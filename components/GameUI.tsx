@@ -104,9 +104,11 @@ const ItemIcon: React.FC<{ item: Item; size?: number }> = ({ item, size = 24 }) 
 
 const NotificationItem: React.FC<{ note: GameNotification; onRemove: (id: string) => void }> = React.memo(({ note, onRemove }) => {
     useEffect(() => {
-        const timer = setTimeout(() => onRemove(note.id), 3000);
-        return () => clearTimeout(timer);
-    }, []);
+        if (!note.persistent) {
+            const timer = setTimeout(() => onRemove(note.id), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [note.persistent]);
 
     return (
         <motion.div
@@ -511,23 +513,29 @@ export const GameUI: React.FC = () => {
 
   // Skill points persistent notification
   useEffect(() => {
-      if (hasUpgradableSkills && status === GameStatus.PLAYING && !panelOpen) {
-          const existingSpNotif = notifications.find(n => n.message.includes('Skill Points') || n.message.includes('Spend'));
-          if (existingSpNotif) {
-              removeNotification(existingSpNotif.id);
-          }
+      const existingSpNotif = notifications.find(n => n.message.includes('UPGRADABLE SKILLS'));
+      if (hasUpgradableSkills && !existingSpNotif) {
+          addNotification('UPGRADABLE SKILLS', '#ec4899', 'SYSTEM', {
+              label: 'SKILLS',
+              onClick: () => { setPanelTab('SKILLS'); openSpecificShop('SKILLS'); }
+          }, true);
+      } else if (!hasUpgradableSkills && existingSpNotif) {
+          removeNotification(existingSpNotif.id);
       }
-  }, [hasUpgradableSkills, status, panelOpen, notifications, removeNotification]);
+  }, [hasUpgradableSkills, notifications, addNotification, removeNotification, openSpecificShop]);
 
   // Better equipment persistent notification
   useEffect(() => {
-      if (hasBetterItem && status === GameStatus.PLAYING && !panelOpen) {
-          const existingItemNotif = notifications.find(n => n.message.includes('Better Equipment'));
-          if (existingItemNotif) {
-              removeNotification(existingItemNotif.id);
-          }
+      const existingItemNotif = notifications.find(n => n.message.includes('BETTER ITEMS'));
+      if (hasBetterItem && !existingItemNotif) {
+          addNotification('BETTER ITEMS', '#3b82f6', 'SYSTEM', {
+              label: 'EQUIP',
+              onClick: () => { setPanelTab('INVENTORY'); toggleInventory(); }
+          }, true);
+      } else if (!hasBetterItem && existingItemNotif) {
+          removeNotification(existingItemNotif.id);
       }
-  }, [hasBetterItem, status, panelOpen, notifications, removeNotification]);
+  }, [hasBetterItem, notifications, addNotification, removeNotification, toggleInventory]);
 
   const onInventoryItemClick = (item: Item) => {
       if (isShopOpen) {
@@ -774,66 +782,49 @@ export const GameUI: React.FC = () => {
                  )}
              </div>
 
-             {/* Top bar notifications */}
-             <div className="flex items-center gap-2">
-                 {hasUpgradableSkills && (
-                     <motion.button
-                         initial={{ scale: 0.8, opacity: 0 }}
-                         animate={{ scale: 1, opacity: 1 }}
-                         exit={{ scale: 0.8, opacity: 0 }}
-                         onClick={() => { setPanelTab('SKILLS'); openSpecificShop('SKILLS'); }}
-                         className="px-3 py-1.5 bg-pink-500/90 text-white font-black text-xs rounded-md border border-pink-400/60 hover:bg-pink-500 transition-all pointer-events-auto"
-                         style={{ boxShadow: '0 2px 8px rgba(236,72,153,0.4)' }}
-                     >
-                         UPGRADE SKILLS
-                     </motion.button>
-                 )}
-                 {hasBetterItem && (
-                     <motion.button
-                         initial={{ scale: 0.8, opacity: 0 }}
-                         animate={{ scale: 1, opacity: 1 }}
-                         exit={{ scale: 0.8, opacity: 0 }}
-                         onClick={() => { setPanelTab('INVENTORY'); toggleInventory(); }}
-                         className="px-3 py-1.5 bg-blue-500/90 text-white font-black text-xs rounded-md border border-blue-400/60 hover:bg-blue-500 transition-all pointer-events-auto"
-                         style={{ boxShadow: '0 2px 8px rgba(59,130,246,0.4)' }}
-                     >
-                         BETTER GEAR
-                     </motion.button>
-                 )}
-             </div>
+             {/* Top bar notifications removed */}
 
-             {/* RIGHT: Coins only */}
-             <div className="flex items-center gap-2">
-                 <Coins size={20} className="text-yellow-400" style={{ filter: 'drop-shadow(0 0 6px #fbbf24)' }}/>
-                 <span className="font-black text-yellow-300 text-2xl rpg-text" style={{ textShadow: '0 0 12px #fbbf2488, 0 2px 4px rgba(0,0,0,0.9)' }}>{score.toLocaleString()}</span>
-             </div>
-          </div>
+             {/* RIGHT: Coins + Menu Icons */}
+             <div className="flex items-center gap-6">
+                 <div className="flex items-center gap-2">
+                    <Coins size={20} className="text-yellow-400" style={{ filter: 'drop-shadow(0 0 6px #fbbf24)' }}/>
+                    <span className="font-black text-yellow-300 text-2xl rpg-text" style={{ textShadow: '0 0 12px #fbbf2488, 0 2px 4px rgba(0,0,0,0.9)' }}>{score.toLocaleString()}</span>
+                 </div>
 
-          {/* Single menu toggle button */}
-          <div className="absolute left-5 top-1/2 -translate-y-1/2 pointer-events-auto z-30">
-              {(() => {
-                const accent = CLASS_COLOR[hero] ?? '#6366f1';
-                return (
-                  <button
-                    onClick={() => {
-                      if (panelOpen) { closeAllUI(); }
-                      else { setPanelTab('INVENTORY'); toggleInventory(); }
-                    }}
-                    className="w-12 h-12 rounded-md flex flex-col items-center justify-center gap-0.5 transition-all"
-                    style={{
-                      background: panelOpen ? `${accent}28` : 'rgba(18,18,26,0.92)',
-                      border: panelOpen ? `1.5px solid ${accent}70` : '1px solid rgba(255,255,255,0.1)',
-                      boxShadow: panelOpen ? `0 0 16px ${accent}40` : '0 2px 12px rgba(0,0,0,0.6)',
-                      color: panelOpen ? accent : 'rgba(160,160,175,0.9)',
-                    }}>
-                    {panelOpen ? <X size={20} /> : <Menu size={20} />}
-                    <span className="text-[7px] font-black uppercase tracking-wider">{panelOpen ? 'CLOSE' : 'MENU'}</span>
-                    {!panelOpen && hasAlerts && (
-                      <div className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 border border-black" />
-                    )}
-                  </button>
-                );
-              })()}
+                 <div className="flex items-center gap-2">
+                    {[
+                        { id: 'INVENTORY', icon: Backpack, label: 'BAG', action: toggleInventory, dot: hasBetterItem },
+                        { id: 'SHOP', icon: ShoppingBag, label: 'SHOP', action: () => openSpecificShop('SUPPLIES'), dot: false },
+                        { id: 'CRAFTING', icon: Hammer, label: 'FORGE', action: () => openSpecificShop('BLACKSMITH'), dot: false },
+                        { id: 'CHARACTER', icon: User, label: 'HERO', action: toggleCharacterSheet, dot: false },
+                        { id: 'SKILLS', icon: Star, label: 'SKILLS', action: () => openSpecificShop('SKILLS'), dot: hasUpgradableSkills },
+                    ].map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => {
+                                if (panelTab === item.id && panelOpen) {
+                                    closeAllUI();
+                                } else {
+                                    setPanelTab(item.id as any);
+                                    item.action();
+                                }
+                            }}
+                            className="relative w-10 h-10 rounded-lg flex flex-col items-center justify-center transition-all hover:bg-white/10"
+                            style={{
+                                background: panelTab === item.id && panelOpen ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.4)',
+                                border: `1px solid ${panelTab === item.id && panelOpen ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                                color: panelTab === item.id && panelOpen ? '#fbbf24' : '#cbd5e1'
+                            }}
+                        >
+                            <item.icon size={18} />
+                            <span className="text-[6px] font-black uppercase mt-0.5">{item.label}</span>
+                            {item.dot && (
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-black animate-pulse" />
+                            )}
+                        </button>
+                    ))}
+                 </div>
+             </div>
           </div>
 
           {/* BOTTOM HOTBAR */}
@@ -913,8 +904,8 @@ export const GameUI: React.FC = () => {
                 {(hero === 'WIZARD' || !SKILLS_INFO.storm.classType) && (
                     <UniversalSkillSlot icon={fi(Tornado, 22)} level={skillLevels.storm} cooldown={passiveSkillState.stormCooldown} maxCooldown={passiveSkillState.stormMaxCooldown} desc="Storm" active={skillLevels.storm > 0} manaCost={0} currentMana={mana} isPassive onHover={(text) => setHoveredSkillText(text)} />
                 )}
-                {(hero === 'ARCHER' || !SKILLS_INFO.burning.classType) && (
-                    <UniversalSkillSlot icon={fi(Flame, 22)} level={skillLevels.burning} cooldown={passiveSkillState.burningCooldown} maxCooldown={passiveSkillState.burningMaxCooldown} desc="Burning" active={skillLevels.burning > 0} manaCost={getManaCost('burning')} currentMana={mana} isPassive onHover={(text) => setHoveredSkillText(text)} />
+                {(hero === 'ARCHER' || !SKILLS_INFO.poison.classType) && (
+                    <UniversalSkillSlot icon={fi(Flame, 22)} level={skillLevels.poison} cooldown={passiveSkillState.poisonCooldown} maxCooldown={passiveSkillState.poisonMaxCooldown} desc="Poison" active={skillLevels.poison > 0} manaCost={getManaCost('poison')} currentMana={mana} isPassive onHover={(text) => setHoveredSkillText(text)} />
                 )}
                 {(hero === 'ARCHER' || !SKILLS_INFO.freezing.classType) && (
                     <UniversalSkillSlot icon={fiC(Gem, '#67e8f9', 22)} level={skillLevels.freezing} cooldown={passiveSkillState.freezingCooldown} maxCooldown={passiveSkillState.freezingMaxCooldown} desc="Freeze" active={skillLevels.freezing > 0} manaCost={getManaCost('freezing')} currentMana={mana} isPassive onHover={(text) => setHoveredSkillText(text)} />
@@ -942,13 +933,13 @@ export const GameUI: React.FC = () => {
 
           {/* Toast notifications above minimap (right side) */}
           <AnimatePresence>
-              {notifications.filter(n => n.type === 'SYSTEM' && !n.message.includes('Spend Unused') && !n.message.includes('Better Equipment')).map((note) => (
+              {notifications.filter(n => n.type === 'SYSTEM' && !n.message.includes('Spend Unused') && !n.message.includes('Better Equipment') && !n.action).map((note) => (
                   <CenterNotification key={note.id} note={note} onRemove={removeNotification} />
               ))}
           </AnimatePresence>
           <div className="absolute right-6 bottom-48 flex flex-col-reverse gap-1.5 items-end pointer-events-none z-30 w-72">
               <AnimatePresence>
-                  {notifications.filter(n => n.type !== 'WARNING' && n.type !== 'SYSTEM' && !n.action).map((note) => (
+                  {notifications.filter(n => n.type !== 'WARNING' && (n.type !== 'SYSTEM' || n.action)).map((note) => (
                       <NotificationItem key={note.id} note={note} onRemove={removeNotification} />
                   ))}
               </AnimatePresence>

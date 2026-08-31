@@ -114,7 +114,7 @@ export const SKILLS_INFO = {
 
     // Archer Only
     piercing: { name: 'Piercing Arrow', description: 'Active (Q): Giant piercing arrow.', classType: 'ARCHER', type: 'ACTIVE' },
-    burning: { name: 'Burning Arrow', description: 'Passive: Periodically fires explosive fire arrows.', classType: 'ARCHER', type: 'PASSIVE' },
+    poison: { name: 'Poison Arrow', description: 'Passive: Periodically fires explosive poison arrows.', classType: 'ARCHER', type: 'PASSIVE' },
     freezing: { name: 'Freezing Arrow', description: 'Passive: Periodically fires explosive ice arrows.', classType: 'ARCHER', type: 'PASSIVE' },
     
     // Wizard Only
@@ -153,7 +153,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_thun', type: 'SKILL_THUNDER', name: 'Thundercaller', description: 'Level Up: +1 Target', rarity: 'RARE', value: 1, classType: 'WIZARD' },
 
   { id: 'u_pierce', type: 'SKILL_PIERCING', name: 'Piercing Arrow', description: 'Active (Q) Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
-  { id: 'u_burn', type: 'SKILL_BURNING', name: 'Burning Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
+  { id: 'u_burn', type: 'SKILL_POISON', name: 'Poison Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   { id: 'u_freeze', type: 'SKILL_FREEZING', name: 'Freezing Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   
   { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Gravity Spell', description: 'Active (Q) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
@@ -215,8 +215,8 @@ export const PETS_POOL: Item[] = [
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
   // --- CONSUMABLES ---
-  { id: 'potion_hp', name: 'Health Potions (x10)', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 500, level: 1, description: 'Restores 50 HP. (Bundle of 10)' },
-  { id: 'potion_mana', name: 'Mana Potions (x10)', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 500, level: 1, description: 'Restores 50 Mana. (Bundle of 10)' },
+  { id: 'potion_hp', name: 'Health Potions (x10)', type: 'POTION', stats: {}, restoreAmount: 100, rarity: 'COMMON', price: 500, level: 1, description: 'Restores 100 HP. (Bundle of 10)' },
+  { id: 'potion_mana', name: 'Mana Potions (x10)', type: 'POTION', stats: {}, restoreAmount: 100, rarity: 'COMMON', price: 500, level: 1, description: 'Restores 100 Mana. (Bundle of 10)' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'RARE', price: 500, level: 1, description: 'Used for upgrades.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death.' },

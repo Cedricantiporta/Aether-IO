@@ -43,7 +43,7 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
 
   useEffect(() => {
     const handleBarrier = (e: CustomEvent) => {
-        const { position, radius, force } = e.detail;
+        const { position, radius, force, damage } = e.detail;
         enemies.current.forEach(enemy => {
             if (enemy.active) {
                 const dist = enemy.position.distanceTo(position);
@@ -52,6 +52,12 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
                     enemy.position.add(dir.multiplyScalar(force));
                     // 2x Stun Duration (1.0s)
                     enemy.freezeTimer = 1.0;
+                    if (damage > 0) {
+                        enemy.health -= damage;
+                        window.dispatchEvent(new CustomEvent('damage', {
+                            detail: { position: enemy.position, damage: damage, isCrit: false, damageType: 'MAGIC' }
+                        }));
+                    }
                 }
             }
         });
@@ -485,7 +491,7 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
                     if (!dropped && wave >= 30 && Math.random() < Math.min(0.50, (wave - 20) * 0.02)) { spawnDrop(e.position, 'ITEM', 0, 'LEGENDARY'); dropped = true; }
                     if (!dropped) spawnDrop(e.position, 'ITEM', 0, 'EPIC');
                     if (isGoldDrop) spawnDrop(e.position.clone().add(tempVec.set(1,0,0)), 'GOLD', 100, undefined, 10);
-                    else spawnDrop(e.position.clone().add(tempVec.set(1,0,0)), 'XP', 1000, undefined, 10);
+                    else spawnDrop(e.position.clone().add(tempVec.set(1,0,0)), 'XP', (20 + (wave - 1) * 5) * 10, undefined, 10);
                 }
                 else if (e.type === 1 || e.type === 5) {
                      if (Math.random() > 0.5) spawnDrop(e.position, 'ITEM', 0);
@@ -493,7 +499,7 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
                      else {
                          for(let k=0; k<5; k++) {
                              const offset = tempVec.set((Math.random()-0.5)*2, 0, (Math.random()-0.5)*2);
-                             spawnDrop(e.position.clone().add(offset), 'XP', 100, undefined, 5);
+                             spawnDrop(e.position.clone().add(offset), 'XP', 20 + (wave - 1) * 5, undefined, 5);
                          }
                      }
                 }
@@ -503,7 +509,7 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
                         const blackOrbChance = Math.max(0, (wave - 10) * 0.02);
                         const orbMult = Math.random() < blackOrbChance ? 10 : 5;
                         if (isGoldDrop) spawnDrop(e.position, 'GOLD', e.type >= 3 ? 10 : 5, undefined, orbMult);
-                        else spawnDrop(e.position, 'XP', e.type >= 3 ? 30 : 20, undefined, orbMult);
+                        else spawnDrop(e.position, 'XP', 20 + (wave - 1) * 5, undefined, orbMult);
                     }
                 }
                 // 5% chance to drop a health orb
@@ -598,11 +604,6 @@ export const EnemyManager: React.FC<EnemyManagerProps> = ({ bulletsDataRef, enem
           </Suspense>
         )}
 
-        {stunnedEnemies.map(s => (
-            <Html key={s.id} position={[s.x, s.y, s.z]} center zIndexRange={[40, 0]} style={{ pointerEvents: 'none' }}>
-                <div style={{ color: '#facc15', fontWeight: 900, fontSize: 18, textShadow: '0 0 6px black, 0 0 6px black', whiteSpace: 'nowrap', letterSpacing: 2 }}>STUNNED</div>
-            </Html>
-        ))}
     </>
   );
 };

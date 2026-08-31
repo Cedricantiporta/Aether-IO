@@ -56,7 +56,14 @@ export const Player: React.FC<PlayerProps> = ({ bulletsDataRef, enemyBulletsData
     const handleKeyUp = (e: KeyboardEvent) => setKeys((k) => ({ ...k, [e.code]: false }));
     const handleRevive = () => {
         reviveVisualTimer.current = 0.5;
-        window.dispatchEvent(new CustomEvent('barrier-trigger'));
+        window.dispatchEvent(new CustomEvent('barrier-trigger', {
+            detail: {
+                position: playerPosition,
+                radius: 15,
+                force: 10,
+                damage: stats.damage * 10
+            }
+        }));
     };
 
     window.addEventListener('keydown', handleKeyDown);

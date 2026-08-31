@@ -157,7 +157,7 @@ interface GameState {
   advanceWave: () => void;
   setBossData: (data: Partial<BossData>) => void;
   
-  addNotification: (message: string, color?: string, type?: 'ITEM' | 'BOSS' | 'SYSTEM' | 'WARNING', action?: { label: string, onClick: () => void }) => void;
+  addNotification: (message: string, color?: string, type?: 'ITEM' | 'BOSS' | 'SYSTEM' | 'WARNING', action?: { label: string, onClick: () => void }, persistent?: boolean) => void;
   removeNotification: (id: string) => void;
   handleInventoryFull: () => void;
 }
@@ -432,7 +432,7 @@ const generateUpgradeOptions = (heroClass: HeroClass, skillLevels: SkillLevels):
             else if (u.type === 'SKILL_BARRIER') skillKey = 'barrier';
             else if (u.type === 'SKILL_STORM') skillKey = 'storm';
             else if (u.type === 'SKILL_PIERCING') skillKey = 'piercing';
-            else if (u.type === 'SKILL_BURNING') skillKey = 'burning';
+            else if (u.type === 'SKILL_POISON') skillKey = 'poison';
             else if (u.type === 'SKILL_FREEZING') skillKey = 'freezing';
             else if (u.type === 'SKILL_GRAVITY') skillKey = 'gravity';
             else if (u.type === 'SKILL_FREEZE_SPELL') skillKey = 'freezeSpell';
@@ -476,12 +476,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   skillLevels: { 
       orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, special: 0,
-      piercing: 0, burning: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
+      piercing: 0, poison: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
   },
   passiveSkillState: {
       orbitalCooldown: 0, orbitalMaxCooldown: 0.5,
       thunderCooldown: 0, thunderMaxCooldown: 0.5,
-      burningCooldown: 0, burningMaxCooldown: 4,
+      poisonCooldown: 0, poisonMaxCooldown: 4,
       freezingCooldown: 0, freezingMaxCooldown: 3.5,
       blizzardCooldown: 0, blizzardMaxCooldown: 5,
       stampCooldown: 0, stampMaxCooldown: 5,
@@ -636,7 +636,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         stats: calculateStats(startStats, finalEquipment),
         skillLevels: { 
             orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, special: 0,
-            piercing: 0, burning: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
+            piercing: 0, poison: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
         },
         activeAbilityQ: null,
         activeAbilityR: null,
@@ -709,7 +709,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Auto-unlock skills every 5 levels (QER and passives)
       if (newLevel % 5 === 0) {
         const skillUnlockMap: Record<HeroClass, Record<number, keyof SkillLevels>> = {
-          ARCHER: { 5: 'piercing', 10: 'burning', 15: 'freezing', 20: 'special' },
+          ARCHER: { 5: 'piercing', 10: 'poison', 15: 'freezing', 20: 'special' },
           WIZARD: { 5: 'gravity', 10: 'thunder', 15: 'freezeSpell', 20: 'special' },
           BARBARIAN: { 5: 'rage', 10: 'orbital', 15: 'stamp', 20: 'special' }
         };
@@ -718,7 +718,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           newSkillLevels[skillToUnlock] = 1;
           unlockedSkill = skillToUnlock;
           const skillNames: Record<keyof SkillLevels, string> = {
-              orbital: 'Orbital Blades', thunder: 'Thundercaller', regen: 'Regeneration', magnet: 'Looter', dash: 'Dash Mastery', weapon: 'Weapon Mastery', barrier: 'Energy Shield', storm: 'Storm', special: 'Class Special', piercing: 'Piercing Arrow', gravity: 'Gravity Well', rage: 'Rage', burning: 'Burning Arrow', freezing: 'Freezing Arrow', freezeSpell: 'Blizzard', stamp: 'Mega Stamp'
+              orbital: 'Orbital Blades', thunder: 'Thundercaller', regen: 'Regeneration', magnet: 'Looter', dash: 'Dash Mastery', weapon: 'Weapon Mastery', barrier: 'Energy Shield', storm: 'Storm', special: 'Class Special', piercing: 'Piercing Arrow', gravity: 'Gravity Well', rage: 'Rage', poison: 'Poison Arrow', freezing: 'Freezing Arrow', freezeSpell: 'Blizzard', stamp: 'Mega Stamp'
           };
           const displayName = skillNames[skillToUnlock] || skillToUnlock.toUpperCase();
           addNotification(`${displayName} Unlocked!`, '#60a5fa', 'SYSTEM', {
@@ -849,7 +849,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     newCrates[index] = { ...crate, active: false };
     set({ crates: newCrates });
     
-    spawnDrop(crate.position, 'XP', 50);
+    spawnDrop(crate.position, 'XP', 20 + (get().wave - 1) * 5);
     const r = Math.random();
     if (r > 0.85) {
         spawnDrop(crate.position.clone().add(new Vector3(1,0,0)), 'ITEM', 0);
@@ -908,7 +908,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       level = state.skillLevels[skill as keyof SkillLevels] || 0;
       if (skill === 'thunder') return Math.ceil((5 + level) * 0.75);
-      if (skill === 'burning' || skill === 'freezing') return Math.ceil((5 + level) * 0.75);
+      if (skill === 'poison' || skill === 'freezing') return Math.ceil((5 + level) * 0.75);
       if (skill === 'freezeSpell') return Math.ceil((15 + (level * 2)) * 0.75);
       if (skill === 'stamp') return Math.ceil((15 + (level * 2)) * 0.75);
 
@@ -1129,7 +1129,7 @@ export const useGameStore = create<GameState>((set, get) => ({
               else if (opt.type === 'SKILL_BARRIER') skillKey = 'barrier';
               else if (opt.type === 'SKILL_STORM') skillKey = 'storm';
               else if (opt.type === 'SKILL_PIERCING') skillKey = 'piercing';
-              else if (opt.type === 'SKILL_BURNING') skillKey = 'burning';
+              else if (opt.type === 'SKILL_POISON') skillKey = 'poison';
               else if (opt.type === 'SKILL_FREEZING') skillKey = 'freezing';
               else if (opt.type === 'SKILL_GRAVITY') skillKey = 'gravity';
               else if (opt.type === 'SKILL_FREEZE_SPELL') skillKey = 'freezeSpell';
@@ -1423,12 +1423,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       waveTimer: 0,
       skillLevels: {
           orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, special: 0,
-          piercing: 0, burning: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
+          piercing: 0, poison: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0
       },
       passiveSkillState: {
           orbitalCooldown: 0, orbitalMaxCooldown: 0.5,
           thunderCooldown: 0, thunderMaxCooldown: 0.5,
-          burningCooldown: 0, burningMaxCooldown: 4,
+          poisonCooldown: 0, poisonMaxCooldown: 4,
           freezingCooldown: 0, freezingMaxCooldown: 3.5,
           blizzardCooldown: 0, blizzardMaxCooldown: 5,
           stampCooldown: 0, stampMaxCooldown: 5,
@@ -1448,7 +1448,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
     set(initialState);
   },
-  addNotification: (message, color = 'white', type = 'ITEM', action) => set(state => ({ notifications: [...state.notifications, { id: Math.random().toString(), message, color, type, action }] })),
+  addNotification: (message, color = 'white', type = 'ITEM', action, persistent = false) => set(state => ({ notifications: [...state.notifications, { id: Math.random().toString(), message, color, type, action, persistent }] })),
   removeNotification: (id) => set(state => ({ notifications: state.notifications.filter(n => n.id !== id) })),
   
   upgradeSkill: (skill) => {
@@ -1493,7 +1493,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         else if (upgrade.type === 'SKILL_BARRIER') skillKey = 'barrier';
         else if (upgrade.type === 'SKILL_STORM') skillKey = 'storm';
         else if (upgrade.type === 'SKILL_PIERCING') skillKey = 'piercing';
-        else if (upgrade.type === 'SKILL_BURNING') skillKey = 'burning';
+        else if (upgrade.type === 'SKILL_POISON') skillKey = 'poison';
         else if (upgrade.type === 'SKILL_FREEZING') skillKey = 'freezing';
         else if (upgrade.type === 'SKILL_GRAVITY') skillKey = 'gravity';
         else if (upgrade.type === 'SKILL_FREEZE_SPELL') skillKey = 'freezeSpell';

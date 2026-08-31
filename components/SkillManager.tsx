@@ -30,7 +30,7 @@ export const SkillManager: React.FC<SkillManagerProps> = ({ enemyBulletsDataRef,
   const [thunderPositions, setThunderPositions] = useState<Vector3[]>([]);
   const thunderVisualTimer = useRef(0);
 
-  const burningTimer = useRef(0);
+  const poisonTimer = useRef(0);
   const freezingTimer = useRef(0);
 
   const blizzardTimer = useRef(0);
@@ -111,15 +111,15 @@ export const SkillManager: React.FC<SkillManagerProps> = ({ enemyBulletsDataRef,
       e => e.active && e.position.distanceTo(playerPosition) <= stats.attackRange
     );
 
-    if (skillLevels.burning > 0) {
-        burningTimer.current += delta;
-        const maxCd = Math.max(2.0, 8.0 - (skillLevels.burning * 0.5));
-        updatePassiveCooldowns({ burningCooldown: maxCd - burningTimer.current, burningMaxCooldown: maxCd });
+    if (skillLevels.poison > 0) {
+        poisonTimer.current += delta;
+        const maxCd = Math.max(2.0, 8.0 - (skillLevels.poison * 0.5));
+        updatePassiveCooldowns({ poisonCooldown: maxCd - poisonTimer.current, poisonMaxCooldown: maxCd });
 
-        if (burningTimer.current >= maxCd) {
+        if (poisonTimer.current >= maxCd) {
             if (hasEnemyInRange) {
-                if (useMana(getManaCost('burning'))) {
-                    burningTimer.current = 0;
+                if (useMana(getManaCost('poison'))) {
+                    poisonTimer.current = 0;
                     const baseDir = new Vector3().subVectors(targetPosRef.current, playerPosition).normalize();
                     const damageMult = 0.525;
                     const spread = 0.5;
@@ -131,10 +131,10 @@ export const SkillManager: React.FC<SkillManagerProps> = ({ enemyBulletsDataRef,
                         }, dir);
                     }
                 } else {
-                    burningTimer.current = maxCd;
+                    poisonTimer.current = maxCd;
                 }
             } else {
-                burningTimer.current = maxCd;
+                poisonTimer.current = maxCd;
             }
         }
     }
