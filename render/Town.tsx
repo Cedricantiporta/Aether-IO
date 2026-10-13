@@ -5,7 +5,7 @@ import {
   AdditiveBlending, AnimationAction, AnimationMixer, Color, DoubleSide, Group, LoopOnce, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight, RingGeometry, Sprite,
 } from 'three';
 import { SHOP_POSITIONS } from '../constants';
-import { world, QUEST_POS } from '../engine/world';
+import { world, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../engine/world';
 import { isLobbyStatus } from './CameraRig';
 import { questDone } from '../quests';
 import { GameStatus } from '../types';
@@ -412,11 +412,108 @@ function QuestBoard() {
   );
 }
 
+// ------------------------------------------------- shrine + skill trainer ---
+function buildShrine() {
+  const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
+  b.cyl(2.0, 2.3, 0.35, 10, [0, 0.17, 0], '#6d6a76'); b.cyl(1.5, 1.7, 0.35, 10, [0, 0.52, 0], '#85828f'); b.cyl(0.9, 1.1, 1.0, 8, [0, 1.2, 0], '#9d9aa8'); b.cyl(1.15, 0.95, 0.2, 8, [0, 1.8, 0], '#b4b1c0');
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.78; b.box(0.35, 2.6, 0.35, [Math.cos(a) * 2.9, 1.3, Math.sin(a) * 2.9], '#7a7784'); g.octa(0.16, [Math.cos(a) * 2.9, 2.85, Math.sin(a) * 2.9], '#c58bff'); }
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; g.box(0.12, 0.05, 0.3, [Math.cos(a) * 1.25, 0.72, Math.sin(a) * 1.25], '#e9b949', [0, -a, 0]); }
+  return { body: b.build(), glow: g.build() };
+}
+function buildTrainer() {
+  const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
+  const wood = '#7a5230', dark = '#4a3020';
+  // dummy
+  b.box(0.22, 2.0, 0.22, [0, 1.0, 0], wood); b.cyl(0.34, 0.4, 1.0, 8, [0, 1.7, 0], '#c9a96a'); b.box(1.5, 0.2, 0.2, [0, 1.95, 0], wood); b.sph(0.3, [0, 2.55, 0], '#d9bd82', 1, 8);
+  b.cyl(0.8, 0.9, 0.2, 8, [0, 0.1, 0], '#6a6358'); b.box(0.5, 0.06, 0.5, [0, 1.35, 0.3], '#a33', [0, 0.4, 0]);
+  // weapon rack
+  b.box(0.2, 2.4, 0.2, [2.8, 1.2, 0.4], dark); b.box(0.2, 2.4, 0.2, [4.6, 1.2, 0.4], dark); b.box(2.0, 0.16, 0.2, [3.7, 2.0, 0.4], dark); b.box(2.0, 0.16, 0.2, [3.7, 1.2, 0.4], dark);
+  for (let i = 0; i < 3; i++) { b.box(0.1, 1.9, 0.08, [3.15 + i * 0.5, 1.7, 0.55], '#b8bcc6', [0, 0, 0.1 - i * 0.08]); b.box(0.36, 0.08, 0.1, [3.15 + i * 0.5, 0.95, 0.55], '#6b4a2a'); }
+  b.cyl(0.55, 0.5, 0.2, 8, [3.7, 0.1, 1.3], '#6a6358');
+  // banner
+  b.box(0.18, 4.2, 0.18, [-3.4, 2.1, 0], dark); b.box(1.8, 0.14, 0.14, [-2.55, 4.0, 0], dark); b.box(1.5, 2.2, 0.06, [-2.55, 2.85, 0], '#b3342a'); b.tri([-3.3, 1.75, 0.03], [-1.8, 1.75, 0.03], [-2.55, 1.2, 0.03], '#b3342a');
+  g.sph(0.14, [-3.4, 4.3, 0], '#ffd070', 1, 6); g.box(0.8, 0.1, 0.02, [-2.55, 3.1, 0.06], '#ffd070'); g.box(0.1, 0.8, 0.02, [-2.55, 3.1, 0.06], '#ffd070');
+  return { body: b.build(), glow: g.build() };
+}
+
+function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [number, number, number] }) {
+  const shrine = kind === 'SHRINE';
+  const geos = useMemo(() => (shrine ? buildShrine() : buildTrainer()), [shrine]);
+  const col = shrine ? '#b57cff' : '#ffb04a';
+  const mats = useMemo(() => ({
+    lit: litMat({ roughness: 0.85 }),
+    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }),
+    ring: new MeshBasicMaterial({ color: new Color(col), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+    ring2: new MeshBasicMaterial({ color: new Color(col), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+    crystal: new MeshBasicMaterial({ color: new Color(1.8, 0.9, 2.6), toneMapped: false }),
+    rune: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 0.5), transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+  }), [col]);
+  const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', shrine ? '#d9b8ff' : '#ffd9a0', { size: 60 }), [shrine]);
+  const sp = useGameStore((s) => s.skillPoints);
+  const spLabel = useMemo(() => (sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#7dffb0', { size: 56 }) : null), [sp]);
+  const near = useRef(false), closedK = useRef(0), rot = useRef(0);
+  const ringRef = useRef<Group>(null!), crystalRef = useRef<Mesh>(null!), runeRef = useRef<Mesh>(null!), titleRef = useRef<Sprite>(null!), spRef = useRef<Sprite>(null!);
+  const px = position[0], pz = position[2];
+  const open = () => {
+    const st = useGameStore.getState().status;
+    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(shrine ? 'SUMMON' : 'SKILLS');
+  };
+  useFrame(({ clock }, dt0) => {
+    const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
+    const status = useGameStore.getState().status;
+    const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
+    closedK.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - closedK.current) * Math.min(1, dt * 2.2);
+    const closed = closedK.current > 0.5;
+    const d = Math.hypot(world.player.pos.x - px, world.player.pos.z - pz);
+    near.current = !lobby && !closed && d < 6;
+    rot.current += dt * (near.current ? 1.2 : 0.3);
+    const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
+    mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
+    mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
+    if (ringRef.current) { ringRef.current.visible = !closed; ringRef.current.rotation.y = rot.current; }
+    if (titleRef.current) titleRef.current.visible = !closed;
+    if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 6.6 + Math.sin(t * 2.4) * 0.2; }
+    if (shrine) {
+      if (crystalRef.current) { crystalRef.current.position.y = 3.3 + Math.sin(t * 1.6) * 0.25; crystalRef.current.rotation.y = t * 0.9; mats.crystal.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 0.9 + Math.sin(t * 2.7) * 0.25, 2.4); }
+      if (runeRef.current) { runeRef.current.rotation.z = -t * 0.4; mats.rune.opacity = 0.35 + 0.3 * pulse; }
+      if (d < 55 && status !== GameStatus.PAUSED && Math.random() < dt * 4) {
+        const a = Math.random() * TAU, r = 0.5 + Math.random() * 0.9, gold = Math.random() < 0.5;
+        FX.add.emit(px + Math.cos(a) * r, 2.0, pz + Math.sin(a) * r, 0, 0.7, 0, 2.4, 0.16, 0.02, gold ? 2.2 : 1.4, gold ? 1.6 : 0.6, gold ? 0.4 : 2.2, 0.8, CELL.GLOW);
+      }
+    }
+  });
+  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : col); };
+  return (
+    <group position={position}>
+      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
+      <mesh geometry={geos.glow} material={mats.glow} />
+      {shrine && <>
+        <mesh ref={crystalRef} material={mats.crystal} position={[0, 3.3, 0]} scale={[0.6, 1.0, 0.6]}><octahedronGeometry args={[0.8, 0]} /></mesh>
+        <mesh ref={runeRef} material={mats.rune} position={[0, 0.8, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[1.35, 1.55, 8]} /></mesh>
+        {q_light(col)}
+      </>}
+      <group ref={ringRef} position={[0, 0.07, 0]}>
+        <mesh geometry={ringGeo1} material={mats.ring} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
+        <mesh geometry={ringGeo2} material={mats.ring2} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
+      </group>
+      <sprite ref={titleRef} material={label.mat} position={[0, shrine ? 5.4 : 5.2, 0]} scale={[label.aspect * 0.85, 0.85, 1]} />
+      {spLabel && !shrine && <sprite ref={spRef} material={spLabel.mat} position={[0, 6.6, 0]} scale={[spLabel.aspect * 0.8, 0.8, 1]} />}
+      <mesh position={[shrine ? 0 : 1.2, 1.8, 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
+        <boxGeometry args={shrine ? [5, 4, 5] : [9, 4, 3.5]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+const q_light = (c: string) => <pointLight position={[0, 3, 0]} color={c} distance={12} decay={1.6} intensity={10} />;
+
 export function Town({ q }: { q: QualityCfg }) {
   return (
     <>
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} />)}
       <QuestBoard />
+      <Station kind="SHRINE" position={SHRINE_POS} />
+      <Station kind="TRAINER" position={TRAINER_POS} />
     </>
   );
 }

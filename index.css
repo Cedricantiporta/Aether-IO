@@ -736,3 +736,9 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
   filter: drop-shadow(0 .3rem 0 #5a3008) drop-shadow(0 0 1.6rem rgba(255, 190, 60, .85)) drop-shadow(0 .8rem 1.2rem rgba(0, 0, 0, .8)); text-shadow: none; }
 .wbar { height: .8rem; -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(10% - 3px), transparent calc(10% - 3px) 10%); mask: repeating-linear-gradient(90deg, #000 0 calc(10% - 3px), transparent calc(10% - 3px) 10%); border-radius: 0; border: none; box-shadow: none; background: #1a1410; }
 .wsub { display: flex; justify-content: space-between; width: 100%; padding: 0 .2rem; }
+
+.slot-sale {
+  position: absolute; left: -.35rem; top: -.3rem; z-index: 6; font-size: .58rem; font-weight: 900; line-height: .95rem; padding: 0 .35rem; color: #fff;
+  background: linear-gradient(#e5483d, #a8221b); border: 1px solid #ffb3a8; border-radius: .2rem .2rem .2rem 0; box-shadow: 0 1px 3px #000a; transform: rotate(-6deg);
+}
+.slot-old { position: absolute; left: 50%; bottom: -1.5rem; transform: translateX(-50%); z-index: 4; font-size: .55rem; color: #9a8f80; text-decoration: line-through; white-space: nowrap; }

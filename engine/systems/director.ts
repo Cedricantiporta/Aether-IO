@@ -31,7 +31,6 @@ const WAVE_SECONDS = 45;
 const BOSS_CLEANUP = 2.5;
 const RESPITE_SECONDS = 20;
 const GIFT_CHANCE = 0.35;
-const DISCOUNT_CHANCE = 0.3;
 
 const centerV = new Vector3();
 const spawnV = new Vector3();
@@ -114,7 +113,6 @@ function tickRespite(dt: number): void {
   if (d.respiteT > 0) return;
   d.respiteT = 0;
   world.village.shopsClosed = true;
-  world.village.discount = 0;
   events.emit('respiteEnd', {});
   beginCountdown();
 }
@@ -125,10 +123,8 @@ function beginRespite(): void {
   d.phaseT = 0;
   d.respiteT = RESPITE_SECONDS;
   world.village.shopsClosed = false;
-  const discount = Math.random() < DISCOUNT_CHANCE ? 0.1 : 0;
-  world.village.discount = discount;
-  events.emit('respiteStart', { seconds: RESPITE_SECONDS, discount });
-  if (discount > 0) useGameStore.getState().addNotification('Thank-you discount: 10% off in every shop during the respite!', '#7dd3fc', 'SYSTEM');
+  useGameStore.getState().rollShopSales();
+  events.emit('respiteStart', { seconds: RESPITE_SECONDS });
 }
 
 const giftPos = new Vector3();

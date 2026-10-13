@@ -82,6 +82,7 @@ export interface Item {
   petSkill?: PetSkillType;
   petValue?: number; // Heal amount or Dmg
   petCooldown?: number; 
+  summonOnly?: boolean; // not sold in the Pets shop; Summon altar only
   
   setName?: string;
   setBonus?: string; 

@@ -47,12 +47,12 @@ export const BuyDialog: React.FC = () => {
   const buyItem = useGameStore((s) => s.buyItem);
   const gold = useGameStore((s) => s.gold);
   const [amount, setAmount] = useState(1);
-  const afford = item ? Math.max(0, Math.floor(gold / shopPrice(item.price))) : 0;
+  const afford = item ? Math.max(0, Math.floor(gold / shopPrice(item))) : 0;
   const stackable = item ? item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' : false;
   const cap = Math.max(1, Math.min(stackable ? POTION_STACK_LIMIT : 1, afford));
   useEffect(() => setAmount(1), [item]);
   const a = Math.min(amount, cap);
-  const total = item ? shopPrice(item.price) * a : 0;
+  const total = item ? shopPrice(item) * a : 0;
   const confirm = () => { if (item && gold >= total) { buyItem(item, a); if (!(item.type === 'POTION' || item.type === 'CORE')) set(null); } };
   return (
     <Modal open={!!item} onClose={() => set(null)} title="How many?" ribbon tone="gold" width="26rem" z={220} onConfirm={confirm}>
@@ -63,7 +63,7 @@ export const BuyDialog: React.FC = () => {
             <div>
               <div className="rpg-title text-lg" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div>
               <div className="text-xs text-[var(--text-dim)] max-w-[12rem]">{item.description}</div>
-              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{shopPrice(item.price).toLocaleString()} G each</div>
+              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{shopPrice(item).toLocaleString()} G each</div>
             </div>
           </div>
           {stackable && <QtyStepper value={a} max={cap} onChange={setAmount} />}

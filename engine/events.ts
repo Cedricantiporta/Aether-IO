@@ -47,7 +47,7 @@ export interface GameEvents {
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
   siegeStart: {};                       // village siege begins (bell + banner)
-  respiteStart: { seconds: number; discount: number };
+  respiteStart: { seconds: number };
   respiteEnd: {};
   fastClear: { wave: number; gold: number };
   villagerGift: { pos: Vector3; text: string };

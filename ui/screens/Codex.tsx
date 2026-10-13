@@ -49,7 +49,7 @@ export const CodexDialog: React.FC = () => {
           </div>
         ) : tab !== 'SKILLS' ? (
           <div className="flex flex-wrap gap-4 content-start">
-            {(tab === 'ITEMS' ? items : pets).map((it) => <ItemSlot key={it.id} item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />)}
+            {(tab === 'ITEMS' ? items : pets).map((it) => <div key={it.id} className="flex flex-col items-center gap-1"><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />{it.summonOnly && <span className="rpg-label !text-[.5rem]" style={{ color: '#c58bff' }}>Summon only</span>}</div>)}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">

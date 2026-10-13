@@ -136,8 +136,6 @@ export const VillageHUD: React.FC = () => {
           <div className="flex gap-[.6rem]">
             <VBtn icon={<User size={24} />} label="Hero (C)" onClick={toggleChar} />
             <VBtn icon={<Backpack size={24} />} label="Bag (I)" onClick={toggleInv} />
-            <VBtn icon={<Store size={24} />} label="Shops" onClick={() => openShop('SUPPLIES')} />
-            <VBtn icon={<ScrollText size={24} />} label="Quest Board" onClick={() => openShop('QUESTS')} badge={claimable} id="open-quests" />
             <VBtn icon={<Trophy size={24} />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
             <VBtn icon={<BookOpen size={24} />} label="Codex" onClick={() => openCodex(true)} />
             <VBtn icon={<Settings size={24} />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />

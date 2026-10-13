@@ -3,7 +3,7 @@
 // town. No enemies / director / attacks. E = interact with a nearby shop or the
 // quest board, F = harvest a nearby crystal / ore node (modest, 90 s respawn).
 // ============================================================================
-import { world, QUEST_POS, MAX_CRATES } from '../world';
+import { world, QUEST_POS, SHRINE_POS, TRAINER_POS, MAX_CRATES } from '../world';
 import { SHOP_POSITIONS } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
@@ -49,6 +49,8 @@ export function updateVillage(dt: number): void {
     const st = useGameStore.getState();
     if (st.isShopOpen) return;
     if ((QUEST_POS[0] - p.pos.x) ** 2 + (QUEST_POS[2] - p.pos.z) ** 2 < 36) { st.openSpecificShop('QUESTS'); return; }
+    if ((SHRINE_POS[0] - p.pos.x) ** 2 + (SHRINE_POS[2] - p.pos.z) ** 2 < 36) { st.openSpecificShop('SUMMON'); return; }
+    if ((TRAINER_POS[0] - p.pos.x) ** 2 + (TRAINER_POS[2] - p.pos.z) ** 2 < 36) { st.openSpecificShop('SKILLS'); return; }
     for (const s of SHOP_POSITIONS) {
       if ((s.position[0] - p.pos.x) ** 2 + (s.position[2] - p.pos.z) ** 2 < INTERACT_R * INTERACT_R) { st.openSpecificShop(s.type); return; }
     }

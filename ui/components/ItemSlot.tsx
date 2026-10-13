@@ -17,6 +17,8 @@ interface Props {
   locked?: boolean;            // level locked
   dim?: boolean;
   price?: number;              // shop price badge
+  sale?: number;               // discount fraction -> red ribbon + struck old price
+  oldPrice?: number;
   cantAfford?: boolean;
   qty?: number;
   emptyLabel?: React.ReactNode;
@@ -30,7 +32,7 @@ interface Props {
 
 /** Metallic rarity-framed item slot. Empty when no item. */
 export const ItemSlot: React.FC<Props> = ({
-  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children,
+  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children,
 }) => {
   const q = qty ?? item?.quantity ?? 1;
   const cls = `rpg-slot ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
@@ -42,6 +44,8 @@ export const ItemSlot: React.FC<Props> = ({
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && isGear(item) && item.level > 1 && <span className="slot-plus">+{item.level - 1}</span>}
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
+      {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
+      {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}
       {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''}`}>{price.toLocaleString()}</span>}
       {children}
     </>

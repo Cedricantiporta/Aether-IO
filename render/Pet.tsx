@@ -1,5 +1,5 @@
 // Companion pets: one procedural model per pet id.
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, DoubleSide, Vector3 } from 'three';
 import { world } from '../engine/world';
@@ -114,10 +114,47 @@ export function Pet() {
   });
   const def = useMemo(() => (DEFS[id] ? DEFS[id]() : null), [id]);
   if (!def) return null;
-  return <PetModel key={id} id={id} def={def} />;
+  return <PetActor key={id} id={id} def={def} />;
 }
 
-function PetModel({ id, def }: { id: string; def: PetDef }) {
+/** Standalone showcase model (no world access): bobs, flaps wings, hops and turns slowly. For UI previews. */
+export function PetModel({ id }: { id: string }) {
+  const def = useMemo(() => (DEFS[id] ? DEFS[id]() : null), [id]);
+  const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
+  const legs = useRef<Group[]>([]);
+  const lit = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7, side: DoubleSide, emissive: id === 'pet_wolf' ? 0x335577 : id === 'pet_dragon' ? 0x553300 : 0x000000, emissiveIntensity: 0.6 }), [id]);
+  const glow = useMemo(() => new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7), side: DoubleSide }), []);
+  useEffect(() => () => { lit.dispose(); glow.dispose(); if (def) { def.body.dispose(); def.glow?.dispose(); def.wing?.geo.dispose(); def.legs?.geo.dispose(); } }, [def, lit, glow]);
+  useFrame(({ clock }) => {
+    if (!def) return;
+    const t = clock.elapsedTime;
+    root.current.rotation.y = t * 0.6;
+    let y = def.hover + (def.hover > 0.2 ? Math.sin(t * 3) * 0.12 : 0), sq = 1;
+    if (def.hop) { const h = Math.max(0, Math.sin(t * 5)) * 0.3; y += h; sq = 1 + h * 0.25; }
+    root.current.position.y = y;
+    const hx = def.hop ? 1.05 - (sq - 1) * 0.5 : 1;
+    model.current.scale.set(def.scale * hx, def.scale * sq, def.scale * hx);
+    if (def.wing && wL.current) { const f = Math.sin(t * def.wing.speed * 0.6) * def.wing.amp; wL.current.rotation.z = f + 0.2; wR.current.rotation.z = -(f + 0.2); }
+    for (let i = 0; i < legs.current.length; i++) if (legs.current[i]) legs.current[i].rotation.x = Math.sin(t * 4 + (i % 2) * Math.PI) * 0.25;
+  });
+  if (!def) return null;
+  const w = def.wing;
+  return (
+    <group ref={root}>
+      <group ref={model}>
+        <mesh geometry={def.body} material={lit} />
+        {def.glow && <mesh geometry={def.glow} material={glow} />}
+        {w && <>
+          <group ref={wR} position={w.pivot}><mesh geometry={w.geo} material={w.glow ? glow : lit} /></group>
+          <group ref={wL} position={[-w.pivot[0], w.pivot[1], w.pivot[2]]} scale={[-1, 1, 1]}><mesh geometry={w.geo} material={w.glow ? glow : lit} /></group>
+        </>}
+        {def.legs && def.legs.pivots.map((p, i) => <group key={i} position={p} ref={(r) => { legs.current[i] = r!; }}><mesh geometry={def.legs!.geo} material={lit} /></group>)}
+      </group>
+    </group>
+  );
+}
+
+function PetActor({ id, def }: { id: string; def: PetDef }) {
   const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
   const legs = useRef<Group[]>([]);
   const lit = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7, side: id === 'pet_fairy' ? DoubleSide : DoubleSide, emissive: id === 'pet_wolf' ? 0x335577 : id === 'pet_dragon' ? 0x553300 : 0x000000, emissiveIntensity: 0.6 }), [id]);

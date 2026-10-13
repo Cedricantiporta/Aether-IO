@@ -72,7 +72,7 @@ export const PlayerPlate: React.FC = () => {
   );
 };
 
-const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string; onPlus: () => void; plusLabel: string }> = ({ icon, value, label, onPlus, plusLabel }) => {
+const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string}> = ({ icon, value, label }) => {
   const el = useRef<HTMLSpanElement>(null);
   const first = useRef(true);
   useEffect(() => {
@@ -84,19 +84,17 @@ const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string; o
     <div className="cpill pe" {...tip(<SimpleTip title={label} />)}>
       {icon}
       <span ref={el} className="val">{value.toLocaleString()}</span>
-      <button className="cplus" aria-label={plusLabel} onClick={onPlus} {...tip(<SimpleTip title={plusLabel} />)}>+</button>
-    </div>
+          </div>
   );
 };
 
 export const Currency: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const gems = useGameStore((s) => s.gems);
-  const openShop = useGameStore((s) => s.openSpecificShop);
   return (
     <div className="flex gap-3 items-center">
-      <Counter icon={<CoinGlyph size={30} />} value={gold} label="Gold" plusLabel="Buy supplies" onPlus={() => openShop('SUPPLIES')} />
-      <Counter icon={<GemGlyph size={30} />} value={gems} label="Gems" plusLabel="Summon" onPlus={() => openShop('SUMMON')} />
+      <Counter icon={<CoinGlyph size={30} />} value={gold} label="Gold" />
+      <Counter icon={<GemGlyph size={30} />} value={gems} label="Gems" />
     </div>
   );
 };
@@ -110,21 +108,14 @@ const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; on
 export const MenuButtons: React.FC = () => {
   const toggleCharacterSheet = useGameStore((s) => s.toggleCharacterSheet);
   const toggleInventory = useGameStore((s) => s.toggleInventory);
-  const openSpecificShop = useGameStore((s) => s.openSpecificShop);
   const togglePause = useGameStore((s) => s.togglePause);
   const openCodex = useUiStore((s) => s.openCodex);
   const c = useGameStore((s) => s.isCharacterSheetOpen);
   const i = useGameStore((s) => s.isInventoryOpen);
-  const sh = useGameStore((s) => s.isShopOpen);
-  const skillPoints = useGameStore((s) => s.skillPoints);
   return (
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<User size={24} />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
       <MenuBtn icon={<Backpack size={24} />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
-      <div className="relative">
-        <MenuBtn icon={<Store size={24} />} label="Shop" hint="K (skills)" onClick={() => openSpecificShop('SUPPLIES')} active={sh} />
-        {skillPoints > 0 && <span className="slot-plus" style={{ left: 'auto', right: '-.3rem', top: '-.35rem', zIndex: 8 }}>{skillPoints}</span>}
-      </div>
       <MenuBtn icon={<BookOpen size={24} />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
       <MenuBtn icon={<Settings size={24} />} label="Settings" hint="Esc" onClick={togglePause} />
     </div>

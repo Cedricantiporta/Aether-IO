@@ -95,6 +95,7 @@ export interface GameState {
   isCharacterSheetOpen: boolean;
   isPauseMenuOpen: boolean;
   activeShopTab: ShopTab;
+  shopSales: Record<string, number>; // item id -> discount fraction (not persisted)
   notifications: GameNotification[];
   actionResult: ActionResult | null;
 
@@ -116,6 +117,7 @@ export interface GameState {
   toggleInventory: () => void;
   toggleCharacterSheet: () => void;
   openSpecificShop: (tab: ShopTab) => void;
+  rollShopSales: () => void;
   closeAllUI: () => void;             // closes panels, resumes PLAYING if paused by a panel
   clearActionResult: () => void;
   updateSettings: (patch: Partial<Settings>) => void;

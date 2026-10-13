@@ -40,7 +40,7 @@ export const Announcer: React.FC = () => {
   });
   useGameEvent('siegeStart', () => push({ kind: 'boss', title: 'THE VILLAGE IS UNDER ATTACK!', sub: 'Defend the villagers - the shops are closing', ms: 2400 }));
   useGameEvent('fastClear', (e) => push({ kind: 'wave', title: 'FAST CLEAR!', sub: `Bonus +${e.gold} gold`, ms: 2000 }));
-  useGameEvent('respiteStart', (e) => push({ kind: 'info', title: 'Respite', sub: e.discount ? 'Shops are open - thank-you discount!' : 'Shops are open', ms: 1800 }));
+  useGameEvent('respiteStart', (e) => push({ kind: 'info', title: 'Respite', sub: 'Shops are open', ms: 1800 }));
   useGameEvent('pickup', (e) => {
     if (e.kind === 'ITEM' && e.name && (e.rarity === 'LEGENDARY' || e.rarity === 'MYTHIC')) push({ kind: e.rarity === 'MYTHIC' ? 'boss' : 'wave', title: e.name, sub: `${e.rarity.charAt(0) + e.rarity.slice(1).toLowerCase()} loot!`, ms: 2200 });
   });

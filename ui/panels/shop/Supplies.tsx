@@ -1,16 +1,16 @@
 import React from 'react';
-import { ITEMS_POOL } from '../../../constants';
-import { useGameStore, shopPrice } from '../../../store';
+import { useGameStore, shopPrice, SUPPLY_STOCK } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, isGear } from '../../lib/game';
 import type { Rarity } from '../../../types';
 
-const STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.type === 'CORE' || i.type === 'REVIVE');
+const STOCK = SUPPLY_STOCK;
 
 export const SuppliesTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
+  const sales = useGameStore((s) => s.shopSales);
   const inventory = useGameStore((s) => s.inventory);
   const massSell = useGameStore((s) => s.massSell);
   const sellAllLoot = useGameStore((s) => s.sellAllLoot);
@@ -32,8 +32,8 @@ export const SuppliesTab: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div>
         <div className="rpg-label mb-2">Provisions</div>
-        <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-6">
-          {STOCK.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={shopPrice(it.price)} cantAfford={gold < shopPrice(it.price)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
+        <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-8">
+          {STOCK.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={shopPrice(it)} sale={sales[it.id]} oldPrice={it.price} cantAfford={gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
         </div>
       </div>
       <div>

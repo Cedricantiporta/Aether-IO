@@ -99,12 +99,11 @@ export const SiegeSkip: React.FC = () => {
   );
 };
 
-/** Respite between waves: shops are open for 20 s. Timer + Continue button + discount tag. */
+/** Respite between waves: shops are open for 20 s. Timer + Continue button. */
 export const RespiteBar: React.FC = () => {
   const root = useRef<HTMLDivElement>(null);
   const tm = useRef<HTMLSpanElement>(null);
-  const disc = useRef<HTMLSpanElement>(null);
-  const st = useRef({ show: false, t: -1, disc: -1 });
+  const st = useRef({ show: false, t: -1 });
   useRaf(() => {
     const d = world.director, s = st.current;
     const show = d.phase === 'RESPITE';
@@ -112,13 +111,10 @@ export const RespiteBar: React.FC = () => {
     if (!show) return;
     const t = Math.ceil(d.respiteT);
     if (t !== s.t && tm.current) { s.t = t; tm.current.textContent = `${t}s`; }
-    const dc = Math.round(world.village.discount * 100);
-    if (dc !== s.disc && disc.current) { s.disc = dc; disc.current.textContent = dc ? `Thank-you discount -${dc}%` : ''; disc.current.style.display = dc ? 'inline-block' : 'none'; }
   });
   return (
     <div ref={root} className="absolute left-0 right-0 flex-col items-center gap-2 pointer-events-none" style={{ display: 'none', top: '8.5rem', zIndex: 45 }} data-testid="respite">
       <div className="rpg-ribbon" data-tone="green" style={{ fontSize: '1.3rem' }}>Respite · shops are open · <span ref={tm}>20s</span></div>
-      <span ref={disc} className="rpg-badge" style={{ display: 'none', color: '#7dd3fc' }} />
       <div className="pe"><Button variant="primary" size="sm" onClick={skipRespite} data-testid="continue">Continue to next wave</Button></div>
     </div>
   );

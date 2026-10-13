@@ -187,7 +187,7 @@ export const PETS_POOL: Item[] = [
         description: 'Attacks nearby enemies.', petSkill: 'ATTACK_MELEE', petValue: 20 
     },
     { 
-        id: 'pet_dragon', name: 'Gold Dragon', type: 'PET', rarity: 'LEGENDARY', price: 10000, level: 1, 
+        id: 'pet_dragon', name: 'Gold Dragon', type: 'PET', rarity: 'LEGENDARY', summonOnly: true, price: 10000, level: 1, 
         stats: { damage: 50, multishot: 1, critDamage: 0.5, fireRate: 0.2 }, // 4 Stats
         description: 'Shoots fireballs.', petSkill: 'ATTACK_RANGED', petValue: 40 
     },
@@ -202,12 +202,12 @@ export const PETS_POOL: Item[] = [
         description: 'Attacks enemies slowly.', petSkill: 'ATTACK_MELEE', petValue: 50 
     },
     { 
-        id: 'pet_phoenix', name: 'Phoenix', type: 'PET', rarity: 'LEGENDARY', price: 12000, level: 1, 
+        id: 'pet_phoenix', name: 'Phoenix', type: 'PET', rarity: 'LEGENDARY', summonOnly: true, price: 12000, level: 1, 
         stats: { regen: 2.5, maxHealth: 100, fireRate: 0.1, damage: 20 }, // 4 Stats
         description: 'Revives you on death (300s CD).', petSkill: 'REVIVE', petCooldown: 300 
     },
     { 
-        id: 'pet_demigod', name: 'Celestial Wisp', type: 'PET', rarity: 'MYTHIC', price: 25000, level: 1, 
+        id: 'pet_demigod', name: 'Celestial Wisp', type: 'PET', rarity: 'MYTHIC', summonOnly: true, price: 25000, level: 1, 
         stats: { damage: 100, maxHealth: 300, moveSpeed: 0.5, cooldownReduction: 0.2, critRate: 0.2 }, // 5 Stats
         description: 'A fragment of a star.', petSkill: 'ATTACK_RANGED', petValue: 100 
     },

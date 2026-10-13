@@ -15,30 +15,22 @@ import { SkillsTab } from './shop/Skills';
 import { QuestsTab } from './shop/Quests';
 
 const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }[] = [
-  { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'General Store' },
-  { id: 'PETS', label: 'Pets', icon: <Ghost size={24} />, title: 'Menagerie' },
-  { id: 'SUMMON', label: 'Summon', icon: <Dices size={24} />, title: 'Aether Altar' },
+  { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'Potion Shop' },
+  { id: 'PETS', label: 'Pets', icon: <Ghost size={24} />, title: 'Pet House' },
+  { id: 'SUMMON', label: 'Summon', icon: <Dices size={24} />, title: 'Summoning Shrine' },
   { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={24} />, title: 'Blacksmith' },
   { id: 'QUESTS', label: 'Quests', icon: <ScrollText size={24} />, title: 'Quest Board' },
-  { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={24} />, title: 'Skill Tome' },
+  { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={24} />, title: 'Skill Trainer' },
 ];
 
 export const ShopPanel: React.FC = () => {
-  const { tab, open, close, gold, gems, sp } = useGameStore(useShallow((s) => ({
-    tab: s.activeShopTab, open: s.openSpecificShop, close: s.closeAllUI, gold: s.gold, gems: s.gems, sp: s.skillPoints,
+  const { tab, close, gold, gems, sp } = useGameStore(useShallow((s) => ({
+    tab: s.activeShopTab, close: s.closeAllUI, gold: s.gold, gems: s.gems, sp: s.skillPoints,
   })));
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex flex-col" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>
-      {/* hanging wooden sign tabs */}
-      <div className="flex gap-1.5 justify-center relative" style={{ zIndex: 2, marginBottom: '-.35rem', paddingTop: '.2rem' }}>
-        {TABS.map((t) => (
-          <button key={t.id} className={`rpg-tab pe ${tab === t.id ? 'is-active' : ''}`} onClick={() => open(t.id)}>
-            <span className="flex items-center justify-center gap-1">{t.icon}{t.label}</span>
-          </button>
-        ))}
-      </div>
       <Panel className="flex flex-col flex-1 min-h-0">
         <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">

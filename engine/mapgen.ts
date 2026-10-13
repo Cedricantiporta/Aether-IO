@@ -5,7 +5,7 @@
 // the REGIONS stay in recognisable places.
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES } from './world';
+import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TRAINER_POS } from './world';
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
 
@@ -150,6 +150,7 @@ function clearZones(): ClearZone[] {
     { x: POND.x, z: POND.z, r: POND.r + 2 },
   ];
   for (const s of SHOP_POSITIONS) zones.push({ x: s.position[0], z: s.position[2], r: 9 });
+  zones.push({ x: SHRINE_POS[0], z: SHRINE_POS[2], r: 6 }, { x: TRAINER_POS[0], z: TRAINER_POS[2], r: 6 });
   return zones;
 }
 
@@ -247,6 +248,8 @@ export function generateMap(): void {
 
   // ---- Shops (render draws the buildings; we only collide) + pond collider.
   for (const s of SHOP_POSITIONS) add('SHOP', s.position[0], s.position[2], 3, 1, true, 0);
+  add('SHOP', SHRINE_POS[0], SHRINE_POS[2], 2.2, 1, true, 0);
+  add('SHOP', TRAINER_POS[0], TRAINER_POS[2], 2.4, 1, true, 0);
   colliders.push({ x: POND.x, z: POND.z, r: POND.collisionR, blocksProjectiles: false });
 
   // ---- TOWN: well behind the shops, a ring of pots/crates at the outskirts.

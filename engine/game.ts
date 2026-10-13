@@ -64,7 +64,7 @@ export function enterVillage(): void {
   resetSystems();
   world.player.pos.set(0, 0, 2);
   world.village.shopsClosed = false;
-  world.village.discount = 0;
+  useGameStore.getState().rollShopSales();
   villageReady = true;
   events.emit('runEnd', {});
 }
@@ -79,7 +79,6 @@ export function startRun(): void {
   d.phase = 'SIEGE';
   d.phaseT = 0;
   world.village.shopsClosed = true;
-  world.village.discount = 0;
   events.emit('runStart', {});
   events.emit('siegeStart', {});
 }

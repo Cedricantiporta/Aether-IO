@@ -63,8 +63,29 @@ export const RANK_REQ: Record<Rarity, number> = {
 export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Math.max(1, r), 1.35));
 /** Passive perk: +1% gold find per rank, capped at +50%. */
 export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * rank);
-/** Shop price after the respite "thank-you discount". */
-export const shopPrice = (price: number): number => Math.max(1, Math.round(price * (1 - world.village.discount)));
+/** Items each shop can put on sale (potion shop provisions, buyable pets). */
+export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.type === 'CORE' || i.type === 'REVIVE');
+export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly).map((p) => p.id)];
+const pickWeighted = <T,>(opts: [T, number][]): T => {
+  let r = Math.random() * opts.reduce((n, o) => n + o[1], 0);
+  for (const [v, w] of opts) { r -= w; if (r <= 0) return v; }
+  return opts[0][0];
+};
+/** Per shop: 1 item on sale most often, sometimes 2-5, each with its own 10-30% off (weighted low). */
+export function rollSales(): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const ids of SHOP_STOCK_IDS) {
+    if (!ids.length) continue;
+    const n = Math.min(ids.length, pickWeighted<number>([[1, 55], [2, 25], [3, 13], [4, 4], [5, 3]]));
+    const pool = [...ids];
+    for (let i = 0; i < n; i++) out[pool.splice(Math.floor(Math.random() * pool.length), 1)[0]] = pickWeighted<number>([[0.1, 40], [0.15, 25], [0.2, 18], [0.25, 10], [0.3, 7]]);
+  }
+  return out;
+}
+/** Current sale fraction for a shop item (0 when not on sale). */
+export const saleOf = (item: { id: string }): number => useGameStore.getState().shopSales[item.id] ?? 0;
+/** Shop price after the item's random sale. */
+export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   COMMON: COLORS.rarityCommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,
@@ -473,6 +494,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     hero: profile.hero,
     difficulty: profile.difficulty,
     activeShopTab: 'SUPPLIES',
+    shopSales: rollSales(),
     gold: profile.gold,
     gems: profile.gems,
     inventory: startLoadout.inventory,
@@ -575,9 +597,11 @@ export const useGameStore = create<GameState>()((set, get) => {
       set(syncPause(open));
     },
 
+    rollShopSales: () => set({ shopSales: rollSales() }),
+
     openSpecificShop: (tab: ShopTab) => {
       if (!canOpenPanels()) return;
-      if (world.village.shopsClosed && tab !== 'SKILLS') {
+      if (world.village.shopsClosed) {
         notify('Shops are closed during the siege!', 'red', 'WARNING');
         return;
       }
@@ -919,7 +943,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     buyItem: (item, quantity = 1) => {
       const s = get();
-      const total = shopPrice(item.price) * quantity;
+      const total = shopPrice(item) * quantity;
       if (s.gold < total) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
       const toAdd: Item = { ...item, stats: { ...item.stats }, id: uid('buy'), quantity };
       if (!isStackable(item) && quantity > 1) {

@@ -67,7 +67,7 @@ pointer) every frame — the engine never touches the camera.
   and the quest board are open; E / click interacts, F harvests crystal + ore nodes. `world.village.shopsClosed`
   gates shops (`openSpecificShop`). `enterVillage()` / `startRun()` in engine/game.ts.
 * Siege flow (director): SIEGE cutscene (2.5 s, skippable, bell) -> COUNTDOWN -> FIGHT -> REWARD -> RESPITE (20 s,
-  shops reopen, 30% 10% discount, 35% villager gift; none before boss waves). Waves: fixed enemy quota, field
+  shops reopen + random per-item sales re-rolled, 35% villager gift; none before boss waves). Waves: fixed enemy quota, field
   topped up while alive < threshold; kill-all = FAST CLEAR (bonus gold, 35% 4th card); 45 s timer = survived,
   leftovers poof. Boss waves end on boss death.
 * Quests (`quests.ts`): 3 persistent villager quests, progress from engine events, claim draws a replacement.

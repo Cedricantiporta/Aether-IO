@@ -21,8 +21,8 @@ const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED,
 
 /** UI root. pointer-events none so the canvas still receives clicks; panels opt in with .pe */
 export const GameUI: React.FC = () => {
-  const { status, inv, shop, chr } = useGameStore(useShallow((s) => ({
-    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, chr: s.isCharacterSheetOpen,
+  const { status, inv, shop, bagShop, chr } = useGameStore(useShallow((s) => ({
+    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen,
   })));
   const titleDone = useUiStore((s) => s.titleDone);
   const village = status === GameStatus.MENU && titleDone;
@@ -38,7 +38,7 @@ export const GameUI: React.FC = () => {
       {village && <VillageHUD />}
       {inGame && <HUD />}
       <AnimatePresence>
-        {panels && (inv || shop) && <InventoryPanel key="inv" />}
+        {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && <ShopPanel key="shop" />}
         {panels && chr && <CharacterSheet key="chr" />}
       </AnimatePresence>
