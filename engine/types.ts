@@ -17,6 +17,12 @@ export type EnemyKind =
   | 'BOMBER'     // beetle that runs in, fuses (telegraph ring) then explodes (wave 5+)
   | 'BRUTE'      // ogre tank: slow, telegraphed charge dash (wave 6+)
   | 'SPLITTER'   // big slime: on death splits into 3 SLIME (wave 7+)
+  | 'ZOMBIE'     // graveyard: slow tank, grabs (slows player) (wave 3+)
+  | 'WRAITH'     // graveyard/ruins: phases out, drifts through obstacles, lunges (wave 5+)
+  | 'CRYSTAL_GOLEMITE' // crystal grove: shatters into a shard ring on death (wave 4+)
+  | 'BANDIT'     // camp: fast, telegraphed dash-slash (wave 4+)
+  | 'BOAR'       // farm/grove: straight-line charge with knockback (wave 3+)
+  | 'ROCK_CRAB'  // quarry/pond: armoured front, sidesteps (wave 6+)
   | 'BOSS_GOLEM' // boss: ground slams w/ telegraphs, rock rings, charge
   | 'BOSS_LICH'; // boss: bullet-hell spirals, teleport, summons minions
 

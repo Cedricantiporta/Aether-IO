@@ -12,7 +12,7 @@ import { GameStatus } from '../../types';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS, COLORS } from '../../constants';
 import { spawnPickup } from './pickups';
-import { onEnemyDeath } from './enemies';
+import { onEnemyDeath, crabArmor } from './enemies';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
@@ -154,6 +154,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!(amount > 0)) return;
 
   let dealt = amount;
+  if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.shield > 0) {
     if (dealt <= e.shield) { e.shield -= dealt; dealt = 0; }
     else { dealt -= e.shield; e.shield = 0; }

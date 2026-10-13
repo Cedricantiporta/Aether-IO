@@ -4,7 +4,7 @@ import type { Enemy, EnemyKind } from '../engine/types';
 import { GB, TAU, clamp, lerp } from './util';
 import { makeBow } from './weapons';
 
-export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow';
+export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow' | 'ghost';
 export interface Part { geo: BufferGeometry; mat: MatKey }
 export interface ModelDef {
   parts: Part[];
@@ -18,10 +18,11 @@ export class Poser {
   meshes: InstancedMesh[] = [];
   idx = 0;
   glow = 1;                // glow multiplier for 'glow' parts (read by renderer after pose)
+  fade = 1;                // brightness multiplier for 'ghost' (additive) parts: 0 = invisible
   private base = new Matrix4(); private local = new Matrix4(); private out = new Matrix4();
   private q = new Quaternion(); private qb = new Quaternion(); private eul = new Euler(); private p = new Vector3(); private s = new Vector3();
   bx = 0; by = 0; bz = 0; yaw = 0; sc = 1; fx = 1; fy = 1; yOff = 0;
-  begin(x: number, y: number, z: number, yaw: number, scale: number, fx = 1, fy = 1, yOff = 0) { this.bx = x; this.by = y; this.bz = z; this.yaw = yaw; this.sc = scale; this.fx = fx; this.fy = fy; this.yOff = yOff; this.glow = 1; this.body(0, 0, 0, 1, 1); }
+  begin(x: number, y: number, z: number, yaw: number, scale: number, fx = 1, fy = 1, yOff = 0) { this.bx = x; this.by = y; this.bz = z; this.yaw = yaw; this.sc = scale; this.fx = fx; this.fy = fy; this.yOff = yOff; this.glow = 1; this.fade = 1; this.body(0, 0, 0, 1, 1); }
   /** adjust whole-body transform: dy offset, pitch (lean fwd +), roll, horizontal and vertical squash */
   body(dy: number, pitch: number, roll: number, sxz: number, sy: number) {
     this.eul.set(pitch, this.yaw, roll, 'YXZ');
@@ -316,9 +317,200 @@ function brute(): ModelDef {
   };
 }
 
+
+// ================================================================ REGIONAL KINDS ===
+// ----------------------------------------------------------------- ZOMBIE ---
+function zombie(): ModelDef {
+  const skin = '#6f8a5a', skin2 = '#5a7448', rag = '#4a3a2c', dark = '#2a2a1e';
+  const body = new GB([0.8, 1.12]);
+  body.box(0.5, 0.62, 0.3, [0, 1.0, 0], rag); body.sph(0.3, [0, 1.0, 0.04], skin2, [1, 1.1, 0.7], 7);
+  body.box(0.52, 0.12, 0.32, [0, 0.66, 0], dark);
+  body.sph(0.27, [0, 1.52, 0.08], skin, [1, 1.05, 1], 8);
+  body.box(0.28, 0.08, 0.1, [0, 1.38, 0.28], '#3a2a1a'); // slack jaw
+  for (const s of [-1, 1]) { body.sph(0.06, [s * 0.1, 1.56, 0.3], '#e8e0a0', 1, 5); body.sph(0.025, [s * 0.1, 1.56, 0.35], '#101008', 1, 4); }
+  body.box(0.3, 0.05, 0.05, [0, 1.62, 0.31], '#3a4a2a', [0, 0, 0.2]);
+  body.cone(0.05, 0.16, 4, [0.18, 1.8, 0], '#2a3a1a', [0, 0, -0.5]); // tuft
+  const arm = limb(new GB([0.8, 1.1]), 0.62, 0.08, 0.07, skin, skin2, 0.1).build();
+  const leg = limb(new GB([0.8, 1.1]), 0.62, 0.1, 0.08, rag).box(0.14, 0.07, 0.26, [0, -0.62, 0.06], dark).build();
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.03, [s * 0.1, 1.56, 0.36], '#ffe040', 1, 4);
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }],
+    headY: 2.0, shadow: 0.8,
+    pose(e, P, t) {
+      const ph = t * 3.2, k = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : e.state === 'ATTACK' ? 1 : 0;
+      P.body(abs(sin(ph)) * 0.05, 0.1 + k * 0.28, sin(ph) * 0.09, 1, 1);
+      P.part(0, 0, 0, 0);
+      const up = -1.45 * lerp(0.55, 1, k);
+      P.part(1, -0.36, 1.25, 0.02, up + sin(ph) * 0.12, 0, 0.12 + k * 0.1);
+      P.part(2, 0.36, 1.25, 0.02, up - sin(ph) * 0.12, 0, -0.12 - k * 0.1);
+      P.part(3, -0.14, 0.68, 0, -sin(ph) * 0.55); P.part(4, 0.14, 0.68, 0, sin(ph) * 0.55 * 0.9);
+      P.part(5, 0, 0, 0);
+      P.glow = 1.1 + k * 2.5;
+    },
+  };
+}
+
+// ----------------------------------------------------------------- WRAITH ---
+function wraith(): ModelDef {
+  const cloak = '#9bdcff', cloak2 = '#5aa6d8';
+  const body = new GB([0.7, 1.15]);
+  body.cone(0.55, 1.6, 8, [0, 0.9, 0], cloak2);
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; body.cone(0.12, 0.7, 4, [cos(a) * 0.42, 0.2, sin(a) * 0.42], cloak, [0, 0, 0], ); }
+  body.sph(0.3, [0, 1.65, 0], cloak, [1, 1.15, 1], 8);
+  body.cone(0.32, 0.5, 8, [0, 1.95, -0.08], cloak2, [-0.35, 0, 0]);
+  body.sph(0.2, [0, 1.62, 0.14], '#04101a', [1, 1.1, 0.8], 7);
+  const arm = new GB([0.8, 1.1]); arm.cone(0.1, 0.9, 5, [0, -0.4, 0], cloak, [Math.PI, 0, 0]); arm.cone(0.03, 0.2, 4, [0.04, -0.9, 0.04], cloak2, [Math.PI, 0, 0]);
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.045, [s * 0.08, 1.64, 0.26], '#ffffff', [1, 1.4, 0.6], 5);
+  return {
+    parts: [{ geo: body.build(), mat: 'ghost' }, { geo: arm.build(), mat: 'ghost' }, { geo: arm.build(), mat: 'ghost' }, { geo: eyes.build(), mat: 'glow' }],
+    headY: 2.4, shadow: 0.55,
+    pose(e, P, t) {
+      const wind = e.state === 'WINDUP' ? clamp(e.stateT / 0.75, 0, 1) : 0;
+      const lunge = e.state === 'ATTACK' ? 1 : 0;
+      const hov = 0.35 + sin(t * 2.4 + e.id) * 0.12;
+      P.body(hov, 0.1 + lunge * 0.6, sin(t * 1.5) * 0.05, 1 - wind * 0.25, 1 + wind * 0.1 + lunge * 0.15);
+      P.part(0, 0, 0, 0, 0, sin(t * 1.1) * 0.15, 0);
+      const r = 0.7 + lunge * 1.2 + wind * 0.6;
+      P.part(1, -0.38, 1.45, 0.05, -r, 0, 0.35 + sin(t * 2) * 0.1);
+      P.part(2, 0.38, 1.45, 0.05, -r, 0, -0.35 - sin(t * 2) * 0.1);
+      P.part(3, 0, 0, 0);
+      // phase out while winding up (untargetable), solid-ish while lunging
+      P.fade = e.state === 'WINDUP' ? 0.12 + 0.1 * sin(e.stateT * 30) : e.state === 'ATTACK' ? 0.9 : 0.55 + 0.1 * sin(t * 3);
+      P.glow = 0.4 + P.fade * 2;
+    },
+  };
+}
+
+// ------------------------------------------------------- CRYSTAL GOLEMITE ---
+function golemite(): ModelDef {
+  const rock = '#6a5a80', rock2 = '#4a3e60';
+  const body = new GB([0.8, 1.15]);
+  body.ico(0.55, [0, 0.75, 0], rock, [1.05, 0.95, 0.95], 0);
+  body.ico(0.34, [0, 1.35, 0.02], rock2, 1, 0);
+  body.box(0.5, 0.2, 0.4, [0, 0.35, 0], rock2);
+  for (const s of [-1, 1]) { body.ico(0.2, [s * 0.58, 1.0, 0], rock, 1, 0); }
+  const cry = new GB([1, 1.15]);
+  for (let i = 0; i < 7; i++) { const a = i * 2.4; cry.cone(0.1, 0.5 + (i % 3) * 0.14, 5, [cos(a) * 0.38, 1.05 + sin(a * 1.3) * 0.25, sin(a) * 0.38], '#f0a0ff', [sin(a) * 0.9, 0, -cos(a) * 0.9]); }
+  cry.cone(0.14, 0.6, 5, [0, 1.75, 0], '#ffd0ff');
+  const core = new GB([1, 1]).ico(0.2, [0, 0.8, 0.32], '#ff80ff', 1, 0).build();
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.box(0.1, 0.045, 0.03, [s * 0.1, 1.38, 0.3], '#ffffff');
+  const arm = limb(new GB([0.85, 1.1]), 0.5, 0.15, 0.12, rock2).ico(0.17, [0, -0.52, 0], rock, 1, 0).build();
+  const leg = limb(new GB([0.8, 1.1]), 0.36, 0.14, 0.12, rock2).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: cry.build(), mat: 'jelly' }, { geo: core, mat: 'glow' }, { geo: eyes.build(), mat: 'glow' }, { geo: arm, mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.0, shadow: 0.8,
+    pose(e, P, t) {
+      const ph = t * 3.6, low = e.hp < e.maxHp * 0.3 ? 1 : 0;
+      P.body(abs(sin(ph)) * 0.06, 0.05, sin(ph) * 0.07 + low * sin(t * 40) * 0.02, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0, 0, t * 0.2, 0);
+      P.part(2, 0, 0, 0, 0, 0, 0, 1 + 0.15 * sin(t * (4 + low * 14)));
+      P.part(3, 0, 0, 0);
+      P.part(4, -0.66, 1.1, 0, -sin(ph) * 0.5, 0, 0.12); P.part(5, 0.66, 1.1, 0, sin(ph) * 0.5, 0, -0.12);
+      P.part(6, -0.2, 0.4, 0, -sin(ph) * 0.6); P.part(7, 0.2, 0.4, 0, sin(ph) * 0.6);
+      P.glow = 1.3 + low * (1 + sin(t * 30)) * 1.5;
+    },
+  };
+}
+
+// ----------------------------------------------------------------- BANDIT ---
+function bandit(): ModelDef {
+  const cloth = '#7a3a22', skin = '#d0a07a', dark = '#2a1a14', bandana = '#b02a2a';
+  const body = new GB([0.8, 1.1]);
+  body.box(0.48, 0.58, 0.28, [0, 0.98, 0], cloth); body.box(0.5, 0.08, 0.3, [0, 0.72, 0], dark);
+  body.cone(0.34, 0.5, 6, [0, 0.55, 0], '#5a2a18', [Math.PI, 0, 0]);
+  body.sph(0.25, [0, 1.52, 0.03], skin, 1, 8);
+  body.box(0.3, 0.11, 0.3, [0, 1.63, 0.02], bandana); body.box(0.3, 0.14, 0.05, [0, 1.46, 0.2], bandana); // mask
+  body.cone(0.06, 0.25, 4, [-0.18, 1.6, -0.2], bandana, [0.9, 0, 0.3]);
+  for (const s of [-1, 1]) body.sph(0.035, [s * 0.09, 1.56, 0.22], '#101010', 1, 4);
+  body.box(0.5, 0.05, 0.1, [0, 1.15, 0.0], dark, [0, 0, 0.4]); // bandolier
+  const arm = limb(new GB([0.8, 1.1]), 0.5, 0.07, 0.06, cloth, skin, 0.08).build();
+  const blade = limb(new GB([0.8, 1.1]), 0.5, 0.07, 0.06, cloth, skin, 0.08);
+  blade.box(0.05, 0.62, 0.02, [0, -0.85, 0.12], '#d8dce2', [0.3, 0, 0]); blade.box(0.16, 0.04, 0.05, [0, -0.54, 0.06], '#5a4a30', [0.3, 0, 0]);
+  const leg = limb(new GB([0.8, 1.1]), 0.55, 0.09, 0.07, '#3a2a1e').box(0.13, 0.07, 0.24, [0, -0.55, 0.05], dark).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: blade.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 1.9, shadow: 0.6,
+    pose(e, P, t) {
+      const ph = t * 12, wind = e.state === 'WINDUP' ? clamp(e.stateT / 0.5, 0, 1) : 0, dash = e.state === 'ATTACK' ? 1 : 0;
+      P.body(abs(sin(ph)) * 0.08 * (1 - dash), 0.15 + dash * 0.55 - wind * 0.25, sin(ph) * 0.08, 1, 1);
+      P.part(0, 0, 0, 0);
+      P.part(1, -0.32, 1.12, 0, sin(ph) * 0.8 * (1 - dash) + dash * 0.6, 0, 0.1);
+      P.part(2, 0.32, 1.12, 0, -sin(ph) * 0.6 - 0.8 - wind * 1.1 - dash * 0.9, 0, -0.1);
+      P.part(3, -0.12, 0.56, 0, -sin(ph) * 1.0); P.part(4, 0.12, 0.56, 0, sin(ph) * 1.0);
+    },
+  };
+}
+
+// ------------------------------------------------------------------- BOAR ---
+function boar(): ModelDef {
+  const fur = '#6a4428', fur2 = '#4a2e1a', tusk = '#f2ecd8';
+  const body = new GB([0.8, 1.12]);
+  body.sph(0.55, [0, 0.8, -0.1], fur, [0.95, 0.9, 1.45], 9);
+  body.sph(0.5, [0, 0.95, 0.35], fur2, [1.0, 1.0, 0.9], 8); // shoulders
+  body.sph(0.36, [0, 0.82, 0.8], fur, [1, 0.95, 1.05], 8);
+  body.cyl(0.17, 0.2, 0.28, 7, [0, 0.72, 1.12], '#c08a78', [Math.PI / 2, 0, 0]); // snout
+  for (const s of [-1, 1]) {
+    body.cone(0.06, 0.34, 4, [s * 0.18, 0.72, 1.08], tusk, [-0.9, 0, -s * 0.5]);
+    body.cone(0.09, 0.22, 4, [s * 0.2, 1.12, 0.66], fur2, [0, 0, -s * 0.3]);
+    body.sph(0.045, [s * 0.19, 0.94, 0.95], '#ffd24a', 1, 5);
+  }
+  for (let i = 0; i < 6; i++) body.cone(0.05, 0.22, 4, [0, 1.28 - i * 0.04, 0.5 - i * 0.28], fur2, [0.2, 0, 0]); // mane
+  body.cyl(0.03, 0.02, 0.3, 4, [0, 0.95, -0.82], fur2, [-0.9, 0, 0]);
+  const leg = limb(new GB([0.8, 1.1]), 0.5, 0.1, 0.08, fur2).box(0.13, 0.06, 0.16, [0, -0.5, 0.04], '#2a1a10').build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 1.7, shadow: 0.95,
+    pose(e, P, t) {
+      const charge = e.state === 'ATTACK' ? 1 : 0, k = e.state === 'WINDUP' ? clamp(e.stateT / 0.7, 0, 1) : 0;
+      const ph = t * (charge ? 17 : 6);
+      // wind-up: lower head, paw the ground (rear up slightly then dip)
+      P.body(abs(sin(ph)) * (charge ? 0.1 : 0.05) - k * 0.08, 0.1 * charge + 0.18 * k, sin(ph) * 0.03 + sin(t * 60) * 0.02 * k, 1, 1);
+      P.part(0, 0, 0, 0);
+      const sw = charge ? 0.9 : 0.6;
+      P.part(1, -0.28, 0.58, 0.6, sin(ph) * sw - k * 1.0 * abs(sin(t * 14))); P.part(2, 0.28, 0.58, 0.6, -sin(ph) * sw);
+      P.part(3, -0.28, 0.58, -0.6, -sin(ph) * sw); P.part(4, 0.28, 0.58, -0.6, sin(ph) * sw);
+      P.glow = 1 + k * 3;
+    },
+  };
+}
+
+// -------------------------------------------------------------- ROCK CRAB ---
+function crab(): ModelDef {
+  const shell = '#8a93a2', shell2 = '#5c6574', red = '#c0553a';
+  const body = new GB([0.85, 1.12]);
+  body.sph(0.62, [0, 0.5, 0], shell, [1.35, 0.55, 1.0], 9);
+  for (let i = 0; i < 5; i++) { const a = -0.8 + i * 0.4; body.ico(0.16, [sin(a) * 0.55, 0.78, cos(a) * 0.3], shell2, [1, 0.8, 1], 0); }
+  body.ico(0.2, [0.3, 0.88, -0.15], shell2, 1, 0); body.ico(0.16, [-0.35, 0.86, -0.2], shell2, 1, 0);
+  // front armour plate (facing +Z): the shielded side
+  body.box(1.0, 0.5, 0.1, [0, 0.55, 0.62], shell2, [-0.15, 0, 0]);
+  body.box(0.8, 0.08, 0.14, [0, 0.82, 0.62], '#c8ccd6');
+  for (const s of [-1, 1]) { body.cyl(0.03, 0.03, 0.22, 4, [s * 0.2, 0.9, 0.5], red); body.sph(0.06, [s * 0.2, 1.02, 0.5], '#ffe24a', 1, 5); }
+  const claw = new GB([0.85, 1.1]);
+  claw.cyl(0.07, 0.09, 0.45, 5, [0, 0, 0.22], red, [Math.PI / 2, 0, 0]);
+  claw.sph(0.2, [0, 0, 0.55], red, [1.2, 0.8, 1.3], 7); claw.cone(0.09, 0.28, 4, [0.1, 0, 0.8], '#e07858', [Math.PI / 2, 0, 0.2]); claw.cone(0.07, 0.24, 4, [-0.1, 0, 0.78], '#e07858', [Math.PI / 2, 0, -0.2]);
+  const leg = new GB([0.85, 1.1]);
+  leg.cyl(0.045, 0.035, 0.5, 4, [0.25, -0.05, 0], shell2, [0, 0, -1.1]); leg.cyl(0.035, 0.025, 0.4, 4, [0.55, -0.22, 0], shell2, [0, 0, 0.5]);
+  const legG = leg.build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: claw.build(), mat: 'lit2' }, { geo: claw.build(), mat: 'lit2' }, { geo: legG, mat: 'lit2' }, { geo: legG, mat: 'lit2' }, { geo: legG, mat: 'lit2' }, { geo: legG, mat: 'lit2' }, { geo: legG, mat: 'lit2' }, { geo: legG, mat: 'lit2' }],
+    headY: 1.3, shadow: 0.95,
+    pose(e, P, t) {
+      const ph = t * 8;
+      P.body(abs(sin(ph)) * 0.03, 0, sin(ph * 0.5) * 0.03, 1, 1);
+      P.part(0, 0, 0, 0);
+      P.part(1, -0.7, 0.5, 0.35, 0, 0.35 + sin(t * 2) * 0.1, 0); P.part(2, 0.7, 0.5, 0.35, 0, -0.35 - sin(t * 2) * 0.1, 0, -1, 1, 1);
+      for (let i = 0; i < 3; i++) {
+        const z = 0.3 - i * 0.28, w = sin(ph + i * 2.1) * 0.25;
+        P.part(3 + i, 0.5, 0.45, z, 0, w, 0.0);
+        P.part(6 + i, -0.5, 0.45, z, 0, w + 0.0, 0.0, -1, 1, 1);
+      }
+    },
+  };
+}
+
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
-  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute() };
+  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab() };
   return cache;
 }
-export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE'];
+export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB'];

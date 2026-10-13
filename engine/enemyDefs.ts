@@ -55,6 +55,30 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Splitter', hp: 120, speed: 2.6, radius: 1.1, scale: 1.7, contactDamage: 12, projectileDamage: 0,
     xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 0.3,
   },
+  ZOMBIE: {
+    name: 'Zombie', hp: 170, speed: 1.7, radius: 0.85, scale: 1.25, contactDamage: 11, projectileDamage: 0,
+    xp: 14, gold: 4, cost: 4, minWave: 3, weight: 4, color: 0x5f7a4a, knockResist: 0.5,
+  },
+  WRAITH: {
+    name: 'Wraith', hp: 55, speed: 3.6, radius: 0.6, scale: 1.1, contactDamage: 9, projectileDamage: 0,
+    xp: 12, gold: 4, cost: 4, minWave: 5, weight: 3, color: 0x7dd3fc, knockResist: 0.2,
+  },
+  CRYSTAL_GOLEMITE: {
+    name: 'Crystal Golemite', hp: 95, speed: 2.4, radius: 0.8, scale: 1.1, contactDamage: 10, projectileDamage: 9,
+    xp: 12, gold: 5, cost: 4, minWave: 4, weight: 4, color: 0xe879f9, knockResist: 0.4,
+  },
+  BANDIT: {
+    name: 'Bandit', hp: 62, speed: 4.4, radius: 0.6, scale: 1.05, contactDamage: 8, projectileDamage: 0,
+    xp: 9, gold: 6, cost: 3.5, minWave: 4, weight: 4, color: 0xb45309, knockResist: 0,
+  },
+  BOAR: {
+    name: 'Wild Boar', hp: 115, speed: 3.0, radius: 0.95, scale: 1.3, contactDamage: 13, projectileDamage: 0,
+    xp: 12, gold: 3, cost: 4, minWave: 3, weight: 4, color: 0x78350f, knockResist: 0.4,
+  },
+  ROCK_CRAB: {
+    name: 'Rock Crab', hp: 150, speed: 2.1, radius: 0.95, scale: 1.2, contactDamage: 12, projectileDamage: 0,
+    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 0.6,
+  },
   BOSS_GOLEM: {
     name: 'Gorath the Mountain', hp: 1625, speed: 2.8, radius: 2.6, scale: 4, contactDamage: 25, projectileDamage: 18,
     xp: 400, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1,
@@ -79,7 +103,31 @@ export function isBossKind(k: EnemyKind): k is BossKind {
 /** Kinds the director may pick for ordinary spawns. */
 export const SPAWNABLE_KINDS: readonly EnemyKind[] = [
   'SLIME', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'SPLITTER',
+  'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB',
 ];
+
+/**
+ * Regional affinity: spawn-weight multiplier per RegionKind (string key) for the regional kinds.
+ * Unlisted region = 0.3 (still appears, rarely). Generic kinds have no entry (always x1).
+ */
+export const REGION_AFFINITY: Partial<Record<EnemyKind, Record<string, number>>> = {
+  ZOMBIE: { GRAVEYARD: 9, RUINS: 2 },
+  WRAITH: { GRAVEYARD: 7, RUINS: 5 },
+  CRYSTAL_GOLEMITE: { CRYSTAL_GROVE: 10, QUARRY: 2 },
+  BANDIT: { CAMP: 10, FARM: 1.5, RUINS: 1.5 },
+  BOAR: { FARM: 7, GROVE: 7 },
+  ROCK_CRAB: { QUARRY: 10, POND: 8 },
+};
+export const REGION_AFFINITY_OFF = 0.3;
+
+/** Mini-boss definitions (waves 5, 15, 25...), picked by the region nearest the player. */
+export const MINI_BOSSES: Record<string, { kind: EnemyKind; name: string; title: string; regions: string[] }> = {
+  WARDEN: { kind: 'ZOMBIE', name: 'Grave Warden', title: 'Zombie Lord', regions: ['GRAVEYARD', 'RUINS'] },
+  CAPTAIN: { kind: 'BANDIT', name: 'Bandit Captain', title: 'Camp Chief', regions: ['CAMP'] },
+  BEHEMOTH: { kind: 'CRYSTAL_GOLEMITE', name: 'Crystal Behemoth', title: 'Shard Colossus', regions: ['CRYSTAL_GROVE'] },
+  TUSK: { kind: 'BOAR', name: 'Old Tusk', title: 'Terror of the Fields', regions: ['FARM', 'GROVE'] },
+  SHELLBACK: { kind: 'ROCK_CRAB', name: 'Shellback', title: 'Quarry Titan', regions: ['QUARRY', 'POND'] },
+};
 
 /** Weak kinds used for RING encirclements. */
 export const WEAK_KINDS: readonly EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT'];

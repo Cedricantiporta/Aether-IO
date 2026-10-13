@@ -14,7 +14,7 @@ import { world } from '../world';
 import { events } from '../events';
 import type { EnemyKind } from '../types';
 import {
-  ENEMY_DEFS, SPAWNABLE_KINDS, WEAK_KINDS, BOSS_NAMES,
+  ENEMY_DEFS, SPAWNABLE_KINDS, WEAK_KINDS, BOSS_NAMES, REGION_AFFINITY, REGION_AFFINITY_OFF, MINI_BOSSES,
   waveBudget, maxAliveForWave,
 } from '../enemyDefs';
 import { useGameStore, makeItemById } from '../../store';
@@ -22,8 +22,9 @@ import { DIFFICULTY_MODS } from '../../constants';
 import { TOWN_CENTER } from '../world';
 import { spawnPickup } from './pickups';
 import {
-  spawnEnemy, findSpawnPoint, isSpawnable, poofAllEnemies,
+  spawnEnemy, spawnMiniBoss, findSpawnPoint, isSpawnable, poofAllEnemies,
 } from './enemies';
+import { REGIONS } from '../mapgen';
 
 const SIEGE_SECONDS = 2.5;
 const COUNTDOWN_SECONDS = 5;
@@ -43,6 +44,44 @@ let eliteWave = false;
 let elitesPending = 0;
 let eliteAt = 0;
 let topUpBelow = 8;
+let miniWave = false;
+let miniPending = false;
+let miniAt = 0;
+
+/** Region kind containing (x,z) (closest by dist/radius, within 1.25 radii), '' if none. TOWN counts as none. */
+function regionAt(x: number, z: number): string {
+  let best = '';
+  let bestK = 1.25;
+  for (let i = 0; i < REGIONS.length; i++) {
+    const r = REGIONS[i];
+    if (r.kind === 'TOWN') continue;
+    const dx = x - r.x, dz = z - r.z;
+    const k = Math.sqrt(dx * dx + dz * dz) / r.r;
+    if (k < bestK) { bestK = k; best = r.kind; }
+  }
+  return best;
+}
+/** Nearest non-town region regardless of distance. */
+function nearestRegion(x: number, z: number): string {
+  let best = '';
+  let bd = 1e9;
+  for (let i = 0; i < REGIONS.length; i++) {
+    const r = REGIONS[i];
+    if (r.kind === 'TOWN') continue;
+    const dx = x - r.x, dz = z - r.z;
+    const d = Math.sqrt(dx * dx + dz * dz) - r.r;
+    if (d < bd) { bd = d; best = r.kind; }
+  }
+  return best;
+}
+function kindWeight(kind: EnemyKind, regSpawn: string, regPlayer: string): number {
+  const def = ENEMY_DEFS[kind];
+  const aff = REGION_AFFINITY[kind];
+  if (!aff) return def.weight;
+  const a = aff[regSpawn] ?? (regSpawn ? REGION_AFFINITY_OFF : 1);
+  const b = aff[regPlayer] ?? (regPlayer ? REGION_AFFINITY_OFF : 1);
+  return def.weight * Math.max(REGION_AFFINITY_OFF, a * 0.4 + b * 0.6);
+}
 
 export function resetDirector(): void {
   const d = world.director;
@@ -69,6 +108,7 @@ export function resetDirector(): void {
   eliteWave = false;
   elitesPending = 0;
   eliteAt = 0;
+  miniWave = false; miniPending = false; miniAt = 0;
 }
 
 export function updateDirector(dt: number): void {
@@ -188,9 +228,13 @@ function startFight(): void {
   totalBudget = waveBudget(d.wave) * mods.spawn * (bossWave ? 0.5 : 1);
   spent = 0;
   d.budget = totalBudget;
+  miniWave = !bossWave && d.wave % 10 === 5;
+  miniPending = miniWave;
+  miniAt = 4 + Math.random() * 4;
   elitesPending = eliteWave ? 1 + Math.floor(Math.random() * 3) + Math.floor((d.wave - 5) / 15) : 0;
+  if (miniWave && elitesPending > 1) elitesPending = 1;
   eliteAt = 6 + Math.random() * 6;
-  d.quotaTotal = Math.max(bossWave ? 6 : 8, Math.round(totalBudget / avgCost(d.wave))) + elitesPending;
+  d.quotaTotal = Math.max(bossWave ? 6 : 8, Math.round(totalBudget / avgCost(d.wave)) - (miniWave ? 6 : 0)) + elitesPending + (miniWave ? 1 : 0);
   d.quotaSpawned = 0;
   topUpBelow = Math.max(5, Math.min(Math.round(d.maxAlive * 0.35), Math.round(d.quotaTotal * 0.5)));
   d.eliteAnnounced = false;
@@ -246,12 +290,13 @@ function tickFight(dt: number): void {
   runSpawner(dt);
 
   if (elitesPending > 0 && d.waveTime >= eliteAt) spawnEliteSquad();
+  if (miniPending && d.waveTime >= miniAt) spawnMini();
 
   if (bossWave) {
     if (d.waveTime > 2 && bossDefeated()) { d.phase = 'CLEANUP'; d.phaseT = 0; d.budget = 0; }
     return;
   }
-  if (d.quotaSpawned >= d.quotaTotal && elitesPending === 0 && d.aliveCount === 0 && d.waveTime > 1) finishWave(true);
+  if (d.quotaSpawned >= d.quotaTotal && elitesPending === 0 && !miniPending && d.aliveCount === 0 && d.waveTime > 1) finishWave(true);
   else if (d.waveTime >= d.waveDuration) finishWave(false);
 }
 
@@ -259,7 +304,7 @@ function runSpawner(dt: number): void {
   const d = world.director;
   d.spawnT -= dt;
   if (d.spawnT > 0) return;
-  const normalLeft = d.quotaTotal - d.quotaSpawned - elitesPending;
+  const normalLeft = d.quotaTotal - d.quotaSpawned - elitesPending - (miniPending ? 1 : 0);
   if (normalLeft < 1) { d.spawnT = 0.5; return; }
   if (d.aliveCount >= topUpBelow || d.aliveCount >= d.maxAlive - 1) { d.spawnT = 0.35; return; }
   spawnGroup(99);
@@ -267,20 +312,20 @@ function runSpawner(dt: number): void {
   d.spawnT = 0.5 + Math.random() * 0.8;
 }
 
-function pickKind(maxCost: number, weakOnly: boolean, minCost = 0): EnemyKind {
+function pickKind(maxCost: number, weakOnly: boolean, minCost = 0, regSpawn = '', regPlayer = ''): EnemyKind {
   const wave = world.director.wave;
   const pool = weakOnly ? WEAK_KINDS : SPAWNABLE_KINDS;
   let total = 0;
   for (let i = 0; i < pool.length; i++) {
     const def = ENEMY_DEFS[pool[i]];
-    if (def.minWave <= wave && def.cost <= maxCost && def.cost >= minCost) total += def.weight;
+    if (def.minWave <= wave && def.cost <= maxCost && def.cost >= minCost) total += kindWeight(pool[i], regSpawn, regPlayer);
   }
   if (total <= 0) return 'SLIME';
   let r = Math.random() * total;
   for (let i = 0; i < pool.length; i++) {
     const def = ENEMY_DEFS[pool[i]];
     if (def.minWave > wave || def.cost > maxCost || def.cost < minCost) continue;
-    r -= def.weight;
+    r -= kindWeight(pool[i], regSpawn, regPlayer);
     if (r <= 0) return pool[i];
   }
   return 'SLIME';
@@ -298,10 +343,15 @@ function spawnUnit(kind: EnemyKind, x: number, z: number): boolean {
 /** Spawns one group of at most `maxCost` points; returns the points spent. */
 function spawnGroup(maxCost: number): number {
   const d = world.director;
-  const room = Math.min(d.maxAlive - d.aliveCount, d.quotaTotal - d.quotaSpawned - elitesPending);
+  const room = Math.min(d.maxAlive - d.aliveCount, d.quotaTotal - d.quotaSpawned - elitesPending - (miniPending ? 1 : 0));
   const roll = Math.random();
   const ring = d.wave >= 4 && room >= 8 && roll < 0.12;
-  const kind = pickKind(maxCost, ring);
+  const regPlayer = nearestRegionIfNear(world.player.pos.x, world.player.pos.z);
+  let kind: EnemyKind;
+  let haveSpawn = false;
+  if (!ring) haveSpawn = findSpawnPoint(26, 34, centerV, Math.random() * Math.PI * 2);
+  if (!ring && !haveSpawn) return 0;
+  kind = pickKind(maxCost, ring, 0, haveSpawn ? regionAt(centerV.x, centerV.z) : '', regPlayer);
   const cost = ENEMY_DEFS[kind].cost;
   let spawned = 0;
 
@@ -327,7 +377,6 @@ function spawnGroup(maxCost: number): number {
   count = Math.max(1, Math.min(count, Math.floor(maxCost / cost), room));
   if (count < 1 || room < 1) return 0;
 
-  if (!findSpawnPoint(26, 34, centerV, Math.random() * Math.PI * 2)) return 0;
   for (let i = 0; i < count; i++) {
     let x = centerV.x;
     let z = centerV.z;
@@ -341,6 +390,26 @@ function spawnGroup(maxCost: number): number {
     if (spawnUnit(kind, x, z)) spawned++;
   }
   return spawned * cost;
+}
+
+function nearestRegionIfNear(x: number, z: number): string {
+  return regionAt(x, z);
+}
+
+function spawnMini(): void {
+  const d = world.director;
+  miniPending = false;
+  const reg = nearestRegion(world.player.pos.x, world.player.pos.z);
+  const keys = Object.keys(MINI_BOSSES);
+  let def = MINI_BOSSES[keys[Math.floor(Math.random() * keys.length)]];
+  for (let i = 0; i < keys.length; i++) if (MINI_BOSSES[keys[i]].regions.indexOf(reg) >= 0) { def = MINI_BOSSES[keys[i]]; break; }
+  if (!findSpawnPoint(22, 28, spawnV, Math.random() * Math.PI * 2)) spawnV.set(world.player.pos.x, 0, world.player.pos.z - 22);
+  const e = spawnMiniBoss(def.kind, spawnV, def.name, def.title);
+  if (!e) return;
+  d.quotaSpawned++;
+  events.emit('bossSpawn', { name: def.name, title: def.title });
+  events.emit('shake', { amount: 0.3 });
+  useGameStore.getState().addNotification(`${def.name}, the ${def.title}, stalks the wave!`, '#f59e0b', 'BOSS');
 }
 
 function spawnEliteSquad(): void {
@@ -370,6 +439,7 @@ function tickCleanup(): void {
 /** fast = every quota enemy was killed before the timer ran out. */
 function finishWave(fast: boolean): void {
   const d = world.director;
+  world.boss.active = false;
   poofAllEnemies(); // leftovers flee / poof (no loot, no xp)
   const eps = world.enemyProjectiles;
   for (let i = 0; i < eps.length; i++) eps[i].active = false;

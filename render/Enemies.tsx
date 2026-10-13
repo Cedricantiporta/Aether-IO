@@ -52,7 +52,7 @@ void main(){ float fill = vD.x; float kind = vD.y; vec2 p = vUv;
 #include <colorspace_fragment>
 }`;
 
-interface KindRT { def: ModelDef; meshes: InstancedMesh[]; mats: ('lit' | 'lit2' | 'jelly' | 'glow')[]; flash: InstancedBufferAttribute; }
+interface KindRT { def: ModelDef; meshes: InstancedMesh[]; mats: ('lit' | 'lit2' | 'jelly' | 'glow' | 'ghost')[]; flash: InstancedBufferAttribute; }
 
 export function Enemies() {
   const status = useGameStore((s) => s.status);
@@ -62,7 +62,8 @@ export function Enemies() {
     const lit2 = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, side: DoubleSide }), 0.4);
     const jelly = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.2, metalness: 0.0, transparent: true, opacity: 0.8, depthWrite: false }), 0.7);
     const glow = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
-    const mats = { lit, lit2, jelly, glow };
+    const ghost = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
+    const mats = { lit, lit2, jelly, glow, ghost };
     const group = new Group();
     const kinds: Partial<Record<EnemyKind, KindRT>> = {};
     const poser = new Poser();
@@ -70,12 +71,12 @@ export function Enemies() {
       const def = models[k]!;
       const flash = new InstancedBufferAttribute(new Float32Array(MAX), 1); flash.setUsage(DynamicDrawUsage);
       const meshes = def.parts.map((p) => {
-        if (p.mat !== 'glow') p.geo.setAttribute('aFlash', flash);
+        if (p.mat !== 'glow' && p.mat !== 'ghost') p.geo.setAttribute('aFlash', flash);
         const m = new InstancedMesh(p.geo, (mats as any)[p.mat] as Material, MAX);
         m.instanceMatrix.setUsage(DynamicDrawUsage);
-        m.count = 0; m.frustumCulled = false; m.castShadow = false; m.receiveShadow = p.mat !== 'glow';
+        m.count = 0; m.frustumCulled = false; m.castShadow = false; m.receiveShadow = p.mat !== 'glow' && p.mat !== 'ghost';
         m.setColorAt(0, _c.setRGB(1, 1, 1)); m.instanceColor!.setUsage(DynamicDrawUsage);
-        if (p.mat === 'jelly') m.renderOrder = 3;
+        if (p.mat === 'jelly' || p.mat === 'ghost') m.renderOrder = 3;
         group.add(m);
         return m;
       });
@@ -165,6 +166,7 @@ export function Enemies() {
       const gl = poser.glow;
       for (let m = 0; m < K.meshes.length; m++) {
         if (K.mats[m] === 'glow') K.meshes[m].setColorAt(idx, _c.setRGB(gl * (0.7 + 0.3 * r), gl * (0.7 + 0.3 * g), gl * (0.7 + 0.3 * b)));
+        else if (K.mats[m] === 'ghost') { const f = poser.fade * alpha; K.meshes[m].setColorAt(idx, _c.setRGB(r * f, g * f, b * f)); }
         else K.meshes[m].setColorAt(idx, _c.setRGB(r, g, b));
       }
 

@@ -35,6 +35,9 @@ import { damagePlayer, damageEnemy, killEnemy } from './combat';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS } from '../../constants';
 import { updateBoss } from './bosses';
+import { spawnPickup } from './pickups';
+import { dropLoot } from './loot';
+import '../lootExtra';
 import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
 
 // ------------------------------------------------------------ tuning --------
@@ -48,6 +51,13 @@ const ARCHER = { minR: 12, maxR: 18, windup: 0.6, recover: 0.5, cd: 2.4, arrowSp
 const CULTIST = { minR: 10, maxR: 14, windup: 0.8, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
 const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
 const BRUTE = { cd: 5, windup: 0.9, recover: 0.8, lineWidth: 2.6, chargeMul: 4, minRange: 4, maxRange: 16 };
+const BOAR = { cd: 4, windup: 0.7, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6, minRange: 5, maxRange: 18 };
+const ZOMBIE = { grabR: 2.3, windup: 0.6, lunge: 0.3, recover: 0.7, cd: 2.6 };
+const WRAITH = { windup: 0.75, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
+const BANDIT = { windup: 0.5, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6 };
+const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
+const MINI = { hpMul: 8, scaleMul: 1.5, slamCd: 6, slamWindup: 0.9, slamR: 5.5, flag: 7, slamFlag: 8 };
+const SHARDS = 8;
 
 // ------------------------------------------------------------ scratch -------
 const contactCd = new Float32Array(MAX_ENEMIES);
@@ -90,6 +100,7 @@ export function requestYaw(yaw: number): void {
 /** True while an enemy must not be hit by player attacks (kept out of enemyGrid). */
 export function isUntargetable(e: Enemy): boolean {
   if (e.state === 'SPAWN') return true;
+  if (e.kind === 'WRAITH') return e.state === 'WINDUP';
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
 
@@ -216,6 +227,24 @@ export function spawnEnemy(
   return e;
 }
 
+/** Wave 5/15/25... mini-boss: elite-like unique (8x hp, +50% size) of a regional kind; drives world.boss HUD. */
+export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
+  const e = spawnEnemy(kind, pos, { elite: true });
+  if (!e) return null;
+  e.maxHp = Math.round(e.maxHp / 4 * MINI.hpMul);
+  e.hp = e.maxHp;
+  e.shield = 0;
+  e.affix = 'NONE';
+  e.radius *= MINI.scaleMul; e.scale *= MINI.scaleMul;
+  e.xp *= 4; e.gold *= 4;
+  e.pattern = MINI.flag;
+  e.angle = MINI.slamCd * 0.7;
+  e.attackCd = Math.max(e.attackCd, 1.5);
+  const b = world.boss;
+  b.active = true; b.name = name; b.title = title; b.hp = e.hp; b.maxHp = e.maxHp; b.phase = 0;
+  return e;
+}
+
 /** Soft-despawn every living enemy with a death poof (no loot, no xp). */
 export function poofAllEnemies(): void {
   const list = world.enemies;
@@ -257,6 +286,32 @@ export function onEnemyDeath(e: Enemy): void {
     }
   } else if (e.affix === 'VOLATILE') {
     spawnTelegraphCircle(e.pos.x, e.pos.z, 4, 1.0, hitBase * 1.2, 0xf97316);
+  }
+
+  if (e.kind === 'CRYSTAL_GOLEMITE') {
+    const off = Math.random() * Math.PI;
+    const n = e.pattern === MINI.flag || e.pattern === MINI.slamFlag ? SHARDS * 2 : SHARDS;
+    for (let i = 0; i < n; i++) {
+      const a = off + (i / n) * Math.PI * 2;
+      tmpV.set(Math.sin(a), 0, Math.cos(a));
+      fireEnemyProjectile(e.pos, tmpV, 'ARROW', 9, e.projectileDamage, { life: 1.6, radius: 0.3 });
+    }
+    events.emit('explosion', { pos: e.pos, radius: 2.5, color: 0xe879f9 });
+  }
+
+  if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {
+    world.boss.active = false;
+    world.boss.hp = 0;
+    events.emit('shake', { amount: 0.6 });
+    events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: ENEMY_DEFS[e.kind].color });
+    const st = useGameStore.getState();
+    const luck = 2 * (1 + d.wave * 0.02);
+    dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
+    dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
+    dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
+    const item = st.rollItemDrop(d.wave >= 25 ? 'LEGENDARY' : d.wave >= 15 ? 'EPIC' : 'RARE');
+    if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
+    for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); }
   }
 
   if (e.kind === 'SPLITTER') {
@@ -395,7 +450,8 @@ function aiBomber(e: Enemy): void {
   }
 }
 
-function aiBrute(e: Enemy): void {
+type ChargeP = typeof BRUTE;
+function aiBrute(e: Enemy, BRUTE: ChargeP): void {
   const inv = 1 / Math.max(tdist, 0.001);
   const chargeSpeed = e.speed * BRUTE.chargeMul;
   switch (e.state) {
@@ -431,14 +487,149 @@ function aiBrute(e: Enemy): void {
   }
 }
 
+function aiZombie(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= ZOMBIE.windup) { e.dir.set(tdx * inv, 0, tdz * inv); enter(e, 'ATTACK'); }
+      return;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, e.speed * 3.2);
+      if (e.stateT >= ZOMBIE.lunge) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= ZOMBIE.recover) { e.attackCd = ZOMBIE.cd; enter(e, 'CHASE'); }
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, tdx * inv, tdz * inv, e.speed);
+      if (e.attackCd <= 0 && tdist < ZOMBIE.grabR + e.radius) {
+        spawnTelegraphCircle(e.pos.x + tdx * inv * 1.2, e.pos.z + tdz * inv * 1.2, 1.9, ZOMBIE.windup, 0, 0x84cc16);
+        enter(e, 'WINDUP'); stop(e);
+      }
+  }
+}
+
+function aiWraith(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP': // phased out (untargetable), aiming
+      stop(e);
+      e.dir.set(tdx * inv, 0, tdz * inv);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= WRAITH.windup) enter(e, 'ATTACK');
+      return;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, e.speed * WRAITH.lungeMul);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= WRAITH.lunge) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= WRAITH.recover) { e.attackCd = WRAITH.cd * (0.8 + Math.random() * 0.5); enter(e, 'CHASE'); }
+      return;
+    default: {
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      const a = Math.atan2(tdx * inv, tdz * inv) + Math.sin(e.animT * 1.6 + e.id) * 0.5;
+      setVel(e, Math.sin(a), Math.cos(a), e.speed);
+      if (e.attackCd <= 0 && tdist < WRAITH.range && tdist > 3) {
+        const len = e.speed * WRAITH.lungeMul * WRAITH.lunge + e.radius;
+        spawnTelegraphLine(e.pos.x, e.pos.z, tdx * inv, tdz * inv, len, 1.5, WRAITH.windup, 0x7dd3fc);
+        enter(e, 'WINDUP'); stop(e);
+      }
+    }
+  }
+}
+
+function aiBandit(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= BANDIT.windup) enter(e, 'ATTACK');
+      return;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, BANDIT.dashSpeed);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= BANDIT.dash) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= BANDIT.recover) { e.attackCd = BANDIT.cd * (0.85 + Math.random() * 0.4); enter(e, 'CHASE'); }
+      return;
+    default: {
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      const s = (e.id & 1) === 0 ? 1 : -1;
+      const w = tdist < 9 ? 0.6 : 0.15; // circle-strafe when close
+      setVel(e, tdx * inv + tdz * inv * s * w, tdz * inv - tdx * inv * s * w, e.speed);
+      if (e.attackCd <= 0 && tdist < BANDIT.range && tdist > 2.2) {
+        e.dir.set(tdx * inv, 0, tdz * inv);
+        spawnTelegraphLine(e.pos.x, e.pos.z, e.dir.x, e.dir.z, BANDIT.dashSpeed * BANDIT.dash + e.radius + 1.5, BANDIT.lineW, BANDIT.windup, 0xef4444);
+        enter(e, 'WINDUP'); stop(e);
+      }
+    }
+  }
+}
+
+function aiGolemite(e: Enemy): void {
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  const inv = 1 / Math.max(tdist, 0.001);
+  setVel(e, tdx * inv, tdz * inv, e.speed * (0.75 + 0.25 * Math.sin(e.animT * 3))); // lumbering gait
+}
+
+function aiCrab(e: Enemy): void {
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  // sidestep: crabs move perpendicular, flipping direction every ~2.2 s, closing in slowly
+  const s = Math.sin(e.animT * 2.85 + e.id) >= 0 ? 1 : -1;
+  const adv = tdist > 3 ? 0.55 : 0.1;
+  setVel(e, uz * s * 0.85 + ux * adv, -ux * s * 0.85 + uz * adv, e.speed);
+}
+
+/** Rock crab: damage from the front arc is reduced. Called by combat.damageEnemy (DoTs ignore armour). */
+export function crabArmor(e: Enemy, amount: number): number {
+  const dx = world.player.pos.x - e.pos.x;
+  const dz = world.player.pos.z - e.pos.z;
+  const d = Math.sqrt(dx * dx + dz * dz) || 1;
+  const dot = (dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / d;
+  return dot > CRAB.frontCos ? amount * CRAB.frontMul : amount;
+}
+
+/** Mini-boss second pattern: ground slam with a big telegraph circle. */
+function miniSlam(e: Enemy): boolean {
+  if (e.pattern === MINI.slamFlag) {
+    stop(e);
+    if (e.stateT >= MINI.slamWindup) {
+      events.emit('shockwave', { pos: e.pos, radius: MINI.slamR, color: 0xfbbf24 });
+      events.emit('shake', { amount: 0.45 });
+      e.pattern = MINI.flag; e.angle = MINI.slamCd * (0.8 + Math.random() * 0.4);
+      enter(e, 'CHASE');
+    }
+    return true;
+  }
+  if (e.angle > 0) e.angle -= frameDt;
+  else if (tdist < MINI.slamR + 3 && (e.state === 'CHASE' || e.state === 'KITE')) {
+    spawnTelegraphCircle(e.pos.x, e.pos.z, MINI.slamR, MINI.slamWindup, e.contactDamage * 2, 0xfbbf24);
+    e.pattern = MINI.slamFlag; enter(e, 'WINDUP'); stop(e);
+    return true;
+  }
+  return false;
+}
+
 function runAI(e: Enemy): void {
   if (e.state === 'SPAWN') {
     stop(e);
     if (e.stateT >= (e.boss ? BOSS_SPAWN_TIME : SPAWN_TIME)) {
       enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' ? 'KITE' : 'CHASE');
+      e.attackCd = Math.max(e.attackCd, 0.6);
     }
     return;
   }
+  if ((e.pattern === MINI.flag || e.pattern === MINI.slamFlag) && miniSlam(e)) return;
   switch (e.kind) {
     case 'SLIME':
     case 'SPLITTER': aiChaser(e, true); break;
@@ -447,7 +638,13 @@ function runAI(e: Enemy): void {
     case 'SKELETON_ARCHER': aiArcher(e); break;
     case 'CULTIST': aiCultist(e); break;
     case 'BOMBER': aiBomber(e); break;
-    case 'BRUTE': aiBrute(e); break;
+    case 'BRUTE': aiBrute(e, BRUTE); break;
+    case 'BOAR': aiBrute(e, BOAR); break;
+    case 'ZOMBIE': aiZombie(e); break;
+    case 'WRAITH': aiWraith(e); break;
+    case 'BANDIT': aiBandit(e); break;
+    case 'CRYSTAL_GOLEMITE': aiGolemite(e); break;
+    case 'ROCK_CRAB': aiCrab(e); break;
     case 'BOSS_GOLEM':
     case 'BOSS_LICH': break; // driven by updateBoss() from updateEnemy()
   }
@@ -506,7 +703,13 @@ function contactHit(e: Enemy, locked: boolean): void {
   if (dx * dx + dz * dz >= r * r) return;
   const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1);
   contactCd[e.id] = CONTACT_CD;
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL' });
+  const grab = e.kind === 'ZOMBIE';
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined });
+  if (e.kind === 'BOAR' && e.state === 'ATTACK') {
+    const k = 3.2 / Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
+    world.player.pos.x += dx * k; world.player.pos.z += dz * k; // knockback shove
+    world.player.slowT = Math.max(world.player.slowT, 0.6);
+  }
   if (e.affix === 'VAMPIRIC') e.hp = Math.min(e.maxHp, e.hp + dmg * 0.2);
   if (e.kind === 'BAT') enter(e, 'RECOVER');
 }
@@ -549,6 +752,7 @@ function updateEnemy(e: Enemy): void {
   const locked = e.freezeT > 0 || e.stunT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz);
+  if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { const b = world.boss; b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
   if (!locked || fuseBurning) {
     e.stateT += dt;
     if (e.attackCd > 0) e.attackCd -= dt;
@@ -570,7 +774,7 @@ function updateEnemy(e: Enemy): void {
 
   // ---- collisions
   if (!e.boss) separate(e);
-  if (e.kind !== 'BAT') pushOutOfObstacles(e);
+  if (e.kind !== 'BAT' && e.kind !== 'WRAITH') pushOutOfObstacles(e);
 
   const ew = player.earthwall;
   if (ew.active && !e.boss) {
@@ -597,7 +801,7 @@ function updateEnemy(e: Enemy): void {
 
   // ---- facing
   const diff = wrapPi(desiredYaw - e.facing);
-  e.facing = wrapPi(e.facing + diff * Math.min(1, 12 * dt));
+  e.facing = wrapPi(e.facing + diff * Math.min(1, (e.kind === 'ROCK_CRAB' ? CRAB.turn : 12) * dt));
 
   // ---- contact damage
   contactHit(e, locked);
