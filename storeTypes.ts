@@ -138,7 +138,7 @@ export interface GameState {
   selectUpgrade: (u: Upgrade) => void;// applies card, status = PLAYING
   upgradeSkill: (k: keyof SkillLevels) => void; // spend SP (skills tab)
   endRun: (summary: Omit<RunSummary, 'hero' | 'difficulty' | 'cp' | 'waveGoldBonus' | 'level' | 'rankXpGained' | 'rankUps' | 'rank'>) => void; // GAME_OVER + stats
-  getManaCost: (skill: keyof SkillLevels | 'dash') => number; // already includes wizard x1.3
+  getManaCost: (skill: keyof SkillLevels | 'q' | 'r' | 'e' | 'dash') => number; // already includes wizard x1.3
 
   // items
   addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full
