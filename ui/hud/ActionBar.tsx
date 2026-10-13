@@ -21,8 +21,8 @@ export const ActionBar: React.FC = () => {
   const { hero, skillLevels } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels })));
   const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4'), s.getManaCost('dash')] as const));
   const cdr = useGameStore((s) => s.stats.cooldownReduction);
-  const hpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.id.startsWith('potion_hp') ? n + (i.quantity || 1) : n), 0));
-  const mpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.id.startsWith('potion_mana') ? n + (i.quantity || 1) : n), 0));
+  const hpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Health') ? n + (i.quantity || 1) : n), 0));
+  const mpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0));
   const dCost = costs[4];
   const p = world.player;
 
