@@ -10,14 +10,14 @@ import type {
 } from './types';
 import { SpatialGrid } from './grid';
 
-export const ARENA_RADIUS = 68;        // playable radius (irregular edge is visual)
+export const ARENA_RADIUS = 100;        // playable radius (irregular edge is visual)
 export const TOWN_CENTER = new Vector3(0, 0, -20); // shops cluster around here
 export const MAX_ENEMIES = 400;
 export const MAX_PROJECTILES = 900;
 export const MAX_ENEMY_PROJECTILES = 600;
-export const MAX_ZONES = 96;
+export const MAX_ZONES = 192;
 export const MAX_PICKUPS = 500;
-export const MAX_CRATES = 32;
+export const MAX_CRATES = 96;
 
 const v = () => new Vector3();
 
@@ -49,6 +49,7 @@ function makeZone(id: number): Zone {
   return {
     id, active: false, kind: 'FIRE', hostile: false, pos: v(), dir: v(), radius: 1, length: 0,
     life: 0, maxLife: 1, damage: 0, tickT: 0, maxPull: 0, color: 0xffffff,
+    permanent: false, period: 0, activeFor: 0,
   };
 }
 
@@ -149,6 +150,7 @@ export function allocZone(): Zone | null {
   const z = grab(world.zones, 'z');
   if (!z) return null;
   z.tickT = 0; z.maxPull = 0; z.length = 0; z.dir.set(0, 0, 1); z.hostile = false;
+  z.permanent = false; z.period = 0; z.activeFor = 0;
   return z;
 }
 

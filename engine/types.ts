@@ -131,7 +131,11 @@ export type ZoneKind =
   | 'TELEGRAPH_CIRCLE'  // hostile: fills up, damages player at end (boss slam, bomber)
   | 'TELEGRAPH_LINE'    // hostile: charge lane warning (dir + length + width)
   | 'POISON_POOL'       // hostile: dps while standing in it
-  | 'SHOCKWAVE';        // visual-only expanding ring (stomp, barrier)
+  | 'SHOCKWAVE'         // visual-only expanding ring (stomp, barrier)
+  // ---- environmental hazards: affect BOTH player and enemies (ignore `hostile`)
+  | 'PUDDLE'            // shallow water: slows anything inside (player 35%, enemies 35%); fire zones touching it are extinguished
+  | 'GAS'               // poison gas cloud: dps + POISON to player & enemies. Vents pulse: active while (world.time % period) < activeFor
+  | 'WILDFIRE';         // burning ground: dps + BURN to player & enemies; spreads from explosive barrels, burns out after life
 
 export interface Zone {
   id: number;
@@ -148,6 +152,9 @@ export interface Zone {
   tickT: number;
   maxPull: number;       // BLACKHOLE
   color: number;         // hex for render tint
+  permanent: boolean;    // map hazard placed by mapgen: never expires (life ignored)
+  period: number;        // GAS vents: pulse cycle length (s); 0 = always on
+  activeFor: number;     // GAS vents: seconds active per cycle
 }
 
 // ---------------------------------------------------------------- pickups --
@@ -166,7 +173,8 @@ export interface Pickup {
 }
 
 // ----------------------------------------------------------- world objects --
-export type ObstacleKind = 'TREE' | 'PINE' | 'ROCK' | 'HOUSE' | 'FENCE' | 'RUIN' | 'SHOP';
+export type ObstacleKind = 'TREE' | 'PINE' | 'ROCK' | 'HOUSE' | 'FENCE' | 'RUIN' | 'SHOP'
+  | 'STUMP' | 'BOULDER' | 'WELL' | 'STATUE' | 'TENT' | 'LOG' | 'CRYSTAL_SPIRE' | 'WINDMILL';
 
 export interface Obstacle {
   id: number;
@@ -178,10 +186,22 @@ export interface Obstacle {
   blocksProjectiles: boolean;
 }
 
+// Destructible props. Variety pass: each kind has its own look, hp and loot table.
+export type CrateKind =
+  | 'CRATE'            // wooden crate: xp + chance gold/item
+  | 'BARREL'           // wooden barrel: xp + gold
+  | 'CHEST'            // treasure chest (rare): guaranteed item + gold burst
+  | 'POT'              // clay pot (1 hit, clusters of 3-5): small gold / xp / heart
+  | 'HAY'              // hay bale (farm area): xp, bursts straw
+  | 'CRYSTAL'          // aether crystal cluster (glowing): gems + big xp
+  | 'EXPLOSIVE_BARREL' // red powder keg: explodes (r 6) damaging ENEMIES when broken
+  | 'GRAVE'            // cracked tombstone (graveyard): xp, may release a bat swarm
+  | 'CART';            // broken merchant cart (high hp): gold shower + item chance
+
 export interface Crate {
   id: number;
   active: boolean;
-  kind: 'CRATE' | 'BARREL' | 'CHEST';
+  kind: CrateKind;
   pos: Vector3;
   hp: number;
   maxHp: number;
