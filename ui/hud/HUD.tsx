@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayerPlate, Currency, MenuButtons } from './TopBars';
 import { RoomPlaque, RoomFade, BiomeChoice } from './WaveInfo';
 import { BossBar } from './BossBar';
+import { TargetFrame } from './TargetFrame';
 import { Minimap } from './Minimap';
 import { ActionBar } from './ActionBar';
 import { Announcer, Vignettes } from './Overlays';
@@ -29,6 +30,7 @@ export const HUD: React.FC = () => {
       <div className="hud-tc">
         <RoomPlaque />
         <BossBar />
+        <TargetFrame />
       </div>
 
       <div className="hud-tr">

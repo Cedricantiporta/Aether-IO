@@ -6,6 +6,7 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { uiOverlayOpen, closeTopOverlay, useUiStore } from '../ui/uiStore';
 import { aimState, cancelAim } from './systems/aim';
+import { requestClick } from './systems/target';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
@@ -64,6 +65,20 @@ export function installInput(): () => void {
     inp.pointerNdc.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
   const onMouseDown = (e: MouseEvent) => { if ((e.target as HTMLElement | null)?.closest?.('.pe')) return; /* UI panels never fire skills */ if (e.button === 0) inp.mouseDown = true; else if (e.button === 2 && aimState.active) { cancelAim(); inp.cancelAim = true; } };
+  // click / tap = select a target (processed by CameraRig). Drags and holds are not clicks; UI (.pe) is ignored.
+  const downs: Record<number, { x: number; y: number; t: number }> = {};
+  const onPtrDown = (e: PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if ((e.target as HTMLElement | null)?.closest?.('.pe')) return;
+    downs[e.pointerId] = { x: e.clientX, y: e.clientY, t: performance.now() };
+  };
+  const onPtrUp = (e: PointerEvent) => {
+    const d = downs[e.pointerId]; if (!d) return;
+    delete downs[e.pointerId];
+    if (aimState.active || performance.now() - d.t > 300 || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
+    requestClick(e.clientX, e.clientY);
+  };
+  const onPtrCancel = (e: PointerEvent) => { delete downs[e.pointerId]; };
   const onContext = (e: Event) => { if (aimState.active) e.preventDefault(); };
   const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; };
 
@@ -71,6 +86,9 @@ export function installInput(): () => void {
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('pointerdown', onPtrDown);
+  window.addEventListener('pointerup', onPtrUp);
+  window.addEventListener('pointercancel', onPtrCancel);
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('contextmenu', onContext);
   window.addEventListener('blur', clearAll);
@@ -80,6 +98,9 @@ export function installInput(): () => void {
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('mousedown', onMouseDown);
+    window.removeEventListener('pointerdown', onPtrDown);
+    window.removeEventListener('pointerup', onPtrUp);
+    window.removeEventListener('pointercancel', onPtrCancel);
     window.removeEventListener('mouseup', onMouseUp);
     window.removeEventListener('contextmenu', onContext);
     window.removeEventListener('blur', clearAll);
