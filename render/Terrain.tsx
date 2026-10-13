@@ -72,7 +72,7 @@ function detailTexture() {
 
 // Ground + windowed grass. The ground grid doubles as a "mask" texture (rgb = grass tint, a = density) that the
 // grass vertex shader samples, so grass can wrap endlessly around the player over a huge map with a fixed instance count.
-function GroundAndGrass({ q }: { q: QualityCfg }) {
+function Ground({ q }: { q: QualityCfg }) {
   const { geo, mat, mask } = useMemo(() => {
     const seg = q.name === 'LOW' ? 120 : 180;
     const S = GROUND_SIZE, cell = S / seg, n = seg + 1;
@@ -116,94 +116,56 @@ function GroundAndGrass({ q }: { q: QualityCfg }) {
   return (
     <>
       <mesh geometry={geo} material={mat} receiveShadow />
-      <Grass q={q} mask={mask} />
     </>
   );
 }
 
-// ------------------------------------------------------------------- grass ---
-// Soft rounded grass mounds instead of spiky blades: smooth normals and a gentle base->top gradient that starts
-// at the ground colour, so the field reads as lush, painterly turf rather than noisy speckles. ~18 tris per mound.
-function clumpGeometry() {
-  const pos: number[] = [], col: number[] = [], nrm: number[] = [], idx: number[] = [];
-  const SEG = 7, RINGS = [[0, 1.0], [0.55, 0.78], [0.88, 0.42]] as const; // [height t, radius]
-  const R = 0.3, H = 0.17;
-  for (let r = 0; r < RINGS.length; r++) {
-    const [t, rr] = RINGS[r];
-    for (let i = 0; i < SEG; i++) {
-      const a = (i / SEG) * TAU + r * 0.35;
-      const x = Math.cos(a) * rr * R, z = Math.sin(a) * rr * R, y = t * H;
-      pos.push(x, y, z);
-      const nx = Math.cos(a) * rr, ny = 0.6 + t * 1.2, nz = Math.sin(a) * rr, nl = Math.hypot(nx, ny, nz);
-      nrm.push(nx / nl, ny / nl, nz / nl);
-      const shade = 0.58 + t * 0.16; col.push(shade, shade, shade);
-    }
-  }
-  const apex = pos.length / 3;
-  pos.push(0, H, 0); nrm.push(0, 1, 0); col.push(0.76, 0.77, 0.72);
-  for (let r = 0; r < RINGS.length - 1; r++) for (let i = 0; i < SEG; i++) {
-    const a0 = r * SEG + i, a1 = r * SEG + ((i + 1) % SEG), b0 = a0 + SEG, b1 = a1 + SEG;
-    idx.push(a0, b0, a1, a1, b0, b1);
-  }
-  const top = (RINGS.length - 1) * SEG;
-  for (let i = 0; i < SEG; i++) idx.push(top + i, apex, top + ((i + 1) % SEG));
-  const g = new BufferGeometry();
-  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new Float32BufferAttribute(col, 3));
-  g.setAttribute('normal', new Float32BufferAttribute(nrm, 3));
-  g.setIndex(idx);
-  return g;
-}
-
-function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
-  const geo = useMemo(clumpGeometry, []);
-  const R = q.name === 'LOW' ? 27 : q.name === 'MEDIUM' ? 33 : 38;
-  const mat = useMemo(() => {
-    const m = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
-    m.onBeforeCompile = (sh) => {
-      sh.uniforms.uTime = wind.uTime; sh.uniforms.uPlayer = wind.uPlayer;
-      sh.uniforms.uMask = { value: mask }; sh.uniforms.uHalf = { value: GROUND_SIZE / 2 };
-      sh.uniforms.uW = { value: R * 2 }; sh.uniforms.uR = { value: R };
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime; uniform vec3 uPlayer; uniform sampler2D uMask; uniform float uHalf; uniform float uW; uniform float uR;\nvarying float vGrassFade;')
-        .replace('#include <color_vertex>', `#include <color_vertex>
-          vec2 gb = vec2(instanceMatrix[3][0], instanceMatrix[3][2]);
-          vec2 gk = floor((uPlayer.xz - gb) / uW + 0.5);
-          vec2 gwp = gb + gk * uW;
-          vec4 gm = texture2D(uMask, (gwp + vec2(uHalf)) / (uHalf * 2.0));
-          float gd = length(gwp - uPlayer.xz);
-          float gh = fract(sin(dot(gb, vec2(12.9898, 78.233))) * 43758.5453);
-          float gh2 = fract(gh * 7.31 + 0.37);
-          float gsx = instanceMatrix[0][0]; float gsz = instanceMatrix[2][2];
-          float gvis = step(gh, gm.a * gm.a) * smoothstep(uR, uR - 8.0, gd);
-          vColor.rgb *= gm.rgb * (0.92 + gh2 * 0.16);`)
-        .replace('#include <begin_vertex>', `#include <begin_vertex>
-          transformed *= gvis;
-          transformed.x += (gwp.x - gb.x) / gsx; transformed.z += (gwp.y - gb.y) / gsz;
-          float hh = position.y * gvis;
-          float wv = sin(uTime * 1.7 + gwp.x * 0.35 + gwp.y * 0.27) * 0.5 + sin(uTime * 2.9 + gwp.x * 0.8 + gwp.y * 0.2) * 0.2;
-          transformed.x += wv * hh * 0.18;
-          transformed.z += wv * hh * 0.08;
-          vec2 away = gwp - uPlayer.xz;
-          vec2 pu = normalize(away + vec2(1e-4)) * smoothstep(2.6, 0.2, gd) * hh * 1.4; transformed.x += pu.x / gsx; transformed.z += pu.y / gsz;
-          transformed.y *= 1.0 - smoothstep(3.0, 0.4, gd) * 0.55;`);
-    };
-    return m;
-  }, [mask, R]);
-  const fill = useMemo(() => (m: InstancedMesh) => {
-    const rnd = mulberry32(11);
-    const W = R * 2;
-    for (let i = 0; i < q.grass; i++) {
-      const s = 0.7 + rnd() * 0.6;
-      setInst(m, i, rnd() * W, 0, rnd() * W, 0, s * (1 + rnd() * 0.5), s * (0.7 + rnd() * 0.5), s * (1 + rnd() * 0.5));
-    }
-  }, [q.grass, R]);
-  useFrame(({ clock }) => { wind.uTime.value = clock.elapsedTime; wind.uPlayer.value.copy(isLobbyNow() ? LOBBY_FOCUS : world.player.pos); });
-  return <Inst geo={geo} mat={mat} count={q.grass} fill={fill} receive culled={false} />;
-}
-
-const LOBBY_FOCUS = new Vector3(0, 0, -8);
 function isLobbyNow() { return isLobbyStatus(useGameStore.getState().status); }
+
+// ------------------------------------------------------------------ bushes ---
+// Sparse leafy bushes that frame the open fighting ground: along the island edge, around the pond and lining
+// dirt paths. Static instancing (2 draw calls), no shadows, nothing in the open centre of fights.
+function Bushes({ q }: { q: QualityCfg }) {
+  const { geo, mat } = useMemo(() => {
+    const g = new GB([0.88, 1.12]);
+    g.sph(0.62, [0, 0.42, 0], '#3f8f3a', [1, 0.82, 1], 6);
+    g.sph(0.48, [0.5, 0.34, 0.18], '#4fa443', [1, 0.85, 1], 6);
+    g.sph(0.44, [-0.42, 0.3, 0.26], '#468f3c', [1, 0.85, 1], 6);
+    g.sph(0.4, [0.05, 0.3, -0.48], '#55ad48', [1, 0.85, 1], 6);
+    return { geo: g.build(), mat: litMat({ flatShading: true, roughness: 0.9 }) };
+  }, []);
+  const target = q.name === 'LOW' ? 110 : q.name === 'MEDIUM' ? 200 : 300;
+  const pts = useMemo(() => {
+    const rnd = mulberry32(77), out: number[] = [];
+    let guard = 0;
+    while (out.length < target * 4 && guard++ < target * 60) {
+      const a = rnd() * TAU, e = edgeR(a);
+      const pick = rnd();
+      let x: number, z: number;
+      if (pick < 0.45) { // island edge band
+        const r = e - 2.5 - rnd() * 6; x = Math.cos(a) * r; z = Math.sin(a) * r;
+      } else if (pick < 0.6) { // pond shore
+        const pr = POND.r + 2 + rnd() * 3; x = POND.x + Math.cos(a) * pr; z = POND.z + Math.sin(a) * pr;
+      } else { // path borders
+        const r = Math.sqrt(rnd()) * (e - 4); x = Math.cos(a) * r; z = Math.sin(a) * r;
+        const d = dirtAmount(x, z); if (d < 0.12 || d > 0.4) continue;
+      }
+      if (Math.hypot(x, z + 20) < 24 || Math.hypot(x, z) < 15) continue; // keep town + spawn clear
+      if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2) continue;
+      if (Math.hypot(x, z) > e - 2) continue;
+      const n = out.length / 4; let tooClose = false;
+      for (let i = 0; i < n; i++) { const dx = out[i * 4] - x, dz = out[i * 4 + 1] - z; if (dx * dx + dz * dz < 4.5) { tooClose = true; break; } }
+      if (tooClose) continue;
+      out.push(x, z, 0.8 + rnd() * 0.9, rnd() * TAU);
+    }
+    return out;
+  }, [target]);
+  const n = pts.length / 4;
+  const fill = useMemo(() => (m: InstancedMesh) => {
+    for (let i = 0; i < n; i++) { const s = pts[i * 4 + 2]; setInst(m, i, pts[i * 4], 0, pts[i * 4 + 1], pts[i * 4 + 3], s, s * 0.9, s); }
+  }, [pts, n]);
+  return <Inst geo={geo} mat={mat} count={n} fill={fill} receive />;
+}
 
 // ---------------------------------------------------- flowers and pebbles ---
 function Flowers({ q }: { q: QualityCfg }) {
@@ -403,7 +365,8 @@ function Rim({ q }: { q: QualityCfg }) {
 export function Terrain({ q }: { q: QualityCfg }) {
   return (
     <>
-      <GroundAndGrass q={q} />
+      <Ground q={q} />
+      <Bushes q={q} />
       <Flowers q={q} />
       <Pebbles q={q} />
       <Pond q={q} />
