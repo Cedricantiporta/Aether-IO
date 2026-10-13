@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Item } from '../../types';
 import { RARITY_TEXT } from '../lib/game';
+import { LOOT, LOOT_BY_NAME } from '../../loot';
+import { ITEMS_POOL, PETS_POOL } from '../../constants';
 
 /** Painted SVG item icons (transparent background, drawn on a 64x64 grid). Memoized per (kind, rarity, size). */
 
@@ -266,6 +268,69 @@ const ARMOR: Record<string, ChestCfg> = {
   armor_4: { body: 'red', trim: 'gold', mark: 'scale', gem: '#ffd24a', spikes: true },
   armor_5: { body: 'void', trim: 'purp', mark: 'void', gem: '#7ff0ff', spikes: true, aura: '#b06cf8' },
 };
+
+// ---- helmets / gloves / boots by tier (0 common .. 4 mythic) ----
+const GEAR_PAL = [
+  ['#a9743d', '#5a3a1e', '#f0d8a0'], ['#c3cad6', '#4a566c', '#e9b949'], ['#4aa856', '#1d5a2a', '#ffd24a'], ['#d8452e', '#6a1410', '#ffd070'], ['#ffe08a', '#a8701a', '#7ff0ff'],
+];
+const Helmet = (t: number): Draw => () => { const [a, b, gem] = GEAR_PAL[t]; return (<g>
+  {t === 3 && <path d="M12 30 C4 26 2 14 8 6 C10 16 16 22 20 24Z M52 30 C60 26 62 14 56 6 C54 16 48 22 44 24Z" fill="#fff0c8" {...st} />}
+  <path d={t === 2 ? 'M10 52 C6 24 18 8 32 8 C46 8 58 24 54 52 L44 46 V34 H20 V46Z' : 'M10 50 C8 24 18 10 32 10 C46 10 56 24 54 50 H44 V38 H20 V50Z'} fill={a} {...st} />
+  <path d="M32 10 V34" stroke={b} strokeWidth="3" /><path d="M14 22 C20 14 26 12 32 12" stroke="#fff" strokeOpacity=".5" strokeWidth="2" fill="none" />
+  {t !== 2 && <path d="M20 34 H44 V40 H20Z" fill={b} {...st} />}
+  {t === 4 && <path d="M10 18 L16 4 L24 14 L32 2 L40 14 L48 4 L54 18Z" fill={a} {...st} />}
+  <circle cx="32" cy={t === 4 ? 12 : 24} r="3.6" fill={gem} stroke={S} strokeWidth="1" />
+  <rect x="20" y="40" width="24" height="3" fill="#000" opacity=".35" />
+</g>); };
+const Gloves = (t: number): Draw => () => { const [a, b, gem] = GEAR_PAL[t]; return (<g>
+  <path d="M18 56 V36 C10 34 8 26 12 20 C16 24 18 26 20 28 V12 C20 8 26 8 26 12 V24 V8 C26 4 32 4 32 8 V24 V10 C32 6 38 6 38 10 V26 V16 C38 12 44 12 44 16 V40 C50 44 48 52 46 56Z" fill={a} {...st} />
+  <rect x="16" y="46" width="32" height="10" rx="2" fill={b} {...st} />
+  <path d="M20 22 V32 M26 20 V32 M32 20 V32 M38 22 V32" stroke={S} strokeOpacity=".4" strokeWidth="1" />
+  {t >= 3 && <path d="M18 30 L22 24 L26 30 M30 30 L34 24 L38 30" fill={gem} stroke={S} strokeWidth="1" />}
+  <circle cx="32" cy="51" r="2.6" fill={gem} stroke={S} strokeWidth="1" />
+  <path d="M14 22 C14 28 16 32 20 34" stroke="#fff" strokeOpacity=".45" strokeWidth="1.6" fill="none" />
+</g>); };
+const BootsT = (t: number): Draw => () => { const [a, b, gem] = GEAR_PAL[t]; return (<g>
+  <path d="M16 6 H34 V32 C34 36 44 38 52 44 C58 47 58 56 52 56 H12 C8 56 8 50 12 48 L16 6Z" fill={a} {...st} />
+  <path d="M12 48 H54 V56 H12Z" fill={b} {...st} /><path d="M16 6 H34 V14 H16Z" fill={gem} {...st} />
+  <path d="M18 22 H34 M18 28 H34" stroke={S} strokeOpacity=".5" strokeWidth="1.2" />
+  {t >= 2 && <path d="M6 18 C10 12 14 12 16 18 C14 20 10 20 6 18Z M4 28 C8 24 12 24 14 28 C12 30 8 30 4 28Z" fill="#fff" stroke={S} strokeWidth="1" opacity=".95" />}
+  {t === 4 && <circle cx="26" cy="40" r="4" fill={gem} stroke={S} strokeWidth="1" />}
+  <path d="M20 10 C20 24 22 34 28 40" stroke="#fff" strokeOpacity=".4" strokeWidth="1.6" fill="none" />
+</g>); };
+
+// ---- loot (trade goods). Each takes two palette colours (main, accent) ----
+const LOOT_DRAW: Record<string, (a: string, b: string) => React.ReactNode> = {
+  gel: (a, b) => (<g><path d="M10 54 C6 34 20 12 32 12 C44 12 58 34 54 54 C44 60 20 60 10 54Z" fill={a} {...st} /><ellipse cx="22" cy="28" rx="5" ry="8" fill={b} opacity=".7" transform="rotate(20 22 28)" /><circle cx="44" cy="44" r="2.4" fill={b} opacity=".6" /></g>),
+  ear: (a, b) => (<g><path d="M14 54 C10 34 18 14 52 6 C50 22 46 40 38 52 C30 60 20 60 14 54Z" fill={a} {...st} /><path d="M22 48 C20 36 26 24 44 14 C42 28 38 38 32 46Z" fill={b} opacity=".75" /><path d="M20 52 C26 56 32 54 36 50" stroke={S} strokeOpacity=".5" fill="none" /></g>),
+  wing: (a, b) => (<g><path d="M4 42 C4 20 20 8 40 10 C34 14 32 18 34 22 C38 20 44 22 48 28 C42 28 40 32 42 36 C48 34 54 38 58 44 C48 42 44 46 44 52 C34 46 20 50 12 56 C14 50 12 46 4 42Z" fill={a} {...st} /><path d="M10 40 C22 26 34 22 46 28 M14 48 C26 38 38 36 52 42" stroke={b} strokeWidth="2" fill="none" /></g>),
+  bone: (a, b) => (<g><path d="M14 46 L46 14 M18 50 L50 18" stroke={S} strokeWidth="12" strokeLinecap="round" /><path d="M16 48 L48 16" stroke={a} strokeWidth="9" strokeLinecap="round" /><circle cx="12" cy="44" r="6" fill={a} {...st} /><circle cx="20" cy="52" r="6" fill={a} {...st} /><circle cx="44" cy="12" r="6" fill={a} {...st} /><circle cx="52" cy="20" r="6" fill={a} {...st} /><path d="M20 40 L40 20" stroke={b} strokeWidth="2" strokeOpacity=".7" /></g>),
+  rune: (a, b) => (<g><path d="M14 12 L50 10 L56 40 L42 58 L18 56 L8 36Z" fill={a} {...st} /><path d="M32 18 V46 M22 28 L32 22 L42 28 M24 40 L40 40" stroke={b} strokeWidth="3.4" fill="none" strokeLinecap="round" /><path d="M32 18 V46 M22 28 L32 22 L42 28 M24 40 L40 40" stroke="#fff" strokeOpacity=".5" strokeWidth="1" fill="none" /></g>),
+  shell: (a, b) => (<g><path d="M6 46 C6 22 20 8 32 8 C44 8 58 22 58 46 C58 54 44 58 32 58 C20 58 6 54 6 46Z" fill={a} {...st} /><path d="M32 8 V58" stroke={S} strokeWidth="2" /><path d="M14 22 C20 14 26 12 28 12 M14 36 C16 30 20 26 26 24" stroke={b} strokeWidth="3" fill="none" strokeLinecap="round" /><circle cx="22" cy="42" r="3" fill={b} opacity=".6" /><circle cx="42" cy="42" r="3" fill={b} opacity=".6" /></g>),
+  tusk: (a, b) => (<g><path d="M12 56 C8 30 20 10 48 6 C40 16 40 28 40 36 C40 46 34 54 26 56Z" fill={a} {...st} /><path d="M18 50 C16 34 24 20 40 12" stroke={b} strokeWidth="3" fill="none" strokeLinecap="round" /><path d="M12 56 H28" stroke={S} strokeWidth="2" /></g>),
+  heart: (a, b) => (<g><circle cx="32" cy="34" r="27" fill={a} opacity=".22" /><path d="M32 56 C8 40 4 22 16 14 C24 9 30 14 32 20 C34 14 40 9 48 14 C60 22 56 40 32 56Z" fill={a} {...st} /><path d="M32 56 C16 42 12 30 18 22 C22 28 28 30 32 28Z" fill={b} opacity=".55" /><path d="M20 20 C22 17 26 16 28 18" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" /></g>),
+  shard: (a, b) => (<g><circle cx="32" cy="34" r="26" fill={a} opacity=".2" /><path d="M30 4 L46 22 L40 56 L28 60 L18 36Z" fill={a} {...st} /><path d="M30 4 L46 22 L32 28 L18 36Z" fill={b} opacity=".7" /><path d="M32 28 L40 56" stroke="#fff" strokeOpacity=".5" /></g>),
+  trophy: (a, b) => (<g><path d="M18 8 H46 V26 C46 38 38 44 32 44 C26 44 18 38 18 26Z" fill={a} {...st} /><path d="M18 12 H8 C8 24 12 28 20 30 M46 12 H56 C56 24 52 28 44 30" fill="none" stroke={a} strokeWidth="4" /><rect x="28" y="44" width="8" height="8" fill={a} {...st} /><rect x="18" y="52" width="28" height="6" rx="1" fill={b} {...st} /><path d="M32 14 L35 22 L43 22 L37 27 L39 35 L32 30 L25 35 L27 27 L21 22 L29 22Z" fill={b} stroke={S} strokeWidth="1" /></g>),
+  goblet: (a, b) => (<g><path d="M14 8 H50 C50 28 42 36 34 38 V50 H44 V58 H20 V50 H30 V38 C22 36 14 28 14 8Z" fill={a} {...st} /><path d="M14 8 H50" stroke={b} strokeWidth="3" /><path d="M18 12 C18 24 22 30 28 33" stroke="#fff" strokeOpacity=".6" strokeWidth="2" fill="none" /><circle cx="32" cy="22" r="3.4" fill="#e83a2e" stroke={S} strokeWidth="1" /></g>),
+  pouch: (a, b) => (<g><path d="M24 12 C20 6 28 4 32 8 C36 4 44 6 40 12 L44 18 C54 28 58 42 52 52 C46 60 18 60 12 52 C6 42 10 28 20 18Z" fill={a} {...st} /><path d="M22 18 H42" stroke={b} strokeWidth="4" strokeLinecap="round" /><circle cx="32" cy="40" r="8" fill={b} stroke={S} strokeWidth="1.2" /><path d="M32 35 V45 M29 38 H35 M29 42 H35" stroke={S} strokeOpacity=".6" /></g>),
+  relic: (a, b) => (<g><path d="M20 58 V40 C14 34 12 22 20 14 C26 8 38 8 44 14 C52 22 50 34 44 40 V58Z" fill={a} {...st} /><circle cx="32" cy="26" r="9" fill="none" stroke={b} strokeWidth="3" /><circle cx="32" cy="26" r="3" fill={b} /><path d="M24 44 H40 M24 50 H40" stroke={b} strokeWidth="2" /><path d="M14 58 H50" stroke={S} strokeWidth="3" /></g>),
+  skull: (a, b) => (<g><path d="M10 28 C10 12 22 6 32 6 C42 6 54 12 54 28 C54 36 48 40 46 44 V54 H18 V44 C16 40 10 36 10 28Z" fill={a} {...st} /><ellipse cx="22" cy="30" rx="6" ry="7" fill="#120804" /><ellipse cx="42" cy="30" rx="6" ry="7" fill="#120804" /><circle cx="22" cy="30" r="2.4" fill={b} /><circle cx="42" cy="30" r="2.4" fill={b} /><path d="M32 38 L28 46 H36Z" fill="#120804" /><path d="M24 54 V48 M32 54 V48 M40 54 V48" stroke={S} strokeWidth="1.5" /></g>),
+  crown: (a, b) => (<g><path d="M6 48 L10 18 L22 32 L32 10 L42 32 L54 18 L58 48Z" fill={a} {...st} /><rect x="6" y="46" width="52" height="10" rx="2" fill={a} {...st} /><circle cx="32" cy="16" r="3.4" fill={b} stroke={S} strokeWidth="1" /><circle cx="14" cy="26" r="2.6" fill={b} stroke={S} strokeWidth="1" /><circle cx="50" cy="26" r="2.6" fill={b} stroke={S} strokeWidth="1" /><circle cx="20" cy="51" r="2.4" fill={b} /><circle cx="32" cy="51" r="2.4" fill={b} /><circle cx="44" cy="51" r="2.4" fill={b} /></g>),
+  fang: (a, b) => (<g><path d="M8 16 C8 40 20 52 32 52 C44 52 56 40 56 16" fill="none" stroke={b} strokeWidth="3" /><path d="M24 48 L28 60 L32 50Z M32 52 L38 62 L40 50Z M14 38 L12 50 L20 42Z M44 42 L50 50 L50 38Z" fill={a} {...st} /><path d="M30 42 L36 54 L38 42Z" fill={a} {...st} /></g>),
+  totem: (a, b) => (<g><path d="M20 6 H44 V58 H20Z" fill={a} {...st} /><path d="M20 6 L12 14 L20 18 M44 6 L52 14 L44 18" fill={a} {...st} /><circle cx="27" cy="20" r="4" fill={b} stroke={S} strokeWidth="1" /><circle cx="37" cy="20" r="4" fill={b} stroke={S} strokeWidth="1" /><path d="M24 32 H40 L38 40 H26Z" fill="#120804" /><path d="M24 36 H40" stroke="#fff" strokeWidth="1.4" /><path d="M24 48 L32 44 L40 48" stroke={b} strokeWidth="3" fill="none" /></g>),
+  banner: (a, b) => (<g><rect x="10" y="4" width="44" height="5" rx="2" fill="#6e4b2b" {...st} /><path d="M14 9 H50 V50 L40 42 L32 52 L24 42 L14 50Z" fill={a} {...st} /><path d="M32 18 L36 28 H28Z M22 34 H42" stroke={b} strokeWidth="3" fill={b} strokeLinejoin="round" /><path d="M16 12 V44" stroke="#fff" strokeOpacity=".3" strokeWidth="2" /></g>),
+  eye: (a, b) => (<g><circle cx="32" cy="32" r="28" fill={a} opacity=".2" /><path d="M4 32 C14 14 50 14 60 32 C50 50 14 50 4 32Z" fill="#f0f4ea" {...st} /><circle cx="32" cy="32" r="12" fill={a} stroke={S} strokeWidth="1.4" /><ellipse cx="32" cy="32" rx="3.4" ry="10" fill="#0a1a10" /><circle cx="27" cy="27" r="3" fill={b} /></g>),
+  page: (a, b) => (<g><path d="M12 6 H44 L52 14 V58 H12Z" fill={a} {...st} /><path d="M44 6 V14 H52" fill="#00000030" stroke={S} strokeWidth="1.2" /><path d="M18 22 H44 M18 30 H40 M18 38 H44 M18 46 H34" stroke={S} strokeOpacity=".55" strokeWidth="2" strokeLinecap="round" /><circle cx="40" cy="46" r="6" fill="none" stroke={b} strokeWidth="2.4" /><path d="M40 41 V51 M35 46 H45" stroke={b} strokeWidth="1.6" /></g>),
+  medal: (a, b) => (<g><path d="M18 4 L28 26 H36 L46 4 H38 L32 16 L26 4Z" fill={a} {...st} /><circle cx="32" cy="40" r="18" fill={b} {...st} /><circle cx="32" cy="40" r="13" fill={a} stroke={S} strokeWidth="1" /><path d="M32 29 L35 37 L43 37 L37 42 L39 50 L32 45 L25 50 L27 42 L21 37 L29 37Z" fill={b} stroke={S} strokeWidth="1" /></g>),
+  gland: (a, b) => (<g><path d="M32 6 C46 22 56 32 52 44 C48 56 16 56 12 44 C8 32 18 22 32 6Z" fill={a} {...st} /><path d="M32 18 C40 28 44 34 42 42 C40 48 24 48 22 42 C20 34 26 28 32 18Z" fill={b} opacity=".85" /><path d="M20 34 C20 30 22 28 24 26" stroke="#fff" strokeWidth="2.2" fill="none" strokeLinecap="round" /></g>),
+  orb: (a, b) => (<g><circle cx="32" cy="32" r="26" fill={a} {...st} /><circle cx="32" cy="32" r="14" fill={b} opacity=".7" /><circle cx="32" cy="32" r="6" fill="#fff" opacity=".9" /><path d="M16 22 C20 14 28 10 36 10" stroke="#fff" strokeOpacity=".7" strokeWidth="2.4" fill="none" strokeLinecap="round" /></g>),
+  crystal: (a, b) => (<g><path d="M32 4 L46 22 L42 56 L32 60 L22 56 L18 22Z" fill={a} {...st} /><path d="M32 4 L46 22 L32 28 L18 22Z" fill={b} opacity=".75" /><path d="M32 28 V60" stroke="#fff" strokeOpacity=".5" /><path d="M10 40 L16 30 L20 52 L12 56Z M54 40 L48 30 L44 52 L52 56Z" fill={a} {...st} /></g>),
+  nugget: (a, b) => (<g><path d="M8 44 L16 22 L34 12 L52 22 L58 42 L46 56 L20 56Z" fill={a} {...st} /><path d="M16 22 L34 12 L36 30 L8 44Z" fill={b} opacity=".4" /><path d="M36 30 L52 22 M36 30 L46 56" stroke={S} strokeOpacity=".5" /><circle cx="26" cy="32" r="3" fill={b} /><circle cx="42" cy="42" r="2.4" fill={b} /></g>),
+  locket: (a, b) => (<g><path d="M32 2 C20 2 16 12 18 22" stroke={a} strokeWidth="3" fill="none" /><path d="M32 2 C44 2 48 12 46 22" stroke={a} strokeWidth="3" fill="none" /><path d="M32 58 C10 46 8 28 18 24 C26 22 30 28 32 32 C34 28 38 22 46 24 C56 28 54 46 32 58Z" fill={a} {...st} /><path d="M32 52 C18 44 16 32 22 30 C26 29 30 33 32 37 C34 33 38 29 42 30 C48 32 46 44 32 52Z" fill={b} opacity=".85" /></g>),
+  seal: (a, b) => (<g><circle cx="32" cy="30" r="24" fill={a} {...st} /><circle cx="32" cy="30" r="17" fill="none" stroke={b} strokeWidth="2.4" /><path d="M32 16 L36 26 L46 26 L38 33 L41 43 L32 37 L23 43 L26 33 L18 26 L28 26Z" fill={b} stroke={S} strokeWidth="1" /><path d="M22 50 L18 62 L26 58 L32 62 L32 52Z M42 50 L46 62 L38 58 L32 62 L32 52Z" fill={a} {...st} /></g>),
+};
+const lootDraw = (glyph: string, a: string, b: string): Draw => () => (LOOT_DRAW[glyph] ?? LOOT_DRAW.nugget)(a, b);
+
 const DRAW: Record<string, Draw> = {
   staff_1: Staff(0), staff_rare: Staff(1), staff_3: Staff(2), staff_legend: Staff(3), staff_god: Staff(4),
   bow_1: Bow(0), bow_2: Bow(1), bow_epic: Bow(2), bow_legend: Bow(3), bow_god: Bow(4),
@@ -274,14 +339,26 @@ const DRAW: Record<string, Draw> = {
   ring_1: Ring(0), ring_wiz: Ring(1), ring_crit: Ring(2), ring_myth: Ring(3), boots_1: Boots, amulet_mana: Amulet(true), focus_crystal: Focus,
   potion_hp: Potion('red', false), potion_mana: Potion('blue', false), potion_hp_big: Potion('red', true), potion_mana_big: Potion('blue', true),
   upgrade_core: Core, revive_ankh: Ankh,
+  helm_1: Helmet(0), helm_2: Helmet(1), helm_3: Helmet(2), helm_4: Helmet(3), helm_5: Helmet(4),
+  gloves_1: Gloves(0), gloves_2: Gloves(1), gloves_3: Gloves(2), gloves_4: Gloves(3), gloves_5: Gloves(4),
+  boots_0: BootsT(0), boots_3: BootsT(2), boots_4: BootsT(3), boots_5: BootsT(4),
+  helmet: Helmet(0), gloves: Gloves(0),
+  ...Object.fromEntries(LOOT.map((l) => ['loot_' + l.id, lootDraw(l.glyph, l.colors[0], l.colors[1])])),
   // generic fallbacks by type / projectile
   sword: Sword, bow: Bow(0), staff: Staff(0), axe: Axe(0), armor: Chest({ body: 'steel', trim: 'gold', mark: 'plate' }), ring: Ring(0), amulet: Amulet(false), core: Core, ankh: Ankh, chest: Treasure,
   potion_hp_fb: Potion('red', false), potion_mp_fb: Potion('blue', false), paw: Paw, ...PETS,
 };
 
+const ID_BY_NAME = new Map<string, string>([...ITEMS_POOL, ...PETS_POOL].map((i) => [i.name, i.id]));
 export function artKey(item: Item): string {
   if (DRAW[item.id]) return item.id;
+  const tpl = ID_BY_NAME.get(item.name);
+  if (tpl && DRAW[tpl]) return tpl; // bag instances carry unique ids: match their template by name
   switch (item.type) {
+    case 'LOOT': return LOOT_BY_NAME[item.name] ? 'loot_' + LOOT_BY_NAME[item.name].id : 'chest';
+    case 'HELMET': return 'helmet';
+    case 'GLOVES': return 'gloves';
+    case 'BOOTS': return 'boots_1';
     case 'POTION': return item.id.includes('mana') ? 'potion_mp_fb' : 'potion_hp_fb';
     case 'CORE': return 'core';
     case 'REVIVE': return 'ankh';

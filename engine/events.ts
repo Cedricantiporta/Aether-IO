@@ -13,7 +13,7 @@ export interface GameEvents {
   // combat
   damage: { pos: Vector3; amount: number; crit: boolean; kind: DamageKind; toPlayer: boolean; dot?: boolean };
   enemyHit: { pos: Vector3; kind: EnemyKind; dmgKind: DamageKind; dir?: Vector3 };
-  enemyDeath: { pos: Vector3; kind: EnemyKind; elite: boolean; boss: boolean; scale: number };
+  enemyDeath: { pos: Vector3; kind: EnemyKind; elite: boolean; boss: boolean; scale: number; poof?: boolean };
   playerHit: { pos: Vector3; amount: number };
   playerDeath: { pos: Vector3 };
   playerRevive: { pos: Vector3; source: 'PHOENIX' | 'ANKH' };
@@ -35,17 +35,22 @@ export interface GameEvents {
   frostNova: { pos: Vector3; radius: number };
   projectileImpact: { pos: Vector3; kind: ProjectileKind | 'ENEMY' };
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
-  pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity };
+  pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string };
   crateBreak: { pos: Vector3; kind: CrateKind };
   spawn: { pos: Vector3; kind: EnemyKind; elite: boolean };
   shake: { amount: number }; // adds camera trauma 0..1
 
   // flow
   waveStart: { wave: number; boss: boolean; elite: boolean };
-  waveClear: { wave: number };
+  waveClear: { wave: number; fast?: boolean };
   countdown: { seconds: number }; // emitted each whole second during COUNTDOWN
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
+  siegeStart: {};                       // village siege begins (bell + banner)
+  respiteStart: { seconds: number; discount: number };
+  respiteEnd: {};
+  fastClear: { wave: number; gold: number };
+  villagerGift: { pos: Vector3; text: string };
   runStart: {};
   runEnd: {};
 }

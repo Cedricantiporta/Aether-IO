@@ -2,10 +2,12 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AdditiveBlending, AnimationAction, AnimationMixer, Color, DoubleSide, Group, LoopOnce, Mesh, MeshBasicMaterial, PointLight, RingGeometry, Sprite,
+  AdditiveBlending, AnimationAction, AnimationMixer, Color, DoubleSide, Group, LoopOnce, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight, RingGeometry, Sprite,
 } from 'three';
 import { SHOP_POSITIONS } from '../constants';
-import { world } from '../engine/world';
+import { world, QUEST_POS } from '../engine/world';
+import { isLobbyStatus } from './CameraRig';
+import { questDone } from '../quests';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, smokePuff } from './fx';
@@ -147,7 +149,10 @@ function buildPets() {
 
 const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets };
 const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable' };
-const NPC: Record<ShopType, { key: CharKey; tint: string; pos: [number, number] }> = {
+type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
+/** Shop-local door the keeper runs to when the siege starts. */
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7] };
+const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
   PETS: { key: 'ROGUE', tint: '#bfffcf', pos: [2.2, 4.7] },
@@ -177,33 +182,47 @@ function buildSign(type: ShopType, color: string) {
 }
 
 // ---------------------------------------------------------------------- NPC ---
-function Shopkeeper({ type, near, onOpen }: { type: ShopType; near: React.MutableRefObject<boolean>; onOpen: () => void }) {
-  const cfg = NPC[type];
+const smooth = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+
+/** `closed` is 0..1 (siege progress): the NPC runs to `door` and vanishes inside, and comes back out on reopen. */
+function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [number, number]; near: React.MutableRefObject<boolean>; closed: React.MutableRefObject<number>; onOpen: () => void }) {
   const ch = useCharacterInstance(cfg.key);
   const clips = useClips();
   const group = useRef<Group>(null!);
-  const st = useRef({ mixer: null as AnimationMixer | null, interact: null as AnimationAction | null, wasNear: false, yaw: 0, idleT: 0 });
+  const st = useRef({ mixer: null as AnimationMixer | null, interact: null as AnimationAction | null, run: null as AnimationAction | null, idle: null as AnimationAction | null, wasNear: false, yaw: 0, prevK: 0, runW: 0 });
   useEffect(() => {
     const m = new AnimationMixer(ch.root);
     const idle = m.clipAction(clips['Idle_A'] || clips['Idle_B']);
     idle.play(); idle.time = Math.random() * 2;
+    const run = clips['Running_A'] ? m.clipAction(clips['Running_A']) : null;
+    if (run) { run.setEffectiveWeight(0); run.play(); }
     const it = clips['Interact'] ? m.clipAction(clips['Interact']) : null;
     if (it) { it.setLoop(LoopOnce, 1); it.clampWhenFinished = false; }
     const tint = new Color(cfg.tint);
     ch.mats.forEach((mt: any) => mt.color && mt.color.copy(tint));
-    st.current.mixer = m; st.current.interact = it;
+    st.current.mixer = m; st.current.interact = it; st.current.run = run; st.current.idle = idle;
     return () => { m.stopAllAction(); m.uncacheRoot(ch.root); };
   }, [ch, clips, cfg.tint]);
   useFrame((_, dt0) => {
     const dt = Math.min(dt0, 0.05), s = st.current;
     s.mixer?.update(dt);
+    const g = group.current; if (!g) return;
+    const k = closed.current;
+    const e = smooth(k);
+    g.visible = k < 0.985;
+    g.position.set(cfg.pos[0] + (door[0] - cfg.pos[0]) * e, 0, cfg.pos[1] + (door[1] - cfg.pos[1]) * e);
+    const moving = Math.abs(k - s.prevK) > 1e-4 && k > 0.01 && k < 0.99;
+    const dk = k - s.prevK;
+    s.prevK = k;
+    s.runW += ((moving ? 1 : 0) - s.runW) * Math.min(1, dt * 12);
+    s.run?.setEffectiveWeight(s.runW); s.idle?.setEffectiveWeight(1 - s.runW + 1e-3);
     if (near.current && !s.wasNear && s.interact) { s.interact.reset().setEffectiveWeight(3).play(); }
     s.wasNear = near.current;
-    const g = group.current; if (!g) return;
     const wp = g.parent!.position;
-    let target = 0;
-    if (near.current) target = Math.atan2(world.player.pos.x - (wp.x + g.position.x), world.player.pos.z - (wp.z + g.position.z));
-    s.yaw = angleLerp(s.yaw, target, 1 - Math.exp(-6 * dt));
+    let target = s.yaw;
+    if (moving) target = Math.atan2((dk > 0 ? door[0] - cfg.pos[0] : cfg.pos[0] - door[0]), (dk > 0 ? door[1] - cfg.pos[1] : cfg.pos[1] - door[1]));
+    else if (near.current) target = Math.atan2(world.player.pos.x - (wp.x + g.position.x), world.player.pos.z - (wp.z + g.position.z));
+    s.yaw = angleLerp(s.yaw, target, 1 - Math.exp(-8 * dt));
     g.rotation.y = s.yaw;
   });
   return (
@@ -214,6 +233,34 @@ function Shopkeeper({ type, near, onOpen }: { type: ShopType; near: React.Mutabl
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
+  );
+}
+
+/** Wooden boards that drop over the shop front during the siege, plus a CLOSED sign. */
+const boardMat = new MeshStandardMaterial({ color: '#7a5230', flatShading: true, roughness: 0.9 });
+const boardMat2 = new MeshStandardMaterial({ color: '#5e3d22', flatShading: true, roughness: 0.9 });
+function Shutters({ k }: { k: React.MutableRefObject<number> }) {
+  const grp = useRef<Group>(null!), cross = useRef<Group>(null!), sign = useRef<Sprite>(null!);
+  const closedLabel = useMemo(() => labelMaterial('CLOSED', '#ff8a7a', { size: 64 }), []);
+  useFrame(() => {
+    const e = smooth(k.current);
+    if (grp.current) { grp.current.visible = e > 0.01; grp.current.scale.y = Math.max(0.001, e); }
+    if (cross.current) cross.current.visible = e > 0.9;
+    if (sign.current) { sign.current.visible = e > 0.75; sign.current.position.y = 2.1; }
+  });
+  return (
+    <>
+      <group ref={grp} position={[0, 3.5, 2.55]}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} position={[0, -0.28 - i * 0.56, 0]} material={i % 2 ? boardMat : boardMat2} castShadow><boxGeometry args={[5.2, 0.52, 0.14]} /></mesh>
+        ))}
+      </group>
+      <group ref={cross} position={[0, 2.0, 2.68]}>
+        <mesh rotation={[0, 0, 0.55]} material={boardMat}><boxGeometry args={[5.6, 0.3, 0.12]} /></mesh>
+        <mesh rotation={[0, 0, -0.55]} material={boardMat}><boxGeometry args={[5.6, 0.3, 0.12]} /></mesh>
+      </group>
+      <sprite ref={sign} material={closedLabel.mat} position={[0, 2.1, 3.0]} scale={[closedLabel.aspect * 0.95, 0.95, 1]} />
+    </>
   );
 }
 
@@ -232,23 +279,31 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   }), [color]);
   const label = useMemo(() => labelMaterial(TITLES[type], color === '#3b82f6' ? '#9fd0ff' : color === '#ef4444' ? '#ffb0a0' : '#9ff0d0', { size: 64 }), [type, color]);
   const near = useRef(false);
+  const closedK = useRef(0);
   const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
   const rot = useRef(0);
   const px = position[0], pz = position[2];
-  const open = () => { if (useGameStore.getState().status === GameStatus.PLAYING) useGameStore.getState().openSpecificShop(type); };
+  const open = () => {
+    const st = useGameStore.getState().status;
+    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(type);
+  };
 
   useFrame(({ clock }, dt0) => {
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
-    const lobby = useGameStore.getState().status !== GameStatus.PLAYING && useGameStore.getState().status !== GameStatus.PAUSED && useGameStore.getState().status !== GameStatus.LEVEL_UP;
+    const status = useGameStore.getState().status;
+    const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
+    closedK.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - closedK.current) * Math.min(1, dt * 2.2);
+    if (closedK.current > 0.999) closedK.current = 1; else if (closedK.current < 0.001) closedK.current = 0;
+    const closed = closedK.current > 0.5;
     const dx = world.player.pos.x - px, dz = world.player.pos.z - pz;
     const d = Math.hypot(dx, dz);
-    near.current = !lobby && d < 6;
+    near.current = !lobby && !closed && d < 6;
     // ring
     rot.current += dt * (near.current ? 1.2 : 0.3);
     const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
     mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
-    if (ringRef.current) { ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
+    if (ringRef.current) { ringRef.current.visible = closedK.current < 0.5; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
     if (titleRef.current) titleRef.current.position.y = 9.4 + Math.sin(t * 1.5 + pz) * 0.18;
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
@@ -294,7 +349,8 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
         ))}
       </group>
       <sprite ref={titleRef} material={label.mat} position={[0, 9.4, 1]} scale={[labelW, 1.0, 1]} />
-      <Shopkeeper type={type} near={near} onOpen={open} />
+      <Shopkeeper cfg={NPC[type]} door={DOOR[type]} near={near} closed={closedK} onOpen={open} />
+      <Shutters k={closedK} />
       <mesh position={[0, 2.8, 0.2]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <boxGeometry args={[7, 5.6, 6]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -304,10 +360,63 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   );
 }
 
+// -------------------------------------------------------------- quest board ---
+function buildBoard() {
+  const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
+  const wood = '#6e4b2b', paper = '#eadbb2';
+  b.box(0.22, 3.0, 0.22, [-1.2, 1.5, 0], wood); b.box(0.22, 3.0, 0.22, [1.2, 1.5, 0], wood);
+  b.box(2.9, 1.8, 0.18, [0, 2.0, 0.02], '#8a5a30'); b.box(3.1, 0.14, 0.26, [0, 2.95, 0.02], '#4a3020'); b.box(3.1, 0.14, 0.26, [0, 1.08, 0.02], '#4a3020');
+  b.prism(3.5, 0.7, 0.9, [0, 3.0, 0], '#4b4b60', [0, 0, 0], [0.9, 1]);
+  for (const [x, y, r] of [[-0.8, 2.3, 0.1], [0.1, 2.5, -0.08], [0.85, 2.2, 0.06], [-0.2, 1.75, 0.04]] as number[][]) { b.box(0.62, 0.78, 0.04, [x, y, 0.14], paper, [0, 0, r]); g.sph(0.05, [x, y + 0.3, 0.18], '#e33a3a', 1, 4); }
+  b.box(0.6, 0.3, 0.5, [1.9, 0.15, 0.6], '#8a5a30'); b.cyl(0.4, 0.45, 0.8, 8, [-1.9, 0.4, 0.7], '#7a4a28');
+  g.sph(0.12, [-1.35, 2.9, 0.2], '#ffd070', 1, 6); g.sph(0.12, [1.35, 2.9, 0.2], '#ffd070', 1, 6);
+  return { body: b.build(), glow: g.build() };
+}
+const questNpc: NpcCfg = { key: 'KNIGHT', tint: '#ffd9a0', pos: [2.9, 1.3] };
+
+function QuestBoard() {
+  const geos = useMemo(() => buildBoard(), []);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }) }), []);
+  const label = useMemo(() => labelMaterial('Quest Board', '#ffe69a', { size: 60 }), []);
+  const mark = useMemo(() => labelMaterial('!', '#ffd24a', { size: 120 }), []);
+  const near = useRef(false), k = useRef(0);
+  const markRef = useRef<Sprite>(null!), titleRef = useRef<Sprite>(null!);
+  const open = () => {
+    const st = useGameStore.getState().status;
+    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop('QUESTS');
+  };
+  useFrame(({ clock }, dt0) => {
+    const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
+    const status = useGameStore.getState().status;
+    const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
+    k.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - k.current) * Math.min(1, dt * 2.2);
+    if (k.current > 0.999) k.current = 1; else if (k.current < 0.001) k.current = 0;
+    near.current = !lobby && k.current < 0.5 && Math.hypot(world.player.pos.x - QUEST_POS[0], world.player.pos.z - QUEST_POS[2]) < 6;
+    const claimable = k.current < 0.5 && useGameStore.getState().quests.some(questDone);
+    if (markRef.current) { markRef.current.visible = claimable; markRef.current.position.y = 5.3 + Math.sin(t * 3.4) * 0.25; const sc = 1.5 + Math.sin(t * 6) * 0.1; markRef.current.scale.set(sc * mark.aspect, sc, 1); }
+    if (titleRef.current) titleRef.current.visible = k.current < 0.5;
+  });
+  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; };
+  return (
+    <group position={QUEST_POS}>
+      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
+      <mesh geometry={geos.glow} material={mats.glow} />
+      <sprite ref={titleRef} material={label.mat} position={[0, 4.4, 0.5]} scale={[label.aspect * 0.8, 0.8, 1]} />
+      <sprite ref={markRef} material={mark.mat} position={[0, 5.3, 0.5]} scale={[1.5, 1.5, 1]} visible={false} />
+      <Shopkeeper cfg={questNpc} door={questNpc.pos} near={near} closed={k} onOpen={open} />
+      <mesh position={[0, 1.8, 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
+        <boxGeometry args={[3.4, 3.6, 1.4]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function Town({ q }: { q: QualityCfg }) {
   return (
     <>
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} />)}
+      <QuestBoard />
     </>
   );
 }

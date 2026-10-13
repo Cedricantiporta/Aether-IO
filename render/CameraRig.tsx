@@ -5,11 +5,13 @@ import { world, TOWN_CENTER } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { damp, clamp } from './util';
+import { useUiStore } from '../ui/uiStore';
 
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
+/** Cinematic (non-interactive) states: title screen and game over. The village itself uses the follow camera. */
 export function isLobbyStatus(s: GameStatus) {
-  return s === GameStatus.MENU || s === GameStatus.HERO_SELECT || s === GameStatus.GAME_OVER;
+  return s === GameStatus.HERO_SELECT || s === GameStatus.GAME_OVER || (s === GameStatus.MENU && !useUiStore.getState().titleDone);
 }
 
 /** Isometric-ish follow camera, screen shake, ground-plane aim, and a cinematic lobby orbit. */

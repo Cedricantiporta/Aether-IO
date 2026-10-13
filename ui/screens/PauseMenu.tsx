@@ -9,7 +9,7 @@ import type { GraphicsQuality } from '../../storeTypes';
 export const PauseMenu: React.FC = () => {
   const open = useGameStore((s) => s.isPauseMenuOpen);
   const togglePause = useGameStore((s) => s.togglePause);
-  const resetGame = useGameStore((s) => s.resetGame);
+  const abandonRun = useGameStore((s) => s.abandonRun);
   const openSettings = useUiStore((s) => s.openSettings);
   const openCodex = useUiStore((s) => s.openCodex);
   const askConfirm = useUiStore((s) => s.askConfirm);
@@ -20,7 +20,7 @@ export const PauseMenu: React.FC = () => {
         <Button variant="primary" size="lg" onClick={togglePause}><Play size={18} fill="currentColor" /> Resume</Button>
         <Button onClick={() => openSettings(true)}><Settings size={16} /> Settings</Button>
         <Button onClick={() => openCodex(true)}><BookOpen size={16} /> Codex</Button>
-        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'Your current run progress will be lost and you will return to the main menu.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: resetGame })}>
+        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the village. Everything you looted is kept, and rank xp and wave gold are paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run
         </Button>
         <div className="text-center rpg-label !text-[.6rem] flex items-center justify-center gap-1"><Pause size={10} /> Press Esc to resume</div>
@@ -41,6 +41,8 @@ export const SettingsDialog: React.FC = () => {
   const close = useUiStore((s) => s.openSettings);
   const settings = useGameStore((s) => s.settings);
   const update = useGameStore((s) => s.updateSettings);
+  const resetProfile = useGameStore((s) => s.resetProfile);
+  const askConfirm = useUiStore((s) => s.askConfirm);
   const Q: GraphicsQuality[] = ['LOW', 'MEDIUM', 'HIGH'];
   const vol = (k: 'masterVolume' | 'sfxVolume' | 'musicVolume', label: string) => (
     <Row label={label}>
@@ -63,7 +65,9 @@ export const SettingsDialog: React.FC = () => {
         <Row label="Screen shake"><Toggle checked={settings.screenShake} onChange={(v) => update({ screenShake: v })} label="Screen shake" /></Row>
         <Row label="Auto potions"><Toggle checked={settings.autoPotions} onChange={(v) => update({ autoPotions: v })} label="Auto potions" /></Row>
       </div>
-      <div className="mt-4"><Button className="w-full" variant="primary" onClick={() => close(false)}>Done</Button></div>
+      <div className="mt-3"><Button className="w-full" variant="danger" size="sm" data-testid="reset-profile"
+        onClick={() => askConfirm({ title: 'Reset profile?', body: 'This permanently erases your gold, gems, items, hero rank, quests and records. A fresh profile with the welcome gift is created.', confirmLabel: 'Reset everything', tone: 'danger', onConfirm: () => { resetProfile(); close(false); } })}>Reset profile</Button></div>
+      <div className="mt-3"><Button className="w-full" variant="primary" onClick={() => close(false)}>Done</Button></div>
     </Modal>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Item, PlayerStats } from '../../types';
-import { useGameStore, calculateItemCP, RARITY_LEVEL_REQ } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf } from '../lib/game';
 import { HERO_STATS } from '../../constants';
 
@@ -13,11 +13,11 @@ const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
 export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'buy' | 'none' }> = ({ item, compare = true, price = 'sell' }) => {
   const equipment = useGameStore((s) => s.equipment);
   const heroClass = useGameStore((s) => s.hero);
-  const level = useGameStore((s) => s.level);
+  const level = useGameStore((s) => s.heroRank);
   const slot = slotOf(item);
   const equipped = compare && slot ? equipment[slot] : null;
   const isEquippedItself = equipped === item;
-  const req = RARITY_LEVEL_REQ[item.rarity];
+  const req = RANK_REQ[item.rarity];
   const wrongClass = item.classType && item.classType !== heroClass;
   const cp = calculateItemCP(item);
   const cpDelta = equipped && !isEquippedItself ? cp - calculateItemCP(equipped) : 0;
@@ -31,7 +31,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
         {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && (
-          <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
+          <span className={level < req ? 'neg' : ''}> · Req Rank {req}</span>
         )}
       </div>
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}

@@ -285,12 +285,32 @@ export const ITEMS_POOL: Item[] = [
   { id: 'armor_5', name: 'Void Plate', type: 'ARMOR', rarity: 'MYTHIC', price: 5000, level: 1, 
     stats: { defense: 80, maxHealth: 250, regen: 3.0, cooldownReduction: 0.1, damage: 20 } }, // HP Halved
 
+  // --- HELMETS (1 Common .. 5 Mythic): health / defense / crit damage ---
+  { id: 'helm_1', name: 'Leather Cap', type: 'HELMET', rarity: 'COMMON', price: 120, level: 1, stats: { maxHealth: 12 } },
+  { id: 'helm_2', name: 'Iron Helm', type: 'HELMET', rarity: 'RARE', price: 550, level: 1, stats: { defense: 4, maxHealth: 15 } },
+  { id: 'helm_3', name: "Ranger's Hood", type: 'HELMET', rarity: 'EPIC', price: 1300, level: 1, stats: { critDamage: 0.15, maxHealth: 30, critRate: 0.03 } },
+  { id: 'helm_4', name: 'Dragonhorn Helm', type: 'HELMET', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { defense: 10, maxHealth: 50, critDamage: 0.2 } },
+  { id: 'helm_5', name: 'Crown of Aether', type: 'HELMET', rarity: 'MYTHIC', price: 4500, level: 1, stats: { defense: 16, maxHealth: 100, critDamage: 0.35, skillDamage: 0.15 } },
+
+  // --- GLOVES: attack speed / crit rate / damage ---
+  { id: 'gloves_1', name: 'Work Gloves', type: 'GLOVES', rarity: 'COMMON', price: 120, level: 1, stats: { fireRate: 0.1 } },
+  { id: 'gloves_2', name: "Archer's Bracers", type: 'GLOVES', rarity: 'RARE', price: 560, level: 1, stats: { fireRate: 0.2, critRate: 0.02 } },
+  { id: 'gloves_3', name: "Wizard's Mitts", type: 'GLOVES', rarity: 'EPIC', price: 1300, level: 1, stats: { skillDamage: 0.15, critRate: 0.04, fireRate: 0.15 } },
+  { id: 'gloves_4', name: 'Berserker Gauntlets', type: 'GLOVES', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { damage: 4, critRate: 0.06, fireRate: 0.3 } },
+  { id: 'gloves_5', name: 'Titan Fists', type: 'GLOVES', rarity: 'MYTHIC', price: 4500, level: 1, stats: { damage: 8, critRate: 0.1, fireRate: 0.5, critDamage: 0.2 } },
+
+  // --- BOOTS (Hermes Boots is the Rare tier): move speed / dodge / dash cooldown ---
+  { id: 'boots_0', name: 'Traveler Boots', type: 'BOOTS', rarity: 'COMMON', price: 120, level: 1, stats: { moveSpeed: 0.15 } },
+  { id: 'boots_3', name: 'Windrunner Boots', type: 'BOOTS', rarity: 'EPIC', price: 1300, level: 1, stats: { moveSpeed: 0.5, dodge: 0.05, dashCooldown: -0.3 } },
+  { id: 'boots_4', name: 'Shadowstep Greaves', type: 'BOOTS', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { moveSpeed: 0.7, dodge: 0.08, dashCooldown: -0.5 } },
+  { id: 'boots_5', name: 'Aether Striders', type: 'BOOTS', rarity: 'MYTHIC', price: 4500, level: 1, stats: { moveSpeed: 1.0, dodge: 0.12, dashCooldown: -0.8 } },
+
   // --- ACCESSORIES (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---
   { id: 'ring_1', name: 'Ring of Vitality', type: 'ACCESSORY', rarity: 'COMMON', price: 250, level: 1, 
     stats: { maxHealth: 25 } }, // HP Halved
   
-  { id: 'boots_1', name: 'Hermes Boots', type: 'ACCESSORY', rarity: 'RARE', price: 600, level: 1, 
-    stats: { moveSpeed: 0.1, dodge: 0.05 } }, // dodge treated as defense visual or mechanic later, purely stat for now
+  { id: 'boots_1', name: 'Hermes Boots', type: 'BOOTS', rarity: 'RARE', price: 600, level: 1, 
+    stats: { moveSpeed: 0.3, dodge: 0.03 } },
   { id: 'amulet_mana', name: 'Mana Amulet', type: 'ACCESSORY', rarity: 'RARE', price: 800, level: 1, 
     stats: { manaRegen: 1.0, maxMana: 50 } },
 

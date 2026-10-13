@@ -5,8 +5,11 @@ import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { Ribbon } from '../components/Frame';
 import { HourglassGlyph } from '../components/ItemArt';
+import { Button } from '../components/Button';
+import { skipCutscene, skipRespite } from '../../engine/systems/director';
 
-const PHASE_LABEL: Record<string, string> = { COUNTDOWN: 'Preparing...', FIGHT: 'Survive', CLEANUP: 'Finish them', BOSS: 'Boss fight', REWARD: 'Cleared' };
+const PHASE_LABEL: Record<string, string> = { SIEGE: 'Under attack!', COUNTDOWN: 'Preparing...', FIGHT: 'Enemies', CLEANUP: 'Boss defeated', BOSS: 'Boss fight', REWARD: 'Cleared', RESPITE: 'Respite' };
+const mmss = (s: number) => { const t = Math.max(0, Math.ceil(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
 export const WavePlaque: React.FC = () => {
   const wave = useGameStore((s) => s.wave);
@@ -17,17 +20,21 @@ export const WavePlaque: React.FC = () => {
 
   useRaf(() => {
     const d = world.director, s = st.current;
-    const f = d.phase === 'FIGHT' || d.phase === 'COUNTDOWN' ? (d.phase === 'COUNTDOWN' ? 1 - Math.min(1, Math.max(0, d.countdown) / 5) : Math.min(1, d.waveTime / Math.max(1, d.waveDuration))) : 1;
+    const f = d.phase === 'FIGHT' || d.phase === 'COUNTDOWN' ? (d.phase === 'COUNTDOWN' ? 1 - Math.min(1, Math.max(0, d.countdown) / 5) : 1 - Math.min(1, d.waveTime / Math.max(1, d.waveDuration))) : d.phase === 'RESPITE' ? Math.max(0, d.respiteT) / 20 : 1;
     const fs = f.toFixed(3);
     if (bar.current && fs !== s.f) {
       s.f = fs; bar.current.style.setProperty('--fill', fs);
-      const cl = d.phase === 'CLEANUP' || d.phase === 'BOSS' ? '#e0554a' : '#e9b949';
+      const cl = d.phase === 'CLEANUP' || d.phase === 'BOSS' ? '#e0554a' : d.phase === 'RESPITE' ? '#4ade80' : '#e9b949';
       if (cl !== s.c) { s.c = cl; bar.current.style.setProperty('--bc', cl); }
     }
-    if (d.aliveCount !== s.a || d.phase !== s.p) {
-      s.a = d.aliveCount; s.p = d.phase;
-      if (lab.current) lab.current.textContent = PHASE_LABEL[d.phase] ?? d.phase;
-      if (cnt.current) cnt.current.textContent = `\u00d7${d.aliveCount}`;
+    const boss = d.wave % 10 === 0;
+    const left = Math.max(0, d.quotaTotal - d.quotaSpawned) + d.aliveCount;
+    const fight = d.phase === 'FIGHT';
+    const key = `${d.phase}|${left}|${d.quotaTotal}|${fight ? Math.ceil(d.waveDuration - d.waveTime) : d.phase === 'RESPITE' ? Math.ceil(d.respiteT) : 0}`;
+    if (key !== s.p) {
+      s.p = key;
+      if (lab.current) lab.current.textContent = fight ? (boss ? 'BOSS FIGHT' : `ENEMIES LEFT ${left}/${Math.max(left, d.quotaTotal)}`) : (PHASE_LABEL[d.phase] ?? d.phase);
+      if (cnt.current) cnt.current.textContent = fight && !boss ? mmss(d.waveDuration - d.waveTime) : d.phase === 'RESPITE' ? mmss(d.respiteT) : '';
     }
   });
 
@@ -76,3 +83,43 @@ export const Countdown: React.FC = () => {
   );
 };
 export { Ribbon };
+
+/** "Skip" for the siege cutscene (also Enter). Pure ref/DOM visibility. */
+export const SiegeSkip: React.FC = () => {
+  const root = useRef<HTMLDivElement>(null);
+  const on = useRef(false);
+  useRaf(() => {
+    const show = world.director.phase === 'SIEGE';
+    if (show !== on.current) { on.current = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
+  });
+  return (
+    <div ref={root} className="absolute left-0 right-0 justify-center pe" style={{ display: 'none', bottom: '9rem', zIndex: 55 }}>
+      <Button size="sm" onClick={skipCutscene} data-testid="skip-siege">Skip (Enter)</Button>
+    </div>
+  );
+};
+
+/** Respite between waves: shops are open for 20 s. Timer + Continue button + discount tag. */
+export const RespiteBar: React.FC = () => {
+  const root = useRef<HTMLDivElement>(null);
+  const tm = useRef<HTMLSpanElement>(null);
+  const disc = useRef<HTMLSpanElement>(null);
+  const st = useRef({ show: false, t: -1, disc: -1 });
+  useRaf(() => {
+    const d = world.director, s = st.current;
+    const show = d.phase === 'RESPITE';
+    if (show !== s.show) { s.show = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
+    if (!show) return;
+    const t = Math.ceil(d.respiteT);
+    if (t !== s.t && tm.current) { s.t = t; tm.current.textContent = `${t}s`; }
+    const dc = Math.round(world.village.discount * 100);
+    if (dc !== s.disc && disc.current) { s.disc = dc; disc.current.textContent = dc ? `Thank-you discount -${dc}%` : ''; disc.current.style.display = dc ? 'inline-block' : 'none'; }
+  });
+  return (
+    <div ref={root} className="absolute left-0 right-0 flex-col items-center gap-2 pointer-events-none" style={{ display: 'none', top: '8.5rem', zIndex: 45 }} data-testid="respite">
+      <div className="rpg-ribbon" data-tone="green" style={{ fontSize: '1.3rem' }}>Respite · shops are open · <span ref={tm}>20s</span></div>
+      <span ref={disc} className="rpg-badge" style={{ display: 'none', color: '#7dd3fc' }} />
+      <div className="pe"><Button variant="primary" size="sm" onClick={skipRespite} data-testid="continue">Continue to next wave</Button></div>
+    </div>
+  );
+};

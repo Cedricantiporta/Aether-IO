@@ -11,6 +11,8 @@ export interface ConfirmRequest {
 }
 
 interface UiState {
+  titleDone: boolean;                   // false until the player leaves the title screen (cinematic orbit camera)
+  recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
   settingsOpen: boolean;
   sellItem: Item | null;
@@ -19,6 +21,8 @@ interface UiState {
   blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT';
   confirm: ConfirmRequest | null;
   summonResults: Item[] | null;
+  setTitleDone: (v: boolean) => void;
+  setRecordsOpen: (v: boolean) => void;
   openCodex: (v: boolean) => void;
   openSettings: (v: boolean) => void;
   setSellItem: (i: Item | null) => void;
@@ -30,6 +34,8 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
+  titleDone: false,
+  recordsOpen: false,
   codexOpen: false,
   settingsOpen: false,
   sellItem: null,
@@ -38,6 +44,8 @@ export const useUiStore = create<UiState>((set) => ({
   blacksmithTab: 'UPGRADE',
   confirm: null,
   summonResults: null,
+  setTitleDone: (v) => set({ titleDone: v }),
+  setRecordsOpen: (v) => set({ recordsOpen: v }),
   openCodex: (v) => set({ codexOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),
   setSellItem: (i) => set({ sellItem: i }),

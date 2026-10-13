@@ -17,6 +17,7 @@ import { labelMaterial } from './label';
 
 const RARITY_HEX: Record<string, string> = { COMMON: '#e5e7eb', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444' };
 const MAXP = 500;
+const SHARD_RGB: number[][] = [[1.5, 1.5, 1.7], [0.5, 1.2, 2.8], [1.9, 0.6, 2.8], [2.8, 2.1, 0.4], [2.8, 0.5, 0.5]];
 const _c = new Color();
 
 export function Pickups() {
@@ -31,17 +32,20 @@ export function Pickups() {
     const heartG = new GB([1, 1]);
     heartG.sph(0.15, [-0.1, 0.1, 0], '#ff4a6a', 1, 8).sph(0.15, [0.1, 0.1, 0], '#ff4a6a', 1, 8).cone(0.22, 0.36, 8, [0, -0.1, 0], '#ff4a6a', [Math.PI, 0, 0]);
     const heart = mk(heartG.build(), new MeshStandardMaterial({ vertexColors: true, flatShading: true, emissive: 0xff2040, emissiveIntensity: 0.7, roughness: 0.4 }));
+    const shardG = new OctahedronGeometry(0.18, 0).scale(0.7, 1.5, 0.7);
+    const shard = mk(shardG, new MeshBasicMaterial({ toneMapped: false }));
+    shard.setColorAt(0, _c.setRGB(1, 1, 1));
     const itemG = new GB([1, 1]).octa(0.34, [0, 0, 0], '#ffffff', [0.9, 1.2, 0.9]).build();
-    return { xp, coin, gem, heart, itemG };
+    return { xp, coin, gem, heart, shard, itemG };
   }, []);
-  const group = useMemo(() => { const g = new Group(); g.add(sys.xp, sys.coin, sys.gem, sys.heart); return g; }, [sys]);
+  const group = useMemo(() => { const g = new Group(); g.add(sys.xp, sys.coin, sys.gem, sys.heart, sys.shard); return g; }, [sys]);
   const ver = useItemPickupsVersion();
   const items = useMemo(() => world.pickups.filter((p) => p.active && p.kind === 'ITEM' && p.item), [ver]);
 
   useFrame(({ clock }, dtRaw) => {
     const t = clock.elapsedTime;
     const pk = world.pickups;
-    let nx = 0, nc = 0, ng = 0, nh = 0;
+    let nx = 0, nc = 0, ng = 0, nh = 0, ns = 0;
     const paused = useGameStore.getState().status === GameStatus.PAUSED;
     for (let i = 0; i < pk.length; i++) {
       const p = pk[i];
@@ -71,6 +75,13 @@ export function Pickups() {
           pushHalo(p.pos.x, y + 0.1, p.pos.z, 1.0 * s, 0.3, 1.1, 1.5, 0.55, CELL.GLOW);
           break;
         }
+        case 'SHARD': {
+          const ri = Math.max(0, Math.min(4, p.value | 0)), c = SHARD_RGB[ri];
+          setInst(sys.shard, ns, p.pos.x, y + 0.1, p.pos.z, t * 2.2 + p.id, s * 1.15, s * 1.15, s * 1.15, 0, Math.sin(t * 3 + p.id) * 0.25);
+          _c.setRGB(c[0], c[1], c[2]); sys.shard.setColorAt(ns, _c); ns++;
+          pushHalo(p.pos.x, y + 0.1, p.pos.z, 0.9 * s, c[0] * 0.35, c[1] * 0.35, c[2] * 0.35, 0.5, CELL.GLOW);
+          break;
+        }
         case 'HEALTH': {
           const sc = (1 + Math.sin(t * 6 + p.id) * 0.08) * s * 1.2;
           setInst(sys.heart, nh++, p.pos.x, y + 0.1, p.pos.z, t * 1.5 + p.id, sc, sc, sc, 0, 0);
@@ -79,7 +90,7 @@ export function Pickups() {
         }
       }
     }
-    for (const [m, n] of [[sys.xp, nx], [sys.coin, nc], [sys.gem, ng], [sys.heart, nh]] as [InstancedMesh, number][]) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    for (const [m, n] of [[sys.xp, nx], [sys.coin, nc], [sys.gem, ng], [sys.heart, nh], [sys.shard, ns]] as [InstancedMesh, number][]) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     void dtRaw; void paused;
   }, -0.2);
 
@@ -111,7 +122,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
     if (!vis) return;
     g.current.position.set(p.pos.x, 0, p.pos.z);
     const pop = Math.min(1, p.t * 3);
-    beamMat.uniforms.uTime.value = t; beamMat.uniforms.uAlpha.value = (0.55 + 0.15 * Math.sin(t * 4)) * pop;
+    beamMat.uniforms.uTime.value = t; beamMat.uniforms.uAlpha.value = (0.55 + 0.15 * Math.sin(t * 4)) * pop * (p.item?.type === 'LOOT' && rarity === 'COMMON' ? 0.3 : 1);
     const hy = Math.max(p.pos.y, 0) + 1.1 + Math.sin(t * 2.4 + p.id) * 0.15;
     icon.current.position.y = hy; icon.current.rotation.y = t * 2; icon.current.scale.setScalar(pop * (rarity === 'MYTHIC' ? 1.5 : rarity === 'LEGENDARY' ? 1.3 : 1.1));
     label.current.position.y = hy + 1.0 + Math.sin(t * 2.4) * 0.05;

@@ -11,7 +11,7 @@ import { useGameStore } from '../store';
 
 const MAXC = 96;
 const _tc = new Color();
-const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
+const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'ORE', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
 
 function crate() {
   const b = new GB([0.82, 1.08]);
@@ -66,6 +66,12 @@ function crystal() {
   for (const [x, z, r, h, rz, rx, c] of sp) g.octa(1, [x, h * 0.5 + 0.2, z], c, [r, h * 0.5, r], [rx, 0, rz]);
   return { body: b.build(), glow: g.build() };
 }
+function ore() {
+  const b = new GB([0.7, 1.1]), g = new GB([0.8, 1.4]);
+  b.ico(0.95, [0, 0.45, 0], '#6b6760', [1.2, 0.85, 1.1], 0); b.ico(0.55, [0.65, 0.25, 0.3], '#7a766e', [1, 0.7, 1], 0); b.ico(0.45, [-0.6, 0.2, -0.35], '#5e5a54', [1, 0.7, 1], 0);
+  for (const [x, y, z, s] of [[0.2, 0.95, 0.5, 0.2], [-0.4, 0.7, 0.55, 0.16], [0.6, 0.55, -0.4, 0.18], [-0.1, 1.05, -0.3, 0.15]] as number[][]) g.octa(1, [x, y, z], '#ffb347', [s, s * 1.5, s], [0.3, 0.4, 0.2]);
+  return { body: b.build(), glow: g.build() };
+}
 function keg() {
   const b = new GB([0.8, 1.1]), g = new GB([1, 1]);
   b.cyl(0.5, 0.53, 1.1, 12, [0, 0.56, 0], '#b8321f'); b.sph(0.58, [0, 0.56, 0], '#b8321f', [1, 0.95, 1], 12);
@@ -100,7 +106,7 @@ function cart() {
   g.cyl(0.12, 0.12, 0.03, 8, [0.6, 1.0, 0.35], '#ffd23a', [0.4, 0, 0.2]); g.cyl(0.1, 0.1, 0.03, 8, [-0.7, 0.95, 0.25], '#ffd23a', [0.2, 0, 0.5]); g.cyl(0.1, 0.1, 0.03, 8, [1.4, 0.04, 0.5], '#ffd23a', [0, 0, 0]);
   return { body: b.build(), glow: g.build() };
 }
-const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: crystal, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
+const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: crystal, ORE: ore, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
 
 export function Crates() {
   const sys = useMemo(() => {

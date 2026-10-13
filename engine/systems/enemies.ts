@@ -223,7 +223,7 @@ export function poofAllEnemies(): void {
     const e = list[i];
     if (!e.active || e.state === 'DYING') continue;
     e.state = 'DYING'; e.stateT = 0; e.deathT = 0; e.hp = 0; e.vel.set(0, 0, 0);
-    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale });
+    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, poof: true });
   }
   world.director.aliveCount = 0;
 }

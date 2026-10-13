@@ -18,6 +18,7 @@ export const MAX_ENEMY_PROJECTILES = 600;
 export const MAX_ZONES = 192;
 export const MAX_PICKUPS = 500;
 export const MAX_CRATES = 96;
+export const QUEST_POS: [number, number, number] = [0, 0, -11]; // quest giver + notice board
 
 const v = () => new Vector3();
 
@@ -98,7 +99,10 @@ export const world = {
   director: {
     wave: 1, phase: 'COUNTDOWN', phaseT: 0, waveTime: 0, waveDuration: 30, countdown: 5,
     budget: 0, spawnT: 0, maxAlive: 50, aliveCount: 0, killsThisWave: 0, bossId: -1, eliteAnnounced: false,
+    quotaTotal: 0, quotaSpawned: 0, respiteT: 0, fastClear: false,
   } as DirectorState,
+  /** Village / siege presentation state. shopsClosed is the single source of truth for shop + quest board access. */
+  village: { shopsClosed: false, discount: 0, harvestCd: 0 },
   boss: { active: false, name: '', title: '', hp: 0, maxHp: 1, phase: 0 } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
   camera: { trauma: 0, zoom: 1 } as CameraState,

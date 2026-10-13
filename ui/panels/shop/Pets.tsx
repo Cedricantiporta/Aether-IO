@@ -1,7 +1,7 @@
 import React from 'react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
-import { useGameStore } from '../../../store';
+import { useGameStore, shopPrice } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { Button } from '../../components/Button';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
@@ -13,7 +13,7 @@ export const PetsTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-2.5">
       {PETS_POOL.map((p) => {
-        const can = gold >= p.price;
+        const can = gold >= shopPrice(p.price);
         return (
           <div key={p.id} className="rpg-frame flex items-center gap-3 p-2.5">
             <ItemSlot item={p} size="4rem" iconSize={30} tooltip="buy" compare={false} />
@@ -27,7 +27,7 @@ export const PetsTab: React.FC = () => {
               </div>
             </div>
             <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => buyItem(p)} style={{ flexDirection: 'column', gap: 0 }}>
-              <span>Buy</span><span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{p.price.toLocaleString()}</span>
+              <span>Buy</span><span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{shopPrice(p.price).toLocaleString()}</span>
             </Button>
           </div>
         );

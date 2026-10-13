@@ -271,6 +271,7 @@ import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { PointLight } from 'three';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
+import { isLobbyStatus } from './CameraRig';
 
 export function Campfire({ q }: { q: QualityCfg }) {
   const camp = REGIONS.find((r) => r.kind === 'CAMP') || { x: 66, z: -12 };
@@ -292,7 +293,7 @@ export function Campfire({ q }: { q: QualityCfg }) {
     const t = clock.elapsedTime;
     if (light.current) light.current.intensity = 22 + Math.sin(t * 11) * 4 + Math.sin(t * 23) * 2.5;
     const px = world.player.pos.x - camp.x, pz = world.player.pos.z - camp.z;
-    if (st === GameStatus.MENU || st === GameStatus.HERO_SELECT) return;
+    if (isLobbyStatus(st)) return;
     const dist2 = px * px + pz * pz;
     if (dist2 > 70 * 70) return;
     pushHalo(camp.x, 1.2, camp.z, 5 + Math.sin(t * 9) * 0.5, 1.8, 0.6, 0.12, 0.45, CELL.GLOW);

@@ -55,7 +55,24 @@ pointer) every frame — the engine never touches the camera.
 ## Gameplay design (designer spec preserved + improved)
 * 3 heroes (Archer / Wizard / Barbarian), class-locked weapons, R weapon ability,
   Q class active, E class special (5 SP), Space dash with charges, passives.
-* Start: 10 000 gold, 10 000 gems, 10 HP + 10 MP potions, 1 Ankh, 30 cores.
+* Persistent profile (`localStorage 'aether-survivor-profile-v1'`, versioned, debounced writes, flushed on
+  pagehide): gold, gems, inventory, equipment (7 slots: weapon/helmet/armor/gloves/boots/accessory/pet), materials
+  (crafting shards), maxInventorySlots, heroRank/rankXp, quests, gameStats, settings, welcomeGiftClaimed.
+  Fresh profile = 0 gold + ONE welcome gift (1000 gold, 100 gems, 5 HP + 5 MP potions, 1 Ankh, 5 cores).
+  Runs keep all loot even on death; wave gold bonus is paid in full at run end. In-run only: level/xp, skill
+  points/levels, wave cards, baseStats. `resetProfile` (Settings) wipes it.
+* Hero Rank (persistent): rankXp += run xp * 0.5 at run end (also on death); `rankXpNeeded(r)=round(400*r^1.35)`.
+  Gear needs rank (`RANK_REQ` 1/3/8/15/25); +1% gold find per rank (cap 50%).
+* Village (status MENU after the title): `engine/systems/village.ts` runs walking only (no enemies/director). Shops
+  and the quest board are open; E / click interacts, F harvests crystal + ore nodes. `world.village.shopsClosed`
+  gates shops (`openSpecificShop`). `enterVillage()` / `startRun()` in engine/game.ts.
+* Siege flow (director): SIEGE cutscene (2.5 s, skippable, bell) -> COUNTDOWN -> FIGHT -> REWARD -> RESPITE (20 s,
+  shops reopen, 30% 10% discount, 35% villager gift; none before boss waves). Waves: fixed enemy quota, field
+  topped up while alive < threshold; kill-all = FAST CLEAR (bonus gold, 35% 4th card); 45 s timer = survived,
+  leftovers poof. Boss waves end on boss death.
+* Quests (`quests.ts`): 3 persistent villager quests, progress from engine events, claim draws a replacement.
+* Loot (`loot.ts`): stackable (99) sellable trade goods per source with COMMON..MYTHIC tables; coin drops are rare,
+  income = selling loot ("Sell all loot" in Supplies) + wave bonus. Crystals/ore drop SHARD pickups (materials).
 * Waves: 5 s countdown → 30 s spawn window → cleanup (kill the rest, max 15 s)
   → reward cards (3 picks, keys 1/2/3) → next wave. Every 10th wave is a boss
   wave (Golem on odd tens, Lich on even tens) with a top-centre boss bar. Elite
@@ -63,8 +80,7 @@ pointer) every frame — the engine never touches the camera.
 * Max alive: 50 (waves 1-10), +20 per 10 waves.
 * Difficulty select: Easy / Normal / Hard / Nightmare multiplies hp, damage,
   spawn budget and loot luck.
-* Loot: rarity colours white/blue/purple/yellow/red; rarity level reqs
-  10/20/30/40; bosses drop Epic+, Legendary from wave 30, Mythic from wave 60.
+* Loot: rarity colours white/blue/purple/yellow/red; rank reqs 1/3/8/15/25; bosses drop Epic+, Legendary from wave 30, Mythic from wave 60.
 
 ## Performance rules (all agents)
 1. No `new Vector3()` / closures / array allocs in per-entity per-frame loops —

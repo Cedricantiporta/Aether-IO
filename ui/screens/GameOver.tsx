@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Skull, RotateCcw, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy } from 'lucide-react';
+import { Skull, RotateCcw, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { Panel, Ribbon } from '../components/Frame';
@@ -52,15 +52,16 @@ export const GameOver: React.FC = () => {
                 <Row delay={.82} icon={<Clock size={16} />} label="Time survived" value={timeMMSS(run.time)} />
                 <Row delay={.9} icon={<Trophy size={16} />} label="Combat power" value={run.cp.toLocaleString()} record={cpRecord} />
                 <Row delay={.98} icon={<Coins size={16} />} label={`Gold earned (+${run.waveGoldBonus} wave bonus)`} value={`+${gold.toLocaleString()}`} />
+                <Row delay={1.02} icon={<Medal size={16} />} label={run.rankUps > 0 ? `Hero rank xp (RANK UP! now ${run.rank})` : 'Hero rank xp'} value={`+${run.rankXpGained.toLocaleString()}`} />
                 <Row delay={1.06} icon={<ArrowUpCircle size={16} />} label="Runs completed" value={stats.totalRuns} />
               </div>
             </>
           )}
           <div className="flex gap-3 mt-5">
-            <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={startGame} pulse><RotateCcw size={18} /> Try again</Button>
-            <Button className="flex-1 whitespace-nowrap !px-3" size="lg" onClick={resetGame}><Home size={18} /> Menu</Button>
+            <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Return to village</Button>
+            <Button className="flex-1 whitespace-nowrap !px-3" size="lg" onClick={startGame}><RotateCcw size={18} /> Defend again</Button>
           </div>
-          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to retry</div>
+          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to defend again</div>
         </Panel>
       </div>
     </motion.div>

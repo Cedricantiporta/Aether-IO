@@ -2,6 +2,7 @@
 // Combat: damage in/out, death + loot, healing, status effects.
 // Engine-B (enemies/bosses/director) calls into this module.
 // ============================================================================
+import { dropLoot } from './loot';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events, type DamageKind } from '../events';
@@ -194,10 +195,17 @@ export function killEnemy(e: Enemy): void {
   const px = e.pos.x, pz = e.pos.z;
 
   // Gold coins.
-  const coins = e.boss ? 10 : e.elite ? 3 : Math.random() < 0.5 ? 1 : 0;
+  const coins = e.boss ? 4 : e.elite ? 1 : Math.random() < 0.15 ? 1 : 0;
   for (let i = 0; i < coins; i++) {
     dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));
     spawnPickup('GOLD', dropPos, 10);
+  }
+
+  // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
+  {
+    const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
+    if (e.boss) { dropLoot(e.kind, luck, px, pz, true); dropLoot(e.kind, luck, px, pz); }
+    else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
   }
 
   // XP gems (split into several orbs for big kills).

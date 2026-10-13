@@ -160,7 +160,7 @@ export interface Zone {
 }
 
 // ---------------------------------------------------------------- pickups --
-export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'ITEM';
+export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'ITEM' | 'SHARD'; // SHARD: value = rarity index (0 COMMON..4 MYTHIC)
 
 export interface Pickup {
   id: number;
@@ -195,7 +195,8 @@ export type CrateKind =
   | 'CHEST'            // treasure chest (rare): guaranteed item + gold burst
   | 'POT'              // clay pot (1 hit, clusters of 3-5): small gold / xp / heart
   | 'HAY'              // hay bale (farm area): xp, bursts straw
-  | 'CRYSTAL'          // aether crystal cluster (glowing): gems + big xp
+  | 'CRYSTAL'          // aether crystal cluster (glowing): gems + crafting shards + big xp
+  | 'ORE'              // ore vein rock (quarry / village): crafting shards
   | 'EXPLOSIVE_BARREL' // red powder keg: explodes (r 6) damaging ENEMIES when broken
   | 'GRAVE'            // cracked tombstone (graveyard): xp, may release a bat swarm
   | 'CART';            // broken merchant cart (high hp): gold shower + item chance
@@ -265,7 +266,7 @@ export interface PlayerRuntime {
 }
 
 // -------------------------------------------------------------- director --
-export type WavePhase = 'COUNTDOWN' | 'FIGHT' | 'CLEANUP' | 'BOSS' | 'REWARD';
+export type WavePhase = 'SIEGE' | 'COUNTDOWN' | 'FIGHT' | 'CLEANUP' | 'BOSS' | 'REWARD' | 'RESPITE';
 
 export interface DirectorState {
   wave: number;
@@ -281,6 +282,10 @@ export interface DirectorState {
   killsThisWave: number;
   bossId: number;        // enemy id or -1
   eliteAnnounced: boolean;
+  quotaTotal: number;    // enemies this wave must spawn (kill-all quota)
+  quotaSpawned: number;
+  respiteT: number;      // seconds left in RESPITE
+  fastClear: boolean;    // last wave ended by kill-all
 }
 
 export interface BossHud {

@@ -8,7 +8,7 @@ import { edgeLimit } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
 import type { Item, Rarity } from '../../types';
-import { useGameStore, calculateItemCP, RARITY_LEVEL_REQ, RARITY_COLOR } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul } from '../../store';
 import { healPlayer } from './combat';
 
 const GRAVITY = 28;
@@ -72,21 +72,41 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': st.addGold(value); world.run.goldEarned += value; break;
+    case 'GOLD': { const g = Math.round(value * goldFindMul(st.heroRank)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'SHARD': giveShard(value, st); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;
     case 'ITEM': if (item) st.addItemToInventory(item); break;
   }
 }
 
+const SHARD_RARITY: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+let shardNote = { rarity: '' as string, count: 0, at: 0, id: '' };
+
+/** Adds a crafting shard and keeps one coalesced "+N Rare Shards" loot-feed line (rarity coloured). */
+function giveShard(idx: number, st: ReturnType<typeof useGameStore.getState>): void {
+  const rarity = SHARD_RARITY[Math.max(0, Math.min(4, idx | 0))];
+  st.addMaterial(rarity, 1);
+  const now = performance.now();
+  if (shardNote.rarity === rarity && now - shardNote.at < 2000) {
+    shardNote.count++;
+    if (shardNote.id) st.removeNotification(shardNote.id);
+  } else shardNote = { rarity, count: 1, at: now, id: '' };
+  shardNote.at = now;
+  const name = rarity.charAt(0) + rarity.slice(1).toLowerCase();
+  st.addNotification(`+${shardNote.count} ${name} Shard${shardNote.count > 1 ? 's' : ''}`, RARITY_COLOR[rarity], 'ITEM');
+  const list = useGameStore.getState().notifications;
+  shardNote.id = list[list.length - 1]?.id ?? '';
+}
+
 function notifyLoot(item: Item): void {
   const st = useGameStore.getState();
   let action: { label: string; onClick: () => void } | undefined;
-  if (item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'PET') {
-    const slot = item.type === 'WEAPON' ? 'weapon' : item.type === 'ARMOR' ? 'armor' : item.type === 'ACCESSORY' ? 'accessory' : 'pet';
+  if (item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'PET' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS') {
+    const slot = item.type.toLowerCase() as 'weapon';
     const cur = st.equipment[slot];
     const better = calculateItemCP(item) > (cur ? calculateItemCP(cur) : 0);
-    const usable = st.level >= RARITY_LEVEL_REQ[item.rarity] && (!item.classType || item.classType === st.hero);
+    const usable = st.heroRank >= RANK_REQ[item.rarity] && (!item.classType || item.classType === st.hero);
     if (better && usable) action = { label: 'EQUIP', onClick: () => useGameStore.getState().equipItem(item) };
   }
   const plus = item.level > 1 ? ` +${item.level - 1}` : '';
@@ -168,16 +188,19 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
   const kind = o.kind;
   const value = o.value;
   let rarity: Rarity | undefined;
+  let name: string | undefined;
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': st.addGold(value); world.run.goldEarned += value; break;
+    case 'GOLD': { const g = Math.round(value * goldFindMul(st.heroRank)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'SHARD': giveShard(value, st); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;
     case 'ITEM': {
       const item = o.item;
       if (!item || !st.addItemToInventory(item)) { o.magnet = false; return; }
       rarity = item.rarity;
+      name = item.type === 'LOOT' ? item.name : undefined;
       notifyLoot(item);
       world.itemPickupsVersion++;
       break;
@@ -185,5 +208,5 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
   }
   o.active = false;
   o.item = null;
-  events.emit('pickup', { pos: o.pos, kind, value, rarity });
+  events.emit('pickup', { pos: o.pos, kind, value, rarity, name });
 }

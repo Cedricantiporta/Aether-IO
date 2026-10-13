@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlayerPlate, Currency, MenuButtons } from './TopBars';
-import { WavePlaque, Countdown } from './WaveInfo';
+import { WavePlaque, Countdown, RespiteBar, SiegeSkip } from './WaveInfo';
 import { BossBar } from './BossBar';
 import { Minimap } from './Minimap';
 import { ActionBar } from './ActionBar';
@@ -12,6 +12,8 @@ export const HUD: React.FC = () => (
   <>
     <Vignettes />
     <Countdown />
+    <RespiteBar />
+    <SiegeSkip />
 
     {/* top-left */}
     <div className="absolute" style={{ left: '1.2rem', top: '1rem' }}><PlayerPlate /></div>

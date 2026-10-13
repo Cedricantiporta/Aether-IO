@@ -38,8 +38,17 @@ export const Announcer: React.FC = () => {
     if (e.boss) return; // boss gets its own banner on bossSpawn
     push({ kind: e.elite ? 'elite' : 'wave', title: `Wave ${e.wave}`, sub: e.elite ? 'Elite champions approach' : 'Survive the onslaught', ms: 2200 });
   });
+  useGameEvent('siegeStart', () => push({ kind: 'boss', title: 'THE VILLAGE IS UNDER ATTACK!', sub: 'Defend the villagers - the shops are closing', ms: 2400 }));
+  useGameEvent('fastClear', (e) => push({ kind: 'wave', title: 'FAST CLEAR!', sub: `Bonus +${e.gold} gold`, ms: 2000 }));
+  useGameEvent('respiteStart', (e) => push({ kind: 'info', title: 'Respite', sub: e.discount ? 'Shops are open - thank-you discount!' : 'Shops are open', ms: 1800 }));
+  useGameEvent('pickup', (e) => {
+    if (e.kind === 'ITEM' && e.name && (e.rarity === 'LEGENDARY' || e.rarity === 'MYTHIC')) push({ kind: e.rarity === 'MYTHIC' ? 'boss' : 'wave', title: e.name, sub: `${e.rarity.charAt(0) + e.rarity.slice(1).toLowerCase()} loot!`, ms: 2200 });
+  });
   useGameEvent('bossSpawn', (e) => push({ kind: 'boss', title: e.name, sub: e.title, ms: 3800 }));
   useGameEvent('levelUp', (e) => push({ kind: 'level', title: 'Level Up', sub: `You reached level ${e.level}`, ms: 1800 }));
+  useEffect(() => { // the siege event fires before this HUD mounts: show the banner if we are still in the cutscene
+    if (world.director.phase === 'SIEGE') push({ kind: 'boss', title: 'THE VILLAGE IS UNDER ATTACK!', sub: 'Defend the villagers - the shops are closing', ms: 2400 });
+  }, [push]);
   useEffect(() => {
     if (!cur) return;
     const t = setTimeout(() => clear(cur.id), cur.ms);

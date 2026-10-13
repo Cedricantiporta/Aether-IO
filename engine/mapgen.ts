@@ -42,14 +42,14 @@ export const REGIONS: Region[] = [
 ];
 
 export const CRATE_HP: Record<CrateKind, number> = {
-  CRATE: 30, BARREL: 20, CHEST: 120, POT: 1, HAY: 12, CRYSTAL: 60, EXPLOSIVE_BARREL: 25, GRAVE: 50, CART: 100,
+  CRATE: 30, BARREL: 20, CHEST: 120, POT: 1, HAY: 12, CRYSTAL: 60, ORE: 45, EXPLOSIVE_BARREL: 25, GRAVE: 50, CART: 100,
 };
 /** Collision radius while intact (0 = walk-through; POT/HAY break when the player touches them). */
 export const CRATE_RADIUS: Record<CrateKind, number> = {
-  CRATE: 0.8, BARREL: 0.65, CHEST: 0.95, POT: 0, HAY: 0, CRYSTAL: 0.9, EXPLOSIVE_BARREL: 0.65, GRAVE: 0.7, CART: 1.4,
+  CRATE: 0.8, BARREL: 0.65, CHEST: 0.95, POT: 0, HAY: 0, CRYSTAL: 0.9, ORE: 1.0, EXPLOSIVE_BARREL: 0.65, GRAVE: 0.7, CART: 1.4,
 };
 const CRATE_SPACE: Record<CrateKind, number> = {
-  CRATE: 1.0, BARREL: 0.8, CHEST: 1.1, POT: 0.6, HAY: 1.3, CRYSTAL: 1.1, EXPLOSIVE_BARREL: 0.8, GRAVE: 0.9, CART: 1.6,
+  CRATE: 1.0, BARREL: 0.8, CHEST: 1.1, POT: 0.6, HAY: 1.3, CRYSTAL: 1.1, ORE: 1.4, EXPLOSIVE_BARREL: 0.8, GRAVE: 0.9, CART: 1.6,
 };
 
 // ------------------------------------------------------------ collider grid --
@@ -331,6 +331,7 @@ export function generateMap(): void {
     return tryAdd('BOULDER', x, z, 1.0 + scale * 0.7, scale, true, undefined, 0.8);
   });
   scatter(q.x, q.z, q.r, 6, rock);
+  scatter(q.x, q.z, 12, 5, (x, z) => tryCrate('ORE', x, z), 3);
   scatter(q.x, q.z, 11, 4, (x, z) => tryCrate('EXPLOSIVE_BARREL', x, z), 2);
   scatter(q.x, q.z, 11, 1, (x, z) => tryCrate('CART', x, z), 3);
   scatter(q.x, q.z, 12, 2, (x, z) => tryCrate('CRATE', x, z), 3);

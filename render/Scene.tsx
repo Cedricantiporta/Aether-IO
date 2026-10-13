@@ -39,11 +39,15 @@ export function Scene() {
       <Campfire q={q} />
       <Suspense fallback={null}><Town q={q} /></Suspense>
       <Suspense fallback={null}><Hero q={q} /></Suspense>
+      {(gameplay || status === GameStatus.MENU) && (
+        <>
+          <Crates />
+          <Pickups />
+        </>
+      )}
       {gameplay && (
         <>
           <Zones />
-          <Crates />
-          <Pickups />
           <Enemies />
           <Bosses />
           <Projectiles />

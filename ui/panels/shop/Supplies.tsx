@@ -1,6 +1,6 @@
 import React from 'react';
 import { ITEMS_POOL } from '../../../constants';
-import { useGameStore } from '../../../store';
+import { useGameStore, shopPrice } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
@@ -13,6 +13,10 @@ export const SuppliesTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const inventory = useGameStore((s) => s.inventory);
   const massSell = useGameStore((s) => s.massSell);
+  const sellAllLoot = useGameStore((s) => s.sellAllLoot);
+  const lootStacks = inventory.filter((i) => i.type === 'LOOT');
+  const lootCount = lootStacks.reduce((n, i) => n + (i.quantity || 1), 0);
+  const lootValue = lootStacks.reduce((n, i) => n + i.price * (i.quantity || 1), 0);
   const setBuy = useUiStore((s) => s.setBuyItem);
   const ask = useUiStore((s) => s.askConfirm);
   const count = (r: Rarity) => inventory.filter((i) => i.rarity === r && isGear(i)).length;
@@ -29,8 +33,14 @@ export const SuppliesTab: React.FC = () => {
       <div>
         <div className="rpg-label mb-2">Provisions</div>
         <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-6">
-          {STOCK.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={it.price} cantAfford={gold < it.price} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
+          {STOCK.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={shopPrice(it.price)} cantAfford={gold < shopPrice(it.price)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
         </div>
+      </div>
+      <div>
+        <div className="rpg-label mb-2">Monster spoils</div>
+        <Button className="w-full" variant="green" disabled={lootCount === 0} onClick={sellAllLoot} data-testid="sell-all-loot">
+          Sell all loot · {lootCount} items · {lootValue.toLocaleString()} G
+        </Button>
       </div>
       <div>
         <div className="rpg-label mb-2">Quick sell (from bag)</div>

@@ -89,8 +89,8 @@ export const WaveReward: React.FC = () => {
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      const i = ['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code) % 3;
-      if (['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].includes(e.code) && options[i]) select(options[i]);
+      const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+      if (m && options[+m[1] - 1]) select(options[+m[1] - 1]);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);

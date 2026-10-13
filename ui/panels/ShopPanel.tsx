@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
@@ -12,12 +12,14 @@ import { PetsTab } from './shop/Pets';
 import { SummonTab } from './shop/Summon';
 import { BlacksmithTab } from './shop/Blacksmith';
 import { SkillsTab } from './shop/Skills';
+import { QuestsTab } from './shop/Quests';
 
 const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }[] = [
   { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'General Store' },
   { id: 'PETS', label: 'Pets', icon: <Ghost size={24} />, title: 'Menagerie' },
   { id: 'SUMMON', label: 'Summon', icon: <Dices size={24} />, title: 'Aether Altar' },
   { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={24} />, title: 'Blacksmith' },
+  { id: 'QUESTS', label: 'Quests', icon: <ScrollText size={24} />, title: 'Quest Board' },
   { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={24} />, title: 'Skill Tome' },
 ];
 
@@ -50,6 +52,7 @@ export const ShopPanel: React.FC = () => {
           {tab === 'SUMMON' && <SummonTab />}
           {tab === 'BLACKSMITH' && <BlacksmithTab />}
           {tab === 'SKILLS' && <SkillsTab />}
+          {tab === 'QUESTS' && <QuestsTab />}
         </div>
       </Panel>
     </motion.div>

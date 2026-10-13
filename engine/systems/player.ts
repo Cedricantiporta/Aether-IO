@@ -261,3 +261,35 @@ export function updatePlayer(dt: number): void {
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }
 }
+
+/** Village mode: walking only (movement, collisions, animation). No dash, attacks, abilities or regen drain. */
+export function updatePlayerVillage(dt: number): void {
+  const st = useGameStore.getState();
+  const p = world.player;
+  const a = p.anim;
+  const k = world.input.keys;
+  p.alive = true;
+  p.hp = st.stats.maxHealth;
+  p.mana = st.stats.maxMana;
+  a.hurtT = tickDown(a.hurtT, dt * 3);
+  a.attackT = tickDown(a.attackT, dt * 4);
+  a.castT = tickDown(a.castT, dt * 3);
+  a.dashing = false;
+  let mx = 0, mz = 0;
+  if (k.KeyW || k.ArrowUp) mz -= 1;
+  if (k.KeyS || k.ArrowDown) mz += 1;
+  if (k.KeyA || k.ArrowLeft) mx -= 1;
+  if (k.KeyD || k.ArrowRight) mx += 1;
+  const ml = Math.sqrt(mx * mx + mz * mz);
+  if (ml > 0) { mx /= ml; mz /= ml; }
+  const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;
+  const lerpK = 1 - Math.exp(-12 * dt);
+  p.vel.x += (mx * speed - p.vel.x) * lerpK;
+  p.vel.z += (mz * speed - p.vel.z) * lerpK;
+  resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+  const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
+  if (ml > 0 && sp > 0.5) p.facing = Math.atan2(p.vel.x, p.vel.z);
+  const target = Math.min(1, sp / Math.max(1, st.stats.moveSpeed));
+  a.moveBlend += (target - a.moveBlend) * Math.min(1, 10 * dt);
+  a.stepPhase += sp * dt * 1.4;
+}

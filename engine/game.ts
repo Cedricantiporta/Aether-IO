@@ -16,6 +16,8 @@ import { updatePickups, resetPickups } from './systems/pickups';
 import { updateCrates } from './systems/crates';
 import { resetAbilities } from './systems/abilities';
 import { updateDirector, resetDirector } from './systems/director';
+import { updateVillage, placeVillageNodes } from './systems/village';
+import { useUiStore } from '../ui/uiStore';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
 
 const MAX_DT = 0.05;
@@ -41,10 +43,9 @@ function rebuildEnemyGrid(): void {
   }
 }
 
-export function startRun(): void {
-  clearWorld();
-  world.enemyGrid.clear();
-  generateMap();
+let villageReady = false;
+
+function resetSystems(): void {
   initPlayer();
   resetAbilities();
   resetSkills();
@@ -52,17 +53,47 @@ export function startRun(): void {
   resetPickups();
   resetDirector();
   clearPressed();
-  events.emit('runStart', {});
 }
 
-export function stopRun(): void {
+/** Peaceful village: shops open, island scenery + a few harvest nodes, hero standing in the square. */
+export function enterVillage(): void {
   clearWorld();
   world.enemyGrid.clear();
+  generateMap();
+  placeVillageNodes();
+  resetSystems();
+  world.player.pos.set(0, 0, 2);
+  world.village.shopsClosed = false;
+  world.village.discount = 0;
+  villageReady = true;
   events.emit('runEnd', {});
 }
 
+/** The siege run: shops close, cutscene (SIEGE phase) then wave 1. */
+export function startRun(): void {
+  clearWorld();
+  world.enemyGrid.clear();
+  generateMap();
+  resetSystems();
+  const d = world.director;
+  d.phase = 'SIEGE';
+  d.phaseT = 0;
+  world.village.shopsClosed = true;
+  world.village.discount = 0;
+  events.emit('runStart', {});
+  events.emit('siegeStart', {});
+}
+
 export function updateGame(rawDt: number): void {
-  if (useGameStore.getState().status !== GameStatus.PLAYING) {
+  const status = useGameStore.getState().status;
+  if (status === GameStatus.MENU) {
+    if (!villageReady) enterVillage();
+    const vdt = Math.min(rawDt, MAX_DT);
+    if (vdt > 0 && useUiStore.getState().titleDone) updateVillage(vdt);
+    clearPressed();
+    return;
+  }
+  if (status !== GameStatus.PLAYING) {
     clearPressed();
     return;
   }
