@@ -141,7 +141,7 @@ export const VillageHUD: React.FC = () => {
           <div className="pe">
             <Button variant="primary" size="lg" pulse onClick={startGame} data-testid="defend"><Shield size={20} fill="currentColor" /> Defend the village</Button>
           </div>
-          {!device.touch && <div className="text-xs text-outline" style={{ color: 'rgba(243,241,234,.8)' }}>WASD walk · E talk · F harvest · Enter to defend</div>}
+          {!device.touch && <div className="text-xs text-outline" style={{ color: 'rgba(243,241,234,.8)' }}>WASD walk · E talk · hold E to harvest · Enter to defend</div>}
         </div>
       )}
 

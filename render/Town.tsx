@@ -15,6 +15,8 @@ import { GB, glowMat, litMat, TAU, angleLerp, damp } from './util';
 import { useCharacterInstance, useClips, CharKey } from './characters';
 import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
+import { TownScenery } from './TownScenery';
+import { Npcs } from './Npcs';
 
 type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS';
 
@@ -508,8 +510,12 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
 const q_light = (c: string) => <pointLight position={[0, 3, 0]} color={c} distance={12} decay={1.6} intensity={10} />;
 
 export function Town({ q }: { q: QualityCfg }) {
+  // houses / stalls / gate / NPCs / animals: only in the peaceful village (and behind the title screen)
+  const village = useGameStore((s) => s.status === GameStatus.MENU || s.status === GameStatus.HERO_SELECT);
   return (
     <>
+      {village && <TownScenery q={q} />}
+      {village && <Npcs />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} />)}
       <QuestBoard />
       <Station kind="SHRINE" position={SHRINE_POS} />
