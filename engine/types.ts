@@ -136,7 +136,7 @@ export interface Projectile {
 }
 
 // -------------------------------------------------------- enemy projectiles --
-export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK';
+export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME';
 
 export interface EnemyProjectile {
   id: number;
@@ -149,7 +149,7 @@ export interface EnemyProjectile {
   radius: number;
   homing: number;        // rad/s
   slow?: number;         // applies slow to player on hit (0..1)
-  debuff: number;        // 0 none, 1 ROOT (pinning arrow)
+  debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
 }
 
 // --------------------------------------------------------------- ground zones --

@@ -12,6 +12,7 @@
 //
 // GOLEM patterns: 0 SLAM, 1 ROCK_RING, 2 CHARGE
 // LICH  patterns: 0 SPIRAL, 1 FAN, 2 BLINK, 3 SUMMON
+// The wave 30-70 bosses live in bosses2.ts (dispatched from updateBoss below).
 // ============================================================================
 import { Vector3 } from 'three';
 import { world } from '../world';
@@ -24,6 +25,7 @@ import {
   enter, fireEnemyProjectile, findSpawnPoint, requestYaw, spawnEnemy,
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
+import { isBoss2, updateBoss2 } from './bosses2';
 
 const dirV = new Vector3();
 const posV = new Vector3();
@@ -68,7 +70,7 @@ function checkPhase(e: Enemy): void {
   );
   e.attackCd = Math.min(e.attackCd, 0.8);
   // golem: next pattern is a slam; lich: next pattern is a summon
-  if (e.state === 'CHASE') e.pattern = e.kind === 'BOSS_GOLEM' ? CHARGE : BLINK;
+  if (e.state === 'CHASE' && !isBoss2(e.kind)) e.pattern = e.kind === 'BOSS_GOLEM' ? CHARGE : BLINK;
 }
 
 function clampToArena(v: Vector3, margin: number): void {
@@ -81,7 +83,8 @@ export function updateBoss(e: Enemy, dt: number, distToPlayer: number): void {
   syncHud(e);
   checkPhase(e);
   if (e.kind === 'BOSS_GOLEM') golem(e, distToPlayer);
-  else lich(e, dt, distToPlayer);
+  else if (e.kind === 'BOSS_LICH') lich(e, dt, distToPlayer);
+  else updateBoss2(e, dt, distToPlayer); // Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (bosses2.ts)
 }
 
 // ============================================================ GOLEM ========

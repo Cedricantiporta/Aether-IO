@@ -12,6 +12,8 @@ import { Town } from './Town';
 import { Hero } from './Hero';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
+import { Bosses2 } from './Bosses2';
+import { BossFx } from './BossFx';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
 import { GroundFx } from './GroundFx';
@@ -57,6 +59,8 @@ export function Scene() {
           <CrystalWalls />
           <Enemies />
           <Bosses />
+          <Bosses2 />
+          <BossFx />
           <Projectiles />
           <Pet />
         </>

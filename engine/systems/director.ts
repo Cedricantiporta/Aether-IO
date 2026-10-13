@@ -15,7 +15,7 @@ import { events } from '../events';
 import type { EnemyKind } from '../types';
 import {
   ENEMY_DEFS, SPAWNABLE_KINDS, WEAK_KINDS, BOSS_NAMES, REGION_AFFINITY, REGION_AFFINITY_OFF, MINI_BOSSES,
-  waveBudget, maxAliveForWave,
+  waveBudget, maxAliveForWave, bossForWave, type BossKind,
 } from '../enemyDefs';
 import { useGameStore, makeItemById } from '../../store';
 import { DIFFICULTY_MODS } from '../../constants';
@@ -249,13 +249,13 @@ function startFight(): void {
 
 function spawnBoss(): void {
   const d = world.director;
-  const kind: EnemyKind = (d.wave / 10) % 2 === 1 ? 'BOSS_GOLEM' : 'BOSS_LICH';
+  const kind: EnemyKind = bossForWave(d.wave);
   if (!findSpawnPoint(18, 22, spawnV)) {
     spawnV.set(world.player.pos.x, 0, world.player.pos.z - 18);
   }
   const e = spawnEnemy(kind, spawnV);
   if (!e) return;
-  const names = BOSS_NAMES[kind === 'BOSS_GOLEM' ? 'BOSS_GOLEM' : 'BOSS_LICH'];
+  const names = BOSS_NAMES[kind as BossKind];
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;

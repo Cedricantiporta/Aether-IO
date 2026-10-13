@@ -24,6 +24,8 @@ import { updateCombatFx, resetCombat } from './systems/combat';
 import { resetTricks } from './systems/tricks';
 import { updateCombo, resetCombo } from './systems/combo';
 import { resetSpecials } from './systems/bossSpecials';
+import { updateBossFx, resetBossFx } from './systems/bossFx';
+import { resetBosses2 } from './systems/bosses2';
 import { tickUltWindup } from './systems/abilities';
 
 const MAX_DT = 0.05;
@@ -124,6 +126,8 @@ function resetSystems(): void {
   resetTricks();
   resetCombo();
   resetSpecials();
+  resetBossFx();
+  resetBosses2();
   clearPressed();
 }
 
@@ -183,6 +187,7 @@ export function updateGame(rawDt: number): void {
   updateProjectiles(dt);
   updateSkills(dt);
   updateZones(dt);
+  updateBossFx(dt);
   updatePets(dt);
   updatePickups(dt);
   updateCrates(dt);

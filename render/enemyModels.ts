@@ -508,9 +508,64 @@ function crab(): ModelDef {
   };
 }
 
+// --------------------------------------------------------- BOSS ADDS ----------
+/** Elderroot's sapling: a walking stump with a leafy crown and glowing eyes. */
+function sapling(): ModelDef {
+  const bark = '#6b4423', leaf = '#5fae2a', leaf2 = '#3f8a1c';
+  const body = new GB([0.8, 1.1]);
+  body.cyl(0.3, 0.42, 1.0, 7, [0, 0.75, 0], bark);
+  body.cone(0.12, 0.5, 4, [-0.36, 1.1, 0], bark, [0, 0, 1.0]); body.cone(0.12, 0.5, 4, [0.36, 1.1, 0], bark, [0, 0, -1.0]);
+  body.ico(0.62, [0, 1.55, 0], leaf, [1.1, 0.85, 1.1], 1);
+  body.ico(0.34, [0.4, 1.35, 0.2], leaf2, 1, 0); body.ico(0.3, [-0.36, 1.7, -0.1], leaf2, 1, 0);
+  body.cone(0.07, 0.3, 4, [0, 0.55, 0.42], '#4a2c14', [Math.PI / 2, 0, 0]);
+  const eyes = new GB([1, 1]);
+  for (const s of [-1, 1]) eyes.sph(0.09, [s * 0.15, 0.98, 0.34], '#d8ff5a', [1, 1.2, 0.6], 6);
+  const leg = new GB([0.7, 1.1]).cyl(0.11, 0.16, 0.4, 5, [0, -0.2, 0], '#4a2c14').cone(0.16, 0.14, 5, [0, -0.42, 0.06], '#3a2210', [Math.PI / 2, 0, 0]).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }], headY: 2.2, shadow: 0.7,
+    pose(e, P, t) {
+      const ph = t * 6;
+      P.body(abs(sin(ph)) * 0.06, 0.08, sin(ph) * 0.1, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.part(2, -0.18, 0.4, 0, sin(ph) * 0.7); P.part(3, 0.18, 0.4, 0, -sin(ph) * 0.7);
+      P.glow = 1.4 + 0.4 * sin(t * 5);
+    },
+  };
+}
+
+/** One of the Mire Hydra's three heads: a tall swaying neck with a fanged snout (the body stays with the boss). */
+function hydraHead(): ModelDef {
+  const skin = '#3f8f4a', skin2 = '#6bc25a', belly = '#c8d88a';
+  const g = new GB([0.8, 1.1]);
+  g.cyl(0.62, 0.78, 1.2, 8, [0, 0.6, 0], skin);                     // base
+  g.cyl(0.46, 0.6, 1.4, 8, [0, 1.8, 0.1], skin, [0.12, 0, 0]);      // neck
+  g.cyl(0.4, 0.46, 1.2, 8, [0, 2.9, 0.3], skin2, [0.28, 0, 0]);
+  for (let i = 0; i < 4; i++) g.cone(0.1, 0.34, 4, [0, 1.2 + i * 0.5, -0.45 + i * 0.12], '#2a6a32', [-0.5, 0, 0]); // back spines
+  g.box(0.5, 0.7, 0.3, [0, 1.6, 0.52], belly, [0.1, 0, 0]);          // throat plates
+  g.sph(0.62, [0, 3.6, 0.7], skin2, [1, 0.85, 1.15], 9);             // skull
+  g.box(0.62, 0.34, 0.9, [0, 3.38, 1.4], skin2);                    // snout
+  g.box(0.56, 0.16, 0.8, [0, 3.1, 1.34], '#2a5a30');                // jaw
+  for (const s of [-1, 1]) {
+    g.cone(0.07, 0.3, 4, [s * 0.22, 3.12, 1.7], '#fff4d0', [Math.PI, 0, 0]);   // fangs
+    g.cone(0.12, 0.5, 4, [s * 0.4, 4.05, 0.45], '#2a5a30', [-0.5, 0, s * 0.5]); // horns
+  }
+  const eyes = new GB([1, 1]);
+  for (const s of [-1, 1]) eyes.sph(0.12, [s * 0.34, 3.78, 1.05], '#ffe14a', [1, 1, 0.7], 6);
+  return {
+    parts: [{ geo: g.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }], headY: 4.6, shadow: 1.1,
+    pose(e, P, t) {
+      const lunge = e.state === 'WINDUP' ? 0.25 : 0;
+      P.body(0, sin(t * 1.7 + e.pattern) * 0.1 + lunge, sin(t * 1.3 + e.pattern * 2) * 0.12, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.glow = 1.6;
+    },
+  };
+}
+
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
-  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab() };
+  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
+    BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin() }; // imps: a goblin model, tinted red in Enemies.tsx
   return cache;
 }
-export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB'];
+export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP'];

@@ -11,7 +11,7 @@ import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS, COLORS } from '../../constants';
-import { GOLD_DROPPERS } from '../enemyDefs';
+import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
 import { onEnemyDeath, crabArmor } from './enemies';
 import { popDecoy } from './bossSpecials';
@@ -106,6 +106,7 @@ function gainStagger(e: Enemy, amount: number): void {
     e.stagger = 0; e.staggerT = 2;
     combatStats.staggers++;
     events.emit('stagger', { pos: e.pos, boss: e.boss });
+    hooks.onStagger(e);
     events.emit('floatText', { pos: e.pos, text: 'STAGGER', color: 0xffd23a, scale: 1.0, dy: 1.0 });
   }
 }
@@ -293,6 +294,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     }
   }
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
+  if (e.boss) dealt *= hooks.damageMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   if (e.shield > 0) {
     if (dealt <= e.shield) { e.shield -= dealt; dealt = 0; }
     else { dealt -= e.shield; e.shield = 0; }
@@ -332,6 +334,13 @@ export function killEnemy(e: Enemy): void {
   if (!e.active || e.state === 'DYING') return;
   if (e.decoy) { popDecoy(e); return; } // Death Clones: no rewards
   e.hp = 0; // state -> DYING is set by onEnemyDeath (Engine-B)
+
+  // Boss adds / body parts (saplings, hydra heads, imps): no xp, loot, gold or kill credit.
+  if (isBossAdd(e.kind)) {
+    onEnemyDeath(e);
+    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: false, boss: false, scale: e.scale });
+    return;
+  }
 
   const run = world.run;
   run.kills++;

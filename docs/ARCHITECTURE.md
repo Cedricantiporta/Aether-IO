@@ -75,7 +75,8 @@ pointer) every frame — the engine never touches the camera.
   income = selling loot ("Sell all loot" in Supplies) + wave bonus. Crystals/ore drop SHARD pickups (materials).
 * Waves: 5 s countdown → 30 s spawn window → cleanup (kill the rest, max 15 s)
   → reward cards (3 picks, keys 1/2/3) → next wave. Every 10th wave is a boss
-  wave (Golem on odd tens, Lich on even tens) with a top-centre boss bar. Elite
+  wave (`enemyDefs.bossForWave`: Gorath 10, Malakar 20, Elderroot 30, Mire Hydra 40, Glacius 50, Ignar 60, Void Herald 70, then the cycle
+  repeats with scaling) with a top-centre boss bar. Elite
   squads from wave 5 every 3 waves; elites get affixes.
 * Max alive: 50 (waves 1-10), +20 per 10 waves.
 * Difficulty select: Easy / Normal / Hard / Nightmare multiplies hp, damage,
@@ -106,3 +107,14 @@ pointer) every frame — the engine never touches the camera.
   `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = skill combo (+20%/stack, finisher on ult).
 * Aimed casting: `engine/systems/aim.ts` (`aimState`, `updateSkillInput`) + `render/AimIndicator.tsx`; skills read `combat.aimOverride` through `getAimDir` / `aimPoint`.
   XP is granted instantly on kill (`combat.grantKillXp`, no XP orbs); coins only from `enemyDefs.GOLD_DROPPERS` + the Lich.
+
+## Wave 30-70 bosses (bosses2 / bossFx)
+* `engine/systems/bosses2.ts` — AIs for Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (dispatched from `bosses.updateBoss`). Each boss is a table of
+  attacks (`Atk`: windup / act / recover + begin / fire / tick / end) run by one shared WINDUP -> ATTACK -> RECOVER runner; `e.pattern` = attack id.
+  Extra per-boss memory (bark armor, hydra heads, dive state...) is the single module object `S` (`bossView`, read by `render/Bosses2.tsx`).
+  `hooks.onStagger` interrupts the running attack (and breaks bark armor); `hooks.damageMul` applies bark armor / hydra-head shielding in `damageEnemy`.
+* `engine/systems/bossFx.ts` — preallocated hazard pools (expanding rings, eruption props, portals, void echoes, frost breath, chill meter, arena shrink / blizzard).
+  Telegraphs are ordinary hostile zones with `Zone.trick >= 30` (`BT.*`); `zones.expire` routes them to `resolveBossZone`. `TELEGRAPH_CONE` = apex at `pos`,
+  `radius` = range, `aux` = half-angle (drawn by `render/Zones.tsx`). `render/BossFx.tsx` draws the pools (one InstancedMesh per prop type).
+* Boss adds (`enemyDefs.isBossAdd`: sapling, hydra head, imp) are normal enemies with tiny AIs: no xp / loot / gold, poofed when their boss dies.
+  Hydra heads are positioned by their own AI around the body (3 targetable heads; the body takes 0.5x/0.75x/1x/1.4x damage with 0..3 heads dead).

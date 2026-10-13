@@ -143,6 +143,7 @@ export function Projectiles() {
       SLOW_ORB: mk([[orbG(0.3, '#7a7aff', '#e0e0ff'), glow]], MAXE),
       BOSS_ORB: mk([[orbG(0.48, '#ff3ae0', '#ffe0ff'), glow]], MAXE),
       ROCK: mk([[rockG, lit]], 200),
+      FLAME: mk([[orbG(0.42, '#ff6a1a', '#fff0b0'), glow]], MAXE),
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
     return { group, S, E, fireMat, tornMat };
@@ -304,6 +305,14 @@ export function Projectiles() {
           pushHalo(x, y, z, 1.6, 2, 1.4, 2, 0.8, CELL.GLOW);
           pushHalo(x, y, z, 2.0 + Math.sin(t * 8) * 0.3, 1.8, 0.4, 1.8, 0.5, CELL.RING);
           if (emit && Math.random() < dt * 30) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.5, 0.45, 0.05, 1.8, 0.3, 1.8, 0.8, CELL.STAR, 0, 1, 0, 3);
+          break;
+        }
+        case 'FLAME': {
+          const pu = 1 + 0.2 * Math.sin(t * 16 + n);
+          place(ims, i, x, y, z, t * 2, t * 3, 0, pu);
+          pushHalo(x, y, z, 2.8 * pu, 2.2, 0.8, 0.2, 0.65, CELL.GLOW);
+          pushHalo(x, y, z, 1.3, 2.2, 1.6, 0.8, 0.8, CELL.GLOW);
+          if (emit && Math.random() < dt * 34) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.2, 0.6 + Math.random() * 1.2, (Math.random() - 0.5) * 1.2, 0.45, 0.4, 0.05, 2.2, 0.9, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
           break;
         }
         case 'ROCK':

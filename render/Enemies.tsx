@@ -18,6 +18,8 @@ import type { EnemyKind } from '../engine/types';
 const MAX = 400;
 const _c = new Color(), _w = new Color();
 const AFFIX_TINT: Record<string, [number, number, number]> = { HASTED: [1.2, 1.12, 0.75], VAMPIRIC: [1.25, 0.78, 0.82], FROZEN: [0.8, 1.0, 1.3], VOLATILE: [1.3, 0.95, 0.7], SHIELDED: [0.9, 1.0, 1.25], NONE: [1, 1, 1] };
+// per-kind colour multiplier on top of the model's own colours (imps = red-hot goblins)
+const KIND_TINT: Partial<Record<EnemyKind, [number, number, number]>> = { BOSS_IMP: [2.1, 0.5, 0.35] };
 const AFFIX_COL: Record<string, number> = { HASTED: 0xffd23a, VAMPIRIC: 0xd0203a, FROZEN: 0x5ad0ff, VOLATILE: 0xff7a1a, SHIELDED: 0x4a8aff, NONE: 0xe8b030 };
 
 const SHADOW_VS = `attribute float iA; varying vec2 vUv; varying float vA;
@@ -159,6 +161,7 @@ export function Enemies() {
 
       // tint + flash
       let r = 1, g = 1, b = 1, fl = e.hitFlash;
+      const kt = KIND_TINT[e.kind]; if (kt) { r = kt[0]; g = kt[1]; b = kt[2]; }
       if (e.affix !== 'NONE') { const a = AFFIX_TINT[e.affix]; r *= a[0]; g *= a[1]; b *= a[2]; }
       if (e.freezeT > 0) { r *= 0.6; g *= 0.92; b *= 1.4; fl = Math.max(fl, 0.14); }
       if (e.burnT > 0) { const p = 0.5 + 0.5 * Math.sin(t * 14 + i); r *= 1.3; g *= 0.78 + 0.12 * p; b *= 0.55; }

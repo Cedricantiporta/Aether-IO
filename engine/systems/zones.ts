@@ -10,6 +10,7 @@ import {
   damageEnemy, damageEnemiesInRadius, applyStatus, damagePlayer, addShake, applyPlayerDebuff, type DamageOpts, type StatusEffect,
 } from './combat';
 import { resolveTrick, updateWalls } from './tricks';
+import { resolveBossZone, arenaSlow, BT } from './bossFx';
 
 const FIRE_TICK = 0.25;
 const POISON_TICK = 0.5;
@@ -234,7 +235,7 @@ function lineHitsPlayer(z: Zone): boolean {
 }
 
 function expire(z: Zone): void {
-  if (z.trick > 0) { resolveTrick(z); z.active = false; return; }
+  if (z.trick > 0) { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); z.active = false; return; }
   switch (z.kind) {
     case 'BLACKHOLE':
       boomOpts.slam = z.damage * 0.35;
@@ -267,7 +268,7 @@ export function updateZones(dt: number): void {
     if (ew.t <= 0) ew.active = false;
   }
 
-  envSlow = 1;
+  envSlow = arenaSlow(); // Glacius blizzard slows the whole arena
   updateWalls(dt);
   const zones = world.zones;
   for (let i = 0; i < zones.length; i++) {

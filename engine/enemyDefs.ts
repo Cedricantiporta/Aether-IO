@@ -113,7 +113,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 0, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x65a30d, knockResist: 0.3, armor: 10,
   },
   BOSS_HYDRA_HEAD: {
-    name: 'Hydra Head', hp: 300, speed: 0, radius: 1.25, scale: 1.0, contactDamage: 0, projectileDamage: 14,
+    name: 'Hydra Head', hp: 300, speed: 0, radius: 1.25, scale: 1.5, contactDamage: 0, projectileDamage: 14,
     xp: 0, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 20,
   },
   BOSS_IMP: {

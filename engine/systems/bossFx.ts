@@ -133,7 +133,19 @@ export function resolveBossZone(z: Zone): void {
   const pw = z.damage;
   switch (z.trick) {
     case BT.ROOT:
+      if (z.kind === 'TELEGRAPH_LINE') {
+        // root eruption lane: roots burst up along the whole line, in sequence away from the caster
+        const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
+        if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) {
+          damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' });
+          if (applyPlayerDebuff('ROOT', 1.1)) stat('Rooted');
+        }
+        for (let d = 2, i = 0; d < z.length; d += 2.6, i++) spawnProp(PROP_ROOT, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.045, 1.2, 0.9 + (i % 3) * 0.15, 2.4 + (i % 2) * 0.9);
+        events.emit('trick', { pos: z.pos.clone(), kind: 'ROOTS', radius: z.radius });
+        break;
+      }
       if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); if (applyPlayerDebuff('ROOT', 1.0)) stat('Rooted'); }
+      spawnProp(PROP_ROOT, z.pos.x, z.pos.z, 0, 1.1, Math.max(1, z.radius * 0.5), 3);
       events.emit('trick', { pos: z.pos.clone(), kind: 'ROOTS', radius: z.radius });
       break;
     case BT.SPIT:
@@ -344,7 +356,8 @@ export function clampToVoid(v: Vector3, margin: number): void {
 }
 export function mapLimit(x: number, z: number, margin: number): number { return edgeLimit(x, z, margin); }
 
-export function resetBossFx(): void {
+/** Boss died / wave ended: clear every hazard but keep the QA counters. */
+export function endBossFx(): void {
   for (const w of waves) w.active = false;
   for (const q of props) q.active = false;
   for (const q of portals) q.active = false;
@@ -352,5 +365,12 @@ export function resetBossFx(): void {
   breath.active = false; chill.stacks = 0; chill.t = 0; chill.immuneT = 0;
   arena.shrink = false; arena.blizzard = false; arena.blizzardK = 0; arena.hailT = 1.5; arena.r = 60; arena.edgeT = 0;
   dive.landed = false;
+  // pending boss telegraphs must not fire after their caster is gone
+  const zs = world.zones;
+  for (let i = 0; i < zs.length; i++) { const z = zs[i]; if (z.active && z.hostile && z.trick >= BT.VISUAL) z.active = false; }
+}
+
+export function resetBossFx(): void {
+  endBossFx();
   for (const k in bossStats) delete bossStats[k];
 }

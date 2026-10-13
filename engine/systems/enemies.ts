@@ -37,6 +37,7 @@ import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial,
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS } from '../../constants';
 import { updateBoss } from './bosses';
+import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
 import '../lootExtra';
@@ -174,6 +175,19 @@ export function spawnTelegraphLine(
   return zn;
 }
 
+/** Cone warning: apex at (x,z), `range` in Zone.radius, half-angle (rad) in Zone.aux. Always resolves through `trick` (>= 30, see bossFx.resolveBossZone). */
+export function spawnTelegraphCone(
+  x: number, z: number, dirX: number, dirZ: number, range: number, half: number, life: number, color: number, trick: number, damage: number,
+): Zone | null {
+  const zn = allocZone();
+  if (!zn) return null;
+  zn.active = true; zn.kind = 'TELEGRAPH_CONE'; zn.hostile = true;
+  zn.pos.set(x, 0, z); zn.dir.set(dirX, 0, dirZ); zn.radius = range; zn.aux = half; zn.length = 0;
+  zn.life = life; zn.maxLife = life; zn.damage = damage; zn.color = color; zn.trick = trick;
+  events.emit('telegraph', { pos: zn.pos, radius: range * 0.4, duration: life });
+  return zn;
+}
+
 function randomAffix(): EliteAffix {
   return ELITE_AFFIXES[Math.floor(Math.random() * ELITE_AFFIXES.length)];
 }
@@ -233,6 +247,7 @@ export function spawnEnemy(
 
   d.aliveCount++;
   events.emit('spawn', { pos: e.pos, kind, elite });
+  if (boss && isBoss2(kind)) initBoss2(e); // wave 30-70 bosses: reset their AI state (Mire Hydra spawns its heads here)
   return e;
 }
 
@@ -278,7 +293,9 @@ export function onEnemyDeath(e: Enemy): void {
   d.killsThisWave++;
   if (d.aliveCount > 0) d.aliveCount--;
 
+  if (e.kind === 'BOSS_SAPLING') saplingDied(e);
   if (e.boss) {
+    bossDied2(e);
     clearDecoys();
     world.boss.active = false;
     world.boss.hp = 0;
@@ -660,8 +677,10 @@ function runAI(e: Enemy): void {
     case 'BANDIT': aiBandit(e); break;
     case 'CRYSTAL_GOLEMITE': aiGolemite(e); break;
     case 'ROCK_CRAB': aiCrab(e); break;
-    case 'BOSS_GOLEM':
-    case 'BOSS_LICH': break; // driven by updateBoss() from updateEnemy()
+    case 'BOSS_SAPLING': aiSapling(e); break;
+    case 'BOSS_HYDRA_HEAD': aiHydraHead(e); break;
+    case 'BOSS_IMP': aiChaser(e, false); break;
+    default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
 
@@ -713,7 +732,7 @@ function pushOutOfObstacles(e: Enemy): boolean {
 }
 
 function contactHit(e: Enemy, locked: boolean): void {
-  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING') return;
+  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0) return;
   if (contactCd[e.id] > 0 || !world.player.alive) return;
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
@@ -747,7 +766,7 @@ function updateEnemy(e: Enemy): void {
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
 
   // leash: stray enemies re-enter near the arena edge close to the player
-  if (!e.boss && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
+  if (!e.boss && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
     e.pos.copy(tmpV);
     tdx = px - e.pos.x; tdz = pz - e.pos.z; tdist = Math.sqrt(tdx * tdx + tdz * tdz);
   }
@@ -816,8 +835,8 @@ function updateEnemy(e: Enemy): void {
   if (Math.abs(e.knock.x) < 0.01 && Math.abs(e.knock.z) < 0.01) { e.knock.x = 0; e.knock.z = 0; }
 
   // ---- collisions
-  if (!e.boss) separate(e);
-  if (e.kind !== 'BAT' && e.kind !== 'WRAITH') {
+  if (!e.boss && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
+  if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD') {
     const pushed = pushOutOfObstacles(e);
     if (pushed && e.slamT > 0 && Math.abs(e.knock.x) + Math.abs(e.knock.z) > 10) wallSlam(e);
     if (pushed && e.spKind === 29 && e.spStep > 0) shellBounce(e);
@@ -926,6 +945,7 @@ const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number 
   SLOW_ORB: { life: 2.4, radius: 0.5 },
   BOSS_ORB: { life: 6, radius: 0.5 },
   ROCK: { life: 4, radius: 0.8 },
+  FLAME: { life: 4.5, radius: 0.55 },
 };
 
 export function fireEnemyProjectile(
@@ -1034,6 +1054,7 @@ export function updateEnemyProjectiles(dt: number): void {
         p.active = false;
         damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow });
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
+        else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       }
     }

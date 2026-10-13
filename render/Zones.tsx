@@ -14,7 +14,7 @@ import { TAU, clamp } from './util';
 import { inView } from './view';
 
 const MAXZ = 192;
-const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, TELEGRAPH_CONE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
+const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, TELEGRAPH_CONE: 11, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
   FIREPATCH: 9, GOO: 10, CALTROPS: 10, ACID: 10, PLAGUE: 10, SMOKE: 10 };
 // sub-style of the generic hostile patch shader (vP.w)
 const PATCH_STYLE: Partial<Record<ZoneKind, number>> = { GOO: 0, CALTROPS: 1, ACID: 2, PLAGUE: 3, SMOKE: 4 };
@@ -67,6 +67,18 @@ void main(){
     float a = max(body * (0.25 + 0.6 * flame), scorch * (1.0 - flame));
     vec3 rgb = mix(vec3(0.04, 0.03, 0.02), c * (1.2 + flame * 1.3), clamp(flame * 1.5 + 0.2, 0.0, 1.0));
     col = vec4(rgb, a * aux);
+  } else if (type > 10.5) {
+    // cone telegraph (apex at the centre, opens along local +z; aux = half-angle in radians, colour always vC)
+    float ha = vP.z;
+    float a = abs(atan(q.x, q.y));
+    float inside = step(a, ha) * step(r, 1.0) * step(0.0, q.y);
+    float side = smoothstep(ha - 0.07, ha, a) * inside;
+    float rim = smoothstep(0.95, 1.0, r) * inside;
+    float fill = inside * smoothstep(prog + 0.01, prog - 0.01, r);
+    float front = inside * smoothstep(0.03, 0.0, abs(r - prog)) * step(0.02, prog);
+    float hatch = 0.5 + 0.5 * sin(r * PAD * 40.0 - uTime * 4.0 + a * 6.0);
+    float al = inside * (0.12 + hatch * 0.06) + fill * 0.34 + (side + rim) * 0.7 + front * 0.6;
+    col = vec4(mix(vC, mix(vC, vec3(1.0), 0.5), fill * 0.5 + front) * (1.0 + (side + rim) * 0.6), al);
   } else if (type > 9.5) {
     // hostile trick patches (vP.w = style): 0 goo, 1 caltrops, 2 acid, 3 plague cloud, 4 smoke
     float st = vP.w;
@@ -205,6 +217,7 @@ export function Zones() {
           yaw = Math.atan2(z.dir.x, z.dir.z);
           break;
         }
+        case 'TELEGRAPH_CONE': aux = z.aux; break; // half-angle; the cone spans the zone radius (range) on both axes
         case 'FIRE': case 'WILDFIRE': case 'FIREPATCH': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.2, 0, 1); break;
         case 'GOO': case 'CALTROPS': case 'ACID': case 'PLAGUE': case 'SMOKE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.1, 0, 1); break;
         case 'BLACKHOLE': case 'TORNADO': aux = clamp((1 - frac) * 6, 0, 1) * clamp(frac * 5, 0, 1); break;
@@ -222,6 +235,7 @@ export function Zones() {
         }
         default: break;
       }
+      if (z.kind === 'TELEGRAPH_CONE') yaw = Math.atan2(z.dir.x, z.dir.z);
       o.position.set(x, y, zz); o.rotation.set(0, yaw, 0); o.scale.set(sx, 1, sz); o.updateMatrix();
       mesh.setMatrixAt(n, o.matrix);
       P[n * 4] = type; P[n * 4 + 1] = prog; P[n * 4 + 2] = aux; P[n * 4 + 3] = type === 10 ? (PATCH_STYLE[z.kind] ?? 0) : z.trick > 0 ? 1 : 0;

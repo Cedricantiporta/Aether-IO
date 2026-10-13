@@ -48,6 +48,17 @@ export const LOOT: LootDef[] = [
   d('mountain_crown', 'Crown of the Mountain', 'MYTHIC', 'crown', ['#ffb347', '#fff0b0'], 'Worn by the mountain itself.'),
   d('phylactery', 'Lich Phylactery Shard', 'LEGENDARY', 'shard', ['#9a4aff', '#d8b0ff'], 'A fragment of a soul vessel.'),
   d('lich_eye', "Lich's Eye", 'MYTHIC', 'eye', ['#5aff9a', '#e0fff0'], 'It watches. It remembers.'),
+  // wave 30-70 boss trophies (one unique LEGENDARY trade good + a tradeable EPIC each)
+  d('elderroot_heartwood', 'Elderroot Heartwood', 'LEGENDARY', 'heart', ['#6a9a2a', '#d8ff8a'], 'Still sprouting. The forest remembers him.', 1.3),
+  d('ancient_acorn', 'Ancient Acorn', 'EPIC', 'nugget', ['#8a5a24', '#c8e870'], 'Older than the village. Do not plant it.'),
+  d('hydra_fang', 'Hydra Fang', 'LEGENDARY', 'fang', ['#e8f0c8', '#3f9a3a'], 'Dripping with swamp venom.', 1.3),
+  d('marsh_scale', 'Marsh Scale', 'EPIC', 'shell', ['#3f8f4a', '#b6f06a'], 'Shrugs off blades and rot alike.'),
+  d('glacius_heart', 'Heart of Glacius', 'LEGENDARY', 'orb', ['#7dd3fc', '#f0fbff'], 'A frozen heartbeat, once a minute.', 1.3),
+  d('frost_scale', 'Wyrm Frostscale', 'EPIC', 'shard', ['#9be0ff', '#e8f8ff'], 'Cold enough to ache through gloves.'),
+  d('ignar_brand', "Ignar's Brand", 'LEGENDARY', 'banner', ['#e8451a', '#ffd070'], 'A glowing warlord sigil. Handle with tongs.', 1.3),
+  d('cinder_core', 'Cinder Core', 'EPIC', 'gland', ['#ff5a1a', '#ffe060'], 'The heart of a fire imp, still warm.'),
+  d('void_shard', 'Herald Void Shard', 'LEGENDARY', 'crystal', ['#a855f7', '#f0d8ff'], 'Looking at it feels like falling.', 1.3),
+  d('echo_of_ruin', 'Echo of Ruin', 'EPIC', 'eye', ['#7a3ab0', '#e0c0ff'], 'Replays the last thing it saw.'),
   d('coin_pouch', 'Old Coin Pouch', 'COMMON', 'pouch', ['#9a6a38', '#ffd23a'], 'A few tarnished coins inside.'),
   d('silver_goblet', 'Silver Goblet', 'RARE', 'goblet', ['#dfe6f2', '#8a96ab'], 'Fit for a noble table.', 1.3),
   d('ancient_relic', 'Ancient Relic', 'EPIC', 'relic', ['#c8a050', '#6ae0c0'], 'Older than the village itself.', 1.2),
@@ -73,6 +84,11 @@ export const LOOT_TABLES: Record<string, string[]> = {
   ELITE: ['elite_trophy', 'champion_medal'],
   BOSS_GOLEM: ['golem_heart', 'mountain_crown'],
   BOSS_LICH: ['phylactery', 'lich_eye'],
+  BOSS_TREANT: ['ancient_acorn', 'elderroot_heartwood'],
+  BOSS_HYDRA: ['marsh_scale', 'hydra_fang'],
+  BOSS_WYRM: ['frost_scale', 'glacius_heart'],
+  BOSS_WARLORD: ['cinder_core', 'ignar_brand'],
+  BOSS_VOID: ['echo_of_ruin', 'void_shard'],
   CRATE: ['coin_pouch', 'silver_goblet'],
   BARREL: ['coin_pouch', 'silver_goblet'],
   POT: ['coin_pouch'],
@@ -85,7 +101,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
 
 /** Chance that a kill / break rolls any loot at all (bosses and elites always do). */
 export const LOOT_CHANCE: Record<string, number> = {
-  CRATE: 0.2, BARREL: 0.2, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1,
+  CRATE: 0.2, BARREL: 0.2, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1, BOSS_TREANT: 1, BOSS_HYDRA: 1, BOSS_WYRM: 1, BOSS_WARLORD: 1, BOSS_VOID: 1,
 };
 export const DEFAULT_LOOT_CHANCE = 0.1;
 
