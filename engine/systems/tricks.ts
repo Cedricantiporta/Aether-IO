@@ -12,6 +12,7 @@ import type { Enemy, EnemyKind, Zone, ZoneKind } from '../types';
 import { applyPlayerDebuff, damagePlayer } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { addTempCollider, removeTempCollider, type Collider } from '../mapgen';
+import { WEAK_KINDS } from '../enemyDefs';
 
 export const TRICK = {
   NONE: 0, STAMPEDE: 15, GOO: 1, FIREBOMB: 2, SCREECH: 3, PIN: 4, CURSE: 5, STOMP: 7, PLAGUE: 9, TERROR: 10, WALL: 11, CALTROPS: 12, SMOKE: 13, PINCH: 14,
@@ -58,8 +59,15 @@ export function resetTricks(): void { for (const k in lastStart) delete lastStar
 export function hasTrick(kind: EnemyKind): boolean { return !!DEFS[kind]; }
 
 /** Spawns the initial random trick cooldown (called from spawnEnemy). */
+// Weak monsters (non-elite WEAK_KINDS) cast at most ONCE per life, ~35% never do, at a random moment, with a slow
+// wind-up. Normal monsters repeat on their cooldown; elites repeat faster.
+const NEVER = 1e9;
+function isWeak(e: Enemy): boolean { return !e.elite && WEAK_KINDS.includes(e.kind); }
+
 export function initTrick(e: Enemy): void {
-  e.trickCd = 2 + Math.random() * 6; e.trickT = 0; e.trickKind = 0;
+  e.trickT = 0; e.trickKind = 0;
+  if (isWeak(e)) e.trickCd = Math.random() < 0.35 ? NEVER : 4 + Math.random() * 14;
+  else e.trickCd = (e.elite ? 1.5 : 2) + Math.random() * (e.elite ? 4 : 6);
 }
 
 /** Advances an active cast. Returns true while the enemy is busy casting (AI must be skipped). */
@@ -82,22 +90,25 @@ export function tryStartTrick(e: Enemy, tdist: number, ux: number, uz: number): 
   if (now - (lastStart[def.id] ?? -9) < 1.2) return false; // keep same-kind casts staggered
   lastStart[def.id] = now;
   casting++;
-  e.trickKind = def.id; e.trickT = def.windup; e.trickCd = def.cd * (0.85 + Math.random() * 0.3);
+  const weak = isWeak(e);
+  const windup = weak ? def.windup * 1.6 : def.windup;
+  e.trickKind = def.id; e.trickT = windup;
+  e.trickCd = weak ? NEVER : def.cd * (e.elite ? 0.65 : 1) * (0.85 + Math.random() * 0.3);
   stat(def.id).cast++;
   const power = Math.max(e.contactDamage, e.projectileDamage, 6);
   const p = world.player.pos;
   let z: Zone | null;
   if (def.id === TRICK.PIN) {
-    z = spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, Math.min(24, tdist + 4), 1.4, def.windup, COLOR[def.id]);
+    z = spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, Math.min(24, tdist + 4), 1.4, windup, COLOR[def.id]);
   } else if (def.id === TRICK.WALL) {
     // wall segment between the golemite and the player, ~5 units in front of the player
     const wx = p.x - ux * 5, wz = p.z - uz * 5;
     const half = 3.6;
-    z = spawnTelegraphLine(wx + uz * half, wz - ux * half, -uz, ux, half * 2, 2.2, def.windup, COLOR[def.id]);
+    z = spawnTelegraphLine(wx + uz * half, wz - ux * half, -uz, ux, half * 2, 2.2, windup, COLOR[def.id]);
   } else if (def.atSelf) {
-    z = spawnTelegraphCircle(e.pos.x, e.pos.z, def.r * Math.max(1, e.scale * 0.8), def.windup, power, COLOR[def.id]);
+    z = spawnTelegraphCircle(e.pos.x, e.pos.z, def.r * Math.max(1, e.scale * 0.8), windup, power, COLOR[def.id]);
   } else {
-    z = spawnTelegraphCircle(p.x, p.z, def.r, def.windup, power, COLOR[def.id]);
+    z = spawnTelegraphCircle(p.x, p.z, def.r, windup, power, COLOR[def.id]);
   }
   if (z) { z.trick = def.id; z.damage = power; }
   events.emit('trick', { pos: e.pos, kind: TRICK_NAME[def.id] + '_CAST', radius: def.r });

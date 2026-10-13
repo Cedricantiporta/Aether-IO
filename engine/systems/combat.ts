@@ -9,6 +9,7 @@ import { events, type DamageKind } from '../events';
 import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
+import { comboMul, registerHit } from './combo';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS, COLORS } from '../../constants';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
@@ -293,6 +294,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
       }
     }
   }
+  if (!o.dot && o.source !== 'PET') { dealt *= comboMul(); registerHit(); }
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.boss) dealt *= hooks.damageMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   if (e.shield > 0) {

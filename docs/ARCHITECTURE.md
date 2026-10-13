@@ -104,7 +104,7 @@ pointer) every frame — the engine never touches the camera.
   (`dashIframes`; the Barbarian shoulder charge has none). Enemy statuses: stun/freeze (bosses + minis fill `stagger` instead), stacking burn (<=3), chill, ARMOR BREAK,
   `armor` (100/(100+armor)), backstab (+30%), launch + wall-slam (`DamageOpts.launch/slam`).
 * Kit: keys 1/2/3 = class actives (`abilityDefs.ACTIVE_ORDER`), Space = class dash (`tryDash` -> Shadow Roll / Blink Nova / Shoulder Charge), R = ult (1 s wind-up while the sim is frozen,
-  `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = skill combo (+20%/stack, finisher on ult).
+  `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = hit combo (every direct player hit +1, 3 s window; +2.5% dmg per 10 hits, cap +25%; ult at 50+ hits = finisher).
 * Aimed casting: `engine/systems/aim.ts` (`aimState`, `updateSkillInput`) + `render/AimIndicator.tsx`; skills read `combat.aimOverride` through `getAimDir` / `aimPoint`.
   XP is granted instantly on kill (`combat.grantKillXp`, no XP orbs); coins only from `enemyDefs.GOLD_DROPPERS` + the Lich.
 
