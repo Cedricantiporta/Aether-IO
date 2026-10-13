@@ -346,6 +346,22 @@ button.rpg-slot:active:not(:disabled) { transform: scale(.96); }
 .wbar > .fill { position: absolute; inset: 0; width: calc(var(--fill, 0) * 100%); transition: width .25s linear; background: var(--bc, var(--ac)); border-radius: inherit; }
 .wsub { margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--on-glass-2, rgba(243, 241, 234, .66)); }
 
+/* run plaque: room-progress pips + black fade between rooms */
+.room-pill { min-width: 11rem; }
+.room-pill .pips { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 7px; }
+.pip { width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, .35); background: transparent; transition: background .2s, border-color .2s, transform .2s; }
+.pip[data-s='done'] { background: var(--ac); border-color: var(--ac); }
+.pip[data-s='cur'] { border-color: #fff; background: rgba(255, 255, 255, .25); animation: pip-pulse 1.1s ease-in-out infinite; }
+.pip.boss { display: grid; place-items: center; width: 20px; height: 20px; margin-left: 4px; color: rgba(255, 255, 255, .55); border-width: 1.5px; }
+.pip.boss[data-s='cur'] { color: #fff; border-color: #ef6a5e; background: rgba(239, 106, 94, .35); }
+.pip.boss[data-s='done'] { color: var(--ac-ink); }
+@keyframes pip-pulse { 50% { transform: scale(1.3); } }
+.room-fade { position: absolute; inset: 0; z-index: 85; background: #05060a; pointer-events: none; }
+.portal-tag { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; white-space: nowrap; pointer-events: none; color: #f3f1ea; font-weight: 700; font-size: 13px; line-height: 1.1;
+  background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-line); box-shadow: 0 0 0 1px var(--pc, #fff) inset; }
+.portal-tag .pi { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #10131c; background: var(--pc, #fff); }
+.portal-tag .pt small { display: block; font-size: 11px; font-weight: 600; color: rgba(243, 241, 234, .7); }
+
 /* minimap */
 .minimap { position: relative; width: var(--mm, 112px); height: var(--mm, 112px); border-radius: 50%; overflow: hidden; background: rgba(15, 18, 28, .5); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-line); }

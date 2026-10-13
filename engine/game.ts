@@ -15,7 +15,7 @@ import { updatePets, resetPets } from './systems/pets';
 import { updatePickups, resetPickups } from './systems/pickups';
 import { updateCrates } from './systems/crates';
 import { resetAbilities } from './systems/abilities';
-import { updateDirector, resetDirector } from './systems/director';
+import { updateDirector, resetDirector, startRunRooms } from './systems/director';
 import { updateVillage, placeVillageNodes } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
@@ -131,7 +131,7 @@ function resetSystems(): void {
   clearPressed();
 }
 
-/** Peaceful village: shops open, island scenery + a few harvest nodes, hero standing in the square. */
+/** Peaceful town: shops always open, island scenery + a few harvest nodes, hero standing in the square. */
 export function enterVillage(): void {
   clearWorld();
   world.enemyGrid.clear();
@@ -139,24 +139,18 @@ export function enterVillage(): void {
   placeVillageNodes();
   resetSystems();
   world.player.pos.set(0, 0, 2);
-  world.village.shopsClosed = false;
   useGameStore.getState().rollShopSales();
   villageReady = true;
   events.emit('runEnd', {});
 }
 
-/** The siege run: shops close, cutscene (SIEGE phase) then wave 1. */
+/** A run: leaves the town and loads room 1 of the first biome (the town map is rebuilt by enterVillage when it ends). */
 export function startRun(): void {
   clearWorld();
   world.enemyGrid.clear();
-  generateMap();
   resetSystems();
-  const d = world.director;
-  d.phase = 'SIEGE';
-  d.phaseT = 0;
-  world.village.shopsClosed = true;
   events.emit('runStart', {});
-  events.emit('siegeStart', {});
+  startRunRooms();
 }
 
 export function updateGame(rawDt: number): void {

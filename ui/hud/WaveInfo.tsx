@@ -1,108 +1,110 @@
-import React, { useRef } from 'react';
-import { useGameStore } from '../../store';
+import React, { useRef, useState } from 'react';
+import { Skull, Home, ChevronsDown } from 'lucide-react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { Button } from '../components/Button';
-import { skipCutscene, skipRespite } from '../../engine/systems/director';
+import { ROOMS_PER_BIOME, BIOMES, biomeOf, loopOf } from '../../engine/roomDefs';
+import { descend, finishRunVictory } from '../../engine/systems/director';
+import { useGameStore } from '../../store';
+import { GameStatus } from '../../types';
 
-const PHASE_LABEL: Record<string, string> = { SIEGE: 'Under attack!', COUNTDOWN: 'Preparing...', FIGHT: 'Enemies', CLEANUP: 'Boss defeated', BOSS: 'Boss fight', REWARD: 'Cleared', RESPITE: 'Respite' };
-const mmss = (s: number) => { const t = Math.max(0, Math.ceil(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+/** Short sub-line under the pips. */
+function subText(): string {
+  const d = world.director, r = world.room, t = r.plan.type;
+  if (d.phase === 'BIOME_DONE') return `${biomeOf(r.biome).name} conquered`;
+  if (d.phase === 'LEAVING') return '';
+  if (d.phase === 'CLEARED') {
+    if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
+    if (t === 'TREASURE' && r.station.kind === 'CHEST' && !r.station.used) return 'Open the chest, then pick an exit';
+    if (t === 'SHRINE' && !r.shrineOn && !r.station.used) return 'Touch the altar for a challenge, or leave';
+    return 'Room cleared - pick an exit';
+  }
+  if (t === 'BOSS') return r.enemiesLeft > 0 ? 'Boss fight' : '';
+  return `Enemies left: ${r.enemiesLeft}`;
+}
 
-export const WavePlaque: React.FC = () => {
-  const wave = useGameStore((s) => s.wave);
-  const bar = useRef<HTMLDivElement>(null);
-  const lab = useRef<HTMLDivElement>(null);
-  const cnt = useRef<HTMLSpanElement>(null);
-  const st = useRef({ f: '', a: -1, p: '', c: '' });
+/** Top-centre run plaque: biome name, room-progress pips (boss skull at the end), enemies left. Pure ref/DOM updates. */
+export const RoomPlaque: React.FC = () => {
+  const name = useRef<HTMLSpanElement>(null);
+  const depth = useRef<HTMLSpanElement>(null);
+  const sub = useRef<HTMLDivElement>(null);
+  const pips = useRef<(HTMLElement | null)[]>([]);
+  const sig = useRef('');
+  const pipSig = useRef('');
 
   useRaf(() => {
-    const d = world.director, s = st.current;
-    const f = d.phase === 'FIGHT' || d.phase === 'COUNTDOWN' ? (d.phase === 'COUNTDOWN' ? 1 - Math.min(1, Math.max(0, d.countdown) / 5) : 1 - Math.min(1, d.waveTime / Math.max(1, d.waveDuration))) : d.phase === 'RESPITE' ? Math.max(0, d.respiteT) / 20 : 1;
-    const fs = f.toFixed(3);
-    if (bar.current && fs !== s.f) {
-      s.f = fs; bar.current.style.setProperty('--fill', fs);
-      const cl = d.phase === 'CLEANUP' || d.phase === 'BOSS' ? '#ef6a5e' : d.phase === 'RESPITE' ? '#5fd68e' : '#f2a93b';
-      if (cl !== s.c) { s.c = cl; bar.current.style.setProperty('--bc', cl); }
+    const r = world.room, d = world.director;
+    if (!r.active) return;
+    const text = subText();
+    const key = `${r.biome}|${d.wave}|${text}`;
+    if (key !== sig.current) {
+      sig.current = key;
+      const loop = loopOf(r.biome);
+      if (name.current) name.current.textContent = biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
+      if (depth.current) depth.current.textContent = `Depth ${d.wave}`;
+      if (sub.current) sub.current.textContent = text;
     }
-    const boss = d.wave % 10 === 0;
-    const left = Math.max(0, d.quotaTotal - d.quotaSpawned) + d.aliveCount;
-    const fight = d.phase === 'FIGHT';
-    const key = `${d.phase}|${left}|${d.quotaTotal}|${fight ? Math.ceil(d.waveDuration - d.waveTime) : d.phase === 'RESPITE' ? Math.ceil(d.respiteT) : 0}`;
-    if (key !== s.p) {
-      s.p = key;
-      if (lab.current) lab.current.textContent = fight ? (boss ? 'Boss fight' : `${left} enemies left`) : (PHASE_LABEL[d.phase] ?? d.phase);
-      if (cnt.current) cnt.current.textContent = fight && !boss ? mmss(d.waveDuration - d.waveTime) : d.phase === 'RESPITE' ? mmss(d.respiteT) : '';
+    const done = d.phase === 'CLEARED' || d.phase === 'BIOME_DONE';
+    const pk = `${r.biome}|${r.index}|${done ? 1 : 0}`;
+    if (pk !== pipSig.current) {
+      pipSig.current = pk;
+      for (let i = 0; i <= ROOMS_PER_BIOME; i++) {
+        const el = pips.current[i]; if (!el) continue;
+        el.dataset.s = i < r.index || (i === r.index && done) ? 'done' : i === r.index ? 'cur' : 'todo';
+      }
     }
   });
 
   return (
-    <div className="wave-pill glass pe">
-      <div className="wt"><span>Wave {wave}</span><span className="tm" ref={cnt} /></div>
-      <div className="wbar" ref={bar}><div className="fill" /></div>
-      <div className="wsub" ref={lab}>Preparing...</div>
+    <div className="wave-pill room-pill glass pe" data-testid="room-plaque">
+      <div className="wt"><span ref={name}>Meadow</span><span className="tm" ref={depth}>Depth 1</span></div>
+      <div className="pips" aria-hidden>
+        {Array.from({ length: ROOMS_PER_BIOME }, (_, i) => <i key={i} className="pip" data-s="todo" ref={(el) => { pips.current[i] = el; }} />)}
+        <i className="pip boss" data-s="todo" ref={(el) => { pips.current[ROOMS_PER_BIOME] = el; }}><Skull size={11} /></i>
+      </div>
+      <div className="wsub" ref={sub} data-testid="room-sub">Enemies left: 0</div>
     </div>
   );
 };
 
-/** Huge centred countdown number between waves — pure ref/DOM, no React state. */
-export const Countdown: React.FC = () => {
-  const root = useRef<HTMLDivElement>(null);
-  const num = useRef<HTMLDivElement>(null);
-  const ribbon = useRef<HTMLSpanElement>(null);
-  const st = useRef({ n: -1, show: false, wave: -1 });
+/** Full-screen black overlay for the 0.4 s room transitions (opacity follows world.room.fade). */
+export const RoomFade: React.FC = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const last = useRef(-1);
   useRaf(() => {
-    const d = world.director, s = st.current;
-    const show = d.phase === 'COUNTDOWN' && d.countdown > 0;
-    if (show !== s.show) { s.show = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
-    if (!show) return;
-    const n = Math.ceil(d.countdown);
-    if (n !== s.n && num.current) {
-      s.n = n; num.current.textContent = String(n);
-      num.current.classList.remove('pop'); void num.current.offsetWidth; num.current.classList.add('pop');
-    }
-    if (d.wave !== s.wave && ribbon.current) { s.wave = d.wave; ribbon.current.textContent = `Wave ${d.wave} incoming`; }
+    const f = Math.round(world.room.fade * 100) / 100;
+    if (f === last.current || !ref.current) return;
+    last.current = f;
+    ref.current.style.opacity = String(f);
+    ref.current.style.visibility = f > 0 ? 'visible' : 'hidden';
   });
-  return (
-    <div ref={root} className="absolute inset-0 flex-col items-center justify-center pointer-events-none gap-2" style={{ display: 'none', justifyContent: 'flex-start', paddingTop: 'calc(var(--sat) + max(88px, 26vh))' }}>
-      <div className="cap-pill"><span ref={ribbon}>Wave 1 incoming</span></div>
-      <div ref={num} className="countdown-num">5</div>
-    </div>
-  );
+  return <div ref={ref} className="room-fade" style={{ opacity: 1 }} />;
 };
 
-
-/** "Skip" for the siege cutscene (also Enter). Pure ref/DOM visibility. */
-export const SiegeSkip: React.FC = () => {
-  const root = useRef<HTMLDivElement>(null);
-  const on = useRef(false);
+/** After a boss: bank the run or descend into the next biome. Shown once the loot has been collected. */
+export const BiomeChoice: React.FC = () => {
+  const [show, setShow] = useState(false);
+  const shown = useRef(false);
+  const status = useGameStore((s) => s.status);
   useRaf(() => {
-    const show = world.director.phase === 'SIEGE';
-    if (show !== on.current) { on.current = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
+    const on = world.director.phase === 'BIOME_DONE' && world.director.phaseT > 1.6 && world.room.fade < 0.05;
+    if (on !== shown.current) { shown.current = on; setShow(on); }
   });
+  if (!show || status !== GameStatus.PLAYING) return null;
+  const b = world.room.biome;
+  const cur = biomeOf(b), next = BIOMES[(b + 1) % BIOMES.length];
   return (
-    <div ref={root} className="absolute left-0 right-0 justify-center pe" style={{ display: 'none', bottom: 'calc(var(--sab) + 28vh)', zIndex: 55 }}>
-      <Button size="sm" onClick={skipCutscene} data-testid="skip-siege">Skip</Button>
-    </div>
-  );
-};
-
-/** Respite between waves: shops are open for 20 s. Timer + Continue button. */
-export const RespiteBar: React.FC = () => {
-  const root = useRef<HTMLDivElement>(null);
-  const tm = useRef<HTMLSpanElement>(null);
-  const st = useRef({ show: false, t: -1 });
-  useRaf(() => {
-    const d = world.director, s = st.current;
-    const show = d.phase === 'RESPITE';
-    if (show !== s.show) { s.show = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
-    if (!show) return;
-    const t = Math.ceil(d.respiteT);
-    if (t !== s.t && tm.current) { s.t = t; tm.current.textContent = `${t}s`; }
-  });
-  return (
-    <div ref={root} className="absolute left-0 right-0 flex-col items-center gap-2 pointer-events-none" style={{ display: 'none', bottom: 'calc(var(--sab) + 30vh)', zIndex: 45 }} data-testid="respite">
-      <div className="cap-pill">Respite · shops open · <span ref={tm}>20s</span></div>
-      <div className="pe"><Button variant="primary" size="sm" onClick={skipRespite} data-testid="continue">Continue to next wave</Button></div>
+    <div className="absolute inset-0 pe go-root" style={{ zIndex: 90 }} data-testid="biome-choice">
+      <div className="go-card paper" style={{ width: 'min(26rem, 100%)' }}>
+        <div className="px-5 pt-5 pb-2 text-center">
+          <div className="text-2xl font-extrabold leading-tight">{cur.name} conquered</div>
+          <div className="text-sm font-semibold text-[var(--fg-2)] mt-1">The way onward is open. Bank your spoils, or press deeper for better loot.</div>
+        </div>
+        <div className="flex flex-col gap-3 p-5">
+          <Button variant="primary" size="lg" onClick={descend} pulse data-testid="descend"><ChevronsDown size={18} /> Descend to {next.name}</Button>
+          <Button size="lg" onClick={finishRunVictory} data-testid="return-town"><Home size={18} /> Return to town</Button>
+        </div>
+      </div>
     </div>
   );
 };

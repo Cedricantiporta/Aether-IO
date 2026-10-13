@@ -675,10 +675,6 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     openSpecificShop: (tab: ShopTab) => {
       if (!canOpenPanels()) return;
-      if (world.village.shopsClosed) {
-        notify('Shops are closed during the siege!', 'red', 'WARNING');
-        return;
-      }
       set({ isShopOpen: true, isInventoryOpen: false, isCharacterSheetOpen: false, activeShopTab: tab });
       set(syncPause(true));
     },
@@ -757,9 +753,9 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     setWave: (wave) => set({ wave }),
 
-    openWaveReward: (fast = false) => {
+    openWaveReward: (bonus = false) => {
       const s = get();
-      const extraCard = fast && Math.random() < 0.35;
+      const extraCard = bonus;
       if (extraCard) notify('Bonus reward card!', COLORS.uiAccent, 'SYSTEM');
       set({
         upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, extraCard ? 4 : 3),

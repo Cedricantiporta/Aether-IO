@@ -4,7 +4,7 @@
 // ============================================================================
 import { Vector3 } from 'three';
 import { world, allocPickup } from '../world';
-import { edgeLimit } from '../mapgen';
+import { edgeLimit, bounds } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
 import type { Item, Rarity } from '../../types';
@@ -35,7 +35,7 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);
-  const maxD = d > 70 ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;
+  const maxD = d > bounds.checkR ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;
   if (d > maxD) tmpPos.multiplyScalar(maxD / d);
 
   // XP orbs are gone: experience is granted instantly (with a coalesced floating number).

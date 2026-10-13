@@ -118,7 +118,20 @@ export function islandRadius(angle: number): number {
 
 /** Walkable limit radius at (x,z): islandRadius(angle) - margin. Cheap early-out for callers: only needed when |p| > 80. */
 export function edgeLimit(x: number, z: number, margin = 2): number {
-  return islandRadius(Math.atan2(z, x)) - margin;
+  return bounds.room ? bounds.r - margin : islandRadius(Math.atan2(z, x)) - margin;
+}
+
+/**
+ * Walkable bounds. Island (town): irregular edge, callers only test beyond `checkR`. Run room: a disc of radius `r`
+ * around 0,0 (every position is tested). Written by installRoom() / generateMap().
+ */
+export const bounds = { room: false, r: 0, checkR: 70, checkR2: 80 * 80 };
+
+/** Switches the collision world to a run room: `list` replaces every collider, `radius` is the walkable disc. */
+export function installRoom(list: Collider[], radius: number): void {
+  bounds.room = true; bounds.r = radius; bounds.checkR = 0; bounds.checkR2 = 0;
+  colliders = list;
+  rebuildColliderGrid();
 }
 
 /** Pushes `pos` (xz) out of intact solid crates. Allocation-free. */
@@ -142,7 +155,7 @@ export function pushOutOfCrates(pos: Vector3, radius: number): void {
 }
 
 // --------------------------------------------------------------------- rng --
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -172,6 +185,7 @@ function clearZones(): ClearZone[] {
 }
 
 export function generateMap(): void {
+  bounds.room = false; bounds.r = 0; bounds.checkR = 70; bounds.checkR2 = 80 * 80;
   mapSeed = (Math.random() * 4294967296) >>> 0;
   const rnd = mulberry32(mapSeed);
   const rand = (a: number, b: number) => a + rnd() * (b - a);
@@ -446,7 +460,7 @@ export function generateMap(): void {
 }
 
 // ------------------------------------------------------------------- crates --
-function commitCrates(list: { kind: CrateKind; x: number; z: number }[], rnd: () => number): void {
+export function commitCrates(list: { kind: CrateKind; x: number; z: number }[], rnd: () => number): void {
   for (const c of world.crates) { c.active = false; c.respawnT = 0; c.hitFlash = 0; }
   let slot = 0;
   for (const s of list) {

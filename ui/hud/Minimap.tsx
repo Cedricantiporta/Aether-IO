@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS } from '../../engine/world';
 import { SHOP_POSITIONS } from '../../constants';
+import { portalLabel } from '../../engine/roomDefs';
 import { useRaf } from '../hooks/useRaf';
 
 const SIZE = 120; // css px
@@ -13,7 +14,9 @@ export const Minimap: React.FC = () => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d'); if (!ctx) return;
     const px = SIZE * DPR, cx = px / 2, R = cx - 3 * DPR;
-    const k = R / (ARENA_RADIUS + 4);
+    const room = world.room.active;
+    const rad = room ? world.room.radius + 1 : ARENA_RADIUS;
+    const k = R / (rad + 4);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, px, px);
     ctx.save();
@@ -22,7 +25,7 @@ export const Minimap: React.FC = () => {
     ctx.fillStyle = 'rgba(38,52,48,.55)'; ctx.fillRect(0, 0, px, px);
     // arena edge
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
-    ctx.beginPath(); ctx.arc(cx, cx, ARENA_RADIUS * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx, cx, rad * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     // obstacles
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     const obs = world.obstacles;
@@ -30,8 +33,18 @@ export const Minimap: React.FC = () => {
       const o = obs[i]; const p = (o as any).pos ?? (o as any).position; if (!p) continue;
       ctx.beginPath(); ctx.arc(cx + p.x * k, cx + p.z * k, Math.max(1, (o.radius ?? 1) * k), 0, Math.PI * 2); ctx.fill();
     }
-    // shops
-    for (const s of SHOP_POSITIONS) {
+    // exit portals + station (room) or shops (town)
+    if (room) {
+      const r = world.room;
+      if (r.station.kind !== 'NONE') { ctx.fillStyle = '#5fd6ff'; ctx.fillRect(cx + r.station.x * k - 3 * DPR, cx + r.station.z * k - 3 * DPR, 6 * DPR, 6 * DPR); }
+      for (let i = 0; i < r.portals.length; i++) {
+        const po = r.portals[i]; if (!po.active) continue;
+        ctx.fillStyle = portalLabel(po.plan, r.biome).color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * DPR;
+        ctx.beginPath(); ctx.arc(cx + po.x * k, cx + po.z * k, 4.5 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+    }
+    for (let si = 0; !room && si < SHOP_POSITIONS.length; si++) {
+      const s = SHOP_POSITIONS[si];
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
       ctx.fillStyle = s.color; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1 * DPR;
       ctx.beginPath(); ctx.rect(x - 3.5 * DPR, y - 3.5 * DPR, 7 * DPR, 7 * DPR); ctx.fill(); ctx.stroke();

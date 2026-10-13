@@ -125,12 +125,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
 export type BossKind =
   | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_VOID';
 
-/** Boss rotation: wave 10 * (i + 1). After the last one the cycle restarts (hp/dmg keep scaling with the wave number). */
-export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_LICH', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID'];
-export function bossForWave(wave: number): BossKind {
-  const i = Math.max(0, Math.round(wave / 10) - 1);
-  return BOSS_ROTATION[i % BOSS_ROTATION.length];
-}
+/** Bosses in biome order (the Lich is a mini-boss room option, so it is not part of the order). Used by the Codex. */
+export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID', 'BOSS_LICH'];
 /** Summons / body parts of the new bosses: no xp, loot or gold; vanish when their boss dies. */
 export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP'; }
 
@@ -148,36 +144,16 @@ export function isBossKind(k: EnemyKind): k is BossKind {
   return k === 'BOSS_GOLEM' || k === 'BOSS_LICH' || k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_VOID';
 }
 
-/** Kinds the director may pick for ordinary spawns. */
-export const SPAWNABLE_KINDS: readonly EnemyKind[] = [
-  'SLIME', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'SPLITTER',
-  'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB',
-];
-
-/**
- * Regional affinity: spawn-weight multiplier per RegionKind (string key) for the regional kinds.
- * Unlisted region = 0.3 (still appears, rarely). Generic kinds have no entry (always x1).
- */
-export const REGION_AFFINITY: Partial<Record<EnemyKind, Record<string, number>>> = {
-  ZOMBIE: { GRAVEYARD: 9, RUINS: 2 },
-  WRAITH: { GRAVEYARD: 7, RUINS: 5 },
-  CRYSTAL_GOLEMITE: { CRYSTAL_GROVE: 10, QUARRY: 2 },
-  BANDIT: { CAMP: 10, FARM: 1.5, RUINS: 1.5 },
-  BOAR: { FARM: 7, GROVE: 7 },
-  ROCK_CRAB: { QUARRY: 10, POND: 8 },
-};
-export const REGION_AFFINITY_OFF = 0.3;
-
-/** Mini-boss definitions (waves 5, 15, 25...), picked by the region nearest the player. */
-export const MINI_BOSSES: Record<string, { kind: EnemyKind; name: string; title: string; regions: string[] }> = {
-  WARDEN: { kind: 'ZOMBIE', name: 'Grave Warden', title: 'Zombie Lord', regions: ['GRAVEYARD', 'RUINS'] },
-  CAPTAIN: { kind: 'BANDIT', name: 'Bandit Captain', title: 'Camp Chief', regions: ['CAMP'] },
-  BEHEMOTH: { kind: 'CRYSTAL_GOLEMITE', name: 'Crystal Behemoth', title: 'Shard Colossus', regions: ['CRYSTAL_GROVE'] },
-  TUSK: { kind: 'BOAR', name: 'Old Tusk', title: 'Terror of the Fields', regions: ['FARM', 'GROVE'] },
-  SHELLBACK: { kind: 'ROCK_CRAB', name: 'Shellback', title: 'Quarry Titan', regions: ['QUARRY', 'POND'] },
+/** Mini-boss definitions for mini-boss rooms (biome rosters in roomDefs list which ones appear where). */
+export const MINI_BOSSES: Record<string, { kind: EnemyKind; name: string; title: string }> = {
+  WARDEN: { kind: 'ZOMBIE', name: 'Grave Warden', title: 'Zombie Lord' },
+  CAPTAIN: { kind: 'BANDIT', name: 'Bandit Captain', title: 'Camp Chief' },
+  BEHEMOTH: { kind: 'CRYSTAL_GOLEMITE', name: 'Crystal Behemoth', title: 'Shard Colossus' },
+  TUSK: { kind: 'BOAR', name: 'Old Tusk', title: 'Terror of the Fields' },
+  SHELLBACK: { kind: 'ROCK_CRAB', name: 'Shellback', title: 'Quarry Titan' },
 };
 
-/** Weak kinds used for RING encirclements. */
+/** Weak kinds (the monster-trick system lets them cast at most once per life). */
 export const WEAK_KINDS: readonly EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT'];
 
 // ------------------------------------------------------------ wave scaling --
@@ -199,10 +175,6 @@ export function waveBudget(wave: number): number {
   const base = 18 + wave * 6 + Math.pow(wave, 1.35) * 2;
   return wave <= 5 ? base * (0.7 + 0.06 * (wave - 1)) : base; // gentler onboarding: waves 1-5 at 70%..94%
 }
-export function maxAliveForWave(wave: number): number {
-  return 50 + 20 * Math.floor((wave - 1) / 10);
-}
-
 /** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
 export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
   GOBLIN: [0.30, 10], BANDIT: [0.35, 10], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],

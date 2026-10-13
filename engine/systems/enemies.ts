@@ -41,7 +41,7 @@ import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } fr
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
 import '../lootExtra';
-import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
+import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -123,7 +123,7 @@ function blockedAt(x: number, z: number, pad: number): boolean {
 /** Is (x,z) a legal spawn spot (inside arena, outside obstacles)? */
 export function isSpawnable(x: number, z: number): boolean {
   const r2 = x * x + z * z;
-  if (r2 > 80 * 80) {
+  if (r2 > bounds.checkR2) {
     const lim = edgeLimit(x, z, 3);
     if (r2 > lim * lim) return false;
   }
@@ -290,7 +290,6 @@ export function onEnemyDeath(e: Enemy): void {
   e.hp = 0;
   e.vel.set(0, 0, 0);
   const d = world.director;
-  d.killsThisWave++;
   if (d.aliveCount > 0) d.aliveCount--;
 
   if (e.kind === 'BOSS_SAPLING') saplingDied(e);
@@ -856,7 +855,7 @@ function updateEnemy(e: Enemy): void {
   }
 
   const r2 = e.pos.x * e.pos.x + e.pos.z * e.pos.z;
-  if (r2 > 80 * 80) {
+  if (r2 > bounds.checkR2) {
     const lim = edgeLimit(e.pos.x, e.pos.z, 1);
     if (r2 > lim * lim) {
       const s = lim / Math.sqrt(r2);

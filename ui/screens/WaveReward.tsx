@@ -39,6 +39,7 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
 
 export const WaveReward: React.FC = () => {
   const { options, select, wave } = useGameStore(useShallow((s) => ({ options: s.upgradeOptions, select: s.selectUpgrade, wave: s.wave })));
+  const boss = wave % 10 === 0;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -53,8 +54,8 @@ export const WaveReward: React.FC = () => {
     <motion.div className="absolute inset-0 pe rw-root" style={{ zIndex: 100 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="rw-head">
-        <div className="t">Wave {Math.max(1, wave)} cleared</div>
-        <div className="s">Choose a reward</div>
+        <div className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
+        <div className="s">Choose a reward · Depth {Math.max(1, wave)}</div>
       </div>
       <div className="rw-cards">
         {options.map((opt, i) => <Card key={opt.id + i} opt={opt} i={i} onPick={() => select(opt)} />)}

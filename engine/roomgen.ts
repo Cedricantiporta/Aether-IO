@@ -1,0 +1,170 @@
+// ============================================================================
+// Procedural run room: a disc around (0,0) with a walls ring (blocking trees / rocks / crystals), a decorative outer
+// ring, a few interior obstacles and some breakable crates. Writes world.obstacles (rendered by render/Props through
+// the same instancing path as the town) and the collision world (mapgen.installRoom). Deterministic per seed.
+// ============================================================================
+import { Vector3 } from 'three';
+import { world, allocZone } from './world';
+import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
+import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
+import { biomeOf } from './roomDefs';
+
+/** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger. */
+export function roomRadius(type: RoomType, seed: number): number {
+  const r = mulberry32(seed ^ 0x9e3779b9)();
+  switch (type) {
+    case 'BOSS': return 30;
+    case 'FOUNTAIN': case 'MERCHANT': case 'SHRINE': return 19 + r * 3;
+    case 'TREASURE': return 22 + r * 3;
+    case 'ELITE': case 'MINIBOSS': return 25 + r * 3;
+    default: return 24 + r * 4;
+  }
+}
+
+/** Where the hero stands on arrival, and where the room's single station (fountain, merchant, chest, altar) sits. */
+export const startPos = (R: number): [number, number] => [0, R * 0.55];
+export const stationPos = (R: number): [number, number] => [0, -R * 0.1];
+/** Exit portal slot i of n, on an arc in the far (north) half of the room. */
+export function portalSlot(i: number, n: number, R: number, out: [number, number]): void {
+  const off = n === 1 ? 0 : n === 2 ? (i === 0 ? -0.6 : 0.6) : (i - 1) * 0.9;
+  const d = R - 4.5;
+  out[0] = Math.sin(off) * d;
+  out[1] = -Math.cos(off) * d;
+}
+
+interface KindSpec { r: (rnd: () => number, s: number) => number; s: [number, number]; blocks: boolean }
+const SPEC: Record<string, KindSpec> = {
+  TREE: { s: [1.5, 2.4], r: (_, s) => 0.8 + s * 0.25, blocks: true },
+  PINE: { s: [1.5, 2.4], r: (_, s) => 0.8 + s * 0.25, blocks: true },
+  ROCK: { s: [0.9, 1.7], r: (_, s) => 0.6 + s * 0.9, blocks: true },
+  BOULDER: { s: [1.6, 2.5], r: (_, s) => 1 + s * 0.7, blocks: true },
+  STUMP: { s: [0.9, 1.5], r: () => 0.6, blocks: false },
+  LOG: { s: [1, 1.2], r: () => 0.9, blocks: false },
+  RUIN: { s: [1, 1.6], r: () => 0.9, blocks: true },
+  STATUE: { s: [1, 1.3], r: () => 1.0, blocks: true },
+  CRYSTAL_SPIRE: { s: [1.1, 1.9], r: () => 1.0, blocks: true },
+};
+
+const tmpPortal: [number, number] = [0, 0];
+
+export function buildRoom(biome: number, type: RoomType, R: number, seed: number): void {
+  const def = biomeOf(biome);
+  const rnd = mulberry32(seed);
+  const rand = (a: number, b: number) => a + rnd() * (b - a);
+  const boss = type === 'BOSS';
+  const obstacles: Obstacle[] = [];
+  const colliders: Collider[] = [];
+  let id = 1;
+
+  const add = (kind: ObstacleKind, x: number, z: number, radius: number, scale: number, blocks: boolean, collide = true): void => {
+    obstacles.push({ id: id++, kind, pos: new Vector3(x, 0, z), radius, scale, rot: rnd() * Math.PI * 2, blocksProjectiles: blocks });
+    if (collide) colliders.push({ x, z, r: radius, blocksProjectiles: blocks });
+  };
+
+  // keep-clear spots: arrival, station, all three exit slots
+  const keep: { x: number; z: number; r: number }[] = [];
+  const [sx, sz] = startPos(R);
+  keep.push({ x: sx, z: sz, r: 4.5 });
+  if (!boss) { const [cx, cz] = stationPos(R); keep.push({ x: cx, z: cz, r: 5 }); }
+  for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
+  const blockedSpot = (x: number, z: number, r: number, gap: number): boolean => {
+    for (const k of keep) if (Math.hypot(x - k.x, z - k.z) < k.r + r) return true;
+    for (const c of colliders) if (Math.hypot(x - c.x, z - c.z) < c.r + r + gap) return true;
+    return false;
+  };
+
+  // ---- walls ring (blocking) + decorative outer ring
+  const pickKind = (list: ObstacleKind[]): ObstacleKind => list[Math.floor(rnd() * list.length)];
+  const ring1 = R + 1.6;
+  const n1 = Math.ceil((Math.PI * 2 * ring1) / 2.6);
+  const off1 = rnd() * Math.PI * 2;
+  for (let i = 0; i < n1; i++) {
+    const a = off1 + (i / n1) * Math.PI * 2 + (rnd() - 0.5) * 0.04;
+    let kind = pickKind(def.border);
+    if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
+    const sp = SPEC[kind] ?? SPEC.ROCK;
+    const s = rand(sp.s[0], sp.s[1]);
+    const d = ring1 + (rnd() - 0.5) * 0.6;
+    add(kind, Math.cos(a) * d, Math.sin(a) * d, Math.max(1.5, sp.r(rnd, s)), s, true);
+  }
+  const ring2 = R + 5;
+  const n2 = Math.ceil((Math.PI * 2 * ring2) / 5.2);
+  const off2 = rnd() * Math.PI * 2;
+  for (let i = 0; i < n2; i++) {
+    const a = off2 + (i / n2) * Math.PI * 2 + (rnd() - 0.5) * 0.1;
+    let kind = pickKind(def.border);
+    if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
+    const sp = SPEC[kind] ?? SPEC.ROCK;
+    const s = rand(sp.s[0], sp.s[1]) * 1.25;
+    const d = ring2 + (rnd() - 0.5) * 2.2;
+    add(kind, Math.cos(a) * d, Math.sin(a) * d, sp.r(rnd, s), s, true, false);
+  }
+
+  // ---- interior obstacles
+  const count = boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14)) : 5;
+  if (boss) {
+    // a ring of pillars at mid radius; everything else stays open for the dance
+    const k = pickKind(def.interior.filter((o) => SPEC[o]?.blocks) as ObstacleKind[]);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + 0.3;
+      const sp = SPEC[k] ?? SPEC.ROCK;
+      const s = rand(sp.s[0], sp.s[1]);
+      add(k, Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62, sp.r(rnd, s), s, sp.blocks);
+    }
+  } else {
+    for (let t = 0, placed = 0; t < count * 25 && placed < count; t++) {
+      const kind = pickKind(def.interior);
+      const sp = SPEC[kind] ?? SPEC.ROCK;
+      const s = rand(sp.s[0], sp.s[1]);
+      const r = sp.r(rnd, s);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 3 - r);
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (blockedSpot(x, z, r, 1.2)) continue;
+      add(kind, x, z, r, s, sp.blocks);
+      placed++;
+    }
+  }
+
+  // ---- breakable crates (decor + a little loot); none in boss arenas
+  const crateList: { kind: CrateKind; x: number; z: number }[] = [];
+  if (!boss) {
+    const want = type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
+    for (let t = 0; t < want * 30 && crateList.length < want; t++) {
+      const kind = def.crates[Math.floor(rnd() * def.crates.length)];
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 3);
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (blockedSpot(x, z, 1.1, 0.8)) continue;
+      let ok = true;
+      for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
+      if (ok) crateList.push({ kind, x, z });
+    }
+  }
+
+  world.obstacles = obstacles;
+  world.obstaclesVersion++;
+  installRoom(colliders, R + 1);
+  commitCrates(crateList, rnd);
+
+  // ---- permanent environmental hazards (swamp puddles, ember gas vents)
+  if (def.hazard && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT') {
+    const hz: { x: number; z: number; r: number }[] = [];
+    const n = Math.round(rand(1, 2.4));
+    for (let t = 0; t < 60 && hz.length < n; t++) {
+      const r = def.hazard === 'PUDDLE' ? rand(3.6, 5.5) : rand(3, 4.2);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 5 - r);
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (Math.hypot(x - sx, z - sz) < r + 6 || Math.hypot(x, z + R * 0.1) < r + 5) continue;
+      if (hz.some((h) => Math.hypot(x - h.x, z - h.z) < h.r + r + 1)) continue;
+      hz.push({ x, z, r });
+    }
+    for (const h of hz) {
+      const z = allocZone();
+      if (!z) break;
+      z.active = true; z.kind = def.hazard; z.hostile = false; z.permanent = true;
+      z.pos.set(h.x, 0, h.z); z.radius = h.r; z.maxLife = 1;
+      z.dir.set(0, 0, 1); z.length = 0; z.damage = 0; z.tickT = 0;
+      if (def.hazard === 'GAS') { z.period = rand(6, 9); z.activeFor = rand(3, 4); z.life = rnd() * z.period; z.color = 0x7bd62a; }
+      else { z.period = 0; z.activeFor = 0; z.life = 0; z.color = 0x4aa3df; }
+    }
+  }
+}
