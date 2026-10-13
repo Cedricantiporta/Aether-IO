@@ -10,6 +10,7 @@ import { Stars } from '../components/Stars';
 import { RARITY_NAME } from '../theme';
 import { device } from '../../engine/device';
 
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 type Tone = 'blue' | 'purple' | 'gold';
 const toneOf = (u: Upgrade): Tone => (u.rarity === 'LEGENDARY' || u.rarity === 'MYTHIC' ? 'gold' : u.type.startsWith('SKILL') || u.rarity === 'EPIC' ? 'purple' : 'blue');
 
@@ -23,8 +24,9 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
       transition={{ type: 'spring', stiffness: 260, damping: 24, delay: .1 + i * .08 }}
       whileHover={{ y: -6 }} whileTap={{ scale: .97 }}>
       {!device.touch && <span className="rw-num rpg-key" style={{ color: '#f3f1ea' }}>{i + 1}</span>}
+      <span className="rw-roman">{ROMAN[i] ?? i + 1}</span>
       <span className="rw-kind" {...tip(<SimpleTip title={RARITY_NAME[opt.rarity]} sub="Reward rarity" />)}>{isSkill ? 'Skill' : 'Stat'}</span>
-      <div className="rw-emblem"><UpgradeIcon upgrade={opt} size={48} /></div>
+      <div className="rw-emblem"><UpgradeIcon upgrade={opt} size={64} /></div>
       <div className="rw-body flex flex-col items-center gap-1.5 min-h-0 flex-1 w-full">
         <Stars rarity={opt.rarity} />
         <div className="rw-title">
@@ -32,7 +34,6 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
         </div>
         <div className="rw-desc">{opt.description}</div>
       </div>
-      <div className="rw-select">Select</div>
     </motion.button>
   );
 };

@@ -127,7 +127,7 @@ const Emblem: React.FC<{ t: UpgradeType; size: number | string }> = React.memo((
 Emblem.displayName = 'UpgradeEmblem';
 
 const PAINTED: Partial<Record<UpgradeType, string>> = {
-  SKILL_PIERCING: 'piercing', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'dash',
+  SKILL_PIERCING: 'GALE_ARROW', SKILL_GRAVITY: 'SINGULARITY', SKILL_RAGE: 'BLOODRAGE_LEAP', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'DASH',
 };
 export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
   const pk = PAINTED[upgrade.type];
