@@ -2,6 +2,7 @@
 // Everything is pointer-event based (multi-touch safe) and writes straight into world.input like the keyboard does.
 import React, { useEffect, useRef } from 'react';
 import { world } from '../../engine/world';
+import { abilityState } from '../../engine/systems/abilities';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
@@ -72,7 +73,7 @@ const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#e
   useRaf(() => {
     const p = prev.current;
     let frac = 0, t = 0;
-    if (ult) { frac = 0; t = 0; const pl = world.player; const ready = pl.ult >= 99.99 && pl.ultT <= 0; const tx = ready ? 'R' : pl.ultT > 0 ? '...' : `${Math.floor(pl.ult)}%`; if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; } if (ready !== p.ready) { p.ready = ready; root.current?.classList.toggle('tc-ready', ready); } return; }
+    if (ult) { frac = 0; t = 0; const pl = world.player; const ucd = abilityState.ultCd; const ready = pl.ult >= 99.99 && pl.ultT <= 0 && ucd <= 0; const tx = ready ? 'R' : pl.ultT > 0 ? '...' : ucd > 0 ? `${Math.ceil(ucd)}s` : `${Math.floor(pl.ult)}%`; if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; } if (ready !== p.ready) { p.ready = ready; root.current?.classList.toggle('tc-ready', ready); } return; }
     if (getCd) { const c = getCd(); t = c.t; frac = c.max > 0 ? Math.min(1, Math.max(0, t / c.max)) : 0; }
     const v = t > 0.04 ? frac.toFixed(3) : '0';
     if (v !== p.cd) { p.cd = v; sweep.current?.style.setProperty('--cd', v); sweep.current?.style.setProperty('--cdv', v === '0' ? '0' : '1'); }

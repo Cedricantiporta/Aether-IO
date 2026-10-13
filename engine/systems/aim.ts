@@ -9,7 +9,7 @@ import { useGameStore } from '../../store';
 import { ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
 import { ULT_MAX } from '../../abilityDefs';
 import { aimOverride, autoAim, findNearestEnemy } from './combat';
-import { castActive, castUlt, tryDash } from './abilities';
+import { castActive, castUlt, tryDash, ultReady } from './abilities';
 import { edgeLimit } from '../mapgen';
 
 export const Shape = { NONE: 0, LINE: 1, CONE: 2, CIRCLE: 3, RING: 4, ARROW: 5 } as const;
@@ -51,7 +51,7 @@ function slotOf(id: string): ActiveSlot | null {
 function isCastable(id: string): boolean {
   const p = world.player, st = useGameStore.getState();
   if (!p.alive) return false;
-  if (id === 'ult') return p.ult >= ULT_MAX - 0.001 && p.ultT <= 0 && p.stunT <= 0 && p.silenceT <= 0;
+  if (id === 'ult') return ultReady() && p.stunT <= 0 && p.silenceT <= 0;
   if (id === 'dash') return p.dashCharges > 0 && p.stunT <= 0;
   const slot = slotOf(id);
   if (!slot) return false;

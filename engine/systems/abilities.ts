@@ -41,7 +41,13 @@ export const abilityState = {
   whirlTick: 0, whirlDmg: 0, whirlLv: 1,
   finalSlam: 0,
   lastStep: 0,
+  ultCd: 0,               // ultimate cooldown remaining (s); the ult needs this at 0 AND a full charge bar
 };
+
+/** Ultimate cooldown after each use (s), on top of needing a full charge bar. Cooldown reduction applies. */
+export const ULT_COOLDOWN = 90;
+/** True when the ultimate can be cast: full charge bar and cooldown finished. */
+export function ultReady(): boolean { const p = world.player; return p.ult >= 99.99 && abilityState.ultCd <= 0 && p.ultT <= 0; }
 
 const aim = new Vector3();
 const tgt = new Vector3();
@@ -70,7 +76,7 @@ const slowFrost: StatusEffect = { type: 'SLOW', duration: 2.5, value: 0.5 };
 
 export function resetAbilities(): void {
   const a = abilityState;
-  a.tint = a.tintTarget = 0; a.flash = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0;
+  a.tint = a.tintTarget = 0; a.flash = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0; a.ultCd = 0;
   a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
   lastNoMana = -10;
   for (const k in lastCd) lastCd[k] = -10;
@@ -470,8 +476,9 @@ export function castUlt(): void {
   const p = world.player;
   const a = abilityState;
   if (!p.alive || p.ultT > 0 || a.ultKind !== 0 || a.windupT > 0) return;
-  if (p.ult < ULT_MAX - 0.001) { notifyCooldown('r'); return; }
+  if (p.ult < ULT_MAX - 0.001 || a.ultCd > 0) { notifyCooldown('r'); return; }
   p.ult = 0;
+  a.ultCd = ULT_COOLDOWN * (1 - Math.min(0.75, st.stats.cooldownReduction || 0));
   // combo: stacks BEFORE this cast boost the ult; at 3 stacks it is a FINISHER (+50%, refunds 25% charge)
   curMul = combo.t > 0 ? comboMul() : 1;
   const fin = registerCast('ult', true);
@@ -594,6 +601,7 @@ function updateUlt(dt: number): void {
   const a = abilityState, p = world.player;
   // Safety: ultT is only decremented while an ult runs, so a leftover value (e.g. wizard ultT > its real
   // duration) would block charge gain forever. Always clear it once nothing is running.
+  if (a.ultCd > 0) a.ultCd = Math.max(0, a.ultCd - dt);
   if (a.ultKind === 0) { p.ultT = 0; return; }
   const lv = st.skillLevels.ult;
   const b = base(lv);

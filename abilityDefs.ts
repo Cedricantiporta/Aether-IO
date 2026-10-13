@@ -85,13 +85,13 @@ export function dashDef(hero: HeroClass): AbilityDef {
 
 export const ULTS: Record<HeroClass, AbilityDef> = {
   ARCHER: { slot: 'ult', icon: 'STORM_ARROWS', name: 'Storm of a Thousand Arrows', mana: 0, cd: 0,
-    desc: 'Aim a large circle (radius 14): time slows and for 4.5s arrows rain inside it. A final volley ends it.',
+    desc: 'Aim a large circle (radius 14): time slows and for 4.5s arrows rain inside it. A final volley ends it. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `${Math.round(54 * (1 + 0.1 * (lv - 1)))} arrows/s · ${pct(2.4 * 0.7 * lvMul(lv))} dmg each · final volley ${pct(25 * 0.7 * lvMul(lv))}` },
   WIZARD: { slot: 'ult', icon: 'METEOR_CATA', name: 'Meteor Cataclysm', mana: 0, cd: 0,
-    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns and ignites everything, two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava.',
+    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns and ignites everything, two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Impact ${pct(50 * 0.7 * lvMul(lv))} dmg (center) · 2 fire rings ${pct(3 * 0.7 * lvMul(lv))} each · lava ${pct(2.2 * 0.7 * lvMul(lv))}` },
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
-    desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you.',
+    desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
 };
 

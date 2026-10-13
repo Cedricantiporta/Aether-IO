@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { world } from '../../engine/world';
+import { abilityState } from '../../engine/systems/abilities';
 import { useRaf } from '../hooks/useRaf';
 import { useGameEvent } from '../hooks/useEvent';
 import { tip } from '../components/Tooltip';
@@ -16,7 +17,8 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
   useRaf(() => {
     const p = world.player;
     const v = Math.floor(p.ult);
-    const ready = p.ult >= 99.99 && p.ultT <= 0;
+    const cd = abilityState.ultCd;
+    const ready = p.ult >= 99.99 && p.ultT <= 0 && cd <= 0;
     const active = p.ultT > 0;
     const l = last.current;
     if (v !== l.v && fill.current && txt.current) {
@@ -28,7 +30,7 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
       l.ready = ready; l.active = active;
       root.current?.setAttribute('data-ready', ready ? '1' : '0');
       root.current?.setAttribute('data-active', active ? '1' : '0');
-      if (txt.current) txt.current.textContent = ready ? 'R' : active ? '...' : `${Math.floor(p.ult)}%`;
+      if (txt.current) txt.current.textContent = ready ? 'R' : active ? '...' : cd > 0 ? `${Math.ceil(cd)}s` : `${Math.floor(p.ult)}%`;
     }
   });
   const shake = () => {
