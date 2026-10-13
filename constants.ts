@@ -108,7 +108,7 @@ export const SKILLS_INFO = {
     magnet: { name: 'Looter', description: 'Increases pickup range.', type: 'PASSIVE' },
     dash: { name: 'Dash Mastery', description: 'Reduces dash cooldown. Level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
     weapon: { name: 'Weapon Mastery', description: 'Improves weapon ability cooldown.', type: 'PASSIVE' },
-    barrier: { name: 'Energy Shield', description: 'Grants temporary invulnerability and knockback when hit.', type: 'PASSIVE' },
+    barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
     // Class Special (E)
     special: { name: 'Class Special (E)', description: 'Unlocks your unique Class Ability. Costs 5 SP.', type: 'ACTIVE' },

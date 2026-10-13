@@ -5,6 +5,7 @@ import { BufferGeometry, Color, Group, Mesh, MeshBasicMaterial, MeshStandardMate
 import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
+import { PETS_POOL } from '../constants';
 import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { GB, TAU, damp } from './util';
 import { isLobbyStatus } from './CameraRig';
@@ -30,14 +31,14 @@ const DEFS: Record<string, () => PetDef> = {
     b.sph(0.4, [0, 0.36, 0], '#7ddc3a', [1, 0.85, 1], 10);
     for (const s of [-1, 1]) { b.sph(0.09, [s * 0.15, 0.48, 0.32], '#fff', [1, 1.1, 0.6], 6); b.sph(0.045, [s * 0.15, 0.47, 0.38], '#111', 1, 5); }
     b.box(0.12, 0.03, 0.04, [0, 0.3, 0.38], '#2a5a14'); b.sph(0.08, [-0.1, 0.62, 0.15], '#c0ffa0', 1, 5);
-    return { body: b.build(), hover: 0, scale: 1, hop: true };
+    return { body: b.build(), hover: 0, scale: 1.5, hop: true };
   },
   pet_bat: () => {
     const b = new GB([0.8, 1.15]);
     b.sph(0.2, [0, 0, 0], '#5a3f7a', [0.9, 0.85, 1.15], 8); b.sph(0.14, [0, 0.06, 0.24], '#5a3f7a', 1, 7);
     for (const s of [-1, 1]) { b.cone(0.06, 0.2, 4, [s * 0.09, 0.22, 0.22], '#3a284f'); b.cone(0.015, 0.06, 3, [s * 0.04, -0.03, 0.34], '#fff', [Math.PI, 0, 0]); }
     const g = new GB([1, 1]); for (const s of [-1, 1]) g.sph(0.035, [s * 0.06, 0.1, 0.33], '#ff4a4a', 1, 4);
-    return { body: b.build(), glow: g.build(), wing: { geo: wingGeo('#4a3068', 0.55, 0.3), pivot: [0.12, 0.05, 0], speed: 20, amp: 0.8 }, hover: 1.6, scale: 1 };
+    return { body: b.build(), glow: g.build(), wing: { geo: wingGeo('#4a3068', 0.55, 0.3), pivot: [0.12, 0.05, 0], speed: 20, amp: 0.8 }, hover: 1.6, scale: 1.7 };
   },
   pet_fairy: () => {
     const b = new GB([0.9, 1.1]), g = new GB([1, 1]);
@@ -45,7 +46,7 @@ const DEFS: Record<string, () => PetDef> = {
     b.cone(0.1, 0.2, 6, [0, -0.2, 0], '#ff9ad0', [Math.PI, 0, 0]);
     g.sph(0.14, [0, 0.0, 0], '#fff4d0', 1, 6);
     const w = new GB([1, 1]); w.tri([0, 0.05, 0], [0.34, 0.3, 0], [0.18, -0.08, 0], '#e8f8ff'); w.tri([0, 0.0, 0], [0.26, -0.22, 0], [0.12, -0.03, 0], '#c8e8ff');
-    return { body: b.build(), glow: g.build(), wing: { geo: w.build(), glow: true, pivot: [0.06, 0.12, -0.02], speed: 30, amp: 0.7 }, hover: 1.7, scale: 1.2, trail: 'fairy', halo: [1.8, 1.6, 1.3, 0.8] };
+    return { body: b.build(), glow: g.build(), wing: { geo: w.build(), glow: true, pivot: [0.06, 0.12, -0.02], speed: 30, amp: 0.7 }, hover: 1.7, scale: 1.7, trail: 'fairy', halo: [1.8, 1.6, 1.3, 0.8] };
   },
   pet_wolf: () => {
     const b = new GB([0.82, 1.15]), g = new GB([1, 1]);
@@ -74,7 +75,7 @@ const DEFS: Record<string, () => PetDef> = {
     b.ico(0.38, [0, 0.36, 0], '#8d939c', [1.1, 0.9, 1], 1);
     for (const s of [-1, 1]) { b.sph(0.1, [s * 0.14, 0.5, 0.3], '#fff', [1, 1, 0.6], 6); b.sph(0.045, [s * 0.14 + s * 0.02, 0.49, 0.37], '#111', 1, 5); }
     b.sph(0.18, [-0.1, 0.68, -0.05], '#5aa03a', [1.3, 0.4, 1], 5); b.box(0.15, 0.03, 0.05, [0, 0.3, 0.37], '#444');
-    return { body: b.build(), hover: 0, scale: 1, hop: true };
+    return { body: b.build(), hover: 0, scale: 1.5, hop: true };
   },
   pet_golem: () => {
     const b = new GB([0.82, 1.12]), g = new GB([1, 1]);
@@ -105,7 +106,12 @@ const DEFS: Record<string, () => PetDef> = {
 };
 
 export function Pet() {
-  const id = useGameStore((s) => s.equipment?.pet?.id) || '';
+  // Owned pets get unique instance ids, so resolve the model by template id / name.
+  const id = useGameStore((s) => {
+    const p = s.equipment?.pet;
+    if (!p) return '';
+    return DEFS[p.id] ? p.id : (PETS_POOL.find((x) => x.name === p.name)?.id ?? '');
+  });
   const def = useMemo(() => (DEFS[id] ? DEFS[id]() : null), [id]);
   if (!def) return null;
   return <PetModel key={id} id={id} def={def} />;
@@ -116,7 +122,9 @@ function PetModel({ id, def }: { id: string; def: PetDef }) {
   const legs = useRef<Group[]>([]);
   const lit = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7, side: id === 'pet_fairy' ? DoubleSide : DoubleSide, emissive: id === 'pet_wolf' ? 0x335577 : id === 'pet_dragon' ? 0x553300 : 0x000000, emissiveIntensity: 0.6 }), [id]);
   const glow = useMemo(() => new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7), side: DoubleSide }), []);
-  const S = useRef({ prev: new Vector3(), speed: 0, init: false, yaw: 0, t: 0 });
+  const S = useRef({ prev: new Vector3(), speed: 0, init: false, yaw: 0, t: 0, phase: 0 });
+  const carryG = useRef<Group>(null!);
+  const carryMat = useMemo(() => new MeshBasicMaterial({ color: new Color(2, 2, 2), toneMapped: false }), []);
   useFrame(({ clock }, dtRaw) => {
     const status = useGameStore.getState().status;
     if (isLobbyStatus(status)) { root.current.visible = false; return; }
@@ -125,20 +133,38 @@ function PetModel({ id, def }: { id: string; def: PetDef }) {
     const pet = world.pet, s = S.current, t = clock.elapsedTime;
     if (!s.init) { s.prev.copy(pet.pos); s.init = true; }
     const sp = dt > 0 ? Math.hypot(pet.pos.x - s.prev.x, pet.pos.z - s.prev.z) / dt : 0;
+    if (Math.hypot(pet.pos.x - s.prev.x, pet.pos.z - s.prev.z) > 8) { // teleported back to the player: poof
+      smokePuff(s.prev.x, 1.2, s.prev.z, 6, 0xcccccc, 1.2, 0.7, 1.0, 1.0, 0.5);
+      smokePuff(pet.pos.x, 1.2, pet.pos.z, 6, 0xcccccc, 1.2, 0.7, 1.0, 1.0, 0.5);
+    }
     s.prev.copy(pet.pos); s.speed = damp(s.speed, sp, 8, dt);
+    s.phase += dt * (1 + clamp01(s.speed / 6) * 1.2);
     const moving = clamp01(s.speed / 4);
-    const bob = Math.sin(t * 3 + 1) * 0.12;
+    const bob = Math.sin(s.phase * 3 + 1) * (0.12 + moving * 0.05);
     let y = def.hover + (def.hover > 0.2 ? bob : 0);
     let sq = 1;
-    if (def.hop) { const h = Math.max(0, Math.sin(t * 7)) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
+    if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
     root.current.position.set(pet.pos.x, Math.max(0, pet.pos.y - 1) + y, pet.pos.z);
     s.yaw = pet.facing;
     root.current.rotation.y = pet.facing;
-    const atk = 1 + (pet.attackT > 0 ? Math.min(0.3, pet.attackT) : 0);
-    model.current.scale.set(def.scale * (def.hop ? 1.05 - (sq - 1) * 0.5 : 1) * atk, def.scale * sq * atk, def.scale * (def.hop ? 1.05 - (sq - 1) * 0.5 : 1) * atk);
-    model.current.rotation.x = def.hover > 0.2 ? moving * 0.2 : 0;
-    if (def.wing && wL.current) { const f = Math.sin(t * def.wing.speed) * def.wing.amp; wL.current.rotation.z = f + 0.2; wR.current.rotation.z = -(f + 0.2); }
-    for (let i = 0; i < legs.current.length; i++) if (legs.current[i]) legs.current[i].rotation.x = Math.sin(t * 12 + (i % 2) * Math.PI + (i > 1 ? 1.5 : 0)) * 0.7 * moving;
+    const a = pet.attackT; // 1 -> 0 after a strike: stretch forward then settle
+    const hx = def.hop ? 1.05 - (sq - 1) * 0.5 : 1;
+    model.current.scale.set(def.scale * hx * (1 - 0.15 * a), def.scale * sq * (1 - 0.1 * a), def.scale * hx * (1 + 0.45 * a));
+    model.current.position.z = a * 0.7;
+    model.current.rotation.x = (def.hover > 0.2 ? moving * 0.2 : 0) + a * 0.35;
+    if (def.wing && wL.current) { const f = Math.sin(s.phase * def.wing.speed) * def.wing.amp * (1 + moving * 0.3); wL.current.rotation.z = f + 0.2; wR.current.rotation.z = -(f + 0.2); }
+    for (let i = 0; i < legs.current.length; i++) if (legs.current[i]) legs.current[i].rotation.x = Math.sin(s.phase * 12 + (i % 2) * Math.PI + (i > 1 ? 1.5 : 0)) * 0.7 * moving;
+    if (carryG.current) {
+      const c = pet.carryT > 0 ? pet.carry : '';
+      carryG.current.visible = !!c;
+      if (c) {
+        carryMat.color.setHex(c === 'GOLD' ? 0xffd23a : c === 'XP' ? 0x5cf0ff : c === 'GEM' ? 0xc58bff : c === 'HEALTH' ? 0xff5a6a : 0xffffff).multiplyScalar(2);
+        carryG.current.position.y = 1.05 * def.scale + 0.5 + Math.sin(t * 8) * 0.06;
+        carryG.current.rotation.y = t * 3;
+        carryG.current.scale.setScalar(Math.min(1, pet.carryT * 4));
+      }
+    }
+    if (dt > 0 && pet.sparkT > 0 && Math.random() < dt * 60) embers(pet.pos.x, root.current.position.y + 0.8, pet.pos.z, 2, 0xfff0a0, 0.5, 2.0, 0.6, 0.12);
     if (def.halo) pushHalo(pet.pos.x, root.current.position.y + 0.5 * def.scale, pet.pos.z, def.halo[0], def.halo[1] * 0.5, def.halo[2] * 0.5, def.halo[3] * 0.5, 0.5, CELL.GLOW);
     if (dt > 0 && def.trail) {
       const x = pet.pos.x, yy = root.current.position.y + 0.4, z = pet.pos.z, r = Math.random;
@@ -162,6 +188,7 @@ function PetModel({ id, def }: { id: string; def: PetDef }) {
         </>}
         {def.legs && def.legs.pivots.map((p, i) => <group key={i} position={p} ref={(r) => { legs.current[i] = r!; }}><mesh geometry={def.legs!.geo} material={lit} castShadow /></group>)}
       </group>
+      <group ref={carryG} visible={false}><mesh material={carryMat}><octahedronGeometry args={[0.2, 0]} /></mesh></group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -(def.hover) + 0.05, 0]} scale={0.5}><circleGeometry args={[0.8, 14]} /><meshBasicMaterial color="#000" transparent opacity={0.25} depthWrite={false} /></mesh>
     </group>
   );

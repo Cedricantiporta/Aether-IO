@@ -94,13 +94,24 @@ function notifyLoot(item: Item): void {
   st.addNotification(`${item.name}${plus}${qty}`, RARITY_COLOR[item.rarity] ?? '#ffffff', 'ITEM', action);
 }
 
+/** Player magnet radius (items outside it are candidates for the pet to fetch). */
+export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): number {
+  let r = st.stats.magnetRadius + st.skillLevels.magnet * MAGNET_SKILL_BONUS;
+  if (st.equipment.pet?.petSkill === 'COLLECT') r = Math.max(r, PET_COLLECT_RANGE);
+  return r;
+}
+
+/** Pet grabs a pickup: same reward path as the player collecting it. */
+export function petCollect(o: (typeof world.pickups)[number]): void {
+  collect(o, useGameStore.getState());
+}
+
 export function updatePickups(dt: number): void {
   const st = useGameStore.getState();
   const p = world.player;
   const pk = world.pickups;
 
-  let magnetR = st.stats.magnetRadius + st.skillLevels.magnet * MAGNET_SKILL_BONUS;
-  if (st.equipment.pet?.petSkill === 'COLLECT') magnetR = Math.max(magnetR, PET_COLLECT_RANGE);
+  const magnetR = getMagnetRadius(st);
   const magnetR2 = magnetR * magnetR;
   const collectR2 = COLLECT_RADIUS * COLLECT_RADIUS;
   const damp = Math.exp(-4 * dt);

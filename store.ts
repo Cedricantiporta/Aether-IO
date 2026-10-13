@@ -190,7 +190,7 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
     const dur = f(1.0 + level * 0.2), ndur = f(1.0 + nextLvl * 0.2);
     const cd = f(Math.max(20, 48 - level * 4)), ncd = f(Math.max(20, 48 - nextLvl * 4));
     const charges = level >= 5 ? 2 : 1, ncharges = nextLvl >= 5 ? 2 : 1;
-    if (level === 0) return 'Unlock: Grants invulnerability shield (1.2s, 1 Charge, 48s CD).';
+    if (level === 0) return 'Unlock: When a hit would drop you below 20% HP, grants invulnerability (1.2s) and a stunning shockwave (1 charge, 48s recharge).';
     if (ncharges > charges) return `LEVEL ${nextLvl} UNLOCK: MAX CHARGES +1 (Total 2)!`;
     return `Invuln: ${dur}s -> ${ndur}s. CD: ${cd}s -> ${ncd}s.`;
   }
@@ -391,6 +391,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (equipment.weapon && equipment.weapon.classType && equipment.weapon.classType !== state.hero) {
         inventory.push(equipment.weapon);
         equipment.weapon = null;
+      }
+      if (!equipment.pet) {
+        const tpl = PETS_POOL.find((i) => i.id === 'pet_blob');
+        if (tpl) equipment.pet = { ...instantiate(tpl), id: uid('start_pet') };
       }
       if (!equipment.weapon) {
         const tpl = ITEMS_POOL.find((i) => i.id === heroInfo.weaponId);

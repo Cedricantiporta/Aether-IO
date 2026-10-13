@@ -10,7 +10,7 @@ import { HERO_COLOR } from '../../lib/game';
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown. Level 5 grants +1 dash charge.',
-  weapon: 'Weapon ability recharges faster.', barrier: 'More shield charges and faster recharge.', special: 'Unlocks and strengthens your class special (E).',
+  weapon: 'Weapon ability recharges faster.', barrier: 'Triggers below 20% HP. Longer invulnerability, more charges, faster recharge.', special: 'Unlocks and strengthens your class special (E).',
   piercing: 'More damage and pierce.', burning: 'Stronger, more frequent fire arrows.', freezing: 'Stronger, more frequent ice arrows.',
   thunder: 'Strikes one more target.', gravity: 'Bigger, longer black hole.', freezeSpell: 'Wider blizzard, longer freeze.', storm: 'Stronger typhoon.',
   orbital: 'One more orbiting blade.', rage: 'Longer rage, more attack speed.', stamp: 'Bigger, more frequent shockwave.',

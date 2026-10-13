@@ -25,6 +25,8 @@ export const passiveCooldowns: Record<string, { t: number; max: number }> = {
 };
 
 const aim = new Vector3();
+const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
+const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
 const thunderPool: Enemy[] = [];
 const thunderOut: number[] = [];
 const blades: Projectile[] = [];
@@ -69,11 +71,11 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
   }
 }
 
-function fireArrowFan(kind: 'BURNING_ARROW' | 'FREEZING_ARROW', mult: number, effect: Projectile['effect']): void {
+function fireArrowFan(kind: 'BURNING_ARROW' | 'FREEZING_ARROW', mult: number, level: number, effect: Projectile['effect']): void {
   const st = useGameStore.getState().stats;
   const dir = getAimDir(aim);
   const pl = world.player;
-  const dmg = st.damage * mult * st.skillDamage * 2.0;
+  const dmg = st.damage * mult * st.skillDamage * 2.0 * lvScale(level);
   for (let i = -1; i <= 1; i++) {
     const a = i * 0.5;
     const c = Math.cos(a), s = Math.sin(a);
@@ -84,10 +86,10 @@ function fireArrowFan(kind: 'BURNING_ARROW' | 'FREEZING_ARROW', mult: number, ef
   pl.anim.castT = 1;
 }
 
-function stomp(stage: 1 | 2): void {
+function stomp(stage: 1 | 2, level: number): void {
   const st = useGameStore.getState().stats;
   const pl = world.player;
-  const dmg = st.damage * 1.5 * st.skillDamage;
+  const dmg = st.damage * 1.5 * st.skillDamage * lvScale(level);
   if (stage === 1) damageEnemiesInRadius(pl.pos.x, pl.pos.z, 16, dmg, stompOpts1, stompStun);
   else damageEnemiesInRadius(pl.pos.x, pl.pos.z, 16, dmg, stompOpts2);
   const z = allocZone();
@@ -217,36 +219,36 @@ export function updateSkills(dt: number): void {
 
   if (lv.burning > 0) {
     burnT += dt;
-    const max = Math.max(2, 8 - lv.burning * 0.5);
+    const max = Math.max(2, 8 - lv.burning * 0.5) * cdrMul();
     setCd('burning', max - burnT, max);
     if (burnT >= max) {
-      if (trySpendMana(st.getManaCost('burning'))) {
+      if (findNearestEnemy(pl.pos.x, pl.pos.z, 35) && trySpendMana(st.getManaCost('burning'))) {
         burnT = 0;
-        fireArrowFan('BURNING_ARROW', 0.525, { type: 'BURN', duration: 4, value: stats.damage * 0.3 });
+        fireArrowFan('BURNING_ARROW', 0.525, lv.burning, { type: 'BURN', duration: 4, value: stats.damage * 0.3 });
       } else burnT = max;
     }
   }
 
   if (lv.freezing > 0) {
     freezeT += dt;
-    const max = Math.max(2, 7 - lv.freezing * 0.5);
+    const max = Math.max(2, 7 - lv.freezing * 0.5) * cdrMul();
     setCd('freezing', max - freezeT, max);
     if (freezeT >= max) {
-      if (trySpendMana(st.getManaCost('freezing'))) {
+      if (findNearestEnemy(pl.pos.x, pl.pos.z, 35) && trySpendMana(st.getManaCost('freezing'))) {
         freezeT = 0;
-        fireArrowFan('FREEZING_ARROW', 0.75, { type: 'FREEZE', duration: 1.5 });
+        fireArrowFan('FREEZING_ARROW', 0.75, lv.freezing, { type: 'FREEZE', duration: 1.5 });
       } else freezeT = max;
     }
   }
 
   if (lv.freezeSpell > 0) {
     blizzT += dt;
-    const max = Math.max(7, 14 - lv.freezeSpell * 0.2);
+    const max = Math.max(7, 14 - lv.freezeSpell * 0.2) * cdrMul();
     setCd('freezeSpell', max - blizzT, max);
     if (blizzT >= max) {
       if (findNearestEnemy(pl.pos.x, pl.pos.z, 27) && trySpendMana(st.getManaCost('freezeSpell'))) {
         blizzT = 0;
-        damageEnemiesInRadius(pl.pos.x, pl.pos.z, 27, stats.damage * 0.75 * stats.skillDamage, iceOpts, freeze5);
+        damageEnemiesInRadius(pl.pos.x, pl.pos.z, 27, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, freeze5);
         const z = allocZone();
         if (z) {
           z.active = true; z.kind = 'FROST_NOVA'; z.hostile = false;
@@ -260,28 +262,30 @@ export function updateSkills(dt: number): void {
 
   if (lv.storm > 0) {
     stormT += dt;
-    const max = Math.max(5, 15 - lv.storm * 0.2);
+    const max = Math.max(5, 15 - lv.storm * 0.2) * cdrMul();
     setCd('storm', max - stormT, max);
     if (stormT >= max) {
+      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 40)) { stormT = max; } else {
       stormT = 0;
       const dir = getAimDir(aim);
-      spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x, dir.z, 4, stats.damage * 1.5 * stats.skillDamage * 2.0,
+      spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x, dir.z, 4, stats.damage * 1.5 * stats.skillDamage * 2.0 * lvScale(lv.storm),
         { life: 10, pierce: Infinity, knockback: 1.0, bounces: 6, radius: 5.5 });
+      }
     }
   }
 
   if (lv.stamp > 0) {
     if (stampStage === 0) {
       stampT += dt;
-      const max = Math.max(4, 12 - lv.stamp * 0.5);
+      const max = Math.max(4, 12 - lv.stamp * 0.5) * cdrMul();
       setCd('stamp', max - stampT, max);
       if (stampT >= max && findNearestEnemy(pl.pos.x, pl.pos.z, 16) && trySpendMana(st.getManaCost('stamp'))) {
         stampStage = 1; stampSeqT = 0;
-        stomp(1);
+        stomp(1, lv.stamp);
       }
     } else {
       stampSeqT += dt;
-      if (stampSeqT >= 0.5) { stomp(2); stampStage = 0; stampT = 0; }
+      if (stampSeqT >= 0.5) { stomp(2, lv.stamp); stampStage = 0; stampT = 0; }
     }
   }
 
@@ -289,7 +293,8 @@ export function updateSkills(dt: number): void {
 
   if (lv.thunder > 0) {
     thunderT += dt;
-    setCd('thunder', 7 - thunderT, 7);
-    if (thunderT > 7) updateThunder(lv.thunder);
+    const tmax = 7 * cdrMul();
+    setCd('thunder', tmax - thunderT, tmax);
+    if (thunderT > tmax) updateThunder(lv.thunder);
   }
 }

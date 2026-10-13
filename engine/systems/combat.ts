@@ -272,13 +272,13 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   if (st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
 
   const barrier = st.skillLevels.barrier;
-  if (barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON') {
+  const mods = DIFFICULTY_MODS[st.difficulty];
+  const reduced = Math.max(1, amount * (100 / (100 + st.stats.defense)) * mods.dmg);
+  // Energy Shield only saves you when this hit would leave you under 20% HP.
+  if (barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);
     return;
   }
-
-  const mods = DIFFICULTY_MODS[st.difficulty];
-  const reduced = Math.max(1, amount * (100 / (100 + st.stats.defense)) * mods.dmg);
   p.hp -= reduced;
   p.anim.hurtT = 1;
   if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
