@@ -202,4 +202,40 @@ export function updateSkillInput(): void {
 
   // ---- refresh the desktop indicator while holding
   if (aimState.active && !aimState.touch) shapeFor(aimState.id, p.aim.x, p.aim.z);
+
+  autoSkills();
+}
+
+// ------------------------------------------------------------ auto skills --
+// Setting `autoSkills`: casts 1/2/3 (and the ult) by itself at the auto-target. Dash always stays manual.
+// Skills fire one at a time (short gap) only when enemies are in reach; the ult waits for a boss or a crowd.
+const AUTO_IDS = ['s1', 's2', 's3'] as const;
+const autoState = { next: 0, i: 0 };
+const nearOut: number[] = [];
+function countNear(r: number): number {
+  const p = world.player, ids = world.enemyGrid.query(p.pos.x, p.pos.z, r, nearOut);
+  let n = 0;
+  for (let i = 0; i < ids.length; i++) { const e = world.enemies[ids[i]]; if (e.active && e.state !== 'DYING' && e.state !== 'SPAWN') n++; }
+  return n;
+}
+function autoSkills(): void {
+  const st = useGameStore.getState();
+  if (!(st.settings as { autoSkills?: boolean }).autoSkills || aimState.active) return;
+  const p = world.player;
+  if (!p.alive || world.time < autoState.next) return;
+  autoState.next = world.time + 0.25;
+  if (isCastable('ult')) {
+    const boss = findNearestEnemy(p.pos.x, p.pos.z, 24);
+    if ((boss && boss.boss) || countNear(14) >= 6) { fire('ult', 'AUTO'); autoState.next = world.time + 1.2; return; }
+  }
+  for (let k = 0; k < AUTO_IDS.length; k++) {
+    const id = AUTO_IDS[(autoState.i + k) % AUTO_IDS.length];
+    if (!isCastable(id)) continue;
+    const reach = aimable(id) ? 20 : 7; // self-centred skills need enemies close
+    if (!findNearestEnemy(p.pos.x, p.pos.z, reach)) continue;
+    fire(id, 'AUTO');
+    autoState.i = (autoState.i + k + 1) % AUTO_IDS.length;
+    autoState.next = world.time + 0.7;
+    return;
+  }
 }

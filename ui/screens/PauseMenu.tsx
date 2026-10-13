@@ -78,6 +78,7 @@ export const SettingsDialog: React.FC = () => {
       <div className="rpg-frame px-4 py-1 mt-2 allow-scroll" style={{ minHeight: '17rem' }}>
         {tab === 'GAMEPLAY' && (<>
           {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
+          {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
           {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
           {tog('Damage numbers', 'showDamageNumbers')}
           {tog('Enemy health bars', 'showEnemyBars')}
