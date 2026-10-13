@@ -7,6 +7,7 @@ import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { useGameEvent } from '../hooks/useEvent';
 import type { GameNotification } from '../../types';
+import { feel } from '../../engine/game';
 
 // ---------------------------------------------------------------- banners
 interface Banner { id: number; kind: 'wave' | 'boss' | 'elite' | 'level' | 'info'; title: string; sub?: string; ms: number; }
@@ -90,6 +91,19 @@ export const Vignettes: React.FC = () => {
     const l = world.player.alive && world.player.hp / Math.max(1, maxRef.current) < 0.3;
     if (l !== on.current && low.current) { on.current = l; low.current.dataset.on = l ? '1' : '0'; }
   });
+  const gold = useRef<HTMLDivElement>(null);
+  const hurt = useRef<HTMLDivElement>(null);
+  const lastG = useRef(-1), lastH = useRef(-1);
+  useRaf(() => {
+    const g = Math.round(feel.gold * 30) / 30, h = Math.round(feel.hurt * 30) / 30;
+    if (g !== lastG.current && gold.current) { lastG.current = g; gold.current.style.opacity = String(g * 0.55); }
+    if (h !== lastH.current && hurt.current) {
+      lastH.current = h;
+      const e = hurt.current.style;
+      e.opacity = String(h);
+      e.boxShadow = `inset 0 0 140px 30px rgba(255,20,40,${0.55 * h}), inset 7px 0 50px rgba(0,255,255,${0.35 * h}), inset -7px 0 50px rgba(255,0,60,${0.35 * h})`;
+    }
+  });
   useGameEvent('playerHit', () => {
     const el = hit.current; if (!el) return;
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
@@ -98,6 +112,8 @@ export const Vignettes: React.FC = () => {
     <>
       <div ref={low} className="vignette-low" data-on="0" />
       <div ref={hit} className="vignette-hit" />
+      <div ref={hurt} className="absolute inset-0 pointer-events-none" style={{ opacity: 0, zIndex: 9 }} />
+      <div ref={gold} className="absolute inset-0 pointer-events-none" style={{ opacity: 0, zIndex: 9, background: 'radial-gradient(ellipse at center, rgba(255,230,140,0) 30%, rgba(255,200,60,.75) 100%)', mixBlendMode: 'screen' }} />
     </>
   );
 };

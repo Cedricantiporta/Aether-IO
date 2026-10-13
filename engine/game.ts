@@ -22,6 +22,63 @@ import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
 
 const MAX_DT = 0.05;
 
+// ---------------------------------------------------------------- game feel --
+/** Shared juice state. Engine writes, render/UI read. Decays in REAL time. */
+export const feel = { timeScale: 1, fov: 0, gold: 0, hurt: 0 };
+let stopT = 0, slowT = 0, slowScale = 0.4, lastStopAt = -10;
+const nowS = (): number => (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
+function motionOk(): boolean {
+  if (useGameStore.getState().settings?.screenShake === false) return false;
+  try { return !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches); } catch { return true; }
+}
+/** Brief time-scale dip. Rate limited (0.25 s) unless force. */
+export function hitStop(dur = 0.055, scale = 0.05, force = false): void {
+  if (!motionOk()) return;
+  const n = nowS();
+  if (!force && n - lastStopAt < 0.25) return;
+  lastStopAt = n; stopT = Math.max(stopT, dur); slowScale = scale;
+}
+export function slowMo(dur = 0.3, scale = 0.35): void {
+  if (!motionOk()) return;
+  slowT = Math.max(slowT, dur); slowScale = scale;
+}
+export function goldFlash(a = 1): void { if (motionOk()) feel.gold = Math.max(feel.gold, a); }
+export function fovKick(a: number): void { if (motionOk()) feel.fov = Math.max(feel.fov, Math.min(1, a)); }
+function tickFeel(raw: number): void {
+  const r = Math.min(raw, 0.1);
+  if (stopT > 0) { stopT -= r; feel.timeScale = 0.05; }
+  else if (slowT > 0) { slowT -= r; feel.timeScale = slowScale; }
+  else feel.timeScale = 1;
+  feel.fov = Math.max(0, feel.fov - r * 3.2);
+  feel.gold = Math.max(0, feel.gold - r * 1.6);
+  feel.hurt = Math.max(0, feel.hurt - r * 2.6);
+}
+events.on('damage', (e) => {
+  if (!world.player.alive) return;
+  if (e.toPlayer) {
+    const mx = Math.max(1, useGameStore.getState().stats.maxHealth);
+    if (e.amount >= mx * 0.12) { hitStop(0.07, 0.05); feel.hurt = 1; fovKick(0.35); }
+    else if (e.amount >= mx * 0.04) feel.hurt = Math.max(feel.hurt, 0.5);
+  } else if (e.crit && (world.boss.active || e.amount >= 60)) hitStop(0.04, 0.06);
+});
+events.on('enemyDeath', (e) => { if (e.boss) hitStop(0.14, 0.04, true); else if (e.elite && !e.poof) hitStop(0.06, 0.05); });
+events.on('explosion', (e) => { if (e.radius >= 4) fovKick(Math.min(0.8, e.radius * 0.1)); });
+events.on('shockwave', (e) => { if (e.radius >= 4) fovKick(Math.min(0.9, e.radius * 0.1)); });
+events.on('bossPhase', () => { fovKick(0.9); hitStop(0.1, 0.05, true); });
+events.on('levelUp', () => { goldFlash(0.8); slowMo(0.3, 0.35); });
+events.on('waveClear', () => { goldFlash(0.6); slowMo(0.3, 0.4); });
+let lastRank = -1, rankSub = false;
+function watchRank(): void { // lazy: store.ts and game.ts import each other
+  if (rankSub) return;
+  rankSub = true;
+  useGameStore.subscribe((s) => {
+    const r = (s as any).heroRank as number | undefined;
+    if (typeof r !== 'number') return;
+    if (lastRank >= 0 && r > lastRank) { goldFlash(1); slowMo(0.3, 0.35); }
+    lastRank = r;
+  });
+}
+
 // Screen shake: events add trauma (render reads + squares world.camera.trauma).
 events.on('shake', ({ amount }) => {
   if (!useGameStore.getState().settings.screenShake) return;
@@ -84,6 +141,8 @@ export function startRun(): void {
 }
 
 export function updateGame(rawDt: number): void {
+  watchRank();
+  tickFeel(rawDt);
   const status = useGameStore.getState().status;
   if (status === GameStatus.MENU) {
     if (!villageReady) enterVillage();
@@ -96,7 +155,7 @@ export function updateGame(rawDt: number): void {
     clearPressed();
     return;
   }
-  const dt = Math.min(rawDt, MAX_DT);
+  const dt = Math.min(rawDt, MAX_DT) * feel.timeScale;
   if (!(dt > 0)) return;
 
   updatePlayer(dt);

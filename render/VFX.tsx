@@ -348,6 +348,7 @@ export function VFX() {
       const hex = e.kind === 'FIREBALL' || e.kind === 'BURNING_ARROW' ? 0xff8a2a : e.kind === 'FREEZING_ARROW' ? 0x9fe4ff : e.kind === 'PIERCING_ARROW' ? 0x7af0ff : e.kind === 'MAGIC' || e.kind === 'STORM' || e.kind === 'PET_BOLT' ? 0xc58bff : 0xfff0c0;
       const p = e.pos;
       glowPuff(p.x + e.dir.x * 0.8, p.y, p.z + e.dir.z * 0.8, hex, 0.9, 0.12, 1.4, 0.8);
+      flashStar(p.x + e.dir.x * 1.0, p.y, p.z + e.dir.z * 1.0, hex, 0.7, 0.07);
     }));
     off.push(on('ability', (e) => {
       const p = e.pos;
@@ -361,6 +362,23 @@ export function VFX() {
       sparks(e.pos.x, 1, e.pos.z, 30, 0xfff0a0, 11, 0.32, 0.8, 2);
       glowPuff(e.pos.x, 1.2, e.pos.z, 0xffffff, 5, 0.5, 1.5, 0.8);
       flashLight(e.pos.x, 3, e.pos.z, 0xffe8a0, 50, 0.7);
+    }));
+    // crit pop: bigger star burst on the target
+    off.push(on('damage', (e) => {
+      if (e.toPlayer || !e.crit || e.dot) return;
+      const p = e.pos;
+      flashStar(p.x, p.y + 1.2, p.z, 0xfff2b0, 2.2, 0.16);
+      sparks(p.x, p.y + 1.2, p.z, 10, 0xffd23a, 10, 0.36, 0.4, 2.2);
+    }));
+    // elite / boss kill confetti
+    off.push(on('enemyDeath', (e) => {
+      if ((!e.elite && !e.boss) || e.poof) return;
+      const cols = [0xff5a5a, 0xffd23a, 0x5ad0ff, 0xa86bff, 0x6bff9a];
+      const n = e.boss ? 40 : 22;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * TAU, sp = 3 + Math.random() * 6, c = cols[i % 5];
+        FX.add.emit(e.pos.x, e.pos.y + 1, e.pos.z, Math.cos(a) * sp, 5 + Math.random() * 5, Math.sin(a) * sp, 1.1 + Math.random() * 0.5, 0.3, 0.2, ((c >> 16) & 255) / 120, ((c >> 8) & 255) / 120, (c & 255) / 120, 1, CELL.STAR, 9, 0.7, Math.random() * 6, (Math.random() - 0.5) * 12, 0);
+      }
     }));
     off.push(on('bossSpawn', () => { pendingBoss = 0.15; }));
     off.push(on('runStart', () => { FX.add.clear(); FX.norm.clear(); DECALS.clear(); }));

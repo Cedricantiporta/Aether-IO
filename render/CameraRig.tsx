@@ -6,6 +6,7 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
+import { feel } from '../engine/game';
 
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
@@ -68,6 +69,9 @@ export function CameraRig() {
         roll = Math.sin(t * 39.1) * 0.012 * sh * 3;
       }
     }
+    // ---- FOV punch (big explosions / boss slams): quick zoom-in that eases back
+    const fk = feel.fov, fovT = 40 - fk * fk * 4.5;
+    if (Math.abs(cam.fov - fovT) > 0.01) { cam.fov = fovT; cam.updateProjectionMatrix(); }
     cam.position.set(s.pos.x + sx, s.pos.y + sy, s.pos.z);
     cam.lookAt(s.tgt);
     if (roll) cam.rotateZ(roll);

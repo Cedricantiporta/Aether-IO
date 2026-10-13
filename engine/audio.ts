@@ -12,6 +12,7 @@ import { world } from './world';
 import { useGameStore } from '../store';
 import type { Vector3 } from 'three';
 import type { ProjectileKind } from './types';
+import { GameStatus } from '../types';
 
 // ------------------------------------------------------------ state ---------
 let ctx: AudioContext | null = null;
@@ -23,8 +24,8 @@ let activeVoices = 0;
 let manualIntensity = 0;
 let intensity = 0.1;
 
-const MAX_VOICES = 36;
-const MAX_VOICES_PRIORITY = 56;
+const MAX_VOICES = 26;
+const MAX_VOICES_PRIORITY = 42;
 
 // time gates (seconds) per sound id
 const enum G {
@@ -32,7 +33,7 @@ const enum G {
   BUZZ, TELEGRAPH, CRATE, HEAL, SHOCK, COUNT,
 }
 const GATE: number[] = [];
-GATE[G.SHOOT] = 0.085; GATE[G.HIT] = 0.03; GATE[G.DEATH] = 0.045; GATE[G.PLAYER_HIT] = 0.1;
+GATE[G.SHOOT] = 0.11; GATE[G.HIT] = 0.03; GATE[G.DEATH] = 0.045; GATE[G.PLAYER_HIT] = 0.1;
 GATE[G.EXPLOSION] = 0.08; GATE[G.XP] = 0.035; GATE[G.GOLD] = 0.06; GATE[G.ITEM] = 0.1;
 GATE[G.DASH] = 0.15; GATE[G.LIGHTNING] = 0.06; GATE[G.SHIELD] = 0.15; GATE[G.BUZZ] = 0.25;
 GATE[G.TELEGRAPH] = 0.2; GATE[G.CRATE] = 0.08; GATE[G.HEAL] = 0.2; GATE[G.SHOCK] = 0.15;
@@ -138,26 +139,25 @@ function semis(root: number, n: number): number { return root * Math.pow(2, n / 
 
 // ------------------------------------------------------------ SFX voices -----
 function sfxShoot(kind: ProjectileKind, pos: Vector3): void {
-  if (kind === 'ORBITAL_BLADE' || !gate(G.SHOOT)) return;
+  if (kind === 'ORBITAL_BLADE' || activeVoices > 16 || !gate(G.SHOOT)) return;
   const v = att(pos);
   switch (kind) {
     case 'AXE':
-      noise(0.2, 0.22 * v, 500, 1400, { filter: 'bandpass', q: 1.2, attack: 0.04 });
+      noise(0.14, 0.12 * v, 500, 1200, { filter: 'bandpass', q: 1.0, attack: 0.03 });
       break;
     case 'MAGIC': case 'STORM': case 'PET_BOLT': {
       const f = 1100 + Math.random() * 500;
-      tone(f, f * 2, 0.11, 0.11 * v, { type: 'sine' });
-      tone(f * 1.5, f * 3, 0.08, 0.05 * v, { type: 'triangle', delay: 0.02 });
+      tone(f * 0.7, f * 1.4, 0.07, 0.06 * v, { type: 'sine' });
       break;
     }
     case 'FIREBALL':
-      noise(0.28, 0.2 * v, 900, 200, { attack: 0.03 });
-      tone(220, 110, 0.2, 0.1 * v, { type: 'sawtooth' });
+      noise(0.2, 0.12 * v, 800, 200, { attack: 0.03 });
+      tone(200, 110, 0.14, 0.05 * v, { type: 'triangle' });
       break;
     default: { // arrows
       const f = 650 + Math.random() * 150;
-      tone(f, f * 0.4, 0.09, 0.13 * v, { type: 'triangle' });
-      noise(0.05, 0.07 * v, 3000, 1500, { filter: 'highpass' });
+      tone(f * 0.8, f * 0.35, 0.06, 0.065 * v, { type: 'triangle' });
+      noise(0.03, 0.025 * v, 2500, 1500, { filter: 'bandpass' });
     }
   }
 }
@@ -167,7 +167,7 @@ function sfxEnemyHit(pos: Vector3, dmgKind: GameEvents['enemyHit']['dmgKind']): 
   const v = att(pos);
   const base = dmgKind === 'ICE' ? 5200 : dmgKind === 'FIRE' ? 1800 : dmgKind === 'LIGHTNING' ? 4200 : 2800;
   const f = base * (0.8 + Math.random() * 0.5);
-  noise(0.035, 0.16 * v, f, f * 0.6, { filter: 'bandpass', q: 1.5 });
+  noise(0.03, 0.09 * v, f * 0.8, f * 0.5, { filter: 'bandpass', q: 1.5 });
 }
 
 function sfxEnemyDeath(pos: Vector3, elite: boolean, boss: boolean): void {
@@ -349,139 +349,163 @@ function sfxHeal(): void {
 }
 
 // ------------------------------------------------------------ music ----------
-// A minor, i - VI - III - VII. Roots in Hz (octave 2) with triad offsets.
-const PROGRESSION: { root: number; third: number; fifth: number }[] = [
-  { root: 110.0, third: 3, fifth: 7 },   // Am
-  { root: 87.31, third: 4, fifth: 7 },   // F
-  { root: 130.81, third: 4, fifth: 7 },  // C
-  { root: 98.0, third: 4, fifth: 7 },    // G
-];
-const STEPS_PER_BAR = 8;
-const A_MINOR_PENT_HZ = [220, 261.63, 293.66, 329.63, 392.0];
-
+// Three generative themes crossfaded by game state (all routed musicGain -> lowpass -> reverb send):
+//   village: warm pad + soft lute pluck, C lydian, slow.
+//   siege:   low drums + minor ostinato, intensity follows alive count.
+//   boss:    deep drone + choir-ish pad, D phrygian, heavy hits.
+type Theme = 0 | 1 | 2; // village, siege, boss
+const layerG: (GainNode | null)[] = [null, null, null];
+const layerLvl = [1, 0, 0];
+let musicEnabled = true;
 let musicTimer: number | null = null;
 let nextStepTime = 0;
 let step = 0;
 let bar = 0;
+let lute = 0;
+const STEPS_PER_BAR = 8;
+
+// village: C lydian chords (semitones above root freq)
+const V_ROOTS = [130.81, 146.83, 110.0, 174.61]; // C, D, A, F
+const V_CHORDS = [[0, 4, 7, 11], [0, 4, 7, 12], [0, 3, 7, 10], [0, 4, 7, 11]];
+const V_SCALE = [0, 2, 4, 6, 7, 9, 11, 12, 14]; // lydian
+// siege: A minor
+const S_ROOTS = [110.0, 87.31, 130.81, 98.0];
+const S_OST = [0, -1, 7, -1, 3, -1, 5, 7]; // semitone offsets, -1 = rest
+const S_PENT = [220, 261.63, 293.66, 329.63, 392.0];
+// boss: D phrygian
+const B_ROOT = 73.42;
+const B_PAT = [0, 1, 0, 0, 3, 0, 1, 0];
+
+function themeTargets(): [number, number, number] {
+  const st = useGameStore.getState().status;
+  if (world.boss.active) return [0, 0, 1];
+  if (st === GameStatus.MENU || world.director.phase === 'RESPITE') return [1, 0, 0];
+  return [0, 1, 0];
+}
 
 function musicTarget(): number {
   const d = world.director;
   let t: number;
-  if (world.boss.active) t = 1;
-  else if (d.phase === 'FIGHT') t = 0.35 + Math.min(0.45, d.aliveCount / 60);
+  if (world.boss.active) t = 0.9;
+  else if (d.phase === 'FIGHT') t = 0.3 + Math.min(0.55, d.aliveCount / 60);
   else if (d.phase === 'CLEANUP') t = 0.3;
   else t = 0.12;
   return Math.max(t, manualIntensity);
 }
 
-function padNote(t: number, freq: number, dur: number, vol: number): void {
-  if (!ctx || !musicGain) return;
+function voice(dest: GainNode, type: OscillatorType, f: number, t: number, atk: number, hold: number, rel: number, vol: number, lpHz: number, det = 0): void {
+  if (!ctx) return;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   const lp = ctx.createBiquadFilter();
-  osc.type = 'triangle';
-  osc.frequency.value = freq;
-  osc.detune.value = (Math.random() - 0.5) * 10;
-  lp.type = 'lowpass';
-  lp.frequency.value = 700 + intensity * 900;
+  osc.type = type; osc.frequency.value = f; osc.detune.value = det;
+  lp.type = 'lowpass'; lp.frequency.value = lpHz; lp.Q.value = 0.4;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(vol, t + 1.2);
-  g.gain.linearRampToValueAtTime(vol * 0.8, t + dur - 1.0);
-  g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.6);
-  osc.connect(lp); lp.connect(g); g.connect(musicGain);
-  osc.start(t);
-  osc.stop(t + dur + 0.7);
+  g.gain.linearRampToValueAtTime(vol, t + atk);
+  g.gain.setValueAtTime(vol, t + atk + hold);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + atk + hold + rel);
+  osc.connect(lp); lp.connect(g); g.connect(dest);
+  osc.start(t); osc.stop(t + atk + hold + rel + 0.05);
 }
 
-function pluck(t: number, freq: number, vol: number): void {
-  if (!ctx || !musicGain) return;
+function pluckTo(dest: GainNode, t: number, f: number, vol: number): void {
+  voice(dest, 'triangle', f, t, 0.008, 0, 0.9, vol, 2200);
+  voice(dest, 'sine', f * 2, t, 0.004, 0, 0.35, vol * 0.25, 3000);
+}
+
+function kickTo(dest: GainNode, t: number, vol: number, deep = false): void {
+  if (!ctx) return;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
-  const lp = ctx.createBiquadFilter();
-  osc.type = 'triangle';
-  osc.frequency.value = freq;
-  lp.type = 'lowpass';
-  lp.frequency.setValueAtTime(2800, t);
-  lp.frequency.exponentialRampToValueAtTime(500, t + 0.4);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(vol, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
-  osc.connect(lp); lp.connect(g); g.connect(musicGain);
-  osc.start(t);
-  osc.stop(t + 0.6);
+  osc.frequency.setValueAtTime(deep ? 90 : 110, t);
+  osc.frequency.exponentialRampToValueAtTime(38, t + (deep ? 0.28 : 0.16));
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (deep ? 0.4 : 0.22));
+  osc.connect(g); g.connect(dest);
+  osc.start(t); osc.stop(t + 0.45);
 }
 
-function bassNote(t: number, freq: number, vol: number): void {
-  if (!ctx || !musicGain) return;
+function tomTo(dest: GainNode, t: number, f: number, vol: number): void {
+  if (!ctx) return;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = freq;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(vol, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-  osc.connect(g); g.connect(musicGain);
-  osc.start(t);
-  osc.stop(t + 0.65);
+  osc.frequency.setValueAtTime(f * 1.5, t);
+  osc.frequency.exponentialRampToValueAtTime(f, t + 0.12);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  osc.connect(g); g.connect(dest);
+  osc.start(t); osc.stop(t + 0.4);
 }
 
-function drum(t: number, kick: boolean, vol: number): void {
-  if (!ctx || !musicGain || !noiseBuf) return;
-  if (kick) {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.frequency.setValueAtTime(120, t);
-    osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-    osc.connect(g); g.connect(musicGain);
-    osc.start(t); osc.stop(t + 0.25);
-  } else {
-    const src = ctx.createBufferSource();
-    const hp = ctx.createBiquadFilter();
-    const g = ctx.createGain();
-    src.buffer = noiseBuf;
-    hp.type = 'highpass'; hp.frequency.value = 7000;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    src.connect(hp); hp.connect(g); g.connect(musicGain);
-    src.start(t, Math.random()); src.stop(t + 0.06);
-  }
-}
-
-function scheduleStep(t: number, stepDur: number): void {
-  const chord = PROGRESSION[bar % PROGRESSION.length];
+function villageStep(t: number, sd: number): void {
+  const g = layerG[0]!;
+  const c = bar % 4, root = V_ROOTS[c] * 2;
   if (step === 0) {
-    const dur = stepDur * STEPS_PER_BAR;
-    const vol = 0.05 + intensity * 0.03;
-    padNote(t, chord.root * 2, dur, vol);
-    padNote(t, semis(chord.root * 2, chord.third), dur, vol * 0.8);
-    padNote(t, semis(chord.root * 2, chord.fifth), dur, vol * 0.8);
+    const dur = sd * STEPS_PER_BAR;
+    for (const n of V_CHORDS[c]) voice(g, 'triangle', semis(root, n), t, 1.6, dur - 1.8, 1.8, 0.05, 900, (Math.random() - 0.5) * 12);
+    voice(g, 'sine', root / 2, t, 1.2, dur - 1.2, 1.5, 0.07, 400);
   }
-  // bass pulses grow with intensity
-  if (intensity > 0.3 && (step === 0 || step === 4 || (intensity > 0.7 && (step === 2 || step === 6)))) {
-    bassNote(t, chord.root, 0.12 + intensity * 0.06);
+  if ((step & 1) === 0 && Math.random() < 0.55) {
+    lute = Math.max(0, Math.min(V_SCALE.length - 1, lute + Math.floor(Math.random() * 5) - 2));
+    pluckTo(g, t, semis(root * 2, V_SCALE[lute]), 0.05);
   }
-  // plucked arpeggio, denser when intense
-  if (Math.random() < 0.3 + intensity * 0.55) {
-    const idx = Math.floor(Math.random() * 7);
-    const f = A_MINOR_PENT_HZ[idx % 5] * (idx >= 5 ? 2 : 1);
-    pluck(t, f, 0.035 + intensity * 0.02);
+}
+
+function siegeStep(t: number, sd: number): void {
+  const g = layerG[1]!;
+  const c = bar % 4, root = S_ROOTS[c];
+  if (step === 0) {
+    const dur = sd * STEPS_PER_BAR;
+    voice(g, 'triangle', root * 2, t, 1.0, dur - 1.0, 1.0, 0.045, 600 + intensity * 600);
+    voice(g, 'triangle', semis(root * 2, c === 1 || c === 2 || c === 3 ? 4 : 3), t, 1.0, dur - 1.0, 1.0, 0.035, 600 + intensity * 600);
+    voice(g, 'sine', root, t, 0.6, dur - 0.6, 1.0, 0.08, 300);
   }
-  if (intensity > 0.6) {
-    if (step % 4 === 0 && intensity > 0.7) drum(t, true, 0.18);
-    if (step % 2 === 1) drum(t, false, 0.04);
+  // minor ostinato (soft saw through a low filter)
+  const o = S_OST[step];
+  if (o >= 0 && intensity > 0.2) voice(g, 'sawtooth', semis(root, o), t, 0.01, 0.05, 0.22, 0.03 + intensity * 0.03, 450 + intensity * 500);
+  if (step === 0 || (step === 4 && intensity > 0.25)) kickTo(g, t, 0.16 + intensity * 0.1);
+  if (intensity > 0.55 && (step === 2 || step === 6)) tomTo(g, t, 85, 0.09);
+  if (intensity > 0.45 && Math.random() < 0.35) pluckTo(g, t, S_PENT[Math.floor(Math.random() * 5)], 0.03);
+}
+
+function bossStep(t: number, sd: number): void {
+  const g = layerG[2]!;
+  if (step === 0) {
+    const dur = sd * STEPS_PER_BAR;
+    voice(g, 'sawtooth', B_ROOT, t, 1.2, dur - 1.2, 1.2, 0.05, 220);
+    // choir-ish: stacked sines, root / flat-2 / fifth / octave, slow swell
+    const ch = bar % 2 === 0 ? [0, 7, 12, 15] : [1, 8, 12, 17];
+    for (const n of ch) {
+      voice(g, 'sine', semis(B_ROOT * 4, n), t, 2.0, dur - 2.2, 1.6, 0.04, 1400, (Math.random() - 0.5) * 18);
+      voice(g, 'triangle', semis(B_ROOT * 2, n), t, 2.0, dur - 2.2, 1.6, 0.025, 800, (Math.random() - 0.5) * 18);
+    }
   }
+  const o = B_PAT[step];
+  if (step === 0 || step === 3 || step === 4) kickTo(g, t, 0.22, true);
+  if (step === 6) tomTo(g, t, 70, 0.14);
+  if (step % 2 === 0) voice(g, 'sawtooth', semis(B_ROOT, o), t, 0.01, 0.05, 0.3, 0.04, 380);
+}
+
+function scheduleStep(t: number, sd: number): void {
+  if (layerLvl[0] > 0.04) villageStep(t, sd);
+  if (layerLvl[1] > 0.04) siegeStep(t, sd);
+  if (layerLvl[2] > 0.04) bossStep(t, sd);
 }
 
 function musicTick(): void {
-  if (!ctx || ctx.state !== 'running') return;
+  if (!ctx || ctx.state !== 'running' || !musicEnabled) return;
+  const tg = themeTargets();
+  for (let i = 0; i < 3; i++) {
+    layerLvl[i] += (tg[i] - layerLvl[i]) * 0.04;
+    if (Math.abs(layerLvl[i] - tg[i]) < 0.005) layerLvl[i] = tg[i];
+    layerG[i]?.gain.setTargetAtTime(layerLvl[i], ctx.currentTime, 0.1);
+  }
   intensity += (musicTarget() - intensity) * 0.08;
-  const stepDur = 0.52 - 0.12 * intensity;
+  const sd = layerLvl[2] > 0.5 ? 0.5 : layerLvl[1] > layerLvl[0] ? 0.5 - 0.1 * intensity : 0.68;
   if (nextStepTime < ctx.currentTime) nextStepTime = ctx.currentTime + 0.05;
   while (nextStepTime < ctx.currentTime + 0.5) {
-    scheduleStep(nextStepTime, stepDur);
-    nextStepTime += stepDur;
+    scheduleStep(nextStepTime, sd);
+    nextStepTime += sd;
     step++;
     if (step >= STEPS_PER_BAR) { step = 0; bar++; }
   }
@@ -492,14 +516,27 @@ export function setMusicIntensity(x: number): void {
   manualIntensity = Math.max(0, Math.min(1, x));
 }
 
+function makeImpulse(c: AudioContext, secs: number): AudioBuffer {
+  const n = Math.floor(c.sampleRate * secs);
+  const buf = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6);
+  }
+  return buf;
+}
+
 // ------------------------------------------------------------ setup ----------
 function applyVolumes(): void {
   if (!ctx || !master || !sfxGain || !musicGain) return;
   const s = useGameStore.getState().settings;
   const t = ctx.currentTime;
   master.gain.setTargetAtTime(Math.max(0, Math.min(1, s.masterVolume)), t, 0.05);
-  sfxGain.gain.setTargetAtTime(Math.max(0, Math.min(1, s.sfxVolume)) * 0.8, t, 0.05);
-  musicGain.gain.setTargetAtTime(Math.max(0, Math.min(1, s.musicVolume)) * 0.55, t, 0.05);
+  sfxGain.gain.setTargetAtTime(Math.max(0, Math.min(1, s.sfxVolume)) * 0.6, t, 0.05);
+  // music was 0.55 * volume; now ~35% of that (0.19) and further softened by the music lowpass
+  const mv = Math.max(0, Math.min(1, s.musicVolume));
+  musicGain.gain.setTargetAtTime(mv * 0.19, t, 0.08);
+  musicEnabled = mv > 0.01; // volume 0: stop scheduling entirely (saves CPU)
 }
 
 function ensureContext(): boolean {
@@ -521,7 +558,15 @@ function ensureContext(): boolean {
     const m = c.createGain();
     const sg = c.createGain();
     const mg = c.createGain();
-    sg.connect(m); mg.connect(m); m.connect(comp); comp.connect(c.destination);
+    // soft sfx bus (tames harsh highs), music bus: lowpass + generated-impulse reverb send
+    const sl = c.createBiquadFilter(); sl.type = 'lowpass'; sl.frequency.value = 8000; sl.Q.value = 0.3;
+    sg.connect(sl); sl.connect(m);
+    const mlp = c.createBiquadFilter(); mlp.type = 'lowpass'; mlp.frequency.value = 2200; mlp.Q.value = 0.4;
+    const conv = c.createConvolver(); conv.buffer = makeImpulse(c, 2.4);
+    const wet = c.createGain(); wet.gain.value = 0.45;
+    mg.connect(mlp); mlp.connect(m); mlp.connect(conv); conv.connect(wet); wet.connect(m);
+    for (let i = 0; i < 3; i++) { const lg = c.createGain(); lg.gain.value = layerLvl[i]; lg.connect(mg); layerG[i] = lg; }
+    m.connect(comp); comp.connect(c.destination);
 
     const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const ch = buf.getChannelData(0);
@@ -600,7 +645,7 @@ export function initAudio(): () => void {
     unsubStore();
     if (musicTimer !== null) { window.clearInterval(musicTimer); musicTimer = null; }
     if (ctx) { void ctx.close().catch(() => undefined); }
-    ctx = null; master = null; sfxGain = null; musicGain = null; noiseBuf = null;
+    ctx = null; master = null; sfxGain = null; musicGain = null; noiseBuf = null; layerG[0] = layerG[1] = layerG[2] = null;
     activeVoices = 0;
   };
 }

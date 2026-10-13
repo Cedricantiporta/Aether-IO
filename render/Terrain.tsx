@@ -12,6 +12,7 @@ import { GB, fbm, litMat, mulberry32, setInst, TAU, vnoise, lerp } from './util'
 import { GROUND_SIZE, POND, dirtAmount, edgeR, groundY, pondEdge, regionAt, sstep } from './terrainFn';
 import { makeRockGeo, useNature } from './models';
 import { Inst } from './Inst';
+import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
 
 const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
@@ -176,23 +177,48 @@ function Flowers({ q }: { q: QualityCfg }) {
     h.sph(0.06, [0, 0.54, 0], '#ffd23a', 1, 5);
     return { stem: s, head: h.build(), sm: litMat({ flatShading: true }), hm: litMat({ flatShading: true }) };
   }, []);
+  // Flowers mostly grow in a few dense flower fields (each field leans to 1-2 colours), with only a sprinkle elsewhere.
   const pts = useMemo(() => {
     const rnd = mulberry32(31), out: number[] = [];
+    const ok = (x: number, z: number) => {
+      const a = Math.atan2(z, x), r = Math.hypot(x, z);
+      if (r > edgeR(a) - 3 || dirtAmount(x, z) > 0.2) return false;
+      if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.5) return false;
+      return true;
+    };
+    // pick 4 field centres in open meadow, away from town, pond and busy regions
+    const fields: { x: number; z: number; r: number; c0: number; c1: number }[] = [];
+    for (let t = 0; t < 400 && fields.length < 4; t++) {
+      const a = rnd() * TAU, d = 28 + rnd() * 45;
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (!ok(x, z) || Math.hypot(x, z + 20) < 30 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 10) continue;
+      if (REGIONS.some((g) => g.kind !== 'GROVE' && g.kind !== 'FARM' && Math.hypot(x - g.x, z - g.z) < g.r + 6)) continue;
+      if (fields.some((f) => Math.hypot(x - f.x, z - f.z) < 30)) continue;
+      fields.push({ x, z, r: 7 + rnd() * 4, c0: Math.floor(rnd() * 6), c1: Math.floor(rnd() * 6) });
+    }
+    const fieldBudget = Math.round(q.flowers * 0.5), scatter = Math.round(q.flowers * 0.06);
     let g = 0;
-    while (out.length < q.flowers * 4 && g++ < q.flowers * 10) {
+    while (out.length < fieldBudget * 5 && fields.length && g++ < fieldBudget * 8) {
+      const f = fields[Math.floor(rnd() * fields.length)];
+      const a = rnd() * TAU, d = Math.sqrt(rnd()) * f.r * (0.6 + rnd() * 0.5);
+      const x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d;
+      if (!ok(x, z)) continue;
+      out.push(x, z, 0.75 + rnd() * 0.6, rnd(), rnd() < 0.7 ? f.c0 : f.c1);
+    }
+    g = 0;
+    let k = 0;
+    while (k < scatter && g++ < scatter * 20) {
       const a = rnd() * TAU, r = Math.sqrt(rnd()) * (ARENA_RADIUS + 2);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (dirtAmount(x, z) > 0.2 || r > edgeR(a) - 2) continue;
-      if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1) continue;
-      if (fbm(x * 0.08 + 40, z * 0.08, 2) < 0.5 && rnd() < 0.6) continue; // clustered
-      out.push(x, z, 0.8 + rnd() * 0.7, rnd());
+      if (!ok(x, z) || Math.hypot(x, z + 20) < 22) continue;
+      out.push(x, z, 0.7 + rnd() * 0.5, rnd(), Math.floor(rnd() * 6)); k++;
     }
     return out;
   }, [q.flowers]);
-  const n = pts.length / 4;
+  const n = pts.length / 5;
   const palette = useMemo(() => ['#ffffff', '#ffe14a', '#ff7aa8', '#9ac8ff', '#ff9a3a', '#d9a0ff'].map((c) => new Color(c)), []);
-  const fillS = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) setInst(m, i, pts[i * 4], 0, pts[i * 4 + 1], pts[i * 4 + 3] * 6, pts[i * 4 + 2]); }, [pts, n]);
-  const fillH = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) { setInst(m, i, pts[i * 4], 0, pts[i * 4 + 1], pts[i * 4 + 3] * 6, pts[i * 4 + 2]); m.setColorAt(i, palette[Math.floor(pts[i * 4 + 3] * 977) % palette.length]); } }, [pts, n, palette]);
+  const fillS = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) setInst(m, i, pts[i * 5], 0, pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); }, [pts, n]);
+  const fillH = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) { setInst(m, i, pts[i * 5], 0, pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); m.setColorAt(i, palette[pts[i * 5 + 4] % palette.length]); } }, [pts, n, palette]);
   return (<>
     <Inst geo={stem} mat={sm} count={n} fill={fillS} />
     <Inst geo={head} mat={hm} count={n} fill={fillH} />
@@ -202,10 +228,11 @@ function Flowers({ q }: { q: QualityCfg }) {
 function Pebbles({ q }: { q: QualityCfg }) {
   const geo = useMemo(() => new GB([0.8, 1.05]).dodeca(0.5, [0, 0.12, 0], '#9a9a94', [1, 0.55, 0.85]).build(), []);
   const mat = useMemo(() => litMat(), []);
+  const pebbleCount = Math.round(q.pebbles * 0.15);
   const fill = useMemo(() => (m: InstancedMesh) => {
     const rnd = mulberry32(77), c = new Color();
     let i = 0;
-    while (i < q.pebbles) {
+    while (i < pebbleCount) {
       const a = rnd() * TAU, r = Math.sqrt(rnd()) * (ARENA_RADIUS + 2);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       const d = dirtAmount(x, z);
@@ -215,8 +242,8 @@ function Pebbles({ q }: { q: QualityCfg }) {
       c.set('#8e8f8a').lerp(c.clone().set('#b9a98c'), rnd()).multiplyScalar(0.8 + rnd() * 0.4);
       m.setColorAt(i, c); i++;
     }
-  }, [q.pebbles]);
-  return <Inst geo={geo} mat={mat} count={q.pebbles} fill={fill} receive />;
+  }, [pebbleCount]);
+  return <Inst geo={geo} mat={mat} count={pebbleCount} fill={fill} receive />;
 }
 
 // -------------------------------------------------------------------- pond ---

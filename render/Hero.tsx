@@ -18,6 +18,7 @@ import { HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff,
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
+import { attachGear } from './gear';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN' };
 const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a };
@@ -32,6 +33,8 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   const ch = useCharacterInstance(CHAR[cls]);
   const clips = useClips();
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
+  const eq = useGameStore((s) => s.equipment);
+  const gearKey = ['helmet', 'armor', 'gloves', 'boots', 'accessory'].map((k) => (eq as any)?.[k]?.rarity || '').join('|');
   const root = useRef<Group>(null!), lean = useRef<Group>(null!), blob = useRef<Mesh>(null!);
   const S = useRef({
     mixer: null as AnimationMixer | null,
@@ -49,9 +52,10 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     const w = buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier);
     const grp = new Group();
     grp.quaternion.copy(HANDSLOT_QUAT);
+    grp.scale.setScalar(1 + 0.05 * tier);
     const body = new Mesh(w.body, litMat({ roughness: 0.55, metalness: 0.25 }));
     body.castShadow = true;
-    const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.8, 1.8) }));
+    const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5 + 0.35 * tier, 1.5 + 0.35 * tier, 1.5 + 0.35 * tier) }));
     grp.add(body, glowM);
     ch.handR.add(grp);
     S.current.gem = w.tip;
@@ -59,6 +63,12 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     const g = grp;
     return () => { ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
   }, [ch, cls, rarity]);
+
+  // ---- visible gear (rebuilt only when a slot's item rarity changes)
+  useEffect(() => {
+    const [helmet, armor, gloves, boots, accessory] = gearKey.split('|');
+    return attachGear(ch.root, ch.mats, { helmet, armor, gloves, boots, accessory });
+  }, [ch, gearKey]);
 
   // ---- mixer + actions
   useEffect(() => {
