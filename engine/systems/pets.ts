@@ -16,11 +16,38 @@ import type { Pickup } from '../types';
 const meleeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 const FOLLOW = 0, FETCH = 1, ATTACK = 2;
 const ENGAGE_R = 10;       // enemy distance from player that triggers ATTACK
-const FETCH_R = 14;        // pickup distance from player that triggers FETCH
-const FETCH_R_COLLECT = 24;
 const LEASH = 18;
 const TELEPORT = 30;
 const RANGED_STOP = 7;
+
+/** Per-pet behaviour, keyed by pet name (instance ids are unique). Speeds: moveSpeed is a multiplier on the
+ *  base follow/attack speed; fetchSpeed is absolute units/s. Non-attackers never ATTACK, non-fetchers never FETCH. */
+export interface PetProfile {
+  moveSpeed: number;
+  fetches: boolean; fetchSpeed: number; fetchRange: number;
+  attacks: boolean; attackMode: 'melee' | 'ranged'; dmgFactor: number; atkCd: number;
+  heals: boolean;
+}
+const NO_ATK = { attacks: false, attackMode: 'melee', dmgFactor: 0, atkCd: 1 } as const;
+const NO_FETCH = { fetches: false, fetchSpeed: 0, fetchRange: 0 } as const;
+export const PET_PROFILES: Record<string, PetProfile> = {
+  'Green Blob':      { moveSpeed: 0.5, fetches: true, fetchSpeed: 5, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.3, atkCd: 1.4, heals: true },
+  'Vampire Bat':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 30, fetchRange: 24, attacks: true, attackMode: 'melee', dmgFactor: 0.5, atkCd: 0.8, heals: false },
+  'Light Fairy':     { moveSpeed: 1.0, fetches: true, fetchSpeed: 14, fetchRange: 14, ...NO_ATK, heals: true },
+  'Spirit Wolf':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 8, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 1, atkCd: 0.45, heals: false },
+  'Gold Dragon':     { moveSpeed: 1.0, fetches: true, fetchSpeed: 15, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 1, atkCd: 1.0, heals: false },
+  'Pet Rock':        { moveSpeed: 0.3, ...NO_FETCH, ...NO_ATK, heals: false },
+  'Iron Golem':      { moveSpeed: 0.55, ...NO_FETCH, attacks: true, attackMode: 'melee', dmgFactor: 2.5, atkCd: 2.2, heals: false },
+  'Phoenix':         { moveSpeed: 1.2, fetches: true, fetchSpeed: 17, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 0.8, atkCd: 1.2, heals: false },
+  'Celestial Wisp':  { moveSpeed: 1.5, fetches: true, fetchSpeed: 30, fetchRange: 24, attacks: true, attackMode: 'ranged', dmgFactor: 1, atkCd: 0.6, heals: false },
+};
+const DEFAULT_PROFILE: PetProfile = { moveSpeed: 1, fetches: true, fetchSpeed: 20, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.45, atkCd: 0.9, heals: false };
+export function getPetProfile(name: string | undefined | null): PetProfile {
+  if (!name) return DEFAULT_PROFILE;
+  if (PET_PROFILES[name]) return PET_PROFILES[name];
+  for (const k in PET_PROFILES) if (name.includes(k)) return PET_PROFILES[k];
+  return DEFAULT_PROFILE;
+}
 
 let lastPetId = '';
 let vx = 0, vz = 0;
@@ -72,6 +99,7 @@ export function updatePets(dt: number): void {
     vx = vz = 0; target = null; wp.state = FOLLOW;
   }
   const skill = pet.petSkill;
+  const prof = getPetProfile(pet.name);
   const lvMul = 1 + 0.25 * Math.max(0, pet.level - 1);
   const alive = pl.alive;
 
@@ -82,14 +110,14 @@ export function updatePets(dt: number): void {
 
   // ---- decide state -------------------------------------------------------
   let enemy = null as ReturnType<typeof findNearestEnemy>;
-  if (alive) enemy = findNearestEnemy(pl.pos.x, pl.pos.z, ENGAGE_R);
+  if (alive && prof.attacks) enemy = findNearestEnemy(pl.pos.x, pl.pos.z, ENGAGE_R);
   if (enemy) { wp.state = ATTACK; target = null; }
   else {
     if (target && (!target.active || target.magnet)) target = null;
     scanT -= dt;
-    if (alive && !target && scanT <= 0) {
+    if (alive && prof.fetches && !target && scanT <= 0) {
       scanT = 0.3;
-      target = findPickup(pl.pos.x, pl.pos.z, skill === 'COLLECT' ? FETCH_R_COLLECT : FETCH_R, getMagnetRadius(st));
+      target = findPickup(pl.pos.x, pl.pos.z, prof.fetchRange, getMagnetRadius(st));
     }
     wp.state = target ? FETCH : FOLLOW;
   }
@@ -98,14 +126,14 @@ export function updatePets(dt: number): void {
   const sf = Math.sin(pl.facing), cf = Math.cos(pl.facing);
   let gx = pl.pos.x - sf * 1.8 + cf * 1.5;
   let gz = pl.pos.z - cf * 1.8 - sf * 1.5;
-  let maxSp = Math.max(10, st.stats.moveSpeed * 1.4);
+  let maxSp = Math.max(10, st.stats.moveSpeed * 1.4) * prof.moveSpeed;
   let stopR = 0.3;
-  const ranged = skill === 'ATTACK_RANGED';
+  const ranged = prof.attacks && prof.attackMode === 'ranged';
 
   if (wp.state === ATTACK && enemy) {
     const ex = enemy.pos.x - wp.pos.x, ez = enemy.pos.z - wp.pos.z;
     const ed = Math.sqrt(ex * ex + ez * ez) || 1;
-    maxSp = 16;
+    maxSp = 16 * prof.moveSpeed;
     if (ranged) {
       // Hold ~7 away from the enemy on our side of it.
       gx = enemy.pos.x - (ex / ed) * RANGED_STOP; gz = enemy.pos.z - (ez / ed) * RANGED_STOP;
@@ -115,22 +143,21 @@ export function updatePets(dt: number): void {
     }
     const strikeR = ranged ? 20 : enemy.radius + 1.6;
     if (wp.atkCd <= 0 && ed < strikeR) {
-      let factor = 0.45;
-      if (skill === 'ATTACK_MELEE' || ranged) factor = 1; else if (skill === 'HEAL') factor = 0.3;
+      const factor = prof.dmgFactor;
       const base = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * factor;
       wp.attackT = 1;
       if (ranged) {
-        wp.atkCd = 1.0;
+        wp.atkCd = prof.atkCd;
         spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, 30, base,
           { life: 2.5, pierce: 1, radius: 1.5, homing: 6, y: wp.pos.y });
       } else {
-        wp.atkCd = skill === 'ATTACK_MELEE' ? 0.6 : 0.9;
+        wp.atkCd = prof.atkCd;
         damageEnemy(enemy, base, meleeOpts);
       }
     }
   } else if (wp.state === FETCH && target) {
     gx = target.pos.x; gz = target.pos.z;
-    maxSp = skill === 'COLLECT' ? 28 : 20;
+    maxSp = prof.fetchSpeed;
     stopR = 0.1;
     const dx = gx - wp.pos.x, dz = gz - wp.pos.z;
     if (dx * dx + dz * dz < 1.4 * 1.4) {
@@ -145,7 +172,7 @@ export function updatePets(dt: number): void {
   const dx = gx - wp.pos.x, dz = gz - wp.pos.z;
   const dist = Math.sqrt(dx * dx + dz * dz);
   let wantSp = dist > stopR ? Math.min(maxSp, dist * 4.5) : 0;
-  if (wp.state === FOLLOW && dist > 8) wantSp = Math.max(wantSp, st.stats.moveSpeed * 1.6);
+  if (wp.state === FOLLOW && dist > 8) wantSp = Math.max(wantSp, st.stats.moveSpeed * 1.6 * Math.max(0.7, prof.moveSpeed));
   const inv = dist > 1e-4 ? 1 / dist : 0;
   const k = 1 - Math.exp(-9 * dt);
   vx += (dx * inv * wantSp - vx) * k;
@@ -172,7 +199,7 @@ export function updatePets(dt: number): void {
   else wp.facing = turnTo(wp.facing, pl.facing, Math.min(1, 4 * dt));
 
   // ---- specialty: HEAL timer ----------------------------------------------
-  if (skill !== 'HEAL' || !alive) return;
+  if (!(prof.heals && skill === 'HEAL') || !alive) return;
   wp.skillT += dt;
   const cd = pet.petCooldown || 10;
   if (wp.skillT >= cd) {
