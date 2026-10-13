@@ -29,17 +29,17 @@ export const HUD: React.FC = () => (
     </div>
 
     {/* bottom-right minimap */}
-    <div className="absolute" style={{ right: '1.4rem', bottom: '1.2rem' }}><Minimap /></div>
+    <div className="absolute hud-mm" style={{ right: '2.8rem', bottom: '2.6rem' }}><Minimap /></div>
 
-    {/* bottom-centre: orbs + xp + action bar */}
-    <div className="absolute left-0 right-0 flex justify-center items-end pointer-events-none" style={{ bottom: '.7rem' }}>
+    {/* bottom-centre: orbs + (xp + action bar) plate */}
+    <div className="absolute left-0 right-0 flex justify-center items-end pointer-events-none hud-bottom" style={{ bottom: '.2rem' }}>
       <div className="flex items-end" style={{ gap: 0 }}>
-        <div style={{ marginRight: '-1.4rem', marginBottom: '.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="hp" /></div>
-        <div className="flex flex-col items-stretch gap-[.9rem]">
+        <div style={{ marginRight: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="hp" /></div>
+        <div className="bar-plate" style={{ marginBottom: '.9rem' }}>
           <XpBar />
           <ActionBar />
         </div>
-        <div style={{ marginLeft: '-1.4rem', marginBottom: '.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="mp" /></div>
+        <div style={{ marginLeft: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="mp" /></div>
       </div>
     </div>
 

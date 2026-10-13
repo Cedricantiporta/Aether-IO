@@ -49,11 +49,11 @@ function setText(n: Num, amount: number, crit: boolean) {
 
 // Token bucket: ordinary hits are rate-limited so AoE / multishot crowds don't flood the screen.
 // Crits, big hits and damage to the player always show.
-let bucket = 10, bucketT = 0;
+let bucket = 3, bucketT = 0;
 function allow(amount: number, crit: boolean, toPlayer: boolean): boolean {
   if (crit || toPlayer || amount > 400) return true;
   const now = performance.now();
-  bucket = Math.min(10, bucket + (now - bucketT) * 0.024); // ~24 numbers / second sustained
+  bucket = Math.min(3, bucket + (now - bucketT) * 0.010); // ~10 numbers / second sustained
   bucketT = now;
   if (bucket < 1) return false;
   bucket -= 1;
@@ -65,6 +65,14 @@ function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean
     for (const n of nums) {
       if (n.active && n.dot && n.kind === kind && n.t < 0.45 && Math.abs(n.x - x) < 1.4 && Math.abs(n.z - z) < 1.4) {
         n.amount += amount; setText(n, n.amount, false); n.scale = Math.min(1.5, n.scale + 0.03); return;
+      }
+    }
+  }
+  if (!crit && !toPlayer && !dot) {
+    // aggregate ordinary hits on the same target within 0.25 s into one number
+    for (const n of nums) {
+      if (n.active && !n.crit && !n.dot && n.t < 0.25 && Math.abs(n.x - x) < 1.6 && Math.abs(n.z - z) < 1.6) {
+        n.amount += amount; setText(n, n.amount, false); n.scale = Math.min(1.3, n.scale + 0.02); return;
       }
     }
   }

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Skull, Swords } from 'lucide-react';
+import { SkullGlyph } from '../components/SkillIcons';
 import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
@@ -10,10 +10,8 @@ const PHASE_LABEL: Record<string, string> = { COUNTDOWN: 'Preparing', FIGHT: 'Su
 export const WavePlaque: React.FC = () => {
   const wave = useGameStore((s) => s.wave);
   const bar = useRef<HTMLDivElement>(null);
-  const alive = useRef<HTMLSpanElement>(null);
-  const phase = useRef<HTMLDivElement>(null);
+  const sub = useRef<HTMLDivElement>(null);
   const st = useRef({ f: '', a: -1, p: '', c: '' });
-  const isBossWave = wave > 0 && wave % 10 === 0;
 
   useRaf(() => {
     const d = world.director, s = st.current;
@@ -24,22 +22,27 @@ export const WavePlaque: React.FC = () => {
       const cl = d.phase === 'CLEANUP' || d.phase === 'BOSS' ? '#e0554a' : '#e9b949';
       if (cl !== s.c) { s.c = cl; bar.current.style.setProperty('--bc', cl); }
     }
-    if (alive.current && d.aliveCount !== s.a) { s.a = d.aliveCount; alive.current.textContent = String(d.aliveCount); }
-    if (phase.current && d.phase !== s.p) { s.p = d.phase; phase.current.textContent = PHASE_LABEL[d.phase] ?? d.phase; }
+    if (sub.current && (d.aliveCount !== s.a || d.phase !== s.p)) {
+      s.a = d.aliveCount; s.p = d.phase;
+      sub.current.textContent = `${PHASE_LABEL[d.phase] ?? d.phase} \u2022 ${d.aliveCount} ENEMIES`;
+    }
   });
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="rpg-panel slim wave-plaque flex flex-col items-center" style={{ minWidth: '13rem' }}>
-        <div className="rpg-title text-[1.7rem] leading-none flex items-center gap-2">
-          {isBossWave && <Skull size={20} color="#ff6b5e" />}Wave {wave}{isBossWave && <Skull size={20} color="#ff6b5e" />}
-        </div>
-        <div className="rpg-bar thin segmented w-full mt-2" ref={bar}><div className="fill" /></div>
-        <div className="flex items-center justify-between w-full mt-[.35rem]">
-          <div ref={phase} className="rpg-label !text-[.6rem]">Preparing</div>
-          <div className="flex items-center gap-1 rpg-num text-[.72rem] text-[#ffb3aa]"><Swords size={11} /><span ref={alive}>0</span></div>
-        </div>
-      </div>
+    <div className="wplaque">
+      <svg className="bg" viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden>
+        <defs>
+          <linearGradient id="wp-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a2c22" /><stop offset=".5" stopColor="#1c1511" /><stop offset="1" stopColor="#0d0a08" /></linearGradient>
+          <linearGradient id="wp-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#8b5a16" /><stop offset=".3" stopColor="#fff0b0" /><stop offset=".5" stopColor="#c8962e" /><stop offset=".7" stopColor="#fff0b0" /><stop offset="1" stopColor="#8b5a16" /></linearGradient>
+        </defs>
+        <path d="M20 8 H380 L394 22 L388 40 L398 58 L380 96 H20 L2 58 L12 40 L6 22Z" fill="url(#wp-w)" stroke="#050304" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M20 8 H380 L394 22 L388 40 L398 58 L380 96 H20 L2 58 L12 40 L6 22Z" fill="none" stroke="url(#wp-g)" strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M30 15 H370 L382 28 L378 82 L366 90 H34 L22 82 L18 28Z" fill="none" stroke="#c8962e" strokeOpacity=".35" strokeWidth="1" />
+      </svg>
+      <span className="crest"><SkullGlyph size={36} /></span>
+      <div className="wtitle">WAVE {wave}</div>
+      <div className="wbar" ref={bar}><div className="fill" /></div>
+      <div ref={sub} className="wsub">{'Survive \u2022 0 ENEMIES'}</div>
     </div>
   );
 };

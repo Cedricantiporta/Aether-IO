@@ -3,6 +3,7 @@ import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { motion } from 'framer-motion';
+import { OrnateRing } from '../components/Ornate';
 
 /** Diablo-style liquid orb. Fill + numbers updated through refs every frame. */
 export const VitalOrb: React.FC<{ kind: 'hp' | 'mp' }> = ({ kind }) => {
@@ -26,8 +27,8 @@ export const VitalOrb: React.FC<{ kind: 'hp' | 'mp' }> = ({ kind }) => {
   });
 
   return (
-    <div className="relative pe" style={{ width: '7.4rem', height: '7.4rem' }}>
-      <div ref={root} className="orb" data-kind={kind} data-low="0">
+    <div className="relative pe" style={{ width: '10.9rem', height: '10.9rem' }}>
+      <div ref={root} className="orb" data-kind={kind} data-low="0" style={{ position: 'absolute', left: '50%', top: '50%', width: '7.1rem', height: '7.1rem', transform: 'translate(-50%,-50%)' }}>
         <div className="orb-glass">
           <div className="orb-fluid">
             <div className="orb-wave w2" />
@@ -39,6 +40,7 @@ export const VitalOrb: React.FC<{ kind: 'hp' | 'mp' }> = ({ kind }) => {
           <div><span ref={txt}>0</span><small>/ {Math.round(max)}</small></div>
         </div>
       </div>
+      <OrnateRing id={`orb-${kind}`} spikes={8} />
     </div>
   );
 };
@@ -47,15 +49,15 @@ export const XpBar: React.FC = () => {
   const { xp, need, level } = { xp: useGameStore((s) => s.experience), need: useGameStore((s) => s.experienceToNextLevel), level: useGameStore((s) => s.level) };
   const f = Math.min(1, Math.max(0, xp / Math.max(1, need)));
   return (
-    <div className="relative w-full pe" style={{ paddingLeft: '1.2rem', paddingRight: '1.2rem' }}>
+    <div className="relative w-full pe" style={{ paddingLeft: '1.3rem' }}>
       <div className="xp-bar" style={{ ['--fill' as any]: f }}>
         <div className="fill" />
+        <div className="rpg-num text-outline" style={{ position: 'absolute', right: '.8rem', top: '50%', transform: 'translateY(-50%)', fontSize: '.72rem', color: '#fff', zIndex: 2 }}>{Math.floor(xp)} / {Math.floor(need)} XP</div>
       </div>
       <motion.div key={level} initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 12 }}
-        className="rpg-medallion absolute left-0 top-1/2" style={{ width: '2.1rem', height: '2.1rem', transform: 'translate(-30%,-50%)', ['--mc' as any]: '#8b5a16', zIndex: 3 }}>
-        <span className="rpg-num text-[.8rem] leading-none text-[var(--gold-light)]" style={{ textShadow: '0 1px 2px #000' }}>{level}</span>
+        className="xp-medal absolute left-0 top-1/2" style={{ width: '1.9rem', height: '1.9rem', transform: 'translate(-30%,-50%)', zIndex: 3, fontSize: '.95rem' }}>
+        {level}
       </motion.div>
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 rpg-num text-[.62rem] text-white/90 text-outline" style={{ zIndex: 2 }}>{Math.floor(xp)} / {Math.floor(need)} XP</div>
     </div>
   );
 };

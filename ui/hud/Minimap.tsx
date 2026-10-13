@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { world, ARENA_RADIUS } from '../../engine/world';
 import { SHOP_POSITIONS } from '../../constants';
 import { useRaf } from '../hooks/useRaf';
+import { OrnateRing } from '../components/Ornate';
 
 const SIZE = 148; // css px
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
@@ -59,17 +60,16 @@ export const Minimap: React.FC = () => {
     const p = world.player;
     const px2 = cx + p.pos.x * k, py2 = cx + p.pos.z * k;
     ctx.save(); ctx.translate(px2, py2); ctx.rotate(Math.PI - p.facing);
-    ctx.fillStyle = '#7fd1ff'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
+    ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
     ctx.beginPath(); ctx.moveTo(0, -6 * DPR); ctx.lineTo(4.5 * DPR, 5 * DPR); ctx.lineTo(0, 2.5 * DPR); ctx.lineTo(-4.5 * DPR, 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
     ctx.restore();
   });
   return (
     <div className="pe relative" style={{ width: `${SIZE / 14.4}rem`, height: `${SIZE / 14.4}rem` }}>
-      <div className="absolute rounded-full" style={{ inset: '-.45rem', background: 'conic-gradient(from 20deg, #fff0b0, #b9812e, #6a410c, #d8a23c, #fff0b0, #b9812e, #6a410c, #d8a23c, #fff0b0)', boxShadow: '0 0 0 2px #0d0703, 0 8px 18px rgba(0,0,0,.7)' }} />
-      <div className="absolute rounded-full" style={{ inset: '-.12rem', background: '#0d0703' }} />
+      <div className="absolute" style={{ inset: '-27%' }}><OrnateRing id="mm" spikes={8} /></div>
       <canvas ref={ref} width={SIZE * DPR} height={SIZE * DPR} className="absolute inset-0 w-full h-full rounded-full" />
-      {['N'].map((l) => <span key={l} className="absolute left-1/2 -translate-x-1/2 -top-[.95rem] rpg-key sm" style={{ position: 'absolute', top: '-1.15rem' }}>{l}</span>)}
+      <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-1.75rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
     </div>
   );
 };

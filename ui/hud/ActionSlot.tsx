@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Lock } from 'lucide-react';
+import { LockGlyph } from '../components/SkillIcons';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { useGameEvent } from '../hooks/useEvent';
@@ -94,17 +94,17 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
 
   return (
     <div className="relative pe" {...tip(tooltip)}>
-      <div ref={root} className={`rpg-slot hoverable ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
+      <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
         <span className="slot-icon">{icon}</span>
         <div ref={sweep} className="cd-sweep"><span ref={txt} className="cd-text" /></div>
         <div ref={lack} className="mana-lack" />
         <div ref={ready} className="cd-ready" />
         {!active && (
           <span className="slot-lock" style={{ zIndex: 5 }}>
-            <span className="flex flex-col items-center gap-[1px]"><Lock size={12} />{lockLabel && <span>{lockLabel}</span>}</span>
+            <span className="flex flex-col items-center gap-[1px]"><LockGlyph size={22} />{lockLabel && <span className="lock-lbl">{lockLabel}</span>}</span>
           </span>
         )}
-        {active && level !== undefined && level > 0 && <span className="slot-plus" style={{ left: 'auto', right: '-.2rem', top: 'auto', bottom: '-.2rem' }}>{level}</span>}
+        {active && level !== undefined && level > 0 && <span className="slot-plus" style={{ left: 'auto', right: '.1rem', top: 'auto', bottom: '.1rem' }}>{level}</span>}
         {qty !== undefined && <span className="slot-qty" style={qty <= 0 ? { color: '#ff8a80' } : undefined}>{qty}</span>}
         {getPips && (
           <div className="absolute left-1/2 -translate-x-1/2 flex gap-[3px]" style={{ top: '.2rem', zIndex: 6 }}>
