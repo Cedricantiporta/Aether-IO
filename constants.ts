@@ -1,9 +1,9 @@
 
-import { Item, PlayerStats, HeroClass, Upgrade, Rarity } from "./types";
+import type { Item, PlayerStats, HeroClass, Upgrade, Rarity } from "./types";
+import type { Difficulty } from "./storeTypes";
 
-export const ARENA_SIZE = 120; // Reduced from 300 for smaller, tighter map
-export const MAX_BULLETS = 1000;
-export const MAX_ENEMY_BULLETS = 500;
+/** Legacy diameter of the playable area. The simulation uses ARENA_RADIUS from engine/world.ts. */
+export const ARENA_SIZE = 136;
 export const PLAYER_RADIUS = 0.8;
 export const CAMERA_HEIGHT = 45;
 export const INVENTORY_LIMIT = 50;
@@ -27,7 +27,15 @@ export const CRAFTING_COSTS: Record<Rarity, number> = {
 
 export const MATERIAL_COMBINE_COST = 5; // 5 Common -> 1 Rare
 
-export const SHOP_POSITIONS = [
+/** Per-difficulty multipliers (read by the director / enemies / combat). */
+export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spawn: number; loot: number; label: string; desc: string }> = {
+    EASY:      { hp: 0.7, dmg: 0.6,  spawn: 0.8,  loot: 0.9,  label: 'Easy',      desc: 'Weaker, fewer enemies. A relaxed run.' },
+    NORMAL:    { hp: 1,   dmg: 1,    spawn: 1,    loot: 1,    label: 'Normal',    desc: 'The intended experience.' },
+    HARD:      { hp: 1.4, dmg: 1.35, spawn: 1.2,  loot: 1.25, label: 'Hard',      desc: 'Tougher, more numerous enemies. Better loot.' },
+    NIGHTMARE: { hp: 2,   dmg: 1.8,  spawn: 1.45, loot: 1.6,  label: 'Nightmare', desc: 'Brutal. Only for the strongest builds.' },
+};
+
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS'; position: [number, number, number]; color: string }[] = [
     { type: 'SUPPLIES', position: [-24, 0, -18], color: '#3b82f6' },
     { type: 'BLACKSMITH', position: [-8, 0, -22], color: '#ef4444' },
     { type: 'PETS', position: [8, 0, -22], color: '#10b981' }

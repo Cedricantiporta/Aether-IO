@@ -1,6 +1,4 @@
 
-import { Vector3 } from 'three';
-
 export enum GameStatus {
   MENU = 'MENU',
   HERO_SELECT = 'HERO_SELECT',
@@ -104,93 +102,6 @@ export interface ActionResult {
     message: string;
 }
 
-export interface EnemyData {
-  id: number;
-  position: Vector3;
-  type: number; 
-  health: number;
-  maxHealth: number;
-  speed: number;
-  radius: number;
-  scale: number;
-  active: boolean;
-  state?: 'CHASE' | 'CHARGE_PREP' | 'CHARGE' | 'SHOOT';
-  stateTimer?: number;
-  chargeDir?: Vector3;
-  
-  burnTimer?: number;
-  burnDamage?: number; 
-  poisonTimer?: number;
-  poisonDamage?: number; 
-  freezeTimer?: number; 
-  slowTimer?: number;
-  slowFactor?: number;
-
-  // Boss / Elite Logic
-  bossPattern?: number; // 0, 1, 2
-  bossTimer?: number;
-  bossAngle?: number;
-}
-
-export interface BulletData {
-  id: number;
-  position: Vector3;
-  velocity: Vector3;
-  active: boolean;
-  lifetime: number;
-  type: ProjectileType; 
-  state?: number; 
-  pierce?: number; 
-  hitIds: number[]; 
-  damageMultiplier?: number;
-  knockback?: number; 
-  trailTimer?: number; 
-  
-  // Added Damage Amount for Enemy Bullets (Collision Check)
-  damage?: number;
-
-  // Bounce Logic
-  bouncesLeft?: number;
-
-  // For Gravity Well limits
-  currentPullCount?: number;
-  maxPullCount?: number;
-
-  effect?: {
-      type: StatusEffectType;
-      duration: number;
-      value?: number;
-      chance?: number;
-  };
-}
-
-export interface Obstacle {
-    id: number;
-    position: Vector3;
-    radius: number;
-    type: 'TREE' | 'ROCK' | 'HOUSE' | 'FENCE';
-    scale?: number;
-}
-
-export interface CrateData {
-  id: number;
-  position: Vector3;
-  active: boolean;
-  rotation: number;
-  hp: number;
-  maxHp: number;
-}
-
-export interface DropData {
-  id: number;
-  position: Vector3;
-  item: Item | null; 
-  type: 'ITEM' | 'GOLD' | 'XP' | 'GEM';
-  active: boolean;
-  value: number;
-  rotation: number;
-}
-
 export interface SkillLevels {
     orbital: number;
     thunder: number;
@@ -214,23 +125,6 @@ export interface SkillLevels {
     stamp: number; // Renamed to Mega Stamp (Passive)
 }
 
-export interface PassiveSkillState {
-    orbitalCooldown: number;
-    orbitalMaxCooldown: number;
-    thunderCooldown: number;
-    thunderMaxCooldown: number;
-    burningCooldown: number;
-    burningMaxCooldown: number;
-    freezingCooldown: number;
-    freezingMaxCooldown: number;
-    blizzardCooldown: number;
-    blizzardMaxCooldown: number;
-    stampCooldown: number;
-    stampMaxCooldown: number;
-    stormCooldown: number;
-    stormMaxCooldown: number;
-}
-
 export interface GameNotification {
     id: string;
     message: string;
@@ -240,13 +134,6 @@ export interface GameNotification {
         label: string;
         onClick: () => void;
     };
-}
-
-export interface BossData {
-    active: boolean;
-    name: string;
-    hp: number;
-    maxHp: number;
 }
 
 export interface GameStatistics {
