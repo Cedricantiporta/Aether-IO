@@ -1,0 +1,749 @@
+// ============================================================================
+// Enemy simulation: spawning, per-kind AI state machines, status effects,
+// knockback, separation, obstacle/earthwall handling, contact damage and
+// enemy projectiles.
+//
+// State machine (Enemy.state):
+//   SPAWN   0.6 s (bosses 1.6 s) rising from the ground; untargetable, harmless
+//   CHASE / KITE   locomotion
+//   WINDUP  telegraphed pre-attack (render shows it; stateT = elapsed)
+//   ATTACK  the attack itself (charge, blink, volley ...)
+//   RECOVER vulnerable cool-down after an attack
+//   DYING   death animation (deathT 0..0.6) then active=false
+//
+// Conventions other layers rely on:
+//   * Enemy.facing = atan2(dirX, dirZ)  (yaw so that +Z is "forward").
+//   * Enemy.knock is a VELOCITY (units/s) decayed x0.85 per 1/60 s.
+//   * SLIME / SPLITTER hop phase: s = max(0, sin(animT * 5)).
+//   * BRUTE / BOSS_GOLEM charge direction lives in Enemy.dir.
+//   * BOSS_LICH pattern 2 (blink): WINDUP = fading out (alpha 1 - stateT/0.5),
+//     ATTACK = fading in (alpha stateT/0.4). Untargetable meanwhile.
+// ============================================================================
+import { Vector3 } from 'three';
+import {
+  world, allocEnemy, allocEnemyProjectile, allocZone, ARENA_RADIUS, MAX_ENEMIES,
+} from '../world';
+import { events } from '../events';
+import type {
+  Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
+} from '../types';
+import {
+  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind,
+  waveHpMult, waveDmgMult, waveSpeedMult,
+} from '../enemyDefs';
+import { damagePlayer, damageEnemy, killEnemy } from './combat';
+import { useGameStore } from '../../store';
+import { DIFFICULTY_MODS } from '../../constants';
+import { updateBoss } from './bosses';
+
+// ------------------------------------------------------------ tuning --------
+const DEATH_TIME = 0.6;
+const LEASH_DIST = 90;
+const CONTACT_CD = 0.6;
+const ELITE_SCALE = 1.35;
+const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'VOLATILE', 'SHIELDED'];
+
+const ARCHER = { minR: 12, maxR: 18, windup: 0.6, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
+const CULTIST = { minR: 10, maxR: 14, windup: 0.8, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
+const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
+const BRUTE = { cd: 5, windup: 0.9, recover: 0.8, lineWidth: 2.6, chargeMul: 4, minRange: 4, maxRange: 16 };
+
+// ------------------------------------------------------------ scratch -------
+const contactCd = new Float32Array(MAX_ENEMIES);
+const sepOut: number[] = [];
+const tmpV = new Vector3();
+const bladeX: number[] = [];
+const bladeZ: number[] = [];
+
+// per-frame context (set in updateEnemies, read by AI helpers)
+let px = 0;
+let pz = 0;
+let tdx = 0;       // vector enemy -> player (xz)
+let tdz = 0;
+let tdist = 0;
+let desiredYaw = 0;
+
+/** Non-narrowing state check (killEnemy may flip state inside callees). */
+function isDying(e: Enemy): boolean {
+  return e.state === 'DYING';
+}
+
+function wrapPi(a: number): number {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+// ------------------------------------------------------------ public helpers --
+/** Change state and reset stateT. */
+export function enter(e: Enemy, s: EnemyState): void {
+  e.state = s;
+  e.stateT = 0;
+}
+
+/** Ask the generic yaw smoother to turn this enemy toward `yaw` this frame. */
+export function requestYaw(yaw: number): void {
+  desiredYaw = yaw;
+}
+
+/** True while an enemy must not be hit by player attacks (kept out of enemyGrid). */
+export function isUntargetable(e: Enemy): boolean {
+  if (e.state === 'SPAWN') return true;
+  return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
+}
+
+function blockedAt(x: number, z: number, pad: number): boolean {
+  const obs = world.obstacles;
+  for (let i = 0; i < obs.length; i++) {
+    const o = obs[i];
+    const dx = x - o.pos.x;
+    const dz = z - o.pos.z;
+    const r = o.radius + pad;
+    if (dx * dx + dz * dz < r * r) return true;
+  }
+  return false;
+}
+
+/** Is (x,z) a legal spawn spot (inside arena, outside obstacles)? */
+export function isSpawnable(x: number, z: number): boolean {
+  const lim = ARENA_RADIUS - 3;
+  return x * x + z * z <= lim * lim && !blockedAt(x, z, 1.5);
+}
+
+/**
+ * Pick a point `minD..maxD` away from the player, inside the arena and out of
+ * obstacles. `baseAngle` (radians, 0 = +Z) biases the direction (+-0.5 rad).
+ */
+export function findSpawnPoint(minD: number, maxD: number, out: Vector3, baseAngle = NaN): boolean {
+  const player = world.player.pos;
+  const biased = !Number.isNaN(baseAngle);
+  for (let pass = 0; pass < 3; pass++) {
+    const k = pass === 0 ? 1 : pass === 1 ? 0.7 : 0.4;
+    for (let t = 0; t < 10; t++) {
+      const a = biased && pass === 0 ? baseAngle + (Math.random() - 0.5) : Math.random() * Math.PI * 2;
+      const d = (minD + Math.random() * (maxD - minD)) * k;
+      const x = player.x + Math.sin(a) * d;
+      const z = player.z + Math.cos(a) * d;
+      if (isSpawnable(x, z)) { out.set(x, 0, z); return true; }
+    }
+  }
+  return false;
+}
+
+export function spawnTelegraphCircle(
+  x: number, z: number, radius: number, life: number, damage: number, color: number,
+): Zone | null {
+  const zn = allocZone();
+  if (!zn) return null;
+  zn.active = true; zn.kind = 'TELEGRAPH_CIRCLE'; zn.hostile = true;
+  zn.pos.set(x, 0, z); zn.radius = radius; zn.life = life; zn.maxLife = life;
+  zn.damage = damage; zn.color = color;
+  events.emit('telegraph', { pos: zn.pos, radius, duration: life });
+  return zn;
+}
+
+/** `width` is stored in Zone.radius, `length` in Zone.length. Damage is 0 (the charge itself hurts). */
+export function spawnTelegraphLine(
+  x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
+): Zone | null {
+  const zn = allocZone();
+  if (!zn) return null;
+  zn.active = true; zn.kind = 'TELEGRAPH_LINE'; zn.hostile = true;
+  zn.pos.set(x, 0, z); zn.dir.set(dirX, 0, dirZ); zn.length = length; zn.radius = width;
+  zn.life = life; zn.maxLife = life; zn.damage = 0; zn.color = color;
+  events.emit('telegraph', { pos: zn.pos, radius: width, duration: life });
+  return zn;
+}
+
+function randomAffix(): EliteAffix {
+  return ELITE_AFFIXES[Math.floor(Math.random() * ELITE_AFFIXES.length)];
+}
+
+// ------------------------------------------------------------ spawning --------
+export function spawnEnemy(
+  kind: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix },
+): Enemy | null {
+  const e = allocEnemy();
+  if (!e) return null;
+  const def = ENEMY_DEFS[kind];
+  const d = world.director;
+  const wave = d.wave;
+  const mods = DIFFICULTY_MODS[useGameStore.getState().difficulty];
+  const boss = isBossKind(kind);
+  const wantsAffix = opts?.affix !== undefined && opts.affix !== 'NONE';
+  const elite = !boss && (!!opts?.elite || wantsAffix);
+  const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
+
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1);
+  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
+  const sizeMul = elite ? ELITE_SCALE : 1;
+  const rewardMul = 1 + 0.05 * (wave - 1);
+
+  e.kind = kind;
+  e.elite = elite;
+  e.affix = affix;
+  e.boss = boss;
+  e.pos.set(pos.x, 0, pos.z);
+  e.maxHp = Math.round(def.hp * hpMul);
+  e.hp = e.maxHp;
+  e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
+  e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1);
+  e.radius = def.radius * sizeMul;
+  e.scale = def.scale * sizeMul;
+  e.contactDamage = def.contactDamage * dmgMul;
+  e.projectileDamage = def.projectileDamage * dmgMul;
+  e.xp = Math.round(def.xp * rewardMul * (elite ? 5 : 1));
+  e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1));
+  e.state = 'SPAWN';
+  e.stateT = 0;
+  e.phase = 0;
+  e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 3 : 0; // so first boss pattern is index 0
+  e.patternT = 0;
+  e.angle = 0;
+  e.attackCd = boss ? 2.5 : kind === 'BRUTE' ? 2 + Math.random() * 2 : 0.8 + Math.random() * 1.4;
+  e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
+  e.active = true;
+  contactCd[e.id] = 0.4;
+
+  d.aliveCount++;
+  events.emit('spawn', { pos: e.pos, kind, elite });
+  return e;
+}
+
+/** Soft-despawn every living enemy with a death poof (no loot, no xp). */
+export function poofAllEnemies(): void {
+  const list = world.enemies;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e.active || e.state === 'DYING') continue;
+    e.state = 'DYING'; e.stateT = 0; e.deathT = 0; e.hp = 0; e.vel.set(0, 0, 0);
+    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale });
+  }
+  world.director.aliveCount = 0;
+}
+
+// ------------------------------------------------------------ death --------
+export function onEnemyDeath(e: Enemy): void {
+  e.state = 'DYING';
+  e.stateT = 0;
+  e.deathT = 0;
+  e.hp = 0;
+  e.vel.set(0, 0, 0);
+  const d = world.director;
+  d.killsThisWave++;
+  if (d.aliveCount > 0) d.aliveCount--;
+
+  if (e.boss) {
+    world.boss.active = false;
+    world.boss.hp = 0;
+    events.emit('shake', { amount: 1 });
+    events.emit('explosion', { pos: e.pos, radius: e.radius * 2.5, color: ENEMY_DEFS[e.kind].color });
+  }
+
+  const hitBase = Math.max(e.projectileDamage, e.contactDamage);
+  if (e.affix === 'FROZEN') {
+    const r = 8;
+    events.emit('frostNova', { pos: e.pos, radius: r });
+    const dx = world.player.pos.x - e.pos.x;
+    const dz = world.player.pos.z - e.pos.z;
+    if (dx * dx + dz * dz < r * r && world.player.alive) {
+      damagePlayer(hitBase * 0.5, { pos: e.pos, kind: 'ICE', slow: 0.5 });
+    }
+  } else if (e.affix === 'VOLATILE') {
+    spawnTelegraphCircle(e.pos.x, e.pos.z, 4, 1.0, hitBase * 1.2, 0xf97316);
+  }
+
+  if (e.kind === 'SPLITTER') {
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + Math.random();
+      tmpV.set(e.pos.x + Math.sin(a) * 1.2, 0, e.pos.z + Math.cos(a) * 1.2);
+      const s = spawnEnemy('SLIME', tmpV);
+      if (s) {
+        s.stateT = SPAWN_TIME * 0.5; // quick pop-out
+        s.knock.set(Math.sin(a) * 6, 0, Math.cos(a) * 6);
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------ AI helpers --------
+function setVel(e: Enemy, ux: number, uz: number, spd: number): void {
+  e.vel.set(ux * spd, 0, uz * spd);
+}
+
+function stop(e: Enemy): void {
+  e.vel.set(0, 0, 0);
+}
+
+function hopMult(e: Enemy): number {
+  const s = Math.max(0, Math.sin(e.animT * 5));
+  return 0.2 + 3.2 * s * s; // mean ~1
+}
+
+function aiChaser(e: Enemy, hop: boolean): void {
+  if (e.state !== 'CHASE') { enter(e, 'CHASE'); }
+  const inv = 1 / Math.max(tdist, 0.001);
+  setVel(e, tdx * inv, tdz * inv, e.speed * (hop ? hopMult(e) : 1));
+}
+
+function aiBat(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  if (e.state === 'RECOVER') {
+    // swoop away after a bite, then return
+    const a = Math.atan2(-tdx, -tdz) + Math.sin(e.animT * 5) * 0.6;
+    setVel(e, Math.sin(a), Math.cos(a), e.speed);
+    desiredYaw = a;
+    if (e.stateT >= 0.7) enter(e, 'CHASE');
+    return;
+  }
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  const weave = Math.sin(e.animT * 3.7 + e.id) * 0.9 * Math.min(1, tdist / 6);
+  const a = Math.atan2(tdx * inv, tdz * inv) + weave;
+  setVel(e, Math.sin(a), Math.cos(a), e.speed);
+  desiredYaw = a;
+}
+
+function aiArcher(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv;
+  const uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= ARCHER.windup) {
+        tmpV.set(ux, 0, uz);
+        fireEnemyProjectile(e.pos, tmpV, 'ARROW', ARCHER.arrowSpeed, e.projectileDamage, { life: 2.5, radius: 0.35 });
+        e.attackCd = ARCHER.cd * (0.8 + Math.random() * 0.4);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= ARCHER.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      kiteMove(e, ux, uz, ARCHER.minR, ARCHER.maxR);
+      if (e.attackCd <= 0 && tdist < ARCHER.maxR + 6) enter(e, 'WINDUP');
+  }
+}
+
+function aiCultist(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv;
+  const uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= CULTIST.windup) {
+        const base = Math.atan2(ux, uz);
+        for (let i = -1; i <= 1; i++) {
+          const a = base + i * CULTIST.spread;
+          tmpV.set(Math.sin(a), 0, Math.cos(a));
+          fireEnemyProjectile(e.pos, tmpV, 'SLOW_ORB', CULTIST.orbSpeed, e.projectileDamage * 0.5, {
+            slow: 0.4, life: CULTIST.orbLife, radius: 0.5,
+          });
+        }
+        e.attackCd = CULTIST.cd * (0.8 + Math.random() * 0.4);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= CULTIST.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      kiteMove(e, ux, uz, CULTIST.minR, CULTIST.maxR);
+      if (e.attackCd <= 0 && tdist < CULTIST.maxR + 4) enter(e, 'WINDUP');
+  }
+}
+
+/** Keep the player inside [minR, maxR]; strafe while inside the band. */
+function kiteMove(e: Enemy, ux: number, uz: number, minR: number, maxR: number): void {
+  if (tdist < minR) setVel(e, -ux, -uz, e.speed * 1.1);
+  else if (tdist > maxR) setVel(e, ux, uz, e.speed);
+  else {
+    const s = (e.id & 1) === 0 ? 1 : -1;
+    setVel(e, uz * s, -ux * s, e.speed * 0.5);
+  }
+}
+
+function aiBomber(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  if (e.state === 'WINDUP') {
+    stop(e);
+    if (e.stateT >= BOMBER.fuse) {
+      events.emit('explosion', { pos: e.pos, radius: BOMBER.radius, color: 0xf97316 });
+      events.emit('shake', { amount: 0.25 });
+      killEnemy(e);
+    }
+    return;
+  }
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  setVel(e, tdx * inv, tdz * inv, e.speed);
+  if (tdist < BOMBER.trigger) {
+    enter(e, 'WINDUP');
+    stop(e);
+    spawnTelegraphCircle(e.pos.x, e.pos.z, BOMBER.radius, BOMBER.fuse, e.projectileDamage, 0xf97316);
+  }
+}
+
+function aiBrute(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const chargeSpeed = e.speed * BRUTE.chargeMul;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= BRUTE.windup) enter(e, 'ATTACK');
+      return;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, chargeSpeed);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= e.patternT) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= BRUTE.recover) {
+        e.attackCd = BRUTE.cd * (0.9 + Math.random() * 0.4);
+        enter(e, 'CHASE');
+      }
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, tdx * inv, tdz * inv, e.speed);
+      if (e.attackCd <= 0 && tdist < BRUTE.maxRange && tdist > BRUTE.minRange) {
+        e.dir.set(tdx * inv, 0, tdz * inv);
+        // charge long enough to reach the target and overshoot a little
+        e.patternT = Math.min(0.9, Math.max(0.35, (tdist + 3) / chargeSpeed));
+        const len = chargeSpeed * e.patternT + e.radius;
+        spawnTelegraphLine(e.pos.x, e.pos.z, e.dir.x, e.dir.z, len, BRUTE.lineWidth, BRUTE.windup, 0xef4444);
+        enter(e, 'WINDUP');
+        stop(e);
+      }
+  }
+}
+
+function runAI(e: Enemy): void {
+  if (e.state === 'SPAWN') {
+    stop(e);
+    if (e.stateT >= (e.boss ? BOSS_SPAWN_TIME : SPAWN_TIME)) {
+      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' ? 'KITE' : 'CHASE');
+    }
+    return;
+  }
+  switch (e.kind) {
+    case 'SLIME':
+    case 'SPLITTER': aiChaser(e, true); break;
+    case 'GOBLIN': aiChaser(e, false); break;
+    case 'BAT': aiBat(e); break;
+    case 'SKELETON_ARCHER': aiArcher(e); break;
+    case 'CULTIST': aiCultist(e); break;
+    case 'BOMBER': aiBomber(e); break;
+    case 'BRUTE': aiBrute(e); break;
+    case 'BOSS_GOLEM':
+    case 'BOSS_LICH': break; // driven by updateBoss() from updateEnemy()
+  }
+}
+
+// ------------------------------------------------------------ per-enemy update --------
+let frameDt = 0;
+let frameDecay = 1;
+let frameDotTick = false;
+
+function separate(e: Enemy): void {
+  const ids = world.enemyGrid.query(e.pos.x, e.pos.z, e.radius + 1.4, sepOut);
+  const k = Math.min(0.5, 8 * frameDt);
+  for (let i = 0; i < ids.length; i++) {
+    const o = world.enemies[ids[i]];
+    if (o === e || !o.active || o.state === 'DYING' || o.state === 'SPAWN') continue;
+    let dx = e.pos.x - o.pos.x;
+    let dz = e.pos.z - o.pos.z;
+    const minD = (e.radius + o.radius) * 0.9;
+    const d2 = dx * dx + dz * dz;
+    if (d2 >= minD * minD) continue;
+    let d = Math.sqrt(d2);
+    if (d < 0.001) { dx = Math.random() - 0.5; dz = Math.random() - 0.5; d = Math.sqrt(dx * dx + dz * dz) + 0.001; }
+    const push = (minD - d) * k * (o.boss ? 2 : 1);
+    e.pos.x += (dx / d) * push;
+    e.pos.z += (dz / d) * push;
+  }
+}
+
+function pushOutOfObstacles(e: Enemy): void {
+  const obs = world.obstacles;
+  for (let i = 0; i < obs.length; i++) {
+    const o = obs[i];
+    const dx = e.pos.x - o.pos.x;
+    const dz = e.pos.z - o.pos.z;
+    const r = o.radius + e.radius * 0.8;
+    if (dx > r || dx < -r || dz > r || dz < -r) continue;
+    const d2 = dx * dx + dz * dz;
+    if (d2 >= r * r) continue;
+    const d = Math.sqrt(d2);
+    if (d < 0.001) { e.pos.x += r; continue; }
+    e.pos.x = o.pos.x + (dx / d) * r;
+    e.pos.z = o.pos.z + (dz / d) * r;
+  }
+}
+
+function contactHit(e: Enemy, locked: boolean): void {
+  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING') return;
+  if (contactCd[e.id] > 0 || !world.player.alive) return;
+  const dx = px - e.pos.x;
+  const dz = pz - e.pos.z;
+  const r = e.radius + 0.8;
+  if (dx * dx + dz * dz >= r * r) return;
+  const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1);
+  contactCd[e.id] = CONTACT_CD;
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL' });
+  if (e.affix === 'VAMPIRIC') e.hp = Math.min(e.maxHp, e.hp + dmg * 0.2);
+  if (e.kind === 'BAT') enter(e, 'RECOVER');
+}
+
+function updateEnemy(e: Enemy): void {
+  const dt = frameDt;
+  const player = world.player;
+
+  e.animT += dt;
+  if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
+
+  tdx = px - e.pos.x;
+  tdz = pz - e.pos.z;
+  tdist = Math.sqrt(tdx * tdx + tdz * tdz);
+
+  // leash: stray enemies re-enter near the arena edge close to the player
+  if (!e.boss && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
+    e.pos.copy(tmpV);
+    tdx = px - e.pos.x; tdz = pz - e.pos.z; tdist = Math.sqrt(tdx * tdx + tdz * tdz);
+  }
+
+  // ---- status effects
+  if (e.boss) { e.freezeT = 0; e.stunT = 0; e.knock.set(0, 0, 0); }
+  if (e.freezeT > 0) e.freezeT -= dt;
+  if (e.stunT > 0) e.stunT -= dt;
+  if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 0; }
+  if (e.burnT > 0) {
+    e.burnT -= dt;
+    if (frameDotTick) damageEnemy(e, e.burnDps * 0.5, { kind: 'FIRE', dot: true });
+  }
+  if (e.state !== 'DYING' && e.poisonT > 0) {
+    e.poisonT -= dt;
+    if (frameDotTick) damageEnemy(e, e.poisonDps * 0.5, { kind: 'POISON', dot: true });
+  }
+  if (e.state === 'DYING') return;
+
+  if (contactCd[e.id] > 0) contactCd[e.id] -= dt;
+
+  // ---- AI
+  const locked = e.freezeT > 0 || e.stunT > 0;
+  const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
+  desiredYaw = Math.atan2(tdx, tdz);
+  if (!locked || fuseBurning) {
+    e.stateT += dt;
+    if (e.attackCd > 0) e.attackCd -= dt;
+    if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
+    else runAI(e);
+  } else {
+    stop(e);
+  }
+  if (isDying(e)) return; // bomber exploded
+
+  // ---- motion
+  const sm = e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;
+  const kr = 1 - ENEMY_DEFS[e.kind].knockResist;
+  e.pos.x += (e.vel.x * sm + e.knock.x * kr) * dt;
+  e.pos.z += (e.vel.z * sm + e.knock.z * kr) * dt;
+  e.knock.x *= frameDecay;
+  e.knock.z *= frameDecay;
+  if (Math.abs(e.knock.x) < 0.01 && Math.abs(e.knock.z) < 0.01) { e.knock.x = 0; e.knock.z = 0; }
+
+  // ---- collisions
+  if (!e.boss) separate(e);
+  if (e.kind !== 'BAT') pushOutOfObstacles(e);
+
+  const ew = player.earthwall;
+  if (ew.active && !e.boss) {
+    const dx = e.pos.x - ew.pos.x;
+    const dz = e.pos.z - ew.pos.z;
+    const r = ew.radius + e.radius;
+    const d2 = dx * dx + dz * dz;
+    if (d2 < r * r) {
+      const d = Math.sqrt(d2);
+      if (d < 0.001) e.pos.x += r;
+      else { e.pos.x = ew.pos.x + (dx / d) * r; e.pos.z = ew.pos.z + (dz / d) * r; }
+    }
+  }
+
+  const lim = ARENA_RADIUS - 1;
+  const r2 = e.pos.x * e.pos.x + e.pos.z * e.pos.z;
+  if (r2 > lim * lim) {
+    const s = lim / Math.sqrt(r2);
+    e.pos.x *= s; e.pos.z *= s;
+  }
+  e.pos.y = 0;
+
+  // ---- facing
+  const diff = wrapPi(desiredYaw - e.facing);
+  e.facing = wrapPi(e.facing + diff * Math.min(1, 12 * dt));
+
+  // ---- contact damage
+  contactHit(e, locked);
+}
+
+// ------------------------------------------------------------ main loop --------
+export function updateEnemies(dt: number): void {
+  const player = world.player;
+  px = player.pos.x;
+  pz = player.pos.z;
+  frameDt = dt;
+  frameDecay = Math.pow(0.85, dt * 60);
+  frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
+
+  const list = world.enemies;
+  let alive = 0;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e.active) continue;
+    e.pullCount = 0;
+    if (e.state === 'DYING') {
+      e.deathT += dt;
+      e.stateT += dt;
+      if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
+      if (e.deathT >= DEATH_TIME) e.active = false;
+      continue;
+    }
+    updateEnemy(e);
+    if (e.active && !isDying(e)) alive++;
+  }
+  world.director.aliveCount = alive;
+
+  // rebuild spatial hash for the rest of the frame (combat, skills, pets)
+  const grid = world.enemyGrid;
+  grid.clear();
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e.active || e.state === 'DYING' || isUntargetable(e)) continue;
+    grid.insert(e.id, e.pos.x, e.pos.z);
+  }
+}
+
+// ------------------------------------------------------------ enemy projectiles --------
+const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number }> = {
+  ARROW: { life: 2.5, radius: 0.35 },
+  ORB: { life: 3, radius: 0.4 },
+  SLOW_ORB: { life: 2.4, radius: 0.5 },
+  BOSS_ORB: { life: 6, radius: 0.5 },
+  ROCK: { life: 4, radius: 0.8 },
+};
+
+export function fireEnemyProjectile(
+  from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
+  opts?: { homing?: number; slow?: number; radius?: number; life?: number },
+): void {
+  const p = allocEnemyProjectile();
+  if (!p) return;
+  const def = PROJ_DEFAULTS[kind];
+  p.active = true;
+  p.kind = kind;
+  p.pos.set(from.x, from.y > 0.5 ? from.y : 1.1, from.z);
+  p.vel.set(dir.x * speed, dir.y * speed, dir.z * speed);
+  p.life = opts?.life ?? def.life;
+  p.damage = damage;
+  p.radius = opts?.radius ?? def.radius;
+  p.homing = opts?.homing ?? 0;
+  p.slow = opts?.slow ?? 0;
+}
+
+export function updateEnemyProjectiles(dt: number): void {
+  const player = world.player;
+  const ppx = player.pos.x;
+  const ppz = player.pos.z;
+  const ew = player.earthwall;
+  const obs = world.obstacles;
+
+  // orbital blades (player projectiles) shoot down enemy projectiles
+  let blades = 0;
+  const plist = world.projectiles;
+  for (let i = 0; i < plist.length; i++) {
+    const b = plist[i];
+    if (b.active && b.kind === 'ORBITAL_BLADE') {
+      bladeX[blades] = b.pos.x; bladeZ[blades] = b.pos.z; blades++;
+    }
+  }
+
+  const list = world.enemyProjectiles;
+  const maxR = ARENA_RADIUS + 15;
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    if (!p.active) continue;
+
+    if (p.homing > 0 && player.alive) {
+      const speed = Math.hypot(p.vel.x, p.vel.z);
+      const cur = Math.atan2(p.vel.x, p.vel.z);
+      const want = Math.atan2(ppx - p.pos.x, ppz - p.pos.z);
+      const maxTurn = p.homing * dt;
+      const step = Math.max(-maxTurn, Math.min(maxTurn, wrapPi(want - cur)));
+      p.vel.x = Math.sin(cur + step) * speed;
+      p.vel.z = Math.cos(cur + step) * speed;
+    }
+
+    p.pos.x += p.vel.x * dt;
+    p.pos.y += p.vel.y * dt;
+    p.pos.z += p.vel.z * dt;
+    p.life -= dt;
+    if (p.life <= 0 || p.pos.x * p.pos.x + p.pos.z * p.pos.z > maxR * maxR) { p.active = false; continue; }
+
+    // earthwall dome
+    if (ew.active) {
+      const dx = p.pos.x - ew.pos.x;
+      const dz = p.pos.z - ew.pos.z;
+      if (dx * dx + dz * dz < ew.radius * ew.radius) {
+        p.active = false;
+        events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+        continue;
+      }
+    }
+
+    // orbital blades
+    let shot = false;
+    for (let b = 0; b < blades; b++) {
+      const dx = p.pos.x - bladeX[b];
+      const dz = p.pos.z - bladeZ[b];
+      if (dx * dx + dz * dz < 1.44) { shot = true; break; }
+    }
+    if (shot) {
+      p.active = false;
+      events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+      continue;
+    }
+
+    // solid obstacles
+    let blocked = false;
+    for (let k = 0; k < obs.length; k++) {
+      const o = obs[k];
+      if (!o.blocksProjectiles) continue;
+      const dx = p.pos.x - o.pos.x;
+      const dz = p.pos.z - o.pos.z;
+      if (dx * dx + dz * dz < o.radius * o.radius) { blocked = true; break; }
+    }
+    if (blocked) {
+      p.active = false;
+      events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+      continue;
+    }
+
+    // player hit (dashing / i-frames let projectiles pass through)
+    if (player.alive && player.invulnT <= 0) {
+      const dx = p.pos.x - ppx;
+      const dz = p.pos.z - ppz;
+      const r = p.radius + 0.7;
+      if (dx * dx + dz * dz < r * r) {
+        p.active = false;
+        damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow });
+        events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+      }
+    }
+  }
+}
