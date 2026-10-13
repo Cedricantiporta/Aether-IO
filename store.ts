@@ -71,7 +71,10 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   LEGENDARY: COLORS.rarityLegendary, MYTHIC: COLORS.rarityMythic,
 };
 
-const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 60, RARE: 28, EPIC: 9, LEGENDARY: 2.5, MYTHIC: 0.5 };
+// Summon odds (%): epic is very rare, legendary ultra rare, mythic hyper rare.
+export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.45, EPIC: 3, LEGENDARY: 0.5, MYTHIC: 0.05 };
+/** Max copies of a rarity a single summon (1x or 10x) can yield; extra rolls are downgraded to RARE. */
+export const SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 2, LEGENDARY: 1, MYTHIC: 1 };
 
 const WEAPON_Q: Record<HeroClass, AbilityType> = {
   ARCHER: 'PIERCING_SHOT', WIZARD: 'GRAVITY_SPELL', BARBARIAN: 'RAGE',
@@ -1140,6 +1143,8 @@ export const useGameStore = create<GameState>()((set, get) => {
           roll -= SUMMON_WEIGHTS[r];
           if (roll <= 0) { rarity = r; break; }
         }
+        const cap = SUMMON_CAPS[rarity];
+        if (cap !== undefined && results.filter((i) => i.rarity === rarity).length >= cap) rarity = 'RARE';
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
         results.push(instantiate(pool[Math.floor(Math.random() * pool.length)]));

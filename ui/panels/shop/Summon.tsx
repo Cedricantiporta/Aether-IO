@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { GemGlyph } from '../../components/SkillIcons';
-import { useGameStore } from '../../../store';
+import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS } from '../../../store';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR } from '../../lib/game';
@@ -20,7 +20,8 @@ export const SummonTab: React.FC = () => {
         <div className="rpg-medallion" style={{ width: '5.5rem', height: '5.5rem', ['--mc' as any]: '#7a3fc2' }}><Sparkles size={44} /></div>
         <div className="rpg-title text-xl mt-3">Aether Altar</div>
         <div className="text-xs text-[var(--text-dim)] mt-1 px-6 leading-snug">Offer gems to the altar and receive gear and companions of any rarity.</div>
-        <div className="flex gap-2 mt-3">{RARITIES.map((r) => <span key={r} className="rpg-gem" data-rarity={r} title={RATES[r]} />)}</div>
+        <div className="flex gap-2 mt-3">{RARITIES.map((r) => <span key={r} className="rpg-gem" data-rarity={r} title={`${RATES[r]} · ${SUMMON_WEIGHTS[r]}%${SUMMON_CAPS[r] ? ` · max ${SUMMON_CAPS[r]} per summon` : ''}`} />)}</div>
+        <div className="mt-2 text-[11px] opacity-80 text-center">Epic {SUMMON_WEIGHTS.EPIC}% (max 2) · Legendary {SUMMON_WEIGHTS.LEGENDARY}% (max 1) · Mythic {SUMMON_WEIGHTS.MYTHIC}% (max 1)</div>
       </div>
       <div className="grid grid-cols-2 gap-3 w-full">
         <Button size="lg" variant="blue" disabled={gems < 100} onClick={() => go(1)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
