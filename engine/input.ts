@@ -4,6 +4,7 @@
 import { world } from './world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
+import { uiOverlayOpen, closeTopOverlay } from '../ui/uiStore';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
@@ -30,6 +31,7 @@ export function installInput(): () => void {
     inp.keys[e.code] = true;
     inp.pressed[e.code] = true;
 
+    if (e.code === 'Escape' && uiOverlayOpen()) { closeTopOverlay(); return; }
     const st = useGameStore.getState();
     const inGame = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED;
     switch (e.code) {

@@ -131,7 +131,7 @@ function tuftGeometry() {
     const ox = Math.cos(a) * 0.1, oz = Math.sin(a) * 0.1;
     const dx = Math.cos(a + 1.2), dz = Math.sin(a + 1.2);
     const lx = Math.cos(a), lz = Math.sin(a);
-    const h = 0.55 + (b % 3) * 0.14, w = 0.075, lean = 0.16 + (b % 2) * 0.1;
+    const h = 0.34 + (b % 3) * 0.09, w = 0.08, lean = 0.1 + (b % 2) * 0.07;
     const rows = [[0, w, 0], [0.5, w * 0.72, lean * 0.3], [1, 0.0, lean]];
     const start = pos.length / 3;
     for (let r = 0; r < 3; r++) {
@@ -187,7 +187,7 @@ function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
           transformed.z += wv * hh * hh * 0.25;
           vec2 away = gwp - uPlayer.xz;
           vec2 pu = normalize(away + vec2(1e-4)) * smoothstep(2.6, 0.2, gd) * hh * 1.4; transformed.x += pu.x / gsx; transformed.z += pu.y / gsz;
-          transformed.y *= 1.0 - smoothstep(1.4, 0.2, gd) * 0.3;`);
+          transformed.y *= 1.0 - smoothstep(3.0, 0.4, gd) * 0.55;`);
     };
     return m;
   }, [mask, R]);
@@ -195,7 +195,7 @@ function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
     const rnd = mulberry32(11);
     const W = R * 2;
     for (let i = 0; i < q.grass; i++) {
-      const s = 0.8 + rnd() * 0.9;
+      const s = 0.75 + rnd() * 0.7;
       setInst(m, i, rnd() * W, 0, rnd() * W, 0, s * (0.8 + rnd() * 0.5), s, s * (0.8 + rnd() * 0.5));
     }
   }, [q.grass, R]);

@@ -49,3 +49,21 @@ export const useUiStore = create<UiState>((set) => ({
 }));
 
 export type { Rarity };
+
+/** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
+export function uiOverlayOpen(): boolean {
+  const s = useUiStore.getState();
+  return s.settingsOpen || s.codexOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+}
+
+/** Closes the top-most overlay. Returns true if something was closed. */
+export function closeTopOverlay(): boolean {
+  const s = useUiStore.getState();
+  if (s.confirm) { s.askConfirm(null); return true; }
+  if (s.summonResults) { s.setSummonResults(null); return true; }
+  if (s.sellItem) { s.setSellItem(null); return true; }
+  if (s.buyItem) { s.setBuyItem(null); return true; }
+  if (s.settingsOpen) { s.openSettings(false); return true; }
+  if (s.codexOpen) { s.openCodex(false); return true; }
+  return false;
+}

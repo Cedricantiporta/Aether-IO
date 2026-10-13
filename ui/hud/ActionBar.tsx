@@ -2,7 +2,7 @@ import React from 'react';
 import { Flame, Zap, RotateCcw, Heart, Wind, ShieldCheck, Magnet, FlaskConical, Target, Orbit, Swords, Star } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
-import { SKILLS_INFO } from '../../constants';
+import { SKILLS_INFO, POTION_COOLDOWN } from '../../constants';
 import { world } from '../../engine/world';
 import { passiveCooldowns } from '../../engine/systems/skills';
 import { ActionSlot } from './ActionSlot';
@@ -90,10 +90,10 @@ export const ActionBar: React.FC = () => {
         tooltip={<SimpleTip title="Looter" sub={`Passive · Lv ${sk('magnet')}`} body={SKILLS_INFO.magnet.description} />} />
       <Sep />
       <ActionSlot id="hp" keyLabel="1" keyCode="Digit1" size="3.1rem" qty={hpQty} active={true} accent="#d6252b"
-        icon={<FlaskConical size={26} color="#ff5a5a" fill="rgba(255,60,60,.4)" />} getCd={() => ({ t: p.hpPotCd, max: 0 })}
+        icon={<FlaskConical size={26} color="#ff5a5a" fill="rgba(255,60,60,.4)" />} getCd={() => ({ t: p.hpPotCd, max: POTION_COOLDOWN })}
         tooltip={<SimpleTip title="Health Potion" sub="Consumable [1]" color="#b3261e" body="Restores health. Auto-drinks below 30% HP when enabled in settings." lines={[cdLine('In bag', `${hpQty}`)]} />} />
       <ActionSlot id="mp" keyLabel="2" keyCode="Digit2" size="3.1rem" qty={mpQty} active={true} accent="#2f6fe0"
-        icon={<FlaskConical size={26} color="#5b9bff" fill="rgba(60,120,255,.4)" />} getCd={() => ({ t: p.mpPotCd, max: 0 })}
+        icon={<FlaskConical size={26} color="#5b9bff" fill="rgba(60,120,255,.4)" />} getCd={() => ({ t: p.mpPotCd, max: POTION_COOLDOWN })}
         tooltip={<SimpleTip title="Mana Potion" sub="Consumable [2]" color="#1f56c4" body="Restores mana. Auto-drinks below 30% mana when enabled in settings." lines={[cdLine('In bag', `${mpQty}`)]} />} />
     </div>
   );

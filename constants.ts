@@ -8,6 +8,7 @@ export const PLAYER_RADIUS = 0.8;
 export const CAMERA_HEIGHT = 45;
 export const INVENTORY_LIMIT = 50;
 export const POTION_STACK_LIMIT = 50;
+export const POTION_COOLDOWN = 10; // seconds, shared by engine + HUD
 
 export const RECYCLE_YIELDS: Record<Rarity, number> = {
     'COMMON': 1,

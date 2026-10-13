@@ -3,7 +3,8 @@
 // Pop out with a bounce, magnetise towards the player, collect on contact.
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocPickup, ARENA_RADIUS } from '../world';
+import { world, allocPickup } from '../world';
+import { edgeLimit } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
 import type { Item, Rarity } from '../../types';
@@ -34,7 +35,7 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);
-  const maxD = ARENA_RADIUS - 2;
+  const maxD = d > 70 ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;
   if (d > maxD) tmpPos.multiplyScalar(maxD / d);
 
   // Merge XP orbs into a nearby one when there are too many.

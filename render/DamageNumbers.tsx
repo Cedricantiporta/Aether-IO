@@ -47,6 +47,19 @@ function setText(n: Num, amount: number, crit: boolean) {
   n.n = k;
 }
 
+// Token bucket: ordinary hits are rate-limited so AoE / multishot crowds don't flood the screen.
+// Crits, big hits and damage to the player always show.
+let bucket = 10, bucketT = 0;
+function allow(amount: number, crit: boolean, toPlayer: boolean): boolean {
+  if (crit || toPlayer || amount > 400) return true;
+  const now = performance.now();
+  bucket = Math.min(10, bucket + (now - bucketT) * 0.024); // ~24 numbers / second sustained
+  bucketT = now;
+  if (bucket < 1) return false;
+  bucket -= 1;
+  return true;
+}
+
 function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean, kind: DamageKind, toPlayer: boolean, dot: boolean) {
   if (dot) {
     for (const n of nums) {
@@ -55,6 +68,7 @@ function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean
       }
     }
   }
+  if (!allow(amount, crit, toPlayer)) return;
   const n = nums[cursor]; cursor = (cursor + 1) % POOL;
   n.active = true; n.t = 0; n.dur = crit ? 1.05 : 0.85; n.crit = crit; n.dot = dot; n.kind = kind; n.amount = amount;
   n.x = x + (Math.random() - 0.5) * 0.8; n.y = y + 1.8 + Math.random() * 0.4; n.z = z + (Math.random() - 0.5) * 0.6; n.vx = (Math.random() - 0.5) * 1.2;

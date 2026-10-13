@@ -74,7 +74,7 @@ export function makeRockGeo(seed: number, stone = '#8d95a0', moss = '#5fa73c', s
   const g0 = new IcosahedronGeometry(1, 1);
   noisify(g0, 0.55, 1.7 + rnd(), seed * 3.1);
   g0.scale(1 + rnd() * 0.3, squash, 1 + rnd() * 0.3);
-  const g = g0.toNonIndexed();
+  const g = g0.index ? g0.toNonIndexed() : g0;
   g.computeVertexNormals();
   g.deleteAttribute('uv');
   const p = g.attributes.position, nrm = g.attributes.normal;

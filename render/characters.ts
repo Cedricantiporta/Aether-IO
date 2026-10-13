@@ -65,6 +65,6 @@ export function useCharacterInstance(key: CharKey): CharInstance {
         meshes.push(m);
       }
     });
-    return { root, mats, meshes, handR: root.getObjectByName('handslot.r') || null, handL: root.getObjectByName('handslot.l') || null };
+    return { root, mats, meshes, handR: root.getObjectByName('handslotr') || null, handL: root.getObjectByName('handslotl') || null };
   }, [gltf, key]);
 }

@@ -63,7 +63,7 @@ export const Countdown: React.FC = () => {
     if (d.wave !== s.wave && ribbon.current) { s.wave = d.wave; ribbon.current.textContent = `Wave ${d.wave} incoming`; }
   });
   return (
-    <div ref={root} className="absolute inset-0 flex-col items-center justify-center pointer-events-none" style={{ display: 'none', paddingBottom: '8rem' }}>
+    <div ref={root} className="absolute inset-0 flex-col items-center justify-center pointer-events-none" style={{ display: 'none', justifyContent: 'flex-start', paddingTop: '15vh' }}>
       <div className="rpg-ribbon" data-tone="red" style={{ fontSize: '1.5rem' }}><span ref={ribbon}>Wave 1 incoming</span></div>
       <div ref={num} className="countdown-num">5</div>
     </div>

@@ -138,8 +138,8 @@ export const MainMenu: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="rpg-label mb-1 flex items-center gap-1"><Layers size={11} /> By class{stats.bestRunClass ? ` · best: ${stats.bestRunClass}` : ''}</div>
-          <div className="flex flex-col gap-1">
+          <div className="rpg-label mb-1 flex items-center gap-1 hide-short"><Layers size={11} /> By class{stats.bestRunClass ? ` · best: ${stats.bestRunClass}` : ''}</div>
+          <div className="flex flex-col gap-1 hide-short">
             {HERO_ORDER.map((h) => (
               <div key={h} className="flex items-center justify-between text-xs rpg-frame px-2 py-1">
                 <span className="font-bold" style={{ color: HERO_COLOR[h] }}>{HERO_META[h].title}</span>

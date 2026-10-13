@@ -34,9 +34,9 @@ export const GameOver: React.FC = () => {
     <motion.div className="absolute inset-0 flex items-center justify-center pe" style={{ zIndex: 120, background: 'radial-gradient(ellipse at center, rgba(70,5,5,.55), rgba(5,0,0,.92))' }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .8 }}>
       <div className="flex flex-col items-center" style={{ width: '31rem', maxWidth: '94vw' }}>
-        <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 -mb-5">
+        <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 mb-1">
           <Skull size={56} color="#ff6b5e" style={{ margin: '0 auto', filter: 'drop-shadow(0 0 18px #f00)' }} />
-          <div className="rpg-logo" style={{ fontSize: '3.1rem', backgroundImage: 'linear-gradient(105deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%), linear-gradient(180deg,#ffd0c8,#e0554a 48%,#5e0f12 52%,#c93b3b)' }}>You have fallen</div>
+          <div className="rpg-logo" style={{ fontSize: '2.3rem', whiteSpace: 'nowrap', backgroundImage: 'linear-gradient(105deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%), linear-gradient(180deg,#ffd0c8,#e0554a 48%,#5e0f12 52%,#c93b3b)' }}>You have fallen</div>
         </motion.div>
         <Panel className="w-full p-5 pt-8">
           {run && (
@@ -57,8 +57,8 @@ export const GameOver: React.FC = () => {
             </>
           )}
           <div className="flex gap-3 mt-5">
-            <Button className="flex-1" variant="primary" size="lg" onClick={startGame} pulse><RotateCcw size={18} /> Try again</Button>
-            <Button className="flex-1" size="lg" onClick={resetGame}><Home size={18} /> Menu</Button>
+            <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={startGame} pulse><RotateCcw size={18} /> Try again</Button>
+            <Button className="flex-1 whitespace-nowrap !px-3" size="lg" onClick={resetGame}><Home size={18} /> Menu</Button>
           </div>
           <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to retry</div>
         </Panel>

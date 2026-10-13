@@ -2,7 +2,8 @@
 // Active abilities: Q (class), R (weapon), E (class special).
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocZone, ARENA_RADIUS } from '../world';
+import { world, allocZone } from '../world';
+import { edgeLimit } from '../mapgen';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import {
@@ -92,7 +93,7 @@ export function castQ(): void {
       if (z) {
         let x = p.pos.x + dir.x * 15, zz = p.pos.z + dir.z * 15;
         const d = Math.hypot(x, zz);
-        const max = ARENA_RADIUS - 2;
+        const max = edgeLimit(x, zz, 2);
         if (d > max) { x *= max / d; zz *= max / d; }
         z.active = true; z.kind = 'BLACKHOLE'; z.hostile = false;
         z.pos.set(x, 0, zz);

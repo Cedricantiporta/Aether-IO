@@ -14,7 +14,8 @@
 // LICH  patterns: 0 SPIRAL, 1 FAN, 2 BLINK, 3 SUMMON
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, ARENA_RADIUS } from '../world';
+import { world } from '../world';
+import { edgeLimit } from '../mapgen';
 import { events } from '../events';
 import type { Enemy } from '../types';
 import { BOSS_NAMES, type BossKind } from '../enemyDefs';
@@ -71,7 +72,7 @@ function checkPhase(e: Enemy): void {
 }
 
 function clampToArena(v: Vector3, margin: number): void {
-  const lim = ARENA_RADIUS - margin;
+  const lim = edgeLimit(v.x, v.z, margin);
   const d2 = v.x * v.x + v.z * v.z;
   if (d2 > lim * lim) { const s = lim / Math.sqrt(d2); v.x *= s; v.z *= s; }
 }

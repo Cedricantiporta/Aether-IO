@@ -270,7 +270,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   });
 
   const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : color); };
-  const labelW = label.aspect * 1.5;
+  const labelW = label.aspect * 1.0;
   return (
     <group position={[px, 0, pz]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
@@ -293,7 +293,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
           </mesh>
         ))}
       </group>
-      <sprite ref={titleRef} material={label.mat} position={[0, 9.4, 1]} scale={[labelW, 1.5, 1]} />
+      <sprite ref={titleRef} material={label.mat} position={[0, 9.4, 1]} scale={[labelW, 1.0, 1]} />
       <Shopkeeper type={type} near={near} onOpen={open} />
       <mesh position={[0, 2.8, 0.2]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <boxGeometry args={[7, 5.6, 6]} />
