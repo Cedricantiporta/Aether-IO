@@ -4,27 +4,30 @@ import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { Ribbon } from '../components/Frame';
+import { HourglassGlyph } from '../components/ItemArt';
 
-const PHASE_LABEL: Record<string, string> = { COUNTDOWN: 'Preparing', FIGHT: 'Survive', CLEANUP: 'Finish them', BOSS: 'Boss fight', REWARD: 'Cleared' };
+const PHASE_LABEL: Record<string, string> = { COUNTDOWN: 'Preparing...', FIGHT: 'Survive', CLEANUP: 'Finish them', BOSS: 'Boss fight', REWARD: 'Cleared' };
 
 export const WavePlaque: React.FC = () => {
   const wave = useGameStore((s) => s.wave);
   const bar = useRef<HTMLDivElement>(null);
-  const sub = useRef<HTMLDivElement>(null);
+  const lab = useRef<HTMLSpanElement>(null);
+  const cnt = useRef<HTMLSpanElement>(null);
   const st = useRef({ f: '', a: -1, p: '', c: '' });
 
   useRaf(() => {
     const d = world.director, s = st.current;
-    const f = d.phase === 'FIGHT' || d.phase === 'COUNTDOWN' ? (d.phase === 'COUNTDOWN' ? 0 : Math.min(1, d.waveTime / Math.max(1, d.waveDuration))) : 1;
+    const f = d.phase === 'FIGHT' || d.phase === 'COUNTDOWN' ? (d.phase === 'COUNTDOWN' ? 1 - Math.min(1, Math.max(0, d.countdown) / 5) : Math.min(1, d.waveTime / Math.max(1, d.waveDuration))) : 1;
     const fs = f.toFixed(3);
     if (bar.current && fs !== s.f) {
       s.f = fs; bar.current.style.setProperty('--fill', fs);
       const cl = d.phase === 'CLEANUP' || d.phase === 'BOSS' ? '#e0554a' : '#e9b949';
       if (cl !== s.c) { s.c = cl; bar.current.style.setProperty('--bc', cl); }
     }
-    if (sub.current && (d.aliveCount !== s.a || d.phase !== s.p)) {
+    if (d.aliveCount !== s.a || d.phase !== s.p) {
       s.a = d.aliveCount; s.p = d.phase;
-      sub.current.textContent = `${PHASE_LABEL[d.phase] ?? d.phase} \u2022 ${d.aliveCount} ENEMIES`;
+      if (lab.current) lab.current.textContent = PHASE_LABEL[d.phase] ?? d.phase;
+      if (cnt.current) cnt.current.textContent = `\u00d7${d.aliveCount}`;
     }
   });
 
@@ -42,7 +45,7 @@ export const WavePlaque: React.FC = () => {
       <span className="crest"><SkullGlyph size={36} /></span>
       <div className="wtitle">WAVE {wave}</div>
       <div className="wbar" ref={bar}><div className="fill" /></div>
-      <div ref={sub} className="wsub">{'Survive \u2022 0 ENEMIES'}</div>
+      <div className="wsub"><span ref={lab}>Preparing...</span><span><HourglassGlyph size={14} /> <span ref={cnt}>{'\u00d70'}</span></span></div>
     </div>
   );
 };
@@ -67,8 +70,8 @@ export const Countdown: React.FC = () => {
   });
   return (
     <div ref={root} className="absolute inset-0 flex-col items-center justify-center pointer-events-none" style={{ display: 'none', justifyContent: 'flex-start', paddingTop: '15vh' }}>
-      <div className="rpg-ribbon" data-tone="red" style={{ fontSize: '1.5rem' }}><span ref={ribbon}>Wave 1 incoming</span></div>
-      <div ref={num} className="countdown-num">5</div>
+      <div className="rpg-ribbon cd-ribbon" data-tone="red" style={{ fontSize: '1.55rem' }}><span ref={ribbon}>Wave 1 incoming</span></div>
+      <div ref={num} className="countdown-num cd-gold">5</div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Coins } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { CoinGlyph } from '../components/SkillIcons';
 import { motion } from 'framer-motion';
 import { POTION_STACK_LIMIT } from '../../constants';
 import { useGameStore } from '../../store';
@@ -28,7 +29,7 @@ export const SellDialog: React.FC = () => {
           {have > 1 && <QtyStepper value={amount} max={have} onChange={setAmount} />}
           <div className="rpg-frame gold w-full text-center py-2">
             <div className="rpg-label !text-[.6rem]">Total value</div>
-            <div className="rpg-num text-3xl text-[var(--gold-light)] flex items-center justify-center gap-2"><Coins size={22} />{(sellPrice(item) * amount).toLocaleString()}</div>
+            <div className="rpg-num text-3xl text-[var(--gold-light)] flex items-center justify-center gap-2"><CoinGlyph size={26} />{(sellPrice(item) * amount).toLocaleString()}</div>
           </div>
           <div className="flex gap-3 w-full">
             <Button className="flex-1" onClick={() => set(null)}>Cancel</Button>
@@ -68,7 +69,7 @@ export const BuyDialog: React.FC = () => {
           {stackable && <QtyStepper value={a} max={cap} onChange={setAmount} />}
           <div className="rpg-frame gold w-full text-center py-2">
             <div className="rpg-label !text-[.6rem]">Total cost</div>
-            <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><Coins size={22} />{total.toLocaleString()}</div>
+            <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><CoinGlyph size={26} />{total.toLocaleString()}</div>
           </div>
           <div className="flex gap-3 w-full">
             <Button className="flex-1" onClick={() => set(null)}>Close</Button>

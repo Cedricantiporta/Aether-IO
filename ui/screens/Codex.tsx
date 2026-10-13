@@ -32,7 +32,7 @@ export const CodexDialog: React.FC = () => {
       <div className="rpg-frame p-4 rpg-scroll" style={{ height: '26rem' }}>
         {tab !== 'SKILLS' ? (
           <div className="flex flex-wrap gap-4 content-start">
-            {(tab === 'ITEMS' ? items : pets).map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} tooltip="buy" compare={false} />)}
+            {(tab === 'ITEMS' ? items : pets).map((it) => <ItemSlot key={it.id} item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />)}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">

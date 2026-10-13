@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { X } from 'lucide-react';
+import { CoinGlyph } from './SkillIcons';
 
 export const Corners: React.FC = () => (
   <>
@@ -33,20 +34,22 @@ export const Ribbon: React.FC<{ tone?: 'red' | 'gold' | 'blue' | 'green' | 'dark
   <div className={`rpg-ribbon ${className}`} data-tone={tone} style={style}>{children}</div>
 );
 
+export const CurrencyPill: React.FC<{ icon?: React.ReactNode; label?: string; value: React.ReactNode }> = ({ icon = <CoinGlyph size={20} />, label, value }) => (
+  <span className="rpg-pill">{icon}{label && <span className="pill-label">{label}</span>}<span className="rpg-num">{value}</span></span>
+);
+
 export const PanelHead: React.FC<{ icon?: React.ReactNode; title: string; sub?: string; onClose?: () => void; right?: React.ReactNode }> = ({ icon, title, sub, onClose, right }) => (
-  <div className="panel-head">
-    <div className="flex items-center gap-2 min-w-0">
-      {icon && <div className="text-[var(--gold-light)]">{icon}</div>}
+  <div className="panel-head v4">
+    <div className="flex items-center gap-2.5 min-w-0">
+      {icon && <div className="head-icon">{icon}</div>}
       <div className="min-w-0">
-        <div className="rpg-title text-lg leading-none">{title}</div>
-        {sub && <div className="rpg-label mt-1">{sub}</div>}
+        <div className="rpg-title head-title">{title}</div>
+        {sub && <div className="head-sub">{sub}</div>}
       </div>
     </div>
     <div className="flex items-center gap-2">
       {right}
-      {onClose && (
-        <button className="rpg-btn rpg-btn-danger rpg-btn-sm" style={{ width: '1.9rem', padding: 0 }} onClick={onClose} aria-label="Close"><X size={16} /></button>
-      )}
+      {onClose && <button className="close-x" onClick={onClose} aria-label="Close"><X size={18} strokeWidth={3.2} /></button>}
     </div>
   </div>
 );

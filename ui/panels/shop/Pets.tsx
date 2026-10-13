@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins } from 'lucide-react';
+import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
 import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
@@ -27,7 +27,7 @@ export const PetsTab: React.FC = () => {
               </div>
             </div>
             <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => buyItem(p)} style={{ flexDirection: 'column', gap: 0 }}>
-              <span>Buy</span><span className="flex items-center gap-1 rpg-num"><Coins size={10} />{p.price.toLocaleString()}</span>
+              <span>Buy</span><span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{p.price.toLocaleString()}</span>
             </Button>
           </div>
         );

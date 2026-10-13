@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Anvil, Hammer, Recycle, RefreshCcw, PenTool, ArrowRight, Coins, Hexagon } from 'lucide-react';
+import { ChevronsDown, Hammer, Recycle, RefreshCcw, PenTool, ArrowRight, Hexagon } from 'lucide-react';
+import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,13 +8,39 @@ import { CRAFTING_COSTS, MATERIAL_COMBINE_COST, RECYCLE_YIELDS } from '../../../
 import type { Rarity, PlayerStats } from '../../../types';
 import { Button } from '../../components/Button';
 import { ItemSlot } from '../../components/ItemSlot';
+import { AnvilGlyph } from '../../components/ItemArt';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 
 const Empty: React.FC<{ text: string }> = ({ text }) => (
   <div className="rpg-frame flex flex-col items-center gap-3 py-8 px-4 text-center opacity-80">
-    <div className="rpg-medallion" style={{ width: '4.4rem', height: '4.4rem', ['--mc' as any]: '#55505e' }}><Anvil size={30} /></div>
+    <div className="forge-orb sm"><AnvilGlyph size={34} glow /></div>
     <div className="rpg-label">{text}</div>
+  </div>
+);
+
+
+const Chain: React.FC<{ d: string }> = ({ d }) => (<g><path d={d} stroke="#050304" strokeWidth="6" strokeDasharray="7 4" fill="none" strokeLinecap="round" /><path d={d} stroke="#7a6a58" strokeWidth="3.4" strokeDasharray="7 4" fill="none" strokeLinecap="round" /></g>);
+const HammerOrn: React.FC<{ r: number; x: number }> = ({ r, x }) => (
+  <g transform={`translate(${x} 46) rotate(${r})`} opacity=".85">
+    <rect x="-3" y="-4" width="6" height="64" rx="2" fill="#4a3426" stroke="#050304" strokeWidth="1.5" />
+    <rect x="-17" y="-18" width="34" height="18" rx="3" fill="#6a6f7c" stroke="#050304" strokeWidth="1.5" /><path d="M-14 -14 H14" stroke="#aab" strokeOpacity=".5" />
+  </g>
+);
+const ForgeEmpty: React.FC = () => (
+  <div className="forge-empty">
+    <div className="forge-stage">
+      <svg viewBox="0 0 380 190" aria-hidden className="forge-orn">
+        <Chain d="M40 6 C60 40 90 70 130 100" /><Chain d="M340 6 C320 40 290 70 250 100" /><Chain d="M10 60 C40 80 70 100 110 120" /><Chain d="M370 60 C340 80 310 100 270 120" />
+        <HammerOrn r={-52} x={52} /><HammerOrn r={52} x={328} />
+      </svg>
+      <div className="forge-ring"><div className="forge-orb"><AnvilGlyph size={64} glow /></div></div>
+    </div>
+    <div className="forge-text">Select a piece of gear<br />from your bag to upgrade</div>
+    <ChevronsDown size={22} className="forge-chev" />
+    <div className="forge-slot">+</div>
+    <button className="forge-btn" disabled>Upgrade</button>
+    <div className="forge-hint">Improve the stats of your equipment.</div>
   </div>
 );
 
@@ -29,7 +56,7 @@ export const Upgrade: React.FC = () => {
     if (actionResult?.type === 'UPGRADE' && actionResult.success && actionResult.item) setSelected(actionResult.item);
   }, [actionResult, setSelected]);
 
-  if (!item || !isGear(item)) return <Empty text="Select a piece of gear from your bag to upgrade" />;
+  if (!item || !isGear(item)) return <ForgeEmpty />;
   const maxed = item.level >= MAX_ITEM_LEVEL;
   const goldCost = upgradeGoldCost(item), coreCost = upgradeCoreCost(item);
   const chance = upgradeChance(item);
@@ -64,14 +91,15 @@ export const Upgrade: React.FC = () => {
           <div className="rpg-bar thin" style={{ ['--fill' as any]: chance, ['--bc' as any]: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}><div className="fill" /></div>
         </div>
         <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Coins size={10} /> Gold</div>
+          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
             <div className="rpg-num" style={{ color: gold >= goldCost ? '#ffe69a' : '#f87171' }}>{goldCost.toLocaleString()}</div></div>
           <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> Cores</div>
             <div className="rpg-num" style={{ color: cores >= coreCost ? '#7cc4ff' : '#f87171' }}>{coreCost} <span className="text-[.65rem] opacity-70">/ {cores}</span></div></div>
         </div>
-        <Button variant="danger" size="lg" className="w-full" disabled={!can} onClick={forge}>
-          <Hammer size={20} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Forge'}
-        </Button>
+        <button className="forge-btn on" disabled={!can} onClick={forge}>
+          <Hammer size={20} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}
+        </button>
+        <div className="forge-hint">Improve the stats of your equipment.</div>
         <AnimatePresence>
           {res && (
             <motion.div key={res.message + res.success} initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
@@ -180,8 +208,8 @@ export const BlacksmithTab: React.FC = () => {
   }, [actionResult, clear]);
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-1.5">
-        {(['UPGRADE', 'RECYCLE', 'CRAFT'] as const).map((t) => <button key={t} className={`rpg-subtab pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+      <div className="grid grid-cols-3 gap-2">
+        {(['UPGRADE', 'RECYCLE', 'CRAFT'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
       {tab === 'RECYCLE' && <RecycleTab />}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Gem, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { GemGlyph } from '../../components/SkillIcons';
 import { useGameStore } from '../../../store';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
@@ -23,10 +24,10 @@ export const SummonTab: React.FC = () => {
       </div>
       <div className="grid grid-cols-2 gap-3 w-full">
         <Button size="lg" variant="blue" disabled={gems < 100} onClick={() => go(1)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
-          <span>Summon x1</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><Gem size={13} />100</span>
+          <span>Summon x1</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />100</span>
         </Button>
         <Button size="lg" variant="primary" disabled={gems < 900} onClick={() => go(10)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
-          <span>Summon x10</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><Gem size={13} />900</span>
+          <span>Summon x10</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />900</span>
         </Button>
       </div>
       <div className="rpg-label !text-[.6rem]" style={{ color: RARITY_COLOR.LEGENDARY }}>10x saves 100 gems</div>

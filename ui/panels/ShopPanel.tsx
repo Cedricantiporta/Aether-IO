@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Coins, Gem, Star } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
-import { Panel, PanelHead } from '../components/Frame';
+import { Panel, PanelHead, CurrencyPill } from '../components/Frame';
+import { AnvilGlyph } from '../components/ItemArt';
+import { GemGlyph } from '../components/SkillIcons';
 import { SuppliesTab } from './shop/Supplies';
 import { PetsTab } from './shop/Pets';
 import { SummonTab } from './shop/Summon';
@@ -12,11 +14,11 @@ import { BlacksmithTab } from './shop/Blacksmith';
 import { SkillsTab } from './shop/Skills';
 
 const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }[] = [
-  { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={13} />, title: 'General Store' },
-  { id: 'PETS', label: 'Pets', icon: <Ghost size={13} />, title: 'Menagerie' },
-  { id: 'SUMMON', label: 'Summon', icon: <Dices size={13} />, title: 'Aether Altar' },
-  { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={13} />, title: 'Blacksmith' },
-  { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={13} />, title: 'Skill Tome' },
+  { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'General Store' },
+  { id: 'PETS', label: 'Pets', icon: <Ghost size={24} />, title: 'Menagerie' },
+  { id: 'SUMMON', label: 'Summon', icon: <Dices size={24} />, title: 'Aether Altar' },
+  { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={24} />, title: 'Blacksmith' },
+  { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={24} />, title: 'Skill Tome' },
 ];
 
 export const ShopPanel: React.FC = () => {
@@ -36,11 +38,11 @@ export const ShopPanel: React.FC = () => {
         ))}
       </div>
       <Panel className="flex flex-col flex-1 min-h-0">
-        <PanelHead title={cur.title} sub={cur.label} onClose={close}
+        <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">
-            <span className="rpg-badge"><Coins size={11} /> <span className="rpg-num text-white">{gold.toLocaleString()}</span></span>
-            {tab === 'SUMMON' && <span className="rpg-badge"><Gem size={11} /> <span className="rpg-num text-white">{gems.toLocaleString()}</span></span>}
-            {tab === 'SKILLS' && <span className="rpg-badge"><Star size={11} /> <span className="rpg-num text-white">{sp} SP</span></span>}
+            <CurrencyPill value={gold.toLocaleString()} />
+            {tab === 'SUMMON' && <CurrencyPill icon={<GemGlyph size={20} />} value={gems.toLocaleString()} />}
+            {tab === 'SKILLS' && <CurrencyPill icon={<Star size={16} className="text-[var(--gold-light)]" />} value={`${sp} SP`} />}
           </div>} />
         <div className="flex-1 min-h-0 rpg-scroll p-4">
           {tab === 'SUPPLIES' && <SuppliesTab />}
