@@ -177,7 +177,8 @@ function WindmillView({ o, body, blades, mat }: { o: Obstacle; body: any; blades
   );
 }
 
-export function Props({ q }: { q: QualityCfg }) {
+/** `tint` multiplies every prop colour (run rooms tint scenery per biome). */
+export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
   const nat = useNature();
   useObstaclesVersion();
   const obs = world.obstacles;
@@ -212,7 +213,8 @@ export function Props({ q }: { q: QualityCfg }) {
   const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), statue = useMemo(makeStatue, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
   const wmBody = useMemo(makeWindmillBody, []), wmBlades = useMemo(makeBlades, []);
   const boulders = useMemo(() => [41, 42, 43].map((s, i) => makeRockGeo(s * 5, i === 1 ? '#7d8590' : '#8d8f94', '#5a9a3a', 0.8 + i * 0.12)), []);
-  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.3, 1.0) }), crystal: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7) }) }), []);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85, color: tint ?? '#ffffff' }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.3, 1.0) }), crystal: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7) }) }), [tint]);
+  const natMat = useMemo(() => { if (!tint) return nat.mat; const m = nat.mat.clone(); m.color.set(tint); return m; }, [nat, tint]);
   useFrame(({ clock }) => { const k = 1.5 + Math.sin(clock.elapsedTime * 1.6) * 0.35; mats.crystal.color.setRGB(k, k, k); });
 
   const fillFor = (list: Obstacle[], tall: number, k: number, jitter: number) => (m: InstancedMesh) => {
@@ -241,10 +243,10 @@ export function Props({ q }: { q: QualityCfg }) {
   void nTrees;
   return (
     <group key={world.obstaclesVersion}>
-      {lists.oak.length > 0 && <Inst geo={nat.oak} mat={nat.mat} count={lists.oak.length} fill={fills.oak} cast receive />}
-      {lists.palm.length > 0 && <Inst geo={nat.palm} mat={nat.mat} count={lists.palm.length} fill={fills.palm} cast receive />}
-      {lists.pineA.length > 0 && <Inst geo={nat.pineA} mat={nat.mat} count={lists.pineA.length} fill={fills.pineA} cast receive />}
-      {lists.pineB.length > 0 && <Inst geo={nat.pineB} mat={nat.mat} count={lists.pineB.length} fill={fills.pineB} cast receive />}
+      {lists.oak.length > 0 && <Inst geo={nat.oak} mat={natMat} count={lists.oak.length} fill={fills.oak} cast receive />}
+      {lists.palm.length > 0 && <Inst geo={nat.palm} mat={natMat} count={lists.palm.length} fill={fills.palm} cast receive />}
+      {lists.pineA.length > 0 && <Inst geo={nat.pineA} mat={natMat} count={lists.pineA.length} fill={fills.pineA} cast receive />}
+      {lists.pineB.length > 0 && <Inst geo={nat.pineB} mat={natMat} count={lists.pineB.length} fill={fills.pineB} cast receive />}
       {rocks.map((g, k) => lists.rock[k].length > 0 && <Inst key={k} geo={g} mat={mats.lit} count={lists.rock[k].length} fill={fills.rock[k]} cast receive />)}
       {lists.house.length > 0 && <>
         <Inst geo={house.body} mat={mats.lit} count={lists.house.length} fill={fills.house} cast receive />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Backpack } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Backpack, Store } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
@@ -7,6 +7,7 @@ import { PanelHead, CurrencyPill } from '../components/Frame';
 import { Sheet } from '../components/Sheet';
 import { GemGlyph } from '../components/SkillIcons';
 import { SuppliesTab } from './shop/Supplies';
+import { MerchantTab } from './shop/Merchant';
 import { PetsTab } from './shop/Pets';
 import { SummonTab } from './shop/Summon';
 import { BlacksmithTab } from './shop/Blacksmith';
@@ -22,6 +23,7 @@ const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }
   { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={22} />, title: 'Blacksmith' },
   { id: 'QUESTS', label: 'Quests', icon: <ScrollText size={22} />, title: 'Quest Board' },
   { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={22} />, title: 'Skill Trainer' },
+  { id: 'MERCHANT', label: 'Merchant', icon: <Store size={22} />, title: 'Travelling Merchant' },
 ];
 
 export const ShopPanel: React.FC = () => {
@@ -48,6 +50,7 @@ export const ShopPanel: React.FC = () => {
         {tab === 'BLACKSMITH' && <BlacksmithTab />}
         {tab === 'SKILLS' && <SkillsTab />}
         {tab === 'QUESTS' && <QuestsTab />}
+        {tab === 'MERCHANT' && <MerchantTab />}
       </div>
     </Sheet>
   );

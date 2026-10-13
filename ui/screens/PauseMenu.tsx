@@ -26,7 +26,7 @@ export const PauseMenu: React.FC = () => {
           <Button onClick={() => openCodex(true)}><BookOpen size={16} /> Codex</Button>
         </div>
         {device.fullscreenOk && <Button onClick={() => { void toggleFullscreen(); }}><Maximize size={16} /> Fullscreen</Button>}
-        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the village. Everything you looted is kept, and rank xp and wave gold are paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
+        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and rank xp and the room bonus gold are paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run
         </Button>
       </div>

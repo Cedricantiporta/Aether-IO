@@ -6,13 +6,14 @@
 import { Vector3 } from 'three';
 import type {
   Enemy, Projectile, GroundFx, EnemyProjectile, Zone, Pickup, Obstacle, Crate,
-  PlayerRuntime, DirectorState, BossHud, RunStats, CameraState, InputState,
+  PlayerRuntime, DirectorState, RoomState, BossHud, RunStats, CameraState, InputState,
 } from './types';
 import { SpatialGrid } from './grid';
 
 export const ARENA_RADIUS = 100;        // playable radius (irregular edge is visual)
 export const TOWN_CENTER = new Vector3(0, 0, -20); // shops cluster around here
 export const MAX_ENEMIES = 400;
+export const ROOM_MAX_ALIVE = 36;     // enemies alive at once inside a room
 export const MAX_PROJECTILES = 900;
 export const MAX_ENEMY_PROJECTILES = 600;
 export const MAX_ZONES = 192;
@@ -112,11 +113,18 @@ export const world = {
   enemyGrid: new SpatialGrid(6, ARENA_RADIUS + 40, MAX_ENEMIES),
 
   director: {
-    wave: 1, phase: 'COUNTDOWN', phaseT: 0, waveTime: 0, waveDuration: 30, countdown: 5,
-    budget: 0, spawnT: 0, maxAlive: 50, aliveCount: 0, killsThisWave: 0, bossId: -1, eliteAnnounced: false,
-    quotaTotal: 0, quotaSpawned: 0, respiteT: 0, fastClear: false,
+    wave: 1, phase: 'FIGHT', phaseT: 0, maxAlive: ROOM_MAX_ALIVE, aliveCount: 0, bossId: -1,
   } as DirectorState,
-  /** Village / siege presentation state. shopsClosed is the single source of truth for shop + quest board access. */
+  /** The current run room (a disc around 0,0). Only one room exists at a time; the director rebuilds it on every room change. */
+  room: {
+    active: false, version: 0, seed: 0, biome: 0, index: 0, plan: { type: 'COMBAT', reward: 'CARD' }, radius: 24,
+    fade: 1, fadeTarget: 0, enemiesLeft: 0,
+    portals: Array.from({ length: 3 }, () => ({ active: false, x: 0, z: 0, t: 0, plan: { type: 'COMBAT', reward: 'CARD' } })),
+    markers: Array.from({ length: 48 }, () => ({ active: false, x: 0, z: 0, t: 0, dur: 1, kind: 'SLIME', elite: false, tag: 0 })),
+    station: { kind: 'NONE', x: 0, z: 0, used: false, ready: false },
+    shrineOn: false, hint: '',
+  } as RoomState,
+  /** Town presentation state (the town renderer reads shopsClosed; shops are always open now, so it stays false). */
   village: { shopsClosed: false, harvestCd: 0 },
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0 } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,

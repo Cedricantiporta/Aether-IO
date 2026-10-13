@@ -13,7 +13,7 @@ import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
-import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
+import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
 
 const DASH_TIME = 0.18;
@@ -96,7 +96,7 @@ function resolveObstacles(p: typeof world.player, x: number, z: number): void {
   p.pos.x = nx; p.pos.z = nz; p.pos.y = 0;
   pushOutOfCrates(p.pos, 0.5);
   const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;
-  if (r2 > 80 * 80) {
+  if (r2 > bounds.checkR2) {
     const lim = edgeLimit(p.pos.x, p.pos.z, 2);
     if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; }
   }

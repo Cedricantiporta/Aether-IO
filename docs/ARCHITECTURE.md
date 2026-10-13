@@ -59,26 +59,30 @@ pointer) every frame — the engine never touches the camera.
   pagehide): gold, gems, inventory, equipment (7 slots: weapon/helmet/armor/gloves/boots/accessory/pet), materials
   (crafting shards), maxInventorySlots, heroRank/rankXp, quests, gameStats, settings, welcomeGiftClaimed.
   Fresh profile = 0 gold + ONE welcome gift (1000 gold, 100 gems, 5 HP + 5 MP potions, 1 Ankh, 5 cores).
-  Runs keep all loot even on death; wave gold bonus is paid in full at run end. In-run only: level/xp, skill
+  Runs keep all loot even on death; the +100 gold per card-reward room is paid in full at run end. In-run only: level/xp, skill
   points/levels, wave cards, baseStats. `resetProfile` (Settings) wipes it.
 * Hero Rank (persistent): rankXp += run xp * 0.5 at run end (also on death); `rankXpNeeded(r)=round(400*r^1.35)`.
   Gear needs rank (`RANK_REQ` 1/3/8/15/25); +1% gold find per rank (cap 50%).
-* Village (status MENU after the title): `engine/systems/village.ts` runs walking only (no enemies/director). Shops
-  and the quest board are open; E / click interacts, F harvests crystal + ore nodes. `world.village.shopsClosed`
-  gates shops (`openSpecificShop`). `enterVillage()` / `startRun()` in engine/game.ts.
-* Siege flow (director): SIEGE cutscene (2.5 s, skippable, bell) -> COUNTDOWN -> FIGHT -> REWARD -> RESPITE (20 s,
-  shops reopen + random per-item sales re-rolled, 35% villager gift; none before boss waves). Waves: fixed enemy quota, field
-  topped up while alive < threshold; kill-all = FAST CLEAR (bonus gold, 35% 4th card); 45 s timer = survived,
-  leftovers poof. Boss waves end on boss death.
+* Town (status MENU after the title): `engine/systems/village.ts` runs walking only (no enemies/director). Shops are always open;
+  E interacts. `enterVillage()` rebuilds the island collision map; `startRun()` (engine/game.ts) leaves for the first room.
+* Room runs (`docs/RUN_DESIGN.md`): `engine/roomDefs.ts` (pure data: 6 biomes, rosters, room types, `depthWave`, portal choices, reward
+  rarity), `engine/roomgen.ts` (one room = a disc around 0,0: blocking walls ring + outer decor ring + interior obstacles + crates +
+  biome hazards, installed through `mapgen.installRoom`; `mapgen.bounds` makes `edgeLimit` return the disc), `engine/systems/director.ts`
+  (flow), `engine/systems/merchant.ts` (merchant stock, `MERCHANT` shop tab). Flow: `enterRoom` -> FIGHT (pre-rolled pack list in 2-3 bursts,
+  each unit announced by a telegraph marker in `world.room.markers`, max 36 alive) -> all enemies dead -> CLEARED (room reward after 0.7 s,
+  1-3 portals from `nextChoices`, loot vacuumed after 1.4 s) -> walk into a portal or E (`roomNearby` interact pills) -> LEAVING (0.4 s fade
+  via `world.room.fade`, leftovers collected, everything transient cleared) -> next room. `world.director.wave` = depth wave so all
+  enemy / boss / loot scaling is unchanged. ~7 rooms per biome (the one before the boss is a fountain / merchant) then the boss room;
+  boss dead -> BIOME_DONE: boss loot + 4 cards, then the HUD (`BiomeChoice`) offers "Descend" or "Return to town"
+  (`finishRunVictory` -> `endRun({victory})`). After biome 6 the cycle loops with ever higher depth. Death = GAME_OVER, loot kept.
+  Render: `render/Room.tsx` (ground, stations, portals + labels, spawn markers) + `Props` (same instanced scenery path, biome tint) +
+  `biomeLook.tsx` (fog / sky / light per biome). Scene shows Room during a run and Terrain/Town only in the town.
 * Quests (`quests.ts`): 3 persistent villager quests, progress from engine events, claim draws a replacement.
 * Loot (`loot.ts`): stackable (99) sellable trade goods per source with COMMON..MYTHIC tables; coin drops are rare,
-  income = selling loot ("Sell all loot" in Supplies) + wave bonus. Crystals/ore drop SHARD pickups (materials).
-* Waves: 5 s countdown → 30 s spawn window → cleanup (kill the rest, max 15 s)
-  → reward cards (3 picks, keys 1/2/3) → next wave. Every 10th wave is a boss
-  wave (`enemyDefs.bossForWave`: Gorath 10, Malakar 20, Elderroot 30, Mire Hydra 40, Glacius 50, Ignar 60, Void Herald 70, then the cycle
-  repeats with scaling) with a top-centre boss bar. Elite
-  squads from wave 5 every 3 waves; elites get affixes.
-* Max alive: 50 (waves 1-10), +20 per 10 waves.
+  income = selling loot ("Sell all loot" in Supplies) + room bonus. Crystals/ore drop SHARD pickups (materials).
+* Rooms: Combat / Elite / Mini-boss (champion + adds, or the Lich in crypt biomes) / Fountain (40% hp+mp) / Merchant / Treasure (guarded
+  chest) / Shrine (optional challenge) / Boss. Boss rooms use `BIOMES[b].boss` (Golem, Treant, Hydra, Wyrm, Warlord, Void) with the top-centre
+  boss bar. Elites get affixes. No timers, no quotas.
 * Difficulty select: Easy / Normal / Hard / Nightmare multiplies hp, damage,
   spawn budget and loot luck.
 * Loot: rarity colours white/blue/purple/yellow/red; rank reqs 1/3/8/15/25; bosses drop Epic+, Legendary from wave 30, Mythic from wave 60.

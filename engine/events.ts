@@ -4,7 +4,7 @@
 // Never emit per-entity-per-frame events (e.g. "moved"); only discrete moments.
 // ============================================================================
 import type { Vector3 } from 'three';
-import type { EnemyKind, ProjectileKind, PickupKind, CrateKind } from './types';
+import type { EnemyKind, ProjectileKind, PickupKind, CrateKind, RoomType } from './types';
 import type { Rarity } from '../types';
 
 export type DamageKind = 'PHYSICAL' | 'FIRE' | 'ICE' | 'POISON' | 'MAGIC' | 'LIGHTNING' | 'TRUE';
@@ -63,16 +63,13 @@ export interface GameEvents {
   shake: { amount: number }; // adds camera trauma 0..1
 
   // flow
-  waveStart: { wave: number; boss: boolean; elite: boolean };
-  waveClear: { wave: number; fast?: boolean };
-  countdown: { seconds: number }; // emitted each whole second during COUNTDOWN
+  waveStart: { wave: number; boss: boolean; elite: boolean };   // a room was entered (wave = depth)
+  waveClear: { wave: number; fast?: boolean };                  // the room's enemies are all dead
+  roomEnter: { biome: number; index: number; type: RoomType; boss: boolean; name: string };
+  portalsOpen: {};
+  biomeClear: { biome: number };
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
-  siegeStart: {};                       // village siege begins (bell + banner)
-  respiteStart: { seconds: number };
-  respiteEnd: {};
-  fastClear: { wave: number; gold: number };
-  villagerGift: { pos: Vector3; text: string };
   runStart: {};
   runEnd: {};
 }
