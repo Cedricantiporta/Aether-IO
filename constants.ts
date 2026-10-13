@@ -1,6 +1,7 @@
 
 import type { Item, PlayerStats, HeroClass, Upgrade, Rarity } from "./types";
 import type { Difficulty } from "./storeTypes";
+import { GENERATED_ITEMS } from "./itemCatalog";
 
 /** Legacy diameter of the playable area. The simulation uses ARENA_RADIUS from engine/world.ts. */
 export const ARENA_SIZE = 136;
@@ -317,3 +318,6 @@ export const ITEMS_POOL: Item[] = [
   { id: 'ring_myth', name: 'Omni Ring', type: 'ACCESSORY', rarity: 'MYTHIC', price: 5000, level: 1, 
     stats: { damage: 50, moveSpeed: 0.2, cooldownReduction: 0.2, skillDamage: 0.5, defense: 30 } },
 ];
+
+// Generated variety (class weapon alternatives, armour flavours, class starter gear, item-set pieces).
+ITEMS_POOL.push(...GENERATED_ITEMS);

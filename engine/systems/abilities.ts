@@ -79,7 +79,7 @@ export function castQ(): void {
 
   switch (ability) {
     case 'RAGE':
-      p.rageT = 4;
+      p.rageT = 4 + st.stats.rageBonus;
       announce('RAGE');
       break;
     case 'PIERCING_SHOT':
@@ -122,7 +122,7 @@ export function castR(): void {
 
   switch (ability) {
     case 'ARROW_RAIN':
-      p.hawkT = 10;
+      p.hawkT = 10 + s.hawkBonus;
       announce('ARROW_RAIN');
       break;
     case 'FIREBALL': {

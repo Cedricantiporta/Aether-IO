@@ -3,6 +3,7 @@ import type { Item } from '../../types';
 import { RARITY_TEXT } from '../lib/game';
 import { LOOT, LOOT_BY_NAME } from '../../loot';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
+import { ART, type Pal, type ArtSpec } from '../../itemCatalog';
 
 /** Painted SVG item icons (transparent background, drawn on a 64x64 grid). Memoized per (kind, rarity, size). */
 
@@ -331,7 +332,107 @@ const LOOT_DRAW: Record<string, (a: string, b: string) => React.ReactNode> = {
 };
 const lootDraw = (glyph: string, a: string, b: string): Draw => () => (LOOT_DRAW[glyph] ?? LOOT_DRAW.nugget)(a, b);
 
+
+// ---- parametric families for the generated catalog (shape x palette) ----
+const BOW_PATH = ['M44 10 C26 16 26 48 44 54', 'M48 2 C16 12 12 52 48 62', 'M38 4 C54 14 22 22 22 32 C22 42 54 50 38 60', 'M46 6 C18 14 18 50 46 58'];
+const BowP = (sh: number, p: Pal): Draw => () => {
+  const d = BOW_PATH[sh % 4]; const x0 = [44, 48, 38, 46][sh % 4], y0 = [10, 2, 4, 6][sh % 4], y1 = [54, 62, 60, 58][sh % 4];
+  return (<g>
+    <circle cx="30" cy="32" r="26" fill={p.gem} opacity=".12" />
+    <path d={d} fill="none" stroke={S} strokeWidth="8" strokeLinecap="round" />
+    <path d={d} fill="none" stroke={g(p.a)} strokeWidth="5" strokeLinecap="round" />
+    <path d={d} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth="1" transform="translate(-1.5 .5)" />
+    {sh === 3 && <path d="M40 14 C26 20 26 44 40 50" fill="none" stroke={g(p.b)} strokeWidth="2.4" strokeLinecap="round" />}
+    {sh === 1 && <path d="M18 18 C12 16 10 10 12 8 C16 8 19 12 18 18Z M18 46 C12 48 10 54 12 56 C16 56 19 52 18 46Z" fill={g(p.b)} {...st} />}
+    {sh === 2 && <><circle cx="38" cy="4" r="2.6" fill={g(p.b)} {...st} /><circle cx="38" cy="60" r="2.6" fill={g(p.b)} {...st} /></>}
+    <path d={`M${x0} ${y0} L${x0} ${y1}`} stroke="#f1ead8" strokeWidth="1.1" />
+    <path d="M10 32 H50" stroke={S} strokeWidth="3.4" strokeLinecap="round" /><path d="M10 32 H50" stroke={g('wood')} strokeWidth="1.6" />
+    <path d="M54 32 L47 27 V37Z" fill={g('steel')} {...st} /><path d="M10 32 L5 28 M10 32 L5 36 M14 32 L9 28 M14 32 L9 36" stroke={p.gem} strokeWidth="2" strokeLinecap="round" />
+    <rect x="21" y="27" width="6" height="10" rx="2" fill={g(p.b)} {...st} />{Facet(24, 32, 2.4, p.gem, true)}
+  </g>);
+};
+const StaffP = (sh: number, p: Pal): Draw => () => (<g transform="rotate(40 32 32)">
+  <circle cx="32" cy="12" r="18" fill={p.gem} opacity=".16" />
+  <rect x="29.6" y="16" width="4.8" height="46" rx="2.2" fill={g(p.b)} {...st} /><path d="M29.6 34 H34.4 M29.6 42 H34.4" stroke={S} strokeOpacity=".5" strokeWidth="1" />
+  {sh === 0 && <><path d="M25 12 C23 4 30 4 32 9 C34 4 41 4 39 12 C38 18 34 20 32 20 C30 20 26 18 25 12Z" fill={g(p.a)} {...st} />{Orb(32, 10, 5, p.gem)}</>}
+  {sh === 1 && <><path d="M22 4 C16 14 22 24 32 24 C42 24 48 14 42 4 C42 14 38 19 32 19 C26 19 22 14 22 4Z" fill={g(p.a)} {...st} />{Orb(32, 11, 4.6, p.gem)}</>}
+  {sh === 2 && <><path d="M32 -2 L40 10 L36 22 L28 22 L24 10Z" fill={p.gem} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /><path d="M32 -2 L32 22 M24 10 H40" stroke="#fff" strokeOpacity=".6" strokeWidth=".9" /><path d="M24 20 H40 L38 25 H26Z" fill={g(p.a)} {...st} /></>}
+  {sh === 3 && <><ellipse cx="32" cy="11" rx="14" ry="5.4" fill="none" stroke={S} strokeWidth="3.4" /><ellipse cx="32" cy="11" rx="14" ry="5.4" fill="none" stroke={g(p.a)} strokeWidth="1.8" /><path d="M32 -5 L35 4 L32 8 L29 4Z M18 -1 L23 5 M46 -1 L41 5" fill={g(p.a)} {...st} />{Orb(32, 11, 7.4, p.gem)}{Spark(32, 11, 3.6)}</>}
+  <rect x="27" y="21" width="10" height="3.8" rx="1.5" fill={g(p.a)} {...st} />
+</g>);
+const AxeP = (sh: number, p: Pal): Draw => () => (<g transform="rotate(35 32 32)">
+  <circle cx="32" cy="20" r="26" fill={p.gem} opacity=".14" />
+  <rect x="29.8" y="4" width="4.4" height="58" rx="2" fill={g(p.b)} {...st} />
+  {sh === 0 && <><path d={BLADE_R} fill={g(p.a)} {...st} /><path d="M50 14 C54 20 54 26 50 31" stroke="#fff" strokeOpacity=".75" strokeWidth="1.5" fill="none" strokeLinecap="round" /></>}
+  {sh === 1 && <><path d={BLADE_R} fill={g(p.a)} {...st} /><path d={BLADE_L} fill={g(p.a)} {...st} /><path d="M50 14 C54 20 54 26 50 31 M14 18 C13 22 14 26 17 29" stroke="#fff" strokeOpacity=".7" strokeWidth="1.4" fill="none" strokeLinecap="round" /></>}
+  {sh === 2 && <><path d="M34 8 H56 L58 36 H34Z" fill={g(p.a)} {...st} /><circle cx="48" cy="22" r="3.2" fill="#14100c" stroke={S} strokeWidth="1" /><path d="M38 12 V32" stroke="#fff" strokeOpacity=".6" strokeWidth="1.4" /></>}
+  {sh === 3 && <><path d="M34 8 C46 4 58 10 58 22 C58 30 50 36 34 36 C40 28 40 16 34 8Z" fill={g(p.a)} {...st} /><path d="M30 14 L18 8 L26 22 L30 24Z" fill={g(p.a)} {...st} /><path d="M58 22 L64 20 L58 14" fill={g(p.b)} {...st} /></>}
+  <rect x="27.5" y="22" width="9" height="7" rx="1.5" fill={g(p.b)} {...st} />{Facet(32, 25.5, 3, p.gem, true)}
+  <rect x="29" y="58" width="6" height="4" rx="1.5" fill={g(p.b)} {...st} />
+</g>);
+
+const HelmP = (sh: number, p: Pal): Draw => () => (<g>
+  {sh === 4 && <path d="M12 30 C2 28 0 14 8 6 C10 16 16 22 20 24Z M52 30 C62 28 64 14 56 6 C54 16 48 22 44 24Z" fill="#fff0c8" {...st} />}
+  {sh === 1 && <path d="M10 54 C8 28 20 8 36 4 C32 14 34 22 40 28 C44 34 52 40 54 54 H44 V40 H20 V54Z" fill={g(p.a)} {...st} />}
+  {sh === 6 && <path d="M8 50 H56 L50 44 C46 36 42 24 34 4 C30 22 18 36 14 44Z" fill={g(p.a)} {...st} />}
+  {sh === 7 && <><path d="M10 40 C10 20 22 12 32 12 C42 12 54 20 54 40 H10Z" fill={g(p.a)} {...st} /><path d="M52 34 L62 42 L50 44Z M54 40 L60 54 L50 46Z" fill={g(p.b)} {...st} /><path d="M10 34 H54 V42 H10Z" fill={g(p.b)} {...st} /></>}
+  {sh === 5 && <><path d="M12 40 C12 34 20 30 32 30 C44 30 52 34 52 40 C52 46 44 50 32 50 C20 50 12 46 12 40Z" fill="none" stroke={S} strokeWidth="6" /><path d="M12 40 C12 34 20 30 32 30 C44 30 52 34 52 40" fill="none" stroke={g(p.a)} strokeWidth="3.6" /><path d="M14 36 L10 22 L22 32 L32 16 L42 32 L54 22 L50 36Z" fill={g(p.a)} {...st} /></>}
+  {(sh === 0 || sh === 2 || sh === 3 || sh === 4) && <path d={sh === 3 ? 'M12 52 C10 26 18 10 32 10 C46 10 54 26 52 52 H12Z' : sh === 2 ? 'M10 50 C8 24 18 10 32 10 C46 10 56 24 54 50 H44 V38 H20 V50Z' : 'M10 48 C10 24 20 12 32 12 C44 12 54 24 54 48Z'} fill={g(p.a)} {...st} />}
+  {sh === 0 && <path d="M6 46 H58 L56 52 H8Z" fill={g(p.b)} {...st} />}
+  {sh === 2 && <><path d="M29 22 H35 V44 H29Z" fill={g(p.b)} {...st} /><path d="M20 34 H44 V40 H20Z" fill={g(p.b)} {...st} /></>}
+  {sh === 3 && <><path d="M18 30 H46 V36 H18Z" fill="#0b0806" stroke={S} strokeWidth="1" /><path d="M32 12 V52" stroke={g(p.b)} strokeWidth="3" /><path d="M20 40 H44 M20 46 H44" stroke={S} strokeOpacity=".4" strokeWidth="1" /></>}
+  {sh === 4 && <path d="M20 36 H44 V42 H20Z" fill={g(p.b)} {...st} />}
+  {sh !== 5 && sh !== 7 && <path d="M15 22 C20 15 26 13 32 13" stroke="#fff" strokeOpacity=".5" strokeWidth="2" fill="none" strokeLinecap="round" />}
+  <circle cx="32" cy={sh === 6 ? 40 : sh === 5 ? 24 : sh === 3 ? 22 : 26} r="3.2" fill={p.gem} stroke={S} strokeWidth="1" />
+</g>);
+const ArmorP = (sh: number, p: Pal): Draw => sh === 1 ? () => (<g>
+  <path d="M12 12 L24 6 H40 L52 12 L58 24 L48 28 L52 60 H12 L16 28 L6 24Z" fill={g(p.a)} {...st} />
+  <path d="M24 6 C28 16 36 16 40 6 L36 4 H28Z" fill="#14100c" {...st} /><path d="M16 36 H48" stroke={g(p.b)} strokeWidth="4" /><path d="M16 36 H48" stroke={S} strokeWidth=".8" />
+  <path d="M32 18 V60 M22 40 L18 60 M42 40 L46 60" stroke={S} strokeOpacity=".35" strokeWidth="1.2" />{Facet(32, 36, 3.6, p.gem, true)}<path d="M12 14 L8 24" stroke="#fff" strokeOpacity=".5" strokeWidth="1.3" strokeLinecap="round" />
+</g>) : sh === 2 ? () => (<g>
+  <path d="M32 4 C44 4 50 14 50 24 L58 56 H6 L14 24 C14 14 20 4 32 4Z" fill={g(p.a)} {...st} />
+  <path d="M32 8 C38 8 42 14 42 22 L32 30 L22 22 C22 14 26 8 32 8Z" fill="#14100c" {...st} /><path d="M32 30 V58 M20 34 L14 56 M44 34 L50 56" stroke={S} strokeOpacity=".4" strokeWidth="1.2" />
+  <circle cx="32" cy="32" r="3.6" fill={g(p.b)} {...st} />{Facet(32, 32, 2.2, p.gem)}<path d="M18 16 C16 26 14 36 12 48" stroke="#fff" strokeOpacity=".4" strokeWidth="1.4" fill="none" />
+</g>) : Chest({ body: p.a, trim: p.b, mark: sh === 3 ? 'laces' : 'plate', gem: sh === 0 ? p.gem : undefined, spikes: false });
+const GlovesP = (sh: number, p: Pal): Draw => () => (<g>
+  <path d="M18 56 V36 C10 34 8 26 12 20 C16 24 18 26 20 28 V12 C20 8 26 8 26 12 V24 V8 C26 4 32 4 32 8 V24 V10 C32 6 38 6 38 10 V26 V16 C38 12 44 12 44 16 V40 C50 44 48 52 46 56Z" fill={g(p.a)} {...st} />
+  <rect x="16" y={sh === 0 ? 44 : 46} width="32" height={sh === 0 ? 12 : 10} rx="2" fill={g(p.b)} {...st} />
+  {sh === 0 && <path d="M16 48 L48 52 M16 52 L48 56 M22 22 L38 30 M22 30 L38 22" stroke="#f1d9a0" strokeWidth="1.4" strokeLinecap="round" />}
+  {sh === 2 && <path d="M20 14 H26 M26 10 H32 M32 12 H38 M20 24 H38" stroke={S} strokeOpacity=".55" strokeWidth="1.6" />}
+  {sh === 3 && <path d="M20 8 L22 0 L25 8 M26 6 L29 -2 L32 6 M32 8 L35 0 L38 8 M38 12 L42 4 L44 14" fill="#f4f1e8" stroke={S} strokeWidth="1" strokeLinejoin="round" />}
+  {sh === 1 && <path d="M20 22 V32 M26 20 V32 M32 20 V32 M38 22 V32" stroke={S} strokeOpacity=".4" strokeWidth="1" />}
+  <circle cx="32" cy="51" r="2.6" fill={p.gem} stroke={S} strokeWidth="1" /><path d="M14 22 C14 28 16 32 20 34" stroke="#fff" strokeOpacity=".45" strokeWidth="1.6" fill="none" />
+</g>);
+const BootsP = (sh: number, p: Pal): Draw => () => (<g>
+  {sh === 3 ? <path d="M18 14 H34 V34 C36 40 46 40 54 36 C60 34 62 42 56 48 C48 56 30 56 14 56 C8 56 8 48 14 46Z" fill={g(p.a)} {...st} />
+    : <path d={sh === 2 ? 'M14 4 H36 V34 C36 38 46 40 54 46 C58 49 58 58 52 58 H10 C6 58 6 50 12 48Z' : 'M16 8 H34 V32 C34 36 44 38 52 44 C58 47 58 56 52 56 H12 C8 56 8 50 12 48 L16 8Z'} fill={g(p.a)} {...st} />}
+  <path d="M10 48 H54 V57 H10Z" fill={g(p.b)} {...st} /><path d="M16 8 H34 V15 H16Z" fill={g(p.b)} {...st} />
+  {sh === 2 && <path d="M16 22 H36 M16 30 H36" stroke={g(p.b)} strokeWidth="4" />}
+  {sh === 1 && <path d="M6 18 C10 12 14 12 16 18 C14 20 10 20 6 18Z M4 28 C8 24 12 24 14 28 C12 30 8 30 4 28Z" fill="#fff" stroke={S} strokeWidth="1" opacity=".95" />}
+  {sh !== 2 && <path d="M18 22 H34 M18 28 H34" stroke={S} strokeOpacity=".5" strokeWidth="1.2" />}
+  {sh === 0 && <path d="M30 50 L38 50 M44 50 L50 50" stroke="#f1ead8" strokeWidth="1.4" />}
+  <circle cx="24" cy="42" r="2.6" fill={p.gem} stroke={S} strokeWidth="1" /><path d="M20 12 C20 24 22 34 28 40" stroke="#fff" strokeOpacity=".4" strokeWidth="1.6" fill="none" />
+</g>);
+const AccP = (sh: number, p: Pal): Draw => () => sh === 0 ? (<g>
+  <circle cx="32" cy="30" r="24" fill={p.gem} opacity=".14" />
+  <ellipse cx="32" cy="40" rx="18" ry="17" fill="none" stroke={S} strokeWidth="9" /><ellipse cx="32" cy="40" rx="18" ry="17" fill="none" stroke={g(p.a)} strokeWidth="6" />
+  <path d="M18 34 C20 26 28 24 34 25" stroke="#fff" strokeOpacity=".65" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+  <path d="M32 10 C40 10 44 16 40 24 H24 C20 16 24 10 32 10Z" fill={g(p.b)} {...st} />{Facet(32, 16, 6, p.gem, true)}
+</g>) : sh === 1 ? (<g>
+  <path d="M10 4 C14 30 24 36 32 38 C40 36 50 30 54 4" fill="none" stroke={S} strokeWidth="5" strokeLinecap="round" />
+  <path d="M10 4 C14 30 24 36 32 38 C40 36 50 30 54 4" fill="none" stroke={g(p.a)} strokeWidth="2.6" strokeLinecap="round" strokeDasharray="4 2" />
+  <circle cx="32" cy="46" r="14" fill={p.gem} opacity=".22" /><path d="M32 32 L44 46 L32 60 L20 46Z" fill={g(p.b)} {...st} />{Facet(32, 46, 6.4, p.gem, true)}
+</g>) : (<g>
+  <path d="M14 6 C18 24 26 28 32 28 C38 28 46 24 50 6" fill="none" stroke={S} strokeWidth="4.4" strokeLinecap="round" /><path d="M14 6 C18 24 26 28 32 28 C38 28 46 24 50 6" fill="none" stroke={g(p.b)} strokeWidth="2" strokeLinecap="round" />
+  <path d="M32 30 C46 34 52 46 46 58 C38 62 24 62 18 56 C12 46 20 34 32 30Z" fill={g(p.a)} {...st} /><path d="M32 36 C40 40 42 48 38 54 C32 56 26 54 24 50 C22 44 26 38 32 36Z" fill={p.gem} opacity=".85" stroke={S} strokeWidth="1" />
+  <path d="M22 44 C24 40 28 38 32 38" stroke="#fff" strokeOpacity=".7" strokeWidth="1.4" fill="none" strokeLinecap="round" />{Spark(48, 40, 2.6)}
+</g>);
+
+const FAM: Record<ArtSpec['f'], (s: number, p: Pal) => Draw> = { bow: BowP, staff: StaffP, axe: AxeP, helm: HelmP, armor: ArmorP, gloves: GlovesP, boots: BootsP, acc: AccP };
+const GENERATED_DRAW: Record<string, Draw> = Object.fromEntries(Object.entries(ART).map(([id, a]) => [id, FAM[a.f](a.s, a.pal)]));
+
 const DRAW: Record<string, Draw> = {
+  ...GENERATED_DRAW,
   staff_1: Staff(0), staff_rare: Staff(1), staff_3: Staff(2), staff_legend: Staff(3), staff_god: Staff(4),
   bow_1: Bow(0), bow_2: Bow(1), bow_epic: Bow(2), bow_legend: Bow(3), bow_god: Bow(4),
   axe_1: Axe(0), axe_2: Axe(1), axe_epic: Axe(2), axe_legend: Axe(3), axe_god: Axe(4),

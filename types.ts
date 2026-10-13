@@ -58,7 +58,34 @@ export interface PlayerStats {
   skillDamage: number; 
   knockback: number; 
   dodge: number;
+  // ---- affix / set / talent driven (all default 0)
+  lifeSteal: number;        // fraction of damage dealt returned as HP
+  thorns: number;           // flat damage to nearby enemies when you are hit
+  goldFind: number;         // +fraction gold from pickups
+  xpBonus: number;          // +fraction xp gained
+  pierceBonus: number;      // extra pierce on basic projectiles
+  onHitBurnChance: number;  // chance on hit to ignite
+  onHitSlowChance: number;  // chance on hit to slow
+  echoEvery: number;        // every Nth attack fires twice (0 = off)
+  hawkBonus: number;        // +seconds Hawk's Focus
+  procHaste: number;        // on-attack procs need N fewer attacks
+  thunderChain: number;     // +chain lightning targets
+  stormBonus: number;       // +seconds typhoon lifetime
+  stormTwin: number;        // 1 = typhoon spawns a second one
+  blizzardRadius: number;   // +blizzard radius
+  blizzFreeze: number;      // +seconds blizzard freeze
+  stompRadius: number;      // +mega stomp radius
+  stompStun: number;        // +seconds stomp stun
+  stompPower: number;       // +fraction stomp damage
+  dashCharges: number;      // +dash charges
+  lowHpHaste: number;       // +fraction attack speed below 50% HP
+  rageBonus: number;        // +seconds Rage
+  dmgReduce: number;        // fraction of damage taken negated
+  manaCostCut: number;      // fraction mana cost reduction
+  berserk: number;          // +fraction damage below 35% HP
 }
+
+export interface ItemAffix { key: string; value: number }
 
 export interface Item {
   id: string;
@@ -84,6 +111,7 @@ export interface Item {
   petCooldown?: number; 
   summonOnly?: boolean; // not sold in the Pets shop; Summon altar only
   
+  affixes?: ItemAffix[];   // rolled bonus lines (gear only)
   setName?: string;
   setBonus?: string; 
   setBonusStats?: Partial<PlayerStats>;

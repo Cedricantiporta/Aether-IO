@@ -34,6 +34,9 @@ export interface StatusEffect {
 }
 
 const dropPos = new Vector3();
+let lsAcc = 0;
+let thornT = -1;
+const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 
 // ------------------------------------------------------------------ helpers --
 export function addShake(amount: number): void {
@@ -167,6 +170,11 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     const run = world.run;
     run.damageDealt += dealt;
     if (!o.dot && dealt > run.highestHit) run.highestHit = dealt;
+    // Life steal (gear affixes / sets / talents): direct player damage only; healed in chunks to limit floating text.
+    if (o.source === 'PLAYER' && !o.dot) {
+      const ls = useGameStore.getState().stats.lifeSteal;
+      if (ls > 0) { lsAcc += Math.min(dealt, 4000) * ls; if (lsAcc >= 2) { healPlayer(lsAcc); lsAcc = 0; } }
+    }
   }
 
   if (o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
@@ -290,7 +298,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
 
   const barrier = st.skillLevels.barrier;
   const mods = DIFFICULTY_MODS[st.difficulty];
-  const reduced = Math.max(1, amount * (100 / (100 + st.stats.defense)) * mods.dmg);
+  const reduced = Math.max(1, amount * (100 / (100 + st.stats.defense)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)));
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);
@@ -302,6 +310,12 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
 
   const run = world.run;
   run.damageTaken += reduced;
+
+  // Thorns: reflect flat damage to enemies in melee range (at most ~3 times a second).
+  if (st.stats.thorns > 0 && kind !== 'POISON' && world.run.time - thornT > 0.33) {
+    thornT = world.run.time;
+    damageEnemiesInRadius(p.pos.x, p.pos.z, 4.5, st.stats.thorns * (1 + st.stats.damage * 0.04), thornOpts);
+  }
 
   events.emit('playerHit', { pos: p.pos, amount: reduced });
   events.emit('damage', { pos: p.pos, amount: reduced, crit: false, kind, toPlayer: true });

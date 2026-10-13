@@ -5,6 +5,8 @@ import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '
 import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
 import { HERO_STATS } from '../../constants';
+import { affixText, isUnique } from '../../affixes';
+import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
   const set = new Set<string>([...Object.keys(a), ...(b ? Object.keys(b) : [])]);
@@ -16,6 +18,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
   const equipment = useGameStore((s) => s.equipment);
   const heroClass = useGameStore((s) => s.hero);
   const level = useGameStore((s) => s.heroRank);
+  const inventory = useGameStore((s) => s.inventory);
   const slot = slotOf(item);
   const equipped = compare && slot ? equipment[slot] : null;
   const isEquippedItself = equipped === item;
@@ -55,7 +58,36 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
           </div>
         );
       })}
-      {item.setName && <><div className="tt-sep" /><div style={{ color: '#1f7a2e', fontWeight: 700 }}>Set: {item.setName}</div>{item.setBonus && <div className="muted">{item.setBonus}</div>}</>}
+      {item.affixes && item.affixes.length > 0 && (
+        <>
+          <div className="tt-sep" />
+          {item.affixes.map((a, i) => (
+            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#b8570a' : '#1f5fbf', fontWeight: 700, fontSize: '.78rem' }}>{isUnique(a) ? '★ ' : '◆ '}{affixText(a)}</div>
+          ))}
+        </>
+      )}
+      {item.setName && SET_BY_NAME[item.setName] && (() => {
+        const def = SET_BY_NAME[item.setName!];
+        const counts = equippedSetCounts(equipment);
+        const n = counts[def.name] || 0;
+        const prog = setProgress(def, heroClass, equipment, inventory);
+        return (
+          <div data-testid="set-block">
+            <div className="tt-sep" />
+            <div style={{ color: SET_COLOR, fontWeight: 800 }}>{def.name} ({n}/6)</div>
+            {prog.map((p) => (
+              <div key={p.slot} style={{ fontSize: '.72rem', color: p.state === 'equipped' ? SET_COLOR : p.state === 'owned' ? '#6a5a3a' : '#9a8f78', fontWeight: p.state === 'equipped' ? 700 : 500 }}>
+                {p.state === 'equipped' ? '✔' : p.state === 'owned' ? '●' : '○'} {p.name}{p.state === 'owned' ? ' (in bag)' : ''}
+              </div>
+            ))}
+            <div style={{ marginTop: 3 }}>
+              {def.bonuses.map((b) => (
+                <div key={b.pieces} style={{ fontSize: '.72rem', color: n >= b.pieces ? SET_COLOR : '#9a8f78', fontWeight: n >= b.pieces ? 700 : 500 }}>({b.pieces}) {b.text}</div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {item.onHitEffect && (
         <>
           <div className="tt-sep" />

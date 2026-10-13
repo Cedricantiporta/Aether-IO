@@ -14,6 +14,7 @@ import type {
 import type { Recipe } from './crafting';
 import type { RunStats } from './engine/types';
 import type { Quest, QuestType } from './quests';
+import type { TalentRanks } from './talents';
 import type { EnemyKind } from './engine/types';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
@@ -67,6 +68,8 @@ export interface GameState {
   rankXp: number;                     // xp into the current rank; need rankXpNeeded(heroRank)
   quests: Quest[];                    // 3 active villager quests
   welcomeGiftClaimed: boolean;
+  talents: Record<HeroClass, TalentRanks>;   // permanent talent ranks per class (node id -> rank)
+  starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
 
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)
   gold: number;
@@ -158,6 +161,10 @@ export interface GameState {
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll
   summon: (count: 1 | 10) => Item[]; // gacha with gems (100 each, 900 for 10x); pets+gear; returns results for reveal UI
+
+  // talents (permanent, per class; 1 point per Hero Rank + 1 per 5 ranks)
+  allocateTalent: (id: string) => boolean;
+  respecTalents: () => boolean;      // costs gold (talents.respecCost)
 
   // notifications
   addNotification: (message: string, color?: string, type?: GameNotification['type'], action?: GameNotification['action']) => void;

@@ -43,7 +43,7 @@ export function initPlayer(): void {
   p.vel.set(0, 0, 0);
   p.hp = st.stats.maxHealth;
   p.mana = st.stats.maxMana;
-  p.maxDashCharges = st.skillLevels.dash >= 5 ? 2 : 1;
+  p.maxDashCharges = (st.skillLevels.dash >= 5 ? 2 : 1) + (st.stats.dashCharges | 0);
   p.dashCharges = p.maxDashCharges;
   p.dashCd = 0;
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
@@ -137,7 +137,7 @@ export function updatePlayer(dt: number): void {
   p.cd.e = tickDown(p.cd.e, dt);
 
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
-  const maxDash = lv.dash >= 5 ? 2 : 1;
+  const maxDash = (lv.dash >= 5 ? 2 : 1) + (stats.dashCharges | 0);
   if (maxDash > p.maxDashCharges) p.dashCharges += maxDash - p.maxDashCharges;
   p.maxDashCharges = maxDash;
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
@@ -256,7 +256,8 @@ export function updatePlayer(dt: number): void {
   if (moving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
-    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * (p.hawkT > 0 ? 1.6 : 1));
+    const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
+    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * (p.hawkT > 0 ? 1.6 : 1) * lowHaste);
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }

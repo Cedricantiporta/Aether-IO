@@ -81,14 +81,17 @@ export const procFlags = { stomp: 0 };   // set to skill level by the basic atta
 let procCount = 0;                       // volleys since the last proc
 let archerNext = 0;                      // 0 = fire next, 1 = ice next
 
-const procN = (lv: number): number => Math.max(2, 11 - lv);
+let procHaste = 0;
+let echoCount = 0;
+const procN = (lv: number): number => Math.max(2, 11 - lv - procHaste);
 
-export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; }
+export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; echoCount = 0; }
 
 /** HUD: attacks remaining until `skill` procs (0 when locked / not a proc skill of this hero). */
 export function procHud(skill: string, out: { t: number; max: number }): void {
   const st = useGameStore.getState();
   const lv = st.skillLevels;
+  procHaste = st.stats.procHaste;
   let n = 0, left = 0;
   if (st.hero === 'ARCHER' && (skill === 'burning' || skill === 'freezing')) {
     const fire = lv.burning > 0, ice = lv.freezing > 0;
@@ -121,7 +124,7 @@ function chainLightning(from: Enemy, lvl: number): void {
   chainHit.length = 0;
   chainHit.push(from);
   let cur = from;
-  for (let n = 2 + lvl; n > 0; n--) {
+  for (let n = 2 + lvl + (useGameStore.getState().stats.thunderChain | 0); n > 0; n--) {
     let best: Enemy | null = null, bd = 18 * 18;
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];
@@ -153,6 +156,8 @@ export function fireBasicAttack(): void {
   const pl = world.player;
   const dir = getAimDir(aim);
   const count = Math.max(1, Math.min(MULTISHOT_CAP, Math.floor(stats.multishot + 1e-6)));
+  procHaste = stats.procHaste;
+  const extraPierce = stats.pierceBonus | 0;
 
   let effect: Projectile['effect'];
   if (weapon?.onHitEffect) {
@@ -171,8 +176,8 @@ export function fireBasicAttack(): void {
   let radius = 1.5;
   switch (ptype) {
     case 'AXE': kind = 'AXE'; speed *= 2.7; life = 3.5; pierce = Infinity; break;
-    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4; aoe = 4; radius = 2.5; break;
-    default: kind = 'ARROW'; speed *= 1.5; life = 2.2; break;
+    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 4; radius = 2.5; break;
+    default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
 
   // ---- on-attack procs (per-volley counter)
@@ -197,12 +202,17 @@ export function fireBasicAttack(): void {
   }
 
   const emp = pl.hawkT > 0;           // Hawk's Focus: +40% damage, glowing shots
-  const dmgMul = emp ? 1.4 : 1;
+  const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
+  const dmgMul = (emp ? 1.4 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  // Echo (sets / talents): every Nth attack fires a second volley.
+  let echo = false;
+  if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
   const baseX = pl.pos.x + dir.x * 0.9;
   const baseZ = pl.pos.z + dir.z * 0.9;
-  for (let i = 0; i < count; i++) {
+  for (let rp = 0; rp < (echo ? 2 : 1); rp++) for (let i = 0; i < count; i++) {
     const off = i - (count - 1) / 2;
     let dx = dir.x, dz = dir.z, ox = baseX, oz = baseZ;
+    if (rp === 1) { ox += -dir.z * 0.8; oz += dir.x * 0.8; }
     if (kind === 'AXE') {
       ox += -dir.z * off * 2.0;
       oz += dir.x * off * 2.0;
@@ -212,13 +222,13 @@ export function fireBasicAttack(): void {
       dx = dir.x * c - dir.z * s;
       dz = dir.x * s + dir.z * c;
     }
-    if (i === Math.floor((count - 1) / 2) && (special || thunderProc)) {
+    if (rp === 0 && i === Math.floor((count - 1) / 2) && (special || thunderProc)) {
       if (special) {
         // Main projectile of this volley becomes the special arrow.
         const burn = special === 'BURNING_ARROW';
         const dmg = stats.damage * dmgMul * (burn ? 1.05 : 1.2) * stats.skillDamage * (1 + 0.15 * (specialLv - 1));
         spawnProjectile(special, ox, oz, dx, dz, 30, dmg, {
-          emp, life: 3, pierce: burn ? 3 : 2, aoe: burn ? 2.5 : 2, radius: 3, knockback: stats.knockback,
+          emp, life: 3, pierce: (burn ? 3 : 2) + extraPierce, aoe: burn ? 2.5 : 2, radius: 3, knockback: stats.knockback,
           effect: burn ? { type: 'BURN', duration: 4, value: stats.damage * 0.3 }
             : { type: 'SLOW', duration: 3 + 0.3 * specialLv, value: 0.6 },
         });
@@ -298,6 +308,11 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
 
   const fx = p.effect;
   if (fx && (fx.chance === undefined || Math.random() < fx.chance)) applyStatusFast(e, fx);
+  if (p.kind !== 'PET_BOLT') {
+    const ps = useGameStore.getState().stats;
+    if (ps.onHitBurnChance > 0 && Math.random() < ps.onHitBurnChance) { fxTmp.type = 'BURN'; fxTmp.duration = 3; fxTmp.value = Math.max(3, ps.damage * 0.25); applyStatus(e, fxTmp); }
+    if (ps.onHitSlowChance > 0 && Math.random() < ps.onHitSlowChance) { fxTmp.type = 'SLOW'; fxTmp.duration = 2.5; fxTmp.value = 0.4; applyStatus(e, fxTmp); }
+  }
 
   if (p.aoeRadius > 0) {
     splashOpts.kind = dkind;

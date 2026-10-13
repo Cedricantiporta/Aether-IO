@@ -1,4 +1,5 @@
 import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
+import { STAT_NAME, fmtFx } from '../../statFx';
 
 export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -13,18 +14,21 @@ export const RARITY_TEXT: Record<Rarity, string> = {
 export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#3fae55', WIZARD: '#4a7fe0', BARBARIAN: '#cf4343' };
 
 export const STAT_LABEL: Record<keyof PlayerStats, string> = {
+  ...STAT_NAME,
   maxHealth: 'Health', maxMana: 'Mana', regen: 'HP Regen', manaRegen: 'Mana Regen', moveSpeed: 'Move Speed',
   damage: 'Damage', fireRate: 'Attack Speed', projectileSpeed: 'Proj. Speed', multishot: 'Multishot', spread: 'Spread',
   dashCooldown: 'Dash Cooldown', cooldownReduction: 'Cooldown Red.', magnetRadius: 'Magnet', critRate: 'Crit Rate',
   critDamage: 'Crit Damage', defense: 'Defense', skillDamage: 'Skill Damage', knockback: 'Knockback', dodge: 'Dodge',
 };
 
+const BASIC_STATS: Record<string, 1> = { maxHealth: 1, maxMana: 1, regen: 1, manaRegen: 1, moveSpeed: 1, damage: 1, fireRate: 1, projectileSpeed: 1, multishot: 1, spread: 1, dashCooldown: 1, cooldownReduction: 1, magnetRadius: 1, critRate: 1, critDamage: 1, defense: 1, skillDamage: 1, knockback: 1, dodge: 1 };
 const PCT_ITEM = new Set(['critRate', 'critDamage', 'dodge', 'cooldownReduction', 'moveSpeed', 'skillDamage', 'spread']);
 
 /** Format an ITEM stat bonus (moveSpeed etc are fractions on items). */
 export function fmtItemStat(key: string, v: number): string {
   const sign = v >= 0 ? '+' : '-';
   const a = Math.abs(v);
+  if (!(key in BASIC_STATS)) return fmtFx(key as keyof PlayerStats, v);
   if (PCT_ITEM.has(key)) return `${sign}${Math.round(a * 100)}%`;
   if (key === 'regen' || key === 'manaRegen') return `${sign}${a.toFixed(1)}/s`;
   return `${sign}${Number.isInteger(a) ? a : a.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}`;

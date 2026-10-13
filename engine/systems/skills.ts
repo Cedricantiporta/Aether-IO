@@ -76,8 +76,9 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
 function stomp(stage: 1 | 2, level: number): void {
   const st = useGameStore.getState().stats;
   const pl = world.player;
-  const R = 12 + level;
-  const dmg = st.damage * 1.5 * st.skillDamage * lvScale(level);
+  const R = 12 + level + st.stompRadius;
+  const dmg = st.damage * 1.5 * st.skillDamage * lvScale(level) * (1 + st.stompPower);
+  stompStun.duration = 2 + st.stompStun;
   if (stage === 1) damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts1, stompStun);
   else damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts2);
   const z = allocZone();
@@ -190,13 +191,15 @@ export function updateSkills(dt: number): void {
     if (blizzT >= max) {
       if (findNearestEnemy(pl.pos.x, pl.pos.z, 27) && trySpendMana(st.getManaCost('freezeSpell'))) {
         blizzT = 0;
-        damageEnemiesInRadius(pl.pos.x, pl.pos.z, 27, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, freeze5);
+        const bR = 27 + stats.blizzardRadius;
+        freeze5.duration = 5.1 + stats.blizzFreeze;
+        damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, freeze5);
         const z = allocZone();
         if (z) {
           z.active = true; z.kind = 'FROST_NOVA'; z.hostile = false;
-          z.pos.set(pl.pos.x, 0, pl.pos.z); z.radius = 27; z.life = z.maxLife = 1.5; z.damage = 0; z.color = 0x0ea5e9;
+          z.pos.set(pl.pos.x, 0, pl.pos.z); z.radius = bR; z.life = z.maxLife = 1.5; z.damage = 0; z.color = 0x0ea5e9;
         }
-        events.emit('frostNova', { pos: pl.pos.clone(), radius: 27 });
+        events.emit('frostNova', { pos: pl.pos.clone(), radius: bR });
         pl.anim.castT = 1;
       } else blizzT = max;
     }
@@ -211,7 +214,12 @@ export function updateSkills(dt: number): void {
       stormT = 0;
       const dir = getAimDir(aim);
       spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x, dir.z, 4, stats.damage * 1.5 * stats.skillDamage * 2.0 * lvScale(lv.storm),
-        { life: 10, pierce: Infinity, knockback: 1.0, bounces: 6, radius: 5.5 });
+        { life: 10 + stats.stormBonus, pierce: Infinity, knockback: 1.0, bounces: 6 + Math.floor(stats.stormBonus / 2), radius: 5.5 });
+      if (stats.stormTwin > 0) {
+        const a = 0.9, ca = Math.cos(a), sa = Math.sin(a);
+        spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x * ca - dir.z * sa, dir.x * sa + dir.z * ca, 4, stats.damage * 1.5 * stats.skillDamage * 2.0 * lvScale(lv.storm),
+          { life: 10 + stats.stormBonus, pierce: Infinity, knockback: 1.0, bounces: 6 + Math.floor(stats.stormBonus / 2), radius: 5.5 });
+      }
       }
     }
   }

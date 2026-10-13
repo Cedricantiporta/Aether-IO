@@ -8,10 +8,11 @@ import { useRaf } from '../hooks/useRaf';
 import { Panel, PanelHead, StatLine } from '../components/Frame';
 import { HERO_ICON } from '../hud/TopBars';
 import { HERO_COLOR, timeMMSS } from '../lib/game';
+import { activeSets, SET_COLOR_DARK } from '../../itemSets';
 
 export const CharacterSheet: React.FC = () => {
-  const { hero, level, stats, close, shiftRight } = useGameStore(useShallow((s) => ({
-    hero: s.hero, level: s.level, stats: s.stats, close: s.toggleCharacterSheet, shiftRight: s.isShopOpen,
+  const { hero, level, stats, close, shiftRight, equipment } = useGameStore(useShallow((s) => ({
+    hero: s.hero, level: s.level, stats: s.stats, equipment: s.equipment, close: s.toggleCharacterSheet, shiftRight: s.isShopOpen,
   })));
   const Icon = HERO_ICON[hero];
   const kills = useRef<HTMLSpanElement>(null);
@@ -36,6 +37,12 @@ export const CharacterSheet: React.FC = () => {
     ['Cooldown red.', `-${pct(stats.cooldownReduction)}`], ['Skill damage', pct(stats.skillDamage)], ['Multishot', stats.multishot.toFixed(1)],
     ['Magnet range', stats.magnetRadius.toFixed(1)], ['Dodge', pct(stats.dodge)], ['Knockback', stats.knockback.toFixed(1)],
   ];
+  const extra: [string, string][] = ([
+    ['Life steal', stats.lifeSteal, pct], ['Thorns', stats.thorns, (v: number) => v.toFixed(0)], ['Gold find', stats.goldFind, pct], ['XP gain', stats.xpBonus, pct],
+    ['Extra pierce', stats.pierceBonus, (v: number) => `+${v}`], ['Burn on hit', stats.onHitBurnChance, pct], ['Slow on hit', stats.onHitSlowChance, pct],
+    ['Damage reduction', stats.dmgReduce, pct], ['Echo shot', stats.echoEvery, (v: number) => `every ${v}`], ['Extra dashes', stats.dashCharges, (v: number) => `+${v}`],
+  ] as [string, number, (v: number) => string][]).filter(([, v]) => v > 0).map(([l, v, f]) => [l, f(v)]);
+  const sets = activeSets(equipment);
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
@@ -51,6 +58,19 @@ export const CharacterSheet: React.FC = () => {
           </div>
           <div className="rpg-frame px-3 py-1">
             {rows.map(([l, v]) => <StatLine key={l} label={l} value={v} />)}
+            {extra.map(([l, v]) => <StatLine key={l} label={l} value={v} tone="pos" />)}
+          </div>
+          <div data-testid="set-bonuses">
+            <div className="rpg-label mb-1.5">Set bonuses</div>
+            {sets.length === 0 && <div className="rpg-frame px-3 py-2 text-[.72rem] text-[var(--text-dim)]">No set pieces equipped. Elites, bosses and chests drop set gear.</div>}
+            {sets.map(({ def, count }) => (
+              <div key={def.id} className="rpg-frame px-3 py-2 mb-1.5">
+                <div className="flex justify-between"><span className="font-bold text-[.8rem]" style={{ color: SET_COLOR_DARK, fontFamily: 'var(--font-title)' }}>{def.name}</span><span className="rpg-num text-[.75rem]">{count}/6</span></div>
+                {def.bonuses.map((b) => (
+                  <div key={b.pieces} className="text-[.68rem] leading-snug" style={{ color: count >= b.pieces ? SET_COLOR_DARK : 'var(--text-dim)', opacity: count >= b.pieces ? 1 : 0.65 }}>({b.pieces}) {b.text}</div>
+                ))}
+              </div>
+            ))}
           </div>
           <div>
             <div className="rpg-label mb-1.5">This run</div>

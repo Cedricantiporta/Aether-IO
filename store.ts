@@ -11,6 +11,12 @@ import {
   ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, INVENTORY_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
+import { rollAffixes, affixFx, affixCP } from './affixes';
+import { accumulateSets } from './itemSets';
+import { newAcc, accumulate, applyAcc } from './statFx';
+import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
+import { STARTER_GEAR } from './itemCatalog';
+import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
@@ -34,6 +40,9 @@ const INITIAL_STATS: PlayerStats = {
   fireRate: 2.0, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
   cooldownReduction: 0, magnetRadius: 5.0, critRate: 0.05, critDamage: 1.5, defense: 0,
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
+  lifeSteal: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
+  echoEvery: 0, hawkBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
+  stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
 };
 
 const INITIAL_SKILLS: SkillLevels = {
@@ -135,6 +144,7 @@ export const calculateItemCP = (item: Item): number => {
   if (s.multishot) cp += s.multishot * 200;
   if (s.dodge) cp += s.dodge * 500;
   const mult: Record<Rarity, number> = { COMMON: 1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
+  cp += affixCP(item);
   return Math.floor(cp * mult[item.rarity]);
 };
 
@@ -154,15 +164,15 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
   cp += stats.skillDamage * 100;
   cp += stats.multishot * 200;
   cp += stats.dodge * 500;
+  cp += stats.lifeSteal * 3000 + stats.thorns * 8 + stats.goldFind * 200 + stats.xpBonus * 200 + stats.pierceBonus * 150;
+  cp += stats.onHitBurnChance * 300 + stats.onHitSlowChance * 300 + stats.dmgReduce * 1500 + stats.dashCharges * 300;
   return Math.floor(cp);
 };
 
-const MULTIPLICATIVE_SET_STATS: ReadonlySet<keyof PlayerStats> = new Set<keyof PlayerStats>(['damage', 'moveSpeed', 'fireRate']);
-
-/** baseStats + equipment (+ set bonuses). Temporary buffs (rage / sprint) are applied by the engine. */
-const calculateStats = (base: PlayerStats, equipment: Equipment): PlayerStats => {
+/** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
+const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>): PlayerStats => {
   const final: PlayerStats = { ...base };
-  const sets: Record<string, number> = {};
+  const acc = newAcc();
 
   (Object.values(equipment) as (Item | null)[]).forEach((item) => {
     if (!item || !item.stats) return;
@@ -174,21 +184,11 @@ const calculateStats = (base: PlayerStats, equipment: Equipment): PlayerStats =>
       if (k === 'cooldownReduction') final[k] = Math.min(0.75, final[k] + v);
       else final[k] += v;
     });
-    if (item.setName) sets[item.setName] = (sets[item.setName] || 0) + 1;
+    if (item.affixes) for (const a of item.affixes) accumulate(acc, affixFx(a));
   });
-
-  Object.keys(sets).forEach((setName) => {
-    if (sets[setName] < 3) return;
-    const setItem = (Object.values(equipment) as (Item | null)[]).find((i) => i?.setName === setName);
-    const bonus = setItem?.setBonusStats;
-    if (!bonus) return;
-    (Object.keys(bonus) as (keyof PlayerStats)[]).forEach((stat) => {
-      const val = bonus[stat];
-      if (val === undefined || val === null) return;
-      if (MULTIPLICATIVE_SET_STATS.has(stat)) final[stat] *= 1 + val;
-      else final[stat] += val;
-    });
-  });
+  accumulateSets(acc, equipment);
+  accumulateTalents(acc, hero, talents[hero]);
+  applyAcc(final, acc);
 
   if (equipment.weapon && equipment.weapon.projectileType === 'MAGIC') final.fireRate *= 0.5;
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
@@ -286,12 +286,13 @@ const addCores = (inv: Item[], n: number): Item[] => {
   return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
-const instantiate = (template: Item): Item => ({
+const instantiate = (template: Item): Item => rollAffixes({
   ...template,
   level: isGear(template) || template.type === 'PET' ? template.level : 1,
   id: uid('it'),
   stats: { ...template.stats },
   onHitEffect: template.onHitEffect ? { ...template.onHitEffect } : undefined,
+  affixes: undefined,
   quantity: 1,
 });
 
@@ -306,6 +307,8 @@ interface Profile {
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
   hero: HeroClass; difficulty: Difficulty;
+  talents: Record<HeroClass, TalentRanks>;
+  starterGiven: Record<HeroClass, boolean>;
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -321,14 +324,30 @@ const baseGameStats = (): GameStatistics => ({
   ...INITIAL_GAME_STATS, classRuns: { ...INITIAL_GAME_STATS.classRuns }, classHighestWave: { ...INITIAL_GAME_STATS.classHighestWave },
 });
 
+/** Full COMMON starter set (weapon + helmet/armor/gloves/boots/accessory) for a class. */
+const starterPiece = (id: string): Item | null => {
+  const tpl = ITEMS_POOL.find((i) => i.id === id);
+  return tpl ? { ...instantiate(tpl), id: uid('start') } : null;
+};
+const starterEquipment = (hero: HeroClass): Equipment => {
+  const g = STARTER_GEAR[hero];
+  return {
+    ...EMPTY_EQUIPMENT,
+    weapon: starterPiece(HERO_STATS[hero].weaponId),
+    helmet: starterPiece(g.helmet), armor: starterPiece(g.armor), gloves: starterPiece(g.gloves), boots: starterPiece(g.boots), accessory: starterPiece(g.accessory),
+  };
+};
+const isStarterId = (id: string | undefined): boolean => !!id && id.startsWith('start_');
+
 /** A brand-new profile with the welcome gift applied (welcomeGiftClaimed = true). */
 const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile => ({
   v: PROFILE_VERSION,
   gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems,
-  inventory: welcomeItems(), equipment: { ...EMPTY_EQUIPMENT }, materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
+  inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
   heroRank: 1, rankXp: 0, quests: fillQuests(1, []),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
+  talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false },
 });
 
 const num = (v: unknown, d: number, min = 0): number => (typeof v === 'number' && isFinite(v) ? Math.max(min, v) : d);
@@ -363,6 +382,8 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' ? p.hero : f.hero,
               difficulty: p.difficulty && DIFFICULTIES.includes(p.difficulty) ? p.difficulty : 'NORMAL',
+              talents: sanitizeTalents(p.talents),
+              starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' ? p.hero : 'ARCHER']: true },
             },
           };
         }
@@ -386,6 +407,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
+      talents: s.talents, starterGiven: s.starterGiven,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -447,8 +469,10 @@ export const useGameStore = create<GameState>()((set, get) => {
     return st !== GameStatus.LEVEL_UP && st !== GameStatus.GAME_OVER;
   };
 
+  const calc = (base: PlayerStats, equipment: Equipment): PlayerStats => calculateStats(base, equipment, get().hero, get().talents);
+
   /** Hero starting stats + class-locked loadout swap (foreign weapon -> bag, starter weapon / pet if missing). */
-  const loadoutFor = (hero: HeroClass, inv: Item[], eq: Equipment) => {
+  const loadoutFor = (hero: HeroClass, inv: Item[], eq: Equipment, talents?: Record<HeroClass, TalentRanks>) => {
     const heroInfo = HERO_STATS[hero];
     const baseStats: PlayerStats = { ...INITIAL_STATS, ...heroInfo.stats };
     const inventory = inv.slice();
@@ -462,10 +486,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (tpl) equipment.pet = { ...instantiate(tpl), id: uid('start_pet') };
     }
     if (!equipment.weapon) {
-      const tpl = ITEMS_POOL.find((i) => i.id === heroInfo.weaponId);
-      if (tpl) equipment.weapon = { ...instantiate(tpl), id: uid('start_wep') };
+      // prefer the best class weapon already in the bag; only mint a starter when there is none
+      const own = inventory.filter((i) => i.type === 'WEAPON' && i.classType === hero && profileRank() >= RANK_REQ[i.rarity])
+        .sort((a, b) => calculateItemCP(b) - calculateItemCP(a))[0];
+      if (own) { inventory.splice(inventory.indexOf(own), 1); equipment.weapon = own; }
+      else {
+        const tpl = ITEMS_POOL.find((i) => i.id === heroInfo.weaponId);
+        if (tpl) equipment.weapon = { ...instantiate(tpl), id: uid('start_wep') };
+      }
     }
-    return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment) };
+    return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment, hero, talents ?? get().talents) };
   };
 
   /** In-run state: everything here resets each run. The profile (gold, items, rank, ...) is never touched. */
@@ -489,7 +519,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     actionResult: null,
   });
 
-  const startLoadout = loadoutFor(profile.hero, profile.inventory, profile.equipment);
+  const profileRank = () => { try { return get()?.heroRank ?? profile.heroRank; } catch { return profile.heroRank; } };
+  const startLoadout = loadoutFor(profile.hero, profile.inventory, profile.equipment, profile.talents);
 
   return {
     ...runState(profile.hero, startLoadout.baseStats, startLoadout.stats),
@@ -508,6 +539,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     rankXp: profile.rankXp,
     quests: profile.quests,
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
+    talents: profile.talents,
+    starterGiven: profile.starterGiven,
     gameStats: profile.gameStats,
     settings: profile.settings,
     lastRun: null,
@@ -518,8 +551,24 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (s.status !== GameStatus.MENU) { set({ hero }); return; }
       // village: switching class swaps the starter loadout immediately
-      const l = loadoutFor(hero, s.inventory, s.equipment);
-      set({ hero, ...runState(hero, l.baseStats, l.stats), inventory: l.inventory, equipment: l.equipment });
+      let inv = s.inventory, eq = s.equipment;
+      let starterGiven = s.starterGiven;
+      if (!starterGiven[hero]) {
+        // first time on this class: its starter weapon, and the starter armour set if the old one is still untouched
+        starterGiven = { ...starterGiven, [hero]: true };
+        const g = STARTER_GEAR[hero];
+        eq = { ...eq };
+        const bag = inv.slice();
+        const has = bag.some((i) => i.type === 'WEAPON' && i.classType === hero);
+        if (!has) { const w = starterPiece(HERO_STATS[hero].weaponId); if (w && !(eq.weapon && eq.weapon.classType === hero)) bag.push(w); }
+        for (const slot of ['helmet', 'armor', 'gloves', 'boots', 'accessory'] as const) {
+          const cur = eq[slot];
+          if (!cur || isStarterId(cur.id)) { const n = starterPiece(g[slot]); if (n) eq[slot] = n; }
+        }
+        inv = bag;
+      }
+      const l = loadoutFor(hero, inv, eq, s.talents);
+      set({ hero, starterGiven, ...runState(hero, l.baseStats, l.stats), inventory: l.inventory, equipment: l.equipment });
     },
     setDifficulty: (difficulty: Difficulty) => set({ difficulty }),
 
@@ -572,6 +621,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
+        talents: emptyTalents(), starterGiven: f.starterGiven,
       });
       get().resetGame();
       notify('Profile reset. A fresh welcome gift awaits!', COLORS.uiAccent, 'SYSTEM');
@@ -629,7 +679,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     addExperience: (amount) => {
       let { experience, experienceToNextLevel, level } = get();
-      const gain = (level >= 10 ? amount * 2 : amount) * 2;
+      const gain = (level >= 10 ? amount * 2 : amount) * 2 * (1 + get().stats.xpBonus);
       experience += gain;
       const startLevel = level;
       let base = get().baseStats;
@@ -659,7 +709,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         return;
       }
 
-      const stats = calculateStats(base, get().equipment);
+      const stats = calc(base, get().equipment);
       set({ experience, experienceToNextLevel, level, skillPoints: sp, baseStats: base, stats });
       // Engine: full heal + fx.
       world.player.hp = stats.maxHealth;
@@ -707,7 +757,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({
         baseStats: base,
         skillLevels: levels,
-        stats: calculateStats(base, state.equipment),
+        stats: calc(base, state.equipment),
         upgradeOptions: [],
         status: GameStatus.PLAYING,
       });
@@ -827,7 +877,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         case 'freezeSpell': cost = 15 + lv.freezeSpell * 2; break;
         default: cost = 0;
       }
-      return s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;
+      const total = s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;
+      return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;
     },
 
     // ----------------------------------------------------------- items --
@@ -881,7 +932,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({
         inventory: inv,
         equipment,
-        stats: calculateStats(s.baseStats, equipment),
+        stats: calc(s.baseStats, equipment),
         activeAbilityQ: q ?? s.activeAbilityQ,
       });
       notify(`Equipped ${item.name}`, COLORS.rarityCommon, 'SYSTEM');
@@ -896,7 +947,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({
         inventory: [...s.inventory, current],
         equipment,
-        stats: calculateStats(s.baseStats, equipment),
+        stats: calc(s.baseStats, equipment),
         activeAbilityQ: slot === 'weapon' ? null : s.activeAbilityQ,
       });
     },
@@ -937,7 +988,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       if (changed) {
         const q = equipment.weapon ? classOf(equipment.weapon) : null;
-        set({ inventory, equipment, stats: calculateStats(s.baseStats, equipment), activeAbilityQ: q ?? s.activeAbilityQ });
+        set({ inventory, equipment, stats: calc(s.baseStats, equipment), activeAbilityQ: q ?? s.activeAbilityQ });
         notify('Auto Equipped Best Items', COLORS.uiAccent, 'SYSTEM');
       } else {
         notify('No better items found', 'white', 'SYSTEM');
@@ -1121,7 +1172,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: s.gold - goldCost,
         inventory: inv.map((i) => (i.id === item.id ? result : i)),
         equipment,
-        stats: calculateStats(s.baseStats, equipment),
+        stats: calc(s.baseStats, equipment),
         actionResult: { type: 'UPGRADE', success: true, message: 'Upgrade Successful!', item: result },
       });
       return { success: true, msg: 'Upgrade Successful!', newItem: result };
@@ -1130,19 +1181,33 @@ export const useGameStore = create<GameState>()((set, get) => {
     rollItemDrop: (rarityOverride) => {
       const hero = get().hero;
       const notPet = ITEMS_POOL.filter((i) => i.type !== 'PET');
+      const usable = (i: Item) => !i.classType || i.classType === hero;
       let pool: Item[];
+      // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
+      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? 'RARE' : null);
+      const setChance: Record<Rarity, number> = { COMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
+      if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
+        const sets = notPet.filter((i) => i.setName && i.rarity === setRarity && usable(i)
+          && (SET_BY_NAME[i.setName!]?.hero ? SET_BY_NAME[i.setName!].hero === hero : true));
+        if (sets.length) {
+          const it = instantiate(sets[Math.floor(Math.random() * sets.length)]);
+          const roll = Math.random();
+          applyPlus(it, roll > 0.95 ? 3 : roll > 0.85 ? 2 : roll > 0.60 ? 1 : 0);
+          return it;
+        }
+      }
       if (rarityOverride) {
-        pool = notPet.filter((i) => i.rarity === rarityOverride && isGear(i) && (!i.classType || i.classType === hero));
-        if (pool.length === 0) pool = notPet.filter(isGear);
+        pool = notPet.filter((i) => i.rarity === rarityOverride && isGear(i) && !i.setName && usable(i));
+        if (pool.length === 0) pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i));
       } else {
         const r = Math.random();
         if (r > 0.90) pool = notPet.filter((i) => i.type === 'POTION');
         else if (r > 0.82) pool = notPet.filter((i) => i.type === 'CORE'); // cores are rare (8% of item drops)
-        else pool = notPet.filter((i) => isGear(i) && (i.rarity === 'COMMON' || i.rarity === 'RARE'));
+        else pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && (i.rarity === 'COMMON' || i.rarity === 'RARE'));
       }
       if (pool.length === 0) return null;
 
-      // Class weapons are twice as likely as other gear.
+      // Class weapons are somewhat more likely than other gear.
       const weighted: Item[] = [];
       for (const p of pool) {
         weighted.push(p, p);
@@ -1154,6 +1219,32 @@ export const useGameStore = create<GameState>()((set, get) => {
         applyPlus(item, roll > 0.95 ? 3 : roll > 0.85 ? 2 : roll > 0.60 ? 1 : 0);
       }
       return item;
+    },
+
+    // ----------------------------------------------------------- talents --
+    allocateTalent: (id) => {
+      const s = get();
+      const node = TALENT_BY_ID[id];
+      if (!node || node.hero !== s.hero) return false;
+      const ranks = s.talents[s.hero];
+      const free = talentPointsTotal(s.heroRank) - talentsSpent(ranks);
+      if (allocBlock(node, ranks, free)) return false;
+      const talents = { ...s.talents, [s.hero]: { ...ranks, [id]: (ranks[id] || 0) + 1 } };
+      set({ talents });
+      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents) });
+      return true;
+    },
+    respecTalents: () => {
+      const s = get();
+      const ranks = s.talents[s.hero];
+      const cost = respecCost(ranks);
+      if (cost <= 0) return false;
+      if (s.gold < cost) { notify('Not enough Gold to respec!', 'red', 'WARNING'); return false; }
+      const talents = { ...s.talents, [s.hero]: {} };
+      set({ talents, gold: s.gold - cost });
+      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents) });
+      notify(`Talents reset (-${cost} gold)`, COLORS.uiAccent, 'SYSTEM');
+      return true;
     },
 
     summon: (count) => {
@@ -1213,7 +1304,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {

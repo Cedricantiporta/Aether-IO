@@ -5,6 +5,7 @@
 import type { HeroClass, Item, PlayerStats, Rarity } from './types';
 import { ITEMS_POOL, RANK_REQ, MATERIAL_DOWNGRADE_YIELD } from './constants';
 import { LOOT_BY_ID } from './loot';
+import { rollAffixes } from './affixes';
 
 export type CraftSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory';
 export const CRAFT_SLOTS: CraftSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory'];
@@ -131,7 +132,7 @@ export function consumeLoot(inv: Item[], recipe: Recipe): Item[] {
 
 /** Templates this recipe can produce (class-matched for weapons). */
 export const recipeTemplates = (recipe: Recipe): Item[] =>
-  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && (!i.classType || i.classType === recipe.hero));
+  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.setName && !i.id.startsWith('start_') && (!i.classType || i.classType === recipe.hero));
 
 /** Stat scaling for "+N" items (also used by drops): every stat x new level. */
 const GEAR = new Set<string>(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY']);
@@ -165,7 +166,9 @@ export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
     ...tpl, stats, quantity: 1,
     id: `it_craft_${Date.now().toString(36)}_${(seq++).toString(36)}_${Math.floor(rng() * 1e6).toString(36)}`,
     onHitEffect: tpl.onHitEffect ? { ...tpl.onHitEffect } : undefined,
+    affixes: undefined,
   };
+  rollAffixes(item, rng);
   const r = rng();
   applyPlus(item, r < CRAFT_PLUS2_CHANCE ? 2 : r < CRAFT_PLUS2_CHANCE + CRAFT_PLUS1_CHANCE ? 1 : 0);
   return item;

@@ -7,6 +7,7 @@ import type { SkillLevels } from '../../../types';
 import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { HERO_COLOR } from '../../lib/game';
+import { TalentsView } from './Talents';
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown. Level 5 grants +1 dash charge.',
@@ -17,7 +18,7 @@ const HINT: Record<string, string> = {
 };
 const costOf = (key: string, lvl: number) => (key === 'special' ? 5 : key === 'dash' || key === 'barrier' ? lvl + 2 : lvl + 1);
 
-export const SkillsTab: React.FC = () => {
+const RunSkills: React.FC = () => {
   const { hero, levels, sp, upgrade } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill })));
   const entries = Object.entries(SKILLS_INFO).filter(([, i]: [string, any]) => !i.classType || i.classType === hero);
   return (
@@ -50,6 +51,20 @@ export const SkillsTab: React.FC = () => {
           </div>
         );
       })}
+    </div>
+  );
+};
+
+/** Skill Trainer: run skills (spent with run Skill Points) and permanent talents (Hero Rank points). */
+export const SkillsTab: React.FC = () => {
+  const [view, setView] = React.useState<'run' | 'talents'>('run');
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-1.5" role="tablist">
+        <Button size="sm" active={view === 'run'} onClick={() => setView('run')} role="tab" data-testid="tab-run-skills">Skills (run)</Button>
+        <Button size="sm" active={view === 'talents'} onClick={() => setView('talents')} role="tab" data-testid="tab-talents">Talents (permanent)</Button>
+      </div>
+      {view === 'run' ? <RunSkills /> : <TalentsView />}
     </div>
   );
 };
