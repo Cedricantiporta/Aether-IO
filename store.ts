@@ -9,8 +9,9 @@ import {
 } from './types';
 import {
   ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, INVENTORY_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
-  RECYCLE_YIELDS, CRAFTING_COSTS, MATERIAL_COMBINE_COST,
+  MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
+import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -56,9 +57,7 @@ const SLOTS: EquipSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'acc
 const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 });
 
 /** Hero rank needed to equip gear of a rarity. */
-export const RANK_REQ: Record<Rarity, number> = {
-  COMMON: 1, RARE: 3, EPIC: 8, LEGENDARY: 15, MYTHIC: 25,
-};
+export { RANK_REQ };
 /** Hero rank xp needed to go from rank r to r+1. */
 export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Math.max(1, r), 1.35));
 /** Passive perk: +1% gold find per rank, capped at +50%. */
@@ -192,7 +191,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment): PlayerStats =>
   });
 
   if (equipment.weapon && equipment.weapon.projectileType === 'MAGIC') final.fireRate *= 0.5;
-  if (final.multishot > 7) final.multishot = 7;
+  if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
   return final;
 };
 
@@ -255,6 +254,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     if (u.classType && u.classType !== hero) return false;
     const key = UPGRADE_SKILL_KEY[u.type];
     if (key && skillLevels[key] >= MAX_SKILL_LEVEL) return false;
+    if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
     return true;
   });
   const options: Upgrade[] = [];
@@ -268,24 +268,27 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
       if (lvl === 0) opt.name = `UNLOCK: ${opt.name}`;
       opt.description = getSkillCardDetails(key, lvl, stats);
     }
+    if (base.type === 'MULTISHOT') {
+      const cur = Math.floor(stats.multishot + 1e-6);
+      opt.description = `Projectiles: ${cur} → ${Math.min(MULTISHOT_CAP, cur + 1)} (max ${MULTISHOT_CAP})`;
+    }
     options.push(opt);
   }
   return options;
 };
 
-/** Gear scaling for "+N" items (also used by drops). */
-const applyPlus = (item: Item, plus: number): void => {
-  if (plus <= 0) return;
-  item.level += plus;
-  (Object.keys(item.stats) as (keyof PlayerStats)[]).forEach((k) => {
-    const v = item.stats[k];
-    if (v === undefined) return;
-    item.stats[k] = parseFloat((v * item.level).toFixed(2));
-  });
+/** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
+const addCores = (inv: Item[], n: number): Item[] => {
+  if (n <= 0) return inv;
+  const idx = inv.findIndex((i) => i.type === 'CORE');
+  if (idx >= 0) { const out = inv.slice(); out[idx] = { ...out[idx], quantity: (out[idx].quantity || 1) + n }; return out; }
+  const tpl = ITEMS_POOL.find((i) => i.type === 'CORE')!;
+  return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
 const instantiate = (template: Item): Item => ({
   ...template,
+  level: isGear(template) || template.type === 'PET' ? template.level : 1,
   id: uid('it'),
   stats: { ...template.stats },
   onHitEffect: template.onHitEffect ? { ...template.onHitEffect } : undefined,
@@ -307,7 +310,7 @@ interface Profile {
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
   const tpl = ITEMS_POOL.find((i) => i.id === id);
-  return tpl ? [{ ...tpl, stats: { ...tpl.stats }, id: uid('gift'), quantity }] : [];
+  return tpl ? [{ ...tpl, level: isGear(tpl) || tpl.type === 'PET' ? tpl.level : 1, stats: { ...tpl.stats }, id: uid('gift'), quantity }] : [];
 };
 
 /** One-time welcome gift for a brand new profile. */
@@ -350,7 +353,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             profile: {
               v: PROFILE_VERSION,
               gold: num(p.gold, 0), gems: num(p.gems, 0),
-              inventory: Array.isArray(p.inventory) ? p.inventory : [],
+              inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)) : [],
               equipment: { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) },
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
@@ -1006,26 +1009,25 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     recycleItem: (item) => {
       const s = get();
-      const yieldAmt = RECYCLE_YIELDS[item.rarity];
+      const y = recycleYield(item);
       set({
-        inventory: s.inventory.filter((i) => i.id !== item.id),
-        materials: { ...s.materials, [item.rarity]: s.materials[item.rarity] + yieldAmt },
+        inventory: addCores(s.inventory.filter((i) => i.id !== item.id), y.cores),
+        materials: { ...s.materials, [item.rarity]: s.materials[item.rarity] + y.shards },
       });
-      notify(`Recycled for ${yieldAmt} ${item.rarity} Shard(s)`, COLORS.uiAccent, 'SYSTEM');
+      notify(`Recycled for ${y.shards} ${item.rarity} Shard(s)${y.cores ? ` + ${y.cores} Core(s)` : ''}`, COLORS.uiAccent, 'SYSTEM');
     },
 
     massRecycle: (rarity) => {
       const s = get();
       const list = s.inventory.filter((i) => i.rarity === rarity && isGear(i));
       if (list.length === 0) { notify(`No ${rarity} items to recycle`, 'white', 'SYSTEM'); return; }
-      let total = 0;
-      list.forEach((i) => { total += RECYCLE_YIELDS[i.rarity]; });
+      const y = recycleYieldAll(list);
       const ids = new Set(list.map((i) => i.id));
       set({
-        inventory: s.inventory.filter((i) => !ids.has(i.id)),
-        materials: { ...s.materials, [rarity]: s.materials[rarity] + total },
+        inventory: addCores(s.inventory.filter((i) => !ids.has(i.id)), y.cores),
+        materials: { ...s.materials, [rarity]: s.materials[rarity] + y.shards },
       });
-      notify(`Recycled ${list.length} items for ${total} ${rarity} Shards`, COLORS.uiAccent, 'SYSTEM');
+      notify(`Recycled ${list.length} items for ${y.shards} ${rarity} Shards${y.cores ? ` + ${y.cores} Cores` : ''}`, COLORS.uiAccent, 'SYSTEM');
     },
 
     combineMaterials: (from) => {
@@ -1041,23 +1043,28 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Crafted 1 ${to} Shard`, COLORS.uiAccent, 'SYSTEM');
     },
 
-    craftItem: (rarity) => {
+    downgradeMaterials: (from) => {
       const s = get();
-      const cost = CRAFTING_COSTS[rarity];
-      if (s.materials[rarity] < cost) { notify(`Need ${cost} ${rarity} Shards`, 'red', 'WARNING'); return false; }
-      if (s.inventory.length >= s.maxInventorySlots) { notify('Inventory Full!', 'red', 'WARNING'); return false; }
+      const idx = RARITIES.indexOf(from);
+      if (idx <= 0) return;
+      const to = RARITIES[idx - 1];
+      if (s.materials[from] < 1) { notify(`Need 1 ${from} Shard`, 'red', 'WARNING'); return; }
+      set({ materials: { ...s.materials, [from]: s.materials[from] - 1, [to]: s.materials[to] + MATERIAL_DOWNGRADE_YIELD } });
+      notify(`Broke 1 ${from} Shard into ${MATERIAL_DOWNGRADE_YIELD} ${to}`, COLORS.uiAccent, 'SYSTEM');
+    },
 
-      let pool = ITEMS_POOL.filter((i) => isGear(i) && i.rarity === rarity && (!i.classType || i.classType === s.hero));
-      if (pool.length === 0) pool = ITEMS_POOL.filter(isGear);
-      const item = instantiate(pool[Math.floor(Math.random() * pool.length)]);
-      if (Math.random() > 0.8) applyPlus(item, 1);
-
+    craftItem: (recipe: Recipe) => {
+      const s = get();
+      const missing = canCraft({ ...s, maxInventorySlots: s.maxInventorySlots }, recipe);
+      if (missing.length > 0) { notify(missing[0].kind === 'space' ? 'Inventory Full!' : `Missing: ${missing[0].label}`, 'red', 'WARNING'); return null; }
+      const item = craft(recipe);
       set({
-        materials: { ...s.materials, [rarity]: s.materials[rarity] - cost },
-        inventory: [...s.inventory, item],
+        gold: s.gold - recipe.gold,
+        materials: { ...s.materials, [recipe.rarity]: s.materials[recipe.rarity] - recipe.shards },
+        inventory: [...consumeLoot(s.inventory, recipe), item],
       });
-      notify(`Crafted ${item.name}!`, RARITY_COLOR[item.rarity], 'ITEM');
-      return true;
+      notify(`Crafted ${item.name}${item.level > 1 ? ` +${item.level - 1}` : ''}!`, RARITY_COLOR[item.rarity], 'ITEM');
+      return item;
     },
 
     buyInventorySlots: () => {

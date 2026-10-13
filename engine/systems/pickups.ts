@@ -109,7 +109,7 @@ function notifyLoot(item: Item): void {
     const usable = st.heroRank >= RANK_REQ[item.rarity] && (!item.classType || item.classType === st.hero);
     if (better && usable) action = { label: 'EQUIP', onClick: () => useGameStore.getState().equipItem(item) };
   }
-  const plus = item.level > 1 ? ` +${item.level - 1}` : '';
+  const plus = item.level > 1 && item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'LOOT' ? ` +${item.level - 1}` : '';
   const qty = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
   st.addNotification(`${item.name}${plus}${qty}`, RARITY_COLOR[item.rarity] ?? '#ffffff', 'ITEM', action);
 }

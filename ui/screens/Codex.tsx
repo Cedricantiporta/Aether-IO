@@ -8,6 +8,7 @@ import { tip } from '../components/Tooltip';
 import { SimpleTip } from '../components/ItemTip';
 import { useUiStore } from '../uiStore';
 import { LOOT, lootItem, lootSources } from '../../loot';
+import { lootCraftUse } from '../../crafting';
 import { ENEMY_DEFS } from '../../engine/enemyDefs';
 import { RARITY_RANK, RARITY_TEXT } from '../lib/game';
 import { HERO_COLOR } from '../lib/game';
@@ -43,6 +44,7 @@ export const CodexDialog: React.FC = () => {
                   <div className="font-bold text-sm leading-tight" style={{ color: RARITY_TEXT[l.rarity] }}>{l.name}</div>
                   <div className="rpg-label !text-[.5rem]">{l.rarity} · sells {l.price.toLocaleString()} G</div>
                   <div className="text-[.62rem] text-[var(--text-dim)] leading-tight">{lootSources(l.id).map(srcName).join(', ')}</div>
+                  {lootCraftUse(l.id) && <div className="text-[.6rem] leading-tight" style={{ color: '#e9b949' }}>{lootCraftUse(l.id)}</div>}
                 </div>
               </div>
             ))}

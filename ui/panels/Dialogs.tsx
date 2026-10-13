@@ -8,7 +8,7 @@ import { useUiStore } from '../uiStore';
 import { Modal, ConfirmDialog, QtyStepper } from '../components/Modal';
 import { Button } from '../components/Button';
 import { ItemSlot } from '../components/ItemSlot';
-import { RARITY_TEXT, isHighValue, sellPrice, RARITY_RANK, RARITY_COLOR } from '../lib/game';
+import { RARITY_TEXT, isHighValue, sellPrice, RARITY_RANK, RARITY_COLOR, isGear } from '../lib/game';
 import type { Item } from '../../types';
 
 export const SellDialog: React.FC = () => {
@@ -24,7 +24,7 @@ export const SellDialog: React.FC = () => {
       {item && (
         <div className="flex flex-col items-center gap-3 pt-1">
           <ItemSlot item={item} size="5rem" iconSize={38} tooltip="none" compare={false} />
-          <div className="rpg-title text-lg text-center" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}{item.level > 1 && <span className="text-[var(--gold)]"> +{item.level - 1}</span>}</div>
+          <div className="rpg-title text-lg text-center" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}{item.level > 1 && isGear(item) && <span className="text-[var(--gold)]"> +{item.level - 1}</span>}</div>
           {isHighValue(item) && <div className="rpg-badge bad"><AlertTriangle size={12} /> High value item</div>}
           {have > 1 && <QtyStepper value={amount} max={have} onChange={setAmount} />}
           <div className="rpg-frame gold w-full text-center py-2">

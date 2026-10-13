@@ -1,7 +1,9 @@
 import React from 'react';
 import type { Item, PlayerStats } from '../../types';
 import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
-import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf } from '../lib/game';
+import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
+import { lootCraftUse } from '../../crafting';
+import { LOOT_BY_NAME } from '../../loot';
 import { HERO_STATS } from '../../constants';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -26,7 +28,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
   return (
     <div style={{ width: '16rem' }}>
       <div className="tt-name" data-rt={item.rarity}>
-        {item.name}{item.level > 1 && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
+        {item.name}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
@@ -36,6 +38,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
       </div>
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
       {item.description && <><div className="tt-sep" /><div className="italic muted">{item.description}</div></>}
+      {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {
         const v = item.stats[k];

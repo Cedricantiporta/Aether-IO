@@ -10,23 +10,15 @@ export const INVENTORY_LIMIT = 50;
 export const POTION_STACK_LIMIT = 50;
 export const POTION_COOLDOWN = 10; // seconds, shared by engine + HUD
 
-export const RECYCLE_YIELDS: Record<Rarity, number> = {
-    'COMMON': 1,
-    'RARE': 1,
-    'EPIC': 1,
-    'LEGENDARY': 1,
-    'MYTHIC': 1
+/** Shard conversion: 5 of a rarity -> 1 of the next; 1 -> 3 of the rarity below. */
+export const MATERIAL_COMBINE_COST = 5;
+export const MATERIAL_DOWNGRADE_YIELD = 3;
+/** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
+export const MULTISHOT_CAP = 5;
+/** Hero rank needed to equip / craft gear of a rarity. */
+export const RANK_REQ: Record<Rarity, number> = {
+  COMMON: 1, RARE: 3, EPIC: 8, LEGENDARY: 15, MYTHIC: 25,
 };
-
-export const CRAFTING_COSTS: Record<Rarity, number> = {
-    'COMMON': 3,
-    'RARE': 3,
-    'EPIC': 3,
-    'LEGENDARY': 3,
-    'MYTHIC': 3
-};
-
-export const MATERIAL_COMBINE_COST = 5; // 5 Common -> 1 Rare
 
 /** Per-difficulty multipliers (read by the director / enemies / combat). */
 export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spawn: number; loot: number; label: string; desc: string }> = {
@@ -84,17 +76,17 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 14, fireRate: 2.5, maxHealth: 80, damage: 10, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 14, fireRate: 2.5, maxHealth: 60, damage: 10, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
         description: 'High Speed & Attack Rate (grows with level). Low Health.'
     },
     WIZARD: {
-        stats: { moveSpeed: 10, maxMana: 200, damage: 25, maxHealth: 70, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
+        stats: { moveSpeed: 10, maxMana: 200, damage: 25, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 200, defense: 15, moveSpeed: 11, damage: 12, fireRate: 1.5, knockback: 1.5, regen: 2.0 },
+        stats: { maxHealth: 140, defense: 15, moveSpeed: 11, damage: 12, fireRate: 1.5, knockback: 1.5, regen: 2.0 },
         weaponId: 'axe_1',
         description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }
@@ -138,7 +130,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_spd', type: 'SPEED', name: 'Wind Step', description: 'Move Speed Up', rarity: 'COMMON', value: 0.05 },
   { id: 'u_dmg', type: 'DAMAGE', name: 'Sharpness', description: 'Damage Up', rarity: 'RARE', value: 0.13 },
   { id: 'u_fr', type: 'FIRE_RATE', name: 'Haste', description: 'Atk Speed Up', rarity: 'RARE', value: 0.1 },
-  { id: 'u_multi', type: 'MULTISHOT', name: 'Multicast', description: 'Projectiles Up', rarity: 'LEGENDARY', value: 0.5 }, // Accumulates to 1 every 2 upgrades
+  { id: 'u_multi', type: 'MULTISHOT', name: 'Multicast', description: 'Projectiles Up', rarity: 'LEGENDARY', value: 1 }, // +1 projectile per card, capped by MULTISHOT_CAP
   { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: 'Dash CD Down', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
@@ -219,8 +211,8 @@ export const ITEMS_POOL: Item[] = [
   { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 50, level: 1, description: 'Restores 50 HP.' },
   { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 50, level: 1, description: 'Restores 50 Mana.' },
   // BIG POTIONS
-  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 25, description: 'Restores 75 HP. Req Lvl 25.' },
-  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 25, description: 'Restores 75 Mana. Req Lvl 25.' },
+  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 1, description: 'Restores 75 HP.' },
+  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 1, description: 'Restores 75 Mana.' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'A rare arcane core used by the Blacksmith to upgrade gear.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death.' },

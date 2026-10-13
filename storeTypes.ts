@@ -11,6 +11,7 @@ import type {
   GameStatus, HeroClass, PlayerStats, Upgrade, Item, Rarity, SkillLevels,
   AbilityType, GameNotification, ActionResult, GameStatistics,
 } from './types';
+import type { Recipe } from './crafting';
 import type { RunStats } from './engine/types';
 import type { Quest, QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
@@ -151,7 +152,8 @@ export interface GameState {
   recycleItem: (item: Item) => void;
   massRecycle: (rarity: Rarity) => void;
   combineMaterials: (from: Rarity) => void;
-  craftItem: (rarity: Rarity) => boolean;
+  downgradeMaterials: (from: Rarity) => void;
+  craftItem: (recipe: Recipe) => Item | null;
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll

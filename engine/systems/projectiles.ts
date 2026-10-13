@@ -7,6 +7,7 @@ import { world, allocProjectile, allocZone, ARENA_RADIUS } from '../world';
 import { events, type DamageKind } from '../events';
 import type { Projectile, ProjectileKind, Enemy } from '../types';
 import type { ProjectileType } from '../../types';
+import { MULTISHOT_CAP } from '../../constants';
 import { useGameStore } from '../../store';
 import {
   damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
@@ -151,7 +152,7 @@ export function fireBasicAttack(): void {
   const ptype = weapon?.projectileType ?? defaultProjectileType();
   const pl = world.player;
   const dir = getAimDir(aim);
-  const count = Math.max(1, Math.min(7, Math.floor(stats.multishot + 1e-6)));
+  const count = Math.max(1, Math.min(MULTISHOT_CAP, Math.floor(stats.multishot + 1e-6)));
 
   let effect: Projectile['effect'];
   if (weapon?.onHitEffect) {
