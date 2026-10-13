@@ -26,6 +26,8 @@ const aim = new Vector3();
 /** Combat feel: attack only when standing still, auto-target the nearest enemy, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
+/** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
+const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11 };
 const STOP_TO_FIRE_DELAY = 0.12;
 
 let dying = false;
@@ -271,6 +273,9 @@ export function updatePlayer(dt: number): void {
   if (stunned) { p.fireT = Math.max(p.fireT, 0.1); return; }
   const archerMoving = st.hero === 'ARCHER' && moving && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0;
   if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
+  // No target in weapon range → hold fire (no shooting into empty air).
+  const range = ATTACK_RANGE[st.hero] ?? 18;
+  if (!findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;

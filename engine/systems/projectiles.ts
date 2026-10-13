@@ -175,7 +175,7 @@ export function fireBasicAttack(): void {
   let aoe = 0;
   let radius = 1.5;
   switch (ptype) {
-    case 'AXE': kind = 'AXE'; speed *= 2.7; life = 3.5; pierce = 4; break;
+    case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 4; break; // shorter throw: barbarian is close range
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
