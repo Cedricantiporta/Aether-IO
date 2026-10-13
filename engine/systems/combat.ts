@@ -19,6 +19,8 @@ import { hooks } from './hooks';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
+/** Chance that a player hit applies its knockback / launch. */
+export const KNOCK_CHANCE = 0.5;
 const KNOCK_MAX = 30;
 
 export interface DamageOpts {
@@ -311,8 +313,10 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     }
   }
 
-  if (o.launch && o.knockDir) launchEnemy(e, o.knockDir.x, o.knockDir.z, o.launch, o.slam ?? 0);
-  else if (o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
+  // Player knockback / launches only trigger on half of the hits (designer: 50% less knockback chance).
+  const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE : true;
+  if (o.launch && o.knockDir) { if (knockRoll) launchEnemy(e, o.knockDir.x, o.knockDir.z, o.launch, o.slam ?? 0); }
+  else if (knockRoll && o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
     const k = Math.min(KNOCK_MAX, o.knockback * KNOCK_SCALE) * (e.elite ? 0.5 : 1) * (e.mini ? 0.5 : 1);
     e.knock.x += o.knockDir.x * k;
     e.knock.z += o.knockDir.z * k;

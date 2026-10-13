@@ -51,7 +51,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Leap to the target, slamming a crater that stuns, and enter Rage (double attack speed).',
       per: (lv) => `Slam ${pct(7 * lvMul(lv))} dmg · radius ${f1(9 + 0.5 * (lv - 1))} · Rage ${f1(3 + lv)}s` },
     { slot: 'e', icon: 'WHIRLWIND', name: 'Whirlwind', mana: 24, cd: 12,
-      desc: 'Spin for 2s, gathering nearby enemies a little and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Bosses are not pulled. After Bloodrage Leap: pulls 30% harder, heals +50%.',
+      desc: 'Spin for 2s, barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Bosses are not pulled. After Bloodrage Leap: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
       desc: 'Cleave a fissure that erupts in a line of stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',

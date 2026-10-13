@@ -876,7 +876,7 @@ export function updateAbilities(dt: number): void {
       if (d2 > R2) continue;
       const d = Math.sqrt(d2) || 1;
       if (d < 1.8) continue;
-      const step = Math.min(d - 1.8, 14 * 0.45 * dt * (a.whirlBoost ? 1.3 : 1)); // pull strength -55%
+      const step = Math.min(d - 1.8, 14 * 0.08 * dt * (a.whirlBoost ? 1.3 : 1)); // very slight pull (designer: barely any)
       e.pos.x += (dx / d) * step; e.pos.z += (dz / d) * step;
     }
     if (a.whirlTick >= 0.15) {
