@@ -541,7 +541,7 @@ function onBossCleared(): void {
 // ------------------------------------------------------------ interaction ---
 export const MAX_ROOM_NEARBY = 3;
 /** Room interactables, same shape as the town's `nearby` list so the shared interact pills can draw them. node: 0..2 = portal, 10 = station. */
-export const roomNearby: Interactable[] = Array.from({ length: MAX_ROOM_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0 }));
+export const roomNearby: Interactable[] = Array.from({ length: MAX_ROOM_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as const }));
 let nearbyN = 0;
 function pushNearby(verb: string, label: string, node: number, d2: number): void {
   let i = nearbyN < MAX_ROOM_NEARBY ? nearbyN : MAX_ROOM_NEARBY;

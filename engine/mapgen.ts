@@ -8,6 +8,7 @@ import { Vector3 } from 'three';
 import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TRAINER_POS } from './world';
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
+import { TOWN_CLEAR } from './townData';
 
 /** Circle collider used for movement push-out and projectile blocking. */
 export interface Collider {
@@ -179,6 +180,7 @@ function clearZones(): ClearZone[] {
   ];
   for (const s of SHOP_POSITIONS) zones.push({ x: s.position[0], z: s.position[2], r: 9 });
   zones.push({ x: SHRINE_POS[0], z: SHRINE_POS[2], r: 6 }, { x: TRAINER_POS[0], z: TRAINER_POS[2], r: 6 });
+  for (const [x, z, r] of TOWN_CLEAR) zones.push({ x, z, r }); // town layout (engine/townData.ts)
   return zones;
 }
 
