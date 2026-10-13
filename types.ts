@@ -35,8 +35,8 @@ export interface Upgrade {
 export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM';
 export type AbilityType = 'METEOR' | 'ARROW_RAIN' | 'AXE_AURA' | 'FIREBALL' | 'AXE_SPIN' | 'NONE' | 'PIERCING_SHOT' | 'FREEZE_SPELL' | 'GRAVITY_SPELL' | 'MEGA_STAMP' | 'RAGE';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT';
-export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON';
-export type PetSkillType = 'HEAL' | 'ATTACK_RANGED' | 'ATTACK_MELEE' | 'COLLECT' | 'REVIVE';
+export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON' | 'ARMOR_BREAK' | 'CHILL';
+export type PetSkillType = 'HEAL' | 'ATTACK_RANGED' | 'ATTACK_MELEE' | 'COLLECT' | 'REVIVE' | 'FIRE_TRAIL' | 'CHILL_SWOOP' | 'LOOT_BURP' | 'CHAIN_ZAP' | 'SHIELD' | 'MARK' | 'SLAM' | 'TIDAL_BEAM';
 
 export interface PlayerStats {
   maxHealth: number;
@@ -63,6 +63,12 @@ export interface PlayerStats {
   thorns: number;           // flat damage to nearby enemies when you are hit
   goldFind: number;         // +fraction gold from pickups
   xpBonus: number;          // +fraction xp gained
+  stunBonus: number;        // +seconds on stuns/freezes you inflict
+  burnStacks: number;       // +max burn stacks on enemies (base 3)
+  backstab: number;         // +fraction extra backstab damage (base +30%)
+  axeCount: number;         // Axe Storm: extra axes
+  axeBounce: number;        // Axe Storm: extra ricochets
+  axeSize: number;          // Axe Storm: +fraction axe size
   pierceBonus: number;      // extra pierce on basic projectiles
   onHitBurnChance: number;  // chance on hit to ignite
   onHitSlowChance: number;  // chance on hit to slow

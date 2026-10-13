@@ -7,8 +7,9 @@ import { useGameStore } from '../../store';
 import { events } from '../events';
 import type { Zone } from '../types';
 import {
-  damageEnemy, damageEnemiesInRadius, applyStatus, damagePlayer, addShake, type DamageOpts, type StatusEffect,
+  damageEnemy, damageEnemiesInRadius, applyStatus, damagePlayer, addShake, applyPlayerDebuff, type DamageOpts, type StatusEffect,
 } from './combat';
+import { resolveTrick, updateWalls } from './tricks';
 
 const FIRE_TICK = 0.25;
 const POISON_TICK = 0.5;
@@ -25,8 +26,10 @@ const out: number[] = [];
 const gasOpts: DamageOpts = { kind: 'POISON', dot: true };
 const wildOpts: DamageOpts = { kind: 'FIRE', dot: true };
 const fireOpts: DamageOpts = { kind: 'FIRE', dot: true, source: 'PLAYER' };
-const boomOpts: DamageOpts = { kind: 'MAGIC', source: 'PLAYER', knockback: 1.5 };
+const boomOpts: DamageOpts = { kind: 'MAGIC', source: 'PLAYER', knockback: 1.5, launch: 11, slam: 0 };
 const burnVisual: StatusEffect = { type: 'BURN', duration: 1, value: 0.01 };
+const holeFreeze: StatusEffect = { type: 'FREEZE', duration: 1.5 };
+const burnReal: StatusEffect = { type: 'BURN', duration: 3, value: 4 };
 
 function fireTick(z: Zone): void {
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
@@ -37,7 +40,8 @@ function fireTick(z: Zone): void {
     const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z;
     const rr = z.radius + e.radius * 0.5;
     if (dx * dx + dz * dz > rr * rr) continue;
-    applyStatus(e, burnVisual); // keeps the "burning" tint without adding meaningful extra DoT
+    if (z.aux > 0) { burnReal.value = Math.max(1, z.damage * 0.5); applyStatus(e, burnReal); } // meteor / pillar craters stack real burn
+    else applyStatus(e, burnVisual); // keeps the "burning" tint without adding meaningful extra DoT
     damageEnemy(e, dmg, fireOpts);
   }
 }
@@ -57,6 +61,7 @@ function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
     const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z;
     if (dx * dx + dz * dz > (rr + e.radius * 0.5) * (rr + e.radius * 0.5)) continue;
     if (slow) {
+      e.frostT = Math.max(e.frostT, 1.2);
       const lvl = useGameStore.getState().skillLevels.s4;
       slowSt.value = Math.min(0.8, 0.5 + 0.04 * lvl);
       applyStatus(e, slowSt);
@@ -66,10 +71,10 @@ function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
 }
 
 function pullTick(z: Zone, dt: number): void {
+  if (z.kind === 'BLACKHOLE') { holeTick(z, dt); return; }
   const range = z.length > 0 ? z.length : PULL_RANGE;
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, range + 4, out);
   const r2 = range * range;
-  const boost = z.kind === 'BLACKHOLE' ? 1 + 2.2 * (1 - Math.min(1, z.life / z.maxLife)) : 1;
   let pulled = 0;
   for (let i = 0; i < ids.length && pulled < z.maxPull; i++) {
     const e = world.enemies[ids[i]];
@@ -80,7 +85,37 @@ function pullTick(z: Zone, dt: number): void {
     pulled++;
     const d = Math.sqrt(d2) || 1;
     if (d <= PULL_STOP) continue;
-    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * boost * dt * (z.kind === 'TORNADO' ? 0.75 : 1));
+    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * dt * (z.kind === 'TORNADO' ? 0.75 : 1));
+    e.pos.x += (dx / d) * step;
+    e.pos.z += (dz / d) * step;
+  }
+}
+
+/** Singularity: a real trap. Heavy slow that deepens toward the core (60% edge -> 95% core), pull strongest near the edge
+ *  (so nothing walks out) and gentle at the core. Bosses / mini-bosses: 40% slow, weak pull. Anything entering while it lives is caught. */
+function holeTick(z: Zone, dt: number): void {
+  const R = z.radius;
+  const range = z.length > R ? z.length : R * 2;
+  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, range + 4, out);
+  const boost = (1 + 2.2 * (1 - Math.min(1, z.life / z.maxLife))) * 0.55;
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
+    const dx = z.pos.x - e.pos.x, dz = z.pos.z - e.pos.z;
+    const d2 = dx * dx + dz * dz;
+    if (d2 > range * range) continue;
+    const d = Math.sqrt(d2) || 1;
+    const big = e.boss || e.mini;
+    if (d < R && e.chillStacks > 0 && e.freezeT <= 0 && !big) { e.chillStacks = 0; applyStatus(e, holeFreeze); events.emit('floatText', { pos: e.pos, text: 'FREEZE', color: 0x8fe4ff, scale: 0.7, dy: 0.4 }); }
+    if (d < R) {
+      const core = 1 - d / R; // 0 at the edge .. 1 at the core
+      const f = big ? 0.4 : 0.6 + 0.35 * core;
+      e.slowT = Math.max(e.slowT, 0.3);
+      if (e.slowFactor < f) e.slowFactor = f;
+    }
+    if (d <= PULL_STOP) continue;
+    const w = d >= R ? 1 : 0.25 + 0.75 * (d / R);
+    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * boost * w * (big ? 0.2 : 1) * dt);
     e.pos.x += (dx / d) * step;
     e.pos.z += (dz / d) * step;
   }
@@ -115,6 +150,31 @@ function puddleUpdate(z: Zone): void {
     if (!inZone(z, e.pos.x, e.pos.z, e.radius * 0.5)) continue;
     if (e.slowT < 0.1) e.slowT = 0.1;
     if (e.slowFactor < PUDDLE_FACTOR) e.slowFactor = PUDDLE_FACTOR;
+  }
+}
+
+/** Hostile trick patches: affect the player only. */
+function hostilePatch(z: Zone, dt: number): void {
+  const p = world.player;
+  if (!p.alive) return;
+  const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
+  const rr = z.radius + PLAYER_RADIUS * 0.5;
+  const inside = dx * dx + dz * dz < rr * rr;
+  if (!inside || p.dashT > 0) return;
+  switch (z.kind) {
+    case 'GOO': envSlow = Math.min(envSlow, 0.45); break;
+    case 'CALTROPS': envSlow = Math.min(envSlow, 0.6); break;
+    case 'SMOKE': p.blindT = Math.max(p.blindT, 0.6); break;
+    default: break;
+  }
+  if (z.kind === 'FIREPATCH' || z.kind === 'ACID' || z.kind === 'PLAGUE' || z.kind === 'CALTROPS') {
+    z.tickT += dt;
+    if (z.tickT >= HAZARD_TICK) {
+      z.tickT -= HAZARD_TICK;
+      if (z.kind === 'FIREPATCH') applyPlayerDebuff('BURN', 1.5, z.damage);
+      else if (z.kind === 'CALTROPS') applyPlayerDebuff('BLEED', 1.5, z.damage);
+      else applyPlayerDebuff('POISON', 1.5, z.damage);
+    }
   }
 }
 
@@ -174,8 +234,10 @@ function lineHitsPlayer(z: Zone): boolean {
 }
 
 function expire(z: Zone): void {
+  if (z.trick > 0) { resolveTrick(z); z.active = false; return; }
   switch (z.kind) {
     case 'BLACKHOLE':
+      boomOpts.slam = z.damage * 0.35;
       damageEnemiesInRadius(z.pos.x, z.pos.z, z.radius, z.damage, boomOpts);
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
       if (z.radius > 8) { events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.6, color: 0xb070ff }); events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x1a0a2a }); }
@@ -206,6 +268,7 @@ export function updateZones(dt: number): void {
   }
 
   envSlow = 1;
+  updateWalls(dt);
   const zones = world.zones;
   for (let i = 0; i < zones.length; i++) {
     const z = zones[i];
@@ -243,6 +306,7 @@ export function updateZones(dt: number): void {
           if (z.tickT >= POISON_TICK) { z.tickT -= POISON_TICK; poisonTick(z); }
           break;
         case 'PUDDLE': puddleUpdate(z); break;
+        case 'GOO': case 'CALTROPS': case 'FIREPATCH': case 'ACID': case 'PLAGUE': case 'SMOKE': hostilePatch(z, dt); break;
         case 'GAS':
           z.tickT += dt;
           if (z.tickT >= HAZARD_TICK) { z.tickT -= HAZARD_TICK; if (gasActive(z)) hazardTick(z); }

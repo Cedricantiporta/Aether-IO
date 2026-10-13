@@ -18,6 +18,12 @@ function findBoss(kind: string): Enemy | null {
   for (let i = 0; i < arr.length; i++) { const e = arr[i]; if (e.active && e.boss && e.kind === kind) return e; }
   return null;
 }
+function findDecoy(n: number): Enemy | null {
+  const arr = world.enemies;
+  let k = 0;
+  for (let i = 0; i < arr.length; i++) { const e = arr[i]; if (e.active && e.decoy && e.kind === 'BOSS_LICH' && e.state !== 'DYING') { if (k++ === n) return e; } }
+  return null;
+}
 function rock(b: GB, r: number, pos: [number, number, number], scl: [number, number, number], color: string, seed = 1, rot: [number, number, number] = [0, 0, 0]) {
   const g = noisify(new IcosahedronGeometry(r, 1), r * 0.28, 1.6 / r, seed);
   return b.add(g, pos, rot, scl, color);
@@ -158,7 +164,7 @@ function buildLich() {
   return { body: body.build(), glow: glow.build(), armL: arm(-1).build(), armR: armR.build(), staff: staff.build(), staffGlow: sg.build(), orb };
 }
 
-export function Lich() {
+export function Lich({ decoy = -1 }: { decoy?: number }) {
   const geo = useMemo(buildLich, []);
   const mats = useMemo(() => {
     const lit = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.75, metalness: 0.05, transparent: true });
@@ -184,7 +190,7 @@ export function Lich() {
 
   useFrame(({ clock }, dtRaw) => {
     const st = useGameStore.getState().status;
-    const e = findBoss('BOSS_LICH');
+    const e = decoy >= 0 ? findDecoy(decoy) : findBoss('BOSS_LICH');
     if (!e || st === GameStatus.MENU || st === GameStatus.HERO_SELECT) { if (g.current) g.current.visible = false; return; }
     const root = g.current; root.visible = true;
     const dt = st === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
@@ -229,6 +235,7 @@ export function Lich() {
     rune.current.visible = s.runeK > 0.02;
     if (s.runeK > 0.02) { rune.current.scale.setScalar(9 * s.runeK + 1); rune.current.rotation.y = T * 0.8; runeMat.opacity = s.runeK; }
     // particles
+    if (dt > 0 && decoy < 0 && findDecoy(0) && Math.random() < dt * 14) FX.add.emit(e.pos.x + (Math.random() - 0.5) * 2, 1 + Math.random() * 3, e.pos.z + (Math.random() - 0.5) * 2, 0, 1, 0, 0.6, 0.35, 0.05, 2.2, 2.2, 2.6, 0.9, CELL.STAR); // real Lich shimmers while clones exist
     if (dt > 0 && e.state !== 'DYING') {
       if (Math.random() < dt * 20) FX.add.emit(e.pos.x + (Math.random() - 0.5) * 2.4 * sc, hover * sc + Math.random() * 2 * sc, e.pos.z + (Math.random() - 0.5) * 2.4 * sc, 0, 1.5, 0, 1.1, 0.32, 0.05, 1.4, 0.4, 2.2, 0.8, CELL.GLOW);
       if (Math.random() < dt * 6) smokePuff(e.pos.x, 0.2, e.pos.z, 1, 0x2a1840, 2.6, 1.4, 0.4, 1.6, 0.4);
@@ -257,7 +264,7 @@ export function Lich() {
 }
 
 export function Bosses() {
-  return (<><Golem /><Lich /></>);
+  return (<><Golem /><Lich /><Lich decoy={0} /><Lich decoy={1} /></>);
 }
 void shakeOff;
 export const __builders = { buildGolem, buildLich };

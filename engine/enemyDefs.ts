@@ -20,72 +20,73 @@ export interface EnemyDef {
   weight: number;           // relative pick weight among eligible kinds
   color: number;            // hex, render tint / minimap
   knockResist: number;      // 0 = full knockback, 1 = immune
+  armor: number;            // damage taken x 100/(100+armor); elites/bosses scale it up in spawnEnemy
 }
 
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   SLIME: {
     name: 'Slime', hp: 30, speed: 3.2, radius: 0.7, scale: 1, contactDamage: 7, projectileDamage: 0,
-    xp: 4, gold: 1, cost: 1, minWave: 1, weight: 10, color: 0x65a30d, knockResist: 0,
+    xp: 4, gold: 1, cost: 1, minWave: 1, weight: 10, color: 0x65a30d, knockResist: 0, armor: 0,
   },
   GOBLIN: {
     name: 'Goblin', hp: 40, speed: 4.0, radius: 0.6, scale: 1, contactDamage: 9, projectileDamage: 0,
-    xp: 5, gold: 2, cost: 1.5, minWave: 1, weight: 10, color: 0xc2410c, knockResist: 0,
+    xp: 5, gold: 2, cost: 1.5, minWave: 1, weight: 10, color: 0xc2410c, knockResist: 0, armor: 5,
   },
   BAT: {
     name: 'Cave Bat', hp: 20, speed: 8.0, radius: 0.45, scale: 0.8, contactDamage: 5, projectileDamage: 0,
-    xp: 3, gold: 1, cost: 1, minWave: 2, weight: 6, color: 0x7c3aed, knockResist: 0,
+    xp: 3, gold: 1, cost: 1, minWave: 2, weight: 6, color: 0x7c3aed, knockResist: 0, armor: 0,
   },
   SKELETON_ARCHER: {
     name: 'Skeleton Archer', hp: 35, speed: 2.2, radius: 0.6, scale: 1, contactDamage: 4, projectileDamage: 10,
-    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 7, color: 0xe5e7eb, knockResist: 0,
+    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 7, color: 0xe5e7eb, knockResist: 0, armor: 5,
   },
   CULTIST: {
     name: 'Cultist', hp: 45, speed: 2.0, radius: 0.65, scale: 1.05, contactDamage: 4, projectileDamage: 12,
-    xp: 10, gold: 4, cost: 4, minWave: 3, weight: 5, color: 0x7e22ce, knockResist: 0,
+    xp: 10, gold: 4, cost: 4, minWave: 3, weight: 5, color: 0x7e22ce, knockResist: 0, armor: 5,
   },
   BOMBER: {
     name: 'Bomber Beetle', hp: 30, speed: 5.0, radius: 0.6, scale: 1, contactDamage: 0, projectileDamage: 28,
-    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 6, color: 0xf97316, knockResist: 0,
+    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 6, color: 0xf97316, knockResist: 0, armor: 10,
   },
   BRUTE: {
     name: 'Brute', hp: 220, speed: 3.0, radius: 1.2, scale: 1.8, contactDamage: 18, projectileDamage: 0,
-    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 0.6,
+    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 0.6, armor: 40,
   },
   SPLITTER: {
     name: 'Splitter', hp: 120, speed: 2.6, radius: 1.1, scale: 1.7, contactDamage: 12, projectileDamage: 0,
-    xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 0.3,
+    xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 0.3, armor: 20,
   },
   ZOMBIE: {
     name: 'Zombie', hp: 170, speed: 1.7, radius: 0.85, scale: 1.25, contactDamage: 11, projectileDamage: 0,
-    xp: 14, gold: 4, cost: 4, minWave: 3, weight: 4, color: 0x5f7a4a, knockResist: 0.5,
+    xp: 14, gold: 4, cost: 4, minWave: 3, weight: 4, color: 0x5f7a4a, knockResist: 0.5, armor: 25,
   },
   WRAITH: {
     name: 'Wraith', hp: 55, speed: 3.6, radius: 0.6, scale: 1.1, contactDamage: 9, projectileDamage: 0,
-    xp: 12, gold: 4, cost: 4, minWave: 5, weight: 3, color: 0x7dd3fc, knockResist: 0.2,
+    xp: 12, gold: 4, cost: 4, minWave: 5, weight: 3, color: 0x7dd3fc, knockResist: 0.2, armor: 15,
   },
   CRYSTAL_GOLEMITE: {
     name: 'Crystal Golemite', hp: 95, speed: 2.4, radius: 0.8, scale: 1.1, contactDamage: 10, projectileDamage: 9,
-    xp: 12, gold: 5, cost: 4, minWave: 4, weight: 4, color: 0xe879f9, knockResist: 0.4,
+    xp: 12, gold: 5, cost: 4, minWave: 4, weight: 4, color: 0xe879f9, knockResist: 0.4, armor: 45,
   },
   BANDIT: {
     name: 'Bandit', hp: 62, speed: 4.4, radius: 0.6, scale: 1.05, contactDamage: 8, projectileDamage: 0,
-    xp: 9, gold: 6, cost: 3.5, minWave: 4, weight: 4, color: 0xb45309, knockResist: 0,
+    xp: 9, gold: 6, cost: 3.5, minWave: 4, weight: 4, color: 0xb45309, knockResist: 0, armor: 15,
   },
   BOAR: {
     name: 'Wild Boar', hp: 115, speed: 3.0, radius: 0.95, scale: 1.3, contactDamage: 13, projectileDamage: 0,
-    xp: 12, gold: 3, cost: 4, minWave: 3, weight: 4, color: 0x78350f, knockResist: 0.4,
+    xp: 12, gold: 3, cost: 4, minWave: 3, weight: 4, color: 0x78350f, knockResist: 0.4, armor: 25,
   },
   ROCK_CRAB: {
     name: 'Rock Crab', hp: 150, speed: 2.1, radius: 0.95, scale: 1.2, contactDamage: 12, projectileDamage: 0,
-    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 0.6,
+    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 0.6, armor: 60,
   },
   BOSS_GOLEM: {
     name: 'Gorath the Mountain', hp: 1625, speed: 2.8, radius: 2.6, scale: 4, contactDamage: 25, projectileDamage: 18,
-    xp: 400, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1,
+    xp: 7, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1, armor: 80,
   },
   BOSS_LICH: {
     name: 'Malakar the Undying', hp: 1430, speed: 3.4, radius: 1.4, scale: 2.6, contactDamage: 18, projectileDamage: 14,
-    xp: 500, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1,
+    xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
 };
 
@@ -152,4 +153,14 @@ export function waveBudget(wave: number): number {
 }
 export function maxAliveForWave(wave: number): number {
   return 50 + 20 * Math.floor((wave - 1) / 10);
+}
+
+/** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
+export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
+  GOBLIN: [0.30, 10], BANDIT: [0.35, 10], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
+};
+/** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
+export function armorFor(kind: EnemyKind, wave: number, elite: boolean): number {
+  const base = ENEMY_DEFS[kind].armor * (1 + 0.02 * (wave - 1));
+  return Math.round(elite ? base * 1.6 + 15 : base);
 }

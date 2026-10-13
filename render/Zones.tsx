@@ -14,7 +14,10 @@ import { TAU, clamp } from './util';
 import { inView } from './view';
 
 const MAXZ = 192;
-const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0 };
+const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
+  FIREPATCH: 9, GOO: 10, CALTROPS: 10, ACID: 10, PLAGUE: 10, SMOKE: 10 };
+// sub-style of the generic hostile patch shader (vP.w)
+const PATCH_STYLE: Partial<Record<ZoneKind, number>> = { GOO: 0, CALTROPS: 1, ACID: 2, PLAGUE: 3, SMOKE: 4 };
 const PAD = 1.25;
 
 const VS = `attribute vec4 iP; attribute vec3 iC; varying vec2 vQ; varying vec4 vP; varying vec3 vC; varying vec2 vS;
@@ -40,7 +43,8 @@ void main(){
     float hatch = 0.5 + 0.5 * sin((q.x + q.y) * PAD * 16.0 - uTime * 2.0);
     float front = smoothstep(0.035, 0.0, abs(r - prog)) * step(0.02, prog);
     float a = disc * (0.13 + hatch * 0.05) + fill * 0.38 + edge * (0.7 + 0.3 * sin(uTime * 12.0)) + front * 0.5;
-    col = vec4(mix(vec3(1.0, 0.14, 0.08), vec3(1.0, 0.5, 0.25), fill * 0.6 + front) * (1.0 + edge * 0.6), a);
+    vec3 cA = vP.w > 0.5 ? vC : vec3(1.0, 0.14, 0.08); vec3 cB = vP.w > 0.5 ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.5, 0.25);
+    col = vec4(mix(cA, cB, fill * 0.6 + front) * (1.0 + edge * 0.6), a);
   } else if (type < 1.5) {
     float across = abs(q.x) * PAD; float along = q.y * 0.5 + 0.5;
     float inside = step(across, 1.0) * step(0.0, along) * step(along, 1.0);
@@ -49,8 +53,9 @@ void main(){
     float chev = step(fract(along * vS.y / 1.8 + abs(q.x) * PAD * 0.7 - uTime * 1.6), 0.35);
     float front = inside * smoothstep(0.03, 0.0, abs(along - prog));
     float a = inside * (0.12 + chev * 0.1) + fill * 0.34 + border * 0.7 + front * 0.6;
-    col = vec4(mix(vec3(1.0, 0.14, 0.08), vec3(1.0, 0.55, 0.3), fill * 0.5 + front) * (1.0 + border * 0.6), a);
-  } else if (type < 2.5 || type > 8.5) {
+    vec3 cA = vP.w > 0.5 ? vC : vec3(1.0, 0.14, 0.08); vec3 cB = vP.w > 0.5 ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.55, 0.3);
+    col = vec4(mix(cA, cB, fill * 0.5 + front) * (1.0 + border * 0.6), a);
+  } else if (type < 2.5 || (type > 8.5 && type < 9.5)) {
     float wild = step(8.5, type);
     float n = fbm(q * 3.2 * PAD + vec2(0.0, -uTime * 1.6));
     float n2 = fbm(q * 6.0 * PAD + vec2(uTime * 0.4, -uTime * 2.6));
@@ -62,6 +67,37 @@ void main(){
     float a = max(body * (0.25 + 0.6 * flame), scorch * (1.0 - flame));
     vec3 rgb = mix(vec3(0.04, 0.03, 0.02), c * (1.2 + flame * 1.3), clamp(flame * 1.5 + 0.2, 0.0, 1.0));
     col = vec4(rgb, a * aux);
+  } else if (type > 9.5) {
+    // hostile trick patches (vP.w = style): 0 goo, 1 caltrops, 2 acid, 3 plague cloud, 4 smoke
+    float st = vP.w;
+    float n = fbm(q * 3.0 * PAD + vec2(uTime * 0.15, -uTime * (st > 2.5 ? 0.35 : 0.1)));
+    float rr = r + (n - 0.5) * 0.3;
+    float body = smoothstep(1.0, 0.8, rr);
+    float rim = smoothstep(0.72, 0.92, rr) * body;
+    vec3 c = vC * (0.55 + 0.6 * n);
+    float a = body * (0.5 + 0.2 * n) * aux;
+    if (st < 0.5) { // goo: sticky bubbles
+      vec2 p = q * PAD * 4.0; vec2 id = floor(p); vec2 f = fract(p) - 0.5; float rn = hash(id);
+      float bub = smoothstep(0.05, 0.0, abs(length(f) - 0.18 - 0.1 * sin(uTime * 2.0 + rn * 6.0))) * step(0.5, rn);
+      c += bub * vec3(0.5, 0.9, 0.3) + rim * vec3(0.2, 0.4, 0.05);
+    } else if (st < 1.5) { // caltrops: scattered spikes
+      vec2 p = q * PAD * 5.0; vec2 id = floor(p); vec2 f = fract(p) - 0.5; vec2 off = (vec2(hash(id), hash(id + 7.0)) - 0.5) * 0.5;
+      float sp = smoothstep(0.1, 0.0, length(f - off)) * step(0.35, hash(id + 3.0));
+      c = mix(vec3(0.18, 0.18, 0.2), vec3(0.85, 0.87, 0.9), sp);
+      a = max(body * 0.25 * aux, sp * body * 0.95 * aux) + rim * 0.2 * aux;
+    } else if (st < 2.5) { // acid: bright bubbling lime
+      vec2 p = q * PAD * 5.0; vec2 id = floor(p); vec2 f = fract(p) - 0.5; float rn = hash(id); float t = fract(uTime * 0.6 + rn);
+      float bub = smoothstep(0.05, 0.0, abs(length(f) - 0.05 - 0.22 * t)) * step(0.4, rn) * (1.0 - t);
+      c = mix(vec3(0.25, 0.5, 0.05), vec3(0.7, 1.0, 0.2), n) + bub * 1.2 + rim * 0.4;
+    } else if (st < 3.5) { // plague: swirling sickly cloud
+      float sw = 0.5 + 0.5 * sin(ang * 3.0 + r * 9.0 - uTime * 1.6);
+      c = mix(vec3(0.2, 0.32, 0.1), vec3(0.6, 0.8, 0.25), sw * n);
+      a = body * (0.35 + 0.3 * sw) * aux;
+    } else { // smoke: soft grey puffs
+      c = vec3(0.45 + 0.2 * n);
+      a = body * (0.45 + 0.25 * n) * aux;
+    }
+    col = vec4(c, a);
   } else if (type < 3.5) {
     float arms = 0.5 + 0.5 * sin(ang * 3.0 + r * 16.0 - uTime * 5.0);
     float arms2 = 0.5 + 0.5 * sin(ang * 5.0 - r * 22.0 - uTime * 7.0);
@@ -169,7 +205,8 @@ export function Zones() {
           yaw = Math.atan2(z.dir.x, z.dir.z);
           break;
         }
-        case 'FIRE': case 'WILDFIRE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.2, 0, 1); break;
+        case 'FIRE': case 'WILDFIRE': case 'FIREPATCH': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.2, 0, 1); break;
+        case 'GOO': case 'CALTROPS': case 'ACID': case 'PLAGUE': case 'SMOKE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.1, 0, 1); break;
         case 'BLACKHOLE': case 'TORNADO': aux = clamp((1 - frac) * 6, 0, 1) * clamp(frac * 5, 0, 1); break;
         case 'FROST_FIELD': aux = clamp(frac * 3, 0, 1); break;
         case 'FROST_NOVA': aux = clamp(frac * 3, 0, 1); break;
@@ -187,7 +224,7 @@ export function Zones() {
       }
       o.position.set(x, y, zz); o.rotation.set(0, yaw, 0); o.scale.set(sx, 1, sz); o.updateMatrix();
       mesh.setMatrixAt(n, o.matrix);
-      P[n * 4] = type; P[n * 4 + 1] = prog; P[n * 4 + 2] = aux; P[n * 4 + 3] = 0;
+      P[n * 4] = type; P[n * 4 + 1] = prog; P[n * 4 + 2] = aux; P[n * 4 + 3] = type === 10 ? (PATCH_STYLE[z.kind] ?? 0) : z.trick > 0 ? 1 : 0;
       _col.setHex(hex || 0xffffff);
       C[n * 3] = _col.r; C[n * 3 + 1] = _col.g; C[n * 3 + 2] = _col.b;
       n++;
@@ -198,11 +235,11 @@ export function Zones() {
       if (dx * dx + dzp * dzp > 62 * 62) continue;
       const R = z.radius;
       switch (z.kind) {
-        case 'FIRE': case 'WILDFIRE': {
-          const rate = (z.kind === 'WILDFIRE' ? 16 : 10) + R * 7;
+        case 'FIRE': case 'WILDFIRE': case 'FIREPATCH': {
+          const rate = (z.kind !== 'FIRE' ? 16 : 10) + R * 7;
           let k = rate * dt * aux; while (k > 0) { if (rnd() < k) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.85; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.1, z.pos.z + Math.sin(a) * d, (rnd() - 0.5) * 0.6, 1.8 + rnd() * 2.2, (rnd() - 0.5) * 0.6, 0.45 + rnd() * 0.4, 0.7 + R * 0.12, 0.1, 2.4, 0.85, 0.15, 0.85, CELL.FLAME, -0.8, 1.2); } k -= 1; }
           if (rnd() < dt * (3 + R)) embers(z.pos.x + (rnd() - 0.5) * R, 0.3, z.pos.z + (rnd() - 0.5) * R, 1, 0xff9a30, R * 0.5, 3.4, 1.0, 0.16);
-          if (z.kind === 'WILDFIRE' && rnd() < dt * 4) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.8, z.pos.z + (rnd() - 0.5) * R, 1, 0x3a3430, 1.6, 1.6, 1.8, 0.6, 0.45);
+          if (z.kind !== 'FIRE' && rnd() < dt * 4) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.8, z.pos.z + (rnd() - 0.5) * R, 1, 0x3a3430, 1.6, 1.6, 1.8, 0.6, 0.45);
           break;
         }
         case 'BLACKHOLE': {
@@ -236,6 +273,13 @@ export function Zones() {
           }
           break;
         }
+        case 'ACID': case 'PLAGUE': case 'GOO':
+          if (aux > 0.3 && rnd() < dt * (4 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.8; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.15, z.pos.z + Math.sin(a) * d, 0, 0.8 + rnd(), 0, 0.9, 0.2, 0.05, z.kind === 'GOO' ? 0.8 : 0.9, z.kind === 'GOO' ? 1.5 : 1.7, 0.3, 0.7, CELL.RING, 0, 0.4); }
+          if (z.kind === 'PLAGUE' && rnd() < dt * 5) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.6, z.pos.z + (rnd() - 0.5) * R, 1, 0x7a9a3a, 1.8, 1.4, 0.8, 0.5, 0.3);
+          break;
+        case 'SMOKE':
+          if (rnd() < dt * 12) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.8, z.pos.z + (rnd() - 0.5) * R, 1, 0x8a8f96, 2.2, 1.6, 0.8, 0.7, 0.35);
+          break;
         case 'PUDDLE':
           if (rnd() < dt * 1.2) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.7; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.1, z.pos.z + Math.sin(a) * d, 0, 0, 0, 1.0, 0.1, 0.9, 0.5, 0.8, 1.2, 0.4, CELL.RING); }
           break;

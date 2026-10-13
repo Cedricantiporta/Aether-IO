@@ -20,6 +20,11 @@ import { updateVillage, placeVillageNodes } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
+import { updateCombatFx, resetCombat } from './systems/combat';
+import { resetTricks } from './systems/tricks';
+import { updateCombo, resetCombo } from './systems/combo';
+import { resetSpecials } from './systems/bossSpecials';
+import { tickUltWindup } from './systems/abilities';
 
 const MAX_DT = 0.05;
 
@@ -115,6 +120,10 @@ function resetSystems(): void {
   resetPets();
   resetPickups();
   resetDirector();
+  resetCombat();
+  resetTricks();
+  resetCombo();
+  resetSpecials();
   clearPressed();
 }
 
@@ -161,6 +170,8 @@ export function updateGame(rawDt: number): void {
     clearPressed();
     return;
   }
+  // Ultimate wind-up: the simulation is frozen (render keeps running) until the effect releases.
+  if (tickUltWindup(Math.min(rawDt, 0.1))) { clearPressed(); return; }
   const dt = Math.min(rawDt, MAX_DT) * feel.timeScale;
   if (!(dt > 0)) return;
 
@@ -175,6 +186,8 @@ export function updateGame(rawDt: number): void {
   updatePets(dt);
   updatePickups(dt);
   updateCrates(dt);
+  updateCombatFx(dt);
+  updateCombo(dt);
 
   world.camera.trauma = Math.max(0, world.camera.trauma - dt * 1.5);
   world.time += dt;

@@ -8,25 +8,24 @@ import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { HERO_COLOR } from '../../lib/game';
 import { TalentsView } from './Talents';
-import { ABILITIES, ULTS } from '../../../abilityDefs';
+import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityDefs';
 import { PaintedIcon } from '../../components/SkillIcons';
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown. Level 5 grants +1 dash charge.',
   weapon: 'Ultimate charge fills 10% faster per level.', barrier: 'Triggers below 20% HP. Longer invulnerability, more charges, faster recharge.',
   burning: 'Fire arrow every Nth attack: N drops by 1 per level.', freezing: 'Ice arrow every Nth attack: N drops by 1, slow lasts longer.',
-  thunder: 'Chain lightning every Nth bolt: N drops by 1, one more target.', freezeSpell: 'Wider blizzard, longer freeze.', storm: 'Stronger typhoon.',
-  orbital: 'One more orbiting blade.', stamp: 'Stomp every Nth throw: N drops by 1, bigger shockwave.',
+  thunder: 'Chain lightning every Nth bolt: N drops by 1, one more target.', freezeSpell: 'Stronger slow, longer duration (radius 16, slow instead of freeze).', storm: 'One more bolt in the volley, more damage.',
+  orbital: 'One more orbiting blade (1 + level).', stamp: 'Axe Storm every Nth throw: N drops by 1, harder-hitting axes.',
 };
-const costOf = (key: string, lvl: number) => (key === 'dash' || key === 'barrier' || key === 'ult' ? lvl + 2 : lvl + 1);
-
-const KEYS: Record<string, string> = { q: 'Q', e: 'E', s3: '3', s4: '4', ult: 'R' };
+const costOf = (hero: any, key: string, lvl: number) => (isDashKey(hero, key) || key === 'barrier' || key === 'ult' ? lvl + 2 : lvl + 1);
 
 const RunSkills: React.FC = () => {
   const { hero, levels, sp, upgrade } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill })));
-  const passives = Object.entries(SKILLS_INFO).filter(([, i]: [string, any]) => i.type === 'PASSIVE' && (!i.classType || i.classType === hero));
+  const passives = Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === hero));
   const rows: { key: string; name: string; desc: string; icon: React.ReactNode; tag?: string; now?: (l: number) => string; color?: string }[] = [
-    ...ABILITIES[hero].map((a) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: KEYS[a.slot], now: a.per })),
+    ...activeDefs(hero).map((a, i) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: String(i + 1), now: a.per })),
+    { key: dashKey(hero), name: `Dash: ${dashDef(hero).name}`, desc: dashDef(hero).desc, icon: <PaintedIcon id={dashDef(hero).icon} />, tag: 'SPACE', now: dashDef(hero).per, color: '#7ad0ff' },
     { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: '#ff9a3a' },
     ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <SkillIcon id={k} size={26} dim={(levels[k as keyof SkillLevels] ?? 0) <= 0} /> })),
   ];
@@ -39,7 +38,7 @@ const RunSkills: React.FC = () => {
       {rows.map((r) => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
-        const cost = costOf(r.key, lvl);
+        const cost = costOf(hero, r.key, lvl);
         const can = !max && sp >= cost;
         const info: any = (SKILLS_INFO as any)[r.key];
         return (

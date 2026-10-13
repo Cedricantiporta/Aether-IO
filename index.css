@@ -802,3 +802,19 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .loading-bar { width: min(24rem, 70vw); }
 .compact .vh-bottom { zoom: .6; bottom: .3rem !important; }
 .compact .vh-bottom { left: 25% !important; right: 25% !important; }
+
+/* ---- combat-depth additions: combo meter, debuff icons, blind overlay ---- */
+.combo-box { display: flex; align-items: center; padding: .15rem .8rem .15rem .3rem; border-radius: 999px; background: rgba(10, 8, 6, .55); box-shadow: 0 0 0 2px #6b5a3a; }
+.combo-label { font-weight: 900; letter-spacing: .12em; font-size: 1.05rem; color: #ffe9a8; text-shadow: 0 2px 0 #000; }
+.combo-box[data-n='2'] .combo-label { color: #ffc24a; } .combo-box[data-n='3'] .combo-label { color: #ff8a3a; text-shadow: 0 0 10px #ff6a00, 0 2px 0 #000; }
+.combo-pop { animation: comboPop .28s ease-out; }
+@keyframes comboPop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.combo-fin { animation: comboFin 1.4s ease-out forwards; }
+@keyframes comboFin { 0% { transform: translateX(-50%) scale(.4); opacity: 0; } 15% { transform: translateX(-50%) scale(1.3); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(-50%) scale(1) translateY(-1.2rem); opacity: 0; } }
+.debuff-row { display: flex; gap: .3rem; flex-wrap: wrap; min-height: 1.6rem; margin-top: .25rem; }
+.debuff-slot { position: relative; width: 1.7rem; height: 1.7rem; display: none; place-items: center; border-radius: .25rem; background: radial-gradient(circle, #3a1410, #0b0908); box-shadow: 0 0 0 1.5px var(--dc, #b44), 0 0 0 2.5px #0a0709, 0 0 8px var(--dc, #b44); color: var(--dc, #f88); }
+.debuff-slot[data-on='1'] { display: grid; animation: debuffIn .2s ease-out; }
+.debuff-slot [data-t] { position: absolute; bottom: -.15rem; right: .02rem; font-size: .58rem; font-weight: 800; color: #fff; text-shadow: 0 0 3px #000, 0 1px 2px #000; }
+@keyframes debuffIn { from { transform: scale(1.6); } to { transform: scale(1); } }
+.compact .debuff-slot { width: 1.35rem; height: 1.35rem; } .compact .debuff-slot [data-t] { font-size: .5rem; }
+.blind-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0; transition: opacity .12s linear; backdrop-filter: blur(0px); background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .15) 12%, rgba(0, 0, 0, .88) 72%); }

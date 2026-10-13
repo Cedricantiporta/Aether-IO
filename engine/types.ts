@@ -76,6 +76,18 @@ export interface Enemy {
   stunT: number;         // stunned (spinning stars, no move/attack)
   fearT: number;         // terrified: flees from the player
   slowT: number; slowFactor: number; // speed *= (1 - slowFactor)
+  // combat-depth systems
+  armor: number;         // damage taken x 100/(100+armor)
+  armorBreakT: number;   // ARMOR BREAK: armor -25% while > 0
+  burnStacks: number; burnStackCd: number; // burn stacks up to 3 (dps x stacks)
+  mini: boolean;         // mini-boss (stagger bar, no full stun, reduced knockback)
+  stagger: number; staggerMax: number; staggerT: number; staggerCd: number; // boss/mini-boss stagger bar; staggerT>0 = staggered (+25% dmg)
+  trickCd: number; trickT: number; trickKind: number; // monster signature trick (telegraphed, own cooldown)
+  spKind: number; spT: number; spStep: number; spCd: number; // boss / mini-boss signature attack (see bossSpecials.ts)
+  decoy: boolean; hideT: number; shellT: number; // Lich clone, ambush vanish, Shellback shell
+  frostT: number;        // chilled by Frost Field / Chain Frost (Archer synergy: Gale Arrow SHATTER +30%)
+  chillStacks: number; chillT: number; // Chain Frost chill (15% slow per stack, 4 = freeze)
+  slamDmg: number; slamT: number; // wall-slam bonus damage while launched (slamT>0)
 
   // boss bookkeeping
   phase: number;         // 0,1,2 (enrage at 66% / 33% hp)
@@ -89,7 +101,7 @@ export interface Enemy {
 export type ProjectileKind =
   | 'ARROW' | 'MAGIC' | 'AXE'
   | 'FIREBALL' | 'PIERCING_ARROW' | 'BURNING_ARROW' | 'FREEZING_ARROW'
-  | 'STORM' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW';
+  | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW';
 
 export interface Projectile {
   id: number;
@@ -129,6 +141,7 @@ export interface EnemyProjectile {
   radius: number;
   homing: number;        // rad/s
   slow?: number;         // applies slow to player on hit (0..1)
+  debuff: number;        // 0 none, 1 ROOT (pinning arrow)
 }
 
 // --------------------------------------------------------------- ground zones --
@@ -147,7 +160,14 @@ export type ZoneKind =
   // ---- environmental hazards: affect BOTH player and enemies (ignore `hostile`)
   | 'PUDDLE'            // shallow water: slows anything inside (player 35%, enemies 35%); fire zones touching it are extinguished
   | 'GAS'               // poison gas cloud: dps + POISON to player & enemies. Vents pulse: active while (world.time % period) < activeFor
-  | 'WILDFIRE';         // burning ground: dps + BURN to player & enemies; spreads from explosive barrels, burns out after life
+  | 'WILDFIRE'          // burning ground: dps + BURN to player & enemies; spreads from explosive barrels, burns out after life
+  // ---- hostile trick zones (affect the PLAYER only)
+  | 'GOO'               // slime goo: slows player
+  | 'CALTROPS'          // bandit caltrops: slows + chip bleed
+  | 'FIREPATCH'         // goblin firebomb / bomber blast: burning ground (player only)
+  | 'ACID'              // splitter acid puddle: poison dps
+  | 'PLAGUE'            // zombie plague cloud: poison dps
+  | 'SMOKE';            // bandit smoke bomb: obscures (short blind pulses)
 
 export interface Zone {
   id: number;
@@ -167,11 +187,13 @@ export interface Zone {
   permanent: boolean;    // map hazard placed by mapgen: never expires (life ignored)
   period: number;        // GAS vents: pulse cycle length (s); 0 = always on
   activeFor: number;     // GAS vents: seconds active per cycle
+  trick: number;         // TELEGRAPH_*: signature-trick id resolved on expiry (0 none)
+  aux: number;           // free: FIRE zones: 1 = real stacking burn
 }
 
 // ------------------------------------------------------------- ground fx --
 // Timed ground effects driven by abilities: falling arrows/meteors, spikes, traps, pillars, rings.
-export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'PILLAR' | 'RING';
+export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'RING';
 export interface GroundFx {
   id: number;
   active: boolean;
@@ -186,6 +208,7 @@ export interface GroundFx {
   aux: number;                // kind-specific (stun time, ring max radius, ...)
   seed: number;
   done: boolean;              // impact already resolved
+  launch: boolean;            // SPIKE: launches enemies (Earthsplitter)
   color: number;
 }
 
@@ -265,11 +288,15 @@ export interface PlayerRuntime {
 
   dashT: number;         // remaining dash time
   dashDir: Vector3;
+  dashIframes: boolean;  // class dash grants i-frames (false for the Barbarian shoulder charge)
   dashCharges: number;
   maxDashCharges: number;
   dashCd: number;        // recharge timer for next charge
   dashCdMax: number;
 
+  // debuffs applied by monster signature tricks (seconds remaining)
+  stunT: number; rootT: number; silenceT: number; defDownT: number; blindT: number;
+  burnT: number; burnDps: number; poisonT: number; poisonDps: number; bleedT: number; bleedDps: number; dotAcc: number;
   cd: { q: number; e: number; s3: number; s4: number };
   cdMax: { q: number; e: number; s3: number; s4: number };
   ult: number;           // ultimate charge 0..100
@@ -326,6 +353,10 @@ export interface DirectorState {
 
 export interface BossHud {
   active: boolean;
+  stagger: number;       // 0..1 fill of the stagger bar
+  staggered: boolean;
+  ability: string;       // name of the signature attack being cast (shown on the boss bar)
+  abilityT: number;
   name: string;
   title: string;
   hp: number;
@@ -359,4 +390,8 @@ export interface InputState {
   joy: { x: number; z: number; active: boolean };
   /** Right aim stick (touch, auto-aim off): direction in world xz, -1..1. */
   aimStick: { x: number; z: number; active: boolean };
+  /** Press / drag state of a touch skill button (see engine/systems/aim.ts). dx/dz = world-axis drag vector, mag 0..1. */
+  touchAim: { active: boolean; id: string; dx: number; dz: number; mag: number; cancel: boolean };
+  /** Set by right-click / Esc: cancels a held aim indicator. */
+  cancelAim: boolean;
 }

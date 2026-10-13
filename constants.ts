@@ -2,6 +2,7 @@
 import type { Item, PlayerStats, HeroClass, Upgrade, Rarity } from "./types";
 import type { Difficulty } from "./storeTypes";
 import { GENERATED_ITEMS } from "./itemCatalog";
+import { EXTRA_PETS } from "./petsCatalog";
 
 /** Legacy diameter of the playable area. The simulation uses ARENA_RADIUS from engine/world.ts. */
 export const ARENA_SIZE = 136;
@@ -99,7 +100,7 @@ export const SKILLS_INFO = {
     // Universal Passives
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
     magnet: { name: 'Looter', description: 'Increases pickup range.', type: 'PASSIVE' },
-    dash: { name: 'Dash Mastery', description: 'Dash costs no mana. Reduces dash cooldown. Level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
+    dash: { name: 'Class Dash', description: 'Your Space dash (Shadow Roll / Blink Nova / Shoulder Charge). Costs no mana. Reduces dash cooldown; level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
     weapon: { name: 'Ultimate Mastery', description: 'Ultimate charge fills faster (+10% per level).', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
@@ -108,13 +109,13 @@ export const SKILLS_INFO = {
     freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (12 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     
     // Wizard Only
-    thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning to nearby enemies.', classType: 'WIZARD', type: 'PASSIVE' },
-    freezeSpell: { name: 'Blizzard', description: 'Passive: Freezes enemies in large area.', classType: 'WIZARD', type: 'PASSIVE' },
-    storm: { name: 'Storm', description: 'Passive: Summons a bouncing typhoon.', classType: 'WIZARD', type: 'PASSIVE' },
+    thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning (1 jump + 1 per level, moderate damage).', classType: 'WIZARD', type: 'PASSIVE' },
+    freezeSpell: { name: 'Blizzard', description: 'Passive: A blizzard bursts around you, heavily slowing enemies in a medium area (radius 16).', classType: 'WIZARD', type: 'PASSIVE' },
+    storm: { name: 'Storm', description: 'Passive: Fires a fan of 5 + level straight lightning bolts (60 degree spread, pierce 2) at the nearest enemy.', classType: 'WIZARD', type: 'PASSIVE' },
     
     // Barbarian Only
-    orbital: { name: 'Orbital Blades', description: 'Passive: Blades orbit and damage enemies.', classType: 'BARBARIAN', type: 'PASSIVE' },
-    stamp: { name: 'Mega Stamp', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) triggers a stunning Mega Stomp shockwave.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    stamp: { name: 'Axe Storm', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) hurls 3 giant spinning axes in a fan. Each ricochets once off the first enemy or obstacle it hits, hits hard and breaks armor.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };
 
 // REDUCED VALUES BY ~50%
@@ -131,7 +132,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   
   { id: 'u_mag', type: 'SKILL_MAGNET', name: 'Looter', description: 'Magnet Range Level Up', rarity: 'COMMON', value: 1 },
-  { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Dash Level Up', rarity: 'RARE', value: 1 }, 
+  { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Class Dash Level Up', rarity: 'RARE', value: 1 }, 
   { id: 'u_wep', type: 'SKILL_WEAPON', name: 'Ability Mastery', description: 'Ability Level Up', rarity: 'EPIC', value: 1 },
   { id: 'u_bar', type: 'SKILL_BARRIER', name: 'Energy Shield', description: 'Shield Level Up', rarity: 'EPIC', value: 1 },
 
@@ -140,15 +141,15 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_orb', type: 'SKILL_ORBITAL', name: 'Orbitals', description: 'Level Up: +1 Blade', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_thun', type: 'SKILL_THUNDER', name: 'Thundercaller', description: 'Level Up: +1 Target', rarity: 'RARE', value: 1, classType: 'WIZARD' },
 
-  { id: 'u_pierce', type: 'SKILL_PIERCING', name: 'Gale Arrow', description: 'Active (Q) Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
+  { id: 'u_pierce', type: 'SKILL_PIERCING', name: 'Gale Arrow', description: 'Active (1) Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   { id: 'u_burn', type: 'SKILL_BURNING', name: 'Burning Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   { id: 'u_freeze', type: 'SKILL_FREEZING', name: 'Freezing Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   
-  { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Singularity', description: 'Active (Q) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
+  { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Singularity', description: 'Active (1) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
   { id: 'u_blizz', type: 'SKILL_FREEZE_SPELL', name: 'Blizzard', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },
   
-  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Bloodrage Leap', description: 'Active (Q) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
-  { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Mega Stamp', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Bloodrage Leap', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Axe Storm', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
 ];
 
 // PETS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
@@ -198,16 +199,17 @@ export const PETS_POOL: Item[] = [
         stats: { damage: 100, maxHealth: 300, moveSpeed: 0.5, cooldownReduction: 0.2, critRate: 0.2 }, // 5 Stats
         description: 'A fragment of a star.', petSkill: 'ATTACK_RANGED', petValue: 100 
     },
+    ...EXTRA_PETS,
 ];
 
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
   // --- CONSUMABLES ---
-  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 50, level: 1, description: 'Restores 50 HP.' },
-  { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 50, level: 1, description: 'Restores 50 Mana.' },
+  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 50 HP.' },
+  { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 50 Mana.' },
   // BIG POTIONS
-  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 1, description: 'Restores 75 HP.' },
-  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 1, description: 'Restores 75 Mana.' },
+  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 75 HP.' },
+  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 75 Mana.' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'A rare arcane core used by the Blacksmith to upgrade gear.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death.' },

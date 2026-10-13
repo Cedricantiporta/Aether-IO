@@ -32,21 +32,16 @@ const aim = new Vector3();
 const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
 const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
 const blades: Projectile[] = [];
-const stompStun: StatusEffect = { type: 'STUN', duration: 2 };
-const stompOpts1: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
-const stompOpts2: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 5 };
+const blizzSlow: StatusEffect = { type: 'SLOW', duration: 3, value: 0.7 };
 const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
-const freeze5: StatusEffect = { type: 'FREEZE', duration: 5.1 };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const bladeOut: number[] = [];
 
 let blizzT = 0, stormT = 0;
-let stampStage = 0, stampSeqT = 0, stampLv = 1;
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
   blizzT = stormT = 0;
-  stampStage = 0; stampSeqT = 0;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -73,20 +68,24 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
   }
 }
 
-function stomp(stage: 1 | 2, level: number): void {
+/** AXE STORM: 3 giant spinning axes in a ~40 degree fan; each ricochets off the first enemy / obstacle toward the next enemy. */
+function axeStorm(level: number): void {
   const st = useGameStore.getState().stats;
   const pl = world.player;
-  const R = 12 + level + st.stompRadius;
-  const dmg = st.damage * 1.5 * st.skillDamage * lvScale(level) * (1 + st.stompPower);
-  stompStun.duration = 2 + st.stompStun;
-  if (stage === 1) damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts1, stompStun);
-  else damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts2);
-  const z = allocZone();
-  if (z) {
-    z.active = true; z.kind = 'SHOCKWAVE'; z.hostile = false;
-    z.pos.set(pl.pos.x, 0, pl.pos.z); z.radius = R; z.life = z.maxLife = 0.5; z.damage = 0; z.color = 0xf97316;
+  const dir = getAimDir(aim);
+  const n = 3 + (st.axeCount | 0);
+  const size = 1 + st.axeSize;
+  const dmg = st.damage * 2.2 * st.skillDamage * lvScale(level) * (1 + st.stompPower);
+  const spread = 0.35; // half-angle (~40 deg total)
+  for (let i = 0; i < n; i++) {
+    const a = n === 1 ? 0 : (i / (n - 1) - 0.5) * 2 * spread;
+    const c = Math.cos(a), s = Math.sin(a);
+    const vx = dir.x * c - dir.z * s, vz = dir.x * s + dir.z * c;
+    const p = spawnProjectile('GIANT_AXE', pl.pos.x + vx * 1.2, pl.pos.z + vz * 1.2, vx, vz, 30, dmg,
+      { life: 2.4, pierce: 6, radius: 2.3 * size, knockback: 0.8, y: 1.3, effect: { type: 'ARMOR_BREAK', duration: 6 } });
+    if (p) { p.bounces = 1 + (st.axeBounce | 0); p.spin = size; }
   }
-  events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xf97316 });
+  events.emit('shockwave', { pos: pl.pos.clone(), radius: 1.5, color: 0xff5a3a });
   pl.anim.castT = 1;
 }
 
@@ -99,14 +98,14 @@ function updateOrbitals(dt: number, level: number, chargeMul: number): void {
     orbT += dt * chargeMul;
     setCd('orbital', 2 - orbT, 2);
     if (orbT < 2) return;
-    const count = 2 + level;
+    const count = 1 + level;
     blades.length = 0;
     for (let i = 0; i < count; i++) {
       const p = allocProjectile();
       if (!p) break;
       p.active = true; p.kind = 'ORBITAL_BLADE'; p.state = 0;
       p.pos.set(pl.pos.x, 1.0, pl.pos.z); p.vel.set(0, 0, 0);
-      p.life = p.maxLife = 99; p.damage = dmg * 5; p.radius = 1.5; p.pierce = 1;
+      p.life = p.maxLife = 99; p.damage = dmg * 3; p.radius = 1.5; p.pierce = 1;
       blades.push(p);
     }
     orbState = 0; orbT = 0; orbTick = 0.2;
@@ -147,7 +146,7 @@ function updateOrbitals(dt: number, level: number, chargeMul: number): void {
         if (t) { dx = t.pos.x - b.pos.x; dz = t.pos.z - b.pos.z; }
         else { dx = b.pos.x - pl.pos.x; dz = b.pos.z - pl.pos.z; }
         const l = Math.sqrt(dx * dx + dz * dz) || 1;
-        b.vel.set((dx / l) * 20, 0, (dz / l) * 20);
+        b.vel.set((dx / l) * 11, 0, (dz / l) * 11);
         b.state = 1; b.life = 2; b.hitIds.length = 0;
       }
       orbState = 1; orbT = 0;
@@ -186,14 +185,14 @@ export function updateSkills(dt: number): void {
 
   if (lv.freezeSpell > 0) {
     blizzT += dt * chargeMul;
-    const max = Math.max(7, 14 - lv.freezeSpell * 0.2) * cdrMul();
+    const max = Math.max(7, 14 - lv.freezeSpell * 0.2) * 1.3 * cdrMul();
     setCd('freezeSpell', max - blizzT, max);
     if (blizzT >= max) {
-      if (findNearestEnemy(pl.pos.x, pl.pos.z, 27) && trySpendMana(st.getManaCost('freezeSpell'))) {
+      if (findNearestEnemy(pl.pos.x, pl.pos.z, 16) && trySpendMana(st.getManaCost('freezeSpell'))) {
         blizzT = 0;
-        const bR = 27 + stats.blizzardRadius;
-        freeze5.duration = 5.1 + stats.blizzFreeze;
-        damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, freeze5);
+        const bR = 16 + stats.blizzardRadius;
+        blizzSlow.duration = 3 + stats.blizzFreeze; blizzSlow.value = Math.min(0.85, 0.65 + 0.03 * lv.freezeSpell);
+        damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, blizzSlow);
         const z = allocZone();
         if (z) {
           z.active = true; z.kind = 'FROST_NOVA'; z.hostile = false;
@@ -207,30 +206,31 @@ export function updateSkills(dt: number): void {
 
   if (lv.storm > 0) {
     stormT += dt * chargeMul;
-    const max = Math.max(5, 15 - lv.storm * 0.2) * cdrMul();
+    const max = Math.max(5, 12 - lv.storm * 0.2) * cdrMul();
     setCd('storm', max - stormT, max);
     if (stormT >= max) {
       if (!findNearestEnemy(pl.pos.x, pl.pos.z, 40)) { stormT = max; } else {
       stormT = 0;
       const dir = getAimDir(aim);
-      spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x, dir.z, 4, stats.damage * 1.5 * stats.skillDamage * 2.0 * lvScale(lv.storm),
-        { life: 10 + stats.stormBonus, pierce: Infinity, knockback: 1.0, bounces: 6 + Math.floor(stats.stormBonus / 2), radius: 5.5 });
-      if (stats.stormTwin > 0) {
-        const a = 0.9, ca = Math.cos(a), sa = Math.sin(a);
-        spawnProjectile('STORM', pl.pos.x, pl.pos.z, dir.x * ca - dir.z * sa, dir.x * sa + dir.z * ca, 4, stats.damage * 1.5 * stats.skillDamage * 2.0 * lvScale(lv.storm),
-          { life: 10 + stats.stormBonus, pierce: Infinity, knockback: 1.0, bounces: 6 + Math.floor(stats.stormBonus / 2), radius: 5.5 });
+      // Storm volley: a fan of straight piercing bolts (no bounce / lingering tornado).
+      const n = 5 + lv.storm + (stats.stormTwin > 0 ? 3 : 0) + Math.round(stats.stormBonus / 2);
+      const dmg = stats.damage * 1.5 * stats.skillDamage * 0.9 * lvScale(lv.storm);
+      const spread = Math.PI / 3; // 60 degrees
+      for (let i = 0; i < n; i++) {
+        const a = (n === 1 ? 0 : i / (n - 1) - 0.5) * spread;
+        const c = Math.cos(a), s = Math.sin(a);
+        const vx = dir.x * c - dir.z * s, vz = dir.x * s + dir.z * c;
+        spawnProjectile('PIERCING_ARROW', pl.pos.x + vx, pl.pos.z + vz, vx, vz, 34, dmg,
+          { life: 0.9, pierce: 2, knockback: 0.5, radius: 1.4, y: 1.3 });
       }
+      events.emit('lightning', { from: new Vector3(pl.pos.x, 1.2, pl.pos.z), to: new Vector3(pl.pos.x + dir.x * 10, 1.2, pl.pos.z + dir.z * 10) });
+      pl.anim.castT = 1;
       }
     }
   }
 
-  // Mega Stamp: the basic attack flags a stomp; stage 2 follows 0.5s after stage 1.
-  if (stampStage === 0) {
-    if (procFlags.stomp > 0) { stampLv = procFlags.stomp; procFlags.stomp = 0; stampStage = 1; stampSeqT = 0; stomp(1, stampLv); }
-  } else {
-    stampSeqT += dt;
-    if (stampSeqT >= 0.5) { stomp(2, stampLv); stampStage = 0; }
-  }
+  // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).
+  if (procFlags.stomp > 0) { const l = procFlags.stomp; procFlags.stomp = 0; axeStorm(l); }
 
   if (lv.orbital > 0) updateOrbitals(dt, lv.orbital, chargeMul);
 }

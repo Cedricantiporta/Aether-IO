@@ -94,3 +94,15 @@ pointer) every frame — the engine never touches the camera.
 5. No per-frame `setState`. No `useGameStore()` without a selector.
 6. Shadows: only the hero, bosses, trees and buildings cast; enemies use cheap
    blob-shadow decals.
+
+## Combat-depth layer (monster tricks, statuses, aimed casting)
+* `engine/systems/tricks.ts` — monster signature tricks. A cast freezes the enemy (`e.trickT`) while a hostile telegraph zone
+  (`Zone.trick`) fills; `resolveTrick()` applies the effect on expiry (player debuffs, hostile ground patches `GOO/CALTROPS/FIREPATCH/ACID/PLAGUE/SMOKE`,
+  crystal wall colliders via `mapgen.addTempCollider`). `engine/systems/bossSpecials.ts` does the same for bosses / mini-bosses (scripted timelines on `e.spT`).
+* Player debuffs live on `world.player` (`stunT rootT silenceT defDownT blindT burnT/poisonT/bleedT`); `combat.applyPlayerDebuff()` ignores dash i-frames
+  (`dashIframes`; the Barbarian shoulder charge has none). Enemy statuses: stun/freeze (bosses + minis fill `stagger` instead), stacking burn (<=3), chill, ARMOR BREAK,
+  `armor` (100/(100+armor)), backstab (+30%), launch + wall-slam (`DamageOpts.launch/slam`).
+* Kit: keys 1/2/3 = class actives (`abilityDefs.ACTIVE_ORDER`), Space = class dash (`tryDash` -> Shadow Roll / Blink Nova / Shoulder Charge), R = ult (1 s wind-up while the sim is frozen,
+  `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = skill combo (+20%/stack, finisher on ult).
+* Aimed casting: `engine/systems/aim.ts` (`aimState`, `updateSkillInput`) + `render/AimIndicator.tsx`; skills read `combat.aimOverride` through `getAimDir` / `aimPoint`.
+  XP is granted instantly on kill (`combat.grantKillXp`, no XP orbs); coins only from `enemyDefs.GOLD_DROPPERS` + the Lich.

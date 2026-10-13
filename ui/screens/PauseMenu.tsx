@@ -107,14 +107,17 @@ export const SettingsDialog: React.FC = () => {
           {vol('musicVolume', 'Music')}
         </>)}
         {tab === 'CONTROLS' && (<>
+          <Row label="Skill casting" hint="Aimed: hold the key to show the indicator, release to cast (right-click / Esc cancels). Quick: instant at the cursor. Auto: instant at the auto-target. Touch: tap = auto-target, drag = aim.">
+            <Seg tid="seg-cast" value={settings.castMode ?? 'AIMED'} opts={[{ v: 'AIMED', l: 'Aimed' }, { v: 'QUICK', l: 'Quick' }, { v: 'AUTO', l: 'Auto' }]} onChange={(v) => update({ castMode: v })} />
+          </Row>
           <Row label="Joystick side" hint="Touch: move stick and ability buttons swap sides."><Seg tid="seg-joy" value={settings.joystickSide} opts={[{ v: 'LEFT', l: 'Left' }, { v: 'RIGHT', l: 'Right' }]} onChange={(v) => update({ joystickSide: v })} /></Row>
           {device.fullscreenOk && <Row label="Fullscreen"><Button size="sm" onClick={() => { void toggleFullscreen(); }}><Maximize size={14} /> Toggle</Button></Row>}
           <div className="py-2" style={{ fontSize: '.72rem', lineHeight: 1.7, color: 'var(--text-dim)' }}>
             <div className="rpg-label !text-[.66rem] mb-1">Keyboard</div>
-            <div><b>WASD</b> move · <b>Mouse</b> aim · <b>Space</b> dash · <b>Q E 3 4</b> abilities · <b>R</b> ultimate</div>
-            <div><b>1 / 2</b> potions · <b>I</b> bag · <b>C</b> hero · <b>Esc</b> pause · <b>E / F</b> interact / harvest (village)</div>
+            <div><b>WASD</b> move · <b>Mouse</b> aim · <b>Space</b> class dash · <b>1 2 3</b> abilities (hold to aim, release to cast) · <b>R</b> ultimate</div>
+            <div><b>Z / X</b> potions · <b>I</b> bag · <b>C</b> hero · <b>Esc</b> pause · <b>E / F</b> interact / harvest (village)</div>
             <div className="rpg-label !text-[.66rem] mt-2 mb-1">Touch</div>
-            <div>Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Ability buttons sit on the {settings.joystickSide === 'LEFT' ? 'right' : 'left'}. With Auto-aim off, drag on the opposite upper side to aim.</div>
+            <div>Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Ability buttons sit on the {settings.joystickSide === 'LEFT' ? 'right' : 'left'}: tap a button to cast at the auto-target, or drag from it to aim (release to cast, drag back to the button or to the top zone to cancel). With Auto-aim off, drag on the opposite upper side to aim.</div>
           </div>
         </>)}
       </div>

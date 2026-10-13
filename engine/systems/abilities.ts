@@ -7,10 +7,11 @@ import { world, allocZone, allocFx } from '../world';
 import { edgeLimit, queryColliders, type Collider } from '../mapgen';
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { abilityCd, lvMul, ULT_MAX, type ActiveSlot } from '../../abilityDefs';
+import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
+import { combo, comboMul, registerCast } from './combo';
 import type { GroundFx, GroundFxKind } from '../types';
 import {
-  getAimDir, trySpendMana, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim,
+  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
@@ -18,7 +19,9 @@ import { hitStop, slowMo, fovKick } from '../game';
 
 /** State for render/UI of multi-frame abilities. */
 export const abilityState = {
-  tint: 0,                 // 0..1 screen darkening (ultimates)
+  tint: 0,                 // (unused: ultimates no longer darken the screen)
+  flash: 0,                // 0..1 brief light flash at ult cast / impact
+  flashRgb: [1, 0.9, 0.7] as [number, number, number],
   tintTarget: 0,
   tintRgb: [0.04, 0.06, 0.16] as [number, number, number],
   ultKind: 0,              // 0 none, 1 archer, 2 wizard, 3 barbarian
@@ -27,6 +30,11 @@ export const abilityState = {
   ultAcc: 0,
   ultX: 0, ultZ: 0,
   whirlR: 7.5,
+  lavaT: 0,
+  ultMul: 1, ultB: 0,
+  windupT: 0, windupDur: 0, windupX: 0, windupZ: 0, windupAim: false,   // ult cinematic wind-up
+  chargeT: 0, chargeDmg: 0, chargeLv: 1, chargeHit: [] as number[],      // barbarian shoulder charge
+  whirlBoost: false, whirlHeal: 0, finisher: false,
   orbT: 0, orbN: 0, orbTick: 0, orbChain: 2, orbDmg: 0,
   orbs: [{ x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }],
   leapT: 0, leapDur: 0.55, leapSx: 0, leapSz: 0, leapTx: 0, leapTz: 0, leapDmg: 0, leapLv: 1,
@@ -44,17 +52,26 @@ const lastCd: Record<string, number> = {};
 
 const physOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const physKnock: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 1.2 };
+const spikeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', launch: 10, slam: 0, armorBreak: true };
+const whirlOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true };
+const elecBreak: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', armorBreak: true };
+const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9 };
+const aimTmp = new Vector3();
+const frostOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
+const trapOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
+const chillSt: StatusEffect = { type: 'CHILL', duration: 4 };
 const fireOpts: DamageOpts = { kind: 'FIRE', source: 'PLAYER', knockback: 0.8 };
 const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const elecOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER' };
 const stunSt: StatusEffect = { type: 'STUN', duration: 1 };
 const burnSt: StatusEffect = { type: 'BURN', duration: 4, value: 5 };
 const freezeSt: StatusEffect = { type: 'FREEZE', duration: 1 };
+const slowFrost: StatusEffect = { type: 'SLOW', duration: 2.5, value: 0.5 };
 
 export function resetAbilities(): void {
   const a = abilityState;
-  a.tint = a.tintTarget = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0;
-  a.orbT = 0; a.leapT = 0; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
+  a.tint = a.tintTarget = 0; a.flash = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0;
+  a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
   lastNoMana = -10;
   for (const k in lastCd) lastCd[k] = -10;
 }
@@ -91,6 +108,7 @@ function gate(slot: ActiveSlot): boolean {
   return true;
 }
 
+let curMul = 1;
 /** Base damage unit of an active (before its per-skill multiplier). */
 function base(lv: number): number {
   const st = useGameStore.getState();
@@ -98,14 +116,15 @@ function base(lv: number): number {
   let d = s.damage * (st.hero === 'WIZARD' ? s.skillDamage * 0.45 : s.skillDamage) * lvMul(lv);
   if (p.cryT > 0) d *= 1.3;
   if (p.titanT > 0) d *= 1.5;
-  return d;
+  return d * curMul;
 }
 
 /** Ground target point: locked enemy, else mouse aim; clamped to [minR, range] and to the arena. */
 function aimPoint(range: number, minR: number, o: Vector3): Vector3 {
   const p = world.player;
   let tx = p.aim.x, tz = p.aim.z;
-  if (autoAim.id >= 0) {
+  if (aimOverride.on) { tx = aimOverride.x; tz = aimOverride.z; }
+  else if (autoAim.id >= 0) {
     const e = world.enemies[autoAim.id];
     if (e.active && e.state !== 'DYING') { tx = e.pos.x; tz = e.pos.z; }
   }
@@ -135,9 +154,10 @@ function safeSpot(o: Vector3): void {
   }
 }
 
-function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff): GroundFx | null {
+function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff, launch = false): GroundFx | null {
   const f = allocFx();
   if (!f) return null;
+  f.launch = launch;
   f.active = true; f.kind = kind; f.x = x; f.z = z; f.delay = delay; f.life = life; f.radius = radius; f.dmg = dmg; f.aux = aux; f.color = color;
   return f;
 }
@@ -151,44 +171,144 @@ function mkZone(kind: 'TORNADO' | 'FROST_FIELD' | 'METEOR_SHADOW' | 'FIRE' | 'BL
   return zn;
 }
 
-// ============================================================ casting =======
-export function castQ(): void { cast('q'); }
-export function castE(): void { cast('e'); }
-export function castS3(): void { cast('s3'); }
-export function castS4(): void { cast('s4'); }
+// ============================================================ chain frost =====
+export interface ChainOrb { active: boolean; x: number; z: number; tx: number; tz: number; target: number; left: number; dmg: number; hit: number[]; t: number }
+export const chainOrbs: ChainOrb[] = Array.from({ length: 4 }, () => ({ active: false, x: 0, z: 0, tx: 0, tz: 0, target: -1, left: 0, dmg: 0, hit: [], t: 0 }));
+const CHAIN_RANGE = 9;
+const CHAIN_SPEED = 48;
 
-function cast(slot: ActiveSlot): void {
+function nearestFrom(x: number, z: number, r: number, hit: number[]): number {
+  const ids = world.enemyGrid.query(x, z, r + 2, out);
+  let best = -1, bd = r * r;
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || hit.indexOf(e.id) !== -1) continue;
+    const dx = e.pos.x - x, dz = e.pos.z - z, d = dx * dx + dz * dz;
+    if (d < bd) { bd = d; best = e.id; }
+  }
+  return best;
+}
+
+/** CHAIN FROST: an icy orb flies to the first target then bounces (6 + level) times, range 9 per jump. */
+function castChainFrost(lv: number, b: number): void {
+  const p = world.player;
+  aimPoint(26, 2, tgt);
+  const o = chainOrbs.find((c) => !c.active);
+  if (!o) return;
+  const first = nearestFrom(tgt.x, tgt.z, 14, []);
+  o.active = true; o.x = p.pos.x; o.z = p.pos.z; o.t = 0; o.hit.length = 0;
+  o.left = 6 + lv; o.dmg = b * 3.0; o.target = first;
+  // no enemy near the aim point: the orb flies on to the aim point and bursts there
+  o.tx = tgt.x; o.tz = tgt.z;
+  announce('CHAIN_FROST');
+}
+
+function updateChains(dt: number): void {
+  for (let i = 0; i < chainOrbs.length; i++) {
+    const o = chainOrbs[i];
+    if (!o.active) continue;
+    o.t += dt;
+    let e = o.target >= 0 ? world.enemies[o.target] : null;
+    if (e && (!e.active || e.state === 'DYING')) { o.target = nearestFrom(o.x, o.z, CHAIN_RANGE, o.hit); e = o.target >= 0 ? world.enemies[o.target] : null; if (!e) { o.active = false; continue; } }
+    const tx = e ? e.pos.x : o.tx, tz = e ? e.pos.z : o.tz;
+    const dx = tx - o.x, dz = tz - o.z, d = Math.sqrt(dx * dx + dz * dz);
+    const step = CHAIN_SPEED * dt;
+    if (d > step + 0.6) { o.x += (dx / d) * step; o.z += (dz / d) * step; if (o.t > 3) o.active = false; continue; }
+    o.x = tx; o.z = tz;
+    if (!e) { events.emit('frostNova', { pos: new Vector3(o.x, 0, o.z), radius: 3 }); o.active = false; continue; }
+    // impact
+    damageEnemy(e, o.dmg, frostOpts);
+    applyStatus(e, chillSt);
+    events.emit('frostNova', { pos: new Vector3(o.x, 0, o.z), radius: 3 });
+    events.emit('lightning', { from: new Vector3(o.x, 1.2, o.z), to: new Vector3(o.x, 2.2, o.z) });
+    o.hit.push(e.id); o.left--;
+    if (o.left <= 0) { o.active = false; continue; }
+    o.target = nearestFrom(o.x, o.z, CHAIN_RANGE, o.hit);
+    if (o.target < 0) o.active = false;
+  }
+}
+
+// ============================================================ casting =======
+/** Casts the active bound to key 1 / 2 / 3 (class order). Cooldown + mana gated. */
+export function castActive(index: number): void {
+  const hero = useGameStore.getState().hero;
+  cast(ACTIVE_ORDER[hero][index], false, index);
+}
+/** Archer Shadow Roll / Wizard Blink Nova: the class dash (charges are handled by player.ts). `auto` = no explicit aim (tap). */
+export function castDashSkill(auto: boolean): void {
+  const hero = useGameStore.getState().hero;
+  if (hero === 'BARBARIAN') { shoulderCharge(); return; }
+  dashAuto = auto;
+  cast('e', true, -1);
+}
+let dashAuto = false;
+
+function moveDir(out: Vector3): boolean {
+  const k = world.input.keys;
+  let mx = 0, mz = 0;
+  if (k.KeyW || k.ArrowUp) mz -= 1;
+  if (k.KeyS || k.ArrowDown) mz += 1;
+  if (k.KeyA || k.ArrowLeft) mx -= 1;
+  if (k.KeyD || k.ArrowRight) mx += 1;
+  const jj = world.input.joy;
+  if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { mx = jj.x; mz = jj.z; }
+  const ml = Math.hypot(mx, mz);
+  if (ml < 0.05) return false;
+  out.set(mx / ml, 0, mz / ml);
+  return true;
+}
+
+function cast(slot: ActiveSlot, dash = false, index = -1): void {
   const st = useGameStore.getState();
   const p = world.player;
   if (!p.alive) return;
-  if (!gate(slot)) return;
+  if (!dash && !gate(slot)) return;
   const lv = st.skillLevels[slot];
+  const hero = st.hero;
+  // ---- combo: each different active cast within 3 s adds a stack; the NEXT skill gets +20% per stack
+  const id = `s${index + 1}`;
+  if (!dash) {
+    curMul = combo.t > 0 && combo.last === id ? 1 : comboMul();
+    registerCast(id, false);
+    if (hero === 'BARBARIAN' && slot === 'e') abilityState.whirlBoost = combo.lastSlot === 'q' && world.time - combo.lastSlotT < 3;
+    combo.lastSlot = slot; combo.lastSlotT = world.time;
+  } else curMul = 1;
   const dir = getAimDir(aim);
   const dx = dir.x, dz = dir.z;
   const stats = st.stats;
-  const b = base(lv);
-  const hero = st.hero;
+  const b = base(lv) * (dash ? 0.8 : 1);
 
   if (hero === 'ARCHER') {
     if (slot === 'q') {
       const w = (1 + stats.galeWidth) * (1 + 0.1 * (lv - 1));
       const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 55, b * 6,
-        { life: 1.5, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5 });
+        { life: 1.5, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
       if (pr) { pr.state = 0; pr.procLv = 0; pr.spin = w; pr.trailT = 0; pr.homing = 0; pr.aoeRadius = 0; pr.bounces = 3 + lv; }
       announce('GALE_ARROW');
     } else if (slot === 'e') {
-      let mx = 0, mz = 0;
-      const k = world.input.keys;
-      if (k.KeyW || k.ArrowUp) mz -= 1;
-      if (k.KeyS || k.ArrowDown) mz += 1;
-      if (k.KeyA || k.ArrowLeft) mx -= 1;
-      if (k.KeyD || k.ArrowRight) mx += 1;
-      const jj = world.input.joy;
-      if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { mx = jj.x; mz = jj.z; }
-      const ml = Math.hypot(mx, mz);
-      if (ml > 0) { mx /= ml; mz /= ml; } else { mx = -dx; mz = -dz; }
+      // SHADOW ROLL (class dash). Aimed: roll toward the aim; tap/auto: end BEHIND the nearest enemy, else roll away from it.
+      let mx = dx, mz = dz;
       const inv = 0.3 + 0.03 * lv;
-      p.dashT = 0.25; p.dashDir.set(mx, 0, mz);
+      p.dashT = 0.25;
+      const near = findNearestEnemy(p.pos.x, p.pos.z, 10.5);
+      if (dashAuto) {
+        if (near && !near.boss) {
+          const bx = near.pos.x - Math.sin(near.facing) * (near.radius + 1.4), bz = near.pos.z - Math.cos(near.facing) * (near.radius + 1.4);
+          const ddx = bx - p.pos.x, ddz = bz - p.pos.z, dl = Math.hypot(ddx, ddz);
+          if (dl > 0.5) { mx = ddx / dl; mz = ddz / dl; p.dashT = Math.min(0.25, Math.max(0.08, dl / 42)); }
+        } else if (near) {
+          const ax = p.pos.x - near.pos.x, az = p.pos.z - near.pos.z, al = Math.hypot(ax, az) || 1;
+          mx = ax / al; mz = az / al;
+        } else if (moveDir(tgt)) { mx = tgt.x; mz = tgt.z; }
+        else { mx = -dx; mz = -dz; }
+      } else if (near && !near.boss) {
+        // aimed roll: snap behind an enemy lying roughly along the chosen line
+        const bx = near.pos.x - Math.sin(near.facing) * (near.radius + 1.4), bz = near.pos.z - Math.cos(near.facing) * (near.radius + 1.4);
+        const ddx = bx - p.pos.x, ddz = bz - p.pos.z, dl = Math.hypot(ddx, ddz);
+        if (dl > 0.5 && (ddx * dx + ddz * dz) / dl > 0.9) { mx = ddx / dl; mz = ddz / dl; p.dashT = Math.min(0.25, Math.max(0.08, dl / 42)); }
+      }
+      p.dashDir.set(mx, 0, mz);
+      p.dashIframes = true;
       p.invulnT = Math.max(p.invulnT, inv);
       events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
       const R = 7 + 0.5 * (lv - 1);
@@ -199,14 +319,14 @@ function cast(slot: ActiveSlot): void {
       }
       announce('SHADOW_ROLL');
     } else if (slot === 's3') {
-      const n = 8 + lv;
-      const spread = 0.62;
+      const n = Math.min(7, 5 + Math.floor((lv - 1) / 2));
+      const spread = 0.305; // half-angle: ~35 degree cone
       for (let i = 0; i < n; i++) {
         const a = (i / (n - 1) - 0.5) * 2 * spread;
         const c = Math.cos(a), s = Math.sin(a);
         const vx = dx * c - dz * s, vz = dx * s + dz * c;
-        const pr = spawnProjectile('BURNING_ARROW', p.pos.x + vx, p.pos.z + vz, vx, vz, 30, b * 2.2,
-          { life: 0.95, pierce: 3, radius: 2.0, knockback: 0.4, effect: { type: 'BURN', duration: 4, value: b * 0.3 } });
+        const pr = spawnProjectile('BURNING_ARROW', p.pos.x + vx, p.pos.z + vz, vx, vz, 30, b * 1.87,
+          { life: 0.76, pierce: 3, radius: 2.0, knockback: 0.4, effect: { type: 'BURN', duration: 4, value: b * 0.3 } });
         if (pr) { pr.state = 2; pr.trailT = Math.random() * 0.1; }
       }
       announce('FAN_FLAMES');
@@ -230,11 +350,17 @@ function cast(slot: ActiveSlot): void {
     if (slot === 'q') {
       aimPoint(28, 7, tgt);
       const R = 11 + 0.6 * (lv - 1);
-      mkZone('BLACKHOLE', tgt.x, tgt.z, R, 3 + 0.1 * lv, b * 14, 0x6d28d9, R * 2.1, 999);
+      mkZone('BLACKHOLE', tgt.x, tgt.z, R, (3 + 0.1 * lv) * 0.7, b * 10, 0x6d28d9, R * 2.1, 999);
       announce('SINGULARITY');
     } else if (slot === 'e') {
-      aimPoint(22 + lv, 4, tgt);
+      if (dashAuto && !aimOverride.on) { // tap: blink in the movement / facing direction
+        const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
+        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 14; aimOverride.z = p.pos.z + md.z * 14;
+        aimPoint(22 + lv, 4, tgt);
+        aimOverride.on = false;
+      } else aimPoint(22 + lv, 4, tgt);
       safeSpot(tgt);
+      p.dashIframes = true;
       const R = 8.5 + 0.4 * (lv - 1);
       const from = p.pos.clone();
       novaAt(from.x, from.z, R, b * 3, lv);
@@ -247,16 +373,11 @@ function cast(slot: ActiveSlot): void {
       const a = abilityState;
       a.orbN = 3 + (lv >= 3 ? 1 : 0) + (stats.orbBonus | 0);
       if (a.orbN > 6) a.orbN = 6;
-      a.orbT = 6 + stats.stormBonus; a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
-      a.orbDmg = b * 2.4;
+      a.orbT = 4 + stats.stormBonus; a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
+      a.orbDmg = b * 2.65;
       announce('STORM_ORBS');
     } else {
-      aimPoint(26, 5, tgt);
-      const R = 6.5 + 0.4 * (lv - 1);
-      mkZone('METEOR_SHADOW', tgt.x, tgt.z, R, 0.5, 0, 0xff7a1a);
-      mkFx('PILLAR', tgt.x, tgt.z, 0.5, 1.9, R, b * 10, 0, 0xff7a1a);
-      events.emit('telegraph', { pos: tgt.clone(), radius: R, duration: 0.5 });
-      announce('INFERNO_PILLAR');
+      castChainFrost(lv, b);
     }
     return;
   }
@@ -273,7 +394,7 @@ function cast(slot: ActiveSlot): void {
     announce('BLOODRAGE_LEAP');
   } else if (slot === 'e') {
     const a = abilityState;
-    p.whirlT = 3; a.whirlTick = 0; a.whirlDmg = b * 1.6; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
+    p.whirlT = 2; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
     announce('WHIRLWIND');
   } else if (slot === 's3') {
     const L = 34 + 2 * (lv - 1), n = 18;
@@ -281,76 +402,174 @@ function cast(slot: ActiveSlot): void {
     for (let i = 0; i < n; i++) {
       const d = 3 + (i / (n - 1)) * L;
       const x = p.pos.x + dx * d, z = p.pos.z + dz * d;
-      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8, b * 5, stun, 0xa89a80);
-      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2, z + dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80);
-      else mkFx('SPIKE', x + dz * 2.2, z - dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80);
+      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8, b * 5, stun, 0xa89a80, true);
+      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2, z + dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
+      else mkFx('SPIKE', x + dz * 2.2, z - dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
     }
     events.emit('fissure', { from: p.pos.clone(), dir: dir.clone(), length: L + 3 });
     announce('EARTHSPLITTER');
-  } else {
-    const R = 15 + lv;
-    const fear = 3 + 0.3 * lv;
-    stunSt.duration = 1.5;
-    damageEnemiesInRadius(p.pos.x, p.pos.z, R, b * 2, physKnock, stunSt);
-    const ids = world.enemyGrid.query(p.pos.x, p.pos.z, R + 4, out);
-    const r2 = R * R;
-    for (let i = 0; i < ids.length; i++) {
-      const e = world.enemies[ids[i]];
-      if (!e.active || e.state === 'DYING' || e.boss) continue;
-      const ex = e.pos.x - p.pos.x, ez = e.pos.z - p.pos.z;
-      if (ex * ex + ez * ez <= r2) e.fearT = Math.max(e.fearT, fear);
-    }
-    p.cryT = 8;
-    events.emit('shout', { pos: p.pos.clone(), radius: R });
-    addShake(0.35);
-    announce('BATTLE_CRY');
   }
 }
 
+/** Battle Cry folded into Titan's Wrath: a roar that stuns and terrifies nearby enemies. */
+function battleCryRoar(b: number, lv: number): void {
+  const p = world.player;
+  const R = 15 + lv;
+  const fear = 3 + 0.3 * lv;
+  stunSt.duration = 1.5;
+  damageEnemiesInRadius(p.pos.x, p.pos.z, R, b * 2, physKnock, stunSt);
+  const ids = world.enemyGrid.query(p.pos.x, p.pos.z, R + 4, out);
+  const r2 = R * R;
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.boss) continue;
+    const ex = e.pos.x - p.pos.x, ez = e.pos.z - p.pos.z;
+    if (ex * ex + ez * ez <= r2) e.fearT = Math.max(e.fearT, fear);
+  }
+  events.emit('shout', { pos: p.pos.clone(), radius: R });
+  addShake(0.35);
+}
+
+/** Barbarian class dash: shoulder charge, damages everything on its path, small knockback, NO i-frames. */
+function shoulderCharge(): void {
+  const st = useGameStore.getState();
+  const p = world.player;
+  const a = abilityState;
+  const lv = st.skillLevels.dash;
+  curMul = 1;
+  let mx = getAimDir(aim).x, mz = getAimDir(aim).z;
+  const k = world.input.keys;
+  let kx = 0, kz = 0;
+  if (k.KeyW || k.ArrowUp) kz -= 1;
+  if (k.KeyS || k.ArrowDown) kz += 1;
+  if (k.KeyA || k.ArrowLeft) kx -= 1;
+  if (k.KeyD || k.ArrowRight) kx += 1;
+  const jj = world.input.joy;
+  if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { kx = jj.x; kz = jj.z; }
+  const kl = Math.hypot(kx, kz);
+  if (kl > 0.05 && !aimOverride.on) { mx = kx / kl; mz = kz / kl; }
+  p.dashT = 0.22; p.dashDir.set(mx, 0, mz);
+  p.dashIframes = false;
+  a.chargeT = 0.26; a.chargeDmg = base(lv) * 2.2; a.chargeLv = lv; a.chargeHit.length = 0;
+  events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
+  p.anim.castT = 1;
+}
+
 function novaAt(x: number, z: number, R: number, dmg: number, lv: number): void {
-  freezeSt.duration = 1 + 0.2 * (lv - 1);
+  freezeSt.duration = 0.8 + 0.15 * (lv - 1);
   damageEnemiesInRadius(x, z, R, dmg, iceOpts, freezeSt);
   events.emit('frostNova', { pos: new Vector3(x, 0, z), radius: R });
 }
 
 // ============================================================ ultimate ======
+export const ULT_WINDUP = 1.0;
+
+/** Ult press: validates, then starts the cinematic wind-up (sim paused, hero invulnerable, camera pushes in). */
 export function castUlt(): void {
   const st = useGameStore.getState();
   const p = world.player;
   const a = abilityState;
-  if (!p.alive || p.ultT > 0 || a.ultKind !== 0) return;
+  if (!p.alive || p.ultT > 0 || a.ultKind !== 0 || a.windupT > 0) return;
   if (p.ult < ULT_MAX - 0.001) { notifyCooldown('r'); return; }
   p.ult = 0;
+  // combo: stacks BEFORE this cast boost the ult; at 3 stacks it is a FINISHER (+50%, refunds 25% charge)
+  curMul = combo.t > 0 ? comboMul() : 1;
+  const fin = registerCast('ult', true);
+  if (fin) curMul += 0.5;
+  a.finisher = fin; a.ultMul = curMul;
+  a.windupT = a.windupDur = ULT_WINDUP;
+  a.windupAim = aimOverride.on; a.windupX = aimOverride.x; a.windupZ = aimOverride.z;
+  a.flashRgb = st.hero === 'WIZARD' ? [1, 0.6, 0.3] : st.hero === 'ARCHER' ? [1, 0.95, 0.7] : [1, 0.75, 0.4];
+  p.invulnT = Math.max(p.invulnT, ULT_WINDUP + 0.4);
+  p.anim.castT = 1;
+  events.emit('ultWindup', { hero: st.hero, pos: p.pos.clone(), duration: ULT_WINDUP });
+}
+
+/** Real-time tick of the wind-up (called from game.ts while the simulation is frozen). */
+export function tickUltWindup(rawDt: number): boolean {
+  const a = abilityState;
+  if (a.windupT <= 0) return false;
+  const p = world.player;
+  a.windupT -= rawDt;
+  const k = 1 - Math.max(0, a.windupT) / a.windupDur;
+  world.camera.zoom = 1 - 0.3 * Math.sin(k * Math.PI * 0.5);
+  p.anim.castT = 1;
+  if (a.windupT <= 0) {
+    a.windupT = 0;
+    world.camera.zoom = 1;
+    aimOverride.on = a.windupAim; aimOverride.x = a.windupX; aimOverride.z = a.windupZ;
+    releaseUlt();
+    aimOverride.on = false;
+  }
+  return true;
+}
+
+function releaseUlt(): void {
+  const st = useGameStore.getState();
+  const p = world.player;
+  const a = abilityState;
   const lv = st.skillLevels.ult;
-  const b = base(lv);
+  curMul = 1;
+  const b = base(lv) * 0.7 * a.ultMul; // ultimates -30% damage; combo / finisher bonus applies on top
   a.ultT = 0; a.ultPhase = 0; a.ultAcc = 0;
   events.emit('ultStart', { hero: st.hero, pos: p.pos.clone() });
+  events.emit('ultRelease', { hero: st.hero, pos: p.pos.clone() });
+  a.flash = a.finisher ? 0.9 : 0.6; addShake(a.finisher ? 0.7 : 0.45); fovKick(a.finisher ? 0.9 : 0.6);
   p.anim.castT = 1;
   if (st.hero === 'ARCHER') {
     a.ultKind = 1;
-    p.ultT = 0.3 + 6 + st.stats.hawkBonus + 0.5;
-    a.tintRgb = [0.02, 0.03, 0.14]; a.tintTarget = 0.85;
+    p.ultT = 0.3 + 4.5 + st.stats.hawkBonus + 0.5;
+    a.tintRgb = [0.02, 0.03, 0.14]; a.tintTarget = 0;
     slowMo(0.8, 0.3); fovKick(0.5);
-    a.ultX = b;
+    aimPoint(28, 6, tgt);
+    a.ultX = tgt.x; a.ultZ = tgt.z; a.ultB = b;
+    mkZone('SHOCKWAVE', tgt.x, tgt.z, 14, 0.8, 0, 0xffe8a0);
   } else if (st.hero === 'WIZARD') {
+    // METEOR CATACLYSM: one colossal impact (no meteor shower): shadow grows 1.2 s, impact, 3 fire rings, molten crater
     a.ultKind = 2;
-    p.ultT = 1.2 + 4.2;
+    p.ultT = 1.2 + 2.7;
     aimPoint(30, 8, tgt);
     a.ultX = tgt.x; a.ultZ = tgt.z;
-    a.tintRgb = [0.16, 0.03, 0.02]; a.tintTarget = 0.4;
-    mkZone('METEOR_SHADOW', tgt.x, tgt.z, 16, 1.2, 0, 0xff5a1a);
-    mkFx('BIG_METEOR', tgt.x, tgt.z, 1.2, 1.5, 16, b * 60, 0, 0xff7a1a);
-    events.emit('telegraph', { pos: tgt.clone(), radius: 16, duration: 1.2 });
+    mkZone('METEOR_SHADOW', tgt.x, tgt.z, 14, 1.2, 0, 0xff5a1a);
+    mkFx('BIG_METEOR', tgt.x, tgt.z, 1.2, 1.5, 14, b * 50, 0, 0xff7a1a);
+    events.emit('telegraph', { pos: tgt.clone(), radius: 14, duration: 1.2 });
     slowMo(0.5, 0.45);
   } else {
     a.ultKind = 3;
-    p.ultT = 8; p.titanT = 8; p.invulnT = Math.max(p.invulnT, 0.8);
-    a.tintRgb = [0.12, 0.06, 0.02]; a.tintTarget = 0.18;
+    battleCryRoar(b, lv);
+    p.ultT = 6; p.titanT = 6; p.invulnT = Math.max(p.invulnT, 0.8);
+    a.tintRgb = [0.12, 0.06, 0.02]; a.tintTarget = 0;
     a.lastStep = Math.floor(p.anim.stepPhase / Math.PI);
     a.ultX = b;
     addShake(0.6); fovKick(0.7); slowMo(0.4, 0.4);
     events.emit('shockwave', { pos: p.pos.clone(), radius: 12, color: 0xd99a4a });
   }
+  refundFinisher();
+}
+
+/** Finisher refund is applied after release so the charge bar visibly refills. */
+function refundFinisher(): void {
+  const a = abilityState;
+  if (!a.finisher) return;
+  const p = world.player;
+  p.ult = Math.min(100, p.ult + 25); a.finisher = false;
+  events.emit('floatText', { pos: p.pos, text: 'FINISHER', color: 0xffd23a, scale: 1.4, dy: 1.6 });
+  events.emit('shockwave', { pos: p.pos.clone(), radius: 30, color: 0xffd23a });
+  events.emit('explosion', { pos: p.pos.clone(), radius: 8, color: 0xffd23a });
+  hitStop(0.12, 0.05, true); addShake(0.5);
+}
+
+/** Random point inside the aimed circle (50%: on an enemy inside it). */
+function circleTarget(cx: number, cz: number, r: number, enemyChance: number, o: Vector3): void {
+  if (Math.random() < enemyChance) {
+    const ids = world.enemyGrid.query(cx, cz, r + 2, out);
+    if (ids.length) {
+      const e = world.enemies[ids[(Math.random() * ids.length) | 0]];
+      if (e.active && e.state !== 'DYING' && (e.pos.x - cx) ** 2 + (e.pos.z - cz) ** 2 < r * r) { o.set(e.pos.x + (Math.random() - 0.5) * 2, 0, e.pos.z + (Math.random() - 0.5) * 2); return; }
+    }
+  }
+  const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * r;
+  o.set(cx + Math.cos(a) * d, 0, cz + Math.sin(a) * d);
 }
 
 function randomTarget(range: number, fromEnemyChance: number, o: Vector3): void {
@@ -373,7 +592,9 @@ function randomTarget(range: number, fromEnemyChance: number, o: Vector3): void 
 function updateUlt(dt: number): void {
   const st = useGameStore.getState();
   const a = abilityState, p = world.player;
-  if (a.ultKind === 0) return;
+  // Safety: ultT is only decremented while an ult runs, so a leftover value (e.g. wizard ultT > its real
+  // duration) would block charge gain forever. Always clear it once nothing is running.
+  if (a.ultKind === 0) { p.ultT = 0; return; }
   const lv = st.skillLevels.ult;
   const b = base(lv);
   p.ultT = Math.max(0, p.ultT - dt);
@@ -381,44 +602,54 @@ function updateUlt(dt: number): void {
 
   if (a.ultKind === 1) {
     // phase 0 intro (0.3s), phase 1 rain, phase 2 finale
-    const dur = 6 + st.stats.hawkBonus;
+    const dur = 4.5 + st.stats.hawkBonus;
     if (a.ultPhase === 0) {
       if (a.ultT >= 0.3) { a.ultPhase = 1; a.ultT = 0; }
     } else if (a.ultPhase === 1) {
-      const rate = 70 * (1 + 0.1 * (lv - 1));
+      const rate = 54 * (1 + 0.1 * (lv - 1)); // density -30%
       a.ultAcc += rate * dt;
       while (a.ultAcc >= 1) {
         a.ultAcc -= 1;
-        randomTarget(46, 0.5, tgt);
+        circleTarget(a.ultX, a.ultZ, 14, 0.5, tgt);
         const fall = 0.45 + Math.random() * 0.15;
         mkFx('RAIN_ARROW', tgt.x, tgt.z, fall, fall + 0.3, 2.6, b * 2.4, 0, 0xffe8a0);
       }
       if (a.ultT >= dur) {
         a.ultPhase = 2; a.ultT = 0;
-        // final volley: dense carpet arrows spreading outwards
-        const n = 140;
+        // final volley: dense carpet inside the circle
+        const n = 70;
         for (let i = 0; i < n; i++) {
-          const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 46;
-          const fall = 0.4 + (d / 46) * 0.5 + Math.random() * 0.1;
-          mkFx('RAIN_ARROW', p.pos.x + Math.cos(ang) * d, p.pos.z + Math.sin(ang) * d * 0.65, fall, fall + 0.3, 3.4, b * 25 / 6, 0, 0xfff0b0);
+          const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 14;
+          const fall = 0.4 + (d / 14) * 0.5 + Math.random() * 0.1;
+          mkFx('RAIN_ARROW', a.ultX + Math.cos(ang) * d, a.ultZ + Math.sin(ang) * d, fall, fall + 0.3, 3.4, b * 25 / 6, 0, 0xfff0b0);
         }
-        events.emit('ultImpact', { pos: p.pos.clone(), name: 'FINAL_VOLLEY', radius: 46 });
+        events.emit('ultImpact', { pos: new Vector3(a.ultX, 0, a.ultZ), name: 'FINAL_VOLLEY', radius: 14 });
         addShake(0.6); fovKick(0.6);
-        a.tintTarget = 0.3;
+        a.tintTarget = 0;
       }
-    } else if (a.ultT >= 1.2) { a.ultKind = 0; a.tintTarget = 0; }
+    } else if (a.ultT >= 1.2) { a.ultKind = 0; a.tintTarget = 0; p.ultT = 0; }
     return;
   }
 
   if (a.ultKind === 2) {
     if (a.ultPhase === 1) {
-      a.ultAcc += 9 * dt;
-      while (a.ultAcc >= 1) {
-        a.ultAcc -= 1;
-        randomTarget(34, 0.55, tgt);
-        mkFx('METEOR', tgt.x, tgt.z, 0.7, 0.95, 5, b * 5, 0, 0xff7a1a);
+      // 3 expanding fire rings, then lava spouts erupting inside the molten crater
+      while (a.ultAcc < 2 && a.ultT >= 0.15 + a.ultAcc * 0.42) {
+        a.ultAcc++;
+        mkFx('RING', a.ultX, a.ultZ, 0, 1.0, 0, b * 3, 26, 0xff7a1a);
+        events.emit('shockwave', { pos: new Vector3(a.ultX, 0, a.ultZ), radius: 26, color: 0xffa050 });
+        addShake(0.3);
       }
-      if (a.ultT >= 4) { a.ultKind = 0; a.tintTarget = 0; }
+      a.lavaT -= dt;
+      if (a.lavaT <= 0 && a.ultT < 2.5) {
+        a.lavaT = 0.28 + Math.random() * 0.2;
+        const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 9;
+        const lx = a.ultX + Math.cos(ang) * d, lz = a.ultZ + Math.sin(ang) * d;
+        damageEnemiesInRadius(lx, lz, 2.4, b * 2.2, fireOpts);
+        events.emit('fxImpact', { pos: new Vector3(lx, 0, lz), kind: 'METEOR', radius: 3 });
+        events.emit('explosion', { pos: new Vector3(lx, 0, lz), radius: 2.2, color: 0xff6a20 });
+      }
+      if (a.ultT >= 2.7) { a.ultKind = 0; p.ultT = 0; }
     }
     return;
   }
@@ -429,13 +660,13 @@ function updateUlt(dt: number): void {
     if (step !== a.lastStep) {
       a.lastStep = step;
       if (Math.hypot(p.vel.x, p.vel.z) > 1) {
-        damageEnemiesInRadius(p.pos.x, p.pos.z, 9, b * 3.5, physKnock);
+        damageEnemiesInRadius(p.pos.x, p.pos.z, 9, b * 2.275, physKnock);
         events.emit('quake', { pos: p.pos.clone(), radius: 9 });
         addShake(0.18);
       }
     }
-    if (a.ultT >= 8 || p.titanT <= 0) {
-      a.ultKind = 0; a.tintTarget = 0;
+    if (a.ultT >= 6 || p.titanT <= 0) {
+      a.ultKind = 0; a.tintTarget = 0; p.ultT = 0;
       finalSlam(b);
     }
   }
@@ -446,26 +677,22 @@ function finalSlam(b: number): void {
   const px = p.pos.x, pz = p.pos.z;
   p.titanT = 0;
   stunSt.duration = 2;
-  damageEnemiesInRadius(px, pz, 24, b * 12, physKnock, stunSt);
-  for (let i = 0; i < 110; i++) {
-    const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 48;
-    mkFx('SPIKE', px + Math.cos(ang) * d, pz + Math.sin(ang) * d * 0.7, 0.15 + d / 55 + Math.random() * 0.1, 1.4 + d / 55, 3, b * 4, 1.0, 0xa89a80);
+  damageEnemiesInRadius(px, pz, 18, b * 12, physKnock, stunSt);
+  // a big ring of spikes (radius ~12), not screen-wide
+  for (let i = 0; i < 44; i++) {
+    const ang = (i / 44) * 6.283 + Math.random() * 0.1, d = 7 + Math.random() * 5;
+    mkFx('SPIKE', px + Math.cos(ang) * d, pz + Math.sin(ang) * d, 0.15 + (d - 7) * 0.03 + (i % 4) * 0.04, 1.4, 3, b * 4, 1.0, 0xa89a80);
   }
-  for (let i = 0; i < 28; i++) {
-    const ang = Math.random() * 6.283, d = 4 + Math.random() * 38;
-    mkFx('ROCK', px + Math.cos(ang) * d, pz + Math.sin(ang) * d * 0.7, 0.7 + Math.random() * 0.6, 1.9, 3.2, b * 3, 0, 0x8a7a6a);
-  }
-  events.emit('ultImpact', { pos: p.pos.clone(), name: 'TITAN_SLAM', radius: 48 });
-  events.emit('shockwave', { pos: p.pos.clone(), radius: 40, color: 0xd99a4a });
-  events.emit('crater', { pos: p.pos.clone(), radius: 11, color: 0x3a2a1a });
+  events.emit('ultImpact', { pos: p.pos.clone(), name: 'TITAN_SLAM', radius: 16 });
+  events.emit('shockwave', { pos: p.pos.clone(), radius: 18, color: 0xd99a4a });
+  events.emit('crater', { pos: p.pos.clone(), radius: 9, color: 0x3a2a1a });
   hitStop(0.16, 0.04, true); fovKick(1); addShake(1);
 }
 
 function bigMeteorImpact(f: GroundFx): void {
-  const st = useGameStore.getState();
   const a = abilityState;
   const px = f.x, pz = f.z;
-  const R = 70;
+  const R = 16.5; // impact radius -25%
   stunSt.duration = 1.5;
   const ids = world.enemyGrid.query(px, pz, R + 4, out);
   for (let i = 0; i < ids.length; i++) {
@@ -474,9 +701,9 @@ function bigMeteorImpact(f: GroundFx): void {
     const dx = e.pos.x - px, dz = e.pos.z - pz;
     const d = Math.sqrt(dx * dx + dz * dz);
     if (d > R) continue;
-    const fall = 1 - 0.55 * (d / R);
-    if (d < 40) applyStatus(e, stunSt);
-    burnSt.duration = 4; burnSt.value = f.dmg * 0.04;
+    const fall = 1 - 0.5 * (d / R);
+    applyStatus(e, stunSt);
+    burnSt.duration = 3; burnSt.value = f.dmg * 0.02;
     applyStatus(e, burnSt);
     if (!e.boss) {
       const k = (1 - d / R) * 32 + 6;
@@ -485,16 +712,15 @@ function bigMeteorImpact(f: GroundFx): void {
     }
     damageEnemy(e, f.dmg * fall, fireOpts);
   }
-  mkZone('FIRE', px, pz, 10, 8, f.dmg * 0.05, 0xff5a1a);
-  mkZone('SHOCKWAVE', px, pz, 60, 0.9, 0, 0xff8a40);
-  events.emit('explosion', { pos: new Vector3(px, 0, pz), radius: 14, color: 0xff7a1a });
-  events.emit('shockwave', { pos: new Vector3(px, 0, pz), radius: 60, color: 0xffb060 });
+  { const cz = mkZone('FIRE', px, pz, 9, 2.5, f.dmg * 0.035, 0xff5a1a); if (cz) cz.aux = 1; } // molten crater, burns 2.5 s
+  mkZone('SHOCKWAVE', px, pz, 30, 0.9, 0, 0xff8a40);
+  events.emit('explosion', { pos: new Vector3(px, 0, pz), radius: 18, color: 0xff7a1a });
+  events.emit('shockwave', { pos: new Vector3(px, 0, pz), radius: 40, color: 0xffb060 });
   events.emit('crater', { pos: new Vector3(px, 0, pz), radius: 13, color: 0x1a0a04 });
-  events.emit('ultImpact', { pos: new Vector3(px, 0, pz), name: 'METEOR', radius: 60 });
+  events.emit('ultImpact', { pos: new Vector3(px, 0, pz), name: 'METEOR', radius: 30 });
   hitStop(0.2, 0.04, true); fovKick(1); addShake(1);
-  a.ultPhase = 1; a.ultT = 0; a.ultAcc = 0;
-  a.tintTarget = 0.28;
-  void st;
+  a.flash = 1; a.flashRgb = [1, 0.8, 0.5];
+  a.ultPhase = 1; a.ultT = 0; a.ultAcc = 0; a.lavaT = 0.2;
 }
 
 // ============================================================ fx pool =======
@@ -507,13 +733,14 @@ function resolveFx(f: GroundFx): void {
       break;
     case 'METEOR':
       damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, fireOpts);
-      mkZone('FIRE', f.x, f.z, 2.6, 2.5, f.dmg * 0.18, 0xff5a1a);
+      { const cz = mkZone('FIRE', f.x, f.z, 2.6, 2.5, f.dmg * 0.18, 0xff5a1a); if (cz) cz.aux = 1; }
       events.emit('fxImpact', { pos, kind: 'METEOR', radius: f.radius });
       addShake(0.05);
       break;
     case 'SPIKE':
       stunSt.duration = f.aux;
-      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physKnock, stunSt);
+      if (f.launch) { spikeOpts.slam = f.dmg * 0.9; damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, spikeOpts, stunSt); }
+      else damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physKnock, stunSt);
       events.emit('fxImpact', { pos, kind: 'SPIKE', radius: f.radius });
       break;
     case 'ROCK':
@@ -528,25 +755,17 @@ function resolveFx(f: GroundFx): void {
       }
       break;
     case 'TRAP': {
-      freezeSt.duration = 1.2;
-      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, iceOpts, freezeSt);
+      freezeSt.duration = 0.8;
+      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, trapOpts, slowFrost);
+      damageEnemiesInRadius(f.x, f.z, f.radius * 0.5, 0, iceOpts, freezeSt); // brief freeze only in the centre
       const lvq = useGameStore.getState().skillLevels.s4;
-      mkZone('FROST_FIELD', f.x, f.z, f.aux, 5 + 0.5 * lvq, f.dmg * 0.25, 0x7fe0ff);
+      mkZone('FROST_FIELD', f.x, f.z, f.aux, (5 + 0.5 * lvq) * 0.65, f.dmg * 0.275, 0x7fe0ff);
       events.emit('frostNova', { pos, radius: f.radius * 1.3 });
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * 6.283 + f.seed * 6, d = 1.5 + (i % 2) * 1.6;
         mkFx('CRYSTAL', f.x + Math.cos(a) * d, f.z + Math.sin(a) * d, 0, 4, 0, 0, 0, 0x9fe8ff);
       }
       addShake(0.15);
-      break;
-    }
-    case 'PILLAR': {
-      burnSt.duration = 4; burnSt.value = f.dmg * 0.06;
-      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, fireOpts, burnSt);
-      mkZone('FIRE', f.x, f.z, f.radius * 0.7, 3.5, f.dmg * 0.15, 0xff5a1a);
-      mkFx('RING', f.x, f.z, 0, 1.2, 0, f.dmg * 0.4, 17, 0xff7a1a);
-      events.emit('explosion', { pos, radius: f.radius * 0.7, color: 0xff7a1a });
-      addShake(0.3);
       break;
     }
     case 'BIG_METEOR': bigMeteorImpact(f); break;
@@ -574,8 +793,9 @@ function stepFx(dt: number): void {
           const dx = e.pos.x - f.x, dz = e.pos.z - f.z;
           const d = Math.sqrt(dx * dx + dz * dz);
           if (Math.abs(d - r) > 2.6) continue;
-          burnSt.duration = 3; burnSt.value = f.dmg * 0.25;
+          burnSt.duration = 2; burnSt.value = f.dmg * 0.12;
           applyStatus(e, burnSt);
+          if (!e.boss && d > 0.1) { const kk = (e.mini ? 3 : e.elite ? 6 : 12) / d; e.knock.x += dx * kk; e.knock.z += dz * kk; }
           damageEnemy(e, f.dmg, fireOpts);
         }
       }
@@ -594,11 +814,11 @@ export function updateAbilities(dt: number): void {
   const a = abilityState;
 
   stepFx(dt);
+  updateChains(dt);
   updateUlt(dt);
 
-  // screen tint easing
-  a.tint += (a.tintTarget - a.tint) * Math.min(1, dt * 4);
-  if (a.tintTarget === 0 && a.tint < 0.003) a.tint = 0;
+  a.tint = 0;
+  if (a.flash > 0) a.flash = Math.max(0, a.flash - dt * 2.4);
 
   // ---- leap
   if (a.leapT > 0) {
@@ -623,6 +843,22 @@ export function updateAbilities(dt: number): void {
     }
   }
 
+  // ---- barbarian shoulder charge: bulldozes everything on its path
+  if (a.chargeT > 0) {
+    a.chargeT -= dt;
+    const ids = world.enemyGrid.query(p.pos.x, p.pos.z, 6, out);
+    for (let i = 0; i < ids.length; i++) {
+      const e = world.enemies[ids[i]];
+      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || a.chargeHit.indexOf(e.id) !== -1) continue;
+      const ddx = e.pos.x - p.pos.x, ddz = e.pos.z - p.pos.z, rr = e.radius + 1.6;
+      if (ddx * ddx + ddz * ddz > rr * rr) continue;
+      a.chargeHit.push(e.id);
+      chargeOpts.knockDir = aimTmp.set(p.dashDir.x, 0, p.dashDir.z);
+      damageEnemy(e, a.chargeDmg, chargeOpts);
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 2.2, color: 0xffb060 });
+    }
+  }
+
   // ---- whirlwind
   if (p.whirlT > 0) {
     p.whirlT = Math.max(0, p.whirlT - dt);
@@ -630,22 +866,26 @@ export function updateAbilities(dt: number): void {
     const R = a.whirlR;
     // pull inward every frame
     const ids = world.enemyGrid.query(p.pos.x, p.pos.z, R + 8, out);
-    const R2 = (R + 6) * (R + 6);
+    const pullR = (R + 6) * 0.7; // pull radius -30%
+    const R2 = pullR * pullR;
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];
-      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss) continue;
+      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss || e.mini) continue;
       const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 > R2) continue;
       const d = Math.sqrt(d2) || 1;
       if (d < 1.8) continue;
-      const step = Math.min(d - 1.8, 14 * dt);
+      const step = Math.min(d - 1.8, 14 * 0.45 * dt * (a.whirlBoost ? 1.3 : 1)); // pull strength -55%
       e.pos.x += (dx / d) * step; e.pos.z += (dz / d) * step;
     }
     if (a.whirlTick >= 0.15) {
       a.whirlTick = 0;
-      const hits = damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.whirlDmg, physOpts);
-      if (hits > 0) healPlayer(Math.min(6, hits) * st.stats.maxHealth * (0.005 + 0.001 * (a.whirlLv - 1)));
+      const hits = damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.whirlDmg, whirlOpts);
+      if (hits > 0 && a.whirlHeal < st.stats.maxHealth * 0.12) {
+        const h = Math.min(6, hits) * st.stats.maxHealth * (0.005 + 0.001 * (a.whirlLv - 1)) * 0.5 * (a.whirlBoost ? 1.5 : 1);
+        a.whirlHeal += h; healPlayer(h); // heal per hit -50%, capped at ~12% max HP per cast
+      }
     }
   }
 
@@ -685,7 +925,7 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
   let cur = world.enemies[best];
   orbFrom.set(o.x, o.y, o.z);
   events.emit('lightning', { from: orbFrom.clone(), to: new Vector3(cur.pos.x, 1.2, cur.pos.z) });
-  damageEnemy(cur, a.orbDmg, elecOpts);
+  damageEnemy(cur, a.orbDmg, elecBreak);
   hitList.push(cur.id);
   for (let c = 0; c < a.orbChain; c++) {
     const near = world.enemyGrid.query(cur.pos.x, cur.pos.z, 14, out);
@@ -699,8 +939,21 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
     if (nb < 0) break;
     const nx = world.enemies[nb];
     events.emit('lightning', { from: new Vector3(cur.pos.x, 1.2, cur.pos.z), to: new Vector3(nx.pos.x, 1.2, nx.pos.z) });
-    damageEnemy(nx, a.orbDmg * 0.7, elecOpts);
+    damageEnemy(nx, a.orbDmg * 0.7, elecBreak);
     hitList.push(nx.id);
     cur = nx;
   }
+}
+
+// ============================================================ dash entry =====
+/** Space: spends a dash charge and performs the class dash (Shadow Roll / Blink Nova / Shoulder Charge). */
+export function tryDash(auto: boolean): boolean {
+  const p = world.player;
+  if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;
+  if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }
+  if (p.dashCd <= 0) p.dashCd = p.dashCdMax;
+  p.dashCharges--;
+  p.rootT = 0; p.slowT = 0; // dash cleanses root + slow
+  castDashSkill(auto);
+  return true;
 }

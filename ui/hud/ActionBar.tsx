@@ -8,7 +8,7 @@ import { ActionSlot } from './ActionSlot';
 import { SimpleTip } from '../components/ItemTip';
 import { PaintedIcon } from '../components/SkillIcons';
 import type { SkillLevels } from '../../types';
-import { ABILITIES, ULTS, abilityCd, type ActiveSlot } from '../../abilityDefs';
+import { ACTIVE_ORDER, ACTIVE_KEYS, activeDefs, dashDef, dashKey, ULTS, abilityCd, type ActiveSlot } from '../../abilityDefs';
 import { UltSlot } from './UltSlot';
 
 const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital'] as const;
@@ -19,11 +19,11 @@ const cdLine = (label: string, v: string) => <><span className="muted">{label}</
 
 export const ActionBar: React.FC = () => {
   const { hero, skillLevels } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels })));
-  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4'), s.getManaCost('dash')] as const));
+  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4')] as const));
+  const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3] };
   const cdr = useGameStore((s) => s.stats.cooldownReduction);
   const hpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Health') ? n + (i.quantity || 1) : n), 0));
   const mpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0));
-  const dCost = costs[4];
   const p = world.player;
 
   const classPassives = (PASSIVE_KEYS as readonly string[]).filter((k) => {
@@ -32,32 +32,31 @@ export const ActionBar: React.FC = () => {
   }) as PKey[];
 
   const sk = (k: keyof SkillLevels) => skillLevels[k];
-  const SLOTS: { slot: ActiveSlot; key: string; code: string }[] = [
-    { slot: 'q', key: 'Q', code: 'KeyQ' }, { slot: 'e', key: 'E', code: 'KeyE' }, { slot: 's3', key: '3', code: 'Digit3' }, { slot: 's4', key: '4', code: 'Digit4' },
-  ];
+  const SLOTS = ACTIVE_ORDER[hero].map((slot, i) => ({ slot, key: String(i + 1), code: ACTIVE_KEYS[i] }));
+  const dDef = dashDef(hero), dLv = sk(dashKey(hero));
   const ult = ULTS[hero];
   const ulv = sk('ult');
 
   return (
     <div className="action-tray pe">
       {SLOTS.map(({ slot, key, code }, i) => {
-        const def = ABILITIES[hero].find((a) => a.slot === slot)!;
+        const def = activeDefs(hero)[i];
         const lv = sk(slot);
-        const cost = costs[i];
+        const cost = COST_OF[slot];
         const cd = abilityCd(hero, slot, lv) * (1 - cdr);
         return (
           <ActionSlot key={slot} id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost}
             getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot] })}
-            tooltip={<SimpleTip title={def.name} sub={`Active [${key}] · Lv ${lv}`} body={def.desc}
+            tooltip={<SimpleTip title={def.name} sub={`Active [${key}] · Lv ${lv} · hold to aim, release to cast`} body={def.desc}
               lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />
         );
       })}
+      <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dLv}
+        getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
+        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={`Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s per charge`), cdLine(`Lv ${dLv}`, dDef.per(dLv)), cdLine('Level 5', '+1 dash charge')]} />} />
       <UltSlot color={hero === 'ARCHER' ? '#ffd24a' : hero === 'WIZARD' ? '#ff6a2a' : '#e9a04a'} icon={<PaintedIcon id={ult.icon} />}
         tooltip={<SimpleTip title={ult.name} sub={`Ultimate [R] · Lv ${ulv}`} color="#ffd98a" body={ult.desc}
           lines={[cdLine('Charge', 'Fill by dealing damage and killing (100%)'), cdLine(`Lv ${ulv}`, ult.per(ulv)), ...(ulv < 5 ? [cdLine(`Lv ${ulv + 1}`, ult.per(ulv + 1))] : [])]} />} />
-      <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id="DASH" />} level={sk('dash')} manaCost={dCost}
-        getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
-        tooltip={<SimpleTip title="Dash" sub={`Mobility [Space] · Lv ${sk('dash')}`} body="Dash in the movement direction. Costs no mana. Invincible briefly. Level 5 grants +1 charge." lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`)]} />} />
 
       <Sep />
       {classPassives.map((k) => {
@@ -79,12 +78,12 @@ export const ActionBar: React.FC = () => {
       <ActionSlot id="magnet" size="4.3rem" active={sk('magnet') > 0} level={sk('magnet')} icon={<PaintedIcon id="magnet" />}
         tooltip={<SimpleTip title="Looter" sub={`Passive · Lv ${sk('magnet')}`} body={SKILLS_INFO.magnet.description} />} />
       <Sep />
-      <ActionSlot id="hp" keyLabel="1" keyCode="Digit1" size="4.3rem" qty={hpQty} active={true} accent="#d6252b"
+      <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="4.3rem" qty={hpQty} active={true} accent="#d6252b"
         icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: POTION_COOLDOWN })}
-        tooltip={<SimpleTip title="Health Potion" sub="Consumable [1]" color="#b3261e" body="Restores health. Auto-drinks below 30% HP when enabled in settings." lines={[cdLine('In bag', `${hpQty}`)]} />} />
-      <ActionSlot id="mp" keyLabel="2" keyCode="Digit2" size="4.3rem" qty={mpQty} active={true} accent="#2f6fe0"
+        tooltip={<SimpleTip title="Health Potion" sub="Consumable [Z]" color="#b3261e" body="Restores health. Auto-drinks below 30% HP when enabled in settings." lines={[cdLine('In bag', `${hpQty}`)]} />} />
+      <ActionSlot id="mp" keyLabel="X" keyCode="KeyX" size="4.3rem" qty={mpQty} active={true} accent="#2f6fe0"
         icon={<PaintedIcon id="MP" />} getCd={() => ({ t: p.mpPotCd, max: POTION_COOLDOWN })}
-        tooltip={<SimpleTip title="Mana Potion" sub="Consumable [2]" color="#1f56c4" body="Restores mana. Auto-drinks below 30% mana when enabled in settings." lines={[cdLine('In bag', `${mpQty}`)]} />} />
+        tooltip={<SimpleTip title="Mana Potion" sub="Consumable [X]" color="#1f56c4" body="Restores mana. Auto-drinks below 30% mana when enabled in settings." lines={[cdLine('In bag', `${mpQty}`)]} />} />
     </div>
   );
 };

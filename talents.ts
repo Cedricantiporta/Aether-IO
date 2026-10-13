@@ -38,7 +38,7 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
   BARBARIAN: [
     { name: 'Berserker', blurb: 'Rage and low-health power', color: '#ff5a4a' },
     { name: 'Juggernaut', blurb: 'Health, defense and thorns', color: '#9fb2c8' },
-    { name: 'Earthshaker', blurb: 'Stomp radius and stun', color: '#d99a4a' },
+    { name: 'Earthshaker', blurb: 'Axe Storm axes and ricochets', color: '#d99a4a' },
   ],
 };
 
@@ -55,7 +55,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Keen Eye', '+2% crit rate', 3, 'u:CRIT_RATE', { add: { critRate: 0.02 } }],
       ['Quick Draw', '+4% attack speed', 3, 'u:FIRE_RATE', { mul: { fireRate: 0.04 } }],
       ['Deadly Aim', '+10% crit damage', 3, 'u:CRIT_DAMAGE', { add: { critDamage: 0.1 } }],
-      ['Steady Hands', '+5% damage', 2, 'u:DAMAGE', { mul: { damage: 0.05 } }],
+      ['Assassin', '+3% damage, +25% backstab damage', 2, 'u:DAMAGE', { mul: { damage: 0.03 }, add: { backstab: 0.25 } }],
       ['Gale Force', 'Gale Arrow +20% width; +1 arrow pierce', 2, 'GALE_ARROW', { add: { pierceBonus: 1, galeWidth: 0.2 } }],
       ['Twin Volley', 'Every 6th attack fires twice', 1, 'u:MULTISHOT', { add: { echoEvery: 6 } }],
     ]],
@@ -64,7 +64,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Frost Affinity', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],
       ['Quick Study', 'Fire / ice arrow N -1 per rank', 2, 'u:SKILL_BURNING', { add: { procHaste: 1 } }],
       ['Searing Arrows', '+10% skill damage', 2, 'u:SKILL_FREEZING', { add: { skillDamage: 0.1 } }],
-      ['Elemental Power', '+4% damage', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }],
+      ['Elemental Power', '+4% damage, burn stacks 1 more time', 1, 'u:DAMAGE', { mul: { damage: 0.04 }, add: { burnStacks: 1 } }],
       ['Convergence', 'Fire / ice arrows N -2, +10% burn and slow chance', 1, 'u:SKILL_PIERCING', { add: { procHaste: 2, onHitBurnChance: 0.1, onHitSlowChance: 0.1 } }],
     ]],
     ['s', [
@@ -88,18 +88,18 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ['t', [
       ['Static Charge', '+4% damage', 3, 'u:DAMAGE', { mul: { damage: 0.04 } }],
       ['Chain Lightning', 'Thundercaller and Storm Orbs chain +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
-      ['Storm Surge', 'Typhoon and Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
+      ['Storm Surge', 'Storm volley +1 bolt, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
       ['Overcharge', 'Thunder bolt N -1 per rank', 2, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }],
       ['Tailwind', '+4% move speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }],
-      ['Tempest', 'A second typhoon, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
+      ['Tempest', 'Storm volley +3 bolts, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
     ]],
     ['f', [
       ['Chill', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],
       ['Wide Blizzard', '+3 blizzard radius', 3, 'freezeSpell', { add: { blizzardRadius: 3 } }],
       ['Icy Veins', '+3% cooldown reduction', 2, 'u:SKILL_FREEZE_SPELL', { add: { cooldownReduction: 0.03 } }],
-      ['Deep Freeze', 'Blizzard freezes +1s', 2, 'freezeSpell', { add: { blizzFreeze: 1 } }],
+      ['Deep Freeze', 'Blizzard slow lasts +1s', 2, 'freezeSpell', { add: { blizzFreeze: 1 } }],
       ['Frostbite', '+10% crit damage', 3, 'u:CRIT_DAMAGE', { add: { critDamage: 0.1 } }],
-      ['Absolute Zero', 'Blizzard +6 radius, freezes +2s, +15% skill damage', 1, 'u:SKILL_FREEZE_SPELL', { add: { blizzardRadius: 6, blizzFreeze: 2, skillDamage: 0.15 } }],
+      ['Absolute Zero', 'Blizzard +6 radius, slow +2s, +15% skill damage', 1, 'u:SKILL_FREEZE_SPELL', { add: { blizzardRadius: 6, blizzFreeze: 2, skillDamage: 0.15 } }],
     ]],
   ],
   BARBARIAN: [
@@ -120,12 +120,12 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Immortal', 'Take 12% less damage, +10% max health', 1, 'u:SKILL_BARRIER', { add: { dmgReduce: 0.12 }, mul: { maxHealth: 0.1 } }],
     ]],
     ['k', [
-      ['Heavy Hands', '+0.3 knockback', 3, 'stamp', { add: { knockback: 0.3 } }],
-      ['Tremor', 'Mega Stamp radius +2', 3, 'u:SKILL_STAMP', { add: { stompRadius: 2 } }],
-      ['Concussion', 'Stomp stuns +0.7s', 2, 'stamp', { add: { stompStun: 0.7 } }],
-      ['Shatter', 'Stomp N -1 per rank', 2, 'orbital', { add: { procHaste: 1 } }],
-      ['Aftershock', '+25% stomp damage', 2, 'u:DAMAGE', { add: { stompPower: 0.25 } }],
-      ['Earthquake', 'Stomp +50% damage, +5 radius, stuns +1.5s', 1, 'u:SKILL_STAMP', { add: { stompPower: 0.5, stompRadius: 5, stompStun: 1.5 } }],
+      ['Heavy Hands', '+0.3 knockback, your stuns +0.2s', 3, 'stamp', { add: { knockback: 0.3, stunBonus: 0.2 } }],
+      ['Tremor', 'Axe Storm axes +10% size', 3, 'u:SKILL_STAMP', { add: { axeSize: 0.1 } }],
+      ['Rebound', 'Axe Storm axes ricochet +1 more time', 2, 'stamp', { add: { axeBounce: 1 } }],
+      ['Shatter', 'Axe Storm N -1 per rank', 2, 'orbital', { add: { procHaste: 1 } }],
+      ['Aftershock', '+25% Axe Storm damage', 2, 'u:DAMAGE', { add: { stompPower: 0.25 } }],
+      ['Axe Tempest', 'Axe Storm +1 axe, +50% damage, +1 ricochet, +20% size', 1, 'u:SKILL_STAMP', { add: { axeCount: 1, stompPower: 0.5, axeBounce: 1, axeSize: 0.2 } }],
     ]],
   ],
 };

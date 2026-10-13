@@ -11,13 +11,13 @@ import type { DamageKind } from '../engine/events';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 
-const GLYPHS = '0123456789!+-';
-const POOL = 256, MAXG = 8;
+const GLYPHS = '0123456789!+-XPBACKSTLMHERINGF';
+const POOL = 256, MAXG = 10;
 
 let tex: CanvasTexture | null = null;
 function atlas() {
   if (tex) return tex;
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
   const ctx = cv.getContext('2d')!;
   ctx.font = '900 54px "Arial Black", Impact, system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -61,6 +61,18 @@ function allow(amount: number, crit: boolean, toPlayer: boolean): boolean {
   return true;
 }
 
+/** Free-form label (e.g. "+12 XP", "BACKSTAB", "SLAM"): supports the atlas glyphs only. */
+function spawnLabel(x: number, y: number, z: number, text: string, hex: number, scale: number, dy: number) {
+  const n = nums[cursor]; cursor = (cursor + 1) % POOL;
+  n.active = true; n.t = 0; n.dur = 1.0; n.crit = false; n.dot = false; n.kind = 'LABEL'; n.amount = 0;
+  n.x = x + (Math.random() - 0.5) * 0.5; n.y = y + 1.8 + dy; n.z = z; n.vx = (Math.random() - 0.5) * 0.6;
+  _c.setHex(hex); n.r = _c.r; n.gc = _c.g; n.b = _c.b;
+  n.scale = scale;
+  let k = 0;
+  for (let i = 0; i < text.length && k < MAXG; i++) { const gi = GLYPHS.indexOf(text[i]); if (gi >= 0) n.g[k++] = gi; }
+  n.n = k;
+}
+
 function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean, kind: DamageKind, toPlayer: boolean, dot: boolean) {
   if (dot) {
     for (const n of nums) {
@@ -96,7 +108,7 @@ void main(){
   mv.xy += vec2(iG.x + position.x * scale * 0.9, position.y * scale * 0.9);
   gl_Position = projectionMatrix * mv;
   float col = mod(iG.y, 8.0); float row = floor(iG.y / 8.0);
-  vUv = (vec2(col, 1.0 - row) + position.xy + 0.5) / vec2(8.0, 2.0);
+  vUv = (vec2(col, 3.0 - row) + position.xy + 0.5) / vec2(8.0, 4.0);
   vCol = vec4(iCol.rgb, iG.w);
 }`;
 const FS = /* glsl */ `
@@ -125,10 +137,15 @@ export function DamageNumbers() {
 
   useEffect(() => {
     if (!show) { for (const n of nums) n.active = false; return; }
-    return events.on('damage', (e) => {
+    const off1 = events.on('damage', (e) => {
       if (useGameStore.getState().status !== GameStatus.PLAYING) return;
       spawnNum(e.pos.x, e.pos.y, e.pos.z, e.amount, e.crit, e.kind, e.toPlayer, !!e.dot);
     });
+    const off2 = events.on('floatText', (e) => {
+      if (useGameStore.getState().status !== GameStatus.PLAYING) return;
+      spawnLabel(e.pos.x, e.pos.y, e.pos.z, e.text, e.color, e.scale ?? 0.8, e.dy ?? 0.6);
+    });
+    return () => { off1(); off2(); };
   }, [show]);
 
   useFrame((_, dtRaw) => {

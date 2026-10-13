@@ -15,6 +15,8 @@ import { Bosses } from './Bosses';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
 import { GroundFx } from './GroundFx';
+import { AimIndicator } from './AimIndicator';
+import { TrickFx, CrystalWalls } from './TrickFx';
 import { Pickups } from './Pickups';
 import { Crates } from './Crates';
 import { Pet } from './Pet';
@@ -50,6 +52,9 @@ export function Scene() {
         <>
           <Zones />
           <GroundFx />
+          <AimIndicator />
+          <TrickFx />
+          <CrystalWalls />
           <Enemies />
           <Bosses />
           <Projectiles />

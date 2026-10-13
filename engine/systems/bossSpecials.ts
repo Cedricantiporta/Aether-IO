@@ -1,0 +1,326 @@
+// ============================================================================
+// Boss & mini-boss signature attacks (telegraphed, readable, using the player debuffs).
+// Same model as tricks.ts: the caster freezes while a scripted timeline (e.spT) runs; telegraph
+// zones carry the damage / effect. Boss bar shows the ability name while casting.
+//   Gorath   BOULDER PRISON, MAGMA VEINS         Malakar  SOUL CHAINS, DEATH CLONES
+//   Warden   RAISE THE DEAD   Captain AMBUSH   Behemoth PRISM BEAM   Old Tusk STAMPEDE   Shellback TIDAL SHELL
+// ============================================================================
+import { Vector3 } from 'three';
+import { world, allocEnemy } from '../world';
+import { events } from '../events';
+import type { Enemy } from '../types';
+import { edgeLimit } from '../mapgen';
+import {
+  damagePlayer, applyPlayerDebuff, addShake,
+} from './combat';
+import { hooks } from './hooks';
+import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
+import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
+
+export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29 } as const;
+export const SP_NAME: Record<number, string> = {
+  21: 'Boulder Prison!', 22: 'Magma Veins!', 23: 'Soul Chains!', 24: 'Death Clones!', 25: 'Raise the Dead!', 26: 'Ambush!', 27: 'Prism Beam!', 28: 'Stampede!', 29: 'Tidal Shell!',
+};
+const LIST: Partial<Record<string, number[]>> = {
+  BOSS_GOLEM: [SP.PRISON, SP.VEINS], BOSS_LICH: [SP.CHAINS, SP.CLONES],
+  ZOMBIE: [SP.DEAD], BANDIT: [SP.AMBUSH], CRYSTAL_GOLEMITE: [SP.PRISM], BOAR: [SP.STAMPEDE], ROCK_CRAB: [SP.SHELL],
+};
+/** QA: how many times each special was cast. */
+export const specialStats: Record<string, number> = {};
+export function resetSpecials(): void { for (const k in specialStats) delete specialStats[k]; tether.active = false; prism.zone = null; }
+
+const casts = new Map<number, number>();
+interface Data { cx: number; cz: number; slots: number[]; ang: number; dirx: number; dirz: number; power: number; flags: number; }
+const data = new Map<number, Data>();
+const tv = new Vector3();
+const tv2 = new Vector3();
+
+/** Soul-chain tether (rendered by render/TrickFx). */
+export const tether = { active: false, id: -1, t: 0, maxDist: 0, lx: 0, lz: 0 };
+/** Prism beam state for rendering / QA. */
+export const prism: { zone: import('../types').Zone | null } = { zone: null };
+hooks.onCleanse = () => { if (tether.active) { tether.active = false; events.emit('trick', { pos: world.player.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); } };
+
+export function hasSpecial(e: Enemy): boolean { return (e.boss || e.mini) && !!LIST[e.kind]; }
+export function initSpecial(e: Enemy): void { e.spCd = 3.5 + Math.random() * 3; e.spKind = 0; e.spT = 0; e.spStep = 0; }
+
+function clampArena(v: Vector3, margin: number): void {
+  const lim = edgeLimit(v.x, v.z, margin), d2 = v.x * v.x + v.z * v.z;
+  if (d2 > lim * lim) { const s = lim / Math.sqrt(d2); v.x *= s; v.z *= s; }
+}
+function stop(e: Enemy): void { e.vel.set(0, 0, 0); }
+function power(e: Enemy): number { return Math.max(e.contactDamage, e.projectileDamage, 8); }
+
+export function cancelSpecial(e: Enemy): void {
+  if (e.spKind === 0) return;
+  if (e.spKind === SP.CHAINS && tether.id === e.id) tether.active = false;
+  if (e.spKind === SP.PRISM && prism.zone) { prism.zone.active = false; prism.zone = null; }
+  e.shellT = 0; e.hideT = 0;
+  e.spKind = 0; e.spT = 0;
+}
+
+/** Called while the enemy acts. Returns true while a special is running (normal AI is skipped). */
+export function updateSpecial(e: Enemy, dt: number): boolean {
+  if (e.spKind === 0) { if (e.spCd > 0) e.spCd -= dt; return false; }
+  e.spT += dt;
+  const d = data.get(e.id)!;
+  const p = world.player;
+  const t = e.spT;
+  stop(e);
+  switch (e.spKind) {
+    case SP.PRISON: {
+      if (e.spStep === 0 && t >= 1.0) {
+        e.spStep = 1;
+        for (let i = 0; i < d.slots.length; i += 2) raiseWallAt(d.slots[i], d.slots[i + 1], 1.5, 4.0, true);
+        spawnTelegraphCircle(d.cx, d.cz, 5, 1.2, power(e) * 1.4, 0xef4444);
+        events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'PRISON', radius: 7 });
+        addShake(0.4);
+      }
+      if (t >= 2.5) e.spKind = 0;
+      break;
+    }
+    case SP.VEINS: {
+      if (t >= 1.0) {
+        const n = Math.min(10, Math.floor((t - 1.0) / 0.07) + 1);
+        while (e.spStep < n) {
+          const i = e.spStep++;
+          for (let l = 0; l < 3; l++) {
+            const a = d.ang + (l - 1) * 0.55, dist = 3 + i * 2.8;
+            tv.set(e.pos.x + Math.sin(a) * dist, 0, e.pos.z + Math.cos(a) * dist); clampArena(tv, 2);
+            spawnHostileZone('FIREPATCH', tv.x, tv.z, 2.1, 3.5, power(e) * 0.35, 0xff5a1a);
+          }
+        }
+        if (e.spStep === 1) events.emit('trick', { pos: e.pos.clone(), kind: 'VEINS', radius: 28 });
+      }
+      if (t >= 2.2) e.spKind = 0;
+      break;
+    }
+    case SP.CHAINS: {
+      if (e.spStep === 0 && t >= 0.7) {
+        e.spStep = 1;
+        const dist = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
+        tether.active = true; tether.id = e.id; tether.t = 0; tether.maxDist = dist + 7;
+        events.emit('trick', { pos: p.pos.clone(), kind: 'CHAINS', radius: 3 });
+      }
+      if (tether.active && tether.id === e.id) {
+        tether.t += dt; tether.lx = e.pos.x; tether.lz = e.pos.z;
+        const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, dist = Math.hypot(dx, dz) || 1;
+        if (p.alive && p.dashT <= 0 && p.stunT <= 0) { p.pos.x += (dx / dist) * 6.5 * dt; p.pos.z += (dz / dist) * 6.5 * dt; }
+        if (dist > tether.maxDist || !p.alive) { tether.active = false; events.emit('trick', { pos: p.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); e.spKind = 0; }
+        else if (dist < 3.4) {
+          tether.active = false;
+          damagePlayer(power(e) * 1.1, { pos: e.pos, kind: 'MAGIC' });
+          applyPlayerDebuff('SILENCE', 1.5);
+          events.emit('trick', { pos: p.pos.clone(), kind: 'CHAINS_END', radius: 3 });
+          e.spKind = 0;
+        } else if (tether.t > 3.2) { tether.active = false; e.spKind = 0; }
+      } else if (e.spStep === 1) e.spKind = 0;
+      break;
+    }
+    case SP.CLONES: {
+      if (e.spStep === 0 && t >= 0.8) {
+        e.spStep = 1;
+        const base = Math.random() * 6.283, real = (Math.random() * 3) | 0;
+        for (let k = 0; k < 3; k++) {
+          const a = base + (k / 3) * 6.283;
+          tv.set(p.pos.x + Math.sin(a) * 11, 0, p.pos.z + Math.cos(a) * 11); clampArena(tv, 4);
+          if (k === real) { e.pos.set(tv.x, 0, tv.z); events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false }); }
+          else spawnDecoy(e, tv.x, tv.z);
+        }
+        events.emit('trick', { pos: e.pos.clone(), kind: 'CLONES', radius: 6 });
+      }
+      if (t >= 1.2) e.spKind = 0;
+      break;
+    }
+    case SP.DEAD: {
+      if (e.spStep === 0 && t >= 1.0) {
+        e.spStep = 1;
+        if (world.director.aliveCount < 70) for (let i = 0; i < d.slots.length; i += 2) { tv.set(d.slots[i], 0, d.slots[i + 1]); const z = spawnEnemy('ZOMBIE', tv); if (z) z.stateT = 0.3; }
+        events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 8 });
+        addShake(0.3);
+      }
+      if (t >= 1.6) e.spKind = 0;
+      break;
+    }
+    case SP.AMBUSH: {
+      if (e.spStep === 0) { e.hideT = 1.6; e.spStep = 1; spawnHostileZone('SMOKE', e.pos.x, e.pos.z, 4, 3.5, 0, 0x6b7280); events.emit('trick', { pos: e.pos.clone(), kind: 'SMOKE', radius: 4 }); }
+      if (e.spStep === 1 && t >= 0.9) {
+        e.spStep = 2; e.hideT = 0;
+        tv.set(p.pos.x - Math.sin(p.facing) * 3.6, 0, p.pos.z - Math.cos(p.facing) * 3.6); clampArena(tv, 3);
+        e.pos.set(tv.x, 0, tv.z);
+        const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
+        d.dirx = dx / l; d.dirz = dz / l; e.facing = Math.atan2(d.dirx, d.dirz); e.dir.set(d.dirx, 0, d.dirz);
+        spawnTelegraphLine(e.pos.x, e.pos.z, d.dirx, d.dirz, 12, 2.2, 0.5, 0xef4444)!.damage = power(e) * 2.2;
+        events.emit('trick', { pos: e.pos.clone(), kind: 'SMOKE', radius: 4 });
+      }
+      if (e.spStep === 2 && t >= 1.4) e.spStep = 3;
+      if (e.spStep === 3) e.vel.set(d.dirx * 30, 0, d.dirz * 30); // the dash-slash
+      if (e.spStep === 3 && t >= 1.75) {
+        e.spStep = 4;
+        const z = spawnTelegraphCircle(p.pos.x, p.pos.z, 3, 0.7, power(e), 0x9ca3af);
+        if (z) { z.trick = TRICK.CALTROPS; z.damage = power(e); }
+      }
+      if (t >= 2.4) e.spKind = 0;
+      break;
+    }
+    case SP.PRISM: {
+      const w = 1.0, dur = 3.6;
+      const ang = d.ang + Math.min(1.1, t) * 0 + (t > w ? (t - w) * 1.0 : 0);
+      const z = prism.zone;
+      if (z && z.active) {
+        z.pos.set(e.pos.x, 0, e.pos.z); z.dir.set(Math.sin(ang), 0, Math.cos(ang));
+        z.maxLife = 1; z.life = t < w ? Math.max(0.06, 1 - t / w * 0.9) : 0.04; // fills during the wind-up, solid while firing
+      }
+      if (t >= w && z) {
+        if ((e.spStep & 1) === 0 && Math.floor(t * 8) !== Math.floor((t - dt) * 8)) {
+          const rx = p.pos.x - e.pos.x, rz = p.pos.z - e.pos.z;
+          const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
+          if (p.alive && along > 0 && along < z.length && perp < 1.3 + 0.6) {
+            damagePlayer(power(e) * 0.28, { pos: e.pos, kind: 'MAGIC' });
+            if (world.time - d.power > 0.6) { d.power = world.time; applyPlayerDebuff('BLIND', 0.9); }
+          }
+        }
+      }
+      if (e.spStep === 0 && t >= w) { e.spStep = 2; events.emit('trick', { pos: e.pos.clone(), kind: 'PRISM', radius: 36 }); for (let i = 0; i < 4; i++) { const a = Math.random() * 6.283, r = 6 + Math.random() * 6; raiseWallAt(p.pos.x + Math.sin(a) * r, p.pos.z + Math.cos(a) * r, 1.3, 4, false); } }
+      if (t >= dur) { if (z) z.active = false; prism.zone = null; e.spKind = 0; }
+      break;
+    }
+    case SP.STAMPEDE: {
+      if (t >= 2.0) e.spKind = 0;
+      break;
+    }
+    case SP.SHELL: {
+      e.shellT = Math.max(e.shellT, 0.2);
+      if (t < 1.2) { stop(e); }
+      else {
+        if (e.spStep === 0) { e.spStep = 1; const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z, l = Math.hypot(dx, dz) || 1; d.dirx = dx / l; d.dirz = dz / l; events.emit('trick', { pos: e.pos.clone(), kind: 'SHELL_SPIN', radius: 4 }); }
+        e.state = 'ATTACK';
+        e.vel.set(d.dirx * 15, 0, d.dirz * 15);
+        e.facing += dt * 14;
+      }
+      if (t >= 3.8) { e.shellT = 0; e.state = 'CHASE'; e.stateT = 0; e.spKind = 0; }
+      break;
+    }
+    default: e.spKind = 0;
+  }
+  if (e.spKind === 0) { cancelSpecial(e); e.attackCd = Math.max(e.attackCd, 0.6); }
+  return true;
+}
+
+/** Shellback bounces off obstacles while spinning. */
+export function shellBounce(e: Enemy): void {
+  const d = data.get(e.id); if (!d) return;
+  const a = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z) + (Math.random() - 0.5) * 1.6;
+  d.dirx = Math.sin(a); d.dirz = Math.cos(a);
+  events.emit('trick', { pos: e.pos.clone(), kind: 'SHELL_BOUNCE', radius: 2 });
+}
+
+/** Starts a special if off cooldown (boss / mini-boss, in CHASE/KITE). */
+export function tryStartSpecial(e: Enemy, tdist: number): boolean {
+  if (e.spCd > 0 || (e.state !== 'CHASE' && e.state !== 'KITE') || !world.player.alive || e.staggerT > 0) return false;
+  const list = LIST[e.kind]; if (!list) return false;
+  const n = casts.get(e.id) ?? 0;
+  const id = list[n % list.length];
+  if (e.mini && tdist > 26) return false;
+  if (id === SP.AMBUSH && tdist > 20) return false;
+  casts.set(e.id, n + 1);
+  e.spKind = id; e.spT = 0; e.spStep = 0;
+  e.spCd = (e.boss ? 13 : 15) * (1 - 0.17 * e.phase) * (0.9 + Math.random() * 0.2);
+  specialStats[SP_NAME[id]] = (specialStats[SP_NAME[id]] ?? 0) + 1;
+  const b = world.boss;
+  b.ability = SP_NAME[id]; b.abilityT = 2.6;
+  const p = world.player.pos;
+  const dx = p.x - e.pos.x, dz = p.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
+  const d: Data = { cx: p.x, cz: p.z, slots: [], ang: Math.atan2(dx, dz), dirx: dx / l, dirz: dz / l, power: -10, flags: 0 };
+  data.set(e.id, d);
+  const pw = power(e);
+  switch (id) {
+    case SP.PRISON: {
+      const N = 10, gap = (Math.random() * N) | 0;
+      for (let i = 0; i < N; i++) {
+        if (i === gap || i === (gap + 1) % N) continue;
+        const a = (i / N) * 6.283;
+        tv.set(p.x + Math.sin(a) * 6.5, 0, p.z + Math.cos(a) * 6.5); clampArena(tv, 2);
+        d.slots.push(tv.x, tv.z);
+        spawnTelegraphCircle(tv.x, tv.z, 1.7, 1.0, 0, 0xb08a5a);
+      }
+      break;
+    }
+    case SP.VEINS:
+      for (let l2 = 0; l2 < 3; l2++) {
+        const a = d.ang + (l2 - 1) * 0.55;
+        const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 30, 3.4, 1.0, 0xff6a1a);
+        if (z) z.damage = pw * 1.3;
+      }
+      break;
+    case SP.CHAINS: spawnTelegraphCircle(p.x, p.z, 2.2, 0.7, 0, 0xc084fc); break;
+    case SP.CLONES: spawnTelegraphCircle(e.pos.x, e.pos.z, 6, 0.8, 0, 0x38bdf8); break;
+    case SP.DEAD: {
+      const N = 6, base = Math.random() * 6.283;
+      for (let i = 0; i < N; i++) {
+        const a = base + (i / N) * 6.283;
+        tv.set(e.pos.x + Math.sin(a) * 7, 0, e.pos.z + Math.cos(a) * 7); clampArena(tv, 3);
+        d.slots.push(tv.x, tv.z);
+        spawnTelegraphCircle(tv.x, tv.z, 2.2, 1.0, 0, 0x84cc16);
+      }
+      const z = spawnTelegraphCircle(e.pos.x, e.pos.z, 12, 1.0, 0, 0xa855f7);
+      if (z) z.trick = TRICK.CURSE;
+      break;
+    }
+    case SP.PRISM: {
+      d.ang = d.ang - 1.1; // sweep starts to the player's left
+      const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(d.ang), Math.cos(d.ang), 36, 2.6, 100, 0xe879f9);
+      if (z) { z.damage = 0; prism.zone = z; z.life = z.maxLife = 1; }
+      break;
+    }
+    case SP.STAMPEDE: {
+      const ux = d.dirx, uz = d.dirz, vx = -uz, vz = ux;
+      for (let i = 0; i < 3; i++) {
+        const off = (i - 1) * 5.6;
+        tv.set(p.x - ux * 22 + vx * off, 0, p.z - uz * 22 + vz * off);
+        const z = spawnTelegraphLine(tv.x, tv.z, ux, uz, 44, 3.4, 1.0 + i * 0.18, 0xfbbf24);
+        if (z) { z.trick = TRICK.STAMPEDE; z.damage = pw * 1.6; }
+      }
+      break;
+    }
+    case SP.SHELL: break;
+    default: break;
+  }
+  events.emit('trick', { pos: e.pos.clone(), kind: 'BOSS_CAST', radius: 6 });
+  void tv2; void fireEnemyProjectile;
+  return true;
+}
+
+// ------------------------------------------------------------ Death Clones --
+function spawnDecoy(real: Enemy, x: number, z: number): void {
+  const e = allocEnemy();
+  if (!e) return;
+  e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true;
+  e.pos.set(x, 0, z); e.maxHp = e.hp = 1; e.shield = 0; e.speed = 0;
+  e.radius = real.radius; e.scale = real.scale; e.contactDamage = 0; e.projectileDamage = 0; e.xp = 0; e.gold = 0;
+  e.state = 'CHASE'; e.stateT = 0; e.attackCd = 1 + Math.random(); e.facing = real.facing; e.armor = 0; e.active = true;
+  e.spT = 0;
+  events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
+}
+export function updateDecoy(e: Enemy, dt: number): void {
+  e.stateT += dt; e.animT += dt;
+  if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
+  const p = world.player.pos;
+  e.facing = Math.atan2(p.x - e.pos.x, p.z - e.pos.z);
+  e.attackCd -= dt;
+  if (e.attackCd <= 0) {
+    e.attackCd = 1.8 + Math.random();
+    tv.set(Math.sin(e.facing), 0, Math.cos(e.facing));
+    fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', 9, 0, { life: 3, radius: 0.5 }); // harmless fake orb (damage 0)
+  }
+  if (e.stateT > 7.5) { popDecoy(e); }
+}
+export function popDecoy(e: Enemy): void {
+  if (!e.active || e.state === 'DYING') return;
+  e.state = 'DYING'; e.stateT = 0; e.deathT = 0; e.hp = 0;
+  events.emit('explosion', { pos: e.pos.clone(), radius: 3, color: 0x7c3aed });
+  events.emit('trick', { pos: e.pos.clone(), kind: 'DECOY_POP', radius: 3 });
+}
+export function clearDecoys(): void {
+  for (const e of world.enemies) if (e.active && e.decoy && e.state !== 'DYING') popDecoy(e);
+}

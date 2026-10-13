@@ -4,7 +4,8 @@ import { Maximize } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain } from 'lucide-react';
+import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown } from 'lucide-react';
+import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
 import { useUiStore } from '../uiStore';
@@ -23,6 +24,45 @@ const BuffSlot: React.FC<{ id: string; icon: React.ReactNode; label: string; col
     <span data-ic style={{ display: 'grid' }}>{icon}</span><span data-t />
   </div>
 );
+
+const DEBUFFS: { id: string; icon: React.ReactNode; color: string; label: string; body: string; get: () => number }[] = [
+  { id: 'stun', icon: <Star size={14} />, color: '#ffd23a', label: 'Stunned', body: 'Cannot move, attack or use skills.', get: () => world.player.stunT },
+  { id: 'root', icon: <Anchor size={14} />, color: '#c8a050', label: 'Rooted', body: 'Cannot move. Dash cleanses it.', get: () => world.player.rootT },
+  { id: 'silence', icon: <VolumeX size={14} />, color: '#c084fc', label: 'Silenced', body: 'Skills and ultimate disabled. Basic attacks still work.', get: () => world.player.silenceT },
+  { id: 'defdown', icon: <ShieldOff size={14} />, color: '#a855f7', label: 'Cursed', body: 'Defense reduced by 30%.', get: () => world.player.defDownT },
+  { id: 'blind', icon: <EyeOff size={14} />, color: '#9ca3af', label: 'Blinded', body: 'Your vision is darkened.', get: () => world.player.blindT },
+  { id: 'burn', icon: <Flame size={14} />, color: '#ff7a1a', label: 'Burning', body: 'Taking fire damage over time.', get: () => world.player.burnT },
+  { id: 'poison', icon: <Skull size={14} />, color: '#84cc16', label: 'Poisoned', body: 'Taking poison damage over time.', get: () => world.player.poisonT },
+  { id: 'bleed', icon: <Droplet size={14} />, color: '#ef4444', label: 'Bleeding', body: 'Taking bleed damage over time.', get: () => world.player.bleedT },
+  { id: 'slow', icon: <ChevronsDown size={14} />, color: '#60a5fa', label: 'Slowed', body: 'Movement speed reduced. Dash cleanses it.', get: () => (world.player.slowT > 0 ? world.player.slowT : envSlow < 0.99 ? 0.01 : 0) },
+];
+
+/** Debuff icons with remaining-time under the HP strip (compact on phones). */
+const DebuffRow: React.FC = () => {
+  const refs = useRef<Record<string, HTMLElement | null>>({});
+  const last = useRef<Record<string, string>>({});
+  useRaf(() => {
+    for (const d of DEBUFFS) {
+      const el = refs.current[d.id]; if (!el) continue;
+      const v = d.get();
+      const text = v > 0.05 ? v.toFixed(1) : v > 0 ? '' : '';
+      const key = v > 0 ? `1${text}` : '0';
+      if (last.current[d.id] === key) continue;
+      last.current[d.id] = key;
+      el.dataset.on = v > 0 ? '1' : '0';
+      const t = el.querySelector('[data-t]'); if (t) t.textContent = text;
+    }
+  });
+  return (
+    <div className="debuff-row" data-testid="debuff-row">
+      {DEBUFFS.map((d) => (
+        <div key={d.id} ref={(el) => { refs.current[d.id] = el; }} className="debuff-slot" data-on="0" data-debuff={d.id} style={{ ['--dc' as any]: d.color }} {...tip(<SimpleTip title={d.label} sub="Debuff" color={d.color} body={d.body} />)}>
+          <span style={{ display: 'grid' }}>{d.icon}</span><span data-t />
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const PlayerPlate: React.FC = () => {
   const hero = useGameStore((s) => s.hero);
@@ -70,6 +110,7 @@ export const PlayerPlate: React.FC = () => {
           <BuffSlot id="whirl" refs={refs} color="#ffd27a" label="Whirlwind" icon={<Wind size={15} />} />
           <BuffSlot id="titan" refs={refs} color="#ff8a3a" label="Titan's Wrath" icon={<Mountain size={15} />} />
         </div>
+        <DebuffRow />
       </div>
     </div>
   );

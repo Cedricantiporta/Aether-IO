@@ -6,7 +6,7 @@ import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { PETS_POOL } from '../constants';
-import { getPetProfile } from '../engine/systems/pets';
+import { getPetProfile, FIRE_PATCHES, MARKS, BEAM } from '../engine/systems/pets';
 import { getModels, type MatKey } from './enemyModels';
 import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { GB, TAU, damp } from './util';
@@ -97,6 +97,90 @@ const DEFS: Record<string, () => PetDef> = {
     g.ico(0.2, [0, 0.4, 0], '#ff9a30', [0.9, 0.9, 1.3], 1);
     return { body: b.build(), glow: g.build(), wing: { geo: wingGeo('#ff9020', 0.8, 0.55, 4), glow: true, pivot: [0.15, 0.5, 0], speed: 10, amp: 0.65 }, hover: 1.4, scale: 1.25, trail: 'fire', halo: [2.4, 1.6, 0.5, 0.1] };
   },
+  pet_fox: () => {
+    const b = new GB([0.85, 1.15]), g = new GB([1, 1]);
+    const o = '#ff7a24', w = '#fff2e0', d = '#3a1808';
+    b.sph(0.26, [0, 0.45, 0], o, [0.85, 0.8, 1.45], 8); b.sph(0.2, [0, 0.58, 0.42], o, 1, 8); b.cone(0.1, 0.24, 5, [0, 0.54, 0.64], w, [Math.PI / 2, 0, 0]);
+    b.sph(0.03, [0, 0.55, 0.78], d, 1, 4);
+    for (const s of [-1, 1]) { b.cone(0.07, 0.22, 4, [s * 0.11, 0.82, 0.36], o); b.cone(0.04, 0.14, 4, [s * 0.11, 0.8, 0.39], d); g.sph(0.03, [s * 0.08, 0.62, 0.58], '#ffe060', 1, 4); b.cyl(0.04, 0.04, 0.3, 5, [s * 0.12, 0.2, 0.25], d); b.cyl(0.04, 0.04, 0.3, 5, [s * 0.12, 0.2, -0.25], d); }
+    b.sph(0.2, [0, 0.4, 0.32], w, [1, 0.8, 0.8], 6);
+    b.sph(0.14, [0, 0.55, -0.6], o, [1, 1, 2.4], 7); b.sph(0.1, [0, 0.55, -0.95], w, [1, 1, 1.3], 6);
+    g.sph(0.09, [0, 0.58, -0.78], '#ff9a30', [1.2, 1.2, 2], 5);
+    return { body: b.build(), glow: g.build(), hover: 0.05, scale: 1.2, trail: 'fire' };
+  },
+  pet_owl: () => {
+    const b = new GB([0.85, 1.15]), g = new GB([1, 1]);
+    const c = '#bfe8ff', c2 = '#6fa8e0', w = '#ffffff';
+    b.sph(0.3, [0, 0.45, 0], c, [0.9, 1.1, 0.9], 8); b.sph(0.2, [0, 0.4, 0.14], w, [0.9, 1, 0.7], 7);
+    b.sph(0.26, [0, 0.82, 0.05], c, 1, 8); b.cone(0.05, 0.12, 4, [0, 0.78, 0.3], '#ffd060', [Math.PI / 2, 0, 0]);
+    for (const s of [-1, 1]) { b.sph(0.1, [s * 0.11, 0.86, 0.22], w, [1, 1, 0.5], 6); g.sph(0.045, [s * 0.11, 0.86, 0.27], '#5ad0ff', 1, 5); b.cone(0.06, 0.2, 4, [s * 0.18, 1.1, 0.0], c2, [0, 0, -s * 0.3]); }
+    b.cone(0.1, 0.35, 4, [0, 0.15, -0.2], c2, [-2.4, 0, 0]);
+    return { body: b.build(), glow: g.build(), wing: { geo: wingGeo('#8fc4f4', 0.7, 0.45, 4), pivot: [0.22, 0.55, 0], speed: 12, amp: 0.7 }, hover: 1.5, scale: 1.2, trail: 'sparkle', halo: [1.2, 1.7, 2.0, 0.4] };
+  },
+  pet_mimic: () => {
+    const b = new GB([0.82, 1.1]), g = new GB([1, 1]);
+    const wd = '#7a4a22', wd2 = '#5a3416', gold = '#e9b949';
+    b.box(0.7, 0.34, 0.5, [0, 0.2, 0], wd); b.box(0.74, 0.06, 0.54, [0, 0.4, 0], gold); b.box(0.06, 0.34, 0.54, [-0.25, 0.2, 0], gold); b.box(0.06, 0.34, 0.54, [0.25, 0.2, 0], gold);
+    // open lid (tilted back), teeth
+    b.box(0.7, 0.08, 0.5, [0, 0.62, -0.3], wd2, [-0.9, 0, 0]); b.box(0.6, 0.12, 0.3, [0, 0.4, 0.2], '#8a1a24');
+    for (let i = -2; i <= 2; i++) { b.cone(0.045, 0.12, 4, [i * 0.12, 0.46, 0.27], '#fff', [Math.PI, 0, 0]); b.cone(0.045, 0.1, 4, [i * 0.12, 0.6, 0.12], '#fff'); }
+    b.ico(0.1, [0, 0.12, 0.2], '#ff6a8a', [0.7, 1.4, 0.7], 0);   // tongue
+    for (const s of [-1, 1]) { g.sph(0.06, [s * 0.18, 0.62, -0.1], '#ffe040', 1, 5); b.box(0.12, 0.12, 0.12, [s * 0.25, 0.04, 0.15], wd2); b.box(0.12, 0.12, 0.12, [s * 0.25, 0.04, -0.15], wd2); }
+    g.sph(0.07, [0, 0.42, 0.5], gold, 1, 5);
+    return { body: b.build(), glow: g.build(), hover: 0.05, scale: 1.3, hop: true };
+  },
+  pet_sprite: () => {
+    const g = new GB([1, 1]), b = new GB([1, 1]);
+    g.ico(0.2, [0, 0, 0], '#fff7a0', 1, 1); g.ico(0.3, [0, 0, 0], '#7fd0ff', 1, 1);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; b.cone(0.05, 0.5, 4, [Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0], '#b8e8ff', [0, 0, a - Math.PI / 2]); }
+    b.torus(0.4, 0.015, [0, 0, 0], '#fff7a0', [0.8, 0.4, 0], 1, 20);
+    return { body: b.build(), glow: g.build(), hover: 1.7, scale: 1.4, trail: 'fairy', halo: [1.6, 1.7, 1.8, 0.7] };
+  },
+  pet_turtle: () => {
+    const b = new GB([0.82, 1.1]), g = new GB([1, 1]);
+    const sh = '#3f9a6a', sh2 = '#2a6a48', sk = '#9ad08a';
+    b.sph(0.42, [0, 0.35, 0], sh, [1, 0.72, 1.15], 8); b.sph(0.36, [0, 0.4, 0], sh2, [0.8, 0.5, 0.95], 6);
+    for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; b.ico(0.1, [Math.cos(a) * 0.22, 0.62, Math.sin(a) * 0.26], '#7fd8a0', [1, 0.4, 1], 0); }
+    b.sph(0.17, [0, 0.35, 0.55], sk, 1, 7); b.sph(0.03, [-0.07, 0.4, 0.69], '#111', 1, 4); b.sph(0.03, [0.07, 0.4, 0.69], '#111', 1, 4);
+    for (const s of [-1, 1]) for (const z of [-1, 1]) b.sph(0.12, [s * 0.34, 0.08, z * 0.3], sk, [1, 0.8, 1.2], 6);
+    b.cone(0.06, 0.2, 4, [0, 0.2, -0.55], sk, [-1.9, 0, 0]);
+    g.ico(0.1, [0, 0.72, 0], '#7fe8ff', 1, 1);
+    return { body: b.build(), glow: g.build(), hover: 0.05, scale: 1.2, halo: [1.0, 1.5, 1.8, 0.35] };
+  },
+  pet_shadowcat: () => {
+    const b = new GB([0.7, 1.1]), g = new GB([1, 1]);
+    const c = '#2a2038', c2 = '#4a3a6a';
+    b.sph(0.22, [0, 0.5, 0], c, [0.8, 0.8, 1.6], 8); b.sph(0.18, [0, 0.68, 0.42], c, 1, 8);
+    for (const s of [-1, 1]) { b.cone(0.07, 0.2, 4, [s * 0.1, 0.9, 0.4], c2); g.sph(0.04, [s * 0.08, 0.7, 0.57], '#c070ff', [1.4, 0.8, 0.6], 5); b.cyl(0.04, 0.035, 0.42, 5, [s * 0.1, 0.22, 0.28], c); b.cyl(0.04, 0.035, 0.42, 5, [s * 0.1, 0.22, -0.28], c); }
+    for (let i = 0; i < 6; i++) b.sph(0.07 - i * 0.006, [0, 0.62 + Math.sin(i * 0.8) * 0.18 + i * 0.03, -0.45 - i * 0.14], i % 2 ? c2 : c, 1, 5);
+    g.ico(0.14, [0, 0.55, 0], '#8a50d0', [0.8, 0.8, 1.6], 1);
+    return { body: b.build(), glow: g.build(), hover: 0.05, scale: 1.25, trail: 'ghost', halo: [1.4, 1.0, 0.4, 1.4] };
+  },
+  pet_crystal: () => {
+    const b = new GB([0.82, 1.15]), g = new GB([1, 1]);
+    const r = '#6a7488', cr = '#7fe0ff', cr2 = '#b8f4ff';
+    b.box(0.5, 0.45, 0.36, [0, 0.55, 0], r); b.box(0.34, 0.26, 0.3, [0, 0.92, 0.02], '#556070');
+    for (const s of [-1, 1]) { b.box(0.15, 0.45, 0.15, [s * 0.36, 0.55, 0], r); b.box(0.2, 0.2, 0.2, [s * 0.36, 0.26, 0.05], '#556070'); b.box(0.18, 0.22, 0.18, [s * 0.14, 0.1, 0], r); }
+    for (let i = 0; i < 5; i++) { const a = (i - 2) * 0.35; b.cone(0.08, 0.4 + (2 - Math.abs(i - 2)) * 0.12, 5, [Math.sin(a) * 0.22, 0.85, -0.2], i % 2 ? cr : cr2, [-0.5, 0, -a]); }
+    b.cone(0.1, 0.32, 5, [0.0, 1.15, 0.05], cr2);
+    g.sph(0.045, [-0.08, 0.95, 0.17], '#ffffff', 1, 4); g.sph(0.045, [0.08, 0.95, 0.17], '#ffffff', 1, 4); g.ico(0.1, [0, 0.6, 0.19], cr, 1, 0);
+    return { body: b.build(), glow: g.build(), hover: 0.05, scale: 1.1, halo: [1.4, 1.6, 2.0, 0.5] };
+  },
+  pet_leviathan: () => {
+    const b = new GB([0.85, 1.15]), g = new GB([1, 1]);
+    const c = '#2f8fd8', c2 = '#7fe0ff', bl = '#d8fbff';
+    // serpentine body: arc of spheres tapering to the tail
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8, z = 0.5 - t * 1.8, y = 0.55 + Math.sin(t * Math.PI * 1.5) * 0.28;
+      b.sph(0.2 - t * 0.12, [0, y, z], i % 2 ? c : '#2a78c0', 1, 7);
+      b.sph(0.12 - t * 0.07, [0, y - 0.06, z + 0.02], bl, [1, 0.8, 1], 5);
+      if (i > 0 && i < 7) b.cone(0.05, 0.18 + (1 - t) * 0.1, 4, [0, y + 0.2 - t * 0.08, z], c2);
+    }
+    b.sph(0.26, [0, 0.62, 0.62], c, [1, 0.9, 1.3], 8); b.cone(0.1, 0.26, 5, [0, 0.58, 0.9], c2, [Math.PI / 2, 0, 0]);
+    for (const s of [-1, 1]) { b.cone(0.05, 0.4, 4, [s * 0.14, 0.9, 0.5], bl, [-0.7, 0, -s * 0.3]); g.sph(0.05, [s * 0.14, 0.7, 0.8], '#ffffff', 1, 4); b.cone(0.12, 0.4, 4, [s * 0.3, 0.5, 0.2], c2, [0, 0, -s * 1.4]); }
+    g.ico(0.14, [0, 0.8, 0.0], '#9ff4ff', 1, 1);
+    return { body: b.build(), glow: g.build(), hover: 1.5, scale: 1.0, trail: 'wisp', halo: [2.2, 1.0, 1.6, 2.0] };
+  },
   pet_demigod: () => {
     const g = new GB([1, 1]), b = new GB([1, 1]);
     g.ico(0.22, [0, 0, 0], '#fff4c0', 1, 2); g.ico(0.34, [0, 0, 0], '#ffe090', 1, 1);
@@ -114,7 +198,7 @@ function petMat(kind: MatKey, id: string, tint = 0xffffff): Material {
   if (!m) {
     if (kind === 'glow') m = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7), side: DoubleSide });
     else if (kind === 'jelly') m = new MeshStandardMaterial({ vertexColors: true, roughness: 0.2, transparent: true, opacity: 0.85, depthWrite: false, color: tint });
-    else m = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7, side: DoubleSide, color: tint, emissive: id === 'pet_wolf' ? 0x335577 : id === 'pet_dragon' ? 0x553300 : 0x000000, emissiveIntensity: 0.6 });
+    else m = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7, side: DoubleSide, color: tint, emissive: id === 'pet_wolf' ? 0x335577 : id === 'pet_dragon' ? 0x553300 : id === 'pet_shadowcat' ? 0x2a1050 : id === 'pet_leviathan' ? 0x103a60 : id === 'pet_crystal' ? 0x1a3a50 : 0x000000, emissiveIntensity: 0.6 });
     MATS.set(key, m);
   }
   return m;
@@ -143,7 +227,41 @@ export function Pet() {
   });
   const def = useMemo(() => getDef(id), [id]);
   if (!def) return null;
-  return <PetActor key={id} id={id} def={def} />;
+  return <><PetActor key={id} id={id} def={def} /><PetFx /></>;
+}
+
+const markMat = new MeshBasicMaterial({ color: new Color(2.2, 0.6, 2.6), toneMapped: false, transparent: true, depthWrite: false });
+const beamMat = new MeshBasicMaterial({ color: new Color(0.6, 2.0, 2.6), toneMapped: false, transparent: true, opacity: 0.7, depthWrite: false, blending: 2 });
+/** Shadow Cat mark gems above marked enemies + Leviathan tidal beam. Pooled, no allocations per frame. */
+function PetFx() {
+  const marks = useRef<Group[]>([]), beam = useRef<Mesh>(null!);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    for (let i = 0; i < 3; i++) {
+      const g = marks.current[i], m = MARKS[i];
+      if (!g) continue;
+      const on = m.t > 0 && !!m.e;
+      g.visible = on;
+      if (on) { g.position.set(m.e!.pos.x, 2.6 + Math.sin(t * 4 + i) * 0.15, m.e!.pos.z); g.rotation.y = t * 3; }
+    }
+    if (beam.current) {
+      const on = BEAM.t > 0;
+      beam.current.visible = on;
+      if (on) {
+        const k = Math.min(1, BEAM.t * 4, (1.2 - BEAM.t) * 6 + 0.3);
+        beam.current.position.set(BEAM.x + BEAM.dx * BEAM.len / 2, 0.9, BEAM.z + BEAM.dz * BEAM.len / 2);
+        beam.current.rotation.y = Math.atan2(BEAM.dx, BEAM.dz);
+        beam.current.scale.set(1 + Math.sin(t * 30) * 0.08, 1, 1);
+        beam.current.scale.x *= Math.max(0.1, k);
+      }
+    }
+  });
+  return (
+    <>
+      {[0, 1, 2].map((i) => <group key={i} ref={(r) => { marks.current[i] = r!; }} visible={false}><mesh material={markMat} rotation={[Math.PI, 0, 0]}><coneGeometry args={[0.28, 0.5, 4]} /></mesh></group>)}
+      <mesh ref={beam} visible={false} material={beamMat}><boxGeometry args={[3.4, 1.4, BEAM.len]} /></mesh>
+    </>
+  );
 }
 
 /** Standalone showcase model (no world access): bobs, flaps wings, hops and turns slowly. For UI previews. */
@@ -185,6 +303,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
   const legs = useRef<Group[]>([]);
   const lit = petMat('lit', id), glow = petMat('glow', id);
   const prof = useMemo(() => getPetProfile(PETS_POOL.find((x) => x.id === id)?.name), [id]);
+  const size = prof.size;
   const animK = 0.55 + 0.45 * prof.moveSpeed; // slower pets hop/flap/trot slower
   const S = useRef({ prev: new Vector3(), speed: 0, init: false, yaw: 0, t: 0, phase: 0 });
   const carryG = useRef<Group>(null!);
@@ -205,7 +324,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     s.phase += dt * (1 + clamp01(s.speed / 6) * 1.2) * animK;
     const moving = clamp01(s.speed / 4);
     const bob = Math.sin(s.phase * 3 + 1) * (0.12 + moving * 0.05);
-    let y = def.hover + (def.hover > 0.2 ? bob : 0);
+    let y = def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0);
     let sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
     root.current.position.set(pet.pos.x, Math.max(0, pet.pos.y - 1) + y, pet.pos.z);
@@ -213,8 +332,9 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     root.current.rotation.y = pet.facing;
     const a = pet.attackT; // 1 -> 0 after a strike: stretch forward then settle
     const hx = def.hop ? 1.05 - (sq - 1) * 0.5 : 1;
-    model.current.scale.set(def.scale * hx * (1 - 0.15 * a), def.scale * sq * (1 - 0.1 * a), def.scale * hx * (1 + 0.45 * a));
-    model.current.position.z = a * 0.7;
+    const S0 = def.scale * size;
+    model.current.scale.set(S0 * hx * (1 - 0.15 * a), S0 * sq * (1 - 0.1 * a), S0 * hx * (1 + 0.45 * a));
+    model.current.position.z = a * 0.7 * size;
     model.current.rotation.x = (def.hover > 0.2 ? moving * 0.2 : 0) + a * 0.35;
     if (def.wing && wL.current) { const f = Math.sin(s.phase * def.wing.speed) * def.wing.amp * (1 + moving * 0.3); const u = def.wing.up ? -1 : 1; wL.current.rotation.z = u * (f + 0.2); wR.current.rotation.z = -u * (f + 0.2); }
     for (let i = 0; i < legs.current.length; i++) if (legs.current[i]) legs.current[i].rotation.x = Math.sin(s.phase * 12 + (i % 2) * Math.PI + (i > 1 ? 1.5 : 0)) * 0.7 * moving;
@@ -223,13 +343,13 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
       carryG.current.visible = !!c;
       if (c) {
         carryMat.color.setHex(c === 'GOLD' ? 0xffd23a : c === 'XP' ? 0x5cf0ff : c === 'GEM' ? 0xc58bff : c === 'HEALTH' ? 0xff5a6a : 0xffffff).multiplyScalar(2);
-        carryG.current.position.y = 1.05 * def.scale + 0.5 + Math.sin(t * 8) * 0.06;
+        carryG.current.position.y = 1.05 * S0 + 0.5 + Math.sin(t * 8) * 0.06;
         carryG.current.rotation.y = t * 3;
         carryG.current.scale.setScalar(Math.min(1, pet.carryT * 4));
       }
     }
     if (dt > 0 && pet.sparkT > 0 && Math.random() < dt * 60) embers(pet.pos.x, root.current.position.y + 0.8, pet.pos.z, 2, 0xfff0a0, 0.5, 2.0, 0.6, 0.12);
-    if (def.halo) pushHalo(pet.pos.x, root.current.position.y + 0.5 * def.scale, pet.pos.z, def.halo[0], def.halo[1] * 0.5, def.halo[2] * 0.5, def.halo[3] * 0.5, 0.5, CELL.GLOW);
+    if (def.halo) pushHalo(pet.pos.x, root.current.position.y + 0.5 * S0, pet.pos.z, def.halo[0] * size, def.halo[1] * 0.5, def.halo[2] * 0.5, def.halo[3] * 0.5, 0.5, CELL.GLOW);
     if (dt > 0 && def.trail) {
       const x = pet.pos.x, yy = root.current.position.y + 0.4, z = pet.pos.z, r = Math.random;
       if (def.trail === 'fire' && r() < dt * 50) { FX.add.emit(x, yy, z, (r() - 0.5), 0.5, (r() - 0.5), 0.7, 0.5, 0.05, 2.4, 0.8, 0.15, 0.8, CELL.FLAME, -0.5, 1); if (r() < 0.4) embers(x, yy, z, 1, 0xffb040, 0.3, 1.5, 0.9, 0.12); }
@@ -237,6 +357,10 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
       if (def.trail === 'wisp' && r() < dt * 40) FX.add.emit(x + (r() - 0.5) * 0.4, yy + (r() - 0.5) * 0.4, z + (r() - 0.5) * 0.4, 0, 0.2, 0, 0.9, 0.35, 0.03, 1.8, 1.5, 1.0, 0.7, CELL.GLOW);
       if (def.trail === 'fairy' && r() < dt * 30) FX.add.emit(x + (r() - 0.5) * 0.3, yy, z + (r() - 0.5) * 0.3, (r() - 0.5) * 0.5, -0.4, (r() - 0.5) * 0.5, 0.9, 0.2, 0.02, 2.2, 1.6, 2.0, 0.9, CELL.STAR, 0, 0.3, r() * 3, 3);
       if (def.trail === 'ghost' && r() < dt * 10 * (0.2 + moving)) FX.add.emit(x, yy, z, 0, 0.3, 0, 0.7, 0.5, 0.2, 0.5, 0.9, 1.6, 0.35, CELL.GLOW);
+    }
+    if (dt > 0) for (let i = 0; i < FIRE_PATCHES.length; i++) {
+      const f = FIRE_PATCHES[i];
+      if (f.t > 0 && Math.random() < dt * 22) { FX.add.emit(f.x + (Math.random() - 0.5), 0.3, f.z + (Math.random() - 0.5), 0, 1.0, 0, 0.6, 0.6, 0.05, 2.4, 0.8, 0.15, 0.8, CELL.FLAME, -0.5, 1); }
     }
     void smokePuff;
   }, -0.2);
@@ -252,7 +376,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
         {def.legs && def.legs.pivots.map((p, i) => <group key={i} position={p} ref={(r) => { legs.current[i] = r!; }}><mesh geometry={def.legs!.geo} material={lit} castShadow /></group>)}
       </group>
       <group ref={carryG} visible={false}><mesh material={carryMat}><octahedronGeometry args={[0.2, 0]} /></mesh></group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -(def.hover) + 0.05, 0]} scale={0.5}><circleGeometry args={[0.8, 14]} /><meshBasicMaterial color="#000" transparent opacity={0.25} depthWrite={false} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -(def.hover * (0.6 + 0.4 * size)) + 0.05, 0]} scale={0.5 * size}><circleGeometry args={[0.8, 14]} /><meshBasicMaterial color="#000" transparent opacity={0.25} depthWrite={false} /></mesh>
     </group>
   );
 }

@@ -119,12 +119,12 @@ const chainHit: Enemy[] = [];
 /** Thundercaller proc: lightning leaps from `from` to 2 + lvl nearby enemies. */
 function chainLightning(from: Enemy, lvl: number): void {
   const st = useGameStore.getState().stats;
-  const dmg = st.damage * 0.9 * st.skillDamage * (1 + 0.15 * Math.max(0, lvl - 1));
+  const dmg = st.damage * 0.585 * st.skillDamage * (1 + 0.15 * Math.max(0, lvl - 1));
   const ids = world.enemyGrid.query(from.pos.x, from.pos.z, 24, chainOut);
   chainHit.length = 0;
   chainHit.push(from);
   let cur = from;
-  for (let n = 2 + lvl + (useGameStore.getState().stats.thunderChain | 0); n > 0; n--) {
+  for (let n = 1 + lvl + (useGameStore.getState().stats.thunderChain | 0); n > 0; n--) {
     let best: Enemy | null = null, bd = 18 * 18;
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];
@@ -278,6 +278,37 @@ function dropFireZone(p: Projectile): void {
   z.color = 0xf97316;
 }
 
+/** Fan of Flames: small, short fire patch where an arrow hits an enemy / ends. */
+function fanPatch(p: Projectile, x: number, zz: number): void {
+  const z = allocZone();
+  if (!z) return;
+  z.active = true; z.kind = 'FIRE'; z.hostile = false;
+  z.pos.set(x, 0, zz); z.radius = 1.6; z.life = z.maxLife = 1.8;
+  z.damage = p.damage * 0.25; z.color = 0xf97316; z.aux = 0;
+}
+
+/** Axe Storm ricochet: redirect toward the nearest un-hit enemy. Returns true when it bounced. */
+function ricochet(p: Projectile, fromX: number, fromZ: number, skip: Enemy | null): boolean {
+  if (p.bounces <= 0) return false;
+  const ids = world.enemyGrid.query(fromX, fromZ, 40, bounceOut);
+  let best: Enemy | null = null, bd = 40 * 40;
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (e === skip || !e.active || e.state === 'DYING' || e.state === 'SPAWN' || p.hitIds.indexOf(e.id) !== -1) continue;
+    const dx = e.pos.x - fromX, dz = e.pos.z - fromZ, d = dx * dx + dz * dz;
+    if (d < bd) { bd = d; best = e; }
+  }
+  if (!best) return false;
+  const dx = best.pos.x - fromX, dz = best.pos.z - fromZ, l = Math.sqrt(dx * dx + dz * dz) || 1;
+  const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z) || 30;
+  p.vel.set((dx / l) * sp, 0, (dz / l) * sp);
+  p.bounces--;
+  p.life = Math.max(p.life, 1.5);
+  events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+  events.emit('explosion', { pos: new Vector3(fromX, 1, fromZ), radius: 1.4, color: 0xffa050 });
+  return true;
+}
+
 function bounceStorm(p: Projectile, from: Enemy): void {
   if (p.bounces <= 0) return;
   const ids = world.enemyGrid.query(from.pos.x, from.pos.z, 30, bounceOut);
@@ -301,10 +332,21 @@ function bounceStorm(p: Projectile, from: Enemy): void {
 }
 
 function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number): void {
+  if (e.shellT > 0) { // Tidal Shell reflects projectiles
+    p.vel.x = -p.vel.x; p.vel.z = -p.vel.z; p.hitIds.push(e.id);
+    events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+    events.emit('floatText', { pos: e.pos, text: 'X', color: 0x9ad0ff, scale: 0.6, dy: 0.6 });
+    return;
+  }
   const mult = p.kind === 'ORBITAL_BLADE' ? 1 : rollCrit(critRate, critDamage);
   const crit = p.kind === 'ORBITAL_BLADE' ? false : lastCrit;
-  const dmg = p.damage * mult;
+  let dmg = p.damage * mult;
   const dkind = damageKindOf(p.kind);
+  // Archer synergy: enemies chilled by Frost Field / Chain Frost shatter under Gale Arrow (+30%)
+  if (p.kind === 'GALE_ARROW' && e.frostT > 0) {
+    dmg *= 1.3;
+    events.emit('floatText', { pos: e.pos, text: 'SHATTER', color: 0x8fe4ff, scale: 0.7, dy: 0.5 });
+  }
 
   const fx = p.effect;
   if (fx && (fx.chance === undefined || Math.random() < fx.chance)) applyStatusFast(e, fx);
@@ -344,6 +386,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.knockDir = knockTmp;
   hitOpts.knockback = p.knockback;
   hitOpts.source = p.kind === 'PET_BOLT' ? 'PET' : 'PLAYER';
+  if (p.kind === 'BURNING_ARROW' && p.state === 2) fanPatch(p, e.pos.x, e.pos.z);
   damageEnemy(e, dmg, hitOpts);
 
   if (p.procLv > 0) { const l = p.procLv; p.procLv = 0; chainLightning(e, l); }
@@ -352,6 +395,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
 
   if (p.kind === 'STORM') { bounceStorm(p, e); return; }
+  if (p.kind === 'GIANT_AXE') ricochet(p, e.pos.x, e.pos.z, e);
   p.pierce -= 1;
   if (p.pierce <= 0) p.active = false;
 }
@@ -410,26 +454,13 @@ export function updateProjectiles(dt: number): void {
             const z = allocZone();
             if (z) {
               z.active = true; z.kind = 'TORNADO'; z.hostile = false;
-              z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 4.2; z.life = z.maxLife = 2.4;
-              z.damage = p.damage * 0.12; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 24;
+              z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 4.2; z.life = z.maxLife = 1.6;
+              z.damage = p.damage * 0.135; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 24;
             }
           }
         }
         break;
-      case 'BURNING_ARROW':
-        if (p.state === 2) {
-          p.trailT += dt;
-          while (p.trailT >= 0.2) {
-            p.trailT -= 0.2;
-            const z = allocZone();
-            if (z) {
-              z.active = true; z.kind = 'FIRE'; z.hostile = false;
-              z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 2.7; z.life = z.maxLife = 3.2;
-              z.damage = p.damage * 0.4; z.color = 0xf97316;
-            }
-          }
-        }
-        break;
+      case 'BURNING_ARROW': break;
       case 'MAGIC': p.spin += dt * 6; break;
       case 'STORM': p.spin += dt * 15; break;
       default: break;
@@ -456,7 +487,7 @@ export function updateProjectiles(dt: number): void {
     p.pos.x = nx; p.pos.z = nz;
 
     p.life -= dt;
-    if (p.life <= 0 || nx * nx + nz * nz > maxR2) { p.active = false; continue; }
+    if (p.life <= 0 || nx * nx + nz * nz > maxR2) { if (p.kind === 'BURNING_ARROW' && p.state === 2 && p.life <= 0) fanPatch(p, nx, nz); p.active = false; continue; }
 
     // --- obstacles ---
     if (blockedByObstacles(p.kind)) {
@@ -471,6 +502,7 @@ export function updateProjectiles(dt: number): void {
       }
       if (blocked) {
         events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+        if (p.kind === 'GIANT_AXE' && ricochet(p, px, pz, null)) { p.pos.x = px; p.pos.z = pz; continue; }
         p.active = false;
         continue;
       }

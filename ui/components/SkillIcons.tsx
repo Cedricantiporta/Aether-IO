@@ -153,13 +153,12 @@ const ICONS: Record<string, (k: string) => React.ReactNode> = {
     {[[12, 46], [28, 22], [52, 16], [44, 50]].map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="6" fill={u(k, 'gold')} stroke={S} strokeWidth="1.3" /><circle cx={x} cy={y} r="2.2" fill="#fff" /></g>)}
     <path d="M36 34 L44 50" stroke="#ffe14a" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="3 3" />
   </Art>,
-  stamp: (k) => <Art k={k} c="#ff9a3c">
-    <ellipse cx="32" cy="52" rx="26" ry="7" fill="none" stroke="#ffb05a" strokeWidth="2" opacity=".9" />
-    <ellipse cx="32" cy="52" rx="16" ry="4" fill="none" stroke="#ffd9a0" strokeWidth="1.6" opacity=".8" />
-    <path d="M8 56 L20 50 M56 56 L44 50 M32 58 V46" stroke="#ffb05a" strokeWidth="2" strokeLinecap="round" />
-    <path d="M18 8 H46 L50 28 C50 36 44 42 32 42 C20 42 14 36 14 28Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
-    <path d="M22 12 H42 M20 20 H44" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".6" />
-    <path d="M22 28 V38 M32 28 V40 M42 28 V38" stroke={S} strokeWidth="1.4" opacity=".6" />
+  stamp: (k) => <Art k={k} c="#ff6a3c">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="#ff9a5a" strokeWidth="2" strokeDasharray="6 5" opacity=".7" filter={u(k, 'glow')} />
+    <g transform="translate(16 34) rotate(-35)"><rect x="-1.8" y="-4" width="3.6" height="30" rx="1.2" fill="#6a4a30" stroke={S} strokeWidth="1" /><path d="M0 -20 C14 -22 20 -6 12 2 C9 -3 5 -4 0 -4Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /><path d="M0 -20 C-14 -22 -20 -6 -12 2 C-9 -3 -5 -4 0 -4Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /></g>
+    <g transform="translate(32 30) rotate(0)"><rect x="-1.8" y="-4" width="3.6" height="30" rx="1.2" fill="#6a4a30" stroke={S} strokeWidth="1" /><path d="M0 -20 C14 -22 20 -6 12 2 C9 -3 5 -4 0 -4Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /><path d="M0 -20 C-14 -22 -20 -6 -12 2 C-9 -3 -5 -4 0 -4Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /></g>
+    <g transform="translate(48 34) rotate(35)"><rect x="-1.8" y="-4" width="3.6" height="30" rx="1.2" fill="#6a4a30" stroke={S} strokeWidth="1" /><path d="M0 -20 C14 -22 20 -6 12 2 C9 -3 5 -4 0 -4Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /><path d="M0 -20 C-14 -22 -20 -6 -12 2 C-9 -3 -5 -4 0 -4Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" /></g>
+    <path d="M6 14 L14 18 M58 14 L50 18 M32 4 V10" stroke="#ffd070" strokeWidth="2.2" strokeLinecap="round" />
   </Art>,
   orbital: (k) => <Art k={k} c="#5ac0ff">
     <ellipse cx="32" cy="32" rx="24" ry="24" fill="none" stroke="#6ec1ff" strokeOpacity=".5" strokeWidth="1.4" strokeDasharray="3 3" />
@@ -253,11 +252,13 @@ Object.assign(ICONS, {
     {[[10, 34], [54, 34], [32, 22]].map(([x, y], i) => (<g key={i}><circle cx={x} cy={y} r="9" fill="#5a7aff" opacity=".4" filter={u(k, 'glow')} /><circle cx={x} cy={y} r="5.5" fill="#cfe0ff" stroke={S} strokeWidth="1" /><circle cx={x} cy={y} r="2.4" fill="#fff" /></g>))}
     <path d="M30 44 L36 50 L32 50 L38 58 L26 50 L31 50Z" fill="#fff6a0" stroke={S} strokeWidth=".8" strokeLinejoin="round" />
   </Art>,
-  INFERNO_PILLAR: (k: string) => <Art k={k} c="#ff7a2a">
-    <path d="M20 58 L22 14 C26 4 38 4 42 14 L44 58Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
-    <path d="M28 58 L29 20 C31 14 35 14 36 20 L37 58Z" fill="#fff0a0" opacity=".85" />
-    <ellipse cx="32" cy="58" rx="26" ry="5" fill="none" stroke="#ffa63a" strokeWidth="2.4" />
-    <path d="M10 50 C14 44 12 40 16 36 M54 50 C50 44 52 40 48 36" stroke="#ff9a30" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+  CHAIN_FROST: (k: string) => <Art k={k} c="#5ad8ff">
+    <path d="M10 50 L26 30 L40 40 L54 14" stroke="#9fe8ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" fill="none" opacity=".85" />
+    {[[10, 50, 6], [26, 30, 8], [40, 40, 6], [54, 14, 7]].map(([x, y, r], i) => (<g key={i}>
+      <circle cx={x} cy={y} r={r + 5} fill="#7fe4ff" opacity=".35" filter={u(k, 'glow')} />
+      <path d={`M${x} ${y - r - 2} L${x + r * 0.8} ${y} L${x} ${y + r + 2} L${x - r * 0.8} ${y}Z`} fill={u(k, 'ice')} stroke={S} strokeWidth="1.1" strokeLinejoin="round" />
+      <circle cx={x} cy={y} r="1.8" fill="#fff" /></g>))}
+    <g stroke="#fff" strokeWidth="1.4" strokeLinecap="round"><path d="M26 18 V26 M22 22 H30 M23 19 L29 25 M29 19 L23 25" /></g>
   </Art>,
   METEOR_CATA: (k: string) => <Art k={k} c="#ff5a2a">
     <path d="M58 4 L28 34" stroke="#ff8a30" strokeWidth="9" strokeLinecap="round" opacity=".55" filter={u(k, 'glow')} />

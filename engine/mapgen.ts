@@ -73,6 +73,21 @@ function rebuildColliderGrid(): void {
   }
 }
 
+/** Runtime collider (crystal walls). Lives in the grid until removeTempCollider. */
+export function addTempCollider(x: number, z: number, r: number, blocksProjectiles: boolean): Collider | null {
+  if (cells.length === 0) return null;
+  const c: Collider = { x, z, r, blocksProjectiles };
+  const x0 = cellOf(x - r), x1 = cellOf(x + r), z0 = cellOf(z - r), z1 = cellOf(z + r);
+  for (let cz = z0; cz <= z1; cz++) for (let cx = x0; cx <= x1; cx++) cells[cz * COLS + cx].push(c);
+  return c;
+}
+export function removeTempCollider(c: Collider): void {
+  const x0 = cellOf(c.x - c.r), x1 = cellOf(c.x + c.r), z0 = cellOf(c.z - c.r), z1 = cellOf(c.z + c.r);
+  for (let cz = z0; cz <= z1; cz++) for (let cx = x0; cx <= x1; cx++) {
+    const l = cells[cz * COLS + cx]; const i = l.indexOf(c); if (i >= 0) l.splice(i, 1);
+  }
+}
+
 /**
  * Colliders whose grid cell overlaps the square (x±r, z±r). Fills and returns `out`
  * (may contain duplicates; callers do an exact test). Allocation-free.

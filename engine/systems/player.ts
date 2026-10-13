@@ -5,9 +5,11 @@ import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
-import { autoAim, findNearestEnemy, getAimDir, healPlayer } from './combat';
+import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
-import { castQ, castE, castS3, castS4, castUlt, updateAbilities, notifyCooldown, abilityState } from './abilities';
+import { updateAbilities, notifyCooldown, abilityState } from './abilities';
+import { updateSkillInput, resetAim } from './aim';
+import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
@@ -32,6 +34,7 @@ let ended = false;
 
 export function resetPlayerSystem(): void {
   dying = false; deathT = 0; ended = false;
+  resetAim();
 }
 
 /** Initialises the runtime player from store stats (after clearWorld). */
@@ -43,7 +46,7 @@ export function initPlayer(): void {
   p.vel.set(0, 0, 0);
   p.hp = st.stats.maxHealth;
   p.mana = st.stats.maxMana;
-  p.maxDashCharges = (st.skillLevels.dash >= 5 ? 2 : 1) + (st.stats.dashCharges | 0);
+  p.maxDashCharges = (st.skillLevels[dashKey(st.hero)] >= 5 ? 2 : 1) + (st.stats.dashCharges | 0);
   p.dashCharges = p.maxDashCharges;
   p.dashCd = 0;
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
@@ -138,14 +141,34 @@ export function updatePlayer(dt: number): void {
   p.cd.s4 = tickDown(p.cd.s4, dt);
   p.cryT = tickDown(p.cryT, dt);
 
+  // ---- debuffs from monster tricks (stun: no move/attack/skills; root: no move; silence: no actives/ult)
+  p.stunT = tickDown(p.stunT, dt); p.rootT = tickDown(p.rootT, dt); p.silenceT = tickDown(p.silenceT, dt);
+  p.defDownT = tickDown(p.defDownT, dt); p.blindT = tickDown(p.blindT, dt);
+  p.burnT = tickDown(p.burnT, dt); p.poisonT = tickDown(p.poisonT, dt); p.bleedT = tickDown(p.bleedT, dt);
+  if (p.burnT <= 0) p.burnDps = 0;
+  if (p.poisonT <= 0) p.poisonDps = 0;
+  if (p.bleedT <= 0) p.bleedDps = 0;
+  if (p.burnT > 0 || p.poisonT > 0 || p.bleedT > 0) {
+    p.dotAcc += dt;
+    if (p.dotAcc >= 0.5) {
+      p.dotAcc -= 0.5;
+      if (p.burnT > 0) damagePlayer(p.burnDps * 0.5, { kind: 'FIRE', dot: true });
+      if (p.poisonT > 0) damagePlayer(p.poisonDps * 0.5, { kind: 'POISON', dot: true });
+      if (p.bleedT > 0) damagePlayer(p.bleedDps * 0.5, { kind: 'PHYSICAL', dot: true });
+      if (!p.alive) return;
+    }
+  } else p.dotAcc = 0;
+  const stunned = p.stunT > 0;
+
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
-  const maxDash = (lv.dash >= 5 ? 2 : 1) + (stats.dashCharges | 0);
+  const dLv = lv[dashKey(st.hero)];
+  const maxDash = (dLv >= 5 ? 2 : 1) + (stats.dashCharges | 0);
   if (maxDash > p.maxDashCharges) p.dashCharges += maxDash - p.maxDashCharges;
   p.maxDashCharges = maxDash;
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = Math.max(0.6, stats.dashCooldown * (1 - 0.08 * Math.max(0, lv.dash - 1)) * (1 - stats.cooldownReduction));
+  p.dashCdMax = Math.max(0.6, stats.dashCooldown * (1 - 0.08 * Math.max(0, dLv - 1)) * (1 - stats.cooldownReduction));
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
@@ -170,8 +193,8 @@ export function updatePlayer(dt: number): void {
   if (p.mana > stats.maxMana) p.mana = stats.maxMana;
 
   // ---- potions
-  if (inp.pressed.Digit1 && p.hpPotCd <= 0) usePotion(true);
-  if (inp.pressed.Digit2 && p.mpPotCd <= 0) usePotion(false);
+  if (inp.pressed.KeyZ && p.hpPotCd <= 0) usePotion(true);
+  if (inp.pressed.KeyX && p.mpPotCd <= 0) usePotion(false);
   if (st.settings.autoPotions) {
     if (p.hpPotCd <= 0 && p.hp < stats.maxHealth * 0.3) usePotion(true);
     if (p.mpPotCd <= 0 && p.mana < stats.maxMana * 0.3) usePotion(false);
@@ -201,18 +224,7 @@ export function updatePlayer(dt: number): void {
   if (ml > 0) { mx /= ml; mz /= ml; }
   if (inp.joy.active) { mx = inp.joy.x; mz = inp.joy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
 
-  // ---- dash
-  if (inp.pressed.Space && p.dashT <= 0) {
-    if (p.dashCharges <= 0) notifyCooldown('dash');
-    else {
-      if (p.dashCd <= 0) p.dashCd = p.dashCdMax;
-      p.dashCharges--;
-      p.dashT = DASH_TIME;
-      if (ml > 0) p.dashDir.set(mx, 0, mz); else p.dashDir.set(dir.x, 0, dir.z);
-      p.invulnT = Math.max(p.invulnT, DASH_TIME);
-      events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
-    }
-  }
+  if (stunned || p.rootT > 0) { mx = 0; mz = 0; ml = 0; }
 
   // ---- velocity (the Bloodrage Leap drives position itself in updateAbilities)
   if (abilityState.leapT > 0) {
@@ -250,15 +262,13 @@ export function updatePlayer(dt: number): void {
   a.stepPhase += sp * dt * 1.4;
 
   // ---- abilities (edge triggered)
-  if (inp.pressed.KeyQ) castQ();
-  if (inp.pressed.KeyE) castE();
-  if (inp.pressed.Digit3) castS3();
-  if (inp.pressed.Digit4) castS4();
-  if (inp.pressed.KeyR) castUlt();
+  // skill keys 1/2/3, Space (class dash) and R (ult): aimed hold & release / quick / auto casting
+  if (stunned) { resetAim(); } else updateSkillInput();
   updateAbilities(dt);
 
   // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
   // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.
+  if (stunned) { p.fireT = Math.max(p.fireT, 0.1); return; }
   const archerMoving = st.hero === 'ARCHER' && moving && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0;
   if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   p.fireT -= dt;

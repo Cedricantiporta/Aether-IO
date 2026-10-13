@@ -327,13 +327,68 @@ function sfxSkill(name: string): void {
     case 'SINGULARITY': tone(70, 220, 0.9, 0.22, { type: 'sine', attack: 0.3 }); tone(90, 40, 1.1, 0.14, { type: 'sawtooth' }); break;
     case 'BLINK_NOVA': tone(1200, 300, 0.2, 0.12, { type: 'sine' }); noise(0.2, 0.1, 6000, 1500, { filter: 'bandpass' }); break;
     case 'STORM_ORBS': tone(220, 880, 0.5, 0.1, { type: 'square', attack: 0.1 }); noise(0.4, 0.1, 3000, 6000, { filter: 'bandpass' }); break;
-    case 'INFERNO_PILLAR': tone(140, 60, 0.7, 0.2, { type: 'sawtooth' }); noise(0.7, 0.22, 2200, 200, { attack: 0.05 }); break;
+    case 'CHAIN_FROST': tone(900, 1500, 0.3, 0.1, { type: 'triangle' }); noise(0.3, 0.1, 5000, 9000, { filter: 'highpass' }); break;
     case 'BLOODRAGE_LEAP': tone(160, 420, 0.3, 0.14, { type: 'sawtooth' }); noise(0.2, 0.12, 900, 300); break;
     case 'WHIRLWIND': noise(0.9, 0.16, 500, 1500, { filter: 'bandpass', q: 1.2, attack: 0.1 }); tone(200, 320, 0.8, 0.07, { type: 'triangle' }); break;
     case 'EARTHSPLITTER': tone(90, 40, 0.5, 0.25, { priority: true }); noise(0.5, 0.2, 700, 80); break;
     case 'BATTLE_CRY': tone(130, 90, 0.7, 0.24, { type: 'sawtooth', priority: true }); tone(260, 180, 0.6, 0.12, { type: 'square' }); break;
     default: break;
   }
+}
+function sfxTrick(kind: string): void {
+  if (!gate(G.SHOCK)) return;
+  switch (kind) {
+    case 'GOO': tone(180, 90, 0.3, 0.18, { type: 'sine' }); noise(0.25, 0.12, 600, 200); break;
+    case 'FIREBOMB': tone(260, 90, 0.35, 0.18, { type: 'sawtooth' }); noise(0.4, 0.2, 2000, 300); break;
+    case 'SCREECH': tone(2200, 1400, 0.5, 0.14, { type: 'sawtooth' }); tone(2600, 1700, 0.5, 0.1, { type: 'square', delay: 0.05 }); break;
+    case 'PIN': tone(900, 400, 0.15, 0.14, { type: 'triangle' }); break;
+    case 'PIN_HIT': tone(300, 120, 0.2, 0.2, { type: 'square' }); noise(0.15, 0.12, 800, 200); break;
+    case 'CURSE': tone(120, 90, 0.7, 0.2, { type: 'sine', attack: 0.15 }); tone(180, 140, 0.7, 0.12, { type: 'triangle', delay: 0.1 }); break;
+    case 'STOMP': tone(80, 28, 0.6, 0.4, { type: 'sine', priority: true }); noise(0.4, 0.25, 700, 80, { priority: true }); break;
+    case 'PLAGUE': noise(0.8, 0.14, 300, 900, { attack: 0.2 }); tone(110, 80, 0.8, 0.1, { type: 'sawtooth' }); break;
+    case 'TERROR': tone(700, 200, 0.7, 0.14, { type: 'sine', attack: 0.1 }); tone(1100, 300, 0.7, 0.08, { type: 'triangle' }); break;
+    case 'WALL': tone(1500, 2500, 0.3, 0.14, { type: 'triangle' }); noise(0.3, 0.2, 5000, 1500); break;
+    case 'WALL_BREAK': tone(2400, 900, 0.25, 0.1, { type: 'triangle' }); noise(0.25, 0.15, 6000, 1200); break;
+    case 'CALTROPS': noise(0.25, 0.14, 3000, 6000, { filter: 'highpass' }); break;
+    case 'SMOKE': noise(0.45, 0.14, 800, 300); break;
+    case 'PINCH': tone(1000, 300, 0.12, 0.14, { type: 'square' }); noise(0.1, 0.12, 2500, 900); break;
+    case 'BOAR_KNOCKDOWN': tone(120, 40, 0.3, 0.3, { type: 'sine' }); noise(0.25, 0.2, 600, 120); break;
+    case 'ACID': noise(0.5, 0.14, 1200, 400); tone(300, 120, 0.4, 0.1, { type: 'sine' }); break;
+    case 'BOSS_CAST': tone(150, 400, 0.5, 0.2, { type: 'sawtooth', attack: 0.2, priority: true }); noise(0.4, 0.12, 400, 2000); break;
+    case 'PRISON': tone(70, 30, 0.7, 0.4, { priority: true }); noise(0.5, 0.3, 900, 100, { priority: true }); break;
+    case 'VEINS': tone(100, 40, 0.8, 0.3, { type: 'sawtooth', priority: true }); noise(0.7, 0.22, 2500, 300); break;
+    case 'CHAINS': tone(900, 500, 0.4, 0.14, { type: 'square' }); noise(0.35, 0.12, 4000, 1500); break;
+    case 'CHAINS_BREAK': tone(1800, 800, 0.2, 0.14, { type: 'triangle' }); noise(0.15, 0.14, 6000, 2000); break;
+    case 'CHAINS_END': tone(200, 90, 0.5, 0.25, { type: 'sine', priority: true }); break;
+    case 'CLONES': tone(900, 300, 0.5, 0.15, { type: 'sine' }); tone(1200, 400, 0.5, 0.1, { type: 'triangle', delay: 0.05 }); break;
+    case 'DECOY_POP': tone(600, 150, 0.2, 0.12, { type: 'sine' }); break;
+    case 'RAISE': tone(70, 50, 0.9, 0.3, { type: 'sawtooth', priority: true }); noise(0.8, 0.22, 600, 120, { attack: 0.1 }); break;
+    case 'PRISM': tone(1200, 3000, 0.9, 0.12, { type: 'sawtooth', attack: 0.3 }); noise(0.9, 0.12, 6000, 2000, { filter: 'highpass' }); break;
+    case 'STAMPEDE_DUST': if (Math.random() < 0.25) { tone(110, 50, 0.2, 0.22, { type: 'sine' }); noise(0.12, 0.12, 500, 150); } break;
+    case 'SHELL_SPIN': tone(300, 900, 0.6, 0.14, { type: 'sawtooth', attack: 0.3 }); break;
+    case 'SHELL_BOUNCE': tone(1400, 500, 0.12, 0.14, { type: 'square' }); break;
+    default: if (kind.endsWith('_CAST')) tone(520, 760, 0.18, 0.07, { type: 'triangle' });
+  }
+}
+function sfxDebuff(type: string): void {
+  switch (type) {
+    case 'STUN': tone(220, 110, 0.3, 0.2, { type: 'square', priority: true }); break;
+    case 'ROOT': tone(160, 90, 0.25, 0.16, { type: 'sawtooth' }); break;
+    case 'SILENCE': tone(600, 200, 0.3, 0.14, { type: 'sine' }); break;
+    default: tone(300, 180, 0.2, 0.1, { type: 'triangle' });
+  }
+}
+function sfxCombo(stacks: number, finisher: boolean): void {
+  if (finisher) { tone(523, 1047, 0.5, 0.18, { type: 'triangle', priority: true }); tone(784, 1568, 0.6, 0.14, { type: 'sine', delay: 0.08 }); tone(1047, 2093, 0.7, 0.12, { type: 'sine', delay: 0.16 }); return; }
+  const f = 440 * Math.pow(1.25, Math.max(0, stacks - 1));
+  tone(f, f * 1.5, 0.22, 0.14, { type: 'triangle', priority: true });
+  if (stacks >= 2) tone(f * 1.5, f * 2, 0.2, 0.08, { type: 'sine', delay: 0.06 });
+  if (stacks >= 3) tone(f * 2, f * 3, 0.25, 0.08, { type: 'sine', delay: 0.12 });
+}
+function sfxWindup(dur: number): void {
+  tone(70, 520, dur, 0.22, { type: 'sawtooth', attack: dur * 0.6, priority: true });
+  tone(140, 1040, dur, 0.12, { type: 'sine', attack: dur * 0.7 });
+  noise(dur, 0.2, 300, 5000, { attack: dur * 0.8, priority: true });
 }
 function sfxUlt(hero: string): void {
   tone(55, 220, 1.4, 0.28, { type: 'sawtooth', attack: 0.5, priority: true });
@@ -651,6 +706,13 @@ export function initAudio(): () => void {
   offs.push(events.on('frostNova', safe(() => sfxFrostNova())));
   offs.push(events.on('ability', safe((p) => sfxSkill(p.name))));
   offs.push(events.on('ultStart', safe((p) => sfxUlt(p.hero))));
+  offs.push(events.on('ultWindup', safe((p) => sfxWindup(p.duration))));
+  offs.push(events.on('trick', safe((p) => sfxTrick(p.kind))));
+  offs.push(events.on('playerDebuff', safe((p) => sfxDebuff(p.type))));
+  offs.push(events.on('combo', safe((p) => sfxCombo(p.stacks, p.finisher))));
+  offs.push(events.on('slam', safe(() => { tone(90, 35, 0.3, 0.3, { priority: true }); noise(0.2, 0.2, 900, 150); })));
+  offs.push(events.on('stagger', safe(() => { tone(400, 120, 0.4, 0.25, { type: 'square', priority: true }); tone(800, 200, 0.3, 0.12, { type: 'sine' }); })));
+  offs.push(events.on('armorBreak', safe(() => { tone(1800, 600, 0.12, 0.1, { type: 'square' }); noise(0.1, 0.1, 4000, 1500); })));
   offs.push(events.on('ultImpact', safe((p) => sfxUltImpact(p.name))));
   offs.push(events.on('fxImpact', safe((p) => { if (p.kind === 'RAIN_ARROW') sfxRainHit(); else sfxExplosion(p.pos, 2); })));
   offs.push(events.on('blink', safe(() => sfxSkill('BLINK_NOVA'))));

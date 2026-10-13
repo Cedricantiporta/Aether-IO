@@ -45,6 +45,7 @@ const INITIAL_STATS: PlayerStats = {
   lifeSteal: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
   echoEvery: 0, hawkBonus: 0, galeWidth: 0, orbBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
   stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
+  stunBonus: 0, burnStacks: 0, backstab: 0, axeCount: 0, axeBounce: 0, axeSize: 0,
 };
 
 const INITIAL_SKILLS: SkillLevels = {
@@ -63,7 +64,7 @@ const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.5, quality: _dd.quality,
   showDamageNumbers: true, screenShake: true, autoPotions: true,
   autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1,
-  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false,
+  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED',
 };
 
 const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
@@ -219,23 +220,26 @@ const PROC_START: Record<HeroClass, Partial<SkillLevels>> = {
   ARCHER: { burning: 1, freezing: 1 }, WIZARD: { thunder: 1 }, BARBARIAN: { stamp: 1 },
 };
 
-const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: PlayerStats): string => {
+/** Skill-level key an upgrade card raises (the class dash card follows the hero: Shadow Roll / Blink Nova use `e`). */
+const skillKeyFor = (type: UpgradeType, hero: HeroClass): keyof SkillLevels | undefined => (type === 'SKILL_DASH' && hero !== 'BARBARIAN' ? 'e' : UPGRADE_SKILL_KEY[type]);
+
+const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: PlayerStats, hero: HeroClass = 'ARCHER'): string => {
   const f = (n: number) => Number(n.toFixed(1));
   const dmg = stats.damage;
   const nextLvl = level + 1;
 
   if (key === 'orbital') {
-    const count = 2 + level, nextCount = 2 + nextLvl;
-    const d = f(dmg * 1.5 * (1 + level * 0.1));
-    const nextD = f(dmg * 1.5 * (1 + nextLvl * 0.1));
-    if (level === 0) return `Unlock: Summons 2 blades dealing ${f(dmg * 1.5)} dmg/hit.`;
+    const count = 1 + level, nextCount = 1 + nextLvl;
+    const d = f(dmg * 0.9 * (1 + level * 0.1));
+    const nextD = f(dmg * 0.9 * (1 + nextLvl * 0.1));
+    if (level === 0) return `Unlock: Summons 2 blades dealing ${f(dmg * 0.9)} dmg/hit.`;
     return `Blades: ${count} -> ${nextCount}. Dmg: ${d} -> ${nextD}.`;
   }
   if (key === 'thunder' || key === 'burning' || key === 'freezing' || key === 'stamp') {
     const n = (l: number) => Math.max(6, 13 - l);
     const every = level === 0 ? `Unlock: every ${n(1)}th attack` : `Every ${n(level)}th attack -> every ${n(nextLvl)}th`;
-    if (key === 'thunder') return `${every}: chain lightning hits ${2 + (level || 1)}${level ? ` -> ${2 + nextLvl}` : ''} enemies. Dmg: ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * Math.max(0, level - 1)))}${level ? ` -> ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * level))}` : ''}.`;
-    if (key === 'stamp') return `${every}: Mega Stomp shockwave. Radius ${12 + (level || 1)}${level ? ` -> ${12 + nextLvl}` : ''}.`;
+    if (key === 'thunder') return `${every}: chain lightning hits ${1 + (level || 1)}${level ? ` -> ${1 + nextLvl}` : ''} enemies. Dmg: ${f(dmg * 0.585 * stats.skillDamage * (1 + 0.15 * Math.max(0, level - 1)))}${level ? ` -> ${f(dmg * 0.585 * stats.skillDamage * (1 + 0.15 * level))}` : ''}.`;
+    if (key === 'stamp') return `${every}: Axe Storm: 3 giant ricocheting axes, breaks armor. Dmg: ${f(dmg * 2.2 * stats.skillDamage * (1 + 0.15 * Math.max(0, (level || 1) - 1)))}${level ? ` -> ${f(dmg * 2.2 * stats.skillDamage * (1 + 0.15 * level))}` : ''} each.`;
     if (key === 'burning') return `${every}: fire arrow (pierce 3, burn, small blast). Stronger per level.`;
     return `${every}: ice arrow (strong slow, small blast). Slow lasts ${f(3 + 0.3 * (level || 1))}s${level ? ` -> ${f(3 + 0.3 * nextLvl)}s` : ''}.`;
   }
@@ -247,7 +251,7 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
     if (ncharges > charges) return `LEVEL ${nextLvl} UNLOCK: MAX CHARGES +1 (Total 2)!`;
     return `Invuln: ${dur}s -> ${ndur}s. CD: ${cd}s -> ${ncd}s.`;
   }
-  if (key === 'dash') {
+  if (key === 'dash' || (key === 'e' && hero !== 'BARBARIAN')) {
     const charges = level >= 5 ? 2 : 1, ncharges = nextLvl >= 5 ? 2 : 1;
     if (level === 0) return 'Unlock: Reduces Dash cooldown.';
     if (ncharges > charges) return `LEVEL ${nextLvl} UNLOCK: MAX CHARGES +1 (Total 2)!`;
@@ -260,7 +264,7 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
 const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 3): Upgrade[] => {
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
-    const key = UPGRADE_SKILL_KEY[u.type];
+    const key = skillKeyFor(u.type, hero);
     if (key && skillLevels[key] >= MAX_SKILL_LEVEL) return false;
     if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
     return true;
@@ -270,11 +274,11 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     const idx = Math.floor(Math.random() * pool.length);
     const base = pool.splice(idx, 1)[0];
     const opt: Upgrade = { ...base, id: uid('card') };
-    const key = UPGRADE_SKILL_KEY[base.type];
+    const key = skillKeyFor(base.type, hero);
     if (key) {
       const lvl = skillLevels[key];
       if (lvl === 0) opt.name = `UNLOCK: ${opt.name}`;
-      opt.description = getSkillCardDetails(key, lvl, stats);
+      opt.description = getSkillCardDetails(key, lvl, stats, hero);
     }
     if (base.type === 'MULTISHOT') {
       const cur = Math.floor(stats.multishot + 1e-6);
@@ -743,7 +747,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const state = get();
       const base: PlayerStats = { ...state.baseStats };
       const levels: SkillLevels = { ...state.skillLevels };
-      const key = UPGRADE_SKILL_KEY[upgrade.type];
+      const key = skillKeyFor(upgrade.type, state.hero);
 
       if (key) {
         levels[key] = Math.min(MAX_SKILL_LEVEL, levels[key] + 1);
@@ -777,7 +781,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (lvl >= MAX_SKILL_LEVEL) return;
       let cost = lvl + 1;
       if (skill === 'ult') cost = lvl + 2;
-      if (skill === 'dash' || skill === 'barrier') cost = lvl + 2;
+      if (skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN') || skill === 'barrier') cost = lvl + 2;
       if (s.skillPoints < cost) return;
       set({ skillLevels: { ...s.skillLevels, [skill]: lvl + 1 }, skillPoints: s.skillPoints - cost });
     },
@@ -868,6 +872,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     getManaCost: (skill) => {
       const s = get();
+      if (skill === 'e' && s.hero !== 'BARBARIAN') return 0; // class dash is free (charges)
       const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? 15 + s.skillLevels.freezeSpell * 2 : 0;
       const total = s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;
       return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;

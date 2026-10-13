@@ -11,6 +11,15 @@ export type DamageKind = 'PHYSICAL' | 'FIRE' | 'ICE' | 'POISON' | 'MAGIC' | 'LIG
 
 export interface GameEvents {
   // combat
+  combo: { stacks: number; finisher: boolean };
+  ultWindup: { hero: string; pos: Vector3; duration: number };
+  ultRelease: { hero: string; pos: Vector3 };
+  floatText: { pos: Vector3; text: string; color: number; scale?: number; dy?: number };
+  trick: { pos: Vector3; kind: string; radius: number };            // monster signature trick landed / cast (VFX + audio cue)
+  playerDebuff: { type: 'STUN' | 'ROOT' | 'SILENCE' | 'DEFDOWN' | 'BLIND' | 'BURN' | 'POISON' | 'BLEED' | 'SLOW'; duration: number };
+  slam: { pos: Vector3; damage: number };
+  armorBreak: { pos: Vector3 };
+  stagger: { pos: Vector3; boss: boolean };
   damage: { pos: Vector3; amount: number; crit: boolean; kind: DamageKind; toPlayer: boolean; dot?: boolean };
   enemyHit: { pos: Vector3; kind: EnemyKind; dmgKind: DamageKind; dir?: Vector3 };
   enemyDeath: { pos: Vector3; kind: EnemyKind; elite: boolean; boss: boolean; scale: number; poof?: boolean };

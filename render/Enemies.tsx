@@ -131,7 +131,7 @@ export function Enemies() {
 
     for (let i = 0; i < enemies.length; i++) {
       const e = enemies[i];
-      if (!e.active || e.boss) continue;
+      if (!e.active || e.boss || e.decoy || e.hideT > 0) continue;
       if (!inView(e.pos.x, e.pos.z, 4)) continue;   // off-screen: no pose, shadow, bar or particles
       const ki = MODEL_KINDS.indexOf(e.kind);   // 8 entries: tiny linear scan
       if (ki < 0) continue;

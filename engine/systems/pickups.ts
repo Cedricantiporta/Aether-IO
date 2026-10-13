@@ -9,7 +9,7 @@ import { events } from '../events';
 import type { PickupKind } from '../types';
 import type { Item, Rarity } from '../../types';
 import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul } from '../../store';
-import { healPlayer } from './combat';
+import { healPlayer, grantKillXp } from './combat';
 
 const GRAVITY = 28;
 const REST_Y = 0.4;
@@ -38,17 +38,8 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   const maxD = d > 70 ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;
   if (d > maxD) tmpPos.multiplyScalar(maxD / d);
 
-  // Merge XP orbs into a nearby one when there are too many.
-  if (kind === 'XP' && xpActive > XP_MERGE_THRESHOLD) {
-    const pk = world.pickups;
-    const r2 = XP_MERGE_RADIUS * XP_MERGE_RADIUS;
-    for (let i = 0; i < pk.length; i++) {
-      const o = pk[i];
-      if (!o.active || o.kind !== 'XP' || o.magnet) continue;
-      const dx = o.pos.x - tmpPos.x, dz = o.pos.z - tmpPos.z;
-      if (dx * dx + dz * dz < r2) { o.value += value; return; }
-    }
-  }
+  // XP orbs are gone: experience is granted instantly (with a coalesced floating number).
+  if (kind === 'XP') { grantKillXp(value, tmpPos); return; }
 
   const p = allocPickup();
   if (!p) {
@@ -63,7 +54,6 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   const a = Math.random() * Math.PI * 2;
   const s = 2 + Math.random() * 4;
   p.vel.set(Math.cos(a) * s, 7 + Math.random() * 4, Math.sin(a) * s);
-  if (kind === 'XP') xpActive++;
   if (kind === 'ITEM') world.itemPickupsVersion++;
 }
 

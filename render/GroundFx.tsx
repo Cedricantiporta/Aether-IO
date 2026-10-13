@@ -7,7 +7,7 @@ import {
   Color, CylinderGeometry, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, Mesh, MeshBasicMaterial, Object3D,
 } from 'three';
 import { world } from '../engine/world';
-import { abilityState } from '../engine/systems/abilities';
+import { abilityState, chainOrbs } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, gate, pushHalo } from './fx';
@@ -54,9 +54,7 @@ export function GroundFx() {
     spikes.castShadow = false;
     const big = new Mesh(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: new Color(2.6, 1.0, 0.25), toneMapped: false }));
     big.visible = false; big.frustumCulled = false;
-    const pg = new CylinderGeometry(1, 1.25, 30, 24, 1, true).translate(0, 15, 0);
-    const pillars = [0, 1].map(() => { const m = new Mesh(pg, makeBeamMaterial(0xff7a1a, { speed: 7, stripes: 8, power: 0.7 })); m.visible = false; m.frustumCulled = false; return m; });
-    return { arrows, meteors, spikes, crystals, traps, rocks, big, pillars, root: new Object3D() };
+    return { arrows, meteors, spikes, crystals, traps, rocks, big, root: new Object3D() };
   }, []);
 
   useFrame(({ clock }, dtRaw) => {
@@ -70,7 +68,6 @@ export function GroundFx() {
     const place = (im: InstancedMesh, i: number, x: number, y: number, z: number, yaw: number, pitch: number, roll: number, sx: number, sy = sx, sz = sx) => {
       o.position.set(x, y, z); o.rotation.set(pitch, yaw, roll, 'YXZ'); o.scale.set(sx, sy, sz); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
     };
-    for (const p of sys.pillars) p.visible = false;
     for (let i = 0; i < fx.length; i++) {
       const f = fx[i];
       if (!f.active) continue;
@@ -172,25 +169,6 @@ export function GroundFx() {
           if (dt > 0 && gate()) FX.add.emit(x, y, z, 0, 0, 0, 0.4, 0.6, 0.05, 0.6, 1.8, 2.4, 0.7, CELL.STAR, 0, 1, rnd() * 6, 3);
           break;
         }
-        case 'PILLAR': {
-          const post = f.t - f.delay;
-          if (post < 0) break;
-          const life = f.life - f.delay;
-          const k = clamp(post / life, 0, 1);
-          if (n.p >= 2) break;
-          const mm = sys.pillars[n.p++];
-          mm.visible = true;
-          const w = f.radius * (0.55 + 0.15 * Math.sin(t * 14)) * (post < 0.12 ? ease(post / 0.12) : 1) * (1 - k * 0.35);
-          mm.position.set(f.x, 0, f.z); mm.scale.set(w, 1, w);
-          const mat = mm.material as any;
-          mat.uniforms.uAlpha.value = Math.pow(1 - k, 0.6); mat.uniforms.uTime.value = t;
-          pushHalo(f.x, 1.4, f.z, f.radius * 2.6, 2.4, 0.9, 0.25, 0.5 * (1 - k), CELL.GLOW);
-          if (dt > 0) for (let q = 0; q < 5; q++) if (gate()) {
-            const a = rnd() * TAU, d = Math.sqrt(rnd()) * f.radius * 0.7;
-            FX.add.emit(f.x + Math.cos(a) * d, 0.2, f.z + Math.sin(a) * d, 0, 9 + rnd() * 7, 0, 0.7 + rnd() * 0.4, 1.4, 0.2, 2.5, 0.9, 0.18, 0.8, CELL.FLAME, -2, 0.6);
-          }
-          break;
-        }
         case 'RING': {
           const r = f.radius;
           if (r < 0.5 || dt <= 0) break;
@@ -225,6 +203,30 @@ export function GroundFx() {
       }
     }
 
+    // ---- Chain Frost orbs: cyan bouncing orb with ice trail
+    for (let i = 0; i < chainOrbs.length; i++) {
+      const c = chainOrbs[i];
+      if (!c.active) continue;
+      pushHalo(c.x, 1.4, c.z, 5.0, 0.4, 1.7, 2.6, 0.5, CELL.GLOW);
+      pushHalo(c.x, 1.4, c.z, 1.8, 2.2, 2.6, 2.8, 0.95, CELL.GLOW);
+      pushHalo(c.x, 1.4, c.z, 3.0 + Math.sin(t * 20) * 0.4, 0.8, 1.9, 2.8, 0.7, CELL.STAR);
+      if (dt > 0 && gate()) {
+        const a = rnd() * TAU;
+        FX.add.emit(c.x, 1.4, c.z, Math.cos(a) * 2, (rnd() - 0.5) * 2, Math.sin(a) * 2, 0.45, 0.35, 0.05, 1.3, 2.2, 2.6, 0.9, CELL.SHARD, 1, 1, rnd() * 6, 4);
+      }
+    }
+
+    // ---- armor break: cracked-shield glint above armor-broken enemies; stagger stars on staggered bosses
+    if (dt > 0) {
+      const es2 = world.enemies;
+      for (let i = 0; i < es2.length; i++) {
+        const e = es2[i];
+        if (!e.active || e.state === 'DYING' || !inView(e.pos.x, e.pos.z, 2)) continue;
+        if (e.armorBreakT > 0 && rnd() < dt * 2.2 && gate()) FX.add.emit(e.pos.x + (rnd() - 0.5) * 0.3, 2.0 * e.scale + 0.9, e.pos.z, 0, 0.3, 0, 0.7, 1.0 * Math.max(1, e.scale * 0.6), 0.6, 1.7, 1.8, 2.2, 0.95, CELL.SHARD, 0, 0.3, 0, 0);
+        if (e.staggerT > 0 && rnd() < dt * 5 && gate()) FX.add.emit(e.pos.x + (rnd() - 0.5) * e.radius, 2.4 * e.scale + 0.6, e.pos.z + (rnd() - 0.5) * e.radius, 0, 0.4, 0, 0.7, 0.9, 0.5, 2.4, 2.0, 0.4, 0.95, CELL.STAR, 0, 0.5, 0, 2);
+      }
+    }
+
     // ---- fear icons above terrified enemies
     if (dt > 0) {
       const es = world.enemies;
@@ -241,7 +243,6 @@ export function GroundFx() {
       <primitive object={sys.arrows} /><primitive object={sys.meteors} /><primitive object={sys.spikes} />
       <primitive object={sys.crystals} /><primitive object={sys.traps} /><primitive object={sys.rocks} />
       <primitive object={sys.big} />
-      {sys.pillars.map((p, i) => <primitive key={i} object={p} />)}
     </>
   );
 }

@@ -28,10 +28,12 @@ import type {
   Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
 } from '../types';
 import {
-  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind,
+  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
-import { damagePlayer, damageEnemy, killEnemy } from './combat';
+import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats } from './combat';
+import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
+import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys } from './bossSpecials';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS } from '../../constants';
 import { updateBoss } from './bosses';
@@ -99,7 +101,7 @@ export function requestYaw(yaw: number): void {
 
 /** True while an enemy must not be hit by player attacks (kept out of enemyGrid). */
 export function isUntargetable(e: Enemy): boolean {
-  if (e.state === 'SPAWN') return true;
+  if (e.state === 'SPAWN' || e.hideT > 0) return true;
   if (e.kind === 'WRAITH') return e.state === 'WINDUP';
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
@@ -191,7 +193,7 @@ export function spawnEnemy(
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1);
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 1 : 1.4); // normal & elites +40% (bosses unchanged)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
@@ -209,8 +211,15 @@ export function spawnEnemy(
   e.scale = def.scale * sizeMul;
   e.contactDamage = def.contactDamage * dmgMul;
   e.projectileDamage = def.projectileDamage * dmgMul;
-  e.xp = Math.round(def.xp * rewardMul * (elite ? 5 : 1));
+  // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
+  e.xp = Math.round(def.xp * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1));
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1));
+  e.armor = armorFor(kind, wave, elite);
+  e.mini = false;
+  e.staggerMax = boss ? 100 : 0;
+  if (!boss) initTrick(e);
+  e.decoy = false; e.hideT = 0; e.shellT = 0; e.spKind = 0;
+  if (boss) initSpecial(e);
   e.state = 'SPAWN';
   e.stateT = 0;
   e.phase = 0;
@@ -231,12 +240,13 @@ export function spawnEnemy(
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
-  e.maxHp = Math.round(e.maxHp / 4 * MINI.hpMul);
+  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 1.25); // mini-bosses +25% over their old hp
   e.hp = e.maxHp;
   e.shield = 0;
   e.affix = 'NONE';
   e.radius *= MINI.scaleMul; e.scale *= MINI.scaleMul;
   e.xp *= 4; e.gold *= 4;
+  e.mini = true; initSpecial(e); e.staggerMax = 70; e.armor = Math.round(e.armor * 1.25);
   e.pattern = MINI.flag;
   e.angle = MINI.slamCd * 0.7;
   e.attackCd = Math.max(e.attackCd, 1.5);
@@ -269,6 +279,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (d.aliveCount > 0) d.aliveCount--;
 
   if (e.boss) {
+    clearDecoys();
     world.boss.active = false;
     world.boss.hp = 0;
     events.emit('shake', { amount: 1 });
@@ -311,10 +322,12 @@ export function onEnemyDeath(e: Enemy): void {
     dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
     const item = st.rollItemDrop(d.wave >= 25 ? 'LEGENDARY' : d.wave >= 15 ? 'EPIC' : 'RARE');
     if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
-    for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); }
+    if (e.kind === 'BANDIT' || e.kind === 'ZOMBIE') for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); } // Bandit Captain's strongbox (humanoids only)
   }
 
   if (e.kind === 'SPLITTER') {
+    spawnHostileZone('ACID', e.pos.x, e.pos.z, 3.4, 5, Math.max(e.contactDamage, 8) * 0.3, 0x9be32a);
+    events.emit('trick', { pos: e.pos, kind: 'ACID', radius: 3.4 });
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + Math.random();
       tmpV.set(e.pos.x + Math.sin(a) * 1.2, 0, e.pos.z + Math.cos(a) * 1.2);
@@ -437,6 +450,8 @@ function aiBomber(e: Enemy): void {
     if (e.stateT >= BOMBER.fuse) {
       events.emit('explosion', { pos: e.pos, radius: BOMBER.radius, color: 0xf97316 });
       events.emit('shake', { amount: 0.25 });
+      spawnHostileZone('FIREPATCH', e.pos.x, e.pos.z, BOMBER.radius * 0.8, 4, e.projectileDamage * 0.3, 0xff5a1a);
+      events.emit('trick', { pos: e.pos, kind: 'BOMBER_PATCH', radius: BOMBER.radius });
       killEnemy(e);
     }
     return;
@@ -675,7 +690,8 @@ function separate(e: Enemy): void {
 }
 
 const colScratch: Collider[] = [];
-function pushOutOfObstacles(e: Enemy): void {
+function pushOutOfObstacles(e: Enemy): boolean {
+  let hit = false;
   const rr = e.radius * 0.8;
   const cols = queryColliders(e.pos.x, e.pos.z, rr + 0.5, colScratch);
   for (let i = 0; i < cols.length; i++) {
@@ -686,12 +702,14 @@ function pushOutOfObstacles(e: Enemy): void {
     if (dx > r || dx < -r || dz > r || dz < -r) continue;
     const d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
+    hit = true;
     const d = Math.sqrt(d2);
     if (d < 0.001) { e.pos.x += r; continue; }
     e.pos.x = o.x + (dx / d) * r;
     e.pos.z = o.z + (dz / d) * r;
   }
   pushOutOfCrates(e.pos, rr);
+  return hit;
 }
 
 function contactHit(e: Enemy, locked: boolean): void {
@@ -709,6 +727,7 @@ function contactHit(e: Enemy, locked: boolean): void {
     const k = 3.2 / Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
     world.player.pos.x += dx * k; world.player.pos.z += dz * k; // knockback shove
     world.player.slowT = Math.max(world.player.slowT, 0.6);
+    if (applyPlayerDebuff('STUN', 0.6)) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });
   }
   if (e.affix === 'VAMPIRIC') e.hp = Math.min(e.maxHp, e.hp + dmg * 0.2);
   if (e.kind === 'BAT') enter(e, 'RECOVER');
@@ -718,8 +737,10 @@ function updateEnemy(e: Enemy): void {
   const dt = frameDt;
   const player = world.player;
 
+  if (e.decoy) { if (e.state === 'DYING') return; updateDecoy(e, dt); return; }
   e.animT += dt;
   if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
+  if (e.hideT > 0) e.hideT -= dt;
 
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
@@ -733,13 +754,27 @@ function updateEnemy(e: Enemy): void {
 
   // ---- status effects
   if (e.boss) { e.freezeT = 0; e.stunT = 0; e.knock.set(0, 0, 0); }
+  if (e.mini) { e.freezeT = 0; e.stunT = 0; }
+  if (e.armorBreakT > 0) e.armorBreakT -= dt;
+  if (e.burnStackCd > 0) e.burnStackCd -= dt;
+  if (e.slamT > 0) e.slamT -= dt;
+  if (e.frostT > 0) e.frostT -= dt;
+  if (e.chillT > 0) { e.chillT -= dt; if (e.chillT <= 0) e.chillStacks = 0; }
+  if (e.staggerMax > 0) {
+    if (e.staggerCd > 0) e.staggerCd -= dt;
+    if (e.staggerT > 0) { e.staggerT -= dt; if (e.staggerT <= 0) e.stagger = 0; }
+    else if (e.stagger > 0 && e.staggerCd <= 0) e.stagger = Math.max(0, e.stagger - 4 * dt);
+    const b = world.boss;
+    if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { b.stagger = e.stagger / e.staggerMax; b.staggered = e.staggerT > 0; }
+  }
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
   if (e.fearT > 0) e.fearT -= dt;
   if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 0; }
   if (e.burnT > 0) {
     e.burnT -= dt;
-    if (frameDotTick) damageEnemy(e, e.burnDps * 0.5, { kind: 'FIRE', dot: true });
+    if (frameDotTick) damageEnemy(e, e.burnDps * 0.5 * Math.max(1, e.burnStacks), { kind: 'FIRE', dot: true });
+    if (e.burnT <= 0) { e.burnDps = 0; e.burnStacks = 0; }
   }
   if (e.state !== 'DYING' && e.poisonT > 0) {
     e.poisonT -= dt;
@@ -750,19 +785,23 @@ function updateEnemy(e: Enemy): void {
   if (contactCd[e.id] > 0) contactCd[e.id] -= dt;
 
   // ---- AI
-  const locked = e.freezeT > 0 || e.stunT > 0;
+  const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz);
   if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { const b = world.boss; b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
+  if (e.boss) { world.boss.hp = e.hp; }
   if (!locked || fuseBurning) {
     e.stateT += dt;
     if (e.attackCd > 0) e.attackCd -= dt;
-    if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
+    if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
+    else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
+    else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') {
       const inv = 1 / (tdist || 1);
       setVel(e, -tdx * inv, -tdz * inv, e.speed * 1.25);
     } else runAI(e);
   } else {
+    if (e.spKind !== 0) cancelSpecial(e);
     stop(e);
   }
   if (isDying(e)) return; // bomber exploded
@@ -778,7 +817,11 @@ function updateEnemy(e: Enemy): void {
 
   // ---- collisions
   if (!e.boss) separate(e);
-  if (e.kind !== 'BAT' && e.kind !== 'WRAITH') pushOutOfObstacles(e);
+  if (e.kind !== 'BAT' && e.kind !== 'WRAITH') {
+    const pushed = pushOutOfObstacles(e);
+    if (pushed && e.slamT > 0 && Math.abs(e.knock.x) + Math.abs(e.knock.z) > 10) wallSlam(e);
+    if (pushed && e.spKind === 29 && e.spStep > 0) shellBounce(e);
+  }
 
   const ew = player.earthwall;
   if (ew.active && !e.boss) {
@@ -820,6 +863,7 @@ export function updateEnemies(dt: number): void {
   px = player.pos.x;
   pz = player.pos.z;
   frameDt = dt;
+  if (world.boss.abilityT > 0) world.boss.abilityT -= dt;
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
@@ -886,7 +930,7 @@ const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number 
 
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
-  opts?: { homing?: number; slow?: number; radius?: number; life?: number },
+  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number },
 ): void {
   const p = allocEnemyProjectile();
   if (!p) return;
@@ -900,6 +944,7 @@ export function fireEnemyProjectile(
   p.radius = opts?.radius ?? def.radius;
   p.homing = opts?.homing ?? 0;
   p.slow = opts?.slow ?? 0;
+  p.debuff = opts?.debuff ?? 0;
 }
 
 export function updateEnemyProjectiles(dt: number): void {
@@ -981,13 +1026,14 @@ export function updateEnemyProjectiles(dt: number): void {
     }
 
     // player hit (dashing / i-frames let projectiles pass through)
-    if (player.alive && player.invulnT <= 0) {
+    if (player.alive && player.invulnT <= 0 && p.damage > 0) {
       const dx = p.pos.x - ppx;
       const dz = p.pos.z - ppz;
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
         damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow });
+        if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       }
     }

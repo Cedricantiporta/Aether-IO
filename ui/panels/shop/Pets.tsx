@@ -1,12 +1,20 @@
-import React, { Suspense, useState } from 'react';
+import React, { useState } from 'react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
 import { useGameStore, shopPrice } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ItemArt } from '../../components/ItemArt';
 import { Button } from '../../components/Button';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
 import type { PlayerStats } from '../../../types';
+
+const RARITY_STARS: Record<string, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
+const PET_SKILL_NAME: Record<string, string> = {
+  HEAL: 'Healer', ATTACK_RANGED: 'Ranged attacker', ATTACK_MELEE: 'Melee attacker', COLLECT: 'Collector', REVIVE: 'Revive',
+  FIRE_TRAIL: 'Fire Trail', CHILL_SWOOP: 'Chilling Swoop', LOOT_BURP: 'Loot Burp', CHAIN_ZAP: 'Chain Lightning', SHIELD: 'Guardian Shield',
+  MARK: 'Hunter\'s Mark', SLAM: 'Armor-Shatter Slam', TIDAL_BEAM: 'Tidal Beam',
+};
 
 const PetBadges: React.FC<{ name: string }> = ({ name }) => {
   const pr = getPetProfile(name);
@@ -16,13 +24,13 @@ const PetBadges: React.FC<{ name: string }> = ({ name }) => {
     <div className="flex flex-wrap gap-1 mt-1" data-testid="pet-badges">
       <span className="rpg-badge" style={on(pr.attacks)}>{pr.attacks ? `Attacks (${pr.attackMode === 'ranged' ? 'ranged' : 'melee'})` : 'No attack'}</span>
       <span className="rpg-badge" style={on(pr.fetches)}>{pr.fetches ? `Fetches (${pr.fetchSpeed >= 25 ? 'fast' : pr.fetchSpeed <= 9 ? 'slow' : 'medium'})` : 'No fetch'}</span>
+      <span className="rpg-badge" style={{ color: 'var(--text-dim)' }}>Size x{pr.size.toFixed(2)}</span>
       {pr.heals && <span className="rpg-badge" style={on(true)}>Heals</span>}
       <span className="rpg-badge" style={{ color: 'var(--text-dim)' }}>{speed} mover</span>
     </div>
   );
 };
 
-const PetPreview = React.lazy(() => import('./PetPreview'));
 
 export const PetsTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
@@ -34,12 +42,12 @@ export const PetsTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="rpg-frame gold flex gap-3 p-2.5" data-testid="pet-preview">
-        <div style={{ width: 220, height: 220, flex: 'none', borderRadius: '.5rem', overflow: 'hidden', background: 'radial-gradient(circle at 50% 35%, #3a3350, #14101c 75%)' }}>
-          <Suspense fallback={null}><PetPreview key={cur.id} id={cur.id} /></Suspense>
+        <div style={{ width: 200, height: 200, flex: 'none', borderRadius: '.5rem', display: 'grid', placeItems: 'center', background: `radial-gradient(circle at 50% 40%, ${RARITY_TEXT[cur.rarity]}55, #14101c 72%)`, filter: cur.summonOnly ? 'drop-shadow(0 0 12px rgba(197,139,255,.5))' : undefined }} data-testid="pet-portrait">
+          <div style={{ filter: 'drop-shadow(0 6px 8px rgba(0,0,0,.7))' }}><ItemArt item={cur} size={170} /></div>
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="font-bold text-lg leading-tight" style={{ color: RARITY_TEXT[cur.rarity], fontFamily: 'var(--font-title)' }}>{cur.name}</div>
-          <div className="rpg-label !text-[.6rem]">{cur.rarity}{cur.summonOnly ? ' · Summon only' : ''}</div>
+          <div className="flex items-center gap-2"><span aria-label={cur.rarity} style={{ color: RARITY_TEXT[cur.rarity], letterSpacing: 2 }}>{'★'.repeat(RARITY_STARS[cur.rarity] ?? 1)}<span style={{ opacity: .25 }}>{'★'.repeat(5 - (RARITY_STARS[cur.rarity] ?? 1))}</span></span><span className="rpg-label !text-[.6rem]">{cur.rarity}{cur.summonOnly ? ' · Summon only' : ''} · {PET_SKILL_NAME[cur.petSkill ?? ''] ?? 'Companion'}</span></div>
           <div className="text-[.72rem] text-[var(--text-dim)] leading-snug">{cur.description}</div>
           <PetBadges name={cur.name} />
           <div className="flex flex-col mt-1">

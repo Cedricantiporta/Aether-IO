@@ -40,6 +40,7 @@ export interface Settings {
   showMinimap: boolean;
   vibration: boolean;     // navigator.vibrate on being hit (touch devices)
   joystickSide: 'LEFT' | 'RIGHT';
+  castMode: 'AIMED' | 'QUICK' | 'AUTO'; // skill casting: hold & release / instant at cursor / instant at auto-target (touch: tap = auto, drag = aim)
   batterySaver: boolean;  // FPS 30 + LOW quality
 }
 

@@ -49,6 +49,19 @@ export const CodexDialog: React.FC = () => {
               </div>
             ))}
           </div>
+        ) : tab === 'PETS' ? (
+          <div className="grid grid-cols-2 gap-2" data-testid="codex-pets">
+            {pets.map((p) => (
+              <div key={p.id} className="rpg-frame flex items-center gap-2 p-2">
+                <div style={p.summonOnly ? { filter: 'drop-shadow(0 0 6px rgba(197,139,255,.5))' } : undefined}><ItemSlot item={p} size="3.6rem" iconSize={40} tooltip="buy" compare={false} /></div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm leading-tight" style={{ color: RARITY_TEXT[p.rarity] }}>{p.name}</div>
+                  <div className="rpg-label !text-[.5rem]">{p.rarity}{p.summonOnly ? ' · Summon only' : ` · ${p.price.toLocaleString()} G`}</div>
+                  <div className="text-[.62rem] text-[var(--text-dim)] leading-tight">{p.description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : tab !== 'SKILLS' ? (
           <div className="flex flex-wrap gap-4 content-start">
             {(tab === 'ITEMS' ? items : pets).map((it) => <div key={it.id} className="flex flex-col items-center gap-1"><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />{it.summonOnly && <span className="rpg-label !text-[.5rem]" style={{ color: '#c58bff' }}>Summon only</span>}</div>)}

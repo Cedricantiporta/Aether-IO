@@ -46,7 +46,7 @@ export const SETS: SetDef[] = [
     bonuses: [
       { pieces: 2, text: '+15% skill damage, +60 max mana', fx: { add: { skillDamage: 0.15, maxMana: 60 } } },
       { pieces: 4, text: 'Chain lightning +2 targets, procs need 1 fewer cast', fx: { add: { thunderChain: 2, procHaste: 1 } } },
-      { pieces: 6, text: 'Spells cost 25% less mana, Storm summons a twin typhoon, +8% cooldown reduction', fx: { add: { manaCostCut: 0.25, stormTwin: 1, cooldownReduction: 0.08 } } },
+      { pieces: 6, text: 'Spells cost 25% less mana, Storm volley fires +3 bolts, +8% cooldown reduction', fx: { add: { manaCostCut: 0.25, stormTwin: 1, cooldownReduction: 0.08 } } },
     ],
   },
   {
@@ -55,7 +55,7 @@ export const SETS: SetDef[] = [
     flavour: { weapon: 'bulwark', helmet: 'heavy', armor: 'heavy', gloves: 'heavy', boots: 'vital', accessory: 'heavy' },
     bonuses: [
       { pieces: 2, text: '+20 defense, +10% max health', fx: { add: { defense: 20 }, mul: { maxHealth: 0.1 } } },
-      { pieces: 4, text: '+20 thorns, Mega Stamp radius +4', fx: { add: { thorns: 20, stompRadius: 4 } } },
+      { pieces: 4, text: '+20 thorns, Axe Storm axes 30% bigger', fx: { add: { thorns: 20, axeSize: 0.3 } } },
       { pieces: 6, text: 'Take 12% less damage, Rage lasts +2s, +10% damage', fx: { add: { dmgReduce: 0.12, rageBonus: 2 }, mul: { damage: 0.1 } } },
     ],
   },

@@ -7,7 +7,10 @@ import { ActionBar } from './ActionBar';
 import { VitalOrb, XpBar } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
 import { UltOverlay } from './UltOverlay';
+import { ComboMeter } from './ComboMeter';
+import { BlindOverlay } from './BlindOverlay';
 import { useGameStore } from '../../store';
+import { device } from '../../engine/device';
 
 /** In-game HUD. Re-renders only on store changes; per-frame values go through refs. */
 export const HUD: React.FC = () => {
@@ -15,6 +18,8 @@ export const HUD: React.FC = () => {
   return (
   <>
     <UltOverlay />
+    <BlindOverlay />
+    {!device.touch && <ComboMeter />}
     <Vignettes />
     <Countdown />
     <RespiteBar />

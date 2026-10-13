@@ -11,8 +11,11 @@ import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS, COLORS } from '../../constants';
+import { GOLD_DROPPERS } from '../enemyDefs';
 import { spawnPickup } from './pickups';
 import { onEnemyDeath, crabArmor } from './enemies';
+import { popDecoy } from './bossSpecials';
+import { hooks } from './hooks';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
@@ -25,6 +28,15 @@ export interface DamageOpts {
   knockback?: number;
   dot?: boolean;
   source?: 'PLAYER' | 'PET';
+  /** Launch distance (units): big knockback. With `slam` damage if the enemy hits an obstacle / crystal wall. */
+  launch?: number;
+  slam?: number;
+  /** Applies ARMOR BREAK (-25% armor, 6 s) before the hit lands. */
+  armorBreak?: boolean;
+  /** Skip the back-attack bonus (slam damage etc.). */
+  noBackstab?: boolean;
+  /** Marks the target chilled (Archer Shatter synergy). */
+  frost?: boolean;
 }
 
 export interface StatusEffect {
@@ -38,13 +50,71 @@ let lsAcc = 0;
 let thornT = -1;
 const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 
+/** Counters for QA / run stats of the combat-depth systems. */
+export const combatStats = { backstabs: 0, slams: 0, staggers: 0, xpFromKills: 0, armorBreaks: 0, debuffs: {} as Record<string, number> };
+export const BACKSTAB_DOT = -0.3;
+export const BACKSTAB_MULT = 1.3;
+const ARMOR_BREAK_FACTOR = 0.75;
+const ARMOR_BREAK_TIME = 6;
+let lastBackstabText = -10;
+let lastSlamText = -10;
+// instant-XP floating text: kills within a short window are summed into one "+N XP" number
+let xpAcc = 0, xpTextT = 0;
+const xpPos = new Vector3();
+const XP_TEXT_COLOR = 0x6fe8ff;
+
+/** Per-frame upkeep of combat floating text (flushes the XP accumulator). Called from game.ts. */
+export function updateCombatFx(dt: number): void {
+  if (xpAcc <= 0) return;
+  xpTextT -= dt;
+  if (xpTextT <= 0) {
+    events.emit('floatText', { pos: xpPos.clone(), text: `+${Math.round(xpAcc)} XP`, color: XP_TEXT_COLOR, scale: 0.8, dy: 1.2 });
+    xpAcc = 0; xpTextT = 0.45;
+  }
+}
+export function resetCombat(): void { xpAcc = 0; xpTextT = 0; lastBackstabText = -10; lastSlamText = -10; }
+
+/** Big knockback: launches the enemy `dist` units away along (dx,dz); slam damage if it hits an obstacle while flying. */
+export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam = 0): void {
+  if (!e.active || e.state === 'DYING' || e.boss || e.freezeT > 0) return;
+  const l = Math.sqrt(dx * dx + dz * dz) || 1;
+  const resist = e.mini ? 0.25 : e.elite ? 0.5 : 1;
+  const v = Math.min(150, dist * 9.5 * resist);
+  e.knock.x = (dx / l) * v; e.knock.z = (dz / l) * v;
+  e.slamDmg = Math.max(e.slamDmg, slam); e.slamT = 0.9;
+}
+
+/** Called by the enemy system when a launched enemy collides with an obstacle / crystal wall. */
+export function wallSlam(e: Enemy): void {
+  const dmg = e.slamDmg;
+  e.slamT = 0; e.slamDmg = 0;
+  e.knock.set(0, 0, 0);
+  combatStats.slams++;
+  applyStatus(e, { type: 'STUN', duration: 0.5 });
+  events.emit('slam', { pos: e.pos, damage: dmg });
+  if (world.time - lastSlamText > 0.3) { lastSlamText = world.time; events.emit('floatText', { pos: e.pos, text: 'SLAM', color: 0xff8a3a, scale: 0.9, dy: 0.6 }); }
+  if (dmg > 0) damageEnemy(e, dmg, { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true });
+}
+
+function gainStagger(e: Enemy, amount: number): void {
+  if (e.staggerT > 0 || e.staggerCd > 0 || e.staggerMax <= 0) return;
+  e.staggerCd = 0.35;
+  e.stagger += amount;
+  if (e.stagger >= e.staggerMax) {
+    e.stagger = 0; e.staggerT = 2;
+    combatStats.staggers++;
+    events.emit('stagger', { pos: e.pos, boss: e.boss });
+    events.emit('floatText', { pos: e.pos, text: 'STAGGER', color: 0xffd23a, scale: 1.0, dy: 1.0 });
+  }
+}
+
 // ------------------------------------------------------------------ helpers --
 /** Ultimate charge (0..100) from damage dealt and kills. */
 export function addUlt(n: number): void {
   const p = world.player;
   if (p.ultT > 0 || p.ult >= 100) return;
   const wl = useGameStore.getState().skillLevels.weapon;
-  p.ult = Math.min(100, p.ult + n * (1 + 0.1 * Math.max(0, wl - 1)));
+  p.ult = Math.min(100, p.ult + n * 0.62 * (1 + 0.1 * Math.max(0, wl - 1))); // slower charge: ~70-90 s of normal play
   if (p.ult >= 100) events.emit('ultReady', {});
 }
 
@@ -72,10 +142,14 @@ const _aimTmp = new Vector3();
 /** Auto-target lock (enemy id or -1). Maintained by player.ts; when valid it overrides the mouse aim. */
 export const autoAim = { id: -1 };
 
+/** Aimed casting: while `on`, skills use this ground point instead of the pointer / auto-target lock. */
+export const aimOverride = { on: false, x: 0, z: 0 };
+
 export function getAimDir(out: Vector3 = _aimTmp): Vector3 {
   const p = world.player;
   let tx = p.aim.x, tz = p.aim.z;
-  if (autoAim.id >= 0) {
+  if (aimOverride.on) { tx = aimOverride.x; tz = aimOverride.z; }
+  else if (autoAim.id >= 0) {
     const e = world.enemies[autoAim.id];
     if (e.active && e.state !== 'DYING') { tx = e.pos.x; tz = e.pos.z; }
   }
@@ -121,7 +195,7 @@ export function damageEnemiesInRadius(
     if (dx * dx + dz * dz > r2) continue;
     hits++;
     if (status) applyStatus(e, status);
-    if (o.knockback) {
+    if (o.knockback || o.launch) {
       const d = Math.sqrt(dx * dx + dz * dz) || 1;
       aoeDir.set(dx / d, 0, dz / d);
       o.knockDir = aoeDir;
@@ -131,41 +205,91 @@ export function damageEnemiesInRadius(
   return hits;
 }
 
+/** Instant XP + coalesced "+N XP" floating text. */
+export function grantKillXp(xp: number, pos: Vector3): void {
+  const st = useGameStore.getState();
+  st.addExperience(xp);
+  world.run.xpEarned += xp;
+  combatStats.xpFromKills += xp;
+  const gain = (st.level >= 10 ? xp * 2 : xp) * 2 * (1 + st.stats.xpBonus);
+  xpAcc += gain; xpPos.copy(pos);
+}
+
 // ------------------------------------------------------------------ enemies --
 export function applyStatus(e: Enemy, effect: StatusEffect): void {
   if (!e.active || e.state === 'DYING') return;
   const durMult = e.boss ? 0.25 : e.elite ? 0.5 : 1;
   switch (effect.type) {
-    case 'BURN':
+    case 'BURN': {
+      const v = effect.value ?? 5;
+      if (v >= 0.5) { // real burn source (not the visual-only tint of fire zones): stack up to 3 (+talents)
+        if (e.burnT <= 0) { e.burnStacks = 1; e.burnStackCd = 0.3; }
+        else if (e.burnStackCd <= 0) { e.burnStacks = Math.min(3 + (useGameStore.getState().stats.burnStacks | 0), e.burnStacks + 1); e.burnStackCd = 0.3; }
+      } else if (e.burnT <= 0) e.burnStacks = Math.max(1, e.burnStacks);
       e.burnT = Math.max(e.burnT, effect.duration);
-      e.burnDps = Math.max(e.burnDps, effect.value ?? 5);
+      e.burnDps = Math.max(e.burnDps, v);
       break;
+    }
     case 'POISON':
       e.poisonT = Math.max(e.poisonT, effect.duration);
       e.poisonDps = Math.max(e.poisonDps, effect.value ?? 3);
       break;
     case 'FREEZE':
-      if (e.boss) return;
-      e.freezeT = Math.max(e.freezeT, effect.duration * durMult);
+    case 'STUN': {
+      const bonus = useGameStore.getState().stats.stunBonus || 0;
+      const dur = effect.duration + (bonus > 0 ? bonus : 0);
+      if (e.boss || e.mini) { gainStagger(e, dur * (effect.type === 'STUN' ? 30 : 24)); return; } // immune to full stun: fills STAGGER instead
+      if (effect.type === 'FREEZE') e.freezeT = Math.max(e.freezeT, dur * durMult);
+      else e.stunT = Math.max(e.stunT, dur * durMult);
       break;
-    case 'STUN':
-      if (e.boss) return;
-      e.stunT = Math.max(e.stunT, effect.duration * durMult);
-      break;
+    }
     case 'SLOW': {
       const f = Math.min(0.9, Math.max(0, effect.value ?? 0.5)) * (e.boss ? 0.5 : 1);
       e.slowT = Math.max(e.slowT, effect.duration);
       e.slowFactor = Math.max(e.slowFactor, f);
       break;
     }
+    case 'CHILL': {
+      e.chillStacks++; e.chillT = effect.duration || 4; e.frostT = Math.max(e.frostT, 4);
+      if (e.chillStacks >= 4) { e.chillStacks = 0; applyStatus(e, freezeOne); }
+      else {
+        e.slowT = Math.max(e.slowT, effect.duration || 4);
+        e.slowFactor = Math.max(e.slowFactor, 0.15 * e.chillStacks * (e.boss ? 0.5 : 1));
+      }
+      break;
+    }
+    case 'ARMOR_BREAK':
+      if (e.armorBreakT <= 0) { combatStats.armorBreaks++; events.emit('armorBreak', { pos: e.pos }); }
+      e.armorBreakT = Math.max(e.armorBreakT, effect.duration || ARMOR_BREAK_TIME);
+      break;
   }
 }
 
+const freezeOne: StatusEffect = { type: 'FREEZE', duration: 1 };
+const abStatus: StatusEffect = { type: 'ARMOR_BREAK', duration: ARMOR_BREAK_TIME };
+
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
+  if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
   if (!(amount > 0)) return;
 
   let dealt = amount;
+  if (o.armorBreak) applyStatus(e, abStatus);
+  if (o.frost) e.frostT = Math.max(e.frostT, 4);
+  if (!o.dot) {
+    if (e.armor > 0) dealt *= 100 / (100 + e.armor * (e.armorBreakT > 0 ? ARMOR_BREAK_FACTOR : 1));
+    if (e.staggerT > 0) dealt *= 1.25;
+    // BACK ATTACK: the player is behind the enemy's facing
+    if (o.source === 'PLAYER' && !o.noBackstab) {
+      const pdx = world.player.pos.x - e.pos.x, pdz = world.player.pos.z - e.pos.z;
+      const pl = Math.sqrt(pdx * pdx + pdz * pdz);
+      if (pl > 0.5 && (pdx * Math.sin(e.facing) + pdz * Math.cos(e.facing)) / pl < BACKSTAB_DOT) {
+        dealt *= BACKSTAB_MULT + useGameStore.getState().stats.backstab;
+        combatStats.backstabs++;
+        if (world.time - lastBackstabText > 0.5) { lastBackstabText = world.time; events.emit('floatText', { pos: e.pos, text: 'BACKSTAB', color: 0xffc23a, scale: 0.7, dy: 0.5 }); }
+      }
+    }
+  }
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.shield > 0) {
     if (dealt <= e.shield) { e.shield -= dealt; dealt = 0; }
@@ -187,8 +311,9 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     }
   }
 
-  if (o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
-    const k = Math.min(KNOCK_MAX, o.knockback * KNOCK_SCALE) * (e.elite ? 0.5 : 1);
+  if (o.launch && o.knockDir) launchEnemy(e, o.knockDir.x, o.knockDir.z, o.launch, o.slam ?? 0);
+  else if (o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
+    const k = Math.min(KNOCK_MAX, o.knockback * KNOCK_SCALE) * (e.elite ? 0.5 : 1) * (e.mini ? 0.5 : 1);
     e.knock.x += o.knockDir.x * k;
     e.knock.z += o.knockDir.z * k;
   }
@@ -201,6 +326,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
 
 export function killEnemy(e: Enemy): void {
   if (!e.active || e.state === 'DYING') return;
+  if (e.decoy) { popDecoy(e); return; } // Death Clones: no rewards
   e.hp = 0; // state -> DYING is set by onEnemyDeath (Engine-B)
 
   const run = world.run;
@@ -214,11 +340,16 @@ export function killEnemy(e: Enemy): void {
   const wave = world.director.wave;
   const px = e.pos.x, pz = e.pos.z;
 
-  // Gold coins.
-  const coins = e.boss ? 4 : e.elite ? 1 : Math.random() < 0.15 ? 1 : 0;
-  for (let i = 0; i < coins; i++) {
-    dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));
-    spawnPickup('GOLD', dropPos, 10);
+  // Gold coins: humanoids (+ the Lich) only. Others still drop their loot items.
+  {
+    let coins = 0, value = 10;
+    const gd = GOLD_DROPPERS[e.kind];
+    if (e.kind === 'BOSS_LICH') { coins = 8; value = 12; }
+    else if (gd) { value = gd[1]; coins = e.elite ? 2 : Math.random() < gd[0] ? 1 : 0; }
+    for (let i = 0; i < coins; i++) {
+      dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));
+      spawnPickup('GOLD', dropPos, value);
+    }
   }
 
   // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
@@ -228,15 +359,8 @@ export function killEnemy(e: Enemy): void {
     else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
   }
 
-  // XP gems (split into several orbs for big kills).
-  if (e.xp > 0) {
-    const orbs = e.boss ? 8 : e.elite ? 4 : 1;
-    const value = e.xp / orbs;
-    for (let i = 0; i < orbs; i++) {
-      dropPos.set(px + (Math.random() - 0.5) * 2, 0, pz + (Math.random() - 0.5) * 2);
-      spawnPickup('XP', dropPos, value);
-    }
-  }
+  // XP is granted instantly (no orbs), scaled by monster strength at spawn time (see spawnEnemy).
+  if (e.xp > 0) grantKillXp(e.xp, e.pos);
 
   // Item drops.
   if (e.boss) {
@@ -298,39 +422,77 @@ function triggerBarrier(level: number): void {
   addShake(0.2);
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number }): void {
+export type PlayerDebuff = 'STUN' | 'ROOT' | 'SILENCE' | 'DEFDOWN' | 'BLIND' | 'BURN' | 'POISON' | 'BLEED' | 'SLOW';
+
+/** True while the player cannot be affected by monster tricks (dash / i-frames). */
+export function playerTrickImmune(): boolean {
+  const p = world.player;
+  return !p.alive || p.invulnT > 0 || (p.dashIframes && (p.dashT > 0 || p.anim.dashing));
+}
+
+/** Applies a monster-trick debuff to the player. Dash/i-frames ignore it. Returns true when applied. */
+export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 0): boolean {
+  const p = world.player;
+  if (playerTrickImmune()) return false;
+  switch (type) {
+    case 'STUN': p.stunT = Math.max(p.stunT, duration); break;
+    case 'ROOT': p.rootT = Math.max(p.rootT, duration); break;
+    case 'SILENCE': p.silenceT = Math.max(p.silenceT, duration); break;
+    case 'DEFDOWN': p.defDownT = Math.max(p.defDownT, duration); break;
+    case 'BLIND': p.blindT = Math.max(p.blindT, duration); break;
+    case 'BURN': p.burnT = Math.max(p.burnT, duration); p.burnDps = Math.max(p.burnDps, value); break;
+    case 'POISON': p.poisonT = Math.max(p.poisonT, duration); p.poisonDps = Math.max(p.poisonDps, value); break;
+    case 'BLEED': p.bleedT = Math.max(p.bleedT, duration); p.bleedDps = Math.max(p.bleedDps, value); break;
+    case 'SLOW': p.slowT = Math.max(p.slowT, duration); break;
+  }
+  combatStats.debuffs[type] = (combatStats.debuffs[type] ?? 0) + 1;
+  events.emit('playerDebuff', { type, duration });
+  return true;
+}
+
+/** Dash cleanses root and slows (and ends DoTs' slow component). */
+/** Hook so boss specials can react to a dash (Soul Chains break). */
+export function cleansePlayer(): void {
+  const p = world.player;
+  p.rootT = 0; p.slowT = 0;
+  hooks.onCleanse();
+}
+
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || st.status !== GameStatus.PLAYING) return;
-  if (p.invulnT > 0 || p.anim.dashing || p.dashT > 0) return;
+  const isDot = !!o?.dot;
+  if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
   const kind = o?.kind ?? 'PHYSICAL';
 
-  if (st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
+  if (!isDot && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
 
   const barrier = st.skillLevels.barrier;
   const mods = DIFFICULTY_MODS[st.difficulty];
-  const reduced = Math.max(1, amount * (100 / (100 + st.stats.defense)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)));
+  const def = st.stats.defense * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
+  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)));
   // Energy Shield only saves you when this hit would leave you under 20% HP.
-  if (barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
+  if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);
     return;
   }
   p.hp -= reduced;
-  p.anim.hurtT = 1;
+  if (!isDot) p.anim.hurtT = 1;
   if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
 
   const run = world.run;
   run.damageTaken += reduced;
 
   // Thorns: reflect flat damage to enemies in melee range (at most ~3 times a second).
-  if (st.stats.thorns > 0 && kind !== 'POISON' && world.run.time - thornT > 0.33) {
+  if (!isDot && st.stats.thorns > 0 && kind !== 'POISON' && world.run.time - thornT > 0.33) {
     thornT = world.run.time;
     damageEnemiesInRadius(p.pos.x, p.pos.z, 4.5, st.stats.thorns * (1 + st.stats.damage * 0.04), thornOpts);
   }
 
-  events.emit('playerHit', { pos: p.pos, amount: reduced });
-  events.emit('damage', { pos: p.pos, amount: reduced, crit: false, kind, toPlayer: true });
-  addShake(Math.min(0.4, Math.max(0.15, (reduced / st.stats.maxHealth) * 1.2)));
+  if (!isDot) events.emit('playerHit', { pos: p.pos, amount: reduced });
+  events.emit('damage', { pos: p.pos, amount: reduced, crit: false, kind, toPlayer: true, dot: isDot });
+  if (!isDot) addShake(Math.min(0.4, Math.max(0.15, (reduced / st.stats.maxHealth) * 1.2)));
 
   if (p.hp > 0) return;
 
