@@ -31,7 +31,7 @@ A GitHub Actions workflow builds a debug APK on every push.
 2. Scroll to **Artifacts**, download `aether-survivor-debug-apk` and unzip it.
 3. Copy the `.apk` to your phone and install it (allow "Install unknown apps" for your file manager/browser).
 
-Build locally (requires Android SDK + JDK 17): `npm run build:android && cd android && ./gradlew assembleDebug`.
+Build locally (requires Android SDK + JDK 21): `npm run build:android && cd android && ./gradlew assembleDebug`.
 
 ## Install as a PWA
 Open the deployed site in Chrome on Android -> menu -> **Add to Home screen**. It runs fullscreen in landscape and caches assets for offline play.
