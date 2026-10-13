@@ -270,12 +270,15 @@ export function updatePlayer(dt: number): void {
 
   // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
   // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.
+  // Holding F (or the touch ATTACK button) = manual attack: fires while moving (80% rate) and even with no target in range.
   if (stunned) { p.fireT = Math.max(p.fireT, 0.1); return; }
-  const archerMoving = st.hero === 'ARCHER' && moving && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0;
+  const manual = !!world.input.keys.KeyF;
+  const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
+  const archerMoving = (st.hero === 'ARCHER' || manual) && moving && !busy;
   if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
-  // No target in weapon range → hold fire (no shooting into empty air).
+  // Auto-attack: no target in weapon range → hold fire (no shooting into empty air).
   const range = ATTACK_RANGE[st.hero] ?? 18;
-  if (!findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
+  if (!manual && !findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;

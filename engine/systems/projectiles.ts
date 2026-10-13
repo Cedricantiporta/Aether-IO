@@ -209,6 +209,8 @@ export function fireBasicAttack(): void {
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
   const baseX = pl.pos.x + dir.x * 0.9;
   const baseZ = pl.pos.z + dir.z * 0.9;
+  // Split shot = forward fan only: whole fan capped at ~50 deg (+-25 deg), however much Spread gear stacks.
+  const fanStep = count > 1 ? Math.min(stats.spread, 0.87 / (count - 1)) : 0;
   for (let rp = 0; rp < (echo ? 2 : 1); rp++) for (let i = 0; i < count; i++) {
     const off = i - (count - 1) / 2;
     let dx = dir.x, dz = dir.z, ox = baseX, oz = baseZ;
@@ -217,7 +219,7 @@ export function fireBasicAttack(): void {
       ox += -dir.z * off * 2.0;
       oz += dir.x * off * 2.0;
     } else if (off !== 0) {
-      const a = off * stats.spread;
+      const a = off * fanStep;
       const c = Math.cos(a), s = Math.sin(a);
       dx = dir.x * c - dir.z * s;
       dz = dir.x * s + dir.z * c;

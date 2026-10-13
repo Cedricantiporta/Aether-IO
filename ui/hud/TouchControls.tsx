@@ -183,11 +183,14 @@ const hpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.
 const mpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0);
 
 // Cluster geometry (units of --u from the corner): ult is the hub, skills fan out on an arc, dash sits beside the hub, potions beyond.
+// Genshin-style: the big ATTACK button sits in the corner, skills arc around it, ult + dash + potions beyond.
 const G = {
-  ult: { cx: 1.6, cy: 1.0, size: 1.35 }, dash: { cx: 3.15, cy: 1.0, size: 1.1 },
-  s1: { cx: 2.66, cy: 2.06, size: 1.0 }, s2: { cx: 1.6, cy: 2.5, size: 1.0 }, s3: { cx: 0.48, cy: 2.34, size: 1.0 },
-  hp: { cx: 4.2, cy: 1.0, size: 0.9 }, mp: { cx: 3.8, cy: 1.9, size: 0.9 },
+  atk: { cx: 1.0, cy: 1.0, size: 1.45 },
+  s1: { cx: 2.45, cy: 0.75, size: 0.95 }, s2: { cx: 2.35, cy: 1.85, size: 0.95 }, s3: { cx: 1.35, cy: 2.5, size: 0.95 },
+  ult: { cx: 3.45, cy: 1.75, size: 1.1 }, dash: { cx: 3.55, cy: 0.6, size: 0.95 },
+  hp: { cx: 4.5, cy: 0.6, size: 0.8 }, mp: { cx: 4.55, cy: 1.5, size: 0.8 },
 };
+const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN' };
 
 export const TouchControls: React.FC = () => {
   const status = useGameStore((s) => s.status);
@@ -237,6 +240,11 @@ export const TouchControls: React.FC = () => {
       {!village && <ComboMeter touch />}
       {/* skills are always available, also in the village; interacting is done through the floating prompts */}
       <div className={`tc-cluster ${left ? 'left' : ''}`}>
+        {!village && (
+          <div style={slotStyle(G.atk, left)}>
+            <TBtn code="KeyF" label="Attack (hold)" size={G.atk.size} accent="#ffffff" icon={<PaintedIcon id={ATK_ICON[hero] ?? 'PIERCING_SHOT'} />} testId="tc-attack" />
+          </div>
+        )}
         <SkillBtn skill="ult" label="Ultimate" at={G.ult} left={left} ult accent="#f2a93b" icon={<PaintedIcon id={ULTS[hero].icon} />} onDrag={setDrag} />
         <SkillBtn skill="s1" label="Skill 1" at={G.s1} left={left} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
         <SkillBtn skill="s2" label="Skill 2" at={G.s2} left={left} icon={icon(1)} {...sk(1)} onDrag={setDrag} />

@@ -45,7 +45,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 10, gold: 4, cost: 4, minWave: 3, weight: 5, color: 0x7e22ce, knockResist: 0, armor: 5,
   },
   BOMBER: {
-    name: 'Bomber Beetle', hp: 30, speed: 5.0, radius: 0.6, scale: 1, contactDamage: 0, projectileDamage: 28,
+    name: 'Bomber Beetle', hp: 30, speed: 5.0, radius: 1.2, scale: 2, contactDamage: 0, projectileDamage: 28,
     xp: 8, gold: 3, cost: 3, minWave: 3, weight: 6, color: 0xf97316, knockResist: 0, armor: 10,
   },
   BRUTE: {

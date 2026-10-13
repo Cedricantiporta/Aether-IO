@@ -25,10 +25,10 @@ export function GroundFx() {
     };
     // glowing arrow (points +Z)
     const ag = new GB([1, 1]);
-    ag.cyl(0.05, 0.05, 1.8, 5, [0, 0, 0], '#fff0b8', [Math.PI / 2, 0, 0]);
-    ag.cone(0.16, 0.6, 5, [0, 0, 1.15], '#ffffff', [Math.PI / 2, 0, 0]);
+    ag.cyl(0.085, 0.085, 1.8, 5, [0, 0, 0], '#fff4c8', [Math.PI / 2, 0, 0]);
+    ag.cone(0.22, 0.65, 5, [0, 0, 1.15], '#ffffff', [Math.PI / 2, 0, 0]);
     for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU; ag.box(0.02, 0.3, 0.45, [Math.sin(a) * 0.1, Math.cos(a) * 0.1, -0.85], '#ffc850', [0, 0, -a]); }
-    const arrowMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2.4, 2.0, 1.2) });
+    const arrowMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(3.4, 2.9, 1.6) }); // light-arrows: HDR so bloom makes them glow
     // meteor: glowing rock
     const metMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2.4, 1.1, 0.35) });
     const mg = new GB([0.7, 1.2]).ico(1, [0, 0, 0], '#ff9a30', 1, 1).ico(0.72, [0.1, 0.1, 0.1], '#ffe080', 1, 0).build();
@@ -82,6 +82,9 @@ export function GroundFx() {
           const s = post < 0 ? 1 : clamp(1 - post / 0.25, 0, 1);
           if (s <= 0.01) break;
           place(sys.arrows, n.a++, f.x + (post < 0 ? (1 - k) * 3 : 0), y, f.z, sd * 6, post < 0 ? 1.45 : 1.25, 0, s * 1.1, s * 1.1, s * (post < 0 ? 2.6 : 1.2));
+          // glow aura around each falling light-arrow, flash on landing
+          if (post < 0) pushHalo(f.x + (1 - k) * 3, y + 0.6, f.z, 1.8, 2.6, 2.1, 1.0, 0.55, CELL.GLOW);
+          else pushHalo(f.x, 0.5, f.z, 2.6 * s, 2.6, 2.0, 0.9, 0.7 * s, CELL.GLOW);
           break;
         }
         case 'ARROW_STICK': {
