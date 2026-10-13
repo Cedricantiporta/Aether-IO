@@ -192,11 +192,12 @@ export function waveDmgMult(wave: number): number {
   return 1 + 0.07 * (wave - 1);
 }
 export function waveSpeedMult(wave: number): number {
-  return Math.min(1.5, 1 + 0.0075 * (wave - 1)) * (wave <= 5 ? 1.1 : 1);
+  return Math.min(1.5, 1 + 0.0075 * (wave - 1));
 }
 /** Total spawn budget points for a wave (before difficulty multiplier). */
 export function waveBudget(wave: number): number {
-  return 18 + wave * 6 + Math.pow(wave, 1.35) * 2;
+  const base = 18 + wave * 6 + Math.pow(wave, 1.35) * 2;
+  return wave <= 5 ? base * (0.7 + 0.06 * (wave - 1)) : base; // gentler onboarding: waves 1-5 at 70%..94%
 }
 export function maxAliveForWave(wave: number): number {
   return 50 + 20 * Math.floor((wave - 1) / 10);
