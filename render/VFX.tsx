@@ -345,17 +345,136 @@ export function VFX() {
       }
     }));
     off.push(on('shoot', (e) => {
-      const hex = e.kind === 'FIREBALL' || e.kind === 'BURNING_ARROW' ? 0xff8a2a : e.kind === 'FREEZING_ARROW' ? 0x9fe4ff : e.kind === 'PIERCING_ARROW' ? 0x7af0ff : e.kind === 'MAGIC' || e.kind === 'STORM' || e.kind === 'PET_BOLT' ? 0xc58bff : 0xfff0c0;
+      const hex = e.kind === 'FIREBALL' || e.kind === 'BURNING_ARROW' ? 0xff8a2a : e.kind === 'FREEZING_ARROW' ? 0x9fe4ff : e.kind === 'PIERCING_ARROW' || e.kind === 'GALE_ARROW' ? 0x7af0ff : e.kind === 'MAGIC' || e.kind === 'STORM' || e.kind === 'PET_BOLT' ? 0xc58bff : 0xfff0c0;
       const p = e.pos;
       glowPuff(p.x + e.dir.x * 0.8, p.y, p.z + e.dir.z * 0.8, hex, 0.9, 0.12, 1.4, 0.8);
       flashStar(p.x + e.dir.x * 1.0, p.y, p.z + e.dir.z * 1.0, hex, 0.7, 0.07);
     }));
     off.push(on('ability', (e) => {
       const p = e.pos;
-      const hex = e.name === 'RAGE' ? 0xff3a2a : e.name === 'SPRINT' ? 0xaaff80 : e.name === 'EARTHWALL' ? 0xc9a070 : e.name === 'VITALITY' ? 0x7aff9a : e.name === 'GRAVITY_SPELL' ? 0xa050ff : e.name === 'FIREBALL' ? 0xff8a2a : e.name === 'PIERCING_SHOT' ? 0x7af0ff : 0xffe08a;
+      const hex = e.name === 'GALE_ARROW' ? 0x7affc8 : e.name === 'SHADOW_ROLL' ? 0xc0e0a0 : e.name === 'FAN_FLAMES' ? 0xff7a2a : e.name === 'FROST_FIELD' ? 0x8fe4ff : e.name === 'SINGULARITY' ? 0xa050ff : e.name === 'BLINK_NOVA' ? 0x9fe4ff : e.name === 'STORM_ORBS' ? 0x9ab8ff : e.name === 'INFERNO_PILLAR' ? 0xff7a1a : e.name === 'BLOODRAGE_LEAP' ? 0xff3a2a : e.name === 'WHIRLWIND' ? 0xffc070 : e.name === 'EARTHSPLITTER' ? 0xc9a070 : e.name === 'BATTLE_CRY' ? 0xff8a3a : e.name === 'RAGE' ? 0xff3a2a : e.name === 'SPRINT' ? 0xaaff80 : e.name === 'EARTHWALL' ? 0xc9a070 : e.name === 'VITALITY' ? 0x7aff9a : e.name === 'GRAVITY_SPELL' ? 0xa050ff : e.name === 'FIREBALL' ? 0xff8a2a : e.name === 'PIERCING_SHOT' ? 0x7af0ff : 0xffe08a;
       ringBurst(p.x, 0.25, p.z, hex, 0.4, 3.2, 0.5, 1.6);
       sparks(p.x, 1.1, p.z, 12, hex, 8, 0.26, 0.45, 1.8);
       if (e.name === 'EARTHWALL') { dustPuff(p.x, p.z, 8, 1.3, 0xb8a078, 4); }
+    }));
+    // ------------------------------------------------ active-kit events --
+    off.push(on('fxImpact', (e) => {
+      const p = e.pos, r = e.radius;
+      switch (e.kind) {
+        case 'RAIN_ARROW':
+          flashStar(p.x, 0.5, p.z, 0xfff0b0, r * 0.9, 0.14);
+          sparks(p.x, 0.4, p.z, 3, 0xffd870, 6, 0.22, 0.28, 1.8);
+          ringBurst(p.x, 0.15, p.z, 0xffc860, r * 0.2, r * 0.9, 0.28, 1.4);
+          break;
+        case 'METEOR':
+          glowPuff(p.x, 0.8, p.z, 0xffa040, r * 1.8, 0.3, 1.6, 0.9);
+          flashStar(p.x, 0.8, p.z, 0xffffff, r * 1.4, 0.18);
+          ringBurst(p.x, 0.2, p.z, 0xff7a1a, r * 0.3, r * 1.3, 0.45, 1.6);
+          sparks(p.x, 0.8, p.z, 10, 0xff8a2a, 9, 0.3, 0.5, 1.9);
+          smokePuff(p.x, 0.5, p.z, 3, 0x2a2420, r * 0.5, 1.0, 1.6, 1.4, 0.5);
+          scorch(p.x, p.z, r * 1.1, 8, 0.5);
+          break;
+        case 'SPIKE':
+          chunks(p.x, 0.6, p.z, 4, 0x8e8576, 0x6a6258, 5, 0.26);
+          dustPuff(p.x, p.z, 2, r * 0.45, 0xb8a888, r);
+          break;
+        default: // ROCK
+          chunks(p.x, 0.6, p.z, 6, 0x8a7a6a, 0x5a4e44, 6, 0.3);
+          dustPuff(p.x, p.z, 3, r * 0.5, 0xa89878, r);
+          ringBurst(p.x, 0.2, p.z, 0xc9b08a, r * 0.3, r * 1.2, 0.35, 1.2);
+      }
+    }));
+    off.push(on('blink', (e) => {
+      for (const p of [e.from, e.to]) {
+        glowPuff(p.x, 1.2, p.z, 0xb8e8ff, 4.5, 0.35, 1.8, 0.9);
+        flashStar(p.x, 1.2, p.z, 0xffffff, 5, 0.22);
+        sparks(p.x, 1.2, p.z, 22, 0xa8e0ff, 11, 0.32, 0.6, 2.2);
+        for (let i = 0; i < 14; i++) FX.add.emit(p.x + (Math.random() - 0.5) * 1.6, 0.2, p.z + (Math.random() - 0.5) * 1.6, 0, 8 + Math.random() * 6, 0, 0.5, 0.5, 0.05, 0.8, 1.7, 2.6, 0.8, CELL.STREAK, 0, 0.5, 0, 0, 0.14);
+        ringBurst(p.x, 0.2, p.z, 0x9fe4ff, 0.5, 4.5, 0.4, 1.8);
+      }
+      if (quality().lights) flashLight(e.to.x, 3, e.to.z, 0x9fd8ff, 40, 0.4);
+    }));
+    off.push(on('leap', (e) => {
+      dustPuff(e.from.x, e.from.z, 6, 1.2, 0xcdbd98, 2.4);
+      ringBurst(e.from.x, 0.2, e.from.z, 0xff5a3a, 0.5, 4.5, 0.4, 1.6);
+      scorch(e.to.x, e.to.z, 3, 0.8, 0.0);
+      for (let i = 0; i < 8; i++) setTimeout(() => {
+        const k = (i + 1) / 9, pl = world.player.pos;
+        void pl;
+        const x = e.from.x + (e.to.x - e.from.x) * k, z = e.from.z + (e.to.z - e.from.z) * k, y = 1 + 24 * k * (1 - k) * 0.25 * 4;
+        FX.add.emit(x, y, z, 0, 0, 0, 0.45, 1.8, 0.2, 2.4, 0.4, 0.15, 0.55, CELL.GLOW);
+      }, i * e.dur * 1000 / 9);
+    }));
+    off.push(on('crater', (e) => {
+      const r = e.radius, x = e.pos.x, z = e.pos.z;
+      DECALS.add(x, z, r * 1.7, r * 1.7, 20, 0.04, 0.03, 0.025, 0.7, CELL.SCORCH);
+      DECALS.add(x, z, r * 2.2, r * 2.2, 22, 0.05, 0.04, 0.03, 0.55, CELL.CRACK);
+      DECALS.add(x, z, r * 1.2, r * 1.2, 16, 1.6, 0.5, 0.1, 0.35, CELL.SPLAT);
+      chunks(x, 0.8, z, Math.round(10 + r), 0x6b5a48, 0x3a3228, r * 1.1, 0.4);
+    }));
+    off.push(on('shout', (e) => {
+      const r = e.radius, x = e.pos.x, z = e.pos.z;
+      for (let i = 0; i < 3; i++) setTimeout(() => {
+        const pp = world.player.pos;
+        ringBurst(pp.x, 0.4 + i * 0.3, pp.z, i === 1 ? 0xffd070 : 0xff6a3a, r * 0.1, r, 0.5, 1.8);
+        DECALS.add(pp.x, pp.z, r * 0.2, r * 1.05, 0.55, 1, 0.55, 0.25, 0.65, CELL.RINGW);
+      }, i * 110);
+      dustPuff(x, z, 8, 1.6, 0xcdbd98, r * 0.5);
+      glowPuff(x, 1.5, z, 0xffa860, r * 0.8, 0.35, 1.5, 0.5);
+      sparks(x, 1.4, z, 28, 0xffb060, r * 1.4, 0.34, 0.6, 2);
+      if (quality().lights) flashLight(x, 3, z, 0xff9050, 40, 0.5);
+    }));
+    off.push(on('fissure', (e) => {
+      const n = Math.max(4, Math.round(e.length / 4));
+      for (let i = 0; i < n; i++) {
+        const d = ((i + 0.5) / n) * e.length, x = e.from.x + e.dir.x * d, z = e.from.z + e.dir.z * d;
+        DECALS.add(x, z, 6.5, 6.5, 6, 0.05, 0.04, 0.03, 0.7, CELL.CRACK, Math.atan2(e.dir.x, e.dir.z) + (Math.random() - 0.5) * 0.3);
+        DECALS.add(x, z, 2.6, 2.6, 5, 1.8, 0.5, 0.1, 0.4, CELL.GLOW);
+      }
+    }));
+    off.push(on('quake', (e) => {
+      ringBurst(e.pos.x, 0.25, e.pos.z, 0xd9b27a, e.radius * 0.2, e.radius, 0.4, 1.4);
+      dustPuff(e.pos.x, e.pos.z, 4, 1.4, 0xc9b88a, e.radius * 0.5);
+      DECALS.add(e.pos.x, e.pos.z, e.radius * 0.7, e.radius * 0.7, 3.5, 0.05, 0.04, 0.03, 0.4, CELL.CRACK);
+      chunks(e.pos.x, 0.5, e.pos.z, 6, 0x7a6a58, 0x4a4036, e.radius * 0.6, 0.3);
+    }));
+    off.push(on('ultStart', (e) => {
+      const p = e.pos;
+      const hex = e.hero === 'ARCHER' ? 0xffd870 : e.hero === 'WIZARD' ? 0xff7a3a : 0xff9a3a;
+      for (let i = 0; i < 3; i++) setTimeout(() => {
+        const pp = world.player.pos;
+        ringBurst(pp.x, 0.3, pp.z, hex, 1, 14 + i * 5, 0.7, 2);
+      }, i * 140);
+      DECALS.add(p.x, p.z, 2, 16, 0.9, 1, 0.8, 0.3, 0.7, CELL.RINGW);
+      sparks(p.x, 1.2, p.z, 40, hex, 16, 0.4, 0.8, 2.2);
+      glowPuff(p.x, 1.4, p.z, hex, 9, 0.5, 1.6, 0.7);
+      if (quality().lights) flashLight(p.x, 4, p.z, hex, 70, 0.8);
+    }));
+    off.push(on('ultImpact', (e) => {
+      const x = e.pos.x, z = e.pos.z;
+      if (e.name === 'METEOR') {
+        flashStar(x, 3, z, 0xffffff, 60, 0.45);
+        glowPuff(x, 4, z, 0xffb060, 44, 0.8, 1.8, 0.9);
+        for (let i = 0; i < 3; i++) setTimeout(() => ringBurst(x, 0.4, z, i === 0 ? 0xffffff : 0xff8a3a, 3, 38 + i * 10, 0.8, 2), i * 120);
+        for (let i = 0; i < 70; i++) {
+          const a = Math.random() * TAU, sp = 12 + Math.random() * 26, h = Math.random();
+          FX.add.emit(x, 1, z, Math.cos(a) * sp, 6 + h * 22, Math.sin(a) * sp, 0.9 + Math.random() * 0.8, 2.6, 0.5, 3 - h, 1.3 - h * 0.8, 0.25, 0.9, CELL.FLAME, 14, 1.1);
+        }
+        smokePuff(x, 1, z, 16, 0x241c18, 8, 2.4, 6, 14, 0.6);
+        chunks(x, 2, z, 40, 0x6b4a2a, 0x2a2420, 28, 0.7);
+        if (quality().lights) flashLight(x, 8, z, 0xff9040, 140, 1.0);
+      } else if (e.name === 'TITAN_SLAM') {
+        flashStar(x, 2, z, 0xffe0a0, 30, 0.35);
+        for (let i = 0; i < 3; i++) setTimeout(() => ringBurst(x, 0.4, z, 0xd9b27a, 2, 30 + i * 8, 0.7, 1.8), i * 130);
+        dustPuff(x, z, 14, 4, 0xcdbd98, 18);
+        chunks(x, 2, z, 40, 0x7a6a58, 0x4a4036, 22, 0.6);
+        if (quality().lights) flashLight(x, 6, z, 0xffb060, 90, 0.8);
+      } else { // FINAL_VOLLEY
+        flashStar(x, 2, z, 0xfff0b0, 24, 0.35);
+        for (let i = 0; i < 3; i++) setTimeout(() => ringBurst(x, 0.4, z, 0xffd870, 2, 32 + i * 8, 0.7, 2), i * 120);
+        sparks(x, 2, z, 60, 0xffe090, 26, 0.4, 0.9, 2.2);
+        if (quality().lights) flashLight(x, 6, z, 0xffe090, 80, 0.7);
+      }
     }));
     off.push(on('playerRevive', (e) => {
       ringBurst(e.pos.x, 0.3, e.pos.z, 0xfff0a0, 0.5, 7, 0.8, 2);

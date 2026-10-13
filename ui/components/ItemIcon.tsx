@@ -17,7 +17,7 @@ const SKILL_ICON: Record<string, [LucideIcon, string]> = {
   freezeSpell: [Snowflake, '#7eb8ff'], storm: [Tornado, '#8fa0ff'], orbital: [Activity, '#6ec1ff'], rage: [Swords, '#ff5a4a'], stamp: [Hammer, '#ff9a3c'],
   orbitalx: [Orbit, '#fff'],
 };
-const PAINTED_SKILLS = new Set(['piercing', 'burning', 'freezing', 'thunder', 'stamp', 'dash']);
+const PAINTED_SKILLS = new Set(['GALE_ARROW', 'SHADOW_ROLL', 'FAN_FLAMES', 'FROST_FIELD', 'STORM_ARROWS', 'SINGULARITY', 'BLINK_NOVA', 'STORM_ORBS', 'INFERNO_PILLAR', 'METEOR_CATA', 'BLOODRAGE_LEAP', 'WHIRLWIND', 'EARTHSPLITTER', 'BATTLE_CRY', 'TITAN_WRATH', 'piercing', 'burning', 'freezing', 'thunder', 'stamp', 'dash']);
 export const SkillIcon: React.FC<{ id: string; size?: number; dim?: boolean }> = ({ id, size = 26, dim }) => {
   if (PAINTED_SKILLS.has(id)) return <span style={{ display: 'block', width: size, height: size, borderRadius: 6, overflow: 'hidden', opacity: dim ? 0.45 : 1 }}><PaintedIcon id={id} /></span>;
   const [I, c] = SKILL_ICON[id] ?? [Star, '#ffd24a'];

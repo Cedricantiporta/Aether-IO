@@ -77,17 +77,17 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 14, fireRate: 2.5, maxHealth: 60, damage: 10, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 14, fireRate: 1.75, maxHealth: 60, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
         description: 'High Speed & Attack Rate (grows with level). Low Health.'
     },
     WIZARD: {
-        stats: { moveSpeed: 10, maxMana: 200, damage: 25, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
+        stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 140, defense: 15, moveSpeed: 11, damage: 12, fireRate: 1.5, knockback: 1.5, regen: 2.0 },
+        stats: { maxHealth: 140, defense: 15, moveSpeed: 11, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0 },
         weaponId: 'axe_1',
         description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }
@@ -100,27 +100,21 @@ export const SKILLS_INFO = {
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
     magnet: { name: 'Looter', description: 'Increases pickup range.', type: 'PASSIVE' },
     dash: { name: 'Dash Mastery', description: 'Dash costs no mana. Reduces dash cooldown. Level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
-    weapon: { name: 'Weapon Mastery', description: 'Improves weapon ability cooldown.', type: 'PASSIVE' },
+    weapon: { name: 'Ultimate Mastery', description: 'Ultimate charge fills faster (+10% per level).', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
-    // Class Special (E)
-    special: { name: 'Class Special (E)', description: 'Unlocks your unique Class Ability. Costs 5 SP.', type: 'ACTIVE' },
-
     // Archer Only
-    piercing: { name: 'Piercing Arrow', description: 'Active (Q): Giant piercing arrow. Cheap, 4s cooldown.', classType: 'ARCHER', type: 'ACTIVE' },
-    burning: { name: 'Burning Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires a piercing fire arrow that burns. Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
-    freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
+    burning: { name: 'Burning Arrow', description: 'On-attack: every Nth attack (12 at Lv1, -1 per level) fires a piercing fire arrow that burns. Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
+    freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (12 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     
     // Wizard Only
-    thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (10 at Lv1, -1 per level) also releases chain lightning to nearby enemies.', classType: 'WIZARD', type: 'PASSIVE' },
-    gravity: { name: 'Gravity Well', description: 'Active (Q): Summon a black hole.', classType: 'WIZARD', type: 'ACTIVE' },
+    thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning to nearby enemies.', classType: 'WIZARD', type: 'PASSIVE' },
     freezeSpell: { name: 'Blizzard', description: 'Passive: Freezes enemies in large area.', classType: 'WIZARD', type: 'PASSIVE' },
     storm: { name: 'Storm', description: 'Passive: Summons a bouncing typhoon.', classType: 'WIZARD', type: 'PASSIVE' },
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: Blades orbit and damage enemies.', classType: 'BARBARIAN', type: 'PASSIVE' },
-    rage: { name: 'Rage', description: 'Active (Q): Double Attack Speed for 4s.', classType: 'BARBARIAN', type: 'ACTIVE' },
-    stamp: { name: 'Mega Stamp', description: 'On-attack: every Nth axe throw (10 at Lv1, -1 per level) triggers a stunning Mega Stomp shockwave.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    stamp: { name: 'Mega Stamp', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) triggers a stunning Mega Stomp shockwave.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };
 
 // REDUCED VALUES BY ~50%
@@ -146,14 +140,14 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_orb', type: 'SKILL_ORBITAL', name: 'Orbitals', description: 'Level Up: +1 Blade', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_thun', type: 'SKILL_THUNDER', name: 'Thundercaller', description: 'Level Up: +1 Target', rarity: 'RARE', value: 1, classType: 'WIZARD' },
 
-  { id: 'u_pierce', type: 'SKILL_PIERCING', name: 'Piercing Arrow', description: 'Active (Q) Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
+  { id: 'u_pierce', type: 'SKILL_PIERCING', name: 'Gale Arrow', description: 'Active (Q) Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   { id: 'u_burn', type: 'SKILL_BURNING', name: 'Burning Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   { id: 'u_freeze', type: 'SKILL_FREEZING', name: 'Freezing Arrow', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
   
-  { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Gravity Spell', description: 'Active (Q) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
+  { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Singularity', description: 'Active (Q) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
   { id: 'u_blizz', type: 'SKILL_FREEZE_SPELL', name: 'Blizzard', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },
   
-  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Rage', description: 'Active (Q) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Bloodrage Leap', description: 'Active (Q) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Mega Stamp', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
 ];
 

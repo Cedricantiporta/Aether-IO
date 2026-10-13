@@ -3,6 +3,7 @@
 // Also ticks the wizard Earthwall timer (enemy push-out lives in the enemy system).
 // ============================================================================
 import { world, allocZone } from '../world';
+import { useGameStore } from '../../store';
 import { events } from '../events';
 import type { Zone } from '../types';
 import {
@@ -41,9 +42,34 @@ function fireTick(z: Zone): void {
   }
 }
 
+const windOpts: DamageOpts = { kind: 'PHYSICAL', dot: true, source: 'PLAYER' };
+const iceDot: DamageOpts = { kind: 'ICE', dot: true, source: 'PLAYER' };
+const slowSt: StatusEffect = { type: 'SLOW', duration: 0.6, value: 0.55 };
+
+/** Generic damage-over-time tick for player zones. Optionally slows. */
+function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
+  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
+  const dmg = z.damage * 0.25;
+  const rr = z.radius;
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
+    const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z;
+    if (dx * dx + dz * dz > (rr + e.radius * 0.5) * (rr + e.radius * 0.5)) continue;
+    if (slow) {
+      const lvl = useGameStore.getState().skillLevels.s4;
+      slowSt.value = Math.min(0.8, 0.5 + 0.04 * lvl);
+      applyStatus(e, slowSt);
+    }
+    damageEnemy(e, dmg, o);
+  }
+}
+
 function pullTick(z: Zone, dt: number): void {
-  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, PULL_RANGE + 4, out);
-  const r2 = PULL_RANGE * PULL_RANGE;
+  const range = z.length > 0 ? z.length : PULL_RANGE;
+  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, range + 4, out);
+  const r2 = range * range;
+  const boost = z.kind === 'BLACKHOLE' ? 1 + 2.2 * (1 - Math.min(1, z.life / z.maxLife)) : 1;
   let pulled = 0;
   for (let i = 0; i < ids.length && pulled < z.maxPull; i++) {
     const e = world.enemies[ids[i]];
@@ -54,7 +80,7 @@ function pullTick(z: Zone, dt: number): void {
     pulled++;
     const d = Math.sqrt(d2) || 1;
     if (d <= PULL_STOP) continue;
-    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * dt);
+    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * boost * dt * (z.kind === 'TORNADO' ? 0.75 : 1));
     e.pos.x += (dx / d) * step;
     e.pos.z += (dz / d) * step;
   }
@@ -152,7 +178,8 @@ function expire(z: Zone): void {
     case 'BLACKHOLE':
       damageEnemiesInRadius(z.pos.x, z.pos.z, z.radius, z.damage, boomOpts);
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
-      addShake(0.3);
+      if (z.radius > 8) { events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.6, color: 0xb070ff }); events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x1a0a2a }); }
+      addShake(z.radius > 8 ? 0.7 : 0.3);
       break;
     case 'TELEGRAPH_CIRCLE': {
       const p = world.player;
@@ -201,6 +228,15 @@ export function updateZones(dt: number): void {
           break;
         case 'BLACKHOLE':
           pullTick(z, dt);
+          break;
+        case 'TORNADO':
+          pullTick(z, dt);
+          z.tickT += dt;
+          if (z.tickT >= FIRE_TICK) { z.tickT -= FIRE_TICK; dotTick(z, windOpts, false); }
+          break;
+        case 'FROST_FIELD':
+          z.tickT += dt;
+          if (z.tickT >= FIRE_TICK) { z.tickT -= FIRE_TICK; dotTick(z, iceDot, true); }
           break;
         case 'POISON_POOL':
           z.tickT += dt;

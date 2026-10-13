@@ -201,6 +201,106 @@ const Bottle: React.FC<P & { c: string; liquid: string }> = ({ k, c, liquid }) =
   </Art>
 );
 
+
+// ---------------------------------------------------------------- active kit --
+Object.assign(ICONS, {
+  GALE_ARROW: (k: string) => <Art k={k} c="#5fe0b0">
+    <path d="M6 40 C20 34 30 44 44 36 M4 30 C18 24 28 34 42 26 M8 50 C20 44 30 52 40 46" stroke="#9ff5d0" strokeWidth="2.6" strokeLinecap="round" fill="none" opacity=".7" />
+    <ArrowShape k={k} tx={34} ty={32} r={62} s={1.35} g="green" />
+    <circle cx="48" cy="20" r="8" fill="none" stroke="#d8fff0" strokeWidth="1.6" opacity=".8" /><circle cx="48" cy="20" r="13" fill="none" stroke="#7affc8" strokeWidth="1.2" opacity=".5" />
+  </Art>,
+  SHADOW_ROLL: (k: string) => <Art k={k} c="#8ac060">
+    <circle cx="26" cy="38" r="14" fill="#10180c" stroke="#6bd05a" strokeWidth="2" strokeDasharray="6 4" />
+    <path d="M10 44 L26 38 L38 24" stroke="#c8f0a0" strokeWidth="3" strokeLinecap="round" fill="none" />
+    <path d="M30 52 L46 36 M36 54 L52 40 M42 56 L56 46" stroke="#e6ffc8" strokeWidth="2.2" strokeLinecap="round" />
+    <path d="M48 12 L52 22 L44 22Z M40 10 L44 20 L36 20Z M56 16 L58 26 L50 26Z" fill={u(k, 'steel')} stroke={S} strokeWidth=".8" />
+    <circle cx="46" cy="30" r="14" fill="#ffd24a" opacity=".25" filter={u(k, 'glow')} />
+  </Art>,
+  FAN_FLAMES: (k: string) => <Art k={k} c="#ff7a2a">
+    <path d="M32 58 L8 14 M32 58 L20 8 M32 58 L32 6 M32 58 L44 8 M32 58 L56 14" stroke={u(k, 'fire')} strokeWidth="4.5" strokeLinecap="round" />
+    <path d="M8 14 L10 22 M20 8 L22 16 M32 6 L34 14 M44 8 L42 16 M56 14 L52 22" stroke="#fff2a0" strokeWidth="2.4" strokeLinecap="round" />
+    <path d="M10 60 C16 48 26 52 32 44 C38 52 48 48 54 60Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
+    <path d="M26 60 C28 52 34 54 36 60Z" fill="#fff0a0" />
+  </Art>,
+  FROST_FIELD: (k: string) => <Art k={k} c="#6ad0ff">
+    <ellipse cx="32" cy="46" rx="26" ry="10" fill="#9fe8ff" opacity=".25" stroke="#bff4ff" strokeWidth="1.6" />
+    <path d="M32 8 L40 36 L32 48 L24 36Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M16 24 L22 42 L14 46 L10 36Z M48 24 L54 36 L50 46 L42 42Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.1" strokeLinejoin="round" />
+    <path d="M32 8 L36 34 M24 36 L32 48" stroke="#fff" strokeWidth="1" opacity=".7" />
+  </Art>,
+  STORM_ARROWS: (k: string) => <Art k={k} c="#ffd24a">
+    <rect width="64" height="64" fill="#0a0e24" opacity=".55" />
+    {[[10, 6, 18], [24, 2, 22], [38, 8, 14], [52, 4, 20], [16, 24, 10], [44, 26, 12]].map(([x, y, r], i) => (
+      <g key={i} transform={`translate(${x} ${y + 8}) rotate(${r})`}><rect x="-.9" y="0" width="1.8" height="22" fill="#ffe9a0" /><path d="M0 28 L4 20 L-4 20Z" fill="#fff" /><path d="M0 -2 L3 -8 M0 -2 L-3 -8" stroke="#ffb030" strokeWidth="2" /></g>
+    ))}
+    <circle cx="32" cy="54" r="14" fill="#ffd24a" opacity=".25" filter={u(k, 'glow')} />
+    <path d="M10 56 Q32 44 54 56" stroke="#ffe9a0" strokeWidth="2" fill="none" />
+  </Art>,
+  SINGULARITY: (k: string) => <Art k={k} c="#8a4be0">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="#b07cff" strokeWidth="3" strokeDasharray="14 6" opacity=".8" filter={u(k, 'glow')} />
+    <path d="M32 6 C50 8 58 28 44 38 C34 46 20 38 26 30 C30 24 38 28 34 33" fill="none" stroke="#d8b8ff" strokeWidth="3" strokeLinecap="round" />
+    <path d="M32 58 C14 56 6 36 20 26 C30 18 44 26 38 34" fill="none" stroke="#8a5cf0" strokeWidth="3" strokeLinecap="round" />
+    <circle cx="32" cy="31" r="7" fill="#050208" stroke="#e8d8ff" strokeWidth="1.6" />
+  </Art>,
+  BLINK_NOVA: (k: string) => <Art k={k} c="#7fd8ff">
+    <circle cx="20" cy="42" r="10" fill="none" stroke="#9fe4ff" strokeWidth="2" strokeDasharray="4 3" opacity=".7" />
+    <path d="M24 38 L44 20" stroke="#e8fbff" strokeWidth="2.6" strokeDasharray="5 4" strokeLinecap="round" />
+    <path d="M44 6 L48 18 L60 22 L48 26 L44 38 L40 26 L28 22 L40 18Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
+    <circle cx="44" cy="22" r="14" fill="#9fe4ff" opacity=".3" filter={u(k, 'glow')} />
+  </Art>,
+  STORM_ORBS: (k: string) => <Art k={k} c="#7a9aff">
+    <ellipse cx="32" cy="34" rx="24" ry="12" fill="none" stroke="#8fb0ff" strokeWidth="1.6" opacity=".6" />
+    {[[10, 34], [54, 34], [32, 22]].map(([x, y], i) => (<g key={i}><circle cx={x} cy={y} r="9" fill="#5a7aff" opacity=".4" filter={u(k, 'glow')} /><circle cx={x} cy={y} r="5.5" fill="#cfe0ff" stroke={S} strokeWidth="1" /><circle cx={x} cy={y} r="2.4" fill="#fff" /></g>))}
+    <path d="M30 44 L36 50 L32 50 L38 58 L26 50 L31 50Z" fill="#fff6a0" stroke={S} strokeWidth=".8" strokeLinejoin="round" />
+  </Art>,
+  INFERNO_PILLAR: (k: string) => <Art k={k} c="#ff7a2a">
+    <path d="M20 58 L22 14 C26 4 38 4 42 14 L44 58Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M28 58 L29 20 C31 14 35 14 36 20 L37 58Z" fill="#fff0a0" opacity=".85" />
+    <ellipse cx="32" cy="58" rx="26" ry="5" fill="none" stroke="#ffa63a" strokeWidth="2.4" />
+    <path d="M10 50 C14 44 12 40 16 36 M54 50 C50 44 52 40 48 36" stroke="#ff9a30" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+  </Art>,
+  METEOR_CATA: (k: string) => <Art k={k} c="#ff5a2a">
+    <path d="M58 4 L28 34" stroke="#ff8a30" strokeWidth="9" strokeLinecap="round" opacity=".55" filter={u(k, 'glow')} />
+    <path d="M60 6 L30 30" stroke={u(k, 'fire')} strokeWidth="6" strokeLinecap="round" />
+    <circle cx="26" cy="38" r="15" fill="#4a2a1a" stroke={S} strokeWidth="1.6" />
+    <circle cx="26" cy="38" r="15" fill={u(k, 'fire')} opacity=".55" />
+    <circle cx="21" cy="33" r="5" fill="#2a1408" opacity=".7" /><circle cx="31" cy="43" r="3.4" fill="#2a1408" opacity=".7" />
+    <ellipse cx="32" cy="58" rx="26" ry="5" fill="none" stroke="#ffa63a" strokeWidth="2.4" />
+    <path d="M8 20 L14 26 M14 10 L18 18" stroke="#ffd070" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  BLOODRAGE_LEAP: (k: string) => <Art k={k} c="#e83a2e">
+    <path d="M6 54 Q26 4 52 40" stroke="#ff6a5a" strokeWidth="3" fill="none" strokeDasharray="5 4" strokeLinecap="round" />
+    <path d="M44 34 L56 42 L42 46Z" fill="#ffb0a0" stroke={S} strokeWidth="1" strokeLinejoin="round" />
+    <path d="M14 56 L22 46 L30 56 L38 46 L46 56Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M20 22 L34 12 L30 26 L40 24 L26 38 L28 26Z" fill="#ffb0a0" opacity=".9" stroke={S} strokeWidth=".8" strokeLinejoin="round" />
+  </Art>,
+  WHIRLWIND: (k: string) => <Art k={k} c="#ffb050">
+    <circle cx="32" cy="32" r="24" fill="none" stroke="#ffc070" strokeWidth="3" strokeDasharray="30 12" strokeLinecap="round" />
+    <circle cx="32" cy="32" r="15" fill="none" stroke="#fff0c0" strokeWidth="2.4" strokeDasharray="18 9" strokeLinecap="round" />
+    <path d="M32 6 L38 14 L32 12 L26 14Z M32 58 L26 50 L32 52 L38 50Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1" />
+    <circle cx="32" cy="32" r="4.5" fill={u(k, 'gold')} stroke={S} strokeWidth="1" />
+  </Art>,
+  EARTHSPLITTER: (k: string) => <Art k={k} c="#c9a070">
+    <path d="M4 56 L18 46 L26 52 L40 42 L60 36" stroke="#120a04" strokeWidth="5" fill="none" strokeLinejoin="round" />
+    <path d="M4 56 L18 46 L26 52 L40 42 L60 36" stroke="#ff8a30" strokeWidth="2" fill="none" strokeLinejoin="round" />
+    {[[16, 44, 18], [28, 46, 24], [40, 38, 28], [52, 34, 22]].map(([x, y, h], i) => (<path key={i} d={`M${x - 6} ${y} L${x} ${y - h} L${x + 6} ${y}Z`} fill={u(k, 'steel')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />))}
+  </Art>,
+  BATTLE_CRY: (k: string) => <Art k={k} c="#ff8a3a">
+    <path d="M10 26 L30 22 L30 44 L10 40Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M30 22 L50 12 L50 54 L30 44Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M54 22 Q60 33 54 44 M58 16 Q68 33 58 50" stroke="#ffd0a0" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    <rect x="14" y="40" width="8" height="14" rx="2" fill={u(k, 'wood')} stroke={S} strokeWidth="1" />
+  </Art>,
+  TITAN_WRATH: (k: string) => <Art k={k} c="#d99a4a">
+    <circle cx="32" cy="32" r="26" fill="#ff8a30" opacity=".25" filter={u(k, 'glow')} />
+    <path d="M18 56 L18 34 C18 24 26 18 32 18 C38 18 46 24 46 34 L46 56Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+    <circle cx="32" cy="14" r="8" fill={u(k, 'gold')} stroke={S} strokeWidth="1.4" />
+    <path d="M24 10 L20 2 M40 10 L44 2" stroke="#fff0c0" strokeWidth="3" strokeLinecap="round" />
+    <path d="M6 58 L12 48 L18 58 M46 58 L52 48 L58 58" stroke="#c9a070" strokeWidth="3" fill="none" strokeLinejoin="round" />
+    <path d="M26 30 H38" stroke="#fff" strokeWidth="2" opacity=".6" />
+  </Art>,
+});
+
 export const SKILL_KEYS = Object.keys(ICONS);
 
 /** Painted icon filling its parent. `id` is an ability / skill / potion key. */

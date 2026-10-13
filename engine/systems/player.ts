@@ -7,7 +7,7 @@ import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
-import { castQ, castR, castE, updateAbilities, notifyCooldown, notifyNoMana } from './abilities';
+import { castQ, castE, castS3, castS4, castUlt, updateAbilities, notifyCooldown, abilityState } from './abilities';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
@@ -49,8 +49,9 @@ export function initPlayer(): void {
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
   p.shieldCharges = p.maxShieldCharges;
   p.shieldCd = 0;
-  p.cdMax.q = 4; p.cdMax.r = 15; p.cdMax.e = 20; p.dashCdMax = 4;
-  p.cd.q = p.cd.r = p.cd.e = 0;
+  p.dashCdMax = 4;
+  p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = 0;
+  p.ult = 0;
   resetPlayerSystem();
 }
 
@@ -126,15 +127,16 @@ export function updatePlayer(dt: number): void {
   // ---- timers
   p.invulnT = tickDown(p.invulnT, dt);
   p.rageT = tickDown(p.rageT, dt);
-  p.hawkT = tickDown(p.hawkT, dt);
-  p.sprintT = tickDown(p.sprintT, dt);
+  p.titanT = tickDown(p.titanT, dt);
   p.slowT = tickDown(p.slowT, dt);
   p.hpPotCd = tickDown(p.hpPotCd, dt);
   p.mpPotCd = tickDown(p.mpPotCd, dt);
   p.petReviveCd = tickDown(p.petReviveCd, dt);
   p.cd.q = tickDown(p.cd.q, dt);
-  p.cd.r = tickDown(p.cd.r, dt);
   p.cd.e = tickDown(p.cd.e, dt);
+  p.cd.s3 = tickDown(p.cd.s3, dt);
+  p.cd.s4 = tickDown(p.cd.s4, dt);
+  p.cryT = tickDown(p.cryT, dt);
 
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
   const maxDash = (lv.dash >= 5 ? 2 : 1) + (stats.dashCharges | 0);
@@ -164,10 +166,6 @@ export function updatePlayer(dt: number): void {
   // ---- regen / vitality
   p.hp = Math.min(stats.maxHealth, p.hp + (stats.regen + lv.regen * 0.5) * dt);
   p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * dt);
-  if (p.vitalityT > 0) {
-    p.vitalityT = tickDown(p.vitalityT, dt);
-    p.hp = Math.min(stats.maxHealth, p.hp + 10 * dt);
-  }
   if (p.hp > stats.maxHealth) p.hp = stats.maxHealth;
   if (p.mana > stats.maxMana) p.mana = stats.maxMana;
 
@@ -214,19 +212,22 @@ export function updatePlayer(dt: number): void {
     }
   }
 
-  // ---- velocity
-  if (p.dashT > 0) {
+  // ---- velocity (the Bloodrage Leap drives position itself in updateAbilities)
+  if (abilityState.leapT > 0) {
+    a.dashing = false;
+  } else if (p.dashT > 0) {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (p.sprintT > 0 ? 2 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
     const lerpK = 1 - Math.exp(-12 * dt);
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;
   }
-  a.dashing = p.dashT > 0;
-
-  resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+  if (abilityState.leapT <= 0) {
+    a.dashing = p.dashT > 0;
+    resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+  }
 
   // ---- walking crates into pieces
   const crates = world.crates;
@@ -239,7 +240,7 @@ export function updatePlayer(dt: number): void {
 
   // ---- anim / facing: face where you walk; when standing still, face the target
   const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
-  const moving = ml > 0 || p.dashT > 0;
+  const moving = ml > 0 || p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
   if (moving && sp > 0.5) p.facing = Math.atan2(p.vel.x, p.vel.z);
   else p.facing = Math.atan2(dir.x, dir.z);
   const target = Math.min(1, sp / Math.max(1, stats.moveSpeed));
@@ -248,8 +249,10 @@ export function updatePlayer(dt: number): void {
 
   // ---- abilities (edge triggered)
   if (inp.pressed.KeyQ) castQ();
-  if (inp.pressed.KeyR) castR();
   if (inp.pressed.KeyE) castE();
+  if (inp.pressed.Digit3) castS3();
+  if (inp.pressed.Digit4) castS4();
+  if (inp.pressed.KeyR) castUlt();
   updateAbilities(dt);
 
   // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
@@ -257,7 +260,7 @@ export function updatePlayer(dt: number): void {
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * (p.hawkT > 0 ? 1.6 : 1) * lowHaste);
+    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * lowHaste);
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }

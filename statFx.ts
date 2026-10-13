@@ -29,13 +29,13 @@ export function applyAcc(final: PlayerStats, acc: FxAcc): void {
 }
 
 /** Human-readable "+x" for a stat effect value. */
-const PCT = new Set<string>(['critRate', 'critDamage', 'dodge', 'cooldownReduction', 'skillDamage', 'lifeSteal', 'goldFind', 'xpBonus', 'onHitBurnChance', 'onHitSlowChance', 'lowHpHaste', 'dmgReduce', 'manaCostCut', 'berserk', 'stompPower']);
+const PCT = new Set<string>(['critRate', 'critDamage', 'dodge', 'cooldownReduction', 'skillDamage', 'lifeSteal', 'goldFind', 'xpBonus', 'onHitBurnChance', 'onHitSlowChance', 'lowHpHaste', 'dmgReduce', 'manaCostCut', 'berserk', 'stompPower', 'galeWidth']);
 export const STAT_NAME: Record<keyof PlayerStats, string> = {
   maxHealth: 'Max Health', maxMana: 'Max Mana', regen: 'HP Regen', manaRegen: 'Mana Regen', moveSpeed: 'Move Speed', damage: 'Damage', fireRate: 'Attack Speed',
   projectileSpeed: 'Projectile Speed', multishot: 'Projectiles', spread: 'Spread', dashCooldown: 'Dash Cooldown', cooldownReduction: 'Cooldown Reduction', magnetRadius: 'Pickup Range',
   critRate: 'Crit Rate', critDamage: 'Crit Damage', defense: 'Defense', skillDamage: 'Skill Damage', knockback: 'Knockback', dodge: 'Dodge',
   lifeSteal: 'Life Steal', thorns: 'Thorns', goldFind: 'Gold Find', xpBonus: 'XP Gain', pierceBonus: 'Pierce', onHitBurnChance: 'Burn on Hit', onHitSlowChance: 'Slow on Hit',
-  echoEvery: 'Echo', hawkBonus: "Hawk's Focus", procHaste: 'Proc Haste', thunderChain: 'Chain Targets', stormBonus: 'Typhoon Duration', stormTwin: 'Twin Typhoon',
+  echoEvery: 'Echo', hawkBonus: 'Arrow Storm Duration', galeWidth: 'Gale Arrow Width', orbBonus: 'Storm Orbs', procHaste: 'Proc Haste', thunderChain: 'Chain Targets', stormBonus: 'Typhoon Duration', stormTwin: 'Twin Typhoon',
   blizzardRadius: 'Blizzard Radius', blizzFreeze: 'Blizzard Freeze', stompRadius: 'Stomp Radius', stompStun: 'Stomp Stun', stompPower: 'Stomp Damage',
   dashCharges: 'Dash Charges', lowHpHaste: 'Attack Speed (low HP)', rageBonus: 'Rage Duration', dmgReduce: 'Damage Reduction', manaCostCut: 'Mana Cost Reduction', berserk: 'Damage (low HP)',
 };

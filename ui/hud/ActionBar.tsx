@@ -8,22 +8,8 @@ import { ActionSlot } from './ActionSlot';
 import { SimpleTip } from '../components/ItemTip';
 import { PaintedIcon } from '../components/SkillIcons';
 import type { SkillLevels } from '../../types';
-
-const WEAPON_ABILITY: Record<string, { name: string; desc: string; icon: React.ReactNode }> = {
-  FIREBALL: { name: 'Giant Fireball', desc: 'Shoots a slow giant fireball.', icon: <PaintedIcon id="FIREBALL" /> },
-  ARROW_RAIN: { name: "Hawk's Focus", desc: 'For 10s: +60% attack speed, +40% attack damage. You and your arrows glow.', icon: <PaintedIcon id="ARROW_RAIN" /> },
-  AXE_SPIN: { name: 'Axe Spin', desc: 'Spinning blade barrier.', icon: <PaintedIcon id="AXE_SPIN" /> },
-};
-const Q_INFO: Record<string, { name: string; desc: string; icon: React.ReactNode }> = {
-  PIERCING_SHOT: { name: 'Piercing Arrow', desc: 'Massive piercing arrow.', icon: <PaintedIcon id="PIERCING_SHOT" /> },
-  GRAVITY_SPELL: { name: 'Gravity Well', desc: 'Summons a black hole.', icon: <PaintedIcon id="GRAVITY_SPELL" /> },
-  RAGE: { name: 'Rage', desc: 'Doubles attack speed for 4s.', icon: <PaintedIcon id="RAGE" /> },
-};
-const E_INFO = {
-  BARBARIAN: { name: 'War Vitality', desc: 'Regenerate 10 HP/s for 6s.', icon: <PaintedIcon id="VITALITY" /> },
-  WIZARD: { name: 'Earthwall', desc: 'Create a defensive barrier for 4s.', icon: <PaintedIcon id="EARTHWALL" /> },
-  ARCHER: { name: 'Wind Sprint', desc: '2x speed & invincible for 4s.', icon: <PaintedIcon id="SPRINT" /> },
-} as const;
+import { ABILITIES, ULTS, abilityCd, type ActiveSlot } from '../../abilityDefs';
+import { UltSlot } from './UltSlot';
 
 const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital'] as const;
 type PKey = typeof PASSIVE_KEYS[number];
@@ -32,18 +18,13 @@ const Sep = () => <div className="tray-sep" />;
 const cdLine = (label: string, v: string) => <><span className="muted">{label}</span><span>{v}</span></>;
 
 export const ActionBar: React.FC = () => {
-  const { hero, skillLevels, activeQ, weaponAbility } = useGameStore(useShallow((s) => ({
-    hero: s.hero, skillLevels: s.skillLevels, activeQ: s.activeAbilityQ, weaponAbility: s.equipment.weapon?.ability,
-  })));
-  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('r'), s.getManaCost('e'), s.getManaCost('dash')] as const));
+  const { hero, skillLevels } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels })));
+  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4'), s.getManaCost('dash')] as const));
+  const cdr = useGameStore((s) => s.stats.cooldownReduction);
   const hpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.id.startsWith('potion_hp') ? n + (i.quantity || 1) : n), 0));
   const mpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.id.startsWith('potion_mana') ? n + (i.quantity || 1) : n), 0));
-  const [qCost, rCost, eCost, dCost] = costs;
+  const dCost = costs[4];
   const p = world.player;
-
-  const r = WEAPON_ABILITY[weaponAbility ?? ''] ?? { name: 'Weapon Ability', desc: 'Basic attack.', icon: <PaintedIcon id="ARROW_RAIN" /> };
-  const q = activeQ ? Q_INFO[activeQ] : null;
-  const e = E_INFO[hero];
 
   const classPassives = (PASSIVE_KEYS as readonly string[]).filter((k) => {
     const info = (SKILLS_INFO as any)[k];
@@ -51,19 +32,29 @@ export const ActionBar: React.FC = () => {
   }) as PKey[];
 
   const sk = (k: keyof SkillLevels) => skillLevels[k];
+  const SLOTS: { slot: ActiveSlot; key: string; code: string }[] = [
+    { slot: 'q', key: 'Q', code: 'KeyQ' }, { slot: 'e', key: 'E', code: 'KeyE' }, { slot: 's3', key: '3', code: 'Digit3' }, { slot: 's4', key: '4', code: 'Digit4' },
+  ];
+  const ult = ULTS[hero];
+  const ulv = sk('ult');
 
   return (
     <div className="action-tray pe">
-      <ActionSlot id="r" keyLabel="R" keyCode="KeyR" size="4.3rem" icon={r.icon} level={sk('weapon')} manaCost={rCost}
-        getCd={() => ({ t: p.cd.r, max: p.cdMax.r })}
-        tooltip={<SimpleTip title={r.name} sub={`Weapon ability [R] · Lv ${sk('weapon')}`} body={r.desc} lines={[cdLine('Mana', `${rCost}`), cdLine('Cooldown', `${p.cdMax.r.toFixed(1)}s`)]} />} />
-      <ActionSlot id="q" keyLabel="Q" keyCode="KeyQ" size="4.3rem" active={!!q} icon={q?.icon ?? <PaintedIcon id="STAR" />} manaCost={qCost}
-        level={activeQ === 'PIERCING_SHOT' ? sk('piercing') : activeQ === 'GRAVITY_SPELL' ? sk('gravity') : sk('rage')}
-        getCd={() => ({ t: p.cd.q, max: p.cdMax.q })}
-        tooltip={<SimpleTip title={q?.name ?? 'Class Active'} sub="Class active [Q]" body={q?.desc ?? 'Locked.'} lines={[cdLine('Mana', `${qCost}`), cdLine('Cooldown', `${p.cdMax.q.toFixed(1)}s`)]} />} />
-      <ActionSlot id="e" keyLabel="E" keyCode="KeyE" size="4.3rem" active={sk('special') > 0} lockLabel="5 SP" icon={e.icon} level={sk('special')} manaCost={eCost}
-        getCd={() => ({ t: p.cd.e, max: p.cdMax.e })}
-        tooltip={<SimpleTip title={e.name} sub={`Class special [E] · Lv ${sk('special')}`} body={sk('special') > 0 ? e.desc : `${e.desc} Unlock in the Skills panel for 5 SP.`} lines={[cdLine('Mana', `${eCost}`), cdLine('Cooldown', `${p.cdMax.e.toFixed(1)}s`)]} />} />
+      {SLOTS.map(({ slot, key, code }, i) => {
+        const def = ABILITIES[hero].find((a) => a.slot === slot)!;
+        const lv = sk(slot);
+        const cost = costs[i];
+        const cd = abilityCd(hero, slot, lv) * (1 - cdr);
+        return (
+          <ActionSlot key={slot} id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost}
+            getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot] })}
+            tooltip={<SimpleTip title={def.name} sub={`Active [${key}] · Lv ${lv}`} body={def.desc}
+              lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />
+        );
+      })}
+      <UltSlot color={hero === 'ARCHER' ? '#ffd24a' : hero === 'WIZARD' ? '#ff6a2a' : '#e9a04a'} icon={<PaintedIcon id={ult.icon} />}
+        tooltip={<SimpleTip title={ult.name} sub={`Ultimate [R] · Lv ${ulv}`} color="#ffd98a" body={ult.desc}
+          lines={[cdLine('Charge', 'Fill by dealing damage and killing (100%)'), cdLine(`Lv ${ulv}`, ult.per(ulv)), ...(ulv < 5 ? [cdLine(`Lv ${ulv + 1}`, ult.per(ulv + 1))] : [])]} />} />
       <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id="DASH" />} level={sk('dash')} manaCost={dCost}
         getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
         tooltip={<SimpleTip title="Dash" sub={`Mobility [Space] · Lv ${sk('dash')}`} body="Dash in the movement direction. Costs no mana. Invincible briefly. Level 5 grants +1 charge." lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`)]} />} />

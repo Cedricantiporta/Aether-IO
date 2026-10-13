@@ -7,7 +7,7 @@ import {
 } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
-import { abilityState, AXE_RING_RADIUS } from '../engine/systems/abilities';
+import { abilityState } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
@@ -40,7 +40,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     mixer: null as AnimationMixer | null,
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
-    wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0,
+    wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
     emissiveKey: '', gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
   });
 
@@ -104,10 +104,13 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
 
     // transform
     const g = root.current;
-    if (lobby) g.position.set(0, 0, 0); else g.position.copy(p.pos);
+    if (lobby) g.position.set(0, 0, 0); else { g.position.copy(p.pos); g.position.y = p.air; }
+    const tk = !lobby && p.titanT > 0 ? 2.2 : 1;
+    s.tscale = damp(s.tscale ?? 1, tk, 5, dt);
+    g.scale.setScalar(s.tscale);
     const targetYaw = lobby ? Math.sin(t * 0.3) * 0.4 : p.facing;
     s.yaw = lobby ? targetYaw : angleLerp(s.yaw, targetYaw, 1 - Math.exp(-20 * dt));
-    g.rotation.y = s.yaw;
+    g.rotation.y = s.yaw + (!lobby && p.whirlT > 0 ? t * 20 : 0);
     const dashing = !lobby && a.dashing;
     s.lean = damp(s.lean, dashing ? 0.5 : 0, 14, dt);
     lean.current.rotation.x = s.lean;
@@ -120,7 +123,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
 
     // locomotion weights
     const b = lobby || !alive ? 0 : clamp(a.moveBlend, 0, 1);
-    const speedMul = lobby ? 1 : 0.85 + Math.min(1.1, Math.hypot(p.vel.x, p.vel.z) / 9) + (p.sprintT > 0 ? 0.5 : 0) + (dashing ? 0.8 : 0);
+    const speedMul = lobby ? 1 : 0.85 + Math.min(1.1, Math.hypot(p.vel.x, p.vel.z) / 9) + (p.whirlT > 0 ? 0.6 : 0) + (dashing ? 0.8 : 0);
     if (s.run) s.run.timeScale = speedMul;
     s.wRun = damp(s.wRun, b, 16, dt); s.wIdle = damp(s.wIdle, alive ? 1 - b : 0, 16, dt);
     s.wDeath = damp(s.wDeath, alive ? 0 : 1, 9, dt);
@@ -151,10 +154,10 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     if (!lobby && alive) {
       if (a.hurtT > 0) { r += a.hurtT * 0.9; gg += a.hurtT * 0.05; }
       if (p.invulnT > 0 && !dashing) { const k = 0.18 + 0.14 * Math.sin(t * 16); gg += k * 0.8; bb += k; }
-      if (p.hawkT > 0) { const k = 0.3 + 0.15 * Math.sin(t * 9); r += k * 0.9; gg += k * 0.75; bb += k * 0.15; }
+      if (p.cryT > 0) { const k = 0.25 + 0.12 * Math.sin(t * 9); r += k * 0.9; gg += k * 0.55; bb += k * 0.1; }
+      if (p.titanT > 0) { const k = 0.3 + 0.12 * Math.sin(t * 6); r += k * 0.8; gg += k * 0.35; }
       if (p.rageT > 0) r += 0.28 + 0.12 * Math.sin(t * 12);
-      if (p.sprintT > 0) { gg += 0.2; r += 0.08; }
-      if (p.vitalityT > 0) gg += 0.16 + 0.08 * Math.sin(t * 6);
+      if (p.whirlT > 0) { gg += 0.12; r += 0.2; }
       if (dashing) { r += 0.35; gg += 0.45; bb += 0.55; }
     }
     const key = (r * 100 | 0) + ',' + (gg * 100 | 0) + ',' + (bb * 100 | 0);
@@ -166,21 +169,20 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     // ---- continuous status particles
     if (dt > 0 && !lobby && alive) {
       const px = p.pos.x, pz = p.pos.z;
-      if (p.hawkT > 0) {
-        FX.add.emit(px, 1.2, pz, 0, 0, 0, 0.1, 3.6, 3.0, 2.4, 1.2, 0.18, 0.3, CELL.GLOW);
-        if (Math.random() < dt * 30) FX.add.emit(px + (Math.random() - 0.5) * 1.2, 0.2, pz + (Math.random() - 0.5) * 1.2, 0, 2.5, 0, 0.8, 0.3, 0.05, 2.2, 1.8, 0.4, 0.9, CELL.STAR, 0, 0.2, t, 2);
+      if (p.cryT > 0) {
+        FX.add.emit(px, 1.2, pz, 0, 0, 0, 0.1, 3.4, 3.0, 2.2, 1.1, 0.18, 0.28, CELL.GLOW);
+        if (Math.random() < dt * 24) FX.add.emit(px + (Math.random() - 0.5) * 1.2, 0.2, pz + (Math.random() - 0.5) * 1.2, 0, 2.5, 0, 0.8, 0.3, 0.05, 2.2, 1.6, 0.3, 0.9, CELL.STAR, 0, 0.2, t, 2);
       }
+      if (p.titanT > 0) {
+        const sc = s.tscale ?? 2.2;
+        FX.add.emit(px, 2.2 * sc * 0.5, pz, 0, 0, 0, 0.1, 6 * sc * 0.5, 5 * sc * 0.5, 2.4, 1.0, 0.2, 0.32, CELL.GLOW);
+        if (Math.random() < dt * 50) embers(px + (Math.random() - 0.5) * 3, 0.3, pz + (Math.random() - 0.5) * 3, 1, 0xff8a2a, 0.8, 5, 1.1, 0.26);
+        if (Math.random() < dt * 20) FX.add.emit(px + Math.cos(t * 3) * 3.2, 0.1, pz + Math.sin(t * 3) * 3.2, 0, 3, 0, 0.7, 1.2, 0.2, 2.2, 0.9, 0.2, 0.5, CELL.RING);
+      }
+      if (p.air > 0.3 && Math.random() < 0.9) FX.add.emit(px, p.air + 1, pz, 0, 0, 0, 0.5, 1.4, 0.2, 2.4, 0.4, 0.15, 0.6, CELL.GLOW);
       if (p.rageT > 0) {
         FX.add.emit(px, 1.2, pz, 0, 0, 0, 0.1, 3.4, 3.2, 1.6, 0.18, 0.08, 0.3, CELL.GLOW);
         if (Math.random() < dt * 40) embers(px, 0.2, pz, 1, 0xff4a1a, 0.7, 3.4, 0.8, 0.2);
-      }
-      if (p.sprintT > 0) {
-        const vx = p.vel.x, vz = p.vel.z, sp = Math.hypot(vx, vz) || 1;
-        for (let i = 0; i < 2; i++) FX.add.emit(px + (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.6, pz + (Math.random() - 0.5) * 0.8, -vx / sp * 14, 0, -vz / sp * 14, 0.28, 0.2, 0.05, 1.2, 1.9, 1.2, 0.75, CELL.STREAK, 0, 1, 0, 0, 0.09);
-      }
-      if (p.vitalityT > 0 && Math.random() < dt * 10) {
-        const an = Math.random() * TAU;
-        FX.add.emit(px + Math.cos(an) * 0.9, 0.3, pz + Math.sin(an) * 0.9, 0, 2.2, 0, 1.1, 0.5, 0.3, 0.4, 2.2, 0.7, 0.95, CELL.PLUS, 0, 0.3);
       }
       if (p.levelUpFx > 0) {
         const an = t * 9;
@@ -331,12 +333,13 @@ function AxeSpin() {
   const ref2 = useRef<InstancedMesh>(null!);
   useFrame(({ clock }, dt0) => {
     const m = ref.current, m2 = ref2.current; if (!m) return;
-    const on = abilityState.axeSpinT > 0 && !isLobbyStatus(useGameStore.getState().status);
+    const on = world.player.whirlT > 0 && !isLobbyStatus(useGameStore.getState().status);
     if (!on) { m.count = 0; m2.count = 0; return; }
     const t = clock.elapsedTime, p = world.player;
-    const grow = clamp((3 - abilityState.axeSpinT) / 0.3, 0, 1), fade = clamp(abilityState.axeSpinT / 0.4, 0, 1);
+    const wt = world.player.whirlT;
+    const grow = clamp((3 - wt) / 0.25, 0, 1), fade = clamp(wt / 0.4, 0, 1);
     m.count = m2.count = N;
-    const R = AXE_RING_RADIUS * grow;
+    const R = abilityState.whirlR * 0.8 * grow;
     for (let i = 0; i < N; i++) {
       const a = t * 5 + (i / N) * TAU;
       const x = p.pos.x + Math.cos(a) * R, z = p.pos.z + Math.sin(a) * R;

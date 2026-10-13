@@ -2,6 +2,7 @@
 // Zustand store — META / RPG state only (inventory, stats, panels, progression).
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
+import { abilityMana } from './abilityDefs';
 import { create } from 'zustand';
 import {
   GameStatus, PlayerStats, Upgrade, Item, SkillLevels, Rarity, HeroClass, ItemType,
@@ -36,18 +37,18 @@ const MAX_ITEM_NOTIFICATIONS = 6;
 const MAX_NOTIFICATIONS = 12;
 
 const INITIAL_STATS: PlayerStats = {
-  maxHealth: 100, maxMana: 100, regen: 0.5, manaRegen: 0.5, moveSpeed: 10, damage: 15,
-  fireRate: 2.0, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
+  maxHealth: 100, maxMana: 100, regen: 0.5, manaRegen: 0.5, moveSpeed: 10, damage: 18,
+  fireRate: 1.4, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
   cooldownReduction: 0, magnetRadius: 5.0, critRate: 0.05, critDamage: 1.5, defense: 0,
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
   lifeSteal: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
-  echoEvery: 0, hawkBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
+  echoEvery: 0, hawkBonus: 0, galeWidth: 0, orbBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
   stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
 };
 
 const INITIAL_SKILLS: SkillLevels = {
-  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, special: 0,
-  piercing: 0, burning: 0, freezing: 0, freezeSpell: 0, gravity: 0, stamp: 0, rage: 0,
+  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0,
+  q: 1, e: 1, s3: 1, s4: 1, ult: 1, burning: 0, freezing: 0, freezeSpell: 0, stamp: 0,
 };
 
 const INITIAL_GAME_STATS: GameStatistics = {
@@ -115,8 +116,8 @@ const WEAPON_Q: Record<HeroClass, AbilityType> = {
 const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
   SKILL_ORBITAL: 'orbital', SKILL_THUNDER: 'thunder', SKILL_REGEN: 'regen', SKILL_MAGNET: 'magnet',
   SKILL_DASH: 'dash', SKILL_WEAPON: 'weapon', SKILL_BARRIER: 'barrier', SKILL_STORM: 'storm',
-  SKILL_PIERCING: 'piercing', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing',
-  SKILL_GRAVITY: 'gravity', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'rage', SKILL_STAMP: 'stamp',
+  SKILL_PIERCING: 'q', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing',
+  SKILL_GRAVITY: 'q', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'q', SKILL_STAMP: 'stamp',
 };
 
 // ------------------------------------------------------------------ helpers --
@@ -204,8 +205,8 @@ export const getEffectiveStats = (): PlayerStats => {
   const p = world.player;
   const out = { ...s };
   if (p.rageT > 0) out.fireRate *= 2;
-  if (p.hawkT > 0) { out.fireRate *= 1.6; out.damage *= 1.4; }
-  if (p.sprintT > 0) out.moveSpeed *= 2;
+  if (p.cryT > 0) out.damage *= 1.3;
+  if (p.titanT > 0) { out.damage *= 1.5; out.knockback += 1; }
   return out;
 };
 
@@ -227,7 +228,7 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
     return `Blades: ${count} -> ${nextCount}. Dmg: ${d} -> ${nextD}.`;
   }
   if (key === 'thunder' || key === 'burning' || key === 'freezing' || key === 'stamp') {
-    const n = (l: number) => Math.max(2, 11 - l);
+    const n = (l: number) => Math.max(6, 13 - l);
     const every = level === 0 ? `Unlock: every ${n(1)}th attack` : `Every ${n(level)}th attack -> every ${n(nextLvl)}th`;
     if (key === 'thunder') return `${every}: chain lightning hits ${2 + (level || 1)}${level ? ` -> ${2 + nextLvl}` : ''} enemies. Dmg: ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * Math.max(0, level - 1)))}${level ? ` -> ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * level))}` : ''}.`;
     if (key === 'stamp') return `${every}: Mega Stomp shockwave. Radius ${12 + (level || 1)}${level ? ` -> ${12 + nextLvl}` : ''}.`;
@@ -702,7 +703,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         };
         // Class scaling per hero level (shown on the character sheet).
         const hero = get().hero;
-        if (hero === 'ARCHER') base.fireRate *= 1.03;
+        if (hero === 'ARCHER') base.fireRate *= 1.015;
         else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
         else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
       }
@@ -771,7 +772,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const lvl = s.skillLevels[skill];
       if (lvl >= MAX_SKILL_LEVEL) return;
       let cost = lvl + 1;
-      if (skill === 'special') cost = 5;
+      if (skill === 'ult') cost = lvl + 2;
       if (skill === 'dash' || skill === 'barrier') cost = lvl + 2;
       if (s.skillPoints < cost) return;
       set({ skillLevels: { ...s.skillLevels, [skill]: lvl + 1 }, skillPoints: s.skillPoints - cost });
@@ -863,23 +864,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     getManaCost: (skill) => {
       const s = get();
-      const lv = s.skillLevels;
-      let cost = 0;
-      switch (skill) {
-        case 'r': cost = 60; break;
-        case 'q': {
-          let level = 0;
-          if (s.activeAbilityQ === 'PIERCING_SHOT') level = lv.piercing;
-          else if (s.activeAbilityQ === 'GRAVITY_SPELL') level = lv.gravity;
-          else if (s.activeAbilityQ === 'RAGE') level = lv.rage;
-          cost = s.activeAbilityQ === 'PIERCING_SHOT' ? 15 + level * 3 : 30 + level * 5;
-          break;
-        }
-        case 'e': cost = 20 + lv.special * 5; break;
-        case 'dash': cost = 0; break;
-        case 'freezeSpell': cost = 15 + lv.freezeSpell * 2; break;
-        default: cost = 0;
-      }
+      const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? 15 + s.skillLevels.freezeSpell * 2 : 0;
       const total = s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;
       return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;
     },

@@ -8,45 +8,61 @@ import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { HERO_COLOR } from '../../lib/game';
 import { TalentsView } from './Talents';
+import { ABILITIES, ULTS } from '../../../abilityDefs';
+import { PaintedIcon } from '../../components/SkillIcons';
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown. Level 5 grants +1 dash charge.',
-  weapon: 'Weapon ability recharges faster.', barrier: 'Triggers below 20% HP. Longer invulnerability, more charges, faster recharge.', special: 'Unlocks and strengthens your class special (E).',
-  piercing: 'More damage and pierce.', burning: 'Fire arrow every Nth attack: N drops by 1 per level.', freezing: 'Ice arrow every Nth attack: N drops by 1, slow lasts longer.',
-  thunder: 'Chain lightning every Nth bolt: N drops by 1, one more target.', gravity: 'Bigger, longer black hole.', freezeSpell: 'Wider blizzard, longer freeze.', storm: 'Stronger typhoon.',
-  orbital: 'One more orbiting blade.', rage: 'Longer rage, more attack speed.', stamp: 'Stomp every Nth throw: N drops by 1, bigger shockwave.',
+  weapon: 'Ultimate charge fills 10% faster per level.', barrier: 'Triggers below 20% HP. Longer invulnerability, more charges, faster recharge.',
+  burning: 'Fire arrow every Nth attack: N drops by 1 per level.', freezing: 'Ice arrow every Nth attack: N drops by 1, slow lasts longer.',
+  thunder: 'Chain lightning every Nth bolt: N drops by 1, one more target.', freezeSpell: 'Wider blizzard, longer freeze.', storm: 'Stronger typhoon.',
+  orbital: 'One more orbiting blade.', stamp: 'Stomp every Nth throw: N drops by 1, bigger shockwave.',
 };
-const costOf = (key: string, lvl: number) => (key === 'special' ? 5 : key === 'dash' || key === 'barrier' ? lvl + 2 : lvl + 1);
+const costOf = (key: string, lvl: number) => (key === 'dash' || key === 'barrier' || key === 'ult' ? lvl + 2 : lvl + 1);
+
+const KEYS: Record<string, string> = { q: 'Q', e: 'E', s3: '3', s4: '4', ult: 'R' };
 
 const RunSkills: React.FC = () => {
   const { hero, levels, sp, upgrade } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill })));
-  const entries = Object.entries(SKILLS_INFO).filter(([, i]: [string, any]) => !i.classType || i.classType === hero);
+  const passives = Object.entries(SKILLS_INFO).filter(([, i]: [string, any]) => i.type === 'PASSIVE' && (!i.classType || i.classType === hero));
+  const rows: { key: string; name: string; desc: string; icon: React.ReactNode; tag?: string; now?: (l: number) => string; color?: string }[] = [
+    ...ABILITIES[hero].map((a) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: KEYS[a.slot], now: a.per })),
+    { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: '#ff9a3a' },
+    ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <SkillIcon id={k} size={26} dim={(levels[k as keyof SkillLevels] ?? 0) <= 0} /> })),
+  ];
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <div className="rpg-label">Skills · {hero}</div>
         <div className="rpg-badge !text-[.75rem]"><Star size={12} /> {sp} skill points</div>
       </div>
-      {entries.map(([key, info]: [string, any]) => {
-        const lvl = levels[key as keyof SkillLevels] ?? 0;
+      {rows.map((r) => {
+        const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
-        const cost = costOf(key, lvl);
+        const cost = costOf(r.key, lvl);
         const can = !max && sp >= cost;
+        const info: any = (SKILLS_INFO as any)[r.key];
         return (
-          <div key={key} className="rpg-frame flex items-center gap-3 p-2.5">
-            <div className="rpg-slot hoverable" style={{ ['--slot' as any]: '3.4rem', ['--rc' as any]: info.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949' }}>
-              <span className="slot-icon"><SkillIcon id={key} size={26} dim={lvl <= 0 && key !== 'special'} /></span>
+          <div key={r.key} className="rpg-frame flex items-center gap-3 p-2.5" data-testid={`skill-${r.key}`}>
+            <div className="rpg-slot hoverable relative" style={{ ['--slot' as any]: '3.4rem', ['--rc' as any]: r.color ?? (info?.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949') }}>
+              <span className="slot-icon">{r.icon}</span>
+              {r.tag && <span className="rpg-key">{r.tag}</span>}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold leading-tight text-[var(--gold-light)]" style={{ fontFamily: 'var(--font-title)' }}>{info.name}</span>
+                <span className="font-bold leading-tight text-[var(--gold-light)]" style={{ fontFamily: 'var(--font-title)' }}>{r.name}</span>
                 <div className="flex gap-[3px]">{[0, 1, 2, 3, 4].map((i) => <i key={i} className="pip" data-s={i < lvl ? 'full' : 'empty'} style={i < lvl ? { background: 'radial-gradient(circle at 35% 30%, #fff6c8, #e9b949 55%, #8b5a16)', boxShadow: '0 0 6px #e9b949' } : undefined} />)}</div>
               </div>
-              <div className="text-[.7rem] text-[var(--text-dim)] leading-snug">{info.description}</div>
-              {!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[key]}</div>}
+              <div className="text-[.7rem] text-[var(--text-dim)] leading-snug">{r.desc}</div>
+              {r.now ? (
+                <>
+                  <div className="text-[.66rem] mt-0.5 text-[var(--text-dim)]">Lv {lvl}: {r.now(lvl)}</div>
+                  {!max && <div className="text-[.66rem] text-[var(--good)]">Lv {lvl + 1}: {r.now(lvl + 1)}</div>}
+                </>
+              ) : (!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
             </div>
-            <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
-              {max ? 'MAX' : <><span>{lvl === 0 && key === 'special' ? 'Unlock' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}
+            <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
+              {max ? 'MAX' : <><span>{lvl === 0 ? 'Unlock' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}
             </Button>
           </div>
         );

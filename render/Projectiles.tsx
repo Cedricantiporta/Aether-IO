@@ -95,6 +95,11 @@ export function Projectiles() {
     pa.cyl(0.07, 0.07, 2.6, 6, [0, 0, -0.3], '#c8ffff', [Math.PI / 2, 0, 0]); pa.cone(0.2, 0.9, 6, [0, 0, 1.45], '#e8ffff', [Math.PI / 2, 0, 0]);
     for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; pa.box(0.02, 0.5, 0.8, [Math.sin(a) * 0.12, Math.cos(a) * 0.12, -1.4], '#40e0ff', [0, 0, -a]); }
     pa.torus(0.26, 0.03, [0, 0, 0.6], '#6ff0ff', [0, 0, 0], 1, 14); pa.torus(0.34, 0.03, [0, 0, -0.2], '#6ff0ff', [0, 0, 0], 1, 14);
+    // gale arrow: giant wind arrow with rings
+    const ga = new GB([1, 1]);
+    ga.cyl(0.1, 0.1, 4.2, 6, [0, 0, -0.6], '#d8fff0', [Math.PI / 2, 0, 0]); ga.cone(0.34, 1.4, 6, [0, 0, 2.0], '#ffffff', [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; ga.box(0.03, 0.8, 1.3, [Math.sin(a) * 0.2, Math.cos(a) * 0.2, -2.4], '#7affc8', [0, 0, -a]); }
+    ga.torus(0.5, 0.05, [0, 0, 0.9], '#aaffe0', [0, 0, 0], 1, 16); ga.torus(0.7, 0.05, [0, 0, -0.3], '#aaffe0', [0, 0, 0], 1, 16); ga.torus(0.9, 0.05, [0, 0, -1.5], '#aaffe0', [0, 0, 0], 1, 16);
     // axe (flat spin)
     const aw = makeAxe('#ffb060', 1);
     const axeB = new GB().addColored(aw.body, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
@@ -116,6 +121,7 @@ export function Projectiles() {
       ARROW: mk([[arr.body, lit], [arr.glow, glow]], MAXP),
       RAIN_ARROW: mk([[rain.body, lit], [rain.glow, glow]], MAXP),
       PIERCING_ARROW: mk([[pa.build(), glow]], 120),
+      GALE_ARROW: mk([[ga.build(), glow]], 20),
       BURNING_ARROW: mk([[burn.body, lit], [burn.glow, glow]], MAXP),
       FREEZING_ARROW: mk([[frz.body, lit], [frz.glow, glow]], MAXP),
       MAGIC: mk([[orbG(0.26, '#e8c8ff', '#ffffff'), glow]], MAXP),
@@ -181,6 +187,16 @@ export function Projectiles() {
             for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.02 * k, y, z - vz * 0.02 * k, vx * -0.08, vy * -0.08, vz * -0.08, 0.35, 0.9, 0.2, 0.3, 1.5, 2.0, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);
           }
           break;
+        case 'GALE_ARROW': {
+          const w = p.spin || 1;
+          place(ims, i, x, y, z, yaw, pitch, t * 9, w * 1.1, w * 1.1, 1.1);
+          pushHalo(x, y, z, 5 * w, 0.4, 1.7, 1.2, 0.5, CELL.GLOW);
+          if (emit) {
+            for (let k = 0; k < 3; k++) { const a = Math.random() * TAU, rr = (0.8 + Math.random() * 1.6) * w; FX.add.emit(x - vx * 0.01 * k + Math.cos(a) * rr * 0.3, y + Math.sin(a) * rr * 0.3, z, -vx * 0.15, 0, -vz * 0.15, 0.4, 0.5 * w, 0.1, 0.6, 1.9, 1.4, 0.7, CELL.STREAK, 0, 1, 0, 0, 0.12); }
+            if (Math.random() < dt * 40) FX.norm.emit(x, 0.4, z, (Math.random() - 0.5) * 4, 2, (Math.random() - 0.5) * 4, 0.6, 0.8, 1.6, 0.8, 0.95, 0.9, 0.3, CELL.SMOKE);
+          }
+          break;
+        }
         case 'BURNING_ARROW':
           place(ims, i, x, y, z, yaw, pitch, 0, 1);
           pushHalo(x + vx * 0.03, y, z + vz * 0.03, 1.1, 1.8, 0.7, 0.15, 0.6, CELL.GLOW);

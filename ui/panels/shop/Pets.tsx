@@ -29,6 +29,7 @@ export const PetsTab: React.FC = () => {
   const sales = useGameStore((s) => s.shopSales);
   const buyItem = useGameStore((s) => s.buyItem);
   const [sel, setSel] = useState(PETS_POOL[0].id);
+  const [hov, setHov] = useState('');
   const cur = PETS_POOL.find((p) => p.id === sel) ?? PETS_POOL[0];
   return (
     <div className="flex flex-col gap-2.5">
@@ -51,8 +52,8 @@ export const PetsTab: React.FC = () => {
       {PETS_POOL.map((p) => {
         const price = shopPrice(p), sale = sales[p.id], can = !p.summonOnly && gold >= price;
         return (
-          <div key={p.id} className="rpg-frame flex items-center gap-3 p-2.5" style={sel === p.id ? { outline: '2px solid var(--gold-light)' } : undefined}
-            onMouseEnter={() => setSel(p.id)} onClick={() => setSel(p.id)}>
+          <div key={p.id} className="rpg-frame flex items-center gap-3 p-2.5" style={{ cursor: 'pointer', ...(sel === p.id ? { outline: '2px solid var(--gold-light)' } : hov === p.id ? { outline: '1px solid var(--gold)', filter: 'brightness(1.12)' } : {}) }}
+            data-testid={`pet-row-${p.id}`} onMouseEnter={() => setHov(p.id)} onMouseLeave={() => setHov('')} onClick={() => setSel(p.id)}>
             <div style={p.summonOnly ? { filter: 'brightness(0) contrast(.6) opacity(.7)' } : undefined}><ItemSlot item={p} size="4rem" iconSize={30} tooltip="buy" compare={false} sale={p.summonOnly ? undefined : sale} /></div>
             <div className="flex-1 min-w-0">
               <div className="font-bold leading-tight" style={{ color: RARITY_TEXT[p.rarity], fontFamily: 'var(--font-title)' }}>{p.name}</div>

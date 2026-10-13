@@ -14,6 +14,7 @@ import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
+import { GroundFx } from './GroundFx';
 import { Pickups } from './Pickups';
 import { Crates } from './Crates';
 import { Pet } from './Pet';
@@ -48,6 +49,7 @@ export function Scene() {
       {gameplay && (
         <>
           <Zones />
+          <GroundFx />
           <Enemies />
           <Bosses />
           <Projectiles />

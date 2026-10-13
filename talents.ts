@@ -56,7 +56,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Quick Draw', '+4% attack speed', 3, 'u:FIRE_RATE', { mul: { fireRate: 0.04 } }],
       ['Deadly Aim', '+10% crit damage', 3, 'u:CRIT_DAMAGE', { add: { critDamage: 0.1 } }],
       ['Steady Hands', '+5% damage', 2, 'u:DAMAGE', { mul: { damage: 0.05 } }],
-      ['Piercing Shots', '+1 projectile pierce', 2, 'piercing', { add: { pierceBonus: 1 } }],
+      ['Gale Force', 'Gale Arrow +20% width; +1 arrow pierce', 2, 'GALE_ARROW', { add: { pierceBonus: 1, galeWidth: 0.2 } }],
       ['Twin Volley', 'Every 6th attack fires twice', 1, 'u:MULTISHOT', { add: { echoEvery: 6 } }],
     ]],
     ['e', [
@@ -72,7 +72,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Evasion', '+2% dodge', 3, 'dash', { add: { dodge: 0.02 } }],
       ['Hardy', '+8 max health', 3, 'u:HEALTH', { add: { maxHealth: 8 } }],
       ['Second Wind', '-0.3s dash cooldown', 2, 'u:DASH_COOLDOWN', { add: { dashCooldown: -0.3 } }],
-      ["Hawk Eyes", "Hawk's Focus lasts +1.5s", 2, 'weapon', { add: { hawkBonus: 1.5 } }],
+      ['Storm Caller', 'Storm of a Thousand Arrows lasts +1.5s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1.5 } }],
       ['Phantom', '+1 dash charge, +5% dodge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1, dodge: 0.05 } }],
     ]],
   ],
@@ -87,11 +87,11 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ]],
     ['t', [
       ['Static Charge', '+4% damage', 3, 'u:DAMAGE', { mul: { damage: 0.04 } }],
-      ['Chain Lightning', 'Thundercaller chains +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
-      ['Storm Surge', 'Typhoon lasts +2s', 3, 'storm', { add: { stormBonus: 2 } }],
+      ['Chain Lightning', 'Thundercaller and Storm Orbs chain +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
+      ['Storm Surge', 'Typhoon and Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
       ['Overcharge', 'Thunder bolt N -1 per rank', 2, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }],
       ['Tailwind', '+4% move speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }],
-      ['Tempest', 'A second typhoon, chain +1 target', 1, 'u:SKILL_STORM', { add: { stormTwin: 1, thunderChain: 1 } }],
+      ['Tempest', 'A second typhoon, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
     ]],
     ['f', [
       ['Chill', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],
@@ -105,7 +105,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
   BARBARIAN: [
     ['b', [
       ['Bloodlust', '+4% attack speed', 3, 'u:FIRE_RATE', { mul: { fireRate: 0.04 } }],
-      ['Rage Mastery', 'Rage lasts +1s', 3, 'rage', { add: { rageBonus: 1 } }],
+      ['Rage Mastery', 'Bloodrage Leap grants Rage for +1s longer', 3, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
       ['Last Stand', '+10% attack speed below 50% HP', 3, 'barrier', { add: { lowHpHaste: 0.1 } }],
       ['Brutality', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
       ['Frenzy', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],

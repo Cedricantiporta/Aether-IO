@@ -83,7 +83,7 @@ let archerNext = 0;                      // 0 = fire next, 1 = ice next
 
 let procHaste = 0;
 let echoCount = 0;
-const procN = (lv: number): number => Math.max(2, 11 - lv - procHaste);
+const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
 
 export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; echoCount = 0; }
 
@@ -175,8 +175,8 @@ export function fireBasicAttack(): void {
   let aoe = 0;
   let radius = 1.5;
   switch (ptype) {
-    case 'AXE': kind = 'AXE'; speed *= 2.7; life = 3.5; pierce = Infinity; break;
-    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 4; radius = 2.5; break;
+    case 'AXE': kind = 'AXE'; speed *= 2.7; life = 3.5; pierce = 4; break;
+    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
 
@@ -201,9 +201,9 @@ export function fireBasicAttack(): void {
     if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
   }
 
-  const emp = pl.hawkT > 0;           // Hawk's Focus: +40% damage, glowing shots
+  const emp = false;
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
-  const dmgMul = (emp ? 1.4 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  const dmgMul = (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.
   let echo = false;
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
@@ -262,7 +262,7 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 }
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
-  return !(kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT');
+  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT');
 }
 
 function dropFireZone(p: Projectile): void {
@@ -318,7 +318,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
     splashOpts.kind = dkind;
     splashOpts.knockback = 0;
     let status: StatusEffect | undefined;
-    let splashMul = 0.5;
+    let splashMul = p.kind === 'MAGIC' ? 0.35 : 0.5;
     if (p.kind === 'FREEZING_ARROW') {
       // Much less explosive than before: small, weak splash, softer slow.
       splashMul = 0.4;
@@ -400,6 +400,35 @@ export function updateProjectiles(dt: number): void {
         p.trailT += dt;
         while (p.trailT >= 0.1) { p.trailT -= 0.1; dropFireZone(p); }
         p.spin += dt * 4;
+        break;
+      case 'GALE_ARROW':
+        p.trailT += dt;
+        while (p.trailT >= 0.11) {
+          p.trailT -= 0.11;
+          if (p.state < p.bounces && p.maxLife - p.life > 0.2) {
+            p.state++;
+            const z = allocZone();
+            if (z) {
+              z.active = true; z.kind = 'TORNADO'; z.hostile = false;
+              z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 4.2; z.life = z.maxLife = 2.4;
+              z.damage = p.damage * 0.12; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 24;
+            }
+          }
+        }
+        break;
+      case 'BURNING_ARROW':
+        if (p.state === 2) {
+          p.trailT += dt;
+          while (p.trailT >= 0.2) {
+            p.trailT -= 0.2;
+            const z = allocZone();
+            if (z) {
+              z.active = true; z.kind = 'FIRE'; z.hostile = false;
+              z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 2.7; z.life = z.maxLife = 3.2;
+              z.damage = p.damage * 0.4; z.color = 0xf97316;
+            }
+          }
+        }
         break;
       case 'MAGIC': p.spin += dt * 6; break;
       case 'STORM': p.spin += dt * 15; break;

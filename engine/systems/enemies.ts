@@ -735,6 +735,7 @@ function updateEnemy(e: Enemy): void {
   if (e.boss) { e.freezeT = 0; e.stunT = 0; e.knock.set(0, 0, 0); }
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
+  if (e.fearT > 0) e.fearT -= dt;
   if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 0; }
   if (e.burnT > 0) {
     e.burnT -= dt;
@@ -757,7 +758,10 @@ function updateEnemy(e: Enemy): void {
     e.stateT += dt;
     if (e.attackCd > 0) e.attackCd -= dt;
     if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
-    else runAI(e);
+    else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') {
+      const inv = 1 / (tdist || 1);
+      setVel(e, -tdx * inv, -tdz * inv, e.speed * 1.25);
+    } else runAI(e);
   } else {
     stop(e);
   }

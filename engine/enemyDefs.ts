@@ -37,15 +37,15 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   SKELETON_ARCHER: {
     name: 'Skeleton Archer', hp: 35, speed: 2.2, radius: 0.6, scale: 1, contactDamage: 4, projectileDamage: 10,
-    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 5, color: 0xe5e7eb, knockResist: 0,
+    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 7, color: 0xe5e7eb, knockResist: 0,
   },
   CULTIST: {
     name: 'Cultist', hp: 45, speed: 2.0, radius: 0.65, scale: 1.05, contactDamage: 4, projectileDamage: 12,
-    xp: 10, gold: 4, cost: 4, minWave: 4, weight: 4, color: 0x7e22ce, knockResist: 0,
+    xp: 10, gold: 4, cost: 4, minWave: 3, weight: 5, color: 0x7e22ce, knockResist: 0,
   },
   BOMBER: {
     name: 'Bomber Beetle', hp: 30, speed: 5.0, radius: 0.6, scale: 1, contactDamage: 0, projectileDamage: 28,
-    xp: 8, gold: 3, cost: 3, minWave: 5, weight: 4, color: 0xf97316, knockResist: 0,
+    xp: 8, gold: 3, cost: 3, minWave: 3, weight: 6, color: 0xf97316, knockResist: 0,
   },
   BRUTE: {
     name: 'Brute', hp: 220, speed: 3.0, radius: 1.2, scale: 1.8, contactDamage: 18, projectileDamage: 0,
@@ -144,7 +144,7 @@ export function waveDmgMult(wave: number): number {
   return 1 + 0.07 * (wave - 1);
 }
 export function waveSpeedMult(wave: number): number {
-  return Math.min(1.5, 1 + 0.0075 * (wave - 1));
+  return Math.min(1.5, 1 + 0.0075 * (wave - 1)) * (wave <= 5 ? 1.1 : 1);
 }
 /** Total spawn budget points for a wave (before difficulty multiplier). */
 export function waveBudget(wave: number): number {

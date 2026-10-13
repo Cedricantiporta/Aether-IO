@@ -67,7 +67,9 @@ export interface PlayerStats {
   onHitBurnChance: number;  // chance on hit to ignite
   onHitSlowChance: number;  // chance on hit to slow
   echoEvery: number;        // every Nth attack fires twice (0 = off)
-  hawkBonus: number;        // +seconds Hawk's Focus
+  hawkBonus: number;        // +seconds Storm of Arrows (archer ultimate)
+  galeWidth: number;        // +fraction Gale Arrow width
+  orbBonus: number;         // +Storm Orbs
   procHaste: number;        // on-attack procs need N fewer attacks
   thunderChain: number;     // +chain lightning targets
   stormBonus: number;       // +seconds typhoon lifetime
@@ -140,12 +142,12 @@ export interface SkillLevels {
     weapon: number;
     barrier: number;
     storm: number;
-    special: number; // E Skill (Class Specific)
-    
-    // Active Skills (Q)
-    piercing: number;
-    gravity: number;
-    rage: number;
+    // Active kit (hero specific meaning): Q, E, 3, 4 and the ultimate (R)
+    q: number;
+    e: number;
+    s3: number;
+    s4: number;
+    ult: number;
     
     // Passive Skills
     burning: number;

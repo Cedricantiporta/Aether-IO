@@ -30,13 +30,13 @@ const MAX_VOICES_PRIORITY = 42;
 // time gates (seconds) per sound id
 const enum G {
   SHOOT, HIT, DEATH, PLAYER_HIT, EXPLOSION, XP, GOLD, ITEM, DASH, LIGHTNING, SHIELD,
-  BUZZ, TELEGRAPH, CRATE, HEAL, SHOCK, COUNT,
+  BUZZ, TELEGRAPH, CRATE, HEAL, SHOCK, SKILL, RAIN, COUNT,
 }
 const GATE: number[] = [];
 GATE[G.SHOOT] = 0.11; GATE[G.HIT] = 0.03; GATE[G.DEATH] = 0.045; GATE[G.PLAYER_HIT] = 0.1;
 GATE[G.EXPLOSION] = 0.08; GATE[G.XP] = 0.035; GATE[G.GOLD] = 0.06; GATE[G.ITEM] = 0.1;
 GATE[G.DASH] = 0.15; GATE[G.LIGHTNING] = 0.06; GATE[G.SHIELD] = 0.15; GATE[G.BUZZ] = 0.25;
-GATE[G.TELEGRAPH] = 0.2; GATE[G.CRATE] = 0.08; GATE[G.HEAL] = 0.2; GATE[G.SHOCK] = 0.15;
+GATE[G.TELEGRAPH] = 0.2; GATE[G.CRATE] = 0.08; GATE[G.HEAL] = 0.2; GATE[G.SHOCK] = 0.15; GATE[G.SKILL] = 0.05; GATE[G.RAIN] = 0.07;
 const lastPlay = new Float64Array(G.COUNT).fill(-10);
 
 function gate(id: number): boolean {
@@ -317,6 +317,39 @@ function sfxFrostNova(): void {
   noise(0.4, 0.2, 7000, 2000, { filter: 'highpass', priority: true });
 }
 
+function sfxSkill(name: string): void {
+  if (!gate(G.SKILL)) return;
+  switch (name) {
+    case 'GALE_ARROW': noise(0.5, 0.2, 400, 2600, { filter: 'bandpass', q: 0.8, attack: 0.05 }); tone(300, 900, 0.3, 0.1, { type: 'sawtooth' }); break;
+    case 'SHADOW_ROLL': noise(0.18, 0.14, 1500, 400, { attack: 0.01 }); tone(500, 200, 0.2, 0.08, { type: 'triangle' }); break;
+    case 'FAN_FLAMES': noise(0.45, 0.2, 1800, 300, { attack: 0.02 }); tone(180, 90, 0.35, 0.12, { type: 'sawtooth' }); break;
+    case 'FROST_FIELD': tone(1800, 900, 0.3, 0.1, { type: 'sine' }); tone(2400, 1200, 0.4, 0.07, { type: 'sine', delay: 0.15 }); noise(0.3, 0.1, 5000, 2000, { filter: 'bandpass' }); break;
+    case 'SINGULARITY': tone(70, 220, 0.9, 0.22, { type: 'sine', attack: 0.3 }); tone(90, 40, 1.1, 0.14, { type: 'sawtooth' }); break;
+    case 'BLINK_NOVA': tone(1200, 300, 0.2, 0.12, { type: 'sine' }); noise(0.2, 0.1, 6000, 1500, { filter: 'bandpass' }); break;
+    case 'STORM_ORBS': tone(220, 880, 0.5, 0.1, { type: 'square', attack: 0.1 }); noise(0.4, 0.1, 3000, 6000, { filter: 'bandpass' }); break;
+    case 'INFERNO_PILLAR': tone(140, 60, 0.7, 0.2, { type: 'sawtooth' }); noise(0.7, 0.22, 2200, 200, { attack: 0.05 }); break;
+    case 'BLOODRAGE_LEAP': tone(160, 420, 0.3, 0.14, { type: 'sawtooth' }); noise(0.2, 0.12, 900, 300); break;
+    case 'WHIRLWIND': noise(0.9, 0.16, 500, 1500, { filter: 'bandpass', q: 1.2, attack: 0.1 }); tone(200, 320, 0.8, 0.07, { type: 'triangle' }); break;
+    case 'EARTHSPLITTER': tone(90, 40, 0.5, 0.25, { priority: true }); noise(0.5, 0.2, 700, 80); break;
+    case 'BATTLE_CRY': tone(130, 90, 0.7, 0.24, { type: 'sawtooth', priority: true }); tone(260, 180, 0.6, 0.12, { type: 'square' }); break;
+    default: break;
+  }
+}
+function sfxUlt(hero: string): void {
+  tone(55, 220, 1.4, 0.28, { type: 'sawtooth', attack: 0.5, priority: true });
+  tone(110, 440, 1.2, 0.16, { type: 'sine', attack: 0.6 });
+  noise(1.2, 0.22, 200, 3000, { attack: 0.7, priority: true });
+  void hero;
+}
+function sfxUltImpact(name: string): void {
+  tone(70, 22, 1.0, 0.5, { priority: true });
+  noise(1.0, 0.5, 3000, 60, { priority: true });
+  if (name === 'METEOR') tone(45, 20, 1.5, 0.45, { priority: true });
+}
+function sfxRainHit(): void {
+  if (!gate(G.RAIN)) return;
+  tone(900 + Math.random() * 500, 300, 0.05, 0.035, { type: 'triangle' });
+}
 function sfxShockwave(): void {
   if (!gate(G.SHOCK)) return;
   tone(110, 35, 0.4, 0.3, { priority: true });
@@ -616,6 +649,14 @@ export function initAudio(): () => void {
   offs.push(events.on('explosion', safe((p) => sfxExplosion(p.pos, p.radius))));
   offs.push(events.on('shockwave', safe(() => sfxShockwave())));
   offs.push(events.on('frostNova', safe(() => sfxFrostNova())));
+  offs.push(events.on('ability', safe((p) => sfxSkill(p.name))));
+  offs.push(events.on('ultStart', safe((p) => sfxUlt(p.hero))));
+  offs.push(events.on('ultImpact', safe((p) => sfxUltImpact(p.name))));
+  offs.push(events.on('fxImpact', safe((p) => { if (p.kind === 'RAIN_ARROW') sfxRainHit(); else sfxExplosion(p.pos, 2); })));
+  offs.push(events.on('blink', safe(() => sfxSkill('BLINK_NOVA'))));
+  offs.push(events.on('shout', safe(() => sfxSkill('BATTLE_CRY'))));
+  offs.push(events.on('quake', safe(() => sfxShockwave())));
+  offs.push(events.on('ultReady', safe(() => { tone(660, 990, 0.25, 0.12, { type: 'sine' }); tone(990, 1320, 0.3, 0.1, { type: 'sine', delay: 0.12 }); })));
   offs.push(events.on('lightning', safe(() => sfxLightning())));
   offs.push(events.on('telegraph', safe(() => sfxTelegraph())));
   offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity))));

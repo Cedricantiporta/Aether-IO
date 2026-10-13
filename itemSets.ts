@@ -36,7 +36,7 @@ export const SETS: SetDef[] = [
     bonuses: [
       { pieces: 2, text: '+10% attack speed, +8% move speed', fx: { mul: { fireRate: 0.1, moveSpeed: 0.08 } } },
       { pieces: 4, text: 'Every 5th attack fires twice', fx: { add: { echoEvery: 5 } } },
-      { pieces: 6, text: "Hawk's Focus lasts +4s, +20% crit damage", fx: { add: { hawkBonus: 4, critDamage: 0.2 } } },
+      { pieces: 6, text: "Storm of Arrows lasts +4s, +20% crit damage", fx: { add: { hawkBonus: 4, critDamage: 0.2 } } },
     ],
   },
   {

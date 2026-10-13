@@ -13,7 +13,7 @@ import { CELL, FX, embers, smokePuff } from './fx';
 import { TAU, clamp } from './util';
 
 const MAXZ = 192;
-const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9 };
+const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0 };
 const PAD = 1.25;
 
 const VS = `attribute vec4 iP; attribute vec3 iC; varying vec2 vQ; varying vec4 vP; varying vec3 vC; varying vec2 vS;
@@ -168,7 +168,8 @@ export function Zones() {
           break;
         }
         case 'FIRE': case 'WILDFIRE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.2, 0, 1); break;
-        case 'BLACKHOLE': aux = clamp((1 - frac) * 6, 0, 1) * clamp(frac * 5, 0, 1); break;
+        case 'BLACKHOLE': case 'TORNADO': aux = clamp((1 - frac) * 6, 0, 1) * clamp(frac * 5, 0, 1); break;
+        case 'FROST_FIELD': aux = clamp(frac * 3, 0, 1); break;
         case 'FROST_NOVA': aux = clamp(frac * 3, 0, 1); break;
         case 'POISON_POOL': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 6, 0, 1); break;
         case 'SHOCKWAVE': hex = hex || 0xcdbd98; break;
@@ -207,6 +208,15 @@ export function Zones() {
           if (rnd() < dt * 18) FX.add.emit(z.pos.x, 0.5, z.pos.z, 0, 4 + rnd() * 3, 0, 0.7, 0.9, 0.2, 1.2, 0.4, 2.0, 0.6, CELL.GLOW);
           break;
         }
+        case 'TORNADO': {
+          let k = (30 + R * 5) * dt; while (k > 0) { if (rnd() < k) { const a = rnd() * TAU, rr = R * (0.25 + rnd() * 0.65), h = rnd(); FX.add.emit(z.pos.x + Math.cos(a) * rr, 0.2 + h * 3.4, z.pos.z + Math.sin(a) * rr, -Math.sin(a) * rr * 2.4, 1.0 + rnd() * 2, Math.cos(a) * rr * 2.4, 0.5, 0.35, 0.05, 0.8, 1.6, 1.3, 0.7, CELL.STREAK, 0, 0.6, 0, 0, 0.1); } k -= 1; }
+          if (rnd() < dt * 14) FX.norm.emit(z.pos.x + (rnd() - 0.5) * R, 0.3, z.pos.z + (rnd() - 0.5) * R, 0, 2.5, 0, 0.8, 0.9, 1.8, 0.75, 0.9, 0.85, 0.3, CELL.SMOKE, 0, 0.5, rnd() * 6, 1);
+          break;
+        }
+        case 'FROST_FIELD':
+          if (rnd() < dt * (10 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.2, z.pos.z + Math.sin(a) * d, (rnd() - 0.5), 0.6 + rnd() * 1.4, (rnd() - 0.5), 1.0, 0.26, 0.05, 1.2, 1.9, 2.4, 0.9, CELL.STAR, 0, 0.3, rnd() * 3, 2); }
+          if (rnd() < dt * 4) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.2, z.pos.z + (rnd() - 0.5) * R, 1, 0xe0f4ff, 2.0, 1.4, 0.4, 1.0, 0.25);
+          break;
         case 'FROST_NOVA':
           if (rnd() < dt * (14 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.2, z.pos.z + Math.sin(a) * d, (rnd() - 0.5), 0.6 + rnd() * 1.4, (rnd() - 0.5), 1.0, 0.28, 0.05, 1.2, 1.9, 2.4, 0.9, CELL.STAR, 0, 0.3, rnd() * 3, 2); }
           if (rnd() < dt * 5) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.2, z.pos.z + (rnd() - 0.5) * R, 1, 0xe0f4ff, 2.0, 1.4, 0.4, 1.0, 0.3);

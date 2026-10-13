@@ -5,7 +5,7 @@
 // ============================================================================
 import { Vector3 } from 'three';
 import type {
-  Enemy, Projectile, EnemyProjectile, Zone, Pickup, Obstacle, Crate,
+  Enemy, Projectile, GroundFx, EnemyProjectile, Zone, Pickup, Obstacle, Crate,
   PlayerRuntime, DirectorState, BossHud, RunStats, CameraState, InputState,
 } from './types';
 import { SpatialGrid } from './grid';
@@ -17,6 +17,7 @@ export const MAX_PROJECTILES = 900;
 export const MAX_ENEMY_PROJECTILES = 600;
 export const MAX_ZONES = 192;
 export const MAX_PICKUPS = 500;
+export const MAX_FX = 420;
 export const MAX_CRATES = 96;
 export const SHRINE_POS: [number, number, number] = [-13, 0, -11]; // summoning shrine
 export const TRAINER_POS: [number, number, number] = [13, 0, -11]; // skill trainer
@@ -31,7 +32,7 @@ function makeEnemy(id: number): Enemy {
     hp: 1, maxHp: 1, shield: 0, speed: 1, radius: 0.6, scale: 1,
     contactDamage: 0, projectileDamage: 0, xp: 0, gold: 0,
     state: 'SPAWN', stateT: 0, attackCd: 0, animT: 0, hitFlash: 0, deathT: 0,
-    burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, slowT: 0, slowFactor: 0,
+    burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, fearT: 0, slowT: 0, slowFactor: 0,
     phase: 0, pattern: 0, patternT: 0, angle: 0, pullCount: 0,
   };
 }
@@ -56,6 +57,10 @@ function makeZone(id: number): Zone {
   };
 }
 
+function makeFx(id: number): GroundFx {
+  return { id, active: false, kind: 'RAIN_ARROW', x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, radius: 1, dmg: 0, aux: 0, seed: 0, done: false, color: 0xffffff };
+}
+
 function makePickup(id: number): Pickup {
   return { id, active: false, kind: 'XP', pos: v(), vel: v(), value: 0, item: null, t: 0, magnet: false };
 }
@@ -69,7 +74,8 @@ function makePlayer(): PlayerRuntime {
     alive: true, pos: v(), vel: v(), facing: 0, aim: new Vector3(0, 0, -10),
     hp: 100, mana: 100,
     dashT: 0, dashDir: v(), dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
-    cd: { q: 0, r: 0, e: 0 }, cdMax: { q: 7, r: 15, e: 20 },
+    cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
+    ult: 0, ultT: 0, cryT: 0, titanT: 0, whirlT: 0, air: 0,
     shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
     invulnT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
@@ -90,6 +96,7 @@ export const world = {
   projectiles: Array.from({ length: MAX_PROJECTILES }, (_, i) => makeProjectile(i)),
   enemyProjectiles: Array.from({ length: MAX_ENEMY_PROJECTILES }, (_, i) => makeEnemyProjectile(i)),
   zones: Array.from({ length: MAX_ZONES }, (_, i) => makeZone(i)),
+  fx: Array.from({ length: MAX_FX }, (_, i) => makeFx(i)),
   pickups: Array.from({ length: MAX_PICKUPS }, (_, i) => makePickup(i)),
   crates: Array.from({ length: MAX_CRATES }, (_, i) => makeCrate(i)),
   obstacles: [] as Obstacle[],           // regenerated per run (mapgen)
@@ -115,7 +122,7 @@ export type World = typeof world;
 
 // ------------------------------------------------------------ pool helpers --
 // Round-robin cursors so we don't rescan from 0 every spawn.
-const cursors = { e: 0, p: 0, ep: 0, z: 0, pk: 0 };
+const cursors = { e: 0, p: 0, ep: 0, z: 0, pk: 0, fx: 0 };
 
 function grab<T extends { active: boolean }>(pool: T[], key: keyof typeof cursors): T | null {
   const n = pool.length;
@@ -161,6 +168,13 @@ export function allocZone(): Zone | null {
   return z;
 }
 
+export function allocFx(): GroundFx | null {
+  const f = grab(world.fx, 'fx');
+  if (!f) return null;
+  f.t = 0; f.done = false; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
+  return f;
+}
+
 export function allocPickup(): Pickup | null {
   const p = grab(world.pickups, 'pk');
   if (!p) return null;
@@ -174,6 +188,7 @@ export function clearWorld(): void {
   for (const p of world.projectiles) p.active = false;
   for (const p of world.enemyProjectiles) p.active = false;
   for (const z of world.zones) z.active = false;
+  for (const f of world.fx) f.active = false;
   for (const p of world.pickups) p.active = false;
   world.itemPickupsVersion++;
   Object.assign(world.player, makePlayer(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });

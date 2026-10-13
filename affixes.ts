@@ -48,7 +48,7 @@ export const AFFIX_BY_KEY: Record<string, AffixDef> = Object.fromEntries(AFFIXES
 /** Unique lines: fixed values, only on MYTHIC gear. */
 export const UNIQUES: { key: string; label: string; stat: AffixDef['stat']; value: number; text: string }[] = [
   { key: 'u_haste', label: 'Bloodrush', stat: 'lowHpHaste', value: 0.3, text: '+30% attack speed below 50% HP' },
-  { key: 'u_hawk', label: 'Falcon Heart', stat: 'hawkBonus', value: 3, text: "Hawk's Focus lasts +3s" },
+  { key: 'u_hawk', label: 'Falcon Heart', stat: 'hawkBonus', value: 3, text: "Storm of a Thousand Arrows lasts +3s" },
   { key: 'u_proc', label: 'Resonance', stat: 'procHaste', value: 1, text: 'On-attack procs need 1 fewer attack' },
   { key: 'u_dash', label: 'Wind Walker', stat: 'dashCharges', value: 1, text: '+1 dash charge' },
   { key: 'u_echo', label: 'Echoing', stat: 'echoEvery', value: 7, text: 'Every 7th attack fires twice' },

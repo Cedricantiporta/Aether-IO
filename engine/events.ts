@@ -28,6 +28,19 @@ export interface GameEvents {
   noMana: {};
   onCooldown: { slot: string };
 
+  // ability fx (new kit)
+  fxImpact: { pos: Vector3; kind: string; radius: number };   // lightweight per-impact burst: RAIN_ARROW METEOR SPIKE ROCK
+  blink: { from: Vector3; to: Vector3 };
+  leap: { from: Vector3; to: Vector3; dur: number };
+  crater: { pos: Vector3; radius: number; color: number };
+  shout: { pos: Vector3; radius: number };
+  fissure: { from: Vector3; dir: Vector3; length: number };
+  quake: { pos: Vector3; radius: number };
+  ultStart: { hero: string; pos: Vector3 };
+  ultImpact: { pos: Vector3; name: string; radius: number };
+  ultReady: {};
+  orbZap: { from: Vector3; to: Vector3 };
+
   // fx moments
   explosion: { pos: Vector3; radius: number; color: number };
   shockwave: { pos: Vector3; radius: number; color: number };

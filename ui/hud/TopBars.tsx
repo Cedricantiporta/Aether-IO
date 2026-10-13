@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Heart } from 'lucide-react';
+import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain } from 'lucide-react';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
 import { useUiStore } from '../uiStore';
@@ -35,7 +35,7 @@ export const PlayerPlate: React.FC = () => {
     const p = world.player;
     const f = (Math.min(1, Math.max(0, p.hp / Math.max(1, maxRef.current)))).toFixed(3);
     if (hpEl.current && last.current.hp !== f) { last.current.hp = f; hpEl.current.style.setProperty('--fill', f); }
-    const vals: Record<string, number> = { hawk: p.hawkT, rage: p.rageT, sprint: p.sprintT, vitality: p.vitalityT };
+    const vals: Record<string, number> = { cry: p.cryT, rage: p.rageT, whirl: p.whirlT, titan: p.titanT };
     for (const k in vals) {
       const el = refs.current[k]; if (!el) continue;
       const v = vals[k];
@@ -62,10 +62,10 @@ export const PlayerPlate: React.FC = () => {
         </motion.div>
         <div ref={hpEl} className="hp-strip"><i /></div>
         <div className="flex gap-[.35rem] mt-[.1rem]">
-          <BuffSlot id="hawk" refs={refs} color="#ffd24a" label="Hawk's Focus" icon={<Crosshair size={15} />} />
+          <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={15} />} />
           <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={15} />} />
-          <BuffSlot id="sprint" refs={refs} color="#6ee7a0" label="Wind Sprint" icon={<Wind size={15} />} />
-          <BuffSlot id="vitality" refs={refs} color="#ff8a8a" label="War Vitality" icon={<Heart size={15} />} />
+          <BuffSlot id="whirl" refs={refs} color="#ffd27a" label="Whirlwind" icon={<Wind size={15} />} />
+          <BuffSlot id="titan" refs={refs} color="#ff8a3a" label="Titan's Wrath" icon={<Mountain size={15} />} />
         </div>
       </div>
     </div>

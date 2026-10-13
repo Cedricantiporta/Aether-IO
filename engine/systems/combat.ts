@@ -39,6 +39,15 @@ let thornT = -1;
 const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 
 // ------------------------------------------------------------------ helpers --
+/** Ultimate charge (0..100) from damage dealt and kills. */
+export function addUlt(n: number): void {
+  const p = world.player;
+  if (p.ultT > 0 || p.ult >= 100) return;
+  const wl = useGameStore.getState().skillLevels.weapon;
+  p.ult = Math.min(100, p.ult + n * (1 + 0.1 * Math.max(0, wl - 1)));
+  if (p.ult >= 100) events.emit('ultReady', {});
+}
+
 export function addShake(amount: number): void {
   events.emit('shake', { amount });
 }
@@ -169,6 +178,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     e.hp -= dealt;
     const run = world.run;
     run.damageDealt += dealt;
+    if (o.source === 'PLAYER') addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, dealt / Math.max(1, e.maxHp)) + (o.dot ? 0 : 0.015));
     if (!o.dot && dealt > run.highestHit) run.highestHit = dealt;
     // Life steal (gear affixes / sets / talents): direct player damage only; healed in chunks to limit floating text.
     if (o.source === 'PLAYER' && !o.dot) {
@@ -197,6 +207,7 @@ export function killEnemy(e: Enemy): void {
   run.kills++;
   if (e.elite) run.eliteKills++;
   if (e.boss) run.bossKills++;
+  addUlt(e.boss ? 15 : e.elite ? 4 : 0.85);
 
   const st = useGameStore.getState();
   const loot = DIFFICULTY_MODS[st.difficulty].loot;

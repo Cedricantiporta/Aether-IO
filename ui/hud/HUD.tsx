@@ -6,10 +6,12 @@ import { Minimap } from './Minimap';
 import { ActionBar } from './ActionBar';
 import { VitalOrb, XpBar } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
+import { UltOverlay } from './UltOverlay';
 
 /** In-game HUD. Re-renders only on store changes; per-frame values go through refs. */
 export const HUD: React.FC = () => (
   <>
+    <UltOverlay />
     <Vignettes />
     <Countdown />
     <RespiteBar />

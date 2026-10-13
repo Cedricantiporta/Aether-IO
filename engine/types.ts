@@ -74,6 +74,7 @@ export interface Enemy {
   poisonT: number; poisonDps: number;
   freezeT: number;       // fully frozen (blue, no move/attack)
   stunT: number;         // stunned (spinning stars, no move/attack)
+  fearT: number;         // terrified: flees from the player
   slowT: number; slowFactor: number; // speed *= (1 - slowFactor)
 
   // boss bookkeeping
@@ -88,7 +89,7 @@ export interface Enemy {
 export type ProjectileKind =
   | 'ARROW' | 'MAGIC' | 'AXE'
   | 'FIREBALL' | 'PIERCING_ARROW' | 'BURNING_ARROW' | 'FREEZING_ARROW'
-  | 'STORM' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW';
+  | 'STORM' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW';
 
 export interface Projectile {
   id: number;
@@ -139,6 +140,9 @@ export type ZoneKind =
   | 'TELEGRAPH_CIRCLE'  // hostile: fills up, damages player at end (boss slam, bomber)
   | 'TELEGRAPH_LINE'    // hostile: charge lane warning (dir + length + width)
   | 'POISON_POOL'       // hostile: dps while standing in it
+  | 'TORNADO'           // player: short-lived pull + damage vortex (Gale Arrow trail)
+  | 'FROST_FIELD'       // player: slowing ice field with damage ticks
+  | 'METEOR_SHADOW'     // visual-only telegraph (fills up), no effect on expiry
   | 'SHOCKWAVE'         // visual-only expanding ring (stomp, barrier)
   // ---- environmental hazards: affect BOTH player and enemies (ignore `hostile`)
   | 'PUDDLE'            // shallow water: slows anything inside (player 35%, enemies 35%); fire zones touching it are extinguished
@@ -163,6 +167,26 @@ export interface Zone {
   permanent: boolean;    // map hazard placed by mapgen: never expires (life ignored)
   period: number;        // GAS vents: pulse cycle length (s); 0 = always on
   activeFor: number;     // GAS vents: seconds active per cycle
+}
+
+// ------------------------------------------------------------- ground fx --
+// Timed ground effects driven by abilities: falling arrows/meteors, spikes, traps, pillars, rings.
+export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'PILLAR' | 'RING';
+export interface GroundFx {
+  id: number;
+  active: boolean;
+  kind: GroundFxKind;
+  x: number; z: number;
+  sx: number; sz: number;     // start point (TRAP throw origin)
+  t: number;                  // age
+  delay: number;              // time of impact / eruption
+  life: number;               // total lifetime
+  radius: number;
+  dmg: number;
+  aux: number;                // kind-specific (stun time, ring max radius, ...)
+  seed: number;
+  done: boolean;              // impact already resolved
+  color: number;
 }
 
 // ---------------------------------------------------------------- pickups --
@@ -246,8 +270,14 @@ export interface PlayerRuntime {
   dashCd: number;        // recharge timer for next charge
   dashCdMax: number;
 
-  cd: { q: number; r: number; e: number };
-  cdMax: { q: number; r: number; e: number };
+  cd: { q: number; e: number; s3: number; s4: number };
+  cdMax: { q: number; e: number; s3: number; s4: number };
+  ult: number;           // ultimate charge 0..100
+  ultT: number;          // seconds the ultimate effect is still running (0 = idle)
+  cryT: number;          // barbarian Battle Cry: +30% damage
+  titanT: number;        // barbarian ultimate: giant form
+  whirlT: number;        // barbarian Whirlwind
+  air: number;           // height above ground (leap arc), render only
 
   shieldCharges: number;
   maxShieldCharges: number;
