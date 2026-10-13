@@ -25,7 +25,7 @@ export interface EnemyDef {
 
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   SLIME: {
-    name: 'Slime', hp: 30, speed: 3.2, radius: 0.7, scale: 1, contactDamage: 7, projectileDamage: 0,
+    name: 'Slime', hp: 15, speed: 3.2, radius: 0.7, scale: 1, contactDamage: 7, projectileDamage: 0,
     xp: 4, gold: 1, cost: 1, minWave: 1, weight: 10, color: 0x65a30d, knockResist: 0, armor: 0,
   },
   GOBLIN: {
