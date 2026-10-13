@@ -5,7 +5,7 @@ import { useRaf } from '../hooks/useRaf';
 import { useGameEvent } from '../hooks/useEvent';
 import { tip } from '../components/Tooltip';
 
-export interface CdInfo { t: number; max: number; }
+export interface CdInfo { t: number; max: number; hits?: boolean; }
 export interface PipInfo { cur: number; max: number; }
 
 interface Props {
@@ -39,7 +39,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
 
   useRaf(() => {
     const s = st.current;
-    let frac = 0, show = false, t = 0;
+    let frac = 0, show = false, t = 0, hits = false;
     let pipInfo: PipInfo | undefined;
     if (getPips) pipInfo = getPips();
     if (getCd) {
@@ -50,6 +50,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
       const mx = c.max > 0 ? c.max : s.peak;
       frac = mx > 0 ? Math.min(1, Math.max(0, t / mx)) : 0;
       show = t > 0.04 && (!pipInfo || pipInfo.cur < pipInfo.max);
+      hits = !!c.hits;
       if (s.prevT > 0.04 && t <= 0.04 && ready.current) {
         ready.current.classList.remove('flash'); void ready.current.offsetWidth; ready.current.classList.add('flash');
       }
@@ -60,7 +61,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
       if (v !== s.cd) { s.cd = v; sweep.current.style.setProperty('--cd', v); sweep.current.style.setProperty('--cdv', show ? '1' : '0'); }
     }
     if (txt.current) {
-      const tx = show && !pipInfo ? fmtCd(t) : '';
+      const tx = show && !pipInfo ? (hits ? String(Math.ceil(t)) : fmtCd(t)) : '';
       if (tx !== s.text) { s.text = tx; txt.current.textContent = tx; }
     }
     if (lack.current) {

@@ -141,6 +141,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     if (!lobby && alive) {
       if (a.hurtT > 0) { r += a.hurtT * 0.9; gg += a.hurtT * 0.05; }
       if (p.invulnT > 0 && !dashing) { const k = 0.18 + 0.14 * Math.sin(t * 16); gg += k * 0.8; bb += k; }
+      if (p.hawkT > 0) { const k = 0.3 + 0.15 * Math.sin(t * 9); r += k * 0.9; gg += k * 0.75; bb += k * 0.15; }
       if (p.rageT > 0) r += 0.28 + 0.12 * Math.sin(t * 12);
       if (p.sprintT > 0) { gg += 0.2; r += 0.08; }
       if (p.vitalityT > 0) gg += 0.16 + 0.08 * Math.sin(t * 6);
@@ -155,6 +156,10 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     // ---- continuous status particles
     if (dt > 0 && !lobby && alive) {
       const px = p.pos.x, pz = p.pos.z;
+      if (p.hawkT > 0) {
+        FX.add.emit(px, 1.2, pz, 0, 0, 0, 0.1, 3.6, 3.0, 2.4, 1.2, 0.18, 0.3, CELL.GLOW);
+        if (Math.random() < dt * 30) FX.add.emit(px + (Math.random() - 0.5) * 1.2, 0.2, pz + (Math.random() - 0.5) * 1.2, 0, 2.5, 0, 0.8, 0.3, 0.05, 2.2, 1.8, 0.4, 0.9, CELL.STAR, 0, 0.2, t, 2);
+      }
       if (p.rageT > 0) {
         FX.add.emit(px, 1.2, pz, 0, 0, 0, 0.1, 3.4, 3.2, 1.6, 0.18, 0.08, 0.3, CELL.GLOW);
         if (Math.random() < dt * 40) embers(px, 0.2, pz, 1, 0xff4a1a, 0.7, 3.4, 0.8, 0.2);

@@ -165,7 +165,13 @@ export function Projectiles() {
       const yaw = Math.atan2(vx, vz), pitch = -Math.atan2(vy, hs);
       const emit = dt > 0;
       switch (p.kind) {
-        case 'ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
+        case 'ARROW':
+          if (p.emp) {
+            place(ims, i, x, y, z, yaw, pitch, 0, 1.25);
+            pushHalo(x, y, z, 1.6, 2.2, 1.7, 0.4, 0.7, CELL.GLOW);
+            if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.3, 0.5, 0.05, 2.4, 1.9, 0.5, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
+          } else place(ims, i, x, y, z, yaw, pitch, 0, 1);
+          break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
         case 'PIERCING_ARROW':
           place(ims, i, x, y, z, yaw, pitch, t * 12, 1);

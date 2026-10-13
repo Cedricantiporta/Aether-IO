@@ -56,11 +56,11 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 0.3,
   },
   BOSS_GOLEM: {
-    name: 'Gorath the Mountain', hp: 2500, speed: 2.8, radius: 2.6, scale: 4, contactDamage: 25, projectileDamage: 18,
+    name: 'Gorath the Mountain', hp: 1625, speed: 2.8, radius: 2.6, scale: 4, contactDamage: 25, projectileDamage: 18,
     xp: 400, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1,
   },
   BOSS_LICH: {
-    name: 'Malakar the Undying', hp: 2200, speed: 3.4, radius: 1.4, scale: 2.6, contactDamage: 18, projectileDamage: 14,
+    name: 'Malakar the Undying', hp: 1430, speed: 3.4, radius: 1.4, scale: 2.6, contactDamage: 18, projectileDamage: 14,
     xp: 500, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1,
   },
 };

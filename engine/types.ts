@@ -103,6 +103,8 @@ export interface Projectile {
   state: number;         // generic sub-state (AXE: 0 out, 1 returning)
   spin: number;          // render rotation accumulator
   homing: number;        // 0 = none, else turn rate rad/s toward nearest enemy
+  emp: boolean;          // fired during Hawk's Focus (render glow)
+  procLv: number;        // >0: on-hit proc payload (wizard thunder chain), value = skill level
   trailT: number;        // emitter accumulator (FIREBALL fire trail, particles)
 }
 
@@ -246,6 +248,7 @@ export interface PlayerRuntime {
   shieldCdMax: number;
 
   invulnT: number;
+  hawkT: number;         // archer R: Hawk's Focus (+60% attack speed, +40% damage)
   rageT: number;         // barbarian Q: attack speed x2
   sprintT: number;       // archer E: speed x2 + invuln
   vitalityT: number;     // barbarian E: heal over time

@@ -25,6 +25,7 @@ export interface ProjSpec {
   bounces?: number;
   homing?: number;
   y?: number;
+  emp?: boolean;
 }
 
 const ORIGIN_Y = 1.2;
@@ -69,7 +70,71 @@ export function spawnProjectile(
   p.effect = spec.effect;
   p.bounces = spec.bounces ?? 0;
   p.homing = spec.homing ?? 0;
+  p.emp = spec.emp === true;
   return p;
+}
+
+// ------------------------------------------------------------ proc system --
+/** Per-run on-attack proc state. Reset by resetProcs() on startRun. */
+export const procFlags = { stomp: 0 };   // set to skill level by the basic attack; consumed by skills.ts
+let procCount = 0;                       // volleys since the last proc
+let archerNext = 0;                      // 0 = fire next, 1 = ice next
+
+const procN = (lv: number): number => Math.max(2, 11 - lv);
+
+export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; }
+
+/** HUD: attacks remaining until `skill` procs (0 when locked / not a proc skill of this hero). */
+export function procHud(skill: string, out: { t: number; max: number }): void {
+  const st = useGameStore.getState();
+  const lv = st.skillLevels;
+  let n = 0, left = 0;
+  if (st.hero === 'ARCHER' && (skill === 'burning' || skill === 'freezing')) {
+    const fire = lv.burning > 0, ice = lv.freezing > 0;
+    if (!fire && !ice) { out.t = 0; out.max = 0; return; }
+    const nextIce = fire && ice ? archerNext === 1 : ice;
+    const next = nextIce ? 'freezing' : 'burning';
+    const nNext = procN(nextIce ? lv.freezing : lv.burning);
+    if (skill === next) { n = nNext; left = n - procCount; }
+    else {
+      const l = skill === 'freezing' ? lv.freezing : lv.burning;
+      if (l <= 0) { out.t = 0; out.max = 0; return; }
+      n = nNext + procN(l); left = n - procCount;
+    }
+  } else if (st.hero === 'WIZARD' && skill === 'thunder' && lv.thunder > 0) {
+    n = procN(lv.thunder); left = n - procCount;
+  } else if (st.hero === 'BARBARIAN' && skill === 'stamp' && lv.stamp > 0) {
+    n = procN(lv.stamp); left = n - procCount;
+  } else { out.t = 0; out.max = 0; return; }
+  out.t = left > 0 ? left : 0; out.max = n;
+}
+
+const chainOut: number[] = [];
+const chainOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', crit: false };
+const chainHit: Enemy[] = [];
+/** Thundercaller proc: lightning leaps from `from` to 2 + lvl nearby enemies. */
+function chainLightning(from: Enemy, lvl: number): void {
+  const st = useGameStore.getState().stats;
+  const dmg = st.damage * 0.9 * st.skillDamage * (1 + 0.15 * Math.max(0, lvl - 1));
+  const ids = world.enemyGrid.query(from.pos.x, from.pos.z, 24, chainOut);
+  chainHit.length = 0;
+  chainHit.push(from);
+  let cur = from;
+  for (let n = 2 + lvl; n > 0; n--) {
+    let best: Enemy | null = null, bd = 18 * 18;
+    for (let i = 0; i < ids.length; i++) {
+      const e = world.enemies[ids[i]];
+      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || chainHit.indexOf(e) !== -1) continue;
+      const dx = e.pos.x - cur.pos.x, dz = e.pos.z - cur.pos.z;
+      const d = dx * dx + dz * dz;
+      if (d < bd) { bd = d; best = e; }
+    }
+    if (!best) break;
+    events.emit('lightning', { from: new Vector3(cur.pos.x, 1.2, cur.pos.z), to: new Vector3(best.pos.x, 1.2, best.pos.z) });
+    damageEnemy(best, dmg, chainOpts);
+    chainHit.push(best);
+    cur = best;
+  }
 }
 
 // ------------------------------------------------------------ basic attack --
@@ -109,6 +174,29 @@ export function fireBasicAttack(): void {
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; break;
   }
 
+  // ---- on-attack procs (per-volley counter)
+  const lv = st.skillLevels;
+  const hero = st.hero;
+  procCount++;
+  let special: 'BURNING_ARROW' | 'FREEZING_ARROW' | null = null;
+  let specialLv = 0;
+  let thunderProc = 0;
+  if (hero === 'ARCHER' && kind === 'ARROW' && (lv.burning > 0 || lv.freezing > 0)) {
+    const useIce = lv.burning > 0 && lv.freezing > 0 ? archerNext === 1 : lv.freezing > 0;
+    specialLv = useIce ? lv.freezing : lv.burning;
+    if (procCount >= procN(specialLv)) {
+      procCount = 0;
+      special = useIce ? 'FREEZING_ARROW' : 'BURNING_ARROW';
+      if (lv.burning > 0 && lv.freezing > 0) archerNext = useIce ? 0 : 1;
+    }
+  } else if (hero === 'WIZARD' && kind === 'MAGIC' && lv.thunder > 0) {
+    if (procCount >= procN(lv.thunder)) { procCount = 0; thunderProc = lv.thunder; }
+  } else if (hero === 'BARBARIAN' && kind === 'AXE' && lv.stamp > 0) {
+    if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
+  }
+
+  const emp = pl.hawkT > 0;           // Hawk's Focus: +40% damage, glowing shots
+  const dmgMul = emp ? 1.4 : 1;
   const baseX = pl.pos.x + dir.x * 0.9;
   const baseZ = pl.pos.z + dir.z * 0.9;
   for (let i = 0; i < count; i++) {
@@ -123,8 +211,26 @@ export function fireBasicAttack(): void {
       dx = dir.x * c - dir.z * s;
       dz = dir.x * s + dir.z * c;
     }
-    spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage, {
-      life, pierce, aoe, radius, knockback: stats.knockback, effect,
+    if (i === Math.floor((count - 1) / 2) && (special || thunderProc)) {
+      if (special) {
+        // Main projectile of this volley becomes the special arrow.
+        const burn = special === 'BURNING_ARROW';
+        const dmg = stats.damage * dmgMul * (burn ? 1.05 : 1.2) * stats.skillDamage * (1 + 0.15 * (specialLv - 1));
+        spawnProjectile(special, ox, oz, dx, dz, 30, dmg, {
+          emp, life: 3, pierce: burn ? 3 : 2, aoe: burn ? 2.5 : 2, radius: 3, knockback: stats.knockback,
+          effect: burn ? { type: 'BURN', duration: 4, value: stats.damage * 0.3 }
+            : { type: 'SLOW', duration: 3 + 0.3 * specialLv, value: 0.6 },
+        });
+        continue;
+      }
+      const p = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
+        life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
+      });
+      if (p) p.procLv = thunderProc;
+      continue;
+    }
+    spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
+      life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
     });
   }
   pl.anim.attackT = 1;
@@ -196,11 +302,17 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
     splashOpts.kind = dkind;
     splashOpts.knockback = 0;
     let status: StatusEffect | undefined;
-    if (fx && (p.kind === 'BURNING_ARROW' || p.kind === 'FREEZING_ARROW')) {
+    let splashMul = 0.5;
+    if (p.kind === 'FREEZING_ARROW') {
+      // Much less explosive than before: small, weak splash, softer slow.
+      splashMul = 0.4;
+      splashStatus.type = 'SLOW'; splashStatus.duration = 2; splashStatus.value = 0.4;
+      status = splashStatus;
+    } else if (fx && p.kind === 'BURNING_ARROW') {
       splashStatus.type = fx.type; splashStatus.duration = fx.duration; splashStatus.value = fx.value;
       status = splashStatus;
     }
-    damageEnemiesInRadius(e.pos.x, e.pos.z, p.aoeRadius, dmg * 0.5, splashOpts, status, e.id);
+    damageEnemiesInRadius(e.pos.x, e.pos.z, p.aoeRadius, dmg * splashMul, splashOpts, status, e.id);
     if (p.kind === 'BURNING_ARROW' || p.kind === 'FREEZING_ARROW') {
       events.emit('explosion', { pos: e.pos.clone(), radius: p.aoeRadius, color: p.kind === 'BURNING_ARROW' ? 0xef4444 : 0x38bdf8 });
     }
@@ -217,6 +329,8 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.knockback = p.knockback;
   hitOpts.source = p.kind === 'PET_BOLT' ? 'PET' : 'PLAYER';
   damageEnemy(e, dmg, hitOpts);
+
+  if (p.procLv > 0) { const l = p.procLv; p.procLv = 0; chainLightning(e, l); }
 
   p.hitIds.push(e.id);
   events.emit('projectileImpact', { pos: p.pos, kind: p.kind });

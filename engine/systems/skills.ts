@@ -1,34 +1,36 @@
 // ============================================================================
-// Passive hero skills (burning/freezing arrows, blizzard, storm, thunder,
-// mega stamp, orbital blades). Numbers follow the original SkillManager.
+// Passive hero skills (blizzard, storm, orbital blades; burning/freezing/thunder/stamp
+// are on-attack procs driven by projectiles.fireBasicAttack). Numbers follow the original SkillManager.
 // ============================================================================
 import { Vector3 } from 'three';
 import { world, allocProjectile, allocZone } from '../world';
 import { events } from '../events';
-import type { Enemy, Projectile } from '../types';
+import type { Projectile } from '../types';
 import { useGameStore } from '../../store';
 import {
   damageEnemy, damageEnemiesInRadius, findNearestEnemy, getAimDir, rollCrit, lastCrit, trySpendMana,
   type DamageOpts, type StatusEffect,
 } from './combat';
-import { spawnProjectile } from './projectiles';
+import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
 
-/** HUD cooldown progress. `t` = seconds remaining, `max` = full cooldown. Mutated in place every frame. */
-export const passiveCooldowns: Record<string, { t: number; max: number }> = {
-  burning: { t: 0, max: 8 },
-  freezing: { t: 0, max: 7 },
-  freezeSpell: { t: 0, max: 14 },
-  storm: { t: 0, max: 15 },
-  thunder: { t: 0, max: 7 },
-  stamp: { t: 0, max: 12 },
-  orbital: { t: 0, max: 2 },
+/**
+ * HUD progress. kind 'time': `t` = seconds remaining, `max` = full cooldown.
+ * kind 'hits' (on-attack procs): `t` = attacks remaining, `max` = attacks per proc.
+ * Mutated in place every frame.
+ */
+export const passiveCooldowns: Record<string, { t: number; max: number; kind: 'time' | 'hits' }> = {
+  burning: { t: 0, max: 10, kind: 'hits' },
+  freezing: { t: 0, max: 10, kind: 'hits' },
+  freezeSpell: { t: 0, max: 14, kind: 'time' },
+  storm: { t: 0, max: 15, kind: 'time' },
+  thunder: { t: 0, max: 10, kind: 'hits' },
+  stamp: { t: 0, max: 10, kind: 'hits' },
+  orbital: { t: 0, max: 2, kind: 'time' },
 };
 
 const aim = new Vector3();
 const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
 const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
-const thunderPool: Enemy[] = [];
-const thunderOut: number[] = [];
 const blades: Projectile[] = [];
 const stompStun: StatusEffect = { type: 'STUN', duration: 2 };
 const stompOpts1: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
@@ -36,19 +38,19 @@ const stompOpts2: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 
 const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const freeze5: StatusEffect = { type: 'FREEZE', duration: 5.1 };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
-const thunderOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', crit: false };
 const bladeOut: number[] = [];
 
-let burnT = 0, freezeT = 0, blizzT = 0, stormT = 0, thunderT = 0, stampT = 0;
-let stampStage = 0, stampSeqT = 0;
+let blizzT = 0, stormT = 0;
+let stampStage = 0, stampSeqT = 0, stampLv = 1;
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  burnT = freezeT = blizzT = stormT = thunderT = stampT = 0;
+  blizzT = stormT = 0;
   stampStage = 0; stampSeqT = 0;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
+  resetProcs();
 }
 
 function setCd(key: string, remaining: number, max: number): void {
@@ -71,33 +73,19 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
   }
 }
 
-function fireArrowFan(kind: 'BURNING_ARROW' | 'FREEZING_ARROW', mult: number, level: number, effect: Projectile['effect']): void {
-  const st = useGameStore.getState().stats;
-  const dir = getAimDir(aim);
-  const pl = world.player;
-  const dmg = st.damage * mult * st.skillDamage * 2.0 * lvScale(level);
-  for (let i = -1; i <= 1; i++) {
-    const a = i * 0.5;
-    const c = Math.cos(a), s = Math.sin(a);
-    spawnProjectile(kind, pl.pos.x + dir.x * 0.9, pl.pos.z + dir.z * 0.9,
-      dir.x * c - dir.z * s, dir.x * s + dir.z * c, 30, dmg,
-      { life: 3, pierce: 5, aoe: 5, radius: 3, knockback: st.knockback, effect });
-  }
-  pl.anim.castT = 1;
-}
-
 function stomp(stage: 1 | 2, level: number): void {
   const st = useGameStore.getState().stats;
   const pl = world.player;
+  const R = 12 + level;
   const dmg = st.damage * 1.5 * st.skillDamage * lvScale(level);
-  if (stage === 1) damageEnemiesInRadius(pl.pos.x, pl.pos.z, 16, dmg, stompOpts1, stompStun);
-  else damageEnemiesInRadius(pl.pos.x, pl.pos.z, 16, dmg, stompOpts2);
+  if (stage === 1) damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts1, stompStun);
+  else damageEnemiesInRadius(pl.pos.x, pl.pos.z, R, dmg, stompOpts2);
   const z = allocZone();
   if (z) {
     z.active = true; z.kind = 'SHOCKWAVE'; z.hostile = false;
-    z.pos.set(pl.pos.x, 0, pl.pos.z); z.radius = 16; z.life = z.maxLife = 0.5; z.damage = 0; z.color = 0xf97316;
+    z.pos.set(pl.pos.x, 0, pl.pos.z); z.radius = R; z.life = z.maxLife = 0.5; z.damage = 0; z.color = 0xf97316;
   }
-  events.emit('shockwave', { pos: pl.pos.clone(), radius: 16, color: 0xf97316 });
+  events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xf97316 });
   pl.anim.castT = 1;
 }
 
@@ -183,33 +171,6 @@ function updateOrbitals(dt: number, level: number): void {
   }
 }
 
-function updateThunder(level: number): void {
-  const st = useGameStore.getState();
-  const pl = world.player;
-  const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, 40, thunderOut);
-  thunderPool.length = 0;
-  for (let i = 0; i < ids.length; i++) {
-    const e = world.enemies[ids[i]];
-    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
-    const dx = e.pos.x - pl.pos.x, dz = e.pos.z - pl.pos.z;
-    if (dx * dx + dz * dz < 1600) thunderPool.push(e);
-  }
-  if (thunderPool.length === 0) return;
-  if (!trySpendMana(st.getManaCost('thunder'))) return;
-  thunderT = 0;
-  for (let i = 0; i < level && thunderPool.length > 0; i++) {
-    const idx = Math.floor(Math.random() * thunderPool.length);
-    const target = thunderPool[idx];
-    thunderPool[idx] = thunderPool[thunderPool.length - 1];
-    thunderPool.pop();
-    const mult = rollCrit(st.stats.critRate, st.stats.critDamage);
-    thunderOpts.crit = lastCrit;
-    const dmg = st.stats.damage * 0.75 * (1 + level * 0.1) * mult;
-    events.emit('lightning', { from: new Vector3(target.pos.x, 40, target.pos.z), to: target.pos.clone() });
-    damageEnemy(target, dmg, thunderOpts);
-  }
-}
-
 export function updateSkills(dt: number): void {
   const st = useGameStore.getState();
   const lv = st.skillLevels;
@@ -217,29 +178,8 @@ export function updateSkills(dt: number): void {
   const pl = world.player;
   if (!pl.alive) return;
 
-  if (lv.burning > 0) {
-    burnT += dt;
-    const max = Math.max(2, 8 - lv.burning * 0.5) * cdrMul();
-    setCd('burning', max - burnT, max);
-    if (burnT >= max) {
-      if (findNearestEnemy(pl.pos.x, pl.pos.z, 35) && trySpendMana(st.getManaCost('burning'))) {
-        burnT = 0;
-        fireArrowFan('BURNING_ARROW', 0.525, lv.burning, { type: 'BURN', duration: 4, value: stats.damage * 0.3 });
-      } else burnT = max;
-    }
-  }
-
-  if (lv.freezing > 0) {
-    freezeT += dt;
-    const max = Math.max(2, 7 - lv.freezing * 0.5) * cdrMul();
-    setCd('freezing', max - freezeT, max);
-    if (freezeT >= max) {
-      if (findNearestEnemy(pl.pos.x, pl.pos.z, 35) && trySpendMana(st.getManaCost('freezing'))) {
-        freezeT = 0;
-        fireArrowFan('FREEZING_ARROW', 0.75, lv.freezing, { type: 'FREEZE', duration: 1.5 });
-      } else freezeT = max;
-    }
-  }
+  // On-attack procs: HUD counters (logic lives in projectiles.fireBasicAttack).
+  for (const k of ['burning', 'freezing', 'thunder', 'stamp'] as const) procHud(k, passiveCooldowns[k]);
 
   if (lv.freezeSpell > 0) {
     blizzT += dt;
@@ -274,27 +214,13 @@ export function updateSkills(dt: number): void {
     }
   }
 
-  if (lv.stamp > 0) {
-    if (stampStage === 0) {
-      stampT += dt;
-      const max = Math.max(4, 12 - lv.stamp * 0.5) * cdrMul();
-      setCd('stamp', max - stampT, max);
-      if (stampT >= max && findNearestEnemy(pl.pos.x, pl.pos.z, 16) && trySpendMana(st.getManaCost('stamp'))) {
-        stampStage = 1; stampSeqT = 0;
-        stomp(1, lv.stamp);
-      }
-    } else {
-      stampSeqT += dt;
-      if (stampSeqT >= 0.5) { stomp(2, lv.stamp); stampStage = 0; stampT = 0; }
-    }
+  // Mega Stamp: the basic attack flags a stomp; stage 2 follows 0.5s after stage 1.
+  if (stampStage === 0) {
+    if (procFlags.stomp > 0) { stampLv = procFlags.stomp; procFlags.stomp = 0; stampStage = 1; stampSeqT = 0; stomp(1, stampLv); }
+  } else {
+    stampSeqT += dt;
+    if (stampSeqT >= 0.5) { stomp(2, stampLv); stampStage = 0; }
   }
 
   if (lv.orbital > 0) updateOrbitals(dt, lv.orbital);
-
-  if (lv.thunder > 0) {
-    thunderT += dt;
-    const tmax = 7 * cdrMul();
-    setCd('thunder', tmax - thunderT, tmax);
-    if (thunderT > tmax) updateThunder(lv.thunder);
-  }
 }

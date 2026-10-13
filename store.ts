@@ -164,8 +164,14 @@ export const getEffectiveStats = (): PlayerStats => {
   const p = world.player;
   const out = { ...s };
   if (p.rageT > 0) out.fireRate *= 2;
+  if (p.hawkT > 0) { out.fireRate *= 1.6; out.damage *= 1.4; }
   if (p.sprintT > 0) out.moveSpeed *= 2;
   return out;
+};
+
+/** Class proc skills start unlocked at level 1 each run. */
+const PROC_START: Record<HeroClass, Partial<SkillLevels>> = {
+  ARCHER: { burning: 1, freezing: 1 }, WIZARD: { thunder: 1 }, BARBARIAN: { stamp: 1 },
 };
 
 const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: PlayerStats): string => {
@@ -180,11 +186,13 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
     if (level === 0) return `Unlock: Summons 2 blades dealing ${f(dmg * 1.5)} dmg/hit.`;
     return `Blades: ${count} -> ${nextCount}. Dmg: ${d} -> ${nextD}.`;
   }
-  if (key === 'thunder') {
-    const d = f(dmg * 0.75 * (1 + level * 0.1));
-    const nd = f(dmg * 0.75 * (1 + nextLvl * 0.1));
-    if (level === 0) return `Unlock: Strikes 1 enemy for ${f(dmg * 0.75)} dmg every 7s.`;
-    return `Targets: ${level} -> ${nextLvl}. Dmg: ${d} -> ${nd}.`;
+  if (key === 'thunder' || key === 'burning' || key === 'freezing' || key === 'stamp') {
+    const n = (l: number) => Math.max(2, 11 - l);
+    const every = level === 0 ? `Unlock: every ${n(1)}th attack` : `Every ${n(level)}th attack -> every ${n(nextLvl)}th`;
+    if (key === 'thunder') return `${every}: chain lightning hits ${2 + (level || 1)}${level ? ` -> ${2 + nextLvl}` : ''} enemies. Dmg: ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * Math.max(0, level - 1)))}${level ? ` -> ${f(dmg * 0.9 * stats.skillDamage * (1 + 0.15 * level))}` : ''}.`;
+    if (key === 'stamp') return `${every}: Mega Stomp shockwave. Radius ${12 + (level || 1)}${level ? ` -> ${12 + nextLvl}` : ''}.`;
+    if (key === 'burning') return `${every}: fire arrow (pierce 3, burn, small blast). Stronger per level.`;
+    return `${every}: ice arrow (strong slow, small blast). Slow lasts ${f(3 + 0.3 * (level || 1))}s${level ? ` -> ${f(3 + 0.3 * nextLvl)}s` : ''}.`;
   }
   if (key === 'barrier') {
     const dur = f(1.0 + level * 0.2), ndur = f(1.0 + nextLvl * 0.2);
@@ -419,7 +427,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         skillPoints: 30,
         baseStats: startStats,
         stats: calculateStats(startStats, equipment),
-        skillLevels: { ...INITIAL_SKILLS },
+        skillLevels: { ...INITIAL_SKILLS, ...PROC_START[state.hero] },
         activeAbilityQ: WEAPON_Q[state.hero],
         inventory,
         equipment,
@@ -507,6 +515,11 @@ export const useGameStore = create<GameState>()((set, get) => {
           damage: base.damage + 1,
           defense: base.defense + 0.5,
         };
+        // Class scaling per hero level (shown on the character sheet).
+        const hero = get().hero;
+        if (hero === 'ARCHER') base.fireRate *= 1.03;
+        else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
+        else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
       }
 
       if (level === startLevel) {
@@ -616,16 +629,12 @@ export const useGameStore = create<GameState>()((set, get) => {
           if (s.activeAbilityQ === 'PIERCING_SHOT') level = lv.piercing;
           else if (s.activeAbilityQ === 'GRAVITY_SPELL') level = lv.gravity;
           else if (s.activeAbilityQ === 'RAGE') level = lv.rage;
-          cost = 30 + level * 5;
+          cost = s.activeAbilityQ === 'PIERCING_SHOT' ? 15 + level * 3 : 30 + level * 5;
           break;
         }
         case 'e': cost = 20 + lv.special * 5; break;
-        case 'dash': cost = 5 + lv.dash * 2; break;
-        case 'thunder': cost = 5 + lv.thunder; break;
-        case 'burning': cost = 5 + lv.burning; break;
-        case 'freezing': cost = 5 + lv.freezing; break;
+        case 'dash': cost = 0; break;
         case 'freezeSpell': cost = 15 + lv.freezeSpell * 2; break;
-        case 'stamp': cost = 15 + lv.stamp * 2; break;
         default: cost = 0;
       }
       return s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;

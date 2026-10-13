@@ -49,7 +49,7 @@ export function initPlayer(): void {
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
   p.shieldCharges = p.maxShieldCharges;
   p.shieldCd = 0;
-  p.cdMax.q = 7; p.cdMax.r = 15; p.cdMax.e = 20; p.dashCdMax = 4;
+  p.cdMax.q = 4; p.cdMax.r = 15; p.cdMax.e = 20; p.dashCdMax = 4;
   p.cd.q = p.cd.r = p.cd.e = 0;
   resetPlayerSystem();
 }
@@ -126,6 +126,7 @@ export function updatePlayer(dt: number): void {
   // ---- timers
   p.invulnT = tickDown(p.invulnT, dt);
   p.rageT = tickDown(p.rageT, dt);
+  p.hawkT = tickDown(p.hawkT, dt);
   p.sprintT = tickDown(p.sprintT, dt);
   p.slowT = tickDown(p.slowT, dt);
   p.hpPotCd = tickDown(p.hpPotCd, dt);
@@ -203,9 +204,7 @@ export function updatePlayer(dt: number): void {
   // ---- dash
   if (inp.pressed.Space && p.dashT <= 0) {
     if (p.dashCharges <= 0) notifyCooldown('dash');
-    else if (p.mana < st.getManaCost('dash')) notifyNoMana();
     else {
-      p.mana -= st.getManaCost('dash');
       if (p.dashCd <= 0) p.dashCd = p.dashCdMax;
       p.dashCharges--;
       p.dashT = DASH_TIME;
@@ -257,7 +256,7 @@ export function updatePlayer(dt: number): void {
   if (moving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
-    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1));
+    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * (p.hawkT > 0 ? 1.6 : 1));
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }

@@ -11,7 +11,7 @@ import type { SkillLevels } from '../../types';
 
 const WEAPON_ABILITY: Record<string, { name: string; desc: string; icon: React.ReactNode }> = {
   FIREBALL: { name: 'Giant Fireball', desc: 'Shoots a slow giant fireball.', icon: <PaintedIcon id="FIREBALL" /> },
-  ARROW_RAIN: { name: 'Arrow Rain', desc: 'Fires waves of arrows.', icon: <PaintedIcon id="ARROW_RAIN" /> },
+  ARROW_RAIN: { name: "Hawk's Focus", desc: 'For 10s: +60% attack speed, +40% attack damage. You and your arrows glow.', icon: <PaintedIcon id="ARROW_RAIN" /> },
   AXE_SPIN: { name: 'Axe Spin', desc: 'Spinning blade barrier.', icon: <PaintedIcon id="AXE_SPIN" /> },
 };
 const Q_INFO: Record<string, { name: string; desc: string; icon: React.ReactNode }> = {
@@ -66,7 +66,7 @@ export const ActionBar: React.FC = () => {
         tooltip={<SimpleTip title={e.name} sub={`Class special [E] · Lv ${sk('special')}`} body={sk('special') > 0 ? e.desc : `${e.desc} Unlock in the Skills panel for 5 SP.`} lines={[cdLine('Mana', `${eCost}`), cdLine('Cooldown', `${p.cdMax.e.toFixed(1)}s`)]} />} />
       <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id="DASH" />} level={sk('dash')} manaCost={dCost}
         getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
-        tooltip={<SimpleTip title="Dash" sub={`Mobility [Space] · Lv ${sk('dash')}`} body="Dash in the movement direction. Invincible briefly. Level 5 grants +1 charge." lines={[cdLine('Mana', `${dCost}`), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`)]} />} />
+        tooltip={<SimpleTip title="Dash" sub={`Mobility [Space] · Lv ${sk('dash')}`} body="Dash in the movement direction. Costs no mana. Invincible briefly. Level 5 grants +1 charge." lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`)]} />} />
 
       <Sep />
       {classPassives.map((k) => {
@@ -75,8 +75,8 @@ export const ActionBar: React.FC = () => {
         const pc = passiveCooldowns[k as PKey];
         return (
           <ActionSlot key={k} id={k} size="4.3rem" active={lvl > 0} level={lvl} icon={<PaintedIcon id={k} />}
-            getCd={() => ({ t: pc?.t ?? 0, max: pc?.max ?? 0 })}
-            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [cdLine('Interval', `${pc.max.toFixed(1)}s`)] : undefined} />} />
+            getCd={() => ({ t: pc?.t ?? 0, max: pc?.max ?? 0, hits: pc?.kind === 'hits' })}
+            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [pc.kind === 'hits' ? cdLine('Procs every', `${pc.max} attacks`) : cdLine('Interval', `${pc.max.toFixed(1)}s`)] : undefined} />} />
         );
       })}
       <Sep />

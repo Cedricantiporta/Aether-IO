@@ -86,17 +86,17 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
     ARCHER: {
         stats: { moveSpeed: 14, fireRate: 2.5, maxHealth: 80, damage: 10, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
-        description: 'High Speed & Attack Rate. Low Health.'
+        description: 'High Speed & Attack Rate (grows with level). Low Health.'
     },
     WIZARD: {
         stats: { moveSpeed: 10, maxMana: 200, damage: 25, maxHealth: 70, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
         weaponId: 'staff_1',
-        description: 'High Mana Regen & Skill Damage. Squishy.'
+        description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     BARBARIAN: {
         stats: { maxHealth: 200, defense: 15, moveSpeed: 11, damage: 12, fireRate: 1.5, knockback: 1.5, regen: 2.0 },
         weaponId: 'axe_1',
-        description: 'High Defense & HP Regen. Tank.'
+        description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }
 };
 
@@ -115,11 +115,11 @@ export const SKILLS_INFO = {
 
     // Archer Only
     piercing: { name: 'Piercing Arrow', description: 'Active (Q): Giant piercing arrow.', classType: 'ARCHER', type: 'ACTIVE' },
-    burning: { name: 'Burning Arrow', description: 'Passive: Periodically fires explosive fire arrows.', classType: 'ARCHER', type: 'PASSIVE' },
-    freezing: { name: 'Freezing Arrow', description: 'Passive: Periodically fires explosive ice arrows.', classType: 'ARCHER', type: 'PASSIVE' },
+    burning: { name: 'Burning Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires a piercing fire arrow that burns. Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
+    freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     
     // Wizard Only
-    thunder: { name: 'Thundercaller', description: 'Passive: Strikes random enemies with lightning.', classType: 'WIZARD', type: 'PASSIVE' },
+    thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (10 at Lv1, -1 per level) also releases chain lightning to nearby enemies.', classType: 'WIZARD', type: 'PASSIVE' },
     gravity: { name: 'Gravity Well', description: 'Active (Q): Summon a black hole.', classType: 'WIZARD', type: 'ACTIVE' },
     freezeSpell: { name: 'Blizzard', description: 'Passive: Freezes enemies in large area.', classType: 'WIZARD', type: 'PASSIVE' },
     storm: { name: 'Storm', description: 'Passive: Summons a bouncing typhoon.', classType: 'WIZARD', type: 'PASSIVE' },
@@ -127,7 +127,7 @@ export const SKILLS_INFO = {
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: Blades orbit and damage enemies.', classType: 'BARBARIAN', type: 'PASSIVE' },
     rage: { name: 'Rage', description: 'Active (Q): Double Attack Speed for 4s.', classType: 'BARBARIAN', type: 'ACTIVE' },
-    stamp: { name: 'Mega Stamp', description: 'Passive: Periodically creates a stunning shockwave.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    stamp: { name: 'Mega Stamp', description: 'On-attack: every Nth axe throw (10 at Lv1, -1 per level) triggers a stunning Mega Stomp shockwave.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };
 
 // REDUCED VALUES BY ~50%

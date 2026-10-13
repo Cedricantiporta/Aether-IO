@@ -122,8 +122,7 @@ export function castR(): void {
 
   switch (ability) {
     case 'ARROW_RAIN':
-      abilityState.arrowRainWaves = 3;
-      abilityState.arrowRainT = 0;
+      p.hawkT = 10;
       announce('ARROW_RAIN');
       break;
     case 'FIREBALL': {

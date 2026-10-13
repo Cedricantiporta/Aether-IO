@@ -37,7 +37,7 @@ function makeProjectile(id: number): Projectile {
   return {
     id, active: false, kind: 'ARROW', pos: v(), vel: v(), life: 0, maxLife: 1,
     damage: 0, radius: 0.5, aoeRadius: 0, pierce: 1, bounces: 0, knockback: 0,
-    effect: undefined, hitIds: [], state: 0, spin: 0, homing: 0, trailT: 0,
+    effect: undefined, hitIds: [], state: 0, spin: 0, homing: 0, trailT: 0, procLv: 0, emp: false,
   };
 }
 
@@ -68,7 +68,7 @@ function makePlayer(): PlayerRuntime {
     dashT: 0, dashDir: v(), dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
     cd: { q: 0, r: 0, e: 0 }, cdMax: { q: 7, r: 15, e: 20 },
     shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
-    invulnT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
+    invulnT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
     slowT: 0, hpPotCd: 0, mpPotCd: 0, petReviveCd: 0,
     fireT: 0, levelUpFx: 0, reviveFx: 0,
@@ -135,7 +135,7 @@ export function allocEnemy(): Enemy | null {
 export function allocProjectile(): Projectile | null {
   const p = grab(world.projectiles, 'p');
   if (!p) return null;
-  p.hitIds.length = 0; p.state = 0; p.spin = 0; p.homing = 0; p.trailT = 0;
+  p.hitIds.length = 0; p.state = 0; p.spin = 0; p.homing = 0; p.trailT = 0; p.procLv = 0; p.emp = false;
   p.bounces = 0; p.aoeRadius = 0; p.effect = undefined; p.knockback = 0; p.radius = 0.5;
   return p;
 }
