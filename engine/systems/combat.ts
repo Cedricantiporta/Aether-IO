@@ -56,9 +56,17 @@ export function rollCrit(critRate: number, critDamage: number): number {
 
 const _aimTmp = new Vector3();
 /** Unit xz direction from the player towards the aim point (falls back to facing when aim is on top of the player). */
+/** Auto-target lock (enemy id or -1). Maintained by player.ts; when valid it overrides the mouse aim. */
+export const autoAim = { id: -1 };
+
 export function getAimDir(out: Vector3 = _aimTmp): Vector3 {
   const p = world.player;
-  const dx = p.aim.x - p.pos.x, dz = p.aim.z - p.pos.z;
+  let tx = p.aim.x, tz = p.aim.z;
+  if (autoAim.id >= 0) {
+    const e = world.enemies[autoAim.id];
+    if (e.active && e.state !== 'DYING') { tx = e.pos.x; tz = e.pos.z; }
+  }
+  const dx = tx - p.pos.x, dz = tz - p.pos.z;
   const l = Math.sqrt(dx * dx + dz * dz);
   if (l < 0.05) out.set(Math.sin(p.facing), 0, Math.cos(p.facing));
   else out.set(dx / l, 0, dz / l);

@@ -5,7 +5,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
-import { getAimDir, healPlayer } from './combat';
+import { autoAim, findNearestEnemy, getAimDir, healPlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
 import { castQ, castR, castE, updateAbilities, notifyCooldown, notifyNoMana } from './abilities';
 import { breakCrate } from './crates';
@@ -20,6 +20,11 @@ const COLLIDE_PAD = 0.5;
 
 const colOut: Collider[] = [];
 const aim = new Vector3();
+
+/** Combat feel: attack only when standing still, auto-target the nearest enemy, slower movement. */
+const MOVE_SPEED_SCALE = 0.8;
+const AUTO_TARGET_RANGE = 22;
+const STOP_TO_FIRE_DELAY = 0.12;
 
 let dying = false;
 let deathT = 0;
@@ -173,9 +178,17 @@ export function updatePlayer(dt: number): void {
     if (p.mpPotCd <= 0 && p.mana < stats.maxMana * 0.3) usePotion(false);
   }
 
-  // ---- aim / facing
+  // ---- auto-target: lock the nearest enemy, keep the lock while it stays alive and in range (sticky)
+  {
+    const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+    const keep = cur && cur.active && cur.state !== 'DYING' && cur.state !== 'SPAWN'
+      && (cur.pos.x - p.pos.x) ** 2 + (cur.pos.z - p.pos.z) ** 2 < (AUTO_TARGET_RANGE + 4) ** 2;
+    if (!keep) {
+      const e = findNearestEnemy(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
+      autoAim.id = e ? e.id : -1;
+    }
+  }
   const dir = getAimDir(aim);
-  p.facing = Math.atan2(dir.x, dir.z);
 
   // ---- movement input
   const k = inp.keys;
@@ -207,7 +220,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * (p.sprintT > 0 ? 2 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (p.sprintT > 0 ? 2 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
     const lerpK = 1 - Math.exp(-12 * dt);
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;
@@ -225,8 +238,11 @@ export function updatePlayer(dt: number): void {
     if ((c.kind === 'POT' || c.kind === 'HAY') && dx * dx + dz * dz < 1.21) breakCrate(c);
   }
 
-  // ---- anim
+  // ---- anim / facing: face where you walk; when standing still, face the target
   const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
+  const moving = ml > 0 || p.dashT > 0;
+  if (moving && sp > 0.5) p.facing = Math.atan2(p.vel.x, p.vel.z);
+  else p.facing = Math.atan2(dir.x, dir.z);
   const target = Math.min(1, sp / Math.max(1, stats.moveSpeed));
   a.moveBlend += (target - a.moveBlend) * Math.min(1, 10 * dt);
   a.stepPhase += sp * dt * 1.4;
@@ -237,7 +253,8 @@ export function updatePlayer(dt: number): void {
   if (inp.pressed.KeyE) castE();
   updateAbilities(dt);
 
-  // ---- auto-fire
+  // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
+  if (moving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1));
