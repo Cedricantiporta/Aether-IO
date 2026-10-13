@@ -19,7 +19,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS';
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -47,12 +47,13 @@ export interface Settings {
 }
 
 export interface RunSummary extends RunStats {
-  wave: number;
+  wave: number;           // depth reached (biome * 10 + room; a boss room of biome b is 10 * (b + 1))
+  victory?: boolean;      // true when the run was banked after a boss ("Return to town")
   level: number;
   hero: HeroClass;
   difficulty: Difficulty;
   cp: number;
-  waveGoldBonus: number;  // 100 gold per cleared wave, paid in full at run end (also on death)
+  waveGoldBonus: number;  // 100 gold per upgrade-card room, paid in full at run end (also on death)
   rankXpGained: number;   // heroRank xp earned this run (xpEarned * 0.5)
   rankUps: number;        // ranks gained at run end
   rank: number;           // heroRank after the run
@@ -73,7 +74,7 @@ export interface GameState {
   status: GameStatus;
   hero: HeroClass;
   difficulty: Difficulty;
-  wave: number;                       // mirrored from director on wave change (UI re-render ok)
+  wave: number;                       // current depth wave, mirrored from the director on every room change (UI re-render ok)
 
   // ---- PERSISTENT PROFILE (localStorage 'aether-survivor-profile-v1'): gold, gems, inventory, equipment,
   // materials, maxInventorySlots, heroRank, rankXp, quests, gameStats, settings, welcomeGiftClaimed (+hero, difficulty).
@@ -94,7 +95,7 @@ export interface GameState {
   experience: number;
   experienceToNextLevel: number;
   skillPoints: number;
-  accumulatedWaveGold: number;        // +100 per cleared wave, paid on run end
+  accumulatedWaveGold: number;        // +100 per upgrade-card room, paid on run end
 
   // ---- character
   baseStats: PlayerStats;             // hero base + level-ups + wave cards
@@ -107,7 +108,7 @@ export interface GameState {
   maxInventorySlots: number;
   materials: Record<Rarity, number>;
   equipment: Equipment;
-  upgradeOptions: Upgrade[];          // wave-clear reward cards (status LEVEL_UP)
+  upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)
 
   // ---- UI panels
   isInventoryOpen: boolean;
@@ -129,9 +130,9 @@ export interface GameState {
   setStatus: (s: GameStatus) => void;
   selectHero: (h: HeroClass) => void;
   setDifficulty: (d: Difficulty) => void;
-  startGame: () => void;              // starts the siege run (profile is NOT touched; in-run state resets)
-  resetGame: () => void;              // back to the peaceful village (status MENU, engine enterVillage); profile kept
-  abandonRun: () => void;             // finalize run rewards (rank xp + wave gold) then back to the village
+  startGame: () => void;              // starts a run: leaves the town for the first room (profile is NOT touched; in-run state resets)
+  resetGame: () => void;              // back to the town (status MENU, engine enterVillage); profile kept
+  abandonRun: () => void;             // finalize run rewards (rank xp + gold bonus) then back to the town
   resetProfile: () => void;           // wipe the saved profile (fresh profile + welcome gift)
   togglePause: () => void;            // Esc: PLAYING <-> PAUSED(+pause menu); closes panels first if any open
   toggleInventory: () => void;
@@ -149,7 +150,7 @@ export interface GameState {
   claimCodexReward: (tab: CodexTab) => boolean;         // one-time gems when a tab is 100% discovered
   addExperience: (n: number) => void; // handles level-ups: +SP, +base stats, engine heal + levelUp event
   setWave: (wave: number) => void;
-  openWaveReward: (fast?: boolean) => void; // generates upgradeOptions (+maybe 4th card on a fast clear), accumulatedWaveGold += 100, status = LEVEL_UP
+  openWaveReward: (bonus?: boolean) => void; // room reward: generates upgradeOptions (+a 4th card when `bonus`), accumulatedWaveGold += 100, status = LEVEL_UP
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
   addQuestProgress: (type: QuestType, amount?: number, kind?: EnemyKind, lootName?: string) => void;
   claimQuest: (id: string) => boolean; // grants reward, draws a replacement quest

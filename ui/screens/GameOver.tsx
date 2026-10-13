@@ -31,13 +31,13 @@ export const GameOver: React.FC = () => {
     <motion.div className="absolute inset-0 pe go-root" style={{ zIndex: 120 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .5 }}>
       <motion.div className="go-card paper" initial={{ y: 30, scale: .96, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: .1 }}>
         <div className="px-4 pt-4 pb-2 text-center flex-none">
-          <div className="text-2xl font-extrabold leading-tight">You have fallen</div>
-          {run && <div className="text-sm font-semibold text-[var(--fg-2)] mt-0.5">Wave {run.wave} · Level {run.level} · {hero.charAt(0) + hero.slice(1).toLowerCase()}</div>}
+          <div className="text-2xl font-extrabold leading-tight">{run?.victory ? 'Spoils banked' : 'You have fallen'}</div>
+          {run && <div className="text-sm font-semibold text-[var(--fg-2)] mt-0.5">Depth {run.wave} · Level {run.level} · {hero.charAt(0) + hero.slice(1).toLowerCase()}</div>}
         </div>
         <div className="px-4 py-2 rpg-scroll flex-1 min-h-0">
           {run && (
             <div className="go-grid pt-2">
-              <Tile delay={.2} label="Highest wave" value={run.wave} record={waveRecord} />
+              <Tile delay={.2} label="Depth reached" value={run.wave} record={waveRecord} />
               <Tile delay={.25} label="Enemies slain" value={run.kills.toLocaleString()} />
               <Tile delay={.3} label="Time survived" value={timeMMSS(run.time)} />
               <Tile delay={.35} label="Damage dealt" value={Math.round(run.damageDealt).toLocaleString()} />
@@ -50,8 +50,8 @@ export const GameOver: React.FC = () => {
           )}
         </div>
         <div className="flex gap-3 p-4 flex-none flex-wrap">
-          <Button className="flex-1" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Village</Button>
-          <Button className="flex-1" size="lg" onClick={startGame}><RotateCcw size={18} /> Defend again</Button>
+          <Button className="flex-1" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Town</Button>
+          <Button className="flex-1" size="lg" onClick={startGame}><RotateCcw size={18} /> Set out again</Button>
         </div>
       </motion.div>
     </motion.div>

@@ -290,7 +290,7 @@ function sfxBossSpawn(): void {
   noise(0.5, 0.3, 800, 100, { delay: 0.3, priority: true });
 }
 
-/** 'bell' cue: village alarm bell. Struck `n` times, each strike a bright inharmonic partial stack with a long ring. */
+/** 'bell' cue: exit portals opened. Struck `n` times, each strike a bright inharmonic partial stack with a long ring. */
 function sfxBell(n: number): void {
   for (let i = 0; i < n; i++) {
     const d = i * 0.42;
@@ -299,11 +299,6 @@ function sfxBell(n: number): void {
     tone(660 * 5.4, 660 * 5.35, 0.45, 0.05, { type: 'sine', delay: d, priority: true });
     noise(0.08, 0.12, 5000, 1500, { filter: 'bandpass', delay: d, priority: true });
   }
-}
-
-function sfxCountdown(seconds: number): void {
-  const last = seconds <= 1;
-  tone(last ? 1320 : 880, last ? 1320 : 880, last ? 0.35 : 0.1, 0.12, { priority: true });
 }
 
 function sfxBuzz(): void {
@@ -467,7 +462,7 @@ const B_PAT = [0, 1, 0, 0, 3, 0, 1, 0];
 function themeTargets(): [number, number, number] {
   const st = useGameStore.getState().status;
   if (world.boss.active) return [0, 0, 1];
-  if (st === GameStatus.MENU || world.director.phase === 'RESPITE') return [1, 0, 0];
+  if (st === GameStatus.MENU || world.director.phase !== 'FIGHT' || world.room.station.kind === 'FOUNTAIN' || world.room.station.kind === 'MERCHANT') return [1, 0, 0];
   return [0, 1, 0];
 }
 
@@ -476,7 +471,6 @@ function musicTarget(): number {
   let t: number;
   if (world.boss.active) t = 0.9;
   else if (d.phase === 'FIGHT') t = 0.3 + Math.min(0.55, d.aliveCount / 60);
-  else if (d.phase === 'CLEANUP') t = 0.3;
   else t = 0.12;
   return Math.max(t, manualIntensity);
 }
@@ -731,10 +725,7 @@ export function initAudio(): () => void {
   offs.push(events.on('waveClear', safe(() => sfxWaveClear())));
   offs.push(events.on('bossSpawn', safe(() => sfxBossSpawn())));
   offs.push(events.on('bossPhase', safe(() => sfxShockwave())));
-  offs.push(events.on('siegeStart', safe(() => sfxBell(4))));
-  offs.push(events.on('respiteEnd', safe(() => sfxBell(2))));
-  offs.push(events.on('respiteStart', safe(() => sfxWaveClear())));
-  offs.push(events.on('countdown', safe((p) => sfxCountdown(p.seconds))));
+  offs.push(events.on('portalsOpen', safe(() => sfxBell(2))));
   offs.push(events.on('runStart', () => { step = 0; bar = 0; intensity = 0.1; manualIntensity = 0; }));
 
   const unsubStore = useGameStore.subscribe((s, prev) => {

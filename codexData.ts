@@ -1,7 +1,8 @@
 // Codex catalogue + discovery keys (pure data; shared by store.ts and ui/screens/Codex.tsx).
 import { ITEMS_POOL, PETS_POOL, SKILLS_INFO } from './constants';
 import { LOOT } from './loot';
-import { ENEMY_DEFS, MINI_BOSSES, REGION_AFFINITY, BOSS_NAMES, BOSS_ROTATION } from './engine/enemyDefs';
+import { ENEMY_DEFS, MINI_BOSSES, BOSS_NAMES, BOSS_ROTATION } from './engine/enemyDefs';
+import { BIOMES } from './engine/roomDefs';
 import type { EnemyKind } from './engine/types';
 
 export type CodexTab = 'items' | 'pets' | 'skills' | 'loot' | 'monsters';
@@ -18,29 +19,33 @@ const TRICKS: Partial<Record<EnemyKind, string>> = {
   WRAITH: 'Phases through obstacles and terrifies with a fear pulse.', CRYSTAL_GOLEMITE: 'Raises crystal walls; shatters into shards on death.',
   BANDIT: 'Scatters caltrops, drops smoke and dash-slashes.', BOAR: 'Charges in a straight line with heavy knockback.', ROCK_CRAB: 'Armoured front; pinches at close range and sidesteps.',
   BOSS_GOLEM: 'Telegraphed ground slams, rock rings and a crushing charge.', BOSS_LICH: 'Bullet-hell spirals, teleports and summons minions.',
-  BOSS_TREANT: 'Root lanes that pin you, a sapling brood that heals him, thorn rings to jump, and bark armor until staggered. Wave 30.',
-  BOSS_HYDRA: 'Three severable heads shield the body. Acid spit, tail sweep cone and a submerge ambush. Wave 40.',
-  BOSS_WYRM: 'Frost breath that chills to a freeze, ice spike lanes, a dive bomb and a blizzard phase. Wave 50.',
-  BOSS_WARLORD: 'Flame wheel, fire pillar salvos, fire imps and a hellcleave; enrages below 30% hp. Wave 60.',
-  BOSS_VOID: 'Shooting portals, a gravity pull-then-push, echoes of fallen bosses and a shrinking arena. Wave 70.',
+  BOSS_TREANT: 'Root lanes that pin you, a sapling brood that heals him, thorn rings to jump, and bark armor until staggered.',
+  BOSS_HYDRA: 'Three severable heads shield the body. Acid spit, tail sweep cone and a submerge ambush.',
+  BOSS_WYRM: 'Frost breath that chills to a freeze, ice spike lanes, a dive bomb and a blizzard phase.',
+  BOSS_WARLORD: 'Flame wheel, fire pillar salvos, fire imps and a hellcleave; enrages below 30% hp.',
+  BOSS_VOID: 'Shooting portals, a gravity pull-then-push, echoes of fallen bosses and a shrinking arena.',
 };
-const REGION_LABEL = (r: string) => r.split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+/** Biomes whose roster contains the kind. */
 const regionOf = (k: EnemyKind): string => {
-  const a = REGION_AFFINITY[k];
-  if (!a) return 'Anywhere';
-  return Object.entries(a).filter(([, v]) => v >= 3).map(([r]) => REGION_LABEL(r)).join(', ') || 'Anywhere';
+  const names = BIOMES.filter((b) => b.roster.some((r) => r[0] === k)).map((b) => b.name);
+  return names.length === 0 ? 'Elsewhere' : names.length === BIOMES.length ? 'Everywhere' : names.join(', ');
 };
+const bossBiome = (k: EnemyKind): string => {
+  const b = BIOMES.find((x) => x.boss === k);
+  return b ? `${b.name} boss` : 'Crypt mini-boss';
+};
+const miniBiomes = (id: string): string => BIOMES.filter((b) => b.minis.includes(id)).map((b) => b.name).join(', ') || 'Anywhere';
 
 export const CODEX_MONSTERS: MonsterEntry[] = [
   ...(Object.keys(ENEMY_DEFS) as EnemyKind[]).filter((k) => !k.startsWith('BOSS_')).map((k): MonsterEntry => ({
     key: k, name: ENEMY_DEFS[k].name, title: '', kind: k, tier: 'MONSTER', region: regionOf(k), trick: TRICKS[k] ?? '', color: ENEMY_DEFS[k].color,
   })),
-  { key: 'ELITE', name: 'Elite', title: 'Affixed champion', kind: 'BRUTE', tier: 'ELITE', region: 'Wave 5+, every 3 waves', trick: 'Any monster with an affix: hasted, vampiric, frozen, volatile or shielded.', color: 0xfbbf24 },
+  { key: 'ELITE', name: 'Elite', title: 'Affixed champion', kind: 'BRUTE', tier: 'ELITE', region: 'Elite rooms', trick: 'Any monster with an affix: hasted, vampiric, frozen, volatile or shielded.', color: 0xfbbf24 },
   ...Object.entries(MINI_BOSSES).map(([id, m]): MonsterEntry => ({
-    key: 'MINI_' + id, name: m.name, title: m.title, kind: m.kind, tier: 'MINI-BOSS', region: m.regions.map(REGION_LABEL).join(', '), trick: 'Scripted attack timeline; stagger-resistant. Appears on waves 5, 15, 25...', color: ENEMY_DEFS[m.kind].color,
+    key: 'MINI_' + id, name: m.name, title: m.title, kind: m.kind, tier: 'MINI-BOSS', region: miniBiomes(id), trick: 'Scripted attack timeline; stagger-resistant. Guards champion rooms.', color: ENEMY_DEFS[m.kind].color,
   })),
-  ...BOSS_ROTATION.map((k, i): MonsterEntry => ({
-    key: k, name: BOSS_NAMES[k].name, title: BOSS_NAMES[k].title, kind: k, tier: 'BOSS', region: i < 2 ? 'Every 10th wave' : `Wave ${(i + 1) * 10}`, trick: TRICKS[k] ?? '', color: ENEMY_DEFS[k].color,
+  ...BOSS_ROTATION.map((k): MonsterEntry => ({
+    key: k, name: BOSS_NAMES[k].name, title: BOSS_NAMES[k].title, kind: k, tier: 'BOSS', region: bossBiome(k), trick: TRICKS[k] ?? '', color: ENEMY_DEFS[k].color,
   })),
 ];
 

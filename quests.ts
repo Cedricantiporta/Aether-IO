@@ -97,8 +97,8 @@ export function questTitle(q: Quest): string {
   switch (q.type) {
     case 'KILL_KIND': return `Slay ${n} ${ENEMY_DEFS[q.kind ?? 'SLIME'].name}${n > 1 ? 's' : ''}`;
     case 'KILL_TOTAL': return `Defeat ${n} monsters`;
-    case 'REACH_WAVE': return `Survive until wave ${n}`;
-    case 'FAST_CLEARS': return `Fast-clear ${n} wave${n > 1 ? 's' : ''}`;
+    case 'REACH_WAVE': return `Reach depth ${n}`;
+    case 'FAST_CLEARS': return `Clear ${n} room${n > 1 ? 's' : ''} in under 40 s`;
     case 'BREAK_CRATES': return `Break ${n} crates and barrels`;
     case 'KILL_BOSS': return n > 1 ? `Defeat ${n} bosses` : 'Defeat a boss';
     case 'COLLECT_GOLD': return `Collect ${n} gold in battle`;
@@ -113,8 +113,8 @@ export function questFlavor(q: Quest): string {
   switch (q.type) {
     case 'KILL_KIND': return 'They keep ruining our crops!';
     case 'KILL_TOTAL': return 'Thin out the horde, guard.';
-    case 'REACH_WAVE': return 'Hold the line as long as you can.';
-    case 'FAST_CLEARS': return 'Kill them all before the timer ends.';
+    case 'REACH_WAVE': return 'Delve deeper: each room is one step (a boss room is a multiple of ten).';
+    case 'FAST_CLEARS': return 'Swift hands: wipe out a whole room in under forty seconds.';
     case 'BREAK_CRATES': return 'The village needs the supplies inside.';
     case 'KILL_BOSS': return 'Bring down one of the big ones.';
     case 'COLLECT_GOLD': return 'Recover what the monsters looted.';

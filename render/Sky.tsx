@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
-  BackSide, CanvasTexture, Color, DirectionalLight, Group, Mesh, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
+  BackSide, CanvasTexture, Color, DirectionalLight, Group, HemisphereLight, Mesh, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
   SRGBColorSpace, Vector3,
 } from 'three';
 import { world } from '../engine/world';
@@ -10,13 +10,14 @@ import { useGameStore } from '../store';
 import { QualityCfg } from './quality';
 import { mulberry32 } from './util';
 import { isLobbyStatus } from './CameraRig';
+import { look } from './biomeLook';
 
 export const FOG_COLOR = '#cfe6f2';
 export const SUN_DIR = new Vector3(-0.55, 0.72, 0.42).normalize();
 
 const SKY_VS = /* glsl */ `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * p; gl_Position.z = gl_Position.w; }`;
 const SKY_FS = /* glsl */ `
-varying vec3 vDir; uniform vec3 uSun;
+varying vec3 vDir; uniform vec3 uSun; uniform vec3 uTint;
 void main(){
   vec3 d = normalize(vDir);
   float h = clamp(d.y, -0.2, 1.0);
@@ -30,6 +31,7 @@ void main(){
   col += vec3(1.0, 0.85, 0.55) * pow(s, 14.0) * 0.45;
   col += vec3(1.0, 0.95, 0.8) * smoothstep(0.9985, 0.9995, s) * 3.0;
   col += vec3(1.0, 0.9, 0.7) * pow(s, 400.0) * 1.5;
+  col *= uTint;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -52,7 +54,7 @@ export function Sky({ q }: { q: QualityCfg }) {
   const dome = useRef<Mesh>(null!);
   const clouds = useRef<Group>(null!);
   const { camera } = useThree();
-  const mat = useMemo(() => new ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, uniforms: { uSun: { value: new Vector3(-0.45, 0.4, -0.78) } }, side: BackSide, depthWrite: false, fog: false }), []);
+  const mat = useMemo(() => new ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, uniforms: { uSun: { value: new Vector3(-0.45, 0.4, -0.78) }, uTint: { value: new Vector3(1, 1, 1) } }, side: BackSide, depthWrite: false, fog: false }), []);
   const cloudMat = useMemo(() => new SpriteMaterial({ map: cloudTexture(), transparent: true, depthWrite: false, fog: false, opacity: 0.95, color: new Color(1, 1, 1) }), []);
   const list = useMemo(() => {
     const r = mulberry32(21);
@@ -61,6 +63,7 @@ export function Sky({ q }: { q: QualityCfg }) {
 
   useFrame((_, dt) => {
     dome.current.position.copy(camera.position);
+    mat.uniforms.uTint.value.copy(look.sky);
     clouds.current.position.set(camera.position.x, 0, camera.position.z);
     const ch = clouds.current.children;
     for (let i = 0; i < ch.length; i++) {
@@ -90,10 +93,13 @@ export function Lighting({ q }: { q: QualityCfg }) {
     l.shadow.mapSize.set(q.shadowMap || 512, q.shadowMap || 512);
     l.shadow.map?.dispose(); (l.shadow as any).map = null;
   }, [q.shadowMap]);
+  const hemi = useRef<HemisphereLight>(null!);
   const t = useRef(new Vector3());
   const half = useRef(38);
   useFrame(() => {
     const l = sun.current; if (!l) return;
+    if (hemi.current) { hemi.current.color.copy(look.hemiSky); hemi.current.groundColor.copy(look.hemiGround); hemi.current.intensity = look.hemiI; }
+    l.color.copy(look.sun); l.intensity = look.sunI;
     const lobby = isLobbyStatus(useGameStore.getState().status);
     const V = world.view;
     // shadow frustum hugs the visible ground rect (quantised so the projection rarely changes)
@@ -113,7 +119,7 @@ export function Lighting({ q }: { q: QualityCfg }) {
   });
   return (
     <>
-      <hemisphereLight args={[0xcfe8ff, 0x6f8f45, 1.25]} />
+      <hemisphereLight ref={hemi} args={[0xcfe8ff, 0x6f8f45, 1.25]} />
       <directionalLight ref={sun} color={0xfff0d2} intensity={3.1} castShadow={q.shadowMap > 0} />
       <SunTarget sun={sun} />
     </>

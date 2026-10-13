@@ -49,7 +49,7 @@ export const GameUI: React.FC = () => {
       {village && <VillageHUD />}
       {inGame && <HUD />}
       {(inGame || village) && device.touch && <TouchControls />}
-      {village && <InteractPrompt />}
+      {(village || inGame) && <InteractPrompt />}
       <AnimatePresence>
         {panels && (inv || bagShop) && (!swap || bagView) && <InventoryPanel key="inv" />}
         {panels && shop && !(swap && bagView) && <ShopPanel key="shop" />}

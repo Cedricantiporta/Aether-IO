@@ -338,26 +338,52 @@ export interface PlayerRuntime {
 }
 
 // -------------------------------------------------------------- director --
-export type WavePhase = 'SIEGE' | 'COUNTDOWN' | 'FIGHT' | 'CLEANUP' | 'BOSS' | 'REWARD' | 'RESPITE';
+/** Room flow: FIGHT (enemies / nothing to do) -> CLEARED (portals open) -> LEAVING (fade) -> next room; BIOME_DONE after a boss. */
+export type RoomPhase = 'FIGHT' | 'CLEARED' | 'LEAVING' | 'BIOME_DONE';
 
 export interface DirectorState {
+  /** Depth wave = biome * 10 + room + 1 (boss room of biome b = 10 * (b + 1)). Feeds every wave-scaling formula. */
   wave: number;
-  phase: WavePhase;
+  phase: RoomPhase;
   phaseT: number;        // time in phase
-  waveTime: number;      // elapsed fight time this wave
-  waveDuration: number;  // spawn window length (s)
-  countdown: number;     // seconds left in COUNTDOWN (UI shows big number)
-  budget: number;        // remaining spawn points this wave
-  spawnT: number;
   maxAlive: number;
   aliveCount: number;
-  killsThisWave: number;
   bossId: number;        // enemy id or -1
-  eliteAnnounced: boolean;
-  quotaTotal: number;    // enemies this wave must spawn (kill-all quota)
-  quotaSpawned: number;
-  respiteT: number;      // seconds left in RESPITE
-  fastClear: boolean;    // last wave ended by kill-all
+}
+
+// ------------------------------------------------------------------- rooms --
+export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'BOSS';
+export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
+export interface RoomPlan { type: RoomType; reward: RewardKind }
+export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
+
+export interface RoomPortal {
+  active: boolean; x: number; z: number; t: number;   // t = seconds since it opened (render grows it)
+  plan: RoomPlan;
+}
+/** Telegraphed spawn point: a ring fills for `dur` seconds, then the enemy rises. */
+export interface SpawnMarker {
+  active: boolean; x: number; z: number; t: number; dur: number;
+  kind: EnemyKind; elite: boolean; tag: number;       // tag: 0 plain, 1 mini-boss, 2 boss
+}
+export interface RoomStation { kind: StationKind; x: number; z: number; used: boolean; ready: boolean }
+
+export interface RoomState {
+  active: boolean;
+  version: number;       // bumped whenever the room is rebuilt (render rebuilds scenery)
+  seed: number;
+  biome: number;         // biome index, grows past 5 when the cycle loops
+  index: number;         // 0..ROOMS_PER_BIOME-1, ROOMS_PER_BIOME = boss room
+  plan: RoomPlan;
+  radius: number;        // walkable radius (room is a disc centred on 0,0)
+  fade: number;          // 0 clear .. 1 black (DOM overlay)
+  fadeTarget: number;
+  enemiesLeft: number;   // alive + telegraphed + still to come (HUD counter)
+  portals: RoomPortal[];
+  markers: SpawnMarker[];
+  station: RoomStation;
+  shrineOn: boolean;     // shrine challenge accepted
+  hint: string;          // short objective text under the room plaque
 }
 
 export interface BossHud {
