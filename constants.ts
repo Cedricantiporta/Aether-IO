@@ -106,7 +106,7 @@ export const SKILLS_INFO = {
     // Universal Passives
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
     magnet: { name: 'Looter', description: 'Increases pickup range.', type: 'PASSIVE' },
-    dash: { name: 'Dash Mastery', description: 'Reduces dash cooldown. Level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
+    dash: { name: 'Dash Mastery', description: 'Dash costs no mana. Reduces dash cooldown. Level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
     weapon: { name: 'Weapon Mastery', description: 'Improves weapon ability cooldown.', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
@@ -114,7 +114,7 @@ export const SKILLS_INFO = {
     special: { name: 'Class Special (E)', description: 'Unlocks your unique Class Ability. Costs 5 SP.', type: 'ACTIVE' },
 
     // Archer Only
-    piercing: { name: 'Piercing Arrow', description: 'Active (Q): Giant piercing arrow.', classType: 'ARCHER', type: 'ACTIVE' },
+    piercing: { name: 'Piercing Arrow', description: 'Active (Q): Giant piercing arrow. Cheap, 4s cooldown.', classType: 'ARCHER', type: 'ACTIVE' },
     burning: { name: 'Burning Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires a piercing fire arrow that burns. Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (10 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     

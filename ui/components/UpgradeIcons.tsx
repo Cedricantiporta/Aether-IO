@@ -1,4 +1,5 @@
 import React from 'react';
+import { PaintedIcon } from './SkillIcons';
 import type { Upgrade, UpgradeType } from '../../types';
 
 /** Painted emblems for every UpgradeType (64x64, transparent bg) — shown inside the glowing reward-card medallion. */
@@ -125,4 +126,11 @@ const Emblem: React.FC<{ t: UpgradeType; size: number | string }> = React.memo((
 ));
 Emblem.displayName = 'UpgradeEmblem';
 
-export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type'>; size?: number | string }> = ({ upgrade, size = 56 }) => <Emblem t={upgrade.type} size={size} />;
+const PAINTED: Partial<Record<UpgradeType, string>> = {
+  SKILL_PIERCING: 'piercing', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'dash',
+};
+export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
+  const pk = PAINTED[upgrade.type];
+  if (pk) return <span style={{ display: 'block', width: size, height: size, borderRadius: 8, overflow: 'hidden', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><PaintedIcon id={pk} /></span>;
+  return <Emblem t={upgrade.type} size={size} />;
+};

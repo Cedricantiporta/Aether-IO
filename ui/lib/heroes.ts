@@ -14,7 +14,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     title: 'Archer', tagline: 'Swift Marksman', tags: ['Ranged', 'Fast', 'Fragile'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.ARCHER.weaponId)?.name ?? 'Shortbow',
     abilities: [
-      { key: 'R', name: 'Arrow Rain', desc: 'Fires waves of arrows.' },
+      { key: 'R', name: "Hawk's Focus", desc: '10s of +60% attack speed and +40% damage; glowing arrows.' },
       { key: 'Q', name: 'Piercing Arrow', desc: 'Giant arrow that pierces everything.' },
       { key: 'E', name: 'Wind Sprint', desc: '2x speed & invincible for 4s.' },
     ],

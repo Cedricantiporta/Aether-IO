@@ -76,7 +76,7 @@ export const ActionBar: React.FC = () => {
         return (
           <ActionSlot key={k} id={k} size="4.3rem" active={lvl > 0} level={lvl} icon={<PaintedIcon id={k} />}
             getCd={() => ({ t: pc?.t ?? 0, max: pc?.max ?? 0, hits: pc?.kind === 'hits' })}
-            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [pc.kind === 'hits' ? cdLine('Procs every', `${pc.max} attacks`) : cdLine('Interval', `${pc.max.toFixed(1)}s`)] : undefined} />} />
+            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [pc.kind === 'hits' ? cdLine('Procs every', `${pc.max} attacks`) : cdLine('Interval', `${pc.max.toFixed(1)}s`), ...(pc.kind === 'time' ? [cdLine('Note', 'Charges faster while standing still')] : [])] : undefined} />} />
         );
       })}
       <Sep />

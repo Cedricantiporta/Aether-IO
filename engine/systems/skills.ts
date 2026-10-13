@@ -89,13 +89,13 @@ function stomp(stage: 1 | 2, level: number): void {
   pl.anim.castT = 1;
 }
 
-function updateOrbitals(dt: number, level: number): void {
+function updateOrbitals(dt: number, level: number, chargeMul: number): void {
   const st = useGameStore.getState().stats;
   const pl = world.player;
   const dmg = st.damage * 1.5 * (1 + level * 0.1);
 
   if (orbState === 2) {
-    orbT += dt;
+    orbT += dt * chargeMul;
     setCd('orbital', 2 - orbT, 2);
     if (orbT < 2) return;
     const count = 2 + level;
@@ -177,12 +177,14 @@ export function updateSkills(dt: number): void {
   const stats = st.stats;
   const pl = world.player;
   if (!pl.alive) return;
+  // Timed auto skills charge at 30% speed while the hero is moving.
+  const chargeMul = pl.vel.x * pl.vel.x + pl.vel.z * pl.vel.z > 0.25 || pl.dashT > 0 ? 0.3 : 1;
 
   // On-attack procs: HUD counters (logic lives in projectiles.fireBasicAttack).
   for (const k of ['burning', 'freezing', 'thunder', 'stamp'] as const) procHud(k, passiveCooldowns[k]);
 
   if (lv.freezeSpell > 0) {
-    blizzT += dt;
+    blizzT += dt * chargeMul;
     const max = Math.max(7, 14 - lv.freezeSpell * 0.2) * cdrMul();
     setCd('freezeSpell', max - blizzT, max);
     if (blizzT >= max) {
@@ -201,7 +203,7 @@ export function updateSkills(dt: number): void {
   }
 
   if (lv.storm > 0) {
-    stormT += dt;
+    stormT += dt * chargeMul;
     const max = Math.max(5, 15 - lv.storm * 0.2) * cdrMul();
     setCd('storm', max - stormT, max);
     if (stormT >= max) {
@@ -222,5 +224,5 @@ export function updateSkills(dt: number): void {
     if (stampSeqT >= 0.5) { stomp(2, stampLv); stampStage = 0; }
   }
 
-  if (lv.orbital > 0) updateOrbitals(dt, lv.orbital);
+  if (lv.orbital > 0) updateOrbitals(dt, lv.orbital, chargeMul);
 }

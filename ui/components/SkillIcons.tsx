@@ -39,10 +39,15 @@ const ArrowShape: React.FC<P & { tx: number; ty: number; r: number; s?: number; 
 );
 
 const ICONS: Record<string, (k: string) => React.ReactNode> = {
-  ARROW_RAIN: (k) => <Art k={k} c="#7be86a">
-    <path d="M8 20 L52 18 M10 40 L56 36" stroke="#9be86a" strokeOpacity=".25" strokeWidth="1" />
-    <ArrowShape k={k} tx={18} ty={30} r={-18} s={1.0} /><ArrowShape k={k} tx={32} ty={34} r={-18} s={1.2} /><ArrowShape k={k} tx={46} ty={30} r={-18} s={1.0} />
-    <ellipse cx="32" cy="56" rx="22" ry="3.5" fill="#9be86a" opacity=".4" filter={u(k, 'glow')} />
+  ARROW_RAIN: (k) => <Art k={k} c="#ffd24a">
+    {/* Hawk's Focus: glowing golden eye + feathers */}
+    <circle cx="32" cy="32" r="24" fill="#ffd24a" opacity=".22" filter={u(k, 'glow')} />
+    <path d="M6 32 C16 14 48 14 58 32 C48 50 16 50 6 32Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <circle cx="32" cy="32" r="12" fill="#fff6c8" stroke={S} strokeWidth="1.2" />
+    <circle cx="32" cy="32" r="7" fill="#e07a10" /><circle cx="32" cy="32" r="3.4" fill="#120804" />
+    <circle cx="29.5" cy="29.5" r="1.6" fill="#fff" />
+    <path d="M10 14 L20 22 M54 14 L44 22 M32 6 V14" stroke="#fff3b0" strokeWidth="2.4" strokeLinecap="round" />
+    <path d="M12 52 L24 44 M52 52 L40 44" stroke="#ffb030" strokeWidth="3" strokeLinecap="round" opacity=".8" />
   </Art>,
   FIREBALL: (k) => <Art k={k} c="#ff7a2a">
     <path d="M14 56 C10 40 26 36 24 22 C34 30 36 38 32 44 C42 38 40 26 36 16 C52 26 58 46 44 56Z" fill={u(k, 'fire')} opacity=".5" filter={u(k, 'glow')} />
@@ -60,14 +65,14 @@ const ICONS: Record<string, (k: string) => React.ReactNode> = {
   </Art>,
   PIERCING_SHOT: (k) => <Art k={k} c="#ffd24a">
     <circle cx="32" cy="32" r="17" fill="none" stroke="#ffd24a" strokeWidth="1.6" opacity=".5" />
-    <circle cx="32" cy="32" r="9" fill="none" stroke="#fff2a0" strokeWidth="1.4" opacity=".7" />
-    <path d="M6 54 L26 34" stroke="#ffd24a" strokeWidth="6" opacity=".4" filter={u(k, 'glow')} />
-    <g transform="translate(32 32) rotate(45)">
-      <rect x="-1.8" y="-6" width="3.6" height="34" fill={u(k, 'wood')} stroke={S} strokeWidth=".7" />
-      <path d="M0 -30 L7 -12 L0 -16 L-7 -12Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1" strokeLinejoin="round" />
-      <path d="M0 24 L7 34 L0 30 L-7 34Z" fill={u(k, 'red')} stroke={S} strokeWidth=".8" strokeLinejoin="round" />
-      <path d="M0 14 L6 24 L0 21 L-6 24Z" fill={u(k, 'red')} stroke={S} strokeWidth=".8" strokeLinejoin="round" />
+    <path d="M2 62 L26 38" stroke="#ffd24a" strokeWidth="7" opacity=".4" filter={u(k, 'glow')} />
+    <path d="M6 58 L20 44 M12 62 L24 50" stroke="#fff2a0" strokeWidth="1.6" opacity=".8" />
+    <g transform="translate(34 30) rotate(45)">
+      <rect x="-1.8" y="-6" width="3.6" height="36" fill={u(k, 'wood')} stroke={S} strokeWidth=".7" />
+      <path d="M0 -32 L8 -12 L0 -17 L-8 -12Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1" strokeLinejoin="round" />
+      <path d="M0 26 L7 36 L0 32 L-7 36Z" fill={u(k, 'red')} stroke={S} strokeWidth=".8" strokeLinejoin="round" />
     </g>
+    <circle cx="50" cy="14" r="3" fill="#fff" opacity=".8" /><circle cx="50" cy="14" r="7" fill="none" stroke="#fff2a0" strokeWidth="1.2" opacity=".7" />
   </Art>,
   GRAVITY_SPELL: (k) => <Art k={k} c="#8a4be0">
     <ellipse cx="32" cy="32" rx="26" ry="11" fill="none" stroke={u(k, 'purp')} strokeWidth="3" transform="rotate(-25 32 32)" opacity=".9" />
@@ -113,17 +118,20 @@ const ICONS: Record<string, (k: string) => React.ReactNode> = {
     <path d="M38 22 L50 24 L46 36 L54 50 M46 36 L36 40 L28 54 M38 22 L28 28 L22 26 M50 24 L58 18" stroke={u(k, 'ice')} strokeWidth="4.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
   </Art>,
   burning: (k) => <Art k={k} c="#ff6a2a">
-    <path d="M32 4 C36 16 52 24 50 40 C48 54 38 60 30 60 C18 60 12 50 16 38 C18 32 24 30 24 22 C30 26 32 30 32 34 C36 26 34 14 32 4Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M32 34 C38 40 40 46 36 52 C32 56 26 54 26 48 C26 44 30 42 32 34Z" fill="#fff0a0" />
+    <path d="M32 2 C40 14 50 20 48 34 C46 44 40 48 36 50 L28 50 C22 48 16 42 18 32 C20 26 26 24 26 16 C30 20 32 24 32 28 C36 20 34 10 32 2Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M32 24 C36 30 38 36 35 42 C32 46 28 44 28 40 C28 36 31 32 32 24Z" fill="#fff0a0" />
+    <path d="M32 62 L24 46 L32 49 L40 46Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M32 49 V62" stroke={S} strokeWidth="2" />
   </Art>,
   freezing: (k) => <Art k={k} c="#7ee0ff">
-    <g transform="translate(32 32)" stroke={S} strokeLinecap="round">
-      {[0, 60, 120].map((a) => <g key={a} transform={`rotate(${a})`}>
-        <path d="M0 -24 V24" strokeWidth="7" /><path d="M0 -24 V24" stroke={u(k, 'ice')} strokeWidth="4.4" />
-        <path d="M-6 -16 L0 -10 L6 -16 M-6 16 L0 10 L6 16" strokeWidth="5" fill="none" /><path d="M-6 -16 L0 -10 L6 -16 M-6 16 L0 10 L6 16" stroke="#cdf4ff" strokeWidth="2.6" fill="none" />
-      </g>)}
-      <circle r="4.5" fill="#fff" strokeWidth="1" />
+    <path d="M10 36 C16 22 30 16 44 22 M14 48 C22 36 36 32 52 38" stroke="#bff0ff" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".8" />
+    <path d="M8 40 C12 30 20 26 26 28" stroke="#7ee0ff" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity=".7" />
+    <g transform="translate(34 30) rotate(45)">
+      <path d="M0 -30 L9 -8 L0 -13 L-9 -8Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
+      <rect x="-1.8" y="-10" width="3.6" height="34" fill="#cdf4ff" stroke={S} strokeWidth=".8" />
+      <path d="M-7 28 L0 18 L7 28 L0 25Z" fill={u(k, 'ice')} stroke={S} strokeWidth=".9" strokeLinejoin="round" />
     </g>
+    <g stroke="#fff" strokeWidth="1.6" strokeLinecap="round"><path d="M50 12 V22 M45 17 H55 M46.5 13.5 L53.5 20.5 M53.5 13.5 L46.5 20.5" /></g>
   </Art>,
   freezeSpell: (k) => <Art k={k} c="#5b9bff">
     <path d="M32 4 L44 26 L40 58 L32 62 L24 58 L20 26Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
@@ -139,15 +147,19 @@ const ICONS: Record<string, (k: string) => React.ReactNode> = {
     <circle cx="14" cy="52" r="1.5" fill="#fff" /><circle cx="50" cy="48" r="1.5" fill="#fff" />
   </Art>,
   thunder: (k) => <Art k={k} c="#ffe14a">
-    <path d="M10 28 C6 20 14 12 22 14 C24 6 38 6 40 14 C50 12 58 22 50 28Z" fill="#6a6f8a" stroke={S} strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M36 22 L22 40 L31 40 L26 60 L46 34 L35 34 L40 22Z" fill="#ffe14a" opacity=".6" filter={u(k, 'glow')} />
-    <path d="M36 22 L22 40 L31 40 L26 60 L46 34 L35 34 L40 22Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.4" strokeLinejoin="round" />
+    <path d="M12 46 L26 24 L38 40 L52 16" stroke="#ffe14a" strokeWidth="7" fill="none" opacity=".45" filter={u(k, 'glow')} strokeLinejoin="round" />
+    <path d="M12 46 L22 36 L18 32 L28 22 L36 34 L32 36 L42 30 L52 16" stroke={S} strokeWidth="6" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    <path d="M12 46 L22 36 L18 32 L28 22 L36 34 L32 36 L42 30 L52 16" stroke="#fff6b0" strokeWidth="3" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    {[[12, 46], [28, 22], [52, 16], [44, 50]].map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="6" fill={u(k, 'gold')} stroke={S} strokeWidth="1.3" /><circle cx={x} cy={y} r="2.2" fill="#fff" /></g>)}
+    <path d="M36 34 L44 50" stroke="#ffe14a" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="3 3" />
   </Art>,
   stamp: (k) => <Art k={k} c="#ff9a3c">
-    <path d="M8 56 L24 52 L32 58 L40 52 L56 56" stroke="#ffb05a" strokeWidth="2" fill="none" strokeLinecap="round" opacity=".8" />
-    <rect x="29.5" y="22" width="5" height="34" rx="2" fill={u(k, 'wood')} stroke={S} strokeWidth="1" transform="rotate(-20 32 40)" />
-    <path d="M14 10 H44 L48 26 H18Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" transform="rotate(-20 32 20)" />
-    <path d="M20 14 H38" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".7" transform="rotate(-20 32 20)" />
+    <ellipse cx="32" cy="52" rx="26" ry="7" fill="none" stroke="#ffb05a" strokeWidth="2" opacity=".9" />
+    <ellipse cx="32" cy="52" rx="16" ry="4" fill="none" stroke="#ffd9a0" strokeWidth="1.6" opacity=".8" />
+    <path d="M8 56 L20 50 M56 56 L44 50 M32 58 V46" stroke="#ffb05a" strokeWidth="2" strokeLinecap="round" />
+    <path d="M18 8 H46 L50 28 C50 36 44 42 32 42 C20 42 14 36 14 28Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M22 12 H42 M20 20 H44" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".6" />
+    <path d="M22 28 V38 M32 28 V40 M42 28 V38" stroke={S} strokeWidth="1.4" opacity=".6" />
   </Art>,
   orbital: (k) => <Art k={k} c="#5ac0ff">
     <ellipse cx="32" cy="32" rx="24" ry="24" fill="none" stroke="#6ec1ff" strokeOpacity=".5" strokeWidth="1.4" strokeDasharray="3 3" />
