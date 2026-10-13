@@ -88,17 +88,64 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Malakar the Undying', hp: 1430, speed: 3.4, radius: 1.4, scale: 2.6, contactDamage: 18, projectileDamage: 14,
     xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
+  BOSS_TREANT: {
+    name: 'Elderroot the Ancient', hp: 1800, speed: 2.4, radius: 2.3, scale: 3.4, contactDamage: 22, projectileDamage: 16,
+    xp: 9, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x4d7c0f, knockResist: 1, armor: 55,
+  },
+  BOSS_HYDRA: {
+    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 2.7, scale: 3.2, contactDamage: 22, projectileDamage: 17,
+    xp: 10, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 50,
+  },
+  BOSS_WYRM: {
+    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 2.2, scale: 3.4, contactDamage: 24, projectileDamage: 18,
+    xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
+  },
+  BOSS_WARLORD: {
+    name: 'Ignar the Infernal Warlord', hp: 2300, speed: 3.4, radius: 2.0, scale: 3.1, contactDamage: 28, projectileDamage: 19,
+    xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
+  },
+  BOSS_VOID: {
+    name: 'The Void Herald', hp: 2600, speed: 3.0, radius: 1.8, scale: 3.0, contactDamage: 26, projectileDamage: 20,
+    xp: 13, gold: 0, cost: 0, minWave: 70, weight: 0, color: 0xa855f7, knockResist: 1, armor: 50,
+  },
+  BOSS_SAPLING: {
+    name: 'Sapling', hp: 90, speed: 1.9, radius: 0.8, scale: 1.0, contactDamage: 0, projectileDamage: 12,
+    xp: 0, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x65a30d, knockResist: 0.3, armor: 10,
+  },
+  BOSS_HYDRA_HEAD: {
+    name: 'Hydra Head', hp: 300, speed: 0, radius: 1.25, scale: 1.0, contactDamage: 0, projectileDamage: 14,
+    xp: 0, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 20,
+  },
+  BOSS_IMP: {
+    name: 'Fire Imp', hp: 70, speed: 5.4, radius: 0.55, scale: 0.9, contactDamage: 11, projectileDamage: 0,
+    xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xff6a1a, knockResist: 0, armor: 5,
+  },
 };
 
-export type BossKind = 'BOSS_GOLEM' | 'BOSS_LICH';
+export type BossKind =
+  | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_VOID';
+
+/** Boss rotation: wave 10 * (i + 1). After the last one the cycle restarts (hp/dmg keep scaling with the wave number). */
+export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_LICH', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID'];
+export function bossForWave(wave: number): BossKind {
+  const i = Math.max(0, Math.round(wave / 10) - 1);
+  return BOSS_ROTATION[i % BOSS_ROTATION.length];
+}
+/** Summons / body parts of the new bosses: no xp, loot or gold; vanish when their boss dies. */
+export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP'; }
 
 export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },
   BOSS_LICH: { name: 'Malakar the Undying', title: 'Lich King' },
+  BOSS_TREANT: { name: 'Elderroot the Ancient', title: 'Ancient Treant' },
+  BOSS_HYDRA: { name: 'The Mire Hydra', title: 'Marsh Terror' },
+  BOSS_WYRM: { name: 'Glacius the Frost Wyrm', title: 'Winter Dragon' },
+  BOSS_WARLORD: { name: 'Ignar the Infernal Warlord', title: 'Lord of Cinders' },
+  BOSS_VOID: { name: 'The Void Herald', title: 'Harbinger of the Abyss' },
 };
 
 export function isBossKind(k: EnemyKind): k is BossKind {
-  return k === 'BOSS_GOLEM' || k === 'BOSS_LICH';
+  return k === 'BOSS_GOLEM' || k === 'BOSS_LICH' || k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_VOID';
 }
 
 /** Kinds the director may pick for ordinary spawns. */

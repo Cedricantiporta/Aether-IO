@@ -14,7 +14,7 @@ import { TAU, clamp } from './util';
 import { inView } from './view';
 
 const MAXZ = 192;
-const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
+const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, TELEGRAPH_CONE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
   FIREPATCH: 9, GOO: 10, CALTROPS: 10, ACID: 10, PLAGUE: 10, SMOKE: 10 };
 // sub-style of the generic hostile patch shader (vP.w)
 const PATCH_STYLE: Partial<Record<ZoneKind, number>> = { GOO: 0, CALTROPS: 1, ACID: 2, PLAGUE: 3, SMOKE: 4 };

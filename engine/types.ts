@@ -24,7 +24,15 @@ export type EnemyKind =
   | 'BOAR'       // farm/grove: straight-line charge with knockback (wave 3+)
   | 'ROCK_CRAB'  // quarry/pond: armoured front, sidesteps (wave 6+)
   | 'BOSS_GOLEM' // boss: ground slams w/ telegraphs, rock rings, charge
-  | 'BOSS_LICH'; // boss: bullet-hell spirals, teleport, summons minions
+  | 'BOSS_LICH'  // boss: bullet-hell spirals, teleport, summons minions
+  | 'BOSS_TREANT' // wave 30: Elderroot the Ancient Treant (roots, sapling brood, thorn ring, bark armor)
+  | 'BOSS_HYDRA'  // wave 40: Mire Hydra (3 targetable heads, acid spit, tail sweep, submerge)
+  | 'BOSS_WYRM'   // wave 50: Glacius the Frost Wyrm (frost breath, ice spikes, dive-bomb, blizzard)
+  | 'BOSS_WARLORD'// wave 60: Ignar the Infernal Warlord (flame wheel, fire pillars, imps, enrage)
+  | 'BOSS_VOID'   // wave 70: The Void Herald (portals, gravity flip, echoes, arena shrink)
+  | 'BOSS_SAPLING'    // boss add: Elderroot mini-treant (walks, fuses, bursts into thorns)
+  | 'BOSS_HYDRA_HEAD' // boss part: separately targetable hydra head (positioned by the hydra AI)
+  | 'BOSS_IMP';       // boss add: Ignar fire imp (goblin model, tinted)
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage
@@ -152,6 +160,7 @@ export type ZoneKind =
   | 'FROST_NOVA'        // player blizzard visual + slow field
   | 'TELEGRAPH_CIRCLE'  // hostile: fills up, damages player at end (boss slam, bomber)
   | 'TELEGRAPH_LINE'    // hostile: charge lane warning (dir + length + width)
+  | 'TELEGRAPH_CONE'    // hostile: cone warning (dir, radius = range, aux = half-angle in rad); always resolves via zone.trick
   | 'POISON_POOL'       // hostile: dps while standing in it
   | 'TORNADO'           // player: short-lived pull + damage vortex (Gale Arrow trail)
   | 'FROST_FIELD'       // player: slowing ice field with damage ticks
