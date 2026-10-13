@@ -222,7 +222,7 @@ export const ITEMS_POOL: Item[] = [
   { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 25, description: 'Restores 75 HP. Req Lvl 25.' },
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 150, level: 25, description: 'Restores 75 Mana. Req Lvl 25.' },
   
-  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'RARE', price: 500, level: 1, description: 'Used for upgrades.' },
+  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'A rare arcane core used by the Blacksmith to upgrade gear.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death.' },
 
   // --- WEAPONS (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---

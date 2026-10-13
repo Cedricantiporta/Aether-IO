@@ -379,7 +379,7 @@ export function generateMap(): void {
   const hazards: { kind: 'PUDDLE' | 'GAS'; x: number; z: number; r: number }[] = [];
   const hazardFree = (x: number, z: number, r: number): boolean => {
     if (!inIsland(x, z, r + 4) || inClear(x, z, r)) return false;
-    if (overlaps(x, z, 1.2, 0)) return false;
+    if (overlaps(x, z, Math.min(r * 0.5, 3), 0)) return false;
     for (const h of hazards) if (Math.hypot(x - h.x, z - h.z) < h.r + r + 1) return false;
     return true;
   };
@@ -388,12 +388,20 @@ export function generateMap(): void {
     hazards.push({ kind, x, z, r });
     return true;
   };
-  const puddleR = () => rand(2.5, 5);
+  // A few large marshy puddles (designer: "big parts instead of many small ones").
+  const puddleR = () => rand(7, 10.5);
   const farmR = reg('FARM'), pondR = reg('POND');
-  scatter(farmR.x, farmR.z, 18, 2, (x, z) => addHazard('PUDDLE', x, z, puddleR()), 5);
-  scatter(pondR.x, pondR.z, 24, 3, (x, z) => addHazard('PUDDLE', x, z, puddleR()), POND.r + 4);
-  for (const g of REGIONS) if (g.kind === 'GROVE') scatter(g.x, g.z, g.r + 2, 1, (x, z) => addHazard('PUDDLE', x, z, puddleR()));
-  scatter(farmR.x, farmR.z, 18, 1, (x, z) => addHazard('PUDDLE', x, z, puddleR()), 5);
+  let puddles = 0;
+  puddles += scatter(farmR.x, farmR.z, 26, 1, (x, z) => addHazard('PUDDLE', x, z, puddleR()), 8);
+  puddles += scatter(pondR.x, pondR.z, 34, 1, (x, z) => addHazard('PUDDLE', x, z, puddleR()), POND.r + 9);
+  const groves = REGIONS.filter((g) => g.kind === 'GROVE');
+  const g0 = groves[Math.floor(rnd() * groves.length)];
+  if (g0) puddles += scatter(g0.x, g0.z, g0.r + 14, 1, (x, z) => addHazard('PUDDLE', x, z, puddleR()), g0.r);
+  // top up to at least 3 anywhere open on the island
+  for (let t = 0; t < 80 && puddles < 3; t++) {
+    const a = rnd() * Math.PI * 2, d = 25 + rnd() * 55;
+    if (addHazard('PUDDLE', Math.cos(a) * d, Math.sin(a) * d, puddleR())) puddles++;
+  }
   const gyR = reg('GRAVEYARD'), cgR = reg('CRYSTAL_GROVE'), qR = reg('QUARRY');
   scatter(gyR.x, gyR.z, 10, 2, (x, z) => addHazard('GAS', x, z, rand(3.5, 5)));
   scatter(cgR.x, cgR.z, 9, 1, (x, z) => addHazard('GAS', x, z, rand(3.5, 5)));

@@ -920,7 +920,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       } else {
         const r = Math.random();
         if (r > 0.90) pool = notPet.filter((i) => i.type === 'POTION');
-        else if (r > 0.60) pool = notPet.filter((i) => i.type === 'CORE');
+        else if (r > 0.82) pool = notPet.filter((i) => i.type === 'CORE'); // cores are rare (8% of item drops)
         else pool = notPet.filter((i) => isGear(i) && (i.rarity === 'COMMON' || i.rarity === 'RARE'));
       }
       if (pool.length === 0) return null;

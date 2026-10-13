@@ -47,12 +47,12 @@ const Sword: Draw = (c) => (<g transform="rotate(45 32 32)">
   <circle cx="32" cy="59" r="3.2" fill={g('gold')} {...st} /><circle cx="32" cy="42.5" r="2" fill={c} stroke={S} strokeWidth="1" />
 </g>);
 const Core: Draw = () => (<g>
-  <circle cx="32" cy="32" r="26" fill="#5aaeff" opacity=".22" />
-  <path d="M32 3 L55 16 V44 L32 61 L9 44 V16Z" fill={g('blue')} {...st} />
+  <circle cx="32" cy="32" r="26" fill="#b26bff" opacity=".28" />
+  <path d="M32 3 L55 16 V44 L32 61 L9 44 V16Z" fill={g('purp')} {...st} />
   <path d="M32 3 L55 16 L32 30 L9 16Z" fill="#fff" opacity=".4" />
   <path d="M32 30 L55 16 V44 L32 61Z" fill="#000" opacity=".22" />
   <path d="M9 16 L32 30 L55 16 M32 30 V61" stroke="#fff" strokeOpacity=".65" strokeWidth="1.1" fill="none" />
-  <path d="M32 18 L42 24 L32 30 L22 24Z" fill="#e4f6ff" opacity=".9" />
+  <path d="M32 18 L42 24 L32 30 L22 24Z" fill="#f3e4ff" opacity=".9" />
 </g>);
 const Ankh: Draw = () => (<g>
   <circle cx="32" cy="32" r="27" fill="#ffd24a" opacity=".16" />
