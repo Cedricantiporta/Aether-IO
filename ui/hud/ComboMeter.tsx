@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { combo, COMBO_WINDOW } from '../../engine/systems/combo';
+import { combo, COMBO_WINDOW, comboTier } from '../../engine/systems/combo';
 import { useRaf } from '../hooks/useRaf';
 
 /** "COMBO xN" counter with a timer ring and a flashy FINISHER! text. Per-frame values are written via refs. */
@@ -14,8 +14,8 @@ export const ComboMeter: React.FC<{ touch?: boolean }> = ({ touch }) => {
     const on = combo.stacks > 0 && combo.t > 0;
     if (combo.stacks !== l.stacks) {
       l.stacks = combo.stacks;
-      if (label.current) label.current.textContent = `COMBO ×${combo.stacks}`;
-      if (root.current) { root.current.dataset.n = String(combo.stacks); root.current.classList.remove('combo-pop'); void root.current.offsetWidth; root.current.classList.add('combo-pop'); }
+      if (label.current) label.current.textContent = `${combo.stacks} HITS`;
+      if (root.current) { root.current.dataset.n = String(comboTier()); if (combo.stacks % 10 === 0) { root.current.classList.remove('combo-pop'); void root.current.offsetWidth; root.current.classList.add('combo-pop'); } }
     }
     if (root.current) root.current.style.opacity = on ? '1' : '0';
     const p = (Math.max(0, combo.t) / COMBO_WINDOW).toFixed(3);

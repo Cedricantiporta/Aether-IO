@@ -1,48 +1,48 @@
 // ============================================================================
-// Skill combo: different active casts within 3 s of each other build stacks (max 3).
-// Each stack = +20% damage to the NEXT skill. Ult cast at 3 stacks = COMBO FINISHER
-// (+50% ult damage, refunds 25% ult charge). Repeating the same skill breaks the chain.
+// Hit combo: every hit the player lands (basic attacks, skills, ults — not DoT ticks or pets) adds 1.
+// The chain drops after COMBO_WINDOW seconds without a hit. Bonus damage on all player hits:
+// +2.5% per 10 hits (cap +25% at 100). An ult cast at FINISHER_HITS+ is a COMBO FINISHER
+// (+50% ult damage, refunds 25% ult charge) and resets the chain.
 // ============================================================================
-import { world } from '../world';
 import { events } from '../events';
 
 export const COMBO_WINDOW = 3;
-export const combo = { stacks: 0, t: 0, last: '', finisher: 0, lastSlot: '', lastSlotT: -10 };
+export const FINISHER_HITS = 50;
+/** `stacks` = current hit count (name kept for the HUD). */
+export const combo = { stacks: 0, t: 0, finisher: 0, best: 0, lastSlot: '', lastSlotT: -10 };
 
-export function resetCombo(): void { combo.stacks = 0; combo.t = 0; combo.last = ''; combo.finisher = 0; combo.lastSlot = ''; combo.lastSlotT = -10; }
+export function resetCombo(): void { combo.stacks = 0; combo.t = 0; combo.finisher = 0; combo.best = 0; combo.lastSlot = ''; combo.lastSlotT = -10; }
 
 export function updateCombo(dt: number): void {
   if (combo.finisher > 0) combo.finisher = Math.max(0, combo.finisher - dt);
   if (combo.t > 0) {
     combo.t -= dt;
-    if (combo.t <= 0) { combo.t = 0; combo.stacks = 0; combo.last = ''; }
+    if (combo.t <= 0) { combo.t = 0; combo.stacks = 0; }
   }
 }
 
-/** Damage multiplier the skill about to be cast receives (stacks BEFORE this cast). */
-export function comboMul(): number { return 1 + 0.2 * combo.stacks; }
+/** 0..3 visual tier (10 / 30 / FINISHER_HITS hits). */
+export function comboTier(): number {
+  const n = combo.stacks;
+  return n >= FINISHER_HITS ? 3 : n >= 30 ? 2 : n >= 10 ? 1 : 0;
+}
 
-/**
- * Registers an active / ult cast. `id` is the skill identity ('s1','s2','s3','ult'); returns true when this ult cast is a finisher.
- */
-export function registerCast(id: string, isUlt: boolean): boolean {
-  const had = combo.t > 0;
-  let finisher = false;
-  if (isUlt && had && combo.stacks >= 3) finisher = true;
-  if (finisher) {
-    combo.stacks = 0; combo.t = 0; combo.last = ''; combo.finisher = 1.4;
-    events.emit('combo', { stacks: 3, finisher: true });
-  } else if (!had) {
-    combo.stacks = 1; combo.t = COMBO_WINDOW; combo.last = id;
-    events.emit('combo', { stacks: 1, finisher: false });
-  } else if (id === combo.last) {
-    // repeating the same skill breaks the chain (and starts a new one)
-    combo.stacks = 1; combo.t = COMBO_WINDOW; combo.last = id;
-    events.emit('combo', { stacks: 0, finisher: false });
-  } else {
-    combo.stacks = Math.min(3, combo.stacks + 1); combo.t = COMBO_WINDOW; combo.last = id;
-    events.emit('combo', { stacks: combo.stacks, finisher: false });
-  }
-  void world;
-  return finisher;
+/** Damage multiplier for player hits from the current chain. */
+export function comboMul(): number { return 1 + Math.min(0.25, Math.floor(combo.stacks / 10) * 0.025); }
+
+/** Called by damageEnemy for every direct player hit. */
+export function registerHit(): void {
+  const prevTier = comboTier();
+  combo.stacks++; combo.t = COMBO_WINDOW;
+  if (combo.stacks > combo.best) combo.best = combo.stacks;
+  const tier = comboTier();
+  if (tier > prevTier) events.emit('combo', { stacks: tier, finisher: false });
+}
+
+/** Ult cast: returns true when it is a finisher (consumes the chain). */
+export function registerUlt(): boolean {
+  if (combo.t <= 0 || combo.stacks < FINISHER_HITS) return false;
+  combo.stacks = 0; combo.t = 0; combo.finisher = 1.4;
+  events.emit('combo', { stacks: 3, finisher: true });
+  return true;
 }

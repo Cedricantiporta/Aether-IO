@@ -8,7 +8,7 @@ import { edgeLimit, queryColliders, type Collider } from '../mapgen';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
-import { combo, comboMul, registerCast } from './combo';
+import { combo, registerUlt } from './combo';
 import type { GroundFx, GroundFxKind } from '../types';
 import {
   getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim,
@@ -271,14 +271,12 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   if (!dash && !gate(slot)) return;
   const lv = st.skillLevels[slot];
   const hero = st.hero;
-  // ---- combo: each different active cast within 3 s adds a stack; the NEXT skill gets +20% per stack
-  const id = `s${index + 1}`;
+  // hit-combo damage bonus is applied per hit in combat.damageEnemy
+  curMul = 1;
   if (!dash) {
-    curMul = combo.t > 0 && combo.last === id ? 1 : comboMul();
-    registerCast(id, false);
     if (hero === 'BARBARIAN' && slot === 'e') abilityState.whirlBoost = combo.lastSlot === 'q' && world.time - combo.lastSlotT < 3;
     combo.lastSlot = slot; combo.lastSlotT = world.time;
-  } else curMul = 1;
+  }
   const dir = getAimDir(aim);
   const dx = dir.x, dz = dir.z;
   const stats = st.stats;
@@ -479,9 +477,9 @@ export function castUlt(): void {
   if (p.ult < ULT_MAX - 0.001 || a.ultCd > 0) { notifyCooldown('r'); return; }
   p.ult = 0;
   a.ultCd = ULT_COOLDOWN * (1 - Math.min(0.75, st.stats.cooldownReduction || 0));
-  // combo: stacks BEFORE this cast boost the ult; at 3 stacks it is a FINISHER (+50%, refunds 25% charge)
-  curMul = combo.t > 0 ? comboMul() : 1;
-  const fin = registerCast('ult', true);
+  // combo: an ult cast with a 50+ hit chain is a FINISHER (+50%, refunds 25% charge)
+  curMul = 1;
+  const fin = registerUlt();
   if (fin) curMul += 0.5;
   a.finisher = fin; a.ultMul = curMul;
   a.windupT = a.windupDur = ULT_WINDUP;
