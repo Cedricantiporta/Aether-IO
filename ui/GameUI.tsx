@@ -6,6 +6,8 @@ import { GameStatus } from '../types';
 import { HUD } from './hud/HUD';
 import { TouchControls } from './hud/TouchControls';
 import { InteractPrompt } from './hud/InteractPrompt';
+import { Dialogue } from './hud/Dialogue';
+import { SpeechBubbles } from './hud/SpeechBubbles';
 import { device } from '../engine/device';
 import { FpsCounter } from './hud/FpsCounter';
 import { RotateHint } from './screens/RotateHint';
@@ -49,7 +51,9 @@ export const GameUI: React.FC = () => {
       {village && <VillageHUD />}
       {inGame && <HUD />}
       {(inGame || village) && device.touch && <TouchControls />}
+      {village && <SpeechBubbles />}
       {village && <InteractPrompt />}
+      {village && <Dialogue />}
       <AnimatePresence>
         {panels && (inv || bagShop) && (!swap || bagView) && <InventoryPanel key="inv" />}
         {panels && shop && !(swap && bagView) && <ShopPanel key="shop" />}

@@ -32,12 +32,12 @@ export const InteractPrompt: React.FC = () => {
       }
     }
   });
-  // E-type prompts fire once; harvest (F) is held like the key so the node keeps getting hit
+  // E-type prompts fire once; harvest is held like the E key so the node keeps getting hit
   const press = (i: number, e: React.PointerEvent) => {
     const n = nearby[i];
-    if (n.key === 'F') { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); world.input.keys.KeyF = true; } else interact(n);
+    if (n.act === 'harvest') { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); world.input.keys.KeyE = true; } else interact(n);
   };
-  const release = () => { world.input.keys.KeyF = false; };
+  const release = () => { world.input.keys.KeyE = false; };
   if (blocked || ui) { sig.current = ['', '', '']; return null; }
   return (
     <div className={`interact-stack ${device.touch ? 'touch' : ''}`} data-testid="interact-stack">
