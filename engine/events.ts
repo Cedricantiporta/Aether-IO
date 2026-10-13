@@ -4,7 +4,7 @@
 // Never emit per-entity-per-frame events (e.g. "moved"); only discrete moments.
 // ============================================================================
 import type { Vector3 } from 'three';
-import type { EnemyKind, ProjectileKind, PickupKind } from './types';
+import type { EnemyKind, ProjectileKind, PickupKind, CrateKind } from './types';
 import type { Rarity } from '../types';
 
 export type DamageKind = 'PHYSICAL' | 'FIRE' | 'ICE' | 'POISON' | 'MAGIC' | 'LIGHTNING' | 'TRUE';
@@ -36,7 +36,7 @@ export interface GameEvents {
   projectileImpact: { pos: Vector3; kind: ProjectileKind | 'ENEMY' };
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity };
-  crateBreak: { pos: Vector3 };
+  crateBreak: { pos: Vector3; kind: CrateKind };
   spawn: { pos: Vector3; kind: EnemyKind; elite: boolean };
   shake: { amount: number }; // adds camera trauma 0..1
 

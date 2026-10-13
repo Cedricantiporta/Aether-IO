@@ -9,7 +9,8 @@ import { getAimDir, healPlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
 import { castQ, castR, castE, updateAbilities, notifyCooldown, notifyNoMana } from './abilities';
 import { breakCrate } from './crates';
-import { queryColliders, type Collider } from '../mapgen';
+import { envSlow } from './zones';
+import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
 
 const DASH_TIME = 0.18;
@@ -81,10 +82,13 @@ function resolveObstacles(p: typeof world.player, x: number, z: number): void {
       nz = c.z + (dz / d) * min;
     }
   }
-  const lim = ARENA_RADIUS - 1;
-  const r2 = nx * nx + nz * nz;
-  if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); nx *= k; nz *= k; }
   p.pos.x = nx; p.pos.z = nz; p.pos.y = 0;
+  pushOutOfCrates(p.pos, 0.5);
+  const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;
+  if (r2 > 80 * 80) {
+    const lim = edgeLimit(p.pos.x, p.pos.z, 2);
+    if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; }
+  }
 }
 
 export function updatePlayer(dt: number): void {
@@ -204,7 +208,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * (p.sprintT > 0 ? 2 : 1) * (p.slowT > 0 ? 0.6 : 1);
+    const speed = stats.moveSpeed * (p.sprintT > 0 ? 2 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
     const lerpK = 1 - Math.exp(-12 * dt);
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;
@@ -219,7 +223,7 @@ export function updatePlayer(dt: number): void {
     const c = crates[i];
     if (!c.active) continue;
     const dx = c.pos.x - p.pos.x, dz = c.pos.z - p.pos.z;
-    if (dx * dx + dz * dz < 1.21) breakCrate(c);
+    if ((c.kind === 'POT' || c.kind === 'HAY') && dx * dx + dz * dz < 1.21) breakCrate(c);
   }
 
   // ---- anim

@@ -35,10 +35,11 @@ import { damagePlayer, damageEnemy, killEnemy } from './combat';
 import { useGameStore } from '../../store';
 import { DIFFICULTY_MODS } from '../../constants';
 import { updateBoss } from './bosses';
+import { queryColliders, edgeLimit, pushOutOfCrates, type Collider } from '../mapgen';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
-const LEASH_DIST = 90;
+const LEASH_DIST = 110;
 const CONTACT_CD = 0.6;
 const ELITE_SCALE = 1.35;
 const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'VOLATILE', 'SHIELDED'];
@@ -92,13 +93,14 @@ export function isUntargetable(e: Enemy): boolean {
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
 
+const spawnCols: Collider[] = [];
 function blockedAt(x: number, z: number, pad: number): boolean {
-  const obs = world.obstacles;
-  for (let i = 0; i < obs.length; i++) {
-    const o = obs[i];
-    const dx = x - o.pos.x;
-    const dz = z - o.pos.z;
-    const r = o.radius + pad;
+  const cols = queryColliders(x, z, pad + 1, spawnCols);
+  for (let i = 0; i < cols.length; i++) {
+    const o = cols[i];
+    const dx = x - o.x;
+    const dz = z - o.z;
+    const r = o.r + pad;
     if (dx * dx + dz * dz < r * r) return true;
   }
   return false;
@@ -106,8 +108,12 @@ function blockedAt(x: number, z: number, pad: number): boolean {
 
 /** Is (x,z) a legal spawn spot (inside arena, outside obstacles)? */
 export function isSpawnable(x: number, z: number): boolean {
-  const lim = ARENA_RADIUS - 3;
-  return x * x + z * z <= lim * lim && !blockedAt(x, z, 1.5);
+  const r2 = x * x + z * z;
+  if (r2 > 80 * 80) {
+    const lim = edgeLimit(x, z, 3);
+    if (r2 > lim * lim) return false;
+  }
+  return !blockedAt(x, z, 1.5);
 }
 
 /**
@@ -471,21 +477,24 @@ function separate(e: Enemy): void {
   }
 }
 
+const colScratch: Collider[] = [];
 function pushOutOfObstacles(e: Enemy): void {
-  const obs = world.obstacles;
-  for (let i = 0; i < obs.length; i++) {
-    const o = obs[i];
-    const dx = e.pos.x - o.pos.x;
-    const dz = e.pos.z - o.pos.z;
-    const r = o.radius + e.radius * 0.8;
+  const rr = e.radius * 0.8;
+  const cols = queryColliders(e.pos.x, e.pos.z, rr + 0.5, colScratch);
+  for (let i = 0; i < cols.length; i++) {
+    const o = cols[i];
+    const dx = e.pos.x - o.x;
+    const dz = e.pos.z - o.z;
+    const r = o.r + rr;
     if (dx > r || dx < -r || dz > r || dz < -r) continue;
     const d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
     const d = Math.sqrt(d2);
     if (d < 0.001) { e.pos.x += r; continue; }
-    e.pos.x = o.pos.x + (dx / d) * r;
-    e.pos.z = o.pos.z + (dz / d) * r;
+    e.pos.x = o.x + (dx / d) * r;
+    e.pos.z = o.z + (dz / d) * r;
   }
+  pushOutOfCrates(e.pos, rr);
 }
 
 function contactHit(e: Enemy, locked: boolean): void {
@@ -576,11 +585,13 @@ function updateEnemy(e: Enemy): void {
     }
   }
 
-  const lim = ARENA_RADIUS - 1;
   const r2 = e.pos.x * e.pos.x + e.pos.z * e.pos.z;
-  if (r2 > lim * lim) {
-    const s = lim / Math.sqrt(r2);
-    e.pos.x *= s; e.pos.z *= s;
+  if (r2 > 80 * 80) {
+    const lim = edgeLimit(e.pos.x, e.pos.z, 1);
+    if (r2 > lim * lim) {
+      const s = lim / Math.sqrt(r2);
+      e.pos.x *= s; e.pos.z *= s;
+    }
   }
   e.pos.y = 0;
 
