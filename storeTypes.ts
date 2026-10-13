@@ -138,7 +138,7 @@ export interface GameState {
   selectUpgrade: (u: Upgrade) => void;// applies card, status = PLAYING
   upgradeSkill: (k: keyof SkillLevels) => void; // spend SP (skills tab)
   endRun: (summary: Omit<RunSummary, 'hero' | 'difficulty' | 'cp' | 'waveGoldBonus' | 'level' | 'rankXpGained' | 'rankUps' | 'rank'>) => void; // GAME_OVER + stats
-  getManaCost: (skill: keyof SkillLevels | 'q' | 'r' | 'e' | 'dash') => number; // already includes wizard x1.3
+  getManaCost: (skill: keyof SkillLevels | 'dash') => number; // already includes wizard x1.3
 
   // items
   addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full
@@ -160,7 +160,7 @@ export interface GameState {
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll
-  summon: (count: 1 | 10) => Item[]; // gacha with gems (100 each, 900 for 10x); pets+gear; returns results for reveal UI
+  summon: (count: 1 | 10) => Item[]; // gacha with gems (10 each, 90 for 10x); pets+gear; returns results for reveal UI
 
   // talents (permanent, per class; 1 point per Hero Rank + 1 per 5 ranks)
   allocateTalent: (id: string) => boolean;

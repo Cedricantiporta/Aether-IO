@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { GemGlyph } from '../../components/SkillIcons';
-import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS } from '../../../store';
+import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10 } from '../../../store';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR } from '../../lib/game';
@@ -24,14 +24,14 @@ export const SummonTab: React.FC = () => {
         <div className="mt-2 text-[11px] opacity-80 text-center">Epic {SUMMON_WEIGHTS.EPIC}% (max 2) · Legendary {SUMMON_WEIGHTS.LEGENDARY}% (max 1) · Mythic {SUMMON_WEIGHTS.MYTHIC}% (max 1)</div>
       </div>
       <div className="grid grid-cols-2 gap-3 w-full">
-        <Button size="lg" variant="blue" disabled={gems < 100} onClick={() => go(1)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
-          <span>Summon x1</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />100</span>
+        <Button size="lg" variant="blue" disabled={gems < SUMMON_COST_1} onClick={() => go(1)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
+          <span>Summon x1</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />{SUMMON_COST_1}</span>
         </Button>
-        <Button size="lg" variant="primary" disabled={gems < 900} onClick={() => go(10)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
-          <span>Summon x10</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />900</span>
+        <Button size="lg" variant="primary" disabled={gems < SUMMON_COST_10} onClick={() => go(10)} style={{ flexDirection: 'column', gap: '.1rem', fontSize: '1rem' }}>
+          <span>Summon x10</span><span className="flex items-center gap-1 rpg-num !text-[.85rem]"><GemGlyph size={16} />{SUMMON_COST_10}</span>
         </Button>
       </div>
-      <div className="rpg-label !text-[.6rem]" style={{ color: RARITY_COLOR.LEGENDARY }}>10x saves 100 gems</div>
+      <div className="rpg-label !text-[.6rem]" style={{ color: RARITY_COLOR.LEGENDARY }}>10x saves {SUMMON_COST_1 * 10 - SUMMON_COST_10} gems</div>
     </div>
   );
 };
