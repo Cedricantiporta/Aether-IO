@@ -6,12 +6,12 @@ small procedurally generated rooms grouped into biomes, each biome ending in a b
 ## Town (hub, no combat)
 * Bigger, alive village: more houses (instanced/chunked, cheap), market stalls, well, fences, lamps.
 * NPCs walk simple loops/idle at points (KayKit character models, tinted / different weapons), a few
-  animals. Near an NPC: Genshin-style interact pill "[F] Talk — Name" → short dialogue box
+  animals. Near an NPC: Genshin-style interact pill "[E] Talk — Name" → short dialogue box
   (2–4 lines, portrait-less, tap to advance; some NPCs offer a quest or a freebie). NPCs also pop a
   random speech bubble ("Lovely day!", "Beware the swamp…") every 15–40 s when the player is near.
 * Shops / smith / quest board / summon shrine are always open (no siege closing). Interaction is via
   the interact pill only — skill buttons are never replaced.
-* Town gate = run start ("[F] Set out"). A death or "return home" brings you back; loot is kept.
+* Town gate = run start ("[E] Set out"). A death or "return home" brings you back; loot is kept.
 
 ## Run = biomes of rooms
 * Biome order: Meadow → Old Grove → Mire → Frostpeak → Ember Wastes → The Void (then loops
