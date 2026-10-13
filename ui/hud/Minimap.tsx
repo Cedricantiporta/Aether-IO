@@ -2,9 +2,8 @@ import React, { useRef } from 'react';
 import { world, ARENA_RADIUS } from '../../engine/world';
 import { SHOP_POSITIONS } from '../../constants';
 import { useRaf } from '../hooks/useRaf';
-import { OrnateRing } from '../components/Ornate';
 
-const SIZE = 148; // css px
+const SIZE = 120; // css px
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Circular minimap — drawn every frame from the world, no React state. */
@@ -19,12 +18,10 @@ export const Minimap: React.FC = () => {
     ctx.clearRect(0, 0, px, px);
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cx, R, 0, Math.PI * 2); ctx.clip();
-    // parchment-dark map ground
-    const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, R);
-    g.addColorStop(0, '#2f4a2a'); g.addColorStop(.8, '#223a22'); g.addColorStop(1, '#14231a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
+    // map ground
+    ctx.fillStyle = 'rgba(38,52,48,.55)'; ctx.fillRect(0, 0, px, px);
     // arena edge
-    ctx.strokeStyle = 'rgba(233,185,73,.55)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
     ctx.beginPath(); ctx.arc(cx, cx, ARENA_RADIUS * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     // obstacles
     ctx.fillStyle = 'rgba(0,0,0,.35)';
@@ -36,7 +33,7 @@ export const Minimap: React.FC = () => {
     // shops
     for (const s of SHOP_POSITIONS) {
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
-      ctx.fillStyle = s.color; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
+      ctx.fillStyle = s.color; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1 * DPR;
       ctx.beginPath(); ctx.rect(x - 3.5 * DPR, y - 3.5 * DPR, 7 * DPR, 7 * DPR); ctx.fill(); ctx.stroke();
     }
     // enemies
@@ -66,10 +63,8 @@ export const Minimap: React.FC = () => {
     ctx.restore();
   });
   return (
-    <div className="pe relative" style={{ width: `${SIZE / 14.4}rem`, height: `${SIZE / 14.4}rem` }}>
-      <div className="absolute" style={{ inset: '-27%' }}><OrnateRing id="mm" spikes={8} /></div>
-      <canvas ref={ref} width={SIZE * DPR} height={SIZE * DPR} className="absolute inset-0 w-full h-full rounded-full" />
-      <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-1.75rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
+    <div className="minimap" aria-label="Minimap">
+      <canvas ref={ref} width={SIZE * DPR} height={SIZE * DPR} />
     </div>
   );
 };

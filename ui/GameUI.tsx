@@ -5,6 +5,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { GameStatus } from '../types';
 import { HUD } from './hud/HUD';
 import { TouchControls } from './hud/TouchControls';
+import { InteractPrompt } from './hud/InteractPrompt';
+import { device } from '../engine/device';
 import { FpsCounter } from './hud/FpsCounter';
 import { RotateHint } from './screens/RotateHint';
 import { Notifications } from './hud/Overlays';
@@ -19,6 +21,7 @@ import { CharacterSheet } from './panels/CharacterSheet';
 import { ShopPanel } from './panels/ShopPanel';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
+import { useSmall } from './hooks/useMedia';
 
 const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.INVENTORY, GameStatus.SHOP]);
 
@@ -28,22 +31,28 @@ export const GameUI: React.FC = () => {
     status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen,
   })));
   const titleDone = useUiStore((s) => s.titleDone);
+  const bagView = useUiStore((s) => s.bagView);
+  const small = useSmall();
+  // small screens: the shop and the bag it works with are one sheet at a time (toggled with a header button)
+  const swap = small && shop && bagShop;
   const village = status === GameStatus.MENU && titleDone;
   const inGame = HUD_STATUSES.has(status);
   const panels = inGame || village;
 
   // tooltips must never outlive the element that spawned them
   useEffect(() => { hideTip(); }, [status, inv, shop, chr]);
+  useEffect(() => { if (!shop) useUiStore.getState().setBagView(false); }, [shop]);
 
   return (
     <div className="hud-root" style={{ zIndex: 10 }}>
       {status === GameStatus.MENU && !titleDone && <TitleScreen />}
       {village && <VillageHUD />}
       {inGame && <HUD />}
-      {(inGame || village) && <TouchControls />}
+      {(inGame || village) && device.touch && <TouchControls />}
+      {village && <InteractPrompt />}
       <AnimatePresence>
-        {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
-        {panels && shop && <ShopPanel key="shop" />}
+        {panels && (inv || bagShop) && (!swap || bagView) && <InventoryPanel key="inv" />}
+        {panels && shop && !(swap && bagView) && <ShopPanel key="shop" />}
         {panels && chr && <CharacterSheet key="chr" />}
       </AnimatePresence>
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>

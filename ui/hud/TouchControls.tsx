@@ -53,31 +53,40 @@ const Stick: React.FC<{ style: React.CSSProperties; onMove: (x: number, y: numbe
   return (
     <div ref={zone} className="pe tc-zone" data-testid={testId} aria-label={label} style={style}
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up}>
-      <div ref={base} className="tc-base" style={{ width: sz, height: sz, borderColor: tone }}>
-        <div ref={knob} className="tc-knob" style={{ width: `calc(${R_BASE * 0.85}px * var(--ui-scale))`, height: `calc(${R_BASE * 0.85}px * var(--ui-scale))`, background: `radial-gradient(circle at 35% 30%, #fff3c4, ${tone} 70%)` }} />
+      <div ref={base} className="tc-base" style={{ width: sz, height: sz, borderColor: tone === '#ffffff' ? undefined : tone }}>
+        <div ref={knob} className="tc-knob" style={{ width: `calc(${R_BASE * 0.85}px * var(--ui-scale))`, height: `calc(${R_BASE * 0.85}px * var(--ui-scale))`, background: tone === '#ffffff' ? undefined : tone }} />
       </div>
     </div>
   );
 };
 
 interface BtnProps {
-  inert?: boolean; code: string; label: string; size: number; icon?: React.ReactNode; hold?: boolean; accent?: string; ult?: boolean; getCd?: () => { t: number; max: number }; qty?: () => number; mana?: () => number; testId?: string;
+  inert?: boolean; code: string; label: string; size: number; icon?: React.ReactNode; accent?: string; ult?: boolean; getCd?: () => { t: number; max: number }; qty?: (s: ReturnType<typeof useGameStore.getState>) => number; mana?: () => number; testId?: string;
 }
-/** Big round action button. Edge-triggers `pressed[code]` and holds `keys[code]` while the finger is down. */
-const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#e9b949', ult, getCd, qty, mana, testId }) => {
+/** Round action button (size in units of --u). Edge-triggers `pressed[code]` and holds `keys[code]` while the finger is down. */
+const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#ffffff', ult, getCd, qty, mana, testId }) => {
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
+  const shade = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
   const id = useRef(-1);
-  const prev = useRef({ cd: '', tx: '', dim: false, ready: false });
+  const prev = useRef({ cd: '', tx: '', dim: false, ready: false, ult: '' });
   useRaf(() => {
     const p = prev.current;
     let frac = 0, t = 0;
-    if (ult) { frac = 0; t = 0; const pl = world.player; const ucd = abilityState.ultCd; const ready = pl.ult >= 99.99 && pl.ultT <= 0 && ucd <= 0; const tx = ready ? 'R' : pl.ultT > 0 ? '...' : ucd > 0 ? `${Math.ceil(ucd)}s` : `${Math.floor(pl.ult)}%`; if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; } if (ready !== p.ready) { p.ready = ready; root.current?.classList.toggle('tc-ready', ready); } return; }
+    if (ult) {
+      const pl = world.player; const ucd = abilityState.ultCd; const ready = pl.ult >= 99.99 && pl.ultT <= 0 && ucd <= 0;
+      const tx = ready ? '' : pl.ultT > 0 ? '...' : ucd > 0 ? `${Math.ceil(ucd)}s` : `${Math.floor(pl.ult)}%`;
+      if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; }
+      if (ready !== p.ready) { p.ready = ready; root.current?.classList.toggle('tc-ready', ready); }
+      const u = (pl.ult / 100).toFixed(2);
+      if (u !== p.ult) { p.ult = u; shade.current?.style.setProperty('--ult', u); }
+      return;
+    }
     if (getCd) { const c = getCd(); t = c.t; frac = c.max > 0 ? Math.min(1, Math.max(0, t / c.max)) : 0; }
     const v = t > 0.04 ? frac.toFixed(3) : '0';
     if (v !== p.cd) { p.cd = v; sweep.current?.style.setProperty('--cd', v); sweep.current?.style.setProperty('--cdv', v === '0' ? '0' : '1'); }
-    const tx = t > 0.04 ? (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1)) : qty ? String(qty()) : '';
+    const tx = t > 0.04 ? (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1)) : '';
     if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; }
     const dim = mana ? world.player.mana < mana() : false;
     if (dim !== p.dim) { p.dim = dim; root.current?.classList.toggle('tc-dim', dim); }
@@ -95,21 +104,37 @@ const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#e
     id.current = -1; world.input.keys[code] = false; root.current?.classList.remove('tc-down');
   };
   return (
-    <div ref={root} className="pe tc-btn" data-testid={testId || `tc-${code}`} role="button" aria-label={label}
-      style={{ width: size, height: size, ['--rc' as any]: accent, fontSize: ult ? undefined : undefined }}
+    <div ref={root} className="rbtn pe" data-testid={testId || `tc-${code}`} role="button" aria-label={label}
+      style={{ ['--s' as any]: `100%`, ['--rc' as any]: accent, width: '100%', height: '100%' }}
       onPointerDown={press} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>
-      {icon && <span className="tc-icon">{icon}</span>}
-      <div ref={sweep} className="cd-sweep" />
-      <span ref={txt} className="tc-txt" />
-      <span className="tc-key">{label}</span>
+      <div className="rb-in">
+        {icon && <span className="slot-icon">{icon}</span>}
+        {ult && <div ref={shade} className="absolute inset-0" style={{ background: 'conic-gradient(rgba(10,12,20,0) calc(var(--ult,0)*360deg), rgba(10,12,20,.6) 0)' }} />}
+        <div ref={sweep} className="cd-sweep" />
+        <span ref={txt} className="rb-txt" style={{ bottom: 'auto', top: '50%', transform: 'translateY(-50%)', fontSize: size > 1.2 ? 13 : 14 }} />
+      </div>
+      {qty && <Qty sel={qty} />}
     </div>
   );
 };
 
+/** Potion count badge: store selector (re-renders only when the count changes). */
+const Qty: React.FC<{ sel: (s: ReturnType<typeof useGameStore.getState>) => number }> = ({ sel }) => {
+  const n = useGameStore(sel);
+  return <span className="rb-qty" style={n <= 0 ? { color: '#ff8a80' } : undefined}>{n}</span>;
+};
+
 const DRAG_PX = 92;   // css px (scaled) for a full-length drag
 
+type At = { cx: number; cy: number; size: number };
+/** Absolute slot inside the cluster: centre at (cx, cy) units from the cluster's bottom/outer corner. */
+const slotStyle = ({ cx, cy, size }: At, left: boolean, minPx = 44): React.CSSProperties => {
+  const sz = `max(${minPx}px, calc(var(--u) * ${size}))`;
+  return { [left ? 'left' : 'right']: `calc(var(--u) * ${cx})`, bottom: `calc(var(--u) * ${cy})`, width: sz, height: sz } as React.CSSProperties;
+};
+
 /** Skill button with Wild-Rift style drag-aiming: drag = aim, release = cast, drag back to the centre / into the top zone = cancel, tap = auto-target. */
-const SkillBtn: React.FC<Omit<BtnProps, 'code'> & { skill: string; aimable?: boolean; onDrag?: (on: boolean, cancel: boolean) => void }> = ({ skill, aimable = true, onDrag, ...p }) => {
+const SkillBtn: React.FC<Omit<BtnProps, 'code' | 'size'> & { skill: string; at: At; left: boolean; aimable?: boolean; onDrag?: (on: boolean, cancel: boolean) => void }> = ({ skill, at, left, aimable = true, onDrag, ...p }) => {
   const ref = useRef<HTMLDivElement>(null);
   const st = useRef({ id: -1, cx: 0, cy: 0, t: 0, token: 0 });
   const scale = () => Number(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
@@ -123,7 +148,7 @@ const SkillBtn: React.FC<Omit<BtnProps, 'code'> & { skill: string; aimable?: boo
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     s.cx = r.left + r.width / 2; s.cy = r.top + r.height / 2;
     T.active = true; T.id = skill; T.dx = 0; T.dz = 0; T.mag = 0; T.cancel = false;
-    ref.current?.classList.add('tc-down');
+    ref.current?.firstElementChild?.classList.add('tc-down');
   };
   const move = (e: React.PointerEvent) => {
     const s = st.current;
@@ -141,18 +166,27 @@ const SkillBtn: React.FC<Omit<BtnProps, 'code'> & { skill: string; aimable?: boo
     if (e.pointerId !== s.id) return;
     s.id = -1;
     const tok = s.token;
-    ref.current?.classList.remove('tc-down');
+    ref.current?.firstElementChild?.classList.remove('tc-down');
     onDrag?.(false, false);
     // keep `active` for ~2 frames so an instant tap is still seen by the sim
     setTimeout(() => { if (st.current.token === tok && st.current.id === -1) T.active = false; }, 40);
   };
   return (
-    <div ref={ref} style={{ display: 'contents' }}>
-      <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up} style={{ touchAction: 'none' }}>
-        <TBtn {...p} code={'__none__' + skill} testId={p.testId || 'tc-' + skill} inert />
-      </div>
+    <div ref={ref} style={{ ...slotStyle(at, left), touchAction: 'none' }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up}>
+      <TBtn {...p} size={at.size} code={'__none__' + skill} testId={p.testId || 'tc-' + skill} inert />
     </div>
   );
+};
+
+type GS = ReturnType<typeof useGameStore.getState>;
+const hpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Health') ? n + (i.quantity || 1) : n), 0);
+const mpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0);
+
+// Cluster geometry (units of --u from the corner): ult is the hub, skills fan out on an arc, dash sits beside the hub, potions beyond.
+const G = {
+  ult: { cx: 1.6, cy: 1.0, size: 1.35 }, dash: { cx: 3.15, cy: 1.0, size: 1.1 },
+  s1: { cx: 2.66, cy: 2.06, size: 1.0 }, s2: { cx: 1.6, cy: 2.5, size: 1.0 }, s3: { cx: 0.48, cy: 2.34, size: 1.0 },
+  hp: { cx: 4.2, cy: 1.0, size: 0.9 }, mp: { cx: 3.8, cy: 1.9, size: 0.9 },
 };
 
 export const TouchControls: React.FC = () => {
@@ -169,61 +203,47 @@ export const TouchControls: React.FC = () => {
   const setDrag = (on: boolean, cancel: boolean) => setDragS((d) => (d.on === on && d.cancel === cancel ? d : { on, cancel }));
   if (!active) return null;
 
-  const left = side === 'LEFT';
+  // joystick on the LEFT => skill cluster on the right (and vice versa)
+  const left = side === 'RIGHT';
   const defs = activeDefs(hero);
   const order = ACTIVE_ORDER[hero];
   const dDef = dashDef(hero);
   const icon = (i: number) => <PaintedIcon id={defs[i].icon} />;
-  const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]] }), mana: () => useGameStore.getState().getManaCost(order[i]) });
   const p = world.player;
-  const S = 58, B = 68;
-  const inset = 'calc(env(safe-area-inset-left, 0px) + 1.2vw)';
-  const insetR = 'calc(env(safe-area-inset-right, 0px) + 1.2vw)';
-  const cluster: React.CSSProperties = { position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5vh)', [left ? 'right' : 'left']: left ? insetR : inset, display: 'grid', gap: 8, zIndex: 6, direction: 'ltr' } as any;
-  const joyZone: React.CSSProperties = { position: 'absolute', top: '22%', bottom: 0, [left ? 'left' : 'right']: 0, width: '46%', zIndex: 5 } as any;
-  const aimZone: React.CSSProperties = { position: 'absolute', top: '16%', bottom: '38%', [left ? 'right' : 'left']: 0, width: '36%', zIndex: 5 } as any;
-  void S; void B;
+  const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]] }), mana: () => useGameStore.getState().getManaCost(order[i]) });
+  const joyZone: React.CSSProperties = { position: 'absolute', top: '22%', bottom: 0, [side === 'LEFT' ? 'left' : 'right']: 0, width: '46%', zIndex: 5 } as any;
+  const aimZone: React.CSSProperties = { position: 'absolute', top: '16%', bottom: '38%', [side === 'LEFT' ? 'right' : 'left']: 0, width: '36%', zIndex: 5 } as any;
+  const potion = (k: 'hp' | 'mp') => (
+    <div style={slotStyle(G[k], left)}>
+      <TBtn code={k === 'hp' ? 'KeyZ' : 'KeyX'} label={k === 'hp' ? 'Health potion' : 'Mana potion'} size={G[k].size} accent={k === 'hp' ? '#ef5f55' : '#4f8df5'} icon={<PaintedIcon id={k === 'hp' ? 'HP' : 'MP'} />}
+        getCd={() => ({ t: k === 'hp' ? p.hpPotCd : p.mpPotCd, max: POTION_COOLDOWN })} qty={k === 'hp' ? hpQty : mpQty} />
+    </div>
+  );
 
   return (
     <div className="tc-root">
-      <Stick testId="joystick" label="Move" tone="#f0dca8" style={joyZone}
+      <Stick testId="joystick" label="Move" tone="#ffffff" style={joyZone}
         onMove={(x, y, a) => { const j = world.input.joy; j.active = a; j.x = a ? x : 0; j.z = a ? y : 0; }} />
       {!autoAim && !village && (
         <Stick testId="aimstick" label="Aim" tone="#ff9a7a" style={aimZone}
           onMove={(x, y, a) => { const j = world.input.aimStick; j.active = a; j.x = a ? x : 0; j.z = a ? y : 0; }} />
       )}
       {drag.on && (
-        <div aria-hidden style={{ position: 'absolute', left: '50%', top: '7%', transform: 'translateX(-50%)', padding: '.5rem 2.2rem', borderRadius: 999, zIndex: 8, pointerEvents: 'none', fontWeight: 800, letterSpacing: '.18em',
-          background: drag.cancel ? 'rgba(220,40,40,.85)' : 'rgba(0,0,0,.45)', color: '#fff', border: `2px solid ${drag.cancel ? '#ff9a8a' : 'rgba(255,255,255,.35)'}` }}>
-          {drag.cancel ? 'RELEASE TO CANCEL' : 'DRAG HERE TO CANCEL'}
+        <div aria-hidden className="cap-pill" style={{ position: 'absolute', left: '50%', top: 'calc(var(--sat) + 18%)', transform: 'translateX(-50%)', zIndex: 8, pointerEvents: 'none',
+          ...(drag.cancel ? { background: 'rgba(217,83,74,.9)', borderColor: 'transparent' } : null) }}>
+          {drag.cancel ? 'Release to cancel' : 'Drag up here to cancel'}
         </div>
       )}
       {!village && <ComboMeter touch />}
-      <div style={cluster}>
-        {village ? (
-          <div className="flex gap-3 items-end">
-            <TBtn code="KeyF" label="Harvest" size={64} accent="#7ae0a0" icon={<PaintedIcon id="magnet" />} />
-            <TBtn code="KeyE" label="Interact" size={78} accent="#ffd24a" testId="tc-interact" />
-          </div>
-        ) : (
-          <>
-            <div className="flex gap-2 justify-end items-end" style={{ gridRow: 1 }}>
-              <TBtn code="KeyZ" label="HP" size={44} accent="#d6252b" icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: POTION_COOLDOWN })}
-                qty={() => useGameStore.getState().inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Health') ? n + (i.quantity || 1) : n), 0)} />
-              <TBtn code="KeyX" label="MP" size={44} accent="#2f6fe0" icon={<PaintedIcon id="MP" />} getCd={() => ({ t: p.mpPotCd, max: POTION_COOLDOWN })}
-                qty={() => useGameStore.getState().inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0)} />
-            </div>
-            <div className="flex gap-2 justify-end items-end" style={{ gridRow: 2 }}>
-              <SkillBtn skill="s3" label="3" size={54} icon={icon(2)} {...sk(2)} onDrag={setDrag} />
-              <SkillBtn skill="s2" label="2" size={54} icon={icon(1)} {...sk(1)} onDrag={setDrag} />
-              <SkillBtn skill="ult" label="ULT" size={64} ult accent="#ffd24a" icon={<PaintedIcon id={ULTS[hero].icon} />} onDrag={setDrag} />
-            </div>
-            <div className="flex gap-2 justify-end items-end" style={{ gridRow: 3 }}>
-              <SkillBtn skill="s1" label="1" size={54} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
-              <SkillBtn skill="dash" label="DASH" size={72} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />
-            </div>
-          </>
-        )}
+      {/* skills are always available, also in the village; interacting is done through the floating prompts */}
+      <div className={`tc-cluster ${left ? 'left' : ''}`}>
+        <SkillBtn skill="ult" label="Ultimate" at={G.ult} left={left} ult accent="#f2a93b" icon={<PaintedIcon id={ULTS[hero].icon} />} onDrag={setDrag} />
+        <SkillBtn skill="s1" label="Skill 1" at={G.s1} left={left} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
+        <SkillBtn skill="s2" label="Skill 2" at={G.s2} left={left} icon={icon(1)} {...sk(1)} onDrag={setDrag} />
+        <SkillBtn skill="s3" label="Skill 3" at={G.s3} left={left} icon={icon(2)} {...sk(2)} onDrag={setDrag} />
+        <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />
+        {potion('hp')}
+        {potion('mp')}
       </div>
     </div>
   );

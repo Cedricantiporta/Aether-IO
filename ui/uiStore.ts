@@ -20,6 +20,7 @@ interface UiState {
   selectedItem: Item | null;            // blacksmith selection
   blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT';
   confirm: ConfirmRequest | null;
+  bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)
   summonResults: Item[] | null;
   setTitleDone: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
@@ -31,6 +32,7 @@ interface UiState {
   setBlacksmithTab: (t: UiState['blacksmithTab']) => void;
   askConfirm: (c: ConfirmRequest | null) => void;
   setSummonResults: (r: Item[] | null) => void;
+  setBagView: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -43,6 +45,7 @@ export const useUiStore = create<UiState>((set) => ({
   selectedItem: null,
   blacksmithTab: 'UPGRADE',
   confirm: null,
+  bagView: false,
   summonResults: null,
   setTitleDone: (v) => set({ titleDone: v }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
@@ -54,6 +57,7 @@ export const useUiStore = create<UiState>((set) => ({
   setBlacksmithTab: (t) => set({ blacksmithTab: t, selectedItem: null }),
   askConfirm: (c) => set({ confirm: c }),
   setSummonResults: (r) => set({ summonResults: r }),
+  setBagView: (v) => set({ bagView: v }),
 }));
 
 export type { Rarity };

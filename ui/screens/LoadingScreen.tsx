@@ -14,13 +14,13 @@ export const LoadingScreen: React.FC = () => {
   const p = Math.max(0, Math.min(100, done ? 100 : progress));
   return (
     <div className={`loading-screen pe ${done ? 'done' : ''}`} data-testid="loading-screen">
-      <div className="rpg-logo" style={{ fontSize: '2.6rem', whiteSpace: 'nowrap' }}>AETHER SURVIVOR</div>
+      <div className="wordmark" style={{ fontSize: 'clamp(1.8rem, 9vw, 3rem)', textAlign: 'center' }}>Aether Survivor</div>
       <div className="loading-bar">
-        <div className="xp-bar" style={{ ['--fill' as any]: p / 100, height: '1.3rem' }}><div className="fill" /></div>
-        <div className="flex justify-between mt-2" style={{ fontFamily: 'var(--font-title)', fontSize: '.72rem', letterSpacing: '.18em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-          <span>{done ? 'Ready' : 'Loading the Aether'}</span><span className="rpg-num">{Math.round(p)}%</span>
+        <div className="rpg-bar" style={{ ['--fill' as any]: p / 100 }}><div className="fill" /></div>
+        <div className="flex justify-between mt-2" style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-2)' }}>
+          <span>{done ? 'Ready' : 'Loading'}</span><span className="rpg-num">{Math.round(p)}%</span>
         </div>
-        <div className="text-center mt-1" style={{ fontSize: '.6rem', color: '#7a6a4a', minHeight: '.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{!done && item ? `${loaded}/${total} · ${item.split('/').pop()}` : ''}</div>
+        <div className="text-center mt-1" style={{ fontSize: 12, color: 'var(--fg-2)', minHeight: '.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{!done && item ? `${loaded}/${total} · ${item.split('/').pop()}` : ''}</div>
       </div>
     </div>
   );

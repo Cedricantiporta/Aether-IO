@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { create } from 'zustand';
+import { device } from '../../engine/device';
 
 interface TipState { content: React.ReactNode | null; show: (c: React.ReactNode) => void; hide: () => void; }
 export const useTipStore = create<TipState>((set) => ({
@@ -40,7 +41,13 @@ export const TooltipLayer: React.FC = () => {
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('pointerdown', touch, true); };
   }, []);
   useEffect(() => { if (content) place(); }, [content]);
+  // touch: tap shows the card docked at the bottom; it fades after a few seconds or on the next tap
+  useEffect(() => {
+    if (!content || !device.touch) return;
+    const t = setTimeout(() => useTipStore.getState().hide(), 5000);
+    return () => clearTimeout(t);
+  }, [content]);
 
   if (!content) return null;
-  return <div ref={ref} className="rpg-tooltip rpg-parchment" style={{ transform: 'translate(-999px,-999px)' }}>{content}</div>;
+  return <div ref={ref} className={`rpg-tooltip paper ${device.touch ? 'docked' : ''}`} style={device.touch ? undefined : { transform: 'translate(-999px,-999px)' }}>{content}</div>;
 };

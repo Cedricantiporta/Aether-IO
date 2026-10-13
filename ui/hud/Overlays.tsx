@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { create } from 'zustand';
-import { Skull, ArrowUpCircle, Swords, Flame } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
@@ -27,8 +27,9 @@ export const useBannerStore = create<BannerState>((set) => ({
   clear: (id) => set((s) => (s.current?.id === id ? { current: null } : s)),
 }));
 
-const KIND_STYLE: Record<Banner['kind'], { tone: 'red' | 'gold' | 'purple' | 'blue' | 'dark'; color: string }> = {
-  wave: { tone: 'gold', color: '#ffe69a' }, boss: { tone: 'red', color: '#ff8a80' }, elite: { tone: 'purple', color: '#d9b3ff' }, level: { tone: 'blue', color: '#a8c8ff' }, info: { tone: 'dark', color: '#f6e8c8' },
+const KIND_STYLE: Record<Banner['kind'], { bg: string; color: string }> = {
+  wave: { bg: 'rgba(15,18,28,.72)', color: '#ffd98a' }, boss: { bg: 'rgba(110,20,24,.78)', color: '#ffb3aa' }, elite: { bg: 'rgba(60,30,100,.75)', color: '#dcc3ff' },
+  level: { bg: 'rgba(24,50,100,.75)', color: '#bcd6ff' }, info: { bg: 'rgba(15,18,28,.72)', color: '#f3f1ea' },
 };
 
 export const Announcer: React.FC = () => {
@@ -57,22 +58,14 @@ export const Announcer: React.FC = () => {
   }, [cur, clear]);
 
   return (
-    <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ top: '22%', zIndex: 60 }}>
+    <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ top: '24%', zIndex: 60 }}>
       <AnimatePresence mode="wait">
         {cur && (
-          <motion.div key={cur.id} className="flex flex-col items-center"
-            initial={{ scale: cur.kind === 'boss' ? 2.2 : 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -30, scale: .95 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
-            {cur.kind === 'boss' && (
-              <div className="absolute -z-10" style={{ width: '120vw', height: '12rem', top: '-3rem', background: 'linear-gradient(90deg, transparent, rgba(120,10,10,.75) 25%, rgba(120,10,10,.75) 75%, transparent)', filter: 'blur(2px)' }} />
-            )}
-            <div className="flex items-center gap-4">
-              {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
-              {cur.kind === 'level' && <ArrowUpCircle size={34} color="#a8c8ff" />}
-              <div className="rpg-ribbon" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '2.6rem' : cur.kind === 'level' ? '1.5rem' : '2.1rem' }}>{cur.title}</div>
-              {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
-            </div>
-            {cur.sub && <div className="rpg-title mt-3 text-lg" style={{ color: KIND_STYLE[cur.kind].color, letterSpacing: '.2em' }}>{cur.sub}</div>}
+          <motion.div key={cur.id} className="banner" style={{ ['--bt' as any]: KIND_STYLE[cur.kind].bg, ['--bc' as any]: KIND_STYLE[cur.kind].color }}
+            initial={{ scale: cur.kind === 'boss' ? 1.6 : 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -16 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}>
+            <div className="bt">{cur.title}</div>
+            {cur.sub && <div className="bs">{cur.sub}</div>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -143,15 +136,16 @@ export const Notifications: React.FC = () => {
     <>
       {notes.map((n) => <NoteTimer key={n.id} id={n.id} ms={NOTE_MS[n.type]} onDone={remove} />)}
 
-      {/* loot feed: text only, no container, color coded, fades out */}
-      <div className="absolute flex flex-col-reverse gap-[.2rem] items-start pointer-events-none" style={{ left: '1.2rem', bottom: '10.5rem', maxWidth: '20rem', zIndex: 20 }}>
+      {/* pickup feed: small fading rows on the left */}
+      <div className="hud-feed" style={{ flexDirection: 'column-reverse', justifyContent: 'flex-end' }}>
         <AnimatePresence initial={false}>
-          {items.slice(-6).reverse().map((n) => (
-            <motion.div key={n.id} layout initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, x: -10 }} transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-              className="flex items-center gap-2 pointer-events-none">
-              <span className="font-bold text-[.9rem] text-outline" style={{ color: n.color }}>{n.message}</span>
+          {items.slice(-4).reverse().map((n) => (
+            <motion.div key={n.id} layout initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="feed-row">
+              <i className="bar" style={{ background: n.color }} />
+              <span className="truncate">{n.message}</span>
               {n.action && (
-                <button className="rpg-btn rpg-btn-green rpg-btn-sm pe" style={{ minHeight: '1.4rem', padding: '.05rem .5rem', fontSize: '.6rem' }}
+                <button className="rpg-btn rpg-btn-green rpg-btn-sm pe" style={{ minHeight: 28, padding: '0 .6rem', fontSize: 12 }}
                   onClick={() => { n.action!.onClick(); remove(n.id); }}>{n.action.label}</button>
               )}
             </motion.div>
@@ -160,12 +154,12 @@ export const Notifications: React.FC = () => {
       </div>
 
       {/* warnings */}
-      <div className="absolute left-0 right-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: '7.5rem', zIndex: 70 }}>
+      <div className="absolute left-0 right-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: '34%', zIndex: 70 }}>
         <AnimatePresence>
           {warnings.map((n) => (
-            <motion.div key={n.id} initial={{ y: -30, opacity: 0, scale: .6 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -20, opacity: 0, scale: .8 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              className="rpg-title text-[2rem]" style={{ color: '#ff6b5e', WebkitTextStroke: '1px #2a0505', textShadow: '0 3px 0 #4a0d0d, 0 0 18px rgba(255,60,40,.7)' }}>
+            <motion.div key={n.id} initial={{ y: -20, opacity: 0, scale: .8 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -12, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+              className="text-xl font-extrabold" style={{ color: '#ff8a82', textShadow: '0 2px 10px rgba(0,0,0,.7)' }}>
               {n.message}
             </motion.div>
           ))}
@@ -173,10 +167,10 @@ export const Notifications: React.FC = () => {
       </div>
 
       {/* system toasts */}
-      <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none" style={{ top: '10.5rem', zIndex: 65 }}>
+      <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none" style={{ top: 'calc(var(--sat) + 110px)', zIndex: 65 }}>
         <AnimatePresence>
           {system.map((n) => (
-            <motion.div key={n.id} initial={{ y: -16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -16, opacity: 0 }} className="rpg-panel slim flat-shadow px-4 py-1.5 flex items-center gap-2 pe">
+            <motion.div key={n.id} initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }} className="cap-pill pe">
               <Flame size={14} style={{ color: n.color }} />
               <span className="font-semibold text-sm">{n.message}</span>
               {n.action && <button className="rpg-btn rpg-btn-sm" onClick={() => { n.action!.onClick(); remove(n.id); }}>{n.action.label}</button>}
@@ -187,4 +181,3 @@ export const Notifications: React.FC = () => {
     </>
   );
 };
-export { Swords };

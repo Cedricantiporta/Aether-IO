@@ -5,6 +5,7 @@ import { ItemIcon } from './ItemIcon';
 import { isGear } from '../lib/game';
 import { tip } from './Tooltip';
 import { ItemTip } from './ItemTip';
+import { Stars } from './Stars';
 
 interface Props {
   item?: Item | null;
@@ -30,7 +31,7 @@ interface Props {
   children?: React.ReactNode;
 }
 
-/** Metallic rarity-framed item slot. Empty when no item. */
+/** Flat rarity tile: tinted background, rarity stripe + small star row. Empty when no item. */
 export const ItemSlot: React.FC<Props> = ({
   item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children,
 }) => {
@@ -40,7 +41,8 @@ export const ItemSlot: React.FC<Props> = ({
   const content = (
     <>
       {item ? <span className="slot-icon" style={dim ? undefined : undefined}><ItemIcon item={item} size={iconSize} /></span>
-        : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
+        : emptyLabel ? <span className="rpg-label opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
+      {item && <span className="slot-stars"><Stars rarity={item.rarity} small /></span>}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && isGear(item) && item.level > 1 && <span className="slot-plus">+{item.level - 1}</span>}
       {locked && <span className="slot-lock"><Lock size={14} /></span>}

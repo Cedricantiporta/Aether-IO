@@ -13,7 +13,7 @@ export const FpsCounter: React.FC = () => {
   }, [show]);
   if (!show) return null;
   return (
-    <div data-testid="fps" className="absolute rpg-num" style={{ left: 'calc(env(safe-area-inset-left, 0px) + .5rem)', bottom: '.4rem', zIndex: 900, fontSize: '.72rem', padding: '.15rem .45rem', borderRadius: '.3rem',
+    <div data-testid="fps" className="absolute rpg-num" style={{ left: 'calc(env(safe-area-inset-left, 0px) + .5rem)', bottom: '.4rem', zIndex: 900, fontSize: 12, padding: '.15rem .45rem', borderRadius: '.3rem',
       background: 'rgba(10,7,9,.78)', color: perf.fps >= 50 ? '#9be37a' : perf.fps >= 28 ? '#ffd24a' : '#ff7a6a', boxShadow: '0 0 0 1px #5a4a2e', pointerEvents: 'none' }}>
       {Math.round(perf.fps)} FPS · {perf.jsMs.toFixed(1)}ms · {perf.calls} dc · {(perf.tris / 1000).toFixed(0)}k tri{perf.level > 0 ? ` · Q-${perf.level}` : ''}
     </div>

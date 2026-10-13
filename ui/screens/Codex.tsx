@@ -52,54 +52,58 @@ export const CodexDialog: React.FC = () => {
   const loot = [...LOOT].sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.name.localeCompare(b.name));
 
   return (
-    <Modal open={open} onClose={() => close(false)} title="Codex" icon={<BookOpen size={20} />} width="40rem" z={250}>
-      <div className="flex gap-2 mb-3">
-        {TABS.map((t) => <button key={t} className={`rpg-subtab pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
-      </div>
-      <div className="mb-3" data-testid="codex-progress">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="rpg-label">{tab.charAt(0) + tab.slice(1).toLowerCase()} {found} / {total} discovered</span>
-          {done && !claimed.includes(tk) && <button className="rpg-btn pe ml-auto" data-testid="codex-claim" onClick={() => claim(tk)}>Claim {CODEX_REWARD_GEMS} gems</button>}
-          {done && claimed.includes(tk) && <span className="rpg-label ml-auto" style={{ color: '#6ee7a0' }}>Complete - reward claimed</span>}
-          {!done && <span className="rpg-label ml-auto opacity-70">100% reward: {CODEX_REWARD_GEMS} gems</span>}
-        </div>
-        <div className="rpg-bar thin"><div className="fill" style={{ ['--fill' as any]: total ? found / total : 0 }} /></div>
-      </div>
-      <div className="rpg-frame p-4 rpg-scroll" style={{ height: '26rem' }}>
+    <Modal open={open} onClose={() => close(false)} title="Codex" icon={<BookOpen size={20} />} width="44rem" z={250} sheet
+      tabs={(
+        <>
+          <div className="tabs">
+            {TABS.map((t) => <button key={t} className={`rpg-subtab ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t.charAt(0) + t.slice(1).toLowerCase()}</button>)}
+          </div>
+          <div className="px-4 pt-2 pb-2.5" data-testid="codex-progress" style={{ borderBottom: '1px solid var(--line)' }}>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="rpg-label">{found} / {total} discovered</span>
+              {done && !claimed.includes(tk) && <button className="rpg-btn rpg-btn-primary rpg-btn-sm pe ml-auto" data-testid="codex-claim" onClick={() => claim(tk)}>Claim {CODEX_REWARD_GEMS} gems</button>}
+              {done && claimed.includes(tk) && <span className="rpg-label ml-auto" style={{ color: 'var(--good)' }}>Complete, reward claimed</span>}
+              {!done && <span className="rpg-label ml-auto">100% reward: {CODEX_REWARD_GEMS} gems</span>}
+            </div>
+            <div className="rpg-bar thin"><div className="fill" style={{ ['--fill' as any]: total ? found / total : 0 }} /></div>
+          </div>
+        </>
+      )}>
+      <div>
         {tab === 'LOOT' ? (
-          <div className="grid grid-cols-2 gap-2" data-testid="codex-loot">
+          <div className="grid gap-2 cdx-grid" data-testid="codex-loot">
             {loot.map((l) => {
               const ok = dLoot.has(l.name);
               return (
-                <div key={l.id} className="rpg-frame flex items-center gap-2 p-2" data-discovered={ok}>
+                <div key={l.id} className="rpg-frame flex items-center gap-3 p-2.5" data-discovered={ok}>
                   {ok ? <ItemSlot item={lootItem(l)} size="3.4rem" iconSize={36} tooltip="buy" compare={false} /> : <Mystery><ItemSlot item={lootItem(l)} size="3.4rem" iconSize={36} tooltip="none" compare={false} /></Mystery>}
                   {ok ? (
                     <div className="min-w-0">
                       <div className="font-bold text-sm leading-tight" style={{ color: RARITY_TEXT[l.rarity] }}>{l.name}</div>
-                      <div className="rpg-label !text-[.5rem]">{l.rarity} · sells {l.price.toLocaleString()} G</div>
-                      <div className="text-[.62rem] text-[var(--text-dim)] leading-tight">{lootSources(l.id).map(srcName).join(', ')}</div>
-                      {lootCraftUse(l.id) && <div className="text-[.6rem] leading-tight" style={{ color: '#e9b949' }}>{lootCraftUse(l.id)}</div>}
+                      <div className="rpg-label !text-xs">{l.rarity} · sells {l.price.toLocaleString()} G</div>
+                      <div className="text-xs text-[var(--fg-2)] leading-tight">{lootSources(l.id).map(srcName).join(', ')}</div>
+                      {lootCraftUse(l.id) && <div className="text-xs leading-tight" style={{ color: 'var(--hi)' }}>{lootCraftUse(l.id)}</div>}
                     </div>
-                  ) : <div className="font-bold text-sm text-[var(--text-dim)]">???</div>}
+                  ) : <div className="font-bold text-sm text-[var(--fg-2)]">???</div>}
                 </div>
               );
             })}
           </div>
         ) : tab === 'PETS' ? (
-          <div className="grid grid-cols-2 gap-2" data-testid="codex-pets">
+          <div className="grid gap-2 cdx-grid" data-testid="codex-pets">
             {pets.map((p) => {
               const ok = dPets.has(p.name);
               return (
-                <div key={p.id} className="rpg-frame flex items-center gap-2 p-2" data-discovered={ok}>
+                <div key={p.id} className="rpg-frame flex items-center gap-3 p-2.5" data-discovered={ok}>
                   {ok ? <div style={p.summonOnly ? { filter: 'drop-shadow(0 0 6px rgba(197,139,255,.5))' } : undefined}><ItemSlot item={p} size="3.6rem" iconSize={40} tooltip="buy" compare={false} /></div>
                     : <Mystery><ItemSlot item={p} size="3.6rem" iconSize={40} tooltip="none" compare={false} /></Mystery>}
                   {ok ? (
                     <div className="min-w-0">
                       <div className="font-bold text-sm leading-tight" style={{ color: RARITY_TEXT[p.rarity] }}>{p.name}</div>
-                      <div className="rpg-label !text-[.5rem]">{p.rarity}{p.summonOnly ? ' · Summon only' : ` · ${p.price.toLocaleString()} G`}</div>
-                      <div className="text-[.62rem] text-[var(--text-dim)] leading-tight">{p.description}</div>
+                      <div className="rpg-label !text-xs">{p.rarity}{p.summonOnly ? ' · Summon only' : ` · ${p.price.toLocaleString()} G`}</div>
+                      <div className="text-xs text-[var(--fg-2)] leading-tight">{p.description}</div>
                     </div>
-                  ) : <div className="font-bold text-sm text-[var(--text-dim)]">???</div>}
+                  ) : <div className="font-bold text-sm text-[var(--fg-2)]">???</div>}
                 </div>
               );
             })}
@@ -107,32 +111,32 @@ export const CodexDialog: React.FC = () => {
         ) : tab === 'ITEMS' ? (
           <div className="flex flex-wrap gap-4 content-start" data-testid="codex-items">
             {items.map((it) => dItems.has(it.name)
-              ? <div key={it.id} data-discovered="true" className="flex flex-col items-center gap-1"><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />{it.summonOnly && <span className="rpg-label !text-[.5rem]" style={{ color: '#c58bff' }}>Summon only</span>}</div>
-              : <div key={it.id} data-discovered="false" className="flex flex-col items-center gap-1"><Mystery><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="none" compare={false} /></Mystery><span className="rpg-label !text-[.5rem]">???</span></div>)}
+              ? <div key={it.id} data-discovered="true" className="flex flex-col items-center gap-1"><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="buy" compare={false} />{it.summonOnly && <span className="rpg-label" style={{ color: 'var(--r3-ink)' }}>Summon only</span>}</div>
+              : <div key={it.id} data-discovered="false" className="flex flex-col items-center gap-1"><Mystery><ItemSlot item={it} size="4.4rem" iconSize={46} tooltip="none" compare={false} /></Mystery><span className="rpg-label !text-xs">???</span></div>)}
           </div>
         ) : tab === 'MONSTERS' ? (
-          <div className="grid grid-cols-2 gap-2" data-testid="codex-monsters">
+          <div className="grid gap-2 cdx-grid" data-testid="codex-monsters">
             {CODEX_MONSTERS.map((m) => {
               const ok = dMon.has(m.key);
               return (
-                <div key={m.key} className="rpg-frame flex items-center gap-2 p-2" data-discovered={ok}>
+                <div key={m.key} className="rpg-frame flex items-center gap-3 p-2.5" data-discovered={ok}>
                   <div className="rpg-slot" style={{ ['--slot' as any]: '3.6rem', ['--rc' as any]: m.tier === 'BOSS' ? '#ef4444' : m.tier === 'MINI-BOSS' ? '#c58bff' : m.tier === 'ELITE' ? '#fbbf24' : '#7a6a4a' }}>
                     <span className="slot-icon">{ok ? <MonsterArt m={m} /> : <Mystery><MonsterArt m={m} /></Mystery>}</span>
                   </div>
                   {ok ? (
                     <div className="min-w-0">
-                      <div className="font-bold text-sm leading-tight text-[var(--gold-light)]">{m.name}</div>
-                      <div className="rpg-label !text-[.5rem]">{m.tier}{m.title ? ` · ${m.title}` : ''}</div>
-                      <div className="text-[.6rem] leading-tight" style={{ color: '#e9b949' }}>{m.region}</div>
-                      <div className="text-[.62rem] text-[var(--text-dim)] leading-tight">{m.trick}</div>
+                      <div className="font-bold text-sm leading-tight text-[var(--fg)]">{m.name}</div>
+                      <div className="rpg-label !text-xs">{m.tier}{m.title ? ` · ${m.title}` : ''}</div>
+                      <div className="text-xs leading-tight" style={{ color: 'var(--hi)' }}>{m.region}</div>
+                      <div className="text-xs text-[var(--fg-2)] leading-tight">{m.trick}</div>
                     </div>
-                  ) : <div className="font-bold text-sm text-[var(--text-dim)]">???</div>}
+                  ) : <div className="font-bold text-sm text-[var(--fg-2)]">???</div>}
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3" data-testid="codex-skills">
+          <div className="grid gap-2 cdx-grid" data-testid="codex-skills">
             {Object.entries(SKILLS_INFO).map(([k, info]: [string, any]) => {
               const ok = dSkills.has(k);
               const slot = (
@@ -143,10 +147,10 @@ export const CodexDialog: React.FC = () => {
                   {ok ? slot : <Mystery>{slot}</Mystery>}
                   {ok ? (
                     <div className="min-w-0">
-                      <div className="font-bold text-sm text-[var(--gold-light)] leading-tight">{info.name}</div>
-                      <div className="rpg-label !text-[.55rem]">{info.classType ?? 'Universal'} · {info.type}</div>
+                      <div className="font-bold text-sm text-[var(--fg)] leading-tight">{info.name}</div>
+                      <div className="rpg-label !text-xs">{info.classType ?? 'Universal'} · {info.type}</div>
                     </div>
-                  ) : <div className="font-bold text-sm text-[var(--text-dim)]">???</div>}
+                  ) : <div className="font-bold text-sm text-[var(--fg-2)]">???</div>}
                 </div>
               );
             })}
