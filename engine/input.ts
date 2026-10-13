@@ -63,7 +63,7 @@ export function installInput(): () => void {
     inp.pointerNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
     inp.pointerNdc.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
-  const onMouseDown = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = true; else if (e.button === 2 && aimState.active) { cancelAim(); inp.cancelAim = true; } };
+  const onMouseDown = (e: MouseEvent) => { if ((e.target as HTMLElement | null)?.closest?.('.pe')) return; /* UI panels never fire skills */ if (e.button === 0) inp.mouseDown = true; else if (e.button === 2 && aimState.active) { cancelAim(); inp.cancelAim = true; } };
   const onContext = (e: Event) => { if (aimState.active) e.preventDefault(); };
   const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; };
 

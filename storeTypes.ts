@@ -16,6 +16,7 @@ import type { RunStats } from './engine/types';
 import type { Quest, QuestType } from './quests';
 import type { TalentRanks } from './talents';
 import type { EnemyKind } from './engine/types';
+import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS';
@@ -82,6 +83,8 @@ export interface GameState {
   welcomeGiftClaimed: boolean;
   talents: Record<HeroClass, TalentRanks>;   // permanent talent ranks per class (node id -> rank)
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
+  discovered: Discovered;                    // Codex discoveries (item/pet/loot names, skill keys, monster keys); persisted
+  codexClaimed: string[];                    // Codex tabs whose 100% reward was claimed
 
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)
   gold: number;
@@ -141,6 +144,8 @@ export interface GameState {
   // progression (called by engine)
   addGold: (n: number) => void;
   addGems: (n: number) => void;
+  discover: (tab: CodexTab, keys: string[]) => void;   // mark Codex entries discovered (idempotent)
+  claimCodexReward: (tab: CodexTab) => boolean;         // one-time gems when a tab is 100% discovered
   addExperience: (n: number) => void; // handles level-ups: +SP, +base stats, engine heal + levelUp event
   setWave: (wave: number) => void;
   openWaveReward: (fast?: boolean) => void; // generates upgradeOptions (+maybe 4th card on a fast clear), accumulatedWaveGold += 100, status = LEVEL_UP

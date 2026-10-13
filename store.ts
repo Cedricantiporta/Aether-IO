@@ -27,6 +27,7 @@ import { fillQuests, makeQuest, questDone, type Quest, type QuestType } from './
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
+import { CODEX_KEYS, CODEX_REWARD_GEMS, emptyDiscovered, monsterKeyByName, type CodexTab, type Discovered } from './codexData';
 
 // ------------------------------------------------------------------ consts --
 const LEGACY_KEY = 'aether-survivor-v2';           // gameStats + settings only (pre-profile builds)
@@ -321,6 +322,7 @@ interface Profile {
   hero: HeroClass; difficulty: Difficulty;
   talents: Record<HeroClass, TalentRanks>;
   starterGiven: Record<HeroClass, boolean>;
+  discovered?: Discovered; codexClaimed?: string[];
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -360,7 +362,14 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false },
+  discovered: emptyDiscovered(), codexClaimed: [],
 });
+
+const sanitizeDiscovered = (d: unknown): Discovered => {
+  const out = emptyDiscovered();
+  if (d && typeof d === 'object') for (const k of Object.keys(out) as (keyof Discovered)[]) { const a = (d as any)[k]; if (Array.isArray(a)) out[k] = a.filter((x) => typeof x === 'string'); }
+  return out;
+};
 
 const num = (v: unknown, d: number, min = 0): number => (typeof v === 'number' && isFinite(v) ? Math.max(min, v) : d);
 
@@ -396,6 +405,8 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               difficulty: p.difficulty && DIFFICULTIES.includes(p.difficulty) ? p.difficulty : 'NORMAL',
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' ? p.hero : 'ARCHER']: true },
+              discovered: sanitizeDiscovered(p.discovered),
+              codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
             },
           };
         }
@@ -419,7 +430,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven,
+      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -468,13 +479,8 @@ export const useGameStore = create<GameState>()((set, get) => {
   /** Which panel flags are open. */
   const anyPanelOpen = (s: GameState) => s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen;
 
-  /** After panels change: pause if a panel is open during play, resume if all closed and nothing else pauses. */
-  const syncPause = (panelsOpen: boolean): Partial<GameState> => {
-    const s = get();
-    if (panelsOpen && s.status === GameStatus.PLAYING) return { status: GameStatus.PAUSED };
-    if (!panelsOpen && s.status === GameStatus.PAUSED && !s.isPauseMenuOpen) return { status: GameStatus.PLAYING };
-    return {};
-  };
+  /** Panels (inventory/shops/character/codex) never pause the simulation; only the explicit pause menu does. */
+  const syncPause = (_panelsOpen: boolean): Partial<GameState> => ({});
 
   const canOpenPanels = () => {
     const st = get().status;
@@ -553,6 +559,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
     talents: profile.talents,
     starterGiven: profile.starterGiven,
+    discovered: profile.discovered ?? emptyDiscovered(),
+    codexClaimed: profile.codexClaimed ?? [],
     gameStats: profile.gameStats,
     settings: profile.settings,
     lastRun: null,
@@ -633,8 +641,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), starterGiven: f.starterGiven,
+        talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [],
       });
+      syncDiscoveries();
       get().resetGame();
       notify('Profile reset. A fresh welcome gift awaits!', COLORS.uiAccent, 'SYSTEM');
     },
@@ -688,6 +697,22 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ----------------------------------------------------- progression --
     addGold: (n) => set((s) => ({ gold: s.gold + n })),
     addGems: (n) => set((s) => ({ gems: s.gems + n })),
+
+    discover: (tab, keys) => {
+      const cur = get().discovered;
+      const have = new Set(cur[tab]);
+      const add = keys.filter((k) => !have.has(k));
+      if (add.length) set({ discovered: { ...cur, [tab]: [...cur[tab], ...new Set(add)] } });
+    },
+    claimCodexReward: (tab) => {
+      const s = get();
+      if (s.codexClaimed.includes(tab)) return false;
+      const have = new Set(s.discovered[tab]);
+      if (!CODEX_KEYS[tab].every((k) => have.has(k))) return false;
+      set({ codexClaimed: [...s.codexClaimed, tab], gems: s.gems + CODEX_REWARD_GEMS });
+      notify(`Codex complete! +${CODEX_REWARD_GEMS} gems`, COLORS.uiAccent, 'SYSTEM');
+      return true;
+    },
 
     addExperience: (amount) => {
       let { experience, experienceToNextLevel, level } = get();
@@ -1301,7 +1326,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
@@ -1311,6 +1336,31 @@ if (typeof window !== 'undefined') {
 if (loaded.gift) {
   flushProfile(); // fresh profile (gift included) is written immediately: a reload can never grant it twice
   useGameStore.getState().addNotification('Welcome gift: 1000 gold, 100 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
+}
+
+// ---- codex discovery: sync from inventory / equipment / skills on every change, plus engine events for monsters.
+const KEYSETS = { items: new Set(CODEX_KEYS.items), pets: new Set(CODEX_KEYS.pets), loot: new Set(CODEX_KEYS.loot), skills: new Set(CODEX_KEYS.skills) };
+function syncDiscoveries(): void {
+  const s = useGameStore.getState();
+  const found: Record<'items' | 'pets' | 'loot', string[]> = { items: [], pets: [], loot: [] };
+  const see = (it: { name: string } | null | undefined) => {
+    if (!it) return;
+    (['items', 'pets', 'loot'] as const).forEach((t) => { if (KEYSETS[t].has(it.name)) found[t].push(it.name); });
+  };
+  s.inventory.forEach(see);
+  (Object.values(s.equipment) as (Item | null)[]).forEach(see);
+  (['items', 'pets', 'loot'] as const).forEach((t) => { if (found[t].length) s.discover(t, found[t]); });
+  const sk = (Object.keys(s.skillLevels) as (keyof typeof s.skillLevels)[]).filter((k) => s.skillLevels[k] > 0 && KEYSETS.skills.has(k as string)).map(String);
+  if (sk.length) s.discover('skills', sk);
+}
+{
+  useGameStore.subscribe((s, prev) => { if (s.inventory !== prev.inventory || s.equipment !== prev.equipment || s.skillLevels !== prev.skillLevels) syncDiscoveries(); });
+  syncDiscoveries(); // seeds existing saved profiles
+  const mon = (k: string) => useGameStore.getState().discover('monsters', [k]);
+  events.on('spawn', (e) => { mon(e.kind); if (e.elite) mon('ELITE'); });
+  events.on('enemyHit', (e) => mon(e.kind));
+  events.on('enemyDeath', (e) => { if (!e.poof) { mon(e.kind); if (e.elite) mon('ELITE'); } });
+  events.on('bossSpawn', (e) => { const k = monsterKeyByName(e.name); if (k) mon(k); });
 }
 
 // ---- quest tracking from engine events (runs and village harvesting)
