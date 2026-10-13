@@ -85,9 +85,9 @@ export const LOOT_TABLES: Record<string, string[]> = {
 
 /** Chance that a kill / break rolls any loot at all (bosses and elites always do). */
 export const LOOT_CHANCE: Record<string, number> = {
-  CRATE: 0.3, BARREL: 0.3, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1,
+  CRATE: 0.2, BARREL: 0.2, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1,
 };
-export const DEFAULT_LOOT_CHANCE = 0.18;
+export const DEFAULT_LOOT_CHANCE = 0.1;
 
 const RARITY_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 const RARITY_W: Record<Rarity, number> = { COMMON: 70, RARE: 22, EPIC: 6, LEGENDARY: 1.7, MYTHIC: 0.3 };

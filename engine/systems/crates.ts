@@ -110,7 +110,7 @@ export function breakCrate(c: Crate): void {
       break;
     case 'CRATE': {
       const r = Math.random();
-      if (r > 0.85) { const item = st.rollItemDrop(); if (item) spawnPickup('ITEM', dropAt(c, 1, 0), 0, item); }
+      if (r > 0.94) { const item = st.rollItemDrop(); if (item) spawnPickup('ITEM', dropAt(c, 1, 0), 0, item); }
       else if (r > 0.8) spawnPickup('GOLD', dropAt(c, 0.5, 0.5), 25);
       break;
     }
@@ -147,7 +147,7 @@ export function breakCrate(c: Crate): void {
       break;
     case 'CART': {
       gold(c, 3, 25);
-      if (Math.random() < 0.3) { const item = st.rollItemDrop(); if (item) spawnPickup('ITEM', dropAt(c, 1, 0), 0, item); }
+      if (Math.random() < 0.12) { const item = st.rollItemDrop(); if (item) spawnPickup('ITEM', dropAt(c, 1, 0), 0, item); }
       break;
     }
   }

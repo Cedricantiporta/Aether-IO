@@ -225,7 +225,7 @@ export function killEnemy(e: Enemy): void {
     else if (wave >= 30 && Math.random() < Math.min(0.5, (wave - 20) * 0.02)) rarity = 'LEGENDARY';
     const item = st.rollItemDrop(rarity);
     if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
-  } else if (Math.random() < Math.min(1, (e.elite ? 0.5 : 0.04) * loot)) {
+  } else if (Math.random() < Math.min(1, (e.elite ? 0.25 : 0.015) * loot)) {
     const item = st.rollItemDrop();
     if (item) { dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5)); spawnPickup('ITEM', dropPos, 0, item); }
   }
