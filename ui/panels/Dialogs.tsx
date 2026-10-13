@@ -8,6 +8,7 @@ import { useUiStore } from '../uiStore';
 import { Modal, ConfirmDialog, QtyStepper } from '../components/Modal';
 import { Button } from '../components/Button';
 import { ItemSlot } from '../components/ItemSlot';
+import { RARITY_LIGHT } from '../theme';
 import { RARITY_TEXT, isHighValue, sellPrice, RARITY_RANK, RARITY_COLOR, isGear } from '../lib/game';
 import type { Item } from '../../types';
 
@@ -20,20 +21,24 @@ export const SellDialog: React.FC = () => {
   const have = item?.quantity || 1;
   const confirm = () => { if (item) { sellItem(item, amount); set(null); } };
   return (
-    <Modal open={!!item} onClose={() => set(null)} title="Sell item" ribbon tone="red" width="25rem" z={220} onConfirm={confirm}>
+    <Modal open={!!item} onClose={() => set(null)} title="Sell item" width="30rem" z={220} onConfirm={confirm}>
       {item && (
-        <div className="flex flex-col items-center gap-3 pt-1">
-          <ItemSlot item={item} size="5rem" iconSize={38} tooltip="none" compare={false} />
-          <div className="rpg-title text-lg text-center" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}{item.level > 1 && isGear(item) && <span className="text-[var(--gold)]"> +{item.level - 1}</span>}</div>
-          {isHighValue(item) && <div className="rpg-badge bad"><AlertTriangle size={12} /> High value item</div>}
-          {have > 1 && <QtyStepper value={amount} max={have} onChange={setAmount} />}
-          <div className="rpg-frame gold w-full text-center py-2">
-            <div className="rpg-label !text-[.6rem]">Total value</div>
-            <div className="rpg-num text-3xl text-[var(--gold-light)] flex items-center justify-center gap-2"><CoinGlyph size={26} />{(sellPrice(item) * amount).toLocaleString()}</div>
+        <div className="dlg-split">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <ItemSlot item={item} size="5rem" iconSize={38} tooltip="none" compare={false} />
+            <div className="rpg-title text-lg" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}{item.level > 1 && isGear(item) && <span className="text-[var(--hi)]"> +{item.level - 1}</span>}</div>
+            {isHighValue(item) && <div className="rpg-badge bad"><AlertTriangle size={12} /> High value item</div>}
           </div>
-          <div className="flex gap-3 w-full">
-            <Button className="flex-1" onClick={() => set(null)}>Cancel</Button>
-            <Button className="flex-1" variant="danger" onClick={confirm}>Sell</Button>
+          <div className="flex flex-col items-stretch gap-3 min-w-0" style={{ flex: '1 1 14rem', maxWidth: '20rem' }}>
+            {have > 1 && <QtyStepper value={amount} max={have} onChange={setAmount} />}
+            <div className="rpg-frame gold text-center py-2">
+              <div className="rpg-label">Total value</div>
+              <div className="rpg-num text-3xl flex items-center justify-center gap-2"><CoinGlyph size={26} />{(sellPrice(item) * amount).toLocaleString()}</div>
+            </div>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={() => set(null)}>Cancel</Button>
+              <Button className="flex-1" variant="danger" onClick={confirm}>Sell</Button>
+            </div>
           </div>
         </div>
       )}
@@ -55,25 +60,27 @@ export const BuyDialog: React.FC = () => {
   const total = item ? shopPrice(item) * a : 0;
   const confirm = () => { if (item && gold >= total) { buyItem(item, a); if (!(item.type === 'POTION' || item.type === 'CORE')) set(null); } };
   return (
-    <Modal open={!!item} onClose={() => set(null)} title="How many?" ribbon tone="gold" width="26rem" z={220} onConfirm={confirm}>
+    <Modal open={!!item} onClose={() => set(null)} title="Buy" width="32rem" z={220} onConfirm={confirm}>
       {item && (
-        <div className="flex flex-col items-center gap-3 pt-1">
+        <div className="dlg-split">
           <div className="flex items-center gap-3">
             <ItemSlot item={item} size="4.6rem" iconSize={34} tooltip="buy" compare={false} />
-            <div>
-              <div className="rpg-title text-lg" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div>
-              <div className="text-xs text-[var(--text-dim)] max-w-[12rem]">{item.description}</div>
-              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{shopPrice(item).toLocaleString()} G each</div>
+            <div className="min-w-0" style={{ maxWidth: '12rem' }}>
+              <div className="rpg-title text-lg leading-tight" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div>
+              <div className="text-xs text-[var(--fg-2)]">{item.description}</div>
+              <div className="rpg-num text-sm mt-1">{shopPrice(item).toLocaleString()} G each</div>
             </div>
           </div>
-          {stackable && <QtyStepper value={a} max={cap} onChange={setAmount} />}
-          <div className="rpg-frame gold w-full text-center py-2">
-            <div className="rpg-label !text-[.6rem]">Total cost</div>
-            <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><CoinGlyph size={26} />{total.toLocaleString()}</div>
-          </div>
-          <div className="flex gap-3 w-full">
-            <Button className="flex-1" onClick={() => set(null)}>Close</Button>
-            <Button className="flex-1" variant="primary" disabled={gold < total} onClick={confirm}>Buy</Button>
+          <div className="flex flex-col items-stretch gap-3 min-w-0" style={{ flex: '1 1 14rem', maxWidth: '20rem' }}>
+            {stackable && <QtyStepper value={a} max={cap} onChange={setAmount} />}
+            <div className="rpg-frame gold text-center py-2">
+              <div className="rpg-label">Total cost</div>
+              <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? undefined : 'var(--bad)' }}><CoinGlyph size={26} />{total.toLocaleString()}</div>
+            </div>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={() => set(null)}>Close</Button>
+              <Button className="flex-1" variant="primary" disabled={gold < total} onClick={confirm}>Buy</Button>
+            </div>
           </div>
         </div>
       )}
@@ -107,12 +114,12 @@ export const SummonReveal: React.FC = () => {
   const many = results.length > 1;
   const step = many ? 0.1 : 0;
   return (
-    <motion.div className="absolute inset-0 grid place-items-center pe" style={{ zIndex: 260, background: 'radial-gradient(circle, rgba(20,8,30,.7), rgba(3,1,6,.93))' }}
+    <motion.div className="absolute inset-0 grid place-items-center pe" style={{ zIndex: 260, background: 'rgba(10,12,20,.88)', padding: 'var(--sat) var(--sar) var(--sab) var(--sal)' }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => set(null)}>
       <motion.div className="absolute inset-0 pointer-events-none" initial={{ opacity: .9 }} animate={{ opacity: 0 }} transition={{ duration: .6 }} style={{ background: `radial-gradient(circle, ${RARITY_COLOR[best.rarity]}, transparent 65%)` }} />
-      <div className="flex flex-col items-center gap-6">
-        <div className="rpg-ribbon" data-tone="purple" style={{ fontSize: '1.6rem' }}>Summoned</div>
-        <div className="flex flex-wrap justify-center gap-5" style={{ maxWidth: many ? '46rem' : undefined, perspective: '1000px' }}>
+      <div className="flex flex-col items-center gap-4 max-h-full overflow-y-auto py-3">
+        <div className="text-2xl font-extrabold text-white">Summoned</div>
+        <div className="flex flex-wrap justify-center gap-4" style={{ maxWidth: many ? '40rem' : undefined, perspective: '1000px' }}>
           {results.map((it, i) => (
             <motion.div key={i} className="relative flex flex-col items-center gap-2"
               initial={{ rotateY: 90, scale: .4, opacity: 0 }} animate={{ rotateY: 0, scale: 1, opacity: 1 }}
@@ -120,11 +127,11 @@ export const SummonReveal: React.FC = () => {
               <motion.div className="absolute rounded-full pointer-events-none" style={{ width: '4rem', height: '4rem', top: '.3rem', border: `3px solid ${RARITY_COLOR[it.rarity]}`, boxShadow: `0 0 24px ${RARITY_COLOR[it.rarity]}` }}
                 initial={{ scale: .3, opacity: 1 }} animate={{ scale: RARITY_RANK[it.rarity] >= 4 ? 3.2 : 2.2, opacity: 0 }} transition={{ duration: .5, delay: .3 + i * step }} />
               <ItemSlot item={it} size={many ? '4.6rem' : '7rem'} iconSize={many ? 34 : 54} tooltip="buy" compare={false} />
-              <div className="text-center font-bold text-[.72rem] leading-tight max-w-[6rem] text-outline" style={{ color: RARITY_TEXT[it.rarity] }}>{it.name}</div>
+              <div className="text-center font-bold text-xs leading-tight max-w-[6rem] text-outline" style={{ color: RARITY_LIGHT[it.rarity] }}>{it.name}</div>
             </motion.div>
           ))}
         </div>
-        <div className="rpg-label animate-pulse">Click or press Enter to continue</div>
+        <div className="text-sm font-semibold animate-pulse" style={{ color: 'rgba(243,241,234,.75)' }}>Tap or press Enter to continue</div>
       </div>
     </motion.div>
   );

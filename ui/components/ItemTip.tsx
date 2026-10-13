@@ -29,7 +29,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
   const keys = statKeys(item.stats, equipped && !isEquippedItself ? equipped.stats : undefined).filter((k) => item.stats[k] !== undefined || (equipped && equipped.stats[k] !== undefined));
 
   return (
-    <div style={{ width: '16rem' }}>
+    <div style={{ width: '16rem', maxWidth: '100%' }}>
       <div className="tt-name" data-rt={item.rarity}>
         {item.name}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
       </div>
@@ -39,9 +39,9 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
           <span className={level < req ? 'neg' : ''}> · Req Rank {req}</span>
         )}
       </div>
-      {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
+      {wrongClass && <div className="neg text-xs font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
       {item.description && <><div className="tt-sep" /><div className="italic muted">{item.description}</div></>}
-      {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
+      {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-xs">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {
         const v = item.stats[k];
@@ -53,7 +53,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
             <span className="muted">{STAT_LABEL[k]}</span>
             <span className={v === undefined ? 'neg' : (v ?? 0) < 0 ? 'neg' : ''}>
               {v !== undefined ? fmtItemStat(k, v) : '—'}
-              {equipped && !isEquippedItself && diff !== 0 && <span className={`ml-1 ${dir}`} style={{ fontSize: '.68rem' }}>{diff > 0 ? '▲' : '▼'}</span>}
+              {equipped && !isEquippedItself && diff !== 0 && <span className={`ml-1 ${dir}`} style={{ fontSize: 12 }}>{diff > 0 ? '▲' : '▼'}</span>}
             </span>
           </div>
         );
@@ -62,7 +62,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
         <>
           <div className="tt-sep" />
           {item.affixes.map((a, i) => (
-            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#b8570a' : '#1f5fbf', fontWeight: 700, fontSize: '.78rem' }}>{isUnique(a) ? '★ ' : '◆ '}{affixText(a)}</div>
+            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#b8570a' : '#1f5fbf', fontWeight: 700, fontSize: 13 }}>{isUnique(a) ? '★ ' : '◆ '}{affixText(a)}</div>
           ))}
         </>
       )}
@@ -76,13 +76,13 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
             <div className="tt-sep" />
             <div style={{ color: SET_COLOR, fontWeight: 800 }}>{def.name} ({n}/6)</div>
             {prog.map((p) => (
-              <div key={p.slot} style={{ fontSize: '.72rem', color: p.state === 'equipped' ? SET_COLOR : p.state === 'owned' ? '#6a5a3a' : '#9a8f78', fontWeight: p.state === 'equipped' ? 700 : 500 }}>
+              <div key={p.slot} style={{ fontSize: 12, color: p.state === 'equipped' ? SET_COLOR : p.state === 'owned' ? '#6a5a3a' : '#9a8f78', fontWeight: p.state === 'equipped' ? 700 : 500 }}>
                 {p.state === 'equipped' ? '✔' : p.state === 'owned' ? '●' : '○'} {p.name}{p.state === 'owned' ? ' (in bag)' : ''}
               </div>
             ))}
             <div style={{ marginTop: 3 }}>
               {def.bonuses.map((b) => (
-                <div key={b.pieces} style={{ fontSize: '.72rem', color: n >= b.pieces ? SET_COLOR : '#9a8f78', fontWeight: n >= b.pieces ? 700 : 500 }}>({b.pieces}) {b.text}</div>
+                <div key={b.pieces} style={{ fontSize: 12, color: n >= b.pieces ? SET_COLOR : '#9a8f78', fontWeight: n >= b.pieces ? 700 : 500 }}>({b.pieces}) {b.text}</div>
               ))}
             </div>
           </div>
@@ -113,7 +113,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
 };
 
 export const SimpleTip: React.FC<{ title: string; sub?: string; color?: string; lines?: React.ReactNode[]; body?: string }> = ({ title, sub, color, lines, body }) => (
-  <div style={{ width: '15rem' }}>
+  <div style={{ width: '15rem', maxWidth: '100%' }}>
     <div className="tt-name" style={color ? { color } : undefined}>{title}</div>
     {sub && <div className="tt-sub">{sub}</div>}
     {body && <><div className="tt-sep" /><div className="muted italic">{body}</div></>}

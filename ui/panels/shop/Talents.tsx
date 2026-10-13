@@ -38,34 +38,34 @@ export const TalentsView: React.FC = () => {
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="rpg-label">Talents · {hero}</div>
-          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 1 point per Hero Rank, +1 every 5 ranks.</div>
+          <div style={{ fontSize: 12, lineHeight: 1.3, color: 'var(--fg-2)' }}>Permanent. 1 point per Hero Rank, +1 every 5 ranks.</div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="rpg-badge !text-[.75rem]" data-testid="talent-points"><Sparkles size={12} /> {free} / {total} points</div>
+          <div className="rpg-badge !text-xs" data-testid="talent-points"><Sparkles size={12} /> {free} / {total} points</div>
           <Button size="sm" disabled={cost <= 0 || gold < cost} onClick={() => respec()} data-testid="talent-respec">
             <RotateCcw size={12} /> Respec{cost > 0 ? ` ${cost.toLocaleString()}g` : ''}
           </Button>
         </div>
       </div>
 
-      <div className="flex justify-center rpg-frame py-2 overflow-x-auto" style={{ ['--hc' as any]: color }}>
-        <div className="flex" style={{ width: COL_W * 3 }}>
+      <div className="rpg-frame py-2 overflow-x-auto allow-scroll" style={{ touchAction: 'pan-x pan-y', ['--hc' as any]: color }}>
+        <div className="flex mx-auto" style={{ width: COL_W * 3 }}>
           {BRANCHES[hero].map((br, b) => {
             const bn = nodes.filter((n) => n.branch === b);
             const bs = branchSpent(hero, b, ranks);
             return (
               <div key={b} className="relative" style={{ width: COL_W, height: BOX_H }}>
                 <div className="absolute left-0 right-0 text-center" style={{ top: 0, padding: '0 4px' }}>
-                  <div style={{ fontSize: '.8rem', fontWeight: 700, lineHeight: 1, color: br.color, fontFamily: 'var(--font-title)', textShadow: '0 1px 0 #000' }}>{br.name}</div>
-                  <div style={{ fontSize: '.56rem', lineHeight: 1.1, marginTop: 3, color: 'var(--text-dim)' }}>{br.blurb}</div>
-                  <div style={{ fontSize: '.56rem', color: bs > 0 ? br.color : 'var(--text-dim)' }}>{bs} pts</div>
+                  <div style={{ fontSize: '.8rem', fontWeight: 700, lineHeight: 1, color: br.color, fontFamily: 'var(--font)',  }}>{br.name}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.1, marginTop: 3, color: 'var(--fg-2)' }}>{br.blurb}</div>
+                  <div style={{ fontSize: 12, color: bs > 0 ? br.color : 'var(--fg-2)' }}>{bs} pts</div>
                 </div>
                 <svg className="absolute inset-0 pointer-events-none" width={COL_W} height={BOX_H}>
                   {bn.flatMap((n) => n.req.map((rid) => {
                     const p = TALENT_BY_ID[rid];
                     const on = (ranks[n.id] || 0) > 0;
                     const open = (ranks[rid] || 0) > 0;
-                    return <line key={n.id + rid} x1={cx(p)} y1={cy(p)} x2={cx(n)} y2={cy(n)} stroke={on ? br.color : open ? '#e9b949' : '#4a3d2a'} strokeWidth={on ? 3.2 : 2.2} strokeOpacity={on ? 1 : open ? 0.8 : 0.6} strokeDasharray={on ? undefined : '4 3'} />;
+                    return <line key={n.id + rid} x1={cx(p)} y1={cy(p)} x2={cx(n)} y2={cy(n)} stroke={on ? br.color : open ? 'var(--ac)' : 'rgba(59,58,69,.28)'} strokeWidth={on ? 3.2 : 2.2} strokeOpacity={on ? 1 : open ? 0.8 : 0.6} strokeDasharray={on ? undefined : '4 3'} />;
                   }))}
                 </svg>
                 {bn.map((n) => {
@@ -88,27 +88,27 @@ export const TalentsView: React.FC = () => {
                       className="absolute flex items-center justify-center"
                       style={{
                         left: cx(n) - sz / 2, top: cy(n) - sz / 2, width: sz, height: sz, borderRadius: n.capstone ? 14 : '50%',
-                        background: r > 0 ? `radial-gradient(circle at 35% 28%, ${br.color}55, #1a1208 75%)` : 'radial-gradient(circle at 35% 28%, #3a2c18, #120d07 75%)',
-                        border: `2px solid ${r >= n.max ? '#ffe08a' : r > 0 ? br.color : can ? '#e9b949' : '#4a3d2a'}`,
-                        boxShadow: r > 0 ? `0 0 10px ${br.color}99` : can ? '0 0 8px #e9b94988' : 'none',
+                        background: r > 0 ? `color-mix(in srgb, ${br.color} 22%, var(--paper))` : 'var(--paper-2)',
+                        border: `2px solid ${r >= n.max ? 'var(--ac)' : r > 0 ? br.color : can ? 'var(--ac)' : 'rgba(59,58,69,.28)'}`,
+                        boxShadow: can && r <= 0 ? '0 0 0 3px color-mix(in srgb, var(--ac) 35%, transparent)' : 'none',
                         cursor: can ? 'pointer' : 'default', transform: n.capstone ? 'rotate(0deg)' : undefined,
                       }}
                     >
                       <NodeIcon icon={n.icon} size={sz - 16} dim={r <= 0 && !can} />
-                      {locked && r <= 0 && <span className="absolute inset-0 flex items-center justify-center"><Lock size={12} color="#cbbd9a" /></span>}
-                      <span className="absolute rpg-num" style={{ bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: '.58rem', padding: '0 4px', borderRadius: 6, background: '#0d0703', color: r >= n.max ? '#ffe08a' : r > 0 ? br.color : '#9a8a6a', border: '1px solid #3a2c18' }}>{r}/{n.max}</span>
+                      {locked && r <= 0 && <span className="absolute inset-0 flex items-center justify-center"><Lock size={12} color="#7b7889" /></span>}
+                      <span className="absolute rpg-num" style={{ bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: 12, padding: '0 4px', borderRadius: 6, background: 'var(--paper)', color: r >= n.max ? 'var(--hi)' : r > 0 ? br.color : 'var(--fg-2)', border: '1px solid var(--line)' }}>{r}/{n.max}</span>
                     </button>
                   );
                 })}
                 {bn.map((n) => (
-                  <div key={'l' + n.id} className="absolute text-center leading-[1.05] pointer-events-none" style={{ left: cx(n) - 25, width: 50, top: cy(n) + (n.capstone ? 38 : 31), fontSize: '.54rem', color: (ranks[n.id] || 0) > 0 ? '#f1d9a0' : '#8a7a5a' }}>{n.name}</div>
+                  <div key={'l' + n.id} className="absolute text-center leading-[1.05] pointer-events-none" style={{ left: cx(n) - 25, width: 50, top: cy(n) + (n.capstone ? 38 : 31), fontSize: 12, color: (ranks[n.id] || 0) > 0 ? 'var(--fg)' : 'var(--fg-2)' }}>{n.name}</div>
                 ))}
               </div>
             );
           })}
         </div>
       </div>
-      <div style={{ fontSize: '.64rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Click a node to spend a point. Capstones need {CAPSTONE_BRANCH_POINTS} points in their branch and both nodes above them. Talents apply in every run of this class.</div>
+      <div style={{ fontSize: 12, lineHeight: 1.3, color: 'var(--fg-2)' }}>Click a node to spend a point. Capstones need {CAPSTONE_BRANCH_POINTS} points in their branch and both nodes above them. Talents apply in every run of this class.</div>
     </div>
   );
 };

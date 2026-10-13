@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Item } from '../../types';
-import { RARITY_TEXT } from '../lib/game';
+import { RARITY_LIGHT as RARITY_TEXT } from '../theme';
 import { LOOT, LOOT_BY_NAME } from '../../loot';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
 import { ART, type Pal, type ArtSpec } from '../../itemCatalog';
