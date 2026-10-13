@@ -34,8 +34,10 @@ export const TooltipLayer: React.FC = () => {
 
   useEffect(() => {
     const move = (e: MouseEvent) => { mouse.current.x = e.clientX; mouse.current.y = e.clientY; place(); };
+    const touch = (e: PointerEvent) => { if (e.pointerType === 'touch') { mouse.current.x = e.clientX; mouse.current.y = e.clientY; useTipStore.getState().hide(); } };
     window.addEventListener('mousemove', move);
-    return () => window.removeEventListener('mousemove', move);
+    window.addEventListener('pointerdown', touch, true);   // tap-to-show: a new tap hides the old tip first, the tapped element's hover handler shows its own
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('pointerdown', touch, true); };
   }, []);
   useEffect(() => { if (content) place(); }, [content]);
 

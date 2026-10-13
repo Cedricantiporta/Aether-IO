@@ -14,6 +14,7 @@ import { GB, TAU, setInst } from './util';
 import { makeBeamMaterial } from './beam';
 import { useItemPickupsVersion } from './hooks';
 import { labelMaterial } from './label';
+import { inView } from './view';
 
 const RARITY_HEX: Record<string, string> = { COMMON: '#e5e7eb', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444' };
 const MAXP = 500;
@@ -50,6 +51,7 @@ export function Pickups() {
     for (let i = 0; i < pk.length; i++) {
       const p = pk[i];
       if (!p.active || p.kind === 'ITEM') continue;
+      if (!inView(p.pos.x, p.pos.z, 3)) continue;
       const bob = Math.sin(t * 3.2 + p.id * 1.7) * 0.1;
       const y = Math.max(p.pos.y, 0.25) + 0.35 + bob;
       const pop = Math.min(1, p.t * 5);
@@ -117,7 +119,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
     if (!g.current) return;
-    const vis = p.active && p.kind === 'ITEM';
+    const vis = p.active && p.kind === 'ITEM' && inView(p.pos.x, p.pos.z, 4);
     g.current.visible = vis;
     if (!vis) return;
     g.current.position.set(p.pos.x, 0, p.pos.z);

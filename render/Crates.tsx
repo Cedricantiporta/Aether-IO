@@ -1,4 +1,5 @@
 // Destructible props: crate, barrel, chest, pot, hay, crystal, explosive barrel, grave, cart (instanced per kind).
+import { inView } from './view';
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry } from 'three';
@@ -135,6 +136,7 @@ export function Crates() {
     for (let i = 0; i < c.length; i++) {
       const cr = c[i];
       if (!cr.active) continue;
+      if (!inView(cr.pos.x, cr.pos.z, 4)) continue;
       const P = sys.per[cr.kind]; if (!P) continue;
       const n = counts[cr.kind]++;
       const f = cr.hitFlash;

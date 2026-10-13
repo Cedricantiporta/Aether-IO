@@ -18,6 +18,7 @@ import { resetAbilities } from './systems/abilities';
 import { updateDirector, resetDirector } from './systems/director';
 import { updateVillage, placeVillageNodes } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
+import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
 
 const MAX_DT = 0.05;
@@ -53,9 +54,14 @@ function tickFeel(raw: number): void {
   feel.gold = Math.max(0, feel.gold - r * 1.6);
   feel.hurt = Math.max(0, feel.hurt - r * 2.6);
 }
+let lastVib = 0;
 events.on('damage', (e) => {
   if (!world.player.alive) return;
   if (e.toPlayer) {
+    if (device.touch && useGameStore.getState().settings?.vibration && typeof navigator !== 'undefined' && navigator.vibrate) {
+      const n = nowS();
+      if (n - lastVib > 0.25) { lastVib = n; try { navigator.vibrate(e.amount >= useGameStore.getState().stats.maxHealth * 0.12 ? 45 : 14); } catch { /* ignore */ } }
+    }
     const mx = Math.max(1, useGameStore.getState().stats.maxHealth);
     if (e.amount >= mx * 0.12) { hitStop(0.07, 0.05); feel.hurt = 1; fovKick(0.35); }
     else if (e.amount >= mx * 0.04) feel.hurt = Math.max(feel.hurt, 0.5);

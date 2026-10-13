@@ -1,3 +1,6 @@
+import { device } from '../../engine/device';
+import { toggleFullscreen } from '../layout';
+import { Maximize } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -118,6 +121,7 @@ export const MenuButtons: React.FC = () => {
       <MenuBtn icon={<Backpack size={24} />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
       <MenuBtn icon={<BookOpen size={24} />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
       <MenuBtn icon={<Settings size={24} />} label="Settings" hint="Esc" onClick={togglePause} />
+      {device.fullscreenOk && <MenuBtn icon={<Maximize size={24} />} label="Fullscreen" hint="F11" onClick={() => { void toggleFullscreen(); }} />}
     </div>
   );
 };

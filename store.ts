@@ -19,6 +19,7 @@ import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalent
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
+import { deviceDefaults } from './engine/device';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -57,9 +58,12 @@ const INITIAL_GAME_STATS: GameStatistics = {
   classHighestWave: { ARCHER: 0, WIZARD: 0, BARBARIAN: 0 },
 };
 
+const _dd = deviceDefaults();
 const DEFAULT_SETTINGS: Settings = {
-  masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.5, quality: 'HIGH',
+  masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.5, quality: _dd.quality,
   showDamageNumbers: true, screenShake: true, autoPotions: true,
+  autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1,
+  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false,
 };
 
 const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };

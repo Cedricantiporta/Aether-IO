@@ -7,9 +7,12 @@ import { ActionBar } from './ActionBar';
 import { VitalOrb, XpBar } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
 import { UltOverlay } from './UltOverlay';
+import { useGameStore } from '../../store';
 
 /** In-game HUD. Re-renders only on store changes; per-frame values go through refs. */
-export const HUD: React.FC = () => (
+export const HUD: React.FC = () => {
+  const showMap = useGameStore((s) => s.settings.showMinimap !== false);
+  return (
   <>
     <UltOverlay />
     <Vignettes />
@@ -18,22 +21,22 @@ export const HUD: React.FC = () => (
     <SiegeSkip />
 
     {/* top-left */}
-    <div className="absolute" style={{ left: '1.2rem', top: '1rem' }}><PlayerPlate /></div>
+    <div className="absolute hud-tl" style={{ left: '1.2rem', top: '1rem' }}><PlayerPlate /></div>
 
     {/* top-centre */}
-    <div className="absolute left-0 right-0 flex flex-col items-center gap-3" style={{ top: '.8rem' }}>
+    <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
       <div className="pe"><WavePlaque /></div>
       <BossBar />
     </div>
 
     {/* top-right */}
-    <div className="absolute flex flex-col items-end gap-3" style={{ right: '1.2rem', top: '1rem' }}>
+    <div className="absolute flex flex-col items-end gap-3 hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
       <Currency />
       <MenuButtons />
     </div>
 
     {/* bottom-right minimap */}
-    <div className="absolute hud-mm" style={{ right: '2.8rem', bottom: '2.6rem' }}><Minimap /></div>
+    {showMap && <div className="absolute hud-mm" style={{ right: '2.8rem', bottom: '2.6rem' }}><Minimap /></div>}
 
     {/* bottom-centre: orbs + (xp + action bar) plate */}
     <div className="absolute left-0 right-0 flex justify-center items-end pointer-events-none hud-bottom" style={{ bottom: '.2rem' }}>
@@ -49,4 +52,5 @@ export const HUD: React.FC = () => (
 
     <Announcer />
   </>
-);
+  );
+};

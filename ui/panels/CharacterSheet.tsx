@@ -45,7 +45,7 @@ export const CharacterSheet: React.FC = () => {
   const sets = activeSets(equipment);
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
+      className="absolute pe flex side-panel" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
       <Panel className="flex flex-col w-full min-h-0">
         <PanelHead icon={<User size={22} />} title="Character" sub={`${hero} · Level ${level}`} onClose={close} />
         <div className="flex-1 min-h-0 rpg-scroll p-4 flex flex-col gap-3">

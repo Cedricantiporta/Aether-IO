@@ -183,6 +183,8 @@ function cast(slot: ActiveSlot): void {
       if (k.KeyS || k.ArrowDown) mz += 1;
       if (k.KeyA || k.ArrowLeft) mx -= 1;
       if (k.KeyD || k.ArrowRight) mx += 1;
+      const jj = world.input.joy;
+      if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { mx = jj.x; mz = jj.z; }
       const ml = Math.hypot(mx, mz);
       if (ml > 0) { mx /= ml; mz /= ml; } else { mx = -dx; mz = -dz; }
       const inv = 0.3 + 0.03 * lv;

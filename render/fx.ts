@@ -3,6 +3,7 @@
 // VFX.tsx mounts the GPU meshes that draw these buffers.
 import { CanvasTexture, Color, LinearFilter, SRGBColorSpace, Texture } from 'three';
 import { fbm, TAU } from './util';
+import { world } from '../engine/world';
 
 // ------------------------------------------------------------------ atlas ----
 let _atlas: Texture | null = null;
@@ -76,6 +77,9 @@ export class Particles {
   }
   emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, s0: number, s1: number,
     r: number, g: number, b: number, a: number, cell: number, grav = 0, drag = 0, rot = 0, rotV = 0, stretch = 0) {
+    // off-screen emission is dropped (visible ground rect + margin for flying particles)
+    const V = world.view;
+    if (x < V.minX - 10 || x > V.maxX + 10 || z < V.minZ - 10 || z > V.maxZ + 10) return;
     // find a dead slot starting from cursor (bounded scan), else overwrite
     let i = this.cursor;
     for (let k = 0; k < 24; k++) { if (this.life[i] <= 0) break; i = i + 1 >= this.cap ? 0 : i + 1; }
@@ -129,6 +133,8 @@ export const FX = {
 export function pushHalo(x: number, y: number, z: number, size: number, r: number, g: number, b: number, a: number, cell = 0) {
   const P = FX.halo, i = P.n;
   if (i >= P.cap) return;
+  const V = world.view;
+  if (x < V.minX - 4 || x > V.maxX + 4 || z < V.minZ - 4 || z > V.maxZ + 4) return;
   const o3 = i * 3, o4 = i * 4;
   P.iPos[o3] = x; P.iPos[o3 + 1] = y; P.iPos[o3 + 2] = z; P.iVel[o3] = 0; P.iVel[o3 + 1] = 0; P.iVel[o3 + 2] = 0;
   P.iCol[o4] = r; P.iCol[o4 + 1] = g; P.iCol[o4 + 2] = b; P.iCol[o4 + 3] = a;

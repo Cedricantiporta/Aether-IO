@@ -30,6 +30,17 @@ export interface Settings {
   showDamageNumbers: boolean;
   screenShake: boolean;
   autoPotions: boolean;   // auto-drink at <30% hp/mana (designer default: true)
+  autoAim: boolean;       // lock the nearest enemy; off = mouse aim (desktop) / right aim stick (touch)
+  autoQuality: boolean;   // adaptive resolution / particle budget from measured frame time
+  fpsLimit: 30 | 60 | 0;  // 0 = unlimited
+  showFps: boolean;
+  uiScale: 'SMALL' | 'NORMAL' | 'LARGE';
+  cameraZoom: number;     // 0.8 (close) .. 1.3 (far)
+  showEnemyBars: boolean;
+  showMinimap: boolean;
+  vibration: boolean;     // navigator.vibrate on being hit (touch devices)
+  joystickSide: 'LEFT' | 'RIGHT';
+  batterySaver: boolean;  // FPS 30 + LOW quality
 }
 
 export interface RunSummary extends RunStats {

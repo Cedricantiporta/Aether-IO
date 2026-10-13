@@ -11,6 +11,7 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, smokePuff } from './fx';
 import { TAU, clamp } from './util';
+import { inView } from './view';
 
 const MAXZ = 192;
 const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0 };
@@ -154,6 +155,7 @@ export function Zones() {
     for (let i = 0; i < zones.length; i++) {
       const z = zones[i];
       if (!z.active) continue;
+      if (!inView(z.pos.x, z.pos.z, z.radius * 1.3 + z.length + 2)) continue;
       const type = TYPE[z.kind];
       if (type === undefined) continue;
       const frac = z.permanent ? 1 : clamp(z.life / Math.max(0.001, z.maxLife), 0, 1);

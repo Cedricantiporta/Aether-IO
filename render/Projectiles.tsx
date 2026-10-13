@@ -12,6 +12,7 @@ import { CELL, FX, embers, pushHalo, sparks } from './fx';
 import { GB, TAU, litMat } from './util';
 import { makeAxe } from './weapons';
 import { makeRockGeo } from './models';
+import { inView } from './view';
 
 const MAXP = 900, MAXE = 600;
 const NOISE = `
@@ -165,6 +166,7 @@ export function Projectiles() {
       const p = pr[n];
       if (!p.active) continue;
       const ims = sys.S[p.kind]; if (!ims) continue;
+      if (!inView(p.pos.x, p.pos.z, 6)) continue;
       const i = counts[p.kind]++;
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);
@@ -253,6 +255,7 @@ export function Projectiles() {
       const p = ep[n];
       if (!p.active) continue;
       const ims = sys.E[p.kind]; if (!ims) continue;
+      if (!inView(p.pos.x, p.pos.z, 4)) continue;
       const i = counts['e' + p.kind]++;
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);

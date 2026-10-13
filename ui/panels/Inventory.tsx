@@ -68,7 +68,7 @@ export const InventoryPanel: React.FC = () => {
 
   return (
     <motion.div initial={{ x: '-105%' }} animate={{ x: 0 }} exit={{ x: '-105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
+      className="absolute pe flex side-panel" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
       <Panel className="flex flex-col w-full min-h-0">
         <PanelHead icon={<BagGlyph size={34} />} title="Bag" onClose={invOpen ? toggleInventory : closeAllUI}
           right={<CurrencyPill label="CP" value={calculateTotalCP(stats).toLocaleString()} />} />

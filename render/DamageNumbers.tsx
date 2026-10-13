@@ -1,4 +1,5 @@
 // Instanced billboard damage numbers sampling a canvas digit atlas.
+import { inView } from './view';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -140,6 +141,7 @@ export function DamageNumbers() {
       if (!n.active) continue;
       n.t += dt;
       if (n.t >= n.dur) { n.active = false; continue; }
+      if (!inView(n.x, n.z, 3)) continue;
       const k = n.t / n.dur;
       const pop = n.t < 0.14 ? (() => { const u = n.t / 0.14; return 1 + 0.35 * Math.sin(u * Math.PI) - (1 - u) * 0.6 + (1 - u) * 0.0; })() : 1;
       const sc = n.scale * Math.max(0.2, pop) * (n.crit ? 1 + 0.06 * Math.sin(n.t * 40) * (1 - k) : 1);

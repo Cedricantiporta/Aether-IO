@@ -11,7 +11,7 @@ export interface HeroMeta {
 
 export const HERO_META: Record<HeroClass, HeroMeta> = {
   ARCHER: {
-    title: 'Archer', tagline: 'Swift Marksman', tags: ['Ranged', 'Fast', 'Fragile'],
+    title: 'Archer', tagline: 'Swift Marksman', tags: ['Ranged', 'Shoots on the move', 'Fragile'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.ARCHER.weaponId)?.name ?? 'Shortbow',
     abilities: [
       { key: 'R', name: "Hawk's Focus", desc: '10s of +60% attack speed and +40% damage; glowing arrows.' },

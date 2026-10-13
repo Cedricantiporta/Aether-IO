@@ -28,7 +28,7 @@ export const TitleScreen: React.FC = () => {
     return () => window.removeEventListener('keydown', h);
   }, [setTitleDone]);
   return (
-    <div className="absolute inset-0 pe" style={{ zIndex: 50 }}>
+    <div className="absolute inset-0 pe title-root" style={{ zIndex: 50 }}>
       <div className="absolute inset-x-0 bottom-0 h-[40%] lobby-fade-b pointer-events-none" />
       <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 16 }}
         className="absolute left-0 right-0 top-[1.6rem] flex flex-col items-center pointer-events-none">
@@ -100,7 +100,7 @@ export const VillageHUD: React.FC = () => {
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 30 }} data-testid="village-hud">
       {/* top-left: rank + hero + difficulty */}
       {!panel && (
-        <div className="absolute flex flex-col gap-2 pe" style={{ left: '1.2rem', top: '1rem', width: '16.5rem' }}>
+        <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '1.2rem', top: '1rem', width: '16.5rem' }}>
           <Panel slim className="p-2.5"><RankPlate /></Panel>
           <Panel slim className="p-2.5">
             <div className="rpg-label mb-1.5 flex items-center gap-1.5"><Swords size={12} /> Hero</div>
@@ -131,7 +131,7 @@ export const VillageHUD: React.FC = () => {
 
       {/* top-right: currency + shortcuts + records */}
       {!panel && (
-        <div className="absolute flex flex-col items-end gap-2.5 pe" style={{ right: '1.2rem', top: '1rem' }}>
+        <div className="absolute flex flex-col items-end gap-2.5 pe hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
           <Currency />
           <div className="flex gap-[.6rem]">
             <VBtn icon={<User size={24} />} label="Hero (C)" onClick={toggleChar} />
@@ -146,7 +146,7 @@ export const VillageHUD: React.FC = () => {
 
       {/* bottom: defend button + hints */}
       {!panel && (
-        <div className="absolute left-0 right-0 bottom-[1.4rem] flex flex-col items-center gap-2">
+        <div className="absolute left-0 right-0 bottom-[1.4rem] flex flex-col items-center gap-2 vh-bottom">
           <div className="pe">
             <Button variant="primary" size="lg" pulse onClick={startGame} data-testid="defend"><Shield size={22} fill="currentColor" /> DEFEND THE VILLAGE</Button>
           </div>

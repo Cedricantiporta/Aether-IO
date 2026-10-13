@@ -31,7 +31,7 @@ export const GameOver: React.FC = () => {
   const gold = run ? run.goldEarned + run.waveGoldBonus : 0;
 
   return (
-    <motion.div className="absolute inset-0 flex items-center justify-center pe" style={{ zIndex: 120, background: 'radial-gradient(ellipse at center, rgba(70,5,5,.55), rgba(5,0,0,.92))' }}
+    <motion.div className="absolute inset-0 flex items-center justify-center pe go-root" style={{ zIndex: 120, background: 'radial-gradient(ellipse at center, rgba(70,5,5,.55), rgba(5,0,0,.92))' }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .8 }}>
       <div className="flex flex-col items-center" style={{ width: '31rem', maxWidth: '94vw' }}>
         <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 mb-1">

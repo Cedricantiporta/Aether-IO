@@ -1,5 +1,6 @@
 // Renders the pooled ground effects of the active kit (falling arrows / meteors, stone spikes, ice crystals,
 // frost traps, fire pillars, expanding rings) plus orbiting storm orbs and fear icons.
+import { inView } from './view';
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -73,6 +74,7 @@ export function GroundFx() {
     for (let i = 0; i < fx.length; i++) {
       const f = fx[i];
       if (!f.active) continue;
+      if (f.kind !== 'BIG_METEOR' && f.kind !== 'TRAP' && !inView(f.x, f.z, 20 + f.radius)) continue;
       const sd = f.seed;
       switch (f.kind) {
         case 'RAIN_ARROW': {
@@ -228,7 +230,7 @@ export function GroundFx() {
       const es = world.enemies;
       for (let i = 0; i < es.length; i++) {
         const e = es[i];
-        if (!e.active || e.fearT <= 0 || e.state === 'DYING') continue;
+        if (!e.active || e.fearT <= 0 || e.state === 'DYING' || !inView(e.pos.x, e.pos.z, 2)) continue;
         if (rnd() < dt * 2.5 && gate()) FX.add.emit(e.pos.x + (rnd() - 0.5) * 0.5, 2.2 * e.scale + 0.4, e.pos.z, 0, 1.2, 0, 0.8, 0.9, 0.6, 1.9, 0.6, 2.4, 0.95, CELL.STAR, 0, 0.5, 0, 2);
       }
     }

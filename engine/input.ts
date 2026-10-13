@@ -17,6 +17,8 @@ function clearAll(): void {
   for (const k in keys) keys[k] = false;
   for (const k in pressed) pressed[k] = false;
   world.input.mouseDown = false;
+  world.input.joy.active = false; world.input.joy.x = world.input.joy.z = 0;
+  world.input.aimStick.active = false;
 }
 
 /** Attaches window listeners. Returns the cleanup function. Call once from App. */
@@ -54,6 +56,7 @@ export function installInput(): () => void {
   };
 
   const onPointerMove = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') return;   // touch uses the virtual joystick / aim stick
     inp.pointerNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
     inp.pointerNdc.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };

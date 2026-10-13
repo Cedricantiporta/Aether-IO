@@ -79,7 +79,7 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
     ARCHER: {
         stats: { moveSpeed: 14, fireRate: 1.75, maxHealth: 60, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
-        description: 'High Speed & Attack Rate (grows with level). Low Health.'
+        description: 'Shoots on the move. High Speed & Attack Rate (grows with level). Low Health.'
     },
     WIZARD: {
         stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },

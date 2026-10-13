@@ -15,7 +15,7 @@ import {
   ringBurst, scorch, smokePuff, sparks, splat,
 } from './fx';
 import { TAU } from './util';
-import { getQuality, useQuality } from './quality';
+import { adaptive, getQuality, useQuality } from "./quality";
 
 const PARTICLE_VS = /* glsl */ `
 attribute vec3 iPos; attribute vec3 iVel; attribute vec4 iCol; attribute vec4 iData;
@@ -153,7 +153,7 @@ let pollenT = 0;
 
 export function VFX() {
   const q = useQuality();
-  useEffect(() => { FX.scale = q.fxScale; }, [q]);
+  useEffect(() => { FX.scale = q.fxScale * adaptive.fxMul; }, [q]);
 
   useEffect(() => {
     const off: (() => void)[] = [];

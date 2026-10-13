@@ -812,6 +812,9 @@ function updateEnemy(e: Enemy): void {
 }
 
 // ------------------------------------------------------------ main loop --------
+const lodAcc = new Float32Array(MAX_ENEMIES);
+let lodTick = 0;
+
 export function updateEnemies(dt: number): void {
   const player = world.player;
   px = player.pos.x;
@@ -822,6 +825,11 @@ export function updateEnemies(dt: number): void {
 
   const list = world.enemies;
   let alive = 0;
+  const V = world.view;
+  const lodOn = V.on && V.r < 1000;
+  const lodR2 = (V.r * 1.6) * (V.r * 1.6);
+  const baseDecay = frameDecay, baseTick = frameDotTick;
+  lodTick++;
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!e.active) continue;
@@ -833,6 +841,25 @@ export function updateEnemies(dt: number): void {
       if (e.deathT >= DEATH_TIME) e.active = false;
       continue;
     }
+    // AI LOD: enemies well outside the visible area think every 2-4 frames with the accumulated dt
+    // (movement/collisions stay correct because motion is integrated with the accumulated step).
+    if (lodOn && !e.boss && e.state !== 'SPAWN') {
+      const dx = e.pos.x - V.cx, dz = e.pos.z - V.cz;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > lodR2) {
+        const stride = d2 > lodR2 * 4 ? 4 : d2 > lodR2 * 2 ? 3 : 2;
+        lodAcc[i] += dt;
+        if ((lodTick + i) % stride !== 0) { alive++; continue; }
+        const eff = lodAcc[i]; lodAcc[i] = 0;
+        frameDt = eff; frameDecay = Math.pow(0.85, eff * 60);
+        frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - eff) * 2);
+        updateEnemy(e);
+        frameDt = dt; frameDecay = baseDecay; frameDotTick = baseTick;
+        if (e.active && !isDying(e)) alive++;
+        continue;
+      }
+    }
+    lodAcc[i] = 0;
     updateEnemy(e);
     if (e.active && !isDying(e)) alive++;
   }

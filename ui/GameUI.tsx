@@ -4,6 +4,9 @@ import { useGameStore } from '../store';
 import { useShallow } from 'zustand/react/shallow';
 import { GameStatus } from '../types';
 import { HUD } from './hud/HUD';
+import { TouchControls } from './hud/TouchControls';
+import { FpsCounter } from './hud/FpsCounter';
+import { RotateHint } from './screens/RotateHint';
 import { Notifications } from './hud/Overlays';
 import { TitleScreen, VillageHUD } from './screens/MainMenu';
 import { useUiStore } from './uiStore';
@@ -37,6 +40,7 @@ export const GameUI: React.FC = () => {
       {status === GameStatus.MENU && !titleDone && <TitleScreen />}
       {village && <VillageHUD />}
       {inGame && <HUD />}
+      {(inGame || village) && <TouchControls />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && <ShopPanel key="shop" />}
@@ -54,6 +58,8 @@ export const GameUI: React.FC = () => {
       <GlobalConfirm />
       <SummonReveal />
       <TooltipLayer />
+      <FpsCounter />
+      <RotateHint />
     </div>
   );
 };

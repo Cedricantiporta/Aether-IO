@@ -7,6 +7,7 @@ import { useGameStore } from '../store';
 import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
 import { feel } from '../engine/game';
+import { device } from '../engine/device';
 
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
@@ -37,7 +38,8 @@ export function CameraRig() {
       const k = d > 0.001 ? Math.min(d, 14) / d * 0.22 : 0;
       lx = ax * k; lz = az * k;
     }
-    s.zoom = damp(s.zoom, world.camera.zoom || 1, 2.5, dt);
+    const zoomSet = useGameStore.getState().settings?.cameraZoom || 1;
+    s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
     _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
     _pos.set(_tgt.x, 32 * s.zoom, _tgt.z + 22 * s.zoom);
 
@@ -77,14 +79,44 @@ export function CameraRig() {
     if (roll) cam.rotateZ(roll);
     cam.updateMatrixWorld();
 
-    // ---- aim point on ground plane
-    const nd = world.input.pointerNdc;
-    _v.set(clamp(nd.x, -1, 1), clamp(nd.y, -1, 1), 0.5).unproject(cam);
-    _v.sub(cam.position);
-    if (_v.y < -1e-4) {
-      const t = -cam.position.y / _v.y;
-      p.aim.set(cam.position.x + _v.x * t, 0, cam.position.z + _v.z * t);
+    // ---- visible ground rectangle (frustum ∩ y=0) + margin; used for culling, shadows and AI LOD
+    const V = world.view;
+    if (lobby || s.lobbyBlend > 0.01) {
+      V.minX = V.minZ = -1e5; V.maxX = V.maxZ = 1e5; V.cx = 0; V.cz = 0; V.r = 1e5; V.on = false;
+    } else {
+      let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+      for (let c = 0; c < 4; c++) {
+        _v.set(c & 1 ? 1 : -1, c & 2 ? 1 : -1, 0.5).unproject(cam).sub(cam.position);
+        const hl = Math.max(1e-3, Math.hypot(_v.x, _v.z));
+        const t = _v.y < -1e-3 ? Math.min(-cam.position.y / _v.y, 150 / hl) : 150 / hl;
+        const gx = cam.position.x + _v.x * t, gz = cam.position.z + _v.z * t;
+        if (gx < minX) minX = gx; if (gx > maxX) maxX = gx; if (gz < minZ) minZ = gz; if (gz > maxZ) maxZ = gz;
+      }
+      const M = 6;
+      V.minX = minX - M; V.maxX = maxX + M; V.minZ = minZ - M; V.maxZ = maxZ + M;
+      V.cx = (V.minX + V.maxX) / 2; V.cz = (V.minZ + V.maxZ) / 2;
+      V.r = Math.max(V.maxX - V.minX, V.maxZ - V.minZ) / 2; V.on = true;
     }
-  }, 0);
+
+    // ---- aim point on ground plane
+    const inp = world.input;
+    const settings = useGameStore.getState().settings;
+    if (inp.aimStick.active && Math.hypot(inp.aimStick.x, inp.aimStick.z) > 0.25) {
+      // touch right stick: aim in the stick direction
+      p.aim.set(p.pos.x + inp.aimStick.x * 10, 0, p.pos.z + inp.aimStick.z * 10);
+    } else if (device.touch && !lobby) {
+      // touch without an aim stick: aim along facing (auto-aim overrides this when enabled)
+      p.aim.set(p.pos.x + Math.sin(p.facing) * 10, 0, p.pos.z + Math.cos(p.facing) * 10);
+    } else {
+      const nd = inp.pointerNdc;
+      _v.set(clamp(nd.x, -1, 1), clamp(nd.y, -1, 1), 0.5).unproject(cam);
+      _v.sub(cam.position);
+      if (_v.y < -1e-4) {
+        const t = -cam.position.y / _v.y;
+        p.aim.set(cam.position.x + _v.x * t, 0, cam.position.z + _v.z * t);
+      }
+    }
+    void settings;
+  }, -0.5);
   return null;
 }

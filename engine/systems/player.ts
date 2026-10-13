@@ -182,7 +182,8 @@ export function updatePlayer(dt: number): void {
     const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const keep = cur && cur.active && cur.state !== 'DYING' && cur.state !== 'SPAWN'
       && (cur.pos.x - p.pos.x) ** 2 + (cur.pos.z - p.pos.z) ** 2 < (AUTO_TARGET_RANGE + 4) ** 2;
-    if (!keep) {
+    if (st.settings.autoAim === false) autoAim.id = -1;
+    else if (!keep) {
       const e = findNearestEnemy(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
       autoAim.id = e ? e.id : -1;
     }
@@ -196,8 +197,9 @@ export function updatePlayer(dt: number): void {
   if (k.KeyS || k.ArrowDown) mz += 1;
   if (k.KeyA || k.ArrowLeft) mx -= 1;
   if (k.KeyD || k.ArrowRight) mx += 1;
-  const ml = Math.sqrt(mx * mx + mz * mz);
+  let ml = Math.sqrt(mx * mx + mz * mz);
   if (ml > 0) { mx /= ml; mz /= ml; }
+  if (inp.joy.active) { mx = inp.joy.x; mz = inp.joy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
 
   // ---- dash
   if (inp.pressed.Space && p.dashT <= 0) {
@@ -256,11 +258,13 @@ export function updatePlayer(dt: number): void {
   updateAbilities(dt);
 
   // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
-  if (moving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
+  // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.
+  const archerMoving = st.hero === 'ARCHER' && moving && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0;
+  if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * lowHaste);
+    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }
@@ -284,8 +288,10 @@ export function updatePlayerVillage(dt: number): void {
   if (k.KeyS || k.ArrowDown) mz += 1;
   if (k.KeyA || k.ArrowLeft) mx -= 1;
   if (k.KeyD || k.ArrowRight) mx += 1;
-  const ml = Math.sqrt(mx * mx + mz * mz);
+  let ml = Math.sqrt(mx * mx + mz * mz);
   if (ml > 0) { mx /= ml; mz /= ml; }
+  const jy = world.input.joy;
+  if (jy.active) { mx = jy.x; mz = jy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
   const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;
   const lerpK = 1 - Math.exp(-12 * dt);
   p.vel.x += (mx * speed - p.vel.x) * lerpK;

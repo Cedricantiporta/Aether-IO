@@ -355,4 +355,8 @@ export interface InputState {
   pressed: Record<string, boolean>; // edge-triggered this frame (cleared after update)
   pointerNdc: { x: number; y: number };
   mouseDown: boolean;
+  /** Virtual joystick (touch): x/z in -1..1 world axes (screen-right = +x, screen-up = -z). */
+  joy: { x: number; z: number; active: boolean };
+  /** Right aim stick (touch, auto-aim off): direction in world xz, -1..1. */
+  aimStick: { x: number; z: number; active: boolean };
 }

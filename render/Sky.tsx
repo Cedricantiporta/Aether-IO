@@ -91,12 +91,20 @@ export function Lighting({ q }: { q: QualityCfg }) {
     l.shadow.map?.dispose(); (l.shadow as any).map = null;
   }, [q.shadowMap]);
   const t = useRef(new Vector3());
+  const half = useRef(38);
   useFrame(() => {
     const l = sun.current; if (!l) return;
     const lobby = isLobbyStatus(useGameStore.getState().status);
-    const px = lobby ? 0 : world.player.pos.x, pz = lobby ? -10 : world.player.pos.z;
+    const V = world.view;
+    // shadow frustum hugs the visible ground rect (quantised so the projection rarely changes)
+    const want = lobby || !V.on ? 38 : Math.min(40, Math.max(16, Math.ceil(V.r * 0.8 / 2) * 2));
+    if (want !== half.current) {
+      half.current = want;
+      const c = l.shadow.camera; c.left = -want; c.right = want; c.top = want; c.bottom = -want; c.updateProjectionMatrix();
+    }
+    const px = lobby ? 0 : V.on ? V.cx : world.player.pos.x, pz = lobby ? -10 : V.on ? V.cz : world.player.pos.z;
     // snap to shadow texel grid to avoid shimmering
-    const texel = 76 / (q.shadowMap || 1024);
+    const texel = (half.current * 2) / (q.shadowMap || 1024);
     const tx = Math.round(px / texel) * texel, tz = Math.round(pz / texel) * texel;
     t.current.set(tx, 0, tz);
     l.target.position.copy(t.current);
