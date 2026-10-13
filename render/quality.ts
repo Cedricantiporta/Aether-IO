@@ -20,9 +20,9 @@ export interface QualityCfg {
 }
 
 export const QUALITY: Record<QualityName, QualityCfg> = {
-  LOW: { name: 'LOW', dpr: 1, shadowMap: 0, bloom: false, smaa: false, msaa: 0, grass: 4500, flowers: 500, pebbles: 300, forest: 0.45, fxScale: 0.45, lights: false, clouds: 4, waterDetail: false },
-  MEDIUM: { name: 'MEDIUM', dpr: Math.min(1.5, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1), shadowMap: 1024, bloom: true, smaa: false, msaa: 2, grass: 8000, flowers: 900, pebbles: 500, forest: 0.75, fxScale: 0.75, lights: false, clouds: 7, waterDetail: true },
-  HIGH: { name: 'HIGH', dpr: Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1), shadowMap: 2048, bloom: true, smaa: true, msaa: 0, grass: 12000, flowers: 1500, pebbles: 800, forest: 1, fxScale: 1, lights: true, clouds: 10, waterDetail: true },
+  LOW: { name: 'LOW', dpr: 1, shadowMap: 0, bloom: false, smaa: false, msaa: 0, grass: 1200, flowers: 500, pebbles: 300, forest: 0.45, fxScale: 0.45, lights: false, clouds: 4, waterDetail: false },
+  MEDIUM: { name: 'MEDIUM', dpr: Math.min(1.5, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1), shadowMap: 1024, bloom: true, smaa: false, msaa: 2, grass: 2600, flowers: 900, pebbles: 500, forest: 0.75, fxScale: 0.75, lights: false, clouds: 7, waterDetail: true },
+  HIGH: { name: 'HIGH', dpr: Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1), shadowMap: 2048, bloom: true, smaa: true, msaa: 0, grass: 4200, flowers: 1500, pebbles: 800, forest: 1, fxScale: 1, lights: true, clouds: 10, waterDetail: true },
 };
 
 export function getQuality(): QualityCfg {

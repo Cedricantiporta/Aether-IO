@@ -122,32 +122,31 @@ function GroundAndGrass({ q }: { q: QualityCfg }) {
 }
 
 // ------------------------------------------------------------------- grass ---
-function tuftGeometry() {
+// Soft rounded grass mounds instead of spiky blades: smooth normals and a gentle base->top gradient that starts
+// at the ground colour, so the field reads as lush, painterly turf rather than noisy speckles. ~18 tris per mound.
+function clumpGeometry() {
   const pos: number[] = [], col: number[] = [], nrm: number[] = [], idx: number[] = [];
-  const base = new Color('#6a7a5a'), tip = new Color('#fff2b0'), c = new Color();
-  const blades = 5;
-  for (let b = 0; b < blades; b++) {
-    const a = (b / blades) * TAU + (b % 2) * 0.4;
-    const ox = Math.cos(a) * 0.1, oz = Math.sin(a) * 0.1;
-    const dx = Math.cos(a + 1.2), dz = Math.sin(a + 1.2);
-    const lx = Math.cos(a), lz = Math.sin(a);
-    const h = 0.34 + (b % 3) * 0.09, w = 0.08, lean = 0.1 + (b % 2) * 0.07;
-    const rows = [[0, w, 0], [0.5, w * 0.72, lean * 0.3], [1, 0.0, lean]];
-    const start = pos.length / 3;
-    for (let r = 0; r < 3; r++) {
-      const [t, hw, l] = rows[r];
-      const y = t * h;
-      if (r < 2) {
-        pos.push(ox - dx * hw + lx * l, y, oz - dz * hw + lz * l, ox + dx * hw + lx * l, y, oz + dz * hw + lz * l);
-        c.copy(base).lerp(tip, t * t); col.push(c.r, c.g, c.b, c.r, c.g, c.b);
-        nrm.push(0, 1, 0, 0, 1, 0);
-      } else {
-        pos.push(ox + lx * l, y, oz + lz * l);
-        c.copy(tip); col.push(c.r, c.g, c.b); nrm.push(0, 1, 0);
-      }
+  const SEG = 7, RINGS = [[0, 1.0], [0.55, 0.78], [0.88, 0.42]] as const; // [height t, radius]
+  const R = 0.3, H = 0.17;
+  for (let r = 0; r < RINGS.length; r++) {
+    const [t, rr] = RINGS[r];
+    for (let i = 0; i < SEG; i++) {
+      const a = (i / SEG) * TAU + r * 0.35;
+      const x = Math.cos(a) * rr * R, z = Math.sin(a) * rr * R, y = t * H;
+      pos.push(x, y, z);
+      const nx = Math.cos(a) * rr, ny = 0.6 + t * 1.2, nz = Math.sin(a) * rr, nl = Math.hypot(nx, ny, nz);
+      nrm.push(nx / nl, ny / nl, nz / nl);
+      const shade = 0.58 + t * 0.16; col.push(shade, shade, shade);
     }
-    idx.push(start, start + 1, start + 2, start + 1, start + 3, start + 2, start + 2, start + 3, start + 4);
   }
+  const apex = pos.length / 3;
+  pos.push(0, H, 0); nrm.push(0, 1, 0); col.push(0.76, 0.77, 0.72);
+  for (let r = 0; r < RINGS.length - 1; r++) for (let i = 0; i < SEG; i++) {
+    const a0 = r * SEG + i, a1 = r * SEG + ((i + 1) % SEG), b0 = a0 + SEG, b1 = a1 + SEG;
+    idx.push(a0, b0, a1, a1, b0, b1);
+  }
+  const top = (RINGS.length - 1) * SEG;
+  for (let i = 0; i < SEG; i++) idx.push(top + i, apex, top + ((i + 1) % SEG));
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new Float32BufferAttribute(col, 3));
@@ -157,10 +156,10 @@ function tuftGeometry() {
 }
 
 function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
-  const geo = useMemo(tuftGeometry, []);
+  const geo = useMemo(clumpGeometry, []);
   const R = q.name === 'LOW' ? 27 : q.name === 'MEDIUM' ? 33 : 38;
   const mat = useMemo(() => {
-    const m = new MeshStandardMaterial({ vertexColors: true, side: DoubleSide, roughness: 1, metalness: 0 });
+    const m = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = wind.uTime; sh.uniforms.uPlayer = wind.uPlayer;
       sh.uniforms.uMask = { value: mask }; sh.uniforms.uHalf = { value: GROUND_SIZE / 2 };
@@ -176,15 +175,15 @@ function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
           float gh = fract(sin(dot(gb, vec2(12.9898, 78.233))) * 43758.5453);
           float gh2 = fract(gh * 7.31 + 0.37);
           float gsx = instanceMatrix[0][0]; float gsz = instanceMatrix[2][2];
-          float gvis = step(gh, gm.a) * smoothstep(uR, uR - 8.0, gd);
-          vColor.rgb *= gm.rgb * (0.85 + gh2 * 0.35);`)
+          float gvis = step(gh, gm.a * gm.a) * smoothstep(uR, uR - 8.0, gd);
+          vColor.rgb *= gm.rgb * (0.92 + gh2 * 0.16);`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
           transformed *= gvis;
           transformed.x += (gwp.x - gb.x) / gsx; transformed.z += (gwp.y - gb.y) / gsz;
           float hh = position.y * gvis;
           float wv = sin(uTime * 1.7 + gwp.x * 0.35 + gwp.y * 0.27) * 0.5 + sin(uTime * 2.9 + gwp.x * 0.8 + gwp.y * 0.2) * 0.2;
-          transformed.x += wv * hh * hh * 0.55;
-          transformed.z += wv * hh * hh * 0.25;
+          transformed.x += wv * hh * 0.18;
+          transformed.z += wv * hh * 0.08;
           vec2 away = gwp - uPlayer.xz;
           vec2 pu = normalize(away + vec2(1e-4)) * smoothstep(2.6, 0.2, gd) * hh * 1.4; transformed.x += pu.x / gsx; transformed.z += pu.y / gsz;
           transformed.y *= 1.0 - smoothstep(3.0, 0.4, gd) * 0.55;`);
@@ -195,8 +194,8 @@ function Grass({ q, mask }: { q: QualityCfg; mask: DataTexture }) {
     const rnd = mulberry32(11);
     const W = R * 2;
     for (let i = 0; i < q.grass; i++) {
-      const s = 0.75 + rnd() * 0.7;
-      setInst(m, i, rnd() * W, 0, rnd() * W, 0, s * (0.8 + rnd() * 0.5), s, s * (0.8 + rnd() * 0.5));
+      const s = 0.7 + rnd() * 0.6;
+      setInst(m, i, rnd() * W, 0, rnd() * W, 0, s * (1 + rnd() * 0.5), s * (0.7 + rnd() * 0.5), s * (1 + rnd() * 0.5));
     }
   }, [q.grass, R]);
   useFrame(({ clock }) => { wind.uTime.value = clock.elapsedTime; wind.uPlayer.value.copy(isLobbyNow() ? LOBBY_FOCUS : world.player.pos); });
