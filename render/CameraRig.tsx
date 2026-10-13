@@ -8,6 +8,7 @@ import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
 import { feel } from '../engine/game';
 import { device } from '../engine/device';
+import { clickReq, selectAt } from '../engine/systems/target';
 
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
@@ -117,6 +118,19 @@ export function CameraRig() {
       }
     }
     void settings;
+
+    // ---- click / tap target selection: pointer ray -> ground plane -> nearest enemy
+    if (clickReq.pending) {
+      clickReq.pending = false;
+      if (status === GameStatus.PLAYING && !lobby) {
+        _v.set(clamp(clickReq.nx, -1, 1), clamp(clickReq.ny, -1, 1), 0.5).unproject(cam);
+        _v.sub(cam.position);
+        if (_v.y < -1e-4) {
+          const t = -cam.position.y / _v.y;
+          selectAt(cam.position.x + _v.x * t, cam.position.z + _v.z * t);
+        }
+      }
+    }
   }, -0.5);
   return null;
 }

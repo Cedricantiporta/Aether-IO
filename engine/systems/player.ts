@@ -5,6 +5,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
+import { lockedEnemy, updateTarget } from './target';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState } from './abilities';
@@ -207,8 +208,12 @@ export function updatePlayer(dt: number): void {
     const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const keep = cur && cur.active && cur.state !== 'DYING' && cur.state !== 'SPAWN'
       && (cur.pos.x - p.pos.x) ** 2 + (cur.pos.z - p.pos.z) ** 2 < (AUTO_TARGET_RANGE + 4) ** 2;
-    if (st.settings.autoAim === false) autoAim.id = -1;
-    else if (!keep) {
+    updateTarget();
+    const lk = lockedEnemy();
+    const lr = (ATTACK_RANGE[st.hero] ?? 18) + (lk ? lk.radius : 0);
+    if (lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 <= lr * lr) autoAim.id = lk.id; // clicked target wins while in weapon range
+    else if (st.settings.autoAim === false) autoAim.id = -1;
+    else if (!keep || (lk && cur === lk)) { // (lock fell out of weapon range: re-pick the nearest)
       const e = findNearestEnemy(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
       autoAim.id = e ? e.id : -1;
     }
@@ -278,7 +283,9 @@ export function updatePlayer(dt: number): void {
   if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   // Auto-attack: no target in weapon range → hold fire (no shooting into empty air).
   const range = ATTACK_RANGE[st.hero] ?? 18;
-  if (!manual && !findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
+  const lkd = lockedEnemy();
+  const lockInRange = !!lkd && autoAim.id === lkd.id;
+  if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;

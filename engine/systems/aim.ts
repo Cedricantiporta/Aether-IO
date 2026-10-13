@@ -11,6 +11,7 @@ import { ULT_MAX } from '../../abilityDefs';
 import { aimOverride, autoAim, findNearestEnemy } from './combat';
 import { castActive, castUlt, tryDash, ultReady } from './abilities';
 import { edgeLimit } from '../mapgen';
+import { lockedEnemy } from './target';
 
 export const Shape = { NONE: 0, LINE: 1, CONE: 2, CIRCLE: 3, RING: 4, ARROW: 5 } as const;
 export const aimState = {
@@ -118,6 +119,8 @@ function shapeFor(id: string, cx: number, cz: number): void {
 // ------------------------------------------------------------ firing --
 function autoTarget(): { x: number; z: number } | null {
   const p = world.player;
+  const lk = lockedEnemy();
+  if (lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 < 30 * 30) return { x: lk.pos.x, z: lk.pos.z };
   if (autoAim.id >= 0) { const e = world.enemies[autoAim.id]; if (e.active && e.state !== 'DYING') return { x: e.pos.x, z: e.pos.z }; }
   const e = findNearestEnemy(p.pos.x, p.pos.z, 26);
   return e ? { x: e.pos.x, z: e.pos.z } : null;

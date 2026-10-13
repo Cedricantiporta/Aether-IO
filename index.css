@@ -433,6 +433,22 @@ button.rpg-slot:active:not(:disabled) { transform: scale(.96); }
 .combo-fin { animation: comboFin 1.4s ease-out forwards; }
 @keyframes comboFin { 0% { transform: translateX(-50%) scale(.4); opacity: 0; } 15% { transform: translateX(-50%) scale(1.25); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(-50%) scale(1) translateY(-1rem); opacity: 0; } }
 
+/* target frame (click-locked enemy) */
+.target-frame { flex-direction: column; gap: 4px; width: min(15rem, 56vw); padding: 7px 10px 8px; border-radius: var(--rad-sm); }
+.tf-top { display: flex; align-items: baseline; gap: 6px; min-height: 18px; }
+.tf-name { font-weight: 800; font-size: 13px; line-height: 1.2; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+.tf-sub { font-weight: 700; font-size: 11px; color: var(--fg-2); flex: 1; }
+.tf-x { width: 26px; height: 26px; margin: -5px -7px -5px auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--fg-2); align-self: center; }
+.tf-x:hover { background: var(--in); color: var(--fg); }
+.tf-bar { height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .1); overflow: hidden; }
+.tf-hp { height: 100%; width: 100%; background: linear-gradient(90deg, #ef5f55, #ff8a6a); }
+.tf-bot { display: flex; align-items: center; gap: 6px; min-height: 16px; }
+.tf-icons { display: flex; gap: 4px; flex: 1; }
+.tf-ic { display: none; }
+.tf-ic[data-on='1'] { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 1px solid currentColor; background: rgba(0, 0, 0, .35); }
+.tf-sh { font-size: 11px; font-weight: 800; color: #7db8ff; }
+.tf-val { font-size: 11px; font-weight: 700; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+
 /* boss bar */
 .boss-bar { width: min(26rem, 56vw); text-align: center; }
 .boss-pip { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .25); }

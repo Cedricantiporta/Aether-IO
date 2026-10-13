@@ -11,6 +11,7 @@ import { activeDefs, dashDef, ACTIVE_ORDER, ULTS } from '../../abilityDefs';
 import { ComboMeter } from './ComboMeter';
 import { PaintedIcon } from '../components/SkillIcons';
 import { POTION_COOLDOWN } from '../../constants';
+import { requestClick } from '../../engine/systems/target';
 
 const R_BASE = 56;   // joystick radius in css px (scaled by --ui-scale via the zone's size)
 
@@ -19,13 +20,14 @@ const Stick: React.FC<{ style: React.CSSProperties; onMove: (x: number, y: numbe
   const zone = useRef<HTMLDivElement>(null);
   const base = useRef<HTMLDivElement>(null);
   const knob = useRef<HTMLDivElement>(null);
-  const st = useRef({ id: -1, ox: 0, oy: 0 });
+  const st = useRef({ id: -1, ox: 0, oy: 0, t: 0, moved: 0 });
   const scale = () => Number(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
 
   const upd = (e: React.PointerEvent) => {
     const s = st.current, R = R_BASE * scale();
     let dx = e.clientX - s.ox, dy = e.clientY - s.oy;
     const l = Math.hypot(dx, dy);
+    if (l > s.moved) s.moved = l;
     if (l > R) { dx = dx / l * R; dy = dy / l * R; }
     if (knob.current) knob.current.style.transform = `translate(${dx}px, ${dy}px)`;
     onMove(dx / R, dy / R, true);
@@ -35,7 +37,7 @@ const Stick: React.FC<{ style: React.CSSProperties; onMove: (x: number, y: numbe
     if (s.id !== -1) return;
     s.id = e.pointerId; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const rect = zone.current!.getBoundingClientRect();
-    s.ox = e.clientX; s.oy = e.clientY;
+    s.ox = e.clientX; s.oy = e.clientY; s.t = performance.now(); s.moved = 0;
     const b = base.current!;
     b.style.left = `${e.clientX - rect.left}px`; b.style.top = `${e.clientY - rect.top}px`; b.style.opacity = '1';
     upd(e);
@@ -43,6 +45,8 @@ const Stick: React.FC<{ style: React.CSSProperties; onMove: (x: number, y: numbe
   const move = (e: React.PointerEvent) => { if (e.pointerId === st.current.id) upd(e); };
   const up = (e: React.PointerEvent) => {
     if (e.pointerId !== st.current.id) return;
+    // a quick tap on the stick area (no drag) selects the enemy under the finger
+    if (e.type === 'pointerup' && st.current.moved < 10 && performance.now() - st.current.t < 300) requestClick(e.clientX, e.clientY);
     st.current.id = -1;
     if (base.current) base.current.style.opacity = '0.28';
     if (knob.current) knob.current.style.transform = 'translate(0,0)';
