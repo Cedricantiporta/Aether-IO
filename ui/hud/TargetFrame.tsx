@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from 'lucide-react';
+import { questKill } from '../../engine/systems/npcQuestLogic';
+import { ScrollText, X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from 'lucide-react';
 import { world } from '../../engine/world';
 import { ENEMY_DEFS } from '../../engine/enemyDefs';
 import type { Enemy } from '../../engine/types';
@@ -23,6 +24,8 @@ const STATUSES: { id: string; icon: React.ReactNode; color: string; label: strin
 export const TargetFrame: React.FC = () => {
   const root = useRef<HTMLDivElement>(null);
   const name = useRef<HTMLSpanElement>(null);
+  const qic = useRef<HTMLSpanElement>(null);
+  const qT = useRef(0);
   const sub = useRef<HTMLSpanElement>(null);
   const hp = useRef<HTMLDivElement>(null);
   const val = useRef<HTMLSpanElement>(null);
@@ -36,6 +39,7 @@ export const TargetFrame: React.FC = () => {
     if (show && root.current) root.current.style.transform = `translate(${Math.round(world.targetAnchor.sx)}px, ${Math.round(world.targetAnchor.sy)}px) translate(-50%, -100%)`;
     if (show !== s.shown) { s.shown = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
     if (!show || !e) { s.id = -1; return; }
+    if (++qT.current % 15 === 0 || s.id !== e.id) { if (qic.current) qic.current.style.display = questKill(e.kind) ? 'inline-flex' : 'none'; }
     if (s.id !== e.id) {
       s.id = e.id; s.hp = ''; s.val = ''; s.ic = ''; s.sh = '';
       const def = ENEMY_DEFS[e.kind];
@@ -64,6 +68,7 @@ export const TargetFrame: React.FC = () => {
   return (
     <div ref={root} className="pe target-frame bare" data-testid="target-frame" style={{ display: 'none' }}>
       <div className="tf-top">
+        <span ref={qic} className="tf-quest" style={{ display: 'none' }} title="Quest target"><ScrollText size={12} /></span>
         <span ref={name} className="tf-name" />
         <span ref={sub} className="tf-sub" />
         <button type="button" className="tf-x" aria-label="Clear target" data-testid="target-clear" onClick={clearTarget}><X size={14} /></button>

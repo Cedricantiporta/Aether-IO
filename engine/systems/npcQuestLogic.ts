@@ -1,6 +1,7 @@
 // NPC story quest logic (data in npcQuests.ts): accept, progress from engine events, turn-in + rewards, and the
 // per-NPC marker cache read by render/Npcs.tsx. The state lives in the store (`npcQuests`, saved with the profile).
 // Importing this module registers the event listeners (dialogue.ts imports it).
+import { STORY } from '../../story';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
 import { useGameStore, makeItemById, instantiate } from '../../store';
 import { events } from '../events';
@@ -96,6 +97,21 @@ function bump(type: NpcObjective['type'], amount: number, hit?: (o: NpcObjective
 
 /** Talking to an NPC: finishes TALK objectives that point at them. */
 export function talkedTo(name: string): void { bump('TALK', 1, (o) => o.target === name); }
+/** True when the NPC matters to an active quest right now: the main story step, a TALK target, or a giver / turn-in marker. */
+export function questNpc(name: string): boolean {
+  const st = useGameStore.getState();
+  if (STORY[st.story.step]?.npc === name) return true;
+  return NPC_QUESTS.some((d) => npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
+    && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
+}
+/** True when killing this enemy kind advances an active quest (main story, NPC or Quest Board). */
+export function questKill(kind: string): boolean {
+  const st = useGameStore.getState();
+  if (STORY[st.story.step]?.kill?.kind === kind) return true;
+  if (st.quests.some((q) => q.accepted && q.type === 'KILL_KIND' && q.kind === kind && q.progress < q.target)) return true;
+  return NPC_QUESTS.some((d) => d.objective.type === 'KILL_KIND' && d.objective.target === kind && npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
+    && (st.npcQuests.q[d.id]?.p ?? 0) < d.objective.count);
+}
 events.on('hub', (e) => bump('ACTION', e.n, (o) => o.target === e.kind));
 /** Farm / town actions (milk a cow, take an egg, find the cat). */
 export function interacted(id: string): void { bump('INTERACT', 1, (o) => o.target === id); }

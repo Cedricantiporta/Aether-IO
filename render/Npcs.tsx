@@ -1,5 +1,7 @@
 // Town NPCs (shared KayKit GLTFs cloned per NPC, tinted / scaled / props in hand), wandering animals and the
 // projection of speech-bubble anchors to screen space (the DOM layer ui/hud/SpeechBubbles.tsx does the drawing).
+import { CanvasTexture, SRGBColorSpace, SpriteMaterial } from 'three';
+import { questNpc } from '../engine/systems/npcQuestLogic';
 import { eggReady, catHidden } from '../engine/systems/village';
 import { NESTS, HIDDEN_CAT } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -84,10 +86,10 @@ function NpcActor({ i }: { i: number }) {
   const def = NPCS[i], st = npcs[i];
   const ch = useCharacterInstance(def.model);
   const clips = useClips();
-  const group = useRef<Group>(null!), tag = useRef<Sprite>(null!), mark = useRef<Sprite>(null!);
+  const group = useRef<Group>(null!), tag = useRef<Sprite>(null!), mark = useRef<Sprite>(null!), qicon = useRef<Sprite>(null!);
   const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini' }), [def]);
   const meshes = useRef<Mesh[]>(ch.meshes);
-  const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true });
+  const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true, quest: false });
 
   useEffect(() => {
     if (!(ch as any).__merged) { (ch as any).__merged = mergeSkinned(ch); }
@@ -157,6 +159,11 @@ function NpcActor({ i }: { i: number }) {
     }
     // name tag only when close
     if (tag.current) { const on = pd2 < 100 && !st.talking; if (tag.current.visible !== on) tag.current.visible = on; }
+    // quest icon beside the name while this NPC matters to an active quest (re-checked a few times a second)
+    if (qicon.current) {
+      if (s.tick % 20 === 0) s.quest = questNpc(def.name);
+      const on = pd2 < 100 && !st.talking && !!s.quest; if (qicon.current.visible !== on) qicon.current.visible = on;
+    }
   });
 
   return (
@@ -165,8 +172,26 @@ function NpcActor({ i }: { i: number }) {
       <group scale={def.scale}><primitive object={ch.root} /></group>
       <sprite ref={mark} material={MARKS[1]!.mat} position={[0, 3.6 * def.scale, 0]} scale={[MARKS[1]!.aspect * 1.3, 1.3, 1]} visible={false} renderOrder={6} />
       <sprite ref={tag} material={label.mat} position={[0, 2.85 * def.scale, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
+      <sprite ref={qicon} material={questIconMat()} position={[-(label.aspect * 0.25) - 0.3, 2.85 * def.scale, 0]} scale={[0.46, 0.46, 1]} visible={false} />
     </group>
   );
+}
+
+// --------------------------------------------------------------- quest icon ---
+let qMat: SpriteMaterial | null = null;
+/** Small gold scroll icon (canvas) shown beside the name of quest NPCs. */
+export function questIconMat(): SpriteMaterial {
+  if (qMat) return qMat;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#1a1208';
+  const scroll = () => { g.beginPath(); g.roundRect(14, 10, 36, 44, 6); };
+  scroll(); g.stroke(); g.fillStyle = '#f6dc8e'; scroll(); g.fill();
+  g.fillStyle = '#c9962e'; g.fillRect(10, 8, 44, 8); g.fillRect(10, 48, 44, 8);
+  g.fillStyle = '#7a5a20'; for (const y of [24, 31, 38]) g.fillRect(21, y, 22, 3);
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace;
+  qMat = new SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false });
+  return qMat;
 }
 
 // ----------------------------------------------------------------- animals ---

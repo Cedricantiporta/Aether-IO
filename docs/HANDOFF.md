@@ -337,3 +337,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - The swing timer keeps counting while walking, and auto-chase stops inside the firing range (range − 0.4 vs check range + 0.8), so the
   hero swings the moment it arrives.
 - Enemies are pushed out to `radius + 0.55` from the hero (no stacking inside it); melee reach is still enough to strike.
+- Quest icons: `questNpc(name)` and `questKill(kind)` (npcQuestLogic) say whether an NPC / enemy kind matters to an active main, NPC or
+  board quest. NPC name tags get a gold scroll sprite (`questIconMat` in render/Npcs.tsx); the floating target plate shows a
+  ScrollText icon.
+- In a run, clicking a finished quest row (or a main step that waits on an NPC in town) asks "Teleport to town?" and confirms into
+  `abandonRun` (loot and xp kept).

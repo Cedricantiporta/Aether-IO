@@ -1597,3 +1597,4 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .dlg-root { bottom: calc(var(--sab) + 7.6rem); }
 .dlg-root.touch { bottom: calc(var(--sab) + 42vh); }
 .pips .pip.mini { box-shadow: 0 0 0 1.5px #c58bff, 0 0 6px rgba(197, 139, 255, .6); }
+.tf-quest { align-items: center; color: #f6dc8e; filter: drop-shadow(0 1px 1px #000) drop-shadow(0 0 2px #000); margin-right: 3px; }
