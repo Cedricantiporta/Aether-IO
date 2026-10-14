@@ -1983,5 +1983,6 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sm-cards.many .sm-name { font-size: .64rem; }
 .sm-aura { position: absolute; inset: -30%; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 45%, transparent), transparent 60%); animation: sm-pulse 1.4s ease-in-out infinite alternate; pointer-events: none; }
 .sm-rays { position: absolute; inset: -60%; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 40%, transparent) 0 6deg, transparent 6deg 22deg); animation: fc-spin 8s linear infinite; opacity: .6; pointer-events: none; }
-.sm-card.open.sm-legendary .sm-inner, .sm-card.open.sm-mythic .sm-inner { filter: drop-shadow(0 0 18px var(--rc)); }
-.sm-card.open.sm-epic .sm-inner { filter: drop-shadow(0 0 10px var(--rc)); }
+/* (glow on the face, never a filter on .sm-inner: a filter flattens preserve-3d and the back showed mirrored) */
+.sm-card.open.sm-legendary .sm-face, .sm-card.open.sm-mythic .sm-face { box-shadow: 0 0 18px var(--rc), 0 0 4px var(--rc); }
+.sm-card.open.sm-epic .sm-face { box-shadow: 0 0 10px var(--rc); }
