@@ -1,7 +1,7 @@
 // Shared geometry/material libraries: Kenney trees (GLB -> merged vertex-coloured geometry) and procedural rocks.
 import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { BufferGeometry, Color, Float32BufferAttribute, IcosahedronGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BufferGeometry, DoubleSide, Color, Float32BufferAttribute, IcosahedronGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { litMat, mulberry32, noisify, vnoise } from './util';
 
@@ -61,7 +61,8 @@ export function useNature(): NatureGeos {
     if (_nat) return _nat;
     _nat = {
       oak: bake(oak.scene), palm: bake(palm.scene), pineA: bake(pa.scene), pineB: bake(pb.scene),
-      mat: litMat({ roughness: 0.85 }),
+      // DoubleSide: some Kenney canopy faces are wound inward and looked hollow from above
+      mat: (() => { const m = litMat({ roughness: 0.85 }); m.side = DoubleSide; return m; })(),
     };
     return _nat;
   }, [oak, palm, pa, pb]);
