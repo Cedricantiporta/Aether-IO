@@ -96,6 +96,13 @@ function bump(type: NpcObjective['type'], amount: number, hit?: (o: NpcObjective
 
 /** Talking to an NPC: finishes TALK objectives that point at them. */
 export function talkedTo(name: string): void { bump('TALK', 1, (o) => o.target === name); }
+/** Farm / town actions (milk a cow, take an egg, find the cat). */
+export function interacted(id: string): void { bump('INTERACT', 1, (o) => o.target === id); }
+/** True while an accepted quest still needs this action. */
+export function wantsInteract(id: string): boolean {
+  const st = useGameStore.getState();
+  return NPC_QUESTS.some((d) => d.objective.type === 'INTERACT' && d.objective.target === id && npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE' && (st.npcQuests.q[d.id]?.p ?? 0) < d.objective.count);
+}
 
 const BOSS_KINDS = new Set<string>(BOSS_ROTATION);
 events.on('enemyDeath', (e) => {

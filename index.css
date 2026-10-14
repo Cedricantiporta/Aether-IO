@@ -1593,3 +1593,6 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   background: linear-gradient(90deg, transparent, rgba(10, 8, 4, .78) 18%, rgba(10, 8, 4, .78) 82%, transparent);
   text-shadow: 0 2px 4px #000; animation: tutPulse 1.6s ease-in-out infinite; }
 @keyframes tutPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+/* dialogue sits above the skill bar (desktop) and above the touch cluster (mobile) */
+.dlg-root { bottom: calc(var(--sab) + 7.6rem); }
+.dlg-root.touch { bottom: calc(var(--sab) + 42vh); }

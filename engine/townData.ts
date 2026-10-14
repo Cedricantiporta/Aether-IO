@@ -25,6 +25,13 @@ export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls). */
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
+/** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
+export const BARN = { x: 22.5, z: 45 };
+export const COOP = { x: 6, z: 48.5 };
+/** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
+export const NESTS: [number, number][] = [[4.2, 50.6], [6.2, 51.0], [8.0, 50.5]];
+/** Where Pip's cat Biscuit hides (only there while the quest is active). */
+export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
 export const TOWER = { x: -21, z: 74, r: 4.2, door: { x: -16, z: 74 } };   // deep in the south-west woods
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
@@ -67,6 +74,9 @@ export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BAN
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 
 export const HOUSES: HouseSpec[] = [
+  // the farm outside the gate: a big red barn by the road and a little chicken coop
+  { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
+  { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
   // flanking the castle
   H(-17.5, -31, 0, 5.0, 4.4, 2), H(17.5, -31, 0, 5.0, 4.4),
   // where the old summoning shrine stood (north street, door facing the street)
@@ -205,7 +215,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
   { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
-  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 24, z: 47, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
+  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 16, z: 77, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -472,6 +482,18 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
   {
+    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [19, 42.5], speed: 1.2,
+    patrol: [[19, 42.5], [15, 44], [15, 49], [19, 47]],
+    talk: [['Fine morning for it. The girls are in a good mood today.', 'Cows, I mean. The cows.'], ['That barn has stood longer than the gate. Built it with my grandfather.']],
+    bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
+  },
+  {
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [9.5, 51.5], speed: 1.3,
+    patrol: [[9.5, 51.5], [3, 52.5], [9.5, 53.5]],
+    talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
+    bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
+  },
+  {
     name: 'Old Wend', role: 'Hermit', model: 'ROGUE', tint: '#c9b79a', scale: 1, prop: 'staff', accent: '#e6c27a', home: [2.2, -50.2],
     talk: [
       ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'I have no use for coin, but you do. Take it, and do not tell the Elder.'],
@@ -486,7 +508,7 @@ export const NPCS: NpcDef[] = [
 
 export const GENERIC_BUBBLES = ['Lovely day!', 'Beware the Mire...', 'Good luck out there!', 'Stay safe, hero.', 'Is that the hero?'];
 
-export interface AnimalDef { kind: 'CHICKEN' | 'CAT'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
+export interface AnimalDef { kind: 'CHICKEN' | 'CAT' | 'COW'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
 export const ANIMALS: AnimalDef[] = [
   // wander ellipses stay well inside the fenced pen
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.1, tint: '#ffffff' },
@@ -494,5 +516,10 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x + 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.2, tint: '#e0a070' },
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
+  // farm (outside the gate): cows grazing by the barn, hens by the coop
+  { kind: 'COW', x: 16.5, z: 44.5, rx: 1.4, rz: 1.6, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 17.5, z: 49.5, rx: 1.2, rz: 1.2, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'CHICKEN', x: COOP.x - 1.6, z: COOP.z + 3.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x + 1.8, z: COOP.z + 3.8, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
 ];

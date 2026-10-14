@@ -4,6 +4,9 @@
 // to, the town gate), hold E near a crystal / ore node outside the gate (they regrow 24 h after the last one is harvested). NPC behaviour lives
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
+import { interacted, wantsInteract } from './npcQuestLogic';
+import { animals } from './npcs';
+import { ANIMALS, NESTS, HIDDEN_CAT } from '../townData';
 import { storyTarget } from './storyLogic';
 import { gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
@@ -62,8 +65,32 @@ export function placeVillageNodes(): void {
 
 /** One thing the hero can interact with right now (preallocated, nearest first). every pill uses E. */
 export interface Interactable { active: boolean; key: 'E' | 'F'; verb: string; label: string; shop: ShopTab | ''; node: number; d2: number; act: Act; }
+// ---- farm actions (interaction quests). Cows can be milked every 20 s; each nest lays a fresh egg every 25 s.
+const milkCd = new Float32Array(16), eggAt = new Float64Array(8);
+export const eggReady = (k: number): boolean => world.time >= eggAt[k] || eggAt[k] - world.time > 25;   // (the clock restarts with each town visit)
+/** Pip's cat sits in her hiding spot only while "Where Is Biscuit?" still needs her. */
+export const catHidden = (): boolean => wantsInteract('cat');
+function farmAct(node: number): void {
+  const st = useGameStore.getState(), p = world.player;
+  if (node >= 200 && node < 300) {
+    const i = node - 200;
+    if (world.time < milkCd[i] && milkCd[i] - world.time <= 20) { st.addNotification('This cow needs a rest. Try another!', '#f1e2b8', 'SYSTEM'); return; }
+    milkCd[i] = world.time + 20; p.anim.castT = 1;
+    p.facing = Math.atan2(animals[i].x - p.pos.x, animals[i].z - p.pos.z);
+    interacted('milk'); st.addNotification('You fill a pail with fresh milk.', '#ffffff', 'SYSTEM');
+  } else if (node >= 300 && node < 400) {
+    const k = node - 300;
+    if (!eggReady(k)) return;
+    eggAt[k] = world.time + 25; p.anim.castT = 1;
+    interacted('egg'); st.addNotification('You collect a warm egg.', '#ffe9b0', 'SYSTEM');
+  } else if (node === 400) {
+    p.anim.castT = 1;
+    interacted('cat'); st.addNotification('You found Biscuit! Bring her back to Pip.', '#ffb070', 'SYSTEM');
+  }
+}
+
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower' | 'farm';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -93,6 +120,10 @@ function scanNearby(): void {
     d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Town Gate', '', -1, d, 'gate');
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
+    // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
+    for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Milk', 'Cow', '', 200 + i, d, 'farm'); }
+    for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Collect', 'Egg', '', 300 + k, d, 'farm'); }
+    if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Pick up', 'Biscuit the cat', '', 400, d, 'farm'); }
   }
   for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area === 'CASTLE') !== castle) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
   if (!castle)
@@ -106,7 +137,7 @@ function scanNearby(): void {
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
-  if (it.act !== 'harvest') {
+  if (it.act !== 'harvest' && it.act !== 'farm') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'leave') v.pending = 'LEAVE';
@@ -119,6 +150,7 @@ export function interact(it: Interactable): void {
     else if (it.shop) st.openSpecificShop(it.shop);
     return;
   }
+  if (it.act === 'farm') { farmAct(it.node); return; }
   const c = world.crates[it.node];
   if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }

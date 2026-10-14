@@ -15,7 +15,8 @@ export type NpcObjectiveType =
   | 'REACH_BIOME'                                              // count = biome number (1 Meadow, 2 Old Grove, 3 Mire ...)
   | 'COLLECT_LOOT'                                             // pick up loot items (target: loot ids, optional room type)
   | 'DELIVER'                                                  // bring loot items to the NPC; they are removed on turn-in
-  | 'TALK';                                                    // speak to another NPC (target: its name)
+  | 'TALK'                                                     // speak to another NPC (target: its name)
+  | 'INTERACT';                                                // a farm / town action (target: 'milk' | 'egg' | 'cat')
 
 export interface NpcObjective {
   type: NpcObjectiveType;
@@ -127,6 +128,39 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     done: ['He says it is a sunstone?! I knew it! Here, you can have some of my sweets money.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
+  },
+  // ---- the farm outside the gate (interaction quests)
+  {
+    id: 'hollis_milk', giver: 'Hollis', title: 'Milk Run', summary: 'Milk the cows by the barn 3 times',
+    intro: ['Ho there, guard! My back is all knots today and the girls need milking.', 'Pop round by the barn and milk them for me, would you? Three pails will do.'],
+    progress: 'The cows are right by the barn. Press E next to one. Gently now!',
+    done: ['Three full pails! You have a farmer\'s hands under all that armour.', 'Here, a little something, and a bottle for the road.'],
+    objective: { type: 'INTERACT', target: 'milk', count: 3 },
+    reward: { gold: 600, items: [{ id: 'potion_hp', qty: 2 }] },
+  },
+  {
+    id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', cond: { rank: 3 },
+    intro: ['Something has been raiding the coop at night. Little green thieves with sticky fingers.', 'Goblins, the lot of them. Thin them out for me: twenty ought to teach them.'],
+    progress: 'Goblins skulk in the Meadow and beyond. Twenty, if you please.',
+    done: ['Not a feather lost last night! You have my thanks, and the farm\'s.'],
+    objective: { type: 'KILL_KIND', target: 'GOBLIN', count: 20 },
+    reward: { gold: 1800, gems: 15 },
+  },
+  {
+    id: 'dalla_eggs', giver: 'Dalla', title: 'Egg Hunt', summary: 'Collect 5 eggs from the coop nests',
+    intro: ['Oh good, a pair of free hands! The hens have been laying all over the place.', 'Gather five eggs from the nests in front of the coop. Mind the beaks.'],
+    progress: 'The nests are in front of the coop. A hen lays a fresh one every little while.',
+    done: ['Five lovely eggs, not a crack among them!', 'Take these, I baked too much again.'],
+    objective: { type: 'INTERACT', target: 'egg', count: 5 },
+    reward: { gold: 500, items: [{ id: 'potion_mana', qty: 2 }] },
+  },
+  {
+    id: 'pip_cat', giver: 'Pip', title: 'Where Is Biscuit?', summary: 'Find Pip\'s cat somewhere in town',
+    intro: ['Hero! Biscuit ran away again! She is orange and grumpy and she HIDES.', 'She likes quiet corners behind the houses. Please find her!'],
+    progress: 'Biscuit loves quiet corners far from the plaza... the other side of town from me, maybe?',
+    done: ['BISCUIT! You found her! Bad kitty. Good hero!', 'Here, this is my whole savings. Do not tell Mum.'],
+    objective: { type: 'INTERACT', target: 'cat', count: 1 },
+    reward: { gold: 400, gems: 10 },
   },
   // ---- hidden: appears only after Gorath the Mountain (biome 1 boss) fell at least once
   {

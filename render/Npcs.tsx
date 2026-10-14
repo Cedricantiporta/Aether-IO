@@ -1,5 +1,7 @@
 // Town NPCs (shared KayKit GLTFs cloned per NPC, tinted / scaled / props in hand), wandering animals and the
 // projection of speech-bubble anchors to screen space (the DOM layer ui/hud/SpeechBubbles.tsx does the drawing).
+import { eggReady, catHidden } from '../engine/systems/village';
+import { NESTS, HIDDEN_CAT } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial, SkinnedMesh, Sprite, Vector3 } from 'three';
@@ -187,36 +189,77 @@ function buildCat(): BufferGeometry {
   return b.build();
 }
 
+function buildCow(): BufferGeometry {
+  const b = new GB([0.82, 1.06]);
+  b.box(0.9, 0.62, 1.55, [0, 0.95, 0], '#ffffff');                       // body
+  for (const [x, z, s] of [[0.3, 0.3, 0.32], [-0.25, -0.35, 0.28], [0.1, -0.1, 0.2]] as number[][]) b.box(s, 0.05, s * 1.3, [x, 1.27, z], '#2a2420');   // spots
+  b.box(0.5, 0.48, 0.55, [0, 1.15, 0.95], '#ffffff'); b.box(0.42, 0.24, 0.2, [0, 1.0, 1.25], '#f0b0a8');   // head + muzzle
+  for (const s of [-1, 1]) { b.cone(0.05, 0.22, 5, [s * 0.2, 1.48, 0.95], '#e8dcc0', [0, 0, s * -0.6]); b.box(0.16, 0.08, 0.1, [s * 0.32, 1.25, 0.9], '#ffffff'); b.sph(0.04, [s * 0.14, 1.22, 1.23], '#1a1a1a', 1, 4); }
+  for (const x of [-0.3, 0.3]) for (const z of [-0.55, 0.55]) b.cyl(0.09, 0.08, 0.66, 6, [x, 0.33, z], '#e8e8e8');
+  b.cyl(0.03, 0.02, 0.6, 4, [0, 1.0, -0.9], '#ffffff', [0.5, 0, 0]); b.sph(0.12, [0, 0.62, 0.2], '#f0b0a8', [1.2, 0.6, 1.2], 6);   // tail, udder
+  return b.build();
+}
+/** Egg nests in front of the coop (an egg shows when one is ready) + Pip's hidden cat while her quest is on. */
+function FarmBits() {
+  const geos = useMemo(() => {
+    const n = new GB([0.8, 1.05]); n.cyl(0.42, 0.34, 0.16, 10, [0, 0.08, 0], '#c9a050'); n.cyl(0.3, 0.3, 0.05, 10, [0, 0.16, 0], '#8a6a30');
+    const e = new GB([0.85, 1.1]); e.sph(0.12, [0, 0.27, 0], '#fff6e6', [0.85, 1.15, 0.85], 7);
+    return { nest: n.build(), egg: e.build(), cat: buildCat() };
+  }, []);
+  const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
+  const catMat = useMemo(() => litMat({ roughness: 0.9, color: '#ff9a4a' }), []);
+  const eggs = useRef<(Mesh | null)[]>([]), cat = useRef<Mesh>(null!);
+  useFrame(({ clock }) => {
+    for (let k = 0; k < NESTS.length; k++) { const m = eggs.current[k]; if (m) m.visible = eggReady(k); }
+    if (cat.current) { cat.current.visible = catHidden(); cat.current.rotation.y = 2.2 + Math.sin(clock.elapsedTime * 0.7) * 0.4; }
+  });
+  return (
+    <>
+      {NESTS.map(([x, z], k) => (
+        <group key={k} position={[x, 0, z]}>
+          <mesh geometry={geos.nest} material={mat} receiveShadow />
+          <mesh ref={(m) => { eggs.current[k] = m; }} geometry={geos.egg} material={mat} />
+        </group>
+      ))}
+      <mesh ref={cat} geometry={geos.cat} material={catMat} position={[HIDDEN_CAT.x, 0, HIDDEN_CAT.z]} scale={1.25} visible={false} castShadow />
+    </>
+  );
+}
+
 function Animals() {
-  const chickens = useRef<InstancedMesh>(null!), cats = useRef<InstancedMesh>(null!);
-  const geos = useMemo(() => ({ chicken: buildChicken(), cat: buildCat() }), []);
+  const chickens = useRef<InstancedMesh>(null!), cats = useRef<InstancedMesh>(null!), cows = useRef<InstancedMesh>(null!);
+  const geos = useMemo(() => ({ chicken: buildChicken(), cat: buildCat(), cow: buildCow() }), []);
   const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const idx = useMemo(() => {
-    let c = 0, k = 0;
-    return ANIMALS.map((a) => (a.kind === 'CHICKEN' ? c++ : k++));
+    let c = 0, k = 0, w = 0;
+    return ANIMALS.map((a) => (a.kind === 'CHICKEN' ? c++ : a.kind === 'COW' ? w++ : k++));
   }, []);
-  const counts = useMemo(() => ({ c: ANIMALS.filter((a) => a.kind === 'CHICKEN').length, k: ANIMALS.filter((a) => a.kind === 'CAT').length }), []);
+  const counts = useMemo(() => ({ c: ANIMALS.filter((a) => a.kind === 'CHICKEN').length, k: ANIMALS.filter((a) => a.kind === 'CAT').length, w: ANIMALS.filter((a) => a.kind === 'COW').length }), []);
+  const meshOf = (kind: string) => (kind === 'CHICKEN' ? chickens.current : kind === 'COW' ? cows.current : cats.current);
   useEffect(() => {
     const col = new Color();
-    ANIMALS.forEach((a, i) => { const m = a.kind === 'CHICKEN' ? chickens.current : cats.current; m.setColorAt(idx[i], col.set(a.tint)); });
+    ANIMALS.forEach((a, i) => { const m = meshOf(a.kind); m.setColorAt(idx[i], col.set(a.tint)); });
+    if (cows.current.instanceColor) cows.current.instanceColor.needsUpdate = true;
     if (chickens.current.instanceColor) chickens.current.instanceColor.needsUpdate = true;
     if (cats.current.instanceColor) cats.current.instanceColor.needsUpdate = true;
-    return () => { geos.chicken.dispose(); geos.cat.dispose(); mat.dispose(); };
+    return () => { geos.chicken.dispose(); geos.cat.dispose(); geos.cow.dispose(); mat.dispose(); };
   }, [geos, mat, idx]);
   useFrame(() => {
     for (let i = 0; i < animals.length; i++) {
-      const a = animals[i], d = ANIMALS[i], m = d.kind === 'CHICKEN' ? chickens.current : cats.current;
+      const a = animals[i], d = ANIMALS[i], m = meshOf(d.kind);
       if (!m) continue;
       const bob = a.moving ? Math.abs(Math.sin(a.hop)) * (d.kind === 'CHICKEN' ? 0.07 : 0.03) : 0;
       const peck = !a.moving && d.kind === 'CHICKEN' ? Math.max(0, Math.sin(a.hop * 2.4)) ** 3 * 0.55 : 0;
-      setInst(m, idx[i], a.x, bob, a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : 1.2, undefined, undefined, peck);
+      setInst(m, idx[i], a.x, bob, a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : 1.2, undefined, undefined, peck);
     }
-    chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true;
+    chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true; cows.current.instanceMatrix.needsUpdate = true;
   });
   return (
     <>
       <instancedMesh ref={chickens} args={[geos.chicken, mat, counts.c]} frustumCulled={false} castShadow />
       <instancedMesh ref={cats} args={[geos.cat, mat, counts.k]} frustumCulled={false} castShadow />
+      <instancedMesh ref={cows} args={[geos.cow, mat, counts.w]} frustumCulled={false} castShadow />
+      <FarmBits />
     </>
   );
 }

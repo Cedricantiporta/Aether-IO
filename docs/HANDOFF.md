@@ -268,3 +268,17 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   near a node, "Press 1" on the first run, then "Ultimate charged, press R". The first trial run starts with a full ult.
 - Skills: a 0.55 s global lock after any skill / ult cast (`gcdUntil` in abilities.ts gate()). Auto-aim always re-picks the closest enemy,
   with 1.5 u hysteresis.
+
+### Farm interaction quests + dialogue position
+- Outside the gate: a red barn (`BARN` 22.5,45) and a chicken coop (`COOP` 6,48.5), both in HOUSES so they get colliders. Two cows and two
+  hens (ANIMALS, new kind COW with a model in render/Npcs.tsx), egg nests (`NESTS`), and farmers Hollis (barn) and Dalla (coop).
+- New NPC objective type `INTERACT` (target 'milk' | 'egg' | 'cat'), counted by `interacted(id)` in npcQuestLogic. Village act 'farm':
+  - Cows: node 200+i, E = milk, 20 s per cow.
+  - Nests: node 300+k, an egg every 25 s (the egg mesh shows when ready).
+  - Pip's cat Biscuit at `HIDDEN_CAT` (40.5,-36.5): node 400, there only while `pip_cat` needs it.
+- Quests:
+  - `hollis_milk`: milk 3 times.
+  - `hollis_fox`: kill 20 Goblins. Unlocks after `hollis_milk` and at rank 3 (example of rank/quest gating).
+  - `dalla_eggs`: collect 5 eggs.
+  - `pip_cat`: find Biscuit.
+- The dialogue box sits above the skill bar (`.dlg-root` bottom 7.6rem; touch: 42vh).
