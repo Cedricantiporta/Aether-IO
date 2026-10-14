@@ -32,7 +32,7 @@ export const SuppliesTab: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div>
         <div className="rpg-label mb-2">Provisions</div>
-        <div className="rpg-frame p-3 slot-grid priced">
+        <div className="slot-grid priced">
           {STOCK.map((it) => <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={shopPrice(it)} sale={sales[it.id]} oldPrice={it.price} cantAfford={gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
         </div>
       </div>

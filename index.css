@@ -1811,7 +1811,14 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 /* ---- one square slot size everywhere (bag, warehouse, shops, merchant, pet store) ---- */
 :root { --cell: 4.2rem; }   /* the universal slot size (bag, shops, equipped, tech, summon lists) */
 .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--cell)); gap: .5rem; justify-content: start; }
-.slot-grid.priced { row-gap: 1.15rem; padding-bottom: 1rem; }
+/* THE item container template (bag look): every slot list (bag, shops, merchant, pets, tech, summon, warehouse) is this
+   grid of identical squares; prices sit inside the slot's bottom edge like the bag's stack counts (no pills, no frames). */
+.slot-grid.priced { row-gap: .5rem; padding-bottom: 0; }
+.slot-grid.priced .slot-price {
+  left: auto; right: .2rem; bottom: .1rem; transform: none; padding: 0; background: none; border: none; border-radius: 0;
+  font-size: .78rem; line-height: 1.2; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 6px #000;
+}
+.slot-grid.priced .slot-price.gem { background: none; }
 .slot-grid > * { width: var(--cell); }
 
 @media (max-width: 640px) { :root { --cell: 3.8rem; } }
