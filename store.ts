@@ -522,7 +522,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     level: 1,
     experience: 0,
     experienceToNextLevel: 250,
-    skillPoints: 30,
+    skillPoints: 0, // start with 0 SP; earn them by levelling up
     accumulatedWaveGold: 0,
     baseStats: base,
     stats,
