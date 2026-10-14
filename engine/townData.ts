@@ -58,7 +58,7 @@ export const RUINS: RuinSpec[] = [
   { x: 47, z: -47, rot: 0.8, kind: 1 }, { x: 34, z: -56.5, rot: 0.1, kind: 0 }, { x: 26, z: -45.5, rot: -0.2, kind: 1 }, { x: 16, z: -56, rot: 0.4, kind: 2 },
   { x: 9, z: -45, rot: 0, kind: 0 },
 ];
-/** Stationary monsters on the hermit path (they hold their ground; respawn a minute after dying). */
+/** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [
   { kind: 'SLIME', x: 53, z: 22 }, { kind: 'SLIME', x: 55, z: 19 }, { kind: 'GOBLIN', x: 52, z: 4 }, { kind: 'GOBLIN', x: 55, z: 1 },
   { kind: 'BOAR', x: 53, z: -14 }, { kind: 'BANDIT', x: 52, z: -34 }, { kind: 'BANDIT', x: 55, z: -37 },

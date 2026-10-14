@@ -20,7 +20,8 @@ export const SetOutWindow: React.FC = () => {
   if (!open) return null;
   const asc = Math.min(progress.ascension, progress.ascensionMax);
   const best = progress.towerBest[hero] ?? 0;
-  const go = () => { setOpen(false); startMode(mode); };
+  const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Malakar defeated)
+  const go = () => { if (mode === 'TOWER' && towerLocked) return; setOpen(false); startMode(mode); };
   return (
     <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={go}>
       <div className="so-modes one" data-testid="setout">
@@ -34,7 +35,7 @@ export const SetOutWindow: React.FC = () => {
           <Castle size={26} />
           <b>Endless Tower</b>
           <span>Climb floor after floor. Elites every 3rd, a champion every 5th, a boss every 10th floor.</span>
-          <em><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</em>
+          <em>{towerLocked ? 'Sealed: finish a full adventure (defeat Malakar at the end of the Void) to open the tower.' : <><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</>}</em>
         </div>}
       </div>
       {mode === 'ADVENTURE' && (
@@ -58,7 +59,7 @@ export const SetOutWindow: React.FC = () => {
           </>)}
         </div>
       )}
-      <Button className="w-full mt-3" variant="primary" size="lg" pulse onClick={go} data-testid="so-go">{mode === 'TOWER' ? 'Enter the Tower' : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
+      <Button className="w-full mt-3" variant="primary" size="lg" pulse={!(mode === 'TOWER' && towerLocked)} disabled={mode === 'TOWER' && towerLocked} onClick={go} data-testid="so-go">{mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
     </Modal>
   );
 };
