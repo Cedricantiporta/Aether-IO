@@ -17,6 +17,26 @@ export interface Collider {
   z: number;
   r: number;
   blocksProjectiles: boolean;
+  /** Run-room liquid (roomFeatures.LIQ): 0 / undefined = solid prop, 1 water, 2 lava (burns on touch), 3 chasm. */
+  liquid?: number;
+}
+
+/** Pushes (x, z) out of every collider (props and liquids) by `pad`; used for loot that lands in a lake or on a rock. */
+const pushCols: Collider[] = [];
+export function pushOutOfColliders(p: { x: number; z: number }, pad: number): void {
+  for (let pass = 0; pass < 3; pass++) {
+    const cols = queryColliders(p.x, p.z, pad + 4, pushCols);
+    let moved = false;
+    for (let i = 0; i < cols.length; i++) {
+      const c = cols[i];
+      const dx = p.x - c.x, dz = p.z - c.z, min = c.r + pad, d2 = dx * dx + dz * dz;
+      if (d2 >= min * min) continue;
+      const d = Math.sqrt(d2);
+      if (d < 1e-4) { p.x = c.x + min; } else { p.x = c.x + (dx / d) * min; p.z = c.z + (dz / d) * min; }
+      moved = true;
+    }
+    if (!moved) return;
+  }
 }
 
 export type RegionKind = 'TOWN' | 'FARM' | 'RUINS' | 'GRAVEYARD' | 'CRYSTAL_GROVE' | 'CAMP' | 'QUARRY' | 'GROVE' | 'POND';

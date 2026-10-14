@@ -19,9 +19,24 @@ export function depthWave(biome: number, index: number): number {
   return biome * 10 + 1 + Math.round(index * 0.65);   // (difficulty curve unchanged: 15 rooms span the same 10 waves)
 }
 
+/** Ground look family (render/Room.tsx picks the detail texture + colour pattern). */
+export type GroundStyle = 'GRASS' | 'MARBLE' | 'SAND' | 'SNOW' | 'BASALT' | 'VOID';
+export type BiomeHazard = 'PUDDLE' | 'GAS' | 'QUICKSAND' | null;
+export type LiquidKind = 'WATER' | 'LAVA' | 'CHASM' | 'ICE';
+
+/** A sub-look of a biome (Greenwood: meadow / deep grove / mire). Rolled per room from the room seed. */
+export interface BiomeVariant {
+  name: string;
+  ground: [string, string]; patch: [string, string, string]; edge?: string; propTint?: string;
+  border: ObstacleKind[]; interior: ObstacleKind[]; hazard: BiomeHazard;
+}
+
 export interface BiomeDef {
   name: string;
+  style: GroundStyle;
   ground: [string, string];      // ground vertex-colour noise endpoints
+  patch: [string, string, string]; // big colour zones: [lush, dry, dirt]
+  stone: string;                 // path / slab stone
   edge: string;                  // floor beyond the walls
   fog: string;
   hemiSky: string; hemiGround: string; hemiI: number;
@@ -29,8 +44,19 @@ export interface BiomeDef {
   skyTint: [number, number, number]; // multiplies the sky dome
   propTint: string;              // multiplies prop colours
   border: ObstacleKind[];        // walls ring
+  outer?: ObstacleKind[];        // decorative outer ring (defaults to border)
   interior: ObstacleKind[];      // scattered obstacles
-  hazard: 'PUDDLE' | 'GAS' | null;
+  hazard: BiomeHazard;
+  /** Liquid of river / lake stages: water, lava, a chasm (bottomless) or icy water. */
+  river: LiquidKind;
+  lake: LiquidKind;
+  /** Stage layout weights [PLAIN, BIG, LONG, RIVER, LAKE] for fight rooms. */
+  layouts: [number, number, number, number, number];
+  /** Outline weights for fight rooms (interior biomes prefer halls). */
+  shapes?: [string, number][];
+  towers: boolean;               // goblin archer towers appear in fight rooms
+  hydras: boolean;               // lake stages hide lurking hydras
+  variants?: BiomeVariant[];
   crates: CrateKind[];
   boss: BossKind;
   minis: string[];               // keys of enemyDefs.MINI_BOSSES
@@ -39,55 +65,76 @@ export interface BiomeDef {
 }
 
 export const BIOMES: readonly BiomeDef[] = [
-  { // 0 Meadow
-    name: 'Meadow', ground: ['#3f9c34', '#76c648'], edge: '#2a4a22', fog: '#cfe6f2',
+  { // 0 Greenwood: the old Meadow / Old Grove / Mire looks as three room variants of one forest biome (Gorath, the Slime King)
+    name: 'Greenwood', style: 'GRASS', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], stone: '#a39d90', edge: '#2a4a22', fog: '#cfe6f2',
     hemiSky: '#cfe8ff', hemiGround: '#6f8f45', hemiI: 1.25, sun: '#fff0d2', sunI: 3.1, skyTint: [1, 1, 1], propTint: '#ffffff',
     border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null,
+    river: 'WATER', lake: 'WATER', layouts: [40, 14, 10, 20, 16], towers: true, hydras: true,
+    variants: [
+      { name: 'Meadow', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], propTint: '#ffffff',
+        border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null },
+      { name: 'Deep Grove', ground: ['#2b6a2f', '#4a8a3a'], patch: ['#3a8a3a', '#7d8a3e', '#5a4630'], edge: '#16301a', propTint: '#cfe8c0',
+        border: ['PINE', 'TREE', 'PINE', 'TREE', 'PINE'], interior: ['STUMP', 'LOG', 'RUIN', 'ROCK', 'PINE'], hazard: null },
+      { name: 'Mire', ground: ['#4a5a2e', '#6b7a3a'], patch: ['#5c6e34', '#7e7a44', '#4a3e26'], edge: '#232a14', propTint: '#b8c890',
+        border: ['DEAD_TREE', 'TREE', 'STUMP', 'DEAD_TREE', 'ROCK'], interior: ['STUMP', 'LOG', 'DEAD_TREE', 'ROCK', 'LOG'], hazard: 'PUDDLE' },
+    ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
     boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
-    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4]],
+    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7]],
   },
-  { // 1 Old Grove
-    name: 'Old Grove', ground: ['#2b6a2f', '#4a8a3a'], edge: '#16301a', fog: '#a9c9a2',
-    hemiSky: '#b8d8b0', hemiGround: '#4b6b35', hemiI: 1.15, sun: '#e8f0c8', sunI: 2.7, skyTint: [0.8, 0.95, 0.8], propTint: '#cfe8c0',
-    border: ['PINE', 'TREE', 'PINE', 'TREE', 'PINE'], interior: ['STUMP', 'LOG', 'RUIN', 'ROCK', 'STUMP'], hazard: null,
-    crates: ['CRATE', 'BARREL', 'POT', 'POT', 'GRAVE'],
-    boss: 'BOSS_TREANT', minis: ['TUSK', 'CAPTAIN'], lichCrypt: true,
-    roster: [['GOBLIN', 8, 0], ['BOAR', 6, 0], ['BAT', 5, 0], ['BANDIT', 6, 1], ['CULTIST', 5, 1], ['SPLITTER', 4, 2], ['SKELETON_ARCHER', 4, 2], ['BRUTE', 3, 3], ['WRAITH', 3, 4]],
+  { // 1 Marble Halls: sunken temple interiors cracked by Elderroot's roots (Elderroot the Ancient)
+    name: 'Marble Halls', style: 'MARBLE', ground: ['#cfc8b8', '#e8e2d4'], patch: ['#d9d2c2', '#b8b09e', '#8f9a78'], stone: '#e6e0d2', edge: '#16130f', fog: '#3a3630',
+    hemiSky: '#fff2dc', hemiGround: '#5a5040', hemiI: 1.15, sun: '#ffe2b0', sunI: 2.6, skyTint: [0.42, 0.38, 0.34], propTint: '#ffffff',
+    border: ['LOWWALL', 'COLUMN', 'LOWWALL', 'LOWWALL'], outer: ['COLUMN', 'LOWWALL', 'COLUMN'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL'], hazard: null,
+    river: 'WATER', lake: 'WATER', layouts: [30, 14, 18, 28, 10], towers: false, hydras: true,
+    shapes: [['RECT', 30], ['HEX', 12], ['OCT', 16], ['CROSS', 18], ['ROUND', 8], ['SEMI', 8], ['ELLIPSE', 8]],
+    crates: ['POT', 'POT', 'CRATE', 'GRAVE', 'BARREL'],
+    boss: 'BOSS_TREANT', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,
+    roster: [['SKELETON_ARCHER', 8, 0], ['SHIELDBEARER', 6, 0], ['CULTIST', 6, 0], ['GOBLIN', 5, 0], ['BAT', 4, 0], ['WRAITH', 5, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 3, 2], ['BRUTE', 3, 3]],
   },
-  { // 2 Mire
-    name: 'Mire', ground: ['#4a5a2e', '#6b7a3a'], edge: '#232a14', fog: '#9aa87a',
-    hemiSky: '#c8d4a0', hemiGround: '#4a4a28', hemiI: 1.05, sun: '#d8e0a0', sunI: 2.5, skyTint: [0.85, 0.9, 0.7], propTint: '#b8c890',
-    border: ['TREE', 'STUMP', 'TREE', 'ROCK'], interior: ['STUMP', 'LOG', 'ROCK', 'STUMP', 'LOG'], hazard: 'PUDDLE',
-    crates: ['BARREL', 'POT', 'POT', 'GRAVE', 'CRATE'],
-    boss: 'BOSS_HYDRA', minis: ['WARDEN'], lichCrypt: false,
-    roster: [['SLIME', 8, 0], ['ZOMBIE', 8, 0], ['SPLITTER', 6, 0], ['BAT', 4, 0], ['CULTIST', 4, 1], ['BOMBER', 4, 1], ['WRAITH', 4, 2], ['BRUTE', 3, 3]],
+  { // 2 Sunscorch Desert: dunes, cacti, sandstone, bleached bones, quicksand, canyon chasms; oases hide the hydra (The Mire Hydra)
+    name: 'Sunscorch Desert', style: 'SAND', ground: ['#d9b46a', '#efd08a'], patch: ['#e8c47a', '#c99a55', '#b07a40'], stone: '#c8a070', edge: '#a8824a', fog: '#f0d6a4',
+    hemiSky: '#ffe8c0', hemiGround: '#b08850', hemiI: 1.35, sun: '#fff0c8', sunI: 3.4, skyTint: [1.12, 1.0, 0.82], propTint: '#ffffff',
+    border: ['SANDSTONE', 'CACTUS', 'ROCK', 'SANDSTONE', 'CACTUS'], interior: ['CACTUS', 'BONES', 'SANDSTONE', 'ROCK', 'CACTUS', 'BONES'], hazard: 'QUICKSAND',
+    river: 'CHASM', lake: 'WATER', layouts: [34, 20, 12, 14, 20], towers: true, hydras: true,
+    crates: ['POT', 'POT', 'BARREL', 'CRATE', 'GRAVE'],
+    boss: 'BOSS_HYDRA', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
+    roster: [['SCARAB', 8, 0], ['BANDIT', 7, 0], ['SKELETON_ARCHER', 5, 0], ['BOMBER', 5, 0], ['ZOMBIE', 5, 1], ['ROCK_CRAB', 4, 1], ['SHIELDBEARER', 4, 2], ['BRUTE', 3, 3]],
   },
-  { // 3 Frostpeak
-    name: 'Frostpeak', ground: ['#cfe0ee', '#f2f8fd'], edge: '#aab9c8', fog: '#dbe9f5',
+  { // 3 Frostpeak: snowfields, ice rocks, frozen rivers and lakes of black water
+    name: 'Frostpeak', style: 'SNOW', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'], stone: '#a8b4c2', edge: '#aab9c8', fog: '#dbe9f5',
     hemiSky: '#e0f0ff', hemiGround: '#9ab0c8', hemiI: 1.4, sun: '#e8f4ff', sunI: 3.0, skyTint: [0.88, 0.97, 1.1], propTint: '#dff0ff',
-    border: ['PINE', 'BOULDER', 'PINE', 'BOULDER', 'CRYSTAL_SPIRE'], interior: ['BOULDER', 'ROCK', 'CRYSTAL_SPIRE', 'ROCK', 'PINE'], hazard: null,
+    border: ['PINE', 'BOULDER', 'PINE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null,
+    river: 'ICE', lake: 'ICE', layouts: [36, 16, 12, 18, 18], towers: false, hydras: true,
     crates: ['CRATE', 'BARREL', 'POT', 'POT'],
     boss: 'BOSS_WYRM', minis: ['SHELLBACK', 'BEHEMOTH'], lichCrypt: false,
-    roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3]],
+    roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3]],
   },
-  { // 4 Ember Wastes
-    name: 'Ember Wastes', ground: ['#4a2a22', '#7a3a22'], edge: '#1e1210', fog: '#7a3c2c',
+  { // 4 Ember Wastes: basalt, obsidian, lava rivers and lava lakes crossed by stone bridges
+    name: 'Ember Wastes', style: 'BASALT', ground: ['#3a2622', '#5a3226'], patch: ['#5a3222', '#8a4a26', '#2a1a14'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
     hemiSky: '#ffb090', hemiGround: '#5a2a1a', hemiI: 1.1, sun: '#ff9a60', sunI: 3.0, skyTint: [1.1, 0.7, 0.55], propTint: '#d09070',
-    border: ['BOULDER', 'ROCK', 'BOULDER', 'STUMP'], interior: ['BOULDER', 'ROCK', 'STUMP', 'RUIN', 'ROCK'], hazard: 'GAS',
+    border: ['OBSIDIAN', 'BOULDER', 'DEAD_TREE', 'OBSIDIAN', 'ROCK'], interior: ['OBSIDIAN', 'ROCK', 'DEAD_TREE', 'RUIN', 'BOULDER'], hazard: 'GAS',
+    river: 'LAVA', lake: 'LAVA', layouts: [28, 14, 10, 28, 20], towers: false, hydras: false,
     crates: ['EXPLOSIVE_BARREL', 'BARREL', 'CRATE', 'POT'],
     boss: 'BOSS_WARLORD', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
-    roster: [['BOMBER', 7, 0], ['BANDIT', 6, 0], ['CULTIST', 6, 0], ['GOBLIN', 5, 0], ['BAT', 4, 0], ['BRUTE', 5, 1], ['SPLITTER', 4, 1], ['ROCK_CRAB', 4, 2]],
+    roster: [['BOMBER', 7, 0], ['BANDIT', 6, 0], ['CULTIST', 6, 0], ['SCARAB', 5, 0], ['GOBLIN', 5, 0], ['BAT', 3, 0], ['BRUTE', 5, 1], ['SPLITTER', 4, 1], ['ROCK_CRAB', 4, 2]],
   },
-  { // 5 The Void
-    name: 'The Void', ground: ['#241a3e', '#3f2a6a'], edge: '#0e0a1c', fog: '#1c1433',
+  { // 5 The Void: floating shards over the abyss (chasms and pits)
+    name: 'The Void', style: 'VOID', ground: ['#241a3e', '#3f2a6a'], patch: ['#33245a', '#4e2c7a', '#16102a'], stone: '#5e5878', edge: '#0e0a1c', fog: '#1c1433',
     hemiSky: '#8a70d0', hemiGround: '#241a40', hemiI: 1.0, sun: '#a890ff', sunI: 2.2, skyTint: [0.55, 0.45, 0.85], propTint: '#a090d0',
     border: ['CRYSTAL_SPIRE', 'BOULDER', 'CRYSTAL_SPIRE', 'RUIN'], interior: ['CRYSTAL_SPIRE', 'RUIN', 'STATUE', 'BOULDER', 'CRYSTAL_SPIRE'], hazard: null,
+    river: 'CHASM', lake: 'CHASM', layouts: [30, 14, 10, 22, 24], towers: false, hydras: false,
     crates: ['CRATE', 'POT', 'POT', 'GRAVE'],
-    boss: 'BOSS_VOID', minis: ['BEHEMOTH', 'WARDEN'], lichCrypt: true,
-    roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2]],
+    boss: 'BOSS_VOID', minis: ['BEHEMOTH', 'WARDEN', 'PHALANX'], lichCrypt: true,
+    roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2]],
   },
 ];
+
+/** The per-room sub-look of a biome (Greenwood: meadow / grove / mire), rolled from the room seed. */
+export function variantOf(def: BiomeDef, seed: number): BiomeVariant | null {
+  if (!def.variants || def.variants.length === 0) return null;
+  return def.variants[((seed >>> 7) % 977) % def.variants.length];
+}
 
 export const biomeOf = (biome: number): BiomeDef => BIOMES[biome % BIOMES.length];
 /** Which loop of the six biomes this is (0 = first time through). Harder each loop through depth scaling. */

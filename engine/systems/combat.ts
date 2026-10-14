@@ -17,7 +17,7 @@ import { COLORS } from '../../constants';
 import { runMods, runInfo } from '../runMods';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
-import { onEnemyDeath, crabArmor } from './enemies';
+import { onEnemyDeath, crabArmor, shieldBlock } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { hooks } from './hooks';
 
@@ -317,6 +317,7 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
+  if (!o.dot && e.kind === 'SHIELDBEARER' && shieldBlock(e)) return;   // braced shield: frontal hits deal 0 (BLOCKED)
   if (!(amount > 0)) return;
   if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)
 

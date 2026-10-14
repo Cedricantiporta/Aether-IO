@@ -8,7 +8,7 @@ import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { lockedEnemy, updateTarget } from './target';
-import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer } from './combat';
+import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff } from './combat';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { updateSkillInput, resetAim } from './aim';
@@ -23,6 +23,7 @@ const DASH_TIME = 0.18;
 const DASH_SPEED = 32;   // ~7 units per dash (was 42)
 const DEATH_DELAY = 1.2;
 const COLLIDE_PAD = 0.5;
+let lavaTouch = false;
 
 const colOut: Collider[] = [];
 const aim = new Vector3();
@@ -106,12 +107,15 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
       const min = c.r + COLLIDE_PAD;
       const d2 = dx * dx + dz * dz;
       if (d2 >= min * min) continue;
+      if (c.liquid === 2) lavaTouch = true;
       const d = Math.sqrt(d2);
       if (d < 1e-4) { nx = c.x + min; continue; }
       nx = c.x + (dx / d) * min;
       nz = c.z + (dz / d) * min;
     }
   }
+  if (lavaTouch && p.burnT <= 0.3 && p.alive) applyPlayerDebuff('BURN', 2.5, 4 + world.director.wave * 0.8);   // walked into lava
+  lavaTouch = false;
   p.pos.x = nx; p.pos.z = nz; p.pos.y = 0;
   pushOutOfCrates(p.pos, 0.5);
   const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;

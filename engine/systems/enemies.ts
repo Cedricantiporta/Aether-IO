@@ -28,7 +28,7 @@ import type {
   Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
 } from '../types';
 import {
-  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor,
+  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor, isStationary,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
 import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats } from './combat';
@@ -43,6 +43,7 @@ import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
+import { feat, routeAround } from '../roomFeatures';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -250,6 +251,7 @@ export function spawnEnemy(
   e.angle = 0;
   e.attackCd = boss ? 2.5 : kind === 'BRUTE' ? 2 + Math.random() * 2 : 0.8 + Math.random() * 1.4;
   e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
+  if (isStationary(kind)) { e.dir.set(pos.x, 0, pos.z); e.phase = 0; e.angle = 5 + Math.random() * 3; }   // home spot (towers / lakes)
   e.active = true;
   contactCd[e.id] = 0.4; meleeT[e.id] = 0;
 
@@ -659,11 +661,149 @@ function miniSlam(e: Enemy): boolean {
   return false;
 }
 
+// ------------------------------------------------------------ stage monsters + new kinds --------
+const TOWER = { range: 26, windup: 0.75, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
+const LHYDRA = { range: 20, windup: 0.8, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
+const SHIELD = { blockR: 9, block: 2.6, blockCd: 2.0, windup: 0.55, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: 0.3, turn: 2.0 };
+const shotFrom = new Vector3();
+let lastBlockText = 0;
+
+/** Goblin archer on its tower: never moves; aimed arrows (every third shot a 3-arrow volley) from the tower top. */
+function aiTowerArcher(e: Enemy): void {
+  stop(e);
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      if (e.stateT >= TOWER.windup) {
+        const volley = e.phase % 3 === 2;
+        shotFrom.set(e.pos.x + ux * 0.6, TOWER.height, e.pos.z + uz * 0.6);
+        const drop = (1.1 - TOWER.height) / Math.max(4, tdist);   // arc down onto the target
+        for (let k = volley ? -1 : 0; k <= (volley ? 1 : 0); k++) {
+          const a = Math.atan2(ux, uz) + k * 0.2;
+          tmpV.set(Math.sin(a), drop, Math.cos(a)).normalize();
+          fireEnemyProjectile(shotFrom, tmpV, 'ARROW', TOWER.arrowSpeed, e.projectileDamage, { life: 2.2, radius: 0.35 });
+        }
+        e.phase++;
+        e.attackCd = TOWER.cd * (0.8 + Math.random() * 0.4);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      if (e.stateT >= TOWER.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      if (e.attackCd <= 0 && tdist < TOWER.range && (world.player.alive || curMin >= 0)) enter(e, 'WINDUP');
+  }
+}
+
+/** Lurking hydra: surfaces for a while (spits venom orbs, bites the shore), then dives (untargetable) and comes back up. */
+function aiLakeHydra(e: Enemy): void {
+  stop(e);
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  // dive cycle on e.angle: counts down while surfaced; dives for LHYDRA.down seconds
+  if (e.hideT > 0) return;
+  e.angle -= frameDt;
+  if (e.angle <= 0 && e.state !== 'WINDUP') {
+    e.angle = LHYDRA.up * (0.85 + Math.random() * 0.3);
+    e.hideT = LHYDRA.down;
+    enter(e, 'RECOVER');
+    return;
+  }
+  switch (e.state) {
+    case 'WINDUP':
+      if (e.stateT >= LHYDRA.windup) {
+        shotFrom.set(e.pos.x + ux, 2.2, e.pos.z + uz);
+        const base = Math.atan2(ux, uz);
+        for (let k = -1; k <= 1; k++) {
+          const a = base + k * 0.26;
+          tmpV.set(Math.sin(a), -0.04, Math.cos(a));
+          fireEnemyProjectile(shotFrom, tmpV, 'SLOW_ORB', LHYDRA.orbSpeed, e.projectileDamage * 0.7, { slow: 0.35, life: 2.6, radius: 0.5 });
+        }
+        e.attackCd = LHYDRA.cd * (0.8 + Math.random() * 0.4);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      if (e.stateT >= LHYDRA.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      if (e.attackCd <= 0 && tdist < LHYDRA.range && tdist > 3) enter(e, 'WINDUP');
+  }
+}
+
+/** Sand scarab: skitters in zig-zags straight at the target (ground swarm). */
+function aiScarab(e: Enemy): void {
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  const inv = 1 / Math.max(tdist, 0.001);
+  const zig = Math.sin(e.animT * 9 + e.id * 1.7) * 0.7 * Math.min(1, tdist / 5);
+  const a = Math.atan2(tdx * inv, tdz * inv) + zig;
+  setVel(e, Math.sin(a), Math.cos(a), e.speed * (0.8 + 0.35 * Math.abs(Math.sin(e.animT * 6 + e.id))));
+  desiredYaw = a;
+}
+
+/**
+ * Shieldbearer: plods forward; near the target it braces behind its shield (state KITE = blocking stance: frontal
+ * hits deal 0, see shieldBlock), then shoves with a short telegraphed shield bash and is open for a moment after it.
+ */
+function aiShieldbearer(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'KITE':   // braced
+      setVel(e, ux, uz, e.speed * 0.3);
+      if (e.stateT >= SHIELD.block) {
+        if (tdist < 6) {
+          e.dir.set(ux, 0, uz);
+          spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, e.speed * SHIELD.bashMul * SHIELD.bash + e.radius + 1.2, 1.8, SHIELD.windup, 0xf2c14e);
+          enter(e, 'WINDUP'); stop(e);
+        } else { e.attackCd = SHIELD.blockCd * 0.5; enter(e, 'CHASE'); }
+      }
+      return;
+    case 'WINDUP':
+      stop(e);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= SHIELD.windup) enter(e, 'ATTACK');
+      return;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, e.speed * SHIELD.bashMul);
+      desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= SHIELD.bash) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':   // shield lowered: open to every hit
+      stop(e);
+      if (e.stateT >= SHIELD.recover) { e.attackCd = SHIELD.blockCd * (0.8 + Math.random() * 0.4); enter(e, 'CHASE'); }
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, ux, uz, e.speed);
+      if (e.attackCd <= 0 && tdist < SHIELD.blockR) { enter(e, 'KITE'); }
+  }
+}
+
+/** Shieldbearer block: braced (KITE) and the hit comes from the front arc -> 0 damage + a BLOCKED word. */
+export function shieldBlock(e: Enemy): boolean {
+  if (e.kind !== 'SHIELDBEARER' || e.state !== 'KITE' || e.stunT > 0 || e.freezeT > 0 || e.staggerT > 0) return false;
+  const dx = world.player.pos.x - e.pos.x, dz = world.player.pos.z - e.pos.z;
+  const d = Math.sqrt(dx * dx + dz * dz) || 1;
+  if ((dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / d < SHIELD.frontCos) return false;
+  e.hitFlash = Math.max(e.hitFlash, 0.25);
+  if (world.time - lastBlockText > 0.35) {
+    lastBlockText = world.time;
+    events.emit('floatText', { pos: e.pos, text: 'BLOCKED', color: 0xc8d4e6, scale: 0.85, dy: 2.3 });
+    events.emit('projectileImpact', { pos: e.pos, kind: 'ENEMY' });
+  }
+  return true;
+}
+
 function runAI(e: Enemy): void {
   if (e.state === 'SPAWN') {
     stop(e);
     if (e.stateT >= (e.boss ? BOSS_SPAWN_TIME : SPAWN_TIME)) {
-      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' ? 'KITE' : 'CHASE');
+      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' || e.kind === 'GOBLIN_ARCHER' || e.kind === 'LAKE_HYDRA' ? 'KITE' : 'CHASE');
       e.attackCd = Math.max(e.attackCd, 0.6);
     }
     return;
@@ -687,6 +827,10 @@ function runAI(e: Enemy): void {
     case 'BOSS_SAPLING': aiSapling(e); break;
     case 'BOSS_HYDRA_HEAD': aiHydraHead(e); break;
     case 'BOSS_IMP': aiChaser(e, false); break;
+    case 'GOBLIN_ARCHER': aiTowerArcher(e); break;
+    case 'LAKE_HYDRA': aiLakeHydra(e); break;
+    case 'SCARAB': aiScarab(e); break;
+    case 'SHIELDBEARER': aiShieldbearer(e); break;
     default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
@@ -716,6 +860,7 @@ function separate(e: Enemy): void {
 }
 
 const colScratch: Collider[] = [];
+const wayPt: [number, number] = [0, 0];
 function pushOutOfObstacles(e: Enemy): boolean {
   let hit = false;
   const rr = e.radius * 0.8;
@@ -729,6 +874,7 @@ function pushOutOfObstacles(e: Enemy): boolean {
     const d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
     hit = true;
+    if (o.liquid === 2 && e.burnT < 1) { e.burnT = 2; e.burnDps = Math.max(e.burnDps, e.maxHp * 0.06); }   // shoved into lava
     const d = Math.sqrt(d2);
     if (d < 0.001) { e.pos.x += r; continue; }
     e.pos.x = o.x + (dx / d) * r;
@@ -802,9 +948,18 @@ function updateEnemy(e: Enemy): void {
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
+  const still = isStationary(e.kind);
+  // rivers / lakes: walkers head for a bridge (or round the shore) when liquid separates them from their target
+  if ((feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
+    && routeAround(e.pos.x, e.pos.z, px, pz, e.radius, wayPt)) {
+    const wx = wayPt[0] - e.pos.x, wz = wayPt[1] - e.pos.z, wd = Math.sqrt(wx * wx + wz * wz);
+    const rest = Math.hypot(px - wayPt[0], pz - wayPt[1]);
+    tdx = wx; tdz = wz; tdist = wd + rest;
+    if (wd > 1e-3) { tdx = (wx / wd) * tdist; tdz = (wz / wd) * tdist; }   // keep the direction, report the walking distance
+  }
 
   // leash: stray enemies re-enter near the arena edge close to the player
-  if (!e.boss && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
+  if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
     e.pos.copy(tmpV);
     tdx = px - e.pos.x; tdz = pz - e.pos.z; tdist = Math.sqrt(tdx * tdx + tdz * tdz);
   }
@@ -873,13 +1028,14 @@ function updateEnemy(e: Enemy): void {
   if (Math.abs(e.knock.x) < 0.01 && Math.abs(e.knock.z) < 0.01) { e.knock.x = 0; e.knock.z = 0; }
 
   // ---- collisions
-  if (!e.boss && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
+  if (still) { e.pos.x = e.dir.x; e.pos.z = e.dir.z; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0); }   // towers / lakes: pinned to the home spot
+  if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
   // never inside the hero: monsters stop a little short of its body (they still reach it with their strikes)
-  if (world.player.alive && e.kind !== 'BOSS_HYDRA_HEAD') {
+  if (world.player.alive && !still && e.kind !== 'BOSS_HYDRA_HEAD') {
     const hx = e.pos.x - world.player.pos.x, hz = e.pos.z - world.player.pos.z, minD = e.radius + 0.55, hd2 = hx * hx + hz * hz;
     if (hd2 < minD * minD) { const hd = Math.sqrt(hd2) || 1e-3; e.pos.x = world.player.pos.x + (hx / hd) * minD; e.pos.z = world.player.pos.z + (hz / hd) * minD; }
   }
-  if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD') {
+  if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD' && !still) {
     const pushed = pushOutOfObstacles(e);
     if (pushed && e.slamT > 0 && Math.abs(e.knock.x) + Math.abs(e.knock.z) > 10) wallSlam(e);
     if (pushed && e.spKind === 29 && e.spStep > 0) shellBounce(e);
@@ -910,7 +1066,7 @@ function updateEnemy(e: Enemy): void {
 
   // ---- facing
   const diff = wrapPi(desiredYaw - e.facing);
-  e.facing = wrapPi(e.facing + diff * Math.min(1, (e.kind === 'ROCK_CRAB' ? CRAB.turn : 12) * dt));
+  e.facing = wrapPi(e.facing + diff * Math.min(1, (e.kind === 'ROCK_CRAB' ? CRAB.turn : e.kind === 'SHIELDBEARER' && e.state === 'KITE' ? SHIELD.turn : 12) * dt));
 
   // ---- contact damage
   contactHit(e, locked);

@@ -562,10 +562,134 @@ function hydraHead(): ModelDef {
   };
 }
 
+// ------------------------------------------------------------ STAGE MONSTERS ---
+const TOWER_Y = 3.15;   // deck height of the archer tower (render/Props makeArcherTower)
+/** Goblin archer: a hooded goblin with a short bow, standing on its tower deck. */
+function goblinArcher(): ModelDef {
+  const skin = '#62a82f', skin2 = '#79c43e', hood = '#5a3a1e';
+  const body = new GB([0.82, 1.1]);
+  body.box(0.46, 0.5, 0.3, [0, 0.88, 0], '#4a6a2a'); body.sph(0.27, [0, 0.8, 0.06], '#5a7a30', [1, 0.9, 0.8], 7);
+  body.cyl(0.26, 0.3, 0.3, 7, [0, 0.58, 0], '#7a4a22'); body.box(0.5, 0.06, 0.34, [0, 0.72, 0], '#3a2616');
+  body.sph(0.29, [0, 1.3, 0.04], skin2, [1.08, 1, 1], 8);
+  body.cone(0.36, 0.5, 6, [0, 1.52, -0.02], hood, [-0.25, 0, 0]);   // hood
+  for (const s of [-1, 1]) {
+    body.cone(0.1, 0.4, 4, [s * 0.36, 1.33, 0], skin2, [0, 0, -s * 1.25]);
+    body.sph(0.07, [s * 0.11, 1.33, 0.25], '#ffe14a', 1, 6); body.sph(0.035, [s * 0.11, 1.33, 0.31], '#101018', 1, 5);
+  }
+  body.cone(0.06, 0.16, 4, [0, 1.25, 0.32], skin, [Math.PI / 2, 0, 0]);
+  body.cyl(0.09, 0.09, 0.55, 6, [0.18, 1.05, -0.24], '#6a4828', [0.3, 0, 0.2]);   // quiver
+  for (let i = 0; i < 3; i++) body.box(0.02, 0.02, 0.22, [0.15 + i * 0.04, 1.38, -0.32], '#e8e0c8', [0.3, 0, 0]);
+  const armR = limb(new GB([0.85, 1.1]), 0.5, 0.07, 0.06, skin, skin2, 0.09).build();
+  const bow = makeBow('#6a4828', 0);
+  const armLb = limb(new GB([0.85, 1.1]), 0.5, 0.07, 0.06, skin, skin2, 0.09);
+  armLb.addColored(bow.body, [0, -0.5, 0], [Math.PI / 2, 0, 0], 0.6);
+  const legL = limb(new GB([0.8, 1.1]), 0.5, 0.09, 0.07, skin).box(0.14, 0.07, 0.24, [0, -0.5, 0.05], '#4a3a24').build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: armR, mat: 'lit' }, { geo: armLb.build(), mat: 'lit' }, { geo: legL, mat: 'lit' }, { geo: legL, mat: 'lit' }], headY: TOWER_Y + 1.8, shadow: 0.01,
+    pose(e, P, t) {
+      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.75, 0, 1) : 0;
+      const rec = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.45, 0, 1) : 0;
+      P.body(TOWER_Y + abs(sin(t * 2.2)) * 0.03, -0.05 * k, 0, 1, 1);
+      P.part(0, 0, 0, 0);
+      const raise = max(k, rec * 0.8);
+      P.part(1, 0.32, 1.08, 0, lerp(-0.3, -1.4, raise), lerp(0, 0.6, k), -0.1);   // draw hand
+      P.part(2, -0.32, 1.08, 0, lerp(sin(t * 2) * 0.1, -1.45, raise), 0, 0.1);    // bow arm
+      P.part(3, -0.13, 0.52, 0, 0); P.part(4, 0.13, 0.52, 0, 0);
+    },
+  };
+}
+
+/** Lurking hydra: the boss-head mesh, smaller, sunk into the water so only the neck and head peek out. */
+function lakeHydra(): ModelDef {
+  const h = hydraHead();
+  return {
+    parts: h.parts.map((p) => ({ geo: p.geo.clone(), mat: p.mat })), headY: 3.3, shadow: 0.01,   // own geometry copies (each kind gets its own flash attribute)
+    pose(e, P, t) {
+      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.8, 0, 1) : 0;
+      const sink = e.state === 'SPAWN' ? 0 : -1.55 + k * 0.45 + sin(t * 1.4 + e.id) * 0.12;
+      P.body(sink, sin(t * 1.7 + e.id) * 0.12 - k * 0.35 + (e.state === 'RECOVER' ? 0.25 : 0), sin(t * 1.2 + e.id * 2) * 0.12, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.glow = 1.6 + k * 2;
+    },
+  };
+}
+
+/** Sand scarab: a small glossy beetle (swarm). */
+function scarab(): ModelDef {
+  const shell = '#1f8f86', shell2 = '#c8a040', dark = '#1a1a14';
+  const body = new GB([0.75, 1.2]);
+  body.sph(0.5, [0, 0.42, -0.05], shell, [1.0, 0.62, 1.25], 10);
+  body.box(0.03, 0.3, 1.0, [0, 0.66, -0.05], dark);
+  body.sph(0.26, [0, 0.36, 0.58], dark, [1.2, 0.8, 1], 8);
+  for (const s of [-1, 1]) {
+    body.cone(0.05, 0.42, 4, [s * 0.14, 0.34, 0.92], shell2, [Math.PI / 2 - 0.15, 0, s * 0.35]);   // mandibles
+    body.sph(0.05, [s * 0.14, 0.44, 0.78], '#ff8a2a', 1, 5);
+  }
+  body.sph(0.12, [0, 0.72, 0.25], shell2, [1, 0.4, 1], 6);   // gold sun mark
+  const legs = (s: number) => {
+    const g = new GB([0.8, 1.1]);
+    for (let i = 0; i < 3; i++) { g.box(0.42, 0.04, 0.05, [s * 0.22, 0, (i - 1) * 0.28], dark, [0, (i - 1) * 0.35 * s, -s * 0.5]); g.box(0.04, 0.26, 0.05, [s * 0.4, -0.1, (i - 1) * 0.32], dark, [0, 0, s * 0.3]); }
+    return g.build();
+  };
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: legs(1), mat: 'lit' }, { geo: legs(-1), mat: 'lit' }], headY: 1.0, shadow: 0.55,
+    pose(e, P, t) {
+      const r = t * 22 + e.id;
+      P.body(abs(sin(r)) * 0.05, 0.05, sin(r * 0.5) * 0.06, 1, 1);
+      P.part(0, 0, 0, 0);
+      P.part(1, 0, 0.26, 0, 0, sin(r) * 0.45, 0); P.part(2, 0, 0.26, 0, 0, -sin(r) * 0.45, 0);
+    },
+  };
+}
+
+/** Shieldbearer: a bronze hoplite with a big round shield (raised to the front while braced) and a short spear. */
+function shieldbearer(): ModelDef {
+  const bronze = '#c08a3a', bronze2 = '#8a5a24', cloth = '#8a2a22', skin = '#c89a74', dark = '#3a2a1e';
+  const body = new GB([0.78, 1.12]);
+  body.box(0.62, 0.72, 0.42, [0, 1.12, 0], bronze);                     // cuirass
+  body.box(0.66, 0.12, 0.46, [0, 0.78, 0], bronze2);
+  for (let i = 0; i < 5; i++) body.box(0.12, 0.34, 0.06, [-0.26 + i * 0.13, 0.58, 0.21], cloth);   // pteruges
+  for (let i = 0; i < 5; i++) body.box(0.12, 0.34, 0.06, [-0.26 + i * 0.13, 0.58, -0.21], cloth);
+  body.sph(0.22, [0, 1.68, 0.02], skin, 1, 8);
+  body.sph(0.26, [0, 1.74, 0], bronze, [1, 1.05, 1.08], 9);               // helmet
+  body.box(0.08, 0.3, 0.06, [0, 1.62, 0.25], bronze2);                    // nose guard
+  for (const s of [-1, 1]) body.box(0.1, 0.28, 0.08, [s * 0.15, 1.6, 0.21], bronze2);
+  body.box(0.08, 0.32, 0.72, [0, 2.06, -0.04], cloth);                    // crest
+  for (const s of [-1, 1]) body.sph(0.17, [s * 0.4, 1.42, 0], bronze2, [1, 0.8, 1], 7);   // pauldrons
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.035, [s * 0.08, 1.7, 0.24], '#ffd24a', 1, 5);
+  const armR = limb(new GB([0.85, 1.1]), 0.6, 0.08, 0.07, skin, bronze2, 0.1);
+  armR.cyl(0.035, 0.035, 2.0, 5, [0, -0.62, 0.5], '#6a4828', [Math.PI / 2, 0, 0]); armR.cone(0.08, 0.3, 4, [0, -0.62, 1.6], '#d8dce4', [Math.PI / 2, 0, 0]);
+  const shield = new GB([0.75, 1.15]);
+  shield.cyl(0.62, 0.62, 0.1, 14, [0, 0, 0], bronze, [Math.PI / 2, 0, 0]);
+  shield.torus(0.6, 0.05, [0, 0, 0.06], bronze2, [0, 0, 0], 1, 16);
+  shield.cyl(0.18, 0.2, 0.08, 10, [0, 0, 0.08], bronze2, [Math.PI / 2, 0, 0]);
+  shield.box(0.5, 0.08, 0.02, [0, 0.22, 0.07], cloth); shield.box(0.08, 0.5, 0.02, [0, -0.1, 0.07], cloth);
+  const leg = limb(new GB([0.8, 1.1]), 0.62, 0.1, 0.09, skin).box(0.16, 0.36, 0.16, [0, -0.38, 0.02], bronze).box(0.16, 0.07, 0.26, [0, -0.62, 0.05], dark).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armR.build(), mat: 'lit' }, { geo: shield.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.3, shadow: 0.8,
+    pose(e, P, t) {
+      const brace = e.state === 'KITE' ? clamp(e.stateT / 0.2, 0, 1) : 0;
+      const wind = e.state === 'WINDUP' ? 1 : 0, bash = e.state === 'ATTACK' ? 1 : 0, open = e.state === 'RECOVER' ? 1 : 0;
+      const g = max(brace, wind, bash);
+      const ph = t * (brace ? 3 : 6.5), mv = brace ? 0.35 : 1;
+      P.body(abs(sin(ph)) * 0.05 * mv - g * 0.12, g * 0.18 + bash * 0.2 - open * 0.1, sin(ph) * 0.05 * mv, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.part(2, 0.42, 1.38, 0, -0.9 - g * 0.4 + sin(ph) * 0.2 * (1 - g), 0, -0.1);
+      // shield: at the side while walking, square in front while braced / bashing, dropped low after the bash
+      P.part(3, lerp(-0.62, -0.06, g), lerp(1.05, 1.15, g) - open * 0.35, lerp(0.15, 0.62 + bash * 0.25, g), open * 0.5, lerp(-1.25, 0, g), 0);
+      P.part(4, -0.17, 0.66, 0, -sin(ph) * 0.6 * mv); P.part(5, 0.17, 0.66, 0, sin(ph) * 0.6 * mv);
+      P.glow = 1.2;
+    },
+  };
+}
+
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
   if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
-    BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin() }; // imps: a goblin model, tinted red in Enemies.tsx
+    BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
+    GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer() };
   return cache;
 }
-export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP'];
+export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
+  'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER'];

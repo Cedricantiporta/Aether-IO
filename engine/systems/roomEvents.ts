@@ -17,6 +17,7 @@ import { damagePlayer, damageEnemiesInRadius } from './combat';
 import { stationPos, startPos } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
 import { OBJ_NAME } from '../roomDefs';
+import { isStationary } from '../enemyDefs';
 
 const E = () => world.roomEvt;
 const tmp = new Vector3();
@@ -99,7 +100,7 @@ export function updateRoomEvents(dt: number): void {
       // monsters near the totem / cage drift to it and wear it down
       let n = 0;
       for (const m of world.enemies) {
-        if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss) continue;
+        if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || isStationary(m.kind)) continue;
         const dx = e.x - m.pos.x, dz = e.z - m.pos.z, d = Math.hypot(dx, dz);
         if (d < 2.6 + m.radius) { n++; continue; }
         if (d < 16) { const s = Math.min(d - 2.4, m.speed * 0.45 * dt); m.pos.x += (dx / d) * s; m.pos.z += (dz / d) * s; }
