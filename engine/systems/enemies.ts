@@ -1295,7 +1295,7 @@ function updateEnemy(e: Enemy): void {
 
   // ---- motion
   const sm = e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;
-  const kr = 1 - ENEMY_DEFS[e.kind].knockResist;
+  const kr = e.mini ? 0 : 1 - ENEMY_DEFS[e.kind].knockResist;   // bosses, mini-bosses and big monsters can't be knocked back
   e.pos.x += (e.vel.x * sm + e.knock.x * kr) * dt;
   e.pos.z += (e.vel.z * sm + e.knock.z * kr) * dt;
   e.knock.x *= frameDecay;

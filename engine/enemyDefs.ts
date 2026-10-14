@@ -50,11 +50,11 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   BRUTE: {
     name: 'Brute', hp: 220, speed: 3.0, radius: 1.2, scale: 1.8, contactDamage: 18, projectileDamage: 0,
-    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 0.6, armor: 40,
+    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 1, armor: 40,
   },
   SPLITTER: {
     name: 'Splitter', hp: 120, speed: 2.6, radius: 1.1, scale: 1.7, contactDamage: 12, projectileDamage: 0,
-    xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 0.3, armor: 20,
+    xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 1, armor: 20,
   },
   ZOMBIE: {
     name: 'Zombie', hp: 170, speed: 1.7, radius: 0.85, scale: 1.25, contactDamage: 11, projectileDamage: 0,
@@ -78,7 +78,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   ROCK_CRAB: {
     name: 'Rock Crab', hp: 150, speed: 2.1, radius: 0.95, scale: 1.2, contactDamage: 12, projectileDamage: 0,
-    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 0.6, armor: 60,
+    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 1, armor: 60,
   },
   BOSS_GOLEM: {
     name: 'Gorath the Mountain', hp: 1625, speed: 2.8, radius: 2.6, scale: 4, contactDamage: 25, projectileDamage: 18,
@@ -136,7 +136,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   SHIELDBEARER: {
     name: 'Shieldbearer', hp: 190, speed: 2.2, radius: 0.85, scale: 1.3, contactDamage: 6, projectileDamage: 0,
-    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 0.7, armor: 70,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 1, armor: 70,
   },
   // ---- biome-unique monsters
   SPORECAP: {
@@ -149,7 +149,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   HAUNTED_ARMOR: {
     name: 'Haunted Armor', hp: 210, speed: 2.0, radius: 0.9, scale: 1.35, contactDamage: 9, projectileDamage: 0,
-    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 0, color: 0x8a94a8, knockResist: 0.7, armor: 65,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 0, color: 0x8a94a8, knockResist: 1, armor: 65,
   },
   GARGOYLE: {
     name: 'Gargoyle', hp: 95, speed: 5.0, radius: 0.8, scale: 1.2, contactDamage: 11, projectileDamage: 0,
@@ -165,7 +165,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   YETI: {
     name: 'Yeti', hp: 260, speed: 2.8, radius: 1.2, scale: 1.7, contactDamage: 17, projectileDamage: 0,
-    xp: 30, gold: 8, cost: 7, minWave: 1, weight: 0, color: 0xe8f0f8, knockResist: 0.6, armor: 30,
+    xp: 30, gold: 8, cost: 7, minWave: 1, weight: 0, color: 0xe8f0f8, knockResist: 1, armor: 30,
   },
   FROST_WISP: {
     name: 'Frost Wisp', hp: 48, speed: 3.2, radius: 0.6, scale: 1.0, contactDamage: 4, projectileDamage: 10,
