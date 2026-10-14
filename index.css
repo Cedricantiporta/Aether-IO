@@ -1611,6 +1611,19 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .ql-card span { color: #d8dce4; font-size: .75rem; }
 .ql-card.main { border-left-color: #f1d58e; background: linear-gradient(90deg, rgba(60, 44, 14, .65), rgba(8, 8, 10, .7)); }
 .ql-card.npc { border-left-color: #5fd0c0; } .ql-card.ready { border-left-color: #7be38f; }
+/* accordion: sections and quest rows collapse */
+.ql-sec { display: flex; flex-direction: column; gap: .35rem; }
+.ql-sec .ql-sec { margin-left: .4rem; }
+.ql-toggle { width: 100%; background: none; border: 0; padding: .15rem 0; cursor: pointer; text-align: left; }
+.ql-toggle .ql-chev { margin-left: auto; transition: transform .2s; opacity: .8; }
+.ql-count { min-width: 1.2rem; padding: 0 .35rem; border-radius: 1rem; background: rgba(217, 181, 106, .2); color: #f1d58e; font-size: .68rem; text-align: center; letter-spacing: 0; }
+.ql-body { display: flex; flex-direction: column; gap: .35rem; }
+.ql-row { display: flex; align-items: center; gap: .5rem; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.ql-row b { flex: 1; min-width: 0; }
+.ql-row .ql-st { flex: none; color: var(--text-dim) !important; font-size: .7rem !important; }
+.ql-row .ql-chev { flex: none; transition: transform .2s; color: #8a7a60; }
+.ql-det { display: flex; flex-direction: column; gap: .25rem; padding-top: .3rem; }
+.ql-card.done { border-left-color: #4a7a4a; opacity: .85; } .ql-card.offer { border-left-color: #3a8a80; opacity: .85; }
 .ql-rew { display: flex; flex-wrap: wrap; gap: .3rem .7rem; margin-top: .15rem; }
 .ql-rew span { display: inline-flex; align-items: center; gap: .25rem; color: #f1d58e; font-size: .72rem; font-weight: 700; }
 .ql-done { display: flex; flex-wrap: wrap; gap: .25rem .7rem; font-size: .7rem; color: #7be38f; } .ql-done span { display: inline-flex; align-items: center; gap: .2rem; }
