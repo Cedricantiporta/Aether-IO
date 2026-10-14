@@ -13,8 +13,7 @@ interface Props {
   keyLabel?: string;                // keybind badge text
   keyCode?: string;                 // KeyboardEvent.code, used to attribute noMana shake
   icon: React.ReactNode;
-  size?: number;                    // px diameter
-  mini?: boolean;                   // passive indicator: no key / level badges
+  size?: string;
   active?: boolean;                 // false => dimmed/locked
   lockLabel?: string;               // overlay text when locked (e.g. '5 SP')
   level?: number;
@@ -23,13 +22,13 @@ interface Props {
   getCd?: () => CdInfo;
   getPips?: () => PipInfo;          // charge pips (dash / shield)
   tooltip: React.ReactNode;
-  accent?: string;                  // ring colour (css) for the button
+  accent?: string;                  // ring colour (css) for the slot
 }
 
 const fmtCd = (t: number) => (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1));
 
-/** Round action-bar button. All per-frame state (sweep, text, pips, mana-lack) is written via refs. */
-export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = 56, mini, active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent }) => {
+/** Framed action-bar slot. All per-frame state (sweep, text, pips, mana-lack) is written via refs. */
+export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent }) => {
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
@@ -95,22 +94,26 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
   }, [keyCode]);
 
   return (
-    <div ref={root} className={`rbtn pe ${active ? '' : 'is-dim'}`} {...tip(tooltip)} style={{ ['--s' as any]: `${size}px`, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
-      <div className="rb-in">
+    <div className="relative pe" {...tip(tooltip)}>
+      <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
         <span className="slot-icon">{icon}</span>
         <div ref={sweep} className="cd-sweep"><span ref={txt} className="cd-text" /></div>
         <div ref={lack} className="mana-lack" />
         <div ref={ready} className="cd-ready" />
-        {!active && <span className="absolute inset-0 grid place-items-center z-[5] text-white"><LockGlyph size={size > 40 ? 20 : 14} />{lockLabel && <span className="text-xs font-bold">{lockLabel}</span>}</span>}
+        {!active && (
+          <span className="slot-lock" style={{ zIndex: 5 }}>
+            <span className="flex flex-col items-center gap-[1px]"><LockGlyph size={22} />{lockLabel && <span className="lock-lbl">{lockLabel}</span>}</span>
+          </span>
+        )}
+        {active && level !== undefined && level > 0 && <span className="slot-plus" style={{ left: 'auto', right: '.1rem', top: 'auto', bottom: '.1rem' }}>{level}</span>}
+        {qty !== undefined && <span className="slot-qty" style={qty <= 0 ? { color: '#ff8a80' } : undefined}>{qty}</span>}
+        {getPips && (
+          <div className="absolute left-1/2 -translate-x-1/2 flex gap-[3px]" style={{ top: '.2rem', zIndex: 6 }}>
+            {[0, 1, 2, 3].map((i) => <i key={i} className="pip" data-s="off" ref={(el) => { pips.current[i] = el; }} />)}
+          </div>
+        )}
       </div>
-      {active && level !== undefined && level > 0 && !mini && <span className="rb-lv">{level}</span>}
-      {qty !== undefined && <span className="rb-qty" style={qty <= 0 ? { color: '#ff8a80' } : undefined}>{qty}</span>}
-      {getPips && (
-        <div className="rb-pips">
-          {[0, 1, 2, 3].map((i) => <i key={i} className="pip" data-s="off" ref={(el) => { pips.current[i] = el; }} />)}
-        </div>
-      )}
-      {keyLabel && !mini && <span className="rb-key rpg-key">{keyLabel}</span>}
+      {keyLabel && <span className="rpg-key">{keyLabel}</span>}
     </div>
   );
 };

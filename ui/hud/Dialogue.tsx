@@ -15,7 +15,7 @@ export const Dialogue: React.FC = () => {
   const stop = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); };
   return (
     <div className={`dlg-root ${device.touch ? 'touch' : ''}`} data-testid="dialogue-root">
-      <div className="dlg pe paper" data-testid="dialogue" role="dialog" aria-label={`${name} says`} onPointerDown={(e) => { stop(e); advanceDialogue(); }}>
+      <div className="dlg pe" data-testid="dialogue" role="dialog" aria-label={`${name} says`} onPointerDown={(e) => { stop(e); advanceDialogue(); }}>
         <div className="dlg-head">
           <span className="dlg-badge" style={{ background: accent }} />
           <span className="dlg-name">{name}</span>

@@ -3,6 +3,8 @@ import { Skull, Home, ChevronsDown } from 'lucide-react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { Button } from '../components/Button';
+import { Panel, Ribbon } from '../components/Frame';
+import { SkullGlyph } from '../components/SkillIcons';
 import { ROOMS_PER_BIOME, BIOMES, biomeOf, loopOf } from '../../engine/roomDefs';
 import { descend, finishRunVictory } from '../../engine/systems/director';
 import { useGameStore } from '../../store';
@@ -27,7 +29,7 @@ function subText(): string {
 export const RoomPlaque: React.FC = () => {
   const name = useRef<HTMLSpanElement>(null);
   const depth = useRef<HTMLSpanElement>(null);
-  const sub = useRef<HTMLDivElement>(null);
+  const sub = useRef<HTMLSpanElement>(null);
   const pips = useRef<(HTMLElement | null)[]>([]);
   const sig = useRef('');
   const pipSig = useRef('');
@@ -56,13 +58,24 @@ export const RoomPlaque: React.FC = () => {
   });
 
   return (
-    <div className="wave-pill room-pill glass pe" data-testid="room-plaque">
-      <div className="wt"><span ref={name}>Meadow</span><span className="tm" ref={depth}>Depth 1</span></div>
+    <div className="wplaque room-pill pe" data-testid="room-plaque">
+      <svg className="bg" viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden>
+        <defs>
+          <linearGradient id="wp-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a2c22" /><stop offset=".5" stopColor="#1c1511" /><stop offset="1" stopColor="#0d0a08" /></linearGradient>
+          <linearGradient id="wp-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#8b5a16" /><stop offset=".3" stopColor="#fff0b0" /><stop offset=".5" stopColor="#c8962e" /><stop offset=".7" stopColor="#fff0b0" /><stop offset="1" stopColor="#8b5a16" /></linearGradient>
+        </defs>
+        <path d="M20 8 H380 L394 22 L388 40 L398 58 L380 96 H20 L2 58 L12 40 L6 22Z" fill="url(#wp-w)" stroke="#050304" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M20 8 H380 L394 22 L388 40 L398 58 L380 96 H20 L2 58 L12 40 L6 22Z" fill="none" stroke="url(#wp-g)" strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M30 15 H370 L382 28 L378 82 L366 90 H34 L22 82 L18 28Z" fill="none" stroke="#c8962e" strokeOpacity=".35" strokeWidth="1" />
+      </svg>
+      <span className="crest"><SkullGlyph size={36} /></span>
+      <div className="wtitle"><span ref={name}>Meadow</span></div>
+      <div className="wdepth"><span ref={depth}>Depth 1</span></div>
       <div className="pips" aria-hidden>
         {Array.from({ length: ROOMS_PER_BIOME }, (_, i) => <i key={i} className="pip" data-s="todo" ref={(el) => { pips.current[i] = el; }} />)}
         <i className="pip boss" data-s="todo" ref={(el) => { pips.current[ROOMS_PER_BIOME] = el; }}><Skull size={11} /></i>
       </div>
-      <div className="wsub" ref={sub} data-testid="room-sub">Enemies left: 0</div>
+      <div className="wsub"><span ref={sub} data-testid="room-sub">Enemies left: 0</span></div>
     </div>
   );
 };
@@ -94,16 +107,16 @@ export const BiomeChoice: React.FC = () => {
   const b = world.room.biome;
   const cur = biomeOf(b), next = BIOMES[(b + 1) % BIOMES.length];
   return (
-    <div className="absolute inset-0 pe go-root" style={{ zIndex: 90 }} data-testid="biome-choice">
-      <div className="go-card paper" style={{ width: 'min(26rem, 100%)' }}>
-        <div className="px-5 pt-5 pb-2 text-center">
-          <div className="text-2xl font-extrabold leading-tight">{cur.name} conquered</div>
-          <div className="text-sm font-semibold text-[var(--fg-2)] mt-1">The way onward is open. Bank your spoils, or press deeper for better loot.</div>
-        </div>
-        <div className="flex flex-col gap-3 p-5">
-          <Button variant="primary" size="lg" onClick={descend} pulse data-testid="descend"><ChevronsDown size={18} /> Descend to {next.name}</Button>
-          <Button size="lg" onClick={finishRunVictory} data-testid="return-town"><Home size={18} /> Return to town</Button>
-        </div>
+    <div className="absolute inset-0 pe flex items-center justify-center" style={{ zIndex: 90, background: 'radial-gradient(ellipse at center, rgba(20,12,4,.6), rgba(5,3,2,.88))' }} data-testid="biome-choice">
+      <div className="flex flex-col items-center" style={{ width: 'min(26rem, 94vw)' }}>
+        <div className="z-10 -mb-3"><Ribbon tone="gold" className="!text-[1.05rem]">{cur.name} conquered</Ribbon></div>
+        <Panel className="w-full p-5 pt-6">
+          <div className="text-center text-sm mb-4" style={{ color: 'var(--text-dim)' }}>The way onward is open. Bank your spoils, or press deeper for better loot.</div>
+          <div className="flex flex-col gap-3">
+            <Button variant="primary" size="lg" onClick={descend} pulse data-testid="descend"><ChevronsDown size={18} /> Descend to {next.name}</Button>
+            <Button size="lg" onClick={finishRunVictory} data-testid="return-town"><Home size={18} /> Return to town</Button>
+          </div>
+        </Panel>
       </div>
     </div>
   );

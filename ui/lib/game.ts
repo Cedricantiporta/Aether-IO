@@ -1,11 +1,17 @@
-import type { Item, PlayerStats, Rarity } from '../../types';
+import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
 
-import { RARITIES, RARITY_COLOR, RARITY_INK, HERO_COLOR } from '../theme';
-export { RARITIES, RARITY_COLOR, HERO_COLOR };
+export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+export const RARITY_COLOR: Record<Rarity, string> = {
+  COMMON: '#e5e7eb', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444',
+};
 export const RARITY_RANK: Record<Rarity, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
-/** Rarity colour for item names on the cream menu surfaces. */
-export const RARITY_TEXT = RARITY_INK;
+/** Colour used for item names on dark backgrounds (slightly lifted for contrast). */
+export const RARITY_TEXT: Record<Rarity, string> = {
+  COMMON: '#f1f2f4', RARE: '#6ea8ff', EPIC: '#c58bff', LEGENDARY: '#f5c518', MYTHIC: '#ff6b5e',
+};
+
+export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#3fae55', WIZARD: '#4a7fe0', BARBARIAN: '#cf4343' };
 
 export const STAT_LABEL: Record<keyof PlayerStats, string> = {
   ...STAT_NAME,

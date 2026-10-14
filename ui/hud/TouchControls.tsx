@@ -8,7 +8,6 @@ import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import { useRaf } from '../hooks/useRaf';
 import { activeDefs, dashDef, ACTIVE_ORDER, ULTS } from '../../abilityDefs';
-import { ComboMeter } from './ComboMeter';
 import { PaintedIcon } from '../components/SkillIcons';
 import { POTION_COOLDOWN } from '../../constants';
 import { requestClick } from '../../engine/systems/target';
@@ -241,7 +240,6 @@ export const TouchControls: React.FC = () => {
           {drag.cancel ? 'Release to cancel' : 'Drag up here to cancel'}
         </div>
       )}
-      {!village && <ComboMeter touch />}
       {/* skills are always available, also in the village; interacting is done through the floating prompts */}
       <div className={`tc-cluster ${left ? 'left' : ''}`}>
         {!village && (

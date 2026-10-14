@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
+import { Skull } from 'lucide-react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
-/** Thin boss bar: name, hp with a delayed damage trail, stagger line and phase dots. */
+/** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail. */
 export const BossBar: React.FC = () => {
   const root = useRef<HTMLDivElement>(null);
   const hp = useRef<HTMLDivElement>(null);
@@ -40,7 +41,7 @@ export const BossBar: React.FC = () => {
     if (stag.current && sfs !== s.stag) { s.stag = sfs; stag.current.style.width = `${(b.staggered ? 1 : sf) * 100}%`; }
     if (b.staggered !== s.staggered) {
       s.staggered = b.staggered;
-      if (stag.current) stag.current.style.background = b.staggered ? '#ffc73a' : '#7db8ff';
+      if (stag.current) stag.current.style.background = b.staggered ? 'linear-gradient(180deg,#fff2a0,#ffb020)' : 'linear-gradient(180deg,#9ad0ff,#3a7ad0)';
       if (stagLbl.current) stagLbl.current.style.opacity = b.staggered ? '1' : '0';
     }
     const on = b.abilityT > 0 && !!b.ability;
@@ -55,26 +56,32 @@ export const BossBar: React.FC = () => {
   });
 
   return (
-    <div ref={root} className="boss-bar" style={{ display: 'none' }}>
-      <div ref={abil} data-testid="boss-ability" className="text-center text-sm font-extrabold" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', color: '#ffd27a', textShadow: '0 1px 6px rgba(0,0,0,.7)', height: '1.3rem' }} />
-      <div className="text-center leading-tight mb-1" style={{ textShadow: '0 1px 4px rgba(0,0,0,.7)' }}>
-        <span ref={name} className="font-extrabold text-sm" style={{ color: '#ffb3aa' }} />
-        <span ref={title} className="text-xs font-semibold ml-2" style={{ color: 'rgba(243,241,234,.7)' }} />
+    <div ref={root} style={{ display: 'none', width: 'min(44rem, 52vw)' }}>
+      <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
+      <div className="text-center leading-none mb-1">
+        <div ref={name} className="rpg-title text-xl" style={{ color: '#ffb3aa' }} />
+        <div ref={title} className="rpg-label !text-[.65rem] mt-1" style={{ color: '#d9a8a0' }} />
       </div>
-      <div className="relative overflow-hidden" style={{ height: 8, borderRadius: 4, background: 'rgba(0,0,0,.45)', border: '1px solid rgba(255,255,255,.12)' }}>
-        <div ref={trail} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'rgba(255,255,255,.8)' }} />
-        <div ref={hp} className="absolute inset-y-0 left-0" style={{ width: '100%', background: '#ef5f55' }} />
+      <div className="relative flex items-center">
+        <div className="rpg-medallion z-10" style={{ width: '3rem', height: '3rem', ['--mc' as any]: '#8e1c1f', marginRight: '-.9rem' }}><Skull size={22} /></div>
+        <div className="rpg-bar flex-1" style={{ height: '1.5rem', borderWidth: 3, boxShadow: '0 0 0 2px #8b5a16, 0 0 0 4px #0d0703, inset 0 3px 8px rgba(0,0,0,.9), 0 6px 14px rgba(0,0,0,.6)' }}>
+          <div ref={trail} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'rgba(255,255,255,.9)' }} />
+          <div ref={hp} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8a85,#d6252b 45%,#7e0f14)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.5)' }} />
+          <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(0,0,0,.6) calc(10% - 2px) 10%)' }} />
+          <div className="absolute inset-0 grid place-items-center rpg-num text-[.78rem] text-white text-outline"><span ref={val} /></div>
+        </div>
+        <div className="rpg-medallion z-10" style={{ width: '3rem', height: '3rem', ['--mc' as any]: '#8e1c1f', marginLeft: '-.9rem' }}><Skull size={22} /></div>
       </div>
-      <div className="relative mx-auto mt-1" style={{ width: '60%', height: 3, background: 'rgba(0,0,0,.4)', borderRadius: 2, overflow: 'hidden' }} title="Stagger">
-        <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: '#7db8ff' }} />
+      <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.42rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
+        <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#9ad0ff,#3a7ad0)' }} />
       </div>
-      <div ref={stagLbl} className="text-center text-xs font-bold" style={{ color: '#ffd23a', opacity: 0 }}>Staggered</div>
+      <div ref={stagLbl} className="text-center rpg-label !text-[.6rem]" style={{ color: '#ffd23a', opacity: 0, letterSpacing: '.3em' }}>STAGGERED</div>
       <div className="flex justify-center gap-2 mt-1">
         {[0, 1, 2].map((i) => (
           <i key={i} ref={(el) => { pips.current[i] = el; }} data-on="0" className="boss-pip" />
         ))}
       </div>
-      <span ref={val} className="sr-only" />
+      <style>{`.boss-pip{width:.7rem;height:.7rem;transform:rotate(45deg);border:2px solid #0d0703;background:#2a1c10}.boss-pip[data-on='1']{background:linear-gradient(135deg,#ffb3aa,#d6252b);box-shadow:0 0 8px #ff4a3a}`}</style>
     </div>
   );
 };

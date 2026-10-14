@@ -3,7 +3,7 @@
 import { device } from '../engine/device';
 import { useGameStore } from '../store';
 
-const SCALE = { SMALL: 0.92, NORMAL: 1, LARGE: 1.18 } as const;
+const SCALE = { SMALL: 0.85, NORMAL: 1, LARGE: 1.2 } as const;
 
 export function installLayout(): () => void {
   const root = document.documentElement;
@@ -13,8 +13,10 @@ export function installLayout(): () => void {
     const short = Math.min(vw, vh);
     const compact = (device.touch || device.phone) && short < 620;
     const scale = SCALE[useGameStore.getState().settings?.uiScale || 'NORMAL'] ?? 1;
-    // rem is a fixed 16px (text never drops below 12px); big desktop screens scale up a little
-    const base = compact || device.touch ? 16 : Math.min(19, Math.max(16, vh / 54));
+    // landscape viewport height drives the base size on phones; desktop keeps the original clamp()
+    const base = compact
+      ? Math.max(8.5, Math.min(12, (portrait ? vw : vh) / 34))
+      : Math.min(17, Math.max(12, 8 + Math.min(vw * 0.005, vh * 0.009)));
     root.style.fontSize = (base * scale).toFixed(2) + 'px';
     root.classList.toggle('is-touch', device.touch);
     root.classList.toggle('is-phone', device.phone || compact);

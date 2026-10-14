@@ -3,7 +3,7 @@ import { useGameStore, shopPrice, SUPPLY_STOCK } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
-import { RARITIES, RARITY_COLOR, RARITY_TEXT, isGear } from '../../lib/game';
+import { RARITIES, RARITY_COLOR, isGear } from '../../lib/game';
 import type { Rarity } from '../../../types';
 
 const STOCK = SUPPLY_STOCK;
@@ -32,7 +32,7 @@ export const SuppliesTab: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div>
         <div className="rpg-label mb-2">Provisions</div>
-        <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-9">
+        <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-8">
           {STOCK.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={shopPrice(it)} sale={sales[it.id]} oldPrice={it.price} cantAfford={gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
         </div>
       </div>
@@ -46,13 +46,13 @@ export const SuppliesTab: React.FC = () => {
         <div className="rpg-label mb-2">Quick sell (from bag)</div>
         <div className="grid grid-cols-5 gap-1.5">
           {RARITIES.map((r) => (
-            <Button key={r} size="sm" disabled={count(r) === 0} onClick={() => quickSell(r)} style={{ boxShadow: `inset 0 -3px 0 ${RARITY_COLOR[r]}`, padding: '.25rem .1rem', flexDirection: 'column', gap: 0, lineHeight: 1.1, borderRadius: 12, minHeight: 52 }}>
-              <span style={{ color: RARITY_TEXT[r], fontSize: 12 }}>{r === 'LEGENDARY' ? 'Legend' : r.charAt(0) + r.slice(1).toLowerCase()}</span>
-              <span className="rpg-num text-xs">{count(r)}</span>
+            <Button key={r} size="sm" disabled={count(r) === 0} onClick={() => quickSell(r)} style={{ borderColor: RARITY_COLOR[r], padding: '.25rem .1rem', flexDirection: 'column', gap: 0, lineHeight: 1.1 }}>
+              <span style={{ color: RARITY_COLOR[r], fontSize: '.58rem' }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</span>
+              <span className="rpg-num !text-[.7rem] text-white">{count(r)}</span>
             </Button>
           ))}
         </div>
-        <div className="rpg-label mt-1.5">Items above rare ask for confirmation. Click any bag item to sell a specific one.</div>
+        <div className="rpg-label !text-[.55rem] mt-1.5 opacity-70">Items above rare ask for confirmation. Click any bag item to sell a specific one.</div>
       </div>
     </div>
   );
