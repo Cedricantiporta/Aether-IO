@@ -14,6 +14,7 @@ import { CRATE_HP, addTempCollider, generateMap, installInterior } from '../mapg
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
+import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
@@ -110,12 +111,71 @@ export function interact(it: Interactable): void {
   if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }
 
-/** Click on a shop / board from afar: walk the hero to (x, z) and open `tab` on arrival (instantly when already close). */
-export function walkAndOpen(x: number, z: number, tab: ShopTab, r = 1.6): void {
+// ---- click-to-walk along the streets. The town's streets form a "+" through the plaza: the south street (z 10),
+// the north street (z -6) and the avenue / castle path (x 0). A route = nearest street point -> along it to the x 0 axis
+// -> along the axis to the target's street -> along that street -> the target (short hops are walked straight).
+const STREETS: { h: boolean; c: number; a: number; b: number }[] = [
+  { h: true, c: 10, a: -38, b: 38 }, { h: true, c: -6, a: -18, b: 18 }, { h: false, c: 0, a: -22, b: 40 },
+];
+function nearestStreet(x: number, z: number): { s: number; x: number; z: number; d: number } {
+  let best = { s: 0, x, z, d: 1e9 };
+  STREETS.forEach((st, i) => {
+    const px = st.h ? Math.max(st.a, Math.min(st.b, x)) : st.c, pz = st.h ? st.c : Math.max(st.a, Math.min(st.b, z));
+    const d = Math.hypot(px - x, pz - z);
+    if (d < best.d) best = { s: i, x: px, z: pz, d };
+  });
+  return best;
+}
+function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32Array): number {
+  let n = 0;
+  const push = (x: number, z: number) => { if (n > 0 && Math.hypot(out[n * 2 - 2] - x, out[n * 2 - 1] - z) < 0.8) return; out[n * 2] = x; out[n * 2 + 1] = z; n++; };
+  if (Math.hypot(tx - fx, tz - fz) > 9 && world.village.area === 'TOWN') {
+    const a = nearestStreet(fx, fz), b = nearestStreet(tx, tz);
+    if (a.d < 14 && b.d < 14) {
+      push(a.x, a.z);
+      if (a.s !== b.s) {
+        const A = STREETS[a.s], B = STREETS[b.s];
+        if (A.h) push(0, A.c);              // along this street to the x 0 axis
+        if (B.h) push(0, B.c);              // along the axis to the target street
+      }
+      push(b.x, b.z);
+    }
+  }
+  push(tx, tz);
+  return n;
+}
+/** Click on a shop / board / quest from afar: walk the hero there along the streets, then do `act` on arrival
+ *  (open `tab` / enter the castle / talk to NPC `npc` / nothing). Instant when already close. */
+export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'leave' | 'npc' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
-  if ((x - p.pos.x) ** 2 + (z - p.pos.z) ** 2 <= r * r) { g.on = false; st.openSpecificShop(tab); return; }
-  g.on = true; g.x = x; g.z = z; g.r = r; g.t = 0; g.tab = tab;
+  g.act = act; g.tab = tab; g.npc = npc; g.r = r;
+  if ((x - p.pos.x) ** 2 + (z - p.pos.z) ** 2 <= r * r) { g.on = false; arrive(); return; }
+  g.n = buildRoute(p.pos.x, p.pos.z, x, z, g.wp); g.i = 0; g.x = g.wp[0]; g.z = g.wp[1];
+  let len = 0; for (let k = 0, px = p.pos.x, pz = p.pos.z; k < g.n; k++) { len += Math.hypot(g.wp[k * 2] - px, g.wp[k * 2 + 1] - pz); px = g.wp[k * 2]; pz = g.wp[k * 2 + 1]; }
+  g.on = true; g.t = 0; g.tmax = 6 + len / 3;
+}
+/** Quest tracker click: walk to wherever the quest continues (claim at the board, the King, the potion shop, else the gate). */
+export function walkToQuest(q: Quest): void {
+  const st = useGameStore.getState(), castle = world.village.area === 'CASTLE';
+  const king = NPCS.findIndex((n) => n.king);
+  if (questDone(q)) { if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); else walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
+  if (questNeedsKing(q)) {
+    if (castle && king >= 0) { const h = NPCS[king].home; walkTo(h[0], h[1] + 2.2, 'npc', '', 1.6, king); }
+    else walkTo(CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 'castle', '', 2.4);
+    return;
+  }
+  if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT') && !castle) { const s = SHOP_POSITIONS.find((x) => x.type === 'SUPPLIES')!; walkTo(s.position[0] + 1.2, s.position[2] + 5.2, 'shop', 'SUPPLIES'); return; }
+  if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
+  else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
+}
+export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
+function arrive(): void {
+  const g = world.village.go, st = useGameStore.getState();
+  if (g.act === 'shop' && g.tab) st.openSpecificShop(g.tab as ShopTab);
+  else if (g.act === 'castle') world.village.pending = 'ENTER';
+  else if (g.act === 'leave') world.village.pending = 'LEAVE';
+  else if (g.act === 'npc' && g.npc >= 0) openDialogue(g.npc);
 }
 
 const FADE_S = 0.2;   // fade out + fade in = ~0.4 s
@@ -183,11 +243,11 @@ export function updateVillage(dt: number): void {
   const g = v.go;
   if (g.on) {
     g.t += dt;
-    if (talking || v.pending || g.t > 10) g.on = false;
-    else if ((g.x - p.pos.x) ** 2 + (g.z - p.pos.z) ** 2 <= g.r * g.r) {
-      g.on = false; p.vel.x = p.vel.z = 0;
-      p.facing = Math.atan2(g.x - p.pos.x, g.z + 3 - p.pos.z) + Math.PI;   // face the shop (shops face +z)
-      useGameStore.getState().openSpecificShop(g.tab as ShopTab);
+    const last = g.i >= g.n - 1, rr = last ? g.r : 1.1;
+    if (talking || v.pending || g.t > g.tmax) g.on = false;
+    else if ((g.x - p.pos.x) ** 2 + (g.z - p.pos.z) ** 2 <= rr * rr) {
+      if (!last) { g.i++; g.x = g.wp[g.i * 2]; g.z = g.wp[g.i * 2 + 1]; }
+      else { g.on = false; p.vel.x = p.vel.z = 0; arrive(); }
     }
   }
 

@@ -164,7 +164,11 @@ export const PLANTERS: PlanterSpec[] = [
   { x: -22, z: 13.4, w: 3.2, d: 1.0, kind: 1 }, { x: 22, z: 13.4, w: 3.2, d: 1.0, kind: 0 },
   // north street + quest board path
   { x: -11.5, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 11.5, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
-  { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 0 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
+  { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
+  // castle approach: flower beds lining the path and the castle front
+  { x: -2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 },
+  { x: -7.6, z: -24.6, w: 6.0, d: 1.5, kind: 1 }, { x: 7.6, z: -24.6, w: 6.0, d: 1.5, kind: 1 },
+  { x: -6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 }, { x: 6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 },
   // pet lane
   { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },
   // flower bed in front of the gate (outside)

@@ -5,6 +5,8 @@
 import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
+import { ASCENSION_MAX } from './ascension';
+import { runInfo, type RunMode } from './engine/runMods';
 import { create } from 'zustand';
 import {
   GameStatus, PlayerStats, Upgrade, Item, SkillLevels, Rarity, HeroClass, ItemType,
@@ -22,7 +24,7 @@ import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import { deviceDefaults } from './engine/device';
-import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
+import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
 import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
@@ -326,6 +328,7 @@ interface Profile {
   gold: number; gems: number;
   inventory: Item[]; equipment: Equipment; materials: Record<Rarity, number>; maxInventorySlots: number;
   warehouse?: Item[]; warehouseGold?: number;
+  progress?: RunProgress;   // ending / ascension / endless tower records
   heroRank: number; rankXp: number; quests: Quest[];
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
@@ -410,7 +413,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
@@ -437,12 +440,20 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
 
 const DIFFICULTIES: Difficulty[] = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
 
+// ---- ending / ascension / endless tower records
+const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => ({
+  endings: Math.max(0, num(p?.endings, 0)),
+  ascensionMax: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascensionMax, 0))),
+  ascension: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascension, 0))),
+  towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0) },
+});
+
 const writeProfile = (s: GameState): void => {
   try {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true, gold10: true,
     };
@@ -569,6 +580,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     maxInventorySlots: profile.maxInventorySlots,
     warehouse: profile.warehouse ?? [],
     warehouseGold: profile.warehouseGold ?? 0,
+    progress: profile.progress ?? sanitizeProgress(undefined),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
     quests: profile.quests,
@@ -666,7 +678,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [],
       });
@@ -848,7 +860,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         classHighestWave: { ...gs.classHighestWave, [s.hero]: Math.max(gs.classHighestWave[s.hero], wave) },
       };
       // Hero rank: 50% of the xp earned this run, banked even on death.
-      const rankXpGained = Math.round((summary.xpEarned || 0) * 0.5);
+      const rankXpGained = Math.round((summary.xpEarned || 0) * 0.5 * (1 + 0.12 * (runInfo.mode === 'ADVENTURE' ? runInfo.ascension : 0)));   // Ascension pays more rank xp
       let rank = s.heroRank, rankXp = s.rankXp + rankXpGained;
       while (rankXp >= rankXpNeeded(rank)) { rankXp -= rankXpNeeded(rank); rank++; }
       const rankUps = rank - s.heroRank;
@@ -981,6 +993,28 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     // ----------------------------------------------------------- items --
+    // ---- run modes: adventure (+ Ascension) / endless tower
+    startMode: (mode: RunMode) => {
+      runInfo.mode = mode;
+      runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
+      get().startGame();
+    },
+    setAscension: (lv) => {
+      const p = get().progress;
+      set({ progress: { ...p, ascension: Math.max(0, Math.min(p.ascensionMax, lv)) } });
+    },
+    completeEnding: () => {   // Malakar defeated: the ending; unlocks the next Ascension level
+      const p = get().progress, cleared = runInfo.mode === 'ADVENTURE' ? runInfo.ascension : 0;
+      const ascensionMax = Math.min(ASCENSION_MAX, Math.max(p.ascensionMax, cleared + 1));
+      set({ progress: { ...p, endings: p.endings + 1, ascensionMax } });
+      if (ascensionMax > p.ascensionMax) notify(`Ascension ${ascensionMax} unlocked!`, '#ffd36a', 'BOSS');
+    },
+    recordTowerFloor: (floor) => {
+      const s = get(), p = s.progress;
+      if (floor <= (p.towerBest[s.hero] ?? 0)) return false;
+      set({ progress: { ...p, towerBest: { ...p.towerBest, [s.hero]: floor } } });
+      return true;
+    },
     moveGold: (n) => {   // + deposit into the warehouse, - withdraw into the bag
       const s = get();
       const amt = n > 0 ? Math.min(Math.floor(n), s.gold) : -Math.min(Math.floor(-n), s.warehouseGold);
@@ -1443,7 +1477,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

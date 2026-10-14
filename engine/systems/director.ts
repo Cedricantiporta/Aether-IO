@@ -16,7 +16,7 @@ import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, type BossKind } from '../enemyDefs';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
-import { DIFFICULTY_MODS } from '../../constants';
+import { runMods } from '../runMods';
 import {
   BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, type BiomeDef,
 } from '../roomDefs';
@@ -242,7 +242,8 @@ function pushGroup(kind: EnemyKind, n: number, elite: boolean): void {
 /** Rolls the room's pack list (budget from the depth formula, capped) and splits it into bursts. */
 function rollPack(mult: number, elites: number, nBursts: number): void {
   const def = biomeOf(biome);
-  const mods = DIFFICULTY_MODS[useGameStore.getState().difficulty];
+  const mods = runMods(useGameStore.getState().difficulty);
+  elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
   let points = Math.min(waveBudget(depth) * mult, 140) * mods.spawn;
   let guard = 0;
   while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60) {

@@ -355,7 +355,7 @@ export function updatePlayerVillage(dt: number): void {
   let worldDir = false;
   if (go.on) {
     if (ml > 0) go.on = false;
-    else { const dx = go.x - p.pos.x, dz = go.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > go.r * 0.6) { mx = dx / d; mz = dz / d; ml = 1; worldDir = true; } }
+    else { const dx = go.x - p.pos.x, dz = go.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > (go.i >= go.n - 1 ? go.r * 0.6 : 0.3)) { mx = dx / d; mz = dz / d; ml = 1; worldDir = true; } }
   }
   if (ml > 0 && !worldDir) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }
   const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;

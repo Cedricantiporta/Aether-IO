@@ -12,7 +12,8 @@ import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
 import { useGameStore } from '../../store';
-import { DIFFICULTY_MODS, COLORS } from '../../constants';
+import { COLORS } from '../../constants';
+import { runMods, runInfo } from '../runMods';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
 import { onEnemyDeath, crabArmor } from './enemies';
@@ -353,7 +354,7 @@ export function killEnemy(e: Enemy): void {
   addUlt(e.boss ? 15 : e.elite ? 4 : 0.85);
 
   const st = useGameStore.getState();
-  const loot = DIFFICULTY_MODS[st.difficulty].loot;
+  const loot = runMods(st.difficulty).loot;
   const wave = world.director.wave;
   const px = e.pos.x, pz = e.pos.z;
 
@@ -411,6 +412,7 @@ const phoenixColor = COLORS.rarityLegendary;
 export function healPlayer(amount: number): void {
   const p = world.player;
   if (!p.alive || amount <= 0) return;
+  amount *= runInfo.ascension >= 4 ? runMods(useGameStore.getState().difficulty).heal : 1;   // Ascension 4: weaker healing
   const max = useGameStore.getState().stats.maxHealth;
   const before = p.hp;
   p.hp = Math.min(max, p.hp + amount);
@@ -489,7 +491,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   if (!isDot && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
 
   const barrier = st.skillLevels.barrier;
-  const mods = DIFFICULTY_MODS[st.difficulty];
+  const mods = runMods(st.difficulty);
   const def = st.stats.defense * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
   const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)));
   // Energy Shield only saves you when this hit would leave you under 20% HP.

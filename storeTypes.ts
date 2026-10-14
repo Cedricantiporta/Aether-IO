@@ -19,6 +19,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
+export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
@@ -109,6 +110,7 @@ export interface GameState {
   // ---- items
   inventory: Item[];
   maxInventorySlots: number;
+  progress: RunProgress;                            // endings cleared, ascension unlocked / chosen, endless tower best floor per class
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   materials: Record<Rarity, number>;
@@ -171,6 +173,10 @@ export interface GameState {
 
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
+  startMode: (mode: 'ADVENTURE' | 'TOWER') => void;   // start a run in this mode (sets engine runInfo, then startGame)
+  setAscension: (lv: number) => void;
+  completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
+  recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero
   moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
   deleteItems: (ids: string[]) => void;              // bag: permanently destroy items (multi-select delete)
   reorderItems: (list: 'inventory' | 'warehouse', items: Item[]) => void;   // manual order (drag within the bag / warehouse, Sort)

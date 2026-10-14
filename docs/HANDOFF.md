@@ -130,3 +130,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - **Cross Slash**: slow (speed 12, life 1.75 s) piercing X; width 2.3 + 0.4 per level (render scales with `p.radius`).
 - **Boss intro banner** smaller (band 5.4rem, title 1.9rem).
 - **Bag delete mode**: footer Delete -> tap items (red X) -> Delete (N) -> confirm (`deleteItems`).
+- **Street routing for click-to-walk**: `walkTo(x, z, act, tab, r, npc)` in village.ts builds waypoints along the "+" street network (south street z10, north street z-6, x0 axis) and does `act` on arrival (shop / castle / leave / npc / none). Quest tracker rows are clickable (`walkToQuest`): claim -> board, King -> castle / King, sell loot -> potion shop, else -> town gate.
+- Castle approach flower beds (PLANTERS).
+- WIP foundations: `ascension.ts`, `engine/runMods.ts` (difficulty x Ascension mods used by spawn / combat / healing), profile `progress` (endings, ascension, tower best) + store actions `startMode`, `setAscension`, `completeEnding`, `recordTowerFloor`.

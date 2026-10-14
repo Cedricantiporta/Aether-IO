@@ -1411,3 +1411,5 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .rpg-slot.is-del::after { content: '\2715'; position: absolute; top: .15rem; left: .3rem; font-size: .8rem; font-weight: 800; color: #ff8a8d; text-shadow: 0 1px 2px #000; }
 .bag-del-go { background: linear-gradient(180deg, #8a1f22, #4e0f12) !important; border-color: #e5484d !important; color: #ffd9da !important; }
 .bag-del-go:disabled { opacity: .45; }
+.qt-row[role="button"] { cursor: pointer; }
+.qt-row[role="button"]:hover { filter: brightness(1.18); }

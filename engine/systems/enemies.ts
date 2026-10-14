@@ -35,7 +35,7 @@ import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, comb
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys } from './bossSpecials';
 import { useGameStore } from '../../store';
-import { DIFFICULTY_MODS } from '../../constants';
+import { runMods } from '../runMods';
 import { updateBoss } from './bosses';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup } from './pickups';
@@ -201,13 +201,13 @@ export function spawnEnemy(
   const def = ENEMY_DEFS[kind];
   const d = world.director;
   const wave = d.wave;
-  const mods = DIFFICULTY_MODS[useGameStore.getState().difficulty];
+  const mods = runMods(useGameStore.getState().difficulty);
   const boss = isBossKind(kind);
   const wantsAffix = opts?.affix !== undefined && opts.affix !== 'NONE';
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.5 : 1.4); // normal & elites +40%; bosses -50%
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.5 * mods.bossHp : 1.4); // normal & elites +40%; bosses -50% (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
@@ -220,7 +220,7 @@ export function spawnEnemy(
   e.maxHp = Math.round(def.hp * hpMul);
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
-  e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1);
+  e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed;
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
   e.contactDamage = def.contactDamage * dmgMul;

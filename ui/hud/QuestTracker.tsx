@@ -4,6 +4,7 @@ import React from 'react';
 import { ScrollText } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { activeQuests, questDone, questNeedsKing, questTitle } from '../../quests';
+import { walkToQuest } from '../../engine/systems/village';
 
 export const QuestTracker: React.FC = () => {
   const quests = useGameStore((s) => s.quests);
@@ -14,7 +15,7 @@ export const QuestTracker: React.FC = () => {
       {act.map((q) => {
         const done = questDone(q), king = questNeedsKing(q), f = Math.min(1, q.progress / Math.max(1, q.target));
         return (
-          <div key={q.id} className={`qt-row ${done ? 'done' : ''} ${king ? 'king' : ''}`}>
+          <div key={q.id} className={`qt-row ${done ? 'done' : ''} ${king ? 'king' : ''}`} role="button" title="Click: auto-path" onClick={() => walkToQuest(q)}>
             <div className="qt-head"><ScrollText size={13} /><span>{done ? 'Ready to claim' : king ? (q.type === 'AUDIENCE' ? 'Talk to the King' : 'Report to the King') : 'Quest'}</span></div>
             <div className="qt-title">{questTitle(q)}</div>
             {q.type === 'AUDIENCE'
