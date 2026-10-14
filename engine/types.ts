@@ -398,6 +398,7 @@ export interface BossHud {
   hp: number;
   maxHp: number;
   phase: number;
+  sx: number; sy: number; onScreen: boolean;   // screen position (px) above the boss's head, written by CameraRig
 }
 
 export interface RunStats {

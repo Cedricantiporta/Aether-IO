@@ -98,6 +98,16 @@ export function CameraRig() {
     if (roll) cam.rotateZ(roll);
     cam.updateMatrixWorld();
 
+    // ---- boss bar anchor: screen position just above the boss's head (the HUD bar follows it)
+    {
+      const B = world.boss, id = world.director.bossId, e = id >= 0 ? world.enemies[id] : null;
+      if (B.active && e && e.active) {
+        _d.set(e.pos.x, 1.4 + e.scale * 1.55, e.pos.z).project(cam);
+        B.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
+        B.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; B.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      } else B.onScreen = false;
+    }
+
     // ---- visible ground rectangle (frustum ∩ y=0) + margin; used for culling, shadows and AI LOD
     const V = world.view;
     if (lobby || s.lobbyBlend > 0.01) {

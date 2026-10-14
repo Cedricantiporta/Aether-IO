@@ -25,6 +25,13 @@ export const BossBar: React.FC = () => {
       if (b.active) { s.trail = b.hp / Math.max(1, b.maxHp); s.name = ''; s.title = ''; }
     }
     if (!b.active) return;
+    // follow the boss: anchored above its head (clamped inside the screen)
+    if (root.current) {
+      const r = root.current, W = window.innerWidth, H = window.innerHeight, hw = r.offsetWidth / 2;
+      const x = Math.min(W - hw - 8, Math.max(hw + 8, b.sx)), y = Math.min(H - 40, Math.max(r.offsetHeight + 8, b.sy));
+      r.style.transform = `translate(${(x - hw).toFixed(1)}px, ${(y - r.offsetHeight).toFixed(1)}px)`;
+      r.style.opacity = b.onScreen ? '1' : '0.85';
+    }
     const f = Math.max(0, Math.min(1, b.hp / Math.max(1, b.maxHp)));
     const fs = f.toFixed(4);
     if (hp.current && fs !== s.hp) { s.hp = fs; hp.current.style.width = `${f * 100}%`; }
@@ -56,21 +63,21 @@ export const BossBar: React.FC = () => {
   });
 
   return (
-    <div ref={root} style={{ display: 'none', width: 'min(44rem, 52vw)' }}>
+    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: 'min(22rem, 46vw)', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar">
       <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
       <div className="text-center leading-none mb-1">
-        <div ref={name} className="rpg-title text-xl" style={{ color: '#ffb3aa' }} />
+        <div ref={name} className="rpg-title text-base" style={{ color: '#ffb3aa' }} />
         <div ref={title} className="rpg-label !text-[.65rem] mt-1" style={{ color: '#d9a8a0' }} />
       </div>
       <div className="relative flex items-center">
-        <div className="rpg-medallion z-10" style={{ width: '3rem', height: '3rem', ['--mc' as any]: '#8e1c1f', marginRight: '-.9rem' }}><Skull size={22} /></div>
-        <div className="rpg-bar flex-1" style={{ height: '1.5rem', borderWidth: 3, boxShadow: '0 0 0 2px #8b5a16, 0 0 0 4px #0d0703, inset 0 3px 8px rgba(0,0,0,.9), 0 6px 14px rgba(0,0,0,.6)' }}>
+        <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginRight: '-.6rem' }}><Skull size={14} /></div>
+        <div className="rpg-bar flex-1" style={{ height: '1.05rem', borderWidth: 2, boxShadow: '0 0 0 2px #8b5a16, 0 0 0 4px #0d0703, inset 0 3px 8px rgba(0,0,0,.9), 0 6px 14px rgba(0,0,0,.6)' }}>
           <div ref={trail} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'rgba(255,255,255,.9)' }} />
           <div ref={hp} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8a85,#d6252b 45%,#7e0f14)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.5)' }} />
           <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(0,0,0,.6) calc(10% - 2px) 10%)' }} />
           <div className="absolute inset-0 grid place-items-center rpg-num text-[.78rem] text-white text-outline"><span ref={val} /></div>
         </div>
-        <div className="rpg-medallion z-10" style={{ width: '3rem', height: '3rem', ['--mc' as any]: '#8e1c1f', marginLeft: '-.9rem' }}><Skull size={22} /></div>
+        <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginLeft: '-.6rem' }}><Skull size={14} /></div>
       </div>
       <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.42rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
         <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#9ad0ff,#3a7ad0)' }} />

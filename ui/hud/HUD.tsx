@@ -30,7 +30,6 @@ export const HUD: React.FC = () => {
     {/* top-centre */}
     <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
       <div className="pe"><RoomPlaque /></div>
-      <BossBar />
       <ComboMeter touch={device.touch} />
       <TargetFrame />
     </div>
@@ -50,6 +49,9 @@ export const HUD: React.FC = () => {
       <SkillRow><ActionBar /></SkillRow>
     </div>
     <ExpStrip />
+
+    {/* boss bar floats above the boss (positioned every frame) */}
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /></div>
 
     <Announcer />
   </>
