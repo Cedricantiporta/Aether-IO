@@ -8,7 +8,9 @@ import { ActionBar } from './ActionBar';
 import { VitalOrb, XpBar } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
 import { UltOverlay } from './UltOverlay';
+import { ComboMeter } from './ComboMeter';
 import { BlindOverlay } from './BlindOverlay';
+import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
 
 /** In-game HUD. Re-renders only on store changes; per-frame values go through refs. */
@@ -29,6 +31,7 @@ export const HUD: React.FC = () => {
     <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
       <div className="pe"><RoomPlaque /></div>
       <BossBar />
+      <ComboMeter touch={device.touch} />
       <TargetFrame />
     </div>
 
