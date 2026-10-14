@@ -152,7 +152,11 @@ void main(){
     float sparkle = step(0.992, hash(floor(q * 18.0 + floor(uTime * 2.0)))) ;
     vec3 c = mix(vec3(0.10, 0.34, 0.62), vec3(0.55, 0.85, 1.0), 0.18 + streak + rip * 0.1);
     float edge = smoothstep(0.78, 0.9, rr) * body;
-    col = vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62);
+    // quicksand (sand-coloured instance tint): a slow sandy swirl that darkens toward the sinking centre
+    float qs = step(0.25, vC.r - vC.b);
+    float swirl = 0.5 + 0.5 * sin(atan(q.y, q.x) * 3.0 + rr * 14.0 - uTime * 1.2 + n * 5.0);
+    vec3 sand = vC * (0.62 + 0.3 * n + 0.12 * swirl) * mix(0.55, 1.0, smoothstep(0.0, 0.7, rr));
+    col = mix(vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62), vec4(sand + edge * vec3(0.12, 0.09, 0.05), body * 0.9), qs);
   } else {
     float vent = 0.3;
     float rr = r;

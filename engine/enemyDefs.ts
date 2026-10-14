@@ -120,7 +120,30 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Fire Imp', hp: 70, speed: 5.4, radius: 0.55, scale: 0.9, contactDamage: 11, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xff6a1a, knockResist: 0, armor: 5,
   },
+  // ---- stage monsters (placed by the room layout, not rolled from the roster)
+  GOBLIN_ARCHER: {
+    name: 'Goblin Archer', hp: 60, speed: 0, radius: 1.35, scale: 1, contactDamage: 0, projectileDamage: 11,
+    xp: 9, gold: 3, cost: 0, minWave: 1, weight: 0, color: 0x9a6a2a, knockResist: 1, armor: 10,
+  },
+  LAKE_HYDRA: {
+    name: 'Lurking Hydra', hp: 150, speed: 0, radius: 1.3, scale: 0.62, contactDamage: 12, projectileDamage: 10,
+    xp: 16, gold: 5, cost: 0, minWave: 1, weight: 0, color: 0x3f8f6a, knockResist: 1, armor: 20,
+  },
+  // ---- roster monsters
+  SCARAB: {
+    name: 'Sand Scarab', hp: 11, speed: 6.6, radius: 0.42, scale: 0.75, contactDamage: 4, projectileDamage: 0,
+    xp: 2, gold: 1, cost: 0.6, minWave: 1, weight: 6, color: 0x2fa8a0, knockResist: 0, armor: 0,
+  },
+  SHIELDBEARER: {
+    name: 'Shieldbearer', hp: 190, speed: 2.2, radius: 0.85, scale: 1.3, contactDamage: 6, projectileDamage: 0,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 0.7, armor: 70,
+  },
 };
+
+/** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */
+export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA'; }
+/** Swarm kinds: rolled in big packs. */
+export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB'; }
 
 export type BossKind =
   | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_VOID';
@@ -151,6 +174,7 @@ export const MINI_BOSSES: Record<string, { kind: EnemyKind; name: string; title:
   BEHEMOTH: { kind: 'CRYSTAL_GOLEMITE', name: 'Crystal Behemoth', title: 'Shard Colossus' },
   TUSK: { kind: 'BOAR', name: 'Old Tusk', title: 'Terror of the Fields' },
   SHELLBACK: { kind: 'ROCK_CRAB', name: 'Shellback', title: 'Quarry Titan' },
+  PHALANX: { kind: 'SHIELDBEARER', name: 'Phalanx Captain', title: 'Bronze Wall' },
 };
 
 /** Weak kinds (the monster-trick system lets them cast at most once per life). */
@@ -177,7 +201,7 @@ export function waveBudget(wave: number): number {
 }
 /** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
 export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
-  GOBLIN: [0.30, 10], BANDIT: [0.35, 10], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
+  GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
 };
 /** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
 export function armorFor(kind: EnemyKind, wave: number, elite: boolean): number {

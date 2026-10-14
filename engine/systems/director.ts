@@ -14,7 +14,8 @@ import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, type BossKind } from '../enemyDefs';
+import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
@@ -66,6 +67,10 @@ const burstEnd = [0, 0, 0, 0];
 const burstSize = [0, 0, 0, 0];
 let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
+// stage monsters placed by the room layout (goblin archers on their towers, lake hydras): spawned with the first burst
+const fixedKind: EnemyKind[] = new Array(MAX_FIXED * 2).fill('GOBLIN_ARCHER');
+const fixedX = new Float32Array(MAX_FIXED * 2), fixedZ = new Float32Array(MAX_FIXED * 2);
+let fixedN = 0;
 let miniKind: EnemyKind = 'BOAR';
 let miniName = '', miniTitle = '';
 let miniIsBoss = false;
@@ -122,7 +127,7 @@ export function resetDirector(): void {
   r.station.kind = 'NONE';
   world.boss.active = false;
   world.enemyGrid.clear();
-  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; fixedN = 0;
   rewardT = -1; vacuumT = 0; shrineBonus = false;
   clearMerchantStock();
 }
@@ -193,8 +198,8 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   clearTransient();
 
   const seed = (Math.random() * 4294967296) >>> 0;
-  const R = roomRadius(p.type, seed);
-  buildRoom(b, p.type, R, seed);
+  const R = roomRadius(p.type, seed, b, idx);
+  buildRoom(b, p.type, R, seed, idx);
   world.room.radius = R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
 
@@ -215,12 +220,16 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.aliveCount = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
   unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1;
-  groupIdx = 0; inGroup = 0;
+  groupIdx = 0; inGroup = 0; fixedN = 0;
 
   rollRoomSpawns(p.type);
+  if (p.type === 'COMBAT' || p.type === 'ELITE' || p.type === 'TREASURE') {
+    for (let i = 0; i < feat.nTowers; i++) { fixedKind[fixedN] = 'GOBLIN_ARCHER'; fixedX[fixedN] = feat.tx[i]; fixedZ[fixedN] = feat.tz[i]; fixedN++; }
+    for (let i = 0; i < feat.nHydras; i++) { fixedKind[fixedN] = 'LAKE_HYDRA'; fixedX[fixedN] = feat.hx[i]; fixedZ[fixedN] = feat.hz[i]; fixedN++; }
+  }
   if (kind === 'MERCHANT') rollMerchantStock(depth);
   else clearMerchantStock();
-  r.enemiesLeft = unitN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
+  r.enemiesLeft = unitN + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
 
   st.setWave(depth);
   const boss = p.type === 'BOSS';
@@ -278,12 +287,13 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const def = biomeOf(biome);
   const mods = runMods(useGameStore.getState().difficulty);
   elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
-  let points = Math.min(waveBudget(depth) * mult, 140) * mods.spawn;
+  const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
+  let points = Math.min(waveBudget(depth) * mult * roomy, 160) * mods.spawn;
   let guard = 0;
   while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60) {
     const kind = rosterPick(def, Math.min(points, 12), 0);
     const cost = ENEMY_DEFS[kind].cost;
-    let n = kind === 'BAT' ? 4 + Math.floor(Math.random() * 3) : Math.random() < 0.65 ? Math.max(1, Math.round((3 + Math.random() * 3) / Math.sqrt(cost))) : 1;
+    let n = kind === 'SCARAB' ? 7 + Math.floor(Math.random() * 5) : isSwarm(kind) ? 4 + Math.floor(Math.random() * 3) : Math.random() < 0.65 ? Math.max(1, Math.round((3 + Math.random() * 3) / Math.sqrt(cost))) : 1;
     n = Math.max(1, Math.min(n, Math.floor(points / cost) || 1));
     pushGroup(kind, n, false);
     points -= n * cost;
@@ -426,6 +436,10 @@ function tickSpawns(dt: number): void {
     if (m.t >= m.dur) { m.active = false; materialise(m.kind, m.x, m.z, m.elite, m.tag); }
   }
   if (roomT < FIRST_BURST_AT) return;
+  if (fixedN > 0) {   // archers climb their towers, hydras surface (telegraphed like everything else)
+    for (let i = 0; i < fixedN; i++) placeMarker(fixedKind[i], fixedX[i], fixedZ[i], false, 1.1, 0);
+    fixedN = 0;
+  }
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
@@ -473,33 +487,32 @@ const at = (x: number, z: number): Vector3 => tmp2.set(x, 0, z);
 
 function grantReward(kind: RewardKind, bonus: number): void {
   const st = useGameStore.getState();
-  const R = world.room.radius;
-  const cz = -R * 0.08;
+  const sx = world.room.station.x, cz = world.room.station.z;   // the station spot: always kept clear (never in a lake / river)
   switch (kind) {
     case 'CARD': st.openWaveReward(Math.random() < (plan.type === 'COMBAT' ? 0.12 : 0.4)); break;
     case 'GOLD': {
       const total = Math.round((70 + depth * 20) * (plan.type === 'COMBAT' ? 1 : 1.4));
-      for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(0, cz), Math.round(total / 6));
+      for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(sx, cz), Math.round(total / 6));
       break;
     }
     case 'SHARDS': {
       const n = 4 + Math.floor(depth / 6);
-      for (let i = 0; i < n; i++) spawnPickup('SHARD', at(0, cz), shardRarity(depth));
+      for (let i = 0; i < n; i++) spawnPickup('SHARD', at(sx, cz), shardRarity(depth));
       break;
     }
     case 'ITEM': {
       const it = st.rollItemDrop(rarityForDepth(depth, bonus, world.run.bossKills));
-      if (it) spawnPickup('ITEM', at(0, cz), 0, it);
+      if (it) spawnPickup('ITEM', at(sx, cz), 0, it);
       break;
     }
     case 'HEAL': {
       const v = Math.round(st.stats.maxHealth * 0.2);
-      for (let i = 0; i < 3; i++) spawnPickup('HEALTH', at(0, cz), v);
+      for (let i = 0; i < 3; i++) spawnPickup('HEALTH', at(sx, cz), v);
       break;
     }
     case 'GEMS': {
       const n = 3 + Math.floor(depth / 5);
-      for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, cz), Math.ceil(n / 3));
+      for (let i = 0; i < 3; i++) spawnPickup('GEM', at(sx, cz), Math.ceil(n / 3));
       break;
     }
     default: break;
@@ -577,8 +590,8 @@ function onCleared(): void {
   if (world.room.shrineOn) {
     // challenge bonus on top of the card
     const it = st.rollItemDrop(rarityForDepth(depth, 0.3, world.run.bossKills));
-    if (it) spawnPickup('ITEM', at(0, -world.room.radius * 0.08), 0, it);
-    for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, -world.room.radius * 0.08), 2 + Math.floor(depth / 6));
+    if (it) spawnPickup('ITEM', at(world.room.station.x, world.room.station.z), 0, it);
+    for (let i = 0; i < 3; i++) spawnPickup('GEM', at(world.room.station.x, world.room.station.z), 2 + Math.floor(depth / 6));
     shrineBonus = false;
     showPortals();
   } else openPortals();
@@ -596,7 +609,7 @@ function tickFight(dt: number): void {
   roomT += dt;
   tickSpawns(dt);
   const markers = activeMarkers();
-  r.enemiesLeft = d.aliveCount + markers + (unitN - nextUnit) + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
+  r.enemiesLeft = d.aliveCount + markers + (unitN - nextUnit) + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
 
   if (plan.type === 'BOSS') {
     if (bossSpawned && bossDefeated()) {
@@ -605,9 +618,9 @@ function tickFight(dt: number): void {
     }
     return;
   }
-  const idle = nextUnit >= unitN && !miniPending && markers === 0 && d.aliveCount === 0;
+  const idle = nextUnit >= unitN && fixedN === 0 && !miniPending && markers === 0 && d.aliveCount === 0;
   if (r.shrineOn) { if (roomT > 1.2 && idle && unitN > 0) onCleared(); return; }
-  if (roomT > (unitN === 0 && !miniPending ? 0.6 : 1.2) && idle) onCleared();
+  if (roomT > (unitN === 0 && !miniPending && fixedN === 0 ? 0.6 : 1.2) && idle) onCleared();
 }
 
 function towerCleared(): void {

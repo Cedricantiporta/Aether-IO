@@ -4,7 +4,10 @@ import { GATE, WALL_RUNS, WALL_TOWERS } from '../../engine/townData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
+import { feat, riverPoint } from '../../engine/roomFeatures';
 import { useRaf } from '../hooks/useRaf';
+
+const mmPt: [number, number] = [0, 0];
 
 const SIZE = 196; // css px
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
@@ -30,6 +33,22 @@ export const Minimap: React.FC = () => {
     g.addColorStop(0, '#2f4a2a'); g.addColorStop(.8, '#223a22'); g.addColorStop(1, '#14231a');
     ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
     ctx.translate(-world.player.pos.x * k, -world.player.pos.z * k);   // world content follows the hero (hero at the centre)
+    // stage liquids (lakes, river / lava / chasm band) and their bridges
+    if (room && (feat.river || feat.nLakes > 0)) {
+      const lc = feat.liquid === 'LAVA' ? '#e0581a' : feat.liquid === 'CHASM' ? '#07050c' : '#2f7fb0';
+      ctx.fillStyle = lc; ctx.strokeStyle = lc;
+      for (let i = 0; i < feat.nLakes; i++) { ctx.beginPath(); ctx.arc(cx + feat.lx[i] * k, cx + feat.lz[i] * k, feat.lr[i] * k, 0, Math.PI * 2); ctx.fill(); }
+      if (feat.river) {
+        ctx.lineWidth = feat.hw * 2 * k; ctx.lineCap = 'butt'; ctx.beginPath();
+        for (let s = -rad - 6, first = true; s <= rad + 6; s += 2, first = false) { riverPoint(s, 0, mmPt); const x = cx + mmPt[0] * k, y = cx + mmPt[1] * k; if (first) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.stroke();
+        ctx.strokeStyle = '#c9a46a'; ctx.lineWidth = feat.bw * 2 * k;
+        for (let i = 0; i < feat.nb; i++) {
+          riverPoint(feat.bridgeS[i], -feat.hw - 0.6, mmPt); ctx.beginPath(); ctx.moveTo(cx + mmPt[0] * k, cx + mmPt[1] * k);
+          riverPoint(feat.bridgeS[i], feat.hw + 0.6, mmPt); ctx.lineTo(cx + mmPt[0] * k, cx + mmPt[1] * k); ctx.stroke();
+        }
+      }
+    }
     // arena edge
     ctx.strokeStyle = 'rgba(233,185,73,.55)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
     ctx.beginPath();

@@ -7,7 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
-  CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RingGeometry, SRGBColorSpace,
+  CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
 } from 'three';
 import { Stars } from '@react-three/drei';
 import { runInfo } from '../engine/runMods';
@@ -15,7 +15,9 @@ import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, 
 import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
-import { BIOMES, biomeOf, portalLabel } from '../engine/roomDefs';
+import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
+import { feat, inLiquid, riverD } from '../engine/roomFeatures';
+import { RoomWater } from './RoomWater';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
@@ -25,21 +27,131 @@ const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.
 const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
 
 // ------------------------------------------------------------------ ground ---
+/** Tileable detail textures per ground style (built once each): [albedo multiplier, emissive glow or null]. */
+const detailTex: Partial<Record<GroundStyle, [CanvasTexture, CanvasTexture | null]>> = {};
+function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null] {
+  const hit = detailTex[style]; if (hit) return hit;
+  const N = 512, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
+  const c = mk(), g = c.getContext('2d')!;
+  const rnd = mulberry32(0xd37a1 + style.length * 977);
+  let glowC: HTMLCanvasElement | null = null;
+  const speck = (n: number, a: number, b: number, light: number) => { for (let i = 0; i < n; i++) { const v = a + rnd() * (b - a); g.fillStyle = rnd() < light ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${v})`; const s = 1 + rnd() * 2.5; g.fillRect(rnd() * N, rnd() * N, s, s); } };
+  /** Jittered-grid crack network (wraps seamlessly). */
+  const cracks = (ctx: CanvasRenderingContext2D, cells: number, style2: string, w: number) => {
+    const P: [number, number][][] = [];
+    for (let y = 0; y < cells; y++) { P.push([]); for (let x = 0; x < cells; x++) P[y].push([(x + 0.2 + rnd() * 0.6) * (N / cells), (y + 0.2 + rnd() * 0.6) * (N / cells)]); }
+    ctx.strokeStyle = style2; ctx.lineWidth = w; ctx.lineCap = 'round';
+    for (let y = 0; y < cells; y++) for (let x = 0; x < cells; x++) {
+      const a = P[y][x];
+      for (const [dx, dy] of [[1, 0], [0, 1], [1, (x + y) % 2 ? 1 : -1]]) {
+        const bx = (x + dx + cells) % cells, by = (y + dy + cells) % cells;
+        const b = P[by][bx];
+        const tx = b[0] + (x + dx >= cells ? N : x + dx < 0 ? -N : 0), ty = b[1] + (y + dy >= cells ? N : y + dy < 0 ? -N : 0);
+        for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) {
+          ctx.beginPath(); ctx.moveTo(a[0] + ox, a[1] + oy);
+          const mx = (a[0] + tx) / 2 + (rnd() - 0.5) * 10, my = (a[1] + ty) / 2 + (rnd() - 0.5) * 10;
+          ctx.lineTo(mx + ox, my + oy); ctx.lineTo(tx + ox, ty + oy); ctx.stroke();
+        }
+      }
+    }
+  };
+  switch (style) {
+    case 'MARBLE': {   // 2 x 2 polished slabs with grout, veins and chips
+      const T = N / 2;
+      for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+        const v = 225 + Math.round(rnd() * 25), warm = Math.round(rnd() * 8);
+        g.fillStyle = `rgb(${v},${v - 3 - warm},${v - 10 - warm})`; g.fillRect(tx * T, ty * T, T, T);
+        g.save(); g.beginPath(); g.rect(tx * T + 3, ty * T + 3, T - 6, T - 6); g.clip();
+        for (let k = 0; k < 5; k++) {   // veins
+          g.strokeStyle = `rgba(110,105,100,${0.12 + rnd() * 0.2})`; g.lineWidth = 0.8 + rnd() * 1.6;
+          g.beginPath(); let x = tx * T + rnd() * T, y = ty * T; g.moveTo(x, y);
+          for (let s = 0; s < 8; s++) { x += (rnd() - 0.4) * 50; y += T / 8; g.lineTo(x, y); }
+          g.stroke();
+        }
+        g.restore();
+        g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(tx * T + 4, ty * T + 4, T - 8, 3);
+      }
+      g.strokeStyle = 'rgba(60,52,44,0.85)'; g.lineWidth = 5;
+      for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(i * T, 0); g.lineTo(i * T, N); g.stroke(); g.beginPath(); g.moveTo(0, i * T); g.lineTo(N, i * T); g.stroke(); }
+      g.strokeStyle = 'rgba(70,60,50,0.35)'; g.lineWidth = 1.2;
+      for (let k = 0; k < 3; k++) { g.beginPath(); let x = rnd() * N, y = rnd() * N; g.moveTo(x, y); for (let s = 0; s < 6; s++) { x += (rnd() - 0.5) * 60; y += (rnd() - 0.5) * 60; g.lineTo(x, y); } g.stroke(); }
+      speck(1500, 0.03, 0.08, 0.5);
+      break;
+    }
+    case 'SAND': {   // grain + tiny wind ripples
+      g.fillStyle = '#f0f0f0'; g.fillRect(0, 0, N, N);
+      for (let y = 0; y < N; y += 6) { g.strokeStyle = `rgba(150,110,60,${0.06 + rnd() * 0.05})`; g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= N; x += 16) g.lineTo(x, y + Math.sin((x / N) * Math.PI * 4 + y * 0.05) * 3); g.stroke(); }
+      speck(5000, 0.05, 0.14, 0.45);
+      break;
+    }
+    case 'SNOW': g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, N, N); speck(3000, 0.04, 0.1, 0.4); for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(rnd() * N, rnd() * N, 1.5, 1.5); } break;
+    case 'BASALT': {   // dark cracked plates; the cracks glow (emissive map derived below)
+      g.fillStyle = '#d8d0cc'; g.fillRect(0, 0, N, N); speck(4000, 0.06, 0.18, 0.3);
+      cracks(g, 6, 'rgba(20,10,8,0.95)', 5);
+      glowC = mk();
+      break;
+    }
+    case 'VOID': {   // faint hex-ish rune grid; the lines glow violet
+      g.fillStyle = '#e8e4f0'; g.fillRect(0, 0, N, N); speck(2500, 0.05, 0.14, 0.4);
+      glowC = mk(); const gg = glowC.getContext('2d')!; gg.fillStyle = '#000'; gg.fillRect(0, 0, N, N);
+      gg.strokeStyle = 'rgba(150,100,255,0.55)'; gg.lineWidth = 2.2;
+      const st = N / 4;
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const cx = (x + (y % 2) * 0.5) * st, cy = y * st + st / 2; gg.beginPath(); for (let k = 0; k <= 6; k++) { const a = (k / 6) * Math.PI * 2 + Math.PI / 6; gg.lineTo(cx + Math.cos(a) * st * 0.42, cy + Math.sin(a) * st * 0.42); } gg.stroke(); }
+      for (let i = 0; i < 160; i++) { gg.fillStyle = `rgba(200,170,255,${0.3 + rnd() * 0.6})`; gg.fillRect(rnd() * N, rnd() * N, 1.5, 1.5); }
+      break;
+    }
+    default: {   // grass: blade speckle, a few clover dots
+      g.fillStyle = '#ececec'; g.fillRect(0, 0, N, N);
+      for (let i = 0; i < 6000; i++) { const x = rnd() * N, y = rnd() * N; g.strokeStyle = rnd() < 0.5 ? `rgba(255,255,255,${0.08 + rnd() * 0.1})` : `rgba(0,30,0,${0.06 + rnd() * 0.1})`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 4); g.stroke(); }
+    }
+  }
+  if (style === 'BASALT' && glowC) {
+    // glow layer = the crack mask of the albedo, hot orange on black
+    const gg = glowC.getContext('2d')!;
+    const img = g.getImageData(0, 0, N, N), out = gg.createImageData(N, N);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const k = img.data[i] < 70 ? 1 : 0;
+      out.data[i] = 255 * k; out.data[i + 1] = 120 * k; out.data[i + 2] = 30 * k; out.data[i + 3] = 255;
+    }
+    gg.putImageData(out, 0, 0);
+  }
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4;
+  let e: CanvasTexture | null = null;
+  if (glowC) { e = new CanvasTexture(glowC); e.colorSpace = SRGBColorSpace; e.wrapS = e.wrapT = RepeatWrapping; }
+  detailTex[style] = [t, e];
+  return [t, e];
+}
+/** World units covered by one repeat of the detail texture. */
+const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 7, MARBLE: 6, SAND: 9, SNOW: 8, BASALT: 10, VOID: 9 };
+
+/** Distance outside the nearest liquid edge (negative = inside the liquid). */
+function liquidEdge(x: number, z: number): number {
+  let e = 1e9;
+  for (let i = 0; i < feat.nLakes; i++) e = Math.min(e, Math.hypot(x - feat.lx[i], z - feat.lz[i]) - feat.lr[i]);
+  if (feat.river) e = Math.min(e, Math.abs(riverD(x, z)) - feat.hw);
+  return e;
+}
+
 function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: number; boss: boolean }) {
   const { geo, mat, tufts, slabs } = useMemo(() => {
     const def = biomeOf(biome);
-    const S = 2 * (shape.maxR + 44), seg = 128;
+    const vr = variantOf(def, seed);
+    const style = def.style;
+    const S = 2 * (shape.maxR + 44), seg = 160;
     const g = new PlaneGeometry(S, S, seg, seg);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
     const col = new Float32Array(pos.count * 3);
-    const g0 = _c.set(def.ground[0]), g1 = _c2.set(def.ground[1]), edge = _c3.set(def.edge), rim = _c4.set('#8c877c').lerp(g0, 0.4);
+    const ground = vr?.ground ?? def.ground, patch = vr?.patch ?? def.patch;
+    const g0 = _c.set(ground[0]), g1 = _c2.set(ground[1]), edge = _c3.set(vr?.edge ?? def.edge), rim = _c4.set(style === 'MARBLE' ? '#9a8f7c' : style === 'SAND' ? '#b08a58' : '#8c877c').lerp(g0, 0.4);
     const so = (seed % 997) * 0.37;
-    const PATCH = [['#5fb83e', '#b7c45a', '#8f7448'], ['#3a8a3a', '#7d8a3e', '#5a4630'], ['#5c6e34', '#7e7a44', '#4a3e26'], ['#e8f2fb', '#b9c7d4', '#9aa6b2'], ['#5a3222', '#8a4a26', '#2a1a14'], ['#33245a', '#4e2c7a', '#16102a']][((biome % 6) + 6) % 6];
-    const lush = new Color(PATCH[0]), dry = new Color(PATCH[1]), dirt = new Color(PATCH[2]);
-    const stone = new Color(biome % 6 === 4 ? '#6e625c' : biome % 6 === 5 ? '#5e5878' : '#a39d90'), stoneC = new Color();
-    const path = !boss && (seed % 5) !== 0;
-    const out = new Color();
+    const lush = new Color(patch[0]), dry = new Color(patch[1]), dirt = new Color(patch[2]);
+    const stone = new Color(def.stone), stoneC = new Color();
+    const bank = new Color(style === 'BASALT' ? '#1a0e0a' : style === 'SAND' ? (feat.liquid === 'CHASM' ? '#a87440' : '#8a7a4a') : style === 'SNOW' ? '#9ab4c8' : style === 'MARBLE' ? '#8a8272' : style === 'VOID' ? '#160f2a' : '#4a5a2a');
+    const hasLiquid = feat.river || feat.nLakes > 0;
+    const path = !boss && (seed % 5) !== 0 && style !== 'MARBLE' && style !== 'VOID';
+    const out = new Color(), tmpC = new Color();
+    const duneA = (seed % 360) * 0.0174, dux = Math.cos(duneA), duz = Math.sin(duneA);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       const r = Math.hypot(x, z);
@@ -47,28 +159,59 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
       const u = r - (shapeLimit(x, z) - 1);
       const n1 = fbm(x * 0.06 + so, z * 0.06 - so, 3), n2 = vnoise(x * 0.9 + so, z * 0.9);
       out.copy(g0).lerp(g1, sstep(0.3, 0.72, n1)).multiplyScalar(0.9 + n2 * 0.2);
-      // worn patches of the second tone
       out.lerp(g1, sstep(0.62, 0.78, fbm(x * 0.14 - so, z * 0.14 + so, 2)) * 0.35);
-      // big colour zones: lush / dry grass and bare-dirt patches (more variety across the room)
       const zA = fbm(x * 0.055 - so * 1.7, z * 0.055 + so, 3), zB = fbm(x * 0.07 + so * 2.3, z * 0.07 - so * 0.6, 3);
-      out.lerp(lush, sstep(0.48, 0.62, zA) * 0.85);
-      out.lerp(dry, sstep(0.5, 0.64, zB) * 0.8);
-      out.lerp(dirt, sstep(0.64, 0.74, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.85);
+      if (style === 'MARBLE') {
+        // slab-to-slab tone (3-unit slabs), worn darker lanes, roots / moss creeping in from the cracks
+        const tx = Math.floor(x / 3), tz = Math.floor(z / 3);
+        out.multiplyScalar(0.9 + vnoise(tx * 3.7 + so, tz * 5.3) * 0.16);
+        out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45);
+        out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75);
+        const lane = Math.abs(x * -shape.fz + z * shape.fx);
+        if (!boss) out.lerp(tmpC.set('#7a2a24'), sstep(2.6, 2.2, lane) * sstep(0.5, -1.5, u) * 0.55);   // faded processional carpet
+      } else if (style === 'SAND') {
+        // dunes: long wind ripples bending with the noise, troughs darker
+        const w = (x * dux + z * duz) * 0.42 + fbm(x * 0.03 + so, z * 0.03, 3) * 6;
+        const rip = Math.sin(w) * 0.5 + 0.5;
+        out.multiplyScalar(0.86 + rip * 0.2);
+        out.lerp(dry, sstep(0.5, 0.66, zB) * 0.6);
+        out.lerp(dirt, sstep(0.66, 0.76, zA) * 0.5);
+      } else if (style === 'SNOW') {
+        out.lerp(dry, sstep(0.5, 0.64, zB) * 0.6);
+        out.lerp(tmpC.set('#a8d4f0'), sstep(0.66, 0.74, zA) * 0.7);   // blue ice patches
+        out.lerp(dirt, sstep(0.7, 0.8, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.6);   // rock poking through
+      } else if (style === 'BASALT') {
+        out.lerp(lush, sstep(0.48, 0.62, zA) * 0.6);
+        out.lerp(dirt, sstep(0.55, 0.7, zB) * 0.8);
+        out.lerp(tmpC.set('#7a3a1a'), sstep(0.68, 0.76, fbm(x * 0.09 + so, z * 0.09, 3)) * 0.6);   // scorched rust
+      } else if (style === 'VOID') {
+        out.lerp(lush, sstep(0.48, 0.62, zA) * 0.7);
+        out.lerp(dirt, sstep(0.6, 0.72, zB) * 0.8);
+      } else {
+        // big colour zones: lush / dry grass and bare-dirt patches (more variety across the room)
+        out.lerp(lush, sstep(0.48, 0.62, zA) * 0.85);
+        out.lerp(dry, sstep(0.5, 0.64, zB) * 0.8);
+        out.lerp(dirt, sstep(0.64, 0.74, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.85);
+      }
       // stone path from the arrival side to the exits (most non-boss rooms), gently winding
       if (path) {
         const t = x * shape.fx + z * shape.fz, l = x * -shape.fz + z * shape.fx;
         const cl = Math.sin(t * 0.11 + so) * 2.6 + Math.sin(t * 0.27 - so) * 0.8;
         const w = 1.9 + vnoise(t * 0.2 + so, 3.1) * 0.9;
         const pd = Math.abs(l - cl) - w;
-        const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u);
+        const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u) * (style === 'SAND' ? 0.55 : 1);
         if (k > 0) {
-          // cobbles: cell noise darkens the gaps between stones
           const cx = x * 1.25, cz = z * 1.25, fx = cx - Math.floor(cx), fz = cz - Math.floor(cz) + (Math.floor(cx) % 2) * 0.5;
           const gap = Math.min(fx, 1 - fx, fz - Math.floor(fz), 1 - (fz - Math.floor(fz)));
           stoneC.copy(stone).multiplyScalar(0.85 + vnoise(Math.floor(cx) * 3.1, Math.floor(cz + (Math.floor(cx) % 2) * 0.5) * 2.7) * 0.3);
           if (gap < 0.09) stoneC.multiplyScalar(0.62);
           out.lerp(stoneC, k * 0.92);
         }
+      }
+      // shore / bank around liquids (wet mud, scorched rock, a canyon lip)
+      if (hasLiquid) {
+        const le = liquidEdge(x, z);
+        if (le < 2.6) out.lerp(bank, sstep(2.6, 0.2, le) * (feat.liquid === 'LAVA' ? 0.9 : 0.7));
       }
       // stone rim just inside the walls
       out.lerp(rim, sstep(-1.4, -0.2, u) * 0.55);
@@ -78,38 +221,54 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
         out.lerp(g1, sstep(0.9, 0.2, rr) * 0.6).multiplyScalar(1 + sstep(0.5, 0.1, rr) * 0.25);
         out.multiplyScalar(1 + sstep(R * 0.2, 0, r) * 0.2);
       }
-      // floor beyond the walls
-      const e = sstep(0.2, 3.2, u);
+      // floor beyond the walls (marble halls: dark interior void)
+      const e = sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
       col[i * 3] = out.r; col[i * 3 + 1] = out.g; col[i * 3 + 2] = out.b;
     }
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
     g.computeVertexNormals();
-    const m = new MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
+    const [dTex, eTex] = groundDetail(style);
+    const rep = S / DETAIL_PERIOD[style];
+    const map = dTex.clone(); map.repeat.set(rep, rep); map.needsUpdate = true;
+    let emap: CanvasTexture | null = null;
+    if (eTex) { emap = eTex.clone(); emap.repeat.set(rep, rep); emap.needsUpdate = true; }
+    const m = new MeshStandardMaterial({
+      vertexColors: true, map, roughness: style === 'MARBLE' ? 0.55 : style === 'SNOW' ? 0.8 : 0.96, metalness: 0,
+      emissiveMap: emap, emissive: new Color(emap ? (style === 'BASALT' ? '#ff6a1a' : '#9a6aff') : '#000000'), emissiveIntensity: emap ? (style === 'BASALT' ? 1.1 : 0.7) : 0,
+    });
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = 45; // sparse clutter (user: fewer small bushes)
+    const N = style === 'MARBLE' ? 26 : 45; // sparse clutter (user: fewer small bushes)
     const tg = new GB([0.8, 1.1]);
-    tg.ico(0.2, [0, 0.08, 0], '#ffffff', [1.3, 0.55, 1.1], 0);
-    tg.cone(0.07, 0.38, 4, [0.12, 0.19, 0.05], '#ffffff', [0.2, 0, 0.3]);
-    tg.cone(0.07, 0.3, 4, [-0.1, 0.15, -0.06], '#ffffff', [-0.2, 0, -0.3]);
+    if (style === 'MARBLE') { tg.box(0.5, 0.18, 0.4, [0, 0.09, 0], '#ffffff', [0, 0.4, 0.1]); tg.box(0.3, 0.14, 0.3, [0.4, 0.07, 0.2], '#ffffff', [0.2, 1, 0]); }
+    else if (style === 'SAND') { tg.ico(0.22, [0, 0.06, 0], '#ffffff', [1.4, 0.4, 1.1], 0); tg.cone(0.04, 0.4, 3, [0.15, 0.2, 0], '#ffffff', [0.3, 0, 0.4]); tg.cone(0.04, 0.35, 3, [-0.1, 0.18, 0.05], '#ffffff', [-0.3, 0, -0.4]); }
+    else {
+      tg.ico(0.2, [0, 0.08, 0], '#ffffff', [1.3, 0.55, 1.1], 0);
+      tg.cone(0.07, 0.38, 4, [0.12, 0.19, 0.05], '#ffffff', [0.2, 0, 0.3]);
+      tg.cone(0.07, 0.3, 4, [-0.1, 0.15, -0.06], '#ffffff', [-0.2, 0, -0.3]);
+    }
     const tgeo = tg.build();
     const tm = new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     const inst = new InstancedMesh(tgeo, tm, N);
     const rnd = mulberry32(seed ^ 0x51ed);
     const o = new Object3D();
     const cc = new Color();
+    let nt = 0;
     for (let i = 0; i < N; i++) {
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shapeLimit(Math.cos(a), Math.sin(a)) - 2);
-      o.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (hasLiquid && inLiquid(x, z, 0.4)) continue;
+      o.position.set(x, 0, z);
       o.rotation.set(0, rnd() * 6.28, 0);
       const s = 0.6 + rnd() * 1.3;
       o.scale.set(s, s * (0.8 + rnd() * 0.6), s);
       o.updateMatrix();
-      inst.setMatrixAt(i, o.matrix);
-      cc.set(def.ground[rnd() < 0.5 ? 0 : 1]).multiplyScalar(0.55 + rnd() * 0.7).offsetHSL(0, 0, rnd() < 0.15 ? 0.2 : 0);
-      inst.setColorAt(i, cc);
+      inst.setMatrixAt(nt, o.matrix);
+      cc.set(style === 'MARBLE' ? def.stone : ground[rnd() < 0.5 ? 0 : 1]).multiplyScalar(0.55 + rnd() * 0.7).offsetHSL(0, 0, rnd() < 0.15 ? 0.2 : 0);
+      inst.setColorAt(nt, cc); nt++;
     }
+    inst.count = nt;
     inst.instanceMatrix.needsUpdate = true;
     if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     inst.receiveShadow = true;
@@ -126,6 +285,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
           const l = cl + (r2() - 0.5) * 2.6;
           const x = t * shape.fx - l * shape.fz, z = t * shape.fz + l * shape.fx;
           if (Math.hypot(x, z) > shapeLimit(x, z) - 2.5 || r2() < 0.25) continue;
+          if (hasLiquid && inLiquid(x, z, 0.8)) continue;
           o.position.set(x, 0, z); o.rotation.set(0, r2() * 6.28, 0);
           const sc = 0.65 + r2() * 0.5; o.scale.set(sc * (0.9 + r2() * 0.4), 1, sc); o.updateMatrix();
           slabs.setMatrixAt(ns, o.matrix);
@@ -504,7 +664,8 @@ export function Room({ q }: { q: QualityCfg }) {
   return (
     <>
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} />)}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : def.propTint} /></Suspense>
+      {r.active && !tower && <RoomWater />}
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.seed)?.propTint ?? def.propTint} /></Suspense>
       <Stations />
       <CampProps />
       <Portals />

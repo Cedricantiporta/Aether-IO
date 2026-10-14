@@ -10,6 +10,10 @@ export const LOOT_TABLES_EXTRA: Record<string, string[]> = {
   BANDIT: ['coin_pouch', 'silver_goblet', 'goblin_totem'],
   BOAR: ['ogre_tusk', 'goblin_fang'],
   ROCK_CRAB: ['ore_nugget', 'beetle_shell', 'raw_gem'],
+  GOBLIN_ARCHER: ['goblin_ear', 'goblin_fang', 'goblin_totem'],
+  LAKE_HYDRA: ['marsh_scale', 'hydra_fang', 'jelly_heart'],
+  SCARAB: ['beetle_shell', 'raw_gem'],
+  SHIELDBEARER: ['brute_knuckle', 'ancient_relic', 'war_banner'],
   MINI: ['elite_trophy', 'champion_medal', 'ancient_relic', 'royal_seal'],
 };
 export const LOOT_CHANCE_EXTRA: Record<string, number> = { MINI: 1 };

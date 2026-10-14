@@ -93,13 +93,23 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 }
 
 /** Builds the outline for a room of nominal radius R (walkable limit ~ R + 1 for a disc). Fills `shape`. */
-export function buildShape(type: string, R: number, seed: number): ShapeKind {
+export interface ShapeOpts { force?: ShapeKind; weights?: [string, number][]; long?: boolean }
+export function buildShape(type: string, R: number, seed: number, opts?: ShapeOpts): ShapeKind {
   const rnd = mulberry(seed ^ 0x7f4a7c15);
-  const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dbg.force ?? pickKind(type, rnd);   // tower floors: always a round arena
+  let picked = pickKind(type, rnd);
+  if (opts?.weights && type !== 'BOSS') {   // biome outline table (interior halls prefer rectangles / crosses)
+    let sum = 0; for (const e of opts.weights) sum += e[1];
+    let r = rnd() * sum;
+    for (const e of opts.weights) { r -= e[1]; if (r <= 0) { picked = e[0] as ShapeKind; break; } }
+  }
+  if (opts?.long) picked = rnd() < 0.5 ? 'ELLIPSE' : 'RECT';
+  if (opts?.force) picked = opts.force;
+  const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dbg.force ?? picked;   // tower floors: always a round arena
+  const stretch = opts?.long ? 1 : 0;   // long stages: a much longer hall / oval
   const theta0 = rnd() * TAU;
   let F: Fn, areaK = 1, axis = false;
   switch (kind) {
-    case 'ELLIPSE': { const k = 2 + rnd() * 0.7; F = (x, z) => Math.hypot(x / k, z) - 1; areaK = 0.92; axis = true; break; }
+    case 'ELLIPSE': { const k = 2 + rnd() * 0.7 + stretch * 1.1; F = (x, z) => Math.hypot(x / k, z) - 1; areaK = 0.92; axis = true; break; }
     case 'SEMI': { const h = 0.02 + rnd() * 0.22; F = (x, z) => Math.max(Math.hypot(x, z) - 1, -x - h); areaK = 0.96; axis = true; break; }
     case 'HEX': case 'OCT': {
       const n = kind === 'HEX' ? 6 : 8, ap = Math.cos(Math.PI / n);
@@ -107,7 +117,7 @@ export function buildShape(type: string, R: number, seed: number): ShapeKind {
       break;
     }
     case 'PEANUT': { const e = 0.52 + rnd() * 0.1; F = (x, z) => Math.hypot(x, z) - (1 + e * Math.cos(2 * Math.atan2(z, x))); areaK = 0.92; axis = true; break; }
-    case 'RECT': { const w = 1.35 + rnd() * 0.4; F = (x, z) => boxF(x, z, w, 1, 0.4); areaK = 0.95; axis = true; break; }
+    case 'RECT': { const w = 1.35 + rnd() * 0.4 + stretch * 1.0; F = (x, z) => boxF(x, z, w, 1, 0.4); areaK = 0.95; axis = true; break; }
     case 'CROSS': { F = (x, z) => smin(boxF(x, z, 1, 0.42, 0.15), boxF(x, z, 0.42, 1, 0.15), 0.4); areaK = 0.9; axis = true; break; }
     default: F = (x, z) => Math.hypot(x, z) - 1; break;
   }

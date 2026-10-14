@@ -32,7 +32,11 @@ export type EnemyKind =
   | 'BOSS_VOID'   // wave 70: The Void Herald (portals, gravity flip, echoes, arena shrink)
   | 'BOSS_SAPLING'    // boss add: Elderroot mini-treant (walks, fuses, bursts into thorns)
   | 'BOSS_HYDRA_HEAD' // boss part: separately targetable hydra head (positioned by the hydra AI)
-  | 'BOSS_IMP';       // boss add: Ignar fire imp (goblin model, tinted)
+  | 'BOSS_IMP'        // boss add: Ignar fire imp (goblin model, tinted)
+  | 'GOBLIN_ARCHER'   // stationary: shoots from a wooden archer tower (the tower is an obstacle; the archer is killable)
+  | 'LAKE_HYDRA'      // stationary: a hydra head peeking from a lake (water stages); spits, bites, submerges
+  | 'SCARAB'          // fast swarm beetle, spawned in big packs (low hp)
+  | 'SHIELDBEARER';   // bulky, high armour, low damage; blocking stance: frontal hits deal 0 ("BLOCKED")
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage
@@ -241,7 +245,9 @@ export interface Pickup {
 
 // ----------------------------------------------------------- world objects --
 export type ObstacleKind = 'TREE' | 'PINE' | 'ROCK' | 'HOUSE' | 'FENCE' | 'RUIN' | 'SHOP'
-  | 'STUMP' | 'BOULDER' | 'WELL' | 'STATUE' | 'TENT' | 'LOG' | 'CRYSTAL_SPIRE' | 'WINDMILL';
+  | 'STUMP' | 'BOULDER' | 'WELL' | 'STATUE' | 'TENT' | 'LOG' | 'CRYSTAL_SPIRE' | 'WINDMILL'
+  // biome scenery (run rooms)
+  | 'PALM' | 'CACTUS' | 'SANDSTONE' | 'BONES' | 'COLUMN' | 'LOWWALL' | 'BRAZIER' | 'ARCHER_TOWER' | 'DEAD_TREE' | 'ICE_ROCK' | 'OBSIDIAN';
 
 export interface Obstacle {
   id: number;

@@ -166,6 +166,122 @@ function makeBlades() {
   return g.build();
 }
 
+// ------------------------------------------------------------ biome scenery (run rooms) ---
+function makeCactus() {
+  const g = new GB([0.72, 1.12]);
+  const c = '#4f8f3a', c2 = '#3f7a2e';
+  g.cyl(0.36, 0.42, 3.2, 8, [0, 1.6, 0], c); g.sph(0.36, [0, 3.2, 0], c, [1, 0.8, 1], 8);
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; g.box(0.05, 3.0, 0.05, [Math.cos(a) * 0.4, 1.6, Math.sin(a) * 0.4], c2); }
+  // two arms
+  g.cyl(0.2, 0.22, 0.8, 7, [0.55, 1.5, 0], c, [0, 0, Math.PI / 2]); g.cyl(0.2, 0.22, 1.2, 7, [0.9, 2.05, 0], c); g.sph(0.2, [0.9, 2.65, 0], c, [1, 0.8, 1], 6);
+  g.cyl(0.18, 0.2, 0.6, 7, [-0.48, 2.0, 0], c, [0, 0, Math.PI / 2]); g.cyl(0.18, 0.2, 0.9, 7, [-0.75, 2.4, 0], c); g.sph(0.18, [-0.75, 2.85, 0], c, [1, 0.8, 1], 6);
+  g.sph(0.14, [0, 3.45, 0], '#f07ab0', 1, 6); g.sph(0.08, [0.9, 2.8, 0], '#ffd24a', 1, 5);
+  g.cyl(0.6, 0.7, 0.12, 8, [0, 0.04, 0], '#c8a060');
+  return g.build();
+}
+function makeSandstone() {
+  // eroded hoodoo: stacked, wind-cut sandstone blocks with darker strata
+  const g = new GB([0.72, 1.1]);
+  const a = '#d8a868', b = '#c08a50', c = '#a87440';
+  g.box(2.2, 0.9, 2.0, [0, 0.45, 0], b, [0, 0.2, 0]); g.box(1.8, 1.0, 1.7, [0.1, 1.35, 0], a, [0, -0.1, 0]);
+  g.box(1.3, 0.25, 1.2, [0.1, 1.95, 0], c); g.box(1.5, 1.1, 1.4, [-0.05, 2.6, 0.05], a, [0, 0.35, 0]);
+  g.box(1.1, 0.22, 1.0, [0, 3.25, 0], c); g.box(1.7, 0.7, 1.5, [0.1, 3.7, -0.05], b, [0, -0.25, 0.05]);
+  g.ico(0.5, [1.2, 0.25, 0.8], b, [1, 0.6, 1], 0); g.ico(0.35, [-1.1, 0.2, -0.6], a, [1, 0.6, 1], 0);
+  return g.build();
+}
+function makeBones() {
+  const g = new GB([0.8, 1.1]);
+  const bone = '#efe6d0', bone2 = '#d8ccb0';
+  g.cyl(0.07, 0.06, 2.2, 5, [0, 0.12, 0], bone, [0, 0, Math.PI / 2]);   // spine
+  for (let i = 0; i < 6; i++) { const x = -0.8 + i * 0.32; for (const s of [-1, 1]) g.torus(0.42 - Math.abs(i - 2.5) * 0.04, 0.035, [x, 0.36, s * 0.05], bone, [0, Math.PI / 2, s * 0.35], [1, 1, 1], 8, Math.PI * 0.9); }
+  g.sph(0.32, [1.35, 0.28, 0], bone, [1.3, 0.85, 1], 8); g.box(0.36, 0.14, 0.3, [1.7, 0.16, 0], bone2);   // skull + snout
+  for (const s of [-1, 1]) { g.sph(0.08, [1.45, 0.38, s * 0.18], '#3a2a1a', 1, 5); g.cone(0.08, 0.7, 5, [1.2, 0.55, s * 0.3], bone, [0, 0, -0.9 + s * 0.0], [1, 1, 1]); }
+  g.cyl(0.05, 0.05, 1.0, 4, [-0.4, 0.06, 0.8], bone2, [0, 0.6, Math.PI / 2]);
+  return g.build();
+}
+function makeColumn(broken: boolean) {
+  const g = new GB([0.72, 1.08]);
+  const m = '#efeae0', m2 = '#d8d2c4', moss = '#6a9a4a';
+  g.box(1.6, 0.35, 1.6, [0, 0.18, 0], m2); g.cyl(0.72, 0.78, 0.3, 14, [0, 0.5, 0], m);
+  const h = broken ? 2.4 : 4.6;
+  g.cyl(0.55, 0.6, h, 14, [0, 0.65 + h / 2, 0], m);
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; g.box(0.06, h, 0.06, [Math.cos(a) * 0.57, 0.65 + h / 2, Math.sin(a) * 0.57], m2); }
+  if (broken) {
+    g.ico(0.58, [0.05, 0.65 + h, 0], m2, [1, 0.45, 1], 0, [0.3, 0.2, 0.1]);
+    g.cyl(0.55, 0.55, 1.0, 12, [1.3, 0.5, 0.5], m, [0.2, 0.3, Math.PI / 2]);   // fallen drum
+    g.sph(0.45, [0.4, 0.2, 0.6], moss, [1.4, 0.35, 1], 5);
+  } else {
+    g.cyl(0.8, 0.6, 0.35, 14, [0, 0.65 + h + 0.18, 0], m); g.box(1.8, 0.35, 1.8, [0, 0.65 + h + 0.5, 0], m2);
+  }
+  return g.build();
+}
+function makeLowWall() {
+  // a 3.2 long marble wall segment (built along local x): ashlar blocks, coping, a broken notch
+  const g = new GB([0.74, 1.08]);
+  const m = '#e6e0d2', m2 = '#cfc8b8', m3 = '#bdb4a2', moss = '#6a9a4a';
+  for (let row = 0; row < 3; row++) for (let i = 0; i < 4; i++) {
+    const off = row % 2 ? 0.4 : 0, x = -1.2 + i * 0.8 + off;
+    if (x > 1.4 || (row === 2 && i === 2)) continue;
+    g.box(0.78, 0.48, 0.8, [x, 0.25 + row * 0.5, 0], [m, m2, m3][(row + i) % 3]);
+  }
+  g.box(3.3, 0.18, 0.95, [0, 1.6, 0], m, [0, 0, 0.0]);
+  g.box(0.8, 0.5, 0.8, [1.0, 1.95, 0], m2, [0, 0.1, 0.06]);
+  g.sph(0.4, [-0.8, 1.7, 0.3], moss, [1.4, 0.3, 0.9], 5); g.sph(0.3, [0.6, 0.15, 0.45], moss, [1.6, 0.4, 0.8], 5);
+  g.ico(0.3, [1.7, 0.15, 0.6], m3, [1, 0.6, 1], 0); g.ico(0.22, [-1.6, 0.12, -0.6], m2, [1, 0.6, 1], 0);
+  return g.build();
+}
+function makeBrazier() {
+  const body = new GB([0.7, 1.1]), glow = new GB([1, 1]);
+  const br = '#9a6a2a', br2 = '#6a4418';
+  for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU; body.cyl(0.05, 0.06, 1.5, 5, [Math.cos(a) * 0.32, 0.72, Math.sin(a) * 0.32], br2, [Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25]); }
+  body.cyl(0.62, 0.32, 0.45, 12, [0, 1.55, 0], br); body.torus(0.62, 0.05, [0, 1.77, 0], br2, [Math.PI / 2, 0, 0], 1, 14);
+  body.cyl(0.55, 0.55, 0.06, 10, [0, 1.72, 0], '#2a1a10');
+  glow.cone(0.42, 0.9, 6, [0, 2.15, 0], '#ff9a2a'); glow.cone(0.24, 0.7, 5, [0.12, 2.1, 0.05], '#ffe08a'); glow.cone(0.2, 0.5, 5, [-0.15, 2.0, -0.08], '#ffc040');
+  return { body: body.build(), glow: glow.build() };
+}
+function makeArcherTower() {
+  const g = new GB([0.72, 1.08]);
+  const w = '#7a5230', w2 = '#5a3a1e', w3 = '#9a6a3e';
+  const H = 3.15;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(0.24, H + 0.9, 0.24, [sx * 1.05, (H + 0.9) / 2, sz * 1.05], w2, [sz * 0.06, 0, -sx * 0.06]);
+  for (const y of [0.9, 2.1]) for (let k = 0; k < 4; k++) {   // cross braces
+    const a = (k * Math.PI) / 2, c = Math.cos(a), s = Math.sin(a);
+    g.box(2.2, 0.14, 0.12, [s * 1.07, y, c * 1.07], w, [0, a, (k % 2 ? 0.5 : -0.5)]);
+  }
+  g.box(2.8, 0.2, 2.8, [0, H - 0.1, 0], w3);   // deck
+  for (let i = 0; i < 7; i++) g.box(0.36, 0.06, 2.8, [-1.2 + i * 0.4, H + 0.02, 0], i % 2 ? w : w3);
+  for (let k = 0; k < 4; k++) {   // railing
+    const a = (k * Math.PI) / 2, c = Math.cos(a), s = Math.sin(a);
+    g.box(2.8, 0.12, 0.1, [s * 1.38, H + 0.75, c * 1.38], w2, [0, a, 0]);
+    for (let i = -1; i <= 1; i++) g.box(0.1, 0.75, 0.1, [s * 1.38 + c * i * 0.9, H + 0.38, c * 1.38 - s * i * 0.9], w2);
+  }
+  // ladder on the back + a banner pole
+  for (const sx of [-0.3, 0.3]) g.box(0.08, H, 0.08, [sx, H / 2, -1.45], w2, [0.12, 0, 0]);
+  for (let i = 0; i < 6; i++) g.box(0.6, 0.06, 0.06, [0, 0.4 + i * 0.5, -1.42 + i * 0.03], w);
+  g.cyl(0.04, 0.04, 2.0, 4, [1.3, H + 1.0, 1.3], w2); g.box(0.04, 0.5, 0.7, [1.3, H + 1.7, 1.66], '#b83a2a');
+  g.ico(0.35, [1.1, 0.18, 1.3], '#8d8f94', [1, 0.6, 1], 0); g.ico(0.3, [-1.2, 0.15, -1.0], '#8d8f94', [1, 0.6, 1], 0);
+  return g.build();
+}
+function makeDeadTree() {
+  const g = new GB([0.7, 1.1]);
+  const b = '#4a3a2e', b2 = '#3a2c22';
+  g.cyl(0.22, 0.42, 3.4, 7, [0, 1.7, 0], b, [0.06, 0, 0.04]);
+  g.cyl(0.08, 0.16, 1.6, 5, [0.5, 2.9, 0.1], b2, [0, 0, -0.85]); g.cyl(0.06, 0.12, 1.3, 5, [-0.45, 3.1, -0.1], b2, [0.2, 0, 0.9]);
+  g.cyl(0.05, 0.1, 1.1, 5, [0.15, 3.6, -0.35], b2, [-0.7, 0, 0.1]); g.cyl(0.04, 0.08, 0.8, 4, [0.95, 3.4, 0.1], b2, [0, 0, -0.3]);
+  for (let i = 0; i < 4; i++) { const a = i * 1.6 + 0.3; g.cone(0.2, 0.9, 4, [Math.cos(a) * 0.45, 0.2, Math.sin(a) * 0.45], b2, [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2]); }
+  return g.build();
+}
+function makeObsidian() {
+  const body = new GB([0.6, 1.25]), glow = new GB([1, 1]);
+  const o = '#2a2230', o2 = '#3e3448';
+  const sp: [number, number, number, number, number][] = [[0, 0, 0.8, 3.2, 0.1], [0.8, 0.3, 0.55, 2.2, 0.35], [-0.7, -0.2, 0.6, 2.5, -0.3], [0.2, -0.8, 0.45, 1.6, 0.2], [-0.3, 0.8, 0.4, 1.4, -0.4]];
+  sp.forEach(([x, z, r, h, tilt], i) => body.add(new (OctahedronGeometry as any)(1, 0), [x, h * 0.45, z], [tilt, i, tilt * 0.5], [r, h * 0.5, r], i % 2 ? o : o2, [0.5, 1.3]));
+  body.ico(1.1, [0, 0.1, 0], '#1e1820', [1.4, 0.4, 1.3], 0);
+  glow.box(0.08, 0.06, 1.4, [0.3, 0.32, 0.1], '#ff6a1a', [0, 0.4, 0]); glow.box(0.06, 0.06, 1.0, [-0.4, 0.3, -0.2], '#ff8a2a', [0, -0.7, 0]);
+  glow.box(0.05, 1.0, 0.05, [0.02, 1.2, 0.42], '#ff5a1a', [0.1, 0, 0]);
+  return { body: body.build(), glow: glow.build() };
+}
+
 function WindmillView({ o, body, blades, mat }: { o: Obstacle; body: any; blades: any; mat: any }) {
   const ref = useRef<Group>(null!);
   useFrame(({ clock }) => { if (ref.current) ref.current.rotation.z = clock.elapsedTime * 0.55 + o.id; });
@@ -183,10 +299,23 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
   useObstaclesVersion();
   const obs = world.obstacles;
   const lists = useMemo(() => {
-    const by = { oak: [] as Obstacle[], palm: [] as Obstacle[], pineA: [] as Obstacle[], pineB: [] as Obstacle[], rock: [[], [], [], []] as Obstacle[][], house: [] as Obstacle[], fence: [] as Obstacle[], ruin: [] as Obstacle[], stump: [] as Obstacle[], boulder: [[], [], []] as Obstacle[][], well: [] as Obstacle[], statue: [] as Obstacle[], tent: [] as Obstacle[], log: [] as Obstacle[], spire: [] as Obstacle[], windmill: [] as Obstacle[] };
+    const by = { oak: [] as Obstacle[], palm: [] as Obstacle[], pineA: [] as Obstacle[], pineB: [] as Obstacle[], rock: [[], [], [], []] as Obstacle[][], house: [] as Obstacle[], fence: [] as Obstacle[], ruin: [] as Obstacle[], stump: [] as Obstacle[], boulder: [[], [], []] as Obstacle[][], well: [] as Obstacle[], statue: [] as Obstacle[], tent: [] as Obstacle[], log: [] as Obstacle[], spire: [] as Obstacle[], windmill: [] as Obstacle[],
+      cactus: [] as Obstacle[], sandstone: [] as Obstacle[], bones: [] as Obstacle[], column: [] as Obstacle[], columnB: [] as Obstacle[], wall: [] as Obstacle[], brazier: [] as Obstacle[],
+      tower: [] as Obstacle[], dead: [] as Obstacle[], ice: [[], []] as Obstacle[][], obsidian: [] as Obstacle[] };
     for (const o of obs) {
       switch (o.kind) {
         case 'TREE': (o.id % 4 === 0 ? by.palm : by.oak).push(o); break;
+        case 'PALM': by.palm.push(o); break;
+        case 'CACTUS': by.cactus.push(o); break;
+        case 'SANDSTONE': by.sandstone.push(o); break;
+        case 'BONES': by.bones.push(o); break;
+        case 'COLUMN': (o.id % 3 === 0 ? by.column : by.columnB).push(o); break;
+        case 'LOWWALL': by.wall.push(o); break;
+        case 'BRAZIER': by.brazier.push(o); break;
+        case 'ARCHER_TOWER': by.tower.push(o); break;
+        case 'DEAD_TREE': by.dead.push(o); break;
+        case 'ICE_ROCK': by.ice[o.id % 2].push(o); break;
+        case 'OBSIDIAN': by.obsidian.push(o); break;
         case 'PINE': (o.id % 2 ? by.pineA : by.pineB).push(o); break;
         case 'ROCK': by.rock[o.id % 4].push(o); break;
         case 'HOUSE': by.house.push(o); break;
@@ -212,10 +341,18 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
   const bush = useMemo(makeBush, []);
   const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), statue = useMemo(makeStatue, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
   const wmBody = useMemo(makeWindmillBody, []), wmBlades = useMemo(makeBlades, []);
+  const biomeGeo = useMemo(() => ({
+    cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), column: makeColumn(false), columnB: makeColumn(true), wall: makeLowWall(),
+    brazier: makeBrazier(), tower: makeArcherTower(), dead: makeDeadTree(), obsidian: makeObsidian(),
+    ice: [61, 62].map((sd, i) => makeRockGeo(sd * 7, i ? '#b8d8ee' : '#d4ecfa', '#f4fbff', 0.9)),
+  }), []);
   const boulders = useMemo(() => [41, 42, 43].map((s, i) => makeRockGeo(s * 5, i === 1 ? '#7d8590' : '#8d8f94', '#5a9a3a', 0.8 + i * 0.12)), []);
-  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85, color: tint ?? '#ffffff' }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.3, 1.0) }), crystal: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7) }) }), [tint]);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85, color: tint ?? '#ffffff' }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.3, 1.0) }), crystal: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7) }), fire: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2.2, 1.6, 1.1) }) }), [tint]);
   const natMat = useMemo(() => { if (!tint) return nat.mat; const m = nat.mat.clone(); m.color.set(tint); return m; }, [nat, tint]);
-  useFrame(({ clock }) => { const k = 1.5 + Math.sin(clock.elapsedTime * 1.6) * 0.35; mats.crystal.color.setRGB(k, k, k); });
+  useFrame(({ clock }) => {
+    const k = 1.5 + Math.sin(clock.elapsedTime * 1.6) * 0.35; mats.crystal.color.setRGB(k, k, k);
+    const f = 1 + Math.sin(clock.elapsedTime * 11) * 0.12 + Math.sin(clock.elapsedTime * 17.3) * 0.08; mats.fire.color.setRGB(2.2 * f, 1.6 * f, 1.1 * f);   // braziers / lava cracks flicker
+  });
 
   const fillFor = (list: Obstacle[], tall: number, k: number, jitter: number) => (m: InstancedMesh) => {
     const rnd = mulberry32(list.length * 31 + k);
@@ -229,6 +366,9 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
     rock: lists.rock.map((l, k) => (m: InstancedMesh) => { const r = mulberry32(k + 5); l.forEach((o, i) => { const s = o.radius * 0.95; setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, s * (0.9 + r() * 0.2), s * (0.9 + r() * 0.4), s * (0.9 + r() * 0.2)); }); }),
     boulder: lists.boulder.map((l, k) => (m: InstancedMesh) => { const r = mulberry32(k + 50); l.forEach((o, i) => { const s = Math.max(2, o.radius) * 1.0; setInst(m, i, o.pos.x, -0.2, o.pos.z, o.rot, s * (0.95 + r() * 0.2), s * (0.9 + r() * 0.5), s * (0.95 + r() * 0.2)); }); }),
     simple: (list: Obstacle[], k = 1) => (m: InstancedMesh) => list.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale * k)),
+    flat: (list: Obstacle[]) => (m: InstancedMesh) => list.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, 1)),
+    wall: (m: InstancedMesh) => lists.wall.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, 1, o.scale, 1)),
+    ice: lists.ice.map((l, k) => (m: InstancedMesh) => { const r = mulberry32(k + 77); l.forEach((o, i) => { const s = o.radius * 0.95; setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, s * (0.9 + r() * 0.2), s * (1.1 + r() * 0.6), s * (0.9 + r() * 0.2)); }); }),
     house: (m: InstancedMesh) => lists.house.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale)),
     fence: (m: InstancedMesh) => lists.fence.forEach((o, i) => setInst(m, i, o.pos.x - 0.75 * Math.cos(o.rot), 0, o.pos.z + 0.75 * Math.sin(o.rot), o.rot, o.scale)),
     ruin: (m: InstancedMesh) => lists.ruin.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale * (0.8 + (i % 3) * 0.12), o.scale * (0.55 + (i % 3) * 0.3), o.scale * (0.8 + (i % 3) * 0.12))),
@@ -261,6 +401,17 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
       {lists.log.length > 0 && <Inst geo={log} mat={mats.lit} count={lists.log.length} fill={fills.simple(lists.log)} cast receive />}
       {lists.tent.length > 0 && <><Inst geo={tent.body} mat={mats.lit} count={lists.tent.length} fill={fills.simple(lists.tent)} cast receive /><Inst geo={tent.glow} mat={mats.glow} count={lists.tent.length} fill={fills.simple(lists.tent)} /></>}
       {lists.spire.length > 0 && <><Inst geo={spire.body} mat={mats.lit} count={lists.spire.length} fill={fills.simple(lists.spire)} cast receive /><Inst geo={spire.glow} mat={mats.crystal} count={lists.spire.length} fill={fills.simple(lists.spire)} /></>}
+      {lists.cactus.length > 0 && <Inst geo={biomeGeo.cactus} mat={mats.lit} count={lists.cactus.length} fill={fills.simple(lists.cactus)} cast receive />}
+      {lists.sandstone.length > 0 && <Inst geo={biomeGeo.sandstone} mat={mats.lit} count={lists.sandstone.length} fill={fills.simple(lists.sandstone, 0.85)} cast receive />}
+      {lists.bones.length > 0 && <Inst geo={biomeGeo.bones} mat={mats.lit} count={lists.bones.length} fill={fills.simple(lists.bones)} receive />}
+      {lists.column.length > 0 && <Inst geo={biomeGeo.column} mat={mats.lit} count={lists.column.length} fill={fills.simple(lists.column)} cast receive />}
+      {lists.columnB.length > 0 && <Inst geo={biomeGeo.columnB} mat={mats.lit} count={lists.columnB.length} fill={fills.simple(lists.columnB)} cast receive />}
+      {lists.wall.length > 0 && <Inst geo={biomeGeo.wall} mat={mats.lit} count={lists.wall.length} fill={fills.wall} cast receive />}
+      {lists.brazier.length > 0 && <><Inst geo={biomeGeo.brazier.body} mat={mats.lit} count={lists.brazier.length} fill={fills.flat(lists.brazier)} cast receive /><Inst geo={biomeGeo.brazier.glow} mat={mats.fire} count={lists.brazier.length} fill={fills.flat(lists.brazier)} /></>}
+      {lists.tower.length > 0 && <Inst geo={biomeGeo.tower} mat={mats.lit} count={lists.tower.length} fill={fills.flat(lists.tower)} cast receive />}
+      {lists.dead.length > 0 && <Inst geo={biomeGeo.dead} mat={mats.lit} count={lists.dead.length} fill={fills.simple(lists.dead)} cast receive />}
+      {biomeGeo.ice.map((g, k) => lists.ice[k].length > 0 && <Inst key={'i' + k} geo={g} mat={mats.lit} count={lists.ice[k].length} fill={fills.ice[k]} cast receive />)}
+      {lists.obsidian.length > 0 && <><Inst geo={biomeGeo.obsidian.body} mat={mats.lit} count={lists.obsidian.length} fill={fills.simple(lists.obsidian)} cast receive /><Inst geo={biomeGeo.obsidian.glow} mat={mats.fire} count={lists.obsidian.length} fill={fills.simple(lists.obsidian)} /></>}
       {lists.windmill.map((o) => <WindmillView key={o.id} o={o} body={wmBody} blades={wmBlades} mat={mats.lit} />)}
       {lists.oak.length + lists.palm.length > 0 && <Inst geo={bush} mat={mats.lit} count={64} fill={fills.bush} receive />}
     </group>
@@ -313,4 +464,4 @@ export function Campfire({ q }: { q: QualityCfg }) {
     </group>
   );
 }
-export const __builders = { makeHouse, makeFence, makeRuin, makeBush, makeStump, makeWell, makeStatue, makeTent, makeLog, makeSpire, makeWindmillBody, makeBlades };
+export const __builders = { makeCactus, makeSandstone, makeColumn, makeLowWall, makeArcherTower, makeHouse, makeFence, makeRuin, makeBush, makeStump, makeWell, makeStatue, makeTent, makeLog, makeSpire, makeWindmillBody, makeBlades };
