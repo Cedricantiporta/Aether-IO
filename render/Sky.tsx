@@ -64,6 +64,7 @@ export function Sky({ q }: { q: QualityCfg }) {
   useFrame((_, dt) => {
     dome.current.position.copy(camera.position);
     mat.uniforms.uTint.value.copy(look.sky);
+    cloudMat.opacity = 0.95 * Math.min(1, look.sky.x * 1.4);   // night skies (tower) hide the clouds
     clouds.current.position.set(camera.position.x, 0, camera.position.z);
     const ch = clouds.current.children;
     for (let i = 0; i < ch.length; i++) {

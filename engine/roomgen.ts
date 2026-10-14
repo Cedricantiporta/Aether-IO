@@ -6,6 +6,7 @@
 import { Vector3 } from 'three';
 import { world, allocZone } from './world';
 import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
+import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint } from './roomShape';
@@ -13,6 +14,7 @@ import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, star
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger. */
 export function roomRadius(type: RoomType, seed: number): number {
   const r = mulberry32(seed ^ 0x9e3779b9)();
+  if (runInfo.mode === 'TOWER') return type === 'BOSS' ? 29 : 26;   // tower floors: one semi-big round arena
   switch (type) {
     case 'BOSS': return 30;
     case 'FOUNTAIN': case 'MERCHANT': case 'SHRINE': return 19 + r * 3;
@@ -91,16 +93,23 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       }
     }
   };
-  const n1 = Math.ceil(P / Math.max(2.6, P / 70));
-  ringWalk(n1, 1.6, 0.03, (x, z) => {
+  const tower = runInfo.mode === 'TOWER';
+  if (tower) {
+    // tower floor: a cobbled disc open to the night sky, ringed by evenly spaced stone pillars (fixed layout every floor)
+    const n = 28, rr = shape.baseR + 2.2;
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; add('RUIN', Math.cos(a) * rr, Math.sin(a) * rr, 1.6, 1.3, true); }
+    for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; add('STATUE', Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55, 1.1, 1.2, true); }
+  }
+  const n1 = tower ? 0 : Math.ceil(P / Math.max(2.6, P / 70));
+  if (n1 > 0) ringWalk(n1, 1.6, 0.03, (x, z) => {
     let kind = pickKind(def.border);
     if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
     const sp = SPEC[kind] ?? SPEC.ROCK;
     const s = rand(sp.s[0], sp.s[1]);
     add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true);
   });
-  const n2 = Math.ceil(P / Math.max(5.2, P / 34));
-  ringWalk(n2, 5, 0.1, (x, z) => {
+  const n2 = tower ? 0 : Math.ceil(P / Math.max(5.2, P / 34));
+  if (n2 > 0) ringWalk(n2, 5, 0.1, (x, z) => {
     let kind = pickKind(def.border);
     if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
     const sp = SPEC[kind] ?? SPEC.ROCK;
@@ -109,8 +118,8 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   });
 
   // ---- interior obstacles
-  const count = boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14)) : 5;
-  if (boss) {
+  const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14)) : 5;
+  if (tower) { /* open floor */ } else if (boss) {
     // a ring of pillars at mid radius; everything else stays open for the dance
     const k = pickKind(def.interior.filter((o) => SPEC[o]?.blocks) as ObstacleKind[]);
     for (let i = 0; i < count; i++) {
@@ -138,7 +147,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const crateList: { kind: CrateKind; x: number; z: number }[] = [];
   if (!boss) {
     const cave = type === 'CRYSTAL';   // crystal cavern: a field of harvestable crystals (+ some ore), nothing else
-    const want = cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
+    const want = tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
       const kind: CrateKind = cave ? (rnd() < 0.72 ? 'CRYSTAL' : 'ORE') : def.crates[Math.floor(rnd() * def.crates.length)];
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
@@ -150,7 +159,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       if (ok) crateList.push({ kind, x, z });
     }
     // any room: 25% chance of a few harvestable crystal / ore nodes among the crates
-    if (!cave && rnd() < 0.25) {
+    if (!cave && !tower && rnd() < 0.25) {
       const extra = 2 + Math.floor(rnd() * 3);
       for (let t = 0, added = 0; t < 120 && added < extra; t++) {
         const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
@@ -168,7 +177,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   commitCrates(crateList, rnd);
 
   // ---- permanent environmental hazards (swamp puddles, ember gas vents)
-  if (def.hazard && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
+  if (def.hazard && !tower && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
     const hz: { x: number; z: number; r: number }[] = [];
     const n = Math.round(rand(1, 2.4));
     for (let t = 0; t < 60 && hz.length < n; t++) {

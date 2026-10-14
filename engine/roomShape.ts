@@ -5,6 +5,8 @@
 // Built once per room from an implicit shape function (bisection along 256 rays), then scaled to ~the old disc area.
 // ============================================================================
 
+import { runInfo } from './runMods';
+
 export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'CROSS';
 export const SHAPE_N = 256;
 const TAU = Math.PI * 2;
@@ -93,7 +95,7 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 /** Builds the outline for a room of nominal radius R (walkable limit ~ R + 1 for a disc). Fills `shape`. */
 export function buildShape(type: string, R: number, seed: number): ShapeKind {
   const rnd = mulberry(seed ^ 0x7f4a7c15);
-  const kind = dbg.force ?? pickKind(type, rnd);
+  const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dbg.force ?? pickKind(type, rnd);   // tower floors: always a round arena
   const theta0 = rnd() * TAU;
   let F: Fn, areaK = 1, axis = false;
   switch (kind) {

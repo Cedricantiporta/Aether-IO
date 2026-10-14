@@ -6,8 +6,10 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
-  Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RingGeometry,
+  CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RingGeometry, SRGBColorSpace,
 } from 'three';
+import { Stars } from '@react-three/drei';
+import { runInfo } from '../engine/runMods';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from 'lucide-react';
 import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
@@ -139,6 +141,70 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
       <mesh geometry={geo} material={mat} receiveShadow />
       <primitive object={tufts} />
       <primitive object={slabs} />
+    </>
+  );
+}
+
+// ----------------------------------------------------------- tower floor ---
+let cobbleTex: CanvasTexture | null = null;
+/** Cobblestone / cement texture for the round tower floors: concentric rings of worn grey stones (built once). */
+function towerCobbles(): CanvasTexture {
+  if (cobbleTex) return cobbleTex;
+  const N = 1024, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d')!;
+  const rnd = mulberry32(0x70e3);
+  g.fillStyle = '#4a4a4f'; g.fillRect(0, 0, N, N);   // mortar / cement
+  const cx = N / 2, ringW = 17;
+  for (let r0 = 0; r0 < N * 0.72; r0 += ringW) {
+    const n = Math.max(6, Math.round((Math.PI * 2 * (r0 + ringW / 2)) / 24));
+    const off = rnd() * Math.PI * 2;
+    for (let i = 0; i < n; i++) {
+      const a0 = off + (i / n) * Math.PI * 2 + 0.012, a1 = off + ((i + 1) / n) * Math.PI * 2 - 0.012;
+      const rIn = r0 + 1.8, rOut = r0 + ringW - 1.8;
+      const v = 0.75 + rnd() * 0.4, warm = rnd() * 10;
+      g.fillStyle = `rgb(${Math.round(128 * v + warm)},${Math.round(126 * v + warm * 0.6)},${Math.round(122 * v)})`;
+      g.beginPath(); g.arc(cx, cx, rOut, a0, a1); g.arc(cx, cx, Math.max(0, rIn), a1, a0, true); g.closePath(); g.fill();
+      // a lighter top face for a little bevel
+      g.fillStyle = 'rgba(255,255,255,0.07)';
+      g.beginPath(); g.arc(cx, cx, rOut - 3, a0 + 0.01, a1 - 0.01); g.arc(cx, cx, Math.max(0, rIn + 5), a1 - 0.01, a0 + 0.01, true); g.closePath(); g.fill();
+    }
+  }
+  // grime + speckle so it reads as rough rock, not tiles
+  for (let i = 0; i < 9000; i++) {
+    const x = rnd() * N, y = rnd() * N, s = 1 + rnd() * 2.5;
+    g.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.06)'; g.fillRect(x, y, s, s);
+  }
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * N, y = rnd() * N, r = 30 + rnd() * 90;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(20,20,30,0.18)'); gr.addColorStop(1, 'rgba(20,20,30,0)');
+    g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  cobbleTex = new CanvasTexture(c); cobbleTex.colorSpace = SRGBColorSpace; cobbleTex.anisotropy = 4;
+  return cobbleTex;
+}
+
+/** Endless Tower floor: a round cobbled platform floating in the night sky (stone skirt below, rune ring, stars). */
+function TowerFloor({ R }: { R: number }) {
+  const { top, skirt, rune } = useMemo(() => {
+    const rr = R + 3.4;
+    const tg = new CircleGeometry(rr, 96); tg.rotateX(-Math.PI / 2);
+    const top = new Mesh(tg, new MeshStandardMaterial({ map: towerCobbles(), roughness: 0.95, metalness: 0 }));
+    top.position.y = 0.005; top.receiveShadow = true;
+    const sg = new CylinderGeometry(rr, rr * 0.55, 7, 48, 1, true);
+    const skirt = new Mesh(sg, new MeshStandardMaterial({ color: '#2c2c36', roughness: 1, side: DoubleSide }));
+    skirt.position.y = -3.5;
+    const rg = new RingGeometry(R * 0.62 - 0.12, R * 0.62 + 0.12, 96); rg.rotateX(-Math.PI / 2);
+    const rune = new Mesh(rg, new MeshBasicMaterial({ color: '#6f8cff', transparent: true, opacity: 0.35, toneMapped: false, depthWrite: false }));
+    rune.position.y = 0.02;
+    return { top, skirt, rune };
+  }, [R]);
+  useFrame(({ clock }) => { (rune.material as MeshBasicMaterial).opacity = 0.25 + Math.sin(clock.elapsedTime * 1.4) * 0.1; });
+  return (
+    <>
+      <primitive object={top} />
+      <primitive object={skirt} />
+      <primitive object={rune} />
+      <Stars radius={140} depth={60} count={2500} factor={5} saturation={0} fade speed={0.4} />
     </>
   );
 }
@@ -389,10 +455,11 @@ export function Room({ q }: { q: QualityCfg }) {
   const ver = useWorldCounter(() => world.room.version);
   const r = world.room;
   const def = biomeOf(r.biome);
+  const tower = runInfo.mode === 'TOWER';
   return (
     <>
-      {r.active && <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} />}
-      <Suspense fallback={null}><Props q={q} tint={def.propTint} /></Suspense>
+      {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} />)}
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : def.propTint} /></Suspense>
       <Stations />
       <Portals />
       <PortalGuides />

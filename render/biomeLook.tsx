@@ -3,6 +3,7 @@
 import { Color, Fog, Vector3 } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { biomeOf } from '../engine/roomDefs';
+import { runInfo } from '../engine/runMods';
 
 interface Look { fog: Color; hemiSky: Color; hemiGround: Color; hemiI: number; sun: Color; sunI: number; sky: Vector3; near: number; far: number }
 const mk = (fog: string, hs: string, hg: string, hi: number, sun: string, si: number, sky: [number, number, number], near: number, far: number): Look =>
@@ -17,6 +18,10 @@ export function setLook(biome: number, snap = false): void {
   if (biome < 0) {
     target.fog.set(TOWN_FOG); target.hemiSky.set('#cfe8ff'); target.hemiGround.set('#6f8f45'); target.hemiI = 1.25;
     target.sun.set('#fff0d2'); target.sunI = 3.1; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
+  } else if (runInfo.mode === 'TOWER') {
+    // Endless Tower: open-air floors under a deep night sky, cool moonlight
+    target.fog.set('#0b1230'); target.hemiSky.set('#8fa6e0'); target.hemiGround.set('#2a2a38'); target.hemiI = 0.95;
+    target.sun.set('#c8d6ff'); target.sunI = 2.1; target.sky.set(0.07, 0.09, 0.22); target.near = 45; target.far = 130;
   } else {
     const b = biomeOf(biome);
     target.fog.set(b.fog); target.hemiSky.set(b.hemiSky); target.hemiGround.set(b.hemiGround); target.hemiI = b.hemiI;

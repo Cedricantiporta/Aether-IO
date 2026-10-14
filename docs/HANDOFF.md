@@ -156,3 +156,13 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   - Passive Consecration (`consecrate`, starts at 1): holy aura damage every 1 s, small heal per enemy hit.
   - Gear: starter Squire set + `sword_1`; 10 generated swords (`w_knight_*`); class set **Paladin's Oath** (EPIC; 2: +25 def/+1 regen, 4: -10% damage taken/+15% skill dmg, 6: Divine Avatar +3s/+15% dmg/+10% HP); swords in the shared sets. Talents: Crusader / Bastion / Templar.
 - **Lore** (`lore.ts`): the Aether Font (the plaza well) and the guardians' oath explain why the hero returns to town on death; Malakar = the King's archmage who stole a shard of the Font. Shown as a one-time **prologue** (`ui/screens/Story.tsx`, localStorage `aether-survivor-prologue-v1`), a **Story book** (Codex -> STORY; chapters unlock per boss kind defeated via `npcQuests.bossKills`, the ending and Ascension), a line on the death screen (`FALL_LINES`) and new lines for Elder Tobin, Old Wend and King Aldric.
+
+### Endless Tower floors (look) + debug rank
+- Tower floors (`runInfo.mode === 'TOWER'`) are always a ROUND arena (`roomShape.buildShape`), radius 26 (boss 29) (`roomgen.roomRadius`).
+  `buildRoom` skips biome walls, clutter and hazards. It places a fixed ring of 28 RUIN pillars, 4 STATUEs on the diagonals and 2–4 crates.
+- ROUND has a fixed facing (`fx=0, fz=-1`), so the arrival spot (0, +0.55R) and the next-floor portal (0, -22) are identical on every floor.
+- Render: `Room.tsx` `TowerFloor` draws a cobblestone/cement disc (canvas texture `towerCobbles`, concentric stone rings), a stone skirt below,
+  a pulsing rune ring and drei `<Stars>`. `biomeLook.setLook` uses a night palette in the tower, and `Sky` fades its clouds with `look.sky`.
+  Enemy rosters and bosses still follow `towerBiome(floor)`.
+- The Announcer shows "Endless Tower · Floor N" on every floor (no biome banner).
+- Debug tab: "Hero rank" +1 / +10 / Max rank (99) buttons (`setRank`).
