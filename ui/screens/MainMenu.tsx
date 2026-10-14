@@ -1,5 +1,6 @@
+import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
 import { ActionBar } from '../hud/ActionBar';
-import { VitalOrb, XpBar } from '../hud/Vitals';
+import { SkillRow, ExpStrip } from '../hud/Vitals';
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, BookOpen, Settings, Trophy, Skull, Layers, ScrollText, Backpack, User, Store, Swords } from 'lucide-react';
@@ -132,11 +133,11 @@ export const VillageHUD: React.FC = () => {
         <div className="absolute flex flex-col items-end gap-2.5 pe hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
           <Currency />
           <div className="flex gap-[.6rem]">
-            <VBtn icon={<User size={24} />} label="Hero (C)" onClick={toggleChar} />
-            <VBtn icon={<Backpack size={24} />} label="Bag (I)" onClick={toggleInv} />
-            <VBtn icon={<Trophy size={24} />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
-            <VBtn icon={<BookOpen size={24} />} label="Codex" onClick={() => openCodex(true)} />
-            <VBtn icon={<Settings size={24} />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
+            <VBtn icon={<HelmGlyph />} label="Hero (C)" onClick={toggleChar} />
+            <VBtn icon={<BagGlyph />} label="Bag (I)" onClick={toggleInv} />
+            <VBtn icon={<TrophyGlyph />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
+            <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} />
+            <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
           </div>
           {recordsOpen && <div style={{ width: '22rem' }}><RecordsPanel /></div>}
         </div>
@@ -144,18 +145,12 @@ export const VillageHUD: React.FC = () => {
 
       {/* bottom: skill bar (skills + dash work in town) + hint (runs start at the town gate) */}
       {!panel && !device.touch && (
-        <div className="absolute left-0 right-0 flex flex-col items-center vh-bottom hud-bottom" style={{ bottom: '.2rem' }}>
+        <div className="absolute left-0 right-0 flex flex-col items-center vh-bottom hud-bottom" style={{ bottom: '1.5rem' }}>
           <div className="text-[.72rem] text-outline mb-1" style={{ color: '#f6e8c8' }}>WASD walk · right-drag rotate camera · wheel zoom · E talk / shops · hold E harvest · town gate to set out</div>
-          <div className="flex items-end">
-            <div style={{ marginRight: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="hp" /></div>
-            <div className="bar-plate pe" style={{ marginBottom: '.9rem' }}>
-              <XpBar />
-              <ActionBar />
-            </div>
-            <div style={{ marginLeft: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="mp" /></div>
-          </div>
+          <SkillRow><ActionBar /></SkillRow>
         </div>
       )}
+      {!panel && <ExpStrip />}
     </div>
   );
 };

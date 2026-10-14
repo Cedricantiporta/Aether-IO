@@ -73,10 +73,10 @@ export const Announcer: React.FC = () => {
             <div className="flex items-center gap-4">
               {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
               {cur.kind === 'level' && <ArrowUpCircle size={34} color="#a8c8ff" />}
-              <div className="rpg-ribbon" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '2.6rem' : cur.kind === 'level' ? '1.5rem' : '2.1rem' }}>{cur.title}</div>
+              <div className="k-title" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '2.8rem' : cur.kind === 'level' ? '1.7rem' : '2.5rem' }}><i /><span>{cur.title}</span><i /></div>
               {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
             </div>
-            {cur.sub && <div className="rpg-title mt-3 text-lg" style={{ color: KIND_STYLE[cur.kind].color, letterSpacing: '.2em' }}>{cur.sub}</div>}
+            {cur.sub && <div className="k-sub">{cur.sub}</div>}
           </motion.div>
         )}
       </AnimatePresence>

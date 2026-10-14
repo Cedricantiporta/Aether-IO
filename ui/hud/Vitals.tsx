@@ -61,3 +61,51 @@ export const XpBar: React.FC = () => {
     </div>
   );
 };
+
+/** Thin full-width EXP line at the very bottom of the screen (Korean MMO style): "EXP 45.20%". */
+export const ExpStrip: React.FC = () => {
+  const xp = useGameStore((s) => s.experience), need = useGameStore((s) => s.experienceToNextLevel);
+  const f = Math.min(1, Math.max(0, xp / Math.max(1, need)));
+  return (
+    <div className="exp-strip" style={{ ['--fill' as any]: f }} data-testid="exp-strip">
+      <span className="exp-lbl">EXP <b>{(f * 100).toFixed(2)}%</b></span>
+      <div className="exp-line"><i /></div>
+    </div>
+  );
+};
+
+/** Top-left vitals: big level number + HP / MP bars with values (replaces the round orbs). */
+export const VitalBars: React.FC = () => {
+  const level = useGameStore((s) => s.level);
+  const maxHp = useGameStore((s) => s.stats.maxHealth), maxMp = useGameStore((s) => s.stats.maxMana);
+  const mx = useRef({ hp: maxHp, mp: maxMp }); mx.current.hp = maxHp; mx.current.mp = maxMp;
+  const hp = useRef<HTMLDivElement>(null), mp = useRef<HTMLDivElement>(null);
+  const hpT = useRef<HTMLSpanElement>(null), mpT = useRef<HTMLSpanElement>(null);
+  const last = useRef({ hp: '', mp: '', ht: -1, mt: -1, low: false });
+  useRaf(() => {
+    const p = world.player, l = last.current;
+    const fh = Math.min(1, Math.max(0, p.hp / Math.max(1, mx.current.hp))), fm = Math.min(1, Math.max(0, p.mana / Math.max(1, mx.current.mp)));
+    const sh = fh.toFixed(3), sm = fm.toFixed(3);
+    if (sh !== l.hp && hp.current) { l.hp = sh; hp.current.style.setProperty('--fill', sh); }
+    if (sm !== l.mp && mp.current) { l.mp = sm; mp.current.style.setProperty('--fill', sm); }
+    const ht = Math.ceil(Math.max(0, p.hp)), mt = Math.ceil(Math.max(0, p.mana));
+    if (ht !== l.ht && hpT.current) { l.ht = ht; hpT.current.textContent = `${ht} / ${Math.round(mx.current.hp)}`; }
+    if (mt !== l.mt && mpT.current) { l.mt = mt; mpT.current.textContent = `${mt} / ${Math.round(mx.current.mp)}`; }
+    const low = fh < 0.3 && p.alive;
+    if (low !== l.low && hp.current) { l.low = low; hp.current.dataset.low = low ? '1' : '0'; }
+  });
+  return (
+    <div className="vbars pe" data-testid="vital-bars">
+      <motion.div key={level} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="vb-lv"><small>LV</small>{level}</motion.div>
+      <div className="vb-col">
+        <div ref={hp} className="vb-bar hp" data-low="0"><i /><span ref={hpT} /></div>
+        <div ref={mp} className="vb-bar mp"><i /><span ref={mpT} /></div>
+      </div>
+    </div>
+  );
+};
+
+/** Bottom skill row: individual slots (no shared container), ult first, EXP strip underneath. */
+export const SkillRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="skill-row">{children}</div>
+);

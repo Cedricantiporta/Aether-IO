@@ -12,6 +12,7 @@ import type { Rarity, PlayerStats, Item } from '../../../types';
 import { Button } from '../../components/Button';
 import { ItemSlot } from '../../components/ItemSlot';
 import { AnvilGlyph } from '../../components/ItemArt';
+import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 
@@ -68,10 +69,15 @@ export const Upgrade: React.FC = () => {
   const forge = () => {
     if (!can) return;
     setForging(true);
-    setTimeout(() => { upgradeItem(item); setForging(false); }, 700);
+  };
+  const runForge = (): ForgeOutcome => {
+    const r = upgradeItem(item);
+    const it = r.newItem ?? item;
+    return r.success
+      ? { success: true, item: it, title: 'Great Success!', sub: `${it.name} reached +${it.level - 1}` }
+      : { success: false, item: it, title: 'Enhancement Failed', sub: r.msg };
   };
   const keys = Object.keys(item.stats) as (keyof PlayerStats)[];
-  const res = actionResult?.type === 'UPGRADE' ? actionResult : null;
 
   return (
     <div className="flex flex-col gap-3 relative">
@@ -103,14 +109,7 @@ export const Upgrade: React.FC = () => {
           <Hammer size={20} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}
         </button>
         <div className="forge-hint">Improve the stats of your equipment.</div>
-        <AnimatePresence>
-          {res && (
-            <motion.div key={res.message + res.success} initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 grid place-items-center pointer-events-none" style={{ background: res.success ? 'radial-gradient(circle, rgba(255,230,150,.55), transparent 70%)' : 'radial-gradient(circle, rgba(200,30,30,.45), transparent 70%)' }}>
-              <div className="rpg-ribbon" data-tone={res.success ? 'gold' : 'red'} style={{ fontSize: '1.2rem' }}>{res.message}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
       </div>
     </div>
   );

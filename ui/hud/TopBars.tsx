@@ -1,3 +1,4 @@
+import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import { Maximize } from 'lucide-react';
@@ -91,19 +92,12 @@ export const PlayerPlate: React.FC = () => {
   });
   return (
     <div className="pplate pe">
-      <div className="relative" style={{ width: '5.4rem', height: '5.4rem', flex: 'none', marginLeft: '-.2rem' }}>
-        <div className="absolute grid place-items-center rounded-full" style={{ inset: '15%', background: `radial-gradient(circle at 40% 30%, ${HERO_COLOR[hero]}, #2a0c0c 80%)`, color: '#fff4d0' }}>
-          <Icon size={30} strokeWidth={2.2} style={{ filter: 'drop-shadow(0 2px 2px #000)' }} />
-        </div>
-        <OrnateRing id="pp" spikes={6} />
-      </div>
       <div className="flex flex-col gap-[.3rem]" style={{ minWidth: '10.5rem' }}>
         <div className="rpg-title text-[1.05rem] leading-none text-[#f4e6c0]">{hero}</div>
         <motion.div key={level} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="text-[.82rem] text-[#e8dcc0] flex items-center gap-2" style={{ transformOrigin: 'left' }}
           {...tip(<SimpleTip title="Combat Power" body="Total strength of your hero from stats and equipment." />)}>
           <span>Lv. {level}</span><span style={{ width: 1, height: '.8rem', background: '#8a7240' }} /><span>CP <span className="rpg-num text-white">{cp.toLocaleString()}</span></span>
         </motion.div>
-        <div ref={hpEl} className="hp-strip"><i /></div>
         <div className="flex gap-[.35rem] mt-[.1rem]">
           <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={15} />} />
           <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={15} />} />
@@ -158,11 +152,11 @@ export const MenuButtons: React.FC = () => {
   const i = useGameStore((s) => s.isInventoryOpen);
   return (
     <div className="flex gap-[.6rem] pb-1">
-      <MenuBtn icon={<User size={24} />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
-      <MenuBtn icon={<Backpack size={24} />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
-      <MenuBtn icon={<BookOpen size={24} />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
-      <MenuBtn icon={<Settings size={24} />} label="Settings" hint="Esc" onClick={togglePause} />
-      {device.fullscreenOk && <MenuBtn icon={<Maximize size={24} />} label="Fullscreen" hint="F11" onClick={() => { void toggleFullscreen(); }} />}
+      <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
+      <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
+      <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
+      <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={togglePause} />
+      {device.fullscreenOk && <MenuBtn icon={<ExpandGlyph />} label="Fullscreen" hint="F11" onClick={() => { void toggleFullscreen(); }} />}
     </div>
   );
 };

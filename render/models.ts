@@ -1,9 +1,9 @@
 // Shared geometry/material libraries: Kenney trees (GLB -> merged vertex-coloured geometry) and procedural rocks.
 import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { BufferGeometry, DoubleSide, Color, Float32BufferAttribute, IcosahedronGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BufferGeometry, ConeGeometry, DoubleSide, Color, Float32BufferAttribute, IcosahedronGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { litMat, mulberry32, noisify, vnoise } from './util';
+import { GB, litMat, mulberry32, noisify, vnoise } from './util';
 
 export const BASE = ((import.meta as any).env?.BASE_URL as string) || '/';
 export const url = (p: string) => BASE + p;
@@ -53,6 +53,51 @@ function bake(gltfScene: any): BufferGeometry {
   return geo;
 }
 
+/** Stylised broadleaf tree: tapered trunk + branches + a cluster of soft, noisy leaf clumps (replaces the
+ *  faceted Kenney canopies that read as hexagon blocks from the top-down camera). Fitted to `ref`'s bounds. */
+function makeLeafyTree(seed: number, ref: BufferGeometry, palette: [string, string, string]): BufferGeometry {
+  const rnd = mulberry32(seed);
+  const g = new GB([0.62, 1.12]);
+  const bark = '#6e4a2c';
+  g.cyl(0.11, 0.2, 1.3, 7, [0, 0.65, 0], bark);
+  g.cyl(0.05, 0.09, 0.6, 5, [0.2, 1.15, 0.05], bark, [0, 0, -0.8]);
+  g.cyl(0.05, 0.09, 0.55, 5, [-0.18, 1.1, -0.08], bark, [0.3, 0, 0.8]);
+  const clumps: [number, number, number, number][] = [[0, 1.75, 0, 0.62], [0.42, 1.5, 0.12, 0.44], [-0.4, 1.5, -0.1, 0.46], [0.05, 1.45, 0.42, 0.42], [-0.08, 1.48, -0.42, 0.42], [0.12, 2.12, -0.05, 0.4]];
+  clumps.forEach(([x, y, z, r], i) => {
+    const geo = new IcosahedronGeometry(r * (0.92 + rnd() * 0.16), 2);
+    noisify(geo, r * 0.16, 3.2, seed * 7 + i);
+    const col = i === 5 ? palette[2] : i === 0 ? palette[1] : palette[0];
+    g.add(geo, [x, y, z], [rnd(), rnd(), rnd()], [1, 0.86, 1], col);
+  });
+  const geo = g.build();
+  ref.computeBoundingBox(); geo.computeBoundingBox();
+  const rb = ref.boundingBox!, gb = geo.boundingBox!;
+  const k = (rb.max.y - rb.min.y) / Math.max(0.01, gb.max.y - gb.min.y);
+  geo.translate(0, -gb.min.y, 0); geo.scale(k, k, k); geo.translate(0, rb.min.y, 0);
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+/** Stylised conifer: trunk + 4 stacked, slightly noisy many-sided cones (round silhouette from above). */
+function makeConifer(seed: number, ref: BufferGeometry, cols: [string, string]): BufferGeometry {
+  const rnd = mulberry32(seed);
+  const g = new GB([0.6, 1.15]);
+  g.cyl(0.08, 0.14, 0.9, 7, [0, 0.45, 0], '#5f4028');
+  const tiers = [[0.95, 1.0, 0.75], [0.78, 0.9, 1.25], [0.6, 0.8, 1.7], [0.4, 0.7, 2.1]];
+  tiers.forEach(([r, h, y], i) => {
+    const geo = new ConeGeometry(r, h, 14, 2);
+    noisify(geo, r * 0.07, 4, seed * 13 + i);
+    g.add(geo, [(rnd() - 0.5) * 0.05, y, (rnd() - 0.5) * 0.05], [0, rnd() * 6, 0], 1, i % 2 ? cols[1] : cols[0]);
+  });
+  const geo = g.build();
+  ref.computeBoundingBox(); geo.computeBoundingBox();
+  const rb = ref.boundingBox!, gb = geo.boundingBox!;
+  const k = (rb.max.y - rb.min.y) / Math.max(0.01, gb.max.y - gb.min.y);
+  geo.translate(0, -gb.min.y, 0); geo.scale(k, k, k); geo.translate(0, rb.min.y, 0);
+  geo.computeBoundingSphere();
+  return geo;
+}
+
 export interface NatureGeos { oak: BufferGeometry; palm: BufferGeometry; pineA: BufferGeometry; pineB: BufferGeometry; mat: MeshStandardMaterial }
 let _nat: NatureGeos | null = null;
 export function useNature(): NatureGeos {
@@ -60,7 +105,9 @@ export function useNature(): NatureGeos {
   return useMemo(() => {
     if (_nat) return _nat;
     _nat = {
-      oak: bake(oak.scene), palm: bake(palm.scene), pineA: bake(pa.scene), pineB: bake(pb.scene),
+      oak: makeLeafyTree(11, bake(oak.scene), ['#4c9a3c', '#6cbd48', '#8fd65a']),
+      palm: makeLeafyTree(23, bake(palm.scene), ['#3f8a46', '#5aa84c', '#7cc458']),
+      pineA: makeConifer(31, bake(pa.scene), ['#2f7a48', '#3f9455']), pineB: makeConifer(47, bake(pb.scene), ['#2a6e44', '#38884f']),
       // DoubleSide: some Kenney canopy faces are wound inward and looked hollow from above
       mat: (() => { const m = litMat({ roughness: 0.85 }); m.side = DoubleSide; return m; })(),
     };
