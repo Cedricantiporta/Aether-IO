@@ -119,7 +119,7 @@ function axeStorm(level: number): void {
     const c = Math.cos(a), s = Math.sin(a);
     const vx = dir.x * c - dir.z * s, vz = dir.x * s + dir.z * c;
     const p = spawnProjectile('GIANT_AXE', pl.pos.x + vx * 1.2, pl.pos.z + vz * 1.2, vx, vz, 30, dmg,
-      { life: 2.4, pierce: 6, radius: 2.3 * size, knockback: 0.8, y: 1.3, effect: { type: 'ARMOR_BREAK', duration: 6 } });
+      { life: 2.4, pierce: 6, radius: 1.5 * size, knockback: 0.8, y: 1.1, effect: { type: 'ARMOR_BREAK', duration: 6 } });
     if (p) { p.bounces = 1 + (st.axeBounce | 0); p.spin = size; }
   }
   events.emit('shockwave', { pos: pl.pos.clone(), radius: 1.5, color: 0xff5a3a });

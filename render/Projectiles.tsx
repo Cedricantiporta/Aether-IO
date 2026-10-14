@@ -339,11 +339,11 @@ export function Projectiles() {
           if (emit) FX.add.emit(x, y, z, 0, 0, 0, 0.18, 1.4, 0.3, 1.2, 0.9, 0.5, 0.35, CELL.GLOW);
           break;
         case 'GIANT_AXE': {
-          const sz = (p.spin || 1) * 2.3;
+          const sz = (p.spin || 1) * 1.4;   // Axe Storm axes ~40% smaller (user)
           place(ims, i, x, y, z, t * 20 + n * 2, 0, 0, sz);
-          pushHalo(x, y, z, 5.5 * (p.spin || 1), 1.8, 0.45, 0.2, 0.6, CELL.GLOW);
+          pushHalo(x, y, z, 3.3 * (p.spin || 1), 1.8, 0.45, 0.2, 0.6, CELL.GLOW);
           if (emit) {
-            FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 2.6 * (p.spin || 1), 0.2, 2.4, 0.5, 0.2, 0.55, CELL.RING);
+            FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 1.6 * (p.spin || 1), 0.2, 2.4, 0.5, 0.2, 0.55, CELL.RING);
             if (Math.random() < dt * 60) FX.add.emit(x, y, z, -vx * 0.08 + (Math.random() - 0.5) * 3, (Math.random() - 0.3) * 3, -vz * 0.08 + (Math.random() - 0.5) * 3, 0.4, 0.5, 0.05, 2.4, 1.2, 0.4, 0.9, CELL.STREAK, 0, 1, 0, 0, 0.1);
             if (Math.random() < dt * 30) embers(x, y, z, 1, 0xff7a30, 0.4, 2.6, 0.9, 0.16);
           }
