@@ -1,37 +1,49 @@
+// Tech House: a centred popup (like Summon) with a grid of one-time upgrades bought with gems. Every level of an upgrade
+// is its own card (I, II, III ...), unlocked in order; bought cards just read "Owned".
 import React from 'react';
-import { Backpack, Warehouse, FlaskConical, Coins, BookOpen, HeartPulse } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Backpack, Warehouse, FlaskConical, Coins, BookOpen, HeartPulse, Cog, X, Lock, Check } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
-import { TECH, techLv, type TechId } from '../../../tech';
-import { CoinGlyph } from '../../components/SkillIcons';
+import { TECH, ROMAN, techLv, type TechId } from '../../../tech';
+import { GemGlyph } from '../../components/SkillIcons';
 
 const ICON: Record<TechId, React.ReactNode> = {
-  bag: <Backpack size={22} />, warehouse: <Warehouse size={22} />, potion: <FlaskConical size={22} />,
-  gold: <Coins size={22} />, xp: <BookOpen size={22} />, vitality: <HeartPulse size={22} />,
+  bag: <Backpack size={30} />, warehouse: <Warehouse size={30} />, potion: <FlaskConical size={30} />,
+  gold: <Coins size={30} />, xp: <BookOpen size={30} />, vitality: <HeartPulse size={30} />,
 };
+const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0' };
 
-/** Tech House: permanent upgrades for gold (applied to every hero and every run). */
-export const TechTab: React.FC = () => {
-  const { tech, gold, buy } = useGameStore(useShallow((s) => ({ tech: s.tech, gold: s.gold, buy: s.buyTech })));
+export const TechWindow: React.FC = () => {
+  const { tech, gems, buy, close } = useGameStore(useShallow((s) => ({ tech: s.tech, gems: s.gems, buy: s.buyTech, close: s.closeAllUI })));
   return (
-    <div className="flex flex-col gap-2.5" data-testid="tech-tab">
-      <div className="text-[.78rem] leading-snug" style={{ color: 'var(--text-dim)' }}>The tinkerer's permanent improvements. They apply to every hero and every run.</div>
-      {TECH.map((d) => {
-        const lv = techLv(tech, d.id), max = lv >= d.max, cost = max ? 0 : d.cost(lv), can = !max && gold >= cost;
-        return (
-          <div key={d.id} className="tech-row" data-testid={`tech-${d.id}`}>
-            <span className="tech-ic">{ICON[d.id]}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2"><b className="tech-name">{d.name}</b><span className="tech-lv">Lv {lv}/{d.max}</span></div>
-              <div className="tech-per">{d.per} per level</div>
-              <div className="tech-pips">{Array.from({ length: d.max }, (_, i) => <i key={i} className={i < lv ? 'on' : ''} />)}</div>
-            </div>
-            <button className={`rpg-btn rpg-btn-sm ${can ? 'rpg-btn-primary' : ''} tech-buy`} disabled={!can} onClick={() => buy(d.id)}>
-              {max ? 'Max' : <><span>Upgrade</span><span className="flex items-center gap-1 rpg-num"><CoinGlyph size={13} />{cost.toLocaleString()}</span></>}
-            </button>
-          </div>
-        );
-      })}
+    <div className="absolute inset-0 grid place-items-center pe sw-backdrop" style={{ zIndex: 45 }} onClick={close} data-testid="tech-window">
+      <motion.div className="tw-win" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}>
+        <div className="tw-head">
+          <span className="tw-title"><Cog size={20} /> Tech House</span>
+          <span className="tw-sub">Permanent upgrades for every hero and every run</span>
+          <span className="tw-wallet"><GemGlyph size={18} /> {gems.toLocaleString()}</span>
+          <button className="sw-x" onClick={close} aria-label="Close"><X size={20} /></button>
+        </div>
+        <div className="tw-grid rpg-scroll" data-testid="tech-tab">
+          {TECH.flatMap((d) => {
+            const lv = techLv(tech, d.id);
+            return Array.from({ length: d.max }, (_, i) => {
+              const owned = i < lv, next = i === lv, cost = d.cost(i), can = next && gems >= cost;
+              return (
+                <div key={`${d.id}${i}`} className={`tw-card ${owned ? 'owned' : next ? 'next' : 'locked'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${i + 1}`}>
+                  <span className="tw-ic">{ICON[d.id]}<b>{ROMAN[i]}</b></span>
+                  <div className="tw-name">{d.name} {ROMAN[i]}</div>
+                  <div className="tw-per">{d.per}</div>
+                  {owned ? <div className="tw-owned"><Check size={14} /> Owned</div>
+                    : next ? <button className={`rpg-btn rpg-btn-sm ${can ? 'rpg-btn-primary' : ''} tw-buy`} disabled={!can} onClick={() => buy(d.id)} data-testid={`tech-buy-${d.id}`}><GemGlyph size={14} /> {cost.toLocaleString()}</button>
+                      : <div className="tw-lock"><Lock size={12} /> Needs {ROMAN[i - 1]}</div>}
+                </div>
+              );
+            });
+          })}
+        </div>
+      </motion.div>
     </div>
   );
 };

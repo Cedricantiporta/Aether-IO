@@ -30,6 +30,7 @@ import { InventoryPanel } from './panels/Inventory';
 import { CharacterSheet } from './panels/CharacterSheet';
 import { ShopPanel } from './panels/ShopPanel';
 import { SummonWindow } from './panels/SummonWindow';
+import { TechWindow } from './panels/shop/Tech';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
 
@@ -37,8 +38,8 @@ const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED,
 
 /** UI root. pointer-events none so the canvas still receives clicks; panels opt in with .pe */
 export const GameUI: React.FC = () => {
-  const { status, inv, shop, bagShop, chr, summonTab } = useGameStore(useShallow((s) => ({
-    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY', 'WAREHOUSE'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON',
+  const { status, inv, shop, bagShop, chr, summonTab, techTab } = useGameStore(useShallow((s) => ({
+    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY', 'WAREHOUSE'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON' || s.activeShopTab === 'TECH', techTab: s.activeShopTab === 'TECH',
   })));
   const titleDone = useUiStore((s) => s.titleDone);
   const charSelect = useUiStore((s) => s.charSelect);
@@ -68,7 +69,8 @@ export const GameUI: React.FC = () => {
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}
-        {panels && shop && summonTab && <SummonWindow key="summon" />}
+        {panels && shop && summonTab && !techTab && <SummonWindow key="summon" />}
+        {panels && shop && techTab && <TechWindow key="tech" />}
         {panels && chr && <CharacterSheet key="chr" />}
       </AnimatePresence>
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>

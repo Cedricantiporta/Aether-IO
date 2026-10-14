@@ -194,3 +194,10 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Prologue and ending are auto-advancing slides (`slideMs(line)` = 3.2 s + 45 ms/char), one passage per screen, with no Next buttons.
   Skip stays, and click/Space jumps ahead. The ending keeps its final Continue card. On the first ending, an "Endless Tower is open" card
   shows once back in town.
+
+### Tech House popup + Pet House grid
+- The Tech House is a centred popup like Summon (`TechWindow` in `ui/panels/shop/Tech.tsx`, mounted in `GameUI` when `activeShopTab === 'TECH'`).
+  It shows a grid of one-time upgrades: each level is its own card (I..V) and they unlock in order. Bought cards read "Owned".
+  Costs are now **gems** (`tech.ts` `cost(lv)` = gems for the next tier; `buyTech` spends gems). Saved levels are unchanged.
+- Pet House has Shop / Pet Care sub-tabs. The Shop is a 4-column bag-style grid (price under each slot, summon-only pets greyed out).
+  Clicking a pet shows its details (stars, badges, skill, stats) and a Buy button below the grid.

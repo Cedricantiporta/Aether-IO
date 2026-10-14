@@ -6,7 +6,7 @@ import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
-import { TECH, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
+import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
 import { create } from 'zustand';
 import {
@@ -1039,10 +1039,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get(), d = TECH.find((t) => t.id === id)!, lv = techLv(s.tech, id);
       if (lv >= d.max) return false;
       const cost = d.cost(lv);
-      if (s.gold < cost) { notify('Not enough gold!', 'red', 'WARNING'); return false; }
+      if (s.gems < cost) { notify('Not enough gems!', 'red', 'WARNING'); return false; }
       const tech = { ...s.tech, [id]: lv + 1 };
-      set({ gold: s.gold - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}) });
-      notify(`${d.name} upgraded to Lv ${lv + 1}!`, '#7dd3fc', 'SYSTEM');
+      set({ gems: s.gems - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}) });
+      notify(`${d.name} ${ROMAN[lv]} unlocked!`, '#7dd3fc', 'SYSTEM');
       return true;
     },
     moveGold: (n) => {   // + deposit into the warehouse, - withdraw into the bag

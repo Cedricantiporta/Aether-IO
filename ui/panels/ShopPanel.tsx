@@ -16,7 +16,6 @@ import { SkillsTab } from './shop/Skills';
 import { QuestsTab } from './shop/Quests';
 import { ArmoryTab } from './shop/Armory';
 import { WarehouseTab } from './shop/Warehouse';
-import { TechTab } from './shop/Tech';
 import { useDrop } from '../lib/dnd';
 import { useUiStore } from '../uiStore';
 
@@ -62,7 +61,6 @@ export const ShopPanel: React.FC = () => {
           {tab === 'MERCHANT' && <MerchantTab />}
           {tab === 'ARMORY' && <ArmoryTab />}
           {tab === 'WAREHOUSE' && <WarehouseTab />}
-          {tab === 'TECH' && <TechTab />}
         </div>
       </Panel>
     </motion.div>
