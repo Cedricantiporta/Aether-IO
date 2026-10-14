@@ -91,11 +91,6 @@ export const VillageHUD: React.FC = () => {
   const setRecordsOpen = useUiStore((s) => s.setRecordsOpen);
   const modalOpen = useUiStore((s) => s.codexOpen || s.settingsOpen || !!s.confirm);
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Enter' && !modalOpen && !panel) startGame(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [startGame, modalOpen, panel]);
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 30 }} data-testid="village-hud">
@@ -145,13 +140,10 @@ export const VillageHUD: React.FC = () => {
         </div>
       )}
 
-      {/* bottom: defend button + hints */}
-      {!panel && (
+      {/* bottom: hint (runs start at the town gate — no quick-start button) */}
+      {!panel && !device.touch && (
         <div className="absolute left-0 right-0 bottom-[1.4rem] flex flex-col items-center gap-2 vh-bottom">
-          <div className="pe">
-            <Button variant="primary" size="lg" pulse onClick={startGame} data-testid="defend"><Shield size={22} fill="currentColor" /> SET OUT</Button>
-          </div>
-          {!device.touch && <div className="text-[.72rem] text-outline" style={{ color: '#f6e8c8' }}>WASD walk · E talk / enter shops · hold E to harvest · Enter to set out</div>}
+          <div className="text-[.72rem] text-outline" style={{ color: '#f6e8c8' }}>WASD walk · E talk / enter shops · hold E to harvest · walk to the town gate to set out</div>
         </div>
       )}
     </div>
