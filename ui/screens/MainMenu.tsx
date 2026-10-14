@@ -1,3 +1,5 @@
+import { ActionBar } from '../hud/ActionBar';
+import { VitalOrb, XpBar } from '../hud/Vitals';
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, BookOpen, Settings, Trophy, Skull, Layers, ScrollText, Backpack, User, Store, Swords } from 'lucide-react';
@@ -140,10 +142,18 @@ export const VillageHUD: React.FC = () => {
         </div>
       )}
 
-      {/* bottom: hint (runs start at the town gate — no quick-start button) */}
+      {/* bottom: skill bar (skills + dash work in town) + hint (runs start at the town gate) */}
       {!panel && !device.touch && (
-        <div className="absolute left-0 right-0 bottom-[1.4rem] flex flex-col items-center gap-2 vh-bottom">
-          <div className="text-[.72rem] text-outline" style={{ color: '#f6e8c8' }}>WASD walk · E talk / enter shops · hold E to harvest · walk to the town gate to set out</div>
+        <div className="absolute left-0 right-0 flex flex-col items-center vh-bottom hud-bottom" style={{ bottom: '.2rem' }}>
+          <div className="text-[.72rem] text-outline mb-1" style={{ color: '#f6e8c8' }}>WASD walk · right-drag rotate camera · wheel zoom · E talk / shops · hold E harvest · town gate to set out</div>
+          <div className="flex items-end">
+            <div style={{ marginRight: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="hp" /></div>
+            <div className="bar-plate pe" style={{ marginBottom: '.9rem' }}>
+              <XpBar />
+              <ActionBar />
+            </div>
+            <div style={{ marginLeft: '-2.2rem', position: 'relative', zIndex: 5 }}><VitalOrb kind="mp" /></div>
+          </div>
         </div>
       )}
     </div>

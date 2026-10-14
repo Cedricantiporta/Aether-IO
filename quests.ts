@@ -1,7 +1,8 @@
 // ============================================================================
 // Village quests: templates, scaling and display helpers (pure data, no store).
-// The store keeps `quests: Quest[]` (3 active, persistent) and drives progress
-// from engine events. See store.ts (claimQuest / addQuestProgress).
+// The store keeps `quests: Quest[]` (board offers + up to 3 accepted, persistent) and
+// drives progress of ACCEPTED quests from engine events. Unaccepted offers refresh daily.
+// See store.ts (acceptQuest / abandonQuest / claimQuest / addQuestProgress).
 // ============================================================================
 import type { Rarity } from './types';
 import type { EnemyKind } from './engine/types';
@@ -27,9 +28,14 @@ export interface Quest {
   target: number;
   progress: number;
   reward: QuestReward;
+  accepted?: boolean; // only accepted quests make progress
+  day?: string;       // board day it was offered on (unaccepted offers expire when the day changes)
 }
 
-export const QUEST_COUNT = 3;
+/** Offers shown on the board (besides the accepted ones) and the active-quest cap. */
+export const QUEST_OFFERS = 6;
+export const QUEST_MAX_ACTIVE = 3;
+export const questDay = (): string => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 const KIND_POOL: EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'SPLITTER'];
 const ALL_TYPES: QuestType[] = ['KILL_KIND', 'KILL_TOTAL', 'REACH_WAVE', 'FAST_CLEARS', 'BREAK_CRATES', 'KILL_BOSS', 'COLLECT_GOLD', 'DASH', 'GATHER_SHARDS', 'SELL_LOOT', 'COLLECT_LOOT'];
 /** Reward weight per type (relative effort). */
@@ -81,16 +87,32 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
   else if (extra < 0.55) reward.cores = 1 + Math.floor(r / 3) + (e > 1.3 ? 1 : 0);
   else if (extra < 0.8) reward.potions = 3 + Math.floor(r / 4);
   else reward.item = itemRarityFor(r);
-  return { id: `q_${Date.now().toString(36)}_${(qid++).toString(36)}`, type, kind, lootName, target, progress: 0, reward };
+  return { id: `q_${Date.now().toString(36)}_${(qid++).toString(36)}`, type, kind, lootName, target, progress: 0, reward, accepted: false, day: questDay() };
 }
 
+/** Board upkeep: keeps accepted quests (old saves: the 3 legacy quests count as accepted), drops offers from an
+ *  earlier day, and tops the offers up to QUEST_OFFERS. Returns `existing` itself when nothing changed. */
 export function fillQuests(rank: number, existing: Quest[]): Quest[] {
-  const list = existing.slice(0, QUEST_COUNT);
-  while (list.length < QUEST_COUNT) list.push(makeQuest(rank, list.map((q) => q.type)));
-  return list;
+  const today = questDay();
+  let changed = false;
+  const list: Quest[] = [];
+  for (const q of existing) {
+    if (q.accepted === undefined && q.day === undefined) { list.push({ ...q, accepted: true, day: today }); changed = true; continue; }
+    if (!q.accepted && q.day !== today) { changed = true; continue; }
+    list.push(q);
+  }
+  let active = 0;
+  for (const q of list) if (q.accepted) active++;
+  if (active > QUEST_MAX_ACTIVE) changed = true;
+  const kept = active > QUEST_MAX_ACTIVE ? list.filter((q, i) => !q.accepted || list.slice(0, i + 1).filter((x) => x.accepted).length <= QUEST_MAX_ACTIVE) : list;
+  while (kept.length - Math.min(active, QUEST_MAX_ACTIVE) < QUEST_OFFERS) { kept.push(makeQuest(rank, kept.map((q) => q.type))); changed = true; }
+  return changed ? kept : existing;
 }
 
-export const questDone = (q: Quest): boolean => q.progress >= q.target;
+export const activeQuests = (qs: Quest[]): Quest[] => qs.filter((q) => q.accepted);
+export const questOffers = (qs: Quest[]): Quest[] => qs.filter((q) => !q.accepted);
+/** Accepted and finished (ready to claim). */
+export const questDone = (q: Quest): boolean => !!q.accepted && q.progress >= q.target;
 
 export function questTitle(q: Quest): string {
   const n = q.target;

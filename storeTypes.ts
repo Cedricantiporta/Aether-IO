@@ -82,7 +82,7 @@ export interface GameState {
   // Fresh profile = 0 gold/gems + one-time welcome gift. Runs keep everything looted, even on death.
   heroRank: number;                   // gear requirements use this (RANK_REQ); +1% gold find per rank (cap 50%)
   rankXp: number;                     // xp into the current rank; need rankXpNeeded(heroRank)
-  quests: Quest[];                    // 3 active villager quests
+  quests: Quest[];                    // quest board: offers (refresh daily) + up to 3 accepted (only those progress)
   welcomeGiftClaimed: boolean;
   talents: Record<HeroClass, TalentRanks>;   // permanent talent ranks per class (node id -> rank)
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
@@ -154,7 +154,10 @@ export interface GameState {
   openWaveReward: (bonus?: boolean) => void; // room reward: generates upgradeOptions (+a 4th card when `bonus`), accumulatedWaveGold += 100, status = LEVEL_UP
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
   addQuestProgress: (type: QuestType, amount?: number, kind?: EnemyKind, lootName?: string) => void;
-  claimQuest: (id: string) => boolean; // grants reward, draws a replacement quest
+  claimQuest: (id: string) => boolean; // grants reward, draws a replacement offer
+  acceptQuest: (id: string) => boolean; // takes an offer (max 3 active)
+  abandonQuest: (id: string) => void;   // drops an accepted quest (frees a slot; progress lost)
+  refreshQuestBoard: () => void;        // daily refresh of unaccepted offers
   selectUpgrade: (u: Upgrade) => void;// applies card, status = PLAYING
   upgradeSkill: (k: keyof SkillLevels) => void; // spend SP (skills tab)
   endRun: (summary: Omit<RunSummary, 'hero' | 'difficulty' | 'cp' | 'waveGoldBonus' | 'level' | 'rankXpGained' | 'rankUps' | 'rank'>) => void; // GAME_OVER + stats

@@ -23,7 +23,7 @@ import { deviceDefaults } from './engine/device';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
-import { fillQuests, makeQuest, questDone, type Quest, type QuestType } from './quests';
+import { fillQuests, questDone, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
@@ -852,7 +852,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       let changed = false;
       const quests = s.quests.map((q) => {
-        if (q.type !== type || questDone(q)) return q;
+        if (!q.accepted || q.type !== type || questDone(q)) return q;
         if (type === 'KILL_KIND' && q.kind !== kind) return q;
         if (type === 'COLLECT_LOOT' && q.lootName !== lootName) return q;
         changed = true;
@@ -880,15 +880,36 @@ export const useGameStore = create<GameState>()((set, get) => {
       let inv: Item[] | null = s.inventory;
       for (const g of gifts) { inv = inv ? insertItem(inv, s.maxInventorySlots, g) : null; }
       if (!inv) { notify('Bag is full! Make room to claim.', 'red', 'WARNING'); return false; }
-      const others = s.quests.filter((x) => x.id !== id);
       set({
         gold: s.gold + (rw.gold ?? 0),
         gems: s.gems + (rw.gems ?? 0),
         inventory: inv,
-        quests: [...others, makeQuest(s.heroRank, others.map((x) => x.type))].slice(0, 3),
+        quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
       });
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
       return true;
+    },
+
+    acceptQuest: (id) => {
+      const s = get();
+      const q = s.quests.find((x) => x.id === id);
+      if (!q || q.accepted) return false;
+      if (s.quests.filter((x) => x.accepted).length >= QUEST_MAX_ACTIVE) { notify(`You can only take ${QUEST_MAX_ACTIVE} quests at a time.`, 'red', 'WARNING'); return false; }
+      set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x))) });
+      notify('Quest accepted!', COLORS.uiAccent, 'SYSTEM');
+      return true;
+    },
+
+    abandonQuest: (id) => {
+      const s = get();
+      if (!s.quests.some((x) => x.id === id && x.accepted)) return;
+      set({ quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)) });
+    },
+
+    refreshQuestBoard: () => {
+      const s = get();
+      const q = fillQuests(s.heroRank, s.quests);
+      if (q !== s.quests) set({ quests: q });
     },
 
     getManaCost: (skill) => {

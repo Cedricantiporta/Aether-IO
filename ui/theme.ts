@@ -17,10 +17,8 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 export const RARITY_LIGHT: Record<Rarity, string> = {
   COMMON: '#e4e6ea', RARE: '#79b4f2', EPIC: '#c3a0f6', LEGENDARY: '#ffc861', MYTHIC: '#ff8a82',
 };
-/** Rarity text on the cream menu surfaces (AA contrast against #f5f1e8). */
-export const RARITY_INK: Record<Rarity, string> = {
-  COMMON: '#6b6a78', RARE: '#2a6dc4', EPIC: '#7a47cf', LEGENDARY: '#a86a00', MYTHIC: '#c93a33',
-};
+/** Rarity text on menu surfaces (dark metal theme: same as the light variants). */
+export const RARITY_INK: Record<Rarity, string> = RARITY_LIGHT;
 
 export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#4aa86a', WIZARD: '#5b8ef0', BARBARIAN: '#e0564a' };
 
