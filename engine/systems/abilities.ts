@@ -513,7 +513,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     // Cross Slash: a slow, wide burning X that rolls forward piercing everything in the lane; it grows with the skill level
     const dmg = b * 4.2;
     spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 12, dmg,
-      { life: 1.75 + 0.05 * (lv - 1), pierce: 999, knockback: 1.4, radius: 2.3 + 0.4 * (lv - 1), y: 1.1 });
+      { life: 1.75 + 0.05 * (lv - 1), pierce: 999, knockback: 1.4, radius: 6.0 + 0.6 * (lv - 1), y: 1.1 });   // ~3x the old X (user)
     p.anim.attackT = 1;
     addShake(0.15);
     announce('CROSS_SLASH');

@@ -1,4 +1,5 @@
 // Instanced projectile renderers (player + enemy) with particle trails and shader-based fireball / tornado.
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -110,15 +111,6 @@ export function Projectiles() {
     const gw = makeAxe('#ff4a2a', 3);
     const gaxB = new GB().addColored(gw.body, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
     const gaxG = new GB().addColored(gw.glow, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
-    // Cross Slash: two crossed, slightly curved flaming crescents lying flat (forward = +z)
-    const xs = new GB([1, 1]);
-    for (const sgn of [-1, 1]) for (let k = 0; k <= 12; k++) {
-      const u = k / 12 - 0.5, w = 0.34 * (1 - Math.abs(u) * 1.6) + 0.04;
-      const lx = u * 3.8, lz = 0.55 - u * u * 2.0;           // bow forward
-      const c = Math.cos(sgn * 0.62), s2 = Math.sin(sgn * 0.62);
-      xs.box(0.42, 0.06, w, [lx * c + lz * s2, 0, -lx * s2 + lz * c], k % 2 ? '#ffb24a' : '#ff7a2a', [0, sgn * 0.62 + Math.atan(-2 * u * 2.0 * 0.5), 0]);
-      xs.box(0.4, 0.07, w * 0.35, [lx * c + lz * s2, 0.01, -lx * s2 + lz * c + 0.05], '#fff2c0', [0, sgn * 0.62, 0]);
-    }
     // Knight: one flat crescent arc (forward = +z), bowed forward; sword swing (white steel, gold edge) / Holy Wave (gold light)
     const crescent = (c1: string, c2: string, core: string, span: number, thick: number) => {
       // a smooth tapered crescent: outer arc (front) + inner arc that meets it at both tips; colour runs edge -> bright core
@@ -155,6 +147,9 @@ export function Projectiles() {
     for (let i = 0; i < 5; i++) { const a = i * 2.4; bs.cone(0.08, 0.5, 4, [Math.sin(a) * 0.16, Math.cos(a) * 0.16, -1.6 + i * 0.6], '#d8d0b8', [Math.PI / 2 + 0.6, 0, a]); }
     const boneSpearG = bs.build();
     const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 6.4, 0.85);
+    // Cross Slash: two big smooth flaming crescents crossed in an X, lying flat (forward = +z); ~3x the old size
+    const xA = crescent('#ff7a1a', '#e8400a', '#ffd27a', 11.4, 1.35).rotateY(0.62), xB = crescent('#ff7a1a', '#e8400a', '#ffd27a', 11.4, 1.35).rotateY(-0.62);
+    const xsG = mergeGeometries([xA, xB], false)!;
     // orbital blade
     const bl = new GB([1, 1]);
     bl.torus(0.62, 0.08, [0, 0, 0], '#8ff4ff', [Math.PI / 2, 0, 0], [1, 1, 0.7], 14, 2.3); bl.torus(0.5, 0.05, [0, 0, 0], '#ffffff', [Math.PI / 2, 0, 0], [1, 1, 0.5], 14, 2.0);
@@ -184,7 +179,7 @@ export function Projectiles() {
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
       SOUL_BOLT: mk([[orbG(0.22, '#a86bff', '#d8ffd0'), glow]], MAXP),   // necromancer: a violet soul with a pale green core
       BONE_SPEAR: mk([[boneSpearG, lit]], 40),
-      X_SLASH: mk([[xs.build(), glow]], 40),
+      X_SLASH: mk([[xsG, glow]], 40),
       SLASH: mk([[slashG, glow]], 120),
       SLASH_GOLD: mk([[slashGoldG, glow]], 80),
       SLASH_RED: mk([[slashRedG, glow]], 80),
@@ -288,11 +283,11 @@ export function Projectiles() {
           break;
         }
         case 'X_SLASH': {
-          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.15 + (1 - life) * 0.25) * (p.radius / 2.3);   // bigger with level (radius)
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.0 + (1 - life) * 0.2) * (p.radius / 6.0);   // bigger with level (radius)
           place(ims, i, x, y, z, yaw, 0, 0, sc);
-          pushHalo(x, y, z, 4.2 * sc, 1.9, 0.75, 0.25, 0.55, CELL.GLOW);
+          pushHalo(x, y, z, 9.5 * sc, 1.9, 0.75, 0.25, 0.45, CELL.GLOW);
           if (emit) {
-            if (Math.random() < dt * 70) { const o = (Math.random() - 0.5) * 3.6; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
+            if (Math.random() < dt * 120) { const o = (Math.random() - 0.5) * 10; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
             if (Math.random() < dt * 30) embers(x, y, z, 1, 0xff9a40, 0.6, 2.4, 0.8, 0.14);
           }
           break;
