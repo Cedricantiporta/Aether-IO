@@ -1,6 +1,6 @@
 // The prologue (once, the first time the village appears) and the Story book (chapters unlock with progress).
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, Lock } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -11,29 +11,42 @@ import { CHAPTERS, PROLOGUE, loreHint, loreUnlocked } from '../../lore';
 const SEEN_KEY = 'aether-survivor-prologue-v1';
 const seen = (): boolean => { try { return localStorage.getItem(SEEN_KEY) === '1'; } catch { return true; } };
 
-/** Full-screen prologue: lines fade in one by one; Begin (or Skip) closes it. */
+/** Full-screen prologue as slides: one passage per screen. Click / Space / Enter / arrow keys page through it; Skip or Begin closes it. */
 export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ force, onDone }) => {
   const titleDone = useUiStore((s) => s.titleDone && !s.charSelect);
   const [open, setOpen] = useState(false);
-  const [n, setN] = useState(1);
-  useEffect(() => { if (force || (titleDone && !seen())) { setN(1); setOpen(true); } }, [titleDone, force]);
-  useEffect(() => {
-    if (!open || n >= PROLOGUE.length) return;
-    const t = setTimeout(() => setN((x) => x + 1), 2600);
-    return () => clearTimeout(t);
-  }, [open, n]);
-  if (!open) return null;
+  const [n, setN] = useState(0);
+  useEffect(() => { if (force || (titleDone && !seen())) { setN(0); setOpen(true); } }, [titleDone, force]);
+  const last = n >= PROLOGUE.length - 1;
   const close = () => { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ } setOpen(false); onDone?.(); };
+  const next = () => (last ? close() : setN((x) => x + 1));
+  const back = () => setN((x) => Math.max(0, x - 1));
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); next(); }
+      else if (e.code === 'ArrowLeft' || e.code === 'KeyA') back();
+      else if (e.code === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  if (!open) return null;
   return (
-    <motion.div className="ending-root pe" style={{ zIndex: 210 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2 }} data-testid="prologue">
+    <motion.div className="ending-root pe" style={{ zIndex: 210, background: 'radial-gradient(ellipse at center, rgba(22,16,10,.94), rgba(4,3,2,.99))' }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} onClick={next} data-testid="prologue">
       <div className="ending-glow" />
-      <div className="ending-story">
-        {PROLOGUE.slice(0, n).map((l, i) => (
-          <motion.p key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: i === n - 1 ? 1 : 0.6, y: 0 }} transition={{ duration: 1.1 }}>{l}</motion.p>
-        ))}
-        {n >= PROLOGUE.length && <button className="rpg-btn rpg-btn-primary ending-go self-center mt-2" onClick={close} data-testid="prologue-begin">Begin</button>}
+      <div className="ending-story prologue-slide">
+        <AnimatePresence mode="wait">
+          <motion.p key={n} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.7 }}>{PROLOGUE[n]}</motion.p>
+        </AnimatePresence>
       </div>
-      {n < PROLOGUE.length && <button className="ending-skip" onClick={() => setN(PROLOGUE.length)}>Skip</button>}
+      <div className="prologue-nav" onClick={(e) => e.stopPropagation()}>
+        <button className="rpg-btn" onClick={back} disabled={n === 0} style={{ visibility: n === 0 ? 'hidden' : 'visible' }}>Back</button>
+        <div className="prologue-dots">{PROLOGUE.map((_, i) => <i key={i} data-on={i === n ? '1' : i < n ? 'd' : '0'} />)}</div>
+        <button className="rpg-btn rpg-btn-primary" onClick={next} data-testid={last ? 'prologue-begin' : 'prologue-next'}>{last ? 'Begin' : 'Next'}</button>
+      </div>
+      {!last && <button className="ending-skip" onClick={(e) => { e.stopPropagation(); close(); }}>Skip</button>}
     </motion.div>
   );
 };

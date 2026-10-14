@@ -1501,3 +1501,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .story-text p { font-size: .9rem; line-height: 1.6; color: #e6dcc6; margin-bottom: .75rem; }
 .story-locked { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; color: #8a8070; font-size: .85rem; }
 .go-fall { margin-top: .2rem; font-family: var(--font-title); font-style: italic; font-size: .95rem; color: #f0d9c8; text-shadow: 0 2px 6px #000; }
+
+/* ---- Prologue slides ---- */
+.prologue-slide { min-height: 12rem; justify-content: center; }
+.prologue-slide p { font-size: clamp(1.15rem, 2.6vw, 1.7rem); }
+.prologue-nav { position: absolute; left: 0; right: 0; bottom: 2.2rem; display: flex; align-items: center; justify-content: center; gap: 1.6rem; }
+.prologue-dots { display: flex; gap: .5rem; }
+.prologue-dots i { width: .55rem; height: .55rem; border-radius: 50%; background: #4a3c26; border: 1px solid #8a7240; transition: all .3s; }
+.prologue-dots i[data-on='d'] { background: #8a7240; }
+.prologue-dots i[data-on='1'] { background: #f1d58e; box-shadow: 0 0 8px #f1d58e; transform: scale(1.25); }
+[data-testid='prologue'] .ending-skip { top: 1.1rem; bottom: auto; }

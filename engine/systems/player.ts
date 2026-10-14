@@ -82,7 +82,23 @@ function usePotion(health: boolean): boolean {
   return true;
 }
 
+/** Moves the player to (x, z) against colliders, in short sub-steps. A dash phases through props, walls and crates (only the
+ *  walkable edge stops it; not inside the castle, whose walls are colliders); a dash ending inside one is pushed out next frame. */
 function resolveObstacles(p: typeof world.player, x: number, z: number): void {
+  if (p.dashT > 0 && bounds.checkR < 1e5) {
+    p.pos.x = x; p.pos.z = z; p.pos.y = 0;
+    const r2 = x * x + z * z;
+    if (r2 > bounds.checkR2) { const lim = edgeLimit(x, z, 2); if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; } }
+    return;
+  }
+  const dx = x - p.pos.x, dz = z - p.pos.z;
+  const n = Math.min(12, Math.ceil(Math.sqrt(dx * dx + dz * dz) / 0.35));
+  if (n <= 1) { resolveStep(p, x, z); return; }
+  const sx = dx / n, sz = dz / n;
+  for (let i = 0; i < n; i++) resolveStep(p, p.pos.x + sx, p.pos.z + sz);
+}
+
+function resolveStep(p: typeof world.player, x: number, z: number): void {
   const cols = queryColliders(x, z, PLAYER_RADIUS + 6, colOut);
   let nx = x, nz = z;
   for (let pass = 0; pass < 2; pass++) {
