@@ -402,3 +402,14 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Gale Arrow is smaller and green; its tornadoes tug gently and big monsters barely move (pull / scale^2, minis x0.25).
 - Health Potion heals 70% of max HP (Big: 100%), Potion Brewing on top.
 - Bag: red dot on every item that beats the worn one, on its category tab and ALL (`alerts.betterGearIds`).
+
+### Room objectives + twists (engine/systems/roomEvents.ts)
+- `RoomPlan.obj` / `.twist`, rolled in roomDefs.plan for COMBAT (obj 35%) and COMBAT / ELITE (twist 30%) doors from the
+  3rd room on; the portal subtitle names them. State in `world.roomEvt`; started in director.enterRoom, ticked after the
+  enemies (game.ts), resolved in onCleared. Render: render/RoomEvents.tsx; HUD banner + Darkness overlay: ui/hud/RoomEventHud.tsx.
+- DEFEND (totem 100 hp, nearby monsters drift to it and wear it down; reward scales with hp left), RESCUE (cage 80 hp,
+  then E "Free Captive" pill node 40 after the clear: gold + gems + rare shards), GOBLIN (fleeing treasure goblin, 15 s,
+  5x hp, no damage: gold + gems), HUNT (farthest monster marked, 2.5x hp, 30 s: bounty).
+- Twists: TRAPS (8 spike tiles, 3.2 s cycle, red telegraph then 12% max-HP hit; they hurt monsters too), DARK (vignette),
+  CURSED (healing x0.35 while fighting, 4 gems on clear), GOLDEN (60% extra gold drop per kill).
+- Equip-suggestion loot notifications stay 9 s.

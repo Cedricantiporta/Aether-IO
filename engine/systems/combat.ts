@@ -429,6 +429,7 @@ export function healPlayer(amount: number): void {
   const p = world.player;
   if (!p.alive || amount <= 0) return;
   amount *= runInfo.ascension >= 4 ? runMods(useGameStore.getState().difficulty).heal : 1;   // Ascension 4: weaker healing
+  amount *= world.roomEvt.twist === 'CURSED' && world.director.phase === 'FIGHT' ? 0.35 : 1;   // Cursed Ground twist
   const max = useGameStore.getState().stats.maxHealth;
   const before = p.hp;
   p.hp = Math.min(max, p.hp + amount);

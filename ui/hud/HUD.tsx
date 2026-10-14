@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayerPlate, Currency, MenuButtons } from './TopBars';
 import { RoomPlaque, RoomFade } from './WaveInfo';
 import { BossBar } from './BossBar';
+import { RoomEventHud } from './RoomEventHud';
 import { TargetFrame } from './TargetFrame';
 import { Minimap } from './Minimap';
 import { ActionBar } from './ActionBar';
@@ -53,6 +54,7 @@ export const HUD: React.FC = () => {
 
     {/* boss bar floats above the boss (positioned every frame) */}
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /></div>
+    <RoomEventHud />
 
     <Announcer />
   </>

@@ -1,3 +1,4 @@
+import { RoomEvents } from './RoomEvents';
 import React, { Suspense, useLayoutEffect } from 'react';
 import { FacingArrow } from './FacingArrow';
 import { useFrame } from '@react-three/fiber';
@@ -91,6 +92,7 @@ export function Scene() {
           <Bosses />
           <Bosses2 />
           <BossFx />
+          <RoomEvents />
           <Projectiles />
           <Pet />
         </>

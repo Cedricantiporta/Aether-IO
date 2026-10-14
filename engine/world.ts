@@ -117,6 +117,12 @@ export const world = {
 
   enemyGrid: new SpatialGrid(6, ARENA_RADIUS + 40, MAX_ENEMIES),
 
+  /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
+  roomEvt: {
+    obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
+    state: 0, hp: 0, maxHp: 1, x: 0, z: 0, t: 0, tmax: 0, enemy: -1, hurtT: 0,
+    traps: Array.from({ length: 10 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
+  },
   director: {
     wave: 1, phase: 'FIGHT', phaseT: 0, maxAlive: ROOM_MAX_ALIVE, aliveCount: 0, bossId: -1,
   } as DirectorState,

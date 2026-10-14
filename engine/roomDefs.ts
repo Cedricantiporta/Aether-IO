@@ -2,7 +2,7 @@
 // Run structure data (pure, no side effects): biomes, room types, rewards, depth scaling, portal choices.
 // A run = biomes of ROOMS_PER_BIOME rooms followed by a boss room. See docs/RUN_DESIGN.md.
 // ============================================================================
-import type { EnemyKind, ObstacleKind, CrateKind, RoomPlan, RoomType, RewardKind } from './types';
+import type { EnemyKind, ObstacleKind, CrateKind, RoomPlan, RoomType, RewardKind, RoomObjective, RoomTwist } from './types';
 import type { BossKind } from './enemyDefs';
 import type { Rarity } from '../types';
 
@@ -112,7 +112,8 @@ export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub
     default: break;
   }
   const r = REWARD_ICON[plan.reward];
-  const sub = plan.type === 'ELITE' ? 'Elite hunt' : plan.type === 'MINIBOSS' ? 'Champion' : TYPE_NAME.COMBAT;
+  let sub = plan.obj ? OBJ_NAME[plan.obj] : plan.type === 'ELITE' ? 'Elite hunt' : plan.type === 'MINIBOSS' ? 'Champion' : TYPE_NAME.COMBAT;
+  if (plan.twist) sub += ` · ${TWIST_NAME[plan.twist]}`;
   return { title: REWARD_NAME[plan.reward], sub, icon: r.icon, color: r.color };
 }
 const REWARD_ICON: Record<RewardKind, { icon: string; color: string }> = {
@@ -136,7 +137,21 @@ function rollReward(type: RoomType): RewardKind {
   }
 }
 
-const plan = (type: RoomType): RoomPlan => ({ type, reward: rollReward(type) });
+const plan = (type: RoomType, next = 0): RoomPlan => {
+  const p: RoomPlan = { type, reward: rollReward(type) };
+  // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
+  if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {
+    if (type === 'COMBAT' && Math.random() < 0.35) p.obj = pick<RoomObjective>([['DEFEND', 30], ['RESCUE', 25], ['GOBLIN', 25], ['HUNT', 20]]);
+    if (Math.random() < 0.3) p.twist = pick<RoomTwist>([['TRAPS', 35], ['DARK', 25], ['CURSED', 20], ['GOLDEN', 20]]);
+  }
+  return p;
+};
+export const OBJ_NAME: Record<RoomObjective, string> = { DEFEND: 'Defend the Totem', RESCUE: 'Rescue the Captive', GOBLIN: 'Treasure Goblin', HUNT: 'Bounty Hunt' };
+export const TWIST_NAME: Record<RoomTwist, string> = { DARK: 'Darkness', CURSED: 'Cursed Ground', TRAPS: 'Spike Traps', GOLDEN: 'Golden Hour' };
+export const TWIST_DESC: Record<RoomTwist, string> = {
+  DARK: 'The light is failing: you only see what is close.', CURSED: 'Healing is weak here, but the clear pays gems.',
+  TRAPS: 'Spikes burst from the floor: watch for the red glow.', GOLDEN: 'Monsters drop extra gold.',
+};
 
 /**
  * The 1..3 rooms the exits of room `index` lead to (never repeated types). Room 0 of a biome is always a skirmish,
@@ -150,7 +165,7 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   if (next === REST_INDEX) {
     if (fountainOk) out.push({ type: 'FOUNTAIN', reward: 'NONE' });
     if (merchantOk && (!fountainOk || Math.random() < 0.55)) out.push({ type: 'MERCHANT', reward: 'NONE' });
-    if (out.length === 0) out.push(plan('COMBAT'));
+    if (out.length === 0) out.push(plan('COMBAT', next));
     return out.length;
   }
   const n = pick<number>([[1, 15], [2, 50], [3, 35]]);
@@ -161,12 +176,12 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
       ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0], ['MERCHANT', next >= 2 && merchantOk ? 8 : 0],
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
-    if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT')); continue; }
+    if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT', next)); continue; }
     if (t === 'MERCHANT') merchantOk = false;   // at most one merchant / fountain door per set (and per biome, see director)
     if (t === 'FOUNTAIN') fountainOk = false;
     if (t === 'SHRINE') shrineOk = false;   // one optional challenge per set (and per biome, see director)
     used.add(t);
-    out.push(plan(t));
+    out.push(plan(t, next));
   }
   // this biome's crystal cavern (50% of biomes, director picks the room): an extra door, or replaces the last one
   if (crystal) { if (out.length >= 3) out.pop(); out.push({ type: 'CRYSTAL', reward: 'NONE' }); }

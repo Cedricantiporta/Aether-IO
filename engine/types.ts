@@ -360,7 +360,10 @@ export interface DirectorState {
 // ------------------------------------------------------------------- rooms --
 export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS' | 'CAMP';   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
 export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
-export interface RoomPlan { type: RoomType; reward: RewardKind; preboss?: boolean }
+/** Room objective (rolled onto some combat rooms, roomEvents.ts) and room twist (a modifier for the whole room). */
+export type RoomObjective = 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT';
+export type RoomTwist = 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN';
+export interface RoomPlan { type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 
 export interface RoomPortal {

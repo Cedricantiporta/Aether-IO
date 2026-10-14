@@ -25,6 +25,7 @@ import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
 import { spawnPickup, petCollect, lootPickup } from './pickups';
+import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
@@ -107,6 +108,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
+  resetRoomEvent();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -188,6 +190,8 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const seed = (Math.random() * 4294967296) >>> 0;
   const R = roomRadius(p.type, seed);
   buildRoom(b, p.type, R, seed);
+  world.room.radius = R;
+  startRoomEvent(p);   // objective / twist (roomEvents.ts)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = R;
   r.fadeTarget = 0; r.shrineOn = false;
@@ -548,6 +552,7 @@ function onCleared(): void {
   d.phase = 'CLEARED'; d.phaseT = 0;
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
+  roomEventCleared();
   events.emit('waveClear', { wave: depth, fast: roomT < 40 });
   if (runInfo.mode === 'TOWER') towerCleared();
   const t = plan.type;
@@ -664,6 +669,7 @@ function scanNearby(): void {
       const dist = q(c.pos.x, c.pos.z);
       if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
     }
+    if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP') {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
       const dt2 = q(campPos.trainer[0], campPos.trainer[1]); if (dt2 < 12) pushNearby('Train', 'Training Post', 31, dt2);
@@ -704,6 +710,7 @@ export function interactRoom(it: Interactable): void {
     }
     return;
   }
+  if (it.node === 40) { freeCaptive(); return; }   // rescue objective
   if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
   if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
   if (it.node >= 1000) { lootPickup(it.node - 1000); return; }   // loot an item on the ground

@@ -149,7 +149,7 @@ export const Notifications: React.FC = () => {
   const system = notes.filter((n) => n.type === 'SYSTEM');
   return (
     <>
-      {notes.map((n) => <NoteTimer key={n.id} id={n.id} ms={NOTE_MS[n.type]} onDone={remove} />)}
+      {notes.map((n) => <NoteTimer key={n.id} id={n.id} ms={n.action ? 9000 : NOTE_MS[n.type]} onDone={remove} />)}{/* equip suggestions stay 9 s */}
 
       {/* loot feed: text only, no container, color coded, fades out */}
       <div className="absolute flex flex-col-reverse gap-[.2rem] items-start pointer-events-none" style={{ left: '1.2rem', bottom: '10.5rem', maxWidth: '20rem', zIndex: 20 }}>

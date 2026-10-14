@@ -22,6 +22,7 @@ import { updateVillage, placeVillageNodes } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
+import { updateRoomEvents } from './systems/roomEvents';
 import { updateCombatFx, resetCombat } from './systems/combat';
 import { resetTricks } from './systems/tricks';
 import { updateCombo, resetCombo } from './systems/combo';
@@ -195,6 +196,7 @@ export function updateGame(rawDt: number): void {
   rebuildEnemyGrid();
   updateDirector(dt);
   updateEnemies(dt);
+  updateRoomEvents(dt);
   updateEnemyProjectiles(dt);
   updateProjectiles(dt);
   updateSkills(dt);
