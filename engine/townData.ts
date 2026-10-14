@@ -39,7 +39,7 @@ export const HOUSES: HouseSpec[] = [
   // south of the east-west street, doors facing the street
   H(-13, 17.5, Math.PI, 4.6, 4.0), H(13, 17.5, Math.PI, 4.8, 4.2, 2),
   // along the road to the gate
-  H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 34, -Math.PI / 2, 5.0, 4.4, 2),
+  H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 31.5, -Math.PI / 2, 5.0, 4.4, 2),
   // outskirts
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
   H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
@@ -61,6 +61,32 @@ export const ROADS: RoadSpec[] = [
   { x1: -27, z1: 9, x2: -27, z2: 5, w: 3 },       // potion shop
   { x1: 27, z1: 9, x2: 27, z2: 5, w: 3 },         // blacksmith
   { x1: 0, z1: 28, x2: 26, z2: 28, w: 3.5 },      // south lane -> pet stable
+  // narrow paths to each functional building's front door / interaction point
+  { x1: 24, z1: 28, x2: 24, z2: 25, w: 2.8 },     // pet stable
+  { x1: 0, z1: -8.5, x2: 0, z2: -14.5, w: 3 },    // quest board
+  { x1: -17, z1: -8.5, x2: -17, z2: -11, w: 2.8 }, // summoning altar
+  { x1: 17, z1: -8.5, x2: 17, z2: -11, w: 2.8 },  // skill trainer
+];
+
+// --------------------------------------------------------------- town wall ---
+/** Stone town wall ring. Centre line of the wall; the south side is cut by the gatehouse (GATE towers at x = +-6.6). */
+export const WALL = { x0: -45, x1: 45, z0: -41, z1: 38, thick: 2.6, gateHalf: 8.4 };
+export interface TowerSpec { x: number; z: number; r: number; corner: boolean }
+export const WALL_TOWERS: TowerSpec[] = [
+  { x: WALL.x0, z: WALL.z0, r: 3.6, corner: true }, { x: WALL.x1, z: WALL.z0, r: 3.6, corner: true },
+  { x: WALL.x0, z: WALL.z1, r: 3.6, corner: true }, { x: WALL.x1, z: WALL.z1, r: 3.6, corner: true },
+  { x: -22.5, z: WALL.z0, r: 3.1, corner: false }, { x: 0, z: WALL.z0, r: 3.1, corner: false }, { x: 22.5, z: WALL.z0, r: 3.1, corner: false },
+  { x: WALL.x0, z: -14.7, r: 3.1, corner: false }, { x: WALL.x0, z: 11.7, r: 3.1, corner: false },
+  { x: WALL.x1, z: -14.7, r: 3.1, corner: false }, { x: WALL.x1, z: 11.7, r: 3.1, corner: false },
+  { x: -27, z: WALL.z1, r: 3.1, corner: false }, { x: 27, z: WALL.z1, r: 3.1, corner: false },
+];
+/** Straight wall runs [x1, z1, x2, z2, outwardX, outwardZ] (outward normal is where the merlons stand). */
+export const WALL_RUNS: [number, number, number, number, number, number][] = [
+  [WALL.x0, WALL.z0, WALL.x1, WALL.z0, 0, -1],              // north
+  [WALL.x1, WALL.z0, WALL.x1, WALL.z1, 1, 0],               // east
+  [WALL.x0, WALL.z0, WALL.x0, WALL.z1, -1, 0],              // west
+  [WALL.x1, WALL.z1, WALL.gateHalf, WALL.z1, 0, 1],         // south-east, up to the gatehouse
+  [-WALL.gateHalf, WALL.z1, WALL.x0, WALL.z1, 0, 1],        // south-west
 ];
 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
@@ -99,28 +125,39 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len / 0.8));
     for (let i = 0; i <= n; i++) c.push([x1 + ((x2 - x1) * i) / n, z1 + ((z2 - z1) * i) / n, 0.45]);
   }
-  // gate towers + wall stubs
-  for (const sx of [-1, 1]) {
-    c.push([GATE.x + sx * 6.6, GATE.z, 2.1]);
-    for (let i = 0; i < 6; i++) c.push([GATE.x + sx * (9.6 + i * 1.8), GATE.z, 0.95]);
+  // gatehouse towers (the 8.8-wide opening between them stays walkable)
+  for (const sx of [-1, 1]) c.push([GATE.x + sx * 6.6, GATE.z, 2.1]);
+  // town wall: towers + a continuous chain of overlapping circles along every run
+  for (const t of WALL_TOWERS) c.push([t.x, t.z, t.r]);
+  for (const [x1, z1, x2, z2] of WALL_RUNS) {
+    const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len / 1.8));
+    for (let i = 0; i <= n; i++) c.push([x1 + ((x2 - x1) * i) / n, z1 + ((z2 - z1) * i) / n, 1.5]);
   }
   return c;
 })();
 
-/** Resource nodes (crystal / ore) out on the outskirts of the village, away from the shops. */
+/** Resource nodes (crystal / ore) in the outer ring of the village, inside the wall, away from the shops. */
 export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE'; x: number; z: number }[] = [
-  { kind: 'ORE', x: -42, z: -4 }, { kind: 'CRYSTAL', x: 42, z: -4 }, { kind: 'ORE', x: -26, z: -34 }, { kind: 'CRYSTAL', x: 24, z: -35 },
+  { kind: 'ORE', x: -39, z: -4 }, { kind: 'CRYSTAL', x: 39, z: -4 }, { kind: 'ORE', x: -26, z: -34 }, { kind: 'CRYSTAL', x: 24, z: -35 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */
 export const TOWN_CLEAR: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
-  c.push([0, 8, 40]); // the whole town yard stays free of random trees / rocks
+  // the whole walled yard stays free of random trees / rocks (grid of circles covering the wall rectangle)
+  for (let x = WALL.x0 + 7; x < WALL.x1; x += 14) for (let z = WALL.z0 + 7; z < WALL.z1 + 6; z += 14) c.push([x, z, 11]);
+  c.push([0, 8, 40]);
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
   c.push([QUEST_POS[0], QUEST_POS[2], 6], [SHRINE_POS[0], SHRINE_POS[2], 6.5], [TRAINER_POS[0], TRAINER_POS[2], 6.5]);
+  // keep the wall line (and a margin either side) free of random trees / rocks
+  for (const [x1, z1, x2, z2] of WALL_RUNS) {
+    const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len / 8));
+    for (let i = 0; i <= n; i++) c.push([x1 + ((x2 - x1) * i) / n, z1 + ((z2 - z1) * i) / n, 8]);
+  }
+  for (const t of WALL_TOWERS) c.push([t.x, t.z, 9]);
   for (const r of ROADS) {
     const len = Math.hypot(r.x2 - r.x1, r.z2 - r.z1), n = Math.max(1, Math.ceil(len / 6));
     for (let i = 0; i <= n; i++) c.push([r.x1 + ((r.x2 - r.x1) * i) / n, r.z1 + ((r.z2 - r.z1) * i) / n, r.w / 2 + 2.5]);
@@ -222,7 +259,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Fenn', role: 'Bard', model: 'ARCHER', tint: '#d3e5ff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [-28, 10.4], speed: 1.7,
-    patrol: [[-28, 10.4], [-14, 10.4], [0, 10.4], [14, 10.4], [28, 10.4], [14, 7.6], [0, 7.6], [-14, 7.6], [-28, 7.6]],
+    patrol: [[-28, 10.4], [-14, 10.4], [0, 10.4], [14, 10.4], [28, 10.4], [14, 8.1], [0, 8.1], [-14, 8.1], [-28, 8.1]],
     talk: [
       ['La la laaa... oh, an audience! I am working on a ballad about the Mire Hydra.', 'So far it goes: "Run." Needs work.'],
       ['They say the Frostpeak winds sing at midnight. I shall go listen, once I find a braver bard.'],
