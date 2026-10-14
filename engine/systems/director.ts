@@ -44,7 +44,7 @@ const BOSS_GRACE = 2.5;        // after the boss falls, before its rewards drop
 const REWARD_DELAY = 0.7;      // after the last kill, before the room reward appears
 const VACUUM_AFTER = 1.4;      // loot left on the floor flies to the hero this long after the clear
 const PORTAL_ARM = 0.9;        // seconds a portal must be open before walking in works
-const MAX_UNITS = 72;
+const MAX_UNITS = 140;   // (Endless Tower floors roll twice the pack)
 
 // ------------------------------------------------------------ module state ---
 let biome = 0;
@@ -289,9 +289,10 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const mods = runMods(useGameStore.getState().difficulty);
   elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
-  let points = Math.min(waveBudget(depth) * mult * roomy, 160) * mods.spawn;
+  const tower = runInfo.mode === 'TOWER' ? 2 : 1;   // Endless Tower: twice the monsters per floor
+  let points = Math.min(waveBudget(depth) * mult * roomy * tower, 160 * tower) * mods.spawn;
   let guard = 0;
-  while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60) {
+  while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60 * tower) {
     const kind = rosterPick(def, Math.min(points, 12), 0);
     const cost = ENEMY_DEFS[kind].cost;
     let n = kind === 'SCARAB' ? 7 + Math.floor(Math.random() * 5) : isSwarm(kind) ? 4 + Math.floor(Math.random() * 3) : Math.random() < 0.65 ? Math.max(1, Math.round((3 + Math.random() * 3) / Math.sqrt(cost))) : 1;
