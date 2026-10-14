@@ -478,8 +478,9 @@ function buildTown() {
 function TownTrees() {
   const nat = useNature();
   const lists = useMemo(() => {
+    // every town tree is the tall round broadleaf (no evergreen cones inside / around the town)
     const l: TreeSpec[][] = [[], [], [], []];
-    for (const t of TOWN_TREES) l[t.kind].push(t);
+    for (const t of TOWN_TREES) l[0].push(t);
     return l;
   }, []);
   const geos = [nat.oak, nat.palm, nat.pineA, nat.pineB];
@@ -487,7 +488,7 @@ function TownTrees() {
     <>
       {lists.map((list, k) => list.length > 0 && (
         <Inst key={k} geo={geos[k]} mat={nat.mat} count={list.length} cast receive fill={(m: InstancedMesh) => {
-          list.forEach((t, i) => { const sc = t.s * 1.25; setInst(m, i, t.x, -0.05, t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc, sc * (0.92 + (i % 3) * 0.06), sc); });
+          list.forEach((t, i) => { const sc = t.s * 1.2; setInst(m, i, t.x, -0.05, t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc * 0.85, sc * (1.4 + (i % 3) * 0.08), sc * 0.85); });   // tall & round
         }} />
       ))}
     </>

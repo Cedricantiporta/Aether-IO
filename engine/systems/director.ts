@@ -85,6 +85,9 @@ const tmp2 = new Vector3();
 const dd = () => world.director;
 const rm = () => world.room;
 
+/** Biome in which a merchant door was already offered (-1 = none this run). */
+let merchantBiome = -1;
+
 export function resetDirector(): void {
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
@@ -103,7 +106,7 @@ export function resetDirector(): void {
 // ------------------------------------------------------------ run control ---
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
-  biome = 0; index = 0;
+  biome = 0; index = 0; merchantBiome = -1;
   world.room.fade = 1;
   enterRoom(0, 0, firstPlan());
 }
@@ -462,7 +465,8 @@ function bossRewards(): void {
 // ------------------------------------------------------------ clearing ------
 function openPortals(): void {
   const r = world.room;
-  const n = nextChoices(biome, index, choices);
+  const n = nextChoices(biome, index, choices, merchantBiome !== biome);
+  if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
   for (let i = 0; i < r.portals.length; i++) {
     const po = r.portals[i];
     if (i >= n) { po.active = false; continue; }

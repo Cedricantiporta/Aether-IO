@@ -66,6 +66,9 @@ export function installInput(): () => void {
       case 'KeyC':
         if (inGame) st.toggleCharacterSheet();
         break;
+      case 'KeyK':
+        if (inGame) { if (st.isShopOpen && st.activeShopTab === 'SKILLS') st.closeAllUI(); else st.openSpecificShop('SKILLS'); }
+        break;
       default: break;
     }
   };

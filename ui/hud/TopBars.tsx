@@ -1,4 +1,5 @@
-import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
+import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
+import { useBagAlert, useCodexAlert, useSkillAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import { Maximize } from 'lucide-react';
@@ -137,9 +138,9 @@ export const Currency: React.FC = () => {
   );
 };
 
-const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean }> = ({ icon, label, hint, onClick, active }) => (
+const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean }> = ({ icon, label, hint, onClick, active, dot }) => (
   <button className={`sqbtn pe ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={`Hotkey: ${hint}`} />)}>
-    {icon}
+    {icon}{dot && <i className="red-dot" />}
   </button>
 );
 
@@ -150,13 +151,15 @@ export const MenuButtons: React.FC = () => {
   const openCodex = useUiStore((s) => s.openCodex);
   const c = useGameStore((s) => s.isCharacterSheetOpen);
   const i = useGameStore((s) => s.isInventoryOpen);
+  const openShop = useGameStore((s) => s.openSpecificShop);
+  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert();
   return (
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
-      <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
-      <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
+      <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
+      <MenuBtn icon={<SkillGlyph />} label="Skills" hint="K" onClick={() => openShop('SKILLS')} dot={skillDot} />
+      <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
       <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={togglePause} />
-      {device.fullscreenOk && <MenuBtn icon={<ExpandGlyph />} label="Fullscreen" hint="F11" onClick={() => { void toggleFullscreen(); }} />}
     </div>
   );
 };

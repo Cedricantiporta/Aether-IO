@@ -1372,3 +1372,12 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .tp-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .16rem .55rem; font-size: .66rem; font-weight: 600; color: #e9dcb8; background: rgba(0, 0, 0, .45); border: 1px solid rgba(214, 186, 122, .4); }
 button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
 .tp-chip.dim { color: #b9ad92; border-color: rgba(214, 186, 122, .2); }
+/* red notification dot on quick-menu icons */
+.sqbtn { position: relative; }
+.red-dot { position: absolute; top: .1rem; right: .1rem; width: .62rem; height: .62rem; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8a80, #e0281e 60%, #9a0f0a); box-shadow: 0 0 0 1.5px #1a0806, 0 0 8px rgba(255, 60, 40, .8); pointer-events: none; z-index: 8; animation: dotPulse 1.6s ease-in-out infinite; }
+.relative > .red-dot { top: .1rem; right: .1rem; }
+@keyframes dotPulse { 50% { transform: scale(1.2); } }
+/* quest tracker: darker plates, white text */
+.qt-row { background: linear-gradient(270deg, rgba(4, 5, 7, .9), rgba(4, 5, 7, .72)); }
+.qt-title { color: #ffffff; }
+.qt-line, .qt-line b { color: #ffffff; }

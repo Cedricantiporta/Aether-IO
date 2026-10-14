@@ -137,13 +137,13 @@ const plan = (type: RoomType): RoomPlan => ({ type, reward: rollReward(type) });
  * The 1..3 rooms the exits of room `index` lead to (never repeated types). Room 0 of a biome is always a skirmish,
  * the room before the boss is a fountain and/or merchant, and the last normal room leads to the boss.
  */
-export function nextChoices(biome: number, index: number, out: RoomPlan[]): number {
+export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true): number {
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
   if (next === REST_INDEX) {
     out.push({ type: 'FOUNTAIN', reward: 'NONE' });
-    if (Math.random() < 0.55) out.push({ type: 'MERCHANT', reward: 'NONE' });
+    if (merchantOk && Math.random() < 0.55) out.push({ type: 'MERCHANT', reward: 'NONE' });
     return out.length;
   }
   const n = pick<number>([[1, 15], [2, 50], [3, 35]]);
@@ -151,10 +151,11 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[]): numb
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([
       ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? 9 : 0], ['TREASURE', 9], ['SHRINE', next >= 2 ? 9 : 0],
-      ['FOUNTAIN', next >= 2 ? 8 : 0], ['MERCHANT', next >= 2 ? 8 : 0],
+      ['FOUNTAIN', next >= 2 ? 8 : 0], ['MERCHANT', next >= 2 && merchantOk ? 8 : 0],
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
     if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT')); continue; }
+    if (t === 'MERCHANT') merchantOk = false;   // at most one merchant door per set (and per biome, see director)
     used.add(t);
     out.push(plan(t));
   }

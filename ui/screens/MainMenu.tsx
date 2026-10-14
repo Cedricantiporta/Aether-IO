@@ -1,4 +1,5 @@
-import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
+import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
+import { useBagAlert, useCodexAlert, useSkillAlert } from '../lib/alerts';
 import { ActionBar } from '../hud/ActionBar';
 import { QuestTracker } from '../hud/QuestTracker';
 import { TownProfile } from '../hud/TownProfile';
@@ -81,7 +82,7 @@ const RecordsPanel: React.FC = () => {
 const VBtn: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; badge?: boolean; active?: boolean; id?: string }> = ({ icon, label, onClick, badge, active, id }) => (
   <div className="relative">
     <button className={`sqbtn pe ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} data-testid={id} {...tip(<SimpleTip title={label} />)}>{icon}</button>
-    {badge && <span className="slot-plus" style={{ left: 'auto', right: '-.3rem', top: '-.35rem', zIndex: 8 }}>!</span>}
+    {badge && <i className="red-dot" />}
   </div>
 );
 
@@ -93,6 +94,7 @@ export const VillageHUD: React.FC = () => {
     panel: s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen, claimable: s.quests.some(questDone),
   })));
   const openCodex = useUiStore((s) => s.openCodex);
+  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert();
   const setCharSelect = useUiStore((s) => s.setCharSelect);
   const openSettings = useUiStore((s) => s.openSettings);
   const recordsOpen = useUiStore((s) => s.recordsOpen);
@@ -115,9 +117,10 @@ export const VillageHUD: React.FC = () => {
           <Currency />
           <div className="flex gap-[.6rem]">
             <VBtn icon={<HelmGlyph />} label="Hero (C)" onClick={toggleChar} />
-            <VBtn icon={<BagGlyph />} label="Bag (I)" onClick={toggleInv} />
+            <VBtn icon={<BagGlyph />} label="Bag (I)" onClick={toggleInv} badge={bagDot} />
+            <VBtn icon={<SkillGlyph />} label="Skills (K)" onClick={() => openShop('SKILLS')} badge={skillDot} />
             <VBtn icon={<TrophyGlyph />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
-            <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} />
+            <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} badge={codexDot} />
             <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
           </div>
           {recordsOpen ? <div style={{ width: '22rem' }}><RecordsPanel /></div> : <QuestTracker />}

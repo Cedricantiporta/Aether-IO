@@ -14,6 +14,7 @@ import { RotateHint } from './screens/RotateHint';
 import { Notifications } from './hud/Overlays';
 import { TitleScreen, VillageHUD } from './screens/MainMenu';
 import { CharacterSelect } from './screens/CharacterSelect';
+import { useSeen } from './lib/alerts';
 import { useUiStore } from './uiStore';
 import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
@@ -38,6 +39,11 @@ export const GameUI: React.FC = () => {
   const village = status === GameStatus.MENU && titleDone;
   const inGame = HUD_STATUSES.has(status);
   const panels = inGame || village;
+
+  // opening the bag / codex clears their red dots
+  const codexOpen = useUiStore((s) => s.codexOpen);
+  useEffect(() => { if (inv) useSeen.getState().markBag(); }, [inv]);
+  useEffect(() => { if (codexOpen) useSeen.getState().markCodex(); }, [codexOpen]);
 
   // tooltips must never outlive the element that spawned them
   useEffect(() => { hideTip(); }, [status, inv, shop, chr]);

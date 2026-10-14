@@ -57,3 +57,9 @@ export const ExpandGlyph: React.FC<{ size?: number }> = ({ size }) => (
 export const CoinGlyphFill: React.FC<{ size?: number }> = ({ size }) => (
   <G id="mg-coin" size={size}>{(f, d) => <><circle cx="16" cy="16" r="12" fill={f} {...S} /><circle cx="16" cy="16" r="8.5" fill="none" stroke="#7a5418" strokeWidth="1.4" /><path d="M16 10l2 4.5 4.5.5-3.4 3 1 4.5-4.1-2.4-4.1 2.4 1-4.5-3.4-3 4.5-.5z" fill={d} /></>}</G>
 );
+export const SkillGlyph: React.FC<{ size?: number }> = ({ size }) => (
+  <G id="mg-skill" size={size}>{(f, d) => <>
+    <path d="M16 3l3.2 7.2 7.8.8-5.9 5.2 1.8 7.7L16 19.8l-6.9 4.1 1.8-7.7L5 11l7.8-.8z" fill={f} {...S} />
+    <circle cx="16" cy="14" r="3.2" fill={d} {...S} /><path d="M9 27h14" stroke="#1a1004" strokeWidth="3.4" strokeLinecap="round" /><path d="M9 27h14" stroke={f} strokeWidth="1.8" strokeLinecap="round" />
+  </>}</G>
+);

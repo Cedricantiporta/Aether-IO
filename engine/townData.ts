@@ -164,6 +164,8 @@ export const PLANTERS: PlanterSpec[] = [
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
+  // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 29.5, z: -6.5, s: 3.15, kind: 0 }, { x: 14.5, z: -35, s: 3.45, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: 22, z: -33.5, s: 3.30, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
