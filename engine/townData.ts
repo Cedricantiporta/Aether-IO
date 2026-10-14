@@ -78,14 +78,15 @@ export const STALLS: StallSpec[] = [
 export const ROAD_W = { main: 5, street: 4, branch: 2.8 };
 export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 8, x2: 0, z2: 74, w: ROAD_W.main },               // main avenue plaza -> gate -> farm road
-  { x1: -31, z1: 10, x2: 31, z2: 10, w: ROAD_W.street },         // south street
+  { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
   { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // pet stable lane
   { x1: -28.4, z1: 10, x2: -28.4, z2: 4.5, w: ROAD_W.branch },   // potion shop door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
-  { x1: -17, z1: -6, x2: -17, z2: -10.6, w: ROAD_W.branch },     // summoning altar
+  { x1: 34.9, z1: 10, x2: 34.9, z2: 4.5, w: ROAD_W.branch },     // armor shop door
+  { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
 ];
@@ -218,7 +219,8 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
 
 /** Resource nodes (crystal / ore) in the outer ring of the village, inside the wall, away from the shops. */
 export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE'; x: number; z: number }[] = [
-  { kind: 'ORE', x: -39, z: -4 }, { kind: 'CRYSTAL', x: 39, z: -4 }, { kind: 'ORE', x: -26, z: -34 }, { kind: 'CRYSTAL', x: 24, z: -35 },
+  // outside the walls, in the forecourt south of the gate (they regrow 24 h after the last one is harvested)
+  { kind: 'ORE', x: -21, z: 45 }, { kind: 'CRYSTAL', x: -5.5, z: 56 }, { kind: 'ORE', x: -21, z: 72 }, { kind: 'CRYSTAL', x: 19, z: 77 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */
@@ -348,7 +350,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['La la laaa~', 'Beware the Mire... it rhymes with nothing!', 'Anyone have a lute string?'],
   },
   {
-    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-11.5, -10.2],
+    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-8, -11.2],
     talk: [
       ['The Aether Altar in the north-west answers wishes with fortune. Offer it gems and see who answers.', 'The Skill Trainer in the north-east will sharpen what you already know.'],
       ['Knowledge is the sharpest weapon. And a very good staff, if I may say.'],

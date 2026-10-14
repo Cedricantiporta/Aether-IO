@@ -1,11 +1,11 @@
 // ============================================================================
 // Village mode (status MENU after the title): the hero walks around the peaceful
 // town. No enemies / director / attacks. E = interact with the nearest thing (shop, quest board, NPC to talk
-// to, the town gate), hold E near a crystal / ore node (modest, 90 s respawn). NPC behaviour lives
+// to, the town gate), hold E near a crystal / ore node outside the gate (they regrow 24 h after the last one is harvested). NPC behaviour lives
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
-import { world, QUEST_POS, SHRINE_POS, TRAINER_POS, MAX_CRATES } from '../world';
-import { SHOP_POSITIONS } from '../../constants';
+import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
+import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
 import { updateCrates, hitCrate } from './crates';
@@ -17,6 +17,18 @@ import { npcs, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
 const INTERACT_R = 7;
+/** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
+export const HARVEST_REGROW_MS = 24 * 60 * 60 * 1000;
+const HARVEST_KEY = 'aether-survivor-harvest-v1';
+interface HarvestSave { broken: number[]; clearedAt: number }
+function loadHarvest(): HarvestSave {
+  try { const r = typeof localStorage !== 'undefined' ? localStorage.getItem(HARVEST_KEY) : null; if (r) { const h = JSON.parse(r); if (Array.isArray(h.broken)) return { broken: h.broken.filter((x: unknown) => typeof x === 'number'), clearedAt: Number(h.clearedAt) || 0 }; } } catch { /* ignore */ }
+  return { broken: [], clearedAt: 0 };
+}
+function saveHarvest(h: HarvestSave): void { try { if (typeof localStorage !== 'undefined') localStorage.setItem(HARVEST_KEY, JSON.stringify(h)); } catch { /* ignore */ } }
+let harvest: HarvestSave = { broken: [], clearedAt: 0 };
+/** ms until the nodes regrow (0 = available / nothing harvested out). */
+export function harvestRegrowIn(): number { return harvest.clearedAt > 0 ? Math.max(0, harvest.clearedAt + HARVEST_REGROW_MS - Date.now()) : 0; }
 const HARVEST_R = 3.6;
 /** Resource nodes on the outskirts of the village (crate pool slots 0..n are reused as village nodes; positions in townData). */
 const NODES = VILLAGE_NODES;
@@ -24,10 +36,13 @@ const NODES = VILLAGE_NODES;
 /** Replaces the island's run crates with the few village harvest nodes. */
 export function placeVillageNodes(): void {
   for (const c of world.crates) { c.active = false; c.respawnT = 0; c.hitFlash = 0; }
+  harvest = loadHarvest();
+  if (harvest.clearedAt > 0 && Date.now() - harvest.clearedAt >= HARVEST_REGROW_MS) { harvest = { broken: [], clearedAt: 0 }; saveHarvest(harvest); }
   NODES.forEach((n, i) => {
     if (i >= MAX_CRATES) return;
     const c = world.crates[i];
-    c.kind = n.kind; c.pos.set(n.x, 0, n.z); c.maxHp = c.hp = CRATE_HP[n.kind]; c.rot = i * 1.3; c.active = true;
+    c.kind = n.kind; c.pos.set(n.x, 0, n.z); c.maxHp = c.hp = CRATE_HP[n.kind]; c.rot = i * 1.3;
+    c.active = harvest.broken.indexOf(i) === -1; c.respawnT = 0;   // harvested nodes stay gone (no 90 s respawn)
   });
   // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
@@ -50,7 +65,7 @@ const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', n
   const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act;
 };
 const GATE_R = 5.5;
-const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House' };
+const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller' };
 
 function scanNearby(): void {
   const p = world.player;
@@ -58,9 +73,8 @@ function scanNearby(): void {
   if (dialogueOpen()) { for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = false; return; }
   const q = (x: number, z: number) => (x - p.pos.x) ** 2 + (z - p.pos.z) ** 2;
   let d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
-  d = q(SHRINE_POS[0], SHRINE_POS[2]); if (d < 36) push('E', 'Pray', 'Aether Altar', 'SUMMON', -1, d);
   d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
-  for (const s of SHOP_POSITIONS) { d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, s.type, -1, d); }
+  for (const s of SHOP_POSITIONS) { d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d); }
   d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', 'Set out', 'Town Gate', '', -1, d, 'gate');
   for (let i = 0; i < npcs.length; i++) { d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
   for (let i = 0; i < world.crates.length; i++) {
@@ -99,6 +113,20 @@ export function updateVillage(dt: number): void {
     }
   } else updatePlayerVillage(dt);
   updateCrates(dt);
+  // persistent harvest: a node that just broke is recorded; when every node is gone the 24 h regrow clock starts
+  let changed = false;
+  for (let i = 0; i < NODES.length && i < MAX_CRATES; i++) {
+    const c = world.crates[i];
+    if (!c.active) { c.respawnT = 0; if (harvest.broken.indexOf(i) === -1) { harvest.broken.push(i); changed = true; } }
+  }
+  if (changed) {
+    if (harvest.broken.length >= Math.min(NODES.length, MAX_CRATES) && harvest.clearedAt === 0) harvest.clearedAt = Date.now();
+    saveHarvest(harvest);
+  }
+  if (harvest.clearedAt > 0 && Date.now() - harvest.clearedAt >= HARVEST_REGROW_MS) {   // regrow while standing in town
+    harvest = { broken: [], clearedAt: 0 }; saveHarvest(harvest);
+    NODES.forEach((n, i) => { if (i < MAX_CRATES) { const c = world.crates[i]; c.hp = c.maxHp = CRATE_HP[n.kind]; c.active = true; } });
+  }
   updatePickups(dt);
   updateNpcs(dt);
 

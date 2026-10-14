@@ -30,11 +30,15 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
     NIGHTMARE: { hp: 2,   dmg: 1.8,  spawn: 1.45, loot: 1.6,  label: 'Nightmare', desc: 'Brutal. Only for the strongest builds.' },
 };
 
-export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS'; position: [number, number, number]; color: string }[] = [
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE'; position: [number, number, number]; color: string }[] = [
     { type: 'SUPPLIES', position: [-27, 0, 2], color: '#3b82f6' },
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
-    { type: 'PETS', position: [24, 0, 22], color: '#10b981' }
+    { type: 'PETS', position: [24, 0, 22], color: '#10b981' },
+    { type: 'ARMORY', position: [36.5, 0, 2], color: '#c9a052' },     // basic gear, beside the blacksmith
+    { type: 'FORTUNE', position: [-36.5, 0, 2], color: '#a46bff' },   // fortune teller (summons), beside the potion shop
 ];
+/** Shop tab each town building opens. */
+export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON' };
 
 export const COLORS = {
   background: '#87CEEB', 

@@ -19,7 +19,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT'; // MERCHANT = the travelling merchant room
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 

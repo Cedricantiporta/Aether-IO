@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import {
   AdditiveBlending, AnimationAction, AnimationMixer, Color, DoubleSide, Group, LoopOnce, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight, RingGeometry, Sprite,
 } from 'three';
-import { SHOP_POSITIONS } from '../constants';
-import { world, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../engine/world';
+import { SHOP_TAB, SHOP_POSITIONS } from '../constants';
+import { world, QUEST_POS, TRAINER_POS } from '../engine/world';
 import { isLobbyStatus } from './CameraRig';
 import { questDone } from '../quests';
 import { GameStatus } from '../types';
@@ -18,7 +18,7 @@ import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
 
-type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS';
+type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE';
 
 // ---------------------------------------------------------------- builders ---
 function lantern(b: GB, g: GB, x: number, y: number, z: number) {
@@ -150,15 +150,75 @@ function buildPets() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable' };
+/** Armor shop: stone-and-timber store with a dark roof, mannequins in plate, a shield wall and a weapon rack out front. */
+function buildArmory() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const stone = '#a39e93', plaster = '#e9e0cc', wood = '#5e4026', roofC = '#2b2420', steel = '#b8bec8', steel2 = '#8e959f';
+  b.box(6.2, 0.6, 5.0, [0, 0.3, 0], '#8f897d');
+  b.box(5.8, 1.4, 4.6, [0, 1.3, 0], stone);
+  b.box(5.6, 2.2, 4.4, [0, 3.1, 0], plaster);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.6, 0.3, [sx * 2.85, 2.4, sz * 2.25], wood);
+  b.box(5.8, 0.24, 0.3, [0, 4.15, 2.27], wood); b.box(5.8, 0.2, 0.3, [0, 2.05, 2.27], wood);
+  b.prism(7.0, 2.6, 5.8, [0, 4.2, 0], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.box(0.3, 0.3, 5.9, [0, 6.85, 0], '#1a1512');
+  // door + windows
+  b.box(1.25, 2.1, 0.2, [-1.6, 1.65, 2.32], '#3e2a18'); b.box(1.45, 0.18, 0.24, [-1.6, 2.8, 2.34], wood);
+  g.box(0.9, 0.9, 0.1, [1.3, 3.1, 2.32], '#ffd88a'); b.box(1.1, 0.12, 0.2, [1.3, 3.6, 2.35], wood); b.box(1.1, 0.12, 0.2, [1.3, 2.6, 2.35], wood); b.box(0.08, 0.9, 0.16, [1.3, 3.1, 2.36], wood);
+  // plain cloth awning over the display
+  stripedAwning(b, 0.0, 2.9, 2.75, 3.1, '#e2d8c4', '#e2d8c4'); pole(b, 0.05, 3.8, 2.4); pole(b, 2.85, 3.8, 2.4);
+  // two mannequins in plate armour
+  for (const mx of [0.7, 2.2]) {
+    b.box(0.12, 1.0, 0.12, [mx, 0.5, 3.4], wood); b.box(0.6, 0.08, 0.6, [mx, 0.04, 3.4], wood);
+    b.cyl(0.32, 0.27, 0.75, 12, [mx, 1.35, 3.4], steel, [0, 0, 0], [1, 1, 0.75]);
+    for (const s2 of [-1, 1]) b.sph(0.17, [mx + s2 * 0.36, 1.66, 3.4], steel2, [1.1, 0.7, 1], 10);
+    b.sph(0.2, [mx, 1.98, 3.4], steel, [1, 1.05, 1], 12); b.box(0.24, 0.05, 0.05, [mx, 1.97, 3.6], '#2a2a2e');
+  }
+  // shield wall on the left side
+  for (let i = 0; i < 3; i++) { const z = -1.4 + i * 1.3; b.cyl(0.45, 0.45, 0.1, 14, [-2.98, 2.6, z], i === 1 ? '#7a1f22' : steel2, [0, 0, Math.PI / 2]); b.sph(0.1, [-3.06, 2.6, z], '#d9b56a', 1, 6); }
+  // weapon rack
+  b.box(1.6, 0.12, 0.12, [-2.3, 1.4, 3.3], wood); b.box(0.12, 1.4, 0.12, [-3.05, 0.7, 3.3], wood); b.box(0.12, 1.4, 0.12, [-1.55, 0.7, 3.3], wood);
+  for (let i = 0; i < 3; i++) b.box(0.08, 1.5, 0.06, [-2.75 + i * 0.45, 1.3, 3.36], steel, [0, 0, 0.08 - i * 0.08]);
+  lantern(b, g, -2.6, 3.1, 2.7);
+  return { body: b.build(), glow: g.build() };
+}
+
+/** Fortune teller's house: crooked dark-roofed cottage, round window, crystal ball on a draped table, moon & star charms. */
+function buildFortune() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const plaster = '#e6dccb', wood = '#4e3524', roofC = '#241e1c', cloth = '#3a2550', gold = '#d9b56a';
+  b.box(5.8, 0.6, 4.8, [0, 0.3, 0], '#8f897d');
+  b.box(5.2, 3.0, 4.3, [0, 2.1, 0], plaster, [0, 0, 0], [0.86, 1]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.1, 0.3, [sx * 2.6, 2.15, sz * 2.15], wood);
+  b.box(5.4, 0.24, 0.3, [0, 3.55, 2.18], wood); b.box(5.4, 0.2, 0.3, [0, 1.3, 2.18], wood);
+  b.prism(6.6, 3.4, 5.6, [0, 3.55, 0], roofC, [0, 0, 0.05], [0.78, 1.08]);
+  b.box(0.28, 0.28, 5.7, [0.12, 6.9, 0], '#1a1512', [0, 0, 0.05]);
+  // little tower with a pointed hat
+  b.cyl(1.0, 1.1, 5.2, 12, [2.6, 2.6, -1.0], plaster); b.cone(1.45, 3.0, 12, [2.6, 6.7, -1.0], roofC, [0.08, 0, -0.1]);
+  g.octa(0.22, [2.75, 8.3, -1.1], gold);
+  // door + round window with violet glow
+  b.box(1.2, 2.1, 0.2, [-1.4, 1.65, 2.2], '#3a2618'); b.cyl(0.6, 0.6, 0.2, 12, [-1.4, 2.7, 2.2], '#3a2618', [Math.PI / 2, 0, 0]);
+  g.cyl(0.62, 0.62, 0.1, 14, [1.2, 2.7, 2.21], '#c9a0ff', [Math.PI / 2, 0, 0]); b.torus(0.66, 0.08, [1.2, 2.7, 2.25], wood, [0, 0, 0], 1, 14);
+  // draped table with the crystal ball
+  b.box(1.6, 0.9, 1.0, [1.2, 0.45, 3.3], cloth); b.box(1.75, 0.08, 1.15, [1.2, 0.92, 3.3], '#5a3a78');
+  b.cyl(0.18, 0.24, 0.16, 10, [1.2, 1.02, 3.3], gold); g.sph(0.32, [1.2, 1.38, 3.3], '#b98aff', 1, 14);
+  // hanging moon & star charms under the eave
+  for (const [x, c] of [[-2.4, gold], [0.0, '#e8e0ff'], [2.3, gold]] as [number, string][]) { b.cyl(0.01, 0.01, 0.6, 3, [x, 3.15, 2.45], '#444'); g.octa(0.12, [x, 2.8, 2.45], c, [1, 1.3, 0.4]); }
+  b.torus(0.22, 0.05, [-1.2, 2.85, 2.45], gold, [0, 0, 0], 1, 10, 4.2);
+  lantern(b, g, -2.4, 3.0, 2.6);
+  return { body: b.build(), glow: g.build() };
+}
+
+const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6] };
 const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
   PETS: { key: 'ROGUE', tint: '#bfffcf', pos: [2.2, 4.7] },
+  ARMORY: { key: 'KNIGHT', tint: '#e8e0d0', pos: [-0.6, 4.6] },
+  FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [0.1, 4.2] },
 };
 
 // -------------------------------------------------------------------- signs ---
@@ -175,6 +235,10 @@ function buildSign(type: ShopType, color: string) {
     b.box(0.7, 0.2, 0.2, [0, -0.1, 0.17], '#555b66'); b.box(0.45, 0.22, 0.2, [0, -0.28, 0.17], '#555b66'); b.cone(0.12, 0.35, 4, [0.5, -0.04, 0.17], '#6e7480', [0, 0, -Math.PI / 2]);
     b.box(0.08, 0.7, 0.08, [-0.3, 0.2, 0.2], '#6a4828', [0, 0, 0.6]); b.box(0.3, 0.2, 0.14, [-0.4, 0.45, 0.2], '#888e98', [0, 0, 0.6]);
     g.box(0.5, 0.04, 0.06, [0, 0.03, 0.28], '#ff8a2a');
+  } else if (type === 'ARMORY') {
+    b.cyl(0.36, 0.36, 0.08, 12, [0, -0.05, 0.17], '#9aa2ae', [Math.PI / 2, 0, 0], [1, 1.2, 1]); b.box(0.08, 0.6, 0.04, [0, -0.05, 0.22], '#d9b56a'); b.box(0.5, 0.08, 0.04, [0, 0.05, 0.22], '#d9b56a');
+  } else if (type === 'FORTUNE') {
+    g.sph(0.26, [0, -0.08, 0.17], '#b98aff', [1, 1, 0.5], 10); b.box(0.5, 0.1, 0.12, [0, -0.36, 0.17], '#d9b56a'); g.octa(0.08, [0.32, 0.24, 0.2], '#fff3c0');
   } else {
     g.sph(0.2, [0, -0.15, 0.16], '#2fd29a', [1.2, 1, 0.45], 7);
     for (const [x, y] of [[-0.3, 0.1], [-0.12, 0.28], [0.12, 0.28], [0.3, 0.1]]) g.sph(0.1, [x, y, 0.16], '#2fd29a', [1, 1.2, 0.45], 6);
@@ -260,7 +324,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
-    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(type);
+    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(SHOP_TAB[type]);
   };
 
   useFrame(({ clock }, dt0) => {
@@ -490,7 +554,6 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <Npcs />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} />)}
       <QuestBoard />
-      <Station kind="SHRINE" position={SHRINE_POS} />
       <Station kind="TRAINER" position={TRAINER_POS} />
     </>
   );
