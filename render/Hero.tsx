@@ -1,5 +1,7 @@
 // The player hero: KayKit skinned model + animation state machine, weapons, status FX, bars, earthwall, axe spin.
 import { activeChar } from '../characters';
+import { titleOf } from '../achievements';
+import { labelMaterial } from './label';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
@@ -440,6 +442,12 @@ function AxeSpin() {
 // -------------------------------------------------------------- mini bars ---
 function HeroBars() {
   const camera = useThree((s) => s.camera);
+  // the character's name (and the equipped achievement title above it) float over the bars
+  const hero = useGameStore((s) => s.hero);
+  const title = useGameStore((s) => titleOf(s.meta.title));
+  const nameLab = useMemo(() => labelMaterial(activeChar()?.name || hero.charAt(0) + hero.slice(1).toLowerCase(), '#f4ead2', { size: 46 }), [hero]);
+  const titleLab = useMemo(() => (title ? labelMaterial(`« ${title} »`, '#ffd24a', { size: 38 }) : null), [title]);
+  useEffect(() => { for (const l of [nameLab, titleLab]) if (l) { l.mat.depthTest = false; l.mat.depthWrite = false; } }, [nameLab, titleLab]);
   const g = useRef<Group>(null!), hp = useRef<Mesh>(null!), mp = useRef<Mesh>(null!);
   useFrame(() => {
     const st = useGameStore.getState();
@@ -461,6 +469,8 @@ function HeroBars() {
       <mesh position={[0, 0.1, 0]} renderOrder={40}><planeGeometry args={[2.36, 0.46]} />{bg}</mesh>
       <mesh ref={hp} position={[0, 0.2, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.16]} /><meshBasicMaterial color="#e0442f" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
       <mesh ref={mp} position={[0, 0.0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#3b82f6" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
+      <sprite material={nameLab.mat} position={[0, 0.8, 0.02]} scale={[nameLab.aspect * 0.78, 0.78, 1]} renderOrder={42} />
+      {titleLab && <sprite material={titleLab.mat} position={[0, 1.38, 0.02]} scale={[titleLab.aspect * 0.6, 0.6, 1]} renderOrder={42} />}
     </group>
   );
 }
