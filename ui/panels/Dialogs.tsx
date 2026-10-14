@@ -171,9 +171,11 @@ export const SummonReveal: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 mt-1">
             {!allOpen && <button className="rpg-btn" onClick={() => setFlipped(results.map(() => true))} data-testid="reveal-all">Reveal all</button>}
-            <button className="rpg-btn" disabled={have < c1} onClick={() => again(1)} data-testid="reveal-draw-1">Draw x1 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c1}</span></button>
-            <button className="rpg-btn rpg-btn-primary" disabled={have < c10} onClick={() => again(10)} data-testid="reveal-draw-10">Draw x10 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c10}</span></button>
-            <button className="rpg-btn" onClick={() => set(null)} data-testid="reveal-leave">Leave</button>
+            {allOpen && <>   {/* (draw again / leave only once every card is turned) */}
+              <button className="rpg-btn" disabled={have < c1} onClick={() => again(1)} data-testid="reveal-draw-1">Draw x1 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c1}</span></button>
+              <button className="rpg-btn rpg-btn-primary" disabled={have < c10} onClick={() => again(10)} data-testid="reveal-draw-10">Draw x10 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c10}</span></button>
+              <button className="rpg-btn" onClick={() => set(null)} data-testid="reveal-leave">Leave</button>
+            </>}
           </div>
         </div>
       )}
