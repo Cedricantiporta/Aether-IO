@@ -76,7 +76,9 @@ export const HOUSES: HouseSpec[] = [
   { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
   { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
   // flanking the castle
-  H(-17.5, -31, 0, 5.0, 4.4, 2), H(17.5, -31, 0, 5.0, 4.4),
+  H(-17.5, -31, 0, 5.0, 4.4, 2), H(18.5, -28, 0, 5.0, 4.4),
+  // east of the Skill Trainer, door facing the north street
+  H(27, -16.5, -Math.PI / 2, 5.0, 4.4, 2),
   // where the old summoning shrine stood (north street, door facing the street)
   H(-17, -14, 0, 5.0, 4.4),
   // south of the east-west street, doors facing the street
@@ -208,7 +210,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 52, z: -57, s: 3.4, kind: 1 }, { x: 40, z: -57.5, s: 3.2, kind: 0 }, { x: 22, z: -57.5, s: 3.5, kind: 1 }, { x: 10, z: -58, s: 3.0, kind: 0 },
   { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
-  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 14.5, z: -35, s: 3.45, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: 22, z: -33.5, s: 3.30, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
