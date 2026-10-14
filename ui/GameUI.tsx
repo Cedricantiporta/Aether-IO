@@ -19,6 +19,8 @@ import { useSeen } from './lib/alerts';
 import { useUiStore } from './uiStore';
 import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
+import { SetOutWindow } from './screens/SetOut';
+import { EndingScreen } from './screens/Ending';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
 import { CodexDialog } from './screens/Codex';
 import { InventoryPanel } from './panels/Inventory';
@@ -68,6 +70,8 @@ export const GameUI: React.FC = () => {
       </AnimatePresence>
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>
       <AnimatePresence>{status === GameStatus.GAME_OVER && <GameOver key="over" />}</AnimatePresence>
+      {village && <SetOutWindow />}
+      <EndingScreen />
 
       <Notifications />
       <PauseMenu />

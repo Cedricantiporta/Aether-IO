@@ -411,6 +411,7 @@ export interface RunStats {
   xpEarned: number;
   time: number;          // seconds survived
   highestHit: number;
+  towerFloor?: number;   // endless tower: highest floor cleared this run
 }
 
 export interface CameraState {

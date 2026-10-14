@@ -45,6 +45,7 @@ export const GameOver: React.FC = () => {
                 <Ribbon tone="red" className="!text-[1rem]">Depth {run.wave} · Level {run.level}</Ribbon>
               </div>
               <div className="rpg-frame px-3 py-1">
+                {run.towerFloor ? <Row delay={.46} icon={<Crown size={16} />} label="Tower floor cleared" value={run.towerFloor} /> : null}
                 <Row delay={.5} icon={<Crown size={16} />} label="Depth reached" value={run.wave} record={waveRecord} />
                 <Row delay={.58} icon={<Swords size={16} />} label="Enemies slain" value={run.kills.toLocaleString()} />
                 <Row delay={.66} icon={<Flame size={16} />} label="Elites / bosses" value={`${run.eliteKills} / ${run.bossKills}`} />

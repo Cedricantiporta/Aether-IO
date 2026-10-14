@@ -63,7 +63,7 @@ export const DebugTab: React.FC = () => {
   const go = () => {
     setDebug({ bossOverride: (boss || '') as typeof debug.bossOverride });
     const st = useGameStore.getState();
-    if (!inRun) st.startGame();
+    if (!inRun) st.startMode('ADVENTURE');
     if (st.isPauseMenuOpen) st.togglePause();
     debugJump(biome, type === 'BOSS' ? BOSS_INDEX : room, type);
     useUiStore.getState().openSettings(false);

@@ -5,6 +5,7 @@
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
+import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
@@ -103,7 +104,7 @@ export function interact(it: Interactable): void {
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'leave') v.pending = 'LEAVE';
     else if (it.act === 'npc') openDialogue(it.node);
-    else if (it.act === 'gate') st.startGame();
+    else if (it.act === 'gate') events.emit('openSetOut', {});   // choose Adventure (+ Ascension) or the Endless Tower
     else if (it.shop) st.openSpecificShop(it.shop);
     return;
   }

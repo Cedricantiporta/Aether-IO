@@ -16,9 +16,9 @@ import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, type BossKind } from '../enemyDefs';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
-import { runMods } from '../runMods';
+import { runMods, runInfo } from '../runMods';
 import {
-  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, type BiomeDef,
+  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
@@ -87,7 +87,19 @@ const rm = () => world.room;
 
 /** Biome in which a merchant door was already offered (-1 = none this run). */
 let merchantBiome = -1, fountainBiome = -1, shrineBiome = -1;
-let crystalAt = -1;   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
+let crystalAt = -1;
+// final fight (after the Void boss) and endless tower state
+let finalFight = false, endingDone = false;
+let towerFloor = 0;
+export const towerState = { floor: 0 };   // read by the HUD
+const FINAL_BIOME = BIOMES.length - 1;
+const towerBiome = (f: number): number => Math.floor((f - 1) / 5) % BIOMES.length;
+function towerPlan(f: number): RoomPlan {
+  if (f % 10 === 0) return { type: 'BOSS', reward: 'NONE' };
+  if (f % 5 === 0) return { type: 'MINIBOSS', reward: 'ITEM' };
+  if (f % 3 === 0) return { type: 'ELITE', reward: f % 2 ? 'GEMS' : 'CARD' };
+  return { type: 'COMBAT', reward: f % 2 ? 'CARD' : f % 4 === 0 ? 'SHARDS' : 'GOLD' };
+}   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
   const d = world.director;
@@ -108,7 +120,9 @@ export function resetDirector(): void {
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
+  finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   world.room.fade = 1;
+  if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), 0, towerPlan(1)); return; }
   enterRoom(0, 0, firstPlan());
 }
 
@@ -126,8 +140,11 @@ export function descend(): void {
   const p = world.player;
   const st = useGameStore.getState();
   p.hp = Math.min(st.stats.maxHealth, p.hp + st.stats.maxHealth * 0.3);
+  if (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE') { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); return; }   // the Undying Throne
   beginLeave(firstPlan(), biome + 1, 0);
 }
+/** The big portal's label after a boss. */
+export const nextBiomeLabel = (): string => (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE' && !finalFight ? 'The Undying Throne' : `Next biome · ${biomeOf(biome + 1).name}`);
 
 /** After a boss: bank the run (rank xp + room bonus gold are paid out) and show the summary. */
 export function finishRunVictory(): void {
@@ -154,9 +171,9 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
-  if (idx === 0) crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
+  if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   biome = b; index = idx; plan = p;
-  depth = depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' ? 1 : 0);
+  depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' ? 1 : 0);
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
   clearTransient();
@@ -191,7 +208,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   st.setWave(depth);
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : biomeOf(b).name });
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
   if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
 }
@@ -360,7 +377,8 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const d = dd();
   const e = spawnEnemy(kind, tmp.set(x, 0, z));
   if (!e) return;
-  const names = BOSS_NAMES[kind as BossKind];
+  const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : BOSS_NAMES[kind as BossKind];
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 3.2); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
@@ -383,7 +401,7 @@ function tickSpawns(dt: number): void {
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
-    const kind = debug.bossOverride || biomeOf(biome).boss;
+    const kind = finalFight ? 'BOSS_LICH' : debug.bossOverride || biomeOf(biome).boss;
     placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     bossSpawned = true;
   }
@@ -476,6 +494,15 @@ function bossRewards(): void {
 // ------------------------------------------------------------ clearing ------
 function openPortals(): void {
   const r = world.room;
+  if (runInfo.mode === 'TOWER') {   // one way up
+    const po = r.portals[0];
+    for (const q of r.portals) q.active = false;
+    portalSlot(0, 1, r.radius, slot);
+    choices.length = 0; choices.push(towerPlan(towerFloor + 1));
+    po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[0]; po.big = false;
+    events.emit('portalsOpen', {});
+    return;
+  }
   const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome, shrineBiome !== biome, index + 1 === crystalAt);
   if (choices.some((c) => c.type === 'SHRINE')) shrineBiome = biome;       // the optional challenge: once per biome
   if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
@@ -502,6 +529,7 @@ function onCleared(): void {
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
   events.emit('waveClear', { wave: depth, fast: roomT < 40 });
+  if (runInfo.mode === 'TOWER') towerCleared();
   const t = plan.type;
   if (t === 'TREASURE') world.room.station.ready = true;
   // reward for this room
@@ -543,9 +571,29 @@ function tickFight(dt: number): void {
   if (roomT > (unitN === 0 && !miniPending ? 0.6 : 1.2) && idle) onCleared();
 }
 
+function towerCleared(): void {
+  const st = useGameStore.getState();
+  world.run.towerFloor = towerFloor;
+  const best = st.recordTowerFloor(towerFloor);
+  events.emit('towerFloor', { floor: towerFloor, best });
+  if (towerFloor % 5 === 0) for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, 0), 2 + Math.floor(towerFloor / 5));   // milestone gems
+}
+
 function onBossCleared(): void {
   const d = dd();
   world.boss.active = false;
+  if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
+    for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+    bossRewards(); onCleared(); return;
+  }
+  if (finalFight) {   // Malakar falls: the ending
+    d.phase = 'BIOME_DONE'; d.phaseT = 0; endingDone = true;
+    for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+    vacuumT = VACUUM_AFTER; vacuumTick = 0;
+    world.run.bossKills = Math.max(world.run.bossKills, 1);
+    events.emit('gameEnding', {});
+    return;
+  }
   d.phase = 'BIOME_DONE'; d.phaseT = 0;
   // adds vanish with their master
   for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
@@ -583,7 +631,7 @@ function scanNearby(): void {
     }
     if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
       const po = r.portals[0];
-      if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', `Next biome · ${biomeOf(biome + 1).name}`, 20, dist); }
+      if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', nextBiomeLabel(), 20, dist); }
     }
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
@@ -605,7 +653,10 @@ export function interactRoom(it: Interactable): void {
   if (st.status !== GameStatus.PLAYING) return;
   if (it.node >= 0 && it.node < 3) {
     const po = r.portals[it.node];
-    if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) beginLeave(po.plan, biome, index + 1);
+    if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
+      if (runInfo.mode === 'TOWER') { towerFloor++; towerState.floor = towerFloor; beginLeave(po.plan, towerBiome(towerFloor), (towerFloor - 1) % ROOMS_PER_BIOME); }
+      else beginLeave(po.plan, biome, index + 1);
+    }
     return;
   }
   if (it.node === 20) {
@@ -669,7 +720,7 @@ export function updateDirector(dt: number): void {
   // after a boss: one big portal to the next biome opens (no return-to-town choice); walking in descends
   if (d.phase === 'BIOME_DONE' && st.status === GameStatus.PLAYING) {
     const pl = world.player, po = r.portals[0];
-    if (!po.active && d.phaseT > 1.2) {
+    if (!po.active && d.phaseT > 1.2 && !endingDone) {
       for (const q of r.portals) q.active = false;
       po.active = true; po.big = true; po.t = 0; po.x = 0; po.z = -r.radius * 0.45; po.plan = { type: 'COMBAT', reward: 'NONE' };
       events.emit('portalsOpen', {});

@@ -73,7 +73,7 @@ export const Announcer: React.FC = () => {
             <div className="flex items-center gap-4">
               {cur.kind === 'boss' && <Skull size={26} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 8px #f00)' }} />}
               {cur.kind === 'level' && <ArrowUpCircle size={34} color="#a8c8ff" />}
-              <div className="k-title" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '1.9rem' : cur.kind === 'level' ? '1.7rem' : '2.5rem' }}><i /><span>{cur.title}</span><i /></div>
+              <div className="k-title" data-tone={KIND_STYLE[cur.kind].tone} style={{ letterSpacing: cur.kind === 'boss' ? '.08em' : undefined, fontSize: cur.kind === 'boss' ? (cur.title.length > 22 ? '1.35rem' : '1.9rem') : cur.kind === 'level' ? '1.7rem' : '2.5rem' }}><i /><span>{cur.title}</span><i /></div>
               {cur.kind === 'boss' && <Skull size={26} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 8px #f00)' }} />}
             </div>
             {cur.sub && <div className="k-sub">{cur.sub}</div>}
