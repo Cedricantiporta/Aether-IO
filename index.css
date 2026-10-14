@@ -1355,3 +1355,20 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .qt-bar { position: relative; flex: 1; height: 3px; background: rgba(255, 255, 255, .12); }
 .qt-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2e, #f1d58e); box-shadow: 0 0 5px rgba(241, 213, 142, .6); }
 .qt-row.done .qt-bar i { background: #7be38f; box-shadow: 0 0 5px rgba(123, 227, 143, .7); }
+
+/* ---- town profile (top-left) */
+.tp { display: flex; align-items: center; gap: .8rem; padding: .4rem 2.6rem .5rem .3rem; background: linear-gradient(90deg, rgba(6, 7, 9, .62), rgba(6, 7, 9, .35) 60%, transparent); }
+.tp-emblem { background: none; border: 0; padding: 0; flex: none; }
+.tp-emblem:hover { filter: brightness(1.2); }
+.tp-body { display: flex; flex-direction: column; gap: .3rem; min-width: 13rem; }
+.tp-name { display: flex; align-items: baseline; gap: .6rem; }
+.tp-name span { font-family: var(--font-title); font-size: 1.45rem; font-weight: 700; color: #f6e8c8; letter-spacing: .04em; text-shadow: 0 2px 3px #000, 0 0 10px rgba(0, 0, 0, .7); line-height: 1; }
+.tp-rank { font-family: var(--font-title); font-size: .7rem; font-weight: 700; letter-spacing: .14em; color: #1f1608; padding: .12rem .45rem; background: linear-gradient(180deg, #f6e0a0, #c99a48); box-shadow: 0 0 0 1px #000, 0 0 8px rgba(241, 213, 142, .35); }
+.tp-xp { display: flex; align-items: center; gap: .55rem; }
+.tp-line { position: relative; flex: 1; height: 3px; background: rgba(255, 255, 255, .14); }
+.tp-line i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2e, #f1d58e); box-shadow: 0 0 6px rgba(241, 213, 142, .6); }
+.tp-xp em { font-style: normal; font-size: .66rem; color: #cfc4a8; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
+.tp-chips { display: flex; gap: .4rem; }
+.tp-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .16rem .55rem; font-size: .66rem; font-weight: 600; color: #e9dcb8; background: rgba(0, 0, 0, .45); border: 1px solid rgba(214, 186, 122, .4); }
+button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
+.tp-chip.dim { color: #b9ad92; border-color: rgba(214, 186, 122, .2); }

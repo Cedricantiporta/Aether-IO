@@ -1,6 +1,7 @@
 import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
 import { ActionBar } from '../hud/ActionBar';
 import { QuestTracker } from '../hud/QuestTracker';
+import { TownProfile } from '../hud/TownProfile';
 import { SkillRow, ExpStrip } from '../hud/Vitals';
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -103,12 +104,8 @@ export const VillageHUD: React.FC = () => {
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 30 }} data-testid="village-hud">
       {/* top-left: rank + hero + difficulty */}
       {!panel && (
-        <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '1.2rem', top: '1rem', width: '16.5rem' }}>
-          <div className="rank-bare"><RankPlate /></div>
-          <button className="cs-change pe" onClick={() => setCharSelect(true)} data-testid="change-class">
-            <ClassEmblem hero={hero} size="3.2rem" lit />
-            <span><b>{HERO_META[hero].title}</b><small>{DIFFICULTY_MODS[difficulty].label} · change class</small></span>
-          </button>
+        <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '.6rem', top: '.6rem' }}>
+          <TownProfile />
         </div>
       )}
 
