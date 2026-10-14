@@ -9,7 +9,7 @@ import { QualityCfg } from './quality';
 import { useGameStore } from '../store';
 import { isLobbyStatus } from './CameraRig';
 import { GB, fbm, litMat, mulberry32, setInst, TAU, vnoise, lerp } from './util';
-import { GROUND_SIZE, POND, edgeR, groundY, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
+import { GROUND_SIZE, POND, edgeR, groundY, lakeK, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
 import { makeRockGeo, useNature } from './models';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
@@ -333,6 +333,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       const s = 0.9 + rnd() * 1.3;
       if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
+      if (lakeK(x, z) > 0.02) continue;
       setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
     }
     m.count = c;
@@ -357,6 +358,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const d = Math.pow(rnd(), 1.5) * 58 + 3;
       const r = e + d, x = Math.cos(a) * r, z = Math.sin(a) * r;
       const t = rnd();
+      if (lakeK(x, z) > 0.02) continue;   // no forest in the lake
       const kind = d < 18 ? (t < 0.38 ? 'oak' : t < 0.52 ? 'palm' : t < 0.76 ? 'pineA' : 'pineB') : (t < 0.1 ? 'oak' : t < 0.55 ? 'pineA' : 'pineB');
       const sc = (kind === 'oak' ? 5 : kind === 'palm' ? 5 : 6) * (0.8 + rnd() * 0.7) * (1 + d * 0.004);
       const arr = d < 16 ? inner[kind] : lists[kind];

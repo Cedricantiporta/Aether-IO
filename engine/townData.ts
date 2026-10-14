@@ -26,8 +26,11 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls). */
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
+/** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
+export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
+
 export const ISLAND_BOXES: [number, number, number, number][] = [
-  [-62, -60, 62, 56],   // walled town + a walkable ring OUTSIDE the walls (hermit camp at the back, route round the corner towers)
+  [-48.5, -60, 62, 56], // walled town + a walkable ring OUTSIDE the walls on the back / east (the west side is the lake)
   [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
 ];
 

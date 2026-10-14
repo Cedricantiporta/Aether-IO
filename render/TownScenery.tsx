@@ -3,13 +3,13 @@
 // are one flat mesh without shadows, lamp bulbs are emissive only (no real lights).
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
+import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
 import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
-  CASTLE, HERMIT_CAMP, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
+  CASTLE, LAKE, HERMIT_CAMP, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
@@ -487,6 +487,51 @@ function buildTown() {
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
+/** Soft bump texture for the lake surface (scrolled every frame -> gentle ripples). */
+function rippleTexture(): CanvasTexture {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d')!; x.fillStyle = '#808080'; x.fillRect(0, 0, N, N);
+  const rnd = mulberry32(91);
+  for (let i = 0; i < 260; i++) {
+    const px = rnd() * N, py = rnd() * N, r = 6 + rnd() * 22, v = rnd() < 0.5 ? 255 : 0;
+    for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) {
+      const g = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r);
+      g.addColorStop(0, `rgba(${v},${v},${v},.18)`); g.addColorStop(1, 'rgba(128,128,128,0)');
+      x.fillStyle = g; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2);
+    }
+  }
+  const t = new CanvasTexture(c); t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(10, 14);
+  return t;
+}
+
+/** The lake west of the town: animated water surface, sandy shore line, reeds and a few shore rocks. */
+function Lake() {
+  const { water, shore, mat, shoreMat } = useMemo(() => {
+    const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 - LAKE.z0;
+    const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1) / 2);
+    const bump = rippleTexture();
+    const mat = new MeshStandardMaterial({ color: new Color('#2c6f93'), roughness: 0.12, metalness: 0.15, bumpMap: bump, bumpScale: 0.6, transparent: true, opacity: 0.94 });
+    const b = new GB([0.85, 1.05]), rnd = mulberry32(303);
+    // sandy shore strip + reeds + rocks along the waterline
+    for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {
+      b.box(4.2, 0.12, 3.2, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e', [0, (rnd() - 0.5) * 0.3, 0]);
+      if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
+      if (rnd() < 0.18) b.ico(0.6 + rnd() * 0.6, [LAKE.x1 - 1.5 - rnd() * 3, -0.05, z + rnd()], '#8a8f94', [1.2, 0.6, 1], 0);
+      if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
+    }
+    const shore = b.build();
+    return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
+  }, []);
+  useFrame((_, dt) => { const m = mat.bumpMap; if (m) { m.offset.x += dt * 0.01; m.offset.y += dt * 0.017; } });
+  useEffect(() => () => { water.dispose(); shore.dispose(); mat.bumpMap?.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, shore, mat, shoreMat]);
+  return (
+    <>
+      <mesh geometry={water} material={mat} receiveShadow renderOrder={1} />
+      <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
+    </>
+  );
+}
+
 function TownTrees() {
   const nat = useNature();
   const lists = useMemo(() => {
@@ -557,6 +602,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
+      <Lake />
       {town.chunks.map((c, i) => (
         <React.Fragment key={i}>
           <mesh geometry={c.body} material={mats.lit} castShadow={shadows} receiveShadow={shadows} />

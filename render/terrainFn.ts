@@ -1,6 +1,7 @@
 // Pure terrain functions shared by ground mesh, props, forest and water.
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
+import { LAKE } from '../engine/townData';
 import { FARM, WALL } from '../engine/townData';
 import { fbm, lerp, smooth } from './util';
 
@@ -30,7 +31,20 @@ export function pondEdge(a: number) {
   return POND.r * (0.82 + 0.34 * fbm(Math.cos(a) * 1.2 + 11, Math.sin(a) * 1.2 + 11, 3));
 }
 
+/** 0..1: how far into the lake west of the town (ramps over LAKE.shore units from the shore line). */
+export function lakeK(x: number, z: number) {
+  if (x > LAKE.x1) return 0;
+  const inX = sstep(LAKE.x1, LAKE.x1 - LAKE.shore, x);
+  const inZ = sstep(LAKE.z0, LAKE.z0 + 14, z) * sstep(LAKE.z1, LAKE.z1 - 14, z);
+  return inX * inZ;
+}
+
 export function groundY(x: number, z: number) {
+  const k = lakeK(x, z);
+  if (k > 0) return groundYLand(x, z) * (1 - k) - 1.6 * k;   // lake bed (water sits at y ~ -0.15)
+  return groundYLand(x, z);
+}
+function groundYLand(x: number, z: number) {
   const r = Math.hypot(x, z);
   const a = Math.atan2(z, x);
   const e = edgeR(a);
