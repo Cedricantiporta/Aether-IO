@@ -224,9 +224,8 @@ export function fireBasicAttack(): void {
       dx = dir.x * c - dir.z * s;
       dz = dir.x * s + dir.z * c;
     }
-    if (rp === 0 && i === Math.floor((count - 1) / 2) && (special || thunderProc)) {
-      if (special) {
-        // Main projectile of this volley becomes the special arrow.
+    if (rp === 0 && special) {
+      // Archer passive proc: EVERY arrow of this volley (multishot included) becomes the burning / freezing arrow.
         const burn = special === 'BURNING_ARROW';
         const dmg = stats.damage * dmgMul * (burn ? 1.05 : 1.2) * stats.skillDamage * (1 + 0.15 * (specialLv - 1));
         spawnProjectile(special, ox, oz, dx, dz, 30, dmg, {
@@ -234,8 +233,9 @@ export function fireBasicAttack(): void {
           effect: burn ? { type: 'BURN', duration: 4, value: stats.damage * 0.3 }
             : { type: 'SLOW', duration: 3 + 0.3 * specialLv, value: 0.6 },
         });
-        continue;
-      }
+      continue;
+    }
+    if (rp === 0 && i === Math.floor((count - 1) / 2) && thunderProc) {
       const p = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
         life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
       });
