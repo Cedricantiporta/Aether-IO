@@ -557,3 +557,15 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   loot / Bulk sell (Epic+ confirm); Tech House per-tier listings; summon: shards below Epic, Shard Altar has a reduced
   Legendary/Mythic pool (summonPool.ts), ritual tint by best pull; hero name + title above the overhead bars; NPC bubbles
   every 4-8 s; Darkwood lighter with glowing mushrooms; loot prompt at the auto-loot distance (2.4).
+- Necromancer ult (Army of the Dead) is now only a bone golem that drops like a meteor (fx GOLEM_DROP, AoE stun),
+  lasts 20 s (`spawnMinion(..., dropped)`); golem damage -20%. Archer: no attack speed per level; Lightpiercer charges
+  while held (`castHold` / `slotHeld` in abilities.ts, up to x2.5 dmg / x2 size, base -33%); Frost Field freeze chance
+  halved. Barbarian Whirlwind: 1.2 s base, keeps spinning while held (max 4 s). Touch: hold skills fire on touch-down.
+  Judgment damage -50%.
+- Malakar (final fight, `world.boss.final`): stage 2 below 50% HP (faster patterns, more and bigger orbs), periodic absorb
+  shield, illusions = real decoys (`spawnIllusions`, trickKind 1: same HP, half armour, fans + rings; 1 for 10 s / 2 for
+  20 s). The Lich summons cultists (dark mages) instead of skeleton archers.
+- Slots: one thin 1px border everywhere (bag / shop slots match the equipped slots). Camp: no Campfire label. Gorath keeps
+  a step back (radius + 3.6) so melee heroes aren't inside the model.
+- QA note: kill stale `vite --port 5191` servers before headless runs (`pkill -f "vite --port 5191"`); a stale server
+  makes page imports hit a duplicate module copy and setups silently do nothing.
