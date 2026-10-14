@@ -28,7 +28,9 @@ export const BossBar: React.FC = () => {
     // follow the boss: anchored above its head (clamped inside the screen)
     if (root.current) {
       const r = root.current, W = window.innerWidth, H = window.innerHeight, hw = r.offsetWidth / 2;
-      const x = Math.min(W - hw - 8, Math.max(hw + 8, b.sx)), y = Math.min(H - 40, Math.max(r.offsetHeight + 8, b.sy));
+      // off screen (or no anchor yet): parked top-centre, under the depth tracker
+      const x = b.onScreen ? Math.min(W - hw - 8, Math.max(hw + 8, b.sx)) : W / 2;
+      const y = b.onScreen ? Math.min(H - 40, Math.max(r.offsetHeight + 150, b.sy)) : r.offsetHeight + 150;
       r.style.transform = `translate(${(x - hw).toFixed(1)}px, ${(y - r.offsetHeight).toFixed(1)}px)`;
       r.style.opacity = b.onScreen ? '1' : '0.85';
     }

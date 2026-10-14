@@ -41,7 +41,8 @@ export const AFFIXES: AffixDef[] = [
   { key: 'burn',  label: 'Burn on Hit',       stat: 'onHitBurnChance', tiers: [0, .04, .06, .08, .11], weight: 4, cp: 300 },
   { key: 'slow',  label: 'Slow on Hit',       stat: 'onHitSlowChance', tiers: [0, .05, .08, .11, .15], weight: 4, cp: 300 },
   { key: 'pierce', label: 'Projectile Pierce', stat: 'pierceBonus',    tiers: [0, 1, 1, 1, 2], weight: 1.6, cp: 150, fixed: true },
-  { key: 'proj',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0.5, minRarity: 'EPIC', cp: 200, fixed: true },
+  { key: 'proj',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0,  // retired: extra projectiles come from weapon perks (weaponPerks.ts)
+    minRarity: 'EPIC', cp: 200, fixed: true },
 ];
 export const AFFIX_BY_KEY: Record<string, AffixDef> = Object.fromEntries(AFFIXES.map((a) => [a.key, a]));
 
@@ -91,7 +92,7 @@ const round = (v: number): number => parseFloat(v.toFixed(3));
 export function rollAffixList(rarity: Rarity, rng: () => number = Math.random): ItemAffix[] {
   const n = AFFIX_COUNT[rarity];
   const ri = R_IDX[rarity];
-  const pool = AFFIXES.filter((d) => !d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]);
+  const pool = AFFIXES.filter((d) => d.weight > 0 && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]));
   const out: ItemAffix[] = [];
   for (let i = 0; i < n && pool.length; i++) {
     let total = 0;

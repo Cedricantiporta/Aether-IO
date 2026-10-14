@@ -6,6 +6,7 @@ import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
+import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { STORY, sanitizeStory, type StorySave } from './story';
 import { xpNeed, growBase, unlockLevel, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
 let runStartLevel = 1;
@@ -232,6 +233,8 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   applyAcc(final, acc);
 
   if (equipment.weapon && equipment.weapon.projectileType === 'MAGIC') final.fireRate *= 0.5;
+  const wp = weaponPerk(equipment.weapon);   // axe perk: Bloodthirst = life steal
+  if (wp?.k === 'LIFESTEAL') final.lifeSteal += lifeStealOf(wp.lv);
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
   return final;
 };

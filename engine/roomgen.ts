@@ -69,7 +69,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const [sx, sz] = startPos(R);
   const [stx, stz] = stationPos(R);
   keep.push({ x: sx, z: sz, r: 4.5 });
-  if (!boss) { const [cx, cz] = stationPos(R); keep.push({ x: cx, z: cz, r: 5 }); }
+  if (!boss) { const [cx, cz] = stationPos(R); keep.push({ x: cx, z: cz, r: type === 'MINIBOSS' ? 12 : 5 }); }   // mini-boss rooms: a wide open arena where the champion spawns (big ones never wedge in rocks)
   for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
   const blockedSpot = (x: number, z: number, r: number, gap: number): boolean => {
     for (const k of keep) if (Math.hypot(x - k.x, z - k.z) < k.r + r) return true;

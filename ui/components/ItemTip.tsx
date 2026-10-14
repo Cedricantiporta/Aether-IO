@@ -7,6 +7,7 @@ import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
 import { HERO_STATS } from '../../constants';
 import { affixText, isUnique } from '../../affixes';
+import { weaponPerk, perkText } from '../../weaponPerks';
 import { petPower, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
@@ -63,6 +64,16 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
           </div>
         );
       })}
+      {(() => {   // weapon perk (weaponPerks.ts): class-specific, strength by rarity
+        const wp = weaponPerk(item);
+        if (!wp) return null;
+        const t = perkText(wp);
+        return (<>
+          <div className="tt-sep" />
+          <div data-testid="perk-line" style={{ color: '#b0560a', fontWeight: 800, fontSize: '.8rem' }}>✦ {t.name}</div>
+          <div style={{ fontSize: '.72rem', opacity: 0.85 }}>{t.desc}</div>
+        </>);
+      })()}
       {item.affixes && item.affixes.length > 0 && (
         <>
           <div className="tt-sep" />

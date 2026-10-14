@@ -322,8 +322,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   if (hero === 'ARCHER') {
     if (slot === 'q') {
       const w = (1 + stats.galeWidth) * (1 + 0.1 * (lv - 1));
-      const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 34, b * 6,
-        { life: 2.4, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
+      const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 34, b * 4.8,
+        { life: 1.6, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
       if (pr) { pr.state = 0; pr.procLv = 0; pr.spin = w; pr.trailT = 0; pr.homing = 0; pr.aoeRadius = 0; pr.bounces = 3 + lv; }
       announce('GALE_ARROW');
     } else if (slot === 'e') {

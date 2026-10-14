@@ -207,7 +207,7 @@ export function spawnEnemy(
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.5 * mods.bossHp : 1.4); // normal & elites +40%; bosses -50% (x Ascension boss hp)
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4); // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
@@ -255,7 +255,7 @@ export function spawnEnemy(
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
-  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 1.25); // mini-bosses +25% over their old hp
+  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 0.625); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
   e.affix = 'NONE';

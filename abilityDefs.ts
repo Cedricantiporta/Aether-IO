@@ -21,7 +21,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ARCHER: [
     { slot: 'q', icon: 'GALE_ARROW', name: 'Gale Arrow', mana: 22, cd: 7,
       desc: 'Loose a slow giant wind arrow that pierces a full line, breaking armor and leaving a trail of tornadoes that tug enemies in.',
-      per: (lv) => `Damage ${pct(6 * lvMul(lv))} · width x${f1(1 + 0.1 * (lv - 1))} · ${3 + lv} tornadoes` },
+      per: (lv) => `Damage ${pct(4.8 * lvMul(lv))} · width x${f1(1 + 0.1 * (lv - 1))} · ${3 + lv} tornadoes` },
     { slot: 'e', icon: 'SHADOW_ROLL', name: 'Shadow Roll', mana: 0, cd: 0,
       desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s.',
       per: (lv) => `Blast ${pct(8 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },

@@ -95,7 +95,7 @@ export const SETS: SetDef[] = [
     flavour: { weapon: 'fury', helmet: 'arcane', armor: 'medium', gloves: 'light', boots: 'swift', accessory: 'arcane' },
     bonuses: [
       { pieces: 2, text: '+10% damage, +20% skill damage', fx: { mul: { damage: 0.1 }, add: { skillDamage: 0.2 } } },
-      { pieces: 4, text: '+1 projectile, +1 pierce', fx: { add: { multishot: 1, pierceBonus: 1 } } },
+      { pieces: 4, text: '+2 pierce', fx: { add: { pierceBonus: 2 } } },
       { pieces: 6, text: 'Every 4th attack fires twice, +12% cooldown reduction, +25% XP and gold', fx: { add: { cooldownReduction: 0.12, echoEvery: 4, xpBonus: 0.25, goldFind: 0.25 } } },
     ],
   },

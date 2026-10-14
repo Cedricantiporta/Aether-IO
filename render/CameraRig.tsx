@@ -104,7 +104,12 @@ export function CameraRig() {
 
     // ---- boss bar anchor: screen position just above the boss's head (the HUD bar follows it)
     {
-      const B = world.boss, id = world.director.bossId, e = id >= 0 ? world.enemies[id] : null;
+      const B = world.boss, id = world.director.bossId;
+      let e = id >= 0 ? world.enemies[id] : null;
+      if (B.active && !(e && e.active)) {   // mini-bosses (champions, the Slime King) use the bar too: find the live one
+        e = null;
+        for (let i = 0; i < world.enemies.length; i++) { const m = world.enemies[i]; if (m.active && m.mini && m.state !== 'DYING') { e = m; break; } }
+      }
       if (B.active && e && e.active) {
         _d.set(e.pos.x, 1.4 + e.scale * 1.55, e.pos.z).project(cam);
         B.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;

@@ -378,3 +378,16 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Equip / pet steps also complete from state (helmet equipped / pet owned, store subscription in storyLogic), so gear
   equipped by drag or auto-equip counts; clicking the equip step opens the bag.
 - NPC head markers: side quests blue "!" / "?", the main quest's current NPC a gold "!".
+
+### Weapon perks (Multicast card removed), boss HP, boss bar, arenas
+- `weaponPerks.ts`: every class weapon above Common has ONE perk, picked from its id hash (nothing saved), level = rarity
+  (Rare I .. Mythic IV). Bow: Multishot (2/3/4/6 arrows, forward fan only) or Piercing Arrows (green, chance +1 pierce).
+  Sword: Twin Slash (2-3 slashes) or Great Slash (bigger + dmg); Legendary swords swing red, Mythic black (`SLASH_RED/DARK`).
+  Axe: Bleeding Edge (poison-type DoT chance), Bloodthirst (life steal, applied in calculateStats) or Twin Axes (2-3).
+  Staff: Arcane Swell (bigger, faster bolts) or Flame / Frost / Storm Bolts (chance to burn / slow / chain; tinted halos).
+  Shown in ItemTip (`perk-line`). The Multicast upgrade card and the `proj` affix (weight 0) are retired; Gold Dragon
+  pet and a set bonus lost their +1 projectile. MULTISHOT_CAP 6.
+- Boss HP x0.5 again (spawnEnemy boss mul 0.25), mini-bosses x0.5 (0.625), Slime King stays half the Golem.
+- Boss bar: mini-bosses now get a screen anchor (CameraRig finds the live `mini` enemy); off-screen it parks top-centre.
+- MINIBOSS rooms keep a 12-radius clear arena at stationPos and the champion spawns there (no more wedged bosses).
+- Combo meter moved to the left edge. Gale Arrow: damage 4.8x (-20%), range ~54 (life 1.6).

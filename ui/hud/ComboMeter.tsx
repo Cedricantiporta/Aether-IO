@@ -23,11 +23,11 @@ export const ComboMeter: React.FC<{ touch?: boolean }> = ({ touch }) => {
     const f = combo.finisher > 0;
     if (f !== l.fin) { l.fin = f; if (fin.current) { fin.current.style.opacity = f ? '1' : '0'; if (f) { fin.current.classList.remove('combo-fin'); void fin.current.offsetWidth; fin.current.classList.add('combo-fin'); } } }
   });
-  // floats on the right edge at mid height, no box: just big outlined text + the timer ring
-  const pos: React.CSSProperties = { position: 'fixed', right: touch ? '1rem' : '2rem', top: touch ? '30%' : '36%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', zIndex: 7 };
+  // floats on the LEFT edge at mid height (clear of the quest tracker on the right), no box: big outlined text + the timer ring
+  const pos: React.CSSProperties = { position: 'fixed', left: touch ? '1rem' : '1.5rem', top: touch ? '34%' : '42%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 7 };
   return (
     <div className="pointer-events-none" style={pos} data-testid="combo-meter">
-      <div ref={fin} style={{ position: 'absolute', right: 0, top: '-1.6rem', opacity: 0, fontSize: touch ? '1rem' : '1.3rem', fontWeight: 900, letterSpacing: '.2em', color: '#ffe27a', textShadow: '0 0 14px #ff9a00, 0 2px 0 #7a2a00', whiteSpace: 'nowrap' }}>FINISHER!</div>
+      <div ref={fin} style={{ position: 'absolute', left: 0, top: '-1.6rem', opacity: 0, fontSize: touch ? '1rem' : '1.3rem', fontWeight: 900, letterSpacing: '.2em', color: '#ffe27a', textShadow: '0 0 14px #ff9a00, 0 2px 0 #7a2a00', whiteSpace: 'nowrap' }}>FINISHER!</div>
       <div ref={root} data-n="0" className="combo-box" style={{ opacity: 0 }}>
         <svg width="26" height="26" viewBox="0 0 44 44" style={{ marginRight: '.45rem' }}>
           <circle cx="22" cy="22" r="18" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.18)" strokeWidth="4" />

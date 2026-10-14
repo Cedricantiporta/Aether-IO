@@ -379,7 +379,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(ENEMY_DEFS.BOSS_GOLEM.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.5 * m.bossHp * 0.5); e.hp = e.maxHp;
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_GOLEM.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5); e.hp = e.maxHp;   // half of the (halved) Golem
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
     }
@@ -425,9 +425,10 @@ function tickSpawns(dt: number): void {
     bossSpawned = true;
   }
   if (miniPending && roomT >= 1.0) {
-    if (pickAnchor(14)) {
+    {   // spawns in the open arena kept clear by roomgen (stationPos of a MINIBOSS room, radius 12)
       miniPending = false;
-      placeMarker(miniKind, anchorX, anchorZ, false, 1.5, miniIsBoss ? 2 : 1);
+      const [mx, mz] = stationPos(R.radius);
+      placeMarker(miniKind, mx, mz, false, 1.5, miniIsBoss ? 2 : 1);
       if (miniIsBoss) bossSpawned = true;
     }
   }

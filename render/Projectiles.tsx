@@ -146,6 +146,8 @@ export function Projectiles() {
     };
     const slashG = crescent('#d8ecff', '#7fbcff', '#ffffff', 4.2, 0.42);   // white steel, blue edge
     const slashGoldG = crescent('#fff6d8', '#ffd76a', '#ffffff', 4.2, 0.48);   // Divine Avatar swing: gold / white
+    const slashRedG = crescent('#ffd0d0', '#ff3a3a', '#ffffff', 4.2, 0.46);   // Legendary sword: crimson
+    const slashDarkG = crescent('#3a2440', '#0c060e', '#c060ff', 4.2, 0.48);  // Mythic sword: black with a violet edge
     const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 6.4, 0.85);
     // orbital blade
     const bl = new GB([1, 1]);
@@ -177,6 +179,8 @@ export function Projectiles() {
       X_SLASH: mk([[xs.build(), glow]], 40),
       SLASH: mk([[slashG, glow]], 120),
       SLASH_GOLD: mk([[slashGoldG, glow]], 80),
+      SLASH_RED: mk([[slashRedG, glow]], 80),
+      SLASH_DARK: mk([[slashDarkG, glow]], 80),
       HOLY_WAVE: mk([[holyG, glow]], 60),
     } as Record<string, InstancedMesh[]>;
     const E = {
@@ -213,7 +217,7 @@ export function Projectiles() {
     for (let n = 0; n < pr.length; n++) {
       const p = pr[n];
       if (!p.active) continue;
-      const key = p.kind === 'SLASH' && p.emp ? 'SLASH_GOLD' : p.kind;   // Divine Avatar swings use the golden arc
+      const key = p.kind === 'SLASH' ? (p.emp ? 'SLASH_GOLD' : p.tint === 4 ? 'SLASH_RED' : p.tint === 5 ? 'SLASH_DARK' : 'SLASH') : p.kind;   // Divine Avatar = gold; Legendary / Mythic swords = red / black
       const ims = sys.S[key]; if (!ims) continue;
       if (!inView(p.pos.x, p.pos.z, 6)) continue;
       const i = counts[key]++;
@@ -231,6 +235,10 @@ export function Projectiles() {
             place(ims, i, x, y, z, yaw, pitch, 0, 1.15);
             pushHalo(x, y, z, 1.5, 0.5, 1.4, 2.6, 0.75, CELL.GLOW);
             if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.25, 0.45, 0.05, 0.6, 1.6, 2.6, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
+          } else if (p.tint === 3) {   // bow perk: green piercing arrow
+            place(ims, i, x, y, z, yaw, pitch, 0, 1.15);
+            pushHalo(x, y, z, 1.5, 0.5, 2.4, 0.7, 0.75, CELL.GLOW);
+            if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.25, 0.45, 0.05, 0.7, 2.4, 0.9, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
           } else if (p.tint === 2) {   // Inspire: white light
             place(ims, i, x, y, z, yaw, pitch, 0, 1.1);
             pushHalo(x, y, z, 1.3, 2.2, 2.2, 2.2, 0.6, CELL.GLOW);
@@ -269,6 +277,8 @@ export function Projectiles() {
           const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (0.85 + (1 - life) * 0.35) * (p.radius / 2.5);
           place(ims, i, x, y, z, yaw, 0, p.bounces & 1 ? 0.25 : -0.25, p.bounces & 1 ? -sc : sc, sc, sc);
           if (p.emp) pushHalo(x, y, z, 2.8 * sc, 2.2, 1.8, 0.9, 0.4 * life + 0.15, CELL.GLOW);
+          else if (p.tint === 4) pushHalo(x, y, z, 2.7 * sc, 2.4, 0.4, 0.3, 0.38 * life + 0.12, CELL.GLOW);
+          else if (p.tint === 5) pushHalo(x, y, z, 2.7 * sc, 0.9, 0.2, 1.6, 0.4 * life + 0.12, CELL.GLOW);
           else pushHalo(x, y, z, 2.6 * sc, 1.0, 1.4, 2.2, 0.35 * life + 0.1, CELL.GLOW);
           if (emit && Math.random() < dt * 40) { const o = (Math.random() - 0.5) * 3; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, 0, 0.4, 0, 0.25, 0.3, 0.05, 1.3, 1.8, 2.5, 0.7, CELL.STAR, 0, 0.3); }
           break;
@@ -293,8 +303,11 @@ export function Projectiles() {
           if (emit && Math.random() < dt * 45) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.5, 0.26, 0.04, 1.0, 1.9, 2.4, 0.9, CELL.SHARD, 2, 1, Math.random() * 6, 5);
           break;
         case 'MAGIC':
-          place(ims, i, x, y, z, yaw, pitch, t * 6 + n, 1 + 0.08 * Math.sin(t * 20 + n));
-          pushHalo(x, y, z, 1.7, 1.0, 0.45, 1.8, 0.55, CELL.GLOW);
+          place(ims, i, x, y, z, yaw, pitch, t * 6 + n, (1 + 0.08 * Math.sin(t * 20 + n)) * (p.radius / 2.5));   // staff perk Arcane Swell = bigger bolts
+          if (p.tint === 6) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 2.4, 0.9, 0.2, 0.6, CELL.GLOW);        // staff perk: fire bolt
+          else if (p.tint === 7) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 0.5, 1.8, 2.6, 0.6, CELL.GLOW);   // ice bolt
+          else if (p.tint === 8) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 2.4, 2.3, 0.6, 0.6, CELL.GLOW);   // lightning bolt
+          else pushHalo(x, y, z, 1.7 * (p.radius / 2.5), 1.0, 0.45, 1.8, 0.55, CELL.GLOW);
           if (emit && Math.random() < dt * 50) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2 + 0.5, (Math.random() - 0.5) * 2, 0.5, 0.3, 0.05, 1.4, 0.7, 2.2, 0.9, CELL.STAR, 0, 1, Math.random() * 3, 4);
           break;
         case 'AXE':

@@ -2,6 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
+import { weaponPerk, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
 import { world, allocProjectile, allocZone, ARENA_RADIUS } from '../world';
@@ -86,6 +87,9 @@ let procHaste = 0;
 let echoCount = 0;
 /** Archer burning / freezing arrows fire on every 6th attack (alternating when both are learned). */
 const ARCHER_PROC = 6;
+/** Shared on-hit payloads of elemental staff bolts (burn value refreshed per shot). */
+const fireFx: NonNullable<Projectile['effect']> = { type: 'BURN', duration: 3, value: 0 };
+const iceFx: NonNullable<Projectile['effect']> = { type: 'SLOW', duration: 2.5, value: 0.5 };
 /** Piercing Shot passive: shelved for now (removed from the skill list); flip to bring it back. */
 const PIERCE_SHOT_ON = false;
 const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
@@ -162,7 +166,7 @@ export function fireBasicAttack(): void {
   const ptype = weapon?.projectileType ?? defaultProjectileType();
   const pl = world.player;
   const dir = getAimDir(aim);
-  const count = Math.max(1, Math.min(MULTISHOT_CAP, Math.floor(stats.multishot + 1e-6)));
+  let count = Math.max(1, Math.min(MULTISHOT_CAP, Math.floor(stats.multishot + 1e-6)));
   procHaste = stats.procHaste;
   const extraPierce = stats.pierceBonus | 0;
 
@@ -187,6 +191,19 @@ export function fireBasicAttack(): void {
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
+
+  // ---- weapon perk (weaponPerks.ts): one class-specific perk per weapon, strength by rarity
+  const perk = weaponPerk(weapon);
+  let perkDmg = 1;
+  if (perk) {
+    if (perk.k === 'MULTI' && kind === 'ARROW') count = Math.max(count, MULTI_ARROWS[perk.lv]);
+    else if (perk.k === 'TWIN' && kind === 'SLASH') count = Math.max(count, twinSlashes(perk.lv));
+    else if (perk.k === 'AXES' && kind === 'AXE') count = Math.max(count, axeCount(perk.lv));
+    else if (perk.k === 'GREAT' && kind === 'SLASH') { const g = greatMul(perk.lv); radius *= g.size; perkDmg = g.dmg; }
+    else if (perk.k === 'BIG' && kind === 'MAGIC') { const b = bigMul(perk.lv); radius *= b.size; aoe *= b.size; speed *= b.speed; }
+    else if (perk.k === 'BLEED' && kind === 'AXE' && !effect) effect = { type: 'POISON', duration: 3, chance: bleedChance(perk.lv), value: stats.damage * (0.15 + 0.05 * perk.lv) };
+  }
+  const swordTint = kind === 'SLASH' && weapon ? (weapon.rarity === 'MYTHIC' ? 5 : weapon.rarity === 'LEGENDARY' ? 4 : 0) : 0;   // red / black blades
 
   // ---- on-attack procs (per-volley counter)
   const lv = st.skillLevels;
@@ -213,14 +230,15 @@ export function fireBasicAttack(): void {
 
   const emp = kind === 'SLASH' && pl.avatarT > 0;   // Divine Avatar: golden double-size sword arcs (render reads p.emp)
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
-  const dmgMul = (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.5 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  const dmgMul = perkDmg * (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.5 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.
   let echo = false;
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
   const baseX = pl.pos.x + dir.x * 0.9;
   const baseZ = pl.pos.z + dir.z * 0.9;
   // Split shot = forward fan only: whole fan capped at ~50 deg (+-25 deg), however much Spread gear stacks.
-  const fanStep = count > 1 ? Math.min(stats.spread, 0.87 / (count - 1)) : 0;
+  const wideBow = kind === 'ARROW' && count > 3;   // bow multishot: a wider forward fan (still never behind the hero)
+  const fanStep = count > 1 ? (kind === 'SLASH' ? 0.4 : Math.min(wideBow ? Math.max(stats.spread, 0.22) : stats.spread, (wideBow ? 1.2 : 0.87) / (count - 1))) : 0;
   for (let rp = 0; rp < (echo ? 2 : 1); rp++) for (let i = 0; i < count; i++) {
     const off = i - (count - 1) / 2;
     let dx = dir.x, dz = dir.z, ox = baseX, oz = baseZ;
@@ -254,10 +272,17 @@ export function fireBasicAttack(): void {
     }
     // Archer: Piercing Shot (a chance per arrow to pierce on into the enemy behind, blue) / Inspire (white arrows)
     const ps = PIERCE_SHOT_ON && kind === 'ARROW' && lv.pierceShot > 0 && Math.random() < 0.15 + 0.05 * lv.pierceShot;
+    const gp = perk?.k === 'PIERCE' && kind === 'ARROW' && Math.random() < pierceChance(perk.lv);   // bow perk: green piercing arrow
+    // staff perk: elemental bolt (fire burns, ice slows, lightning chains)
+    const el = perk?.k === 'ELEMENT' && kind === 'MAGIC' && Math.random() < elementChance(perk.lv) ? perk.el : null;
+    let fxE = effect;
+    if (el === 'FIRE') { fireFx.value = stats.damage * 0.3; fxE = fireFx; } else if (el === 'ICE') fxE = iceFx;
     const np = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
-      life, pierce: ps ? pierce + 1 + (lv.pierceShot >> 1) : pierce, aoe, radius, knockback: stats.knockback, effect, emp,
+      life, pierce: ps ? pierce + 1 + (lv.pierceShot >> 1) : gp ? pierce + 1 : pierce, aoe, radius, knockback: stats.knockback, effect: fxE, emp,
     });
-    if (np && kind === 'ARROW') np.tint = ps ? 1 : hero === 'ARCHER' && pl.buffT > 0 && pl.buffHaste > 0 ? 2 : 0;
+    if (np && kind === 'ARROW') np.tint = gp ? 3 : ps ? 1 : hero === 'ARCHER' && pl.buffT > 0 && pl.buffHaste > 0 ? 2 : 0;
+    if (np && kind === 'SLASH') np.tint = swordTint;
+    if (np && el) { np.tint = el === 'FIRE' ? 6 : el === 'ICE' ? 7 : 8; if (el === 'LIGHTNING') np.procLv = perk!.lv; }
     if (np && kind === 'AXE') { np.bounces = (i + rp) & 1; np.trailT = 0; }   // boomerang: alternate curve side per axe
     if (np && kind === 'SLASH') np.bounces = (procCount + i) & 1;              // alternate swing direction (render mirror)
   }

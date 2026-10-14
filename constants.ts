@@ -18,7 +18,7 @@ export const POTION_COOLDOWN = 10; // seconds, shared by engine + HUD
 export const MATERIAL_COMBINE_COST = 5;
 export const MATERIAL_DOWNGRADE_YIELD = 3;
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
-export const MULTISHOT_CAP = 5;
+export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
 /** Hero rank needed to equip / craft gear of a rarity. */
 export const RANK_REQ: Record<Rarity, number> = {
   COMMON: 1, RARE: 3, EPIC: 8, LEGENDARY: 15, MYTHIC: 25,
@@ -147,7 +147,6 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_spd', type: 'SPEED', name: 'Wind Step', description: 'Move Speed Up', rarity: 'COMMON', value: 0.05 },
   { id: 'u_dmg', type: 'DAMAGE', name: 'Sharpness', description: 'Damage Up', rarity: 'RARE', value: 0.13 },
   { id: 'u_fr', type: 'FIRE_RATE', name: 'Haste', description: 'Atk Speed Up', rarity: 'RARE', value: 0.1 },
-  { id: 'u_multi', type: 'MULTISHOT', name: 'Multicast', description: 'Projectiles Up', rarity: 'LEGENDARY', value: 1 }, // +1 projectile per card, capped by MULTISHOT_CAP
   { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: 'Dash CD Down', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
@@ -203,7 +202,7 @@ export const PETS_POOL: Item[] = [
     },
     { 
         id: 'pet_dragon', name: 'Gold Dragon', type: 'PET', rarity: 'LEGENDARY', summonOnly: true, price: 10000, level: 1, 
-        stats: { damage: 50, multishot: 1, critDamage: 0.5, fireRate: 0.2 }, // 4 Stats
+        stats: { damage: 60, critDamage: 0.5, fireRate: 0.2 }, // 3 Stats
         description: 'Shoots fireballs.', petSkill: 'ATTACK_RANGED', petValue: 40 
     },
     { 
