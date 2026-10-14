@@ -49,7 +49,19 @@ needed to see the new game).
   `camRel`). Spawn = plaza centre, camera looking at the gate (yaw PI); runs reset yaw to 0.
 - **Quest board**: 6 daily offers + up to 3 accepted; only accepted quests progress; abandon frees a slot
   (`quests.ts` `fillQuests`, store `acceptQuest/abandonQuest/refreshQuestBoard`).
-- **Town look**: stone wall ring with towers + gatehouse (`WALL*` in `engine/townData.ts`, colliders included),
+- **Town look (latest owner direction)**: muted Korean-MMO town — pale flagstone/cement paving over almost the whole
+  walled yard (few small grass patches), pale low-contrast cobbles, stone planters + a few trees, dark brown/black roofs,
+  plain beige/white stall cloth (no stripes), building/NPC names on dark gold-hairline plates (`render/label.ts`
+  `plate` option). Lobby island = walled town + thin margin; in front of the gate a small farm (wheat field,
+  scarecrow, haystack), flowerbed, trees (`ISLAND_BOXES` in `engine/townData.ts`). Clean road network: avenue gate ->
+  plaza, two streets tangent to the plaza, straight branch paths to each building door.
+- **Combat changes (latest)**: Barbarian Space = Bloodrage Leap (aimable), skill 1 = Cross Slash (X projectile
+  `X_SLASH`), Whirlwind = flat orbiting axes + keep-out push. Wizard skill 3 = Fireballs (3-ball fan; Chain Frost code
+  kept unused), Storm passive = drifting tornado, Blizzard 12%+ freeze chance, Singularity pull weaker + size-based
+  (bosses/minis never pulled), Storm Orbs zap every 0.8 s. After a boss ONE big portal to the next biome (no return to
+  town; runs end on death). Summon = Gem Altar (gold, better odds) + Shard Altar (purple, 100/900 Common shards).
+  Start with 1000 gems. Ultimate slot: gold rising energy fill, golden glow + rays when full.
+- **Town look (earlier pass)**: stone wall ring with towers + gatehouse (`WALL*` in `engine/townData.ts`, colliders included),
   cobblestone roads/plaza (canvas texture + planar UVs in `render/TownScenery.tsx`), paths to every building, no
   glowing rings around shops. Trees are procedural rounded broadleafs / conifers (`render/models.ts`
   `makeLeafyTree` / `makeConifer`, fitted to the old Kenney bounds). Hero armour is rounded + smooth-shaded
