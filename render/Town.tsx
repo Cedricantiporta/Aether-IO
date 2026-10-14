@@ -428,7 +428,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
     if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
-    if (titleRef.current) titleRef.current.position.y = 9.4 + Math.sin(t * 1.5 + pz) * 0.18;
+    if (titleRef.current) titleRef.current.position.y = 9.4; void pz;
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
     if (liquid.current) { const k = 1.4 + Math.sin(t * 4) * 0.35; mats.liquid.color.setRGB(0.5 * k, 1.8 * k, 0.6 * k); liquid.current.scale.y = 1 + Math.sin(t * 6) * 0.15; }
     // ambient emitters only when nearby (and not paused)
@@ -643,7 +643,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
     if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; }
     if (titleRef.current) titleRef.current.visible = !closed;
-    if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 7.4 + Math.sin(t * 2.4) * 0.2; }
+    if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 7.4; }
     if (shrine) {
       if (crystalRef.current) { crystalRef.current.position.y = 3.3 + Math.sin(t * 1.6) * 0.25; crystalRef.current.rotation.y = t * 0.9; mats.crystal.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 0.9 + Math.sin(t * 2.7) * 0.25, 2.4); }
       if (runeRef.current) { runeRef.current.rotation.z = -t * 0.4; mats.rune.opacity = 0.35 + 0.3 * pulse; }
@@ -711,7 +711,7 @@ function TowerLandmark() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     mats.glow.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 1.3 + Math.sin(t * 2.4) * 0.2, 2.2);
-    if (titleRef.current) titleRef.current.position.y = 32.5 + Math.sin(t * 1.4) * 0.25;
+    if (titleRef.current) titleRef.current.position.y = 32.5;
   });
   const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(TOWER.door.x + 1.2, TOWER.door.z, 'tower', '', 2.2); };
   return (

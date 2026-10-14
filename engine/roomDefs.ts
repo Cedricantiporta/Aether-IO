@@ -6,14 +6,17 @@ import type { EnemyKind, ObstacleKind, CrateKind, RoomPlan, RoomType, RewardKind
 import type { BossKind } from './enemyDefs';
 import type { Rarity } from '../types';
 
-export const ROOMS_PER_BIOME = 7;          // normal rooms before the boss room (room index ROOMS_PER_BIOME)
-export const BOSS_INDEX = ROOMS_PER_BIOME;
+export const ROOMS_PER_BIOME = 14;         // normal rooms before the boss room (room index ROOMS_PER_BIOME): 15 depths per biome
+export const BOSS_INDEX = ROOMS_PER_BIOME;   // the biome boss: depth 15
+export const PREBOSS_INDEX = 9;              // the pre-boss: depth 10 (Meadow: the Slime King; elsewhere a biome champion)
 export const REST_INDEX = ROOMS_PER_BIOME - 1; // the room before the boss is always a fountain / merchant
+/** Depth shown to the player (1-based, 15 per biome). */
+export const shownDepth = (biome: number, index: number): number => biome * (BOSS_INDEX + 1) + index + 1;
 
 /** Depth scaling: feeds waveHpMult / waveDmgMult / budget. Boss room of biome b = 10 * (b + 1). */
 export function depthWave(biome: number, index: number): number {
   if (index >= BOSS_INDEX) return 10 * (biome + 1);
-  return biome * 10 + 1 + Math.round(index * 1.3);
+  return biome * 10 + 1 + Math.round(index * 0.65);   // (difficulty curve unchanged: 15 rooms span the same 10 waves)
 }
 
 export interface BiomeDef {
@@ -142,6 +145,7 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
+  if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'ITEM', preboss: true }); return 1; }
   if (next === REST_INDEX) {
     if (fountainOk) out.push({ type: 'FOUNTAIN', reward: 'NONE' });
     if (merchantOk && (!fountainOk || Math.random() < 0.55)) out.push({ type: 'MERCHANT', reward: 'NONE' });

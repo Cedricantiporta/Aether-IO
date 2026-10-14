@@ -121,8 +121,9 @@ function scanNearby(): void {
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
-    for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Milk', 'Cow', '', 200 + i, d, 'farm'); }
-    for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Collect', 'Egg', '', 300 + k, d, 'farm'); }
+    // (only while a quest asks for it)
+    if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Milk', 'Cow', '', 200 + i, d, 'farm'); }
+    if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Collect', 'Egg', '', 300 + k, d, 'farm'); }
     if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Pick up', 'Biscuit the cat', '', 400, d, 'farm'); }
   }
   for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area === 'CASTLE') !== castle) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
@@ -180,6 +181,13 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
     if (!outS(fz, fx)) n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
     push(0, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z0 - 9); push(tx, tz);
     return n;
+  }
+  // back from the ring outside the north / east wall: along the outside of the wall to the forecourt, then on from there
+  if (world.village.area === 'TOWN' && outN(fz, fx) && !outN(tz, tx)) {
+    if (fz < WALL.z0 - 1.5) push(WALL.x1 + 8, WALL.z0 - 9);   // north side: to the north-east corner first
+    push(WALL.x1 + 8, WALL.z1 + 6); push(GATE.x + 6, WALL.z1 + 6);
+    const k = buildRoute(GATE.x + 6, WALL.z1 + 6, tx, tz, out.subarray(n * 2));
+    return n + k;
   }
   // through the gate: forecourt -> town, or town -> forecourt (never straight into the wall)
   if (world.village.area === 'TOWN' && outS(fz, fx) !== outS(tz, tx) && !outN(fz, fx) && !outN(tz, tx)) {

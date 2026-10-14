@@ -287,7 +287,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - `classLevels.ts`: `classProg: Record<HeroClass, {lv, xp, sp, skills}>`, persisted in the profile.
   - XP curve `xpNeed(lv) = 250 · lv^1.5`, max level 99. Level growth uses the same per-level stats as before (`growBase`).
   - A fresh class has 3 SP; skill 1, the dash, the ult and the utilities are learned.
-  - Unlock levels (`unlockLevel`): skill 2 Lv 3, skill 3 Lv 5, regen Lv 2, class passives Lv 2/4/6/8.
+  - Unlock levels (`unlockLevel`): skill 2 Lv 5, skill 3 Lv 10, regen Lv 2, class passives Lv 2/4/6/8.
   - Old saves: every class starts at the old shared rank with `3 + (rank-1)` SP.
 - Store:
   - `runState` reads level / xp / sp / skills from `classProg` of the hero. `skillLevels` is a run copy: room cards boost it for the run
@@ -300,3 +300,23 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Casting a level-0 skill is refused ("Unlocks at Lv N" / "Learn it at the Skill Trainer"). The action bar dims locked skills, and the
   Skill Trainer shows "Locked · Lv N" / "Learn".
 - UI says "Lv"/"Level" everywhere instead of Rank: TownProfile, RankPlate, item tips, Blacksmith, Talents, GameOver, main menu, debug.
+
+### 15-room biomes, Slime King, town layout pass
+- Biomes have 15 depths: `ROOMS_PER_BIOME` 14 (indices 0..13), `BOSS_INDEX` 14 (depth 15), `PREBOSS_INDEX` 9 (depth 10, forced MINIBOSS
+  plan with `preboss: true`), and `REST_INDEX` 13.
+  - `depthWave` keeps the old difficulty curve (15 rooms span the same 10 waves). `shownDepth()` is the player-facing depth (15 per
+    biome) in the plaque. The pre-boss pip is purple.
+  - Meadow pre-boss = **The Slime King**: a SPLITTER spawned through the mini-boss path with a boss bar and slams. Its HP is half the
+    Golem's in its own room (`waveHpMult(10·(biome+1))`, boss rule). It bursts into slimes. Other biomes use one of their champions.
+- Dash collides again: walls, props and crates stop it, checked in 0.35 u sub-steps (the town wall test stops at all sides).
+- Town:
+  - Monsters outside town removed (`TOWN_MONSTERS = []`).
+  - Harvest nodes moved outside the walls on the east side and behind the castle, with all four kinds.
+  - Farm clearing east of the field (extra ISLAND box [20,44,44,80]) with the barn (35,60), 3 cows and Hollis.
+  - Dalla patrols along the nests only.
+  - Endless Tower is in a forest nook (box [-37,69,-20,81]) at (-31,75), reached by a narrow 1.8-wide path.
+  - Roads outside the walls render as dirt (`buildDirtPaths`, clipped at `WALL.z1+2.5`); only the in-town part stays paved.
+- Farm interactions (milk, eggs) only appear while a quest asks for them (`wantsInteract`).
+- Auto-path from the outer north/east ring routes around the wall to the forecourt first.
+- Labels: plain outlined bold sans text (no plates, `labelMaterial` plate branch retired) and no bobbing on building titles.
+- Skill unlocks: skill 2 at Lv 5, skill 3 at Lv 10.

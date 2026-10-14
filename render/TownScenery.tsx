@@ -274,14 +274,47 @@ function planarUv(g: BufferGeometry, tile: number): BufferGeometry {
   return g;
 }
 
+/** The part of a road between z0 and z1 (roads are straight), or null. */
+function clipZ(rd: { x1: number; z1: number; x2: number; z2: number }, z0: number, z1: number): [number, number, number, number] | null {
+  let a = 0, b = 1; const dz = rd.z2 - rd.z1;
+  if (Math.abs(dz) < 1e-6) { if (rd.z1 < z0 || rd.z1 > z1) return null; }
+  else {
+    let t0 = (z0 - rd.z1) / dz, t1 = (z1 - rd.z1) / dz; if (t0 > t1) [t0, t1] = [t1, t0];
+    a = Math.max(a, t0); b = Math.min(b, t1); if (b - a < 1e-3) return null;
+  }
+  const lx = (t: number) => rd.x1 + (rd.x2 - rd.x1) * t, lz = (t: number) => rd.z1 + dz * t;
+  return [lx(a), lz(a), lx(b), lz(b)];
+}
+/** Outside the walls the roads are packed-earth paths: brown strips, a bit narrower, with ragged darker edges. */
+function buildDirtPaths(): BufferGeometry {
+  const r = new GB([1, 1]);
+  const rnd = mulberry32(17);
+  for (const rd of ROADS) {
+    const seg = clipZ(rd, WALL.z1 + 2.5, 1e9); if (!seg) continue;
+    const [x1, z1, x2, z2] = seg;
+    const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
+    const w = Math.max(1.4, rd.w * 0.72), n = Math.max(1, Math.round(len / 1.6));
+    for (let i = 0; i < n; i++) {   // short overlapping patches with a little wobble, so the path looks trodden, not built
+      const t = (i + 0.5) / n, mx = x1 + dx * t, mz = z1 + dz * t, wob = (rnd() - 0.5) * 0.35;
+      const ox = -Math.sin(-yaw) * wob, oz = Math.cos(-yaw) * wob;
+      r.box(len / n + 0.5, 0.04, w + 0.5 + rnd() * 0.4, [mx + ox, 0.03, mz + oz], rnd() < 0.5 ? '#6e5236' : '#644a30', [0, yaw + (rnd() - 0.5) * 0.06, 0]);
+      r.box(len / n + 0.3, 0.05, w, [mx + ox, 0.04, mz + oz], rnd() < 0.5 ? '#94734c' : '#8a6a44', [0, yaw, 0]);
+    }
+  }
+  return r.build();
+}
+
 /** All road strips share ONE layer: edge strips at y .055, surface at y .075 (identical for every road, so overlaps and
  *  junctions are seamless; higher road tops simply cover lower edge strips). */
 function buildRoads(): BufferGeometry {
   const r = new GB([1, 1]);
   const EDGE = '#cfcac0', SURF = '#ffffff';
   for (const rd of ROADS) {
-    const dx = rd.x2 - rd.x1, dz = rd.z2 - rd.z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
-    const mx = (rd.x1 + rd.x2) / 2, mz = (rd.z1 + rd.z2) / 2;
+    // only the part inside the walls is paved (outside: a dirt path, see buildDirtPaths)
+    const seg = clipZ(rd, -1e9, WALL.z1 + 2.5); if (!seg) continue;
+    const [x1, z1, x2, z2] = seg;
+    const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
+    const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
     r.box(len, 0.05, rd.w + 0.7, [mx, 0.03, mz], EDGE, [0, yaw, 0]);
     r.box(len, 0.06, rd.w, [mx, 0.045, mz], SURF, [0, yaw, 0]);
   }
@@ -514,7 +547,7 @@ function buildTown() {
   WALL_TOWERS.forEach((t, i) => { const c = at(t.x, t.z); addWallTower(c.b, c.g, t, i); });
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
-  return { chunks: out, roads: buildRoads(), paving: paving.geo };
+  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo };
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
@@ -625,11 +658,12 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = pavingTexture(); return m; })(),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) }),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+    dirt: litMat({ roughness: 1 }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), []);
   useEffect(() => () => {
-    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.paving.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose();
+    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
   const label = useMemo(() => labelMaterial('Town Gate', '#f1e2b8', { size: 60, plate: 'plate' }), []);
   const label2 = useMemo(() => labelMaterial('TOWN GATE', '#f1e2b8', { size: 64, plate: 'plate' }), []);
@@ -640,7 +674,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     const t = clock.elapsedTime;
     mats.ring.opacity = 0.22 + 0.16 * Math.sin(t * 2.2);
     mats.beam.opacity = 0.1 + 0.05 * Math.sin(t * 1.7);
-    if (sprite.current) sprite.current.position.y = 11.2 + Math.sin(t * 1.3) * 0.15;
+    if (sprite.current) sprite.current.position.y = 11.2;
     // the light column + ground ring stand where the main quest continues (an NPC, the castle door), else on the gate
     const ms = storyTarget();
     let bx = GATE.x, bz = GATE.z - 1;
@@ -653,6 +687,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     <group>
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
+      <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
       <Lake />
       {town.chunks.map((c, i) => (

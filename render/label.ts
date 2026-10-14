@@ -55,7 +55,7 @@ export function labelMaterial(text: string, color = '#ffffff', opts: Opts = {}):
   const cv = document.createElement('canvas');
   const ctx = cv.getContext('2d')!;
   let w: number, h: number;
-  if (opts.plate) {
+  if (opts.plate && false) {   // (plates retired: every label is clean outlined text now)
     const mini = opts.plate === 'mini';
     const fs = size * (mini ? 0.78 : 0.9);          // plates read bigger than the old outlined text: keep the sprite scale
     ctx.font = `${mini ? 600 : 700} ${fs}px ${SERIF}`;
@@ -67,13 +67,15 @@ export function labelMaterial(text: string, color = '#ffffff', opts: Opts = {}):
     l = { mat: new SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }), aspect: w / h };
     if (!fontsReady) fontWaiters.push(() => { drawPlate(cv, text, fs, opts.plate!, w, h); t.needsUpdate = true; });
   } else {
-    ctx.font = `800 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
-    w = Math.ceil(ctx.measureText(text).width) + 40; h = size + 30;
+    const fs = opts.plate ? Math.round(size * (opts.plate === 'mini' ? 0.8 : 0.92)) : size;
+    const font = `800 ${fs}px "Segoe UI", system-ui, Roboto, Arial, sans-serif`;
+    ctx.font = font;
+    w = Math.ceil(ctx.measureText(text).width) + 40; h = fs + 30;
     cv.width = w; cv.height = h;
-    ctx.font = `800 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+    ctx.font = font;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     if (opts.bg) { ctx.fillStyle = opts.bg; const r = h / 2; ctx.beginPath(); ctx.moveTo(r, 2); ctx.arcTo(w - 2, 2, w - 2, h - 2, r); ctx.arcTo(w - 2, h - 2, 2, h - 2, r); ctx.arcTo(2, h - 2, 2, 2, r); ctx.arcTo(2, 2, w - 2, 2, r); ctx.fill(); }
-    ctx.lineWidth = 9; ctx.strokeStyle = opts.stroke || 'rgba(15,10,20,0.92)'; ctx.strokeText(text, w / 2, h / 2 + 2);
+    ctx.lineWidth = Math.max(7, fs * 0.17); ctx.strokeStyle = opts.stroke || 'rgba(15,10,20,0.92)'; ctx.strokeText(text, w / 2, h / 2 + 2);
     ctx.fillStyle = color; ctx.fillText(text, w / 2, h / 2 + 2);
     const t = new CanvasTexture(cv); t.colorSpace = SRGBColorSpace; t.minFilter = LinearFilter; t.generateMipmaps = false;
     l = { mat: new SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }), aspect: w / h };

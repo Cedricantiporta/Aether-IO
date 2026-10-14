@@ -17,8 +17,8 @@ export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max
 /** Hero level a skill key unlocks at (0 = available from level 1). */
 export function unlockLevel(hero: HeroClass, key: string): number {
   const order = ACTIVE_ORDER[hero];
-  if (key === order[1]) return 3;
-  if (key === order[2]) return 5;
+  if (key === order[1]) return 5;
+  if (key === order[2]) return 10;
   if (key === 'regen') return 2;
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]) => (i as { type?: string; classType?: string }).type === 'PASSIVE' && (i as { classType?: string }).classType === hero && k !== 'dash').map(([k]) => k);
   const i = passives.indexOf(key);

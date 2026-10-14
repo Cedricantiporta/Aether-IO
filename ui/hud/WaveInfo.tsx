@@ -5,7 +5,7 @@ import { useRaf } from '../hooks/useRaf';
 import { Button } from '../components/Button';
 import { Panel, Ribbon } from '../components/Frame';
 import { SkullGlyph } from '../components/SkillIcons';
-import { ROOMS_PER_BIOME, BIOMES, biomeOf, loopOf } from '../../engine/roomDefs';
+import { ROOMS_PER_BIOME, BIOMES, BOSS_INDEX, PREBOSS_INDEX, biomeOf, loopOf, shownDepth } from '../../engine/roomDefs';
 import { descend, finishRunVictory, towerState } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
 import { useGameStore } from '../../store';
@@ -40,13 +40,13 @@ export const RoomPlaque: React.FC = () => {
     const r = world.room, d = world.director;
     if (!r.active) return;
     const text = subText();
-    const key = `${r.biome}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}`;
+    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}`;
     if (key !== sig.current) {
       sig.current = key;
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
       if (name.current) name.current.textContent = tower ? 'Endless Tower' : throne ? 'The Undying Throne' : biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
-      if (depth.current) depth.current.textContent = tower ? `Floor ${towerState.floor}` : `Depth ${d.wave}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
+      if (depth.current) depth.current.textContent = tower ? `Floor ${towerState.floor}` : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
       if (sub.current) sub.current.textContent = text;
     }
     const done = d.phase === 'CLEARED' || d.phase === 'BIOME_DONE';
@@ -75,7 +75,7 @@ export const RoomPlaque: React.FC = () => {
       <div className="wtitle"><span ref={name}>Meadow</span></div>
       <div className="wdepth"><span ref={depth}>Depth 1</span></div>
       <div className="pips" aria-hidden>
-        {Array.from({ length: ROOMS_PER_BIOME }, (_, i) => <i key={i} className="pip" data-s="todo" ref={(el) => { pips.current[i] = el; }} />)}
+        {Array.from({ length: ROOMS_PER_BIOME }, (_, i) => <i key={i} className={`pip ${i === PREBOSS_INDEX ? 'mini' : ''}`} data-s="todo" ref={(el) => { pips.current[i] = el; }} />)}
         <i className="pip boss" data-s="todo" ref={(el) => { pips.current[ROOMS_PER_BIOME] = el; }}><Skull size={11} /></i>
       </div>
       <div className="wsub"><span ref={sub} data-testid="room-sub">Enemies left: 0</span></div>

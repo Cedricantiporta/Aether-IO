@@ -13,12 +13,12 @@ import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, type BossKind } from '../enemyDefs';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
 import {
-  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, type BiomeDef,
+  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
@@ -65,7 +65,8 @@ let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
 let miniKind: EnemyKind = 'BOAR';
 let miniName = '', miniTitle = '';
-let miniIsBoss = false;      // the Lich: a full boss used as a mini-boss
+let miniIsBoss = false;
+let prebossKing = false;    // the Meadow's depth-10 Slime King      // the Lich: a full boss used as a mini-boss
 let bossPending = false;
 let bossSpawned = false;
 let bossDeadT = -1;
@@ -132,7 +133,7 @@ export function startRunRooms(): void {
 export function debugJump(b: number, idx: number, type: RoomType): void {
   merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   world.room.fade = 1;
-  enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' ? 'CARD' : 'NONE' });
+  enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' ? 'CARD' : 'NONE', preboss: type === 'MINIBOSS' && idx === PREBOSS_INDEX });
 }
 
 /** After a boss: continue into the next biome (harder, same hero). */
@@ -299,7 +300,11 @@ function rollRoomSpawns(type: RoomType): void {
     case 'MINIBOSS': {
       rollPack(0.3, 0, 2);
       miniPending = true;
-      if (def.lichCrypt && depth >= 14 && Math.random() < 0.35) {
+      prebossKing = false;
+      if (plan.preboss && runInfo.mode === 'ADVENTURE' && biome % BIOMES.length === 0) {
+        // depth 10 of the Meadow: the Slime King (a giant splitter with half the Golem's hp, full boss bar)
+        miniIsBoss = false; prebossKing = true; miniKind = 'SPLITTER'; miniName = 'The Slime King'; miniTitle = 'Lord of the Meadow Ooze';
+      } else if (def.lichCrypt && depth >= 14 && Math.random() < 0.35) {
         miniIsBoss = true; miniKind = 'BOSS_LICH'; miniName = BOSS_NAMES.BOSS_LICH.name; miniTitle = BOSS_NAMES.BOSS_LICH.title;
       } else {
         const m = MINI_BOSSES[def.minis[Math.floor(Math.random() * def.minis.length)]];
@@ -366,6 +371,13 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
   if (tag === 1) {
     const e = spawnMiniBoss(kind, tmp, miniName, miniTitle);
+    if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
+      // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
+      const m = runMods(useGameStore.getState().difficulty);
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_GOLEM.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.5 * m.bossHp * 0.5); e.hp = e.maxHp;
+      e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
+      world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
+    }
     if (e) {
       events.emit('bossSpawn', { name: miniName, title: miniTitle });
       events.emit('shake', { amount: 0.3 });

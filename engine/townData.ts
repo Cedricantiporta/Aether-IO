@@ -26,14 +26,14 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls). */
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
-export const BARN = { x: 22.5, z: 45 };
+export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 6, z: 48.5 };
 /** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
 export const NESTS: [number, number][] = [[4.2, 50.6], [6.2, 51.0], [8.0, 50.5]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
-export const TOWER = { x: -21, z: 74, r: 4.2, door: { x: -16, z: 74 } };   // deep in the south-west woods
+export const TOWER = { x: -31, z: 75, r: 4.2, door: { x: -26, z: 75 } };   // deep in the dark south-west forest, at the end of a narrow dirt path
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -41,6 +41,8 @@ export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
 export const ISLAND_BOXES: [number, number, number, number][] = [
   [-48.5, -60, 62, 56], // walled town + a walkable ring OUTSIDE the walls on the back / east (the west side is the lake)
   [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
+  [20, 44, 44, 80],     // the farm clearing east of the field (barn, cows)
+  [-37, 69, -20, 81],   // the forest nook of the Endless Tower
 ];
 
 const WALLS = ['#e9dfc8', '#e4d8bd', '#dccdb0', '#d6d0c4', '#cfd3c4', '#d8c6b0', '#c9cdd2'];
@@ -66,11 +68,7 @@ export const RUINS: RuinSpec[] = [
   { x: 9, z: -45, rot: 0, kind: 0 },
 ];
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
-export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [
-  { kind: 'SLIME', x: 53, z: 22 }, { kind: 'SLIME', x: 55, z: 19 }, { kind: 'GOBLIN', x: 52, z: 4 }, { kind: 'GOBLIN', x: 55, z: 1 },
-  { kind: 'BOAR', x: 53, z: -14 }, { kind: 'BANDIT', x: 52, z: -34 }, { kind: 'BANDIT', x: 55, z: -37 },
-  { kind: 'GOBLIN', x: 38, z: -50 }, { kind: 'BOAR', x: 30, z: -52 }, { kind: 'BRUTE', x: 14, z: -50 },
-];
+export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 
 export const HOUSES: HouseSpec[] = [
@@ -126,7 +124,7 @@ export const ROADS: RoadSpec[] = [
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
-  { x1: 0, z1: 74, x2: -16, z2: 74, w: ROAD_W.branch },        // endless tower door (a woodland path)
+  { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -215,7 +213,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
   { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
-  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 16, z: 77, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
+  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -18, z: 69.5, s: 3.6, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 71, s: 3.3, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 12, z: 72, s: 3.5, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -269,10 +267,11 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   return c;
 })();
 
-/** Resource nodes (crystal / ore) in the outer ring of the village, inside the wall, away from the shops. */
-export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE'; x: number; z: number }[] = [
-  // outside the walls, in the forecourt south of the gate (they regrow 24 h after the last one is harvested)
-  { kind: 'ORE', x: -21, z: 45 }, { kind: 'CRYSTAL', x: -5.5, z: 56 }, { kind: 'ORE', x: -20, z: 58 }, { kind: 'CRYSTAL', x: 19, z: 77 },
+/** Harvest nodes around the town: outside the walls along the east side and behind the castle (the back), never by the
+ *  gate. They regrow 24 h after the last one is harvested. */
+export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE' | 'GOLD_VEIN' | 'HERB'; x: number; z: number }[] = [
+  { kind: 'ORE', x: 53, z: 32 }, { kind: 'HERB', x: 50.5, z: 11 }, { kind: 'CRYSTAL', x: 54, z: -12 }, { kind: 'GOLD_VEIN', x: 51, z: -30 },
+  { kind: 'CRYSTAL', x: 24, z: -50 }, { kind: 'ORE', x: -12, z: -52 }, { kind: 'HERB', x: -30, z: -49 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */
@@ -482,14 +481,14 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
   {
-    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [19, 42.5], speed: 1.2,
-    patrol: [[19, 42.5], [15, 44], [15, 49], [19, 47]],
+    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 60.5], speed: 1.2,
+    patrol: [[30.5, 60.5], [25, 59], [25, 67], [30.5, 66]],
     talk: [['Fine morning for it. The girls are in a good mood today.', 'Cows, I mean. The cows.'], ['That barn has stood longer than the gate. Built it with my grandfather.']],
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [9.5, 51.5], speed: 1.3,
-    patrol: [[9.5, 51.5], [3, 52.5], [9.5, 53.5]],
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [9, 51.8], speed: 1.3,
+    patrol: [[9, 51.8], [2.5, 51.8]],   // along the nests only (clear of the coop and the field fence)
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -517,8 +516,9 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   // farm (outside the gate): cows grazing by the barn, hens by the coop
-  { kind: 'COW', x: 16.5, z: 44.5, rx: 1.4, rz: 1.6, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 17.5, z: 49.5, rx: 1.2, rz: 1.2, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 27.5, z: 57, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 28, z: 64.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 32, z: 70, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
   { kind: 'CHICKEN', x: COOP.x - 1.6, z: COOP.z + 3.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x + 1.8, z: COOP.z + 3.8, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
