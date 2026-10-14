@@ -85,7 +85,7 @@ function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
       const lvl = useGameStore.getState().skillLevels.s4;
       slowSt.value = Math.min(0.9, (0.5 + 0.04 * lvl) * 1.5);   // Frost Field: strong slow
       applyStatus(e, slowSt);
-      if (!e.boss && Math.random() < 0.06 + 0.01 * lvl) applyStatus(e, frzSt);   // ...and a chance to freeze solid (per tick)
+      if (!e.boss && Math.random() < (0.06 + 0.01 * lvl) * 0.5) applyStatus(e, frzSt);   // ...and a small chance to freeze solid (per tick; halved)
     }
     damageEnemy(e, dmg, o);
   }

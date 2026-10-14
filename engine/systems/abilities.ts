@@ -29,6 +29,8 @@ export const abilityState = {
   castLockT: 0,
   curseRaise: 0,           // Plague Ground: skeletons that may still rise from enemies dying in it            // > 0: a skill is being cast, no basic attacks (player.ts)
   lpT: 0, lpMax: 0, lpDx: 0, lpDz: 1, lpDmg: 0,   // Lightpiercer: charging a ball of light, fires when lpT runs out
+  lpCharge: 0, lpHold: false,   // ...held longer (key / button kept down): up to LP_CHARGE s of extra charge = more damage + size
+  whirlExt: 0,   // Whirlwind: seconds added by holding the key
   tint: 0,                 // (unused: ultimates no longer darken the screen)
   flash: 0,                // 0..1 brief light flash at ult cast / impact
   flashRgb: [1, 0.9, 0.7] as [number, number, number],
@@ -185,6 +187,18 @@ function safeSpot(o: Vector3): void {
       if (d < 1e-4) o.x = c.x + min; else { o.x = c.x + (dx / d) * min; o.z = c.z + (dz / d) * min; }
     }
   }
+}
+
+/** Lightpiercer: extra charge time when held (s). Whirlwind: base spin and the longest a held spin can last (s). */
+const LP_CHARGE = 1.5, WHIRL_BASE = 1.2, WHIRL_MAX = 4;
+/** Hold time of the key / button that cast the current skill (aim.ts sets it; 0 for auto casts). */
+export const castHold = { t: 0 };
+/** Is the key / touch button of this active slot still held down? */
+function slotHeld(slot: string): boolean {
+  const i = ACTIVE_ORDER[useGameStore.getState().hero].indexOf(slot as never);
+  if (i < 0) return false;
+  const inp = world.input;
+  return !!inp.keys['Digit' + (i + 1)] || (inp.touchAim.active && inp.touchAim.id === 's' + (i + 1));
 }
 
 /** Army of the Dead: the golem meteor (fall time, impact radius) and how long the golem stands. */
@@ -372,7 +386,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       announce('SHADOW_ROLL');
     } else if (slot === 's3') {
       // LIGHTPIERCER: charges a ball of light (0.5s), then looses a big white arrow that pierces the whole line
-      abilityState.lpT = abilityState.lpMax = 0.5; abilityState.lpDx = dx; abilityState.lpDz = dz; abilityState.lpDmg = b * 7.5;
+      abilityState.lpT = abilityState.lpMax = 0.5; abilityState.lpDx = dx; abilityState.lpDz = dz; abilityState.lpDmg = b * 5;   // (base -33%: holding charges it)
+      abilityState.lpCharge = Math.min(LP_CHARGE, castHold.t); abilityState.lpHold = true;
       abilityState.castLockT = Math.max(abilityState.castLockT, 0.75);
       p.facing = Math.atan2(dx, dz);
       announce('LIGHT_ARROW');
@@ -527,7 +542,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     announce('CROSS_SLASH');
   } else if (slot === 'e') {
     const a = abilityState;
-    p.whirlT = 2; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
+    p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
     announce('WHIRLWIND');
   } else if (slot === 's3') {
     const L = 34 + 2 * (lv - 1), n = 18;
@@ -1021,11 +1036,18 @@ export function updateAbilities(dt: number): void {
   updateChains(dt);
   updateUlt(dt);
   if (a.castLockT > 0) a.castLockT -= dt;
-  if (a.lpT > 0) {   // Lightpiercer charge -> fire
-    a.lpT -= dt; p.facing = Math.atan2(a.lpDx, a.lpDz);
+  if (a.lpT > 0) {   // Lightpiercer charge -> fire (keep holding the key to charge it further)
+    p.facing = Math.atan2(a.lpDx, a.lpDz);
+    if (a.lpHold && a.lpCharge < LP_CHARGE && slotHeld('s3')) {
+      a.lpCharge = Math.min(LP_CHARGE, a.lpCharge + dt);
+      a.castLockT = Math.max(a.castLockT, 0.3);
+      if (a.lpCharge >= LP_CHARGE) events.emit('floatText', { pos: p.pos, text: 'FULL CHARGE', color: 0xfff4c8, scale: 0.8, dy: 2.6 });
+    } else { a.lpHold = false; a.lpT -= dt; }
     if (a.lpT <= 0) {
-      spawnProjectile('PIERCING_ARROW', p.pos.x + a.lpDx, p.pos.z + a.lpDz, a.lpDx, a.lpDz, 75, a.lpDmg, { life: 1.1, pierce: Infinity, radius: 2.4, knockback: 0.15, y: 1.3 });
-      addShake(0.2); p.anim.attackT = 1;
+      const k = a.lpCharge / LP_CHARGE;   // 0..1: up to x2.5 damage and x2 size
+      spawnProjectile('PIERCING_ARROW', p.pos.x + a.lpDx, p.pos.z + a.lpDz, a.lpDx, a.lpDz, 75, a.lpDmg * (1 + 1.5 * k), { life: 1.1, pierce: Infinity, radius: 2.4 * (1 + k), knockback: 0.15 + 0.5 * k, y: 1.3 });
+      addShake(0.2 + 0.3 * k); p.anim.attackT = 1;
+      a.lpCharge = 0;
     }
   }
 
@@ -1094,7 +1116,9 @@ export function updateAbilities(dt: number): void {
 
   // ---- whirlwind
   if (p.whirlT > 0) {
-    p.whirlT = Math.max(0, p.whirlT - dt);
+    // holding the key keeps spinning (up to WHIRL_MAX s in total)
+    if (st.hero === 'BARBARIAN' && a.whirlExt < WHIRL_MAX - WHIRL_BASE && slotHeld('e')) a.whirlExt += dt;
+    else p.whirlT = Math.max(0, p.whirlT - dt);
     a.whirlTick += dt;
     const R = a.whirlR;
     // pull inward every frame

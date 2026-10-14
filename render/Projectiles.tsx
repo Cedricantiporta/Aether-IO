@@ -220,9 +220,10 @@ export function Projectiles() {
     {
       const a = abilityState;
       if (a.lpT > 0 && a.lpMax > 0) {
-        const k = 1 - a.lpT / a.lpMax, pl = world.player.pos;
+        const ch = a.lpCharge / 1.5, k = Math.min(1, 1 - a.lpT / a.lpMax + ch), pl = world.player.pos;   // ch: extra charge from holding
         const bx = pl.x + a.lpDx * 1.3, bz = pl.z + a.lpDz * 1.3, by = 1.3;
-        pushHalo(bx, by, bz, 0.8 + 2.6 * k, 2.4, 2.4, 2.5, 0.5 + 0.4 * k, CELL.GLOW);
+        pushHalo(bx, by, bz, 0.8 + 2.6 * k + 2.4 * ch, 2.4, 2.4, 2.5, 0.5 + 0.4 * k, CELL.GLOW);
+        if (ch >= 1) pushHalo(bx, by, bz, 6 + Math.sin(performance.now() * 0.02) * 0.6, 2.6, 2.2, 1.4, 0.35, CELL.GLOW);   // full charge: pulsing gold rim
         if (dt > 0 && Math.random() < dt * 40) {   // motes drawn into the ball
           const an = Math.random() * TAU, rr = 1.6 + Math.random();
           FX.add.emit(bx + Math.cos(an) * rr, by + (Math.random() - 0.5), bz + Math.sin(an) * rr, -Math.cos(an) * rr * 3, 0, -Math.sin(an) * rr * 3, 0.3, 0.25, 0.05, 2.2, 2.2, 2.4, 0.9, CELL.STAR, 0, 0, 0, 0, 0);
@@ -265,8 +266,9 @@ export function Projectiles() {
           break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
         case 'PIERCING_ARROW':
-          place(ims, i, x, y, z, yaw, pitch, t * 12, 2.1);   // Lightpiercer: a big shaft of light
-          pushHalo(x, y, z, 4.2, 2.4, 2.4, 2.5, 0.65, CELL.GLOW);
+          { const sz = p.radius / 2.4;   // a charged shot is up to twice as big
+          place(ims, i, x, y, z, yaw, pitch, t * 12, 2.1 * sz);   // Lightpiercer: a big shaft of light
+          pushHalo(x, y, z, 4.2 * sz, 2.4, 2.4, 2.5, 0.65, CELL.GLOW); }
           if (emit) {
             FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 0.6, 0.05, 2.2, 2.2, 2.4, 0.85, CELL.STREAK, 0, 0, 0, 0, 0);
             for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.015 * k, y, z - vz * 0.015 * k, vx * -0.05, vy * -0.05, vz * -0.05, 0.3, 0.8, 0.2, 2.0, 2.0, 2.3, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);

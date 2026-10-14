@@ -9,7 +9,7 @@ import { useGameStore } from '../../store';
 import { ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
 import { ULT_MAX } from '../../abilityDefs';
 import { aimOverride, autoAim, findNearestEnemy } from './combat';
-import { castActive, castUlt, tryDash, ultReady } from './abilities';
+import { castActive, castUlt, tryDash, ultReady, castHold } from './abilities';
 import { edgeLimit } from '../mapgen';
 import { lockedEnemy } from './target';
 import { camRel } from '../camera';
@@ -31,6 +31,14 @@ export const SKILL_KEYS: readonly (readonly [string, string])[] = [
   ['Digit1', 's1'], ['Digit2', 's2'], ['Digit3', 's3'], ['Space', 'dash'], ['KeyR', 'ult'],
 ];
 const held: Record<string, boolean> = {};
+const pressAt: Record<string, number> = {};   // performance.now() when each key / touch button went down
+const lastTouchFired = { on: false };   // a hold skill already fired at touch-down
+
+/** Skills charged / sustained by holding the key: Lightpiercer (charge) and Whirlwind (longer spin). */
+function holdSkill(id: string): boolean {
+  const hero = useGameStore.getState().hero, slot = slotOf(id);
+  return (hero === 'ARCHER' && slot === 's3') || (hero === 'BARBARIAN' && slot === 'e');
+}
 const lastTouch = { active: false, maxMag: 0 };
 
 function mode(): 'AIMED' | 'QUICK' | 'AUTO' {
@@ -145,6 +153,8 @@ function fire(id: string, how: 'AIM' | 'CURSOR' | 'AUTO' | 'FACING', ax = 0, az 
   const p = world.player;
   aimOverride.on = false;
   let auto = false;
+  castHold.t = pressAt[id] ? Math.max(0, (performance.now() - pressAt[id]) / 1000) : 0;
+  pressAt[id] = 0;
   if (how === 'AIM') { aimOverride.on = true; aimOverride.x = ax; aimOverride.z = az; }
   else if (how === 'FACING') { const f = facingPoint(); aimOverride.on = true; aimOverride.x = f.x; aimOverride.z = f.z; }
   else if (how === 'CURSOR') { aimOverride.on = true; aimOverride.x = p.aim.x; aimOverride.z = p.aim.z; }
@@ -186,7 +196,9 @@ export function updateSkillInput(): void {
     held[code] = down;
     if (down && !was) {
       // a fresh press after a cancel must be released first (down edge only)
+      pressAt[id] = performance.now();
       press(id);
+      if (!aimState.active) pressAt[id] = 0;   // fired on the press: any further hold is read live (slotHeld)
     } else if (!down && was) {
       if (aimState.active && aimState.id === id && !aimState.touch) {
         aimState.active = false;
@@ -198,9 +210,13 @@ export function updateSkillInput(): void {
   // ---- touch drag-cast
   const T = inp.touchAim;
   if (T.active && !lastTouch.active) {
-    lastTouch.active = true; lastTouch.maxMag = 0;
-    if (!aimable(T.id)) { /* handled on release */ }
+    lastTouch.active = true; lastTouch.maxMag = 0; lastTouchFired.on = false;
+    // hold skills fire at touch-down so keeping the button pressed charges / sustains them
+    if (holdSkill(T.id)) { fire(T.id, 'AUTO'); lastTouchFired.on = true; }
   }
+  if (lastTouchFired.on) {
+    if (!T.active) { lastTouch.active = false; lastTouchFired.on = false; }
+  } else {
   if (T.active) {
     lastTouch.maxMag = Math.max(lastTouch.maxMag, T.mag);
     if (aimable(T.id) && lastTouch.maxMag > 0.14) {
@@ -220,6 +236,7 @@ export function updateSkillInput(): void {
     if (T.cancel || (wasAiming && T.mag < 0.12)) { /* cancelled */ }
     else if (wasAiming) fire(id, 'AIM', aimState.targetX, aimState.targetZ);
     else fire(id, 'AUTO'); // quick tap = smart cast at the auto-target
+  }
   }
 
   // ---- refresh the desktop indicator while holding
