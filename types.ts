@@ -118,6 +118,9 @@ export interface Item {
   petValue?: number; // Heal amount or Dmg
   petCooldown?: number; 
   summonOnly?: boolean; // not sold in the Pets shop; Summon altar only
+  petLv?: number;    // pet growth (see petGrowth.ts): level 1-20, xp into the level, evolution stage 1-3 (all default to 1 / 0 / 1)
+  petXp?: number;
+  petStage?: number;
   
   affixes?: ItemAffix[];   // rolled bonus lines (gear only)
   setName?: string;

@@ -98,7 +98,7 @@ export const world = {
   frame: 0,
   player: makePlayer(),
   // state: 0 FOLLOW, 1 FETCH, 2 ATTACK. carry = PickupKind being carried back (cosmetic), carryT = seconds left.
-  pet: { pos: new Vector3(-1.5, 1, 1.5), facing: 0, attackT: 0, skillT: 0, state: 0, carry: '' as string, carryT: 0, sparkT: 0, atkCd: 0 },
+  pet: { pos: new Vector3(-1.5, 1, 1.5), facing: 0, attackT: 0, skillT: 0, state: 0, carry: '' as string, carryT: 0, sparkT: 0, atkCd: 0, stage: 1, xpBuf: 0 },
 
   enemies: Array.from({ length: MAX_ENEMIES }, (_, i) => makeEnemy(i)),
   projectiles: Array.from({ length: MAX_PROJECTILES }, (_, i) => makeProjectile(i)),

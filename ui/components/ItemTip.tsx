@@ -6,6 +6,7 @@ import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
 import { HERO_STATS } from '../../constants';
 import { affixText, isUnique } from '../../affixes';
+import { petPower, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -14,6 +15,7 @@ const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
 };
 
 /** Parchment item tooltip content. `compare` shows green/red deltas vs the equipped item. */
+const tip_ok = (price: string) => price !== 'buy'; // shop templates have no growth
 export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'buy' | 'none' }> = ({ item, compare = true, price = 'sell' }) => {
   const equipment = useGameStore((s) => s.equipment);
   const heroClass = useGameStore((s) => s.hero);
@@ -26,12 +28,13 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
   const wrongClass = item.classType && item.classType !== heroClass;
   const cp = calculateItemCP(item);
   const cpDelta = equipped && !isEquippedItself ? cp - calculateItemCP(equipped) : 0;
+  const pm = petPower(item), epm = equipped ? petPower(equipped) : 1; // pet growth scales displayed stats
   const keys = statKeys(item.stats, equipped && !isEquippedItself ? equipped.stats : undefined).filter((k) => item.stats[k] !== undefined || (equipped && equipped.stats[k] !== undefined));
 
   return (
     <div style={{ width: '16rem' }}>
       <div className="tt-name" data-rt={item.rarity}>
-        {item.name}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
+        {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
@@ -44,8 +47,8 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
       {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {
-        const v = item.stats[k];
-        const ev = equipped && !isEquippedItself ? equipped.stats[k] : undefined;
+        const v = item.stats[k] === undefined ? undefined : (item.stats[k] as number) * pm;
+        const ev = equipped && !isEquippedItself && equipped.stats[k] !== undefined ? (equipped.stats[k] as number) * epm : undefined;
         const diff = equipped && !isEquippedItself ? (v ?? 0) - (ev ?? 0) : 0;
         const dir = diff > 0.0001 ? 'pos' : diff < -0.0001 ? 'neg' : '';
         return (
@@ -96,6 +99,14 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
             {item.onHitEffect.type.toLowerCase()} for {item.onHitEffect.duration}s
           </div>
         </>
+      )}
+      {item.type === 'PET' && tip_ok(price) && (
+        <div data-testid="pet-growth-tip">
+          <div className="tt-sep" />
+          <div className="tt-row"><span style={{ color: petStage(item) > 1 ? '#7a2ec2' : undefined, fontWeight: 800 }}>{PET_STAGE_LABEL[petStage(item)]} · Lv {petLv(item)}/{petLvCap(petStage(item))}</span>
+            <span className="muted">{petLv(item) >= petLvCap(petStage(item)) ? (petStage(item) < 3 ? 'Ready to evolve' : 'MAX') : `${petXp(item)}/${petXpNeed(petLv(item))} XP`}</span></div>
+          <div className="muted text-[.68rem]">Stats and skill power x{pm.toFixed(2)}</div>
+        </div>
       )}
       {item.petSkill && <div className="muted mt-1">Pet skill: {item.petSkill.replace('_', ' ').toLowerCase()}{item.petCooldown ? ` (${item.petCooldown}s)` : ''}</div>}
       {cp > 0 && (
