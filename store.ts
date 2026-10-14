@@ -242,6 +242,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   if (wp?.k === 'LIFESTEAL') final.lifeSteal += lifeStealOf(wp.lv);
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
+  if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; }   // fragile, slow caster (user tuning)
   return final;
 };
 
