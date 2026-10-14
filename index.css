@@ -1563,3 +1563,4 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 @keyframes srPulse { 0%, 100% { opacity: .75; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } }
 @keyframes srBorder { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
 @keyframes srSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.story-skip { position: absolute; right: 1.6rem; bottom: 1.6rem; z-index: 5; padding: .55rem 1.4rem; font-size: .85rem; letter-spacing: .14em; }

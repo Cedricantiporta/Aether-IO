@@ -22,7 +22,7 @@ const CREDITS: [string, string][] = [
 ];
 
 /** How long one story slide stays up (longer passages stay longer). */
-export const slideMs = (line: string): number => 3200 + line.length * 45;
+export const slideMs = (line: string): number => 1800 + line.length * 28;
 
 export const EndingScreen: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -81,7 +81,7 @@ export const EndingScreen: React.FC = () => {
           <button className="rpg-btn rpg-btn-primary ending-go" onClick={done} data-testid="ending-continue">Continue</button>
         </motion.div>
       )}
-      {step < total - 1 && <button className="ending-skip" onClick={() => setStep(total - 1)}>Skip</button>}
+      {step < total - 1 && <button className="rpg-btn story-skip" onClick={() => setStep(total - 1)} data-testid="ending-skip">Skip ›</button>}
     </motion.div>
   );
 };

@@ -44,8 +44,7 @@ export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ f
           <motion.p key={n} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.9 }}>{PROLOGUE[n]}</motion.p>
         </AnimatePresence>
       </div>
-      <div className="prologue-nav"><div className="prologue-dots">{PROLOGUE.map((_, i) => <i key={i} data-on={i === n ? '1' : i < n ? 'd' : '0'} />)}</div></div>
-      <button className="ending-skip" onClick={(e) => { e.stopPropagation(); close(); }} data-testid="prologue-skip">Skip</button>
+      <button className="rpg-btn story-skip" onClick={(e) => { e.stopPropagation(); close(); }} data-testid="prologue-skip">Skip ›</button>
     </motion.div>
   );
 };
