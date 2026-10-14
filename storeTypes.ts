@@ -114,6 +114,7 @@ export interface GameState {
   inventory: Item[];
   maxInventorySlots: number;
   tech: import('./tech').TechLevels;                 // Tech House upgrade levels
+  summonPity: import('./store').SummonPity;          // draws so far per summon altar (pity counters)
   progress: RunProgress;                            // endings cleared, ascension unlocked / chosen, endless tower best floor per class
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)

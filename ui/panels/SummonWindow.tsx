@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, X } from 'lucide-react';
-import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10 } from '../../store';
+import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC } from '../../store';
 import { Hexagon } from 'lucide-react';
 import { useUiStore } from '../uiStore';
 import { GemGlyph } from '../components/SkillIcons';
@@ -22,15 +22,17 @@ export const SummonWindow: React.FC = () => {
   const gems = useGameStore((s) => s.gems);
   const shards = useGameStore((s) => s.materials.COMMON);
   const summon = useGameStore((s) => s.summon);
+  const pity = useGameStore((s) => s.summonPity);
   const close = useGameStore((s) => s.closeAllUI);
   const setResults = useUiStore((s) => s.setSummonResults);
   const [tab, setTab] = useState<(typeof BANNERS)[number]['id']>('GEM');
   const gem = tab === 'GEM';
+  const drawn = pity?.[tab] ?? 0;
   const B = BANNERS.find((b) => b.id === tab)!;
   const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
   const c1 = gem ? SUMMON_COST_1 : SHARD_COST_1, c10 = gem ? SUMMON_COST_10 : SHARD_COST_10, have = gem ? gems : shards;
   const Cur = ({ size }: { size: number }) => (gem ? <GemGlyph size={size} /> : <Hexagon size={size} color="#c9a8ff" />);
-  const go = (n: 1 | 10) => { const r = summon(n, tab); if (r && r.length) setResults(r); };
+  const go = (n: 1 | 10) => { const r = summon(n, tab); if (r && r.length) setResults(r, tab); };
   return (
     <div className="absolute inset-0 grid place-items-center pe sw-backdrop" style={{ zIndex: 45 }} onClick={close} data-testid="summon-window">
       <motion.div className={`sw-win ${gem ? 'gold' : 'purple'}`} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}>
@@ -64,6 +66,16 @@ export const SummonWindow: React.FC = () => {
                 {CAPS[r] ? <span className="c">max {CAPS[r]} per 10x</span> : <span className="c" />}
               </div>
             ))}
+          </div>
+          <div className="sw-pity" data-testid="summon-pity">
+            <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.LEGENDARY }}>
+              <span className="n">Guaranteed <b>Legendary</b> in <b className="rpg-num">{PITY_LEGEND - (drawn % PITY_LEGEND)}</b> draws</span>
+              <span className="bar"><i style={{ width: `${((drawn % PITY_LEGEND) / PITY_LEGEND) * 100}%` }} /></span>
+            </div>
+            <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.MYTHIC }}>
+              <span className="n">Every {PITY_MYTHIC}: <b>80% Legendary · 20% Mythic</b> in <b className="rpg-num">{PITY_MYTHIC - (drawn % PITY_MYTHIC)}</b></span>
+              <span className="bar"><i style={{ width: `${((drawn % PITY_MYTHIC) / PITY_MYTHIC) * 100}%` }} /></span>
+            </div>
           </div>
           <div className="sw-foot">
             <span className="sw-note">{gem ? `10x saves ${c1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} shards · get shards from crystals, ore and recycling`}</span>

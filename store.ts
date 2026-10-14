@@ -126,6 +126,14 @@ export const SHARD_COST_1 = 100;
 export const SHARD_COST_10 = 900;
 /** Max copies of a rarity a single summon (1x or 10x) can yield; extra rolls are downgraded to RARE. */
 /** Gem cost of a single summon and of a 10x summon. */
+/** Summon pity: every PITY_LEGEND-th draw on an altar is a Legendary; every PITY_MYTHIC-th is 80% Legendary / 20% Mythic. */
+export const PITY_LEGEND = 60, PITY_MYTHIC = 240;
+export type SummonPity = { GEM: number; SHARD: number };
+const sanitizePity = (raw: unknown): SummonPity => {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const v = (x: unknown) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Math.floor(Number(x)) : 0);
+  return { GEM: v(r.GEM), SHARD: v(r.SHARD) };
+};
 export const SUMMON_COST_1 = 10;
 export const SUMMON_COST_10 = 90;
 export const SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 2, LEGENDARY: 1, MYTHIC: 1 };
@@ -336,6 +344,7 @@ interface Profile {
   warehouse?: Item[]; warehouseGold?: number;
   progress?: RunProgress;   // ending / ascension / endless tower records
   tech?: TechLevels;        // Tech House upgrades
+  summonPity?: SummonPity;  // draws so far per altar (guaranteed Legendary every 60, Legendary/Mythic every 240)
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   heroRank: number; rankXp: number; quests: Quest[];
   gameStats: GameStatistics; settings: Settings;
@@ -423,7 +432,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech), summonPity: sanitizePity(p.summonPity),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
@@ -465,7 +474,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
@@ -597,6 +606,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     warehouseGold: profile.warehouseGold ?? 0,
     progress: profile.progress ?? sanitizeProgress(undefined),
     tech: profile.tech ?? {},
+    summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
@@ -696,7 +706,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -1465,7 +1475,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const gear = ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === s.hero));
       const all = [...PETS_POOL, ...gear];
       const results: Item[] = [];
+      let drawn = s.summonPity[altar] ?? 0;
       for (let k = 0; k < n; k++) {
+        drawn++;
         let roll = Math.random() * 100;
         let rarity: Rarity = 'COMMON';
         for (const r of RARITIES) {
@@ -1474,12 +1486,16 @@ export const useGameStore = create<GameState>()((set, get) => {
         }
         const cap = CAPS[rarity];
         if (cap !== undefined && results.filter((i) => i.rarity === rarity).length >= cap) rarity = 'RARE';
+        // pity: the 60th draw is a Legendary; the 240th is 80% Legendary / 20% Mythic
+        if (drawn % PITY_MYTHIC === 0) rarity = Math.random() < 0.2 ? 'MYTHIC' : 'LEGENDARY';
+        else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
         results.push(instantiate(pool[Math.floor(Math.random() * pool.length)]));
       }
-      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...results] });
-      else set({ materials: { ...s.materials, COMMON: s.materials.COMMON - cost }, inventory: [...s.inventory, ...results] });
+      const summonPity = { ...s.summonPity, [altar]: drawn };
+      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...results], summonPity });
+      else set({ materials: { ...s.materials, COMMON: s.materials.COMMON - cost }, inventory: [...s.inventory, ...results], summonPity });
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },
@@ -1520,7 +1536,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

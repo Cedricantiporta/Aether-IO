@@ -13,6 +13,7 @@ import { updateCrates, hitCrate } from './crates';
 import { updatePickups } from './pickups';
 import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
 import { updateEnemies } from './enemies';
+import { updatePetTown } from './pets';
 import { CRATE_HP, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { CAM_PITCH0 } from '../world';
@@ -251,6 +252,7 @@ export function updateVillage(dt: number): void {
       if (inp.pressed.KeyE || inp.pressed.Space) advanceDialogue();
     }
   } else if (v.pending) { p.vel.x = p.vel.z = 0; } else updatePlayerVillage(dt);
+  updatePetTown(dt);
   updateCrates(dt);
   // persistent harvest: a node that just broke is recorded; when every node is gone the 24 h regrow clock starts
   let changed = false;

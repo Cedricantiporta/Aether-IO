@@ -201,3 +201,12 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Costs are now **gems** (`tech.ts` `cost(lv)` = gems for the next tier; `buyTech` spends gems). Saved levels are unchanged.
 - Pet House has Shop / Pet Care sub-tabs. The Shop is a 4-column bag-style grid (price under each slot, summon-only pets greyed out).
   Clicking a pet shows its details (stars, badges, skill, stats) and a Buy button below the grid.
+
+### Summon pity, reveal screen, town pet
+- Pity (`store.ts` `summonPity` {GEM, SHARD}, persisted): each altar counts its draws. Every 60th draw is a Legendary, and every 240th is
+  80% Legendary / 20% Mythic (`PITY_LEGEND` / `PITY_MYTHIC`). The Summon window shows both countdowns with bars.
+- Summon results (`SummonReveal` in `ui/panels/Dialogs.tsx`) stay up until Draw x1 / Draw x10 (same altar, `uiStore.summonAltar`) or Leave.
+  Clicking, Enter and Esc no longer close it. Common/Rare just fade in. Epic gets a medium purple aura, Legendary a big gold aura and border
+  glow, and Mythic a huge red aura plus spinning red rays and a pulsing border (`.sr-*` in index.css).
+- Pets now show in town: `updatePetTown` (pets.ts) trots after the hero from the village loop, and Scene mounts `<Pet />` in TOWN. Before,
+  pets were only drawn and updated during runs. Note: Legendary gear (pets too) needs Hero Rank 15 to equip.

@@ -24,6 +24,7 @@ interface UiState {
   confirm: ConfirmRequest | null;
   bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)
   summonResults: Item[] | null;
+  summonAltar: 'GEM' | 'SHARD';   // altar of the last draw (the results screen re-draws from it)
   setTitleDone: (v: boolean) => void;
   setCharSelect: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
@@ -37,7 +38,7 @@ interface UiState {
   setSelectedItem: (i: Item | null) => void;
   setBlacksmithTab: (t: UiState['blacksmithTab']) => void;
   askConfirm: (c: ConfirmRequest | null) => void;
-  setSummonResults: (r: Item[] | null) => void;
+  setSummonResults: (r: Item[] | null, altar?: 'GEM' | 'SHARD') => void;
   setBagView: (v: boolean) => void;
 }
 
@@ -55,6 +56,7 @@ export const useUiStore = create<UiState>((set) => ({
   confirm: null,
   bagView: false,
   summonResults: null,
+  summonAltar: 'GEM',
   setTitleDone: (v) => set({ titleDone: v }),
   setCharSelect: (v) => set(v ? { charSelect: true, titleDone: false } : { charSelect: false, titleDone: true }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
@@ -68,7 +70,7 @@ export const useUiStore = create<UiState>((set) => ({
   setSelectedItem: (i) => set({ selectedItem: i }),
   setBlacksmithTab: (t) => set({ blacksmithTab: t, selectedItem: null }),
   askConfirm: (c) => set({ confirm: c }),
-  setSummonResults: (r) => set({ summonResults: r }),
+  setSummonResults: (r, altar) => set(altar ? { summonResults: r, summonAltar: altar } : { summonResults: r }),
   setBagView: (v) => set({ bagView: v }),
 }));
 
@@ -84,7 +86,7 @@ export function uiOverlayOpen(): boolean {
 export function closeTopOverlay(): boolean {
   const s = useUiStore.getState();
   if (s.confirm) { s.askConfirm(null); return true; }
-  if (s.summonResults) { s.setSummonResults(null); return true; }
+  if (s.summonResults) return true;   // summon results close only via Leave (or a new draw)
   if (s.sellItem) { s.setSellItem(null); return true; }
   if (s.buyItem) { s.setBuyItem(null); return true; }
   if (s.storyOpen) { s.openStory(false); return true; }

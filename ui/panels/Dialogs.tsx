@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { CoinGlyph } from '../components/SkillIcons';
+import { AlertTriangle, Hexagon } from 'lucide-react';
+import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { motion } from 'framer-motion';
 import { POTION_STACK_LIMIT } from '../../constants';
-import { useGameStore, shopPrice } from '../../store';
+import { useGameStore, shopPrice, SUMMON_COST_1, SUMMON_COST_10, SHARD_COST_1, SHARD_COST_10 } from '../../store';
 import { useUiStore } from '../uiStore';
 import { Modal, ConfirmDialog, QtyStepper } from '../components/Modal';
 import { Button } from '../components/Button';
@@ -93,38 +93,51 @@ export const GlobalConfirm: React.FC = () => {
 };
 
 /** Fast gacha reveal: whole sequence stays well under 2.5 s. */
+/** Summon results. Common / Rare just appear; Epic gets a medium purple glow, Legendary a big gold one, Mythic a huge red
+ *  aura radiating from its border. It stays until the player draws again (x1 / x10 on the same altar) or leaves. */
 export const SummonReveal: React.FC = () => {
   const results = useUiStore((s) => s.summonResults);
+  const altar = useUiStore((s) => s.summonAltar);
   const set = useUiStore((s) => s.setSummonResults);
-  useEffect(() => {
-    if (!results) return;
-    const h = (e: KeyboardEvent) => { if (['Enter', 'Escape', 'Space'].includes(e.code) || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); set(null); } };
-    window.addEventListener('keydown', h, true);
-    return () => window.removeEventListener('keydown', h, true);
-  }, [results, set]);
+  const summon = useGameStore((s) => s.summon);
+  const gems = useGameStore((s) => s.gems);
+  const shards = useGameStore((s) => s.materials.COMMON);
+  const [round, setRound] = useState(0);
   if (!results) return null;
+  const gem = altar === 'GEM';
+  const c1 = gem ? SUMMON_COST_1 : SHARD_COST_1, c10 = gem ? SUMMON_COST_10 : SHARD_COST_10, have = gem ? gems : shards;
+  const Cur = () => (gem ? <GemGlyph size={15} /> : <Hexagon size={14} color="#c9a8ff" />);
+  const again = (n: 1 | 10) => { const r = summon(n, altar); if (r && r.length) { setRound((x) => x + 1); set(r, altar); } };
   const best = results.reduce<Item>((b, i) => (RARITY_RANK[i.rarity] > RARITY_RANK[b.rarity] ? i : b), results[0]);
   const many = results.length > 1;
   const step = many ? 0.1 : 0;
+  const bestRank = RARITY_RANK[best.rarity];
   return (
     <motion.div className="absolute inset-0 grid place-items-center pe" style={{ zIndex: 260, background: 'radial-gradient(circle, rgba(20,8,30,.7), rgba(3,1,6,.93))' }}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => set(null)}>
-      <motion.div className="absolute inset-0 pointer-events-none" initial={{ opacity: .9 }} animate={{ opacity: 0 }} transition={{ duration: .6 }} style={{ background: `radial-gradient(circle, ${RARITY_COLOR[best.rarity]}, transparent 65%)` }} />
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="summon-reveal">
+      {bestRank >= 3 && <motion.div key={`f${round}`} className="absolute inset-0 pointer-events-none" initial={{ opacity: .9 }} animate={{ opacity: 0 }} transition={{ duration: .7 }} style={{ background: `radial-gradient(circle, ${RARITY_COLOR[best.rarity]}, transparent 65%)` }} />}
       <div className="flex flex-col items-center gap-6">
         <div className="k-title" style={{ fontSize: '2rem' }}><i /><span>Summoned</span><i /></div>
-        <div className="flex flex-wrap justify-center gap-5" style={{ maxWidth: many ? '46rem' : undefined, perspective: '1000px' }}>
-          {results.map((it, i) => (
-            <motion.div key={i} className="relative flex flex-col items-center gap-2"
-              initial={{ rotateY: 90, scale: .4, opacity: 0 }} animate={{ rotateY: 0, scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 20, delay: .15 + i * step }}>
-              <motion.div className="absolute rounded-full pointer-events-none" style={{ width: '4rem', height: '4rem', top: '.3rem', border: `3px solid ${RARITY_COLOR[it.rarity]}`, boxShadow: `0 0 24px ${RARITY_COLOR[it.rarity]}` }}
-                initial={{ scale: .3, opacity: 1 }} animate={{ scale: RARITY_RANK[it.rarity] >= 4 ? 3.2 : 2.2, opacity: 0 }} transition={{ duration: .5, delay: .3 + i * step }} />
-              <ItemSlot item={it} size={many ? '4.6rem' : '7rem'} iconSize={many ? 34 : 54} tooltip="buy" compare={false} />
-              <div className="text-center font-bold text-[.72rem] leading-tight max-w-[6rem] text-outline" style={{ color: RARITY_TEXT[it.rarity] }}>{it.name}</div>
-            </motion.div>
-          ))}
+        <div key={round} className="flex flex-wrap justify-center gap-6" style={{ maxWidth: many ? '48rem' : undefined, perspective: '1000px' }}>
+          {results.map((it, i) => {
+            const rk = RARITY_RANK[it.rarity], fancy = rk >= 3;
+            return (
+              <motion.div key={i} className={`relative flex flex-col items-center gap-2 sr-card sr-${it.rarity.toLowerCase()}`}
+                initial={fancy ? { rotateY: 90, scale: .4, opacity: 0 } : { opacity: 0 }} animate={fancy ? { rotateY: 0, scale: 1, opacity: 1 } : { opacity: 1 }}
+                transition={fancy ? { type: 'spring', stiffness: 320, damping: 20, delay: .15 + i * step } : { duration: .2, delay: .1 + i * step }}>
+                {fancy && <span className="sr-aura" />}
+                {rk >= 5 && <><span className="sr-ray" /><span className="sr-ray r2" /></>}
+                <ItemSlot item={it} size={many ? '4.6rem' : '7rem'} iconSize={many ? 34 : 54} tooltip="buy" compare={false} />
+                <div className="text-center font-bold text-[.72rem] leading-tight max-w-[6rem] text-outline" style={{ color: RARITY_TEXT[it.rarity] }}>{it.name}</div>
+              </motion.div>
+            );
+          })}
         </div>
-        <div className="rpg-label animate-pulse">Click or press Enter to continue</div>
+        <div className="flex items-center gap-3 mt-2">
+          <button className="rpg-btn" disabled={have < c1} onClick={() => again(1)} data-testid="reveal-draw-1">Draw x1 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c1}</span></button>
+          <button className="rpg-btn rpg-btn-primary" disabled={have < c10} onClick={() => again(10)} data-testid="reveal-draw-10">Draw x10 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c10}</span></button>
+          <button className="rpg-btn" onClick={() => set(null)} data-testid="reveal-leave">Leave</button>
+        </div>
       </div>
     </motion.div>
   );

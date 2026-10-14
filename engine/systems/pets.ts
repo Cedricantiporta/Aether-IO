@@ -114,6 +114,24 @@ function findPickup(px: number, pz: number, fetchR: number, magnetR: number): Pi
   return best;
 }
 
+/** Town: the equipped pet just trots after the hero (no skills, fetching or fighting). Allocation-free. */
+export function updatePetTown(dt: number): void {
+  const pet = useGameStore.getState().equipment.pet;
+  const pl = world.player, wp = world.pet;
+  if (!pet) return;
+  wp.attackT = 0; wp.carryT = 0;
+  // follow point: a little behind and to the side of the hero
+  const fx = pl.pos.x - Math.sin(pl.facing) * 1.6 - Math.cos(pl.facing) * 0.9, fz = pl.pos.z - Math.cos(pl.facing) * 1.6 + Math.sin(pl.facing) * 0.9;
+  const dx = fx - wp.pos.x, dz = fz - wp.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+  if (d > 25) { wp.pos.set(fx, 1, fz); return; }   // fell far behind (teleport / area change)
+  if (d > 0.3) {
+    const sp = Math.min(d, (4 + d * 2.2) * dt);
+    wp.pos.x += (dx / d) * sp; wp.pos.z += (dz / d) * sp;
+    wp.facing = Math.atan2(dx, dz);
+  }
+  wp.pos.y = 1;
+}
+
 export function updatePets(dt: number): void {
   const st = useGameStore.getState();
   const pet = st.equipment.pet;

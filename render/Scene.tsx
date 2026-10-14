@@ -74,6 +74,7 @@ export function Scene() {
           <GroundFx />
           <Enemies />
           <Projectiles />
+          <Pet />
         </>
       )}
       {gameplay && (
