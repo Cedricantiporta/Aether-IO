@@ -437,6 +437,8 @@ export interface BossHud {
   maxHp: number;
   phase: number;
   sx: number; sy: number; onScreen: boolean;   // screen position (px) above the boss's head, written by CameraRig
+  /** Malakar in the final fight (bosses.ts): stage 1, then stage 2 below half HP (bigger, faster skills). */
+  final: boolean; stage: number; shieldCd: number;
 }
 
 export interface RunStats {

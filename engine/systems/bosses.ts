@@ -26,6 +26,7 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2 } from './bosses2';
+import { spawnIllusions } from './bossSpecials';
 
 const dirV = new Vector3();
 const posV = new Vector3();
@@ -51,7 +52,7 @@ function syncHud(e: Enemy): void {
   const names = BOSS_NAMES[e.kind as BossKind];
   b.active = e.state !== 'DYING';
   b.name = names.name;
-  b.title = names.title;
+  if (!b.final) b.title = names.title;   // (the final fight keeps 'Lord of the Void')
   b.hp = e.hp;
   b.maxHp = e.maxHp;
   b.phase = e.phase;
@@ -227,7 +228,36 @@ function lichPosition(e: Enemy, ux: number, uz: number, dist: number, mul: numbe
   }
 }
 
+/** Malakar (final fight) stage 2: faster patterns, more and bigger, faster orbs. */
+const st2 = (): boolean => world.boss.final && world.boss.stage === 2;
+
+/** Malakar in the final fight: stage 2 below half HP, and a periodic damage-absorbing shield. */
+function malakar(e: Enemy, dt: number): void {
+  const b = world.boss;
+  if (b.stage === 1 && e.hp <= e.maxHp * 0.5) {
+    b.stage = 2;
+    e.scale *= 1.15; e.radius *= 1.1;
+    e.shield = e.maxHp * 0.1; b.shieldCd = 12;
+    e.attackCd = Math.min(e.attackCd, 0.5);
+    events.emit('bossPhase', { phase: 2 });
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 16, color: 0x7c3aed });
+    events.emit('shake', { amount: 0.9 });
+    events.emit('floatText', { pos: e.pos, text: 'STAGE 2', color: 0xc084fc, scale: 1.5, dy: 5 });
+    useGameStore.getState().addNotification('Malakar casts off his mortal shell: STAGE 2!', '#c084fc', 'BOSS');
+    spawnIllusions(e, 2, 20);
+  }
+  if (e.state === 'DYING') return;
+  b.shieldCd -= dt;
+  if (b.shieldCd <= 0 && e.shield <= 0) {
+    e.shield = e.maxHp * (b.stage === 2 ? 0.1 : 0.07);
+    b.shieldCd = b.stage === 2 ? 13 : 17;
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 5, color: 0x93c5fd });
+    events.emit('floatText', { pos: e.pos, text: 'SHIELD', color: 0x93c5fd, scale: 1, dy: 4.5 });
+  }
+}
+
 function lich(e: Enemy, dt: number, dist: number): void {
+  if (world.boss.final) malakar(e, dt);
   const player = world.player.pos;
   const dx = player.x - e.pos.x;
   const dz = player.z - e.pos.z;
@@ -267,7 +297,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
       lichPosition(e, ux, uz, dist, 0.4);
       const rec = e.pattern === BLINK ? 0.2 : 0.8;
       if (e.stateT >= rec) {
-        e.attackCd = e.pattern === BLINK ? 0.3 : LICH_CD[e.phase];
+        e.attackCd = e.pattern === BLINK ? 0.3 : LICH_CD[e.phase] * (st2() ? 0.65 : 1);
         enter(e, 'CHASE');
       }
       return;
@@ -300,16 +330,17 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
   switch (e.pattern) {
     case SPIRAL: {
       lichPosition(e, ux, uz, dist, 0.35);
-      const arms = 2 + e.phase;
+      const s2 = st2();
+      const arms = 2 + e.phase + (s2 ? 2 : 0);
       const interval = 0.12 - 0.01 * e.phase;
-      e.angle += (1.7 + 0.5 * e.phase) * dt * (e.phase === 1 ? -1 : 1);
+      e.angle += (1.7 + 0.5 * e.phase) * (s2 ? 1.3 : 1) * dt * (e.phase === 1 ? -1 : 1);
       e.patternT -= dt;
       if (e.patternT <= 0) {
         e.patternT += interval;
         for (let k = 0; k < arms; k++) {
           const a = e.angle + (k * Math.PI * 2) / arms;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 8.5, e.projectileDamage * 0.6, { life: 6, radius: 0.5 });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 8.5 * (s2 ? 1.35 : 1), e.projectileDamage * 0.6, { life: 6, radius: s2 ? 0.85 : 0.5 });
         }
       }
       if (e.stateT >= 3.4 + 0.4 * e.phase) enter(e, 'RECOVER');
@@ -317,14 +348,15 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
     }
     case FAN: {
       lichPosition(e, ux, uz, dist, 0.35);
-      const volleys = 2 + e.phase;
-      if (e.patternT < volleys && e.stateT >= e.patternT * 0.4) {
-        const wide = e.phase >= 2 ? 3 : 2;
+      const s2 = st2();
+      const volleys = 2 + e.phase + (s2 ? 1 : 0);
+      if (e.patternT < volleys && e.stateT >= e.patternT * (s2 ? 0.3 : 0.4)) {
+        const wide = (e.phase >= 2 ? 3 : 2) + (s2 ? 1 : 0);
         const base = Math.atan2(ux, uz);
         for (let i = -wide; i <= wide; i++) {
           const a = base + i * 0.26;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 13, e.projectileDamage * 0.9, { life: 4, radius: 0.5 });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 13 * (s2 ? 1.35 : 1), e.projectileDamage * 0.9, { life: 4, radius: s2 ? 0.85 : 0.5 });
         }
         e.patternT++;
       }
@@ -339,13 +371,14 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       stop(e);
       if (e.patternT === 0) {
         e.patternT = 1;
-        const n = 4 + e.phase;
+        // dark mages (cultists); every third one an elite lich acolyte
+        const n = 3 + e.phase + (st2() ? 1 : 0);
         const base = Math.random() * Math.PI * 2;
         for (let i = 0; i < n; i++) {
           const a = base + (i / n) * Math.PI * 2;
           posV.set(e.pos.x + Math.sin(a) * 4, 0, e.pos.z + Math.cos(a) * 4);
           clampToArena(posV, 3);
-          spawnEnemy(i % 3 === 2 ? 'BAT' : 'SKELETON_ARCHER', posV);
+          spawnEnemy('CULTIST', posV, i % 3 === 2 ? { elite: true } : undefined);
         }
         events.emit('shake', { amount: 0.3 });
       }

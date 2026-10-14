@@ -146,7 +146,7 @@ export const world = {
   village: { harvestCd: 0, area: 'TOWN' as 'TOWN' | 'CASTLE', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE', spawnFx: 0,
     // click-to-walk: follow waypoints wp[0..n) (current = i, (x, z) = the waypoint being walked to), then do `act`
     go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'leave' | 'npc' | 'tower' | 'none', npc: -1, wp: new Float32Array(32), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
-  boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false } as BossHud,
+  boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0 } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
   camera: { trauma: 0, zoom: 1, yaw: 0, pitch: CAM_PITCH0, dist: 1 } as CameraState,
   input: { keys: {}, pressed: {}, pointerNdc: { x: 0, y: 0 }, mouseDown: false, joy: { x: 0, z: 0, active: false }, aimStick: { x: 0, z: 0, active: false }, touchAim: { active: false, id: '', dx: 0, dz: 0, mag: 0, cancel: false }, cancelAim: false } as InputState,
@@ -228,7 +228,7 @@ export function clearWorld(): void {
   for (const p of world.pickups) p.active = false;
   world.itemPickupsVersion++;
   Object.assign(world.player, makePlayer(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
-  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0;
+  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1;
   for (const w of world.walls) w.active = false;
   world.camera.trauma = 0;
   Object.assign(world.run, { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 });

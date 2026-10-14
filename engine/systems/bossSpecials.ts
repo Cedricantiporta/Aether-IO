@@ -118,6 +118,16 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       break;
     }
     case SP.CLONES: {
+      if (world.boss.final) {   // Malakar: real illusions that fight (1 in stage 1 for 10 s, 2 in stage 2 for 20 s)
+        if (e.spStep === 0 && t >= 0.8) {
+          e.spStep = 1;
+          const s2 = world.boss.stage === 2;
+          spawnIllusions(e, s2 ? 2 : 1, s2 ? 20 : 10);
+          events.emit('trick', { pos: e.pos.clone(), kind: 'CLONES', radius: 6 });
+        }
+        if (t >= 1.2) e.spKind = 0;
+        break;
+      }
       if (e.spStep === 0 && t >= 0.8) {
         e.spStep = 1;
         const base = Math.random() * 6.283, real = (Math.random() * 3) | 0;
@@ -302,9 +312,55 @@ function spawnDecoy(real: Enemy, x: number, z: number): void {
   e.spT = 0;
   events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
 }
+/** Malakar's illusions: n copies beside him with his current HP and half his armour. They move and cast his
+ *  basic attacks (orb fans and orb rings) for `life` seconds, then fade. No rewards. Max 2 at a time. */
+export function spawnIllusions(real: Enemy, n: number, life: number): void {
+  let have = 0;
+  for (const o of world.enemies) if (o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') have++;
+  const base = Math.random() * 6.283;
+  for (let k = 0; k < n && have < 2; k++, have++) {
+    const e = allocEnemy();
+    if (!e) return;
+    const a = base + (k / Math.max(1, n)) * 6.283;
+    tv.set(real.pos.x + Math.sin(a) * 6, 0, real.pos.z + Math.cos(a) * 6); clampArena(tv, 4);
+    e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true; e.trickKind = 1; e.trickT = life;
+    e.pos.set(tv.x, 0, tv.z); e.maxHp = e.hp = Math.max(1, real.hp); e.shield = 0;
+    e.armor = real.armor * 0.5;   // same HP as Malakar, half his defense
+    e.speed = real.speed; e.radius = real.radius; e.scale = real.scale;
+    e.contactDamage = 0; e.projectileDamage = real.projectileDamage; e.xp = 0; e.gold = 0;
+    e.state = 'CHASE'; e.stateT = 0; e.attackCd = 1 + Math.random(); e.facing = real.facing; e.active = true; e.spT = 0; e.pattern = 0;
+    events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
+    events.emit('explosion', { pos: e.pos.clone(), radius: 3, color: 0x7c3aed });
+  }
+}
+
+function updateIllusion(e: Enemy, dt: number): void {
+  const p = world.player.pos, s2 = world.boss.stage === 2;
+  const dx = p.x - e.pos.x, dz = p.z - e.pos.z, dist = Math.hypot(dx, dz) || 1, ux = dx / dist, uz = dz / dist;
+  e.facing = Math.atan2(dx, dz);
+  // keep a casting distance, strafing around the hero
+  const sp = e.speed * 0.8, side = (e.id & 1) ? 1 : -1;
+  const mx = dist < 9 ? -ux : dist > 15 ? ux : uz * side * 0.5, mz = dist < 9 ? -uz : dist > 15 ? uz : -ux * side * 0.5;
+  e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
+  e.attackCd -= dt;
+  if (e.attackCd <= 0) {
+    e.attackCd = (s2 ? 1.5 : 2.1) + Math.random() * 0.6;
+    const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
+    if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero
+      const b = Math.atan2(ux, uz);
+      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.24), 0, Math.cos(b + i * 0.24)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd + 3, e.projectileDamage * 0.7, { life: 4, radius: r }); }
+    } else {   // ring of orbs
+      const m = s2 ? 12 : 9, b = Math.random() * 6.283;
+      for (let i = 0; i < m; i++) { const a = b + (i / m) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd, e.projectileDamage * 0.55, { life: 5, radius: r }); }
+    }
+  }
+  if (e.stateT > e.trickT) popDecoy(e);
+}
+
 export function updateDecoy(e: Enemy, dt: number): void {
   e.stateT += dt; e.animT += dt;
   if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
+  if (e.trickKind === 1) { updateIllusion(e, dt); return; }
   const p = world.player.pos;
   e.facing = Math.atan2(p.x - e.pos.x, p.z - e.pos.z);
   e.attackCd -= dt;

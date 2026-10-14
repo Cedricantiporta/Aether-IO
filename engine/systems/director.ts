@@ -501,6 +501,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
   hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
+  hud.final = finalFight && kind === 'BOSS_LICH'; hud.stage = 1; hud.shieldCd = 14;   // Malakar: two stages, periodic shield (bosses.ts)
   events.emit('bossSpawn', { name: names.name, title: names.title });
   events.emit('shake', { amount: 0.5 });
   useGameStore.getState().addNotification(`${names.name}, the ${names.title}, approaches!`, '#ef4444', 'BOSS');
