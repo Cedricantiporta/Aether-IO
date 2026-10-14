@@ -32,6 +32,7 @@ const TRICKS: Partial<Record<EnemyKind, string>> = {
   HELLHOUND: 'Blazing fast. Leaves burning paw prints behind and pounces like a wolf.',
   CINDER_SHAMAN: 'Calls fire down on where you stand, and where you are running to.',
   VOID_STALKER: 'Blinks behind you, then strikes the spot you are standing on. Keep moving.',
+  BOSS_CRYSTAL: 'Shields its boss: while any ward crystal stands, the boss takes no damage.',
   VOID_EYE: 'Floats out of reach and fires rings of void orbs in every direction.',
   BANDIT: 'Scatters caltrops, drops smoke and dash-slashes.', BOAR: 'Charges in a straight line with heavy knockback.', ROCK_CRAB: 'Armoured front; pinches at close range and sidesteps.',
   BOSS_GOLEM: 'Telegraphed ground slams, rock rings and a crushing charge.', BOSS_LICH: 'Bullet-hell spirals, teleports and summons minions.',

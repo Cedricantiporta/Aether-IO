@@ -998,15 +998,31 @@ function voidEye(): ModelDef {
   };
 }
 
+/** Boss ward crystal: a tall faceted pylon on a rune plinth, floating shards around it. */
+function wardCrystal(): ModelDef {
+  const base = new GB([0.8, 1.1]); base.cyl(0.9, 1.05, 0.35, 8, [0, 0.18, 0], '#3a3a4a'); base.cyl(0.7, 0.9, 0.2, 8, [0, 0.42, 0], '#4a4a5e');
+  const cr = new GB([0.85, 1.25]); cr.ico(0.55, [0, 1.6, 0], '#9ad0ff', [0.75, 2.2, 0.75], 0); cr.ico(0.3, [0.45, 0.9, 0.2], '#7ab8ff', [0.6, 1.6, 0.6], 0); cr.ico(0.26, [-0.4, 0.85, -0.25], '#b8e0ff', [0.6, 1.4, 0.6], 0);
+  const glow = new GB([1, 1]); glow.ico(0.3, [0, 1.6, 0], '#e0f4ff', [0.6, 1.8, 0.6], 0); for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; glow.ico(0.12, [cos(a) * 1.0, 2.0, sin(a) * 1.0], '#bfe4ff', [0.6, 1.4, 0.6], 0); }
+  return {
+    parts: [{ geo: base.build(), mat: 'lit' }, { geo: cr.build(), mat: 'lit' }, { geo: glow.build(), mat: 'glow' }], headY: 3.6, shadow: 1.0,
+    pose(e, P, t) {
+      P.body(0, 0, 0, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, sin(t * 2 + e.id) * 0.08, 0, 0, t * 0.4, 0);
+      P.part(2, 0, sin(t * 2 + e.id) * 0.08, 0, 0, t * 1.2, 0);
+      P.glow = 1.6 + 0.4 * sin(t * 4);
+    },
+  };
+}
+
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
   if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
     SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(),
-    HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye() };
+    HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
   'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
-  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE'];
+  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL'];

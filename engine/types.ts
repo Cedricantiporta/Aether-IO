@@ -49,7 +49,8 @@ export type EnemyKind =
   | 'HELLHOUND'       // Ember: very fast, leaves burning paw prints, pounces
   | 'CINDER_SHAMAN'   // Ember: calls down fire on your position (artillery circles)
   | 'VOID_STALKER'    // Void: blinks behind you and strikes
-  | 'VOID_EYE';       // Void: floating eye, fires rings of void orbs
+  | 'VOID_EYE'        // Void: floating eye, fires rings of void orbs
+  | 'BOSS_CRYSTAL';   // boss ward crystal: the boss is immune until every crystal is destroyed
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage

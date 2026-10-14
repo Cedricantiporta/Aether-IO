@@ -38,6 +38,7 @@ import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial,
 import { useGameStore } from '../../store';
 import { runMods } from '../runMods';
 import { updateBoss } from './bosses';
+import { updateBossMech, bossMechDied, tickBossStrikes } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
@@ -160,9 +161,14 @@ export function findSpawnPoint(minD: number, maxD: number, out: Vector3, baseAng
   return false;
 }
 
+/** True while a boss runs its AI: its telegraphs are drawn bigger and resolve sooner (harder to dodge). */
+let bossTel = false;
+const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
+
 export function spawnTelegraphCircle(
   x: number, z: number, radius: number, life: number, damage: number, color: number,
 ): Zone | null {
+  if (bossTel) { radius *= BOSS_TEL_R; life *= BOSS_TEL_T; }
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_CIRCLE'; zn.hostile = true;
@@ -176,6 +182,7 @@ export function spawnTelegraphCircle(
 export function spawnTelegraphLine(
   x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
 ): Zone | null {
+  if (bossTel) { width *= BOSS_TEL_R; length *= 1.12; life *= BOSS_TEL_T; }
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_LINE'; zn.hostile = true;
@@ -189,6 +196,7 @@ export function spawnTelegraphLine(
 export function spawnTelegraphCone(
   x: number, z: number, dirX: number, dirZ: number, range: number, half: number, life: number, color: number, trick: number, damage: number,
 ): Zone | null {
+  if (bossTel) { range *= 1.2; half = Math.min(1.5, half * 1.15); life *= BOSS_TEL_T; }
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_CONE'; zn.hostile = true;
@@ -306,6 +314,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (e.kind === 'BOSS_SAPLING') saplingDied(e);
   if (e.boss) {
     bossDied2(e);
+    bossMechDied();
     clearDecoys();
     world.boss.active = false;
     world.boss.hp = 0;
@@ -1092,6 +1101,7 @@ function runAI(e: Enemy): void {
     case 'CINDER_SHAMAN': aiCinderShaman(e); break;
     case 'VOID_STALKER': aiVoidStalker(e); break;
     case 'VOID_EYE': aiVoidEye(e); break;
+    case 'BOSS_CRYSTAL': stop(e); break;
     default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
@@ -1266,7 +1276,9 @@ function updateEnemy(e: Enemy): void {
   desiredYaw = Math.atan2(tdx, tdz);
   if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { const b = world.boss; b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
   if (e.boss) { world.boss.hp = e.hp; }
-  if (!locked || fuseBurning) {
+  bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
+  if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
+  else if (!locked || fuseBurning) {
     e.stateT += dt;
     if (e.attackCd > 0) e.attackCd -= dt;
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
@@ -1278,6 +1290,7 @@ function updateEnemy(e: Enemy): void {
     if (e.spKind !== 0) cancelSpecial(e);
     stop(e);
   }
+  bossTel = false;
   if (isDying(e)) return; // bomber exploded
 
   // ---- motion
@@ -1343,6 +1356,7 @@ export function updateEnemies(dt: number): void {
   px = player.pos.x;
   pz = player.pos.z;
   frameDt = dt;
+  tickBossStrikes(dt);
   if (world.boss.abilityT > 0) world.boss.abilityT -= dt;
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);

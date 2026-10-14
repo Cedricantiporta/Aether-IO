@@ -525,3 +525,13 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   past the wall ring under an animated lava plane (`RoomWater.LavaSea`), no outer prop ring. Lava pools are FLAT
   (`uCut` / plane at y 0.04, no bank sink); only lava rivers cut channels. Lakes are now blobs: a core circle + 2-4
   overlapping lobes (irregular outline; MAX_LAKES 16).
+- Boss mechanics layer (`engine/systems/bossMech.ts`, every biome boss + the Lich; `MECH` table per boss): Cataclysm =
+  arena-wide rain of impacts (12+4*phase random + aimed at you / your heading / a ring around you) carrying a debuff
+  (rocks stun, thorns/acid poison, hail slow, meteors burn, void blind, soulfire slow); Quake = big ring around the boss
+  with its signature CC (stun / root / slow / silence = "terrify"); Ward at 66% and 33% hp = immune (`bossWarded`,
+  shield bubble via e.shield) until its `BOSS_CRYSTAL`s (Golem, Wyrm, Void) or summoned guard (Treant sporecaps, Warlord
+  hellhounds, Lich archers) die, then a 2.5 s stagger; Mend = 3 s heal channel (Treant, Hydra, Void, Lich), broken by
+  6% max-hp damage; Crush = heavy melee on the NEAREST unit (minions take 4x). Impacts are our own strike pool
+  (`tickBossStrikes`, METEOR_SHADOW warnings) so they hit minions too. While a boss runs its AI, every telegraph it
+  spawns is 30% bigger and resolves 12% sooner (`bossTel` in enemies.ts).
+- Fear (Battle Cry): enemies cower in place, then 30% slow for 3 s. Cross Slash ~3x (two smooth crescents, radius 6).

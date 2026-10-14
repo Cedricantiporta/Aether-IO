@@ -187,10 +187,14 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Void Eye', hp: 75, speed: 2.4, radius: 0.8, scale: 1.1, contactDamage: 5, projectileDamage: 9,
     xp: 13, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0xc070ff, knockResist: 0.3, armor: 15,
   },
+  BOSS_CRYSTAL: {
+    name: 'Ward Crystal', hp: 100, speed: 0, radius: 1.1, scale: 1.3, contactDamage: 0, projectileDamage: 0,
+    xp: 0, gold: 0, cost: 0, minWave: 1, weight: 0, color: 0x8ab8ff, knockResist: 1, armor: 0,
+  },
 };
 
 /** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */
-export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA'; }
+export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA' || k === 'BOSS_CRYSTAL'; }
 /** Swarm kinds: rolled in big packs. */
 export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB'; }
 
@@ -200,7 +204,7 @@ export type BossKind =
 /** Bosses in biome order (the Lich is a mini-boss room option, so it is not part of the order). Used by the Codex. */
 export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID', 'BOSS_LICH'];
 /** Summons / body parts of the new bosses: no xp, loot or gold; vanish when their boss dies. */
-export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP'; }
+export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP' || k === 'BOSS_CRYSTAL'; }
 
 export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },

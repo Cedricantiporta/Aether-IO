@@ -19,6 +19,7 @@ import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
 import { onEnemyDeath, crabArmor, shieldBlock } from './enemies';
 import { popDecoy } from './bossSpecials';
+import { bossWarded } from './bossMech';
 import { hooks } from './hooks';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
@@ -317,6 +318,7 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
+  if (e.boss && bossWarded(e)) { if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
   if (!o.dot && e.kind === 'SHIELDBEARER' && shieldBlock(e)) return;   // braced shield: frontal hits deal 0 (BLOCKED)
   if (!(amount > 0)) return;
   if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)

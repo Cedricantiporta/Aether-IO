@@ -1,4 +1,5 @@
 import { CAM_PITCH0 } from './world';
+import { resetBossMech } from './systems/bossMech';
 import { PLAZA } from './townData';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
@@ -131,7 +132,7 @@ function resetSystems(): void {
   resetCombo();
   resetSpecials();
   resetBossFx();
-  resetBosses2();
+  resetBosses2(); resetBossMech();
   clearPressed();
 }
 

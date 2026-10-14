@@ -1,4 +1,5 @@
 import { RARITY_LABEL_COLOR } from '../../constants';
+import { resetBossMech } from './bossMech';
 // ============================================================================
 // Run director (Hades-style rooms). A run is a chain of small rooms grouped into biomes; each biome ends in a boss.
 //
@@ -183,7 +184,7 @@ function clearTransient(): void {
   world.boss.staggered = false;
   world.boss.stagger = 0;
   world.enemyGrid.clear();
-  resetTricks(); resetSpecials(); resetBossFx(); resetBosses2();
+  resetTricks(); resetSpecials(); resetBossFx(); resetBosses2(); resetBossMech();
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
