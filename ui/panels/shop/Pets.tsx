@@ -5,6 +5,7 @@ import { useGameStore, shopPrice, firstPetFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ItemArt } from '../../components/ItemArt';
 import { PetCare } from './PetCare';
+import { PetFuse } from './PetFuse';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
 import type { PlayerStats } from '../../../types';
@@ -38,15 +39,15 @@ export const PetsTab: React.FC = () => {
   const sales = useGameStore((s) => s.shopSales);
   const setBuy = useUiStore((s) => s.setBuyItem);
   const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
-  const [tab, setTab] = useState<'SHOP' | 'CARE'>('SHOP');
+  const [tab, setTab] = useState<'SHOP' | 'CARE' | 'FUSE'>('SHOP');
   const [selId, setSel] = useState(PETS_POOL[0]?.id ?? '');
   const p = PETS_POOL.find((x) => x.id === selId) ?? PETS_POOL[0];
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        {(['SHOP', 'CARE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : 'Pet Care'}</button>)}
+      <div className="grid grid-cols-3 gap-2">
+        {(['SHOP', 'CARE', 'FUSE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : t === 'CARE' ? 'Pet Care' : 'Fuse'}</button>)}
       </div>
-      {tab === 'CARE' ? <PetCare /> : (<>
+      {tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
         <div className="pet-grid slot-grid priced" data-testid="pet-grid">
           {PETS_POOL.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>

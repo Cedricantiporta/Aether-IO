@@ -9,6 +9,7 @@ import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
 import { STORY, sanitizeStory, type StorySave } from './story';
+import { FUSE_COUNT, FUSE_CHANCE, nextTier, randomPetOf } from './petFusion';
 import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
@@ -1304,6 +1305,22 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
     },
 
+    fusePets: (ids) => {
+      const s = get();
+      const pets = ids.map((id) => s.inventory.find((i) => i.id === id)).filter((i): i is Item => !!i && i.type === 'PET');
+      if (pets.length !== FUSE_COUNT || new Set(pets.map((p) => p.id)).size !== FUSE_COUNT) return null;
+      const r = pets[0].rarity, up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
+      if (!up || chance <= 0 || pets.some((p) => p.rarity !== r)) return null;
+      const ok = Math.random() < chance;
+      const tpl = randomPetOf(ok ? up : r);
+      if (!tpl) return null;
+      const item: Item = { ...tpl, stats: { ...tpl.stats }, id: uid('fuse'), quantity: 1, level: tpl.level };
+      const inv = s.inventory.filter((i) => !ids.includes(i.id));
+      inv.push(item);   // (5 slots freed, 1 used: always fits)
+      set({ inventory: inv });
+      notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
+      return { ok, item };
+    },
     buyItem: (item, quantity = 1) => {
       const s = get();
       const total = firstPetFree(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;

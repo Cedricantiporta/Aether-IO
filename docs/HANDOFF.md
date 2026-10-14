@@ -573,3 +573,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   any closer to it than to the hero; their chase step is undone in roomEvents). Death screen: only Return to town.
   Item containers: `.slot-grid.priced` is the bag-grid template (prices inside the slot, no frames). Boss arenas:
   `BOSS_ARENA_R` per biome (30..42) and a pillar plan per biome (roomgen PLANS).
+- Malakar's illusions show an HP bar (render/Enemies.tsx, after the main loop). Shared warehouse: store.ts keeps
+  items + gold under `aether-survivor-shared-warehouse-v1` for every character (each profile's old warehouse merges in
+  once, tracked in `merged`); profiles save an empty warehouse. Pet fusion: Pet House > Fuse (ui/panels/shop/PetFuse.tsx,
+  petFusion.ts, store.fusePets): 5 bag pets of one tier -> Common 60% / Rare 40% / Epic 20% / Legendary 8% for a random
+  pet of the next tier (summon-only pets included), else one random pet of the same tier.

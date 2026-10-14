@@ -206,6 +206,8 @@ export interface GameState {
   unequipItem: (slot: EquipSlot) => void;
   autoEquip: () => void;
   buyItem: (item: Item, quantity?: number) => boolean;
+  /** Pet fusion: 5 bag pets of one tier -> a chance at one pet of the next tier (else one of the same tier). */
+  fusePets: (ids: string[]) => { ok: boolean; item: Item } | null;
   setAttrs: (a: import('./attributes').Attrs) => boolean;   // allocate attribute points for the current class
   resetAttrs: () => boolean;                               // refund all points (costs gold)
   sellItem: (item: Item, amount?: number) => void;
