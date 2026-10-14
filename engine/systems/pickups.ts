@@ -19,7 +19,6 @@ const XP_MERGE_THRESHOLD = 300;
 const XP_MERGE_RADIUS = 4;
 const MAX_MAGNET_SPEED = 55;
 const PET_COLLECT_RANGE = 20;
-const MAGNET_SKILL_BONUS = 1.5; // per skill level
 
 let xpActive = 0;
 const tmpPos = new Vector3();
@@ -107,11 +106,25 @@ function notifyLoot(item: Item): void {
 
 /** Player magnet radius (items outside it are candidates for the pet to fetch). */
 export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): number {
-  let r = st.stats.magnetRadius + st.skillLevels.magnet * MAGNET_SKILL_BONUS;
+  let r = st.stats.magnetRadius;   // (the Looter passive is gone)
   if (st.equipment.pet?.petSkill === 'COLLECT') r = Math.max(r, PET_COLLECT_RANGE);
   return r;
 }
 
+/** E / tap on a loot pill: the item flies to the hero and is collected (bag full -> a warning, it stays). */
+export function lootPickup(i: number): void {
+  const o = world.pickups[i], st = useGameStore.getState();
+  if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
+  if (!st.canPickUp(o.item)) { st.addNotification('Bag is full!', 'red', 'WARNING'); return; }
+  o.magnet = true; o.t = Math.max(o.t, 0.4);
+}
+/** Nearest lootable item pickup within r of (x, z): index or -1. */
+export function nearestLoot(x: number, z: number, r: number): number {
+  let best = -1, bd = r * r;
+  const pk = world.pickups;
+  for (let i = 0; i < pk.length; i++) { const o = pk[i]; if (!o.active || o.kind !== 'ITEM' || o.magnet || o.t < 0.35) continue; const d = (o.pos.x - x) ** 2 + (o.pos.z - z) ** 2; if (d < bd) { bd = d; best = i; } }
+  return best;
+}
 /** Pet grabs a pickup: same reward path as the player collecting it. */
 export function petCollect(o: (typeof world.pickups)[number]): void {
   collect(o, useGameStore.getState());
@@ -142,7 +155,8 @@ export function updatePickups(dt: number): void {
     let canGet = p.alive;
     if (canGet && o.kind === 'ITEM') canGet = !!o.item && st.canPickUp(o.item);
 
-    if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2) o.magnet = true;
+    // items (gear / goods) are looted by hand (E / tap the pill: lootPickup); only currency, xp and hearts fly in by themselves
+    if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2 && o.kind !== 'ITEM') o.magnet = true;
     if (o.magnet && !canGet) o.magnet = false;
 
     if (o.magnet) {
@@ -170,7 +184,7 @@ export function updatePickups(dt: number): void {
       }
     }
 
-    if (canGet && d2 < collectR2) collect(o, st);
+    if (canGet && d2 < collectR2 && (o.kind !== 'ITEM' || o.magnet)) collect(o, st);
   }
   xpActive = xpCount;
 }

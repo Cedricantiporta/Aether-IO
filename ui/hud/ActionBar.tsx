@@ -78,8 +78,6 @@ export const ActionBar: React.FC = () => {
         tooltip={<SimpleTip title="Energy Shield" sub={`Passive · Lv ${sk('barrier')}`} body={SKILLS_INFO.barrier.description} lines={[cdLine('Recharge', `${p.shieldCdMax.toFixed(0)}s`)]} />} />
       <ActionSlot id="regen" size="4.3rem" active={sk('regen') > 0} level={sk('regen')} icon={<PaintedIcon id="regen" />}
         tooltip={<SimpleTip title="Regeneration" sub={`Passive · Lv ${sk('regen')}`} body={SKILLS_INFO.regen.description} />} />
-      <ActionSlot id="magnet" size="4.3rem" active={sk('magnet') > 0} level={sk('magnet')} icon={<PaintedIcon id="magnet" />}
-        tooltip={<SimpleTip title="Looter" sub={`Passive · Lv ${sk('magnet')}`} body={SKILLS_INFO.magnet.description} />} />
       <Sep />
       <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="4.3rem" qty={hpQty} active={true} accent="#d6252b"
         icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: POTION_COOLDOWN })}

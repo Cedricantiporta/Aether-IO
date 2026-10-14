@@ -33,6 +33,16 @@ export function hasBetterGear(inv: Item[], eq: Equipment, hero: string, rank: nu
   return false;
 }
 
+/** Ids of bag items that beat what is equipped in their slot (usable by this hero at this level): red dot on the item + its tab. */
+export function betterGearIds(inv: Item[], eq: Equipment, hero: string, rank: number): Set<string> {
+  const out = new Set<string>();
+  for (const [slot, type] of SLOT) {
+    const cur = eq[slot] as Item | null; const cp = cur ? calculateItemCP(cur) : -1;
+    for (const i of inv) if (i.type === type && rank >= RANK_REQ[i.rarity] && (!i.classType || i.classType === hero) && calculateItemCP(i) > cp) out.add(i.id);
+  }
+  return out;
+}
+
 export function useBagAlert(): boolean {
   const seen = useSeen((s) => s.items);
   return useGameStore((s) => {

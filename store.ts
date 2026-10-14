@@ -8,7 +8,7 @@ import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { STORY, sanitizeStory, type StorySave } from './story';
-import { xpNeed, growBase, unlockLevel, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
+import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
@@ -885,9 +885,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const lvl = s.skillLevels[skill];
       if (lvl >= MAX_SKILL_LEVEL) return;
-      let cost = lvl + 1;
-      if (skill === 'ult') cost = lvl + 2;
-      if (skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN') || skill === 'barrier') cost = lvl + 2;
+      const cost = skillCost(skill, lvl, skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN'));
       const need = unlockLevel(s.hero, skill);
       if (s.level < need) { notify(`Unlocks at Lv ${need}`, 'red', 'WARNING'); return; }
       if (s.skillPoints < cost) return;

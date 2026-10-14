@@ -1,3 +1,4 @@
+import { betterGearIds } from '../lib/alerts';
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from 'lucide-react';
@@ -78,6 +79,9 @@ export const InventoryPanel: React.FC = () => {
     if (isGear(it) && !lockedFor(it)) equipItem(it);
   };
   const shown = useMemo(() => (cat === 'ALL' ? sorted : sorted.filter((i) => catOf(i) === cat)), [sorted, cat]);
+  // better gear than what is worn: red dot on the item and on its category tab (and ALL)
+  const better = useMemo(() => betterGearIds(inventory, equipment, hero, rank), [inventory, equipment, hero, rank]);
+  const betterCats = useMemo(() => { const c = new Set<string>(); for (const i of inventory) if (better.has(i.id)) { c.add(catOf(i)); c.add('ALL'); } return c; }, [inventory, better]);
   const empty = cat === 'ALL' ? Math.max(0, max - inventory.length) : Math.max(0, Math.max(12, Math.ceil(shown.length / 4) * 4 + 4) - shown.length);
   const chips: [React.ReactNode, string, string][] = [
     [<Heart size={12} key="h" />, 'HP', String(Math.round(stats.maxHealth))], [<Swords size={12} key="d" />, 'DMG', String(Math.round(stats.damage))],
@@ -116,7 +120,7 @@ export const InventoryPanel: React.FC = () => {
         <div className="flex-1 min-h-0 flex">
           <nav className="bag-cats rpg-scroll">
             {CATS.map((c) => (
-              <button key={c.id} className={`bag-cat ${cat === c.id ? 'is-active' : ''}`} onClick={() => setCat(c.id)}>{c.icon}<span>{c.label}</span></button>
+              <button key={c.id} className={`bag-cat relative ${cat === c.id ? 'is-active' : ''}`} onClick={() => setCat(c.id)}>{c.icon}<span>{c.label}</span>{betterCats.has(c.id) && <i className="red-dot" data-testid="cat-dot" />}</button>
             ))}
           </nav>
           <div className="flex-1 min-w-0 min-h-0 rpg-scroll p-2.5">
@@ -134,7 +138,9 @@ export const InventoryPanel: React.FC = () => {
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
                   <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
-                    onClick={() => click(it)} tooltip="sell" drag={delMode ? null : { from: 'BAG', item: it }} className={delMode && delSel.includes(it.id) ? 'is-del' : delMode ? 'del-pick' : ''} />
+                    onClick={() => click(it)} tooltip="sell" drag={delMode ? null : { from: 'BAG', item: it }} className={delMode && delSel.includes(it.id) ? 'is-del' : delMode ? 'del-pick' : ''}>
+                    {better.has(it.id) && <i className="red-dot" data-testid="item-dot" />}
+                  </ItemSlot>
                 </DropCell>
               ))}
               {Array.from({ length: empty }).map((_, i) => (

@@ -6,6 +6,7 @@ import {
   MeshStandardMaterial, Group, Matrix4, Object3D, Quaternion, ShaderMaterial, Vector3, IcosahedronGeometry,
 } from 'three';
 import { world } from '../engine/world';
+import { abilityState } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, pushHalo, sparks } from './fx';
@@ -98,9 +99,9 @@ export function Projectiles() {
     for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; pa.box(0.02, 0.5, 0.8, [Math.sin(a) * 0.12, Math.cos(a) * 0.12, -1.4], '#e8f2ff', [0, 0, -a]); }
     // gale arrow: giant wind arrow with rings
     const ga = new GB([1, 1]);
-    ga.cyl(0.1, 0.1, 4.2, 6, [0, 0, -0.6], '#d8fff0', [Math.PI / 2, 0, 0]); ga.cone(0.34, 1.4, 6, [0, 0, 2.0], '#ffffff', [Math.PI / 2, 0, 0]);
-    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; ga.box(0.03, 0.8, 1.3, [Math.sin(a) * 0.2, Math.cos(a) * 0.2, -2.4], '#7affc8', [0, 0, -a]); }
-    ga.torus(0.5, 0.05, [0, 0, 0.9], '#aaffe0', [0, 0, 0], 1, 16); ga.torus(0.7, 0.05, [0, 0, -0.3], '#aaffe0', [0, 0, 0], 1, 16); ga.torus(0.9, 0.05, [0, 0, -1.5], '#aaffe0', [0, 0, 0], 1, 16);
+    ga.cyl(0.1, 0.1, 4.2, 6, [0, 0, -0.6], '#9dffb0', [Math.PI / 2, 0, 0]); ga.cone(0.34, 1.4, 6, [0, 0, 2.0], '#d8ffd8', [Math.PI / 2, 0, 0]);   // green wind arrow
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; ga.box(0.03, 0.8, 1.3, [Math.sin(a) * 0.2, Math.cos(a) * 0.2, -2.4], '#4aff6a', [0, 0, -a]); }
+    ga.torus(0.5, 0.05, [0, 0, 0.9], '#8aff9a', [0, 0, 0], 1, 16); ga.torus(0.7, 0.05, [0, 0, -0.3], '#8aff9a', [0, 0, 0], 1, 16); ga.torus(0.9, 0.05, [0, 0, -1.5], '#8aff9a', [0, 0, 0], 1, 16);
     // axe (flat spin)
     const aw = makeAxe('#ffb060', 1);
     const axeB = new GB().addColored(aw.body, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
@@ -213,6 +214,19 @@ export function Projectiles() {
       for (let m = 0; m < ims.length; m++) ims[m].setMatrixAt(i, o.matrix);
     };
 
+    // Lightpiercer charge: a ball of light gathering in front of the archer, growing until the shot
+    {
+      const a = abilityState;
+      if (a.lpT > 0 && a.lpMax > 0) {
+        const k = 1 - a.lpT / a.lpMax, pl = world.player.pos;
+        const bx = pl.x + a.lpDx * 1.3, bz = pl.z + a.lpDz * 1.3, by = 1.3;
+        pushHalo(bx, by, bz, 0.8 + 2.6 * k, 2.4, 2.4, 2.5, 0.5 + 0.4 * k, CELL.GLOW);
+        if (dt > 0 && Math.random() < dt * 40) {   // motes drawn into the ball
+          const an = Math.random() * TAU, rr = 1.6 + Math.random();
+          FX.add.emit(bx + Math.cos(an) * rr, by + (Math.random() - 0.5), bz + Math.sin(an) * rr, -Math.cos(an) * rr * 3, 0, -Math.sin(an) * rr * 3, 0.3, 0.25, 0.05, 2.2, 2.2, 2.4, 0.9, CELL.STAR, 0, 0, 0, 0, 0);
+        }
+      }
+    }
     const pr = world.projectiles;
     for (let n = 0; n < pr.length; n++) {
       const p = pr[n];
@@ -246,8 +260,8 @@ export function Projectiles() {
           break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
         case 'PIERCING_ARROW':
-          place(ims, i, x, y, z, yaw, pitch, t * 12, 1.2);
-          pushHalo(x, y, z, 2.4, 2.4, 2.4, 2.5, 0.6, CELL.GLOW);
+          place(ims, i, x, y, z, yaw, pitch, t * 12, 2.1);   // Lightpiercer: a big shaft of light
+          pushHalo(x, y, z, 4.2, 2.4, 2.4, 2.5, 0.65, CELL.GLOW);
           if (emit) {
             FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 0.6, 0.05, 2.2, 2.2, 2.4, 0.85, CELL.STREAK, 0, 0, 0, 0, 0);
             for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.015 * k, y, z - vz * 0.015 * k, vx * -0.05, vy * -0.05, vz * -0.05, 0.3, 0.8, 0.2, 2.0, 2.0, 2.3, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);
@@ -255,10 +269,10 @@ export function Projectiles() {
           break;
         case 'GALE_ARROW': {
           const w = p.spin || 1;
-          place(ims, i, x, y, z, yaw, pitch, t * 9, w * 1.1, w * 1.1, 1.1);
-          pushHalo(x, y, z, 5 * w, 0.4, 1.7, 1.2, 0.5, CELL.GLOW);
+          place(ims, i, x, y, z, yaw, pitch, t * 9, w * 0.75, w * 0.75, 0.8);   // smaller, green
+          pushHalo(x, y, z, 3.4 * w, 0.4, 2.2, 0.5, 0.55, CELL.GLOW);
           if (emit) {
-            for (let k = 0; k < 3; k++) { const a = Math.random() * TAU, rr = (0.8 + Math.random() * 1.6) * w; FX.add.emit(x - vx * 0.01 * k + Math.cos(a) * rr * 0.3, y + Math.sin(a) * rr * 0.3, z, -vx * 0.15, 0, -vz * 0.15, 0.4, 0.5 * w, 0.1, 0.6, 1.9, 1.4, 0.7, CELL.STREAK, 0, 1, 0, 0, 0.12); }
+            for (let k = 0; k < 3; k++) { const a = Math.random() * TAU, rr = (0.8 + Math.random() * 1.6) * w; FX.add.emit(x - vx * 0.01 * k + Math.cos(a) * rr * 0.3, y + Math.sin(a) * rr * 0.3, z, -vx * 0.15, 0, -vz * 0.15, 0.4, 0.4 * w, 0.1, 0.5, 2.2, 0.6, 0.7, CELL.STREAK, 0, 1, 0, 0, 0.12); }
             if (Math.random() < dt * 40) FX.norm.emit(x, 0.4, z, (Math.random() - 0.5) * 4, 2, (Math.random() - 0.5) * 4, 0.6, 0.8, 1.6, 0.8, 0.95, 0.9, 0.3, CELL.SMOKE);
           }
           break;

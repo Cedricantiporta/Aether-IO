@@ -26,6 +26,15 @@ export function unlockLevel(hero: HeroClass, key: string): number {
   return 0;
 }
 
+/** Skill points to learn / raise `key` from level `lvl` (1 SP per class level, 3 to start). Actives and class passives
+ *  2 + lvl, dash / shield 2 + lvl, the ultimate 3 + lvl, Ultimate Charge 3 + lvl, Regeneration is pricey: 4 + 2 x lvl. */
+export function skillCost(key: string, lvl: number, dash = false): number {
+  if (key === 'regen') return 4 + 2 * lvl;
+  if (key === 'ult' || key === 'weapon') return 3 + lvl;
+  if (dash || key === 'barrier') return 2 + lvl;
+  return 2 + lvl;
+}
+
 /** Learned skills of a fresh class: skill 1, the class dash, the ultimate and the basic utilities. Everything else 0. */
 export function freshSkills(hero: HeroClass, base: SkillLevels): SkillLevels {
   const s = { ...base } as unknown as Record<string, number>;

@@ -115,7 +115,6 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
 export const SKILLS_INFO = {
     // Universal Passives
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
-    magnet: { name: 'Looter', description: 'Increases pickup range.', type: 'PASSIVE' },
     dash: { name: 'Class Dash', description: 'Your Space dash (Shadow Roll / Blink Nova / Shoulder Charge). Costs no mana. Reduces dash cooldown; level 5 grants +1 Dash Charge.', type: 'PASSIVE' },
     weapon: { name: 'Ultimate Mastery', description: 'Ultimate charge fills faster (+10% per level).', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
@@ -151,7 +150,6 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   
-  { id: 'u_mag', type: 'SKILL_MAGNET', name: 'Looter', description: 'Magnet Range Level Up', rarity: 'COMMON', value: 1 },
   { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Class Dash Level Up', rarity: 'RARE', value: 1 }, 
   { id: 'u_wep', type: 'SKILL_WEAPON', name: 'Ability Mastery', description: 'Ability Level Up', rarity: 'EPIC', value: 1 },
   { id: 'u_bar', type: 'SKILL_BARRIER', name: 'Energy Shield', description: 'Shield Level Up', rarity: 'EPIC', value: 1 },
@@ -231,10 +229,10 @@ export const PETS_POOL: Item[] = [
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
   // --- CONSUMABLES ---
-  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 50 HP.' },
+  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 70% of your max HP.' },
   { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 50 Mana.' },
   // BIG POTIONS
-  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 75 HP.' },
+  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your HP.' },
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 75 Mana.' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'A rare arcane core used by the Blacksmith to upgrade gear.' },

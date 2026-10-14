@@ -86,7 +86,9 @@ function pullTick(z: Zone, dt: number): void {
     pulled++;
     const d = Math.sqrt(d2) || 1;
     if (d <= PULL_STOP) continue;
-    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * dt * (z.kind === 'TORNADO' ? 0.75 : 1));
+    // Gale tornadoes: a gentle tug that big monsters mostly shrug off (pull / size^2; mini-bosses barely move)
+    const tug = z.kind === 'TORNADO' ? 0.4 / Math.max(1, e.scale * e.scale) * (e.mini ? 0.25 : 1) : 1;
+    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * dt * tug);
     e.pos.x += (dx / d) * step;
     e.pos.z += (dz / d) * step;
   }

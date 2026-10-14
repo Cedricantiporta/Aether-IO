@@ -15,7 +15,7 @@ import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
 import { updateCrates, hitCrate } from './crates';
-import { updatePickups } from './pickups';
+import { updatePickups, lootPickup } from './pickups';
 import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
 import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
@@ -93,7 +93,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower' | 'farm';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower' | 'farm' | 'loot';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -135,13 +135,18 @@ function scanNearby(): void {
     const c = world.crates[i]; if (!c.active) continue;
     d = q(c.pos.x, c.pos.z); if (d < HARVEST_R * HARVEST_R) push('E', 'Harvest', HARVEST_NAME[c.kind] ?? 'Node', '', i, d, 'harvest');
   }
+  // items on the ground are looted by hand (E / tap)
+  for (let i = 0; i < world.pickups.length; i++) {
+    const o = world.pickups[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;
+    d = q(o.pos.x, o.pos.z); if (d < 3.2 * 3.2) push('E', 'Loot', o.item.name, '', i, d - 0.5, 'loot');
+  }
   for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
 }
 
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
-  if (it.act !== 'harvest' && it.act !== 'farm') {
+  if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'leave') v.pending = 'LEAVE';
@@ -155,6 +160,7 @@ export function interact(it: Interactable): void {
     return;
   }
   if (it.act === 'farm') { farmAct(it.node); return; }
+  if (it.act === 'loot') { lootPickup(it.node); return; }
   const c = world.crates[it.node];
   if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }

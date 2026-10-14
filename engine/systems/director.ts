@@ -24,7 +24,7 @@ import { shape, insideShape } from '../roomShape';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
-import { spawnPickup, petCollect } from './pickups';
+import { spawnPickup, petCollect, lootPickup } from './pickups';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
@@ -679,8 +679,18 @@ function scanNearby(): void {
       }
     }
   }
+  // loot on the ground (items are picked up by hand: E / tap), also mid-fight
+  if (r.fade < 0.6 && d.phase !== 'LEAVING') {
+    const pk = world.pickups;
+    for (let i = 0; i < pk.length; i++) {
+      const o = pk[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;
+      const dd2 = (o.pos.x - p.x) ** 2 + (o.pos.z - p.z) ** 2;
+      if (dd2 < LOOT_R * LOOT_R) pushNearby('Loot', o.item.name, 1000 + i, dd2 - 0.5);   // slightly ahead of other pills at the same distance
+    }
+  }
   for (let i = 0; i < MAX_ROOM_NEARBY; i++) roomNearby[i].active = i < nearbyN;
 }
+const LOOT_R = 3.2;
 
 /** Same action as pressing E next to the thing (also used by the touch interact pills). */
 export function interactRoom(it: Interactable): void {
@@ -696,6 +706,7 @@ export function interactRoom(it: Interactable): void {
   }
   if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
   if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
+  if (it.node >= 1000) { lootPickup(it.node - 1000); return; }   // loot an item on the ground
   if (it.node >= 100) {   // harvest stroke (held E repeats it every 0.3 s)
     const c = world.crates[it.node - 100];
     if (c && c.active && harvestCd <= 0 && world.player.alive) {
@@ -786,5 +797,5 @@ export function updateDirector(dt: number): void {
 
 function vacuumLoot(): void {
   const pk = world.pickups;
-  for (let i = 0; i < pk.length; i++) if (pk[i].active) pk[i].magnet = true;
+  for (let i = 0; i < pk.length; i++) if (pk[i].active && pk[i].kind !== 'ITEM') pk[i].magnet = true;   // currency / xp only: items need E
 }

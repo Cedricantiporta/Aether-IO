@@ -106,7 +106,7 @@ function findPickup(px: number, pz: number, fetchR: number, magnetR: number): Pi
     const dx = o.pos.x - px, dz = o.pos.z - pz;
     const d2 = dx * dx + dz * dz;
     if (d2 > fr2 || d2 <= mr2) continue;
-    if (o.kind === 'ITEM' && !(o.item && st.canPickUp(o.item))) continue;
+    if (o.kind === 'ITEM') continue;   // items are looted by hand (E), the pet leaves them
     const ex = o.pos.x - wp.pos.x, ez = o.pos.z - wp.pos.z;
     const e2 = ex * ex + ez * ez;
     if (e2 < bestD) { bestD = e2; best = o; }

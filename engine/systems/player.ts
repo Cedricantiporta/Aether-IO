@@ -78,7 +78,8 @@ function usePotion(health: boolean): boolean {
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
   const amt = (item.restoreAmount || 50) * (1 + 0.12 * techLv(st.tech, 'potion'));   // Tech House: Potion Brewing
-  if (health) { healPlayer(amt); p.hpPotCd = POTION_COOLDOWN; }
+  // health potions restore a share of max HP: 70% (Big: 100%), Potion Brewing on top
+  if (health) { healPlayer(st.stats.maxHealth * ((item.restoreAmount || 50) >= 75 ? 1 : 0.7) * (1 + 0.12 * techLv(st.tech, 'potion'))); p.hpPotCd = POTION_COOLDOWN; }
   else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
   return true;
 }
@@ -325,6 +326,8 @@ export function updatePlayer(dt: number): void {
   // the swing timer keeps counting down while walking, so arriving at a target swings at once (no idle second)
   p.fireT = Math.max(-0.05, p.fireT - dt);
   const manual = !!world.input.keys.KeyF;
+  // casting a skill: no basic attacks until the cast is done
+  if (abilityState.castLockT > 0) { p.fireT = Math.max(p.fireT, 0.08); return; }
   const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
   const archerMoving = (st.hero === 'ARCHER' || manual) && moving && !busy;
   if (moving && !archerMoving) { if (!autoChase) p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }   // (walking up to the target: swing on arrival)

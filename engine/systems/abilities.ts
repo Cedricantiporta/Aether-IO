@@ -23,6 +23,8 @@ const judgeRays = Array.from({ length: 7 }, () => ({ x: 0, z: 0, t: 0, id: -1 })
 const judgeUsed: number[] = [];
 let judgeN = 0;
 export const abilityState = {
+  castLockT: 0,            // > 0: a skill is being cast, no basic attacks (player.ts)
+  lpT: 0, lpMax: 0, lpDx: 0, lpDz: 1, lpDmg: 0,   // Lightpiercer: charging a ball of light, fires when lpT runs out
   tint: 0,                 // (unused: ultimates no longer darken the screen)
   flash: 0,                // 0..1 brief light flash at ult cast / impact
   flashRgb: [1, 0.9, 0.7] as [number, number, number],
@@ -310,6 +312,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   const hero = st.hero;
   // hit-combo damage bonus is applied per hit in combat.damageEnemy
   curMul = 1;
+  if (!dash) abilityState.castLockT = Math.max(abilityState.castLockT, 0.4);   // casting: no basic attacks for a moment
   if (!dash) {
     if (hero === 'BARBARIAN' && slot === 'e') abilityState.whirlBoost = combo.lastSlot === 'q' && world.time - combo.lastSlotT < 3;
     combo.lastSlot = slot; combo.lastSlotT = world.time;
@@ -323,7 +326,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     if (slot === 'q') {
       const w = (1 + stats.galeWidth) * (1 + 0.1 * (lv - 1));
       const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 34, b * 4.8,
-        { life: 1.6, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
+        { life: 1.6, pierce: Infinity, knockback: 0.4, radius: 2.1 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
       if (pr) { pr.state = 0; pr.procLv = 0; pr.spin = w; pr.trailT = 0; pr.homing = 0; pr.aoeRadius = 0; pr.bounces = 3 + lv; }
       announce('GALE_ARROW');
     } else if (slot === 'e') {
@@ -345,9 +348,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       }
       announce('SHADOW_ROLL');
     } else if (slot === 's3') {
-      // LIGHTPIERCER: one very fast white arrow, pierces the whole line, pure damage
-      spawnProjectile('PIERCING_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 110, b * 7.5,
-        { life: 0.75, pierce: Infinity, radius: 1.5, knockback: 0.15, y: 1.3 });
+      // LIGHTPIERCER: charges a ball of light (0.5s), then looses a big white arrow that pierces the whole line
+      abilityState.lpT = abilityState.lpMax = 0.5; abilityState.lpDx = dx; abilityState.lpDz = dz; abilityState.lpDmg = b * 7.5;
+      abilityState.castLockT = Math.max(abilityState.castLockT, 0.75);
+      p.facing = Math.atan2(dx, dz);
       announce('LIGHT_ARROW');
     } else {
       const R = 7.5 + 0.5 * (lv - 1);
@@ -924,6 +928,14 @@ export function updateAbilities(dt: number): void {
   stepFx(dt);
   updateChains(dt);
   updateUlt(dt);
+  if (a.castLockT > 0) a.castLockT -= dt;
+  if (a.lpT > 0) {   // Lightpiercer charge -> fire
+    a.lpT -= dt; p.facing = Math.atan2(a.lpDx, a.lpDz);
+    if (a.lpT <= 0) {
+      spawnProjectile('PIERCING_ARROW', p.pos.x + a.lpDx, p.pos.z + a.lpDz, a.lpDx, a.lpDz, 75, a.lpDmg, { life: 1.1, pierce: Infinity, radius: 2.4, knockback: 0.15, y: 1.3 });
+      addShake(0.2); p.anim.attackT = 1;
+    }
+  }
 
   a.tint = 0;
   if (a.flash > 0) a.flash = Math.max(0, a.flash - dt * 2.4);

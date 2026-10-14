@@ -391,3 +391,14 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Boss bar: mini-bosses now get a screen anchor (CameraRig finds the live `mini` enemy); off-screen it parks top-centre.
 - MINIBOSS rooms keep a 12-radius clear arena at stationPos and the champion spawns there (no more wedged bosses).
 - Combo meter moved to the left edge. Gale Arrow: damage 4.8x (-20%), range ~54 (life 1.6).
+
+### Skills SP, manual looting, Lightpiercer charge, cast lock, potions, gear dots
+- SP costs (`classLevels.skillCost`): actives / class passives / dash / shield 2 + lvl, ultimate and Ultimate Charge
+  3 + lvl, Regeneration 4 + 2 x lvl. Looter passive removed (SKILLS_INFO / card / action-bar slot; pickup range = stat only).
+- Items on the ground are looted by hand: an E / tap "Loot <name>" pill (rooms: node 1000+i, town: act 'loot') ->
+  `pickups.lootPickup`. Currency / xp / hearts still fly in; the room-clear vacuum and the pet skip items.
+- Casting any active skill locks basic attacks for 0.4 s (`abilityState.castLockT`). Lightpiercer charges a ball of
+  light for 0.5 s (rendered in Projectiles.tsx from `abilityState.lpT`), then fires a bigger, slower (75) arrow.
+- Gale Arrow is smaller and green; its tornadoes tug gently and big monsters barely move (pull / scale^2, minis x0.25).
+- Health Potion heals 70% of max HP (Big: 100%), Potion Brewing on top.
+- Bag: red dot on every item that beats the worn one, on its category tab and ALL (`alerts.betterGearIds`).

@@ -1,5 +1,5 @@
 import React from 'react';
-import { unlockLevel } from '../../../classLevels';
+import { unlockLevel, skillCost } from '../../../classLevels';
 import { Star } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -20,7 +20,7 @@ const HINT: Record<string, string> = {
   thunder: 'Chain lightning every Nth bolt: N drops by 1, one more target.', freezeSpell: 'Stronger slow, longer duration (radius 16, slow instead of freeze).', storm: 'One more bolt in the volley, more damage.',
   orbital: 'One more orbiting blade (1 + level).', stamp: 'Axe Storm every Nth throw: N drops by 1, harder-hitting axes.',
 };
-const costOf = (hero: any, key: string, lvl: number) => (isDashKey(hero, key) || key === 'barrier' || key === 'ult' ? lvl + 2 : lvl + 1);
+const costOf = (hero: any, key: string, lvl: number) => skillCost(key, lvl, isDashKey(hero, key));
 
 const RunSkills: React.FC = () => {
   const { hero, levels, sp, upgrade, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill, heroLv: s.level })));

@@ -517,7 +517,7 @@ export function updateProjectiles(dt: number): void {
             if (z) {
               z.active = true; z.kind = 'TORNADO'; z.hostile = false;
               z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 4.2; z.life = z.maxLife = 1.6;
-              z.damage = p.damage * 0.135; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 11;   // gentle tug
+              z.damage = p.damage * 0.135; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 7;   // gentle tug, few enemies
             }
           }
         }
