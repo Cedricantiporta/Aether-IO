@@ -14,7 +14,7 @@ export type Liquid = 'WATER' | 'LAVA' | 'CHASM' | 'ICE';
 export const LIQ = { NONE: 0, WATER: 1, LAVA: 2, CHASM: 3, ICE: 1 } as const;
 export const liquidCode = (l: Liquid): number => (l === 'LAVA' ? 2 : l === 'CHASM' ? 3 : 1);
 
-export const MAX_LAKES = 6;
+export const MAX_LAKES = 16;
 export const MAX_BRIDGES = 3;
 export const MAX_FIXED = 4;
 

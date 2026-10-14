@@ -17,7 +17,7 @@ import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
-import { RoomWater } from './RoomWater';
+import { RoomWater, LavaSea } from './RoomWater';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
@@ -86,10 +86,9 @@ function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null]
       break;
     }
     case 'SNOW': g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, N, N); speck(3000, 0.04, 0.1, 0.4); for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(rnd() * N, rnd() * N, 1.5, 1.5); } break;
-    case 'BASALT': {   // dark cracked plates; the cracks glow (emissive map derived below)
-      g.fillStyle = '#d8d0cc'; g.fillRect(0, 0, N, N); speck(4000, 0.06, 0.18, 0.3);
-      cracks(g, 6, 'rgba(20,10,8,0.95)', 5);
-      glowC = mk();
+    case 'BASALT': {   // plain volcanic rock: grainy plates with dark seams (no glowing cracks)
+      g.fillStyle = '#d4ccc6'; g.fillRect(0, 0, N, N); speck(6000, 0.06, 0.2, 0.35);
+      cracks(g, 4, 'rgba(40,24,16,0.55)', 2.5);
       break;
     }
     case 'VOID': {   // faint hex-ish rune grid; the lines glow violet
@@ -135,10 +134,10 @@ function liquidEdge(x: number, z: number): number {
   return e;
 }
 
-function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: number; boss: boolean }) {
+function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number; seed: number; boss: boolean; index: number }) {
   const { geo, mat, tufts, slabs } = useMemo(() => {
     const def = biomeOf(biome);
-    const vr = variantOf(def, seed);
+    const vr = variantOf(def, index);
     const style = def.style;
     const S = 2 * (shape.maxR + 44), seg = feat.river || feat.nLakes > 0 ? 260 : 160;   // finer grid where banks are carved
     const g = new PlaneGeometry(S, S, seg, seg);
@@ -152,6 +151,8 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     const stone = new Color(def.stone), stoneC = new Color();
     const bank = new Color(style === 'BASALT' ? '#1a0e0a' : style === 'SAND' ? (feat.liquid === 'CHASM' ? '#a87440' : '#8a7a4a') : style === 'SNOW' ? '#9ab4c8' : style === 'MARBLE' ? '#8a8272' : style === 'VOID' ? '#160f2a' : '#4a5a2a');
     const hasLiquid = feat.river || feat.nLakes > 0;
+    const flatLava = feat.liquid === 'LAVA' && !feat.river;   // lava pools lie flat on the rock (only lava rivers cut channels)
+    const lavaSea = !!def.lavaSea;
     const path = !boss && (seed % 5) !== 0 && style !== 'MARBLE' && style !== 'VOID';
     const out = new Color(), tmpC = new Color();
     const duneA = (seed % 360) * 0.0174, dux = Math.cos(duneA), duz = Math.sin(duneA);
@@ -191,7 +192,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
       } else if (style === 'BASALT') {
         out.lerp(lush, sstep(0.48, 0.62, zA) * 0.6);
         out.lerp(dirt, sstep(0.55, 0.7, zB) * 0.8);
-        out.lerp(tmpC.set('#7a3a1a'), sstep(0.68, 0.76, fbm(x * 0.09 + so, z * 0.09, 3)) * 0.6);   // scorched rust
+        out.lerp(tmpC.set('#5a3220'), sstep(0.7, 0.78, fbm(x * 0.09 + so, z * 0.09, 3)) * 0.35);   // faint scorch
       } else if (style === 'VOID') {
         out.lerp(lush, sstep(0.48, 0.62, zA) * 0.7);
         out.lerp(dirt, sstep(0.6, 0.72, zB) * 0.8);
@@ -220,7 +221,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
       if (hasLiquid) {
         const le = liquidEdge(x, z);
         if (le < 2.6) out.lerp(bank, sstep(2.6, 0.2, le) * (feat.liquid === 'LAVA' ? 0.9 : 0.7));
-        if (le < 0.6) {
+        if (le < 0.6 && !flatLava) {
           const k = sstep(0.6, -1.4, le);   // 0 at the lip -> 1 at the channel bed
           pos.setY(i, -SINK * k * (0.9 + 0.1 * vnoise(x * 0.7 + so, z * 0.7)));
           const strata = 0.7 + 0.3 * Math.sin(k * 11 + fbm(x * 0.4, z * 0.4, 2) * 3);
@@ -234,6 +235,12 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
         const rr = Math.abs(r - (shapeLimit(x, z) - 1) * 0.62);
         out.lerp(g1, sstep(0.9, 0.2, rr) * 0.6).multiplyScalar(1 + sstep(0.5, 0.1, rr) * 0.25);
         out.multiplyScalar(1 + sstep(R * 0.2, 0, r) * 0.2);
+      }
+      // lava sea: past the wall ring the rock crumbles away under the lava (a dark scorched lip first)
+      if (lavaSea) {
+        const k = sstep(3.6, 6.0, u);
+        if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.4 * k));
+        out.lerp(tmpC.set('#1a0c08'), sstep(2.6, 4.2, u) * 0.85);
       }
       // floor beyond the walls (marble halls: dark interior void)
       const e = sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);
@@ -682,9 +689,10 @@ export function Room({ q }: { q: QualityCfg }) {
   const tower = runInfo.mode === 'TOWER';
   return (
     <>
-      {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} />)}
+      {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
       {r.active && !tower && <RoomWater />}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.seed)?.propTint ?? def.propTint} /></Suspense>
+      {r.active && !tower && def.lavaSea && <LavaSea key={'lava' + ver} />}
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
       <Stations />
       <CampProps />
       <Portals />

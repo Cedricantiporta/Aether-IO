@@ -45,7 +45,7 @@ export function Scene() {
   useFrame((_, dt) => updateGame(dt), -1);
   const gameplay = status !== GameStatus.MENU && status !== GameStatus.HERO_SELECT;
   // town while in the menu / hero select; a run shows only its current room (rebuilt behind the black fade)
-  useLayoutEffect(() => { setLook(gameplay ? world.room.biome : -1, true); }, [gameplay, roomVer]);
+  useLayoutEffect(() => { setLook(gameplay ? world.room.biome : -1, true, world.room.index); }, [gameplay, roomVer]);
   return (
     <>
       <color attach="background" args={[FOG_COLOR]} />

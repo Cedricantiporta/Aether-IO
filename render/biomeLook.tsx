@@ -2,7 +2,7 @@
 // hemisphere + sun light. Sky and Lighting read `look` every frame; LookDriver eases it towards the target and applies fog.
 import { Color, Fog, Vector3 } from 'three';
 import { useFrame } from '@react-three/fiber';
-import { biomeOf } from '../engine/roomDefs';
+import { biomeOf, variantOf } from '../engine/roomDefs';
 import { runInfo } from '../engine/runMods';
 
 interface Look { fog: Color; hemiSky: Color; hemiGround: Color; hemiI: number; sun: Color; sunI: number; sky: Vector3; near: number; far: number }
@@ -14,7 +14,7 @@ export const look: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.
 const target: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
 
 /** Points the look at a biome (index >= 0) or back at the town (-1). `snap` skips the ease (used at full black). */
-export function setLook(biome: number, snap = false): void {
+export function setLook(biome: number, snap = false, index = 0): void {
   if (biome < 0) {
     target.fog.set(TOWN_FOG); target.hemiSky.set('#cfe8ff'); target.hemiGround.set('#6f8f45'); target.hemiI = 1.25;
     target.sun.set('#fff0d2'); target.sunI = 3.1; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
@@ -23,9 +23,11 @@ export function setLook(biome: number, snap = false): void {
     target.fog.set('#0b1230'); target.hemiSky.set('#8fa6e0'); target.hemiGround.set('#2a2a38'); target.hemiI = 0.95;
     target.sun.set('#c8d6ff'); target.sunI = 2.1; target.sky.set(0.07, 0.09, 0.22); target.near = 45; target.far = 130;
   } else {
-    const b = biomeOf(biome);
-    target.fog.set(b.fog); target.hemiSky.set(b.hemiSky); target.hemiGround.set(b.hemiGround); target.hemiI = b.hemiI;
-    target.sun.set(b.sun); target.sunI = b.sunI; target.sky.set(...b.skyTint); target.near = 50; target.far = b.fog === '#1c1433' || b.fog === '#7a3c2c' ? 115 : 150;
+    const b = biomeOf(biome), v = variantOf(b, index);   // depth tier light overrides
+    const fog = v?.fog ?? b.fog;
+    target.fog.set(fog); target.hemiSky.set(v?.hemiSky ?? b.hemiSky); target.hemiGround.set(v?.hemiGround ?? b.hemiGround); target.hemiI = v?.hemiI ?? b.hemiI;
+    target.sun.set(v?.sun ?? b.sun); target.sunI = v?.sunI ?? b.sunI; target.sky.set(...(v?.skyTint ?? b.skyTint)); target.near = 50;
+    target.far = b.style === 'VOID' || b.style === 'BASALT' || (v?.fog && v.hemiI !== undefined && v.hemiI < 0.9) ? 115 : 150;
   }
   if (snap) copy(look, target, 1);
 }

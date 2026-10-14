@@ -24,11 +24,15 @@ export type GroundStyle = 'GRASS' | 'MARBLE' | 'SAND' | 'SNOW' | 'BASALT' | 'VOI
 export type BiomeHazard = 'PUDDLE' | 'GAS' | 'QUICKSAND' | null;
 export type LiquidKind = 'WATER' | 'LAVA' | 'CHASM' | 'ICE';
 
-/** A sub-look of a biome (Greenwood: meadow / deep grove / mire). Rolled per room from the room seed. */
+/** A depth tier of a biome: depths 1-5, 6-10, 11-15 each get their own look (and light). */
 export interface BiomeVariant {
   name: string;
   ground: [string, string]; patch: [string, string, string]; edge?: string; propTint?: string;
   border: ObstacleKind[]; interior: ObstacleKind[]; hazard: BiomeHazard;
+  // optional light overrides (else the biome's)
+  fog?: string; hemiSky?: string; hemiGround?: string; hemiI?: number; sun?: string; sunI?: number; skyTint?: [number, number, number];
+  layouts?: [number, number, number, number, number];   // stage layout weights override
+  lakeScale?: number;                                     // lake / pool size multiplier
 }
 
 export interface BiomeDef {
@@ -57,6 +61,7 @@ export interface BiomeDef {
   towers: boolean;               // goblin archer towers appear in fight rooms
   hydras: boolean;               // lake stages hide lurking hydras
   variants?: BiomeVariant[];
+  lavaSea?: boolean;             // the floor beyond the walls drops into a lava sea (Ember Wastes)
   crates: CrateKind[];
   boss: BossKind;
   minis: string[];               // keys of enemyDefs.MINI_BOSSES
@@ -71,12 +76,14 @@ export const BIOMES: readonly BiomeDef[] = [
     border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null,
     river: 'WATER', lake: 'WATER', layouts: [40, 14, 10, 20, 16], towers: true, hydras: true,
     variants: [
-      { name: 'Meadow', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], propTint: '#ffffff',
-        border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null },
-      { name: 'Deep Grove', ground: ['#2b6a2f', '#4a8a3a'], patch: ['#3a8a3a', '#7d8a3e', '#5a4630'], edge: '#16301a', propTint: '#cfe8c0',
-        border: ['PINE', 'TREE', 'PINE', 'TREE', 'PINE'], interior: ['STUMP', 'LOG', 'RUIN', 'ROCK', 'PINE'], hazard: null },
-      { name: 'Mire', ground: ['#4a5a2e', '#6b7a3a'], patch: ['#5c6e34', '#7e7a44', '#4a3e26'], edge: '#232a14', propTint: '#b8c890',
-        border: ['DEAD_TREE', 'TREE', 'STUMP', 'DEAD_TREE', 'ROCK'], interior: ['STUMP', 'LOG', 'DEAD_TREE', 'ROCK', 'LOG'], hazard: 'PUDDLE' },
+      { name: 'Sunlit Meadow', ground: ['#43a236', '#7ccc4a'], patch: ['#62bc40', '#bcc85c', '#8f7448'], propTint: '#ffffff',
+        border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null, hemiI: 1.35, sunI: 3.3 },
+      { name: 'Deep Grove', ground: ['#2b6a2f', '#4a8a3a'], patch: ['#3a8a3a', '#7d8a3e', '#5a4630'], edge: '#16301a', propTint: '#c8e0b8',
+        border: ['PINE', 'TREE', 'PINE', 'TREE', 'PINE'], interior: ['STUMP', 'LOG', 'RUIN', 'ROCK', 'PINE'], hazard: null,
+        fog: '#8faa98', hemiSky: '#b8d0c8', hemiGround: '#3a5a2a', hemiI: 1.0, sun: '#ffe2b0', sunI: 2.3, skyTint: [0.72, 0.82, 0.78] },
+      { name: 'Darkwood', ground: ['#22402a', '#335430'], patch: ['#2e4a2a', '#4a5030', '#2e2418'], edge: '#0a140c', propTint: '#90a888',
+        border: ['DEAD_TREE', 'PINE', 'DEAD_TREE', 'TREE', 'ROCK'], interior: ['STUMP', 'LOG', 'DEAD_TREE', 'ROCK', 'RUIN'], hazard: 'PUDDLE',
+        fog: '#2e3a34', hemiSky: '#8098b0', hemiGround: '#1e2a18', hemiI: 0.75, sun: '#c0d0f0', sunI: 1.5, skyTint: [0.36, 0.44, 0.46] },
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
     boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
@@ -89,6 +96,16 @@ export const BIOMES: readonly BiomeDef[] = [
     hemiSky: '#ffd9a8', hemiGround: '#3a2e24', hemiI: 0.95, sun: '#ffcf96', sunI: 2.2, skyTint: [0.3, 0.25, 0.22], propTint: '#ffffff',
     border: ['CASTLEWALL'], outer: ['CASTLEWALL', 'COLUMN'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL', 'BRAZIER'], hazard: null,
     river: 'WATER', lake: 'WATER', layouts: [46, 24, 30, 0, 0], towers: false, hydras: false,
+    variants: [
+      { name: 'Outer Ward', ground: ['#7c766c', '#958f83'], patch: ['#8a8478', '#6a655c', '#4f5a3c'],
+        border: ['CASTLEWALL'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL', 'BRAZIER'], hazard: null },
+      { name: 'Broken Hall', ground: ['#736d62', '#8a8476'], patch: ['#7a7468', '#5e594f', '#4a5a36'], propTint: '#e8e4dc',
+        border: ['CASTLEWALL'], interior: ['RUIN', 'COLUMN', 'LOWWALL', 'RUIN', 'STATUE', 'BRAZIER', 'BOULDER'], hazard: null,
+        hemiI: 0.9, sunI: 2.0 },
+      { name: 'Fallen Keep', ground: ['#5e5a4e', '#6e6a5a'], patch: ['#5a6040', '#504a40', '#3e5a2e'], propTint: '#d0d4c0',
+        border: ['CASTLEWALL'], interior: ['RUIN', 'DEAD_TREE', 'LOWWALL', 'BOULDER', 'COLUMN', 'TREE', 'RUIN'], hazard: null,
+        fog: '#2e3028', hemiSky: '#d8e0c8', hemiGround: '#2e3424', hemiI: 1.1, sun: '#e8f0d8', sunI: 2.6, skyTint: [0.45, 0.48, 0.42] },
+    ],
     shapes: [['RECT', 30], ['HEX', 12], ['OCT', 16], ['CROSS', 18], ['ROUND', 8], ['SEMI', 8], ['ELLIPSE', 8]],
     crates: ['POT', 'POT', 'CRATE', 'GRAVE', 'BARREL'],
     boss: 'BOSS_TREANT', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,
@@ -99,6 +116,16 @@ export const BIOMES: readonly BiomeDef[] = [
     hemiSky: '#ffe8c0', hemiGround: '#b08850', hemiI: 1.35, sun: '#fff0c8', sunI: 3.4, skyTint: [1.12, 1.0, 0.82], propTint: '#ffffff',
     border: ['SANDSTONE', 'CACTUS', 'ROCK', 'SANDSTONE', 'CACTUS'], interior: ['CACTUS', 'BONES', 'SANDSTONE', 'ROCK', 'CACTUS', 'BONES'], hazard: 'QUICKSAND',
     river: 'CHASM', lake: 'WATER', layouts: [34, 20, 12, 14, 20], towers: true, hydras: true,
+    variants: [
+      { name: 'Golden Dunes', ground: ['#d9b46a', '#efd08a'], patch: ['#e8c47a', '#c99a55', '#b07a40'],
+        border: ['SANDSTONE', 'CACTUS', 'ROCK', 'SANDSTONE', 'CACTUS'], interior: ['CACTUS', 'BONES', 'SANDSTONE', 'ROCK', 'CACTUS', 'BONES'], hazard: 'QUICKSAND' },
+      { name: 'Buried Ruins', ground: ['#d0a862', '#e6c47e'], patch: ['#dcb470', '#b88a4c', '#a07040'],
+        border: ['SANDSTONE', 'RUIN', 'COLUMN', 'SANDSTONE', 'ROCK'], interior: ['RUIN', 'COLUMN', 'SANDSTONE', 'STATUE', 'CACTUS', 'RUIN'], hazard: 'QUICKSAND',
+        hemiI: 1.25, sun: '#ffe4b0', sunI: 3.1 },
+      { name: 'Bone Wastes', ground: ['#c08850', '#d8a466'], patch: ['#c89458', '#a87040', '#7a4a2a'], edge: '#7a5030', propTint: '#f0d8c0',
+        border: ['SANDSTONE', 'DEAD_TREE', 'ROCK', 'BONES', 'SANDSTONE'], interior: ['BONES', 'DEAD_TREE', 'BONES', 'ROCK', 'SANDSTONE', 'RUIN'], hazard: 'QUICKSAND',
+        fog: '#d89a6a', hemiSky: '#ffc890', hemiGround: '#8a5a30', hemiI: 1.15, sun: '#ffa868', sunI: 2.7, skyTint: [1.08, 0.78, 0.6] },
+    ],
     crates: ['POT', 'POT', 'BARREL', 'CRATE', 'GRAVE'],
     boss: 'BOSS_HYDRA', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
     roster: [['SCARAB', 8, 0], ['BANDIT', 7, 0], ['SKELETON_ARCHER', 5, 0], ['BOMBER', 5, 0], ['ZOMBIE', 5, 1], ['ROCK_CRAB', 4, 1], ['SHIELDBEARER', 4, 2], ['BRUTE', 3, 3], ['SCORPION', 7, 0], ['MUMMY', 6, 1]],
@@ -108,15 +135,37 @@ export const BIOMES: readonly BiomeDef[] = [
     hemiSky: '#e0f0ff', hemiGround: '#9ab0c8', hemiI: 1.4, sun: '#e8f4ff', sunI: 3.0, skyTint: [0.88, 0.97, 1.1], propTint: '#dff0ff',
     border: ['PINE', 'BOULDER', 'PINE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null,
     river: 'ICE', lake: 'ICE', layouts: [36, 16, 12, 18, 18], towers: false, hydras: true,
+    variants: [
+      { name: 'Snowfield', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'],
+        border: ['PINE', 'BOULDER', 'PINE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null },
+      { name: 'Frostbite Pass', ground: ['#b8d4ea', '#dcecf8'], patch: ['#cfe4f6', '#9ec0dc', '#8aa0b4'], propTint: '#cfe6ff',
+        border: ['ICE_ROCK', 'PINE', 'ICE_ROCK', 'BOULDER', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ICE_ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null,
+        fog: '#c4dcf0', hemiSky: '#d0e8ff', hemiI: 1.3, sun: '#d8ecff', sunI: 2.7, skyTint: [0.8, 0.92, 1.12] },
+      { name: 'Glacier Heart', ground: ['#94c4e6', '#c4e2f8'], patch: ['#a8d4f2', '#7ab0d8', '#6a8ea8'], edge: '#5a86a8', propTint: '#b8dcff',
+        border: ['ICE_ROCK', 'CRYSTAL_SPIRE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['CRYSTAL_SPIRE', 'ICE_ROCK', 'ICE_ROCK', 'CRYSTAL_SPIRE', 'BOULDER'], hazard: null,
+        fog: '#9cc4e4', hemiSky: '#b8dcff', hemiGround: '#5a80a8', hemiI: 1.2, sun: '#c0dcff', sunI: 2.4, skyTint: [0.66, 0.84, 1.15] },
+    ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT'],
     boss: 'BOSS_WYRM', minis: ['SHELLBACK', 'BEHEMOTH'], lichCrypt: false,
     roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3], ['FROST_WISP', 7, 0], ['YETI', 4, 1]],
   },
-  { // 4 Ember Wastes: basalt, obsidian, lava rivers and lava lakes crossed by stone bridges
-    name: 'Ember Wastes', style: 'BASALT', ground: ['#3a2622', '#5a3226'], patch: ['#5a3222', '#8a4a26', '#2a1a14'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
-    hemiSky: '#ffb090', hemiGround: '#5a2a1a', hemiI: 1.1, sun: '#ff9a60', sunI: 3.0, skyTint: [1.1, 0.7, 0.55], propTint: '#d09070',
-    border: ['OBSIDIAN', 'BOULDER', 'DEAD_TREE', 'OBSIDIAN', 'ROCK'], interior: ['OBSIDIAN', 'ROCK', 'DEAD_TREE', 'RUIN', 'BOULDER'], hazard: 'GAS',
-    river: 'LAVA', lake: 'LAVA', layouts: [28, 14, 10, 28, 20], towers: false, hydras: false,
+  { // 4 Ember Wastes: islands of plain dark-brown rock in a sea of lava (the floor beyond the walls drops into it); lava
+    // rivers sink into channels, lava pools lie flat and irregular and grow with depth
+    name: 'Ember Wastes', style: 'BASALT', ground: ['#3c2a20', '#523b2a'], patch: ['#4a3426', '#634530', '#2a1d15'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
+    hemiSky: '#ffd0b0', hemiGround: '#4a2e20', hemiI: 1.1, sun: '#ffd0a8', sunI: 2.8, skyTint: [1.1, 0.7, 0.55], propTint: '#c8a088',
+    border: ['OBSIDIAN', 'BOULDER', 'ROCK', 'OBSIDIAN', 'ROCK'], interior: ['OBSIDIAN', 'ROCK', 'DEAD_TREE', 'BOULDER', 'ROCK'], hazard: null,
+    river: 'LAVA', lake: 'LAVA', layouts: [34, 14, 10, 22, 20], towers: false, hydras: false, lavaSea: true,
+    variants: [
+      { name: 'Ashen Slopes', ground: ['#3e2c22', '#54402e'], patch: ['#4a3628', '#66483a', '#2c1f16'],
+        border: ['BOULDER', 'ROCK', 'OBSIDIAN', 'ROCK'], interior: ['ROCK', 'BOULDER', 'DEAD_TREE', 'ROCK', 'OBSIDIAN'], hazard: null,
+        layouts: [36, 16, 10, 18, 20], lakeScale: 1 },
+      { name: 'Magma Fields', ground: ['#3a2820', '#4e3828'], patch: ['#463024', '#6a4430', '#281a12'],
+        border: ['OBSIDIAN', 'BOULDER', 'ROCK', 'OBSIDIAN'], interior: ['OBSIDIAN', 'ROCK', 'BOULDER', 'DEAD_TREE', 'ROCK'], hazard: 'GAS',
+        layouts: [22, 14, 8, 20, 36], lakeScale: 1.3, hemiI: 1.05, sunI: 2.8 },
+      { name: 'Molten Core', ground: ['#34221a', '#463024'], patch: ['#40281e', '#5e3a26', '#22160e'], edge: '#140a08', propTint: '#b88068',
+        border: ['OBSIDIAN', 'OBSIDIAN', 'BOULDER', 'ROCK'], interior: ['OBSIDIAN', 'OBSIDIAN', 'ROCK', 'BOULDER'], hazard: 'GAS',
+        layouts: [12, 14, 6, 22, 46], lakeScale: 1.6, fog: '#6a2a1c', hemiSky: '#ffb090', hemiGround: '#40200f', hemiI: 1.0, sun: '#ffb080', sunI: 2.5, skyTint: [1.15, 0.6, 0.45] },
+    ],
     crates: ['EXPLOSIVE_BARREL', 'BARREL', 'CRATE', 'POT'],
     boss: 'BOSS_WARLORD', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
     roster: [['BOMBER', 7, 0], ['BANDIT', 6, 0], ['CULTIST', 6, 0], ['SCARAB', 5, 0], ['GOBLIN', 5, 0], ['BAT', 3, 0], ['BRUTE', 5, 1], ['SPLITTER', 4, 1], ['ROCK_CRAB', 4, 2], ['HELLHOUND', 7, 0], ['CINDER_SHAMAN', 6, 1]],
@@ -126,16 +175,27 @@ export const BIOMES: readonly BiomeDef[] = [
     hemiSky: '#8a70d0', hemiGround: '#241a40', hemiI: 1.0, sun: '#a890ff', sunI: 2.2, skyTint: [0.55, 0.45, 0.85], propTint: '#a090d0',
     border: ['CRYSTAL_SPIRE', 'BOULDER', 'CRYSTAL_SPIRE', 'RUIN'], interior: ['CRYSTAL_SPIRE', 'RUIN', 'STATUE', 'BOULDER', 'CRYSTAL_SPIRE'], hazard: null,
     river: 'CHASM', lake: 'CHASM', layouts: [30, 14, 10, 22, 24], towers: false, hydras: false,
+    variants: [
+      { name: 'Rift Edge', ground: ['#2c2048', '#4a3478'], patch: ['#3a2a64', '#56348a', '#1a1230'], propTint: '#b0a0e0',
+        border: ['CRYSTAL_SPIRE', 'BOULDER', 'CRYSTAL_SPIRE', 'RUIN'], interior: ['CRYSTAL_SPIRE', 'RUIN', 'STATUE', 'BOULDER', 'CRYSTAL_SPIRE'], hazard: null,
+        hemiI: 1.1, sunI: 2.4 },
+      { name: 'Shattered Expanse', ground: ['#241a3e', '#3f2a6a'], patch: ['#33245a', '#4e2c7a', '#16102a'], propTint: '#a090d0',
+        border: ['CRYSTAL_SPIRE', 'RUIN', 'BOULDER', 'RUIN'], interior: ['RUIN', 'CRYSTAL_SPIRE', 'BOULDER', 'RUIN', 'STATUE'], hazard: null,
+        layouts: [22, 14, 8, 26, 30], lakeScale: 1.25 },
+      { name: 'The Abyss', ground: ['#160f28', '#2a1c4a'], patch: ['#24183e', '#3c2060', '#0c0818'], edge: '#050310', propTint: '#8070c0',
+        border: ['CRYSTAL_SPIRE', 'CRYSTAL_SPIRE', 'BOULDER'], interior: ['CRYSTAL_SPIRE', 'CRYSTAL_SPIRE', 'RUIN', 'BOULDER'], hazard: null,
+        layouts: [18, 12, 8, 28, 34], lakeScale: 1.45, fog: '#100a20', hemiSky: '#7a5ad0', hemiGround: '#140e28', hemiI: 0.85, sun: '#9a7aff', sunI: 1.9, skyTint: [0.35, 0.28, 0.6] },
+    ],
     crates: ['CRATE', 'POT', 'POT', 'GRAVE'],
     boss: 'BOSS_VOID', minis: ['BEHEMOTH', 'WARDEN', 'PHALANX'], lichCrypt: true,
     roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2], ['VOID_STALKER', 7, 0], ['VOID_EYE', 6, 1]],
   },
 ];
 
-/** The per-room sub-look of a biome (Greenwood: meadow / grove / mire), rolled from the room seed. */
-export function variantOf(def: BiomeDef, seed: number): BiomeVariant | null {
+/** Depth tier look of a biome: depths 1-5 -> variant 0, 6-10 -> 1, 11-15 (incl. the boss) -> 2. */
+export function variantOf(def: BiomeDef, index: number): BiomeVariant | null {
   if (!def.variants || def.variants.length === 0) return null;
-  return def.variants[((seed >>> 7) % 977) % def.variants.length];
+  return def.variants[Math.min(def.variants.length - 1, Math.max(0, Math.floor(index / 5)))];
 }
 
 export const biomeOf = (biome: number): BiomeDef => BIOMES[biome % BIOMES.length];

@@ -515,3 +515,13 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Mummy (rooting bandage throw); Frost Yeti (charge ending in a slam + slowing snow) + Frost Wisp (slowing shard fan, nova
   when close); Ember Hellhound (wolf AI + burning paw-print trail) + Cinder Shaman (fire circles on you and your heading);
   Void Stalker (blinks behind you, strikes your spot) + Void Eye (rings of orbs). Axe Storm axes ~40% smaller.
+- Biome depth tiers (`roomDefs.variantOf(def, index)`: depths 1-5 / 6-10 / 11-15 -> variants 0 / 1 / 2): each variant
+  sets ground, props, hazard and optional light (fog, hemi, sun, sky; `setLook(biome, snap, index)`), layout weights and
+  `lakeScale`. Greenwood: Sunlit Meadow -> Deep Grove -> Darkwood. Marble Halls: Outer Ward -> Broken Hall -> Fallen Keep
+  (roots, open sky). Desert: Golden Dunes -> Buried Ruins -> Bone Wastes (sunset). Frost: Snowfield -> Frostbite Pass ->
+  Glacier Heart. Ember: Ashen Slopes -> Magma Fields -> Molten Core (more / bigger lava pools). Void: Rift Edge ->
+  Shattered Expanse -> The Abyss.
+- Ember Wastes rework: plain dark-brown rock floor (no glowing crack texture), `lavaSea` biome flag = the ground sinks
+  past the wall ring under an animated lava plane (`RoomWater.LavaSea`), no outer prop ring. Lava pools are FLAT
+  (`uCut` / plane at y 0.04, no bank sink); only lava rivers cut channels. Lakes are now blobs: a core circle + 2-4
+  overlapping lobes (irregular outline; MAX_LAKES 16).

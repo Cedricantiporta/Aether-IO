@@ -13,7 +13,7 @@ import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, type ShapeKind } from './roomShape';
-import { hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
+import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
 
 /** QA hook: force the stage layout of the following fight rooms. */
 export const layoutDbg: { force: Layout | null } = { force: null };
@@ -27,9 +27,10 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
   const r = mulberry32(seed ^ 0x2545f491)();
   if (type === 'MINIBOSS') return layoutDbg.force === 'BIG' || r < 0.3 ? 'BIG' : 'PLAIN';
   if (!FIGHT[type]) return 'PLAIN';
-  if (layoutDbg.force && biomeOf(biome).layouts[LAYOUTS.indexOf(layoutDbg.force)] > 0) return layoutDbg.force;
+  if (layoutDbg.force && (variantOf(biomeOf(biome), index)?.layouts ?? biomeOf(biome).layouts)[LAYOUTS.indexOf(layoutDbg.force)] > 0) return layoutDbg.force;
   if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return 'PLAIN';   // the very first room of a run stays simple
-  const w = biomeOf(biome).layouts;
+  const bd = biomeOf(biome);
+  const w = variantOf(bd, index)?.layouts ?? bd.layouts;
   let sum = 0; for (const x of w) sum += x;
   let k = r * sum;
   for (let i = 0; i < 5; i++) { k -= w[i]; if (k <= 0) return LAYOUTS[i]; }
@@ -98,7 +99,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     long: layout === 'LONG',
     force: layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
   });
-  const vr = tower ? null : variantOf(def, seed);
+  const vr = tower ? null : variantOf(def, index);
   const border = vr?.border ?? def.border, interior = vr?.interior ?? def.interior, hazard = vr ? vr.hazard : def.hazard;
   const outerKinds = def.outer ?? border;
 
@@ -138,7 +139,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       for (let i = 0; i < feat.nb; i++) for (const d of [0, -(feat.hw + 2), feat.hw + 2]) {
         riverPoint(feat.bridgeS[i], d, rp); keep.push({ x: rp[0], z: rp[1], r: Math.max(feat.bw + 0.8, 3.2) });
       }
-    } else if (layout === 'LAKE') buildLakes(def.lake, rnd, colliders, nearKeep, type, index, def.hydras);
+    } else if (layout === 'LAKE') buildLakes(def.lake, rnd, colliders, nearKeep, type, index, def.hydras, vr?.lakeScale ?? 1);
   }
 
   // ---- walls ring (blocking) + decorative outer ring
@@ -178,7 +179,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const s = rand(sp.s[0], sp.s[1]);
     add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true, true, kind === 'LOWWALL' || kind === 'CASTLEWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
   });
-  const n2 = tower ? 0 : Math.ceil(P / Math.max(5.2, P / 34));
+  const n2 = tower || def.lavaSea ? 0 : Math.ceil(P / Math.max(5.2, P / 34));   // (lava sea: nothing stands out in the lava)
   if (n2 > 0) ringWalk(n2, 5, 0.1, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.5)) return;
     const kind = wallKind(pickKind(outerKinds));
@@ -373,29 +374,41 @@ function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, 
 
 /** Lake stage: one big lake (water / lava / abyss) + 0-2 ponds, kept off the arrival, station and exits. Hydras lurk in water. */
 function buildLakes(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, colliders: Collider[],
-  nearKeep: (x: number, z: number, r: number) => boolean, type: RoomType, index: number, hydras: boolean): void {
+  nearKeep: (x: number, z: number, r: number) => boolean, type: RoomType, index: number, hydras: boolean, scale = 1): void {
   feat.liquid = liq;
   const code = liquidCode(liq);
+  const free = (x: number, z: number, r: number, skip: number): boolean => {
+    if (!insideShape(x, z, r + 3.2) || nearKeep(x, z, r + 1.5)) return false;
+    for (let i = 0; i < feat.nLakes; i++) if (i < skip && Math.hypot(x - feat.lx[i], z - feat.lz[i]) < feat.lr[i] + r + 4) return false;
+    return true;
+  };
+  const put = (x: number, z: number, r: number): void => {
+    const k = feat.nLakes++;
+    feat.lx[k] = x; feat.lz[k] = z; feat.lr[k] = r;
+    colliders.push({ x, z, r: r - 0.35, blocksProjectiles: false, liquid: code });
+  };
+  // a pool = one core circle plus 2-4 overlapping lobes: an irregular, organic outline (the union of the circles)
   const tryLake = (r: number, tries: number, central: boolean): boolean => {
     for (let t = 0; t < tries; t++) {
       const a = rnd() * Math.PI * 2, d = central ? rnd() * shape.baseR * 0.35 : Math.sqrt(rnd()) * (shape.maxR - r - 3);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (!insideShape(x, z, r + 3.2)) continue;
-      if (nearKeep(x, z, r + 1.5)) continue;
-      let ok = true;
-      for (let i = 0; i < feat.nLakes; i++) if (Math.hypot(x - feat.lx[i], z - feat.lz[i]) < feat.lr[i] + r + 4) { ok = false; break; }
-      if (!ok) continue;
-      const k = feat.nLakes++;
-      feat.lx[k] = x; feat.lz[k] = z; feat.lr[k] = r;
-      colliders.push({ x, z, r: r - 0.35, blocksProjectiles: false, liquid: code });
+      const first = feat.nLakes;
+      if (first >= MAX_LAKES || !free(x, z, r, first)) continue;
+      put(x, z, r);
+      const lobes = 2 + Math.floor(rnd() * 3), a0 = rnd() * Math.PI * 2;
+      for (let j = 0; j < lobes && feat.nLakes < MAX_LAKES; j++) {
+        const la = a0 + (j / lobes) * Math.PI * 2 + (rnd() - 0.5) * 1.2, lr = r * (0.42 + rnd() * 0.3), ld = r * (0.55 + rnd() * 0.35);
+        const lx = x + Math.cos(la) * ld, lz = z + Math.sin(la) * ld;
+        if (free(lx, lz, lr, first)) put(lx, lz, lr);
+      }
       return true;
     }
     return false;
   };
-  let mainR = shape.baseR * (0.3 + rnd() * 0.08);
+  let mainR = shape.baseR * (0.26 + rnd() * 0.07) * scale;
   while (mainR > 4 && !tryLake(mainR, 40, true)) mainR -= 1;
-  const ponds = rnd() < 0.3 ? 0 : rnd() < 0.6 ? 1 : 2;
-  for (let i = 0; i < ponds; i++) tryLake(2.8 + rnd() * 2, 30, false);
+  const ponds = (rnd() < 0.3 ? 0 : rnd() < 0.6 ? 1 : 2) + (scale > 1.2 ? 1 : 0) + (scale > 1.5 ? 1 : 0);
+  for (let i = 0; i < ponds; i++) tryLake((2.6 + rnd() * 2) * Math.min(1.4, scale), 30, false);
   // hydras peek out of the water near the shore (fight rooms only, not the first rooms)
   if (hydras && (liq === 'WATER' || liq === 'ICE') && (type === 'COMBAT' || type === 'ELITE') && index >= 1) {
     for (let i = 0; i < feat.nLakes && feat.nHydras < 2; i++) {

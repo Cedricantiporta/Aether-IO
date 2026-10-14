@@ -14,7 +14,7 @@ import { useWorldCounter } from './hooks';
 
 const VS = `varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const FS = `
-uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform vec4 uRiv3; uniform vec2 uRiv4; uniform float uTime; uniform int uKind;
+uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform vec4 uRiv3; uniform vec2 uRiv4; uniform float uTime; uniform int uKind; uniform float uCut;
 uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uRim;
 varying vec2 vP;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -31,7 +31,7 @@ void main(){
     float d = uRiv.w * (1.0 + uRiv3.w * sin(uRiv4.x * s + uRiv4.y)) - abs(dd);
     if (d > e){ e = d; flow = vec2(-n.y, n.x); }
   }
-  if (e < -1.2) discard;   // (the sunken surface tucks under the banks; the depth test hides the rest)
+  if (e < uCut) discard;   // sunken: -1.2 (the surface tucks under the banks); flat lava pools: cut at the shore
   e = max(e, 0.0);
   vec3 col; float t = uTime;
   vec2 q = vP + flow * t * (uKind == 1 ? 0.35 : 1.2);
@@ -43,9 +43,9 @@ void main(){
     col += uShallow * mote * 0.8 + uShallow * 0.12 * smoothstep(1.5, 4.0, e) * fbm(vP * 0.3 + t * 0.05);
   } else if (uKind == 1){   // lava: glowing flow under a cooling crust
     float n1 = fbm(q * 0.35 + vec2(t * 0.05, 0.0)), n2 = fbm(q * 0.9 - vec2(0.0, t * 0.12));
-    float crust = smoothstep(0.52, 0.7, n1 * 0.7 + n2 * 0.45);
-    vec3 hot = mix(uShallow, uDeep, n2);
-    col = mix(hot * (1.4 + 0.3 * sin(t * 2.0 + n1 * 8.0)), uRim, crust * 0.85);
+    float crust = smoothstep(0.46, 0.64, n1 * 0.7 + n2 * 0.45);
+    vec3 hot = mix(uShallow, uDeep, n2 * n2);
+    col = mix(hot * (1.0 + 0.18 * sin(t * 2.0 + n1 * 8.0)), uRim, crust * 0.9);
     col = mix(uRim * 0.6, col, smoothstep(0.0, 0.55, e));   // dark crust lip
   } else {   // water / icy water
     float depth = smoothstep(0.0, 3.5, e);
@@ -64,7 +64,7 @@ void main(){
 const PAL: Record<string, [string, string, string]> = {   // shallow, deep, rim
   WATER: ['#4cc0cf', '#155f86', '#3a5a40'],
   ICE: ['#4a90b0', '#12304e', '#c8e0f0'],
-  LAVA: ['#ff5a12', '#ffc23a', '#2a120c'],
+  LAVA: ['#e8460c', '#ff9a22', '#2a120c'],
   CHASM: ['#8a6cff', '#040208', '#7a5a3a'],
 };
 
@@ -117,6 +117,7 @@ export function RoomWater() {
     const S = 2 * (shape.maxR + 24);
     const geo = new PlaneGeometry(S, S, 1, 1); geo.rotateX(-Math.PI / 2);
     const lakes = Array.from({ length: MAX_LAKES }, (_, i) => new Vector3(feat.lx[i], feat.lz[i], i < feat.nLakes ? feat.lr[i] : 0));
+    const flat = feat.liquid === 'LAVA' && !feat.river;   // lava pools lie flat on the rock
     const kind = feat.liquid === 'LAVA' ? 1 : feat.liquid === 'CHASM' ? 2 : feat.liquid === 'ICE' ? 3 : 0;
     const pal = PAL[feat.liquid] ?? PAL.WATER;
     const def = biomeOf(world.room.biome);
@@ -130,12 +131,13 @@ export function RoomWater() {
         uRiv: { value: new Vector4(feat.nx, feat.nz, feat.off, feat.river ? feat.hw : 0) },
         uRiv2: { value: new Vector4(feat.amp, feat.freq, feat.ph, feat.river ? 1 : 0) },
         uRiv3: { value: new Vector4(feat.amp2, feat.freq2, feat.ph2, feat.wAmp) }, uRiv4: { value: new Vector2(feat.wFreq, feat.wPh) },
-        uTime: { value: 0 }, uKind: { value: kind },
+        uTime: { value: 0 }, uKind: { value: kind }, uCut: { value: flat ? -0.05 : -1.2 },
         uShallow: { value: new Color(shallow) }, uDeep: { value: new Color(deep) }, uRim: { value: new Color(rim) },
       },
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
     });
-    const plane = new Mesh(geo, mat); plane.position.y = -SINK * 0.62;   // the liquid lies down in the carved channel plane.renderOrder = 1; plane.frustumCulled = false;
+    const plane = new Mesh(geo, mat); plane.position.y = flat ? 0.04 : -SINK * 0.62;   // the liquid lies down in the carved channel
+    plane.renderOrder = 1; plane.frustumCulled = false;
     // bridges
     const bridges: Mesh[] = [];
     if (feat.river) {
@@ -160,4 +162,33 @@ export function RoomWater() {
       {built.bridges.map((m, i) => <primitive key={i} object={m} />)}
     </group>
   );
+}
+
+// ---------------------------------------------------------------- lava sea ---
+const SEA_FS = `
+uniform float uTime; varying vec2 vP;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+void main(){
+  float t = uTime;
+  float n1 = fbm(vP * 0.12 + vec2(t * 0.03, t * 0.01)), n2 = fbm(vP * 0.4 - vec2(t * 0.05, 0.0));
+  float crust = smoothstep(0.44, 0.62, n1 * 0.7 + n2 * 0.45);
+  vec3 hot = mix(vec3(0.85, 0.2, 0.03), vec3(1.0, 0.5, 0.08), n2 * n2);
+  vec3 col = mix(hot * (1.0 + 0.18 * sin(t * 1.5 + n1 * 9.0)), vec3(0.12, 0.045, 0.025), crust * 0.9);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+/** Ember Wastes: an animated lava sea around the room (the ground mesh drops below it beyond the wall ring). */
+export function LavaSea() {
+  const built = useMemo(() => {
+    const S = 2 * (shape.maxR + 90);
+    const geo = new PlaneGeometry(S, S, 1, 1); geo.rotateX(-Math.PI / 2);
+    const mat = new ShaderMaterial({ vertexShader: VS, fragmentShader: SEA_FS, toneMapped: false, uniforms: { uTime: { value: 0 } } });
+    const m = new Mesh(geo, mat); m.position.y = -0.55; m.frustumCulled = false;
+    return { m, geo, mat };
+  }, []);
+  useEffect(() => () => { built.geo.dispose(); built.mat.dispose(); }, [built]);
+  useFrame(({ clock }) => { built.mat.uniforms.uTime.value = clock.elapsedTime; });
+  return <primitive object={built.m} />;
 }
