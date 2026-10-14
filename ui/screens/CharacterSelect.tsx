@@ -99,7 +99,6 @@ export const CharacterSelect: React.FC = () => {
   return (
     <div className="absolute inset-0 pe cs-root" style={{ zIndex: 55 }} data-testid="char-select">
       <div className="cs-vig" />
-      <div className="cs-center"><ClassEmblem hero={hero} size="15rem" lit /></div>
       <div className="cs-head">{mode === 'list' ? 'Choose your character' : 'Create a character'}</div>
 
       {mode === 'list' ? (
@@ -127,7 +126,6 @@ export const CharacterSelect: React.FC = () => {
 
       <AnimatePresence mode="wait">
         <motion.div key={mode + hero + (picked?.id ?? '')} className="cs-info" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }}>
-          <ClassEmblem hero={hero} size="5.4rem" lit />
           <div className="cs-name">{mode === 'list' && picked ? picked.name : meta.title}</div>
           <div className="cs-role">{mode === 'list' && picked ? `${meta.title} · Lv ${charLevel(picked)}` : ROLE[hero]}</div>
           <div className="cs-blurb">{BLURB[hero]}</div>
