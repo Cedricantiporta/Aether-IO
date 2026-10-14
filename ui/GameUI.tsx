@@ -13,6 +13,7 @@ import { FpsCounter } from './hud/FpsCounter';
 import { RotateHint } from './screens/RotateHint';
 import { Notifications } from './hud/Overlays';
 import { TitleScreen, VillageHUD } from './screens/MainMenu';
+import { CharacterSelect } from './screens/CharacterSelect';
 import { useUiStore } from './uiStore';
 import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
@@ -32,6 +33,7 @@ export const GameUI: React.FC = () => {
     status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen,
   })));
   const titleDone = useUiStore((s) => s.titleDone);
+  const charSelect = useUiStore((s) => s.charSelect);
   const village = status === GameStatus.MENU && titleDone;
   const inGame = HUD_STATUSES.has(status);
   const panels = inGame || village;
@@ -41,7 +43,8 @@ export const GameUI: React.FC = () => {
 
   return (
     <div className="hud-root" style={{ zIndex: 10 }}>
-      {status === GameStatus.MENU && !titleDone && <TitleScreen />}
+      {status === GameStatus.MENU && !titleDone && !charSelect && <TitleScreen />}
+      {status === GameStatus.MENU && charSelect && <CharacterSelect />}
       {village && <VillageHUD />}
       {inGame && <HUD />}
       {(inGame || village) && device.touch && <TouchControls />}

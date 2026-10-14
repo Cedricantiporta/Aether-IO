@@ -3,7 +3,7 @@
 // are one flat mesh without shadows, lamp bulbs are emissive only (no real lights).
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Mesh, MeshBasicMaterial, Sprite } from 'three';
+import { AdditiveBlending, BufferGeometry, CanvasTexture, Color, DoubleSide, Float32BufferAttribute, Mesh, MeshBasicMaterial, RepeatWrapping, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32 } from './util';
 import { labelMaterial } from './label';
 import {
@@ -165,26 +165,65 @@ function addLamp(b: GB, g: GB, x: number, z: number) {
   b.box(0.38, 0.06, 0.38, [x, 2.82, z], '#2a2a2e'); b.cone(0.3, 0.3, 4, [x, 3.06, z], '#2a2a2e', [0, Math.PI / 4, 0]);
   g.box(0.24, 0.34, 0.24, [x, 2.55, z], '#ffd070');
 }
+/** Procedural cobblestone texture: staggered rounded stones with mortar, light top-left bevel, tone variation. */
+function cobbleTexture(): CanvasTexture {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d')!;
+  x.fillStyle = '#5a5247'; x.fillRect(0, 0, N, N);
+  const rnd = mulberry32(7);
+  const rows = 8, h = N / rows;
+  for (let r = 0; r < rows; r++) {
+    let px = (r % 2) * -h * 0.5 - rnd() * 6;
+    while (px < N) {
+      const w = h * (0.8 + rnd() * 0.6), y = r * h;
+      const tone = 150 + Math.floor(rnd() * 55), warm = Math.floor(rnd() * 14);
+      for (const ox of [0, N, -N]) {
+        const sx = px + ox + 2, sy = y + 2, sw = w - 4, sh = h - 4, rr = 7;
+        x.beginPath(); x.roundRect(sx, sy, sw, sh, rr);
+        x.fillStyle = `rgb(${tone + warm},${tone + warm * 0.6},${tone - 6})`; x.fill();
+        x.save(); x.clip();
+        const gr = x.createLinearGradient(sx, sy, sx + sw, sy + sh);
+        gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.28)');
+        x.fillStyle = gr; x.fillRect(sx, sy, sw, sh);
+        for (let k = 0; k < 6; k++) { x.fillStyle = `rgba(0,0,0,${0.05 + rnd() * 0.06})`; x.fillRect(sx + rnd() * sw, sy + rnd() * sh, 2 + rnd() * 3, 2 + rnd() * 3); }
+        x.restore();
+      }
+      px += w;
+    }
+  }
+  const t = new CanvasTexture(c);
+  t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+
+/** World-space planar UVs (xz / tile) so the cobbles line up across roads and the plaza. */
+function planarUv(g: BufferGeometry, tile: number): BufferGeometry {
+  const p = g.attributes.position, uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i) / tile; uv[i * 2 + 1] = p.getZ(i) / tile; }
+  g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  return g;
+}
+
 function buildRoads(): BufferGeometry {
   const r = new GB([1, 1]);
-  const S = ['#bfa87c', '#c4ad82', '#b9a276'];
+  const S = ['#e8e0d0', '#ece4d4', '#e4dccb'];
   ROADS.forEach((rd, i) => {
     const dx = rd.x2 - rd.x1, dz = rd.z2 - rd.z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
-    r.box(len, 0.05, rd.w + 0.7, [(rd.x1 + rd.x2) / 2, 0.03, (rd.z1 + rd.z2) / 2], '#9c8a64', [0, yaw, 0]);
+    r.box(len, 0.05, rd.w + 0.7, [(rd.x1 + rd.x2) / 2, 0.03, (rd.z1 + rd.z2) / 2], '#8f8778', [0, yaw, 0]);
     r.box(len, 0.06, rd.w, [(rd.x1 + rd.x2) / 2, 0.045, (rd.z1 + rd.z2) / 2], S[i % 3], [0, yaw, 0]);
   });
   // plaza
-  r.cyl(PLAZA.r, PLAZA.r, 0.08, 28, [PLAZA.x, 0.05, PLAZA.z], '#8d8678');
-  r.cyl(PLAZA.r - 0.7, PLAZA.r - 0.7, 0.1, 28, [PLAZA.x, 0.06, PLAZA.z], '#a8a090');
-  r.cyl(PLAZA.r * 0.62, PLAZA.r * 0.62, 0.11, 24, [PLAZA.x, 0.065, PLAZA.z], '#b6ae9d');
+  r.cyl(PLAZA.r, PLAZA.r, 0.08, 28, [PLAZA.x, 0.05, PLAZA.z], '#9c958a');
+  r.cyl(PLAZA.r - 0.7, PLAZA.r - 0.7, 0.1, 28, [PLAZA.x, 0.06, PLAZA.z], '#e2dacb');
+  r.cyl(PLAZA.r * 0.62, PLAZA.r * 0.62, 0.11, 24, [PLAZA.x, 0.065, PLAZA.z], '#efe7d6');
   r.cyl(2.2, 2.2, 0.12, 20, [PLAZA.x, 0.07, PLAZA.z], '#cdb88a');
   r.cyl(1.7, 1.7, 0.13, 20, [PLAZA.x, 0.075, PLAZA.z], '#e0c98f');
   for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; r.box(0.5, 0.13, 1.5, [PLAZA.x + Math.cos(a) * 4.3, 0.075, PLAZA.z + Math.sin(a) * 4.3], '#8d8678', [0, -a + Math.PI / 2, 0]); }
   // golden chevrons painted on the main road: follow them to the gate
   for (let z = 14; z <= 33; z += 4.5) for (const s of [-1, 1]) r.box(1.6, 0.04, 0.34, [s * 0.52, 0.09, z], '#e6c35a', [0, s * 0.8, 0]);
   // gate forecourt
-  r.cyl(6.5, 6.5, 0.08, 20, [GATE.x, 0.05, GATE.z], '#8d8678'); r.cyl(5.8, 5.8, 0.1, 20, [GATE.x, 0.06, GATE.z], '#a8a090');
-  return r.build();
+  r.cyl(6.5, 6.5, 0.08, 20, [GATE.x, 0.05, GATE.z], '#9c958a'); r.cyl(5.8, 5.8, 0.1, 20, [GATE.x, 0.06, GATE.z], '#e2dacb');
+  return planarUv(r.build(), 3.2);
 }
 
 interface Chunk { b: GB; g: GB }
@@ -222,14 +261,14 @@ export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
-    road: litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+    road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); m.map = cobbleTexture(); return m; })(),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) }),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), []);
   useEffect(() => () => {
     town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose();
-    mats.lit.dispose(); mats.road.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose();
   }, [town, mats]);
   const label = useMemo(() => labelMaterial('Town Gate', '#ffe69a', { size: 60 }), []);
   const label2 = useMemo(() => labelMaterial('TOWN GATE', '#ffe69a', { size: 64, stroke: 'rgba(60,10,10,0.95)' }), []);

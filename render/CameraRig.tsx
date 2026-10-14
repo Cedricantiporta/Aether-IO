@@ -23,7 +23,7 @@ export function isLobbyStatus(s: GameStatus) {
 /** Free-orbit follow camera (MMORPG style: yaw / pitch / zoom from engine/input), screen shake, ground-plane aim, and a cinematic lobby orbit. */
 export function CameraRig() {
   const cam = useThree((s) => s.camera) as PerspectiveCamera;
-  const st = useRef({ yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0 });
+  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0 });
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -62,8 +62,18 @@ export function CameraRig() {
       _tgt.lerp(lt, s.lobbyBlend);
     }
 
+    // ---- class selection: close-up of the hero standing in the plaza, facing the camera
+    const cs = useUiStore.getState().charSelect;
+    s.csBlend = damp(s.csBlend, cs ? 1 : 0, 3, dt);
+    if (s.csBlend > 0.001) {
+      if (cs) p.facing = 0;
+      _v.set(p.pos.x - 0.3, 1.8, p.pos.z + 4.6);
+      _d.set(p.pos.x - 0.3, 1.05, p.pos.z);
+      _pos.lerp(_v, s.csBlend); _tgt.lerp(_d, s.csBlend);
+    }
+
     if (!s.init) { s.pos.copy(_pos); s.tgt.copy(_tgt); s.init = true; }
-    const kf = lobby ? 2.2 : 7;
+    const kf = s.csBlend > 0.05 ? 5 : lobby ? 2.2 : 7;
     s.pos.x = damp(s.pos.x, _pos.x, kf, dt); s.pos.y = damp(s.pos.y, _pos.y, kf, dt); s.pos.z = damp(s.pos.z, _pos.z, kf, dt);
     s.tgt.x = damp(s.tgt.x, _tgt.x, kf, dt); s.tgt.y = damp(s.tgt.y, _tgt.y, kf, dt); s.tgt.z = damp(s.tgt.z, _tgt.z, kf, dt);
 

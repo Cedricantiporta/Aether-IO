@@ -305,7 +305,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
     const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
     mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
-    if (ringRef.current) { ringRef.current.visible = closedK.current < 0.5; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
+    if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
     if (titleRef.current) titleRef.current.position.y = 9.4 + Math.sin(t * 1.5 + pz) * 0.18;
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
@@ -472,7 +472,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
     mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
-    if (ringRef.current) { ringRef.current.visible = !closed; ringRef.current.rotation.y = rot.current; }
+    if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; }
     if (titleRef.current) titleRef.current.visible = !closed;
     if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 6.6 + Math.sin(t * 2.4) * 0.2; }
     if (shrine) {

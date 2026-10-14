@@ -12,6 +12,7 @@ export interface ConfirmRequest {
 
 interface UiState {
   titleDone: boolean;                   // false until the player leaves the title screen (cinematic orbit camera)
+  charSelect: boolean;                  // full-screen class selection (after the title, or from the town)
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
   settingsOpen: boolean;
@@ -23,6 +24,7 @@ interface UiState {
   bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)
   summonResults: Item[] | null;
   setTitleDone: (v: boolean) => void;
+  setCharSelect: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
   openCodex: (v: boolean) => void;
   openSettings: (v: boolean) => void;
@@ -37,6 +39,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   titleDone: false,
+  charSelect: false,
   recordsOpen: false,
   codexOpen: false,
   settingsOpen: false,
@@ -48,6 +51,7 @@ export const useUiStore = create<UiState>((set) => ({
   bagView: false,
   summonResults: null,
   setTitleDone: (v) => set({ titleDone: v }),
+  setCharSelect: (v) => set(v ? { charSelect: true, titleDone: false } : { charSelect: false, titleDone: true }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
   openCodex: (v) => set({ codexOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),

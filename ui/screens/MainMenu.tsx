@@ -13,6 +13,7 @@ import type { Difficulty } from '../../storeTypes';
 import { Panel } from '../components/Frame';
 import { Button } from '../components/Button';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
+import { ClassEmblem } from './CharacterSelect';
 import { HERO_COLOR } from '../lib/game';
 import { HERO_ICON, Currency } from '../hud/TopBars';
 import { RankPlate } from '../hud/Rank';
@@ -25,12 +26,13 @@ const DIFF_COLOR: Record<Difficulty, string> = { EASY: '#4ade80', NORMAL: '#e9b9
 
 /** First-load title: the cinematic orbit camera shows the village behind it. */
 export const TitleScreen: React.FC = () => {
-  const setTitleDone = useUiStore((s) => s.setTitleDone);
+  const setCharSelect = useUiStore((s) => s.setCharSelect);
+  const setTitleDone = (_: boolean) => setCharSelect(true);   // title -> class selection -> village
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Enter') setTitleDone(true); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [setTitleDone]);
+  }, [setCharSelect]);
   return (
     <div className="absolute inset-0 pe title-root" style={{ zIndex: 50 }}>
       <div className="absolute inset-x-0 bottom-0 h-[40%] lobby-fade-b pointer-events-none" />
@@ -89,6 +91,7 @@ export const VillageHUD: React.FC = () => {
     panel: s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen, claimable: s.quests.some(questDone),
   })));
   const openCodex = useUiStore((s) => s.openCodex);
+  const setCharSelect = useUiStore((s) => s.setCharSelect);
   const openSettings = useUiStore((s) => s.openSettings);
   const recordsOpen = useUiStore((s) => s.recordsOpen);
   const setRecordsOpen = useUiStore((s) => s.setRecordsOpen);
@@ -100,31 +103,11 @@ export const VillageHUD: React.FC = () => {
       {/* top-left: rank + hero + difficulty */}
       {!panel && (
         <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '1.2rem', top: '1rem', width: '16.5rem' }}>
-          <Panel slim className="p-2.5"><RankPlate /></Panel>
-          <Panel slim className="p-2.5">
-            <div className="rpg-label mb-1.5 flex items-center gap-1.5"><Swords size={12} /> Hero</div>
-            <div className="flex gap-2">
-              {HERO_ORDER.map((h) => {
-                const Icon = HERO_ICON[h]; const sel = hero === h;
-                return (
-                  <button key={h} onClick={() => selectHero(h)} className="flex-1 flex flex-col items-center gap-1 pe" aria-label={HERO_META[h].title} data-testid={`hero-${h}`}
-                    style={{ filter: sel ? 'none' : 'brightness(.7) saturate(.8)' }}>
-                    <div className="rpg-medallion" style={{ ['--mc' as any]: HERO_COLOR[h], width: '3rem', height: '3rem', boxShadow: sel ? '0 0 14px rgba(233,185,73,.9)' : undefined }}><Icon size={22} /></div>
-                    <span className="rpg-label !text-[.55rem]" style={{ color: sel ? 'var(--gold-light)' : undefined }}>{HERO_META[h].title}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="rpg-label mt-2 mb-1 flex items-center gap-1.5"><Skull size={12} /> Difficulty</div>
-            <div className="grid grid-cols-4 gap-1">
-              {DIFFS.map((d) => (
-                <button key={d} onClick={() => setDifficulty(d)} className={`rpg-subtab pe ${difficulty === d ? 'is-active' : ''}`}
-                  style={difficulty === d ? { background: `linear-gradient(${DIFF_COLOR[d]}, color-mix(in srgb, ${DIFF_COLOR[d]} 55%, #000))`, color: '#1a0e05', padding: '.3rem .1rem', fontSize: '.55rem', textAlign: 'center' } : { color: DIFF_COLOR[d], padding: '.3rem .1rem', fontSize: '.55rem', textAlign: 'center' }}>
-                  {DIFFICULTY_MODS[d].label}
-                </button>
-              ))}
-            </div>
-          </Panel>
+          <div className="rank-bare"><RankPlate /></div>
+          <button className="cs-change pe" onClick={() => setCharSelect(true)} data-testid="change-class">
+            <ClassEmblem hero={hero} size="3.2rem" lit />
+            <span><b>{HERO_META[hero].title}</b><small>{DIFFICULTY_MODS[difficulty].label} · change class</small></span>
+          </button>
         </div>
       )}
 
