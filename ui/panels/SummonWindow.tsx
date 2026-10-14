@@ -1,6 +1,7 @@
 // Centred event-style summon window (Korean MMO look): banner list on the left, big banner art + rates +
 // summon buttons on the right. Replaces the side panel for the SUMMON shop tab.
 import React, { useMemo, useState } from 'react';
+import { shardItem } from '../../shards';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
 import { isGear } from '../lib/game';
 import { motion } from 'framer-motion';
@@ -75,11 +76,12 @@ export const SummonWindow: React.FC = () => {
           <div className="sw-preview rpg-scroll" data-testid="summon-preview">
             <div className="sw-prev-h">Possible rewards <em>{hero.charAt(0) + hero.slice(1).toLowerCase()} gear and companions</em></div>
             {PREVIEW_ORDER.map((r) => {
-              const list = pool.filter((i) => i.rarity === r);
+              // below Epic the altar pays shards, not gear (store.summon)
+              const list = r === 'COMMON' ? [shardItem('RARE', 3)] : r === 'RARE' ? [shardItem('EPIC', 2)] : pool.filter((i) => i.rarity === r);
               if (!list.length) return null;
               return (
                 <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
-                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}<i>{list.length}</i></div>
+                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}{r === 'COMMON' ? ' · 3 Rare shards' : r === 'RARE' ? ' · 2 Epic shards' : ''}<i>{list.length}</i></div>
                   <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
                 </div>
               );
@@ -93,7 +95,7 @@ export const SummonWindow: React.FC = () => {
             {RARITIES.map((r) => (
               <div key={r} className="sw-rate" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
                 <span className="rpg-gem" data-rarity={r} />
-                <span className="n">{RATE_NAME[r]}</span>
+                <span className="n">{RATE_NAME[r]}{r === 'COMMON' ? ' (3 Rare shards)' : r === 'RARE' ? ' (2 Epic shards)' : ''}</span>
                 <span className="v">{W[r]}%</span>
                 {CAPS[r] ? <span className="c">max {CAPS[r]} per 10x</span> : <span className="c" />}
               </div>

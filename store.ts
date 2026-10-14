@@ -32,7 +32,7 @@ import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll,
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
-import { shardCounts, syncShardStacks, SHARD_RARITIES } from './shards';
+import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shards';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -1554,7 +1554,8 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const gear = ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === s.hero));
       const all = [...PETS_POOL, ...gear];
-      const results: Item[] = [];
+      const results: Item[] = [], gearOut: Item[] = [];
+      const shardGain: Partial<Record<Rarity, number>> = {};
       let drawn = s.summonPity[altar] ?? 0;
       for (let k = 0; k < n; k++) {
         drawn++;
@@ -1569,13 +1570,24 @@ export const useGameStore = create<GameState>()((set, get) => {
         // pity: the 60th draw is a Legendary; the 240th is 80% Legendary / 20% Mythic
         if (drawn % PITY_MYTHIC === 0) rarity = Math.random() < 0.2 ? 'MYTHIC' : 'LEGENDARY';
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
+        // no gear below Epic: a Common roll pays 3 Rare shards, a Rare roll 2 Epic shards (the bag stacks them)
+        if (rarity === 'COMMON' || rarity === 'RARE') {
+          const sr: Rarity = rarity === 'COMMON' ? 'RARE' : 'EPIC', q = rarity === 'COMMON' ? 3 : 2;
+          shardGain[sr] = (shardGain[sr] ?? 0) + q;
+          results.push(shardItem(sr, q));
+          continue;
+        }
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
-        results.push(instantiate(pool[Math.floor(Math.random() * pool.length)]));
+        const it = instantiate(pool[Math.floor(Math.random() * pool.length)]);
+        results.push(it); gearOut.push(it);
       }
       const summonPity = { ...s.summonPity, [altar]: drawn };
-      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...results], summonPity });
-      else set({ materials: { ...s.materials, COMMON: s.materials.COMMON - cost }, inventory: [...s.inventory, ...results], summonPity });
+      const materials = { ...s.materials };
+      for (const r of Object.keys(shardGain) as Rarity[]) materials[r] = (materials[r] ?? 0) + shardGain[r]!;
+      if (!gem) materials.COMMON -= cost;
+      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut], summonPity, materials });
+      else set({ materials, inventory: [...s.inventory, ...gearOut], summonPity });
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },
