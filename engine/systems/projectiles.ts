@@ -242,9 +242,10 @@ export function fireBasicAttack(): void {
       if (p) p.procLv = thunderProc;
       continue;
     }
-    spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
+    const np = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
       life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
     });
+    if (np && kind === 'AXE') { np.bounces = (i + rp) & 1; np.trailT = 0; }   // boomerang: alternate curve side per axe
   }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });
@@ -426,22 +427,36 @@ export function updateProjectiles(dt: number): void {
 
     // --- per-kind steering ---
     switch (p.kind) {
-      case 'AXE':
+      case 'AXE': {
+        // Boomerang: arcs out to one side (curving velocity, slowly losing speed), swings round after ~150 deg of turn,
+        // then homes back to the hero with a limited turn rate (a loop, not a snap), hitting again on the way back.
+        const sgn = p.bounces & 1 ? -1 : 1;
+        const sp0 = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z) || 1;
         if (p.state === 0) {
-          const k = Math.exp(-3.08 * dt);
-          p.vel.x *= k; p.vel.z *= k;
-          if (p.vel.x * p.vel.x + p.vel.z * p.vel.z < 4) { p.state = 1; p.hitIds.length = 0; }
+          const age = p.maxLife - p.life;   // straight at first, then an ever tighter curve (elongated loop)
+          const w = (0.3 + 6.5 * age) * sgn * dt, c = Math.cos(w), s = Math.sin(w);
+          const vx = p.vel.x * c - p.vel.z * s, vz = p.vel.x * s + p.vel.z * c;
+          const k = Math.exp(-1.5 * dt);
+          p.vel.x = vx * k; p.vel.z = vz * k;
+          p.trailT += Math.abs(w);
+          if (p.trailT > 2.4) { p.state = 1; p.hitIds.length = 0; p.pierce = Math.max(p.pierce, 4); }
         } else {
           const dx = pl.pos.x - p.pos.x, dz = pl.pos.z - p.pos.z;
           const l = Math.sqrt(dx * dx + dz * dz) || 1;
           if (l < 1.5) { p.active = false; continue; }
-          p.vel.x += (dx / l) * 90 * dt;
-          p.vel.z += (dz / l) * 90 * dt;
-          const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
-          if (sp > 60) { p.vel.x *= 60 / sp; p.vel.z *= 60 / sp; }
+          // turn the velocity towards the hero (max 5 rad/s), speed up to a fast return
+          const want = Math.atan2(dz, dx), cur = Math.atan2(p.vel.z, p.vel.x);
+          let da = want - cur; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+          const turn = Math.max(-5 * dt, Math.min(5 * dt, da)) + (l < 6 ? da * Math.min(1, 6 * dt) : 0);
+          const sp = Math.min(46, sp0 + 30 * dt), a = cur + turn;
+          p.vel.x = Math.cos(a) * sp; p.vel.z = Math.sin(a) * sp;
+          p.trailT += dt * 10;
+          if (p.trailT > 2.6 + 40) { p.active = false; continue; }   // safety: give up after ~4 s of homing
+          p.life = Math.max(p.life, 0.5);   // otherwise it always comes home
         }
-        p.spin += dt * 25;
+        p.spin += dt * 32;
         break;
+      }
       case 'FIREBALL':
         p.trailT += dt;
         while (p.trailT >= 0.1) { p.trailT -= 0.1; dropFireZone(p); }

@@ -149,6 +149,17 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
       if (ok) crateList.push({ kind, x, z });
     }
+    // any room: 25% chance of a few harvestable crystal / ore nodes among the crates
+    if (!cave && rnd() < 0.25) {
+      const extra = 2 + Math.floor(rnd() * 3);
+      for (let t = 0, added = 0; t < 120 && added < extra; t++) {
+        const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
+        const x = Math.cos(a) * d, z = Math.sin(a) * d;
+        if (!insideShape(x, z, 3) || blockedSpot(x, z, 1.1, 0.8)) continue;
+        if (crateList.some((c) => Math.hypot(x - c.x, z - c.z) < 2.4)) continue;
+        crateList.push({ kind: rnd() < 0.65 ? 'CRYSTAL' : 'ORE', x, z }); added++;
+      }
+    }
   }
 
   world.obstacles = obstacles;
