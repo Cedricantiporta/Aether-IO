@@ -36,6 +36,12 @@ function pickTarget(): boolean {
     else { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; }
     return true;
   }
+  // a shop / board step (in town; from the castle head for the exit)
+  if (ms && ms.shop) {
+    tgt.quest = false;
+    if (castle) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; } else { tgt.x = ms.x; tgt.z = ms.z; }
+    return true;
+  }
   // an NPC story quest ready to turn in (lowest priority of the quest targets)
   const mk = npcMarkers();
   let npcI = -1;

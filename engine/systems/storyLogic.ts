@@ -124,8 +124,8 @@ events.on('gameEnding', () => {
 });
 
 
-export interface StoryTarget { x: number; z: number; area: 'TOWN' | 'CASTLE'; npc: number }
-const T: StoryTarget = { x: 0, z: 0, area: 'TOWN', npc: -1 };
+export interface StoryTarget { x: number; z: number; area: 'TOWN' | 'CASTLE'; npc: number; /** a shop counter / board step */ shop: boolean }
+const T: StoryTarget = { x: 0, z: 0, area: 'TOWN', npc: -1, shop: false };
 /** Shop counters / the quest board (where shop steps are done). */
 function atPos(at: StoryAt): { x: number; z: number } | null {
   if (at === 'BAG') return null;
@@ -140,14 +140,14 @@ export function storyTarget(): StoryTarget | null {
   if (!step) return null;
   if (step.npc) {
     const i = NPCS.findIndex((n) => n.name === step.npc);
-    if (i >= 0) { const n = NPCS[i]; T.x = n.home[0]; T.z = n.home[1]; T.area = n.area === 'CASTLE' ? 'CASTLE' : 'TOWN'; T.npc = i; return T; }
+    if (i >= 0) { const n = NPCS[i]; T.x = n.home[0]; T.z = n.home[1]; T.area = n.area === 'CASTLE' ? 'CASTLE' : 'TOWN'; T.npc = i; T.shop = false; return T; }
   }
   if (step.at) {
     const p = atPos(step.at);
     if (!p) return null;
-    T.x = p.x; T.z = p.z; T.area = 'TOWN'; T.npc = -1; return T;
+    T.x = p.x; T.z = p.z; T.area = 'TOWN'; T.npc = -1; T.shop = true; return T;
   }
-  T.x = GATE.x; T.z = GATE.z - 1; T.area = 'TOWN'; T.npc = -1;
+  T.x = GATE.x; T.z = GATE.z - 1; T.area = 'TOWN'; T.npc = -1; T.shop = false;
   return T;
 }
 /** The point to aim at from the current area (an NPC inside the castle is reached through the castle door). */
