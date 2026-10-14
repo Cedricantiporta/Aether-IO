@@ -9,7 +9,7 @@ import { QualityCfg } from './quality';
 import { useGameStore } from '../store';
 import { isLobbyStatus } from './CameraRig';
 import { GB, fbm, litMat, mulberry32, setInst, TAU, vnoise, lerp } from './util';
-import { GROUND_SIZE, POND, dirtAmount, edgeR, groundY, pondEdge, regionAt, sstep } from './terrainFn';
+import { GROUND_SIZE, POND, edgeR, groundY, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
 import { makeRockGeo, useNature } from './models';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
@@ -27,11 +27,10 @@ function groundColor(x: number, z: number, y: number, out: Color) {
   cG.lerp(cT.set('#2b7430'), sstep(0.52, 0.7, n1) * 0.8);
   cG.lerp(cT.set('#9bd04e'), sstep(0.42, 0.28, n1) * 0.45);
   cG.multiplyScalar(0.94 + n3 * 0.12);
-  const d = dirtAmount(x, z);
+  const d = 0;
   const rg = regionAt(x, z, _rg);
   if (rg.style && rg.w > 0) {
     cT.set(rg.style.color).multiplyScalar(0.9 + n3 * 0.2);
-    if (rg.kind === 'FARM') { const f = 0.5 + 0.5 * Math.sin(z * 1.5 + Math.sin(x * 0.2) * 0.6); cT.lerp(cD.set('#7a5a30'), f * 0.55); }
     if (rg.kind === 'CRYSTAL_GROVE') cT.lerp(cD.set('#8fe8ff'), sstep(0.65, 0.9, n2) * 0.35);
     cG.lerp(cT, rg.w * rg.style.w);
   }
@@ -93,7 +92,7 @@ function Ground({ q }: { q: QualityCfg }) {
       // grass density + tint
       const r = Math.hypot(x, z), e = edgeR(Math.atan2(z, x));
       const pd = Math.hypot(x - POND.x, z - POND.z);
-      let dens = regionAt(x, z, _rg).grass * (1 - sstep(0.15, 0.7, dirtAmount(x, z))) * sstep(e - 1, e - 6, r) * sstep(pe(x, z) + 0.3, pe(x, z) + 2.5, pd);
+      let dens = regionAt(x, z, _rg).grass *  sstep(e - 1, e - 6, r) * sstep(pe(x, z) + 0.3, pe(x, z) + 2.5, pd);
       gc.copy(c).multiplyScalar(1.55); gc.convertLinearToSRGB();
       bytes[k * 4] = Math.min(255, gc.r * 255); bytes[k * 4 + 1] = Math.min(255, gc.g * 255); bytes[k * 4 + 2] = Math.min(255, gc.b * 255);
       bytes[k * 4 + 3] = Math.round(dens * 255);
@@ -135,25 +134,17 @@ function Bushes({ q }: { q: QualityCfg }) {
     g.sph(0.4, [0.05, 0.3, -0.48], '#55ad48', [1, 0.85, 1], 6);
     return { geo: g.build(), mat: litMat({ flatShading: true, roughness: 0.9 }) };
   }, []);
-  const target = q.name === 'LOW' ? 110 : q.name === 'MEDIUM' ? 200 : 300;
+  const target = q.name === 'LOW' ? 40 : q.name === 'MEDIUM' ? 70 : 100;
   const pts = useMemo(() => {
     const rnd = mulberry32(77), out: number[] = [];
     let guard = 0;
     while (out.length < target * 4 && guard++ < target * 60) {
       const a = rnd() * TAU, e = edgeR(a);
       const pick = rnd();
-      let x: number, z: number;
-      if (pick < 0.45) { // island edge band
-        const r = e - 2.5 - rnd() * 6; x = Math.cos(a) * r; z = Math.sin(a) * r;
-      } else if (pick < 0.6) { // pond shore
-        const pr = POND.r + 2 + rnd() * 3; x = POND.x + Math.cos(a) * pr; z = POND.z + Math.sin(a) * pr;
-      } else { // path borders
-        const r = Math.sqrt(rnd()) * (e - 4); x = Math.cos(a) * r; z = Math.sin(a) * r;
-        const d = dirtAmount(x, z); if (d < 0.12 || d > 0.4) continue;
-      }
-      if (Math.hypot(x, z + 20) < 24 || Math.hypot(x, z) < 15) continue; // keep town + spawn clear
-      if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2) continue;
-      if (Math.hypot(x, z) > e - 2) continue;
+      // thin band just inside the island edge only (the walled yard, avenue and field stay clear)
+      const r = e - 1.5 - rnd() * 4, x = Math.cos(a) * r, z = Math.sin(a) * r;
+      void pick;
+      if (inYard(x, z, 3) || inForecourtUse(x, z, 2) || Math.hypot(x, z) > e - 1) continue;
       const n = out.length / 4; let tooClose = false;
       for (let i = 0; i < n; i++) { const dx = out[i * 4] - x, dz = out[i * 4 + 1] - z; if (dx * dx + dz * dz < 4.5) { tooClose = true; break; } }
       if (tooClose) continue;
@@ -182,21 +173,19 @@ function Flowers({ q }: { q: QualityCfg }) {
     const rnd = mulberry32(31), out: number[] = [];
     const ok = (x: number, z: number) => {
       const a = Math.atan2(z, x), r = Math.hypot(x, z);
-      if (r > edgeR(a) - 3 || dirtAmount(x, z) > 0.2) return false;
-      if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.5) return false;
+      if (r > edgeR(a) - 3 || inYard(x, z, 2) || inForecourtUse(x, z, 1)) return false;
       return true;
     };
     // pick 4 field centres in open meadow, away from town, pond and busy regions
     const fields: { x: number; z: number; r: number; c0: number; c1: number }[] = [];
-    for (let t = 0; t < 400 && fields.length < 4; t++) {
-      const a = rnd() * TAU, d = 28 + rnd() * 45;
+    for (let t = 0; t < 800 && fields.length < 3; t++) {
+      const a = rnd() * TAU, d = 30 + rnd() * 50;
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (!ok(x, z) || Math.hypot(x, z + 20) < 30 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 10) continue;
-      if (REGIONS.some((g) => g.kind !== 'GROVE' && g.kind !== 'FARM' && Math.hypot(x - g.x, z - g.z) < g.r + 6)) continue;
-      if (fields.some((f) => Math.hypot(x - f.x, z - f.z) < 30)) continue;
-      fields.push({ x, z, r: 7 + rnd() * 4, c0: Math.floor(rnd() * 6), c1: Math.floor(rnd() * 6) });
+      if (!ok(x, z)) continue;
+      if (fields.some((f) => Math.hypot(x - f.x, z - f.z) < 14)) continue;
+      fields.push({ x, z, r: 3.5 + rnd() * 2, c0: Math.floor(rnd() * 6), c1: Math.floor(rnd() * 6) });
     }
-    const fieldBudget = Math.round(q.flowers * 0.5), scatter = Math.round(q.flowers * 0.06);
+    const fieldBudget = Math.round(q.flowers * 0.12), scatter = Math.round(q.flowers * 0.03);
     let g = 0;
     while (out.length < fieldBudget * 5 && fields.length && g++ < fieldBudget * 8) {
       const f = fields[Math.floor(rnd() * fields.length)];
@@ -210,7 +199,7 @@ function Flowers({ q }: { q: QualityCfg }) {
     while (k < scatter && g++ < scatter * 20) {
       const a = rnd() * TAU, r = Math.sqrt(rnd()) * (ARENA_RADIUS + 2);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (!ok(x, z) || Math.hypot(x, z + 20) < 22) continue;
+      if (!ok(x, z)) continue;
       out.push(x, z, 0.7 + rnd() * 0.5, rnd(), Math.floor(rnd() * 6)); k++;
     }
     return out;
@@ -232,16 +221,17 @@ function Pebbles({ q }: { q: QualityCfg }) {
   const fill = useMemo(() => (m: InstancedMesh) => {
     const rnd = mulberry32(77), c = new Color();
     let i = 0;
-    while (i < pebbleCount) {
+    for (let g = 0; i < pebbleCount && g < pebbleCount * 60; g++) {
       const a = rnd() * TAU, r = Math.sqrt(rnd()) * (ARENA_RADIUS + 2);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const d = dirtAmount(x, z);
-      if (rnd() > 0.25 + d) continue;
+      if (r > edgeR(a) - 2 || inYard(x, z, 1) || inForecourtUse(x, z, 0)) continue;
+      if (rnd() > 0.25) continue;
       const s = 0.15 + rnd() * 0.35;
       setInst(m, i, x, 0, z, rnd() * 6, s, s * (0.7 + rnd() * 0.6), s * 1.1);
       c.set('#8e8f8a').lerp(c.clone().set('#b9a98c'), rnd()).multiplyScalar(0.8 + rnd() * 0.4);
       m.setColorAt(i, c); i++;
     }
+    m.count = i;
   }, [pebbleCount]);
   return <Inst geo={geo} mat={mat} count={pebbleCount} fill={fill} receive />;
 }
@@ -341,7 +331,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const a = ((i + rnd()) / per) * TAU; const e = edgeR(a);
       const r = e + (rnd() - 0.3) * 6;
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const s = 2 + rnd() * 3.8;
+      const s = 1.4 + rnd() * 2.6;
       setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
     }
     m.count = c;
@@ -352,7 +342,7 @@ function Rim({ q }: { q: QualityCfg }) {
   const nStone = 70;
   const stoneFill = useMemo(() => (m: InstancedMesh) => {
     const rnd = mulberry32(55);
-    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = ARENA_RADIUS + 1.6 + rnd() * 1.2; setInst(m, i, Math.cos(a) * r, 0, Math.sin(a) * r, rnd() * 6, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9); }
+    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; setInst(m, i, Math.cos(a) * r, 0, Math.sin(a) * r, rnd() * 6, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9); }
   }, []);
 
   // forest
@@ -396,7 +386,6 @@ export function Terrain({ q }: { q: QualityCfg }) {
       <Bushes q={q} />
       <Flowers q={q} />
       <Pebbles q={q} />
-      <Pond q={q} />
       <Rim q={q} />
     </>
   );

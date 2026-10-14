@@ -1,6 +1,6 @@
 // ============================================================================
 // Town layout + NPC cast (pure data, no three / no React). Read by:
-//  * engine/mapgen.ts          -> TOWN_CLEAR (keep random scenery out of the town)
+//  * engine/mapgen.ts          -> ISLAND_BOXES (small island shape)
 //  * engine/systems/village.ts -> colliders, gate position, harvest nodes, NPC pills
 //  * engine/systems/npcs.ts    -> NPC / animal behaviour
 //  * render/TownScenery.tsx + render/Npcs.tsx -> drawing
@@ -23,9 +23,17 @@ export const PLAZA = { x: 0, z: 2, r: 6.5 };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
+/** Fenced wheat field in front of the gate (outside the walls). */
+export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
+/** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
+export const ISLAND_BOXES: [number, number, number, number][] = [
+  [-54, -50, 54, 46],   // walled town + a thin margin on the back and the sides
+  [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
+];
 
-const WALLS = ['#f3e6c6', '#efe2c0', '#e8cfa3', '#d9d2c4', '#c9d8c0', '#e6bfa6', '#cbd5e8'];
-const ROOFS = ['#3f74d0', '#b8483a', '#5a8f4a', '#8a5a3a', '#d6b052', '#7a5aa8', '#cf7b2e', '#b8483a'];
+const WALLS = ['#e9dfc8', '#e4d8bd', '#dccdb0', '#d6d0c4', '#cfd3c4', '#d8c6b0', '#c9cdd2'];
+/** Muted roofs only: dark browns, charcoal and black-brown. */
+const ROOFS = ['#3b2a20', '#2e2926', '#4a3426', '#241c18', '#33281f', '#2b2b2e', '#3f2d22', '#1f1a18'];
 const DOORS = ['#5a3a1e', '#7a3a2a', '#2f5a7a', '#3e5a2e'];
 
 let HOUSE_COUNT = 0;
@@ -48,24 +56,32 @@ export const HOUSES: HouseSpec[] = [
 
 /** Decorative market stalls (the useful shops are Supplies / Blacksmith / Pets). */
 export const STALLS: StallSpec[] = [
-  { x: -10, z: -1, rot: Math.PI / 2, c1: '#d94a3a', c2: '#f4f4f4', goods: 0 },
-  { x: 10, z: -1, rot: -Math.PI / 2, c1: '#3f74d0', c2: '#f4f4f4', goods: 1 },
-  { x: -7, z: 12.8, rot: Math.PI, c1: '#3f9a4a', c2: '#f4ead2', goods: 2 },
-  { x: 7, z: 12.8, rot: Math.PI, c1: '#cf7b2e', c2: '#f4f4f4', goods: 3 },
+  { x: -11.5, z: -1, rot: Math.PI / 2, c1: '#e6dac0', c2: '#e6dac0', goods: 0 },
+  { x: 11.5, z: -1, rot: -Math.PI / 2, c1: '#efe8d8', c2: '#efe8d8', goods: 1 },
+  { x: -8.5, z: 15, rot: Math.PI, c1: '#e2d4b4', c2: '#e2d4b4', goods: 2 },
+  { x: 8.5, z: 15, rot: Math.PI, c1: '#ece2c8', c2: '#ece2c8', goods: 3 },
 ];
 
+/**
+ * Clean road network (all strips are axis-aligned and drawn in one flat layer, see TownScenery.buildRoads):
+ *  - main avenue (w5): plaza -> gate -> on south into the farmland
+ *  - two streets (w4) tangent to the plaza: south street (shops / houses) and north street (board, altar, trainer)
+ *  - one lane (w4) to the Pet Stable (its barn door faces south onto the lane)
+ *  - short straight branches (w2.8) that end exactly at each building's door / interaction point.
+ * Door x of the shops: Potion Shop door at local x -1.4 (world -28.4), Blacksmith door local x -1.6 (world 25.4).
+ */
+export const ROAD_W = { main: 5, street: 4, branch: 2.8 };
 export const ROADS: RoadSpec[] = [
-  { x1: 0, z1: -10, x2: 0, z2: 46, w: 5 },        // main road, plaza -> gate
-  { x1: -33, z1: 9, x2: 33, z2: 9, w: 4 },        // east-west street
-  { x1: -18, z1: -8.5, x2: 18, z2: -8.5, w: 3.5 }, // north street (altar / board / trainer)
-  { x1: -27, z1: 9, x2: -27, z2: 5, w: 3 },       // potion shop
-  { x1: 27, z1: 9, x2: 27, z2: 5, w: 3 },         // blacksmith
-  { x1: 0, z1: 28, x2: 26, z2: 28, w: 3.5 },      // south lane -> pet stable
-  // narrow paths to each functional building's front door / interaction point
-  { x1: 24, z1: 28, x2: 24, z2: 25, w: 2.8 },     // pet stable
-  { x1: 0, z1: -8.5, x2: 0, z2: -14.5, w: 3 },    // quest board
-  { x1: -17, z1: -8.5, x2: -17, z2: -11, w: 2.8 }, // summoning altar
-  { x1: 17, z1: -8.5, x2: 17, z2: -11, w: 2.8 },  // skill trainer
+  { x1: 0, z1: 8, x2: 0, z2: 74, w: ROAD_W.main },               // main avenue plaza -> gate -> farm road
+  { x1: -31, z1: 10, x2: 31, z2: 10, w: ROAD_W.street },         // south street
+  { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
+  { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // pet stable lane
+  { x1: -28.4, z1: 10, x2: -28.4, z2: 4.5, w: ROAD_W.branch },   // potion shop door
+  { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
+  { x1: 0, z1: -6, x2: 0, z2: -15.6, w: ROAD_W.branch },         // quest board
+  { x1: -17, z1: -6, x2: -17, z2: -10.6, w: ROAD_W.branch },     // summoning altar
+  { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
+  { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -92,23 +108,66 @@ export const WALL_RUNS: [number, number, number, number, number, number][] = [
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
 export const FENCES: [number, number, number, number][] = [
   // road to the gate (east side has a gap for the pet-stable lane)
-  [-3.9, 20, -3.9, 33], [3.9, 20, 3.9, 25.5], [3.9, 30.5, 3.9, 33],
+  [-3.9, 20, -3.9, 33], [3.9, 20, 3.9, 24.3], [3.9, 28.7, 3.9, 33],
   // chicken pen
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z - PEN.hd], [PEN.x - PEN.hw, PEN.z + PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   // front gardens
   [-18, 15, -18, 20], [18, 14.5, 18, 20],
+  // farm field south of the gate (gap in the west side, facing the avenue)
+  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
+  [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
+  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
-export const SIGNS: SignSpec[] = [{ x: 4.6, z: 9.2 }, { x: -5.2, z: 16 }];
+export const SIGNS: SignSpec[] = [{ x: -4.4, z: 13.6 }, { x: -5.6, z: 22 }];
 
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
-  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5],
-  [-30, 6.8], [-22, 6.8], [-14, 6.8], [14, 6.8], [22, 6.8], [30, 6.8],
-  [-6, 6.2], [6, 6.2], [-8, -10.3], [8, -10.3],
+  // main avenue (+ the road on into the farmland)
+  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 58], [3.2, 68],
+  // south street (north edge), plaza, north street
+  [-11, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
 ];
+
+/** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
+export interface PlanterSpec { x: number; z: number; w: number; d: number; kind: 0 | 1 }
+export const PLANTERS: PlanterSpec[] = [
+  // plaza ring
+  { x: -7.6, z: 5.8, w: 1.4, d: 3.0, kind: 1 }, { x: 7.6, z: 5.8, w: 1.4, d: 3.0, kind: 0 },
+  { x: -7.6, z: -1.8, w: 1.4, d: 3.0, kind: 0 }, { x: 7.6, z: -1.8, w: 1.4, d: 3.0, kind: 1 },
+  // avenue
+  { x: -3.8, z: 16.5, w: 1.4, d: 3.2, kind: 1 }, { x: 3.8, z: 16.5, w: 1.4, d: 3.2, kind: 0 },
+  // south street, both sides
+  { x: -14.5, z: 7.0, w: 3.2, d: 1.0, kind: 0 }, { x: 14.5, z: 7.0, w: 3.2, d: 1.0, kind: 1 },
+  { x: -22, z: 13.4, w: 3.2, d: 1.0, kind: 1 }, { x: 22, z: 13.4, w: 3.2, d: 1.0, kind: 0 },
+  // north street + quest board path
+  { x: -8, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 8, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
+  { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 0 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
+  // pet lane
+  { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },
+  // flower bed in front of the gate (outside)
+  { x: -9, z: 49, w: 6, d: 2.4, kind: 1 }, { x: 9, z: 46, w: 4, d: 2, kind: 1 },
+];
+
+/** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
+export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
+export const TOWN_TREES: TreeSpec[] = [
+  { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
+  { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 }, { x: 0, z: -30, s: 3.6, kind: 2 },
+  // forecourt south of the gate
+  { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
+  { x: -6, z: 71, s: 3.4, kind: 1 }, { x: 24, z: 47, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
+];
+/** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
+export const GRASS_PATCHES: [number, number, number, number][] = [
+  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4], [-22, -22, 3.6, 3.2], [22, -22, 3.6, 3.2], [0, -30, 3.4, 3],
+  [-10, 24, 2.6, 2.4], [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
+];
+/** Farm props (outside the walls): scarecrow + haystack positions. */
+export const SCARECROW = { x: FARM.x, z: FARM.z };
+export const HAYSTACK = { x: FARM.x + 5, z: FARM.z - 4 };
 
 /** Movement colliders [x, z, r] registered with mapgen.addTempCollider after the island is generated. */
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
@@ -117,6 +176,13 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
+  // plant boxes: circles along the long axis
+  for (const p of PLANTERS) {
+    const r = Math.min(p.w, p.d) / 2 + 0.2, alongX = p.w >= p.d, len = Math.max(p.w, p.d), n = Math.max(1, Math.ceil((len - 2 * r) / 0.7));
+    for (let i = 0; i <= n; i++) { const o = -len / 2 + r + ((len - 2 * r) * i) / n; c.push([p.x + (alongX ? o : 0), p.z + (alongX ? 0 : o), r]); }
+  }
+  for (const t of TOWN_TREES) c.push([t.x, t.z, 0.85]);
+  c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.3]);
   c.push([QUEST_POS[0], QUEST_POS[2], 1.6]); // notice board
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
   for (const [x, z] of LAMPS) c.push([x, z, 0.3]);
@@ -258,8 +324,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Fine wares! Fine wares!', 'Everything has a price.', 'Best prices in the valley!'],
   },
   {
-    name: 'Fenn', role: 'Bard', model: 'ARCHER', tint: '#d3e5ff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [-28, 10.4], speed: 1.7,
-    patrol: [[-28, 10.4], [-14, 10.4], [0, 10.4], [14, 10.4], [28, 10.4], [14, 8.1], [0, 8.1], [-14, 8.1], [-28, 8.1]],
+    name: 'Fenn', role: 'Bard', model: 'ARCHER', tint: '#d3e5ff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [-28, 9], speed: 1.7,
+    patrol: [[-28, 9], [-14, 9], [0, 9], [14, 9], [28, 9], [14, 11], [0, 11], [-14, 11], [-28, 11]],
     talk: [
       ['La la laaa... oh, an audience! I am working on a ballad about the Mire Hydra.', 'So far it goes: "Run." Needs work.'],
       ['They say the Frostpeak winds sing at midnight. I shall go listen, once I find a braver bard.'],
@@ -284,8 +350,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Fresh bounties on the board!', 'Hero wanted: apply within.', 'So much paperwork...'],
   },
   {
-    name: 'Maeve', role: 'Gossip', model: 'WIZARD', tint: '#f0e8f7', scale: 1, prop: 'staff', accent: '#e8d0ff', home: [19, 7.2], speed: 1.2,
-    patrol: [[19, 7.2], [30, 12.6], [24, 12.6], [17, 12.6]],
+    name: 'Maeve', role: 'Gossip', model: 'WIZARD', tint: '#f0e8f7', scale: 1, prop: 'staff', accent: '#e8d0ff', home: [19, 9], speed: 1.2,
+    patrol: [[19, 9], [30, 9], [24, 11], [17, 11]],
     talk: [
       ['I heard the Ember Wastes are so hot the goblins carry parasols. True story.', 'Do not tell Tobin I told you.'],
       ['Hodge fancies the herbalist. Everyone knows. Except Hodge. And Lysa.'],
@@ -303,6 +369,6 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x + 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#f1d7a0' },
   { kind: 'CHICKEN', x: PEN.x + 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.2, tint: '#e0a070' },
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
-  { kind: 'CAT', x: -22, z: 12.3, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
+  { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   { kind: 'CAT', x: 17.5, z: 4.5, rx: 2.5, rz: 1.2, speed: 1.7, tint: '#8a8a96' },
 ];

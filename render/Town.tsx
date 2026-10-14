@@ -25,6 +25,7 @@ function lantern(b: GB, g: GB, x: number, y: number, z: number) {
   b.box(0.06, 0.55, 0.06, [x, y + 0.35, z], '#2a2a2e'); b.box(0.26, 0.05, 0.26, [x, y + 0.1, z], '#2a2a2e'); b.box(0.26, 0.05, 0.26, [x, y - 0.22, z], '#2a2a2e');
   g.sph(0.15, [x, y - 0.06, z], '#ffd070', 1, 6);
 }
+/** Plain (unstriped) cloth awning. */
 function stripedAwning(b: GB, x0: number, x1: number, y: number, z: number, c1: string, c2: string) {
   const n = Math.round((x1 - x0) / 0.9);
   const w = (x1 - x0) / n;
@@ -35,22 +36,22 @@ function pole(b: GB, x: number, z: number, h: number, c = '#6e4b2b') { b.box(0.2
 
 function buildSupplies() {
   const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const cream = '#f3e6c6', blue = '#3f74d0', wood = '#6e4b2b';
+  const cream = '#f3e6c6', roofC = '#372a21', wood = '#6e4b2b';
   b.box(5.9, 0.6, 4.9, [0, 0.3, 0], '#9b9488');
   b.box(5.4, 2.8, 4.4, [0, 2.0, 0], cream, [0, 0, 0], [0.86, 1]);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 2.9, 0.3, [sx * 2.7, 2.05, sz * 2.2], wood);
   b.box(5.6, 0.25, 0.3, [0, 3.35, 2.22], wood); b.box(5.6, 0.2, 0.3, [0, 1.2, 2.22], wood);
-  b.prism(6.9, 2.8, 5.7, [0, 3.35, 0], blue, [0, 0, 0], [0.78, 1.08]);
-  b.box(0.3, 0.3, 5.8, [0, 6.15, 0], '#2c4f9a');
+  b.prism(6.9, 2.8, 5.7, [0, 3.35, 0], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.box(0.3, 0.3, 5.8, [0, 6.15, 0], '#1f1814');
   b.box(0.18, 0.18, 5.9, [-3.4, 3.4, 0], wood, [0, 0, -0.78]); b.box(0.18, 0.18, 5.9, [3.4, 3.4, 0], wood, [0, 0, 0.78]);
   // alchemist tower
-  b.cyl(1.15, 1.3, 5.0, 10, [-3.2, 2.5, -0.8], cream); b.cone(1.6, 2.6, 10, [-3.2, 6.3, -0.8], blue); b.octa(0.3, [-3.2, 7.8, -0.8], '#ffe14a');
+  b.cyl(1.15, 1.3, 5.0, 10, [-3.2, 2.5, -0.8], cream); b.cone(1.6, 2.6, 10, [-3.2, 6.3, -0.8], '#2e2420'); b.octa(0.3, [-3.2, 7.8, -0.8], '#ffe14a');
   b.torus(1.2, 0.08, [-3.2, 4.4, -0.8], wood, [Math.PI / 2, 0, 0], 1, 12);
   g.cyl(0.4, 0.4, 0.1, 8, [-3.2, 3.6, 0.35], '#9ad8ff', [Math.PI / 2, 0, 0]);
   // door + round window
   b.box(1.2, 2.0, 0.2, [-1.4, 1.6, 2.25], '#5a3a1e'); b.cyl(0.6, 0.6, 0.2, 10, [-1.4, 2.6, 2.25], '#5a3a1e', [Math.PI / 2, 0, 0]);
   g.cyl(0.75, 0.75, 0.1, 12, [1.2, 2.7, 2.24], '#8fd2ff', [Math.PI / 2, 0, 0]); b.torus(0.78, 0.09, [1.2, 2.7, 2.27], wood, [0, 0, 0], 1, 12);
-  stripedAwning(b, -2.6, 2.6, 3.2, 3.0, '#3f74d0', '#f4f4f4');
+  stripedAwning(b, -2.6, 2.6, 3.2, 3.0, '#e6dac0', '#e6dac0');
   pole(b, -2.6, 3.7, 2.8); pole(b, 2.6, 3.7, 2.8);
   // counter and bottles
   b.box(3.2, 0.95, 0.9, [0.9, 0.5, 3.1], wood); b.box(3.4, 0.12, 1.1, [0.9, 1.0, 3.1], '#b88556');
@@ -76,13 +77,13 @@ function buildSupplies() {
 
 function buildBlacksmith() {
   const b = new GB([0.78, 1.08]), g = new GB([1, 1]);
-  const stone = '#8f8b86', dark = '#4a3626', slate = '#4b5062', steel = '#aeb4be';
+  const stone = '#8f8b86', dark = '#4a3626', slate = '#2f2c2d', steel = '#aeb4be';
   b.box(5.9, 0.6, 4.9, [0, 0.3, 0], '#6f6c68');
   b.box(5.4, 2.9, 4.4, [0, 2.05, 0], stone, [0, 0, 0], [0.82, 1.05]);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.34, 3.0, 0.34, [sx * 2.7, 2.1, sz * 2.2], dark);
   b.box(5.6, 0.3, 0.34, [0, 3.45, 2.22], dark);
   for (let i = 0; i < 9; i++) b.box(0.3, 0.2, 0.06, [-2.0 + (i % 5) * 0.9 + (Math.floor(i / 5) ? 0.45 : 0), 0.9 + Math.floor(i / 5) * 0.5 + (i > 8 ? 0.5 : 0), 2.24], '#a29d97');
-  b.prism(6.8, 2.2, 5.6, [0, 3.55, 0], slate, [0, 0, 0], [0.8, 1.05]); b.box(0.3, 0.26, 5.7, [0, 5.75, 0], '#363a46');
+  b.prism(6.8, 2.2, 5.6, [0, 3.55, 0], slate, [0, 0, 0], [0.8, 1.05]); b.box(0.3, 0.26, 5.7, [0, 5.75, 0], '#1f1c1d');
   // canopy over the anvil
   b.box(5.2, 0.16, 2.4, [0, 3.35, 3.4], slate, [0.18, 0, 0]); pole(b, -2.5, 4.5, 3.0, dark); pole(b, 2.5, 4.5, 3.0, dark);
   // big chimney
@@ -115,7 +116,7 @@ function buildBlacksmith() {
 
 function buildPets() {
   const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const plank = '#b98a52', trim = '#f1e6d0', thatch = '#d6b052', dthatch = '#b58d38', wood = '#6e4b2b', hay = '#e6c85e';
+  const plank = '#b98a52', trim = '#f1e6d0', thatch = '#3d2e22', dthatch = '#2a2019', wood = '#6e4b2b', hay = '#e6c85e';
   b.box(5.9, 0.5, 4.9, [0, 0.25, 0], '#7b5a38');
   b.box(5.5, 2.9, 4.5, [0, 1.95, 0], plank, [0, 0, 0], [0.85, 1.05]);
   for (let i = 0; i < 12; i++) b.box(0.06, 2.8, 0.05, [-2.4 + i * 0.44, 1.95, 2.27], '#8f6838');
@@ -251,7 +252,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
     ring2: new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
-  const label = useMemo(() => labelMaterial(TITLES[type], color === '#3b82f6' ? '#9fd0ff' : color === '#ef4444' ? '#ffb0a0' : '#9ff0d0', { size: 64 }), [type, color]);
+  const label = useMemo(() => labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate' }), [type, color]);
   const near = useRef(false);
   const closedK = useRef(0);
   const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
@@ -339,7 +340,7 @@ function buildBoard() {
   const wood = '#6e4b2b', paper = '#eadbb2';
   b.box(0.22, 3.0, 0.22, [-1.2, 1.5, 0], wood); b.box(0.22, 3.0, 0.22, [1.2, 1.5, 0], wood);
   b.box(2.9, 1.8, 0.18, [0, 2.0, 0.02], '#8a5a30'); b.box(3.1, 0.14, 0.26, [0, 2.95, 0.02], '#4a3020'); b.box(3.1, 0.14, 0.26, [0, 1.08, 0.02], '#4a3020');
-  b.prism(3.5, 0.7, 0.9, [0, 3.0, 0], '#4b4b60', [0, 0, 0], [0.9, 1]);
+  b.prism(3.5, 0.7, 0.9, [0, 3.0, 0], '#2d2520', [0, 0, 0], [0.9, 1]);
   for (const [x, y, r] of [[-0.8, 2.3, 0.1], [0.1, 2.5, -0.08], [0.85, 2.2, 0.06], [-0.2, 1.75, 0.04]] as number[][]) { b.box(0.62, 0.78, 0.04, [x, y, 0.14], paper, [0, 0, r]); g.sph(0.05, [x, y + 0.3, 0.18], '#e33a3a', 1, 4); }
   b.box(0.6, 0.3, 0.5, [1.9, 0.15, 0.6], '#8a5a30'); b.cyl(0.4, 0.45, 0.8, 8, [-1.9, 0.4, 0.7], '#7a4a28');
   g.sph(0.12, [-1.35, 2.9, 0.2], '#ffd070', 1, 6); g.sph(0.12, [1.35, 2.9, 0.2], '#ffd070', 1, 6);
@@ -350,7 +351,7 @@ const questNpc: NpcCfg = { key: 'KNIGHT', tint: '#ffd9a0', pos: [2.9, 1.3] };
 function QuestBoard() {
   const geos = useMemo(() => buildBoard(), []);
   const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }) }), []);
-  const label = useMemo(() => labelMaterial('Quest Board', '#ffe69a', { size: 60 }), []);
+  const label = useMemo(() => labelMaterial('Quest Board', '#f1e2b8', { size: 60, plate: 'plate' }), []);
   const mark = useMemo(() => labelMaterial('!', '#ffd24a', { size: 120 }), []);
   const near = useRef(false), k = useRef(0);
   const markRef = useRef<Sprite>(null!), titleRef = useRef<Sprite>(null!);
@@ -421,7 +422,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     crystal: new MeshBasicMaterial({ color: new Color(1.8, 0.9, 2.6), toneMapped: false }),
     rune: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 0.5), transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), [col]);
-  const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', shrine ? '#d9b8ff' : '#ffd9a0', { size: 60 }), [shrine]);
+  const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', '#f1e2b8', { size: 60, plate: 'plate' }), [shrine]);
   const sp = useGameStore((s) => s.skillPoints);
   const spLabel = useMemo(() => (sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#7dffb0', { size: 56 }) : null), [sp]);
   const near = useRef(false), closedK = useRef(0), rot = useRef(0);

@@ -9,7 +9,7 @@ import { LookDriver, setLook } from './biomeLook';
 import { Room } from './Room';
 import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
-import { Props, Campfire } from './Props';
+import { Props } from './Props';
 import { Town } from './Town';
 import { Hero } from './Hero';
 import { Enemies } from './Enemies';
@@ -51,7 +51,6 @@ export function Scene() {
         <>
           <Suspense fallback={null}><Terrain key={q.name + ':' + ver} q={q} /></Suspense>
           <Suspense fallback={null}><Props q={q} /></Suspense>
-          <Campfire q={q} />
           <Suspense fallback={null}><Town q={q} /></Suspense>
         </>
       )}
