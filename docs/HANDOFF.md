@@ -547,3 +547,13 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Oathsworn, Malakar's backstory) = full heal; Lyra the Seer = prophecy of the biome boss + 30 gems; Old Mags =
   repeatable gold gamble (55% item); Brother Fen = bounty of 30 kills (gold + gems, auto-paid); Kaelen the scout =
   potions.
+- Bug fixes: skills blocked after town -> run (abilities `gcdUntil` / aim `autoState.next` kept town timestamps after
+  world.time reset; now reset + clamped); bridges blocked when two decks were close (side water rows skip any deck);
+  summon cards stuck face-down (no `filter` on the 3D-flipping element).
+- Tuning: Wizard -25% HP / -15% move / -15% damage; Blizzard radius 6.5, tiny damage, ice-spike visual; Blink Nova radius
+  5, 35% freeze; Bone Spear -50%; dashes 1 charge, levels raise damage only; Fireballs (key 1) huge slow piercing,
+  Singularity (key 3) damage over time, no collapse.
+- UI: Esc opens Settings (pauses a run); slots universal (4.2rem, square, 1px borders); bag footer buttons on top; Sell
+  loot / Bulk sell (Epic+ confirm); Tech House per-tier listings; summon: shards below Epic, Shard Altar has a reduced
+  Legendary/Mythic pool (summonPool.ts), ritual tint by best pull; hero name + title above the overhead bars; NPC bubbles
+  every 4-8 s; Darkwood lighter with glowing mushrooms; loot prompt at the auto-loot distance (2.4).
