@@ -1,3 +1,4 @@
+import { GameStatus } from '../../types';
 import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
@@ -163,7 +164,7 @@ export const MenuButtons: React.FC = () => {
       <MenuBtn icon={<ScrollText size={24} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
       <MenuBtn icon={<Trophy size={24} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
-      <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={togglePause} />
+      <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
     </div>
   );
 };

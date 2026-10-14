@@ -1,12 +1,11 @@
 // Full-screen class selection (Korean MMO style): class list on the left, the 3D hero centred in the scene
-// (CameraRig frames it while `charSelect` is on), emblem + role + profile bars + difficulty + Confirm on the right.
+// (CameraRig frames it while `charSelect` is on), emblem + role + profile bars + Confirm on the right.
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useUiStore } from '../uiStore';
 import type { HeroClass } from '../../types';
 import type { Difficulty } from '../../storeTypes';
-import { DIFFICULTY_MODS } from '../../constants';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
 import { HeroPreview } from '../components/HeroPreview';
 import { characters, activeChar, charLevel, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
@@ -28,7 +27,6 @@ const PROFILE: Record<HeroClass, [string, number][]> = {
   KNIGHT: [['Attack', 3], ['Defense', 5], ['Range', 2], ['Mobility', 3], ['Control', 4]],
   NECROMANCER: [['Attack', 4], ['Defense', 2], ['Range', 4], ['Mobility', 2], ['Control', 4]],
 };
-const DIFFS: Difficulty[] = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
 
 /** Gold ring emblem with the class glyph. */
 export const ClassEmblem: React.FC<{ hero: HeroClass; size: string; lit?: boolean }> = ({ hero, size, lit }) => {
@@ -67,8 +65,6 @@ const Radar: React.FC<{ stats: [string, number][] }> = ({ stats }) => {
 };
 
 export const CharacterSelect: React.FC = () => {
-  const difficulty = useGameStore((s) => s.difficulty);
-  const setDifficulty = useGameStore((s) => s.setDifficulty);
   const setCharSelect = useUiStore((s) => s.setCharSelect);
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [chars, setChars] = useState<CharEntry[]>(() => characters());
@@ -164,9 +160,6 @@ export const CharacterSelect: React.FC = () => {
           {mode === 'list' && (<>
             <div className="cs-sep" />
             <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
-            <div className="cs-diffs">
-              {DIFFS.map((d) => <button key={d} className={`cs-diff ${difficulty === d ? 'on' : ''}`} onClick={() => setDifficulty(d)}>{DIFFICULTY_MODS[d].label}</button>)}
-            </div>
             <button className="cs-confirm" onClick={play} disabled={!picked} data-testid="cs-confirm">Play</button>
             {picked && <button className="cs-sub danger" onClick={del} data-testid="cs-delete">Delete character</button>}
           </>)}

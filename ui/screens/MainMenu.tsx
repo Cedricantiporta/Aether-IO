@@ -18,7 +18,9 @@ import { Button } from '../components/Button';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
 import { ClassEmblem } from './CharacterSelect';
 import { HERO_COLOR } from '../lib/game';
-import { HERO_ICON, Currency } from '../hud/TopBars';
+import { HERO_ICON, Currency, MenuButtons, PlayerPlate } from '../hud/TopBars';
+import { Minimap } from '../hud/Minimap';
+import { VitalBars } from '../hud/Vitals';
 import { RankPlate } from '../hud/Rank';
 import { useUiStore } from '../uiStore';
 import { tip } from '../components/Tooltip';
@@ -52,7 +54,7 @@ export const TitleScreen: React.FC = () => {
   );
 };
 
-const RecordsPanel: React.FC = () => {
+export const RecordsPanel: React.FC = () => {
   const { stats, rank } = useGameStore(useShallow((s) => ({ stats: s.gameStats, rank: s.heroRank })));
   return (
     <Panel className="p-4" data-testid="records">
@@ -101,32 +103,23 @@ export const VillageHUD: React.FC = () => {
   const recordsOpen = useUiStore((s) => s.recordsOpen);
   const setRecordsOpen = useUiStore((s) => s.setRecordsOpen);
   const modalOpen = useUiStore((s) => s.codexOpen || s.goalsOpen || s.settingsOpen || !!s.confirm);
+  const showMap = useGameStore((s) => s.settings.showMinimap !== false);
 
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 30 }} data-testid="village-hud">
-      {/* top-left: rank + hero + difficulty */}
+      {/* same HUD as in runs: vitals + plate + quest tracker (left), currency + menu + minimap (right) */}
       {!panel && (
-        <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '.6rem', top: '.6rem' }}>
-          <TownProfile />
-          {!recordsOpen && <div className="qt-left"><QuestTracker /></div>}
+        <div className="absolute hud-tl flex flex-col gap-2 pe" style={{ left: '1.2rem', top: '1rem' }}>
+          <VitalBars /><PlayerPlate />
+          <div className="qt-left"><QuestTracker /></div>
         </div>
       )}
-
-      {/* top-right: currency + shortcuts + records */}
       {!panel && (
-        <div className="absolute flex flex-col items-end gap-2.5 pe hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
+        <div className="absolute flex flex-col items-end gap-3 pe hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
           <Currency />
-          <div className="flex gap-[.6rem]">
-            <VBtn icon={<HelmGlyph />} label="Hero (C)" onClick={toggleChar} />
-            <VBtn icon={<BagGlyph />} label="Bag (I)" onClick={toggleInv} badge={bagDot} />
-            <VBtn icon={<ScrollText size={26} />} label="Quests (J)" onClick={() => useUiStore.getState().openQuestLog(true)} id="open-quests" />
-            <VBtn icon={<GoalGlyph />} label="Goals" onClick={() => openGoals(true)} badge={goalDot} id="open-goals" />
-            <VBtn icon={<TrophyGlyph />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
-            <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} badge={codexDot} />
-            <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
-          </div>
-          {recordsOpen && <div style={{ width: '22rem' }}><RecordsPanel /></div>}
+          <MenuButtons />
+          {showMap && <div className="hud-mm hud-mm-top"><Minimap /></div>}
         </div>
       )}
 

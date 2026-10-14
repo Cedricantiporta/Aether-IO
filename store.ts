@@ -30,6 +30,7 @@ import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import { deviceDefaults } from './engine/device';
+import { feedReward } from './rewardFeed';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -451,7 +452,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
-              difficulty: p.difficulty && DIFFICULTIES.includes(p.difficulty) ? p.difficulty : 'NORMAL',
+              difficulty: 'NORMAL',   // (difficulty selection removed: every save plays Normal)
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered),
@@ -799,6 +800,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const have = new Set(s.discovered[tab]);
       if (!CODEX_KEYS[tab].every((k) => have.has(k))) return false;
       set({ codexClaimed: [...s.codexClaimed, tab], gems: s.gems + CODEX_REWARD_GEMS });
+      feedReward({ gems: CODEX_REWARD_GEMS });
       notify(`Codex complete! +${CODEX_REWARD_GEMS} gems`, COLORS.uiAccent, 'SYSTEM');
       return true;
     },
@@ -993,6 +995,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
       });
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
+      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts });
       events.emit('hub', { kind: 'quest', n: 1 });
       return true;
     },
@@ -1078,14 +1081,13 @@ export const useGameStore = create<GameState>()((set, get) => {
         const r = STORY[k]?.reward; if (!r) continue;
         const now = get();
         set({ gold: now.gold + (r.gold ?? 0) * GOLD_SCALE, gems: now.gems + (r.gems ?? 0) });
-        const got: string[] = [];
-        if (r.gold) got.push(`+${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
-        if (r.gems) got.push(`+${r.gems} gems`);
+        const gotItems: Item[] = [];
         for (const it of r.items ?? []) for (const item of makeItemById(it.id, it.qty ?? 1)) {
-          got.push(`${item.name}${(it.qty ?? 1) > 1 ? ` x${it.qty}` : ''}`);
+          gotItems.push(item);
           if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
         }
-        notify(`Main quest complete: ${STORY[k].title}${got.length ? ` (${got.join(', ')})` : ''}`, '#f1d58e', 'SYSTEM');
+        notify(`Main quest complete: ${STORY[k].title}`, '#f1d58e', 'SYSTEM');
+        feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems });   // the rewards in the loot feed
       }
       if (step !== s.story.step) {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');

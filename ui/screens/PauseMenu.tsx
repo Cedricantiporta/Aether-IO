@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Settings, BookOpen, Flag, Pause, Maximize } from 'lucide-react';
+import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+import { GameStatus } from '../../types';
+import { activeChar } from '../../characters';
+import { ClassEmblem } from './CharacterSelect';
+import { HERO_META } from '../lib/heroes';
+import { RecordsPanel } from './MainMenu';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import { useGameStore } from '../../store';
@@ -34,22 +40,26 @@ export const PauseMenu: React.FC = () => {
 };
 
 const Row: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
-  <div className="flex items-center gap-4 py-2 border-b border-black/30 last:border-0" style={{ minHeight: '2.6rem' }}>
-    <div className="shrink-0" style={{ width: '9.5rem' }}>
-      <div className="rpg-label !text-[.72rem]">{label}</div>
-      {hint && <div style={{ fontSize: '.58rem', color: 'var(--text-dim)', lineHeight: 1.2, marginTop: '.1rem' }}>{hint}</div>}
-    </div>
-    <div className="flex-1 flex items-center justify-end gap-3">{children}</div>
+  <div className="st-row">
+    <div className="st-lbl"><b>{label}</b>{hint && <em>{hint}</em>}</div>
+    <div className="st-ctl">{children}</div>
   </div>
 );
+const Sec: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div className="st-sec"><div className="st-sec-h"><span>{title}</span><i /></div>{children}</div>
+);
 
-type Tab = 'GAMEPLAY' | 'GRAPHICS' | 'AUDIO' | 'CONTROLS' | 'DEBUG';
-const TABS: { id: Tab; label: string }[] = [{ id: 'GAMEPLAY', label: 'Gameplay' }, { id: 'GRAPHICS', label: 'Graphics' }, { id: 'AUDIO', label: 'Audio' }, { id: 'CONTROLS', label: 'Controls' }, { id: 'DEBUG', label: 'Debug' }];
+type Tab = 'GAMEPLAY' | 'GRAPHICS' | 'AUDIO' | 'CONTROLS' | 'PROFILE' | 'DEBUG';
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'GAMEPLAY', label: 'Gameplay', icon: <Swords size={17} /> }, { id: 'GRAPHICS', label: 'Graphics', icon: <Monitor size={17} /> },
+  { id: 'AUDIO', label: 'Audio', icon: <Volume2 size={17} /> }, { id: 'CONTROLS', label: 'Controls', icon: <Gamepad2 size={17} /> },
+  { id: 'PROFILE', label: 'Character', icon: <UserRound size={17} /> }, { id: 'DEBUG', label: 'Debug', icon: <Bug size={17} /> },
+];
 
 function Seg<T extends string | number>({ value, opts, onChange, tid }: { value: T; opts: { v: T; l: string }[]; onChange: (v: T) => void; tid?: string }) {
   return (
-    <div className="flex gap-1.5" data-testid={tid}>
-      {opts.map((o) => <button key={String(o.v)} className={`rpg-subtab pe ${value === o.v ? 'is-active' : ''}`} onClick={() => onChange(o.v)}>{o.l}</button>)}
+    <div className="st-seg" data-testid={tid}>
+      {opts.map((o) => <button key={String(o.v)} className={`pe ${value === o.v ? 'on' : ''}`} onClick={() => onChange(o.v)}>{o.l}</button>)}
     </div>
   );
 }
@@ -65,71 +75,107 @@ export const SettingsDialog: React.FC = () => {
   const vol = (k: 'masterVolume' | 'sfxVolume' | 'musicVolume', label: string) => (
     <Row label={label}>
       <div className="flex-1"><Slider value={settings[k]} onChange={(v) => update({ [k]: v })} /></div>
-      <span className="rpg-num text-sm w-10 text-right text-[var(--gold-light)]">{Math.round(settings[k] * 100)}</span>
+      <span className="st-num">{Math.round(settings[k] * 100)}</span>
     </Row>
   );
   const tog = (label: string, k: keyof Settings, hint?: string) => (
     <Row label={label} hint={hint}><Toggle checked={!!settings[k]} onChange={(v) => update({ [k]: v } as Partial<Settings>)} label={label} /></Row>
   );
+  const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED);
+  const { hero, rank } = useGameStore(useShallow((s) => ({ hero: s.hero, rank: s.heroRank })));
+  const me = activeChar();
   return (
-    <Modal open={open} onClose={() => close(false)} title="Settings" ribbon tone="blue" width="31rem" z={250}>
-      <div className="flex gap-1.5 mt-2" role="tablist" data-testid="settings-tabs">
-        {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} data-testid={`tab-${t.id}`} className={`rpg-subtab bevel pe flex-1 ${tab === t.id ? 'is-active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>)}
-      </div>
-      <div className="rpg-frame px-4 py-1 mt-2 allow-scroll" style={{ minHeight: '17rem' }}>
+    <Modal open={open} onClose={() => close(false)} title="Settings" ribbon tone="blue" width="min(46rem, 96vw)" z={250}>
+      <div className="st" data-testid="settings-tabs">
+        <nav className="st-nav" role="tablist">
+          {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} data-testid={`tab-${t.id}`} className={`st-tab pe ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.icon}<span>{t.label}</span></button>)}
+        </nav>
+        <div className="st-body rpg-scroll allow-scroll">
         {tab === 'GAMEPLAY' && (<>
-          {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
-          {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
-          {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
-          {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
-          {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
-          {tog('Damage numbers', 'showDamageNumbers')}
-          {tog('Enemy health bars', 'showEnemyBars')}
-          {tog('Screen shake', 'screenShake')}
-          {tog('Show minimap', 'showMinimap')}
-          {tog('Vibration on hit', 'vibration', 'Phones only.')}
-          {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}
-          {settings.zoomUnlocked && <Row label="Camera zoom" hint="Close to far">
-            <div className="flex-1"><Slider value={(settings.cameraZoom - 0.8) / 0.5} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.5) * 100) / 100 })} /></div>
-            <span className="rpg-num text-sm w-10 text-right text-[var(--gold-light)]">{settings.cameraZoom.toFixed(2)}</span>
-          </Row>}
+          <Sec title="Combat">
+            {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
+            {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
+            {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
+            {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
+          </Sec>
+          <Sec title="Camera">
+            {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
+            {tog('Screen shake', 'screenShake')}
+            {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}
+            {settings.zoomUnlocked && <Row label="Camera zoom" hint="Close to far">
+              <div className="flex-1"><Slider value={(settings.cameraZoom - 0.8) / 0.5} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.5) * 100) / 100 })} /></div>
+              <span className="st-num">{settings.cameraZoom.toFixed(2)}</span>
+            </Row>}
+          </Sec>
+          <Sec title="Interface">
+            {tog('Damage numbers', 'showDamageNumbers')}
+            {tog('Enemy health bars', 'showEnemyBars')}
+            {tog('Show minimap', 'showMinimap')}
+            {tog('Vibration on hit', 'vibration', 'Phones only.')}
+          </Sec>
         </>)}
         {tab === 'GRAPHICS' && (<>
-          <Row label="Graphics" hint={settings.batterySaver ? 'Locked to LOW by Battery saver.' : undefined}>
-            <Seg tid="seg-quality" value={settings.batterySaver ? 'LOW' : settings.quality} opts={(['LOW', 'MEDIUM', 'HIGH'] as GraphicsQuality[]).map((q) => ({ v: q, l: q }))} onChange={(v) => update({ quality: v })} />
-          </Row>
-          {tog('Auto quality', 'autoQuality', 'Lowers resolution / particles when the frame rate drops, restores when stable.')}
-          <Row label="FPS limit" hint={settings.batterySaver ? 'Battery saver caps at 30.' : undefined}>
-            <Seg tid="seg-fps" value={settings.batterySaver ? 30 : settings.fpsLimit} opts={[{ v: 30, l: '30' }, { v: 60, l: '60' }, { v: 0, l: 'Unlimited' }]} onChange={(v) => update({ fpsLimit: v as Settings['fpsLimit'] })} />
-          </Row>
-          {tog('Show FPS counter', 'showFps')}
-          {tog('Battery saver', 'batterySaver', '30 FPS + LOW graphics.')}
-          <Row label="UI scale"><Seg tid="seg-ui" value={settings.uiScale} opts={[{ v: 'SMALL', l: 'Small' }, { v: 'NORMAL', l: 'Normal' }, { v: 'LARGE', l: 'Large' }]} onChange={(v) => update({ uiScale: v })} /></Row>
+          <Sec title="Quality">
+            <Row label="Graphics" hint={settings.batterySaver ? 'Locked to LOW by Battery saver.' : undefined}>
+              <Seg tid="seg-quality" value={settings.batterySaver ? 'LOW' : settings.quality} opts={(['LOW', 'MEDIUM', 'HIGH'] as GraphicsQuality[]).map((q) => ({ v: q, l: q[0] + q.slice(1).toLowerCase() }))} onChange={(v) => update({ quality: v })} />
+            </Row>
+            {tog('Auto quality', 'autoQuality', 'Lowers resolution / particles when the frame rate drops, restores when stable.')}
+            {tog('Battery saver', 'batterySaver', '30 FPS + LOW graphics.')}
+          </Sec>
+          <Sec title="Display">
+            <Row label="FPS limit" hint={settings.batterySaver ? 'Battery saver caps at 30.' : undefined}>
+              <Seg tid="seg-fps" value={settings.batterySaver ? 30 : settings.fpsLimit} opts={[{ v: 30, l: '30' }, { v: 60, l: '60' }, { v: 0, l: 'Max' }]} onChange={(v) => update({ fpsLimit: v as Settings['fpsLimit'] })} />
+            </Row>
+            {tog('Show FPS counter', 'showFps')}
+            <Row label="UI scale"><Seg tid="seg-ui" value={settings.uiScale} opts={[{ v: 'SMALL', l: 'Small' }, { v: 'NORMAL', l: 'Normal' }, { v: 'LARGE', l: 'Large' }]} onChange={(v) => update({ uiScale: v })} /></Row>
+            {device.fullscreenOk && <Row label="Fullscreen"><Button size="sm" onClick={() => { void toggleFullscreen(); }}><Maximize size={14} /> Toggle</Button></Row>}
+          </Sec>
         </>)}
-        {tab === 'AUDIO' && (<>
-          {vol('masterVolume', 'Master volume')}
-          {vol('sfxVolume', 'Effects')}
-          {vol('musicVolume', 'Music')}
-        </>)}
+        {tab === 'AUDIO' && (
+          <Sec title="Volume">
+            {vol('masterVolume', 'Master')}
+            {vol('sfxVolume', 'Effects')}
+            {vol('musicVolume', 'Music')}
+          </Sec>
+        )}
         {tab === 'DEBUG' && <DebugTab />}
         {tab === 'CONTROLS' && (<>
-          <Row label="Skill casting" hint="Aimed: hold the key to show the indicator, release to cast (right-click / Esc cancels). Quick: instant at the cursor. Auto: instant at the auto-target. Touch: tap = auto-target, drag = aim.">
-            <Seg tid="seg-cast" value={settings.castMode ?? 'AIMED'} opts={[{ v: 'AIMED', l: 'Aimed' }, { v: 'QUICK', l: 'Quick' }, { v: 'AUTO', l: 'Auto' }]} onChange={(v) => update({ castMode: v })} />
-          </Row>
-          <Row label="Joystick side" hint="Touch: move stick and ability buttons swap sides."><Seg tid="seg-joy" value={settings.joystickSide} opts={[{ v: 'LEFT', l: 'Left' }, { v: 'RIGHT', l: 'Right' }]} onChange={(v) => update({ joystickSide: v })} /></Row>
-          {device.fullscreenOk && <Row label="Fullscreen"><Button size="sm" onClick={() => { void toggleFullscreen(); }}><Maximize size={14} /> Toggle</Button></Row>}
-          <div className="py-2" style={{ fontSize: '.72rem', lineHeight: 1.7, color: 'var(--text-dim)' }}>
-            <div className="rpg-label !text-[.66rem] mb-1">Keyboard</div>
-            <div><b>WASD</b> move · <b>Mouse</b> aim · <b>Space</b> class dash · <b>1 2 3</b> abilities (hold to aim, release to cast) · <b>R</b> ultimate</div>
-            <div><b>Z / X</b> potions · <b>I</b> bag · <b>C</b> hero · <b>Esc</b> pause · <b>E / F</b> interact / harvest (village)</div>
-            <div className="rpg-label !text-[.66rem] mt-2 mb-1">Touch</div>
-            <div>Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Ability buttons sit on the {settings.joystickSide === 'LEFT' ? 'right' : 'left'}: tap a button to cast at the auto-target, or drag from it to aim (release to cast, drag back to the button or to the top zone to cancel). With Auto-aim off, drag on the opposite upper side to aim.</div>
-          </div>
+          <Sec title="Casting">
+            <Row label="Skill casting" hint="Aimed: hold to show the indicator, release to cast. Quick: instant at the cursor. Auto: instant at the auto-target.">
+              <Seg tid="seg-cast" value={settings.castMode ?? 'AIMED'} opts={[{ v: 'AIMED', l: 'Aimed' }, { v: 'QUICK', l: 'Quick' }, { v: 'AUTO', l: 'Auto' }]} onChange={(v) => update({ castMode: v })} />
+            </Row>
+            <Row label="Joystick side" hint="Touch: move stick and ability buttons swap sides."><Seg tid="seg-joy" value={settings.joystickSide} opts={[{ v: 'LEFT', l: 'Left' }, { v: 'RIGHT', l: 'Right' }]} onChange={(v) => update({ joystickSide: v })} /></Row>
+          </Sec>
+          <Sec title="Keyboard">
+            <div className="st-keys">
+              {([['WASD', 'Move'], ['Mouse', 'Aim'], ['Space', 'Class dash'], ['1 2 3', 'Abilities'], ['R', 'Ultimate'], ['Z / X', 'Potions'], ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['E', 'Interact / loot (hold: harvest)'], ['Esc', 'Pause']] as [string, string][]).map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
+            </div>
+          </Sec>
+          <Sec title="Touch">
+            <p className="st-p">Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Tap an ability to cast at the auto-target, or drag from it to aim (release to cast, drag back to cancel).</p>
+          </Sec>
         </>)}
+        {tab === 'PROFILE' && (<>
+          <Sec title="Character">
+            <div className="st-char">
+              <ClassEmblem hero={hero} size="3.6rem" lit />
+              <div className="flex-1 min-w-0"><b>{me?.name ?? HERO_META[hero].title}</b><em>{HERO_META[hero].title} · Level {rank}</em></div>
+              <Button size="sm" variant="primary" disabled={inRun} data-testid="change-class"
+                onClick={() => { close(false); useUiStore.getState().setCharSelect(true); }}><Repeat size={14} /> Change character</Button>
+            </div>
+            {inRun && <p className="st-p">Return to town to switch characters.</p>}
+          </Sec>
+          <Sec title="Records"><RecordsPanel /></Sec>
+          <Sec title="Danger zone">
+            <Row label="Reset profile" hint="Erases this character's gold, gems, items, levels, quests and records.">
+              <Button variant="danger" size="sm" data-testid="reset-profile"
+                onClick={() => askConfirm({ title: 'Reset profile?', body: 'This permanently erases your gold, gems, items, hero rank, quests and records. A fresh profile with the welcome gift is created.', confirmLabel: 'Reset everything', tone: 'danger', onConfirm: () => { resetProfile(); close(false); } })}>Reset</Button>
+            </Row>
+          </Sec>
+        </>)}
+        </div>
       </div>
-      <div className="mt-3"><Button className="w-full" variant="danger" size="sm" data-testid="reset-profile"
-        onClick={() => askConfirm({ title: 'Reset profile?', body: 'This permanently erases your gold, gems, items, hero rank, quests and records. A fresh profile with the welcome gift is created.', confirmLabel: 'Reset everything', tone: 'danger', onConfirm: () => { resetProfile(); close(false); } })}>Reset profile</Button></div>
-      <div className="mt-3"><Button className="w-full" variant="primary" onClick={() => close(false)}>Done</Button></div>
+      <div className="mt-3 flex justify-end"><Button variant="primary" onClick={() => close(false)} style={{ minWidth: '9rem' }}>Done</Button></div>
     </Modal>
   );
 };

@@ -1,3 +1,4 @@
+import { feedReward } from '../../rewardFeed';
 // NPC story quest logic (data in npcQuests.ts): accept, progress from engine events, turn-in + rewards, and the
 // per-NPC marker cache read by render/Npcs.tsx. The state lives in the store (`npcQuests`, saved with the profile).
 // Importing this module registers the event listeners (dialogue.ts imports it).
@@ -58,8 +59,10 @@ export function completeNpcQuest(id: string): boolean {
   const o = def.objective;
   if (o.type === 'DELIVER') inv = takeLoot(inv, (o.target as string), o.count);
   useGameStore.setState({ inventory: inv });
+  const got: Item[] = [];
   for (const r of def.reward.items ?? []) {
     for (const it of rewardItems(r.id, r.qty ?? 1)) {
+      got.push(it);
       if (!useGameStore.getState().addItemToInventory(it)) {
         useGameStore.setState({ inventory: before });
         notify('Bag is full! Make room, then come back.', 'red');
@@ -75,6 +78,7 @@ export function completeNpcQuest(id: string): boolean {
   });
   if (def.reward.shards) s.addMaterial(def.reward.shards[0], def.reward.shards[1]);
   notify(`Quest complete: ${def.title}`);
+  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0] });
   return true;
 }
 

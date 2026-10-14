@@ -7,7 +7,7 @@ import { portalLabel } from '../../engine/roomDefs';
 import { useRaf } from '../hooks/useRaf';
 import { OrnateRing } from '../components/Ornate';
 
-const SIZE = 148; // css px
+const SIZE = 176; // css px
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Circular minimap — drawn every frame from the world, no React state. */

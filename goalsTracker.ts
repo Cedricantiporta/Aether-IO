@@ -1,3 +1,4 @@
+import { feedReward } from './rewardFeed';
 // ============================================================================
 // Goals + achievements tracker. Counts come from the typed event bus (kills, rooms, harvest, hub actions) and from
 // store changes (gold spent, rank, mythic items, warehouse). Counts are BUFFERED in a module object and flushed into
@@ -105,6 +106,7 @@ const pay = (r: GoalReward): void => {
     gems: s.gems + (r.gems ?? 0), gold: s.gold + (r.gold ?? 0),
     materials: r.shards ? { ...s.materials, COMMON: s.materials.COMMON + r.shards } : s.materials,
   });
+  feedReward({ gold: r.gold, gems: r.gems, shards: r.shards });
 };
 const rewardMsg = (r: GoalReward): string => [r.gems ? `+${r.gems} gems` : '', r.gold ? `+${r.gold.toLocaleString()} gold` : '', r.shards ? `+${r.shards} shards` : ''].filter(Boolean).join('  ');
 
