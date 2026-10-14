@@ -93,7 +93,7 @@ function pullTick(z: Zone, dt: number): void {
 }
 
 /** Singularity: a real trap. Heavy slow that deepens toward the core (60% edge -> 95% core), pull strongest near the edge
- *  (so nothing walks out) and gentle at the core. Bosses / mini-bosses: 40% slow, weak pull. Anything entering while it lives is caught. */
+ *  and gentle at the core; big monsters resist the pull. Bosses / mini-bosses: 40% slow, never pulled. Anything entering while it lives is caught. */
 function holeTick(z: Zone, dt: number): void {
   const R = z.radius;
   const range = z.length > R ? z.length : R * 2;
@@ -114,9 +114,11 @@ function holeTick(z: Zone, dt: number): void {
       e.slowT = Math.max(e.slowT, 0.3);
       if (e.slowFactor < f) e.slowFactor = f;
     }
-    if (d <= PULL_STOP) continue;
+    if (d <= PULL_STOP || big || e.speed <= 0) continue;    // bosses, mini-bosses and rooted adds can't be pulled (still slowed)
     const w = d >= R ? 1 : 0.25 + 0.75 * (d / R);
-    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * boost * w * (big ? 0.2 : 1) * dt);
+    // heavier (bigger) monsters resist: slime/goblin 1.0, zombie/boar ~0.6, brute/splitter ~0.35; elites half again
+    const heft = Math.min(1, Math.max(0.25, (0.7 / Math.max(0.45, e.radius)) ** 2)) * (e.elite ? 0.6 : 1);
+    const step = Math.min(d - PULL_STOP, Math.max(8, e.speed * 2) * boost * w * heft * 0.55 * dt);   // overall pull -45%
     e.pos.x += (dx / d) * step;
     e.pos.z += (dz / d) * step;
   }

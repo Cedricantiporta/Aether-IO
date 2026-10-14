@@ -34,7 +34,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   WIZARD: [
     { slot: 'q', icon: 'SINGULARITY', name: 'Singularity', mana: 34, cd: 12,
-      desc: 'A black hole traps enemies: heavy slow deepening toward the core, pulling hardest at the edge, then collapses in an explosion.',
+      desc: 'A black hole traps enemies: heavy slow deepening toward the core and a gentle pull. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed). Collapses in an explosion.',
       per: (lv) => `Collapse ${pct(6.5 * lvMul(lv))} dmg · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
     { slot: 'e', icon: 'BLINK_NOVA', name: 'Blink Nova', mana: 0, cd: 0,
       desc: 'Teleport to the aim point. A frost nova briefly freezes enemies at both the origin and the destination.',
