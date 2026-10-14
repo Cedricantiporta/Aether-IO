@@ -16,6 +16,14 @@ import type { Enemy } from '../types';
 import { spawnProjectile } from './projectiles';
 import { getMagnetRadius, petCollect } from './pickups';
 import type { Pickup } from '../types';
+import { petPower, petStage, petKillXp } from '../../petGrowth';
+import { bufferPetXp, flushPetXp } from '../../petActions';
+
+// ---- pet growth: kill XP is buffered in world.pet.xpBuf and committed to the pet item on discrete moments (level-up, room clear, death, run end).
+events.on('enemyDeath', (e) => { if (!e.poof) bufferPetXp(petKillXp(e.elite, e.boss, world.director.wave)); });
+events.on('waveClear', flushPetXp);
+events.on('playerDeath', flushPetXp);
+events.on('runEnd', flushPetXp);
 
 const meleeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 const FOLLOW = 0, FETCH = 1, ATTACK = 2;
@@ -120,7 +128,9 @@ export function updatePets(dt: number): void {
   }
   const skill = pet.petSkill;
   const prof = getPetProfile(pet.name);
-  const lvMul = 1 + 0.25 * Math.max(0, pet.level - 1);
+  const grow = petPower(pet);                       // pet growth (level + evolution): scales skill power
+  wp.stage = petStage(pet);
+  const lvMul = (1 + 0.25 * Math.max(0, pet.level - 1)) * grow;
   const alive = pl.alive;
 
   if (wp.attackT > 0) wp.attackT = Math.max(0, wp.attackT - dt * 3);
@@ -231,7 +241,7 @@ export function updatePets(dt: number): void {
   wp.skillT += dt;
   const cd = pet.petCooldown || 10;
   if (wp.skillT >= cd) {
-    if (pl.hp < st.stats.maxHealth) { wp.skillT = 0; healPlayer(pet.petValue || 10); wp.attackT = 1; }
+    if (pl.hp < st.stats.maxHealth) { wp.skillT = 0; healPlayer((pet.petValue || 10) * grow); wp.attackT = 1; }
     else wp.skillT = cd;
   }
 }

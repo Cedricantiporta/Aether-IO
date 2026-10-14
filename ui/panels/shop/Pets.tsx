@@ -5,6 +5,7 @@ import { useGameStore, shopPrice } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ItemArt } from '../../components/ItemArt';
 import { Button } from '../../components/Button';
+import { PetCare } from './PetCare';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
 import type { PlayerStats } from '../../../types';
@@ -39,6 +40,7 @@ export const PetsTab: React.FC = () => {
   const [hov, setHov] = useState('');
   return (
     <div className="flex flex-col gap-2.5">
+      <PetCare />
       {PETS_POOL.map((p) => {
         const price = shopPrice(p), sale = sales[p.id], can = !p.summonOnly && gold >= price;
         return (

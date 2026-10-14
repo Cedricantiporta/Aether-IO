@@ -27,6 +27,7 @@ import { deviceDefaults } from './engine/device';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
+import { petPower } from './petGrowth';
 import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
@@ -152,6 +153,7 @@ export const calculateItemCP = (item: Item): number => {
   if (!item.stats) return 0;
   const s = item.stats;
   let cp = 0;
+  const petMul = petPower(item); // pet growth (level + evolution) scales its stats
   if (s.damage) cp += s.damage * 10;
   if (s.maxHealth) cp += s.maxHealth;
   if (s.defense) cp += s.defense * 8;
@@ -167,7 +169,7 @@ export const calculateItemCP = (item: Item): number => {
   if (s.dodge) cp += s.dodge * 500;
   const mult: Record<Rarity, number> = { COMMON: 1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
   cp += affixCP(item);
-  return Math.floor(cp * mult[item.rarity]);
+  return Math.floor(cp * petMul * mult[item.rarity]);
 };
 
 /** Combat power of the whole character. */
@@ -203,6 +205,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
       if (v === undefined || v === null) return;
       if (item.type === 'WEAPON' && k === 'damage') v *= 0.5;
       if (item.type === 'ARMOR' && k === 'defense') v *= 0.5;
+      if (item.type === 'PET') v *= petPower(item);
       if (k === 'cooldownReduction') final[k] = Math.min(0.75, final[k] + v);
       else final[k] += v;
     });
@@ -1461,6 +1464,15 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     // --------------------------------------------------- notifications --
+    // ---- pet growth (see petActions.ts)
+    patchEquippedPet: (patch, spend) => {
+      const s = get();
+      if (!s.equipment.pet) return;
+      const equipment = { ...s.equipment, pet: { ...s.equipment.pet, ...patch } };
+      const materials = { ...s.materials };
+      if (spend?.materials) for (const k of Object.keys(spend.materials) as Rarity[]) materials[k] = Math.max(0, materials[k] - (spend.materials[k] ?? 0));
+      set({ equipment, stats: calc(s.baseStats, equipment), gold: s.gold - (spend?.gold ?? 0), materials, ...(spend?.inventory ? { inventory: spend.inventory } : {}) });
+    },
     addNotification: (message, color = 'white', type = 'ITEM', action) => {
       set((s) => {
         let list = [...s.notifications, { id: uid('n'), message, color, type, action }];

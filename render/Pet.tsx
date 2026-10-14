@@ -11,6 +11,7 @@ import { getModels, type MatKey } from './enemyModels';
 import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { GB, TAU, damp } from './util';
 import { isLobbyStatus } from './CameraRig';
+import { PET_STAGE_SCALE } from '../petGrowth';
 
 interface PetPart { geo: BufferGeometry; mat: MatKey; tint?: number }
 interface PetDef {
@@ -324,7 +325,8 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     s.phase += dt * (1 + clamp01(s.speed / 6) * 1.2) * animK;
     const moving = clamp01(s.speed / 4);
     const bob = Math.sin(s.phase * 3 + 1) * (0.12 + moving * 0.05);
-    let y = def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0);
+    const stg = pet.stage, gs = PET_STAGE_SCALE[stg] ?? 1;   // evolution: bigger body + aura (stage 2 gold, stage 3 violet)
+    let y = (def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0)) * gs;
     let sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
     root.current.position.set(pet.pos.x, Math.max(0, pet.pos.y - 1) + y, pet.pos.z);
@@ -332,7 +334,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     root.current.rotation.y = pet.facing;
     const a = pet.attackT; // 1 -> 0 after a strike: stretch forward then settle
     const hx = def.hop ? 1.05 - (sq - 1) * 0.5 : 1;
-    const S0 = def.scale * size;
+    const S0 = def.scale * size * gs;
     model.current.scale.set(S0 * hx * (1 - 0.15 * a), S0 * sq * (1 - 0.1 * a), S0 * hx * (1 + 0.45 * a));
     model.current.position.z = a * 0.7 * size;
     model.current.rotation.x = (def.hover > 0.2 ? moving * 0.2 : 0) + a * 0.35;
@@ -349,6 +351,13 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
       }
     }
     if (dt > 0 && pet.sparkT > 0 && Math.random() < dt * 60) embers(pet.pos.x, root.current.position.y + 0.8, pet.pos.z, 2, 0xfff0a0, 0.5, 2.0, 0.6, 0.12);
+    if (stg > 1) {
+      const pul = 0.75 + 0.25 * Math.sin(t * 2.4);
+      const c = AURA[stg] ?? AURA[2];
+      pushHalo(pet.pos.x, root.current.position.y + 0.45 * S0, pet.pos.z, (1.7 + stg * 0.5) * size * gs * pul, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.45, CELL.GLOW);
+      pushHalo(pet.pos.x, 0.12, pet.pos.z, (2.0 + stg * 0.5) * size * gs, c[0] * 0.6, c[1] * 0.6, c[2] * 0.6, 0.55 * pul, CELL.RING);   // glow ring on the ground
+      if (dt > 0 && Math.random() < dt * (stg === 2 ? 6 : 14)) FX.add.emit(pet.pos.x + (Math.random() - 0.5) * size * gs, root.current.position.y + 0.3 * S0, pet.pos.z + (Math.random() - 0.5) * size * gs, 0, 0.9, 0, 1.0, 0.18, 0.03, c[0], c[1], c[2], 0.9, CELL.STAR, 0, 0.3, Math.random() * 3, 3);
+    }
     if (def.halo) pushHalo(pet.pos.x, root.current.position.y + 0.5 * S0, pet.pos.z, def.halo[0] * size, def.halo[1] * 0.5, def.halo[2] * 0.5, def.halo[3] * 0.5, 0.5, CELL.GLOW);
     if (dt > 0 && def.trail) {
       const x = pet.pos.x, yy = root.current.position.y + 0.4, z = pet.pos.z, r = Math.random;
@@ -380,6 +389,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     </group>
   );
 }
+const AURA: number[][] = [[0, 0, 0], [0, 0, 0], [1.7, 1.25, 0.35], [1.4, 0.55, 2.0]]; // evolution aura colours (stage 2 gold, 3 violet)
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 void Mesh;
 export const __builders = DEFS;

@@ -210,6 +210,7 @@ export interface GameState {
   respecTalents: () => boolean;      // costs gold (talents.respecCost)
 
   // notifications
+  patchEquippedPet: (patch: Partial<Item>, spend?: { gold?: number; materials?: Partial<Record<Rarity, number>>; inventory?: Item[] }) => void; // pet growth (petActions.ts): merge fields into the equipped pet, optionally paying costs; recalculates stats
   addNotification: (message: string, color?: string, type?: GameNotification['type'], action?: GameNotification['action']) => void;
   removeNotification: (id: string) => void;
 }
