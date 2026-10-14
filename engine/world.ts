@@ -127,8 +127,8 @@ export const world = {
     station: { kind: 'NONE', x: 0, z: 0, used: false, ready: false },
     shrineOn: false, hint: '',
   } as RoomState,
-  /** Town presentation state (the town renderer reads shopsClosed; shops are always open now, so it stays false). */
-  village: { shopsClosed: false, harvestCd: 0 },
+  /** Town state (harvest node cooldown). */
+  village: { harvestCd: 0 },
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0 } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
   camera: { trauma: 0, zoom: 1, yaw: 0, pitch: CAM_PITCH0, dist: 1 } as CameraState,

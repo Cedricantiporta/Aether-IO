@@ -1,7 +1,8 @@
 # Handoff — Aether Survivor (status as of 2026-10-14)
 
-Branch: `claude/festive-shannon-tspv5k` (all work lands here; `main` is the old version — the Vercel
-production deploy builds `main`, so preview deployments of this branch or a merge/PR are needed to see the new game).
+Branch: `claude/charming-shannon-nq5wcd` (contains all of `claude/festive-shannon-tspv5k` + the work below; `main` is
+the old version — the Vercel production deploy builds `main`, so preview deployments of this branch or a merge/PR are
+needed to see the new game).
 
 ## The owner (how to work with them)
 - Not a coder. Gives short, informal feedback, often several requests in one message, frequently with screenshots.
@@ -30,11 +31,29 @@ production deploy builds `main`, so preview deployments of this branch or a merg
   aim). Setting `autoSkills` auto-casts 1/2/3 + ult. Click/tap an enemy to lock target (`engine/systems/target.ts`,
   `render/TargetRing.tsx`, `ui/hud/TargetFrame.tsx`). Combo = hit counter (`engine/systems/combo.ts`, +2.5% dmg
   per 10 hits, ult finisher at 50). Monster tricks (`tricks.ts`): weak monsters cast at most once, slowly.
-- **UI**: OLD style (wood/stone/gold frames, Cinzel + Rubik) restored — the user rejected the flat modern reskin.
-  Exception: reward cards are **tarot style** (`ui/screens/WaveReward.tsx`, `.rw-*` CSS) — keep them. Combo meter
-  sits top-centre under the room plaque. Interact = Genshin-style pills (`ui/hud/InteractPrompt.tsx`); skill buttons
-  are never replaced by interact/harvest. Touch: joystick + big ATTACK hub + skill arc (`ui/hud/TouchControls.tsx`),
-  touch controls only on touch devices.
+- **UI direction (current, user-driven)**: **Korean MMORPG** look (Night Crows / Lineage W style): dark smoked-glass
+  panels, gunmetal surfaces, thin brushed-gold hairlines, sharp corners, NO wood/parchment, and **as few containers as
+  possible** (HUD text/icons float on the scene with soft shadows). Implemented as the "v5" override layers at the end
+  of `index.css` (old wood rules above are overridden, not deleted). Menu icons are filled gold glyphs
+  (`ui/components/MenuGlyphs.tsx`). Announcer / biome titles = thin gold serif with hairlines (`.k-title`).
+  HUD: top-left level + big HP/MP bars with numbers (`VitalBars` in `ui/hud/Vitals.tsx`), no orbs; bottom = individual
+  skill slots, ult first and bigger (`SkillRow` + `ActionBar`), thin full-width EXP strip at the screen bottom
+  (`ExpStrip`); same bar in town. Reward cards keep the tarot layout but sharp-edged gold frames (`.rw-*`).
+  Interact = pills (`ui/hud/InteractPrompt.tsx`); touch: joystick + ATTACK hub + skill arc (`ui/hud/TouchControls.tsx`).
+- **Screens**: title -> full-screen **class selection** (`ui/screens/CharacterSelect.tsx`, uiStore `charSelect`;
+  CameraRig frames the hero close-up) -> town. Town top-left "change class" opens it again. Summon = centred
+  event-style window (`ui/panels/SummonWindow.tsx`, replaces the side panel for the SUMMON tab). Blacksmith upgrade
+  plays a full-screen cinematic (`ui/components/ForgeCinematic.tsx`: swirl -> burst -> result card).
+- **Camera**: free MMORPG orbit (`engine/input.ts`: left/right drag or one-finger drag on empty screen = orbit,
+  wheel/pinch = zoom; `world.camera.yaw/pitch/dist`; movement + touch aim are camera-relative via `engine/camera.ts`
+  `camRel`). Spawn = plaza centre, camera looking at the gate (yaw PI); runs reset yaw to 0.
+- **Quest board**: 6 daily offers + up to 3 accepted; only accepted quests progress; abandon frees a slot
+  (`quests.ts` `fillQuests`, store `acceptQuest/abandonQuest/refreshQuestBoard`).
+- **Town look**: stone wall ring with towers + gatehouse (`WALL*` in `engine/townData.ts`, colliders included),
+  cobblestone roads/plaza (canvas texture + planar UVs in `render/TownScenery.tsx`), paths to every building, no
+  glowing rings around shops. Trees are procedural rounded broadleafs / conifers (`render/models.ts`
+  `makeLeafyTree` / `makeConifer`, fitted to the old Kenney bounds). Hero armour is rounded + smooth-shaded
+  (`render/gear.ts`).
 - **Progression**: persistent profile in localStorage `aether-survivor-profile-v1` (gold, gems, items, equipment,
   hero rank, talents, quests, codex discoveries, settings). Runs start with 0 SP.
 
@@ -46,20 +65,17 @@ production deploy builds `main`, so preview deployments of this branch or a merg
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)
-1. **MMORPG free camera**: right-mouse drag / one-finger drag on empty screen = orbit (yaw + limited pitch), wheel /
-   pinch = zoom, movement + joystick relative to camera yaw (W = away from camera), skills "facing" unaffected.
-   Files: `render/CameraRig.tsx`, `engine/input.ts`, `engine/systems/player.ts` (movement in `updatePlayer` and
-   `updatePlayerVillage`), `ui/hud/TouchControls.tsx` (a rotate zone). Ground aim already raycasts.
-2. **Quest board** (was started then paused, not merged): board lists many offered quests (e.g. 6–8, refreshes daily / on claim); a quest only progresses
-   after **Accept**; max **3 active**; abandon frees a slot. Files: `quests.ts`, `store.ts` (`quests`,
-   `addQuestProgress`, `claimQuest`), `storeTypes.ts`, the QUESTS shop tab UI (`ui/panels/shop/Quests.tsx`).
-3. Balance/tuning still unverified: new boss damage/cadence, town performance on real phones (12 skinned NPCs),
+1. Balance/tuning still unverified: boss damage/cadence, town performance on real phones (12 skinned NPCs + wall),
    camera framing in long corridor rooms, boss rooms with new shapes, fountain heal (40%).
-4. Leftovers to clean: siege/shutter code in `render/Town.tsx` + `world.village.shopsClosed` (always false),
-   siege music theme in `engine/audio.ts`, unused `ui/hooks/useMedia.ts` / `ui/components/Sheet.tsx`.
-5. Ideas the user liked earlier but not built: village upgrades, daily challenge, item sets/affixes are partly in.
+2. Remaining wood-style screens to convert to the dark metal look if the user asks: character sheet avatar ring / CP
+   box, pause/settings menus, codex, game-over screen (they inherit the v5 overrides but still use some old pieces).
+3. Character select shows the low-poly KayKit hero; the user's reference uses painted key art. Free CC0 art only.
+4. Ideas the user liked earlier but not built: village upgrades, daily challenge; item sets/affixes are partly in.
 
 ## QA (headless)
+- Tailwind CDN is blocked in the container: route it to the npm package `tailwindcss-cdn@3.4.10`
+  (`3.4.3/tailwindcss.js`). Restart Vite before each scripted run: after HMR, `import('/store.ts')` from the page
+  gets a SECOND module instance and state changes don't reach the app.
 - Playwright helpers live outside the repo (session scratchpad, gone with the container). Pattern: launch Chromium
   at `/opt/pw-browsers` (never `playwright install`) with `--use-angle=swiftshader`, route the Tailwind CDN to a
   local copy if offline, `npx vite --port <p>`, then in-page import modules via

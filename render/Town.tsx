@@ -238,34 +238,6 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
   );
 }
 
-/** Wooden boards that drop over the shop front during the siege, plus a CLOSED sign. */
-const boardMat = new MeshStandardMaterial({ color: '#7a5230', flatShading: true, roughness: 0.9 });
-const boardMat2 = new MeshStandardMaterial({ color: '#5e3d22', flatShading: true, roughness: 0.9 });
-function Shutters({ k }: { k: React.MutableRefObject<number> }) {
-  const grp = useRef<Group>(null!), cross = useRef<Group>(null!), sign = useRef<Sprite>(null!);
-  const closedLabel = useMemo(() => labelMaterial('CLOSED', '#ff8a7a', { size: 64 }), []);
-  useFrame(() => {
-    const e = smooth(k.current);
-    if (grp.current) { grp.current.visible = e > 0.01; grp.current.scale.y = Math.max(0.001, e); }
-    if (cross.current) cross.current.visible = e > 0.9;
-    if (sign.current) { sign.current.visible = e > 0.75; sign.current.position.y = 2.1; }
-  });
-  return (
-    <>
-      <group ref={grp} position={[0, 3.5, 2.55]}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <mesh key={i} position={[0, -0.28 - i * 0.56, 0]} material={i % 2 ? boardMat : boardMat2} castShadow><boxGeometry args={[5.2, 0.52, 0.14]} /></mesh>
-        ))}
-      </group>
-      <group ref={cross} position={[0, 2.0, 2.68]}>
-        <mesh rotation={[0, 0, 0.55]} material={boardMat}><boxGeometry args={[5.6, 0.3, 0.12]} /></mesh>
-        <mesh rotation={[0, 0, -0.55]} material={boardMat}><boxGeometry args={[5.6, 0.3, 0.12]} /></mesh>
-      </group>
-      <sprite ref={sign} material={closedLabel.mat} position={[0, 2.1, 3.0]} scale={[closedLabel.aspect * 0.95, 0.95, 1]} />
-    </>
-  );
-}
-
 // --------------------------------------------------------------------- shop ---
 const ringGeo1 = new RingGeometry(4.6, 5.05, 72), ringGeo2 = new RingGeometry(5.25, 5.4, 72);
 
@@ -294,7 +266,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
     const status = useGameStore.getState().status;
     const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
-    closedK.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - closedK.current) * Math.min(1, dt * 2.2);
+    closedK.current += (0 - closedK.current) * Math.min(1, dt * 2.2);
     if (closedK.current > 0.999) closedK.current = 1; else if (closedK.current < 0.001) closedK.current = 0;
     const closed = closedK.current > 0.5;
     const dx = world.player.pos.x - px, dz = world.player.pos.z - pz;
@@ -352,7 +324,6 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
       </group>
       <sprite ref={titleRef} material={label.mat} position={[0, 9.4, 1]} scale={[labelW, 1.0, 1]} />
       <Shopkeeper cfg={NPC[type]} door={DOOR[type]} near={near} closed={closedK} onOpen={open} />
-      <Shutters k={closedK} />
       <mesh position={[0, 2.8, 0.2]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <boxGeometry args={[7, 5.6, 6]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -391,7 +362,7 @@ function QuestBoard() {
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
     const status = useGameStore.getState().status;
     const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
-    k.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - k.current) * Math.min(1, dt * 2.2);
+    k.current += (0 - k.current) * Math.min(1, dt * 2.2);
     if (k.current > 0.999) k.current = 1; else if (k.current < 0.001) k.current = 0;
     near.current = !lobby && k.current < 0.5 && Math.hypot(world.player.pos.x - QUEST_POS[0], world.player.pos.z - QUEST_POS[2]) < 6;
     const claimable = k.current < 0.5 && useGameStore.getState().quests.some(questDone);
@@ -464,7 +435,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
     const status = useGameStore.getState().status;
     const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
-    closedK.current += ((world.village.shopsClosed && !lobby ? 1 : 0) - closedK.current) * Math.min(1, dt * 2.2);
+    closedK.current += (0 - closedK.current) * Math.min(1, dt * 2.2);
     const closed = closedK.current > 0.5;
     const d = Math.hypot(world.player.pos.x - px, world.player.pos.z - pz);
     near.current = !lobby && !closed && d < 6;
