@@ -413,3 +413,10 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Twists: TRAPS (8 spike tiles, 3.2 s cycle, red telegraph then 12% max-HP hit; they hurt monsters too), DARK (vignette),
   CURSED (healing x0.35 while fighting, 4 gems on clear), GOLDEN (60% extra gold drop per kill).
 - Equip-suggestion loot notifications stay 9 s.
+- Boss key (`director.bossKeyState`): from the champion room (depth 10) to depth 13, a cleared room may hold the
+  biome's Boss Key (chests 60%, champion 25%, others 20% + 8%/room). With it, `nextChoices(..., bossKey)` adds a BOSS
+  door to every portal set; without it the boss still waits at depth 15. WaveInfo shows "Boss Key ✓".
+- Shadow Roll blast radius 4.2 + 0.3/lv. Frost Field ticks have a 6% + 1%/lv chance to freeze (non-boss).
+- Mana Potion 70% of max mana (Big 100%). HP regen and mana regen are halved (player.ts regen tick).
+- Floating status words ("BURNED", "FROZEN", "STUNNED", "SLOWED", ...) when a status newly lands on an enemy
+  (budgeted ~8/s) or on the hero (combat.ts statusWord).

@@ -230,8 +230,32 @@ export function grantKillXp(xp: number, pos: Vector3): void {
 }
 
 // ------------------------------------------------------------------ enemies --
+// ---- floating status words ("BURNED", "FROZEN" ...) when a status newly lands; a small budget keeps crowds readable
+const STATUS_WORD: Partial<Record<string, [string, number]>> = {
+  BURN: ['BURNED', 0xff8a3a], POISON: ['POISONED', 0x8be05a], FREEZE: ['FROZEN', 0x9fe4ff], STUN: ['STUNNED', 0xffe27a], SLOW: ['SLOWED', 0x7fc8ff],
+  ROOT: ['ROOTED', 0xb08a5a], SILENCE: ['SILENCED', 0xc58bff], DEFDOWN: ['ARMOR DOWN', 0xff9a6a], BLIND: ['BLINDED', 0xcfcfcf], BLEED: ['BLEEDING', 0xff4a4a],
+  ARMOR_BREAK: ['ARMOR BROKEN', 0xffb070],
+};
+let wordBudget = 6, wordT = 0;
+function statusWord(pos: Vector3, type: string, player = false): void {
+  const w = STATUS_WORD[type]; if (!w) return;
+  const now = world.time;
+  wordBudget = Math.min(6, wordBudget + (now - wordT) * 8); wordT = now;
+  if (!player && wordBudget < 1) return;
+  wordBudget -= 1;
+  events.emit('floatText', { pos, text: w[0], color: w[1], scale: player ? 0.8 : 0.55, dy: player ? 2.6 : 2.0 });
+}
+const statusActive = (e: Enemy, t: string): boolean =>
+  t === 'BURN' ? e.burnT > 0 : t === 'POISON' ? e.poisonT > 0 : t === 'FREEZE' ? e.freezeT > 0 : t === 'STUN' ? e.stunT > 0 : t === 'SLOW' ? e.slowT > 0.05 : false;
+
 export function applyStatus(e: Enemy, effect: StatusEffect): void {
   if (!e.active || e.state === 'DYING') return;
+  const fresh = !statusActive(e, effect.type);
+  applyStatusRaw(e, effect);
+  if (fresh && statusActive(e, effect.type)) statusWord(e.pos, effect.type);
+}
+
+function applyStatusRaw(e: Enemy, effect: StatusEffect): void {
   const durMult = e.boss ? 0.25 : e.elite ? 0.5 : 1;
   switch (effect.type) {
     case 'BURN': {
@@ -472,6 +496,9 @@ export function playerTrickImmune(): boolean {
 export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 0): boolean {
   const p = world.player;
   if (playerTrickImmune()) return false;
+  const was = type === 'STUN' ? p.stunT : type === 'ROOT' ? p.rootT : type === 'SILENCE' ? p.silenceT : type === 'DEFDOWN' ? p.defDownT : type === 'BLIND' ? p.blindT
+    : type === 'BURN' ? p.burnT : type === 'POISON' ? p.poisonT : type === 'BLEED' ? p.bleedT : p.slowT;
+  if (was <= 0) statusWord(p.pos, type, true);
   switch (type) {
     case 'STUN': p.stunT = Math.max(p.stunT, duration); break;
     case 'ROOT': p.rootT = Math.max(p.rootT, duration); break;

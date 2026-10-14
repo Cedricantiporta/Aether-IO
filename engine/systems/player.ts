@@ -80,7 +80,8 @@ function usePotion(health: boolean): boolean {
   const amt = (item.restoreAmount || 50) * (1 + 0.12 * techLv(st.tech, 'potion'));   // Tech House: Potion Brewing
   // health potions restore a share of max HP: 70% (Big: 100%), Potion Brewing on top
   if (health) { healPlayer(st.stats.maxHealth * ((item.restoreAmount || 50) >= 75 ? 1 : 0.7) * (1 + 0.12 * techLv(st.tech, 'potion'))); p.hpPotCd = POTION_COOLDOWN; }
-  else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
+  else { p.mana = Math.min(st.stats.maxMana, p.mana + st.stats.maxMana * ((item.restoreAmount || 50) >= 75 ? 1 : 0.7) * (1 + 0.12 * techLv(st.tech, 'potion'))); p.mpPotCd = POTION_COOLDOWN; }   // 70% (Big: 100%)
+  void amt;
   return true;
 }
 
@@ -211,8 +212,8 @@ export function updatePlayer(dt: number): void {
   }
 
   // ---- regen / vitality
-  p.hp = Math.min(stats.maxHealth, p.hp + (stats.regen + lv.regen * 0.5) * dt);
-  p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * dt);
+  p.hp = Math.min(stats.maxHealth, p.hp + (stats.regen + lv.regen * 0.5) * 0.5 * dt);   // all HP regen halved
+  p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * 0.5 * dt);   // all mana regen halved
   if (p.hp > stats.maxHealth) p.hp = stats.maxHealth;
   if (p.mana > stats.maxMana) p.mana = stats.maxMana;
 
