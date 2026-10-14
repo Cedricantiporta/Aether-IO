@@ -117,6 +117,8 @@ export const world = {
 
   enemyGrid: new SpatialGrid(6, ARENA_RADIUS + 40, MAX_ENEMIES),
 
+  /** Auto battle (touch Auto toggle): the hero seeks the nearest enemy anywhere in the room and casts ready skills. */
+  autoBattle: { on: false, castT: 0 },
   /** Necromancer minions (systems/minions.ts): kind 0 warrior, 1 mage, 2 golem. */
   minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0 })),
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */

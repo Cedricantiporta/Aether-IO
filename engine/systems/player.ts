@@ -1,6 +1,7 @@
 // ============================================================================
 // Player: movement, dash, auto-fire, cooldowns, regen, potions, death flow.
 // ============================================================================
+import { GameStatus } from '../../types';
 import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
@@ -9,7 +10,7 @@ import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { lockedEnemy, updateTarget } from './target';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer } from './combat';
 import { fireBasicAttack } from './projectiles';
-import { updateAbilities, notifyCooldown, abilityState } from './abilities';
+import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
@@ -271,7 +272,7 @@ export function updatePlayer(dt: number): void {
     const lk = lockedEnemy();
     const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     let e = lk ?? (cur && cur.active && cur.state !== 'DYING' ? cur : null);
-    if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, chaseR);
+    if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : chaseR);   // auto battle: hunt anywhere in the room
     if (e) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
       if (d > range - 0.4 && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; autoChase = true; }   // (stops inside the firing check's range)
@@ -319,6 +320,11 @@ export function updatePlayer(dt: number): void {
   // skill keys 1/2/3, Space (class dash) and R (ult): aimed hold & release / quick / auto casting
   if (stunned) { resetAim(); } else updateSkillInput();
   updateAbilities(dt);
+  // auto battle: cast ready skills while an enemy is close
+  if (world.autoBattle.on && st.status === GameStatus.PLAYING && !stunned && (world.autoBattle.castT -= dt) <= 0) {
+    world.autoBattle.castT = 0.5;
+    if (findNearestEnemy(p.pos.x, p.pos.z, 13)) autoCast();
+  }
 
   // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
   // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.

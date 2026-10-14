@@ -441,3 +441,15 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - CharacterSelect: list view (characters with level, Play, Delete, New) and create view (class list, name, outfit
   tint from TINTS, Create). Fresh installs land in create view. Town profile shows the character name; its chip is
   "Characters" (no class switching). Hero.tsx multiplies the outfit tint over the model materials.
+
+### UI pass (references from the owner)
+- Character screen: 3D idling hero (ui/components/HeroPreview.tsx, own small Canvas), diamond class crests, radar stat
+  chart, subtle off-centre golden backdrop; no outfit picker in create (tint stays white).
+- HUD: quest tracker on the left under the hero frame (main quest pulses gold), minimap top-right. Achievements
+  button + O key (Goals panel opens on the achievements tab, `uiStore.openGoals(v, tab)`). LevelUpBurst: golden
+  ring "Level N" + stat gains (replaces the level banner).
+- Quest window: Main / Side / Bounties tabs; chapters (`story.CHAPTERS`) expand to steps (done / current / locked);
+  detail pane with banner, story text, objective, reward tiles, Track / Teleport.
+- Bag: 4 top tabs (All / Equipment / Accessories / Other), rarity-tinted slot backgrounds.
+- Touch: skill wheel around the attack button (`G` arc layout in TouchControls) + Auto toggle (`world.autoBattle`:
+  hunts the nearest enemy anywhere in the room, `abilities.autoCast` casts ready skills / ult every 0.5 s).

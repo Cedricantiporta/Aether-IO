@@ -1757,3 +1757,12 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .bag-grid .rpg-slot[data-rarity] { background:
   linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, #1e1a16) 0%, color-mix(in srgb, var(--rc) 14%, #0c0a08) 100%); }
 .bag-grid .rpg-slot[data-rarity='COMMON'] { background: linear-gradient(160deg, #4a4a4c, #26262a); }
+
+/* touch skill wheel: a faint ornate ring behind the cluster + the Auto toggle */
+.tc-ring { position: absolute; right: calc(var(--u) * .05); bottom: calc(var(--u) * .05); width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; pointer-events: none; z-index: 5;
+  border: 1px solid rgba(201, 160, 82, .28); box-shadow: inset 0 0 0 calc(var(--u) * .5) rgba(10, 8, 5, .25), inset 0 0 0 calc(var(--u) * .52) rgba(201, 160, 82, .15);
+  background: repeating-conic-gradient(from 0deg, rgba(201, 160, 82, .08) 0 1deg, transparent 1deg 9deg); -webkit-mask: radial-gradient(circle, transparent 38%, #000 40%); mask: radial-gradient(circle, transparent 38%, #000 40%); }
+.tc-ring.left { right: auto; left: calc(var(--u) * .05); }
+.tc-auto { position: absolute; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-title); font-size: .72rem; font-weight: 700; color: #d8c8a0;
+  background: radial-gradient(circle at 40% 30%, #2a241c, #0c0a08); border: 1.5px solid #6b5a3a; box-shadow: 0 0 0 1px #000; z-index: 7; }
+.tc-auto.on { color: #2a1204; background: radial-gradient(circle at 40% 30%, #fff0b0, #e9b949 60%, #8b5a16); border-color: #fff1c4; box-shadow: 0 0 12px rgba(255, 200, 90, .8); }

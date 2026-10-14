@@ -187,13 +187,26 @@ const mpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.
 
 // Cluster geometry (units of --u from the corner): ult is the hub, skills fan out on an arc, dash sits beside the hub, potions beyond.
 // Genshin-style: the big ATTACK button sits in the corner, skills arc around it, ult + dash + potions beyond.
+// Skill wheel (MMO style): the big ATTACK button in the middle, skills on an arc around it (from the lower inner side over
+// the top), the ultimate at the top, dash on the outer upper side, Auto at the outer edge, potions below.
+const WC = 2.0, WR = 1.9;   // wheel centre (units from the outer-bottom corner) and arc radius
+const arc = (deg: number, size: number): At => { const a = (deg * Math.PI) / 180; return { cx: WC + WR * Math.cos(a) - size / 2, cy: WC + WR * Math.sin(a) - size / 2, size }; };
 const G = {
-  atk: { cx: 1.0, cy: 1.0, size: 1.45 },
-  s1: { cx: 3.55, cy: 0.6, size: 0.95 }, s2: { cx: 2.35, cy: 1.85, size: 0.95 }, s3: { cx: 1.35, cy: 2.5, size: 0.95 },
-  ult: { cx: 3.45, cy: 1.75, size: 1.1 }, dash: { cx: 2.45, cy: 0.75, size: 0.95 },   // dash right beside ATTACK
-  hp: { cx: 4.5, cy: 0.6, size: 0.8 }, mp: { cx: 4.55, cy: 1.5, size: 0.8 },
+  atk: { cx: WC - 0.8, cy: WC - 0.8, size: 1.6 },
+  s1: arc(-12, 0.95), s2: arc(28, 0.95), s3: arc(64, 0.95),
+  ult: arc(102, 1.1), dash: arc(140, 0.95), auto: arc(176, 0.62),
+  hp: { cx: 4.25, cy: 0.12, size: 0.72 }, mp: { cx: 3.4, cy: 0.05, size: 0.72 },
 };
 const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN', KNIGHT: 'HOLY_WAVE', NECROMANCER: 'BONE_SPEAR' };
+
+/** Auto battle toggle: hunt the nearest enemy and cast ready skills by yourself. */
+const AutoBtn: React.FC<{ at: At; left: boolean }> = ({ at, left }) => {
+  const [on, setOn] = React.useState(world.autoBattle.on);
+  return (
+    <button className={`tc-auto pe ${on ? 'on' : ''}`} style={slotStyle(at, left, 38)} data-testid="tc-auto"
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); world.autoBattle.on = !world.autoBattle.on; setOn(world.autoBattle.on); }}>Auto</button>
+  );
+};
 
 export const TouchControls: React.FC = () => {
   const status = useGameStore((s) => s.status);
@@ -254,7 +267,9 @@ export const TouchControls: React.FC = () => {
         <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />
         {potion('hp')}
         {potion('mp')}
+        {!village && <AutoBtn at={G.auto} left={left} />}
       </div>
+      {!village && <div className={`tc-ring ${left ? 'left' : ''}`} aria-hidden />}
     </div>
   );
 };

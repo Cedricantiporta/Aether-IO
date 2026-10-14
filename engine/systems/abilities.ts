@@ -277,6 +277,18 @@ function updateChains(dt: number): void {
 
 // ============================================================ casting =======
 /** Casts the active bound to key 1 / 2 / 3 (class order). Cooldown + mana gated. */
+/** Auto battle: casts the first ready, learned, affordable active (and the ult when charged) without warnings. */
+export function autoCast(): void {
+  const st = useGameStore.getState(), p = world.player;
+  if (abilityState.leapT > 0 || world.time < gcdUntil || abilityState.castLockT > 0) return;
+  const order = ACTIVE_ORDER[st.hero];
+  for (let i = 0; i < order.length; i++) {
+    const s = order[i];
+    if ((st.skillLevels[s] ?? 0) <= 0 || p.cd[s] > 0 || p.mana < st.getManaCost(s)) continue;
+    castActive(i); return;
+  }
+  if (p.ult >= 100 && abilityState.ultCd <= 0 && p.ultT <= 0) castUlt();
+}
 export function castActive(index: number): void {
   const hero = useGameStore.getState().hero;
   cast(ACTIVE_ORDER[hero][index], false, index);
