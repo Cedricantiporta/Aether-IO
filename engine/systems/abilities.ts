@@ -93,6 +93,7 @@ export function resetAbilities(): void {
   a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.judgeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
   lastNoMana = -10;
   for (const k in lastCd) lastCd[k] = -10;
+  gcdUntil = 0;   // world.time restarts at 0 each run: a lock stamped in town would block every skill for minutes
 }
 
 export function notifyCooldown(slot: 'q' | 'e' | 's3' | 's4' | 'dash' | 'r'): void {
@@ -125,6 +126,7 @@ function gate(slot: ActiveSlot): boolean {
   }
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
   if (abilityState.leapT > 0) return false;
+  if (gcdUntil > world.time + GCD) gcdUntil = 0;   // (stale stamp from before a world.time reset)
   if (world.time < gcdUntil) return false;   // global skill lock: one skill at a time
   const cost = st.getManaCost(slot);
   if (!trySpendMana(cost)) { notifyNoMana(); return false; }

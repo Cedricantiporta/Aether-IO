@@ -244,6 +244,7 @@ function autoSkills(): void {
   const st = useGameStore.getState();
   if (!(st.settings as { autoSkills?: boolean }).autoSkills || aimState.active) return;
   const p = world.player;
+  if (autoState.next > world.time + 2) autoState.next = 0;   // (stale stamp from before a world.time reset, e.g. a town visit)
   if (!p.alive || world.time < autoState.next) return;
   autoState.next = world.time + 0.25;
   if (isCastable('ult')) {
