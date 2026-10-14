@@ -91,7 +91,7 @@ export const biomeOf = (biome: number): BiomeDef => BIOMES[biome % BIOMES.length
 export const loopOf = (biome: number): number => Math.floor(biome / BIOMES.length);
 
 export const TYPE_NAME: Record<RoomType, string> = {
-  COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', BOSS: 'Boss',
+  COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', CRYSTAL: 'Crystal Cavern', BOSS: 'Boss',
 };
 export const REWARD_NAME: Record<RewardKind, string> = {
   CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Shards', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
@@ -104,6 +104,7 @@ export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub
     case 'BOSS': return { title: 'Boss', sub: biomeOf(biome).name, icon: 'boss', color: '#ef6a5e' };
     case 'TREASURE': return { title: 'Treasure', sub: 'Guarded chest', icon: 'chest', color: '#f2c14e' };
     case 'SHRINE': return { title: 'Shrine', sub: 'Optional challenge', icon: 'shrine', color: '#c084fc' };
+    case 'CRYSTAL': return { title: 'Crystal Cavern', sub: 'Harvest only, no enemies', icon: 'gem', color: '#7fd8ff' };
     default: break;
   }
   const r = REWARD_ICON[plan.reward];
@@ -137,7 +138,7 @@ const plan = (type: RoomType): RoomPlan => ({ type, reward: rollReward(type) });
  * The 1..3 rooms the exits of room `index` lead to (never repeated types). Room 0 of a biome is always a skirmish,
  * the room before the boss is a fountain and/or merchant, and the last normal room leads to the boss.
  */
-export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true, fountainOk = true): number {
+export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true, fountainOk = true, shrineOk = true, crystal = false): number {
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
@@ -151,16 +152,19 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   const used = new Set<RoomType>();
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([
-      ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? 9 : 0], ['TREASURE', 9], ['SHRINE', next >= 2 ? 9 : 0],
+      ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? 9 : 0], ['TREASURE', 9], ['SHRINE', next >= 2 && shrineOk ? 9 : 0],
       ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0], ['MERCHANT', next >= 2 && merchantOk ? 8 : 0],
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
     if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT')); continue; }
     if (t === 'MERCHANT') merchantOk = false;   // at most one merchant / fountain door per set (and per biome, see director)
     if (t === 'FOUNTAIN') fountainOk = false;
+    if (t === 'SHRINE') shrineOk = false;   // one optional challenge per set (and per biome, see director)
     used.add(t);
     out.push(plan(t));
   }
+  // this biome's crystal cavern (50% of biomes, director picks the room): an extra door, or replaces the last one
+  if (crystal) { if (out.length >= 3) out.pop(); out.push({ type: 'CRYSTAL', reward: 'NONE' }); }
   return out.length;
 }
 

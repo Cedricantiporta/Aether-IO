@@ -18,7 +18,7 @@ import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { DIFFICULTY_MODS } from '../../constants';
 import {
-  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, type BiomeDef,
+  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
@@ -37,7 +37,6 @@ const BOSS_GRACE = 2.5;        // after the boss falls, before its rewards drop
 const REWARD_DELAY = 0.7;      // after the last kill, before the room reward appears
 const VACUUM_AFTER = 1.4;      // loot left on the floor flies to the hero this long after the clear
 const PORTAL_ARM = 0.9;        // seconds a portal must be open before walking in works
-const PORTAL_R = 1.7;
 const MAX_UNITS = 72;
 
 // ------------------------------------------------------------ module state ---
@@ -87,7 +86,8 @@ const dd = () => world.director;
 const rm = () => world.room;
 
 /** Biome in which a merchant door was already offered (-1 = none this run). */
-let merchantBiome = -1, fountainBiome = -1;
+let merchantBiome = -1, fountainBiome = -1, shrineBiome = -1;
+let crystalAt = -1;   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
   const d = world.director;
@@ -107,16 +107,16 @@ export function resetDirector(): void {
 // ------------------------------------------------------------ run control ---
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
-  biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1;
+  biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   world.room.fade = 1;
   enterRoom(0, 0, firstPlan());
 }
 
 /** Debug: jump straight to biome `b`, room `idx` of type `type` (boss rooms use debug.bossOverride if set). Run must be in progress. */
 export function debugJump(b: number, idx: number, type: RoomType): void {
-  merchantBiome = -1; fountainBiome = -1;
+  merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   world.room.fade = 1;
-  enterRoom(b, idx, { type, reward: type === 'BOSS' || type === 'FOUNTAIN' || type === 'MERCHANT' ? 'NONE' : 'CARD' });
+  enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' ? 'CARD' : 'NONE' });
 }
 
 /** After a boss: continue into the next biome (harder, same hero). */
@@ -154,6 +154,7 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
+  if (idx === 0) crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   biome = b; index = idx; plan = p;
   depth = depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' ? 1 : 0);
   const d = world.director, r = world.room;
@@ -192,6 +193,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: biomeOf(b).name });
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
+  if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
 }
 
 function beginLeave(p: RoomPlan, nb: number, ni: number): void {
@@ -473,7 +475,8 @@ function bossRewards(): void {
 // ------------------------------------------------------------ clearing ------
 function openPortals(): void {
   const r = world.room;
-  const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome);
+  const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome, shrineBiome !== biome, index + 1 === crystalAt);
+  if (choices.some((c) => c.type === 'SHRINE')) shrineBiome = biome;       // the optional challenge: once per biome
   if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
   if (choices.some((c) => c.type === 'FOUNTAIN')) fountainBiome = biome;   // ...and so does a fountain
   for (let i = 0; i < r.portals.length; i++) {
@@ -577,6 +580,10 @@ function scanNearby(): void {
         if (dist < 36) { const l = portalLabel(po.plan, biome); pushNearby('Enter', `${l.title} · ${l.sub}`, i, dist); }
       }
     }
+    if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
+      const po = r.portals[0];
+      if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', `Next biome · ${biomeOf(biome + 1).name}`, 20, dist); }
+    }
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
       const dist = q(s.x, s.z);
@@ -597,7 +604,12 @@ export function interactRoom(it: Interactable): void {
   if (st.status !== GameStatus.PLAYING) return;
   if (it.node >= 0 && it.node < 3) {
     const po = r.portals[it.node];
-    if (po.active && d.phase === 'CLEARED') beginLeave(po.plan, biome, index + 1);
+    if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) beginLeave(po.plan, biome, index + 1);
+    return;
+  }
+  if (it.node === 20) {
+    const po = r.portals[0];
+    if (po.active && po.big && d.phase === 'BIOME_DONE') { po.active = false; po.big = false; descend(); }
     return;
   }
   const s = r.station;
@@ -662,18 +674,11 @@ export function updateDirector(dt: number): void {
       events.emit('portalsOpen', {});
     } else if (po.active && po.big) {
       po.t += dt;
-      const RR = PORTAL_R * 2;
-      if (po.t >= PORTAL_ARM + 0.6 && r.fade < 0.3 && pl.alive && (po.x - pl.pos.x) ** 2 + (po.z - pl.pos.z) ** 2 < RR * RR) { po.active = false; po.big = false; descend(); }
+      void pl;   // entered with E (scanNearby / interactRoom), never by touching
     }
   }
   if (d.phase === 'CLEARED') {
-    const pl = world.player;
-    for (let i = 0; i < r.portals.length; i++) {
-      const po = r.portals[i];
-      if (!po.active) continue;
-      po.t += dt;
-      if (po.t >= PORTAL_ARM && r.fade < 0.3 && pl.alive && st.status === GameStatus.PLAYING && (po.x - pl.pos.x) ** 2 + (po.z - pl.pos.z) ** 2 < PORTAL_R * PORTAL_R) { beginLeave(po.plan, biome, index + 1); break; }
-    }
+    for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active) po.t += dt; }   // portals are entered with E
   }
 
   scanNearby();

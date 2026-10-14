@@ -137,9 +137,10 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   // ---- breakable crates (decor + a little loot); none in boss arenas
   const crateList: { kind: CrateKind; x: number; z: number }[] = [];
   if (!boss) {
-    const want = type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
+    const cave = type === 'CRYSTAL';   // crystal cavern: a field of harvestable crystals (+ some ore), nothing else
+    const want = cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
-      const kind = def.crates[Math.floor(rnd() * def.crates.length)];
+      const kind: CrateKind = cave ? (rnd() < 0.72 ? 'CRYSTAL' : 'ORE') : def.crates[Math.floor(rnd() * def.crates.length)];
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (!insideShape(x, z, 3)) continue;
@@ -156,7 +157,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   commitCrates(crateList, rnd);
 
   // ---- permanent environmental hazards (swamp puddles, ember gas vents)
-  if (def.hazard && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT') {
+  if (def.hazard && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
     const hz: { x: number; z: number; r: number }[] = [];
     const n = Math.round(rand(1, 2.4));
     for (let t = 0; t < 60 && hz.length < n; t++) {

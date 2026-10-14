@@ -272,7 +272,7 @@ function Effects({ cls }: { cls: HeroClass }) {
     prevTitle.current = ui.titleDone;
     const V = world.village, onTitle = !ui.titleDone || ui.charSelect;
     if (V.spawnFx > 0 && !onTitle) V.spawnFx = Math.max(0, V.spawnFx - dt / 3.2);
-    const sf = onTitle ? 0 : V.spawnFx;
+    const sf = onTitle || status !== GameStatus.MENU ? 0 : V.spawnFx;   // town only
     if (arrive.current) {
       arrive.current.visible = arriveIn.current.visible = sf > 0;
       if (sf > 0) {

@@ -18,6 +18,7 @@ function subText(): string {
   if (d.phase === 'CLEARED') {
     if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
     if (t === 'TREASURE' && r.station.kind === 'CHEST' && !r.station.used) return 'Open the chest, then pick an exit';
+    if (t === 'CRYSTAL') return 'Harvest the crystals, then press E at an exit';
     if (t === 'SHRINE' && !r.shrineOn && !r.station.used) return 'Touch the altar for a challenge, or leave';
     return 'Room cleared - pick an exit';
   }
