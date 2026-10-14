@@ -248,3 +248,23 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - No contact damage. A monster in reach winds up a basic strike (`meleeT`, 0.42 s, flashes in render/Enemies.tsx), lunges 0.35, and hits
   only if the hero is still within reach + 0.7. 1.1 s between strikes. Skill moves (state ATTACK: boar/brute charges, zombie grab,
   bandit dash, wraith lunge) still hit on contact (×2).
+
+### Main story chain, tutorial hints, quest colours, gate routing, skill lock
+- `story.ts` holds the chain: Garrick (gate guard) → King Aldric → kill 10 Slimes → report to the King → defeat Malakar.
+  - The profile field is `story {step,p}`. A new profile starts at 0; old saves without the field jump to step 4, or past it if the ending
+    was already seen.
+  - The store action `setStory(step, p)` posts a "Main quest: ..." notification.
+  - `engine/systems/storyLogic.ts`: `storyTalk(npc)` (dialogue.ts calls it first, so the step NPC's lines replace ambient talk and the step
+    advances), kill counting on `enemyDeath`, `gameEnding` finishes the Lich step, and `storyTarget()`.
+- New game: the hero spawns outside the gate (0, GATE.z+9) facing the town. The gate shows "Sealed" and refuses to open until step 2
+  (`gateOpen`).
+- Tracker:
+  - The main quest row (`.qt-row.main`) is gold, at the top, and click → `walkToMain()`.
+  - Quest-board rows (`.board`) are bluish; NPC side quests are teal.
+- The guide arrow (gold) and the gate light column + ring follow `storyTarget()`: the step NPC, or the castle door when that NPC is inside.
+  Field steps fall back to the old logic / the gate.
+- Routing: `buildRoute` crosses the gate properly forecourt ↔ town (gate waypoints z1+5 / z1-4). Waypoint buffer is now 16 points.
+- Tutorial (`engine/systems/tutorial.ts` + `ui/hud/TutorialHint.tsx`, flags in localStorage `aether-survivor-tutorial-v1`): "Hold E to harvest"
+  near a node, "Press 1" on the first run, then "Ultimate charged, press R". The first trial run starts with a full ult.
+- Skills: a 0.55 s global lock after any skill / ult cast (`gcdUntil` in abilities.ts gate()). Auto-aim always re-picks the closest enemy,
+  with 1.5 u hysteresis.

@@ -229,7 +229,7 @@ export function updatePlayer(dt: number): void {
     if (p.mpPotCd <= 0 && p.mana < stats.maxMana * 0.3) usePotion(false);
   }
 
-  // ---- auto-target: lock the nearest enemy, keep the lock while it stays alive and in range (sticky)
+  // ---- auto-target: the clicked lock, else the closest enemy
   {
     const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const keep = cur && cur.active && cur.state !== 'DYING' && cur.state !== 'SPAWN'
@@ -240,9 +240,15 @@ export function updatePlayer(dt: number): void {
     void lr;
     if (lk) autoAim.id = lk.id;   // a clicked target always wins (the hero walks to it when out of range)
     else if (st.settings.autoAim === false) autoAim.id = -1;
-    else if (!keep || (lk && cur === lk)) { // (lock fell out of weapon range: re-pick the nearest)
+    else {
+      // always the closest enemy; a current target is only dropped for one clearly closer (1.5 u), so it doesn't flicker
       const e = findNearestEnemy(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
-      autoAim.id = e ? e.id : -1;
+      if (!e) autoAim.id = -1;
+      else if (!keep || !cur) autoAim.id = e.id;
+      else if (e !== cur) {
+        const dc = Math.hypot(cur.pos.x - p.pos.x, cur.pos.z - p.pos.z), de = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
+        if (de + 1.5 < dc) autoAim.id = e.id;
+      }
     }
   }
   const dir = getAimDir(aim);

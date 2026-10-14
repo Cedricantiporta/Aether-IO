@@ -4,6 +4,8 @@
 // to, the town gate), hold E near a crystal / ore node outside the gate (they regrow 24 h after the last one is harvested). NPC behaviour lives
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
+import { storyTarget } from './storyLogic';
+import { gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
@@ -88,7 +90,7 @@ function scanNearby(): void {
     d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
     for (const s of SHOP_POSITIONS) { d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d); }
-    d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', 'Set out', 'Town Gate', '', -1, d, 'gate');
+    d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Town Gate', '', -1, d, 'gate');
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
   }
@@ -109,7 +111,10 @@ export function interact(it: Interactable): void {
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'leave') v.pending = 'LEAVE';
     else if (it.act === 'npc') openDialogue(it.node);
-    else if (it.act === 'gate') events.emit('openSetOut', { mode: 'ADVENTURE' });   // adventure (+ Ascension)
+    else if (it.act === 'gate') {   // adventure (+ Ascension); sealed until the King's first task (main story)
+      if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
+      else events.emit('openSetOut', { mode: 'ADVENTURE' });
+    }
     else if (it.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });      // the Endless Tower building
     else if (it.shop) st.openSpecificShop(it.shop);
     return;
@@ -138,9 +143,21 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
   const push = (x: number, z: number) => { if (n > 0 && Math.hypot(out[n * 2 - 2] - x, out[n * 2 - 1] - z) < 0.8) return; out[n * 2] = x; out[n * 2 + 1] = z; n++; };
   // the hermit lives outside the north wall: out through the gate, round the east side, along the back of the wall
   const outN = (z: number, x: number) => z < WALL.z0 - 1.5 || x > WALL.x1 + 1.5;
+  const outS = (z: number, x: number) => z > WALL.z1 + 1.2 && !outN(z, x);   // the forecourt south of the gate
   if (world.village.area === 'TOWN' && outN(tz, tx) && !outN(fz, fx)) {
-    n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
+    if (!outS(fz, fx)) n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
     push(0, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z0 - 9); push(tx, tz);
+    return n;
+  }
+  // through the gate: forecourt -> town, or town -> forecourt (never straight into the wall)
+  if (world.village.area === 'TOWN' && outS(fz, fx) !== outS(tz, tx) && !outN(fz, fx) && !outN(tz, tx)) {
+    if (outS(fz, fx)) {
+      push(GATE.x, WALL.z1 + 5); push(GATE.x, WALL.z1 - 4);
+      const k = buildRoute(GATE.x, WALL.z1 - 4, tx, tz, out.subarray(n * 2));
+      return n + k;
+    }
+    n = buildRoute(fx, fz, GATE.x, WALL.z1 - 4, out);
+    push(GATE.x, WALL.z1 + 5); push(tx, tz);
     return n;
   }
   if (Math.hypot(tx - fx, tz - fz) > 9 && world.village.area === 'TOWN') {
@@ -182,6 +199,19 @@ export function walkToQuest(q: Quest): void {
   if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT') && !castle) { const s = SHOP_POSITIONS.find((x) => x.type === 'SUPPLIES')!; walkTo(s.position[0] + 1.2, s.position[2] + 5.2, 'shop', 'SUPPLIES'); return; }
   if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
+}
+/** Main story row click: the step's NPC (through the castle door / exit when it is in the other area), else the gate. */
+export function walkToMain(): void {
+  const t = storyTarget(), castle = world.village.area === 'CASTLE';
+  if (!t) return;
+  if (t.npc >= 0) {
+    const inCastle = t.area === 'CASTLE';
+    if (inCastle === castle) { walkTo(npcs[t.npc].x, npcs[t.npc].z + 1.8, 'npc', '', 2.4, t.npc); return; }
+    if (inCastle) { walkTo(CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 'castle', '', 2.4); return; }
+    walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return;
+  }
+  if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
+  else walkTo(GATE.x, GATE.z - 1, 'none', '', 2.2);
 }
 /** NPC story quest row click: ready -> the NPC who takes it in; talk objective -> that NPC; otherwise out through the gate. */
 export function walkToNpcQuest(name: string | null): void {

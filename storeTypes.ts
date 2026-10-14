@@ -114,7 +114,8 @@ export interface GameState {
   inventory: Item[];
   maxInventorySlots: number;
   tech: import('./tech').TechLevels;                 // Tech House upgrade levels
-  summonPity: import('./store').SummonPity;          // draws so far per summon altar (pity counters)
+  summonPity: import('./store').SummonPity;
+  story: import('./story').StorySave;                // main story chain step + progress          // draws so far per summon altar (pity counters)
   progress: RunProgress;                            // endings cleared, ascension unlocked / chosen, endless tower best floor per class
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
@@ -183,7 +184,8 @@ export interface GameState {
   setAscension: (lv: number) => void;
   completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
   recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero
-  buyTech: (id: import('./tech').TechId) => boolean;   // Tech House: buy the next level of an upgrade
+  buyTech: (id: import('./tech').TechId) => boolean;
+  setStory: (step: number, p?: number) => void;       // main story: move to `step` (progress `p`)   // Tech House: buy the next level of an upgrade
   moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
   deleteItems: (ids: string[]) => void;              // bag: permanently destroy items (multi-select delete)
   reorderItems: (list: 'inventory' | 'warehouse', items: Item[]) => void;   // manual order (drag within the bag / warehouse, Sort)

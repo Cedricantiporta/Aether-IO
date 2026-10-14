@@ -1577,3 +1577,19 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .target-frame.bare .tf-bot { min-height: 0; justify-content: center; }
 .target-frame.bare .tf-icons { flex: 0; }
 .target-frame.bare .tf-val { font-size: 10px; }
+/* main story quest: subtle gold; quest-board (optional) quests: bluish; NPC side quests: soft teal */
+.qt-row.main { background: linear-gradient(270deg, rgba(40, 30, 10, .92), rgba(10, 8, 4, .78)); box-shadow: inset -3px 0 0 #f1d58e, 0 0 0 1px rgba(241, 213, 142, .45), 0 0 16px rgba(241, 196, 90, .2); }
+.qt-row.main .qt-head { color: #f1d58e; }
+.qt-row.main .qt-title { color: #fff1c8; }
+.qt-row.main .qt-bar i { background: linear-gradient(90deg, #a07a2a, #f6dc8e); box-shadow: 0 0 5px rgba(246, 220, 142, .6); }
+.qt-row.board:not(.done):not(.king) { box-shadow: inset -2px 0 0 #6fa8ff, 0 0 0 1px rgba(111, 168, 255, .35), 0 0 12px rgba(111, 168, 255, .12); }
+.qt-row.board:not(.done):not(.king) .qt-head { color: #9cc3ff; }
+.qt-row.board:not(.done) .qt-bar i { background: linear-gradient(90deg, #3f6fb8, #9cc3ff); }
+.qt-row.npc:not(.done) { box-shadow: inset -2px 0 0 #5fd0c0, 0 0 0 1px rgba(95, 208, 192, .32), 0 0 12px rgba(95, 208, 192, .1); }
+.qt-row.npc:not(.done) .qt-head { color: #8fe6da; }
+.qt-row.npc:not(.done) .qt-bar i { background: linear-gradient(90deg, #2f8f84, #8fe6da); }
+.tut-hint { position: absolute; left: 50%; bottom: 24%; transform: translateX(-50%); z-index: 70; pointer-events: none; white-space: pre; transition: opacity .3s;
+  font-family: var(--font-title); font-size: 1.15rem; letter-spacing: .06em; color: #fff3c8; padding: .45rem 1.2rem;
+  background: linear-gradient(90deg, transparent, rgba(10, 8, 4, .78) 18%, rgba(10, 8, 4, .78) 82%, transparent);
+  text-shadow: 0 2px 4px #000; animation: tutPulse 1.6s ease-in-out infinite; }
+@keyframes tutPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }

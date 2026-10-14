@@ -112,12 +112,17 @@ function gate(slot: ActiveSlot): boolean {
   const p = world.player;
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
   if (abilityState.leapT > 0) return false;
+  if (world.time < gcdUntil) return false;   // global skill lock: one skill at a time
   const cost = st.getManaCost(slot);
   if (!trySpendMana(cost)) { notifyNoMana(); return false; }
   const cd = abilityCd(st.hero, slot, st.skillLevels[slot]) * (1 - st.stats.cooldownReduction);
   p.cd[slot] = cd; p.cdMax[slot] = cd;
+  gcdUntil = world.time + GCD;
   return true;
 }
+/** Shared lock after any skill / ultimate cast, so skills can't all be fired in the same instant. */
+const GCD = 0.55;
+let gcdUntil = 0;
 
 let curMul = 1;
 /** Base damage unit of an active (before its per-skill multiplier). */
@@ -553,6 +558,8 @@ export function castUlt(): void {
   const a = abilityState;
   if (!p.alive || p.ultT > 0 || a.ultKind !== 0 || a.windupT > 0) return;
   if (p.ult < ULT_MAX - 0.001 || a.ultCd > 0) { notifyCooldown('r'); return; }
+  if (world.time < gcdUntil) return;
+  gcdUntil = world.time + GCD;
   p.ult = 0;
   a.ultCd = ULT_COOLDOWN * (1 - Math.min(0.75, st.stats.cooldownReduction || 0));
   // combo: an ult cast with a 50+ hit chain is a FINISHER (+50%, refunds 25% charge)

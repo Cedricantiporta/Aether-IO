@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { NPCS } from '../townData';
 import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
+import { storyTalk } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
 
 /** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
@@ -51,6 +52,13 @@ export function openDialogue(npc: number): void {
   if (d.quest && useGameStore.getState().quests.some(questDone)) lines.push('Oh! One of your bounties is complete. Hurry to the Quest Board and claim your reward!');
   // NPC story quests (npcQuests.ts): a turn-in / offer / reminder replaces the ambient talk (the gift line stays, first)
   talkedTo(d.name);
+  // main story: the step's NPC tells its part (replaces the ambient talk) and the chain moves on
+  const story = storyTalk(d.name);
+  if (story) {
+    useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines: story, idx: 0, offer: '', turnIn: '' });
+    onLine(npc, 0);
+    return;
+  }
   const nq = questDialogueFor(d.name);
   let offer = '', turnIn = '';
   if (nq) {

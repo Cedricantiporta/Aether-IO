@@ -1,6 +1,7 @@
 // Ground arrow beside the hero in the town hub. Points at the current quest objective in town (claim at the Quest Board,
 // talk to / report to the King, sell loot at the Potion Shop); otherwise at the town gate. Inside the castle it points at
 // the King (royal quest) or the exit (quest ready to claim).
+import { storyTarget } from '../engine/systems/storyLogic';
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { ConeGeometry, Color, Mesh, MeshBasicMaterial } from 'three';
@@ -26,6 +27,15 @@ function pickTarget(): boolean {
   const king = qs.some(questNeedsKing), claim = qs.some(questDone);
   const sell = qs.some((q) => q.accepted && q.type === 'SELL_LOOT' && q.progress < q.target) && st.inventory.some((i) => i.type === 'LOOT');
   tgt.quest = true; tgt.hideR = 4.5;
+  // the main story comes first when it waits on someone to talk to (gold arrow); field steps fall through to the gate
+  const ms = storyTarget();
+  if (ms && ms.npc >= 0) {
+    tgt.quest = false;
+    if ((ms.area === 'CASTLE') === castle) { tgt.x = npcs[ms.npc].x; tgt.z = npcs[ms.npc].z; }
+    else if (castle) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; }
+    else { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; }
+    return true;
+  }
   // an NPC story quest ready to turn in (lowest priority of the quest targets)
   const mk = npcMarkers();
   let npcI = -1;

@@ -1,10 +1,11 @@
 // Active quest tracker (Korean-MMO style): right side, under the menu icons. Shows accepted quests with progress;
 // finished ones glow "Ready to claim" (claim at the Quest Board).
 import React from 'react';
-import { ScrollText, BookOpen } from 'lucide-react';
+import { ScrollText, BookOpen, Crown } from 'lucide-react';
+import { STORY } from '../../story';
 import { useGameStore } from '../../store';
 import { activeQuests, questDone, questNeedsKing, questTitle } from '../../quests';
-import { walkToQuest, walkToNpcQuest } from '../../engine/systems/village';
+import { walkToQuest, walkToNpcQuest, walkToMain } from '../../engine/systems/village';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn } from '../../npcQuests';
 
 export const QuestTracker: React.FC = () => {
@@ -13,13 +14,24 @@ export const QuestTracker: React.FC = () => {
   // NPC story quests (blue book icon): accepted, not yet handed in
   const nq = useGameStore((s) => s.npcQuests), inv = useGameStore((s) => s.inventory);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
-  if (act.length === 0 && story.length === 0) return null;
+  const ms = useGameStore((s) => s.story), main = STORY[ms.step];
+  if (act.length === 0 && story.length === 0 && !main) return null;
   return (
     <div className="qt pe" data-testid="quest-tracker">
+      {main && (
+        <div className="qt-row main" data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={walkToMain}>
+          <div className="qt-head"><Crown size={13} /><span>Main Quest</span></div>
+          <div className="qt-title">{main.title}</div>
+          {main.kill
+            ? <div className="qt-line"><span className="qt-bar"><i style={{ width: `${Math.min(1, ms.p / main.kill.count) * 100}%` }} /></span><b>{Math.min(ms.p, main.kill.count)} / {main.kill.count}</b></div>
+            : null}
+          <div className="qt-line"><b style={{ fontWeight: 500, opacity: 0.85 }}>{main.line}</b></div>
+        </div>
+      )}
       {act.map((q) => {
         const done = questDone(q), king = questNeedsKing(q), f = Math.min(1, q.progress / Math.max(1, q.target));
         return (
-          <div key={q.id} className={`qt-row ${done ? 'done' : ''} ${king ? 'king' : ''}`} role="button" title="Click: auto-path" onClick={() => walkToQuest(q)}>
+          <div key={q.id} className={`qt-row board ${done ? 'done' : ''} ${king ? 'king' : ''}`} role="button" title="Click: auto-path" onClick={() => walkToQuest(q)}>
             <div className="qt-head"><ScrollText size={13} /><span>{done ? 'Ready to claim' : king ? (q.type === 'AUDIENCE' ? 'Talk to the King' : 'Report to the King') : 'Quest'}</span></div>
             <div className="qt-title">{questTitle(q)}</div>
             {q.type === 'AUDIENCE'

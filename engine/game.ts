@@ -1,5 +1,5 @@
 import { CAM_PITCH0 } from './world';
-import { PLAZA } from './townData';
+import { PLAZA, GATE } from './townData';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
 // No React in here. Called from the store (start/stop) and render/Scene (update).
@@ -141,9 +141,15 @@ export function enterVillage(): void {
   generateMap();
   placeVillageNodes();
   resetSystems();
-  world.player.pos.set(PLAZA.x, 0, PLAZA.z);
-  world.player.facing = 0;                       // face south, towards the town gate
-  world.camera.yaw = Math.PI;                    // camera behind the hero, looking at the entrance
+  if (useGameStore.getState().story.step === 0) {   // new game: the recruit arrives outside the town gate, facing it
+    world.player.pos.set(GATE.x, 0, GATE.z + 9);
+    world.player.facing = Math.PI;
+    world.camera.yaw = 0;
+  } else {
+    world.player.pos.set(PLAZA.x, 0, PLAZA.z);
+    world.player.facing = 0;                       // face south, towards the town gate
+    world.camera.yaw = Math.PI;                    // camera behind the hero, looking at the entrance
+  }
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
   world.village.spawnFx = 1;                     // arrival light pillar on the hero
   useGameStore.getState().rollShopSales();

@@ -31,6 +31,7 @@ import { CharacterSheet } from './panels/CharacterSheet';
 import { ShopPanel } from './panels/ShopPanel';
 import { SummonWindow } from './panels/SummonWindow';
 import { TechWindow } from './panels/shop/Tech';
+import { TutorialHint } from './hud/TutorialHint';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
 
@@ -64,6 +65,7 @@ export const GameUI: React.FC = () => {
       {(inGame || village) && device.touch && <TouchControls />}
       {village && <SpeechBubbles />}
       {(village || inGame) && <InteractPrompt />}
+      {(village || inGame) && <TutorialHint />}
       {village && <Dialogue />}
       {village && <TownFade />}
       <AnimatePresence>
