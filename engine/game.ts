@@ -1,3 +1,4 @@
+import { CAM_PITCH0 } from './world';
 import { PLAZA } from './townData';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
@@ -142,6 +143,7 @@ export function enterVillage(): void {
   world.player.pos.set(PLAZA.x, 0, PLAZA.z);
   world.player.facing = 0;                       // face south, towards the town gate
   world.camera.yaw = Math.PI;                    // camera behind the hero, looking at the entrance
+  world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
   useGameStore.getState().rollShopSales();
   villageReady = true;
   events.emit('runEnd', {});
@@ -153,7 +155,7 @@ export function startRun(): void {
   world.enemyGrid.clear();
   resetSystems();
   events.emit('runStart', {});
-  world.camera.yaw = 0;
+  world.camera.yaw = 0; world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;
   startRunRooms();
 }
 

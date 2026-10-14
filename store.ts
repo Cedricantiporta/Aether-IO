@@ -331,6 +331,7 @@ interface Profile {
   starterGiven: Record<HeroClass, boolean>;
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
+  zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -407,7 +408,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
-              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) },
+              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' ? p.hero : f.hero,
               difficulty: p.difficulty && DIFFICULTIES.includes(p.difficulty) ? p.difficulty : 'NORMAL',
@@ -438,7 +439,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true,
+      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
