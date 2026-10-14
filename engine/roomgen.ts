@@ -38,13 +38,16 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
   return 'PLAIN';
 }
 
+/** Boss arena radius per biome (Gorath 30 ... the Void Herald / Malakar 42). */
+const BOSS_ARENA_R = [30, 33, 35, 37, 40, 42];
+
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger; BIG stages ~1.4x. */
 export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): number {
   const r = mulberry32(seed ^ 0x9e3779b9)();
   if (runInfo.mode === 'TOWER') return type === 'BOSS' ? 29 : 26;   // tower floors: one semi-big round arena
   let R: number;
   switch (type) {
-    case 'BOSS': return 30;
+    case 'BOSS': return BOSS_ARENA_R[biome % BOSS_ARENA_R.length];   // later bosses fight in bigger arenas
     case 'FOUNTAIN': case 'MERCHANT': case 'SHRINE': R = 19 + r * 3; break;
     case 'CAMP': return 23;
     case 'TREASURE': R = 22 + r * 3; break;
@@ -194,13 +197,22 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const big = layout === 'BIG';
   const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14) * (big ? 1.7 : 1)) : 5;
   if (tower) { /* open floor */ } else if (boss) {
-    // a ring of pillars at mid radius; everything else stays open for the dance
+    // each biome's boss arena has its own pillar plan (everything else stays open for the dance):
+    // rings of [count, radius fraction, angle offset, size]
     const k = pickKind(interior.filter((o) => SPEC[o]?.blocks) as ObstacleKind[]);
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + 0.3;
-      const sp = SPEC[k] ?? SPEC.ROCK;
-      const s = rand(sp.s[0], sp.s[1]);
-      add(k, Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62, sp.r(rnd, s), s, sp.blocks, true, k === 'LOWWALL' ? Math.atan2(Math.sin(a), Math.cos(a)) : rnd() * Math.PI * 2);
+    const PLANS: [number, number, number, number][][] = [
+      [[6, 0.62, 0.3, 1]],                              // Greenwood: one ring
+      [[10, 0.72, 0, 0.9]],                             // Marble Halls: a colonnade circle
+      [[4, 0.45, 0.785, 1.3], [8, 0.8, 0, 0.9]],        // Desert: four great obelisks inside a broken ring
+      [[3, 0.35, 0.5, 1.1], [9, 0.74, 0.2, 1]],         // Frost: an inner triangle of ice and an outer ring
+      [[5, 0.5, 0, 1.1], [5, 0.82, 0.628, 1.2]],        // Ember: two staggered pentagons
+      [[8, 0.42, 0.2, 0.8], [12, 0.84, 0, 0.8]],        // Void: two thin rings (the widest floor)
+    ];
+    const sp = SPEC[k] ?? SPEC.ROCK;
+    for (const [n, fr, off, sz] of PLANS[(biome | 0) % PLANS.length]) for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + off;
+      const s = rand(sp.s[0], sp.s[1]) * sz;
+      add(k, Math.cos(a) * R * fr, Math.sin(a) * R * fr, sp.r(rnd, s), s, sp.blocks, true, k === 'LOWWALL' ? Math.atan2(Math.sin(a), Math.cos(a)) : rnd() * Math.PI * 2);
     }
   } else {
     // marble halls: colonnades along the hall (most fight rooms)
