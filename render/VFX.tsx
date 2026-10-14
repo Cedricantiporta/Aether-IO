@@ -248,7 +248,7 @@ export function VFX() {
       const p = e.pos;
       switch (e.kind) {
         case 'ARROW': case 'RAIN_ARROW': case 'PIERCING_ARROW':
-          sparks(p.x, p.y, p.z, 4, e.kind === 'PIERCING_ARROW' ? 0x7af0ff : 0xffe8b0, 5, 0.2, 0.25, 1.5); chunks(p.x, p.y, p.z, 2, 0x8a5a2a, 0xb88a50, 3, 0.14); break;
+          sparks(p.x, p.y, p.z, 4, e.kind === 'PIERCING_ARROW' ? 0xffffff : 0xffe8b0, 5, 0.2, 0.25, 1.5); chunks(p.x, p.y, p.z, 2, 0x8a5a2a, 0xb88a50, 3, 0.14); break;
         case 'BURNING_ARROW': sparks(p.x, p.y, p.z, 7, 0xff7a1a, 6, 0.25, 0.4, 1.8); embers(p.x, p.y, p.z, 4); break;
         case 'FREEZING_ARROW': sparks(p.x, p.y, p.z, 7, 0x9fe4ff, 6, 0.25, 0.4, 1.8); chunks(p.x, p.y, p.z, 3, 0xbfeaff, 0x7fd0ff, 4, 0.18); break;
         case 'MAGIC': case 'PET_BOLT': case 'STORM':
@@ -355,7 +355,7 @@ export function VFX() {
     }));
     off.push(on('ability', (e) => {
       const p = e.pos;
-      const hex = e.name === 'GALE_ARROW' ? 0x7affc8 : e.name === 'SHADOW_ROLL' ? 0xc0e0a0 : e.name === 'FAN_FLAMES' ? 0xff7a2a : e.name === 'FROST_FIELD' ? 0x8fe4ff : e.name === 'SINGULARITY' ? 0xa050ff : e.name === 'BLINK_NOVA' ? 0x9fe4ff : e.name === 'STORM_ORBS' ? 0x9ab8ff : e.name === 'CHAIN_FROST' ? 0x7fe4ff : e.name === 'BLOODRAGE_LEAP' ? 0xff3a2a : e.name === 'WHIRLWIND' ? 0xffc070 : e.name === 'EARTHSPLITTER' ? 0xc9a070 : e.name === 'BATTLE_CRY' ? 0xff8a3a : e.name === 'RAGE' ? 0xff3a2a : e.name === 'SPRINT' ? 0xaaff80 : e.name === 'EARTHWALL' ? 0xc9a070 : e.name === 'VITALITY' ? 0x7aff9a : e.name === 'GRAVITY_SPELL' ? 0xa050ff : e.name === 'FIREBALL' ? 0xff8a2a : e.name === 'PIERCING_SHOT' ? 0x7af0ff : 0xffe08a;
+      const hex = e.name === 'GALE_ARROW' ? 0x7affc8 : e.name === 'SHADOW_ROLL' ? 0xc0e0a0 : e.name === 'FAN_FLAMES' ? 0xff7a2a : e.name === 'LIGHT_ARROW' ? 0xffffff : e.name === 'FROST_FIELD' ? 0x8fe4ff : e.name === 'SINGULARITY' ? 0xa050ff : e.name === 'BLINK_NOVA' ? 0x9fe4ff : e.name === 'STORM_ORBS' ? 0x9ab8ff : e.name === 'CHAIN_FROST' ? 0x7fe4ff : e.name === 'BLOODRAGE_LEAP' ? 0xff3a2a : e.name === 'WHIRLWIND' ? 0xffc070 : e.name === 'EARTHSPLITTER' ? 0xc9a070 : e.name === 'BATTLE_CRY' ? 0xff8a3a : e.name === 'RAGE' ? 0xff3a2a : e.name === 'SPRINT' ? 0xaaff80 : e.name === 'EARTHWALL' ? 0xc9a070 : e.name === 'VITALITY' ? 0x7aff9a : e.name === 'GRAVITY_SPELL' ? 0xa050ff : e.name === 'FIREBALL' ? 0xff8a2a : e.name === 'PIERCING_SHOT' ? 0x7af0ff : 0xffe08a;
       ringBurst(p.x, 0.25, p.z, hex, 0.4, 3.2, 0.5, 1.6);
       sparks(p.x, 1.1, p.z, 12, hex, 8, 0.26, 0.45, 1.8);
       if (e.name === 'EARTHWALL') { dustPuff(p.x, p.z, 8, 1.3, 0xb8a078, 4); }

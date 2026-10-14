@@ -322,8 +322,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   if (hero === 'ARCHER') {
     if (slot === 'q') {
       const w = (1 + stats.galeWidth) * (1 + 0.1 * (lv - 1));
-      const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 55, b * 6,
-        { life: 1.5, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
+      const pr = spawnProjectile('GALE_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 34, b * 6,
+        { life: 2.4, pierce: Infinity, knockback: 0.4, radius: 3.0 * w, y: 1.5, effect: { type: 'ARMOR_BREAK', duration: 6 } });
       if (pr) { pr.state = 0; pr.procLv = 0; pr.spin = w; pr.trailT = 0; pr.homing = 0; pr.aoeRadius = 0; pr.bounces = 3 + lv; }
       announce('GALE_ARROW');
     } else if (slot === 'e') {
@@ -345,17 +345,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       }
       announce('SHADOW_ROLL');
     } else if (slot === 's3') {
-      const n = Math.min(7, 5 + Math.floor((lv - 1) / 2));
-      const spread = 0.305; // half-angle: ~35 degree cone
-      for (let i = 0; i < n; i++) {
-        const a = (i / (n - 1) - 0.5) * 2 * spread;
-        const c = Math.cos(a), s = Math.sin(a);
-        const vx = dx * c - dz * s, vz = dx * s + dz * c;
-        const pr = spawnProjectile('BURNING_ARROW', p.pos.x + vx, p.pos.z + vz, vx, vz, 30, b * 1.87,
-          { life: 0.76, pierce: 3, radius: 2.0, knockback: 0.4, effect: { type: 'BURN', duration: 4, value: b * 0.3 } });
-        if (pr) { pr.state = 2; pr.trailT = Math.random() * 0.1; }
-      }
-      announce('FAN_FLAMES');
+      // LIGHTPIERCER: one very fast white arrow, pierces the whole line, pure damage
+      spawnProjectile('PIERCING_ARROW', p.pos.x + dx, p.pos.z + dz, dx, dz, 110, b * 7.5,
+        { life: 0.75, pierce: Infinity, radius: 1.5, knockback: 0.15, y: 1.3 });
+      announce('LIGHT_ARROW');
     } else {
       const R = 7.5 + 0.5 * (lv - 1);
       const baseAng = Math.atan2(dz, dx);
@@ -614,7 +607,7 @@ function releaseUlt(): void {
   p.anim.castT = 1;
   if (st.hero === 'ARCHER') {
     a.ultKind = 1;
-    p.ultT = 0.3 + 4.5 + st.stats.hawkBonus + 0.5;
+    p.ultT = 0.3 + (4.5 + st.stats.hawkBonus) * 0.6 + 0.5;
     a.tintRgb = [0.02, 0.03, 0.14]; a.tintTarget = 0;
     slowMo(0.8, 0.3); fovKick(0.5);
     aimPoint(28, 6, tgt);
@@ -711,7 +704,7 @@ function updateUlt(dt: number): void {
 
   if (a.ultKind === 1) {
     // phase 0 intro (0.3s), phase 1 rain, phase 2 finale
-    const dur = 4.5 + st.stats.hawkBonus;
+    const dur = (4.5 + st.stats.hawkBonus) * 0.6;   // 2.7s base
     if (a.ultPhase === 0) {
       if (a.ultT >= 0.3) { a.ultPhase = 1; a.ultT = 0; }
     } else if (a.ultPhase === 1) {
@@ -721,7 +714,7 @@ function updateUlt(dt: number): void {
         a.ultAcc -= 1;
         circleTarget(a.ultX, a.ultZ, 14, 0.5, tgt);
         const fall = 0.45 + Math.random() * 0.15;
-        mkFx('RAIN_ARROW', tgt.x, tgt.z, fall, fall + 0.3, 2.6, b * 2.4, 0, 0xffe8a0);
+        mkFx('RAIN_ARROW', tgt.x, tgt.z, fall, fall + 0.3, 2.6, b * 2.4 * 0.7, 0, 0xffe8a0);
       }
       if (a.ultT >= dur) {
         a.ultPhase = 2; a.ultT = 0;
@@ -730,7 +723,7 @@ function updateUlt(dt: number): void {
         for (let i = 0; i < n; i++) {
           const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 14;
           const fall = 0.4 + (d / 14) * 0.5 + Math.random() * 0.1;
-          mkFx('RAIN_ARROW', a.ultX + Math.cos(ang) * d, a.ultZ + Math.sin(ang) * d, fall, fall + 0.3, 3.4, b * 25 / 6, 0, 0xfff0b0);
+          mkFx('RAIN_ARROW', a.ultX + Math.cos(ang) * d, a.ultZ + Math.sin(ang) * d, fall, fall + 0.3, 3.4, b * 25 / 6 * 0.7, 0, 0xfff0b0);
         }
         events.emit('ultImpact', { pos: new Vector3(a.ultX, 0, a.ultZ), name: 'FINAL_VOLLEY', radius: 14 });
         addShake(0.6); fovKick(0.6);

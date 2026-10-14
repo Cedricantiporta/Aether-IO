@@ -122,7 +122,6 @@ export const SKILLS_INFO = {
     
     // Archer Only
     inspire: { name: 'Inspire', description: 'Passive: every 12s in battle you rally yourself: +25% attack speed and +8% damage for 5s, and your arrows shine white (+4% damage, +0.5s per level).', classType: 'ARCHER', type: 'PASSIVE' },
-    pierceShot: { name: 'Piercing Shot', description: 'Passive: each basic arrow has a 20% chance to glow blue and pierce on into the enemy behind (+5% chance and +1 extra target every 2 levels).', classType: 'ARCHER', type: 'PASSIVE' },
     burning: { name: 'Burning Arrow', description: 'On-attack: every 6th attack fires a piercing fire arrow that burns (more damage per level). Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     freezing: { name: 'Freezing Arrow', description: 'On-attack: every 6th attack fires an ice arrow that heavily slows enemies (longer slow per level). Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     
@@ -178,7 +177,6 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_smite', type: 'SKILL_SMITE', name: 'Smite', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_radiant', type: 'SKILL_RADIANT', name: 'Radiant Burst', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_inspire', type: 'SKILL_INSPIRE', name: 'Inspire', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
-  { id: 'u_pierceshot', type: 'SKILL_PIERCE_SHOT', name: 'Piercing Shot', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
 ];
 
 // PETS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)

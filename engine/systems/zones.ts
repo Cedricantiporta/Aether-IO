@@ -64,7 +64,7 @@ function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
     if (slow) {
       e.frostT = Math.max(e.frostT, 1.2);
       const lvl = useGameStore.getState().skillLevels.s4;
-      slowSt.value = Math.min(0.8, 0.5 + 0.04 * lvl);
+      slowSt.value = Math.min(0.9, (0.5 + 0.04 * lvl) * 1.5);   // Frost Field: strong slow
       applyStatus(e, slowSt);
     }
     damageEnemy(e, dmg, o);

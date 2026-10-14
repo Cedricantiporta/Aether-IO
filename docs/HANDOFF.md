@@ -369,3 +369,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Runs: no interact pills (harvest, stations, camp) while any enemy is alive in the room.
 - Rocks / trees / pillars now also stop axes, fireballs and pet bolts (only melee arcs, waves, storms, orbiting blades
   and the Gale Arrow pass); enemy shots were already blocked.
+- Archer kit change: **Lightpiercer** (s3, icon `LIGHT_ARROW`, projectile `PIERCING_ARROW` recoloured white) replaces Fan of
+  Flames: one very fast (110) arrow, 7.5x damage, pierces everything and passes obstacles, no other effect. Gale Arrow is
+  slower (34, longer life) and its tornadoes pull far less (maxPull 11). Storm of a Thousand Arrows: duration x0.6 (2.7 s),
+  damage x0.7. Frost Field slow x1.5 (cap 90%). Piercing Shot passive shelved (`PIERCE_SHOT_ON = false`, removed from SKILLS_INFO).

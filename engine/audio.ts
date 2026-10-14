@@ -317,6 +317,7 @@ function sfxSkill(name: string): void {
   switch (name) {
     case 'GALE_ARROW': noise(0.5, 0.2, 400, 2600, { filter: 'bandpass', q: 0.8, attack: 0.05 }); tone(300, 900, 0.3, 0.1, { type: 'sawtooth' }); break;
     case 'SHADOW_ROLL': noise(0.18, 0.14, 1500, 400, { attack: 0.01 }); tone(500, 200, 0.2, 0.08, { type: 'triangle' }); break;
+    case 'LIGHT_ARROW': noise(0.2, 0.18, 3000, 9000, { filter: 'highpass', attack: 0.005 }); tone(1400, 2600, 0.18, 0.1, { type: 'triangle' }); break;
     case 'FAN_FLAMES': noise(0.45, 0.2, 1800, 300, { attack: 0.02 }); tone(180, 90, 0.35, 0.12, { type: 'sawtooth' }); break;
     case 'FROST_FIELD': tone(1800, 900, 0.3, 0.1, { type: 'sine' }); tone(2400, 1200, 0.4, 0.07, { type: 'sine', delay: 0.15 }); noise(0.3, 0.1, 5000, 2000, { filter: 'bandpass' }); break;
     case 'SINGULARITY': tone(70, 220, 0.9, 0.22, { type: 'sine', attack: 0.3 }); tone(90, 40, 1.1, 0.14, { type: 'sawtooth' }); break;

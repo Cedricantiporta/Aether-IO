@@ -221,6 +221,13 @@ Object.assign(ICONS, {
     <path d="M10 60 C16 48 26 52 32 44 C38 52 48 48 54 60Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
     <path d="M26 60 C28 52 34 54 36 60Z" fill="#fff0a0" />
   </Art>,
+  LIGHT_ARROW: (k: string) => <Art k={k} c="#ffffff">
+    <circle cx="32" cy="32" r="24" fill="#ffffff" opacity=".18" filter={u(k, 'glow')} />
+    <path d="M6 58 L56 8" stroke="#0d0703" strokeWidth="7" strokeLinecap="round" />
+    <path d="M6 58 L56 8" stroke="#ffffff" strokeWidth="3.6" strokeLinecap="round" />
+    <path d="M58 6 L44 10 L54 20Z" fill="#ffffff" stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M12 44 L4 46 M20 52 L18 60 M16 48 L8 56" stroke="#dfeaff" strokeWidth="2" strokeLinecap="round" />
+  </Art>,
   FROST_FIELD: (k: string) => <Art k={k} c="#6ad0ff">
     <ellipse cx="32" cy="46" rx="26" ry="10" fill="#9fe8ff" opacity=".25" stroke="#bff4ff" strokeWidth="1.6" />
     <path d="M32 8 L40 36 L32 48 L24 36Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />

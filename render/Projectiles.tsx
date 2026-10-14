@@ -93,9 +93,9 @@ export function Projectiles() {
     const frz = arrow('#8ab0c8', '#c8ccd2', '#bfeaff', '#7fe0ff');
     // piercing: huge spectral arrow
     const pa = new GB([1, 1]);
-    pa.cyl(0.07, 0.07, 2.6, 6, [0, 0, -0.3], '#c8ffff', [Math.PI / 2, 0, 0]); pa.cone(0.2, 0.9, 6, [0, 0, 1.45], '#e8ffff', [Math.PI / 2, 0, 0]);
-    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; pa.box(0.02, 0.5, 0.8, [Math.sin(a) * 0.12, Math.cos(a) * 0.12, -1.4], '#40e0ff', [0, 0, -a]); }
-    pa.torus(0.26, 0.03, [0, 0, 0.6], '#6ff0ff', [0, 0, 0], 1, 14); pa.torus(0.34, 0.03, [0, 0, -0.2], '#6ff0ff', [0, 0, 0], 1, 14);
+    // Lightpiercer: a slim arrow of white light
+    pa.cyl(0.07, 0.07, 2.6, 6, [0, 0, -0.3], '#ffffff', [Math.PI / 2, 0, 0]); pa.cone(0.2, 0.9, 6, [0, 0, 1.45], '#ffffff', [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; pa.box(0.02, 0.5, 0.8, [Math.sin(a) * 0.12, Math.cos(a) * 0.12, -1.4], '#e8f2ff', [0, 0, -a]); }
     // gale arrow: giant wind arrow with rings
     const ga = new GB([1, 1]);
     ga.cyl(0.1, 0.1, 4.2, 6, [0, 0, -0.6], '#d8fff0', [Math.PI / 2, 0, 0]); ga.cone(0.34, 1.4, 6, [0, 0, 2.0], '#ffffff', [Math.PI / 2, 0, 0]);
@@ -238,11 +238,11 @@ export function Projectiles() {
           break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
         case 'PIERCING_ARROW':
-          place(ims, i, x, y, z, yaw, pitch, t * 12, 1);
-          pushHalo(x, y, z, 2.6, 0.3, 1.5, 1.9, 0.55, CELL.GLOW);
+          place(ims, i, x, y, z, yaw, pitch, t * 12, 1.2);
+          pushHalo(x, y, z, 2.4, 2.4, 2.4, 2.5, 0.6, CELL.GLOW);
           if (emit) {
-            FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.3, 0.55, 0.05, 0.4, 1.7, 2.2, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
-            for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.02 * k, y, z - vz * 0.02 * k, vx * -0.08, vy * -0.08, vz * -0.08, 0.35, 0.9, 0.2, 0.3, 1.5, 2.0, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);
+            FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 0.6, 0.05, 2.2, 2.2, 2.4, 0.85, CELL.STREAK, 0, 0, 0, 0, 0);
+            for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.015 * k, y, z - vz * 0.015 * k, vx * -0.05, vy * -0.05, vz * -0.05, 0.3, 0.8, 0.2, 2.0, 2.0, 2.3, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);
           }
           break;
         case 'GALE_ARROW': {

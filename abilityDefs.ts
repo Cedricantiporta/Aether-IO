@@ -20,17 +20,17 @@ const f1 = (n: number) => Number(n.toFixed(1));
 export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ARCHER: [
     { slot: 'q', icon: 'GALE_ARROW', name: 'Gale Arrow', mana: 22, cd: 7,
-      desc: 'Loose a giant wind arrow that pierces a full line, launching enemies aside and breaking armor, leaving a trail of tornadoes.',
+      desc: 'Loose a slow giant wind arrow that pierces a full line, breaking armor and leaving a trail of tornadoes that tug enemies in.',
       per: (lv) => `Damage ${pct(6 * lvMul(lv))} · width x${f1(1 + 0.1 * (lv - 1))} · ${3 + lv} tornadoes` },
     { slot: 'e', icon: 'SHADOW_ROLL', name: 'Shadow Roll', mana: 0, cd: 0,
       desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s.',
       per: (lv) => `Blast ${pct(8 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },
-    { slot: 's3', icon: 'FAN_FLAMES', name: 'Fan of Flames', mana: 28, cd: 9,
-      desc: 'Fire a tight cone of burning arrows. Arrows stack Burn (up to 3) and leave small fire patches where they hit.',
-      per: (lv) => `${Math.min(7, 5 + Math.floor((lv - 1) / 2))} arrows · ${pct(1.87 * lvMul(lv))} dmg each · burn stacks` },
+    { slot: 's3', icon: 'LIGHT_ARROW', name: 'Lightpiercer', mana: 24, cd: 8,
+      desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Pure damage, no other effect.',
+      per: (lv) => `Damage ${pct(7.5 * lvMul(lv))} · pierces all` },
     { slot: 's4', icon: 'FROST_FIELD', name: 'Frost Field', mana: 26, cd: 11,
       desc: 'Throw 3 frost traps in a spread. Each bursts into ice crystals and a large slowing field; the centre is briefly frozen.',
-      per: (lv) => `Burst ${pct(3 * lvMul(lv))} dmg · field radius ${f1(7.5 + 0.5 * (lv - 1))} · slow ${pct(Math.min(0.8, 0.5 + 0.04 * lv))}` },
+      per: (lv) => `Burst ${pct(3 * lvMul(lv))} dmg · field radius ${f1(7.5 + 0.5 * (lv - 1))} · slow ${pct(Math.min(0.9, (0.5 + 0.04 * lv) * 1.5))}` },
   ],
   WIZARD: [
     { slot: 'q', icon: 'SINGULARITY', name: 'Singularity', mana: 34, cd: 12,
@@ -101,8 +101,8 @@ export function dashDef(hero: HeroClass): AbilityDef {
 
 export const ULTS: Record<HeroClass, AbilityDef> = {
   ARCHER: { slot: 'ult', icon: 'STORM_ARROWS', name: 'Storm of a Thousand Arrows', mana: 0, cd: 0,
-    desc: 'Aim a large circle (radius 14): time slows and for 4.5s arrows rain inside it. A final volley ends it. Needs a full charge bar and its 90s cooldown finished.',
-    per: (lv) => `${Math.round(54 * (1 + 0.1 * (lv - 1)))} arrows/s · ${pct(2.4 * 0.7 * lvMul(lv))} dmg each · final volley ${pct(25 * 0.7 * lvMul(lv))}` },
+    desc: 'Aim a large circle (radius 14): time slows and for 2.7s arrows rain inside it. A final volley ends it. Needs a full charge bar and its 90s cooldown finished.',
+    per: (lv) => `${Math.round(54 * (1 + 0.1 * (lv - 1)))} arrows/s · ${pct(2.4 * 0.49 * lvMul(lv))} dmg each · final volley ${pct(25 * 0.49 * lvMul(lv))}` },
   WIZARD: { slot: 'ult', icon: 'METEOR_CATA', name: 'Meteor Cataclysm', mana: 0, cd: 0,
     desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns and ignites everything, two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Impact ${pct(50 * 0.7 * lvMul(lv))} dmg (center) · 2 fire rings ${pct(3 * 0.7 * lvMul(lv))} each · lava ${pct(2.2 * 0.7 * lvMul(lv))}` },

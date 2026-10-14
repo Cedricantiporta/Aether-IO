@@ -86,6 +86,8 @@ let procHaste = 0;
 let echoCount = 0;
 /** Archer burning / freezing arrows fire on every 6th attack (alternating when both are learned). */
 const ARCHER_PROC = 6;
+/** Piercing Shot passive: shelved for now (removed from the skill list); flip to bring it back. */
+const PIERCE_SHOT_ON = false;
 const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
 
 export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; procFlags.smite = 0; echoCount = 0; }
@@ -251,7 +253,7 @@ export function fireBasicAttack(): void {
       continue;
     }
     // Archer: Piercing Shot (a chance per arrow to pierce on into the enemy behind, blue) / Inspire (white arrows)
-    const ps = kind === 'ARROW' && lv.pierceShot > 0 && Math.random() < 0.15 + 0.05 * lv.pierceShot;
+    const ps = PIERCE_SHOT_ON && kind === 'ARROW' && lv.pierceShot > 0 && Math.random() < 0.15 + 0.05 * lv.pierceShot;
     const np = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
       life, pierce: ps ? pierce + 1 + (lv.pierceShot >> 1) : pierce, aoe, radius, knockback: stats.knockback, effect, emp,
     });
@@ -282,7 +284,7 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
   // rocks / trees / pillars stop shots; only melee arcs, waves, storms, orbiting blades and the Gale Arrow pass over them
-  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'ORBITAL_BLADE' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
+  return !(kind === 'GALE_ARROW' || kind === 'PIERCING_ARROW' || kind === 'STORM' || kind === 'ORBITAL_BLADE' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
 }
 
 function dropFireZone(p: Projectile): void {
@@ -490,7 +492,7 @@ export function updateProjectiles(dt: number): void {
             if (z) {
               z.active = true; z.kind = 'TORNADO'; z.hostile = false;
               z.pos.set(p.pos.x, 0, p.pos.z); z.radius = 4.2; z.life = z.maxLife = 1.6;
-              z.damage = p.damage * 0.135; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 24;
+              z.damage = p.damage * 0.135; z.color = 0xa8f0d0; z.length = 10; z.maxPull = 11;   // gentle tug
             }
           }
         }
