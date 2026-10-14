@@ -172,6 +172,7 @@ export interface GameState {
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
   moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
+  deleteItems: (ids: string[]) => void;              // bag: permanently destroy items (multi-select delete)
   reorderItems: (list: 'inventory' | 'warehouse', items: Item[]) => void;   // manual order (drag within the bag / warehouse, Sort)
   depositItem: (id: string) => boolean;            // bag -> warehouse (stacks), false if the warehouse is full
   withdrawItem: (id: string) => boolean;           // warehouse -> bag, false if the bag is full

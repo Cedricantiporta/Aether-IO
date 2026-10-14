@@ -987,6 +987,11 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!amt) return;
       set({ gold: s.gold - amt, warehouseGold: s.warehouseGold + amt });
     },
+    deleteItems: (ids) => {
+      const s = get(), del = new Set(ids);
+      const inv = s.inventory.filter((i) => !del.has(i.id));
+      if (inv.length !== s.inventory.length) set({ inventory: inv });
+    },
     reorderItems: (list, items) => {
       const cur = get()[list];
       if (items.length !== cur.length) return;

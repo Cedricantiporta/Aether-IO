@@ -407,10 +407,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
 
   // ---- BARBARIAN
   if (slot === 'q') {
-    // Cross Slash: two crossed axe waves fly forward as one X, cleaving through everything in the lane
+    // Cross Slash: a slow, wide burning X that rolls forward piercing everything in the lane; it grows with the skill level
     const dmg = b * 4.2;
-    spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 26, dmg,
-      { life: 0.8 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 2.3 + 0.1 * (lv - 1), y: 1.1 });
+    spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 12, dmg,
+      { life: 1.75 + 0.05 * (lv - 1), pierce: 999, knockback: 1.4, radius: 2.3 + 0.4 * (lv - 1), y: 1.1 });
     p.anim.attackT = 1;
     addShake(0.15);
     announce('CROSS_SLASH');

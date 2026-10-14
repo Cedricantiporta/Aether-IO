@@ -216,7 +216,7 @@ export function Projectiles() {
           break;
         }
         case 'X_SLASH': {
-          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = 1.15 + (1 - life) * 0.5;
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.15 + (1 - life) * 0.25) * (p.radius / 2.3);   // bigger with level (radius)
           place(ims, i, x, y, z, yaw, 0, 0, sc);
           pushHalo(x, y, z, 4.2 * sc, 1.9, 0.75, 0.25, 0.55, CELL.GLOW);
           if (emit) {

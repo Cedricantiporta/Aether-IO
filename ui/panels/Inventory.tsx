@@ -50,6 +50,12 @@ export const InventoryPanel: React.FC = () => {
   const shopTab = useGameStore((s) => (s.isShopOpen ? s.activeShopTab : null));
   const { selected, setSelected, setSell } = useUiStore(useShallow((s) => ({ selected: s.selectedItem, setSelected: s.setSelectedItem, setSell: s.setSellItem })));
   const gold = useGameStore((s) => s.gold);
+  const deleteItems = useGameStore((s) => s.deleteItems);
+  const askConfirm = useUiStore((s) => s.askConfirm);
+  const [delMode, setDelMode] = useState(false);
+  const [delSel, setDelSel] = useState<string[]>([]);
+  const toggleDel = (id: string) => setDelSel((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  const exitDel = () => { setDelMode(false); setDelSel([]); };
   const [sortIdx, setSortIdx] = useState(-1);   // last Sort applied (the bag keeps its manual order otherwise)
   const reorderItems = useGameStore((s) => s.reorderItems);
   const [cat, setCat] = useState<Cat>('ALL');
@@ -65,6 +71,7 @@ export const InventoryPanel: React.FC = () => {
   // the bag accepts equipped items (unequip) and warehouse items (withdraw)
   const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });
   const click = (it: Item) => {
+    if (delMode) { toggleDel(it.id); return; }
     if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
     if (shopTab === 'BLACKSMITH') { setSelected(it); return; }
     if (shopTab === 'SUPPLIES' || shopTab === 'PETS') { setSell(it); return; }
@@ -127,7 +134,7 @@ export const InventoryPanel: React.FC = () => {
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
                   <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
-                    onClick={() => click(it)} tooltip="sell" drag={{ from: 'BAG', item: it }} />
+                    onClick={() => click(it)} tooltip="sell" drag={delMode ? null : { from: 'BAG', item: it }} className={delMode && delSel.includes(it.id) ? 'is-del' : delMode ? 'del-pick' : ''} />
                 </DropCell>
               ))}
               {Array.from({ length: empty }).map((_, i) => (
@@ -142,9 +149,16 @@ export const InventoryPanel: React.FC = () => {
           <span className="flex items-center gap-2 rpg-label !text-[.7rem]"><BagGlyph size={22} /> <span className="rpg-num text-white">{inventory.length}/{max}</span>
             <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={16} /><span className="rpg-num">{gold.toLocaleString()}</span></span></span>
           <div className="flex gap-1.5">
-            <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
-              title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
-            <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>
+            {delMode ? (<>
+              <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
+              <button className="rpg-btn rpg-btn-sm bag-del-go" disabled={!delSel.length} data-testid="bag-del-go"
+                onClick={() => askConfirm({ title: `Delete ${delSel.length} item${delSel.length > 1 ? 's' : ''}?`, body: 'They are destroyed for good (no gold back). Sell them at a shop instead if you want gold.', confirmLabel: 'Delete', tone: 'danger', onConfirm: () => { deleteItems(delSel); exitDel(); } })}>Delete ({delSel.length})</button>
+            </>) : (<>
+              <button className="rpg-btn rpg-btn-sm" onClick={() => setDelMode(true)} title="Select items to delete" data-testid="bag-del">Delete</button>
+              <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
+                title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
+              <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>
+            </>)}
           </div>
         </div>
       </Panel>

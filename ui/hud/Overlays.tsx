@@ -65,16 +65,16 @@ export const Announcer: React.FC = () => {
       <AnimatePresence mode="wait">
         {cur && (
           <motion.div key={cur.id} className="flex flex-col items-center"
-            initial={{ scale: cur.kind === 'boss' ? 2.2 : 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -30, scale: .95 }}
+            initial={{ scale: cur.kind === 'boss' ? 1.6 : 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -30, scale: .95 }}
             transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
             {cur.kind === 'boss' && (
-              <div className="absolute -z-10" style={{ width: '120vw', height: '12rem', top: '-3rem', background: 'linear-gradient(90deg, transparent, rgba(120,10,10,.75) 25%, rgba(120,10,10,.75) 75%, transparent)', filter: 'blur(2px)' }} />
+              <div className="absolute -z-10" style={{ width: '72vw', height: '5.4rem', top: '-1.1rem', background: 'linear-gradient(90deg, transparent, rgba(110,10,10,.55) 22%, rgba(110,10,10,.55) 78%, transparent)', filter: 'blur(2px)' }} />
             )}
             <div className="flex items-center gap-4">
-              {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
+              {cur.kind === 'boss' && <Skull size={26} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 8px #f00)' }} />}
               {cur.kind === 'level' && <ArrowUpCircle size={34} color="#a8c8ff" />}
-              <div className="k-title" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '2.8rem' : cur.kind === 'level' ? '1.7rem' : '2.5rem' }}><i /><span>{cur.title}</span><i /></div>
-              {cur.kind === 'boss' && <Skull size={44} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 12px #f00)' }} />}
+              <div className="k-title" data-tone={KIND_STYLE[cur.kind].tone} style={{ fontSize: cur.kind === 'boss' ? '1.9rem' : cur.kind === 'level' ? '1.7rem' : '2.5rem' }}><i /><span>{cur.title}</span><i /></div>
+              {cur.kind === 'boss' && <Skull size={26} color="#ff6b5e" style={{ filter: 'drop-shadow(0 0 8px #f00)' }} />}
             </div>
             {cur.sub && <div className="k-sub">{cur.sub}</div>}
           </motion.div>

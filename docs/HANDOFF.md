@@ -127,3 +127,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - **Portals need E**: next-room portals and the big next-biome portal are entered only via E / the interact pill (`interactRoom`, node 20 = big portal); touching does nothing.
 - **Crystal Cavern** room type `CRYSTAL`: no enemies, 13-17 CRYSTAL/ORE nodes (`roomgen`), no reward; 50% of biomes get one door to it (director `crystalAt`, injected by `nextChoices(..., crystal)`).
 - **Shrine (optional challenge) at most once per biome** (`shrineBiome`, `nextChoices(..., shrineOk)`).
+- **Cross Slash**: slow (speed 12, life 1.75 s) piercing X; width 2.3 + 0.4 per level (render scales with `p.radius`).
+- **Boss intro banner** smaller (band 5.4rem, title 1.9rem).
+- **Bag delete mode**: footer Delete -> tap items (red X) -> Delete (N) -> confirm (`deleteItems`).

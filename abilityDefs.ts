@@ -48,8 +48,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,
-      desc: 'Hurl two crossed axe waves that fly forward as a burning X, cleaving through every enemy in the lane and knocking them back.',
-      per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (2.3 + 0.1 * (lv - 1)))}` },
+      desc: 'Hurl a slow, burning X of crossed axe waves that rolls forward through every enemy in the lane, knocking them back. It grows bigger with each level.',
+      per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · slow, pierces all · width ${f1(2 * (2.3 + 0.4 * (lv - 1)))}` },
     { slot: 'e', icon: 'WHIRLWIND', name: 'Whirlwind', mana: 24, cd: 12,
       desc: 'Spin for 2s, barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
