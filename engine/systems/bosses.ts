@@ -107,7 +107,7 @@ function golem(e: Enemy, dist: number): void {
   const uz = dz * inv;
 
   switch (e.state) {
-    case 'CHASE': {
+    case 'CHASE': {   // keeps a step back so melee heroes don't end up inside the model
       if (dist > 4.5) setVel(e, ux, uz, e.speed * (1 + 0.25 * e.phase));
       else stop(e);
       if (e.attackCd <= 0) beginGolemPattern(e, ux, uz);
