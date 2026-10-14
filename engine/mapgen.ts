@@ -30,7 +30,7 @@ export const CRATE_RESPAWN_TIME = 75;
 
 /** Fixed region centres (render tints the ground per region). Static, not per-run. */
 export const REGIONS: Region[] = [
-  { name: 'Town', kind: 'TOWN', x: TOWN_CENTER.x, z: TOWN_CENTER.z, r: 26 },
+  { name: 'Town', kind: 'TOWN', x: TOWN_CENTER.x, z: TOWN_CENTER.z, r: 32 },
   { name: 'Mirror Pond', kind: 'POND', x: POND.x, z: POND.z, r: 22 },
   { name: 'Hollow Farm', kind: 'FARM', x: 50, z: 28, r: 20 },
   { name: 'Broken Ruins', kind: 'RUINS', x: -58, z: 22, r: 16 },
@@ -284,9 +284,9 @@ export function generateMap(): void {
   add('SHOP', TRAINER_POS[0], TRAINER_POS[2], 2.4, 1, true, 0);
   colliders.push({ x: POND.x, z: POND.z, r: POND.collisionR, blocksProjectiles: false });
 
-  // ---- TOWN: well behind the shops, a ring of pots/crates at the outskirts.
+  // ---- TOWN: a ring of pots/crates at the outskirts (village mode replaces them with the harvest nodes).
   const town = reg('TOWN');
-  add('WELL', TOWN_CENTER.x + 2, TOWN_CENTER.z - 17, 1.3, 1, true, 0);
+  // (the town draws its own well, see townData.WELL_POS)
   scatter(town.x, town.z, town.r, 4, (x, z) => tryCrate('POT', x, z), 17);
   scatter(town.x, town.z, town.r, 2, (x, z) => tryCrate('CRATE', x, z), 17);
 

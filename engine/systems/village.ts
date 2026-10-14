@@ -12,16 +12,14 @@ import { updateCrates, hitCrate } from './crates';
 import { updatePickups } from './pickups';
 import { CRATE_HP, addTempCollider } from '../mapgen';
 import type { ShopTab } from '../../storeTypes';
-import { GATE, NPCS, TOWN_COLLIDERS } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES } from '../townData';
 import { npcs, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
 const INTERACT_R = 7;
 const HARVEST_R = 3.6;
-/** Resource nodes close to the town (crate pool slots 0..n are reused as village nodes). */
-const NODES: { kind: 'CRYSTAL' | 'ORE'; x: number; z: number }[] = [
-  { kind: 'CRYSTAL', x: 15, z: -4 }, { kind: 'ORE', x: -15, z: -3 }, { kind: 'CRYSTAL', x: 22, z: 6 }, { kind: 'ORE', x: -21, z: 7 },
-];
+/** Resource nodes on the outskirts of the village (crate pool slots 0..n are reused as village nodes; positions in townData). */
+const NODES = VILLAGE_NODES;
 
 /** Replaces the island's run crates with the few village harvest nodes. */
 export function placeVillageNodes(): void {
@@ -31,7 +29,7 @@ export function placeVillageNodes(): void {
     const c = world.crates[i];
     c.kind = n.kind; c.pos.set(n.x, 0, n.z); c.maxHp = c.hp = CRATE_HP[n.kind]; c.rot = i * 1.3; c.active = true;
   });
-  // houses / stalls / well / gate towers (mapgen rebuilt its collider grid just before this is called)
+  // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
   resetNpcs();
   closeDialogue();

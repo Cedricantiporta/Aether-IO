@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { world, ARENA_RADIUS } from '../../engine/world';
+import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
+import { GATE } from '../../engine/townData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
@@ -62,6 +63,17 @@ export const Minimap: React.FC = () => {
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
       ctx.fillStyle = s.color; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
       ctx.beginPath(); ctx.rect(x - 3.5 * DPR, y - 3.5 * DPR, 7 * DPR, 7 * DPR); ctx.fill(); ctx.stroke();
+    }
+    // village: quest board / altar / trainer (small gold-violet-orange dots) and the town gate (gold arrow, easy to spot)
+    if (!room) {
+      const dots: [number[], string][] = [[QUEST_POS, '#ffd24a'], [SHRINE_POS, '#b57cff'], [TRAINER_POS, '#ffb04a']];
+      for (const [pp, col] of dots) {
+        ctx.fillStyle = col; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.2 * DPR;
+        ctx.beginPath(); ctx.arc(cx + pp[0] * k, cx + pp[2] * k, 3 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      const gx = cx + GATE.x * k, gy = cx + GATE.z * k;
+      ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
+      ctx.beginPath(); ctx.moveTo(gx - 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx + 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx, gy + 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
     // enemies
     const es = world.enemies;

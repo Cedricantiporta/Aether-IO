@@ -31,9 +31,9 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 };
 
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS'; position: [number, number, number]; color: string }[] = [
-    { type: 'SUPPLIES', position: [-24, 0, -18], color: '#3b82f6' },
-    { type: 'BLACKSMITH', position: [-8, 0, -22], color: '#ef4444' },
-    { type: 'PETS', position: [8, 0, -22], color: '#10b981' }
+    { type: 'SUPPLIES', position: [-27, 0, 2], color: '#3b82f6' },
+    { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
+    { type: 'PETS', position: [24, 0, 22], color: '#10b981' }
 ];
 
 export const COLORS = {
