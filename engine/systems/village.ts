@@ -11,12 +11,14 @@ import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
 import { updateCrates, hitCrate } from './crates';
 import { updatePickups } from './pickups';
+import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
+import { updateEnemies } from './enemies';
 import { CRATE_HP, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
@@ -50,6 +52,7 @@ export function placeVillageNodes(): void {
   });
   // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
+  spawnTownMonsters();
   resetNpcs();
   closeDialogue();
 }
@@ -130,6 +133,13 @@ function nearestStreet(x: number, z: number): { s: number; x: number; z: number;
 function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32Array): number {
   let n = 0;
   const push = (x: number, z: number) => { if (n > 0 && Math.hypot(out[n * 2 - 2] - x, out[n * 2 - 1] - z) < 0.8) return; out[n * 2] = x; out[n * 2 + 1] = z; n++; };
+  // the hermit lives outside the north wall: out through the gate, round the east side, along the back of the wall
+  const outN = (z: number, x: number) => z < WALL.z0 - 1.5 || x > WALL.x1 + 1.5;
+  if (world.village.area === 'TOWN' && outN(tz, tx) && !outN(fz, fx)) {
+    n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
+    push(0, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z0 - 9); push(tx, tz);
+    return n;
+  }
   if (Math.hypot(tx - fx, tz - fz) > 9 && world.village.area === 'TOWN') {
     const a = nearestStreet(fx, fz), b = nearestStreet(tx, tz);
     if (a.d < 14 && b.d < 14) {
@@ -255,6 +265,7 @@ export function updateVillage(dt: number): void {
     NODES.forEach((n, i) => { if (i < MAX_CRATES) { const c = world.crates[i]; c.hp = c.maxHp = CRATE_HP[n.kind]; c.active = true; } });
   }
   updatePickups(dt);
+  if (updateTownMonsters(dt)) updateEnemies(dt);   // hermit-path monsters (stationary, harmless)
   updateNpcs(dt);
   // click-to-walk arrival (gives up after 10 s, e.g. blocked by a wall)
   const g = v.go;

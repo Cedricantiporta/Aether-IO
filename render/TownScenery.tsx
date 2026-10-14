@@ -9,7 +9,7 @@ import { Inst } from './Inst';
 import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
-  CASTLE, LAKE, HERMIT_CAMP, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
+  CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
@@ -441,6 +441,33 @@ function addCamp(b: GB, g: GB, x: number, z: number) {
   b.box(0.7, 0.6, 0.5, [x + 2.4, 0.3, z - 1.6], '#6e4b2b'); b.cyl(0.22, 0.2, 0.3, 8, [x - 0.2, 0.15, z + 1.5], '#3a3a3e');
 }
 
+/** Overgrown ruins on the hermit path: 0 broken pillar (+ fallen drum), 1 ruined wall stub, 2 fallen arch. */
+function buildRuin(kind: number, seed: number) {
+  const b = new GB([0.8, 1.06]), g = new GB([1, 1]);
+  const st = ['#9a958a', '#8c877c', '#a5a091'], moss = '#5f7a3a';
+  const r = mulberry32(seed);
+  if (kind === 0) {
+    b.box(1.6, 0.3, 1.6, [0, 0.15, 0], st[1]);
+    const h = 1.6 + r() * 1.6;
+    b.cyl(0.5, 0.55, h, 10, [0, 0.3 + h / 2, 0], st[0]); b.cyl(0.52, 0.52, 0.12, 10, [0, 0.3 + h, 0], st[2], [0.15, 0, 0.1]);
+    b.sph(0.35, [0.2, 0.4 + h * 0.4, 0.45], moss, [1, 0.5, 0.6], 6);
+    b.cyl(0.5, 0.5, 1.1, 10, [1.5, 0.5, 0.6], st[2], [0, 0.4, Math.PI / 2]);   // fallen drum
+  } else if (kind === 1) {
+    for (let i = 0; i < 5; i++) {
+      const h = 0.6 + r() * 2.2;
+      b.box(0.95, h, 0.8, [-2 + i, h / 2, (r() - 0.5) * 0.15], st[i % 3]);
+      if (r() < 0.6) b.sph(0.3, [-2 + i, h + 0.05, 0], moss, [1.2, 0.4, 1], 6);
+    }
+    for (let i = 0; i < 4; i++) b.box(0.5, 0.35, 0.45, [-1.8 + r() * 3.6, 0.18, 0.9 + r() * 0.6], st[i % 3], [0, r() * 2, 0]);
+  } else {
+    for (const sx of [-1, 1]) { b.box(0.7, 2.6, 0.7, [sx * 1.4, 1.3, 0], st[0]); b.sph(0.32, [sx * 1.4, 2.65, 0.2], moss, [1, 0.5, 1], 6); }
+    b.box(3.6, 0.55, 0.7, [0.3, 0.35, 1.2], st[2], [0, 0.25, 0.12]);   // the fallen lintel
+    b.box(0.6, 0.4, 0.5, [-0.6, 0.2, -0.9], st[1], [0, 0.7, 0]);
+  }
+  g.sph(0.06, [0, 0.05, 0], '#000000', 0.01, 3);
+  return { b: b.build(), g: g.build() };
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -458,6 +485,7 @@ function buildTown() {
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
   { const c = at(CASTLE.x, CASTLE.z); addCastle(c.b, c.g); }
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
+  RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
   put(GATE.x, GATE.z, 0, buildGate());
   const sign = buildSignpost();

@@ -49,6 +49,19 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 /** Castle keep against the north wall, behind the quest board (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
 /** Hermit's camp outside the north wall (campfire + bedroll, drawn in TownScenery). */
 export const HERMIT_CAMP = { x: 0, z: -51 };
+/** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
+export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }   // 0 broken pillar, 1 ruined wall, 2 fallen arch
+export const RUINS: RuinSpec[] = [
+  { x: 58, z: 14, rot: 0.3, kind: 1 }, { x: 57.5, z: -4, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 58, z: -28, rot: -0.4, kind: 2 },
+  { x: 47, z: -47, rot: 0.8, kind: 1 }, { x: 34, z: -56.5, rot: 0.1, kind: 0 }, { x: 26, z: -45.5, rot: -0.2, kind: 1 }, { x: 16, z: -56, rot: 0.4, kind: 2 },
+  { x: 9, z: -45, rot: 0, kind: 0 },
+];
+/** Stationary monsters on the hermit path (they hold their ground; respawn a minute after dying). */
+export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [
+  { kind: 'SLIME', x: 53, z: 22 }, { kind: 'SLIME', x: 55, z: 19 }, { kind: 'GOBLIN', x: 52, z: 4 }, { kind: 'GOBLIN', x: 55, z: 1 },
+  { kind: 'BOAR', x: 53, z: -14 }, { kind: 'BANDIT', x: 52, z: -34 }, { kind: 'BANDIT', x: 55, z: -37 },
+  { kind: 'GOBLIN', x: 38, z: -50 }, { kind: 'BOAR', x: 30, z: -52 }, { kind: 'BRUTE', x: 14, z: -50 },
+];
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 
 export const HOUSES: HouseSpec[] = [
@@ -178,6 +191,11 @@ export const PLANTERS: PlanterSpec[] = [
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
+  // hermit path (outside the walls): east ring and north ring, both sides of the trail
+  { x: 59.5, z: 30, s: 3.4, kind: 1 }, { x: 59, z: 8, s: 3.2, kind: 0 }, { x: 60, z: -12, s: 3.6, kind: 1 }, { x: 59.5, z: -40, s: 3.3, kind: 0 },
+  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 },
+  { x: 52, z: -57, s: 3.4, kind: 1 }, { x: 40, z: -57.5, s: 3.2, kind: 0 }, { x: 22, z: -57.5, s: 3.5, kind: 1 }, { x: 10, z: -58, s: 3.0, kind: 0 },
+  { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
   { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 14.5, z: -35, s: 3.45, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: 22, z: -33.5, s: 3.30, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
@@ -199,6 +217,7 @@ export const HAYSTACK = { x: FARM.x + 5, z: FARM.z - 4 };
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]);
+  for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
@@ -312,8 +331,7 @@ export const NPCS: NpcDef[] = [
     gift: { gold: 150, text: 'Elder Tobin presses a pouch into your hand. (+150 gold)' },
   },
   {
-    name: 'Pip', role: 'Village Kid', model: 'ROGUE', tint: '#ffe0ea', scale: 1, prop: 'none', accent: '#ff9ac0', home: [-4, 6.2], speed: 2.6,
-    patrol: [[-4, 6.2], [3, 7], [4.5, -3], [-4, -3.2], [-5, 2]],
+    name: 'Pip', role: 'Village Kid', model: 'ROGUE', tint: '#ffe0ea', scale: 1, prop: 'none', accent: '#ff9ac0', home: [-40.5, -36.5], speed: 2.6,   // hiding in the north-west corner behind the houses (knows the hermit's secret)
     talk: [
       ['Have you seen my cat? She is orange, and very rude.', 'Last time I saw her she ran off towards the plaza...'],
       ['When I grow up I will be a hero like you! Do you have a sword? Can I hold it?', 'No? Aww.'],

@@ -2,6 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
+import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
 import { world, allocProjectile, allocZone, ARENA_RADIUS } from '../world';
 import { events, type DamageKind } from '../events';
@@ -416,7 +417,8 @@ export function updateProjectiles(dt: number): void {
   const critRate = st.stats.critRate, critDamage = st.stats.critDamage;
   const pl = world.player;
   const pool = world.projectiles;
-  const maxR2 = (ARENA_RADIUS + 20) * (ARENA_RADIUS + 20);
+  const maxR = st.status === GameStatus.MENU ? 120 : ARENA_RADIUS + 20;   // the town hub is bigger than a room (hermit path monsters)
+  const maxR2 = maxR * maxR;
 
   for (let i = 0; i < pool.length; i++) {
     const p = pool[i];

@@ -371,4 +371,11 @@ export function updatePlayerVillage(dt: number): void {
   const target = Math.min(1, sp / Math.max(1, st.stats.moveSpeed));
   a.moveBlend += (target - a.moveBlend) * Math.min(1, 10 * dt);
   a.stepPhase += sp * dt * 1.4;
+  // town monsters (hermit path): auto-attack while standing still with one in range, like in a run
+  if (ml > 0 || p.dashT > 0 || p.whirlT > 0) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
+  const tgt = findNearestEnemy(p.pos.x, p.pos.z, ATTACK_RANGE[st.hero] ?? 18);
+  if (!tgt) { p.fireT = Math.max(p.fireT, 0.05); autoAim.id = -1; return; }
+  autoAim.id = tgt.id; p.facing = Math.atan2(tgt.pos.x - p.pos.x, tgt.pos.z - p.pos.z);   // aim at it (no run targeting in town)
+  p.fireT -= dt;
+  if (p.fireT <= 0) { fireBasicAttack(); p.fireT = Math.max(0, p.fireT + 1 / Math.max(0.1, st.stats.fireRate)); }
 }
