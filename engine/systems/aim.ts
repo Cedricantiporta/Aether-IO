@@ -69,7 +69,7 @@ function aimable(id: string): boolean {
   // Self-centred skills cast instantly (no drag/aim): Storm Orbs, Whirlwind, Titan's Wrath.
   const slot = id === 'ult' ? 'ult' : slotOf(id);
   if (hero === 'WIZARD' && slot === 's3') return false;
-  if (hero === 'BARBARIAN' && (slot === 'e' || slot === 'ult')) return false;
+  if ((hero === 'BARBARIAN' || hero === 'KNIGHT') && (slot === 'e' || slot === 'ult')) return false;
   return true;
 }
 

@@ -6,7 +6,7 @@ import { Maximize } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown } from 'lucide-react';
+import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown } from 'lucide-react';
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
@@ -20,7 +20,7 @@ import { SimpleTip } from '../components/ItemTip';
 import { HERO_COLOR } from '../lib/game';
 import type { HeroClass } from '../../types';
 
-export const HERO_ICON: Record<HeroClass, LucideIcon> = { ARCHER: Crosshair, WIZARD: Wand2, BARBARIAN: Axe };
+export const HERO_ICON: Record<HeroClass, LucideIcon> = { ARCHER: Crosshair, WIZARD: Wand2, BARBARIAN: Axe, KNIGHT: Sword };
 
 const BuffSlot: React.FC<{ id: string; icon: React.ReactNode; label: string; color: string; refs: React.MutableRefObject<Record<string, HTMLElement | null>> }> = ({ id, icon, label, color, refs }) => (
   <div ref={(el) => { refs.current[id] = el; }} className="buff-slot" data-on="0" style={{ color }} {...tip(<SimpleTip title={label} sub="Active buff" color={color} />)}>

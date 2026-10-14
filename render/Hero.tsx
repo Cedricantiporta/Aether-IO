@@ -14,20 +14,20 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, sparks } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
-import { HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, WeaponGeo } from './weapons';
+import { HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, WeaponGeo } from './weapons';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
 import { attachGear } from './gear';
 import { useUiStore } from '../ui/uiStore';
 
-const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN' };
-const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a };
+const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT' };
+const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a, KNIGHT: 0xffe08a };
 
 const _col = new Color();
 
 function buildWeapon(cls: HeroClass, accent: string, tier: number): WeaponGeo {
-  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' ? makeStaff(accent, tier) : makeAxe(accent, tier);
+  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' ? makeStaff(accent, tier) : cls === 'KNIGHT' ? makeSword(accent, tier) : makeAxe(accent, tier);
 }
 
 function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {

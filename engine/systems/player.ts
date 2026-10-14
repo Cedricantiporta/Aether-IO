@@ -149,6 +149,8 @@ export function updatePlayer(dt: number): void {
   p.cd.s4 = tickDown(p.cd.s4, dt);
   p.cryT = tickDown(p.cryT, dt);
   p.buffT = tickDown(p.buffT, dt);
+  if (p.guardT > 0) { p.guardT = tickDown(p.guardT, dt); healPlayer(st.stats.maxHealth * 0.02 * dt); }   // Shield Wall: slow heal
+  p.avatarT = tickDown(p.avatarT, dt);
   if (p.buffT <= 0) { p.buffDmg = 0; p.buffDef = 0; p.buffHaste = 0; }
 
   // ---- debuffs from monster tricks (stun: no move/attack/skills; root: no move; silence: no actives/ult)

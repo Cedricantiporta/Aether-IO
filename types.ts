@@ -10,14 +10,14 @@ export enum GameStatus {
   SHOP = 'SHOP',
 }
 
-export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN';
+export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT';
 
 export type UpgradeType = 
   'HEALTH' | 'SPEED' | 'DAMAGE' | 'FIRE_RATE' | 'MULTISHOT' | 'DASH_COOLDOWN' |
   'SKILL_ORBITAL' | 'SKILL_THUNDER' | 'SKILL_REGEN' | 'SKILL_MAGNET' |
   'SKILL_DASH' | 'SKILL_WEAPON' | 'SKILL_BARRIER' |
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 
-  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' |
+  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' |
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA';
 
 export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
@@ -32,7 +32,7 @@ export interface Upgrade {
   classType?: HeroClass; // Restrict upgrade to class
 }
 
-export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM';
+export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'SWORD' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM';
 export type AbilityType = 'METEOR' | 'ARROW_RAIN' | 'AXE_AURA' | 'FIREBALL' | 'AXE_SPIN' | 'NONE' | 'PIERCING_SHOT' | 'FREEZE_SPELL' | 'GRAVITY_SPELL' | 'MEGA_STAMP' | 'RAGE';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT';
 export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON' | 'ARMOR_BREAK' | 'CHILL';
@@ -79,6 +79,7 @@ export interface PlayerStats {
   procHaste: number;        // on-attack procs need N fewer attacks
   thunderChain: number;     // +chain lightning targets
   stormBonus: number;       // +seconds typhoon lifetime
+  avatarBonus: number;      // +seconds Divine Avatar (knight ultimate)
   stormTwin: number;        // 1 = typhoon spawns a second one
   blizzardRadius: number;   // +blizzard radius
   blizzFreeze: number;      // +seconds blizzard freeze
@@ -165,6 +166,7 @@ export interface SkillLevels {
     stamp: number; // Renamed to Mega Stamp (Passive)
     warcry: number;  // Barbarian passive: periodic roar, +damage / +defense
     inspire: number; // Archer passive: periodic rally, +attack speed / +damage
+    consecrate: number; // Knight passive: holy aura damaging nearby enemies and healing a little
 }
 
 export interface GameNotification {

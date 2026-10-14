@@ -145,7 +145,7 @@ function chainLightning(from: Enemy, lvl: number): void {
 // ------------------------------------------------------------ basic attack --
 function defaultProjectileType(): ProjectileType {
   const hero = useGameStore.getState().hero;
-  return hero === 'WIZARD' ? 'MAGIC' : hero === 'BARBARIAN' ? 'AXE' : 'ARROW';
+  return hero === 'WIZARD' ? 'MAGIC' : hero === 'BARBARIAN' ? 'AXE' : hero === 'KNIGHT' ? 'SWORD' : 'ARROW';
 }
 
 /** Fires the hero's basic attack towards the aim point. Called by player.ts on its fire timer. */
@@ -177,6 +177,7 @@ export function fireBasicAttack(): void {
   let radius = 1.5;
   switch (ptype) {
     case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 4; break; // shorter throw: barbarian is close range
+    case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = 2.5; break;   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
@@ -204,7 +205,7 @@ export function fireBasicAttack(): void {
 
   const emp = false;
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
-  const dmgMul = (1 + pl.buffDmg) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  const dmgMul = (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.5 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.
   let echo = false;
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
@@ -247,6 +248,11 @@ export function fireBasicAttack(): void {
       life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
     });
     if (np && kind === 'AXE') { np.bounces = (i + rp) & 1; np.trailT = 0; }   // boomerang: alternate curve side per axe
+    if (np && kind === 'SLASH') np.bounces = (procCount + i) & 1;              // alternate swing direction (render mirror)
+  }
+  // Divine Avatar: every sword swing also releases a Holy Wave
+  if (kind === 'SLASH' && pl.avatarT > 0) {
+    spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 2.4, y: 1.1 });
   }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });
@@ -266,7 +272,7 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 }
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
-  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT' || kind === 'X_SLASH');
+  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
 }
 
 function dropFireZone(p: Projectile): void {

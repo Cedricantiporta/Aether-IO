@@ -8,7 +8,7 @@ import { events } from '../events';
 import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
 import {
-  damageEnemy, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana,
+  damageEnemy, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
@@ -28,6 +28,7 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
   orbital: { t: 0, max: 2, kind: 'time' },
   warcry: { t: 0, max: 12, kind: 'time' },
   inspire: { t: 0, max: 12, kind: 'time' },
+  consecrate: { t: 0, max: 1, kind: 'time' },
 };
 
 const aim = new Vector3();
@@ -42,11 +43,13 @@ const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const bladeOut: number[] = [];
 
-let blizzT = 0, stormT = 0, rallyT = 0;
+let blizzT = 0, stormT = 0, rallyT = 0, auraT = 0;
+const auraOut: number[] = [];
+const holyAuraOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = rallyT = 0; stormZones[0] = stormZones[1] = null;
+  blizzT = stormT = rallyT = auraT = 0; stormZones[0] = stormZones[1] = null;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -216,6 +219,29 @@ export function updateSkills(dt: number): void {
         events.emit('frostNova', { pos: pl.pos.clone(), radius: bR });
         pl.anim.castT = 1;
       } else blizzT = max;
+    }
+  }
+
+  // Consecration (knight): a holy aura burns nearby enemies once a second and heals a little per enemy hit
+  if (lv.consecrate > 0) {
+    auraT += dt;
+    setCd('consecrate', 1 - auraT, 1);
+    if (auraT >= 1) {
+      auraT = 0;
+      const R = 4.5 + 0.4 * (lv.consecrate - 1);
+      const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, R + 2, auraOut);
+      let hits = 0;
+      const dmg = stats.damage * 0.6 * stats.skillDamage * lvScale(lv.consecrate);
+      for (let i = 0; i < ids.length; i++) {
+        const e = world.enemies[ids[i]];
+        if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
+        if ((e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > (R + e.radius) ** 2) continue;
+        damageEnemy(e, dmg, holyAuraOpts); hits++;
+      }
+      if (hits > 0) {
+        healPlayer(stats.maxHealth * 0.004 * Math.min(hits, 5));
+        events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xffe08a });
+      }
     }
   }
 

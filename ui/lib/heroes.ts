@@ -37,9 +37,18 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
       { key: 'E', name: 'War Vitality', desc: 'Regenerate 10 HP/s for 6s.' },
     ],
   },
+  KNIGHT: {
+    title: 'Knight', tagline: 'Holy Guardian', tags: ['Melee', 'Tank', 'Holy light'],
+    weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.KNIGHT.weaponId)?.name ?? 'Squire Sword',
+    abilities: [
+      { key: 'R', name: 'Divine Avatar', desc: 'A column of light, then 8s of radiant power.' },
+      { key: 'Q', name: 'Holy Wave', desc: 'A wide golden crescent that pierces all.' },
+      { key: 'E', name: 'Shield Wall', desc: 'Knock enemies back, take far less damage.' },
+    ],
+  },
 };
 
-export const HERO_ORDER: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN'];
+export const HERO_ORDER: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'];
 
 /** Normalised (0..1) hero stats for menu bars. */
 export function heroBars(h: HeroClass) {

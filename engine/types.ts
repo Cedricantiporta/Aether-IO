@@ -107,7 +107,7 @@ export interface Enemy {
 
 // ------------------------------------------------------- player projectiles --
 export type ProjectileKind =
-  | 'ARROW' | 'MAGIC' | 'AXE'
+  | 'ARROW' | 'MAGIC' | 'AXE' | 'SLASH' | 'HOLY_WAVE'
   | 'FIREBALL' | 'PIERCING_ARROW' | 'BURNING_ARROW' | 'FREEZING_ARROW'
   | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW' | 'X_SLASH';
 
@@ -312,6 +312,8 @@ export interface PlayerRuntime {
   ultT: number;          // seconds the ultimate effect is still running (0 = idle)
   cryT: number;          // barbarian Battle Cry: +30% damage
   buffT: number; buffDmg: number; buffDef: number; buffHaste: number;   // Warcry / Inspire passive buff
+  guardT: number; guardRed: number;   // knight Shield Wall: damage taken x (1 - guardRed)
+  avatarT: number;                    // knight Divine Avatar (ultimate)
   titanT: number;        // barbarian ultimate: giant form
   whirlT: number;        // barbarian Whirlwind
   air: number;           // height above ground (leap arc), render only

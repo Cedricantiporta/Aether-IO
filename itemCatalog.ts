@@ -34,17 +34,18 @@ const WSEC: Record<HeroClass, Record<string, string[]>> = {
   ARCHER: { swift: ['aspd', 'move', 'crit', 'dodge'], deadly: ['crit', 'critd', 'kb', 'aspd'] },
   WIZARD: { arcane: ['skill', 'cdr', 'mregen', 'crit'], fury: ['crit', 'critd', 'skill', 'mana'] },
   BARBARIAN: { bulwark: ['def', 'hp', 'regen', 'kb'], rampage: ['aspd', 'critd', 'kb', 'hp'] },
+  KNIGHT: { aegis: ['def', 'hp', 'regen', 'crit'], valor: ['crit', 'critd', 'aspd', 'def'] },
 };
-const WDMG: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300] };
+const WDMG: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280] };
 const WMETA: Record<HeroClass, { projectileType: ProjectileType; ability: AbilityType }> = {
-  ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' },
+  ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' }, KNIGHT: { projectileType: 'SWORD', ability: 'AXE_SPIN' },
 };
 const WPRICE = [100, 600, 1500, 3000, 5000];
 const GPRICE = [120, 560, 1300, 2200, 4500];
 
 // ------------------------------------------------------------------ art -----
 export interface Pal { a: string; b: string; gem: string }
-export interface ArtSpec { f: 'bow' | 'staff' | 'axe' | 'helm' | 'armor' | 'gloves' | 'boots' | 'acc'; s: number; pal: Pal }
+export interface ArtSpec { f: 'bow' | 'staff' | 'axe' | 'sword' | 'helm' | 'armor' | 'gloves' | 'boots' | 'acc'; s: number; pal: Pal }
 export const ART: Record<string, ArtSpec> = {};
 const PALS: Pal[][] = [
   [{ a: 'leather', b: 'wood', gem: '#f0d8a0' }, { a: 'wood', b: 'leather', gem: '#9ad07a' }, { a: 'steel', b: 'dark', gem: '#e8e8e8' }],
@@ -55,7 +56,7 @@ const PALS: Pal[][] = [
 ];
 export const SET_PAL: Record<string, Pal> = {
   gale: { a: 'green', b: 'wood', gem: '#c8ff8a' }, regalia: { a: 'blue', b: 'gold', gem: '#9fe6ff' }, bulwark: { a: 'steel', b: 'red', gem: '#ffb347' },
-  shadowstep: { a: 'dark', b: 'leather', gem: '#8ad0ff' }, dragonbone: { a: 'white', b: 'red', gem: '#ff7a2e' }, sovereign: { a: 'void', b: 'gold', gem: '#7ff0ff' },
+  oath: { a: 'white', b: 'gold', gem: '#ffe08a' }, shadowstep: { a: 'dark', b: 'leather', gem: '#8ad0ff' }, dragonbone: { a: 'white', b: 'red', gem: '#ff7a2e' }, sovereign: { a: 'void', b: 'gold', gem: '#7ff0ff' },
 };
 
 // -------------------------------------------------------------- builders ----
@@ -78,10 +79,10 @@ function gear(id: string, name: string, type: Item['type'], ri: number, flav: st
 }
 function weapon(id: string, name: string, hero: HeroClass, ri: number, flav: string, s: number, pal: Pal, extra: Partial<Item> = {}, scale = 1): void {
   const sec = WSEC[hero][flav] ?? Object.values(WSEC[hero])[1];
-  const stats: Partial<PlayerStats> = { damage: r3(WDMG[hero][ri] * (flav === 'swift' || flav === 'arcane' || flav === 'bulwark' ? 0.9 : 0.95) * scale) };
+  const stats: Partial<PlayerStats> = { damage: r3(WDMG[hero][ri] * (flav === 'swift' || flav === 'arcane' || flav === 'bulwark' || flav === 'aegis' ? 0.9 : 0.95) * scale) };
   stats.damage = Math.round(stats.damage!);
   for (let i = 0; i < ri && i < sec.length; i++) { const [k, v] = T[sec[i]]; stats[k] = r3((stats[k] ?? 0) + v[ri] * scale); }
-  const f = hero === 'ARCHER' ? 'bow' : hero === 'WIZARD' ? 'staff' : 'axe';
+  const f = hero === 'ARCHER' ? 'bow' : hero === 'WIZARD' ? 'staff' : hero === 'KNIGHT' ? 'sword' : 'axe';
   out.push({ id, name, type: 'WEAPON', rarity: RAR[ri], price: WPRICE[ri], level: 1, classType: hero, ...WMETA[hero], stats, description: `${flav[0].toUpperCase()}${flav.slice(1)} ${hero.toLowerCase()} weapon.`, ...extra });
   ART[id] = { f, s, pal };
 }
@@ -92,9 +93,10 @@ const W: Record<HeroClass, [string, string, string][]> = {   // [rarity][name A,
   ARCHER: [['Hunter\'s Bow', 'Willow Longbow', ''], ['Hornet Recurve', 'Falconer\'s Bow', ''], ['Stormpiercer', 'Frostfang Bow', ''], ['Skyreaver', 'Phoenix Longbow', ''], ['Starfall Arc', 'Eclipse Bow', '']],
   WIZARD: [['Twig Wand', 'Ember Rod', ''], ['Sage\'s Staff', 'Cinder Wand', ''], ['Tidecaller', 'Stormglass Rod', ''], ['Moonlit Scepter', 'Cataclysm Staff', ''], ['Astral Scepter', 'Oblivion Rod', '']],
   BARBARIAN: [['Woodcutter Axe', 'Bone Cleaver', ''], ['Battle Axe', 'Raider Hatchet', ''], ['Bearded Greataxe', 'Bloodletter', ''], ['Juggernaut Axe', 'Ragnarok Axe', ''], ['Colossus Cleaver', 'Doomcleaver', '']],
+  KNIGHT: [['Militia Sword', 'Arming Sword', ''], ['Knight\'s Longsword', 'Silver Sabre', ''], ['Oathkeeper', 'Dawnblade', ''], ['Lionheart', 'Radiant Claymore', ''], ['Excalibur', 'Seraph\'s Edge', '']],
 };
-const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly'], WIZARD: ['arcane', 'fury'], BARBARIAN: ['bulwark', 'rampage'] };
-for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN'] as HeroClass[]) {
+const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly'], WIZARD: ['arcane', 'fury'], BARBARIAN: ['bulwark', 'rampage'], KNIGHT: ['aegis', 'valor'] };
+for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'] as HeroClass[]) {
   W[hero].forEach((row, ri) => {
     weapon(`w_${hero.toLowerCase()}_${ri}a`, row[0], hero, ri, WFLAV[hero][0], 1 + (ri % 3), P(ri, 1));
     weapon(`w_${hero.toLowerCase()}_${ri}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2));
@@ -149,12 +151,14 @@ export const STARTER_GEAR: Record<HeroClass, Record<Exclude<SetSlot, 'weapon'>, 
   ARCHER: { helmet: 'start_archer_helmet', armor: 'start_archer_armor', gloves: 'start_archer_gloves', boots: 'start_archer_boots', accessory: 'start_archer_accessory' },
   WIZARD: { helmet: 'start_wizard_helmet', armor: 'start_wizard_armor', gloves: 'start_wizard_gloves', boots: 'start_wizard_boots', accessory: 'start_wizard_accessory' },
   BARBARIAN: { helmet: 'start_barbarian_helmet', armor: 'start_barbarian_armor', gloves: 'start_barbarian_gloves', boots: 'start_barbarian_boots', accessory: 'start_barbarian_accessory' },
+  KNIGHT: { helmet: 'start_knight_helmet', armor: 'start_knight_armor', gloves: 'start_knight_gloves', boots: 'start_knight_boots', accessory: 'start_knight_accessory' },
 };
 {
   const S: Record<HeroClass, [string, string, string, string, string, string, Pal]> = {
     ARCHER: ["Hunter's Cap", "Hunter's Jerkin", "Hunter's Wraps", "Scout Boots", "Hunter's Whistle", 'light', { a: 'wood', b: 'leather', gem: '#9ad07a' }],
     WIZARD: ['Apprentice Hood', 'Apprentice Robe', 'Initiate Gloves', 'Soft Slippers', 'Apprentice Charm', 'arcane', { a: 'blue', b: 'leather', gem: '#9fe6ff' }],
     BARBARIAN: ['Hide Helm', 'Hide Cuirass', 'Wolf Fists', 'Furred Boots', 'Tusk Necklace', 'heavy', { a: 'leather', b: 'dark', gem: '#ff9a6a' }],
+    KNIGHT: ['Squire Helm', 'Squire Mail', 'Squire Gauntlets', 'Squire Sabatons', 'Oath Pendant', 'heavy', { a: 'steel', b: 'blue', gem: '#ffe08a' }],
   };
   (Object.keys(S) as HeroClass[]).forEach((h) => {
     const [hn, an, gn, bn, xn, flav, pal] = S[h];

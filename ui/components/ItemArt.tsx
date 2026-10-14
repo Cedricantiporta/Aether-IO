@@ -379,6 +379,15 @@ const AxeP = (sh: number, p: Pal): Draw => () => (<g transform="rotate(35 32 32)
   <rect x="29" y="58" width="6" height="4" rx="1.5" fill={g(p.b)} {...st} />
 </g>);
 
+const SwordP = (sh: number, p: Pal): Draw => () => (<g transform="rotate(40 32 32)">
+  <circle cx="32" cy="22" r="26" fill={p.gem} opacity=".14" />
+  <path d={sh % 2 ? 'M28 6 L32 0 L36 6 L36 42 L28 42Z' : 'M29 4 L32 -1 L35 4 L36 42 L28 42Z'} fill={g(p.a)} {...st} />
+  <path d="M32 3 V40" stroke="#fff" strokeOpacity=".55" strokeWidth="1.3" />
+  <rect x={sh >= 2 ? 17 : 20} y="41" width={sh >= 2 ? 30 : 24} height="5" rx="2" fill={g(p.b)} {...st} />
+  <rect x="29.5" y="46" width="5" height="12" rx="1.5" fill={g('leather')} {...st} />
+  <circle cx="32" cy="60" r="3.2" fill={g(p.b)} {...st} />{Facet(32, 43.5, 2.6, p.gem, true)}
+</g>);
+
 const HelmP = (sh: number, p: Pal): Draw => () => (<g>
   {sh === 4 && <path d="M12 30 C2 28 0 14 8 6 C10 16 16 22 20 24Z M52 30 C62 28 64 14 56 6 C54 16 48 22 44 24Z" fill="#fff0c8" {...st} />}
   {sh === 1 && <path d="M10 54 C8 28 20 8 36 4 C32 14 34 22 40 28 C44 34 52 40 54 54 H44 V40 H20 V54Z" fill={g(p.a)} {...st} />}
@@ -436,13 +445,14 @@ const AccP = (sh: number, p: Pal): Draw => () => sh === 0 ? (<g>
   <path d="M22 44 C24 40 28 38 32 38" stroke="#fff" strokeOpacity=".7" strokeWidth="1.4" fill="none" strokeLinecap="round" />{Spark(48, 40, 2.6)}
 </g>);
 
-const FAM: Record<ArtSpec['f'], (s: number, p: Pal) => Draw> = { bow: BowP, staff: StaffP, axe: AxeP, helm: HelmP, armor: ArmorP, gloves: GlovesP, boots: BootsP, acc: AccP };
+const FAM: Record<ArtSpec['f'], (s: number, p: Pal) => Draw> = { bow: BowP, staff: StaffP, axe: AxeP, sword: SwordP, helm: HelmP, armor: ArmorP, gloves: GlovesP, boots: BootsP, acc: AccP };
 const GENERATED_DRAW: Record<string, Draw> = Object.fromEntries(Object.entries(ART).map(([id, a]) => [id, FAM[a.f](a.s, a.pal)]));
 
 const DRAW: Record<string, Draw> = {
   ...GENERATED_DRAW,
   staff_1: Staff(0), staff_rare: Staff(1), staff_3: Staff(2), staff_legend: Staff(3), staff_god: Staff(4),
   bow_1: Bow(0), bow_2: Bow(1), bow_epic: Bow(2), bow_legend: Bow(3), bow_god: Bow(4),
+  sword_1: SwordP(0, { a: 'steel', b: 'gold', gem: '#ffe08a' }),
   axe_1: Axe(0), axe_2: Axe(1), axe_epic: Axe(2), axe_legend: Axe(3), axe_god: Axe(4),
   ...Object.fromEntries(Object.entries(ARMOR).map(([k, v]) => [k, Chest(v)])),
   ring_1: Ring(0), ring_wiz: Ring(1), ring_crit: Ring(2), ring_myth: Ring(3), boots_1: Boots, amulet_mana: Amulet(true), focus_crystal: Focus,

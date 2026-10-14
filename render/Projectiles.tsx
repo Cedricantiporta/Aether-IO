@@ -118,6 +118,19 @@ export function Projectiles() {
       xs.box(0.42, 0.06, w, [lx * c + lz * s2, 0, -lx * s2 + lz * c], k % 2 ? '#ffb24a' : '#ff7a2a', [0, sgn * 0.62 + Math.atan(-2 * u * 2.0 * 0.5), 0]);
       xs.box(0.4, 0.07, w * 0.35, [lx * c + lz * s2, 0.01, -lx * s2 + lz * c + 0.05], '#fff2c0', [0, sgn * 0.62, 0]);
     }
+    // Knight: one flat crescent arc (forward = +z), bowed forward; sword swing (white steel, gold edge) / Holy Wave (gold light)
+    const crescent = (c1: string, c2: string, core: string, span: number, thick: number) => {
+      const cb = new GB([1, 1]);
+      for (let k = 0; k <= 14; k++) {
+        const u = k / 14 - 0.5, w = thick * (1 - Math.abs(u) * 1.7) + 0.04;
+        const lx = u * span, lz = 0.6 - u * u * 2.2;
+        cb.box(span / 14 + 0.05, 0.06, w, [lx, 0, lz], k % 2 ? c1 : c2, [0, Math.atan(-2 * u * 2.2 / span * span * 0.5), 0]);
+        cb.box(span / 14 + 0.04, 0.07, w * 0.35, [lx, 0.01, lz + 0.06], core, [0, 0, 0]);
+      }
+      return cb.build();
+    };
+    const slashG = crescent('#e8eef8', '#ffe8a8', '#ffffff', 4.2, 0.42);
+    const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 4.6, 0.6);
     // orbital blade
     const bl = new GB([1, 1]);
     bl.torus(0.62, 0.08, [0, 0, 0], '#8ff4ff', [Math.PI / 2, 0, 0], [1, 1, 0.7], 14, 2.3); bl.torus(0.5, 0.05, [0, 0, 0], '#ffffff', [Math.PI / 2, 0, 0], [1, 1, 0.5], 14, 2.0);
@@ -146,6 +159,8 @@ export function Projectiles() {
       ORBITAL_BLADE: mk([[bl.build(), glow], [blB, lit]], 100),
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
       X_SLASH: mk([[xs.build(), glow]], 40),
+      SLASH: mk([[slashG, glow]], 120),
+      HOLY_WAVE: mk([[holyG, glow]], 60),
     } as Record<string, InstancedMesh[]>;
     const E = {
       ARROW: mk([[earrow.body, lit], [earrow.glow, glow]], MAXE),
@@ -222,6 +237,22 @@ export function Projectiles() {
           if (emit) {
             if (Math.random() < dt * 70) { const o = (Math.random() - 0.5) * 3.6; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
             if (Math.random() < dt * 30) embers(x, y, z, 1, 0xff9a40, 0.6, 2.4, 0.8, 0.14);
+          }
+          break;
+        }
+        case 'SLASH': {   // a quick sword arc: fades / widens over its short life, mirrored on alternate swings
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (0.85 + (1 - life) * 0.35) * (p.radius / 2.5);
+          place(ims, i, x, y, z, yaw, 0, p.bounces & 1 ? 0.25 : -0.25, p.bounces & 1 ? -sc : sc, sc, sc);
+          pushHalo(x, y, z, 2.6 * sc, 1.6, 1.5, 1.2, 0.35 * life + 0.1, CELL.GLOW);
+          if (emit && Math.random() < dt * 40) { const o = (Math.random() - 0.5) * 3; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, 0, 0.4, 0, 0.25, 0.3, 0.05, 2.2, 2.0, 1.6, 0.7, CELL.STAR, 0, 0.3); }
+          break;
+        }
+        case 'HOLY_WAVE': {
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.0 + (1 - life) * 0.3) * (p.radius / 2.6);
+          place(ims, i, x, y, z, yaw, 0, 0, sc);
+          pushHalo(x, y, z, 4.4 * sc, 2.0, 1.7, 0.9, 0.55, CELL.GLOW);
+          if (emit) {
+            if (Math.random() < dt * 60) { const o = (Math.random() - 0.5) * 4; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 0.35, 0.05, 2.2, 1.9, 1.2, 0.8, CELL.STAR, -0.2, 0.4); }
           }
           break;
         }

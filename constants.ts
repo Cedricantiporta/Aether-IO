@@ -98,6 +98,11 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
+    KNIGHT: {
+        stats: { maxHealth: 160, defense: 22, moveSpeed: 11, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05 },
+        weaponId: 'sword_1',
+        description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
+    },
     BARBARIAN: {
         stats: { maxHealth: 140, defense: 15, moveSpeed: 11, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0 },
         weaponId: 'axe_1',
@@ -127,6 +132,7 @@ export const SKILLS_INFO = {
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    consecrate: { name: 'Consecration', description: 'Passive: a holy aura burns enemies around you every second and heals you a little for each one hit (radius and damage grow per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     warcry: { name: 'Warcry', description: 'Passive: every 12s in battle you roar, gaining +10% damage and +8 defense for 5s (+5% damage, +4 defense, +0.5s per level).', classType: 'BARBARIAN', type: 'PASSIVE' },
     stamp: { name: 'Axe Storm', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) hurls 3 giant spinning axes in a fan. Each ricochets once off the first enemy or obstacle it hits, hits hard and breaks armor.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };
@@ -164,6 +170,8 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_rage', type: 'SKILL_RAGE', name: 'Cross Slash', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Axe Storm', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
   { id: 'u_warcry', type: 'SKILL_WARCRY', name: 'Warcry', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_holywave', type: 'SKILL_HOLY_WAVE', name: 'Holy Wave', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'KNIGHT' },
+  { id: 'u_consecrate', type: 'SKILL_CONSECRATE', name: 'Consecration', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_inspire', type: 'SKILL_INSPIRE', name: 'Inspire', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
 ];
 
@@ -234,6 +242,8 @@ export const ITEMS_POOL: Item[] = [
     stats: { damage: 15 }, description: 'Basic magic.' },
   { id: 'bow_1', name: 'Shortbow', classType: 'ARCHER', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'ARROW', ability: 'ARROW_RAIN', 
     stats: { damage: 8 }, description: 'Basic bow.' },
+  { id: 'sword_1', name: 'Squire Sword', classType: 'KNIGHT', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'SWORD', ability: 'AXE_SPIN',
+    stats: { damage: 17 }, description: 'A plain, trusty blade.' },
   { id: 'axe_1', name: 'Hand Axe', classType: 'BARBARIAN', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'AXE', ability: 'AXE_SPIN', 
     stats: { damage: 18 }, description: 'Basic axe.' },
   

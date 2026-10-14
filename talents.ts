@@ -40,6 +40,11 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
     { name: 'Juggernaut', blurb: 'Health, defense and thorns', color: '#9fb2c8' },
     { name: 'Earthshaker', blurb: 'Axe Storm axes and ricochets', color: '#d99a4a' },
   ],
+  KNIGHT: [
+    { name: 'Crusader', blurb: 'Sword damage and crits', color: '#e9b949' },
+    { name: 'Bastion', blurb: 'Defense, health and shield', color: '#9fb2c8' },
+    { name: 'Templar', blurb: 'Holy skills and the aura', color: '#fff0a8' },
+  ],
 };
 
 type Row = [name: string, desc: string, max: number, icon: string, fx: StatFx];
@@ -128,6 +133,32 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Axe Tempest', 'Axe Storm +1 axe, +50% damage, +1 ricochet, +20% size', 1, 'u:SKILL_STAMP', { add: { axeCount: 1, stompPower: 0.5, axeBounce: 1, axeSize: 0.2 } }],
     ]],
   ],
+  KNIGHT: [
+    ['c', [
+      ['Edge Discipline', '+3% damage', 3, 'u:DAMAGE', { mul: { damage: 0.03 } }],
+      ['Swift Strikes', '+4% attack speed', 3, 'u:FIRE_RATE', { mul: { fireRate: 0.04 } }],
+      ['Precision', '+2% crit rate', 3, 'u:CRIT_RATE', { add: { critRate: 0.02 } }],
+      ['Executioner', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
+      ['Cleave', '+0.3 knockback, +3% damage', 2, 'u:DAMAGE', { add: { knockback: 0.3 }, mul: { damage: 0.03 } }],
+      ['Holy Avenger', 'Divine Avatar lasts +2s, +10% damage', 1, 'DIVINE_AVATAR', { add: { avatarBonus: 2 }, mul: { damage: 0.1 } }],
+    ]],
+    ['s', [
+      ['Plate Mastery', '+4 defense', 3, 'u:DEFENSE', { add: { defense: 4 } }],
+      ['Stalwart', '+15 max health', 3, 'u:HEALTH', { add: { maxHealth: 15 } }],
+      ['Retribution', '+8 thorns', 3, 'barrier', { add: { thorns: 8 } }],
+      ['Second Wind', '+1 HP regen/s', 2, 'regen', { add: { regen: 1 } }],
+      ['Shield Training', 'Take 3% less damage', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }],
+      ['Unbreakable', 'Take 12% less damage, +12% max health', 1, 'u:SKILL_BARRIER', { add: { dmgReduce: 0.12 }, mul: { maxHealth: 0.12 } }],
+    ]],
+    ['t', [
+      ['Devotion', '+6% skill damage', 3, 'u:SKILL_WEAPON', { add: { skillDamage: 0.06 } }],
+      ['Faith', '+20 max mana, +0.5 mana regen', 3, 'u:MAX_MANA', { add: { maxMana: 20, manaRegen: 0.5 } }],
+      ['Zeal', '+3% cooldown reduction', 3, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }],
+      ['Radiance', '+10% skill damage', 2, 'HOLY_WAVE', { add: { skillDamage: 0.1 } }],
+      ['Sanctuary', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Light Incarnate', '+20% skill damage, +6% cooldown reduction', 1, 'JUDGMENT', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
+    ]],
+  ],
 };
 
 export const TALENTS: TalentNode[] = [];
@@ -147,7 +178,7 @@ export const TALENT_BY_ID: Record<string, TalentNode> = Object.fromEntries(TALEN
 export const talentsOf = (hero: HeroClass): TalentNode[] => TALENTS.filter((t) => t.hero === hero);
 
 export type TalentRanks = Record<string, number>;
-export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {} });
+export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {} });
 
 /** 1 point per Hero Rank, +1 bonus every 5 ranks. */
 export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) + Math.floor(rank / 5);

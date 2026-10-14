@@ -57,17 +57,28 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Cleave a fissure that erupts in a line of stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${34 + 2 * (lv - 1)} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
+  KNIGHT: [
+    { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
+      desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
+      per: (lv) => `${pct(4.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (2.6 + 0.3 * (lv - 1)))}` },
+    { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 12,
+      desc: 'Raise your shield: a burst of light knocks nearby enemies back, then for a few seconds you take far less damage and slowly heal.',
+      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
+    { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
+      desc: 'Call a pillar of holy light down on the target area after a short warning: heavy damage, stuns, and breaks armor.',
+      per: (lv) => `${pct(7 * lvMul(lv))} dmg · radius ${f1(5.5 + 0.3 * (lv - 1))} · stun ${f1(1 + 0.1 * lv)}s` },
+  ],
 };
 
 /** Active slot bound to keys 1, 2, 3 (per class). Archer/Wizard keep their old E in the dash; the Barbarian keeps Whirlwind on 2. */
 export const ACTIVE_ORDER: Record<HeroClass, ActiveSlot[]> = {
-  ARCHER: ['q', 's3', 's4'], WIZARD: ['q', 's3', 's4'], BARBARIAN: ['q', 'e', 's3'],
+  ARCHER: ['q', 's3', 's4'], WIZARD: ['q', 's3', 's4'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'],
 };
 export const ACTIVE_KEYS = ['Digit1', 'Digit2', 'Digit3'] as const;
 /** Slot whose definition IS the class dash (Space). Barbarian has a dedicated shoulder charge (skill level key `dash`). */
-export const DASH_SLOT: Record<HeroClass, ActiveSlot | null> = { ARCHER: 'e', WIZARD: 'e', BARBARIAN: null };
+export const DASH_SLOT: Record<HeroClass, ActiveSlot | null> = { ARCHER: 'e', WIZARD: 'e', BARBARIAN: null, KNIGHT: null };
 /** Skill-level key of the class dash. */
-export const dashKey = (hero: HeroClass): 'e' | 'dash' => (hero === 'BARBARIAN' ? 'dash' : 'e');
+export const dashKey = (hero: HeroClass): 'e' | 'dash' => (hero === 'BARBARIAN' || hero === 'KNIGHT' ? 'dash' : 'e');
 export const isDashKey = (hero: HeroClass, key: string): boolean => key === dashKey(hero);
 
 export const SHOULDER_CHARGE: AbilityDef = {
@@ -75,12 +86,17 @@ export const SHOULDER_CHARGE: AbilityDef = {
   desc: 'Leap to the target (tap: forward) and slam down: stuns nearby enemies and grants a short Rage (faster attacks). Invulnerable while airborne.',
   per: (lv) => `Slam ${pct(3.5 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
 };
+export const HOLY_CHARGE: AbilityDef = {
+  slot: 'e', icon: 'HOLY_CHARGE', name: 'Holy Charge', mana: 0, cd: 0,
+  desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside.',
+  per: (lv) => `${pct(3 * lvMul(lv))} dmg · length ${f1(11 + 0.5 * (lv - 1))} · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
+};
 /** Ordered active definitions (keys 1, 2, 3). */
 export function activeDefs(hero: HeroClass): AbilityDef[] {
   return ACTIVE_ORDER[hero].map((s) => ABILITIES[hero].find((a) => a.slot === s)!);
 }
 export function dashDef(hero: HeroClass): AbilityDef {
-  return hero === 'BARBARIAN' ? SHOULDER_CHARGE : ABILITIES[hero].find((a) => a.slot === 'e')!;
+  return hero === 'BARBARIAN' ? SHOULDER_CHARGE : hero === 'KNIGHT' ? HOLY_CHARGE : ABILITIES[hero].find((a) => a.slot === 'e')!;
 }
 
 export const ULTS: Record<HeroClass, AbilityDef> = {
@@ -93,6 +109,9 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
     desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
+  KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
+    desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, 40% less damage taken, and every sword swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
+    per: (lv) => `Burst ${pct(14 * lvMul(lv) * 0.7)} dmg · wave ${pct(2 * lvMul(lv))} per swing` },
 };
 
 export function abilityDef(hero: HeroClass, slot: ActiveSlot | 'ult'): AbilityDef {

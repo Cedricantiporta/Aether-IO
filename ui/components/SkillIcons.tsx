@@ -315,6 +315,34 @@ Object.assign(ICONS, {
     <path d="M6 58 L12 48 L18 58 M46 58 L52 48 L58 58" stroke="#c9a070" strokeWidth="3" fill="none" strokeLinejoin="round" />
     <path d="M26 30 H38" stroke="#fff" strokeWidth="2" opacity=".6" />
   </Art>,
+  // ---- knight
+  HOLY_WAVE: (k: string) => <Art k={k} c="#ffd76a">
+    <path d="M8 44 C14 22 34 12 56 14 C40 20 28 32 22 50Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M14 42 C20 28 32 20 48 18" stroke="#fffbe0" strokeWidth="2.4" fill="none" strokeLinecap="round" opacity=".9" />
+    <path d="M40 40 L58 58 M44 36 L54 34 L52 44" stroke="#c4cad4" strokeWidth="4" strokeLinecap="round" />
+  </Art>,
+  SHIELD_WALL: (k: string) => <Art k={k} c="#9fc8ff">
+    <path d="M32 6 L54 14 C54 34 46 50 32 58 C18 50 10 34 10 14Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M32 12 L48 18 C48 32 42 44 32 50 C22 44 16 32 16 18Z" fill={u(k, 'blue')} stroke={S} strokeWidth="1" />
+    <path d="M32 18 V44 M22 28 H42" stroke="#ffe08a" strokeWidth="3.4" strokeLinecap="round" />
+  </Art>,
+  JUDGMENT: (k: string) => <Art k={k} c="#fff0a8">
+    <path d="M24 2 H40 L44 56 H20Z" fill="#fff6c8" opacity=".85" />
+    <path d="M28 2 H36 L38 56 H26Z" fill="#ffffff" />
+    <ellipse cx="32" cy="56" rx="22" ry="5" fill={u(k, 'gold')} stroke={S} strokeWidth="1.2" />
+    <path d="M10 46 L4 40 M54 46 L60 40 M14 36 L8 30 M50 36 L56 30" stroke="#ffe08a" strokeWidth="2.6" strokeLinecap="round" />
+  </Art>,
+  HOLY_CHARGE: (k: string) => <Art k={k} c="#ffe08a">
+    <path d="M30 10 L50 16 C50 32 44 44 30 52 C18 44 12 32 12 16Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M30 18 V44 M21 27 H39" stroke="#ffe08a" strokeWidth="3" strokeLinecap="round" />
+    <path d="M52 22 H62 M54 32 H64 M52 42 H60" stroke="#fff3c0" strokeWidth="3" strokeLinecap="round" />
+  </Art>,
+  DIVINE_AVATAR: (k: string) => <Art k={k} c="#ffd76a">
+    <circle cx="32" cy="32" r="27" fill="#ffd76a" opacity=".28" filter={u(k, 'glow')} />
+    <circle cx="32" cy="16" r="9" fill="none" stroke="#fff3c0" strokeWidth="2.6" />
+    <path d="M20 58 L22 34 C22 26 28 22 32 22 C36 22 42 26 42 34 L44 58Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M22 34 C10 30 6 20 8 12 C14 20 20 24 26 26 M42 34 C54 30 58 20 56 12 C50 20 44 24 38 26" fill="#fffbe8" stroke={S} strokeWidth="1.2" />
+  </Art>,
 });
 
 export const SKILL_KEYS = Object.keys(ICONS);

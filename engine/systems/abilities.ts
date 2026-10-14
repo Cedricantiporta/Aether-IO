@@ -33,7 +33,8 @@ export const abilityState = {
   lavaT: 0,
   ultMul: 1, ultB: 0,
   windupT: 0, windupDur: 0, windupX: 0, windupZ: 0, windupAim: false,   // ult cinematic wind-up
-  chargeT: 0, chargeDmg: 0, chargeLv: 1, chargeHit: [] as number[],      // barbarian shoulder charge
+  chargeT: 0, chargeDmg: 0, chargeLv: 1, chargeHit: [] as number[],      // barbarian shoulder charge / knight Holy Charge
+  judgeT: 0, judgeX: 0, judgeZ: 0, judgeR: 5, judgeDmg: 0, judgeStun: 1,   // knight Judgment (pending pillar)
   whirlBoost: false, whirlHeal: 0, finisher: false,
   orbT: 0, orbN: 0, orbTick: 0, orbChain: 2, orbDmg: 0,
   orbs: [{ x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }],
@@ -62,6 +63,7 @@ const spikeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', launch: 10, 
 const whirlOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true };
 const elecBreak: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', armorBreak: true };
 const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9 };
+const holyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true, knockback: 0.6 };
 const aimTmp = new Vector3();
 const frostOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
 const trapOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
@@ -77,7 +79,7 @@ const slowFrost: StatusEffect = { type: 'SLOW', duration: 2.5, value: 0.5 };
 export function resetAbilities(): void {
   const a = abilityState;
   a.tint = a.tintTarget = 0; a.flash = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0; a.ultCd = 0;
-  a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
+  a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.judgeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
   lastNoMana = -10;
   for (const k in lastCd) lastCd[k] = -10;
 }
@@ -123,6 +125,7 @@ function base(lv: number): number {
   if (p.cryT > 0) d *= 1.3;
   d *= 1 + p.buffDmg;   // Warcry / Inspire
   if (p.titanT > 0) d *= 1.5;
+  if (p.avatarT > 0) d *= 1.5;   // knight Divine Avatar
   return d * curMul;
 }
 
@@ -263,7 +266,7 @@ export function castActive(index: number): void {
 export function castDashSkill(auto: boolean): void {
   const hero = useGameStore.getState().hero;
   if (hero === 'BARBARIAN') { barbLeap(auto); return; }
-  void shoulderCharge;
+  if (hero === 'KNIGHT') { shoulderCharge(true); return; }   // Holy Charge
   dashAuto = auto;
   cast('e', true, -1);
 }
@@ -406,6 +409,34 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     return;
   }
 
+  // ---- KNIGHT
+  if (hero === 'KNIGHT') {
+    const a = abilityState;
+    if (slot === 'q') {
+      // Holy Wave: a wide golden crescent that sweeps forward through everything
+      spawnProjectile('HOLY_WAVE', p.pos.x + dx * 1.4, p.pos.z + dz * 1.4, dx, dz, 20, b * 4.4,
+        { life: 0.95, pierce: 999, knockback: 1.6, radius: 2.6 + 0.3 * (lv - 1), y: 1.1 });
+      p.anim.attackT = 1; addShake(0.12);
+      announce('HOLY_WAVE');
+    } else if (slot === 'e') {
+      // Shield Wall: knockback burst, then heavy damage reduction + slow heal
+      p.guardT = 3 + 0.4 * (lv - 1); p.guardRed = Math.min(0.75, 0.5 + 0.04 * (lv - 1));
+      damageEnemiesInRadius(p.pos.x, p.pos.z, 6, b * 2.5, physKnock);
+      events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xffe08a });
+      events.emit('shieldBlock', { pos: p.pos.clone(), radius: 2.4 });
+      p.anim.castT = 1; addShake(0.2);
+      announce('SHIELD_WALL');
+    } else if (slot === 's3') {
+      // Judgment: a pillar of light lands on the target after a short warning
+      aimPoint(26, 0, tgt);
+      a.judgeT = 0.6; a.judgeX = tgt.x; a.judgeZ = tgt.z; a.judgeR = 5.5 + 0.3 * (lv - 1); a.judgeDmg = b * 7; a.judgeStun = 1 + 0.1 * lv;
+      events.emit('telegraph', { pos: tgt.clone(), radius: a.judgeR, duration: 0.6 });
+      p.anim.castT = 1;
+      announce('JUDGMENT');
+    }
+    return;
+  }
+
   // ---- BARBARIAN
   if (slot === 'q') {
     // Cross Slash: a slow, wide burning X that rolls forward piercing everything in the lane; it grows with the skill level
@@ -473,7 +504,7 @@ function barbLeap(auto: boolean): void {
   p.anim.castT = 1;
 }
 
-function shoulderCharge(): void {
+function shoulderCharge(holy = false): void {
   const st = useGameStore.getState();
   const p = world.player;
   const a = abilityState;
@@ -490,9 +521,10 @@ function shoulderCharge(): void {
   if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { kx = jj.x; kz = jj.z; }
   const kl = Math.hypot(kx, kz);
   if (kl > 0.05 && !aimOverride.on) { mx = kx / kl; mz = kz / kl; }
-  p.dashT = 0.22; p.dashDir.set(mx, 0, mz);
-  p.dashIframes = false;
-  a.chargeT = 0.26; a.chargeDmg = base(lv) * 2.2; a.chargeLv = lv; a.chargeHit.length = 0;
+  p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
+  p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
+  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2); a.chargeLv = lv; a.chargeHit.length = 0;
+  if (holy) { events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0xffe08a }); announce('HOLY_CHARGE'); }
   events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
   p.anim.castT = 1;
 }
@@ -522,7 +554,7 @@ export function castUlt(): void {
   a.finisher = fin; a.ultMul = curMul;
   a.windupT = a.windupDur = ULT_WINDUP;
   a.windupAim = aimOverride.on; a.windupX = aimOverride.x; a.windupZ = aimOverride.z;
-  a.flashRgb = st.hero === 'WIZARD' ? [1, 0.6, 0.3] : st.hero === 'ARCHER' ? [1, 0.95, 0.7] : [1, 0.75, 0.4];
+  a.flashRgb = st.hero === 'WIZARD' ? [1, 0.6, 0.3] : st.hero === 'ARCHER' ? [1, 0.95, 0.7] : st.hero === 'KNIGHT' ? [1, 0.92, 0.6] : [1, 0.75, 0.4];
   p.invulnT = Math.max(p.invulnT, ULT_WINDUP + 0.4);
   p.anim.castT = 1;
   events.emit('ultWindup', { hero: st.hero, pos: p.pos.clone(), duration: ULT_WINDUP });
@@ -577,6 +609,18 @@ function releaseUlt(): void {
     mkFx('BIG_METEOR', tgt.x, tgt.z, 1.2, 1.5, 14, b * 50, 0, 0xff7a1a);
     events.emit('telegraph', { pos: tgt.clone(), radius: 14, duration: 1.2 });
     slowMo(0.5, 0.45);
+  } else if (st.hero === 'KNIGHT') {
+    // DIVINE AVATAR: a column of light crashes down around the knight, then 8s of radiant power
+    a.ultKind = 4;
+    const dur = 8 + (st.stats.avatarBonus || 0);
+    p.ultT = dur; p.avatarT = dur; p.invulnT = Math.max(p.invulnT, 0.8);
+    stunSt.duration = 1.5;
+    damageEnemiesInRadius(p.pos.x, p.pos.z, 12, b * 14, physKnock, stunSt);
+    p.levelUpFx = 1;   // the golden pillar
+    a.tintRgb = [0.14, 0.11, 0.03]; a.tintTarget = 0;
+    events.emit('ultImpact', { pos: p.pos.clone(), name: 'DIVINE_AVATAR', radius: 12 });
+    events.emit('shockwave', { pos: p.pos.clone(), radius: 14, color: 0xffe08a });
+    addShake(0.6); fovKick(0.7); slowMo(0.4, 0.4);
   } else {
     a.ultKind = 3;
     battleCryRoar(b, lv);
@@ -695,6 +739,12 @@ function updateUlt(dt: number): void {
       }
       if (a.ultT >= 2.7) { a.ultKind = 0; p.ultT = 0; }
     }
+    return;
+  }
+
+  // knight: Divine Avatar runs on p.avatarT (damage x1.5, -40% damage taken, swings release Holy Waves)
+  if (a.ultKind === 4) {
+    if (p.avatarT <= 0) { a.ultKind = 0; a.tintTarget = 0; p.ultT = 0; events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xffe08a }); }
     return;
   }
 
@@ -888,6 +938,20 @@ export function updateAbilities(dt: number): void {
     }
   }
 
+  // ---- knight Judgment: the pillar of light lands
+  if (a.judgeT > 0) {
+    a.judgeT -= dt;
+    if (a.judgeT <= 0) {
+      stunSt.duration = a.judgeStun;
+      damageEnemiesInRadius(a.judgeX, a.judgeZ, a.judgeR, a.judgeDmg, holyOpts, stunSt);
+      const at = new Vector3(a.judgeX, 0, a.judgeZ);
+      events.emit('explosion', { pos: at, radius: a.judgeR, color: 0xffe08a });
+      events.emit('shockwave', { pos: at.clone(), radius: a.judgeR * 1.2, color: 0xfff2c0 });
+      events.emit('ultImpact', { pos: at.clone(), name: 'JUDGMENT', radius: a.judgeR });
+      addShake(0.35);
+    }
+  }
+
   // ---- barbarian shoulder charge: bulldozes everything on its path
   if (a.chargeT > 0) {
     a.chargeT -= dt;
@@ -900,7 +964,7 @@ export function updateAbilities(dt: number): void {
       a.chargeHit.push(e.id);
       chargeOpts.knockDir = aimTmp.set(p.dashDir.x, 0, p.dashDir.z);
       damageEnemy(e, a.chargeDmg, chargeOpts);
-      events.emit('shockwave', { pos: e.pos.clone(), radius: 2.2, color: 0xffb060 });
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 2.2, color: useGameStore.getState().hero === 'KNIGHT' ? 0xffe08a : 0xffb060 });
     }
   }
 

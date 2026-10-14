@@ -70,3 +70,19 @@ export function makeAxe(accent: string, tier: number): WeaponGeo {
   if (tier >= 3) { g.box(0.03, 0.8, 0.05, [0.09, 1.12, 0.9], accent); g.box(0.03, 0.8, 0.05, [0.09, 1.12, -0.9], accent); }
   return { body: b.build(), glow: g.build(), tip: [0, 1.12, 0.9] };
 }
+
+/** Knight longsword: fuller-grooved steel blade, gold crossguard, leather grip, round pommel (blade up = +y). */
+export function makeSword(accent: string, tier: number): WeaponGeo {
+  const b = new GB([0.82, 1.1]), g = new GB([1, 1]);
+  const steel = tier >= 3 ? '#eef2f8' : '#c4cad4', gold = '#d9b25a';
+  b.cyl(0.06, 0.06, 0.6, 6, [0, -0.15, 0], '#4a2e1c');                    // grip
+  b.sph(0.11, [0, -0.5, 0], gold, 1, 8);                                    // pommel
+  b.box(0.75 + tier * 0.05, 0.1, 0.14, [0, 0.18, 0], gold);                 // crossguard
+  b.box(0.12, 0.14, 0.18, [0, 0.18, 0], accent);
+  b.box(0.2, 1.55 + tier * 0.08, 0.05, [0, 1.05 + tier * 0.04, 0], steel);  // blade
+  b.box(0.05, 1.4 + tier * 0.08, 0.06, [0, 1.0 + tier * 0.04, 0], '#9aa2ae'); // fuller
+  b.cone(0.1, 0.3, 4, [0, 1.98 + tier * 0.08, 0], steel, [0, Math.PI / 4, 0]);
+  if (tier >= 1) g.box(0.05, 1.2 + tier * 0.08, 0.07, [0, 1.0 + tier * 0.04, 0], accent);
+  if (tier >= 3) { g.sph(0.07, [-0.38, 0.18, 0], accent, 1, 6); g.sph(0.07, [0.38, 0.18, 0], accent, 1, 6); }
+  return { body: b.build(), glow: g.build(), tip: [0, 1.9, 0] };
+}
