@@ -42,7 +42,7 @@ export const WarehouseTab: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <div className="rpg-label !text-[.72rem]">Storage <span className="rpg-num text-white ml-1">{wh.length}/{cap}</span></div>
+        <div className="rpg-label !text-[.72rem]" title="Shared by all your characters">Shared storage <span className="rpg-num text-white ml-1">{wh.length}/{cap}</span></div>
         <div className="flex gap-2">
           <input className="wh-search pe" placeholder="Search…" value={filter} onChange={(e) => setFilter(e.target.value)} />
           <button className="wh-btn pe" disabled={wh.length < 2} onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('warehouse', sortedItems(wh, SORTS[n], calculateItemCP)); }}

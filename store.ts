@@ -496,7 +496,9 @@ const writeProfile = (s: GameState): void => {
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
+    p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    writeSharedWh(s.warehouse, s.warehouseGold);
   } catch {
     /* storage unavailable (private mode, quota) — ignore */
   }
@@ -504,6 +506,28 @@ const writeProfile = (s: GameState): void => {
 
 const loaded = loadProfile();
 const profile = loaded.profile;
+
+// ---- shared warehouse: one storage for all characters (its own key). Each character's old per-profile warehouse is
+// merged in once (the profile keys already merged are remembered), then profiles store an empty warehouse.
+const SHARED_WH_KEY = 'aether-survivor-shared-warehouse-v1';
+interface SharedWh { items: Item[]; gold: number; merged: string[] }
+const sharedWh: SharedWh = (() => {
+  let w: SharedWh = { items: [], gold: 0, merged: [] };
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SHARED_WH_KEY) : null;
+    const p = raw ? JSON.parse(raw) as Partial<SharedWh> : null;
+    if (p && typeof p === 'object') w = { items: Array.isArray(p.items) ? p.items : [], gold: num(p.gold, 0), merged: Array.isArray(p.merged) ? p.merged : [] };
+  } catch { /* corrupt / unavailable: start empty */ }
+  if (!w.merged.includes(PROFILE_KEY)) {
+    w = { items: [...w.items, ...(profile.warehouse ?? [])], gold: w.gold + (profile.warehouseGold ?? 0), merged: [...w.merged, PROFILE_KEY] };
+  }
+  return w;
+})();
+profile.warehouse = sharedWh.items; profile.warehouseGold = sharedWh.gold;
+const writeSharedWh = (items: Item[], gold: number): void => {
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(SHARED_WH_KEY, JSON.stringify({ items, gold, merged: sharedWh.merged })); } catch { /* ignore */ }
+};
+writeSharedWh(sharedWh.items, sharedWh.gold);
 
 // -------------------------------------------------------------------- store --
 export const useGameStore = create<GameState>()((set, get) => {
@@ -740,7 +764,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
