@@ -43,3 +43,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: android/app/build/outputs/apk/debug/*.apk
+      - name: Publish APK as a GitHub Release (dev branch builds)
+        if: github.ref == 'refs/heads/claude/charming-shannon-nq5wcd'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Aether Survivor APK (build ${{ github.run_number }})
+          body: Debug APK built automatically from the latest commit. Download the .apk below and install it on Android (allow installs from unknown sources).
+          make_latest: true
+          files: android/app/build/outputs/apk/debug/*.apk
