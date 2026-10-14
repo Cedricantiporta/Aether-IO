@@ -957,7 +957,7 @@ export function updateAbilities(dt: number): void {
       o.x = p.pos.x + Math.cos(aa) * 4.5; o.z = p.pos.z + Math.sin(aa) * 4.5; o.y = 1.4 + Math.sin(world.time * 5 + i) * 0.2;
     }
     if (a.orbTick <= 0 && fade > 0.3) {
-      a.orbTick = 0.4;
+      a.orbTick = 0.8;   // zap rate halved
       for (let i = 0; i < n; i++) orbZap(a.orbs[i], a);
     }
     if (a.orbT <= 0) a.orbN = 0;

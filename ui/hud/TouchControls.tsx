@@ -112,7 +112,7 @@ const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#f
       onPointerDown={press} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>
       <div className="rb-in">
         {icon && <span className="slot-icon">{icon}</span>}
-        {ult && <div ref={shade} className="absolute inset-0" style={{ background: 'conic-gradient(rgba(10,12,20,0) calc(var(--ult,0)*360deg), rgba(10,12,20,.6) 0)' }} />}
+        {ult && <div ref={shade} className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(255,190,60,.55) calc(var(--ult,0)*100%), rgba(10,12,20,.6) 0)', mixBlendMode: 'normal' }} />}
         <div ref={sweep} className="cd-sweep" />
         <span ref={txt} className="rb-txt" style={{ bottom: 'auto', top: '50%', transform: 'translateY(-50%)', fontSize: size > 1.2 ? 13 : 14 }} />
       </div>

@@ -1339,3 +1339,6 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .sw-win.gold .sw-swirl { background: conic-gradient(from 0deg, transparent, rgba(255, 230, 150, .45), transparent 25%, rgba(233, 185, 73, .4), transparent 55%, rgba(255, 255, 255, .25), transparent 80%); }
 .sw-win.gold .sw-btn:not(.gold) { color: #f6e8c8; background: linear-gradient(180deg, #5a4626, #2e2312); border-color: #c9a052; }
 .sw-win.purple .sw-btn:not(.gold) { color: #f1e6ff; background: linear-gradient(180deg, #5a3a8a, #2e1c4e); border-color: #a07ad8; }
+/* touch ult: golden glow when charged */
+.rbtn.tc-ready { box-shadow: 0 0 0 2px #f6d27a, 0 0 22px 6px rgba(255, 200, 80, .75) !important; animation: tcUlt 1.1s ease-in-out infinite; }
+@keyframes tcUlt { 50% { box-shadow: 0 0 0 2px #fff0b8, 0 0 30px 10px rgba(255, 210, 100, .95); } }
