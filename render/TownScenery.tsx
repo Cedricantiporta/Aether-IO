@@ -14,8 +14,7 @@ import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
-} from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, PORTAL } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
@@ -686,7 +685,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     // the light column + ground ring stand where the main quest continues (an NPC, a shop, the castle door), else on
     // the gate; hidden while the step is done from the bag
     const ms = storyTarget(), hide = !ms && !!STORY[useGameStore.getState().story.step];
-    let bx = GATE.x, bz = GATE.z - 1;
+    let bx = PORTAL.x, bz = PORTAL.front.z;   // default: the Adventure Portal
     if (ms && ms.shop) { bx = ms.x; bz = ms.z; }
     else if (ms && ms.npc >= 0) { if (ms.area === 'CASTLE') { bx = CASTLE_DOOR.x; bz = CASTLE_DOOR.z + 1.5; } else { bx = npcs[ms.npc].x; bz = npcs[ms.npc].z; } }
     if (beam.current) { beam.current.position.set(bx, 18, bz); beam.current.visible = !hide; }

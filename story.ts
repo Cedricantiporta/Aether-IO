@@ -55,7 +55,7 @@ export const STORY: StoryStep[] = [
     talk: ['Bounties, bounties! Kill this, fetch that, gold for all of it.', 'Pick any one off the board and it is yours. Come back when it is done and I pay out.'] },
   { id: 'board', title: 'Odd Jobs', line: 'Accept a bounty from the Quest Board', npc: '', at: 'BOARD', act: { kind: 'accept', count: 1 }, reward: { gold: 80 } },
   { id: 'king', title: 'Audience with the King', line: 'Speak with King Aldric in the castle', npc: 'King Aldric', reward: { gold: 300, items: [{ id: 'potion_hp', qty: 3 }] },
-    talk: ['Rise, guard. You have the Font\'s light about you; few do any more.', 'Something is twisting the wilds beyond our walls. The old guardians of each land have turned on us.', 'First prove yourself: the slimes in the Meadow grow bold. Cut down ten of them.', 'The gate is open to you now. Go with the Font.'] },
+    talk: ['Rise, guard. You have the Font\'s light about you; few do any more.', 'Something is twisting the wilds beyond our walls. The old guardians of each land have turned on us.', 'First prove yourself: the slimes in the Meadow grow bold. Cut down ten of them.', 'The Adventure Portal in the forest past the town gate is open to you now. Go with the Font.'] },
   // ---------------------------------------------------------------- act I: the Meadow
   { id: 'slimes', title: 'Trial of the Meadow', line: 'Defeat Slimes beyond the gate', npc: '', kill: { kind: 'SLIME', count: 10 }, reward: { gold: 500, items: [{ id: 'upgrade_core', qty: 1 }] } },
   { id: 'lysa', title: 'Sticky Business', line: 'Bring 3 Slime Gel to Lysa the Herbalist', npc: 'Lysa', deliver: { id: 'slime_gel', count: 3 }, reward: { gold: 400, items: [{ id: 'potion_hp', qty: 3 }] },

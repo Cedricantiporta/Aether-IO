@@ -24,7 +24,7 @@ import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS 
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
@@ -120,7 +120,7 @@ function scanNearby(): void {
     d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
     for (const s of SHOP_POSITIONS) { d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d); }
-    d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Town Gate', '', -1, d, 'gate');
+    d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
@@ -247,7 +247,7 @@ export function walkToQuest(q: Quest): void {
   }
   if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT') && !castle) { const s = SHOP_POSITIONS.find((x) => x.type === 'SUPPLIES')!, f = shopFront(s, 5.2, 1.2); walkTo(f.x, f.z, 'shop', 'SUPPLIES'); return; }
   if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
-  else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
+  else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
 }
 /** Main story row click: the step's NPC (through the castle door / exit when it is in the other area), else the gate. */
 export function walkToMain(): void {
@@ -264,7 +264,7 @@ export function walkToMain(): void {
   if (castle) { walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return; }
   const at = STORY[useGameStore.getState().story.step]?.at;
   if (at && at !== 'BAG') { walkToSpot(at); return; }
-  walkTo(GATE.x, GATE.z - 1, 'none', '', 2.2);
+  walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
 type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER';
 /** Walk to a shop counter / the quest board / the skill trainer and open it on arrival. */
@@ -291,7 +291,7 @@ export function walkToNpcObjective(o: { type: string; target?: string | string[]
     if (t === 'cat') { walkTo(HIDDEN_CAT.x, HIDDEN_CAT.z, 'none', '', 2.4); return; }
   }
   if (o.type === 'ACTION' && ACTION_SPOT[t]) { walkToSpot(ACTION_SPOT[t]); return; }
-  walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);
+  walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
 // After a teleport home from a run: the quest's auto-path starts by itself once the town is in.
 let afterArrive: (() => void) | null = null, afterT = 0;
@@ -309,7 +309,7 @@ export function walkToNpcQuest(name: string | null): void {
     }
   }
   if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
-  else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);
+  else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {

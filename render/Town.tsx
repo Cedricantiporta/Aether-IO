@@ -18,7 +18,7 @@ import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER } from '../engine/townData';
+import { TOWER, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 
 type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH';
@@ -729,6 +729,82 @@ function TowerLandmark() {
   );
 }
 
+// ---- Adventure Portal: an ancient stone gate in the forest clearing south of the town (runs start here)
+function buildPortalGeo() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const st = ['#8f8c86', '#9c988f', '#85827c', '#a6a299'], dark = '#3a3833', moss = '#5d7a3a';
+  // round stepped platform
+  b.cyl(7.6, 8.0, 0.5, 28, [0, 0.25, 0], '#6f6c66'); b.cyl(6.6, 6.9, 0.4, 28, [0, 0.7, 0], st[0]); b.cyl(5.4, 5.6, 0.3, 28, [0, 1.05, 0], st[1]);
+  for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; g.box(0.28, 0.04, 0.5, [Math.cos(a) * 6.1, 0.92, Math.sin(a) * 6.1], '#7ad8ff', [0, -a, 0]); }   // rune ring
+  // steps up to it (front, -z)
+  for (let i = 0; i < 3; i++) b.box(4.2, 0.35, 0.8, [0, 0.18 + i * 0.32, -8.2 + i * 0.75], st[i % 3]);
+  // two massive carved pillars
+  for (const sx of [-1, 1]) {
+    const x = sx * 4.3;
+    b.box(2.3, 1.0, 2.3, [x, 1.6, 0], st[2]);
+    for (let k = 0; k < 5; k++) b.box(1.7 - (k % 2) * 0.12, 1.9, 1.7 - (k % 2) * 0.12, [x, 3.05 + k * 1.9, 0], st[k % 4]);
+    b.box(2.1, 0.5, 2.1, [x, 12.6, 0], st[0]);
+    for (let k = 0; k < 4; k++) g.box(0.12, 0.7, 0.08, [x - sx * 0.86, 4 + k * 2.1, -0.4], '#7ad8ff');   // glowing runes facing the opening
+    b.box(0.5, 2.4, 1.75, [x + sx * 0.95, 4.2, 0], moss);   // moss streak on the outer face
+  }
+  // arch: stone voussoirs on a semicircle over the pillars, keystone on top
+  const R = 4.3, cy = 12.9;
+  for (let i = 0; i <= 10; i++) {
+    const a = Math.PI * (i / 10), x = Math.cos(a) * R, y = cy + Math.sin(a) * R * 0.75;
+    b.box(1.5, 1.2, 1.9, [x, y, 0], st[i % 4], [0, 0, a - Math.PI / 2]);
+  }
+  b.box(1.4, 1.8, 2.3, [0, cy + R * 0.75 + 0.4, 0], '#b0aca2'); g.sph(0.36, [0, cy + R * 0.75 + 0.4, -1.2], '#9fe8ff', 1, 8);
+  // broken standing stones around the clearing
+  for (let i = 0; i < 6; i++) { const a = -0.4 + (i / 5) * (Math.PI + 0.8) + Math.PI, r = 9.3; b.box(1.0, 2.2 + (i % 3) * 0.8, 0.8, [Math.cos(a) * r, 1.1 + (i % 3) * 0.4, Math.sin(a) * r * -1 + 1], st[i % 4], [0.08 * (i % 2 ? 1 : -1), a, 0.1]); }
+  // braziers flanking the steps
+  for (const sx of [-1, 1]) { b.cyl(0.55, 0.7, 1.6, 10, [sx * 3.4, 0.8, -8.0], '#4a4842'); b.cyl(0.85, 0.6, 0.4, 10, [sx * 3.4, 1.8, -8.0], dark); g.sph(0.5, [sx * 3.4, 2.2, -8.0], '#ffb347', [1, 1.3, 1], 8); }
+  return { body: b.build(), glow: g.build() };
+}
+function PortalLandmark() {
+  const geos = useMemo(() => buildPortalGeo(), []);
+  const mats = useMemo(() => ({
+    lit: litMat({ roughness: 0.92 }),
+    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.8) }),
+    disc: new MeshBasicMaterial({ color: new Color(0.25, 0.6, 1.4), transparent: true, opacity: 0.55, side: DoubleSide, depthWrite: false, toneMapped: false }),
+    swirl: new MeshBasicMaterial({ color: new Color(0.7, 1.4, 2.4), transparent: true, opacity: 0.6, side: DoubleSide, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
+    swirl2: new MeshBasicMaterial({ color: new Color(1.4, 0.8, 2.2), transparent: true, opacity: 0.45, side: DoubleSide, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
+  }), []);
+  const label = useMemo(() => labelMaterial('Adventure Portal', '#d6f2ff', { size: 64, plate: 'plate' }), []);
+  const r1 = useRef<Mesh>(null!), r2 = useRef<Mesh>(null!), r3 = useRef<Mesh>(null!), stones = useRef<Group>(null!);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (r1.current) r1.current.rotation.z = t * 0.9;
+    if (r2.current) r2.current.rotation.z = -t * 1.4;
+    if (r3.current) { r3.current.rotation.z = t * 0.4; r3.current.scale.setScalar(1 + Math.sin(t * 2) * 0.04); }
+    mats.disc.opacity = 0.45 + Math.sin(t * 1.7) * 0.1;
+    if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = 3 + i * 1.6 + Math.sin(t * 1.5 + i) * 0.35; }); }
+  });
+  const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2); };
+  return (
+    <group position={[PORTAL.x, 0, PORTAL.z]}>
+      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
+      <mesh geometry={geos.glow} material={mats.glow} />
+      {/* the swirling gateway between the pillars */}
+      <group position={[0, 7.6, 0]}>
+        <mesh material={mats.disc}><circleGeometry args={[3.3, 40]} /></mesh>
+        <mesh ref={r1} material={mats.swirl} position={[0, 0, -0.02]}><ringGeometry args={[1.2, 3.3, 40, 1, 0, Math.PI * 1.3]} /></mesh>
+        <mesh ref={r2} material={mats.swirl2} position={[0, 0, -0.04]}><ringGeometry args={[0.4, 2.6, 36, 1, 0, Math.PI * 0.9]} /></mesh>
+        <mesh ref={r3} material={mats.swirl} position={[0, 0, -0.06]}><ringGeometry args={[2.9, 3.35, 48]} /></mesh>
+      </group>
+      {/* rune stones floating around the arch */}
+      <group ref={stones}>
+        {[0, 1, 2, 3].map((i) => <mesh key={i} material={mats.glow} position={[Math.cos(i * 1.57) * 6, 3 + i * 1.6, Math.sin(i * 1.57) * 6]}><octahedronGeometry args={[0.45, 0]} /></mesh>)}
+      </group>
+      <sprite material={label.mat} position={[0, 20.5, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
+      <pointLight position={[0, 7, -2.5]} color="#7ad8ff" distance={18} decay={1.6} intensity={18} />
+      <mesh position={[0, 7, 0]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+        <boxGeometry args={[10, 14, 3]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function Town({ q }: { q: QualityCfg }) {
   // houses / stalls / gate / NPCs / animals: only in the peaceful village (and behind the title screen)
   const village = useGameStore((s) => s.status === GameStatus.MENU || s.status === GameStatus.HERO_SELECT);
@@ -737,6 +813,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <TownScenery q={q} />}
       {village && <Npcs />}
       {village && <TowerLandmark />}
+      {village && <PortalLandmark />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
       <QuestBoard />
       <Station kind="TRAINER" position={TRAINER_POS} />

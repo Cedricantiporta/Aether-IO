@@ -63,7 +63,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${Math.min(4, 1 + Math.ceil(lv / 2))} skeletons (max 4) · ${pct(0.9 * lvMul(lv))} dmg per hit · until slain` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
-      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
+      per: (lv) => `Burst ${pct(1.25 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
     { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(4.5 * lvMul(lv))} dmg · pierces all · slow 40%` },

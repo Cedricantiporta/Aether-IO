@@ -838,7 +838,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const hero = get().hero, cp = get().classProg;
       set({ experience, experienceToNextLevel, level, heroRank: level, skillPoints: sp, baseStats: base, stats,
         classProg: { ...cp, [hero]: { ...cp[hero], lv: level, xp: experience, sp } } });
-      notify(`LEVEL UP! ${hero.charAt(0) + hero.slice(1).toLowerCase()} Lv ${level}`, COLORS.uiAccent, 'BOSS');
+      // (no banner: the golden LevelUpBurst ring shows the level-up)
       // Engine: full heal + fx.
       world.player.hp = stats.maxHealth;
       world.player.mana = stats.maxMana;

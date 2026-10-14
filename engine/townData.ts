@@ -20,6 +20,9 @@ export interface SignSpec { x: number; z: number }
 
 export const GATE = { x: 0, z: 38 };
 export const PLAZA = { x: 0, z: 2, r: 6.5 };
+/** The Adventure Portal: an ancient stone gate in a forest clearing at the end of the road south of the town gate.
+ *  Runs start here (the town gate is just a gate). `front` = where the hero stands to step in. */
+export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 81.5 } };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
@@ -41,6 +44,7 @@ export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
 export const ISLAND_BOXES: [number, number, number, number][] = [
   [-48.5, -60, 62, 56], // walled town + a walkable ring OUTSIDE the walls on the back / east (the west side is the lake)
   [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
+  [-12, -10, 12, 99],   // the forest road on to the Adventure Portal clearing (PORTAL)
   [20, 44, 44, 80],     // the farm clearing east of the field (barn, cows)
   [-37, 69, -20, 81],   // the forest nook of the Endless Tower
 ];
@@ -128,6 +132,7 @@ export const ROADS: RoadSpec[] = [
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
   { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
+  { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -232,6 +237,8 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]);
   c.push([TOWER.x, TOWER.z, TOWER.r]);
+  for (const sx of [-1, 1]) c.push([PORTAL.x + sx * 4.3, PORTAL.z, 1.5]);   // the portal's two great pillars
+  c.push([PORTAL.x, PORTAL.z + 2.2, 3.4]);                                       // the stone back of the arch
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
@@ -285,6 +292,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   c.push([0, 8, 40]);
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
   c.push([CASTLE.x, CASTLE.z, 14], [HERMIT_CAMP.x, HERMIT_CAMP.z, 7]);
+  c.push([PORTAL.x, PORTAL.z, 13], [PORTAL.x, PORTAL.z - 6, 9]);   // the portal clearing
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
@@ -332,9 +340,9 @@ export const NPCS: NpcDef[] = [
       ['Welcome to Aether Village, traveller! I am Mira. Let me show you the ropes.', 'Move with WASD or the left stick. Dash with Space (or the dash button) to slip through danger with a burst of speed.'],
       ['Your skills live on the keys 1, 2 and 3, or on the round skill buttons. R unleashes your ultimate once its gauge is full.', 'Potions are on Z and X. Mana refills over time, so do not hoard it.'],
       ['Combos are hit counts. Every hit you land adds one, and the chain breaks after about three seconds without a hit.', 'Every 10 hits adds a little bonus damage, up to a big chunk at the top. An ultimate at 50+ hits becomes a finisher!'],
-      ['Tired of tapping? Open the pause menu and switch on "Auto skills": skills 1/2/3 and your ultimate cast themselves at nearby enemies.', 'Dashing always stays manual, so stay sharp. When you are ready, the gate in the south awaits.'],
+      ['Tired of tapping? Open the pause menu and switch on "Auto skills": skills 1/2/3 and your ultimate cast themselves at nearby enemies.', 'Dashing always stays manual, so stay sharp. When you are ready, take the road south past the gate to the old stone portal in the forest.'],
     ],
-    bubbles: ['Press E near anything glowing!', 'Ask me again for more tips. The gate is down the main road!', 'Skills 1, 2, 3 and R. Never forget R!'],
+    bubbles: ['Press E near anything glowing!', 'Ask me again for more tips. The portal is down the main road, past the gate!', 'Skills 1, 2, 3 and R. Never forget R!'],
   },
   {
     name: 'Elder Tobin', role: 'Village Elder', model: 'BARBARIAN', tint: '#f1ece2', scale: 1, prop: 'none', accent: '#e6d3a0', home: [4.8, -2.2],
@@ -369,7 +377,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Garrick', role: 'Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#bcd0ff', home: [5, 34.8],
     talk: [
-      ['Halt! ...Oh. It is you. Carry on.', 'The gate to the south leads out into the wilds. Step up to it and set out when you are ready.'],
+      ['Halt! ...Oh. It is you. Carry on.', 'Follow the road south through the gate to the Adventure Portal in the forest. Step into it when you are ready.'],
       ['Nothing gets past me. Well, nothing except hens. And the Elder\'s cat.', 'Bring back something shiny, will you?'],
       ['Stock up at the potion shop before you set out. Heroes who forget potions tend to come back without their dignity.'],
     ],

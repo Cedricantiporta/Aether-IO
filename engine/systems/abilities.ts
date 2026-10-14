@@ -440,7 +440,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
       necroSlow.duration = 2;
-      damageEnemiesInRadius(from.x, from.z, R, b * 2.5, physOpts, necroSlow);
+      damageEnemiesInRadius(from.x, from.z, R, b * 1.25, physOpts, necroSlow);
       events.emit('explosion', { pos: from, radius: R, color: 0xd8d0b8 });
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
       p.invulnT = Math.max(p.invulnT, 0.35);

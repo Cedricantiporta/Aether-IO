@@ -93,8 +93,8 @@ function buildRig(d: RigDef, mat: Material): Rig {
   return { root, hips, head, armL, armR, legL, legR };
 }
 
-const SCALE = [1.3, 1.3, 1.5, 1.3];   // warrior, mage, golem, bowman
-const BAR_Y = [2.75, 3.0, 4.6, 2.85];
+const SCALE = [1.3, 1.3, 1.9, 1.3];   // warrior, mage, golem, bowman
+const BAR_Y = [2.75, 3.0, 5.8, 2.85];
 
 export function Minions() {
   const N = world.minions.length;

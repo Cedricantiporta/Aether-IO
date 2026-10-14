@@ -46,11 +46,11 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const m = M.find((o) => !o.active);
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
-  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL; m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
+  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.3 : 1);   // the bone golem hits 30% harder m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
   m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
@@ -97,7 +97,7 @@ export function updateMinions(dt: number): void {
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 2.6 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
+    const reach = golem ? 3.2 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;

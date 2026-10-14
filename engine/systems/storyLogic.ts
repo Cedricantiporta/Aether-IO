@@ -9,7 +9,7 @@ import { spawnPickup } from './pickups';
 import { Vector3 } from 'three';
 import { SHOP_POSITIONS, GOLD_SCALE, ITEMS_POOL } from '../../constants';
 import type { Item } from '../../types';
-import { NPCS, GATE } from '../townData';
+import { NPCS, GATE, PORTAL } from '../townData';
 import { CASTLE_DOOR } from '../castleData';
 
 /** Loot of `id` in the bag. */
@@ -148,7 +148,7 @@ export function storyTarget(): StoryTarget | null {
     if (!p) return null;
     T.x = p.x; T.z = p.z; T.area = 'TOWN'; T.npc = -1; T.shop = true; return T;
   }
-  T.x = GATE.x; T.z = GATE.z - 1; T.area = 'TOWN'; T.npc = -1; T.shop = false;
+  T.x = PORTAL.front.x; T.z = PORTAL.front.z; T.area = 'TOWN'; T.npc = -1; T.shop = false;   // field steps: the Adventure Portal
   return T;
 }
 /** The point to aim at from the current area (an NPC inside the castle is reached through the castle door). */

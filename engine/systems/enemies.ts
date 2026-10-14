@@ -1097,7 +1097,7 @@ export function updateEnemyProjectiles(dt: number): void {
       for (let k = 0; k < M.length; k++) {
         const m = M[k];
         if (!m.active || m.rise > 0) continue;
-        const dx = p.pos.x - m.x, dz = p.pos.z - m.z, r = p.radius + (m.kind === 2 ? 1.5 : 0.65);
+        const dx = p.pos.x - m.x, dz = p.pos.z - m.z, r = p.radius + (m.kind === 2 ? 1.9 : 0.65);
         if (dx * dx + dz * dz < r * r) { hitM = k; break; }
       }
       if (hitM >= 0) {
