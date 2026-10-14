@@ -101,7 +101,7 @@ export function breakCrate(c: Crate): void {
   switch (c.kind) {
     case 'POT': {
       const r = Math.random();
-      if (r < 0.08) spawnPickup('HEALTH', dropAt(c, 0.4, 0.4), 25);
+      if (r < 0.016) spawnPickup('HEALTH', dropAt(c, 0.4, 0.4), 25);
       else if (r < 0.2) spawnPickup('GOLD', dropAt(c, 0.4, 0.4), 4 + Math.floor(Math.random() * 8));
       break;
     }
