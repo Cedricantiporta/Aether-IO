@@ -37,7 +37,7 @@ let ultHold = 0;   // the ult cooldown frozen while the ult army stands
 
 /** Raises a minion at (x, z). dmg = damage per hit (before talents), life in seconds (PERMANENT = until slain).
  *  src 1 = Raise Dead, 2 = Army of the Dead (their cooldowns only start once all of those minions are gone). */
-export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0): void {
+export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0, dropped = false): void {
   const M = world.minions, mm = minionMul();
   // too many warriors: the oldest one crumbles to make room
   if (kind === MINION_WARRIOR) {
@@ -48,9 +48,10 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const m = M.find((o) => !o.active);
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
-  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.3 : 1);   // (the bone golem hits 30% harder)
+  m.life = m.maxLife = life <= 0 ? Infinity : dropped ? life : life * mm.life;   // (the ult golem lasts exactly its timer)
+  m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.04 : 1);   // (the bone golem hits 4% harder: 1.3 x 0.8)
   m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
-  m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
+  m.rise = dropped ? 0 : 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
   // skeleton warriors grow with Raise Dead's level: +10% HP and +4% damage reduction per level (max 40%)
@@ -61,7 +62,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
     * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
   m.def = warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0;
   m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
-  events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
+  if (!dropped) events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
 function crumble(m: (typeof world.minions)[number]): void {

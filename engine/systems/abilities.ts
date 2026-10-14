@@ -187,6 +187,9 @@ function safeSpot(o: Vector3): void {
   }
 }
 
+/** Army of the Dead: the golem meteor (fall time, impact radius) and how long the golem stands. */
+const GOLEM_DROP_T = 0.9, GOLEM_DROP_R = 5.5, GOLEM_LIFE = 20;
+
 function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff, launch = false): GroundFx | null {
   const f = allocFx();
   if (!f) return null;
@@ -696,19 +699,15 @@ function releaseUlt(): void {
     events.emit('telegraph', { pos: tgt.clone(), radius: 14, duration: 1.2 });
     slowMo(0.5, 0.45);
   } else if (st.hero === 'NECROMANCER') {
-    // ARMY OF THE DEAD: a wail stuns everything near, then a legion rises around the necromancer
+    // ARMY OF THE DEAD: a bone golem crashes down like a meteor (AoE stun on impact), fights 20 s, then crumbles
     a.ultKind = 5;
     p.ultT = 1.2; p.invulnT = Math.max(p.invulnT, 0.8);
-    stunSt.duration = 1.2;
-    damageEnemiesInRadius(p.pos.x, p.pos.z, 10, b * 8, physKnock, stunSt);
     const mlv = st.skillLevels.ult, md = base(mlv);
-    for (let i = 0; i < MAX_SKELETONS; i++) { const an = (i / MAX_SKELETONS) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, PERMANENT, 2); }
-    for (let i = 0; i < 2; i++) { const an = Math.PI * (0.5 + i); spawnMinion(MINION_MAGE, p.pos.x + Math.cos(an) * 4.5, p.pos.z + Math.sin(an) * 4.5, md * 1.0, PERMANENT, 2); }
-    spawnMinion(MINION_GOLEM, p.pos.x + Math.sin(p.facing) * 3.5, p.pos.z + Math.cos(p.facing) * 3.5, md * 3, PERMANENT, 2);
+    aimPoint(9, 3.5, tgt);
+    safeSpot(tgt);
+    mkZone('METEOR_SHADOW', tgt.x, tgt.z, GOLEM_DROP_R, GOLEM_DROP_T, 0, 0x9a6bd8);
+    mkFx('GOLEM_DROP', tgt.x, tgt.z, GOLEM_DROP_T, GOLEM_DROP_T + 0.4, GOLEM_DROP_R, b * 8, md * 3, 0x9a6bd8);
     a.tintRgb = [0.08, 0.03, 0.12]; a.tintTarget = 0;
-    events.emit('ultImpact', { pos: p.pos.clone(), name: 'ARMY_DEAD', radius: 10 });
-    events.emit('shockwave', { pos: p.pos.clone(), radius: 12, color: 0x9a6bd8 });
-    addShake(0.5); fovKick(0.6); slowMo(0.35, 0.4);
   } else if (st.hero === 'KNIGHT') {
     // DIVINE AVATAR: a column of light crashes down around the knight, then 8s of radiant power
     a.ultKind = 4;
@@ -964,6 +963,16 @@ function resolveFx(f: GroundFx): void {
       break;
     }
     case 'BIG_METEOR': bigMeteorImpact(f); break;
+    case 'GOLEM_DROP':
+      // the golem lands: stun + knock everything in the crater, then it stands up and fights for 20 s
+      stunSt.duration = 1.2;
+      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physKnock, stunSt);
+      spawnMinion(MINION_GOLEM, f.x, f.z, f.aux, GOLEM_LIFE, 2, true);
+      events.emit('explosion', { pos, radius: f.radius * 0.6, color: 0x6a3aa8 });
+      events.emit('shockwave', { pos, radius: f.radius * 1.8, color: 0xc8a8ff });
+      events.emit('crater', { pos, radius: f.radius * 0.6, color: 0x120a18 });
+      hitStop(0.12, 0.04, true); addShake(0.6); fovKick(0.5);
+      break;
     default: break;
   }
 }

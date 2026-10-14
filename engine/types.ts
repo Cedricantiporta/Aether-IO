@@ -224,7 +224,7 @@ export interface Zone {
 
 // ------------------------------------------------------------- ground fx --
 // Timed ground effects driven by abilities: falling arrows/meteors, spikes, traps, pillars, rings.
-export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'RING';
+export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'RING' | 'GOLEM_DROP';
 export interface GroundFx {
   id: number;
   active: boolean;

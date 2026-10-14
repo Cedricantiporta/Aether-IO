@@ -54,7 +54,12 @@ export function GroundFx() {
     spikes.castShadow = false;
     const big = new Mesh(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: new Color(2.6, 1.0, 0.25), toneMapped: false }));
     big.visible = false; big.frustumCulled = false;
-    return { arrows, meteors, spikes, crystals, traps, rocks, big, root: new Object3D() };
+    // Army of the Dead: a golem-sized boulder of bone wrapped in violet flame
+    const golG = new GB([0.75, 1.2]).dodeca(1, [0, 0, 0], '#cfc6b0', [1, 0.9, 1]).dodeca(0.62, [0.55, 0.35, 0.15], '#e8e0cc').dodeca(0.55, [-0.5, -0.3, 0.3], '#b0a690')
+      .ico(0.5, [0.1, 0.2, -0.75], '#b88cff', 1, 0).build();
+    const gol = new Mesh(golG, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.15, 1.0, 1.35) }));
+    gol.visible = false; gol.frustumCulled = false;
+    return { arrows, meteors, spikes, crystals, traps, rocks, big, gol, root: new Object3D() };
   }, []);
 
   useFrame(({ clock }, dtRaw) => {
@@ -63,7 +68,7 @@ export function GroundFx() {
     const paused = status === GameStatus.PAUSED;
     const dt = paused ? 0 : Math.min(dtRaw, 0.05);
     const n = { a: 0, m: 0, s: 0, c: 0, t: 0, r: 0, p: 0 };
-    let bigOn = false;
+    let bigOn = false, golOn = false;
     const fx = world.fx;
     const place = (im: InstancedMesh, i: number, x: number, y: number, z: number, yaw: number, pitch: number, roll: number, sx: number, sy = sx, sz = sx) => {
       o.position.set(x, y, z); o.rotation.set(pitch, yaw, roll, 'YXZ'); o.scale.set(sx, sy, sz); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
@@ -71,7 +76,7 @@ export function GroundFx() {
     for (let i = 0; i < fx.length; i++) {
       const f = fx[i];
       if (!f.active) continue;
-      if (f.kind !== 'BIG_METEOR' && f.kind !== 'TRAP' && !inView(f.x, f.z, 20 + f.radius)) continue;
+      if (f.kind !== 'BIG_METEOR' && f.kind !== 'GOLEM_DROP' && f.kind !== 'TRAP' && !inView(f.x, f.z, 20 + f.radius)) continue;
       const sd = f.seed;
       switch (f.kind) {
         case 'RAIN_ARROW': {
@@ -126,6 +131,23 @@ export function GroundFx() {
               FX.add.emit(x + Math.cos(a) * sc * 0.6, y + rnd() * sc * 0.4, z + Math.sin(a) * sc * 0.6, (x - f.x) * 0.9, (y) * 0.9, (z - f.z) * 0.9, 0.6, sc * 0.55, sc * 0.1, 2.5, 0.9, 0.2, 0.7, CELL.FLAME, 0, 1);
             }
             if (gate()) FX.norm.emit(x, y, z, 0, 0, 0, 1.2, sc * 0.8, sc * 1.8, 0.15, 0.12, 0.1, 0.45, CELL.SMOKE, 0, 0.5, rnd() * 6, 0.4);
+          }
+          break;
+        }
+        case 'GOLEM_DROP': {
+          if (f.t >= f.delay) break;
+          const k = clamp(f.t / f.delay, 0, 1), e = k * k;
+          const x = f.x + 5 * (1 - e), y = 1.8 + 15 * (1 - e), z = f.z - 5 * (1 - e);
+          golOn = true;
+          sys.gol.position.set(x, y, z); sys.gol.scale.setScalar(2.1); sys.gol.rotation.set(t * 2.2, t * 1.4, 0);
+          pushHalo(x, y, z, 6, 0.7, 0.4, 1.1, 0.4, CELL.GLOW);
+          pushHalo(x, y, z, 3.2, 1.0, 0.8, 1.4, 0.5, CELL.GLOW);
+          if (dt > 0) {
+            for (let q = 0; q < 3; q++) if (gate()) {
+              const a = rnd() * TAU;
+              FX.add.emit(x + Math.cos(a) * 1.2, y + rnd() * 0.8, z + Math.sin(a) * 1.2, (x - f.x) * 0.8, y * 0.8, (z - f.z) * 0.8, 0.5, 2.2, 0.3, 1.4, 0.8, 2.4, 0.7, CELL.FLAME, 0, 1);
+            }
+            if (gate()) FX.norm.emit(x, y, z, 0, 0, 0, 0.9, 2.2, 4, 0.16, 0.12, 0.2, 0.45, CELL.SMOKE, 0, 0.5, rnd() * 6, 0.4);
           }
           break;
         }
@@ -188,7 +210,7 @@ export function GroundFx() {
     }
     const fin = (im: InstancedMesh, c: number) => { im.count = c; im.instanceMatrix.needsUpdate = true; };
     fin(sys.arrows, n.a); fin(sys.meteors, n.m); fin(sys.spikes, n.s); fin(sys.crystals, n.c); fin(sys.traps, n.t); fin(sys.rocks, n.r);
-    sys.big.visible = bigOn;
+    sys.big.visible = bigOn; sys.gol.visible = golOn;
 
     // ---- storm orbs
     const A = abilityState;
@@ -246,6 +268,7 @@ export function GroundFx() {
       <primitive object={sys.arrows} /><primitive object={sys.meteors} /><primitive object={sys.spikes} />
       <primitive object={sys.crystals} /><primitive object={sys.traps} /><primitive object={sys.rocks} />
       <primitive object={sys.big} />
+      <primitive object={sys.gol} />
     </>
   );
 }
