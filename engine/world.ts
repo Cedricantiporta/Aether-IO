@@ -11,7 +11,7 @@ import type {
 import { SpatialGrid } from './grid';
 
 export const ARENA_RADIUS = 100;        // playable radius (irregular edge is visual)
-export const TOWN_CENTER = new Vector3(0, 0, -20); // shops cluster around here
+export const TOWN_CENTER = new Vector3(0, 0, 6); // town centre (terrain tint region; layout in townData.ts)
 export const MAX_ENEMIES = 400;
 export const ROOM_MAX_ALIVE = 36;     // enemies alive at once inside a room
 export const MAX_PROJECTILES = 900;
@@ -20,9 +20,9 @@ export const MAX_ZONES = 192;
 export const MAX_PICKUPS = 500;
 export const MAX_FX = 420;
 export const MAX_CRATES = 96;
-export const SHRINE_POS: [number, number, number] = [-13, 0, -11]; // summoning shrine
-export const TRAINER_POS: [number, number, number] = [13, 0, -11]; // skill trainer
-export const QUEST_POS: [number, number, number] = [0, 0, -11]; // quest giver + notice board
+export const SHRINE_POS: [number, number, number] = [-17, 0, -13]; // summoning shrine
+export const TRAINER_POS: [number, number, number] = [17, 0, -13]; // skill trainer
+export const QUEST_POS: [number, number, number] = [0, 0, -17]; // quest giver + notice board
 
 const v = () => new Vector3();
 

@@ -33,16 +33,27 @@ function propGeo(kind: NpcProp) {
 
 // --------------------------------------------------------------------- npc ---
 const _p = new Vector3();
+const WHITE = new Color(1, 1, 1);
 
 /**
  * A KayKit character is ~8 skinned meshes (arms, legs, head, cape...) that share one texture atlas. Merging them into a single
  * SkinnedMesh on the same skeleton turns 8 draw calls (x2 with shadows) per NPC into 1. Falls back to the original meshes.
  */
+/** True when both skinned meshes deform with exactly the same bones in the same order (vertex skin indices are then interchangeable). */
+function sameSkin(a: SkinnedMesh, b: SkinnedMesh): boolean {
+  const A = a.skeleton, B = b.skeleton;
+  if (A === B) return true;
+  if (A.bones.length !== B.bones.length) return false;
+  for (let i = 0; i < A.bones.length; i++) if (A.bones[i] !== B.bones[i] || !A.boneInverses[i].equals(B.boneInverses[i])) return false;
+  return true;
+}
+
 function mergeSkinned(ch: { meshes: Mesh[] }): Mesh[] {
   const sk = ch.meshes.filter((m) => (m as SkinnedMesh).isSkinnedMesh) as SkinnedMesh[];
   if (sk.length < 2 || sk.length !== ch.meshes.length) return ch.meshes;
   const map = (sk[0].material as any).map;
-  if (sk.some((m) => (m.material as any).map !== map || !m.geometry.attributes.skinIndex || m.parent !== sk[0].parent)) return ch.meshes;
+  // meshes must share atlas, parent AND bind matrix, otherwise merging would distort the pose (-> fall back to separate meshes)
+  if (sk.some((m) => (m.material as any).map !== map || !m.geometry.attributes.skinIndex || m.parent !== sk[0].parent || !m.bindMatrix.equals(sk[0].bindMatrix) || !m.matrix.equals(sk[0].matrix) || !sameSkin(m, sk[0]))) return ch.meshes;
   const g = mergeGeometries(sk.map((m) => m.geometry), false);
   if (!g) return ch.meshes;
   const merged = new SkinnedMesh(g, sk[0].material);
@@ -65,13 +76,15 @@ function NpcActor({ i }: { i: number }) {
   useEffect(() => {
     if (!(ch as any).__merged) { (ch as any).__merged = mergeSkinned(ch); }
     meshes.current = (ch as any).__merged;
-    const tint = new Color(def.tint);
+    // light tints only: blend the authored tint 45% towards white so the KayKit atlas stays bright and readable
+    const tint = new Color(def.tint).lerp(WHITE, 0.45);
     ch.mats.forEach((m: any) => { if (m.color) m.color.copy(tint); });
     const m = new AnimationMixer(ch.root), s = S.current;
-    const idleClip = clips[i % 2 ? 'Idle_B' : 'Idle_A'] || clips['Idle_A'];
-    const walkClip = clips[['Walking_A', 'Walking_B', 'Walking_C'][i % 3]] || clips['Walking_A'];
+    // same proven clips as the hero (Idle_A / a regular Walking_A), so every NPC stands upright and walks normally
+    const idleClip = clips['Idle_A'] || clips['Idle_B'];
+    const walkClip = clips['Walking_A'] || clips['Walking_B'];
     s.idle = m.clipAction(idleClip); s.idle.play(); s.idle.time = Math.random() * 3;
-    if (walkClip) { s.walk = m.clipAction(walkClip); s.walk.setEffectiveWeight(0); s.walk.play(); s.walk.timeScale = Math.max(0.6, (def.speed ?? 1.4) / 1.45); }
+    if (walkClip) { s.walk = m.clipAction(walkClip); s.walk.setEffectiveWeight(0); s.walk.play(); s.walk.timeScale = Math.max(0.7, (def.speed ?? 1.4) / 1.4); }
     s.talk = clips['Interact'] ? m.clipAction(clips['Interact']) : null;
     if (s.talk) { s.talk.setLoop(LoopOnce, 1); s.talk.clampWhenFinished = false; }
     s.mixer = m; s.yaw = st.yaw; s.w = 0;
@@ -118,8 +131,9 @@ function NpcActor({ i }: { i: number }) {
 
   return (
     <group ref={group} position={[st.x, 0, st.z]} visible={false}>
-      <group scale={def.scale}><primitive object={ch.root} /></group>
-      <sprite ref={tag} material={label.mat} position={[0, 2.5 * def.scale + 0.35, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
+      {/* NPCs use the hero's scale (1) so they match the player's size */}
+      <primitive object={ch.root} />
+      <sprite ref={tag} material={label.mat} position={[0, 2.85, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
     </group>
   );
 }
@@ -184,8 +198,8 @@ function BubbleProjector() {
   useFrame(({ camera, size }) => {
     for (let i = 0; i < bubbles.length; i++) {
       const b = bubbles[i]; if (!b.active) continue;
-      const n = npcs[b.npc], sc = NPCS[b.npc].scale;
-      _p.set(n.x, 2.55 * sc + 0.25, n.z).project(camera);
+      const n = npcs[b.npc];
+      _p.set(n.x, 2.8, n.z).project(camera);
       b.sx = (_p.x * 0.5 + 0.5) * size.width; b.sy = (-_p.y * 0.5 + 0.5) * size.height;
       b.onScreen = _p.z < 1 && _p.x > -1.05 && _p.x < 1.05 && _p.y > -1.05 && _p.y < 1.05;
     }

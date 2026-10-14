@@ -228,7 +228,7 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
     g.rotation.y = s.yaw;
   });
   return (
-    <group ref={group} position={[cfg.pos[0], 0, cfg.pos[1]]} scale={0.95}>
+    <group ref={group} position={[cfg.pos[0], 0, cfg.pos[1]]}>
       <primitive object={ch.root} />
       <mesh position={[0, 1.1, 0]} onClick={(e) => { e.stopPropagation(); onOpen(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
         <cylinderGeometry args={[0.7, 0.7, 2.4, 8]} />
