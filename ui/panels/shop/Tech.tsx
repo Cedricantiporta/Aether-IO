@@ -7,6 +7,9 @@ import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { TECH, ROMAN, techLv, type TechId } from '../../../tech';
 import { GemGlyph } from '../../components/SkillIcons';
+import { tip } from '../../components/Tooltip';
+import { SimpleTip } from '../../components/ItemTip';
+import { useUiStore } from '../../uiStore';
 
 const ICON: Record<TechId, React.ReactNode> = {
   bag: <Backpack size={30} />, warehouse: <Warehouse size={30} />, potion: <FlaskConical size={30} />,
@@ -31,26 +34,25 @@ export const TechWindow: React.FC = () => {
   );
 };
 
-/** The upgrade cards (shared by the Tech window and the Summon window's Tech House tab). */
+/** The upgrades as square slots (same grid as the bag and shops): one slot per upgrade showing its next level; click to
+ *  buy (confirm), hover for the details. Maxed upgrades read MAX. */
 export const TechGrid: React.FC = () => {
   const { tech, gems, buy } = useGameStore(useShallow((s) => ({ tech: s.tech, gems: s.gems, buy: s.buyTech })));
   return (
-    <div className="tw-grid rpg-scroll" data-testid="tech-tab">
-      {TECH.flatMap((d) => {
-        const lv = techLv(tech, d.id);
-        return Array.from({ length: d.max }, (_, i) => {
-          const owned = i < lv, next = i === lv, cost = d.cost(i), can = next && gems >= cost;
-          return (
-            <div key={`${d.id}${i}`} className={`tw-card ${owned ? 'owned' : next ? 'next' : 'locked'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${i + 1}`}>
-              <span className="tw-ic">{ICON[d.id]}<b>{ROMAN[i]}</b></span>
-              <div className="tw-name">{d.name} {ROMAN[i]}</div>
-              <div className="tw-per">{d.per}</div>
-              {owned ? <div className="tw-owned"><Check size={14} /> Owned</div>
-                : next ? <button className={`rpg-btn rpg-btn-sm ${can ? 'rpg-btn-primary' : ''} tw-buy`} disabled={!can} onClick={() => buy(d.id)} data-testid={`tech-buy-${d.id}`}><GemGlyph size={14} /> {cost.toLocaleString()}</button>
-                  : <div className="tw-lock"><Lock size={12} /> Needs {ROMAN[i - 1]}</div>}
-            </div>
-          );
-        });
+    <div className="slot-grid priced" data-testid="tech-tab">
+      {TECH.map((d) => {
+        const lv = techLv(tech, d.id), max = lv >= d.max, cost = max ? 0 : d.cost(lv), can = !max && gems >= cost;
+        const name = `${d.name} ${ROMAN[Math.min(lv, d.max - 1)]}`;
+        return (
+          <button key={d.id} className={`tech-slot pe ${max ? 'max' : can ? 'can' : 'cant'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${lv + 1}`}
+            {...tip(<SimpleTip title={max ? `${d.name} (max)` : name} body={`${d.per}. Level ${lv} / ${d.max}.`} />)}
+            onClick={() => { if (!max) useUiStore.getState().askConfirm({ title: `Buy ${name}?`, body: `${d.per} for ${cost.toLocaleString()} gems.`, confirmLabel: 'Buy', onConfirm: () => { buy(d.id); } }); }}>
+            <span className="tech-ic">{ICON[d.id]}</span>
+            <b className="tech-lv">{max ? 'MAX' : ROMAN[lv]}</b>
+            <span className="tech-pips">{Array.from({ length: d.max }, (_, i) => <i key={i} className={i < lv ? 'on' : ''} />)}</span>
+            {!max && <span className={`slot-price gem ${can ? '' : 'cant'}`} data-testid={`tech-buy-${d.id}`}>{cost.toLocaleString()}</span>}
+          </button>
+        );
       })}
     </div>
   );
