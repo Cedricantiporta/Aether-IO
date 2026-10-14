@@ -70,6 +70,7 @@ export interface GameEvents {
   biomeClear: { biome: number };
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
+  hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest'; n: number };   // discrete town actions (goals / achievements)
   runStart: {};
   runEnd: {};
 }

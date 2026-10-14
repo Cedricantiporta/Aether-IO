@@ -6,6 +6,7 @@ import type { Item, ItemType } from '../../types';
 import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
 import { talentPointsTotal, talentsSpent } from '../../talents';
+import { allClaimed, goalClaimable } from '../../goals';
 
 const KEY = 'aether-survivor-seen-v1';
 interface Seen { items: string[]; codex: number }
@@ -51,3 +52,9 @@ export function useCodexAlert(): boolean {
 export const useRunSkillAlert = (): boolean => useGameStore((s) => s.skillPoints > 0);
 export const useTalentAlert = (): boolean => useGameStore((s) => talentPointsTotal(s.heroRank) - talentsSpent(s.talents[s.hero]) > 0);
 export const useSkillAlert = (): boolean => { const a = useRunSkillAlert(), b = useTalentAlert(); return a || b; };
+/** Claimable goal / bonus chest / achievement reward (the dot stays until everything is claimed). */
+export const useGoalsAlert = (): boolean => useGameStore((s) => {
+  const m = s.meta;
+  return m.daily.some(goalClaimable) || m.weekly.some(goalClaimable) || (!m.dailyBonus && allClaimed(m.daily)) || (!m.weeklyBonus && allClaimed(m.weekly))
+    || m.unlocked.some((id) => !m.claimed.includes(id));
+});

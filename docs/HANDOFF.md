@@ -130,3 +130,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - **Cross Slash**: slow (speed 12, life 1.75 s) piercing X; width 2.3 + 0.4 per level (render scales with `p.radius`).
 - **Boss intro banner** smaller (band 5.4rem, title 1.9rem).
 - **Bag delete mode**: footer Delete -> tap items (red X) -> Delete (N) -> confirm (`deleteItems`).
+- **Goals & achievements**: `goals.ts` (daily/weekly pool, ISO-week/day keys, `MetaState`), `achievements.ts` (23 achievements + titles), `goalsTracker.ts` (event-bus feeds `enemyDeath/crateBreak/waveClear/biomeClear/playerHit` + new `hub` event emitted by store summon/upgrade/buy/craft/claimQuest; counts buffered, flushed on room clear / run end / hub action / every 6 s; claim + equip actions), saved as `profile.meta` (store `meta`), UI `ui/screens/Goals.tsx` (`uiStore.goalsOpen`, quick-menu button + `useGoalsAlert` dot), equipped title shown under the name in `TownProfile` and the in-run `PlayerPlate`.

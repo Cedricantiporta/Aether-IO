@@ -201,7 +201,7 @@ export const TouchControls: React.FC = () => {
   const side = useGameStore((s) => s.settings.joystickSide);
   const autoAim = useGameStore((s) => s.settings.autoAim);
   const open = useGameStore((s) => s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen || s.isPauseMenuOpen);
-  const ui = useUiStore((s) => s.settingsOpen || s.codexOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults || s.recordsOpen || !s.titleDone);
+  const ui = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults || s.recordsOpen || !s.titleDone);
   const village = status === GameStatus.MENU;
   const active = (status === GameStatus.PLAYING || village) && !open && !ui;
   useEffect(() => { if (!active) { const i = world.input; i.joy.active = false; i.joy.x = i.joy.z = 0; i.aimStick.active = false; for (const k in i.keys) i.keys[k] = false; } }, [active]);

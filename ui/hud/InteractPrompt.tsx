@@ -16,7 +16,7 @@ import { device } from '../../engine/device';
  */
 export const InteractPrompt: React.FC = () => {
   const blocked = useGameStore((s) => s.isShopOpen || s.isInventoryOpen || s.isCharacterSheetOpen || s.isPauseMenuOpen);
-  const ui = useUiStore((s) => s.settingsOpen || s.codexOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults || s.recordsOpen);
+  const ui = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults || s.recordsOpen);
   const els = useRef<(HTMLButtonElement | null)[]>([]);
   const sig = useRef<string[]>(['', '', '']);
   const list = () => (useGameStore.getState().status === GameStatus.MENU ? nearby : roomNearby);

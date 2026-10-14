@@ -15,6 +15,7 @@ interface UiState {
   charSelect: boolean;                  // full-screen class selection (after the title, or from the town)
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
+  goalsOpen: boolean;                   // Goals panel (daily / weekly / achievements)
   settingsOpen: boolean;
   sellItem: Item | null;
   buyItem: Item | null;
@@ -27,6 +28,7 @@ interface UiState {
   setCharSelect: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
   openCodex: (v: boolean) => void;
+  openGoals: (v: boolean) => void;
   openSettings: (v: boolean) => void;
   setSellItem: (i: Item | null) => void;
   setBuyItem: (i: Item | null) => void;
@@ -42,6 +44,7 @@ export const useUiStore = create<UiState>((set) => ({
   charSelect: false,
   recordsOpen: false,
   codexOpen: false,
+  goalsOpen: false,
   settingsOpen: false,
   sellItem: null,
   buyItem: null,
@@ -54,6 +57,7 @@ export const useUiStore = create<UiState>((set) => ({
   setCharSelect: (v) => set(v ? { charSelect: true, titleDone: false } : { charSelect: false, titleDone: true }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
   openCodex: (v) => set({ codexOpen: v }),
+  openGoals: (v) => set({ goalsOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),
   setSellItem: (i) => set({ sellItem: i }),
   setBuyItem: (i) => set({ buyItem: i }),
@@ -69,7 +73,7 @@ export type { Rarity };
 /** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
 export function uiOverlayOpen(): boolean {
   const s = useUiStore.getState();
-  return s.settingsOpen || s.codexOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+  return s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
 }
 
 /** Closes the top-most overlay. Returns true if something was closed. */
@@ -81,5 +85,6 @@ export function closeTopOverlay(): boolean {
   if (s.buyItem) { s.setBuyItem(null); return true; }
   if (s.settingsOpen) { s.openSettings(false); return true; }
   if (s.codexOpen) { s.openCodex(false); return true; }
+  if (s.goalsOpen) { s.openGoals(false); return true; }
   return false;
 }

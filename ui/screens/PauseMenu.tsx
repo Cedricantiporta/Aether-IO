@@ -17,7 +17,7 @@ export const PauseMenu: React.FC = () => {
   const openSettings = useUiStore((s) => s.openSettings);
   const openCodex = useUiStore((s) => s.openCodex);
   const askConfirm = useUiStore((s) => s.askConfirm);
-  const blocked = useUiStore((s) => s.settingsOpen || s.codexOpen || !!s.confirm);
+  const blocked = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm);
   return (
     <Modal open={open} title="Paused" ribbon tone="gold" width="21rem" z={150} onClose={() => !blocked && togglePause()} onConfirm={blocked ? undefined : togglePause}>
       <div className="flex flex-col gap-3 pt-2">
