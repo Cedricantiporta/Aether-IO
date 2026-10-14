@@ -23,7 +23,7 @@ const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
 
 // ------------------------------------------------------------------ ground ---
 function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: number; boss: boolean }) {
-  const { geo, mat, tufts } = useMemo(() => {
+  const { geo, mat, tufts, slabs } = useMemo(() => {
     const def = biomeOf(biome);
     const S = 2 * (shape.maxR + 44), seg = 128;
     const g = new PlaneGeometry(S, S, seg, seg);
@@ -32,6 +32,10 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     const col = new Float32Array(pos.count * 3);
     const g0 = _c.set(def.ground[0]), g1 = _c2.set(def.ground[1]), edge = _c3.set(def.edge), rim = _c4.set('#8c877c').lerp(g0, 0.4);
     const so = (seed % 997) * 0.37;
+    const PATCH = [['#5fb83e', '#b7c45a', '#8f7448'], ['#3a8a3a', '#7d8a3e', '#5a4630'], ['#5c6e34', '#7e7a44', '#4a3e26'], ['#e8f2fb', '#b9c7d4', '#9aa6b2'], ['#5a3222', '#8a4a26', '#2a1a14'], ['#33245a', '#4e2c7a', '#16102a']][((biome % 6) + 6) % 6];
+    const lush = new Color(PATCH[0]), dry = new Color(PATCH[1]), dirt = new Color(PATCH[2]);
+    const stone = new Color(biome % 6 === 4 ? '#6e625c' : biome % 6 === 5 ? '#5e5878' : '#a39d90'), stoneC = new Color();
+    const path = !boss && (seed % 5) !== 0;
     const out = new Color();
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
@@ -42,6 +46,27 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
       out.copy(g0).lerp(g1, sstep(0.3, 0.72, n1)).multiplyScalar(0.9 + n2 * 0.2);
       // worn patches of the second tone
       out.lerp(g1, sstep(0.62, 0.78, fbm(x * 0.14 - so, z * 0.14 + so, 2)) * 0.35);
+      // big colour zones: lush / dry grass and bare-dirt patches (more variety across the room)
+      const zA = fbm(x * 0.055 - so * 1.7, z * 0.055 + so, 3), zB = fbm(x * 0.07 + so * 2.3, z * 0.07 - so * 0.6, 3);
+      out.lerp(lush, sstep(0.48, 0.62, zA) * 0.85);
+      out.lerp(dry, sstep(0.5, 0.64, zB) * 0.8);
+      out.lerp(dirt, sstep(0.64, 0.74, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.85);
+      // stone path from the arrival side to the exits (most non-boss rooms), gently winding
+      if (path) {
+        const t = x * shape.fx + z * shape.fz, l = x * -shape.fz + z * shape.fx;
+        const cl = Math.sin(t * 0.11 + so) * 2.6 + Math.sin(t * 0.27 - so) * 0.8;
+        const w = 1.9 + vnoise(t * 0.2 + so, 3.1) * 0.9;
+        const pd = Math.abs(l - cl) - w;
+        const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u);
+        if (k > 0) {
+          // cobbles: cell noise darkens the gaps between stones
+          const cx = x * 1.25, cz = z * 1.25, fx = cx - Math.floor(cx), fz = cz - Math.floor(cz) + (Math.floor(cx) % 2) * 0.5;
+          const gap = Math.min(fx, 1 - fx, fz - Math.floor(fz), 1 - (fz - Math.floor(fz)));
+          stoneC.copy(stone).multiplyScalar(0.85 + vnoise(Math.floor(cx) * 3.1, Math.floor(cz + (Math.floor(cx) % 2) * 0.5) * 2.7) * 0.3);
+          if (gap < 0.09) stoneC.multiplyScalar(0.62);
+          out.lerp(stoneC, k * 0.92);
+        }
+      }
       // stone rim just inside the walls
       out.lerp(rim, sstep(-1.4, -0.2, u) * 0.55);
       // boss arena: a faint rune circle
@@ -60,7 +85,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     const m = new MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = 150;
+    const N = 45; // sparse clutter (user: fewer small bushes)
     const tg = new GB([0.8, 1.1]);
     tg.ico(0.2, [0, 0.08, 0], '#ffffff', [1.3, 0.55, 1.1], 0);
     tg.cone(0.07, 0.38, 4, [0.12, 0.19, 0.05], '#ffffff', [0.2, 0, 0.3]);
@@ -85,12 +110,35 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     inst.instanceMatrix.needsUpdate = true;
     if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     inst.receiveShadow = true;
-    return { geo: g, mat: m, tufts: inst };
+
+    // flat stepping stones along the stone path (one instanced draw)
+    const SG = new GB([0.9, 1.1]); SG.cyl(0.62, 0.7, 0.14, 6, [0, 0.05, 0], '#ffffff');
+    const slabs = new InstancedMesh(SG.build(), new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), 90);
+    let ns = 0;
+    if (path) {
+      const r2 = mulberry32(seed ^ 0x7a11);
+      for (let t = -shape.maxR; t <= shape.maxR && ns < 90; t += 0.95) {
+        const cl = Math.sin(t * 0.11 + so) * 2.6 + Math.sin(t * 0.27 - so) * 0.8;
+        for (let k = 0; k < 2 && ns < 90; k++) {
+          const l = cl + (r2() - 0.5) * 2.6;
+          const x = t * shape.fx - l * shape.fz, z = t * shape.fz + l * shape.fx;
+          if (Math.hypot(x, z) > shapeLimit(x, z) - 2.5 || r2() < 0.25) continue;
+          o.position.set(x, 0, z); o.rotation.set(0, r2() * 6.28, 0);
+          const sc = 0.65 + r2() * 0.5; o.scale.set(sc * (0.9 + r2() * 0.4), 1, sc); o.updateMatrix();
+          slabs.setMatrixAt(ns, o.matrix);
+          cc.copy(stone).multiplyScalar(0.8 + r2() * 0.35); slabs.setColorAt(ns, cc); ns++;
+        }
+      }
+    }
+    slabs.count = ns; slabs.receiveShadow = true;
+    if (slabs.instanceColor) slabs.instanceColor.needsUpdate = true;
+    return { geo: g, mat: m, tufts: inst, slabs };
   }, [biome, R, seed, boss]);
   return (
     <>
       <mesh geometry={geo} material={mat} receiveShadow />
       <primitive object={tufts} />
+      <primitive object={slabs} />
     </>
   );
 }
