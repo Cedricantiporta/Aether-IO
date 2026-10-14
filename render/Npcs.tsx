@@ -11,6 +11,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
 import { npcs, animals, bubbles } from '../engine/systems/npcs';
+import { STORY } from '../story';
+import { useGameStore } from '../store';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
 import { useCharacterInstance, useClips } from './characters';
@@ -48,8 +50,9 @@ function crownGeo(): BufferGeometry {
 }
 
 // --------------------------------------------------------------------- npc ---
-/** Quest markers above NPCs: gold "!" = new quest, gold "?" = ready to turn in, grey "?" = in progress (index = npcMarkers()). */
-const MARKS = [null, labelMaterial('!', '#ffd24a', { size: 120 }), labelMaterial('?', '#9aa0aa', { size: 120 }), labelMaterial('?', '#ffd24a', { size: 120 })];
+/** Quest markers above NPCs. Side quests are blue: "!" = new quest, "?" = ready to turn in, grey "?" = in progress
+ *  (index = npcMarkers()). Index 4: the gold "!" of the main quest's current NPC (always wins). */
+const MARKS = [null, labelMaterial('!', '#5fb8ff', { size: 120 }), labelMaterial('?', '#9aa0aa', { size: 120 }), labelMaterial('?', '#5fb8ff', { size: 120 }), labelMaterial('!', '#ffd24a', { size: 120 })];
 const _p = new Vector3();
 const WHITE = new Color(1, 1, 1);
 
@@ -149,7 +152,7 @@ function NpcActor({ i }: { i: number }) {
     if (++s.tick % every === 0) { s.mixer.update(s.acc); s.acc = 0; }
     // quest marker (bobs gently, hidden while talking)
     if (mark.current) {
-      const k = st.talking ? 0 : npcMarkers()[i], mk = mark.current;
+      const k = st.talking ? 0 : STORY[useGameStore.getState().story.step]?.npc === def.name ? 4 : npcMarkers()[i], mk = mark.current;
       if (k) {
         const l = MARKS[k]!;
         if (mk.material !== l.mat) { mk.material = l.mat; mk.scale.set(l.aspect * 1.3, 1.3, 1); }

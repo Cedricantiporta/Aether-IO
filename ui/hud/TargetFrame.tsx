@@ -39,7 +39,7 @@ export const TargetFrame: React.FC = () => {
     if (show && root.current) root.current.style.transform = `translate(${Math.round(world.targetAnchor.sx)}px, ${Math.round(world.targetAnchor.sy)}px) translate(-50%, -100%)`;
     if (show !== s.shown) { s.shown = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
     if (!show || !e) { s.id = -1; return; }
-    if (++qT.current % 15 === 0 || s.id !== e.id) { if (qic.current) qic.current.style.display = questKill(e.kind) ? 'inline-flex' : 'none'; }
+    if (++qT.current % 15 === 0 || s.id !== e.id) { if (qic.current) qic.current.style.display = questKill(e.kind, e.mini) ? 'inline-flex' : 'none'; }
     if (s.id !== e.id) {
       s.id = e.id; s.hp = ''; s.val = ''; s.ic = ''; s.sh = '';
       const def = ENEMY_DEFS[e.kind];

@@ -62,7 +62,10 @@ export const STORY: StoryStep[] = [
     wait: ['Back from the Meadow? Then you have seen the slimes.', 'Their gel is the base of every healing salve I brew. Bring me three Slime Gel and I will make it worth your while.'],
     talk: ['Three good globs of gel! Fresh, too.', 'Here, my best salves. The King asked after you, by the way. Do not keep him waiting.'] },
   { id: 'report', title: 'The King Awaits', line: 'Report back to King Aldric', npc: 'King Aldric', reward: { gold: 600, gems: 10 },
-    talk: ['Ten slimes, and the herbalist is singing your praises. Good.', 'Now a real task. Gorath, the stone guardian of the Meadow, has woken angry. He waits at the end of the Meadow, past the Slime King.', 'Bring him down.'] },
+    talk: ['Ten slimes, and the herbalist is singing your praises. Good.', 'Now a real task. The slimes answer to a king of their own: a great ooze deep in the Meadow, ten rooms in.', 'Pop the Slime King and the Meadow will breathe again.'] },
+  { id: 'slimeking', title: 'The Slime King', line: 'Defeat the Slime King (Meadow, depth 10)', npc: '', kill: { kind: 'SLIME_KING', count: 1 }, reward: { gold: 800, gems: 15 } },
+  { id: 'garrick2', title: 'Rumbling Stones', line: 'Tell Garrick about the Slime King', npc: 'Garrick', reward: { gold: 400, items: [{ id: 'upgrade_core', qty: 1 }] },
+    talk: ['The Slime King, popped! Ha! The lads at the gate owe me a drink.', 'But listen: since it fell, the ground past it shakes. Gorath the Mountain, the stone guardian of the Meadow, has woken angry.', 'He waits at the very end of the Meadow, depth fifteen. Bring him down.'] },
   { id: 'golem', title: 'The Mountain Stirs', line: 'Defeat Gorath the Mountain (Meadow, depth 15)', npc: '', kill: { kind: 'BOSS_GOLEM', count: 1 }, reward: { gold: 1200, gems: 20 } },
   { id: 'dorn', title: 'Heart of Stone', line: 'Bring 2 Ore Nuggets to Dorn the Miner', npc: 'Dorn', deliver: { id: 'ore_nugget', count: 2 }, reward: { gold: 700, items: [{ id: 'upgrade_core', qty: 2 }] },
     wait: ['Gorath fell? Then the ore veins out there are free again!', 'There are ore veins just outside the town walls, east and behind the castle, and more out in the wilds. Hold E by a vein to mine it. Bring me two nuggets.'],
@@ -94,6 +97,8 @@ const IDX: Record<string, number> = Object.fromEntries(STORY.map((s, i) => [s.id
 /** Index of a step id (STORY.length if unknown). */
 export const storyIdx = (id: string): number => IDX[id] ?? STORY.length;
 /** Step ids of the first story version (saves without `v`): mapped by id onto this chain. */
+/** Index of 'golem' in story v2 (before the two Slime King steps were added). */
+const V2_GOLEM = 15;
 const V1 = ['guard', 'king', 'slimes', 'report', 'golem', 'report2', 'grove', 'mire', 'frost', 'cinders', 'herald', 'report3', 'lich'];
 
 export interface StorySave { step: number; p: number; v?: number }
@@ -102,11 +107,12 @@ export function sanitizeStory(raw: unknown, endings: number, isNew: boolean): St
   if (raw && typeof raw === 'object') {
     const r = raw as Record<string, unknown>;
     let step = Math.max(0, Math.floor(Number(r.step) || 0)), p = Math.max(0, Math.floor(Number(r.p) || 0));
-    if (r.v !== 2) { const id = V1[step]; step = id ? storyIdx(id) : STORY.length; if (id === 'guard') step = 0; }   // v1 save: same step by id
-    return { step: Math.min(STORY.length, step), p, v: 2 };
+    if (r.v !== 2 && r.v !== 3) { const id = V1[step]; step = id ? storyIdx(id) : STORY.length; if (id === 'guard') step = 0; }   // v1 save: same step by id
+    else if (r.v === 2 && step >= V2_GOLEM) { step = step === V2_GOLEM ? storyIdx('slimeking') : step + 2; if (step === storyIdx('slimeking')) p = 0; }   // v2: the Slime King steps were added before the Golem
+    return { step: Math.min(STORY.length, step), p, v: 3 };
   }
-  if (isNew) return { step: 0, p: 0, v: 2 };
-  return { step: endings > 0 ? STORY.length : storyIdx('golem'), p: 0, v: 2 };   // pre-story saves: straight to the first guardian
+  if (isNew) return { step: 0, p: 0, v: 3 };
+  return { step: endings > 0 ? STORY.length : storyIdx('slimeking'), p: 0, v: 3 };   // pre-story saves: straight to the first guardian
 }
 export const storyStep = (s: StorySave): StoryStep | null => STORY[s.step] ?? null;
 /** The gate lets you set out once the King has spoken. */

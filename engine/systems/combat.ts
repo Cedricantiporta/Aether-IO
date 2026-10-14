@@ -416,7 +416,7 @@ export function killEnemy(e: Enemy): void {
   }
 
   onEnemyDeath(e);
-  events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale });
+  events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, mini: e.mini });
   if (e.boss) addShake(0.8);
   else if (e.elite) addShake(0.25);
 }

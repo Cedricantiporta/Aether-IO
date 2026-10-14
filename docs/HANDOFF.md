@@ -373,3 +373,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Flames: one very fast (110) arrow, 7.5x damage, pierces everything and passes obstacles, no other effect. Gale Arrow is
   slower (34, longer life) and its tornadoes pull far less (maxPull 11). Storm of a Thousand Arrows: duration x0.6 (2.7 s),
   damage x0.7. Frost Field slow x1.5 (cap 90%). Piercing Shot passive shelved (`PIERCE_SHOT_ON = false`, removed from SKILLS_INFO).
+- Story v3: after the King's report the chain is Slime King (`SLIME_KING` = the Meadow's depth-10 SPLITTER mini-boss,
+  `enemyDeath.mini`) -> Garrick -> Golem. v2 saves on the Golem step move to the Slime King; later v2 steps shift by 2.
+- Equip / pet steps also complete from state (helmet equipped / pet owned, store subscription in storyLogic), so gear
+  equipped by drag or auto-equip counts; clicking the equip step opens the bag.
+- NPC head markers: side quests blue "!" / "?", the main quest's current NPC a gold "!".

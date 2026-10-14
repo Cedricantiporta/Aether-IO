@@ -245,6 +245,8 @@ export function walkToQuest(q: Quest): void {
 }
 /** Main story row click: the step's NPC (through the castle door / exit when it is in the other area), else the gate. */
 export function walkToMain(): void {
+  const st0 = useGameStore.getState();
+  if (STORY[st0.story.step]?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
   const t = storyTarget(), castle = world.village.area === 'CASTLE';
   if (!t) return;
   if (t.npc >= 0) {

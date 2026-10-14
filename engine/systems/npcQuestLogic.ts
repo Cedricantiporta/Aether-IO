@@ -105,9 +105,9 @@ export function questNpc(name: string): boolean {
     && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
 }
 /** True when killing this enemy kind advances an active quest (main story, NPC or Quest Board). */
-export function questKill(kind: string): boolean {
-  const st = useGameStore.getState();
-  if (STORY[st.story.step]?.kill?.kind === kind) return true;
+export function questKill(kind: string, mini = false): boolean {
+  const st = useGameStore.getState(), sk = STORY[st.story.step]?.kill?.kind;
+  if (sk === kind || (sk === 'SLIME_KING' && kind === 'SPLITTER' && mini)) return true;
   if (st.quests.some((q) => q.accepted && q.type === 'KILL_KIND' && q.kind === kind && q.progress < q.target)) return true;
   return NPC_QUESTS.some((d) => d.objective.type === 'KILL_KIND' && d.objective.target === kind && npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
     && (st.npcQuests.q[d.id]?.p ?? 0) < d.objective.count);

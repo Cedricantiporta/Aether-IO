@@ -619,7 +619,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     progress: profile.progress ?? sanitizeProgress(undefined),
     tech: profile.tech ?? {},
     summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
-    story: profile.story ?? { step: 0, p: 0, v: 2 },   // a brand-new profile starts the main story
+    story: profile.story ?? { step: 0, p: 0, v: 3 },   // a brand-new profile starts the main story
     classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
@@ -728,7 +728,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 2 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -1070,7 +1070,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (step === s.story.step && p === s.story.p) return;
       const next = STORY[step];
-      set({ story: { step, p, v: 2 } });
+      set({ story: { step, p, v: 3 } });
       // finishing a step pays its reward (main quests always pay: gold, gems, items)
       if (step > s.story.step) for (let k = s.story.step; k < step; k++) {
         const r = STORY[k]?.reward; if (!r) continue;

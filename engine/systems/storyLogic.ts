@@ -77,7 +77,7 @@ const _drop = new Vector3();
 events.on('enemyDeath', (e) => {
   const st = useGameStore.getState(), step = STORY[st.story.step];
   if (!step || e.poof) return;
-  if (step.kill && e.kind === step.kill.kind) bumpStory(1);
+  if (step.kill && (e.kind === step.kill.kind || (step.kill.kind === 'SLIME_KING' && e.kind === 'SPLITTER' && e.mini))) bumpStory(1);   // SLIME_KING: the Meadow's depth-10 mini-boss
   // quest drops: while a delivery step still needs goods this enemy carries, they drop often (35%)
   const d = step.deliver ?? (step.kill ? STORY[st.story.step + 1]?.deliver : undefined);   // (also while hunting just before it)
   if (d && LOOT_TABLES[e.kind]?.includes(d.id) && Math.random() < 0.35 && bagCount(d.id) < d.count) {
@@ -95,6 +95,24 @@ events.on('crateBreak', (e) => {   // a harvest node that yields what a delivery
   _drop.set(e.pos.x + (Math.random() - 0.5) * 1.4, 0, e.pos.z + (Math.random() - 0.5) * 1.4);
   spawnPickup('ITEM', _drop, 0, lootItem(LOOT_BY_ID[d.id]));
 });
+// Steps already satisfied by the current state (gear equipped by drag / auto-equip, a pet already owned) finish on their own.
+function stateDone(kind: string): boolean {
+  const eq = useGameStore.getState().equipment;
+  if (kind === 'equip') return !!eq.helmet;   // the Leather Cap step (new heroes start with every slot but the helmet filled)
+  if (kind === 'buy_pet') return !!eq.pet;
+  return false;
+}
+let lastEq: unknown = null, lastStep = -1;
+setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engine import cycle)
+  if (st.equipment === lastEq && st.story.step === lastStep) return;
+  lastEq = st.equipment; lastStep = st.story.step;
+  const step = STORY[st.story.step];
+  const at = st.story.step;
+  if (step?.act && stateDone(step.act.kind)) queueMicrotask(() => {
+    const now = useGameStore.getState();
+    if (now.story.step === at && stateDone(step.act!.kind)) now.setStory(at + 1, 0);
+  });
+}), 0);
 events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods as they are picked up
   if (e.kind !== 'ITEM' || !e.name) return;
   const st = useGameStore.getState(), step = STORY[st.story.step];
