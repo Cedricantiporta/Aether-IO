@@ -8,8 +8,15 @@ import { storyTalk, acceptStory } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
 
 /** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
-interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string }
-export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0, offer: '', turnIn: '' }));
+interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string; acceptLabel: string }
+export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0, offer: '', turnIn: '', acceptLabel: 'Accept' }));
+
+/** A one-off conversation not tied to a town NPC (wanderers in run rooms): optional offer with its own button. */
+let customAccept: (() => void) | null = null;
+export function openCustomDialogue(name: string, role: string, accent: string, lines: string[], offer?: { label: string; accept: () => void }): void {
+  customAccept = offer?.accept ?? null;
+  useDialogue.setState({ open: true, npc: -1, name, role, accent, lines, idx: 0, offer: offer ? 'custom' : '', turnIn: '', acceptLabel: offer?.label ?? 'Accept' });
+}
 
 const lastConvo: number[] = NPCS.map(() => -1);
 const guideStep: number[] = NPCS.map(() => 0);
@@ -76,7 +83,7 @@ export function openDialogue(npc: number): void {
 export function closeDialogue(): void {
   const s = useDialogue.getState();
   if (!s.open) return;
-  useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '' });
+  useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '', acceptLabel: 'Accept' });
 }
 
 /** Next line; on the last line closes. Reaching a gift line pays it out (once per day per NPC). */
@@ -91,6 +98,7 @@ export function advanceDialogue(): void {
 
 /** A line was reached: a gift line pays out (once per day per NPC), the last line of a turn-in dialogue pays the quest rewards. */
 function onLine(npc: number, idx: number): void {
+  if (npc < 0) return;   // custom conversation
   const s = useDialogue.getState();
   if (s.lines[idx] === NPCS[npc].gift?.text && giftAvailable(npc)) claimGift(npc);
   if (s.turnIn && idx === s.lines.length - 1) {
@@ -106,6 +114,7 @@ function onLine(npc: number, idx: number): void {
 export function acceptOffer(): void {
   const s = useDialogue.getState();
   if (!s.open || !s.offer || s.idx < s.lines.length - 1) return;
+  if (s.offer === 'custom') { const f = customAccept; customAccept = null; closeDialogue(); f?.(); return; }
   if (s.offer.startsWith('story:')) {   // main quest: take it; when the same NPC has more to say (next offer), keep talking
     acceptStory(s.offer);
     const nx = storyTalk(s.name);

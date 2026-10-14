@@ -41,6 +41,8 @@ import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
+import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS } from '../wanderers';
+import { dialogueOpen, advanceDialogue, acceptOffer } from './dialogue';
 
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
@@ -124,7 +126,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates();
+  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates(); resetWanderers();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -207,6 +209,7 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
+  clearWanderer();
   if (idx === 0) bossKeyState.has = false;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
@@ -665,6 +668,7 @@ function onCleared(): void {
     }
   }
   events.emit('waveClear', { wave: depth, fast: roomT < 40 });
+  maybeWanderer(biome, index, plan.type, gateBiome() || finalFight || plan.gate !== undefined);   // a wanderer may be resting here
   if (runInfo.mode === 'TOWER') towerCleared();
   const t = plan.type;
   if (t === 'TREASURE') world.room.station.ready = true;
@@ -798,6 +802,7 @@ function scanNearby(): void {
       const dk = q(KEEPER_POS[0], KEEPER_POS[1]);
       if (dk < 30) pushNearby('Talk', 'The Gatekeeper', 56, dk);
     }
+    if (wander.on) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
     if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP') {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
@@ -841,6 +846,7 @@ export function interactRoom(it: Interactable): void {
     return;
   }
   if (it.node === 40) { freeCaptive(); return; }   // rescue objective
+  if (it.node === 60) { talkWanderer(); return; }   // a wanderer resting in the room
   if (it.node >= 50 && it.node <= 56) { interactHub(it.node); return; }   // the Gatekeeper's courtyard
   if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
   if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
@@ -947,6 +953,12 @@ export function updateDirector(dt: number): void {
     for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active) po.t += dt; }   // portals are entered with E
   }
 
+  // a conversation (wanderer) takes E / F: next line / accept the offer
+  if (dialogueOpen()) {
+    if (world.input.pressed.KeyE) advanceDialogue();
+    if (world.input.pressed.KeyF) acceptOffer();
+    return;
+  }
   scanNearby();
   harvestCd = Math.max(0, harvestCd - dt);
   if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);

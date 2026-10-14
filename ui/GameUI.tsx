@@ -70,7 +70,7 @@ export const GameUI: React.FC = () => {
       {village && <SpeechBubbles />}
       {(village || inGame) && <InteractPrompt />}
       {(village || inGame) && <TutorialHint />}
-      {village && <Dialogue />}
+      {(village || inGame) && <Dialogue />}
       {village && <TownFade />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}

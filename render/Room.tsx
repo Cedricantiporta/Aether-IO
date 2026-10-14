@@ -18,6 +18,7 @@ import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater, LavaSea } from './RoomWater';
+import { Wanderer } from './Wanderer';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
@@ -696,6 +697,7 @@ export function Room({ q }: { q: QualityCfg }) {
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
       <Stations />
       <CampProps />
+      {!tower && <Suspense fallback={null}><Wanderer /></Suspense>}
       <SpecialRooms q={q} />
       <Portals />
       <PortalGuides />

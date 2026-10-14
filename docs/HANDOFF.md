@@ -541,3 +541,9 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   courtyard with five trial gates (Shadows = duel your own class, Horde, Thorns traps, Hunt in the dark, the Herald boss),
   each awarding a Gate Key; 5 keys open the Dark Castle (Malakar). Fountain rooms use a marble plaza. Debug:
   `director.debugGate(g)`.
+- Wanderers (`engine/wanderers.ts`, `render/Wanderer.tsx`): 20% chance in a cleared COMBAT / ELITE / TREASURE room
+  (adventure, not the first room or gates; max 2 per biome, each met once per run) a story character rests there.
+  E talks (custom dialogue: `dialogue.openCustomDialogue` with an offer button; E/F work in runs). Ser Aldric (last
+  Oathsworn, Malakar's backstory) = full heal; Lyra the Seer = prophecy of the biome boss + 30 gems; Old Mags =
+  repeatable gold gamble (55% item); Brother Fen = bounty of 30 kills (gold + gems, auto-paid); Kaelen the scout =
+  potions.
