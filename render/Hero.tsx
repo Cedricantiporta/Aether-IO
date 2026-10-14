@@ -19,6 +19,7 @@ import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
 import { attachGear } from './gear';
+import { useUiStore } from '../ui/uiStore';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN' };
 const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a };
@@ -223,6 +224,12 @@ function Effects({ cls }: { cls: HeroClass }) {
   const reviveMat = useMemo(() => makeBeamMaterial(0xfff2b0, { speed: 3, stripes: 4, power: 0.8 }), []);
   const reviveGeo = useMemo(() => new CylinderGeometry(2.6, 3.2, 30, 28, 1, true).translate(0, 15, 0), []);
   const pillar = useRef<Mesh>(null!), revive = useRef<Mesh>(null!), bubble = useRef<Mesh>(null!);
+  // town arrival: a tall white-gold light column on the hero that flares up then fades
+  const arriveGeo = useMemo(() => new CylinderGeometry(1.15, 1.35, 46, 32, 1, true).translate(0, 23, 0), []);
+  const arriveMat = useMemo(() => makeBeamMaterial(0xfff0c0, { speed: 2.4, stripes: 5, power: 0.9 }), []);
+  const arriveCore = useMemo(() => makeBeamMaterial(0xffffff, { speed: 4, stripes: 3, power: 1.3 }), []);
+  const arrive = useRef<Mesh>(null!), arriveIn = useRef<Mesh>(null!);
+  const prevTitle = useRef(useUiStore.getState().titleDone);
   const bubbleMat = useMemo(() => new MeshBasicMaterial({ color: new Color(0.5, 1.6, 2.4), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false }), []);
   const bubbleGeo = useMemo(() => new SphereGeometry(1, 20, 14), []);
   const flash = useRef({ bubble: 0, radius: 2 });
@@ -259,6 +266,27 @@ function Effects({ cls }: { cls: HeroClass }) {
       revive.current.visible = rv > 0;
       if (rv > 0) { revive.current.position.set(p.pos.x, 0, p.pos.z); const k = Math.min(1, (1 - rv) * 6); revive.current.scale.set(0.3 + k * 0.7 + (1 - rv) * 0.4, 1, 0.3 + k * 0.7 + (1 - rv) * 0.4); reviveMat.uniforms.uAlpha.value = Math.min(1, rv * 1.4); reviveMat.uniforms.uTime.value = t; }
     }
+    // arrival pillar (town spawn, and when the class select closes)
+    const ui = useUiStore.getState();
+    if (ui.titleDone && !prevTitle.current) world.village.spawnFx = 1;
+    prevTitle.current = ui.titleDone;
+    const V = world.village, onTitle = !ui.titleDone || ui.charSelect;
+    if (V.spawnFx > 0 && !onTitle) V.spawnFx = Math.max(0, V.spawnFx - dt / 3.2);
+    const sf = onTitle ? 0 : V.spawnFx;
+    if (arrive.current) {
+      arrive.current.visible = arriveIn.current.visible = sf > 0;
+      if (sf > 0) {
+        const age = 1 - sf, grow = Math.min(1, age * 7);           // snaps open in ~0.45 s, then thins out as it fades
+        const w = (0.35 + grow * 0.65) * (0.75 + sf * 0.25);
+        arrive.current.position.set(p.pos.x, 0, p.pos.z); arrive.current.scale.set(w, 0.4 + grow * 0.6, w);
+        arriveIn.current.position.copy(arrive.current.position); arriveIn.current.scale.set(w * 0.42, 0.4 + grow * 0.6, w * 0.42);
+        const a = Math.min(1, sf * 2.2);
+        arriveMat.uniforms.uAlpha.value = a; arriveMat.uniforms.uTime.value = t;
+        arriveCore.uniforms.uAlpha.value = a; arriveCore.uniforms.uTime.value = t;
+        if (dt > 0 && Math.random() < dt * 40 * sf) { const r = Math.random() * 1.2, an = Math.random() * TAU; embers(p.pos.x + Math.cos(an) * r, 0.3 + Math.random() * 2, p.pos.z + Math.sin(an) * r, 1, 0xffe9a8, 0.25, 4.5, 1.4, 0.12); }
+        if (age < 0.02 && dt > 0) dustPuff(p.pos.x, p.pos.z, 10, 2.6, 0xfff2c8, 3.5);
+      }
+    }
     // shield bubble
     const f = flash.current;
     f.bubble = Math.max(0, f.bubble - dt * 3);
@@ -272,6 +300,8 @@ function Effects({ cls }: { cls: HeroClass }) {
       {gm.map((m, i) => <mesh key={i} ref={(r) => { ghosts.current[i] = r!; }} geometry={ghostGeo} material={m} visible={false} />)}
       <mesh ref={pillar} geometry={pillarGeo} material={pillarMat} visible={false} frustumCulled={false} />
       <mesh ref={revive} geometry={reviveGeo} material={reviveMat} visible={false} frustumCulled={false} />
+      <mesh ref={arrive} geometry={arriveGeo} material={arriveMat} visible={false} frustumCulled={false} renderOrder={5} />
+      <mesh ref={arriveIn} geometry={arriveGeo} material={arriveCore} visible={false} frustumCulled={false} renderOrder={6} />
       <mesh ref={bubble} geometry={bubbleGeo} material={bubbleMat} visible={false} />
       <GhostTint cls={cls} mats={gm} />
     </>

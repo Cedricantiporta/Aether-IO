@@ -147,7 +147,10 @@ function targets(e: Enemy, T: Pose, t: number): void {
   const W = st === 'WINDUP', A = st === 'ATTACK', R = st === 'RECOVER';
   switch (e.kind) {
     case 'BOSS_TREANT':
-      T.dy = Math.abs(sin(t * 2)) * 0.05 * (st === 'CHASE' ? 1 : 0);
+      if (st === 'CHASE') { // heavy lumbering stride: lurch up on each step, arms swing opposite
+        const mv = Math.min(1, Math.hypot(e.vel.x, e.vel.z) / Math.max(e.speed, 0.1));
+        T.dy = Math.abs(sin(t * 3)) * 0.22 * mv; T.armL = sin(t * 3) * 0.55 * mv; T.armR = -T.armL; T.pitch = 0.08 * mv;
+      }
       if (p === 0) { if (W) { const w = clamp(k / 1.0, 0, 1); T.armL = T.armR = -2.5 * w; T.pitch = -0.15 * w; T.glow += w; } else if (A) { T.armL = T.armR = 0.7; T.pitch = 0.25; T.dy = -0.15; T.glow += 1.2; } }
       else if (p === 1) { if (W || A) { T.armL = T.armR = -2.9; T.spread = 0.5; T.glow += 1.2; } }
       else if (p === 2) { if (W) { T.armL = T.armR = -0.6; T.spread = 1.3 * clamp(k, 0, 1); T.dy = clamp(k, 0, 1) * 0.1; T.glow += clamp(k, 0, 1); } else if (A) { T.dy = -0.2; T.spread = 0.3; T.glow += 1.5; } }
@@ -217,7 +220,7 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     r.rotation.y = e.facing + s.yaw;
     r.scale.set(sc, sc * fy, sc);
     const b = body.current;
-    b.position.y = s.dy; b.rotation.x = s.pitch; b.rotation.z = e.state === 'CHASE' ? sin(t * 2.6) * 0.035 : 0;
+    b.position.y = s.dy; b.rotation.x = s.pitch; b.rotation.z = e.state === 'CHASE' ? sin(t * (kind === 'BOSS_TREANT' ? 3 : 2.6)) * (kind === 'BOSS_TREANT' ? 0.09 : 0.035) : 0;
     if (aL.current) { aL.current.rotation.x = s.armL; aL.current.rotation.z = s.spread * (kind === 'BOSS_WYRM' ? 1 : 1); }
     if (aR.current) { aR.current.rotation.x = s.armR; aR.current.rotation.z = -s.spread; }
     if (extra.current) {

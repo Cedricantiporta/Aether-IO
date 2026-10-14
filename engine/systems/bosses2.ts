@@ -309,7 +309,8 @@ function treant(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   const list = LISTS.BOSS_TREANT!;
   if (S.bark) { S.barkT -= dt; if (S.barkT <= 0) { S.bark = false; events.emit('floatText', { pos: e.pos, text: 'BARK CRACKS', color: 0xffd23a, scale: 0.9, dy: 2.2 }); } }
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  keepRange(e, ux, uz, dist, 6, 12, e.speed * (1 + 0.15 * e.phase), 0.3);
+  // Elderroot lumbers into melee range and keeps stalking (slow circle when already close).
+  keepRange(e, ux, uz, dist, 2.5, e.radius + 3.5, e.speed * (1 + 0.15 * e.phase), 0.55);
   if (e.attackCd > 0) return;
   let id: number;
   if (S.wantBark && !S.bark) { S.wantBark = false; id = T_BARK; }
