@@ -32,6 +32,7 @@ import {
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
 import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats } from './combat';
+import { damageMinion, nearestMinion } from './minions';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys } from './bossSpecials';
 import { useGameStore } from '../../store';
@@ -76,6 +77,13 @@ let tdx = 0;       // vector enemy -> player (xz)
 let tdz = 0;
 let tdist = 0;
 let desiredYaw = 0;
+// necromancer minions draw aggro: a monster (not bosses / mini-bosses) within MINION_AGGRO of a risen minion goes for
+// it instead of the hero (px/pz become the minion's position for that monster's update)
+const MINION_AGGRO = 12;
+const minTgt = new Int8Array(MAX_ENEMIES).fill(-1);
+const minRe = new Float32Array(MAX_ENEMIES);
+let anyMinion = false;
+let curMin = -1;
 
 /** Non-narrowing state check (killEnemy may flip state inside callees). */
 function isDying(e: Enemy): boolean {
@@ -735,7 +743,7 @@ function pushOutOfObstacles(e: Enemy): boolean {
 export const meleeT = new Float32Array(MAX_ENEMIES);
 const MELEE_WINDUP = 0.42, MELEE_CD = 1.1;
 function contactHit(e: Enemy, locked: boolean): void {
-  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || !world.player.alive) { meleeT[e.id] = 0; return; }
+  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || (!world.player.alive && curMin < 0)) { meleeT[e.id] = 0; return; }
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
   const r = e.radius + 0.8;
@@ -759,6 +767,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   }
   const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1);
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
+  if (curMin >= 0) { damageMinion(curMin, dmg); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton
   const grab = e.kind === 'ZOMBIE';
   damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined });
   if (e.kind === 'BOAR' && e.state === 'ATTACK') {
@@ -780,6 +789,16 @@ function updateEnemy(e: Enemy): void {
   if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
   if (e.hideT > 0) e.hideT -= dt;
 
+  // target: a nearby minion first, else the hero
+  curMin = -1;
+  if (anyMinion && !e.boss && !e.mini) {
+    minRe[e.id] -= dt;
+    let k = minTgt[e.id];
+    if (minRe[e.id] <= 0 || k < 0 || !world.minions[k].active) { minRe[e.id] = 0.4; k = nearestMinion(e.pos.x, e.pos.z, MINION_AGGRO); minTgt[e.id] = k; }
+    if (k >= 0 && world.minions[k].active) curMin = k;
+  }
+  if (curMin >= 0) { px = world.minions[curMin].x; pz = world.minions[curMin].z; }
+  else { px = player.pos.x; pz = player.pos.z; }
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
@@ -910,6 +929,8 @@ export function updateEnemies(dt: number): void {
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
+  anyMinion = false;
+  for (const m of world.minions) if (m.active && m.rise <= 0) { anyMinion = true; break; }
   const list = world.enemies;
   let alive = 0;
   const V = world.view;
@@ -1067,6 +1088,24 @@ export function updateEnemyProjectiles(dt: number): void {
       p.active = false;
       events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       continue;
+    }
+
+    // necromancer minions body-block shots
+    if (anyMinion && p.damage > 0) {
+      let hitM = -1;
+      const M = world.minions;
+      for (let k = 0; k < M.length; k++) {
+        const m = M[k];
+        if (!m.active || m.rise > 0) continue;
+        const dx = p.pos.x - m.x, dz = p.pos.z - m.z, r = p.radius + (m.kind === 2 ? 1.5 : 0.65);
+        if (dx * dx + dz * dz < r * r) { hitM = k; break; }
+      }
+      if (hitM >= 0) {
+        p.active = false;
+        damageMinion(hitM, p.damage);
+        events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+        continue;
+      }
     }
 
     // player hit (dashing / i-frames let projectiles pass through)

@@ -1,6 +1,7 @@
 // Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts) and the bone golem (big melee, ultimate).
 // A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
-// crumbles when its time runs out. Monsters do not target minions; minions are timed, not killed.
+// crumbles when its time runs out or its HP is gone. Nearby monsters attack minions before the hero (enemies.ts
+// minionTarget), so the skeletons hold the line.
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
@@ -12,7 +13,8 @@ import { spawnProjectile } from './projectiles';
 import { weaponPerk, hordeMul } from '../../weaponPerks';
 
 export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2;
-const MAX_WARRIORS = 8;
+/** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
+export const MAX_SKELETONS = 4;
 const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
 const tmp = new Vector3();
@@ -31,19 +33,43 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   if (kind === MINION_WARRIOR) {
     let n = 0, oldest = -1, ol = 1e9;
     for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind === MINION_WARRIOR) { n++; if (m.life < ol) { ol = m.life; oldest = i; } } }
-    if (n >= MAX_WARRIORS + (useGameStore.getState().stats.minionCount | 0) && oldest >= 0) crumble(M[oldest]);
+    if (n >= MAX_SKELETONS && oldest >= 0) crumble(M[oldest]);
   }
   const m = M.find((o) => !o.active);
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
   m.life = m.maxLife = life * mm.life; m.dmg = dmg * mm.dmg; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
-  m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2;
+  m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
+  // HP from the hero's max HP (golems are the tanks, mages are frail)
+  const st = useGameStore.getState().stats;
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_MAGE ? 0.3 : 0.5) * (1 + (st.minionLife || 0) * 0.03);
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
 function crumble(m: (typeof world.minions)[number]): void {
   m.active = false;
   events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: m.kind === MINION_GOLEM ? 2.5 : 1.2, color: 0xd8d0b8 });
+}
+
+/** A monster hits minion i (melee or projectile). Bone Armor-free: minions take the full hit. */
+export function damageMinion(i: number, dmg: number): void {
+  const m = world.minions[i];
+  if (!m || !m.active || m.rise > 0) return;
+  m.hp -= dmg; m.hitT = 0.25;
+  if (m.hp <= 0) crumble(m);
+}
+
+/** The nearest risen minion within r of (x, z), or -1 (monsters use it to pick a target). */
+export function nearestMinion(x: number, z: number, r: number): number {
+  const M = world.minions;
+  let best = -1, bd = r * r;
+  for (let i = 0; i < M.length; i++) {
+    const m = M[i];
+    if (!m.active || m.rise > 0) continue;
+    const d = (m.x - x) ** 2 + (m.z - z) ** 2;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
 }
 
 export function clearMinions(): void { for (const m of world.minions) m.active = false; }
@@ -57,8 +83,9 @@ export function updateMinions(dt: number): void {
     if (!m.active) continue;
     m.life -= dt;
     if (m.life <= 0 || !pl.alive) { crumble(m); continue; }
-    if (m.rise > 0) { m.rise -= dt; continue; }   // still clawing out of the ground
-    if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 3);
+    if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground
+    if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
+    if (m.hitT > 0) m.hitT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE;
     const reach = golem ? 2.6 : mage ? 10 : 1.5, speed = golem ? 6 : mage ? 7 : 8.5, cd = (golem ? 1.3 : mage ? 1.1 : 0.85) / haste;
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
@@ -83,10 +110,14 @@ export function updateMinions(dt: number): void {
     }
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
     if (d > 30) { m.x = pl.pos.x; m.z = pl.pos.z; continue; }   // left far behind (room change): catch up
+    let mv = 0;
     if (d > stop) {
       const s = Math.min(d - stop, speed * dt);
       m.x += (dx / d) * s; m.z += (dz / d) * s;
+      mv = dt > 0 ? s / (speed * dt) : 0;
     }
+    m.mv += (mv - m.mv) * Math.min(1, dt * 10);
+    m.walk += dt * speed * m.mv * (golem ? 0.9 : 1.6);
     if (d > 0.05) m.facing = Math.atan2(dx, dz);
     m.atkT -= dt;
     if (e && d <= stop + 0.3 && m.atkT <= 0) {

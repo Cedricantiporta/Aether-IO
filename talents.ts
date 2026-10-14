@@ -143,9 +143,9 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Bone Craft', '+8% minion damage', 3, 'RAISE_DEAD', { add: { minionDmg: 0.08 } }],
       ['Long Rest', 'Minions last +1.5s', 3, 'RAISE_DEAD', { add: { minionLife: 1.5 } }],
       ['Marrow', '+4% minion damage, +5 max health', 3, 'u:DAMAGE', { add: { minionDmg: 0.04, maxHealth: 5 } }],
-      ['Legion', '+1 skeleton per Raise Dead', 1, 'RAISE_DEAD', { add: { minionCount: 1 } }],
+      ['Legion', '+1 skeleton per Raise Dead (max 4)', 1, 'RAISE_DEAD', { add: { minionCount: 1 } }],
       ['Frenzied Dead', 'Minions attack 12% faster', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.12 } }],
-      ['Gravelord', '+1 skeleton per Raise Dead, +20% minion damage', 1, 'ARMY_DEAD', { add: { minionCount: 1, minionDmg: 0.2 } }],
+      ['Gravelord', '+1 skeleton per Raise Dead (max 4), +20% minion damage', 1, 'ARMY_DEAD', { add: { minionCount: 1, minionDmg: 0.2 } }],
     ]],
     ['p', [
       ['Malice', '+6% skill damage', 3, 'u:SKILL_WEAPON', { add: { skillDamage: 0.06 } }],

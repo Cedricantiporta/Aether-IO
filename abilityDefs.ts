@@ -59,8 +59,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 10,
-      desc: 'Skeleton warriors claw out of the ground around you and hunt the nearest enemies. They crumble after a while.',
-      per: (lv) => `${2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0)} skeletons · ${pct(0.9 * lvMul(lv))} dmg per hit · ${14 + lv}s` },
+      desc: 'Skeleton warriors claw out of the ground around you and hunt the nearest enemies. Monsters attack them before you; they crumble when slain or after a while. One more skeleton every 2 levels (max 4).',
+      per: (lv) => `${Math.min(4, 1 + Math.ceil(lv / 2))} skeletons (max 4) · ${pct(0.9 * lvMul(lv))} dmg per hit · ${14 + lv}s` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
       per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },

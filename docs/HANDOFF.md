@@ -426,11 +426,15 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   SOUL_BOLT: single target, no pierce, no splash. Starter weapon `wand_n1` Bone Wand; item catalog / starter set /
   item-set names / talents (Gravelord, Plague, Lich) / perks (HORDE: minion damage + lifetime, BIG) all filled in.
 - Minions: `engine/systems/minions.ts` (pool `world.minions`, 16): warrior (melee), mage (PET_BOLT, tint 9), golem.
-  They hunt the nearest enemy (enemyGrid), otherwise trail the hero; timed (crumble), not killable; max 8 warriors
-  (+talents). Render: render/Minions.tsx. Stats `minionDmg / minionLife / minionCount / minionHaste` (talents).
-- Kit: 1 Raise Dead (2-4 warriors), 2 Bone Spear (piercing slow), 3 Plague Ground (zone kind CURSE: rot + slow,
+  They hunt the nearest enemy (enemyGrid), otherwise trail the hero; timed AND killable: HP from hero max HP
+  (warrior 0.5x, mage 0.3x, golem 1.6x). Monsters (not bosses / minis) within 12 of a risen minion target it instead
+  of the hero (enemies.ts `minTgt` / `curMin`: px/pz swap per monster; melee hits `damageMinion`); enemy projectiles
+  are body-blocked by minions. Max 4 warriors alive (`MAX_SKELETONS`, oldest crumbles). Render: render/Minions.tsx,
+  jointed rigs (hips/head/arms/legs): walk cycle from `m.walk / m.mv`, sword raise-and-slash, staff thrust, golem
+  double slam, claw-out rise, hurt flinch (`hitT`), camera-facing HP bar once hurt; scale 1.3 (golem 1.5). Stats `minionDmg / minionLife / minionCount / minionHaste` (talents).
+- Kit: 1 Raise Dead (2 / 3 / 4 warriors at skill lv 1 / 3 / 5, +talents, max 4), 2 Bone Spear (piercing slow), 3 Plague Ground (zone kind CURSE: rot + slow,
   the fallen rise: `abilityState.curseRaise`), Space Soul Step (blink + bone burst). Ult Army of the Dead (wail stun,
-  5 warriors + 2 mages + golem, 12 s). Passives: Grave Call (every Nth bolt raises a warrior), Soul Harvest (kills heal
+  4 warriors + 2 mages + golem, 12 s). Passives: Grave Call (every Nth bolt raises a warrior), Soul Harvest (kills heal
   + mana), Bone Armor (3%+ damage reduction per living minion, max 30%, in damagePlayer).
 
 ### Character slots (MMO style)

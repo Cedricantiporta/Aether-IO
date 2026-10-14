@@ -1,4 +1,4 @@
-// Red-dot alerts for the quick menu: new loot / better gear (Bag), new Codex entries or claimable rewards (Codex),
+// Red-dot alerts for the quick menu: better equippable gear (Bag), new Codex entries or claimable rewards (Codex),
 // unspent skill points (Skills). "Seen" state is per device (localStorage) and cleared when the panel is opened.
 import { create } from 'zustand';
 import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
@@ -43,12 +43,9 @@ export function betterGearIds(inv: Item[], eq: Equipment, hero: string, rank: nu
   return out;
 }
 
+/** Bag dot: only when there is equippable gear better than what is worn (plain new loot does not light it). */
 export function useBagAlert(): boolean {
-  const seen = useSeen((s) => s.items);
-  return useGameStore((s) => {
-    if (s.inventory.some((i) => seen.indexOf(i.id) === -1)) return true;
-    return hasBetterGear(s.inventory, s.equipment, s.hero, s.heroRank);
-  });
+  return useGameStore((s) => hasBetterGear(s.inventory, s.equipment, s.hero, s.heroRank));
 }
 export function useCodexAlert(): boolean {
   const seen = useSeen((s) => s.codex);

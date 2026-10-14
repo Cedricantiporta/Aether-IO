@@ -2,7 +2,7 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
-import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM } from './minions';
+import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MAX_SKELETONS } from './minions';
 import { unlockLevel } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
@@ -423,7 +423,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   // ---- NECROMANCER
   if (hero === 'NECROMANCER') {
     if (slot === 'q') {   // RAISE DEAD: skeleton warriors claw out of the ground around you
-      const n = 2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0) + (stats.minionCount | 0);
+      const n = Math.min(MAX_SKELETONS, 1 + Math.ceil(lv / 2) + (stats.minionCount | 0));   // +1 per 2 levels (2 / 3 / 4)
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
         spawnMinion(MINION_WARRIOR, p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, 14 + lv + (stats.minionLife || 0));
@@ -690,7 +690,7 @@ function releaseUlt(): void {
     stunSt.duration = 1.2;
     damageEnemiesInRadius(p.pos.x, p.pos.z, 10, b * 8, physKnock, stunSt);
     const mlv = st.skillLevels.ult, md = base(mlv);
-    for (let i = 0; i < 5; i++) { const an = (i / 5) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, 12); }
+    for (let i = 0; i < MAX_SKELETONS; i++) { const an = (i / MAX_SKELETONS) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, 12); }
     for (let i = 0; i < 2; i++) { const an = Math.PI * (0.5 + i); spawnMinion(MINION_MAGE, p.pos.x + Math.cos(an) * 4.5, p.pos.z + Math.sin(an) * 4.5, md * 1.0, 12); }
     spawnMinion(MINION_GOLEM, p.pos.x + Math.sin(p.facing) * 3.5, p.pos.z + Math.cos(p.facing) * 3.5, md * 3, 12);
     a.tintRgb = [0.08, 0.03, 0.12]; a.tintTarget = 0;
