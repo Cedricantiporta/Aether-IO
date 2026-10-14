@@ -19,7 +19,7 @@ import { Vector3 } from 'three';
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
-const DASH_SPEED = 42;
+const DASH_SPEED = 32;   // ~7 units per dash (was 42)
 const DEATH_DELAY = 1.2;
 const COLLIDE_PAD = 0.5;
 
@@ -196,7 +196,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = Math.max(0.6, stats.dashCooldown * (1 - 0.08 * Math.max(0, dLv - 1)) * (1 - stats.cooldownReduction));
+  p.dashCdMax = Math.max(0.5, stats.dashCooldown * 0.6 * (1 - 0.08 * Math.max(0, dLv - 1)) * (1 - stats.cooldownReduction));
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {

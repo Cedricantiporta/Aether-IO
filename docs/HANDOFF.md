@@ -232,3 +232,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Target ring + HP card follow `currentTarget()` (combat.ts): the click-lock, else the auto-aim enemy. Before, they only showed for a
   clicked target.
 - Mobile: Dash swapped places with Skill 1, so it sits right beside the Attack button. The Knight attack button uses the HOLY_WAVE icon.
+
+### Town fixes: monster stacking, tower spot, dash tuning, Set Out
+- `spawnTownMonsters` clears every active enemy before spawning. Each town rebuild (back from a run or the castle) used to add another
+  unleashed set: 10 → 60 after 5 rebuilds, which looked like "50 superfast monster shadows".
+- Endless Tower moved deeper into the woods: `TOWER {x:-21,z:74}`, door (-16,74), a road branch at z 74, extra trees around it. The ORE
+  node moved to (-20,58).
+- Dash: `DASH_SPEED` 32 (~7 units, was 42). Cooldown is ×0.6 (min 0.5 s). FacingArrow chevrons reach 7.
+- The Set Out / Endless Tower window closes by itself when the hero walks more than 7.5 units from the gate / tower door.

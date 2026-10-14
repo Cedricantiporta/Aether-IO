@@ -12,7 +12,7 @@ function tri(w: number, l: number, notch: number): BufferGeometry {
   g.setAttribute('position', new Float32BufferAttribute([0, 0, l, -w, 0, 0, 0, 0, notch, 0, 0, l, 0, 0, notch, w, 0, 0], 3));
   return g;
 }
-const DASH_REACH = 8.5;
+const DASH_REACH = 7;
 
 export function FacingArrow() {
   const { root, arrow, chev, chevMat, arrowMat } = useMemo(() => {

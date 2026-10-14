@@ -9,6 +9,9 @@ import { Button } from '../components/Button';
 import { useGameEvent } from '../hooks/useEvent';
 import { ASCENSIONS } from '../../ascension';
 import { HERO_META } from '../lib/heroes';
+import { useRaf } from '../hooks/useRaf';
+import { world } from '../../engine/world';
+import { GATE, TOWER } from '../../engine/townData';
 
 type Mode = 'ADVENTURE' | 'TOWER';
 
@@ -16,6 +19,12 @@ export const SetOutWindow: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('ADVENTURE');
   useGameEvent('openSetOut', (e) => { setMode(e.mode); setOpen(true); });   // gate = Adventure, the tower building = Endless Tower
+  // walking off (e.g. on through the gate to the outskirts) closes it: it only stays while the hero stands at the gate / tower door
+  useRaf(() => {
+    if (!open) return;
+    const p = world.player.pos, at = mode === 'TOWER' ? TOWER.door : { x: GATE.x, z: GATE.z - 1 };
+    if ((p.x - at.x) ** 2 + (p.z - at.z) ** 2 > 7.5 * 7.5) setOpen(false);
+  });
   const { progress, hero, startMode, setAscension } = useGameStore(useShallow((s) => ({ progress: s.progress, hero: s.hero, startMode: s.startMode, setAscension: s.setAscension })));
   if (!open) return null;
   const asc = Math.min(progress.ascension, progress.ascensionMax);

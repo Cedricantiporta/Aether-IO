@@ -26,7 +26,7 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls). */
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
-export const TOWER = { x: -16, z: 58, r: 4.2, door: { x: -11, z: 58 } };
+export const TOWER = { x: -21, z: 74, r: 4.2, door: { x: -16, z: 74 } };   // deep in the south-west woods
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -116,7 +116,7 @@ export const ROADS: RoadSpec[] = [
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
-  { x1: 0, z1: 58, x2: -11, z2: 58, w: ROAD_W.branch },        // endless tower door
+  { x1: 0, z1: 74, x2: -16, z2: 74, w: ROAD_W.branch },        // endless tower door (a woodland path)
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -205,7 +205,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
   { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
-  { x: -6, z: 71, s: 3.4, kind: 1 }, { x: 24, z: 47, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
+  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 24, z: 47, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -262,7 +262,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
 /** Resource nodes (crystal / ore) in the outer ring of the village, inside the wall, away from the shops. */
 export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE'; x: number; z: number }[] = [
   // outside the walls, in the forecourt south of the gate (they regrow 24 h after the last one is harvested)
-  { kind: 'ORE', x: -21, z: 45 }, { kind: 'CRYSTAL', x: -5.5, z: 56 }, { kind: 'ORE', x: -21, z: 72 }, { kind: 'CRYSTAL', x: 19, z: 77 },
+  { kind: 'ORE', x: -21, z: 45 }, { kind: 'CRYSTAL', x: -5.5, z: 56 }, { kind: 'ORE', x: -20, z: 58 }, { kind: 'CRYSTAL', x: 19, z: 77 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */

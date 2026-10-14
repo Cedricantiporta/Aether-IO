@@ -13,6 +13,8 @@ const slots = TOWN_MONSTERS.map(() => ({ id: -1, t: 0 }));
 const v = new Vector3();
 
 export function spawnTownMonsters(): void {
+  // a town rebuild (back from a run / the castle) must not stack a second set on top: clear every leftover enemy first
+  for (const e of world.enemies) if (e.active) e.active = false;
   world.director.wave = 3;   // their strength (town: no director)
   for (let i = 0; i < slots.length; i++) { slots[i].id = -1; slots[i].t = 0; spawnSlot(i); }
 }
