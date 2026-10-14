@@ -15,7 +15,7 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, sparks } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
-import { HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, WeaponGeo } from './weapons';
+import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, WeaponGeo } from './weapons';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
@@ -37,8 +37,8 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   // the character's outfit tint (characters.ts), multiplied over the model's colours
   useEffect(() => {
     const t = activeChar()?.tint ?? '#ffffff';
-    for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.color) mt.color.set(t);
-  }, [ch]);
+    for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.color) { mt.color.set(t); if (cls === 'NECROMANCER') mt.color.multiply(NECRO_TINT); }
+  }, [ch, cls]);
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
   const eq = useGameStore((s) => s.equipment);
   const gearKey = ['helmet', 'armor', 'gloves', 'boots', 'accessory'].map((k) => (eq as any)?.[k]?.rarity || '').join('|');

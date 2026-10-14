@@ -1,4 +1,5 @@
 // Procedural hand-held weapons. Authored frame: grip at origin, long axis +Y, "forward" (bow belly / blade edge) +Z.
+import { Color } from 'three';
 import { BufferGeometry, Matrix4, Quaternion, Vector3 } from 'three';
 import { GB, TAU } from './util';
 
@@ -10,6 +11,8 @@ export const RARITY_TIER: Record<string, number> = { COMMON: 0, RARE: 1, EPIC: 2
 /** Quaternion mapping authored weapon axes onto KayKit `handslot` local axes (X->-Z, Y->-X, Z->+Y). */
 export const HANDSLOT_QUAT = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, 0, -1), new Vector3(-1, 0, 0), new Vector3(0, 1, 0)));
 
+/** The necromancer's hooded model is dyed a dusky violet (multiplied with the character's outfit tint). */
+export const NECRO_TINT = new Color('#7d6a9a');
 export interface WeaponGeo { body: BufferGeometry; glow: BufferGeometry; tip: [number, number, number] }
 
 export function makeBow(accent: string, tier: number): WeaponGeo {

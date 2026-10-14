@@ -8,6 +8,7 @@ import type { HeroClass } from '../../types';
 import type { Difficulty } from '../../storeTypes';
 import { DIFFICULTY_MODS } from '../../constants';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
+import { HeroPreview } from '../components/HeroPreview';
 import { characters, activeChar, charLevel, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
 import { HERO_ICON } from '../hud/TopBars';
 
@@ -48,6 +49,23 @@ export const ClassEmblem: React.FC<{ hero: HeroClass; size: string; lit?: boolea
 /** Character select (MMO style): your saved characters on the left (name, class, level), Play / Create / Delete.
  *  Create: pick a class (left list), a name and an outfit tint, then Create (the new character's save loads at once).
  *  A character's class is fixed; there is no class switching in town any more. */
+/** Pentagon radar of the class profile (Attack / Defense / Range / Mobility / Control, 0..5). */
+const Radar: React.FC<{ stats: [string, number][] }> = ({ stats }) => {
+  const n = stats.length, R = 46, cx = 90, cy = 80;
+  const pt = (i: number, r: number) => { const a = -Math.PI / 2 + (i / n) * Math.PI * 2; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
+  const ring = (k: number) => stats.map((_, i) => pt(i, R * k).join(',')).join(' ');
+  return (
+    <svg className="cs-radar" viewBox="0 0 180 160" aria-hidden>
+      {[0.25, 0.5, 0.75, 1].map((k) => <polygon key={k} points={ring(k)} fill="none" stroke="rgba(201,160,82,.28)" strokeWidth=".7" />)}
+      {stats.map((_, i) => { const [x, y] = pt(i, R); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(201,160,82,.22)" strokeWidth=".6" />; })}
+      <polygon points={stats.map(([, v], i) => pt(i, R * (v / 5)).join(',')).join(' ')} fill="rgba(241,213,142,.28)" stroke="#f1d58e" strokeWidth="1.2" />
+      {stats.map(([l, v], i) => { const [x, y] = pt(i, R + 15); return (
+        <g key={l}><text x={x} y={y - 2} textAnchor="middle" className="cs-radar-v">{v * 20}</text><text x={x} y={y + 7} textAnchor="middle" className="cs-radar-l">{l.toUpperCase()}</text></g>
+      ); })}
+    </svg>
+  );
+};
+
 export const CharacterSelect: React.FC = () => {
   const difficulty = useGameStore((s) => s.difficulty);
   const setDifficulty = useGameStore((s) => s.setDifficulty);
@@ -99,6 +117,7 @@ export const CharacterSelect: React.FC = () => {
   return (
     <div className="absolute inset-0 pe cs-root" style={{ zIndex: 55 }} data-testid="char-select">
       <div className="cs-vig" />
+      <HeroPreview hero={hero} tint={mode === 'create' ? cTint : picked?.tint ?? '#ffffff'} />
       <div className="cs-head">{mode === 'list' ? 'Choose your character' : 'Create a character'}</div>
 
       {mode === 'list' ? (
@@ -113,34 +132,31 @@ export const CharacterSelect: React.FC = () => {
           {chars.length < MAX_CHARS && <button className="cs-item cs-new" onClick={() => setMode('create')} data-testid="cs-new"><span className="cs-plus">+</span><span>New character</span></button>}
         </div>
       ) : (
-        <div className="cs-list">
-          {HERO_ORDER.map((h, i) => (
-            <motion.button key={h} className={`cs-item ${cHero === h ? 'on' : ''}`} onClick={() => setCHero(h)} data-testid={`cs-${h}`}
-              initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.07 }}>
-              <ClassEmblem hero={h} size="4.2rem" lit={cHero === h} />
-              <span>{HERO_META[h].title}</span>
-            </motion.button>
-          ))}
+        <div className="cs-dias">
+          {HERO_ORDER.map((h, i) => {
+            const Icon = HERO_ICON[h];
+            return (
+              <motion.button key={h} className={`cs-dia ${cHero === h ? 'on' : ''}`} onClick={() => setCHero(h)} data-testid={`cs-${h}`} title={HERO_META[h].title}
+                style={{ marginLeft: i % 2 ? '4.6rem' : 0 }} initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.07 }}>
+                <span className="cs-dia-frame" /><Icon className="cs-dia-ico" strokeWidth={1.5} />
+              </motion.button>
+            );
+          })}
         </div>
       )}
 
       <AnimatePresence mode="wait">
         <motion.div key={mode + hero + (picked?.id ?? '')} className="cs-info" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }}>
           <div className="cs-name">{mode === 'list' && picked ? picked.name : meta.title}</div>
-          <div className="cs-role">{mode === 'list' && picked ? `${meta.title} · Lv ${charLevel(picked)}` : ROLE[hero]}</div>
+          <div className="cs-tag">{mode === 'list' && picked ? `${meta.title} · Lv ${charLevel(picked)}` : `The ${meta.tagline}`}</div>
+          <div className="cs-orn" />
+          <div className="cs-tags">{meta.tags.map((t, k) => <span key={t} data-k={k}>{t}</span>)}</div>
           <div className="cs-blurb">{BLURB[hero]}</div>
+          <div className="cs-sep" />
+          <Radar stats={PROFILE[hero]} />
           {mode === 'create' && (<>
             <div className="cs-row"><span>Complexity</span><span className="cs-stars">{[1, 2, 3].map((n) => <i key={n} className={n <= COMPLEXITY[hero] ? 'on' : ''} />)}</span></div>
-            <div className="cs-bars">
-              {PROFILE[hero].map(([l, v]) => (
-                <div key={l} className="cs-bar"><span>{l}</span><div>{[1, 2, 3, 4, 5].map((n) => <i key={n} className={n <= v ? 'on' : ''} />)}</div></div>
-              ))}
-            </div>
-            <div className="cs-sep" />
             <input className="cs-input pe" placeholder="Character name" maxLength={16} value={cName} onChange={(e) => setCName(e.target.value)} data-testid="cs-name-input" />
-            <div className="cs-tints" aria-label="Outfit colour">
-              {TINTS.map((t) => <button key={t.id} className={`cs-tint pe ${cTint === t.id ? 'on' : ''}`} style={{ background: t.c }} title={t.name} onClick={() => setCTint(t.id)} />)}
-            </div>
             <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
             <button className="cs-confirm" onClick={create} data-testid="cs-create">Create</button>
             {chars.length > 0 && <button className="cs-sub" onClick={() => setMode('list')}>Back to characters</button>}
