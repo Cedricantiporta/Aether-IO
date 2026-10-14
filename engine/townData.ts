@@ -126,7 +126,8 @@ export const FENCES: [number, number, number, number][] = [
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
-export const SIGNS: SignSpec[] = [{ x: -4.4, z: 13.6 }, { x: -5.6, z: 22 }];
+/** Gate signposts were removed at the owner's request (a ground arrow points to the gate instead). */
+export const SIGNS: SignSpec[] = [];
 
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
