@@ -323,7 +323,7 @@ function Rim({ q }: { q: QualityCfg }) {
   const nat = useNature();
   const rocks = useMemo(() => [1, 2, 3, 4].map((s) => makeRockGeo(s * 17, s % 2 ? '#8a929c' : '#76808a', '#5fa73c', 0.85 + s * 0.12)), []);
   const rockMat = useMemo(() => litMat({ roughness: 0.92 }), []);
-  const nRock = Math.round(230 * q.forest) + 60;
+  const nRock = Math.round(70 * q.forest) + 24;   // few rim rocks (the owner wants no wall of giant boulders behind / beside the town)
   const rockFills = useMemo(() => rocks.map((_, k) => (m: InstancedMesh) => {
     const rnd = mulberry32(100 + k); let c = 0;
     const per = Math.ceil(nRock / rocks.length);
@@ -331,7 +331,8 @@ function Rim({ q }: { q: QualityCfg }) {
       const a = ((i + rnd()) / per) * TAU; const e = edgeR(a);
       const r = e + (rnd() - 0.3) * 6;
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const s = 1.4 + rnd() * 2.6;
+      const s = 0.9 + rnd() * 1.3;
+      if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
       setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
     }
     m.count = c;
@@ -371,9 +372,9 @@ function Rim({ q }: { q: QualityCfg }) {
   const keys = ['oak', 'palm', 'pineA', 'pineB'] as const;
   return (
     <>
-      {rocks.map((g, k) => <Inst key={'r' + k} geo={g} mat={rockMat} count={perRock} fill={rockFills[k]} cast={k < 2} receive />)}
+      {rocks.map((g, k) => <Inst key={'r' + k} geo={g} mat={rockMat} count={perRock} fill={rockFills[k]} receive />)}
       <Inst geo={stones} mat={rockMat} count={nStone} fill={stoneFill} cast receive />
-      {keys.map((k, i) => (spec.inner[k].length ? <Inst key={'i' + k} geo={nat[k]} mat={nat.mat} count={spec.inner[k].length / 5} fill={fills.inner[i]} cast receive /> : null))}
+      {keys.map((k, i) => (spec.inner[k].length ? <Inst key={'i' + k} geo={nat[k]} mat={nat.mat} count={spec.inner[k].length / 5} fill={fills.inner[i]} receive /> : null))}
       {keys.map((k, i) => (spec.lists[k].length ? <Inst key={'o' + k} geo={nat[k]} mat={nat.mat} count={spec.lists[k].length / 5} fill={fills.outer[i]} /> : null))}
     </>
   );

@@ -3,7 +3,7 @@
 // are one flat mesh without shadows, lamp bulbs are emissive only (no real lights).
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AdditiveBlending, BufferGeometry, CanvasTexture, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
+import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
 import { useNature } from './models';
@@ -13,6 +13,10 @@ import {
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
+import { world } from '../engine/world';
+import { useGameStore } from '../store';
+import { GameStatus } from '../types';
+import { useUiStore } from '../ui/uiStore';
 
 type V3 = [number, number, number];
 const WOOD = '#6e4b2b', STONE = '#9b9488', DSTONE = '#7d776d';
@@ -285,8 +289,6 @@ function buildRoads(): BufferGeometry {
   r.cyl(2.2, 2.2, 0.12, 24, [PLAZA.x, 0.07, PLAZA.z], '#d9ccaa');
   r.cyl(1.7, 1.7, 0.13, 24, [PLAZA.x, 0.075, PLAZA.z], '#e9deba');
   for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; r.box(0.5, 0.13, 1.5, [PLAZA.x + Math.cos(a) * 4.3, 0.075, PLAZA.z + Math.sin(a) * 4.3], '#c4bfb3', [0, -a + Math.PI / 2, 0]); }
-  // soft golden chevrons on the avenue: follow them to the gate
-  for (let z = 14; z <= 33; z += 4.5) for (const s of [-1, 1]) r.box(1.6, 0.04, 0.34, [s * 0.52, 0.09, z], '#dccb8a', [0, s * 0.8, 0]);
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], '#cbc6bb'); r.cyl(5.8, 5.8, 0.1, 24, [GATE.x, 0.06, GATE.z], '#f4f0e6');
   return planarUv(r.build(), 4);
@@ -492,6 +494,24 @@ function TownTrees() {
   );
 }
 
+/** Gold arrow on the ground beside the hero pointing at the town gate (like the exit-portal guides in rooms); hidden near the gate. */
+function GateGuide() {
+  const geo = useMemo(() => new ConeGeometry(0.55, 1.5, 3).rotateX(Math.PI / 2), []);
+  const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false, color: new Color('#f2c14e') }), []);
+  const ref = useRef<Mesh>(null!);
+  useFrame(({ clock }) => {
+    const m = ref.current; if (!m) return;
+    const p = world.player.pos, st = useGameStore.getState().status;
+    const dx = GATE.x - p.x, dz = GATE.z - p.z, d = Math.hypot(dx, dz);
+    m.visible = st === GameStatus.MENU && useUiStore.getState().titleDone && d > 14;
+    if (!m.visible) return;
+    const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
+    m.position.set(p.x + (dx / d) * k, 0.25, p.z + (dz / d) * k);
+    m.rotation.y = Math.atan2(dx, dz);
+  });
+  return <mesh ref={ref} geometry={geo} material={mat} visible={false} renderOrder={5} />;
+}
+
 export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
   const mats = useMemo(() => ({
@@ -523,6 +543,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
+      <GateGuide />
       {town.chunks.map((c, i) => (
         <React.Fragment key={i}>
           <mesh geometry={c.body} material={mats.lit} castShadow={shadows} receiveShadow={shadows} />
