@@ -2,7 +2,7 @@
 // the treasure goblin / bounty target. Reads world.roomEvt in useFrame; meshes are built once (traps are a fixed pool).
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { Group, Mesh } from 'three';
+import { Color, MeshBasicMaterial, Sprite, SpriteMaterial, type Group, type Mesh, type PointLight } from 'three';
 import { world } from '../engine/world';
 import { trapPhase } from '../engine/systems/roomEvents';
 import { GB, litMat } from './util';
@@ -11,13 +11,22 @@ import { CELL, pushHalo } from './fx';
 const MAXT = 10;
 
 export function RoomEvents() {
+  const totemLight = useRef<PointLight>(null!), barG = useRef<Group>(null!);
+  // totem HP bar (two sprites, the fill anchored on its left edge)
+  const bar = useMemo(() => {
+    const bg = new Sprite(new SpriteMaterial({ color: '#120d0a', depthTest: false, transparent: true, opacity: 0.85 }));
+    const fill = new Sprite(new SpriteMaterial({ color: '#4ade80', depthTest: false }));
+    bg.scale.set(3.2, 0.32, 1); fill.center.set(0, 0.5); fill.position.x = -1.5; fill.scale.set(3.0, 0.2, 1);
+    bg.renderOrder = fill.renderOrder = 20; fill.renderOrder = 21;
+    return { bg, fill };
+  }, []);
+  const glowMat = useMemo(() => new MeshBasicMaterial({ color: new Color(1.1, 2.4, 2.8), toneMapped: false }), []);
   const totem = useRef<Group>(null!), cage = useRef<Group>(null!), bars = useRef<Group>(null!);
   const traps = useRef<(Group | null)[]>([]), spikes = useRef<(Mesh | null)[]>([]);
   const mat = useMemo(() => litMat({ roughness: 0.7, metalness: 0.15 }), []);
   const geo = useMemo(() => {
     const t = new GB([0.9, 1.1]);
     t.cyl(1.1, 1.3, 0.5, 8, [0, 0.25, 0], '#5a5a66'); t.cyl(0.55, 0.7, 2.2, 6, [0, 1.6, 0], '#8a8aa0');
-    t.ico(0.75, [0, 3.2, 0], '#7fe0ff', 1, 0);
     const c = new GB([0.9, 1.1]);
     c.cyl(1.5, 1.5, 0.25, 12, [0, 0.12, 0], '#4a3a2a');
     const v = new GB([0.9, 1.1]);   // the captive: a little villager sitting in the cage
@@ -29,7 +38,8 @@ export function RoomEvents() {
     for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2, r = i === 0 ? 0 : 0.9; plate.cyl(0.18, 0.2, 0.06, 6, [Math.cos(a) * r, 0.09, Math.sin(a) * r], '#1a1618'); }
     const sp = new GB([0.9, 1.1]);
     for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2, r = i === 0 ? 0 : 0.9; sp.cone(0.17, 1.1, 5, [Math.cos(a) * r, 0.55, Math.sin(a) * r], '#cfcfd8'); }
-    return { totem: t.build(), cageBase: c.build(), villager: v.build(), bars: b.build(), plate: plate.build(), spikes: sp.build() };
+    const cr = new GB([1, 1]).ico(0.75, [0, 3.2, 0], '#ffffff', 1, 0);
+    return { crystal: cr.build(), totem: t.build(), cageBase: c.build(), villager: v.build(), bars: b.build(), plate: plate.build(), spikes: sp.build() };
   }, []);
 
   useFrame(({ clock }) => {
@@ -38,12 +48,21 @@ export function RoomEvents() {
     const showT = live && e.obj === 'DEFEND';
     if (totem.current) {
       totem.current.visible = showT;
+      if (!showT && barG.current) barG.current.visible = false;
       if (showT) {
         totem.current.position.set(e.x, 0, e.z);
         const k = e.maxHp > 0 ? e.hp / e.maxHp : 0;
-        if (e.state !== 3) pushHalo(e.x, 3.2, e.z, 2.6 + Math.sin(t * 3) * 0.3, e.hurtT > 0 ? 2.6 : 0.5, e.hurtT > 0 ? 0.6 : 1.8, e.hurtT > 0 ? 0.4 : 2.4, 0.35 + 0.35 * k, CELL.GLOW);
+        if (e.state !== 3) pushHalo(e.x, 4.5, e.z, 3.8 + Math.sin(t * 3) * 0.4, e.hurtT > 0 ? 2.6 : 0.5, e.hurtT > 0 ? 0.6 : 1.8, e.hurtT > 0 ? 0.4 : 2.4, 0.35 + 0.35 * k, CELL.GLOW);
         totem.current.rotation.y = t * 0.4;
-        totem.current.scale.setScalar(e.state === 3 ? 0.55 : 1);   // a broken stump when it fell
+        totem.current.scale.setScalar(e.state === 3 ? 0.75 : 1.4);   // bigger; a broken stump when it fell
+        // a real light on the floor around it (red while it is being hit) and its HP bar
+        const L = totemLight.current;
+        if (L) { L.intensity = e.state === 3 ? 0 : (e.hurtT > 0 ? 70 : 45) + Math.sin(t * 3) * 6; L.color.set(e.hurtT > 0 ? '#ff6a5a' : '#7fe0ff'); }
+        pushHalo(e.x, 0.15, e.z, 7, 0.4, 1.4, 1.8, e.state === 3 ? 0 : 0.25, CELL.GLOW);
+        const alive = e.state !== 3;
+        if (barG.current) { barG.current.visible = alive; barG.current.position.set(e.x, 5.8, e.z); }
+        bar.fill.scale.x = 3.0 * Math.max(0, k);
+        bar.fill.material.color.set(k > 0.5 ? '#4ade80' : k > 0.25 ? '#facc15' : '#ef4444');
       }
     }
     // cage + captive
@@ -81,7 +100,11 @@ export function RoomEvents() {
 
   return (
     <>
-      <group ref={totem} visible={false}><mesh geometry={geo.totem} material={mat} castShadow /></group>
+      <group ref={totem} visible={false}>
+        <mesh geometry={geo.totem} material={mat} castShadow /><mesh geometry={geo.crystal} material={glowMat} />
+        <pointLight ref={totemLight} position={[0, 3.4, 0]} distance={16} decay={1.6} intensity={45} color="#7fe0ff" />
+      </group>
+      <group ref={barG} visible={false}><primitive object={bar.bg} /><primitive object={bar.fill} /></group>
       <group ref={cage} visible={false}>
         <mesh geometry={geo.cageBase} material={mat} receiveShadow />
         <mesh geometry={geo.villager} material={mat} castShadow />

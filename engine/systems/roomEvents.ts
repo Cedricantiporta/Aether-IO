@@ -97,13 +97,21 @@ export function updateRoomEvents(dt: number): void {
   // ---- objectives
   if (e.state === 1 && fighting) {
     if (e.obj === 'DEFEND' || e.obj === 'RESCUE') {
-      // monsters near the totem / cage drift to it and wear it down
+      // monsters target the totem / cage: every other one (and any closer to it than to the hero) walks to it and wears it
+      // down, unless the hero is right next to it. (Enemies moved toward the hero this frame already: undo that step.)
       let n = 0;
+      const reach = e.obj === 'DEFEND' ? 3.2 : 2.6;
       for (const m of world.enemies) {
-        if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || isStationary(m.kind)) continue;
-        const dx = e.x - m.pos.x, dz = e.z - m.pos.z, d = Math.hypot(dx, dz);
-        if (d < 2.6 + m.radius) { n++; continue; }
-        if (d < 16) { const s = Math.min(d - 2.4, m.speed * 0.45 * dt); m.pos.x += (dx / d) * s; m.pos.z += (dz / d) * s; }
+        if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || m.mini || isStationary(m.kind)) continue;
+        const dx = e.x - m.pos.x, dz = e.z - m.pos.z, d = Math.hypot(dx, dz) || 0.01;
+        if (d < reach + m.radius) { n++; m.facing = Math.atan2(dx, dz); continue; }
+        const pd = Math.hypot(pl.pos.x - m.pos.x, pl.pos.z - m.pos.z);
+        const toTotem = pd > 4 && ((m.id & 1) === 0 || d < pd);
+        if (toTotem) {
+          if (m.state === 'CHASE' || m.state === 'KITE') { m.pos.x -= m.vel.x * dt; m.pos.z -= m.vel.z * dt; }
+          const s = Math.min(d - reach, m.speed * 0.9 * dt);
+          m.pos.x += (dx / d) * s; m.pos.z += (dz / d) * s; m.facing = Math.atan2(dx, dz);
+        } else if (d < 16) { const s = Math.min(d - reach, m.speed * 0.45 * dt); m.pos.x += (dx / d) * s; m.pos.z += (dz / d) * s; }
       }
       if (n > 0) { e.hp -= Math.min(4, n) * 3.2 * dt; e.hurtT = 0.25; }
       if (e.hp <= 0) { e.hp = 0; fail(e.obj === 'DEFEND' ? 'The totem fell.' : 'The captive was lost...'); }
