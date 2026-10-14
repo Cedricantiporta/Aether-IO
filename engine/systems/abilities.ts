@@ -20,7 +20,7 @@ import { spawnProjectile } from './projectiles';
 import { hitStop, slowMo, fovKick } from '../game';
 
 /** State for render/UI of multi-frame abilities. */
-const judgeRays = Array.from({ length: 7 }, () => ({ x: 0, z: 0, t: 0, id: -1 }));
+const judgeRays = Array.from({ length: 12 }, () => ({ x: 0, z: 0, t: 0, id: -1 }));
 const judgeUsed: number[] = [];
 let judgeN = 0;
 export const abilityState = {
@@ -480,10 +480,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.anim.castT = 1; addShake(0.2);
       announce('SHIELD_WALL');
     } else if (slot === 's3') {
-      // Judgment: up to 7 rays of holy light strike enemies around the target from above, one after another
+      // Judgment: up to 12 rays of holy light strike enemies around the target from above, one after another (wide AoE)
       aimPoint(26, 0, tgt);
-      const area = 9 + 0.4 * (lv - 1), n = Math.min(7, 3 + lv);
-      a.judgeR = 2.6 + 0.15 * (lv - 1); a.judgeDmg = b * 3.4; a.judgeStun = 0.8 + 0.1 * lv;
+      const area = 14 + 0.6 * (lv - 1), n = Math.min(12, 5 + lv);
+      a.judgeR = 4.0 + 0.2 * (lv - 1); a.judgeDmg = b * 3.0; a.judgeStun = 0.8 + 0.1 * lv;
       const ids = world.enemyGrid.query(tgt.x, tgt.z, area + 2, out);
       judgeN = 0; judgeUsed.length = 0;
       // nearest-first distinct enemies, then random spots around the target for the leftover rays
@@ -498,7 +498,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
         const r = judgeRays[judgeN];
         if (best >= 0) { judgeUsed[judgeN] = best; const e = world.enemies[best]; r.x = e.pos.x; r.z = e.pos.z; r.id = best; }
         else { judgeUsed[judgeN] = -1; const an = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * area * 0.7; r.x = tgt.x + Math.cos(an) * rr; r.z = tgt.z + Math.sin(an) * rr; r.id = -1; }
-        r.t = 0.45 + judgeN * 0.09; judgeN++;
+        r.t = 0.45 + judgeN * 0.07; judgeN++;
       }
       a.judgeT = 1;
       events.emit('telegraph', { pos: tgt.clone(), radius: area, duration: 0.45 });

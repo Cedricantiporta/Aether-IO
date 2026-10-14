@@ -79,8 +79,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage and slowly heal.',
       per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
-      desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray deals heavy damage and stuns. More rays per level (max 7).',
-      per: (lv) => `${Math.min(7, 3 + lv)} rays · ${pct(3.4 * lvMul(lv))} dmg each · stun ${f1(0.8 + 0.1 * lv)}s` },
+      desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage and stuns. More rays per level (max 12).',
+      per: (lv) => `${Math.min(12, 5 + lv)} rays · ${pct(3.0 * lvMul(lv))} dmg each · radius ${f1(4 + 0.2 * (lv - 1))} · stun ${f1(0.8 + 0.1 * lv)}s` },
   ],
 };
 
