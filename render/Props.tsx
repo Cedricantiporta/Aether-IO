@@ -201,7 +201,7 @@ function makeBones() {
 }
 function makeColumn(broken: boolean) {
   const g = new GB([0.72, 1.08]);
-  const m = '#efeae0', m2 = '#d8d2c4', moss = '#6a9a4a';
+  const m = '#a8a194', m2 = '#8f887b', moss = '#5a7a40';
   g.box(1.6, 0.35, 1.6, [0, 0.18, 0], m2); g.cyl(0.72, 0.78, 0.3, 14, [0, 0.5, 0], m);
   const h = broken ? 2.4 : 4.6;
   g.cyl(0.55, 0.6, h, 14, [0, 0.65 + h / 2, 0], m);
@@ -216,9 +216,9 @@ function makeColumn(broken: boolean) {
   return g.build();
 }
 function makeLowWall() {
-  // a 3.2 long marble wall segment (built along local x): ashlar blocks, coping, a broken notch
+  // a 3.2 long broken stone wall segment (built along local x): ashlar blocks, coping, a broken notch
   const g = new GB([0.74, 1.08]);
-  const m = '#e6e0d2', m2 = '#cfc8b8', m3 = '#bdb4a2', moss = '#6a9a4a';
+  const m = '#9a9488', m2 = '#857f73', m3 = '#736d62', moss = '#5a7a40';
   for (let row = 0; row < 3; row++) for (let i = 0; i < 4; i++) {
     const off = row % 2 ? 0.4 : 0, x = -1.2 + i * 0.8 + off;
     if (x > 1.4 || (row === 2 && i === 2)) continue;
@@ -229,6 +229,52 @@ function makeLowWall() {
   g.sph(0.4, [-0.8, 1.7, 0.3], moss, [1.4, 0.3, 0.9], 5); g.sph(0.3, [0.6, 0.15, 0.45], moss, [1.6, 0.4, 0.8], 5);
   g.ico(0.3, [1.7, 0.15, 0.6], m3, [1, 0.6, 1], 0); g.ico(0.22, [-1.6, 0.12, -0.6], m2, [1, 0.6, 1], 0);
   return g.build();
+}
+function makeCastleWall(v: number) {
+  // ruined castle curtain wall segment (built along local x, +z faces the room): ashlar courses, merlons, and per variant
+  // a torch sconce + hanging banner (0), a tall arched window open to the dark (1) or a collapsed breach with rubble (2)
+  const body = new GB([0.7, 1.08]), glow = new GB([1, 1]);
+  const S = ['#8d877c', '#7d776c', '#9a9488', '#6f695f'], moss = '#4f6a3a', L = 3.7, T = 1.3, H = v === 2 ? 2.6 : 4.8;
+  const rnd = mulberry32(91 + v * 7);
+  const course = (x0: number, x1: number, y0: number, y1: number) => {
+    for (let y = y0, row = 0; y < y1 - 0.05; y += 0.6, row++) {
+      const h = Math.min(0.6, y1 - y);
+      for (let x = x0 - (row % 2 ? 0.45 : 0); x < x1 - 0.05; x += 0.9) {
+        const a = Math.max(x, x0), b = Math.min(x + 0.9, x1);
+        if (b - a < 0.1) continue;
+        body.box(b - a - 0.05, h - 0.05, T + (rnd() - 0.5) * 0.08, [(a + b) / 2, y + h / 2, (rnd() - 0.5) * 0.05], S[Math.floor(rnd() * 4)]);
+      }
+    }
+  };
+  body.box(L + 0.2, 0.5, T + 0.4, [0, 0.25, 0], S[3]);   // plinth
+  if (v === 1) {
+    course(-L / 2, -0.75, 0.5, H); course(0.75, L / 2, 0.5, H);
+    course(-0.75, 0.75, 0.5, 1.4); course(-0.75, 0.75, 3.6, H);
+    body.torus(0.75, 0.16, [0, 3.0, T / 2 + 0.02], S[2], [0, 0, 0], 1, 12, Math.PI);   // arch rim
+    body.box(0.2, 1.7, 0.2, [-0.75, 2.2, T / 2 + 0.02], S[2]); body.box(0.2, 1.7, 0.2, [0.75, 2.2, T / 2 + 0.02], S[2]);
+    body.box(1.5, 0.2, T + 0.3, [0, 1.45, 0.1], S[0]);   // sill
+    body.box(0.08, 2.0, 0.08, [0, 2.4, 0], '#2a2a2e'); body.box(1.5, 0.08, 0.08, [0, 2.6, 0], '#2a2a2e');   // iron bars
+  } else course(-L / 2, L / 2, 0.5, H);
+  if (v !== 2) {
+    body.box(L + 0.1, 0.25, T + 0.25, [0, H + 0.1, 0], S[2]);   // wall walk
+    for (let i = 0; i < 4; i++) if (!(v === 0 && i === 2)) body.box(0.62, 0.7, T * 0.55, [-L / 2 + 0.45 + i * 0.95, H + 0.55, -0.15], S[i % 3]);   // merlons (one fallen)
+  } else {
+    // jagged broken top and the fallen blocks spilling into the room
+    for (let i = 0; i < 5; i++) body.box(0.7, 0.4 + rnd() * 0.9, T * 0.8, [-L / 2 + 0.4 + i * 0.72, H + 0.25, (rnd() - 0.5) * 0.3], S[i % 4], [0, 0, (rnd() - 0.5) * 0.4]);
+    for (let i = 0; i < 6; i++) body.box(0.5 + rnd() * 0.4, 0.4 + rnd() * 0.25, 0.5 + rnd() * 0.4, [(rnd() - 0.5) * 3, 0.2, T / 2 + 0.4 + rnd() * 1.1], S[i % 4], [rnd() * 0.5, rnd() * 3, rnd() * 0.5]);
+  }
+  if (v === 0) {
+    // torch sconce + maroon banner on the inner face
+    body.box(0.14, 0.5, 0.14, [-1.1, 2.6, T / 2 + 0.15], '#2a2a2e', [0.5, 0, 0]); body.cyl(0.16, 0.1, 0.25, 6, [-1.1, 2.95, T / 2 + 0.32], '#3a2a1a');
+    glow.cone(0.16, 0.5, 5, [-1.1, 3.3, T / 2 + 0.32], '#ff9a2a'); glow.cone(0.09, 0.35, 4, [-1.08, 3.25, T / 2 + 0.34], '#ffe08a');
+    body.box(1.0, 0.1, 0.14, [0.7, 4.25, T / 2 + 0.08], '#2a2a2e');
+    body.box(0.85, 2.3, 0.06, [0.7, 3.05, T / 2 + 0.1], '#6a1820'); body.box(0.85, 0.12, 0.07, [0.7, 4.1, T / 2 + 0.11], '#d9b04a');
+    body.prism(0.85, 0.45, 0.06, [0.7, 1.68, T / 2 + 0.1], '#6a1820', [Math.PI, 0, 0]);
+    body.sph(0.17, [0.7, 3.2, T / 2 + 0.14], '#d9b04a', [1, 1, 0.3], 6);
+  }
+  body.sph(0.4, [(rnd() - 0.5) * 2.4, 0.55, T / 2 + 0.05], moss, [1.6, 0.4, 0.5], 5);
+  body.sph(0.3, [(rnd() - 0.5) * 2.4, H - 0.2, T / 2], moss, [1.4, 0.4, 0.6], 5);
+  return { body: body.build(), glow: glow.build() };
 }
 function makeBrazier() {
   const body = new GB([0.7, 1.1]), glow = new GB([1, 1]);
@@ -300,7 +346,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
   const obs = world.obstacles;
   const lists = useMemo(() => {
     const by = { oak: [] as Obstacle[], palm: [] as Obstacle[], pineA: [] as Obstacle[], pineB: [] as Obstacle[], rock: [[], [], [], []] as Obstacle[][], house: [] as Obstacle[], fence: [] as Obstacle[], ruin: [] as Obstacle[], stump: [] as Obstacle[], boulder: [[], [], []] as Obstacle[][], well: [] as Obstacle[], statue: [] as Obstacle[], tent: [] as Obstacle[], log: [] as Obstacle[], spire: [] as Obstacle[], windmill: [] as Obstacle[],
-      cactus: [] as Obstacle[], sandstone: [] as Obstacle[], bones: [] as Obstacle[], column: [] as Obstacle[], columnB: [] as Obstacle[], wall: [] as Obstacle[], brazier: [] as Obstacle[],
+      cactus: [] as Obstacle[], sandstone: [] as Obstacle[], bones: [] as Obstacle[], column: [] as Obstacle[], columnB: [] as Obstacle[], wall: [] as Obstacle[], cwall: [[], [], []] as Obstacle[][], brazier: [] as Obstacle[],
       tower: [] as Obstacle[], dead: [] as Obstacle[], ice: [[], []] as Obstacle[][], obsidian: [] as Obstacle[] };
     for (const o of obs) {
       switch (o.kind) {
@@ -311,6 +357,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
         case 'BONES': by.bones.push(o); break;
         case 'COLUMN': (o.id % 3 === 0 ? by.column : by.columnB).push(o); break;
         case 'LOWWALL': by.wall.push(o); break;
+        case 'CASTLEWALL': by.cwall[o.id % 3].push(o); break;
         case 'BRAZIER': by.brazier.push(o); break;
         case 'ARCHER_TOWER': by.tower.push(o); break;
         case 'DEAD_TREE': by.dead.push(o); break;
@@ -342,7 +389,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
   const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), statue = useMemo(makeStatue, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
   const wmBody = useMemo(makeWindmillBody, []), wmBlades = useMemo(makeBlades, []);
   const biomeGeo = useMemo(() => ({
-    cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), column: makeColumn(false), columnB: makeColumn(true), wall: makeLowWall(),
+    cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), column: makeColumn(false), columnB: makeColumn(true), wall: makeLowWall(), cwall: [0, 1, 2].map(makeCastleWall),
     brazier: makeBrazier(), tower: makeArcherTower(), dead: makeDeadTree(), obsidian: makeObsidian(),
     ice: [61, 62].map((sd, i) => makeRockGeo(sd * 7, i ? '#b8d8ee' : '#d4ecfa', '#f4fbff', 0.9)),
   }), []);
@@ -368,6 +415,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
     simple: (list: Obstacle[], k = 1) => (m: InstancedMesh) => list.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale * k)),
     flat: (list: Obstacle[]) => (m: InstancedMesh) => list.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, 1)),
     wall: (m: InstancedMesh) => lists.wall.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, 1, o.scale, 1)),
+    cwall: lists.cwall.map((l) => (m: InstancedMesh) => l.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale, o.scale, 1))),
     ice: lists.ice.map((l, k) => (m: InstancedMesh) => { const r = mulberry32(k + 77); l.forEach((o, i) => { const s = o.radius * 0.95; setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, s * (0.9 + r() * 0.2), s * (1.1 + r() * 0.6), s * (0.9 + r() * 0.2)); }); }),
     house: (m: InstancedMesh) => lists.house.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale)),
     fence: (m: InstancedMesh) => lists.fence.forEach((o, i) => setInst(m, i, o.pos.x - 0.75 * Math.cos(o.rot), 0, o.pos.z + 0.75 * Math.sin(o.rot), o.rot, o.scale)),
@@ -407,6 +455,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
       {lists.column.length > 0 && <Inst geo={biomeGeo.column} mat={mats.lit} count={lists.column.length} fill={fills.simple(lists.column)} cast receive />}
       {lists.columnB.length > 0 && <Inst geo={biomeGeo.columnB} mat={mats.lit} count={lists.columnB.length} fill={fills.simple(lists.columnB)} cast receive />}
       {lists.wall.length > 0 && <Inst geo={biomeGeo.wall} mat={mats.lit} count={lists.wall.length} fill={fills.wall} cast receive />}
+      {biomeGeo.cwall.map((g, k) => lists.cwall[k].length > 0 && <React.Fragment key={'cw' + k}><Inst geo={g.body} mat={mats.lit} count={lists.cwall[k].length} fill={fills.cwall[k]} cast receive /><Inst geo={g.glow} mat={mats.fire} count={lists.cwall[k].length} fill={fills.cwall[k]} /></React.Fragment>)}
       {lists.brazier.length > 0 && <><Inst geo={biomeGeo.brazier.body} mat={mats.lit} count={lists.brazier.length} fill={fills.flat(lists.brazier)} cast receive /><Inst geo={biomeGeo.brazier.glow} mat={mats.fire} count={lists.brazier.length} fill={fills.flat(lists.brazier)} /></>}
       {lists.tower.length > 0 && <Inst geo={biomeGeo.tower} mat={mats.lit} count={lists.tower.length} fill={fills.flat(lists.tower)} cast receive />}
       {lists.dead.length > 0 && <Inst geo={biomeGeo.dead} mat={mats.lit} count={lists.dead.length} fill={fills.simple(lists.dead)} cast receive />}

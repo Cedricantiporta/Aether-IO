@@ -27,7 +27,7 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
   const r = mulberry32(seed ^ 0x2545f491)();
   if (type === 'MINIBOSS') return layoutDbg.force === 'BIG' || r < 0.3 ? 'BIG' : 'PLAIN';
   if (!FIGHT[type]) return 'PLAIN';
-  if (layoutDbg.force) return layoutDbg.force;
+  if (layoutDbg.force && biomeOf(biome).layouts[LAYOUTS.indexOf(layoutDbg.force)] > 0) return layoutDbg.force;
   if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return 'PLAIN';   // the very first room of a run stays simple
   const w = biomeOf(biome).layouts;
   let sum = 0; for (const x of w) sum += x;
@@ -79,6 +79,7 @@ const SPEC: Record<string, KindSpec> = {
   SANDSTONE: { s: [1.0, 1.6], r: (_, s) => 1.1 + s * 0.25, blocks: true },
   COLUMN: { s: [1.0, 1.3], r: () => 0.95, blocks: true },
   LOWWALL: { s: [1.0, 1.15], r: () => 1.45, blocks: true },
+  CASTLEWALL: { s: [1.0, 1.12], r: () => 1.7, blocks: true },
   BRAZIER: { s: [1.0, 1.15], r: () => 0.75, blocks: true },
 };
 
@@ -168,21 +169,22 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; add('RUIN', Math.cos(a) * rr, Math.sin(a) * rr, 1.6, 1.3, true); }
     for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; add('STATUE', Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55, 1.1, 1.2, true); }
   }
-  const n1 = tower ? 0 : Math.ceil(P / Math.max(2.6, P / 70));
+  const castle = border.every((k) => k === 'CASTLEWALL');   // curtain wall segments abut each other
+  const n1 = tower ? 0 : Math.ceil(P / Math.max(castle ? 3.3 : 2.6, P / 70));
   if (n1 > 0) ringWalk(n1, 1.6, 0.03, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.2)) return;   // the river flows out through a gap in the wall
     const kind = wallKind(pickKind(border));
     const sp = SPEC[kind] ?? SPEC.ROCK;
     const s = rand(sp.s[0], sp.s[1]);
-    add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true, true, kind === 'LOWWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
+    add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true, true, kind === 'LOWWALL' || kind === 'CASTLEWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
   });
   const n2 = tower ? 0 : Math.ceil(P / Math.max(5.2, P / 34));
   if (n2 > 0) ringWalk(n2, 5, 0.1, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.5)) return;
     const kind = wallKind(pickKind(outerKinds));
     const sp = SPEC[kind] ?? SPEC.ROCK;
-    const s = rand(sp.s[0], sp.s[1]) * (kind === 'LOWWALL' || kind === 'COLUMN' ? 1.6 : 1.25);
-    add(kind, x, z, sp.r(rnd, s), s, true, false, kind === 'LOWWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
+    const s = rand(sp.s[0], sp.s[1]) * (kind === 'CASTLEWALL' ? 1.35 : kind === 'LOWWALL' || kind === 'COLUMN' ? 1.6 : 1.25);
+    add(kind, x, z, sp.r(rnd, s), s, true, false, kind === 'LOWWALL' || kind === 'CASTLEWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
   });
 
   // ---- interior obstacles

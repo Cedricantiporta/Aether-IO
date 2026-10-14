@@ -82,11 +82,13 @@ export const BIOMES: readonly BiomeDef[] = [
     boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
     roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7]],
   },
-  { // 1 Marble Halls: sunken temple interiors cracked by Elderroot's roots (Elderroot the Ancient)
-    name: 'Marble Halls', style: 'MARBLE', ground: ['#cfc8b8', '#e8e2d4'], patch: ['#d9d2c2', '#b8b09e', '#8f9a78'], stone: '#e6e0d2', edge: '#16130f', fog: '#3a3630',
-    hemiSky: '#fff2dc', hemiGround: '#5a5040', hemiI: 1.15, sun: '#ffe2b0', sunI: 2.6, skyTint: [0.42, 0.38, 0.34], propTint: '#ffffff',
-    border: ['LOWWALL', 'COLUMN', 'LOWWALL', 'LOWWALL'], outer: ['COLUMN', 'LOWWALL', 'COLUMN'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL'], hazard: null,
-    river: 'WATER', lake: 'WATER', layouts: [30, 14, 18, 28, 10], towers: false, hydras: true,
+  { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Elderroot's roots (Elderroot the Ancient).
+    // Inside the castle: flagstone floors with a worn red carpet, broken curtain walls with torches, banners and arched
+    // windows, toppled pillars and rubble. No water stages here (user request).
+    name: 'Marble Halls', style: 'MARBLE', ground: ['#7c766c', '#958f83'], patch: ['#8a8478', '#6a655c', '#4f5a3c'], stone: '#a39d90', edge: '#0c0a08', fog: '#241d17',
+    hemiSky: '#ffd9a8', hemiGround: '#3a2e24', hemiI: 0.95, sun: '#ffcf96', sunI: 2.2, skyTint: [0.3, 0.25, 0.22], propTint: '#ffffff',
+    border: ['CASTLEWALL'], outer: ['CASTLEWALL', 'COLUMN'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL', 'BRAZIER'], hazard: null,
+    river: 'WATER', lake: 'WATER', layouts: [46, 24, 30, 0, 0], towers: false, hydras: false,
     shapes: [['RECT', 30], ['HEX', 12], ['OCT', 16], ['CROSS', 18], ['ROUND', 8], ['SEMI', 8], ['ELLIPSE', 8]],
     crates: ['POT', 'POT', 'CRATE', 'GRAVE', 'BARREL'],
     boss: 'BOSS_TREANT', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,

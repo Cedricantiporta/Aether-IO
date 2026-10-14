@@ -247,7 +247,7 @@ export interface Pickup {
 export type ObstacleKind = 'TREE' | 'PINE' | 'ROCK' | 'HOUSE' | 'FENCE' | 'RUIN' | 'SHOP'
   | 'STUMP' | 'BOULDER' | 'WELL' | 'STATUE' | 'TENT' | 'LOG' | 'CRYSTAL_SPIRE' | 'WINDMILL'
   // biome scenery (run rooms)
-  | 'PALM' | 'CACTUS' | 'SANDSTONE' | 'BONES' | 'COLUMN' | 'LOWWALL' | 'BRAZIER' | 'ARCHER_TOWER' | 'DEAD_TREE' | 'ICE_ROCK' | 'OBSIDIAN';
+  | 'PALM' | 'CACTUS' | 'SANDSTONE' | 'BONES' | 'COLUMN' | 'LOWWALL' | 'CASTLEWALL' | 'BRAZIER' | 'ARCHER_TOWER' | 'DEAD_TREE' | 'ICE_ROCK' | 'OBSIDIAN';
 
 export interface Obstacle {
   id: number;

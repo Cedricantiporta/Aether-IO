@@ -56,25 +56,25 @@ function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null]
     }
   };
   switch (style) {
-    case 'MARBLE': {   // 2 x 2 polished slabs with grout, veins and chips
-      const T = N / 2;
-      for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
-        const v = 225 + Math.round(rnd() * 25), warm = Math.round(rnd() * 8);
-        g.fillStyle = `rgb(${v},${v - 3 - warm},${v - 10 - warm})`; g.fillRect(tx * T, ty * T, T, T);
-        g.save(); g.beginPath(); g.rect(tx * T + 3, ty * T + 3, T - 6, T - 6); g.clip();
-        for (let k = 0; k < 5; k++) {   // veins
-          g.strokeStyle = `rgba(110,105,100,${0.12 + rnd() * 0.2})`; g.lineWidth = 0.8 + rnd() * 1.6;
-          g.beginPath(); let x = tx * T + rnd() * T, y = ty * T; g.moveTo(x, y);
-          for (let s = 0; s < 8; s++) { x += (rnd() - 0.4) * 50; y += T / 8; g.lineTo(x, y); }
-          g.stroke();
+    case 'MARBLE': {   // castle flagstones: staggered rows of worn grey blocks with dark mortar, chips and cracks
+      g.fillStyle = 'rgb(58,52,46)'; g.fillRect(0, 0, N, N);
+      const rows = 4, h = N / rows;
+      for (let r = 0; r < rows; r++) {
+        let px = -rnd() * 80;
+        while (px < N) {
+          const w = 90 + rnd() * 80, v = 150 + Math.round(rnd() * 40), warm = Math.round(rnd() * 10);
+          for (const ox of [0, N, -N]) {
+            const sx = px + ox + 3, sy = r * h + 3, sw = w - 6, sh = h - 6;
+            g.fillStyle = `rgb(${v + warm},${v + warm * 0.5},${v - 8})`; g.fillRect(sx, sy, sw, sh);
+            const gr = g.createLinearGradient(sx, sy, sx + sw, sy + sh);
+            gr.addColorStop(0, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(0,0,0,.18)');
+            g.fillStyle = gr; g.fillRect(sx, sy, sw, sh);
+          }
+          px += w;
         }
-        g.restore();
-        g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(tx * T + 4, ty * T + 4, T - 8, 3);
       }
-      g.strokeStyle = 'rgba(60,52,44,0.85)'; g.lineWidth = 5;
-      for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(i * T, 0); g.lineTo(i * T, N); g.stroke(); g.beginPath(); g.moveTo(0, i * T); g.lineTo(N, i * T); g.stroke(); }
-      g.strokeStyle = 'rgba(70,60,50,0.35)'; g.lineWidth = 1.2;
-      for (let k = 0; k < 3; k++) { g.beginPath(); let x = rnd() * N, y = rnd() * N; g.moveTo(x, y); for (let s = 0; s < 6; s++) { x += (rnd() - 0.5) * 60; y += (rnd() - 0.5) * 60; g.lineTo(x, y); } g.stroke(); }
+      g.strokeStyle = 'rgba(40,34,28,0.55)'; g.lineWidth = 1.4;
+      for (let k = 0; k < 6; k++) { g.beginPath(); let x = rnd() * N, y = rnd() * N; g.moveTo(x, y); for (let s = 0; s < 5; s++) { x += (rnd() - 0.5) * 50; y += (rnd() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); }
       speck(1500, 0.03, 0.08, 0.5);
       break;
     }
@@ -170,7 +170,12 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
         out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45);
         out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75);
         const lane = Math.abs(x * -shape.fz + z * shape.fx);
-        if (!boss) out.lerp(tmpC.set('#7a2a24'), sstep(2.6, 2.2, lane) * sstep(0.5, -1.5, u) * 0.55);   // faded processional carpet
+        if (!boss) {   // worn royal carpet down the hall: crimson with a gold border, frayed and torn in places
+          const torn = sstep(0.62, 0.7, fbm(x * 0.12 + so, z * 0.12, 3));
+          const inLane = sstep(2.9, 2.6, lane) * sstep(0.5, -1.5, u) * (1 - torn);
+          out.lerp(tmpC.set('#6e1a20'), inLane * 0.85);
+          out.lerp(tmpC.set('#b8913a'), sstep(2.9, 2.6, lane) * sstep(2.2, 2.45, lane) * sstep(0.5, -1.5, u) * (1 - torn) * 0.7);
+        }
       } else if (style === 'SAND') {
         // dunes: long wind ripples bending with the noise, troughs darker
         const w = (x * dux + z * duz) * 0.42 + fbm(x * 0.03 + so, z * 0.03, 3) * 6;
