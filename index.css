@@ -1920,6 +1920,14 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   box-shadow: 0 0 0 1px #050304, inset 0 0 0 2px #c8962e, inset 0 0 0 3px rgba(5, 3, 4, .9), inset 0 0 14px rgba(0, 0, 0, .7), 0 4px 12px rgba(0, 0, 0, .6); }
 
 /* Tech House upgrades as square slots */
+.tech-list { display: flex; flex-direction: column; gap: .7rem; }
+.tech-list .tech-row { display: block; }
+.tech-row-h { font-family: var(--font-title); font-size: .9rem; margin-bottom: .35rem; }
+.tech-row-h em { font-style: normal; font-family: inherit; font-size: .66rem; color: var(--text-dim); margin-left: .4rem; }
+.tech-slot.owned { filter: saturate(.55) brightness(.75); }
+.tech-slot.later { filter: grayscale(.6) brightness(.6); }
+.tech-owned { position: absolute; left: 0; right: 0; bottom: 2px; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 2px; font-size: .58rem; font-weight: 800; color: #9be8a8; text-transform: uppercase; text-shadow: 0 1px 0 #000; }
+.tech-lock { position: absolute; right: 3px; top: 3px; z-index: 3; color: #cbbd9a; }
 .tech-slot { position: relative; width: var(--cell); aspect-ratio: 1; border-radius: 0; display: grid; place-items: center;
   background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 26%, #1e1a16), color-mix(in srgb, var(--tc) 8%, #0c0a08));
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tc) 60%, #000), 0 0 0 1.5px #050304; color: var(--tc); }

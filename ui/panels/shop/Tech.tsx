@@ -2,7 +2,8 @@
 // is its own card (I, II, III ...), unlocked in order; bought cards just read "Owned".
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Backpack, Warehouse, FlaskConical, Coins, BookOpen, HeartPulse, Cog, X, Lock, Check } from 'lucide-react';
+import { Cog, X, Lock, Check } from 'lucide-react';
+import { BagGlyph, ItemArtByKey } from '../../components/ItemArt';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { TECH, ROMAN, techLv, type TechId } from '../../../tech';
@@ -11,9 +12,10 @@ import { tip } from '../../components/Tooltip';
 import { SimpleTip } from '../../components/ItemTip';
 import { useUiStore } from '../../uiStore';
 
-const ICON: Record<TechId, React.ReactNode> = {
-  bag: <Backpack size={30} />, warehouse: <Warehouse size={30} />, potion: <FlaskConical size={30} />,
-  gold: <Coins size={30} />, xp: <BookOpen size={30} />, vitality: <HeartPulse size={30} />,
+/** Painted item art for each upgrade (the same art the bag uses for real items). */
+const ART: Record<TechId, React.ReactNode> = {
+  bag: <BagGlyph size={44} />, warehouse: <ItemArtByKey k="chest" size={44} />, potion: <ItemArtByKey k="potion_hp_big" size={44} />,
+  gold: <ItemArtByKey k="loot_coin_pouch" size={44} />, xp: <ItemArtByKey k="loot_dark_page" size={44} />, vitality: <ItemArtByKey k="loot_golem_heart" size={44} />,
 };
 const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0' };
 
@@ -34,24 +36,39 @@ export const TechWindow: React.FC = () => {
   );
 };
 
-/** The upgrades as square slots (same grid as the bag and shops): one slot per upgrade showing its next level; click to
- *  buy (confirm), hover for the details. Maxed upgrades read MAX. */
+/** Every tier of every upgrade is its own listing (Bigger Bag I ... V), bought in order: owned tiers read BOUGHT, the
+ *  next one is for sale, later ones say which tier to buy first. Painted item art instead of line icons. */
 export const TechGrid: React.FC = () => {
   const { tech, gems, buy } = useGameStore(useShallow((s) => ({ tech: s.tech, gems: s.gems, buy: s.buyTech })));
   return (
-    <div className="slot-grid priced" data-testid="tech-tab">
+    <div className="tech-list" data-testid="tech-tab">
       {TECH.map((d) => {
-        const lv = techLv(tech, d.id), max = lv >= d.max, cost = max ? 0 : d.cost(lv), can = !max && gems >= cost;
-        const name = `${d.name} ${ROMAN[Math.min(lv, d.max - 1)]}`;
+        const lv = techLv(tech, d.id);
         return (
-          <button key={d.id} className={`tech-slot pe ${max ? 'max' : can ? 'can' : 'cant'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${lv + 1}`}
-            {...tip(<SimpleTip title={max ? `${d.name} (max)` : name} body={`${d.per}. Level ${lv} / ${d.max}.`} />)}
-            onClick={() => { if (!max) useUiStore.getState().askConfirm({ title: `Buy ${name}?`, body: `${d.per} for ${cost.toLocaleString()} gems.`, confirmLabel: 'Buy', onConfirm: () => { buy(d.id); } }); }}>
-            <span className="tech-ic">{ICON[d.id]}</span>
-            <b className="tech-lv">{max ? 'MAX' : ROMAN[lv]}</b>
-            <span className="tech-pips">{Array.from({ length: d.max }, (_, i) => <i key={i} className={i < lv ? 'on' : ''} />)}</span>
-            {!max && <span className={`slot-price gem ${can ? '' : 'cant'}`} data-testid={`tech-buy-${d.id}`}>{cost.toLocaleString()}</span>}
-          </button>
+          <div key={d.id} className="tech-row">
+            <div className="tech-row-h" style={{ color: TONE[d.id] }}>{d.name} <em>{d.per} per tier · {lv}/{d.max}</em></div>
+            <div className="slot-grid priced">
+              {Array.from({ length: d.max }, (_, t) => {
+                const owned = t < lv, next = t === lv, cost = d.cost(t), can = next && gems >= cost;
+                const name = `${d.name} ${ROMAN[t]}`;
+                const click = () => {
+                  if (owned) return;
+                  if (!next) { useGameStore.getState().addNotification(`Buy ${d.name} ${ROMAN[lv]} first.`, '#ffb4a8', 'WARNING'); return; }
+                  useUiStore.getState().askConfirm({ title: `Buy ${name}?`, body: `${d.per} for ${cost.toLocaleString()} gems.`, confirmLabel: 'Buy', onConfirm: () => { buy(d.id); } });
+                };
+                return (
+                  <button key={t} className={`tech-slot pe ${owned ? 'owned' : next ? (can ? 'can' : 'cant') : 'later'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${t + 1}`}
+                    {...tip(<SimpleTip title={name} body={owned ? `${d.per}. Bought.` : next ? `${d.per}. ${cost.toLocaleString()} gems.` : `${d.per}. Buy ${d.name} ${ROMAN[lv]} first.`} />)} onClick={click}>
+                    <span className="tech-ic">{ART[d.id]}</span>
+                    <b className="tech-lv">{ROMAN[t]}</b>
+                    {owned && <span className="tech-owned"><Check size={14} /> Bought</span>}
+                    {!owned && !next && <span className="tech-lock"><Lock size={14} /></span>}
+                    {!owned && <span className={`slot-price gem ${can ? '' : 'cant'}`} data-testid={next ? `tech-buy-${d.id}` : undefined}>{cost.toLocaleString()}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         );
       })}
     </div>
