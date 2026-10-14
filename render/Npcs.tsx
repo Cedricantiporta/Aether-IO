@@ -69,7 +69,7 @@ function NpcActor({ i }: { i: number }) {
   const ch = useCharacterInstance(def.model);
   const clips = useClips();
   const group = useRef<Group>(null!), tag = useRef<Sprite>(null!);
-  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46 }), [def]);
+  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini' }), [def]);
   const meshes = useRef<Mesh[]>(ch.meshes);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true });
 
