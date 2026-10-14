@@ -86,11 +86,11 @@ export const STORY: StoryStep[] = [
     talk: ['Guard. Our scouts in the east do not come back.', 'Ignar, the Infernal Warlord, has raised an army of cinders. You have done what my whole company could not. Do it once more.'] },
   { id: 'cinders', title: 'Lord of Cinders', line: 'Defeat Ignar the Infernal Warlord', npc: '', kill: { kind: 'BOSS_WARLORD', count: 1 }, reward: { gold: 2800, gems: 40 } },
   { id: 'wren2', title: 'The Edge of the Void', line: 'Talk to Wren the Scholar', npc: 'Wren', reward: { gold: 700 },
-    talk: ['I found it, in the oldest scroll: the Void is guarded by a Herald, Malakar\'s first servant.', 'Beat the Herald and the road to his throne lies open.'] },
-  { id: 'herald', title: 'The Herald of the Abyss', line: 'Defeat the Void Herald', npc: '', kill: { kind: 'BOSS_VOID', count: 1 }, reward: { gold: 3200, gems: 50 } },
+    talk: ['I found it, in the oldest scroll: at the end of the Void a Gatekeeper guards five gates, and behind them stands Malakar\'s Dark Castle.', 'Each gate holds a shard of the castle key. The last gate holds the Herald, Malakar\'s first servant. Beat them all and the road to his throne lies open.'] },
+  { id: 'herald', title: 'The Herald of the Abyss', line: 'Defeat the Void Herald (the Gate of the Herald, at the Gatekeeper)', npc: '', kill: { kind: 'BOSS_VOID', count: 1 }, reward: { gold: 3200, gems: 50 } },
   { id: 'report3', title: 'The Last Audience', line: 'Report to King Aldric before the end', npc: 'King Aldric', reward: { gold: 1500, items: [{ id: 'upgrade_core', qty: 3 }] },
     talk: ['Every guardian is free. Only the Void remains, and the throne Malakar made for himself there.', 'Take all the light the Font can give you. End him, and bring the stolen light home.'] },
-  { id: 'lich', title: 'The Undying', line: 'Defeat Malakar at the end of the Void', npc: '', ending: true, reward: { gold: 5000, gems: 100 } },
+  { id: 'lich', title: 'The Undying', line: 'Clear the 5 Gates of the Void, open the Dark Castle and defeat Malakar', npc: '', ending: true, reward: { gold: 5000, gems: 100 } },
 ];
 
 /** Story chapters for the quest window (each starts at a step id and runs to the next chapter). */

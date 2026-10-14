@@ -14,6 +14,7 @@ import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, type ShapeKind } from './roomShape';
 import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
+import { isArenaRoom, buildArena } from './arenaRooms';
 
 /** QA hook: force the stage layout of the following fight rooms. */
 export const layoutDbg: { force: Layout | null } = { force: null };
@@ -90,6 +91,7 @@ const rp: [number, number] = [0, 0];
 const pickHarvest = (r: number): CrateKind => (r < 0.3 ? 'CRYSTAL' : r < 0.6 ? 'ORE' : r < 0.8 ? 'GOLD_VEIN' : 'HERB');
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number, index = 1): void {
+  if (runInfo.mode !== 'TOWER' && isArenaRoom(type)) { buildArena(biome, type, R, seed); return; }   // duel ring / gatekeeper courtyard / fountain plaza
   const def = biomeOf(biome);
   const tower = runInfo.mode === 'TOWER';
   const layout: Layout = roomLayout(biome, type, seed, index);

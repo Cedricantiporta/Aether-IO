@@ -50,7 +50,8 @@ export type EnemyKind =
   | 'CINDER_SHAMAN'   // Ember: calls down fire on your position (artillery circles)
   | 'VOID_STALKER'    // Void: blinks behind you and strikes
   | 'VOID_EYE'        // Void: floating eye, fires rings of void orbs
-  | 'BOSS_CRYSTAL';   // boss ward crystal: the boss is immune until every crystal is destroyed
+  | 'BOSS_CRYSTAL'    // boss ward crystal: the boss is immune until every crystal is destroyed
+  | 'DARK_HERO';      // champion duel: a shadow copy of a hero class (systems/darkHero.ts, render/DarkHero.tsx)
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage
@@ -156,7 +157,7 @@ export interface Projectile {
 }
 
 // -------------------------------------------------------- enemy projectiles --
-export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME';
+export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME' | 'AXE';   // AXE: dark barbarian boomerang (drawn by render/DarkHero)
 
 export interface EnemyProjectile {
   id: number;
@@ -380,12 +381,18 @@ export interface DirectorState {
 }
 
 // ------------------------------------------------------------------- rooms --
-export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS' | 'CAMP';   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
+export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS' | 'CAMP'
+  | 'DUEL'          // dark hero champion duel (ring arena, no other spawns)
+  | 'GATEKEEPER';   // the Void's end: the Gatekeeper's courtyard with 5 trial gates and the sealed Dark Castle   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
 export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
 /** Room objective (rolled onto some combat rooms, roomEvents.ts) and room twist (a modifier for the whole room). */
 export type RoomObjective = 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT';
 export type RoomTwist = 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN';
-export interface RoomPlan { type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist }
+export interface RoomPlan {
+  type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist;
+  /** Gatekeeper trial: gate index (0..4) and the room step inside that trial (engine/gates.ts). */
+  gate?: number; step?: number;
+}
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 
 export interface RoomPortal {

@@ -40,6 +40,7 @@ const TRICKS: Partial<Record<EnemyKind, string>> = {
   BOSS_HYDRA: 'Three severable heads shield the body. Acid spit, tail sweep cone and a submerge ambush.',
   BOSS_WYRM: 'Frost breath that chills to a freeze, ice spike lanes, a dive bomb and a blizzard phase.',
   BOSS_WARLORD: 'Flame wheel, fire pillar salvos, fire imps and a hellcleave; enrages below 30% hp.',
+  DARK_HERO: 'A shadow copy of a hero class with its own dark skills. Fights alone in a ring of braziers; guards Champion duels and the Gate of Shadows.',
   BOSS_VOID: 'Shooting portals, a gravity pull-then-push, echoes of fallen bosses and a shrinking arena.',
 };
 /** Biomes whose roster contains the kind. */

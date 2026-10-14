@@ -45,6 +45,7 @@ import { dropLoot } from './loot';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround } from '../roomFeatures';
+import { aiDarkHero, darkHeroDied } from './darkHero';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -312,6 +313,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (d.aliveCount > 0) d.aliveCount--;
 
   if (e.kind === 'BOSS_SAPLING') saplingDied(e);
+  if (e.kind === 'DARK_HERO') darkHeroDied(e);
   if (e.boss) {
     bossDied2(e);
     bossMechDied();
@@ -1102,6 +1104,7 @@ function runAI(e: Enemy): void {
     case 'VOID_STALKER': aiVoidStalker(e); break;
     case 'VOID_EYE': aiVoidEye(e); break;
     case 'BOSS_CRYSTAL': stop(e); break;
+    case 'DARK_HERO': aiDarkHero(e, frameDt, px, pz, tdist); break;
     default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
@@ -1423,6 +1426,7 @@ const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number 
   BOSS_ORB: { life: 6, radius: 0.5 },
   ROCK: { life: 4, radius: 0.8 },
   FLAME: { life: 4.5, radius: 0.55 },
+  AXE: { life: 3, radius: 0.75 },
 };
 
 export function fireEnemyProjectile(

@@ -10,13 +10,16 @@ import { bossKeyState, descend, finishRunVictory, towerState } from '../../engin
 import { runInfo } from '../../engine/runMods';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
+import { GATES, GATE_KEYS_NEEDED, gateState } from '../../engine/gates';
 
 /** Short sub-line under the pips. */
 function subText(): string {
   const d = world.director, r = world.room, t = r.plan.type;
   if (d.phase === 'BIOME_DONE') return `${biomeOf(r.biome).name} conquered`;
   if (d.phase === 'LEAVING') return '';
+  if (t === 'GATEKEEPER') return gateState.keys >= GATE_KEYS_NEEDED ? `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · the Dark Castle is open` : `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · enter a gate (E)`;
   if (d.phase === 'CLEARED') {
+    if (r.plan.gate !== undefined) return `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · press E at the portal`;
     if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
     if (t === 'TREASURE' && r.station.kind === 'CHEST' && !r.station.used) return 'Open the chest, then pick an exit';
     if (t === 'CRYSTAL') return 'Harvest the crystals, then press E at an exit';
@@ -24,7 +27,9 @@ function subText(): string {
     if (t === 'SHRINE' && !r.shrineOn && !r.station.used) return 'Touch the altar for a challenge, or leave';
     return 'Room cleared - pick an exit';
   }
+  if (r.plan.gate !== undefined) { const g = GATES[r.plan.gate]; return `Trial ${(r.plan.step ?? 0) + 1}/${g.steps.length}${t === 'BOSS' ? '' : ` · Enemies left: ${r.enemiesLeft}`}`; }
   if (t === 'BOSS') return r.enemiesLeft > 0 ? 'Boss fight' : '';
+  if (t === 'DUEL') return r.enemiesLeft > 0 ? 'Champion duel' : '';
   return `Enemies left: ${r.enemiesLeft}`;
 }
 
@@ -41,12 +46,13 @@ export const RoomPlaque: React.FC = () => {
     const r = world.room, d = world.director;
     if (!r.active) return;
     const text = subText();
-    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}|${bossKeyState.has}`;
+    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}|${bossKeyState.has}|${r.plan.type}|${r.plan.gate}`;
     if (key !== sig.current) {
       sig.current = key;
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
-      if (name.current) name.current.textContent = tower ? 'Endless Tower' : throne ? 'The Undying Throne' : biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
+      const gname = r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
+      if (name.current) name.current.textContent = tower ? 'Endless Tower' : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
       if (depth.current) depth.current.textContent = tower ? `Floor ${towerState.floor}` : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
       if (sub.current) sub.current.textContent = text + (bossKeyState.has && r.plan.type !== 'BOSS' ? '  ·  Boss Key ✓' : '');
     }

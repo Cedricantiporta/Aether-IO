@@ -535,3 +535,9 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (`tickBossStrikes`, METEOR_SHADOW warnings) so they hit minions too. While a boss runs its AI, every telegraph it
   spawns is 30% bigger and resolves 12% sooner (`bossTel` in enemies.ts).
 - Fear (Battle Cry): enemies cower in place, then 30% slow for 3 s. Cross Slash ~3x (two smooth crescents, radius 6).
+- Merged the stopped gates/champions agent (engine/gates.ts, engine/arenaRooms.ts, engine/systems/darkHero.ts,
+  render/DarkHero.tsx, render/SpecialRooms.tsx): DUEL rooms (35% of champion rooms, `DUEL_CHANCE`) = a dark copy of a
+  hero class (5 kits with telegraphed class skills) in a hand-laid ring; the Void's last room is the GATEKEEPER
+  courtyard with five trial gates (Shadows = duel your own class, Horde, Thorns traps, Hunt in the dark, the Herald boss),
+  each awarding a Gate Key; 5 keys open the Dark Castle (Malakar). Fountain rooms use a marble plaza. Debug:
+  `director.debugGate(g)`.
