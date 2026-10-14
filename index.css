@@ -1911,3 +1911,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .ws-side .rpg-btn { padding-left: .45rem; padding-right: .45rem; }
 .ws-go { margin-top: auto; width: 100%; }
 @media (max-width: 900px) { .ws-body { grid-template-columns: 1fr; overflow-y: auto; } .ws-tree { max-height: 11rem; border-right: 0; } }
+
+/* minimap: thin gold rim instead of the heavy spiked ring */
+.mm-ring { inset: -4px; border-radius: 50%; pointer-events: none; z-index: 1;
+  box-shadow: 0 0 0 1px #050304, inset 0 0 0 2px #c8962e, inset 0 0 0 3px rgba(5, 3, 4, .9), inset 0 0 14px rgba(0, 0, 0, .7), 0 4px 12px rgba(0, 0, 0, .6); }

@@ -5,9 +5,8 @@ import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
 import { useRaf } from '../hooks/useRaf';
-import { OrnateRing } from '../components/Ornate';
 
-const SIZE = 176; // css px
+const SIZE = 196; // css px
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Circular minimap — drawn every frame from the world, no React state. */
@@ -19,7 +18,9 @@ export const Minimap: React.FC = () => {
     const px = SIZE * DPR, cx = px / 2, R = cx - 3 * DPR;
     const room = world.room.active;
     const rad = room ? shape.maxR : ARENA_RADIUS;
-    const k = R / (rad + 4);
+    // zoomed in around the hero (not the whole map): about 30 m of radius in view
+    const view = room ? Math.min(rad + 4, 28) : 34;
+    const k = R / view;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, px, px);
     ctx.save();
@@ -28,6 +29,7 @@ export const Minimap: React.FC = () => {
     const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, R);
     g.addColorStop(0, '#2f4a2a'); g.addColorStop(.8, '#223a22'); g.addColorStop(1, '#14231a');
     ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
+    ctx.translate(-world.player.pos.x * k, -world.player.pos.z * k);   // world content follows the hero (hero at the centre)
     // arena edge
     ctx.strokeStyle = 'rgba(233,185,73,.55)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
     ctx.beginPath();
@@ -112,9 +114,9 @@ export const Minimap: React.FC = () => {
   });
   return (
     <div className="pe relative" style={{ width: `${SIZE / 14.4}rem`, height: `${SIZE / 14.4}rem` }}>
-      <div className="absolute" style={{ inset: '-27%' }}><OrnateRing id="mm" spikes={8} /></div>
+      <div className="absolute mm-ring" />
       <canvas ref={ref} width={SIZE * DPR} height={SIZE * DPR} className="absolute inset-0 w-full h-full rounded-full" />
-      <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-1.75rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
+      <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-.85rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
     </div>
   );
 };
