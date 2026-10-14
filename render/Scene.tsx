@@ -7,6 +7,7 @@ import { useQuality } from './quality';
 import { Sky, Lighting, FOG_COLOR } from './Sky';
 import { LookDriver, setLook } from './biomeLook';
 import { Room } from './Room';
+import { GuideArrow } from './GuideArrow';
 import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
@@ -60,6 +61,7 @@ export function Scene() {
         </>
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>
+      {!gameplay && <GuideArrow />}
       {(gameplay || (status === GameStatus.MENU && world.village.area === 'TOWN')) && (
         <>
           <Crates />

@@ -508,7 +508,8 @@ function TownTrees() {
 }
 
 /** Gold arrow on the ground beside the hero pointing at the town gate (like the exit-portal guides in rooms); hidden near the gate. */
-function GateGuide() {
+// (replaced by render/GuideArrow.tsx, which is quest-aware)
+export function GateGuideOld() {
   const geo = useMemo(() => new ConeGeometry(0.55, 1.5, 3).rotateX(Math.PI / 2), []);
   const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false, color: new Color('#f2c14e') }), []);
   const ref = useRef<Mesh>(null!);
@@ -556,7 +557,6 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
-      <GateGuide />
       {town.chunks.map((c, i) => (
         <React.Fragment key={i}>
           <mesh geometry={c.body} material={mats.lit} castShadow={shadows} receiveShadow={shadows} />
