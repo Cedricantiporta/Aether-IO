@@ -6,7 +6,7 @@ import { questDone, questTitle, questFlavor, type Quest } from '../../../quests'
 import { Button } from '../../components/Button';
 
 const Chip: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
-  <span className="rpg-badge !text-xs inline-flex items-center gap-1">{icon}{text}</span>
+  <span className="rpg-badge !text-[.6rem] inline-flex items-center gap-1">{icon}{text}</span>
 );
 
 const RewardChips: React.FC<{ q: Quest }> = ({ q }) => {
@@ -26,7 +26,7 @@ export const QuestsTab: React.FC = () => {
   const { quests, claim } = useGameStore(useShallow((s) => ({ quests: s.quests, claim: s.claimQuest })));
   return (
     <div className="flex flex-col gap-3" data-testid="quests-tab">
-      <div className="rpg-frame p-3 text-sm leading-snug">
+      <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
         Guard, the village needs you. Complete these tasks during your defense runs and come back for your reward.
         Progress is saved between runs.
       </div>
@@ -36,10 +36,10 @@ export const QuestsTab: React.FC = () => {
           <div key={q.id} className="rpg-frame p-3 flex flex-col gap-2" data-testid="quest" data-done={done ? '1' : '0'}>
             <div className="flex items-baseline justify-between gap-2">
               <span className="rpg-title text-base">{questTitle(q)}</span>
-              <span className="rpg-num text-[var(--hi)]" data-testid="quest-progress">{Math.min(q.progress, q.target).toLocaleString()} / {q.target.toLocaleString()}</span>
+              <span className="rpg-num text-[var(--gold-light)]" data-testid="quest-progress">{Math.min(q.progress, q.target).toLocaleString()} / {q.target.toLocaleString()}</span>
             </div>
-            <div className="text-xs text-[var(--fg-2)]">{questFlavor(q)}</div>
-            <div className="rpg-bar thin" style={{ ['--bc' as any]: done ? 'var(--good)' : 'var(--ac)', ['--fill' as any]: Math.min(1, q.progress / q.target) }}><div className="fill" /></div>
+            <div className="text-xs text-[var(--text-dim)]">{questFlavor(q)}</div>
+            <div className="rpg-bar thin" style={{ ['--bc' as any]: done ? '#4ade80' : '#e9b949', ['--fill' as any]: Math.min(1, q.progress / q.target) }}><div className="fill" /></div>
             <div className="flex items-center justify-between gap-2">
               <RewardChips q={q} />
               <Button size="sm" variant={done ? 'green' : 'default'} disabled={!done} onClick={() => claim(q.id)} data-testid="claim">{done ? 'Claim' : 'In progress'}</Button>

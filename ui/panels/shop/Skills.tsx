@@ -25,15 +25,15 @@ const RunSkills: React.FC = () => {
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === hero));
   const rows: { key: string; name: string; desc: string; icon: React.ReactNode; tag?: string; now?: (l: number) => string; color?: string }[] = [
     ...activeDefs(hero).map((a, i) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: String(i + 1), now: a.per })),
-    { key: dashKey(hero), name: `Dash: ${dashDef(hero).name}`, desc: dashDef(hero).desc, icon: <PaintedIcon id={dashDef(hero).icon} />, tag: 'SPACE', now: dashDef(hero).per, color: '#4a9bd8' },
-    { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: 'var(--r4)' },
+    { key: dashKey(hero), name: `Dash: ${dashDef(hero).name}`, desc: dashDef(hero).desc, icon: <PaintedIcon id={dashDef(hero).icon} />, tag: 'SPACE', now: dashDef(hero).per, color: '#7ad0ff' },
+    { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: '#ff9a3a' },
     ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <SkillIcon id={k} size={26} dim={(levels[k as keyof SkillLevels] ?? 0) <= 0} /> })),
   ];
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <div className="rpg-label">Skills · {hero}</div>
-        <div className="rpg-badge"><Star size={12} /> {sp} skill points</div>
+        <div className="rpg-badge !text-[.75rem]"><Star size={12} /> {sp} skill points</div>
       </div>
       {rows.map((r) => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
@@ -45,20 +45,20 @@ const RunSkills: React.FC = () => {
           <div key={r.key} className="rpg-frame flex items-center gap-3 p-2.5" data-testid={`skill-${r.key}`}>
             <div className="rpg-slot hoverable relative" style={{ ['--slot' as any]: '3.4rem', ['--rc' as any]: r.color ?? (info?.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949') }}>
               <span className="slot-icon">{r.icon}</span>
-              {r.tag && <span className="rpg-key" style={{ position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)', zIndex: 6 }}>{r.tag}</span>}
+              {r.tag && <span className="rpg-key">{r.tag}</span>}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="font-bold leading-tight" style={{ fontFamily: 'var(--font)' }}>{r.name}</span>
-                <div className="flex gap-[3px]">{[0, 1, 2, 3, 4].map((i) => <i key={i} className="pip" data-s={i < lvl ? 'full' : 'empty'} style={{ background: i < lvl ? 'var(--ac)' : 'var(--line)', boxShadow: 'none', width: 8, height: 8 }} />)}</div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold leading-tight text-[var(--gold-light)]" style={{ fontFamily: 'var(--font-title)' }}>{r.name}</span>
+                <div className="flex gap-[3px]">{[0, 1, 2, 3, 4].map((i) => <i key={i} className="pip" data-s={i < lvl ? 'full' : 'empty'} style={i < lvl ? { background: 'radial-gradient(circle at 35% 30%, #fff6c8, #e9b949 55%, #8b5a16)', boxShadow: '0 0 6px #e9b949' } : undefined} />)}</div>
               </div>
-              <div className="text-xs text-[var(--fg-2)] leading-snug">{r.desc}</div>
+              <div className="text-[.7rem] text-[var(--text-dim)] leading-snug">{r.desc}</div>
               {r.now ? (
                 <>
-                  <div className="text-xs mt-0.5 text-[var(--fg-2)]">Lv {lvl}: {r.now(lvl)}</div>
-                  {!max && <div className="text-xs text-[var(--good)]">Lv {lvl + 1}: {r.now(lvl + 1)}</div>}
+                  <div className="text-[.66rem] mt-0.5 text-[var(--text-dim)]">Lv {lvl}: {r.now(lvl)}</div>
+                  {!max && <div className="text-[.66rem] text-[var(--good)]">Lv {lvl + 1}: {r.now(lvl + 1)}</div>}
                 </>
-              ) : (!max && <div className="text-xs mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
+              ) : (!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
             </div>
             <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
               {max ? 'MAX' : <><span>{lvl === 0 ? 'Unlock' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}

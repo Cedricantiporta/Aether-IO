@@ -1,9 +1,15 @@
+import { device } from '../../engine/device';
+import { toggleFullscreen } from '../layout';
+import { Maximize } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { User, Backpack, Menu, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown } from 'lucide-react';
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
-import { useGameStore } from '../../store';
+import { OrnateRing } from '../components/Ornate';
+import { useUiStore } from '../uiStore';
+import { useGameStore, calculateTotalCP } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { tip } from '../components/Tooltip';
@@ -14,7 +20,7 @@ import type { HeroClass } from '../../types';
 export const HERO_ICON: Record<HeroClass, LucideIcon> = { ARCHER: Crosshair, WIZARD: Wand2, BARBARIAN: Axe };
 
 const BuffSlot: React.FC<{ id: string; icon: React.ReactNode; label: string; color: string; refs: React.MutableRefObject<Record<string, HTMLElement | null>> }> = ({ id, icon, label, color, refs }) => (
-  <div ref={(el) => { refs.current[id] = el; }} className="buff-slot" data-on="0" style={{ ['--dc' as any]: color }} {...tip(<SimpleTip title={label} sub="Active buff" color={color} />)}>
+  <div ref={(el) => { refs.current[id] = el; }} className="buff-slot" data-on="0" style={{ color }} {...tip(<SimpleTip title={label} sub="Active buff" color={color} />)}>
     <span data-ic style={{ display: 'grid' }}>{icon}</span><span data-t />
   </div>
 );
@@ -61,31 +67,22 @@ const DebuffRow: React.FC = () => {
 export const PlayerPlate: React.FC = () => {
   const hero = useGameStore((s) => s.hero);
   const level = useGameStore((s) => s.level);
+  const cp = useGameStore((s) => calculateTotalCP(s.stats));
   const maxHp = useGameStore((s) => s.stats.maxHealth);
-  const maxMp = useGameStore((s) => s.stats.maxMana);
-  const xp = useGameStore((s) => s.experience);
-  const need = useGameStore((s) => s.experienceToNextLevel);
-  const openHero = useGameStore((s) => s.toggleCharacterSheet);
-  const maxRef = useRef([maxHp, maxMp]); maxRef.current = [maxHp, maxMp];
+  const maxRef = useRef(maxHp); maxRef.current = maxHp;
   const Icon = HERO_ICON[hero];
   const refs = useRef<Record<string, HTMLElement | null>>({});
-  const plate = useRef<HTMLDivElement>(null);
   const hpEl = useRef<HTMLDivElement>(null);
-  const mpEl = useRef<HTMLDivElement>(null);
   const last = useRef<Record<string, string>>({});
   useRaf(() => {
     const p = world.player;
-    const f = (Math.min(1, Math.max(0, p.hp / Math.max(1, maxRef.current[0])))).toFixed(3);
+    const f = (Math.min(1, Math.max(0, p.hp / Math.max(1, maxRef.current)))).toFixed(3);
     if (hpEl.current && last.current.hp !== f) { last.current.hp = f; hpEl.current.style.setProperty('--fill', f); }
-    const m = (Math.min(1, Math.max(0, p.mana / Math.max(1, maxRef.current[1])))).toFixed(3);
-    if (mpEl.current && last.current.mp !== m) { last.current.mp = m; mpEl.current.style.setProperty('--fill', m); }
-    const low = p.alive && +f < 0.3 ? '1' : '0';
-    if (plate.current && last.current.low !== low) { last.current.low = low; plate.current.dataset.low = low; }
     const vals: Record<string, number> = { cry: p.cryT, rage: p.rageT, whirl: p.whirlT, titan: p.titanT };
     for (const k in vals) {
       const el = refs.current[k]; if (!el) continue;
       const v = vals[k];
-      const text = v > 0 ? v.toFixed(0) : '';
+      const text = v > 0 ? v.toFixed(1) : '';
       if (last.current[k] === text) continue;
       last.current[k] = text;
       el.dataset.on = v > 0 ? '1' : '0';
@@ -93,27 +90,33 @@ export const PlayerPlate: React.FC = () => {
     }
   });
   return (
-    <div>
-      <div ref={plate} className="vitals glass pe" data-low="0" role="button" aria-label="Hero sheet" onClick={openHero} style={{ ['--hc' as any]: HERO_COLOR[hero], cursor: 'pointer' }}>
-        <div className="av"><Icon size={20} strokeWidth={2.2} /><span className="lv">{level}</span></div>
-        <div className="bars">
-          <div ref={hpEl} className="vbar" style={{ ['--bc' as any]: 'var(--hp)' }}><i /></div>
-          <div ref={mpEl} className="vbar sm" style={{ ['--bc' as any]: 'var(--mp)' }}><i /></div>
+    <div className="pplate pe">
+      <div className="relative" style={{ width: '5.4rem', height: '5.4rem', flex: 'none', marginLeft: '-.2rem' }}>
+        <div className="absolute grid place-items-center rounded-full" style={{ inset: '15%', background: `radial-gradient(circle at 40% 30%, ${HERO_COLOR[hero]}, #2a0c0c 80%)`, color: '#fff4d0' }}>
+          <Icon size={30} strokeWidth={2.2} style={{ filter: 'drop-shadow(0 2px 2px #000)' }} />
         </div>
-        <div className="xp" style={{ ['--fill' as any]: Math.min(1, Math.max(0, xp / Math.max(1, need))) }}><i /></div>
+        <OrnateRing id="pp" spikes={6} />
       </div>
-      <div className="status-row">
-        <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={14} />} />
-        <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={14} />} />
-        <BuffSlot id="whirl" refs={refs} color="#ffd27a" label="Whirlwind" icon={<Wind size={14} />} />
-        <BuffSlot id="titan" refs={refs} color="#ff8a3a" label="Titan's Wrath" icon={<Mountain size={14} />} />
+      <div className="flex flex-col gap-[.3rem]" style={{ minWidth: '10.5rem' }}>
+        <div className="rpg-title text-[1.05rem] leading-none text-[#f4e6c0]">{hero}</div>
+        <motion.div key={level} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="text-[.82rem] text-[#e8dcc0] flex items-center gap-2" style={{ transformOrigin: 'left' }}
+          {...tip(<SimpleTip title="Combat Power" body="Total strength of your hero from stats and equipment." />)}>
+          <span>Lv. {level}</span><span style={{ width: 1, height: '.8rem', background: '#8a7240' }} /><span>CP <span className="rpg-num text-white">{cp.toLocaleString()}</span></span>
+        </motion.div>
+        <div ref={hpEl} className="hp-strip"><i /></div>
+        <div className="flex gap-[.35rem] mt-[.1rem]">
+          <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={15} />} />
+          <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={15} />} />
+          <BuffSlot id="whirl" refs={refs} color="#ffd27a" label="Whirlwind" icon={<Wind size={15} />} />
+          <BuffSlot id="titan" refs={refs} color="#ff8a3a" label="Titan's Wrath" icon={<Mountain size={15} />} />
+        </div>
         <DebuffRow />
       </div>
     </div>
   );
 };
 
-const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string }> = ({ icon, value, label }) => {
+const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string}> = ({ icon, value, label }) => {
   const el = useRef<HTMLSpanElement>(null);
   const first = useRef(true);
   useEffect(() => {
@@ -124,40 +127,42 @@ const Counter: React.FC<{ icon: React.ReactNode; value: number; label: string }>
   return (
     <div className="cpill pe" {...tip(<SimpleTip title={label} />)}>
       {icon}
-      <span ref={el}>{value.toLocaleString()}</span>
-    </div>
+      <span ref={el} className="val">{value.toLocaleString()}</span>
+          </div>
   );
 };
 
-export const Currency: React.FC<{ gems?: boolean }> = ({ gems: showGems }) => {
+export const Currency: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const gems = useGameStore((s) => s.gems);
   return (
-    <div className="flex gap-2 items-center">
-      <Counter icon={<CoinGlyph size={24} />} value={gold} label="Gold" />
-      {showGems && <Counter icon={<GemGlyph size={24} />} value={gems} label="Gems" />}
+    <div className="flex gap-3 items-center">
+      <Counter icon={<CoinGlyph size={30} />} value={gold} label="Gold" />
+      <Counter icon={<GemGlyph size={30} />} value={gems} label="Gems" />
     </div>
   );
 };
 
-const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; id?: string }> = ({ icon, label, hint, onClick, active, id }) => (
-  <button className={`iconbtn pe ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} data-testid={id} {...tip(<SimpleTip title={label} sub={`Hotkey: ${hint}`} />)}>
+const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean }> = ({ icon, label, hint, onClick, active }) => (
+  <button className={`sqbtn pe ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={`Hotkey: ${hint}`} />)}>
     {icon}
   </button>
 );
 
-/** Combat shortcuts: Hero sheet, Bag and the menu (pause, settings, codex, fullscreen all live in the pause menu). */
 export const MenuButtons: React.FC = () => {
   const toggleCharacterSheet = useGameStore((s) => s.toggleCharacterSheet);
   const toggleInventory = useGameStore((s) => s.toggleInventory);
   const togglePause = useGameStore((s) => s.togglePause);
+  const openCodex = useUiStore((s) => s.openCodex);
   const c = useGameStore((s) => s.isCharacterSheetOpen);
   const i = useGameStore((s) => s.isInventoryOpen);
   return (
-    <div className="hud-row">
-      <MenuBtn icon={<User size={22} />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
-      <MenuBtn icon={<Backpack size={22} />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
-      <MenuBtn icon={<Menu size={22} />} label="Menu" hint="Esc" onClick={togglePause} id="open-menu" />
+    <div className="flex gap-[.6rem] pb-1">
+      <MenuBtn icon={<User size={24} />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
+      <MenuBtn icon={<Backpack size={24} />} label="Bag" hint="I" onClick={toggleInventory} active={i} />
+      <MenuBtn icon={<BookOpen size={24} />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} />
+      <MenuBtn icon={<Settings size={24} />} label="Settings" hint="Esc" onClick={togglePause} />
+      {device.fullscreenOk && <MenuBtn icon={<Maximize size={24} />} label="Fullscreen" hint="F11" onClick={() => { void toggleFullscreen(); }} />}
     </div>
   );
 };
