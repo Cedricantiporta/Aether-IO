@@ -109,6 +109,11 @@ v2 rebuild (engine/world split, instancing) → KayKit heroes + Kenney trees →
 casting, combos) → Capacitor APK + PWA → 5 new bosses → modern UI (later reverted) → Hades rooms + living town →
 target lock → room shapes → tarot cards → old UI restored → F attack, facing-cast, town skills, 0 SP start.
 
+## NPC story quests
+- Data `npcQuests.ts` (11 hand-written quests, chains via `after`, hidden via `cond`), logic + event hooks `engine/systems/npcQuestLogic.ts`
+  (accept / progress / turn-in / marker cache), state `npcQuests` in the store (saved in the profile, incl. `bossKills` counters).
+  Dialogue: `dialogue.ts` offers (Accept F / Later E), reminds, or turns in; markers in `render/Npcs.tsx`; tracker rows (blue book) in `QuestTracker.tsx`; guide arrow points at a ready NPC.
+
 ## Session additions (Oct 2026, cont.)
 - **Elderroot (biome 2 boss)** now walks into melee range (`keepRange` near 2.5 / far radius+3.5) and has a lumbering stride animation (`render/Bosses2.tsx`).
 - **Town arrival pillar**: `world.village.spawnFx` (1 -> 0 over ~3 s) set by `enterVillage` and when the class select closes; drawn in `render/Hero.tsx`.

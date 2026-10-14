@@ -18,7 +18,7 @@ import type { ShopTab } from '../../storeTypes';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
-import { openDialogue, advanceDialogue, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
+import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
 const INTERACT_R = 7;
 /** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
@@ -170,6 +170,21 @@ export function walkToQuest(q: Quest): void {
   if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
 }
+/** NPC story quest row click: ready -> the NPC who takes it in; talk objective -> that NPC; otherwise out through the gate. */
+export function walkToNpcQuest(name: string | null): void {
+  const castle = world.village.area === 'CASTLE';
+  if (name) {
+    const i = NPCS.findIndex((n) => n.name === name);
+    if (i >= 0) {
+      const inCastle = NPCS[i].area === 'CASTLE';
+      if (inCastle === castle) { walkTo(npcs[i].x, npcs[i].z + 1.8, 'npc', '', 2.4, i); return; }
+      if (inCastle) { walkTo(CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 'castle', '', 2.4); return; }
+      walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return;
+    }
+  }
+  if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
+  else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);
+}
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {
   const g = world.village.go, st = useGameStore.getState();
@@ -219,6 +234,7 @@ export function updateVillage(dt: number): void {
     else {
       p.vel.x = p.vel.z = 0; p.anim.moveBlend *= Math.max(0, 1 - dt * 10);
       if (n) p.facing = Math.atan2(n.x - p.pos.x, n.z - p.pos.z);
+      if (inp.pressed.KeyF) acceptOffer();   // F accepts an NPC quest offer (last line)
       if (inp.pressed.KeyE || inp.pressed.Space) advanceDialogue();
     }
   } else if (v.pending) { p.vel.x = p.vel.z = 0; } else updatePlayerVillage(dt);

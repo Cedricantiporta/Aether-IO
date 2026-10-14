@@ -4,9 +4,11 @@ import { create } from 'zustand';
 import { NPCS } from '../townData';
 import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
+import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
 
-interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number }
-export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0 }));
+/** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
+interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string }
+export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0, offer: '', turnIn: '' }));
 
 const lastConvo: number[] = NPCS.map(() => -1);
 const guideStep: number[] = NPCS.map(() => 0);
@@ -36,24 +38,37 @@ export function openDialogue(npc: number): void {
   else { ci = Math.floor(Math.random() * d.talk.length); if (d.talk.length > 1 && ci === lastConvo[npc]) ci = (ci + 1) % d.talk.length; }
   lastConvo[npc] = ci;
   const lines = d.talk[ci].slice();
+  let kingPre = 0;   // royal lines added in front (kept when a quest dialogue replaces the ambient talk)
   if (d.king) {
     // royal quests: an audience is granted, finished bounties are reported (store.reportToKing)
     const r = useGameStore.getState().reportToKing();
     const pre: string[] = [];
     if (r.audience) pre.push('So you are the hero they speak of. You sought an audience, and you have it. Aether is glad to look upon you.');
     if (r.reports) pre.push(r.reports > 1 ? 'You bring word of great deeds done in my name. The crown is in your debt. See the Quest Board for your rewards.' : 'You bring word of a deed done in my name. The crown is in your debt. See the Quest Board for your reward.');
-    if (pre.length) lines.unshift(...pre);
+    if (pre.length) { lines.unshift(...pre); kingPre = pre.length; }
     else if (useGameStore.getState().quests.some((q) => q.accepted && q.needsKing && !q.reported)) lines.push('A royal commission awaits its end. Finish the deed, hero, then come and tell me of it.');
   }
   if (d.quest && useGameStore.getState().quests.some(questDone)) lines.push('Oh! One of your bounties is complete. Hurry to the Quest Board and claim your reward!');
-  if (giftAvailable(npc)) lines.push(d.gift!.text);
-  useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0 });
+  // NPC story quests (npcQuests.ts): a turn-in / offer / reminder replaces the ambient talk (the gift line stays, first)
+  talkedTo(d.name);
+  const nq = questDialogueFor(d.name);
+  let offer = '', turnIn = '';
+  if (nq) {
+    const q = nq.def;
+    const qLines = nq.mode === 'offer' ? [`New quest: ${q.title}`, ...q.intro] : nq.mode === 'turnin' ? q.done.slice() : [q.progress];
+    if (nq.mode === 'offer') offer = q.id; else if (nq.mode === 'turnin') turnIn = q.id;
+    lines.length = kingPre;
+    lines.push(...qLines);
+    if (giftAvailable(npc)) lines.unshift(d.gift!.text);
+  } else if (giftAvailable(npc)) lines.push(d.gift!.text);
+  useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0, offer, turnIn });
+  onLine(npc, 0);
 }
 
 export function closeDialogue(): void {
   const s = useDialogue.getState();
   if (!s.open) return;
-  useDialogue.setState({ open: false, npc: -1 });
+  useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '' });
 }
 
 /** Next line; on the last line closes. Reaching a gift line pays it out (once per day per NPC). */
@@ -63,5 +78,20 @@ export function advanceDialogue(): void {
   if (s.idx >= s.lines.length - 1) { closeDialogue(); return; }
   const idx = s.idx + 1;
   useDialogue.setState({ idx });
-  if (idx === s.lines.length - 1 && s.lines[idx] === NPCS[s.npc].gift?.text && giftAvailable(s.npc)) claimGift(s.npc);
+  onLine(s.npc, idx);
+}
+
+/** A line was reached: a gift line pays out (once per day per NPC), the last line of a turn-in dialogue pays the quest rewards. */
+function onLine(npc: number, idx: number): void {
+  const s = useDialogue.getState();
+  if (s.lines[idx] === NPCS[npc].gift?.text && giftAvailable(npc)) claimGift(npc);
+  if (s.turnIn && idx === s.lines.length - 1) { const id = s.turnIn; useDialogue.setState({ turnIn: '' }); completeNpcQuest(id); }
+}
+
+/** Accept button / key on the last line of an offer. */
+export function acceptOffer(): void {
+  const s = useDialogue.getState();
+  if (!s.open || !s.offer || s.idx < s.lines.length - 1) return;
+  acceptNpcQuest(s.offer);
+  closeDialogue();
 }

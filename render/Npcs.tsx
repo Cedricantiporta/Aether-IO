@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
 import { npcs, animals, bubbles } from '../engine/systems/npcs';
+import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
 import { useCharacterInstance, useClips } from './characters';
 import { HANDSLOT_QUAT } from './weapons';
@@ -43,6 +44,8 @@ function crownGeo(): BufferGeometry {
 }
 
 // --------------------------------------------------------------------- npc ---
+/** Quest markers above NPCs: gold "!" = new quest, gold "?" = ready to turn in, grey "?" = in progress (index = npcMarkers()). */
+const MARKS = [null, labelMaterial('!', '#ffd24a', { size: 120 }), labelMaterial('?', '#9aa0aa', { size: 120 }), labelMaterial('?', '#ffd24a', { size: 120 })];
 const _p = new Vector3();
 const WHITE = new Color(1, 1, 1);
 
@@ -79,7 +82,7 @@ function NpcActor({ i }: { i: number }) {
   const def = NPCS[i], st = npcs[i];
   const ch = useCharacterInstance(def.model);
   const clips = useClips();
-  const group = useRef<Group>(null!), tag = useRef<Sprite>(null!);
+  const group = useRef<Group>(null!), tag = useRef<Sprite>(null!), mark = useRef<Sprite>(null!);
   const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini' }), [def]);
   const meshes = useRef<Mesh[]>(ch.meshes);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true });
@@ -140,6 +143,16 @@ function NpcActor({ i }: { i: number }) {
     s.acc += dt;
     const every = pd2 > 400 ? 3 : pd2 > 144 ? 2 : 1;
     if (++s.tick % every === 0) { s.mixer.update(s.acc); s.acc = 0; }
+    // quest marker (bobs gently, hidden while talking)
+    if (mark.current) {
+      const k = st.talking ? 0 : npcMarkers()[i], mk = mark.current;
+      if (k) {
+        const l = MARKS[k]!;
+        if (mk.material !== l.mat) { mk.material = l.mat; mk.scale.set(l.aspect * 1.3, 1.3, 1); }
+        mk.position.y = 3.6 * def.scale + Math.sin(world.time * 3 + i) * 0.08;
+      }
+      if (mk.visible !== !!k) mk.visible = !!k;
+    }
     // name tag only when close
     if (tag.current) { const on = pd2 < 100 && !st.talking; if (tag.current.visible !== on) tag.current.visible = on; }
   });
@@ -148,6 +161,7 @@ function NpcActor({ i }: { i: number }) {
     <group ref={group} position={[st.x, def.y ?? 0, st.z]} visible={false}>
       {/* NPCs use the hero's scale (1) so they match the player's size */}
       <group scale={def.scale}><primitive object={ch.root} /></group>
+      <sprite ref={mark} material={MARKS[1]!.mat} position={[0, 3.6 * def.scale, 0]} scale={[MARKS[1]!.aspect * 1.3, 1.3, 1]} visible={false} renderOrder={6} />
       <sprite ref={tag} material={label.mat} position={[0, 2.85 * def.scale, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
     </group>
   );

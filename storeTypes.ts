@@ -15,6 +15,7 @@ import type {
 import type { Recipe } from './crafting';
 import type { RunStats } from './engine/types';
 import type { Quest, QuestType } from './quests';
+import type { NpcQuestSave } from './npcQuests';
 import type { TalentRanks } from './talents';
 import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
@@ -115,6 +116,7 @@ export interface GameState {
   progress: RunProgress;                            // endings cleared, ascension unlocked / chosen, endless tower best floor per class
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
+  npcQuests: NpcQuestSave;                          // NPC story quests: state + boss kill counters (saved with the profile)
   materials: Record<Rarity, number>;
   equipment: Equipment;
   upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useDialogue, advanceDialogue, closeDialogue } from '../../engine/systems/dialogue';
+import { useDialogue, advanceDialogue, closeDialogue, acceptOffer } from '../../engine/systems/dialogue';
 import { device } from '../../engine/device';
 
 /**
@@ -8,7 +8,7 @@ import { device } from '../../engine/device';
  * X closes. The engine freezes the hero while it is open (engine/systems/village.ts) and handles E there.
  */
 export const Dialogue: React.FC = () => {
-  const { open, name, role, accent, lines, idx } = useDialogue();
+  const { open, name, role, accent, lines, idx, offer } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   if (!open) return null;
   const last = idx >= lines.length - 1;
@@ -25,7 +25,14 @@ export const Dialogue: React.FC = () => {
         <p className="dlg-text" key={`${name}:${idx}`} data-testid="dialogue-text">{lines[idx]}</p>
         <div className="dlg-foot">
           <span className="dlg-dots">{lines.map((_, i) => <i key={i} className={i === idx ? 'on' : i < idx ? 'done' : ''} />)}</span>
-          <span className="dlg-next">{last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span>
+          {last && offer
+            ? (
+              <span className="dlg-choices">
+                <button className="dlg-btn" data-testid="dialogue-later" onPointerDown={(e) => { stop(e); closeDialogue(); }}>Later{!device.touch && <kbd>E</kbd>}</button>
+                <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); }}>Accept{!device.touch && <kbd>F</kbd>}</button>
+              </span>
+            )
+            : <span className="dlg-next">{last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span>}
         </div>
       </div>
     </div>
