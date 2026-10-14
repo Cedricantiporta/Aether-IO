@@ -31,7 +31,6 @@ import { InventoryPanel } from './panels/Inventory';
 import { CharacterSheet } from './panels/CharacterSheet';
 import { ShopPanel } from './panels/ShopPanel';
 import { SummonWindow } from './panels/SummonWindow';
-import { TechWindow } from './panels/shop/Tech';
 import { TutorialHint } from './hud/TutorialHint';
 import { QuestLog } from './screens/QuestLog';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
@@ -76,8 +75,7 @@ export const GameUI: React.FC = () => {
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}
-        {panels && shop && summonTab && !techTab && <SummonWindow key="summon" />}
-        {panels && shop && techTab && <TechWindow key="tech" />}
+        {panels && shop && summonTab && <SummonWindow key="summon" />}
         {panels && chr && <CharacterSheet key="chr" />}
       </AnimatePresence>
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>

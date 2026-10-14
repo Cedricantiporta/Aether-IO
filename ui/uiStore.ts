@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Item, Rarity } from '../types';
 
-export interface BuyOpts { price?: number; max?: number; onBuy?: (n: number) => void }
+export interface BuyOpts { price?: number; max?: number; onBuy?: (n: number) => void; gems?: boolean }
 
 // Purely local UI state (modals, selections). Game state stays in the main store.
 export interface ConfirmRequest {

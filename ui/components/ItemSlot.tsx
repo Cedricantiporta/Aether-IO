@@ -19,6 +19,7 @@ interface Props {
   locked?: boolean;            // level locked
   dim?: boolean;
   price?: number;              // shop price badge
+  gemPrice?: boolean;          // the price is in gems (cyan badge)
   sale?: number;               // discount fraction -> red ribbon + struck old price
   oldPrice?: number;
   cantAfford?: boolean;
@@ -35,7 +36,7 @@ interface Props {
 
 /** Metallic rarity-framed item slot. Empty when no item. */
 export const ItemSlot: React.FC<Props> = ({
-  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag,
+  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, gemPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag,
 }) => {
   const q = qty ?? item?.quantity ?? 1;
   const cls = `rpg-slot ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
@@ -50,7 +51,7 @@ export const ItemSlot: React.FC<Props> = ({
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}
-      {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''}`}>{price === 0 ? 'Free' : price.toLocaleString()}</span>}
+      {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''} ${gemPrice ? 'gem' : ''}`}>{price === 0 ? 'Free' : price.toLocaleString()}</span>}
       {children}
     </>
   );

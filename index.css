@@ -1812,3 +1812,11 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, #1e1a16) 0%, color-mix(in srgb, var(--rc) 14%, #0c0a08) 100%); }
 .slot-grid .rpg-slot[data-rarity='COMMON'] { background: linear-gradient(160deg, #4a4a4c, #26262a); }
 @media (max-width: 640px) { :root { --cell: 4.6rem; } }
+
+/* Summon window: Gem Shop / Tech House panes */
+.sw-shop, .sw-tech { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow-y: auto; padding: .2rem .4rem .6rem; }
+.sw-pane-h { display: flex; align-items: center; gap: .55rem; font-family: var(--font-title); font-size: 1.05rem; color: #f6e6bd; margin: .2rem 0 .8rem; padding-right: 2.4rem; flex-wrap: wrap; }
+.sw-pane-h em { font-style: normal; font-family: inherit; font-size: .7rem; color: var(--text-dim); width: 100%; }
+.sw-tech .tw-grid { max-height: none; }
+.slot-price.gem { color: #bff4ff; background: linear-gradient(#1c4a5a, #0c2630); border-color: #5ee0f5; }
+.slot-price.gem::before { content: '\25C6'; color: #5ee0f5; margin-right: .2rem; font-size: .7em; }

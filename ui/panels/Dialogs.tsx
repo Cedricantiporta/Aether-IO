@@ -46,8 +46,9 @@ export const BuyDialog: React.FC = () => {
   const opts = useUiStore((s) => s.buyOpts);
   const set = useUiStore((s) => s.setBuyItem);
   const buyItem = useGameStore((s) => s.buyItem);
-  const gold = useGameStore((s) => s.gold);
+  const gold = useGameStore((s) => (opts?.gems ? s.gems : s.gold));   // balance in the offer's currency
   const [amount, setAmount] = useState(1);
+  const Coin = opts?.gems ? GemGlyph : CoinGlyph;
   // every purchase (shops, pets, the wandering merchant) goes through this dialog with a quantity, even when only 1 fits
   const unit = item ? opts?.price ?? shopPrice(item) : 0;
   const afford = unit > 0 ? Math.max(0, Math.floor(gold / unit)) : 99;
@@ -71,13 +72,13 @@ export const BuyDialog: React.FC = () => {
             <div>
               <div className="rpg-title text-lg" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div>
               <div className="text-xs text-[var(--text-dim)] max-w-[12rem]">{item.description}</div>
-              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{unit === 0 ? 'Free' : `${unit.toLocaleString()} G each`}</div>
+              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{unit === 0 ? 'Free' : `${unit.toLocaleString()} ${opts?.gems ? 'gems' : 'G'} each`}</div>
             </div>
           </div>
           <QtyStepper value={a} max={cap} onChange={setAmount} />
           <div className="rpg-frame gold w-full text-center py-2">
             <div className="rpg-label !text-[.6rem]">Total cost</div>
-            <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><CoinGlyph size={26} />{total.toLocaleString()}</div>
+            <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><Coin size={26} />{total.toLocaleString()}</div>
           </div>
           <div className="flex gap-3 w-full">
             <Button className="flex-1" onClick={() => set(null)}>Close</Button>
