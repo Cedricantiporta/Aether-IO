@@ -135,6 +135,7 @@ function resetSystems(): void {
 
 /** Peaceful town: shops always open, island scenery + a few harvest nodes, hero standing in the square. */
 export function enterVillage(): void {
+  world.village.area = 'TOWN'; world.village.pending = ''; world.village.fade = 0; world.village.areaVer++;   // always back in the town (never inside the castle)
   clearWorld();
   world.enemyGrid.clear();
   generateMap();

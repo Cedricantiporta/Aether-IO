@@ -9,7 +9,7 @@ import { Inst } from './Inst';
 import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
-  CASTLE, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
+  CASTLE, HERMIT_CAMP, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
@@ -430,6 +430,17 @@ function addCastle(b: GB, g: GB): void {
   for (const sx of [-1, 1]) { b.cyl(0.35, 0.25, 1.2, 8, [x + sx * 3.6, 0.6, z1 + 2.8], iron); g.sph(0.32, [x + sx * 3.6, 1.35, z1 + 2.8], '#ffb050', [1, 1.3, 1], 6); }
 }
 
+/** Hermit camp: stone-ringed campfire with logs, a bedroll and a small lean-to. */
+function addCamp(b: GB, g: GB, x: number, z: number) {
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; b.sph(0.22, [x + Math.cos(a) * 0.75, 0.15, z + Math.sin(a) * 0.75], '#8a867c', [1, 0.7, 1], 5); }
+  b.cyl(0.08, 0.08, 1.1, 5, [x, 0.22, z], '#4a2f1a', [0, 0, 0.5]); b.cyl(0.08, 0.08, 1.1, 5, [x, 0.22, z], '#4a2f1a', [0.5, 1.2, 0]);
+  g.cone(0.3, 0.9, 6, [x, 0.7, z], '#ffb050'); g.sph(0.18, [x, 0.4, z], '#ffe090', 1, 5);
+  b.box(1.0, 0.14, 2.0, [x - 2.6, 0.08, z + 0.6], '#6b5a3a', [0, 0.3, 0]); b.box(0.9, 0.18, 0.5, [x - 2.7, 0.2, z - 0.2], '#8c1d28', [0, 0.3, 0]);
+  b.box(0.1, 1.9, 0.1, [x + 1.2, 0.95, z - 2.2], '#4a2f1a'); b.box(0.1, 1.9, 0.1, [x + 3.2, 0.95, z - 2.2], '#4a2f1a');
+  b.box(2.6, 0.08, 1.8, [x + 2.2, 1.7, z - 2.9], '#7a6a48', [0.6, 0, 0]);
+  b.box(0.7, 0.6, 0.5, [x + 2.4, 0.3, z - 1.6], '#6e4b2b'); b.cyl(0.22, 0.2, 0.3, 8, [x - 0.2, 0.15, z + 1.5], '#3a3a3e');
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -446,6 +457,7 @@ function buildTown() {
   HOUSES.forEach((h, i) => put(h.x, h.z, h.rot, buildHouse(h, i)));
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
   { const c = at(CASTLE.x, CASTLE.z); addCastle(c.b, c.g); }
+  { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
   put(GATE.x, GATE.z, 0, buildGate());
   const sign = buildSignpost();

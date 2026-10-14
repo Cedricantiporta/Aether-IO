@@ -10,7 +10,9 @@ import { ENEMY_DEFS } from './engine/enemyDefs';
 
 export type QuestType =
   | 'KILL_KIND' | 'KILL_TOTAL' | 'REACH_WAVE' | 'FAST_CLEARS' | 'BREAK_CRATES'
-  | 'KILL_BOSS' | 'COLLECT_GOLD' | 'DASH' | 'GATHER_SHARDS' | 'SELL_LOOT' | 'COLLECT_LOOT';
+  | 'KILL_BOSS' | 'COLLECT_GOLD' | 'DASH' | 'GATHER_SHARDS' | 'SELL_LOOT' | 'COLLECT_LOOT'
+  /** royal quests (the King lives in the castle): AUDIENCE = talk to him; KING_BOUNTY = kill count / boss, then report to him */
+  | 'AUDIENCE' | 'KING_BOUNTY';
 
 export interface QuestReward {
   gold?: number;
@@ -28,6 +30,11 @@ export interface Quest {
   target: number;
   progress: number;
   reward: QuestReward;
+  /** KING_BOUNTY: which run stat counts ('KILL_TOTAL' or 'KILL_BOSS') */
+  bounty?: 'KILL_TOTAL' | 'KILL_BOSS';
+  /** royal quest: must be settled by talking to the King (old saves have neither field) */
+  needsKing?: boolean;
+  reported?: boolean; // the King has been told
   accepted?: boolean; // only accepted quests make progress
   day?: string;       // board day it was offered on (unaccepted offers expire when the day changes)
 }
@@ -37,10 +44,10 @@ export const QUEST_OFFERS = 6;
 export const QUEST_MAX_ACTIVE = 3;
 export const questDay = (): string => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 const KIND_POOL: EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'SPLITTER'];
-const ALL_TYPES: QuestType[] = ['KILL_KIND', 'KILL_TOTAL', 'REACH_WAVE', 'FAST_CLEARS', 'BREAK_CRATES', 'KILL_BOSS', 'COLLECT_GOLD', 'DASH', 'GATHER_SHARDS', 'SELL_LOOT', 'COLLECT_LOOT'];
+const ALL_TYPES: QuestType[] = ['KILL_KIND', 'KILL_TOTAL', 'REACH_WAVE', 'FAST_CLEARS', 'BREAK_CRATES', 'KILL_BOSS', 'COLLECT_GOLD', 'DASH', 'GATHER_SHARDS', 'SELL_LOOT', 'COLLECT_LOOT', 'AUDIENCE', 'KING_BOUNTY'];
 /** Reward weight per type (relative effort). */
 const EFFORT: Record<QuestType, number> = {
-  KILL_KIND: 1, KILL_TOTAL: 1, REACH_WAVE: 1.4, FAST_CLEARS: 1.5, BREAK_CRATES: 1, KILL_BOSS: 2, COLLECT_GOLD: 1, DASH: 0.8, GATHER_SHARDS: 1.1, SELL_LOOT: 1, COLLECT_LOOT: 1,
+  KILL_KIND: 1, KILL_TOTAL: 1, REACH_WAVE: 1.4, FAST_CLEARS: 1.5, BREAK_CRATES: 1, KILL_BOSS: 2, COLLECT_GOLD: 1, DASH: 0.8, GATHER_SHARDS: 1.1, SELL_LOOT: 1, COLLECT_LOOT: 1, AUDIENCE: 1, KING_BOUNTY: 2.2,
 };
 
 let qid = 0;
@@ -62,6 +69,7 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
   let target = 10;
   let kind: EnemyKind | undefined;
   let lootName: string | undefined;
+  let bounty: Quest['bounty'];
   switch (type) {
     case 'KILL_KIND': {
       const pool = KIND_POOL.filter((k) => ENEMY_DEFS[k].minWave <= 2 + r * 1.5);
@@ -78,6 +86,8 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
     case 'DASH': target = 25 + 8 * r; break;
     case 'GATHER_SHARDS': target = 8 + 2 * r; break;
     case 'SELL_LOOT': target = 8 + 3 * r; break;
+    case 'AUDIENCE': target = 1; break;
+    case 'KING_BOUNTY': bounty = Math.random() < 0.4 ? 'KILL_BOSS' : 'KILL_TOTAL'; target = bounty === 'KILL_BOSS' ? 1 + Math.floor(r / 14) : 50 + 15 * r; break;
     case 'COLLECT_LOOT': lootName = pick(['Goblin Ear', 'Slime Gel', 'Bat Wing', 'Old Bone', 'Beetle Shell', 'Cultist Rune', 'Ogre Tusk'].slice(0, Math.min(7, 3 + r))); target = 4 + r; break;
   }
   const e = EFFORT[type];
@@ -87,7 +97,11 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
   else if (extra < 0.55) reward.cores = 1 + Math.floor(r / 3) + (e > 1.3 ? 1 : 0);
   else if (extra < 0.8) reward.potions = 3 + Math.floor(r / 4);
   else reward.item = itemRarityFor(r);
-  return { id: `q_${Date.now().toString(36)}_${(qid++).toString(36)}`, type, kind, lootName, target, progress: 0, reward, accepted: false, day: questDay() };
+  // royal commissions pay in gems (and gear for the bounties)
+  if (type === 'AUDIENCE') { reward.gems = 10 + 3 * r; delete reward.cores; delete reward.potions; delete reward.item; }
+  if (type === 'KING_BOUNTY') { reward.gems = Math.round((12 + 4 * r) * (bounty === 'KILL_BOSS' ? 1.5 : 1)); if (!reward.item && Math.random() < 0.6) reward.item = itemRarityFor(r + 4); }
+  const royal = type === 'AUDIENCE' || type === 'KING_BOUNTY';
+  return { bounty, needsKing: royal || undefined, id: `q_${Date.now().toString(36)}_${(qid++).toString(36)}`, type, kind, lootName, target, progress: 0, reward, accepted: false, day: questDay() };
 }
 
 /** Board upkeep: keeps accepted quests (old saves: the 3 legacy quests count as accepted), drops offers from an
@@ -112,7 +126,11 @@ export function fillQuests(rank: number, existing: Quest[]): Quest[] {
 export const activeQuests = (qs: Quest[]): Quest[] => qs.filter((q) => q.accepted);
 export const questOffers = (qs: Quest[]): Quest[] => qs.filter((q) => !q.accepted);
 /** Accepted and finished (ready to claim). */
-export const questDone = (q: Quest): boolean => !!q.accepted && q.progress >= q.target;
+export const questDone = (q: Quest): boolean => !!q.accepted && q.progress >= q.target && (!q.needsKing || !!q.reported);
+/** Accepted royal quest still waiting for the King: AUDIENCE (go and talk to him) or KING_BOUNTY whose count is done (report). */
+export const questNeedsKing = (q: Quest): boolean => !!q.accepted && !!q.needsKing && !q.reported && (q.type === 'AUDIENCE' || q.progress >= q.target);
+/** The run stat a quest listens to (KING_BOUNTY counts like its base type). */
+export const questCounts = (q: Quest): QuestType => (q.type === 'KING_BOUNTY' && q.bounty ? q.bounty : q.type);
 
 export function questTitle(q: Quest): string {
   const n = q.target;
@@ -128,6 +146,8 @@ export function questTitle(q: Quest): string {
     case 'GATHER_SHARDS': return `Gather ${n} crafting shards`;
     case 'SELL_LOOT': return `Sell ${n} loot items`;
     case 'COLLECT_LOOT': return `Collect ${n} ${q.lootName}${n > 1 ? 's' : ''}`;
+    case 'AUDIENCE': return 'Seek an audience with the King';
+    case 'KING_BOUNTY': return q.bounty === 'KILL_BOSS' ? (n > 1 ? `Defeat ${n} bosses and report to the King` : 'Defeat a boss and report to the King') : `Slay ${n} monsters and report to the King`;
   }
 }
 
@@ -144,5 +164,7 @@ export function questFlavor(q: Quest): string {
     case 'GATHER_SHARDS': return 'Smash crystals and ore for the smith.';
     case 'SELL_LOOT': return 'Sell monster spoils at the potion shop.';
     case 'COLLECT_LOOT': return 'The captain pays a bounty for these.';
+    case 'AUDIENCE': return 'The King asks to meet heroes. Enter the castle keep in the north of town and speak to him on his throne.';
+    case 'KING_BOUNTY': return 'A royal commission: finish the deed, then return to the castle and report to the King in person.';
   }
 }

@@ -8,6 +8,7 @@ import { TouchControls } from './hud/TouchControls';
 import { InteractPrompt } from './hud/InteractPrompt';
 import { Dialogue } from './hud/Dialogue';
 import { SpeechBubbles } from './hud/SpeechBubbles';
+import { TownFade } from './hud/TownFade';
 import { device } from '../engine/device';
 import { FpsCounter } from './hud/FpsCounter';
 import { RotateHint } from './screens/RotateHint';
@@ -58,6 +59,7 @@ export const GameUI: React.FC = () => {
       {village && <SpeechBubbles />}
       {(village || inGame) && <InteractPrompt />}
       {village && <Dialogue />}
+      {village && <TownFade />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}

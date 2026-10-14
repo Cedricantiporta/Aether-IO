@@ -11,6 +11,7 @@ import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
 import { Town } from './Town';
+import { CastleInterior } from './CastleInterior';
 import { Hero } from './Hero';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
@@ -34,6 +35,8 @@ export function Scene() {
   const q = useQuality();
   const status = useGameStore((s) => s.status);
   const ver = useWorldCounter(() => world.obstaclesVersion);
+  const area = useWorldCounter(() => world.village.areaVer);
+  void area;
   const roomVer = useWorldCounter(() => world.room.version);
   useFrame((_, dt) => updateGame(dt), -1);
   const gameplay = status !== GameStatus.MENU && status !== GameStatus.HERO_SELECT;
@@ -47,7 +50,9 @@ export function Scene() {
       <Lighting q={q} />
       <LookDriver />
       <CameraRig />
-      {gameplay ? <Room q={q} /> : (
+      {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
+        <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
+      ) : (
         <>
           <Suspense fallback={null}><Terrain key={q.name + ':' + ver} q={q} /></Suspense>
           <Suspense fallback={null}><Props q={q} /></Suspense>
@@ -55,7 +60,7 @@ export function Scene() {
         </>
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>
-      {(gameplay || status === GameStatus.MENU) && (
+      {(gameplay || (status === GameStatus.MENU && world.village.area === 'TOWN')) && (
         <>
           <Crates />
           <Pickups />

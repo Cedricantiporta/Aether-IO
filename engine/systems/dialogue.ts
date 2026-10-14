@@ -13,12 +13,14 @@ const guideStep: number[] = NPCS.map(() => 0);
 const todayKey = () => new Date().toDateString();
 const giftKey = (name: string) => 'aether.npcgift.' + name;
 function giftAvailable(npc: number): boolean {
-  if (!NPCS[npc].gift) return false;
+  const g0 = NPCS[npc].gift;
+  if (!g0) return false;
+  if (g0.once) { try { return !localStorage.getItem(g0.once); } catch { return true; } }
   try { return localStorage.getItem(giftKey(NPCS[npc].name)) !== todayKey(); } catch { return true; }
 }
 function claimGift(npc: number): void {
   const g = NPCS[npc].gift; if (!g) return;
-  try { localStorage.setItem(giftKey(NPCS[npc].name), todayKey()); } catch { /* ignore */ }
+  try { if (g.once) localStorage.setItem(g.once, '1'); else localStorage.setItem(giftKey(NPCS[npc].name), todayKey()); } catch { /* ignore */ }
   const st = useGameStore.getState();
   if (g.gold) st.addGold(g.gold * GOLD_SCALE);
   if (g.item) for (const it of makeItemById(g.item, g.qty ?? 1)) if (!st.addItemToInventory(it)) { st.addNotification('Bag is full!', 'red', 'WARNING'); break; }
@@ -34,6 +36,15 @@ export function openDialogue(npc: number): void {
   else { ci = Math.floor(Math.random() * d.talk.length); if (d.talk.length > 1 && ci === lastConvo[npc]) ci = (ci + 1) % d.talk.length; }
   lastConvo[npc] = ci;
   const lines = d.talk[ci].slice();
+  if (d.king) {
+    // royal quests: an audience is granted, finished bounties are reported (store.reportToKing)
+    const r = useGameStore.getState().reportToKing();
+    const pre: string[] = [];
+    if (r.audience) pre.push('So you are the hero they speak of. You sought an audience, and you have it. Aether is glad to look upon you.');
+    if (r.reports) pre.push(r.reports > 1 ? 'You bring word of great deeds done in my name. The crown is in your debt. See the Quest Board for your rewards.' : 'You bring word of a deed done in my name. The crown is in your debt. See the Quest Board for your reward.');
+    if (pre.length) lines.unshift(...pre);
+    else if (useGameStore.getState().quests.some((q) => q.accepted && q.needsKing && !q.reported)) lines.push('A royal commission awaits its end. Finish the deed, hero, then come and tell me of it.');
+  }
   if (d.quest && useGameStore.getState().quests.some(questDone)) lines.push('Oh! One of your bounties is complete. Hurry to the Quest Board and claim your reward!');
   if (giftAvailable(npc)) lines.push(d.gift!.text);
   useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0 });

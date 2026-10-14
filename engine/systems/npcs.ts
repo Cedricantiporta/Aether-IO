@@ -32,7 +32,7 @@ export function resetNpcs(): void {
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
     n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1;
-    n.yaw = Math.atan2(-n.x, 2 - n.z); // idle NPCs start facing the spawn plaza
+    n.yaw = d.area === 'CASTLE' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
   }
   for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
   for (const b of bubbles) b.active = false;
@@ -44,13 +44,18 @@ function inVisible(x: number, z: number, m: number): boolean {
   return x >= v.minX + m && x <= v.maxX - m && z >= v.minZ + m && z <= v.maxZ - m;
 }
 
+/** Town NPCs live in the town, castle NPCs in the throne hall: only the current area simulates. */
+const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area;
+
 export function updateNpcs(dt: number): void {
   const p = world.player;
+  const town = world.village.area === 'TOWN';
   const talkNpc = useDialogue.getState().open ? useDialogue.getState().npc : -1;
 
   // ---- NPCs
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
+    if (!inArea(i)) { n.talking = false; continue; }
     n.talking = i === talkNpc;
     if (n.talking) { n.moving = false; n.yaw = Math.atan2(p.pos.x - n.x, p.pos.z - n.z); continue; }
     const path = d.patrol;
@@ -68,7 +73,7 @@ export function updateNpcs(dt: number): void {
   }
 
   // ---- animals (cheap random wander inside an ellipse around their home)
-  for (let i = 0; i < animals.length; i++) {
+  for (let i = 0; i < animals.length && town; i++) {
     const a = animals[i], d = ANIMALS[i];
     a.hop += dt * (a.moving ? 9 : 3);
     if (a.wait > 0) { a.wait -= dt; a.moving = false; continue; }
@@ -95,7 +100,7 @@ export function updateNpcs(dt: number): void {
     let pick = -1;
     for (let k = 0; k < npcs.length && pick < 0; k++) {
       const i = (start + k) % npcs.length, n = npcs[i];
-      if (n.talking || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > BUBBLE_R * BUBBLE_R) continue;
+      if (!inArea(i) || n.talking || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > BUBBLE_R * BUBBLE_R) continue;
       if (world.view.on && !inVisible(n.x, n.z, 9)) continue;
       let busy = false;
       for (let j = 0; j < MAX_BUBBLES; j++) if (bubbles[j].active && bubbles[j].npc === i) busy = true;
