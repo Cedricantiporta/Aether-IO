@@ -207,7 +207,7 @@ export function spawnEnemy(
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 1 : 1.4); // normal & elites +40% (bosses unchanged)
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.5 : 1.4); // normal & elites +40%; bosses -50%
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
