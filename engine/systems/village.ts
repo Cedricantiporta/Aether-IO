@@ -14,7 +14,7 @@ import { updatePickups } from './pickups';
 import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
 import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
-import { CRATE_HP, addTempCollider, generateMap, installInterior } from '../mapgen';
+import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
@@ -96,7 +96,7 @@ function scanNearby(): void {
   if (!castle)
   for (let i = 0; i < world.crates.length; i++) {
     const c = world.crates[i]; if (!c.active) continue;
-    d = q(c.pos.x, c.pos.z); if (d < HARVEST_R * HARVEST_R) push('E', 'Harvest', c.kind === 'ORE' ? 'Ore Vein' : c.kind === 'CRYSTAL' ? 'Crystal' : 'Node', '', i, d, 'harvest');
+    d = q(c.pos.x, c.pos.z); if (d < HARVEST_R * HARVEST_R) push('E', 'Harvest', HARVEST_NAME[c.kind] ?? 'Node', '', i, d, 'harvest');
   }
   for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
 }
@@ -115,7 +115,7 @@ export function interact(it: Interactable): void {
     return;
   }
   const c = world.crates[it.node];
-  if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
+  if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }
 
 // ---- click-to-walk along the streets. The town's streets form a "+" through the plaza: the south street (z 10),

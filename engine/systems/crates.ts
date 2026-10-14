@@ -11,7 +11,7 @@ import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
-import { CRATE_HP } from '../mapgen';
+import { CRATE_HP, isHarvestNode } from '../mapgen';
 import { damageEnemiesInRadius, addShake, type DamageOpts } from './combat';
 import { spawnEnemy } from './enemies';
 import { spawnWildfire } from './zones';
@@ -29,7 +29,7 @@ const boomOpts: DamageOpts = { kind: 'FIRE', knockback: 1.6 };
 let lastTime = 0;
 
 const BASE_XP: Record<Crate['kind'], number> = {
-  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, ORE: 80, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
+  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, ORE: 80, GOLD_VEIN: 80, HERB: 60, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
 };
 
 function dropAt(c: Crate, ox: number, oz: number): Vector3 {
@@ -43,8 +43,10 @@ function rollChestRarity(): Rarity {
 }
 
 /** Deals damage to a crate; breaks it at 0 hp. */
-export function hitCrate(c: Crate, amount: number): void {
+/** `byHand`: a harvest stroke (hold E). Harvest nodes ignore every other hit (attacks, explosions). */
+export function hitCrate(c: Crate, amount: number, byHand = false): void {
   if (!c.active) return;
+  if (!byHand && isHarvestNode(c.kind)) return;
   c.hp -= amount;
   c.hitFlash = 1;
   if (c.hp <= 0) breakCrate(c);
@@ -133,6 +135,15 @@ export function breakCrate(c: Crate): void {
     case 'ORE':
       shards(c, 1 + Math.floor(Math.random() * 3), 0.05, 0.005);
       break;
+    case 'GOLD_VEIN':
+      gold(c, 5, Math.round(30 * (1 + 0.08 * (wave - 1))));
+      shards(c, 1, 0.03, 0);
+      break;
+    case 'HERB': {
+      if (inRun) { spawnPickup('HEALTH', dropAt(c, 0.6, 0), 30); spawnPickup('HEALTH', dropAt(c, -0.6, 0.3), 30); spawnPickup('HEALTH', dropAt(c, 0, -0.6), 30); }
+      else gold(c, 2, 15);
+      break;
+    }
     case 'EXPLOSIVE_BARREL':
       explode(c);
       break;

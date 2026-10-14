@@ -1,4 +1,5 @@
 import React from 'react';
+import { ankhCooldownLeft } from '../../engine/systems/combat';
 import type { Item, PlayerStats } from '../../types';
 import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
@@ -43,7 +44,8 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
         )}
       </div>
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
-      {item.description && <><div className="tt-sep" /><div className="italic muted">{item.description}</div></>}
+      {item.description && <><div className="tt-sep" /><div className="italic muted">{item.type === 'REVIVE' ? 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' : item.description}</div></>}
+      {item.type === 'REVIVE' && (() => { const ms = ankhCooldownLeft(); return <div style={{ color: ms > 0 ? '#ff8a7a' : 'var(--good)', fontWeight: 700 }}>{ms > 0 ? `Recharging: ${Math.ceil(ms / 60000)} min left` : 'Ready'}</div>; })()}
       {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {

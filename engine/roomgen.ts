@@ -45,6 +45,8 @@ const SPEC: Record<string, KindSpec> = {
 };
 
 const tmpPortal: [number, number] = [0, 0];
+/** Harvest node kind from a 0..1 roll: crystal 30%, ore 30%, gold vein 20%, healing herb 20%. */
+const pickHarvest = (r: number): CrateKind => (r < 0.3 ? 'CRYSTAL' : r < 0.6 ? 'ORE' : r < 0.8 ? 'GOLD_VEIN' : 'HERB');
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number): void {
   buildShape(type, R, seed);
@@ -149,7 +151,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const cave = type === 'CRYSTAL';   // crystal cavern: a field of harvestable crystals (+ some ore), nothing else
     const want = tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
-      const kind: CrateKind = cave ? (rnd() < 0.72 ? 'CRYSTAL' : 'ORE') : def.crates[Math.floor(rnd() * def.crates.length)];
+      const kind: CrateKind = cave ? (rnd() < 0.6 ? 'CRYSTAL' : pickHarvest(rnd())) : def.crates[Math.floor(rnd() * def.crates.length)];
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (!insideShape(x, z, 3)) continue;
@@ -158,15 +160,15 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
       if (ok) crateList.push({ kind, x, z });
     }
-    // any room: 25% chance of a few harvestable crystal / ore nodes among the crates
-    if (!cave && !tower && rnd() < 0.25) {
-      const extra = 2 + Math.floor(rnd() * 3);
+    // harvest nodes (hold E): usually 1 per room, sometimes 2; kind decides the look and the yield
+    if (!cave && !tower) {
+      const extra = rnd() < 0.75 ? 1 : 2;
       for (let t = 0, added = 0; t < 120 && added < extra; t++) {
         const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
         const x = Math.cos(a) * d, z = Math.sin(a) * d;
         if (!insideShape(x, z, 3) || blockedSpot(x, z, 1.1, 0.8)) continue;
         if (crateList.some((c) => Math.hypot(x - c.x, z - c.z) < 2.4)) continue;
-        crateList.push({ kind: rnd() < 0.65 ? 'CRYSTAL' : 'ORE', x, z }); added++;
+        crateList.push({ kind: pickHarvest(rnd()), x, z }); added++;
       }
     }
   }

@@ -21,6 +21,8 @@ import {
   BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
+import { isHarvestNode, HARVEST_NAME } from '../mapgen';
+import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
 import { spawnPickup, petCollect } from './pickups';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
@@ -609,7 +611,7 @@ function onBossCleared(): void {
 export const MAX_ROOM_NEARBY = 3;
 /** Room interactables, same shape as the town's `nearby` list so the shared interact pills can draw them. node: 0..2 = portal, 10 = station. */
 export const roomNearby: Interactable[] = Array.from({ length: MAX_ROOM_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as const }));
-let nearbyN = 0;
+let nearbyN = 0, harvestCd = 0;
 function pushNearby(verb: string, label: string, node: number, d2: number): void {
   let i = nearbyN < MAX_ROOM_NEARBY ? nearbyN : MAX_ROOM_NEARBY;
   if (i === MAX_ROOM_NEARBY) { if (d2 >= roomNearby[MAX_ROOM_NEARBY - 1].d2) return; i = MAX_ROOM_NEARBY - 1; } else nearbyN++;
@@ -632,6 +634,14 @@ function scanNearby(): void {
     if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
       const po = r.portals[0];
       if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', nextBiomeLabel(), 20, dist); }
+    }
+    // harvest nodes: hold E next to one
+    const cr = world.crates;
+    for (let i = 0; i < cr.length; i++) {
+      const c = cr[i];
+      if (!c.active || !isHarvestNode(c.kind)) continue;
+      const dist = q(c.pos.x, c.pos.z);
+      if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
     }
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
@@ -656,6 +666,14 @@ export function interactRoom(it: Interactable): void {
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
       if (runInfo.mode === 'TOWER') { towerFloor++; towerState.floor = towerFloor; beginLeave(po.plan, towerBiome(towerFloor), (towerFloor - 1) % ROOMS_PER_BIOME); }
       else beginLeave(po.plan, biome, index + 1);
+    }
+    return;
+  }
+  if (it.node >= 100) {   // harvest stroke (held E repeats it every 0.3 s)
+    const c = world.crates[it.node - 100];
+    if (c && c.active && harvestCd <= 0 && world.player.alive) {
+      harvestCd = 0.3; hitCrate(c, 15, true);
+      world.player.anim.attackT = 1; world.player.facing = Math.atan2(c.pos.x - world.player.pos.x, c.pos.z - world.player.pos.z);
     }
     return;
   }
@@ -734,6 +752,8 @@ export function updateDirector(dt: number): void {
   }
 
   scanNearby();
+  harvestCd = Math.max(0, harvestCd - dt);
+  if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);
   if (world.input.pressed.KeyE && roomNearby[0].active && !st.isShopOpen && !st.isInventoryOpen && !st.isCharacterSheetOpen) interactRoom(roomNearby[0]);
 }
 

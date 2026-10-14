@@ -259,6 +259,8 @@ export type CrateKind =
   | 'HAY'              // hay bale (farm area): xp, bursts straw
   | 'CRYSTAL'          // aether crystal cluster (glowing): gems + crafting shards + big xp
   | 'ORE'              // ore vein rock (quarry / village): crafting shards
+  | 'GOLD_VEIN'        // rock seamed with gold nuggets: a gold burst
+  | 'HERB'             // healing herb bush: heals + a little mana
   | 'EXPLOSIVE_BARREL' // red powder keg: explodes (r 6) damaging ENEMIES when broken
   | 'GRAVE'            // cracked tombstone (graveyard): xp, may release a bat swarm
   | 'CART';            // broken merchant cart (high hp): gold shower + item chance

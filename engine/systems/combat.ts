@@ -274,6 +274,14 @@ export function applyStatus(e: Enemy, effect: StatusEffect): void {
 const freezeOne: StatusEffect = { type: 'FREEZE', duration: 1 };
 const abStatus: StatusEffect = { type: 'ARMOR_BREAK', duration: ARMOR_BREAK_TIME };
 
+// ---- Ankh of Life: a very long real-time cooldown (15 min) between revives, kept across runs and reloads
+export const ANKH_COOLDOWN_MS = 15 * 60 * 1000;
+const ANKH_KEY = 'aether-survivor-ankh-cd-v1';
+let ankhReadyAt = (() => { try { return Number(localStorage.getItem(ANKH_KEY)) || 0; } catch { return 0; } })();
+/** ms until an Ankh can revive again (0 = ready). */
+export function ankhCooldownLeft(): number { return Math.max(0, ankhReadyAt - Date.now()); }
+function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS; try { localStorage.setItem(ANKH_KEY, String(ankhReadyAt)); } catch { /* ignore */ } }
+
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
@@ -530,8 +538,9 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     events.emit('playerRevive', { pos: p.pos, source: 'PHOENIX' });
     return;
   }
-  const ankh = st.consumeItem((i) => i.type === 'REVIVE');
+  const ankh = ankhCooldownLeft() <= 0 ? st.consumeItem((i) => i.type === 'REVIVE') : null;
   if (ankh) {
+    startAnkhCooldown();
     p.hp = st.stats.maxHealth * 0.5;
     p.invulnT = Math.max(p.invulnT, 5);
     p.reviveFx = 1;

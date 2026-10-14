@@ -210,3 +210,14 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   glow, and Mythic a huge red aura plus spinning red rays and a pulsing border (`.sr-*` in index.css).
 - Pets now show in town: `updatePetTown` (pets.ts) trots after the hero from the village loop, and Scene mounts `<Pet />` in TOWN. Before,
   pets were only drawn and updated during runs. Note: Legendary gear (pets too) needs Hero Rank 15 to equip.
+
+### Harvest nodes, Ankh cooldown, APK
+- Harvest nodes (`isHarvestNode` / `HARVEST_NAME` in mapgen): CRYSTAL (gems + shards), ORE (shards; silver-blue flecks), GOLD_VEIN
+  (gold burst), HERB (3 health orbs in runs). Each has its own model (`render/Crates.tsx`) and glow.
+  They only break by hand: `hitCrate(c, n, byHand)`, where attacks and explosions pass `byHand = false` and are ignored.
+- Runs: every non-boss, non-tower, non-cavern room gets 1 node (75%) or 2 (25%). The roll is crystal 30 / ore 30 / gold 20 / herb 20.
+  Crystal Caverns keep their big node field. Biome crate lists no longer contain CRYSTAL.
+  Hold E next to a node: `director.scanNearby` adds node `100 + crate index`, and `interactRoom` strikes it every 0.3 s.
+- Ankh of Life: 15-minute real-time cooldown between revives (`ankhCooldownLeft()` in combat.ts, localStorage `aether-survivor-ankh-cd-v1`).
+  The item tooltip shows "Recharging: N min left" / "Ready".
+- CI: the android workflow also builds on `claude/charming-shannon-nq5wcd`. A `v*` tag publishes a GitHub Release with the APK.
