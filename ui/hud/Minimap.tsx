@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
-import { GATE } from '../../engine/townData';
+import { GATE, WALL_RUNS, WALL_TOWERS } from '../../engine/townData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
@@ -41,6 +41,15 @@ export const Minimap: React.FC = () => {
       ctx.closePath();
     } else ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
     ctx.stroke(); ctx.setLineDash([]);
+    // town wall outline + towers (village only; the gate gap is the break in the south side)
+    if (!room) {
+      ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR; ctx.lineCap = 'butt';
+      ctx.beginPath();
+      for (const [x1, z1, x2, z2] of WALL_RUNS) { ctx.moveTo(cx + x1 * k, cx + z1 * k); ctx.lineTo(cx + x2 * k, cx + z2 * k); }
+      ctx.stroke();
+      ctx.fillStyle = '#c9c3b4';
+      for (const t of WALL_TOWERS) { ctx.beginPath(); ctx.arc(cx + t.x * k, cx + t.z * k, (t.corner ? 2.6 : 2) * DPR, 0, Math.PI * 2); ctx.fill(); }
+    }
     // obstacles
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     const obs = world.obstacles;

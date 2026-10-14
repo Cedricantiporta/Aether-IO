@@ -7,7 +7,7 @@ import { AdditiveBlending, BufferGeometry, CanvasTexture, Color, DoubleSide, Flo
 import { GB, TAU, litMat, mulberry32 } from './util';
 import { labelMaterial } from './label';
 import {
-  GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, HouseSpec, StallSpec,
+  GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL_RUNS, WALL_TOWERS, HouseSpec, StallSpec, TowerSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
 
@@ -136,9 +136,7 @@ function buildGate(): { b: BufferGeometry; g: BufferGeometry } {
     b.box(0.08, 0.7, 0.08, [x - sx * 2.3, 2.3, 1.0], WOOD); g.sph(0.2, [x - sx * 2.3, 2.8, 1.0], '#ff9a2a', [1, 1.4, 1], 5);
     // open gate door
     b.box(2.2, 4.6, 0.22, [sx * 3.7, 2.4, -1.2], '#6e4b2b', [0, -sx * 1.15, 0]); b.box(2.2, 0.2, 0.26, [sx * 3.7, 1.0, -1.2], '#3a3a40', [0, -sx * 1.15, 0]); b.box(2.2, 0.2, 0.26, [sx * 3.7, 3.6, -1.2], '#3a3a40', [0, -sx * 1.15, 0]);
-    // wall stub with crenellations
-    b.box(11.4, 3.0, 1.5, [sx * 14.1, 1.5, 0], STONE);
-    for (let i = 0; i < 6; i++) b.box(1.1, 0.7, 1.6, [sx * (8.8 + i * 2.1), 3.3, 0], DSTONE);
+    // (the town wall itself, see addWallRun, joins the towers from x = +-8.4 outwards)
   }
   b.box(10.4, 1.3, 2.0, [0, 7.0, 0], STONE); b.box(10.6, 0.3, 2.2, [0, 6.3, 0], DSTONE); b.box(10.6, 0.35, 2.2, [0, 7.8, 0], DSTONE);
   for (let i = 0; i < 5; i++) b.box(1.2, 0.6, 2.1, [-4.4 + i * 2.2, 8.2, 0], DSTONE);
@@ -151,6 +149,45 @@ function buildGate(): { b: BufferGeometry; g: BufferGeometry } {
   // guard house hut + hay beside the road
   b.box(2.6, 0.9, 1.4, [-3.6, 0.45, 5.6], '#a4793f'); b.box(1.2, 0.5, 0.9, [-3.2, 1.15, 5.7], '#b88a4e', [0, 0.4, 0]);
   return { b: b.build(), g: g.build() };
+}
+
+
+// ----------------------------------------------------------- town wall ---
+const BLOCKS = ['#9b9488', '#a39c90', '#8f897e', '#a8a296', '#968f83', '#8a857b'];
+/** One straight piece of the town wall: stone-block courses, walkway ledge, outer parapet with merlons, low inner parapet. */
+function addWallRun(b: GB, x1: number, z1: number, x2: number, z2: number, ox: number, oz: number, rnd: () => number) {
+  const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len, yaw = -Math.atan2(dz, dx);
+  const P = (s: number, off: number, y: number): V3 => [x1 + ux * s + ox * off, y, z1 + uz * s + oz * off];
+  const CH_ = 1.25, COURSES = 4;
+  for (let c = 0; c < COURSES; c++) {
+    const th = c === 0 ? 3.0 : 2.6, y = CH_ * (c + 0.5), BL = 3.1;
+    for (let s0 = -(c % 2) * 1.55; s0 < len; s0 += BL) {
+      const a = Math.max(0, s0), e = Math.min(len, s0 + BL);
+      if (e - a < 0.3) continue;
+      b.box(e - a, CH_, th, P((a + e) / 2, 0, y), BLOCKS[Math.floor(rnd() * BLOCKS.length)], [0, yaw, 0], [0.82, 1.02]);
+    }
+  }
+  const top = CH_ * COURSES;
+  b.box(len, 0.35, 3.3, P(len / 2, 0, top + 0.17), DSTONE, [0, yaw, 0], [0.9, 1.0]);          // walkway ledge (corbel lip)
+  b.box(len, 1.2, 0.8, P(len / 2, 1.2, top + 0.95), STONE, [0, yaw, 0], [0.85, 1.0]);          // outer parapet
+  b.box(len, 0.1, 1.0, P(len / 2, 1.2, top + 1.6), DSTONE, [0, yaw, 0]);                       // parapet cap
+  b.box(len, 0.5, 0.3, P(len / 2, -1.4, top + 0.6), STONE, [0, yaw, 0]);                       // low inner parapet
+  for (let s = 1.2; s + 0.6 <= len; s += 2.4) b.box(1.2, 0.95, 0.85, P(s, 1.2, top + 2.1), BLOCKS[Math.floor(rnd() * BLOCKS.length)], [0, yaw, 0], [0.85, 1.05]); // merlons
+}
+function addWallTower(b: GB, g: GB, t: TowerSpec, idx: number) {
+  const { x, z, r } = t, h = t.corner ? 9.6 : 8.4;
+  b.cyl(r + 0.3, r + 0.4, 0.8, 12, [x, 0.4, z], DSTONE);
+  b.cyl(r, r + 0.12, h, 12, [x, h / 2, z], STONE, [0, 0, 0], 1, [0.8, 1.05]);
+  for (let i = 0; i < 4; i++) b.torus(r + 0.06, 0.08, [x, 1.8 + i * 1.9, z], DSTONE, [Math.PI / 2, 0, 0], 1, 12);
+  b.cyl(r + 0.55, r, 0.7, 12, [x, h + 0.15, z], DSTONE);                                      // corbelled top
+  b.cyl(r + 0.55, r + 0.55, 0.2, 12, [x, h + 0.5, z], '#6f6a62');
+  if (t.corner) {
+    b.cone(r + 0.9, 4.0, 12, [x, h + 2.5, z], '#b8483a', [0, 0, 0], 1, [0.8, 1.12]); b.sph(0.22, [x, h + 4.6, z], '#e8c05a', 1, 5);
+  } else {
+    const n = Math.round((TAU * (r + 0.35)) / 2.1);
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU; b.box(1.2, 1.0, 0.85, [x + Math.cos(a) * (r + 0.3), h + 1.1, z + Math.sin(a) * (r + 0.3)], BLOCKS[(i + idx) % BLOCKS.length], [0, -a - Math.PI / 2, 0]); }
+  }
+  for (let k = 0; k < 3; k++) { const a = idx * 0.9 + (k / 3) * TAU; g.box(0.24, 0.9, 0.1, [x + Math.cos(a) * (r + 0.1), h * 0.62, z + Math.sin(a) * (r + 0.1)], '#ffd88a', [0, -a + Math.PI / 2, 0]); }
 }
 
 // ------------------------------------------------------------------- misc ---
@@ -252,6 +289,16 @@ function buildTown() {
   // fences + lamps go straight into the chunk of their midpoint / position
   for (const [x1, z1, x2, z2] of FENCES) addFence(at((x1 + x2) / 2, (z1 + z2) / 2).b, x1, z1, x2, z2);
   for (const [x, z] of LAMPS) { const c = at(x, z); addLamp(c.b, c.g, x, z); }
+  // town wall: runs are cut into ~15-unit pieces so every piece lands in its own spatial chunk (frustum culling)
+  const wr = mulberry32(4242);
+  for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
+    const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 15));
+    for (let i = 0; i < n; i++) {
+      const ax = x1 + ((x2 - x1) * i) / n, az = z1 + ((z2 - z1) * i) / n, bx = x1 + ((x2 - x1) * (i + 1)) / n, bz = z1 + ((z2 - z1) * (i + 1)) / n;
+      addWallRun(at((ax + bx) / 2, (az + bz) / 2).b, ax, az, bx, bz, ox, oz, wr);
+    }
+  }
+  WALL_TOWERS.forEach((t, i) => { const c = at(t.x, t.z); addWallTower(c.b, c.g, t, i); });
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
   return { chunks: out, roads: buildRoads() };
