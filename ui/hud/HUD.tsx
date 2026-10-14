@@ -9,6 +9,7 @@ import { VitalBars, ExpStrip, SkillRow } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
 import { UltOverlay } from './UltOverlay';
 import { ComboMeter } from './ComboMeter';
+import { QuestTracker } from './QuestTracker';
 import { BlindOverlay } from './BlindOverlay';
 import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
@@ -38,6 +39,7 @@ export const HUD: React.FC = () => {
     <div className="absolute flex flex-col items-end gap-3 hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
       <Currency />
       <MenuButtons />
+      <QuestTracker />
     </div>
 
     {/* bottom-right minimap */}

@@ -1,5 +1,6 @@
 import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, ExpandGlyph } from '../components/MenuGlyphs';
 import { ActionBar } from '../hud/ActionBar';
+import { QuestTracker } from '../hud/QuestTracker';
 import { SkillRow, ExpStrip } from '../hud/Vitals';
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -122,7 +123,7 @@ export const VillageHUD: React.FC = () => {
             <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} />
             <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
           </div>
-          {recordsOpen && <div style={{ width: '22rem' }}><RecordsPanel /></div>}
+          {recordsOpen ? <div style={{ width: '22rem' }}><RecordsPanel /></div> : <QuestTracker />}
         </div>
       )}
 
