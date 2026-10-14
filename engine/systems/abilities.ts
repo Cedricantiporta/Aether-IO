@@ -506,7 +506,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       // Judgment: up to 12 rays of holy light strike enemies around the target from above, one after another (wide AoE)
       aimPoint(26, 0, tgt);
       const area = 14 + 0.6 * (lv - 1), n = Math.min(12, 5 + lv);
-      a.judgeR = 4.0 + 0.2 * (lv - 1); a.judgeDmg = b * 3.0; a.judgeStun = 0.8 + 0.1 * lv;
+      a.judgeR = 4.0 + 0.2 * (lv - 1); a.judgeDmg = b * 1.5; a.judgeStun = 0.8 + 0.1 * lv;   // (damage -50%)
       const ids = world.enemyGrid.query(tgt.x, tgt.z, area + 2, out);
       judgeN = 0; judgeUsed.length = 0;
       // nearest-first distinct enemies, then random spots around the target for the leftover rays
