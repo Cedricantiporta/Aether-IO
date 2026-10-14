@@ -30,7 +30,7 @@ export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], y
 export interface AnimalState { x: number; z: number; yaw: number; moving: boolean; tx: number; tz: number; wait: number; hop: number }
 export const animals: AnimalState[] = ANIMALS.map((a) => ({ x: a.x, z: a.z, yaw: Math.random() * 6.28, moving: false, tx: a.x, tz: a.z, wait: Math.random() * 2, hop: 0 }));
 
-export const MAX_BUBBLES = 3;
+export const MAX_BUBBLES = 4;
 export interface Bubble { active: boolean; npc: number; text: string; t: number; life: number; sx: number; sy: number; onScreen: boolean }
 export const bubbles: Bubble[] = Array.from({ length: MAX_BUBBLES }, () => ({ active: false, npc: -1, text: '', t: 0, life: 3.2, sx: 0, sy: 0, onScreen: false }));
 let bubbleCd = 6;
@@ -47,7 +47,7 @@ export function resetNpcs(): void {
   }
   for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
   for (const b of bubbles) b.active = false;
-  bubbleCd = 5 + Math.random() * 5;
+  bubbleCd = 2 + Math.random() * 2;
 }
 
 function inVisible(x: number, z: number, m: number): boolean {
@@ -126,11 +126,11 @@ export function updateNpcs(dt: number): void {
         if (ti === n_last(pick)) ti = (ti + 1) % (pool.length + 1);
         npcs[pick].lastBubble = ti;
         b.text = ti < pool.length ? pool[ti] : GENERIC_BUBBLES[(Math.random() * GENERIC_BUBBLES.length) | 0];
-        b.npc = pick; b.t = 0; b.life = 3.2; b.active = true; b.onScreen = false;
+        b.npc = pick; b.t = 0; b.life = 4; b.active = true; b.onScreen = false;
         break;
       }
-      bubbleCd = 15 + Math.random() * 25;
-    } else bubbleCd = 2.5;
+      bubbleCd = 4 + Math.random() * 4;   // NPCs chatter regularly (user: periodic bubbles)
+    } else bubbleCd = 1.5;
   }
 }
 const n_last = (i: number) => npcs[i].lastBubble;
