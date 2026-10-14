@@ -32,14 +32,13 @@ const DollSlot: React.FC<{ slot: EquipSlot; label: string; item: Item | null; on
 };
 
 type Cat = 'ALL' | 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CONSUMABLE' | 'MATERIAL' | 'PET' | 'ETC';
+// four top tabs (MMO style): everything / weapons and armour / accessories and pets / consumables, materials, goods
 const CATS: { id: Cat; label: string; icon: React.ReactNode }[] = [
-  { id: 'ALL', label: 'All', icon: <LayoutGrid size={18} /> }, { id: 'WEAPON', label: 'Weapon', icon: <Sword size={18} /> },
-  { id: 'ARMOR', label: 'Armor', icon: <Shield size={18} /> }, { id: 'ACCESSORY', label: 'Accessory', icon: <Gem size={18} /> },
-  { id: 'CONSUMABLE', label: 'Consumable', icon: <FlaskConical size={18} /> }, { id: 'MATERIAL', label: 'Material', icon: <Hexagon size={18} /> },
-  { id: 'PET', label: 'Pet', icon: <PawPrint size={18} /> }, { id: 'ETC', label: 'Etc', icon: <Ellipsis size={18} /> },
+  { id: 'ALL', label: 'All', icon: <LayoutGrid size={15} /> }, { id: 'WEAPON', label: 'Equipment', icon: <Sword size={15} /> },
+  { id: 'ACCESSORY', label: 'Accessories', icon: <Gem size={15} /> }, { id: 'ETC', label: 'Other', icon: <Ellipsis size={15} /> },
 ];
-const catOf = (it: Item): Cat => it.type === 'WEAPON' ? 'WEAPON' : it.type === 'ARMOR' || it.type === 'HELMET' || it.type === 'GLOVES' || it.type === 'BOOTS' ? 'ARMOR' : it.type === 'ACCESSORY' ? 'ACCESSORY'
-  : it.type === 'POTION' || it.type === 'REVIVE' ? 'CONSUMABLE' : it.type === 'CORE' ? 'MATERIAL' : it.type === 'PET' ? 'PET' : 'ETC';
+const catOf = (it: Item): Cat => it.type === 'WEAPON' || it.type === 'ARMOR' || it.type === 'HELMET' || it.type === 'GLOVES' || it.type === 'BOOTS' ? 'WEAPON'
+  : it.type === 'ACCESSORY' || it.type === 'PET' ? 'ACCESSORY' : 'ETC';
 
 export const InventoryPanel: React.FC = () => {
   const { inventory, max, equipment, level, rank, materials, hero, stats } = useGameStore(useShallow((s) => ({
@@ -117,14 +116,14 @@ export const InventoryPanel: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 flex">
-          <nav className="bag-cats rpg-scroll">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <nav className="bag-tabs">
             {CATS.map((c) => (
-              <button key={c.id} className={`bag-cat relative ${cat === c.id ? 'is-active' : ''}`} onClick={() => setCat(c.id)}>{c.icon}<span>{c.label}</span>{betterCats.has(c.id) && <i className="red-dot" data-testid="cat-dot" />}</button>
+              <button key={c.id} className={`bag-tab relative ${cat === c.id ? 'is-active' : ''}`} onClick={() => setCat(c.id)}>{c.icon}<span>{c.label}</span>{betterCats.has(c.id) && <i className="red-dot" data-testid="cat-dot" />}</button>
             ))}
           </nav>
           <div className="flex-1 min-w-0 min-h-0 rpg-scroll p-2.5">
-            {cat === 'MATERIAL' && (
+            {cat === 'ETC' && (
               <div className="flex flex-wrap gap-1.5 mb-2.5" aria-label="Crafting shards">
                 {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as const).map((r) => (
                   <div key={r} className="rpg-frame px-2 py-1 text-center" style={{ minWidth: '3.6rem' }}>
