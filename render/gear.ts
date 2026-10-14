@@ -173,3 +173,33 @@ export function attachGear(root: Object3D, mats: Material[], set: GearSet): () =
     if (orig.length) { let i = 0; for (const m of mats as any[]) if (m.color && orig[i]) m.color.copy(orig[i++][0]); }
   };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Recolour mode (what the hero uses now): the KayKit model keeps its own silhouette; each gear slot only recolours
+// the matching parts of the model by rarity. Helmet -> hat / helmet / hood / mask, armour -> body (+ cape when the
+// cape is not the hood), gloves -> arms, boots -> legs. Common gear leaves the original colours.
+const PART_TINT: Record<string, string> = { RARE: '#a9c8ff', EPIC: '#d6b0ff', LEGENDARY: '#ffe08a', MYTHIC: '#ff9c8c' };
+const PART_GLOW: Record<string, string> = { LEGENDARY: '#3a2a00', MYTHIC: '#3a0804' };
+
+export function tintGear(meshes: Mesh[], set: GearSet): () => void {
+  // rangers and hooded rogues wear their hood as part of the cape
+  const hoodIsCape = meshes.some((m) => /Ranger_Cape|RogueHooded_Cape/.test(m.name));
+  const slotOf = (n: string): keyof GearSet | null => {
+    if (/Hat|Helmet|Visor|Mask/i.test(n)) return 'helmet';
+    if (/Cape/.test(n)) return hoodIsCape ? 'helmet' : 'armor';
+    if (/Body/.test(n)) return 'armor';
+    if (/Arm(Left|Right)/.test(n)) return 'gloves';
+    if (/Leg(Left|Right)/.test(n)) return 'boots';
+    return null;
+  };
+  const undo: [any, Color, Color | null][] = [];
+  for (const m of meshes) {
+    const slot = slotOf(m.name); if (!slot) continue;
+    const r = set[slot]; const tint = r && PART_TINT[r]; if (!tint) continue;
+    const mat = m.material as any; if (!mat?.color) continue;
+    undo.push([mat, mat.color.clone(), mat.emissive ? mat.emissive.clone() : null]);
+    mat.color.multiply(new Color(tint));
+    if (PART_GLOW[r] && mat.emissive) mat.emissive.set(PART_GLOW[r]);
+  }
+  return () => { for (const [mat, c, e] of undo) { mat.color.copy(c); if (e) mat.emissive.copy(e); } };
+}

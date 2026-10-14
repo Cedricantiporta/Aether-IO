@@ -19,7 +19,7 @@ import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
-import { attachGear } from './gear';
+import { tintGear } from './gear';
 import { useUiStore } from '../ui/uiStore';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
@@ -71,10 +71,11 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     return () => { ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
   }, [ch, cls, rarity]);
 
-  // ---- visible gear (rebuilt only when a slot's item rarity changes)
+  // ---- gear look: the model keeps its original design; equipped gear recolours its parts by rarity
+  // (re-applied only when a slot's rarity changes; runs after the outfit tint above)
   useEffect(() => {
     const [helmet, armor, gloves, boots, accessory] = gearKey.split('|');
-    return attachGear(ch.root, ch.mats, { helmet, armor, gloves, boots, accessory, hero: cls });
+    return tintGear(ch.meshes, { helmet, armor, gloves, boots, accessory, hero: cls });
   }, [ch, gearKey, cls]);
 
   // ---- mixer + actions
