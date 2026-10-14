@@ -17,7 +17,7 @@ export type UpgradeType =
   'SKILL_ORBITAL' | 'SKILL_THUNDER' | 'SKILL_REGEN' | 'SKILL_MAGNET' |
   'SKILL_DASH' | 'SKILL_WEAPON' | 'SKILL_BARRIER' |
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 
-  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' |
+  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' |
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA';
 
 export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
@@ -163,6 +163,8 @@ export interface SkillLevels {
     freezing: number;
     freezeSpell: number; // Renamed to Blizzard (Passive)
     stamp: number; // Renamed to Mega Stamp (Passive)
+    warcry: number;  // Barbarian passive: periodic roar, +damage / +defense
+    inspire: number; // Archer passive: periodic rally, +attack speed / +damage
 }
 
 export interface GameNotification {

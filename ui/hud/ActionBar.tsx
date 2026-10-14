@@ -11,7 +11,7 @@ import type { SkillLevels } from '../../types';
 import { ACTIVE_ORDER, ACTIVE_KEYS, activeDefs, dashDef, dashKey, ULTS, abilityCd, type ActiveSlot } from '../../abilityDefs';
 import { UltSlot } from './UltSlot';
 
-const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital'] as const;
+const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire'] as const;
 type PKey = typeof PASSIVE_KEYS[number];
 
 const Sep = () => <div className="tray-sep" />;

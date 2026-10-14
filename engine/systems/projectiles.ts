@@ -203,7 +203,7 @@ export function fireBasicAttack(): void {
 
   const emp = false;
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
-  const dmgMul = (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  const dmgMul = (1 + pl.buffDmg) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.
   let echo = false;
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }

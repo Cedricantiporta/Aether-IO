@@ -311,6 +311,7 @@ export interface PlayerRuntime {
   ult: number;           // ultimate charge 0..100
   ultT: number;          // seconds the ultimate effect is still running (0 = idle)
   cryT: number;          // barbarian Battle Cry: +30% damage
+  buffT: number; buffDmg: number; buffDef: number; buffHaste: number;   // Warcry / Inspire passive buff
   titanT: number;        // barbarian ultimate: giant form
   whirlT: number;        // barbarian Whirlwind
   air: number;           // height above ground (leap arc), render only

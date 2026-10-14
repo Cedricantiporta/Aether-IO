@@ -115,6 +115,7 @@ export const SKILLS_INFO = {
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
     // Archer Only
+    inspire: { name: 'Inspire', description: 'Passive: every 12s in battle you rally yourself, gaining +15% attack speed and +8% damage for 5s (+5% speed, +4% damage, +0.5s per level).', classType: 'ARCHER', type: 'PASSIVE' },
     burning: { name: 'Burning Arrow', description: 'On-attack: every Nth attack (12 at Lv1, -1 per level) fires a piercing fire arrow that burns. Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     freezing: { name: 'Freezing Arrow', description: 'On-attack: every Nth attack (12 at Lv1, -1 per level) fires an ice arrow that heavily slows enemies. Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     
@@ -125,6 +126,7 @@ export const SKILLS_INFO = {
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
+    warcry: { name: 'Warcry', description: 'Passive: every 12s in battle you roar, gaining +10% damage and +8 defense for 5s (+5% damage, +4 defense, +0.5s per level).', classType: 'BARBARIAN', type: 'PASSIVE' },
     stamp: { name: 'Axe Storm', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) hurls 3 giant spinning axes in a fan. Each ricochets once off the first enemy or obstacle it hits, hits hard and breaks armor.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };
 
@@ -160,6 +162,8 @@ export const UPGRADES_POOL: Upgrade[] = [
   
   { id: 'u_rage', type: 'SKILL_RAGE', name: 'Cross Slash', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Axe Storm', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_warcry', type: 'SKILL_WARCRY', name: 'Warcry', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_inspire', type: 'SKILL_INSPIRE', name: 'Inspire', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
 ];
 
 // PETS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)

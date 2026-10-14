@@ -26,6 +26,8 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
   thunder: { t: 0, max: 10, kind: 'hits' },
   stamp: { t: 0, max: 10, kind: 'hits' },
   orbital: { t: 0, max: 2, kind: 'time' },
+  warcry: { t: 0, max: 12, kind: 'time' },
+  inspire: { t: 0, max: 12, kind: 'time' },
 };
 
 const aim = new Vector3();
@@ -40,11 +42,11 @@ const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const bladeOut: number[] = [];
 
-let blizzT = 0, stormT = 0;
+let blizzT = 0, stormT = 0, rallyT = 0;
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = 0; stormZones[0] = stormZones[1] = null;
+  blizzT = stormT = rallyT = 0; stormZones[0] = stormZones[1] = null;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -214,6 +216,29 @@ export function updateSkills(dt: number): void {
         events.emit('frostNova', { pos: pl.pos.clone(), radius: bR });
         pl.anim.castT = 1;
       } else blizzT = max;
+    }
+  }
+
+  // Warcry (barbarian) / Inspire (archer): a timed self-buff whenever an enemy is near
+  const rally = lv.warcry > 0 ? 'warcry' : lv.inspire > 0 ? 'inspire' : null;
+  if (rally) {
+    const l = rally === 'warcry' ? lv.warcry : lv.inspire;
+    const max = 12 * cdrMul();
+    rallyT += dt * chargeMul;
+    setCd(rally, max - rallyT, max);
+    if (rallyT >= max) {
+      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 25)) rallyT = max;
+      else {
+        rallyT = 0;
+        pl.buffT = 5 + 0.5 * (l - 1);
+        if (rally === 'warcry') { pl.buffDmg = 0.10 + 0.05 * (l - 1); pl.buffDef = 8 + 4 * (l - 1); pl.buffHaste = 0; }
+        else { pl.buffHaste = 0.15 + 0.05 * (l - 1); pl.buffDmg = 0.08 + 0.04 * (l - 1); pl.buffDef = 0; }
+        const col = rally === 'warcry' ? 0xff6a3c : 0x7dffb0;
+        events.emit('floatText', { pos: pl.pos, text: rally === 'warcry' ? 'WARCRY!' : 'INSPIRED!', color: col, scale: 1.0, dy: 2.2 });
+        events.emit('shockwave', { pos: pl.pos.clone(), radius: 6, color: col });
+        if (rally === 'warcry') events.emit('shake', { amount: 0.25 });
+        pl.anim.castT = 1;
+      }
     }
   }
 

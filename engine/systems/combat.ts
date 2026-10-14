@@ -492,7 +492,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
 
   const barrier = st.skillLevels.barrier;
   const mods = runMods(st.difficulty);
-  const def = st.stats.defense * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
+  const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
   const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)));
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {

@@ -147,6 +147,8 @@ export function updatePlayer(dt: number): void {
   p.cd.s3 = tickDown(p.cd.s3, dt);
   p.cd.s4 = tickDown(p.cd.s4, dt);
   p.cryT = tickDown(p.cryT, dt);
+  p.buffT = tickDown(p.buffT, dt);
+  if (p.buffT <= 0) { p.buffDmg = 0; p.buffDef = 0; p.buffHaste = 0; }
 
   // ---- debuffs from monster tricks (stun: no move/attack/skills; root: no move; silence: no actives/ult)
   p.stunT = tickDown(p.stunT, dt); p.rootT = tickDown(p.rootT, dt); p.silenceT = tickDown(p.silenceT, dt);
@@ -308,7 +310,7 @@ export function updatePlayer(dt: number): void {
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (p.rageT > 0 ? 2 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
+    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }

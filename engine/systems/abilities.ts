@@ -121,6 +121,7 @@ function base(lv: number): number {
   const s = st.stats, p = world.player;
   let d = s.damage * (st.hero === 'WIZARD' ? s.skillDamage * 0.45 : s.skillDamage) * lvMul(lv);
   if (p.cryT > 0) d *= 1.3;
+  d *= 1 + p.buffDmg;   // Warcry / Inspire
   if (p.titanT > 0) d *= 1.5;
   return d * curMul;
 }
