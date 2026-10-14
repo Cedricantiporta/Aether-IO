@@ -830,7 +830,7 @@ function scanNearby(): void {
   }
   for (let i = 0; i < MAX_ROOM_NEARBY; i++) roomNearby[i].active = i < nearbyN;
 }
-const LOOT_R = 3.2;
+const LOOT_R = 2.4;   // the E-loot prompt shows from the same distance auto loot grabs items (pickups ITEM_GRAB_R2)
 
 /** Same action as pressing E next to the thing (also used by the touch interact pills). */
 export function interactRoom(it: Interactable): void {

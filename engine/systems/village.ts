@@ -138,7 +138,7 @@ function scanNearby(): void {
   // items on the ground are looted by hand (E / tap)
   for (let i = 0; i < world.pickups.length; i++) {
     const o = world.pickups[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;
-    d = q(o.pos.x, o.pos.z); if (d < 3.2 * 3.2) push('E', 'Loot', o.item.name, '', i, d - 0.5, 'loot', RARITY_LABEL_COLOR[o.item.rarity] ?? '');
+    d = q(o.pos.x, o.pos.z); if (d < 2.4 * 2.4) push('E', 'Loot', o.item.name, '', i, d - 0.5, 'loot', RARITY_LABEL_COLOR[o.item.rarity] ?? '');
   }
   for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
 }

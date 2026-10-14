@@ -6,6 +6,8 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { uiOverlayOpen, closeTopOverlay, useUiStore } from '../ui/uiStore';
 import { aimState, cancelAim } from './systems/aim';
+/** Settings were opened with Esc and paused the run (closing them resumes). */
+let escPaused = false;
 import { requestClick } from './systems/target';
 
 // ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
@@ -53,12 +55,22 @@ export function installInput(): () => void {
     inp.pressed[e.code] = true;
 
     if (e.code === 'Escape' && aimState.active) { cancelAim(); inp.cancelAim = true; return; } // Esc cancels a held skill indicator
-    if (e.code === 'Escape' && uiOverlayOpen()) { closeTopOverlay(); return; }
+    if (e.code === 'Escape' && uiOverlayOpen()) {
+      const wasSettings = useUiStore.getState().settingsOpen;
+      closeTopOverlay();
+      // settings opened with Esc during a run paused it: closing them resumes
+      if (wasSettings && escPaused) { escPaused = false; const s0 = useGameStore.getState(); if (s0.status === GameStatus.PAUSED) s0.togglePause(); }
+      return;
+    }
     const st = useGameStore.getState();
     const inGame = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || (st.status === GameStatus.MENU && useUiStore.getState().titleDone);
     switch (e.code) {
-      case 'Escape':
-        if (inGame) st.togglePause();
+      case 'Escape':   // opens Settings (a run pauses underneath)
+        if (inGame) {
+          if (st.status === GameStatus.PLAYING) { st.togglePause(); escPaused = true; }
+          else if (st.status === GameStatus.PAUSED) { st.togglePause(); escPaused = false; break; }
+          useUiStore.getState().openSettings(true);
+        }
         break;
       case 'KeyI':
         if (inGame) st.toggleInventory();

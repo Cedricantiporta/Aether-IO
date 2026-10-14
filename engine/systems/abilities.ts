@@ -404,7 +404,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       } else aimPoint(22 + lv, 4, tgt);
       safeSpot(tgt);
       p.dashIframes = true;
-      const R = 8.5 + 0.4 * (lv - 1);
+      const R = 5 + 0.25 * (lv - 1);   // smaller nova (user)
       const from = p.pos.clone();
       novaAt(from.x, from.z, R, b * 3 * DASH_DMG, lv);
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
@@ -452,7 +452,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       events.emit('blink', { from, to: p.pos.clone() });
       announce('SOUL_STEP');
     } else if (slot === 's3') {   // BONE SPEAR: impales a whole line
-      spawnProjectile('BONE_SPEAR', p.pos.x + dx, p.pos.z + dz, dx, dz, 38, b * 4.5,
+      spawnProjectile('BONE_SPEAR', p.pos.x + dx, p.pos.z + dz, dx, dz, 38, b * 2.25,   // -50% (user)
         { life: 0.95, pierce: Infinity, radius: 1.9, knockback: 0.3, y: 1.1, effect: { type: 'SLOW', duration: 2, value: 0.4 } });
       p.anim.attackT = 1;
       announce('BONE_SPEAR');
@@ -607,8 +607,15 @@ function shoulderCharge(holy = false): void {
 }
 
 function novaAt(x: number, z: number, R: number, dmg: number, lv: number): void {
-  freezeSt.duration = 0.8 + 0.15 * (lv - 1);
-  damageEnemiesInRadius(x, z, R, dmg, iceOpts, freezeSt);
+  // short freeze with a 35% chance per enemy (user: less frost)
+  freezeSt.duration = 0.8 + 0.1 * (lv - 1);
+  damageEnemiesInRadius(x, z, R, dmg, iceOpts);
+  const ids = world.enemyGrid.query(x, z, R + 1, out);
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.boss || (e.pos.x - x) ** 2 + (e.pos.z - z) ** 2 > R * R || Math.random() >= 0.35) continue;
+    applyStatus(e, freezeSt);
+  }
   events.emit('frostNova', { pos: new Vector3(x, 0, z), radius: R });
 }
 
