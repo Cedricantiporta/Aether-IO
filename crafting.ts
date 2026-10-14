@@ -28,7 +28,7 @@ export interface Recipe {
 }
 
 const SHARD_COST: Record<Rarity, number> = { COMMON: 3, RARE: 4, EPIC: 5, LEGENDARY: 6, MYTHIC: 8 };
-const GOLD_COST: Record<Rarity, number> = { COMMON: 100, RARE: 400, EPIC: 1500, LEGENDARY: 5000, MYTHIC: 15000 };
+const GOLD_COST: Record<Rarity, number> = { COMMON: 1000, RARE: 4000, EPIC: 15000, LEGENDARY: 50000, MYTHIC: 150000 };   // x10 economy
 
 /** Primary loot per slot + counts for EPIC / LEGENDARY / MYTHIC (cheap drops need more of them). */
 const SLOT_LOOT: Record<Exclude<CraftSlot, 'weapon'>, { id: string; n: [number, number, number] }> = {

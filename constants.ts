@@ -30,6 +30,9 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
     NIGHTMARE: { hp: 2,   dmg: 1.8,  spawn: 1.45, loot: 1.6,  label: 'Nightmare', desc: 'Brutal. Only for the strongest builds.' },
 };
 
+/** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
+export const GOLD_SCALE = 10;
+
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE'; position: [number, number, number]; color: string }[] = [
     { type: 'SUPPLIES', position: [-27, 0, 2], color: '#3b82f6' },
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
@@ -321,3 +324,9 @@ export const ITEMS_POOL: Item[] = [
 
 // Generated variety (class weapon alternatives, armour flavours, class starter gear, item-set pieces).
 ITEMS_POOL.push(...GENERATED_ITEMS);
+
+// ---- economy inflation: scale every template price exactly once (pools may share objects)
+{
+  const seen = new Set<object>();
+  for (const it of [...PETS_POOL, ...ITEMS_POOL]) { if (seen.has(it)) continue; seen.add(it); it.price = Math.round(it.price * GOLD_SCALE); }
+}

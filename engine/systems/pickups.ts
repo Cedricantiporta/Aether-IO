@@ -1,3 +1,4 @@
+import { GOLD_SCALE } from '../../constants';
 // ============================================================================
 // Pickups: XP / gold / gems / health orbs and item drops.
 // Pop out with a bounce, magnetise towards the player, collect on contact.
@@ -62,7 +63,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;
@@ -182,7 +183,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;

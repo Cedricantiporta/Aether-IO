@@ -1,3 +1,4 @@
+import { GOLD_SCALE } from '../../constants';
 // NPC dialogue state (a tiny zustand store so the DOM box re-renders only when a line changes) + daily gifts.
 import { create } from 'zustand';
 import { NPCS } from '../townData';
@@ -19,7 +20,7 @@ function claimGift(npc: number): void {
   const g = NPCS[npc].gift; if (!g) return;
   try { localStorage.setItem(giftKey(NPCS[npc].name), todayKey()); } catch { /* ignore */ }
   const st = useGameStore.getState();
-  if (g.gold) st.addGold(g.gold);
+  if (g.gold) st.addGold(g.gold * GOLD_SCALE);
   if (g.item) for (const it of makeItemById(g.item, g.qty ?? 1)) if (!st.addItemToInventory(it)) { st.addNotification('Bag is full!', 'red', 'WARNING'); break; }
   st.addNotification(g.text.replace(/^.*?\(/, '').replace(/\)$/, '') || 'Gift received', '#ffc861', 'SYSTEM');
 }

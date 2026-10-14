@@ -1,3 +1,4 @@
+import { GOLD_SCALE } from './constants';
 // ============================================================================
 // Sellable trade-goods loot (ItemType 'LOOT'): stackable to 99, no stats, rarity
 // COMMON..MYTHIC. Every source (enemy kind, elites, bosses, destructibles) has a
@@ -20,7 +21,7 @@ export interface LootDef {
 /** Base sell value by rarity (items scale slightly around it). */
 const BASE: Record<Rarity, number> = { COMMON: 5, RARE: 25, EPIC: 120, LEGENDARY: 600, MYTHIC: 3000 };
 const d = (id: string, name: string, rarity: Rarity, glyph: LootGlyph, colors: [string, string], desc: string, mult = 1): LootDef =>
-  ({ id, name, rarity, glyph, colors, desc, price: Math.round(BASE[rarity] * mult) });
+  ({ id, name, rarity, glyph, colors, desc, price: Math.round(BASE[rarity] * mult) * GOLD_SCALE });
 
 export const LOOT: LootDef[] = [
   d('slime_gel', 'Slime Gel', 'COMMON', 'gel', ['#7ddc4a', '#d8ffb0'], 'Sticky green goo. Alchemists pay for it.'),

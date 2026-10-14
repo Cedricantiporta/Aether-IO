@@ -155,7 +155,7 @@ export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (co
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
   talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? ranks[t.id] || 0 : 0), 0);
 export const CAPSTONE_BRANCH_POINTS = 6;
-export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? 200 + 150 * s : 0; };
+export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? (200 + 150 * s) * 10 : 0; };   // x10 economy
 
 export type AllocBlock = null | 'max' | 'points' | 'prereq' | 'branch';
 export function allocBlock(node: TalentNode, ranks: TalentRanks, free: number): AllocBlock {

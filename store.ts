@@ -2,6 +2,7 @@
 // Zustand store — META / RPG state only (inventory, stats, panels, progression).
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
+import { GOLD_SCALE } from './constants';
 import { abilityMana } from './abilityDefs';
 import { create } from 'zustand';
 import {
@@ -332,6 +333,7 @@ interface Profile {
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
+  gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -340,7 +342,7 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 };
 
 /** One-time welcome gift for a brand new profile. */
-const WELCOME_GIFT = { gold: 1000, gems: 1000 };
+const WELCOME_GIFT = { gold: 10000, gems: 1000 };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 5), ...makeItemById('potion_mana', 5), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
 const baseGameStats = (): GameStatistics => ({
@@ -401,9 +403,9 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             gift: false,
             profile: {
               v: PROFILE_VERSION,
-              gold: num(p.gold, 0), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems),
-              inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)) : [],
-              equipment: { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) },
+              gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems),
+              inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
+              equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
@@ -439,7 +441,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true,
+      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true, gold10: true,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -768,7 +770,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (extraCard) notify('Bonus reward card!', COLORS.uiAccent, 'SYSTEM');
       set({
         upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, extraCard ? 4 : 3),
-        accumulatedWaveGold: s.accumulatedWaveGold + 100,
+        accumulatedWaveGold: s.accumulatedWaveGold + 1000,
         status: GameStatus.LEVEL_UP,
       });
     },
@@ -1168,7 +1170,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     buyInventorySlots: () => {
       const s = get();
-      const cost = s.maxInventorySlots * 100;
+      const cost = s.maxInventorySlots * 1000;
       if (s.gold < cost) return false;
       set({ gold: s.gold - cost, maxInventorySlots: s.maxInventorySlots + 5 });
       return true;
@@ -1365,7 +1367,7 @@ if (typeof window !== 'undefined') {
 }
 if (loaded.gift) {
   flushProfile(); // fresh profile (gift included) is written immediately: a reload can never grant it twice
-  useGameStore.getState().addNotification('Welcome gift: 1000 gold, 100 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
+  useGameStore.getState().addNotification('Welcome gift: 10,000 gold, 1,000 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
 }
 
 // ---- codex discovery: sync from inventory / equipment / skills on every change, plus engine events for monsters.
@@ -1406,7 +1408,7 @@ function syncDiscoveries(): void {
   events.on('waveClear', (e) => { if (e.fast) q('FAST_CLEARS'); });
   events.on('dash', () => q('DASH'));
   events.on('pickup', (e) => {
-    if (e.kind === 'GOLD') q('COLLECT_GOLD', e.value);
+    if (e.kind === 'GOLD') q('COLLECT_GOLD', e.value * GOLD_SCALE);
     else if (e.kind === 'SHARD') q('GATHER_SHARDS');
     else if (e.kind === 'ITEM' && e.name) useGameStore.getState().addQuestProgress('COLLECT_LOOT', 1, undefined, e.name);
   });

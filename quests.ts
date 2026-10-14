@@ -74,14 +74,14 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
     case 'FAST_CLEARS': target = Math.min(8, 2 + Math.floor(r / 3)); break;
     case 'BREAK_CRATES': target = 8 + 3 * r; break;
     case 'KILL_BOSS': target = 1 + Math.floor(r / 12); break;
-    case 'COLLECT_GOLD': target = 300 + 150 * r; break;
+    case 'COLLECT_GOLD': target = (300 + 150 * r) * 10; break;
     case 'DASH': target = 25 + 8 * r; break;
     case 'GATHER_SHARDS': target = 8 + 2 * r; break;
     case 'SELL_LOOT': target = 8 + 3 * r; break;
     case 'COLLECT_LOOT': lootName = pick(['Goblin Ear', 'Slime Gel', 'Bat Wing', 'Old Bone', 'Beetle Shell', 'Cultist Rune', 'Ogre Tusk'].slice(0, Math.min(7, 3 + r))); target = 4 + r; break;
   }
   const e = EFFORT[type];
-  const reward: QuestReward = { gold: Math.round((100 + 55 * r) * e / 10) * 10 };
+  const reward: QuestReward = { gold: Math.round((100 + 55 * r) * e / 10) * 100 };   // x10 economy
   const extra = Math.random();
   if (extra < 0.3) reward.gems = Math.round((6 + 2 * r) * e);
   else if (extra < 0.55) reward.cores = 1 + Math.floor(r / 3) + (e > 1.3 ? 1 : 0);
