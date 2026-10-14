@@ -233,6 +233,14 @@ export function Enemies() {
     upd(sys.shadows, nSh); sys.shA.needsUpdate = true;
     upd(sys.rings, nRing); sys.rC.needsUpdate = true; sys.ringMat.uniforms.uTime.value = t;
     upd(sys.bubble, nBub); upd(sys.ice, nIce); upd(sys.stars, nStar); upd(sys.halo, nHalo);
+    // Malakar's illusions (decoys with real HP): a wide elite-style bar over the head
+    for (let i = 0; i < enemies.length && nBar < MAX; i++) {
+      const e = enemies[i];
+      if (!e.active || !e.decoy || e.trickKind !== 1 || e.state === 'DYING' || !inView(e.pos.x, e.pos.z, 4)) continue;
+      bP[nBar * 3] = e.pos.x; bP[nBar * 3 + 1] = e.pos.y + e.scale * 2.3; bP[nBar * 3 + 2] = e.pos.z;
+      bDd[nBar * 3] = clamp(e.hp / e.maxHp, 0, 1); bDd[nBar * 3 + 1] = 1; bDd[nBar * 3 + 2] = 3;
+      nBar++;
+    }
     sys.bg.instanceCount = nBar; sys.bPos.needsUpdate = true; sys.bD.needsUpdate = true;
   });
 
