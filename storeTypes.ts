@@ -7,6 +7,7 @@
 // UI components MUST subscribe with selectors: useGameStore(s => s.gold)
 // (or useShallow for multiple fields). Never call useGameStore() bare.
 // ============================================================================
+import type { MetaState } from './goals';
 import type {
   GameStatus, HeroClass, PlayerStats, Upgrade, Item, Rarity, SkillLevels,
   AbilityType, GameNotification, ActionResult, GameStatistics,
@@ -91,6 +92,7 @@ export interface GameState {
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
   discovered: Discovered;                    // Codex discoveries (item/pet/loot names, skill keys, monster keys); persisted
   codexClaimed: string[];                    // Codex tabs whose 100% reward was claimed
+  meta: MetaState;                           // daily / weekly goals, achievements, equipped title (goals.ts; written by goalsTracker.ts)
 
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)
   gold: number;

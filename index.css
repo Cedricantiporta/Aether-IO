@@ -1450,3 +1450,19 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .ending-go { padding: .55rem 2.4rem !important; font-size: 1rem !important; }
 .ending-skip { position: absolute; right: 1.2rem; bottom: 1.1rem; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: #a8946a; }
 .ending-skip:hover { color: #f6e6bd; }
+
+/* ---- Goals panel + hero title ---- */
+.tp-title { font-family: var(--font-title); font-size: .78rem; font-weight: 600; letter-spacing: .12em; color: #f1d58e; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, .8); line-height: 1; margin-top: -.05rem; }
+.tp-title::before, .tp-title::after { content: '\25C6'; font-size: .5rem; opacity: .7; margin: 0 .35rem; vertical-align: .12em; }
+.pplate .tp-title { font-size: .72rem; }
+.gl-row { display: flex; align-items: center; gap: .8rem; padding: .55rem .7rem; background: linear-gradient(90deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, 0)); border: 1px solid rgba(214, 186, 122, .22); }
+.gl-row.done { border-color: rgba(241, 213, 142, .65); background: linear-gradient(90deg, rgba(217, 181, 106, .14), rgba(217, 181, 106, 0)); }
+.gl-row.claimed { opacity: .55; }
+.gl-name { font-weight: 700; font-size: .86rem; color: #f3e6c4; line-height: 1.15; }
+.gl-sub { font-size: .66rem; color: var(--text-dim); line-height: 1.2; }
+.gl-reward { font-size: .66rem; letter-spacing: .06em; color: #f1d58e; white-space: nowrap; }
+.gl-bar { position: relative; height: .32rem; margin-top: .3rem; background: rgba(0, 0, 0, .6); box-shadow: 0 0 0 1px rgba(214, 186, 122, .3); }
+.gl-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #a87b34, #f1d58e); }
+.gl-mark { width: 1.9rem; height: 1.9rem; flex: none; display: grid; place-items: center; font-size: .9rem; color: #f1d58e; border: 1px solid rgba(214, 186, 122, .5); transform: rotate(45deg); }
+.gl-mark > * { transform: rotate(-45deg); }
+.gl-eq { color: #6ee7a0; font-size: .62rem; letter-spacing: .12em; }

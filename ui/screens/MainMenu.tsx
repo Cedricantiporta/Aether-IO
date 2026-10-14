@@ -1,5 +1,5 @@
-import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
-import { useBagAlert, useCodexAlert, useSkillAlert } from '../lib/alerts';
+import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph } from '../components/MenuGlyphs';
+import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { ActionBar } from '../hud/ActionBar';
 import { QuestTracker } from '../hud/QuestTracker';
 import { TownProfile } from '../hud/TownProfile';
@@ -94,12 +94,13 @@ export const VillageHUD: React.FC = () => {
     panel: s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen, claimable: s.quests.some(questDone),
   })));
   const openCodex = useUiStore((s) => s.openCodex);
-  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert();
+  const openGoals = useUiStore((s) => s.openGoals);
+  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalDot = useGoalsAlert();
   const setCharSelect = useUiStore((s) => s.setCharSelect);
   const openSettings = useUiStore((s) => s.openSettings);
   const recordsOpen = useUiStore((s) => s.recordsOpen);
   const setRecordsOpen = useUiStore((s) => s.setRecordsOpen);
-  const modalOpen = useUiStore((s) => s.codexOpen || s.settingsOpen || !!s.confirm);
+  const modalOpen = useUiStore((s) => s.codexOpen || s.goalsOpen || s.settingsOpen || !!s.confirm);
 
 
   return (
@@ -119,6 +120,7 @@ export const VillageHUD: React.FC = () => {
             <VBtn icon={<HelmGlyph />} label="Hero (C)" onClick={toggleChar} />
             <VBtn icon={<BagGlyph />} label="Bag (I)" onClick={toggleInv} badge={bagDot} />
             <VBtn icon={<SkillGlyph />} label="Skills (K)" onClick={() => openShop('SKILLS')} badge={skillDot} />
+            <VBtn icon={<GoalGlyph />} label="Goals" onClick={() => openGoals(true)} badge={goalDot} id="open-goals" />
             <VBtn icon={<TrophyGlyph />} label="Records" onClick={() => setRecordsOpen(!recordsOpen)} active={recordsOpen} id="open-records" />
             <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} badge={codexDot} />
             <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />

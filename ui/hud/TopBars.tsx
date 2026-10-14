@@ -10,6 +10,7 @@ import { User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
+import { titleOf } from '../../achievements';
 import { useUiStore } from '../uiStore';
 import { useGameStore, calculateTotalCP } from '../../store';
 import { world } from '../../engine/world';
@@ -68,6 +69,7 @@ const DebuffRow: React.FC = () => {
 
 export const PlayerPlate: React.FC = () => {
   const hero = useGameStore((s) => s.hero);
+  const title = useGameStore((s) => titleOf(s.meta.title));
   const level = useGameStore((s) => s.level);
   const cp = useGameStore((s) => calculateTotalCP(s.stats));
   const maxHp = useGameStore((s) => s.stats.maxHealth);
@@ -95,6 +97,7 @@ export const PlayerPlate: React.FC = () => {
     <div className="pplate pe">
       <div className="flex flex-col gap-[.3rem]" style={{ minWidth: '10.5rem' }}>
         <div className="rpg-title text-[1.05rem] leading-none text-[#f4e6c0]">{hero}</div>
+        {title && <div className="tp-title" data-testid="hero-title">{title}</div>}
         <motion.div key={level} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="text-[.82rem] text-[#e8dcc0] flex items-center gap-2" style={{ transformOrigin: 'left' }}
           {...tip(<SimpleTip title="Combat Power" body="Total strength of your hero from stats and equipment." />)}>
           <span>Lv. {level}</span><span style={{ width: 1, height: '.8rem', background: '#8a7240' }} /><span>CP <span className="rpg-num text-white">{cp.toLocaleString()}</span></span>

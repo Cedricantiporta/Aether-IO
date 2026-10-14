@@ -73,6 +73,7 @@ export interface GameEvents {
   towerFloor: { floor: number; best: boolean }; // endless tower floor cleared
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
+  hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest'; n: number };   // discrete town actions (goals / achievements)
   runStart: {};
   runEnd: {};
 }

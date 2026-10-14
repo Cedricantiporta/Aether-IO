@@ -63,3 +63,10 @@ export const SkillGlyph: React.FC<{ size?: number }> = ({ size }) => (
     <circle cx="16" cy="14" r="3.2" fill={d} {...S} /><path d="M9 27h14" stroke="#1a1004" strokeWidth="3.4" strokeLinecap="round" /><path d="M9 27h14" stroke={f} strokeWidth="1.8" strokeLinecap="round" />
   </>}</G>
 );
+export const GoalGlyph: React.FC<{ size?: number }> = ({ size }) => (
+  <G id="mg-goal" size={size}>{(f, d) => <>
+    <path d="M7 3.5h18a2 2 0 0 1 2 2V28l-5-3-6 3-6-3-5 3V5.5a2 2 0 0 1 2-2z" fill={f} {...S} />
+    <path d="M10.5 10.5l2 2 3.6-4M10.5 17.5l2 2 3.6-4" fill="none" stroke="#1a1004" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /><path d="M10.5 10.5l2 2 3.6-4M10.5 17.5l2 2 3.6-4" fill="none" stroke={d} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M19 11h4M19 18h4" stroke="#7a5418" strokeWidth="1.8" strokeLinecap="round" />
+  </>}</G>
+);

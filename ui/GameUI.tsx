@@ -23,6 +23,8 @@ import { SetOutWindow } from './screens/SetOut';
 import { EndingScreen } from './screens/Ending';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
 import { CodexDialog } from './screens/Codex';
+import { GoalsDialog } from './screens/Goals';
+import '../goalsTracker';
 import { InventoryPanel } from './panels/Inventory';
 import { CharacterSheet } from './panels/CharacterSheet';
 import { ShopPanel } from './panels/ShopPanel';
@@ -79,6 +81,7 @@ export const GameUI: React.FC = () => {
       <BuyDialog />
       <SettingsDialog />
       <CodexDialog />
+      <GoalsDialog />
       <GlobalConfirm />
       <SummonReveal />
       <TooltipLayer />

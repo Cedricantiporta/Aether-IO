@@ -31,6 +31,7 @@ import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, t
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
+import { freshMeta, sanitizeMeta, type MetaState } from './goals';
 import { CODEX_KEYS, CODEX_REWARD_GEMS, emptyDiscovered, monsterKeyByName, type CodexTab, type Discovered } from './codexData';
 
 // ------------------------------------------------------------------ consts --
@@ -339,6 +340,7 @@ interface Profile {
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
+  meta?: MetaState;   // daily / weekly goals, achievements, equipped title (goals.ts)
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -379,6 +381,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false },
   discovered: emptyDiscovered(), codexClaimed: [],
+  meta: freshMeta(),
 });
 
 const sanitizeDiscovered = (d: unknown): Discovered => {
@@ -424,6 +427,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered),
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
+              meta: sanitizeMeta(p.meta),
             },
           };
         }
@@ -455,7 +459,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true, gold10: true,
+      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -589,6 +593,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     starterGiven: profile.starterGiven,
     discovered: profile.discovered ?? emptyDiscovered(),
     codexClaimed: profile.codexClaimed ?? [],
+    meta: profile.meta ?? freshMeta(),
     gameStats: profile.gameStats,
     settings: profile.settings,
     lastRun: null,
@@ -680,7 +685,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [],
+        talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
       syncDiscoveries();
       get().resetGame();
@@ -942,6 +947,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
       });
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
+      events.emit('hub', { kind: 'quest', n: 1 });
       return true;
     },
 
@@ -1183,6 +1189,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         set({ gold: s.gold - total, inventory: inv });
       }
       notify(`Bought ${item.name}`, 'white', 'SYSTEM');
+      events.emit('hub', { kind: 'buy', n: quantity });
       return true;
     },
 
@@ -1286,6 +1293,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         inventory: [...consumeLoot(s.inventory, recipe), item],
       });
       notify(`Crafted ${item.name}${item.level > 1 ? ` +${item.level - 1}` : ''}!`, RARITY_COLOR[item.rarity], 'ITEM');
+      events.emit('hub', { kind: 'craft', n: 1 });
       return item;
     },
 
@@ -1346,6 +1354,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         stats: calc(s.baseStats, equipment),
         actionResult: { type: 'UPGRADE', success: true, message: 'Upgrade Successful!', item: result },
       });
+      events.emit('hub', { kind: 'upgrade', n: 1 });
       return { success: true, msg: 'Upgrade Successful!', newItem: result };
     },
 
@@ -1447,6 +1456,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...results] });
       else set({ materials: { ...s.materials, COMMON: s.materials.COMMON - cost }, inventory: [...s.inventory, ...results] });
+      events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },
 
@@ -1479,7 +1489,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
