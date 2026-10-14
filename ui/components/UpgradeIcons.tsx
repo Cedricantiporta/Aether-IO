@@ -117,7 +117,7 @@ const ART: Record<UpgradeType, () => React.ReactNode> = {
   SKILL_MAGNET: Magnet, SKILL_DASH: Wind, SKILL_WEAPON: Star, SKILL_BARRIER: () => Shield('gold'), SKILL_PIERCING: Arrow, SKILL_BURNING: Flame,
   SKILL_FREEZING: Snow, SKILL_FREEZE_SPELL: Snow, SKILL_GRAVITY: BlackHole, SKILL_STAMP: Hammer,
   SKILL_RAGE: () => <g>{SwordA(-40)}{SwordA(40)}</g>, SKILL_STORM: Tornado,
-  SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star,
+  SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star, SKILL_PIERCE_SHOT: Arrow,
   SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star,
 };
 
@@ -129,7 +129,7 @@ const Emblem: React.FC<{ t: UpgradeType; size: number | string }> = React.memo((
 Emblem.displayName = 'UpgradeEmblem';
 
 const PAINTED: Partial<Record<UpgradeType, string>> = {
-  SKILL_PIERCING: 'GALE_ARROW', SKILL_GRAVITY: 'SINGULARITY', SKILL_RAGE: 'BLOODRAGE_LEAP', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'DASH',
+  SKILL_PIERCING: 'GALE_ARROW', SKILL_GRAVITY: 'SINGULARITY', SKILL_RAGE: 'BLOODRAGE_LEAP', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_PIERCE_SHOT: 'pierceShot', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'DASH',
 };
 export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
   const pk = PAINTED[upgrade.type];

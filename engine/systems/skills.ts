@@ -306,7 +306,7 @@ export function updateSkills(dt: number): void {
         rallyT = 0;
         pl.buffT = 5 + 0.5 * (l - 1);
         if (rally === 'warcry') { pl.buffDmg = 0.10 + 0.05 * (l - 1); pl.buffDef = 8 + 4 * (l - 1); pl.buffHaste = 0; }
-        else { pl.buffHaste = 0.15 + 0.05 * (l - 1); pl.buffDmg = 0.08 + 0.04 * (l - 1); pl.buffDef = 0; }
+        else { pl.buffHaste = 0.25; pl.buffDmg = 0.08 + 0.04 * (l - 1); pl.buffDef = 0; }
         const col = rally === 'warcry' ? 0xff6a3c : 0x7dffb0;
         events.emit('floatText', { pos: pl.pos, text: rally === 'warcry' ? 'WARCRY!' : 'INSPIRED!', color: col, scale: 1.0, dy: 2.2 });
         events.emit('shockwave', { pos: pl.pos.clone(), radius: 6, color: col });

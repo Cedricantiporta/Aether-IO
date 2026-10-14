@@ -84,6 +84,8 @@ let archerNext = 0;                      // 0 = fire next, 1 = ice next
 
 let procHaste = 0;
 let echoCount = 0;
+/** Archer burning / freezing arrows fire on every 6th attack (alternating when both are learned). */
+const ARCHER_PROC = 6;
 const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
 
 export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; procFlags.smite = 0; echoCount = 0; }
@@ -99,12 +101,12 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
     if (!fire && !ice) { out.t = 0; out.max = 0; return; }
     const nextIce = fire && ice ? archerNext === 1 : ice;
     const next = nextIce ? 'freezing' : 'burning';
-    const nNext = procN(nextIce ? lv.freezing : lv.burning);
+    const nNext = ARCHER_PROC;
     if (skill === next) { n = nNext; left = n - procCount; }
     else {
       const l = skill === 'freezing' ? lv.freezing : lv.burning;
       if (l <= 0) { out.t = 0; out.max = 0; return; }
-      n = nNext + procN(l); left = n - procCount;
+      n = nNext + ARCHER_PROC; left = n - procCount;
     }
   } else if (st.hero === 'WIZARD' && skill === 'thunder' && lv.thunder > 0) {
     n = procN(lv.thunder); left = n - procCount;
@@ -194,7 +196,7 @@ export function fireBasicAttack(): void {
   if (hero === 'ARCHER' && kind === 'ARROW' && (lv.burning > 0 || lv.freezing > 0)) {
     const useIce = lv.burning > 0 && lv.freezing > 0 ? archerNext === 1 : lv.freezing > 0;
     specialLv = useIce ? lv.freezing : lv.burning;
-    if (procCount >= procN(specialLv)) {
+    if (procCount >= ARCHER_PROC) {   // burning / freezing arrow: every 6th attack
       procCount = 0;
       special = useIce ? 'FREEZING_ARROW' : 'BURNING_ARROW';
       if (lv.burning > 0 && lv.freezing > 0) archerNext = useIce ? 0 : 1;
@@ -248,9 +250,12 @@ export function fireBasicAttack(): void {
       if (p) p.procLv = thunderProc;
       continue;
     }
+    // Archer: Piercing Shot (a chance per arrow to pierce on into the enemy behind, blue) / Inspire (white arrows)
+    const ps = kind === 'ARROW' && lv.pierceShot > 0 && Math.random() < 0.15 + 0.05 * lv.pierceShot;
     const np = spawnProjectile(kind, ox, oz, dx, dz, speed, stats.damage * dmgMul, {
-      life, pierce, aoe, radius, knockback: stats.knockback, effect, emp,
+      life, pierce: ps ? pierce + 1 + (lv.pierceShot >> 1) : pierce, aoe, radius, knockback: stats.knockback, effect, emp,
     });
+    if (np && kind === 'ARROW') np.tint = ps ? 1 : hero === 'ARCHER' && pl.buffT > 0 && pl.buffHaste > 0 ? 2 : 0;
     if (np && kind === 'AXE') { np.bounces = (i + rp) & 1; np.trailT = 0; }   // boomerang: alternate curve side per axe
     if (np && kind === 'SLASH') np.bounces = (procCount + i) & 1;              // alternate swing direction (render mirror)
   }
@@ -276,7 +281,8 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 }
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
-  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
+  // rocks / trees / pillars stop shots; only melee arcs, waves, storms, orbiting blades and the Gale Arrow pass over them
+  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'ORBITAL_BLADE' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
 }
 
 function dropFireZone(p: Projectile): void {

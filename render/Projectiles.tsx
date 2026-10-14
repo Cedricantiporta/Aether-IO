@@ -227,6 +227,13 @@ export function Projectiles() {
             place(ims, i, x, y, z, yaw, pitch, 0, 1.25);
             pushHalo(x, y, z, 1.6, 2.2, 1.7, 0.4, 0.7, CELL.GLOW);
             if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.3, 0.5, 0.05, 2.4, 1.9, 0.5, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
+          } else if (p.tint === 1) {   // Piercing Shot: blue light
+            place(ims, i, x, y, z, yaw, pitch, 0, 1.15);
+            pushHalo(x, y, z, 1.5, 0.5, 1.4, 2.6, 0.75, CELL.GLOW);
+            if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.25, 0.45, 0.05, 0.6, 1.6, 2.6, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
+          } else if (p.tint === 2) {   // Inspire: white light
+            place(ims, i, x, y, z, yaw, pitch, 0, 1.1);
+            pushHalo(x, y, z, 1.3, 2.2, 2.2, 2.2, 0.6, CELL.GLOW);
           } else place(ims, i, x, y, z, yaw, pitch, 0, 1);
           break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;

@@ -349,6 +349,13 @@ Object.assign(ICONS, {
     <path d="M36 6 L27 27 H35 L29 46" stroke="#ffffff" strokeWidth="1.6" fill="none" />
     <ellipse cx="28" cy="58" rx="20" ry="4" fill={u(k, 'gold')} opacity=".9" />
   </Art>,
+  pierceShot: (k: string) => <Art k={k} c="#7fc8ff">
+    <circle cx="20" cy="40" r="9" fill="#2a3a5a" stroke={S} strokeWidth="1.4" />
+    <circle cx="42" cy="22" r="9" fill="#2a3a5a" stroke={S} strokeWidth="1.4" />
+    <path d="M6 56 L58 6" stroke="#0d0703" strokeWidth="6" strokeLinecap="round" />
+    <path d="M6 56 L58 6" stroke="#9fdcff" strokeWidth="3" strokeLinecap="round" />
+    <path d="M58 6 L46 9 L55 18Z" fill="#e8f6ff" stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
+  </Art>,
   radiant: (k: string) => <Art k={k} c="#ffd76a">
     <circle cx="32" cy="32" r="9" fill="#fffbe8" stroke={S} strokeWidth="1.4" />
     {[0, 45, 90, 135, 180, 225, 270, 315].map((d) => <path key={d} transform={`rotate(${d} 32 32)`} d="M24 14 C28 9 36 9 40 14 C36 12 28 12 24 14Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1" />)}

@@ -131,6 +131,7 @@ export interface Projectile {
   spin: number;          // render rotation accumulator
   homing: number;        // 0 = none, else turn rate rad/s toward nearest enemy
   emp: boolean;          // fired during Hawk's Focus (render glow)
+  tint: number;          // basic arrow glow: 0 none, 1 blue (Piercing Shot), 2 white (Inspire)
   procLv: number;        // >0: on-hit proc payload (wizard thunder chain), value = skill level
   trailT: number;        // emitter accumulator (FIREBALL fire trail, particles)
 }

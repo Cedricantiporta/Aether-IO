@@ -14,7 +14,7 @@ import { UltSlot } from './UltSlot';
 
 /** Timed passives whose charge slows while moving (skills.ts chargeMul). */
 const STILL_CHARGE = new Set(['freezeSpell', 'storm', 'orbital', 'warcry', 'inspire', 'radiant']);
-const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire', 'consecrate', 'smite', 'radiant'] as const;
+const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire', 'pierceShot', 'consecrate', 'smite', 'radiant'] as const;
 type PKey = typeof PASSIVE_KEYS[number];
 
 const Sep = () => <div className="tray-sep" />;

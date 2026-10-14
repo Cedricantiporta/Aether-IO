@@ -638,7 +638,10 @@ function pushNearby(verb: string, label: string, node: number, d2: number): void
 function scanNearby(): void {
   nearbyN = 0;
   const d = dd(), r = world.room, p = world.player.pos;
-  if (r.fade < 0.6 && d.phase !== 'LEAVING') {
+  // no harvesting / interacting while monsters are still alive in the room (combat)
+  let fighting = false;
+  for (let i = 0; i < world.enemies.length && !fighting; i++) { const e = world.enemies[i]; if (e.active && e.state !== 'DYING') fighting = true; }
+  if (r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {
     const q = (x: number, z: number) => (x - p.x) ** 2 + (z - p.z) ** 2;
     if (d.phase === 'CLEARED') {
       for (let i = 0; i < r.portals.length; i++) {

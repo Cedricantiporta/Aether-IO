@@ -61,7 +61,7 @@ const INITIAL_STATS: PlayerStats = {
 };
 
 const INITIAL_SKILLS: SkillLevels = {
-  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, warcry: 0, inspire: 0, consecrate: 0, smite: 0, radiant: 0,
+  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, warcry: 0, inspire: 0, pierceShot: 0, consecrate: 0, smite: 0, radiant: 0,
   q: 1, e: 1, s3: 1, s4: 1, ult: 1, burning: 0, freezing: 0, freezeSpell: 0, stamp: 0,
 };
 
@@ -149,7 +149,7 @@ const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
   SKILL_ORBITAL: 'orbital', SKILL_THUNDER: 'thunder', SKILL_REGEN: 'regen', SKILL_MAGNET: 'magnet',
   SKILL_DASH: 'dash', SKILL_WEAPON: 'weapon', SKILL_BARRIER: 'barrier', SKILL_STORM: 'storm',
   SKILL_PIERCING: 'q', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing',
-  SKILL_GRAVITY: 'q', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'q', SKILL_STAMP: 'stamp', SKILL_WARCRY: 'warcry', SKILL_INSPIRE: 'inspire', SKILL_HOLY_WAVE: 'q', SKILL_CONSECRATE: 'consecrate', SKILL_SMITE: 'smite', SKILL_RADIANT: 'radiant',
+  SKILL_GRAVITY: 'q', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'q', SKILL_STAMP: 'stamp', SKILL_WARCRY: 'warcry', SKILL_INSPIRE: 'inspire', SKILL_PIERCE_SHOT: 'pierceShot', SKILL_HOLY_WAVE: 'q', SKILL_CONSECRATE: 'consecrate', SKILL_SMITE: 'smite', SKILL_RADIANT: 'radiant',
 };
 
 // ------------------------------------------------------------------ helpers --

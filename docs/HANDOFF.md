@@ -361,3 +361,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Gate: no Set Out popup until Ascension is unlocked. Room harvest nodes halved (half the rooms have none). Coop + Dalla
   moved to the forest edge of the farm clearing. Dirt paths outside the walls = rounded irregular blobs. The small enemy
   HP bar is hidden on the enemy shown by the target frame.
+
+### Archer passives, combat interaction lock, projectile blocking
+- Archer: new class passive **Piercing Shot** (`pierceShot`): 15% + 5%/lv chance per basic arrow to pierce on (+1 target
+  every 2 lv), drawn with a blue glow (`Projectile.tint` 1). Inspire is a flat +25% attack speed and paints arrows white
+  (tint 2) while active. Burning / Freezing arrows fire on every 6th attack (`ARCHER_PROC`, alternating when both learned).
+- Runs: no interact pills (harvest, stations, camp) while any enemy is alive in the room.
+- Rocks / trees / pillars now also stop axes, fireballs and pet bolts (only melee arcs, waves, storms, orbiting blades
+  and the Gale Arrow pass); enemy shots were already blocked.
