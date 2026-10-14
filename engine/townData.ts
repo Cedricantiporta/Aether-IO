@@ -64,7 +64,7 @@ export const HOUSES: HouseSpec[] = [
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
   H(24, 22, 0, 5.2, 4.4, 2),   // where the pet stable used to be
   // north street ends, facing the street (west end north of the potion shop, east end north of the warehouse)
-  H(-24, -6, Math.PI / 2, 5.0, 4.4, 2), H(23, -6, -Math.PI / 2, 5.0, 4.4),
+  H(-24, -6, Math.PI / 2, 5.0, 4.4, 2),   // (the east one is the Tech House shop)
   H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
   H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
 ];

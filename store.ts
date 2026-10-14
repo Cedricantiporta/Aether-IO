@@ -6,6 +6,7 @@ import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
+import { TECH, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
 import { create } from 'zustand';
 import {
@@ -334,6 +335,7 @@ interface Profile {
   inventory: Item[]; equipment: Equipment; materials: Record<Rarity, number>; maxInventorySlots: number;
   warehouse?: Item[]; warehouseGold?: number;
   progress?: RunProgress;   // ending / ascension / endless tower records
+  tech?: TechLevels;        // Tech House upgrades
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   heroRank: number; rankXp: number; quests: Quest[];
   gameStats: GameStatistics; settings: Settings;
@@ -421,7 +423,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
@@ -463,7 +465,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
@@ -528,6 +530,9 @@ export const useGameStore = create<GameState>()((set, get) => {
   const loadoutFor = (hero: HeroClass, inv: Item[], eq: Equipment, talents?: Record<HeroClass, TalentRanks>) => {
     const heroInfo = HERO_STATS[hero];
     const baseStats: PlayerStats = { ...INITIAL_STATS, ...heroInfo.stats };
+    const tech = (() => { try { return get()?.tech ?? profile.tech; } catch { return profile.tech; } })();   // Tech House upgrades
+    baseStats.goldFind += 0.04 * techLv(tech, 'gold'); baseStats.xpBonus += 0.04 * techLv(tech, 'xp');
+    baseStats.maxHealth = Math.round(baseStats.maxHealth * (1 + 0.03 * techLv(tech, 'vitality')));
     const inventory = inv.slice();
     const equipment: Equipment = { ...eq };
     if (equipment.weapon && equipment.weapon.classType && equipment.weapon.classType !== hero) {
@@ -591,6 +596,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     warehouse: profile.warehouse ?? [],
     warehouseGold: profile.warehouseGold ?? 0,
     progress: profile.progress ?? sanitizeProgress(undefined),
+    tech: profile.tech ?? {},
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
@@ -690,7 +696,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -1028,6 +1034,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ progress: { ...p, towerBest: { ...p.towerBest, [s.hero]: floor } } });
       return true;
     },
+    buyTech: (id: TechId) => {
+      const s = get(), d = TECH.find((t) => t.id === id)!, lv = techLv(s.tech, id);
+      if (lv >= d.max) return false;
+      const cost = d.cost(lv);
+      if (s.gold < cost) { notify('Not enough gold!', 'red', 'WARNING'); return false; }
+      const tech = { ...s.tech, [id]: lv + 1 };
+      set({ gold: s.gold - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}) });
+      notify(`${d.name} upgraded to Lv ${lv + 1}!`, '#7dd3fc', 'SYSTEM');
+      return true;
+    },
     moveGold: (n) => {   // + deposit into the warehouse, - withdraw into the bag
       const s = get();
       const amt = n > 0 ? Math.min(Math.floor(n), s.gold) : -Math.min(Math.floor(-n), s.warehouseGold);
@@ -1050,7 +1066,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const idx = s.inventory.findIndex((i) => i.id === id);
       if (idx === -1) return false;
-      const wh = insertItem(s.warehouse, WAREHOUSE_LIMIT, s.inventory[idx]);
+      const wh = insertItem(s.warehouse, WAREHOUSE_LIMIT + 25 * techLv(s.tech, 'warehouse'), s.inventory[idx]);
       if (!wh) { notify('Warehouse is full!', 'red', 'WARNING'); return false; }
       const inv = s.inventory.slice(); inv.splice(idx, 1);
       set({ inventory: inv, warehouse: wh });
@@ -1503,7 +1519,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

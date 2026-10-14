@@ -1,6 +1,7 @@
 // ============================================================================
 // Player: movement, dash, auto-fire, cooldowns, regen, potions, death flow.
 // ============================================================================
+import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
@@ -75,7 +76,7 @@ function usePotion(health: boolean): boolean {
   const item = st.consumeItem((i) =>
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
-  const amt = item.restoreAmount || 50;
+  const amt = (item.restoreAmount || 50) * (1 + 0.12 * techLv(st.tech, 'potion'));   // Tech House: Potion Brewing
   if (health) { healPlayer(amt); p.hpPotCd = POTION_COOLDOWN; }
   else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
   return true;

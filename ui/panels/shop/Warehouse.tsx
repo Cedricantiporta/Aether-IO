@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { WAREHOUSE_LIMIT } from '../../../constants';
+import { techLv } from '../../../tech';
 import { ItemSlot } from '../../components/ItemSlot';
 import { useDrop, reorder } from '../../lib/dnd';
 import { DropCell } from '../../components/DropCell';
@@ -18,6 +19,7 @@ export const WarehouseTab: React.FC = () => {
     wh: s.warehouse, inv: s.inventory, deposit: s.depositItem, withdraw: s.withdrawItem, reorderItems: s.reorderItems,
   })));
   const [sortIdx, setSortIdx] = useState(-1);
+  const cap = WAREHOUSE_LIMIT + 25 * techLv(useGameStore((s) => s.tech), 'warehouse');
   const { gold, whGold, moveGold } = useGameStore(useShallow((s) => ({ gold: s.gold, whGold: s.warehouseGold, moveGold: s.moveGold })));
   const [amt, setAmt] = useState('');
   const n = Math.max(0, Math.floor(Number(amt.replace(/[^0-9]/g, '')) || 0));
@@ -40,7 +42,7 @@ export const WarehouseTab: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <div className="rpg-label !text-[.72rem]">Storage <span className="rpg-num text-white ml-1">{wh.length}/{WAREHOUSE_LIMIT}</span></div>
+        <div className="rpg-label !text-[.72rem]">Storage <span className="rpg-num text-white ml-1">{wh.length}/{cap}</span></div>
         <div className="flex gap-2">
           <input className="wh-search pe" placeholder="Search…" value={filter} onChange={(e) => setFilter(e.target.value)} />
           <button className="wh-btn pe" disabled={wh.length < 2} onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('warehouse', sortedItems(wh, SORTS[n], calculateItemCP)); }}
@@ -54,7 +56,7 @@ export const WarehouseTab: React.FC = () => {
             <ItemSlot item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} onClick={() => withdraw(it.id)} drag={{ from: 'WAREHOUSE', item: it }} />
           </DropCell>
         ))}
-        {Array.from({ length: filter ? 0 : Math.max(0, WAREHOUSE_LIMIT - wh.length) }).map((_, i) => (
+        {Array.from({ length: filter ? 0 : Math.max(0, cap - wh.length) }).map((_, i) => (
           <DropCell key={`e${i}`} accept={(d) => d.from === 'WAREHOUSE'} onDrop={(d) => reorderItems('warehouse', reorder(wh, d.item.id, null))}>
             <div className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }} />
           </DropCell>

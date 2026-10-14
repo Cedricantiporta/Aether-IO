@@ -20,7 +20,7 @@ import { Npcs } from './Npcs';
 import { walkAndOpen } from '../engine/systems/village';
 import { useUiStore } from '../ui/uiStore';
 
-type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE';
+type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH';
 
 // ---------------------------------------------------------------- builders ---
 function lantern(b: GB, g: GB, x: number, y: number, z: number) {
@@ -220,6 +220,39 @@ function buildWarehouse() {
   return { body: b.build(), glow: g.build() };
 }
 
+/** Tech House: tinkerer's workshop - stone + timber, copper roof trim, big brass gears on the wall, pipes, a chimney,
+ *  a lens window and a workbench with gadgets out front. */
+function buildTech() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const stone = '#8f8a80', plaster = '#e4dccb', wood = '#5a3d24', roofC = '#2a2f36', brass = '#c9a24a', copper = '#b8693a', steel = '#9aa2ae';
+  b.box(6.2, 0.6, 5.0, [0, 0.3, 0], '#857f74');
+  b.box(5.8, 1.3, 4.6, [0, 1.25, 0], stone);
+  b.box(5.6, 2.3, 4.4, [0, 3.1, 0], plaster);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.7, 0.3, [sx * 2.85, 2.4, sz * 2.25], wood);
+  b.box(5.8, 0.22, 0.3, [0, 4.2, 2.27], wood);
+  b.prism(7.0, 2.4, 5.8, [0, 4.25, 0], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.box(7.1, 0.16, 0.2, [0, 4.3, 2.95], copper); b.box(0.3, 0.3, 5.9, [0, 6.7, 0], copper);
+  // chimney with a brass cap, steam pipe
+  b.box(0.8, 2.4, 0.8, [1.8, 6.2, -1.2], stone); b.cyl(0.5, 0.45, 0.25, 10, [1.8, 7.5, -1.2], brass);
+  b.cyl(0.12, 0.12, 3.2, 8, [-2.95, 2.4, 1.4], copper); b.cyl(0.12, 0.12, 1.2, 8, [-2.95, 4.0, 0.8], copper, [Math.PI / 2, 0, 0]);
+  // door + round lens window
+  b.box(1.2, 2.1, 0.2, [-1.4, 1.65, 2.32], '#3a2a1c'); b.box(1.4, 0.16, 0.24, [-1.4, 2.8, 2.34], wood); b.sph(0.07, [-1.0, 1.6, 2.45], brass, 1, 6);
+  b.torus(0.62, 0.1, [1.3, 3.1, 2.3], brass, [0, 0, 0], 1, 16); g.cyl(0.55, 0.55, 0.06, 16, [1.3, 3.1, 2.28], '#9fe8ff', [Math.PI / 2, 0, 0]);
+  // big gears on the front wall
+  const gear = (x: number, y: number, z: number, r: number, teeth: number, c: string) => {
+    b.cyl(r, r, 0.12, 16, [x, y, z], c, [Math.PI / 2, 0, 0]); b.cyl(r * 0.3, r * 0.3, 0.16, 10, [x, y, z + 0.02], '#5b4a2a', [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < teeth; i++) { const a = (i / teeth) * Math.PI * 2; b.box(r * 0.28, r * 0.28, 0.12, [x + Math.cos(a) * r, y + Math.sin(a) * r, z], c, [0, 0, a]); }
+  };
+  gear(-0.1, 3.55, 2.33, 0.42, 9, brass); gear(0.5, 3.0, 2.34, 0.26, 7, copper);
+  // workbench out front with gadgets
+  b.box(1.9, 0.12, 0.8, [1.9, 0.95, 3.5], wood); for (const x of [1.1, 2.7]) b.box(0.12, 0.9, 0.7, [x, 0.48, 3.5], wood);
+  b.box(0.5, 0.35, 0.4, [1.5, 1.2, 3.5], steel); g.sph(0.1, [1.5, 1.45, 3.5], '#7df3ff', 1, 6);
+  b.cyl(0.06, 0.06, 0.6, 6, [2.3, 1.3, 3.4], brass, [0, 0, 0.6]); b.sph(0.18, [2.5, 1.55, 3.4], copper, 1, 8);
+  b.box(0.9, 0.7, 0.6, [-2.4, 0.35, 3.3], '#7d5733'); b.cyl(0.3, 0.3, 0.8, 10, [-2.6, 0.4, 2.7], steel);
+  lantern(b, g, -2.2, 3.0, 2.7);
+  return { body: b.build(), glow: g.build() };
+}
+
 /** Fortune teller's house: crooked dark-roofed cottage, round window, crystal ball on a draped table, moon & star charms. */
 function buildFortune() {
   const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
@@ -246,11 +279,11 @@ function buildFortune() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse' };
+const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6] };
 const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
@@ -258,6 +291,7 @@ const NPC: Record<ShopType, NpcCfg> = {
   ARMORY: { key: 'KNIGHT', tint: '#e8e0d0', pos: [-0.6, 4.6] },
   FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [0.1, 4.2] },
   WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [0.9, 4.4] },
+  TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [0.2, 4.4] },
 };
 
 // -------------------------------------------------------------------- signs ---
@@ -276,6 +310,9 @@ function buildSign(type: ShopType, color: string) {
     g.box(0.5, 0.04, 0.06, [0, 0.03, 0.28], '#ff8a2a');
   } else if (type === 'ARMORY') {
     b.cyl(0.36, 0.36, 0.08, 12, [0, -0.05, 0.17], '#9aa2ae', [Math.PI / 2, 0, 0], [1, 1.2, 1]); b.box(0.08, 0.6, 0.04, [0, -0.05, 0.22], '#d9b56a'); b.box(0.5, 0.08, 0.04, [0, 0.05, 0.22], '#d9b56a');
+  } else if (type === 'TECH') {
+    b.cyl(0.32, 0.32, 0.1, 12, [0, -0.08, 0.17], '#c9a24a', [Math.PI / 2, 0, 0]); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; b.box(0.1, 0.1, 0.1, [Math.cos(a) * 0.36, -0.08 + Math.sin(a) * 0.36, 0.17], '#c9a24a'); }
+    b.cyl(0.1, 0.1, 0.12, 8, [0, -0.08, 0.2], '#5b4a2a', [Math.PI / 2, 0, 0]);
   } else if (type === 'WAREHOUSE') {
     b.box(0.7, 0.55, 0.12, [0, -0.08, 0.17], '#9c7245'); b.box(0.74, 0.08, 0.14, [0, -0.08, 0.2], '#5a3d24'); b.box(0.08, 0.55, 0.14, [0, -0.08, 0.2], '#5a3d24');
   } else if (type === 'FORTUNE') {
@@ -329,7 +366,11 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
     const wp = g.parent!.position;
     let target = s.yaw;
     if (moving) target = Math.atan2((dk > 0 ? door[0] - cfg.pos[0] : cfg.pos[0] - door[0]), (dk > 0 ? door[1] - cfg.pos[1] : cfg.pos[1] - door[1]));
-    else if (near.current) target = Math.atan2(world.player.pos.x - (wp.x + g.position.x), world.player.pos.z - (wp.z + g.position.z));
+    else if (near.current) {   // face the hero (the shop group may be rotated: work in its local frame)
+      const pr = g.parent!.rotation.y, c = Math.cos(pr), s2 = Math.sin(pr);
+      const lx = c * (world.player.pos.x - wp.x) - s2 * (world.player.pos.z - wp.z), lz = s2 * (world.player.pos.x - wp.x) + c * (world.player.pos.z - wp.z);
+      target = Math.atan2(lx - g.position.x, lz - g.position.z);
+    }
     s.yaw = angleLerp(s.yaw, target, 1 - Math.exp(-8 * dt));
     g.rotation.y = s.yaw;
   });
@@ -347,7 +388,7 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
 // --------------------------------------------------------------------- shop ---
 const ringGeo1 = new RingGeometry(4.6, 5.05, 72), ringGeo2 = new RingGeometry(5.25, 5.4, 72);
 
-function Shop({ type, position, color, q }: { type: ShopType; position: number[]; color: string; q: QualityCfg }) {
+function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; position: number[]; color: string; q: QualityCfg; facing?: number }) {
   const geos = useMemo(() => BUILD[type](), [type]);
   const sign = useMemo(() => buildSign(type, color), [type, color]);
   const mats = useMemo(() => ({
@@ -365,7 +406,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
-    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(px + NPC[type].pos[0] * 0.5, pz + 5.2, SHOP_TAB[type]);   // walk up to the counter first
+    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(px + Math.cos(facing) * NPC[type].pos[0] * 0.5 + Math.sin(facing) * 5.2, pz - Math.sin(facing) * NPC[type].pos[0] * 0.5 + Math.cos(facing) * 5.2, SHOP_TAB[type]);   // walk up to the counter first
     else if (st === GameStatus.PLAYING) useGameStore.getState().openSpecificShop(SHOP_TAB[type]);
   };
 
@@ -408,7 +449,7 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : color); };
   const labelW = label.aspect * 1.0;
   return (
-    <group position={[px, 0, pz]}>
+    <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
       <mesh geometry={geos.glow} material={mats.glow} />
       {type === 'SUPPLIES' && <mesh ref={liquid} material={mats.liquid} position={[3.6, 1.55, 2.4]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.72, 12]} /></mesh>}
@@ -643,7 +684,7 @@ export function Town({ q }: { q: QualityCfg }) {
     <>
       {village && <TownScenery q={q} />}
       {village && <Npcs />}
-      {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} />)}
+      {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
       <QuestBoard />
       <Station kind="TRAINER" position={TRAINER_POS} />
     </>

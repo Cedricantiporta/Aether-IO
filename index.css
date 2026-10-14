@@ -1477,3 +1477,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .gl-mark { width: 1.9rem; height: 1.9rem; flex: none; display: grid; place-items: center; font-size: .9rem; color: #f1d58e; border: 1px solid rgba(214, 186, 122, .5); transform: rotate(45deg); }
 .gl-mark > * { transform: rotate(-45deg); }
 .gl-eq { color: #6ee7a0; font-size: .62rem; letter-spacing: .12em; }
+/* ---- Tech House ---- */
+.tech-row { display: flex; align-items: center; gap: .75rem; padding: .6rem .7rem; background: linear-gradient(180deg, rgba(26, 24, 20, .8), rgba(10, 9, 8, .82)); border: 1px solid rgba(201, 162, 83, .24); }
+.tech-ic { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; color: #7fd8ff; background: radial-gradient(circle, rgba(95, 200, 232, .18), rgba(0, 0, 0, .3)); border: 1px solid rgba(95, 200, 232, .35); flex: none; }
+.tech-name { font-family: var(--font-title); color: #f6e6bd; font-size: .95rem; }
+.tech-lv { font-size: .66rem; color: #d9c08a; }
+.tech-per { font-size: .7rem; color: var(--text-dim); }
+.tech-pips { display: flex; gap: .2rem; margin-top: .3rem; }
+.tech-pips i { width: 1.1rem; height: .3rem; background: rgba(255, 255, 255, .1); }
+.tech-pips i.on { background: linear-gradient(90deg, #5fc8e8, #b9f0ff); box-shadow: 0 0 6px rgba(95, 200, 232, .6); }
+.tech-buy { min-width: 6.4rem; display: flex; flex-direction: column; align-items: center; gap: .1rem; }

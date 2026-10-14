@@ -35,16 +35,17 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 /** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
 export const GOLD_SCALE = 10;
 
-export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE'; position: [number, number, number]; color: string }[] = [
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH'; position: [number, number, number]; color: string; rot?: number }[] = [
     { type: 'SUPPLIES', position: [-20.5, 0, 2], color: '#3b82f6' },
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
     { type: 'PETS', position: [-29.5, 0, 2], color: '#10b981' },          // between the potion shop and the fortune teller
     { type: 'ARMORY', position: [36.5, 0, 2], color: '#c9a052' },     // basic gear, beside the blacksmith
     { type: 'FORTUNE', position: [-36.5, 0, 2], color: '#a46bff' },   // fortune teller (summons), beside the potion shop
-    { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },   // item storage (100 slots), beside the blacksmith (plaza side)
+    { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
+    { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
 ];
 /** Shop tab each town building opens. */
-export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE' };
+export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH' };
 
 export const COLORS = {
   background: '#87CEEB', 
