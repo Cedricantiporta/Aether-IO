@@ -370,7 +370,7 @@ export function killEnemy(e: Enemy): void {
   // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
   {
     const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
-    if (e.boss) { dropLoot(e.kind, luck, px, pz, true); dropLoot(e.kind, luck, px, pz); }
+    if (e.boss) { const my = run.bossKills >= 2; dropLoot(e.kind, luck, px, pz, true, my); dropLoot(e.kind, luck, px, pz, false, my); }
     else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
   }
 
@@ -379,9 +379,11 @@ export function killEnemy(e: Enemy): void {
 
   // Item drops.
   if (e.boss) {
+    // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
+    const before = run.bossKills - 1;
     let rarity: Rarity = 'EPIC';
-    if (wave >= 60 && Math.random() < Math.min(0.2, (wave - 50) * 0.01)) rarity = 'MYTHIC';
-    else if (wave >= 30 && Math.random() < Math.min(0.5, (wave - 20) * 0.02)) rarity = 'LEGENDARY';
+    if (before >= 1 && Math.random() < Math.min(0.03, 0.01 * before)) rarity = 'MYTHIC';
+    else if (Math.random() < (before >= 1 ? Math.min(0.45, 0.15 + 0.08 * before) : 0.04)) rarity = 'LEGENDARY';
     const item = st.rollItemDrop(rarity);
     if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
   } else if (Math.random() < Math.min(1, (e.elite ? 0.25 : 0.015) * loot)) {

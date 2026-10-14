@@ -8,7 +8,7 @@
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
 //   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Altar (-17,-13), Skill Trainer (17,-13)
-//   west Potion Shop (-27, 2), east Blacksmith (27, 2), south-east Pet Stable (24, 22), gate (0, 38) at the end of the
+//   west row Potion Shop (-20.5, 2) / Pet Stable (-29.5, 2) / Fortune Teller (-36.5, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
 //   main road. Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
@@ -62,7 +62,8 @@ export const HOUSES: HouseSpec[] = [
   H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 31.5, -Math.PI / 2, 5.0, 4.4, 2),
   // outskirts
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
-  H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
+  H(24, 22, 0, 5.2, 4.4, 2),   // where the pet stable used to be
+  H(-33, -9, 0.5, 5.0, 4.4, 2),   // (the east twin is now the Warehouse, constants SHOP_POSITIONS)
   H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
 ];
 
@@ -80,15 +81,16 @@ export const STALLS: StallSpec[] = [
  *  - two streets (w4) tangent to the plaza: south street (shops / houses) and north street (board, altar, trainer)
  *  - one lane (w4) to the Pet Stable (its barn door faces south onto the lane)
  *  - short straight branches (w2.8) that end exactly at each building's door / interaction point.
- * Door x of the shops: Potion Shop door at local x -1.4 (world -28.4), Blacksmith door local x -1.6 (world 25.4).
+ * Door x of the shops: Potion Shop door at local x -1.4 (world -21.9), Blacksmith door local x -1.6 (world 25.4).
  */
 export const ROAD_W = { main: 5, street: 4, branch: 2.8 };
 export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 8, x2: 0, z2: 74, w: ROAD_W.main },               // main avenue plaza -> gate -> farm road
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
   { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
-  { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // pet stable lane
-  { x1: -28.4, z1: 10, x2: -28.4, z2: 4.5, w: ROAD_W.branch },   // potion shop door
+  { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
+  { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // potion shop door
+  { x1: -30.4, z1: 10, x2: -30.4, z2: 4.5, w: ROAD_W.branch },   // pet stable door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
@@ -170,7 +172,7 @@ export const PLANTERS: PlanterSpec[] = [
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
-  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 29.5, z: -6.5, s: 3.15, kind: 0 }, { x: 14.5, z: -35, s: 3.45, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: 22, z: -33.5, s: 3.30, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 14.5, z: -35, s: 3.45, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: 22, z: -33.5, s: 3.30, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate

@@ -1386,3 +1386,11 @@ button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
 .qt-row.king .qt-head { color: #ff9aa2; }
 .king-note { font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: #ff9aa2; border-left: 2px solid #c8454f; padding: .1rem .5rem; background: rgba(120, 20, 30, .25); }
 .town-fade { position: absolute; inset: 0; z-index: 85; background: #05060a; pointer-events: none; visibility: hidden; opacity: 0; }
+
+/* ---- warehouse (town storage) ---- */
+.wh-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .32rem; }
+.wh-grid .rpg-slot.is-empty { opacity: .55; }
+.wh-search { width: 9rem; padding: .25rem .5rem; font-size: .74rem; color: #f3ead6; background: rgba(8, 9, 12, .7); border: 1px solid rgba(201, 162, 83, .35); outline: none; }
+.wh-search:focus { border-color: rgba(233, 196, 106, .8); }
+.wh-btn { padding: .28rem .7rem; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: #f6e6bd; background: linear-gradient(180deg, rgba(60, 48, 30, .9), rgba(24, 19, 12, .92)); border: 1px solid rgba(201, 162, 83, .55); }
+.wh-btn:hover { border-color: #e9c46a; color: #fff; }

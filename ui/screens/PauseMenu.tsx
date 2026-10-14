@@ -86,10 +86,11 @@ export const SettingsDialog: React.FC = () => {
           {tog('Screen shake', 'screenShake')}
           {tog('Show minimap', 'showMinimap')}
           {tog('Vibration on hit', 'vibration', 'Phones only.')}
-          <Row label="Camera zoom" hint="Close to far">
+          {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}
+          {settings.zoomUnlocked && <Row label="Camera zoom" hint="Close to far">
             <div className="flex-1"><Slider value={(settings.cameraZoom - 0.8) / 0.5} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.5) * 100) / 100 })} /></div>
             <span className="rpg-num text-sm w-10 text-right text-[var(--gold-light)]">{settings.cameraZoom.toFixed(2)}</span>
-          </Row>
+          </Row>}
         </>)}
         {tab === 'GRAPHICS' && (<>
           <Row label="Graphics" hint={settings.batterySaver ? 'Locked to LOW by Battery saver.' : undefined}>

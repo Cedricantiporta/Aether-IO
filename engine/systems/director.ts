@@ -430,7 +430,7 @@ function grantReward(kind: RewardKind, bonus: number): void {
       break;
     }
     case 'ITEM': {
-      const it = st.rollItemDrop(rarityForDepth(depth, bonus));
+      const it = st.rollItemDrop(rarityForDepth(depth, bonus, world.run.bossKills));
       if (it) spawnPickup('ITEM', at(0, cz), 0, it);
       break;
     }
@@ -453,7 +453,7 @@ function bossRewards(): void {
   const R = world.room.radius;
   const items = 2;
   for (let i = 0; i < items; i++) {
-    const it = st.rollItemDrop(rarityForDepth(depth, 0.35 + i * 0.1));
+    const it = st.rollItemDrop(rarityForDepth(depth, 0.35 + i * 0.1, world.run.bossKills - 1));
     if (it) spawnPickup('ITEM', at((i - 0.5) * 2, 0), 0, it);
   }
   for (let i = 0; i < 4; i++) spawnPickup('GEM', at(0, -R * 0.1), 4 + biome * 2);
@@ -497,7 +497,7 @@ function onCleared(): void {
   rewardT = rewardKind === 'NONE' ? -1 : REWARD_DELAY;
   if (world.room.shrineOn) {
     // challenge bonus on top of the card
-    const it = st.rollItemDrop(rarityForDepth(depth, 0.3));
+    const it = st.rollItemDrop(rarityForDepth(depth, 0.3, world.run.bossKills));
     if (it) spawnPickup('ITEM', at(0, -world.room.radius * 0.08), 0, it);
     for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, -world.room.radius * 0.08), 2 + Math.floor(depth / 6));
     shrineBonus = false;
@@ -615,7 +615,7 @@ export function interactRoom(it: Interactable): void {
     if (!st.isShopOpen) st.openSpecificShop('MERCHANT');
   } else if (s.kind === 'CHEST' && s.ready && !s.used) {
     s.used = true;
-    const it2 = st.rollItemDrop(rarityForDepth(depth, 0.2));
+    const it2 = st.rollItemDrop(rarityForDepth(depth, 0.2, world.run.bossKills));
     if (it2) spawnPickup('ITEM', at(s.x, s.z), 0, it2);
     for (let i = 0; i < 4; i++) spawnPickup('GOLD', at(s.x, s.z), Math.round(30 + depth * 8));
     for (let i = 0; i < 3; i++) spawnPickup('SHARD', at(s.x, s.z), shardRarity(depth));

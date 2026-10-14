@@ -5,6 +5,7 @@ import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
 import type { Item, ItemType } from '../../types';
 import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
+import { talentPointsTotal, talentsSpent } from '../../talents';
 
 const KEY = 'aether-survivor-seen-v1';
 interface Seen { items: string[]; codex: number }
@@ -46,4 +47,7 @@ export function useCodexAlert(): boolean {
     return (Object.keys(CODEX_KEYS) as CodexTab[]).some((t) => !s.codexClaimed.includes(t) && CODEX_KEYS[t].length > 0 && CODEX_KEYS[t].every((k) => (d[t] ?? []).includes(k)));
   });
 }
-export const useSkillAlert = (): boolean => useGameStore((s) => s.skillPoints > 0);
+/** Unspent run skill points / permanent talent points (the dot stays until they are spent). */
+export const useRunSkillAlert = (): boolean => useGameStore((s) => s.skillPoints > 0);
+export const useTalentAlert = (): boolean => useGameStore((s) => talentPointsTotal(s.heroRank) - talentsSpent(s.talents[s.hero]) > 0);
+export const useSkillAlert = (): boolean => { const a = useRunSkillAlert(), b = useTalentAlert(); return a || b; };

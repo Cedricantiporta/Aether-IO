@@ -20,7 +20,7 @@ import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY'; // MERCHANT = the travelling merchant room
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -38,6 +38,7 @@ export interface Settings {
   showFps: boolean;
   uiScale: 'SMALL' | 'NORMAL' | 'LARGE';
   cameraZoom: number;     // 0.8 (close) .. 1.3 (far)
+  zoomUnlocked: boolean;  // off (default): camera locked at zoom 1.0 (wheel / pinch / slider do nothing)
   showEnemyBars: boolean;
   showMinimap: boolean;
   vibration: boolean;     // navigator.vibrate on being hit (touch devices)
@@ -108,6 +109,7 @@ export interface GameState {
   // ---- items
   inventory: Item[];
   maxInventorySlots: number;
+  warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   materials: Record<Rarity, number>;
   equipment: Equipment;
   upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)
@@ -167,6 +169,8 @@ export interface GameState {
   getManaCost: (skill: keyof SkillLevels | 'dash') => number; // already includes wizard x1.3
 
   // items
+  depositItem: (id: string) => boolean;            // bag -> warehouse (stacks), false if the warehouse is full
+  withdrawItem: (id: string) => boolean;           // warehouse -> bag, false if the bag is full
   addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full
   canPickUp: (item: Item) => boolean;               // used by pickups magnet
   consumeItem: (pred: (i: Item) => boolean) => Item | null; // removes one from a stack, returns template

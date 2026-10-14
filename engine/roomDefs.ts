@@ -168,13 +168,19 @@ export const firstPlan = (): RoomPlan => ({ type: 'COMBAT', reward: 'CARD' });
 
 // ------------------------------------------------------------------ rewards --
 const LEVELS: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-/** Gear rarity for a reward at `depth` (`bonus` shifts the odds up: elites 0.1, chests 0.15, bosses 0.3). */
-export function rarityForDepth(depth: number, bonus = 0): Rarity {
-  const r = Math.random() - bonus;
-  const legendary = Math.max(0, Math.min(0.32, (depth - 14) * 0.011));
-  const mythic = depth >= 45 ? Math.min(0.06, (depth - 40) * 0.002) : 0;
-  const epic = Math.min(0.5, 0.04 + depth * 0.011);
-  const rare = Math.min(0.75, 0.3 + depth * 0.012);
+/**
+ * Gear rarity for a reward at `depth`. `bonus` lifts the odds (elites 0.1, chests 0.2, bosses 0.35+).
+ * `bosses` = bosses already beaten this run (not counting the one whose reward this is):
+ *  - MYTHIC never drops before a boss has been beaten (so never from the first boss), and stays very rare after (<= 1.5%).
+ *  - LEGENDARY is a trickle in the first biome and only opens up after the first boss (+3% per boss beaten).
+ */
+export function rarityForDepth(depth: number, bonus = 0, bosses = 0): Rarity {
+  const r = Math.random();
+  const boost = 1 + bonus * 1.5;
+  const mythic = bosses >= 1 ? Math.min(0.015, 0.002 * bosses * boost) : 0;
+  const legendary = Math.min(0.3, (bosses >= 1 ? 0.03 + 0.03 * bosses : Math.min(0.015, Math.max(0, depth - 6) * 0.002)) * boost);
+  const epic = Math.min(0.5, (0.04 + depth * 0.011) * boost);
+  const rare = Math.min(0.75, 0.3 + depth * 0.012 + bonus);
   if (r < mythic) return LEVELS[4];
   if (r < mythic + legendary) return LEVELS[3];
   if (r < mythic + legendary + epic) return LEVELS[2];

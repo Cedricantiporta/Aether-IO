@@ -9,6 +9,8 @@ export const ARENA_SIZE = 136;
 export const PLAYER_RADIUS = 0.8;
 export const CAMERA_HEIGHT = 45;
 export const INVENTORY_LIMIT = 50;
+/** Town warehouse (storage house beside the blacksmith): permanent item storage, twice the bag. */
+export const WAREHOUSE_LIMIT = 100;
 export const POTION_STACK_LIMIT = 50;
 export const POTION_COOLDOWN = 10; // seconds, shared by engine + HUD
 
@@ -33,15 +35,16 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 /** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
 export const GOLD_SCALE = 10;
 
-export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE'; position: [number, number, number]; color: string }[] = [
-    { type: 'SUPPLIES', position: [-27, 0, 2], color: '#3b82f6' },
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE'; position: [number, number, number]; color: string }[] = [
+    { type: 'SUPPLIES', position: [-20.5, 0, 2], color: '#3b82f6' },
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
-    { type: 'PETS', position: [24, 0, 22], color: '#10b981' },
+    { type: 'PETS', position: [-29.5, 0, 2], color: '#10b981' },          // between the potion shop and the fortune teller
     { type: 'ARMORY', position: [36.5, 0, 2], color: '#c9a052' },     // basic gear, beside the blacksmith
     { type: 'FORTUNE', position: [-36.5, 0, 2], color: '#a46bff' },   // fortune teller (summons), beside the potion shop
+    { type: 'WAREHOUSE', position: [32, 0, -10], color: '#b08850' },  // item storage (100 slots), behind the blacksmith
 ];
 /** Shop tab each town building opens. */
-export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON' };
+export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE' };
 
 export const COLORS = {
   background: '#87CEEB', 

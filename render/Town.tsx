@@ -18,7 +18,7 @@ import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
 
-type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE';
+type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE';
 
 // ---------------------------------------------------------------- builders ---
 function lantern(b: GB, g: GB, x: number, y: number, z: number) {
@@ -182,6 +182,42 @@ function buildArmory() {
   return { body: b.build(), glow: g.build() };
 }
 
+/** Warehouse: long timber storehouse on a stone plinth, wide barn doors, a loading hoist, crates, barrels and grain sacks out front. */
+function buildWarehouse() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const stone = '#9d978a', plank = '#d9ccb0', beam = '#5a3d24', roofC = '#3a2e26', crate = '#9c7245', crate2 = '#7d5733', sack = '#d8c8a0';
+  b.box(7.2, 0.6, 5.4, [0, 0.3, 0], '#8a8478');
+  b.box(6.8, 1.0, 5.0, [0, 1.1, 0], stone);
+  b.box(6.6, 3.2, 4.8, [0, 3.2, 0], plank);
+  for (const sx of [-1, -0.33, 0.33, 1]) b.box(0.3, 4.4, 0.3, [sx * 3.3, 2.6, 2.42], beam);
+  for (const sx of [-1, 1]) b.box(0.3, 4.4, 0.3, [sx * 3.3, 2.6, -2.42], beam);
+  b.box(6.9, 0.26, 0.3, [0, 4.75, 2.44], beam); b.box(6.9, 0.22, 0.3, [0, 1.6, 2.44], beam);
+  // roof + loft gable with a hoist beam
+  b.prism(8.0, 2.8, 6.0, [0, 4.85, 0], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.box(0.3, 0.3, 6.1, [0, 7.65, 0], '#1d1713');
+  b.box(1.4, 1.2, 0.2, [0, 5.6, 2.62], '#3e2a18'); b.box(1.6, 0.14, 0.24, [0, 6.25, 2.66], beam);
+  b.box(0.2, 0.2, 1.6, [0, 6.6, 3.2], beam); b.cyl(0.03, 0.03, 2.4, 4, [0, 5.4, 3.95], '#6b5a44'); b.box(0.5, 0.4, 0.5, [0, 4.1, 3.95], crate);
+  // wide double barn doors (X braces)
+  for (const sx of [-1, 1]) {
+    const x = sx * 0.78;
+    b.box(1.5, 2.9, 0.18, [x, 3.05, 2.5], '#6e4a2a');
+    b.box(1.5, 0.14, 0.22, [x, 4.4, 2.53], beam); b.box(1.5, 0.14, 0.22, [x, 1.7, 2.53], beam);
+    b.box(0.14, 2.9, 0.22, [x, 3.05, 2.54], beam, [0, 0, sx * 0.5]);
+  }
+  b.box(0.08, 0.5, 0.1, [-0.12, 3.0, 2.64], '#2a2a2e'); b.box(0.08, 0.5, 0.1, [0.12, 3.0, 2.64], '#2a2a2e');
+  b.box(3.4, 0.25, 1.4, [0, 1.47, 3.1], '#7a6a56');   // loading step
+  // small side windows
+  for (const sx of [-1, 1]) { g.box(0.8, 0.7, 0.1, [sx * 2.35, 3.5, 2.47], '#ffd88a'); b.box(1.0, 0.12, 0.18, [sx * 2.35, 3.9, 2.5], beam); b.box(1.0, 0.12, 0.18, [sx * 2.35, 3.1, 2.5], beam); }
+  // goods out front: crates, barrels, sacks
+  const crateAt = (x: number, y: number, z: number, sz: number, c: string, r = 0) => { b.box(sz, sz, sz, [x, y + sz / 2, z], c, [0, r, 0]); b.box(sz + 0.04, 0.08, sz * 0.3, [x, y + sz / 2, z], beam, [0, r, 0]); };
+  crateAt(-2.9, 0, 3.6, 0.9, crate, 0.2); crateAt(-2.0, 0, 3.9, 0.75, crate2, -0.3); crateAt(-2.75, 0.9, 3.6, 0.6, crate2, 0.5);
+  crateAt(2.9, 0, 3.2, 0.8, crate2, -0.15);
+  for (const [x, z] of [[2.1, 3.9], [2.9, 4.2]]) { b.cyl(0.38, 0.34, 0.95, 10, [x, 0.48, z], '#7a5432'); b.cyl(0.4, 0.4, 0.07, 10, [x, 0.2, z], '#3a3a3e'); b.cyl(0.4, 0.4, 0.07, 10, [x, 0.78, z], '#3a3a3e'); }
+  for (const [x, z, r] of [[-1.2, 4.1, 0.3], [-0.7, 4.3, -0.4]]) b.sph(0.36, [x, 0.3, z], sack, [1, 0.8, 1.25], 8, [0, r, 0]);
+  lantern(b, g, 1.9, 3.3, 2.7);
+  return { body: b.build(), glow: g.build() };
+}
+
 /** Fortune teller's house: crooked dark-roofed cottage, round window, crystal ball on a draped table, moon & star charms. */
 function buildFortune() {
   const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
@@ -208,17 +244,18 @@ function buildFortune() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller' };
+const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7] };
 const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
   PETS: { key: 'ROGUE', tint: '#bfffcf', pos: [2.2, 4.7] },
   ARMORY: { key: 'KNIGHT', tint: '#e8e0d0', pos: [-0.6, 4.6] },
   FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [0.1, 4.2] },
+  WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [0.9, 4.4] },
 };
 
 // -------------------------------------------------------------------- signs ---
@@ -237,6 +274,8 @@ function buildSign(type: ShopType, color: string) {
     g.box(0.5, 0.04, 0.06, [0, 0.03, 0.28], '#ff8a2a');
   } else if (type === 'ARMORY') {
     b.cyl(0.36, 0.36, 0.08, 12, [0, -0.05, 0.17], '#9aa2ae', [Math.PI / 2, 0, 0], [1, 1.2, 1]); b.box(0.08, 0.6, 0.04, [0, -0.05, 0.22], '#d9b56a'); b.box(0.5, 0.08, 0.04, [0, 0.05, 0.22], '#d9b56a');
+  } else if (type === 'WAREHOUSE') {
+    b.box(0.7, 0.55, 0.12, [0, -0.08, 0.17], '#9c7245'); b.box(0.74, 0.08, 0.14, [0, -0.08, 0.2], '#5a3d24'); b.box(0.08, 0.55, 0.14, [0, -0.08, 0.2], '#5a3d24');
   } else if (type === 'FORTUNE') {
     g.sph(0.26, [0, -0.08, 0.17], '#b98aff', [1, 1, 0.5], 10); b.box(0.5, 0.1, 0.12, [0, -0.36, 0.17], '#d9b56a'); g.octa(0.08, [0.32, 0.24, 0.2], '#fff3c0');
   } else {

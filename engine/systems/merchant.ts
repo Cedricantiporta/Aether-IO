@@ -1,3 +1,4 @@
+import { world } from '../world';
 // ============================================================================
 // Travelling merchant (merchant rooms): potions + three random gear pieces at a markup, one of them on sale.
 // Stock is rolled when the room is entered and lives in a tiny zustand store so the shop tab can re-render.
@@ -27,7 +28,7 @@ export function rollMerchantStock(depth: number): void {
   add(makeItemById('potion_mana', 1)[0], 4);
   if (depth >= 8) add(makeItemById(Math.random() < 0.5 ? 'potion_hp_big' : 'potion_mana_big', 1)[0], 2);
   for (let i = 0; i < 3; i++) {
-    const gear = st.rollItemDrop(rarityForDepth(depth, 0.05));
+    const gear = st.rollItemDrop(rarityForDepth(depth, 0.05, world.run.bossKills));
     if (gear) add({ ...gear, id: `${gear.id}-m${i}` }, 1, MARKUP + 0.2);
   }
   // exactly one entry on sale

@@ -42,7 +42,9 @@ export function CameraRig() {
       const k = d > 0.001 ? Math.min(d, 14) / d * 0.22 : 0;
       lx = ax * k; lz = az * k;
     }
-    const zoomSet = useGameStore.getState().settings?.cameraZoom || 1;
+    const setts = useGameStore.getState().settings;
+    const zoomSet = setts?.zoomUnlocked ? setts.cameraZoom || 1 : 1;
+    if (!setts?.zoomUnlocked) world.camera.dist = 1;   // zoom locked at 1.0 unless unlocked in Settings
     s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
     _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
     // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero

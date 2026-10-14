@@ -8,6 +8,7 @@ import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { HERO_COLOR } from '../../lib/game';
 import { TalentsView } from './Talents';
+import { useRunSkillAlert, useTalentAlert } from '../../lib/alerts';
 import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityDefs';
 import { PaintedIcon } from '../../components/SkillIcons';
 
@@ -72,12 +73,13 @@ const RunSkills: React.FC = () => {
 
 /** Skill Trainer: run skills (spent with run Skill Points) and permanent talents (Hero Rank points). */
 export const SkillsTab: React.FC = () => {
-  const [view, setView] = React.useState<'run' | 'talents'>('run');
+  const runDot = useRunSkillAlert(), talentDot = useTalentAlert();
+  const [view, setView] = React.useState<'run' | 'talents'>(() => (!runDot && talentDot ? 'talents' : 'run'));
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" role="tablist">
-        <Button size="sm" active={view === 'run'} onClick={() => setView('run')} role="tab" data-testid="tab-run-skills">Skills (run)</Button>
-        <Button size="sm" active={view === 'talents'} onClick={() => setView('talents')} role="tab" data-testid="tab-talents">Talents (permanent)</Button>
+        <div className="relative"><Button size="sm" active={view === 'run'} onClick={() => setView('run')} role="tab" data-testid="tab-run-skills">Skills (run)</Button>{runDot && <i className="red-dot" />}</div>
+        <div className="relative"><Button size="sm" active={view === 'talents'} onClick={() => setView('talents')} role="tab" data-testid="tab-talents">Talents (permanent)</Button>{talentDot && <i className="red-dot" />}</div>
       </div>
       {view === 'run' ? <RunSkills /> : <TalentsView />}
     </div>
