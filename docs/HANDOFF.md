@@ -240,3 +240,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   node moved to (-20,58).
 - Dash: `DASH_SPEED` 32 (~7 units, was 42). Cooldown is ×0.6 (min 0.5 s). FacingArrow chevrons reach 7.
 - The Set Out / Endless Tower window closes by itself when the hero walks more than 7.5 units from the gate / tower door.
+
+### Targeting + enemy melee
+- The hero walks to the targeted enemy until it is in weapon range: the click-lock always (any distance up to the drop range), else the
+  auto-aim pick. A clicked target always wins over closer enemies. Switching targets or arriving in range swings immediately (no
+  STOP_TO_FIRE_DELAY after auto-chasing; `fireT` is clamped on a target change).
+- No contact damage. A monster in reach winds up a basic strike (`meleeT`, 0.42 s, flashes in render/Enemies.tsx), lunges 0.35, and hits
+  only if the hero is still within reach + 0.7. 1.1 s between strikes. Skill moves (state ATTACK: boar/brute charges, zombie grab,
+  bandit dash, wraith lunge) still hit on contact (×2).

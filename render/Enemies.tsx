@@ -1,4 +1,5 @@
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
+import { meleeT } from '../engine/systems/enemies';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -168,6 +169,7 @@ export function Enemies() {
       if (e.poisonT > 0) { r *= 0.72; g *= 1.25; b *= 0.62; }
       if (e.slowT > 0) { r *= 0.85; g *= 0.95; b *= 1.18; }
       if (e.state === 'WINDUP') fl = Math.max(fl, 0.1 + 0.12 * Math.sin(e.stateT * 34));
+      else if (meleeT[e.id] > 0) fl = Math.max(fl, 0.22 + 0.14 * Math.sin(e.animT * 40));   // winding up a basic strike
       sys.kinds[e.kind]!.flash.array[idx] = fl;
       const gl = poser.glow;
       for (let m = 0; m < K.meshes.length; m++) {

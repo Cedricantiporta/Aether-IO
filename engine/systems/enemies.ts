@@ -243,7 +243,7 @@ export function spawnEnemy(
   e.attackCd = boss ? 2.5 : kind === 'BRUTE' ? 2 + Math.random() * 2 : 0.8 + Math.random() * 1.4;
   e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
   e.active = true;
-  contactCd[e.id] = 0.4;
+  contactCd[e.id] = 0.4; meleeT[e.id] = 0;
 
   d.aliveCount++;
   events.emit('spawn', { pos: e.pos, kind, elite });
@@ -730,15 +730,35 @@ function pushOutOfObstacles(e: Enemy): boolean {
   return hit;
 }
 
+/** Basic melee: touching the hero does nothing; a monster in reach winds up a short strike (MELEE_WINDUP, it flashes),
+ *  then hits only if the hero is still in reach. Skill moves (state ATTACK: charges, lunges, grabs) hit on contact. */
+export const meleeT = new Float32Array(MAX_ENEMIES);
+const MELEE_WINDUP = 0.42, MELEE_CD = 1.1;
 function contactHit(e: Enemy, locked: boolean): void {
-  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0) return;
-  if (contactCd[e.id] > 0 || !world.player.alive) return;
+  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || !world.player.alive) { meleeT[e.id] = 0; return; }
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
   const r = e.radius + 0.8;
-  if (dx * dx + dz * dz >= r * r) return;
+  const d2 = dx * dx + dz * dz;
+  if (e.state !== 'ATTACK') {
+    if (e.stunT > 0 || e.freezeT > 0) { meleeT[e.id] = 0; return; }
+    if (meleeT[e.id] > 0) {
+      meleeT[e.id] -= frameDt;
+      if (meleeT[e.id] > 0) return;
+      meleeT[e.id] = 0; contactCd[e.id] = MELEE_CD;
+      const d = Math.sqrt(d2) || 1;
+      e.pos.x += (dx / d) * 0.35; e.pos.z += (dz / d) * 0.35;   // lunge into the strike
+      if (d2 > (r + 0.7) * (r + 0.7)) return;                  // the hero stepped out of reach: whiff
+    } else {
+      if (contactCd[e.id] > 0 || d2 >= (r + 0.3) * (r + 0.3)) return;
+      meleeT[e.id] = MELEE_WINDUP;
+      return;
+    }
+  } else {
+    if (contactCd[e.id] > 0 || d2 >= r * r) return;
+  }
   const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1);
-  contactCd[e.id] = CONTACT_CD;
+  contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   const grab = e.kind === 'ZOMBIE';
   damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined });
   if (e.kind === 'BOAR' && e.state === 'ATTACK') {

@@ -33,6 +33,7 @@ const AUTO_TARGET_RANGE = 22;
 /** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
 const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
 const STOP_TO_FIRE_DELAY = 0.12;
+let autoChase = false, lastAimId = -1;
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
 const CHASE_MUL = 1.35;
 
@@ -236,7 +237,8 @@ export function updatePlayer(dt: number): void {
     updateTarget();
     const lk = lockedEnemy();
     const lr = (ATTACK_RANGE[st.hero] ?? 18) + (lk ? lk.radius : 0);
-    if (lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 <= lr * lr) autoAim.id = lk.id; // clicked target wins while in weapon range
+    void lr;
+    if (lk) autoAim.id = lk.id;   // a clicked target always wins (the hero walks to it when out of range)
     else if (st.settings.autoAim === false) autoAim.id = -1;
     else if (!keep || (lk && cur === lk)) { // (lock fell out of weapon range: re-pick the nearest)
       const e = findNearestEnemy(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
@@ -259,15 +261,18 @@ export function updatePlayer(dt: number): void {
 
   // ---- auto-chase: no movement input + an enemy inside the chase ring (a bit beyond weapon range) but outside
   // weapon range -> walk toward it until it is in range (then the normal auto-attack takes over). Follows the auto-aim setting.
+  autoChase = false;
   if (ml === 0 && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
     const range = ATTACK_RANGE[st.hero] ?? 18;
     const chaseR = range * CHASE_MUL;
+    // the targeted enemy (clicked lock, else the auto-aim pick) is always walked to until it is in weapon range
     const lk = lockedEnemy();
-    let e = lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 <= chaseR * chaseR ? lk : null;
+    const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+    let e = lk ?? (cur && cur.active && cur.state !== 'DYING' ? cur : null);
     if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, chaseR);
     if (e) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > range - 1 + (e === lk ? e.radius : 0) && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; }
+      if (d > range - 0.6 + e.radius && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; autoChase = true; }
     }
   }
 
@@ -320,11 +325,13 @@ export function updatePlayer(dt: number): void {
   const manual = !!world.input.keys.KeyF;
   const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
   const archerMoving = (st.hero === 'ARCHER' || manual) && moving && !busy;
-  if (moving && !archerMoving) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
+  if (moving && !archerMoving) { if (!autoChase) p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }   // (walking up to the target: swing on arrival)
+  // a new target: swing at it right away (no idle wait)
+  if (autoAim.id !== lastAimId) { lastAimId = autoAim.id; if (autoAim.id >= 0) p.fireT = Math.min(p.fireT, 0.03); }
   // Auto-attack: no target in weapon range → hold fire (no shooting into empty air).
   const range = ATTACK_RANGE[st.hero] ?? 18;
   const lkd = lockedEnemy();
-  const lockInRange = !!lkd && autoAim.id === lkd.id;
+  const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
   if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
   p.fireT -= dt;
   if (p.fireT <= 0) {
