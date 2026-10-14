@@ -12,6 +12,9 @@ import { aimOverride, autoAim, findNearestEnemy } from './combat';
 import { castActive, castUlt, tryDash, ultReady } from './abilities';
 import { edgeLimit } from '../mapgen';
 import { lockedEnemy } from './target';
+import { camRel } from '../camera';
+
+const _td = { x: 0, z: 0 };
 
 export const Shape = { NONE: 0, LINE: 1, CONE: 2, CIRCLE: 3, RING: 4, ARROW: 5 } as const;
 export const aimState = {
@@ -205,7 +208,8 @@ export function updateSkillInput(): void {
       const m = Math.max(0.05, T.mag);
       const len = Math.hypot(T.dx, T.dz) || 1;
       const reach = 30 * Math.min(1, m);
-      shapeFor(T.id, p.pos.x + (T.dx / len) * reach, p.pos.z + (T.dz / len) * reach);
+      camRel(T.dx / len, T.dz / len, _td);
+      shapeFor(T.id, p.pos.x + _td.x * reach, p.pos.z + _td.z * reach);
       aimState.cancelZone = T.cancel;
     }
   } else if (lastTouch.active) {

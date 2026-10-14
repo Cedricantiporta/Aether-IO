@@ -15,6 +15,7 @@ import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
+import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
 const DASH_SPEED = 42;
@@ -23,6 +24,7 @@ const COLLIDE_PAD = 0.5;
 
 const colOut: Collider[] = [];
 const aim = new Vector3();
+const _mv = { x: 0, z: 0 };
 
 /** Combat feel: attack only when standing still, auto-target the nearest enemy, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
@@ -230,6 +232,7 @@ export function updatePlayer(dt: number): void {
   let ml = Math.sqrt(mx * mx + mz * mz);
   if (ml > 0) { mx /= ml; mz /= ml; }
   if (inp.joy.active) { mx = inp.joy.x; mz = inp.joy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
+  if (ml > 0) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }   // W = away from the camera
 
   if (stunned || p.rootT > 0) { mx = 0; mz = 0; ml = 0; }
 
@@ -331,6 +334,7 @@ export function updatePlayerVillage(dt: number): void {
   if (ml > 0) { mx /= ml; mz /= ml; }
   const jy = world.input.joy;
   if (jy.active) { mx = jy.x; mz = jy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
+  if (ml > 0) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }
   const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;
   const lerpK = 1 - Math.exp(-12 * dt);
   p.vel.x += (mx * speed - p.vel.x) * lerpK;

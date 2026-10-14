@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { world, TOWN_CENTER } from '../engine/world';
+import { world, TOWN_CENTER, CAM_PITCH0 } from '../engine/world';
+import { camRel } from '../engine/camera';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { damp, clamp } from './util';
@@ -10,6 +11,8 @@ import { feel } from '../engine/game';
 import { device } from '../engine/device';
 import { clickReq, selectAt } from '../engine/systems/target';
 
+const CAM_DIST0 = Math.hypot(32, 22);
+const _rel = { x: 0, z: 0 };
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
 /** Cinematic (non-interactive) states: title screen and game over. The village itself uses the follow camera. */
@@ -17,10 +20,10 @@ export function isLobbyStatus(s: GameStatus) {
   return s === GameStatus.HERO_SELECT || s === GameStatus.GAME_OVER || (s === GameStatus.MENU && !useUiStore.getState().titleDone);
 }
 
-/** Isometric-ish follow camera, screen shake, ground-plane aim, and a cinematic lobby orbit. */
+/** Free-orbit follow camera (MMORPG style: yaw / pitch / zoom from engine/input), screen shake, ground-plane aim, and a cinematic lobby orbit. */
 export function CameraRig() {
   const cam = useThree((s) => s.camera) as PerspectiveCamera;
-  const st = useRef({ tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0 });
+  const st = useRef({ yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0 });
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -42,7 +45,11 @@ export function CameraRig() {
     const zoomSet = useGameStore.getState().settings?.cameraZoom || 1;
     s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
     _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
-    _pos.set(_tgt.x, 32 * s.zoom, _tgt.z + 22 * s.zoom);
+    // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
+    const C = world.camera;
+    s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
+    const R = CAM_DIST0 * s.zoom * s.dist, hr = Math.cos(s.pitch) * R;
+    _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
     // ---- lobby orbit: sweep around the hero/town
     if (s.lobbyBlend > 0.001) {
@@ -104,7 +111,8 @@ export function CameraRig() {
     const settings = useGameStore.getState().settings;
     if (inp.aimStick.active && Math.hypot(inp.aimStick.x, inp.aimStick.z) > 0.25) {
       // touch right stick: aim in the stick direction
-      p.aim.set(p.pos.x + inp.aimStick.x * 10, 0, p.pos.z + inp.aimStick.z * 10);
+      camRel(inp.aimStick.x, inp.aimStick.z, _rel);
+      p.aim.set(p.pos.x + _rel.x * 10, 0, p.pos.z + _rel.z * 10);
     } else if (device.touch && !lobby) {
       // touch without an aim stick: aim along facing (auto-aim overrides this when enabled)
       p.aim.set(p.pos.x + Math.sin(p.facing) * 10, 0, p.pos.z + Math.cos(p.facing) * 10);

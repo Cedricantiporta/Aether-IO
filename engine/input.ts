@@ -8,6 +8,22 @@ import { uiOverlayOpen, closeTopOverlay, useUiStore } from '../ui/uiStore';
 import { aimState, cancelAim } from './systems/aim';
 import { requestClick } from './systems/target';
 
+// ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
+const PITCH_MIN = 0.55, PITCH_MAX = 1.3, DIST_MIN = 0.55, DIST_MAX = 1.6;
+const orbitAllowed = () => {
+  const st = useGameStore.getState().status;
+  return st === GameStatus.PLAYING || (st === GameStatus.MENU && useUiStore.getState().titleDone);
+};
+function orbit(dxPx: number, dyPx: number): void {
+  const c = world.camera;
+  c.yaw -= dxPx * 0.0065;
+  c.pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, c.pitch + dyPx * 0.0045));
+}
+function zoomBy(f: number): void {
+  const c = world.camera;
+  c.dist = Math.min(DIST_MAX, Math.max(DIST_MIN, c.dist * f));
+}
+
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
   const tag = t.tagName;
@@ -64,7 +80,46 @@ export function installInput(): () => void {
     inp.pointerNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
     inp.pointerNdc.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
-  const onMouseDown = (e: MouseEvent) => { if ((e.target as HTMLElement | null)?.closest?.('.pe')) return; /* UI panels never fire skills */ if (e.button === 0) inp.mouseDown = true; else if (e.button === 2 && aimState.active) { cancelAim(); inp.cancelAim = true; } };
+  const onUi = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('.pe');
+  // right mouse: cancels a held skill indicator, otherwise drag = orbit the camera
+  const rmb = { on: false, x: 0, y: 0 };
+  const onMouseDown = (e: MouseEvent) => {
+    if (onUi(e)) return; /* UI panels never fire skills */
+    if (e.button === 0) inp.mouseDown = true;
+    else if (e.button === 2) {
+      if (aimState.active) { cancelAim(); inp.cancelAim = true; }
+      else if (orbitAllowed()) { rmb.on = true; rmb.x = e.clientX; rmb.y = e.clientY; }
+    }
+  };
+  const onMouseMove = (e: MouseEvent) => {
+    if (!rmb.on) return;
+    orbit(e.clientX - rmb.x, e.clientY - rmb.y);
+    rmb.x = e.clientX; rmb.y = e.clientY;
+  };
+  const onWheel = (e: WheelEvent) => {
+    if (onUi(e) || !orbitAllowed()) return;
+    zoomBy(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.0022));
+  };
+  // touch: drags that start on empty screen (not joystick / buttons / panels) orbit; two fingers pinch-zoom
+  const touches = new Map<number, { x: number; y: number }>();
+  let pinchD = 0;
+  const onTouchDown = (e: PointerEvent) => {
+    if (e.pointerType !== 'touch' || onUi(e) || !orbitAllowed()) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); }
+  };
+  const onTouchMove = (e: PointerEvent) => {
+    const t = touches.get(e.pointerId); if (!t) return;
+    if (touches.size === 1) orbit((e.clientX - t.x) * 1.15, (e.clientY - t.y) * 1.15);
+    t.x = e.clientX; t.y = e.clientY;
+    if (touches.size === 2) {
+      const [a, b] = [...touches.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchD > 10 && d > 10) zoomBy(pinchD / d);
+      pinchD = d;
+    }
+  };
+  const onTouchUp = (e: PointerEvent) => { touches.delete(e.pointerId); pinchD = 0; };
   // click / tap = select a target (processed by CameraRig). Drags and holds are not clicks; UI (.pe) is ignored.
   const downs: Record<number, { x: number; y: number; t: number }> = {};
   const onPtrDown = (e: PointerEvent) => {
@@ -79,8 +134,8 @@ export function installInput(): () => void {
     requestClick(e.clientX, e.clientY);
   };
   const onPtrCancel = (e: PointerEvent) => { delete downs[e.pointerId]; };
-  const onContext = (e: Event) => { if (aimState.active) e.preventDefault(); };
-  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; };
+  const onContext = (e: Event) => { if (aimState.active || !onUi(e)) e.preventDefault(); };
+  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; else if (e.button === 2) rmb.on = false; };
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -92,6 +147,14 @@ export function installInput(): () => void {
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('contextmenu', onContext);
   window.addEventListener('blur', clearAll);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('wheel', onWheel, { passive: true });
+  window.addEventListener('pointerdown', onTouchDown);
+  window.addEventListener('pointermove', onTouchMove);
+  window.addEventListener('pointerup', onTouchUp);
+  window.addEventListener('pointercancel', onTouchUp);
+  const onBlur = () => { rmb.on = false; touches.clear(); };
+  window.addEventListener('blur', onBlur);
 
   return () => {
     window.removeEventListener('keydown', onKeyDown);
@@ -104,5 +167,12 @@ export function installInput(): () => void {
     window.removeEventListener('mouseup', onMouseUp);
     window.removeEventListener('contextmenu', onContext);
     window.removeEventListener('blur', clearAll);
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('wheel', onWheel);
+    window.removeEventListener('pointerdown', onTouchDown);
+    window.removeEventListener('pointermove', onTouchMove);
+    window.removeEventListener('pointerup', onTouchUp);
+    window.removeEventListener('pointercancel', onTouchUp);
+    window.removeEventListener('blur', onBlur);
   };
 }

@@ -90,6 +90,9 @@ function makePlayer(): PlayerRuntime {
   };
 }
 
+/** Default camera elevation (the classic 32 up / 22 back framing). */
+export const CAM_PITCH0 = Math.atan2(32, 22);
+
 export const world = {
   time: 0,              // total simulated seconds (only advances while PLAYING)
   frame: 0,
@@ -128,7 +131,7 @@ export const world = {
   village: { shopsClosed: false, harvestCd: 0 },
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0 } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
-  camera: { trauma: 0, zoom: 1 } as CameraState,
+  camera: { trauma: 0, zoom: 1, yaw: 0, pitch: CAM_PITCH0, dist: 1 } as CameraState,
   input: { keys: {}, pressed: {}, pointerNdc: { x: 0, y: 0 }, mouseDown: false, joy: { x: 0, z: 0, active: false }, aimStick: { x: 0, z: 0, active: false }, touchAim: { active: false, id: '', dx: 0, dz: 0, mag: 0, cancel: false }, cancelAim: false } as InputState,
   /** Visible ground rectangle (camera frustum ∩ ground plane + margin). Written by render/CameraRig every frame; read by renderers and the AI LOD. */
   view: { minX: -1e5, maxX: 1e5, minZ: -1e5, maxZ: 1e5, cx: 0, cz: 0, r: 1e5, on: false },
