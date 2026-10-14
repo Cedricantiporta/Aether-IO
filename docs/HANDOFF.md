@@ -432,3 +432,12 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   the fallen rise: `abilityState.curseRaise`), Space Soul Step (blink + bone burst). Ult Army of the Dead (wail stun,
   5 warriors + 2 mages + golem, 12 s). Passives: Grave Call (every Nth bolt raises a warrior), Soul Harvest (kills heal
   + mana), Bone Armor (3%+ damage reduction per living minion, max 30%, in damagePlayer).
+
+### Character slots (MMO style)
+- `characters.ts`: index `aether-survivor-chars-v1` {list: {id, name, hero, tint}, active}. Each character is its own
+  save: id 'c0' (first / pre-slot save) = 'aether-survivor-profile-v1', others `...:<id>`. store.ts loads
+  `activeProfileKey()` at start; switching / creating = set active + `enterWithReload()` (sessionStorage autoplay flag
+  skips the title once). A character's class is fixed (store forces `selectHero(activeChar.hero)` at boot).
+- CharacterSelect: list view (characters with level, Play, Delete, New) and create view (class list, name, outfit
+  tint from TINTS, Create). Fresh installs land in create view. Town profile shows the character name; its chip is
+  "Characters" (no class switching). Hero.tsx multiplies the outfit tint over the model materials.

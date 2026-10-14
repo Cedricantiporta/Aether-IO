@@ -1,6 +1,6 @@
 // Full-screen class selection (Korean MMO style): class list on the left, the 3D hero centred in the scene
 // (CameraRig frames it while `charSelect` is on), emblem + role + profile bars + difficulty + Confirm on the right.
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useUiStore } from '../uiStore';
@@ -8,6 +8,7 @@ import type { HeroClass } from '../../types';
 import type { Difficulty } from '../../storeTypes';
 import { DIFFICULTY_MODS } from '../../constants';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
+import { characters, activeChar, charLevel, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
 import { HERO_ICON } from '../hud/TopBars';
 
 const ROLE: Record<HeroClass, string> = { ARCHER: 'Ranged  |  Damage', WIZARD: 'Ranged  |  Magic', BARBARIAN: 'Melee  |  Defense', KNIGHT: 'Melee  |  Tank', NECROMANCER: 'Ranged  |  Summoner' };
@@ -44,19 +45,52 @@ export const ClassEmblem: React.FC<{ hero: HeroClass; size: string; lit?: boolea
   );
 };
 
+/** Character select (MMO style): your saved characters on the left (name, class, level), Play / Create / Delete.
+ *  Create: pick a class (left list), a name and an outfit tint, then Create (the new character's save loads at once).
+ *  A character's class is fixed; there is no class switching in town any more. */
 export const CharacterSelect: React.FC = () => {
-  const hero = useGameStore((s) => s.hero);
   const difficulty = useGameStore((s) => s.difficulty);
-  const selectHero = useGameStore((s) => s.selectHero);
   const setDifficulty = useGameStore((s) => s.setDifficulty);
   const setCharSelect = useUiStore((s) => s.setCharSelect);
-  const confirm = () => setCharSelect(false);
+  const askConfirm = useUiStore((s) => s.askConfirm);
+  const [chars, setChars] = useState<CharEntry[]>(() => characters());
+  const active = activeChar();
+  const [sel, setSel] = useState<string>(active?.id ?? chars[0]?.id ?? '');
+  const [mode, setMode] = useState<'list' | 'create'>(chars.length ? 'list' : 'create');
+  const [cHero, setCHero] = useState<HeroClass>('ARCHER');
+  const [cName, setCName] = useState('');
+  const [cTint, setCTint] = useState(TINTS[0].id);
+  const picked = chars.find((c) => c.id === sel) ?? null;
+  const hero: HeroClass = mode === 'create' ? cHero : picked?.hero ?? 'ARCHER';
+  const play = () => {
+    if (!picked) return;
+    if (picked.id === active?.id) { setCharSelect(false); return; }   // already loaded
+    setActiveChar(picked.id); enterWithReload();
+  };
+  const create = () => {
+    const c = createChar(cName || HERO_META[cHero].title, cHero, cTint);
+    if (c) enterWithReload();
+  };
+  const del = () => {
+    if (!picked) return;
+    askConfirm({ title: `Delete ${picked.name}?`, body: 'This character and everything they own will be gone for good.', confirmLabel: 'Delete', onConfirm: () => {
+      const wasActive = picked.id === active?.id;
+      deleteChar(picked.id);
+      const left = characters();
+      setChars(left); setSel(left[0]?.id ?? '');
+      if (!left.length) setMode('create');
+      else if (wasActive) { setActiveChar(left[0].id); enterWithReload(); }
+    } });
+  };
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') confirm();
-      const i = HERO_ORDER.indexOf(hero);
-      if (e.key === 'ArrowDown' || e.key === 's') selectHero(HERO_ORDER[(i + 1) % HERO_ORDER.length]);
-      if (e.key === 'ArrowUp' || e.key === 'w') selectHero(HERO_ORDER[(i + HERO_ORDER.length - 1) % HERO_ORDER.length]);
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      if (e.key === 'Enter') { if (mode === 'list') play(); else create(); }
+      const list = mode === 'list' ? chars.map((c) => c.id) : HERO_ORDER;
+      const cur = mode === 'list' ? sel : cHero;
+      const i = list.indexOf(cur as never);
+      const nx = e.key === 'ArrowDown' || e.key === 's' ? 1 : e.key === 'ArrowUp' || e.key === 'w' ? -1 : 0;
+      if (nx && list.length) { const v = list[(i + nx + list.length) % list.length]; if (mode === 'list') setSel(v as string); else setCHero(v as HeroClass); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -65,37 +99,62 @@ export const CharacterSelect: React.FC = () => {
   return (
     <div className="absolute inset-0 pe cs-root" style={{ zIndex: 55 }} data-testid="char-select">
       <div className="cs-vig" />
-      <div className="cs-head">Choose your class</div>
+      <div className="cs-head">{mode === 'list' ? 'Choose your character' : 'Create a character'}</div>
 
-      <div className="cs-list">
-        {HERO_ORDER.map((h, i) => (
-          <motion.button key={h} className={`cs-item ${hero === h ? 'on' : ''}`} onClick={() => selectHero(h)} data-testid={`cs-${h}`}
-            initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.07 }}>
-            <ClassEmblem hero={h} size="4.6rem" lit={hero === h} />
-            <span>{HERO_META[h].title}</span>
-          </motion.button>
-        ))}
-      </div>
+      {mode === 'list' ? (
+        <div className="cs-list" data-testid="cs-chars">
+          {chars.map((c, i) => (
+            <motion.button key={c.id} className={`cs-item cs-char ${sel === c.id ? 'on' : ''}`} onClick={() => setSel(c.id)} onDoubleClick={play} data-testid={`cs-char-${i}`}
+              initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.06 }}>
+              <ClassEmblem hero={c.hero} size="4.2rem" lit={sel === c.id} />
+              <span className="cs-charname"><b style={{ color: c.tint === '#ffffff' ? undefined : c.tint }}>{c.name}</b><em>Lv {charLevel(c)} {HERO_META[c.hero].title}{c.id === active?.id ? ' · last played' : ''}</em></span>
+            </motion.button>
+          ))}
+          {chars.length < MAX_CHARS && <button className="cs-item cs-new" onClick={() => setMode('create')} data-testid="cs-new"><span className="cs-plus">+</span><span>New character</span></button>}
+        </div>
+      ) : (
+        <div className="cs-list">
+          {HERO_ORDER.map((h, i) => (
+            <motion.button key={h} className={`cs-item ${cHero === h ? 'on' : ''}`} onClick={() => setCHero(h)} data-testid={`cs-${h}`}
+              initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.07 }}>
+              <ClassEmblem hero={h} size="4.2rem" lit={cHero === h} />
+              <span>{HERO_META[h].title}</span>
+            </motion.button>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
-        <motion.div key={hero} className="cs-info" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }}>
-          <ClassEmblem hero={hero} size="6rem" lit />
-          <div className="cs-name">{meta.title}</div>
-          <div className="cs-role">{ROLE[hero]}</div>
+        <motion.div key={mode + hero + (picked?.id ?? '')} className="cs-info" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }}>
+          <ClassEmblem hero={hero} size="5.4rem" lit />
+          <div className="cs-name">{mode === 'list' && picked ? picked.name : meta.title}</div>
+          <div className="cs-role">{mode === 'list' && picked ? `${meta.title} · Lv ${charLevel(picked)}` : ROLE[hero]}</div>
           <div className="cs-blurb">{BLURB[hero]}</div>
-          <div className="cs-row"><span>Complexity</span><span className="cs-stars">{[1, 2, 3].map((n) => <i key={n} className={n <= COMPLEXITY[hero] ? 'on' : ''} />)}</span></div>
-          <div className="cs-sep" />
-          <div className="cs-bars">
-            {PROFILE[hero].map(([l, v]) => (
-              <div key={l} className="cs-bar"><span>{l}</span><div>{[1, 2, 3, 4, 5].map((n) => <i key={n} className={n <= v ? 'on' : ''} />)}</div></div>
-            ))}
-          </div>
-          <div className="cs-sep" />
-          <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
-          <div className="cs-diffs">
-            {DIFFS.map((d) => <button key={d} className={`cs-diff ${difficulty === d ? 'on' : ''}`} onClick={() => setDifficulty(d)}>{DIFFICULTY_MODS[d].label}</button>)}
-          </div>
-          <button className="cs-confirm" onClick={confirm} data-testid="cs-confirm">Confirm</button>
+          {mode === 'create' && (<>
+            <div className="cs-row"><span>Complexity</span><span className="cs-stars">{[1, 2, 3].map((n) => <i key={n} className={n <= COMPLEXITY[hero] ? 'on' : ''} />)}</span></div>
+            <div className="cs-bars">
+              {PROFILE[hero].map(([l, v]) => (
+                <div key={l} className="cs-bar"><span>{l}</span><div>{[1, 2, 3, 4, 5].map((n) => <i key={n} className={n <= v ? 'on' : ''} />)}</div></div>
+              ))}
+            </div>
+            <div className="cs-sep" />
+            <input className="cs-input pe" placeholder="Character name" maxLength={16} value={cName} onChange={(e) => setCName(e.target.value)} data-testid="cs-name-input" />
+            <div className="cs-tints" aria-label="Outfit colour">
+              {TINTS.map((t) => <button key={t.id} className={`cs-tint pe ${cTint === t.id ? 'on' : ''}`} style={{ background: t.c }} title={t.name} onClick={() => setCTint(t.id)} />)}
+            </div>
+            <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
+            <button className="cs-confirm" onClick={create} data-testid="cs-create">Create</button>
+            {chars.length > 0 && <button className="cs-sub" onClick={() => setMode('list')}>Back to characters</button>}
+          </>)}
+          {mode === 'list' && (<>
+            <div className="cs-sep" />
+            <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
+            <div className="cs-diffs">
+              {DIFFS.map((d) => <button key={d} className={`cs-diff ${difficulty === d ? 'on' : ''}`} onClick={() => setDifficulty(d)}>{DIFFICULTY_MODS[d].label}</button>)}
+            </div>
+            <button className="cs-confirm" onClick={play} disabled={!picked} data-testid="cs-confirm">Play</button>
+            {picked && <button className="cs-sub danger" onClick={del} data-testid="cs-delete">Delete character</button>}
+          </>)}
         </motion.div>
       </AnimatePresence>
     </div>

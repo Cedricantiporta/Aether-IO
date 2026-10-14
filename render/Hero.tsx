@@ -1,4 +1,5 @@
 // The player hero: KayKit skinned model + animation state machine, weapons, status FX, bars, earthwall, axe spin.
+import { activeChar } from '../characters';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
@@ -33,6 +34,11 @@ function buildWeapon(cls: HeroClass, accent: string, tier: number): WeaponGeo {
 function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   const ch = useCharacterInstance(CHAR[cls]);
   const clips = useClips();
+  // the character's outfit tint (characters.ts), multiplied over the model's colours
+  useEffect(() => {
+    const t = activeChar()?.tint ?? '#ffffff';
+    for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.color) mt.color.set(t);
+  }, [ch]);
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
   const eq = useGameStore((s) => s.equipment);
   const gearKey = ['helmet', 'armor', 'gloves', 'boots', 'accessory'].map((k) => (eq as any)?.[k]?.rarity || '').join('|');

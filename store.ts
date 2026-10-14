@@ -7,6 +7,7 @@ import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
+import { activeChar, activeProfileKey } from './characters';
 import { STORY, sanitizeStory, type StorySave } from './story';
 import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
 let runStartLevel = 1;
@@ -43,7 +44,7 @@ import { CODEX_KEYS, CODEX_REWARD_GEMS, emptyDiscovered, monsterKeyByName, type 
 
 // ------------------------------------------------------------------ consts --
 const LEGACY_KEY = 'aether-survivor-v2';           // gameStats + settings only (pre-profile builds)
-const PROFILE_KEY = 'aether-survivor-profile-v1';
+const PROFILE_KEY = activeProfileKey();   // the active character's save (characters.ts; the first one keeps 'aether-survivor-profile-v1')
 const PROFILE_VERSION = 1;
 const MAX_SKILL_LEVEL = 5;
 const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
@@ -1646,4 +1647,10 @@ function syncDiscoveries(): void {
     else if (e.kind === 'SHARD') q('GATHER_SHARDS');
     else if (e.kind === 'ITEM' && e.name) useGameStore.getState().addQuestProgress('COLLECT_LOOT', 1, undefined, e.name);
   });
+}
+
+// The active character's class is fixed (characters.ts): a brand-new character starts on its chosen class.
+{
+  const ac = activeChar();
+  if (ac && useGameStore.getState().hero !== ac.hero) useGameStore.getState().selectHero(ac.hero);
 }

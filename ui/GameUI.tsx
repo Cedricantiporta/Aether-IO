@@ -1,3 +1,4 @@
+import { takeAutoplay } from '../characters';
 import React, { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
@@ -48,6 +49,9 @@ export const GameUI: React.FC = () => {
   const village = status === GameStatus.MENU && titleDone;
   const inGame = HUD_STATUSES.has(status);
   const panels = inGame || village;
+
+  // back from a character switch (page reload): straight into the town
+  useEffect(() => { if (takeAutoplay()) useUiStore.getState().setCharSelect(false); }, []);
 
   // opening the bag / codex clears their red dots
   const codexOpen = useUiStore((s) => s.codexOpen);

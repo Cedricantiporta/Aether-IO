@@ -1258,6 +1258,14 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .cs-diff.on { color: #f6e4b0; border-color: rgba(241, 213, 142, .8); background: linear-gradient(180deg, rgba(217, 181, 106, .3), rgba(217, 181, 106, .06)); }
 .cs-confirm { margin-top: 1.4rem; width: 13rem; padding: .8rem 0; font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; letter-spacing: .3em; color: #f6e8c8; text-shadow: 0 1px 2px #000;
   background: linear-gradient(180deg, #6b5536, #3e2f1b 55%, #2c2113); border: 1px solid #c9a052; box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 240, 200, .3), 0 6px 18px rgba(0, 0, 0, .6); }
+.tp-cls { font-style: normal; font-size: .7em; opacity: .7; margin-left: .3rem; }
+.cs-charname { display: flex; flex-direction: column; line-height: 1.15; } .cs-charname b { font-size: 1.15rem; } .cs-charname em { font-style: normal; font-family: var(--font-ui, inherit); font-size: .72rem; letter-spacing: .04em; color: #a89a7a; }
+.cs-new { opacity: .85; } .cs-plus { width: 4.2rem; height: 4.2rem; display: grid; place-items: center; border: 1.5px dashed #8a7a5a; border-radius: 50%; font-size: 2rem; color: #c9a052; }
+.cs-input { margin-top: .6rem; width: 15rem; padding: .5rem .7rem; background: rgba(0, 0, 0, .55); border: 1px solid #6b5a3a; color: #f6e8c8; font-size: .95rem; text-align: center; outline: none; }
+.cs-input:focus { border-color: #e9cf8a; }
+.cs-tints { display: flex; gap: .4rem; margin: .6rem 0 .2rem; } .cs-tint { width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid #1a1410; box-shadow: 0 0 0 1px #6b5a3a; cursor: pointer; }
+.cs-tint.on { box-shadow: 0 0 0 2px #f1d58e, 0 0 10px rgba(241, 213, 142, .6); }
+.cs-sub { margin-top: .6rem; background: none; border: 0; color: #a89a7a; font-size: .78rem; text-decoration: underline; cursor: pointer; } .cs-sub.danger { color: #d0705a; }
 .cs-confirm:hover { filter: brightness(1.25); box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 240, 200, .3), 0 0 22px rgba(241, 213, 142, .45); }
 @media (max-width: 900px) { .cs-info { width: 16rem; right: 1rem; } .cs-name { font-size: 1.7rem; } .cs-list { left: 1rem; gap: 1rem; } .cs-item span { display: none; } }
 .cs-change { display: flex; align-items: center; gap: .6rem; background: none; border: 0; padding: 0; text-align: left; color: var(--text); }
