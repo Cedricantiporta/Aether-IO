@@ -20,6 +20,8 @@ import { spawnProjectile } from './projectiles';
 import { hitStop, slowMo, fovKick } from '../game';
 
 /** State for render/UI of multi-frame abilities. */
+/** Every class dash deals 70% less damage (user tuning: dashes are for movement). */
+const DASH_DMG = 0.3;
 const judgeRays = Array.from({ length: 12 }, () => ({ x: 0, z: 0, t: 0, id: -1 }));
 const judgeUsed: number[] = [];
 let judgeN = 0;
@@ -356,7 +358,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.invulnT = Math.max(p.invulnT, inv);
       events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
       const R = 4.2 + 0.3 * (lv - 1);   // a smaller blast
-      mkFx('ARROW_STICK', p.pos.x, p.pos.z, 0.6, 0.85, R, b * 8, 0, 0xffe8a0);
+      mkFx('ARROW_STICK', p.pos.x, p.pos.z, 0.6, 0.85, R, b * 8 * DASH_DMG, 0, 0xffe8a0);
       for (let i = 0; i < 6; i++) {
         const a = Math.random() * 6.283, d = 0.4 + Math.random() * 1.1;
         mkFx('ARROW_STICK', p.pos.x + Math.cos(a) * d, p.pos.z + Math.sin(a) * d, 0.6, 0.85, 0, 0, 0, 0xffe8a0);
@@ -401,10 +403,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       const R = 8.5 + 0.4 * (lv - 1);
       const from = p.pos.clone();
-      novaAt(from.x, from.z, R, b * 3, lv);
+      novaAt(from.x, from.z, R, b * 3 * DASH_DMG, lv);
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
       p.invulnT = Math.max(p.invulnT, 0.35);
-      novaAt(tgt.x, tgt.z, R, b * 3, lv);
+      novaAt(tgt.x, tgt.z, R, b * 3 * DASH_DMG, lv);
       events.emit('blink', { from, to: p.pos.clone() });
       announce('BLINK_NOVA');
     } else if (slot === 's3') {
@@ -440,7 +442,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
       necroSlow.duration = 2;
-      damageEnemiesInRadius(from.x, from.z, R, b * 1.25, physOpts, necroSlow);
+      damageEnemiesInRadius(from.x, from.z, R, b * 1.25 * DASH_DMG, physOpts, necroSlow);
       events.emit('explosion', { pos: from, radius: R, color: 0xd8d0b8 });
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
       p.invulnT = Math.max(p.invulnT, 0.35);
@@ -569,7 +571,7 @@ function barbLeap(auto: boolean): void {
   } else aimPoint(18, 4, tgt);
   safeSpot(tgt);
   a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
-  a.leapDmg = base(lv) * 3.5 * 0.3; a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)
+  a.leapDmg = base(lv) * 3.5 * DASH_DMG; a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)
   p.invulnT = Math.max(p.invulnT, a.leapDur + 0.1);
   events.emit('leap', { from: p.pos.clone(), to: tgt.clone(), dur: a.leapDur });
   p.anim.castT = 1;
@@ -595,7 +597,7 @@ function shoulderCharge(holy = false): void {
   void kl;
   p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
   p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
-  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2); a.chargeLv = lv; a.chargeHit.length = 0;
+  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * DASH_DMG; a.chargeLv = lv; a.chargeHit.length = 0;
   if (holy) { events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0xffe08a }); announce('HOLY_CHARGE'); }
   events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
   p.anim.castT = 1;

@@ -24,7 +24,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `Damage ${pct(4.8 * lvMul(lv))} · width x${f1(1 + 0.1 * (lv - 1))} · ${3 + lv} tornadoes` },
     { slot: 'e', icon: 'SHADOW_ROLL', name: 'Shadow Roll', mana: 0, cd: 0,
       desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s.',
-      per: (lv) => `Blast ${pct(8 * lvMul(lv))} dmg · radius ${f1(4.2 + 0.3 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },
+      per: (lv) => `Blast ${pct(2.4 * lvMul(lv))} dmg · radius ${f1(4.2 + 0.3 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },
     { slot: 's3', icon: 'LIGHT_ARROW', name: 'Lightpiercer', mana: 24, cd: 8,
       desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Pure damage, no other effect.',
       per: (lv) => `Damage ${pct(7.5 * lvMul(lv))} · pierces all` },
@@ -38,7 +38,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `Collapse ${pct(6.5 * lvMul(lv))} dmg · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
     { slot: 'e', icon: 'BLINK_NOVA', name: 'Blink Nova', mana: 0, cd: 0,
       desc: 'Teleport to the aim point. A frost nova briefly freezes enemies at both the origin and the destination.',
-      per: (lv) => `Nova ${pct(3 * lvMul(lv))} dmg x2 · radius ${f1(8.5 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.15 * (lv - 1))}s` },
+      per: (lv) => `Nova ${pct(0.9 * lvMul(lv))} dmg x2 · radius ${f1(8.5 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.15 * (lv - 1))}s` },
     { slot: 's3', icon: 'STORM_ORBS', name: 'Storm Orbs', mana: 28, cd: 14,
       desc: 'Three lightning orbs orbit you for 4s, zapping nearby enemies with chain lightning that breaks armor.',
       per: (lv) => `${3 + (lv >= 3 ? 1 : 0)} orbs · zap ${pct(1.7 * lvMul(lv))} dmg · chains ${2 + Math.floor(lv / 2)}` },
@@ -63,7 +63,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${Math.min(4, 1 + Math.ceil(lv / 2))} skeletons (max 4) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
-      per: (lv) => `Burst ${pct(1.25 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
+      per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
     { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(4.5 * lvMul(lv))} dmg · pierces all · slow 40%` },
@@ -103,7 +103,7 @@ export const SHOULDER_CHARGE: AbilityDef = {
 export const HOLY_CHARGE: AbilityDef = {
   slot: 'e', icon: 'HOLY_CHARGE', name: 'Holy Charge', mana: 0, cd: 0,
   desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside.',
-  per: (lv) => `${pct(3 * lvMul(lv))} dmg · length ${f1(11 + 0.5 * (lv - 1))} · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
+  per: (lv) => `${pct(0.9 * lvMul(lv))} dmg · length ${f1(11 + 0.5 * (lv - 1))} · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
 };
 /** Ordered active definitions (keys 1, 2, 3). */
 export function activeDefs(hero: HeroClass): AbilityDef[] {
