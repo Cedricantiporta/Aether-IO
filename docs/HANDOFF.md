@@ -473,3 +473,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Normal). Settings: side tabs + sections; Character tab (change character, records, reset profile).
 - Buying: every purchase goes through BuyDialog (`setBuyItem(item, { price, max, onBuy })`); pet shop: clicking a pet
   opens it (no Buy button).
+- Attributes (`attributes.ts`): STR / DEX / INT / VIT / LUK per class in `attrs` (profile), 3 + 2 per level points,
+  applied last in `calculateStats` (`applyAttrs`). Character sheet: Attributes tab (hex-node tree, staged points, Apply /
+  Undo, Reset for gold) and Stats tab; red dot on the Hero button while points are unspent.
+- Summon window tabs: Gem Altar, Shard Altar, Gem Shop (`gemShop.ts` offers, BuyDialog with `gems: true`), Tech House
+  (`TechGrid`). All item grids share `.slot-grid` (one square size, `--cell`).

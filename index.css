@@ -1820,3 +1820,41 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sw-tech .tw-grid { max-height: none; }
 .slot-price.gem { color: #bff4ff; background: linear-gradient(#1c4a5a, #0c2630); border-color: #5ee0f5; }
 .slot-price.gem::before { content: '\25C6'; color: #5ee0f5; margin-right: .2rem; font-size: .7em; }
+
+/* ---- Character sheet: tabs + attribute hex tree ---- */
+.cs2-tabs { display: flex; border-bottom: 1px solid rgba(214, 186, 122, .25); margin: 0 .8rem; }
+.cs2-tab { position: relative; flex: 1; padding: .6rem 0; font-family: var(--font-title); font-size: .82rem; letter-spacing: .1em; color: #b9a98a; }
+.cs2-tab.on { color: var(--gold-light); box-shadow: inset 0 -2px 0 var(--gold); background: linear-gradient(0deg, rgba(217, 181, 106, .14), transparent); }
+.cs2-tab .red-dot { top: .45rem; right: 22%; }
+.at-points { display: flex; align-items: baseline; gap: .6rem; padding: .5rem .8rem; border-radius: 3px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(214, 186, 122, .2); }
+.at-points span { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .12em; }
+.at-points b { font-family: var(--font-title); font-size: 1.4rem; color: #8a7a5a; }
+.at-points b.has { color: #ffe08a; text-shadow: 0 0 10px rgba(255, 210, 90, .6); }
+.at-points em { margin-left: auto; font-style: normal; font-size: .64rem; color: var(--text-dim); }
+.at-tree { position: relative; width: 100%; aspect-ratio: 1 / .92; margin: .2rem 0; }
+.at-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.at-lines line { stroke: rgba(214, 186, 122, .22); stroke-width: .5; vector-effect: non-scaling-stroke; }
+.at-lines line.ring { stroke-dasharray: 2 2; stroke: rgba(214, 186, 122, .14); }
+.at-lines line.lit { stroke: var(--c); stroke-width: 2.4; filter: drop-shadow(0 0 3px var(--c)); }
+.at-core { position: absolute; left: 50%; top: 50%; width: 4.2rem; height: 4.2rem; transform: translate(-50%, -50%) rotate(45deg); display: grid; place-items: center;
+  background: radial-gradient(circle, #3a2c14, #120c04); border: 2px solid #c9a052; box-shadow: 0 0 18px rgba(233, 185, 73, .35); color: var(--mc); }
+.at-core > * { transform: rotate(-45deg); }
+.at-node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: .15rem; }
+.at-node .hx { width: 3.3rem; height: 3.7rem; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 30%, #1c1610), #0c0a07); position: relative; }
+.at-node .hx::before { content: ''; position: absolute; inset: 2px; clip-path: inherit; background: linear-gradient(160deg, #241c12, #0e0b07); z-index: 0; }
+.at-node .hx b { position: relative; z-index: 1; font-family: var(--font-title); font-size: 1.2rem; color: #8a7a5a; }
+.at-node.on .hx { background: linear-gradient(160deg, var(--c), color-mix(in srgb, var(--c) 40%, #000)); }
+.at-node.on .hx b { color: #fff6dc; text-shadow: 0 0 8px var(--c); }
+.at-node.sel .hx { filter: drop-shadow(0 0 8px var(--c)); transform: scale(1.08); }
+.at-node em { font-style: normal; font-family: var(--font-title); font-size: .7rem; letter-spacing: .14em; color: var(--c); }
+.at-detail { padding: .7rem .8rem; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), rgba(0, 0, 0, .25)); border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+.at-dh { display: flex; justify-content: space-between; align-items: baseline; }
+.at-dh b { font-family: var(--font-title); font-size: 1rem; color: var(--c); }
+.at-dh span { font-family: var(--font-title); font-size: 1.1rem; color: #fff1c8; }
+.at-dh i { font-style: normal; font-size: .8rem; color: #7fe08a; }
+.at-desc { font-size: .74rem; color: #d8ccae; margin-top: .15rem; }
+.at-per { font-size: .66rem; color: var(--text-dim); margin-top: .3rem; line-height: 1.4; }
+.at-btns { display: flex; gap: .4rem; margin-top: .55rem; }
+.at-btns .rpg-btn { flex: 1; }
+.at-foot { display: flex; gap: .4rem; }

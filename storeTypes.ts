@@ -117,7 +117,8 @@ export interface GameState {
   tech: import('./tech').TechLevels;                 // Tech House upgrade levels
   summonPity: import('./store').SummonPity;
   story: import('./story').StorySave;
-  classProg: Record<HeroClass, import('./classLevels').ClassProg>;   // permanent per-class level / xp / skill points / skills                // main story chain step + progress          // draws so far per summon altar (pity counters)
+  classProg: Record<HeroClass, import('./classLevels').ClassProg>;
+  attrs: Record<HeroClass, import('./attributes').Attrs>;   // allocated STR / DEX / INT / VIT / LUK per class   // permanent per-class level / xp / skill points / skills                // main story chain step + progress          // draws so far per summon altar (pity counters)
   progress: RunProgress;                            // endings cleared, ascension unlocked / chosen, endless tower best floor per class
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
@@ -201,6 +202,8 @@ export interface GameState {
   unequipItem: (slot: EquipSlot) => void;
   autoEquip: () => void;
   buyItem: (item: Item, quantity?: number) => boolean;
+  setAttrs: (a: import('./attributes').Attrs) => boolean;   // allocate attribute points for the current class
+  resetAttrs: () => boolean;                               // refund all points (costs gold)
   sellItem: (item: Item, amount?: number) => void;
   sellItems: (items: Item[]) => void;
   sellAllLoot: () => number;                        // sells every LOOT stack at full value; returns gold gained

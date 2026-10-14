@@ -1,3 +1,4 @@
+import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
 import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
@@ -157,9 +158,10 @@ export const MenuButtons: React.FC = () => {
   const i = useGameStore((s) => s.isInventoryOpen);
   const openShop = useGameStore((s) => s.openSpecificShop);
   const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert();
+  const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
     <div className="flex gap-[.6rem] pb-1">
-      <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
+      <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
       <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
       <MenuBtn icon={<ScrollText size={24} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
       <MenuBtn icon={<Trophy size={24} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />

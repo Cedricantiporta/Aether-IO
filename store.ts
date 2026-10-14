@@ -31,6 +31,7 @@ import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
+import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES } from './shards';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
@@ -214,7 +215,7 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 };
 
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
-const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>): PlayerStats => {
+const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>, attrs?: Attrs): PlayerStats => {
   const final: PlayerStats = { ...base };
   const acc = newAcc();
 
@@ -239,6 +240,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   const wp = weaponPerk(equipment.weapon);   // axe perk: Bloodthirst = life steal
   if (wp?.k === 'LIFESTEAL') final.lifeSteal += lifeStealOf(wp.lv);
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
+  applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
   return final;
 };
 
@@ -365,6 +367,7 @@ interface Profile {
   welcomeGiftClaimed: boolean;
   hero: HeroClass; difficulty: Difficulty;
   talents: Record<HeroClass, TalentRanks>;
+  attrs?: Record<HeroClass, Attrs>;   // allocated attribute points per class (attributes.ts)
   starterGiven: Record<HeroClass, boolean>;
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
@@ -409,7 +412,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
-  talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
+  talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
   discovered: emptyDiscovered(), codexClaimed: [],
   meta: freshMeta(),
 });
@@ -454,6 +457,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: 'NORMAL',   // (difficulty selection removed: every save plays Normal)
+              attrs: sanitizeAttrs(p.attrs),
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered),
@@ -490,7 +494,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -547,7 +551,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     return st !== GameStatus.LEVEL_UP && st !== GameStatus.GAME_OVER;
   };
 
-  const calc = (base: PlayerStats, equipment: Equipment): PlayerStats => calculateStats(base, equipment, get().hero, get().talents);
+  const calc = (base: PlayerStats, equipment: Equipment): PlayerStats => calculateStats(base, equipment, get().hero, get().talents, get().attrs?.[get().hero]);
 
   /** Hero starting stats + class-locked loadout swap (foreign weapon -> bag, starter weapon / pet if missing). */
   const loadoutFor = (hero: HeroClass, inv: Item[], eq: Equipment, talents?: Record<HeroClass, TalentRanks>) => {
@@ -573,7 +577,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (tpl) equipment.weapon = { ...instantiate(tpl), id: uid('start_wep') };
       }
     }
-    return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment, hero, talents ?? get().talents) };
+    return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment, hero, talents ?? get().talents, attrsOf(hero)) };
   };
 
   /** In-run state: everything here resets each run. The profile (gold, items, rank, ...) is never touched. */
@@ -604,6 +608,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     actionResult: null,
   });
 
+  const attrsOf = (h: HeroClass): Attrs | undefined => { try { return (get()?.attrs ?? profile.attrs)?.[h]; } catch { return profile.attrs?.[h]; } };
   const profileRank = () => { try { return get()?.heroRank ?? profile.heroRank; } catch { return profile.heroRank; } };
   const startLoadout = loadoutFor(profile.hero, profile.inventory, profile.equipment, profile.talents);
 
@@ -633,6 +638,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     quests: profile.quests,
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
     talents: profile.talents,
+    attrs: profile.attrs ?? sanitizeAttrs(undefined),
     starterGiven: profile.starterGiven,
     discovered: profile.discovered ?? emptyDiscovered(),
     codexClaimed: profile.codexClaimed ?? [],
@@ -736,7 +742,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
+        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
       syncDiscoveries();
       get().resetGame();
@@ -1094,6 +1100,22 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
         else notify('Main story complete!', '#f1d58e', 'SYSTEM');
       }
+    },
+    setAttrs: (a) => {
+      const s = get(), lv = s.classProg[s.hero]?.lv ?? 1;
+      if (attrSpent(a) > attrPointsTotal(lv)) return false;
+      const attrs = { ...s.attrs, [s.hero]: { ...a } };
+      set({ attrs, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, attrs[s.hero]) });
+      return true;
+    },
+    resetAttrs: () => {
+      const s = get(), cost = ATTR_RESET_GOLD * GOLD_SCALE;
+      if (attrSpent(s.attrs[s.hero]) === 0) return false;
+      if (s.gold < cost) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
+      const attrs = { ...s.attrs, [s.hero]: { STR: 0, DEX: 0, INT: 0, VIT: 0, LUK: 0 } };
+      set({ gold: s.gold - cost, attrs, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, attrs[s.hero]) });
+      notify('Attributes reset', '#f1d58e', 'SYSTEM');
+      return true;
     },
     buyTech: (id: TechId) => {
       const s = get(), d = TECH.find((t) => t.id === id)!, lv = techLv(s.tech, id);
@@ -1503,7 +1525,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (allocBlock(node, ranks, free)) return false;
       const talents = { ...s.talents, [s.hero]: { ...ranks, [id]: (ranks[id] || 0) + 1 } };
       set({ talents });
-      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents) });
+      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents, s.attrs?.[s.hero]) });
       return true;
     },
     respecTalents: () => {
@@ -1514,7 +1536,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (s.gold < cost) { notify('Not enough Gold to respec!', 'red', 'WARNING'); return false; }
       const talents = { ...s.talents, [s.hero]: {} };
       set({ talents, gold: s.gold - cost });
-      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents) });
+      set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents, s.attrs?.[s.hero]) });
       notify(`Talents reset (-${cost} gold)`, COLORS.uiAccent, 'SYSTEM');
       return true;
     },
@@ -1596,7 +1618,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
