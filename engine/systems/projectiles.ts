@@ -2,7 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
-import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER } from './minions';
+import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT } from './minions';
 import { weaponPerk, raiseEvery, raiseCap, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
@@ -95,6 +95,8 @@ const iceFx: NonNullable<Projectile['effect']> = { type: 'SLOW', duration: 2.5, 
 /** Piercing Shot passive: shelved for now (removed from the skill list); flip to bring it back. */
 const PIERCE_SHOT_ON = false;
 const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
+/** Grave Call (a summon): 30% longer between raises than the other class procs. */
+const graveN = (lv: number): number => Math.round(procN(lv) * 1.3);
 
 export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; procFlags.smite = 0; echoCount = 0; }
 
@@ -121,7 +123,7 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
   } else if (st.hero === 'BARBARIAN' && skill === 'stamp' && lv.stamp > 0) {
     n = procN(lv.stamp); left = n - procCount;
   } else if (st.hero === 'NECROMANCER' && skill === 'graveCall' && lv.graveCall > 0) {
-    n = procN(lv.graveCall); left = n - procCount;
+    n = graveN(lv.graveCall); left = n - procCount;
   } else if (st.hero === 'KNIGHT' && skill === 'smite' && lv.smite > 0) {
     n = procN(lv.smite); left = n - procCount;
   } else { out.t = 0; out.max = 0; return; }
@@ -232,7 +234,7 @@ export function fireBasicAttack(): void {
   } else if (hero === 'BARBARIAN' && kind === 'AXE' && lv.stamp > 0) {
     if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
   } else if (hero === 'NECROMANCER' && kind === 'SOUL_BOLT' && lv.graveCall > 0) {
-    if (procCount >= procN(lv.graveCall)) { procCount = 0; graveProc = lv.graveCall; }
+    if (procCount >= graveN(lv.graveCall)) { procCount = 0; graveProc = lv.graveCall; }
   } else if (hero === 'KNIGHT' && kind === 'SLASH' && lv.smite > 0) {
     if (procCount >= procN(lv.smite)) { procCount = 0; procFlags.smite = lv.smite; }
   }
@@ -303,7 +305,7 @@ export function fireBasicAttack(): void {
   if (graveProc) {
     const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const gx = t && t.active ? t.pos.x - dir.x * 1.5 : pl.pos.x + dir.x * 4, gz = t && t.active ? t.pos.z - dir.z * 1.5 : pl.pos.z + dir.z * 4;
-    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, 8 + graveProc + (stats.minionLife || 0));
+    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, PERMANENT);
   }
   // wand perk Bone Choir / Grave Archers: every Nth soul bolt a ranged skeleton rises behind you (up to a cap)
   if (kind === 'SOUL_BOLT' && perk && (perk.k === 'MAGES' || perk.k === 'BOWMEN') && ++raiseCount >= raiseEvery(perk.lv)) {
@@ -311,8 +313,8 @@ export function fireBasicAttack(): void {
     if (minionCount(mk) < raiseCap(perk.k, perk.lv)) {
       raiseCount = 0;
       const a = pl.facing + Math.PI + (Math.random() - 0.5) * 1.6;
-      spawnMinion(mk, pl.pos.x + Math.sin(a) * 2.2, pl.pos.z + Math.cos(a) * 2.2, stats.damage * (mk === MINION_MAGE ? 0.9 : 0.6), 12 + (stats.minionLife || 0));
-    }
+      spawnMinion(mk, pl.pos.x + Math.sin(a) * 2.2, pl.pos.z + Math.cos(a) * 2.2, stats.damage * (mk === MINION_MAGE ? 0.9 : 0.6), PERMANENT);
+    } else raiseCount = 0;   // at the cap: the count (the perk's "cooldown") only runs once one has fallen
   }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });

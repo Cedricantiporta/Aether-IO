@@ -9,7 +9,7 @@ import type { Zone, ZoneKind } from '../engine/types';
 import { gasActive } from '../engine/systems/zones';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
-import { CELL, FX, embers, smokePuff } from './fx';
+import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { TAU, clamp } from './util';
 import { inView } from './view';
 
@@ -288,7 +288,11 @@ export function Zones() {
           break;
         }
         case 'ACID': case 'PLAGUE': case 'GOO': case 'CURSE':
-          if (aux > 0.3 && rnd() < dt * (4 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.8; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.15, z.pos.z + Math.sin(a) * d, 0, 0.8 + rnd(), 0, 0.9, 0.2, 0.05, z.kind === 'GOO' ? 0.8 : 0.9, z.kind === 'GOO' ? 1.5 : 1.7, 0.3, 0.7, CELL.RING, 0, 0.4); }
+          if (z.kind === 'CURSE') {   // Plague Ground: a glowing violet field with rising soul motes
+            const pulse = 0.75 + 0.25 * Math.sin(world.time * 3.2 + i);
+            pushHalo(z.pos.x, 0.35, z.pos.z, R * 2.3, 1.1 * pulse, 0.35, 2.2, 0.32 * aux, CELL.GLOW);
+            if (aux > 0.3 && rnd() < dt * (8 + R * 3)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.9; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.15, z.pos.z + Math.sin(a) * d, 0, 1.2 + rnd() * 1.5, 0, 1.1, 0.25, 0.04, 1.7, 0.6, 2.6, 0.9, CELL.GLOW, 0, 0.2); }
+          } else if (aux > 0.3 && rnd() < dt * (4 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.8; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.15, z.pos.z + Math.sin(a) * d, 0, 0.8 + rnd(), 0, 0.9, 0.2, 0.05, z.kind === 'GOO' ? 0.8 : 0.9, z.kind === 'GOO' ? 1.5 : 1.7, 0.3, 0.7, CELL.RING, 0, 0.4); }
           if (z.kind === 'CURSE' && rnd() < dt * 6) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.5, z.pos.z + (rnd() - 0.5) * R, 1, 0x6a3a9a, 1.8, 1.4, 0.8, 0.5, 0.3);
           if (z.kind === 'PLAGUE' && rnd() < dt * 5) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.6, z.pos.z + (rnd() - 0.5) * R, 1, 0x7a9a3a, 1.8, 1.4, 0.8, 0.5, 0.3);
           break;

@@ -120,8 +120,9 @@ export const world = {
   /** Auto battle (touch Auto toggle): the hero seeks the nearest enemy anywhere in the room and casts ready skills. */
   autoBattle: { on: false, castT: 0 },
   /** Necromancer minions (systems/minions.ts): kind 0 warrior, 1 mage, 2 golem. hp: monsters attack them first;
-   *  walk = walk-cycle phase, mv = current move speed 0..1 (render animation), hitT = hurt flinch timer. */
-  minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, hitT: 0, walk: 0, mv: 0 })),
+   *  walk = walk-cycle phase, mv = current move speed 0..1 (render animation), hitT = hurt flinch timer.
+   *  life = Infinity for permanent summons (they stay until slain); src 1 = raised by Raise Dead (holds its cooldown). */
+  minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, hitT: 0, walk: 0, mv: 0, src: 0, born: 0 })),
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',

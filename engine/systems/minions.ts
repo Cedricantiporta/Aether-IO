@@ -1,7 +1,7 @@
 // Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts), skeleton bowmen (bone arrows, wand perk)
 // and the bone golem (big melee, ultimate).
 // A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
-// crumbles when its time runs out or its HP is gone. Nearby monsters attack minions before the hero (enemies.ts
+// stays until its HP is gone (only the ult army is timed). Nearby monsters attack minions before the hero (enemies.ts
 // minionTarget), so the skeletons hold the line.
 import { Vector3 } from 'three';
 import { world } from '../world';
@@ -20,30 +20,37 @@ const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
 const tmp = new Vector3();
 
-/** Damage / lifetime multiplier from talents and the wand perk. */
+/** Damage / HP (life) multiplier from talents and the wand perk. */
 function minionMul(): { dmg: number; life: number; haste: number } {
   const st = useGameStore.getState(), s = st.stats, wp = weaponPerk(st.equipment.weapon);
   const h = wp?.k === 'HORDE' ? hordeMul(wp.lv) : 1;
   return { dmg: (1 + (s.minionDmg || 0)) * h, life: h, haste: 1 + (s.minionHaste || 0) };
 }
 
-/** Raises a minion at (x, z). dmg = damage per hit (before talents), life in seconds. */
-export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number): void {
+/** Summons are permanent: they stay until slain (life 0 = permanent). Only the ult army is timed. */
+export const PERMANENT = 0;
+/** Skeleton tuning: move speed x0.8, damage x0.7, attack speed x0.7 (attack interval / 0.7). */
+const SPEED_MUL = 0.8, DMG_MUL = 0.7, ATK_SPD_MUL = 0.7;
+let bornSeq = 0;
+
+/** Raises a minion at (x, z). dmg = damage per hit (before talents), life in seconds (PERMANENT = until slain).
+ *  src 1 = Raise Dead (its cooldown only starts once all of those skeletons are gone). */
+export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0): void {
   const M = world.minions, mm = minionMul();
   // too many warriors: the oldest one crumbles to make room
   if (kind === MINION_WARRIOR) {
     let n = 0, oldest = -1, ol = 1e9;
-    for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind === MINION_WARRIOR) { n++; if (m.life < ol) { ol = m.life; oldest = i; } } }
+    for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind === MINION_WARRIOR) { n++; if (m.born < ol) { ol = m.born; oldest = i; } } }
     if (n >= MAX_SKELETONS && oldest >= 0) crumble(M[oldest]);
   }
   const m = M.find((o) => !o.active);
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
-  m.life = m.maxLife = life * mm.life; m.dmg = dmg * mm.dmg; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
+  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL; m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
   m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.03);
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
@@ -78,7 +85,9 @@ export function minionCount(kind = -1): number { let n = 0; for (const m of worl
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
-  let slotI = 0;
+  let slotI = 0, raised = false;
+  for (let i = 0; i < M.length; i++) if (M[i].active && M[i].src === 1) { raised = true; break; }
+  if (raised) pl.cd.q = pl.cdMax.q;   // Raise Dead: the cooldown starts when its skeletons have all fallen
   for (let i = 0; i < M.length; i++) {
     const m = M[i];
     if (!m.active) continue;
@@ -88,7 +97,7 @@ export function updateMinions(dt: number): void {
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 2.6 : mage ? 10 : bow ? 13 : 1.5, speed = golem ? 6 : mage || bow ? 7.5 : 8.5, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / haste;
+    const reach = golem ? 2.6 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
@@ -146,7 +155,7 @@ events.on('enemyDeath', (d) => {
   // Plague Ground: the fallen rise as skeletons (a few per cast)
   if (abilityState.curseRaise > 0 && inCurse(d.pos.x, d.pos.z)) {
     abilityState.curseRaise--;
-    spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), 10 + (st.stats.minionLife || 0));
+    spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), PERMANENT);
   }
   // Soul Harvest: kills near you (or near a minion) restore HP and mana
   if (lv.soulHarvest > 0 && pl.alive) {
