@@ -64,7 +64,7 @@ export const SetOutWindow: React.FC = () => {
             <ul className="so-asc-list">
               {ASCENSIONS.slice(0, Math.max(1, asc)).map((a) => <li key={a.lv} className={a.lv <= asc ? 'on' : ''}><b>{a.lv}</b> {a.name} <span>- {a.hardship}</span></li>)}
             </ul>
-            <div className="so-asc-reward">{asc > 0 ? `Rewards: +${Math.round(asc * 12)}% gold, loot luck and hero rank xp` : 'No Ascension: the standard adventure.'}</div>
+            <div className="so-asc-reward">{asc > 0 ? `Rewards: +${Math.round(asc * 12)}% gold, loot luck and xp` : 'No Ascension: the standard adventure.'}</div>
           </>)}
         </div>
       )}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { unlockLevel } from '../../../classLevels';
 import { Star } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -22,7 +23,7 @@ const HINT: Record<string, string> = {
 const costOf = (hero: any, key: string, lvl: number) => (isDashKey(hero, key) || key === 'barrier' || key === 'ult' ? lvl + 2 : lvl + 1);
 
 const RunSkills: React.FC = () => {
-  const { hero, levels, sp, upgrade } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill })));
+  const { hero, levels, sp, upgrade, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill, heroLv: s.level })));
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === hero));
   const rows: { key: string; name: string; desc: string; icon: React.ReactNode; tag?: string; now?: (l: number) => string; color?: string }[] = [
     ...activeDefs(hero).map((a, i) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: String(i + 1), now: a.per })),
@@ -40,7 +41,8 @@ const RunSkills: React.FC = () => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
         const cost = costOf(hero, r.key, lvl);
-        const can = !max && sp >= cost;
+        const need = unlockLevel(hero, r.key), lockedLv = lvl === 0 && heroLv < need;
+        const can = !max && !lockedLv && sp >= cost;
         const info: any = (SKILLS_INFO as any)[r.key];
         return (
           <div key={r.key} className="rpg-frame flex items-center gap-3 p-2.5" data-testid={`skill-${r.key}`}>
@@ -62,7 +64,7 @@ const RunSkills: React.FC = () => {
               ) : (!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
             </div>
             <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
-              {max ? 'MAX' : <><span>{lvl === 0 ? 'Unlock' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}
+              {max ? 'MAX' : lockedLv ? <><span>Locked</span><span className="rpg-num">Lv {need}</span></> : <><span>{lvl === 0 ? 'Learn' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}
             </Button>
           </div>
         );
@@ -71,14 +73,14 @@ const RunSkills: React.FC = () => {
   );
 };
 
-/** Skill Trainer: run skills (spent with run Skill Points) and permanent talents (Hero Rank points). */
+/** Skill Trainer: skills (learned with skill points from class levels) and talents (points from class levels). */
 export const SkillsTab: React.FC = () => {
   const runDot = useRunSkillAlert(), talentDot = useTalentAlert();
   const [view, setView] = React.useState<'run' | 'talents'>(() => (!runDot && talentDot ? 'talents' : 'run'));
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" role="tablist">
-        <div className="relative"><Button size="sm" active={view === 'run'} onClick={() => setView('run')} role="tab" data-testid="tab-run-skills">Skills (run)</Button>{runDot && <i className="red-dot" />}</div>
+        <div className="relative"><Button size="sm" active={view === 'run'} onClick={() => setView('run')} role="tab" data-testid="tab-run-skills">Skills</Button>{runDot && <i className="red-dot" />}</div>
         <div className="relative"><Button size="sm" active={view === 'talents'} onClick={() => setView('talents')} role="tab" data-testid="tab-talents">Talents (permanent)</Button>{talentDot && <i className="red-dot" />}</div>
       </div>
       {view === 'run' ? <RunSkills /> : <TalentsView />}

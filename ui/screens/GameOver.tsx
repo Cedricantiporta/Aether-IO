@@ -55,7 +55,7 @@ export const GameOver: React.FC = () => {
                 <Row delay={.82} icon={<Clock size={16} />} label="Time survived" value={timeMMSS(run.time)} />
                 <Row delay={.9} icon={<Trophy size={16} />} label="Combat power" value={run.cp.toLocaleString()} record={cpRecord} />
                 <Row delay={.98} icon={<Coins size={16} />} label={`Gold earned (+${run.waveGoldBonus} wave bonus)`} value={`+${gold.toLocaleString()}`} />
-                <Row delay={1.02} icon={<Medal size={16} />} label={run.rankUps > 0 ? `Hero rank xp (RANK UP! now ${run.rank})` : 'Hero rank xp'} value={`+${run.rankXpGained.toLocaleString()}`} />
+                <Row delay={1.02} icon={<Medal size={16} />} label={run.rankUps > 0 ? `XP earned (LEVEL UP! now Lv ${run.rank})` : 'XP earned'} value={`+${run.rankXpGained.toLocaleString()}`} />
                 <Row delay={1.06} icon={<ArrowUpCircle size={16} />} label="Runs completed" value={stats.totalRuns} />
               </div>
             </>

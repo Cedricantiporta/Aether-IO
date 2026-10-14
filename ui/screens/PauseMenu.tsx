@@ -24,7 +24,7 @@ export const PauseMenu: React.FC = () => {
         <Button variant="primary" size="lg" onClick={togglePause}><Play size={18} fill="currentColor" /> Resume</Button>
         <Button onClick={() => openSettings(true)}><Settings size={16} /> Settings</Button>
         <Button onClick={() => openCodex(true)}><BookOpen size={16} /> Codex</Button>
-        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and rank xp and the room bonus gold are paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
+        <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and your xp is kept and the room bonus gold is paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run
         </Button>
         <div className="text-center rpg-label !text-[.6rem] flex items-center justify-center gap-1"><Pause size={10} /> Press Esc to resume</div>

@@ -22,7 +22,7 @@ export const TownProfile: React.FC = () => {
       <div className="tp-body">
         <div className="tp-name">
           <span>{HERO_META[hero].title}</span>
-          <b className="tp-rank" data-testid="rank-num" {...tip(<SimpleTip title={`Hero Rank ${rank}`} body={`Earn rank xp from every run (even if you fall). Higher ranks unlock better gear and give +${gf}% gold find.`} />)}>RANK {rank}</b>
+          <b className="tp-rank" data-testid="rank-num" {...tip(<SimpleTip title={`Level ${rank}`} body={`Each class levels up on its own from the xp you earn in runs. Higher levels unlock skills, better gear and give +${gf}% gold find.`} />)}>LV {rank}</b>
         </div>
         {title && <div className="tp-title" data-testid="hero-title">{title}</div>}
         <div className="tp-xp"><span className="tp-line"><i style={{ width: `${f * 100}%` }} /></span><em data-testid="rank-xp">{xp.toLocaleString()} / {need.toLocaleString()}</em></div>

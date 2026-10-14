@@ -12,12 +12,12 @@ export const RankPlate: React.FC<{ className?: string }> = ({ className = '' }) 
   const gold = Math.round((goldFindMul(rank) - 1) * 100);
   return (
     <div className={`flex items-center gap-2.5 ${className}`} data-testid="rank-plate"
-      {...tip(<SimpleTip title={`Hero Rank ${rank}`} body={`Earn rank xp from every run (even if you fall). Higher ranks unlock better gear and give +${gold}% gold find.`} />)}>
+      {...tip(<SimpleTip title={`Level ${rank}`} body={`Each class levels up on its own from the xp you earn in runs. Higher levels unlock skills, better gear and give +${gold}% gold find.`} />)}>
       <div className="rpg-medallion" style={{ ['--mc' as any]: '#c8962e', width: '3.2rem', height: '3.2rem' }}>
         <div className="flex flex-col items-center leading-none"><Medal size={14} /><span className="rpg-num text-base" data-testid="rank-num">{rank}</span></div>
       </div>
       <div className="flex-1 min-w-[8rem]">
-        <div className="rpg-label !text-[.6rem] flex justify-between"><span>Hero Rank</span><span data-testid="rank-xp" className="rpg-num text-white">{xp.toLocaleString()} / {need.toLocaleString()}</span></div>
+        <div className="rpg-label !text-[.6rem] flex justify-between"><span>Level</span><span data-testid="rank-xp" className="rpg-num text-white">{xp.toLocaleString()} / {need.toLocaleString()}</span></div>
         <div className="rpg-bar thin" style={{ ['--bc' as any]: '#e9b949', ['--fill' as any]: Math.min(1, xp / need) }}><div className="fill" /></div>
       </div>
     </div>

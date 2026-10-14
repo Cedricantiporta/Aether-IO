@@ -40,7 +40,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
         {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && (
-          <span className={level < req ? 'neg' : ''}> · Req Rank {req}</span>
+          <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
         )}
       </div>
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}

@@ -209,7 +209,7 @@ export const CraftTab: React.FC = () => {
   const missing = canCraft({ materials, gold, inventory, heroRank, maxInventorySlots }, recipe);
   const locked = heroRank < recipe.rankReq;
   const templates = recipeTemplates(recipe);
-  const reason = missing.length === 0 ? '' : missing[0].kind === 'rank' ? `Requires Hero Rank ${recipe.rankReq}` : missing[0].kind === 'space' ? 'Inventory full' : `Missing ${missing[0].label}`;
+  const reason = missing.length === 0 ? '' : missing[0].kind === 'rank' ? `Requires Lv ${recipe.rankReq}` : missing[0].kind === 'space' ? 'Inventory full' : `Missing ${missing[0].label}`;
   const go = () => { const it = craftItem(recipe); if (it) setReveal(it); };
   const Need: React.FC<{ label: string; have: number; need: number }> = ({ label, have, need }) => (
     <div className="flex justify-between text-[.76rem]" data-testid="craft-need"><span>{label}</span><span className="rpg-num" style={{ color: have >= need ? '#9be8a8' : '#f87171' }}>{have.toLocaleString()} / {need.toLocaleString()}</span></div>
@@ -227,14 +227,14 @@ export const CraftTab: React.FC = () => {
           return (
             <button key={r} onClick={() => setRarity(r)} className="rpg-frame text-center py-1.5 pe" style={{ boxShadow: `inset 0 0 0 ${rarity === r ? 3 : 1}px ${RARITY_COLOR[r]}${rarity === r ? '' : '88'}, inset 0 3px 8px rgba(0,0,0,.6)`, opacity: lk ? .7 : 1 }}>
               <div className="rpg-label !text-[.5rem]" style={{ color: RARITY_TEXT[r] }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</div>
-              <div className="text-[.6rem] text-[var(--text-dim)]">{lk ? <><Lock size={9} className="inline" /> Rank {getRecipe(slot, r, hero).rankReq}</> : `${materials[r]} shards`}</div>
+              <div className="text-[.6rem] text-[var(--text-dim)]">{lk ? <><Lock size={9} className="inline" /> Lv {getRecipe(slot, r, hero).rankReq}</> : `${materials[r]} shards`}</div>
             </button>
           );
         })}
       </div>
       <div className="rpg-frame p-3 flex flex-col gap-2" style={{ boxShadow: `inset 0 0 0 2px ${RARITY_COLOR[rarity]}aa, inset 0 3px 10px rgba(0,0,0,.6)` }}>
         <div className="rpg-title text-sm" style={{ color: RARITY_TEXT[rarity] }}>{rarity.charAt(0) + rarity.slice(1).toLowerCase()} {SLOT_LABEL[slot]}{slot === 'weapon' ? ` (${hero.charAt(0) + hero.slice(1).toLowerCase()})` : ''}</div>
-        {locked && <div className="text-[.72rem] font-bold" style={{ color: '#f87171' }} data-testid="craft-lock"><Lock size={12} className="inline" /> Locked: needs Hero Rank {recipe.rankReq} (you are {heroRank})</div>}
+        {locked && <div className="text-[.72rem] font-bold" style={{ color: '#f87171' }} data-testid="craft-lock"><Lock size={12} className="inline" /> Locked: needs Lv {recipe.rankReq} (you are Lv {heroRank})</div>}
         <div className="rpg-parchment p-2 flex flex-col gap-1.5" data-testid="craft-preview">
           {templates.map((t) => (
             <div key={t.id}>

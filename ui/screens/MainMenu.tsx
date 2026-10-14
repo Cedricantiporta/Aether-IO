@@ -59,7 +59,7 @@ const RecordsPanel: React.FC = () => {
       <div className="rpg-title text-base mb-2 flex items-center gap-2"><Trophy size={16} /> Records</div>
       <RankPlate className="mb-3" />
       <div className="grid grid-cols-4 gap-2 mb-3">
-        {[['Rank', rank], ['Runs', stats.totalRuns], ['Best Wave', stats.highestWave], ['Best CP', stats.highestCP]].map(([l, v]) => (
+        {[['Level', rank], ['Runs', stats.totalRuns], ['Best Wave', stats.highestWave], ['Best CP', stats.highestCP]].map(([l, v]) => (
           <div key={l as string} className="rpg-frame text-center py-1.5">
             <div className="rpg-num text-lg text-[var(--gold-light)]">{(v as number).toLocaleString()}</div>
             <div className="rpg-label !text-[.5rem]">{l}</div>

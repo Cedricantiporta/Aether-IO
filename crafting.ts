@@ -86,7 +86,7 @@ export const lootOwned = (inv: Item[], id: string): number => {
 /** Everything that blocks crafting right now (empty list = can craft). */
 export function canCraft(state: CraftState, recipe: Recipe): Missing[] {
   const m: Missing[] = [];
-  if (state.heroRank < recipe.rankReq) m.push({ kind: 'rank', label: `Hero Rank ${recipe.rankReq}`, have: state.heroRank, need: recipe.rankReq });
+  if (state.heroRank < recipe.rankReq) m.push({ kind: 'rank', label: `Lv ${recipe.rankReq}`, have: state.heroRank, need: recipe.rankReq });
   if (state.materials[recipe.rarity] < recipe.shards) m.push({ kind: 'shards', label: `${recipe.rarity} Shards`, have: state.materials[recipe.rarity], need: recipe.shards });
   if (state.gold < recipe.gold) m.push({ kind: 'gold', label: 'Gold', have: state.gold, need: recipe.gold });
   for (const l of recipe.loot) {

@@ -7,6 +7,8 @@ import { abilityMana, activeDefs, dashKey } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { STORY, sanitizeStory, type StorySave } from './story';
+import { xpNeed, growBase, unlockLevel, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
+let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
 import { create } from 'zustand';
@@ -292,7 +294,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
     const key = skillKeyFor(u.type, hero);
-    if (key && skillLevels[key] >= MAX_SKILL_LEVEL) return false;
+    if (key && (skillLevels[key] >= MAX_SKILL_LEVEL || skillLevels[key] <= 0)) return false;   // cards only boost learned skills
     if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
     return true;
   });
@@ -346,6 +348,7 @@ interface Profile {
   progress?: RunProgress;   // ending / ascension / endless tower records
   tech?: TechLevels;        // Tech House upgrades
   story?: StorySave;        // main story chain (story.ts)
+  classProg?: Record<HeroClass, ClassProg>;   // permanent per-class level / xp / skill points / learned skills
   summonPity?: SummonPity;  // draws so far per altar (guaranteed Legendary every 60, Legendary/Mythic every 240)
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   heroRank: number; rankXp: number; quests: Quest[];
@@ -394,7 +397,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   v: PROFILE_VERSION,
   gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
-  heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(),
+  heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false },
@@ -434,7 +437,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
@@ -476,7 +479,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
     };
@@ -540,7 +543,8 @@ export const useGameStore = create<GameState>()((set, get) => {
   /** Hero starting stats + class-locked loadout swap (foreign weapon -> bag, starter weapon / pet if missing). */
   const loadoutFor = (hero: HeroClass, inv: Item[], eq: Equipment, talents?: Record<HeroClass, TalentRanks>) => {
     const heroInfo = HERO_STATS[hero];
-    const baseStats: PlayerStats = { ...INITIAL_STATS, ...heroInfo.stats };
+    let baseStats: PlayerStats = { ...INITIAL_STATS, ...heroInfo.stats };
+    for (let i = 1; i < progOf(hero).lv; i++) baseStats = growBase(baseStats, hero);   // permanent class level growth
     const tech = (() => { try { return get()?.tech ?? profile.tech; } catch { return profile.tech; } })();   // Tech House upgrades
     baseStats.goldFind += 0.04 * techLv(tech, 'gold'); baseStats.xpBonus += 0.04 * techLv(tech, 'xp');
     baseStats.maxHealth = Math.round(baseStats.maxHealth * (1 + 0.03 * techLv(tech, 'vitality')));
@@ -568,16 +572,23 @@ export const useGameStore = create<GameState>()((set, get) => {
   };
 
   /** In-run state: everything here resets each run. The profile (gold, items, rank, ...) is never touched. */
+  /** The permanent progress of `hero` (level, xp, skill points, learned skills). */
+  const progOf = (hero: HeroClass): ClassProg => {
+    const cp = (() => { try { return get()?.classProg ?? profile.classProg; } catch { return profile.classProg; } })();
+    return cp?.[hero] ?? freshClass(hero, INITIAL_SKILLS);
+  };
+  /** Per-run state. Level, xp, skill points and learned skills come from the class's permanent progress. */
   const runState = (hero: HeroClass, base: PlayerStats, stats: PlayerStats) => ({
     wave: 1,
-    level: 1,
-    experience: 0,
-    experienceToNextLevel: 250,
-    skillPoints: 0, // start with 0 SP; earn them by levelling up
+    level: progOf(hero).lv,
+    heroRank: progOf(hero).lv,   // (legacy name: gear / quests / talents read it; always = the class level)
+    experience: progOf(hero).xp,
+    experienceToNextLevel: xpNeed(progOf(hero).lv),
+    skillPoints: progOf(hero).sp,
     accumulatedWaveGold: 0,
     baseStats: base,
     stats,
-    skillLevels: { ...INITIAL_SKILLS, ...PROC_START[hero] },
+    skillLevels: { ...progOf(hero).skills },   // a run copy: room cards boost it for this run only
     activeAbilityQ: WEAPON_Q[hero] as AbilityType | null,
     upgradeOptions: [] as Upgrade[],
     isInventoryOpen: false,
@@ -610,6 +621,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     tech: profile.tech ?? {},
     summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
     story: profile.story ?? { step: 0, p: 0 },   // a brand-new profile starts the main story
+    classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
@@ -626,6 +638,13 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     // ------------------------------------------------------------ flow --
     setStatus: (status) => set({ status }),
+    debugSetLevel: (lv) => {
+      const s = get(), cp = s.classProg[s.hero];
+      const sp = Math.max(0, cp.sp + (lv - cp.lv));
+      set({ classProg: { ...s.classProg, [s.hero]: { ...cp, lv, xp: 0, sp } } });
+      if (s.status === GameStatus.MENU) get().selectHero(s.hero);   // rebuild stats / skills from the new level
+      else set({ level: lv, heroRank: lv, experience: 0, experienceToNextLevel: xpNeed(lv), skillPoints: sp });
+    },
     selectHero: (hero) => {
       const s = get();
       if (s.status !== GameStatus.MENU) { set({ hero }); return; }
@@ -667,6 +686,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         actionResult: null,
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
       });
+      runStartLevel = get().level;
       if (debug.maxSkills) get().debugMaxSkills();
       startRun();
     },
@@ -709,7 +729,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0 }, npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -782,7 +802,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     addExperience: (amount) => {
       let { experience, experienceToNextLevel, level } = get();
-      const gain = (level >= 10 ? amount * 2 : amount) * 2 * (1 + get().stats.xpBonus);
+      const gain = amount * (1 + get().stats.xpBonus);
       experience += gain;
       const startLevel = level;
       let base = get().baseStats;
@@ -790,22 +810,11 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       while (experience >= experienceToNextLevel) {
         experience -= experienceToNextLevel;
-        experienceToNextLevel = Math.floor(experienceToNextLevel * (level < 10 ? 1.35 : 1.10));
+        if (level >= MAX_LEVEL) { experience = 0; break; }
         level += 1;
+        experienceToNextLevel = xpNeed(level);
         sp += 1;
-        base = {
-          ...base,
-          maxHealth: base.maxHealth + 5,
-          maxMana: base.maxMana + 5,
-          damage: base.damage + 1,
-          defense: base.defense + 0.5,
-        };
-        // Class scaling per hero level (shown on the character sheet).
-        const hero = get().hero;
-        if (hero === 'ARCHER') base.fireRate *= 1.015;
-        else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
-        else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
-        else if (hero === 'KNIGHT') { base.maxHealth *= 1.025; base.defense += 0.5; base.damage *= 1.012; }
+        base = growBase(base, get().hero);   // class scaling per level (shown on the character sheet)
       }
 
       if (level === startLevel) {
@@ -814,7 +823,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
 
       const stats = calc(base, get().equipment);
-      set({ experience, experienceToNextLevel, level, skillPoints: sp, baseStats: base, stats });
+      const hero = get().hero, cp = get().classProg;
+      set({ experience, experienceToNextLevel, level, heroRank: level, skillPoints: sp, baseStats: base, stats,
+        classProg: { ...cp, [hero]: { ...cp[hero], lv: level, xp: experience, sp } } });
+      notify(`LEVEL UP! ${hero.charAt(0) + hero.slice(1).toLowerCase()} Lv ${level}`, COLORS.uiAccent, 'BOSS');
       // Engine: full heal + fx.
       world.player.hp = stats.maxHealth;
       world.player.mana = stats.maxMana;
@@ -874,8 +886,13 @@ export const useGameStore = create<GameState>()((set, get) => {
       let cost = lvl + 1;
       if (skill === 'ult') cost = lvl + 2;
       if (skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN') || skill === 'barrier') cost = lvl + 2;
+      const need = unlockLevel(s.hero, skill);
+      if (s.level < need) { notify(`Unlocks at Lv ${need}`, 'red', 'WARNING'); return; }
       if (s.skillPoints < cost) return;
-      set({ skillLevels: { ...s.skillLevels, [skill]: lvl + 1 }, skillPoints: s.skillPoints - cost });
+      const cp = s.classProg[s.hero];
+      const perm = { ...cp.skills, [skill]: Math.min(MAX_SKILL_LEVEL, (cp.skills[skill] ?? 0) + 1) };   // learned for good
+      set({ skillLevels: { ...s.skillLevels, [skill]: lvl + 1 }, skillPoints: s.skillPoints - cost,
+        classProg: { ...s.classProg, [s.hero]: { ...cp, skills: perm, sp: s.skillPoints - cost } } });
     },
 
     endRun: (summary) => {
@@ -891,16 +908,16 @@ export const useGameStore = create<GameState>()((set, get) => {
         classRuns: { ...gs.classRuns, [s.hero]: gs.classRuns[s.hero] + 1 },
         classHighestWave: { ...gs.classHighestWave, [s.hero]: Math.max(gs.classHighestWave[s.hero], wave) },
       };
-      // Hero rank: 50% of the xp earned this run, banked even on death.
-      const rankXpGained = Math.round((summary.xpEarned || 0) * 0.5 * (1 + 0.12 * (runInfo.mode === 'ADVENTURE' ? runInfo.ascension : 0)));   // Ascension pays more rank xp
-      let rank = s.heroRank, rankXp = s.rankXp + rankXpGained;
-      while (rankXp >= rankXpNeeded(rank)) { rankXp -= rankXpNeeded(rank); rank++; }
-      const rankUps = rank - s.heroRank;
+      // class level: run xp already went straight into the permanent level; bank the leftover xp
+      const rankXpGained = Math.round(summary.xpEarned || 0);
+      const rank = s.level, rankUps = Math.max(0, s.level - runStartLevel), rankXp = s.rankXp;
+      const classProg = { ...s.classProg, [s.hero]: { ...s.classProg[s.hero], lv: s.level, xp: s.experience } };
       set({
         status: GameStatus.GAME_OVER,
         gold: s.gold + s.accumulatedWaveGold,
         heroRank: rank,
         rankXp,
+        classProg,
         gameStats,
         lastRun: {
           ...summary, hero: s.hero, difficulty: s.difficulty, cp, level: s.level,
@@ -911,7 +928,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         isCharacterSheetOpen: false,
         isPauseMenuOpen: false,
       });
-      if (rankUps > 0) notify(`HERO RANK UP! Rank ${rank}`, COLORS.uiAccent, 'BOSS');
+
     },
 
     addMaterial: (rarity, n = 1) => {
@@ -1137,7 +1154,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     equipItem: (item) => {
       const s = get();
       const req = RANK_REQ[item.rarity];
-      if (s.heroRank < req) { notify(`Requires Hero Rank ${req}!`, 'red', 'WARNING'); return; }
+      if (s.heroRank < req) { notify(`Requires Lv ${req}!`, 'red', 'WARNING'); return; }
       if (item.type === 'WEAPON' && item.classType && item.classType !== s.hero) {
         notify(`Only for ${item.classType}!`, 'red', 'WARNING');
         return;
@@ -1549,7 +1566,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

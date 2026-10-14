@@ -282,3 +282,21 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   - `dalla_eggs`: collect 5 eggs.
   - `pip_cat`: find Biscuit.
 - The dialogue box sits above the skill bar (`.dlg-root` bottom 7.6rem; touch: 42vh).
+
+### Per-class permanent levels (Rank removed)
+- `classLevels.ts`: `classProg: Record<HeroClass, {lv, xp, sp, skills}>`, persisted in the profile.
+  - XP curve `xpNeed(lv) = 250 · lv^1.5`, max level 99. Level growth uses the same per-level stats as before (`growBase`).
+  - A fresh class has 3 SP; skill 1, the dash, the ult and the utilities are learned.
+  - Unlock levels (`unlockLevel`): skill 2 Lv 3, skill 3 Lv 5, regen Lv 2, class passives Lv 2/4/6/8.
+  - Old saves: every class starts at the old shared rank with `3 + (rank-1)` SP.
+- Store:
+  - `runState` reads level / xp / sp / skills from `classProg` of the hero. `skillLevels` is a run copy: room cards boost it for the run
+    only, and cards never unlock level-0 skills.
+  - `addExperience` levels the class permanently: +1 SP and growth, written to `classProg`, with a LEVEL UP toast.
+  - `upgradeSkill` checks the unlock level and writes the learned level to `classProg`. `endRun` banks the leftover xp.
+  - `heroRank` is kept as a legacy alias = the current class level, so gear (RANK_REQ), crafting, quests, talents and NPC
+    `cond.rank` all read the class level.
+  - `debugSetLevel(lv)` is the debug action.
+- Casting a level-0 skill is refused ("Unlocks at Lv N" / "Learn it at the Skill Trainer"). The action bar dims locked skills, and the
+  Skill Trainer shows "Locked · Lv N" / "Learn".
+- UI says "Lv"/"Level" everywhere instead of Rank: TownProfile, RankPlate, item tips, Blacksmith, Talents, GameOver, main menu, debug.

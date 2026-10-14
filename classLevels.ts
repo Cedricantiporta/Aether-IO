@@ -1,0 +1,59 @@
+// Permanent per-class levels (replace the old shared Hero Rank + per-run level). Each class keeps its own level, xp,
+// unspent skill points and learned skill levels. Gear / crafting / quests / talents read the current class's level.
+// Skills unlock by level: skill 1 (+ dash, ultimate and the basic utilities) from the start, the rest at set levels;
+// a fresh class starts with 3 skill points. Room upgrade cards are run-only boosts on top of the learned levels.
+import type { HeroClass, SkillLevels, PlayerStats } from './types';
+import { ACTIVE_ORDER } from './abilityDefs';
+import { SKILLS_INFO } from './constants';
+
+export interface ClassProg { lv: number; xp: number; sp: number; skills: SkillLevels }
+export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'];
+export const START_SP = 3;
+export const MAX_LEVEL = 99;
+
+/** XP needed to go from `lv` to `lv + 1`. */
+export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max(1, lv), 1.5));
+
+/** Hero level a skill key unlocks at (0 = available from level 1). */
+export function unlockLevel(hero: HeroClass, key: string): number {
+  const order = ACTIVE_ORDER[hero];
+  if (key === order[1]) return 3;
+  if (key === order[2]) return 5;
+  if (key === 'regen') return 2;
+  const passives = Object.entries(SKILLS_INFO).filter(([k, i]) => (i as { type?: string; classType?: string }).type === 'PASSIVE' && (i as { classType?: string }).classType === hero && k !== 'dash').map(([k]) => k);
+  const i = passives.indexOf(key);
+  if (i >= 0) return 2 + i * 2;   // class passives: Lv 2, 4, 6, 8 ...
+  return 0;
+}
+
+/** Learned skills of a fresh class: skill 1, the class dash, the ultimate and the basic utilities. Everything else 0. */
+export function freshSkills(hero: HeroClass, base: SkillLevels): SkillLevels {
+  const s = { ...base } as unknown as Record<string, number>;
+  for (const k of Object.keys(s)) if (unlockLevel(hero, k) > 0) s[k] = 0;
+  return s as unknown as SkillLevels;
+}
+
+export const freshClass = (hero: HeroClass, base: SkillLevels, lv = 1): ClassProg => ({ lv, xp: 0, sp: START_SP + Math.max(0, lv - 1), skills: freshSkills(hero, base) });
+
+/** One level of class growth on the base stats (same numbers the old run level used). */
+export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
+  const base = { ...b, maxHealth: b.maxHealth + 5, maxMana: b.maxMana + 5, damage: b.damage + 1, defense: b.defense + 0.5 };
+  if (hero === 'ARCHER') base.fireRate *= 1.015;
+  else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
+  else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
+  else if (hero === 'KNIGHT') { base.maxHealth *= 1.025; base.defense += 0.5; base.damage *= 1.012; }
+  return base;
+}
+
+export function sanitizeClassProg(raw: unknown, base: SkillLevels, legacyLevel: number): Record<HeroClass, ClassProg> {
+  const out = {} as Record<HeroClass, ClassProg>;
+  const r = (raw && typeof raw === 'object' ? raw : null) as Record<string, Partial<ClassProg>> | null;
+  for (const h of HEROES) {
+    const e = r?.[h];
+    if (e && typeof e === 'object') {
+      const skills = { ...freshSkills(h, base), ...(e.skills ?? {}) } as SkillLevels;
+      out[h] = { lv: Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(e.lv) || 1))), xp: Math.max(0, Number(e.xp) || 0), sp: Math.max(0, Math.floor(Number(e.sp) || 0)), skills };
+    } else out[h] = freshClass(h, base, Math.max(1, Math.min(MAX_LEVEL, Math.floor(legacyLevel || 1))));   // old saves: every class starts at the old shared rank
+  }
+  return out;
+}

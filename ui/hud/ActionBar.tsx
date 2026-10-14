@@ -1,4 +1,5 @@
 import React from 'react';
+import { unlockLevel } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
 import { SKILLS_INFO, POTION_COOLDOWN } from '../../constants';
@@ -50,9 +51,9 @@ export const ActionBar: React.FC = () => {
         const cost = COST_OF[slot];
         const cd = abilityCd(hero, slot, lv) * (1 - cdr);
         return (
-          <ActionSlot key={slot} id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost}
+          <ActionSlot key={slot} id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost} active={lv > 0}
             getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot] })}
-            tooltip={<SimpleTip title={def.name} sub={`Active [${key}] · Lv ${lv} · hold to aim, release to cast`} body={def.desc}
+            tooltip={<SimpleTip title={def.name} sub={lv <= 0 ? `Locked · unlocks at Lv ${unlockLevel(hero, def.slot)}, then learn it at the Skill Trainer` : `Active [${key}] · Lv ${lv} · hold to aim, release to cast`} body={def.desc}
               lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />
         );
       })}

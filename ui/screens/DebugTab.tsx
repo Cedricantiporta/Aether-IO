@@ -36,19 +36,19 @@ function maxCurrencies() {
   void s; toast('Debug: gold, gems and shards maxed');
 }
 function maxRankAndTalents() {
-  useGameStore.setState({ heroRank: Math.max(useGameStore.getState().heroRank, 40) });
+  useGameStore.getState().debugSetLevel(Math.max(useGameStore.getState().level, 40));
   const nodes = talentsOf(useGameStore.getState().hero);
   for (let pass = 0; pass < 12; pass++) {
     let any = false;
     for (const n of nodes) while (useGameStore.getState().allocateTalent(n.id)) any = true;
     if (!any) break;
   }
-  toast('Debug: hero rank 40 + every talent maxed');
+  toast('Debug: Lv 40 + every talent maxed');
 }
 const MAX_RANK = 99;
 function setRank(r: number) {
-  useGameStore.setState({ heroRank: Math.max(1, Math.min(MAX_RANK, r)), rankXp: 0 });
-  toast(`Debug: hero rank ${useGameStore.getState().heroRank}`);
+  useGameStore.getState().debugSetLevel(Math.max(1, Math.min(MAX_RANK, r)));
+  toast(`Debug: class level ${useGameStore.getState().level}`);
 }
 function levelUp(n: number) {
   const st = useGameStore.getState();
@@ -85,12 +85,12 @@ export const DebugTab: React.FC = () => {
     <Line label="One-hit kills" hint="Every hit kills, bosses included."><Toggle checked={debug.oneHit} onChange={(v) => flip('oneHit', v)} label="One-hit kills" /></Line>
     <Line label="Max skills" hint="Every run starts with all of this hero's skills at max level."><Toggle checked={debug.maxSkills} onChange={(v) => { flip('maxSkills', v); if (v && inRun) useGameStore.getState().debugMaxSkills(); }} label="Max skills" /></Line>
     <Line label="Currencies"><Button size="sm" onClick={maxCurrencies} data-testid="dbg-money">Max gold / gems / shards</Button></Line>
-    <Line label="Hero rank" hint="Unlocks every rank-gated item and enough talent points for all talents.">
+    <Line label="Class level" hint="Unlocks every rank-gated item and enough talent points for all talents.">
       <Button size="sm" onClick={() => setRank(useGameStore.getState().heroRank + 1)}>+1</Button>
       <Button size="sm" onClick={() => setRank(useGameStore.getState().heroRank + 10)}>+10</Button>
-      <Button size="sm" onClick={() => setRank(MAX_RANK)} data-testid="dbg-max-rank">Max rank ({MAX_RANK})</Button>
+      <Button size="sm" onClick={() => setRank(MAX_RANK)} data-testid="dbg-max-rank">Max level ({MAX_RANK})</Button>
     </Line>
-    <Line label="Rank & talents"><Button size="sm" onClick={maxRankAndTalents}>Rank 40 + all talents</Button></Line>
+    <Line label="Level & talents"><Button size="sm" onClick={maxRankAndTalents}>Lv 40 + all talents</Button></Line>
     <Line label="This run" hint={inRun ? undefined : 'Start a run first.'}>
       <Button size="sm" disabled={!inRun} onClick={() => useGameStore.getState().debugMaxSkills()}>Max skills now</Button>
       <Button size="sm" disabled={!inRun} onClick={() => useGameStore.setState((s) => ({ skillPoints: s.skillPoints + 99 }))}>+99 SP</Button>

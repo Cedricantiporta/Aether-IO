@@ -93,7 +93,7 @@ export const InventoryPanel: React.FC = () => {
         {/* equipped (collapsible paper doll) */}
         <div className="bag-equip">
           <button className="bag-equip-head" onClick={() => setEquipOpen((v) => !v)} aria-expanded={equipOpen}>
-            <span className="flex items-center gap-1.5"><HeroIcon size={14} /> Equipped <span className="rpg-num text-white">Lv {level} · Rank {rank}</span></span>
+            <span className="flex items-center gap-1.5"><HeroIcon size={14} /> Equipped <span className="rpg-num text-white">Lv {level}</span></span>
             <span className="flex items-center gap-2.5 rpg-num">
               {chips.map(([ic, l, v]) => <span key={l} className="flex items-center gap-1 text-[var(--gold-light)]" title={l}>{ic}{v}</span>)}
               <ChevronDown size={16} style={{ transform: equipOpen ? 'rotate(180deg)' : undefined, transition: 'transform .2s' }} />

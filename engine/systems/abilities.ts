@@ -2,6 +2,7 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
+import { unlockLevel } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
 import { edgeLimit, queryColliders, type Collider } from '../mapgen';
@@ -110,6 +111,11 @@ function announce(name: string): void {
 function gate(slot: ActiveSlot): boolean {
   const st = useGameStore.getState();
   const p = world.player;
+  if ((st.skillLevels[slot] ?? 0) <= 0) {   // not learned yet (skills unlock by class level, then cost skill points)
+    const need = unlockLevel(st.hero, slot);
+    st.addNotification(st.level < need ? `Unlocks at Lv ${need}` : 'Learn it at the Skill Trainer', 'red', 'WARNING');
+    return false;
+  }
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
   if (abilityState.leapT > 0) return false;
   if (world.time < gcdUntil) return false;   // global skill lock: one skill at a time
