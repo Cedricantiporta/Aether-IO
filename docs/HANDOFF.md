@@ -353,7 +353,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   pays and rolls straight on into the NPC's next offer; NPC side quests also chain into the next offer after a turn-in.
 - Quest drops: while a delivery step (or the kill step right before it) needs loot, enemies carrying it drop it 35%, and
   harvest nodes that yield it always give one. Mira's potion side quest removed; her other lessons need Lv 2.
-- New profiles have NO pet (loadoutFor no longer mints pet_blob); the first pet bought auto-equips. Pet was hidden in
+- New profiles have NO pet (loadoutFor no longer mints pet_blob); the Green Blob is FREE while you own no pet (`firstPetFree`), and the first pet bought auto-equips. Pet was hidden in
   town by `PetActor` (status MENU) — now shown in the town area.
 - Farm chores (milk / egg / cat) are held: `village.farmHold` fills a ring on the E key (`.hold-key`), 1.1 s.
 - Tracker: side-quest rows auto-path to the objective (cows, nests, cat, shop for ACTION); teleporting home from a run

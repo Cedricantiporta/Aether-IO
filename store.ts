@@ -111,6 +111,9 @@ export function rollSales(): Record<string, number> {
 /** Current sale fraction for a shop item (0 when not on sale). */
 export const saleOf = (item: { id: string }): number => useGameStore.getState().shopSales[item.id] ?? 0;
 /** Shop price after the item's random sale. */
+/** The Pet House gives a new guard their first pet: the Green Blob is free while you own no pet at all. */
+export const firstPetFree = (s: { equipment: Equipment; inventory: Item[]; warehouse: Item[] }, id: string): boolean =>
+  id === 'pet_blob' && !s.equipment.pet && !s.inventory.some((i) => i.type === 'PET') && !s.warehouse.some((i) => i.type === 'PET');
 export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -1252,7 +1255,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     buyItem: (item, quantity = 1) => {
       const s = get();
-      const total = shopPrice(item) * quantity;
+      const total = firstPetFree(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;
       if (s.gold < total) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
       const toAdd: Item = { ...item, stats: { ...item.stats }, id: uid('buy'), quantity };
       if (!isStackable(item) && quantity > 1) {

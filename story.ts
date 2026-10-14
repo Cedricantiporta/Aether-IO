@@ -43,7 +43,7 @@ export const STORY: StoryStep[] = [
     talk: ['A new guard! Welcome to Aether. I show every newcomer around.', 'First lesson: never leave town without potions. The Potion Shop is just west of the square.', 'Walk up to the counter, press E, and buy one Health Potion. I will wait!'] },
   { id: 'potion', title: 'Stock Up', line: 'Buy a potion at the Potion Shop', npc: '', at: 'SUPPLIES', act: { kind: 'buy_potion', count: 1 }, reward: { gold: 60, items: [{ id: 'potion_hp', qty: 2 }] } },
   { id: 'mira2', title: 'A Friend for the Road', line: 'Tell Mira you bought a potion', npc: 'Mira', reward: { gold: 120 },
-    talk: ['Good! Z drinks a health potion, X a mana potion. Two more on the house, from me.', 'Next: nobody walks the wilds alone. The Pet House keeps companions that fight beside you.', 'Here is enough coin for a little one. Adopt your first pet; it will follow you everywhere.'] },
+    talk: ['Good! Z drinks a health potion, X a mana potion. Two more on the house, from me.', 'Next: nobody walks the wilds alone. The Pet House keeps companions that fight beside you.', 'The keeper gives every new guard a Green Blob for free. Go adopt yours; it will follow you everywhere.'] },
   { id: 'pet', title: 'Your First Pet', line: 'Adopt a pet at the Pet House', npc: '', at: 'PETS', act: { kind: 'buy_pet', count: 1 }, reward: { gold: 60, gems: 10 } },
   { id: 'mira3', title: 'Read the Stars', line: 'Show Mira your new pet', npc: 'Mira', reward: { gems: 10 },
     talk: ['Aww, look at it! It already likes you.', 'Last stop: Madame Zora\'s Fortune tent, at the west end of the street. She summons gear from the stars for gems.', 'Here are some gems. Try one summon; you never know what falls out.'] },

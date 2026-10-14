@@ -50,7 +50,7 @@ export const ItemSlot: React.FC<Props> = ({
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}
-      {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''}`}>{price.toLocaleString()}</span>}
+      {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''}`}>{price === 0 ? 'Free' : price.toLocaleString()}</span>}
       {children}
     </>
   );

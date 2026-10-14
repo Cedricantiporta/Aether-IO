@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
-import { useGameStore, shopPrice } from '../../../store';
+import { useGameStore, shopPrice, firstPetFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ItemArt } from '../../components/ItemArt';
 import { Button } from '../../components/Button';
@@ -38,10 +38,11 @@ export const PetsTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const sales = useGameStore((s) => s.shopSales);
   const buyItem = useGameStore((s) => s.buyItem);
+  const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
   const [tab, setTab] = useState<'SHOP' | 'CARE'>('SHOP');
   const [selId, setSel] = useState(PETS_POOL[0]?.id ?? '');
   const p = PETS_POOL.find((x) => x.id === selId) ?? PETS_POOL[0];
-  const price = shopPrice(p), sale = sales[p.id], can = !p.summonOnly && gold >= price;
+  const price = freeBlob && p.id === 'pet_blob' ? 0 : shopPrice(p), sale = sales[p.id], can = !p.summonOnly && gold >= price;
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2">
@@ -52,7 +53,7 @@ export const PetsTab: React.FC = () => {
           {PETS_POOL.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>
               <ItemSlot item={q} fluid iconSize={30} tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
-                price={q.summonOnly ? undefined : shopPrice(q)} cantAfford={!q.summonOnly && gold < shopPrice(q)} onClick={() => setSel(q.id)} />
+                price={q.summonOnly ? undefined : freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q)} cantAfford={!q.summonOnly && !(freeBlob && q.id === 'pet_blob') && gold < shopPrice(q)} onClick={() => setSel(q.id)} />
             </div>
           ))}
         </div>
@@ -66,7 +67,7 @@ export const PetsTab: React.FC = () => {
               <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => buyItem(p)} style={{ flexDirection: 'column', gap: 0 }} data-testid="pet-buy">
                 <span>Buy</span>
                 {sale ? <span className="text-[.6rem] opacity-70 line-through rpg-num">{p.price.toLocaleString()}</span> : null}
-                <span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{price.toLocaleString()}</span>
+                {price === 0 ? <span className="rpg-num" data-testid="pet-free">Free</span> : <span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{price.toLocaleString()}</span>}
               </Button>
             )}
           </div>
