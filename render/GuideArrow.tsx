@@ -11,7 +11,7 @@ import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
 import { GATE, NPCS } from '../engine/townData';
 import { CASTLE_DOOR, CASTLE_EXIT } from '../engine/castleData';
-import { SHOP_POSITIONS } from '../constants';
+import { SHOP_POSITIONS, shopFront } from '../constants';
 import { questDone, questNeedsKing } from '../quests';
 import { npcs } from '../engine/systems/npcs';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
@@ -54,7 +54,7 @@ function pickTarget(): boolean {
   }
   if (claim) { tgt.x = QUEST_POS[0]; tgt.z = QUEST_POS[2]; return true; }
   if (king) { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; return true; }
-  if (sell) { tgt.x = POTION.position[0]; tgt.z = POTION.position[2] + 4; return true; }
+  if (sell) { const f = shopFront(POTION, 4); tgt.x = f.x; tgt.z = f.z; return true; }
   if (npcI >= 0) { if (NPCS[npcI].area === 'CASTLE') { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; } else { tgt.x = npcs[npcI].x; tgt.z = npcs[npcI].z; } return true; }
   tgt.x = GATE.x; tgt.z = GATE.z; tgt.quest = false; tgt.hideR = 14;
   return true;

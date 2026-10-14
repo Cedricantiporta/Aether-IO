@@ -81,8 +81,9 @@ export const HOUSES: HouseSpec[] = [
   H(27, -16.5, -Math.PI / 2, 5.0, 4.4, 2),
   // where the old summoning shrine stood (north street, door facing the street)
   H(-17, -14, 0, 5.0, 4.4),
-  // south of the east-west street, doors facing the street
-  H(-13, 17.5, Math.PI, 4.6, 4.0), H(13, 17.5, Math.PI, 4.8, 4.2, 2),
+  // (south of the east-west street: the Potion Shop and Armor Shop buildings, see constants SHOP_POSITIONS)
+  // the old shop lots on the street now hold houses
+  H(-20.5, 1.5, 0, 5.0, 4.4, 2), H(36.5, 1.5, 0, 4.8, 4.2),
   // along the road to the gate
   H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 31.5, -Math.PI / 2, 5.0, 4.4, 2),
   // outskirts
@@ -116,13 +117,13 @@ export const ROADS: RoadSpec[] = [
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
   { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
-  { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // potion shop door
+  { x1: -11.6, z1: 10, x2: -11.6, z2: 14.6, w: ROAD_W.branch },   // potion shop door (shop faces north onto the street)
   { x1: -30.4, z1: 10, x2: -30.4, z2: 4.5, w: ROAD_W.branch },   // pet stable door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 19.5, z1: 10, x2: 19.5, z2: 5.2, w: ROAD_W.branch },     // warehouse barn doors
   { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
-  { x1: 34.9, z1: 10, x2: 34.9, z2: 4.5, w: ROAD_W.branch },     // armor shop door
+  { x1: 14.6, z1: 10, x2: 14.6, z2: 14.6, w: ROAD_W.branch },     // armor shop door
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate

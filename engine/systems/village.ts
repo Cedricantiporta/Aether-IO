@@ -11,7 +11,7 @@ import { storyTarget } from './storyLogic';
 import { STORY, gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
-import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
+import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
 import { updateCrates, hitCrate } from './crates';
@@ -245,7 +245,7 @@ export function walkToQuest(q: Quest): void {
     else walkTo(CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 'castle', '', 2.4);
     return;
   }
-  if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT') && !castle) { const s = SHOP_POSITIONS.find((x) => x.type === 'SUPPLIES')!; walkTo(s.position[0] + 1.2, s.position[2] + 5.2, 'shop', 'SUPPLIES'); return; }
+  if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT') && !castle) { const s = SHOP_POSITIONS.find((x) => x.type === 'SUPPLIES')!, f = shopFront(s, 5.2, 1.2); walkTo(f.x, f.z, 'shop', 'SUPPLIES'); return; }
   if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);   // kill / gold / clear quests: out through the town gate
 }
@@ -272,7 +272,7 @@ function walkToSpot(at: Spot): void {
   if (at === 'BOARD') { walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
   if (at === 'TRAINER') { walkTo(TRAINER_POS[0], TRAINER_POS[2] + 2.6, 'shop', 'SKILLS', 1.8); return; }
   const s = SHOP_POSITIONS.find((x) => x.type === at);
-  if (s) walkTo(s.position[0], s.position[2] + 3.2, 'shop', SHOP_TAB[s.type], 1.8);
+  if (s) { const f = shopFront(s, 3.2); walkTo(f.x, f.z, 'shop', SHOP_TAB[s.type], 1.8); }
 }
 const ACTION_SPOT: Record<string, Spot> = { buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
 /** NPC quest row click: hand-in / talk target NPC, else where the objective is done (the cows, the nests, the hiding

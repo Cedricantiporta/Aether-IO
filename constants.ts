@@ -36,14 +36,19 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 export const GOLD_SCALE = 10;
 
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH'; position: [number, number, number]; color: string; rot?: number }[] = [
-    { type: 'SUPPLIES', position: [-20.5, 0, 2], color: '#3b82f6' },
+    { type: 'SUPPLIES', position: [-13, 0, 17.5], color: '#3b82f6', rot: Math.PI },   // potion shop: by the plaza, south of the street (door faces the street)
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
     { type: 'PETS', position: [-29.5, 0, 2], color: '#10b981' },          // between the potion shop and the fortune teller
-    { type: 'ARMORY', position: [36.5, 0, 2], color: '#c9a052' },     // basic gear, beside the blacksmith
+    { type: 'ARMORY', position: [13, 0, 17.5], color: '#c9a052', rot: Math.PI },   // armor shop: by the plaza, opposite the potion shop
     { type: 'FORTUNE', position: [-36.5, 0, 2], color: '#a46bff' },   // fortune teller (summons), beside the potion shop
     { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
     { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
 ];
+/** The point `d` m in front of a shop's counter (shops face +z, turned by `rot`). */
+export const shopFront = (s: { position: [number, number, number]; rot?: number }, d: number, side = 0): { x: number; z: number } => {
+  const r = s.rot ?? 0;
+  return { x: s.position[0] + Math.sin(r) * d + Math.cos(r) * side, z: s.position[2] + Math.cos(r) * d - Math.sin(r) * side };
+};
 /** Shop tab each town building opens. */
 export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH' };
 

@@ -131,7 +131,8 @@ function atPos(at: StoryAt): { x: number; z: number } | null {
   if (at === 'BAG') return null;
   if (at === 'BOARD') { const h = NPCS.find((n) => n.name === 'Hodge'); return h ? { x: h.home[0], z: h.home[1] } : null; }
   const sp = SHOP_POSITIONS.find((p) => p.type === at);
-  return sp ? { x: sp.position[0], z: sp.position[2] + 3 } : null;   // in front of the counter
+  const r = sp?.rot ?? 0;   // shops face +z, rotated by rot
+  return sp ? { x: sp.position[0] + Math.sin(r) * 3, z: sp.position[2] + Math.cos(r) * 3 } : null;   // in front of the counter
 }
 /** Where the main quest continues right now (null when the chain is finished or the step is done from the bag).
  *  Talk / delivery steps point at the NPC, shop steps at the shop, field steps at the town gate. */
