@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Skull, RotateCcw, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from 'lucide-react';
+import { Skull, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { Panel, Ribbon } from '../components/Frame';
@@ -19,13 +19,13 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNo
 );
 
 export const GameOver: React.FC = () => {
-  const { run, stats, startGame, resetGame, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, startGame: s.startGame, resetGame: s.resetGame, hero: s.hero })));
+  const { run, stats, resetGame, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, resetGame: s.resetGame, hero: s.hero })));
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Enter') startGame(); };
+    const h = (e: KeyboardEvent) => { if (e.key === 'Enter') resetGame(); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [startGame]);
+  }, [resetGame]);
 
   const waveRecord = !!run && stats.totalRuns > 1 && run.wave >= stats.highestWave && run.wave > 1;
   const cpRecord = !!run && stats.totalRuns > 1 && run.cp >= stats.highestCP && run.cp > 0;
@@ -62,9 +62,8 @@ export const GameOver: React.FC = () => {
           )}
           <div className="flex gap-3 mt-5">
             <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Return to town</Button>
-            <Button className="flex-1 whitespace-nowrap !px-3" size="lg" onClick={startGame}><RotateCcw size={18} /> Set out again</Button>
           </div>
-          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to set out again</div>
+          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to return to town</div>
         </Panel>
       </div>
     </motion.div>
