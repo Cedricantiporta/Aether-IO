@@ -112,6 +112,7 @@ export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): n
 }
 
 /** E / tap on a loot pill: the item flies to the hero and is collected (bag full -> a warning, it stays). */
+const ITEM_GRAB_R2 = 2.4 * 2.4;
 export function lootPickup(i: number): void {
   const o = world.pickups[i], st = useGameStore.getState();
   if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
@@ -156,7 +157,8 @@ export function updatePickups(dt: number): void {
     if (canGet && o.kind === 'ITEM') canGet = !!o.item && st.canPickUp(o.item);
 
     // Common items are looted by hand (E / tap the pill: lootPickup); Rare and better, currency, xp and hearts fly in by themselves
-    const autoItem = o.kind !== 'ITEM' || (!!o.item && o.item.rarity !== 'COMMON');
+    // (Rare+ items only when you walk up to them: a short grab radius, no long-range pull)
+    const autoItem = o.kind !== 'ITEM' || (!!o.item && o.item.rarity !== 'COMMON' && d2 < ITEM_GRAB_R2);
     if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2 && autoItem) o.magnet = true;
     if (o.magnet && !canGet) o.magnet = false;
 

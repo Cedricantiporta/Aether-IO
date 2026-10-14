@@ -817,5 +817,5 @@ export function updateDirector(dt: number): void {
 
 function vacuumLoot(): void {
   const pk = world.pickups;
-  for (let i = 0; i < pk.length; i++) { const o = pk[i]; if (o.active && (o.kind !== 'ITEM' || (o.item && o.item.rarity !== 'COMMON'))) o.magnet = true; }   // currency / xp / Rare+ items; Common items need E
+  for (let i = 0; i < pk.length; i++) if (pk[i].active && pk[i].kind !== 'ITEM') pk[i].magnet = true;   // currency / xp only: items are walked to (Rare+) or looted with E
 }
