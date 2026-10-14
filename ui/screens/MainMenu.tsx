@@ -126,7 +126,6 @@ export const VillageHUD: React.FC = () => {
       {/* bottom: skill bar (skills + dash work in town) + hint (runs start at the town gate) */}
       {!panel && !device.touch && (
         <div className="absolute left-0 right-0 flex flex-col items-center vh-bottom hud-bottom" style={{ bottom: '1.5rem' }}>
-          <div className="text-[.72rem] text-outline mb-1" style={{ color: '#f6e8c8' }}>WASD walk · drag to rotate camera · wheel zoom · E talk / shops · hold E harvest · the portal in the forest to set out</div>
           <SkillRow><ActionBar /></SkillRow>
         </div>
       )}

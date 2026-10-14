@@ -172,9 +172,7 @@ export const InventoryPanel: React.FC = () => {
           </div>
         </div>
         <div className="bag-foot">
-          <span className="flex items-center gap-2 rpg-label !text-[.7rem]"><BagGlyph size={22} /> <span className="rpg-num text-white">{inventory.length}/{max}</span>
-            <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={16} /><span className="rpg-num">{gold.toLocaleString()}</span></span></span>
-          <div className="flex gap-1.5">
+          <div className="bag-foot-btns">
             {sellMode ? (<>
               <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
               <button className="rpg-btn rpg-btn-primary rpg-btn-sm" disabled={!delSel.length} data-testid="bag-sell-go" onClick={bulkSell}>
@@ -191,6 +189,10 @@ export const InventoryPanel: React.FC = () => {
                 title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
               <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>
             </>)}
+          </div>
+          <div className="bag-foot-info">
+            <span className="flex items-center gap-1.5 rpg-label !text-[.66rem]"><BagGlyph size={16} /> <span className="rpg-num text-white">{inventory.length}/{max}</span></span>
+            <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={14} /><span className="rpg-num">{gold.toLocaleString()}</span></span>
           </div>
         </div>
       </Panel>
