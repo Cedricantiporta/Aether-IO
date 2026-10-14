@@ -374,7 +374,7 @@ function PortalLabel({ i }: { i: number }) {
     <Html position={[0, 3.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: l.color }} data-testid={`portal-${i}`}>
         <span className="pi">{ICONS[l.icon]}</span>
-        <span className="pt">{l.title}<small>{l.sub}</small></span>
+        <span className="pt">{l.title}{l.sub && <small>{l.sub}</small>}</span>
       </div>
     </Html>
   );

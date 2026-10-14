@@ -478,3 +478,12 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Undo, Reset for gold) and Stats tab; red dot on the Hero button while points are unspent.
 - Summon window tabs: Gem Altar, Shard Altar, Gem Shop (`gemShop.ts` offers, BuyDialog with `gems: true`), Tech House
   (`TechGrid`). All item grids share `.slot-grid` (one square size, `--cell`).
+- Summon: the window shows a "Possible rewards" list (pool by rarity) and a Rates popup (rates + pity). Results play a
+  ritual (sigil + light pillar tinted by the best rarity), then tarot cards fly out face down and turn one by one (click
+  to turn early, Reveal all).
+- Crafting: Blacksmith CRAFT opens the Workshop window (`ui/panels/shop/Workshop.tsx`): recipe tree, anvil preview with
+  gains vs equipped, materials owned / needed, success / great success / failure (`CRAFT_SUCCESS`, failure spends gold +
+  shards, keeps monster loot), quantity, forge cinematic. `craftItem` returns `{ item, outcome }`.
+- Town: Potion Shop / Armor Shop moved beside the plaza (constants SHOP_POSITIONS, `shopFront()`); every arrival spawns
+  at the plaza centre; runs start at the Adventure Portal (`PORTAL` in townData, PortalLandmark in render/Town.tsx) in a
+  forest clearing south of the gate (island box added). Town labels use Cinzel. Minimap: thin rim, zoomed on the hero.

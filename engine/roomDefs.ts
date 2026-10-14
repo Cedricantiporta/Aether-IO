@@ -101,20 +101,24 @@ export const REWARD_NAME: Record<RewardKind, string> = {
 };
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
+  // door labels show just what the room is / gives; the sub line only carries a room objective or twist when there is one
   switch (plan.type) {
-    case 'FOUNTAIN': return { title: 'Fountain', sub: 'Heal 40% + a blessing', icon: 'fountain', color: '#5fd6ff' };
-    case 'MERCHANT': return { title: 'Merchant', sub: 'Travelling shop', icon: 'merchant', color: '#f2c14e' };
-    case 'CAMP': return { title: 'Camp', sub: 'Storage + training', icon: 'fountain', color: '#9bd26a' };
+    case 'FOUNTAIN': return { title: 'Fountain', sub: '', icon: 'fountain', color: '#5fd6ff' };
+    case 'MERCHANT': return { title: 'Merchant', sub: '', icon: 'merchant', color: '#f2c14e' };
+    case 'CAMP': return { title: 'Camp', sub: '', icon: 'fountain', color: '#9bd26a' };
     case 'BOSS': return { title: 'Boss', sub: biomeOf(biome).name, icon: 'boss', color: '#ef6a5e' };
-    case 'TREASURE': return { title: 'Treasure', sub: 'Guarded chest', icon: 'chest', color: '#f2c14e' };
-    case 'SHRINE': return { title: 'Shrine', sub: 'Optional challenge', icon: 'shrine', color: '#c084fc' };
-    case 'CRYSTAL': return { title: 'Crystal Cavern', sub: 'Harvest only, no enemies', icon: 'gem', color: '#7fd8ff' };
+    case 'TREASURE': return { title: 'Treasure', sub: '', icon: 'chest', color: '#f2c14e' };
+    case 'SHRINE': return { title: 'Shrine', sub: '', icon: 'shrine', color: '#c084fc' };
+    case 'CRYSTAL': return { title: 'Crystal Cavern', sub: '', icon: 'gem', color: '#7fd8ff' };
     default: break;
   }
   const r = REWARD_ICON[plan.reward];
-  let sub = plan.obj ? OBJ_NAME[plan.obj] : plan.type === 'ELITE' ? 'Elite hunt' : plan.type === 'MINIBOSS' ? 'Champion' : TYPE_NAME.COMBAT;
-  if (plan.twist) sub += ` · ${TWIST_NAME[plan.twist]}`;
-  return { title: REWARD_NAME[plan.reward], sub, icon: r.icon, color: r.color };
+  const parts: string[] = [];
+  if (plan.obj) parts.push(OBJ_NAME[plan.obj]);
+  else if (plan.type === 'ELITE') parts.push('Elite');
+  else if (plan.type === 'MINIBOSS') parts.push('Champion');
+  if (plan.twist) parts.push(TWIST_NAME[plan.twist]);
+  return { title: REWARD_NAME[plan.reward], sub: parts.join(' · '), icon: r.icon, color: r.color };
 }
 const REWARD_ICON: Record<RewardKind, { icon: string; color: string }> = {
   CARD: { icon: 'card', color: '#6ab0ff' }, GOLD: { icon: 'coins', color: '#fbbf24' }, SHARDS: { icon: 'shard', color: '#c084fc' },

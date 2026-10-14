@@ -1,8 +1,10 @@
 // Centred event-style summon window (Korean MMO look): banner list on the left, big banner art + rates +
 // summon buttons on the right. Replaces the side panel for the SUMMON shop tab.
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ITEMS_POOL, PETS_POOL } from '../../constants';
+import { isGear } from '../lib/game';
 import { motion } from 'framer-motion';
-import { Sparkles, X, Cog, Gem } from 'lucide-react';
+import { Sparkles, X, Cog, Gem, Info } from 'lucide-react';
 import { TechGrid } from './shop/Tech';
 import { ItemSlot } from '../components/ItemSlot';
 import { GEM_OFFERS, buyGemOffer } from '../../gemShop';
@@ -21,6 +23,7 @@ const BANNERS = [
   { id: 'SHOP', name: 'Gem Shop', sub: 'Supplies · shards · companions', tone: '#5ee0f5', title: 'Gem Shop', blurb: '' },
   { id: 'TECH', name: 'Tech House', sub: 'Permanent upgrades', tone: '#7dffb0', title: 'Tech House', blurb: '' },
 ] as const;
+const PREVIEW_ORDER = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'COMMON'] as const;
 const RATE_NAME: Record<string, string> = { COMMON: 'Common', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 
 export const SummonWindow: React.FC = () => {
@@ -30,6 +33,9 @@ export const SummonWindow: React.FC = () => {
   const pity = useGameStore((s) => s.summonPity);
   const close = useGameStore((s) => s.closeAllUI);
   const setResults = useUiStore((s) => s.setSummonResults);
+  const [ratesOpen, setRatesOpen] = useState(false);
+  const hero = useGameStore((s) => s.hero);
+  const pool = useMemo(() => [...PETS_POOL, ...ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === hero))], [hero]);
   const [tab, setTab] = useState<(typeof BANNERS)[number]['id']>(() => (useGameStore.getState().activeShopTab === 'TECH' ? 'TECH' : 'GEM'));
   const gem = tab === 'GEM';
   const altar = tab === 'GEM' || tab === 'SHARD';
@@ -66,6 +72,23 @@ export const SummonWindow: React.FC = () => {
             <div className="sw-subt">{B.blurb}</div>
             <div className="sw-gems"><Cur size={18} /> {have.toLocaleString()}</div>
           </div>
+          <div className="sw-preview rpg-scroll" data-testid="summon-preview">
+            <div className="sw-prev-h">Possible rewards <em>{hero.charAt(0) + hero.slice(1).toLowerCase()} gear and companions</em></div>
+            {PREVIEW_ORDER.map((r) => {
+              const list = pool.filter((i) => i.rarity === r);
+              if (!list.length) return null;
+              return (
+                <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
+                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}<i>{list.length}</i></div>
+                  <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+                </div>
+              );
+            })}
+          </div>
+          {ratesOpen && (
+            <div className="sw-pop" onClick={() => setRatesOpen(false)} data-testid="summon-rates">
+              <div className="sw-pop-box" onClick={(e) => e.stopPropagation()}>
+                <div className="sw-pop-h">Summon rates · {B.name}<button className="sw-x" onClick={() => setRatesOpen(false)} aria-label="Close"><X size={18} /></button></div>
           <div className="sw-rates">
             {RARITIES.map((r) => (
               <div key={r} className="sw-rate" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
@@ -86,7 +109,11 @@ export const SummonWindow: React.FC = () => {
               <span className="bar"><i style={{ width: `${((drawn % PITY_MYTHIC) / PITY_MYTHIC) * 100}%` }} /></span>
             </div>
           </div>
+              </div>
+            </div>
+          )}
           <div className="sw-foot">
+            <button className="sw-rates-btn pe" onClick={() => setRatesOpen(true)} data-testid="summon-rates-btn"><Info size={14} /> Rates</button>
             <span className="sw-note">{gem ? `10x saves ${c1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} shards · get shards from crystals, ore and recycling`}</span>
             <button className="sw-btn" disabled={have < c1} onClick={() => go(1)} data-testid="summon-1">
               Summon x1 <span><Cur size={14} />{c1}</span>

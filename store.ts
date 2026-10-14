@@ -1669,6 +1669,8 @@ function syncDiscoveries(): void {
   events.on('waveStart', (e) => q('REACH_WAVE', e.wave));
   events.on('waveClear', (e) => { if (e.fast) q('FAST_CLEARS'); });
   events.on('dash', () => q('DASH'));
+  // blink dashes (Wizard Blink, Necromancer Soul Step) count as dashes too (pet blinks do not)
+  events.on('blink', () => { const h = useGameStore.getState().hero; if ((h === 'WIZARD' || h === 'NECROMANCER') && useGameStore.getState().status === GameStatus.PLAYING) q('DASH'); });
   events.on('pickup', (e) => {
     if (e.kind === 'GOLD') q('COLLECT_GOLD', e.value * GOLD_SCALE);
     else if (e.kind === 'SHARD') q('GATHER_SHARDS');

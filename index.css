@@ -1931,3 +1931,57 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .tech-slot .tech-ic { color: var(--tc); display: grid; place-items: center; margin-top: -.5rem; }
 .tech-slot .tech-ic svg { color: var(--tc); stroke: var(--tc); }
 .tech-slot .tech-pips { bottom: .85rem; }
+
+/* summon window: reward preview list + rates popup */
+.sw-preview { flex: 1; min-height: 0; overflow-y: auto; margin: .4rem 0; padding: .4rem .6rem; background: rgba(0, 0, 0, .25); border: 1px solid rgba(214, 186, 122, .14); border-radius: 3px; }
+.sw-prev-h { font-family: var(--font-title); font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-bottom: .4rem; display: flex; gap: .6rem; align-items: baseline; }
+.sw-prev-h em { font-style: normal; letter-spacing: 0; text-transform: none; font-size: .66rem; color: var(--text-dim); font-family: inherit; }
+.sw-tier { margin-bottom: .55rem; }
+.sw-tier-h { display: flex; align-items: center; gap: .4rem; font-family: var(--font-title); font-size: .74rem; color: var(--rc); margin-bottom: .3rem; }
+.sw-tier-h i { font-style: normal; font-size: .62rem; color: var(--text-dim); margin-left: .2rem; }
+.sw-tier-row { display: flex; flex-wrap: wrap; gap: .35rem; }
+.sw-rates-btn { display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .7rem; font-size: .72rem; color: #d8c8a0; border: 1px solid rgba(214, 186, 122, .35); border-radius: 3px; background: rgba(0, 0, 0, .3); }
+.sw-rates-btn:hover { color: var(--gold-light); border-color: var(--gold); }
+.sw-pop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(0, 0, 0, .55); }
+.sw-pop-box { position: relative; width: min(44rem, 92%); padding: 1rem 1.1rem; background: linear-gradient(180deg, #1a1610, #0c0a07); border: 1px solid #6b5a3a; border-radius: 3px; box-shadow: 0 16px 50px rgba(0, 0, 0, .8); }
+.sw-pop-h { font-family: var(--font-title); font-size: 1rem; color: #f6e6bd; margin-bottom: .7rem; }
+.sw-pop-h .sw-x { position: absolute; right: .6rem; top: .55rem; }
+.sw-pop .sw-rates { margin: 0 0 .6rem; }
+
+/* ---- summon reveal: ritual + tarot cards ---- */
+.sm-root { background: radial-gradient(circle at 50% 45%, rgba(30, 14, 44, .78), rgba(3, 1, 6, .95)); }
+.sm-ritual { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; pointer-events: none; }
+.sm-pillar { position: absolute; width: 9rem; height: 140%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tint) 70%, #fff) 50%, transparent);
+  filter: blur(10px); opacity: 0; animation: sm-pillar 1.5s ease-in forwards; }
+@keyframes sm-pillar { 0% { opacity: 0; transform: scaleX(.2); } 55% { opacity: .55; } 85% { opacity: 1; transform: scaleX(1.4); } 100% { opacity: 0; transform: scaleX(3); } }
+.sm-sigil { width: min(26rem, 70vw); fill: none; stroke: color-mix(in srgb, var(--tint) 60%, #f3dfa6); stroke-width: 1.4; opacity: 0;
+  filter: drop-shadow(0 0 10px var(--tint)); animation: sm-sigil 1.5s cubic-bezier(.3, .7, .3, 1) forwards; }
+.sm-sigil text { fill: #f3dfa6; stroke: none; font-size: 9px; text-anchor: middle; }
+@keyframes sm-sigil { 0% { opacity: 0; transform: scale(.3) rotate(-90deg); } 30% { opacity: 1; } 80% { opacity: 1; transform: scale(1) rotate(120deg); } 100% { opacity: 0; transform: scale(1.8) rotate(160deg); } }
+.sm-flash { position: absolute; inset: 0; background: radial-gradient(circle, #fff, transparent 60%); opacity: 0; animation: sm-flash 1.5s forwards; }
+@keyframes sm-flash { 0%, 80% { opacity: 0; } 90% { opacity: .9; } 100% { opacity: 0; } }
+.sm-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.1rem; max-width: 62rem; perspective: 1100px; }
+.sm-cards.many { gap: .8rem; max-width: 52rem; }
+.sm-card { --rc: #9aa0aa; width: 11rem; height: 17.5rem; padding: 0; border: 0; background: none; perspective: 1000px; }
+.sm-cards.many .sm-card { width: 8.6rem; height: 13.4rem; }
+.sm-inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.3, 1.3, .5, 1); }
+.sm-card.open .sm-inner { transform: rotateY(180deg); }
+.sm-back, .sm-face { position: absolute; inset: 0; border-radius: 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.sm-back { justify-content: center; gap: .4rem; color: #e6c27a; cursor: pointer;
+  background: repeating-linear-gradient(45deg, rgba(230, 194, 122, .07) 0 2px, transparent 2px 12px), radial-gradient(circle at 50% 50%, #2c1f4a, #120c22 70%);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .6), inset 0 0 0 2px #e6c27a, inset 0 0 0 6px #120e22, inset 0 0 0 7px rgba(230, 194, 122, .6); }
+.sm-back-sigil { font-style: normal; font-size: 2.6rem; text-shadow: 0 0 14px rgba(230, 194, 122, .7); animation: sm-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes sm-pulse { from { opacity: .6; transform: scale(.95); } to { opacity: 1; transform: scale(1.08); } }
+.sm-back b { font-family: 'Cinzel', serif; font-size: .8rem; letter-spacing: .3em; }
+.sm-face { transform: rotateY(180deg); justify-content: space-between; padding: .9rem .6rem .8rem; color: #f4ead2;
+  background: radial-gradient(120% 60% at 50% 38%, color-mix(in srgb, var(--rc) 36%, transparent), transparent 60%), linear-gradient(170deg, #241a3a, #141026 55%, #0c0a18);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .6), inset 0 0 0 2px #e6c27a, inset 0 0 0 6px #120e22, inset 0 0 0 7px color-mix(in srgb, var(--rc) 70%, #e6c27a); }
+.sm-roman { font-family: 'Cinzel', serif; font-weight: 700; font-size: .72rem; letter-spacing: .28em; color: #e6c27a; }
+.sm-window { width: 80%; flex: 1; margin: .4rem 0; display: grid; place-items: center; border-radius: 999px 999px 10px 10px; border: 1.5px solid rgba(230, 194, 122, .8);
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 50%, transparent), transparent 70%), linear-gradient(#1c1534, #100c1e); }
+.sm-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: .78rem; line-height: 1.15; text-align: center; text-transform: uppercase; letter-spacing: .03em; min-height: 1.8rem; display: grid; place-items: center; }
+.sm-cards.many .sm-name { font-size: .64rem; }
+.sm-aura { position: absolute; inset: -30%; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 45%, transparent), transparent 60%); animation: sm-pulse 1.4s ease-in-out infinite alternate; pointer-events: none; }
+.sm-rays { position: absolute; inset: -60%; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 40%, transparent) 0 6deg, transparent 6deg 22deg); animation: fc-spin 8s linear infinite; opacity: .6; pointer-events: none; }
+.sm-card.open.sm-legendary .sm-inner, .sm-card.open.sm-mythic .sm-inner { filter: drop-shadow(0 0 18px var(--rc)); }
+.sm-card.open.sm-epic .sm-inner { filter: drop-shadow(0 0 10px var(--rc)); }
