@@ -275,8 +275,9 @@ button:disabled { cursor: not-allowed; }
 .rpg-slot[data-rarity='MYTHIC'] { --rc: var(--c-mythic); }
 .rpg-slot[data-rarity='LEGENDARY']::before, .rpg-slot[data-rarity='MYTHIC']::before {
   content: ''; position: absolute; inset: 2px; border-radius: .15rem; pointer-events: none; overflow: hidden;
-  background: linear-gradient(115deg, transparent 35%, color-mix(in srgb, var(--rc) 55%, #fff) 50%, transparent 65%);
-  background-size: 250% 100%; opacity: .5; mix-blend-mode: screen; animation: slot-shimmer 3s linear infinite;
+  /* subtle: a soft static gradient wash of the rarity colour from the top corner (no sweeping shine) */
+  background: linear-gradient(145deg, color-mix(in srgb, var(--rc) 30%, transparent) 0%, color-mix(in srgb, var(--rc) 8%, transparent) 45%, transparent 70%);
+  opacity: .9;
 }
 @keyframes slot-shimmer { from { background-position: 220% 0; } to { background-position: -120% 0; } }
 button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { transform: translateY(-2px); filter: brightness(1.2); z-index: 5;
