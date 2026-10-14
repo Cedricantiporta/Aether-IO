@@ -11,7 +11,7 @@ import { storyTarget } from './storyLogic';
 import { STORY, gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
-import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
+import { SHOP_POSITIONS, SHOP_TAB, shopFront, RARITY_LABEL_COLOR } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
 import { updateCrates, hitCrate } from './crates';
@@ -64,7 +64,7 @@ export function placeVillageNodes(): void {
 }
 
 /** One thing the hero can interact with right now (preallocated, nearest first). every pill uses E. */
-export interface Interactable { active: boolean; key: 'E' | 'F'; verb: string; label: string; shop: ShopTab | ''; node: number; d2: number; act: Act; }
+export interface Interactable { active: boolean; key: 'E' | 'F'; verb: string; label: string; shop: ShopTab | ''; node: number; d2: number; act: Act; /** label colour ('' = default), e.g. loot rarity */ color?: string }
 // ---- farm actions (interaction quests). Cows can be milked every 20 s; each nest lays a fresh egg every 25 s.
 const milkCd = new Float32Array(16), eggAt = new Float64Array(8);
 export const eggReady = (k: number): boolean => world.time >= eggAt[k] || eggAt[k] - world.time > 25;   // (the clock restarts with each town visit)
@@ -97,12 +97,12 @@ export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'to
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
-const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', node: number, d2: number, act: Act = 'shop') => {
+const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', node: number, d2: number, act: Act = 'shop', color = '') => {
   // insertion by distance into a fixed-size list
   let i = nearbyN < MAX_NEARBY ? nearbyN : MAX_NEARBY;
   if (i === MAX_NEARBY) { if (d2 >= nearby[MAX_NEARBY - 1].d2) return; i = MAX_NEARBY - 1; } else nearbyN++;
-  while (i > 0 && nearby[i - 1].d2 > d2) { const a = nearby[i], b = nearby[i - 1]; a.key = b.key; a.verb = b.verb; a.label = b.label; a.shop = b.shop; a.node = b.node; a.d2 = b.d2; a.act = b.act; i--; }
-  const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act;
+  while (i > 0 && nearby[i - 1].d2 > d2) { const a = nearby[i], b = nearby[i - 1]; a.key = b.key; a.verb = b.verb; a.label = b.label; a.shop = b.shop; a.node = b.node; a.d2 = b.d2; a.act = b.act; a.color = b.color; i--; }
+  const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act; t.color = color;
 };
 const GATE_R = 5.5;
 const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House' };
@@ -138,7 +138,7 @@ function scanNearby(): void {
   // items on the ground are looted by hand (E / tap)
   for (let i = 0; i < world.pickups.length; i++) {
     const o = world.pickups[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;
-    d = q(o.pos.x, o.pos.z); if (d < 3.2 * 3.2) push('E', 'Loot', o.item.name, '', i, d - 0.5, 'loot');
+    d = q(o.pos.x, o.pos.z); if (d < 3.2 * 3.2) push('E', 'Loot', o.item.name, '', i, d - 0.5, 'loot', RARITY_LABEL_COLOR[o.item.rarity] ?? '');
   }
   for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
 }

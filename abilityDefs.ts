@@ -58,7 +58,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${34 + 2 * (lv - 1)} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
   NECROMANCER: [
-    { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13,
+    { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 10.4,
       desc: 'Skeleton warriors claw out of the ground around you and hunt the nearest enemies. Monsters attack them before you; they stay until slain, and the cooldown only starts once all of them have fallen. One more skeleton every 2 levels (max 4).',
       per: (lv) => `${Math.min(4, 1 + Math.ceil(lv / 2))} skeletons (max 4) · ${pct(0.9 * lvMul(lv))} dmg per hit · until slain` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
@@ -124,7 +124,7 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
     desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
   NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Army of the Dead', mana: 0, cd: 0,
-    desc: 'A wail of the grave stuns everything around you, then a legion rises: five skeleton warriors, two skeleton mages and a hulking bone golem fight for you for 12s. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A wail of the grave stuns everything around you, then a legion rises: four skeleton warriors, two skeleton mages and a hulking bone golem fight for you until slain. Its 90s cooldown only starts once the whole army has fallen; it also needs a full charge bar.',
     per: (lv) => `Wail ${pct(8 * lvMul(lv) * 0.7)} dmg · minions ${pct(1.2 * lvMul(lv))} per hit · golem ${pct(3 * lvMul(lv))}` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
     desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',

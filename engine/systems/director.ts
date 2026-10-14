@@ -1,3 +1,4 @@
+import { RARITY_LABEL_COLOR } from '../../constants';
 // ============================================================================
 // Run director (Hades-style rooms). A run is a chain of small rooms grouped into biomes; each biome ends in a boss.
 //
@@ -648,11 +649,11 @@ export const MAX_ROOM_NEARBY = 3;
 /** Room interactables, same shape as the town's `nearby` list so the shared interact pills can draw them. node: 0..2 = portal, 10 = station. */
 export const roomNearby: Interactable[] = Array.from({ length: MAX_ROOM_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as const }));
 let nearbyN = 0, harvestCd = 0;
-function pushNearby(verb: string, label: string, node: number, d2: number): void {
+function pushNearby(verb: string, label: string, node: number, d2: number, color = ''): void {
   let i = nearbyN < MAX_ROOM_NEARBY ? nearbyN : MAX_ROOM_NEARBY;
   if (i === MAX_ROOM_NEARBY) { if (d2 >= roomNearby[MAX_ROOM_NEARBY - 1].d2) return; i = MAX_ROOM_NEARBY - 1; } else nearbyN++;
-  while (i > 0 && roomNearby[i - 1].d2 > d2) { const a = roomNearby[i], b = roomNearby[i - 1]; a.verb = b.verb; a.label = b.label; a.node = b.node; a.d2 = b.d2; i--; }
-  const t = roomNearby[i]; t.key = 'E'; t.verb = verb; t.label = label; t.node = node; t.d2 = d2;
+  while (i > 0 && roomNearby[i - 1].d2 > d2) { const a = roomNearby[i], b = roomNearby[i - 1]; a.verb = b.verb; a.label = b.label; a.node = b.node; a.d2 = b.d2; a.color = b.color; i--; }
+  const t = roomNearby[i]; t.key = 'E'; t.verb = verb; t.label = label; t.node = node; t.d2 = d2; t.color = color;
 }
 function scanNearby(): void {
   nearbyN = 0;
@@ -667,7 +668,7 @@ function scanNearby(): void {
         const po = r.portals[i];
         if (!po.active || po.t < 0.5) continue;
         const dist = q(po.x, po.z);
-        if (dist < 36) { const l = portalLabel(po.plan, biome); pushNearby('Enter', `${l.title} · ${l.sub}`, i, dist); }
+        if (dist < 36) { const l = portalLabel(po.plan, biome); pushNearby('Enter', l.sub ? `${l.title} · ${l.sub}` : l.title, i, dist); }
       }
     }
     if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
@@ -704,7 +705,7 @@ function scanNearby(): void {
     for (let i = 0; i < pk.length; i++) {
       const o = pk[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;
       const dd2 = (o.pos.x - p.x) ** 2 + (o.pos.z - p.z) ** 2;
-      if (dd2 < LOOT_R * LOOT_R) pushNearby('Loot', o.item.name, 1000 + i, dd2 - 0.5);   // slightly ahead of other pills at the same distance
+      if (dd2 < LOOT_R * LOOT_R) pushNearby('Loot', o.item.name, 1000 + i, dd2 - 0.5, RARITY_LABEL_COLOR[o.item.rarity] ?? '');   // slightly ahead of other pills at the same distance
     }
   }
   for (let i = 0; i < MAX_ROOM_NEARBY; i++) roomNearby[i].active = i < nearbyN;

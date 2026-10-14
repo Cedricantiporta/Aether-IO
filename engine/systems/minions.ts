@@ -1,7 +1,7 @@
 // Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts), skeleton bowmen (bone arrows, wand perk)
 // and the bone golem (big melee, ultimate).
 // A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
-// stays until its HP is gone (only the ult army is timed). Nearby monsters attack minions before the hero (enemies.ts
+// stays until its HP is gone. Nearby monsters attack minions before the hero (enemies.ts
 // minionTarget), so the skeletons hold the line.
 import { Vector3 } from 'three';
 import { world } from '../world';
@@ -27,14 +27,15 @@ function minionMul(): { dmg: number; life: number; haste: number } {
   return { dmg: (1 + (s.minionDmg || 0)) * h, life: h, haste: 1 + (s.minionHaste || 0) };
 }
 
-/** Summons are permanent: they stay until slain (life 0 = permanent). Only the ult army is timed. */
+/** Summons are permanent: they stay until slain (life 0 = permanent). */
 export const PERMANENT = 0;
 /** Skeleton tuning: move speed x0.8, damage x0.7, attack speed x0.7 (attack interval / 0.7). */
 const SPEED_MUL = 0.8, DMG_MUL = 0.7, ATK_SPD_MUL = 0.7;
 let bornSeq = 0;
+let ultHold = 0;   // the ult cooldown frozen while the ult army stands
 
 /** Raises a minion at (x, z). dmg = damage per hit (before talents), life in seconds (PERMANENT = until slain).
- *  src 1 = Raise Dead (its cooldown only starts once all of those skeletons are gone). */
+ *  src 1 = Raise Dead, 2 = Army of the Dead (their cooldowns only start once all of those minions are gone). */
 export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0): void {
   const M = world.minions, mm = minionMul();
   // too many warriors: the oldest one crumbles to make room
@@ -46,11 +47,13 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const m = M.find((o) => !o.active);
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
-  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.3 : 1);   // the bone golem hits 30% harder m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
+  m.life = m.maxLife = life <= 0 ? Infinity : life * mm.life; m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.3 : 1);   // (the bone golem hits 30% harder)
+  m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
   m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : kind === MINION_WARRIOR ? 0.5 * (src === 1 ? 1.3 : 1) : 0.3)   // Raise Dead skeletons +30% HP
+    * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
@@ -85,9 +88,11 @@ export function minionCount(kind = -1): number { let n = 0; for (const m of worl
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
-  let slotI = 0, raised = false;
-  for (let i = 0; i < M.length; i++) if (M[i].active && M[i].src === 1) { raised = true; break; }
+  let slotI = 0, raised = false, army = false;
+  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === 1) raised = true; else if (M[i].src === 2) army = true; }
   if (raised) pl.cd.q = pl.cdMax.q;   // Raise Dead: the cooldown starts when its skeletons have all fallen
+  // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen
+  if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;
   for (let i = 0; i < M.length; i++) {
     const m = M[i];
     if (!m.active) continue;

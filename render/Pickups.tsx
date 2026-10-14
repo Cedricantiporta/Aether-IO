@@ -110,6 +110,7 @@ const ringGeo = new CircleGeometry(1.1, 24).rotateX(-Math.PI / 2);
 function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   const rarity = p.item?.rarity || 'COMMON';
   const hex = RARITY_HEX[rarity];
+  const beam = rarity !== 'COMMON' && rarity !== 'RARE';
   const g = useRef<Group>(null!), icon = useRef<Mesh>(null!), label = useRef<Sprite>(null!), ring = useRef<Mesh>(null!);
   const beamMat = useMemo(() => makeBeamMaterial(hex, { speed: 2.5, stripes: 5, power: 1.3 }), [hex]);
   const iconMat = useMemo(() => new MeshBasicMaterial({ color: new Color(hex).multiplyScalar(2.2), toneMapped: false }), [hex]);
@@ -139,7 +140,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   }, -0.2);
   return (
     <group ref={g}>
-      <mesh geometry={beamGeo} material={beamMat} />
+      {beam && <mesh geometry={beamGeo} material={beamMat} />}{/* light beam only for Epic and above */}
       <mesh ref={ring} geometry={ringGeo} material={ringMat} position={[0, 0.07, 0]} />
       <mesh ref={icon} geometry={geo} material={iconMat} />
       <sprite ref={label} material={lab.mat} scale={[lab.aspect * 0.62, 0.62, 1]} />

@@ -690,9 +690,9 @@ function releaseUlt(): void {
     stunSt.duration = 1.2;
     damageEnemiesInRadius(p.pos.x, p.pos.z, 10, b * 8, physKnock, stunSt);
     const mlv = st.skillLevels.ult, md = base(mlv);
-    for (let i = 0; i < MAX_SKELETONS; i++) { const an = (i / MAX_SKELETONS) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, 12); }
-    for (let i = 0; i < 2; i++) { const an = Math.PI * (0.5 + i); spawnMinion(MINION_MAGE, p.pos.x + Math.cos(an) * 4.5, p.pos.z + Math.sin(an) * 4.5, md * 1.0, 12); }
-    spawnMinion(MINION_GOLEM, p.pos.x + Math.sin(p.facing) * 3.5, p.pos.z + Math.cos(p.facing) * 3.5, md * 3, 12);
+    for (let i = 0; i < MAX_SKELETONS; i++) { const an = (i / MAX_SKELETONS) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, PERMANENT, 2); }
+    for (let i = 0; i < 2; i++) { const an = Math.PI * (0.5 + i); spawnMinion(MINION_MAGE, p.pos.x + Math.cos(an) * 4.5, p.pos.z + Math.sin(an) * 4.5, md * 1.0, PERMANENT, 2); }
+    spawnMinion(MINION_GOLEM, p.pos.x + Math.sin(p.facing) * 3.5, p.pos.z + Math.cos(p.facing) * 3.5, md * 3, PERMANENT, 2);
     a.tintRgb = [0.08, 0.03, 0.12]; a.tintTarget = 0;
     events.emit('ultImpact', { pos: p.pos.clone(), name: 'ARMY_DEAD', radius: 10 });
     events.emit('shockwave', { pos: p.pos.clone(), radius: 12, color: 0x9a6bd8 });

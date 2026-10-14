@@ -30,7 +30,7 @@ export const InteractPrompt: React.FC = () => {
         const h = n.active && n.act === 'farm' && farmHold.node === n.node ? Math.min(1, farmHold.t / FARM_HOLD_S) : 0;
         if (h !== hold.current[i]) { hold.current[i] = h; (el.children[0] as HTMLElement).style.setProperty('--hold', String(h)); }
       }
-      const key = n.active ? `${n.key}|${n.verb}|${n.label}` : '';
+      const key = n.active ? `${n.key}|${n.verb}|${n.label}|${n.color ?? ''}` : '';
       if (key === sig.current[i]) continue;
       sig.current[i] = key;
       el.style.display = n.active ? 'flex' : 'none';
@@ -38,6 +38,7 @@ export const InteractPrompt: React.FC = () => {
         (el.children[0] as HTMLElement).textContent = n.key;
         (el.children[1] as HTMLElement).textContent = n.verb;
         (el.children[2] as HTMLElement).textContent = n.label;
+        (el.children[2] as HTMLElement).style.color = n.color || '';   // loot: rarity colour
       }
     }
   });
