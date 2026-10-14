@@ -5,6 +5,7 @@ import { ItemIcon } from './ItemIcon';
 import { isGear } from '../lib/game';
 import { tip } from './Tooltip';
 import { ItemTip } from './ItemTip';
+import { dragProps, type DragSrc } from '../lib/dnd';
 
 interface Props {
   item?: Item | null;
@@ -28,11 +29,12 @@ interface Props {
   disabled?: boolean;
   className?: string;
   children?: React.ReactNode;
+  drag?: DragSrc | null;       // makes the slot draggable (see ui/lib/dnd)
 }
 
 /** Metallic rarity-framed item slot. Empty when no item. */
 export const ItemSlot: React.FC<Props> = ({
-  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children,
+  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag,
 }) => {
   const q = qty ?? item?.quantity ?? 1;
   const cls = `rpg-slot ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
@@ -51,8 +53,9 @@ export const ItemSlot: React.FC<Props> = ({
     </>
   );
   const tipProps = item && !noTip ? tip(<ItemTip item={item} price={tooltip} compare={compare} />) : {};
+  const dnd = item && drag ? dragProps(drag) : {};
   if (onClick || onContextMenu) {
-    return <button type="button" disabled={disabled} className={cls} style={style} data-rarity={item?.rarity} onClick={onClick} onContextMenu={onContextMenu} {...tipProps}>{content}</button>;
+    return <button type="button" disabled={disabled} className={cls} style={style} data-rarity={item?.rarity} onClick={onClick} onContextMenu={onContextMenu} {...tipProps} {...dnd}>{content}</button>;
   }
-  return <div className={`${cls} hoverable`} style={style} data-rarity={item?.rarity} {...tipProps}>{content}</div>;
+  return <div className={`${cls} hoverable`} style={style} data-rarity={item?.rarity} {...tipProps} {...dnd}>{content}</div>;
 };

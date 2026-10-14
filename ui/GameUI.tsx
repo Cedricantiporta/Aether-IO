@@ -33,7 +33,7 @@ const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED,
 /** UI root. pointer-events none so the canvas still receives clicks; panels opt in with .pe */
 export const GameUI: React.FC = () => {
   const { status, inv, shop, bagShop, chr, summonTab } = useGameStore(useShallow((s) => ({
-    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON',
+    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY', 'WAREHOUSE'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON',
   })));
   const titleDone = useUiStore((s) => s.titleDone);
   const charSelect = useUiStore((s) => s.charSelect);

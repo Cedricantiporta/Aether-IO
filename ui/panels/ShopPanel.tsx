@@ -16,6 +16,8 @@ import { SkillsTab } from './shop/Skills';
 import { QuestsTab } from './shop/Quests';
 import { ArmoryTab } from './shop/Armory';
 import { WarehouseTab } from './shop/Warehouse';
+import { useDrop } from '../lib/dnd';
+import { useUiStore } from '../uiStore';
 
 const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }[] = [
   { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'Potion Shop' },
@@ -34,10 +36,14 @@ export const ShopPanel: React.FC = () => {
     tab: s.activeShopTab, close: s.closeAllUI, gold: s.gold, gems: s.gems, sp: s.skillPoints,
   })));
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
+  // drop a bag item on a shop: sell it (or pick it for upgrading at the blacksmith); the warehouse grid handles its own drops
+  const ui = useUiStore.getState();
+  const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH'].includes(tab),
+    (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex flex-col side-panel" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>
-      <Panel className="flex flex-col flex-1 min-h-0">
+      <Panel className={`flex flex-col flex-1 min-h-0 drop-zone ${sellDrop.hot ? 'drop-hot' : ''}`} {...sellDrop.props}>
         <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">
             <CurrencyPill value={gold.toLocaleString()} />

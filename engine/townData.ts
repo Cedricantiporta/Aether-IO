@@ -63,7 +63,7 @@ export const HOUSES: HouseSpec[] = [
   // outskirts
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
   H(24, 22, 0, 5.2, 4.4, 2),   // where the pet stable used to be
-  H(-33, -9, 0.5, 5.0, 4.4, 2),   // (the east twin is now the Warehouse, constants SHOP_POSITIONS)
+  H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
   H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
 ];
 
@@ -92,6 +92,7 @@ export const ROADS: RoadSpec[] = [
   { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // potion shop door
   { x1: -30.4, z1: 10, x2: -30.4, z2: 4.5, w: ROAD_W.branch },   // pet stable door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
+  { x1: 19.5, z1: 10, x2: 19.5, z2: 5.2, w: ROAD_W.branch },     // warehouse barn doors
   { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: 34.9, z1: 10, x2: 34.9, z2: 4.5, w: ROAD_W.branch },     // armor shop door

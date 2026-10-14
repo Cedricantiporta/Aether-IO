@@ -11,15 +11,22 @@ import { ItemSlot } from '../components/ItemSlot';
 import { HERO_ICON } from '../hud/TopBars';
 import { useUiStore } from '../uiStore';
 import { RARITY_RANK, SORTS, isGear, type SortMode } from '../lib/game';
+import { useDrop } from '../lib/dnd';
 
 const TYPE_RANK: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
 
-const DollSlot: React.FC<{ slot: EquipSlot; label: string; item: Item | null; onClick: () => void }> = ({ slot, label, item, onClick }) => (
-  <div className="flex flex-col items-center gap-1">
-    <ItemSlot item={item} size="3.5rem" iconSize="82%" fluid={false} onClick={item ? onClick : undefined} emptyLabel={label} tooltip="sell" compare={false} className={item ? '' : 'hoverable'} />
-    <span className="rpg-label !text-[.5rem]">{label}</span>
-  </div>
-);
+/** Paper-doll slot: click to unequip, drag out to the bag, drop a matching bag item on it to equip. */
+const DollSlot: React.FC<{ slot: EquipSlot; label: string; item: Item | null; onClick: () => void }> = ({ slot, label, item, onClick }) => {
+  const equip = useGameStore((s) => s.equipItem);
+  const { hot, props } = useDrop((d) => d.from === 'BAG' && d.item.type.toLowerCase() === slot, (d) => equip(d.item));
+  return (
+    <div className={`flex flex-col items-center gap-1 drop-zone ${hot ? 'drop-hot' : ''}`} {...props}>
+      <ItemSlot item={item} size="3.5rem" iconSize="82%" fluid={false} onClick={item ? onClick : undefined} emptyLabel={label} tooltip="sell" compare={false} className={item ? '' : 'hoverable'}
+        drag={item ? { from: 'EQUIP', item, slot } : null} />
+      <span className="rpg-label !text-[.5rem]">{label}</span>
+    </div>
+  );
+};
 
 type Cat = 'ALL' | 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'CONSUMABLE' | 'MATERIAL' | 'PET' | 'ETC';
 const CATS: { id: Cat; label: string; icon: React.ReactNode }[] = [
@@ -54,7 +61,11 @@ export const InventoryPanel: React.FC = () => {
   const selectedLive = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id)) : null;
 
   const lockedFor = (it: Item) => isGear(it) && (RANK_REQ[it.rarity] > rank || (!!it.classType && it.classType !== hero));
+  const { deposit, withdraw } = useGameStore(useShallow((s) => ({ deposit: s.depositItem, withdraw: s.withdrawItem })));
+  // the bag accepts equipped items (unequip) and warehouse items (withdraw)
+  const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });
   const click = (it: Item) => {
+    if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
     if (shopTab === 'BLACKSMITH') { setSelected(it); return; }
     if (shopTab === 'SUPPLIES' || shopTab === 'PETS') { setSell(it); return; }
     if (isGear(it) && !lockedFor(it)) equipItem(it);
@@ -69,7 +80,7 @@ export const InventoryPanel: React.FC = () => {
   return (
     <motion.div initial={{ x: '-105%' }} animate={{ x: 0 }} exit={{ x: '-105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex side-panel" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
-      <Panel className="flex flex-col w-full min-h-0">
+      <Panel className={`flex flex-col w-full min-h-0 drop-zone ${bagDrop.hot ? 'drop-hot' : ''}`} {...bagDrop.props}>
         <PanelHead icon={<BagGlyph size={34} />} title="Bag" onClose={invOpen ? toggleInventory : closeAllUI}
           right={<CurrencyPill label="CP" value={calculateTotalCP(stats).toLocaleString()} />} />
         {/* equipped (collapsible paper doll) */}
@@ -115,7 +126,7 @@ export const InventoryPanel: React.FC = () => {
             <div className="bag-grid">
               {shown.map((it, i) => (
                 <ItemSlot key={`${it.id}-${i}`} item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
-                  onClick={() => click(it)} tooltip="sell" />
+                  onClick={() => click(it)} tooltip="sell" drag={{ from: 'BAG', item: it }} />
               ))}
               {Array.from({ length: empty }).map((_, i) => <div key={`e${i}`} className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }}><span className="slot-plus-faint">+</span></div>)}
             </div>

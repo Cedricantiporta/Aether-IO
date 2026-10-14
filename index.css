@@ -1394,3 +1394,10 @@ button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
 .wh-search:focus { border-color: rgba(233, 196, 106, .8); }
 .wh-btn { padding: .28rem .7rem; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: #f6e6bd; background: linear-gradient(180deg, rgba(60, 48, 30, .9), rgba(24, 19, 12, .92)); border: 1px solid rgba(201, 162, 83, .55); }
 .wh-btn:hover { border-color: #e9c46a; color: #fff; }
+
+/* ---- item drag & drop ---- */
+.rpg-slot[draggable="true"] { cursor: grab; }
+body.is-dragging .rpg-slot[draggable="true"] { cursor: grabbing; }
+.drop-zone { transition: box-shadow .12s, outline-color .12s; outline: 1px solid transparent; outline-offset: -2px; }
+body.is-dragging .drop-zone.drop-hot { outline: 2px solid rgba(233, 196, 106, .85); box-shadow: inset 0 0 22px rgba(233, 196, 106, .22), 0 0 14px rgba(233, 196, 106, .35); }
+.wh-btn:disabled { opacity: .45; pointer-events: none; }

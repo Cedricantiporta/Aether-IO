@@ -41,7 +41,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'PETS', position: [-29.5, 0, 2], color: '#10b981' },          // between the potion shop and the fortune teller
     { type: 'ARMORY', position: [36.5, 0, 2], color: '#c9a052' },     // basic gear, beside the blacksmith
     { type: 'FORTUNE', position: [-36.5, 0, 2], color: '#a46bff' },   // fortune teller (summons), beside the potion shop
-    { type: 'WAREHOUSE', position: [32, 0, -10], color: '#b08850' },  // item storage (100 slots), behind the blacksmith
+    { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },   // item storage (100 slots), beside the blacksmith (plaza side)
 ];
 /** Shop tab each town building opens. */
 export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE' };
