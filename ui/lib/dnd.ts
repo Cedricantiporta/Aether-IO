@@ -36,10 +36,24 @@ export function useDrop(accept: (s: DragSrc) => boolean, onDrop: (s: DragSrc) =>
     onDragEnter: (e: React.DragEvent) => { if (ok()) { e.preventDefault(); setHot(true); } },
     onDragLeave: (e: React.DragEvent) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setHot(false); },
     onDrop: (e: React.DragEvent) => {
-      e.preventDefault(); e.stopPropagation(); setHot(false);
-      const s = current; current = null; document.body.classList.remove('is-dragging');
-      if (s && accept(s)) onDrop(s);
+      setHot(false);
+      const s = current;
+      if (!s || !accept(s)) return;            // not ours: let it bubble to an outer target (e.g. the whole bag panel)
+      e.preventDefault(); e.stopPropagation();
+      current = null; document.body.classList.remove('is-dragging');
+      onDrop(s);
     },
   };
   return { hot, props };
+}
+
+/** New order for `list` after dropping item `dragId` on the slot holding `targetId` (swap) or on an empty slot (to the end). */
+export function reorder<T extends { id: string }>(list: T[], dragId: string, targetId: string | null): T[] {
+  const a = list.slice(), i = a.findIndex((x) => x.id === dragId);
+  if (i < 0) return list;
+  if (targetId === null) { const [x] = a.splice(i, 1); a.push(x); return a; }
+  const j = a.findIndex((x) => x.id === targetId);
+  if (j < 0 || j === i) return list;
+  [a[i], a[j]] = [a[j], a[i]];
+  return a;
 }

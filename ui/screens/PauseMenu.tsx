@@ -6,6 +6,7 @@ import { useGameStore } from '../../store';
 import { Modal } from '../components/Modal';
 import { Button, Slider, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
+import { DebugTab } from './DebugTab';
 import type { GraphicsQuality, Settings as SettingsT } from '../../storeTypes';
 type Settings = SettingsT;
 
@@ -42,8 +43,8 @@ const Row: React.FC<{ label: string; hint?: string; children: React.ReactNode }>
   </div>
 );
 
-type Tab = 'GAMEPLAY' | 'GRAPHICS' | 'AUDIO' | 'CONTROLS';
-const TABS: { id: Tab; label: string }[] = [{ id: 'GAMEPLAY', label: 'Gameplay' }, { id: 'GRAPHICS', label: 'Graphics' }, { id: 'AUDIO', label: 'Audio' }, { id: 'CONTROLS', label: 'Controls' }];
+type Tab = 'GAMEPLAY' | 'GRAPHICS' | 'AUDIO' | 'CONTROLS' | 'DEBUG';
+const TABS: { id: Tab; label: string }[] = [{ id: 'GAMEPLAY', label: 'Gameplay' }, { id: 'GRAPHICS', label: 'Graphics' }, { id: 'AUDIO', label: 'Audio' }, { id: 'CONTROLS', label: 'Controls' }, { id: 'DEBUG', label: 'Debug' }];
 
 function Seg<T extends string | number>({ value, opts, onChange, tid }: { value: T; opts: { v: T; l: string }[]; onChange: (v: T) => void; tid?: string }) {
   return (
@@ -109,6 +110,7 @@ export const SettingsDialog: React.FC = () => {
           {vol('sfxVolume', 'Effects')}
           {vol('musicVolume', 'Music')}
         </>)}
+        {tab === 'DEBUG' && <DebugTab />}
         {tab === 'CONTROLS' && (<>
           <Row label="Skill casting" hint="Aimed: hold the key to show the indicator, release to cast (right-click / Esc cancels). Quick: instant at the cursor. Auto: instant at the auto-target. Touch: tap = auto-target, drag = aim.">
             <Seg tid="seg-cast" value={settings.castMode ?? 'AIMED'} opts={[{ v: 'AIMED', l: 'Aimed' }, { v: 'QUICK', l: 'Quick' }, { v: 'AUTO', l: 'Auto' }]} onChange={(v) => update({ castMode: v })} />

@@ -8,6 +8,7 @@
 // Clear condition is simply "every enemy dead" (no timer, no quota). Depth scaling reuses the old wave formulas:
 // world.director.wave = depthWave(biome, room). Pure engine code; the render layer reads world.room.
 // ============================================================================
+import { debug } from '../debug';
 import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
@@ -109,6 +110,13 @@ export function startRunRooms(): void {
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1;
   world.room.fade = 1;
   enterRoom(0, 0, firstPlan());
+}
+
+/** Debug: jump straight to biome `b`, room `idx` of type `type` (boss rooms use debug.bossOverride if set). Run must be in progress. */
+export function debugJump(b: number, idx: number, type: RoomType): void {
+  merchantBiome = -1; fountainBiome = -1;
+  world.room.fade = 1;
+  enterRoom(b, idx, { type, reward: type === 'BOSS' || type === 'FOUNTAIN' || type === 'MERCHANT' ? 'NONE' : 'CARD' });
 }
 
 /** After a boss: continue into the next biome (harder, same hero). */
@@ -372,7 +380,7 @@ function tickSpawns(dt: number): void {
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
-    const kind = biomeOf(biome).boss;
+    const kind = debug.bossOverride || biomeOf(biome).boss;
     placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     bossSpawned = true;
   }

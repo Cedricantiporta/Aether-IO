@@ -10,8 +10,10 @@ import { BagGlyph } from '../components/ItemArt';
 import { ItemSlot } from '../components/ItemSlot';
 import { HERO_ICON } from '../hud/TopBars';
 import { useUiStore } from '../uiStore';
-import { RARITY_RANK, SORTS, isGear, type SortMode } from '../lib/game';
-import { useDrop } from '../lib/dnd';
+import { SORTS, isGear, sortedItems } from '../lib/game';
+import { useDrop, reorder } from '../lib/dnd';
+import { DropCell } from '../components/DropCell';
+import { CoinGlyph } from '../components/SkillIcons';
 
 const TYPE_RANK: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
 
@@ -47,16 +49,14 @@ export const InventoryPanel: React.FC = () => {
   })));
   const shopTab = useGameStore((s) => (s.isShopOpen ? s.activeShopTab : null));
   const { selected, setSelected, setSell } = useUiStore(useShallow((s) => ({ selected: s.selectedItem, setSelected: s.setSelectedItem, setSell: s.setSellItem })));
-  const [sort, setSort] = useState<SortMode>('RARITY');
+  const gold = useGameStore((s) => s.gold);
+  const [sortIdx, setSortIdx] = useState(-1);   // last Sort applied (the bag keeps its manual order otherwise)
+  const reorderItems = useGameStore((s) => s.reorderItems);
   const [cat, setCat] = useState<Cat>('ALL');
   const [equipOpen, setEquipOpen] = useState(true);
   const HeroIcon = HERO_ICON[hero];
 
-  const sorted = useMemo(() => [...inventory].sort((a, b) => {
-    if (sort === 'POWER') return calculateItemCP(b) - calculateItemCP(a);
-    if (sort === 'TYPE') return (TYPE_RANK[b.type] ?? 0) - (TYPE_RANK[a.type] ?? 0) || RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity];
-    return RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || (TYPE_RANK[b.type] ?? 0) - (TYPE_RANK[a.type] ?? 0);
-  }), [inventory, sort]);
+  const sorted = inventory;   // manual order: drag items onto each other to swap them, Sort orders the bag once
 
   const selectedLive = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id)) : null;
 
@@ -82,7 +82,7 @@ export const InventoryPanel: React.FC = () => {
       className="absolute pe flex side-panel" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
       <Panel className={`flex flex-col w-full min-h-0 drop-zone ${bagDrop.hot ? 'drop-hot' : ''}`} {...bagDrop.props}>
         <PanelHead icon={<BagGlyph size={34} />} title="Bag" onClose={invOpen ? toggleInventory : closeAllUI}
-          right={<CurrencyPill label="CP" value={calculateTotalCP(stats).toLocaleString()} />} />
+          right={<CurrencyPill icon={null} label="CP" value={calculateTotalCP(stats).toLocaleString()} />} />
         {/* equipped (collapsible paper doll) */}
         <div className="bag-equip">
           <button className="bag-equip-head" onClick={() => setEquipOpen((v) => !v)} aria-expanded={equipOpen}>
@@ -125,17 +125,25 @@ export const InventoryPanel: React.FC = () => {
             )}
             <div className="bag-grid">
               {shown.map((it, i) => (
-                <ItemSlot key={`${it.id}-${i}`} item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
-                  onClick={() => click(it)} tooltip="sell" drag={{ from: 'BAG', item: it }} />
+                <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
+                  <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
+                    onClick={() => click(it)} tooltip="sell" drag={{ from: 'BAG', item: it }} />
+                </DropCell>
               ))}
-              {Array.from({ length: empty }).map((_, i) => <div key={`e${i}`} className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }}><span className="slot-plus-faint">+</span></div>)}
+              {Array.from({ length: empty }).map((_, i) => (
+                <DropCell key={`e${i}`} accept={(d) => d.from === 'BAG'} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, null))}>
+                  <div className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }}><span className="slot-plus-faint">+</span></div>
+                </DropCell>
+              ))}
             </div>
           </div>
         </div>
         <div className="bag-foot">
-          <span className="flex items-center gap-2 rpg-label !text-[.7rem]"><BagGlyph size={22} /> Storage <span className="rpg-num text-white">{inventory.length}/{max}</span></span>
+          <span className="flex items-center gap-2 rpg-label !text-[.7rem]"><BagGlyph size={22} /> <span className="rpg-num text-white">{inventory.length}/{max}</span>
+            <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={16} /><span className="rpg-num">{gold.toLocaleString()}</span></span></span>
           <div className="flex gap-1.5">
-            <button className="rpg-btn rpg-btn-sm" onClick={() => setSort(SORTS[(SORTS.indexOf(sort) + 1) % SORTS.length])} title={`Sorted by ${sort.toLowerCase()}`}>Sort</button>
+            <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
+              title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
             <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>
           </div>
         </div>

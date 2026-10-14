@@ -71,3 +71,13 @@ export const TYPE_LABEL: Record<Item['type'], string> = {
 
 export const SORTS = ['RARITY', 'TYPE', 'POWER'] as const;
 export type SortMode = typeof SORTS[number];
+
+const TYPE_ORDER: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
+/** A sorted copy of `items` (Sort buttons of the bag and the warehouse). `cp` = item power. */
+export function sortedItems(items: Item[], mode: SortMode, cp: (i: Item) => number): Item[] {
+  return [...items].sort((a, b) => {
+    if (mode === 'POWER') return cp(b) - cp(a);
+    if (mode === 'TYPE') return (TYPE_ORDER[b.type] ?? 0) - (TYPE_ORDER[a.type] ?? 0) || RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity];
+    return RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || (TYPE_ORDER[b.type] ?? 0) - (TYPE_ORDER[a.type] ?? 0);
+  });
+}

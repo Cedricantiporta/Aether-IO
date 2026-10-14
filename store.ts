@@ -3,14 +3,15 @@
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
 import { GOLD_SCALE } from './constants';
-import { abilityMana } from './abilityDefs';
+import { abilityMana, activeDefs, dashKey } from './abilityDefs';
+import { debug } from './engine/debug';
 import { create } from 'zustand';
 import {
   GameStatus, PlayerStats, Upgrade, Item, SkillLevels, Rarity, HeroClass, ItemType,
   AbilityType, GameStatistics, UpgradeType, GameNotification,
 } from './types';
 import {
-  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
+  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
@@ -324,7 +325,7 @@ interface Profile {
   v: number;
   gold: number; gems: number;
   inventory: Item[]; equipment: Equipment; materials: Record<Rarity, number>; maxInventorySlots: number;
-  warehouse?: Item[];
+  warehouse?: Item[]; warehouseGold?: number;
   heroRank: number; rankXp: number; quests: Quest[];
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
@@ -409,7 +410,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [],
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
@@ -441,7 +442,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true, gold10: true,
     };
@@ -567,6 +568,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     materials: profile.materials,
     maxInventorySlots: profile.maxInventorySlots,
     warehouse: profile.warehouse ?? [],
+    warehouseGold: profile.warehouseGold ?? 0,
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
     quests: profile.quests,
@@ -622,7 +624,18 @@ export const useGameStore = create<GameState>()((set, get) => {
         actionResult: null,
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
       });
+      if (debug.maxSkills) get().debugMaxSkills();
       startRun();
+    },
+
+    /** Debug: every skill of the current hero (actives, dash, ultimate, class passives) at max level. */
+    debugMaxSkills: () => {
+      const s = get();
+      const lv: SkillLevels = { ...s.skillLevels };
+      const keys: string[] = [...activeDefs(s.hero).map((a) => a.slot), dashKey(s.hero), 'ult'];
+      for (const [k, i] of Object.entries(SKILLS_INFO) as [string, { type?: string; classType?: string }][]) if (i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === s.hero)) keys.push(k);
+      for (const k of keys) if (k in lv) (lv as unknown as Record<string, number>)[k] = MAX_SKILL_LEVEL;
+      set({ skillLevels: lv });
     },
 
     resetGame: () => {
@@ -653,7 +666,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [],
       });
@@ -968,6 +981,19 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     // ----------------------------------------------------------- items --
+    moveGold: (n) => {   // + deposit into the warehouse, - withdraw into the bag
+      const s = get();
+      const amt = n > 0 ? Math.min(Math.floor(n), s.gold) : -Math.min(Math.floor(-n), s.warehouseGold);
+      if (!amt) return;
+      set({ gold: s.gold - amt, warehouseGold: s.warehouseGold + amt });
+    },
+    reorderItems: (list, items) => {
+      const cur = get()[list];
+      if (items.length !== cur.length) return;
+      const ids = new Set(cur.map((i) => i.id));
+      if (!items.every((i) => ids.has(i.id))) return;   // only a permutation of the same items
+      set({ [list]: items } as Pick<GameState, typeof list>);
+    },
     depositItem: (id) => {
       const s = get();
       const idx = s.inventory.findIndex((i) => i.id === id);
@@ -1412,7 +1438,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

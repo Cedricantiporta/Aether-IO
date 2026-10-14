@@ -2,6 +2,7 @@
 // Combat: damage in/out, death + loot, healing, status effects.
 // Engine-B (enemies/bosses/director) calls into this module.
 // ============================================================================
+import { debug } from '../debug';
 import { dropLoot } from './loot';
 import { Vector3 } from 'three';
 import { world } from '../world';
@@ -276,6 +277,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
   if (!(amount > 0)) return;
+  if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)
 
   let dealt = amount;
   if (o.armorBreak) applyStatus(e, abStatus);
@@ -479,6 +481,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || st.status !== GameStatus.PLAYING) return;
+  if (debug.god) return;   // debug god mode
   const isDot = !!o?.dot;
   if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
   const kind = o?.kind ?? 'PHYSICAL';

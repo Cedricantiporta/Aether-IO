@@ -109,6 +109,7 @@ export interface GameState {
   // ---- items
   inventory: Item[];
   maxInventorySlots: number;
+  warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   materials: Record<Rarity, number>;
   equipment: Equipment;
@@ -169,6 +170,9 @@ export interface GameState {
   getManaCost: (skill: keyof SkillLevels | 'dash') => number; // already includes wizard x1.3
 
   // items
+  debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
+  moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
+  reorderItems: (list: 'inventory' | 'warehouse', items: Item[]) => void;   // manual order (drag within the bag / warehouse, Sort)
   depositItem: (id: string) => boolean;            // bag -> warehouse (stacks), false if the warehouse is full
   withdrawItem: (id: string) => boolean;           // warehouse -> bag, false if the bag is full
   addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full
