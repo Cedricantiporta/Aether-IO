@@ -155,8 +155,9 @@ export function updatePickups(dt: number): void {
     let canGet = p.alive;
     if (canGet && o.kind === 'ITEM') canGet = !!o.item && st.canPickUp(o.item);
 
-    // items (gear / goods) are looted by hand (E / tap the pill: lootPickup); only currency, xp and hearts fly in by themselves
-    if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2 && o.kind !== 'ITEM') o.magnet = true;
+    // Common items are looted by hand (E / tap the pill: lootPickup); Rare and better, currency, xp and hearts fly in by themselves
+    const autoItem = o.kind !== 'ITEM' || (!!o.item && o.item.rarity !== 'COMMON');
+    if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2 && autoItem) o.magnet = true;
     if (o.magnet && !canGet) o.magnet = false;
 
     if (o.magnet) {

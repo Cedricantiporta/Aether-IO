@@ -395,7 +395,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 ### Skills SP, manual looting, Lightpiercer charge, cast lock, potions, gear dots
 - SP costs (`classLevels.skillCost`): actives / class passives / dash / shield 2 + lvl, ultimate and Ultimate Charge
   3 + lvl, Regeneration 4 + 2 x lvl. Looter passive removed (SKILLS_INFO / card / action-bar slot; pickup range = stat only).
-- Items on the ground are looted by hand: an E / tap "Loot <name>" pill (rooms: node 1000+i, town: act 'loot') ->
+- Common items on the ground are looted by hand (Rare+ fly in like gold): an E / tap "Loot <name>" pill (rooms: node 1000+i, town: act 'loot') ->
   `pickups.lootPickup`. Currency / xp / hearts still fly in; the room-clear vacuum and the pet skip items.
 - Casting any active skill locks basic attacks for 0.4 s (`abilityState.castLockT`). Lightpiercer charges a ball of
   light for 0.5 s (rendered in Projectiles.tsx from `abilityState.lpT`), then fires a bigger, slower (75) arrow.
