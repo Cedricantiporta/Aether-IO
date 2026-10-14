@@ -33,6 +33,7 @@ import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shards';
+import { summonPool } from './summonPool';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -1552,8 +1553,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!gem && s.materials.COMMON < cost) { notify('Not enough Common Shards!', 'red', 'WARNING'); return []; }
       const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
 
-      const gear = ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === s.hero));
-      const all = [...PETS_POOL, ...gear];
+      const all = summonPool(altar, s.hero);   // the Shard Altar offers fewer top-tier pieces (summonPool.ts)
       const results: Item[] = [], gearOut: Item[] = [];
       const shardGain: Partial<Record<Rarity, number>> = {};
       let drawn = s.summonPity[altar] ?? 0;

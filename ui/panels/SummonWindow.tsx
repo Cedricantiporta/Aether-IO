@@ -1,6 +1,7 @@
 // Centred event-style summon window (Korean MMO look): banner list on the left, big banner art + rates +
 // summon buttons on the right. Replaces the side panel for the SUMMON shop tab.
 import React, { useMemo, useState } from 'react';
+import { summonPool } from '../../summonPool';
 import { shardItem } from '../../shards';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
 import { isGear } from '../lib/game';
@@ -36,9 +37,9 @@ export const SummonWindow: React.FC = () => {
   const setResults = useUiStore((s) => s.setSummonResults);
   const [ratesOpen, setRatesOpen] = useState(false);
   const hero = useGameStore((s) => s.hero);
-  const pool = useMemo(() => [...PETS_POOL, ...ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === hero))], [hero]);
   const [tab, setTab] = useState<(typeof BANNERS)[number]['id']>(() => (useGameStore.getState().activeShopTab === 'TECH' ? 'TECH' : 'GEM'));
   const gem = tab === 'GEM';
+  const pool = useMemo(() => summonPool(tab === 'SHARD' ? 'SHARD' : 'GEM', hero), [hero, tab]);
   const altar = tab === 'GEM' || tab === 'SHARD';
   const drawn = altar ? pity?.[tab] ?? 0 : 0;
   const B = BANNERS.find((b) => b.id === tab)!;
