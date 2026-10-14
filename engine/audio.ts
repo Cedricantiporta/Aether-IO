@@ -434,9 +434,9 @@ function sfxHeal(): void {
 // ------------------------------------------------------------ music ----------
 // Three generative themes crossfaded by game state (all routed musicGain -> lowpass -> reverb send):
 //   village: warm pad + soft lute pluck, C lydian, slow.
-//   siege:   low drums + minor ostinato, intensity follows alive count.
+//   combat:  low drums + minor ostinato, intensity follows alive count.
 //   boss:    deep drone + choir-ish pad, D phrygian, heavy hits.
-type Theme = 0 | 1 | 2; // village, siege, boss
+type Theme = 0 | 1 | 2; // village, combat (rooms), boss
 const layerG: (GainNode | null)[] = [null, null, null];
 const layerLvl = [1, 0, 0];
 let musicEnabled = true;
