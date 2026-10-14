@@ -8,7 +8,7 @@
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
 //   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Altar (-17,-13), Skill Trainer (17,-13)
-//   west row Potion Shop (-20.5, 2) / Pet Stable (-29.5, 2) / Fortune Teller (-36.5, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
+//   west of the plaza Fortune Teller (-12.5, 1.5) / Pet Stable (-21, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
 //   main road. Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
@@ -87,7 +87,7 @@ export const HOUSES: HouseSpec[] = [
   H(-17, -14, 0, 5.0, 4.4),
   // (south of the east-west street: the Potion Shop and Armor Shop buildings, see constants SHOP_POSITIONS)
   // the old shop lots on the street now hold houses
-  H(-20.5, 1.5, 0, 5.0, 4.4, 2), H(36.5, 1.5, 0, 4.8, 4.2),
+  H(-30, 1.5, 0, 5.0, 4.4, 2), H(-37, 1.5, 0, 4.8, 4.2), H(36.5, 1.5, 0, 4.8, 4.2),   // (the west lots by the plaza now hold the Pet Stable + Fortune Teller)
   // along the road to the gate
   H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 31.5, -Math.PI / 2, 5.0, 4.4, 2),
   // outskirts
@@ -101,7 +101,6 @@ export const HOUSES: HouseSpec[] = [
 
 /** Decorative market stalls (the useful shops are Supplies / Blacksmith / Pets). */
 export const STALLS: StallSpec[] = [
-  { x: -11.5, z: -1, rot: Math.PI / 2, c1: '#e6dac0', c2: '#e6dac0', goods: 0 },
   { x: 11.5, z: -1, rot: -Math.PI / 2, c1: '#efe8d8', c2: '#efe8d8', goods: 1 },
   { x: -8.5, z: 15, rot: Math.PI, c1: '#e2d4b4', c2: '#e2d4b4', goods: 2 },
   { x: 8.5, z: 15, rot: Math.PI, c1: '#ece2c8', c2: '#ece2c8', goods: 3 },
@@ -122,7 +121,8 @@ export const ROADS: RoadSpec[] = [
   { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
   { x1: -11.6, z1: 10, x2: -11.6, z2: 14.6, w: ROAD_W.branch },   // potion shop door (shop faces north onto the street)
-  { x1: -30.4, z1: 10, x2: -30.4, z2: 4.5, w: ROAD_W.branch },   // pet stable door
+  { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // pet stable door
+  { x1: -12.5, z1: 10, x2: -12.5, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 19.5, z1: 10, x2: 19.5, z2: 5.2, w: ROAD_W.branch },     // warehouse barn doors
   { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
@@ -180,7 +180,7 @@ export const LAMPS: [number, number][] = [
   // main avenue (+ the road on into the farmland)
   [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 58], [3.2, 68],
   // south street (north edge), plaza, north street
-  [-11, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
+  [-9.4, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
 ];
 
 /** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
