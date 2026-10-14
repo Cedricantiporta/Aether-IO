@@ -51,6 +51,10 @@ export interface Settings {
   cameraLead: boolean;    // desktop: the camera drifts toward the mouse cursor (off by default)
   aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)
   autoSkills: boolean;    // auto-cast skills 1/2/3 + ult at the auto-target (dash stays manual)
+  autoLootGear: 'OFF' | 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';   // lowest gear rarity that flies in by itself (default RARE)
+  autoLootMaterials: boolean;  // monster loot, shards, potions fly in at any rarity
+  autoLootRange: 'NEAR' | 'FAR';  // NEAR: walk up to items; FAR: the full magnet radius pulls them
+  autoLootOnClear: boolean;    // once a room is cleared every item on the floor flies to you
 }
 
 export interface RunSummary extends RunStats {

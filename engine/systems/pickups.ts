@@ -114,6 +114,14 @@ export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): n
 
 /** E / tap on a loot pill: the item flies to the hero and is collected (bag full -> a warning, it stays). */
 const ITEM_GRAB_R2 = 2.4 * 2.4;
+const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+const GEAR_MIN: Record<string, number> = { OFF: 99, COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3 };
+const MATERIAL: Record<string, boolean> = { LOOT: true, SHARD: true, POTION: true, REVIVE: true, CORE: true };
+/** Does the auto-loot setting pick this item up by itself? */
+function autoLootWants(it: Item, set: { autoLootGear: string; autoLootMaterials: boolean }): boolean {
+  if (MATERIAL[it.type]) return set.autoLootMaterials || it.rarity !== 'COMMON';
+  return RARITY_RANK[it.rarity] >= GEAR_MIN[set.autoLootGear];
+}
 export function lootPickup(i: number): void {
   const o = world.pickups[i], st = useGameStore.getState();
   if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
@@ -143,6 +151,8 @@ export function updatePickups(dt: number): void {
   const damp = Math.exp(-4 * dt);
   const lerpK = Math.min(1, 10 * dt);
 
+  const set = st.settings, farLoot = set.autoLootRange === 'FAR';
+  const sweep = set.autoLootOnClear && world.room.active && world.director.phase === 'CLEARED';
   let xpCount = 0;
   for (let i = 0; i < pk.length; i++) {
     const o = pk[i];
@@ -159,8 +169,9 @@ export function updatePickups(dt: number): void {
 
     // Common items are looted by hand (E / tap the pill: lootPickup); Rare and better, currency, xp and hearts fly in by themselves
     // (Rare+ items only when you walk up to them: a short grab radius, no long-range pull)
-    const autoItem = o.kind !== 'ITEM' || (!!o.item && o.item.rarity !== 'COMMON' && d2 < ITEM_GRAB_R2);
-    if (canGet && !o.magnet && o.t > 0.35 && d2 < magnetR2 && autoItem) o.magnet = true;
+    // (Settings > Auto loot: minimum gear rarity, materials, range, sweep the floor once the room is cleared)
+    const autoItem = o.kind !== 'ITEM' || (!!o.item && (sweep || (autoLootWants(o.item, set) && (farLoot || d2 < ITEM_GRAB_R2))));
+    if (canGet && !o.magnet && o.t > 0.35 && (sweep || d2 < magnetR2) && autoItem) o.magnet = true;
     if (o.magnet && !canGet) o.magnet = false;
 
     if (o.magnet) {

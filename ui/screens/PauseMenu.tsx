@@ -98,6 +98,16 @@ export const SettingsDialog: React.FC = () => {
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
             {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
           </Sec>
+          <Sec title="Auto loot">
+            <Row label="Auto-pick gear" hint="Lowest rarity of equipment that flies to you by itself. Lower ones wait for E / a tap.">
+              <Seg tid="seg-autoloot" value={settings.autoLootGear} opts={[{ v: 'OFF', l: 'Off' }, { v: 'COMMON', l: 'All' }, { v: 'RARE', l: 'Rare+' }, { v: 'EPIC', l: 'Epic+' }, { v: 'LEGENDARY', l: 'Leg.+' }]} onChange={(v) => update({ autoLootGear: v })} />
+            </Row>
+            {tog('Auto-pick materials', 'autoLootMaterials', 'Monster loot, shards and potions fly to you at any rarity.')}
+            <Row label="Pickup range" hint="Near: walk up to items. Far: your magnet radius pulls them in.">
+              <Seg tid="seg-lootrange" value={settings.autoLootRange} opts={[{ v: 'NEAR', l: 'Near' }, { v: 'FAR', l: 'Far' }]} onChange={(v) => update({ autoLootRange: v })} />
+            </Row>
+            {tog('Collect all when room is cleared', 'autoLootOnClear', 'Once the fight is over every item on the floor flies to you (bag space allowing).')}
+          </Sec>
           <Sec title="Camera">
             {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
             {tog('Screen shake', 'screenShake')}

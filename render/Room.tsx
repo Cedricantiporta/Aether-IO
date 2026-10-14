@@ -21,6 +21,7 @@ import { RoomWater } from './RoomWater';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
+import { labelMaterial } from './label';
 import type { QualityCfg } from './quality';
 
 const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -451,6 +452,8 @@ function CampProps() {
   }, []);
   const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.4, 1.0) }) }), []);
   const root = useRef<Group>(null!), fire = useRef<Mesh>(null!), st = useRef<Group>(null!), tr = useRef<Group>(null!);
+  // floating name tags (like the town buildings) so the storage and the training post read at a glance
+  const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini' }), fire: labelMaterial('Campfire', '#ffc27a', { size: 40, plate: 'mini' }) }), []);
   useFrame(({ clock }) => {
     const on = world.room.active && world.room.plan.type === 'CAMP';
     if (root.current) root.current.visible = on;
@@ -466,8 +469,11 @@ function CampProps() {
       <mesh geometry={geos.base} material={mats.lit} castShadow receiveShadow />
       <mesh ref={fire} geometry={geos.fire} material={mats.glow} position={[0, 0, 0]} />
       <pointLight position={[0, 1.4, 1]} color="#ffa040" intensity={8} distance={10} decay={1.6} />
-      <group ref={st}><mesh geometry={geos.storage} material={mats.lit} castShadow receiveShadow /></group>
-      <group ref={tr}><mesh geometry={geos.train} material={mats.lit} castShadow receiveShadow /></group>
+      <sprite material={labs.fire.mat} position={[0, 2.4, 1]} scale={[labs.fire.aspect * 0.75, 0.75, 1]} />
+      <group ref={st}><mesh geometry={geos.storage} material={mats.lit} castShadow receiveShadow />
+        <sprite material={labs.st.mat} position={[0, 3.2, 0]} scale={[labs.st.aspect * 1.0, 1.0, 1]} /></group>
+      <group ref={tr}><mesh geometry={geos.train} material={mats.lit} castShadow receiveShadow />
+        <sprite material={labs.tr.mat} position={[0.8, 3.2, 0]} scale={[labs.tr.aspect * 1.0, 1.0, 1]} /></group>
     </group>
   );
 }
