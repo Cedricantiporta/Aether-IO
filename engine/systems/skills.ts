@@ -5,7 +5,7 @@
 import { Vector3 } from 'three';
 import { world, allocProjectile, allocZone } from '../world';
 import { events } from '../events';
-import type { Projectile } from '../types';
+import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
 import {
   damageEnemy, damageEnemiesInRadius, findNearestEnemy, getAimDir, rollCrit, lastCrit, trySpendMana,
@@ -29,6 +29,7 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
 };
 
 const aim = new Vector3();
+const stormZones: (Zone | null)[] = [null, null];
 const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
 const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
 const blades: Projectile[] = [];
@@ -41,7 +42,7 @@ let blizzT = 0, stormT = 0;
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = 0;
+  blizzT = stormT = 0; stormZones[0] = stormZones[1] = null;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -212,21 +213,36 @@ export function updateSkills(dt: number): void {
       if (!findNearestEnemy(pl.pos.x, pl.pos.z, 40)) { stormT = max; } else {
       stormT = 0;
       const dir = getAimDir(aim);
-      // Storm volley: a fan of straight piercing bolts (no bounce / lingering tornado).
-      const n = 5 + lv.storm + (stats.stormTwin > 0 ? 3 : 0) + Math.round(stats.stormBonus / 2);
-      const dmg = stats.damage * 1.5 * stats.skillDamage * 0.9 * lvScale(lv.storm);
-      const spread = Math.PI / 3; // 60 degrees
-      for (let i = 0; i < n; i++) {
-        const a = (n === 1 ? 0 : i / (n - 1) - 0.5) * spread;
-        const c = Math.cos(a), s = Math.sin(a);
-        const vx = dir.x * c - dir.z * s, vz = dir.x * s + dir.z * c;
-        spawnProjectile('PIERCING_ARROW', pl.pos.x + vx, pl.pos.z + vz, vx, vz, 34, dmg,
-          { life: 0.9, pierce: 2, knockback: 0.5, radius: 1.4, y: 1.3 });
+      // Storm: a medium tornado spawns ~6 units in front of the hero, grinds enemies inside (continuous damage + light
+      // pull) for ~3.5 s and drifts toward the nearest enemy. Storm Twin talent adds a second one beside it.
+      const dps = stats.damage * 1.3 * stats.skillDamage * lvScale(lv.storm);
+      const life = 3.5 + 0.25 * (stats.stormBonus | 0);
+      const twin = stats.stormTwin > 0;
+      for (let i = 0; i < (twin ? 2 : 1); i++) {
+        const side = twin ? (i === 0 ? -1 : 1) * 2.6 : 0;
+        const z = allocZone();
+        if (!z) break;
+        z.active = true; z.kind = 'TORNADO'; z.hostile = false;
+        z.pos.set(pl.pos.x + dir.x * 6 - dir.z * side, 0, pl.pos.z + dir.z * 6 + dir.x * side);
+        z.radius = 3.6 + 0.1 * lv.storm; z.life = z.maxLife = life; z.tickT = 0;
+        z.damage = dps; z.color = 0xa8d8ff; z.length = 7; z.maxPull = 10;
+        stormZones[i] = z;
       }
-      events.emit('lightning', { from: new Vector3(pl.pos.x, 1.2, pl.pos.z), to: new Vector3(pl.pos.x + dir.x * 10, 1.2, pl.pos.z + dir.z * 10) });
+      events.emit('lightning', { from: new Vector3(pl.pos.x, 1.2, pl.pos.z), to: new Vector3(pl.pos.x + dir.x * 6, 1.2, pl.pos.z + dir.z * 6) });
       pl.anim.castT = 1;
       }
     }
+  }
+
+  // Storm tornadoes drift slowly toward the nearest enemy.
+  for (let i = 0; i < stormZones.length; i++) {
+    const z = stormZones[i];
+    if (!z) continue;
+    if (!z.active || z.kind !== 'TORNADO' || z.life <= 0) { stormZones[i] = null; continue; }
+    const e = findNearestEnemy(z.pos.x, z.pos.z, 14);
+    if (!e) continue;
+    const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+    if (d > 0.8) { const st2 = Math.min(d, 3.2 * dt); z.pos.x += (dx / d) * st2; z.pos.z += (dz / d) * st2; }
   }
 
   // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).

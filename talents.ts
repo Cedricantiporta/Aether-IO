@@ -88,10 +88,10 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ['t', [
       ['Static Charge', '+4% damage', 3, 'u:DAMAGE', { mul: { damage: 0.04 } }],
       ['Chain Lightning', 'Thundercaller and Storm Orbs chain +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
-      ['Storm Surge', 'Storm volley +1 bolt, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
+      ['Storm Surge', 'Storm tornado lasts +0.5s, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
       ['Overcharge', 'Thunder bolt N -1 per rank', 2, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }],
       ['Tailwind', '+4% move speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }],
-      ['Tempest', 'Storm volley +3 bolts, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
+      ['Tempest', 'Storm summons a twin tornado, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
     ]],
     ['f', [
       ['Chill', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],

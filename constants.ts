@@ -111,7 +111,7 @@ export const SKILLS_INFO = {
     // Wizard Only
     thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning (1 jump + 1 per level, moderate damage).', classType: 'WIZARD', type: 'PASSIVE' },
     freezeSpell: { name: 'Blizzard', description: 'Passive: A blizzard bursts around you, heavily slowing enemies in a medium area (radius 16).', classType: 'WIZARD', type: 'PASSIVE' },
-    storm: { name: 'Storm', description: 'Passive: Fires a fan of 5 + level straight lightning bolts (60 degree spread, pierce 2) at the nearest enemy.', classType: 'WIZARD', type: 'PASSIVE' },
+    storm: { name: 'Storm', description: 'Passive: Summons a tornado in front of you that drifts toward enemies, pulling them in and dealing continuous damage for 3.5s.', classType: 'WIZARD', type: 'PASSIVE' },
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },

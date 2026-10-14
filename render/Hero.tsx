@@ -67,8 +67,8 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   // ---- visible gear (rebuilt only when a slot's item rarity changes)
   useEffect(() => {
     const [helmet, armor, gloves, boots, accessory] = gearKey.split('|');
-    return attachGear(ch.root, ch.mats, { helmet, armor, gloves, boots, accessory });
-  }, [ch, gearKey]);
+    return attachGear(ch.root, ch.mats, { helmet, armor, gloves, boots, accessory, hero: cls });
+  }, [ch, gearKey, cls]);
 
   // ---- mixer + actions
   useEffect(() => {

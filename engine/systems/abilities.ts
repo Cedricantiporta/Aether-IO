@@ -354,7 +354,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     if (slot === 'q') {
       aimPoint(28, 7, tgt);
       const R = 11 + 0.6 * (lv - 1);
-      mkZone('BLACKHOLE', tgt.x, tgt.z, R, (3 + 0.1 * lv) * 0.7, b * 10, 0x6d28d9, R * 2.1, 999);
+      mkZone('BLACKHOLE', tgt.x, tgt.z, R, (3 + 0.1 * lv) * 0.7, b * 6.5, 0x6d28d9, R * 2.1, 999);
       announce('SINGULARITY');
     } else if (slot === 'e') {
       if (dashAuto && !aimOverride.on) { // tap: blink in the movement / facing direction
@@ -378,7 +378,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       a.orbN = 3 + (lv >= 3 ? 1 : 0) + (stats.orbBonus | 0);
       if (a.orbN > 6) a.orbN = 6;
       a.orbT = 4 + stats.stormBonus; a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
-      a.orbDmg = b * 2.65;
+      a.orbDmg = b * 1.7;
       announce('STORM_ORBS');
     } else {
       castChainFrost(lv, b);

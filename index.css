@@ -1328,3 +1328,6 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .rw-emblem { border-radius: 0 !important; }
 .rw-title { color: #f6e8c8; }
 .rw-emblem { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 45%, transparent) 0%, transparent 65%), linear-gradient(#17181d, #0b0c0f) !important; border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent) !important; }
+/* framer-motion owns `transform` on these: centre with top/bottom + flex instead of translateY(-50%) */
+.cs-info { top: 0 !important; bottom: 0; transform: none; justify-content: center; max-height: none; padding: 1rem 0; }
+.cs-list { top: 0 !important; bottom: 0; transform: none; justify-content: center; }
