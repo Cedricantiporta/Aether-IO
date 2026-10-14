@@ -1331,3 +1331,11 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 /* framer-motion owns `transform` on these: centre with top/bottom + flex instead of translateY(-50%) */
 .cs-info { top: 0 !important; bottom: 0; transform: none; justify-content: center; max-height: none; padding: 1rem 0; }
 .cs-list { top: 0 !important; bottom: 0; transform: none; justify-content: center; }
+/* summon altars: gold (gem) vs purple (shard) themes */
+.sw-wallet { margin-top: auto; display: flex; flex-direction: column; gap: .35rem; padding: .6rem .4rem 0; border-top: 1px solid rgba(214, 186, 122, .2); font-size: .72rem; color: #cfc4a8; }
+.sw-wallet span { display: inline-flex; align-items: center; gap: .35rem; }
+.sw-win.gold .sw-banner { background: radial-gradient(ellipse at 70% 40%, rgba(233, 185, 73, .55), transparent 60%), radial-gradient(ellipse at 20% 100%, rgba(255, 140, 40, .22), transparent 55%), linear-gradient(180deg, #241b0e, #0d0b08); }
+.sw-win.gold .sw-orb { color: #3a2608; background: radial-gradient(circle at 40% 35%, #fff6d0, #e9b949 45%, #6a4410 80%); box-shadow: 0 0 44px rgba(233, 185, 73, .85), 0 0 0 1px rgba(255, 240, 200, .7), 0 0 0 6px rgba(0, 0, 0, .35); }
+.sw-win.gold .sw-swirl { background: conic-gradient(from 0deg, transparent, rgba(255, 230, 150, .45), transparent 25%, rgba(233, 185, 73, .4), transparent 55%, rgba(255, 255, 255, .25), transparent 80%); }
+.sw-win.gold .sw-btn:not(.gold) { color: #f6e8c8; background: linear-gradient(180deg, #5a4626, #2e2312); border-color: #c9a052; }
+.sw-win.purple .sw-btn:not(.gold) { color: #f1e6ff; background: linear-gradient(180deg, #5a3a8a, #2e1c4e); border-color: #a07ad8; }

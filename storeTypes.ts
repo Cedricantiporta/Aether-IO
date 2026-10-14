@@ -183,7 +183,7 @@ export interface GameState {
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll
-  summon: (count: 1 | 10) => Item[]; // gacha with gems (10 each, 90 for 10x); pets+gear; returns results for reveal UI
+  summon: (count: 1 | 10, altar?: 'GEM' | 'SHARD') => Item[]; // gacha: GEM altar (10 / 90 gems, better odds) or SHARD altar (100 / 900 Common shards); pets+gear
 
   // talents (permanent, per class; 1 point per Hero Rank + 1 per 5 ranks)
   allocateTalent: (id: string) => boolean;

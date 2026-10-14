@@ -108,7 +108,14 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 };
 
 // Summon odds (%): epic is very rare, legendary ultra rare, mythic hyper rare.
+/** Shard altar (purple): the classic odds. */
 export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.45, EPIC: 3, LEGENDARY: 0.5, MYTHIC: 0.05 };
+/** Gem altar (gold): premium odds. */
+export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, RARE: 40, EPIC: 12, LEGENDARY: 2.7, MYTHIC: 0.3 };
+export const GEM_SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 3, LEGENDARY: 1, MYTHIC: 1 };
+/** Shard summons are paid with Common shards. */
+export const SHARD_COST_1 = 100;
+export const SHARD_COST_10 = 900;
 /** Max copies of a rarity a single summon (1x or 10x) can yield; extra rolls are downgraded to RARE. */
 /** Gem cost of a single summon and of a 10x summon. */
 export const SUMMON_COST_1 = 10;
@@ -323,6 +330,7 @@ interface Profile {
   talents: Record<HeroClass, TalentRanks>;
   starterGiven: Record<HeroClass, boolean>;
   discovered?: Discovered; codexClaimed?: string[];
+  gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -331,7 +339,7 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 };
 
 /** One-time welcome gift for a brand new profile. */
-const WELCOME_GIFT = { gold: 1000, gems: 100 };
+const WELCOME_GIFT = { gold: 1000, gems: 1000 };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 5), ...makeItemById('potion_mana', 5), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
 const baseGameStats = (): GameStatistics => ({
@@ -392,7 +400,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             gift: false,
             profile: {
               v: PROFILE_VERSION,
-              gold: num(p.gold, 0), gems: num(p.gems, 0),
+              gold: num(p.gold, 0), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems),
               inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)) : [],
               equipment: { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) },
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
@@ -430,7 +438,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed,
+      talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true,
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -1286,13 +1294,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       return true;
     },
 
-    summon: (count) => {
+    summon: (count, altar = 'GEM') => {
       const s = get();
       const space = s.maxInventorySlots - s.inventory.length;
       const n = Math.min(count, space);
       if (n <= 0) { notify('Inventory Full!', 'red', 'WARNING'); return []; }
-      const cost = n === 10 ? SUMMON_COST_10 : n * SUMMON_COST_1;
-      if (s.gems < cost) { notify('Not enough Gems!', 'red', 'WARNING'); return []; }
+      const gem = altar === 'GEM';
+      const cost = gem ? (n === 10 ? SUMMON_COST_10 : n * SUMMON_COST_1) : (n === 10 ? SHARD_COST_10 : n * SHARD_COST_1);
+      if (gem && s.gems < cost) { notify('Not enough Gems!', 'red', 'WARNING'); return []; }
+      if (!gem && s.materials.COMMON < cost) { notify('Not enough Common Shards!', 'red', 'WARNING'); return []; }
+      const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
 
       const gear = ITEMS_POOL.filter((i) => isGear(i) && (!i.classType || i.classType === s.hero));
       const all = [...PETS_POOL, ...gear];
@@ -1301,16 +1312,17 @@ export const useGameStore = create<GameState>()((set, get) => {
         let roll = Math.random() * 100;
         let rarity: Rarity = 'COMMON';
         for (const r of RARITIES) {
-          roll -= SUMMON_WEIGHTS[r];
+          roll -= W[r];
           if (roll <= 0) { rarity = r; break; }
         }
-        const cap = SUMMON_CAPS[rarity];
+        const cap = CAPS[rarity];
         if (cap !== undefined && results.filter((i) => i.rarity === rarity).length >= cap) rarity = 'RARE';
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
         results.push(instantiate(pool[Math.floor(Math.random() * pool.length)]));
       }
-      set({ gems: s.gems - cost, inventory: [...s.inventory, ...results] });
+      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...results] });
+      else set({ materials: { ...s.materials, COMMON: s.materials.COMMON - cost }, inventory: [...s.inventory, ...results] });
       return results;
     },
 
