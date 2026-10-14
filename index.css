@@ -825,6 +825,11 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .interact-pill:active { transform: scale(.97); }
 .interact-pill .rpg-key { position: static; transform: none; display: grid; place-items: center; width: 28px; height: 28px; min-width: 0; padding: 0; border-radius: 50%; font-family: var(--font-title); font-size: 14px; font-weight: 800; color: #2a1204;
   background: radial-gradient(circle at 40% 30%, #fff0b0, #e9b949 55%, #8b5a16); border: 1.5px solid #0a0709; }
+.interact-pill .hold-key { position: relative; left: auto; top: auto; }
+/* hold ring: fills around the key while E is held (farm chores) */
+.interact-pill .hold-key::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#fff3c0 calc(var(--hold, 0) * 1turn), rgba(255, 255, 255, .12) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); }
 .interact-pill .iv { color: var(--gold-light); font-family: var(--font-title); letter-spacing: .04em; text-shadow: 0 1px 2px #000; }
 .interact-pill .il { color: rgba(246, 232, 200, .85); font-weight: 600; }
 .interact-pill .il::before { content: '\2014\00a0'; opacity: .6; }

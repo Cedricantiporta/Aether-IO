@@ -1,5 +1,6 @@
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
 import { meleeT } from '../engine/systems/enemies';
+import { currentTarget } from '../engine/systems/combat';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -129,6 +130,7 @@ export function Enemies() {
     let nSh = 0, nRing = 0, nBub = 0, nIce = 0, nStar = 0, nHalo = 0, nBar = 0;
     const enemies = world.enemies;
     const showBars = useGameStore.getState().settings?.showEnemyBars !== false;
+    const tgt0 = currentTarget(), framed = tgt0 && !tgt0.boss && !world.boss.active && world.targetAnchor.on ? tgt0 : null;   // the target frame shows its HP
     const bP = sys.bPos.array as Float32Array, bDd = sys.bD.array as Float32Array;
     const shAa = sys.shA.array as Float32Array, rCa = sys.rC.array as Float32Array;
 
@@ -213,7 +215,7 @@ export function Enemies() {
         if (e.freezeT > 0 && Math.random() < dt * 3) FX.add.emit(e.pos.x + (Math.random() - 0.5) * s, e.pos.y + Math.random() * 1.5 * s, e.pos.z + (Math.random() - 0.5) * s, 0, 0.3, 0, 0.5, 0.3, 0.1, 1.4, 2.0, 2.4, 0.9, CELL.STAR, 0, 0, Math.random() * 3, 3);
       }
       // health bar
-      if ((e.hp < e.maxHp || e.elite) && e.state !== 'SPAWN' && nBar < MAX && showBars) {
+      if ((e.hp < e.maxHp || e.elite) && e !== framed && e.state !== 'SPAWN' && nBar < MAX && showBars) {
         bP[nBar * 3] = e.pos.x; bP[nBar * 3 + 1] = e.pos.y + K.def.headY * s + (e.elite ? 1.15 : 0.5); bP[nBar * 3 + 2] = e.pos.z;
         bDd[nBar * 3] = clamp(e.hp / e.maxHp, 0, 1); bDd[nBar * 3 + 1] = e.elite ? 1 : 0; bDd[nBar * 3 + 2] = e.elite ? 1.9 : 1.25;
         nBar++;

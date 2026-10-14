@@ -286,6 +286,8 @@ function clipZ(rd: { x1: number; z1: number; x2: number; z2: number }, z0: numbe
   return [lx(a), lz(a), lx(b), lz(b)];
 }
 /** Outside the walls the roads are packed-earth paths: brown strips, a bit narrower, with ragged darker edges. */
+/** Outside the walls: a soft trodden path of overlapping rounded blobs (worn grass rim, dirt, a few paler spots), so it
+ *  reads as part of the ground rather than built strips. Flat low-poly ellipses; each layer is one colour, so overlaps vanish. */
 function buildDirtPaths(): BufferGeometry {
   const r = new GB([1, 1]);
   const rnd = mulberry32(17);
@@ -293,12 +295,17 @@ function buildDirtPaths(): BufferGeometry {
     const seg = clipZ(rd, WALL.z1 + 2.5, 1e9); if (!seg) continue;
     const [x1, z1, x2, z2] = seg;
     const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
-    const w = Math.max(1.4, rd.w * 0.72), n = Math.max(1, Math.round(len / 1.6));
-    for (let i = 0; i < n; i++) {   // short overlapping patches with a little wobble, so the path looks trodden, not built
-      const t = (i + 0.5) / n, mx = x1 + dx * t, mz = z1 + dz * t, wob = (rnd() - 0.5) * 0.35;
-      const ox = -Math.sin(-yaw) * wob, oz = Math.cos(-yaw) * wob;
-      r.box(len / n + 0.5, 0.04, w + 0.5 + rnd() * 0.4, [mx + ox, 0.03, mz + oz], rnd() < 0.5 ? '#6e5236' : '#644a30', [0, yaw + (rnd() - 0.5) * 0.06, 0]);
-      r.box(len / n + 0.3, 0.05, w, [mx + ox, 0.04, mz + oz], rnd() < 0.5 ? '#94734c' : '#8a6a44', [0, yaw, 0]);
+    const nx = -dz / len, nz = dx / len;   // sideways
+    const w = Math.max(1.3, rd.w * 0.6), n = Math.max(2, Math.round(len / 1.1));
+    let drift = 0;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n; drift = drift * 0.7 + (rnd() - 0.5) * 0.35;   // a gently meandering centre line
+      const mx = x1 + dx * t + nx * drift, mz = z1 + dz * t + nz * drift;
+      const rw = (w / 2) * (0.85 + rnd() * 0.35), ry = yaw + (rnd() - 0.5) * 0.5;
+      r.cyl(rw + 0.45, rw + 0.45, 0.02, 9, [mx, 0.022, mz], '#86964c', [0, ry, 0], [1.45, 1, 1]);   // worn grass rim
+      r.cyl(rw, rw, 0.02, 9, [mx, 0.034, mz], '#8f7752', [0, ry + 0.4, 0], [1.4, 1, 1]);             // dirt
+      if (rnd() < 0.3) { const o = (rnd() - 0.5) * rw; r.cyl(rw * 0.35, rw * 0.35, 0.02, 7, [mx + nx * o, 0.046, mz + nz * o], '#a08a63', [0, rnd() * 3, 0], [1.5, 1, 1]); }   // paler sandy spots
+      if (rnd() < 0.18) { const side = rnd() < 0.5 ? -1 : 1, o = side * (rw + 0.6 + rnd() * 0.5); r.cyl(0.3 + rnd() * 0.25, 0.3, 0.02, 7, [mx + nx * o, 0.034, mz + nz * o], '#8f7752', [0, rnd() * 3, 0], [1.3, 1, 1]); }   // stray worn patches beside it
     }
   }
   return r.build();

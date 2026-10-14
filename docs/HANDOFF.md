@@ -342,3 +342,22 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   ScrollText icon.
 - In a run, clicking a finished quest row (or a main step that waits on an NPC in town) asks "Teleport to town?" and confirms into
   `abandonRun` (loot and xp kept).
+
+### Townsfolk questline (story v2), first pet, hold-E chores
+- `story.ts` STORY is now a townsfolk chain (save `v: 2`; v1 saves are mapped by step id). Step kinds: talk (`npc` +
+  `talk`), shop/town action (`act` = engine `hub` kind: buy_potion, buy_pet, summon, equip, accept...; `at` = where),
+  kill (`kill`), delivery (`npc` + `deliver` loot + `wait` lines), ending. Prologue: Garrick -> Mira (potion, first pet at
+  the Pet House, summon, equip the Leather Cap) -> Hodge (accept a bounty) -> King (gate opens) -> slimes -> Lysa wants 3
+  Slime Gel -> King -> Golem -> Dorn wants 2 Ore -> King -> Wren / Lysa / Dorn / Captain Roan / Wren per guardian -> King -> Malakar.
+- Talk steps are OFFERS: Accept advances (reward paid, shown in the notification), Later keeps the step. A delivery turn-in
+  pays and rolls straight on into the NPC's next offer; NPC side quests also chain into the next offer after a turn-in.
+- Quest drops: while a delivery step (or the kill step right before it) needs loot, enemies carrying it drop it 35%, and
+  harvest nodes that yield it always give one. Mira's potion side quest removed; her other lessons need Lv 2.
+- New profiles have NO pet (loadoutFor no longer mints pet_blob); the first pet bought auto-equips. Pet was hidden in
+  town by `PetActor` (status MENU) — now shown in the town area.
+- Farm chores (milk / egg / cat) are held: `village.farmHold` fills a ring on the E key (`.hold-key`), 1.1 s.
+- Tracker: side-quest rows auto-path to the objective (cows, nests, cat, shop for ACTION); teleporting home from a run
+  queues the auto-path (`walkAfterArrive`). Main shop steps walk to the shop and open it.
+- Gate: no Set Out popup until Ascension is unlocked. Room harvest nodes halved (half the rooms have none). Coop + Dalla
+  moved to the forest edge of the farm clearing. Dirt paths outside the walls = rounded irregular blobs. The small enemy
+  HP bar is hidden on the enemy shown by the target frame.

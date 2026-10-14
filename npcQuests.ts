@@ -130,17 +130,9 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
   },
-  // ---- Mira's introductions: one quest per shop / service, each asks you to actually use it
+  // ---- Mira's later lessons (side quests once you reach Lv 2; the shop / pet / summon basics are in the main questline)
   {
-    id: 'mira_potions', giver: 'Mira', title: 'Stock Up', summary: 'Buy a potion at the Potion Shop',
-    intro: ['Before you go anywhere, guard: potions. The Potion Shop is on the south street, west of the plaza.', 'Buy one, just one, and you will thank me later.'],
-    progress: 'The Potion Shop is on the south street, west side. Buy any potion.',
-    done: ['Good! Z drinks a health potion, X a mana potion. Keep a few on you.'],
-    objective: { type: 'ACTION', target: 'buy_potion', count: 1 },
-    reward: { gold: 300, items: [{ id: 'potion_hp', qty: 1 }] },
-  },
-  {
-    id: 'mira_storage', giver: 'Mira', title: 'Safe Keeping', summary: 'Store an item in the Warehouse', after: 'mira_potions',
+    id: 'mira_storage', giver: 'Mira', title: 'Safe Keeping', summary: 'Store an item in the Warehouse', cond: { rank: 2 },
     intro: ['Your bag fills up fast out there. The Warehouse on the south street keeps a hundred things safe.', 'Put one item in it, so you know how it works.'],
     progress: 'Open the Warehouse and drag (or click) an item from your bag into it.',
     done: ['There you go. Camps beyond the first biome keep a storage chest that reaches the same warehouse, too.'],

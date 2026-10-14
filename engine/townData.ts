@@ -27,9 +27,9 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
-export const COOP = { x: 6, z: 48.5 };
+export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against the forest edge
 /** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
-export const NESTS: [number, number][] = [[4.2, 50.6], [6.2, 51.0], [8.0, 50.5]];
+export const NESTS: [number, number][] = [[COOP.x - 1.8, COOP.z + 2.1], [COOP.x + 0.2, COOP.z + 2.5], [COOP.x + 2, COOP.z + 2]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
@@ -489,8 +489,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [9, 51.8], speed: 1.3,
-    patrol: [[9, 51.8], [2.5, 51.8]],   // along the nests only (clear of the coop and the field fence)
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x + 3, COOP.z + 3.3], speed: 1.3,
+    patrol: [[COOP.x + 3, COOP.z + 3.3], [COOP.x - 3.5, COOP.z + 3.3]],   // along the nests only (clear of the coop and the field fence)
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },

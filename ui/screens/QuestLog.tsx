@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
 import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
-import { STORY } from '../../story';
+import { stepCount, STORY } from '../../story';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, type NpcReward } from '../../npcQuests';
 import { activeQuests, questDone, questTitle, type QuestReward } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
@@ -39,7 +39,7 @@ export const QuestLog: React.FC = () => {
         <div className="ql-h"><Crown size={14} /> Main story</div>
         {main ? (
           <div className="ql-card main">
-            <b>{main.title}</b><span>{main.line}{main.kill ? ` (${Math.min(story.p, main.kill.count)} / ${main.kill.count})` : ''}</span>
+            <b>{main.title}</b><span>{main.line}{stepCount(main) > 1 ? ` (${Math.min(story.p, stepCount(main))} / ${stepCount(main)})` : ''}</span>
             <Rewards r={main.reward} scale />
           </div>
         ) : <div className="ql-card main"><b>The story is complete</b><span>The Font shines again. Ascension awaits at the gate.</span></div>}

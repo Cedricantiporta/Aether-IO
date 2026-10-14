@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { nearby, interact, MAX_NEARBY } from '../../engine/systems/village';
+import { nearby, interact, MAX_NEARBY, farmHold, FARM_HOLD_S } from '../../engine/systems/village';
 import { roomNearby, interactRoom } from '../../engine/systems/director';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
@@ -19,12 +19,17 @@ export const InteractPrompt: React.FC = () => {
   const ui = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults || s.recordsOpen);
   const els = useRef<(HTMLButtonElement | null)[]>([]);
   const sig = useRef<string[]>(['', '', '']);
+  const hold = useRef<number[]>([0, 0, 0]);
   const list = () => (useGameStore.getState().status === GameStatus.MENU ? nearby : roomNearby);
   useRaf(() => {
     const src = list();
     for (let i = 0; i < MAX_NEARBY; i++) {
       const el = els.current[i]; if (!el) continue;
       const n = src[i];
+      if (src === nearby) {   // hold ring (farm chores): fills while E is held on this pill's thing
+        const h = n.active && n.act === 'farm' && farmHold.node === n.node ? Math.min(1, farmHold.t / FARM_HOLD_S) : 0;
+        if (h !== hold.current[i]) { hold.current[i] = h; (el.children[0] as HTMLElement).style.setProperty('--hold', String(h)); }
+      }
       const key = n.active ? `${n.key}|${n.verb}|${n.label}` : '';
       if (key === sig.current[i]) continue;
       sig.current[i] = key;
@@ -40,7 +45,7 @@ export const InteractPrompt: React.FC = () => {
   const press = (i: number, e: React.PointerEvent) => {
     const inTown = useGameStore.getState().status === GameStatus.MENU;
     const n = (inTown ? nearby : roomNearby)[i];
-    if (n.act === 'harvest') { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); world.input.keys.KeyE = true; } else if (inTown) interact(n); else interactRoom(n);
+    if (n.act === 'harvest' || n.act === 'farm') { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); world.input.keys.KeyE = true; } else if (inTown) interact(n); else interactRoom(n);
   };
   const release = () => { world.input.keys.KeyE = false; };
   if (blocked || ui) { sig.current = ['', '', '']; return null; }
@@ -49,7 +54,7 @@ export const InteractPrompt: React.FC = () => {
       {Array.from({ length: MAX_NEARBY }, (_, i) => (
         <button key={i} ref={(el) => { els.current[i] = el; }} className="interact-pill pe" style={{ display: 'none' }} data-testid={`interact-${i}`}
           onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); press(i, e); }} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>
-          <span className="rpg-key" />
+          <span className="rpg-key hold-key" />
           <span className="iv" />
           <span className="il" />
         </button>

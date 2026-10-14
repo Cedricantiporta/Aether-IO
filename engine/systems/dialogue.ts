@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { NPCS } from '../townData';
 import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
-import { storyTalk } from './storyLogic';
+import { storyTalk, acceptStory } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
 
 /** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
@@ -55,7 +55,7 @@ export function openDialogue(npc: number): void {
   // main story: the step's NPC tells its part (replaces the ambient talk) and the chain moves on
   const story = storyTalk(d.name);
   if (story) {
-    useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines: story, idx: 0, offer: '', turnIn: '' });
+    useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines: story.lines, idx: 0, offer: story.offer, turnIn: '' });
     onLine(npc, 0);
     return;
   }
@@ -93,13 +93,25 @@ export function advanceDialogue(): void {
 function onLine(npc: number, idx: number): void {
   const s = useDialogue.getState();
   if (s.lines[idx] === NPCS[npc].gift?.text && giftAvailable(npc)) claimGift(npc);
-  if (s.turnIn && idx === s.lines.length - 1) { const id = s.turnIn; useDialogue.setState({ turnIn: '' }); completeNpcQuest(id); }
+  if (s.turnIn && idx === s.lines.length - 1) {
+    const id = s.turnIn; useDialogue.setState({ turnIn: '' });
+    if (completeNpcQuest(id)) {   // rewards paid: the talk rolls straight on into this NPC's next quest, if there is one
+      const nq = questDialogueFor(s.name);
+      if (nq?.mode === 'offer') useDialogue.setState({ lines: [...s.lines, `New quest: ${nq.def.title}`, ...nq.def.intro], offer: nq.def.id });
+    }
+  }
 }
 
 /** Accept button / key on the last line of an offer. */
 export function acceptOffer(): void {
   const s = useDialogue.getState();
   if (!s.open || !s.offer || s.idx < s.lines.length - 1) return;
+  if (s.offer.startsWith('story:')) {   // main quest: take it; when the same NPC has more to say (next offer), keep talking
+    acceptStory(s.offer);
+    const nx = storyTalk(s.name);
+    if (nx) { useDialogue.setState({ lines: nx.lines, idx: 0, offer: nx.offer, turnIn: '' }); return; }
+    closeDialogue(); return;
+  }
   acceptNpcQuest(s.offer);
   closeDialogue();
 }

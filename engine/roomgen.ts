@@ -161,9 +161,9 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
       if (ok) crateList.push({ kind, x, z });
     }
-    // harvest nodes (hold E): usually 1 per room, sometimes 2; kind decides the look and the yield
+    // harvest nodes (hold E): half the rooms have one (sometimes 2); kind decides the look and the yield
     if (!cave && !tower && type !== 'CAMP') {
-      const extra = rnd() < 0.75 ? 1 : 2;
+      const extra = rnd() < 0.5 ? 0 : rnd() < 0.75 ? 1 : 2;   // half the rooms have none
       for (let t = 0, added = 0; t < 120 && added < extra; t++) {
         const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
         const x = Math.cos(a) * d, z = Math.sin(a) * d;

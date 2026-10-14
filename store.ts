@@ -554,10 +554,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       inventory.push(equipment.weapon);
       equipment.weapon = null;
     }
-    if (!equipment.pet) {
-      const tpl = PETS_POOL.find((i) => i.id === 'pet_blob');
-      if (tpl) equipment.pet = { ...instantiate(tpl), id: uid('start_pet') };
-    }
     if (!equipment.weapon) {
       // prefer the best class weapon already in the bag; only mint a starter when there is none
       const own = inventory.filter((i) => i.type === 'WEAPON' && i.classType === hero && profileRank() >= RANK_REQ[i.rarity])
@@ -620,7 +616,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     progress: profile.progress ?? sanitizeProgress(undefined),
     tech: profile.tech ?? {},
     summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
-    story: profile.story ?? { step: 0, p: 0 },   // a brand-new profile starts the main story
+    story: profile.story ?? { step: 0, p: 0, v: 2 },   // a brand-new profile starts the main story
     classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
@@ -729,7 +725,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, progress: sanitizeProgress(undefined), tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 2 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -1020,6 +1016,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (s.quests.filter((x) => x.accepted).length >= QUEST_MAX_ACTIVE) { notify(`You can only take ${QUEST_MAX_ACTIVE} quests at a time.`, 'red', 'WARNING'); return false; }
       set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x))) });
       notify('Quest accepted!', COLORS.uiAccent, 'SYSTEM');
+      events.emit('hub', { kind: 'accept', n: 1 });
       return true;
     },
 
@@ -1070,14 +1067,20 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (step === s.story.step && p === s.story.p) return;
       const next = STORY[step];
-      set({ story: { step, p } });
+      set({ story: { step, p, v: 2 } });
       // finishing a step pays its reward (main quests always pay: gold, gems, items)
       if (step > s.story.step) for (let k = s.story.step; k < step; k++) {
         const r = STORY[k]?.reward; if (!r) continue;
         const now = get();
         set({ gold: now.gold + (r.gold ?? 0) * GOLD_SCALE, gems: now.gems + (r.gems ?? 0) });
-        for (const it of r.items ?? []) for (const item of makeItemById(it.id, it.qty ?? 1)) if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
-        notify(`Main quest complete: ${STORY[k].title}`, '#f1d58e', 'SYSTEM');
+        const got: string[] = [];
+        if (r.gold) got.push(`+${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
+        if (r.gems) got.push(`+${r.gems} gems`);
+        for (const it of r.items ?? []) for (const item of makeItemById(it.id, it.qty ?? 1)) {
+          got.push(`${item.name}${(it.qty ?? 1) > 1 ? ` x${it.qty}` : ''}`);
+          if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
+        }
+        notify(`Main quest complete: ${STORY[k].title}${got.length ? ` (${got.join(', ')})` : ''}`, '#f1d58e', 'SYSTEM');
       }
       if (step !== s.story.step) {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
@@ -1187,6 +1190,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         activeAbilityQ: q ?? s.activeAbilityQ,
       });
       notify(`Equipped ${item.name}`, COLORS.rarityCommon, 'SYSTEM');
+      events.emit('hub', { kind: item.type === 'PET' ? 'equip_pet' : 'equip', n: 1 });
     },
 
     unequipItem: (slot) => {
@@ -1265,6 +1269,11 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Bought ${item.name}`, 'white', 'SYSTEM');
       events.emit('hub', { kind: 'buy', n: quantity });
       if (item.type === 'POTION') events.emit('hub', { kind: 'buy_potion', n: quantity });
+      if (item.type === 'PET') {
+        events.emit('hub', { kind: 'buy_pet', n: quantity });
+        const first = !get().equipment.pet && get().inventory.find((i) => i.type === 'PET' && i.name === item.name);
+        if (first) get().equipItem(first);   // the first pet goes straight to your side
+      }
       return true;
     },
 

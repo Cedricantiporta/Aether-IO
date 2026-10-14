@@ -4,19 +4,19 @@ import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React from 'react';
 import { ScrollText, BookOpen, Crown } from 'lucide-react';
-import { STORY } from '../../story';
+import { stepCount, STORY } from '../../story';
 import { useGameStore } from '../../store';
 import { activeQuests, questDone, questNeedsKing, questTitle } from '../../quests';
-import { walkToQuest, walkToNpcQuest, walkToMain } from '../../engine/systems/village';
+import { walkToQuest, walkToNpcObjective, walkToMain, walkAfterArrive } from '../../engine/systems/village';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn } from '../../npcQuests';
 
 /** In a run, a quest that is ready to hand in (or a main-quest step that waits on someone in town) offers a trip home. */
-function offerTeleport(): boolean {
+function offerTeleport(then?: () => void): boolean {
   const st = useGameStore.getState();
   if (st.status !== GameStatus.PLAYING) return false;
   useUiStore.getState().askConfirm({
     title: 'Teleport to town?', body: 'This quest continues in town. Head back now? The run ends here: your loot and xp are kept.',
-    confirmLabel: 'Teleport', onConfirm: () => st.abandonRun(),
+    confirmLabel: 'Teleport', onConfirm: () => { if (then) walkAfterArrive(then); st.abandonRun(); },
   });
   return true;
 }
@@ -32,11 +32,11 @@ export const QuestTracker: React.FC = () => {
   return (
     <div className="qt pe" data-testid="quest-tracker">
       {main && (
-        <div className="qt-row main" data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={() => { if (!(main.npc && offerTeleport())) walkToMain(); }}>
+        <div className="qt-row main" data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={() => { if (!((main.npc || main.at) && offerTeleport(walkToMain))) walkToMain(); }}>
           <div className="qt-head"><Crown size={13} /><span>Main Quest</span></div>
           <div className="qt-title">{main.title}</div>
-          {main.kill
-            ? <div className="qt-line"><span className="qt-bar"><i style={{ width: `${Math.min(1, ms.p / main.kill.count) * 100}%` }} /></span><b>{Math.min(ms.p, main.kill.count)} / {main.kill.count}</b></div>
+          {stepCount(main) > 1
+            ? <div className="qt-line"><span className="qt-bar"><i style={{ width: `${Math.min(1, ms.p / stepCount(main)) * 100}%` }} /></span><b>{Math.min(ms.p, stepCount(main))} / {stepCount(main)}</b></div>
             : null}
           <div className="qt-line"><b style={{ fontWeight: 500, opacity: 0.85 }}>{main.line}</b></div>
         </div>
@@ -57,7 +57,11 @@ export const QuestTracker: React.FC = () => {
         const ready = npcQuestReady(d, nq, inv), n = npcQuestProgress(d, nq, inv), c = d.objective.count;
         return (
           <div key={d.id} className={`qt-row npc ${ready ? 'done' : ''}`} data-testid="npc-quest-row" role="button" title="Click: auto-path"
-            onClick={() => { if (!((ready || d.objective.type === 'TALK') && offerTeleport())) walkToNpcQuest(ready ? npcQuestTurnIn(d) : d.objective.type === 'TALK' ? String(d.objective.target) : null); }}>
+            onClick={() => {
+              const o = d.objective, npc = ready ? npcQuestTurnIn(d) : o.type === 'TALK' ? String(o.target) : null;
+              const go = () => walkToNpcObjective(o, npc);
+              if (!((npc || o.type === 'INTERACT' || o.type === 'ACTION') && offerTeleport(go))) go();
+            }}>
             <div className="qt-head"><BookOpen size={13} /><span>{ready ? `Return to ${npcQuestTurnIn(d)}` : d.giver}</span></div>
             <div className="qt-title">{d.title}</div>
             {d.objective.type === 'TALK'

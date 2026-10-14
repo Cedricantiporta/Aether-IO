@@ -18,7 +18,12 @@ type Mode = 'ADVENTURE' | 'TOWER';
 export const SetOutWindow: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('ADVENTURE');
-  useGameEvent('openSetOut', (e) => { setMode(e.mode); setOpen(true); });   // gate = Adventure, the tower building = Endless Tower
+  useGameEvent('openSetOut', (e) => {
+    const st = useGameStore.getState();
+    // the gate sets out straight away; the window only appears when there is a choice to make (Ascension unlocked)
+    if (e.mode === 'ADVENTURE' && st.progress.ascensionMax === 0) { st.startMode('ADVENTURE'); return; }
+    setMode(e.mode); setOpen(true);
+  });   // gate = Adventure, the tower building = Endless Tower
   // walking off (e.g. on through the gate to the outskirts) closes it: it only stays while the hero stands at the gate / tower door
   useRaf(() => {
     if (!open) return;

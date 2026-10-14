@@ -311,7 +311,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
   const carryMat = useMemo(() => new MeshBasicMaterial({ color: new Color(2, 2, 2), toneMapped: false }), []);
   useFrame(({ clock }, dtRaw) => {
     const status = useGameStore.getState().status;
-    if (isLobbyStatus(status) || status === GameStatus.MENU) { root.current.visible = false; return; }
+    if (isLobbyStatus(status) || (status === GameStatus.MENU && world.village.area !== 'TOWN')) { root.current.visible = false; return; }   // town hub: the pet follows you (hidden in the castle)
     root.current.visible = true;
     const dt = status === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
     const pet = world.pet, s = S.current, t = clock.elapsedTime;

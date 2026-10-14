@@ -8,7 +8,7 @@ import { interacted, wantsInteract } from './npcQuestLogic';
 import { animals } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT } from '../townData';
 import { storyTarget } from './storyLogic';
-import { gateOpen } from '../../story';
+import { STORY, gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB } from '../../constants';
@@ -70,6 +70,9 @@ const milkCd = new Float32Array(16), eggAt = new Float64Array(8);
 export const eggReady = (k: number): boolean => world.time >= eggAt[k] || eggAt[k] - world.time > 25;   // (the clock restarts with each town visit)
 /** Pip's cat sits in her hiding spot only while "Where Is Biscuit?" still needs her. */
 export const catHidden = (): boolean => wantsInteract('cat');
+/** Hold-E progress for farm chores (read by the interact prompt's ring). */
+export const FARM_HOLD_S = 1.1;
+export const farmHold = { node: -1, t: 0, lock: false };
 function farmAct(node: number): void {
   const st = useGameStore.getState(), p = world.player;
   if (node >= 200 && node < 300) {
@@ -122,9 +125,9 @@ function scanNearby(): void {
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
     // (only while a quest asks for it)
-    if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Milk', 'Cow', '', 200 + i, d, 'farm'); }
-    if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Collect', 'Egg', '', 300 + k, d, 'farm'); }
-    if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Pick up', 'Biscuit the cat', '', 400, d, 'farm'); }
+    if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Hold: Milk', 'Cow', '', 200 + i, d, 'farm'); }
+    if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Hold: Collect', 'Egg', '', 300 + k, d, 'farm'); }
+    if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Hold: Coax', 'Biscuit the cat', '', 400, d, 'farm'); }
   }
   for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area === 'CASTLE') !== castle) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
   if (!castle)
@@ -250,9 +253,41 @@ export function walkToMain(): void {
     if (inCastle) { walkTo(CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 'castle', '', 2.4); return; }
     walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return;
   }
-  if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
-  else walkTo(GATE.x, GATE.z - 1, 'none', '', 2.2);
+  if (castle) { walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return; }
+  const at = STORY[useGameStore.getState().story.step]?.at;
+  if (at && at !== 'BAG') { walkToSpot(at); return; }
+  walkTo(GATE.x, GATE.z - 1, 'none', '', 2.2);
 }
+type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER';
+/** Walk to a shop counter / the quest board / the skill trainer and open it on arrival. */
+function walkToSpot(at: Spot): void {
+  if (at === 'BOARD') { walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
+  if (at === 'TRAINER') { walkTo(TRAINER_POS[0], TRAINER_POS[2] + 2.6, 'shop', 'SKILLS', 1.8); return; }
+  const s = SHOP_POSITIONS.find((x) => x.type === at);
+  if (s) walkTo(s.position[0], s.position[2] + 3.2, 'shop', SHOP_TAB[s.type], 1.8);
+}
+const ACTION_SPOT: Record<string, Spot> = { buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
+/** NPC quest row click: hand-in / talk target NPC, else where the objective is done (the cows, the nests, the hiding
+ *  cat, the shop for a shop action), else out through the gate. */
+export function walkToNpcObjective(o: { type: string; target?: string | string[] }, npc: string | null): void {
+  if (npc) { walkToNpcQuest(npc); return; }
+  if (world.village.area === 'CASTLE') { walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return; }
+  const p = world.player, t = String(o.target ?? '');
+  if (o.type === 'INTERACT') {
+    if (t === 'milk') {   // the nearest cow
+      let bi = -1, bd = 1e9;
+      for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; const d = (animals[i].x - p.pos.x) ** 2 + (animals[i].z - p.pos.z) ** 2; if (d < bd) { bd = d; bi = i; } }
+      if (bi >= 0) { walkTo(animals[bi].x, animals[bi].z, 'none', '', 2.2); return; }
+    }
+    if (t === 'egg') { walkTo(NESTS[1][0], NESTS[1][1] + 1.2, 'none', '', 1.4); return; }
+    if (t === 'cat') { walkTo(HIDDEN_CAT.x, HIDDEN_CAT.z, 'none', '', 2.4); return; }
+  }
+  if (o.type === 'ACTION' && ACTION_SPOT[t]) { walkToSpot(ACTION_SPOT[t]); return; }
+  walkTo(GATE.x, GATE.z - 3, 'none', '', 2.2);
+}
+// After a teleport home from a run: the quest's auto-path starts by itself once the town is in.
+let afterArrive: (() => void) | null = null, afterT = 0;
+export function walkAfterArrive(fn: () => void): void { afterArrive = fn; afterT = 0.8; }
 /** NPC story quest row click: ready -> the NPC who takes it in; talk objective -> that NPC; otherwise out through the gate. */
 export function walkToNpcQuest(name: string | null): void {
   const castle = world.village.area === 'CASTLE';
@@ -310,6 +345,7 @@ export function updateVillage(dt: number): void {
     if (v.fade >= 1) { switchArea(v.pending === 'ENTER' ? 'CASTLE' : 'TOWN'); v.pending = ''; }
   } else if (v.fade > 0) v.fade = Math.max(0, v.fade - dt / FADE_S);
   const talking = dialogueOpen();
+  if (afterArrive && !v.pending && v.fade <= 0 && !talking && (afterT -= dt) <= 0) { const f = afterArrive; afterArrive = null; f(); }
   if (talking) {
     // frozen in conversation: face the speaker, E / Space advances, opening a panel ends it
     const st0 = useGameStore.getState();
@@ -359,8 +395,17 @@ export function updateVillage(dt: number): void {
   const top = nearby[0];
   if (!talking && top.active && !v.pending) {
     if (top.act === 'harvest') { if (inp.keys.KeyE || inp.pressed.KeyE) interact(top); }
+    else if (top.act === 'farm') {   // farm chores are held: the key's ring fills, then the chore is done (release to go again)
+      const held = !!(inp.keys.KeyE || inp.pressed.KeyE);
+      if (!held) { farmHold.t = 0; farmHold.lock = false; }
+      else if (!farmHold.lock) {
+        if (farmHold.node !== top.node) { farmHold.node = top.node; farmHold.t = 0; }
+        farmHold.t += dt; p.anim.castT = Math.max(p.anim.castT, 0.6);
+        if (farmHold.t >= FARM_HOLD_S) { farmAct(top.node); farmHold.t = 0; farmHold.lock = true; }
+      }
+    }
     else if (inp.pressed.KeyE) interact(top);
-  }
+  } else farmHold.t = 0;
   scanNearby();
   world.camera.trauma = Math.max(0, world.camera.trauma - dt * 1.5);
   world.time += dt;
