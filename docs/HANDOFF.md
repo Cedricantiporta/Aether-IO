@@ -423,7 +423,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 
 ### Necromancer (5th class)
 - `HeroClass` 'NECROMANCER' (model: Rogue_Hooded, staff in violet). Basic attack `ProjectileType 'SOUL'` -> kind
-  SOUL_BOLT: single target, no pierce, no splash. Starter weapon `wand_n1` Bone Wand; item catalog / starter set /
+  SOUL_BOLT: single target, no pierce, small splash (1.8 radius, half damage). Starter weapon `wand_n1` Bone Wand; item catalog / starter set /
   item-set names / talents (Gravelord, Plague, Lich) / perks (HORDE: minion damage + lifetime, BIG, MAGES 'Bone Choir'
   and BOWMEN 'Grave Archers': every Nth soul bolt raises a skeleton mage / bowman up to a cap, projectiles.ts
   `raiseCount`) all filled in. Minion kind 3 = skeleton bowman (ARROW tint 10 = minion arrow, PET damage source).
@@ -487,3 +487,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Town: Potion Shop / Armor Shop moved beside the plaza (constants SHOP_POSITIONS, `shopFront()`); every arrival spawns
   at the plaza centre; runs start at the Adventure Portal (`PORTAL` in townData, PortalLandmark in render/Town.tsx) in a
   forest clearing south of the gate (island box added). Town labels use Cinzel. Minimap: thin rim, zoomed on the hero.
+- Necromancer summons (latest): every summon stays until slain; Raise Dead cooldown starts on cast (13.5 s); Army of the
+  Dead holds the ult cooldown until the whole army has fallen (minions.ts `ultHold`, src 2). Summons +20% HP; warriors
+  gain +10% HP and +4% armour (`def`, max 40%) per Raise Dead level and Cleave (2.8 m AoE, 2x damage, every 5 s /
+  haste; `skillT`, render spin). Bone Armor (`combat.boneArmorMul`) protects the hero and the minions.
