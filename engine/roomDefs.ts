@@ -5,6 +5,7 @@
 import type { EnemyKind, ObstacleKind, CrateKind, RoomPlan, RoomType, RewardKind, RoomObjective, RoomTwist } from './types';
 import type { BossKind } from './enemyDefs';
 import type { Rarity } from '../types';
+import { GATES, GATE_KEYS_NEEDED, gateState } from './gates';
 
 export const ROOMS_PER_BIOME = 14;         // normal rooms before the boss room (room index ROOMS_PER_BIOME): 15 depths per biome
 export const BOSS_INDEX = ROOMS_PER_BIOME;   // the biome boss: depth 15
@@ -95,13 +96,19 @@ export const loopOf = (biome: number): number => Math.floor(biome / BIOMES.lengt
 
 export const TYPE_NAME: Record<RoomType, string> = {
   COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', CRYSTAL: 'Crystal Cavern', BOSS: 'Boss', CAMP: 'Camp',
+  DUEL: 'Champion Duel', GATEKEEPER: 'The Gatekeeper',
 };
 export const REWARD_NAME: Record<RewardKind, string> = {
   CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Shards', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
 };
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
+  if (plan.gate !== undefined) {   // the next room of a Gatekeeper trial
+    const g = GATES[plan.gate];
+    return { title: g.name, sub: `Trial room ${(plan.step ?? 0) + 1}/${g.steps.length}`, icon: plan.type === 'BOSS' ? 'boss' : 'shrine', color: g.color };
+  }
   switch (plan.type) {
+    case 'GATEKEEPER': return { title: 'The Gatekeeper', sub: `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED}`, icon: 'shrine', color: '#c9a2ff' };
     case 'FOUNTAIN': return { title: 'Fountain', sub: 'Heal 40% + a blessing', icon: 'fountain', color: '#5fd6ff' };
     case 'MERCHANT': return { title: 'Merchant', sub: 'Travelling shop', icon: 'merchant', color: '#f2c14e' };
     case 'CAMP': return { title: 'Camp', sub: 'Storage + training', icon: 'fountain', color: '#9bd26a' };
@@ -112,7 +119,7 @@ export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub
     default: break;
   }
   const r = REWARD_ICON[plan.reward];
-  let sub = plan.obj ? OBJ_NAME[plan.obj] : plan.type === 'ELITE' ? 'Elite hunt' : plan.type === 'MINIBOSS' ? 'Champion' : TYPE_NAME.COMBAT;
+  let sub = plan.obj ? OBJ_NAME[plan.obj] : plan.type === 'ELITE' ? 'Elite hunt' : plan.type === 'MINIBOSS' ? 'Champion' : plan.type === 'DUEL' ? 'Dark Champion duel' : TYPE_NAME.COMBAT;
   if (plan.twist) sub += ` · ${TWIST_NAME[plan.twist]}`;
   return { title: REWARD_NAME[plan.reward], sub, icon: r.icon, color: r.color };
 }
@@ -131,13 +138,16 @@ const pick = <T,>(opts: readonly (readonly [T, number])[]): T => {
 function rollReward(type: RoomType): RewardKind {
   switch (type) {
     case 'ELITE': return pick<RewardKind>([['CARD', 45], ['ITEM', 35], ['GEMS', 10], ['SHARDS', 10]]);
-    case 'MINIBOSS': return pick<RewardKind>([['ITEM', 45], ['CARD', 45], ['GEMS', 10]]);
+    case 'MINIBOSS': case 'DUEL': return pick<RewardKind>([['ITEM', 45], ['CARD', 45], ['GEMS', 10]]);
     case 'COMBAT': return pick<RewardKind>([['CARD', 40], ['GOLD', 18], ['SHARDS', 14], ['ITEM', 14], ['HEAL', 8], ['GEMS', 6]]);
     default: return 'NONE'; // fountain / merchant / treasure / shrine / boss carry their own content
   }
 }
 
+/** Share of champion doors that become a dark hero duel (a solo fight in a ring arena). */
+export const DUEL_CHANCE = 0.35;
 const plan = (type: RoomType, next = 0): RoomPlan => {
+  if (type === 'MINIBOSS' && Math.random() < DUEL_CHANCE) type = 'DUEL';
   const p: RoomPlan = { type, reward: rollReward(type) };
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {

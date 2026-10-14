@@ -16,6 +16,7 @@ const BIG = 999_999_999;
 const ROOM_TYPES: { v: RoomType; l: string }[] = [
   { v: 'COMBAT', l: 'Skirmish' }, { v: 'ELITE', l: 'Elite hunt' }, { v: 'MINIBOSS', l: 'Champion (mini-boss)' }, { v: 'TREASURE', l: 'Treasure' },
   { v: 'FOUNTAIN', l: 'Fountain' }, { v: 'MERCHANT', l: 'Merchant' }, { v: 'SHRINE', l: 'Shrine' }, { v: 'CRYSTAL', l: 'Crystal cavern' }, { v: 'BOSS', l: 'Boss' },
+  { v: 'DUEL', l: 'Dark champion duel' }, { v: 'GATEKEEPER', l: 'Gatekeeper (5 gates)' },
 ];
 
 const Line: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (

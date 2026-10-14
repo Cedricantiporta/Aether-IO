@@ -34,6 +34,10 @@ import { resetSpecials } from './bossSpecials';
 import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
 import type { Interactable } from './village';
+import { spawnDarkHero, DARK_CLASSES } from './darkHero';
+import { isArenaRoom, arenaRadius } from '../arenaRooms';
+import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
+import type { HeroClass } from '../../types';
 
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
@@ -70,6 +74,8 @@ let miniName = '', miniTitle = '';
 let miniIsBoss = false;
 let prebossKing = false;    // the Meadow's depth-10 Slime King      // the Lich: a full boss used as a mini-boss
 let bossPending = false;
+let duelPending = false;          // DUEL room: the dark hero still has to rise
+let duelCls: HeroClass = 'KNIGHT';
 let bossSpawned = false;
 let bossDeadT = -1;
 
@@ -105,13 +111,13 @@ const FINAL_BIOME = BIOMES.length - 1;
 const towerBiome = (f: number): number => Math.floor((f - 1) / 5) % BIOMES.length;
 function towerPlan(f: number): RoomPlan {
   if (f % 10 === 0) return { type: 'BOSS', reward: 'NONE' };
-  if (f % 5 === 0) return { type: 'MINIBOSS', reward: 'ITEM' };
+  if (f % 5 === 0) return { type: Math.random() < 0.35 ? 'DUEL' : 'MINIBOSS', reward: 'ITEM' };   // some champion floors: a dark hero duel
   if (f % 3 === 0) return { type: 'ELITE', reward: f % 2 ? 'GEMS' : 'CARD' };
   return { type: 'COMBAT', reward: f % 2 ? 'CARD' : f % 4 === 0 ? 'SHARDS' : 'GOLD' };
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent(); bossKeyState.has = false; clearMinions();
+  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -131,6 +137,7 @@ export function resetDirector(): void {
 export function startRunRooms(): void {
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
+  resetGates();
   world.room.fade = 1;
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), 0, towerPlan(1)); return; }
   enterRoom(0, 0, firstPlan());
@@ -140,7 +147,14 @@ export function startRunRooms(): void {
 export function debugJump(b: number, idx: number, type: RoomType): void {
   merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   world.room.fade = 1;
-  enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' ? 'CARD' : 'NONE', preboss: type === 'MINIBOSS' && idx === PREBOSS_INDEX });
+  if (type === 'GATEKEEPER') { finalFight = false; endingDone = false; enterRoom(b, BOSS_INDEX, hubPlan()); return; }
+  enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'DUEL' ? 'CARD' : 'NONE', preboss: type === 'MINIBOSS' && idx === PREBOSS_INDEX });
+}
+/** Debug / QA: walk into gate `g`'s trial (as if E was pressed at it), or straight into the throne room. */
+export function debugGate(g: number): void {
+  world.room.fade = 1;
+  if (g < 0) { finalFight = true; endingDone = false; enterRoom(biome, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }
+  gateState.on = true; enterRoom(biome, BOSS_INDEX, gatePlan(g, 0));
 }
 
 /** After a boss: continue into the next biome (harder, same hero). */
@@ -150,11 +164,16 @@ export function descend(): void {
   const p = world.player;
   const st = useGameStore.getState();
   p.hp = Math.min(st.stats.maxHealth, p.hp + st.stats.maxHealth * 0.3);
-  if (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE') { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); return; }   // the Undying Throne
+  if (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE') {   // (the Herald beaten outside the gates, e.g. a debug jump): on to the Gatekeeper
+    if (!gateState.done[4]) { gateState.done[4] = true; gateState.keys++; }
+    beginLeave(hubPlan(), biome, BOSS_INDEX); return;
+  }
   beginLeave(firstPlan(), biome + 1, 0);
 }
 /** The big portal's label after a boss. */
-export const nextBiomeLabel = (): string => (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE' && !finalFight ? 'The Undying Throne' : `Next biome · ${biomeOf(biome + 1).name}`);
+export const nextBiomeLabel = (): string => (biome === FINAL_BIOME && runInfo.mode === 'ADVENTURE' && !finalFight ? 'The Gatekeeper' : `Next biome · ${biomeOf(biome + 1).name}`);
+/** Adventure, last biome: the Gatekeeper's gates replace the boss key / boss door. */
+const gateBiome = (): boolean => runInfo.mode === 'ADVENTURE' && biome === FINAL_BIOME;
 
 /** After a boss: bank the run (rank xp + room bonus gold are paid out) and show the summary. */
 export function finishRunVictory(): void {
@@ -186,13 +205,13 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
   if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS') p = { type: 'CAMP', reward: 'NONE' };
   biome = b; index = idx; plan = p;
-  depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' ? 1 : 0);
+  depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
   clearTransient();
 
   const seed = (Math.random() * 4294967296) >>> 0;
-  const R = roomRadius(p.type, seed);
+  const R = runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed);
   buildRoom(b, p.type, R, seed);
   world.room.radius = R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
@@ -209,24 +228,73 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const pl = world.player;
   const [sx, sz] = startPos(R);
   pl.pos.set(sx, 0, sz); pl.vel.set(0, 0, 0); pl.dashT = 0; pl.facing = Math.PI;
-  world.pet.pos.set(sx + 1.2, 1, sz + 1.2);
+  if (p.type === 'GATEKEEPER') enterHub(); else if (p.gate !== undefined) { gateState.on = true; gateState.cur = p.gate; }
+  world.pet.pos.set(pl.pos.x + 1.2, 1, pl.pos.z + 1.2);
 
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.aliveCount = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
-  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0;
 
   rollRoomSpawns(p.type);
   if (kind === 'MERCHANT') rollMerchantStock(depth);
   else clearMerchantStock();
-  r.enemiesLeft = unitN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
+  r.enemiesLeft = unitN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? 1 : 0);
 
   st.setWave(depth);
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : biomeOf(b).name });
+  const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : gname || biomeOf(b).name });
+  if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
+  if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
   if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
+}
+
+// ------------------------------------------------------------ the gates -----
+const gp: [number, number] = [0, 0];
+/** Arriving in the Gatekeeper's courtyard: first visit = his greeting, back from a trial = in front of that gate + his flame mends you. */
+function enterHub(): void {
+  const pl = world.player, st = useGameStore.getState();
+  const back = gateState.cur;
+  gateState.on = true; gateState.cur = -1;
+  if (back >= 0) {
+    const yaw = gatePos(back, gp);
+    pl.pos.set(gp[0] * 0.78, 0, gp[1] * 0.78); pl.facing = yaw;
+    const hp = st.stats.maxHealth * 0.35, mp = st.stats.maxMana * 0.35, before = pl.hp;
+    pl.hp = Math.min(st.stats.maxHealth, pl.hp + hp); pl.mana = Math.min(st.stats.maxMana, pl.mana + mp);
+    if (pl.hp > before) events.emit('heal', { pos: pl.pos, amount: pl.hp - before });
+  } else { pl.pos.set(HUB_START[0], 0, HUB_START[1]); pl.facing = Math.PI; }
+  gateState.visits++;
+  const left = GATE_KEYS_NEEDED - gateState.keys;
+  if (gateState.visits === 1) {
+    st.addNotification(`The Gatekeeper: "${GATEKEEPER_LINES[0]}"`, '#c9a2ff', 'BOSS');
+    st.addNotification(`The Gatekeeper: "${GATEKEEPER_LINES[1]}"`, '#c9a2ff', 'SYSTEM');
+  } else if (left > 0) st.addNotification(`The Gatekeeper: "${left} gate${left > 1 ? 's' : ''} remain. My flame mends you."`, '#c9a2ff', 'SYSTEM');
+  else st.addNotification('The Gatekeeper: "All five keys. The Dark Castle opens for you. End him."', '#ffd24a', 'BOSS');
+}
+
+/** A trial room is clear: the next trial room, or (last room) the gate's key + the way back to the Gatekeeper. */
+function trialCleared(): void {
+  const r = world.room, st = useGameStore.getState();
+  const g = plan.gate!;
+  choices.length = 0;
+  if (isLastStep(plan)) {
+    if (!gateState.done[g]) {
+      gateState.done[g] = true; gateState.keys++;
+      st.addNotification(`Gate Key ${gateState.keys}/${GATE_KEYS_NEEDED}: ${GATES[g].name} is cleared!`, '#ffd24a', 'SYSTEM');
+      events.emit('floatText', { pos: world.player.pos, text: `GATE KEY ${gateState.keys}/${GATE_KEYS_NEEDED}`, color: 0xffd24a, scale: 1.25, dy: 2.8 });
+      events.emit('shockwave', { pos: world.player.pos.clone(), radius: 6, color: 0xffd24a });
+      for (let i = 0; i < 2; i++) spawnPickup('GEM', at(0, -r.radius * 0.1), 3 + Math.floor(depth / 10));
+    }
+    choices.push(hubPlan());
+  } else choices.push(gatePlan(g, (plan.step ?? 0) + 1));
+  const po = r.portals[0];
+  for (const q of r.portals) q.active = false;
+  portalSlot(0, 1, r.radius, slot);
+  po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[0]; po.big = false;
+  events.emit('portalsOpen', {});
 }
 
 function beginLeave(p: RoomPlan, nb: number, ni: number): void {
@@ -326,6 +394,12 @@ function rollRoomSpawns(type: RoomType): void {
       break;
     }
     case 'BOSS': bossPending = true; break;
+    case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
+      const own = useGameStore.getState().hero as HeroClass;
+      duelCls = plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)];
+      duelPending = true;
+      break;
+    }
     default: break; // fountain / merchant / shrine (until the challenge is accepted): nothing to fight
   }
 }
@@ -382,6 +456,7 @@ function activeMarkers(): number {
 function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag: number): void {
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
+  if (tag === 3) { spawnDarkHero(duelCls, x, z); return; }
   if (tag === 1) {
     const e = spawnMiniBoss(kind, tmp, miniName, miniTitle);
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
@@ -431,6 +506,11 @@ function tickSpawns(dt: number): void {
     const kind = finalFight ? 'BOSS_LICH' : debug.bossOverride || biomeOf(biome).boss;
     placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     bossSpawned = true;
+  }
+  if (duelPending && roomT >= 1.0) {   // the dark hero rises in the middle of the ring
+    duelPending = false;
+    const [mx, mz] = stationPos(R.radius);
+    placeMarker('DARK_HERO', mx, mz - 2, false, 1.6, 3);
   }
   if (miniPending && roomT >= 1.0) {
     {   // spawns in the open arena kept clear by roomgen (stationPos of a MINIBOSS room, radius 12)
@@ -532,6 +612,7 @@ function openPortals(): void {
     return;
   }
   const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome, shrineBiome !== biome, index + 1 === crystalAt, bossKeyState.has && !finalFight);
+  if (gateBiome()) for (let i = 0; i < n; i++) if (choices[i].type === 'BOSS') choices[i] = hubPlan();   // the Void ends at the Gatekeeper
   if (choices.some((c) => c.type === 'SHRINE')) shrineBiome = biome;       // the optional challenge: once per biome
   if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
   if (choices.some((c) => c.type === 'FOUNTAIN')) fountainBiome = biome;   // ...and so does a fountain
@@ -557,9 +638,10 @@ function onCleared(): void {
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
   roomEventCleared();
+  if (plan.type === 'GATEKEEPER') return;   // the courtyard: nothing to clear, the gates are entered with E
   // the boss key: rooms from the champion on may hold it (more often the deeper you go; chests are the best bet)
-  if (runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
-    const ch = plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : 0.2 + 0.08 * (index - PREBOSS_INDEX);
+  if (runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && !gateBiome() && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
+    const ch = plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : plan.type === 'DUEL' ? 0.35 : 0.2 + 0.08 * (index - PREBOSS_INDEX);
     if (Math.random() < ch) {
       bossKeyState.has = true;
       st.addNotification('You found the Boss Key! A boss door will open.', '#ffd24a', 'SYSTEM');
@@ -571,7 +653,7 @@ function onCleared(): void {
   const t = plan.type;
   if (t === 'TREASURE') world.room.station.ready = true;
   // reward for this room
-  if (world.room.shrineOn) { rewardKind = 'CARD'; rewardBonus = 0.3; } else { rewardKind = plan.reward; rewardBonus = t === 'ELITE' ? 0.1 : t === 'MINIBOSS' ? 0.15 : 0; }
+  if (world.room.shrineOn) { rewardKind = 'CARD'; rewardBonus = 0.3; } else { rewardKind = plan.reward; rewardBonus = t === 'ELITE' ? 0.1 : t === 'MINIBOSS' ? 0.15 : t === 'DUEL' ? 0.25 : 0; }
   rewardT = rewardKind === 'NONE' ? -1 : REWARD_DELAY;
   if (world.room.shrineOn) {
     // challenge bonus on top of the card
@@ -580,7 +662,8 @@ function onCleared(): void {
     for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, -world.room.radius * 0.08), 2 + Math.floor(depth / 6));
     shrineBonus = false;
     showPortals();
-  } else openPortals();
+  } else if (plan.gate !== undefined) trialCleared();
+  else openPortals();
 }
 
 function bossDefeated(): boolean {
@@ -595,7 +678,7 @@ function tickFight(dt: number): void {
   roomT += dt;
   tickSpawns(dt);
   const markers = activeMarkers();
-  r.enemiesLeft = d.aliveCount + markers + (unitN - nextUnit) + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
+  r.enemiesLeft = d.aliveCount + markers + (unitN - nextUnit) + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? 1 : 0);
 
   if (plan.type === 'BOSS') {
     if (bossSpawned && bossDefeated()) {
@@ -604,9 +687,9 @@ function tickFight(dt: number): void {
     }
     return;
   }
-  const idle = nextUnit >= unitN && !miniPending && markers === 0 && d.aliveCount === 0;
+  const idle = nextUnit >= unitN && !miniPending && !duelPending && markers === 0 && d.aliveCount === 0;
   if (r.shrineOn) { if (roomT > 1.2 && idle && unitN > 0) onCleared(); return; }
-  if (roomT > (unitN === 0 && !miniPending ? 0.6 : 1.2) && idle) onCleared();
+  if (roomT > (unitN === 0 && !miniPending && plan.type !== 'DUEL' ? 0.6 : 1.2) && idle) onCleared();
 }
 
 function towerCleared(): void {
@@ -622,6 +705,12 @@ function onBossCleared(): void {
   world.boss.active = false;
   if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+    bossRewards(); onCleared(); return;
+  }
+  if (plan.gate !== undefined) {   // the Gate of the Herald: rewards, then the way back to the Gatekeeper
+    for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+    events.emit('biomeClear', { biome });
+    useGameStore.getState().addNotification('The Void Herald falls!', '#fbbf24', 'BOSS');
     bossRewards(); onCleared(); return;
   }
   if (finalFight) {   // Malakar falls: the ending
@@ -682,6 +771,17 @@ function scanNearby(): void {
       const dist = q(c.pos.x, c.pos.z);
       if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
     }
+    if (r.plan.type === 'GATEKEEPER' && d.phase === 'CLEARED') {
+      for (let i = 0; i < GATES.length; i++) {
+        gatePos(i, gp);
+        const dg = q(gp[0], gp[1]);
+        if (dg < 30) pushNearby(gateState.done[i] ? 'Cleared' : 'Enter', GATES[i].name + (gateState.done[i] ? ' · key taken' : ` · ${GATES[i].sub}`), 50 + i, dg);
+      }
+      const dc = q(CASTLE_DOOR[0], CASTLE_DOOR[1]);
+      if (dc < 42) pushNearby(gateState.keys >= GATE_KEYS_NEEDED ? 'Enter' : 'Sealed', gateState.keys >= GATE_KEYS_NEEDED ? 'The Dark Castle' : `Dark Castle · Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED}`, 55, dc);
+      const dk = q(KEEPER_POS[0], KEEPER_POS[1]);
+      if (dk < 30) pushNearby('Talk', 'The Gatekeeper', 56, dk);
+    }
     if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP') {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
@@ -719,11 +819,13 @@ export function interactRoom(it: Interactable): void {
     const po = r.portals[it.node];
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
       if (runInfo.mode === 'TOWER') { towerFloor++; towerState.floor = towerFloor; beginLeave(po.plan, towerBiome(towerFloor), (towerFloor - 1) % ROOMS_PER_BIOME); }
+      else if (po.plan.gate !== undefined || po.plan.type === 'GATEKEEPER') beginLeave(po.plan, biome, BOSS_INDEX);   // trials and the courtyard keep the boss depth
       else beginLeave(po.plan, biome, index + 1);
     }
     return;
   }
   if (it.node === 40) { freeCaptive(); return; }   // rescue objective
+  if (it.node >= 50 && it.node <= 56) { interactHub(it.node); return; }   // the Gatekeeper's courtyard
   if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
   if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
   if (it.node >= 1000) { lootPickup(it.node - 1000); return; }   // loot an item on the ground
@@ -771,6 +873,26 @@ export function interactRoom(it: Interactable): void {
     vacuumT = 1.2; // pick it all up soon
   } else if (s.kind === 'ALTAR' && !s.used && d.phase === 'CLEARED') {
     startShrineChallenge();
+  }
+}
+
+let keeperLine = 0;
+function interactHub(node: number): void {
+  const d = dd(), st = useGameStore.getState();
+  if (d.phase !== 'CLEARED' || world.room.plan.type !== 'GATEKEEPER' || !world.player.alive) return;
+  if (node <= 54) {
+    const g = node - 50;
+    if (gateState.done[g]) { st.addNotification(`${GATES[g].name} is already cleared.`, '#9aa0b4', 'SYSTEM'); return; }
+    beginLeave(gatePlan(g, 0), biome, BOSS_INDEX);
+  } else if (node === 55) {
+    if (gateState.keys >= GATE_KEYS_NEEDED) { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); }   // the Undying Throne
+    else {
+      st.addNotification(`The castle door is sealed: ${GATE_KEYS_NEEDED - gateState.keys} more Gate Key${GATE_KEYS_NEEDED - gateState.keys > 1 ? 's' : ''} needed.`, '#c9a2ff', 'SYSTEM');
+      events.emit('floatText', { pos: world.player.pos, text: `SEALED ${gateState.keys}/${GATE_KEYS_NEEDED}`, color: 0xc9a2ff, scale: 1, dy: 2.4 });
+    }
+  } else {
+    const line = gateState.keys >= GATE_KEYS_NEEDED ? 'The keys are whole. Go, guardian: the castle is open.' : GATEKEEPER_LINES[keeperLine++ % GATEKEEPER_LINES.length];
+    st.addNotification(`The Gatekeeper: "${line}"`, '#c9a2ff', 'SYSTEM');
   }
 }
 

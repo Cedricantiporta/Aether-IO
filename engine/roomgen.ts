@@ -10,6 +10,7 @@ import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint } from './roomShape';
+import { isArenaRoom, buildArena } from './arenaRooms';
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger. */
 export function roomRadius(type: RoomType, seed: number): number {
@@ -50,6 +51,7 @@ const tmpPortal: [number, number] = [0, 0];
 const pickHarvest = (r: number): CrateKind => (r < 0.3 ? 'CRYSTAL' : r < 0.6 ? 'ORE' : r < 0.8 ? 'GOLD_VEIN' : 'HERB');
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number): void {
+  if (runInfo.mode !== 'TOWER' && isArenaRoom(type)) { buildArena(biome, type, R, seed); return; }   // duel ring / gatekeeper courtyard / fountain plaza
   buildShape(type, R, seed);
   const def = biomeOf(biome);
   const rnd = mulberry32(seed);

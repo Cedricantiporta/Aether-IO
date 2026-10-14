@@ -20,6 +20,7 @@ import { Hero } from './Hero';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
 import { Bosses2 } from './Bosses2';
+import { DarkHeroes } from './DarkHero';
 import { BossFx } from './BossFx';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
@@ -92,6 +93,7 @@ export function Scene() {
           <Enemies />
           <Bosses />
           <Bosses2 />
+          <DarkHeroes />
           <BossFx />
           <RoomEvents />
           <Minions />

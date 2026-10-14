@@ -20,6 +20,7 @@ import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
 import type { QualityCfg } from './quality';
+import { SpecialRooms } from './SpecialRooms';
 
 const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
@@ -361,7 +362,7 @@ const ICONS: Record<string, React.ReactNode> = {
   card: <Sparkles size={18} />, coins: <Coins size={18} />, shard: <Diamond size={18} />, gear: <Sword size={18} />, heart: <Heart size={18} />,
   gem: <Gem size={18} />, fountain: <Droplets size={18} />, merchant: <Store size={18} />, chest: <Package size={18} />, shrine: <Flame size={18} />, boss: <Skull size={18} />,
 };
-const TYPE_I: Record<string, number> = { COMBAT: 1, ELITE: 2, MINIBOSS: 3, FOUNTAIN: 4, MERCHANT: 5, TREASURE: 6, SHRINE: 7, CRYSTAL: 6, BOSS: 8 };
+const TYPE_I: Record<string, number> = { COMBAT: 1, ELITE: 2, MINIBOSS: 3, FOUNTAIN: 4, MERCHANT: 5, TREASURE: 6, SHRINE: 7, CRYSTAL: 6, BOSS: 8, CAMP: 9, DUEL: 10, GATEKEEPER: 11 };
 const REW_I: Record<string, number> = { NONE: 0, CARD: 1, GOLD: 2, SHARDS: 3, ITEM: 4, HEAL: 5, GEMS: 6 };
 
 function PortalLabel({ i }: { i: number }) {
@@ -507,6 +508,7 @@ export function Room({ q }: { q: QualityCfg }) {
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : def.propTint} /></Suspense>
       <Stations />
       <CampProps />
+      <SpecialRooms q={q} />
       <Portals />
       <PortalGuides />
       <SpawnMarkers />

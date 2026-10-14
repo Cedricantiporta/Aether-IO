@@ -120,6 +120,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Fire Imp', hp: 70, speed: 5.4, radius: 0.55, scale: 0.9, contactDamage: 11, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xff6a1a, knockResist: 0, armor: 5,
   },
+  DARK_HERO: {   // champion duel (systems/darkHero.ts sets the real hp: ~5x an elite of the depth)
+    name: 'Dark Champion', hp: 130, speed: 4.6, radius: 0.75, scale: 1.2, contactDamage: 15, projectileDamage: 13,
+    xp: 14, gold: 0, cost: 0, minWave: 3, weight: 0, color: 0x8b3dff, knockResist: 0.7, armor: 30,
+  },
 };
 
 export type BossKind =
