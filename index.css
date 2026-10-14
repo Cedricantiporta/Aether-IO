@@ -662,9 +662,11 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .bag-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
 .bag-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem .7rem; background: linear-gradient(#2a180c, #1a0e06); border-top: 2px solid var(--outline); box-shadow: inset 0 2px 0 rgba(255, 220, 150, .15); }
 .rpg-slot.fluid { --slot: 100%; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 0;
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rc) 38%, #121018), #0d0b12 85%);
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rc) 80%, #000), inset 0 0 12px rgba(0, 0, 0, .7), 0 0 0 1.5px var(--outline), 0 0 10px color-mix(in srgb, var(--rc) 45%, transparent); }
-.rpg-slot.fluid.is-empty { background: #14111a; box-shadow: inset 0 0 0 2px #2c2434, inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1.5px var(--outline); }
+  /* same as the equipped slots: dark glass, rarity glow from below, one thin 1px line */
+  background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--rc) 40%, transparent), transparent 70%), linear-gradient(180deg, #24252b, #101115);
+  border: 1px solid color-mix(in srgb, var(--rc) 70%, #707070);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 0 12px rgba(0, 0, 0, .7); }
+.rpg-slot.fluid.is-empty { background: linear-gradient(180deg, rgba(36, 37, 43, .7), rgba(14, 15, 19, .7)); border: 1px solid rgba(214, 186, 122, .18); box-shadow: inset 0 0 12px rgba(0, 0, 0, .7); }
 .rpg-slot.fluid .slot-icon { width: 100%; height: 100%; }
 .rpg-slot.fluid .slot-qty { right: .2rem; bottom: .1rem; min-width: 0; padding: 0; background: none; border: none; font-size: .9rem; line-height: 1.2; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 6px #000; }
 .slot-plus-faint { font-size: 1.8rem; font-weight: 300; color: #3c3446; line-height: 1; }
@@ -1067,11 +1069,12 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 /* item slots: dark glass squares, rarity glow from below */
 .rpg-slot {
   background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--rc) 40%, transparent), transparent 70%), linear-gradient(180deg, #24252b, #101115);
-  border: 1px solid color-mix(in srgb, var(--rc) 60%, #3a3a3a); border-radius: 2px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 12px rgba(0, 0, 0, .7), 0 0 0 1px #000, 0 0 10px color-mix(in srgb, var(--rc) 25%, transparent);
+  /* one thin 1px line, like the equipped slots (user): no inner ring, no outer frame or glow */
+  border: 1px solid color-mix(in srgb, var(--rc) 70%, #707070); border-radius: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 0 12px rgba(0, 0, 0, .7);
 }
 .rpg-slot.is-empty, .rpg-slot.is-dim { background: linear-gradient(180deg, rgba(36, 37, 43, .7), rgba(14, 15, 19, .7)); border-color: rgba(214, 186, 122, .18);
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, .7), 0 0 0 1px #000; }
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .7); }
 button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: inset 0 0 12px rgba(0, 0, 0, .6), 0 0 0 1px var(--gold), 0 0 16px color-mix(in srgb, var(--rc) 60%, transparent); }
 .rpg-slot.is-selected { box-shadow: inset 0 0 12px rgba(0, 0, 0, .6), 0 0 0 2px var(--gold-light), 0 0 16px rgba(243, 223, 166, .5); }
 .rpg-key { background: rgba(10, 10, 12, .9); border: 1px solid #6f5f3e; color: var(--gold-light); border-radius: 2px; }
