@@ -367,6 +367,10 @@ function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, 
   for (let i = 0; i < feat.nb; i++) for (const sd of [-1, 1]) {
     const b = feat.bridgeS[i], hw = hwAt(b) - 0.15;
     for (let ds = feat.bw + 0.6; ds < feat.bw + hw + 1; ds += 0.9) for (let d = -hw + 0.6; d <= hw - 0.6; d += 1.1) {
+      // never on a deck: with two bridges close together one bridge's rows used to reach onto the other's deck
+      let onDeck = false;
+      for (let j = 0; j < feat.nb; j++) if (Math.abs(b + sd * ds - feat.bridgeS[j]) < feat.bw + 0.6) { onDeck = true; break; }
+      if (onDeck) continue;
       riverPoint(b + sd * ds, d, rp);
       colliders.push({ x: rp[0], z: rp[1], r: 0.6, blocksProjectiles: false, liquid: code });
     }
