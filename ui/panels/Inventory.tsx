@@ -19,12 +19,14 @@ import { CoinGlyph } from '../components/SkillIcons';
 const TYPE_RANK: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
 
 /** Paper-doll slot: click to unequip, drag out to the bag, drop a matching bag item on it to equip. */
+const RANK: Record<string, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+
 const DollSlot: React.FC<{ slot: EquipSlot; label: string; item: Item | null; onClick: () => void }> = ({ slot, label, item, onClick }) => {
   const equip = useGameStore((s) => s.equipItem);
   const { hot, props } = useDrop((d) => d.from === 'BAG' && d.item.type.toLowerCase() === slot, (d) => equip(d.item));
   return (
     <div className={`flex flex-col items-center gap-1 drop-zone ${hot ? 'drop-hot' : ''}`} {...props}>
-      <ItemSlot item={item} size="3.5rem" iconSize="82%" fluid={false} onClick={item ? onClick : undefined} emptyLabel={label} tooltip="sell" compare={false} className={item ? '' : 'hoverable'}
+      <ItemSlot item={item} size="var(--cell)" iconSize="78%" fluid={false} onClick={item ? onClick : undefined} emptyLabel={label} tooltip="sell" compare={false} className={item ? '' : 'hoverable'}
         drag={item ? { from: 'EQUIP', item, slot } : null} />
       <span className="rpg-label !text-[.5rem]">{label}</span>
     </div>
@@ -53,9 +55,28 @@ export const InventoryPanel: React.FC = () => {
   const deleteItems = useGameStore((s) => s.deleteItems);
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [delMode, setDelMode] = useState(false);
+  // bulk sell (any shop but the warehouse): pick items, then sell them together; Epic+ gear asks first
+  const [sellMode, setSellMode] = useState(false);
+  const { sellItem, sellItems, sellAllLoot } = useGameStore(useShallow((s) => ({ sellItem: s.sellItem, sellItems: s.sellItems, sellAllLoot: s.sellAllLoot })));
+  const canSell = !!shopTab && shopTab !== 'WAREHOUSE';
   const [delSel, setDelSel] = useState<string[]>([]);
   const toggleDel = (id: string) => setDelSel((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
-  const exitDel = () => { setDelMode(false); setDelSel([]); };
+  const exitDel = () => { setDelMode(false); setSellMode(false); setDelSel([]); };
+  const sellValue = (it: Item) => (it.type === 'LOOT' || it.type === 'SHARD' ? it.price : Math.floor(it.price * 0.3)) * (it.quantity || 1);
+  const bulkSell = () => {
+    const picked = inventory.filter((i) => delSel.includes(i.id));
+    if (!picked.length) return;
+    const go = () => {
+      const stacks = picked.filter((i) => (i.quantity || 1) > 1 || i.type === 'LOOT' || i.type === 'SHARD');
+      const rest = picked.filter((i) => !stacks.includes(i));
+      for (const st of stacks) sellItem(st, st.quantity || 1);
+      if (rest.length) sellItems(rest);
+      exitDel();
+    };
+    const precious = picked.filter((i) => i.type !== 'LOOT' && i.type !== 'SHARD' && RANK[i.rarity] >= 2);
+    if (precious.length) askConfirm({ title: `Sell ${picked.length} item${picked.length > 1 ? 's' : ''}?`, body: `${precious.length} of them ${precious.length > 1 ? 'are' : 'is'} Epic or better (${precious.slice(0, 3).map((i) => i.name).join(', ')}${precious.length > 3 ? '...' : ''}). Sell anyway?`, confirmLabel: 'Sell', tone: 'danger', onConfirm: go });
+    else go();
+  };
   const [sortIdx, setSortIdx] = useState(-1);   // last Sort applied (the bag keeps its manual order otherwise)
   const reorderItems = useGameStore((s) => s.reorderItems);
   const [cat, setCat] = useState<Cat>('ALL');
@@ -71,7 +92,7 @@ export const InventoryPanel: React.FC = () => {
   // the bag accepts equipped items (unequip) and warehouse items (withdraw)
   const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });
   const click = (it: Item) => {
-    if (delMode) { toggleDel(it.id); return; }
+    if (delMode || sellMode) { toggleDel(it.id); return; }
     if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
     if (shopTab === 'BLACKSMITH') { setSelected(it); return; }
     if (shopTab === 'SUPPLIES' || shopTab === 'PETS') { setSell(it); return; }
@@ -137,7 +158,7 @@ export const InventoryPanel: React.FC = () => {
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
                   <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
-                    onClick={() => click(it)} tooltip="sell" drag={delMode ? null : { from: 'BAG', item: it }} className={delMode && delSel.includes(it.id) ? 'is-del' : delMode ? 'del-pick' : ''}>
+                    onClick={() => click(it)} tooltip="sell" drag={delMode || sellMode ? null : { from: 'BAG', item: it }} className={(delMode || sellMode) && delSel.includes(it.id) ? (sellMode ? 'is-sell' : 'is-del') : delMode || sellMode ? 'del-pick' : ''}>
                     {better.has(it.id) && <i className="red-dot" data-testid="item-dot" />}
                   </ItemSlot>
                 </DropCell>
@@ -154,11 +175,17 @@ export const InventoryPanel: React.FC = () => {
           <span className="flex items-center gap-2 rpg-label !text-[.7rem]"><BagGlyph size={22} /> <span className="rpg-num text-white">{inventory.length}/{max}</span>
             <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={16} /><span className="rpg-num">{gold.toLocaleString()}</span></span></span>
           <div className="flex gap-1.5">
-            {delMode ? (<>
+            {sellMode ? (<>
+              <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
+              <button className="rpg-btn rpg-btn-primary rpg-btn-sm" disabled={!delSel.length} data-testid="bag-sell-go" onClick={bulkSell}>
+                Sell ({delSel.length}) · {inventory.filter((i) => delSel.includes(i.id)).reduce((n, i) => n + sellValue(i), 0).toLocaleString()}g</button>
+            </>) : delMode ? (<>
               <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
               <button className="rpg-btn rpg-btn-sm bag-del-go" disabled={!delSel.length} data-testid="bag-del-go"
                 onClick={() => askConfirm({ title: `Delete ${delSel.length} item${delSel.length > 1 ? 's' : ''}?`, body: 'They are destroyed for good (no gold back). Sell them at a shop instead if you want gold.', confirmLabel: 'Delete', tone: 'danger', onConfirm: () => { deleteItems(delSel); exitDel(); } })}>Delete ({delSel.length})</button>
             </>) : (<>
+              {canSell && <button className="rpg-btn rpg-btn-sm" onClick={() => sellAllLoot()} title="Sell every monster loot stack" data-testid="bag-sell-loot">Sell loot</button>}
+              {canSell && <button className="rpg-btn rpg-btn-sm" onClick={() => setSellMode(true)} title="Select items to sell together" data-testid="bag-bulk-sell">Bulk sell</button>}
               <button className="rpg-btn rpg-btn-sm" onClick={() => setDelMode(true)} title="Select items to delete" data-testid="bag-del">Delete</button>
               <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
                 title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>

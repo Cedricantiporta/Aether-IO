@@ -260,12 +260,13 @@ button:disabled { cursor: not-allowed; }
   background:
     radial-gradient(circle at 50% 110%, color-mix(in srgb, var(--rc) 38%, transparent), transparent 70%),
     radial-gradient(circle at 50% 30%, #3b3144 0, #15111a 78%);
-  border: 2px solid var(--outline); border-radius: .3rem;
+  /* one universal slot: sharp square corners, thin borders (user) */
+  border: 1px solid var(--outline); border-radius: 0;
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--rc) 75%, #000),
-    inset 0 0 14px rgba(0, 0, 0, .85),
-    0 0 0 2px #7a5420, 0 0 0 3px var(--outline),
-    0 0 12px color-mix(in srgb, var(--rc) 35%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--rc) 80%, #000),
+    inset 0 0 12px rgba(0, 0, 0, .8),
+    0 0 0 1px #6a4a1c,
+    0 0 8px color-mix(in srgb, var(--rc) 25%, transparent);
   transition: transform .12s, box-shadow .12s, filter .12s;
 }
 .rpg-slot[data-rarity='COMMON'] { --rc: var(--c-common); }
@@ -274,20 +275,20 @@ button:disabled { cursor: not-allowed; }
 .rpg-slot[data-rarity='LEGENDARY'] { --rc: var(--c-legendary); }
 .rpg-slot[data-rarity='MYTHIC'] { --rc: var(--c-mythic); }
 .rpg-slot[data-rarity='LEGENDARY']::before, .rpg-slot[data-rarity='MYTHIC']::before {
-  content: ''; position: absolute; inset: 2px; border-radius: .15rem; pointer-events: none; overflow: hidden;
+  content: ''; position: absolute; inset: 1px; border-radius: 0; pointer-events: none; overflow: hidden;
   /* subtle: a soft static gradient wash of the rarity colour from the top corner (no sweeping shine) */
   background: linear-gradient(145deg, color-mix(in srgb, var(--rc) 30%, transparent) 0%, color-mix(in srgb, var(--rc) 8%, transparent) 45%, transparent 70%);
   opacity: .9;
 }
 @keyframes slot-shimmer { from { background-position: 220% 0; } to { background-position: -120% 0; } }
 button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { transform: translateY(-2px); filter: brightness(1.2); z-index: 5;
-  box-shadow: inset 0 0 0 2px var(--rc), inset 0 0 14px rgba(0, 0, 0, .8), 0 0 0 2px var(--gold), 0 0 0 3px var(--outline), 0 0 18px color-mix(in srgb, var(--rc) 70%, transparent); }
+  box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1px var(--gold), 0 0 12px color-mix(in srgb, var(--rc) 60%, transparent); }
 button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
-.rpg-slot.is-selected { box-shadow: inset 0 0 0 2px var(--rc), inset 0 0 14px rgba(0, 0, 0, .8), 0 0 0 3px var(--gold-light), 0 0 0 4px var(--outline), 0 0 18px rgba(255, 230, 154, .7); }
-.rpg-slot.is-empty { background: radial-gradient(circle at 50% 40%, #241d2b, #0f0c13 80%); box-shadow: inset 0 0 0 2px #4a3a22, inset 0 0 14px rgba(0, 0, 0, .9), 0 0 0 2px #5a4020, 0 0 0 3px var(--outline); }
+.rpg-slot.is-selected { box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 2px var(--gold-light), 0 0 14px rgba(255, 230, 154, .6); }
+.rpg-slot.is-empty { background: radial-gradient(circle at 50% 40%, #241d2b, #0f0c13 80%); box-shadow: inset 0 0 0 1px #4a3a22, inset 0 0 12px rgba(0, 0, 0, .9), 0 0 0 1px #5a4020; }
 .rpg-slot.is-locked > .slot-icon { filter: grayscale(.7) brightness(.7); }
 .rpg-slot.is-dim > .slot-icon { filter: grayscale(.9) brightness(.55); }
-.rpg-slot.is-dim { box-shadow: inset 0 0 0 2px #4a3a22, inset 0 0 14px rgba(0, 0, 0, .9), 0 0 0 2px #5a4020, 0 0 0 3px var(--outline); }
+.rpg-slot.is-dim { box-shadow: inset 0 0 0 1px #4a3a22, inset 0 0 12px rgba(0, 0, 0, .9), 0 0 0 1px #5a4020; }
 .slot-icon { position: relative; z-index: 1; display: grid; place-items: center; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .7)); }
 .slot-qty {
   position: absolute; right: -.15rem; bottom: -.15rem; z-index: 4; min-width: 1.15rem; padding: 0 .25rem; text-align: center;
@@ -400,7 +401,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .mana-lack.on { opacity: 1; }
 
 .slot-shake { animation: slot-shake .32s; }
-.slot-shake::after { content: ''; position: absolute; inset: 0; z-index: 7; border-radius: .2rem; pointer-events: none; background: rgba(220, 30, 30, .45); animation: slot-red .32s forwards; }
+.slot-shake::after { content: ''; position: absolute; inset: 0; z-index: 7; border-radius: 0; pointer-events: none; background: rgba(220, 30, 30, .45); animation: slot-red .32s forwards; }
 @keyframes slot-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
 @keyframes slot-red { to { opacity: 0; } }
 
@@ -658,9 +659,10 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .bag-cat:hover { color: var(--gold-light); }
 .bag-cat.is-active { color: #3b1f04; text-shadow: 0 1px 0 rgba(255, 240, 180, .6); background: linear-gradient(#ffe48a, #e9b949 55%, #b9812e); border-color: var(--outline); box-shadow: inset 0 0 0 1px rgba(255, 250, 210, .7); }
 .bag-cat.is-active svg { color: #5a3408; }
+.rpg-slot.is-sell { outline: 2px solid #ffd24a; outline-offset: -2px; filter: brightness(1.15); }
 .bag-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
 .bag-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem .7rem; background: linear-gradient(#2a180c, #1a0e06); border-top: 2px solid var(--outline); box-shadow: inset 0 2px 0 rgba(255, 220, 150, .15); }
-.rpg-slot.fluid { --slot: 100%; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: .35rem;
+.rpg-slot.fluid { --slot: 100%; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 0;
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rc) 38%, #121018), #0d0b12 85%);
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rc) 80%, #000), inset 0 0 12px rgba(0, 0, 0, .7), 0 0 0 1.5px var(--outline), 0 0 10px color-mix(in srgb, var(--rc) 45%, transparent); }
 .rpg-slot.fluid.is-empty { background: #14111a; box-shadow: inset 0 0 0 2px #2c2434, inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1.5px var(--outline); }
@@ -1805,14 +1807,14 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 }
 
 /* ---- one square slot size everywhere (bag, warehouse, shops, merchant, pet store) ---- */
-:root { --cell: 5.6rem; }
+:root { --cell: 4.2rem; }   /* the universal slot size (bag, shops, equipped, tech, summon lists) */
 .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--cell)); gap: .5rem; justify-content: start; }
 .slot-grid.priced { row-gap: 1.15rem; padding-bottom: 1rem; }
 .slot-grid > * { width: var(--cell); }
 .slot-grid .rpg-slot[data-rarity] { background:
   linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, #1e1a16) 0%, color-mix(in srgb, var(--rc) 14%, #0c0a08) 100%); }
 .slot-grid .rpg-slot[data-rarity='COMMON'] { background: linear-gradient(160deg, #4a4a4c, #26262a); }
-@media (max-width: 640px) { :root { --cell: 4.6rem; } }
+@media (max-width: 640px) { :root { --cell: 3.8rem; } }
 
 /* Summon window: Gem Shop / Tech House panes */
 .sw-shop, .sw-tech { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow-y: auto; padding: .2rem .4rem .6rem; }
@@ -1918,7 +1920,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   box-shadow: 0 0 0 1px #050304, inset 0 0 0 2px #c8962e, inset 0 0 0 3px rgba(5, 3, 4, .9), inset 0 0 14px rgba(0, 0, 0, .7), 0 4px 12px rgba(0, 0, 0, .6); }
 
 /* Tech House upgrades as square slots */
-.tech-slot { position: relative; width: var(--cell); aspect-ratio: 1; border-radius: .35rem; display: grid; place-items: center;
+.tech-slot { position: relative; width: var(--cell); aspect-ratio: 1; border-radius: 0; display: grid; place-items: center;
   background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 26%, #1e1a16), color-mix(in srgb, var(--tc) 8%, #0c0a08));
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tc) 60%, #000), 0 0 0 1.5px #050304; color: var(--tc); }
 .tech-slot.cant { filter: saturate(.6) brightness(.85); }
