@@ -10,7 +10,7 @@ export interface ForgeOutcome { success: boolean; item: Item; title: string; sub
 
 type Phase = 'charge' | 'burst' | 'result';
 
-export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void }> = ({ item, run, onDone }) => {
+export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void; heading?: string }> = ({ item, run, onDone, heading = 'Enhancement Result' }) => {
   const [phase, setPhase] = useState<Phase>('charge');
   const [out, setOut] = useState<ForgeOutcome | null>(null);
   const runRef = useRef(run); runRef.current = run;
@@ -28,7 +28,7 @@ export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onD
       <div className="fc-smoke" /><div className="fc-smoke b" />
       <div className="fc-rays" />
       <div className="fc-sparks">{Array.from({ length: 26 }, (_, i) => <i key={i} style={{ ['--a' as any]: `${(i * 137.5) % 360}deg`, ['--d' as any]: `${(i % 7) * 0.09}s`, ['--r' as any]: `${14 + (i * 7) % 22}rem` }} />)}</div>
-      {phase === 'result' && <div className="fc-heading">{ok ? 'Enhancement Result' : 'Enhancement Result'}</div>}
+      {phase === 'result' && <div className="fc-heading">{heading}</div>}
       <div className="fc-card">
         <div className="fc-card-name">{shown.name}</div>
         <div className="fc-card-art"><ItemSlot item={shown} size="7.5rem" iconSize={64} tooltip="none" compare={false} /></div>
@@ -36,7 +36,7 @@ export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onD
         <div className="fc-card-flash" />
       </div>
       {phase === 'result' && out && (
-        <div className="fc-result">
+        <div className="fc-res">
           <div className="fc-title">{out.title}</div>
           {out.sub && <div className="fc-sub">{out.sub}</div>}
           <div className="fc-tap">Tap to continue</div>

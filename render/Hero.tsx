@@ -161,7 +161,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     let r = 0, gg = 0, bb = 0;
     if (!lobby && alive) {
       if (a.hurtT > 0) { r += a.hurtT * 0.9; gg += a.hurtT * 0.05; }
-      if (p.invulnT > 0 && !dashing) { const k = 0.18 + 0.14 * Math.sin(t * 16); gg += k * 0.8; bb += k; }
+      if (p.invulnT > 0 && !dashing && status === GameStatus.PLAYING) { const k = 0.18 + 0.14 * Math.sin(t * 16); gg += k * 0.8; bb += k; }
       if (p.cryT > 0) { const k = 0.25 + 0.12 * Math.sin(t * 9); r += k * 0.9; gg += k * 0.55; bb += k * 0.1; }
       if (p.titanT > 0) { const k = 0.3 + 0.12 * Math.sin(t * 6); r += k * 0.8; gg += k * 0.35; }
       if (p.rageT > 0) r += 0.28 + 0.12 * Math.sin(t * 12);

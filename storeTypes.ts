@@ -212,7 +212,7 @@ export interface GameState {
   massRecycle: (rarity: Rarity) => void;
   combineMaterials: (from: Rarity) => void;
   downgradeMaterials: (from: Rarity) => void;
-  craftItem: (recipe: Recipe) => Item | null;
+  craftItem: (recipe: Recipe) => { item: Item | null; outcome: import('./crafting').CraftOutcome } | null;   // null = cannot craft (nothing spent)
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll

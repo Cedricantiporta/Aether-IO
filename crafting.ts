@@ -14,6 +14,10 @@ export const CRAFT_RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 
 export const CRAFT_VARIANCE = 0.15;      // +-15% per stat
 export const CRAFT_PLUS1_CHANCE = 0.15;  // 15% -> +1
 export const CRAFT_PLUS2_CHANCE = 0.03;  // 3%  -> +2
+/** Chance a craft succeeds (a failure spends the gold and shards; monster loot is kept). A success that rolls +1/+2 is a
+ *  Great Success. */
+export const CRAFT_SUCCESS: Record<Rarity, number> = { COMMON: 1, RARE: 0.95, EPIC: 0.85, LEGENDARY: 0.75, MYTHIC: 0.65 };
+export type CraftOutcome = 'GREAT' | 'SUCCESS' | 'FAIL';
 
 export interface LootNeed { id: string; count: number }
 export interface Recipe {

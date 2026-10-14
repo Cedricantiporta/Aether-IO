@@ -28,7 +28,7 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
+import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
@@ -1400,15 +1400,17 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const missing = canCraft({ ...s, maxInventorySlots: s.maxInventorySlots }, recipe);
       if (missing.length > 0) { notify(missing[0].kind === 'space' ? 'Inventory Full!' : `Missing: ${missing[0].label}`, 'red', 'WARNING'); return null; }
+      const paid = { gold: s.gold - recipe.gold, materials: { ...s.materials, [recipe.rarity]: s.materials[recipe.rarity] - recipe.shards } };
+      if (Math.random() >= CRAFT_SUCCESS[recipe.rarity]) {   // failed: gold + shards are lost, the monster loot is kept
+        set(paid);
+        events.emit('hub', { kind: 'craft_fail', n: 1 });
+        return { item: null, outcome: 'FAIL' as const };
+      }
       const item = craft(recipe);
-      set({
-        gold: s.gold - recipe.gold,
-        materials: { ...s.materials, [recipe.rarity]: s.materials[recipe.rarity] - recipe.shards },
-        inventory: [...consumeLoot(s.inventory, recipe), item],
-      });
+      set({ ...paid, inventory: [...consumeLoot(s.inventory, recipe), item] });
       notify(`Crafted ${item.name}${item.level > 1 ? ` +${item.level - 1}` : ''}!`, RARITY_COLOR[item.rarity], 'ITEM');
       events.emit('hub', { kind: 'craft', n: 1 });
-      return item;
+      return { item, outcome: item.level > 1 ? 'GREAT' as const : 'SUCCESS' as const };
     },
 
     buyInventorySlots: () => {
