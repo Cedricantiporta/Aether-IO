@@ -491,3 +491,20 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Dead holds the ult cooldown until the whole army has fallen (minions.ts `ultHold`, src 2). Summons +20% HP; warriors
   gain +10% HP and +4% armour (`def`, max 40%) per Raise Dead level and Cleave (2.8 m AoE, 2x damage, every 5 s /
   haste; `skillT`, render spin). Bone Armor (`combat.boneArmorMul`) protects the hero and the minions.
+- River stages (`roomgen.buildRiver`, `roomFeatures.hwAt`): wide meandering sunken channel (floor sinks `SINK` near
+  liquids in Room.tsx), irregular width, 1-2 wide bridges with piers. Debug tab: "Unlock adventure". Active skills
+  auto-learn at their unlock level (`classLevels.autoLearnActives`).
+- Marble Halls = ruined castle interior: flagstone floor + torn crimson carpet (Room.tsx MARBLE), `CASTLEWALL` obstacle
+  (3 variants by id: torch + banner / arched window / collapsed breach, Props.tsx `makeCastleWall`) rings the rooms,
+  grey stone pillars. The user asked for NO water there: river/lake layout weights are 0 (a forced debug layout falls
+  back when the biome's weight is 0).
+- Camp: floating name tags over Storage / Training Post / Campfire (Room.tsx CampProps).
+- Settings > Gameplay > Auto loot: `autoLootGear` (Off / All / Rare+ / Epic+ / Leg.+), `autoLootMaterials`,
+  `autoLootRange` (NEAR grab radius / FAR magnet radius), `autoLootOnClear` (sweep the floor when the room is CLEARED);
+  read in `pickups.ts` `autoLootWants`.
+- Talents cost more deeper down: `TalentNode.cost` = 1 / 1 / 2 / 3 points per rank by row (`TIER_COST`);
+  `talentsSpent` / `branchSpent` are weighted; nodes show a 2P / 3P badge. Tree columns narrowed so it fits the panel.
+- Still open: Gatekeeper + 5 gates and dark-hero champions (WIP in the stopped agent worktree
+  `.claude/worktrees/agent-a1afc4106bafe597b`, uncommitted: engine/arenaRooms.ts, engine/gates.ts,
+  engine/systems/darkHero.ts, render/DarkHero.tsx, render/SpecialRooms.tsx); NPCs in adventure rooms; the
+  "skills don't work after town -> adventure" report (not reproduced, waiting on class / device / input details).

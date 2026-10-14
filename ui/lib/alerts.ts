@@ -5,7 +5,7 @@ import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
 import type { Item, ItemType } from '../../types';
 import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
-import { talentPointsTotal, talentsSpent } from '../../talents';
+import { allocBlock, talentPointsTotal, talentsOf, talentsSpent } from '../../talents';
 import { allClaimed, goalClaimable } from '../../goals';
 
 const KEY = 'aether-survivor-seen-v1';
@@ -57,7 +57,10 @@ export function useCodexAlert(): boolean {
 }
 /** Unspent run skill points / permanent talent points (the dot stays until they are spent). */
 export const useRunSkillAlert = (): boolean => useGameStore((s) => s.skillPoints > 0);
-export const useTalentAlert = (): boolean => useGameStore((s) => talentPointsTotal(s.heroRank) - talentsSpent(s.talents[s.hero]) > 0);
+export const useTalentAlert = (): boolean => useGameStore((s) => {
+  const ranks = s.talents[s.hero], free = talentPointsTotal(s.heroRank) - talentsSpent(ranks);
+  return free > 0 && talentsOf(s.hero).some((n) => allocBlock(n, ranks, free) === null);   // only when something can actually be bought
+});
 export const useSkillAlert = (): boolean => { const a = useRunSkillAlert(), b = useTalentAlert(); return a || b; };
 /** Claimable goal / bonus chest / achievement reward (the dot stays until everything is claimed). */
 export const useGoalsAlert = (): boolean => useGameStore((s) => {

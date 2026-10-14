@@ -21,6 +21,7 @@ export interface TalentNode {
   icon: string;           // 'u:TYPE' (UpgradeArt) or skill icon id
   fx: StatFx;             // per rank
   capstone?: boolean;
+  cost: number;           // talent points per rank (deeper tiers cost more)
 }
 export interface TalentBranch { name: string; blurb: string; color: string }
 
@@ -192,6 +193,9 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
   ],
 };
 
+/** Points per rank by row: the first two tiers 1, the third 2, the capstone 3. */
+const TIER_COST = [1, 1, 2, 3];
+
 export const TALENTS: TalentNode[] = [];
 (Object.keys(DEF) as HeroClass[]).forEach((hero) => {
   DEF[hero].forEach(([pfx, rows], b) => {
@@ -200,7 +204,7 @@ export const TALENTS: TalentNode[] = [];
       TALENTS.push({
         id: `${hero[0].toLowerCase()}_${pfx}${i}`, hero, branch: b as 0 | 1 | 2, row: L.row, x: L.x,
         name: r[0], desc: r[1], max: r[2], icon: r[3], fx: r[4],
-        req: L.req.map((q) => `${hero[0].toLowerCase()}_${pfx}${q}`), capstone: i === 5,
+        req: L.req.map((q) => `${hero[0].toLowerCase()}_${pfx}${q}`), capstone: i === 5, cost: TIER_COST[L.row],
       });
     });
   });
@@ -213,9 +217,9 @@ export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {},
 
 /** 1 point per Hero Rank, +1 bonus every 5 ranks. */
 export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) + Math.floor(rank / 5);
-export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k]; return n; };
+export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
-  talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? ranks[t.id] || 0 : 0), 0);
+  talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? (ranks[t.id] || 0) * t.cost : 0), 0);
 export const CAPSTONE_BRANCH_POINTS = 6;
 export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? (200 + 150 * s) * 10 : 0; };   // x10 economy
 
@@ -224,7 +228,7 @@ export function allocBlock(node: TalentNode, ranks: TalentRanks, free: number): 
   if ((ranks[node.id] || 0) >= node.max) return 'max';
   if (node.req.some((r) => !(ranks[r] > 0))) return 'prereq';
   if (node.capstone && branchSpent(node.hero, node.branch, ranks) < CAPSTONE_BRANCH_POINTS) return 'branch';
-  if (free <= 0) return 'points';
+  if (free < node.cost) return 'points';
   return null;
 }
 
