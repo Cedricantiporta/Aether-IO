@@ -434,7 +434,7 @@ export function killEnemy(e: Enemy): void {
     if (item) { dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5)); spawnPickup('ITEM', dropPos, 0, item); }
   }
 
-  if (Math.random() < 0.03) {
+  if (Math.random() < 0.006) {   // heart drops: -80%
     dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5));
     spawnPickup('HEALTH', dropPos, 20);
   }
