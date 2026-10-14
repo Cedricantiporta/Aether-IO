@@ -93,6 +93,14 @@ export const STORY: StoryStep[] = [
   { id: 'lich', title: 'The Undying', line: 'Defeat Malakar at the end of the Void', npc: '', ending: true, reward: { gold: 5000, gems: 100 } },
 ];
 
+/** Story chapters for the quest window (each starts at a step id and runs to the next chapter). */
+export const CHAPTERS: { id: string; title: string; from: string; blurb: string }[] = [
+  { id: 'pro', title: 'Prologue · The New Guard', from: 'guard', blurb: 'The Font brought you back. Aether needs guards again, and its people are glad to show a newcomer around before the King gives the word.' },
+  { id: 'act1', title: 'Chapter 1 · Trial of the Meadow', from: 'slimes', blurb: 'Beyond the gate the Meadow stirs: slimes grow bold, their king grows fat, and the stone guardian Gorath has woken angry.' },
+  { id: 'act2', title: 'Chapter 2 · The Fallen Guardians', from: 'wren', blurb: 'Malakar\'s stolen light poisons every guardian it touches. One land at a time, the townsfolk send you to set them free.' },
+  { id: 'fin', title: 'Finale · The Undying', from: 'report3', blurb: 'Every guardian is free. Only the Void remains, and the throne Malakar made for himself there.' },
+];
+
 const IDX: Record<string, number> = Object.fromEntries(STORY.map((s, i) => [s.id, i]));
 /** Index of a step id (STORY.length if unknown). */
 export const storyIdx = (id: string): number => IDX[id] ?? STORY.length;

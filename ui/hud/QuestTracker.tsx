@@ -11,7 +11,7 @@ import { walkToQuest, walkToNpcObjective, walkToMain, walkAfterArrive } from '..
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn } from '../../npcQuests';
 
 /** In a run, a quest that is ready to hand in (or a main-quest step that waits on someone in town) offers a trip home. */
-function offerTeleport(then?: () => void): boolean {
+export function offerTeleport(then?: () => void): boolean {
   const st = useGameStore.getState();
   if (st.status !== GameStatus.PLAYING) return false;
   useUiStore.getState().askConfirm({
