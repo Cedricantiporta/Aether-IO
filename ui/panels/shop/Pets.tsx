@@ -47,10 +47,10 @@ export const PetsTab: React.FC = () => {
         {(['SHOP', 'CARE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : 'Pet Care'}</button>)}
       </div>
       {tab === 'CARE' ? <PetCare /> : (<>
-        <div className="pet-grid" data-testid="pet-grid">
+        <div className="pet-grid slot-grid priced" data-testid="pet-grid">
           {PETS_POOL.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>
-              <ItemSlot item={q} fluid iconSize={30} tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
+              <ItemSlot item={q} fluid size="100%" iconSize="78%" tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
                 price={q.summonOnly ? undefined : freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q)} cantAfford={!q.summonOnly && !(freeBlob && q.id === 'pet_blob') && gold < shopPrice(q)}
                 onClick={() => { setSel(q.id); if (!q.summonOnly) setBuy(q, { price: freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q), max: 1 }); }} />
             </div>

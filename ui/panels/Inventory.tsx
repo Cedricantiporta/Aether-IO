@@ -133,7 +133,7 @@ export const InventoryPanel: React.FC = () => {
                 ))}
               </div>
             )}
-            <div className="bag-grid">
+            <div className="bag-grid slot-grid">
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
                   <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}

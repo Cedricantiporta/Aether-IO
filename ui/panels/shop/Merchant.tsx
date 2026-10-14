@@ -12,9 +12,9 @@ export const MerchantTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-4" data-testid="merchant-tab">
       <div className="rpg-label">A wandering trader sets up shop. Prices include a travelling markup; one item is on sale. The stock is gone when you leave the room.</div>
-      <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-9">
+      <div className="rpg-frame p-3 slot-grid priced">
         {items.map((e, i) => (
-          <ItemSlot key={e.item.id} item={e.left > 0 ? e.item : null} size="3.8rem" iconSize={28} price={e.left > 0 ? e.price : undefined}
+          <ItemSlot key={e.item.id} item={e.left > 0 ? e.item : null} fluid size="100%" iconSize="78%" price={e.left > 0 ? e.price : undefined}
             sale={e.sale && e.left > 0 ? 1 - e.price / e.oldPrice : undefined} oldPrice={e.sale ? e.oldPrice : undefined}
             qty={e.left > 1 ? e.left : undefined} cantAfford={gold < e.price} tooltip="buy" compare onClick={e.left > 0 ? () => setBuy(e.item, { price: e.price, max: e.left, onBuy: (n) => { for (let k = 0; k < n && buyMerchant(i); k++); } }) : undefined}
             emptyLabel={e.left <= 0 ? 'Sold' : undefined} />

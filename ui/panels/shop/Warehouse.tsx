@@ -50,7 +50,7 @@ export const WarehouseTab: React.FC = () => {
           <button className="wh-btn pe" disabled={!inv.some(isLoot)} onClick={() => inv.filter(isLoot).forEach((i) => deposit(i.id))} data-testid="wh-deposit-loot">Store all loot</button>
         </div>
       </div>
-      <div className={`wh-grid drop-zone ${drop.hot ? 'drop-hot' : ''}`} data-testid="wh-store" {...drop.props}>
+      <div className={`wh-grid slot-grid drop-zone ${drop.hot ? 'drop-hot' : ''}`} data-testid="wh-store" {...drop.props}>
         {shown.map((it, i) => (
           <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'WAREHOUSE' && d.item.id !== it.id} onDrop={(d) => reorderItems('warehouse', reorder(wh, d.item.id, it.id))}>
             <ItemSlot item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} onClick={() => withdraw(it.id)} drag={{ from: 'WAREHOUSE', item: it }} />

@@ -1802,3 +1802,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   .st-nav { flex-direction: row; width: auto; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(214, 186, 122, .18); padding: 0 0 .4rem; }
   .st-tab span { display: none; }
 }
+
+/* ---- one square slot size everywhere (bag, warehouse, shops, merchant, pet store) ---- */
+:root { --cell: 5.6rem; }
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--cell)); gap: .5rem; justify-content: start; }
+.slot-grid.priced { row-gap: 1.15rem; padding-bottom: 1rem; }
+.slot-grid > * { width: var(--cell); }
+.slot-grid .rpg-slot[data-rarity] { background:
+  linear-gradient(160deg, color-mix(in srgb, var(--rc) 32%, #1e1a16) 0%, color-mix(in srgb, var(--rc) 14%, #0c0a08) 100%); }
+.slot-grid .rpg-slot[data-rarity='COMMON'] { background: linear-gradient(160deg, #4a4a4c, #26262a); }
+@media (max-width: 640px) { :root { --cell: 4.6rem; } }

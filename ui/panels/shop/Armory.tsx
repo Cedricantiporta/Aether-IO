@@ -26,8 +26,8 @@ export const ArmoryTab: React.FC = () => {
       {groups.map(({ k, items }) => (
         <div key={k}>
           <div className="rpg-label mb-2">{SLOT_NAME[k] ?? k}</div>
-          <div className="rpg-frame p-4 flex flex-wrap gap-x-4 gap-y-8">
-            {items.map((it) => <ItemSlot key={it.id} item={it} size="3.8rem" iconSize={28} price={shopPrice(it)} cantAfford={gold < shopPrice(it)} tooltip="buy" compare onClick={() => setBuy(it)} />)}
+          <div className="rpg-frame p-3 slot-grid priced">
+            {items.map((it) => <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={shopPrice(it)} cantAfford={gold < shopPrice(it)} tooltip="buy" compare onClick={() => setBuy(it)} />)}
           </div>
         </div>
       ))}
