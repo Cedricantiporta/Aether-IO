@@ -483,12 +483,12 @@ function TownTrees() {
     for (const t of TOWN_TREES) l[0].push(t);
     return l;
   }, []);
-  const geos = [nat.oak, nat.palm, nat.pineA, nat.pineB];
+  const geos = [nat.park, nat.palm, nat.pineA, nat.pineB];
   return (
     <>
       {lists.map((list, k) => list.length > 0 && (
         <Inst key={k} geo={geos[k]} mat={nat.mat} count={list.length} cast receive fill={(m: InstancedMesh) => {
-          list.forEach((t, i) => { const sc = t.s * 1.2; setInst(m, i, t.x, -0.05, t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc * 0.85, sc * (1.4 + (i % 3) * 0.08), sc * 0.85); });   // tall & round
+          list.forEach((t, i) => { const sc = t.s * 1.75; setInst(m, i, t.x, -0.05, t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc, sc * (1.0 + (i % 3) * 0.08), sc); });   // tall trunk + round crown
         }} />
       ))}
     </>

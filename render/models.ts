@@ -98,13 +98,35 @@ function makeConifer(seed: number, ref: BufferGeometry, cols: [string, string]):
   return geo;
 }
 
-export interface NatureGeos { oak: BufferGeometry; palm: BufferGeometry; pineA: BufferGeometry; pineB: BufferGeometry; mat: MeshStandardMaterial }
+/** Town "park tree": a tall visible trunk (bottom ~half) with two forks and a full round crown on top. Unit height ~1. */
+function makeParkTree(seed: number): BufferGeometry {
+  const rnd = mulberry32(seed);
+  const g = new GB([0.6, 1.12]);
+  const bark = '#6a4a30', bark2 = '#5a3e28';
+  g.cyl(0.035, 0.06, 0.56, 9, [0, 0.28, 0], bark);                    // trunk
+  g.cyl(0.07, 0.085, 0.05, 9, [0, 0.025, 0], bark2);                  // root flare
+  g.cyl(0.018, 0.03, 0.2, 6, [0.06, 0.55, 0.01], bark, [0, 0, -0.7]);  // forks into the crown
+  g.cyl(0.018, 0.03, 0.2, 6, [-0.055, 0.56, -0.02], bark, [0.2, 0, 0.7]);
+  const cols = ['#4f9c3e', '#5fb048', '#78c454'];
+  const clumps: [number, number, number, number][] = [[0, 0.8, 0, 0.21], [0.15, 0.72, 0.05, 0.15], [-0.15, 0.73, -0.03, 0.15], [0.03, 0.7, 0.16, 0.14], [-0.02, 0.71, -0.16, 0.14], [0.02, 0.94, -0.02, 0.14]];
+  clumps.forEach(([x, y, z, r], i) => {
+    const geo = new IcosahedronGeometry(r * (0.94 + rnd() * 0.12), 2);
+    noisify(geo, r * 0.14, 9, seed * 5 + i);
+    g.add(geo, [x, y, z], [rnd(), rnd(), rnd()], [1, 0.9, 1], cols[i === 5 ? 2 : i === 0 ? 1 : 0]);
+  });
+  const geo = g.build();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+export interface NatureGeos { park: BufferGeometry; oak: BufferGeometry; palm: BufferGeometry; pineA: BufferGeometry; pineB: BufferGeometry; mat: MeshStandardMaterial }
 let _nat: NatureGeos | null = null;
 export function useNature(): NatureGeos {
   const oak = useGLTF(TREE_URLS.oak), palm = useGLTF(TREE_URLS.palm), pa = useGLTF(TREE_URLS.pineA), pb = useGLTF(TREE_URLS.pineB);
   return useMemo(() => {
     if (_nat) return _nat;
     _nat = {
+      park: makeParkTree(77),
       oak: makeLeafyTree(11, bake(oak.scene), ['#4c9a3c', '#6cbd48', '#8fd65a']),
       palm: makeLeafyTree(23, bake(palm.scene), ['#3f8a46', '#5aa84c', '#7cc458']),
       pineA: makeConifer(31, bake(pa.scene), ['#2f7a48', '#3f9455']), pineB: makeConifer(47, bake(pb.scene), ['#2a6e44', '#38884f']),
