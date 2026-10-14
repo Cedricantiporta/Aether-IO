@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlayerPlate, Currency, MenuButtons } from './TopBars';
-import { RoomPlaque, RoomFade, BiomeChoice } from './WaveInfo';
+import { RoomPlaque, RoomFade } from './WaveInfo';
 import { BossBar } from './BossBar';
 import { TargetFrame } from './TargetFrame';
 import { Minimap } from './Minimap';
@@ -22,7 +22,6 @@ export const HUD: React.FC = () => {
     <BlindOverlay />
     <Vignettes />
     <RoomFade />
-    <BiomeChoice />
 
     {/* top-left */}
     <div className="absolute hud-tl flex flex-col gap-2" style={{ left: '1.2rem', top: '1rem' }}><VitalBars /><PlayerPlate /></div>

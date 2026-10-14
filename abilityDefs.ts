@@ -42,9 +42,9 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's3', icon: 'STORM_ORBS', name: 'Storm Orbs', mana: 28, cd: 14,
       desc: 'Three lightning orbs orbit you for 4s, zapping nearby enemies with chain lightning that breaks armor.',
       per: (lv) => `${3 + (lv >= 3 ? 1 : 0)} orbs · zap ${pct(1.7 * lvMul(lv))} dmg · chains ${2 + Math.floor(lv / 2)}` },
-    { slot: 's4', icon: 'CHAIN_FROST', name: 'Chain Frost', mana: 32, cd: 11,
-      desc: 'Fire an icy orb that bounces between enemies. Each hit chills (stacking slow); at 4 stacks the target freezes for 1s (bosses stagger instead).',
-      per: (lv) => `${6 + lv} bounces (range 9) · ${pct(3 * lvMul(lv))} dmg per hit · chill 15% slow per stack` },
+    { slot: 's4', icon: 'FIREBALLS', name: 'Fireballs', mana: 30, cd: 9,
+      desc: 'Hurl three fireballs in a narrow fan. Each explodes on the first enemy it hits, splashing nearby foes, setting them ablaze and leaving a short trail of fire.',
+      per: (lv) => `3 x ${pct(2.6 * lvMul(lv))} dmg · burst radius ${f1(3.2 + 0.15 * (lv - 1))} · burn 3s` },
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,

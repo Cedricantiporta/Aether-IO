@@ -196,6 +196,24 @@ function nearestFrom(x: number, z: number, r: number, hit: number[]): number {
 }
 
 /** CHAIN FROST: an icy orb flies to the first target then bounces (6 + level) times, range 9 per jump. */
+/** Wizard skill 3: three fireballs in a narrow fan; each bursts on the first enemy (splash + burn) and leaves a short fire trail. */
+const fbBurn = { type: 'BURN' as const, duration: 3, value: 0 };
+function castFireballs(lv: number, b: number): void {
+  const p = world.player;
+  const dir = getAimDir(aim);
+  const dmg = b * 2.6;
+  fbBurn.value = Math.max(1, dmg * 0.08);
+  for (let i = -1; i <= 1; i++) {
+    const a = i * 0.2, c = Math.cos(a), s2 = Math.sin(a);
+    const vx = dir.x * c - dir.z * s2, vz = dir.x * s2 + dir.z * c;
+    spawnProjectile('FIREBALL', p.pos.x + vx * 1.2, p.pos.z + vz * 1.2, vx, vz, 30, dmg,
+      { life: 0.95, pierce: 0, aoe: 3.2 + 0.15 * (lv - 1), radius: 1.3, knockback: 0.6, y: 1.3, effect: fbBurn });
+  }
+  p.anim.castT = 1;
+  announce('FIREBALLS');
+}
+void castChainFrost;
+
 function castChainFrost(lv: number, b: number): void {
   const p = world.player;
   aimPoint(26, 2, tgt);
@@ -382,7 +400,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       a.orbDmg = b * 1.7;
       announce('STORM_ORBS');
     } else {
-      castChainFrost(lv, b);
+      castFireballs(lv, b);
     }
     return;
   }

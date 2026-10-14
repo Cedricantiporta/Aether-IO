@@ -12,7 +12,7 @@ import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, 
 import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
-import { biomeOf, portalLabel } from '../engine/roomDefs';
+import { BIOMES, biomeOf, portalLabel } from '../engine/roomDefs';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
@@ -254,10 +254,11 @@ const TYPE_I: Record<string, number> = { COMBAT: 1, ELITE: 2, MINIBOSS: 3, FOUNT
 const REW_I: Record<string, number> = { NONE: 0, CARD: 1, GOLD: 2, SHARDS: 3, ITEM: 4, HEAL: 5, GEMS: 6 };
 
 function PortalLabel({ i }: { i: number }) {
-  const sig = useWorldCounter(() => { const p = world.room.portals[i]; return p.active ? TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + 1000 * world.room.version : 0; });
+  const sig = useWorldCounter(() => { const p = world.room.portals[i]; return p.active ? TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + 1000 * world.room.version + (p.big ? 500 : 0) : 0; });
   if (!sig) return null;
   const p = world.room.portals[i];
-  const l = portalLabel(p.plan, world.room.biome);
+  const nb = BIOMES[(world.room.biome + 1) % BIOMES.length];
+  const l = p.big ? { title: 'Next biome', sub: nb.name, icon: 'boss', color: '#f2c14e' } : portalLabel(p.plan, world.room.biome);
   return (
     <Html position={[0, 3.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: l.color }} data-testid={`portal-${i}`}>
@@ -290,12 +291,12 @@ function Portals() {
       g.visible = p.active;
       if (!p.active) { last.current[i] = -1; continue; }
       g.position.set(p.x, 0, p.z);
-      const k = Math.min(1, p.t * 1.6), grow = 1 - (1 - k) * (1 - k);
+      const k = Math.min(1, p.t * (p.big ? 0.8 : 1.6)), grow = (1 - (1 - k) * (1 - k)) * (p.big ? 2.1 : 1);
       g.scale.set(grow, grow, grow);
-      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward];
+      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0);
       if (key !== last.current[i]) {
         last.current[i] = key;
-        const c = portalLabel(p.plan, world.room.biome).color;
+        const c = p.big ? '#f2c14e' : portalLabel(p.plan, world.room.biome).color;
         ringMats[i].color.set(c).multiplyScalar(1.8); discMats[i].color.set(c); floorMats[i].color.set(c);
       }
       const d = discs.current[i];

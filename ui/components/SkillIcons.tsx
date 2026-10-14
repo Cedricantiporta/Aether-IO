@@ -275,6 +275,14 @@ Object.assign(ICONS, {
     <path d="M14 56 L22 46 L30 56 L38 46 L46 56Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
     <path d="M20 22 L34 12 L30 26 L40 24 L26 38 L28 26Z" fill="#ffb0a0" opacity=".9" stroke={S} strokeWidth=".8" strokeLinejoin="round" />
   </Art>,
+  FIREBALLS: (k: string) => <Art k={k} c="#ff6a2a">
+    {[[16, 44, 9], [32, 30, 11], [48, 44, 9]].map(([x, y, r], i) => <g key={i}>
+      <path d={`M${x} ${y + r} Q${x - 4} ${y + r + 12} ${x + 2} ${y + r + 16}`} stroke="#ff8a30" strokeWidth="4" fill="none" opacity=".5" strokeLinecap="round" />
+      <circle cx={x} cy={y} r={r + 3} fill="#ff6a20" opacity=".35" filter={u(k, 'glow')} />
+      <circle cx={x} cy={y} r={r} fill={u(k, 'fire')} stroke={S} strokeWidth="1" />
+      <circle cx={x - r * 0.3} cy={y - r * 0.3} r={r * 0.35} fill="#fff6c0" opacity=".85" />
+    </g>)}
+  </Art>,
   CROSS_SLASH: (k: string) => <Art k={k} c="#ff7a3a">
     <path d="M10 12 Q34 30 54 54" stroke="#ff8a40" strokeWidth="10" fill="none" strokeLinecap="round" opacity=".45" filter={u(k, 'glow')} />
     <path d="M54 12 Q30 30 10 54" stroke="#ff8a40" strokeWidth="10" fill="none" strokeLinecap="round" opacity=".45" filter={u(k, 'glow')} />

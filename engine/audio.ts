@@ -323,6 +323,7 @@ function sfxSkill(name: string): void {
     case 'BLINK_NOVA': tone(1200, 300, 0.2, 0.12, { type: 'sine' }); noise(0.2, 0.1, 6000, 1500, { filter: 'bandpass' }); break;
     case 'STORM_ORBS': tone(220, 880, 0.5, 0.1, { type: 'square', attack: 0.1 }); noise(0.4, 0.1, 3000, 6000, { filter: 'bandpass' }); break;
     case 'CHAIN_FROST': tone(900, 1500, 0.3, 0.1, { type: 'triangle' }); noise(0.3, 0.1, 5000, 9000, { filter: 'highpass' }); break;
+    case 'FIREBALLS': noise(0.35, 0.14, 500, 1800); tone(180, 90, 0.4, 0.1, { type: 'sawtooth' }); break;
     case 'CROSS_SLASH': noise(0.22, 0.16, 2400, 600, { filter: 'bandpass' }); tone(320, 120, 0.25, 0.1, { type: 'sawtooth' }); break;
     case 'BLOODRAGE_LEAP': tone(160, 420, 0.3, 0.14, { type: 'sawtooth' }); noise(0.2, 0.12, 900, 300); break;
     case 'WHIRLWIND': noise(0.9, 0.16, 500, 1500, { filter: 'bandpass', q: 1.2, attack: 0.1 }); tone(200, 320, 0.8, 0.07, { type: 'triangle' }); break;

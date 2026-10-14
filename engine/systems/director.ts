@@ -3,7 +3,7 @@
 //
 //   enterRoom -> FIGHT (telegraphed spawn bursts, or a boss) -> CLEARED (reward + 1..3 exit portals, loot is vacuumed)
 //             -> LEAVING (0.4 s fade out, rebuild, fade in) -> next room ...
-//   boss room: boss dead -> BIOME_DONE (big reward, then the HUD offers "Return to town" or "Descend").
+//   boss room: boss dead -> BIOME_DONE (big reward, then ONE big portal to the next biome opens; no return-to-town).
 //
 // Clear condition is simply "every enemy dead" (no timer, no quota). Depth scaling reuses the old wave formulas:
 // world.director.wave = depthWave(biome, room). Pure engine code; the render layer reads world.room.
@@ -467,7 +467,7 @@ function openPortals(): void {
     const po = r.portals[i];
     if (i >= n) { po.active = false; continue; }
     portalSlot(i, n, r.radius, slot);
-    po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[i];
+    po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[i]; po.big = false;
   }
   events.emit('portalsOpen', {});
 }
@@ -632,6 +632,19 @@ export function updateDirector(dt: number): void {
     phaseClock += dt;
     if (vacuumT > 0) { vacuumT -= dt; vacuumTick = 0; }
     else { vacuumTick -= dt; if (vacuumTick <= 0) { vacuumTick = 0.3; vacuumLoot(); } }
+  }
+  // after a boss: one big portal to the next biome opens (no return-to-town choice); walking in descends
+  if (d.phase === 'BIOME_DONE' && st.status === GameStatus.PLAYING) {
+    const pl = world.player, po = r.portals[0];
+    if (!po.active && d.phaseT > 1.2) {
+      for (const q of r.portals) q.active = false;
+      po.active = true; po.big = true; po.t = 0; po.x = 0; po.z = -r.radius * 0.45; po.plan = { type: 'COMBAT', reward: 'NONE' };
+      events.emit('portalsOpen', {});
+    } else if (po.active && po.big) {
+      po.t += dt;
+      const RR = PORTAL_R * 2;
+      if (po.t >= PORTAL_ARM + 0.6 && r.fade < 0.3 && pl.alive && (po.x - pl.pos.x) ** 2 + (po.z - pl.pos.z) ** 2 < RR * RR) { po.active = false; po.big = false; descend(); }
+    }
   }
   if (d.phase === 'CLEARED') {
     const pl = world.player;

@@ -360,6 +360,7 @@ export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 export interface RoomPortal {
   active: boolean; x: number; z: number; t: number;   // t = seconds since it opened (render grows it)
   plan: RoomPlan;
+  big?: boolean;         // the single large portal to the next biome after a boss
 }
 /** Telegraphed spawn point: a ring fills for `dur` seconds, then the enemy rises. */
 export interface SpawnMarker {

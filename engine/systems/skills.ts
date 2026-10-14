@@ -8,7 +8,7 @@ import { events } from '../events';
 import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
 import {
-  damageEnemy, damageEnemiesInRadius, findNearestEnemy, getAimDir, rollCrit, lastCrit, trySpendMana,
+  damageEnemy, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
@@ -34,6 +34,8 @@ const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
 const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
 const blades: Projectile[] = [];
 const blizzSlow: StatusEffect = { type: 'SLOW', duration: 3, value: 0.7 };
+const blizzFreeze: StatusEffect = { type: 'FREEZE', duration: 1.2 };
+const blizOut: number[] = [];
 const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const bladeOut: number[] = [];
@@ -194,6 +196,16 @@ export function updateSkills(dt: number): void {
         const bR = 16 + stats.blizzardRadius;
         blizzSlow.duration = 3 + stats.blizzFreeze; blizzSlow.value = Math.min(0.85, 0.65 + 0.03 * lv.freezeSpell);
         damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, blizzSlow);
+        // small chance to freeze each normal enemy caught in the blizzard (bosses / mini-bosses immune)
+        const chance = 0.12 + 0.02 * (lv.freezeSpell - 1);
+        const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, bR + 2, blizOut);
+        for (let i = 0; i < ids.length; i++) {
+          const e = world.enemies[ids[i]];
+          if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss || e.mini) continue;
+          if ((e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > bR * bR || Math.random() >= chance) continue;
+          applyStatus(e, blizzFreeze);
+          events.emit('floatText', { pos: e.pos, text: 'FREEZE', color: 0x8fe4ff, scale: 0.7, dy: 0.4 });
+        }
         const z = allocZone();
         if (z) {
           z.active = true; z.kind = 'FROST_NOVA'; z.hostile = false;
