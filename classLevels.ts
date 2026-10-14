@@ -55,8 +55,8 @@ export const freshClass = (hero: HeroClass, base: SkillLevels, lv = 1): ClassPro
 /** One level of class growth on the base stats (same numbers the old run level used). */
 export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
   const base = { ...b, maxHealth: b.maxHealth + 5, maxMana: b.maxMana + 5, damage: b.damage + 1, defense: b.defense + 0.5 };
-  if (hero === 'ARCHER') base.fireRate *= 1.015;
-  else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
+  // (the archer gains no attack speed per level)
+  if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
   else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
   else if (hero === 'NECROMANCER') { base.skillDamage *= 1.025; base.maxMana += 3; base.manaRegen *= 1.015; }
   else if (hero === 'KNIGHT') { base.maxHealth *= 1.025; base.defense += 0.5; base.damage *= 1.012; }
