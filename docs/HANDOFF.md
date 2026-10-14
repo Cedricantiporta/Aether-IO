@@ -569,3 +569,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   a step back (radius + 3.6) so melee heroes aren't inside the model.
 - QA note: kill stale `vite --port 5191` servers before headless runs (`pkill -f "vite --port 5191"`); a stale server
   makes page imports hit a duplicate module copy and setups silently do nothing.
+- Defend the Totem: totem x1.4 with a glowing crystal, point light and a sprite HP bar; monsters target it (even ids or
+  any closer to it than to the hero; their chase step is undone in roomEvents). Death screen: only Return to town.
+  Item containers: `.slot-grid.priced` is the bag-grid template (prices inside the slot, no frames). Boss arenas:
+  `BOSS_ARENA_R` per biome (30..42) and a pillar plan per biome (roomgen PLANS).
