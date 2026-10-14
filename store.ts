@@ -1071,6 +1071,14 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (step === s.story.step && p === s.story.p) return;
       const next = STORY[step];
       set({ story: { step, p } });
+      // finishing a step pays its reward (main quests always pay: gold, gems, items)
+      if (step > s.story.step) for (let k = s.story.step; k < step; k++) {
+        const r = STORY[k]?.reward; if (!r) continue;
+        const now = get();
+        set({ gold: now.gold + (r.gold ?? 0) * GOLD_SCALE, gems: now.gems + (r.gems ?? 0) });
+        for (const it of r.items ?? []) for (const item of makeItemById(it.id, it.qty ?? 1)) if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
+        notify(`Main quest complete: ${STORY[k].title}`, '#f1d58e', 'SYSTEM');
+      }
       if (step !== s.story.step) {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
         else notify('Main story complete!', '#f1d58e', 'SYSTEM');

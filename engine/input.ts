@@ -63,6 +63,9 @@ export function installInput(): () => void {
       case 'KeyI':
         if (inGame) st.toggleInventory();
         break;
+      case 'KeyJ':
+        if (inGame) { const u = useUiStore.getState(); u.openQuestLog(!u.questLogOpen); }
+        break;
       case 'KeyC':
         if (inGame) st.toggleCharacterSheet();
         break;

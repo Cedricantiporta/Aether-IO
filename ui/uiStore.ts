@@ -16,6 +16,8 @@ interface UiState {
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
   goalsOpen: boolean;                   // Goals panel (daily / weekly / achievements)
+  questLogOpen: boolean;                // Quest log (main / NPC / board quests + rewards)
+  openQuestLog: (v: boolean) => void;
   settingsOpen: boolean;
   sellItem: Item | null;
   buyItem: Item | null;
@@ -48,6 +50,8 @@ export const useUiStore = create<UiState>((set) => ({
   recordsOpen: false,
   codexOpen: false,
   goalsOpen: false,
+  questLogOpen: false,
+  openQuestLog: (v) => set({ questLogOpen: v }),
   settingsOpen: false,
   sellItem: null,
   buyItem: null,
@@ -79,7 +83,7 @@ export type { Rarity };
 /** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
 export function uiOverlayOpen(): boolean {
   const s = useUiStore.getState();
-  return s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+  return s.settingsOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
 }
 
 /** Closes the top-most overlay. Returns true if something was closed. */
@@ -93,5 +97,6 @@ export function closeTopOverlay(): boolean {
   if (s.settingsOpen) { s.openSettings(false); return true; }
   if (s.codexOpen) { s.openCodex(false); return true; }
   if (s.goalsOpen) { s.openGoals(false); return true; }
+  if (s.questLogOpen) { s.openQuestLog(false); return true; }
   return false;
 }
