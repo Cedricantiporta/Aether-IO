@@ -75,7 +75,7 @@ export const SETS: SetDef[] = [
     flavour: { weapon: 'swift', helmet: 'light', armor: 'light', gloves: 'light', boots: 'swift', accessory: 'light' },
     bonuses: [
       { pieces: 2, text: '+8% move speed, +5% dodge', fx: { mul: { moveSpeed: 0.08 }, add: { dodge: 0.05 } } },
-      { pieces: 4, text: '+1 dash charge, +5% cooldown reduction', fx: { add: { dashCharges: 1, cooldownReduction: 0.05 } } },
+      { pieces: 4, text: '+10% cooldown reduction', fx: { add: { cooldownReduction: 0.1 } } },
       { pieces: 6, text: '+10% crit rate, +8% dodge, +10% attack speed', fx: { add: { critRate: 0.1, dodge: 0.08 }, mul: { fireRate: 0.1 } } },
     ],
   },

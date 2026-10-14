@@ -51,7 +51,7 @@ export const UNIQUES: { key: string; label: string; stat: AffixDef['stat']; valu
   { key: 'u_haste', label: 'Bloodrush', stat: 'lowHpHaste', value: 0.3, text: '+30% attack speed below 50% HP' },
   { key: 'u_hawk', label: 'Falcon Heart', stat: 'hawkBonus', value: 3, text: "Storm of a Thousand Arrows lasts +3s" },
   { key: 'u_proc', label: 'Resonance', stat: 'procHaste', value: 1, text: 'On-attack procs need 1 fewer attack' },
-  { key: 'u_dash', label: 'Wind Walker', stat: 'dashCharges', value: 1, text: '+1 dash charge' },
+  { key: 'u_dash', label: 'Wind Walker', stat: 'dodge', value: 0.08, text: '+8% dodge' },   // (dashes no longer stack)
   { key: 'u_echo', label: 'Echoing', stat: 'echoEvery', value: 7, text: 'Every 7th attack fires twice' },
 ];
 export const UNIQUE_BY_KEY: Record<string, typeof UNIQUES[number]> = Object.fromEntries(UNIQUES.map((u) => [u.key, u]));

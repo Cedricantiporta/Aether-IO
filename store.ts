@@ -292,10 +292,8 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
     return `Invuln: ${dur}s -> ${ndur}s. CD: ${cd}s -> ${ncd}s.`;
   }
   if (key === 'dash' || (key === 'e' && hero !== 'BARBARIAN')) {
-    const charges = level >= 5 ? 2 : 1, ncharges = nextLvl >= 5 ? 2 : 1;
-    if (level === 0) return 'Unlock: Reduces Dash cooldown.';
-    if (ncharges > charges) return `LEVEL ${nextLvl} UNLOCK: MAX CHARGES +1 (Total 2)!`;
-    return 'Cooldown further reduced.';
+    if (level === 0) return 'Unlock: your dash deals damage.';
+    return 'Dash damage increased.';
   }
   if (level === 0) return 'Unlocks this skill.';
   return 'Improves skill stats & mana cost.';

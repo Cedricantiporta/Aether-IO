@@ -18,8 +18,8 @@ import { envSlow } from './zones';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
 
-/** No class dash ever stacks more than 2 charges (skill level 5, talents and gear included). */
-const MAX_DASH_CHARGES = 2;
+/** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
+const MAX_DASH_CHARGES = 1;
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
@@ -198,10 +198,11 @@ export function updatePlayer(dt: number): void {
   const maxDash = Math.min(MAX_DASH_CHARGES, (dLv >= 5 ? 2 : 1) + (stats.dashCharges | 0));
   if (maxDash > p.maxDashCharges) p.dashCharges += maxDash - p.maxDashCharges;
   p.maxDashCharges = maxDash;
+  if (p.dashCharges > maxDash) p.dashCharges = maxDash;
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = Math.max(0.5, stats.dashCooldown * 0.6 * (1 - 0.08 * Math.max(0, dLv - 1)) * (1 - stats.cooldownReduction)) * (st.hero === 'BARBARIAN' ? 1.2 : 1);   // Bloodrage Leap recharges 20% slower
+  p.dashCdMax = Math.max(0.5, stats.dashCooldown * 0.6 * (1 - stats.cooldownReduction)) * (st.hero === 'BARBARIAN' ? 1.2 : 1);   // (no per-level recharge cut)   // Bloodrage Leap recharges 20% slower
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
