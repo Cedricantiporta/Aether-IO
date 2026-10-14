@@ -11,7 +11,9 @@ import type { SkillLevels } from '../../types';
 import { ACTIVE_ORDER, ACTIVE_KEYS, activeDefs, dashDef, dashKey, ULTS, abilityCd, type ActiveSlot } from '../../abilityDefs';
 import { UltSlot } from './UltSlot';
 
-const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire', 'consecrate'] as const;
+/** Timed passives whose charge slows while moving (skills.ts chargeMul). */
+const STILL_CHARGE = new Set(['freezeSpell', 'storm', 'orbital', 'warcry', 'inspire', 'radiant']);
+const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire', 'consecrate', 'smite', 'radiant'] as const;
 type PKey = typeof PASSIVE_KEYS[number];
 
 const Sep = () => <div className="tray-sep" />;
@@ -66,7 +68,7 @@ export const ActionBar: React.FC = () => {
         return (
           <ActionSlot key={k} id={k} size="4.3rem" active={lvl > 0} level={lvl} icon={<PaintedIcon id={k} />}
             getCd={() => ({ t: pc?.t ?? 0, max: pc?.max ?? 0, hits: pc?.kind === 'hits' })}
-            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [pc.kind === 'hits' ? cdLine('Procs every', `${pc.max} attacks`) : cdLine('Interval', `${pc.max.toFixed(1)}s`), ...(pc.kind === 'time' ? [cdLine('Note', 'Charges faster while standing still')] : [])] : undefined} />} />
+            tooltip={<SimpleTip title={info.name} sub={`Passive · Lv ${lvl}${lvl <= 0 ? ' (locked)' : ''}`} body={info.description} lines={pc && pc.max > 0 ? [pc.kind === 'hits' ? cdLine('Procs every', `${pc.max} attacks`) : cdLine('Interval', `${pc.max.toFixed(1)}s`), ...(pc.kind === 'time' && STILL_CHARGE.has(k) ? [cdLine('Note', 'Charges faster while standing still')] : [])] : undefined} />} />
         );
       })}
       <Sep />

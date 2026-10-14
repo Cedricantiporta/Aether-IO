@@ -337,6 +337,22 @@ Object.assign(ICONS, {
     <path d="M30 18 V44 M21 27 H39" stroke="#ffe08a" strokeWidth="3" strokeLinecap="round" />
     <path d="M52 22 H62 M54 32 H64 M52 42 H60" stroke="#fff3c0" strokeWidth="3" strokeLinecap="round" />
   </Art>,
+  consecrate: (k: string) => <Art k={k} c="#ffe08a">
+    <ellipse cx="32" cy="44" rx="26" ry="10" fill="#ffd76a" opacity=".3" filter={u(k, 'glow')} />
+    <ellipse cx="32" cy="44" rx="24" ry="9" fill="none" stroke={u(k, 'gold')} strokeWidth="3" />
+    <path d="M32 8 V40 M22 18 H42" stroke="#0d0703" strokeWidth="7" strokeLinecap="round" />
+    <path d="M32 8 V40 M22 18 H42" stroke={u(k, 'gold')} strokeWidth="4" strokeLinecap="round" />
+    <path d="M12 34 L8 28 M52 34 L56 28" stroke="#fff3c0" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  smite: (k: string) => <Art k={k} c="#fff3a0">
+    <path d="M36 2 L22 30 H32 L24 58 L46 24 H35 L44 2Z" fill="#fff8d0" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M36 6 L27 27 H35 L29 46" stroke="#ffffff" strokeWidth="1.6" fill="none" />
+    <ellipse cx="28" cy="58" rx="20" ry="4" fill={u(k, 'gold')} opacity=".9" />
+  </Art>,
+  radiant: (k: string) => <Art k={k} c="#ffd76a">
+    <circle cx="32" cy="32" r="9" fill="#fffbe8" stroke={S} strokeWidth="1.4" />
+    {[0, 45, 90, 135, 180, 225, 270, 315].map((d) => <path key={d} transform={`rotate(${d} 32 32)`} d="M24 14 C28 9 36 9 40 14 C36 12 28 12 24 14Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1" />)}
+  </Art>,
   DIVINE_AVATAR: (k: string) => <Art k={k} c="#ffd76a">
     <circle cx="32" cy="32" r="27" fill="#ffd76a" opacity=".28" filter={u(k, 'glow')} />
     <circle cx="32" cy="16" r="9" fill="none" stroke="#fff3c0" strokeWidth="2.6" />

@@ -343,6 +343,9 @@ export function updatePlayerVillage(dt: number): void {
   const k = world.input.keys;
   p.alive = true;
   p.hp = st.stats.maxHealth;
+  // run-only flashes must still fade in town (a level-up / revive light carried back from a run used to stay lit forever)
+  p.levelUpFx = tickDown(p.levelUpFx, dt * 1.2); p.reviveFx = tickDown(p.reviveFx, dt);
+  p.avatarT = 0; p.guardT = 0;
   p.mana = st.stats.maxMana;
   a.hurtT = tickDown(a.hurtT, dt * 3);
   a.attackT = tickDown(a.attackT, dt * 4);

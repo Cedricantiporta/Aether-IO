@@ -129,8 +129,8 @@ export function Projectiles() {
       }
       return cb.build();
     };
-    const slashG = crescent('#e8eef8', '#ffe8a8', '#ffffff', 4.2, 0.42);
-    const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 4.6, 0.6);
+    const slashG = crescent('#d8ecff', '#7fbcff', '#ffffff', 4.2, 0.42);   // white steel, blue edge
+    const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 6.4, 0.85);
     // orbital blade
     const bl = new GB([1, 1]);
     bl.torus(0.62, 0.08, [0, 0, 0], '#8ff4ff', [Math.PI / 2, 0, 0], [1, 1, 0.7], 14, 2.3); bl.torus(0.5, 0.05, [0, 0, 0], '#ffffff', [Math.PI / 2, 0, 0], [1, 1, 0.5], 14, 2.0);
@@ -243,16 +243,16 @@ export function Projectiles() {
         case 'SLASH': {   // a quick sword arc: fades / widens over its short life, mirrored on alternate swings
           const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (0.85 + (1 - life) * 0.35) * (p.radius / 2.5);
           place(ims, i, x, y, z, yaw, 0, p.bounces & 1 ? 0.25 : -0.25, p.bounces & 1 ? -sc : sc, sc, sc);
-          pushHalo(x, y, z, 2.6 * sc, 1.6, 1.5, 1.2, 0.35 * life + 0.1, CELL.GLOW);
-          if (emit && Math.random() < dt * 40) { const o = (Math.random() - 0.5) * 3; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, 0, 0.4, 0, 0.25, 0.3, 0.05, 2.2, 2.0, 1.6, 0.7, CELL.STAR, 0, 0.3); }
+          pushHalo(x, y, z, 2.6 * sc, 1.0, 1.4, 2.2, 0.35 * life + 0.1, CELL.GLOW);
+          if (emit && Math.random() < dt * 40) { const o = (Math.random() - 0.5) * 3; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, 0, 0.4, 0, 0.25, 0.3, 0.05, 1.3, 1.8, 2.5, 0.7, CELL.STAR, 0, 0.3); }
           break;
         }
         case 'HOLY_WAVE': {
-          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.0 + (1 - life) * 0.3) * (p.radius / 2.6);
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (1.0 + (1 - life) * 0.35) * (p.radius / 3.6);
           place(ims, i, x, y, z, yaw, 0, 0, sc);
-          pushHalo(x, y, z, 4.4 * sc, 2.0, 1.7, 0.9, 0.55, CELL.GLOW);
+          pushHalo(x, y, z, 6.2 * sc, 2.0, 1.7, 0.9, 0.6, CELL.GLOW);
           if (emit) {
-            if (Math.random() < dt * 60) { const o = (Math.random() - 0.5) * 4; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 0.35, 0.05, 2.2, 1.9, 1.2, 0.8, CELL.STAR, -0.2, 0.4); }
+            if (Math.random() < dt * 60) { const o = (Math.random() - 0.5) * 6 * sc; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 0.35, 0.05, 2.2, 1.9, 1.2, 0.8, CELL.STAR, -0.2, 0.4); }
           }
           break;
         }

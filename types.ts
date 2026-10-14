@@ -17,7 +17,7 @@ export type UpgradeType =
   'SKILL_ORBITAL' | 'SKILL_THUNDER' | 'SKILL_REGEN' | 'SKILL_MAGNET' |
   'SKILL_DASH' | 'SKILL_WEAPON' | 'SKILL_BARRIER' |
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 
-  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' |
+  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' | 'SKILL_SMITE' | 'SKILL_RADIANT' |
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA';
 
 export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
@@ -167,6 +167,8 @@ export interface SkillLevels {
     warcry: number;  // Barbarian passive: periodic roar, +damage / +defense
     inspire: number; // Archer passive: periodic rally, +attack speed / +damage
     consecrate: number; // Knight passive: holy aura damaging nearby enemies and healing a little
+    smite: number;      // Knight passive: every N sword swings, holy light strikes the target area (damage + stun)
+    radiant: number;    // Knight passive: periodic ring of holy crescents bursting outward
 }
 
 export interface GameNotification {

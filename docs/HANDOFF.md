@@ -166,3 +166,16 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Enemy rosters and bosses still follow `towerBiome(floor)`.
 - The Announcer shows "Endless Tower · Floor N" on every floor (no biome banner).
 - Debug tab: "Hero rank" +1 / +10 / Max rank (99) buttons (`setRank`).
+
+### Dash, prologue slides, Knight passives
+- Dash phases through props, walls and crates (`player.ts` `resolveObstacles`: while `dashT > 0` only the walkable edge clamps; never inside
+  the castle interior). A dash that ends inside a collider is pushed out on the next frame. Normal moves resolve in ≤0.35-unit sub-steps.
+- Prologue (`ui/screens/Story.tsx`) is now slides: one passage per screen. Next/Back, Space/Enter/arrows, progress dots, Skip.
+- The town now fades `levelUpFx` / `reviveFx` and clears `avatarT` / `guardT` (the gold level-up column used to stay lit in town).
+- Knight: sword arcs are white/blue. Holy Wave radius is 3.6 (+0.4/lv) and its crescent mesh is bigger; the Avatar holy wave radius is 3.2.
+- New Knight passives:
+  - `smite`: a hit proc on SLASH via `procFlags.smite`. A holy bolt hits the nearest enemy for 2.4× damage in an area, plus a stun.
+  - `radiant` (Radiant Burst): every 10 s (timed, charges while still), it fires 7+lv HOLY_WAVE crescents in a ring.
+  - Both have cards (`SKILL_SMITE` / `SKILL_RADIANT`) and painted icons (`consecrate`, `smite`, `radiant`).
+- Consecration is an always-on aura, so it shows no cooldown. The "Charges faster while standing still" tooltip note only appears for
+  passives that really use `chargeMul` (`STILL_CHARGE` in ActionBar).

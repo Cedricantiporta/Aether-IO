@@ -415,7 +415,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     if (slot === 'q') {
       // Holy Wave: a wide golden crescent that sweeps forward through everything
       spawnProjectile('HOLY_WAVE', p.pos.x + dx * 1.4, p.pos.z + dz * 1.4, dx, dz, 20, b * 4.4,
-        { life: 0.95, pierce: 999, knockback: 1.6, radius: 2.6 + 0.3 * (lv - 1), y: 1.1 });
+        { life: 0.95, pierce: 999, knockback: 1.6, radius: 3.6 + 0.4 * (lv - 1), y: 1.1 });
       p.anim.attackT = 1; addShake(0.12);
       announce('HOLY_WAVE');
     } else if (slot === 'e') {

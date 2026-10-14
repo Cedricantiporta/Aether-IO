@@ -1,6 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Heart, Wind, Flame, ShieldCheck, Magnet, Star, Target, Snowflake, CloudLightning, Orbit, Tornado, Hammer, Activity, Swords, Megaphone, Sparkles, Sun } from 'lucide-react';
+import { Heart, Wind, Flame, ShieldCheck, Magnet, Star, Target, Snowflake, CloudLightning, Orbit, Tornado, Hammer, Activity, Swords, Megaphone, Sparkles, Sun, Zap } from 'lucide-react';
 import type { Item, Upgrade } from '../../types';
 import { ItemArt } from './ItemArt';
 import { UpgradeArt } from './UpgradeIcons';
@@ -15,7 +15,7 @@ const SKILL_ICON: Record<string, [LucideIcon, string]> = {
   regen: [Heart, '#4ade80'], magnet: [Magnet, '#c58bff'], dash: [Wind, '#6ee7a0'], weapon: [Flame, '#ff9a3c'], barrier: [ShieldCheck, '#ffb347'], special: [Star, '#ffd24a'],
   piercing: [Target, '#9be86a'], burning: [Flame, '#ff6a3c'], freezing: [Snowflake, '#7ee0ff'], thunder: [CloudLightning, '#ffe14a'], gravity: [Orbit, '#b07cff'],
   freezeSpell: [Snowflake, '#7eb8ff'], storm: [Tornado, '#8fa0ff'], orbital: [Activity, '#6ec1ff'], rage: [Swords, '#ff5a4a'], stamp: [Hammer, '#ff9a3c'],
-  orbitalx: [Orbit, '#fff'], warcry: [Megaphone, '#ff6a3c'], inspire: [Sparkles, '#7dffb0'], consecrate: [Sun, '#ffe08a'],
+  orbitalx: [Orbit, '#fff'], warcry: [Megaphone, '#ff6a3c'], inspire: [Sparkles, '#7dffb0'], consecrate: [Sun, '#ffe08a'], smite: [Zap, '#fff3a0'], radiant: [Sparkles, '#ffd76a'],
 };
 const PAINTED_SKILLS = new Set(['GALE_ARROW', 'SHADOW_ROLL', 'FAN_FLAMES', 'FROST_FIELD', 'STORM_ARROWS', 'SINGULARITY', 'BLINK_NOVA', 'STORM_ORBS', 'CHAIN_FROST', 'METEOR_CATA', 'BLOODRAGE_LEAP', 'WHIRLWIND', 'EARTHSPLITTER', 'BATTLE_CRY', 'TITAN_WRATH', 'piercing', 'burning', 'freezing', 'thunder', 'stamp', 'dash']);
 export const SkillIcon: React.FC<{ id: string; size?: number; dim?: boolean }> = ({ id, size = 26, dim }) => {

@@ -78,7 +78,7 @@ export function spawnProjectile(
 
 // ------------------------------------------------------------ proc system --
 /** Per-run on-attack proc state. Reset by resetProcs() on startRun. */
-export const procFlags = { stomp: 0 };   // set to skill level by the basic attack; consumed by skills.ts
+export const procFlags = { stomp: 0, smite: 0 };   // set to skill level by the basic attack; consumed by skills.ts
 let procCount = 0;                       // volleys since the last proc
 let archerNext = 0;                      // 0 = fire next, 1 = ice next
 
@@ -86,7 +86,7 @@ let procHaste = 0;
 let echoCount = 0;
 const procN = (lv: number): number => Math.max(6, 13 - lv - procHaste);
 
-export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; echoCount = 0; }
+export function resetProcs(): void { procCount = 0; archerNext = 0; procFlags.stomp = 0; procFlags.smite = 0; echoCount = 0; }
 
 /** HUD: attacks remaining until `skill` procs (0 when locked / not a proc skill of this hero). */
 export function procHud(skill: string, out: { t: number; max: number }): void {
@@ -110,6 +110,8 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
     n = procN(lv.thunder); left = n - procCount;
   } else if (st.hero === 'BARBARIAN' && skill === 'stamp' && lv.stamp > 0) {
     n = procN(lv.stamp); left = n - procCount;
+  } else if (st.hero === 'KNIGHT' && skill === 'smite' && lv.smite > 0) {
+    n = procN(lv.smite); left = n - procCount;
   } else { out.t = 0; out.max = 0; return; }
   out.t = left > 0 ? left : 0; out.max = n;
 }
@@ -201,6 +203,8 @@ export function fireBasicAttack(): void {
     if (procCount >= procN(lv.thunder)) { procCount = 0; thunderProc = lv.thunder; }
   } else if (hero === 'BARBARIAN' && kind === 'AXE' && lv.stamp > 0) {
     if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
+  } else if (hero === 'KNIGHT' && kind === 'SLASH' && lv.smite > 0) {
+    if (procCount >= procN(lv.smite)) { procCount = 0; procFlags.smite = lv.smite; }
   }
 
   const emp = false;
@@ -252,7 +256,7 @@ export function fireBasicAttack(): void {
   }
   // Divine Avatar: every sword swing also releases a Holy Wave
   if (kind === 'SLASH' && pl.avatarT > 0) {
-    spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 2.4, y: 1.1 });
+    spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 3.2, y: 1.1 });
   }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });

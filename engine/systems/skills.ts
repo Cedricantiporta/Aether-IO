@@ -28,7 +28,9 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
   orbital: { t: 0, max: 2, kind: 'time' },
   warcry: { t: 0, max: 12, kind: 'time' },
   inspire: { t: 0, max: 12, kind: 'time' },
-  consecrate: { t: 0, max: 1, kind: 'time' },
+  consecrate: { t: 0, max: 0, kind: 'time' },   // always-on aura: no cooldown shown
+  smite: { t: 0, max: 10, kind: 'hits' },
+  radiant: { t: 0, max: 10, kind: 'time' },
 };
 
 const aim = new Vector3();
@@ -43,13 +45,13 @@ const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const bladeOut: number[] = [];
 
-let blizzT = 0, stormT = 0, rallyT = 0, auraT = 0;
+let blizzT = 0, stormT = 0, rallyT = 0, auraT = 0, radT = 0;
 const auraOut: number[] = [];
 const holyAuraOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = rallyT = auraT = 0; stormZones[0] = stormZones[1] = null;
+  blizzT = stormT = rallyT = auraT = radT = 0; stormZones[0] = stormZones[1] = null;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -74,6 +76,33 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
       events.emit('projectileImpact', { pos: b.pos, kind: 'ENEMY' });
     }
   }
+}
+
+const smiteOut: number[] = [];
+const smiteOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
+const smiteStun: StatusEffect = { type: 'STUN', duration: 0.6 };
+const smiteFrom = new Vector3(), smiteAt = new Vector3();
+/** SMITE (knight proc): holy light strikes the nearest enemy (or ahead): area damage + a short stun. */
+function smite(level: number): void {
+  const pl = world.player, st = useGameStore.getState().stats;
+  const t = findNearestEnemy(pl.pos.x, pl.pos.z, 14);
+  if (t) smiteAt.set(t.pos.x, 0, t.pos.z);
+  else { getAimDir(aim); smiteAt.set(pl.pos.x + aim.x * 5, 0, pl.pos.z + aim.z * 5); }
+  const R = 3.2 + 0.3 * (level - 1), dmg = st.damage * 2.4 * st.skillDamage * lvScale(level);
+  smiteStun.duration = 0.6 + 0.1 * (level - 1);
+  const ids = world.enemyGrid.query(smiteAt.x, smiteAt.z, R + 2, smiteOut);
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
+    if ((e.pos.x - smiteAt.x) ** 2 + (e.pos.z - smiteAt.z) ** 2 > (R + e.radius) ** 2) continue;
+    damageEnemy(e, dmg, smiteOpts); applyStatus(e, smiteStun);
+  }
+  smiteFrom.set(smiteAt.x, 16, smiteAt.z);
+  events.emit('lightning', { from: smiteFrom.clone(), to: smiteAt.clone() });
+  events.emit('crater', { pos: smiteAt.clone(), radius: R, color: 0xffe08a });
+  events.emit('shockwave', { pos: smiteAt.clone(), radius: R, color: 0xfff3c0 });
+  events.emit('floatText', { pos: smiteAt.clone(), text: 'SMITE!', color: 0xfff3a0, scale: 0.9, dy: 2 });
+  events.emit('shake', { amount: 0.15 });
 }
 
 /** AXE STORM: 3 giant spinning axes in a ~40 degree fan; each ricochets off the first enemy / obstacle toward the next enemy. */
@@ -189,7 +218,7 @@ export function updateSkills(dt: number): void {
   const chargeMul = pl.vel.x * pl.vel.x + pl.vel.z * pl.vel.z > 0.25 || pl.dashT > 0 ? 0.3 : 1;
 
   // On-attack procs: HUD counters (logic lives in projectiles.fireBasicAttack).
-  for (const k of ['burning', 'freezing', 'thunder', 'stamp'] as const) procHud(k, passiveCooldowns[k]);
+  for (const k of ['burning', 'freezing', 'thunder', 'stamp', 'smite'] as const) procHud(k, passiveCooldowns[k]);
 
   if (lv.freezeSpell > 0) {
     blizzT += dt * chargeMul;
@@ -225,7 +254,6 @@ export function updateSkills(dt: number): void {
   // Consecration (knight): a holy aura burns nearby enemies once a second and heals a little per enemy hit
   if (lv.consecrate > 0) {
     auraT += dt;
-    setCd('consecrate', 1 - auraT, 1);
     if (auraT >= 1) {
       auraT = 0;
       const R = 4.5 + 0.4 * (lv.consecrate - 1);
@@ -241,6 +269,26 @@ export function updateSkills(dt: number): void {
       if (hits > 0) {
         healPlayer(stats.maxHealth * 0.004 * Math.min(hits, 5));
         events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xffe08a });
+      }
+    }
+  }
+
+  // Radiant Burst (knight): a ring of holy crescents every 10 s while enemies are near
+  if (lv.radiant > 0) {
+    const max = 10 * cdrMul();
+    radT += dt * chargeMul;
+    setCd('radiant', max - radT, max);
+    if (radT >= max) {
+      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 22)) radT = max;
+      else {
+        radT = 0;
+        const n = 7 + lv.radiant, dmg = stats.damage * 1.6 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
+        for (let i = 0; i < n; i++) {
+          const a = a0 + (i / n) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
+          spawnProjectile('HOLY_WAVE', pl.pos.x + dx * 1.2, pl.pos.z + dz * 1.2, dx, dz, 16, dmg, { life: 0.75, pierce: 999, knockback: 1, radius: 2.2, y: 1.1 });
+        }
+        events.emit('shockwave', { pos: pl.pos.clone(), radius: 5, color: 0xffe08a });
+        pl.anim.castT = 1;
       }
     }
   }
@@ -310,6 +358,7 @@ export function updateSkills(dt: number): void {
 
   // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).
   if (procFlags.stomp > 0) { const l = procFlags.stomp; procFlags.stomp = 0; axeStorm(l); }
+  if (procFlags.smite > 0) { const l = procFlags.smite; procFlags.smite = 0; smite(l); }
 
   if (lv.orbital > 0) updateOrbitals(dt, lv.orbital, chargeMul);
 }
