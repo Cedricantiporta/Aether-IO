@@ -49,6 +49,8 @@ export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 export const HOUSES: HouseSpec[] = [
   // flanking the castle
   H(-17.5, -31, 0, 5.0, 4.4, 2), H(17.5, -31, 0, 5.0, 4.4),
+  // where the old summoning shrine stood (north street, door facing the street)
+  H(-17, -14, 0, 5.0, 4.4),
   // south of the east-west street, doors facing the street
   H(-13, 17.5, Math.PI, 4.6, 4.0), H(13, 17.5, Math.PI, 4.8, 4.2, 2),
   // along the road to the gate
