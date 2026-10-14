@@ -7,7 +7,7 @@
 // Coordinates are world x / z. A building's door faces +z at rot = 0 (facing vector = (sin rot, cos rot)).
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
-//   spawn / plaza (0, 2) -> north: Quest Board (0,-17), Altar (-17,-13), Skill Trainer (17,-13)
+//   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Altar (-17,-13), Skill Trainer (17,-13)
 //   west Potion Shop (-27, 2), east Blacksmith (27, 2), south-east Pet Stable (24, 22), gate (0, 38) at the end of the
 //   main road. Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
@@ -83,7 +83,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // pet stable lane
   { x1: -28.4, z1: 10, x2: -28.4, z2: 4.5, w: ROAD_W.branch },   // potion shop door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
-  { x1: 0, z1: -6, x2: 0, z2: -15.6, w: ROAD_W.branch },         // quest board
+  { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
+  { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: -17, z1: -6, x2: -17, z2: -10.6, w: ROAD_W.branch },     // summoning altar
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
@@ -149,7 +150,7 @@ export const PLANTERS: PlanterSpec[] = [
   { x: -14.5, z: 7.0, w: 3.2, d: 1.0, kind: 0 }, { x: 14.5, z: 7.0, w: 3.2, d: 1.0, kind: 1 },
   { x: -22, z: 13.4, w: 3.2, d: 1.0, kind: 1 }, { x: 22, z: 13.4, w: 3.2, d: 1.0, kind: 0 },
   // north street + quest board path
-  { x: -8, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 8, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
+  { x: -11.5, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 11.5, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
   { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 0 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
   // pet lane
   { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },

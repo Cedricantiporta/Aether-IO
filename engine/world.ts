@@ -22,7 +22,7 @@ export const MAX_FX = 420;
 export const MAX_CRATES = 96;
 export const SHRINE_POS: [number, number, number] = [-17, 0, -13]; // summoning shrine
 export const TRAINER_POS: [number, number, number] = [17, 0, -13]; // skill trainer
-export const QUEST_POS: [number, number, number] = [0, 0, -17]; // quest giver + notice board
+export const QUEST_POS: [number, number, number] = [7.5, 0, -13]; // quest giver + notice board (beside the castle path)
 
 const v = () => new Vector3();
 

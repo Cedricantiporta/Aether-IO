@@ -552,8 +552,6 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       ))}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
       <sprite ref={sprite} material={label.mat} position={[GATE.x, 11.2, GATE.z]} scale={[label.aspect * 1.2, 1.2, 1]} />
-      <sprite material={label2.mat} position={[GATE.x, 5.15, GATE.z + 1.5]} scale={[label2.aspect * 1.0, 1.0, 1]} />
-      <sprite material={label3.mat} position={[GATE.x, 9.6, GATE.z + 1.2]} scale={[label3.aspect * 0.6, 0.6, 1]} />
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>
       {SIGNS.map((sg, i) => <sprite key={i} material={signLabel.mat} position={[sg.x, 4.9, sg.z + 0.3]} scale={[signLabel.aspect * 0.6, 0.6, 1]} />)}
     </group>
