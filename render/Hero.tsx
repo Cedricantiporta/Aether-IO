@@ -21,13 +21,13 @@ import { QualityCfg } from './quality';
 import { attachGear } from './gear';
 import { useUiStore } from '../ui/uiStore';
 
-const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT' };
-const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a, KNIGHT: 0xffe08a };
+const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
+const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a, KNIGHT: 0xffe08a, NECROMANCER: 0xb08aff };
 
 const _col = new Color();
 
 function buildWeapon(cls: HeroClass, accent: string, tier: number): WeaponGeo {
-  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' ? makeStaff(accent, tier) : cls === 'KNIGHT' ? makeSword(accent, tier) : makeAxe(accent, tier);
+  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(cls === 'NECROMANCER' ? '#7a4ad0' : accent, tier) : cls === 'KNIGHT' ? makeSword(accent, tier) : makeAxe(accent, tier);
 }
 
 function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {

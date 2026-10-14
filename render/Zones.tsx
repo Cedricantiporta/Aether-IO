@@ -15,9 +15,9 @@ import { inView } from './view';
 
 const MAXZ = 192;
 const TYPE: Record<ZoneKind, number> = { TELEGRAPH_CIRCLE: 0, TELEGRAPH_LINE: 1, TELEGRAPH_CONE: 11, FIRE: 2, BLACKHOLE: 3, FROST_NOVA: 4, POISON_POOL: 5, SHOCKWAVE: 6, PUDDLE: 7, GAS: 8, WILDFIRE: 9, TORNADO: 3, FROST_FIELD: 4, METEOR_SHADOW: 0,
-  FIREPATCH: 9, GOO: 10, CALTROPS: 10, ACID: 10, PLAGUE: 10, SMOKE: 10 };
+  FIREPATCH: 9, GOO: 10, CALTROPS: 10, ACID: 10, PLAGUE: 10, SMOKE: 10, CURSE: 10 };
 // sub-style of the generic hostile patch shader (vP.w)
-const PATCH_STYLE: Partial<Record<ZoneKind, number>> = { GOO: 0, CALTROPS: 1, ACID: 2, PLAGUE: 3, SMOKE: 4 };
+const PATCH_STYLE: Partial<Record<ZoneKind, number>> = { GOO: 0, CALTROPS: 1, ACID: 2, PLAGUE: 3, SMOKE: 4, CURSE: 3 };
 const PAD = 1.25;
 
 const VS = `attribute vec4 iP; attribute vec3 iC; varying vec2 vQ; varying vec4 vP; varying vec3 vC; varying vec2 vS;
@@ -219,7 +219,7 @@ export function Zones() {
         }
         case 'TELEGRAPH_CONE': aux = z.aux; break; // half-angle; the cone spans the zone radius (range) on both axes
         case 'FIRE': case 'WILDFIRE': case 'FIREPATCH': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.2, 0, 1); break;
-        case 'GOO': case 'CALTROPS': case 'ACID': case 'PLAGUE': case 'SMOKE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.1, 0, 1); break;
+        case 'GOO': case 'CALTROPS': case 'ACID': case 'PLAGUE': case 'SMOKE': case 'CURSE': aux = clamp(frac * 4, 0, 1) * clamp((1 - frac) * 8 + 0.1, 0, 1); break;
         case 'BLACKHOLE': case 'TORNADO': aux = clamp((1 - frac) * 6, 0, 1) * clamp(frac * 5, 0, 1); break;
         case 'FROST_FIELD': aux = clamp(frac * 3, 0, 1); break;
         case 'FROST_NOVA': aux = clamp(frac * 3, 0, 1); break;
@@ -287,8 +287,9 @@ export function Zones() {
           }
           break;
         }
-        case 'ACID': case 'PLAGUE': case 'GOO':
+        case 'ACID': case 'PLAGUE': case 'GOO': case 'CURSE':
           if (aux > 0.3 && rnd() < dt * (4 + R * 2)) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.8; FX.add.emit(z.pos.x + Math.cos(a) * d, 0.15, z.pos.z + Math.sin(a) * d, 0, 0.8 + rnd(), 0, 0.9, 0.2, 0.05, z.kind === 'GOO' ? 0.8 : 0.9, z.kind === 'GOO' ? 1.5 : 1.7, 0.3, 0.7, CELL.RING, 0, 0.4); }
+          if (z.kind === 'CURSE' && rnd() < dt * 6) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.5, z.pos.z + (rnd() - 0.5) * R, 1, 0x6a3a9a, 1.8, 1.4, 0.8, 0.5, 0.3);
           if (z.kind === 'PLAGUE' && rnd() < dt * 5) smokePuff(z.pos.x + (rnd() - 0.5) * R, 0.6, z.pos.z + (rnd() - 0.5) * R, 1, 0x7a9a3a, 1.8, 1.4, 0.8, 0.5, 0.3);
           break;
         case 'SMOKE':

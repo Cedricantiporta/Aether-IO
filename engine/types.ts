@@ -109,7 +109,8 @@ export interface Enemy {
 export type ProjectileKind =
   | 'ARROW' | 'MAGIC' | 'AXE' | 'SLASH' | 'HOLY_WAVE'
   | 'FIREBALL' | 'PIERCING_ARROW' | 'BURNING_ARROW' | 'FREEZING_ARROW'
-  | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW' | 'X_SLASH';
+  | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW' | 'X_SLASH'
+  | 'SOUL_BOLT' | 'BONE_SPEAR';   // necromancer basic attack / Bone Spear
 
 export interface Projectile {
   id: number;
@@ -156,6 +157,7 @@ export interface EnemyProjectile {
 // --------------------------------------------------------------- ground zones --
 // Persistent area effects: player fire trail, black hole, telegraphs, etc.
 export type ZoneKind =
+  | 'CURSE'             // player (necromancer): rot damage + slow, the fallen rise as skeletons
   | 'FIRE'              // player: burns enemies inside
   | 'BLACKHOLE'         // player: pulls up to maxPull enemies, explodes at end
   | 'FROST_NOVA'        // player blizzard visual + slow field

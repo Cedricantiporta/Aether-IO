@@ -10,19 +10,21 @@ import { DIFFICULTY_MODS } from '../../constants';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
 import { HERO_ICON } from '../hud/TopBars';
 
-const ROLE: Record<HeroClass, string> = { ARCHER: 'Ranged  |  Damage', WIZARD: 'Ranged  |  Magic', BARBARIAN: 'Melee  |  Defense', KNIGHT: 'Melee  |  Tank' };
+const ROLE: Record<HeroClass, string> = { ARCHER: 'Ranged  |  Damage', WIZARD: 'Ranged  |  Magic', BARBARIAN: 'Melee  |  Defense', KNIGHT: 'Melee  |  Tank', NECROMANCER: 'Ranged  |  Summoner' };
 const BLURB: Record<HeroClass, string> = {
   ARCHER: 'A swift marksman who looses arrows on the run and never stops moving.',
   WIZARD: 'A master of the arcane who bends fire, ice and gravity to clear the field.',
   BARBARIAN: 'An unbreakable warrior who wades into the horde and laughs at pain.',
   KNIGHT: 'A sworn guardian in plate who cuts wide arcs of steel and calls down holy light.',
+  NECROMANCER: 'A grave-robbing scholar who raises skeletons, curses the ground and drains souls.',
 };
-const COMPLEXITY: Record<HeroClass, number> = { ARCHER: 2, WIZARD: 3, BARBARIAN: 1, KNIGHT: 2 };
+const COMPLEXITY: Record<HeroClass, number> = { ARCHER: 2, WIZARD: 3, BARBARIAN: 1, KNIGHT: 2, NECROMANCER: 3 };
 const PROFILE: Record<HeroClass, [string, number][]> = {
   ARCHER: [['Attack', 4], ['Defense', 1], ['Range', 5], ['Mobility', 5], ['Control', 2]],
   WIZARD: [['Attack', 5], ['Defense', 1], ['Range', 4], ['Mobility', 2], ['Control', 5]],
   BARBARIAN: [['Attack', 4], ['Defense', 5], ['Range', 1], ['Mobility', 3], ['Control', 3]],
   KNIGHT: [['Attack', 3], ['Defense', 5], ['Range', 2], ['Mobility', 3], ['Control', 4]],
+  NECROMANCER: [['Attack', 4], ['Defense', 2], ['Range', 4], ['Mobility', 2], ['Control', 4]],
 };
 const DIFFS: Difficulty[] = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
 

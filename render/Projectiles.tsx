@@ -149,6 +149,11 @@ export function Projectiles() {
     const slashGoldG = crescent('#fff6d8', '#ffd76a', '#ffffff', 4.2, 0.48);   // Divine Avatar swing: gold / white
     const slashRedG = crescent('#ffd0d0', '#ff3a3a', '#ffffff', 4.2, 0.46);   // Legendary sword: crimson
     const slashDarkG = crescent('#3a2440', '#0c060e', '#c060ff', 4.2, 0.48);  // Mythic sword: black with a violet edge
+    // Bone Spear: a long jagged spear of bone
+    const bs = new GB([0.85, 1.1]);
+    bs.cyl(0.13, 0.18, 3.6, 6, [0, 0, -0.6], '#ebe5d0', [Math.PI / 2, 0, 0]); bs.cone(0.26, 1.3, 6, [0, 0, 1.75], '#f4efe0', [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 5; i++) { const a = i * 2.4; bs.cone(0.08, 0.5, 4, [Math.sin(a) * 0.16, Math.cos(a) * 0.16, -1.6 + i * 0.6], '#d8d0b8', [Math.PI / 2 + 0.6, 0, a]); }
+    const boneSpearG = bs.build();
     const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 6.4, 0.85);
     // orbital blade
     const bl = new GB([1, 1]);
@@ -177,6 +182,8 @@ export function Projectiles() {
       STORM: mk([[tornA, tornMat], [tornB, tornMat]], 100),
       ORBITAL_BLADE: mk([[bl.build(), glow], [blB, lit]], 100),
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
+      SOUL_BOLT: mk([[orbG(0.22, '#a86bff', '#d8ffd0'), glow]], MAXP),   // necromancer: a violet soul with a pale green core
+      BONE_SPEAR: mk([[boneSpearG, lit]], 40),
       X_SLASH: mk([[xs.build(), glow]], 40),
       SLASH: mk([[slashG, glow]], 120),
       SLASH_GOLD: mk([[slashGoldG, glow]], 80),
@@ -363,8 +370,19 @@ export function Projectiles() {
           if (emit) FX.add.emit(x, y, z, 0, 0, 0, 0.2, 1.1, 0.2, 0.3, 1.5, 2.0, 0.5, CELL.GLOW);
           break;
         }
+        case 'SOUL_BOLT':
+          place(ims, i, x, y, z, yaw, pitch, t * 7 + n, p.radius / 1.2);
+          pushHalo(x, y, z, 1.5 * (p.radius / 1.2), 1.3, 0.5, 2.2, 0.55, CELL.GLOW);
+          if (emit && Math.random() < dt * 40) FX.add.emit(x, y, z, (Math.random() - 0.5), 0.4, (Math.random() - 0.5), 0.4, 0.25, 0.04, 0.8, 1.9, 0.9, 0.8, CELL.STAR, 0, 1, 0, 3);
+          break;
+        case 'BONE_SPEAR':
+          place(ims, i, x, y, z, yaw, pitch, t * 4, 1.3);
+          pushHalo(x, y, z, 2.2, 1.4, 1.2, 1.9, 0.35, CELL.GLOW);
+          if (emit && Math.random() < dt * 30) FX.norm.emit(x, 0.3, z, (Math.random() - 0.5) * 3, 1.5, (Math.random() - 0.5) * 3, 0.5, 0.4, 0.1, 0.9, 0.88, 0.8, 0.6, CELL.SMOKE);
+          break;
         case 'PET_BOLT':
           place(ims, i, x, y, z, yaw, pitch, t * 8, 1);
+          if (p.tint === 9) { pushHalo(x, y, z, 1.2, 1.2, 0.5, 2.2, 0.55, CELL.GLOW); break; }   // skeleton mage bolt
           pushHalo(x, y, z, 1.0, 1.6, 1.0, 0.7, 0.55, CELL.GLOW);
           if (emit && Math.random() < dt * 30) FX.add.emit(x, y, z, 0, 0.3, 0, 0.35, 0.2, 0.03, 2.0, 1.3, 0.8, 0.8, CELL.STAR, 0, 1, 0, 3);
           break;

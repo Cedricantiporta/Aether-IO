@@ -57,6 +57,20 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Cleave a fissure that erupts in a line of stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${34 + 2 * (lv - 1)} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
+  NECROMANCER: [
+    { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 10,
+      desc: 'Skeleton warriors claw out of the ground around you and hunt the nearest enemies. They crumble after a while.',
+      per: (lv) => `${2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0)} skeletons · ${pct(0.9 * lvMul(lv))} dmg per hit · ${14 + lv}s` },
+    { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
+      desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
+      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
+    { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
+      desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
+      per: (lv) => `${pct(4.5 * lvMul(lv))} dmg · pierces all · slow 40%` },
+    { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 12,
+      desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and anything that dies there rises as a skeleton for you.',
+      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · up to ${2 + Math.floor(lv / 2)} risen` },
+  ],
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
@@ -72,11 +86,11 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
 
 /** Active slot bound to keys 1, 2, 3 (per class). Archer/Wizard keep their old E in the dash; the Barbarian keeps Whirlwind on 2. */
 export const ACTIVE_ORDER: Record<HeroClass, ActiveSlot[]> = {
-  ARCHER: ['q', 's3', 's4'], WIZARD: ['q', 's3', 's4'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'],
+  ARCHER: ['q', 's3', 's4'], WIZARD: ['q', 's3', 's4'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'], NECROMANCER: ['q', 's3', 's4'],
 };
 export const ACTIVE_KEYS = ['Digit1', 'Digit2', 'Digit3'] as const;
 /** Slot whose definition IS the class dash (Space). Barbarian has a dedicated shoulder charge (skill level key `dash`). */
-export const DASH_SLOT: Record<HeroClass, ActiveSlot | null> = { ARCHER: 'e', WIZARD: 'e', BARBARIAN: null, KNIGHT: null };
+export const DASH_SLOT: Record<HeroClass, ActiveSlot | null> = { ARCHER: 'e', WIZARD: 'e', BARBARIAN: null, KNIGHT: null, NECROMANCER: 'e' };
 /** Skill-level key of the class dash. */
 export const dashKey = (hero: HeroClass): 'e' | 'dash' => (hero === 'BARBARIAN' || hero === 'KNIGHT' ? 'dash' : 'e');
 export const isDashKey = (hero: HeroClass, key: string): boolean => key === dashKey(hero);
@@ -109,6 +123,9 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
     desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
+  NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Army of the Dead', mana: 0, cd: 0,
+    desc: 'A wail of the grave stuns everything around you, then a legion rises: five skeleton warriors, two skeleton mages and a hulking bone golem fight for you for 12s. Needs a full charge bar and its 90s cooldown finished.',
+    per: (lv) => `Wail ${pct(8 * lvMul(lv) * 0.7)} dmg · minions ${pct(1.2 * lvMul(lv))} per hit · golem ${pct(3 * lvMul(lv))}` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
     desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Burst ${pct(14 * lvMul(lv) * 0.7)} dmg · wave ${pct(2 * lvMul(lv))} per swing` },

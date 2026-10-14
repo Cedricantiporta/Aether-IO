@@ -40,6 +40,11 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
     { name: 'Juggernaut', blurb: 'Health, defense and thorns', color: '#9fb2c8' },
     { name: 'Earthshaker', blurb: 'Axe Storm axes and ricochets', color: '#d99a4a' },
   ],
+  NECROMANCER: [
+    { name: 'Gravelord', blurb: 'Stronger, longer-lived minions', color: '#b08aff' },
+    { name: 'Plague', blurb: 'Curses and skill damage', color: '#8be05a' },
+    { name: 'Lich', blurb: 'Mana, health and soul drain', color: '#7fd8ff' },
+  ],
   KNIGHT: [
     { name: 'Crusader', blurb: 'Sword damage and crits', color: '#e9b949' },
     { name: 'Bastion', blurb: 'Defense, health and shield', color: '#9fb2c8' },
@@ -133,6 +138,32 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Axe Tempest', 'Axe Storm +1 axe, +50% damage, +1 ricochet, +20% size', 1, 'u:SKILL_STAMP', { add: { axeCount: 1, stompPower: 0.5, axeBounce: 1, axeSize: 0.2 } }],
     ]],
   ],
+  NECROMANCER: [
+    ['g', [
+      ['Bone Craft', '+8% minion damage', 3, 'RAISE_DEAD', { add: { minionDmg: 0.08 } }],
+      ['Long Rest', 'Minions last +1.5s', 3, 'RAISE_DEAD', { add: { minionLife: 1.5 } }],
+      ['Marrow', '+4% minion damage, +5 max health', 3, 'u:DAMAGE', { add: { minionDmg: 0.04, maxHealth: 5 } }],
+      ['Legion', '+1 skeleton per Raise Dead', 1, 'RAISE_DEAD', { add: { minionCount: 1 } }],
+      ['Frenzied Dead', 'Minions attack 12% faster', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.12 } }],
+      ['Gravelord', '+1 skeleton per Raise Dead, +20% minion damage', 1, 'ARMY_DEAD', { add: { minionCount: 1, minionDmg: 0.2 } }],
+    ]],
+    ['p', [
+      ['Malice', '+6% skill damage', 3, 'u:SKILL_WEAPON', { add: { skillDamage: 0.06 } }],
+      ['Rot', '+3% cooldown reduction', 3, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }],
+      ['Dark Focus', '+2% crit rate', 3, 'u:CRIT_RATE', { add: { critRate: 0.02 } }],
+      ['Withering', '+10% skill damage', 2, 'CURSE_FIELD', { add: { skillDamage: 0.1 } }],
+      ['Bone Shards', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
+      ['Pestilence', '+20% skill damage, +6% cooldown reduction', 1, 'BONE_SPEAR', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
+    ]],
+    ['l', [
+      ['Phylactery', '+12 max health', 3, 'u:HEALTH', { add: { maxHealth: 12 } }],
+      ['Soul Well', '+20 max mana, +0.5 mana regen', 3, 'u:MAX_MANA', { add: { maxMana: 20, manaRegen: 0.5 } }],
+      ['Grave Ward', '+3 defense', 3, 'u:DEFENSE', { add: { defense: 3 } }],
+      ['Drain', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Deathless', 'Take 3% less damage', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }],
+      ['Lichdom', 'Take 10% less damage, +15% max mana', 1, 'SOUL_STEP', { add: { dmgReduce: 0.1 }, mul: { maxMana: 0.15 } }],
+    ]],
+  ],
   KNIGHT: [
     ['c', [
       ['Edge Discipline', '+3% damage', 3, 'u:DAMAGE', { mul: { damage: 0.03 } }],
@@ -178,7 +209,7 @@ export const TALENT_BY_ID: Record<string, TalentNode> = Object.fromEntries(TALEN
 export const talentsOf = (hero: HeroClass): TalentNode[] => TALENTS.filter((t) => t.hero === hero);
 
 export type TalentRanks = Record<string, number>;
-export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {} });
+export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {}, NECROMANCER: {} });
 
 /** 1 point per Hero Rank, +1 bonus every 5 ranks. */
 export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) + Math.floor(rank / 5);

@@ -2,6 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
+import { spawnMinion, MINION_WARRIOR } from './minions';
 import { weaponPerk, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
@@ -12,7 +13,7 @@ import type { ProjectileType } from '../../types';
 import { MULTISHOT_CAP } from '../../constants';
 import { useGameStore } from '../../store';
 import {
-  damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
+  damageEnemy, damageEnemiesInRadius, autoAim, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { queryColliders, type Collider } from '../mapgen';
@@ -49,7 +50,7 @@ export function damageKindOf(kind: ProjectileKind): DamageKind {
   switch (kind) {
     case 'FIREBALL': case 'BURNING_ARROW': return 'FIRE';
     case 'FREEZING_ARROW': return 'ICE';
-    case 'MAGIC': case 'STORM': case 'PET_BOLT': return 'MAGIC';
+    case 'MAGIC': case 'STORM': case 'PET_BOLT': case 'SOUL_BOLT': return 'MAGIC';
     default: return 'PHYSICAL';
   }
 }
@@ -118,6 +119,8 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
     n = procN(lv.thunder); left = n - procCount;
   } else if (st.hero === 'BARBARIAN' && skill === 'stamp' && lv.stamp > 0) {
     n = procN(lv.stamp); left = n - procCount;
+  } else if (st.hero === 'NECROMANCER' && skill === 'graveCall' && lv.graveCall > 0) {
+    n = procN(lv.graveCall); left = n - procCount;
   } else if (st.hero === 'KNIGHT' && skill === 'smite' && lv.smite > 0) {
     n = procN(lv.smite); left = n - procCount;
   } else { out.t = 0; out.max = 0; return; }
@@ -155,7 +158,7 @@ function chainLightning(from: Enemy, lvl: number): void {
 // ------------------------------------------------------------ basic attack --
 function defaultProjectileType(): ProjectileType {
   const hero = useGameStore.getState().hero;
-  return hero === 'WIZARD' ? 'MAGIC' : hero === 'BARBARIAN' ? 'AXE' : hero === 'KNIGHT' ? 'SWORD' : 'ARROW';
+  return hero === 'WIZARD' ? 'MAGIC' : hero === 'BARBARIAN' ? 'AXE' : hero === 'KNIGHT' ? 'SWORD' : hero === 'NECROMANCER' ? 'SOUL' : 'ARROW';
 }
 
 /** Fires the hero's basic attack towards the aim point. Called by player.ts on its fire timer. */
@@ -189,6 +192,7 @@ export function fireBasicAttack(): void {
     case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 4; break; // shorter throw: barbarian is close range
     case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
+    case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 0; radius = 1.2; break;   // necromancer: one target, no pierce, no splash
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
 
@@ -196,7 +200,8 @@ export function fireBasicAttack(): void {
   const perk = weaponPerk(weapon);
   let perkDmg = 1;
   if (perk) {
-    if (perk.k === 'MULTI' && kind === 'ARROW') count = Math.max(count, MULTI_ARROWS[perk.lv]);
+    if (perk.k === 'BIG' && kind === 'SOUL_BOLT') { const b2 = bigMul(perk.lv); radius *= b2.size; speed *= b2.speed; }
+    else if (perk.k === 'MULTI' && kind === 'ARROW') count = Math.max(count, MULTI_ARROWS[perk.lv]);
     else if (perk.k === 'TWIN' && kind === 'SLASH') count = Math.max(count, twinSlashes(perk.lv));
     else if (perk.k === 'AXES' && kind === 'AXE') count = Math.max(count, axeCount(perk.lv));
     else if (perk.k === 'GREAT' && kind === 'SLASH') { const g = greatMul(perk.lv); radius *= g.size; perkDmg = g.dmg; }
@@ -212,6 +217,7 @@ export function fireBasicAttack(): void {
   let special: 'BURNING_ARROW' | 'FREEZING_ARROW' | null = null;
   let specialLv = 0;
   let thunderProc = 0;
+  let graveProc = 0;
   if (hero === 'ARCHER' && kind === 'ARROW' && (lv.burning > 0 || lv.freezing > 0)) {
     const useIce = lv.burning > 0 && lv.freezing > 0 ? archerNext === 1 : lv.freezing > 0;
     specialLv = useIce ? lv.freezing : lv.burning;
@@ -224,6 +230,8 @@ export function fireBasicAttack(): void {
     if (procCount >= procN(lv.thunder)) { procCount = 0; thunderProc = lv.thunder; }
   } else if (hero === 'BARBARIAN' && kind === 'AXE' && lv.stamp > 0) {
     if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
+  } else if (hero === 'NECROMANCER' && kind === 'SOUL_BOLT' && lv.graveCall > 0) {
+    if (procCount >= procN(lv.graveCall)) { procCount = 0; graveProc = lv.graveCall; }
   } else if (hero === 'KNIGHT' && kind === 'SLASH' && lv.smite > 0) {
     if (procCount >= procN(lv.smite)) { procCount = 0; procFlags.smite = lv.smite; }
   }
@@ -290,6 +298,12 @@ export function fireBasicAttack(): void {
   if (kind === 'SLASH' && pl.avatarT > 0) {
     spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 3.2, y: 1.1 });
   }
+  // Grave Call: a skeleton warrior claws up beside the target
+  if (graveProc) {
+    const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+    const gx = t && t.active ? t.pos.x - dir.x * 1.5 : pl.pos.x + dir.x * 4, gz = t && t.active ? t.pos.z - dir.z * 1.5 : pl.pos.z + dir.z * 4;
+    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, 8 + graveProc + (stats.minionLife || 0));
+  }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });
 }
@@ -309,7 +323,7 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
   // rocks / trees / pillars stop shots; only melee arcs, waves, storms, orbiting blades and the Gale Arrow pass over them
-  return !(kind === 'GALE_ARROW' || kind === 'PIERCING_ARROW' || kind === 'STORM' || kind === 'ORBITAL_BLADE' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
+  return !(kind === 'GALE_ARROW' || kind === 'PIERCING_ARROW' || kind === 'BONE_SPEAR' || kind === 'STORM' || kind === 'ORBITAL_BLADE' || kind === 'X_SLASH' || kind === 'SLASH' || kind === 'HOLY_WAVE');
 }
 
 function dropFireZone(p: Projectile): void {

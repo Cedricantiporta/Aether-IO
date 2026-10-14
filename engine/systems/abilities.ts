@@ -2,6 +2,7 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
+import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM } from './minions';
 import { unlockLevel } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
@@ -23,7 +24,8 @@ const judgeRays = Array.from({ length: 7 }, () => ({ x: 0, z: 0, t: 0, id: -1 })
 const judgeUsed: number[] = [];
 let judgeN = 0;
 export const abilityState = {
-  castLockT: 0,            // > 0: a skill is being cast, no basic attacks (player.ts)
+  castLockT: 0,
+  curseRaise: 0,           // Plague Ground: skeletons that may still rise from enemies dying in it            // > 0: a skill is being cast, no basic attacks (player.ts)
   lpT: 0, lpMax: 0, lpDx: 0, lpDz: 1, lpDmg: 0,   // Lightpiercer: charging a ball of light, fires when lpT runs out
   tint: 0,                 // (unused: ultimates no longer darken the screen)
   flash: 0,                // 0..1 brief light flash at ult cast / impact
@@ -78,6 +80,7 @@ const fireOpts: DamageOpts = { kind: 'FIRE', source: 'PLAYER', knockback: 0.8 };
 const iceOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER' };
 const elecOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER' };
 const stunSt: StatusEffect = { type: 'STUN', duration: 1 };
+const necroSlow: StatusEffect = { type: 'SLOW', duration: 2, value: 0.5 };
 const burnSt: StatusEffect = { type: 'BURN', duration: 4, value: 5 };
 const freezeSt: StatusEffect = { type: 'FREEZE', duration: 1 };
 const slowFrost: StatusEffect = { type: 'SLOW', duration: 2.5, value: 0.5 };
@@ -188,7 +191,7 @@ function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: num
   return f;
 }
 
-function mkZone(kind: 'TORNADO' | 'FROST_FIELD' | 'METEOR_SHADOW' | 'FIRE' | 'BLACKHOLE' | 'SHOCKWAVE', x: number, z: number, r: number, life: number, dmg: number, color: number, pullRange = 0, maxPull = 0) {
+function mkZone(kind: 'TORNADO' | 'FROST_FIELD' | 'METEOR_SHADOW' | 'FIRE' | 'BLACKHOLE' | 'SHOCKWAVE' | 'CURSE', x: number, z: number, r: number, life: number, dmg: number, color: number, pullRange = 0, maxPull = 0) {
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = kind; zn.hostile = false;
@@ -401,6 +404,47 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       announce('STORM_ORBS');
     } else {
       castFireballs(lv, b);
+    }
+    return;
+  }
+
+  // ---- NECROMANCER
+  if (hero === 'NECROMANCER') {
+    if (slot === 'q') {   // RAISE DEAD: skeleton warriors claw out of the ground around you
+      const n = 2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0) + (stats.minionCount | 0);
+      for (let i = 0; i < n; i++) {
+        const an = p.facing + (i - (n - 1) / 2) * 0.75;
+        spawnMinion(MINION_WARRIOR, p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, 14 + lv + (stats.minionLife || 0));
+      }
+      announce('RAISE_DEAD');
+    } else if (slot === 'e') {   // SOUL STEP: blink, bone shards burst where you stood
+      if (dashAuto && !aimOverride.on) {
+        const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
+        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 12; aimOverride.z = p.pos.z + md.z * 12;
+        aimPoint(16 + lv, 4, tgt);
+        aimOverride.on = false;
+      } else aimPoint(16 + lv, 4, tgt);
+      safeSpot(tgt);
+      p.dashIframes = true;
+      const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
+      necroSlow.duration = 2;
+      damageEnemiesInRadius(from.x, from.z, R, b * 2.5, physOpts, necroSlow);
+      events.emit('explosion', { pos: from, radius: R, color: 0xd8d0b8 });
+      p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
+      p.invulnT = Math.max(p.invulnT, 0.35);
+      events.emit('blink', { from, to: p.pos.clone() });
+      announce('SOUL_STEP');
+    } else if (slot === 's3') {   // BONE SPEAR: impales a whole line
+      spawnProjectile('BONE_SPEAR', p.pos.x + dx, p.pos.z + dz, dx, dz, 38, b * 4.5,
+        { life: 0.95, pierce: Infinity, radius: 1.9, knockback: 0.3, y: 1.1, effect: { type: 'SLOW', duration: 2, value: 0.4 } });
+      p.anim.attackT = 1;
+      announce('BONE_SPEAR');
+    } else {   // PLAGUE GROUND: a cursed patch; the fallen rise for you
+      aimPoint(26, 7.5, tgt);
+      const R = 7.5 + 0.4 * (lv - 1);
+      mkZone('CURSE', tgt.x, tgt.z, R, 5 + 0.3 * lv, b * 0.6, 0x7a3ab0);
+      abilityState.curseRaise = 2 + Math.floor(lv / 2);
+      announce('CURSE_FIELD');
     }
     return;
   }
@@ -627,6 +671,20 @@ function releaseUlt(): void {
     mkFx('BIG_METEOR', tgt.x, tgt.z, 1.2, 1.5, 14, b * 50, 0, 0xff7a1a);
     events.emit('telegraph', { pos: tgt.clone(), radius: 14, duration: 1.2 });
     slowMo(0.5, 0.45);
+  } else if (st.hero === 'NECROMANCER') {
+    // ARMY OF THE DEAD: a wail stuns everything near, then a legion rises around the necromancer
+    a.ultKind = 5;
+    p.ultT = 1.2; p.invulnT = Math.max(p.invulnT, 0.8);
+    stunSt.duration = 1.2;
+    damageEnemiesInRadius(p.pos.x, p.pos.z, 10, b * 8, physKnock, stunSt);
+    const mlv = st.skillLevels.ult, md = base(mlv);
+    for (let i = 0; i < 5; i++) { const an = (i / 5) * Math.PI * 2; spawnMinion(MINION_WARRIOR, p.pos.x + Math.cos(an) * 3, p.pos.z + Math.sin(an) * 3, md * 1.2, 12); }
+    for (let i = 0; i < 2; i++) { const an = Math.PI * (0.5 + i); spawnMinion(MINION_MAGE, p.pos.x + Math.cos(an) * 4.5, p.pos.z + Math.sin(an) * 4.5, md * 1.0, 12); }
+    spawnMinion(MINION_GOLEM, p.pos.x + Math.sin(p.facing) * 3.5, p.pos.z + Math.cos(p.facing) * 3.5, md * 3, 12);
+    a.tintRgb = [0.08, 0.03, 0.12]; a.tintTarget = 0;
+    events.emit('ultImpact', { pos: p.pos.clone(), name: 'ARMY_DEAD', radius: 10 });
+    events.emit('shockwave', { pos: p.pos.clone(), radius: 12, color: 0x9a6bd8 });
+    addShake(0.5); fovKick(0.6); slowMo(0.35, 0.4);
   } else if (st.hero === 'KNIGHT') {
     // DIVINE AVATAR: a column of light crashes down around the knight, then 8s of radiant power
     a.ultKind = 4;
@@ -706,6 +764,7 @@ function updateUlt(dt: number): void {
   p.ultT = Math.max(0, p.ultT - dt);
   a.ultT += dt;
 
+  if (a.ultKind === 5) { if (p.ultT <= 0) a.ultKind = 0; return; }   // necromancer: the legion fights on its own
   if (a.ultKind === 1) {
     // phase 0 intro (0.3s), phase 1 rain, phase 2 finale
     const dur = (4.5 + st.stats.hawkBonus) * 0.6;   // 2.7s base

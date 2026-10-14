@@ -420,3 +420,15 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Mana Potion 70% of max mana (Big 100%). HP regen and mana regen are halved (player.ts regen tick).
 - Floating status words ("BURNED", "FROZEN", "STUNNED", "SLOWED", ...) when a status newly lands on an enemy
   (budgeted ~8/s) or on the hero (combat.ts statusWord).
+
+### Necromancer (5th class)
+- `HeroClass` 'NECROMANCER' (model: Rogue_Hooded, staff in violet). Basic attack `ProjectileType 'SOUL'` -> kind
+  SOUL_BOLT: single target, no pierce, no splash. Starter weapon `wand_n1` Bone Wand; item catalog / starter set /
+  item-set names / talents (Gravelord, Plague, Lich) / perks (HORDE: minion damage + lifetime, BIG) all filled in.
+- Minions: `engine/systems/minions.ts` (pool `world.minions`, 16): warrior (melee), mage (PET_BOLT, tint 9), golem.
+  They hunt the nearest enemy (enemyGrid), otherwise trail the hero; timed (crumble), not killable; max 8 warriors
+  (+talents). Render: render/Minions.tsx. Stats `minionDmg / minionLife / minionCount / minionHaste` (talents).
+- Kit: 1 Raise Dead (2-4 warriors), 2 Bone Spear (piercing slow), 3 Plague Ground (zone kind CURSE: rot + slow,
+  the fallen rise: `abilityState.curseRaise`), Space Soul Step (blink + bone burst). Ult Army of the Dead (wail stun,
+  5 warriors + 2 mages + golem, 12 s). Passives: Grave Call (every Nth bolt raises a warrior), Soul Harvest (kills heal
+  + mana), Bone Armor (3%+ damage reduction per living minion, max 30%, in damagePlayer).

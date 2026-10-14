@@ -35,10 +35,11 @@ const WSEC: Record<HeroClass, Record<string, string[]>> = {
   WIZARD: { arcane: ['skill', 'cdr', 'mregen', 'crit'], fury: ['crit', 'critd', 'skill', 'mana'] },
   BARBARIAN: { bulwark: ['def', 'hp', 'regen', 'kb'], rampage: ['aspd', 'critd', 'kb', 'hp'] },
   KNIGHT: { aegis: ['def', 'hp', 'regen', 'crit'], valor: ['crit', 'critd', 'aspd', 'def'] },
+  NECROMANCER: { grave: ['skill', 'mana', 'hp', 'cdr'], blight: ['crit', 'critd', 'skill', 'mregen'] },
 };
-const WDMG: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280] };
+const WDMG: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280], NECROMANCER: [14, 26, 58, 115, 210] };
 const WMETA: Record<HeroClass, { projectileType: ProjectileType; ability: AbilityType }> = {
-  ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' }, KNIGHT: { projectileType: 'SWORD', ability: 'AXE_SPIN' },
+  ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' }, KNIGHT: { projectileType: 'SWORD', ability: 'AXE_SPIN' }, NECROMANCER: { projectileType: 'SOUL', ability: 'NONE' },
 };
 const WPRICE = [100, 600, 1500, 3000, 5000];
 const GPRICE = [120, 560, 1300, 2200, 4500];
@@ -82,7 +83,7 @@ function weapon(id: string, name: string, hero: HeroClass, ri: number, flav: str
   const stats: Partial<PlayerStats> = { damage: r3(WDMG[hero][ri] * (flav === 'swift' || flav === 'arcane' || flav === 'bulwark' || flav === 'aegis' ? 0.9 : 0.95) * scale) };
   stats.damage = Math.round(stats.damage!);
   for (let i = 0; i < ri && i < sec.length; i++) { const [k, v] = T[sec[i]]; stats[k] = r3((stats[k] ?? 0) + v[ri] * scale); }
-  const f = hero === 'ARCHER' ? 'bow' : hero === 'WIZARD' ? 'staff' : hero === 'KNIGHT' ? 'sword' : 'axe';
+  const f = hero === 'ARCHER' ? 'bow' : hero === 'WIZARD' ? 'staff' : hero === 'KNIGHT' ? 'sword' : hero === 'NECROMANCER' ? 'staff' : 'axe';
   out.push({ id, name, type: 'WEAPON', rarity: RAR[ri], price: WPRICE[ri], level: 1, classType: hero, ...WMETA[hero], stats, description: `${flav[0].toUpperCase()}${flav.slice(1)} ${hero.toLowerCase()} weapon.`, ...extra });
   ART[id] = { f, s, pal };
 }
@@ -93,10 +94,11 @@ const W: Record<HeroClass, [string, string, string][]> = {   // [rarity][name A,
   ARCHER: [['Hunter\'s Bow', 'Willow Longbow', ''], ['Hornet Recurve', 'Falconer\'s Bow', ''], ['Stormpiercer', 'Frostfang Bow', ''], ['Skyreaver', 'Phoenix Longbow', ''], ['Starfall Arc', 'Eclipse Bow', '']],
   WIZARD: [['Twig Wand', 'Ember Rod', ''], ['Sage\'s Staff', 'Cinder Wand', ''], ['Tidecaller', 'Stormglass Rod', ''], ['Moonlit Scepter', 'Cataclysm Staff', ''], ['Astral Scepter', 'Oblivion Rod', '']],
   BARBARIAN: [['Woodcutter Axe', 'Bone Cleaver', ''], ['Battle Axe', 'Raider Hatchet', ''], ['Bearded Greataxe', 'Bloodletter', ''], ['Juggernaut Axe', 'Ragnarok Axe', ''], ['Colossus Cleaver', 'Doomcleaver', '']],
+  NECROMANCER: [['Bone Wand', 'Grave Rod', ''], ['Ossuary Staff', 'Wraith Wand', ''], ['Soulreaper', 'Plaguebringer', ''], ['Lichbane Scepter', 'Deathknell', ''], ['Crown of Bones', 'Requiem', '']],
   KNIGHT: [['Militia Sword', 'Arming Sword', ''], ['Knight\'s Longsword', 'Silver Sabre', ''], ['Oathkeeper', 'Dawnblade', ''], ['Lionheart', 'Radiant Claymore', ''], ['Excalibur', 'Seraph\'s Edge', '']],
 };
-const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly'], WIZARD: ['arcane', 'fury'], BARBARIAN: ['bulwark', 'rampage'], KNIGHT: ['aegis', 'valor'] };
-for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'] as HeroClass[]) {
+const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly'], WIZARD: ['arcane', 'fury'], BARBARIAN: ['bulwark', 'rampage'], KNIGHT: ['aegis', 'valor'], NECROMANCER: ['grave', 'blight'] };
+for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]) {
   W[hero].forEach((row, ri) => {
     weapon(`w_${hero.toLowerCase()}_${ri}a`, row[0], hero, ri, WFLAV[hero][0], 1 + (ri % 3), P(ri, 1));
     weapon(`w_${hero.toLowerCase()}_${ri}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2));
@@ -151,6 +153,7 @@ export const STARTER_GEAR: Record<HeroClass, Record<Exclude<SetSlot, 'weapon'>, 
   ARCHER: { helmet: 'start_archer_helmet', armor: 'start_archer_armor', gloves: 'start_archer_gloves', boots: 'start_archer_boots', accessory: 'start_archer_accessory' },
   WIZARD: { helmet: 'start_wizard_helmet', armor: 'start_wizard_armor', gloves: 'start_wizard_gloves', boots: 'start_wizard_boots', accessory: 'start_wizard_accessory' },
   BARBARIAN: { helmet: 'start_barbarian_helmet', armor: 'start_barbarian_armor', gloves: 'start_barbarian_gloves', boots: 'start_barbarian_boots', accessory: 'start_barbarian_accessory' },
+  NECROMANCER: { helmet: 'start_necromancer_helmet', armor: 'start_necromancer_armor', gloves: 'start_necromancer_gloves', boots: 'start_necromancer_boots', accessory: 'start_necromancer_accessory' },
   KNIGHT: { helmet: 'start_knight_helmet', armor: 'start_knight_armor', gloves: 'start_knight_gloves', boots: 'start_knight_boots', accessory: 'start_knight_accessory' },
 };
 {
@@ -158,6 +161,7 @@ export const STARTER_GEAR: Record<HeroClass, Record<Exclude<SetSlot, 'weapon'>, 
     ARCHER: ["Hunter's Cap", "Hunter's Jerkin", "Hunter's Wraps", "Scout Boots", "Hunter's Whistle", 'light', { a: 'wood', b: 'leather', gem: '#9ad07a' }],
     WIZARD: ['Apprentice Hood', 'Apprentice Robe', 'Initiate Gloves', 'Soft Slippers', 'Apprentice Charm', 'arcane', { a: 'blue', b: 'leather', gem: '#9fe6ff' }],
     BARBARIAN: ['Hide Helm', 'Hide Cuirass', 'Wolf Fists', 'Furred Boots', 'Tusk Necklace', 'heavy', { a: 'leather', b: 'dark', gem: '#ff9a6a' }],
+    NECROMANCER: ['Grave Hood', 'Shroud of Ash', 'Bone Grips', 'Crypt Boots', 'Skull Charm', 'arcane', { a: 'dark', b: 'leather', gem: '#b08aff' }],
     KNIGHT: ['Squire Helm', 'Squire Mail', 'Squire Gauntlets', 'Squire Sabatons', 'Oath Pendant', 'heavy', { a: 'steel', b: 'blue', gem: '#ffe08a' }],
   };
   (Object.keys(S) as HeroClass[]).forEach((h) => {

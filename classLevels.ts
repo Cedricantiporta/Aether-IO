@@ -7,7 +7,7 @@ import { ACTIVE_ORDER } from './abilityDefs';
 import { SKILLS_INFO } from './constants';
 
 export interface ClassProg { lv: number; xp: number; sp: number; skills: SkillLevels }
-export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'];
+export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 export const START_SP = 3;
 export const MAX_LEVEL = 99;
 
@@ -50,6 +50,7 @@ export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
   if (hero === 'ARCHER') base.fireRate *= 1.015;
   else if (hero === 'WIZARD') { base.skillDamage *= 1.03; base.manaRegen *= 1.02; }
   else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
+  else if (hero === 'NECROMANCER') { base.skillDamage *= 1.025; base.maxMana += 3; base.manaRegen *= 1.015; }
   else if (hero === 'KNIGHT') { base.maxHealth *= 1.025; base.defense += 0.5; base.damage *= 1.012; }
   return base;
 }

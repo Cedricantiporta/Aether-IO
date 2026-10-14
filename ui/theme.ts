@@ -20,7 +20,7 @@ export const RARITY_LIGHT: Record<Rarity, string> = {
 /** Rarity text on menu surfaces (dark metal theme: same as the light variants). */
 export const RARITY_INK: Record<Rarity, string> = RARITY_LIGHT;
 
-export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#4aa86a', WIZARD: '#5b8ef0', BARBARIAN: '#e0564a', KNIGHT: '#e2bd62' };
+export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#4aa86a', WIZARD: '#5b8ef0', BARBARIAN: '#e0564a', KNIGHT: '#e2bd62', NECROMANCER: '#9a6bd8' };
 
 export function installTheme(): void {
   const s = document.documentElement.style;

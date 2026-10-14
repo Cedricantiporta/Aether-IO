@@ -98,6 +98,11 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
+    NECROMANCER: {
+        stats: { maxHealth: 85, maxMana: 170, moveSpeed: 11, damage: 22, fireRate: 1.2, manaRegen: 2.4, knockback: 0.4, skillDamage: 1.2 },
+        weaponId: 'wand_n1',
+        description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
+    },
     KNIGHT: {
         stats: { maxHealth: 160, defense: 22, moveSpeed: 11, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05 },
         weaponId: 'sword_1',
@@ -133,6 +138,9 @@ export const SKILLS_INFO = {
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
     consecrate: { name: 'Consecration', description: 'Always-on holy aura: once a second it burns every enemy within reach and heals you a little per enemy hit (radius and damage grow per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     smite: { name: 'Smite', description: 'Passive: every few sword swings, a bolt of holy light strikes your target, dealing heavy damage around it and stunning (damage, radius and stun grow per level; fewer swings needed per level).', classType: 'KNIGHT', type: 'PASSIVE' },
+    graveCall: { name: 'Grave Call', description: 'Passive: every few soul bolts, a skeleton warrior claws its way up beside your target and fights for 8s (fewer bolts needed and +1s per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
+    soulHarvest: { name: 'Soul Harvest', description: 'Passive: every kill near you (or by your minions) restores 1% max HP and 2 mana (+0.5% HP and +1 mana per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
+    boneArmor: { name: 'Bone Armor', description: 'Passive: each living minion grants 3% damage reduction (max 30%; +1% per minion per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
     radiant: { name: 'Radiant Burst', description: 'Passive: every 10s in battle, eight holy crescents burst out from you in a ring, piercing everything (+1 crescent and more damage per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     warcry: { name: 'Warcry', description: 'Passive: every 12s in battle you roar, gaining +10% damage and +8 defense for 5s (+5% damage, +4 defense, +0.5s per level).', classType: 'BARBARIAN', type: 'PASSIVE' },
     stamp: { name: 'Axe Storm', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) hurls 3 giant spinning axes in a fan. Each ricochets once off the first enemy or obstacle it hits, hits hard and breaks armor.', classType: 'BARBARIAN', type: 'PASSIVE' },
@@ -172,6 +180,9 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_holywave', type: 'SKILL_HOLY_WAVE', name: 'Holy Wave', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'KNIGHT' },
   { id: 'u_consecrate', type: 'SKILL_CONSECRATE', name: 'Consecration', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_smite', type: 'SKILL_SMITE', name: 'Smite', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
+  { id: 'u_gravecall', type: 'SKILL_GRAVECALL', name: 'Grave Call', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
+  { id: 'u_soulharvest', type: 'SKILL_SOULHARVEST', name: 'Soul Harvest', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
+  { id: 'u_bonearmor', type: 'SKILL_BONEARMOR', name: 'Bone Armor', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
   { id: 'u_radiant', type: 'SKILL_RADIANT', name: 'Radiant Burst', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_inspire', type: 'SKILL_INSPIRE', name: 'Inspire', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
 ];
@@ -243,6 +254,8 @@ export const ITEMS_POOL: Item[] = [
     stats: { damage: 15 }, description: 'Basic magic.' },
   { id: 'bow_1', name: 'Shortbow', classType: 'ARCHER', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'ARROW', ability: 'ARROW_RAIN', 
     stats: { damage: 8 }, description: 'Basic bow.' },
+  { id: 'wand_n1', name: 'Bone Wand', classType: 'NECROMANCER', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'SOUL', ability: 'NONE',
+    stats: { damage: 14 }, description: 'A wand of carved bone. Whispers to the dead.' },
   { id: 'sword_1', name: 'Squire Sword', classType: 'KNIGHT', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'SWORD', ability: 'AXE_SPIN',
     stats: { damage: 17 }, description: 'A plain, trusty blade.' },
   { id: 'axe_1', name: 'Hand Axe', classType: 'BARBARIAN', type: 'WEAPON', rarity: 'COMMON', price: 100, level: 1, projectileType: 'AXE', ability: 'AXE_SPIN', 

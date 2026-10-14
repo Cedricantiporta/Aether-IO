@@ -25,6 +25,7 @@ import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
 import { spawnPickup, petCollect, lootPickup } from './pickups';
+import { clearMinions } from './minions';
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -110,7 +111,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent(); bossKeyState.has = false;
+  resetRoomEvent(); bossKeyState.has = false; clearMinions();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;

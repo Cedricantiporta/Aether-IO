@@ -38,7 +38,7 @@ const SLOT_LOOT: Record<Exclude<CraftSlot, 'weapon'>, { id: string; n: [number, 
   boots:     { id: 'bat_wing',       n: [8, 14, 20] },
   accessory: { id: 'echo_crystal',   n: [4, 7, 10] },
 };
-const WEAPON_LOOT: Record<HeroClass, string> = { ARCHER: 'goblin_totem', WIZARD: 'forbidden_sigil', BARBARIAN: 'war_banner', KNIGHT: 'war_banner' };
+const WEAPON_LOOT: Record<HeroClass, string> = { ARCHER: 'goblin_totem', WIZARD: 'forbidden_sigil', BARBARIAN: 'war_banner', KNIGHT: 'war_banner', NECROMANCER: 'forbidden_sigil' };
 /** MYTHIC recipes also need one boss relic. */
 const MYTHIC_RELIC: Record<CraftSlot, string> = {
   weapon: 'golem_heart', armor: 'golem_heart', gloves: 'golem_heart', helmet: 'phylactery', boots: 'phylactery', accessory: 'phylactery',

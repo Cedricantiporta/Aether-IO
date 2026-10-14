@@ -53,6 +53,24 @@ const slowSt: StatusEffect = { type: 'SLOW', duration: 0.6, value: 0.55 };
 const frzSt: StatusEffect = { type: 'FREEZE', duration: 1.2 };
 
 /** Generic damage-over-time tick for player zones. Optionally slows. */
+const curseDot: DamageOpts = { kind: 'POISON', dot: true, source: 'PLAYER' };
+const curseSlow: StatusEffect = { type: 'SLOW', duration: 0.6, value: 0.35 };
+/** Enemies standing in a curse zone right now (the necromancer's raise-on-death reads it). */
+export function inCurse(x: number, z: number): boolean {
+  for (const zn of world.zones) if (zn.active && zn.kind === 'CURSE' && (zn.pos.x - x) ** 2 + (zn.pos.z - z) ** 2 < zn.radius * zn.radius) return true;
+  return false;
+}
+function curseTick(z: Zone): void {
+  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
+    if ((e.pos.x - z.pos.x) ** 2 + (e.pos.z - z.pos.z) ** 2 > z.radius * z.radius) continue;
+    applyStatus(e, curseSlow);
+    damageEnemy(e, z.damage, curseDot);
+  }
+}
+
 function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
   const dmg = z.damage * 0.25;
@@ -307,6 +325,10 @@ export function updateZones(dt: number): void {
         case 'FROST_FIELD':
           z.tickT += dt;
           if (z.tickT >= FIRE_TICK) { z.tickT -= FIRE_TICK; dotTick(z, iceDot, true); }
+          break;
+        case 'CURSE':   // necromancer Plague Ground: rot + slow
+          z.tickT += dt;
+          if (z.tickT >= FIRE_TICK) { z.tickT -= FIRE_TICK; curseTick(z); }
           break;
         case 'POISON_POOL':
           z.tickT += dt;

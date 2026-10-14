@@ -31,7 +31,7 @@ const _mv = { x: 0, z: 0 };
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
 /** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
-const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
+const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7, NECROMANCER: 17 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
 const STOP_TO_FIRE_DELAY = 0.12;
 let autoChase = false, lastAimId = -1;
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */

@@ -193,7 +193,7 @@ const G = {
   ult: { cx: 3.45, cy: 1.75, size: 1.1 }, dash: { cx: 2.45, cy: 0.75, size: 0.95 },   // dash right beside ATTACK
   hp: { cx: 4.5, cy: 0.6, size: 0.8 }, mp: { cx: 4.55, cy: 1.5, size: 0.8 },
 };
-const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN', KNIGHT: 'HOLY_WAVE' };
+const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN', KNIGHT: 'HOLY_WAVE', NECROMANCER: 'BONE_SPEAR' };
 
 export const TouchControls: React.FC = () => {
   const status = useGameStore((s) => s.status);

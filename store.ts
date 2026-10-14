@@ -55,21 +55,21 @@ const INITIAL_STATS: PlayerStats = {
   fireRate: 1.4, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
   cooldownReduction: 0, magnetRadius: 5.0, critRate: 0.05, critDamage: 1.5, defense: 0,
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
-  lifeSteal: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
+  lifeSteal: 0, minionDmg: 0, minionLife: 0, minionCount: 0, minionHaste: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
   echoEvery: 0, hawkBonus: 0, galeWidth: 0, orbBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, avatarBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
   stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
   stunBonus: 0, burnStacks: 0, backstab: 0, axeCount: 0, axeBounce: 0, axeSize: 0,
 };
 
 const INITIAL_SKILLS: SkillLevels = {
-  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, warcry: 0, inspire: 0, pierceShot: 0, consecrate: 0, smite: 0, radiant: 0,
+  orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, warcry: 0, inspire: 0, pierceShot: 0, consecrate: 0, smite: 0, radiant: 0, graveCall: 0, soulHarvest: 0, boneArmor: 0,
   q: 1, e: 1, s3: 1, s4: 1, ult: 1, burning: 0, freezing: 0, freezeSpell: 0, stamp: 0,
 };
 
 const INITIAL_GAME_STATS: GameStatistics = {
   totalRuns: 0, highestWave: 0, highestCP: 0, bestRunClass: null,
-  classRuns: { ARCHER: 0, WIZARD: 0, BARBARIAN: 0, KNIGHT: 0 },
-  classHighestWave: { ARCHER: 0, WIZARD: 0, BARBARIAN: 0, KNIGHT: 0 },
+  classRuns: { ARCHER: 0, WIZARD: 0, BARBARIAN: 0, KNIGHT: 0, NECROMANCER: 0 },
+  classHighestWave: { ARCHER: 0, WIZARD: 0, BARBARIAN: 0, KNIGHT: 0, NECROMANCER: 0 },
 };
 
 const _dd = deviceDefaults();
@@ -146,14 +146,14 @@ export const SUMMON_COST_10 = 90;
 export const SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 2, LEGENDARY: 1, MYTHIC: 1 };
 
 const WEAPON_Q: Record<HeroClass, AbilityType> = {
-  ARCHER: 'PIERCING_SHOT', WIZARD: 'GRAVITY_SPELL', BARBARIAN: 'RAGE', KNIGHT: 'RAGE',
+  ARCHER: 'PIERCING_SHOT', WIZARD: 'GRAVITY_SPELL', BARBARIAN: 'RAGE', KNIGHT: 'RAGE', NECROMANCER: 'NONE',
 };
 
 const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
   SKILL_ORBITAL: 'orbital', SKILL_THUNDER: 'thunder', SKILL_REGEN: 'regen', SKILL_MAGNET: 'magnet',
   SKILL_DASH: 'dash', SKILL_WEAPON: 'weapon', SKILL_BARRIER: 'barrier', SKILL_STORM: 'storm',
   SKILL_PIERCING: 'q', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing',
-  SKILL_GRAVITY: 'q', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'q', SKILL_STAMP: 'stamp', SKILL_WARCRY: 'warcry', SKILL_INSPIRE: 'inspire', SKILL_PIERCE_SHOT: 'pierceShot', SKILL_HOLY_WAVE: 'q', SKILL_CONSECRATE: 'consecrate', SKILL_SMITE: 'smite', SKILL_RADIANT: 'radiant',
+  SKILL_GRAVITY: 'q', SKILL_FREEZE_SPELL: 'freezeSpell', SKILL_RAGE: 'q', SKILL_STAMP: 'stamp', SKILL_WARCRY: 'warcry', SKILL_INSPIRE: 'inspire', SKILL_PIERCE_SHOT: 'pierceShot', SKILL_HOLY_WAVE: 'q', SKILL_CONSECRATE: 'consecrate', SKILL_SMITE: 'smite', SKILL_RADIANT: 'radiant', SKILL_GRAVECALL: 'graveCall', SKILL_SOULHARVEST: 'soulHarvest', SKILL_BONEARMOR: 'boneArmor',
 };
 
 // ------------------------------------------------------------------ helpers --
@@ -252,7 +252,7 @@ export const getEffectiveStats = (): PlayerStats => {
 
 /** Class proc skills start unlocked at level 1 each run. */
 const PROC_START: Record<HeroClass, Partial<SkillLevels>> = {
-  ARCHER: { burning: 1, freezing: 1 }, WIZARD: { thunder: 1 }, BARBARIAN: { stamp: 1 }, KNIGHT: { consecrate: 1 },
+  ARCHER: { burning: 1, freezing: 1 }, WIZARD: { thunder: 1 }, BARBARIAN: { stamp: 1 }, KNIGHT: { consecrate: 1 }, NECROMANCER: { graveCall: 1 },
 };
 
 /** Skill-level key an upgrade card raises (the class dash card follows the hero: Shadow Roll / Blink Nova use `e`). */
@@ -406,7 +406,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
-  talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false },
+  talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
   discovered: emptyDiscovered(), codexClaimed: [],
   meta: freshMeta(),
 });
@@ -449,10 +449,10 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
-              hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' ? p.hero : f.hero,
+              hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.difficulty && DIFFICULTIES.includes(p.difficulty) ? p.difficulty : 'NORMAL',
               talents: sanitizeTalents(p.talents),
-              starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' ? p.hero : 'ARCHER']: true },
+              starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered),
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
               meta: sanitizeMeta(p.meta),
@@ -477,7 +477,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   endings: Math.max(0, num(p?.endings, 0)),
   ascensionMax: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascensionMax, 0))),
   ascension: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascension, 0))),
-  towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0), KNIGHT: num(p?.towerBest?.KNIGHT, 0) },
+  towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0), KNIGHT: num(p?.towerBest?.KNIGHT, 0), NECROMANCER: num(p?.towerBest?.NECROMANCER, 0) },
 });
 
 const writeProfile = (s: GameState): void => {

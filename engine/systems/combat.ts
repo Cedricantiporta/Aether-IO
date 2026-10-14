@@ -538,7 +538,13 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const mods = runMods(st.difficulty);
   const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
-  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy);
+  // Necromancer Bone Armor: each living minion soaks a little (max 30%)
+  let bone = 1;
+  if (st.hero === 'NECROMANCER' && st.skillLevels.boneArmor > 0) {
+    let n = 0; for (const m of world.minions) if (m.active) n++;
+    bone = 1 - Math.min(0.3, n * (0.03 + 0.01 * (st.skillLevels.boneArmor - 1)));
+  }
+  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone);
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);

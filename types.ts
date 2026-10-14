@@ -10,14 +10,14 @@ export enum GameStatus {
   SHOP = 'SHOP',
 }
 
-export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT';
+export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT' | 'NECROMANCER';
 
 export type UpgradeType = 
   'HEALTH' | 'SPEED' | 'DAMAGE' | 'FIRE_RATE' | 'MULTISHOT' | 'DASH_COOLDOWN' |
   'SKILL_ORBITAL' | 'SKILL_THUNDER' | 'SKILL_REGEN' | 'SKILL_MAGNET' |
   'SKILL_DASH' | 'SKILL_WEAPON' | 'SKILL_BARRIER' |
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 
-  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_PIERCE_SHOT' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' | 'SKILL_SMITE' | 'SKILL_RADIANT' |
+  'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_PIERCE_SHOT' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' | 'SKILL_SMITE' | 'SKILL_RADIANT' | 'SKILL_GRAVECALL' | 'SKILL_SOULHARVEST' | 'SKILL_BONEARMOR' |
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA';
 
 export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
@@ -32,7 +32,7 @@ export interface Upgrade {
   classType?: HeroClass; // Restrict upgrade to class
 }
 
-export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'SWORD' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM';
+export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'SWORD' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM' | 'SOUL';   // SOUL: necromancer single-target soul bolt
 export type AbilityType = 'METEOR' | 'ARROW_RAIN' | 'AXE_AURA' | 'FIREBALL' | 'AXE_SPIN' | 'NONE' | 'PIERCING_SHOT' | 'FREEZE_SPELL' | 'GRAVITY_SPELL' | 'MEGA_STAMP' | 'RAGE';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT';
 export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON' | 'ARMOR_BREAK' | 'CHILL';
@@ -60,6 +60,7 @@ export interface PlayerStats {
   dodge: number;
   // ---- affix / set / talent driven (all default 0)
   lifeSteal: number;        // fraction of damage dealt returned as HP
+  minionDmg: number; minionLife: number; minionCount: number; minionHaste: number;   // Necromancer minions (talents)
   thorns: number;           // flat damage to nearby enemies when you are hit
   goldFind: number;         // +fraction gold from pickups
   xpBonus: number;          // +fraction xp gained
@@ -169,7 +170,10 @@ export interface SkillLevels {
     inspire: number; // Archer passive: periodic rally, +attack speed / +damage
     consecrate: number; // Knight passive: holy aura damaging nearby enemies and healing a little
     smite: number;      // Knight passive: every N sword swings, holy light strikes the target area (damage + stun)
-    radiant: number;    // Knight passive: periodic ring of holy crescents bursting outward
+    radiant: number;
+    graveCall: number;   // Necromancer passive: every Nth bolt raises a skeleton
+    soulHarvest: number; // Necromancer passive: kills heal / restore mana
+    boneArmor: number;   // Necromancer passive: damage reduction per minion    // Knight passive: periodic ring of holy crescents bursting outward
 }
 
 export interface GameNotification {

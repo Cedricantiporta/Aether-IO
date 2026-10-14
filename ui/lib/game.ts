@@ -11,7 +11,7 @@ export const RARITY_TEXT: Record<Rarity, string> = {
   COMMON: '#f1f2f4', RARE: '#6ea8ff', EPIC: '#c58bff', LEGENDARY: '#f5c518', MYTHIC: '#ff6b5e',
 };
 
-export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#3fae55', WIZARD: '#4a7fe0', BARBARIAN: '#cf4343', KNIGHT: '#d9b25a' };
+export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#3fae55', WIZARD: '#4a7fe0', BARBARIAN: '#cf4343', KNIGHT: '#d9b25a', NECROMANCER: '#8a5ad0' };
 
 export const STAT_LABEL: Record<keyof PlayerStats, string> = {
   ...STAT_NAME,

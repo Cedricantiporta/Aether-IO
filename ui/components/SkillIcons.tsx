@@ -234,6 +234,47 @@ Object.assign(ICONS, {
     <path d="M16 24 L22 42 L14 46 L10 36Z M48 24 L54 36 L50 46 L42 42Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.1" strokeLinejoin="round" />
     <path d="M32 8 L36 34 M24 36 L32 48" stroke="#fff" strokeWidth="1" opacity=".7" />
   </Art>,
+  graveCall: (k: string) => <Art k={k} c="#b08aff">
+    <path d="M14 58 V30 a18 18 0 0 1 36 0 V58Z" fill="#5a5060" stroke={S} strokeWidth="1.6" />
+    <path d="M32 30 v14 M25 36 h14" stroke="#ebe5d0" strokeWidth="3" strokeLinecap="round" />
+    <path d="M22 60 l4 -8 M42 60 l-4 -8" stroke="#ebe5d0" strokeWidth="3" strokeLinecap="round" />
+  </Art>,
+  soulHarvest: (k: string) => <Art k={k} c="#9a6bd8">
+    <path d="M32 54 C14 42 12 28 20 22 C26 18 30 22 32 26 C34 22 38 18 44 22 C52 28 50 42 32 54Z" fill="#7a3ab0" stroke={S} strokeWidth="1.6" />
+    <path d="M24 14 C26 8 30 10 32 4 C34 10 38 8 40 14" fill="none" stroke="#d8ffd0" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  boneArmor: (k: string) => <Art k={k} c="#ebe5d0">
+    <path d="M32 6 L54 14 V32 C54 46 44 54 32 60 C20 54 10 46 10 32 V14Z" fill="#5a4a6a" stroke={S} strokeWidth="1.6" />
+    {[20, 30, 40].map((y) => <path key={y} d={`M18 ${y} h28`} stroke="#ebe5d0" strokeWidth="3.4" strokeLinecap="round" />)}
+  </Art>,
+  RAISE_DEAD: (k: string) => <Art k={k} c="#b08aff">
+    <ellipse cx="32" cy="54" rx="24" ry="6" fill="#3a1a50" opacity=".8" />
+    <circle cx="32" cy="26" r="11" fill="#ebe5d0" stroke={S} strokeWidth="1.5" />
+    <circle cx="28" cy="25" r="2.6" fill="#9a6bff" /><circle cx="36" cy="25" r="2.6" fill="#9a6bff" />
+    <path d="M27 33 h10 M29 33 v4 M32 33 v4 M35 33 v4" stroke={S} strokeWidth="1.4" />
+    <path d="M14 56 L22 38 M50 56 L42 38" stroke="#ebe5d0" strokeWidth="4" strokeLinecap="round" />
+    <path d="M18 40 l-4 -5 M22 38 l1 -6 M46 40 l4 -5 M42 38 l-1 -6" stroke="#ebe5d0" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  SOUL_STEP: (k: string) => <Art k={k} c="#9a6bd8">
+    <path d="M10 46 C18 30 30 50 40 30" fill="none" stroke="#b08aff" strokeWidth="5" strokeLinecap="round" opacity=".6" />
+    <circle cx="46" cy="22" r="9" fill="#2a1840" stroke="#b08aff" strokeWidth="2" />
+    <path d="M14 54 l6 -6 M8 48 l8 -2 M20 58 l1 -8" stroke="#ebe5d0" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  BONE_SPEAR: (k: string) => <Art k={k} c="#ebe5d0">
+    <path d="M8 56 L54 10" stroke={S} strokeWidth="8" strokeLinecap="round" />
+    <path d="M8 56 L54 10" stroke="#ebe5d0" strokeWidth="5" strokeLinecap="round" />
+    <path d="M58 6 L44 11 L53 20Z" fill="#f4efe0" stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
+    <path d="M22 42 l-6 -2 M30 34 l-6 -2 M38 26 l-6 -2" stroke="#c9c2a8" strokeWidth="2.4" strokeLinecap="round" />
+  </Art>,
+  CURSE_FIELD: (k: string) => <Art k={k} c="#8a4ad0">
+    <ellipse cx="32" cy="44" rx="26" ry="11" fill="#5a2a8a" opacity=".7" stroke="#b08aff" strokeWidth="1.5" />
+    <path d="M18 40 C20 30 26 34 24 22 M32 42 C36 30 30 26 34 14 M46 40 C44 30 40 32 42 22" fill="none" stroke="#8be05a" strokeWidth="3" strokeLinecap="round" opacity=".85" />
+    <circle cx="32" cy="46" r="5" fill="#ebe5d0" stroke={S} strokeWidth="1" />
+  </Art>,
+  ARMY_DEAD: (k: string) => <Art k={k} c="#9a6bd8">
+    <rect width="64" height="64" fill="#140a20" opacity=".6" />
+    {[[14, 34], [32, 26], [50, 34]].map(([x, y], i) => (<g key={i}><circle cx={x} cy={y} r="8" fill="#ebe5d0" stroke={S} strokeWidth="1.2" /><circle cx={x - 3} cy={y} r="1.8" fill="#9a6bff" /><circle cx={x + 3} cy={y} r="1.8" fill="#9a6bff" /><path d={`M${x - 6} ${y + 22} L${x} ${y + 9} L${x + 6} ${y + 22}`} stroke="#ebe5d0" strokeWidth="2.6" fill="none" /></g>))}
+  </Art>,
   STORM_ARROWS: (k: string) => <Art k={k} c="#ffd24a">
     <rect width="64" height="64" fill="#0a0e24" opacity=".55" />
     {[[10, 6, 18], [24, 2, 22], [38, 8, 14], [52, 4, 20], [16, 24, 10], [44, 26, 12]].map(([x, y, r], i) => (

@@ -1,0 +1,125 @@
+// Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts) and the bone golem (big melee, ultimate).
+// A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
+// crumbles when its time runs out. Monsters do not target minions; minions are timed, not killed.
+import { Vector3 } from 'three';
+import { world } from '../world';
+import { events } from '../events';
+import { useGameStore } from '../../store';
+import { damageEnemy, healPlayer, type DamageOpts } from './combat';
+import { inCurse } from './zones';
+import { abilityState } from './abilities';
+import { spawnProjectile } from './projectiles';
+import { weaponPerk, hordeMul } from '../../weaponPerks';
+
+export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2;
+const MAX_WARRIORS = 8;
+const ids: number[] = [];
+const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
+const tmp = new Vector3();
+
+/** Damage / lifetime multiplier from talents and the wand perk. */
+function minionMul(): { dmg: number; life: number; haste: number } {
+  const st = useGameStore.getState(), s = st.stats, wp = weaponPerk(st.equipment.weapon);
+  const h = wp?.k === 'HORDE' ? hordeMul(wp.lv) : 1;
+  return { dmg: (1 + (s.minionDmg || 0)) * h, life: h, haste: 1 + (s.minionHaste || 0) };
+}
+
+/** Raises a minion at (x, z). dmg = damage per hit (before talents), life in seconds. */
+export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number): void {
+  const M = world.minions, mm = minionMul();
+  // too many warriors: the oldest one crumbles to make room
+  if (kind === MINION_WARRIOR) {
+    let n = 0, oldest = -1, ol = 1e9;
+    for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind === MINION_WARRIOR) { n++; if (m.life < ol) { ol = m.life; oldest = i; } } }
+    if (n >= MAX_WARRIORS + (useGameStore.getState().stats.minionCount | 0) && oldest >= 0) crumble(M[oldest]);
+  }
+  const m = M.find((o) => !o.active);
+  if (!m) return;
+  m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
+  m.life = m.maxLife = life * mm.life; m.dmg = dmg * mm.dmg; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
+  m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2;
+  events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
+}
+
+function crumble(m: (typeof world.minions)[number]): void {
+  m.active = false;
+  events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: m.kind === MINION_GOLEM ? 2.5 : 1.2, color: 0xd8d0b8 });
+}
+
+export function clearMinions(): void { for (const m of world.minions) m.active = false; }
+export function minionCount(): number { let n = 0; for (const m of world.minions) if (m.active) n++; return n; }
+
+export function updateMinions(dt: number): void {
+  const M = world.minions, pl = world.player, haste = minionMul().haste;
+  let slotI = 0;
+  for (let i = 0; i < M.length; i++) {
+    const m = M[i];
+    if (!m.active) continue;
+    m.life -= dt;
+    if (m.life <= 0 || !pl.alive) { crumble(m); continue; }
+    if (m.rise > 0) { m.rise -= dt; continue; }   // still clawing out of the ground
+    if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 3);
+    const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE;
+    const reach = golem ? 2.6 : mage ? 10 : 1.5, speed = golem ? 6 : mage ? 7 : 8.5, cd = (golem ? 1.3 : mage ? 1.1 : 0.85) / haste;
+    // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
+    m.retarget -= dt;
+    let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
+    if (!e || !e.active || e.state === 'DYING' || m.retarget <= 0) {
+      m.retarget = 0.3; m.tgt = -1; e = null;
+      const found = world.enemyGrid.query(m.x, m.z, 16, ids);
+      let bd = 1e9;
+      for (let k = 0; k < found.length; k++) {
+        const c = world.enemies[found[k]];
+        if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || c.hideT > 0) continue;
+        const d = (c.pos.x - m.x) ** 2 + (c.pos.z - m.z) ** 2;
+        if (d < bd) { bd = d; m.tgt = c.id; e = c; }
+      }
+    }
+    let tx: number, tz: number, stop: number;
+    if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
+    else {   // trail the hero in a loose ring
+      const a = m.slot + slotI++ * 0.9;
+      tx = pl.pos.x + Math.cos(a) * 3.2; tz = pl.pos.z + Math.sin(a) * 3.2; stop = 0.6;
+    }
+    const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
+    if (d > 30) { m.x = pl.pos.x; m.z = pl.pos.z; continue; }   // left far behind (room change): catch up
+    if (d > stop) {
+      const s = Math.min(d - stop, speed * dt);
+      m.x += (dx / d) * s; m.z += (dz / d) * s;
+    }
+    if (d > 0.05) m.facing = Math.atan2(dx, dz);
+    m.atkT -= dt;
+    if (e && d <= stop + 0.3 && m.atkT <= 0) {
+      m.atkT = cd; m.swing = 1;
+      if (mage) {
+        const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 0.8, pierce: 1, radius: 0.9, y: 1.2 });
+        if (p) p.tint = 9;
+      } else {
+        hitO.knockback = golem ? 1.2 : 0.3;
+        damageEnemy(e, m.dmg, hitO);
+        if (golem) events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: 2.2, color: 0xb8a888 });
+      }
+    }
+  }
+}
+
+// ---- necromancer passives that react to kills
+events.on('enemyDeath', (d) => {
+  const st = useGameStore.getState();
+  if (st.hero !== 'NECROMANCER' || d.poof) return;
+  const pl = world.player, lv = st.skillLevels;
+  // Plague Ground: the fallen rise as skeletons (a few per cast)
+  if (abilityState.curseRaise > 0 && inCurse(d.pos.x, d.pos.z)) {
+    abilityState.curseRaise--;
+    spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), 10 + (st.stats.minionLife || 0));
+  }
+  // Soul Harvest: kills near you (or near a minion) restore HP and mana
+  if (lv.soulHarvest > 0 && pl.alive) {
+    let near = (d.pos.x - pl.pos.x) ** 2 + (d.pos.z - pl.pos.z) ** 2 < 14 * 14;
+    if (!near) for (const m of world.minions) if (m.active && (d.pos.x - m.x) ** 2 + (d.pos.z - m.z) ** 2 < 36) { near = true; break; }
+    if (near) {
+      healPlayer(st.stats.maxHealth * (0.01 + 0.005 * (lv.soulHarvest - 1)));
+      pl.mana = Math.min(st.stats.maxMana, pl.mana + 2 + (lv.soulHarvest - 1));
+    }
+  }
+});

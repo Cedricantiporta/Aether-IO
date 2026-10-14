@@ -118,7 +118,7 @@ const ART: Record<UpgradeType, () => React.ReactNode> = {
   SKILL_FREEZING: Snow, SKILL_FREEZE_SPELL: Snow, SKILL_GRAVITY: BlackHole, SKILL_STAMP: Hammer,
   SKILL_RAGE: () => <g>{SwordA(-40)}{SwordA(40)}</g>, SKILL_STORM: Tornado,
   SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star, SKILL_PIERCE_SHOT: Arrow,
-  SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star,
+  SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star, SKILL_GRAVECALL: Star, SKILL_SOULHARVEST: Star, SKILL_BONEARMOR: () => Shield('steel'),
 };
 
 const Emblem: React.FC<{ t: UpgradeType; size: number | string }> = React.memo(({ t, size }) => (

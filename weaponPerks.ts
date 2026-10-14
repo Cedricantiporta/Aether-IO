@@ -6,7 +6,7 @@
 // ============================================================================
 import type { HeroClass, Item, Rarity } from './types';
 
-export type PerkKind = 'MULTI' | 'PIERCE' | 'TWIN' | 'GREAT' | 'BLEED' | 'LIFESTEAL' | 'AXES' | 'BIG' | 'ELEMENT';
+export type PerkKind = 'MULTI' | 'PIERCE' | 'TWIN' | 'GREAT' | 'BLEED' | 'LIFESTEAL' | 'AXES' | 'BIG' | 'ELEMENT' | 'HORDE';
 export type PerkElement = 'FIRE' | 'ICE' | 'LIGHTNING';
 export interface WeaponPerk { k: PerkKind; lv: number; el: PerkElement }
 
@@ -14,7 +14,8 @@ const BY_CLASS: Record<HeroClass, PerkKind[]> = {
   ARCHER: ['MULTI', 'PIERCE'],              // bow: a forward fan of arrows, or a chance for green piercing arrows
   KNIGHT: ['TWIN', 'GREAT'],                // sword: more slashes, or bigger / harder slashes
   BARBARIAN: ['BLEED', 'LIFESTEAL', 'AXES'],   // axe: bleeding hits, lifesteal, or 2-3 axes at once
-  WIZARD: ['BIG', 'ELEMENT'],               // staff: bigger and faster bolts, or elemental bolts (fire / ice / lightning)
+  WIZARD: ['BIG', 'ELEMENT'],
+  NECROMANCER: ['HORDE', 'BIG'],            // wand: stronger, longer-lived minions, or bigger, faster soul bolts               // staff: bigger and faster bolts, or elemental bolts (fire / ice / lightning)
 };
 const LV: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 const ELS: PerkElement[] = ['FIRE', 'ICE', 'LIGHTNING'];
@@ -35,6 +36,7 @@ export const bleedChance = (lv: number): number => 0.2 + 0.1 * lv;
 export const lifeStealOf = (lv: number): number => 0.02 * lv;
 export const axeCount = (lv: number): number => (lv >= 3 ? 3 : 2);
 export const bigMul = (lv: number): { size: number; speed: number } => ({ size: 1 + 0.2 * lv, speed: 1 + 0.12 * lv });
+export const hordeMul = (lv: number): number => 1 + 0.2 * lv;   // minion damage + lifetime
 export const elementChance = (lv: number): number => 0.15 + 0.1 * lv;
 
 /** The perk of a weapon (null: not a class weapon, or Common). */
@@ -60,6 +62,7 @@ export function perkText(p: WeaponPerk): { name: string; desc: string } {
     case 'LIFESTEAL': return { name: `Bloodthirst ${r}`, desc: `+${pc(lifeStealOf(p.lv))} life steal.` };
     case 'AXES': return { name: `Twin Axes ${r}`, desc: `Throws ${axeCount(p.lv)} axes side by side.` };
     case 'BIG': { const b = bigMul(p.lv); return { name: `Arcane Swell ${r}`, desc: `Bolts ${pc(b.size - 1)} bigger and ${pc(b.speed - 1)} faster.` }; }
+    case 'HORDE': return { name: `Lord of Bones ${r}`, desc: `Your minions deal +${pc(hordeMul(p.lv) - 1)} damage and last ${pc(hordeMul(p.lv) - 1)} longer.` };
     case 'ELEMENT': {
       const what = p.el === 'FIRE' ? 'burn' : p.el === 'ICE' ? 'chill and slow' : 'chain lightning to';
       const nm = p.el === 'FIRE' ? 'Flame' : p.el === 'ICE' ? 'Frost' : 'Storm';

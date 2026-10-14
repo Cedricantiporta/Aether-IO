@@ -37,6 +37,15 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
       { key: 'E', name: 'War Vitality', desc: 'Regenerate 10 HP/s for 6s.' },
     ],
   },
+  NECROMANCER: {
+    title: 'Necromancer', tagline: 'Lord of the Dead', tags: ['Ranged', 'Summoner', 'Curses'],
+    weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.NECROMANCER.weaponId)?.name ?? 'Bone Wand',
+    abilities: [
+      { key: 'R', name: 'Army of the Dead', desc: 'A legion of skeletons and a bone golem rise for 12s.' },
+      { key: 'Q', name: 'Raise Dead', desc: 'Skeleton warriors claw out of the ground to fight for you.' },
+      { key: 'E', name: 'Bone Spear', desc: 'A spear of bone that impales a whole line.' },
+    ],
+  },
   KNIGHT: {
     title: 'Knight', tagline: 'Holy Guardian', tags: ['Melee', 'Tank', 'Holy light'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.KNIGHT.weaponId)?.name ?? 'Squire Sword',
@@ -48,7 +57,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
   },
 };
 
-export const HERO_ORDER: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT'];
+export const HERO_ORDER: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 
 /** Normalised (0..1) hero stats for menu bars. */
 export function heroBars(h: HeroClass) {

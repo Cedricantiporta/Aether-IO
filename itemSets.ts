@@ -71,7 +71,7 @@ export const SETS: SetDef[] = [
   },
   {
     id: 'shadowstep', name: 'Shadowstep', rarity: 'RARE', blurb: 'Light leathers for those who are never where you aimed.',
-    names: { weapon: { ARCHER: 'Shadowstep Bow', WIZARD: 'Shadowstep Wand', BARBARIAN: 'Shadowstep Hatchet', KNIGHT: 'Shadowstep Blade' }, helmet: 'Shadowstep Cowl', armor: 'Shadowstep Leathers', gloves: 'Shadowstep Wraps', boots: 'Shadowstep Treads', accessory: 'Shadowstep Locket' },
+    names: { weapon: { ARCHER: 'Shadowstep Bow', WIZARD: 'Shadowstep Wand', BARBARIAN: 'Shadowstep Hatchet', KNIGHT: 'Shadowstep Blade', NECROMANCER: 'Shadowstep Wand' }, helmet: 'Shadowstep Cowl', armor: 'Shadowstep Leathers', gloves: 'Shadowstep Wraps', boots: 'Shadowstep Treads', accessory: 'Shadowstep Locket' },
     flavour: { weapon: 'swift', helmet: 'light', armor: 'light', gloves: 'light', boots: 'swift', accessory: 'light' },
     bonuses: [
       { pieces: 2, text: '+8% move speed, +5% dodge', fx: { mul: { moveSpeed: 0.08 }, add: { dodge: 0.05 } } },
@@ -81,7 +81,7 @@ export const SETS: SetDef[] = [
   },
   {
     id: 'dragonbone', name: 'Dragonbone', rarity: 'LEGENDARY', blurb: 'Carved from the ribs of an ancient wyrm.',
-    names: { weapon: { ARCHER: 'Dragonbone Longbow', WIZARD: 'Dragonbone Staff', BARBARIAN: 'Dragonbone Cleaver', KNIGHT: 'Dragonbone Greatsword' }, helmet: 'Dragonbone Visage', armor: 'Dragonbone Hauberk', gloves: 'Dragonbone Claws', boots: 'Dragonbone Sabatons', accessory: 'Dragonbone Fang' },
+    names: { weapon: { ARCHER: 'Dragonbone Longbow', WIZARD: 'Dragonbone Staff', BARBARIAN: 'Dragonbone Cleaver', KNIGHT: 'Dragonbone Greatsword', NECROMANCER: 'Dragonbone Scepter' }, helmet: 'Dragonbone Visage', armor: 'Dragonbone Hauberk', gloves: 'Dragonbone Claws', boots: 'Dragonbone Sabatons', accessory: 'Dragonbone Fang' },
     flavour: { weapon: 'fury', helmet: 'heavy', armor: 'heavy', gloves: 'medium', boots: 'vital', accessory: 'medium' },
     bonuses: [
       { pieces: 2, text: '+15% max health', fx: { mul: { maxHealth: 0.15 } } },
@@ -91,7 +91,7 @@ export const SETS: SetDef[] = [
   },
   {
     id: 'sovereign', name: 'Aether Sovereign', rarity: 'MYTHIC', blurb: 'Regalia of a king who ruled between the stars.',
-    names: { weapon: { ARCHER: "Sovereign's Arc", WIZARD: "Sovereign's Scepter", BARBARIAN: "Sovereign's Crusher", KNIGHT: "Sovereign's Blade" }, helmet: 'Sovereign Diadem', armor: 'Sovereign Mantle', gloves: 'Sovereign Grasp', boots: 'Sovereign Treads', accessory: 'Sovereign Orb' },
+    names: { weapon: { ARCHER: "Sovereign's Arc", WIZARD: "Sovereign's Scepter", BARBARIAN: "Sovereign's Crusher", KNIGHT: "Sovereign's Blade", NECROMANCER: "Sovereign's Reliquary" }, helmet: 'Sovereign Diadem', armor: 'Sovereign Mantle', gloves: 'Sovereign Grasp', boots: 'Sovereign Treads', accessory: 'Sovereign Orb' },
     flavour: { weapon: 'fury', helmet: 'arcane', armor: 'medium', gloves: 'light', boots: 'swift', accessory: 'arcane' },
     bonuses: [
       { pieces: 2, text: '+10% damage, +20% skill damage', fx: { mul: { damage: 0.1 }, add: { skillDamage: 0.2 } } },
