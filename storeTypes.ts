@@ -19,6 +19,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
+export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -155,6 +156,7 @@ export interface GameState {
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
   addQuestProgress: (type: QuestType, amount?: number, kind?: EnemyKind, lootName?: string) => void;
   reportToKing: () => { audience: number; reports: number }; // talking to the King: finishes AUDIENCE quests, marks finished KING_BOUNTY quests as reported
+  applyBlessing: (kind: BlessingKind) => string;   // fountain blessing for the rest of the run (edits baseStats); returns its label
   claimQuest: (id: string) => boolean; // grants reward, draws a replacement offer
   acceptQuest: (id: string) => boolean; // takes an offer (max 3 active)
   abandonQuest: (id: string) => void;   // drops an accepted quest (frees a slot; progress lost)

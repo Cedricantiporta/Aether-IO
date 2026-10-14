@@ -519,6 +519,21 @@ function Lake() {
       if (rnd() < 0.18) b.ico(0.6 + rnd() * 0.6, [LAKE.x1 - 1.5 - rnd() * 3, -0.05, z + rnd()], '#8a8f94', [1.2, 0.6, 1], 0);
       if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
     }
+    // small wooden dock reaching out from the west shore (+ a moored rowboat and a lantern post)
+    {
+      const dz = 22, x0 = LAKE.x1 - 0.5, len = 13, wood = '#7a5634', wood2 = '#5e4026', dark = '#3e2a18';
+      for (let i = 0; i < len / 0.55; i++) b.box(0.5, 0.12, 2.4, [x0 - 0.3 - i * 0.55, 0.35, dz], i % 2 ? wood : '#84603c', [0, 0, (rnd() - 0.5) * 0.04]);
+      for (const sz of [-1.1, 1.1]) b.box(len, 0.16, 0.18, [x0 - len / 2, 0.24, dz + sz], wood2);
+      for (let k = 0; k <= 4; k++) for (const sz of [-1.15, 1.15]) b.cyl(0.13, 0.15, 2.0, 7, [x0 - 0.5 - k * (len / 4), -0.6, dz + sz], dark);
+      b.cyl(0.11, 0.13, 1.1, 7, [x0 - len + 0.2, 0.85, dz + 1.15], dark); b.torus(0.16, 0.035, [x0 - len + 0.2, 0.95, dz + 1.15], '#c9b27a', [Math.PI / 2, 0, 0], 1, 10);
+      // lantern post at the end
+      b.box(0.12, 2.0, 0.12, [x0 - len + 0.3, 1.3, dz - 1.0], dark); b.box(0.5, 0.08, 0.08, [x0 - len + 0.5, 2.25, dz - 1.0], dark);
+      // rowboat alongside
+      const bx = x0 - len + 2.8, bz = dz + 2.4;
+      b.box(3.2, 0.5, 1.2, [bx, -0.02, bz], '#6b4a2e'); b.box(3.4, 0.12, 1.36, [bx, 0.22, bz], '#8a6440');
+      b.cone(0.62, 0.9, 4, [bx - 2.0, -0.02, bz], '#6b4a2e', [0, Math.PI / 4, Math.PI / 2], [1, 1, 0.7]);
+      b.box(0.2, 0.08, 1.1, [bx + 0.4, 0.28, bz], '#a07a50'); b.box(2.6, 0.05, 0.08, [bx, 0.3, bz + 0.55], '#c9b27a', [0, 0.25, 0]);
+    }
     const shore = b.build();
     return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
   }, []);

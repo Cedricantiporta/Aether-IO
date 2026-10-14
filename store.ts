@@ -917,6 +917,23 @@ export const useGameStore = create<GameState>()((set, get) => {
       return true;
     },
 
+    applyBlessing: (kind) => {
+      const s = get();
+      const b = { ...s.baseStats };
+      let label = '';
+      switch (kind) {
+        case 'FORTUNE': b.goldFind = (b.goldFind || 0) + 0.25; b.xpBonus = (b.xpBonus || 0) + 0.15; label = 'Blessing of Fortune: +25% gold, +15% XP'; break;
+        case 'MIGHT': b.damage = b.damage * 1.15; label = 'Blessing of Might: +15% damage'; break;
+        case 'AEGIS': b.defense = (b.defense || 0) + 6; label = 'Blessing of the Aegis: +6 defense and a shield'; break;
+        case 'SWIFT': b.moveSpeed = b.moveSpeed * 1.12; label = 'Blessing of Swiftness: +12% move speed'; break;
+        case 'VITALITY': b.maxHealth = Math.round(b.maxHealth * 1.2); label = 'Blessing of Vitality: +20% max HP'; break;
+        case 'PRECISION': b.critRate = (b.critRate || 0) + 0.1; label = 'Blessing of Precision: +10% crit chance'; break;
+      }
+      set({ baseStats: b, stats: calc(b, s.equipment) });
+      notify(label + ' (this run)', '#ffd36a', 'SYSTEM');
+      return label;
+    },
+
     acceptQuest: (id) => {
       const s = get();
       const q = s.quests.find((x) => x.id === id);

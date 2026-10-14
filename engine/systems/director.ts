@@ -86,7 +86,7 @@ const dd = () => world.director;
 const rm = () => world.room;
 
 /** Biome in which a merchant door was already offered (-1 = none this run). */
-let merchantBiome = -1;
+let merchantBiome = -1, fountainBiome = -1;
 
 export function resetDirector(): void {
   const d = world.director;
@@ -106,7 +106,7 @@ export function resetDirector(): void {
 // ------------------------------------------------------------ run control ---
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
-  biome = 0; index = 0; merchantBiome = -1;
+  biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1;
   world.room.fade = 1;
   enterRoom(0, 0, firstPlan());
 }
@@ -465,8 +465,9 @@ function bossRewards(): void {
 // ------------------------------------------------------------ clearing ------
 function openPortals(): void {
   const r = world.room;
-  const n = nextChoices(biome, index, choices, merchantBiome !== biome);
+  const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome);
   if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
+  if (choices.some((c) => c.type === 'FOUNTAIN')) fountainBiome = biome;   // ...and so does a fountain
   for (let i = 0; i < r.portals.length; i++) {
     const po = r.portals[i];
     if (i >= n) { po.active = false; continue; }
@@ -601,8 +602,15 @@ export function interactRoom(it: Interactable): void {
     p.hp = Math.min(st.stats.maxHealth, p.hp + hp);
     p.mana = Math.min(st.stats.maxMana, p.mana + mp);
     events.emit('heal', { pos: p.pos, amount: p.hp - before });
-    events.emit('floatText', { pos: p.pos, text: 'Refreshed!', color: 0x7fe0ff, scale: 1, dy: 1.6 });
     st.addNotification('The fountain restores 40% HP and MP.', '#5fd6ff', 'SYSTEM');
+    // ...and grants a random blessing for the rest of the run
+    const kinds = ['FORTUNE', 'MIGHT', 'AEGIS', 'SWIFT', 'VITALITY', 'PRECISION'] as const;
+    const kind = kinds[Math.floor(Math.random() * kinds.length)];
+    const label = st.applyBlessing(kind);
+    if (kind === 'AEGIS') p.shieldCharges += 1;
+    if (kind === 'VITALITY') p.hp = Math.min(useGameStore.getState().stats.maxHealth, p.hp + st.stats.maxHealth * 0.2);
+    events.emit('floatText', { pos: p.pos, text: label.split(':')[0], color: 0xffd36a, scale: 1.1, dy: 1.6 });
+    events.emit('shockwave', { pos: p.pos.clone(), radius: 5, color: 0xffd36a });
   } else if (s.kind === 'MERCHANT') {
     if (!st.isShopOpen) st.openSpecificShop('MERCHANT');
   } else if (s.kind === 'CHEST' && s.ready && !s.used) {
