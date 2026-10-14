@@ -121,7 +121,7 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
     desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns and ignites everything, two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Impact ${pct(50 * 0.7 * lvMul(lv))} dmg (center) · 2 fire rings ${pct(3 * 0.7 * lvMul(lv))} each · lava ${pct(2.2 * 0.7 * lvMul(lv))}` },
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
-    desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
   NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Army of the Dead', mana: 0, cd: 0,
     desc: 'A wail of the grave stuns everything around you, then a legion rises: four skeleton warriors, two skeleton mages and a hulking bone golem fight for you until slain. Its 90s cooldown only starts once the whole army has fallen; it also needs a full charge bar.',

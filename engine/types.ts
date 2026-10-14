@@ -99,7 +99,7 @@ export interface Enemy {
   poisonT: number; poisonDps: number;
   freezeT: number;       // fully frozen (blue, no move/attack)
   stunT: number;         // stunned (spinning stars, no move/attack)
-  fearT: number;         // terrified: flees from the player
+  fearT: number;         // terrified: cowers in place (no move / attack), then 30% slow for 3 s
   slowT: number; slowFactor: number; // speed *= (1 - slowFactor)
   // combat-depth systems
   armor: number;         // damage taken x 100/(100+armor)

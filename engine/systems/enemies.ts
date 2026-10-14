@@ -63,6 +63,7 @@ const BANDIT = { windup: 0.5, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22,
 const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
 const MINI = { hpMul: 8, scaleMul: 1.5, slamCd: 6, slamWindup: 0.9, slamR: 5.5, flag: 7, slamFlag: 8 };
 const SHARDS = 8;
+const FEAR_SLOW_T = 3;   // seconds of 30% slow after a fear ends
 
 // ------------------------------------------------------------ scratch -------
 const contactCd = new Float32Array(MAX_ENEMIES);
@@ -1241,7 +1242,10 @@ function updateEnemy(e: Enemy): void {
   }
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
-  if (e.fearT > 0) e.fearT -= dt;
+  if (e.fearT > 0) {   // terrified: frozen in place; when it wears off, slowed 30% for a while
+    e.fearT -= dt;
+    if (e.fearT <= 0) { e.slowT = Math.max(e.slowT, FEAR_SLOW_T); e.slowFactor = Math.max(e.slowFactor, 0.3); }
+  }
   if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 0; }
   if (e.burnT > 0) {
     e.burnT -= dt;
@@ -1268,10 +1272,8 @@ function updateEnemy(e: Enemy): void {
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
     else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
-    else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') {
-      const inv = 1 / (tdist || 1);
-      setVel(e, -tdx * inv, -tdz * inv, e.speed * 1.25);
-    } else runAI(e);
+    else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)
+    else runAI(e);
   } else {
     if (e.spKind !== 0) cancelSpecial(e);
     stop(e);
