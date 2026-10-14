@@ -1676,3 +1676,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .lvb-row { display: flex; justify-content: space-between; gap: 2.5rem; font-size: .82rem; color: #e8dcc0; text-shadow: 0 1px 2px #000; }
 .lvb-row b { color: #f1d58e; font-weight: 700; } .lvb-row em { font-style: normal; color: #ffd24a; margin-left: .3rem; font-size: .7rem; }
 .lvb-row.main { font-size: .95rem; padding-bottom: .2rem; border-bottom: 1px solid rgba(241, 213, 142, .25); margin-bottom: .1rem; } .lvb-row.main b { font-size: 1rem; }
+
+/* quest tracker on the left (under the hero frame); the active main quest glows softly gold */
+.qt-left { margin-top: .4rem; }
+.qt-left .qt-row { text-align: left; }
+.qt-row.main { animation: qtGlow 3.2s ease-in-out infinite; }
+.qt-row.main::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #fff1c4, #e9b949); box-shadow: 0 0 10px rgba(255, 200, 90, .8); }
+@keyframes qtGlow { 0%, 100% { box-shadow: inset -3px 0 0 #f1d58e, 0 0 0 1px rgba(241, 213, 142, .45), 0 0 12px rgba(241, 196, 90, .18); }
+  50% { box-shadow: inset -3px 0 0 #f1d58e, 0 0 0 1px rgba(255, 224, 150, .7), 0 0 22px rgba(255, 200, 90, .38); } }
+.hud-mm-top { margin-top: .2rem; transform: scale(.82); transform-origin: top right; }
+.compact .hud-mm.hud-mm-top { position: static; zoom: .55; }

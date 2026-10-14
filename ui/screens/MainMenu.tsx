@@ -109,6 +109,7 @@ export const VillageHUD: React.FC = () => {
       {!panel && (
         <div className="absolute flex flex-col gap-2 pe hud-tl" style={{ left: '.6rem', top: '.6rem' }}>
           <TownProfile />
+          {!recordsOpen && <div className="qt-left"><QuestTracker /></div>}
         </div>
       )}
 
@@ -125,7 +126,7 @@ export const VillageHUD: React.FC = () => {
             <VBtn icon={<BookGlyph />} label="Codex" onClick={() => openCodex(true)} badge={codexDot} />
             <VBtn icon={<GearGlyph />} label="Settings" onClick={() => openSettings(true)} id="open-settings" />
           </div>
-          {recordsOpen ? <div style={{ width: '22rem' }}><RecordsPanel /></div> : <QuestTracker />}
+          {recordsOpen && <div style={{ width: '22rem' }}><RecordsPanel /></div>}
         </div>
       )}
 
