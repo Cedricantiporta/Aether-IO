@@ -44,7 +44,7 @@ export const isGear = (i: Item) => GEAR_TYPES.has(i.type);
 export const slotOf = (i: Item): 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | null =>
   GEAR_TYPES.has(i.type) ? (i.type.toLowerCase() as 'weapon') : null;
 /** Gear sells for 30%; trade-goods loot sells at full value. */
-export const sellPrice = (i: Item) => (i.type === 'LOOT' ? i.price : Math.floor(i.price * 0.3));
+export const sellPrice = (i: Item) => (i.type === 'LOOT' || i.type === 'SHARD' ? i.price : Math.floor(i.price * 0.3));
 export const isHighValue = (i: Item) => i.rarity === 'EPIC' || i.rarity === 'LEGENDARY' || i.rarity === 'MYTHIC' || i.level >= 5;
 
 /** Upgrade chance: 100% up to +2, then -10% per level (min 10%). item.level 1 == +0 */
@@ -66,7 +66,7 @@ export function upgradedStats(i: Item): Partial<PlayerStats> {
 }
 
 export const TYPE_LABEL: Record<Item['type'], string> = {
-  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot',
+  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot', SHARD: 'Material',
 };
 
 export const SORTS = ['RARITY', 'TYPE', 'POWER'] as const;

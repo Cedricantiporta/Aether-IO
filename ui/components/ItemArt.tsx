@@ -496,7 +496,7 @@ Art.displayName = 'ItemArt';
 
 /** Painted icon for an item. `size` is px or a css length / percentage. */
 export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => (
-  <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
+  item.type === 'SHARD' ? <ShardArt rarity={item.rarity} size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
 );
 export const ItemArtByKey: React.FC<{ k: string; c?: string; size?: number | string }> = ({ k, c = '#e9b949', size = 26 }) => <Art k={k} c={c} size={size} />;
 

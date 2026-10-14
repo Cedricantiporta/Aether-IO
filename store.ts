@@ -31,6 +31,7 @@ import { SET_BY_NAME } from './itemSets';
 import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
+import { shardCounts, syncShardStacks, SHARD_RARITIES } from './shards';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
@@ -162,8 +163,8 @@ const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
 let uidCounter = 0;
 const uid = (prefix = 'id'): string => `${prefix}_${Date.now().toString(36)}_${(uidCounter++).toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
-const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT';
-const stackLimit = (item: Item): number => (item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
+const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD';
+const stackLimit = (item: Item): number => (item.type === 'SHARD' ? 1e9 : item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
 const isGear = (item: Item): boolean => item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS';
 
 /** Combat power of one item (UI comparison / auto-equip). */
@@ -1292,7 +1293,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const cur = inv[idx];
       const qty = cur.quantity || 1;
       const sellQty = Math.min(qty, amount);
-      const value = (cur.type === 'LOOT' ? cur.price : Math.floor(cur.price * 0.3)) * sellQty;
+      const value = (cur.type === 'LOOT' || cur.type === 'SHARD' ? cur.price : Math.floor(cur.price * 0.3)) * sellQty;
       if (sellQty >= qty) inv.splice(idx, 1);
       else inv[idx] = { ...cur, quantity: qty - sellQty };
       set({ gold: s.gold + value, inventory: inv });
@@ -1656,3 +1657,18 @@ function syncDiscoveries(): void {
   const ac = activeChar();
   if (ac && useGameStore.getState().hero !== ac.hero) useGameStore.getState().selectHero(ac.hero);
 }
+
+// ---- shards are bag items: keep the materials counts and the shard stacks in sync (shards.ts)
+{
+  const st = useGameStore.getState(), inv = syncShardStacks(st.inventory, st.materials);
+  if (inv !== st.inventory) useGameStore.setState({ inventory: inv });   // old saves: counts -> stacks
+}
+useGameStore.subscribe((s, p) => {
+  if (s.materials !== p.materials) {          // gained / spent shards -> stacks
+    const inv = syncShardStacks(s.inventory, s.materials);
+    if (inv !== s.inventory) useGameStore.setState({ inventory: inv });
+  } else if (s.inventory !== p.inventory) {   // a stack was sold / deleted / stored / retrieved -> counts
+    const c = shardCounts(s.inventory);
+    if (SHARD_RARITIES.some((r) => c[r] !== s.materials[r])) useGameStore.setState({ materials: c });
+  }
+});

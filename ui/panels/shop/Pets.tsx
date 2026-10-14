@@ -1,11 +1,9 @@
 import { useUiStore } from '../../uiStore';
 import React, { useState } from 'react';
-import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
 import { useGameStore, shopPrice, firstPetFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ItemArt } from '../../components/ItemArt';
-import { Button } from '../../components/Button';
 import { PetCare } from './PetCare';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
@@ -43,7 +41,6 @@ export const PetsTab: React.FC = () => {
   const [tab, setTab] = useState<'SHOP' | 'CARE'>('SHOP');
   const [selId, setSel] = useState(PETS_POOL[0]?.id ?? '');
   const p = PETS_POOL.find((x) => x.id === selId) ?? PETS_POOL[0];
-  const price = freeBlob && p.id === 'pet_blob' ? 0 : shopPrice(p), sale = sales[p.id], can = !p.summonOnly && gold >= price;
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2">
@@ -54,7 +51,8 @@ export const PetsTab: React.FC = () => {
           {PETS_POOL.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>
               <ItemSlot item={q} fluid iconSize={30} tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
-                price={q.summonOnly ? undefined : freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q)} cantAfford={!q.summonOnly && !(freeBlob && q.id === 'pet_blob') && gold < shopPrice(q)} onClick={() => setSel(q.id)} />
+                price={q.summonOnly ? undefined : freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q)} cantAfford={!q.summonOnly && !(freeBlob && q.id === 'pet_blob') && gold < shopPrice(q)}
+                onClick={() => { setSel(q.id); if (!q.summonOnly) setBuy(q, { price: freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q), max: 1 }); }} />
             </div>
           ))}
         </div>
@@ -64,13 +62,7 @@ export const PetsTab: React.FC = () => {
               <div className="font-bold leading-tight" style={{ color: RARITY_TEXT[p.rarity], fontFamily: 'var(--font-title)' }}>{p.name} <span className="text-[.7rem]" style={{ color: '#ffd24a' }}>{'★'.repeat(RARITY_STARS[p.rarity] ?? 1)}</span></div>
               <div className="text-[.72rem] text-[var(--text-dim)] leading-snug">{p.description}</div>
             </div>
-            {p.summonOnly ? <span className="rpg-badge" style={{ color: '#c58bff' }}>Summon only</span> : (
-              <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => setBuy(p, { price, max: 1 })} style={{ flexDirection: 'column', gap: 0 }} data-testid="pet-buy">
-                <span>Buy</span>
-                {sale ? <span className="text-[.6rem] opacity-70 line-through rpg-num">{p.price.toLocaleString()}</span> : null}
-                {price === 0 ? <span className="rpg-num" data-testid="pet-free">Free</span> : <span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{price.toLocaleString()}</span>}
-              </Button>
-            )}
+            {p.summonOnly && <span className="rpg-badge" style={{ color: '#c58bff' }}>Summon only</span>}
           </div>
           {!p.summonOnly && <PetBadges name={p.name} />}
           {PET_SKILL_NAME[p.petSkill as string] && <div className="text-[.7rem]" style={{ color: 'var(--text-dim)' }}>Skill: <b style={{ color: '#f6e6bd' }}>{PET_SKILL_NAME[p.petSkill as string]}</b></div>}

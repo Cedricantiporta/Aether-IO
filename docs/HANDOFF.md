@@ -459,3 +459,17 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Bag: 4 top tabs (All / Equipment / Accessories / Other), rarity-tinted slot backgrounds.
 - Touch: skill wheel around the attack button (`G` arc layout in TouchControls) + Auto toggle (`world.autoBattle`:
   hunts the nearest enemy anywhere in the room, `abilities.autoCast` casts ready skills / ult every 0.5 s).
+
+### Shards as bag items, reward feed, gear recolour (latest)
+- `shards.ts`: crafting shards are ItemType 'SHARD' stacks in the bag (one stack per rarity, no stack limit). `materials`
+  stays the count used by crafting / summon / pets; a store.ts subscription keeps both in sync (materials change ->
+  stacks; selling / deleting / storing a stack -> counts). Old saves get their stacks at load.
+- `rewardFeed.ts` `feedReward()`: claimed rewards (main / NPC / board quests, goals, achievements, codex) appear in the
+  bottom-left loot feed like pickups.
+- Gear look (`render/gear.ts` `tintGear`): the KayKit hero keeps its own model; gear recolours its parts by rarity
+  (helmet -> hat / helmet / hood, armour -> body / cape, gloves -> arms, boots -> legs). `attachGear` (added meshes) is
+  no longer used.
+- Town HUD = run HUD (VitalBars, PlayerPlate, MenuButtons, Minimap 176px). Difficulty selection removed (saves load as
+  Normal). Settings: side tabs + sections; Character tab (change character, records, reset profile).
+- Buying: every purchase goes through BuyDialog (`setBuyItem(item, { price, max, onBuy })`); pet shop: clicking a pet
+  opens it (no Buy button).
