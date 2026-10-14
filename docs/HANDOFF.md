@@ -38,12 +38,12 @@ production deploy builds `main`, so preview deployments of this branch or a merg
 - **Progression**: persistent profile in localStorage `aether-survivor-profile-v1` (gold, gems, items, equipment,
   hero rank, talents, quests, codex discoveries, settings). Runs start with 0 SP.
 
-## In flight when this was written (may already be merged — check `git log`)
+## Paused / NOT done (stopped at handoff — nothing from these was merged; redo from these descriptions)
 1. **Town rework** (sub-agent): town ~60% size but functional buildings spread out (each in its own spot), houses +
    decorative stalls in the OLD house style (as before commit 50fbed7), well moved off the plaza onto grass, fences
    (and posts) get colliders, NPC avatars fixed (hero scale, upright, proper idle/walk anims, light tints), harvest
    nodes moved to the outskirts, gate easy to find (signpost/banner).
-If that branch never landed, redo it from this description.
+
 - NOTE: the user asked to remove HP/MP potions, then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
@@ -52,7 +52,7 @@ If that branch never landed, redo it from this description.
    pinch = zoom, movement + joystick relative to camera yaw (W = away from camera), skills "facing" unaffected.
    Files: `render/CameraRig.tsx`, `engine/input.ts`, `engine/systems/player.ts` (movement in `updatePlayer` and
    `updatePlayerVillage`), `ui/hud/TouchControls.tsx` (a rotate zone). Ground aim already raycasts.
-2. **Quest board**: board lists many offered quests (e.g. 6–8, refreshes daily / on claim); a quest only progresses
+2. **Quest board** (was started then paused, not merged): board lists many offered quests (e.g. 6–8, refreshes daily / on claim); a quest only progresses
    after **Accept**; max **3 active**; abandon frees a slot. Files: `quests.ts`, `store.ts` (`quests`,
    `addQuestProgress`, `claimQuest`), `storeTypes.ts`, the QUESTS shop tab UI (`ui/panels/shop/Quests.tsx`).
 3. Balance/tuning still unverified: new boss damage/cadence, town performance on real phones (12 skinned NPCs),
