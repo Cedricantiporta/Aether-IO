@@ -148,7 +148,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_grav', type: 'SKILL_GRAVITY', name: 'Singularity', description: 'Active (1) Level Up', rarity: 'LEGENDARY', value: 1, classType: 'WIZARD' },
   { id: 'u_blizz', type: 'SKILL_FREEZE_SPELL', name: 'Blizzard', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },
   
-  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Bloodrage Leap', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
+  { id: 'u_rage', type: 'SKILL_RAGE', name: 'Cross Slash', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_stamp', type: 'SKILL_STAMP', name: 'Axe Storm', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
 ];
 

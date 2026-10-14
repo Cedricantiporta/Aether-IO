@@ -37,7 +37,7 @@ export const abilityState = {
   whirlBoost: false, whirlHeal: 0, finisher: false,
   orbT: 0, orbN: 0, orbTick: 0, orbChain: 2, orbDmg: 0,
   orbs: [{ x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: 0 }],
-  leapT: 0, leapDur: 0.55, leapSx: 0, leapSz: 0, leapTx: 0, leapTz: 0, leapDmg: 0, leapLv: 1,
+  leapT: 0, leapDur: 0.55, leapSx: 0, leapSz: 0, leapTx: 0, leapTz: 0, leapDmg: 0, leapLv: 1, leapDash: false,
   whirlTick: 0, whirlDmg: 0, whirlLv: 1,
   finalSlam: 0,
   lastStep: 0,
@@ -243,7 +243,8 @@ export function castActive(index: number): void {
 /** Archer Shadow Roll / Wizard Blink Nova: the class dash (charges are handled by player.ts). `auto` = no explicit aim (tap). */
 export function castDashSkill(auto: boolean): void {
   const hero = useGameStore.getState().hero;
-  if (hero === 'BARBARIAN') { shoulderCharge(); return; }
+  if (hero === 'BARBARIAN') { barbLeap(auto); return; }
+  void shoulderCharge;
   dashAuto = auto;
   cast('e', true, -1);
 }
@@ -388,14 +389,13 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
 
   // ---- BARBARIAN
   if (slot === 'q') {
-    aimPoint(24, 5, tgt);
-    safeSpot(tgt);
-    const a = abilityState;
-    a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
-    a.leapDmg = b * 7; a.leapLv = lv;
-    p.invulnT = Math.max(p.invulnT, a.leapDur + 0.1);
-    events.emit('leap', { from: p.pos.clone(), to: tgt.clone(), dur: a.leapDur });
-    announce('BLOODRAGE_LEAP');
+    // Cross Slash: two crossed axe waves fly forward as one X, cleaving through everything in the lane
+    const dmg = b * 4.2;
+    spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 26, dmg,
+      { life: 0.8 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 2.3 + 0.1 * (lv - 1), y: 1.1 });
+    p.anim.attackT = 1;
+    addShake(0.15);
+    announce('CROSS_SLASH');
   } else if (slot === 'e') {
     const a = abilityState;
     p.whirlT = 2; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
@@ -435,6 +435,25 @@ function battleCryRoar(b: number, lv: number): void {
 }
 
 /** Barbarian class dash: shoulder charge, damages everything on its path, small knockback, NO i-frames. */
+/** Barbarian class dash: Bloodrage Leap — jump to the aim point (tap: along movement / facing), slam on landing (stun + short Rage). */
+function barbLeap(auto: boolean): void {
+  const st = useGameStore.getState();
+  const p = world.player;
+  const a = abilityState;
+  const lv = st.skillLevels.dash;
+  const tgt = aim;
+  if (auto && !aimOverride.on) {
+    const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
+    tgt.set(p.pos.x + md.x * 12, 0, p.pos.z + md.z * 12);
+  } else aimPoint(18, 4, tgt);
+  safeSpot(tgt);
+  a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
+  a.leapDmg = base(lv) * 3.5; a.leapLv = lv; a.leapDash = true;
+  p.invulnT = Math.max(p.invulnT, a.leapDur + 0.1);
+  events.emit('leap', { from: p.pos.clone(), to: tgt.clone(), dur: a.leapDur });
+  p.anim.castT = 1;
+}
+
 function shoulderCharge(): void {
   const st = useGameStore.getState();
   const p = world.player;
@@ -838,10 +857,11 @@ export function updateAbilities(dt: number): void {
     if (a.leapT <= 0) {
       p.air = 0; p.vel.set(0, 0, 0);
       const lv = a.leapLv;
-      const R = 9 + 0.5 * (lv - 1);
-      stunSt.duration = 1;
+      const R = (a.leapDash ? 7 : 9) + 0.5 * (lv - 1);
+      stunSt.duration = a.leapDash ? 0.6 : 1;
       damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.leapDmg, physKnock, stunSt);
-      p.rageT = Math.max(p.rageT, 3 + lv + st.stats.rageBonus);
+      p.rageT = Math.max(p.rageT, (a.leapDash ? 1.5 + 0.5 * lv : 3 + lv) + st.stats.rageBonus);
+      a.leapDash = false;
       events.emit('shockwave', { pos: p.pos.clone(), radius: R, color: 0xff5a3a });
       events.emit('crater', { pos: p.pos.clone(), radius: R * 0.7, color: 0x2a1408 });
       events.emit('quake', { pos: p.pos.clone(), radius: R });
@@ -876,13 +896,24 @@ export function updateAbilities(dt: number): void {
     const R2 = pullR * pullR;
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];
-      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss || e.mini) continue;
+      if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
       const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 > R2) continue;
+      if (e.boss || e.mini) { // big targets: no pull, only a gentle shove so they don't stand inside the hero
+        const d = Math.sqrt(d2) || 1, keep = 1.5 + e.radius;
+        if (d < keep) { const push = Math.min(keep - d, 6 * dt); e.pos.x -= (dx / d) * push; e.pos.z -= (dz / d) * push; }
+        continue;
+      }
       const d = Math.sqrt(d2) || 1;
-      if (d < 1.8) continue;
-      const step = Math.min(d - 1.8, 14 * 0.08 * dt * (a.whirlBoost ? 1.3 : 1)); // very slight pull (designer: barely any)
+      // keep-out ring: nothing gets close enough to touch the hero while spinning (still damaged by the ticks below)
+      const keep = 3.0 + e.radius;
+      if (d < keep) {
+        const push = Math.min(keep - d, 18 * dt);
+        e.pos.x -= (dx / d) * push; e.pos.z -= (dz / d) * push;
+        continue;
+      }
+      const step = Math.min(d - keep, 14 * 0.08 * dt * (a.whirlBoost ? 1.3 : 1)); // very slight pull toward the blade ring
       e.pos.x += (dx / d) * step; e.pos.z += (dz / d) * step;
     }
     if (a.whirlTick >= 0.15) {

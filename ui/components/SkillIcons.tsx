@@ -275,6 +275,13 @@ Object.assign(ICONS, {
     <path d="M14 56 L22 46 L30 56 L38 46 L46 56Z" fill={u(k, 'red')} stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
     <path d="M20 22 L34 12 L30 26 L40 24 L26 38 L28 26Z" fill="#ffb0a0" opacity=".9" stroke={S} strokeWidth=".8" strokeLinejoin="round" />
   </Art>,
+  CROSS_SLASH: (k: string) => <Art k={k} c="#ff7a3a">
+    <path d="M10 12 Q34 30 54 54" stroke="#ff8a40" strokeWidth="10" fill="none" strokeLinecap="round" opacity=".45" filter={u(k, 'glow')} />
+    <path d="M54 12 Q30 30 10 54" stroke="#ff8a40" strokeWidth="10" fill="none" strokeLinecap="round" opacity=".45" filter={u(k, 'glow')} />
+    <path d="M10 12 Q34 30 54 54" stroke={u(k, 'fire')} strokeWidth="5" fill="none" strokeLinecap="round" />
+    <path d="M54 12 Q30 30 10 54" stroke={u(k, 'fire')} strokeWidth="5" fill="none" strokeLinecap="round" />
+    <path d="M10 12 Q34 30 54 54 M54 12 Q30 30 10 54" stroke="#fff6d0" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+  </Art>,
   WHIRLWIND: (k: string) => <Art k={k} c="#ffb050">
     <circle cx="32" cy="32" r="24" fill="none" stroke="#ffc070" strokeWidth="3" strokeDasharray="30 12" strokeLinecap="round" />
     <circle cx="32" cy="32" r="15" fill="none" stroke="#fff0c0" strokeWidth="2.4" strokeDasharray="18 9" strokeLinecap="round" />

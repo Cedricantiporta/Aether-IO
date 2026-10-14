@@ -342,11 +342,13 @@ function AxeSpin() {
     const R = abilityState.whirlR * 0.8 * grow;
     for (let i = 0; i < N; i++) {
       const a = t * 5 + (i / N) * TAU;
-      const x = p.pos.x + Math.cos(a) * R, z = p.pos.z + Math.sin(a) * R;
-      setInst(m, i, x, 1.4, z, -a, 2.2 * fade, 2.2 * fade, 2.2 * fade, t * 14 + i, 0);
-      setInst(m2, i, x, 1.4, z, -a, 2.2 * fade, 2.2 * fade, 2.2 * fade, t * 14 + i, 0);
-      FX.add.emit(x, 1.4, z, 0, 0, 0, 0.18, 2.3, 1.2, 1.8, 0.7, 0.2, 0.55, CELL.GLOW);
-      if (Math.random() < 0.5) sparks(x, 1.4, z, 1, 0xffc070, 4, 0.2, 0.25, 1.6);
+      // lying flat (sideways): handle points back at the hero, blade swings horizontally at the rim
+      const ri = R * 0.45, x = p.pos.x + Math.cos(a) * ri, z = p.pos.z + Math.sin(a) * ri;
+      const bx = p.pos.x + Math.cos(a) * R, bz = p.pos.z + Math.sin(a) * R;
+      setInst(m, i, x, 1.15, z, -a, 2.2 * fade, 2.2 * fade, 2.2 * fade, Math.PI / 2, -Math.PI / 2);
+      setInst(m2, i, x, 1.15, z, -a, 2.2 * fade, 2.2 * fade, 2.2 * fade, Math.PI / 2, -Math.PI / 2);
+      FX.add.emit(bx, 1.15, bz, 0, 0, 0, 0.18, 2.3, 1.2, 1.8, 0.7, 0.2, 0.55, CELL.GLOW);
+      if (Math.random() < 0.5) sparks(bx, 1.15, bz, 1, 0xffc070, 4, 0.2, 0.25, 1.6);
     }
     for (let k = 0; k < 20; k++) { const a = (k / 20) * TAU + t * 0.5; FX.add.emit(p.pos.x + Math.cos(a) * R, 0.15, p.pos.z + Math.sin(a) * R, 0, 0, 0, 0.1, 1.4, 1.4, 1.3, 0.5, 0.15, 0.25 * fade, CELL.GLOW); }
     m.instanceMatrix.needsUpdate = true; m2.instanceMatrix.needsUpdate = true;

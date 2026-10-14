@@ -65,7 +65,7 @@ function isCastable(id: string): boolean {
 /** Does this skill use an aim indicator? (Barbarian dash is a plain instant dash.) */
 function aimable(id: string): boolean {
   const hero = useGameStore.getState().hero;
-  if (id === 'dash') return hero !== 'BARBARIAN';
+  if (id === 'dash') return true;
   // Self-centred skills cast instantly (no drag/aim): Storm Orbs, Whirlwind, Titan's Wrath.
   const slot = id === 'ult' ? 'ult' : slotOf(id);
   if (hero === 'WIZARD' && slot === 's3') return false;
@@ -110,8 +110,8 @@ function shapeFor(id: string, cx: number, cz: number): void {
     else if (slot === 's4') line(26, 1.8);
     else circle(30, 8, 14);
   } else {
-    if (id === 'dash') ring(0);
-    else if (slot === 'q') circle(24, 5, 9 + 0.5 * (lv.q - 1));
+    if (id === 'dash') circle(18, 4, 7 + 0.5 * (lv.dash - 1));
+    else if (slot === 'q') line(21, 4.6);
     else if (slot === 'e') ring(7.5 + 0.3 * (lv.e - 1));
     else if (slot === 's3') line(37 + 2 * (lv.s3 - 1), 5.6);
     else ring(12);

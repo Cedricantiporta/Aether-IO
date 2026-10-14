@@ -47,11 +47,11 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${6 + lv} bounces (range 9) · ${pct(3 * lvMul(lv))} dmg per hit · chill 15% slow per stack` },
   ],
   BARBARIAN: [
-    { slot: 'q', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 20, cd: 8,
-      desc: 'Leap to the target, slamming a crater that stuns, and enter Rage (double attack speed).',
-      per: (lv) => `Slam ${pct(7 * lvMul(lv))} dmg · radius ${f1(9 + 0.5 * (lv - 1))} · Rage ${f1(3 + lv)}s` },
+    { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,
+      desc: 'Hurl two crossed axe waves that fly forward as a burning X, cleaving through every enemy in the lane and knocking them back.',
+      per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (2.3 + 0.1 * (lv - 1)))}` },
     { slot: 'e', icon: 'WHIRLWIND', name: 'Whirlwind', mana: 24, cd: 12,
-      desc: 'Spin for 2s, barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Bosses are not pulled. After Bloodrage Leap: pulls 30% harder, heals +50%.',
+      desc: 'Spin for 2s, barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
       desc: 'Cleave a fissure that erupts in a line of stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
@@ -71,9 +71,9 @@ export const dashKey = (hero: HeroClass): 'e' | 'dash' => (hero === 'BARBARIAN' 
 export const isDashKey = (hero: HeroClass, key: string): boolean => key === dashKey(hero);
 
 export const SHOULDER_CHARGE: AbilityDef = {
-  slot: 'e', icon: 'DASH', name: 'Shoulder Charge', mana: 0, cd: 0,
-  desc: 'A fast dash that bulldozes through enemies, damaging and shoving them aside. No invulnerability frames.',
-  per: (lv) => `Impact ${pct(2.2 * lvMul(lv))} dmg to everything on the path · small knockback · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
+  slot: 'e', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 0, cd: 0,
+  desc: 'Leap to the target (tap: forward) and slam down: stuns nearby enemies and grants a short Rage (faster attacks). Invulnerable while airborne.',
+  per: (lv) => `Slam ${pct(3.5 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
 };
 /** Ordered active definitions (keys 1, 2, 3). */
 export function activeDefs(hero: HeroClass): AbilityDef[] {

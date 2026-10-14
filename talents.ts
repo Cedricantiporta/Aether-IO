@@ -105,7 +105,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
   BARBARIAN: [
     ['b', [
       ['Bloodlust', '+4% attack speed', 3, 'u:FIRE_RATE', { mul: { fireRate: 0.04 } }],
-      ['Rage Mastery', 'Bloodrage Leap grants Rage for +1s longer', 3, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
+      ['Rage Mastery', 'Bloodrage Leap (Space) grants Rage for +1s longer', 3, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
       ['Last Stand', '+10% attack speed below 50% HP', 3, 'barrier', { add: { lowHpHaste: 0.1 } }],
       ['Brutality', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
       ['Frenzy', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],

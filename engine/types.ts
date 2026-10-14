@@ -109,7 +109,7 @@ export interface Enemy {
 export type ProjectileKind =
   | 'ARROW' | 'MAGIC' | 'AXE'
   | 'FIREBALL' | 'PIERCING_ARROW' | 'BURNING_ARROW' | 'FREEZING_ARROW'
-  | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW';
+  | 'STORM' | 'GIANT_AXE' | 'ORBITAL_BLADE' | 'PET_BOLT' | 'RAIN_ARROW' | 'GALE_ARROW' | 'X_SLASH';
 
 export interface Projectile {
   id: number;

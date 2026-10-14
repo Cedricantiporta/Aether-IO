@@ -109,6 +109,15 @@ export function Projectiles() {
     const gw = makeAxe('#ff4a2a', 3);
     const gaxB = new GB().addColored(gw.body, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
     const gaxG = new GB().addColored(gw.glow, [0, 0, -0.5], [Math.PI / 2, 0, 0], 1.0).build();
+    // Cross Slash: two crossed, slightly curved flaming crescents lying flat (forward = +z)
+    const xs = new GB([1, 1]);
+    for (const sgn of [-1, 1]) for (let k = 0; k <= 12; k++) {
+      const u = k / 12 - 0.5, w = 0.34 * (1 - Math.abs(u) * 1.6) + 0.04;
+      const lx = u * 3.8, lz = 0.55 - u * u * 2.0;           // bow forward
+      const c = Math.cos(sgn * 0.62), s2 = Math.sin(sgn * 0.62);
+      xs.box(0.42, 0.06, w, [lx * c + lz * s2, 0, -lx * s2 + lz * c], k % 2 ? '#ffb24a' : '#ff7a2a', [0, sgn * 0.62 + Math.atan(-2 * u * 2.0 * 0.5), 0]);
+      xs.box(0.4, 0.07, w * 0.35, [lx * c + lz * s2, 0.01, -lx * s2 + lz * c + 0.05], '#fff2c0', [0, sgn * 0.62, 0]);
+    }
     // orbital blade
     const bl = new GB([1, 1]);
     bl.torus(0.62, 0.08, [0, 0, 0], '#8ff4ff', [Math.PI / 2, 0, 0], [1, 1, 0.7], 14, 2.3); bl.torus(0.5, 0.05, [0, 0, 0], '#ffffff', [Math.PI / 2, 0, 0], [1, 1, 0.5], 14, 2.0);
@@ -136,6 +145,7 @@ export function Projectiles() {
       STORM: mk([[tornA, tornMat], [tornB, tornMat]], 100),
       ORBITAL_BLADE: mk([[bl.build(), glow], [blB, lit]], 100),
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
+      X_SLASH: mk([[xs.build(), glow]], 40),
     } as Record<string, InstancedMesh[]>;
     const E = {
       ARROW: mk([[earrow.body, lit], [earrow.glow, glow]], MAXE),
@@ -202,6 +212,16 @@ export function Projectiles() {
           if (emit) {
             for (let k = 0; k < 3; k++) { const a = Math.random() * TAU, rr = (0.8 + Math.random() * 1.6) * w; FX.add.emit(x - vx * 0.01 * k + Math.cos(a) * rr * 0.3, y + Math.sin(a) * rr * 0.3, z, -vx * 0.15, 0, -vz * 0.15, 0.4, 0.5 * w, 0.1, 0.6, 1.9, 1.4, 0.7, CELL.STREAK, 0, 1, 0, 0, 0.12); }
             if (Math.random() < dt * 40) FX.norm.emit(x, 0.4, z, (Math.random() - 0.5) * 4, 2, (Math.random() - 0.5) * 4, 0.6, 0.8, 1.6, 0.8, 0.95, 0.9, 0.3, CELL.SMOKE);
+          }
+          break;
+        }
+        case 'X_SLASH': {
+          const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = 1.15 + (1 - life) * 0.5;
+          place(ims, i, x, y, z, yaw, 0, 0, sc);
+          pushHalo(x, y, z, 4.2 * sc, 1.9, 0.75, 0.25, 0.55, CELL.GLOW);
+          if (emit) {
+            if (Math.random() < dt * 70) { const o = (Math.random() - 0.5) * 3.6; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
+            if (Math.random() < dt * 30) embers(x, y, z, 1, 0xff9a40, 0.6, 2.4, 0.8, 0.14);
           }
           break;
         }

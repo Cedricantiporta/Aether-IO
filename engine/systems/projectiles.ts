@@ -264,7 +264,7 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 }
 
 function blockedByObstacles(kind: ProjectileKind): boolean {
-  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT');
+  return !(kind === 'GALE_ARROW' || kind === 'STORM' || kind === 'FIREBALL' || kind === 'AXE' || kind === 'ORBITAL_BLADE' || kind === 'PET_BOLT' || kind === 'X_SLASH');
 }
 
 function dropFireZone(p: Projectile): void {
