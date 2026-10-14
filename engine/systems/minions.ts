@@ -7,7 +7,7 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { damageEnemy, healPlayer, type DamageOpts } from './combat';
+import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, type DamageOpts } from './combat';
 import { inCurse } from './zones';
 import { abilityState } from './abilities';
 import { spawnProjectile } from './projectiles';
@@ -18,6 +18,7 @@ export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHE
 export const MAX_SKELETONS = 4;
 const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
+const cleaveO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.6 };
 const tmp = new Vector3();
 
 /** Damage / HP (life) multiplier from talents and the wand perk. */
@@ -52,8 +53,14 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : kind === MINION_WARRIOR ? 0.5 * (src === 1 ? 1.3 : 1) : 0.3)   // Raise Dead skeletons +30% HP
+  // skeleton warriors grow with Raise Dead's level: +10% HP and +4% damage reduction per level (max 40%)
+  const rdLv = Math.max(1, useGameStore.getState().skillLevels.q || 1), warrior = kind === MINION_WARRIOR;
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.3)   // Raise Dead skeletons +30% HP
+    * 1.2                                                    // every summon +20% HP
+    * (warrior ? 1 + 0.1 * (rdLv - 1) : 1)
     * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
+  m.def = warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0;
+  m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
@@ -66,7 +73,7 @@ function crumble(m: (typeof world.minions)[number]): void {
 export function damageMinion(i: number, dmg: number): void {
   const m = world.minions[i];
   if (!m || !m.active || m.rise > 0) return;
-  m.hp -= dmg; m.hitT = 0.25;
+  m.hp -= dmg * (1 - m.def) * boneArmorMul(); m.hitT = 0.25;   // armour + Bone Armor
   if (m.hp <= 0) crumble(m);
 }
 
@@ -88,9 +95,8 @@ export function minionCount(kind = -1): number { let n = 0; for (const m of worl
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
-  let slotI = 0, raised = false, army = false;
-  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === 1) raised = true; else if (M[i].src === 2) army = true; }
-  if (raised) pl.cd.q = pl.cdMax.q;   // Raise Dead: the cooldown starts when its skeletons have all fallen
+  let slotI = 0, army = false;
+  for (let i = 0; i < M.length; i++) if (M[i].active && M[i].src === 2) { army = true; break; }
   // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen
   if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;
   for (let i = 0; i < M.length; i++) {
@@ -101,6 +107,8 @@ export function updateMinions(dt: number): void {
     if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
+    if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
+    if (m.skillT > 0) m.skillT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
     const reach = golem ? 3.2 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
@@ -145,7 +153,12 @@ export function updateMinions(dt: number): void {
         if (p) p.tint = 10;
       } else {
         hitO.knockback = golem ? 1.2 : 0.3;
-        damageEnemy(e, m.dmg, hitO);
+        if (!golem && m.skillT <= 0) {   // skeleton skill: CLEAVE, a spinning swing that hits everything close (small AoE)
+          m.skillT = 5 / haste; m.spin = 1; m.swing = 0;
+          cleaveO.knockback = 0.6;
+          damageEnemiesInRadius(m.x, m.z, 2.8, m.dmg * 2, cleaveO);
+          events.emit('shockwave', { pos: tmp.set(m.x, 0, m.z).clone(), radius: 2.8, color: 0xc9b8ff });
+        } else damageEnemy(e, m.dmg, hitO);
         if (golem) events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: 2.2, color: 0xb8a888 });
       }
     }

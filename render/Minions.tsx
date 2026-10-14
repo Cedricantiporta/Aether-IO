@@ -128,7 +128,7 @@ export function Minions() {
       const mv = m.mv, w = m.walk, sw = Math.sin(w);
       const hurt = m.hitT > 0 ? m.hitT / 0.25 : 0;
       S.outer.position.set(m.x + (hurt > 0 ? Math.sin(t * 60) * 0.05 * hurt : 0), -rise * 1.8, m.z);
-      S.body.rotation.set(0, m.facing, 0);
+      S.body.rotation.set(0, m.facing + (m.spin > 0 ? (1 - m.spin) * Math.PI * 2 : 0), 0);   // cleave: one full spin
       const fade = m.life < 1 ? m.life : 1;
       S.body.scale.setScalar(fade * SCALE[k]);
 
@@ -162,6 +162,7 @@ export function Minions() {
           R.hips.rotation.y += (up - strike) * 0.35;
         }
       }
+      if (m.spin > 0) { aR = -1.6; zR = -1.2 * m.spin - 0.3; aL = -0.6; zL = 0.9; }   // cleave: sword arm swept out to the side
       if (rise > 0) { aL = aR = -2.9 * rise; zL = 0.3 * rise; zR = -zL; R.head.rotation.x = 0.4 * rise; }   // clawing up
       R.armL.rotation.set(aL, 0, zL); R.armR.rotation.set(aR, 0, zR);
 
