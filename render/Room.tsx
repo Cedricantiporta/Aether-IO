@@ -137,7 +137,7 @@ function liquidEdge(x: number, z: number): number {
 }
 
 function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number; seed: number; boss: boolean; index: number }) {
-  const { geo, mat, tufts, slabs } = useMemo(() => {
+  const { geo, mat, tufts, slabs, shrooms } = useMemo(() => {
     const def = biomeOf(biome);
     const vr = variantOf(def, index);
     const style = def.style;
@@ -318,13 +318,36 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     }
     slabs.count = ns; slabs.receiveShadow = true;
     if (slabs.instanceColor) slabs.instanceColor.needsUpdate = true;
-    return { geo: g, mat: m, tufts: inst, slabs };
+    // Darkwood (Greenwood's last tier): clusters of glowing mushrooms light the dim forest floor (one instanced draw)
+    let shrooms: InstancedMesh | null = null;
+    if (style === 'GRASS' && vr && def.variants && def.variants.indexOf(vr) === 2) {
+      const sg = new GB([1, 1]);
+      sg.cyl(0.05, 0.07, 0.35, 5, [0, 0.17, 0], '#e8f0d8'); sg.sph(0.2, [0, 0.38, 0], '#ffffff', [1, 0.55, 1], 8);
+      sg.cyl(0.035, 0.05, 0.22, 5, [0.28, 0.11, 0.12], '#e8f0d8'); sg.sph(0.13, [0.28, 0.25, 0.12], '#ffffff', [1, 0.55, 1], 7);
+      sg.cyl(0.03, 0.04, 0.16, 5, [-0.2, 0.08, 0.22], '#e8f0d8'); sg.sph(0.1, [-0.2, 0.18, 0.22], '#ffffff', [1, 0.55, 1], 6);
+      const NS = 34;
+      shrooms = new InstancedMesh(sg.build(), new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.6) }), NS);
+      const r3 = mulberry32(seed ^ 0x5b00);
+      const tones = ['#5ad8ff', '#7affc0', '#c08aff', '#5affe0'];
+      let ns2 = 0;
+      for (let i = 0; i < NS * 3 && ns2 < NS; i++) {
+        const a = r3() * Math.PI * 2, d = Math.sqrt(r3()) * (shapeLimit(Math.cos(a), Math.sin(a)) + 3);
+        const x = Math.cos(a) * d, z = Math.sin(a) * d;
+        if (hasLiquid && inLiquid(x, z, 0.6)) continue;
+        o.position.set(x, 0, z); o.rotation.set(0, r3() * 6.28, 0); const sc = 0.9 + r3() * 1.3; o.scale.set(sc, sc, sc); o.updateMatrix();
+        shrooms.setMatrixAt(ns2, o.matrix); cc.set(tones[Math.floor(r3() * tones.length)]); shrooms.setColorAt(ns2, cc); ns2++;
+      }
+      shrooms.count = ns2;
+      if (shrooms.instanceColor) shrooms.instanceColor.needsUpdate = true;
+    }
+    return { geo: g, mat: m, tufts: inst, slabs, shrooms };
   }, [biome, R, seed, boss]);
   return (
     <>
       <mesh geometry={geo} material={mat} receiveShadow />
       <primitive object={tufts} />
       <primitive object={slabs} />
+      {shrooms && <primitive object={shrooms} />}
     </>
   );
 }

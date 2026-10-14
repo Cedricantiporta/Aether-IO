@@ -84,7 +84,7 @@ export const BIOMES: readonly BiomeDef[] = [
         fog: '#8faa98', hemiSky: '#b8d0c8', hemiGround: '#3a5a2a', hemiI: 1.0, sun: '#ffe2b0', sunI: 2.3, skyTint: [0.72, 0.82, 0.78] },
       { name: 'Darkwood', ground: ['#22402a', '#335430'], patch: ['#2e4a2a', '#4a5030', '#2e2418'], edge: '#0a140c', propTint: '#90a888',
         border: ['DEAD_TREE', 'PINE', 'DEAD_TREE', 'TREE', 'ROCK'], interior: ['STUMP', 'LOG', 'DEAD_TREE', 'ROCK', 'RUIN'], hazard: 'PUDDLE',
-        fog: '#2e3a34', hemiSky: '#8098b0', hemiGround: '#1e2a18', hemiI: 0.75, sun: '#c0d0f0', sunI: 1.5, skyTint: [0.36, 0.44, 0.46] },
+        fog: '#4e6254', hemiSky: '#a4bcc8', hemiGround: '#2e4026', hemiI: 1.05, sun: '#d8e2f2', sunI: 2.2, skyTint: [0.5, 0.6, 0.6] },   // dim, not black: glowing mushrooms light it (Room.tsx)
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
     boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
