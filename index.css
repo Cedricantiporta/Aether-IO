@@ -1223,7 +1223,12 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .skill-row .ult-slot { margin-right: .5rem !important; }
 
 /* ---- character select */
-.cs-root { color: var(--text); }
+.cs-root { color: var(--text);
+  /* opaque backdrop (the town is hidden): a dark golden radial glow */
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, #4a3714 0%, #2a1e0c 38%, #120c06 72%, #070504 100%); }
+.cs-root::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 210, 120, .16), transparent 42%), repeating-radial-gradient(circle at 50% 45%, rgba(255, 220, 150, .025) 0 2px, transparent 2px 22px); }
+.cs-center { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); pointer-events: none; opacity: .9; filter: drop-shadow(0 0 40px rgba(241, 200, 110, .35)); }
 .cs-vig { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(90deg, rgba(6, 5, 4, .92) 0%, rgba(6, 5, 4, .45) 24%, transparent 38%, transparent 60%, rgba(6, 5, 4, .55) 72%, rgba(6, 5, 4, .94) 100%),
     radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0, 0, 0, .55) 100%); }

@@ -99,6 +99,7 @@ export const CharacterSelect: React.FC = () => {
   return (
     <div className="absolute inset-0 pe cs-root" style={{ zIndex: 55 }} data-testid="char-select">
       <div className="cs-vig" />
+      <div className="cs-center"><ClassEmblem hero={hero} size="15rem" lit /></div>
       <div className="cs-head">{mode === 'list' ? 'Choose your character' : 'Create a character'}</div>
 
       {mode === 'list' ? (
