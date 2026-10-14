@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Panel, Ribbon } from '../components/Frame';
 import { Button } from '../components/Button';
 import { timeMMSS } from '../lib/game';
+import { FALL_LINES } from '../../lore';
 
 const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; record?: boolean; delay: number }> = ({ icon, label, value, record, delay }) => (
   <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 22 }}
@@ -37,6 +38,7 @@ export const GameOver: React.FC = () => {
         <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 mb-1">
           <Skull size={56} color="#ff6b5e" style={{ margin: '0 auto', filter: 'drop-shadow(0 0 18px #f00)' }} />
           <div className="rpg-logo" style={{ fontSize: '2.3rem', whiteSpace: 'nowrap', backgroundImage: 'linear-gradient(105deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%), linear-gradient(180deg,#ffd0c8,#e0554a 48%,#5e0f12 52%,#c93b3b)' }}>{run?.victory ? 'Spoils banked' : 'You have fallen'}</div>
+          {!run?.victory && <div className="go-fall">{FALL_LINES[(run?.kills ?? 0) % FALL_LINES.length]}</div>}
         </motion.div>
         <Panel className="w-full p-5 pt-8">
           {run && (

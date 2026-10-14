@@ -55,6 +55,7 @@ export const CodexDialog: React.FC = () => {
     <Modal open={open} onClose={() => close(false)} title="Codex" icon={<BookOpen size={20} />} width="40rem" z={250}>
       <div className="flex gap-2 mb-3">
         {TABS.map((t) => <button key={t} className={`rpg-subtab pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+        <button className="rpg-subtab pe ml-auto" onClick={() => useUiStore.getState().openStory(true)} data-testid="open-story">STORY</button>
       </div>
       <div className="mb-3" data-testid="codex-progress">
         <div className="flex items-center gap-2 mb-1">

@@ -330,6 +330,7 @@ export const NPCS: NpcDef[] = [
       ['Ah, a young adventurer. This well has fed our village for three hundred years.', 'The old tales say the Mire swallows the careless. Walk with care.'],
       ['My knees ache, but my memory is sharp. I remember when this valley had no gate at all.', 'Keep your potions stocked and your wits about you.'],
       ['Every hero starts as a stranger here. Take this, a little something from an old man.'],
+      ['That well is no well, child. It is the Aether Font. You swore your oath on it, remember?', 'When you fall out there, its light brings you home. It brought me home eleven times, in my day.'],
     ],
     bubbles: ['Lovely day!', 'Back in my day the Mire was a meadow.', 'Mind the well, children.'],
     gift: { gold: 150, text: 'Elder Tobin presses a pouch into your hand. (+150 gold)' },
@@ -429,6 +430,7 @@ export const NPCS: NpcDef[] = [
     name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, ordered: true,
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
+      ['Malakar was my archmage, and my friend. He took a shard of the Font and ran into the Void.', 'Bring it home, guardian. The Font will keep bringing you home until you do.'],
       ['Beyond the gate lie six realms, each ruled by a beast older than my house. Greenwood, the Mire, the Ember Wastes, Frostpeak... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
       ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
       ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
@@ -475,6 +477,7 @@ export const NPCS: NpcDef[] = [
       ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'I have no use for coin, but you do. Take it, and do not tell the Elder.'],
       ['The walls keep the world out, and the world is where the best mushrooms grow. Funny, that.', 'Stay for the fire if you like. I only ask you leave the bedroll alone.'],
       ['Some nights the Frostpeak wind carries singing over the wall. I think it is the bard, lost again.'],
+      ['I was a guardian before you. I knew Malakar when he still laughed at supper.', 'He was afraid of dying. Funny, for a man who lived next to the one thing that could have kept him safe.'],
     ],
     bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
     gift: { once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend drops a heavy sack into your hands. (+10,000 gold)' },

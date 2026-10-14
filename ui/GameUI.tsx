@@ -21,6 +21,7 @@ import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
 import { SetOutWindow } from './screens/SetOut';
 import { EndingScreen } from './screens/Ending';
+import { Prologue, StoryBook } from './screens/Story';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
 import { CodexDialog } from './screens/Codex';
 import { GoalsDialog } from './screens/Goals';
@@ -74,6 +75,8 @@ export const GameUI: React.FC = () => {
       <AnimatePresence>{status === GameStatus.GAME_OVER && <GameOver key="over" />}</AnimatePresence>
       {village && <SetOutWindow />}
       <EndingScreen />
+      {village && <Prologue />}
+      <StoryBook />
 
       <Notifications />
       <PauseMenu />

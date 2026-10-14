@@ -30,6 +30,8 @@ interface UiState {
   openCodex: (v: boolean) => void;
   openGoals: (v: boolean) => void;
   openSettings: (v: boolean) => void;
+  storyOpen: boolean;
+  openStory: (v: boolean) => void;
   setSellItem: (i: Item | null) => void;
   setBuyItem: (i: Item | null) => void;
   setSelectedItem: (i: Item | null) => void;
@@ -59,6 +61,8 @@ export const useUiStore = create<UiState>((set) => ({
   openCodex: (v) => set({ codexOpen: v }),
   openGoals: (v) => set({ goalsOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),
+  storyOpen: false,
+  openStory: (v) => set({ storyOpen: v }),
   setSellItem: (i) => set({ sellItem: i }),
   setBuyItem: (i) => set({ buyItem: i }),
   setSelectedItem: (i) => set({ selectedItem: i }),
@@ -83,6 +87,7 @@ export function closeTopOverlay(): boolean {
   if (s.summonResults) { s.setSummonResults(null); return true; }
   if (s.sellItem) { s.setSellItem(null); return true; }
   if (s.buyItem) { s.setBuyItem(null); return true; }
+  if (s.storyOpen) { s.openStory(false); return true; }
   if (s.settingsOpen) { s.openSettings(false); return true; }
   if (s.codexOpen) { s.openCodex(false); return true; }
   if (s.goalsOpen) { s.openGoals(false); return true; }
