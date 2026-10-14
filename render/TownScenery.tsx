@@ -9,7 +9,7 @@ import { Inst } from './Inst';
 import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
-  GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
+  CASTLE, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec,
 } from '../engine/townData';
 import { QualityCfg } from './quality';
@@ -382,6 +382,52 @@ function addFarm(b: GB, rnd: () => number) {
 interface Chunk { b: GB; g: GB }
 const CH = 40;
 
+/** Castle keep: stone hall with battlements, four round corner towers with dark cone roofs, a taller central donjon,
+ *  arched gate with iron-banded doors, glowing windows and dark maroon banners. Local coords, door faces +z. */
+function addCastle(b: GB, g: GB): void {
+  const { x, z, w, d, h } = CASTLE;
+  const st = '#a7a296', st2 = '#8e897e', st3 = '#bcb7aa', roof = '#2a231d', wood = '#3e2a1a', iron = '#2c2c30', ban = '#5a1a1e';
+  const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
+  // plinth + hall
+  b.box(w + 1.2, 0.8, d + 1.2, [x, 0.4, z], st2);
+  b.box(w, h, d, [x, 0.8 + h / 2, z], st);
+  for (let k = 1; k < 4; k++) b.box(w + 0.08, 0.14, d + 0.08, [x, 0.8 + k * (h / 4), z], st2);   // stone courses
+  // battlements on the hall
+  b.box(w + 0.4, 0.5, d + 0.4, [x, 0.8 + h + 0.25, z], st3);
+  for (let px = x0 + 0.6; px <= x1 - 0.5; px += 1.4) { b.box(0.8, 0.9, 0.5, [px, 0.8 + h + 0.95, z1 + 0.05], st); b.box(0.8, 0.9, 0.5, [px, 0.8 + h + 0.95, z0 - 0.05], st); }
+  for (let pz = z0 + 0.6; pz <= z1 - 0.5; pz += 1.4) { b.box(0.5, 0.9, 0.8, [x0 - 0.05, 0.8 + h + 0.95, pz], st); b.box(0.5, 0.9, 0.8, [x1 + 0.05, 0.8 + h + 0.95, pz], st); }
+  // corner towers
+  for (const [tx, tz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) {
+    const th = h + 5.5;
+    b.cyl(2.5, 2.8, th, 14, [tx, 0.8 + th / 2, tz], st);
+    b.cyl(2.85, 2.85, 0.5, 14, [tx, 0.8 + th, tz], st3);
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; b.box(0.7, 0.8, 0.5, [tx + Math.cos(a) * 2.6, 0.8 + th + 0.6, tz + Math.sin(a) * 2.6], st, [0, -a, 0]); }
+    b.cone(3.2, 4.6, 14, [tx, 0.8 + th + 3.1, tz], roof);
+    b.cyl(0.04, 0.04, 1.4, 4, [tx, 0.8 + th + 6.0, tz], iron);
+    b.box(0.9, 0.5, 0.04, [tx + 0.45, 0.8 + th + 6.4, tz], ban);
+    for (const yy of [4, 8.5]) g.box(0.35, 0.9, 0.12, [tx, 0.8 + yy, tz + (tz > z ? 2.62 : -2.62)], '#ffcf7a');
+  }
+  // central donjon
+  const dh = h + 9, dw = 7.5, dd = 6.5;
+  b.box(dw, dh, dd, [x, 0.8 + dh / 2, z - 0.8], st);
+  b.box(dw + 0.4, 0.45, dd + 0.4, [x, 0.8 + dh + 0.22, z - 0.8], st3);
+  for (let px = x - dw / 2 + 0.5; px <= x + dw / 2 - 0.4; px += 1.3) b.box(0.75, 0.85, 0.5, [px, 0.8 + dh + 0.85, z - 0.8 + dd / 2], st);
+  b.cone(5.6, 6.5, 4, [x, 0.8 + dh + 3.6, z - 0.8], roof, [0, Math.PI / 4, 0], [1.02, 1, 0.9]);
+  b.cyl(0.05, 0.05, 2.2, 4, [x, 0.8 + dh + 7.6, z - 0.8], iron); b.box(1.6, 0.9, 0.05, [x + 0.8, 0.8 + dh + 8.1, z - 0.8], ban);
+  for (const px of [-2, 0, 2]) g.box(0.5, 1.2, 0.12, [x + px, 0.8 + dh - 3, z - 0.8 + dd / 2 + 0.02], '#ffcf7a');
+  // windows along the hall front
+  for (const px of [-7, -4, 4, 7]) { g.box(0.6, 1.3, 0.12, [x + px, 0.8 + h * 0.62, z1 + 0.02], '#ffcf7a'); b.box(0.9, 0.16, 0.2, [x + px, 0.8 + h * 0.62 + 0.75, z1 + 0.05], st3); }
+  // gate: arch, doors, steps, banners
+  b.box(5.2, 6.2, 0.7, [x, 0.8 + 3.1, z1 + 0.25], st3);
+  b.cyl(2.0, 2.0, 0.75, 16, [x, 0.8 + 4.3, z1 + 0.32], '#1a1612', [Math.PI / 2, 0, 0], [1, 1, 1]);
+  b.box(4.0, 4.3, 0.75, [x, 0.8 + 2.15, z1 + 0.32], '#1a1612');
+  for (const sx of [-1, 1]) { b.box(1.85, 4.6, 0.18, [x + sx * 0.97, 0.8 + 2.3, z1 + 0.72], wood); for (const yy of [1.2, 3.2]) b.box(1.85, 0.16, 0.06, [x + sx * 0.97, 0.8 + yy, z1 + 0.82], iron); }
+  for (let k = 0; k < 3; k++) b.box(7 - k * 0.8, 0.27, 1.2, [x, 0.13 + k * 0.27, z1 + 1.4 + (2 - k) * 0.9], st2);
+  for (const sx of [-1, 1]) { b.box(1.5, 4.6, 0.06, [x + sx * 4.2, 0.8 + h - 3.0, z1 + 0.06], ban); b.box(1.7, 0.18, 0.18, [x + sx * 4.2, 0.8 + h - 0.6, z1 + 0.1], iron); g.box(0.5, 0.5, 0.05, [x + sx * 4.2, 0.8 + h - 2.2, z1 + 0.1], '#d9b56a'); }
+  // braziers at the gate
+  for (const sx of [-1, 1]) { b.cyl(0.35, 0.25, 1.2, 8, [x + sx * 3.6, 0.6, z1 + 2.8], iron); g.sph(0.32, [x + sx * 3.6, 1.35, z1 + 2.8], '#ffb050', [1, 1.3, 1], 6); }
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -397,6 +443,7 @@ function buildTown() {
   };
   HOUSES.forEach((h, i) => put(h.x, h.z, h.rot, buildHouse(h, i)));
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
+  { const c = at(CASTLE.x, CASTLE.z); addCastle(c.b, c.g); }
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
   put(GATE.x, GATE.z, 0, buildGate());
   const sign = buildSignpost();

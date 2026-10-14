@@ -43,7 +43,12 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 };
 
 /** Decorative houses (old shop-style: stone footing, timber frame, big gabled roof, striped awning). */
+/** Castle keep against the north wall, behind the quest board (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
+export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
+
 export const HOUSES: HouseSpec[] = [
+  // flanking the castle
+  H(-17.5, -31, 0, 5.0, 4.4, 2), H(17.5, -31, 0, 5.0, 4.4),
   // south of the east-west street, doors facing the street
   H(-13, 17.5, Math.PI, 4.6, 4.0), H(13, 17.5, Math.PI, 4.8, 4.2, 2),
   // along the road to the gate
@@ -155,14 +160,14 @@ export const PLANTERS: PlanterSpec[] = [
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
-  { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 }, { x: 0, z: -30, s: 3.6, kind: 2 },
+  { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // forecourt south of the gate
   { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
   { x: -6, z: 71, s: 3.4, kind: 1 }, { x: 24, z: 47, s: 3.7, kind: 0 }, { x: 23, z: 69, s: 3.8, kind: 2 }, { x: 12, z: 72, s: 3.5, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
-  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4], [-22, -22, 3.6, 3.2], [22, -22, 3.6, 3.2], [0, -30, 3.4, 3],
+  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4], [-22, -22, 3.6, 3.2], [22, -22, 3.6, 3.2],
   [-10, 24, 2.6, 2.4], [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
@@ -176,6 +181,13 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
+  // castle: ring of circles around the hall footprint + corner towers
+  {
+    const { x, z, w, d } = CASTLE, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
+    for (let px = x0; px <= x1 + 0.01; px += 2) { c.push([px, z0, 1.6], [px, z1, 1.6]); }
+    for (let pz = z0; pz <= z1 + 0.01; pz += 2) { c.push([x0, pz, 1.6], [x1, pz, 1.6]); }
+    for (const [tx, tz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) c.push([tx, tz, 3.0]);
+  }
   // plant boxes: circles along the long axis
   for (const p of PLANTERS) {
     const r = Math.min(p.w, p.d) / 2 + 0.2, alongX = p.w >= p.d, len = Math.max(p.w, p.d), n = Math.max(1, Math.ceil((len - 2 * r) / 0.7));
@@ -214,6 +226,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = WALL.x0 + 7; x < WALL.x1; x += 14) for (let z = WALL.z0 + 7; z < WALL.z1 + 6; z += 14) c.push([x, z, 11]);
   c.push([0, 8, 40]);
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
+  c.push([CASTLE.x, CASTLE.z, 14]);
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
