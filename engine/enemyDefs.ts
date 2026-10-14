@@ -138,6 +138,55 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Shieldbearer', hp: 190, speed: 2.2, radius: 0.85, scale: 1.3, contactDamage: 6, projectileDamage: 0,
     xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 0.7, armor: 70,
   },
+  // ---- biome-unique monsters
+  SPORECAP: {
+    name: 'Sporecap', hp: 70, speed: 2.2, radius: 0.75, scale: 1.15, contactDamage: 8, projectileDamage: 10,
+    xp: 9, gold: 3, cost: 3, minWave: 1, weight: 0, color: 0xd04a3a, knockResist: 0.2, armor: 10,
+  },
+  DIREWOLF: {
+    name: 'Dire Wolf', hp: 58, speed: 5.2, radius: 0.75, scale: 1.2, contactDamage: 10, projectileDamage: 0,
+    xp: 9, gold: 2, cost: 3, minWave: 1, weight: 0, color: 0x6b6f78, knockResist: 0.1, armor: 10,
+  },
+  HAUNTED_ARMOR: {
+    name: 'Haunted Armor', hp: 210, speed: 2.0, radius: 0.9, scale: 1.35, contactDamage: 9, projectileDamage: 0,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 0, color: 0x8a94a8, knockResist: 0.7, armor: 65,
+  },
+  GARGOYLE: {
+    name: 'Gargoyle', hp: 95, speed: 5.0, radius: 0.8, scale: 1.2, contactDamage: 11, projectileDamage: 0,
+    xp: 12, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0x7a7468, knockResist: 0.4, armor: 45,
+  },
+  SCORPION: {
+    name: 'Giant Scorpion', hp: 110, speed: 3.4, radius: 0.9, scale: 1.3, contactDamage: 8, projectileDamage: 13,
+    xp: 13, gold: 3, cost: 4, minWave: 1, weight: 0, color: 0xb8742a, knockResist: 0.4, armor: 35,
+  },
+  MUMMY: {
+    name: 'Mummy', hp: 160, speed: 1.8, radius: 0.8, scale: 1.2, contactDamage: 10, projectileDamage: 9,
+    xp: 14, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0xd8c8a0, knockResist: 0.4, armor: 20,
+  },
+  YETI: {
+    name: 'Yeti', hp: 260, speed: 2.8, radius: 1.2, scale: 1.7, contactDamage: 17, projectileDamage: 0,
+    xp: 30, gold: 8, cost: 7, minWave: 1, weight: 0, color: 0xe8f0f8, knockResist: 0.6, armor: 30,
+  },
+  FROST_WISP: {
+    name: 'Frost Wisp', hp: 48, speed: 3.2, radius: 0.6, scale: 1.0, contactDamage: 4, projectileDamage: 10,
+    xp: 10, gold: 3, cost: 3.5, minWave: 1, weight: 0, color: 0x8ae0ff, knockResist: 0, armor: 5,
+  },
+  HELLHOUND: {
+    name: 'Hellhound', hp: 70, speed: 6.0, radius: 0.75, scale: 1.2, contactDamage: 11, projectileDamage: 6,
+    xp: 11, gold: 3, cost: 3.5, minWave: 1, weight: 0, color: 0xff5a1a, knockResist: 0.1, armor: 15,
+  },
+  CINDER_SHAMAN: {
+    name: 'Cinder Shaman', hp: 60, speed: 2.2, radius: 0.65, scale: 1.1, contactDamage: 5, projectileDamage: 15,
+    xp: 12, gold: 5, cost: 4, minWave: 1, weight: 0, color: 0xc0381a, knockResist: 0, armor: 10,
+  },
+  VOID_STALKER: {
+    name: 'Void Stalker', hp: 85, speed: 3.8, radius: 0.65, scale: 1.15, contactDamage: 9, projectileDamage: 16,
+    xp: 14, gold: 4, cost: 4.5, minWave: 1, weight: 0, color: 0x8a4aff, knockResist: 0.2, armor: 20,
+  },
+  VOID_EYE: {
+    name: 'Void Eye', hp: 75, speed: 2.4, radius: 0.8, scale: 1.1, contactDamage: 5, projectileDamage: 9,
+    xp: 13, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0xc070ff, knockResist: 0.3, armor: 15,
+  },
 };
 
 /** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */
@@ -201,7 +250,7 @@ export function waveBudget(wave: number): number {
 }
 /** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
 export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
-  GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
+  GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], MUMMY: [0.35, 10], CINDER_SHAMAN: [0.4, 10], HAUNTED_ARMOR: [0.4, 12], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
 };
 /** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
 export function armorFor(kind: EnemyKind, wave: number, elite: boolean): number {

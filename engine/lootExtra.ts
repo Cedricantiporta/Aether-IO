@@ -14,6 +14,18 @@ export const LOOT_TABLES_EXTRA: Record<string, string[]> = {
   LAKE_HYDRA: ['marsh_scale', 'hydra_fang', 'jelly_heart'],
   SCARAB: ['beetle_shell', 'raw_gem'],
   SHIELDBEARER: ['brute_knuckle', 'ancient_relic', 'war_banner'],
+  SPORECAP: ['slime_gel', 'ancient_acorn'],
+  DIREWOLF: ['goblin_fang', 'ogre_tusk'],
+  HAUNTED_ARMOR: ['ancient_relic', 'war_banner', 'royal_seal'],
+  GARGOYLE: ['ore_nugget', 'raw_gem', 'bat_wing'],
+  SCORPION: ['beetle_shell', 'volatile_gland'],
+  MUMMY: ['grave_locket', 'old_bone', 'silver_goblet'],
+  YETI: ['frost_scale', 'ogre_tusk', 'brute_knuckle'],
+  FROST_WISP: ['frost_scale', 'echo_crystal', 'shimmer_core'],
+  HELLHOUND: ['cinder_core', 'goblin_fang'],
+  CINDER_SHAMAN: ['cinder_core', 'cultist_rune', 'forbidden_sigil'],
+  VOID_STALKER: ['void_shard', 'cursed_skull'],
+  VOID_EYE: ['void_shard', 'lich_eye', 'echo_crystal'],
   MINI: ['elite_trophy', 'champion_medal', 'ancient_relic', 'royal_seal'],
 };
 export const LOOT_CHANCE_EXTRA: Record<string, number> = { MINI: 1 };

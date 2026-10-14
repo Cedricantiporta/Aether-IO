@@ -80,7 +80,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
     boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
-    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7]],
+    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7], ['DIREWOLF', 5, 2], ['SPORECAP', 4, 3]],
   },
   { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Elderroot's roots (Elderroot the Ancient).
     // Inside the castle: flagstone floors with a worn red carpet, broken curtain walls with torches, banners and arched
@@ -92,7 +92,7 @@ export const BIOMES: readonly BiomeDef[] = [
     shapes: [['RECT', 30], ['HEX', 12], ['OCT', 16], ['CROSS', 18], ['ROUND', 8], ['SEMI', 8], ['ELLIPSE', 8]],
     crates: ['POT', 'POT', 'CRATE', 'GRAVE', 'BARREL'],
     boss: 'BOSS_TREANT', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,
-    roster: [['SKELETON_ARCHER', 8, 0], ['SHIELDBEARER', 6, 0], ['CULTIST', 6, 0], ['GOBLIN', 5, 0], ['BAT', 4, 0], ['WRAITH', 5, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 3, 2], ['BRUTE', 3, 3]],
+    roster: [['SKELETON_ARCHER', 8, 0], ['SHIELDBEARER', 6, 0], ['CULTIST', 6, 0], ['GOBLIN', 5, 0], ['BAT', 4, 0], ['WRAITH', 5, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 3, 2], ['BRUTE', 3, 3], ['HAUNTED_ARMOR', 6, 0], ['GARGOYLE', 5, 1]],
   },
   { // 2 Sunscorch Desert: dunes, cacti, sandstone, bleached bones, quicksand, canyon chasms; oases hide the hydra (The Mire Hydra)
     name: 'Sunscorch Desert', style: 'SAND', ground: ['#d9b46a', '#efd08a'], patch: ['#e8c47a', '#c99a55', '#b07a40'], stone: '#c8a070', edge: '#a8824a', fog: '#f0d6a4',
@@ -101,7 +101,7 @@ export const BIOMES: readonly BiomeDef[] = [
     river: 'CHASM', lake: 'WATER', layouts: [34, 20, 12, 14, 20], towers: true, hydras: true,
     crates: ['POT', 'POT', 'BARREL', 'CRATE', 'GRAVE'],
     boss: 'BOSS_HYDRA', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
-    roster: [['SCARAB', 8, 0], ['BANDIT', 7, 0], ['SKELETON_ARCHER', 5, 0], ['BOMBER', 5, 0], ['ZOMBIE', 5, 1], ['ROCK_CRAB', 4, 1], ['SHIELDBEARER', 4, 2], ['BRUTE', 3, 3]],
+    roster: [['SCARAB', 8, 0], ['BANDIT', 7, 0], ['SKELETON_ARCHER', 5, 0], ['BOMBER', 5, 0], ['ZOMBIE', 5, 1], ['ROCK_CRAB', 4, 1], ['SHIELDBEARER', 4, 2], ['BRUTE', 3, 3], ['SCORPION', 7, 0], ['MUMMY', 6, 1]],
   },
   { // 3 Frostpeak: snowfields, ice rocks, frozen rivers and lakes of black water
     name: 'Frostpeak', style: 'SNOW', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'], stone: '#a8b4c2', edge: '#aab9c8', fog: '#dbe9f5',
@@ -110,7 +110,7 @@ export const BIOMES: readonly BiomeDef[] = [
     river: 'ICE', lake: 'ICE', layouts: [36, 16, 12, 18, 18], towers: false, hydras: true,
     crates: ['CRATE', 'BARREL', 'POT', 'POT'],
     boss: 'BOSS_WYRM', minis: ['SHELLBACK', 'BEHEMOTH'], lichCrypt: false,
-    roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3]],
+    roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3], ['FROST_WISP', 7, 0], ['YETI', 4, 1]],
   },
   { // 4 Ember Wastes: basalt, obsidian, lava rivers and lava lakes crossed by stone bridges
     name: 'Ember Wastes', style: 'BASALT', ground: ['#3a2622', '#5a3226'], patch: ['#5a3222', '#8a4a26', '#2a1a14'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
@@ -119,7 +119,7 @@ export const BIOMES: readonly BiomeDef[] = [
     river: 'LAVA', lake: 'LAVA', layouts: [28, 14, 10, 28, 20], towers: false, hydras: false,
     crates: ['EXPLOSIVE_BARREL', 'BARREL', 'CRATE', 'POT'],
     boss: 'BOSS_WARLORD', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
-    roster: [['BOMBER', 7, 0], ['BANDIT', 6, 0], ['CULTIST', 6, 0], ['SCARAB', 5, 0], ['GOBLIN', 5, 0], ['BAT', 3, 0], ['BRUTE', 5, 1], ['SPLITTER', 4, 1], ['ROCK_CRAB', 4, 2]],
+    roster: [['BOMBER', 7, 0], ['BANDIT', 6, 0], ['CULTIST', 6, 0], ['SCARAB', 5, 0], ['GOBLIN', 5, 0], ['BAT', 3, 0], ['BRUTE', 5, 1], ['SPLITTER', 4, 1], ['ROCK_CRAB', 4, 2], ['HELLHOUND', 7, 0], ['CINDER_SHAMAN', 6, 1]],
   },
   { // 5 The Void: floating shards over the abyss (chasms and pits)
     name: 'The Void', style: 'VOID', ground: ['#241a3e', '#3f2a6a'], patch: ['#33245a', '#4e2c7a', '#16102a'], stone: '#5e5878', edge: '#0e0a1c', fog: '#1c1433',
@@ -128,7 +128,7 @@ export const BIOMES: readonly BiomeDef[] = [
     river: 'CHASM', lake: 'CHASM', layouts: [30, 14, 10, 22, 24], towers: false, hydras: false,
     crates: ['CRATE', 'POT', 'POT', 'GRAVE'],
     boss: 'BOSS_VOID', minis: ['BEHEMOTH', 'WARDEN', 'PHALANX'], lichCrypt: true,
-    roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2]],
+    roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2], ['VOID_STALKER', 7, 0], ['VOID_EYE', 6, 1]],
   },
 ];
 

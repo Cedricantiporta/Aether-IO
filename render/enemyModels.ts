@@ -684,12 +684,329 @@ function shieldbearer(): ModelDef {
   };
 }
 
+// ======================================================= biome-unique monsters ===
+const wind = (e: Enemy, d: number) => (e.state === 'WINDUP' ? clamp(e.stateT / d, 0, 1) : 0);
+
+/** Greenwood Sporecap: a waddling red toadstool with a stubby face; puffs up before bursting into spores. */
+function sporecap(): ModelDef {
+  const stem = '#efe2c4', cap = '#c8382c', dot = '#fff4e0';
+  const body = new GB([0.8, 1.12]);
+  body.cyl(0.32, 0.4, 0.8, 9, [0, 0.55, 0], stem);
+  body.sph(0.62, [0, 1.05, 0], cap, [1.15, 0.62, 1.15], 12);
+  body.cyl(0.62, 0.66, 0.08, 12, [0, 0.95, 0], '#d8c49a');
+  for (let i = 0; i < 7; i++) { const a = i * 1.7, r = i ? 0.42 : 0; body.sph(0.1, [cos(a) * r, 1.32 - r * 0.25, sin(a) * r], dot, [1, 0.4, 1], 6); }
+  for (const s of [-1, 1]) { body.sph(0.06, [s * 0.13, 0.7, 0.33], '#1a1010', 1, 5); }
+  body.box(0.14, 0.04, 0.04, [0, 0.56, 0.36], '#5a2a1a');
+  const foot = new GB([0.8, 1.1]); foot.sph(0.16, [0, -0.05, 0.05], '#d8c8a8', [1, 0.6, 1.3], 6);
+  const spore = new GB([1, 1]); for (let i = 0; i < 5; i++) { const a = i * 1.26; spore.sph(0.05, [cos(a) * 0.5, 1.45, sin(a) * 0.5], '#d08aff', 1, 4); }
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: foot.build(), mat: 'lit' }, { geo: foot.build(), mat: 'lit' }, { geo: spore.build(), mat: 'glow' }], headY: 1.7, shadow: 0.7,
+    pose(e, P, t) {
+      const k = wind(e, 0.75), ph = t * 7;
+      P.body(abs(sin(ph)) * 0.08, 0, sin(ph) * 0.12, 1 + k * 0.25 + sin(t * 40) * 0.03 * k, 1 - k * 0.15);
+      P.part(0, 0, 0, 0);
+      P.part(1, -0.2, 0.15, sin(ph) * 0.15); P.part(2, 0.2, 0.15, -sin(ph) * 0.15);
+      P.part(3, 0, k * 0.3, 0, 0, t * 2, 0, 1 + k);
+      P.glow = 0.6 + k * 2.5;
+    },
+  };
+}
+
+/** Greenwood Dire Wolf (also the Ember Hellhound with `hound`): lean quadruped, raised hackles, glowing eyes. */
+function wolf(hound: boolean): ModelDef {
+  const fur = hound ? '#3a1a14' : '#7a7f88', fur2 = hound ? '#1e0e0a' : '#5a5e66', belly = hound ? '#6a2a1a' : '#b8bcc4', eye = hound ? '#ffb02a' : '#ffe14a';
+  const body = new GB([0.78, 1.15]);
+  body.sph(0.42, [0, 0.82, -0.15], fur, [0.8, 0.8, 1.5], 9);
+  body.sph(0.4, [0, 0.9, 0.35], fur2, [0.9, 0.95, 0.9], 8);
+  body.sph(0.3, [0, 1.05, 0.82], fur, [0.9, 0.85, 1.0], 8);
+  body.box(0.22, 0.2, 0.42, [0, 0.96, 1.15], fur, [0.1, 0, 0]);   // muzzle
+  body.sph(0.06, [0, 1.02, 1.37], '#101010', 1, 5);
+  for (let i = 0; i < 4; i++) body.cone(0.035, 0.12, 3, [(i % 2 ? 0.06 : -0.06), 0.88, 1.18 + i * 0.04], '#ffffff', [Math.PI, 0, 0]);
+  for (const s of [-1, 1]) body.cone(0.1, 0.28, 4, [s * 0.15, 1.32, 0.72], fur2, [-0.2, 0, -s * 0.2]);
+  for (let i = 0; i < 6; i++) body.cone(0.07, 0.26, 4, [0, 1.2 - i * 0.03, 0.4 - i * 0.18], fur2, [-0.5, 0, 0]);   // hackles
+  body.sph(0.3, [0, 0.66, 0.1], belly, [0.7, 0.5, 1.2], 7);
+  body.cone(0.1, 0.7, 5, [0, 0.95, -0.95], fur2, [-1.9, 0, 0]);   // tail
+  if (hound) for (let i = 0; i < 4; i++) body.cone(0.06, 0.3, 4, [0, 1.25 - i * 0.02, 0.2 - i * 0.3], '#ff6a1a', [-0.4, 0, 0]);
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.05, [s * 0.12, 1.12, 1.06], eye, 1, 5);
+  if (hound) { eyes.cone(0.1, 0.4, 5, [0, 1.35, 0.3], '#ff8a2a', [-0.3, 0, 0]); eyes.cone(0.08, 0.35, 5, [0, 1.3, -0.3], '#ffb040', [-0.3, 0, 0]); }
+  const leg = limb(new GB([0.8, 1.1]), 0.58, 0.08, 0.06, fur2).sph(0.08, [0, -0.6, 0.04], fur2, [1, 0.6, 1.4], 5).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 1.7, shadow: 0.85,
+    pose(e, P, t) {
+      const k = wind(e, 0.4), leap = e.state === 'ATTACK' ? 1 : 0, ph = t * (leap ? 18 : 11);
+      P.body(abs(sin(ph)) * 0.1 + leap * 0.5 - k * 0.15, 0.08 - k * 0.15 + leap * -0.25, sin(ph) * 0.04, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const sw = leap ? 1.2 : 0.8;
+      P.part(2, -0.2, 0.62, 0.5, sin(ph) * sw - leap * 0.8); P.part(3, 0.2, 0.62, 0.5, sin(ph + 0.5) * sw - leap * 0.8);
+      P.part(4, -0.2, 0.62, -0.62, -sin(ph) * sw + leap * 0.8); P.part(5, 0.2, 0.62, -0.62, -sin(ph + 0.5) * sw + leap * 0.8);
+      P.glow = 1.3 + k * 2 + (hound ? 0.6 + 0.3 * sin(t * 13) : 0);
+    },
+  };
+}
+
+/** Marble Halls Haunted Armor: an empty suit of plate with a ghostly glow inside the visor and a two-handed greatsword. */
+function hauntedArmor(): ModelDef {
+  const steel = '#8a94a8', steel2 = '#5a6274', trim = '#b8923a', cloth = '#3a2a5a';
+  const body = new GB([0.75, 1.15]);
+  body.box(0.7, 0.8, 0.44, [0, 1.25, 0], steel); body.box(0.6, 0.2, 0.46, [0, 0.82, 0], steel2);
+  body.box(0.08, 0.7, 0.46, [0, 1.25, 0.01], trim);
+  for (const s of [-1, 1]) body.sph(0.24, [s * 0.46, 1.58, 0], steel2, [1, 0.8, 1.1], 8);
+  body.box(0.5, 0.5, 0.1, [0, 0.55, 0.2], cloth); body.box(0.5, 0.5, 0.1, [0, 0.55, -0.2], cloth);   // tabard
+  body.cyl(0.24, 0.26, 0.42, 9, [0, 1.92, 0], steel); body.sph(0.24, [0, 2.12, 0], steel, [1, 0.6, 1], 9);   // great helm
+  body.box(0.36, 0.05, 0.05, [0, 1.95, 0.25], '#101016');
+  body.box(0.06, 0.4, 0.06, [0, 2.38, -0.05], '#8a2a3a'); body.box(0.06, 0.06, 0.5, [0, 2.55, -0.2], '#8a2a3a');   // plume
+  const glow = new GB([1, 1]); glow.box(0.3, 0.035, 0.04, [0, 1.95, 0.26], '#7ad0ff'); glow.sph(0.18, [0, 1.25, 0.12], '#5aa0ff', [1, 1, 0.3], 6);
+  const arm = new GB([0.8, 1.1]); limb(arm, 0.7, 0.1, 0.09, steel2, steel, 0.12);
+  arm.box(0.08, 1.8, 0.18, [0, -1.55, 0.35], '#c8ccd8', [0.2, 0, 0]); arm.box(0.5, 0.08, 0.12, [0, -0.72, 0.18], trim); arm.cyl(0.04, 0.04, 0.3, 5, [0, -0.55, 0.15], '#3a2a1a');
+  const arm2 = limb(new GB([0.8, 1.1]), 0.7, 0.1, 0.09, steel2, steel, 0.12).build();
+  const leg = limb(new GB([0.8, 1.1]), 0.75, 0.13, 0.11, steel2).box(0.2, 0.08, 0.32, [0, -0.76, 0.06], steel).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: glow.build(), mat: 'glow' }, { geo: arm.build(), mat: 'lit' }, { geo: arm2, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.8, shadow: 0.85,
+    pose(e, P, t) {
+      const k = wind(e, 0.85), rec = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.3, 0, 1) : 0, ph = t * 4.5;
+      P.body(abs(sin(ph)) * 0.04, 0.05 + rec * 0.25 - k * 0.1, sin(ph) * 0.04, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      // greatsword: raised high over the shoulder in the wind-up, brought down on release
+      P.part(2, 0.48, 1.55, 0, -0.4 - k * 2.6 + rec * 1.8, 0, -0.15 - k * 0.3);
+      P.part(3, -0.48, 1.55, 0, -0.3 - k * 2.2 + rec * 1.5, 0, 0.3);
+      P.part(4, -0.18, 0.78, 0, -sin(ph) * 0.45); P.part(5, 0.18, 0.78, 0, sin(ph) * 0.45);
+      P.glow = 1.2 + k * 2 + 0.3 * sin(t * 3);
+    },
+  };
+}
+
+/** Marble Halls Gargoyle: crouched stone statue with folded wings; spreads them and flies once awake. */
+function gargoyle(): ModelDef {
+  const st = '#8a847a', st2 = '#6a655c', moss = '#5a7040';
+  const body = new GB([0.72, 1.12]);
+  body.sph(0.45, [0, 0.9, 0], st, [0.9, 1.0, 0.85], 9);
+  body.sph(0.3, [0, 1.42, 0.22], st, [1, 0.95, 1.05], 8);
+  body.box(0.26, 0.16, 0.26, [0, 1.36, 0.46], st2);
+  for (const s of [-1, 1]) { body.cone(0.07, 0.42, 4, [s * 0.18, 1.7, 0.12], st2, [-0.6, 0, -s * 0.35]); body.cone(0.04, 0.14, 3, [s * 0.08, 1.24, 0.55], '#e8e2d4', [Math.PI, 0, 0]); }
+  body.cone(0.06, 0.8, 4, [0, 0.55, -0.6], st2, [-2.1, 0, 0]);   // tail
+  body.sph(0.2, [0.2, 1.2, -0.25], moss, [1.2, 0.4, 1], 5);
+  for (const s of [-1, 1]) { body.cyl(0.08, 0.06, 0.55, 5, [s * 0.3, 0.45, 0.25], st2, [0.3, 0, 0]); body.cyl(0.11, 0.08, 0.5, 5, [s * 0.32, 0.35, -0.15], st2, [-0.4, 0, 0]); }
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.05, [s * 0.11, 1.48, 0.48], '#ff5a2a', 1, 5);
+  const w = new GB([0.75, 1.1]);
+  w.box(1.1, 0.06, 0.08, [0.55, 0, 0], st2, [0, 0, 0.15]);
+  w.tri([0, 0, 0.05], [1.1, 0.16, 0], [0.9, -0.45, -0.35], st); w.tri([0, 0, 0.05], [0.9, -0.45, -0.35], [0.4, -0.35, -0.5], st2);
+  const wing = w.build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: wing, mat: 'lit2' }, { geo: wing, mat: 'lit2' }], headY: 2.1, shadow: 0.75,
+    pose(e, P, t) {
+      const perched = e.phase === 0;
+      const flap = perched ? 0 : sin(t * 14), dive = e.state === 'ATTACK' ? 1 : 0;
+      const hov = perched ? 0 : 1.3 + sin(t * 3 + e.id) * 0.15 - dive * 0.9;
+      P.body(hov, perched ? 0 : 0.35 + dive * 0.4, perched ? 0 : sin(t * 2 + e.id) * 0.15, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const fold = perched ? -1.1 : flap * 0.8 + 0.2 - dive * 0.6;
+      P.part(2, 0.25, 1.1, -0.1, 0, perched ? -0.9 : 0, fold);
+      P.part(3, -0.25, 1.1, -0.1, 0, perched ? 0.9 : 0, -fold, -1, 1, 1);
+      P.glow = perched ? 0.25 + 0.15 * sin(t * 2) : 1.6;
+    },
+  };
+}
+
+/** Desert Giant Scorpion: armoured body, two pincers and a segmented tail that arcs forward to sting. */
+function scorpion(): ModelDef {
+  const sh = '#b8742a', sh2 = '#8a5218', dark = '#3a2410';
+  const body = new GB([0.75, 1.15]);
+  body.sph(0.5, [0, 0.5, 0], sh, [0.95, 0.5, 1.3], 9);
+  for (let i = 0; i < 3; i++) body.box(0.9 - i * 0.1, 0.06, 0.12, [0, 0.74, -0.3 + i * 0.3], sh2);
+  body.sph(0.28, [0, 0.52, 0.62], sh2, [1.1, 0.6, 0.8], 7);
+  for (const s of [-1, 1]) body.sph(0.05, [s * 0.1, 0.66, 0.82], '#101010', 1, 4);
+  const tail = new GB([0.75, 1.15]);
+  for (let i = 0; i < 5; i++) tail.sph(0.17 - i * 0.015, [0, 0.12 + i * 0.32, -i * 0.08], i % 2 ? sh : sh2, [1, 1.1, 1], 7);
+  tail.cone(0.12, 0.42, 5, [0, 1.75, 0.18], sh2, [2.2, 0, 0]); tail.cone(0.04, 0.22, 4, [0, 1.62, 0.42], '#e8e0c0', [2.4, 0, 0]);
+  const tg = new GB([1, 1]); tg.sph(0.09, [0, 1.75, 0.2], '#9ad040', 1, 5);
+  const claw = new GB([0.8, 1.1]);
+  claw.cyl(0.08, 0.08, 0.55, 5, [0, 0, 0.27], sh2, [Math.PI / 2, 0, 0]); claw.sph(0.2, [0, 0, 0.62], sh, [0.9, 0.7, 1.3], 7);
+  claw.cone(0.07, 0.38, 4, [0.09, 0, 0.92], sh2, [Math.PI / 2, 0, -0.2]); claw.cone(0.06, 0.32, 4, [-0.09, 0, 0.88], sh2, [Math.PI / 2, 0, 0.3]);
+  const legs = (s: number) => { const g = new GB([0.8, 1.1]); for (let i = 0; i < 4; i++) { g.box(0.55, 0.05, 0.06, [s * 0.32, 0, (i - 1.5) * 0.24], dark, [0, 0, -s * 0.5]); g.box(0.05, 0.36, 0.05, [s * 0.58, -0.17, (i - 1.5) * 0.26], dark, [0, 0, s * 0.25]); } return g.build(); };
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: tail.build(), mat: 'lit' }, { geo: tg.build(), mat: 'glow' }, { geo: claw.build(), mat: 'lit' }, { geo: claw.build(), mat: 'lit' }, { geo: legs(1), mat: 'lit' }, { geo: legs(-1), mat: 'lit' }],
+    headY: 1.6, shadow: 0.95,
+    pose(e, P, t) {
+      const k = wind(e, 0.55), rec = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.25, 0, 1) : 0, r = t * 14 + e.id;
+      P.body(abs(sin(r)) * 0.03, 0.03, sin(r * 0.5) * 0.04, 1, 1);
+      P.part(0, 0, 0, 0);
+      const arc = -k * 0.55 + rec * 1.1;   // tail cocks back, then whips over
+      P.part(1, 0, 0.5, -0.55, arc); P.part(2, 0, 0.5, -0.55, arc);
+      P.part(3, -0.38, 0.5, 0.45, 0, 0.35 + sin(t * 3) * 0.12 + k * 0.4, 0); P.part(4, 0.38, 0.5, 0.45, 0, -0.35 - sin(t * 3) * 0.12 - k * 0.4, 0);
+      P.part(5, 0, 0.42, 0, 0, sin(r) * 0.3, 0); P.part(6, 0, 0.42, 0, 0, -sin(r) * 0.3, 0);
+      P.glow = 1 + k * 2.5;
+    },
+  };
+}
+
+/** Desert Mummy: bandaged shambler with trailing wraps and glowing eye slits. */
+function mummy(): ModelDef {
+  const w1 = '#d8c8a0', w2 = '#bfae84', w3 = '#a89870';
+  const body = new GB([0.75, 1.12]);
+  for (let i = 0; i < 6; i++) body.cyl(0.3 - abs(i - 2.5) * 0.02, 0.31 - abs(i - 2.5) * 0.02, 0.16, 9, [0, 0.82 + i * 0.15, 0], [w1, w2, w3][i % 3], [0.08 * ((i % 2) * 2 - 1), 0, 0.05]);
+  body.sph(0.25, [0, 1.92, 0.02], w1, [1, 1.1, 1], 8);
+  for (let i = 0; i < 3; i++) body.box(0.52, 0.06, 0.52, [0, 1.8 + i * 0.12, 0], w3, [0.2 * (i - 1), 0.4 * i, 0]);
+  body.box(0.12, 0.6, 0.04, [0.12, 0.85, -0.3], w2, [0.3, 0, 0.2]); body.box(0.1, 0.5, 0.04, [-0.15, 0.95, 0.31], w3, [-0.2, 0, -0.3]);   // loose wraps
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.box(0.09, 0.03, 0.04, [s * 0.09, 1.95, 0.24], '#7affc0');
+  const arm = limb(new GB([0.8, 1.1]), 0.68, 0.08, 0.07, w2, w1, 0.09); arm.box(0.06, 0.45, 0.03, [0.05, -0.85, 0], w3);
+  const leg = limb(new GB([0.8, 1.1]), 0.7, 0.11, 0.09, w2).build();
+  const armG = arm.build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armG, mat: 'lit' }, { geo: armG, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.4, shadow: 0.7,
+    pose(e, P, t) {
+      const k = wind(e, 0.65), ph = t * 3.6;
+      P.body(abs(sin(ph)) * 0.04, 0.15, sin(ph) * 0.08, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.part(2, -0.38, 1.55, 0, -1.5 + sin(ph) * 0.15, 0, 0.1);   // arms out in front, zombie-like
+      P.part(3, 0.38, 1.55, 0, -1.5 - sin(ph) * 0.15 - k * 1.2, 0, -0.1 - k * 0.4);
+      P.part(4, -0.15, 0.78, 0, -sin(ph) * 0.4); P.part(5, 0.15, 0.78, 0, sin(ph) * 0.4);
+      P.glow = 1 + k * 2;
+    },
+  };
+}
+
+/** Frost Yeti: huge white-furred ape with blue face and long arms; pounds the ground at the end of a charge. */
+function yeti(): ModelDef {
+  const fur = '#eef2f8', fur2 = '#c8d4e2', skin = '#5a8ab8';
+  const body = new GB([0.72, 1.12]);
+  body.sph(0.62, [0, 1.25, 0], fur, [1.05, 1.0, 0.85], 10);
+  body.sph(0.48, [0, 0.78, 0], fur2, [1.0, 0.8, 0.8], 9);
+  for (let i = 0; i < 10; i++) { const a = i * 0.63; body.cone(0.12, 0.3, 4, [cos(a) * 0.55, 1.5 + sin(i) * 0.15, sin(a) * 0.45], fur, [sin(a) * 0.6, 0, -cos(a) * 0.6]); }
+  body.sph(0.34, [0, 1.85, 0.25], fur, [1, 0.95, 0.95], 8);
+  body.sph(0.22, [0, 1.8, 0.45], skin, [1.2, 0.9, 0.6], 7);
+  body.box(0.26, 0.06, 0.08, [0, 1.68, 0.56], '#2a3a5a');
+  for (const s of [-1, 1]) body.cone(0.05, 0.14, 3, [s * 0.09, 1.66, 0.58], '#ffffff', [Math.PI, 0, 0]);
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.05, [s * 0.1, 1.86, 0.6], '#9ae8ff', 1, 5);
+  const arm = new GB([0.8, 1.1]); arm.cyl(0.2, 0.17, 1.0, 7, [0, -0.5, 0], fur2); arm.sph(0.24, [0, -1.05, 0.05], skin, [1, 0.8, 1.1], 7);
+  const leg = limb(new GB([0.8, 1.1]), 0.55, 0.2, 0.17, fur2).box(0.32, 0.1, 0.42, [0, -0.56, 0.08], skin).build();
+  const armG = arm.build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armG, mat: 'lit' }, { geo: armG, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.5, shadow: 1.1,
+    pose(e, P, t) {
+      const k = wind(e, 0.85), ch = e.state === 'ATTACK' ? 1 : 0, slam = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.35, 0, 1) : 0;
+      const ph = t * (ch ? 14 : 5);
+      P.body(abs(sin(ph)) * 0.08 - slam * 0.2, 0.15 + ch * 0.35 + slam * 0.3, sin(ph) * 0.06, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const up = k * 2.6 - slam * 0.4;   // arms raised over the head, then pounded down
+      P.part(2, -0.7, 1.6, 0, -sin(ph) * 0.6 * (1 - k) - up - ch * 0.6, 0, 0.25); P.part(3, 0.7, 1.6, 0, sin(ph) * 0.6 * (1 - k) - up - ch * 0.6, 0, -0.25);
+      P.part(4, -0.28, 0.58, 0, -sin(ph) * 0.6); P.part(5, 0.28, 0.58, 0, sin(ph) * 0.6);
+      P.glow = 1.2 + k * 2;
+    },
+  };
+}
+
+/** Frost Wisp: a floating ice crystal core inside a ring of orbiting shards and a soft glow. */
+function frostWisp(): ModelDef {
+  const core = new GB([0.8, 1.2]); core.ico(0.36, [0, 0, 0], '#bfefff', [0.8, 1.4, 0.8]); core.ico(0.22, [0, 0.42, 0], '#e8fbff', [0.6, 1.2, 0.6]); core.ico(0.18, [0, -0.38, 0], '#9adcff', [0.6, 1.2, 0.6]);
+  const ring = new GB([1, 1]); for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; ring.ico(0.1, [cos(a) * 0.62, 0, sin(a) * 0.62], '#8ae0ff', [0.6, 1.4, 0.6]); }
+  const glow = new GB([1, 1]); glow.sph(0.22, [0, 0, 0], '#c8f4ff', 1, 7); for (const s of [-1, 1]) glow.sph(0.05, [s * 0.09, 0.08, 0.26], '#ffffff', 1, 4);
+  return {
+    parts: [{ geo: core.build(), mat: 'lit' }, { geo: ring.build(), mat: 'glow' }, { geo: glow.build(), mat: 'ghost' }], headY: 2.4, shadow: 0.45,
+    pose(e, P, t) {
+      const k = wind(e, 0.6);
+      P.body(1.4 + sin(t * 2.5 + e.id) * 0.2, 0, 0, 1 + k * 0.2, 1);
+      P.part(0, 0, 0, 0, 0, t * 1.5, 0);
+      P.part(1, 0, 0, 0, sin(t) * 0.3, t * (2.5 + k * 6), 0, 1 + k * 0.3);
+      P.part(2, 0, 0, 0, 0, 0, 0, 1.6 + k * 0.8 + sin(t * 4) * 0.1);
+      P.fade = 0.7 + k * 0.6; P.glow = 1.4 + k * 1.5;
+    },
+  };
+}
+
+/** Ember Cinder Shaman: hunched robed fire-caster with a horned mask and a burning staff. */
+function cinderShaman(): ModelDef {
+  const robe = '#4a1810', robe2 = '#7a2a14', bone = '#e8dcc0', skin = '#2a1a14';
+  const body = new GB([0.75, 1.12]);
+  body.cone(0.6, 1.5, 9, [0, 0.75, 0], robe);
+  body.cyl(0.36, 0.5, 0.25, 9, [0, 1.4, 0], robe2);
+  body.box(0.62, 0.1, 0.46, [0, 1.0, 0], '#b8923a');
+  body.sph(0.25, [0, 1.72, 0.08], skin, 1, 8);
+  body.box(0.34, 0.36, 0.08, [0, 1.72, 0.3], bone);   // mask
+  for (const s of [-1, 1]) body.cone(0.06, 0.5, 4, [s * 0.22, 2.05, 0.12], bone, [-0.3, 0, -s * 0.8]);
+  for (let i = 0; i < 5; i++) body.box(0.1, 0.1, 0.06, [-0.24 + i * 0.12, 1.45, 0.38], ['#ff8a2a', bone][i % 2]);   // bead necklace
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.box(0.07, 0.04, 0.03, [s * 0.08, 1.76, 0.35], '#ffb02a');
+  const staff = limb(new GB([0.8, 1.1]), 0.6, 0.08, 0.07, robe2, skin, 0.09);
+  staff.cyl(0.04, 0.05, 2.0, 5, [0, -0.6, 0.18], '#3a2414', [0.1, 0, 0]); staff.torus(0.16, 0.03, [0, 0.42, 0.24], '#b8923a', [0, 0, 0], 1, 8);
+  const flame = new GB([1, 1]); flame.cone(0.18, 0.5, 6, [0, 0.62, 0.26], '#ff8a2a'); flame.cone(0.1, 0.35, 5, [0, 0.58, 0.26], '#ffe08a');
+  const arm = limb(new GB([0.8, 1.1]), 0.6, 0.08, 0.07, robe2, skin, 0.09).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: staff.build(), mat: 'lit' }, { geo: flame.build(), mat: 'glow' }, { geo: arm, mat: 'lit' }],
+    headY: 2.4, shadow: 0.7,
+    pose(e, P, t) {
+      const k = wind(e, 0.5), ph = t * 4;
+      P.body(abs(sin(ph)) * 0.04, 0.2 - k * 0.3, sin(ph) * 0.05, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const raise = -0.3 - k * 2.4;   // staff thrust skyward to call the fire
+      P.part(2, 0.42, 1.4, 0, raise, 0, -0.1); P.part(3, 0.42, 1.4, 0, raise, 0, -0.1, 1 + k * 0.8 + sin(t * 17) * 0.1);
+      P.part(4, -0.42, 1.4, 0, -0.6 - k * 1.2 + sin(ph) * 0.1, 0, 0.3);
+      P.glow = 1.4 + k * 2 + 0.2 * sin(t * 11);
+    },
+  };
+}
+
+/** Void Stalker: lanky shadow assassin with twin curved blades; flickers while it blinks. */
+function voidStalker(): ModelDef {
+  const dark = '#1a1028', dark2 = '#2a1a44', vio = '#8a4aff';
+  const body = new GB([0.7, 1.15]);
+  body.box(0.42, 0.75, 0.3, [0, 1.25, 0], dark2, [0.15, 0, 0]);
+  body.cone(0.36, 0.7, 7, [0, 0.7, 0], dark, [Math.PI, 0, 0]);
+  body.sph(0.22, [0, 1.82, 0.12], dark, [0.9, 1.1, 1.1], 8);
+  body.cone(0.24, 0.5, 6, [0, 2.0, 0.02], dark2, [-0.5, 0, 0]);   // hood point
+  for (let i = 0; i < 4; i++) body.cone(0.06, 0.4, 4, [0, 1.6 - i * 0.2, -0.2], dark2, [-2.6, 0, 0]);
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.box(0.08, 0.03, 0.03, [s * 0.08, 1.84, 0.32], '#d0a0ff', [0, 0, s * 0.3]); eyes.sph(0.12, [0, 1.25, 0.16], vio, [1, 1, 0.3], 6);
+  const arm = limb(new GB([0.8, 1.1]), 0.75, 0.06, 0.05, dark2, dark, 0.07);
+  arm.box(0.04, 0.9, 0.12, [0, -1.15, 0.2], '#b080ff', [0.5, 0, 0]);
+  const armG = arm.build();
+  const leg = limb(new GB([0.8, 1.1]), 0.75, 0.08, 0.06, dark).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armG, mat: 'lit' }, { geo: armG, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 2.4, shadow: 0.6,
+    pose(e, P, t) {
+      const k = wind(e, 0.5), rec = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.25, 0, 1) : 0, ph = t * 8;
+      P.body(abs(sin(ph)) * 0.05, 0.3 + k * 0.2, sin(ph) * 0.05, 1 - k * 0.1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const cross = -0.8 - k * 1.8 + rec * 2.4;   // blades crossed high, then scissored down
+      P.part(2, -0.3, 1.55, 0, cross, 0, 0.3 + k * 0.4); P.part(3, 0.3, 1.55, 0, cross, 0, -0.3 - k * 0.4);
+      P.part(4, -0.13, 0.75, 0, -sin(ph) * 0.7); P.part(5, 0.13, 0.75, 0, sin(ph) * 0.7);
+      P.glow = 1.3 + k * 2.5 + 0.3 * sin(t * 9);
+    },
+  };
+}
+
+/** Void Eye: a floating eyeball with a split violet pupil, ringed by tentacles. */
+function voidEye(): ModelDef {
+  const body = new GB([0.75, 1.2]);
+  body.sph(0.55, [0, 0, 0], '#2a1840', 1, 12);
+  body.sph(0.42, [0, 0, 0.2], '#efe6ff', [1, 1, 0.8], 10);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; body.cone(0.1, 0.8, 5, [cos(a) * 0.3, -0.45 + sin(a) * 0.15, -0.2 + sin(a) * 0.2], '#3a2058', [0.4 + sin(a) * 0.2, 0, cos(a) * 0.5 + Math.PI]); }
+  for (let i = 0; i < 4; i++) body.box(0.3, 0.03, 0.02, [(i - 1.5) * 0.14, 0.18 - abs(i - 1.5) * 0.06, 0.53], '#c03a5a', [0, 0, (i - 1.5) * 0.5]);   // veins
+  const pupil = new GB([1, 1]); pupil.sph(0.2, [0, 0, 0.5], '#c070ff', [1, 1, 0.3], 8); pupil.box(0.06, 0.3, 0.03, [0, 0, 0.58], '#120820');
+  const ring = new GB([1, 1]); ring.torus(0.8, 0.03, [0, 0, 0], '#a050ff', [Math.PI / 2, 0, 0], 1, 20);
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: pupil.build(), mat: 'glow' }, { geo: ring.build(), mat: 'ghost' }], headY: 2.6, shadow: 0.6,
+    pose(e, P, t) {
+      const k = wind(e, 0.85);
+      P.body(1.6 + sin(t * 2 + e.id) * 0.2, sin(t * 1.3) * 0.15, sin(t * 0.9) * 0.1, 1 + k * 0.15, 1 + k * 0.15);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0, 0, 0, 0, 1 + k * 0.4);
+      P.part(2, 0, 0, 0, 0, t * 2, 0, 1 + k * 0.6);
+      P.fade = 0.3 + k * 0.9; P.glow = 1.5 + k * 2.5;
+    },
+  };
+}
+
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
   if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
-    GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer() };
+    GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
+    SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(),
+    HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
-  'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER'];
+  'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
+  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE'];

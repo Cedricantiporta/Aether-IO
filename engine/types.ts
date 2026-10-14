@@ -36,7 +36,20 @@ export type EnemyKind =
   | 'GOBLIN_ARCHER'   // stationary: shoots from a wooden archer tower (the tower is an obstacle; the archer is killable)
   | 'LAKE_HYDRA'      // stationary: a hydra head peeking from a lake (water stages); spits, bites, submerges
   | 'SCARAB'          // fast swarm beetle, spawned in big packs (low hp)
-  | 'SHIELDBEARER';   // bulky, high armour, low damage; blocking stance: frontal hits deal 0 ("BLOCKED")
+  | 'SHIELDBEARER'    // bulky, high armour, low damage; blocking stance: frontal hits deal 0 ("BLOCKED")
+  // ---- biome-unique monsters (2 per biome)
+  | 'SPORECAP'        // Greenwood: walking mushroom, bursts into a lingering spore cloud near you
+  | 'DIREWOLF'        // Greenwood: fast pack hunter, circles then pounces
+  | 'HAUNTED_ARMOR'   // Marble Halls: empty plate armour, slow, telegraphed greatsword cleave in front
+  | 'GARGOYLE'        // Marble Halls: perched stone statue until you come close, then swoops in dives
+  | 'SCORPION'        // Desert: tail sting in front that leaves an acid splash
+  | 'MUMMY'           // Desert: slow, hurls a binding bandage (roots)
+  | 'YETI'            // Frost: charging brute that ends with a ground slam
+  | 'FROST_WISP'      // Frost: kites, fires slowing ice shards, frost nova when you close in
+  | 'HELLHOUND'       // Ember: very fast, leaves burning paw prints, pounces
+  | 'CINDER_SHAMAN'   // Ember: calls down fire on your position (artillery circles)
+  | 'VOID_STALKER'    // Void: blinks behind you and strikes
+  | 'VOID_EYE';       // Void: floating eye, fires rings of void orbs
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage

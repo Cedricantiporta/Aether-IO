@@ -508,3 +508,10 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   `.claude/worktrees/agent-a1afc4106bafe597b`, uncommitted: engine/arenaRooms.ts, engine/gates.ts,
   engine/systems/darkHero.ts, render/DarkHero.tsx, render/SpecialRooms.tsx); NPCs in adventure rooms; the
   "skills don't work after town -> adventure" report (not reproduced, waiting on class / device / input details).
+- Biome-unique monsters (2 per biome, roster weights in roomDefs; AI in enemies.ts "biome-unique monsters", models in
+  enemyModels.ts, loot in lootExtra.ts, codex text in codexData.ts): Greenwood Dire Wolf (circles, telegraphed pounce) +
+  Sporecap (bursts into a poison spore cloud); Marble Halls Haunted Armor (greatsword cleave circle) + Gargoyle (perched
+  statue until approached/struck, then dive-bombs; `phase` 0 = perched); Desert Giant Scorpion (sting + acid splash) +
+  Mummy (rooting bandage throw); Frost Yeti (charge ending in a slam + slowing snow) + Frost Wisp (slowing shard fan, nova
+  when close); Ember Hellhound (wolf AI + burning paw-print trail) + Cinder Shaman (fire circles on you and your heading);
+  Void Stalker (blinks behind you, strikes your spot) + Void Eye (rings of orbs). Axe Storm axes ~40% smaller.

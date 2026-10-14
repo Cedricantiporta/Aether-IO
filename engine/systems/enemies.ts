@@ -799,11 +799,259 @@ export function shieldBlock(e: Enemy): boolean {
   return true;
 }
 
+// ------------------------------------------------------------ biome-unique monsters --
+const SPORE = { range: 3.4, windup: 0.75, r: 3.0, cloud: 4.5, recover: 0.8, cd: 4.5 };
+const WOLF = { range: 7, windup: 0.4, pounce: 0.3, mul: 3.6, recover: 0.5, cd: 2.6, orbit: 9 };
+const ARMOR = { range: 3.6, windup: 0.85, r: 2.5, reach: 2.0, recover: 1.0, cd: 3.2 };
+const GARG = { wake: 10, range: 7, windup: 0.4, dive: 0.38, mul: 3.2, recover: 0.8, cd: 2.4 };
+const SCORP = { range: 3.0, windup: 0.55, r: 1.7, reach: 1.7, recover: 0.6, cd: 2.4 };
+const MUMMY_P = { minR: 4, maxR: 11, windup: 0.65, recover: 0.6, cd: 4.5, speed: 11 };
+const YETI_P = { cd: 5, windup: 0.85, recover: 1.0, lineWidth: 2.8, chargeMul: 3.8, minRange: 4, maxRange: 15 };
+const WISP = { minR: 8, maxR: 13, windup: 0.6, recover: 0.5, cd: 2.8, novaR: 4, novaCd: 6, spread: 0.3 };
+const HOUND = { trail: 0.55, trailR: 0.95, trailLife: 2.2 };
+const SHAMAN = { minR: 9, maxR: 15, windup: 0.5, recover: 0.8, cd: 3.4, r: 2.6, fall: 1.1 };
+const STALK = { range: 13, windup: 0.5, r: 1.9, recover: 0.7, cd: 4.6, behind: 2.6 };
+const EYE = { minR: 9, maxR: 14, windup: 0.85, recover: 0.6, cd: 4.2, n: 10, speed: 7 };
+
+/** Generic "wind up, then a damaging circle in front of me" melee (Haunted Armor cleave, Scorpion sting, Sporecap burst). */
+function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; recover: number; cd: number }, reach: number, dmg: number, color: number, onHit?: (x: number, z: number) => void): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e); desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= P.windup) { if (onHit) onHit(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach); enter(e, 'RECOVER'); }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= P.recover) { e.attackCd = P.cd * (0.85 + Math.random() * 0.3); enter(e, 'CHASE'); }
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, tdx * inv, tdz * inv, e.speed);
+      if (e.attackCd <= 0 && tdist < P.range + e.radius) {
+        e.dir.set(tdx * inv, 0, tdz * inv);
+        spawnTelegraphCircle(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach, P.r, P.windup, dmg, color);
+        enter(e, 'WINDUP'); stop(e);
+      }
+  }
+}
+
+/** Short telegraphed pounce (wolf / hound / gargoyle dive). Returns true while busy. */
+function pounce(e: Enemy, P: { range: number; windup: number; recover: number; cd: number }, dur: number, mul: number, color: number): boolean {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e); desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= P.windup) enter(e, 'ATTACK');
+      return true;
+    case 'ATTACK':
+      setVel(e, e.dir.x, e.dir.z, e.speed * mul); desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= dur) enter(e, 'RECOVER');
+      return true;
+    case 'RECOVER':
+      setVel(e, -e.dir.x, -e.dir.z, e.speed * 0.35);
+      if (e.stateT >= P.recover) { e.attackCd = P.cd * (0.85 + Math.random() * 0.3); enter(e, 'CHASE'); }
+      return true;
+  }
+  if (e.attackCd <= 0 && tdist < P.range) {
+    e.dir.set(tdx * inv, 0, tdz * inv);
+    spawnTelegraphLine(e.pos.x, e.pos.z, e.dir.x, e.dir.z, e.speed * mul * dur + e.radius, 1.4, P.windup, color);
+    enter(e, 'WINDUP'); stop(e);
+    return true;
+  }
+  return false;
+}
+
+function aiSporecap(e: Enemy): void {
+  frontStrike(e, SPORE, 0.4, e.projectileDamage, 0xb04ad0, (x, z) => {
+    spawnHostileZone('PLAGUE', x, z, SPORE.r * 0.9, SPORE.cloud, e.projectileDamage * 0.35, 0xa05ad0);
+  });
+}
+
+function aiDirewolf(e: Enemy, trail: boolean): void {
+  if (trail && (e.state === 'CHASE' || e.state === 'ATTACK')) {
+    e.patternT += frameDt;
+    if (e.patternT >= HOUND.trail) { e.patternT = 0; spawnHostileZone('FIREPATCH', e.pos.x, e.pos.z, HOUND.trailR, HOUND.trailLife, e.projectileDamage, 0xff5a1a); }
+  }
+  if (pounce(e, WOLF, WOLF.pounce, WOLF.mul, trail ? 0xff6a1a : 0xd0d4dc)) return;
+  if (e.state !== 'CHASE') enter(e, 'CHASE');
+  const inv = 1 / Math.max(tdist, 0.001);
+  // circle the prey while the pounce recharges, closing in slowly
+  const s = (e.id & 1) === 0 ? 1 : -1;
+  const orbit = e.attackCd > 0 && tdist < WOLF.orbit ? 0.85 : 0;
+  const ux = tdx * inv, uz = tdz * inv;
+  const vx = ux * (1 - orbit) + uz * s * orbit, vz = uz * (1 - orbit) - ux * s * orbit;
+  const l = 1 / Math.max(0.001, Math.hypot(vx, vz));
+  setVel(e, vx * l, vz * l, e.speed);
+  desiredYaw = Math.atan2(vx, vz);
+}
+
+function aiHauntedArmor(e: Enemy): void { frontStrike(e, ARMOR, ARMOR.reach, e.contactDamage * 2.2, 0x9ab0ff); }
+
+function aiGargoyle(e: Enemy): void {
+  if (e.phase === 0) {   // perched statue: wakes when you come close or it is struck
+    stop(e);
+    if (tdist < GARG.wake || e.hp < e.maxHp) { e.phase = 1; e.attackCd = 0.3; events.emit('explosion', { pos: e.pos, radius: 1.2, color: 0x9a948a }); enter(e, 'CHASE'); }
+    else if (e.state !== 'KITE') enter(e, 'KITE');
+    return;
+  }
+  if (pounce(e, GARG, GARG.dive, GARG.mul, 0xc0b8a8)) return;
+  aiBat(e);
+}
+
+function aiScorpion(e: Enemy): void {
+  frontStrike(e, SCORP, SCORP.reach, e.projectileDamage, 0xd0a040, (x, z) => {
+    spawnHostileZone('ACID', x, z, 1.4, 2.5, e.projectileDamage * 0.25, 0x9ad040);
+  });
+}
+
+function aiMummy(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= MUMMY_P.windup) {
+        tmpV.set(ux, 0, uz);
+        fireEnemyProjectile(e.pos, tmpV, 'SLOW_ORB', MUMMY_P.speed, e.projectileDamage, { life: 1.6, radius: 0.55, debuff: 1 });   // binding wraps: root
+        e.attackCd = MUMMY_P.cd * (0.85 + Math.random() * 0.3);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= MUMMY_P.recover) enter(e, 'CHASE');
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, ux, uz, e.speed);
+      if (e.attackCd <= 0 && tdist > MUMMY_P.minR && tdist < MUMMY_P.maxR) { enter(e, 'WINDUP'); stop(e); }
+  }
+}
+
+function aiYeti(e: Enemy): void {
+  aiBrute(e, YETI_P);
+  if (e.state === 'RECOVER' && e.phase === 0) {   // the charge ends in a ground slam
+    e.phase = 1;
+    spawnTelegraphCircle(e.pos.x + e.dir.x * 1.2, e.pos.z + e.dir.z * 1.2, 3.4, 0.45, e.contactDamage * 1.2, 0xbfe8ff);
+    spawnHostileZone('GOO', e.pos.x, e.pos.z, 3.2, 3, 0, 0xbfe8ff);   // packed snow slows
+  } else if (e.state !== 'RECOVER') e.phase = 0;
+}
+
+function aiFrostWisp(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  e.patternT -= frameDt;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= WISP.windup) {
+        const base = Math.atan2(ux, uz);
+        for (let i = -1; i <= 1; i++) { const a = base + i * WISP.spread; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ORB', 12, e.projectileDamage, { slow: 0.45, life: 1.8, radius: 0.4 }); }
+        e.attackCd = WISP.cd * (0.85 + Math.random() * 0.3);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= WISP.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      if (tdist < WISP.novaR && e.patternT <= 0) {   // too close: frost nova, then drift away
+        e.patternT = WISP.novaCd;
+        spawnTelegraphCircle(e.pos.x, e.pos.z, WISP.novaR + 0.5, 0.6, e.projectileDamage * 1.2, 0x8ae0ff);
+        spawnHostileZone('GOO', e.pos.x, e.pos.z, WISP.novaR, 2.5, 0, 0x8ae0ff);
+      }
+      kiteMove(e, ux, uz, WISP.minR, WISP.maxR);
+      if (e.attackCd <= 0 && tdist < WISP.maxR + 4) enter(e, 'WINDUP');
+  }
+}
+
+function aiCinderShaman(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= SHAMAN.windup) {
+        // fire rains on where you stand (and a second circle where you are heading)
+        spawnTelegraphCircle(px, pz, SHAMAN.r, SHAMAN.fall, e.projectileDamage * 1.3, 0xff5a1a);
+        const pv = world.player.vel;
+        if (Math.abs(pv.x) + Math.abs(pv.z) > 1) spawnTelegraphCircle(px + pv.x * 0.8, pz + pv.z * 0.8, SHAMAN.r * 0.8, SHAMAN.fall + 0.3, e.projectileDamage, 0xff7a2a);
+        e.attackCd = SHAMAN.cd * (0.85 + Math.random() * 0.3);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= SHAMAN.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      kiteMove(e, ux, uz, SHAMAN.minR, SHAMAN.maxR);
+      if (e.attackCd <= 0 && tdist < SHAMAN.maxR + 5) enter(e, 'WINDUP');
+  }
+}
+
+function aiVoidStalker(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e); desiredYaw = Math.atan2(tdx, tdz);
+      if (e.stateT >= STALK.windup) enter(e, 'RECOVER');
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= STALK.recover) { e.attackCd = STALK.cd * (0.85 + Math.random() * 0.3); enter(e, 'CHASE'); }
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      setVel(e, tdx * inv, tdz * inv, e.speed);
+      if (e.attackCd <= 0 && tdist < STALK.range) {
+        // blink behind the target, then a telegraphed strike on it
+        const f = world.player.facing;
+        const bx = px - Math.sin(f) * STALK.behind, bz = pz - Math.cos(f) * STALK.behind;
+        if (isSpawnable(bx, bz)) {
+          events.emit('explosion', { pos: e.pos, radius: 1.1, color: 0x8a4aff });
+          e.pos.set(bx, 0, bz);
+          events.emit('explosion', { pos: e.pos, radius: 1.1, color: 0x8a4aff });
+        }
+        spawnTelegraphCircle(px, pz, STALK.r, STALK.windup, e.projectileDamage, 0xa060ff);
+        enter(e, 'WINDUP'); stop(e);
+      }
+  }
+}
+
+function aiVoidEye(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e);
+      if (e.stateT >= EYE.windup) {
+        const o = Math.random() * Math.PI * 2;
+        for (let i = 0; i < EYE.n; i++) { const a = o + (i / EYE.n) * Math.PI * 2; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ORB', EYE.speed, e.projectileDamage, { life: 3, radius: 0.45 }); }
+        e.attackCd = EYE.cd * (0.85 + Math.random() * 0.3);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      stop(e);
+      if (e.stateT >= EYE.recover) enter(e, 'KITE');
+      return;
+    default:
+      if (e.state !== 'KITE') enter(e, 'KITE');
+      kiteMove(e, ux, uz, EYE.minR, EYE.maxR);
+      if (e.attackCd <= 0 && tdist < EYE.maxR + 4) { spawnTelegraphCircle(e.pos.x, e.pos.z, 1.6, EYE.windup, 0, 0xc070ff); enter(e, 'WINDUP'); }
+  }
+}
+
 function runAI(e: Enemy): void {
   if (e.state === 'SPAWN') {
     stop(e);
     if (e.stateT >= (e.boss ? BOSS_SPAWN_TIME : SPAWN_TIME)) {
-      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' || e.kind === 'GOBLIN_ARCHER' || e.kind === 'LAKE_HYDRA' ? 'KITE' : 'CHASE');
+      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' || e.kind === 'GOBLIN_ARCHER' || e.kind === 'LAKE_HYDRA' || e.kind === 'FROST_WISP' || e.kind === 'CINDER_SHAMAN' || e.kind === 'VOID_EYE' || e.kind === 'GARGOYLE' ? 'KITE' : 'CHASE');
       e.attackCd = Math.max(e.attackCd, 0.6);
     }
     return;
@@ -831,6 +1079,18 @@ function runAI(e: Enemy): void {
     case 'LAKE_HYDRA': aiLakeHydra(e); break;
     case 'SCARAB': aiScarab(e); break;
     case 'SHIELDBEARER': aiShieldbearer(e); break;
+    case 'SPORECAP': aiSporecap(e); break;
+    case 'DIREWOLF': aiDirewolf(e, false); break;
+    case 'HAUNTED_ARMOR': aiHauntedArmor(e); break;
+    case 'GARGOYLE': aiGargoyle(e); break;
+    case 'SCORPION': aiScorpion(e); break;
+    case 'MUMMY': aiMummy(e); break;
+    case 'YETI': aiYeti(e); break;
+    case 'FROST_WISP': aiFrostWisp(e); break;
+    case 'HELLHOUND': aiDirewolf(e, true); break;
+    case 'CINDER_SHAMAN': aiCinderShaman(e); break;
+    case 'VOID_STALKER': aiVoidStalker(e); break;
+    case 'VOID_EYE': aiVoidEye(e); break;
     default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
