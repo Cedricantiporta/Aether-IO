@@ -43,6 +43,7 @@ export interface Settings {
   joystickSide: 'LEFT' | 'RIGHT';
   castMode: 'AIMED' | 'QUICK' | 'AUTO'; // skill casting: hold & release / instant at cursor / instant at auto-target (touch: tap = auto, drag = aim)
   batterySaver: boolean;  // FPS 30 + LOW quality
+  aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)
   autoSkills: boolean;    // auto-cast skills 1/2/3 + ult at the auto-target (dash stays manual)
 }
 

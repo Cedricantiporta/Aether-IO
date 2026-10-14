@@ -126,11 +126,24 @@ function autoTarget(): { x: number; z: number } | null {
   return e ? { x: e.pos.x, z: e.pos.z } : null;
 }
 
-function fire(id: string, how: 'AIM' | 'CURSOR' | 'AUTO', ax = 0, az = 0): void {
+/** Point in front of the hero: the locked / nearest enemy inside a ~35 deg cone of the facing, else 12 units ahead. */
+function facingPoint(): { x: number; z: number } {
+  const p = world.player;
+  const fx = Math.sin(p.facing), fz = Math.cos(p.facing);
+  const t = autoTarget();
+  if (t) {
+    const dx = t.x - p.pos.x, dz = t.z - p.pos.z, d = Math.hypot(dx, dz);
+    if (d > 0.5 && d < 30 && (dx * fx + dz * fz) / d > 0.82) return { x: p.pos.x + fx * d, z: p.pos.z + fz * d };
+  }
+  return { x: p.pos.x + fx * 12, z: p.pos.z + fz * 12 };
+}
+
+function fire(id: string, how: 'AIM' | 'CURSOR' | 'AUTO' | 'FACING', ax = 0, az = 0): void {
   const p = world.player;
   aimOverride.on = false;
   let auto = false;
   if (how === 'AIM') { aimOverride.on = true; aimOverride.x = ax; aimOverride.z = az; }
+  else if (how === 'FACING') { const f = facingPoint(); aimOverride.on = true; aimOverride.x = f.x; aimOverride.z = f.z; }
   else if (how === 'CURSOR') { aimOverride.on = true; aimOverride.x = p.aim.x; aimOverride.z = p.aim.z; }
   else {
     const t = autoTarget();
@@ -149,6 +162,8 @@ function begin(id: string, touch: boolean): void {
 }
 
 function press(id: string): void {
+  // Default: skills and dash go where the hero is FACING (setting aimAtCursor restores mouse aiming).
+  if (!(useGameStore.getState().settings as { aimAtCursor?: boolean }).aimAtCursor) { fire(id, 'FACING'); return; }
   const m = mode();
   if (!aimable(id) || m !== 'AIMED') { fire(id, m === 'AUTO' ? 'AUTO' : 'CURSOR'); return; }
   begin(id, false);
