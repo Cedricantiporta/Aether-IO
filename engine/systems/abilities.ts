@@ -320,23 +320,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       let mx = dx, mz = dz;
       const inv = 0.3 + 0.03 * lv;
       p.dashT = 0.25;
-      const near = findNearestEnemy(p.pos.x, p.pos.z, 10.5);
-      if (dashAuto) {
-        if (near && !near.boss) {
-          const bx = near.pos.x - Math.sin(near.facing) * (near.radius + 1.4), bz = near.pos.z - Math.cos(near.facing) * (near.radius + 1.4);
-          const ddx = bx - p.pos.x, ddz = bz - p.pos.z, dl = Math.hypot(ddx, ddz);
-          if (dl > 0.5) { mx = ddx / dl; mz = ddz / dl; p.dashT = Math.min(0.25, Math.max(0.08, dl / 42)); }
-        } else if (near) {
-          const ax = p.pos.x - near.pos.x, az = p.pos.z - near.pos.z, al = Math.hypot(ax, az) || 1;
-          mx = ax / al; mz = az / al;
-        } else if (moveDir(tgt)) { mx = tgt.x; mz = tgt.z; }
-        else { mx = -dx; mz = -dz; }
-      } else if (near && !near.boss) {
-        // aimed roll: snap behind an enemy lying roughly along the chosen line
-        const bx = near.pos.x - Math.sin(near.facing) * (near.radius + 1.4), bz = near.pos.z - Math.cos(near.facing) * (near.radius + 1.4);
-        const ddx = bx - p.pos.x, ddz = bz - p.pos.z, dl = Math.hypot(ddx, ddz);
-        if (dl > 0.5 && (ddx * dx + ddz * dz) / dl > 0.9) { mx = ddx / dl; mz = ddz / dl; p.dashT = Math.min(0.25, Math.max(0.08, dl / 42)); }
-      }
+      // tap: roll exactly where the hero faces (the facing arrow under the hero); hold-to-aim: along the aimed line
+      if (dashAuto) { mx = Math.sin(p.facing); mz = Math.cos(p.facing); }
       p.dashDir.set(mx, 0, mz);
       p.dashIframes = true;
       p.invulnT = Math.max(p.invulnT, inv);
@@ -542,7 +527,8 @@ function shoulderCharge(holy = false): void {
   const jj = world.input.joy;
   if (jj.active && Math.hypot(jj.x, jj.z) > 0.2) { kx = jj.x; kz = jj.z; }
   const kl = Math.hypot(kx, kz);
-  if (kl > 0.05 && !aimOverride.on) { mx = kx / kl; mz = kz / kl; }
+  if (!aimOverride.on) { mx = Math.sin(p.facing); mz = Math.cos(p.facing); }   // exactly where the hero faces (= move direction while walking)
+  void kl;
   p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
   p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
   a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2); a.chargeLv = lv; a.chargeHit.length = 0;

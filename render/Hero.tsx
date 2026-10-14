@@ -159,6 +159,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
       if (p.titanT > 0) { const k = 0.3 + 0.12 * Math.sin(t * 6); r += k * 0.8; gg += k * 0.35; }
       if (p.rageT > 0) r += 0.28 + 0.12 * Math.sin(t * 12);
       if (p.whirlT > 0) { gg += 0.12; r += 0.2; }
+      if (p.avatarT > 0) { const k = 0.2 + 0.05 * Math.sin(t * 3); r += k; gg += k * 0.9; bb += k * 0.6; }   // Divine Avatar: a soft holy glow
       if (dashing) { r += 0.35; gg += 0.45; bb += 0.55; }
     }
     const key = (r * 100 | 0) + ',' + (gg * 100 | 0) + ',' + (bb * 100 | 0);

@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AdditiveBlending, BufferGeometry, ConeGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Euler, InstancedMesh, Material, MeshBasicMaterial,
+  AdditiveBlending, BufferGeometry, ConeGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Euler, Float32BufferAttribute, InstancedMesh, Material, MeshBasicMaterial,
   MeshStandardMaterial, Group, Matrix4, Object3D, Quaternion, ShaderMaterial, Vector3, IcosahedronGeometry,
 } from 'three';
 import { world } from '../engine/world';
@@ -120,14 +120,29 @@ export function Projectiles() {
     }
     // Knight: one flat crescent arc (forward = +z), bowed forward; sword swing (white steel, gold edge) / Holy Wave (gold light)
     const crescent = (c1: string, c2: string, core: string, span: number, thick: number) => {
-      const cb = new GB([1, 1]);
-      for (let k = 0; k <= 14; k++) {
-        const u = k / 14 - 0.5, w = thick * (1 - Math.abs(u) * 1.7) + 0.04;
-        const lx = u * span, lz = 0.6 - u * u * 2.2;
-        cb.box(span / 14 + 0.05, 0.06, w, [lx, 0, lz], k % 2 ? c1 : c2, [0, Math.atan(-2 * u * 2.2 / span * span * 0.5), 0]);
-        cb.box(span / 14 + 0.04, 0.07, w * 0.35, [lx, 0.01, lz + 0.06], core, [0, 0, 0]);
+      // a smooth tapered crescent: outer arc (front) + inner arc that meets it at both tips; colour runs edge -> bright core
+      const N = 40, A = 1.05, R = span / (2 * Math.sin(A)), cz = 0.6 - R;   // arc centre behind, apex at z 0.6
+      const ca = new Color(c1), cb2 = new Color(c2), cc = new Color(core), tmp = new Color();
+      const pos: number[] = [], col: number[] = [], idx: number[] = [];
+      for (let i = 0; i <= N; i++) {
+        const u = i / N, th = -A + u * 2 * A, taper = Math.sin(u * Math.PI);   // 0 at the tips, 1 in the middle
+        const w = thick * Math.pow(taper, 0.8);
+        const rings = [R, R - w * 0.45, R - w];                                 // outer edge, bright core line, inner edge
+        rings.forEach((r, k) => {
+          pos.push(Math.sin(th) * r, k === 1 ? 0.01 : 0, Math.cos(th) * r + cz);
+          if (k === 1) tmp.copy(cc); else tmp.copy(ca).lerp(cb2, k === 0 ? 0.65 : 0.15);
+          col.push(tmp.r, tmp.g, tmp.b);
+        });
       }
-      return cb.build();
+      for (let i = 0; i < N; i++) for (let k = 0; k < 2; k++) {
+        const a0 = i * 3 + k, a1 = a0 + 1, b0 = a0 + 3, b1 = b0 + 1;
+        idx.push(a0, b0, a1, a1, b0, b1, a0, a1, b0, a1, b1, b0);   // both windings: visible from any angle
+      }
+      const g = new BufferGeometry();
+      g.setAttribute('position', new Float32BufferAttribute(pos, 3));
+      g.setAttribute('color', new Float32BufferAttribute(col, 3));
+      g.setIndex(idx); g.computeVertexNormals();
+      return g;
     };
     const slashG = crescent('#d8ecff', '#7fbcff', '#ffffff', 4.2, 0.42);   // white steel, blue edge
     const slashGoldG = crescent('#fff6d8', '#ffd76a', '#ffffff', 4.2, 0.48);   // Divine Avatar swing: gold / white

@@ -3,7 +3,8 @@ import { X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from
 import { world } from '../../engine/world';
 import { ENEMY_DEFS } from '../../engine/enemyDefs';
 import type { Enemy } from '../../engine/types';
-import { lockedEnemy, clearTarget } from '../../engine/systems/target';
+import { clearTarget } from '../../engine/systems/target';
+import { currentTarget } from '../../engine/systems/combat';
 import { useRaf } from '../hooks/useRaf';
 
 const AFFIX_NAME: Record<string, string> = { HASTED: 'Hasted', VAMPIRIC: 'Vampiric', FROZEN: 'Frozen', VOLATILE: 'Volatile', SHIELDED: 'Shielded' };
@@ -30,7 +31,7 @@ export const TargetFrame: React.FC = () => {
   const st = useRef({ shown: false, id: -1, hp: '', val: '', ic: '', sh: '' });
 
   useRaf(() => {
-    const e = lockedEnemy(), s = st.current;
+    const e = currentTarget(), s = st.current;
     const show = !!e && !e.boss && !world.boss.active;
     if (show !== s.shown) { s.shown = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
     if (!show || !e) { s.id = -1; return; }

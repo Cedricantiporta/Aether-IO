@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, Mesh, PlaneGeometry, ShaderMaterial, DoubleSide } from 'three';
 import { world } from '../engine/world';
-import { lockedEnemy } from '../engine/systems/target';
+import { currentTarget } from '../engine/systems/combat';
 
 const VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const FS = `
@@ -38,7 +38,7 @@ export function TargetRing() {
   }, []);
 
   useFrame(({ clock }) => {
-    const e = lockedEnemy();
+    const e = currentTarget();
     if (!e || e.hideT > 0 || !world.player.alive) { mesh.visible = false; return; }
     const u = (mesh.material as ShaderMaterial).uniforms;
     u.uTime.value = clock.elapsedTime;

@@ -1,4 +1,5 @@
 import React, { Suspense, useLayoutEffect } from 'react';
+import { FacingArrow } from './FacingArrow';
 import { useFrame } from '@react-three/fiber';
 import { updateGame } from '../engine/game';
 import { GameStatus } from '../types';
@@ -61,6 +62,7 @@ export function Scene() {
         </>
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>
+      <FacingArrow />
       {!gameplay && <GuideArrow />}
       {(gameplay || (status === GameStatus.MENU && world.village.area === 'TOWN')) && (
         <>

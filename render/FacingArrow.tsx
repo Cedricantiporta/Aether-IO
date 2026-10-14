@@ -1,0 +1,41 @@
+// Small white triangle on the ground in front of the hero showing where it faces (= where a dash goes), plus faint
+// chevrons out to the dash reach while a dash charge is ready (runs only). Two meshes, no allocations per frame.
+import { useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial } from 'three';
+import { world } from '../engine/world';
+import { useGameStore } from '../store';
+import { GameStatus } from '../types';
+
+function tri(w: number, l: number, notch: number): BufferGeometry {
+  const g = new BufferGeometry();   // flat arrowhead pointing +z (notched back edge)
+  g.setAttribute('position', new Float32BufferAttribute([0, 0, l, -w, 0, 0, 0, 0, notch, 0, 0, l, 0, 0, notch, w, 0, 0], 3));
+  return g;
+}
+const DASH_REACH = 8.5;
+
+export function FacingArrow() {
+  const { root, arrow, chev, chevMat, arrowMat } = useMemo(() => {
+    const arrowMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, side: DoubleSide, toneMapped: false });
+    const chevMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false, side: DoubleSide, toneMapped: false });
+    const root = new Group();
+    const arrow = new Mesh(tri(0.32, 0.5, 0.14), arrowMat); arrow.position.set(0, 0.06, 1.25); arrow.renderOrder = 6;
+    const chev = new Group();
+    for (let i = 0; i < 3; i++) { const m = new Mesh(tri(0.42, 0.5, 0.22), chevMat); m.position.set(0, 0.05, 3 + i * ((DASH_REACH - 3) / 2)); m.renderOrder = 5; chev.add(m); }
+    root.add(arrow, chev);
+    return { root, arrow, chev, chevMat, arrowMat };
+  }, []);
+  useFrame(({ clock }) => {
+    const p = world.player, st = useGameStore.getState().status;
+    const run = st === GameStatus.PLAYING, town = st === GameStatus.MENU && world.village.area === 'TOWN';
+    root.visible = p.alive && (run || town) && !p.anim.dashing;
+    if (!root.visible) return;
+    root.position.set(p.pos.x, 0, p.pos.z);
+    root.rotation.y = p.facing;
+    arrowMat.opacity = 0.7 + 0.15 * Math.sin(clock.elapsedTime * 4);
+    chev.visible = run && p.dashCharges > 0;
+    if (chev.visible) chevMat.opacity = 0.12 + 0.06 * Math.sin(clock.elapsedTime * 3);
+    void arrow;
+  });
+  return <primitive object={root} />;
+}

@@ -221,3 +221,14 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Ankh of Life: 15-minute real-time cooldown between revives (`ankhCooldownLeft()` in combat.ts, localStorage `aether-survivor-ankh-cd-v1`).
   The item tooltip shows "Recharging: N min left" / "Ready".
 - CI: the android workflow also builds on `claude/charming-shannon-nq5wcd`. A `v*` tag publishes a GitHub Release with the APK.
+
+### Combat readability batch
+- Knight sword arcs and Holy Wave use a real tapered crescent mesh (`crescent()` in `render/Projectiles.tsx`: 3-ring strip, edge → bright
+  core, double-sided) instead of stepped boxes.
+- Divine Avatar adds a soft gold-white emissive glow on the hero (`Hero.tsx` emissive tint).
+- Dash direction is predictable: a tap dash (Archer roll, Barbarian/Knight charge) goes exactly along `p.facing`. Aimed (hold) dashes keep
+  the aimed line. `render/FacingArrow.tsx` draws a white ground triangle ahead of the hero (runs + town) and, while a dash charge is ready
+  in a run, faint chevrons out to the dash reach.
+- Target ring + HP card follow `currentTarget()` (combat.ts): the click-lock, else the auto-aim enemy. Before, they only showed for a
+  clicked target.
+- Mobile: Dash swapped places with Skill 1, so it sits right beside the Attack button. The Knight attack button uses the HOLY_WAVE icon.

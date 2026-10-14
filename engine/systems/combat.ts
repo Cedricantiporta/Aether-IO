@@ -2,6 +2,7 @@
 // Combat: damage in/out, death + loot, healing, status effects.
 // Engine-B (enemies/bosses/director) calls into this module.
 // ============================================================================
+import { lockedEnemy } from './target';
 import { debug } from '../debug';
 import { dropLoot } from './loot';
 import { Vector3 } from 'three';
@@ -147,6 +148,13 @@ const _aimTmp = new Vector3();
 /** Unit xz direction from the player towards the aim point (falls back to facing when aim is on top of the player). */
 /** Auto-target lock (enemy id or -1). Maintained by player.ts; when valid it overrides the mouse aim. */
 export const autoAim = { id: -1 };
+/** The enemy the hero is attacking right now: the click-locked one, else the auto-aim pick (ring + HP card follow it). */
+export function currentTarget(): Enemy | null {
+  const lk = lockedEnemy();
+  if (lk) return lk;
+  const e = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+  return e && e.active && e.state !== 'DYING' && e.state !== 'SPAWN' && e.hideT <= 0 ? e : null;
+}
 
 /** Aimed casting: while `on`, skills use this ground point instead of the pointer / auto-target lock. */
 export const aimOverride = { on: false, x: 0, z: 0 };

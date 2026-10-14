@@ -189,11 +189,11 @@ const mpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.
 // Genshin-style: the big ATTACK button sits in the corner, skills arc around it, ult + dash + potions beyond.
 const G = {
   atk: { cx: 1.0, cy: 1.0, size: 1.45 },
-  s1: { cx: 2.45, cy: 0.75, size: 0.95 }, s2: { cx: 2.35, cy: 1.85, size: 0.95 }, s3: { cx: 1.35, cy: 2.5, size: 0.95 },
-  ult: { cx: 3.45, cy: 1.75, size: 1.1 }, dash: { cx: 3.55, cy: 0.6, size: 0.95 },
+  s1: { cx: 3.55, cy: 0.6, size: 0.95 }, s2: { cx: 2.35, cy: 1.85, size: 0.95 }, s3: { cx: 1.35, cy: 2.5, size: 0.95 },
+  ult: { cx: 3.45, cy: 1.75, size: 1.1 }, dash: { cx: 2.45, cy: 0.75, size: 0.95 },   // dash right beside ATTACK
   hp: { cx: 4.5, cy: 0.6, size: 0.8 }, mp: { cx: 4.55, cy: 1.5, size: 0.8 },
 };
-const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN' };
+const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN', KNIGHT: 'HOLY_WAVE' };
 
 export const TouchControls: React.FC = () => {
   const status = useGameStore((s) => s.status);
