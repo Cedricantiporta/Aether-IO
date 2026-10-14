@@ -17,7 +17,8 @@ import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
-import { walkAndOpen } from '../engine/systems/village';
+import { walkAndOpen, walkTo } from '../engine/systems/village';
+import { TOWER } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 
 type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH';
@@ -677,6 +678,57 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
 }
 const q_light = (c: string) => <pointLight position={[0, 3, 0]} color={c} distance={12} decay={1.6} intensity={10} />;
 
+// ------------------------------------------------------------- endless tower ---
+/** The Endless Tower: a tall round stone tower in the forecourt, purple-lit windows, a glowing rune door facing the road. */
+function buildTowerGeo() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const st = ['#a29fab', '#94919e', '#aeabb8'], dark = '#2a2733';
+  b.cyl(5.0, 5.4, 1.2, 16, [0, 0.6, 0], '#5d5a66');
+  for (let i = 0; i < 7; i++) b.cyl(4.05 - i * 0.12, 4.15 - i * 0.12, 3.2, 14, [0, 1.2 + 1.6 + i * 3.2, 0], st[i % 3]);   // stacked drums
+  for (let i = 1; i < 7; i++) b.cyl(4.2 - i * 0.12, 4.2 - i * 0.12, 0.25, 14, [0, 1.2 + i * 3.2, 0], '#56535f');           // course lines
+  const top = 1.2 + 7 * 3.2;
+  b.cyl(4.6, 3.6, 0.8, 16, [0, top + 0.4, 0], st[1]);
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; b.box(1.0, 1.1, 0.7, [Math.cos(a) * 4.2, top + 1.35, Math.sin(a) * 4.2], st[i % 3], [0, -a, 0]); }   // crenellations
+  b.cone(3.4, 5.5, 12, [0, top + 3.6, 0], '#3a2f4a'); b.cyl(0.08, 0.08, 2.4, 6, [0, top + 7.4, 0], dark);
+  g.sph(0.35, [0, top + 8.7, 0], '#c58bff', 1, 8);
+  // glowing windows spiralling up
+  for (let i = 0; i < 9; i++) { const a = i * 1.15 + 0.4, y = 4 + i * 2.25, r = 4.0 - (y / 30) * 0.8; g.box(0.55, 1.0, 0.12, [Math.cos(a) * r, y, Math.sin(a) * r], '#b77dff', [0, -a + Math.PI / 2, 0]); }
+  // door (faces +x): stone frame, dark doorway, rune arch
+  b.box(0.6, 4.2, 3.2, [4.1, 2.6, 0], st[2]);
+  b.box(0.3, 3.2, 2.0, [4.35, 2.2, 0], dark);
+  g.torus(1.2, 0.09, [4.45, 3.7, 0], '#c58bff', [0, Math.PI / 2, 0], 1, 16, Math.PI);
+  for (const sz of [-1, 1]) { b.box(0.9, 1.4, 0.9, [4.9, 0.7, sz * 2.1], st[0]); g.sph(0.28, [4.9, 1.65, sz * 2.1], '#d9b4ff', 1, 7); }   // braziers
+  b.box(2.6, 0.25, 3.4, [5.4, 0.12, 0], '#5d5a66');   // threshold
+  return { body: b.build(), glow: g.build() };
+}
+function TowerLandmark() {
+  const geos = useMemo(() => buildTowerGeo(), []);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.9 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.5, 2.2) }) }), []);
+  const label = useMemo(() => labelMaterial('Endless Tower', '#e9d6ff', { size: 64, plate: 'plate' }), []);
+  const best = useGameStore((s) => s.progress.towerBest[s.hero] ?? 0);
+  const sub = useMemo(() => (best > 0 ? labelMaterial(`Best floor ${best}`, '#c9a6ff', { size: 46 }) : null), [best]);
+  const titleRef = useRef<Sprite>(null!);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    mats.glow.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 1.3 + Math.sin(t * 2.4) * 0.2, 2.2);
+    if (titleRef.current) titleRef.current.position.y = 32.5 + Math.sin(t * 1.4) * 0.25;
+  });
+  const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(TOWER.door.x + 1.2, TOWER.door.z, 'tower', '', 2.2); };
+  return (
+    <group position={[TOWER.x, 0, TOWER.z]}>
+      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
+      <mesh geometry={geos.glow} material={mats.glow} />
+      <sprite ref={titleRef} material={label.mat} position={[0, 32.5, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
+      {sub && <sprite material={sub.mat} position={[0, 31.0, 0]} scale={[sub.aspect * 0.8, 0.8, 1]} />}
+      <pointLight position={[6.5, 3, 0]} color="#b77dff" distance={12} decay={1.6} intensity={12} />
+      <mesh position={[1, 6, 0]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+        <cylinderGeometry args={[5, 5, 12, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function Town({ q }: { q: QualityCfg }) {
   // houses / stalls / gate / NPCs / animals: only in the peaceful village (and behind the title screen)
   const village = useGameStore((s) => s.status === GameStatus.MENU || s.status === GameStatus.HERO_SELECT);
@@ -684,6 +736,7 @@ export function Town({ q }: { q: QualityCfg }) {
     <>
       {village && <TownScenery q={q} />}
       {village && <Npcs />}
+      {village && <TowerLandmark />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
       <QuestBoard />
       <Station kind="TRAINER" position={TRAINER_POS} />

@@ -68,6 +68,14 @@ export function Scene() {
           <Pickups />
         </>
       )}
+      {!gameplay && status === GameStatus.MENU && world.village.area === 'TOWN' && (
+        <>{/* town: skills / attacks and the hermit-path monsters */}
+          <Zones />
+          <GroundFx />
+          <Enemies />
+          <Projectiles />
+        </>
+      )}
       {gameplay && (
         <>
           <Zones />

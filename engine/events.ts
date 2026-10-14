@@ -69,7 +69,7 @@ export interface GameEvents {
   portalsOpen: {};
   biomeClear: { biome: number };
   gameEnding: Record<string, never>;            // Malakar (final boss) defeated: ending + credits
-  openSetOut: Record<string, never>;            // town gate: choose Adventure / Endless Tower
+  openSetOut: { mode: 'ADVENTURE' | 'TOWER' };  // town gate: Adventure (+ Ascension) / the Endless Tower building
   towerFloor: { floor: number; best: boolean }; // endless tower floor cleared
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };

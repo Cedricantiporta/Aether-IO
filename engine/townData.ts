@@ -25,6 +25,8 @@ export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls). */
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
+/** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
+export const TOWER = { x: -16, z: 58, r: 4.2, door: { x: -11, z: 58 } };
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -114,6 +116,7 @@ export const ROADS: RoadSpec[] = [
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
   { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
+  { x1: 0, z1: 58, x2: -11, z2: 58, w: ROAD_W.branch },        // endless tower door
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -217,6 +220,7 @@ export const HAYSTACK = { x: FARM.x + 5, z: FARM.z - 4 };
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]);
+  c.push([TOWER.x, TOWER.z, TOWER.r]);
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);

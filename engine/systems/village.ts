@@ -18,7 +18,7 @@ import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS 
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 
@@ -60,7 +60,7 @@ export function placeVillageNodes(): void {
 /** One thing the hero can interact with right now (preallocated, nearest first). every pill uses E. */
 export interface Interactable { active: boolean; key: 'E' | 'F'; verb: string; label: string; shop: ShopTab | ''; node: number; d2: number; act: Act; }
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -88,6 +88,7 @@ function scanNearby(): void {
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
     for (const s of SHOP_POSITIONS) { d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d); }
     d = q(GATE.x, GATE.z - 1); if (d < GATE_R * GATE_R) push('E', 'Set out', 'Town Gate', '', -1, d, 'gate');
+    d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
   }
   for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area === 'CASTLE') !== castle) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
@@ -107,7 +108,8 @@ export function interact(it: Interactable): void {
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'leave') v.pending = 'LEAVE';
     else if (it.act === 'npc') openDialogue(it.node);
-    else if (it.act === 'gate') events.emit('openSetOut', {});   // choose Adventure (+ Ascension) or the Endless Tower
+    else if (it.act === 'gate') events.emit('openSetOut', { mode: 'ADVENTURE' });   // adventure (+ Ascension)
+    else if (it.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });      // the Endless Tower building
     else if (it.shop) st.openSpecificShop(it.shop);
     return;
   }
@@ -157,7 +159,7 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
 }
 /** Click on a shop / board / quest from afar: walk the hero there along the streets, then do `act` on arrival
  *  (open `tab` / enter the castle / talk to NPC `npc` / nothing). Instant when already close. */
-export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'leave' | 'npc' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
+export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'leave' | 'npc' | 'tower' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
   g.act = act; g.tab = tab; g.npc = npc; g.r = r;
@@ -201,6 +203,7 @@ function arrive(): void {
   if (g.act === 'shop' && g.tab) st.openSpecificShop(g.tab as ShopTab);
   else if (g.act === 'castle') world.village.pending = 'ENTER';
   else if (g.act === 'leave') world.village.pending = 'LEAVE';
+  else if (g.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });
   else if (g.act === 'npc' && g.npc >= 0) openDialogue(g.npc);
 }
 

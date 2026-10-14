@@ -15,27 +15,27 @@ type Mode = 'ADVENTURE' | 'TOWER';
 export const SetOutWindow: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('ADVENTURE');
-  useGameEvent('openSetOut', () => setOpen(true));
+  useGameEvent('openSetOut', (e) => { setMode(e.mode); setOpen(true); });   // gate = Adventure, the tower building = Endless Tower
   const { progress, hero, startMode, setAscension } = useGameStore(useShallow((s) => ({ progress: s.progress, hero: s.hero, startMode: s.startMode, setAscension: s.setAscension })));
   if (!open) return null;
   const asc = Math.min(progress.ascension, progress.ascensionMax);
   const best = progress.towerBest[hero] ?? 0;
   const go = () => { setOpen(false); startMode(mode); };
   return (
-    <Modal open={open} title="Set Out" ribbon tone="gold" width="34rem" z={160} onClose={() => setOpen(false)} onConfirm={go}>
-      <div className="so-modes" data-testid="setout">
-        <button className={`so-card ${mode === 'ADVENTURE' ? 'on' : ''}`} onClick={() => setMode('ADVENTURE')} data-testid="so-adventure">
+    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={go}>
+      <div className="so-modes one" data-testid="setout">
+        {mode === 'ADVENTURE' && <div className="so-card on" data-testid="so-adventure">
           <Swords size={26} />
           <b>Adventure</b>
           <span>Six biomes, six guardians, and the Undying Throne at the end of the Void.</span>
           <em>{progress.endings > 0 ? `Ending seen ${progress.endings}x` : 'Ending not yet seen'}</em>
-        </button>
-        <button className={`so-card ${mode === 'TOWER' ? 'on' : ''}`} onClick={() => setMode('TOWER')} data-testid="so-tower">
+        </div>}
+        {mode === 'TOWER' && <div className="so-card on" data-testid="so-tower">
           <Castle size={26} />
           <b>Endless Tower</b>
           <span>Climb floor after floor. Elites every 3rd, a champion every 5th, a boss every 10th floor.</span>
           <em><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</em>
-        </button>
+        </div>}
       </div>
       {mode === 'ADVENTURE' && (
         <div className="so-asc" data-testid="so-asc">

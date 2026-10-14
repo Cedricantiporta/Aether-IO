@@ -232,6 +232,6 @@ export function Enemies() {
     sys.bg.instanceCount = nBar; sys.bPos.needsUpdate = true; sys.bD.needsUpdate = true;
   });
 
-  return <primitive object={sys.group} visible={status !== GameStatus.MENU && status !== GameStatus.HERO_SELECT} />;
+  return <primitive object={sys.group} visible={status !== GameStatus.HERO_SELECT} />;
 }
 
