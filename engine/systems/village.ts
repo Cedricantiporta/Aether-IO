@@ -110,6 +110,14 @@ export function interact(it: Interactable): void {
   if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }
 
+/** Click on a shop / board from afar: walk the hero to (x, z) and open `tab` on arrival (instantly when already close). */
+export function walkAndOpen(x: number, z: number, tab: ShopTab, r = 1.6): void {
+  const st = useGameStore.getState(), p = world.player, g = world.village.go;
+  if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
+  if ((x - p.pos.x) ** 2 + (z - p.pos.z) ** 2 <= r * r) { g.on = false; st.openSpecificShop(tab); return; }
+  g.on = true; g.x = x; g.z = z; g.r = r; g.t = 0; g.tab = tab;
+}
+
 const FADE_S = 0.2;   // fade out + fade in = ~0.4 s
 /** Swaps the village between the town and the castle throne hall (called at full black). */
 function switchArea(to: 'TOWN' | 'CASTLE'): void {
@@ -171,6 +179,17 @@ export function updateVillage(dt: number): void {
   }
   updatePickups(dt);
   updateNpcs(dt);
+  // click-to-walk arrival (gives up after 10 s, e.g. blocked by a wall)
+  const g = v.go;
+  if (g.on) {
+    g.t += dt;
+    if (talking || v.pending || g.t > 10) g.on = false;
+    else if ((g.x - p.pos.x) ** 2 + (g.z - p.pos.z) ** 2 <= g.r * g.r) {
+      g.on = false; p.vel.x = p.vel.z = 0;
+      p.facing = Math.atan2(g.x - p.pos.x, g.z + 3 - p.pos.z) + Math.PI;   // face the shop (shops face +z)
+      useGameStore.getState().openSpecificShop(g.tab as ShopTab);
+    }
+  }
 
   v.harvestCd = Math.max(0, v.harvestCd - dt);
   // E acts on the NEAREST pill: press = talk / open / set out; press or HOLD = harvest when that nearest thing is a node

@@ -63,6 +63,8 @@ export const HOUSES: HouseSpec[] = [
   // outskirts
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
   H(24, 22, 0, 5.2, 4.4, 2),   // where the pet stable used to be
+  // north street ends, facing the street (west end north of the potion shop, east end north of the warehouse)
+  H(-24, -6, Math.PI / 2, 5.0, 4.4, 2), H(23, -6, -Math.PI / 2, 5.0, 4.4),
   H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
   H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
 ];
@@ -335,8 +337,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
   },
   {
-    name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-21, 5.5], speed: 1.4,
-    patrol: [[-21, 5.5], [-21, -4], [-14, -4], [-14, 5.5]],
+    name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-15, 8.4], speed: 1.4,
+    patrol: [[-15, 8.4], [-34, 8.4]],   // strolls past the west shop row
     talk: [
       ['Moonpetal, ember root, a pinch of swamp moss... the Potion Shop pays well for the good stuff.', 'Do not forget to sell what you do not need.'],
       ['Mana potions taste like mint, health potions like regret. Drink them anyway.', 'Take this one, on the house.'],
@@ -345,8 +347,8 @@ export const NPCS: NpcDef[] = [
     gift: { item: 'potion_mana', qty: 1, text: 'Lysa slips a vial into your pack. (+1 Mana Potion)' },
   },
   {
-    name: 'Dorn', role: 'Miner', model: 'BARBARIAN', tint: '#ecd2b4', scale: 1, prop: 'hammer', accent: '#ffb86a', home: [21, 5.5], speed: 1.5,
-    patrol: [[21, 5.5], [21, -4], [15, -4], [15, 5.5]],
+    name: 'Dorn', role: 'Miner', model: 'BARBARIAN', tint: '#ecd2b4', scale: 1, prop: 'hammer', accent: '#ffb86a', home: [15, 8.4], speed: 1.5,
+    patrol: [[15, 8.4], [34, 8.4]],     // walks past the warehouse / blacksmith / armor shop
     talk: [
       ['Out on the edges of the village you will find crystals and ore veins. Stand close and hold E to hit them.', 'They grow back after a while, and the shards are worth good coin.'],
       ['The blacksmith will turn what you dig into something sharp. Tell her Dorn sent you!'],
@@ -380,7 +382,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Hodge', role: 'Bounty Clerk', model: 'KNIGHT', tint: '#ffe8c7', scale: 1, prop: 'none', accent: '#ffcf70', home: [4.5, -12], speed: 1.5, quest: true,
-    patrol: [[4.5, -12], [8, -6.4], [-8, -6.4], [-4.5, -12]],
+    patrol: [[4.5, -12], [8, -6.4], [-8, -6.4], [-4.5, -12], [-8, -6.4], [8, -6.4]],   // there and back (never across the castle path planters)
     talk: [
       ['Bounties, bounties... the Quest Board north of the plaza is full of them. Slay monsters, earn gold.', 'Come back and claim the reward when you are done.'],
       ['I keep the ledgers straight, and the heroes honest. Check the Quest Board every day for new work.'],
@@ -463,5 +465,5 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x + 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.2, tint: '#e0a070' },
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
-  { kind: 'CAT', x: 17.5, z: 4.5, rx: 2.5, rz: 1.2, speed: 1.7, tint: '#8a8a96' },
+  { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
 ];

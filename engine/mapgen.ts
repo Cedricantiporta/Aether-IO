@@ -204,7 +204,9 @@ export function generateMap(): void {
   // TOWN_COLLIDERS (engine/townData.ts, added by village.placeVillageNodes). Only the functional-building colliders live here.
   for (const s of SHOP_POSITIONS) add('SHOP', s.position[0], s.position[2], 3, 1, true, 0);
   add('SHOP', SHRINE_POS[0], SHRINE_POS[2], 2.2, 1, true, 0);
-  add('SHOP', TRAINER_POS[0], TRAINER_POS[2], 2.4, 1, true, 0);
+  // skill trainer pavilion (two circles) + its dummies / rack / target
+  add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 0.4, 2.6, 1, true, 0); add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 2.4, 2.6, 1, true, 0);
+  for (const [dx, dz, r] of [[-3.4, 1.7, 0.55], [-3.9, 3.6, 0.55], [3.7, 1.5, 0.9], [4.0, 3.7, 0.8], [2.6, 3.9, 0.6]] as const) add('SHOP', TRAINER_POS[0] + dx, TRAINER_POS[2] + dz, r, 1, true, 0);
   world.obstacles = obstacles;
   world.obstaclesVersion++;
   rebuildColliderGrid();

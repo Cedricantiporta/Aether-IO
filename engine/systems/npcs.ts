@@ -6,6 +6,17 @@
 import { world } from '../world';
 import { NPCS, ANIMALS, GENERIC_BUBBLES } from '../townData';
 import { useDialogue } from './dialogue';
+import { queryColliders, type Collider } from '../mapgen';
+
+const hits: Collider[] = [];
+/** Push a walker out of any building / prop collider it overlaps (safety net: routes are checked to be clear). */
+function pushOut(o: { x: number; z: number }, r: number): void {
+  queryColliders(o.x, o.z, r, hits);
+  for (let i = 0; i < hits.length; i++) {
+    const c = hits[i], dx = o.x - c.x, dz = o.z - c.z, d = Math.sqrt(dx * dx + dz * dz), min = c.r + r;
+    if (d < min && d > 1e-4) { o.x = c.x + (dx / d) * min; o.z = c.z + (dz / d) * min; }
+  }
+}
 
 export interface NpcState {
   x: number; z: number;
@@ -69,6 +80,7 @@ export function updateNpcs(dt: number): void {
       n.wait = 1.2 + Math.random() * 4; n.moving = false;
     } else {
       n.x += (dx / dist) * step; n.z += (dz / dist) * step; n.moving = true; n.yaw = Math.atan2(dx, dz);
+      if (town) pushOut(n, 0.45);
     }
   }
 
@@ -82,7 +94,7 @@ export function updateNpcs(dt: number): void {
       a.moving = false; a.wait = 0.8 + Math.random() * 3.5;
       const ang = Math.random() * 6.283, rr = Math.sqrt(Math.random());
       a.tx = d.x + Math.cos(ang) * d.rx * rr; a.tz = d.z + Math.sin(ang) * d.rz * rr;
-    } else { a.x += (dx / dist) * step; a.z += (dz / dist) * step; a.moving = true; a.yaw = Math.atan2(dx, dz); }
+    } else { a.x += (dx / dist) * step; a.z += (dz / dist) * step; a.moving = true; a.yaw = Math.atan2(dx, dz); pushOut(a, 0.3); }
   }
 
   // ---- ambient speech bubbles

@@ -350,7 +350,14 @@ export function updatePlayerVillage(dt: number): void {
   if (ml > 0) { mx /= ml; mz /= ml; }
   const jy = world.input.joy;
   if (jy.active) { mx = jy.x; mz = jy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
-  if (ml > 0) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }
+  // click-to-walk (village): head for the clicked shop until there; any manual input cancels it
+  const go = world.village.go;
+  let worldDir = false;
+  if (go.on) {
+    if (ml > 0) go.on = false;
+    else { const dx = go.x - p.pos.x, dz = go.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > go.r * 0.6) { mx = dx / d; mz = dz / d; ml = 1; worldDir = true; } }
+  }
+  if (ml > 0 && !worldDir) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }
   const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;
   const lerpK = 1 - Math.exp(-12 * dt);
   p.vel.x += (mx * speed - p.vel.x) * lerpK;

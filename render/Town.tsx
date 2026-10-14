@@ -17,6 +17,8 @@ import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
+import { walkAndOpen } from '../engine/systems/village';
+import { useUiStore } from '../ui/uiStore';
 
 type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE';
 
@@ -363,7 +365,8 @@ function Shop({ type, position, color, q }: { type: ShopType; position: number[]
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
-    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(SHOP_TAB[type]);
+    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(px + NPC[type].pos[0] * 0.5, pz + 5.2, SHOP_TAB[type]);   // walk up to the counter first
+    else if (st === GameStatus.PLAYING) useGameStore.getState().openSpecificShop(SHOP_TAB[type]);
   };
 
   useFrame(({ clock }, dt0) => {
@@ -460,7 +463,8 @@ function QuestBoard() {
   const markRef = useRef<Sprite>(null!), titleRef = useRef<Sprite>(null!);
   const open = () => {
     const st = useGameStore.getState().status;
-    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop('QUESTS');
+    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(QUEST_POS[0], QUEST_POS[2] + 2.6, 'QUESTS', 1.8);
+    else if (st === GameStatus.PLAYING) useGameStore.getState().openSpecificShop('QUESTS');
   };
   useFrame(({ clock }, dt0) => {
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
@@ -497,19 +501,66 @@ function buildShrine() {
   for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; g.box(0.12, 0.05, 0.3, [Math.cos(a) * 1.25, 0.72, Math.sin(a) * 1.25], '#e9b949', [0, -a, 0]); }
   return { body: b.build(), glow: g.build() };
 }
+/** Skill Trainer: open-front striped training pavilion (rug, bench, scroll shelf, weapon wall) with straw dummies,
+ *  a weapon rack, an archery target and hay bales out front. Faces +z (the north street). */
 function buildTrainer() {
   const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
-  const wood = '#7a5230', dark = '#4a3020';
-  // dummy
-  b.box(0.22, 2.0, 0.22, [0, 1.0, 0], wood); b.cyl(0.34, 0.4, 1.0, 8, [0, 1.7, 0], '#c9a96a'); b.box(1.5, 0.2, 0.2, [0, 1.95, 0], wood); b.sph(0.3, [0, 2.55, 0], '#d9bd82', 1, 8);
-  b.cyl(0.8, 0.9, 0.2, 8, [0, 0.1, 0], '#6a6358'); b.box(0.5, 0.06, 0.5, [0, 1.35, 0.3], '#a33', [0, 0.4, 0]);
-  // weapon rack
-  b.box(0.2, 2.4, 0.2, [2.8, 1.2, 0.4], dark); b.box(0.2, 2.4, 0.2, [4.6, 1.2, 0.4], dark); b.box(2.0, 0.16, 0.2, [3.7, 2.0, 0.4], dark); b.box(2.0, 0.16, 0.2, [3.7, 1.2, 0.4], dark);
-  for (let i = 0; i < 3; i++) { b.box(0.1, 1.9, 0.08, [3.15 + i * 0.5, 1.7, 0.55], '#b8bcc6', [0, 0, 0.1 - i * 0.08]); b.box(0.36, 0.08, 0.1, [3.15 + i * 0.5, 0.95, 0.55], '#6b4a2a'); }
-  b.cyl(0.55, 0.5, 0.2, 8, [3.7, 0.1, 1.3], '#6a6358');
-  // banner
-  b.box(0.18, 4.2, 0.18, [-3.4, 2.1, 0], dark); b.box(1.8, 0.14, 0.14, [-2.55, 4.0, 0], dark); b.box(1.5, 2.2, 0.06, [-2.55, 2.85, 0], '#b3342a'); b.tri([-3.3, 1.75, 0.03], [-1.8, 1.75, 0.03], [-2.55, 1.2, 0.03], '#b3342a');
-  g.sph(0.14, [-3.4, 4.3, 0], '#ffd070', 1, 6); g.box(0.8, 0.1, 0.02, [-2.55, 3.1, 0.06], '#ffd070'); g.box(0.1, 0.8, 0.02, [-2.55, 3.1, 0.06], '#ffd070');
+  const wood = '#7a5230', dark = '#4a3020', canvas = '#efe4cc', red = '#a8352b', straw = '#d6b56a', steel = '#b8bcc6';
+  const tz = -1.3, half = 2.4, poleH = 2.7;
+  // floor: low wooden deck + rug
+  b.box(5.4, 0.18, 5.2, [0, 0.09, tz], '#8a6a48');
+  b.box(3.2, 0.03, 2.6, [0, 0.2, tz + 0.2], '#7a2a24'); b.box(2.8, 0.035, 2.2, [0, 0.21, tz + 0.2], '#b8873a');
+  // poles + pyramid roof (cream canvas, red cap) + scalloped red / cream valance
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(0.09, 0.11, poleH, 6, [sx * half, poleH / 2, tz + sz * half], dark);
+  b.cone(half * 1.5, 2.0, 4, [0, poleH + 1.0, tz], canvas, [0, Math.PI / 4, 0]);
+  b.cone(half * 0.62, 0.83, 4, [0, poleH + 2.0 - 0.415 + 0.0, tz], red, [0, Math.PI / 4, 0]);
+  b.cyl(0.04, 0.04, 0.9, 4, [0, poleH + 2.4, tz], dark); b.box(0.5, 0.32, 0.03, [0.27, poleH + 2.65, tz], red);
+  for (let side = 0; side < 4; side++) {
+    const ang = side * Math.PI / 2;
+    for (let k = 0; k < 6; k++) {
+      const u = -half + (k + 0.5) * (2 * half / 6);
+      const lx = Math.cos(ang) * u - Math.sin(ang) * half * 1.02, lz = Math.sin(ang) * u + Math.cos(ang) * half * 1.02;
+      b.box(2 * half / 6 + 0.02, 0.42, 0.05, [lx, poleH - 0.12, tz + lz], k % 2 ? canvas : red, [0, -ang, 0]);
+    }
+  }
+  // back + side walls (sides tied half-open), front open
+  b.box(2 * half, poleH - 0.3, 0.06, [0, (poleH - 0.3) / 2 + 0.18, tz - half], canvas);
+  for (const sx of [-1, 1]) { b.box(0.06, poleH - 0.3, 2 * half * 0.55, [sx * half, (poleH - 0.3) / 2 + 0.18, tz - half * 0.45], canvas); b.box(0.12, 0.12, 0.5, [sx * half, 1.3, tz + 0.2], red); }
+  // inside: weapon wall on the back, bench, scroll shelf
+  b.box(2.2, 0.12, 0.1, [0, 1.95, tz - half + 0.1], dark); b.box(2.2, 0.12, 0.1, [0, 1.1, tz - half + 0.1], dark);
+  for (let i = 0; i < 4; i++) b.box(0.08, 1.4, 0.06, [-0.75 + i * 0.5, 1.5, tz - half + 0.18], steel, [0, 0, 0.12 - i * 0.08]);
+  b.cyl(0.35, 0.35, 0.06, 10, [-0.25, 1.55, tz - half + 0.22], '#7a1f22', [Math.PI / 2, 0, 0]);
+  b.box(1.8, 0.12, 0.5, [-1.2, 0.62, tz + 0.6], wood); for (const x of [-1.95, -0.45]) b.box(0.12, 0.42, 0.42, [x, 0.4, tz + 0.6], dark);
+  b.box(0.9, 1.3, 0.4, [1.7, 0.85, tz - 1.6], dark); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) b.cyl(0.07, 0.07, 0.34, 6, [1.45 + j * 0.25, 0.55 + i * 0.4, tz - 1.45], i === 1 ? '#e8dcc0' : '#d8c49a', [0, 0, Math.PI / 2]);
+  // straw training dummies (left of the entrance)
+  const dummy = (x: number, z: number, r: number) => {
+    b.cyl(0.55, 0.6, 0.16, 8, [x, 0.08, z], '#6a6358');
+    b.box(0.16, 1.9, 0.16, [x, 0.95, z], wood);
+    b.cyl(0.3, 0.36, 0.95, 8, [x, 1.55, z], straw, [0, r, 0]);
+    b.box(0.08, 0.95, 0.08, [x, 1.55, z], dark, [0, r, 0]);
+    b.box(1.35, 0.14, 0.14, [x, 1.85, z], wood, [0, r, 0]);
+    b.sph(0.27, [x, 2.32, z], '#e0c37e', 1, 8);
+    b.box(0.5, 0.05, 0.5, [x, 1.4, z], red, [0, r + 0.4, 0]);
+    b.torus(0.31, 0.04, [x, 1.25, z], '#7a5230', [Math.PI / 2, 0, 0]); b.torus(0.33, 0.04, [x, 1.85 - 0.25, z], '#7a5230', [Math.PI / 2, 0, 0]);
+  };
+  dummy(-3.4, 1.7, 0.3); dummy(-3.9, 3.6, -0.4);
+  // weapon rack + archery target + hay (right of the entrance)
+  b.box(0.16, 1.6, 0.16, [2.9, 0.8, 1.5], dark); b.box(0.16, 1.6, 0.16, [4.5, 0.8, 1.5], dark);
+  b.box(1.8, 0.12, 0.16, [3.7, 1.45, 1.5], dark); b.box(1.8, 0.12, 0.16, [3.7, 0.55, 1.5], dark);
+  for (let i = 0; i < 4; i++) { b.box(0.08, 1.5, 0.06, [3.1 + i * 0.4, 1.15, 1.62], steel, [0, 0, 0.1 - i * 0.07]); b.box(0.3, 0.07, 0.1, [3.1 + i * 0.4, 0.5, 1.62], '#6b4a2a'); }
+  b.box(0.12, 1.7, 0.12, [3.6, 0.85, 3.6], dark, [0.25, 0, 0]); b.box(0.12, 1.7, 0.12, [4.4, 0.85, 3.6], dark, [0.25, 0, 0]);
+  b.cyl(0.75, 0.75, 0.16, 16, [4.0, 1.55, 3.85], straw, [Math.PI / 2 - 0.2, 0, 0]);
+  b.cyl(0.55, 0.55, 0.17, 16, [4.0, 1.55, 3.86], '#efe4cc', [Math.PI / 2 - 0.2, 0, 0]);
+  b.cyl(0.36, 0.36, 0.18, 16, [4.0, 1.55, 3.87], red, [Math.PI / 2 - 0.2, 0, 0]);
+  b.cyl(0.16, 0.16, 0.19, 12, [4.0, 1.55, 3.88], '#e9b949', [Math.PI / 2 - 0.2, 0, 0]);
+  b.box(0.04, 0.04, 0.7, [3.85, 1.7, 4.15], dark, [0.3, 0.2, 0]); b.box(0.04, 0.04, 0.7, [4.2, 1.45, 4.2], dark, [0.2, -0.2, 0]);
+  b.box(1.1, 0.6, 0.7, [2.6, 0.3, 3.9], straw); b.box(1.1, 0.06, 0.72, [2.6, 0.45, 3.9], '#b89850'); b.box(0.9, 0.5, 0.6, [2.75, 0.85, 3.85], straw, [0, 0.3, 0]);
+  // banner pole (left back corner)
+  b.box(0.18, 4.4, 0.18, [-3.6, 2.2, -2.6], dark); b.box(1.6, 0.14, 0.14, [-2.85, 4.2, -2.6], dark); b.box(1.3, 2.0, 0.06, [-2.85, 3.15, -2.6], red);
+  b.tri([-3.5, 2.15, -2.57], [-2.2, 2.15, -2.57], [-2.85, 1.6, -2.57], red);
+  g.sph(0.14, [-3.6, 4.5, -2.6], '#ffd070', 1, 6); g.box(0.7, 0.1, 0.02, [-2.85, 3.35, -2.54], '#ffd070'); g.box(0.1, 0.7, 0.02, [-2.85, 3.35, -2.54], '#ffd070');
+  // lanterns on the front poles
+  for (const sx of [-1, 1]) { g.sph(0.13, [sx * half, 2.1, tz + half + 0.15], '#ffd88a', 1, 6); b.box(0.22, 0.05, 0.22, [sx * half, 2.27, tz + half + 0.15], dark); }
   return { body: b.build(), glow: g.build() };
 }
 
@@ -533,7 +584,8 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
-    if (st === GameStatus.PLAYING || (st === GameStatus.MENU && !isLobbyStatus(st))) useGameStore.getState().openSpecificShop(shrine ? 'SUMMON' : 'SKILLS');
+    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(px, pz + (shrine ? 3.2 : 2.8), shrine ? 'SUMMON' : 'SKILLS', 1.8);
+    else if (st === GameStatus.PLAYING) useGameStore.getState().openSpecificShop(shrine ? 'SUMMON' : 'SKILLS');
   };
   useFrame(({ clock }, dt0) => {
     const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
@@ -549,7 +601,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
     if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; }
     if (titleRef.current) titleRef.current.visible = !closed;
-    if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 6.6 + Math.sin(t * 2.4) * 0.2; }
+    if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 7.4 + Math.sin(t * 2.4) * 0.2; }
     if (shrine) {
       if (crystalRef.current) { crystalRef.current.position.y = 3.3 + Math.sin(t * 1.6) * 0.25; crystalRef.current.rotation.y = t * 0.9; mats.crystal.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 0.9 + Math.sin(t * 2.7) * 0.25, 2.4); }
       if (runeRef.current) { runeRef.current.rotation.z = -t * 0.4; mats.rune.opacity = 0.35 + 0.3 * pulse; }
@@ -573,10 +625,10 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
         <mesh geometry={ringGeo1} material={mats.ring} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
         <mesh geometry={ringGeo2} material={mats.ring2} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
       </group>
-      <sprite ref={titleRef} material={label.mat} position={[0, shrine ? 5.4 : 5.2, 0]} scale={[label.aspect * 0.85, 0.85, 1]} />
-      {spLabel && !shrine && <sprite ref={spRef} material={spLabel.mat} position={[0, 6.6, 0]} scale={[spLabel.aspect * 0.8, 0.8, 1]} />}
-      <mesh position={[shrine ? 0 : 1.2, 1.8, 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
-        <boxGeometry args={shrine ? [5, 4, 5] : [9, 4, 3.5]} />
+      <sprite ref={titleRef} material={label.mat} position={[0, shrine ? 5.4 : 6.2, 0]} scale={[label.aspect * 0.85, 0.85, 1]} />
+      {spLabel && !shrine && <sprite ref={spRef} material={spLabel.mat} position={[0, 7.4, 0]} scale={[spLabel.aspect * 0.8, 0.8, 1]} />}
+      <mesh position={[0, 1.8, shrine ? 0 : 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
+        <boxGeometry args={shrine ? [5, 4, 5] : [9, 4.4, 7.4]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
