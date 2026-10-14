@@ -61,7 +61,7 @@ export const TargetFrame: React.FC = () => {
   });
 
   return (
-    <div ref={root} className="glass pe target-frame" data-testid="target-frame" style={{ display: 'none' }}>
+    <div ref={root} className="pe target-frame bare" data-testid="target-frame" style={{ display: 'none' }}>
       <div className="tf-top">
         <span ref={name} className="tf-name" />
         <span ref={sub} className="tf-sub" />
