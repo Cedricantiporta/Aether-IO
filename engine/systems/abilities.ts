@@ -340,7 +340,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       p.invulnT = Math.max(p.invulnT, inv);
       events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
-      const R = 7 + 0.5 * (lv - 1);
+      const R = 4.2 + 0.3 * (lv - 1);   // a smaller blast
       mkFx('ARROW_STICK', p.pos.x, p.pos.z, 0.6, 0.85, R, b * 8, 0, 0xffe8a0);
       for (let i = 0; i < 6; i++) {
         const a = Math.random() * 6.283, d = 0.4 + Math.random() * 1.1;

@@ -50,6 +50,7 @@ function fireTick(z: Zone): void {
 const windOpts: DamageOpts = { kind: 'PHYSICAL', dot: true, source: 'PLAYER' };
 const iceDot: DamageOpts = { kind: 'ICE', dot: true, source: 'PLAYER' };
 const slowSt: StatusEffect = { type: 'SLOW', duration: 0.6, value: 0.55 };
+const frzSt: StatusEffect = { type: 'FREEZE', duration: 1.2 };
 
 /** Generic damage-over-time tick for player zones. Optionally slows. */
 function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
@@ -66,6 +67,7 @@ function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
       const lvl = useGameStore.getState().skillLevels.s4;
       slowSt.value = Math.min(0.9, (0.5 + 0.04 * lvl) * 1.5);   // Frost Field: strong slow
       applyStatus(e, slowSt);
+      if (!e.boss && Math.random() < 0.06 + 0.01 * lvl) applyStatus(e, frzSt);   // ...and a chance to freeze solid (per tick)
     }
     damageEnemy(e, dmg, o);
   }
