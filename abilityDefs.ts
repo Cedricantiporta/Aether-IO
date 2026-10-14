@@ -98,7 +98,7 @@ export const isDashKey = (hero: HeroClass, key: string): boolean => key === dash
 export const SHOULDER_CHARGE: AbilityDef = {
   slot: 'e', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 0, cd: 0,
   desc: 'Leap to the target (tap: forward) and slam down: stuns nearby enemies and grants a short Rage (faster attacks). Invulnerable while airborne.',
-  per: (lv) => `Slam ${pct(3.5 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
+  per: (lv) => `Slam ${pct(1.05 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s · recharge -${Math.round(8 * Math.max(0, lv - 1))}%`,
 };
 export const HOLY_CHARGE: AbilityDef = {
   slot: 'e', icon: 'HOLY_CHARGE', name: 'Holy Charge', mana: 0, cd: 0,

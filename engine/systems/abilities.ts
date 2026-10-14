@@ -569,7 +569,7 @@ function barbLeap(auto: boolean): void {
   } else aimPoint(18, 4, tgt);
   safeSpot(tgt);
   a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
-  a.leapDmg = base(lv) * 3.5; a.leapLv = lv; a.leapDash = true;
+  a.leapDmg = base(lv) * 3.5 * 0.3; a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)
   p.invulnT = Math.max(p.invulnT, a.leapDur + 0.1);
   events.emit('leap', { from: p.pos.clone(), to: tgt.clone(), dur: a.leapDur });
   p.anim.castT = 1;

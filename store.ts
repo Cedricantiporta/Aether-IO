@@ -1050,7 +1050,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     getManaCost: (skill) => {
       const s = get();
       if (skill === 'e' && s.hero !== 'BARBARIAN') return 0; // class dash is free (charges)
-      const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? 15 + s.skillLevels.freezeSpell * 2 : 0;
+      const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? Math.ceil((15 + s.skillLevels.freezeSpell * 2) * 0.5) : 0;   // passives cost half mana
       const total = s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : cost;
       return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;
     },
