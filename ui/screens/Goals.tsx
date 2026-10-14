@@ -110,7 +110,9 @@ const Achievements: React.FC = () => {
 export const GoalsDialog: React.FC = () => {
   const open = useUiStore((s) => s.goalsOpen);
   const close = useUiStore((s) => s.openGoals);
-  const [tab, setTab] = useState<Tab>('DAILY');
+  const [tab, setTab] = useState<Tab>(() => useUiStore.getState().goalsTab as Tab);
+  const wantTab = useUiStore((s) => s.goalsTab);
+  useEffect(() => { if (open) setTab(wantTab as Tab); }, [open, wantTab]);
   const m = useGameStore((s) => s.meta);
   useEffect(() => { if (open) flush(); }, [open]);   // roll an expired day / week and merge buffered counts before showing
   const dot = (t: Tab) => t === 'DAILY' ? m.daily.some(goalClaimable) || (!m.dailyBonus && allClaimed(m.daily))

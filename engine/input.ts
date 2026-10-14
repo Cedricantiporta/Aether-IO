@@ -66,6 +66,9 @@ export function installInput(): () => void {
       case 'KeyJ':
         if (inGame) { const u = useUiStore.getState(); u.openQuestLog(!u.questLogOpen); }
         break;
+      case 'KeyO':   // achievements
+        if (inGame) { const u = useUiStore.getState(); u.openGoals(!u.goalsOpen, 'ACHIEVEMENTS'); }
+        break;
       case 'KeyC':
         if (inGame) st.toggleCharacterSheet();
         break;

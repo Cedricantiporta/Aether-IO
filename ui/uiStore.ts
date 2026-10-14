@@ -31,7 +31,8 @@ interface UiState {
   setCharSelect: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
   openCodex: (v: boolean) => void;
-  openGoals: (v: boolean) => void;
+  openGoals: (v: boolean, tab?: string) => void;
+  goalsTab: string;                     // tab the Goals panel opens on (DAILY / WEEKLY / ACHIEVEMENTS)
   openSettings: (v: boolean) => void;
   storyOpen: boolean;
   openStory: (v: boolean) => void;
@@ -50,6 +51,7 @@ export const useUiStore = create<UiState>((set) => ({
   recordsOpen: false,
   codexOpen: false,
   goalsOpen: false,
+  goalsTab: 'DAILY',
   questLogOpen: false,
   openQuestLog: (v) => set({ questLogOpen: v }),
   settingsOpen: false,
@@ -65,7 +67,7 @@ export const useUiStore = create<UiState>((set) => ({
   setCharSelect: (v) => set(v ? { charSelect: true, titleDone: false } : { charSelect: false, titleDone: true }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
   openCodex: (v) => set({ codexOpen: v }),
-  openGoals: (v) => set({ goalsOpen: v }),
+  openGoals: (v, tab) => set(tab ? { goalsOpen: v, goalsTab: tab } : { goalsOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),
   storyOpen: false,
   openStory: (v) => set({ storyOpen: v }),

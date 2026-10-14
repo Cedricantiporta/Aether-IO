@@ -57,7 +57,7 @@ export const Announcer: React.FC = () => {
     if (e.kind === 'ITEM' && e.name && (e.rarity === 'LEGENDARY' || e.rarity === 'MYTHIC')) push({ kind: e.rarity === 'MYTHIC' ? 'boss' : 'wave', title: e.name, sub: `${e.rarity.charAt(0) + e.rarity.slice(1).toLowerCase()} loot!`, ms: 2200 });
   });
   useGameEvent('bossSpawn', (e) => push({ kind: 'boss', title: e.name, sub: e.title, ms: 3800 }));
-  useGameEvent('levelUp', (e) => push({ kind: 'level', title: 'Level Up', sub: `You reached level ${e.level}`, ms: 1800 }));
+  // level ups: LevelUpBurst (golden ring + stat gains)
   useEffect(() => {
     if (!cur) return;
     const t = setTimeout(() => clear(cur.id), cur.ms);
