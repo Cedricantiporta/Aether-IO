@@ -106,11 +106,11 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ]],
     ['f', [
       ['Chill', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],
-      ['Wide Blizzard', '+3 blizzard radius', 3, 'freezeSpell', { add: { blizzardRadius: 3 } }],
+      ['Wide Blizzard', '+1 blizzard radius', 3, 'freezeSpell', { add: { blizzardRadius: 1 } }],
       ['Icy Veins', '+3% cooldown reduction', 2, 'u:SKILL_FREEZE_SPELL', { add: { cooldownReduction: 0.03 } }],
       ['Deep Freeze', 'Blizzard slow lasts +1s', 2, 'freezeSpell', { add: { blizzFreeze: 1 } }],
       ['Frostbite', '+10% crit damage', 3, 'u:CRIT_DAMAGE', { add: { critDamage: 0.1 } }],
-      ['Absolute Zero', 'Blizzard +6 radius, slow +2s, +15% skill damage', 1, 'u:SKILL_FREEZE_SPELL', { add: { blizzardRadius: 6, blizzFreeze: 2, skillDamage: 0.15 } }],
+      ['Absolute Zero', 'Blizzard +2 radius, slow +2s, +15% skill damage', 1, 'u:SKILL_FREEZE_SPELL', { add: { blizzardRadius: 2, blizzFreeze: 2, skillDamage: 0.15 } }],
     ]],
   ],
   BARBARIAN: [

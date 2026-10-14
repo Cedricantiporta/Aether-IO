@@ -225,11 +225,11 @@ export function updateSkills(dt: number): void {
     const max = Math.max(7, 14 - lv.freezeSpell * 0.2) * 1.3 * cdrMul();
     setCd('freezeSpell', max - blizzT, max);
     if (blizzT >= max) {
-      if (findNearestEnemy(pl.pos.x, pl.pos.z, 16) && trySpendMana(st.getManaCost('freezeSpell'))) {
+      if (findNearestEnemy(pl.pos.x, pl.pos.z, 8 + stats.blizzardRadius) && trySpendMana(st.getManaCost('freezeSpell'))) {
         blizzT = 0;
-        const bR = 16 + stats.blizzardRadius;
+        const bR = 6.5 + stats.blizzardRadius;   // a tight frost burst around the hero (user: very small radius, little damage)
         blizzSlow.duration = 3 + stats.blizzFreeze; blizzSlow.value = Math.min(0.85, 0.65 + 0.03 * lv.freezeSpell);
-        damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.75 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, blizzSlow);
+        damageEnemiesInRadius(pl.pos.x, pl.pos.z, bR, stats.damage * 0.12 * stats.skillDamage * lvScale(lv.freezeSpell), iceOpts, blizzSlow);
         // small chance to freeze each normal enemy caught in the blizzard (bosses / mini-bosses immune)
         const chance = 0.12 + 0.02 * (lv.freezeSpell - 1);
         const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, bR + 2, blizOut);

@@ -234,14 +234,18 @@ export function VFX() {
 
     off.push(on('frostNova', (e) => {
       const r = e.radius, x = e.pos.x, z = e.pos.z;
-      ringBurst(x, 0.3, z, 0x9fe4ff, r * 0.2, r, 0.6, 1.6);
-      DECALS.add(x, z, r * 0.4, r * 1.05, 0.7, 0.55, 0.85, 1, 0.7, CELL.RINGW);
-      glowPuff(x, 0.8, z, 0xbfeaff, r * 1.2, 0.4, 1.3, 0.6);
-      for (let i = 0; i < Math.min(34, Math.round(r * 4)); i++) {
-        const a = Math.random() * TAU, sp = r * (0.8 + Math.random() * 1.2);
-        FX.add.emit(x, 0.4, z, Math.cos(a) * sp, 1 + Math.random() * 3, Math.sin(a) * sp, 0.7 + Math.random() * 0.4, 0.5, 0.15, 1.1, 1.8, 2.4, 0.95, CELL.SHARD, 6, 1.6, Math.random() * 6, Math.random() * 6, 0);
+      // sharp frost: a crisp ring, a crown of ice spikes jutting up around the edge and flying shards (no soft mist)
+      ringBurst(x, 0.3, z, 0xbfefff, r * 0.3, r, 0.35, 2.2);
+      DECALS.add(x, z, r * 0.5, r * 1.02, 0.85, 0.75, 0.95, 1, 0.9, CELL.RINGW);
+      const spikes = Math.round(10 + r * 1.6);
+      for (let i = 0; i < spikes; i++) {
+        const a = (i / spikes) * TAU + Math.random() * 0.2, rr = r * (0.75 + Math.random() * 0.25);
+        FX.add.emit(x + Math.cos(a) * rr, 0.2, z + Math.sin(a) * rr, 0, 3.5 + Math.random() * 2.5, 0, 0.9, 0.9 + Math.random() * 0.5, 0.05, 1.3, 2.0, 2.6, 1.0, CELL.SHARD, -6, 1.2, a, 0, 0);
       }
-      smokePuff(x, 0.3, z, 6, 0xdff6ff, r * 0.4, 1.0, 0.8, r * 0.8, 0.35);
+      for (let i = 0; i < 18; i++) {
+        const a = Math.random() * TAU, sp = r * (1.2 + Math.random() * 1.2);
+        FX.add.emit(x, 0.6, z, Math.cos(a) * sp, 1 + Math.random() * 2, Math.sin(a) * sp, 0.45, 0.45, 0.1, 1.6, 2.2, 2.6, 0.95, CELL.SHARD, 4, 1.4, Math.random() * 6, Math.random() * 6, 0);
+      }
     }));
 
     off.push(on('projectileImpact', (e) => {
