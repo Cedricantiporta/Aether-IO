@@ -116,8 +116,13 @@ function pullTick(z: Zone, dt: number): void {
 
 /** Singularity: a real trap. Heavy slow that deepens toward the core (60% edge -> 95% core), pull strongest near the edge
  *  and gentle at the core; big monsters resist the pull. Bosses / mini-bosses: 40% slow, never pulled. Anything entering while it lives is caught. */
+const HOLE_TICK = 0.35;
+const holeDot: DamageOpts = { kind: 'MAGIC', source: 'PLAYER' };
 function holeTick(z: Zone, dt: number): void {
   const R = z.radius;
+  // constant damage to everything inside while it pulls (z.damage = the total over its life)
+  z.tickT += dt;
+  if (z.tickT >= HOLE_TICK) { z.tickT -= HOLE_TICK; damageEnemiesInRadius(z.pos.x, z.pos.z, R, z.damage * HOLE_TICK / z.maxLife, holeDot); }
   const range = z.length > R ? z.length : R * 2;
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, range + 4, out);
   const boost = (1 + 2.2 * (1 - Math.min(1, z.life / z.maxLife))) * 0.55;
@@ -261,12 +266,8 @@ function lineHitsPlayer(z: Zone): boolean {
 function expire(z: Zone): void {
   if (z.trick > 0) { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); z.active = false; return; }
   switch (z.kind) {
-    case 'BLACKHOLE':
-      boomOpts.slam = z.damage * 0.35;
-      damageEnemiesInRadius(z.pos.x, z.pos.z, z.radius, z.damage, boomOpts);
-      events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
-      if (z.radius > 8) { events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.6, color: 0xb070ff }); events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x1a0a2a }); }
-      addShake(z.radius > 8 ? 0.7 : 0.3);
+    case 'BLACKHOLE':   // no collapse explosion any more (it deals its damage while pulling): just fades out
+      events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x6d28d9 });
       break;
     case 'TELEGRAPH_CIRCLE': {
       const p = world.player;

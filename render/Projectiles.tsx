@@ -36,10 +36,10 @@ void main(){
 const FIRE_FS = `varying vec3 vN; varying vec3 vV; varying float vNo;
 void main(){
   float f = 1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
-  float heat = clamp(vNo * 1.2 + (1.0 - f) * 0.6, 0.0, 1.0);
+  float heat = clamp(vNo * 0.9 + (1.0 - f) * 0.3, 0.0, 1.0);
   vec3 col = mix(vec3(1.0, 0.18, 0.02), vec3(1.0, 0.62, 0.1), smoothstep(0.2, 0.6, heat));
-  col = mix(col, vec3(1.0, 0.95, 0.6), smoothstep(0.6, 1.0, heat));
-  col *= 1.6 + (1.0 - f) * 0.8;
+  col = mix(col, vec3(1.0, 0.85, 0.45), smoothstep(0.7, 1.0, heat));
+  col *= 0.9 + (1.0 - f) * 0.3;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -170,7 +170,7 @@ export function Projectiles() {
       GALE_ARROW: mk([[ga.build(), glow]], 20),
       BURNING_ARROW: mk([[burn.body, lit], [burn.glow, glow]], MAXP),
       FREEZING_ARROW: mk([[frz.body, lit], [frz.glow, glow]], MAXP),
-      MAGIC: mk([[orbG(0.26, '#e8c8ff', '#ffffff'), glow]], MAXP),
+      MAGIC: mk([[orbG(0.5, '#e8c8ff', '#ffffff'), glow]], MAXP),
       AXE: mk([[axeB, lit], [axeG, glow]], 200),
       GIANT_AXE: mk([[gaxB, lit], [gaxG, glow]], 40),
       FIREBALL: mk([[fireG, fireMat]], 200),
@@ -322,11 +322,11 @@ export function Projectiles() {
           if (emit && Math.random() < dt * 45) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.5, 0.26, 0.04, 1.0, 1.9, 2.4, 0.9, CELL.SHARD, 2, 1, Math.random() * 6, 5);
           break;
         case 'MAGIC':
-          place(ims, i, x, y, z, yaw, pitch, t * 6 + n, (1 + 0.08 * Math.sin(t * 20 + n)) * (p.radius / 2.5));   // staff perk Arcane Swell = bigger bolts
-          if (p.tint === 6) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 2.4, 0.9, 0.2, 0.6, CELL.GLOW);        // staff perk: fire bolt
-          else if (p.tint === 7) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 0.5, 1.8, 2.6, 0.6, CELL.GLOW);   // ice bolt
-          else if (p.tint === 8) pushHalo(x, y, z, 1.9 * (p.radius / 2.5), 2.4, 2.3, 0.6, 0.6, CELL.GLOW);   // lightning bolt
-          else pushHalo(x, y, z, 1.7 * (p.radius / 2.5), 1.0, 0.45, 1.8, 0.55, CELL.GLOW);
+          place(ims, i, x, y, z, yaw, pitch, t * 6 + n, (1 + 0.08 * Math.sin(t * 20 + n)) * (p.radius / 3.4));   // staff perk Arcane Swell = bigger bolts
+          if (p.tint === 6) pushHalo(x, y, z, 2.8 * (p.radius / 3.4), 2.4, 0.9, 0.2, 0.6, CELL.GLOW);        // staff perk: fire bolt
+          else if (p.tint === 7) pushHalo(x, y, z, 2.8 * (p.radius / 3.4), 0.5, 1.8, 2.6, 0.6, CELL.GLOW);   // ice bolt
+          else if (p.tint === 8) pushHalo(x, y, z, 2.8 * (p.radius / 3.4), 2.4, 2.3, 0.6, 0.6, CELL.GLOW);   // lightning bolt
+          else pushHalo(x, y, z, 2.6 * (p.radius / 3.4), 1.0, 0.45, 1.8, 0.55, CELL.GLOW);
           if (emit && Math.random() < dt * 50) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2 + 0.5, (Math.random() - 0.5) * 2, 0.5, 0.3, 0.05, 1.4, 0.7, 2.2, 0.9, CELL.STAR, 0, 1, Math.random() * 3, 4);
           break;
         case 'AXE':
@@ -345,8 +345,8 @@ export function Projectiles() {
           break;
         }
         case 'FIREBALL':
-          place(ims, i, x, y, z, 0, 0, 0, 1 + 0.06 * Math.sin(t * 18 + n));
-          pushHalo(x, y, z, 3.4, 1.6, 0.55, 0.1, 0.55, CELL.GLOW);
+          place(ims, i, x, y, z, 0, 0, 0, (1 + 0.06 * Math.sin(t * 18 + n)) * (p.radius / 1.3));   // big rolling fireball
+          pushHalo(x, y, z, 1.7 * (p.radius / 1.3), 1.0, 0.28, 0.04, 0.22, CELL.GLOW);
           if (emit) {
             if (Math.random() < dt * 60) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.5, 0.5 + Math.random(), (Math.random() - 0.5) * 1.5, 0.5, 0.8, 0.1, 2.2, 0.8, 0.15, 0.7, CELL.FLAME, -1, 1.2);
             if (Math.random() < dt * 25) embers(x, y, z, 1, 0xffa030, 0.4, 2.2, 0.8, 0.16);

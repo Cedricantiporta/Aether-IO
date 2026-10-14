@@ -34,8 +34,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   WIZARD: [
     { slot: 'q', icon: 'SINGULARITY', name: 'Singularity', mana: 34, cd: 12,
-      desc: 'A black hole traps enemies: heavy slow deepening toward the core and a gentle pull. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed). Collapses in an explosion.',
-      per: (lv) => `Collapse ${pct(6.5 * lvMul(lv))} dmg · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
+      desc: 'A black hole traps enemies: heavy slow deepening toward the core, a gentle pull and constant damage to everything caught inside. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed).',
+      per: (lv) => `${pct(6.5 * lvMul(lv))} dmg over its life · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
     { slot: 'e', icon: 'BLINK_NOVA', name: 'Blink Nova', mana: 0, cd: 0,
       desc: 'Teleport to the aim point. A frost nova briefly freezes enemies at both the origin and the destination.',
       per: (lv) => `Nova ${pct(0.9 * lvMul(lv))} dmg x2 · radius ${f1(8.5 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.15 * (lv - 1))}s` },
@@ -43,8 +43,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Three lightning orbs orbit you for 4s, zapping nearby enemies with chain lightning that breaks armor.',
       per: (lv) => `${3 + (lv >= 3 ? 1 : 0)} orbs · zap ${pct(1.7 * lvMul(lv))} dmg · chains ${2 + Math.floor(lv / 2)}` },
     { slot: 's4', icon: 'FIREBALLS', name: 'Fireballs', mana: 30, cd: 9,
-      desc: 'Hurl three fireballs in a narrow fan. Each explodes on the first enemy it hits, splashing nearby foes, setting them ablaze and leaving a short trail of fire.',
-      per: (lv) => `3 x ${pct(2.6 * lvMul(lv))} dmg · burst radius ${f1(3.2 + 0.15 * (lv - 1))} · burn 3s` },
+      desc: 'Hurl three huge, slow fireballs in a fan. They roll through every enemy in their path, scorching each one with a splash, setting them ablaze and leaving a trail of fire.',
+      per: (lv) => `3 x ${pct(2.2 * lvMul(lv))} dmg per enemy · splash ${f1(2.4 + 0.12 * (lv - 1))} · piercing · burn 3s` },
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,
@@ -86,7 +86,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
 
 /** Active slot bound to keys 1, 2, 3 (per class). Archer/Wizard keep their old E in the dash; the Barbarian keeps Whirlwind on 2. */
 export const ACTIVE_ORDER: Record<HeroClass, ActiveSlot[]> = {
-  ARCHER: ['q', 's3', 's4'], WIZARD: ['q', 's3', 's4'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'], NECROMANCER: ['q', 's3', 's4'],
+  ARCHER: ['q', 's3', 's4'], WIZARD: ['s4', 's3', 'q'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'], NECROMANCER: ['q', 's3', 's4'],
 };
 export const ACTIVE_KEYS = ['Digit1', 'Digit2', 'Digit3'] as const;
 /** Slot whose definition IS the class dash (Space). Barbarian has a dedicated shoulder charge (skill level key `dash`). */
