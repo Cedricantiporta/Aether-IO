@@ -27,7 +27,7 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 export const ISLAND_BOXES: [number, number, number, number][] = [
-  [-54, -50, 54, 46],   // walled town + a thin margin on the back and the sides
+  [-62, -60, 62, 56],   // walled town + a walkable ring OUTSIDE the walls (hermit camp at the back, route round the corner towers)
   [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
 ];
 
@@ -44,6 +44,8 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 
 /** Decorative houses (old shop-style: stone footing, timber frame, big gabled roof, striped awning). */
 /** Castle keep against the north wall, behind the quest board (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
+/** Hermit's camp outside the north wall (campfire + bedroll, drawn in TownScenery). */
+export const HERMIT_CAMP = { x: 0, z: -51 };
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 
 export const HOUSES: HouseSpec[] = [
@@ -184,6 +186,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
+  c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
   // castle: ring of circles around the hall footprint + corner towers
   {
     const { x, z, w, d } = CASTLE, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
@@ -230,7 +233,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = WALL.x0 + 7; x < WALL.x1; x += 14) for (let z = WALL.z0 + 7; z < WALL.z1 + 6; z += 14) c.push([x, z, 11]);
   c.push([0, 8, 40]);
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
-  c.push([CASTLE.x, CASTLE.z, 14]);
+  c.push([CASTLE.x, CASTLE.z, 14], [HERMIT_CAMP.x, HERMIT_CAMP.z, 7]);
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
@@ -251,7 +254,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
 // -------------------------------------------------------------------- NPCs ---
 export type NpcModel = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT' | 'ROGUE';
 export type NpcProp = 'none' | 'staff' | 'hammer' | 'basket' | 'lantern' | 'spear';
-export interface NpcGift { gold?: number; item?: 'potion_hp' | 'potion_mana'; qty?: number; text: string }
+export interface NpcGift { once?: string; gold?: number; item?: 'potion_hp' | 'potion_mana'; qty?: number; text: string }
 export interface NpcDef {
   name: string; role: string; model: NpcModel; tint: string; scale: number; prop: NpcProp; accent: string;
   home: [number, number]; patrol?: [number, number][]; speed?: number;
@@ -261,6 +264,14 @@ export interface NpcDef {
   gift?: NpcGift;
   /** replaces the last line with a nudge when a quest is ready to claim */
   quest?: boolean;
+  /** which map the NPC lives in (default town) */
+  area?: 'CASTLE';
+  /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
+  king?: boolean;
+  /** gold crown on his head */
+  crown?: boolean;
+  /** floor height (standing on the dais) */
+  y?: number;
 }
 
 export const NPCS: NpcDef[] = [
@@ -374,6 +385,61 @@ export const NPCS: NpcDef[] = [
       ['Hodge fancies the herbalist. Everyone knows. Except Hodge. And Lysa.'],
     ],
     bubbles: ['Did you hear?', 'Lovely day!', 'Beware the Mire... or so they say.'],
+  },
+  // ------------------------------------------------------------ castle (throne hall, see castleData.ts)
+  {
+    name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, ordered: true,
+    talk: [
+      ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
+      ['Beyond the gate lie six realms, each ruled by a beast older than my house. Greenwood, the Mire, the Ember Wastes, Frostpeak... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
+      ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
+      ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
+      ['My grandfather sealed the Aether Altar to keep its fortune from the greedy. Spend your gems there wisely, and it may smile on you.', 'Go now. Aether is counting on its heroes.'],
+    ],
+    bubbles: ['Aether endures.', 'Hmm... the realm weighs heavy.', 'Speak, if you have a deed to report.'],
+  },
+  {
+    name: 'Captain Roan', role: 'Royal Guard', model: 'KNIGHT', tint: '#c9d6ff', scale: 1.05, prop: 'spear', accent: '#bcd0ff', home: [-4.6, -11.2], area: 'CASTLE',
+    talk: [
+      ['Keep your voice down in the presence of His Majesty. And your hands off the carpet.', 'The King receives heroes who have proven themselves. You are welcome.'],
+      ['Twenty years at this post. Not once has anyone sneaked past me. Not once. Do not ask about the kitchen.'],
+    ],
+    bubbles: ['Eyes forward.', 'All quiet.', 'Long live the King.'],
+  },
+  {
+    name: 'Guard Tamsin', role: 'Royal Guard', model: 'KNIGHT', tint: '#c9d6ff', scale: 1.05, prop: 'spear', accent: '#bcd0ff', home: [4.6, -11.2], area: 'CASTLE',
+    talk: [
+      ['Standing still all day is harder than any monster. My feet are just two painful rumours.', 'The King is kind though. He asks after our families.'],
+      ['If you are going out beyond the gate, bring back something shiny for the throne room. The steward keeps complaining it is drab.'],
+    ],
+    bubbles: ['My feet...', 'Do not touch the throne.', 'Is it lunch yet?'],
+  },
+  {
+    name: 'Steward Maren', role: 'Royal Steward', model: 'WIZARD', tint: '#e8d6ff', scale: 1, prop: 'none', accent: '#d9b0ff', home: [-4.6, 11], speed: 1.3, area: 'CASTLE',
+    patrol: [[-4.6, 11], [-4.6, -8], [-4.6, 11], [-5, 2]],
+    talk: [
+      ['The King prefers royal bounties handled in person: an audience to start, then reports once the deed is done.', 'Find them on the Quest Board, hero. They pay in gems.'],
+      ['I keep the household ledgers. Do you know how many candles a throne room eats in a week? Do not ask.'],
+    ],
+    bubbles: ['So many candles...', 'The ledgers will not balance themselves.', 'Mind the carpet, please!'],
+  },
+  {
+    name: 'Lady Isolde', role: 'Noble of the Court', model: 'ROGUE', tint: '#ffd0e0', scale: 1, prop: 'none', accent: '#ff9ac0', home: [8.6, 10], area: 'CASTLE',
+    talk: [
+      ['Oh, a real adventurer, here among the velvet and the dust! Tell me, are the monsters as ugly as they say?', 'Never mind, do not answer. I shall imagine.'],
+      ['His Majesty is fond of heroes who bring him good news. Shall I tell you a secret? He is terrible at cards.'],
+    ],
+    bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
+  },
+  {
+    name: 'Old Wend', role: 'Hermit', model: 'ROGUE', tint: '#c9b79a', scale: 1, prop: 'staff', accent: '#e6c27a', home: [2.2, -50.2],
+    talk: [
+      ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'I have no use for coin, but you do. Take it, and do not tell the Elder.'],
+      ['The walls keep the world out, and the world is where the best mushrooms grow. Funny, that.', 'Stay for the fire if you like. I only ask you leave the bedroll alone.'],
+      ['Some nights the Frostpeak wind carries singing over the wall. I think it is the bard, lost again.'],
+    ],
+    bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
+    gift: { once: 'aether-survivor-hermit-v1', gold: 10000, text: 'Old Wend drops a heavy sack into your hands. (+10,000 gold)' },
   },
 ];
 

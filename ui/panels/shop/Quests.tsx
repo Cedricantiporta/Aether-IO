@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Coins, Gem, FlaskConical, Hexagon, Sword } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
-import { questDone, questTitle, questFlavor, activeQuests, questOffers, QUEST_MAX_ACTIVE, type Quest } from '../../../quests';
+import { questDone, questNeedsKing, questTitle, questFlavor, activeQuests, questOffers, QUEST_MAX_ACTIVE, type Quest } from '../../../quests';
 import { Button } from '../../components/Button';
 
 const Chip: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
@@ -24,21 +24,22 @@ const RewardChips: React.FC<{ q: Quest }> = ({ q }) => {
 
 const QuestCard: React.FC<{ q: Quest; full: boolean }> = ({ q, full }) => {
   const { claim, accept, abandon } = useGameStore(useShallow((s) => ({ claim: s.claimQuest, accept: s.acceptQuest, abandon: s.abandonQuest })));
-  const done = questDone(q);
+  const done = questDone(q), king = questNeedsKing(q);
   return (
     <div className="rpg-frame p-3 flex flex-col gap-2" data-testid={q.accepted ? 'quest' : 'quest-offer'} data-done={done ? '1' : '0'}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="rpg-title text-base">{questTitle(q)}</span>
-        {q.accepted && <span className="rpg-num text-[var(--gold-light)]" data-testid="quest-progress">{Math.min(q.progress, q.target).toLocaleString()} / {q.target.toLocaleString()}</span>}
+        {q.accepted && <span className="rpg-num text-[var(--gold-light)]" data-testid="quest-progress">{q.type === 'AUDIENCE' ? (done ? 'Done' : 'Pending') : `${Math.min(q.progress, q.target).toLocaleString()} / ${q.target.toLocaleString()}`}</span>}
       </div>
       <div className="text-xs text-[var(--text-dim)]">{questFlavor(q)}</div>
-      {q.accepted && <div className="rpg-bar thin" style={{ ['--bc' as any]: done ? '#4ade80' : '#e9b949', ['--fill' as any]: Math.min(1, q.progress / q.target) }}><div className="fill" /></div>}
+      {q.accepted && king && <div className="king-note" data-testid="quest-king">{q.type === 'AUDIENCE' ? 'Talk to the King in the castle keep' : 'Objective complete: report to the King in the castle'}</div>}
+      {q.accepted && <div className="rpg-bar thin" style={{ ['--bc' as any]: done ? '#4ade80' : '#e9b949', ['--fill' as any]: done ? 1 : Math.min(1, q.progress / q.target) }}><div className="fill" /></div>}
       <div className="flex items-center justify-between gap-2">
         <RewardChips q={q} />
         {q.accepted ? (
           <div className="flex gap-1.5">
             {!done && <Button size="sm" variant="default" onClick={() => abandon(q.id)} data-testid="abandon">Abandon</Button>}
-            <Button size="sm" variant={done ? 'green' : 'default'} disabled={!done} onClick={() => claim(q.id)} data-testid="claim">{done ? 'Claim' : 'In progress'}</Button>
+            <Button size="sm" variant={done ? 'green' : 'default'} disabled={!done} onClick={() => claim(q.id)} data-testid="claim">{done ? 'Claim' : king ? 'See the King' : 'In progress'}</Button>
           </div>
         ) : (
           <Button size="sm" variant="primary" disabled={full} onClick={() => accept(q.id)} data-testid="accept">{full ? 'Slots full' : 'Accept'}</Button>

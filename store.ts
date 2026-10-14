@@ -23,7 +23,7 @@ import { deviceDefaults } from './engine/device';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
-import { fillQuests, questDone, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
+import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
@@ -861,7 +861,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       let changed = false;
       const quests = s.quests.map((q) => {
-        if (!q.accepted || q.type !== type || questDone(q)) return q;
+        if (!q.accepted || questCounts(q) !== type || q.progress >= q.target) return q;
         if (type === 'KILL_KIND' && q.kind !== kind) return q;
         if (type === 'COLLECT_LOOT' && q.lootName !== lootName) return q;
         changed = true;
@@ -872,8 +872,24 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!changed) return;
       set({ quests });
       for (let i = 0; i < quests.length; i++) {
-        if (quests[i] !== s.quests[i] && questDone(quests[i])) notify('Quest complete! Visit the quest board.', COLORS.uiAccent, 'SYSTEM');
+        if (quests[i] === s.quests[i] || quests[i].progress < quests[i].target) continue;
+        if (questNeedsKing(quests[i])) notify('Objective complete! Report to the King in the castle.', COLORS.uiAccent, 'SYSTEM');
+        else notify('Quest complete! Visit the quest board.', COLORS.uiAccent, 'SYSTEM');
       }
+    },
+
+    reportToKing: () => {
+      const s = get();
+      let audience = 0, reports = 0;
+      const quests = s.quests.map((q) => {
+        if (!questNeedsKing(q)) return q;
+        if (q.type === 'AUDIENCE') { audience++; return { ...q, progress: q.target, reported: true }; }
+        reports++; return { ...q, reported: true };
+      });
+      if (audience + reports === 0) return { audience: 0, reports: 0 };
+      set({ quests });
+      notify('The King has acknowledged your deeds. Claim your reward at the Quest Board!', COLORS.uiAccent, 'SYSTEM');
+      return { audience, reports };
     },
 
     claimQuest: (id) => {

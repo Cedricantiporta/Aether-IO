@@ -31,6 +31,17 @@ function propGeo(kind: NpcProp) {
   return p;
 }
 
+const crownMat = litMat({ roughness: 0.3, metalness: 0.7, emissive: new Color('#7a5200'), emissiveIntensity: 0.6 });
+let _crown: BufferGeometry | null = null;
+/** King's crown: gold band, five spikes with red / blue gems (merged vertex-coloured geometry). */
+function crownGeo(): BufferGeometry {
+  if (_crown) return _crown;
+  const b = new GB([0.9, 1.1]);
+  b.cyl(0.19, 0.2, 0.1, 12, [0, 0, 0], '#ffd24a');
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; b.cone(0.045, 0.16, 4, [Math.cos(a) * 0.17, 0.12, Math.sin(a) * 0.17], '#ffd24a'); b.sph(0.03, [Math.cos(a) * 0.17, 0.21, Math.sin(a) * 0.17], i % 2 ? '#4aa8ff' : '#ff4a5a', 1, 4); }
+  return (_crown = b.build());
+}
+
 // --------------------------------------------------------------------- npc ---
 const _p = new Vector3();
 const WHITE = new Color(1, 1, 1);
@@ -99,7 +110,11 @@ function NpcActor({ i }: { i: number }) {
       propRoot.add(a, b);
       ch.handR.add(propRoot);
     }
-    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; if (propRoot) ch.handR?.remove(propRoot); };
+    // gold crown on the head bone
+    let crown: Mesh | null = null;
+    const head = def.crown ? ch.root.getObjectByName('head') : null;
+    if (head) { crown = new Mesh(crownGeo(), crownMat); crown.position.set(0, 0.34, 0.02); crown.scale.setScalar(1.3); head.add(crown); }
+    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; if (propRoot) ch.handR?.remove(propRoot); if (crown) head?.remove(crown); };
   }, [ch, clips, def, i, st]);
 
   useFrame((_, dt0) => {
@@ -114,7 +129,7 @@ function NpcActor({ i }: { i: number }) {
     // only nearby NPCs cast shadows (skinned shadow draws are the expensive part)
     const sh = pd2 < 324;
     if (sh !== s.shadow) { s.shadow = sh; for (const m of meshes.current) m.castShadow = sh; }
-    g.position.set(st.x, 0, st.z);
+    g.position.set(st.x, def.y ?? 0, st.z);
     s.yaw = angleLerp(s.yaw, st.yaw, 1 - Math.exp(-9 * dt));
     g.rotation.y = s.yaw;
     s.w += ((st.moving ? 1 : 0) - s.w) * Math.min(1, dt * 8);
@@ -130,10 +145,10 @@ function NpcActor({ i }: { i: number }) {
   });
 
   return (
-    <group ref={group} position={[st.x, 0, st.z]} visible={false}>
+    <group ref={group} position={[st.x, def.y ?? 0, st.z]} visible={false}>
       {/* NPCs use the hero's scale (1) so they match the player's size */}
-      <primitive object={ch.root} />
-      <sprite ref={tag} material={label.mat} position={[0, 2.85, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
+      <group scale={def.scale}><primitive object={ch.root} /></group>
+      <sprite ref={tag} material={label.mat} position={[0, 2.85 * def.scale, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
     </group>
   );
 }
@@ -199,7 +214,7 @@ function BubbleProjector() {
     for (let i = 0; i < bubbles.length; i++) {
       const b = bubbles[i]; if (!b.active) continue;
       const n = npcs[b.npc];
-      _p.set(n.x, 2.8, n.z).project(camera);
+      _p.set(n.x, 2.8 * (NPCS[b.npc].scale || 1) + (NPCS[b.npc].y ?? 0), n.z).project(camera);
       b.sx = (_p.x * 0.5 + 0.5) * size.width; b.sy = (-_p.y * 0.5 + 0.5) * size.height;
       b.onScreen = _p.z < 1 && _p.x > -1.05 && _p.x < 1.05 && _p.y > -1.05 && _p.y < 1.05;
     }
@@ -207,11 +222,12 @@ function BubbleProjector() {
   return null;
 }
 
-export function Npcs() {
+/** `area` picks which cast is mounted: the town's villagers (+ animals) or the castle court. */
+export function Npcs({ area = 'TOWN' }: { area?: 'TOWN' | 'CASTLE' }) {
   return (
     <>
-      {NPCS.map((_, i) => <NpcActor key={i} i={i} />)}
-      <Animals />
+      {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area ? <NpcActor key={i} i={i} /> : null))}
+      {area === 'TOWN' && <Animals />}
       <BubbleProjector />
     </>
   );

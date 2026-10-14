@@ -1355,3 +1355,9 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .qt-bar { position: relative; flex: 1; height: 3px; background: rgba(255, 255, 255, .12); }
 .qt-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2e, #f1d58e); box-shadow: 0 0 5px rgba(241, 213, 142, .6); }
 .qt-row.done .qt-bar i { background: #7be38f; box-shadow: 0 0 5px rgba(123, 227, 143, .7); }
+
+/* ---- castle: King quests + area-switch fade (added last) ---- */
+.qt-row.king { box-shadow: inset -2px 0 0 #c8454f, 0 0 0 1px rgba(200, 69, 79, .4), 0 0 14px rgba(200, 69, 79, .18); }
+.qt-row.king .qt-head { color: #ff9aa2; }
+.king-note { font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: #ff9aa2; border-left: 2px solid #c8454f; padding: .1rem .5rem; background: rgba(120, 20, 30, .25); }
+.town-fade { position: absolute; inset: 0; z-index: 85; background: #05060a; pointer-events: none; visibility: hidden; opacity: 0; }

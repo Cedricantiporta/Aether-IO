@@ -140,6 +140,13 @@ export function installRoom(list: Collider[], radius: number): void {
   rebuildColliderGrid();
 }
 
+/** Castle interior: replaces every collider with `list` ([x, z, r]) and disables the town's island edge clamp (walls are colliders). */
+export function installInterior(list: [number, number, number][]): void {
+  bounds.room = false; bounds.r = 0; bounds.checkR = 1e6; bounds.checkR2 = 1e12;
+  colliders = list.map(([x, z, r]) => ({ x, z, r, blocksProjectiles: true }));
+  rebuildColliderGrid();
+}
+
 /** Pushes `pos` (xz) out of intact solid crates. Allocation-free. */
 export function pushOutOfCrates(pos: Vector3, radius: number): void {
   const crates = world.crates;

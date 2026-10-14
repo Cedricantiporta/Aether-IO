@@ -128,7 +128,7 @@ export const world = {
     shrineOn: false, hint: '',
   } as RoomState,
   /** Town state (harvest node cooldown). */
-  village: { harvestCd: 0 },
+  village: { harvestCd: 0, area: 'TOWN' as 'TOWN' | 'CASTLE', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE' },
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false } as BossHud,
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
   camera: { trauma: 0, zoom: 1, yaw: 0, pitch: CAM_PITCH0, dist: 1 } as CameraState,

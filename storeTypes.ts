@@ -154,6 +154,7 @@ export interface GameState {
   openWaveReward: (bonus?: boolean) => void; // room reward: generates upgradeOptions (+a 4th card when `bonus`), accumulatedWaveGold += 100, status = LEVEL_UP
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
   addQuestProgress: (type: QuestType, amount?: number, kind?: EnemyKind, lootName?: string) => void;
+  reportToKing: () => { audience: number; reports: number }; // talking to the King: finishes AUDIENCE quests, marks finished KING_BOUNTY quests as reported
   claimQuest: (id: string) => boolean; // grants reward, draws a replacement offer
   acceptQuest: (id: string) => boolean; // takes an offer (max 3 active)
   abandonQuest: (id: string) => void;   // drops an accepted quest (frees a slot; progress lost)
