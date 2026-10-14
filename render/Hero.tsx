@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   AdditiveBlending, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
-  MeshStandardMaterial, SphereGeometry,
+  MeshStandardMaterial, SphereGeometry, DoubleSide,
 } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
@@ -232,6 +232,23 @@ function Effects({ cls }: { cls: HeroClass }) {
   const prevTitle = useRef(useUiStore.getState().titleDone);
   const bubbleMat = useMemo(() => new MeshBasicMaterial({ color: new Color(0.5, 1.6, 2.4), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false }), []);
   const bubbleGeo = useMemo(() => new SphereGeometry(1, 20, 14), []);
+  // knight Divine Avatar: a pair of glowing white feathered wings (one geometry, mirrored for the left wing)
+  const wingGeo = useMemo(() => {
+    const w = new GB([0.85, 1.1]);
+    w.box(1.9, 0.2, 0.1, [0.95, 0.62, 0], '#ffffff', [0, 0, 0.38]);   // the arm of the wing
+    // overlapping feathers: long flight feathers along the trailing edge, a full inner layer of coverts
+    for (let k = 0; k < 12; k++) {
+      const t = k / 11, bx = 0.1 + t * 1.7, by = 0.28 + t * 0.66, len = 0.7 + t * 1.0, ang = 0.05 + t * 0.7;
+      const dx = Math.sin(ang), dy = -Math.cos(ang);
+      w.box(0.36, len, 0.05, [bx + dx * len * 0.5, by + dy * len * 0.5, -0.03], k % 2 ? '#eef4ff' : '#dfe8ff', [0, 0, ang]);
+      const l2 = len * 0.6;
+      w.box(0.34, l2, 0.05, [bx + dx * l2 * 0.5, by + dy * l2 * 0.5, 0.03], '#ffffff', [0, 0, ang]);
+    }
+    return w.build();
+  }, []);
+  const wingMat = useMemo(() => new MeshBasicMaterial({ vertexColors: true, color: new Color(1.35, 1.35, 1.45), transparent: true, opacity: 0, side: DoubleSide, depthWrite: false, toneMapped: false }), []);
+  const wings = useRef<Group>(null!), wingL = useRef<Mesh>(null!), wingR = useRef<Mesh>(null!);
+  const wingK = useRef(0);
   const flash = useRef({ bubble: 0, radius: 2 });
 
   useEffect(() => {
@@ -287,6 +304,22 @@ function Effects({ cls }: { cls: HeroClass }) {
         if (age < 0.02 && dt > 0) dustPuff(p.pos.x, p.pos.z, 10, 2.6, 0xfff2c8, 3.5);
       }
     }
+    // Divine Avatar wings: unfurl, slow flap, fold away when it ends
+    const wantWings = !lobby && p.avatarT > 0 ? 1 : 0;
+    wingK.current += (wantWings - wingK.current) * (1 - Math.exp(-(wantWings ? 6 : 4) * Math.min(dt0, 0.05)));
+    if (wings.current) {
+      const k = wingK.current;
+      wings.current.visible = k > 0.01;
+      if (k > 0.01) {
+        wings.current.position.set(p.pos.x, p.pos.y + 1.45, p.pos.z);
+        wings.current.rotation.y = p.facing;
+        const flap = Math.sin(t * 3.2) * 0.16, open = 0.3 + (1 - k) * 0.9;
+        wingR.current.rotation.set(1.15 + flap, open, 0.25);
+        wingL.current.rotation.set(1.15 + flap, -open, -0.25);
+        const s = 0.3 + k * 1.15; wingR.current.scale.set(s, s, s); wingL.current.scale.set(-s, s, s);
+        wingMat.opacity = Math.min(1, k * 1.2) * 0.92;
+      }
+    }
     // shield bubble
     const f = flash.current;
     f.bubble = Math.max(0, f.bubble - dt * 3);
@@ -303,6 +336,10 @@ function Effects({ cls }: { cls: HeroClass }) {
       <mesh ref={arrive} geometry={arriveGeo} material={arriveMat} visible={false} frustumCulled={false} renderOrder={5} />
       <mesh ref={arriveIn} geometry={arriveGeo} material={arriveCore} visible={false} frustumCulled={false} renderOrder={6} />
       <mesh ref={bubble} geometry={bubbleGeo} material={bubbleMat} visible={false} />
+      <group ref={wings} visible={false}>
+        <mesh ref={wingR} geometry={wingGeo} material={wingMat} position={[0.2, 0.15, -0.45]} renderOrder={4} />
+        <mesh ref={wingL} geometry={wingGeo} material={wingMat} position={[-0.2, 0.15, -0.45]} renderOrder={4} />
+      </group>
       <GhostTint cls={cls} mats={gm} />
     </>
   );

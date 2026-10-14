@@ -6,26 +6,29 @@ import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../uiStore';
 import { Modal } from '../components/Modal';
+import { slideMs } from './Ending';
 import { CHAPTERS, PROLOGUE, loreHint, loreUnlocked } from '../../lore';
 
 const SEEN_KEY = 'aether-survivor-prologue-v1';
 const seen = (): boolean => { try { return localStorage.getItem(SEEN_KEY) === '1'; } catch { return true; } };
 
-/** Full-screen prologue as slides: one passage per screen. Click / Space / Enter / arrow keys page through it; Skip or Begin closes it. */
+/** Full-screen prologue as slides: one passage per screen, advancing on its own (click / Space skips ahead); Skip closes it. */
 export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ force, onDone }) => {
   const titleDone = useUiStore((s) => s.titleDone && !s.charSelect);
   const [open, setOpen] = useState(false);
   const [n, setN] = useState(0);
   useEffect(() => { if (force || (titleDone && !seen())) { setN(0); setOpen(true); } }, [titleDone, force]);
-  const last = n >= PROLOGUE.length - 1;
   const close = () => { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ } setOpen(false); onDone?.(); };
-  const next = () => (last ? close() : setN((x) => x + 1));
-  const back = () => setN((x) => Math.max(0, x - 1));
+  const next = () => (n >= PROLOGUE.length - 1 ? close() : setN((x) => x + 1));
+  useEffect(() => {   // auto-advance; the last slide closes the prologue
+    if (!open) return;
+    const t = setTimeout(next, slideMs(PROLOGUE[n]));
+    return () => clearTimeout(t);
+  });
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); next(); }
-      else if (e.code === 'ArrowLeft' || e.code === 'KeyA') back();
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); next(); }
       else if (e.code === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
@@ -38,15 +41,11 @@ export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ f
       <div className="ending-glow" />
       <div className="ending-story prologue-slide">
         <AnimatePresence mode="wait">
-          <motion.p key={n} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.7 }}>{PROLOGUE[n]}</motion.p>
+          <motion.p key={n} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.9 }}>{PROLOGUE[n]}</motion.p>
         </AnimatePresence>
       </div>
-      <div className="prologue-nav" onClick={(e) => e.stopPropagation()}>
-        <button className="rpg-btn" onClick={back} disabled={n === 0} style={{ visibility: n === 0 ? 'hidden' : 'visible' }}>Back</button>
-        <div className="prologue-dots">{PROLOGUE.map((_, i) => <i key={i} data-on={i === n ? '1' : i < n ? 'd' : '0'} />)}</div>
-        <button className="rpg-btn rpg-btn-primary" onClick={next} data-testid={last ? 'prologue-begin' : 'prologue-next'}>{last ? 'Begin' : 'Next'}</button>
-      </div>
-      {!last && <button className="ending-skip" onClick={(e) => { e.stopPropagation(); close(); }}>Skip</button>}
+      <div className="prologue-nav"><div className="prologue-dots">{PROLOGUE.map((_, i) => <i key={i} data-on={i === n ? '1' : i < n ? 'd' : '0'} />)}</div></div>
+      <button className="ending-skip" onClick={(e) => { e.stopPropagation(); close(); }} data-testid="prologue-skip">Skip</button>
     </motion.div>
   );
 };

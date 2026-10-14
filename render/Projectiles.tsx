@@ -130,6 +130,7 @@ export function Projectiles() {
       return cb.build();
     };
     const slashG = crescent('#d8ecff', '#7fbcff', '#ffffff', 4.2, 0.42);   // white steel, blue edge
+    const slashGoldG = crescent('#fff6d8', '#ffd76a', '#ffffff', 4.2, 0.48);   // Divine Avatar swing: gold / white
     const holyG = crescent('#ffd76a', '#ffe9a0', '#fffbe8', 6.4, 0.85);
     // orbital blade
     const bl = new GB([1, 1]);
@@ -160,6 +161,7 @@ export function Projectiles() {
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
       X_SLASH: mk([[xs.build(), glow]], 40),
       SLASH: mk([[slashG, glow]], 120),
+      SLASH_GOLD: mk([[slashGoldG, glow]], 80),
       HOLY_WAVE: mk([[holyG, glow]], 60),
     } as Record<string, InstancedMesh[]>;
     const E = {
@@ -196,9 +198,10 @@ export function Projectiles() {
     for (let n = 0; n < pr.length; n++) {
       const p = pr[n];
       if (!p.active) continue;
-      const ims = sys.S[p.kind]; if (!ims) continue;
+      const key = p.kind === 'SLASH' && p.emp ? 'SLASH_GOLD' : p.kind;   // Divine Avatar swings use the golden arc
+      const ims = sys.S[key]; if (!ims) continue;
       if (!inView(p.pos.x, p.pos.z, 6)) continue;
-      const i = counts[p.kind]++;
+      const i = counts[key]++;
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);
       const yaw = Math.atan2(vx, vz), pitch = -Math.atan2(vy, hs);
@@ -243,7 +246,8 @@ export function Projectiles() {
         case 'SLASH': {   // a quick sword arc: fades / widens over its short life, mirrored on alternate swings
           const life = p.maxLife > 0 ? p.life / p.maxLife : 1, sc = (0.85 + (1 - life) * 0.35) * (p.radius / 2.5);
           place(ims, i, x, y, z, yaw, 0, p.bounces & 1 ? 0.25 : -0.25, p.bounces & 1 ? -sc : sc, sc, sc);
-          pushHalo(x, y, z, 2.6 * sc, 1.0, 1.4, 2.2, 0.35 * life + 0.1, CELL.GLOW);
+          if (p.emp) pushHalo(x, y, z, 2.8 * sc, 2.2, 1.8, 0.9, 0.4 * life + 0.15, CELL.GLOW);
+          else pushHalo(x, y, z, 2.6 * sc, 1.0, 1.4, 2.2, 0.35 * life + 0.1, CELL.GLOW);
           if (emit && Math.random() < dt * 40) { const o = (Math.random() - 0.5) * 3; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, 0, 0.4, 0, 0.25, 0.3, 0.05, 1.3, 1.8, 2.5, 0.7, CELL.STAR, 0, 0.3); }
           break;
         }

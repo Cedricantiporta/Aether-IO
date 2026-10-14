@@ -1,4 +1,4 @@
-// The ending: shown a moment after Malakar falls in the Undying Throne. Story lines fade in one by one, then the
+// The ending: shown a moment after Malakar falls in the Undying Throne. Story slides advance on their own (one per screen), then the
 // credits and the Ascension unlock; Continue banks the run (victory summary) and returns to town afterwards.
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,7 @@ import { useGameEvent } from '../hooks/useEvent';
 import { finishRunVictory } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
 import { ASCENSION_MAX } from '../../ascension';
+import { GameStatus } from '../../types';
 
 const STORY = [
   'Malakar, the Undying, falls at last.',
@@ -20,27 +21,48 @@ const CREDITS: [string, string][] = [
   ['A game by', 'The Aether Survivor team'], ['3D characters', 'KayKit (CC0)'], ['Trees', 'Kenney (CC0)'], ['Built with', 'three.js · React · Zustand'],
 ];
 
+/** How long one story slide stays up (longer passages stay longer). */
+export const slideMs = (line: string): number => 3200 + line.length * 45;
+
 export const EndingScreen: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [towerNote, setTowerNote] = useState(false);
+  const inTown = useGameStore((s) => s.status === GameStatus.MENU);
   useGameEvent('gameEnding', () => { setTimeout(() => { setStep(0); setOpen(true); }, 2600); });
-  const total = STORY.length + 2;   // story lines, credits, final card
+  const total = STORY.length + 2;   // story slides, credits, final card
   useEffect(() => {
     if (!open || step >= total - 1) return;
-    const t = setTimeout(() => setStep((s) => s + 1), step < STORY.length ? 2600 : 5200);
+    const t = setTimeout(() => setStep((s) => s + 1), step < STORY.length ? slideMs(STORY[step]) : 6000);
     return () => clearTimeout(t);
   }, [open, step, total]);
-  if (!open) return null;
+  if (!open) {
+    // first ending: once back in town, announce that the Endless Tower has opened
+    if (towerNote && inTown) return (
+      <div className="absolute inset-0 pe flex items-center justify-center" style={{ zIndex: 220, background: 'rgba(5,3,2,.6)' }} data-testid="tower-unlocked">
+        <motion.div className="tower-note" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
+          <div className="ending-title" style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.4rem)' }}>The Endless Tower is open</div>
+          <p>With Malakar gone, the old tower outside the village gate has woken. Climb it floor by floor, as high as you dare.</p>
+          <button className="rpg-btn rpg-btn-primary ending-go" onClick={() => setTowerNote(false)} data-testid="tower-unlocked-ok">Onward</button>
+        </motion.div>
+      </div>
+    );
+    return null;
+  }
   const next = Math.min(ASCENSION_MAX, runInfo.ascension + 1);
-  const done = () => { setOpen(false); useGameStore.getState().completeEnding(); finishRunVictory(); };
+  const done = () => {
+    const first = useGameStore.getState().progress.endings === 0;
+    setOpen(false); useGameStore.getState().completeEnding(); finishRunVictory();
+    if (first) setTowerNote(true);
+  };
   return (
-    <motion.div className="ending-root pe" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.6 }} data-testid="ending">
+    <motion.div className="ending-root pe" style={{ background: 'radial-gradient(ellipse at center, rgba(22,16,10,.95), rgba(4,3,2,.99))' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.6 }} data-testid="ending">
       <div className="ending-glow" />
       {step < STORY.length && (
-        <div className="ending-story">
-          {STORY.slice(0, step + 1).map((l, i) => (
-            <motion.p key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: i === step ? 1 : 0.55, y: 0 }} transition={{ duration: 1.2 }}>{l}</motion.p>
-          ))}
+        <div className="ending-story prologue-slide">
+          <AnimatePresence mode="wait">
+            <motion.p key={step} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.9 }}>{STORY[step]}</motion.p>
+          </AnimatePresence>
         </div>
       )}
       <AnimatePresence>

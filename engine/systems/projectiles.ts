@@ -179,7 +179,7 @@ export function fireBasicAttack(): void {
   let radius = 1.5;
   switch (ptype) {
     case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 4; break; // shorter throw: barbarian is close range
-    case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = 2.5; break;   // knight: a short wide sword arc
+    case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.2; radius = 2.5; break;
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }
@@ -207,7 +207,7 @@ export function fireBasicAttack(): void {
     if (procCount >= procN(lv.smite)) { procCount = 0; procFlags.smite = lv.smite; }
   }
 
-  const emp = false;
+  const emp = kind === 'SLASH' && pl.avatarT > 0;   // Divine Avatar: golden double-size sword arcs (render reads p.emp)
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
   const dmgMul = (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.5 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.

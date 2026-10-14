@@ -60,13 +60,13 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
-      per: (lv) => `${pct(4.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (2.6 + 0.3 * (lv - 1)))}` },
+      per: (lv) => `${pct(4.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
     { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 12,
-      desc: 'Raise your shield: a burst of light knocks nearby enemies back, then for a few seconds you take far less damage and slowly heal.',
-      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
+      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage and slowly heal.',
+      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
-      desc: 'Call a pillar of holy light down on the target area after a short warning: heavy damage, stuns, and breaks armor.',
-      per: (lv) => `${pct(7 * lvMul(lv))} dmg · radius ${f1(5.5 + 0.3 * (lv - 1))} · stun ${f1(1 + 0.1 * lv)}s` },
+      desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray deals heavy damage and stuns. More rays per level (max 7).',
+      per: (lv) => `${Math.min(7, 3 + lv)} rays · ${pct(3.4 * lvMul(lv))} dmg each · stun ${f1(0.8 + 0.1 * lv)}s` },
   ],
 };
 
@@ -110,7 +110,7 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
     desc: 'Open with a roar that stuns and terrifies nearby enemies, then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
-    desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, 40% less damage taken, and every sword swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Burst ${pct(14 * lvMul(lv) * 0.7)} dmg · wave ${pct(2 * lvMul(lv))} per swing` },
 };
 

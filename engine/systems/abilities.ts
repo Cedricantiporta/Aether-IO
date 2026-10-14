@@ -18,6 +18,9 @@ import { spawnProjectile } from './projectiles';
 import { hitStop, slowMo, fovKick } from '../game';
 
 /** State for render/UI of multi-frame abilities. */
+const judgeRays = Array.from({ length: 7 }, () => ({ x: 0, z: 0, t: 0, id: -1 }));
+const judgeUsed: number[] = [];
+let judgeN = 0;
 export const abilityState = {
   tint: 0,                 // (unused: ultimates no longer darken the screen)
   flash: 0,                // 0..1 brief light flash at ult cast / impact
@@ -415,22 +418,41 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     if (slot === 'q') {
       // Holy Wave: a wide golden crescent that sweeps forward through everything
       spawnProjectile('HOLY_WAVE', p.pos.x + dx * 1.4, p.pos.z + dz * 1.4, dx, dz, 20, b * 4.4,
-        { life: 0.95, pierce: 999, knockback: 1.6, radius: 3.6 + 0.4 * (lv - 1), y: 1.1 });
+        { life: 0.95, pierce: 999, knockback: 1.6, radius: (3.6 + 0.4 * (lv - 1)) * (p.avatarT > 0 ? 2 : 1), y: 1.1 });
       p.anim.attackT = 1; addShake(0.12);
       announce('HOLY_WAVE');
     } else if (slot === 'e') {
       // Shield Wall: knockback burst, then heavy damage reduction + slow heal
       p.guardT = 3 + 0.4 * (lv - 1); p.guardRed = Math.min(0.75, 0.5 + 0.04 * (lv - 1));
-      damageEnemiesInRadius(p.pos.x, p.pos.z, 6, b * 2.5, physKnock);
-      events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xffe08a });
-      events.emit('shieldBlock', { pos: p.pos.clone(), radius: 2.4 });
+      const wr = 8 + 0.3 * (lv - 1);
+      damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 2.5, physKnock);
+      events.emit('shockwave', { pos: p.pos.clone(), radius: wr, color: 0xffe08a });
+      events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4 });
       p.anim.castT = 1; addShake(0.2);
       announce('SHIELD_WALL');
     } else if (slot === 's3') {
-      // Judgment: a pillar of light lands on the target after a short warning
+      // Judgment: up to 7 rays of holy light strike enemies around the target from above, one after another
       aimPoint(26, 0, tgt);
-      a.judgeT = 0.6; a.judgeX = tgt.x; a.judgeZ = tgt.z; a.judgeR = 5.5 + 0.3 * (lv - 1); a.judgeDmg = b * 7; a.judgeStun = 1 + 0.1 * lv;
-      events.emit('telegraph', { pos: tgt.clone(), radius: a.judgeR, duration: 0.6 });
+      const area = 9 + 0.4 * (lv - 1), n = Math.min(7, 3 + lv);
+      a.judgeR = 2.6 + 0.15 * (lv - 1); a.judgeDmg = b * 3.4; a.judgeStun = 0.8 + 0.1 * lv;
+      const ids = world.enemyGrid.query(tgt.x, tgt.z, area + 2, out);
+      judgeN = 0; judgeUsed.length = 0;
+      // nearest-first distinct enemies, then random spots around the target for the leftover rays
+      for (let pass = 0; pass < n; pass++) {
+        let best = -1, bd = area * area;
+        for (let i = 0; i < ids.length; i++) {
+          const e = world.enemies[ids[i]];
+          if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || judgeUsed.includes(ids[i])) continue;
+          const d = (e.pos.x - tgt.x) ** 2 + (e.pos.z - tgt.z) ** 2;
+          if (d < bd) { bd = d; best = ids[i]; }
+        }
+        const r = judgeRays[judgeN];
+        if (best >= 0) { judgeUsed[judgeN] = best; const e = world.enemies[best]; r.x = e.pos.x; r.z = e.pos.z; r.id = best; }
+        else { judgeUsed[judgeN] = -1; const an = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * area * 0.7; r.x = tgt.x + Math.cos(an) * rr; r.z = tgt.z + Math.sin(an) * rr; r.id = -1; }
+        r.t = 0.45 + judgeN * 0.09; judgeN++;
+      }
+      a.judgeT = 1;
+      events.emit('telegraph', { pos: tgt.clone(), radius: area, duration: 0.45 });
       p.anim.castT = 1;
       announce('JUDGMENT');
     }
@@ -742,7 +764,7 @@ function updateUlt(dt: number): void {
     return;
   }
 
-  // knight: Divine Avatar runs on p.avatarT (damage x1.5, -40% damage taken, swings release Holy Waves)
+  // knight: Divine Avatar runs on p.avatarT (white wings, damage x1.5, +50% attack speed, 2x golden swings + Holy Wave, swings release Holy Waves)
   if (a.ultKind === 4) {
     if (p.avatarT <= 0) { a.ultKind = 0; a.tintTarget = 0; p.ultT = 0; events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xffe08a }); }
     return;
@@ -940,16 +962,22 @@ export function updateAbilities(dt: number): void {
 
   // ---- knight Judgment: the pillar of light lands
   if (a.judgeT > 0) {
-    a.judgeT -= dt;
-    if (a.judgeT <= 0) {
+    let live = 0;
+    for (let k = 0; k < judgeN; k++) {
+      const r = judgeRays[k];
+      if (r.t <= 0) continue;
+      r.t -= dt;
+      if (r.t > 0) { live++; continue; }
+      // the ray follows its enemy until it lands
+      if (r.id >= 0) { const e = world.enemies[r.id]; if (e.active && e.state !== 'DYING') { r.x = e.pos.x; r.z = e.pos.z; } }
       stunSt.duration = a.judgeStun;
-      damageEnemiesInRadius(a.judgeX, a.judgeZ, a.judgeR, a.judgeDmg, holyOpts, stunSt);
-      const at = new Vector3(a.judgeX, 0, a.judgeZ);
-      events.emit('explosion', { pos: at, radius: a.judgeR, color: 0xffe08a });
-      events.emit('shockwave', { pos: at.clone(), radius: a.judgeR * 1.2, color: 0xfff2c0 });
-      events.emit('ultImpact', { pos: at.clone(), name: 'JUDGMENT', radius: a.judgeR });
-      addShake(0.35);
+      damageEnemiesInRadius(r.x, r.z, a.judgeR, a.judgeDmg, holyOpts, stunSt);
+      const at = new Vector3(r.x, 0, r.z);
+      events.emit('ultImpact', { pos: at, name: 'JUDGMENT', radius: a.judgeR });
+      events.emit('shockwave', { pos: at.clone(), radius: a.judgeR * 1.3, color: 0xfff2c0 });
+      addShake(0.12);
     }
+    if (live === 0) a.judgeT = 0;
   }
 
   // ---- barbarian shoulder charge: bulldozes everything on its path

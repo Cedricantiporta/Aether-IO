@@ -466,6 +466,14 @@ export function VFX() {
         smokePuff(x, 1, z, 10, 0x241c18, 8, 2.4, 6, 12, 0.6);
         chunks(x, 2, z, 12, 0x6b4a2a, 0x2a2420, 18, 0.5);
         if (quality().lights) flashLight(x, 8, z, 0xff9040, 140, 1.0);
+      } else if (e.name === 'JUDGMENT') {   // one ray of holy light from the sky
+        const R = e.radius;
+        for (let k = 0; k < 9; k++) glowPuff(x, 1 + k * 2.2, z, k < 2 ? 0xffffff : 0xffe7a0, 2.6 - k * 0.12, 0.32, 2.2, 0.85);
+        for (let k = 0; k < 14; k++) { const o = (Math.random() - 0.5) * R * 0.5, o2 = (Math.random() - 0.5) * R * 0.5; FX.add.emit(x + o, 14 + Math.random() * 6, z + o2, 0, -70, 0, 0.26, 0.7, 0.4, 2.4, 2.2, 1.6, 1, CELL.STREAK, 0, 0, 0, 0, 0.06); }
+        flashStar(x, 1.2, z, 0xffffff, 7, 0.25);
+        ringBurst(x, 0.3, z, 0xffe08a, 0.6, R * 1.4, 0.45, 2);
+        sparks(x, 0.8, z, 16, 0xfff0b0, 12, 0.35, 0.5, 2.2);
+        if (quality().lights) flashLight(x, 4, z, 0xffe090, 40, 0.3);
       } else if (e.name === 'TITAN_SLAM') {
         flashStar(x, 2, z, 0xffe0a0, 22, 0.35);
         for (let i = 0; i < 2; i++) setTimeout(() => ringBurst(x, 0.4, z, 0xd9b27a, 2, 18 + i * 6, 0.7, 1.8), i * 130);

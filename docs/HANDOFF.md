@@ -179,3 +179,18 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   - Both have cards (`SKILL_SMITE` / `SKILL_RADIANT`) and painted icons (`consecrate`, `smite`, `radiant`).
 - Consecration is an always-on aura, so it shows no cooldown. The "Charges faster while standing still" tooltip note only appears for
   passives that really use `chargeMul` (`STILL_CHARGE` in ActionBar).
+
+### Divine Avatar rework, Judgment rays, slides, Knight range
+- Divine Avatar (`avatarT`):
+  - Keeps the light column, +50% damage and a Holy Wave on every swing.
+  - Adds white feathered wings (`Hero.tsx` wingGeo, two mirrored meshes laid back so the top-down camera sees them; they unfurl and flap).
+  - +50% attack speed (`player.ts` rate). The damage reduction was removed (`combat.ts`).
+  - Sword arcs are 2× (radius 5) and golden: projectile `emp` flag → `SLASH_GOLD` instanced mesh in `Projectiles.tsx`. The Holy Wave skill is 2× too.
+- Judgment: min(7, 3+lv) rays (`judgeRays`). It picks the nearest distinct enemies within ~9 of the aim point, or random spots if there are
+  fewer enemies. Each ray lands 0.45 s + 0.09 s × i after the cast and follows its enemy until it lands: 3.4× damage in r 2.6, plus a stun.
+  The VFX is `ultImpact` 'JUDGMENT' in `VFX.tsx` (stacked glow column + falling light streaks).
+- Shield Wall burst radius is 8 (+0.3/lv); it used to be 6.
+- Knight basic-attack range is 7 (`ATTACK_RANGE.KNIGHT`). It was missing, so the Knight swung at enemies 18 units away.
+- Prologue and ending are auto-advancing slides (`slideMs(line)` = 3.2 s + 45 ms/char), one passage per screen, with no Next buttons.
+  Skip stays, and click/Space jumps ahead. The ending keeps its final Continue card. On the first ending, an "Endless Tower is open" card
+  shows once back in town.

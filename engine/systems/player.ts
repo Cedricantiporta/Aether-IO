@@ -31,7 +31,7 @@ const _mv = { x: 0, z: 0 };
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
 /** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
-const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11 };
+const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
 const STOP_TO_FIRE_DELAY = 0.12;
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
 const CHASE_MUL = 1.35;
@@ -329,7 +329,7 @@ export function updatePlayer(dt: number): void {
   p.fireT -= dt;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
+    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }
