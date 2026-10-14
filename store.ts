@@ -25,6 +25,7 @@ import { deviceDefaults } from './engine/device';
 import type { Difficulty, Equipment, EquipSlot, GameState, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT } from './loot';
+import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
 import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
@@ -308,7 +309,7 @@ const addCores = (inv: Item[], n: number): Item[] => {
   return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
-const instantiate = (template: Item): Item => rollAffixes({
+export const instantiate = (template: Item): Item => rollAffixes({
   ...template,
   level: isGear(template) || template.type === 'PET' ? template.level : 1,
   id: uid('it'),
@@ -326,6 +327,7 @@ interface Profile {
   gold: number; gems: number;
   inventory: Item[]; equipment: Equipment; materials: Record<Rarity, number>; maxInventorySlots: number;
   warehouse?: Item[]; warehouseGold?: number;
+  npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   heroRank: number; rankXp: number; quests: Quest[];
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
@@ -371,7 +373,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   v: PROFILE_VERSION,
   gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
-  heroRank: 1, rankXp: 0, quests: fillQuests(1, []),
+  heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false },
@@ -411,6 +413,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)),
+              npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
@@ -442,7 +445,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, gems1k: true, zoom1: true, gold10: true,
     };
@@ -569,6 +572,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     maxInventorySlots: profile.maxInventorySlots,
     warehouse: profile.warehouse ?? [],
     warehouseGold: profile.warehouseGold ?? 0,
+    npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
     quests: profile.quests,
@@ -666,7 +670,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: [], warehouseGold: 0, npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [],
       });
@@ -1443,7 +1447,7 @@ const flushProfile = (): void => {
 };
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

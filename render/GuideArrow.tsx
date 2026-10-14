@@ -12,6 +12,8 @@ import { GATE, NPCS } from '../engine/townData';
 import { CASTLE_DOOR, CASTLE_EXIT } from '../engine/castleData';
 import { SHOP_POSITIONS } from '../constants';
 import { questDone, questNeedsKing } from '../quests';
+import { npcs } from '../engine/systems/npcs';
+import { npcMarkers } from '../engine/systems/npcQuestLogic';
 
 const GOLD = new Color('#f2c14e'), QUEST = new Color('#4fe3ff');
 const KING = NPCS.find((n) => n.king);
@@ -24,14 +26,20 @@ function pickTarget(): boolean {
   const king = qs.some(questNeedsKing), claim = qs.some(questDone);
   const sell = qs.some((q) => q.accepted && q.type === 'SELL_LOOT' && q.progress < q.target) && st.inventory.some((i) => i.type === 'LOOT');
   tgt.quest = true; tgt.hideR = 4.5;
+  // an NPC story quest ready to turn in (lowest priority of the quest targets)
+  const mk = npcMarkers();
+  let npcI = -1;
+  for (let i = 0; i < mk.length; i++) if (mk[i] === 3 && (npcI < 0 || (NPCS[i].area === 'CASTLE') === castle)) npcI = i;   // prefer one in the current area
   if (castle) {
     if (king && KING?.home) { tgt.x = KING.home[0]; tgt.z = KING.home[1]; return true; }
     if (claim || sell) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; return true; }
+    if (npcI >= 0) { if (NPCS[npcI].area === 'CASTLE') { tgt.x = npcs[npcI].x; tgt.z = npcs[npcI].z; } else { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; } return true; }
     return false;
   }
   if (claim) { tgt.x = QUEST_POS[0]; tgt.z = QUEST_POS[2]; return true; }
   if (king) { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; return true; }
   if (sell) { tgt.x = POTION.position[0]; tgt.z = POTION.position[2] + 4; return true; }
+  if (npcI >= 0) { if (NPCS[npcI].area === 'CASTLE') { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; } else { tgt.x = npcs[npcI].x; tgt.z = npcs[npcI].z; } return true; }
   tgt.x = GATE.x; tgt.z = GATE.z; tgt.quest = false; tgt.hideR = 14;
   return true;
 }
