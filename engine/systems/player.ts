@@ -32,6 +32,8 @@ const AUTO_TARGET_RANGE = 22;
 /** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
 const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11 };
 const STOP_TO_FIRE_DELAY = 0.12;
+/** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
+const CHASE_MUL = 1.35;
 
 let dying = false;
 let deathT = 0;
@@ -233,6 +235,20 @@ export function updatePlayer(dt: number): void {
   if (ml > 0) { mx /= ml; mz /= ml; }
   if (inp.joy.active) { mx = inp.joy.x; mz = inp.joy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
   if (ml > 0) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }   // W = away from the camera
+
+  // ---- auto-chase: no movement input + an enemy inside the chase ring (a bit beyond weapon range) but outside
+  // weapon range -> walk toward it until it is in range (then the normal auto-attack takes over). Follows the auto-aim setting.
+  if (ml === 0 && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
+    const range = ATTACK_RANGE[st.hero] ?? 18;
+    const chaseR = range * CHASE_MUL;
+    const lk = lockedEnemy();
+    let e = lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 <= chaseR * chaseR ? lk : null;
+    if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, chaseR);
+    if (e) {
+      const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+      if (d > range - 1 + (e === lk ? e.radius : 0) && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; }
+    }
+  }
 
   if (stunned || p.rootT > 0) { mx = 0; mz = 0; ml = 0; }
 
