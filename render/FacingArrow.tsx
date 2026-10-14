@@ -1,5 +1,4 @@
-// Small white triangle on the ground in front of the hero showing where it faces (= where a dash goes), plus faint
-// chevrons out to the dash reach while a dash charge is ready (runs only). Two meshes, no allocations per frame.
+// One white triangle on the ground in front of the hero showing where it faces (= where a dash goes). Two meshes, no allocations per frame.
 import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial } from 'three';
@@ -19,7 +18,7 @@ export function FacingArrow() {
     const arrowMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, side: DoubleSide, toneMapped: false });
     const chevMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false, side: DoubleSide, toneMapped: false });
     const root = new Group();
-    const arrow = new Mesh(tri(0.32, 0.5, 0.14), arrowMat); arrow.position.set(0, 0.06, 1.25); arrow.renderOrder = 6;
+    const arrow = new Mesh(tri(0.46, 0.72, 0.2), arrowMat); arrow.position.set(0, 0.06, 1.35); arrow.renderOrder = 6;
     const chev = new Group();
     for (let i = 0; i < 3; i++) { const m = new Mesh(tri(0.42, 0.5, 0.22), chevMat); m.position.set(0, 0.05, 3 + i * ((DASH_REACH - 3) / 2)); m.renderOrder = 5; chev.add(m); }
     root.add(arrow, chev);
@@ -33,7 +32,7 @@ export function FacingArrow() {
     root.position.set(p.pos.x, 0, p.pos.z);
     root.rotation.y = p.facing;
     arrowMat.opacity = 0.7 + 0.15 * Math.sin(clock.elapsedTime * 4);
-    chev.visible = run && p.dashCharges > 0;
+    chev.visible = false;   // single arrow only (user preference)
     if (chev.visible) chevMat.opacity = 0.12 + 0.06 * Math.sin(clock.elapsedTime * 3);
     void arrow;
   });
