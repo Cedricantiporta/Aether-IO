@@ -16,7 +16,7 @@ import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
-import { feat, inLiquid, riverD } from '../engine/roomFeatures';
+import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater } from './RoomWater';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
@@ -122,13 +122,15 @@ function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null]
   return [t, e];
 }
 /** World units covered by one repeat of the detail texture. */
+/** How far the floor sinks under rivers / lakes (the liquid surface sits a little above the bed). */
+export const SINK = 2.4;
 const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 7, MARBLE: 6, SAND: 9, SNOW: 8, BASALT: 10, VOID: 9 };
 
 /** Distance outside the nearest liquid edge (negative = inside the liquid). */
 function liquidEdge(x: number, z: number): number {
   let e = 1e9;
   for (let i = 0; i < feat.nLakes; i++) e = Math.min(e, Math.hypot(x - feat.lx[i], z - feat.lz[i]) - feat.lr[i]);
-  if (feat.river) e = Math.min(e, Math.abs(riverD(x, z)) - feat.hw);
+  if (feat.river) e = Math.min(e, Math.abs(riverD(x, z)) - hwAt(riverS(x, z)));
   return e;
 }
 
@@ -137,7 +139,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     const def = biomeOf(biome);
     const vr = variantOf(def, seed);
     const style = def.style;
-    const S = 2 * (shape.maxR + 44), seg = 160;
+    const S = 2 * (shape.maxR + 44), seg = feat.river || feat.nLakes > 0 ? 260 : 160;   // finer grid where banks are carved
     const g = new PlaneGeometry(S, S, seg, seg);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
@@ -208,10 +210,16 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
           out.lerp(stoneC, k * 0.92);
         }
       }
-      // shore / bank around liquids (wet mud, scorched rock, a canyon lip)
+      // shore / bank around liquids: the floor drops away into a sunken channel (rock cliff strata on the slope)
       if (hasLiquid) {
         const le = liquidEdge(x, z);
         if (le < 2.6) out.lerp(bank, sstep(2.6, 0.2, le) * (feat.liquid === 'LAVA' ? 0.9 : 0.7));
+        if (le < 0.6) {
+          const k = sstep(0.6, -1.4, le);   // 0 at the lip -> 1 at the channel bed
+          pos.setY(i, -SINK * k * (0.9 + 0.1 * vnoise(x * 0.7 + so, z * 0.7)));
+          const strata = 0.7 + 0.3 * Math.sin(k * 11 + fbm(x * 0.4, z * 0.4, 2) * 3);
+          out.lerp(tmpC.copy(bank).multiplyScalar(strata), Math.min(1, k * 1.4)).multiplyScalar(1 - k * 0.45);
+        }
       }
       // stone rim just inside the walls
       out.lerp(rim, sstep(-1.4, -0.2, u) * 0.55);

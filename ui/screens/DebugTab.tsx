@@ -9,6 +9,7 @@ import { world } from '../../engine/world';
 import { BIOMES, BOSS_INDEX, ROOMS_PER_BIOME } from '../../engine/roomDefs';
 import { BOSS_ROTATION, BOSS_NAMES } from '../../engine/enemyDefs';
 import { talentsOf } from '../../talents';
+import { gateOpen, storyIdx } from '../../story';
 import { GameStatus } from '../../types';
 import type { RoomType } from '../../engine/types';
 
@@ -30,6 +31,12 @@ const Line: React.FC<{ label: string; hint?: string; children: React.ReactNode }
 
 const toast = (msg: string) => useGameStore.getState().addNotification(msg, '#7dd3fc', 'SYSTEM');
 
+function unlockAdventure() {
+  const st = useGameStore.getState();
+  if (gateOpen(st.story)) { toast('Debug: the adventure is already open'); return; }
+  useGameStore.setState({ story: { step: storyIdx('king') + 1, p: 0, v: 3 } });   // no step rewards (direct set)
+  toast('Debug: adventure unlocked');
+}
 function maxCurrencies() {
   const s = useGameStore.getState();
   useGameStore.setState({ gold: BIG, gems: BIG, materials: { COMMON: 99_999, RARE: 99_999, EPIC: 99_999, LEGENDARY: 99_999, MYTHIC: 99_999 } });
@@ -84,6 +91,9 @@ export const DebugTab: React.FC = () => {
     <Line label="God mode" hint="Your hero takes no damage."><Toggle checked={debug.god} onChange={(v) => flip('god', v)} label="God mode" /></Line>
     <Line label="One-hit kills" hint="Every hit kills, bosses included."><Toggle checked={debug.oneHit} onChange={(v) => flip('oneHit', v)} label="One-hit kills" /></Line>
     <Line label="Max skills" hint="Every run starts with all of this hero's skills at max level."><Toggle checked={debug.maxSkills} onChange={(v) => { flip('maxSkills', v); if (v && inRun) useGameStore.getState().debugMaxSkills(); }} label="Max skills" /></Line>
+    <Line label="Unlock adventure" hint="Skips the opening story steps so the Adventure Portal is open right away (main quest jumps to the King's first task).">
+      <Button size="sm" onClick={unlockAdventure} data-testid="dbg-unlock-adv">Unlock now</Button>
+    </Line>
     <Line label="Currencies"><Button size="sm" onClick={maxCurrencies} data-testid="dbg-money">Max gold / gems / shards</Button></Line>
     <Line label="Class level" hint="Unlocks every rank-gated item and enough talent points for all talents.">
       <Button size="sm" onClick={() => setRank(useGameStore.getState().heroRank + 1)}>+1</Button>

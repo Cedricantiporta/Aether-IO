@@ -3,9 +3,10 @@
 // Rebuilt when world.room.version changes; per frame only the time uniform moves. No per-frame allocations.
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, Mesh, PlaneGeometry, ShaderMaterial, Vector3, Vector4 } from 'three';
+import { Color, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3, Vector4 } from 'three';
 import { world } from '../engine/world';
-import { feat, MAX_LAKES, riverPoint } from '../engine/roomFeatures';
+import { feat, MAX_LAKES, riverPoint, hwAt } from '../engine/roomFeatures';
+import { SINK } from './Room';
 import { shape } from '../engine/roomShape';
 import { biomeOf } from '../engine/roomDefs';
 import { GB, litMat } from './util';
@@ -13,7 +14,7 @@ import { useWorldCounter } from './hooks';
 
 const VS = `varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const FS = `
-uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform float uTime; uniform int uKind;
+uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform vec4 uRiv3; uniform vec2 uRiv4; uniform float uTime; uniform int uKind;
 uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uRim;
 varying vec2 vP;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -26,11 +27,12 @@ void main(){
   for (int i = 0; i < ${MAX_LAKES}; i++){ if (i >= uNL) break; vec3 L = uLakes[i]; float d = L.z - length(vP - L.xy); if (d > e){ e = d; flow = vec2(0.0); } }
   if (uRiv2.w > 0.5){
     vec2 n = uRiv.xy; float s = -vP.x * n.y + vP.y * n.x;
-    float dd = dot(vP, n) - uRiv.z - uRiv2.x * sin(uRiv2.y * s + uRiv2.z);
-    float d = uRiv.w - abs(dd);
+    float dd = dot(vP, n) - uRiv.z - uRiv2.x * sin(uRiv2.y * s + uRiv2.z) - uRiv3.x * sin(uRiv3.y * s + uRiv3.z);
+    float d = uRiv.w * (1.0 + uRiv3.w * sin(uRiv4.x * s + uRiv4.y)) - abs(dd);
     if (d > e){ e = d; flow = vec2(-n.y, n.x); }
   }
-  if (e < 0.0) discard;
+  if (e < -1.2) discard;   // (the sunken surface tucks under the banks; the depth test hides the rest)
+  e = max(e, 0.0);
   vec3 col; float t = uTime;
   vec2 q = vP + flow * t * (uKind == 1 ? 0.35 : 1.2);
   if (uKind == 2){   // chasm: rock walls falling away into darkness
@@ -96,6 +98,14 @@ function bridgeGeo(style: string, len: number, w: number) {
       else g.box(0.12, 0.12, len, [sx * (w + 0.02), 1.05, 0], wood);
     }
   }
+  // piers / trestles down into the sunken channel
+  const pierC = style === 'MARBLE' ? '#cfc8b8' : style === 'BASALT' ? '#3a302c' : style === 'CRYSTAL' ? '#2a1e48' : style === 'STONE' ? '#8c877c' : '#5a3c22';
+  const np = Math.max(2, Math.round(len / 4.5));
+  for (let i = 1; i < np; i++) {
+    const z = -half + (i * len) / np;
+    if (style === 'STONE' || style === 'MARBLE' || style === 'BASALT') g.box(w * 2 - 0.6, 2.6, 1.0, [0, -1.25, z], pierC);
+    else for (const sx of [-1, 1]) g.box(0.32, 2.7, 0.32, [sx * (w - 0.35), -1.2, z], pierC);
+  }
   return g.build();
 }
 
@@ -119,28 +129,29 @@ export function RoomWater() {
         uLakes: { value: lakes }, uNL: { value: feat.nLakes },
         uRiv: { value: new Vector4(feat.nx, feat.nz, feat.off, feat.river ? feat.hw : 0) },
         uRiv2: { value: new Vector4(feat.amp, feat.freq, feat.ph, feat.river ? 1 : 0) },
+        uRiv3: { value: new Vector4(feat.amp2, feat.freq2, feat.ph2, feat.wAmp) }, uRiv4: { value: new Vector2(feat.wFreq, feat.wPh) },
         uTime: { value: 0 }, uKind: { value: kind },
         uShallow: { value: new Color(shallow) }, uDeep: { value: new Color(deep) }, uRim: { value: new Color(rim) },
       },
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
     });
-    const plane = new Mesh(geo, mat); plane.position.y = 0.035; plane.renderOrder = 1; plane.frustumCulled = false;
+    const plane = new Mesh(geo, mat); plane.position.y = -SINK * 0.62;   // the liquid lies down in the carved channel plane.renderOrder = 1; plane.frustumCulled = false;
     // bridges
     const bridges: Mesh[] = [];
     if (feat.river) {
       const style = def.style === 'MARBLE' ? 'MARBLE' : def.style === 'BASALT' ? 'BASALT' : def.style === 'VOID' ? 'CRYSTAL' : def.style === 'SAND' ? 'ROPE' : def.style === 'SNOW' ? 'STONE' : 'WOOD';
-      const bg = bridgeGeo(style, feat.hw * 2 + 2.8, feat.bw);
       const bm = litMat({ roughness: 0.85 });
       const p: [number, number] = [0, 0];
       for (let i = 0; i < feat.nb; i++) {
         riverPoint(feat.bridgeS[i], 0, p);
+        const bg = bridgeGeo(style, hwAt(feat.bridgeS[i]) * 2 + 4.5, feat.bw);
         const m = new Mesh(bg, bm); m.position.set(p[0], 0, p[1]); m.rotation.y = Math.atan2(feat.nx, feat.nz);
         m.castShadow = true; m.receiveShadow = true; bridges.push(m);
       }
     }
     return { plane, mat, bridges };
   }, [ver]);   // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (built) { built.plane.geometry.dispose(); built.mat.dispose(); built.bridges[0]?.geometry.dispose(); } }, [built]);
+  useEffect(() => () => { if (built) { built.plane.geometry.dispose(); built.mat.dispose(); for (const b of built.bridges) b.geometry.dispose(); } }, [built]);
   useFrame(({ clock }) => { if (built) built.mat.uniforms.uTime.value = clock.elapsedTime; });
   if (!built) return null;
   return (

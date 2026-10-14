@@ -13,7 +13,7 @@ import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, type ShapeKind } from './roomShape';
-import { feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
+import { hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
 
 /** QA hook: force the stage layout of the following fight rooms. */
 export const layoutDbg: { force: Layout | null } = { force: null };
@@ -319,44 +319,52 @@ function pickLakeShape(seed: number): ShapeKind {
 
 /** River / lava / chasm channel across the room (perpendicular to the forward axis, between arrival and station), 1-3 bridges. */
 function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, colliders: Collider[]): void {
+  // Two land masses split by a wide, meandering, uneven channel that sits well below the ground (render/Room.tsx sinks
+  // the floor along it), joined by one or two wide bridges.
   feat.river = true; feat.liquid = liq;
   feat.nx = shape.fx; feat.nz = shape.fz;
-  feat.straight = rnd() < 0.3;
-  feat.hw = liq === 'CHASM' ? 2.6 + rnd() * 0.6 : 2.2 + rnd() * 0.6;
-  feat.amp = feat.straight ? 0 : 0.5 + rnd() * 0.6;
-  feat.freq = 0.08 + rnd() * 0.06; feat.ph = rnd() * Math.PI * 2;
-  // centre line halfway between the arrival spot and the station, wiggle kept clear of both
+  feat.straight = false;
+  feat.hw = liq === 'CHASM' ? 5.0 + rnd() * 1.0 : 4.4 + rnd() * 1.2;
+  feat.amp = 1.8 + rnd() * 1.4;
+  feat.freq = 0.06 + rnd() * 0.04; feat.ph = rnd() * Math.PI * 2;
+  feat.amp2 = 0.7 + rnd() * 0.6; feat.freq2 = feat.freq * (2.3 + rnd() * 0.6); feat.ph2 = rnd() * Math.PI * 2;
+  feat.wAmp = 0.14 + rnd() * 0.1; feat.wFreq = 0.17 + rnd() * 0.1; feat.wPh = rnd() * Math.PI * 2;
+  // centre line halfway between the arrival spot and the station, meander kept clear of both
   startPoint(rp); const t0 = rp[0] * feat.nx + rp[1] * feat.nz;
   stationPoint(rp); const t1 = rp[0] * feat.nx + rp[1] * feat.nz;
   feat.off = (t0 + t1) * 0.5;
-  feat.amp = Math.max(0, Math.min(feat.amp, (t1 - t0) * 0.5 - feat.hw - 5.2));
+  const room = (t1 - t0) * 0.5 - feat.hw * (1 + feat.wAmp) - 5.2;
+  if (feat.amp + feat.amp2 > room) { const k = Math.max(0, room) / (feat.amp + feat.amp2); feat.amp *= k; feat.amp2 *= k; }
   // walkable extent of the channel line inside the outline
   let sMin = 0, sMax = 0;
   for (let s = 0; s < 120; s += 0.5) { riverPoint(s, 0, rp); if (!insideShape(rp[0], rp[1], 2.5)) break; sMax = s; }
   for (let s = 0; s > -120; s -= 0.5) { riverPoint(s, 0, rp); if (!insideShape(rp[0], rp[1], 2.5)) break; sMin = s; }
   const span = sMax - sMin;
-  let nb = span > 34 ? (rnd() < 0.45 ? 3 : 2) : span > 20 ? (rnd() < 0.6 ? 2 : 1) : 1;
-  if (rnd() < 0.18) nb = 1;   // sometimes one single chokepoint bridge
-  feat.bw = liq === 'CHASM' ? 1.5 + rnd() * 0.4 : 1.7 + rnd() * 0.5;
-  const lo = sMin + 4, hi = sMax - 4;
+  const nb = span > 24 ? 2 : 1;
+  feat.bw = 3.0 + rnd() * 0.4;   // wide decks (~6-7 m): room for the hero, minions and a crowd
+  const lo = sMin + feat.bw + 3, hi = sMax - feat.bw - 3;
   feat.nb = 0;
   for (let i = 0; i < nb; i++) {
-    const t = nb === 1 ? 0.5 + (rnd() - 0.5) * 0.4 : (i + 0.5) / nb + (rnd() - 0.5) * (0.35 / nb);
+    const t = nb === 1 ? 0.5 + (rnd() - 0.5) * 0.3 : i === 0 ? 0.22 + rnd() * 0.12 : 0.66 + rnd() * 0.12;
     feat.bridgeS[feat.nb++] = lo + (hi - lo) * Math.min(1, Math.max(0, t));
   }
-  // colliders: a chain of circles along the centre line, gapped at the bridges (+ small corner plugs beside each deck)
-  const code = liquidCode(liq), r = feat.hw - 0.15, gap = feat.bw + r;
-  for (let s = sMin - 14; s <= sMax + 14; s += 1.1) {
+  // colliders: a chain of circles along the centre line (radius follows the bank wobble), gapped at the bridges
+  const code = liquidCode(liq);
+  for (let s = sMin - 14; s <= sMax + 14; s += 1.0) {
+    const r = hwAt(s) - 0.15;
     let near = false;
-    for (let i = 0; i < feat.nb; i++) if (Math.abs(s - feat.bridgeS[i]) < gap) { near = true; break; }
+    for (let i = 0; i < feat.nb; i++) if (Math.abs(s - feat.bridgeS[i]) < feat.bw + r) { near = true; break; }
     if (near) continue;
     riverPoint(s, 0, rp);
     colliders.push({ x: rp[0], z: rp[1], r, blocksProjectiles: false, liquid: code });
   }
-  const pr = r * 0.5;
-  for (let i = 0; i < feat.nb; i++) for (const sd of [-1, 1]) for (const dd of [-1, 1]) {
-    riverPoint(feat.bridgeS[i] + sd * (feat.bw + pr + 0.05), dd * (r - pr), rp);
-    colliders.push({ x: rp[0], z: rp[1], r: pr, blocksProjectiles: false, liquid: code });
+  // beside each deck: rows of small circles filling the channel between the deck edge and the chain
+  for (let i = 0; i < feat.nb; i++) for (const sd of [-1, 1]) {
+    const b = feat.bridgeS[i], hw = hwAt(b) - 0.15;
+    for (let ds = feat.bw + 0.6; ds < feat.bw + hw + 1; ds += 0.9) for (let d = -hw + 0.6; d <= hw - 0.6; d += 1.1) {
+      riverPoint(b + sd * ds, d, rp);
+      colliders.push({ x: rp[0], z: rp[1], r: 0.6, blocksProjectiles: false, liquid: code });
+    }
   }
   void riverS;
 }

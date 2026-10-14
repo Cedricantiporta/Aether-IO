@@ -35,6 +35,14 @@ export function skillCost(key: string, lvl: number, dash = false): number {
   return 2 + lvl;
 }
 
+/** Active skills auto-learn (level 1, free) once the class reaches their unlock level. Returns null when nothing changes. */
+export function autoLearnActives(hero: HeroClass, lv: number, skills: SkillLevels): SkillLevels | null {
+  const s = skills as unknown as Record<string, number>;
+  let out: Record<string, number> | null = null;
+  for (const k of ACTIVE_ORDER[hero]) if ((s[k] ?? 0) <= 0 && lv >= unlockLevel(hero, k)) { out = out ?? { ...s }; out[k] = 1; }
+  return out as unknown as SkillLevels | null;
+}
+
 /** Learned skills of a fresh class: skill 1, the class dash, the ultimate and the basic utilities. Everything else 0. */
 export function freshSkills(hero: HeroClass, base: SkillLevels): SkillLevels {
   const s = { ...base } as unknown as Record<string, number>;

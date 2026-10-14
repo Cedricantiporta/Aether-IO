@@ -28,6 +28,8 @@ export const feat = {
   // Signed distance d(x,z) = (p . n) - off - amp * sin(freq * s + ph), s = p . t (t = n rotated +90 deg).
   river: false,
   nx: 0, nz: -1, off: 0, hw: 2.5, amp: 0, freq: 0.1, ph: 0, straight: false,
+  // second meander harmonic + width wobble (uneven banks): hw(s) = hw * (1 + wAmp * sin(wFreq * s + wPh))
+  amp2: 0, freq2: 0.2, ph2: 0, wAmp: 0, wFreq: 0.2, wPh: 0,
   nb: 0, bridgeS: new Float32Array(MAX_BRIDGES), bw: 1.6,
   // ---- lakes: circles (x, z, r). r is the visual water radius; the collider is a bit smaller.
   nLakes: 0, lx: new Float32Array(MAX_LAKES), lz: new Float32Array(MAX_LAKES), lr: new Float32Array(MAX_LAKES),
@@ -46,11 +48,13 @@ export function riverS(x: number, z: number): number { return -x * feat.nz + z *
 /** River signed distance (0 on the centre line; |d| < hw = water). */
 export function riverD(x: number, z: number): number {
   const s = -x * feat.nz + z * feat.nx;
-  return x * feat.nx + z * feat.nz - feat.off - feat.amp * Math.sin(feat.freq * s + feat.ph);
+  return x * feat.nx + z * feat.nz - feat.off - feat.amp * Math.sin(feat.freq * s + feat.ph) - feat.amp2 * Math.sin(feat.freq2 * s + feat.ph2);
 }
+/** River half width at tangent coordinate s (the banks wobble). */
+export function hwAt(s: number): number { return feat.hw * (1 + feat.wAmp * Math.sin(feat.wFreq * s + feat.wPh)); }
 /** Centre-line point of the river at tangent coordinate s, pushed `d` along the normal. */
 export function riverPoint(s: number, d: number, out: [number, number]): void {
-  const c = feat.off + feat.amp * Math.sin(feat.freq * s + feat.ph) + d;
+  const c = feat.off + feat.amp * Math.sin(feat.freq * s + feat.ph) + feat.amp2 * Math.sin(feat.freq2 * s + feat.ph2) + d;
   out[0] = feat.nx * c - feat.nz * s;
   out[1] = feat.nz * c + feat.nx * s;
 }
@@ -63,7 +67,8 @@ export function bridgeAt(s: number, pad = 0): number {
 export function inLiquid(x: number, z: number, pad = 0): boolean {
   if (feat.river) {
     const d = riverD(x, z);
-    if (Math.abs(d) < feat.hw + pad && bridgeAt(riverS(x, z), -pad) < 0) return true;
+    const s = riverS(x, z);
+    if (Math.abs(d) < hwAt(s) + pad && bridgeAt(s, -pad) < 0) return true;
   }
   for (let i = 0; i < feat.nLakes; i++) {
     const dx = x - feat.lx[i], dz = z - feat.lz[i], r = feat.lr[i] + pad;
@@ -80,7 +85,7 @@ export function inLiquid(x: number, z: number, pad = 0): boolean {
 export function routeAround(ex: number, ez: number, tx: number, tz: number, rad: number, out: [number, number]): boolean {
   if (feat.river && feat.nb > 0) {
     const de = riverD(ex, ez), dt = riverD(tx, tz);
-    const hw = feat.hw;
+    const hw = hwAt(riverS(ex, ez));
     if ((de > 0) !== (dt > 0) && Math.abs(dt) > hw * 0.5) {
       const se = riverS(ex, ez), st = riverS(tx, tz);
       // best bridge: shortest detour

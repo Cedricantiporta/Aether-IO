@@ -3,13 +3,13 @@
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
 import { GOLD_SCALE } from './constants';
-import { abilityMana, activeDefs, dashKey } from './abilityDefs';
+import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
 import { STORY, sanitizeStory, type StorySave } from './story';
-import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg } from './classLevels';
+import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
@@ -1698,3 +1698,17 @@ useGameStore.subscribe((s, p) => {
     if (SHARD_RARITIES.some((r) => c[r] !== s.materials[r])) useGameStore.setState({ materials: c });
   }
 });
+
+// ---- active skills auto-learn when the class reaches their unlock level (classLevels.autoLearnActives)
+const autoLearn = (): void => {
+  const st = useGameStore.getState(), cp = st.classProg[st.hero];
+  if (!cp) return;
+  const perm = autoLearnActives(st.hero, cp.lv, cp.skills);
+  const run = autoLearnActives(st.hero, cp.lv, st.skillLevels);
+  if (!perm && !run) return;
+  const learned = ACTIVE_ORDER[st.hero].filter((k) => (perm ?? cp.skills)[k] > 0 && !(cp.skills[k] > 0));
+  useGameStore.setState({ classProg: perm ? { ...st.classProg, [st.hero]: { ...cp, skills: perm } } : st.classProg, ...(run ? { skillLevels: run } : {}) });
+  for (const k of learned) st.addNotification(`New skill learned: ${activeDefs(st.hero).find((a) => a.slot === k)?.name ?? k}`, '#f1d58e', 'SYSTEM');
+};
+autoLearn();
+useGameStore.subscribe((s, p) => { if (s.hero !== p.hero || s.classProg !== p.classProg || s.skillLevels !== p.skillLevels) autoLearn(); });
