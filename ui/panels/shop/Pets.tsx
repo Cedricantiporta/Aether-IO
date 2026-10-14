@@ -1,3 +1,4 @@
+import { useUiStore } from '../../uiStore';
 import React, { useState } from 'react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { PETS_POOL } from '../../../constants';
@@ -37,7 +38,7 @@ const PetBadges: React.FC<{ name: string }> = ({ name }) => {
 export const PetsTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const sales = useGameStore((s) => s.shopSales);
-  const buyItem = useGameStore((s) => s.buyItem);
+  const setBuy = useUiStore((s) => s.setBuyItem);
   const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
   const [tab, setTab] = useState<'SHOP' | 'CARE'>('SHOP');
   const [selId, setSel] = useState(PETS_POOL[0]?.id ?? '');
@@ -64,7 +65,7 @@ export const PetsTab: React.FC = () => {
               <div className="text-[.72rem] text-[var(--text-dim)] leading-snug">{p.description}</div>
             </div>
             {p.summonOnly ? <span className="rpg-badge" style={{ color: '#c58bff' }}>Summon only</span> : (
-              <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => buyItem(p)} style={{ flexDirection: 'column', gap: 0 }} data-testid="pet-buy">
+              <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => setBuy(p, { price, max: 1 })} style={{ flexDirection: 'column', gap: 0 }} data-testid="pet-buy">
                 <span>Buy</span>
                 {sale ? <span className="text-[.6rem] opacity-70 line-through rpg-num">{p.price.toLocaleString()}</span> : null}
                 {price === 0 ? <span className="rpg-num" data-testid="pet-free">Free</span> : <span className="flex items-center gap-1 rpg-num"><CoinGlyph size={14} />{price.toLocaleString()}</span>}

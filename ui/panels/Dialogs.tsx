@@ -43,17 +43,25 @@ export const SellDialog: React.FC = () => {
 
 export const BuyDialog: React.FC = () => {
   const item = useUiStore((s) => s.buyItem);
+  const opts = useUiStore((s) => s.buyOpts);
   const set = useUiStore((s) => s.setBuyItem);
   const buyItem = useGameStore((s) => s.buyItem);
   const gold = useGameStore((s) => s.gold);
   const [amount, setAmount] = useState(1);
-  const afford = item ? Math.max(0, Math.floor(gold / shopPrice(item))) : 0;
+  // every purchase (shops, pets, the wandering merchant) goes through this dialog with a quantity, even when only 1 fits
+  const unit = item ? opts?.price ?? shopPrice(item) : 0;
+  const afford = unit > 0 ? Math.max(0, Math.floor(gold / unit)) : 99;
   const stackable = item ? item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' : false;
-  const cap = Math.max(1, Math.min(stackable ? POTION_STACK_LIMIT : 1, afford));
+  const limit = opts?.max ?? (stackable ? POTION_STACK_LIMIT : 1);
+  const cap = Math.max(1, Math.min(limit, afford));
   useEffect(() => setAmount(1), [item]);
   const a = Math.min(amount, cap);
-  const total = item ? shopPrice(item) * a : 0;
-  const confirm = () => { if (item && gold >= total) { buyItem(item, a); if (!(item.type === 'POTION' || item.type === 'CORE')) set(null); } };
+  const total = unit * a;
+  const confirm = () => {
+    if (!item || gold < total) return;
+    if (opts?.onBuy) { opts.onBuy(a); set(null); return; }
+    buyItem(item, a); if (!(item.type === 'POTION' || item.type === 'CORE')) set(null);
+  };
   return (
     <Modal open={!!item} onClose={() => set(null)} title="How many?" ribbon tone="gold" width="26rem" z={220} onConfirm={confirm}>
       {item && (
@@ -63,10 +71,10 @@ export const BuyDialog: React.FC = () => {
             <div>
               <div className="rpg-title text-lg" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div>
               <div className="text-xs text-[var(--text-dim)] max-w-[12rem]">{item.description}</div>
-              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{shopPrice(item).toLocaleString()} G each</div>
+              <div className="rpg-num text-sm text-[var(--gold-light)] mt-1">{unit === 0 ? 'Free' : `${unit.toLocaleString()} G each`}</div>
             </div>
           </div>
-          {stackable && <QtyStepper value={a} max={cap} onChange={setAmount} />}
+          <QtyStepper value={a} max={cap} onChange={setAmount} />
           <div className="rpg-frame gold w-full text-center py-2">
             <div className="rpg-label !text-[.6rem]">Total cost</div>
             <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><CoinGlyph size={26} />{total.toLocaleString()}</div>

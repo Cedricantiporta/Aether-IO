@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Item, Rarity } from '../types';
 
+export interface BuyOpts { price?: number; max?: number; onBuy?: (n: number) => void }
+
 // Purely local UI state (modals, selections). Game state stays in the main store.
 export interface ConfirmRequest {
   title: string;
@@ -21,6 +23,8 @@ interface UiState {
   settingsOpen: boolean;
   sellItem: Item | null;
   buyItem: Item | null;
+  /** buy dialog overrides (merchant / pets): unit price, how many are left, and the purchase itself */
+  buyOpts: BuyOpts | null;
   selectedItem: Item | null;            // blacksmith selection
   blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT';
   confirm: ConfirmRequest | null;
@@ -37,7 +41,7 @@ interface UiState {
   storyOpen: boolean;
   openStory: (v: boolean) => void;
   setSellItem: (i: Item | null) => void;
-  setBuyItem: (i: Item | null) => void;
+  setBuyItem: (i: Item | null, o?: BuyOpts) => void;
   setSelectedItem: (i: Item | null) => void;
   setBlacksmithTab: (t: UiState['blacksmithTab']) => void;
   askConfirm: (c: ConfirmRequest | null) => void;
@@ -56,7 +60,7 @@ export const useUiStore = create<UiState>((set) => ({
   openQuestLog: (v) => set({ questLogOpen: v }),
   settingsOpen: false,
   sellItem: null,
-  buyItem: null,
+  buyItem: null, buyOpts: null,
   selectedItem: null,
   blacksmithTab: 'UPGRADE',
   confirm: null,
@@ -72,7 +76,7 @@ export const useUiStore = create<UiState>((set) => ({
   storyOpen: false,
   openStory: (v) => set({ storyOpen: v }),
   setSellItem: (i) => set({ sellItem: i }),
-  setBuyItem: (i) => set({ buyItem: i }),
+  setBuyItem: (i, o) => set({ buyItem: i, buyOpts: o ?? null }),
   setSelectedItem: (i) => set({ selectedItem: i }),
   setBlacksmithTab: (t) => set({ blacksmithTab: t, selectedItem: null }),
   askConfirm: (c) => set({ confirm: c }),
