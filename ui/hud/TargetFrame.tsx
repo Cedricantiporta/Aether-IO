@@ -32,7 +32,8 @@ export const TargetFrame: React.FC = () => {
 
   useRaf(() => {
     const e = currentTarget(), s = st.current;
-    const show = !!e && !e.boss && !world.boss.active;
+    const show = !!e && !e.boss && !world.boss.active && world.targetAnchor.on;
+    if (show && root.current) root.current.style.transform = `translate(${Math.round(world.targetAnchor.sx)}px, ${Math.round(world.targetAnchor.sy)}px) translate(-50%, -100%)`;
     if (show !== s.shown) { s.shown = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
     if (!show || !e) { s.id = -1; return; }
     if (s.id !== e.id) {

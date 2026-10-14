@@ -1568,3 +1568,12 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .target-frame.bare { background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .target-frame.bare .tf-name, .target-frame.bare .tf-val, .target-frame.bare .tf-sub { text-shadow: 0 0 2px #000, 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; }
 .target-frame.bare .tf-val { color: #fff; }
+/* floating target plate: a small rectangle (name + hp bar + numbers) right above the targeted monster */
+.target-frame.bare { position: absolute; left: 0; top: 0; width: 7.4rem; padding: 0 0 .35rem; gap: .12rem; pointer-events: none; will-change: transform; }
+.target-frame.bare .tf-top { justify-content: center; min-height: 0; }
+.target-frame.bare .tf-name { font-size: 11px; }
+.target-frame.bare .tf-sub, .target-frame.bare .tf-x { display: none; }
+.target-frame.bare .tf-bar { height: .5rem; border-radius: 1px; border-width: 1px; }
+.target-frame.bare .tf-bot { min-height: 0; justify-content: center; }
+.target-frame.bare .tf-icons { flex: 0; }
+.target-frame.bare .tf-val { font-size: 10px; }

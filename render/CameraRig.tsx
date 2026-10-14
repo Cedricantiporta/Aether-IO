@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { currentTarget } from '../engine/systems/combat';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { world, TOWN_CENTER, CAM_PITCH0 } from '../engine/world';
@@ -109,6 +110,16 @@ export function CameraRig() {
         B.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
         B.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; B.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
       } else B.onScreen = false;
+    }
+
+    // ---- target anchor: the name + hp plate floats just above the targeted enemy's head
+    {
+      const A = world.targetAnchor, e = currentTarget();
+      if (e && !e.boss) {
+        _d.set(e.pos.x, 1.2 + e.scale * 1.5, e.pos.z).project(cam);
+        A.on = _d.z < 1 && Math.abs(_d.x) < 1.1 && Math.abs(_d.y) < 1.1;
+        A.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; A.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      } else A.on = false;
     }
 
     // ---- visible ground rectangle (frustum ∩ y=0) + margin; used for culling, shadows and AI LOD

@@ -94,6 +94,8 @@ function makePlayer(): PlayerRuntime {
 export const CAM_PITCH0 = Math.atan2(32, 22);
 
 export const world = {
+  /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */
+  targetAnchor: { on: false, sx: 0, sy: 0 },
   time: 0,              // total simulated seconds (only advances while PLAYING)
   frame: 0,
   player: makePlayer(),
