@@ -37,7 +37,8 @@ export function CameraRig() {
 
     // ---- play camera target
     let lx = 0, lz = 0;
-    if (!lobby) {
+    // camera lead toward the mouse aim point: opt-in (Settings > Camera follows mouse); touch aims never move it
+    if (!lobby && useGameStore.getState().settings?.cameraLead) {
       const ax = p.aim.x - p.pos.x, az = p.aim.z - p.pos.z;
       const d = Math.hypot(ax, az);
       const k = d > 0.001 ? Math.min(d, 14) / d * 0.22 : 0;

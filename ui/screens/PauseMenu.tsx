@@ -80,6 +80,7 @@ export const SettingsDialog: React.FC = () => {
         {tab === 'GAMEPLAY' && (<>
           {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
           {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
+          {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
           {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
           {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
           {tog('Damage numbers', 'showDamageNumbers')}

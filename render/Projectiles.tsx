@@ -256,6 +256,9 @@ export function Projectiles() {
             place(ims, i, x, y, z, yaw, pitch, 0, 1.15);
             pushHalo(x, y, z, 1.5, 0.5, 1.4, 2.6, 0.75, CELL.GLOW);
             if (emit) FX.add.emit(x - vx * 0.03, y, z - vz * 0.03, 0, 0, 0, 0.25, 0.45, 0.05, 0.6, 1.6, 2.6, 0.8, CELL.STREAK, 0, 0, 0, 0, 0);
+          } else if (p.tint === 10) {   // skeleton bowman: bone arrow with a violet glow
+            place(ims, i, x, y, z, yaw, pitch, 0, 1.0);
+            pushHalo(x, y, z, 1.0, 1.3, 0.7, 2.2, 0.5, CELL.GLOW);
           } else if (p.tint === 3) {   // bow perk: green piercing arrow
             place(ims, i, x, y, z, yaw, pitch, 0, 1.15);
             pushHalo(x, y, z, 1.5, 0.5, 2.4, 0.7, 0.75, CELL.GLOW);

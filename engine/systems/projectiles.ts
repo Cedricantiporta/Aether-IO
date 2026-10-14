@@ -2,8 +2,8 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
-import { spawnMinion, MINION_WARRIOR } from './minions';
-import { weaponPerk, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
+import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER } from './minions';
+import { weaponPerk, raiseEvery, raiseCap, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
 import { world, allocProjectile, allocZone, ARENA_RADIUS } from '../world';
@@ -82,6 +82,7 @@ export function spawnProjectile(
 /** Per-run on-attack proc state. Reset by resetProcs() on startRun. */
 export const procFlags = { stomp: 0, smite: 0 };   // set to skill level by the basic attack; consumed by skills.ts
 let procCount = 0;                       // volleys since the last proc
+let raiseCount = 0;                      // soul bolts since the last wand MAGES / BOWMEN raise
 let archerNext = 0;                      // 0 = fire next, 1 = ice next
 
 let procHaste = 0;
@@ -304,6 +305,15 @@ export function fireBasicAttack(): void {
     const gx = t && t.active ? t.pos.x - dir.x * 1.5 : pl.pos.x + dir.x * 4, gz = t && t.active ? t.pos.z - dir.z * 1.5 : pl.pos.z + dir.z * 4;
     spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, 8 + graveProc + (stats.minionLife || 0));
   }
+  // wand perk Bone Choir / Grave Archers: every Nth soul bolt a ranged skeleton rises behind you (up to a cap)
+  if (kind === 'SOUL_BOLT' && perk && (perk.k === 'MAGES' || perk.k === 'BOWMEN') && ++raiseCount >= raiseEvery(perk.lv)) {
+    const mk = perk.k === 'MAGES' ? MINION_MAGE : MINION_ARCHER;
+    if (minionCount(mk) < raiseCap(perk.k, perk.lv)) {
+      raiseCount = 0;
+      const a = pl.facing + Math.PI + (Math.random() - 0.5) * 1.6;
+      spawnMinion(mk, pl.pos.x + Math.sin(a) * 2.2, pl.pos.z + Math.cos(a) * 2.2, stats.damage * (mk === MINION_MAGE ? 0.9 : 0.6), 12 + (stats.minionLife || 0));
+    }
+  }
   pl.anim.attackT = 1;
   events.emit('shoot', { pos: pl.pos, dir, kind });
 }
@@ -411,7 +421,8 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
 
   const fx = p.effect;
   if (fx && (fx.chance === undefined || Math.random() < fx.chance)) applyStatusFast(e, fx);
-  if (p.kind !== 'PET_BOLT') {
+  const petShot = p.kind === 'PET_BOLT' || (p.kind === 'ARROW' && p.tint === 10);   // pet / minion shots: no hero on-hit procs
+  if (!petShot) {
     const ps = useGameStore.getState().stats;
     if (ps.onHitBurnChance > 0 && Math.random() < ps.onHitBurnChance) { fxTmp.type = 'BURN'; fxTmp.duration = 3; fxTmp.value = Math.max(3, ps.damage * 0.25); applyStatus(e, fxTmp); }
     if (ps.onHitSlowChance > 0 && Math.random() < ps.onHitSlowChance) { fxTmp.type = 'SLOW'; fxTmp.duration = 2.5; fxTmp.value = 0.4; applyStatus(e, fxTmp); }
@@ -446,7 +457,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.crit = crit;
   hitOpts.knockDir = knockTmp;
   hitOpts.knockback = p.knockback;
-  hitOpts.source = p.kind === 'PET_BOLT' ? 'PET' : 'PLAYER';
+  hitOpts.source = petShot ? 'PET' : 'PLAYER';
   if (p.kind === 'BURNING_ARROW' && p.state === 2) fanPatch(p, e.pos.x, e.pos.z);
   damageEnemy(e, dmg, hitOpts);
 

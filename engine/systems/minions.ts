@@ -1,4 +1,5 @@
-// Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts) and the bone golem (big melee, ultimate).
+// Necromancer minions: skeleton warriors (melee), skeleton mages (soul bolts), skeleton bowmen (bone arrows, wand perk)
+// and the bone golem (big melee, ultimate).
 // A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
 // crumbles when its time runs out or its HP is gone. Nearby monsters attack minions before the hero (enemies.ts
 // minionTarget), so the skeletons hold the line.
@@ -12,7 +13,7 @@ import { abilityState } from './abilities';
 import { spawnProjectile } from './projectiles';
 import { weaponPerk, hordeMul } from '../../weaponPerks';
 
-export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2;
+export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHER = 3;
 /** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
 export const MAX_SKELETONS = 4;
 const ids: number[] = [];
@@ -42,7 +43,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   m.rise = 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_MAGE ? 0.3 : 0.5) * (1 + (st.minionLife || 0) * 0.03);
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 : kind === MINION_WARRIOR ? 0.5 : 0.3) * (1 + (st.minionLife || 0) * 0.03);
   events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
@@ -73,7 +74,7 @@ export function nearestMinion(x: number, z: number, r: number): number {
 }
 
 export function clearMinions(): void { for (const m of world.minions) m.active = false; }
-export function minionCount(): number { let n = 0; for (const m of world.minions) if (m.active) n++; return n; }
+export function minionCount(kind = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind)) n++; return n; }
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
@@ -86,8 +87,8 @@ export function updateMinions(dt: number): void {
     if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
-    const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE;
-    const reach = golem ? 2.6 : mage ? 10 : 1.5, speed = golem ? 6 : mage ? 7 : 8.5, cd = (golem ? 1.3 : mage ? 1.1 : 0.85) / haste;
+    const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
+    const reach = golem ? 2.6 : mage ? 10 : bow ? 13 : 1.5, speed = golem ? 6 : mage || bow ? 7.5 : 8.5, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / haste;
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
@@ -125,6 +126,9 @@ export function updateMinions(dt: number): void {
       if (mage) {
         const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 0.8, pierce: 1, radius: 0.9, y: 1.2 });
         if (p) p.tint = 9;
+      } else if (bow) {   // bone arrow (tint 10 = minion arrow: pet damage, violet-white glow)
+        const p = spawnProjectile('ARROW', m.x, m.z, dx / d, dz / d, 32, m.dmg, { life: 0.6, pierce: 1, radius: 0.6, y: 1.4 });
+        if (p) p.tint = 10;
       } else {
         hitO.knockback = golem ? 1.2 : 0.3;
         damageEnemy(e, m.dmg, hitO);

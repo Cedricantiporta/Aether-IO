@@ -424,7 +424,9 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 ### Necromancer (5th class)
 - `HeroClass` 'NECROMANCER' (model: Rogue_Hooded, staff in violet). Basic attack `ProjectileType 'SOUL'` -> kind
   SOUL_BOLT: single target, no pierce, no splash. Starter weapon `wand_n1` Bone Wand; item catalog / starter set /
-  item-set names / talents (Gravelord, Plague, Lich) / perks (HORDE: minion damage + lifetime, BIG) all filled in.
+  item-set names / talents (Gravelord, Plague, Lich) / perks (HORDE: minion damage + lifetime, BIG, MAGES 'Bone Choir'
+  and BOWMEN 'Grave Archers': every Nth soul bolt raises a skeleton mage / bowman up to a cap, projectiles.ts
+  `raiseCount`) all filled in. Minion kind 3 = skeleton bowman (ARROW tint 10 = minion arrow, PET damage source).
 - Minions: `engine/systems/minions.ts` (pool `world.minions`, 16): warrior (melee), mage (PET_BOLT, tint 9), golem.
   They hunt the nearest enemy (enemyGrid), otherwise trail the hero; timed AND killable: HP from hero max HP
   (warrior 0.5x, mage 0.3x, golem 1.6x). Monsters (not bosses / minis) within 12 of a risen minion target it instead
