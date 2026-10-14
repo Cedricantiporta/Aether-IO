@@ -65,12 +65,12 @@ export const Announcer: React.FC = () => {
   }, [cur, clear]);
 
   return (
-    <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ top: '22%', zIndex: 60 }}>
+    <div className="absolute left-0 right-0 flex justify-center pointer-events-none" style={{ top: cur?.kind === 'boss' ? '15%' : '22%', zIndex: 60 }}>
       <AnimatePresence mode="wait">
         {cur && (
           <motion.div key={cur.id} className="flex flex-col items-center"
-            initial={{ scale: cur.kind === 'boss' ? 1.6 : 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -30, scale: .95 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}>{/* banners fade in place: no sliding / scaling over the fight */}
             {cur.kind === 'boss' && (
               <div className="absolute -z-10" style={{ width: '72vw', height: '5.4rem', top: '-1.1rem', background: 'linear-gradient(90deg, transparent, rgba(110,10,10,.55) 22%, rgba(110,10,10,.55) 78%, transparent)', filter: 'blur(2px)' }} />
             )}
