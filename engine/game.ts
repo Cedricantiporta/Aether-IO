@@ -1,3 +1,4 @@
+import { PLAZA } from './townData';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
 // No React in here. Called from the store (start/stop) and render/Scene (update).
@@ -138,7 +139,9 @@ export function enterVillage(): void {
   generateMap();
   placeVillageNodes();
   resetSystems();
-  world.player.pos.set(0, 0, 2);
+  world.player.pos.set(PLAZA.x, 0, PLAZA.z);
+  world.player.facing = 0;                       // face south, towards the town gate
+  world.camera.yaw = Math.PI;                    // camera behind the hero, looking at the entrance
   useGameStore.getState().rollShopSales();
   villageReady = true;
   events.emit('runEnd', {});
@@ -150,6 +153,7 @@ export function startRun(): void {
   world.enemyGrid.clear();
   resetSystems();
   events.emit('runStart', {});
+  world.camera.yaw = 0;
   startRunRooms();
 }
 

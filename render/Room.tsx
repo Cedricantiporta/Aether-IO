@@ -259,7 +259,7 @@ function PortalLabel({ i }: { i: number }) {
   const p = world.room.portals[i];
   const l = portalLabel(p.plan, world.room.biome);
   return (
-    <Html position={[0, 3.9, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+    <Html position={[0, 3.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: l.color }} data-testid={`portal-${i}`}>
         <span className="pi">{ICONS[l.icon]}</span>
         <span className="pt">{l.title}<small>{l.sub}</small></span>

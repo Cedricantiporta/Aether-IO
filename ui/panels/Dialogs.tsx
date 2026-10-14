@@ -111,7 +111,7 @@ export const SummonReveal: React.FC = () => {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => set(null)}>
       <motion.div className="absolute inset-0 pointer-events-none" initial={{ opacity: .9 }} animate={{ opacity: 0 }} transition={{ duration: .6 }} style={{ background: `radial-gradient(circle, ${RARITY_COLOR[best.rarity]}, transparent 65%)` }} />
       <div className="flex flex-col items-center gap-6">
-        <div className="rpg-ribbon" data-tone="purple" style={{ fontSize: '1.6rem' }}>Summoned</div>
+        <div className="k-title" style={{ fontSize: '2rem' }}><i /><span>Summoned</span><i /></div>
         <div className="flex flex-wrap justify-center gap-5" style={{ maxWidth: many ? '46rem' : undefined, perspective: '1000px' }}>
           {results.map((it, i) => (
             <motion.div key={i} className="relative flex flex-col items-center gap-2"

@@ -83,15 +83,24 @@ export function installInput(): () => void {
   const onUi = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('.pe');
   // right mouse: cancels a held skill indicator, otherwise drag = orbit the camera
   const rmb = { on: false, x: 0, y: 0 };
+  // left mouse: a drag that starts on the scene (not UI) also orbits once it moves past a few pixels; a click still selects
+  const lmb = { down: false, drag: false, x: 0, y: 0, sx: 0, sy: 0 };
   const onMouseDown = (e: MouseEvent) => {
     if (onUi(e)) return; /* UI panels never fire skills */
-    if (e.button === 0) inp.mouseDown = true;
-    else if (e.button === 2) {
+    if (e.button === 0) {
+      inp.mouseDown = true;
+      if (orbitAllowed() && !aimState.active) { lmb.down = true; lmb.drag = false; lmb.x = lmb.sx = e.clientX; lmb.y = lmb.sy = e.clientY; }
+    } else if (e.button === 2) {
       if (aimState.active) { cancelAim(); inp.cancelAim = true; }
       else if (orbitAllowed()) { rmb.on = true; rmb.x = e.clientX; rmb.y = e.clientY; }
     }
   };
   const onMouseMove = (e: MouseEvent) => {
+    if (lmb.down) {
+      if (!lmb.drag && Math.hypot(e.clientX - lmb.sx, e.clientY - lmb.sy) > 6) lmb.drag = true;
+      if (lmb.drag) orbit(e.clientX - lmb.x, e.clientY - lmb.y);
+      lmb.x = e.clientX; lmb.y = e.clientY;
+    }
     if (!rmb.on) return;
     orbit(e.clientX - rmb.x, e.clientY - rmb.y);
     rmb.x = e.clientX; rmb.y = e.clientY;
@@ -135,7 +144,7 @@ export function installInput(): () => void {
   };
   const onPtrCancel = (e: PointerEvent) => { delete downs[e.pointerId]; };
   const onContext = (e: Event) => { if (aimState.active || !onUi(e)) e.preventDefault(); };
-  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; else if (e.button === 2) rmb.on = false; };
+  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; else if (e.button === 2) rmb.on = false; if (e.button === 0) lmb.down = false; };
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -153,7 +162,7 @@ export function installInput(): () => void {
   window.addEventListener('pointermove', onTouchMove);
   window.addEventListener('pointerup', onTouchUp);
   window.addEventListener('pointercancel', onTouchUp);
-  const onBlur = () => { rmb.on = false; touches.clear(); };
+  const onBlur = () => { rmb.on = false; lmb.down = false; touches.clear(); };
   window.addEventListener('blur', onBlur);
 
   return () => {

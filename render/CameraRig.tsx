@@ -47,6 +47,7 @@ export function CameraRig() {
     _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
     // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
     const C = world.camera;
+    if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
     const R = CAM_DIST0 * s.zoom * s.dist, hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);

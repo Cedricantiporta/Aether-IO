@@ -7,7 +7,7 @@ import { RARITY_ACCENT, RARITY_TIER } from './weapons';
 export interface GearSet { helmet: string; armor: string; gloves: string; boots: string; accessory: string }
 
 let _solid: Material | null = null, _glow: Material | null = null;
-const solid = () => (_solid ||= litMat({ roughness: 0.5, metalness: 0.45 }));
+const solid = () => (_solid ||= litMat({ roughness: 0.42, metalness: 0.5, flatShading: false }));   // smooth: no faceted 'blocky' look
 const glow = () => (_glow ||= new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.7, 1.7, 1.7) }));
 
 const METAL = ['#7a5230', '#aeb6c2', '#8a8fa8', '#e2b94a', '#d8c070'];   // by tier: leather, iron, steel-violet, gold, royal gold
@@ -21,15 +21,15 @@ function helmet(t: number): Pair {
   const { body: b, glow: g } = mk();
   const m = METAL[t], a = TRIM(t);
   if (t === 0) { // leather cap
-    b.sph(0.29, [0, 0.3, -0.01], m, [1, 0.8, 1.05], 8);
+    b.sph(0.29, [0, 0.3, -0.01], m, [1, 0.8, 1.05], 16);
     b.box(0.5, 0.05, 0.12, [0, 0.27, 0.27], '#5a3a20');
   } else if (t === 1) { // iron helm + nose guard
-    b.sph(0.3, [0, 0.3, -0.01], m, [1, 0.88, 1.07], 8);
-    b.cyl(0.31, 0.31, 0.06, 10, [0, 0.27, 0], a);
+    b.sph(0.3, [0, 0.3, -0.01], m, [1, 0.88, 1.07], 16);
+    b.cyl(0.31, 0.31, 0.06, 18, [0, 0.27, 0], a);
     b.box(0.05, 0.2, 0.04, [0, 0.2, 0.3], m);
   } else if (t === 2) { // horned helm
-    b.sph(0.3, [0, 0.3, -0.01], m, [1, 0.9, 1.07], 8);
-    b.cyl(0.32, 0.32, 0.07, 10, [0, 0.26, 0], a);
+    b.sph(0.3, [0, 0.3, -0.01], m, [1, 0.9, 1.07], 16);
+    b.cyl(0.32, 0.32, 0.07, 18, [0, 0.26, 0], a);
     b.box(0.05, 0.22, 0.04, [0, 0.2, 0.3], m);
     for (const s of [-1, 1]) {
       b.cone(0.07, 0.34, 6, [s * 0.34, 0.42, 0], '#efe6d0', [0, 0, -s * 0.9]);
@@ -56,38 +56,41 @@ function armorChest(t: number): Pair {
   const { body: b, glow: g } = mk();
   const m = METAL[t], a = TRIM(t);
   // chest plate (front + back) and shoulder pads
-  b.box(0.5, 0.42, 0.36, [0, 0.0, 0.0], m, [0, 0, 0]);
-  b.box(0.52, 0.06, 0.38, [0, -0.2, 0], a);
+  // rounded cuirass: tapered elliptic barrel + domed collar + belt ring (was a plain box)
+  b.cyl(0.255, 0.215, 0.38, 18, [0, -0.01, 0], m, [0, 0, 0], [1, 1, 0.74]);
+  b.sph(0.255, [0, 0.18, 0], m, [1, 0.42, 0.74], 18);
+  b.torus(0.222, 0.032, [0, -0.2, 0], a, [Math.PI / 2, 0, 0], [1, 0.74, 1], 20);
+  b.torus(0.2, 0.018, [0, 0.27, 0.02], a, [Math.PI / 2, 0, 0], [1, 0.7, 1], 18);
   for (const s of [-1, 1]) {
-    b.sph(0.17 + t * 0.012, [s * 0.34, 0.2, 0], m, [1.15, 0.7, 1.1], 7);
-    b.torus(0.15, 0.025, [s * 0.34, 0.2, 0], a, [Math.PI / 2, 0, 0], [1.1, 1.1, 1], 10);
+    b.sph(0.17 + t * 0.012, [s * 0.32, 0.2, 0], m, [1.15, 0.7, 1.1], 14);
+    b.torus(0.15, 0.025, [s * 0.32, 0.18, 0], a, [Math.PI / 2, 0, 0], [1.1, 1.1, 1], 16);
     if (t >= 2) b.cone(0.045, 0.2 + t * 0.03, 5, [s * 0.4, 0.33, 0], m, [0, 0, -s * 0.5]);
     if (t >= 3) g.sph(0.04, [s * 0.34, 0.26, 0.14], a, 1, 5);
   }
-  if (t >= 1) b.box(0.08, 0.34, 0.02, [0, 0.0, 0.19], a);
+  if (t >= 1) b.cyl(0.03, 0.03, 0.3, 8, [0, 0.0, 0.185], a);
   if (t >= 3) g.sph(0.06, [0, 0.08, 0.2], a, 1, 6);
   return { body: b, glow: g };
 }
 
 function bracer(t: number): Pair {
   const { body: b, glow: g } = mk();
-  b.cyl(0.075 + t * 0.005, 0.065, 0.15, 8, [0, 0.12, 0], METAL[t]);
-  b.cyl(0.082 + t * 0.005, 0.082 + t * 0.005, 0.03, 8, [0, 0.2, 0], TRIM(t));
+  b.cyl(0.075 + t * 0.005, 0.065, 0.15, 14, [0, 0.12, 0], METAL[t]);
+  b.cyl(0.082 + t * 0.005, 0.082 + t * 0.005, 0.03, 14, [0, 0.2, 0], TRIM(t));
   if (t >= 2) g.sph(0.03, [0, 0.12, 0.075], TRIM(t), 1, 5);
   return { body: b, glow: g };
 }
 
 function greave(t: number): Pair {
   const { body: b, glow: g } = mk();
-  b.cyl(0.1 + t * 0.006, 0.085, 0.17, 8, [0, 0.09, 0], METAL[t]);
-  b.cyl(0.108 + t * 0.006, 0.108 + t * 0.006, 0.035, 8, [0, 0.19, 0], TRIM(t));
+  b.cyl(0.1 + t * 0.006, 0.085, 0.17, 14, [0, 0.09, 0], METAL[t]);
+  b.cyl(0.108 + t * 0.006, 0.108 + t * 0.006, 0.035, 14, [0, 0.19, 0], TRIM(t));
   if (t >= 2) g.sph(0.035, [0, 0.12, 0.1], TRIM(t), 1, 5);
   return { body: b, glow: g };
 }
 
 function bootCap(t: number): Pair {
   const { body: b } = mk();
-  b.sph(0.1, [0, 0.07, 0], METAL[t], [1, 1.1, 0.95], 6);
+  b.sph(0.1, [0, 0.07, 0], METAL[t], [1, 1.1, 0.95], 12);
   return { body: b, glow: new GB() };
 }
 
