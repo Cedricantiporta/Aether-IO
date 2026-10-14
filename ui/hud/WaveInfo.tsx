@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { Panel, Ribbon } from '../components/Frame';
 import { SkullGlyph } from '../components/SkillIcons';
 import { ROOMS_PER_BIOME, BIOMES, BOSS_INDEX, PREBOSS_INDEX, biomeOf, loopOf, shownDepth } from '../../engine/roomDefs';
-import { descend, finishRunVictory, towerState } from '../../engine/systems/director';
+import { bossKeyState, descend, finishRunVictory, towerState } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
@@ -41,14 +41,14 @@ export const RoomPlaque: React.FC = () => {
     const r = world.room, d = world.director;
     if (!r.active) return;
     const text = subText();
-    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}`;
+    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}|${bossKeyState.has}`;
     if (key !== sig.current) {
       sig.current = key;
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
       if (name.current) name.current.textContent = tower ? 'Endless Tower' : throne ? 'The Undying Throne' : biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
       if (depth.current) depth.current.textContent = tower ? `Floor ${towerState.floor}` : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
-      if (sub.current) sub.current.textContent = text;
+      if (sub.current) sub.current.textContent = text + (bossKeyState.has && r.plan.type !== 'BOSS' ? '  ·  Boss Key ✓' : '');
     }
     const done = d.phase === 'CLEARED' || d.phase === 'BIOME_DONE';
     const pk = `${r.biome}|${r.index}|${done ? 1 : 0}`;

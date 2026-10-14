@@ -92,6 +92,8 @@ const rm = () => world.room;
 /** Biome in which a merchant door was already offered (-1 = none this run). */
 let merchantBiome = -1, fountainBiome = -1, shrineBiome = -1;
 let crystalAt = -1;
+/** Boss key of the current biome: found in a room after the champion (depth 10); opens a boss door early. */
+export const bossKeyState = { has: false };
 // final fight (after the Void boss) and endless tower state
 let finalFight = false, endingDone = false;
 let towerFloor = 0;
@@ -108,7 +110,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent();
+  resetRoomEvent(); bossKeyState.has = false;
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -178,6 +180,7 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
+  if (idx === 0) bossKeyState.has = false;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
   if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS') p = { type: 'CAMP', reward: 'NONE' };
@@ -527,7 +530,7 @@ function openPortals(): void {
     events.emit('portalsOpen', {});
     return;
   }
-  const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome, shrineBiome !== biome, index + 1 === crystalAt);
+  const n = nextChoices(biome, index, choices, merchantBiome !== biome, fountainBiome !== biome, shrineBiome !== biome, index + 1 === crystalAt, bossKeyState.has && !finalFight);
   if (choices.some((c) => c.type === 'SHRINE')) shrineBiome = biome;       // the optional challenge: once per biome
   if (choices.some((c) => c.type === 'MERCHANT')) merchantBiome = biome;   // the travelling merchant shows up once per biome
   if (choices.some((c) => c.type === 'FOUNTAIN')) fountainBiome = biome;   // ...and so does a fountain
@@ -553,6 +556,15 @@ function onCleared(): void {
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
   roomEventCleared();
+  // the boss key: rooms from the champion on may hold it (more often the deeper you go; chests are the best bet)
+  if (runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
+    const ch = plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : 0.2 + 0.08 * (index - PREBOSS_INDEX);
+    if (Math.random() < ch) {
+      bossKeyState.has = true;
+      st.addNotification('You found the Boss Key! A boss door will open.', '#ffd24a', 'SYSTEM');
+      events.emit('floatText', { pos: world.player.pos, text: 'BOSS KEY!', color: 0xffd24a, scale: 1.2, dy: 2.6 });
+    }
+  }
   events.emit('waveClear', { wave: depth, fast: roomT < 40 });
   if (runInfo.mode === 'TOWER') towerCleared();
   const t = plan.type;

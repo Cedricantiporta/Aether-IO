@@ -157,11 +157,13 @@ export const TWIST_DESC: Record<RoomTwist, string> = {
  * The 1..3 rooms the exits of room `index` lead to (never repeated types). Room 0 of a biome is always a skirmish,
  * the room before the boss is a fountain and/or merchant, and the last normal room leads to the boss.
  */
-export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true, fountainOk = true, shrineOk = true, crystal = false): number {
+export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true, fountainOk = true, shrineOk = true, crystal = false, bossKey = false): number {
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
   if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'ITEM', preboss: true }); return 1; }
+  // the boss key was found: a boss door opens beside the usual ones (fight early, or keep exploring)
+  if (bossKey && next > PREBOSS_INDEX) { const n = nextChoices(biome, index, out, merchantOk, fountainOk, shrineOk, crystal, false); if (n >= 3) out.pop(); out.unshift({ type: 'BOSS', reward: 'NONE' }); return out.length; }
   if (next === REST_INDEX) {
     if (fountainOk) out.push({ type: 'FOUNTAIN', reward: 'NONE' });
     if (merchantOk && (!fountainOk || Math.random() < 0.55)) out.push({ type: 'MERCHANT', reward: 'NONE' });
