@@ -1,5 +1,5 @@
 // Canvas-text sprites. Town labels use a classic serif (Cinzel from the page, Georgia / serif fallback) inside a dark
-// MMORPG name plate; the legacy rounded style stays for item pickups etc.
+// MMORPG style: thin dark outline, no rounded cartoon lettering.
 import { CanvasTexture, LinearFilter, SRGBColorSpace, SpriteMaterial } from 'three';
 
 interface Lab { mat: SpriteMaterial; aspect: number }
@@ -67,18 +67,27 @@ export function labelMaterial(text: string, color = '#ffffff', opts: Opts = {}):
     l = { mat: new SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }), aspect: w / h };
     if (!fontsReady) fontWaiters.push(() => { drawPlate(cv, text, fs, opts.plate!, w, h); t.needsUpdate = true; });
   } else {
+    // classic serif (Cinzel) with a thin dark outline: no chunky rounded 'cartoon' lettering
     const fs = opts.plate ? Math.round(size * (opts.plate === 'mini' ? 0.8 : 0.92)) : size;
-    const font = `800 ${fs}px "Segoe UI", system-ui, Roboto, Arial, sans-serif`;
+    const font = `700 ${fs}px ${SERIF}`;
     ctx.font = font;
-    w = Math.ceil(ctx.measureText(text).width) + 40; h = fs + 30;
+    w = Math.ceil(ctx.measureText(text).width * (fontsReady ? 1 : 1.15)) + 40; h = fs + 30;
     cv.width = w; cv.height = h;
-    ctx.font = font;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    if (opts.bg) { ctx.fillStyle = opts.bg; const r = h / 2; ctx.beginPath(); ctx.moveTo(r, 2); ctx.arcTo(w - 2, 2, w - 2, h - 2, r); ctx.arcTo(w - 2, h - 2, 2, h - 2, r); ctx.arcTo(2, h - 2, 2, 2, r); ctx.arcTo(2, 2, w - 2, 2, r); ctx.fill(); }
-    ctx.lineWidth = Math.max(7, fs * 0.17); ctx.strokeStyle = opts.stroke || 'rgba(15,10,20,0.92)'; ctx.strokeText(text, w / 2, h / 2 + 2);
-    ctx.fillStyle = color; ctx.fillText(text, w / 2, h / 2 + 2);
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.font = font;
+      const tw = ctx.measureText(text).width, k = tw > w - 24 ? (w - 24) / tw : 1;
+      ctx.save(); ctx.translate(w / 2, h / 2 + 2); ctx.scale(k, 1);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'miter'; ctx.miterLimit = 2;
+      if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(-w / 2 / k + 2, -h / 2 + 1, (w - 4) / k, h - 4); }
+      ctx.lineWidth = Math.max(4, fs * 0.11); ctx.strokeStyle = opts.stroke || 'rgba(12,9,6,0.9)'; ctx.strokeText(text, 0, 0);
+      ctx.fillStyle = color; ctx.fillText(text, 0, 0);
+      ctx.restore();
+    };
+    draw();
     const t = new CanvasTexture(cv); t.colorSpace = SRGBColorSpace; t.minFilter = LinearFilter; t.generateMipmaps = false;
     l = { mat: new SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }), aspect: w / h };
+    if (!fontsReady) fontWaiters.push(() => { draw(); t.needsUpdate = true; });
   }
   cache.set(key, l);
   return l;
