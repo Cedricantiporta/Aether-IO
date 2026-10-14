@@ -72,7 +72,6 @@ export const RoomPlaque: React.FC = () => {
         <path d="M20 8 H380 L394 22 L388 40 L398 58 L380 96 H20 L2 58 L12 40 L6 22Z" fill="none" stroke="url(#wp-g)" strokeWidth="2.6" strokeLinejoin="round" />
         <path d="M30 15 H370 L382 28 L378 82 L366 90 H34 L22 82 L18 28Z" fill="none" stroke="#c8962e" strokeOpacity=".35" strokeWidth="1" />
       </svg>
-      <span className="crest"><SkullGlyph size={36} /></span>
       <div className="wtitle"><span ref={name}>Meadow</span></div>
       <div className="wdepth"><span ref={depth}>Depth 1</span></div>
       <div className="pips" aria-hidden>
