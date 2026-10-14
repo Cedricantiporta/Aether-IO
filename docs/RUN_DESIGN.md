@@ -51,3 +51,24 @@ small procedurally generated rooms grouped into biomes, each biome ending in a b
 ## Removed / changed
 * Siege cutscene, respite timer, shops closing, 45 s wave timer, "X/Y" quota, calling waves early.
 * Wave reward cards → become room rewards (portal choice) instead of every wave.
+
+## Proposal: making adventure runs less repetitive (not built yet)
+Goal: not every room = "kill everything, pick a portal". Five layers, cheapest first:
+
+1. **Room objectives** (rolled onto COMBAT rooms, shown on the portal label):
+   - *Defend the Totem*: a crystal in the centre; survive 30 s of waves while enemies attack it. Reward scales with its HP left.
+   - *Treasure Goblin*: a loot goblin flees toward an exit and vanishes after ~15 s. Catch it = big gold/gems; the room's mobs keep coming.
+   - *Rescue*: a caged villager; break the cage while mobs try to finish them. Rescued people move into town (new shopkeeper
+     stock, a tech discount, a side quest) - runs feed the town.
+   - *Rune puzzle*: step on 3 runes in the right order (hint carved on a pillar) to open a vault; wrong order spawns an ambush.
+   - *Hunt*: one marked elite roams; kill it before the room's timer ends for a bounty card.
+2. **Room twists** (random modifier, shown on entry): Darkness (small light radius, enemies glow), Flooded (slow + lightning
+   arcs through water), Cursed Ground (healing off, +loot), Collapsing floor (tiles fall over time), Wind (projectiles drift).
+3. **Run events between rooms**: a wandering NPC choice (pay HP for a relic, gamble gold, free a spirit for a pet buff),
+   a "cursed portal" (harder next room for a guaranteed epic), a rival adventurer who duels you once per biome.
+4. **Path choice with a map**: show the next 2-3 rooms ahead as a small node map (Hades/Slay the Spire), so routing becomes
+   a decision (elite vs. shop vs. objective room), not just picking a portal blind.
+5. **Biome-specific set pieces**: one per biome, e.g. Meadow stampede (dodge boars across the field), Grove living maze,
+   Mire rising water, Frost avalanche escape, Cinders lava bridge run, Void gravity flips.
+
+Suggested first build: objectives (Defend / Goblin / Rescue) + room twists, then the node map.
