@@ -8,6 +8,7 @@ import { world, allocZone } from './world';
 import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf } from './roomDefs';
+import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint } from './roomShape';
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger. */
 export function roomRadius(type: RoomType, seed: number): number {
@@ -21,16 +22,12 @@ export function roomRadius(type: RoomType, seed: number): number {
   }
 }
 
-/** Where the hero stands on arrival, and where the room's single station (fountain, merchant, chest, altar) sits. */
-export const startPos = (R: number): [number, number] => [0, R * 0.55];
-export const stationPos = (R: number): [number, number] => [0, -R * 0.1];
-/** Exit portal slot i of n, on an arc in the far (north) half of the room. */
-export function portalSlot(i: number, n: number, R: number, out: [number, number]): void {
-  const off = n === 1 ? 0 : n === 2 ? (i === 0 ? -0.6 : 0.6) : (i - 1) * 0.9;
-  const d = R - 4.5;
-  out[0] = Math.sin(off) * d;
-  out[1] = -Math.cos(off) * d;
-}
+/** Where the hero stands on arrival, and where the room's single station (fountain, merchant, chest, altar) sits (shape-aware; R kept for API stability). */
+const tmpA: [number, number] = [0, 0];
+export const startPos = (_R?: number): [number, number] => { startPoint(tmpA); return [tmpA[0], tmpA[1]]; };
+export const stationPos = (_R?: number): [number, number] => { stationPoint(tmpA); return [tmpA[0], tmpA[1]]; };
+/** Exit portal slot i of n, across the front (far) end of the room. */
+export function portalSlot(i: number, n: number, _R: number, out: [number, number]): void { portalPoint(i, n, out); }
 
 interface KindSpec { r: (rnd: () => number, s: number) => number; s: [number, number]; blocks: boolean }
 const SPEC: Record<string, KindSpec> = {
@@ -48,6 +45,7 @@ const SPEC: Record<string, KindSpec> = {
 const tmpPortal: [number, number] = [0, 0];
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number): void {
+  buildShape(type, R, seed);
   const def = biomeOf(biome);
   const rnd = mulberry32(seed);
   const rand = (a: number, b: number) => a + rnd() * (b - a);
@@ -64,6 +62,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   // keep-clear spots: arrival, station, all three exit slots
   const keep: { x: number; z: number; r: number }[] = [];
   const [sx, sz] = startPos(R);
+  const [stx, stz] = stationPos(R);
   keep.push({ x: sx, z: sz, r: 4.5 });
   if (!boss) { const [cx, cz] = stationPos(R); keep.push({ x: cx, z: cz, r: 5 }); }
   for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
@@ -75,30 +74,39 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
 
   // ---- walls ring (blocking) + decorative outer ring
   const pickKind = (list: ObstacleKind[]): ObstacleKind => list[Math.floor(rnd() * list.length)];
-  const ring1 = R + 1.6;
-  const n1 = Math.ceil((Math.PI * 2 * ring1) / 2.6);
-  const off1 = rnd() * Math.PI * 2;
-  for (let i = 0; i < n1; i++) {
-    const a = off1 + (i / n1) * Math.PI * 2 + (rnd() - 0.5) * 0.04;
+  const P = perimeter();
+  const bp: [number, number] = [0, 0];
+  /** Walks the outline (arc length), placing `n` evenly spaced props `off` outside it. */
+  const ringWalk = (n: number, off: number, jit: number, place: (x: number, z: number) => void): void => {
+    const o0 = rnd() * Math.PI * 2, step = P / n, dth = 0.004;
+    let acc = 0, th = o0, k = 0;
+    for (let a = 0; a < Math.PI * 2 + 0.1 && k < n; a += dth) {
+      const r = shapeAt(th), dr = (shapeAt(th + 0.01) - shapeAt(th - 0.01)) / 0.02;
+      acc += Math.sqrt(r * r + dr * dr) * dth;
+      th += dth;
+      if (acc >= (k + 0.5) * step) {
+        boundaryPoint(th + (rnd() - 0.5) * jit, off + (rnd() - 0.5) * 0.6, bp);
+        place(bp[0], bp[1]);
+        k++;
+      }
+    }
+  };
+  const n1 = Math.ceil(P / Math.max(2.6, P / 70));
+  ringWalk(n1, 1.6, 0.03, (x, z) => {
     let kind = pickKind(def.border);
     if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
     const sp = SPEC[kind] ?? SPEC.ROCK;
     const s = rand(sp.s[0], sp.s[1]);
-    const d = ring1 + (rnd() - 0.5) * 0.6;
-    add(kind, Math.cos(a) * d, Math.sin(a) * d, Math.max(1.5, sp.r(rnd, s)), s, true);
-  }
-  const ring2 = R + 5;
-  const n2 = Math.ceil((Math.PI * 2 * ring2) / 5.2);
-  const off2 = rnd() * Math.PI * 2;
-  for (let i = 0; i < n2; i++) {
-    const a = off2 + (i / n2) * Math.PI * 2 + (rnd() - 0.5) * 0.1;
+    add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true);
+  });
+  const n2 = Math.ceil(P / Math.max(5.2, P / 34));
+  ringWalk(n2, 5, 0.1, (x, z) => {
     let kind = pickKind(def.border);
     if (kind === 'STUMP' || kind === 'LOG') kind = 'ROCK';
     const sp = SPEC[kind] ?? SPEC.ROCK;
     const s = rand(sp.s[0], sp.s[1]) * 1.25;
-    const d = ring2 + (rnd() - 0.5) * 2.2;
-    add(kind, Math.cos(a) * d, Math.sin(a) * d, sp.r(rnd, s), s, true, false);
-  }
+    add(kind, x, z, sp.r(rnd, s), s, true, false);
+  });
 
   // ---- interior obstacles
   const count = boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14)) : 5;
@@ -117,8 +125,9 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       const sp = SPEC[kind] ?? SPEC.ROCK;
       const s = rand(sp.s[0], sp.s[1]);
       const r = sp.r(rnd, s);
-      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 3 - r);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3 - r);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (!insideShape(x, z, 3 + r)) continue;
       if (blockedSpot(x, z, r, 1.2)) continue;
       add(kind, x, z, r, s, sp.blocks);
       placed++;
@@ -131,8 +140,9 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const want = type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
       const kind = def.crates[Math.floor(rnd() * def.crates.length)];
-      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 3);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (!insideShape(x, z, 3)) continue;
       if (blockedSpot(x, z, 1.1, 0.8)) continue;
       let ok = true;
       for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
@@ -142,7 +152,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
 
   world.obstacles = obstacles;
   world.obstaclesVersion++;
-  installRoom(colliders, R + 1);
+  installRoom(colliders, shape.baseR + 1);
   commitCrates(crateList, rnd);
 
   // ---- permanent environmental hazards (swamp puddles, ember gas vents)
@@ -151,9 +161,10 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const n = Math.round(rand(1, 2.4));
     for (let t = 0; t < 60 && hz.length < n; t++) {
       const r = def.hazard === 'PUDDLE' ? rand(3.6, 5.5) : rand(3, 4.2);
-      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 5 - r);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 5 - r);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (Math.hypot(x - sx, z - sz) < r + 6 || Math.hypot(x, z + R * 0.1) < r + 5) continue;
+      if (!insideShape(x, z, 5 + r)) continue;
+      if (Math.hypot(x - sx, z - sz) < r + 6 || Math.hypot(x - stx, z - stz) < r + 5) continue;
       if (hz.some((h) => Math.hypot(x - h.x, z - h.z) < h.r + r + 1)) continue;
       hz.push({ x, z, r });
     }

@@ -5,6 +5,7 @@
 // the REGIONS stay in recognisable places.
 // ============================================================================
 import { Vector3 } from 'three';
+import { shapeLimit } from './roomShape';
 import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TRAINER_POS } from './world';
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
@@ -118,12 +119,12 @@ export function islandRadius(angle: number): number {
 
 /** Walkable limit radius at (x,z): islandRadius(angle) - margin. Cheap early-out for callers: only needed when |p| > 80. */
 export function edgeLimit(x: number, z: number, margin = 2): number {
-  return bounds.room ? bounds.r - margin : islandRadius(Math.atan2(z, x)) - margin;
+  return bounds.room ? shapeLimit(x, z) - margin : islandRadius(Math.atan2(z, x)) - margin;
 }
 
 /**
- * Walkable bounds. Island (town): irregular edge, callers only test beyond `checkR`. Run room: a disc of radius `r`
- * around 0,0 (every position is tested). Written by installRoom() / generateMap().
+ * Walkable bounds. Island (town): irregular edge, callers only test beyond `checkR`. Run room: the star-convex outline in
+ * engine/roomShape (every position is tested; `r` is its mean radius). Written by installRoom() / generateMap().
  */
 export const bounds = { room: false, r: 0, checkR: 70, checkR2: 80 * 80 };
 

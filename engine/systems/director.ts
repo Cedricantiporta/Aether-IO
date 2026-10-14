@@ -19,6 +19,7 @@ import { DIFFICULTY_MODS } from '../../constants';
 import {
   BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, type BiomeDef,
 } from '../roomDefs';
+import { shape, insideShape } from '../roomShape';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
 import { spawnPickup, petCollect } from './pickups';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
@@ -307,10 +308,11 @@ function placeMarker(kind: EnemyKind, x: number, z: number, elite: boolean, dur:
 }
 
 function pickAnchor(minPlayerDist: number): boolean {
-  const R = world.room.radius, pp = world.player.pos;
-  for (let t = 0; t < 30; t++) {
-    const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (R - 4);
+  const pp = world.player.pos;
+  for (let t = 0; t < 40; t++) {
+    const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (shape.maxR - 4);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (!insideShape(x, z, 4)) continue;
     if ((x - pp.x) ** 2 + (z - pp.z) ** 2 < minPlayerDist * minPlayerDist) continue;
     if (!isSpawnable(x, z)) continue;
     anchorX = x; anchorZ = z;

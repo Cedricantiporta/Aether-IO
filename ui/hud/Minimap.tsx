@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS } from '../../engine/world';
+import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
 import { useRaf } from '../hooks/useRaf';
@@ -15,7 +16,7 @@ export const Minimap: React.FC = () => {
     const ctx = c.getContext('2d'); if (!ctx) return;
     const px = SIZE * DPR, cx = px / 2, R = cx - 3 * DPR;
     const room = world.room.active;
-    const rad = room ? world.room.radius + 1 : ARENA_RADIUS;
+    const rad = room ? shape.maxR : ARENA_RADIUS;
     const k = R / (rad + 4);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, px, px);
@@ -25,7 +26,17 @@ export const Minimap: React.FC = () => {
     ctx.fillStyle = 'rgba(38,52,48,.55)'; ctx.fillRect(0, 0, px, px);
     // arena edge
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
-    ctx.beginPath(); ctx.arc(cx, cx, rad * k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath();
+    if (room) {
+      // run room: the star-convex outline from the shape table (theta_i = -PI + i*TAU/N)
+      for (let i = 0; i <= SHAPE_N; i += 4) {
+        const th = -Math.PI + (i * Math.PI * 2) / SHAPE_N, rr = shape.table[i] * k;
+        const x = cx + Math.cos(th) * rr, y = cx + Math.sin(th) * rr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    } else ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
+    ctx.stroke(); ctx.setLineDash([]);
     // obstacles
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     const obs = world.obstacles;

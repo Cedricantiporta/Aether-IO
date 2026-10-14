@@ -10,6 +10,7 @@ import {
 } from 'three';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from 'lucide-react';
 import { world } from '../engine/world';
+import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { biomeOf, portalLabel } from '../engine/roomDefs';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
@@ -24,7 +25,7 @@ const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
 function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: number; boss: boolean }) {
   const { geo, mat, tufts } = useMemo(() => {
     const def = biomeOf(biome);
-    const S = 2 * (R + 44), seg = 112;
+    const S = 2 * (shape.maxR + 44), seg = 128;
     const g = new PlaneGeometry(S, S, seg, seg);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
@@ -35,20 +36,22 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       const r = Math.hypot(x, z);
+      // signed distance-ish to the walkable outline (0 at the old disc edge R), so rim / outside tint follow the shape
+      const u = r - (shapeLimit(x, z) - 1);
       const n1 = fbm(x * 0.06 + so, z * 0.06 - so, 3), n2 = vnoise(x * 0.9 + so, z * 0.9);
       out.copy(g0).lerp(g1, sstep(0.3, 0.72, n1)).multiplyScalar(0.9 + n2 * 0.2);
       // worn patches of the second tone
       out.lerp(g1, sstep(0.62, 0.78, fbm(x * 0.14 - so, z * 0.14 + so, 2)) * 0.35);
       // stone rim just inside the walls
-      out.lerp(rim, sstep(R - 1.4, R - 0.2, r) * 0.55);
+      out.lerp(rim, sstep(-1.4, -0.2, u) * 0.55);
       // boss arena: a faint rune circle
       if (boss) {
-        const rr = Math.abs(r - R * 0.62);
+        const rr = Math.abs(r - (shapeLimit(x, z) - 1) * 0.62);
         out.lerp(g1, sstep(0.9, 0.2, rr) * 0.6).multiplyScalar(1 + sstep(0.5, 0.1, rr) * 0.25);
         out.multiplyScalar(1 + sstep(R * 0.2, 0, r) * 0.2);
       }
       // floor beyond the walls
-      const e = sstep(R + 0.2, R + 3.2, r);
+      const e = sstep(0.2, 3.2, u);
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
       col[i * 3] = out.r; col[i * 3 + 1] = out.g; col[i * 3 + 2] = out.b;
     }
@@ -69,7 +72,7 @@ function RoomGround({ biome, R, seed, boss }: { biome: number; R: number; seed: 
     const o = new Object3D();
     const cc = new Color();
     for (let i = 0; i < N; i++) {
-      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (R - 1);
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shapeLimit(Math.cos(a), Math.sin(a)) - 2);
       o.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
       o.rotation.set(0, rnd() * 6.28, 0);
       const s = 0.6 + rnd() * 1.3;
