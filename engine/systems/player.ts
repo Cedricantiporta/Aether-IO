@@ -307,7 +307,21 @@ export function updatePlayerVillage(dt: number): void {
   a.hurtT = tickDown(a.hurtT, dt * 3);
   a.attackT = tickDown(a.attackT, dt * 4);
   a.castT = tickDown(a.castT, dt * 3);
-  a.dashing = false;
+  // skills + class dash work in town too (free: mana stays full; no enemies to hit)
+  p.cd.q = tickDown(p.cd.q, dt); p.cd.e = tickDown(p.cd.e, dt); p.cd.s3 = tickDown(p.cd.s3, dt); p.cd.s4 = tickDown(p.cd.s4, dt);
+  if (p.maxDashCharges < 1) p.maxDashCharges = 1;
+  if (p.dashCdMax <= 0) p.dashCdMax = Math.max(0.6, st.stats.dashCooldown);
+  if (p.dashCharges < p.maxDashCharges) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashCharges++; p.dashCd = p.dashCharges < p.maxDashCharges ? p.dashCdMax : 0; } }
+  updateSkillInput();
+  updateAbilities(dt);
+  a.dashing = p.dashT > 0;
+  if (abilityState.leapT > 0) return;
+  if (p.dashT > 0) {
+    p.dashT -= dt;
+    p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
+    resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+    return;
+  }
   let mx = 0, mz = 0;
   if (k.KeyW || k.ArrowUp) mz -= 1;
   if (k.KeyS || k.ArrowDown) mz += 1;

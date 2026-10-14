@@ -160,7 +160,11 @@ export function updateGame(rawDt: number): void {
   if (status === GameStatus.MENU) {
     if (!villageReady) enterVillage();
     const vdt = Math.min(rawDt, MAX_DT);
-    if (vdt > 0 && useUiStore.getState().titleDone) updateVillage(vdt);
+    if (vdt > 0 && useUiStore.getState().titleDone) {
+      updateVillage(vdt);
+      // skill / dash effects cast in town (harmless: no enemies)
+      updateProjectiles(vdt); updateSkills(vdt); updateZones(vdt); updateCombatFx(vdt);
+    }
     clearPressed();
     return;
   }
