@@ -96,6 +96,7 @@ function bump(type: NpcObjective['type'], amount: number, hit?: (o: NpcObjective
 
 /** Talking to an NPC: finishes TALK objectives that point at them. */
 export function talkedTo(name: string): void { bump('TALK', 1, (o) => o.target === name); }
+events.on('hub', (e) => bump('ACTION', e.n, (o) => o.target === e.kind));
 /** Farm / town actions (milk a cow, take an egg, find the cat). */
 export function interacted(id: string): void { bump('INTERACT', 1, (o) => o.target === id); }
 /** True while an accepted quest still needs this action. */

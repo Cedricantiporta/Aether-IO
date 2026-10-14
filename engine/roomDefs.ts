@@ -94,7 +94,7 @@ export const biomeOf = (biome: number): BiomeDef => BIOMES[biome % BIOMES.length
 export const loopOf = (biome: number): number => Math.floor(biome / BIOMES.length);
 
 export const TYPE_NAME: Record<RoomType, string> = {
-  COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', CRYSTAL: 'Crystal Cavern', BOSS: 'Boss',
+  COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', CRYSTAL: 'Crystal Cavern', BOSS: 'Boss', CAMP: 'Camp',
 };
 export const REWARD_NAME: Record<RewardKind, string> = {
   CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Shards', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
@@ -104,6 +104,7 @@ export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub
   switch (plan.type) {
     case 'FOUNTAIN': return { title: 'Fountain', sub: 'Heal 40% + a blessing', icon: 'fountain', color: '#5fd6ff' };
     case 'MERCHANT': return { title: 'Merchant', sub: 'Travelling shop', icon: 'merchant', color: '#f2c14e' };
+    case 'CAMP': return { title: 'Camp', sub: 'Storage + training', icon: 'fountain', color: '#9bd26a' };
     case 'BOSS': return { title: 'Boss', sub: biomeOf(biome).name, icon: 'boss', color: '#ef6a5e' };
     case 'TREASURE': return { title: 'Treasure', sub: 'Guarded chest', icon: 'chest', color: '#f2c14e' };
     case 'SHRINE': return { title: 'Shrine', sub: 'Optional challenge', icon: 'shrine', color: '#c084fc' };

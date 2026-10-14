@@ -320,3 +320,20 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Auto-path from the outer north/east ring routes around the wall to the forecourt first.
 - Labels: plain outlined bold sans text (no plates, `labelMaterial` plate branch retired) and no bobbing on building titles.
 - Skill unlocks: skill 2 at Lv 5, skill 3 at Lv 10.
+
+### Camps, shop intro quests, attack timing, enemy spacing
+- CAMP room type: the first room of every biome after the Meadow (adventure, not the final fight) is a quiet camp.
+  - No enemies, 2 crates, no harvest or hazards; it clears at once.
+  - Camp Storage (node 30) opens the town WAREHOUSE panel; the Training Post (node 31) opens SKILLS.
+  - Props (tent, campfire with light, storage pile, dummy + weapon rack) are drawn by `CampProps` in render/Room.tsx at `campPos`
+    (director).
+- The Skills menu button and the K hotkey are gone: skills are learned at the Skill Trainer (town) or a camp Training Post.
+- Mira's intro chain uses the new NPC objective type `ACTION`, counted by `hub` events, which now also include
+  'buy_potion' / 'store' / 'learn':
+  - Stock Up: buy a potion.
+  - Safe Keeping: store an item.
+  - Train Hard: learn a skill.
+  - Sharpen Up: upgrade gear.
+- The swing timer keeps counting while walking, and auto-chase stops inside the firing range (range − 0.4 vs check range + 0.8), so the
+  hero swings the moment it arrives.
+- Enemies are pushed out to `radius + 0.55` from the hero (no stacking inside it); melee reach is still enough to strike.

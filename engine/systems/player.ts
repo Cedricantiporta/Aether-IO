@@ -272,7 +272,7 @@ export function updatePlayer(dt: number): void {
     if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, chaseR);
     if (e) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > range - 0.6 + e.radius && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; autoChase = true; }
+      if (d > range - 0.4 && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; autoChase = true; }   // (stops inside the firing check's range)
     }
   }
 
@@ -322,6 +322,8 @@ export function updatePlayer(dt: number): void {
   // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.
   // Holding F (or the touch ATTACK button) = manual attack: fires while moving (80% rate) and even with no target in range.
   if (stunned) { p.fireT = Math.max(p.fireT, 0.1); return; }
+  // the swing timer keeps counting down while walking, so arriving at a target swings at once (no idle second)
+  p.fireT = Math.max(-0.05, p.fireT - dt);
   const manual = !!world.input.keys.KeyF;
   const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
   const archerMoving = (st.hero === 'ARCHER' || manual) && moving && !busy;
@@ -332,8 +334,7 @@ export function updatePlayer(dt: number): void {
   const range = ATTACK_RANGE[st.hero] ?? 18;
   const lkd = lockedEnemy();
   const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
-  if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range)) { p.fireT = Math.max(p.fireT, 0.05); return; }
-  p.fireT -= dt;
+  if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
     const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste * (archerMoving ? 0.8 : 1));

@@ -160,7 +160,6 @@ export const MenuButtons: React.FC = () => {
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} />
       <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
-      <MenuBtn icon={<SkillGlyph />} label="Skills" hint="K" onClick={() => openShop('SKILLS')} dot={skillDot} />
       <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
       <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={togglePause} />
     </div>

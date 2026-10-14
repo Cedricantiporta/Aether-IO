@@ -94,7 +94,9 @@ let crystalAt = -1;
 // final fight (after the Void boss) and endless tower state
 let finalFight = false, endingDone = false;
 let towerFloor = 0;
-export const towerState = { floor: 0 };   // read by the HUD
+export const towerState = { floor: 0 };
+/** Camp room layout (storage chest pile left of the fire, training post right), set on room entry. */
+export const campPos = { storage: [0, 0] as [number, number], trainer: [0, 0] as [number, number], fire: [0, 0] as [number, number] };   // read by the HUD
 const FINAL_BIOME = BIOMES.length - 1;
 const towerBiome = (f: number): number => Math.floor((f - 1) / 5) % BIOMES.length;
 function towerPlan(f: number): RoomPlan {
@@ -175,6 +177,8 @@ function clearTransient(): void {
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
+  // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
+  if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS') p = { type: 'CAMP', reward: 'NONE' };
   biome = b; index = idx; plan = p;
   depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' ? 1 : 0);
   const d = world.director, r = world.room;
@@ -190,6 +194,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   for (const po of r.portals) po.active = false;
   for (const m of r.markers) m.active = false;
   const [cx, cz] = stationPos(R);
+  campPos.storage[0] = cx - 6; campPos.storage[1] = cz; campPos.trainer[0] = cx + 6; campPos.trainer[1] = cz; campPos.fire[0] = cx; campPos.fire[1] = cz + 1;
   const kind = p.type === 'FOUNTAIN' ? 'FOUNTAIN' : p.type === 'MERCHANT' ? 'MERCHANT' : p.type === 'TREASURE' ? 'CHEST' : p.type === 'SHRINE' ? 'ALTAR' : 'NONE';
   r.station.kind = kind; r.station.x = cx; r.station.z = cz; r.station.used = false; r.station.ready = kind === 'FOUNTAIN' || kind === 'MERCHANT' || kind === 'ALTAR';
 
@@ -655,6 +660,10 @@ function scanNearby(): void {
       const dist = q(c.pos.x, c.pos.z);
       if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
     }
+    if (r.plan.type === 'CAMP') {
+      const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
+      const dt2 = q(campPos.trainer[0], campPos.trainer[1]); if (dt2 < 12) pushNearby('Train', 'Training Post', 31, dt2);
+    }
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
       const dist = q(s.x, s.z);
@@ -681,6 +690,8 @@ export function interactRoom(it: Interactable): void {
     }
     return;
   }
+  if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
+  if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
   if (it.node >= 100) {   // harvest stroke (held E repeats it every 0.3 s)
     const c = world.crates[it.node - 100];
     if (c && c.active && harvestCd <= 0 && world.player.alive) {

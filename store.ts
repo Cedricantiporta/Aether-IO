@@ -893,6 +893,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const perm = { ...cp.skills, [skill]: Math.min(MAX_SKILL_LEVEL, (cp.skills[skill] ?? 0) + 1) };   // learned for good
       set({ skillLevels: { ...s.skillLevels, [skill]: lvl + 1 }, skillPoints: s.skillPoints - cost,
         classProg: { ...s.classProg, [s.hero]: { ...cp, skills: perm, sp: s.skillPoints - cost } } });
+      events.emit('hub', { kind: 'learn', n: 1 });
     },
 
     endRun: (summary) => {
@@ -1111,6 +1112,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!wh) { notify('Warehouse is full!', 'red', 'WARNING'); return false; }
       const inv = s.inventory.slice(); inv.splice(idx, 1);
       set({ inventory: inv, warehouse: wh });
+      events.emit('hub', { kind: 'store', n: 1 });
       return true;
     },
     withdrawItem: (id) => {
@@ -1254,6 +1256,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       notify(`Bought ${item.name}`, 'white', 'SYSTEM');
       events.emit('hub', { kind: 'buy', n: quantity });
+      if (item.type === 'POTION') events.emit('hub', { kind: 'buy_potion', n: quantity });
       return true;
     },
 

@@ -1,6 +1,7 @@
 // The run room: biome-tinted ground disc, walls ring (via Props: the same instanced scenery path as the town), the room's
 // single station (fountain / merchant / chest / altar), exit portals with reward labels and telegraphed spawn markers.
 // Only the current room exists; it is rebuilt when world.room.version changes (during the black fade). No per-frame allocations.
+import { campPos } from '../engine/systems/director';
 import React, { Suspense, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -254,6 +255,50 @@ function stationGeos() {
   };
 }
 
+/** Camp room props: tent + campfire in the middle, storage (crates + chest) on the left, training post (dummy + rack) right. */
+function CampProps() {
+  const geos = useMemo(() => {
+    const b = new GB([0.75, 1.08]), g = new GB([1, 1]);
+    // tent behind the fire
+    b.cone(2.6, 3.2, 4, [0, 1.6, -3.2], '#c9a070', [0, Math.PI / 4, 0]); b.box(1.1, 1.6, 0.1, [0, 0.8, -1.4], '#5a3a1e');
+    // campfire
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; b.box(0.9, 0.18, 0.2, [Math.cos(a) * 0.35, 0.1, 1 + Math.sin(a) * 0.35], '#5a3a1e', [0, -a, 0.25]); }
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; b.ico(0.22, [Math.cos(a) * 0.85, 0.1, 1 + Math.sin(a) * 0.85], '#7a766e', [1, 0.6, 1], 0); }
+    g.cone(0.4, 1.0, 6, [0, 0.6, 1], '#ffb040'); g.cone(0.22, 0.7, 5, [0.05, 0.55, 1.05], '#fff0a0');
+    // storage (left): crate stack + chest
+    const s = new GB([0.75, 1.08]);
+    s.box(1.1, 1.1, 1.1, [0, 0.55, 0], '#8a6a44'); s.box(1.0, 1.0, 1.0, [1.15, 0.5, 0.2], '#7a5a38'); s.box(0.9, 0.9, 0.9, [0.5, 1.55, 0.1], '#9a7a50');
+    s.box(1.4, 0.7, 0.9, [-1.1, 0.35, 0.9], '#6a4a2a'); s.box(1.45, 0.25, 0.95, [-1.1, 0.82, 0.9], '#8a6a3a'); s.box(0.2, 0.25, 0.1, [-1.1, 0.55, 1.36], '#e9b949');
+    // training post (right): dummy + weapon rack
+    const t = new GB([0.75, 1.08]);
+    t.cyl(0.1, 0.1, 1.9, 6, [0, 0.95, 0], '#6a4a2a'); t.cyl(0.42, 0.36, 0.9, 8, [0, 1.25, 0], '#d9c08a'); t.sph(0.3, [0, 2.0, 0], '#d9c08a', 1, 7); t.box(1.5, 0.14, 0.14, [0, 1.5, 0], '#6a4a2a');
+    t.box(0.12, 1.6, 0.12, [1.4, 0.8, -0.4], '#5a3a1e'); t.box(0.12, 1.6, 0.12, [2.6, 0.8, -0.4], '#5a3a1e'); t.box(1.4, 0.12, 0.12, [2.0, 1.4, -0.4], '#5a3a1e');
+    for (let i = 0; i < 3; i++) t.box(0.08, 1.4, 0.08, [1.6 + i * 0.4, 0.75, -0.25], '#c4cad4', [0.25, 0, 0]);
+    return { base: b.build(), fire: g.build(), storage: s.build(), train: t.build() };
+  }, []);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.4, 1.0) }) }), []);
+  const root = useRef<Group>(null!), fire = useRef<Mesh>(null!), st = useRef<Group>(null!), tr = useRef<Group>(null!);
+  useFrame(({ clock }) => {
+    const on = world.room.active && world.room.plan.type === 'CAMP';
+    if (root.current) root.current.visible = on;
+    if (!on) return;
+    root.current.position.set(campPos.fire[0], 0, campPos.fire[1] - 1);
+    st.current.position.set(campPos.storage[0] - campPos.fire[0], 0, 0);
+    tr.current.position.set(campPos.trainer[0] - campPos.fire[0], 0, 0);
+    const k = 1 + Math.sin(clock.elapsedTime * 13) * 0.08 + Math.sin(clock.elapsedTime * 7.3) * 0.06;
+    fire.current.scale.set(k, k * 1.1, k);
+  });
+  return (
+    <group ref={root} visible={false}>
+      <mesh geometry={geos.base} material={mats.lit} castShadow receiveShadow />
+      <mesh ref={fire} geometry={geos.fire} material={mats.glow} position={[0, 0, 0]} />
+      <pointLight position={[0, 1.4, 1]} color="#ffa040" intensity={8} distance={10} decay={1.6} />
+      <group ref={st}><mesh geometry={geos.storage} material={mats.lit} castShadow receiveShadow /></group>
+      <group ref={tr}><mesh geometry={geos.train} material={mats.lit} castShadow receiveShadow /></group>
+    </group>
+  );
+}
+
 function Stations() {
   const geos = useMemo(stationGeos, []);
   const mats = useMemo(() => ({
@@ -461,6 +506,7 @@ export function Room({ q }: { q: QualityCfg }) {
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} />)}
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : def.propTint} /></Suspense>
       <Stations />
+      <CampProps />
       <Portals />
       <PortalGuides />
       <SpawnMarkers />

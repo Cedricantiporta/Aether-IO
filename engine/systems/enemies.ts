@@ -855,6 +855,11 @@ function updateEnemy(e: Enemy): void {
 
   // ---- collisions
   if (!e.boss && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
+  // never inside the hero: monsters stop a little short of its body (they still reach it with their strikes)
+  if (world.player.alive && e.kind !== 'BOSS_HYDRA_HEAD') {
+    const hx = e.pos.x - world.player.pos.x, hz = e.pos.z - world.player.pos.z, minD = e.radius + 0.55, hd2 = hx * hx + hz * hz;
+    if (hd2 < minD * minD) { const hd = Math.sqrt(hd2) || 1e-3; e.pos.x = world.player.pos.x + (hx / hd) * minD; e.pos.z = world.player.pos.z + (hz / hd) * minD; }
+  }
   if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD') {
     const pushed = pushOutOfObstacles(e);
     if (pushed && e.slamT > 0 && Math.abs(e.knock.x) + Math.abs(e.knock.z) > 10) wallSlam(e);

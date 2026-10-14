@@ -16,7 +16,8 @@ export type NpcObjectiveType =
   | 'COLLECT_LOOT'                                             // pick up loot items (target: loot ids, optional room type)
   | 'DELIVER'                                                  // bring loot items to the NPC; they are removed on turn-in
   | 'TALK'                                                     // speak to another NPC (target: its name)
-  | 'INTERACT';                                                // a farm / town action (target: 'milk' | 'egg' | 'cat')
+  | 'INTERACT'                                                 // a farm / town action (target: 'milk' | 'egg' | 'cat')
+  | 'ACTION';                                                  // a shop / town action (target: 'buy_potion' | 'store' | 'learn' | 'upgrade' | 'summon')
 
 export interface NpcObjective {
   type: NpcObjectiveType;
@@ -128,6 +129,39 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     done: ['He says it is a sunstone?! I knew it! Here, you can have some of my sweets money.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
+  },
+  // ---- Mira's introductions: one quest per shop / service, each asks you to actually use it
+  {
+    id: 'mira_potions', giver: 'Mira', title: 'Stock Up', summary: 'Buy a potion at the Potion Shop',
+    intro: ['Before you go anywhere, guard: potions. The Potion Shop is on the south street, west of the plaza.', 'Buy one, just one, and you will thank me later.'],
+    progress: 'The Potion Shop is on the south street, west side. Buy any potion.',
+    done: ['Good! Z drinks a health potion, X a mana potion. Keep a few on you.'],
+    objective: { type: 'ACTION', target: 'buy_potion', count: 1 },
+    reward: { gold: 300, items: [{ id: 'potion_hp', qty: 1 }] },
+  },
+  {
+    id: 'mira_storage', giver: 'Mira', title: 'Safe Keeping', summary: 'Store an item in the Warehouse', after: 'mira_potions',
+    intro: ['Your bag fills up fast out there. The Warehouse on the south street keeps a hundred things safe.', 'Put one item in it, so you know how it works.'],
+    progress: 'Open the Warehouse and drag (or click) an item from your bag into it.',
+    done: ['There you go. Camps beyond the first biome keep a storage chest that reaches the same warehouse, too.'],
+    objective: { type: 'ACTION', target: 'store', count: 1 },
+    reward: { gold: 400 },
+  },
+  {
+    id: 'mira_training', giver: 'Mira', title: 'Train Hard', summary: 'Learn or upgrade a skill at the Skill Trainer', after: 'mira_storage',
+    intro: ['Skill points come with every level. The trainer by the north street turns them into real skills.', 'Spend a point at the Skill Trainer. The camps out in the wilds have a training post as well.'],
+    progress: 'Talk to the Skill Trainer on the north street and spend a skill point.',
+    done: ['Feel that? New skills unlock as your level climbs: skill 2 at level 5, skill 3 at level 10.'],
+    objective: { type: 'ACTION', target: 'learn', count: 1 },
+    reward: { gold: 500, gems: 5 },
+  },
+  {
+    id: 'mira_forge', giver: 'Mira', title: 'Sharpen Up', summary: 'Upgrade a piece of gear at the Blacksmith', after: 'mira_training',
+    intro: ['Last lesson: gear. The Blacksmith at the east end of the south street can make it stronger.', 'Upgrade any piece once. It costs gold and an Upgrade Core.'],
+    progress: 'Bring gold and an Upgrade Core to the Blacksmith and upgrade one item.',
+    done: ['Now you are ready. Go make the King proud.'],
+    objective: { type: 'ACTION', target: 'upgrade', count: 1 },
+    reward: { gold: 800, items: [{ id: 'upgrade_core', qty: 2 }] },
   },
   // ---- the farm outside the gate (interaction quests)
   {

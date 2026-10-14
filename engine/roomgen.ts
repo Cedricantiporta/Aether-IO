@@ -18,6 +18,7 @@ export function roomRadius(type: RoomType, seed: number): number {
   switch (type) {
     case 'BOSS': return 30;
     case 'FOUNTAIN': case 'MERCHANT': case 'SHRINE': return 19 + r * 3;
+    case 'CAMP': return 23;
     case 'TREASURE': return 22 + r * 3;
     case 'ELITE': case 'MINIBOSS': return 25 + r * 3;
     default: return 24 + r * 4;
@@ -149,7 +150,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const crateList: { kind: CrateKind; x: number; z: number }[] = [];
   if (!boss) {
     const cave = type === 'CRYSTAL';   // crystal cavern: a field of harvestable crystals (+ some ore), nothing else
-    const want = tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
+    const want = type === 'CAMP' ? 2 : tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
       const kind: CrateKind = cave ? (rnd() < 0.6 ? 'CRYSTAL' : pickHarvest(rnd())) : def.crates[Math.floor(rnd() * def.crates.length)];
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
@@ -161,7 +162,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       if (ok) crateList.push({ kind, x, z });
     }
     // harvest nodes (hold E): usually 1 per room, sometimes 2; kind decides the look and the yield
-    if (!cave && !tower) {
+    if (!cave && !tower && type !== 'CAMP') {
       const extra = rnd() < 0.75 ? 1 : 2;
       for (let t = 0, added = 0; t < 120 && added < extra; t++) {
         const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
@@ -179,7 +180,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   commitCrates(crateList, rnd);
 
   // ---- permanent environmental hazards (swamp puddles, ember gas vents)
-  if (def.hazard && !tower && !boss && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
+  if (def.hazard && !tower && !boss && type !== 'CAMP' && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
     const hz: { x: number; z: number; r: number }[] = [];
     const n = Math.round(rand(1, 2.4));
     for (let t = 0; t < 60 && hz.length < n; t++) {

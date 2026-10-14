@@ -357,7 +357,7 @@ export interface DirectorState {
 }
 
 // ------------------------------------------------------------------- rooms --
-export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS';   // CRYSTAL: harvest-only cavern (no enemies)
+export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS' | 'CAMP';   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
 export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
 export interface RoomPlan { type: RoomType; reward: RewardKind; preboss?: boolean }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
