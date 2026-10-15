@@ -59,7 +59,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
   NECROMANCER: [
-    { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13.5,
+    { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 16.2,   // (owner: +20%, was 13.5)
       desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. The cooldown only starts once the last skeleton has fallen, and every summon slain costs you 9% of your max HP. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (1 / 2 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
       per: (lv) => `${[1, 2, 3, 4, 5][Math.min(5, Math.max(1, lv)) - 1]} skeleton${lv > 1 ? 's' : ''} (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
