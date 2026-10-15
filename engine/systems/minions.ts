@@ -39,10 +39,10 @@ let ultHold = 0;   // the ult cooldown frozen while the ult army stands
  *  src 1 = Raise Dead, 2 = Army of the Dead (their cooldowns only start once all of those minions are gone). */
 export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0, dropped = false): void {
   const M = world.minions, mm = minionMul();
-  // too many warriors: the oldest one crumbles to make room
-  if (kind === MINION_WARRIOR) {
+  // too many skeletons: the oldest one crumbles to make room
+  if (kind !== MINION_GOLEM) {   // (skeletons of every kind share the cap)
     let n = 0, oldest = -1, ol = 1e9;
-    for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind === MINION_WARRIOR) { n++; if (m.born < ol) { ol = m.born; oldest = i; } } }
+    for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.kind !== MINION_GOLEM) { n++; if (m.born < ol) { ol = m.born; oldest = i; } } }
     if (n >= MAX_SKELETONS && oldest >= 0) crumble(M[oldest]);
   }
   const m = M.find((o) => !o.active);

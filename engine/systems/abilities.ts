@@ -2,7 +2,7 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
-import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MAX_SKELETONS, PERMANENT } from './minions';
+import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT } from './minions';
 import { unlockLevel } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
@@ -445,11 +445,13 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
 
   // ---- NECROMANCER
   if (hero === 'NECROMANCER') {
-    if (slot === 'q') {   // RAISE DEAD: skeleton warriors claw out of the ground around you
+    if (slot === 'q') {   // RAISE DEAD: skeletons (warriors, archers or mages) claw out of the ground around you
       const n = Math.min(MAX_SKELETONS, 1 + Math.ceil(lv / 2) + (stats.minionCount | 0));   // +1 per 2 levels (2 / 3 / 4)
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
-        spawnMinion(MINION_WARRIOR, p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, PERMANENT, 1);
+        // each skeleton rises as a random warrior, archer or mage
+        const r3 = Math.random(), kind = r3 < 1 / 3 ? MINION_WARRIOR : r3 < 2 / 3 ? MINION_ARCHER : MINION_MAGE;
+        spawnMinion(kind, p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, PERMANENT, 1);
       }
       announce('RAISE_DEAD');
     } else if (slot === 'e') {   // SOUL STEP: blink, bone shards burst where you stood
