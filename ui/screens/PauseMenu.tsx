@@ -94,6 +94,7 @@ export const SettingsDialog: React.FC = () => {
         {tab === 'GAMEPLAY' && (<>
           <Sec title="Combat">
             {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
+            {tog('Hard mode', 'hardMode', 'Enemies have +40% HP, deal +35% damage and come in greater numbers; loot is 25% better. Takes effect from your next run.')}
             {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
             {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}

@@ -457,7 +457,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
-              difficulty: 'NORMAL',   // (difficulty selection removed: every save plays Normal)
+              difficulty: p.settings?.hardMode ? 'HARD' : 'NORMAL',   // (Hard mode is a Settings toggle)
               attrs: sanitizeAttrs(p.attrs),
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
@@ -1087,6 +1087,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ---- run modes: adventure (+ Ascension) / endless tower
     startMode: (mode: RunMode) => {
       runInfo.mode = mode;
+      set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
       get().startGame();
     },

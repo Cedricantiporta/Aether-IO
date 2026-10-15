@@ -50,6 +50,8 @@ export interface Settings {
   batterySaver: boolean;  // FPS 30 + LOW quality
   cameraLead: boolean;    // desktop: the camera drifts toward the mouse cursor (off by default)
   aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)
+  /** Hard mode (Settings): runs started while it is on use the HARD difficulty (tougher, more enemies, better loot). */
+  hardMode?: boolean;
   autoSkills: boolean;    // auto-cast skills 1/2/3 + ult at the auto-target (dash stays manual)
   autoLootGear: 'OFF' | 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';   // lowest gear rarity that flies in by itself (default RARE)
   autoLootMaterials: boolean;  // monster loot, shards, potions fly in at any rarity
