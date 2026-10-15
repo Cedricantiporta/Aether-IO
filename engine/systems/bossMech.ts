@@ -44,8 +44,13 @@ const RAIN_CD = [12, 10, 8.5];      // by phase
 const QUAKE_CD = 9;
 const HEAL_CD = 26, HEAL_T = 3, HEAL_RATE = 0.025, HEAL_BREAK = 0.06;
 const CRUSH_CD = 3.6, CRUSH_R = 3.4, CRUSH_WIND = 0.65, CRUSH_RANGE = 8;
-const WARD_MAX_T = 35;
-const BARRIER_CD = [20, 17, 14], BARRIER_HP = [0.06, 0.08, 0.1];   // by phase: seconds between barriers, shield as a share of max hp
+const WARD_MAX_T = 25;   // (balance pass: was 35 s of a boss that can't be hurt)
+// by phase: seconds between barriers, shield as a share of max hp (balance pass: was [20, 17, 14] s / [6, 8, 10]%; low-damage
+// builds stalled at 5-25% boss hp behind back-to-back barriers)
+const BARRIER_CD = [22, 20, 18], BARRIER_HP = [0.05, 0.06, 0.07];
+// damage of the shared layer as multiples of the boss's power (balance pass: 1.1 / 1.3 / 1.6 -> 0.8 / 1.0 / 1.25; this layer
+// sits on top of every boss's own kit and dealt a big share of the hits that killed level-8 heroes at Elderroot)
+const RAIN_DMG = 0.8, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
 
 // ---- strike pool (delayed AoE hits we resolve ourselves so they can carry crowd control and hit minions)
 const MAX_STRIKES = 64;
@@ -92,7 +97,7 @@ function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
 
 /** Cataclysm: a wide rain of impacts over the arena, aimed bursts on the player and their heading. */
 function rain(e: Enemy, m: Mech): void {
-  const p = world.player, n = 12 + 4 * e.phase, R = arenaR(), dmg = pwr(e) * 1.1;
+  const p = world.player, n = 12 + 4 * e.phase, R = arenaR(), dmg = pwr(e) * RAIN_DMG;
   events.emit('floatText', { pos: e.pos, text: m.rainWord, color: m.rainColor, scale: 1.2, dy: 5 });
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R;
@@ -106,12 +111,12 @@ function rain(e: Enemy, m: Mech): void {
 
 /** Quake: a big ring around the boss carrying its signature crowd control. */
 function quake(e: Enemy, m: Mech): void {
-  strike(e.pos.x, e.pos.z, e.radius + 6 + e.phase * 1.5, 1.15, pwr(e) * 1.3, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a);
+  strike(e.pos.x, e.pos.z, e.radius + 6 + e.phase * 1.5, 1.15, pwr(e) * QUAKE_DMG, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a);
 }
 
 /** Ward: immune until the crystals (or the summoned guard) fall. */
 function raiseWard(e: Enemy, m: Mech): void {
-  S.wards.length = 0; S.wardOn = true; S.wardT = 0;
+  S.wards.length = 0; S.wardOn = true; S.wardT = 0; S.healT = 0;   // (a mend in progress stops: it can't be interrupted behind the ward)
   const R = arenaR() * 0.7, n = 3 + e.phase;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
@@ -119,8 +124,8 @@ function raiseWard(e: Enemy, m: Mech): void {
     else tv.set(e.pos.x + Math.cos(a) * 4, 0, e.pos.z + Math.sin(a) * 4);
     const w = spawnEnemy(m.ward === 'CRYSTALS' ? 'BOSS_CRYSTAL' : m.guard!, tv);
     if (!w) continue;
-    if (m.ward === 'CRYSTALS') { w.maxHp = Math.round(e.maxHp * 0.045); w.hp = w.maxHp; }
-    else { w.maxHp = Math.round(w.maxHp * 1.5); w.hp = w.maxHp; }
+    if (m.ward === 'CRYSTALS') { w.maxHp = Math.round(e.maxHp * 0.035); w.hp = w.maxHp; }   // (balance pass: 4.5% -> 3.5% of the boss each)
+    else { w.maxHp = Math.round(w.maxHp * 1.2); w.hp = w.maxHp; }                            // (guards x1.5 -> x1.2 hp)
     S.wards.push(w.id);
   }
   e.shield = 1;   // draws the shield bubble (damage is refused in combat.damageEnemy via bossWarded)
@@ -190,7 +195,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
     return S.healT > 0;
   }
   S.healCd -= dt;
-  if (m.heal && S.healCd <= 0 && hpF < 0.7 && e.state !== 'WINDUP' && e.state !== 'ATTACK') {
+  if (m.heal && !S.wardOn && !world.boss.final && S.healCd <= 0 && hpF < 0.7 && e.state !== 'WINDUP' && e.state !== 'ATTACK') {   // (never while warded: it could not be interrupted then; never for Malakar's final fight, which has its own shield - balance pass)
     S.healCd = HEAL_CD; S.healT = HEAL_T; S.healHp0 = e.hp;
     spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2, HEAL_T, 0, 0x4ade80);
     events.emit('floatText', { pos: e.pos, text: 'HEALING...', color: 0x4ade80, scale: 1.2, dy: 5 });
@@ -209,7 +214,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
     if (Number.isNaN(tx) && pd < e.radius + 4) { tx = p.pos.x; tz = p.pos.z; }
     if (!Number.isNaN(tx)) {
       S.crushCd = CRUSH_CD;
-      strike(tx, tz, CRUSH_R, CRUSH_WIND, pwr(e) * 1.6, pwr(e) * 4, m.cc, m.ccDur * 0.5, 0xff3a2a);
+      strike(tx, tz, CRUSH_R, CRUSH_WIND, pwr(e) * CRUSH_DMG, pwr(e) * 4, m.cc, m.ccDur * 0.5, 0xff3a2a);
     }
   }
 

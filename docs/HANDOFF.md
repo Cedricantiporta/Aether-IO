@@ -110,6 +110,93 @@ needed to see the new game).
 3. Character select shows the low-poly KayKit hero; the user's reference uses painted key art. Free CC0 art only.
 4. Ideas the user liked earlier but not built: village upgrades, daily challenge; item sets/affixes are partly in.
 
+## Balance pass (Oct 2026, headless sim)
+Owner asks: "improve gameplay overall, balance the game", "decrease monster spawns on some bosses if there are too many".
+None of the owner's explicit values were touched (drop nerfs, class HP / move speed, mana regen 1.0-1.5, potion 30 s,
+Barbarian kit, Necro summon rules, stagger meter, pre-boss -25% HP, boss HP x0.5).
+
+**How it was measured.** A Playwright harness (session scratchpad, not in the repo) loads the engine modules on a blank
+page, drives `updateGame(1/30)` and plays with auto-battle plus a bot that dodges ~70% of telegraphs and ~55% of enemy
+shots, kites with ranged classes, takes the first reward card and walks through portals. "Shop" runs keep the profile
+between runs: equip better loot, spend attribute points (half VIT), keep 5 HP potions and buy Armory upgrades. Boss
+tests jump into the boss room with a typical level and gear per biome (Lv 5-6 Rare, 12-18 Epic, 24-40 Legendary).
+"God" = the hero can't die (to measure adds and fight length). The bot is a weak player, so absolute death rates are
+pessimistic; compare before/after and class against class. QA gotcha: restart Vite after every engine edit, or the
+page imports a second copy of edited modules and nothing happens.
+
+### Boss adds and fight length (god mode, 5 classes each)
+| Fight | Before: time / peak adds alive / adds per fight | After |
+|---|---|---|
+| Slime King (pre-boss, Lv 5) | 15 s / max 17 (avg 10.6) / 21 | 14 s / max 9 (avg 7.8) / 18 |
+| Elderroot (Lv 6) | 39 s / 4 / 7 sporecaps | 28 s / 4 / 7 |
+| Gorath (Lv 12) | 83 s / 0 | 69 s / 0 |
+| Lich mini-boss (Lv 12) | 19 s median, **Knight 543 s**, max 19 adds, 45 cultists per fight | 40 s median, worst 46 s, max 10, 10 per fight |
+| Mire Hydra (Lv 18) | **3 of 5 never finished (10 min)**, heads regrew 35-45 times | all finish, 73 s median (38-110) |
+| Glacius (Lv 24) | 84 s / wyrmlings max 4 | 67 s / max 4 (unchanged) |
+| Ignar + Colossus (Lv 30) | 192 s / max 7 (imps + hellhound guards) | 153 s / max 8 |
+| Void Herald (Lv 36) | 114 s, 1 of 5 unfinished | 86 s, all finish |
+| Malakar, both stages (Lv 40) | 4 of 8 finish within 500 s, max 8-15 adds | 5 of 8, max 6-11 |
+| Desert pre-boss champion (Lv 16) | **max 36 adds alive** (scarab swarms), 66 per fight | max 10, 34 per fight |
+
+### Runs (biome 1, 15 rooms + boss)
+| | Before | After |
+|---|---|---|
+| Fresh Lv 1 run, rooms survived (Archer / Wizard / Barbarian / Knight / Necro) | 6.1 / 6.0 / 9.0 / 9.5 / 10.8 | 8.0 / 7.2 / 11.0 / 9.8 / 11.0 |
+| Elderroot, Lv 8 in shop gear, boss room only | 0 of 15 won, boss at 59% when the hero fell | 1 of 15 won, boss at 39% |
+| Elderroot reached in 6-run shop progressions (Lv 1 -> 9-10) | 7 won / 18 lost (28%) | 31 won / 38 lost over three batches (45%); the last batch, on the final code, 6 / 18 |
+| Average Lv after 6 runs | 9-10 | 9-10 |
+| Gold / gems per run, Lv 1-10 | 7-17k fresh, 14-31k later / 4-31 gems | about the same |
+Per class (6-run progressions): Barbarian is clearly the strongest (1-2 deaths in 6 runs, 29-31k gold per run, wins
+Elderroot 4-5/5); Wizard is the weakest (0 of 10 Elderroot fights won after the pass, 132 HP at Lv 8 with shop gear);
+Archer next weakest. Necro and Knight sit in between and vary a lot between batches.
+
+### Changes (every value)
+- **Champion / pre-boss rooms** (`director.ts`): escort pack 0.3 -> 0.22 of a skirmish budget; at most
+  `MINI_MAX_ALIVE` = 10 room-pack monsters alive at once (`d.maxAlive`, was the room cap 36); escort groups at most
+  4 (scarabs used to come in 7-11). Boss rooms use the same cap for their extra packs (Endless Waves from wave 20).
+  `nextWave` resets `d.maxAlive` to 36 for normal waves.
+- **Lich / Malakar** (`bosses.ts`): summons only while fewer than 9 monsters are alive (was 14); one fewer cultist
+  per summon outside Malakar's first fight (2+phase, stage 2 +1); the anti-hug blink has a 4 s cooldown (was every
+  time a hero came within 6 u, which locked melee heroes out).
+- **Malakar's illusions** (`combat.ts`): take x3 damage (bar still mirrors his HP; auto-aim kept feeding them).
+- **Mire Hydra** (`bosses2.ts`): at most 4 head regrowths per fight (was unlimited), +2.5% hp per regrown head (was
+  4%), no regrowth while warded.
+- **Ignar**: Summon Imps 2+phase per cast (was 3+phase), max 6 imps alive (was 10).
+- **Elderroot**: Thorn Ring damage x0.9 power (was x1.3): the class dash only unlocks at Lv 20, so the rings were
+  almost unavoidable in biome 1.
+- **Shared boss layer** (`bossMech.ts`): Cataclysm impacts x0.8 power (was 1.1), Quake x1.0 (1.3), Crush x1.25
+  (1.6); ward lasts at most 25 s (35); ward crystals 3.5% of boss hp each (4.5%), summoned guards x1.2 hp (x1.5);
+  Mend never starts while warded or in Malakar's final fight (he has his own shield) and a ward cancels a running
+  Mend; periodic barrier every 22 / 20 / 18 s for 5 / 6 / 7% hp (was 20 / 17 / 14 s, 6 / 8 / 10%).
+- **Boss damage** (`enemies.ts` `BOSS_DMG`): biome bosses deal x0.85 damage.
+- **Onboarding** (`enemyDefs.ts` `waveDmgMult`): waves 1-5 hit for 75 / 80 / 85 / 90 / 95% (like `waveBudget`).
+- Tried and reverted: Knight skills -25% mana (once measured correctly every non-Barbarian class is mana-bound,
+  so the Knight is not an outlier).
+
+### Endless Waves / Daily Trial / economy (checked, not changed)
+- Endless Waves: Lv 20 Epic reaches wave ~20-22 (the wave-20 Gorath boss is where it ends); Lv 35 Legendary reaches
+  21-26 in 25 min. Waves 1-15 take 15-20 s each, waves 20+ take 70-200 s (hp grows with depth^2, depth = 2 + 1.6 x
+  wave). Boss waves are about 2-2.4x the hp of the same boss in Adventure. Peak alive stays at the 36 cap. Fine as an
+  endless mode; if late waves feel like a slog, lower `waveDepth` to 2 + 1.4 x wave.
+- Daily Trial (depth 5-13, x1.5 monsters, 2-3 modifiers): Lv 20 Epic clears all 5 floors in 1.5-3.5 min with any
+  modifiers; Lv 10 in shop gear dies on floor 2-4 when the day has Dry Flasks + Bloodthirst. The Lv 8 unlock (merged
+  after this pass) is on the edge for those days.
+- Economy: Armory Common ~1.2k / Rare ~6k gold, potion 1.5k, so a full Rare set takes 2-3 early runs. 1-3 gem summons
+  per run (10-30 gems). XP: Lv 1 -> 10 in about 6 runs (~40 min); estimated 15-20 h to Lv 50 (~2-4k XP per minute at
+  Lv 20-35 vs `xpNeed(lv) = 250 lv^1.5`).
+
+### Open owner decisions
+1. **Wizard is the weakest class** (30 base HP, glass cannon by request). Options: +HP per level for the Wizard only,
+   a small shield on Blink Nova / Frost, or leave it as the hard class.
+2. **Barbarian is the strongest** (the -60% mana skills + boomerang pierce 6+6 are owner picks). It never runs out of
+   mana; every other class is mana-bound in long fights at regen 1.0-1.5.
+3. **The class dash unlocks at Lv 20**, but boss kits (Thorn Ring, Gravity Flip, Void rings) are built around
+   dashing. Unlocking it at Lv 8-10 would make biome 1-2 bosses much fairer.
+4. Elderroot is still the first big wall (about half of the bot's first attempts at Lv 6-10 fail). Lower it further
+   only if players complain.
+5. Malakar's final fight is long for auto-aim players (two illusions + cultists + his own shield): about half of the
+   bot fights at Lv 40 Legendary still take over 8 minutes.
+
 ## QA (headless)
 - Tailwind CDN is blocked in the container: route it to the npm package `tailwindcss-cdn@3.4.10`
   (`3.4.3/tailwindcss.js`). Restart Vite before each scripted run: after HMR, `import('/store.ts')` from the page

@@ -214,6 +214,8 @@ function randomAffix(): EliteAffix {
 // ------------------------------------------------------------ spawning --------
 /** Hero-level scaling of every spawned enemy (per level above 1): HP, damage, and xp / gold. */
 const LEVEL_HP = 0.07, LEVEL_DMG = 0.045, LEVEL_REWARD = 0.03;
+/** Biome bosses hit 15% softer (balance pass: level-8 heroes in shop gear lost 15 of 15 Elderroot fights). */
+const BOSS_DMG = 0.85;
 /** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
 export const levelHpMul = (): number => 1 + LEVEL_HP * (Math.max(1, useGameStore.getState().level | 0) - 1);
 
@@ -234,7 +236,7 @@ export function spawnEnemy(
   // every monster, elite and boss also scales with the hero's level: +7% HP and +4.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
   const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
-  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1) * lvDmg;
+  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg;
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
 
