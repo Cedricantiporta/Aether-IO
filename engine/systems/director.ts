@@ -950,7 +950,7 @@ function scanNearby(): void {
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
       const dist = q(s.x, s.z);
-      if (dist < 20) {
+      if (dist < (s.kind === 'ALTAR' ? 45 : 20)) {   // (the big shrine: a wider reach)
         if (s.kind === 'FOUNTAIN') pushNearby('Drink', 'Healing Fountain', 10, dist);
         else if (s.kind === 'MERCHANT') pushNearby('Trade', 'Travelling Merchant', 10, dist);
         else if (s.kind === 'CHEST' && s.ready) pushNearby('Open', 'Treasure Chest', 10, dist);

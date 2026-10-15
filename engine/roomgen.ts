@@ -48,7 +48,8 @@ export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): 
   let R: number;
   switch (type) {
     case 'BOSS': return BOSS_ARENA_R[biome % BOSS_ARENA_R.length];   // later bosses fight in bigger arenas
-    case 'FOUNTAIN': case 'MERCHANT': case 'SHRINE': R = 19 + r * 3; break;
+    case 'FOUNTAIN': case 'MERCHANT': R = 19 + r * 3; break;
+    case 'SHRINE': R = 26 + r * 3; break;   // a bigger stage: the challenge waves need room
     case 'CAMP': return 23;
     case 'TREASURE': R = 22 + r * 3; break;
     case 'ELITE': case 'MINIBOSS': R = 25 + r * 3; break;
@@ -127,7 +128,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const [sx, sz] = startPos(R);
   const [stx, stz] = stationPos(R);
   keep.push({ x: sx, z: sz, r: 4.5 });
-  if (!boss) keep.push({ x: stx, z: stz, r: type === 'MINIBOSS' ? 12 : 5 });   // mini-boss rooms: a wide open arena where the champion spawns (big ones never wedge in rocks)
+  if (!boss) keep.push({ x: stx, z: stz, r: type === 'MINIBOSS' ? 12 : type === 'SHRINE' ? 8 : 5 });   // mini-boss rooms: a wide open arena where the champion spawns (big ones never wedge in rocks)
   for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
   const nearKeep = (x: number, z: number, r: number): boolean => { for (const k of keep) if (Math.hypot(x - k.x, z - k.z) < k.r + r) return true; return false; };
   const blockedSpot = (x: number, z: number, r: number, gap: number): boolean => {

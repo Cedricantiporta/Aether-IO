@@ -14,11 +14,13 @@ export function RoomEvents() {
   const totemLight = useRef<PointLight>(null!), barG = useRef<Group>(null!);
   // totem HP bar (two sprites, the fill anchored on its left edge)
   const bar = useMemo(() => {
-    const bg = new Sprite(new SpriteMaterial({ color: '#120d0a', depthTest: false, transparent: true, opacity: 0.85 }));
-    const fill = new Sprite(new SpriteMaterial({ color: '#4ade80', depthTest: false }));
-    bg.scale.set(3.2, 0.32, 1); fill.center.set(0, 0.5); fill.position.x = -1.5; fill.scale.set(3.0, 0.2, 1);
-    bg.renderOrder = fill.renderOrder = 20; fill.renderOrder = 21;
-    return { bg, fill };
+    // gold frame + dark track + coloured fill (drawn over everything, above the crystal's glow)
+    const frame = new Sprite(new SpriteMaterial({ color: '#c8962e', depthTest: false, transparent: true, opacity: 0.95, toneMapped: false }));
+    const bg = new Sprite(new SpriteMaterial({ color: '#0d0a08', depthTest: false, transparent: true, opacity: 0.95, toneMapped: false }));
+    const fill = new Sprite(new SpriteMaterial({ color: '#4ade80', depthTest: false, toneMapped: false }));
+    frame.scale.set(3.5, 0.48, 1); bg.scale.set(3.36, 0.36, 1); fill.center.set(0, 0.5); fill.position.x = -1.6; fill.scale.set(3.2, 0.26, 1);
+    frame.renderOrder = 20; bg.renderOrder = 21; fill.renderOrder = 22;
+    return { frame, bg, fill };
   }, []);
   const glowMat = useMemo(() => new MeshBasicMaterial({ color: new Color(1.1, 2.4, 2.8), toneMapped: false }), []);
   const totem = useRef<Group>(null!), cage = useRef<Group>(null!), bars = useRef<Group>(null!);
@@ -60,8 +62,8 @@ export function RoomEvents() {
         if (L) { L.intensity = e.state === 3 ? 0 : (e.hurtT > 0 ? 70 : 45) + Math.sin(t * 3) * 6; L.color.set(e.hurtT > 0 ? '#ff6a5a' : '#7fe0ff'); }
         pushHalo(e.x, 0.15, e.z, 7, 0.4, 1.4, 1.8, e.state === 3 ? 0 : 0.25, CELL.GLOW);
         const alive = e.state !== 3;
-        if (barG.current) { barG.current.visible = alive; barG.current.position.set(e.x, 5.8, e.z); }
-        bar.fill.scale.x = 3.0 * Math.max(0, k);
+        if (barG.current) { barG.current.visible = alive; barG.current.position.set(e.x, 8.4, e.z); }   // (bar above the crystal and its bloom)
+        bar.fill.scale.x = 3.2 * Math.max(0, k);
         bar.fill.material.color.set(k > 0.5 ? '#4ade80' : k > 0.25 ? '#facc15' : '#ef4444');
       }
     }
@@ -104,7 +106,7 @@ export function RoomEvents() {
         <mesh geometry={geo.totem} material={mat} castShadow /><mesh geometry={geo.crystal} material={glowMat} />
         <pointLight ref={totemLight} position={[0, 3.4, 0]} distance={16} decay={1.6} intensity={45} color="#7fe0ff" />
       </group>
-      <group ref={barG} visible={false}><primitive object={bar.bg} /><primitive object={bar.fill} /></group>
+      <group ref={barG} visible={false}><primitive object={bar.frame} /><primitive object={bar.bg} /><primitive object={bar.fill} /></group>
       <group ref={cage} visible={false}>
         <mesh geometry={geo.cageBase} material={mat} receiveShadow />
         <mesh geometry={geo.villager} material={mat} castShadow />

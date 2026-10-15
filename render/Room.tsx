@@ -560,7 +560,7 @@ function Stations() {
         <group ref={lid} position={[0, 0.9, -0.65]}><mesh geometry={geos.chestLid} material={mats.lit} position={[0, 0, 0.65]} castShadow /></group>
         <mesh ref={chestGlow} geometry={geos.chestGlow} material={mats.glow} />
       </group>
-      <group ref={altar}>
+      <group ref={altar} scale={1.7}>   {/* a big shrine */}
         <mesh geometry={geos.altar} material={mats.lit} castShadow receiveShadow />
         <mesh ref={altarGlow} geometry={geos.altarGlow} material={mats.glow} />
       </group>
