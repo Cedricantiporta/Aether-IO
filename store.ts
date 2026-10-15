@@ -1589,6 +1589,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     summon: (count, altar = 'GEM') => {
+      const SUMMON_SHARD_SHARE = 0.5;   // shards vs equipment: 50 / 50
       const s = get();
       const space = s.maxInventorySlots - s.inventory.length;
       const n = Math.min(count, space);
@@ -1616,13 +1617,15 @@ export const useGameStore = create<GameState>()((set, get) => {
         // pity: the 60th draw is a Legendary; the 240th is 80% Legendary / 20% Mythic
         if (drawn % PITY_MYTHIC === 0) rarity = Math.random() < 0.2 ? 'MYTHIC' : 'LEGENDARY';
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
-        // no gear below Epic: a Common roll pays 3 Rare shards, a Rare roll 2 Epic shards (the bag stacks them)
-        if (rarity === 'COMMON' || rarity === 'RARE') {
-          const sr: Rarity = rarity === 'COMMON' ? 'RARE' : 'EPIC', q = rarity === 'COMMON' ? 3 : 2;
-          shardGain[sr] = (shardGain[sr] ?? 0) + q;
-          results.push(shardItem(sr, q));
+        // half the pulls are a single shard of the rolled tier (Rare at least), half are gear (Epic at least); pity pulls are gear
+        const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
+        if (!pity && Math.random() < SUMMON_SHARD_SHARE) {
+          const sr: Rarity = rarity === 'COMMON' ? 'RARE' : rarity;
+          shardGain[sr] = (shardGain[sr] ?? 0) + 1;
+          results.push(shardItem(sr, 1));
           continue;
         }
+        if (rarity === 'COMMON' || rarity === 'RARE') rarity = 'EPIC';
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
         const it = instantiate(pool[Math.floor(Math.random() * pool.length)]);

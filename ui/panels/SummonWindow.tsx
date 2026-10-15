@@ -77,12 +77,12 @@ export const SummonWindow: React.FC = () => {
           <div className="sw-preview rpg-scroll" data-testid="summon-preview">
             <div className="sw-prev-h">Possible rewards <em>{hero.charAt(0) + hero.slice(1).toLowerCase()} gear and companions</em></div>
             {PREVIEW_ORDER.map((r) => {
-              // below Epic the altar pays shards, not gear (store.summon)
-              const list = r === 'COMMON' ? [shardItem('RARE', 3)] : r === 'RARE' ? [shardItem('EPIC', 2)] : pool.filter((i) => i.rarity === r);
+              // every pull: 50% one shard of the rolled tier (Rare at least), 50% gear (Epic at least) (store.summon)
+              const list = r === 'COMMON' ? [shardItem('RARE', 1)] : r === 'RARE' ? [shardItem('RARE', 1)] : [shardItem(r, 1), ...pool.filter((i) => i.rarity === r)];
               if (!list.length) return null;
               return (
                 <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
-                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}{r === 'COMMON' ? ' · 3 Rare shards' : r === 'RARE' ? ' · 2 Epic shards' : ''}<i>{list.length}</i></div>
+                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}{r === 'COMMON' || r === 'RARE' ? ' · Rare shard or Epic gear' : ' · shard or gear'}<i>{list.length}</i></div>
                   <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
                 </div>
               );
@@ -96,12 +96,13 @@ export const SummonWindow: React.FC = () => {
             {RARITIES.map((r) => (
               <div key={r} className="sw-rate" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
                 <span className="rpg-gem" data-rarity={r} />
-                <span className="n">{RATE_NAME[r]}{r === 'COMMON' ? ' (3 Rare shards)' : r === 'RARE' ? ' (2 Epic shards)' : ''}</span>
+                <span className="n">{RATE_NAME[r]}{r === 'COMMON' || r === 'RARE' ? ' (Rare shard / Epic gear)' : ''}</span>
                 <span className="v">{W[r]}%</span>
                 {CAPS[r] ? <span className="c">max {CAPS[r]} per 10x</span> : <span className="c" />}
               </div>
             ))}
           </div>
+          <div className="sw-note" style={{ display: 'block', margin: '.4rem 0' }}>Every pull is 50% a single shard of the rolled tier (Rare at least) and 50% a piece of gear (Epic at least). Pity pulls are always gear.</div>
           <div className="sw-pity" data-testid="summon-pity">
             <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.LEGENDARY }}>
               <span className="n">Guaranteed <b>Legendary</b> in <b className="rpg-num">{PITY_LEGEND - (drawn % PITY_LEGEND)}</b> draws</span>
