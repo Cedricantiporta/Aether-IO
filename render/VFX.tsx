@@ -157,6 +157,7 @@ let pollenT = 0;
 // ---- pet attacks (engine PET_EL): every pet hit reads as its element
 const EL_HEX = [0xffffff, 0xff7a1a, 0xffc23a, 0xffffff, 0x3aa8ff, 0x9fe8ff, 0xb070ff, 0xff3048, 0x9a7a52, 0x7ae8ff, 0x7ad04a, 0xffd23a];
 const clawC = new Color();
+const _bc = new Color();
 function claws(x: number, y: number, z: number, dx: number, dz: number, hex: number, big: boolean): void {
   // three parallel claw rakes across the target
   const px = -dz, pz = dx, s = big ? 1.4 : 1, c = clawC.setHex(hex);
@@ -296,6 +297,21 @@ export function VFX() {
     }));
 
     off.push(on('petStrike', (e) => petFx(e.pos.x, 1.1, e.pos.z, e.el, e.dx, e.dz, false, !!e.big)));
+    off.push(on('petBurst', (e) => {   // Legendary / Mythic pet burst: an element-coloured blast ring + its impact + a sky strike
+      const x = e.pos.x, z = e.pos.z, hex = EL_HEX[e.el] ?? 0xffd76a;
+      ringBurst(x, 0.15, z, hex, 0.8, e.r, 0.55, 2);
+      ringBurst(x, 0.2, z, 0xffffff, 0.5, e.r * 0.6, 0.4, 1.6);
+      petFx(x, 1.2, z, e.el || 3, 0, 1, true, true);
+      glowPuff(x, 1, z, hex, e.r * 0.9, 0.4, 1.8, 0.7);
+      const n = e.tier === 2 ? 7 : 5;
+      for (let k = 0; k < n; k++) {   // strikes falling around the target (starfall / flames / water spouts / shards)
+        const a = Math.random() * TAU, rr = Math.random() * e.r * 0.8, sx = x + Math.cos(a) * rr, sz = z + Math.sin(a) * rr;
+        _bc.setHex(hex);
+        FX.add.emit(sx, 9, sz, 0, -28, 0, 0.32, 0.55, 0.2, _bc.r * 2.4, _bc.g * 2.4, _bc.b * 2.4, 1, CELL.STREAK, 0, 0, 0, 0, 0.12);
+        window.setTimeout(() => { flashStar(sx, 0.5, sz, hex, 1.6, 0.2); sparks(sx, 0.4, sz, 5, hex, 6, 0.24, 0.3, 2); }, 280);
+      }
+      flashLight(x, 3, z, hex, 40, 0.4);
+    }));
 
     off.push(on('projectileImpact', (e) => {
       const p = e.pos;

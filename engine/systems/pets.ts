@@ -91,6 +91,21 @@ export function getPetProfile(name: string | undefined | null): PetProfile {
 }
 
 let lastPetId = '';
+let burstT = 3;
+const burstOpts: DamageOpts = { kind: 'MAGIC', source: 'PET' };
+const burstBurn = { type: 'BURN' as const, duration: 3, value: 5 };
+const burstSlow = { type: 'SLOW' as const, duration: 2.5, value: 0.45 };
+const burstStun = { type: 'STUN' as const, duration: 0.6 };
+/** Legendary / Mythic pet signature: an elemental area burst on the target (Wisp starfall, Phoenix fire nova, Leviathan
+ *  tidal wave, Shadow Cat pounce, Gold Dragon fire, Crystal Golemling shards). */
+function petBurst(x: number, z: number, el: number, tier: number, dmg: number): void {
+  const r = tier === 2 ? 5.5 : 4.5;
+  burstOpts.kind = el === PET_EL.FIRE || el === PET_EL.GOLD ? 'FIRE' : el === PET_EL.WATER || el === PET_EL.CRYSTAL ? 'ICE' : el === PET_EL.LIGHT ? 'LIGHTNING' : 'MAGIC';
+  const status = el === PET_EL.FIRE || el === PET_EL.GOLD ? (burstBurn.value = 4 + dmg * 0.15, burstBurn) : el === PET_EL.WATER ? burstSlow : el === PET_EL.LIGHT || el === PET_EL.CRYSTAL ? burstStun : undefined;
+  damageEnemiesInRadius(x, z, r, dmg, burstOpts, status);
+  events.emit('petBurst', { pos: burstPos.set(x, 0, z), el, r, tier });
+}
+const burstPos = new Vector3();
 let vx = 0, vz = 0;
 let scanT = 0;
 let target: Pickup | null = null;
@@ -207,17 +222,28 @@ export function updatePets(dt: number): void {
       stopR = 0.2;
     }
     const strikeR = ranged ? 20 : enemy.radius + 1.6;
+    // Legendary / Mythic pets fight harder: faster attacks, a splash on every basic and a periodic elemental burst
+    const tier = pet.rarity === 'MYTHIC' ? 2 : pet.rarity === 'LEGENDARY' ? 1 : 0;
+    const atkCd = prof.atkCd * (tier === 2 ? 0.6 : tier === 1 ? 0.75 : 1);
+    if (tier > 0) {
+      burstT -= dt;
+      if (burstT <= 0 && ed < (ranged ? 20 : 8)) {
+        burstT = tier === 2 ? 5 : 7;
+        const bBase = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * prof.dmgFactor;
+        petBurst(enemy.pos.x, enemy.pos.z, prof.el ?? 0, tier, bBase * (tier === 2 ? 3 : 2.2));
+      }
+    }
     if (wp.atkCd <= 0 && ed < strikeR) {
       const factor = prof.dmgFactor;
       const base = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * factor;
       wp.attackT = 1;
       const el = prof.el ?? 0;
       if (ranged) {
-        wp.atkCd = prof.atkCd;
+        wp.atkCd = atkCd;
         // elemental shots: Phoenix fireballs splash + burn, Gold Dragon embers, Wisp starlight pierces, Leviathan water slows
         const fire = el === PET_EL.FIRE, gold = el === PET_EL.GOLD, light = el === PET_EL.LIGHT, water = el === PET_EL.WATER;
         const p = spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, fire ? 22 : water ? 24 : gold ? 26 : light ? 34 : 30, base,
-          { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0 });
+          { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: Math.max(fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0, tier > 0 ? 2 : 0) });   // Legendary+: every shot splashes
         if (p && el) {
           p.tint = 20 + el;
           if (fire) { fxBurn.value = 4 + base * 0.25; p.effect = fxBurn; }
@@ -225,8 +251,9 @@ export function updatePets(dt: number): void {
           else if (water) p.effect = fxSlow;
         }
       } else {
-        wp.atkCd = prof.atkCd;
+        wp.atkCd = atkCd;
         damageEnemy(enemy, base, meleeOpts);
+        if (tier > 0) damageEnemiesInRadius(enemy.pos.x, enemy.pos.z, 2.2, base * 0.5, meleeOpts, undefined, enemy.id);   // Legendary+: a mini splash
         if (prof.ignite) applyStatus(enemy, { type: 'BURN', duration: 3, value: 4 + base * 0.2 });
         if (el === PET_EL.NATURE) { fxPoison.value = 1 + base * 0.15; applyStatus(enemy, fxPoison); }
         if (el) events.emit('petStrike', { pos: enemy.pos, el, dx: ex / ed, dz: ez / ed, big: prof.size > 1.2 });

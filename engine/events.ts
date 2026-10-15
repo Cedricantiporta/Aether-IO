@@ -57,6 +57,7 @@ export interface GameEvents {
   frostNova: { pos: Vector3; radius: number };
   projectileImpact: { pos: Vector3; kind: ProjectileKind | 'ENEMY'; tint?: number };
   petStrike: { pos: Vector3; el: number; dx: number; dz: number; big?: boolean };   // a pet's melee hit (el = PET_EL)
+  petBurst: { pos: Vector3; el: number; r: number; tier: number };   // a Legendary / Mythic pet's elemental area burst
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string };
   crateBreak: { pos: Vector3; kind: CrateKind };
