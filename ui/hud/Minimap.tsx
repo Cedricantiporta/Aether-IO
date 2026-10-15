@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
-import { GATE, WALL_RUNS, WALL_TOWERS } from '../../engine/townData';
+import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL } from '../../engine/townData';
+import { BEACH, DOCK } from '../../engine/beachData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
@@ -22,6 +23,7 @@ const SHOP_ICON: Record<string, Poly[]> = {
   WAREHOUSE: [[true, -0.75, -0.3, 0.75, -0.3, 0.75, 0.8, -0.75, 0.8], [false, -0.95, -0.25, 0, -0.9, 0.95, -0.25], [false, -0.25, 0.8, -0.25, 0.25, 0.25, 0.25, 0.25, 0.8]],   // storehouse
   TECH: [[true, 0, -0.9, 0.78, -0.45, 0.78, 0.45, 0, 0.9, -0.78, 0.45, -0.78, -0.45], dia(0, 0, 0.32)],   // hex nut
   BREWER: [[true, -0.8, -0.2, 0.8, -0.2, 0.55, 0.75, -0.55, 0.75], [false, -0.95, -0.2, 0.95, -0.2], dia(-0.25, -0.62, 0.14), dia(0.25, -0.75, 0.12)],   // cauldron
+  FISH: [[true, -0.9, 0, -0.35, -0.5, 0.3, -0.35, 0.55, 0, 0.95, -0.5, 0.95, 0.5, 0.55, 0, 0.3, 0.35, -0.35, 0.5], dia(-0.5, -0.08, 0.1)],   // fish
 };
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
@@ -76,6 +78,14 @@ export const Minimap: React.FC = () => {
       ctx.closePath();
     } else ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
     ctx.stroke(); ctx.setLineDash([]);
+    // the lake west of the wall + the beach (sand strip, pier) on its southern half (village only)
+    if (!room) {
+      ctx.fillStyle = 'rgba(47,111,148,.75)'; ctx.fillRect(cx + LAKE.x0 * k, cx + LAKE.z0 * k, (LAKE.x1 - LAKE.x0) * k, (LAKE.z1 - LAKE.z0) * k);
+      ctx.fillStyle = 'rgba(196,172,118,.75)'; ctx.fillRect(cx + BEACH.shoreX * k, cx + BEACH.z0 * k, (WALL.x0 - BEACH.shoreX) * k, (BEACH.z1 - BEACH.z0) * k);
+      ctx.fillStyle = 'rgba(138,100,64,.95)';
+      ctx.fillRect(cx + DOCK.x1 * k, cx + (DOCK.z - DOCK.hw) * k, (BEACH.shoreX + 2 - DOCK.x1) * k, DOCK.hw * 2 * k);
+      ctx.fillRect(cx + DOCK.head.x0 * k, cx + DOCK.head.z0 * k, (DOCK.head.x1 - DOCK.head.x0) * k, (DOCK.head.z1 - DOCK.head.z0) * k);
+    }
     // town wall outline + towers (village only; the gate gap is the break in the south side)
     if (!room) {
       ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR; ctx.lineCap = 'butt';

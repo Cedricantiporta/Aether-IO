@@ -27,6 +27,8 @@ import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
+import { BEACH_COLLIDERS, FISH_SPOTS, FISH_SPOT_R } from '../beachData';
+import { fishingActive, startFishing, stopFishing, updateFishing } from './fishing';
 
 const INTERACT_R = 7;
 /** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
@@ -58,6 +60,8 @@ export function placeVillageNodes(): void {
   });
   // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
+  for (const [x, z, r] of BEACH_COLLIDERS) addTempCollider(x, z, r, false);   // the lakeside beach (headland rocks, palms, props)
+  stopFishing();
   spawnTownMonsters();
   resetNpcs();
   closeDialogue();
@@ -93,7 +97,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower' | 'farm' | 'loot';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'leave' | 'tower' | 'farm' | 'loot' | 'fish';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -105,12 +109,12 @@ const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', n
   const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act; t.color = color;
 };
 const GATE_R = 5.5;
-const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer' };
+const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger' };
 
 function scanNearby(): void {
   const p = world.player;
   nearbyN = 0;
-  if (dialogueOpen()) { for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = false; return; }
+  if (dialogueOpen() || fishingActive()) { for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = false; return; }
   const q = (x: number, z: number) => (x - p.pos.x) ** 2 + (z - p.pos.z) ** 2;
   let d: number;
   const castle = world.village.area === 'CASTLE';
@@ -128,6 +132,7 @@ function scanNearby(): void {
     if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Hold: Milk', 'Cow', '', 200 + i, d, 'farm'); }
     if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Hold: Collect', 'Egg', '', 300 + k, d, 'farm'); }
     if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Hold: Coax', 'Biscuit the cat', '', 400, d, 'farm'); }
+    for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); }   // lakeside fishing
   }
   for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area === 'CASTLE') !== castle) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
   if (!castle)
@@ -146,6 +151,7 @@ function scanNearby(): void {
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
+  if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'castle') v.pending = 'ENTER';
@@ -186,6 +192,19 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
   // the hermit lives outside the north wall: out through the gate, round the east side, along the back of the wall
   const outN = (z: number, x: number) => z < WALL.z0 - 1.5 || x > WALL.x1 + 1.5;
   const outS = (z: number, x: number) => z > WALL.z1 + 1.2 && !outN(z, x);   // the forecourt south of the gate
+  // the lakeside beach west of the wall: only reachable round the south-west corner tower (engine/beachData.ts)
+  const onBeach = (z: number, x: number) => x < WALL.x0 - 1.5 && z > WALL.z0;
+  if (world.village.area === 'TOWN' && onBeach(tz, tx) !== onBeach(fz, fx)) {
+    if (onBeach(tz, tx)) {
+      if (!outS(fz, fx)) n = buildRoute(fx, fz, -38, WALL.z1 + 8, out);
+      else push(-38, WALL.z1 + 8);
+      push(WALL.x0 - 4, WALL.z1 + 9); push(tx, tz);
+      return n;
+    }
+    push(WALL.x0 - 4, WALL.z1 + 9); push(-38, WALL.z1 + 8);
+    const k = buildRoute(-38, WALL.z1 + 8, tx, tz, out.subarray(n * 2));
+    return n + k;
+  }
   if (world.village.area === 'TOWN' && outN(tz, tx) && !outN(fz, fx)) {
     if (!outS(fz, fx)) n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
     push(0, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z0 - 9); push(tx, tz);
@@ -402,6 +421,7 @@ export function updateVillage(dt: number): void {
 
   v.harvestCd = Math.max(0, v.harvestCd - dt);
   // E acts on the NEAREST pill: press = talk / open / set out; press or HOLD = harvest when that nearest thing is a node
+  updateFishing(dt);   // lakeside fishing (E drives the cast / hook / reel; moving reels in)
   const top = nearby[0];
   if (!talking && top.active && !v.pending) {
     if (top.act === 'harvest') { if (inp.keys.KeyE || inp.pressed.KeyE) interact(top); }

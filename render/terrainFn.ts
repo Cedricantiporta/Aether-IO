@@ -3,6 +3,7 @@ import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
 import { FARM, WALL, BREWER_HUT } from '../engine/townData';
+import { BEACH, beachSandK } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
 
 export const POND = { x: ENGINE_POND.x, z: ENGINE_POND.z, r: ENGINE_POND.r - 1.5 };
@@ -25,7 +26,8 @@ export function inYard(x: number, z: number, m = 0) {
 /** Outside the wall but occupied by the avenue / farm field (no random bushes, flowers or pebbles here). */
 export function inForecourtUse(x: number, z: number, m = 0) {
   return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m)
-    || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x);
+    || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x)
+    || beachSandK(x, z) > 0.15;   // the lakeside beach (render/Beach.tsx has its own props)
 }
 
 export function pondEdge(a: number) {
@@ -35,7 +37,9 @@ export function pondEdge(a: number) {
 /** 0..1: how far into the lake west of the town (ramps over LAKE.shore units from the shore line). */
 export function lakeK(x: number, z: number) {
   if (x > LAKE.x1) return 0;
-  const inX = sstep(LAKE.x1, LAKE.x1 - LAKE.shore, x);
+  // the beach (engine/beachData) pushes the shore line west along the southern half of the west side
+  const sx = LAKE.x1 + (BEACH.shoreX - LAKE.x1) * sstep(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstep(BEACH.z1 + 9, BEACH.z1 + 1, z);
+  const inX = sstep(sx, sx - LAKE.shore, x);
   const inZ = sstep(LAKE.z0, LAKE.z0 + 14, z) * sstep(LAKE.z1, LAKE.z1 - 14, z);
   return inX * inZ;
 }

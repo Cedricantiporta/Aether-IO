@@ -23,7 +23,7 @@ import type { CodexTab, Discovered } from './codexData';
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
 export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER'; // MERCHANT = the travelling merchant room
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH'; // FISH = the Fishmonger on the beach; MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
