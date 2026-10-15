@@ -39,6 +39,7 @@ import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircl
 import { hooks } from './hooks';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
+import { towerMode, towerCrystals } from './combat';
 import { spawnHostileZone } from './tricks';
 import { spawnWave, WAVE_FIRE, BT } from './bossFx';
 import { useGameStore } from '../../store';
@@ -184,6 +185,11 @@ export function darkHeroDied(e: Enemy): void {
   const st = useGameStore.getState();
   const wave = world.director.wave;
   const luck = 2.4 * (1 + wave * 0.02);
+  if (towerMode()) {   // tower modes (the tower's champion floors): crystals instead of loot / gear
+    st.addCrystals(towerCrystals(true, false, false, wave), e.pos);
+    for (let i = 0; i < 6; i++) spawnPickup('GOLD', tmp.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3), 12 + wave);
+    return;
+  }
   dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
   const r1 = rarityForDepth(wave, 0.5, world.run.bossKills);
   const it1 = st.rollItemDrop(r1);

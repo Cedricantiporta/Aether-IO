@@ -8,7 +8,7 @@ import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { lockedEnemy, updateTarget } from './target';
-import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable } from './combat';
+import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
@@ -87,8 +87,8 @@ let dryTextT = -10;
 function usePotion(health: boolean): boolean {
   const st = useGameStore.getState();
   const p = world.player;
-  if (dailyMods.noPotions) {   // Daily Trial: Dry Flasks
-    if (world.time - dryTextT > 4) { dryTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'DRY FLASKS: NO POTIONS', color: 0xef5f55, scale: 0.8, dy: 2.6 }); }
+  if (dailyMods.noPotions || towerMode()) {   // Daily Trial: Dry Flasks; the tower modes never allow potions (owner)
+    if (world.time - dryTextT > 4) { dryTextT = world.time; events.emit('floatText', { pos: p.pos, text: towerMode() ? 'NO POTIONS IN THE TOWER' : 'DRY FLASKS: NO POTIONS', color: 0xef5f55, scale: 0.8, dy: 2.6 }); }
     return false;
   }
   const item = st.consumeItem((i) =>

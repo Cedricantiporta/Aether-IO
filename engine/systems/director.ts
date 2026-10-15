@@ -51,7 +51,7 @@ import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from '
 import { daily, dailyPlan, dailyBiome, dailyRoomSeed, dailyDepth, climbTitle, climbFloor, DAILY_FLOORS } from '../../dailyChallenge';
 import { dailyFloorCleared, tickDaily } from './dailyRun';
 // Endless Waves (endlessWaves.ts): one arena, wave after wave (towerFloor = the wave number); hooks only while waves.on
-import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd, WAVE_BREAK, WAVES_ARENA_R } from '../../endlessWaves';
+import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd, waveExtraBosses, waveBossMinis, waveMinis, waveMiniElites, WAVE_BREAK, WAVES_ARENA_R } from '../../endlessWaves';
 
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
@@ -84,6 +84,9 @@ const burstEnd = [0, 0, 0, 0];
 const burstSize = [0, 0, 0, 0];
 let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
+/** Endless Waves stacking (owner): extra bosses beside the wave's boss, and how many mini-bosses a wave brings. */
+let extraBosses: EnemyKind[] = [];
+let miniCount = 1;
 // stage monsters placed by the room layout (goblin archers on their towers, lake hydras): spawned with the first burst
 const fixedKind: EnemyKind[] = new Array(MAX_FIXED * 2).fill('GOBLIN_ARCHER');
 const fixedX = new Float32Array(MAX_FIXED * 2), fixedZ = new Float32Array(MAX_FIXED * 2);
@@ -165,7 +168,7 @@ export function resetDirector(): void {
   r.station.kind = 'NONE';
   world.boss.active = false;
   world.enemyGrid.clear();
-  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; fixedN = 0;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; fixedN = 0;
   rewardT = -1; vacuumT = 0; shrineBonus = false;
   clearMerchantStock();
 }
@@ -284,7 +287,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
 
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.aliveCount = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
-  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;
 
   rollRoomSpawns(p.type);
@@ -439,8 +442,8 @@ function rollRoomSpawns(type: RoomType): void {
     case 'MINIBOSS': {
       // the champion's escort: a smaller pack (was 0.3 of a skirmish) and at most MINI_MAX_ALIVE at once, so the
       // fight stays about the champion (balance pass: the desert pre-boss had up to 36 adds alive beside it)
-      rollPack(0.22, 0, 2); dd().maxAlive = MINI_MAX_ALIVE;
-      miniPending = true;
+      rollPack(0.22, waves.on ? waveMiniElites(towerFloor) : 0, 2); dd().maxAlive = MINI_MAX_ALIVE;
+      miniPending = true; miniCount = waves.on ? waveMinis(towerFloor) : 1;
       prebossKing = false; prebossRoom = !!plan.preboss;
       if (plan.preboss && runInfo.mode === 'ADVENTURE' && biome % BIOMES.length === 0) {
         // depth 10 of the Meadow: the Slime King (a giant splitter with half the Golem's hp, full boss bar)
@@ -453,7 +456,22 @@ function rollRoomSpawns(type: RoomType): void {
       }
       break;
     }
-    case 'BOSS': bossPending = true; dd().maxAlive = MINI_MAX_ALIVE; if (waves.on && towerFloor >= 20) rollPack(0.35, 1, 2); break;   // Endless Waves: adds join the boss from wave 20
+    case 'BOSS': {
+      bossPending = true; dd().maxAlive = MINI_MAX_ALIVE;
+      if (waves.on) {   // Endless Waves: deeper waves stack bosses, mini-bosses and elites together (owner)
+        const main = biomeBoss(biome);
+        const pool = [...new Set(BIOMES.map((x) => x.boss))].filter((k) => k !== main && k !== 'BOSS_LICH');
+        const n = waveExtraBosses(towerFloor);
+        for (let i = 0; i < n && pool.length; i++) extraBosses.push(pool.splice((towerFloor * 3 + i * 5) % pool.length, 1)[0]);
+        const m = waveBossMinis(towerFloor);
+        if (m > 0) {
+          const def = biomeOf(biome), mm = MINI_BOSSES[def.minis[towerFloor % def.minis.length]];
+          miniPending = true; miniCount = m; miniIsBoss = false; miniKind = mm.kind; miniName = mm.name; miniTitle = mm.title; prebossKing = false; prebossRoom = false;
+        }
+        if (towerFloor >= 10) rollPack(0.35, waveMiniElites(towerFloor), 2);
+      }
+      break;
+    }
     case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
       const own = useGameStore.getState().hero as HeroClass;
       duelCls = plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)];
@@ -517,6 +535,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
   if (tag === 3) { spawnDarkHero(duelCls, x, z); return; }
+  if (tag === 4) { spawnEnemy(kind, tmp); events.emit('shake', { amount: 0.4 }); return; }   // an extra Endless Waves boss
   if (tag === 1) {
     const e = spawnMiniBoss(kind, tmp, miniName, miniTitle);
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
@@ -576,6 +595,10 @@ function tickSpawns(dt: number): void {
     bossPending = false;
     const kind = finalFight ? 'BOSS_LICH' : nextBossKind || debug.bossOverride || biomeBoss(biome);
     placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
+    for (let i = 0; i < extraBosses.length; i++) {   // Endless Waves: more bosses around the arena (no boss bar of their own until the first falls)
+      const a = Math.PI * (0.5 + (i + 1) / (extraBosses.length + 1));
+      placeMarker(extraBosses[i], Math.cos(a) * R.radius * 0.45, -Math.sin(a) * R.radius * 0.45, false, 1.8, 4);
+    }
     bossSpawned = true;
   }
   if (duelPending && roomT >= 1.0) {   // the dark hero rises in the middle of the ring
@@ -588,6 +611,11 @@ function tickSpawns(dt: number): void {
       miniPending = false;
       const [mx, mz] = stationPos(R.radius);
       placeMarker(miniKind, mx, mz, false, 1.5, miniIsBoss ? 2 : 1);
+      for (let i = 1; i < miniCount; i++) {   // Endless Waves: several mini-bosses at once
+        const a = (i / miniCount) * Math.PI * 2, rr = Math.min(9, R.radius * 0.4);
+        const x = mx + Math.cos(a) * rr, z = mz + Math.sin(a) * rr;
+        placeMarker(miniKind, isSpawnable(x, z) ? x : mx, isSpawnable(x, z) ? z : mz, false, 1.5, 1);
+      }
       if (miniIsBoss) bossSpawned = true;
     }
   }
@@ -773,11 +801,23 @@ function onCleared(): void {
   else openPortals();
 }
 
+/** Endless Waves: when the boss with the bar falls while another boss / mini-boss of the wave lives, the bar moves to it. */
+function handOffBoss(): boolean {
+  for (const e of world.enemies) {
+    if (!e.active || e.state === 'DYING' || !(e.boss || e.mini)) continue;
+    const d = dd(), hud = world.boss;
+    d.bossId = e.id;
+    const nm = e.mini ? { name: miniName, title: miniTitle } : bossNameIn(e.kind as BossKind, biome);
+    hud.active = true; hud.name = nm.name; hud.title = nm.title; hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
+    return true;
+  }
+  return false;
+}
 function bossDefeated(): boolean {
   const d = dd();
   if (d.bossId < 0) return !bossPending && bossSpawned; // spawn failed
   const b = world.enemies[d.bossId];
-  return !b.active || b.state === 'DYING' || !b.boss;
+  return !b.active || b.state === 'DYING' || !(b.boss || b.mini);
 }
 
 function tickFight(dt: number): void {
@@ -788,7 +828,8 @@ function tickFight(dt: number): void {
   r.enemiesLeft = d.aliveCount + markers + (unitN - nextUnit) + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? 1 : 0);
 
   if (plan.type === 'BOSS') {
-    if (bossSpawned && bossDefeated()) {
+    if (waves.on && bossSpawned && bossDefeated() && handOffBoss()) return;   // another boss of the wave still stands
+    if (bossSpawned && bossDefeated() && !(waves.on && (miniPending || markers > 0))) {
       bossDeadT = bossDeadT < 0 ? 0 : bossDeadT + dt;
       if (bossDeadT >= BOSS_GRACE) onBossCleared();
     }
@@ -821,6 +862,8 @@ function wavesCleared(): void {
   events.emit('floatText', { pos: world.player.pos, text: `WAVE ${towerFloor} CLEARED`, color: 0xffd24a, scale: 1.1, dy: 2.8 });
 }
 /** The next wave in the same arena (no rebuild: loot on the floor and the hero stay where they are). */
+/** QA: jump an Endless Waves run to wave n (headless tests). */
+export function debugJumpWave(n: number): void { if (!waves.on) return; for (const e of world.enemies) if (e.active) { e.active = false; } world.director.aliveCount = 0; towerFloor = n - 1; nextWave(); }
 function nextWave(): void {
   waves.breakT = -1;
   towerFloor++; towerState.floor = towerFloor;
@@ -830,7 +873,7 @@ function nextWave(): void {
   world.boss.active = false; nextBossKind = '';
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
-  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;
   for (const po of r.portals) po.active = false;
   rollRoomSpawns(plan.type);

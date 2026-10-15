@@ -20,7 +20,7 @@ export const WavesCard: React.FC = () => {
         </div>
         <div className="dc-reset">Best wave<span data-testid="waves-best">{best || '-'}</span></div>
       </div>
-      <div className="dc-route">One big arena, no exits. Waves swarm in from all sides, each one bigger: monsters of <i>every biome</i> join over time, elites from wave 3, <i>a champion every 5th</i> and <i>a biome boss every 10th wave</i>. A reward card every 3rd wave. The run ends when you fall.</div>
+      <div className="dc-route">One big arena, no exits. Waves swarm in from all sides, each one bigger: monsters of <i>every biome</i> join over time, elites from wave 3, <i>a biome boss every 5th wave</i> and champions in between; from wave 20 several bosses, champions and elites come at once. No potions or Ankh, healing -40%; monsters drop gold and Aether Crystals. The run ends when you fall.</div>
       <div className="dc-label">First-time milestones · {HERO_META[hero].title}</div>
       <div className="dc-mods" data-testid="waves-milestones">
         {WAVE_MILESTONES.map((w) => {

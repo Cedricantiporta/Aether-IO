@@ -240,9 +240,9 @@ export function interact(it: Interactable): void {
     else if (it.act === 'leave') { viaSide = v.area === 'CHURCH' && it.node === 1; v.pending = 'LEAVE'; }
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
     else if (it.act === 'npc') openDialogue(it.node);
-    else if (it.act === 'gate') {   // adventure (+ Ascension); sealed until the King's first task (main story)
+    else if (it.act === 'gate') {   // adventure; sealed until the King's first task (main story)
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
-      else events.emit('openSetOut', { mode: 'ADVENTURE' });
+      else st.startMode('ADVENTURE');   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
     }
     else if (it.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });      // the Endless Tower building
     else if (it.shop) st.openSpecificShop(it.shop);

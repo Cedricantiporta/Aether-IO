@@ -1,6 +1,7 @@
 import { CAM_PITCH0 } from './world';
 import { resetBossMech } from './systems/bossMech';
-import { PLAZA } from './townData';
+import { PLAZA, TOWER } from './townData';
+import { runInfo } from './runMods';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
 // No React in here. Called from the store (start/stop) and render/Scene (update).
@@ -149,6 +150,10 @@ export function enterVillage(): void {
   world.player.pos.set(PLAZA.x, 0, PLAZA.z - 4.4);
   world.player.facing = Math.PI;                 // face north, up the avenue to the castle
   world.camera.yaw = 0;                          // camera behind the hero
+  if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
+    world.player.pos.set(TOWER.door.x + 3.2, 0, TOWER.door.z); world.player.facing = Math.PI / 2;
+  }
+  runInfo.back = '';
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
   world.village.spawnFx = 1;                     // arrival light pillar on the hero
   useGameStore.getState().rollShopSales();

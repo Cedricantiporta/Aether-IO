@@ -42,6 +42,7 @@ import { updateBossMech, bossMechDied, tickBossStrikes } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
+import { towerMode, towerCrystals } from './combat';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround } from '../roomFeatures';
@@ -293,6 +294,8 @@ export function spawnEnemy(
 }
 
 /** Wave 5/15/25... mini-boss: elite-like unique (8x hp, +50% size) of a regional kind; drives world.boss HUD. */
+/** The enemy whose hp the boss bar shows (bosses win over minis). */
+let barOwner = -1;
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
@@ -370,16 +373,20 @@ export function onEnemyDeath(e: Enemy): void {
   }
 
   if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {
-    world.boss.active = false;
-    world.boss.hp = 0;
+    let other = false;   // (Endless Waves stacks bosses / minis: keep the bar while another one still stands)
+    for (const o of world.enemies) if (o !== e && o.active && o.state !== 'DYING' && (o.boss || o.mini)) { other = true; break; }
+    if (!other) { world.boss.active = false; world.boss.hp = 0; }
     events.emit('shake', { amount: 0.6 });
     events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: ENEMY_DEFS[e.kind].color });
     const st = useGameStore.getState();
     const luck = 2 * (1 + d.wave * 0.02);
-    dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
-    dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
-    const item = st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE');
-    if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
+    if (towerMode()) st.addCrystals(towerCrystals(false, true, false, d.wave), e.pos);   // tower modes: crystals, no items / loot
+    else {
+      dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
+      dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
+      const item = st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE');
+      if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
+    }
     if (e.kind === 'BANDIT' || e.kind === 'ZOMBIE') for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); } // Bandit Captain's strongbox (humanoids only)
   }
 
@@ -1300,8 +1307,11 @@ function updateEnemy(e: Enemy): void {
   const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz);
-  if (e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { const b = world.boss; b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
-  if (e.boss) { world.boss.hp = e.hp; }
+  if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)
+    const o = barOwner >= 0 ? world.enemies[barOwner] : null;
+    if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) barOwner = e.id;
+    if (barOwner === e.id) { const b = world.boss; if (!e.boss) b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
+  }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {

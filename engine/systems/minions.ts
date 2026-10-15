@@ -273,7 +273,7 @@ events.on('enemyDeath', (d) => {
     let near = (d.pos.x - pl.pos.x) ** 2 + (d.pos.z - pl.pos.z) ** 2 < 14 * 14;
     if (!near) for (const m of world.minions) if (m.active && (d.pos.x - m.x) ** 2 + (d.pos.z - m.z) ** 2 < 36) { near = true; break; }
     if (near) {
-      healPlayer(st.stats.maxHealth * (0.01 + 0.005 * (lv.soulHarvest - 1)));
+      healPlayer(st.stats.maxHealth * (0.007 + 0.0035 * (lv.soulHarvest - 1)));   // (-30%, owner)
       pl.mana = Math.min(st.stats.maxMana, pl.mana + 2 + (lv.soulHarvest - 1));
     }
   }

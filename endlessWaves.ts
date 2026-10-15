@@ -1,7 +1,7 @@
 // ============================================================================
 // Endless Waves: survival in one big round arena. Waves spawn one after another (short breather + banner between
 // them), growing in size and strength and mixing the monster pools of more biomes over time. Elites from wave 3,
-// a mini-boss every 5th wave, a real biome boss every 10th (cycling through the six; adds join from wave 20).
+// a boss every 5th wave and mini-bosses on 5n+3; deeper waves stack several bosses, minis and elites together.
 // No exits: the run ends on death. Best wave per class + one-time milestone rewards (waves 10/20/30/50).
 //
 // Pure data + engine run state (no React, no store import). The director drives the waves (towerFloor = wave),
@@ -19,17 +19,26 @@ export const waves = { on: false, breakT: -1, lastBest: 0, lastWave: 0 };   // l
 export function armWaves(): void { waves.on = true; waves.breakT = -1; waves.lastBest = 0; waves.lastWave = 0; }
 export function disarmWaves(): void { waves.on = false; waves.breakT = -1; }
 
-/** Wave w's room plan. Every 3rd: reward card; boss / mini waves drop an item. */
+/** Wave w's room plan (owner: bosses more often, and stacked deeper in). Every 5th wave a boss, every 5th + 3 a
+ *  mini-boss wave, every 3rd otherwise an elite pack with a reward card. */
 export function wavePlan(w: number): RoomPlan {
-  if (w % 10 === 0) return { type: 'BOSS', reward: 'NONE' };          // (boss waves: bossRewards incl. a card)
-  if (w % 5 === 0) return { type: 'MINIBOSS', reward: 'ITEM' };
+  if (w % 5 === 0) return { type: 'BOSS', reward: 'NONE' };          // (boss waves: bossRewards incl. a card)
+  if (w % 5 === 3) return { type: 'MINIBOSS', reward: 'ITEM' };
   const card = w % 3 === 0;
   return { type: w >= 3 && w % 3 === 0 ? 'ELITE' : 'COMBAT', reward: card ? 'CARD' : w % 2 ? 'GOLD' : 'NONE' };
 }
+/** Extra bosses beside a boss wave's boss: 2 bosses from wave 20, 3 from 35, 4 from 50. */
+export const waveExtraBosses = (w: number): number => (w < 20 ? 0 : Math.min(3, 1 + Math.floor((w - 20) / 15)));
+/** Mini-bosses joining a boss wave: from wave 15, one more every 15 waves (max 3). */
+export const waveBossMinis = (w: number): number => (w < 15 ? 0 : Math.min(3, Math.floor(w / 15)));
+/** Mini-bosses in a mini-boss wave: 1, 2 from wave 13, 3 from 28, 4 from 43. */
+export const waveMinis = (w: number): number => Math.min(4, 1 + Math.floor((w + 2) / 15));
+/** Elites escorting mini-boss / boss waves. */
+export const waveMiniElites = (w: number): number => Math.min(5, Math.floor(w / 8));
 /** Biome whose monster pool wave w draws from: the first 4 waves Greenwood, then more biomes join the mix
  *  (one more every 5 waves) and the waves rotate through them. Boss waves cycle the six biome bosses. */
 export function waveBiome(w: number): number {
-  if (w % 10 === 0) return (w / 10 - 1) % WAVES_BIOMES;
+  if (w % 5 === 0) return (w / 5 - 1) % WAVES_BIOMES;
   const open = Math.min(WAVES_BIOMES, 1 + Math.floor(w / 5));
   return (w * 7 + Math.floor(w / 3)) % open;
 }

@@ -1148,7 +1148,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ---- run modes: adventure (+ Ascension) / endless tower
     startMode: (mode: RunMode) => {
       disarmDaily(); disarmWaves();
-      runInfo.mode = mode;
+      runInfo.mode = mode; runInfo.back = mode === 'TOWER' ? 'TOWER' : '';
       set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
       get().startGame();
@@ -1177,7 +1177,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     startDaily: () => {
       const today = dayKey(), p = get().progress, d = p.daily;
       disarmWaves(); armDaily(dailyFor(today));
-      runInfo.mode = 'TOWER'; runInfo.ascension = 0;
+      runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
       set({ difficulty: 'NORMAL', progress: { ...p, daily: d.day === today ? { ...d, tries: d.tries + 1 } : { ...d, day: today, best: 0, tries: 1 } } });   // same rules for everyone
       get().startGame();
     },
@@ -1200,7 +1200,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ---- Endless Waves (endlessWaves.ts): one arena, wave after wave until death
     startWaves: () => {
       disarmDaily(); armWaves();
-      runInfo.mode = 'TOWER'; runInfo.ascension = 0;
+      runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
       set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });
       get().startGame();
     },

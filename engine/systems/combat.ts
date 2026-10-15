@@ -15,6 +15,17 @@ import { comboMul, registerHit } from './combo';
 import { useGameStore } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo } from '../runMods';
+/** The tower modes (Endless Tower, Daily Trial, Endless Waves all run as runInfo.mode 'TOWER'): monsters drop no items
+ *  or loot there, only gold and Aether Crystals (owner: that currency is for summoning). */
+export const towerMode = (): boolean => runInfo.mode === 'TOWER';
+/** Aether Crystals for one tower-mode kill: bosses / minis / elites pay, plain monsters rarely; deeper pays a bit more. */
+export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, depth: number): number {
+  const deep = 1 + Math.floor(depth / 10) * 0.5;
+  if (boss) return Math.round(3 * deep);
+  if (mini) return Math.round(2 * deep);
+  if (elite) return Math.random() < 0.35 ? Math.max(1, Math.round(deep)) : 0;
+  return Math.random() < 0.015 ? 1 : 0;
+}
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
@@ -322,12 +333,13 @@ export function ankhCooldownLeft(): number { return Math.max(0, ankhReadyAt - Da
 /** Death screen offer: set by the death flow (player.ts) while an Ankh is ready; read by ui/screens/AnkhPrompt.tsx. */
 export const ankhOffer = { open: false, declined: false };
 /** An Ankh in the bag, off cooldown. */
-export function ankhAvailable(): boolean { return ankhCooldownLeft() <= 0 && useGameStore.getState().inventory.some((i) => i.type === 'REVIVE'); }
+export function ankhAvailable(): boolean { return !towerMode() && ankhCooldownLeft() <= 0 &&   // (no Ankh in the tower modes)
+   useGameStore.getState().inventory.some((i) => i.type === 'REVIVE'); }
 /** The player chose to use the Ankh of Life: consume it, start its cooldown and bring the hero back (half HP, 5 s invuln). */
 export function reviveWithAnkh(): boolean {
   const st = useGameStore.getState(), p = world.player;
   ankhOffer.open = false;
-  if (ankhCooldownLeft() > 0 || !st.consumeItem((i) => i.type === 'REVIVE')) return false;
+  if (towerMode() || ankhCooldownLeft() > 0 || !st.consumeItem((i) => i.type === 'REVIVE')) return false;
   startAnkhCooldown();
   p.alive = true; p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
   p.invulnT = Math.max(p.invulnT, 5);
@@ -444,15 +456,17 @@ export function killEnemy(e: Enemy): void {
   // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
   {
     const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
-    if (e.boss) { const my = run.bossKills >= 2; dropLoot(e.kind, luck, px, pz, true, my); if (Math.random() < 0.4) dropLoot(e.kind, luck, px, pz, false, my); }
+    if (towerMode()) { const c = towerCrystals(e.boss, e.mini, e.elite, wave); if (c > 0) st.addCrystals(c, e.pos); }   // tower modes: crystals, never loot
+    else if (e.boss) { const my = run.bossKills >= 2; dropLoot(e.kind, luck, px, pz, true, my); if (Math.random() < 0.4) dropLoot(e.kind, luck, px, pz, false, my); }
     else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
   }
 
   // XP is granted instantly (no orbs), scaled by monster strength at spawn time (see spawnEnemy).
   if (e.xp > 0) grantKillXp(e.xp, e.pos);
 
-  // Item drops.
-  if (e.boss) {
+  // Item drops (none in the tower modes: Endless Tower / Daily Trial / Endless Waves pay gold + Aether Crystals instead).
+  if (towerMode()) { /* no items */ }
+  else if (e.boss) {
     // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
     const before = run.bossKills - 1;
     let rarity: Rarity = 'EPIC';
@@ -486,6 +500,7 @@ export function healPlayer(amount: number): void {
   amount *= runInfo.ascension >= 4 ? runMods(useGameStore.getState().difficulty).heal : 1;   // Ascension 4: weaker healing
   amount *= world.roomEvt.twist === 'CURSED' && world.director.phase === 'FIGHT' ? 0.35 : 1;   // Cursed Ground twist
   amount *= dailyMods.heal;   // Daily Trial: Bloodthirst
+  if (towerMode()) amount *= 0.6;   // tower modes: healing -40% (owner)
   const max = useGameStore.getState().stats.maxHealth;
   const before = p.hp;
   p.hp = Math.min(max, p.hp + amount);
