@@ -8,6 +8,7 @@ import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import { useRaf } from '../hooks/useRaf';
 import { activeDefs, dashDef, ACTIVE_ORDER, ULTS } from '../../abilityDefs';
+import { DASH_UNLOCK_LV } from '../../classLevels';
 import { PaintedIcon } from '../components/SkillIcons';
 import { POTION_COOLDOWN } from '../../constants';
 import { requestClick } from '../../engine/systems/target';
@@ -227,6 +228,7 @@ export const TouchControls: React.FC = () => {
   const defs = activeDefs(hero);
   const order = ACTIVE_ORDER[hero];
   const dDef = dashDef(hero);
+  const dashOpen = useGameStore((s) => s.level >= DASH_UNLOCK_LV);   // the dash button appears at class level 20
   const icon = (i: number) => <PaintedIcon id={defs[i].icon} />;
   const p = world.player;
   const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]] }), mana: () => useGameStore.getState().getManaCost(order[i]) });
@@ -264,7 +266,7 @@ export const TouchControls: React.FC = () => {
         <SkillBtn skill="s1" label="Skill 1" at={G.s1} left={left} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
         <SkillBtn skill="s2" label="Skill 2" at={G.s2} left={left} icon={icon(1)} {...sk(1)} onDrag={setDrag} />
         <SkillBtn skill="s3" label="Skill 3" at={G.s3} left={left} icon={icon(2)} {...sk(2)} onDrag={setDrag} />
-        <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />
+ {dashOpen && <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />}
         {potion('hp')}
         {potion('mp')}
         {!village && <AutoBtn at={G.auto} left={left} />}

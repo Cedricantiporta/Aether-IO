@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGameStore, shopPrice, SUPPLY_STOCK } from '../../../store';
+import { useGameStore, shopPrice, SUPPLY_STOCK, questFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
@@ -10,6 +10,7 @@ const STOCK = SUPPLY_STOCK;
 
 export const SuppliesTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
+  const freeHp = useGameStore((s) => questFree(s, 'potion'));   // tutorial "Stock Up": one Health Potion on the house
   const sales = useGameStore((s) => s.shopSales);
   const inventory = useGameStore((s) => s.inventory);
   const massSell = useGameStore((s) => s.massSell);
@@ -33,7 +34,7 @@ export const SuppliesTab: React.FC = () => {
       <div>
         <div className="rpg-label mb-2">Provisions</div>
         <div className="slot-grid priced">
-          {STOCK.map((it) => <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={shopPrice(it)} sale={sales[it.id]} oldPrice={it.price} cantAfford={gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => setBuy(it)} />)}
+          {STOCK.map((it) => { const free = freeHp && it.id === 'potion_hp'; return <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={free ? 0 : shopPrice(it)} sale={free ? undefined : sales[it.id]} oldPrice={it.price} cantAfford={!free && gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => (free ? setBuy(it, { price: 0, max: 1 }) : setBuy(it))} />; })}
         </div>
       </div>
       <div>

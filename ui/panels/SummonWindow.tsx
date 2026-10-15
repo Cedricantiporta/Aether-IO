@@ -10,7 +10,7 @@ import { Sparkles, X, Cog, Gem, Info } from 'lucide-react';
 import { TechGrid } from './shop/Tech';
 import { ItemSlot } from '../components/ItemSlot';
 import { GEM_OFFERS, buyGemOffer } from '../../gemShop';
-import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC } from '../../store';
+import { useGameStore, questFree, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC } from '../../store';
 import { Hexagon } from 'lucide-react';
 import { useUiStore } from '../uiStore';
 import { GemGlyph } from '../components/SkillIcons';
@@ -44,7 +44,8 @@ export const SummonWindow: React.FC = () => {
   const drawn = altar ? pity?.[tab] ?? 0 : 0;
   const B = BANNERS.find((b) => b.id === tab)!;
   const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
-  const c1 = gem ? SUMMON_COST_1 : SHARD_COST_1, c10 = gem ? SUMMON_COST_10 : SHARD_COST_10, have = gem ? gems : shards;
+  const free1 = useGameStore((s) => questFree(s, 'summon')) && gem;   // tutorial "A Gift from the Stars": the first summon is free
+  const c1 = free1 ? 0 : gem ? SUMMON_COST_1 : SHARD_COST_1, c10 = gem ? SUMMON_COST_10 : SHARD_COST_10, have = gem ? gems : shards;
   const Cur = ({ size }: { size: number }) => (gem ? <GemGlyph size={size} /> : <Hexagon size={size} color="#c9a8ff" />);
   const go = (n: 1 | 10) => { if (!altar) return; const r = summon(n, tab); if (r && r.length) setResults(r, tab); };
   return (
@@ -118,9 +119,9 @@ export const SummonWindow: React.FC = () => {
           )}
           <div className="sw-foot">
             <button className="sw-rates-btn pe" onClick={() => setRatesOpen(true)} data-testid="summon-rates-btn"><Info size={14} /> Rates</button>
-            <span className="sw-note">{gem ? `10x saves ${c1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} shards · get shards from crystals, ore and recycling`}</span>
+            <span className="sw-note">{gem ? `10x saves ${SUMMON_COST_1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} shards · get shards from crystals, ore and recycling`}</span>
             <button className="sw-btn" disabled={have < c1} onClick={() => go(1)} data-testid="summon-1">
-              Summon x1 <span><Cur size={14} />{c1}</span>
+              Summon x1 <span>{free1 ? 'FREE' : <><Cur size={14} />{c1}</>}</span>
             </button>
             <button className="sw-btn gold" disabled={have < c10} onClick={() => go(10)} data-testid="summon-10">
               Summon x10 <span><Cur size={14} />{c10}</span>

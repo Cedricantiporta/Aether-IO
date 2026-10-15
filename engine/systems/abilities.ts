@@ -3,7 +3,7 @@
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
-import { unlockLevel } from '../../classLevels';
+import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
 import { edgeLimit, queryColliders, type Collider } from '../mapgen';
@@ -19,7 +19,7 @@ import {
 import { spawnProjectile } from './projectiles';
 import { hitStop, slowMo, fovKick } from '../game';
 /** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
-const RAISE_N = [2, 3, 3, 4, 5];
+const RAISE_N = [1, 2, 3, 4, 5];
 import { hooks } from './hooks';
 
 /** State for render/UI of multi-frame abilities. */
@@ -449,7 +449,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   // ---- NECROMANCER
   if (hero === 'NECROMANCER') {
     if (slot === 'q') {   // RAISE DEAD: skeletons (warriors, archers or mages) claw out of the ground around you
-      const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 2 / 3 / 3 / 4 / 5 by level
+      const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 1 / 2 / 3 / 4 / 5 by level
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
         // random warrior / archer / mage, at least one of each in the army
@@ -1219,10 +1219,15 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
 }
 
 // ============================================================ dash entry =====
+let dashLockMsgT = -9;
 /** Space: spends a dash charge and performs the class dash (Shadow Roll / Blink Nova / Shoulder Charge). */
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;
+  if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level 20
+    if (world.time - dashLockMsgT > 3) { dashLockMsgT = world.time; useGameStore.getState().addNotification(`Dash unlocks at Lv ${DASH_UNLOCK_LV}`, '#c8c0b0', 'SYSTEM'); }
+    return false;
+  }
   if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }
   if (p.dashCd <= 0) p.dashCd = p.dashCdMax;
   p.dashCharges--;

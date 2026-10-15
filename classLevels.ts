@@ -10,6 +10,8 @@ export interface ClassProg { lv: number; xp: number; sp: number; skills: SkillLe
 export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 export const START_SP = 3;
 export const MAX_LEVEL = 99;
+/** The class dash unlocks at this class level (below it Space does nothing). */
+export const DASH_UNLOCK_LV = 20;
 
 /** XP needed to go from `lv` to `lv + 1`. */
 export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max(1, lv), 1.5));

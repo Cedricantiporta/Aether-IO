@@ -1,5 +1,5 @@
 import React from 'react';
-import { unlockLevel } from '../../classLevels';
+import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
 import { SKILLS_INFO, POTION_COOLDOWN } from '../../constants';
@@ -21,7 +21,8 @@ const Sep = () => <div className="tray-sep" />;
 const cdLine = (label: string, v: string) => <><span className="muted">{label}</span><span>{v}</span></>;
 
 export const ActionBar: React.FC = () => {
-  const { hero, skillLevels } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels })));
+  const { hero, skillLevels, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels, heroLv: s.level })));
+  const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level 20
   const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4')] as const));
   const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3] };
   const cdr = useGameStore((s) => s.stats.cooldownReduction);
@@ -57,9 +58,9 @@ export const ActionBar: React.FC = () => {
               lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />
         );
       })}
-      <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dLv}
+      <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dashOpen ? dLv : 0} active={dashOpen}
         getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
-        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={`Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s per charge`), cdLine(`Lv ${dLv}`, dDef.per(dLv)), cdLine('Level 5', '+1 dash charge')]} />} />
+        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s per charge`), cdLine(`Lv ${dLv}`, dDef.per(dLv)), cdLine('Level 5', '+1 dash charge')]} />} />
 
       <Sep />
       {classPassives.map((k) => {

@@ -21,7 +21,7 @@ import { Vector3 } from 'three';
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
 const MAX_DASH_CHARGES = 1;
 /** Every dash (all classes, any level) recharges in exactly 4 s. */
-const DASH_CD = 4;
+const DASH_CD = 6;
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
@@ -68,7 +68,7 @@ export function initPlayer(): void {
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
   p.shieldCharges = p.maxShieldCharges;
   p.shieldCd = 0;
-  p.dashCdMax = 4;
+  p.dashCdMax = DASH_CD;
   p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = 0;
   p.ult = 0;
   resetPlayerSystem();
@@ -204,7 +204,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD;   // a flat 4 s for every class and dash level (no gear / talent / cooldown-reduction changes)
+  p.dashCdMax = DASH_CD;   // a flat 6 s for every class and dash level (no gear / talent / cooldown-reduction changes)
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {

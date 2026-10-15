@@ -121,6 +121,11 @@ export const saleOf = (item: { id: string }): number => useGameStore.getState().
 /** The Pet House gives a new guard their first pet: the Green Blob is free while you own no pet at all. */
 export const firstPetFree = (s: { equipment: Equipment; inventory: Item[]; warehouse: Item[] }, id: string): boolean =>
   id === 'pet_blob' && !s.equipment.pet && !s.inventory.some((i) => i.type === 'PET') && !s.warehouse.some((i) => i.type === 'PET');
+/** Tutorial freebies like the first pet: while the story step "Stock Up" is active one Health Potion is free, and while
+ *  "A Gift from the Stars" is active one gem summon is free. */
+export const questFree = (s: { story: StorySave }, what: 'potion' | 'summon'): boolean => STORY[s.story.step]?.id === what;
+export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[] }, id: string): boolean =>
+  firstPetFree(s, id) || (id === 'potion_hp' && questFree(s, 'potion'));
 export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -1353,7 +1358,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     buyItem: (item, quantity = 1) => {
       const s = get();
-      const total = firstPetFree(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;
+      const total = freeBuy(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;
       if (s.gold < total) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
       const toAdd: Item = { ...item, stats: { ...item.stats }, id: uid('buy'), quantity };
       if (!isStackable(item) && quantity > 1) {
@@ -1621,7 +1626,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const n = Math.min(count, space);
       if (n <= 0) { notify('Inventory Full!', 'red', 'WARNING'); return []; }
       const gem = altar === 'GEM';
-      const cost = gem ? (n === 10 ? SUMMON_COST_10 : n * SUMMON_COST_1) : (n === 10 ? SHARD_COST_10 : n * SHARD_COST_1);
+      const cost = gem && n === 1 && questFree(s, 'summon') ? 0   // the tutorial's first summon is on the house
+        : gem ? (n === 10 ? SUMMON_COST_10 : n * SUMMON_COST_1) : (n === 10 ? SHARD_COST_10 : n * SHARD_COST_1);
       if (gem && s.gems < cost) { notify('Not enough Gems!', 'red', 'WARNING'); return []; }
       if (!gem && s.materials.COMMON < cost) { notify('Not enough Common Shards!', 'red', 'WARNING'); return []; }
       const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
