@@ -12,6 +12,7 @@ import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleanse
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
+import { wardedBossId } from './bossMech';
 import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
@@ -23,7 +24,7 @@ import { dailyMods } from '../../dailyChallenge';
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
 const MAX_DASH_CHARGES = 1;
 /** Every dash (all classes, any level) recharges in exactly 4 s. */
-const DASH_CD = 6;
+const DASH_CD = 5.5;   // (owner: was 6 s)
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
@@ -74,6 +75,7 @@ export function initPlayer(): void {
   p.dashCdMax = DASH_CD;
   p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = 0;
   p.ult = 0;
+  p.arcane = p.arcaneMax = p.arcaneT = 0;
   resetPlayerSystem();
 }
 
@@ -215,7 +217,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD;   // a flat 6 s for every class and dash level (no gear / talent / cooldown-reduction changes)
+  p.dashCdMax = DASH_CD;   // a flat 5.5 s for every class and dash level (no gear / talent / cooldown-reduction changes)
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
@@ -266,6 +268,20 @@ export function updatePlayer(dt: number): void {
       else if (e !== cur) {
         const dc = Math.hypot(cur.pos.x - p.pos.x, cur.pos.z - p.pos.z), de = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
         if (de + 1.5 < dc) autoAim.id = e.id;
+      }
+      // a warded (immune) boss is skipped while its guards / crystals live: auto-aim goes for the nearest of them
+      // (balance pass 2: ranged heroes kept shooting the shielded boss and lost the race at the 66% / 33% wards)
+      const wb = wardedBossId();
+      if (wb >= 0 && autoAim.id === wb) {
+        let best = -1, bd = AUTO_TARGET_RANGE * AUTO_TARGET_RANGE;
+        const L = world.enemies;
+        for (let i = 0; i < L.length; i++) {
+          const o = L[i];
+          if (!o.active || o.state === 'DYING' || o.id === wb || o.decoy) continue;
+          const d2 = (o.pos.x - p.pos.x) ** 2 + (o.pos.z - p.pos.z) ** 2;
+          if (d2 < bd) { bd = d2; best = o.id; }
+        }
+        if (best >= 0) autoAim.id = best;
       }
     }
   }

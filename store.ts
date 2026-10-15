@@ -136,6 +136,10 @@ export const questFree = (s: { story: StorySave }, what: QuestFreebie): boolean 
 export const isArmorPiece = (i: { type: string }): boolean => i.type === 'ARMOR' || i.type === 'HELMET' || i.type === 'GLOVES' || i.type === 'BOOTS';
 export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[] }, item: { id: string; type: string }): boolean =>
   firstPetFree(s, item.id) || (item.id === 'potion_hp' && questFree(s, 'potion')) || (isArmorPiece(item) && questFree(s, 'armor'));
+/** Skill mana cost multiplier per class (balance pass 2, owner: "Barbarian -60% is too much"). Tuned with the headless sim
+ *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
+ *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
+export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
 export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -1118,7 +1122,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (skill === 'e' && s.hero !== 'BARBARIAN') return 0; // class dash is free (charges)
       const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? Math.ceil((15 + s.skillLevels.freezeSpell * 2) * 0.5) : 0;   // passives cost half mana
-      const total = s.hero === 'WIZARD' && cost > 0 ? Math.ceil(cost * 1.3) : s.hero === 'BARBARIAN' && cost > 0 ? Math.ceil(cost * 0.4) : cost;   // Barbarian skills -60% mana
+      const total = cost > 0 ? Math.ceil(cost * (CLASS_MANA_MUL[s.hero] ?? 1)) : 0;   // per-class mana cost multiplier (balance pass 2)
       return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;
     },
 

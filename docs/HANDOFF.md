@@ -87,7 +87,8 @@ needed to see the new game).
   (was 2); elite gear drop 0.25 -> 0.15, plain 0.015 -> 0.01; boss Legendary/Mythic gear odds ~halved, `rarityForDepth`
   Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved.
 - **Barbarian:** Earthsplitter (s3) is now a short close-range cleave (length 9 + 0.6/lv, 6 spikes; was 34+); all
-  Barbarian skills cost 60% less mana (store `getManaCost`).
+  Barbarian skills cost 60% less mana (store `getManaCost`). **Changed by the owner later:** now -30% (store
+  `CLASS_MANA_MUL`, see "Balance pass 2").
 - **Barbarian basic axe:** boomerang pierces up to 6 enemies on the way out and 6 more on the way back (a brief
   non-piercing version was reverted on request).
 - **Mana regen:** every class has a base 1.0-1.5/s (Archer 1.2, Wizard 1.5, Necro 1.4, Knight/Barbarian 1.0), and the old
@@ -185,17 +186,58 @@ Archer next weakest. Necro and Knight sit in between and vary a lot between batc
   per run (10-30 gems). XP: Lv 1 -> 10 in about 6 runs (~40 min); estimated 15-20 h to Lv 50 (~2-4k XP per minute at
   Lv 20-35 vs `xpNeed(lv) = 250 lv^1.5`).
 
-### Open owner decisions
-1. **Wizard is the weakest class** (30 base HP, glass cannon by request). Options: +HP per level for the Wizard only,
-   a small shield on Blink Nova / Frost, or leave it as the hard class.
-2. **Barbarian is the strongest** (the -60% mana skills + boomerang pierce 6+6 are owner picks). It never runs out of
-   mana; every other class is mana-bound in long fights at regen 1.0-1.5.
-3. **The class dash unlocks at Lv 20**, but boss kits (Thorn Ring, Gravity Flip, Void rings) are built around
-   dashing. Unlocking it at Lv 8-10 would make biome 1-2 bosses much fairer.
-4. Elderroot is still the first big wall (about half of the bot's first attempts at Lv 6-10 fail). Lower it further
-   only if players complain.
-5. Malakar's final fight is long for auto-aim players (two illusions + cultists + his own shield): about half of the
-   bot fights at Lv 40 Legendary still take over 8 minutes.
+### Open owner decisions (answered - see Balance pass 2)
+The owner answered: Wizard gets a purple shield passive (replacing Storm), Barbarian -60% mana is too much (re-tune every
+class), the dash unlocks at Lv 8 with a slightly shorter cooldown, bosses adjusted to match.
+
+## Balance pass 2 (Oct 2026, owner answers)
+**Harness correction:** the first pass's bot could learn OTHER classes' passives (the trainer filters by class, the bot
+did not; `skills.ts` never checked the class either), so e.g. an Archer bot got the Wizard tornado. Absolute numbers of
+pass 1 were inflated; the relative findings stand. Pass 2 numbers are honest. The engine now also checks the class
+before running the Wizard passive.
+
+### Changes (every value)
+- **Wizard: Arcane Shield replaces Storm** (same skill key `storm`, so saves keep their levels; Lv 6 unlock as before).
+  Every 12 s (-1 s per level, min 7 s, full speed while moving) in battle a purple shield absorbs 20% (+5% per level)
+  of max HP for 6 s or until broken. Player fields `arcane / arcaneMax / arcaneT` (engine/types.ts), cast in
+  `skills.ts`, soaked first in `combat.damagePlayer` ("SHIELD SHATTERED" + purple burst when broken), drawn as a
+  purple bubble by `AegisSphere` in render/Hero.tsx and on the shield strip above the HP bar; "ARCANE SHIELD" float
+  text on cast. Talents: Storm Surge = +0.5 s duration per rank, Tempest / Archmage 6-set = shield +25%. New icons
+  (SkillIcons / UpgradeIcons / ItemIcon). The tornado no longer spawns (the `TORNADO` zone is still used by Gale Arrow).
+  Measured with the bot at Elderroot (Lv 8-10, shop gear): 0 of 6 won without the shield; 2 of 12 with it (it casts
+  4-6 times per fight).
+- **Mana cost per class** (store `CLASS_MANA_MUL`; regen unchanged 1.0-1.5/s): Barbarian x0.7 (was x0.4), Wizard x1.0
+  (was x1.3), Knight x0.85, Archer x0.75, Necromancer x1. Average mana left during fights in 6-run progressions:
+  before Barbarian 77% (never empty) / Wizard 29% / Knight 25% / Archer ~40% / Necro 48%; after Barbarian 35%, Wizard
+  31%, Archer 37%, Necro 36%, Knight 18-46% (noisy between batches).
+- **Dash** unlocks at Lv 8 (was 20), recharge 5.5 s (was 6), every class incl. Barbarian Leap / Knight Holy Charge
+  (all share `tryDash`). Mira's tutorial line updated.
+- **Bosses, now that the dash comes at Lv 8:** Elderroot Thorn Ring x1.1 power (pass 1: x0.9, originally x1.3).
+  Elderroot (the Adventure Greenwood guardian only) has -15% HP. Auto-aim skips a warded (immune) boss while its
+  guards / crystals are alive (`player.ts`). Ranged heroes used to pour damage into the shield and die at the 33% ward.
+  Malakar's own shield is now 5% every 20 s / 7% every 16 s in stage 2 (was 7% / 17 s and 10% / 13 s).
+- **Archer** base damage 12.2 -> 14.6 (+20%). It was the clear outlier once the bot stopped borrowing passives: 8.5
+  rooms per run vs 12-18 for the others. After the change: 10.9-12.3.
+
+### Results (final code, honest bot)
+| Elderroot, Lv 8-10, shop gear, boss room only | Won |
+|---|---|
+| Barbarian | 6 / 6 |
+| Knight | 5 / 6 |
+| Necromancer | 4-5 / 6 |
+| Archer | 3 / 6 (after the auto-aim fix; 0-2 / 6 before) |
+| Wizard | 1-2 / 6 (0 / 15 in pass 1) |
+
+6-run shop progressions (Lv 1 -> 9-10): rooms per run Archer 12.3 / Wizard 12.2 / Barbarian 14.8 / Knight 18 / Necro
+14.7. Barbarian and Knight beat Elderroot in runs (10 / 10); the other three mostly still fall to it on their first
+6 runs. God-mode boss suite unchanged apart from the Lich mini (peak 4 adds, 15 s). Malakar at Lv 40: 3 of 6 bot fights
+finish within 500 s (was 1 of 5 within 900 s).
+
+### Still open
+1. **Wizard is still the weakest boss fighter.** Next steps if the owner wants: shield +5% per level more, or let the
+   Lv 6 unlock come at Lv 2.
+2. **Malakar's final fight** stays long for auto-aim (illusions + cultists): half the Lv 40 bot fights exceed 8 min.
+3. **Knight runs lowest on mana** but is the strongest runner (0 deaths in 6 runs). Leave it, or drop its mana cut to x1.
 
 ## QA (headless)
 - Tailwind CDN is blocked in the container: route it to the npm package `tailwindcss-cdn@3.4.10`
@@ -723,8 +765,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   per cast 1/2/3/4/5 by level. Plague Ground (src 3): every enemy dying in it rises as a warrior for 8 s (max 5).
   Weapon perk raises (src 4) max 2; Grave Call (src 5) warriors last 8 s + 1 s/level (max 2). Skeleton skills:
   warriors Cleave, archers Burning Arrow (heavy, burns, leaves a fire patch), mages Chain Lightning (4 targets).
-- The class dash unlocks at class level 20 (classLevels DASH_UNLOCK_LV; tryDash gate, locked slot, hidden on mobile);
-  dash recharge 6 s. Tutorial freebies: the Stock Up potion and the first gem summon are free (store `questFree`).
+- The class dash unlocks at class level 8 (classLevels DASH_UNLOCK_LV, was 20 - owner, balance pass 2; tryDash gate,
+  locked slot, hidden on mobile); dash recharge 5.5 s (was 6 s). Tutorial freebies: the Stock Up potion and the first gem summon are free (store `questFree`).
 - Town: two castle guards (Sir Aldo, Sir Bram) flank the castle steps.
 
 ### Story v4: biome errands, second town tour, level-gated side quests

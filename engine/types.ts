@@ -353,6 +353,8 @@ export interface PlayerRuntime {
 
   /** Aegis card: a damage-absorbing shield (hp) that takes hits before health; aegisMax = its size when granted. */
   aegis: number; aegisMax: number;
+  /** Wizard Arcane Shield passive (skill key 'storm'): purple absorb shield (hp), its size when cast, seconds left. */
+  arcane: number; arcaneMax: number; arcaneT: number;
   shieldCharges: number;
   maxShieldCharges: number;
   shieldCd: number;

@@ -1,5 +1,5 @@
 // ============================================================================
-// Passive hero skills (blizzard, storm, orbital blades; burning/freezing/thunder/stamp
+// Passive hero skills (blizzard, arcane shield, orbital blades; burning/freezing/thunder/stamp
 // are on-attack procs driven by projectiles.fireBasicAttack). Numbers follow the original SkillManager.
 // ============================================================================
 import { Vector3 } from 'three';
@@ -34,7 +34,6 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
 };
 
 const aim = new Vector3();
-const stormZones: (Zone | null)[] = [null, null];
 const lvScale = (lv: number): number => 1 + 0.15 * Math.max(0, lv - 1);
 const cdrMul = (): number => 1 - useGameStore.getState().stats.cooldownReduction;
 const blades: Projectile[] = [];
@@ -51,7 +50,7 @@ const holyAuraOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = rallyT = auraT = radT = 0; stormZones[0] = stormZones[1] = null;
+  blizzT = stormT = rallyT = auraT = radT = 0;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -316,44 +315,24 @@ export function updateSkills(dt: number): void {
     }
   }
 
-  if (lv.storm > 0) {
-    stormT += dt * chargeMul;
-    const max = Math.max(5, 12 - lv.storm * 0.2) * cdrMul();
+  // Arcane Shield (Wizard passive, skill key 'storm'): every 12 s (-1 s per level, min 7 s) in battle a purple shield
+  // absorbs 20% (+5% per level) of max HP for 6 s or until broken (combat.damagePlayer soaks it before the Aegis card).
+  if (pl.arcaneT > 0) { pl.arcaneT -= dt; if (pl.arcaneT <= 0) { pl.arcaneT = 0; pl.arcane = 0; pl.arcaneMax = 0; } }
+  if (lv.storm > 0 && st.hero === 'WIZARD') {
+    stormT += dt;   // (charges at full speed while moving: a defensive passive for a kiting caster)
+    const max = Math.max(7, 13 - lv.storm) * cdrMul();
     setCd('storm', max - stormT, max);
     if (stormT >= max) {
-      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 40)) { stormT = max; } else {
-      stormT = 0;
-      const dir = getAimDir(aim);
-      // Storm: a medium tornado spawns ~6 units in front of the hero, grinds enemies inside (continuous damage + light
-      // pull) for ~3.5 s and drifts toward the nearest enemy. Storm Twin talent adds a second one beside it.
-      const dps = stats.damage * 1.3 * stats.skillDamage * lvScale(lv.storm);
-      const life = 3.5 + 0.25 * (stats.stormBonus | 0);
-      const twin = stats.stormTwin > 0;
-      for (let i = 0; i < (twin ? 2 : 1); i++) {
-        const side = twin ? (i === 0 ? -1 : 1) * 2.6 : 0;
-        const z = allocZone();
-        if (!z) break;
-        z.active = true; z.kind = 'TORNADO'; z.hostile = false;
-        z.pos.set(pl.pos.x + dir.x * 6 - dir.z * side, 0, pl.pos.z + dir.z * 6 + dir.x * side);
-        z.radius = 3.6 + 0.1 * lv.storm; z.life = z.maxLife = life; z.tickT = 0;
-        z.damage = dps; z.color = 0xa8d8ff; z.length = 7; z.maxPull = 10;
-        stormZones[i] = z;
-      }
-      events.emit('lightning', { from: new Vector3(pl.pos.x, 1.2, pl.pos.z), to: new Vector3(pl.pos.x + dir.x * 6, 1.2, pl.pos.z + dir.z * 6) });
-      pl.anim.castT = 1;
+      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 30)) { stormT = max; } else {
+        stormT = 0;
+        const size = stats.maxHealth * (0.20 + 0.05 * (lv.storm - 1)) * (1 + 0.25 * (stats.stormTwin | 0));
+        pl.arcane = Math.max(pl.arcane, size); pl.arcaneMax = Math.max(pl.arcane, size);
+        pl.arcaneT = 6 + 0.25 * (stats.stormBonus | 0);
+        events.emit('floatText', { pos: pl.pos, text: 'ARCANE SHIELD', color: 0xb46bff, scale: 0.9, dy: 2.4 });
+        events.emit('shockwave', { pos: pl.pos.clone(), radius: 3.2, color: 0xa855f7 });
+        pl.anim.castT = 1;
       }
     }
-  }
-
-  // Storm tornadoes drift slowly toward the nearest enemy.
-  for (let i = 0; i < stormZones.length; i++) {
-    const z = stormZones[i];
-    if (!z) continue;
-    if (!z.active || z.kind !== 'TORNADO' || z.life <= 0) { stormZones[i] = null; continue; }
-    const e = findNearestEnemy(z.pos.x, z.pos.z, 14);
-    if (!e) continue;
-    const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-    if (d > 0.8) { const st2 = Math.min(d, 3.2 * dt); z.pos.x += (dx / d) * st2; z.pos.z += (dz / d) * st2; }
   }
 
   // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).

@@ -1228,7 +1228,7 @@ let dashLockMsgT = -9;
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;
-  if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level 20
+  if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (8)
     if (world.time - dashLockMsgT > 3) { dashLockMsgT = world.time; useGameStore.getState().addNotification(`Dash unlocks at Lv ${DASH_UNLOCK_LV}`, '#c8c0b0', 'SYSTEM'); }
     return false;
   }

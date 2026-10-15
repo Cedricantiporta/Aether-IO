@@ -35,7 +35,7 @@ export const STAT_NAME: Record<keyof PlayerStats, string> = {
   projectileSpeed: 'Projectile Speed', multishot: 'Projectiles', spread: 'Spread', dashCooldown: 'Dash Cooldown', cooldownReduction: 'Cooldown Reduction', magnetRadius: 'Pickup Range',
   critRate: 'Crit Rate', critDamage: 'Crit Damage', defense: 'Defense', skillDamage: 'Skill Damage', knockback: 'Knockback', dodge: 'Dodge',
   lifeSteal: 'Life Steal', minionDmg: 'Minion Damage', minionLife: 'Minion HP', minionCount: 'Extra Skeletons', minionHaste: 'Minion Attack Speed', thorns: 'Thorns', goldFind: 'Gold Find', xpBonus: 'XP Gain', pierceBonus: 'Pierce', onHitBurnChance: 'Burn on Hit', onHitSlowChance: 'Slow on Hit',
-  echoEvery: 'Echo', hawkBonus: 'Arrow Storm Duration', galeWidth: 'Gale Arrow Width', orbBonus: 'Storm Orbs', procHaste: 'Proc Haste', thunderChain: 'Chain Targets', stormBonus: 'Storm Duration', avatarBonus: 'Divine Avatar Duration', stormTwin: 'Storm Tornado',
+  echoEvery: 'Echo', hawkBonus: 'Arrow Storm Duration', galeWidth: 'Gale Arrow Width', orbBonus: 'Storm Orbs', procHaste: 'Proc Haste', thunderChain: 'Chain Targets', stormBonus: 'Arcane Shield Duration', avatarBonus: 'Divine Avatar Duration', stormTwin: 'Arcane Shield +25%',
   blizzardRadius: 'Blizzard Radius', blizzFreeze: 'Blizzard Freeze', stompRadius: 'Stomp Radius', stompStun: 'Stomp Stun', stompPower: 'Axe Storm Damage',
   dashCharges: 'Dash Charges', lowHpHaste: 'Attack Speed (low HP)', rageBonus: 'Rage Duration', dmgReduce: 'Damage Reduction', manaCostCut: 'Mana Cost Reduction', berserk: 'Damage (low HP)', stunBonus: 'Stun Duration', burnStacks: 'Max Burn Stacks', backstab: 'Backstab Damage', axeCount: 'Axe Storm Axes', axeBounce: 'Axe Storm Ricochets', axeSize: 'Axe Storm Size',
 };
@@ -43,7 +43,7 @@ export function fmtFx(k: keyof PlayerStats, v: number, mul = false): string {
   const sign = v < 0 ? '-' : '+';
   const a = Math.abs(v);
   if (k === 'echoEvery') return `every ${a} attacks fires twice`;
-  if (k === 'stormTwin') return 'twin';
+  if (k === 'stormTwin') return 'on';
   if (mul || PCT.has(k)) return `${sign}${parseFloat((a * 100).toFixed(1))}%`;
   if (k === 'regen' || k === 'manaRegen') return `${sign}${parseFloat(a.toFixed(1))}/s`;
   if (k === 'hawkBonus' || k === 'avatarBonus' || k === 'stormBonus' || k === 'blizzFreeze' || k === 'stompStun' || k === 'rageBonus' || k === 'stunBonus') return `${sign}${parseFloat(a.toFixed(1))}s`;

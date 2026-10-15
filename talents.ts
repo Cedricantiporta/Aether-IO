@@ -33,7 +33,7 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
   ],
   WIZARD: [
     { name: 'Arcane', blurb: 'Skill damage and mana', color: '#b07cff' },
-    { name: 'Storm', blurb: 'Chain lightning and typhoons', color: '#ffe14a' },
+    { name: 'Storm', blurb: 'Chain lightning and arcane wards', color: '#ffe14a' },
     { name: 'Frost', blurb: 'Blizzard and slows', color: '#7ee0ff' },
   ],
   BARBARIAN: [
@@ -99,10 +99,10 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ['t', [
       ['Static Charge', '+4% damage', 3, 'u:DAMAGE', { mul: { damage: 0.04 } }],
       ['Chain Lightning', 'Thundercaller and Storm Orbs chain +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
-      ['Storm Surge', 'Storm tornado lasts +0.5s, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
+      ['Storm Surge', 'Arcane Shield lasts +0.5s, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
       ['Overcharge', 'Thunder bolt N -1 per rank', 2, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }],
       ['Tailwind', '+4% move speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }],
-      ['Tempest', 'Storm summons a twin tornado, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
+      ['Tempest', 'Arcane Shield +25% stronger, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
     ]],
     ['f', [
       ['Chill', '+6% chance to slow on hit', 3, 'freezing', { add: { onHitSlowChance: 0.06 } }],
