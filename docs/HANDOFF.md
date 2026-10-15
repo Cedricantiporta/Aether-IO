@@ -871,3 +871,10 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   report from inside the cave.
 - Note: the wheat field is EAST of the road beside the barn (`FARM` (18, 60)); the Brewer hut is top-left outside the
   wall by the gate (-14, 45). The older bullet above saying "west of the road" for the field is outdated.
+
+### Cave follow-ups (owner)
+- Veins sit toward the middle of every chamber (within ~60% of the radius, 5+ apart); Floor 1 veins re-placed.
+- Unlooted drops (shards, gold, items) left on a cave floor are LOST when you change floors, climb out, get caved-in or leave
+  the cave (cave.ts enterFloor / cave-in, village.ts switchArea). Town drops are still scooped up when entering the cave.
+- Ultimate (R) slot: bigger, and the ready glow/rays finally show (the CSS read data-ready on the wrong element); icon brightens + pulses when full.
+- Beach: shoreline boulders kept off the pier (Terrain.tsx nearDock).

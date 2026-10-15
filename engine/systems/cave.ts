@@ -184,7 +184,9 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
   const v = world.village, cv = v.cave, p = world.player, C = world.camera, st = useGameStore.getState();
   closeDialogue(); useLanternPanel.setState({ open: false });
   for (const b of bubbles) b.active = false;
-  for (const o of world.pickups) if (o.active) petCollect(o);   // scoop up what lies on the ground (it would float in the next floor)
+  // unlooted drops on the floor you leave are lost (owner rule: loot it before you go); town drops coming in are scooped up
+  for (const o of world.pickups) if (o.active) { if (arrive === 'TOWN') petCollect(o); else o.active = false; }
+  world.itemPickupsVersion++;
   for (const z of world.zones) z.active = false;   // ground effects / shots of the last floor stay behind
   for (const pr of world.projectiles) pr.active = false;
   v.area = 'CAVE';
@@ -251,7 +253,8 @@ export function leaveCave(): void {
   for (const e of world.enemies) if (e.active) e.active = false;
   for (const z of world.zones) z.active = false;
   for (const pr of world.projectiles) pr.active = false;
-  for (const o of world.pickups) if (o.active) petCollect(o);
+  for (const o of world.pickups) o.active = false;   // unlooted drops stay behind (lost)
+  world.itemPickupsVersion++;
   world.player.hp = useGameStore.getState().stats.maxHealth;
 }
 /** At full black: 'DOWN' = one floor deeper (stairs / lucky ladder; from Floor 1 a new trip starts), 'UP' = back to Floor 1. */

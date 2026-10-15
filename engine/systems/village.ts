@@ -401,7 +401,9 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
   const p = world.player, v = world.village, C = world.camera, from = v.area;
   closeDialogue();
   // cave trips: whatever lies on the ground is scooped up on the way (it would otherwise float in the other map)
-  if (to === 'CAVE' || from === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
+  // (leaving the cave: unlooted drops there are lost; going in: town drops are scooped up)
+  if (from === 'CAVE') { for (const o of world.pickups) o.active = false; world.itemPickupsVersion++; }
+  else if (to === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
   if (from === 'CAVE' && to !== 'CAVE') leaveCave();
   for (const b of bubbles) b.active = false;
   p.vel.set(0, 0, 0); p.dashT = 0; p.anim.moveBlend = 0;
