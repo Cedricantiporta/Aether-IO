@@ -91,6 +91,11 @@ export function RoomEvents() {
       if (s) { const up = ph === 2 ? 1 : ph > 0 ? 0.12 * ph : 0; s.scale.set(1, Math.max(0.01, up), 1); s.visible = up > 0.02; }
       if (ph > 0 && ph < 2) pushHalo(tr.x, 0.3, tr.z, 2.6 + ph, 2.6, 0.3, 0.2, 0.2 + 0.35 * ph, CELL.GLOW);
     }
+    // the Shadowcaster (darkness twist): a pulsing violet aura
+    if (live && e.twist === 'DARK' && e.darkId >= 0) {
+      const m = world.enemies[e.darkId];
+      if (m.active && m.state !== 'DYING') pushHalo(m.pos.x, 1.2, m.pos.z, 3.4 + Math.sin(t * 5) * 0.4, 1.6, 0.4, 3.0, 0.6, CELL.GLOW);
+    }
     // goblin / bounty glows
     if (live && e.state === 1 && e.enemy >= 0) {
       const m = world.enemies[e.enemy];

@@ -8,11 +8,23 @@ import { OBJ_NAME, TWIST_NAME, TWIST_DESC } from '../../engine/roomDefs';
 export const RoomEventHud: React.FC = () => {
   const box = useRef<HTMLDivElement>(null), title = useRef<HTMLDivElement>(null), line = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null), fill = useRef<HTMLDivElement>(null), dark = useRef<HTMLDivElement>(null);
-  const sig = useRef('');
+  const sig = useRef(''), maskSig = useRef('-');
   useRaf(() => {
     const e = world.roomEvt, live = world.room.active;
-    const darkOn = live && e.twist === 'DARK' && world.director.phase === 'FIGHT';
-    if (dark.current) dark.current.style.opacity = darkOn ? '1' : '0';
+    const darkOn = live && e.twist === 'DARK' && !e.lifted && world.director.phase === 'FIGHT';
+    if (dark.current) {
+      dark.current.style.opacity = darkOn ? '1' : '0';
+      // the Shadowcaster stays faintly visible: a second hole in the darkness mask around it
+      const ms = darkOn && e.dOn ? `${Math.round(e.dsx)},${Math.round(e.dsy)}` : '';
+      if (ms !== maskSig.current) {
+        maskSig.current = ms;
+        const hero = 'radial-gradient(circle at 50% 56%, transparent 14%, rgba(0,0,0,.9) 34%, #000 60%)';
+        const m = ms ? `${hero}, radial-gradient(circle 9vmin at ${Math.round(e.dsx)}px ${Math.round(e.dsy)}px, rgba(0,0,0,.25) 30%, #000 100%)` : hero;
+        const st = dark.current.style as CSSStyleDeclaration & { webkitMaskImage: string; webkitMaskComposite: string };
+        st.maskImage = m; st.webkitMaskImage = m;
+        st.maskComposite = 'intersect'; st.webkitMaskComposite = 'source-in';
+      }
+    }
     const show = live && (!!e.obj || !!e.twist);
     let t = '', l = '', k = -1, col = '#f1d58e';
     if (show) {
@@ -25,7 +37,8 @@ export const RoomEventHud: React.FC = () => {
         else if (e.obj === 'GOBLIN') { l = e.enemy >= 0 ? `Catch it! ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Something glitters nearby...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
         else if (e.obj === 'HUNT') { l = e.enemy >= 0 ? `Kill the marked monster: ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Marking the bounty...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
       }
-      if (e.twist) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#c9b6ff'; void tw; }
+      if (e.twist === 'DARK' && !e.obj) { t = TWIST_NAME.DARK; l = e.lifted ? 'The darkness lifted' : 'Slay the glowing Shadowcaster to lift the darkness'; col = '#c9b6ff'; }
+      else if (e.twist) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#c9b6ff'; void tw; }
     }
     const s = `${show}|${t}|${l}|${col}`;
     if (s !== sig.current) {
@@ -41,7 +54,7 @@ export const RoomEventHud: React.FC = () => {
     <>
       {/* Darkness twist: only a small circle around the hero stays lit */}
       <div ref={dark} className="absolute inset-0 pointer-events-none" style={{ opacity: 0, transition: 'opacity .8s', zIndex: 2,
-        background: 'radial-gradient(circle at 50% 56%, rgba(0,0,0,0) 0, rgba(0,0,0,0) 14%, rgba(4,4,12,.86) 34%, rgba(2,2,8,.96) 60%)' }} />
+        background: 'rgba(2,2,8,.96)' }} />
       <div ref={box} className="absolute pointer-events-none" data-testid="room-objective" style={{ display: 'none', left: '50%', top: '8.4rem', transform: 'translateX(-50%)', zIndex: 6, textAlign: 'center', minWidth: '16rem' }}>
         <div ref={title} style={{ fontFamily: 'var(--font-title)', fontWeight: 800, fontSize: '1rem', letterSpacing: '.06em', textShadow: '0 2px 0 #000, 0 0 10px rgba(0,0,0,.8)' }} />
         <div ref={line} style={{ fontSize: '.78rem', color: '#f4ead2', textShadow: '0 1px 2px #000' }} />

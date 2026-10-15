@@ -135,6 +135,14 @@ export function CameraRig() {
       for (; n < 2; n++) world.illusionBars[n].active = false;
     }
 
+    // ---- darkness twist: where the Shadowcaster is on screen (the overlay lights a small hole around it)
+    {
+      const R = world.roomEvt, m = R.darkId >= 0 ? world.enemies[R.darkId] : null;
+      if (m && m.active && m.state !== 'DYING') {
+        _d.set(m.pos.x, 1, m.pos.z).project(cam);
+        R.dOn = _d.z < 1; R.dsx = (_d.x * 0.5 + 0.5) * window.innerWidth; R.dsy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      } else R.dOn = false;
+    }
     // ---- target anchor: the name + hp plate floats just above the targeted enemy's head
     {
       const A = world.targetAnchor, e = currentTarget();

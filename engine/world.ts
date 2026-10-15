@@ -128,6 +128,10 @@ export const world = {
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
     state: 0, hp: 0, maxHp: 1, x: 0, z: 0, t: 0, tmax: 0, enemy: -1, hurtT: 0,
+    /** Darkness twist: the monster casting it (-1 none yet), darkT = time in the room, lifted once it falls. */
+    darkId: -1, darkT: 0, lifted: false,
+    /** the Shadowcaster's screen spot (CameraRig): the darkness overlay keeps a small lit hole around it */
+    dOn: false, dsx: 0, dsy: 0,
     traps: Array.from({ length: 40 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
   },
   director: {

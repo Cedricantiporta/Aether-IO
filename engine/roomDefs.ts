@@ -299,7 +299,7 @@ const plan = (type: RoomType, next = 0): RoomPlan => {
 export const OBJ_NAME: Record<RoomObjective, string> = { DEFEND: 'Defend the Totem', RESCUE: 'Rescue the Captive', GOBLIN: 'Treasure Goblin', HUNT: 'Bounty Hunt' };
 export const TWIST_NAME: Record<RoomTwist, string> = { DARK: 'Darkness', CURSED: 'Cursed Ground', TRAPS: 'Spike Traps', GOLDEN: 'Golden Hour' };
 export const TWIST_DESC: Record<RoomTwist, string> = {
-  DARK: 'The light is failing: you only see what is close.', CURSED: 'Healing is weak here, but the clear pays gems.',
+  DARK: 'A Shadowcaster smothers the light: slay it to see again.', CURSED: 'Healing is weak here, but the clear pays gems.',
   TRAPS: 'Spikes burst from the floor: watch for the red glow.', GOLDEN: 'Monsters drop extra gold.',
 };
 

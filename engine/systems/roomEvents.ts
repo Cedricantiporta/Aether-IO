@@ -28,7 +28,7 @@ const GOBLIN_TIME = 15, HUNT_TIME = 30, TRAP_PERIOD = 3.2, TRAP_WARN = 2.1, TRAP
 
 export function resetRoomEvent(): void {
   const e = E();
-  e.obj = ''; e.twist = ''; e.state = 0; e.hp = 0; e.maxHp = 1; e.t = 0; e.tmax = 0; e.enemy = -1; e.nTraps = 0; e.hurtT = 0;
+  e.obj = ''; e.twist = ''; e.state = 0; e.hp = 0; e.maxHp = 1; e.t = 0; e.tmax = 0; e.enemy = -1; e.nTraps = 0; e.hurtT = 0; e.darkId = -1; e.darkT = 0; e.lifted = false;
 }
 
 /** Room entry: set up this room's objective / twist. */
@@ -191,6 +191,26 @@ export function updateRoomEvents(dt: number): void {
     }
   }
   // ---- twists
+  if (e.twist === 'DARK' && fighting && !e.lifted) {   // one monster casts the darkness: slay it and the light returns
+    e.darkT += dt;
+    if (e.darkId < 0 && e.darkT > 1.5) {
+      let best = -1, bd = 1e9;
+      for (const m of world.enemies) {
+        if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || m.mini || m.id === e.enemy) continue;
+        const d = Math.abs(Math.hypot(m.pos.x - pl.pos.x, m.pos.z - pl.pos.z) - 14);   // one at mid range: findable in the gloom
+        if (d < bd) { bd = d; best = m.id; }
+      }
+      if (best >= 0) {
+        const m = world.enemies[best];
+        m.maxHp = m.hp = Math.round(m.maxHp * 2.5); m.scale *= 1.25;
+        e.darkId = best;
+        events.emit('floatText', { pos: m.pos, text: 'SHADOWCASTER', color: 0xb47cff, scale: 1.0, dy: 2.4 });
+      }
+    } else if (e.darkId >= 0) {
+      const m = world.enemies[e.darkId];
+      if (!m.active || m.state === 'DYING') { e.lifted = true; e.darkId = -1; notify('The Shadowcaster falls: the darkness lifts!', '#c9b6ff'); }
+    }
+  }
   if (e.twist === 'TRAPS' && fighting) {
     for (let i = 0; i < e.nTraps; i++) {
       const tr = e.traps[i];
