@@ -59,8 +59,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13.5,
-      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5, each a random warrior, archer or mage, always at least one of each. Monsters attack them before you and they stay until slain. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
-      per: (lv) => `${[2, 3, 3, 4, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5, at least 1 warrior, archer and mage) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
+      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
+      per: (lv) => `${[2, 3, 3, 4, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
       per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },

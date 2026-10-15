@@ -24,18 +24,19 @@ export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4;
 const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2];
 export const PLAGUE_LIFE = 7;
 const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
-const SK_KINDS = [MINION_WARRIOR, MINION_ARCHER, MINION_MAGE];
 function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === src) { skN[m.kind]++; n++; } return n; }
-/** The next Raise Dead skeleton: a random warrior / archer / mage, but the army always holds at least one of each
- *  (a missing kind rises first). Recasting re-rolls the army: each new skeleton replaces the oldest one that isn't
- *  the last of its kind (spawnMinion). */
+/** The next Raise Dead skeleton. The army is 3 skeleton warriors + 2 that are each a random archer or mage
+ *  (3W+1A+1M, 3W+2A or 3W+2M): warriors rise first, the 4th and 5th are the ranged pair. A full army recast replaces
+ *  its oldest skeleton within the same group (warrior -> warrior, archer/mage -> a re-rolled archer or mage). */
+export const RAISE_WARRIORS = 3;
 export function pickRaiseKind(): number {
-  countSkeletons(SRC_RAISE);
-  let miss = 0;
-  for (const k of SK_KINDS) if (skN[k] === 0) miss++;
-  if (miss > 0) { let r = Math.floor(Math.random() * miss); for (const k of SK_KINDS) if (skN[k] === 0 && r-- === 0) return k; }
-  return SK_KINDS[Math.floor(Math.random() * 3)];
+  const n = countSkeletons(SRC_RAISE), war = skN[MINION_WARRIOR];
+  if (n < MAX_SKELETONS) return war < RAISE_WARRIORS ? MINION_WARRIOR : randRanged();
+  let oldK = MINION_WARRIOR, ol = 1e9;
+  for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === SRC_RAISE && m.born < ol) { ol = m.born; oldK = m.kind; }
+  return oldK === MINION_WARRIOR ? MINION_WARRIOR : randRanged();
 }
+function randRanged(): number { return Math.random() < 0.5 ? MINION_ARCHER : MINION_MAGE; }
 const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
 const cleaveO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.6 };
@@ -62,15 +63,15 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   // too many skeletons: the oldest one crumbles to make room
   if (kind !== MINION_GOLEM) {   // (each summon source has its own cap)
     const n = countSkeletons(src);
-    if (n >= (SRC_CAP[src] ?? MAX_SKELETONS)) {   // full: the oldest skeleton of this source that isn't the last of its kind crumbles
-      let any = -1, aOl = 1e9, same = -1, sOl = 1e9, oldest = -1, ol = 1e9;
+    if (n >= (SRC_CAP[src] ?? MAX_SKELETONS)) {   // full: the oldest skeleton of this source in the same group (warrior / ranged) crumbles
+      let same = -1, sOl = 1e9, oldest = -1, ol = 1e9;
+      const war = kind === MINION_WARRIOR;
       for (let i = 0; i < M.length; i++) {
         const m = M[i]; if (!m.active || m.kind === MINION_GOLEM || m.src !== src) continue;
         if (m.born < ol) { ol = m.born; oldest = i; }
-        if ((skN[m.kind] > 1 || m.kind === kind) && m.born < aOl) { aOl = m.born; any = i; }
-        if (m.kind === kind && m.born < sOl) { sOl = m.born; same = i; }
+        if ((m.kind === MINION_WARRIOR) === war && m.born < sOl) { sOl = m.born; same = i; }   // same group: warrior / ranged
       }
-      const k = any >= 0 ? any : same >= 0 ? same : oldest;
+      const k = same >= 0 ? same : oldest;
       if (k >= 0) crumble(M[k]);
     }
   }
