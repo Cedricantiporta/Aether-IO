@@ -268,11 +268,14 @@ export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'cave' | '
   if (act === 'npc' && npc >= 0 && npcs[npc]) { x = npcs[npc].x; z = npcs[npc].z; r = TALK_REACH; }
   g.act = act; g.tab = tab; g.npc = npc; g.r = 0.9;
   goT.x = x; goT.z = z; goT.reach = r; goT.repaths = 0; goT.track = 0.4;
+  goT.resume = hopNext; hopNext = null;   // (a quest walk through a door carries on in the next area)
   if ((x - p.pos.x) ** 2 + (z - p.pos.z) ** 2 <= r * r) { g.on = false; arrive(); return; }
   g.on = planRoute();
 }
 /** Walk state beside world.village.go: the real target + reach, stuck detection, re-path budget, NPC follow timer. */
-const goT = { x: 0, z: 0, reach: 1.6, best: 1e9, stuck: 0, repaths: 0, track: 0 };
+const goT = { x: 0, z: 0, reach: 1.6, best: 1e9, stuck: 0, repaths: 0, track: 0, resume: null as (() => void) | null, hops: 0 };
+/** Set by navWalk just before walkTo: what to walk to next when this walk ends at a door / exit (castle, cave). */
+let hopNext: (() => void) | null = null;
 function planRoute(): boolean {
   const p = world.player, g = world.village.go;
   let n = findPath(p.pos.x, p.pos.z, goT.x, goT.z, goT.reach, g.wp);
@@ -308,21 +311,30 @@ function tickWalk(dt: number, talking: boolean): void {
     useGameStore.getState().addNotification('Can\'t find a way there from here.', '#f1e2b8', 'SYSTEM');
   }
 }
-const navWalk = (t: NavTarget): void => walkTo(t.x, t.z, t.act, t.tab, t.reach, t.npc);
+/** Walks to a quest target; when it is only a door / exit on the way (`hop`), `again` re-runs the quest walk once the
+ *  next area has faded in, so one tracker click leads all the way (e.g. cave -> town -> castle hall -> the King). */
+function navWalk(t: NavTarget, again?: () => void, chained = false): void {
+  if (!chained) goT.hops = 0;
+  hopNext = t.hop && again && goT.hops < 3 ? () => { goT.hops++; again(); } : null;
+  walkTo(t.x, t.z, t.act, t.tab, t.reach, t.npc);
+  hopNext = null;
+}
 /** Quest tracker click (Quest Board bounty): claim at the board, the King, the potion shop (sell loot), else the portal. */
-export function walkToQuest(q: Quest): void { navWalk(boardQuestNav(q)); }
+export function walkToQuest(q: Quest): void { navWalk(boardQuestNav(q), () => walkToQuestHop(q), false); }
+function walkToQuestHop(q: Quest): void { navWalk(boardQuestNav(q), () => walkToQuestHop(q), true); }
 /** Main story row click: the step's NPC (through the castle door / exit when it is in the other area), the step's shop,
  *  else the Adventure Portal. The equip step opens the bag. */
 export function walkToMain(): void {
   const st0 = useGameStore.getState();
   if (STORY[st0.story.step]?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
   const t = mainNav();
-  if (t) navWalk(t);
+  if (t) navWalk(t, walkToMainHop);
 }
+function walkToMainHop(): void { const t = mainNav(); if (t) navWalk(t, walkToMainHop, true); }
 /** NPC side quest click: the NPC who takes it in when ready, the TALK target, the farm chore, the shop of a shop action,
  *  else the Adventure Portal. Takes the quest (or, legacy form, its objective + the NPC to walk to). */
 export function walkToNpcObjective(o: { type: string; target?: string | string[] } | NpcQuestDef, npc?: string | null): void {
-  if ('objective' in o) { navWalk(npcQuestNav(o)); return; }
+  if ('objective' in o) { const again = (): void => navWalk(npcQuestNav(o), again, true); navWalk(npcQuestNav(o), again); return; }
   if (npc) { walkToNpcQuest(npc); return; }
   navWalk(npcQuestNav({ id: '', giver: '', title: '', summary: '', intro: [], progress: '', done: [], objective: { type: o.type as NpcQuestDef['objective']['type'], target: o.target, count: 1 }, reward: {} }));
 }
@@ -332,7 +344,7 @@ export function walkAfterArrive(fn: () => void): void { afterArrive = fn; afterT
 /** Walk to talk with NPC `name` (through the castle door / exit when needed); unknown name: the Adventure Portal. */
 export function walkToNpcQuest(name: string | null): void {
   const i = name ? NPCS.findIndex((n) => n.name === name) : -1;
-  if (i >= 0) { navWalk(navNpc(i)); return; }
+  if (i >= 0) { const again = (): void => navWalk(navNpc(i), again, true); navWalk(navNpc(i), again); return; }
   if (world.village.area === 'CASTLE') walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'CAVE') walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2);
   else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
@@ -342,6 +354,8 @@ export function walkToSpot(at: Spot): void { const t = navSpot(at); if (t) navWa
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {
   const g = world.village.go, st = useGameStore.getState();
+  if (goT.resume && (g.act === 'castle' || g.act === 'cave' || g.act === 'leave')) walkAfterArrive(goT.resume);
+  goT.resume = null;
   if (g.act === 'shop' && g.tab) st.openSpecificShop(g.tab as ShopTab);
   else if (g.act === 'castle') world.village.pending = 'ENTER';
   else if (g.act === 'cave') world.village.pending = 'CAVE';

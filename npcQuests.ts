@@ -64,9 +64,9 @@ export interface NpcQuestDef {
 export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
-    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems from a Crystal Cavern',
-    intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'Some doors in the wilds lead to a Crystal Cavern: no monsters, only glowing veins. Mine them and bring me back ten gemstones or crystals.'],
-    progress: 'Ten shards of light from a Crystal Cavern, remember. The cave doors show up now and then between the fights.',
+    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems in a crystal cave',
+    intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'There is a crystal cave in the forest bay east of the town walls, and now and then a door in the wilds opens on a Crystal Cavern too. No monsters, only glowing veins.', 'Mine them and gather ten gemstones, crystals or ore nuggets. Hold on to them, I only want to hear them sing.'],
+    progress: 'Ten shards of light, remember. Follow the ring path east of the walls to the cave in the forest bay, or find a Crystal Cavern door in the wilds.',
     done: ['Ahh, look at them sing! You have a good eye, hero.', 'Take this for the trouble.'],
     objective: { type: 'COLLECT_LOOT', target: ['raw_gem', 'echo_crystal', 'ore_nugget'], count: 10, room: 'CRYSTAL' },
     reward: { gold: 1500, shards: ['COMMON', 10] },
@@ -389,6 +389,8 @@ export function npcMarker(name: string, save: NpcQuestSave, inv: readonly Item[]
   let m: 0 | 1 | 2 | 3 = 0;
   for (const d of NPC_QUESTS) {
     const st = npcQuestStatus(d, save, rank);
+    // the NPC a TALK quest sends you to has something for you too (the message to pass on): blue "?" like a turn-in
+    if (st === 'ACTIVE' && d.objective.type === 'TALK' && d.objective.target === name && (save.q[d.id]?.p ?? 0) < d.objective.count) return 3;
     if (st === 'ACTIVE' && npcQuestTurnIn(d) === name) { if (npcQuestReady(d, save, inv)) return 3; if (m === 0) m = 2; }
     else if (st === 'AVAILABLE' && d.giver === name) m = 1;   // a new quest outranks a grey "in progress" mark
   }

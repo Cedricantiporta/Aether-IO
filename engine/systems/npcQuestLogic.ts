@@ -143,7 +143,8 @@ events.on('enemyDeath', (e) => {
 events.on('roomEnter', (e) => bump('REACH_BIOME', e.biome + 1, undefined, true));
 events.on('pickup', (e) => {
   if (e.kind !== 'ITEM' || !e.name) return;
-  const room = world.room.plan.type;
+  // in town only the crystal cave counts as a "Crystal Cavern" (the run's last room type is stale there)
+  const room = useGameStore.getState().status === GameStatus.MENU ? (world.village.area === 'CAVE' ? 'CRYSTAL' : '') : world.room.plan.type;
   bump('COLLECT_LOOT', 1, (o) => (!o.room || o.room === room) && (Array.isArray(o.target) ? o.target : [o.target]).some((id) => !!id && LOOT_BY_ID[id]?.name === e.name));
 });
 

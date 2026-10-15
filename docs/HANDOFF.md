@@ -708,3 +708,30 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (`HarvestSet` in village.ts). Leaving puts the hero at `CAVE_OUT` facing the bay; ground pickups are scooped up on cave
   transitions. Minimap draws the cave outline / nodes / exit (and the hall in the castle), a cyan cave icon in town.
   The ruined wall that stood at the bay mouth moved from (58, 14) to (57.6, 25).
+
+### NPC + quest pass (Oct 2026)
+- **Routing**: `engine/systems/townPath.ts` = A* on a 0.5 m walkability grid rasterised from the real colliders + island
+  edge (cached per area / map version; town box now reaches x 84 for the cave bay). Click-to-walk / tracker auto-path
+  (`village.walkTo`) uses it (old street route only as fallback), follows a patrolling NPC, re-plans when blocked.
+  The guide arrow points along the route (`updateRouteHint`), not through walls.
+- **One source of truth for "where next"**: `engine/systems/questNav.ts` (`mainNav`, `npcQuestNav`, `boardQuestNav`,
+  `navNpc`, `navSpot`) is used by the tracker click, the guide arrow, the tracker distance text and the gold beacon in
+  TownScenery (old `storyTarget` / `storyAim` removed). It is area-aware for TOWN / CASTLE / CAVE: from the cave it
+  leads out, from town into the castle hall or the cave. A walk that ends at a door / exit carries on in the next area
+  by itself (`navWalk` hop resume, max 3 hops), so one tracker click goes e.g. cave -> town -> castle -> King.
+- **Bugs fixed**: merged WIP had no cave handling (tracker / arrow pointed at town targets from inside the cave, path
+  grid did not cover the cave bay); TALK-quest targets (Old Wend for Pip, Hollis for Corin) had no marker (now a blue
+  "?"); Wend's "Crystal Cavern" quest ignored the town Crystal Cave (cave pickups now count, town pickups no longer
+  count from a stale run room type; tracker leads into the cave to the nearest vein); "Town Gate" in Garrick's tracker
+  lines; the gold beacon had its own target table (board step = Hodge's home) that could disagree with the arrow.
+- **Interactions** (WIP, verified): NPCs stop + face the hero while talking (and when walked to), linger ~1.6 s, then
+  resume the patrol; prompt priority favours quest NPCs / the one faced (`talkBias`); per-NPC bubble cooldown 14 s,
+  "call over" bubbles for NPCs with something for you, one-off news lines per story milestone (`engine/npcLines.ts`);
+  dialogue hint line (next step + rewards). Tilda / Corin / Nell got more lines (cave east bay, Gerald the stone).
+- **Headless audit** (fresh save, `updateVillage(0.05)` stepped manually): all 66 main steps via `walkToMain` (dialogue /
+  shop / set-out opens at the target, step advances, gems paid exactly once, no off-island positions, min clearance to
+  any collider >= 0.64 m, save survives reload); all 30 side quests accepted / done / turned in via auto-path from
+  town, castle and cave start (rewards once, re-talk pays nothing, markers ! -> ? correct); board-quest claim + King
+  report from inside the cave.
+- Note: the wheat field is EAST of the road beside the barn (`FARM` (18, 60)); the Brewer hut is top-left outside the
+  wall by the gate (-14, 45). The older bullet above saying "west of the road" for the field is outdated.

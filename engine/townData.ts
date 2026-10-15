@@ -562,8 +562,10 @@ export const NPCS: NpcDef[] = [
       ['I\'ve traded with three kingdoms and a goblin. The goblin haggled best.', 'Never trust a price that doesn\'t argue back, dear.'],
       ['Everything on this cart has a story. That kettle? Survived a sea serpent. Allegedly.', 'The stories are free. The kettle is not.'],
       ['A good merchant reads the road like a map: dust means buyers, smoke means trouble, and silence means wolves.'],
+      ['Everyone who comes back from that cave in the east bay smells of wet rock and smugness.', 'Find crystals in there? Polish them first. Dull stones get dull prices. From me, anyway.'],
+      ['My grandmother sold maps. Half of them were true.', 'The other half sold better. Family business, dear: never let the truth slow down a good bargain.'],
     ],
-    bubbles: ['Spices! Silks! Slightly used!', 'Best prices outside the walls!', 'Mind the cart, dear.', 'Haggling welcome. Winning, less so.', 'Bat wings! Who sells me bat wings?'],
+    bubbles: ['Spices! Silks! Slightly used!', 'Best prices outside the walls!', 'Mind the cart, dear.', 'Haggling welcome. Winning, less so.', 'Bat wings! Who sells me bat wings?', 'Crystals? I buy crystals! Sometimes.'],
   },
   {
     name: 'Corin', role: 'Carter', model: 'BARBARIAN', tint: '#e8d8bc', scale: 1, prop: 'none', accent: '#c9a46a', home: [-24, 50.5], speed: 1.3,
@@ -572,18 +574,20 @@ export const NPCS: NpcDef[] = [
       ['Hay for the barn, if the wheel holds.', 'This old cart has seen more roads than I have. Probably smarter too.'],
       ['Hollis pays in milk. I\'ve stopped asking.', 'Twenty years of hauling and I have never once been paid in coin. I have very strong bones, mind.'],
       ['The trick with a cart is the same as with life: grease the wheels, never the driver.'],
+      ['Folk ask why I never haul from the cave in the east bay. Simple: the cart does not fit, and I do not go where my cart cannot.', 'Dorn carries his ore out on his back. Says it builds character. I have plenty already.'],
+      ['Twenty-two years on this road. I know every stone by name.', 'That one is Gerald. Do not step on Gerald.'],
     ],
-    bubbles: ['Hup, hup.', 'Where did I leave that wheel pin...', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.'],
+    bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
   },
   {
     name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,
     patrol: [[3.6, 46], [3.6, 58], [3.6, 70]],
     talk: [
       ['I walk the portal road every evening. Someone has to wave at the heroes.', 'You would be surprised how many of them wave back. The brave ones, mostly.'],
-      ['They say the forest east of the walls hides a cave full of ore. Bring a pick.'],
+      ['Follow the ring path east, past the town wall, to where the forest bends into a little bay. There is a mine mouth there, with lanterns on posts.', 'Crystals grow inside, blue and violet, glowing like my lantern. Mine a few, and tell me what colour the walls are. For my book.'],
       ['I keep a little book of the places heroes tell me about. Greenwood, the Marble Halls... most pages are still blank.', 'One day I will walk through that portal myself. Just to look. Then run straight back.'],
     ],
-    bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.', 'Hear that? Wolves, far off.', 'Another page for my book...'],
+    bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.', 'Hear that? Wolves, far off.', 'Another page for my book...', 'The cave in the east bay glows at night...'],
   },
 ];
 

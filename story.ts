@@ -47,7 +47,7 @@ export const stepCount = (s: StoryStep): number => s.kill?.count ?? s.goal?.coun
 // Trainer, Warehouse; the first armor piece, upgrade and skill lesson are free while their step is active).
 export const STORY: StoryStep[] = [
   // ---------------------------------------------------------------- prologue: the town
-  { id: 'guard', title: 'A New Guard', line: 'Report to Garrick at the Town Gate', npc: 'Garrick', reward: { gold: 100 },
+  { id: 'guard', title: 'A New Guard', line: 'Report to Garrick at the gate', npc: 'Garrick', reward: { gold: 100 },
     talk: ['So you are the new recruit. The Font brought you back to us, eh?', 'The gate stays shut for new blood until the King himself gives the word.', 'You look half-dressed for the wilds, though. Mira by the fountain will get you sorted first.'] },
   { id: 'mira', title: 'The Town Guide', line: 'Talk to Mira by the fountain', npc: 'Mira', reward: { gold: 100 },
     talk: ['A new guard! Welcome to Aether. I show every newcomer around.', 'First lesson: never leave town without potions. The Potion Shop is just south-west of the square, on the street.', 'Walk up to the counter, press E, and buy one Health Potion. I will wait!'] },
@@ -71,7 +71,7 @@ export const STORY: StoryStep[] = [
   { id: 'lysa', title: 'Sticky Business', line: 'Bring 3 Slime Gel to Lysa the Herbalist', npc: 'Lysa', deliver: { id: 'slime_gel', count: 3 }, reward: { gold: 400, items: [{ id: 'potion_hp', qty: 3 }] },
     wait: ['Back from the Meadow? Then you have seen the slimes.', 'Their gel is the base of every healing salve I brew. Bring me three Slime Gel and I will make it worth your while.'],
     talk: ['Three good globs of gel! Fresh, too.', 'Here, my best salves. You will want them: Garrick came by asking for you. Something about wolves on the road.'] },
-  { id: 'garrick_wolves', title: 'Wolves at the Door', line: 'Talk to Garrick at the Town Gate', npc: 'Garrick', reward: { gold: 200 },
+  { id: 'garrick_wolves', title: 'Wolves at the Door', line: 'Talk to Garrick at the gate', npc: 'Garrick', reward: { gold: 200 },
     talk: ['There you are. A trader came in at dawn with his cart torn to splinters.', 'Dire wolves, down from the Deep Grove. They circle, then pounce in a straight line: step aside and strike back.', 'Thin the pack. Eight of them should teach the rest some manners.'] },
   { id: 'wolves', title: 'Thin the Pack', line: 'Defeat Dire Wolves in the Greenwood', npc: '', kill: { kind: 'DIREWOLF', count: 8 }, reward: { gold: 600, gems: 5 } },
   { id: 'mira5', title: 'Proper Armor', line: 'Talk to Mira by the fountain', npc: 'Mira', reward: { gold: 100 },

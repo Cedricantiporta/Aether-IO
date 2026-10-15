@@ -9,7 +9,6 @@ import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
-import { NPCS } from '../engine/townData';
 import { questDone, questNeedsKing } from '../quests';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { mainNav, boardQuestNav, navNpc, npcArea, type NavTarget } from '../engine/systems/questNav';

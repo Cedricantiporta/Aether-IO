@@ -1,18 +1,16 @@
 // Main story chain runtime: talking to the step's NPC advances it (dialogue.ts), kills of the step's enemy kind count
 // during runs (also champions / the depth-10 pre-boss for `goal` steps), freed captives count for rescue steps, town
-// actions (`hub` events) count for shop steps, the ending finishes the Lich step. Also answers "where does the main quest continue?" for the guide
-// arrow, the gate beacon and the tracker click (storyTarget).
+// actions (`hub` events) count for shop steps, the ending finishes the Lich step. (Where the main quest continues for the guide
+// arrow, the gate beacon and the tracker click: engine/systems/questNav.ts mainNav.)
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { STORY, stepCount, type StoryAt, type StoryStep } from '../../story';
+import { STORY, stepCount, type StoryStep } from '../../story';
 import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
 import { spawnPickup } from './pickups';
 import { Vector3 } from 'three';
-import { SHOP_POSITIONS, GOLD_SCALE, ITEMS_POOL } from '../../constants';
+import { GOLD_SCALE, ITEMS_POOL } from '../../constants';
 import { GameStatus, type Item } from '../../types';
-import { NPCS, PORTAL, GATE, TOWER } from '../townData';
-import { CASTLE_DOOR } from '../castleData';
-import { world, TRAINER_POS } from '../world';
+import { world } from '../world';
 import { storyBias, BIOMES } from '../roomDefs';
 
 /** Loot of `id` in the bag. */
@@ -165,42 +163,3 @@ events.on('gameEnding', () => {
   const st = useGameStore.getState(), s = st.story;
   if (STORY[s.step]?.ending) st.setStory(s.step + 1, 0);
 });
-
-
-export interface StoryTarget { x: number; z: number; area: 'TOWN' | 'CASTLE'; npc: number; /** a shop counter / board step */ shop: boolean }
-const T: StoryTarget = { x: 0, z: 0, area: 'TOWN', npc: -1, shop: false };
-/** Shop counters / the quest board (where shop steps are done). */
-function atPos(at: StoryAt): { x: number; z: number } | null {
-  if (at === 'BAG') return null;
-  if (at === 'BOARD') { const h = NPCS.find((n) => n.name === 'Hodge'); return h ? { x: h.home[0], z: h.home[1] } : null; }
-  if (at === 'TRAINER') return { x: TRAINER_POS[0], z: TRAINER_POS[2] + 2.6 };
-  if (at === 'TOWER') return { x: TOWER.door.x, z: TOWER.door.z };
-  const sp = SHOP_POSITIONS.find((p) => p.type === at);
-  const r = sp?.rot ?? 0;   // shops face +z, rotated by rot
-  if (!sp) return at === 'BREWER' ? { x: GATE.x, z: GATE.z + 4 } : null;   // a shop not built (yet): the Brewer's hut is outside the gate
-  return { x: sp.position[0] + Math.sin(r) * 3, z: sp.position[2] + Math.cos(r) * 3 };   // in front of the counter
-}
-/** Where the main quest continues right now (null when the chain is finished or the step is done from the bag).
- *  Talk / delivery steps point at the NPC, shop steps at the shop, field steps at the town gate. */
-export function storyTarget(): StoryTarget | null {
-  const s = useGameStore.getState().story, step = STORY[s.step];
-  if (!step) return null;
-  if (step.npc) {
-    const i = NPCS.findIndex((n) => n.name === step.npc);
-    if (i >= 0) { const n = NPCS[i]; T.x = n.home[0]; T.z = n.home[1]; T.area = n.area === 'CASTLE' ? 'CASTLE' : 'TOWN'; T.npc = i; T.shop = false; return T; }
-  }
-  if (step.at) {
-    const p = atPos(step.at);
-    if (!p) return null;
-    T.x = p.x; T.z = p.z; T.area = 'TOWN'; T.npc = -1; T.shop = true; return T;
-  }
-  T.x = PORTAL.front.x; T.z = PORTAL.front.z; T.area = 'TOWN'; T.npc = -1; T.shop = false;   // field steps: the Adventure Portal
-  return T;
-}
-/** The point to aim at from the current area (an NPC inside the castle is reached through the castle door). */
-export function storyAim(area: 'TOWN' | 'CASTLE'): { x: number; z: number } | null {
-  const t = storyTarget();
-  if (!t) return null;
-  if (t.area === area) return t;
-  return area === 'TOWN' ? { x: CASTLE_DOOR.x, z: CASTLE_DOOR.z } : null;   // (castle -> town: the exit, handled by callers)
-}

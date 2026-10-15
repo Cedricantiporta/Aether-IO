@@ -107,6 +107,14 @@ export function npcQuestNav(def: NpcQuestDef): NavTarget {
     if (t === 'cat') return set(SIDE, HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4, 'none');
     if (t === 'pin') return set(SIDE, WHEEL_PIN.x, WHEEL_PIN.z, 2.2, 'none');
   }
+  if (o.type === 'COLLECT_LOOT' && o.room === 'CRYSTAL') {   // gems from a crystal cave: the one east of town counts
+    if (area() !== 'CAVE') return hop(SIDE, 'CAVE')!;
+    const p = world.player.pos;   // inside: the nearest vein still standing
+    let bx = 0, bz = 0, bd = 1e9;
+    for (const c of world.crates) { if (!c.active) continue; const d = (c.pos.x - p.x) ** 2 + (c.pos.z - p.z) ** 2; if (d < bd) { bd = d; bx = c.pos.x; bz = c.pos.z; } }
+    if (bd < 1e9) return set(SIDE, bx, bz, 2.4, 'none');
+    return portal(SIDE);   // (all mined: a Crystal Cavern in the wilds)
+  }
   if (o.type === 'ACTION' && ACTION_SPOT[String(o.target)]) { const r = navSpot(ACTION_SPOT[String(o.target)], SIDE); if (r) return r; }
   return portal(SIDE);
 }
