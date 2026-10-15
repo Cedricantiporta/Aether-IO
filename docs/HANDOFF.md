@@ -663,3 +663,20 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (5 elixirs, 2-3 monster parts + gold each). Store: `brewElixir(id, n)`, `drinkElixir(item)` (click an elixir in the
   bag), `elixirsNext` (drunk in town, saved, applied to run base stats in `startGame`) and `elixirsRun` (active this run,
   cleared by `resetGame`). HUD: elixir icons under the player plate (`ElixirRow` in `ui/hud/TopBars.tsx`).
+- Balance (Oct 2026): base move speed Archer 9.24 / Barbarian, Knight, Necromancer 8.47 (Wizard keeps 10); base HP -40%;
+  HP potion cooldown 30 s; new characters start with 3 HP / 3 MP potions; max class level 50. Raise Dead skeletons +50%
+  HP, +10% defense; Bone Spear 2 spears at Lv 3, 3 at Lv 5; Storm Orbs half duration; Blizzard +50% slow, 20%+3%/lv freeze;
+  Wizard orb splash 2.0. Cards: Second Breath 30%, Wind Step +2.5%, Shadow Step +4% dodge once per run; skill cards are
+  run-only ("(this run)"). Treasure goblin: middle of the room, -50% HP, gilded glow. Defend / rescue: standing within 7 of
+  the totem / cage pulls every monster onto you. Boss key chances halved. Wanderers: max one per biome (12%).
+- Ankh of Life is a choice on death (ui/screens/AnkhPrompt.tsx, combat.ts ankhOffer / reviveWithAnkh; the death flow in
+  player.ts waits on it) with a pillar-of-light revive (VFX playerRevive ANKH). The Phoenix pet stays automatic.
+- New-item dot: Item.isNew (loot, rewards, summons, fusion; never monster loot), gold dot in the bag cleared on hover / tap
+  (store.seeItem), the Bag button lights up. Quest payouts also list under the quest tracker (rewardFeed `quest` flag).
+- Endless Tower milestones (towerRewards.ts): every 10th floor reached unlocks a reward claimed in the tower popup
+  (progress.towerClaimed per class): gear / supplies / pets below 100, shards from 100 (+ a pet every 100th).
+- Summons give several shards per shard pull again (Rare 2-5, Epic 1-3, Legendary 1-2, Mythic 1). Gem-shop companions:
+  Ember Fox / Frost Owl (Rare, 300 gems), Storm Sprite / Shield Turtle (Epic, 500 gems).
+- Merges: the quests worktree (story v4, level-gated side quests, tutorials) and the town worktree (trainer west of the
+  castle, wider meadow, farm west of the road, Elixir Brewer at (11, 56), elixirs.ts) are both merged; the brew action emits
+  hub `brew` and `brew_elixir` (the Chapter 1 elixir step).
