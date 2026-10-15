@@ -40,7 +40,7 @@ const MECH: Record<BossKind, Mech> = {
 };
 
 // ---- tuning
-const RAIN_CD = [12, 10, 8.5];      // by phase
+const RAIN_CD = [19, 16, 13];      // by phase (owner: less frequent; was 12 / 10 / 8.5)
 const QUAKE_CD = 9;
 const HEAL_CD = 26, HEAL_T = 3, HEAL_RATE = 0.025, HEAL_BREAK = 0.06;
 const CRUSH_CD = 3.6, CRUSH_R = 3.4, CRUSH_WIND = 0.65, CRUSH_RANGE = 8;
@@ -97,16 +97,26 @@ function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
 
 /** Cataclysm: a wide rain of impacts over the arena, aimed bursts on the player and their heading. */
 function rain(e: Enemy, m: Mech): void {
-  const p = world.player, n = 12 + 4 * e.phase, R = arenaR(), dmg = pwr(e) * RAIN_DMG;
+  const p = world.player, n = 9 + 3 * e.phase, R = arenaR(), dmg = pwr(e) * RAIN_DMG;
   events.emit('floatText', { pos: e.pos, text: m.rainWord, color: m.rainColor, scale: 1.2, dy: 5 });
-  for (let i = 0; i < n; i++) {
+  // impacts are spread out (owner: not bunched up): every centre keeps >= RAIN_GAP from the others, with gaps to walk through
+  rainN = 0;
+  // aimed: one on the player and one where they are running to
+  place(p.pos.x, p.pos.z, 3.0, 1.3, dmg, m, true);
+  place(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, 2.8, 1.6, dmg, m, false);
+  for (let i = 0, tries = 0; i < n && tries < n * 12; tries++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R;
-    strike(Math.cos(a) * d, Math.sin(a) * d, 2.6 + Math.random() * 1.0, 1.1 + Math.random() * 1.1, dmg, dmg * 0.6, m.rain, m.rainDur, m.rainColor);
+    if (place(Math.cos(a) * d, Math.sin(a) * d, 2.6 + Math.random() * 0.8, 1.1 + Math.random() * 1.1, dmg, m, false)) i++;
   }
-  // aimed: on the player, where they are running to, and a ring around them (no safe standing still)
-  strike(p.pos.x, p.pos.z, 3.2, 1.2, dmg, 0, m.rain, m.rainDur, m.rainColor);
-  strike(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, 3.0, 1.5, dmg, 0, m.rain, m.rainDur, m.rainColor);
-  for (let i = 0; i < 4 + e.phase; i++) { const a = (i / (4 + e.phase)) * Math.PI * 2; strike(p.pos.x + Math.cos(a) * 5, p.pos.z + Math.sin(a) * 5, 2.6, 1.7, dmg, 0, m.rain, m.rainDur, m.rainColor); }
+}
+const RAIN_GAP = 8.5, rainX: number[] = [], rainZ: number[] = [];
+let rainN = 0;
+/** One rain impact, unless it would sit closer than RAIN_GAP to one already placed (force: always). */
+function place(x: number, z: number, r: number, t: number, dmg: number, m: Mech, force: boolean): boolean {
+  if (!force) for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < RAIN_GAP * RAIN_GAP) return false;
+  rainX[rainN] = x; rainZ[rainN] = z; rainN++;
+  strike(x, z, r, t, dmg, dmg * 0.6, m.rain, m.rainDur, m.rainColor);
+  return true;
 }
 
 /** Quake: a big ring around the boss carrying its signature crowd control. */

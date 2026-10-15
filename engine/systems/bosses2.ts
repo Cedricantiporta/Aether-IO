@@ -32,6 +32,21 @@ export function isBoss2(k: EnemyKind): boolean {
 }
 
 const tv = new Vector3();
+/** Spread-out salvo spots (owner: boss impacts must not bunch up): the first on (fx, fz), the rest at rMin..rMax from it,
+ *  every spot >= gap from the others. Writes into SPOT_X / SPOT_Z, returns how many were placed. */
+const SPOT_X: number[] = [], SPOT_Z: number[] = [];
+function spreadSpots(fx: number, fz: number, n: number, rMin: number, rMax: number, gap: number): number {
+  let m = 0;
+  for (let tries = 0; m < n && tries < n * 14; tries++) {
+    let x = fx, z = fz;
+    if (m > 0) { const a = Math.random() * 6.283, r = rMin + Math.random() * (rMax - rMin); x += Math.sin(a) * r; z += Math.cos(a) * r; }
+    tv.set(x, 0, z); clampArena(tv, 2);
+    let ok = true; for (let q = 0; q < m; q++) if ((SPOT_X[q] - tv.x) ** 2 + (SPOT_Z[q] - tv.z) ** 2 < gap * gap) { ok = false; break; }
+    if (!ok) continue;
+    SPOT_X[m] = tv.x; SPOT_Z[m] = tv.z; m++;
+  }
+  return m;
+}
 const dirV = new Vector3();
 
 // ------------------------------------------------------------ shared state ---
@@ -329,14 +344,8 @@ LISTS.BOSS_TREANT = [
   { // Seed Barrage: seed pods are lobbed around you and burst into lingering poison pools.
     name: 'Seed Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 0.9,
     begin(e) {
-      const p = world.player, n = 5 + e.phase * 2;
-      for (let i = 0; i < n; i++) {
-        const life = 1.0 + i * 0.14;
-        let x = p.pos.x + p.vel.x * life * 0.5, z = p.pos.z + p.vel.z * life * 0.5;
-        if (i > 0) { const a = Math.random() * 6.283, r = 2 + Math.random() * 6; x += Math.sin(a) * r; z += Math.cos(a) * r; }
-        tv.set(x, 0, z); clampArena(tv, 2);
-        circle(tv.x, tv.z, 2.4, life, BT.SPIT, pwr(e) * 1.1, 0x84cc16);
-      }
+      const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.5, p.pos.z + p.vel.z * 0.5, 4 + e.phase, 6, 12, 6.5);   // (fewer, spread out)
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.4, 1.0 + i * 0.16, BT.SPIT, pwr(e) * 1.1, 0x84cc16);
     },
     fire() { /* pods burst as their telegraphs expire */ },
   },
@@ -394,10 +403,9 @@ LISTS.BOSS_HYDRA = [
     name: 'Acid Barrage!', wind: () => 0.9, act: () => 0.5, rec: () => 0.9, windMove: 0.4,
     begin() { /* the globs' own telegraphs appear on fire */ },
     fire(e) {
-      const p = world.player.pos, n = 3 + e.phase;
+      const p = world.player.pos, n = spreadSpots(p.x, p.z, 3 + e.phase, 6.5, 11, 7);   // (spread out)
       for (let i = 0; i < n; i++) {
-        const a = Math.random() * 6.283, r = i === 0 ? 0 : 3 + Math.random() * 5;
-        const x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+        const x = SPOT_X[i], z = SPOT_Z[i];
         circle(x, z, 2.7, 1.25, BT.SPIT, pwr(e) * 1.1, 0x9be32a);
         spawnProp(PROP_GLOB, x, z, 1.25, 0.35, 1.1, 1, e.pos.x, e.pos.z);
       }
@@ -628,12 +636,16 @@ LISTS.BOSS_WARLORD = [
   { // Fire Pillars: a salvo of erupting pillars, the first under you, the rest fanning out where you are heading.
     name: 'Pillars of Cinder!', wind: () => 1.0, act: () => 0.4, rec: () => 1.0,
     begin(e) {
-      const p = world.player, n = 5 + 2 * e.phase + (S.enraged ? 2 : 0);
-      for (let i = 0; i < n; i++) {
-        const life = 1.0 + i * 0.18;
+      const p = world.player, n = 4 + e.phase + (S.enraged ? 1 : 0);   // (owner: fewer + spread out; was 5 + 2 phase + 2)
+      const px: number[] = [], pz: number[] = [];
+      for (let i = 0, tries = 0; i < n && tries < n * 10; tries++) {
+        const life = 1.0 + i * 0.2;
         let x = p.pos.x, z = p.pos.z;
-        if (i > 0) { const a = Math.random() * 6.283, r = 3.5 + Math.random() * 5.5; x += Math.sin(a) * r + p.vel.x * life * 0.5; z += Math.cos(a) * r + p.vel.z * life * 0.5; }
+        if (i > 0) { const a = Math.random() * 6.283, r = 6 + Math.random() * 8; x += Math.sin(a) * r + p.vel.x * life * 0.5; z += Math.cos(a) * r + p.vel.z * life * 0.5; }
         tv.set(x, 0, z); clampArena(tv, 2); clampToVoid(tv, 2);
+        let ok = true; for (let k = 0; k < px.length; k++) if ((px[k] - tv.x) ** 2 + (pz[k] - tv.z) ** 2 < 7 * 7) { ok = false; break; }
+        if (!ok) continue;
+        px.push(tv.x); pz.push(tv.z); i++;
         circle(tv.x, tv.z, 2.6, life, BT.PILLAR, pwr(e) * 1.5, 0xff5a1a);
       }
     },
@@ -686,14 +698,8 @@ LISTS.BOSS_WARMACH = [
   { // Artillery Barrage: mortar shells rain where you are and where you are heading (each leaves burning ground).
     name: 'Artillery Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0,
     begin(e) {
-      const p = world.player, n = 8 + 2 * e.phase;
-      for (let i = 0; i < n; i++) {
-        const life = 1.0 + i * 0.15;
-        let x = p.pos.x + p.vel.x * life * 0.6, z = p.pos.z + p.vel.z * life * 0.6;
-        if (i > 0) { const a = Math.random() * 6.283, rr = 2.5 + Math.random() * 7; x += Math.sin(a) * rr; z += Math.cos(a) * rr; }
-        tv.set(x, 0, z); clampArena(tv, 2);
-        circle(tv.x, tv.z, 2.8, life, BT.PILLAR, pwr(e) * 1.3, 0xffa040);
-      }
+      const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.6, p.pos.z + p.vel.z * 0.6, 5 + e.phase, 6.5, 13, 7);   // (was 8 + 2 phase, bunched)
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.8, 1.0 + i * 0.17, BT.PILLAR, pwr(e) * 1.3, 0xffa040);
       events.emit('shake', { amount: 0.3 });
     },
     fire() { /* shells land as their telegraphs expire */ },

@@ -924,3 +924,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   x0.75 / x0.82 / x0.9 — slower wind-ups + attacks and longer gaps between skills. Later biomes unchanged.
 - Travelling Merchant: real KayKit character behind the stall + "Travelling Merchant" tag (Room.tsx MerchantNpc).
 - Necromancer: +10% move speed (9.32), Plague Ground cd 18 s; summons arrive beside the hero on room entry.
+- Boss impact salvos spread out + less frequent (owner): the shared stage-wide rain (bossMech `rain`, every boss) now
+  every 19/16/13 s (was 12/10/8.5), 9 + 3*phase impacts with >= 8.5 m between centres; Ignar Pillars of Cinder 4 + phase
+  (>= 7 m apart), Elderroot Seed Barrage 4 + phase, Hydra Acid Barrage, War Machine Artillery 5 + phase — all placed with
+  bosses2 `spreadSpots` (min gap 6.5-7 m).
