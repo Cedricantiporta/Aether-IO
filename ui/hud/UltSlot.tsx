@@ -39,11 +39,14 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
   };
   useGameEvent('onCooldown', (p) => { if (p.slot === 'r') shake(); });
   return (
-    <div className="relative pe ult-slot" {...tip(tooltip)} style={{ ['--uc' as any]: color, width: '6.2rem', height: '6.2rem', flex: 'none', margin: '0 .3rem' }}>
+    <div className="relative pe ult-slot" {...tip(tooltip)} style={{ ['--uc' as any]: color, width: '7.8rem', height: '7.8rem', flex: 'none', margin: '0 .3rem' }}>
       <style>{`
         .ult-slot .ult-core{position:absolute;inset:17%;border-radius:50%;overflow:hidden;background:#07050a;box-shadow:inset 0 0 12px #000}
-        .ult-slot .ult-core .ico{position:absolute;inset:0;filter:grayscale(.85) brightness(.55);transition:filter .3s}
-        .ult-slot[data-ready="1"] .ult-core .ico,.ult-slot[data-active="1"] .ult-core .ico{filter:none}
+        .ult-slot .ult-core .ico{position:absolute;inset:0;filter:grayscale(.55) brightness(.75);transition:filter .3s,transform .3s}
+        .ult-slot [data-active="1"] .ult-core .ico{filter:none}
+        .ult-slot [data-ready="1"] .ult-core .ico{filter:brightness(1.35) saturate(1.35) drop-shadow(0 0 6px rgba(255,226,140,.95));transform:scale(1.12);animation:ultIco 1.1s ease-in-out infinite}
+        @keyframes ultIco{0%,100%{transform:scale(1.08)}50%{transform:scale(1.16)}}
+        .ult-slot [data-ready="1"]{filter:drop-shadow(0 0 14px rgba(255,200,70,.85))}
         /* Genshin-style energy fill: gold liquid rising from the bottom with a rolling wave + drifting sparkles */
         .ult-slot .ult-fill{position:absolute;left:0;right:0;bottom:0;height:calc(var(--ult,0)*100%);pointer-events:none;mix-blend-mode:screen;transition:height .25s ease-out;
           background:linear-gradient(0deg,rgba(214,150,30,.85),rgba(255,214,110,.55) 70%,rgba(255,240,190,.75));}
@@ -54,16 +57,16 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
           background-size:100% 100%;animation:ultSpark 2.2s linear infinite}
         @keyframes ultWave{from{transform:translateX(-25%)}to{transform:translateX(25%)}}
         @keyframes ultSpark{from{background-position:0 0,0 0,0 0,0 0}to{background-position:0 -40px,0 -60px,0 -30px,0 -50px}}
-        .ult-slot .ult-glow{position:absolute;inset:2%;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 30px 12px rgba(255,196,64,.95),0 0 60px 18px rgba(255,170,40,.45),inset 0 0 22px rgba(255,226,140,1)}
+        .ult-slot .ult-glow{position:absolute;inset:2%;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 36px 16px rgba(255,196,64,1),0 0 80px 28px rgba(255,170,40,.55),inset 0 0 26px rgba(255,226,140,1)}
         .ult-slot .ult-rays{position:absolute;inset:-14%;border-radius:50%;pointer-events:none;opacity:0;
           background:repeating-conic-gradient(from 0deg,rgba(255,220,130,.0) 0deg 10deg,rgba(255,226,140,.9) 13deg,rgba(255,220,130,0) 16deg 30deg);
           -webkit-mask:radial-gradient(circle,transparent 46%,#000 52%,transparent 70%);mask:radial-gradient(circle,transparent 46%,#000 52%,transparent 70%);animation:ultSpin 6s linear infinite}
-        .ult-slot[data-ready="1"] .ult-glow{opacity:1;animation:ultPulse 1.1s ease-in-out infinite}
-        .ult-slot[data-ready="1"] .ult-rays{opacity:1}
-        .ult-slot[data-ready="1"] .ult-fill{background:linear-gradient(0deg,rgba(255,190,60,.9),rgba(255,236,170,.75));}
-        .ult-slot[data-active="1"] .ult-glow{opacity:1;animation:ultPulse .35s ease-in-out infinite}
+        .ult-slot [data-ready="1"] .ult-glow{opacity:1;animation:ultPulse 1.1s ease-in-out infinite}
+        .ult-slot [data-ready="1"] .ult-rays{opacity:1}
+        .ult-slot [data-ready="1"] .ult-fill{background:linear-gradient(0deg,rgba(255,190,60,.35),rgba(255,236,170,.2));}   /* (full: let the bright icon show through) */
+        .ult-slot [data-active="1"] .ult-glow{opacity:1;animation:ultPulse .35s ease-in-out infinite}
         .ult-slot .ult-txt{position:absolute;left:0;right:0;bottom:12%;text-align:center;font-weight:800;font-size:.8rem;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;z-index:4;pointer-events:none}
-        .ult-slot[data-ready="1"] .ult-txt{color:#fff3c0;font-size:1.05rem;bottom:34%;text-shadow:0 0 8px #c88a10,0 1px 3px #000}
+        .ult-slot [data-ready="1"] .ult-txt{color:#fff3c0;font-size:1.05rem;bottom:34%;text-shadow:0 0 8px #c88a10,0 1px 3px #000}
         @keyframes ultPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}
         @keyframes ultSpin{to{transform:rotate(360deg)}}
       `}</style>
