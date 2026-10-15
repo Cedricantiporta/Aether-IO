@@ -15,11 +15,11 @@ import { LOOT_BY_ID } from './loot';
 
 export type NpcObjectiveType =
   | 'KILL_KIND' | 'KILL_TOTAL' | 'KILL_ELITE' | 'KILL_BOSS'   // kill counts (KILL_BOSS target: a boss kind)
-  | 'REACH_BIOME'                                              // count = biome number (1 Meadow, 2 Old Grove, 3 Mire ...)
+  | 'REACH_BIOME'                                              // count = biome number (1 Greenwood, 2 Marble Halls, 3 Sunscorch ...)
   | 'COLLECT_LOOT'                                             // pick up loot items (target: loot ids, optional room type)
   | 'DELIVER'                                                  // bring loot items to the NPC; they are removed on turn-in
   | 'TALK'                                                     // speak to another NPC (target: its name)
-  | 'INTERACT'                                                 // a farm / town action (target: 'milk' | 'egg' | 'cat')
+  | 'INTERACT'                                                 // a farm / town action (target: 'milk' | 'egg' | 'cat' | 'pin')
   | 'ACTION';                                                  // a shop / town action (target: 'buy_potion' | 'store' | 'learn' | 'upgrade' | 'summon')
 
 export interface NpcObjective {
@@ -57,14 +57,16 @@ export interface NpcQuestDef {
   minLevel?: number;
   /** the turn-in NPC when it is not the giver */
   turnIn?: string;
+  /** TALK objectives: what the target NPC says when you pass the message on (shown first in their dialogue) */
+  heard?: string;
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
-    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems from a Crystal Cavern',
-    intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'Some doors in the wilds lead to a Crystal Cavern: no monsters, only glowing veins. Mine them and bring me back ten gemstones or crystals.'],
-    progress: 'Ten shards of light from a Crystal Cavern, remember. The cave doors show up now and then between the fights.',
+    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems in a crystal cave',
+    intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'There is a crystal cave in the forest bay east of the town walls, and now and then a door in the wilds opens on a Crystal Cavern too. No monsters, only glowing veins.', 'Mine them and gather ten gemstones, crystals or ore nuggets. Hold on to them, I only want to hear them sing.'],
+    progress: 'Ten shards of light, remember. Follow the ring path east of the walls to the cave in the forest bay, or find a Crystal Cavern door in the wilds.',
     done: ['Ahh, look at them sing! You have a good eye, hero.', 'Take this for the trouble.'],
     objective: { type: 'COLLECT_LOOT', target: ['raw_gem', 'echo_crystal', 'ore_nugget'], count: 10, room: 'CRYSTAL' },
     reward: { gold: 1500, shards: ['COMMON', 10] },
@@ -112,16 +114,16 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- singles
   {
-    id: 'garrick_road', minLevel: 20, giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Mire (biome 3)',
-    intro: ['Traders say the road past the Old Grove sinks into the Mire. Nobody I send comes back with a clear report.', 'Make it to the Mire, hero, and tell me what you see.'],
-    progress: 'The Mire is past the Old Grove: three biomes deep. Keep going!',
-    done: ['So the Mire is real, and you came back. I am impressed.', 'The watch pays for good scouting.'],
+    id: 'garrick_road', minLevel: 20, giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Sunscorch Desert (biome 3)',
+    intro: ['Traders say the road past the Marble Halls turns to sand: the Sunscorch Desert, where the Hydra keeps its mire. Nobody I send comes back with a clear report.', 'Make it to the Sunscorch, hero, and tell me what you see.'],
+    progress: 'The Sunscorch Desert is past the Marble Halls: three realms deep. Keep going!',
+    done: ['So the desert is real, and you came back. I am impressed.', 'The watch pays for good scouting.'],
     objective: { type: 'REACH_BIOME', count: 3 },
     reward: { gold: 3000, gems: 20 },
   },
   {
     id: 'dorn_ore', minLevel: 6, giver: 'Dorn', title: 'Ore for the Forge', summary: 'Deliver 15 Ore Nuggets to Dorn',
-    intro: ['My veins outside the gate are dry and the smith keeps knocking. Bring me fifteen Ore Nuggets from the wilds and I will make it worth your while.'],
+    intro: ['My veins outside the walls are dry and the smith keeps knocking. Bring me fifteen Ore Nuggets from the wilds and I will make it worth your while.'],
     progress: 'Fifteen Ore Nuggets. Look for ore veins in the caverns.',
     done: ['Heavy and honest! This will keep the forge hot a month.', 'My share: cores for your gear, and a fistful of gold.'],
     objective: { type: 'DELIVER', target: 'ore_nugget', count: 15 },
@@ -131,6 +133,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     id: 'pip_secret', giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
     intro: ['Psst! Hero! I found a shiny pebble and I think the old hermit north of town would love it.', 'But I am not allowed past the wall. Could you ask Old Wend what it is? Then come and tell me!'],
     progress: 'Did you see Old Wend yet? He lives behind the north wall of town.',
+    heard: 'A shiny pebble, warm to the touch? That is a sunstone, child. Tell little Pip to keep it out of the rain: it sulks when it gets wet.',
     done: ['He says it is a sunstone?! I knew it! Here, you can have some of my sweets money.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
@@ -181,7 +184,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   {
     id: 'king_frost', minLevel: 28, giver: 'King Aldric', title: 'The Frozen Frontier', summary: 'Reach Frostpeak (biome 4)',
     intro: ['Hero. Word reaches my court that the Frostpeak is stirring: a winter dragon, they say.', 'Go to the Frostpeak and see it with your own eyes. The crown will reward you.'],
-    progress: 'The Frostpeak lies beyond the Mire, hero. Go, and return when you have seen it.',
+    progress: 'The Frostpeak lies beyond the Sunscorch Desert, hero. Go, and return when you have seen it.',
     done: ['The Frostpeak is real, and so is the danger. Aether owes you.', 'Take the crown\'s thanks.'],
     objective: { type: 'REACH_BIOME', count: 4 },
     reward: { gold: 10000, gems: 50 },
@@ -267,6 +270,48 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'KILL_BOSS', target: 'BOSS_VOID', count: 1 },
     reward: { gold: 15000, gems: 60, shards: ['LEGENDARY', 3] },
   },
+  // ---- the meadow in front of the walls (Tilda, Corin, Nell)
+  {
+    id: 'tilda_wings', minLevel: 2, giver: 'Tilda', title: 'Wings for the Spice Rack', summary: 'Deliver 4 Bat Wings to Tilda',
+    intro: ['Psst. You go out there, yes? Past the portal, where the bats are?', 'Ground bat wing is worth its weight in pepper on the coast. Bring me four and I pay better than the Potion Shop. Promise. Mostly.'],
+    progress: 'Four Bat Wings, dear. Bats flutter about the Greenwood from the second room on.',
+    done: ['Lovely, crispy, slightly horrible. Perfect!', 'Here, a fair price. Fairer than fair, because I like you. Do not tell the other customers.'],
+    objective: { type: 'DELIVER', target: 'bat_wing', count: 4 },
+    reward: { gold: 900, gems: 10 },
+  },
+  {
+    id: 'corin_pin', giver: 'Corin', title: 'A Pin in the Hay', summary: 'Find Corin\'s wheel pin by the haystack',
+    intro: ['You there! Sharp eyes? Mine are not, any more.', 'My wheel pin jumped out while I unloaded hay by the wheat field. Little iron thing, shiny. Without it the wheel walks off on its own.', 'Have a look in the grass by the haystack, would you?'],
+    progress: 'By the haystack, next to the wheat field east of the road. A little shiny iron pin.',
+    done: ['That is the one! Back in you go, you little runaway.', 'Not much coin in hauling, but take this. And a potion: the road is long.'],
+    objective: { type: 'INTERACT', target: 'pin', count: 1 },
+    reward: { gold: 500, items: [{ id: 'potion_hp', qty: 1 }] },
+  },
+  {
+    id: 'corin_hay', giver: 'Corin', title: 'Hay for Hollis', summary: 'Tell Hollis at the barn that his hay is coming', after: 'corin_pin',
+    intro: ['Wheel is fixed, but my back is not. Tell Hollis at the barn his hay is on its way, will you?', 'And remind him I take payment in milk. Apparently.'],
+    progress: 'Hollis works by the red barn in the farm clearing, east of the wheat field.',
+    heard: 'Hay from Corin, finally? About time! Tell him the milk is waiting. As always.',
+    done: ['Hollis said "about time"? Ha! That is Hollis for "thank you".', 'Here, your share of the milk money. Which is no money. Have some gold instead.'],
+    objective: { type: 'TALK', target: 'Hollis', count: 1 },
+    reward: { gold: 400, gems: 5 },
+  },
+  {
+    id: 'nell_wolves', minLevel: 3, giver: 'Nell', title: 'Howls on the Road', summary: 'Defeat 10 Dire Wolves (Greenwood)',
+    intro: ['Every night the howling comes closer to the road. Last night a wolf sat right there and stared at my lantern.', 'You go out through the portal anyway. Could you thin the dire wolves a little? Ten of them, and I can walk my road in peace.'],
+    progress: 'Dire wolves prowl the Greenwood from the third room on. They circle, then lunge in a straight line.',
+    done: ['Not a single howl last night. I nearly slept on the road!', 'Here: my savings, and a page of my book with your name on it.'],
+    objective: { type: 'KILL_KIND', target: 'DIREWOLF', count: 10 },
+    reward: { gold: 900, gems: 10 },
+  },
+  {
+    id: 'nell_halls', minLevel: 10, giver: 'Nell', title: 'A Page for the Marble Halls', summary: 'Reach the Marble Halls (biome 2)', after: 'nell_wolves',
+    intro: ['My little book has a page for the Marble Halls, but it is empty. I have never seen a marble hall. Have you?', 'Go and see them for me, then come back and tell me everything. Especially the ceilings.'],
+    progress: 'The Marble Halls lie past Elderroot, beyond the Greenwood.',
+    done: ['Columns as tall as trees? Armour that walks by itself? I am writing it all down!', 'For the story. Worth every coin.'],
+    objective: { type: 'REACH_BIOME', count: 2 },
+    reward: { gold: 1500, gems: 15 },
+  },
 ];
 
 export const NPC_QUEST_BY_ID: Record<string, NpcQuestDef> = Object.fromEntries(NPC_QUESTS.map((q) => [q.id, q]));
@@ -339,13 +384,15 @@ export const npcQuestReady = (def: NpcQuestDef, save: NpcQuestSave, inv: readonl
 /** NPC that takes the quest back. */
 export const npcQuestTurnIn = (def: NpcQuestDef): string => def.turnIn ?? def.giver;
 
-/** Marker above an NPC: 0 none, 1 new quest, 2 in progress, 3 ready to turn in. */
+/** Marker above an NPC: 0 none, 1 new quest, 2 in progress, 3 ready to turn in (priority 3 > 1 > 2). */
 export function npcMarker(name: string, save: NpcQuestSave, inv: readonly Item[], rank: number): 0 | 1 | 2 | 3 {
   let m: 0 | 1 | 2 | 3 = 0;
   for (const d of NPC_QUESTS) {
     const st = npcQuestStatus(d, save, rank);
-    if (st === 'ACTIVE' && npcQuestTurnIn(d) === name) { if (npcQuestReady(d, save, inv)) return 3; m = 2; }
-    else if (st === 'AVAILABLE' && d.giver === name && m < 2) m = 1;
+    // the NPC a TALK quest sends you to has something for you too (the message to pass on): blue "?" like a turn-in
+    if (st === 'ACTIVE' && d.objective.type === 'TALK' && d.objective.target === name && (save.q[d.id]?.p ?? 0) < d.objective.count) return 3;
+    if (st === 'ACTIVE' && npcQuestTurnIn(d) === name) { if (npcQuestReady(d, save, inv)) return 3; if (m === 0) m = 2; }
+    else if (st === 'AVAILABLE' && d.giver === name) m = 1;   // a new quest outranks a grey "in progress" mark
   }
   return m;
 }

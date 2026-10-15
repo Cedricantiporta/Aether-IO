@@ -7,6 +7,10 @@ import { world } from '../world';
 import { NPCS, ANIMALS, GENERIC_BUBBLES } from '../townData';
 import { useDialogue } from './dialogue';
 import { queryColliders, type Collider } from '../mapgen';
+import { useGameStore } from '../../store';
+import { STORY } from '../../story';
+import { npcMarkers } from './npcQuestLogic';
+import { progressBubble, callBubble } from '../npcLines';
 
 const hits: Collider[] = [];
 /** Push a walker out of any building / prop collider it overlaps (safety net: routes are checked to be clear). */
@@ -24,8 +28,10 @@ export interface NpcState {
   yaw: number;
   moving: boolean; talking: boolean; wp: number; wait: number;
   lastBubble: number;
+  /** world.time of this NPC's last bubble (per-NPC cooldown: no spam) */
+  bubbleT: number;
 }
-export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], yaw: 0, moving: false, talking: false, wp: 0, wait: Math.random() * 3, lastBubble: -1 }));
+export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], yaw: 0, moving: false, talking: false, wp: 0, wait: Math.random() * 3, lastBubble: -1, bubbleT: -99 }));
 
 export interface AnimalState { x: number; z: number; yaw: number; moving: boolean; tx: number; tz: number; wait: number; hop: number }
 export const animals: AnimalState[] = ANIMALS.map((a) => ({ x: a.x, z: a.z, yaw: Math.random() * 6.28, moving: false, tx: a.x, tz: a.z, wait: Math.random() * 2, hop: 0 }));
@@ -42,7 +48,7 @@ const BUBBLE_R = 14;
 export function resetNpcs(): void {
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
-    n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1;
+    n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1; n.bubbleT = -99;
     n.yaw = d.area === 'CASTLE' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
   }
   for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
@@ -68,8 +74,15 @@ export function updateNpcs(dt: number): void {
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
     if (!inArea(i)) { n.talking = false; continue; }
+    const was = n.talking;
     n.talking = i === talkNpc;
     if (n.talking) { n.moving = false; n.yaw = Math.atan2(p.pos.x - n.x, p.pos.z - n.z); continue; }
+    if (was) n.wait = Math.max(n.wait, 1.6);   // linger a moment after a talk, then resume the patrol
+    // the hero is walking over to talk (click / quest auto-path): stop and turn to greet them
+    const go = world.village.go;
+    if (go.on && go.act === 'npc' && go.npc === i && (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 < 64) {
+      n.moving = false; n.wait = Math.max(n.wait, 0.5); n.yaw = Math.atan2(p.pos.x - n.x, p.pos.z - n.z); continue;
+    }
     const path = d.patrol;
     if (!path || path.length < 2) { n.moving = false; continue; }
     if (n.wait > 0) { n.wait -= dt; n.moving = false; continue; }
@@ -113,7 +126,7 @@ export function updateNpcs(dt: number): void {
     let pick = -1;
     for (let k = 0; k < npcs.length && pick < 0; k++) {
       const i = (start + k) % npcs.length, n = npcs[i];
-      if (!inArea(i) || n.talking || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > BUBBLE_R * BUBBLE_R) continue;
+      if (!inArea(i) || n.talking || world.time - n.bubbleT < 14 || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > BUBBLE_R * BUBBLE_R) continue;
       if (world.view.on && !inVisible(n.x, n.z, 9)) continue;
       let busy = false;
       for (let j = 0; j < MAX_BUBBLES; j++) if (bubbles[j].active && bubbles[j].npc === i) busy = true;
@@ -125,8 +138,12 @@ export function updateNpcs(dt: number): void {
         const d = NPCS[pick], pool = d.bubbles;
         let ti = (Math.random() * (pool.length + 1)) | 0; // last slot = generic line
         if (ti === n_last(pick)) ti = (ti + 1) % (pool.length + 1);
-        npcs[pick].lastBubble = ti;
+        npcs[pick].lastBubble = ti; npcs[pick].bubbleT = world.time;
         b.text = ti < pool.length ? pool[ti] : GENERIC_BUBBLES[(Math.random() * GENERIC_BUBBLES.length) | 0];
+        // someone with something for the hero calls them over now and then; after a guardian falls, the town talks about it
+        const mk = STORY[useGameStore.getState().story.step]?.npc === d.name ? 4 : npcMarkers()[pick], r = Math.random();
+        const call = mk ? callBubble(mk) : null, news = r >= 0.4 && r < 0.65 ? progressBubble() : null;
+        if (call && r < 0.4) b.text = call; else if (news) b.text = news;
         b.npc = pick; b.t = 0; b.life = 4; b.active = true; b.onScreen = false;
         break;
       }

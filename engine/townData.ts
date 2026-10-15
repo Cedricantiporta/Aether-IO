@@ -41,6 +41,8 @@ export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against 
 export const NESTS: [number, number][] = [[COOP.x - 1.8, COOP.z + 2.1], [COOP.x + 0.2, COOP.z + 2.5], [COOP.x + 2, COOP.z + 2]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
+/** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
+export const WHEEL_PIN = { x: 11.6, z: 52.4 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
 export const TOWER = { x: -31, z: 75, r: 4.2, door: { x: -26, z: 75 } };   // deep in the dark south-west forest, at the end of a narrow dirt path
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
@@ -372,7 +374,7 @@ export const NPCS: NpcDef[] = [
     talk: [
       ['Ah, a young adventurer. This well has fed our village for three hundred years.', 'The old tales say the Mire swallows the careless. Walk with care.'],
       ['My knees ache, but my memory is sharp. I remember when this valley had no gate at all.', 'Keep your potions stocked and your wits about you.'],
-      ['Every hero starts as a stranger here. Take this, a little something from an old man.'],
+      ['Every hero starts as a stranger here. The Font does not care where you were born, only that you came back.'],
       ['That well is no well, child. It is the Aether Font. You swore your oath on it, remember?', 'When you fall out there, its light brings you home. It brought me home eleven times, in my day.'],
     ],
     bubbles: ['Lovely day!', 'Back in my day the Mire was a meadow.', 'Mind the well, children.'],
@@ -445,7 +447,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Sera', role: 'Merchant', model: 'ROGUE', tint: '#e6d3ff', scale: 1, prop: 'none', accent: '#d9b0ff', home: [13.5, 1.8],
     talk: [
-      ['Fine wares, rare finds! Alas, today I am only here for the fresh air.', 'The real shops are spread around: potions to the west, smithing to the east, the pet stable down south.'],
+      ['Fine wares, rare finds! Alas, today I am only here for the fresh air.', 'The real shops are all around the square: potions and pets to the west, the smithy and the warehouse to the east.'],
       ['Coins make the world go round, friend. Spend them well, save a few for the altar.'],
     ],
     bubbles: ['Fine wares! Fine wares!', 'Everything has a price.', 'Best prices in the valley!'],
@@ -491,7 +493,7 @@ export const NPCS: NpcDef[] = [
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
       ['Malakar was my archmage, and my friend. He took a shard of the Font and ran into the Void.', 'Bring it home, guardian. The Font will keep bringing you home until you do.'],
-      ['Beyond the gate lie six realms, each ruled by a beast older than my house. Greenwood, the Mire, the Ember Wastes, Frostpeak... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
+      ['Beyond the gate lie six realms, each ruled by a beast older than my house. Greenwood, the Marble Halls, the Sunscorch, Frostpeak, the Ember Wastes, the Void... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
       ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
       ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
       ['My grandfather sealed the Aether Altar to keep its fortune from the greedy. Spend your gems there wisely, and it may smile on you.', 'Go now. Aether is counting on its heroes.'],
@@ -559,27 +561,35 @@ export const NPCS: NpcDef[] = [
     name: 'Tilda', role: 'Travelling Merchant', model: 'ROGUE', tint: '#ffe6c4', scale: 1, prop: 'basket', accent: '#ffb86a', home: [6.4, 51.5],
     talk: [
       ['Fresh from the coast road! Well... fresh-ish.', 'The guards won\'t let my cart through the gate, so I sell from out here. Better view anyway.'],
-      ['I\'ve traded with three kingdoms and a goblin. The goblin haggled best.'],
+      ['I\'ve traded with three kingdoms and a goblin. The goblin haggled best.', 'Never trust a price that doesn\'t argue back, dear.'],
+      ['Everything on this cart has a story. That kettle? Survived a sea serpent. Allegedly.', 'The stories are free. The kettle is not.'],
+      ['A good merchant reads the road like a map: dust means buyers, smoke means trouble, and silence means wolves.'],
+      ['Everyone who comes back from that cave in the east bay smells of wet rock and smugness.', 'Find crystals in there? Polish them first. Dull stones get dull prices. From me, anyway.'],
+      ['My grandmother sold maps. Half of them were true.', 'The other half sold better. Family business, dear: never let the truth slow down a good bargain.'],
     ],
-    bubbles: ['Spices! Silks! Slightly used!', 'Best prices outside the walls!', 'Mind the cart, dear.'],
+    bubbles: ['Spices! Silks! Slightly used!', 'Best prices outside the walls!', 'Mind the cart, dear.', 'Haggling welcome. Winning, less so.', 'Bat wings! Who sells me bat wings?', 'Crystals? I buy crystals! Sometimes.'],
   },
   {
     name: 'Corin', role: 'Carter', model: 'BARBARIAN', tint: '#e8d8bc', scale: 1, prop: 'none', accent: '#c9a46a', home: [-24, 50.5], speed: 1.3,
     patrol: [[-24, 50.5], [-12, 52.5], [-5, 51]],
     talk: [
       ['Hay for the barn, if the wheel holds.', 'This old cart has seen more roads than I have. Probably smarter too.'],
-      ['Hollis pays in milk. I\'ve stopped asking.'],
+      ['Hollis pays in milk. I\'ve stopped asking.', 'Twenty years of hauling and I have never once been paid in coin. I have very strong bones, mind.'],
+      ['The trick with a cart is the same as with life: grease the wheels, never the driver.'],
+      ['Folk ask why I never haul from the cave in the east bay. Simple: the cart does not fit, and I do not go where my cart cannot.', 'Dorn carries his ore out on his back. Says it builds character. I have plenty already.'],
+      ['Twenty-two years on this road. I know every stone by name.', 'That one is Gerald. Do not step on Gerald.'],
     ],
-    bubbles: ['Hup, hup.', 'Where did I leave that wheel pin...', 'Lovely weather for hauling.'],
+    bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
   },
   {
     name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,
     patrol: [[3.6, 46], [3.6, 58], [3.6, 70]],
     talk: [
-      ['I walk the portal road every evening. Someone has to wave at the heroes.'],
-      ['They say the forest east of the walls hides a cave full of ore. Bring a pick.'],
+      ['I walk the portal road every evening. Someone has to wave at the heroes.', 'You would be surprised how many of them wave back. The brave ones, mostly.'],
+      ['Follow the ring path east, past the town wall, to where the forest bends into a little bay. There is a mine mouth there, with lanterns on posts.', 'Crystals grow inside, blue and violet, glowing like my lantern. Mine a few, and tell me what colour the walls are. For my book.'],
+      ['I keep a little book of the places heroes tell me about. Greenwood, the Marble Halls... most pages are still blank.', 'One day I will walk through that portal myself. Just to look. Then run straight back.'],
     ],
-    bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.'],
+    bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.', 'Hear that? Wolves, far off.', 'Another page for my book...', 'The cave in the east bay glows at night...'],
   },
   // ------------------------------------------------------------ crystal cave, Floor 1 (see engine/caveData.ts)
   {

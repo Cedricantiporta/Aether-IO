@@ -2,8 +2,8 @@
 // projection of speech-bubble anchors to screen space (the DOM layer ui/hud/SpeechBubbles.tsx does the drawing).
 import { CanvasTexture, SRGBColorSpace, SpriteMaterial } from 'three';
 import { questNpc } from '../engine/systems/npcQuestLogic';
-import { eggReady, catHidden } from '../engine/systems/village';
-import { NESTS, HIDDEN_CAT } from '../engine/townData';
+import { eggReady, catHidden, pinHidden } from '../engine/systems/village';
+import { NESTS, HIDDEN_CAT, WHEEL_PIN } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial, SkinnedMesh, Sprite, Vector3 } from 'three';
@@ -12,6 +12,7 @@ import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
 import { npcs, animals, bubbles } from '../engine/systems/npcs';
 import { STORY } from '../story';
+import { bagCount } from '../npcQuests';
 import { useGameStore } from '../store';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
@@ -50,9 +51,20 @@ function crownGeo(): BufferGeometry {
 }
 
 // --------------------------------------------------------------------- npc ---
+/** Main-quest marker for an NPC (0 none, 4 gold "!", 5 gold "?" delivery ready, 6 dim "?" delivery pending); the
+ *  delivery check reads the bag only a few times a second (cached by store identity). */
+let mmInv: unknown = null, mmStep = -1, mmReady = false;
+function mainMark(name: string): number {
+  const st = useGameStore.getState(), step = STORY[st.story.step];
+  if (!step || step.npc !== name) return 0;
+  if (!step.deliver) return 4;
+  if (st.inventory !== mmInv || st.story.step !== mmStep) { mmInv = st.inventory; mmStep = st.story.step; mmReady = bagCount(st.inventory, step.deliver.id) >= step.deliver.count; }
+  return mmReady ? 5 : 6;
+}
 /** Quest markers above NPCs. Side quests are blue: "!" = new quest, "?" = ready to turn in, grey "?" = in progress
- *  (index = npcMarkers()). Index 4: the gold "!" of the main quest's current NPC (always wins). */
-const MARKS = [null, labelMaterial('!', '#5fb8ff', { size: 120 }), labelMaterial('?', '#9aa0aa', { size: 120 }), labelMaterial('?', '#5fb8ff', { size: 120 }), labelMaterial('!', '#ffd24a', { size: 120 })];
+ *  (index = npcMarkers()). Index 4: the gold "!" of the main quest's current NPC (always wins); a main-quest delivery
+ *  shows a gold "?" (5) once the goods are in the bag, a dim gold "?" (6) while they are still being gathered. */
+const MARKS = [null, labelMaterial('!', '#5fb8ff', { size: 120 }), labelMaterial('?', '#9aa0aa', { size: 120 }), labelMaterial('?', '#5fb8ff', { size: 120 }), labelMaterial('!', '#ffd24a', { size: 120 }), labelMaterial('?', '#ffd24a', { size: 120 }), labelMaterial('?', '#a08a50', { size: 120 })];
 const _p = new Vector3();
 const WHITE = new Color(1, 1, 1);
 
@@ -152,7 +164,7 @@ function NpcActor({ i }: { i: number }) {
     if (++s.tick % every === 0) { s.mixer.update(s.acc); s.acc = 0; }
     // quest marker (bobs gently, hidden while talking)
     if (mark.current) {
-      const k = st.talking ? 0 : STORY[useGameStore.getState().story.step]?.npc === def.name ? 4 : npcMarkers()[i], mk = mark.current;
+      const k = st.talking ? 0 : mainMark(def.name) || npcMarkers()[i], mk = mark.current;
       if (k) {
         const l = MARKS[k]!;
         if (mk.material !== l.mat) { mk.material = l.mat; mk.scale.set(l.aspect * 1.3, 1.3, 1); }
@@ -232,14 +244,17 @@ function FarmBits() {
   const geos = useMemo(() => {
     const n = new GB([0.8, 1.05]); n.cyl(0.42, 0.34, 0.16, 10, [0, 0.08, 0], '#c9a050'); n.cyl(0.3, 0.3, 0.05, 10, [0, 0.16, 0], '#8a6a30');
     const e = new GB([0.85, 1.1]); e.sph(0.12, [0, 0.27, 0], '#fff6e6', [0.85, 1.15, 0.85], 7);
-    return { nest: n.build(), egg: e.build(), cat: buildCat() };
+    const pn = new GB([0.9, 1.1]); pn.cyl(0.07, 0.07, 0.62, 6, [0, 0.07, 0], '#c8ccd4', [0, 0, Math.PI / 2]); pn.cyl(0.13, 0.13, 0.06, 8, [0.33, 0.07, 0], '#e8ecf2', [0, 0, Math.PI / 2]);   // Corin's wheel pin, lying in the grass
+    return { nest: n.build(), egg: e.build(), cat: buildCat(), pin: pn.build() };
   }, []);
   const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const catMat = useMemo(() => litMat({ roughness: 0.9, color: '#ff9a4a' }), []);
-  const eggs = useRef<(Mesh | null)[]>([]), cat = useRef<Mesh>(null!);
+  const pinMat = useMemo(() => litMat({ roughness: 0.25, metalness: 0.8, emissive: new Color('#fff2c0'), emissiveIntensity: 0.35 }), []);
+  const eggs = useRef<(Mesh | null)[]>([]), cat = useRef<Mesh>(null!), pin = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
     for (let k = 0; k < NESTS.length; k++) { const m = eggs.current[k]; if (m) m.visible = eggReady(k); }
     if (cat.current) { cat.current.visible = catHidden(); cat.current.rotation.y = 2.2 + Math.sin(clock.elapsedTime * 0.7) * 0.4; }
+    if (pin.current) { pin.current.visible = pinHidden(); pinMat.emissiveIntensity = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 4)); }   // glints
   });
   return (
     <>
@@ -250,6 +265,7 @@ function FarmBits() {
         </group>
       ))}
       <mesh ref={cat} geometry={geos.cat} material={catMat} position={[HIDDEN_CAT.x, 0, HIDDEN_CAT.z]} scale={1.25} visible={false} castShadow />
+      <mesh ref={pin} geometry={geos.pin} material={pinMat} position={[WHEEL_PIN.x, 0, WHEEL_PIN.z]} rotation={[0, 0.7, 0]} scale={1.4} visible={false} />
     </>
   );
 }

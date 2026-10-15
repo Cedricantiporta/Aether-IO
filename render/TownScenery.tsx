@@ -1,10 +1,8 @@
 // Town scenery: houses, market stalls, well, fences, lamp posts, roads/plaza and the town gate.
 // Everything static is merged into per-chunk vertex-coloured meshes (frustum-culled by three), roads and the plaza
 // are one flat mesh without shadows, lamp bulbs are emissive only (no real lights).
-import { storyTarget } from '../engine/systems/storyLogic';
+import { mainNav } from '../engine/systems/questNav';
 import { STORY } from '../story';
-import { npcs } from '../engine/systems/npcs';
-import { CASTLE_DOOR } from '../engine/castleData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
@@ -694,10 +692,10 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     mats.beam.opacity = 0.1 + 0.05 * Math.sin(t * 1.7);
     // the light column + ground ring stand where the main quest continues (an NPC, a shop, the castle door), else on
     // the gate; hidden while the step is done from the bag
-    const ms = storyTarget(), hide = !ms && !!STORY[useGameStore.getState().story.step];
+    // (questNav.mainNav: the same target the guide arrow and the tracker auto-path use)
+    const ms = world.village.area === 'TOWN' ? mainNav() : null, hide = !ms && !!STORY[useGameStore.getState().story.step];
     let bx = PORTAL.x, bz = PORTAL.front.z;   // default: the Adventure Portal
-    if (ms && ms.shop) { bx = ms.x; bz = ms.z; }
-    else if (ms && ms.npc >= 0) { if (ms.area === 'CASTLE') { bx = CASTLE_DOOR.x; bz = CASTLE_DOOR.z + 1.5; } else { bx = npcs[ms.npc].x; bz = npcs[ms.npc].z; } }
+    if (ms && !ms.field) { bx = ms.x; bz = ms.z; if (ms.act === 'castle') bz -= 0.5; }
     if (beam.current) { beam.current.position.set(bx, 18, bz); beam.current.visible = !hide; }
     if (ring.current) { ring.current.position.set(bx, 0.12, bz); ring.current.visible = !hide; }
   });

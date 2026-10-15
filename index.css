@@ -898,6 +898,8 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .dlg-btn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; font-family: var(--font-title); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; color: var(--gold-light); background: linear-gradient(#2a241c, #0f0c09); border: 1.5px solid #6b5a3a; border-radius: 0; min-height: 0; }
 .dlg-btn:hover { border-color: #f1d58e; color: #fff; }
 .dlg-btn.accept { color: #1f1608; background: linear-gradient(180deg, #f6e0a0, #c99a48); border-color: #8a6a2e; }
+.dlg-hint { margin: -2px 0 8px; padding-top: 5px; border-top: 1px solid rgba(214, 186, 122, .28); font-size: 12px; line-height: 1.35; font-weight: 600; color: #e9cf8e; }
+.qt-dist { margin-left: auto; padding-left: .4rem; font-size: .6rem; font-weight: 600; letter-spacing: .04em; text-transform: none; color: rgba(255, 255, 255, .7); font-variant-numeric: tabular-nums; }
 .dlg-btn kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 3px; font: inherit; font-size: 10px; border-radius: 3px; color: var(--gold-light); background: #17120c; border: 1px solid #6b5a3a; }
 @keyframes dlg-in { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes dlg-line { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
