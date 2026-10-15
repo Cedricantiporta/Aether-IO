@@ -67,7 +67,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
-    { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 12,
+    { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 18,   // (owner: longer cooldown, was 12)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
       per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },
   ],
