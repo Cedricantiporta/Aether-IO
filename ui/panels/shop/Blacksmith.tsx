@@ -4,7 +4,7 @@ import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
-import { MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
+import { SHARD_FUSE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
 import { CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
 import { Lock } from 'lucide-react';
@@ -121,6 +121,45 @@ export const Upgrade: React.FC = () => {
   );
 };
 
+
+/** Blacksmith > Shards: fuse shards up a tier (20 Common / 10 Rare / 5 Epic / 3 Legendary -> 1 of the next) or break one down. */
+export const ShardTab: React.FC = () => {
+  const { materials, combineMaterials, downgradeMaterials } = useGameStore(useShallow((s) => ({ materials: s.materials, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials })));
+  return (
+    <div className="flex flex-col gap-3" data-testid="shard-tab">
+      <div>
+        <div className="rpg-label mb-1.5">Fuse shards (always succeeds)</div>
+        <div className="flex flex-col gap-1.5">
+          {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[]).map((r, i) => {
+            const nx = (['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[])[i];
+            const cost = SHARD_FUSE_COST[r as keyof typeof SHARD_FUSE_COST], can = materials[r] >= cost;
+            return (
+              <button key={r} disabled={!can} onClick={() => combineMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
+                <span className="text-[.72rem] font-bold">{cost} <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> 1 <span style={{ color: RARITY_TEXT[nx] }}>{nx}</span></span>
+                <span className="opacity-70 text-[.7rem]">({materials[r]})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <div className="rpg-label mb-1.5">Break shards down</div>
+        <div className="flex flex-col gap-1.5">
+          {(['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[]).map((r, i) => {
+            const lo = (['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[])[i];
+            return (
+              <button key={r} disabled={materials[r] < 1} onClick={() => downgradeMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
+                <span className="text-[.72rem] font-bold">1 <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> {MATERIAL_DOWNGRADE_YIELD} <span style={{ color: RARITY_TEXT[lo] }}>{lo}</span></span>
+                <RefreshCcw size={13} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const RecycleTab: React.FC = () => {
   const { inventory, materials, recycleItem, massRecycle, combineMaterials, downgradeMaterials } = useGameStore(useShallow((s) => ({
     inventory: s.inventory, materials: s.materials, recycleItem: s.recycleItem, massRecycle: s.massRecycle, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials,
@@ -166,35 +205,6 @@ export const RecycleTab: React.FC = () => {
           ))}
         </div>
       </div>
-      <div>
-        <div className="rpg-label mb-1.5">Shard conversion: combine up</div>
-        <div className="flex flex-col gap-1.5">
-          {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[]).map((r, i) => {
-            const nx = (['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[])[i];
-            const can = materials[r] >= MATERIAL_COMBINE_COST;
-            return (
-              <button key={r} disabled={!can} onClick={() => combineMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
-                <span className="text-[.72rem] font-bold">{MATERIAL_COMBINE_COST} <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> 1 <span style={{ color: RARITY_TEXT[nx] }}>{nx}</span></span>
-                <RefreshCcw size={13} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <div>
-        <div className="rpg-label mb-1.5">Shard conversion: break down</div>
-        <div className="flex flex-col gap-1.5">
-          {(['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[]).map((r, i) => {
-            const lo = (['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[])[i];
-            return (
-              <button key={r} disabled={materials[r] < 1} onClick={() => downgradeMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
-                <span className="text-[.72rem] font-bold">1 <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> {MATERIAL_DOWNGRADE_YIELD} <span style={{ color: RARITY_TEXT[lo] }}>{lo}</span></span>
-                <RefreshCcw size={13} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 };
@@ -212,11 +222,12 @@ export const BlacksmithTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['UPGRADE', 'RECYCLE', 'CRAFT', 'FUSE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+        {(['UPGRADE', 'RECYCLE', 'CRAFT', 'FUSE', 'SHARDS'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
       {tab === 'RECYCLE' && <RecycleTab />}
       {tab === 'FUSE' && <ItemFuse />}
+      {tab === 'SHARDS' && <ShardTab />}
       {tab === 'CRAFT' && (<>
         <div className="rpg-frame p-3 text-[.78rem] text-center">The Workshop is open. Pick a recipe on the left, check the materials and forge.</div>
         <Workshop onClose={() => setTab('UPGRADE')} />

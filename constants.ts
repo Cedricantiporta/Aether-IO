@@ -15,8 +15,10 @@ export const POTION_STACK_LIMIT = 50;
 export const POTION_COOLDOWN = 30; // seconds, shared by engine + HUD
 
 /** Shard conversion: 5 of a rarity -> 1 of the next; 1 -> 3 of the rarity below. */
-export const MATERIAL_COMBINE_COST = 5;
-export const MATERIAL_DOWNGRADE_YIELD = 3;
+export const MATERIAL_COMBINE_COST = 5;   // (legacy; shard fusion uses SHARD_FUSE_COST)
+/** Shards needed to fuse one of the next tier (owner): 20 Common, 10 Rare, 5 Epic, 3 Legendary. */
+export const SHARD_FUSE_COST: Record<'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY', number> = { COMMON: 20, RARE: 10, EPIC: 5, LEGENDARY: 3 };
+export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no break-down / fuse loop)
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
 /** Hero rank needed to equip / craft gear of a rarity. */

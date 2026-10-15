@@ -24,7 +24,7 @@ import {
 } from './types';
 import {
   ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
-  MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, MULTISHOT_CAP, RANK_REQ,
+  MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
 import { accumulateSets } from './itemSets';
@@ -1442,26 +1442,24 @@ export const useGameStore = create<GameState>()((set, get) => {
       const items = ids.map((id) => s.inventory.find((i) => i.id === id)).filter((i): i is Item => !!i && isGear(i));
       if (items.length !== FUSE_COUNT || new Set(items.map((i) => i.id)).size !== FUSE_COUNT) return null;
       const r = items[0].rarity, up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
-      if (!up || chance <= 0 || items.some((i) => i.rarity !== r)) return null;
+      // (owner: five of the SAME type - 5 weapons, 5 boots... - and the result is that type too)
+      if (!up || chance <= 0 || items.some((i) => i.rarity !== r || i.type !== items[0].type)) return null;
       const ok = Math.random() < chance;
-      const pool = summonPool('GEM', s.hero).filter((i) => isGear(i) && i.rarity === (ok ? up : r));
+      const pool = summonPool('GEM', s.hero).filter((i) => isGear(i) && i.type === items[0].type && i.rarity === (ok ? up : r));
       if (!pool.length) return null;
       const item = instantiate(pool[Math.floor(Math.random() * pool.length)]);
       set({ inventory: [...s.inventory.filter((i) => !ids.includes(i.id)), markNew(item)] });   // (5 slots freed, 1 used)
       notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
       return { ok, item };
     },
-    fuseShards: (r) => {
-      const s = get();
-      const up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
-      if (!up || chance <= 0 || (s.materials[r] ?? 0) < FUSE_COUNT) return null;
-      const ok = Math.random() < chance;
-      const got: Rarity = ok ? up : r;
-      const materials = { ...s.materials, [r]: s.materials[r] - FUSE_COUNT };
-      materials[got] = (materials[got] ?? 0) + 1;
+    fuseShards: (r) => {   // (same rule as combineMaterials: SHARD_FUSE_COST of a tier -> 1 of the next, guaranteed)
+      const s = get(), up = nextTier(r), cost = SHARD_FUSE_COST[r as keyof typeof SHARD_FUSE_COST];
+      if (!up || !cost || (s.materials[r] ?? 0) < cost) return null;
+      const materials = { ...s.materials, [r]: s.materials[r] - cost };
+      materials[up] = (materials[up] ?? 0) + 1;
       set({ materials, inventory: syncShardStacks(s.inventory, materials) });
-      notify(ok ? `Fusion succeeded: 1 ${up.charAt(0) + up.slice(1).toLowerCase()} shard!` : 'Fusion failed... 1 shard remains.', ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
-      return { ok, item: shardItem(got, 1) };
+      notify(`Fused 1 ${up.charAt(0) + up.slice(1).toLowerCase()} shard!`, '#ffd24a', 'SYSTEM');
+      return { ok: true, item: shardItem(up, 1) };
     },
     buyItem: (item, quantity = 1) => {
       const s = get();
@@ -1560,17 +1558,17 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Recycled ${list.length} items for ${y.shards} ${rarity} Shards${y.cores ? ` + ${y.cores} Cores` : ''}`, COLORS.uiAccent, 'SYSTEM');
     },
 
-    combineMaterials: (from) => {
+    combineMaterials: (from) => {   // shard fusion: SHARD_FUSE_COST shards -> 1 of the next tier (always succeeds)
       const s = get();
       const idx = RARITIES.indexOf(from);
       if (idx === -1 || idx === RARITIES.length - 1) return;
-      const to = RARITIES[idx + 1];
-      if (s.materials[from] < MATERIAL_COMBINE_COST) {
-        notify(`Need ${MATERIAL_COMBINE_COST} ${from} Shards`, 'red', 'WARNING');
+      const to = RARITIES[idx + 1], cost = SHARD_FUSE_COST[from as keyof typeof SHARD_FUSE_COST];
+      if (s.materials[from] < cost) {
+        notify(`Need ${cost} ${from} Shards`, 'red', 'WARNING');
         return;
       }
-      set({ materials: { ...s.materials, [from]: s.materials[from] - MATERIAL_COMBINE_COST, [to]: s.materials[to] + 1 } });
-      notify(`Crafted 1 ${to} Shard`, COLORS.uiAccent, 'SYSTEM');
+      set({ materials: { ...s.materials, [from]: s.materials[from] - cost, [to]: s.materials[to] + 1 } });
+      notify(`Fused 1 ${to} Shard`, COLORS.uiAccent, 'SYSTEM');
     },
 
     downgradeMaterials: (from) => {

@@ -26,7 +26,7 @@ interface UiState {
   /** buy dialog overrides (merchant / pets): unit price, how many are left, and the purchase itself */
   buyOpts: BuyOpts | null;
   selectedItem: Item | null;            // blacksmith selection
-  blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT' | 'FUSE';
+  blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT' | 'FUSE' | 'SHARDS';
   confirm: ConfirmRequest | null;
   bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)
   summonResults: Item[] | null;
