@@ -470,8 +470,8 @@ export function aiHydraHead(e: Enemy): void {
 }
 
 // ============================================================ GLACIUS =========
-const G_BREATH = 0, G_SPIKES = 1, G_DIVE = 2, G_BLIZZ = 3;
-const WYRM_ORDER = [G_BREATH, G_SPIKES, G_DIVE, G_SPIKES, G_BREATH];
+const G_BREATH = 0, G_SPIKES = 1, G_DIVE = 2, G_BLIZZ = 3, G_BROOD = 4;
+const WYRM_ORDER = [G_BREATH, G_SPIKES, G_BROOD, G_DIVE, G_SPIKES, G_BLIZZ, G_BREATH];
 
 LISTS.BOSS_WYRM = [
   { // Frost Breath: a cone that chills (4 chill stacks freeze you). The beam drifts toward you - keep moving out of it.
@@ -537,6 +537,18 @@ LISTS.BOSS_WYRM = [
       notify('A blizzard engulfs the arena!', '#93d8ff');
     },
   },
+  { // Brood of Ice: wyrmlings hatch from the frost around Glacius and harry you with slowing ice shards.
+    name: 'Brood of Ice!', wind: () => 1.1, act: () => 0.4, rec: () => 0.8,
+    begin(e) { circle(e.pos.x, e.pos.z, 7, 1.1, BT.VISUAL, 0, 0x8fdcff); },
+    fire(e) {
+      const n = 2 + e.phase, base = Math.random() * 6.283;
+      for (let i = 0; i < n; i++) {
+        const a = base + (i / n) * 6.283, r = e.radius + 2.5;
+        spawnAdd('BOSS_WYRMLING', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 1, 1, 6);
+      }
+      events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 6 });
+    },
+  },
 ];
 
 function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
@@ -547,7 +559,7 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
   if (e.attackCd > 0) return;
   let id: number;
   if (S.wantBlizz && S.blizzT <= 0) { S.wantBlizz = false; id = G_BLIZZ; }
-  else id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length];
+  else { id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; }
   beginAtk(e, list, id, ux, uz, dist);
 }
 

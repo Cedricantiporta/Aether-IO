@@ -34,6 +34,7 @@ export type EnemyKind =
   | 'BOSS_SAPLING'    // boss add: Elderroot mini-treant (walks, fuses, bursts into thorns)
   | 'BOSS_HYDRA_HEAD' // boss part: separately targetable hydra head (positioned by the hydra AI)
   | 'BOSS_IMP'        // boss add: Ignar fire imp (goblin model, tinted)
+  | 'BOSS_WYRMLING'   // boss add: Glacius's baby wyrm (flies, kites, fires slowing ice shards)
   | 'GOBLIN_ARCHER'   // stationary: shoots from a wooden archer tower (the tower is an obstacle; the archer is killable)
   | 'LAKE_HYDRA'      // stationary: a hydra head peeking from a lake (water stages); spits, bites, submerges
   | 'SCARAB'          // fast swarm beetle, spawned in big packs (low hp)

@@ -120,6 +120,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Hydra Head', hp: 300, speed: 0, radius: 1.7, scale: 2.1, contactDamage: 0, projectileDamage: 14,
     xp: 0, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 20,
   },
+  BOSS_WYRMLING: {
+    name: 'Wyrmling', hp: 150, speed: 5.5, radius: 0.85, scale: 1.0, contactDamage: 12, projectileDamage: 11,
+    xp: 0, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x8fd0f0, knockResist: 0.3, armor: 10,
+  },
   BOSS_IMP: {
     name: 'Fire Imp', hp: 70, speed: 5.4, radius: 0.55, scale: 0.9, contactDamage: 11, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xff6a1a, knockResist: 0, armor: 5,
@@ -212,7 +216,7 @@ export type BossKind =
 /** Bosses in biome order (the Lich is a mini-boss room option, so it is not part of the order). Used by the Codex. */
 export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID', 'BOSS_LICH'];
 /** Summons / body parts of the new bosses: no xp, loot or gold; vanish when their boss dies. */
-export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP' || k === 'BOSS_CRYSTAL'; }
+export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_WYRMLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP' || k === 'BOSS_CRYSTAL'; }
 
 export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },

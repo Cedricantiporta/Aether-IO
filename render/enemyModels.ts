@@ -809,6 +809,37 @@ function gargoyle(): ModelDef {
   };
 }
 
+/** Glacius's wyrmling: a small icy dragon with flapping wings and a long tail; hovers and dives. */
+function wyrmling(): ModelDef {
+  const ice = '#8fc8e8', ice2 = '#5f9ec4', pale = '#e2f4ff';
+  const body = new GB([0.72, 1.12]);
+  body.sph(0.42, [0, 1.0, 0], ice, [0.8, 0.75, 1.25], 9);                        // body
+  body.sph(0.3, [0, 0.92, 0.12], pale, [0.7, 0.55, 1.05], 7);                    // belly
+  body.sph(0.26, [0, 1.3, 0.55], ice, [0.9, 0.85, 1.2], 8);                      // head
+  body.box(0.2, 0.14, 0.3, [0, 1.24, 0.82], ice2);                               // snout
+  for (const s of [-1, 1]) body.cone(0.05, 0.32, 4, [s * 0.12, 1.5, 0.45], pale, [-0.9, 0, -s * 0.3]);   // horns
+  for (let i = 0; i < 4; i++) body.cone(0.05, 0.18, 4, [0, 1.38 - i * 0.03, 0.2 - i * 0.25], pale, [-0.3, 0, 0]);   // spine ridge
+  body.cone(0.14, 1.0, 5, [0, 0.95, -0.85], ice2, [-1.75, 0, 0]);                // tail
+  for (const s of [-1, 1]) body.cyl(0.06, 0.05, 0.4, 5, [s * 0.22, 0.6, 0.15], ice2, [0.3, 0, 0]);   // legs
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.045, [s * 0.11, 1.36, 0.78], '#7df3ff', 1, 5);
+  const w = new GB([0.75, 1.1]);
+  w.box(0.9, 0.05, 0.07, [0.45, 0, 0], ice2, [0, 0, 0.15]);
+  w.tri([0, 0, 0.05], [0.95, 0.14, 0], [0.75, -0.38, -0.35], pale); w.tri([0, 0, 0.05], [0.75, -0.38, -0.35], [0.3, -0.3, -0.45], ice);
+  const wing = w.build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: wing, mat: 'lit2' }, { geo: wing, mat: 'lit2' }], headY: 1.9, shadow: 0.6,
+    pose(e, P, t) {
+      const flap = sin(t * 12 + e.id), atk = e.state === 'WINDUP' || e.state === 'ATTACK' ? 1 : 0;
+      P.body(1.0 + sin(t * 3 + e.id) * 0.15, 0.15 + atk * 0.25, sin(t * 2 + e.id) * 0.12, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      const fold = flap * 0.8 + 0.25;
+      P.part(2, 0.2, 1.15, 0, 0, 0, fold);
+      P.part(3, -0.2, 1.15, 0, 0, 0, -fold, -1, 1, 1);
+      P.glow = 1.2 + atk * 0.8;
+    },
+  };
+}
+
 /** Desert Giant Scorpion: armoured body, two pincers and a segmented tail that arcs forward to sting. */
 function scorpion(): ModelDef {
   const sh = '#b8742a', sh2 = '#8a5218', dark = '#3a2410';
@@ -1019,10 +1050,10 @@ export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
   if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
-    SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(),
+    SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
     HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
   'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
-  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL'];
+  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING'];

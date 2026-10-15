@@ -1105,7 +1105,7 @@ function runAI(e: Enemy): void {
     case 'SCORPION': aiScorpion(e); break;
     case 'MUMMY': aiMummy(e); break;
     case 'YETI': aiYeti(e); break;
-    case 'FROST_WISP': aiFrostWisp(e); break;
+    case 'FROST_WISP': case 'BOSS_WYRMLING': aiFrostWisp(e); break;   // (Glacius's wyrmlings fight like frost wisps)
     case 'HELLHOUND': aiDirewolf(e, true); break;
     case 'CINDER_SHAMAN': aiCinderShaman(e); break;
     case 'VOID_STALKER': aiVoidStalker(e); break;

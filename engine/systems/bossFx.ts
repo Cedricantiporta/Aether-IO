@@ -176,7 +176,7 @@ export function resolveBossZone(z: Zone): void {
     case BT.SPIKES: {
       // damage now; spikes erupt in sequence for the visual
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(1); }
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(2); applyPlayerDebuff('SLOW', 3); }
       for (let d = 1.5, i = 0; d < z.length; d += 2.4, i++) spawnProp(PROP_ICE, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.035, 1.3, 1.1 + (i % 3) * 0.2, 3.2 + (i % 2) * 1.2);
       events.emit('trick', { pos: z.pos.clone(), kind: 'ICE_SPIKES', radius: z.radius });
       break;
@@ -186,7 +186,7 @@ export function resolveBossZone(z: Zone): void {
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.8, color: 0xbfe8ff });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x16303f });
       addShake(0.7);
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.5); addChill(1); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3); }
       diveLanded(z.pos.x, z.pos.z);
       break;
     case BT.PILLAR:
@@ -210,7 +210,7 @@ export function resolveBossZone(z: Zone): void {
       addShake(0.3);
       break;
     case BT.HAIL:
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(1); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(2); }
       spawnProp(PROP_ICE, z.pos.x, z.pos.z, 0, 0.9, 0.9, 2.6);
       events.emit('trick', { pos: z.pos.clone(), kind: 'HAIL', radius: z.radius });
       break;
@@ -346,7 +346,7 @@ export function updateBossFx(dt: number): void {
 let lastVoidText = -9;
 
 /** Multiplier applied to player move speed (read by zones.updateZones -> envSlow). */
-export function arenaSlow(): number { return arena.blizzard ? 0.8 : 1; }
+export function arenaSlow(): number { return arena.blizzard ? 0.6 : 1; }   // Glacius's blizzard: -40% move speed everywhere
 
 /** Keeps `v` inside the Void arena (bosses use it). */
 export function clampToVoid(v: Vector3, margin: number): void {
