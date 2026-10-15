@@ -129,6 +129,26 @@ needed to see the new game).
   dark CP box (`.cs-cp`) instead of the round medallion + parchment; game over shows header and results side by side on
   phones (`.go-wrap` / `.go-head` / `.go-rows`, no more zoom .65).
 
+## Session batch (2026-10-15, later)
+- **Boss wards** (`engine/systems/bossMech.ts`): once per fight at 50% hp (`WARD_AT`), max 18 s, barriers every 32/28/24 s.
+  Each boss has its own: Golem CRYSTALS (arena crystals), Elderroot GUARD (sporecaps), Hydra GUARD with spare
+  `BOSS_HYDRA_HEAD`s (`HEAD_SLOTS` angles so they don't stack on the 3 real heads), Glacius SHELL (no immunity: a 14%
+  max-hp absorb shield, stagger + "SHELL SHATTERED" when broken), Ignar GUARD (hellhounds), War Machine CORES (crystals
+  right beside it), Void Herald PHASE (immune 5 s, nothing to kill), Lich GUARD (cultists).
+- **Town** (`engine/townData.ts`, `render/TownScenery.tsx`): raised castle `TERRACE` (h 1.2) with central stairs; the keep
+  stands on it. Ground height = `townLift(x, z)`; the engine keeps y = 0 and renderers add `render/lift.ts liftAt()`
+  (hero, bars, wings, NPCs, pet, camera target, facing / guide arrows, status tags). Landmarks: `CHURCH` (enterable),
+  `TAVERN` (Golden Tankard), `WINDMILL` (turning sails), `STATUE` (plaza centre; spawn at (0,0) is pushed out by its
+  collider). Five crowded houses + ~10 town trees removed; Skill Trainer moved to (-16, -17).
+- **Chapel interior**: village area `'CHURCH'` (`engine/churchData.ts`, `render/ChurchInterior.tsx`), same plumbing as
+  the castle hall (pending `'CHURCH'`, `switchArea`, exit pill, questNav hop, minimap, tracker). Sister Elowen inside
+  (one-time gift: 2 HP potions).
+- **Stopped agents finished + merged**: town/cave paths + mining camp + Mine shop + tutorial quests; phone UI pass;
+  perf (range-limited uploads, hidden empty pools with shader warm-up, merged NPC skinned meshes).
+- Craft / fusion cinematic: lighter backdrop, no blur layer (phones showed black); fusion (gear, shards, pets) uses it.
+- Skills in facing mode always aim at the target (`aim.ts fire`); attribute gains ~60%; Common gear drops cut (70% of
+  Common rolls give nothing, `store.rollItemDrop`); no "unlocks at Lv" toasts.
+
 ## Open tasks (do next, in order)
 1. Balance/tuning still unverified: boss damage/cadence, town performance on real phones (12 skinned NPCs + wall),
    camera framing in long corridor rooms, boss rooms with new shapes, fountain heal (40%).
