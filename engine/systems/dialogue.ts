@@ -133,7 +133,12 @@ export function closeDialogue(): void {
 export function advanceDialogue(): void {
   const s = useDialogue.getState();
   if (!s.open) return;
-  if (s.idx >= s.lines.length - 1) { closeDialogue(); return; }
+  if (s.idx >= s.lines.length - 1) {
+    const tab = s.npc >= 0 && !s.offer && !s.turnIn ? NPCS[s.npc].opens : undefined;
+    closeDialogue();
+    if (tab) useGameStore.getState().openSpecificShop(tab);   // e.g. the Skill Trainer opens the skill panel
+    return;
+  }
   const idx = s.idx + 1;
   useDialogue.setState({ idx });
   onLine(s.npc, idx);

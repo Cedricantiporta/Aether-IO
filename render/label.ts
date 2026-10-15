@@ -9,7 +9,7 @@ const SERIF = '"Cinzel", Georgia, "Times New Roman", serif';
 const GOLD = '#d9b56a', CREAM = '#f1e2b8';
 
 type PlateKind = 'plate' | 'mini';
-interface Opts { size?: number; stroke?: string; bg?: string; /** town name plate ('mini' = smaller, subtler NPC variant) */ plate?: PlateKind }
+interface Opts { size?: number; stroke?: string; bg?: string; /** border colour drawn around the bg box */ border?: string; /** town name plate ('mini' = smaller, subtler NPC variant) */ plate?: PlateKind }
 
 // Kick the web font off as early as possible (the town mounts while it may still be loading).
 let fontsReady = false;
@@ -48,7 +48,7 @@ function drawPlate(cv: HTMLCanvasElement, text: string, size: number, kind: Plat
 }
 
 export function labelMaterial(text: string, color = '#ffffff', opts: Opts = {}): Lab {
-  const key = text + '|' + color + '|' + (opts.bg || '') + '|' + (opts.plate || '') + '|' + (opts.size || '');
+  const key = text + '|' + color + '|' + (opts.bg || '') + '|' + (opts.border || '') + '|' + (opts.plate || '') + '|' + (opts.size || '');
   let l = cache.get(key);
   if (l) return l;
   const size = opts.size ?? 56;
@@ -80,6 +80,7 @@ export function labelMaterial(text: string, color = '#ffffff', opts: Opts = {}):
       ctx.save(); ctx.translate(w / 2, h / 2 + 2); ctx.scale(k, 1);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'miter'; ctx.miterLimit = 2;
       if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(-w / 2 / k + 2, -h / 2 + 1, (w - 4) / k, h - 4); }
+      if (opts.bg && opts.border) { ctx.lineWidth = 3; ctx.strokeStyle = opts.border; ctx.strokeRect(-w / 2 / k + 3.5, -h / 2 + 2.5, (w - 7) / k, h - 7); }
       ctx.lineWidth = Math.max(4, fs * 0.11); ctx.strokeStyle = opts.stroke || 'rgba(12,9,6,0.9)'; ctx.strokeText(text, 0, 0);
       ctx.fillStyle = color; ctx.fillText(text, 0, 0);
       ctx.restore();

@@ -690,7 +690,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
   }), [col]);
   const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', '#f1e2b8', { size: 60, plate: 'plate' }), [shrine]);
   const sp = useGameStore((s) => s.skillPoints);
-  const spLabel = useMemo(() => (sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#7dffb0', { size: 56 }) : null), [sp]);
+  const spLabel = useMemo(() => (sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#ffffff', { size: 50, bg: 'rgba(10,8,6,0.86)', border: '#c8962e' }) : null), [sp]);
   const near = useRef(false), closedK = useRef(0), rot = useRef(0);
   const ringRef = useRef<Group>(null!), crystalRef = useRef<Mesh>(null!), runeRef = useRef<Mesh>(null!), titleRef = useRef<Sprite>(null!), spRef = useRef<Sprite>(null!);
   const px = position[0], pz = position[2];

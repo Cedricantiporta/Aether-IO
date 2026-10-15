@@ -191,7 +191,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- level-gated: the deeper biomes (offered once the class level can reach them)
   {
-    id: 'aldo_gargoyles', minLevel: 12, giver: 'Sir Aldo', title: 'Stone Wings', summary: 'Defeat 15 Gargoyles (Marble Halls)',
+    id: 'aldo_gargoyles', minLevel: 12, giver: 'Sir Bram', title: 'Stone Wings', summary: 'Defeat 15 Gargoyles (Marble Halls)',
     intro: ['The old castle had gargoyles on every tower. Stone, harmless, pretty.', 'Now they wake when you walk past and dive at your head. Smash fifteen of them in the Marble Halls, would you?'],
     progress: 'Gargoyles sit still like statues until you come close. Strike first.',
     done: ['Fifteen! The masons will have work for a year. Take this from the guard\'s purse.'],

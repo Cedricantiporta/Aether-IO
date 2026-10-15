@@ -349,6 +349,8 @@ export interface NpcDef {
   /** replaces the last line with a nudge when a quest is ready to claim */
   quest?: boolean;
   /** which map the NPC lives in (default town) */
+  /** talking to this NPC ends by opening this shop tab (e.g. the Skill Trainer -> SKILLS) */
+  opens?: import('../storeTypes').ShopTab;
   area?: 'CASTLE' | 'CAVE';   // (CAVE = Floor 1 of the crystal cave)
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
@@ -462,7 +464,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['La la laaa~', 'Beware the Mire... it rhymes with nothing!', 'Anyone have a lute string?'],
   },
   {
-    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-8, -11.2],
+    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-14.5, -12.6],   // among the houses (clear of the Skill Trainer's tent)
     talk: [
       ['The Fortune Teller by the plaza answers wishes with fortune. Offer her gems and see who answers.', 'The Skill Trainer, by the castle steps on the west side, will sharpen what you already know.'],
       ['Knowledge is the sharpest weapon. And a very good staff, if I may say.'],
@@ -555,6 +557,16 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
     gift: { once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend drops a heavy sack into your hands. (+10,000 gold)' },
+  },
+  // the Skill Trainer beside the training tent west of the castle steps (talking opens the skill panel)
+  {
+    name: 'Master Varek', role: 'Skill Trainer', model: 'KNIGHT', tint: '#ffe0b0', scale: 1.05, prop: 'spear', accent: '#ffb04a', home: [-7.4, -17.4], opens: 'SKILLS',
+    talk: [
+      ['Footwork first, flourish later.', 'Spend your skill points here. Every point is a lesson you already paid for in blood.'],
+      ['A new skill opens as you grow. Come back after every few levels.', 'Let\'s see what you have learned.'],
+      ['Mana is a muscle. Overuse it and you\'ll stand there waving your arms at a goblin.'],
+    ],
+    bubbles: ['Again! Faster!', 'Mind your stance.', 'Skill points waiting? Come train.'],
   },
   // the meadow in front of the walls: a travelling merchant by her cart, a carter and a wanderer on the road
   {
