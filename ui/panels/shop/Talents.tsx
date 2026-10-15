@@ -58,7 +58,7 @@ export const TalentsView: React.FC = () => {
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="rpg-label">Talents · {hero}</div>
-          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 3 points per class level: at the max level every talent is full. Deeper tiers cost more points.</div>
+          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 4 points per class level: at the max level every talent is full. ★ = special talent. Deeper tiers cost more points.</div>
         </div>
         <div className="flex items-center gap-2">
           <div className="rpg-badge !text-[.75rem]" data-testid="talent-points"><Sparkles size={12} /> {free} / {total} points</div>
@@ -99,13 +99,14 @@ export const TalentsView: React.FC = () => {
                     <span key="d" className="pos">Per rank: {n.desc}</span>,
                     <span key="k" className={free >= n.cost || r >= n.max ? 'muted' : 'neg'}>Costs {n.cost} point{n.cost > 1 ? 's' : ''} per rank</span>,
                   ];
+                  if (n.special) lines.push(<span key="s" style={{ color: '#ffd24a', fontWeight: 700 }}>★ Special talent: changes how a skill or move works</span>);
                   if (n.req.length) lines.push(<span key="q" className={n.req.every((q) => ranks[q] > 0) ? 'muted' : 'neg'}>Requires: {n.req.map((q) => TALENT_BY_ID[q].name).join(' + ')}</span>);
                   if (n.capstone) lines.push(<span key="c" className={bs >= CAPSTONE_BRANCH_POINTS ? 'muted' : 'neg'}>Requires {CAPSTONE_BRANCH_POINTS} points in {br.name} ({bs})</span>);
                   return (
                     <button
                       key={n.id} type="button" aria-disabled={!can} data-testid={`talent-${n.id}`} data-rank={r} data-state={r >= n.max ? 'max' : can ? 'open' : locked ? 'locked' : 'closed'}
                       onClick={() => { if (can) allocate(n.id); }}
-                      {...tip(<SimpleTip title={n.name} sub={n.capstone ? `${br.name} capstone` : br.name} color={br.color} lines={lines} />)}
+                      {...tip(<SimpleTip title={n.name} sub={n.capstone ? `${br.name} capstone` : n.special ? `${br.name} · special` : br.name} color={br.color} lines={lines} />)}
                       className="absolute flex items-center justify-center"
                       style={{
                         left: cx(n) - sz / 2, top: cy(n) - sz / 2, width: sz, height: sz, borderRadius: n.capstone ? 14 : '50%',
@@ -117,6 +118,7 @@ export const TalentsView: React.FC = () => {
                     >
                       <NodeIcon icon={n.icon} size={sz - 16} dim={r <= 0 && !can} />
                       {n.cost > 1 && r < n.max && <span className="absolute rpg-num" style={{ top: -7, right: -9, fontSize: '.52rem', padding: '0 3px', borderRadius: 5, background: '#0d0703', color: free >= n.cost ? '#e9b949' : '#8a7a5a', border: '1px solid #3a2c18' }} title="Points per rank">{n.cost}P</span>}
+                      {n.special && <span className="absolute" style={{ top: -8, left: -7, fontSize: '.7rem', color: '#ffd24a', textShadow: '0 0 4px #000, 0 0 6px #ffb000' }}>★</span>}
                       {locked && r <= 0 && <span className="absolute inset-0 flex items-center justify-center"><Lock size={12} color="#cbbd9a" /></span>}
                       <span className="absolute rpg-num" style={{ bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: '.58rem', padding: '0 4px', borderRadius: 6, background: '#0d0703', color: r >= n.max ? '#ffe08a' : r > 0 ? br.color : '#9a8a6a', border: '1px solid #3a2c18' }}>{r}/{n.max}</span>
                     </button>

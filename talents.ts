@@ -1,7 +1,7 @@
 // ============================================================================
 // Talent trees: permanent (profile) per class, 3 branches x 10 nodes laid out left -> right (a landscape strip that
 // scrolls sideways in the narrow panel). Costs rise by column 1..5; stat values are 45% of the old tree (owner).
-// Points: 3 per class level (a full tree at the max level). Respec costs gold.
+// Points: 4 per class level (a full tree at the max level). Respec costs gold.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are
 // read from the new PlayerStats fields by the engine systems.
 // ============================================================================
@@ -12,7 +12,7 @@ import { accumulate, describeFx, type FxAcc } from './statFx';
 export interface TalentNode {
   id: string;
   hero: HeroClass;
-  branch: 0 | 1 | 2;
+  branch: number;
   row: number;            // column 0 (left) .. 5 (capstone)
   x: number;              // lane 0..2 (top / middle / bottom)
   name: string;
@@ -22,6 +22,8 @@ export interface TalentNode {
   icon: string;           // 'u:TYPE' (UpgradeArt) or skill icon id
   fx: StatFx;             // per rank
   capstone?: boolean;
+  /** a special talent: changes a mechanic (extra dash / pierce / skeleton / axe / chain...), drawn with a gold star */
+  special?: boolean;
   cost: number;           // talent points per rank (deeper tiers cost more)
 }
 export interface TalentBranch { name: string; blurb: string; color: string }
@@ -31,26 +33,31 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
     { name: 'Marksman', blurb: 'Crits and attack speed', color: '#f0b64a' },
     { name: 'Elementalist', blurb: 'Fire and ice arrow procs', color: '#ff7a3c' },
     { name: 'Survivalist', blurb: 'Dash, speed and evasion', color: '#5fd35a' },
+    { name: 'Ranger', blurb: 'Special tricks: pierce, dash charges, ambush', color: '#7ee8c8' },
   ],
   WIZARD: [
     { name: 'Arcane', blurb: 'Skill damage and mana', color: '#b07cff' },
     { name: 'Storm', blurb: 'Chain lightning and arcane wards', color: '#ffe14a' },
     { name: 'Frost', blurb: 'Blizzard and slows', color: '#7ee0ff' },
+    { name: 'Chronomancer', blurb: 'Special tricks: cooldowns, orbs, chains', color: '#ffb3f0' },
   ],
   BARBARIAN: [
     { name: 'Berserker', blurb: 'Rage and low-health power', color: '#ff5a4a' },
     { name: 'Juggernaut', blurb: 'Health, defense and thorns', color: '#9fb2c8' },
     { name: 'Earthshaker', blurb: 'Axe Storm axes and ricochets', color: '#d99a4a' },
+    { name: 'Warlord', blurb: 'Special tricks: extra axes, leap, bloodlust', color: '#ff9a5a' },
   ],
   NECROMANCER: [
     { name: 'Gravelord', blurb: 'Stronger, longer-lived minions', color: '#b08aff' },
     { name: 'Plague', blurb: 'Curses and skill damage', color: '#8be05a' },
     { name: 'Lich', blurb: 'Mana, health and soul drain', color: '#7fd8ff' },
+    { name: 'Bone Lord', blurb: 'Special tricks: more skeletons, swift dead', color: '#e8e0c8' },
   ],
   KNIGHT: [
     { name: 'Crusader', blurb: 'Sword damage and crits', color: '#e9b949' },
     { name: 'Bastion', blurb: 'Defense, health and shield', color: '#9fb2c8' },
     { name: 'Templar', blurb: 'Holy skills and the aura', color: '#fff0a8' },
+    { name: 'Paladin', blurb: 'Special tricks: avatar, dash, retribution', color: '#ffd27a' },
   ],
 };
 
@@ -68,31 +75,37 @@ const EXTRA: Record<HeroClass, Row[][]> = {
     [['Steady Hands', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Hunter\'s Mark', '', 2, 'u:DAMAGE', { mul: { damage: 0.03 } }], ['Hawkeye', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Rapid Fire', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }]],
     [['Kindling', '', 2, 'burning', { add: { onHitBurnChance: 0.05 } }], ['Rime', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Wildfire', '', 2, 'u:SKILL_BURNING', { add: { skillDamage: 0.1 } }], ['Glacial Tips', '', 2, 'u:SKILL_FREEZING', { add: { critDamage: 0.12 } }]],
     [['Light Step', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Tumble', '', 2, 'dash', { add: { dodge: 0.03 } }], ['Rugged', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Windrunner', '', 2, 'u:SKILL_DASH', { add: { dodge: 0.03 }, mul: { moveSpeed: 0.03 } }]],
+    [['Scout', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Falconer', 'Arrow storm lasts +1s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1 } }], ['Snare Shot', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Deep Quiver', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }]],
   ],
   WIZARD: [
     [['Spellweave', '', 2, 'special', { add: { skillDamage: 0.08 } }], ['Deep Well', '', 2, 'u:MAX_MANA', { add: { maxMana: 25 } }], ['Arcane Echo', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Clarity', '', 2, 'gravity', { add: { manaRegen: 0.8 } }]],
     [['Conductor', '', 2, 'thunder', { mul: { damage: 0.04 } }], ['Ion Field', '', 2, 'storm', { add: { cooldownReduction: 0.03 } }], ['Thunderhead', '', 2, 'u:SKILL_THUNDER', { add: { skillDamage: 0.1 } }], ['Galvanize', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }]],
     [['Permafrost', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Ice Armor', '', 2, 'u:DEFENSE', { add: { defense: 3 } }], ['Shatterpoint', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.03 } }], ['Winter\'s Grasp', '', 2, 'freezeSpell', { add: { skillDamage: 0.1 } }]],
+    [['Haste', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Rewind', '', 2, 'regen', { add: { regen: 0.8 } }], ['Echoing Bolt', 'Thunder bolt N -1', 1, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }], ['Eternity', '', 2, 'special', { add: { skillDamage: 0.1 } }]],
   ],
   BARBARIAN: [
     [['Savagery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Bloodthirst', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Rampage', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Gore', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
     [['Iron Hide', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Giant\'s Blood', '', 2, 'u:HEALTH', { add: { maxHealth: 18 } }], ['Thornmail', '', 2, 'barrier', { add: { thorns: 8 } }], ['Rooted', '', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }]],
     [['Fault Line', '', 2, 'stamp', { add: { stompPower: 0.2 } }], ['Hurl', '', 2, 'orbital', { add: { axeSize: 0.1 } }], ['Quake', '', 2, 'u:SKILL_STAMP', { add: { stunBonus: 0.3 } }], ['Landslide', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }]],
+    [['Battle Hunger', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Hide of Iron', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Boomerang', 'Axe Storm axes ricochet +1 more time', 1, 'stamp', { add: { axeBounce: 1 } }], ['Last Rites', '', 2, 'barrier', { add: { lowHpHaste: 0.1 } }]],
   ],
   NECROMANCER: [
     [['Bone Armor', '', 2, 'RAISE_DEAD', { add: { minionLife: 1.5 } }], ['Grave Pact', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.1 } }], ['Dread March', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Ossuary', '', 2, 'RAISE_DEAD', { add: { minionDmg: 0.1 } }]],
     [['Blight', '', 2, 'CURSE_FIELD', { add: { skillDamage: 0.08 } }], ['Miasma', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }], ['Necrosis', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }], ['Contagion', '', 2, 'BONE_SPEAR', { add: { skillDamage: 0.1 } }]],
     [['Soul Leech', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Spectral Ward', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Undeath', '', 2, 'u:HEALTH', { add: { maxHealth: 15 } }], ['Eternal', '', 2, 'SOUL_STEP', { add: { dmgReduce: 0.03 } }]],
+    [['Marrow Feast', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Rattle', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Bone Wall', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Grim Tide', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.12 } }]],
   ],
   KNIGHT: [
     [['Riposte', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Sword Mastery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Flurry', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Coup de Grace', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
     [['Tower Shield', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Fortitude', '', 2, 'u:HEALTH', { add: { maxHealth: 18 } }], ['Vigil', '', 2, 'regen', { add: { regen: 1 } }], ['Aegis Oath', '', 2, 'u:SKILL_BARRIER', { add: { dmgReduce: 0.03 } }]],
     [['Litany', '', 2, 'HOLY_WAVE', { add: { skillDamage: 0.08 } }], ['Blessed', '', 2, 'u:MAX_MANA', { add: { maxMana: 25 } }], ['Consecrate', '', 2, 'JUDGMENT', { add: { skillDamage: 0.1 } }], ['Grace', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }]],
+    [['Shining Mail', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Valor', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Lay on Hands', '', 2, 'regen', { add: { regen: 1 } }], ['Bulwark Oath', '', 2, 'u:SKILL_BARRIER', { add: { dmgReduce: 0.03 } }]],
   ],
 };
 /** Count / step mechanics stay whole; every other talent value is cut to 45% (owner: -50% or more). */
-const WHOLE = new Set(['pierceBonus', 'echoEvery', 'thunderChain', 'procHaste', 'burnStacks', 'orbBonus', 'stormTwin', 'axeBounce', 'axeCount', 'minionCount']);
+const WHOLE = new Set(['dashCharges', 'pierceBonus', 'echoEvery', 'thunderChain', 'procHaste', 'burnStacks', 'orbBonus', 'stormTwin', 'axeBounce', 'axeCount', 'minionCount']);
 const TALENT_SCALE = 0.45;
+const SPECIAL_KEYS = new Set(['dashCharges', 'hawkBonus', 'avatarBonus', 'rageBonus', 'galeWidth', 'stormBonus', 'blizzFreeze', 'blizzardRadius']);
 function scaleFx(fx: StatFx): StatFx {
   const out: StatFx = {};
   for (const part of ['add', 'mul'] as const) {
@@ -130,6 +143,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Storm Caller', 'Storm of a Thousand Arrows lasts +1.5s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1.5 } }],
       ['Phantom', '+10% dodge, +5% move speed', 1, 'u:SKILL_DASH', { add: { dodge: 0.1 }, mul: { moveSpeed: 0.05 } }],
     ]],
+    ['r', [
+      ['Trailblazer', '', 3, 'u:SPEED', { mul: { moveSpeed: 0.03 } }],
+      ['Ricochet', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }],
+      ['Bounty Hunter', '', 3, 'u:DAMAGE', { add: { goldFind: 0.08 } }],
+      ['Ambush', '', 2, 'u:CRIT_DAMAGE', { add: { backstab: 0.25 } }],
+      ['Double Step', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
+      ['Apex Predator', 'Arrows pierce +1, +1 dash charge, +10% damage', 1, 'u:MULTISHOT', { add: { pierceBonus: 1, dashCharges: 1 }, mul: { damage: 0.1 } }],
+    ]],
   ],
   WIZARD: [
     ['a', [
@@ -155,6 +176,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Deep Freeze', 'Blizzard slow lasts +1s', 2, 'freezeSpell', { add: { blizzFreeze: 1 } }],
       ['Frostbite', '+10% crit damage', 3, 'u:CRIT_DAMAGE', { add: { critDamage: 0.1 } }],
       ['Absolute Zero', 'Blizzard +2 radius, slow +2s, +15% skill damage', 1, 'u:SKILL_FREEZE_SPELL', { add: { blizzardRadius: 2, blizzFreeze: 2, skillDamage: 0.15 } }],
+    ]],
+    ['c', [
+      ['Time Weave', '', 3, 'weapon', { add: { cooldownReduction: 0.03 } }],
+      ['Orb Weaver', 'Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { orbBonus: 1 } }],
+      ['Mana Loop', '', 3, 'gravity', { add: { manaCostCut: 0.05 } }],
+      ['Arc Jump', 'Lightning chains +1 target', 1, 'thunder', { add: { thunderChain: 1 } }],
+      ['Blink Step', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
+      ['Paradox', 'Storm Orbs +1, chains +1 target, +8% cooldown reduction', 1, 'u:SKILL_THUNDER', { add: { orbBonus: 1, thunderChain: 1, cooldownReduction: 0.08 } }],
     ]],
   ],
   BARBARIAN: [
@@ -182,6 +211,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Aftershock', '+25% Axe Storm damage', 2, 'u:DAMAGE', { add: { stompPower: 0.25 } }],
       ['Axe Tempest', 'Axe Storm +1 axe, +50% damage, +1 ricochet, +20% size', 1, 'u:SKILL_STAMP', { add: { axeCount: 1, stompPower: 0.5, axeBounce: 1, axeSize: 0.2 } }],
     ]],
+    ['w', [
+      ['War Cry', '', 3, 'u:DAMAGE', { mul: { damage: 0.03 } }],
+      ['Twin Axes', 'Axe Storm +1 axe', 1, 'orbital', { add: { axeCount: 1 } }],
+      ['Bloodbath', '', 3, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Long Leap', 'Bloodrage Leap grants Rage +1s longer', 2, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
+      ['Second Leap', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
+      ['Conqueror', 'Axe Storm +1 axe and +1 ricochet, +40% damage below 35% HP', 1, 'u:SKILL_RAGE', { add: { axeCount: 1, axeBounce: 1, berserk: 0.4 } }],
+    ]],
   ],
   NECROMANCER: [
     ['g', [
@@ -207,6 +244,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Drain', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
       ['Deathless', 'Take 3% less damage', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }],
       ['Lichdom', 'Take 10% less damage, +15% max mana', 1, 'SOUL_STEP', { add: { dmgReduce: 0.1 }, mul: { maxMana: 0.15 } }],
+    ]],
+    ['o', [
+      ['Ossified', '', 3, 'RAISE_DEAD', { add: { minionLife: 1.5 } }],
+      ['Bone Horde', '+1 skeleton per Raise Dead (max 4)', 1, 'RAISE_DEAD', { add: { minionCount: 1 } }],
+      ['Death March', '', 3, 'u:FIRE_RATE', { add: { minionHaste: 0.08 } }],
+      ['Grave Hunger', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.1 } }],
+      ['Soul Step', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
+      ['Bone Throne', '+1 skeleton, minions +20% damage and attack speed', 1, 'RAISE_DEAD', { add: { minionCount: 1, minionDmg: 0.2, minionHaste: 0.2 } }],
     ]],
   ],
   KNIGHT: [
@@ -234,6 +279,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Sanctuary', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
       ['Light Incarnate', '+20% skill damage, +6% cooldown reduction', 1, 'JUDGMENT', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
     ]],
+    ['p', [
+      ['Oathkeeper', '', 3, 'u:HEALTH', { add: { maxHealth: 12 } }],
+      ['Long Vigil', 'Divine Avatar lasts +2s', 1, 'DIVINE_AVATAR', { add: { avatarBonus: 2 } }],
+      ['Penance', '', 3, 'barrier', { add: { thorns: 8 } }],
+      ['Mercy', '', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Holy Charge', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
+      ['Crusade', 'Divine Avatar +3s, +1 dash charge, take 8% less damage', 1, 'DIVINE_AVATAR', { add: { avatarBonus: 3, dashCharges: 1, dmgReduce: 0.08 } }],
+    ]],
   ],
 };
 
@@ -249,9 +302,9 @@ export const TALENTS: TalentNode[] = [];
       const L = LAYOUT[i], fx = scaleFx(r[4]);
       const mech = r[1] && !/^[+\-]/.test(r[1]) ? `${r[1].split(/[;,]/)[0]}. ` : '';   // keep a mechanic's wording (e.g. 'Every 6th attack fires twice')
       TALENTS.push({
-        id: id(i), hero, branch: b as 0 | 1 | 2, row: L.row, x: L.x,
+        id: id(i), hero, branch: b, row: L.row, x: L.x,
         name: r[0], desc: mech && Object.keys({ ...fx.add, ...fx.mul }).every((k) => WHOLE.has(k)) ? r[1] : describeFx(fx), max: r[2], icon: r[3], fx,
-        req: L.req.map(id), capstone: i === 9, cost: TIER_COST[L.row],
+        req: L.req.map(id), capstone: i === 9, cost: TIER_COST[L.row], special: Object.keys({ ...fx.add, ...fx.mul }).some((k) => WHOLE.has(k) || SPECIAL_KEYS.has(k)),
       });
     });
   });
@@ -262,8 +315,8 @@ export const talentsOf = (hero: HeroClass): TalentNode[] => TALENTS.filter((t) =
 export type TalentRanks = Record<string, number>;
 export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {}, NECROMANCER: {} });
 
-/** 3 points per class level (owner: at max level every talent is full; the fullest tree costs 150 = level 50 x 3). */
-export const TALENT_POINTS_PER_LEVEL = 3;
+/** 4 points per class level (owner: at max level every talent is full; the fullest 4-branch tree costs 196 <= 50 x 4). */
+export const TALENT_POINTS_PER_LEVEL = 4;
 export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) * TALENT_POINTS_PER_LEVEL;
 export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>

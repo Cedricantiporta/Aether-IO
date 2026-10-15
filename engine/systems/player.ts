@@ -67,7 +67,7 @@ export function initPlayer(): void {
   p.vel.set(0, 0, 0);
   p.hp = st.stats.maxHealth;
   p.mana = st.stats.maxMana;
-  p.maxDashCharges = MAX_DASH_CHARGES;   // one dash, every class, every level
+  p.maxDashCharges = MAX_DASH_CHARGES + Math.max(0, Math.round(st.stats.dashCharges || 0));   // one dash (+ special talents)
   p.dashCharges = p.maxDashCharges;
   p.dashCd = 0;
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
@@ -214,7 +214,7 @@ export function updatePlayer(dt: number): void {
 
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
   const dLv = lv[dashKey(st.hero)];
-  const maxDash = MAX_DASH_CHARGES;   // one dash, every class, every level
+  const maxDash = MAX_DASH_CHARGES + Math.max(0, Math.round(st.stats.dashCharges || 0));   // one dash, + special talents (Double Step...)
   if (maxDash > p.maxDashCharges) p.dashCharges += maxDash - p.maxDashCharges;
   p.maxDashCharges = maxDash;
   if (p.dashCharges > maxDash) p.dashCharges = maxDash;
