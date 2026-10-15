@@ -75,6 +75,22 @@ function mitreGeo(col: string): BufferGeometry {
   return b.build();
 }
 
+/** Villager hair (on the head bone): a cap over the crown; long hair adds a fall down the back. */
+function hairGeo(col: string, long: boolean): BufferGeometry {
+  const b = new GB([0.85, 1.08]);
+  b.sph(0.6, [0, 0.72, -0.1], col, [1.04, 0.62, 1.0], 12);
+  for (const sx of [-1, 1]) b.sph(0.22, [sx * 0.46, 0.5, -0.12], col, [0.7, 1.2, 1], 7);   // side locks
+  if (long) { b.box(0.86, 0.9, 0.24, [0, 0.2, -0.42], col); b.sph(0.4, [0, -0.2, -0.42], col, [1.1, 0.8, 0.5], 8); }
+  return b.build();
+}
+/** Villager tunic (on the chest bone): a plain shirt + belt; the hips get a short skirt / trouser band. */
+function tunicGeo(col: string): BufferGeometry {
+  const b = new GB([0.8, 1.06]);
+  b.cyl(0.36, 0.4, 0.62, 12, [0, -0.06, 0], col, [0, 0, 0], [1, 1, 0.82]);
+  b.cyl(0.41, 0.41, 0.08, 12, [0, -0.36, 0], '#5a3a22', [0, 0, 0], [1, 1, 0.84]);
+  return b.build();
+}
+
 // --------------------------------------------------------------------- npc ---
 /** Main-quest marker for an NPC (0 none, 4 gold "!", 5 gold "?" delivery ready, 6 dim "?" delivery pending); the
  *  delivery check reads the bag only a few times a second (cached by store identity). */
@@ -105,7 +121,8 @@ function NpcActor({ i }: { i: number }) {
 
   useEffect(() => () => disposeMerged(ch), [ch]);
   useEffect(() => {
-    if (def.noHat) for (const m of ch.meshes) if (/hat|helm|hood|cap|crown/i.test(m.name)) m.visible = false;   // (merging then keeps the parts separate)
+    if (def.noHat) for (const m of ch.meshes) if (/hat|helm|hood|cap|crown|visor/i.test(m.name)) m.visible = false;   // (merging then keeps the parts separate)
+    if (def.noCape) for (const m of ch.meshes) if (/cape|quiver|mask/i.test(m.name)) m.visible = false;
     meshes.current = mergeCharacter(ch);   // 1 draw call per NPC instead of 7-9
     // light tints only: blend the authored tint 45% towards white so the KayKit atlas stays bright and readable
     const tint = new Color(def.tint).lerp(WHITE, 0.45);
@@ -139,6 +156,8 @@ function NpcActor({ i }: { i: number }) {
     if (def.cape) wear('chest', capeGeo(def.cape), 0, 0.2, -0.05, 1.25);
     if (def.robe) wear('hips', robeGeo(def.robe), 0, 0, 0, 1.25);
     if (def.mitre) wear('head', mitreGeo(def.mitre), 0, 0.86, 0, 1.9);
+    if (def.hair) wear('head', hairGeo(def.hair, !!def.longHair), 0, 0, 0, 1);
+    if (def.tunic) wear('chest', tunicGeo(def.tunic), 0, 0, 0, 1.25);
     return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; if (propRoot) ch.handR?.remove(propRoot); if (crown) head?.remove(crown); for (const [b, mm] of extra) { b.remove(mm); mm.geometry.dispose(); } };
   }, [ch, clips, def, i, st]);
 

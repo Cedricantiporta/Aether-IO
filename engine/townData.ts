@@ -489,6 +489,8 @@ export interface NpcDef {
   noHat?: boolean;
   /** a long robe over the body (colour), a cape down the back (colour), a priest's mitre (colour) */
   robe?: string; cape?: string; mitre?: string;
+  /** plain villager look: hide the model's cape / quiver / mask, a simple tunic (colour) and hair (colour, long = women) */
+  noCape?: boolean; tunic?: string; hair?: string; longHair?: boolean;
   /** floor height (standing on the dais) */
   y?: number;
 }
@@ -681,6 +683,19 @@ export const NPCS: NpcDef[] = [
     bubbles: ['May the Flame keep you.', 'Light a candle for the lost.', 'Peace, traveller.'],
     gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 2, text: 'Take these, with the Flame\'s blessing. They have saved braver souls than either of us.' },
   },
+  // ambient villagers (owner): plain folk in light / brown clothes, hero faces, varied hair, no hats or capes; they stroll the streets
+  { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-30, 10], [-30, 12], [-6, 12]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
+    talk: [['Fine day for it.']], bubbles: ['Fine day for it.', 'Have you seen my goat?', 'Bread\'s fresh at the stall!'] },
+  { name: 'Greta', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [6, 10], speed: 1.1, patrol: [[6, 10], [34, 10], [34, 12], [6, 12]], noHat: true, noCape: true, tunic: '#efe2c8', hair: '#b0582a', longHair: true,
+    talk: [['Morning, hero!']], bubbles: ['Morning, hero!', 'Mind the puddles.', 'The market\'s busy today.'] },
+  { name: 'Bram', role: 'Villager', model: 'KNIGHT', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-3, 16], speed: 1.1, patrol: [[-3, 16], [-3, 32], [-1, 32], [-1, 16]], noHat: true, noCape: true, tunic: '#c9a77a', hair: '#2a1c12', longHair: false,
+    talk: [['Gate\'s that way.']], bubbles: ['Gate\'s that way.', 'Heard the King\'s hiring.', 'Watch your step.'] },
+  { name: 'Lina', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-14, -6], speed: 1.1, patrol: [[-14, -6], [14, -6], [14, -4], [-14, -4]], noHat: true, noCape: true, tunic: '#e8d8b8', hair: '#e0c070', longHair: true,
+    talk: [['Lovely weather.']], bubbles: ['Lovely weather.', 'The chapel bells are pretty.', 'Off to the tavern later!'] },
+  { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [10, 52], speed: 1.1, patrol: [[10, 52], [-10, 52], [-10, 48], [10, 48]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
+    talk: [['Ahh, fresh air.']], bubbles: ['Ahh, fresh air.', 'The river\'s high this year.', 'Good fishing at the beach.'] },
+  { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
+    talk: [['Have you met my sister? She never stops talking.']], bubbles: ['Have you met my sister? She never stops talking.', 'Lovely flowers by the gate.'] },
   // the Golden Tankard (enterable tavern east of the keep): the barkeep behind the bar and a regular at the hearth
   {
     name: 'Marta Goldtap', role: 'Barkeep', model: 'ROGUE', tint: '#ffe2c4', scale: 1, prop: 'none', accent: '#ffcf5a', home: [-2, -5.6], area: 'TAVERN',
