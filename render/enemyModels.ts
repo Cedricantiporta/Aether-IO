@@ -205,6 +205,72 @@ function skeleton(): ModelDef {
   };
 }
 
+// ------------------------------------------- RAISED DEAD (dark necromancer) ---
+/** The dark necromancer's raised skeletons: a sword-and-shield warrior ('W') or a robed mage with a staff ('M'). */
+function raisedSkeleton(v: 'W' | 'M'): ModelDef {
+  const bone = '#ebe5d0', bone2 = '#c9c2a8', mage = v === 'M';
+  const body = new GB([0.85, 1.1]);
+  body.sph(0.2, [0, 1.62, 0], bone, [1, 1.05, 1.05], 8); body.box(0.2, 0.07, 0.17, [0, 1.44, 0.07], bone2);
+  for (const s of [-1, 1]) body.sph(0.065, [s * 0.075, 1.63, 0.17], '#15110e', 1, 6);
+  body.cyl(0.035, 0.04, 0.6, 5, [0, 1.1, 0], bone2);
+  for (let i = 0; i < 4; i++) body.torus(0.17 - i * 0.012, 0.018, [0, 1.3 - i * 0.12, 0.0], bone, [Math.PI / 2, 0, 0], [1, 0.75, 1], 8);
+  body.box(0.46, 0.05, 0.08, [0, 1.4, 0], bone); body.box(0.3, 0.1, 0.18, [0, 0.76, 0], bone2);
+  if (mage) { body.cyl(0.24, 0.4, 0.8, 8, [0, 0.95, 0], '#3a2050'); body.cone(0.3, 0.5, 8, [0, 1.84, -0.03], '#4a2a6a'); }
+  else { body.cone(0.2, 0.28, 6, [0, 1.9, 0], '#5a5f68'); body.box(0.5, 0.3, 0.28, [0, 1.2, 0], '#4a4f58'); }   // helm spike + rusty breastplate
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.034, [s * 0.075, 1.63, 0.2], '#c070ff', 1, 5);
+  const legs = limb(new GB([0.85, 1.1]), 0.76, 0.045, 0.035, bone2).sph(0.06, [0, -0.38, 0.0], bone, 1, 5).box(0.1, 0.05, 0.2, [0, -0.76, 0.05], bone).build();
+  const armR = limb(new GB([0.85, 1.1]), 0.55, 0.035, 0.03, bone2, bone, 0.05);
+  if (mage) { armR.cyl(0.03, 0.03, 1.5, 5, [0, -0.3, 0.06], '#5a3a2a'); armR.sph(0.12, [0, 0.45, 0.06], '#b08aff', 1, 6); }
+  else { armR.box(0.08, 0.85, 0.03, [0, -0.95, 0.0], '#9aa0aa'); armR.box(0.26, 0.05, 0.07, [0, -0.55, 0], '#5a4a3a'); }   // sword (points down, swings up)
+  const armL = limb(new GB([0.85, 1.1]), 0.55, 0.035, 0.03, bone2, bone, 0.05);
+  if (!mage) armL.cyl(0.3, 0.3, 0.06, 10, [-0.05, -0.45, 0.12], '#4a3a30', [Math.PI / 2, 0, 0]);   // round shield
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armR.build(), mat: 'lit' }, { geo: armL.build(), mat: 'lit' }, { geo: legs, mat: 'lit' }, { geo: legs, mat: 'lit' }],
+    headY: 2.1, shadow: 0.6,
+    pose(e, P, t) {
+      const ph = t * (mage ? 5 : 7), moving = e.state === 'WINDUP' ? 0 : 1;
+      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : 0;
+      P.body(abs(sin(ph)) * 0.04 * moving, -0.08 * k, sin(ph) * 0.03 * moving, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      if (mage) P.part(2, 0.26, 1.38, 0, -0.5 - k * 1.2, 0, -0.1);
+      else P.part(2, 0.26, 1.38, 0, -sin(ph) * 0.6 * moving - k * 2.2, 0, -0.1);
+      P.part(3, -0.26, 1.38, 0, mage ? sin(ph) * 0.4 * moving : -0.9, 0, 0.1);
+      P.part(4, -0.1, 0.78, 0, -sin(ph) * 0.6 * moving); P.part(5, 0.1, 0.78, 0, sin(ph) * 0.6 * moving);
+      P.glow = 1.3 + k * 3;
+    },
+  };
+}
+
+/** Army of the Dead: the hulking bone golem (violet-eyed, bone-plated). */
+function boneGolem(): ModelDef {
+  const bone = '#ebe5d0', bone2 = '#bdb59c', dark = '#a8a088';
+  const body = new GB([0.85, 1.1]);
+  body.sph(0.9, [0, 1.55, 0], bone2, [1.2, 1, 0.9], 7);
+  for (let i = 0; i < 5; i++) body.cone(0.14, 0.6, 4, [-0.8 + i * 0.4, 2.35, -0.2], bone, [-0.4, 0, 0]);
+  body.box(0.9, 0.35, 0.6, [0, 0.9, 0], dark);
+  body.sph(0.4, [0, 2.3, 0.4], bone, 1, 7);
+  for (let i = 0; i < 4; i++) body.torus(0.55 - i * 0.04, 0.05, [0, 1.75 - i * 0.2, 0.25], bone, [Math.PI / 2, 0, 0], [1, 0.7, 1], 9);
+  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.09, [s * 0.15, 2.35, 0.73], '#9a6bff', 1, 5);
+  eyes.sph(0.22, [0, 1.6, 0.85], '#7a3ab0', [1, 1, 0.4], 6);   // soul core
+  const arm = limb(new GB([0.85, 1.1]), 1.25, 0.3, 0.36, bone2).sph(0.42, [0, 0, 0], dark, 1, 6).sph(0.46, [0, -1.3, 0.05], dark, 1, 6).build();
+  const leg = limb(new GB([0.85, 1.1]), 0.85, 0.32, 0.36, bone2).sph(0.36, [0, -0.85, 0.1], dark, [1, 0.5, 1.2], 6).build();
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: arm, mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
+    headY: 3.0, shadow: 1.1,
+    pose(e, P, t) {
+      const charge = e.state === 'ATTACK' ? 1 : 0;
+      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.9, 0, 1) : 0;
+      const ph = t * (charge ? 11 : 3.6);
+      P.body(abs(sin(ph)) * 0.08, -0.3 * k + 0.35 * charge, sin(ph) * 0.05, 1, 1);
+      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
+      P.part(2, -1.15, 1.85, 0.1, -sin(ph) * 0.5 - k * 2.4 + charge * 0.8, 0, 0.2);
+      P.part(3, 1.15, 1.85, 0.1, sin(ph) * 0.5 - k * 2.4 + charge * 0.8, 0, -0.2);
+      P.part(4, -0.45, 0.9, 0, -sin(ph) * 0.6); P.part(5, 0.45, 0.9, 0, sin(ph) * 0.6);
+      P.glow = 1.6 + k * 3 + charge * 1.5 + sin(t * 4) * 0.3;
+    },
+  };
+}
+
 // ---------------------------------------------------------------- CULTIST ---
 function cultist(): ModelDef {
   const robe = '#5b2a8a', robe2 = '#3d1a63', gold = '#e0b040';
@@ -1051,9 +1117,11 @@ export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
     SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
-    HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal() };
+    HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal(),
+    SKELETON_WARRIOR: raisedSkeleton('W'), SKELETON_MAGE: raisedSkeleton('M'), BONE_GOLEM: boneGolem() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
   'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
-  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING'];
+  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING',
+  'SKELETON_WARRIOR', 'SKELETON_MAGE', 'BONE_GOLEM'];

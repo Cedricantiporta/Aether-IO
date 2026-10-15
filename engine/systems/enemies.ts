@@ -45,7 +45,7 @@ import { dropLoot } from './loot';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround } from '../roomFeatures';
-import { aiDarkHero, darkHeroDied } from './darkHero';
+import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -1070,7 +1070,7 @@ function runAI(e: Enemy): void {
   if (e.state === 'SPAWN') {
     stop(e);
     if (e.stateT >= (e.boss ? BOSS_SPAWN_TIME : SPAWN_TIME)) {
-      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' || e.kind === 'GOBLIN_ARCHER' || e.kind === 'LAKE_HYDRA' || e.kind === 'FROST_WISP' || e.kind === 'CINDER_SHAMAN' || e.kind === 'VOID_EYE' || e.kind === 'GARGOYLE' ? 'KITE' : 'CHASE');
+      enter(e, e.kind === 'SKELETON_ARCHER' || e.kind === 'CULTIST' || e.kind === 'GOBLIN_ARCHER' || e.kind === 'LAKE_HYDRA' || e.kind === 'FROST_WISP' || e.kind === 'CINDER_SHAMAN' || e.kind === 'VOID_EYE' || e.kind === 'GARGOYLE' || e.kind === 'SKELETON_MAGE' ? 'KITE' : 'CHASE');
       e.attackCd = Math.max(e.attackCd, 0.6);
     }
     return;
@@ -1112,6 +1112,9 @@ function runAI(e: Enemy): void {
     case 'VOID_EYE': aiVoidEye(e); break;
     case 'BOSS_CRYSTAL': stop(e); break;
     case 'DARK_HERO': aiDarkHero(e, frameDt, px, pz, tdist); break;
+    case 'SKELETON_WARRIOR': aiChaser(e, false); break;   // the dark necromancer's raised dead
+    case 'SKELETON_MAGE': aiCultist(e); break;
+    case 'BONE_GOLEM': aiBrute(e, BRUTE); break;
     default: break; // bosses are driven by updateBoss() from updateEnemy()
   }
 }
@@ -1414,6 +1417,7 @@ export function updateEnemies(dt: number): void {
     if (e.active && !isDying(e)) alive++;
   }
   world.director.aliveCount = alive;
+  tickDarkHero(dt);   // dark hero champion: its shots, fields, delayed strikes (run even while it is staggered)
 
   // rebuild spatial hash for the rest of the frame (combat, skills, pets)
   const grid = world.enemyGrid;

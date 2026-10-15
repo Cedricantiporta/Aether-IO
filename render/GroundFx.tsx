@@ -88,7 +88,10 @@ export function GroundFx() {
           if (s <= 0.01) break;
           place(sys.arrows, n.a++, f.x + (post < 0 ? (1 - k) * 3 : 0), y, f.z, sd * 6, post < 0 ? 1.45 : 1.25, 0, s * 1.1, s * 1.1, s * (post < 0 ? 2.6 : 1.2));
           // glow aura around each falling light-arrow, flash on landing
-          if (post < 0) pushHalo(f.x + (1 - k) * 3, y + 0.6, f.z, 1.8, 2.6, 2.1, 1.0, 0.55, CELL.GLOW);
+          if (f.hostile) {   // the dark ranger's storm: violet light-arrows
+            if (post < 0) pushHalo(f.x + (1 - k) * 3, y + 0.6, f.z, 1.8, 1.5, 0.6, 2.6, 0.55, CELL.GLOW);
+            else pushHalo(f.x, 0.5, f.z, 2.6 * s, 1.5, 0.5, 2.4, 0.7 * s, CELL.GLOW);
+          } else if (post < 0) pushHalo(f.x + (1 - k) * 3, y + 0.6, f.z, 1.8, 2.6, 2.1, 1.0, 0.55, CELL.GLOW);
           else pushHalo(f.x, 0.5, f.z, 2.6 * s, 2.6, 2.0, 0.9, 0.7 * s, CELL.GLOW);
           break;
         }
@@ -100,7 +103,8 @@ export function GroundFx() {
           place(sys.arrows, n.a++, f.x, 0.55, f.z, sd * 6, 0.9 + sd * 0.4, 0, 0.7 * grow);
           if (f.dmg > 0) {
             const pulse = clamp(f.t / f.delay, 0, 1);
-            pushHalo(f.x, 0.8, f.z, 2 + pulse * 5, 2.2, 1.6, 0.4, 0.3 + pulse * 0.5, CELL.GLOW);
+            if (f.hostile) pushHalo(f.x, 0.8, f.z, 2 + pulse * 5, 1.6, 0.5, 2.4, 0.3 + pulse * 0.5, CELL.GLOW);
+            else pushHalo(f.x, 0.8, f.z, 2 + pulse * 5, 2.2, 1.6, 0.4, 0.3 + pulse * 0.5, CELL.GLOW);
           }
           break;
         }

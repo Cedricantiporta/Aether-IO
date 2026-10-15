@@ -17,9 +17,10 @@ import {
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
-/** Raise Dead skeletons per cast by skill level 1..5 (army: up to 3 warriors + 2 random archers / mages). */
-const RAISE_N = [2, 3, 3, 4, 5];
 import { hitStop, slowMo, fovKick } from '../game';
+/** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
+const RAISE_N = [2, 3, 3, 4, 5];
+import { hooks } from './hooks';
 
 /** State for render/UI of multi-frame abilities. */
 /** Every class dash deals 70% less damage (user tuning: dashes are for movement). */
@@ -451,7 +452,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 2 / 3 / 3 / 4 / 5 by level
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
-        // the army fills toward 3 skeleton warriors + 2 random archers / mages
+        // random warrior / archer / mage, at least one of each in the army
         spawnMinion(pickRaiseKind(), p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, PERMANENT, 1);
       }
       announce('RAISE_DEAD');
@@ -937,6 +938,7 @@ function bigMeteorImpact(f: GroundFx): void {
 
 // ============================================================ fx pool =======
 function resolveFx(f: GroundFx): void {
+  if (f.hostile) { hooks.hostileFx(f); return; }   // dark hero copy: never hurts monsters
   const pos = new Vector3(f.x, 0, f.z);
   switch (f.kind) {
     case 'RAIN_ARROW':
@@ -1001,7 +1003,7 @@ function stepFx(dt: number): void {
     const f = list[i];
     if (!f.active) continue;
     f.t += dt;
-    if (f.kind === 'RING') {
+    if (f.kind === 'RING' && !f.hostile) {
       const k = Math.min(1, f.t / f.life);
       const r = f.aux * Math.pow(k, 0.75);
       f.radius = r;

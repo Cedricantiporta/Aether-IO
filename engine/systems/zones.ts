@@ -57,7 +57,7 @@ const curseDot: DamageOpts = { kind: 'POISON', dot: true, source: 'PLAYER' };
 const curseSlow: StatusEffect = { type: 'SLOW', duration: 0.6, value: 0.35 };
 /** Enemies standing in a curse zone right now (the necromancer's raise-on-death reads it). */
 export function inCurse(x: number, z: number): boolean {
-  for (const zn of world.zones) if (zn.active && zn.kind === 'CURSE' && (zn.pos.x - x) ** 2 + (zn.pos.z - z) ** 2 < zn.radius * zn.radius) return true;
+  for (const zn of world.zones) if (zn.active && !zn.hostile && zn.kind === 'CURSE' && (zn.pos.x - x) ** 2 + (zn.pos.z - z) ** 2 < zn.radius * zn.radius) return true;
   return false;
 }
 function curseTick(z: Zone): void {
@@ -310,6 +310,9 @@ export function updateZones(dt: number): void {
     z.life -= dt;
 
     if (z.life > 0) {
+      // hostile copies of the hero's own fields (the dark hero champion): drawn as usual, but they never touch monsters;
+      // darkHero.ts applies their effect to the player
+      if (z.hostile && (z.kind === 'FIRE' || z.kind === 'BLACKHOLE' || z.kind === 'TORNADO' || z.kind === 'FROST_FIELD' || z.kind === 'CURSE')) continue;
       switch (z.kind) {
         case 'FIRE':
           z.tickT += dt;

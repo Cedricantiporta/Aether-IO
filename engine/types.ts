@@ -53,7 +53,11 @@ export type EnemyKind =
   | 'VOID_STALKER'    // Void: blinks behind you and strikes
   | 'VOID_EYE'        // Void: floating eye, fires rings of void orbs
   | 'BOSS_CRYSTAL'    // boss ward crystal: the boss is immune until every crystal is destroyed
-  | 'DARK_HERO';      // champion duel: a shadow copy of a hero class (systems/darkHero.ts, render/DarkHero.tsx)
+  | 'DARK_HERO'       // champion duel: a shadow copy of a hero class (systems/darkHero.ts, render/DarkHero.tsx)
+  // ---- raised by the Dark Necromancer (hostile copies of the necromancer's own minions; never rolled in rosters)
+  | 'SKELETON_WARRIOR' // sword-and-shield skeleton: melee chaser
+  | 'SKELETON_MAGE'    // robed skeleton: kites, 3-orb spread
+  | 'BONE_GOLEM';      // Army of the Dead: a hulking bone golem (telegraphed charge), crumbles after 20 s
 
 export type EnemyState =
   | 'SPAWN'    // rising out of ground, invulnerable-ish, no contact damage
@@ -243,6 +247,7 @@ export interface GroundFx {
   done: boolean;              // impact already resolved
   launch: boolean;            // SPIKE: launches enemies (Earthsplitter)
   color: number;
+  hostile: boolean;           // dark hero copy of a hero effect: visual only here, its hit is resolved by darkHero.ts (hooks.hostileFx)
 }
 
 // ---------------------------------------------------------------- pickups --

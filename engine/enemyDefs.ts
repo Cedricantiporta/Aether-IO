@@ -203,6 +203,19 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Dark Champion', hp: 130, speed: 4.6, radius: 0.75, scale: 1.2, contactDamage: 15, projectileDamage: 13,
     xp: 14, gold: 0, cost: 0, minWave: 3, weight: 0, color: 0x8b3dff, knockResist: 0.7, armor: 30,
   },
+  // raised by the Dark Necromancer (systems/darkHero.ts): hostile copies of the necromancer's minions, never rolled in rosters
+  SKELETON_WARRIOR: {
+    name: 'Skeleton Warrior', hp: 50, speed: 3.4, radius: 0.6, scale: 1.05, contactDamage: 9, projectileDamage: 0,
+    xp: 0, gold: 0, cost: 0, minWave: 99, weight: 0, color: 0xd8d0b8, knockResist: 0.2, armor: 15,
+  },
+  SKELETON_MAGE: {
+    name: 'Skeleton Mage', hp: 38, speed: 2.2, radius: 0.6, scale: 1.05, contactDamage: 4, projectileDamage: 11,
+    xp: 0, gold: 0, cost: 0, minWave: 99, weight: 0, color: 0xb08aff, knockResist: 0, armor: 5,
+  },
+  BONE_GOLEM: {
+    name: 'Bone Golem', hp: 260, speed: 2.8, radius: 1.3, scale: 1.9, contactDamage: 16, projectileDamage: 0,
+    xp: 0, gold: 0, cost: 0, minWave: 99, weight: 0, color: 0x9a6bd8, knockResist: 1, armor: 40,
+  },
 };
 
 /** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */

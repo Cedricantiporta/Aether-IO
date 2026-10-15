@@ -77,6 +77,8 @@ export interface GameEvents {
   hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest' | 'buy_potion' | 'store' | 'learn' | 'buy_pet' | 'equip' | 'equip_pet' | 'accept' | 'craft_fail'; n: number };   // discrete town actions (goals / achievements)
   runStart: {};
   runEnd: {};
+  /** Dark hero champion moments (systems/darkHero.ts), drawn violet by render/VFX: ROAR ULT JUDGMENT NOVA RAIN SPIKE SOUL METEOR AVATAR GUARD ZAP */
+  darkFx: { pos: Vector3; kind: string; radius: number; to?: Vector3 };
 }
 
 type Handler<T> = (payload: T) => void;

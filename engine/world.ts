@@ -61,7 +61,7 @@ function makeZone(id: number): Zone {
 }
 
 function makeFx(id: number): GroundFx {
-  return { id, active: false, kind: 'RAIN_ARROW', x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, radius: 1, dmg: 0, aux: 0, seed: 0, done: false, launch: false, color: 0xffffff };
+  return { id, active: false, kind: 'RAIN_ARROW', x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, radius: 1, dmg: 0, aux: 0, seed: 0, done: false, launch: false, color: 0xffffff, hostile: false };
 }
 
 function makePickup(id: number): Pickup {
@@ -209,7 +209,7 @@ export function allocZone(): Zone | null {
 export function allocFx(): GroundFx | null {
   const f = grab(world.fx, 'fx');
   if (!f) return null;
-  f.t = 0; f.done = false; f.launch = false; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
+  f.t = 0; f.done = false; f.launch = false; f.hostile = false; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
   return f;
 }
 

@@ -565,6 +565,80 @@ export function VFX() {
         FX.add.emit(e.pos.x, e.pos.y + 1, e.pos.z, Math.cos(a) * sp, 5 + Math.random() * 5, Math.sin(a) * sp, 1.1 + Math.random() * 0.5, 0.3, 0.2, ((c >> 16) & 255) / 120, ((c >> 8) & 255) / 120, (c & 255) / 120, 1, CELL.STAR, 9, 0.7, Math.random() * 6, (Math.random() - 0.5) * 12, 0);
       }
     }));
+    // dark hero champion (engine/systems/darkHero.ts): the hero's own effects, dyed violet
+    off.push(on('darkFx', (e) => {
+      const x = e.pos.x, z = e.pos.z, r = e.radius;
+      switch (e.kind) {
+        case 'RAIN':   // one violet light-arrow lands
+          flashStar(x, 0.5, z, 0xd8b0ff, r * 0.8, 0.14);
+          sparks(x, 0.4, z, 3, 0xb070ff, 6, 0.22, 0.28, 1.8);
+          ringBurst(x, 0.15, z, 0x9a5aff, r * 0.2, r * 0.9, 0.28, 1.4);
+          break;
+        case 'VOLLEY':   // Storm of a Thousand Arrows: the final volley
+          flashStar(x, 2, z, 0xe0c0ff, 20, 0.35);
+          for (let i = 0; i < 2; i++) setTimeout(() => ringBurst(x, 0.4, z, 0xa060ff, 2, r * 1.5 + i * 5, 0.7, 2), i * 120);
+          sparks(x, 2, z, 40, 0xc090ff, 20, 0.4, 0.9, 2.2);
+          if (quality().lights) flashLight(x, 6, z, 0xa070ff, 80, 0.7);
+          break;
+        case 'JUDGMENT': case 'THUNDER': case 'AVATAR': {   // a ray / column from the sky (Judgment, Smite, Divine Avatar, Thunder)
+          const big = e.kind === 'AVATAR', th = e.kind === 'THUNDER';
+          if (th) { bolt(x + 1, 16, z - 1, x, 0.3, z, 0xc8b0ff, 0.6); bolt(x + 1, 16, z - 1, x, 0.3, z, 0xffffff, 0.22); }
+          else {
+            for (let k = 0; k < 9; k++) glowPuff(x, 1 + k * 2.2, z, k < 2 ? 0xffffff : 0xd8b0ff, (big ? 5 : 2.6) - k * 0.12, 0.32, 2.2, 0.85);
+            for (let k = 0; k < (big ? 26 : 14); k++) { const o = (Math.random() - 0.5) * r * 0.5, o2 = (Math.random() - 0.5) * r * 0.5; FX.add.emit(x + o, 14 + Math.random() * 6, z + o2, 0, -70, 0, 0.26, 0.7, 0.4, 1.8, 1.0, 2.6, 1, CELL.STREAK, 0, 0, 0, 0, 0.06); }
+          }
+          flashStar(x, 1.2, z, 0xffffff, big ? 14 : 7, 0.25);
+          ringBurst(x, 0.3, z, 0xc890ff, 0.6, r * 1.3, 0.45, 2);
+          sparks(x, 0.8, z, big ? 30 : 16, 0xe0c8ff, 12, 0.35, 0.5, 2.2);
+          if (quality().lights) flashLight(x, 4, z, 0xb080ff, big ? 70 : 40, 0.3);
+          break;
+        }
+        case 'NOVA': case 'SOUL': {   // Blink Nova frost / Soul Step bone burst
+          const soul = e.kind === 'SOUL';
+          ringBurst(x, 0.3, z, soul ? 0xd8d0b8 : 0xb8c8ff, r * 0.3, r, 0.4, 2);
+          DECALS.add(x, z, r * 0.5, r * 1.02, 0.8, 0.6, 0.5, 1, 0.8, CELL.RINGW);
+          for (let i = 0; i < 16; i++) {
+            const a = Math.random() * TAU, sp = r * (1.2 + Math.random());
+            FX.add.emit(x, 0.6, z, Math.cos(a) * sp, 1 + Math.random() * 2, Math.sin(a) * sp, 0.45, 0.45, 0.1, soul ? 1.8 : 1.3, soul ? 1.7 : 1.4, soul ? 1.5 : 2.6, 0.95, CELL.SHARD, 4, 1.4, Math.random() * 6, Math.random() * 6, 0);
+          }
+          glowPuff(x, 1, z, soul ? 0x9a6bd8 : 0x9fb8ff, r * 0.9, 0.3, 1.5, 0.6);
+          break;
+        }
+        case 'BLINK': case 'ROLL': {   // Blink Nova / Soul Step teleport, Shadow Roll smoke
+          const pts = e.to ? [e.pos, e.to] : [e.pos];
+          for (const p of pts) {
+            glowPuff(p.x, 1.2, p.z, 0xa070ff, e.kind === 'ROLL' ? 2.5 : 4.5, 0.35, 1.8, 0.9);
+            sparks(p.x, 1.2, p.z, e.kind === 'ROLL' ? 10 : 22, 0xc090ff, 11, 0.32, 0.6, 2.2);
+            smokePuff(p.x, 0.6, p.z, 3, 0x2a1a3a, 1.4, 0.8, 1.2, 1.2, 0.5);
+            if (e.kind === 'BLINK') ringBurst(p.x, 0.2, p.z, 0x9a5aff, 0.5, r, 0.4, 1.8);
+          }
+          break;
+        }
+        case 'GUARD':   // Shield Wall burst
+          ringBurst(x, 1.2, z, 0xd8b0ff, 1, r, 0.4, 2);
+          sparks(x, 1.2, z, 18, 0xe8d0ff, 9, 0.28, 0.4, 2);
+          glowPuff(x, 1.2, z, 0xc8a0ff, 6, 0.3, 1.4, 0.7);
+          break;
+        case 'ROAR': case 'SLAM': case 'STAMP': {   // Titan's Wrath roar / final slam, Bloodrage landing, Stamp
+          const roar = e.kind === 'ROAR';
+          for (let i = 0; i < 3; i++) setTimeout(() => ringBurst(x, 0.4 + i * 0.3, z, i === 1 ? 0xff7a9a : 0xb04aff, r * 0.1, r, 0.5, 1.8), i * 110);
+          dustPuff(x, z, roar ? 8 : 6, 1.6, 0x8a7a8a, r * 0.5);
+          if (!roar) { DECALS.add(x, z, r * 0.7, r * 0.7, 3.5, 0.05, 0.04, 0.03, 0.45, CELL.CRACK); chunks(x, 0.5, z, 8, 0x5a4a58, 0x3a3036, r * 0.6, 0.3); }
+          glowPuff(x, 1.5, z, 0xc050ff, r * 0.7, 0.35, 1.5, 0.5);
+          sparks(x, 1.4, z, roar ? 28 : 16, 0xff70a0, r * 1.3, 0.34, 0.6, 2);
+          if (quality().lights) flashLight(x, 3, z, 0xb050ff, 40, 0.5);
+          break;
+        }
+        case 'ULT': {   // a champion begins its ultimate
+          for (let i = 0; i < 2; i++) setTimeout(() => ringBurst(x, 0.3, z, 0xb060ff, 1, 9 + i * 5, 0.7, 2), i * 140);
+          sparks(x, 1.2, z, 28, 0xd090ff, 14, 0.4, 0.8, 2.2);
+          glowPuff(x, 1.4, z, 0x9a40ff, 7, 0.5, 1.6, 0.7);
+          if (quality().lights) flashLight(x, 4, z, 0xa050ff, 70, 0.8);
+          break;
+        }
+        default: break;
+      }
+    }));
     off.push(on('bossSpawn', () => { pendingBoss = 0.15; }));
     off.push(on('runStart', () => { FX.add.clear(); FX.norm.clear(); DECALS.clear(); }));
     return () => off.forEach((f) => f());
