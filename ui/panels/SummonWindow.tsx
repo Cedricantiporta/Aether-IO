@@ -103,7 +103,7 @@ export const SummonWindow: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="sw-note" style={{ display: 'block', margin: '.4rem 0' }}>Every pull is 50% a single shard of the rolled tier (Rare at least) and 50% a piece of gear (Epic at least). Pity pulls are always gear.</div>
+          <div className="sw-note" style={{ display: 'block', margin: '.4rem 0' }}>Every pull is 50% shards of the rolled tier (Rare at least: 2-5 Rare, 1-3 Epic, 1-2 Legendary, 1 Mythic) and 50% a piece of gear (Epic at least). Pity pulls are always gear.</div>
           <div className="sw-pity" data-testid="summon-pity">
             <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.LEGENDARY }}>
               <span className="n">Guaranteed <b>Legendary</b> in <b className="rpg-num">{PITY_LEGEND - (drawn % PITY_LEGEND)}</b> draws</span>

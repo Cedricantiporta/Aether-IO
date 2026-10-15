@@ -70,14 +70,14 @@ const bounty = { on: false, need: 30, got: 0, biome: 0 };
 export function resetWanderers(): void { met.clear(); perBiome = 0; lastBiome = -1; bounty.on = false; clearWanderer(); }
 export function clearWanderer(): void { if (wander.on) { wander.on = false; wander.ver++; } }
 
-const CHANCE = 0.2;
+const CHANCE = 0.12;   // at most one wanderer per biome, and often none
 /** A fight room was cleared: maybe a wanderer is waiting in it. */
 export function maybeWanderer(biome: number, index: number, type: string, gateOrFinal: boolean): void {
   if (runInfo.mode !== 'ADVENTURE' || gateOrFinal || index < 1) return;
   if (type !== 'COMBAT' && type !== 'ELITE' && type !== 'TREASURE') return;
   const b = biome % BIOMES.length;
   if (b !== lastBiome) { lastBiome = b; perBiome = 0; }
-  if (perBiome >= 2 || Math.random() >= CHANCE) return;
+  if (perBiome >= 1 || Math.random() >= CHANCE) return;
   const pool = WANDERERS.map((w, i) => i).filter((i) => !met.has(WANDERERS[i].id) && WANDERERS[i].biomes.includes(b) && !(WANDERERS[i].id === 'FEN' && bounty.on));
   if (!pool.length) return;
   const i = pool[Math.floor(Math.random() * pool.length)];

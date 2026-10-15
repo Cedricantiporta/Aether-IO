@@ -78,7 +78,7 @@ export function completeNpcQuest(id: string): boolean {
   });
   if (def.reward.shards) s.addMaterial(def.reward.shards[0], def.reward.shards[1]);
   notify(`Quest complete: ${def.title}`);
-  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0] });
+  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0] }, true);
   return true;
 }
 

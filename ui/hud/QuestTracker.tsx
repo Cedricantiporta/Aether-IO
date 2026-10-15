@@ -1,5 +1,6 @@
 // Active quest tracker (Korean-MMO style): right side, under the menu icons. Shows accepted quests with progress;
 // finished ones glow "Ready to claim" (claim at the Quest Board).
+import { useQuestToast } from '../../rewardFeed';
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React from 'react';
@@ -28,9 +29,15 @@ export const QuestTracker: React.FC = () => {
   const nq = useGameStore((s) => s.npcQuests), inv = useGameStore((s) => s.inventory);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const ms = useGameStore((s) => s.story), main = STORY[ms.step];
-  if (act.length === 0 && story.length === 0 && !main) return null;
+  const toast = useQuestToast((s) => s.lines);
+  if (act.length === 0 && story.length === 0 && !main && toast.length === 0) return null;
   return (
     <div className="qt pe" data-testid="quest-tracker">
+      {toast.length > 0 && (
+        <div className="qt-toast" data-testid="quest-toast">
+          {toast.map((l) => <div key={l.id} className="qt-toast-line" style={{ color: l.color }}>{l.text}</div>)}
+        </div>
+      )}
       {main && (
         <div className="qt-row main" data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={() => { if (!((main.npc || main.at) && offerTeleport(walkToMain))) walkToMain(); }}>
           <div className="qt-head"><Crown size={13} /><span>Main Quest</span></div>

@@ -1041,7 +1041,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
       });
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
-      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts });
+      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts }, true);
       events.emit('hub', { kind: 'quest', n: 1 });
       return true;
     },
@@ -1134,7 +1134,7 @@ export const useGameStore = create<GameState>()((set, get) => {
           if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
         }
         notify(`Main quest complete: ${STORY[k].title}`, '#f1d58e', 'SYSTEM');
-        feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems });   // the rewards in the loot feed
+        feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems }, true);   // the rewards in the loot feed + under the tracker
       }
       if (step !== s.story.step) {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
@@ -1661,12 +1661,13 @@ export const useGameStore = create<GameState>()((set, get) => {
         // pity: the 60th draw is a Legendary; the 240th is 80% Legendary / 20% Mythic
         if (drawn % PITY_MYTHIC === 0) rarity = Math.random() < 0.2 ? 'MYTHIC' : 'LEGENDARY';
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
-        // half the pulls are a single shard of the rolled tier (Rare at least), half are gear (Epic at least); pity pulls are gear
+        // half the pulls are shards of the rolled tier (Rare at least; several of the lower tiers), half are gear (Epic at least); pity pulls are gear
         const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
         if (!pity && Math.random() < SUMMON_SHARD_SHARE) {
           const sr: Rarity = rarity === 'COMMON' ? 'RARE' : rarity;
-          shardGain[sr] = (shardGain[sr] ?? 0) + 1;
-          results.push(shardItem(sr, 1));
+          const q = sr === 'RARE' ? 2 + Math.floor(Math.random() * 4) : sr === 'EPIC' ? 1 + Math.floor(Math.random() * 3) : sr === 'LEGENDARY' ? 1 + Math.floor(Math.random() * 2) : 1;   // Rare 2-5, Epic 1-3, Legendary 1-2, Mythic 1
+          shardGain[sr] = (shardGain[sr] ?? 0) + q;
+          results.push(shardItem(sr, q));
           continue;
         }
         if (rarity === 'COMMON' || rarity === 'RARE') rarity = 'EPIC';
