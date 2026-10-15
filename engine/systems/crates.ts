@@ -58,7 +58,7 @@ function gold(c: Crate, n: number, each: number): void {
 
 /** Crafting shards: mostly COMMON/RARE, small chance of EPIC / LEGENDARY (value = rarity index). */
 function shards(c: Crate, n: number, epic: number, legendary: number): void {
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < Math.min(1, n); i++) {   // (owner: shards are rare - one per drop)
     const r = Math.random();
     const rarity = r < legendary ? 3 : r < legendary + epic ? 2 : Math.random() < 0.35 ? 1 : 0;
     spawnPickup('SHARD', dropAt(c, jit(2.5), jit(2.5)), rarity);

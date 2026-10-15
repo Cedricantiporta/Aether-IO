@@ -138,15 +138,19 @@ export function consumeLoot(inv: Item[], recipe: { loot: LootNeed[] }): Item[] {
 export const recipeTemplates = (recipe: Recipe): Item[] =>
   ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.setName && !i.id.startsWith('start_') && (!i.classType || i.classType === recipe.hero));
 
-/** Stat scaling for "+N" items (also used by drops): every stat x new level. */
+/** Stat scaling for "+N" items (also used by drops and the blacksmith): each + adds 25% of the base stats (owner: was
+ *  x level - a +3 item had 4x its stats and out-ranked the tiers above it). plusMul(level) = 1 + 0.25 * (level - 1). */
+export const plusMul = (level: number): number => 1 + 0.25 * (Math.max(1, level) - 1);
 const GEAR = new Set<string>(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY']);
 export const applyPlus = (item: Item, plus: number): void => {
   if (plus <= 0 || !GEAR.has(item.type)) return; // never level potions / cores / loot
+  const from = plusMul(item.level);
   item.level += plus;
+  const f = plusMul(item.level) / from;
   (Object.keys(item.stats) as (keyof PlayerStats)[]).forEach((k) => {
     const v = item.stats[k];
     if (v === undefined) return;
-    item.stats[k] = parseFloat((v * item.level).toFixed(2));
+    item.stats[k] = parseFloat((v * f).toFixed(2));
   });
 };
 

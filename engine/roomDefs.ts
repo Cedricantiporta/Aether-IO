@@ -348,8 +348,8 @@ const LEVELS: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export function rarityForDepth(depth: number, bonus = 0, bosses = 0): Rarity {
   const r = Math.random();
   const boost = 1 + bonus * 1.5;
-  const mythic = bosses >= 1 ? Math.min(0.0075, 0.001 * bosses * boost) : 0;   // halved
-  const legendary = Math.min(0.15, (bosses >= 1 ? 0.015 + 0.015 * bosses : Math.min(0.0075, Math.max(0, depth - 6) * 0.001)) * boost);   // halved
+  const mythic = bosses >= 1 ? Math.min(0.0035, 0.0005 * bosses * boost) : 0;   // halved, then halved again (owner: rarer)
+  const legendary = 0.5 * Math.min(0.15, (bosses >= 1 ? 0.015 + 0.015 * bosses : Math.min(0.0075, Math.max(0, depth - 6) * 0.001)) * boost);   // halved, then halved again (owner: rarer)
   const epic = Math.min(0.5, (0.04 + depth * 0.011) * boost);
   const rare = Math.min(0.75, 0.3 + depth * 0.012 + bonus);
   if (r < mythic) return LEVELS[4];

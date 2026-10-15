@@ -102,7 +102,7 @@ export interface DailyReward { gold: number; gems: number; shards: number; shard
 export function dailyReward(streak: number): DailyReward {
   const s = Math.max(1, streak), k = 1 + 0.1 * Math.min(6, s - 1);   // +10% per streak day, up to +60% (day 7)
   const week = s % 7 === 0;                                          // every 7th day: an Epic shard on top
-  return { gold: Math.round(3000 * k / 10) * 10, gems: Math.round(40 * k) + (week ? 60 : 0), shards: 3 + Math.min(3, Math.floor((s - 1) / 2)), shardRarity: 'RARE', bonusShards: week ? 1 : 0, bonusRarity: 'EPIC' };
+  return { gold: Math.round(3000 * k / 10) * 10, gems: Math.round(40 * k) + (week ? 60 : 0), shards: 1, shardRarity: s >= 5 ? 'EPIC' : 'RARE', bonusShards: week ? 1 : 0, bonusRarity: 'EPIC' };
 }
 
 // ------------------------------------------------------------------ score ---

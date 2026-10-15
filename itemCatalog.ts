@@ -19,6 +19,11 @@ const T: Record<string, [St, number[]]> = {
   cdr: ['cooldownReduction', [.02, .03, .05, .07, .1]], kb: ['knockback', [.3, .5, .8, 1.2, 1.8]], dashcd: ['dashCooldown', [-.1, -.2, -.3, -.5, -.8]],
   mag: ['magnetRadius', [1, 1.5, 2.2, 3, 4.5]],
 };
+/** Tier steps (owner): each rarity is a clear jump over the one below - Rare +25%, Epic +40%, Legendary +75%,
+ *  Mythic +120% - anchored on the Epic value of every stat. */
+export const TIER_STEP = [1.25, 1.4, 1.75, 2.2];
+const tierRow = (epic: number): number[] => { const r = epic / TIER_STEP[1], c = r / TIER_STEP[0], l = epic * TIER_STEP[2]; return [c, r, epic, l, l * TIER_STEP[3]].map((v) => parseFloat(v.toPrecision(3))); };
+for (const k of Object.keys(T)) T[k][1] = tierRow(T[k][1][2]);
 const FL: Record<string, string[]> = {
   light: ['crit', 'aspd', 'dodge', 'move', 'critd'],
   medium: ['hp', 'critd', 'dmg', 'crit', 'regen'],
@@ -37,7 +42,8 @@ const WSEC: Record<HeroClass, Record<string, string[]>> = {
   KNIGHT: { aegis: ['def', 'hp', 'regen', 'crit'], valor: ['crit', 'critd', 'aspd', 'def'] },
   NECROMANCER: { grave: ['skill', 'mana', 'hp', 'cdr'], blight: ['crit', 'critd', 'skill', 'mregen'] },
 };
-const WDMG: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280], NECROMANCER: [14, 26, 58, 115, 210] };
+const WDMG_RAW: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280], NECROMANCER: [14, 26, 58, 115, 210] };
+const WDMG = Object.fromEntries(Object.entries(WDMG_RAW).map(([h, v]) => [h, tierRow(v[2]).map((x) => Math.round(x))])) as Record<HeroClass, number[]>;
 const WMETA: Record<HeroClass, { projectileType: ProjectileType; ability: AbilityType }> = {
   ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' }, KNIGHT: { projectileType: 'SWORD', ability: 'AXE_SPIN' }, NECROMANCER: { projectileType: 'SOUL', ability: 'NONE' },
 };

@@ -32,7 +32,7 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
+import { applyPlus, plusMul, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
@@ -149,9 +149,9 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 
 // Summon odds (%): epic is very rare, legendary ultra rare, mythic hyper rare.
 /** Shard altar (purple): the classic odds. */
-export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.45, EPIC: 3, LEGENDARY: 0.5, MYTHIC: 0.05 };
+export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
 /** Gem altar (gold): premium odds. */
-export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, RARE: 40, EPIC: 12, LEGENDARY: 2.7, MYTHIC: 0.3 };
+export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
 export const GEM_SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 3, LEGENDARY: 1, MYTHIC: 1 };
 /** Shard summons are paid with Common shards. */
 export const SHARD_COST_1 = 100;
@@ -1676,11 +1676,11 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const upgraded = (i: Item): Item => {
         const stats: Partial<PlayerStats> = { ...i.stats };
-        const lvl = Math.max(1, i.level);
+        const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);   // +25% of the base per level
         for (const k of mutableStatKeys(stats)) {
           const v = stats[k];
           if (v === undefined) continue;
-          stats[k] = parseFloat(((v / lvl) * (lvl + 1)).toFixed(2));
+          stats[k] = parseFloat((v * f).toFixed(2));
         }
         return { ...i, level: i.level + 1, stats };
       };
@@ -1806,7 +1806,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
         if (!pity && Math.random() < SUMMON_SHARD_SHARE) {
           const sr: Rarity = rarity === 'COMMON' ? 'RARE' : rarity;
-          const q = sr === 'RARE' ? 2 + Math.floor(Math.random() * 4) : sr === 'EPIC' ? 1 + Math.floor(Math.random() * 3) : sr === 'LEGENDARY' ? 1 + Math.floor(Math.random() * 2) : 1;   // Rare 2-5, Epic 1-3, Legendary 1-2, Mythic 1
+          const q = 1;   // (owner: a shard pull is always a single shard)
           shardGain[sr] = (shardGain[sr] ?? 0) + q;
           results.push(shardItem(sr, q));
           continue;

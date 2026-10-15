@@ -134,7 +134,7 @@ export const LOOT_CHANCE: Record<string, number> = {
 export const DEFAULT_LOOT_CHANCE = 0.07;   // was 0.1
 
 const RARITY_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-const RARITY_W: Record<Rarity, number> = { COMMON: 70, RARE: 22, EPIC: 6, LEGENDARY: 0.85, MYTHIC: 0.04 };   // mythic goods: very rare
+const RARITY_W: Record<Rarity, number> = { COMMON: 70, RARE: 22, EPIC: 6, LEGENDARY: 0.45, MYTHIC: 0.02 };   // mythic goods: very rare
 
 /** Picks a loot id from a source table; `luck` (>=1) shifts odds toward higher rarities (wave, difficulty, elites). */
 export function rollLoot(source: string, luck = 1, mythic = true): string | null {

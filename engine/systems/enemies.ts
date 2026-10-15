@@ -246,6 +246,9 @@ export function spawnEnemy(
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
   const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg;
+  // later biomes breed tougher monsters on top of the depth curve (owner): +15% HP and +10% damage per biome
+  const bi = Math.max(0, Math.min(7, world.room.biome | 0));
+  const biomeHp = 1 + 0.15 * bi, biomeDmg = 1 + 0.1 * bi;
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
 
@@ -254,14 +257,14 @@ export function spawnEnemy(
   e.affix = affix;
   e.boss = boss;
   e.pos.set(pos.x, 0, pos.z);
-  e.maxHp = Math.round(def.hp * hpMul);
+  e.maxHp = Math.round(def.hp * hpMul * biomeHp);
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed;
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
-  e.contactDamage = def.contactDamage * dmgMul;
-  e.projectileDamage = def.projectileDamage * dmgMul;
+  e.contactDamage = def.contactDamage * dmgMul * biomeDmg;
+  e.projectileDamage = def.projectileDamage * dmgMul * biomeDmg;
   // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
   e.xp = Math.round(def.xp * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
