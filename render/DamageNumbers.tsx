@@ -2,6 +2,7 @@
 import { inView } from './view';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { world } from '../engine/world';
 import {
   CanvasTexture, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedBufferGeometry, LinearFilter, PlaneGeometry,
   ShaderMaterial, SRGBColorSpace, Sphere, Vector3,
@@ -93,9 +94,10 @@ function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean
   const n = nums[cursor]; cursor = (cursor + 1) % POOL;
   n.active = true; n.t = 0; n.dur = crit ? 1.05 : 0.85; n.crit = crit; n.dot = dot; n.kind = kind; n.amount = amount;
   n.x = x + (Math.random() - 0.5) * 0.8; n.y = y + 1.8 + Math.random() * 0.4; n.z = z + (Math.random() - 0.5) * 0.6; n.vx = (Math.random() - 0.5) * 1.2;
-  let hex = toPlayer ? 0xff4040 : crit ? 0xffd23a : dot && kind === 'PHYSICAL' ? 0xffa13a : dot && kind === 'FIRE' ? 0xff9a3a : COLORS[kind];
+  // hazard / DoT ticks on the hero: element-coloured (lava orange, acid / poison green) so the tick reads at a glance
+  let hex = toPlayer && dot ? (kind === 'FIRE' ? 0xff8a2a : kind === 'POISON' ? 0x7dff5a : 0xff6060) : toPlayer ? 0xff4040 : crit ? 0xffd23a : dot && kind === 'PHYSICAL' ? 0xffa13a : dot && kind === 'FIRE' ? 0xff9a3a : COLORS[kind];
   _c.setHex(hex); n.r = _c.r; n.gc = _c.g; n.b = _c.b;
-  n.scale = crit ? 1.65 : toPlayer ? 1.25 : dot ? 0.7 : amount > 400 ? 1.2 : amount > 100 ? 1.0 : 0.85;
+  n.scale = crit ? 1.65 : toPlayer ? (dot ? 1.05 : 1.25) : dot ? 0.7 : amount > 400 ? 1.2 : amount > 100 ? 1.0 : 0.85;
   setText(n, amount, crit);
 }
 
@@ -138,11 +140,11 @@ export function DamageNumbers() {
   useEffect(() => {
     if (!show) { for (const n of nums) n.active = false; return; }
     const off1 = events.on('damage', (e) => {
-      if (useGameStore.getState().status !== GameStatus.PLAYING) return;
+      if (useGameStore.getState().status !== GameStatus.PLAYING && !(world.village.area === 'CAVE' && world.village.cave.combat)) return;   // (deep cave floors fight too)
       spawnNum(e.pos.x, e.pos.y, e.pos.z, e.amount, e.crit, e.kind, e.toPlayer, !!e.dot);
     });
     const off2 = events.on('floatText', (e) => {
-      if (useGameStore.getState().status !== GameStatus.PLAYING) return;
+      if (useGameStore.getState().status !== GameStatus.PLAYING && !(world.village.area === 'CAVE' && world.village.cave.combat)) return;
       spawnLabel(e.pos.x, e.pos.y, e.pos.z, e.text, e.color, e.scale ?? 0.8, e.dy ?? 0.6);
     });
     return () => { off1(); off2(); };

@@ -259,6 +259,13 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
   }, [geo, mats]);
   const l0 = useRef<PointLight>(null!), l1 = useRef<PointLight>(null!), l2 = useRef<PointLight>(null!), hero = useRef<PointLight>(null!);
   const boards = useRef<Mesh>(null!), open = useRef<Mesh>(null!), ladder = useRef<Group>(null!);
+  // stairs unlocked: a golden light + beam + pulsing ring fade in so the way down is obvious
+  const stairFx = useRef<Group>(null!), stairLight = useRef<PointLight>(null!), stairBeam = useRef<Mesh>(null!), stairRing = useRef<Mesh>(null!), openK = useRef(0);
+  const stairMats = useMemo(() => ({
+    beam: new MeshBasicMaterial({ color: '#ffd77a', transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+    ring: new MeshBasicMaterial({ color: '#ffe9a8', transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+  }), []);
+  useEffect(() => () => { stairMats.beam.dispose(); stairMats.ring.dispose(); }, [stairMats]);
   const flasks = useRef<Group>(null!), geodes = useRef<InstancedMesh>(null!), gems = useRef<InstancedMesh>(null!), beams = useRef<InstancedMesh>(null!);
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime, oil = cv.oilMax > 0 ? cv.oil / cv.oilMax : 1, deep = cv.floor > 1;
@@ -279,6 +286,14 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
     }
     if (boards.current) boards.current.visible = cv.left > 0;
     if (open.current) { open.current.visible = cv.left <= 0; mats.open.opacity = 0.35 + Math.sin(t * 2.4) * 0.12; }
+    {
+      const ok = cv.left <= 0 ? 1 : 0; openK.current += (ok - openK.current) * Math.min(1, dt * 2.5);
+      const o = openK.current, pulse = 0.8 + 0.2 * Math.sin(t * 3);
+      if (stairFx.current) stairFx.current.visible = o > 0.01;
+      if (stairLight.current) stairLight.current.intensity = 70 * o * pulse;
+      stairMats.beam.opacity = 0.22 * o * pulse; stairMats.ring.opacity = 0.75 * o * (0.6 + 0.4 * Math.sin(t * 4));
+      if (stairRing.current) { const s = 1 + ((t * 0.6) % 1) * 0.5; stairRing.current.scale.set(s, s, 1); }
+    }
     if (ladder.current) { ladder.current.visible = cv.ladderFound; ladder.current.position.set(cv.lx, 0, cv.lz); }
     if (flasks.current) for (let i = 0; i < flasks.current.children.length; i++) {
       const c = flasks.current.children[i], f = cv.flasks[i];
@@ -318,6 +333,12 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
       <mesh geometry={geo.glow} material={mats.glow} />
       <mesh ref={boards} geometry={geo.stairs.boards} material={mats.lit} castShadow={sh} />
       <mesh ref={open} geometry={geo.stairs.open} material={mats.open} visible={false} />
+      {/* (the light stays mounted at intensity 0: toggling a light's visibility would recompile every material) */}
+      <pointLight ref={stairLight} color="#ffcf6a" intensity={0} distance={16} decay={1.6} position={[L.down.x, 2.4, L.down.z - 0.4]} />
+      <group ref={stairFx} position={[L.down.x, 0, L.down.z - 0.4]} visible={false}>
+        <mesh ref={stairBeam} material={stairMats.beam} position={[0, 4.5, 0]}><cylinderGeometry args={[1.2, 1.8, 9, 16, 1, true]} /></mesh>
+        <mesh ref={stairRing} material={stairMats.ring} position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[2.2, 2.6, 32]} /></mesh>
+      </group>
       {geo.pools && <>
         <mesh geometry={geo.pools.rim} material={mats.lit} receiveShadow={sh} />
         <mesh geometry={geo.pools.glow} material={mats.pool} />
