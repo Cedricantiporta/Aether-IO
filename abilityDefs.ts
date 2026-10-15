@@ -13,7 +13,8 @@ export interface AbilityDef {
 }
 
 /** Damage multiplier of an active at level lv. */
-export const lvMul = (lv: number): number => 1 + 0.2 * Math.max(0, lv - 1);
+/** Skill damage per skill level: +12% per level above 1 (owner: was +20%, too strong). */
+export const lvMul = (lv: number): number => 1 + 0.12 * Math.max(0, lv - 1);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const f1 = (n: number) => Number(n.toFixed(1));
 
@@ -64,7 +65,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
       per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
-    { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
+    { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 9,   // (owner: +50%, was 6)
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
