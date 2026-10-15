@@ -1,8 +1,9 @@
 // KayKit character + animation loading helpers (shared by Hero and shopkeeper NPCs).
 import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { AnimationClip, Bone, Group, Mesh, Object3D, SkinnedMesh, Material } from 'three';
+import { AnimationClip, Bone, BufferGeometry, Group, Matrix4, Mesh, Object3D, Skeleton, SkinnedMesh, Material, Uint16BufferAttribute } from 'three';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { url } from './models';
 
 export const CHAR_URLS = {
@@ -67,4 +68,58 @@ export function useCharacterInstance(key: CharKey): CharInstance {
     });
     return { root, mats, meshes, handR: root.getObjectByName('handslotr') || null, handL: root.getObjectByName('handslotl') || null };
   }, [gltf, key]);
+}
+
+/**
+ * Merge a cloned KayKit character's skinned parts (arms, legs, head, cape, hat...: 7-9 meshes sharing one atlas) into ONE
+ * SkinnedMesh: 1 draw call instead of 7-9 (x2 with shadows). The parts share bones but each carries its own inverse-bind
+ * matrices, so the merged skeleton holds every distinct (bone, inverse) pair of all parts and each part's skinIndex is
+ * remapped into it: the skinning maths is exactly what the separate meshes did (identical pairs are shared).
+ * Idempotent per instance; falls back to the original meshes when the parts don't fit (other material, hidden part...).
+ * Only for characters that never toggle / re-material single parts (town NPCs, shopkeepers). `disposeMerged` on unmount.
+ */
+export function mergeCharacter(ch: CharInstance): Mesh[] {
+  const c = ch as CharInstance & { __merged?: Mesh[] };
+  if (c.__merged) return c.__merged;
+  const sk = ch.meshes as SkinnedMesh[];
+  const s0 = sk[0];
+  const map = s0 ? (s0.material as any).map : null;
+  if (sk.length < 2 || sk.some((m) => !m.isSkinnedMesh || !m.visible || (m.material as any).map !== map || !m.geometry.attributes.skinIndex
+    || m.parent !== s0.parent || !m.bindMatrix.equals(s0.bindMatrix) || !m.matrix.equals(s0.matrix))) return (c.__merged = ch.meshes);
+  const bones: Bone[] = [], inverses: Matrix4[] = [];
+  const parts = sk.map((m) => {
+    const src = m.geometry, sb = m.skeleton.bones, remap = new Uint16Array(sb.length);
+    for (let i = 0; i < sb.length; i++) {   // reuse an identical (bone, inverse) entry: fewer bone matrices to update + upload per frame
+      const inv = m.skeleton.boneInverses[i];
+      let j = 0;
+      while (j < bones.length && !(bones[j] === sb[i] && inverses[j].equals(inv))) j++;
+      if (j === bones.length) { bones.push(sb[i]); inverses.push(inv.clone()); }
+      remap[i] = j;
+    }
+    const si = src.attributes.skinIndex, idx = new Uint16Array(si.count * 4);
+    for (let v = 0; v < si.count; v++) for (let k = 0; k < 4; k++) idx[v * 4 + k] = remap[si.getComponent(v, k)];
+    const g = new BufferGeometry();
+    for (const name in src.attributes) g.setAttribute(name, name === 'skinIndex' ? new Uint16BufferAttribute(idx, 4) : src.attributes[name]);
+    g.setIndex(src.index);
+    return g;
+  });
+  const geo = mergeGeometries(parts, false);
+  if (!geo) return (c.__merged = ch.meshes);
+  geo.computeBoundingSphere();
+  const merged = new SkinnedMesh(geo, s0.material);
+  merged.name = 'mergedCharacter';
+  merged.position.copy(s0.position); merged.quaternion.copy(s0.quaternion); merged.scale.copy(s0.scale);
+  merged.frustumCulled = false; merged.castShadow = s0.castShadow; merged.receiveShadow = s0.receiveShadow;
+  s0.parent!.add(merged);
+  merged.updateMatrixWorld(true);
+  merged.bind(new Skeleton(bones, inverses), s0.bindMatrix);
+  for (const m of sk) m.parent!.remove(m);
+  return (c.__merged = [merged]);
+}
+
+/** Free the GPU buffers / bone texture of a character merged by `mergeCharacter`. */
+export function disposeMerged(ch: CharInstance): void {
+  const c = ch as CharInstance & { __merged?: Mesh[] };
+  if (!c.__merged || c.__merged === ch.meshes) return;
+  for (const m of c.__merged) { m.geometry.dispose(); (m as SkinnedMesh).skeleton?.dispose(); }
 }

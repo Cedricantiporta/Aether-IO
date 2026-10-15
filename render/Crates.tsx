@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry } from 'three';
 import { world } from '../engine/world';
 import type { CrateKind } from '../engine/types';
-import { GB, TAU, patchFlashRim, setInst } from './util';
+import { GB, TAU, commitInst, liveRange, patchFlashRim, setInst } from './util';
 import { pushHalo, CELL } from './fx';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -169,7 +169,7 @@ export function Crates() {
         if (cr.kind === 'CHEST') { if (((t * 1.3 + i) % 3) < 0.15) pushHalo(cr.pos.x, cr.pos.y + 0.6, cr.pos.z + 0.5, 0.9, 2, 1.7, 0.7, 0.8, CELL.STAR); }
       }
     }
-    for (const k of KINDS) { const P = sys.per[k], n = counts[k]; P.body.count = n; P.body.instanceMatrix.needsUpdate = true; P.flash.needsUpdate = true; if (P.glow) { P.glow.count = n; P.glow.instanceMatrix.needsUpdate = true; if (P.glow.instanceColor) P.glow.instanceColor.needsUpdate = true; } }
+    for (const k of KINDS) { const P = sys.per[k], n = counts[k]; commitInst(P.body, n); liveRange(P.flash, n); if (P.glow) commitInst(P.glow, n); }
     const k = 1.55 + Math.sin(t * 1.6) * 0.3; sys.crystalM.color.setRGB(k, k, k);
   }, -0.2);
   return <primitive object={sys.group} />;

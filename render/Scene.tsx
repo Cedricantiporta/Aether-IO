@@ -1,6 +1,6 @@
 import { RoomEvents } from './RoomEvents';
 import { Minions } from './Minions';
-import React, { Suspense, useLayoutEffect } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect } from 'react';
 import { FacingArrow } from './FacingArrow';
 import { useFrame } from '@react-three/fiber';
 import { updateGame } from '../engine/game';
@@ -39,6 +39,17 @@ import { DamageNumbers } from './DamageNumbers';
 import { StatusFx } from './StatusFx';
 import { useWorldCounter } from './hooks';
 import { world } from '../engine/world';
+import { poolWarm } from './util';
+
+/**
+ * Empty effect pools are hidden (render/util `commitInst`); keep them drawn for a few frames whenever the scene / room /
+ * area / quality changes so their shaders compile behind the room fade, with the room's real lights, as before.
+ */
+function ShaderWarmup({ k }: { k: string }) {
+  useEffect(() => { poolWarm.frames = 4; }, [k]);
+  useFrame(() => { if (poolWarm.frames > 0) poolWarm.frames--; });
+  return null;
+}
 
 export function Scene() {
   const q = useQuality();
@@ -62,6 +73,7 @@ export function Scene() {
       <Lighting q={q} />
       <LookDriver />
       <CameraRig />
+      <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
       {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
         <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
       ) : cave ? (

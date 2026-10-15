@@ -209,8 +209,50 @@ export function patchFlashRim(mat: Material, rim = 0.35) {
 }
 
 // ------------------------------------------------------------ instancing ----
-import { InstancedMesh, Object3D } from 'three';
+import { BufferAttribute, InstancedMesh, Object3D } from 'three';
 const _o = new Object3D();
+
+/**
+ * Flag a per-frame (pooled) attribute for upload, limited to its first `n` items. Without an update range three
+ * re-uploads the WHOLE pool (e.g. 400 x 64 B per instanceMatrix) every frame even when only a few (or zero) instances
+ * are live; with ~500 pooled attributes that was ~7 MB of bufferSubData per frame. Nothing is uploaded when n is 0
+ * (count 0 draws nothing, and the next non-zero frame uploads its own range).
+ */
+export function liveRange(a: BufferAttribute, n: number): void {
+  a.clearUpdateRanges();
+  if (n <= 0) return;
+  a.addUpdateRange(0, n * a.itemSize);
+  a.needsUpdate = true;
+}
+
+/**
+ * Shader warm-up for hidden pools: three compiles a material when an object using it is first DRAWN, and before pools
+ * were hidden every (empty) pool was drawn on the first frame of a scene / room, i.e. behind the fade. `poolWarm.frames`
+ * (set by render/Scene `ShaderWarmup` when the scene, room, area or quality changes) and each pool's own first frames
+ * keep empty pools visible for a moment so that still happens (with the real lights / fog / render target) instead of
+ * mid-fight on first use.
+ */
+export const poolWarm = { frames: 0 };
+export function poolVisible(o: Object3D, n: number): boolean {
+  if (n > 0 || poolWarm.frames > 0) return true;
+  const w = o.userData.warmed as number | undefined;
+  if (w !== undefined && w >= 2) return false;
+  o.userData.warmed = (w || 0) + 1;
+  return true;
+}
+
+/**
+ * `m.count = n` + range-limited upload of instanceMatrix (and instanceColor when present). An empty pool is also hidden:
+ * three still projects, sorts and binds (setProgram + uniforms + VAO) a count-0 InstancedMesh every frame and only skips
+ * the draw call itself, which was ~250 wasted render items per frame across the pooled effect / enemy / projectile meshes.
+ */
+export function commitInst(m: InstancedMesh, n: number): void {
+  m.count = n;
+  m.visible = poolVisible(m, n);
+  liveRange(m.instanceMatrix, n);
+  if (m.instanceColor) liveRange(m.instanceColor, n);
+}
+
 export function setInst(m: InstancedMesh, i: number, x: number, y: number, z: number, ry = 0, sx = 1, sy = sx, sz = sx, rx = 0, rz = 0) {
   _o.position.set(x, y, z);
   _o.rotation.set(rx, ry, rz, 'YXZ');

@@ -16,7 +16,7 @@ import {
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX } from './fx';
-import { GB, TAU, clamp, setInst } from './util';
+import { GB, TAU, clamp, commitInst, liveRange, setInst } from './util';
 import { inView } from './view';
 
 const MAXW = 12, MAXP = 110, MAXPORT = 8, MAXECHO = 4;
@@ -128,7 +128,7 @@ export function BossFx() {
         _c.setHex(w.color); C[n * 3] = _c.r; C[n * 3 + 1] = _c.g; C[n * 3 + 2] = _c.b;
         n++;
       }
-      sys.rings.count = n; sys.rings.instanceMatrix.needsUpdate = true; sys.iW.needsUpdate = true; sys.iC.needsUpdate = true; sys.ringMat.uniforms.uTime.value = t;
+      commitInst(sys.rings, n); liveRange(sys.iW, n); liveRange(sys.iC, n); sys.ringMat.uniforms.uTime.value = t;
     }
 
     // ---- props
@@ -163,7 +163,7 @@ export function BossFx() {
           }
         }
       }
-      const set = (m: InstancedMesh, n: number) => { m.count = n; m.instanceMatrix.needsUpdate = true; };
+      const set = commitInst;
       set(sys.root, nR); set(sys.ice, nI); set(sys.thorn, nT); set(sys.pillar, nP); set(sys.core, nC); set(sys.glob, nG);
     }
 
@@ -182,7 +182,7 @@ export function BossFx() {
         if (dt > 0 && rnd() < dt * 26 && k > 0.5) { const a = rnd() * TAU; FX.add.emit(q.x + Math.sin(a) * e * 0.9, 2.3 + Math.cos(a) * e * 0.9, q.z, 0, 0, 0, 0.5, 0.3, 0.05, 1.8, 0.6, 2.4, 0.8, CELL.STAR); }
         n++;
       }
-      for (const m of [sys.portalRing, sys.portalIn, sys.portalDisc]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+      commitInst(sys.portalRing, n); commitInst(sys.portalIn, n); commitInst(sys.portalDisc, n);
     }
 
     // ---- echoes
@@ -199,7 +199,7 @@ export function BossFx() {
         if (dt > 0 && rnd() < dt * 18) FX.add.emit(q.x + (rnd() - 0.5) * 1.4, 0.4 + rnd() * 3, q.z + (rnd() - 0.5) * 1.4, 0, 1.4, 0, 0.7, 0.3, 0.05, _c.r, _c.g, _c.b, 0.7, CELL.DISC);
         n++;
       }
-      sys.echo.count = n; sys.echo.instanceMatrix.needsUpdate = true; if (sys.echo.instanceColor) sys.echo.instanceColor.needsUpdate = true;
+      commitInst(sys.echo, n);
     }
 
     // ---- Void arena veil
