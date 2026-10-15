@@ -25,17 +25,20 @@ interface Mech {
   cc: PlayerDebuff; ccDur: number;      // signature crowd control (quake + crush)
   rain: PlayerDebuff; rainDur: number;  // what a falling impact applies
   rainColor: number; rainWord: string;
-  ward: 'CRYSTALS' | 'GUARD' | null; guard?: EnemyKind;
+  /** each boss has its own invulnerability (owner): CRYSTALS (break the crystals around the arena), GUARD (kill the summoned
+   *  guards), CORES (power cores right beside it), SHELL (not immune: a thick shield to break), PHASE (immune for a few
+   *  seconds, survive it) */
+  ward: 'CRYSTALS' | 'GUARD' | 'CORES' | 'SHELL' | 'PHASE' | null; guard?: EnemyKind;
   heal: boolean;
 }
 const MECH: Record<BossKind, Mech> = {
   BOSS_GOLEM:   { cc: 'STUN', ccDur: 1.0, rain: 'STUN', rainDur: 0.6, rainColor: 0xb0a090, rainWord: 'Rockfall!', ward: 'CRYSTALS', heal: false },
-  BOSS_TREANT:  { cc: 'ROOT', ccDur: 1.6, rain: 'POISON', rainDur: 3, rainColor: 0x84cc16, rainWord: 'Thorn rain!', ward: 'GUARD', guard: 'SPORECAP', heal: true },
-  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', ward: 'CRYSTALS', heal: true },
-  BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0x8ae0ff, rainWord: 'Hailstorm!', ward: 'CRYSTALS', heal: false },
+  BOSS_TREANT:  { cc: 'ROOT', ccDur: 1.6, rain: 'POISON', rainDur: 3, rainColor: 0x84cc16, rainWord: 'Thorn rain!', ward: 'GUARD', guard: 'SPORECAP', heal: true },   // Root Cocoon: kill the spore guardians
+  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', ward: 'GUARD', guard: 'BOSS_HYDRA_HEAD', heal: true },   // Spare Heads: cut the heads that shield it
+  BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0x8ae0ff, rainWord: 'Hailstorm!', ward: 'SHELL', heal: false },   // Frost Shell: a thick ice armour to shatter
   BOSS_WARLORD: { cc: 'SILENCE', ccDur: 2.2, rain: 'BURN', rainDur: 3, rainColor: 0xff5a1a, rainWord: 'Meteor shower!', ward: 'GUARD', guard: 'HELLHOUND', heal: false },
-  BOSS_WARMACH: { cc: 'STUN', ccDur: 1.0, rain: 'BURN', rainDur: 3, rainColor: 0xffa040, rainWord: 'Shelling!', ward: 'CRYSTALS', heal: false },
-  BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void rain!', ward: 'CRYSTALS', heal: true },
+  BOSS_WARMACH: { cc: 'STUN', ccDur: 1.0, rain: 'BURN', rainDur: 3, rainColor: 0xffa040, rainWord: 'Shelling!', ward: 'CORES', heal: false },   // Power Cores beside the machine
+  BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void rain!', ward: 'PHASE', heal: true },   // Void Phase: untouchable for a few seconds
   BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', ward: 'GUARD', guard: 'CULTIST', heal: true },
 };
 
@@ -44,10 +47,12 @@ const RAIN_CD = [19, 16, 13];      // by phase (owner: less frequent; was 12 / 1
 const QUAKE_CD = 9;
 const HEAL_CD = 26, HEAL_T = 3, HEAL_RATE = 0.025, HEAL_BREAK = 0.06;
 const CRUSH_CD = 3.6, CRUSH_R = 3.4, CRUSH_WIND = 0.65, CRUSH_RANGE = 8;
-const WARD_MAX_T = 25;   // (balance pass: was 35 s of a boss that can't be hurt)
+const WARD_MAX_T = 18;   // (owner: shorter; was 25)
+const PHASE_T = 5;      // Void Phase: immune this long
+const WARD_AT = 0.5;    // (owner: once per fight at 50% hp; was at 66% and 33%)   // (balance pass: was 35 s of a boss that can't be hurt)
 // by phase: seconds between barriers, shield as a share of max hp (balance pass: was [20, 17, 14] s / [6, 8, 10]%; low-damage
 // builds stalled at 5-25% boss hp behind back-to-back barriers)
-const BARRIER_CD = [22, 20, 18], BARRIER_HP = [0.05, 0.06, 0.07];
+const BARRIER_CD = [32, 28, 24], BARRIER_HP = [0.05, 0.06, 0.07];   // (owner: less often; was 22 / 20 / 18)
 // damage of the shared layer as multiples of the boss's power (balance pass: 1.1 / 1.3 / 1.6 -> 0.8 / 1.0 / 1.25; this layer
 // sits on top of every boss's own kit and dealt a big share of the hits that killed level-8 heroes at Elderroot)
 const RAIN_DMG = 0.8, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
@@ -56,10 +61,10 @@ const RAIN_DMG = 0.8, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
 const MAX_STRIKES = 64;
 const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0 }));
 const tv = new Vector3();
-const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, ward: 0, wardOn: false, wardT: 0, wards: [] as number[], healT: 0, healHp0: 0 };
+const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, ward: 0, wardOn: false, wardT: 0, wards: [] as number[], healT: 0, healHp0: 0, shellOn: false };
 
 export function resetBossMech(): void {
-  S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.ward = 0; S.wardOn = false; S.wardT = 0; S.wards.length = 0; S.healT = 0;
+  S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.ward = 0; S.wardOn = false; S.wardT = 0; S.wards.length = 0; S.healT = 0; S.shellOn = false;
   for (const s of strikes) s.on = false;
 }
 
@@ -125,22 +130,42 @@ function quake(e: Enemy, m: Mech): void {
 }
 
 /** Ward: immune until the crystals (or the summoned guard) fall. */
+const WARD_TEXT: Record<string, [string, string]> = {
+  CRYSTALS: ['CRYSTAL WARD', 'Crystal Ward! Destroy the crystals around the arena!'],
+  GUARD: ['GUARDED', 'The boss is guarded! Defeat its guardians!'],
+  CORES: ['POWER CORES', 'Power Cores! Smash the cores beside it!'],
+  SHELL: ['FROST SHELL', 'Frost Shell! Shatter the ice armour!'],
+  PHASE: ['VOID PHASE', 'Void Phase! It cannot be harmed - survive until it returns!'],
+};
+const HEAD_SLOTS = [3, -1, 4];
 function raiseWard(e: Enemy, m: Mech): void {
-  S.wards.length = 0; S.wardOn = true; S.wardT = 0; S.healT = 0;   // (a mend in progress stops: it can't be interrupted behind the ward)
-  const R = arenaR() * 0.7, n = 3 + e.phase;
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
-    if (m.ward === 'CRYSTALS') tv.set(Math.cos(a) * R, 0, Math.sin(a) * R);
-    else tv.set(e.pos.x + Math.cos(a) * 4, 0, e.pos.z + Math.sin(a) * 4);
-    const w = spawnEnemy(m.ward === 'CRYSTALS' ? 'BOSS_CRYSTAL' : m.guard!, tv);
-    if (!w) continue;
-    if (m.ward === 'CRYSTALS') { w.maxHp = Math.round(e.maxHp * 0.035); w.hp = w.maxHp; }   // (balance pass: 4.5% -> 3.5% of the boss each)
-    else { w.maxHp = Math.round(w.maxHp * 1.2); w.hp = w.maxHp; }                            // (guards x1.5 -> x1.2 hp)
-    S.wards.push(w.id);
+  S.wards.length = 0; S.healT = 0;   // (a mend in progress stops)
+  const kind = m.ward!, txt = WARD_TEXT[kind];
+  events.emit('floatText', { pos: e.pos, text: txt[0], color: 0x8ab8ff, scale: 1.3, dy: 5 });
+  notify(txt[1], '#8ab8ff');
+  if (kind === 'SHELL') {   // not immune: a thick shield (absorbs damage) that has to be shattered
+    e.shield = Math.max(e.shield, e.maxHp * 0.14); S.shellOn = true;
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0xbfe8ff });
+    return;
+  }
+  S.wardOn = true; S.wardT = 0;
+  if (kind !== 'PHASE') {
+    const near = kind === 'CORES', R = near ? e.radius + 4.5 : arenaR() * 0.7, n = Math.min(m.guard === 'BOSS_HYDRA_HEAD' ? 3 : 5, (kind === 'GUARD' ? 2 : 3) + e.phase);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+      if (kind === 'GUARD') tv.set(e.pos.x + Math.cos(a) * 4, 0, e.pos.z + Math.sin(a) * 4);
+      else if (near) tv.set(e.pos.x + Math.cos(a) * R, 0, e.pos.z + Math.sin(a) * R);
+      else tv.set(Math.cos(a) * R, 0, Math.sin(a) * R);
+      const w = spawnEnemy(kind === 'GUARD' ? m.guard! : 'BOSS_CRYSTAL', tv);
+      if (!w) continue;
+      if (kind !== 'GUARD') { w.maxHp = Math.round(e.maxHp * (near ? 0.03 : 0.035)); w.hp = w.maxHp; }
+      else { w.maxHp = Math.round(w.maxHp * 1.2); w.hp = w.maxHp; }
+      if (w.kind === 'BOSS_HYDRA_HEAD') { w.pattern = HEAD_SLOTS[i]; w.attackCd = 3 + i; }   // spare heads sit behind / beside the 3 front heads
+      S.wards.push(w.id);
+    }
   }
   e.shield = 1;   // draws the shield bubble (damage is refused in combat.damageEnemy via bossWarded)
-  events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0x8ab8ff });
-  notify(m.ward === 'CRYSTALS' ? 'The boss is warded! Destroy the crystals!' : 'The boss is warded! Defeat its guard!', '#8ab8ff');
+  events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: kind === 'PHASE' ? 0xa060ff : 0x8ab8ff });
 }
 
 function wardAlive(): number {
@@ -170,13 +195,19 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   const hpF = e.hp / e.maxHp;
 
   // ward
-  if (m.ward && !S.wardOn && ((S.ward === 0 && hpF < 0.66) || (S.ward === 1 && hpF < 0.33))) { S.ward++; raiseWard(e, m); }
+  if (m.ward && !S.wardOn && S.ward === 0 && hpF < WARD_AT) { S.ward++; raiseWard(e, m); }
+  if (S.shellOn && e.shield <= 0) {   // Frost Shell shattered: staggered
+    S.shellOn = false;
+    events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: 0xbfe8ff });
+    events.emit('floatText', { pos: e.pos, text: 'SHELL SHATTERED', color: 0xbfe8ff, scale: 1.3, dy: 5 });
+    e.staggerT = Math.max(e.staggerT, 2.5);
+  }
   if (S.wardOn) {
     S.wardT += dt;
-    if (wardAlive() === 0 || S.wardT > WARD_MAX_T) {
+    if ((m.ward === 'PHASE' ? S.wardT > PHASE_T : wardAlive() === 0) || S.wardT > WARD_MAX_T) {
       S.wardOn = false; e.shield = 0;
       events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: 0x8ab8ff });
-      events.emit('floatText', { pos: e.pos, text: 'WARD BROKEN', color: 0x8ab8ff, scale: 1.3, dy: 5 });
+      events.emit('floatText', { pos: e.pos, text: m.ward === 'PHASE' ? 'PHASE ENDS' : 'WARD BROKEN', color: 0x8ab8ff, scale: 1.3, dy: 5 });
       e.staggerT = Math.max(e.staggerT, 2.5);   // staggered: a window to punish
     }
   }
