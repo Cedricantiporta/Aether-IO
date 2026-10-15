@@ -8,7 +8,7 @@ import { trapPhase } from '../engine/systems/roomEvents';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
 
-const MAXT = 10;
+const MAXT = 40;   // = world.roomEvt.traps pool (tiles of the trap groups)
 
 export function RoomEvents() {
   const totemLight = useRef<PointLight>(null!), barG = useRef<Group>(null!);
@@ -36,10 +36,11 @@ export function RoomEvents() {
     const b = new GB([0.9, 1.1]);
     for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; b.cyl(0.06, 0.06, 2.4, 5, [Math.cos(a) * 1.35, 1.3, Math.sin(a) * 1.35], '#3a3a40'); }
     b.cyl(1.55, 1.55, 0.2, 12, [0, 2.5, 0], '#4a3a2a');
-    const plate = new GB([0.9, 1.1]); plate.cyl(1.6, 1.7, 0.08, 10, [0, 0.04, 0], '#3a3436');
-    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2, r = i === 0 ? 0 : 0.9; plate.cyl(0.18, 0.2, 0.06, 6, [Math.cos(a) * r, 0.09, Math.sin(a) * r], '#1a1618'); }
+    // square tiles (3.4 wide, edge to edge) so 1x3 / cross / 3x3 groups read as one trap floor; 3x3 holes each
+    const plate = new GB([0.9, 1.1]); plate.box(3.3, 0.08, 3.3, [0, 0.04, 0], '#3a3436');
+    for (let i = 0; i < 9; i++) plate.cyl(0.18, 0.2, 0.06, 6, [((i % 3) - 1) * 1.05, 0.09, (Math.floor(i / 3) - 1) * 1.05], '#1a1618');
     const sp = new GB([0.9, 1.1]);
-    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2, r = i === 0 ? 0 : 0.9; sp.cone(0.17, 1.1, 5, [Math.cos(a) * r, 0.55, Math.sin(a) * r], '#cfcfd8'); }
+    for (let i = 0; i < 9; i++) sp.cone(0.17, 1.1, 5, [((i % 3) - 1) * 1.05, 0.55, (Math.floor(i / 3) - 1) * 1.05], '#cfcfd8');
     const cr = new GB([1, 1]).ico(0.75, [0, 3.2, 0], '#ffffff', 1, 0);
     return { crystal: cr.build(), totem: t.build(), cageBase: c.build(), villager: v.build(), bars: b.build(), plate: plate.build(), spikes: sp.build() };
   }, []);
@@ -88,7 +89,7 @@ export function RoomEvents() {
       g.position.set(tr.x, 0, tr.z);
       const s = spikes.current[i];
       if (s) { const up = ph === 2 ? 1 : ph > 0 ? 0.12 * ph : 0; s.scale.set(1, Math.max(0.01, up), 1); s.visible = up > 0.02; }
-      if (ph > 0 && ph < 2) pushHalo(tr.x, 0.3, tr.z, 2.4 + ph, 2.6, 0.3, 0.2, 0.25 + 0.45 * ph, CELL.GLOW);
+      if (ph > 0 && ph < 2) pushHalo(tr.x, 0.3, tr.z, 2.6 + ph, 2.6, 0.3, 0.2, 0.2 + 0.35 * ph, CELL.GLOW);
     }
     // goblin / bounty glows
     if (live && e.state === 1 && e.enemy >= 0) {

@@ -49,19 +49,42 @@ export function startRoomEvent(plan: RoomPlan): void {
   if (e.twist === 'TRAPS') placeTraps();
 }
 
+/** Spike-trap layouts, in tiles (dx, dz): single, 1x3 line, cross, 3x3 block. A group's tiles fire together. */
+const TRAP_PATTERNS: readonly (readonly [number, number])[][] = [
+  [[0, 0]],
+  [[-1, 0], [0, 0], [1, 0]],
+  [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]],
+  [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]],
+];
+const TRAP_W = [30, 30, 20, 20];
+const TRAP_TILE = TRAP_R * 2;   // square tiles, edge to edge
+const tileX: number[] = [], tileZ: number[] = [];
+
 function placeTraps(): void {
-  const e = E(), R = world.room.radius;
+  const e = E(), R = world.room.radius, cap = e.traps.length;
   const [sx, sz] = startPos(R);
-  let n = 0;
-  for (let t = 0; t < 200 && n < 8; t++) {
-    const a = Math.random() * Math.PI * 2, d = 4 + Math.sqrt(Math.random()) * (R * 0.7 - 4);
-    const x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (Math.hypot(x - sx, z - sz) < 6) continue;   // never under the hero's arrival
-    if (queryColliders(x, z, TRAP_R + 0.6, colOut).some((c) => Math.hypot(c.x - x, c.z - z) < c.r + TRAP_R)) continue;
+  let n = 0, groups = 0;
+  for (let t = 0; t < 300 && groups < 6 && n < cap; t++) {
+    let r = Math.random() * 100, pi = 0;
+    for (; pi < TRAP_W.length - 1; pi++) { r -= TRAP_W[pi]; if (r <= 0) break; }
+    const pat = TRAP_PATTERNS[pi], swap = Math.random() < 0.5;   // 1x3 lines run along x or z
+    if (n + pat.length > cap) continue;
+    const a = Math.random() * Math.PI * 2, d = 5 + Math.sqrt(Math.random()) * (R * 0.66 - 5);
+    const cx = Math.cos(a) * d, cz = Math.sin(a) * d;
     let ok = true;
-    for (let k = 0; k < n; k++) if (Math.hypot(e.traps[k].x - x, e.traps[k].z - z) < TRAP_R * 2.6) { ok = false; break; }
+    tileX.length = tileZ.length = 0;
+    for (const [ox, oz] of pat) {
+      const x = cx + (swap ? oz : ox) * TRAP_TILE, z = cz + (swap ? ox : oz) * TRAP_TILE;
+      if (Math.hypot(x, z) > R * 0.82 || Math.hypot(x - sx, z - sz) < 6.5) { ok = false; break; }   // inside the arena, never under the hero's arrival
+      if (queryColliders(x, z, TRAP_R + 0.6, colOut).some((c) => Math.hypot(c.x - x, c.z - z) < c.r + TRAP_R)) { ok = false; break; }
+      for (let k = 0; k < n; k++) if (Math.abs(e.traps[k].x - x) < TRAP_TILE * 1.6 && Math.abs(e.traps[k].z - z) < TRAP_TILE * 1.6) { ok = false; break; }   // a gap between groups
+      if (!ok) break;
+      tileX.push(x); tileZ.push(z);
+    }
     if (!ok) continue;
-    const tr = e.traps[n++]; tr.x = x; tr.z = z; tr.t = Math.random() * TRAP_PERIOD; tr.hit = false;
+    const t0 = Math.random() * TRAP_PERIOD;
+    for (let k = 0; k < tileX.length; k++) { const tr = e.traps[n++]; tr.x = tileX[k]; tr.z = tileZ[k]; tr.t = t0; tr.hit = false; }
+    groups++;
   }
   e.nTraps = n;
 }
@@ -175,8 +198,8 @@ export function updateRoomEvents(dt: number): void {
       if (tr.t >= TRAP_PERIOD) { tr.t -= TRAP_PERIOD; tr.hit = false; }
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
-        if (pl.alive && Math.hypot(pl.pos.x - tr.x, pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12, { pos: tmp }); }
-        damageEnemiesInRadius(tr.x, tr.z, TRAP_R, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER' });
+        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12, { pos: tmp }); }
+        damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER' });
       }
     }
   }

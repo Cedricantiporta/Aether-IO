@@ -128,7 +128,7 @@ export const world = {
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
     state: 0, hp: 0, maxHp: 1, x: 0, z: 0, t: 0, tmax: 0, enemy: -1, hurtT: 0,
-    traps: Array.from({ length: 10 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
+    traps: Array.from({ length: 40 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
   },
   director: {
     wave: 1, phase: 'FIGHT', phaseT: 0, maxAlive: ROOM_MAX_ALIVE, aliveCount: 0, bossId: -1,
