@@ -488,7 +488,7 @@ function HeroBars() {
     hp.current.scale.x = Math.max(0.001, fh); hp.current.position.x = -(1 - fh) * 1.1;
     mp.current.scale.x = Math.max(0.001, fm); mp.current.position.x = -(1 - fm) * 1.1;
     (hp.current.material as MeshBasicMaterial).color.setRGB(fh < 0.3 ? 1.6 : 1.1, fh < 0.3 ? 0.2 : 0.18, 0.2);
-    const fs = p.aegisMax > 0 ? clamp(p.aegis / p.aegisMax, 0, 1) : 0;
+    const fsMax = p.aegisMax + p.arcaneMax, fs = fsMax > 0 ? clamp((p.aegis + p.arcane) / fsMax, 0, 1) : 0;   // Aegis + Arcane Shield
     shG.current.visible = fs > 0;
     if (fs > 0) { sh.current.scale.x = Math.max(0.001, fs); sh.current.position.x = -(1 - fs) * 1.1; }
   });
@@ -509,8 +509,8 @@ function HeroBars() {
   );
 }
 
-/** A transparent sphere around the hero (bright rim, see-through middle): light blue while the Aegis shield holds,
- *  golden while the knight's Shield Wall is up. */
+/** A transparent sphere around the hero (bright rim, see-through middle): purple while the Wizard's Arcane Shield holds,
+ *  light blue while the Aegis shield holds, golden while the knight's Shield Wall is up. */
 function AegisSphere() {
   const m = useRef<Mesh>(null!);
   const mat = useMemo(() => new ShaderMaterial({
@@ -520,13 +520,13 @@ function AegisSphere() {
     fragmentShader: 'uniform float uA; uniform vec3 uC; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(uC * (0.25 + 1.4 * f), (0.08 + 0.6 * f) * uA); }',
   }), []);
   useFrame(({ clock }) => {
-    const p = world.player, aegis = p.aegis > 0, guard = p.guardT > 0, on = (aegis || guard) && p.alive;   // blue: Aegis; gold: Shield Wall
+    const p = world.player, arcane = p.arcane > 0, aegis = p.aegis > 0, guard = p.guardT > 0, on = (arcane || aegis || guard) && p.alive;   // purple: Arcane Shield; blue: Aegis; gold: Shield Wall
     m.current.visible = on;
     if (!on) return;
-    if (aegis) mat.uniforms.uC.value.setRGB(0.45, 0.85, 1.0); else mat.uniforms.uC.value.setRGB(1.0, 0.82, 0.3);
+    if (arcane) mat.uniforms.uC.value.setRGB(0.72, 0.38, 1.0); else if (aegis) mat.uniforms.uC.value.setRGB(0.45, 0.85, 1.0); else mat.uniforms.uC.value.setRGB(1.0, 0.82, 0.3);
     m.current.position.set(p.pos.x, 1.1 + (p.air || 0), p.pos.z);
     m.current.scale.setScalar(1.55 + Math.sin(clock.elapsedTime * 3) * 0.04);
-    mat.uniforms.uA.value = aegis ? 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1) : 0.8;
+    mat.uniforms.uA.value = arcane ? 0.7 + 0.5 * clamp(p.arcane / Math.max(1, p.arcaneMax), 0, 1) : aegis ? 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1) : 0.8;
   });
   return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>;
 }

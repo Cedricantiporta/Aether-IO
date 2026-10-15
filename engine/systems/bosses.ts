@@ -246,8 +246,8 @@ function malakar(e: Enemy, dt: number): void {
   if (e.state === 'DYING') return;
   b.shieldCd -= dt;
   if (b.shieldCd <= 0 && e.shield <= 0) {
-    e.shield = e.maxHp * (b.stage === 2 ? 0.1 : 0.07);
-    b.shieldCd = b.stage === 2 ? 13 : 17;
+    e.shield = e.maxHp * (b.stage === 2 ? 0.07 : 0.05);   // (balance pass 2: was 10% / 7%; most Lv 40 bot fights never broke through)
+    b.shieldCd = b.stage === 2 ? 16 : 20;                   // (was 13 / 17 s)
     events.emit('shockwave', { pos: e.pos.clone(), radius: 5, color: 0x93c5fd });
     events.emit('floatText', { pos: e.pos, text: 'SHIELD', color: 0x93c5fd, scale: 1, dy: 4.5 });
   }

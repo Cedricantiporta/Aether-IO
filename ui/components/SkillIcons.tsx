@@ -139,12 +139,13 @@ const ICONS: Record<string, (k: string) => React.ReactNode> = {
     <path d="M24 28 L28 14 L28 46 Z" fill="#fff" opacity=".35" />
     <path d="M10 40 L18 34 L16 46Z M54 38 L46 32 L48 44Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
   </Art>,
-  storm: (k) => <Art k={k} c="#8fa0ff">
-    {[[8, 12, 48], [14, 22, 36], [20, 32, 24], [25, 42, 14]].map(([x, y, w], i) => (
-      <path key={i} d={`M${x} ${y} C${x + w * .3} ${y - 6} ${x + w * .8} ${y - 6} ${x + w} ${y} C${x + w * .8} ${y + 7} ${x + w * .3} ${y + 7} ${x} ${y}Z`} fill={i % 2 ? '#aab6ff' : '#d8defc'} stroke={S} strokeWidth="1.3" />
-    ))}
-    <path d="M28 50 L34 50 L32 58Z" fill="#8fa0ff" stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
-    <circle cx="14" cy="52" r="1.5" fill="#fff" /><circle cx="50" cy="48" r="1.5" fill="#fff" />
+  storm: (k) => <Art k={k} c="#b46bff">
+    <circle cx="32" cy="34" r="25" fill="#a855f7" opacity=".22" filter={u(k, 'glow')} />
+    <circle cx="32" cy="34" r="22" fill="none" stroke={u(k, 'purp')} strokeWidth="4" />
+    <circle cx="32" cy="34" r="22" fill="none" stroke="#f0d8ff" strokeOpacity=".55" strokeWidth="1" />
+    <path d="M32 18 L44 23 V34 C44 42 38 47 32 50 C26 47 20 42 20 34 V23Z" fill={u(k, 'purp')} stroke={S} strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M32 24 L34 31 L41 33 L34 35 L32 42 L30 35 L23 33 L30 31Z" fill="#fff" opacity=".85" />
+    <path d="M14 22 C18 14 24 11 30 10" stroke="#fff" strokeOpacity=".6" strokeWidth="1.6" fill="none" strokeLinecap="round" />
   </Art>,
   thunder: (k) => <Art k={k} c="#ffe14a">
     <path d="M12 46 L26 24 L38 40 L52 16" stroke="#ffe14a" strokeWidth="7" fill="none" opacity=".45" filter={u(k, 'glow')} strokeLinejoin="round" />

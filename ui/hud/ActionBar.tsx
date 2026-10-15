@@ -13,7 +13,7 @@ import { ACTIVE_ORDER, ACTIVE_KEYS, activeDefs, dashDef, dashKey, ULTS, abilityC
 import { UltSlot } from './UltSlot';
 
 /** Timed passives whose charge slows while moving (skills.ts chargeMul). */
-const STILL_CHARGE = new Set(['freezeSpell', 'storm', 'orbital', 'warcry', 'inspire', 'radiant']);
+const STILL_CHARGE = new Set(['freezeSpell', 'orbital', 'warcry', 'inspire', 'radiant']);
 const PASSIVE_KEYS = ['burning', 'freezing', 'freezeSpell', 'storm', 'thunder', 'stamp', 'orbital', 'warcry', 'inspire', 'consecrate', 'smite', 'radiant', 'graveCall', 'soulHarvest', 'boneArmor'] as const;
 type PKey = typeof PASSIVE_KEYS[number];
 
@@ -22,7 +22,7 @@ const cdLine = (label: string, v: string) => <><span className="muted">{label}</
 
 export const ActionBar: React.FC = () => {
   const { hero, skillLevels, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels, heroLv: s.level })));
-  const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level 20
+  const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level DASH_UNLOCK_LV (8)
   const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4')] as const));
   const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3] };
   const cdr = useGameStore((s) => s.stats.cooldownReduction);

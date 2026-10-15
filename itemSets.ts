@@ -46,7 +46,7 @@ export const SETS: SetDef[] = [
     bonuses: [
       { pieces: 2, text: '+15% skill damage, +60 max mana', fx: { add: { skillDamage: 0.15, maxMana: 60 } } },
       { pieces: 4, text: 'Chain lightning +2 targets, procs need 1 fewer cast', fx: { add: { thunderChain: 2, procHaste: 1 } } },
-      { pieces: 6, text: 'Spells cost 25% less mana, Storm volley fires +3 bolts, +8% cooldown reduction', fx: { add: { manaCostCut: 0.25, stormTwin: 1, cooldownReduction: 0.08 } } },
+      { pieces: 6, text: 'Spells cost 25% less mana, Arcane Shield +25% stronger, +8% cooldown reduction', fx: { add: { manaCostCut: 0.25, stormTwin: 1, cooldownReduction: 0.08 } } },
     ],
   },
   {

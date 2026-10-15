@@ -98,7 +98,7 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 9.24, fireRate: 1.75, maxHealth: 48, manaRegen: 1.2, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 9.24, fireRate: 1.75, maxHealth: 48, manaRegen: 1.2, damage: 14.6, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
         description: 'Plant your feet and loose a storm of arrows. High attack rate, low health.'
     },
@@ -141,7 +141,7 @@ export const SKILLS_INFO = {
     // Wizard Only
     thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning (1 jump + 1 per level, moderate damage).', classType: 'WIZARD', type: 'PASSIVE' },
     freezeSpell: { name: 'Blizzard', description: 'Passive: A sharp frost burst around you (small radius): little damage, but it heavily slows everything close and may freeze them.', classType: 'WIZARD', type: 'PASSIVE' },
-    storm: { name: 'Storm', description: 'Passive: Summons a tornado in front of you that drifts toward enemies, pulling them in and dealing continuous damage for 3.5s.', classType: 'WIZARD', type: 'PASSIVE' },
+    storm: { name: 'Arcane Shield', description: 'Passive: every 12s in battle (-1s per level, min 7s) a purple arcane shield absorbs 20% of your max HP (+5% per level) for 6s or until broken.', classType: 'WIZARD', type: 'PASSIVE' },
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
@@ -176,7 +176,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_bar', type: 'SKILL_BARRIER', name: 'Energy Shield', description: 'Shield Level Up', rarity: 'EPIC', value: 1 },
 
   // Class Specific
-  { id: 'u_storm', type: 'SKILL_STORM', name: 'Storm', description: 'Storm Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },
+  { id: 'u_storm', type: 'SKILL_STORM', name: 'Arcane Shield', description: 'Arcane Shield Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },
   { id: 'u_orb', type: 'SKILL_ORBITAL', name: 'Orbitals', description: 'Level Up: +1 Blade', rarity: 'RARE', value: 1, classType: 'BARBARIAN' },
   { id: 'u_thun', type: 'SKILL_THUNDER', name: 'Thundercaller', description: 'Level Up: +1 Target', rarity: 'RARE', value: 1, classType: 'WIZARD' },
 

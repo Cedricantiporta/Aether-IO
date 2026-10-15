@@ -79,7 +79,7 @@ function makePlayer(): PlayerRuntime {
     dashT: 0, dashDir: v(), dashIframes: true, dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
     cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
     ult: 0, ultT: 0, cryT: 0, buffT: 0, buffDmg: 0, buffDef: 0, buffHaste: 0, guardT: 0, guardRed: 0, avatarT: 0, titanT: 0, whirlT: 0, air: 0,
-    aegis: 0, aegisMax: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
+    aegis: 0, aegisMax: 0, arcane: 0, arcaneMax: 0, arcaneT: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
     invulnT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
     stunT: 0, rootT: 0, silenceT: 0, defDownT: 0, blindT: 0,

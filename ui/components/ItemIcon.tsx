@@ -14,7 +14,7 @@ export const UpgradeIcon: React.FC<{ upgrade: Upgrade; size?: number }> = ({ upg
 const SKILL_ICON: Record<string, [LucideIcon, string]> = {
   regen: [Heart, '#4ade80'], magnet: [Magnet, '#c58bff'], dash: [Wind, '#6ee7a0'], weapon: [Flame, '#ff9a3c'], barrier: [ShieldCheck, '#ffb347'], special: [Star, '#ffd24a'],
   piercing: [Target, '#9be86a'], burning: [Flame, '#ff6a3c'], freezing: [Snowflake, '#7ee0ff'], thunder: [CloudLightning, '#ffe14a'], gravity: [Orbit, '#b07cff'],
-  freezeSpell: [Snowflake, '#7eb8ff'], storm: [Tornado, '#8fa0ff'], orbital: [Activity, '#6ec1ff'], rage: [Swords, '#ff5a4a'], stamp: [Hammer, '#ff9a3c'],
+  freezeSpell: [Snowflake, '#7eb8ff'], storm: [ShieldCheck, '#b46bff'], orbital: [Activity, '#6ec1ff'], rage: [Swords, '#ff5a4a'], stamp: [Hammer, '#ff9a3c'],
   orbitalx: [Orbit, '#fff'], warcry: [Megaphone, '#ff6a3c'], inspire: [Sparkles, '#7dffb0'], pierceShot: [Zap, '#7fc8ff'], consecrate: [Sun, '#ffe08a'], smite: [Zap, '#fff3a0'], radiant: [Sparkles, '#ffd76a'], graveCall: [Skull, '#b08aff'], soulHarvest: [Heart, '#9a6bd8'], boneArmor: [ShieldCheck, '#ebe5d0'],
 };
 const PAINTED_SKILLS = new Set(['GALE_ARROW', 'SHADOW_ROLL', 'FAN_FLAMES', 'LIGHT_ARROW', 'FROST_FIELD', 'STORM_ARROWS', 'SINGULARITY', 'BLINK_NOVA', 'STORM_ORBS', 'CHAIN_FROST', 'METEOR_CATA', 'BLOODRAGE_LEAP', 'WHIRLWIND', 'EARTHSPLITTER', 'BATTLE_CRY', 'TITAN_WRATH', 'RAISE_DEAD', 'SOUL_STEP', 'BONE_SPEAR', 'CURSE_FIELD', 'ARMY_DEAD', 'piercing', 'burning', 'freezing', 'thunder', 'stamp', 'dash']);

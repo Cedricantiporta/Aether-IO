@@ -362,7 +362,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Mira', role: 'Guide', model: 'WIZARD', tint: '#fff1d6', scale: 1, prop: 'none', accent: '#ffd36a', home: [3.6, 5.4], ordered: true,
     talk: [
-      ['Welcome to Aether Village, traveller! I am Mira. Let me show you the ropes.', 'Move with WASD or the left stick. Once you reach level 20 you learn to Dash with Space (or the dash button) and slip through danger.'],
+      ['Welcome to Aether Village, traveller! I am Mira. Let me show you the ropes.', 'Move with WASD or the left stick. Once you reach level 8 you learn to Dash with Space (or the dash button) and slip through danger.'],
       ['Your skills live on the keys 1, 2 and 3, or on the round skill buttons. R unleashes your ultimate once its gauge is full.', 'Potions are on Z and X. Mana refills over time, so do not hoard it.'],
       ['Combos are hit counts. Every hit you land adds one, and the chain breaks after about three seconds without a hit.', 'Every 10 hits adds a little bonus damage, up to a big chunk at the top. An ultimate at 50+ hits becomes a finisher!'],
       ['Tired of tapping? Open the pause menu and switch on "Auto skills": skills 1/2/3 and your ultimate cast themselves at nearby enemies.', 'Dashing always stays manual, so stay sharp. When you are ready, take the road south past the gate to the old stone portal in the forest.'],
