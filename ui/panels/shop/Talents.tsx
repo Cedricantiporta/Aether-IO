@@ -40,7 +40,7 @@ export const TalentsView: React.FC = () => {
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="rpg-label">Talents · {hero}</div>
-          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 1 point per class level, +1 every 5 levels. Deeper tiers cost more points.</div>
+          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 3 points per class level: at the max level every talent is full. Deeper tiers cost more points.</div>
         </div>
         <div className="flex items-center gap-2">
           <div className="rpg-badge !text-[.75rem]" data-testid="talent-points"><Sparkles size={12} /> {free} / {total} points</div>

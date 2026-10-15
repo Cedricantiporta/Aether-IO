@@ -1,7 +1,7 @@
 // ============================================================================
 // Talent trees: permanent (profile) per class, 3 branches x 10 nodes laid out left -> right (a landscape strip that
 // scrolls sideways in the narrow panel). Costs rise by column 1..5; stat values are 45% of the old tree (owner).
-// Points: 1 per Hero Rank (+1 bonus every 5 ranks). Respec costs gold.
+// Points: 3 per class level (a full tree at the max level). Respec costs gold.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are
 // read from the new PlayerStats fields by the engine systems.
 // ============================================================================
@@ -262,8 +262,9 @@ export const talentsOf = (hero: HeroClass): TalentNode[] => TALENTS.filter((t) =
 export type TalentRanks = Record<string, number>;
 export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {}, NECROMANCER: {} });
 
-/** 1 point per Hero Rank, +1 bonus every 5 ranks. */
-export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) + Math.floor(rank / 5);
+/** 3 points per class level (owner: at max level every talent is full; the fullest tree costs 150 = level 50 x 3). */
+export const TALENT_POINTS_PER_LEVEL = 3;
+export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) * TALENT_POINTS_PER_LEVEL;
 export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
   talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? (ranks[t.id] || 0) * t.cost : 0), 0);
