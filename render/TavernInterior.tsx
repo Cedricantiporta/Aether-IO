@@ -17,7 +17,17 @@ function buildTavern() {
   const { hw, hd, h } = TAP, T = 1.0;
   // walls: plaster with timber frame
   b.box(T, h, hd * 2 + T, [-hw - T / 2, h / 2, -T / 2], PLASTER); b.box(T, h, hd * 2 + T, [hw + T / 2, h / 2, -T / 2], PLASTER);
-  b.box(hw * 2, h, T, [0, h / 2, -hd - T / 2], PLASTER); b.box(hw * 2 + 2 * T, 1.0, T, [0, 0.5, hd + T / 2], WOOD3);   // (south wall cut away: the camera looks in from the south)
+  b.box(hw * 2, h, T, [0, h / 2, -hd - T / 2], PLASTER); for (const sx of [-1, 1]) b.box(hw + T - 1.6, 1.0, T, [sx * (1.6 + (hw + T - 1.6) / 2), 0.5, hd + T / 2], WOOD3);   // (south wall cut away to a rail: the camera looks in from the south)
+  // the exit door: a timber frame in the rail gap with both leaves swung open inward, a lantern over it, a mat before it
+  const dz = hd + T / 2, a = 1.2, lw = 1.45;
+  for (const sx of [-1, 1]) {
+    b.box(0.36, 3.6, 0.5, [sx * 1.68, 1.8, dz], WOOD3);
+    b.box(lw, 3.1, 0.12, [sx * (1.5 - (lw / 2) * Math.cos(a)), 1.58, dz - (lw / 2) * Math.sin(a)], WOOD2, [0, sx < 0 ? a : -a, 0]);
+    for (const y of [0.7, 2.5]) b.box(lw * 0.9, 0.12, 0.16, [sx * (1.5 - (lw / 2) * Math.cos(a)), y, dz - (lw / 2) * Math.sin(a)], '#3a3a3a', [0, sx < 0 ? a : -a, 0]);
+  }
+  b.box(3.8, 0.4, 0.55, [0, 3.6, dz], WOOD3);
+  b.box(2.4, 0.03, 1.4, [0, 0.02, hd - 0.9], '#7a3a2a');
+  b.box(0.22, 0.32, 0.22, [0, 4.0, dz + 0.1], WOOD3); g.box(0.16, 0.24, 0.16, [0, 4.0, dz + 0.1], '#ffcf5a');
   for (const sx of [-1, 1]) for (let z = -hd; z <= hd; z += 3.5) b.box(0.35, h, 0.35, [sx * (hw - 0.15), h / 2, z], WOOD3);
   for (let x = -hw; x <= hw; x += 3) b.box(0.35, h, 0.35, [x, h / 2, -hd + 0.15], WOOD3);
   for (const sx of [-1, 1]) b.box(0.3, 0.35, hd * 2, [sx * (hw - 0.15), 1.1, 0], WOOD3);
