@@ -507,6 +507,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   ascension: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascension, 0))),
   towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0), KNIGHT: num(p?.towerBest?.KNIGHT, 0), NECROMANCER: num(p?.towerBest?.NECROMANCER, 0) },
   towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
+  caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
 });
 
 const writeProfile = (s: GameState): void => {

@@ -18,6 +18,7 @@ import { Town } from './Town';
 import { CastleInterior } from './CastleInterior';
 import { CaveInterior } from './CaveInterior';
 import { CaveEntrance } from './CaveEntrance';
+import { caveLayout } from '../engine/caveData';
 import { Hero } from './Hero';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
@@ -49,7 +50,9 @@ export function Scene() {
   const gameplay = status !== GameStatus.MENU && status !== GameStatus.HERO_SELECT;
   // town while in the menu / hero select; a run shows only its current room (rebuilt behind the black fade)
   const cave = !gameplay && world.village.area === 'CAVE';
-  useLayoutEffect(() => { setLook(gameplay ? world.room.biome : cave ? -2 : -1, true, world.room.index); }, [gameplay, roomVer, cave]);
+  const cv = world.village.cave, hz = cave ? caveLayout(cv.floor, cv.seed).hazard : 'NONE';
+  const look = gameplay ? world.room.biome : !cave ? -1 : hz === 'LAVA' ? -3 : hz === 'POISON' ? -4 : -2;   // (cave floors: lava / poison looks)
+  useLayoutEffect(() => { setLook(look, true, world.room.index); }, [gameplay, roomVer, look]);
   return (
     <>
       <color attach="background" args={[FOG_COLOR]} />
@@ -61,7 +64,7 @@ export function Scene() {
       {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
         <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
       ) : cave ? (
-        <Suspense fallback={null}><CaveInterior q={q} /></Suspense>
+        <Suspense fallback={null}><CaveInterior key={cv.floor + ':' + cv.seed} q={q} /></Suspense>
       ) : (
         <>
           <Suspense fallback={null}><Terrain key={q.name + ':' + ver} q={q} /></Suspense>
@@ -79,8 +82,8 @@ export function Scene() {
           <Pickups />
         </>
       )}
-      {!gameplay && status === GameStatus.MENU && world.village.area === 'TOWN' && (
-        <>{/* town: skills / attacks and the hermit-path monsters */}
+      {!gameplay && status === GameStatus.MENU && world.village.area !== 'CASTLE' && (
+        <>{/* town / crystal cave: skills / attacks, the hermit-path monsters and the cave monsters */}
           <Zones />
           <GroundFx />
           <Enemies />

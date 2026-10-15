@@ -701,10 +701,36 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - **Crystal Cave** (third village area, `world.village.area = 'CAVE'`, modeled on the castle): outside the east wall the
   island edge bulges into a rounded forest bay (`CAVE_BAY` sin^2 bulge in `mapgen.baseRadius`; forest / rim rocks / edge
   bushes follow it, `inCaveClear` keeps the mound free) with a rock mound + dark arched mine opening at its back
-  (`render/CaveEntrance.tsx`, mounted in Scene's town branch; E / click "Enter Crystal Cave", `act 'cave'`, pending
-  `'CAVE'`). Inside: `engine/caveData.ts` (outline `caveRadius`, colliders, 8 harvest nodes ORE / CRYSTAL / GOLD_VEIN,
-  3 point lights) drawn by `render/CaveInterior.tsx` (merged floor / wall / props / glow meshes), dim `setLook(-2)`.
-  Cave nodes reuse crate slots 0..7 with their own save key `aether-survivor-cave-harvest-v1` and own 24 h regrow
-  (`HarvestSet` in village.ts). Leaving puts the hero at `CAVE_OUT` facing the bay; ground pickups are scooped up on cave
-  transitions. Minimap draws the cave outline / nodes / exit (and the hall in the castle), a cyan cave icon in town.
-  The ruined wall that stood at the bay mouth moved from (58, 14) to (57.6, 25).
+  (`render/CaveEntrance.tsx`; E / click "Enter Crystal Cave", `act 'cave'`, pending `'CAVE'`). The ruined wall that stood
+  at the bay mouth moved from (58, 14) to (57.6, 25).
+- **Cave floors / trips** (logic `engine/systems/cave.ts`, data + tables `engine/caveData.ts`, drawing
+  `render/CaveInterior.tsx`, HUD `ui/hud/CaveHud.tsx`, Grit's panel `ui/panels/LanternPanel.tsx`, minimap layer
+  `ui/hud/minimapCave.ts`). State lives in `world.village.cave` (floor, trip seed, veins left, oil, ladder, rare tiers,
+  flasks, blackout `dark`); village.ts only hooks in (`enterCave` / `leaveCave` / `switchCaveFloor` / `scanCave` /
+  `interactCave` / `updateCave`, pending `'DOWN'` / `'UP'`, acts `down` / `up` / `bench`).
+  * Floor 1 = persistent hub: the old miner **Grit** (NPC area `'CAVE'`, only on Floor 1, `npcInArea`), his lantern bench,
+    8 veins (24 h regrow after the last one; save `aether-survivor-cave-v2`, the v1 key is migrated + removed).
+  * Stairs down on every floor are boarded up ("Harvest all veins to go deeper (n left)") until every vein is taken; a
+    **lucky ladder** hides under a random vein on ~30 % of deep floors (shown + minimap marker once found).
+  * **Trip** = going down from Floor 1: floors 2+ are generated fresh per trip (`caveLayout(floor, seed)`: chambers grow
+    with depth, twin "hourglass" chambers from floor 6, LAVA / POISON pools from floor 4 that hurt while you stand in
+    them, 6-12 veins, tints cyan -> violet -> magenta -> gold -> crimson). The arrival stairs = "Climb out" straight to
+    Floor 1 (banks the haul).
+  * **Lantern oil** = ONE timer for the whole trip (drains on Floor 2+, never refills between floors; oil flasks on some
+    floors / 12 % from cave monsters give +20 s). Under 25 % the meter turns orange and flickers, the scene darkens and the
+    hero's lantern light shrinks; under 10 % red pulse, heartbeat + tick (`audio.sfxCave`), vignette, big countdown in the
+    last 10 s. At 0: ~1.3 s pitch-black blackout, then you wake up on Floor 1 and lose the trip's haul (gold, shards and
+    items gathered below Floor 1, tracked by a snapshot at trip start; "At risk: ..." under the meter). Dying to cave
+    monsters (from Floor 3, 2..8 per floor, `world.village.cave.combat` lets `damagePlayer` hurt in the MENU status) or
+    hazards is the same cave-in, never a game over.
+  * Grit's bench panel: refill (free once a day, then 1,500 + 1,000/level gold); bigger lantern 6 levels (120 s + 30 s
+    per level), each payable with gems OR shards (`LANTERN_COST`). Level + personal best are profile fields
+    `progress.caveLantern` / `progress.caveBest` (sanitized in `sanitizeProgress`).
+  * Depth rarity (`depthWeights`, d = min(floor, 12) - 1): C/R/E/L/M = max(4, 62-7d) / 28+d / 8+3d / 2+1.5d / 0.4(d-2);
+    measured: F1 62/28/8/2/0 %, F4 42/33/18/7/0.4 %, F8 14/38/32/14/2 %, F12 4/37/39/18/3 %. Bonus shards + trade goods
+    (new loot ids deep_geode, mithril_ore, starfire_crystal, adamant_ore, abyssal_diamond) below Floor 1, gold veins
+    x(1 + 0.35d), vein HP x(1 + 0.3d).
+  * **Rare veins** (per vein, chance 6 % -> 34 % with depth, tier rolled without COMMON; Mythic ~0.6 % per vein at F8,
+    ~1.2 % at F12+): dark geode + big rarity-coloured crystal cluster that shrinks as it cracks, beam for Legendary /
+    Mythic, "Mythic Vein" etc. on the prompt, diamond marker on the minimap, HP x(1.5 + 0.9 tier) on top of the depth
+    hardness; guaranteed shards + a trade good of their tier. They count toward "harvest all veins".

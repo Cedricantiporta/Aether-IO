@@ -67,6 +67,12 @@ export const LOOT: LootDef[] = [
   d('grave_locket', 'Grave Locket', 'RARE', 'locket', ['#e9c860', '#c8f0ff'], 'A faded portrait inside.'),
   d('ore_nugget', 'Ore Nugget', 'COMMON', 'nugget', ['#b87a3a', '#ffcf80'], 'Raw metal-bearing rock.'),
   d('raw_gem', 'Raw Gemstone', 'RARE', 'crystal', ['#ff6ac8', '#ffe0f4'], 'Uncut, but promising.', 1.2),
+  // Crystal Cave depths (engine/caveData CAVE_GOODS: deeper floors roll rarer ones)
+  d('deep_geode', 'Deep Geode', 'EPIC', 'crystal', ['#9a6aff', '#e8d8ff'], 'Split it open and the dark sparkles back.'),
+  d('mithril_ore', 'Mithril Ore', 'EPIC', 'nugget', ['#9fc8d8', '#f0fbff'], 'Light as a feather, hard as a promise.'),
+  d('starfire_crystal', 'Starfire Crystal', 'LEGENDARY', 'crystal', ['#ffc83a', '#fff6c8'], 'Warm to the touch, even in the deepest dark.'),
+  d('adamant_ore', 'Adamant Ore', 'LEGENDARY', 'nugget', ['#5a6a7a', '#ffd070'], 'No forge in the valley is hot enough. Yet.'),
+  d('abyssal_diamond', 'Abyssal Diamond', 'MYTHIC', 'crystal', ['#ff3a5a', '#ffe0f0'], 'Pulled from the bottom of the world.'),
 ];
 
 export const LOOT_BY_ID: Record<string, LootDef> = Object.fromEntries(LOOT.map((l) => [l.id, l]));
@@ -98,6 +104,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
   CART: ['coin_pouch', 'silver_goblet', 'ancient_relic', 'royal_seal'],
   GRAVE: ['old_bone', 'grave_locket', 'ancient_relic'],
   CRYSTAL: ['raw_gem', 'echo_crystal'],
+  CAVE_DEPTHS: ['deep_geode', 'mithril_ore', 'starfire_crystal', 'adamant_ore', 'abyssal_diamond'],   // (cave veins only, never rolled by rollLoot)
   ORE: ['ore_nugget', 'raw_gem'],
 };
 

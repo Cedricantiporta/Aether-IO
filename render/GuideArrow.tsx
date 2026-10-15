@@ -24,7 +24,9 @@ const tgt = { x: 0, z: 0, quest: false, hideR: 14 };
 
 function pickTarget(): boolean {
   if (world.village.area !== 'CAVE') return pickTargetIn(world.village.area === 'CASTLE');
-  // crystal cave: every objective is outside, so the arrow points at the way out (only while there is a real objective)
+  // crystal cave: every objective is outside, so the arrow points at the way out (only while there is a real objective;
+  // never on the deep floors, where the way out is the trip's own business)
+  if (world.village.cave.floor > 1) return false;
   if (!pickTargetIn(false) || (!tgt.quest && tgt.x === GATE.x && tgt.z === GATE.z)) return false;
   tgt.x = CAVE_EXIT.x; tgt.z = CAVE_EXIT.z; tgt.hideR = 4.5;
   return true;

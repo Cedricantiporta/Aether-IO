@@ -374,7 +374,7 @@ export function updatePlayerVillage(dt: number): void {
   const a = p.anim;
   const k = world.input.keys;
   p.alive = true;
-  p.hp = st.stats.maxHealth;
+  if (!(world.village.cave.combat && world.village.area === 'CAVE')) p.hp = st.stats.maxHealth;   // (deep cave floors keep real HP, see cave.ts)
   // run-only flashes must still fade in town (a level-up / revive light carried back from a run used to stay lit forever)
   p.levelUpFx = tickDown(p.levelUpFx, dt * 1.2); p.reviveFx = tickDown(p.reviveFx, dt);
   p.avatarT = 0; p.guardT = 0;

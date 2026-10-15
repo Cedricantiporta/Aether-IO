@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import { GATE, WALL_RUNS, WALL_TOWERS } from '../../engine/townData';
 import { HALL } from '../../engine/castleData';
-import { CAVE_DOOR, CAVE_EXIT, caveRadius } from '../../engine/caveData';
+import { CAVE_DOOR } from '../../engine/caveData';
+import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
 import { isHarvestNode } from '../../engine/mapgen';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
@@ -84,19 +85,9 @@ export const Minimap: React.FC = () => {
     if (area === 'CASTLE') {
       ctx.fillStyle = 'rgba(120,112,98,.35)'; ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR;
       ctx.beginPath(); ctx.rect(cx - HALL.hw * k, cx - HALL.hd * k, HALL.hw * 2 * k, HALL.hd * 2 * k); ctx.fill(); ctx.stroke();
-    } else if (area === 'CAVE') {
-      ctx.fillStyle = 'rgba(70,64,58,.75)'; ctx.strokeStyle = 'rgba(150,140,128,.95)'; ctx.lineWidth = 2.2 * DPR;
-      ctx.beginPath();
-      for (let i = 0; i <= 48; i++) { const a = (i / 48) * Math.PI * 2, r = caveRadius(a) * k; const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      for (let i = 0; i < world.crates.length; i++) {
-        const c = world.crates[i]; if (!c.active || !isHarvestNode(c.kind)) continue;
-        ctx.fillStyle = c.kind === 'CRYSTAL' ? '#6fe6ff' : c.kind === 'GOLD_VEIN' ? '#ffd24a' : '#c9a27a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.2 * DPR;
-        ctx.beginPath(); ctx.arc(cx + c.pos.x * k, cx + c.pos.z * k, 3 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      }
-    }
-    if (area === 'CAVE' || area === 'CASTLE') {   // the way out (gold arrow pointing south)
-      const ex = area === 'CAVE' ? CAVE_EXIT.z : HALL.hd, gx = cx, gy = cx + ex * k;
+    } else if (area === 'CAVE') drawCaveMinimap(ctx, cx, k, DPR);   // floor outline, pools, stairs, ladder, flasks, veins, the way out
+    if (area === 'CASTLE') {   // the way out (gold arrow pointing south)
+      const gx = cx, gy = cx + HALL.hd * k;
       ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
       ctx.beginPath(); ctx.moveTo(gx - 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx + 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx, gy + 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
@@ -184,6 +175,7 @@ export const Minimap: React.FC = () => {
     ctx.beginPath(); ctx.moveTo(0, -6 * DPR); ctx.lineTo(4.5 * DPR, 5 * DPR); ctx.lineTo(0, 2.5 * DPR); ctx.lineTo(-4.5 * DPR, 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
     ctx.restore();
+    if (area === 'CAVE') drawCaveFloorTag(ctx, ox + 6 * DPR, 6 * DPR, DPR);
   });
   return (
     <div className="pe relative" style={{ width: `${W / 14.4}rem`, height: `${H / 14.4}rem` }}>
