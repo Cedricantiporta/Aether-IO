@@ -74,7 +74,7 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="ws-tree rpg-scroll" data-testid="craft-slots">
             {CRAFT_SLOTS.map((sl) => (
               <div key={sl} className={`ws-cat ${open === sl ? 'open' : ''}`}>
-                <button className="ws-cat-h pe" onClick={() => setOpen(open === sl ? ('' as CraftSlot) : sl)}><span>{SLOT_LABEL[sl]}</span><ChevronDown size={14} /></button>
+                <button className="ws-cat-h pe" onClick={() => setOpen(open === sl ? ('' as CraftSlot) : sl)}><span>{SLOT_LABEL[sl]}</span>{CRAFT_RARITIES.some((r) => canCraft(st, getRecipe(sl, r, hero)).length === 0) && <b className="ws-can" title="Something here can be crafted" />}<ChevronDown size={14} /></button>
                 {open === sl && CRAFT_RARITIES.map((r) => {
                   const rc = getRecipe(sl, r, hero), lk = heroRank < rc.rankReq, can = canCraft(st, rc).length === 0;
                   return (

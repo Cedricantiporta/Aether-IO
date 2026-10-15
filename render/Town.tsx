@@ -10,6 +10,7 @@ import { isLobbyStatus } from './CameraRig';
 import { questDone } from '../quests';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
+import { canTrainSkill, canBuyTalent, canCraftAny } from '../ui/lib/alerts';
 import { CELL, FX, embers, smokePuff } from './fx';
 import { GB, glowMat, litMat, TAU, angleLerp, damp } from './util';
 import { disposeMerged, mergeCharacter, useCharacterInstance, useClips, CharKey } from './characters';
@@ -465,7 +466,8 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     ring2: new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
-  const label = useMemo(() => { const l = labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate' }); l.mat.depthTest = false; return l; }, [type, color]);   // drawn over roofs
+  const craftDot = useGameStore((s) => type === 'BLACKSMITH' && canCraftAny(s));   // red dot: something can be forged
+  const label = useMemo(() => { const l = labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate', dot: craftDot }); l.mat.depthTest = false; return l; }, [type, color, craftDot]);   // drawn over roofs
   const near = useRef(false);
   const closedK = useRef(0);
   const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
@@ -695,9 +697,11 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     crystal: new MeshBasicMaterial({ color: new Color(1.8, 0.9, 2.6), toneMapped: false }),
     rune: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 0.5), transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), [col]);
-  const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', '#f1e2b8', { size: 60, plate: 'plate' }), [shrine]);
+  const trainDot = useGameStore((s) => !shrine && (canTrainSkill(s) || canBuyTalent(s)));   // only when a lesson / talent is affordable (owner)
+  const canTrain = useGameStore((s) => !shrine && canTrainSkill(s));
+  const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', '#f1e2b8', { size: 60, plate: 'plate', dot: trainDot }), [shrine, trainDot]);
   const sp = useGameStore((s) => s.skillPoints);
-  const spLabel = useMemo(() => (sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#ffffff', { size: 50, bg: 'rgba(10,8,6,0.86)', border: '#c8962e' }) : null), [sp]);
+  const spLabel = useMemo(() => (canTrain && sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#ffffff', { size: 50, bg: 'rgba(10,8,6,0.86)', border: '#c8962e' }) : null), [sp]);
   const near = useRef(false), closedK = useRef(0), rot = useRef(0);
   const ringRef = useRef<Group>(null!), crystalRef = useRef<Mesh>(null!), runeRef = useRef<Mesh>(null!), titleRef = useRef<Sprite>(null!), spRef = useRef<Sprite>(null!);
   const px = position[0], pz = position[2];

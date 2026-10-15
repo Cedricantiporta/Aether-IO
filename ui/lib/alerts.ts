@@ -1,7 +1,11 @@
 // Red-dot alerts for the quick menu: better equippable gear (Bag), new Codex entries or claimable rewards (Codex),
 // unspent skill points (Skills). "Seen" state is per device (localStorage) and cleared when the panel is opened.
 import { create } from 'zustand';
-import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, questFree } from '../../store';
+import { SKILLS_INFO } from '../../constants';
+import { activeDefs, dashKey, isDashKey } from '../../abilityDefs';
+import { unlockLevel, skillCost } from '../../classLevels';
+import { RECIPES, canCraft } from '../../crafting';
 import type { Item, ItemType } from '../../types';
 import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
@@ -56,11 +60,32 @@ export function useCodexAlert(): boolean {
   });
 }
 /** Unspent run skill points / permanent talent points (the dot stays until they are spent). */
-export const useRunSkillAlert = (): boolean => useGameStore((s) => s.skillPoints > 0);
-export const useTalentAlert = (): boolean => useGameStore((s) => {
+/** Something the Skill Trainer can teach right now: an unlocked skill below max whose SP cost is affordable (owner: no dot
+ *  when the points don't cover any lesson). */
+export function canTrainSkill(s: ReturnType<typeof useGameStore.getState>): boolean {
+  if (questFree(s, 'train')) return true;
+  if (s.skillPoints <= 0) return false;
+  const h = s.hero, keys: string[] = [...activeDefs(h).map((a) => a.slot), dashKey(h), 'ult',
+    ...Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === h)).map(([k]) => k)];
+  return keys.some((k) => {
+    const lvl = (s.skillLevels as any)[k] ?? 0;
+    if (lvl >= 5 || (lvl === 0 && s.level < unlockLevel(h, k))) return false;
+    return s.skillPoints >= skillCost(k, lvl, isDashKey(h, k));
+  });
+}
+export function canBuyTalent(s: ReturnType<typeof useGameStore.getState>): boolean {
   const ranks = s.talents[s.hero], free = talentPointsTotal(s.heroRank) - talentsSpent(ranks);
-  return free > 0 && talentsOf(s.hero).some((n) => allocBlock(n, ranks, free) === null);   // only when something can actually be bought
-});
+  return free > 0 && talentsOf(s.hero).some((n) => allocBlock(n, ranks, free) === null);
+}
+/** Any Workshop recipe the hero can forge right now (owner: red dot on the Blacksmith and on the recipe). */
+export function canCraftAny(s: ReturnType<typeof useGameStore.getState>): boolean {
+  const st = { materials: s.materials, gold: s.gold, inventory: s.inventory, heroRank: s.heroRank, maxInventorySlots: s.maxInventorySlots };
+  for (const k in RECIPES) { const r = RECIPES[k]; if (r.hero === s.hero && canCraft(st, r).length === 0) return true; }
+  return false;
+}
+export const useRunSkillAlert = (): boolean => useGameStore(canTrainSkill);
+export const useTalentAlert = (): boolean => useGameStore(canBuyTalent);   // only when something can actually be bought
+export const useCraftAlert = (): boolean => useGameStore(canCraftAny);
 export const useSkillAlert = (): boolean => { const a = useRunSkillAlert(), b = useTalentAlert(); return a || b; };
 /** Claimable goal / bonus chest / achievement reward (the dot stays until everything is claimed). */
 export const useGoalsAlert = (): boolean => useGameStore((s) => {

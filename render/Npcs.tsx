@@ -14,6 +14,7 @@ import { npcs, animals, bubbles } from '../engine/systems/npcs';
 import { STORY } from '../story';
 import { bagCount } from '../npcQuests';
 import { useGameStore } from '../store';
+import { canTrainSkill, canBuyTalent, canCraftAny } from '../ui/lib/alerts';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
 import { disposeMerged, mergeCharacter, useCharacterInstance, useClips } from './characters';
@@ -97,7 +98,8 @@ function NpcActor({ i }: { i: number }) {
   const ch = useCharacterInstance(def.model);
   const clips = useClips();
   const group = useRef<Group>(null!), tag = useRef<Sprite>(null!), mark = useRef<Sprite>(null!), qicon = useRef<Sprite>(null!);
-  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini' }), [def]);
+  const dot = useGameStore((s) => def.opens === 'SKILLS' ? canTrainSkill(s) || canBuyTalent(s) : def.opens === 'BLACKSMITH' ? canCraftAny(s) : false);   // red dot: something to do here
+  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini', dot }), [def, dot]);
   const meshes = useRef<Mesh[]>(ch.meshes);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true, quest: false });
 
