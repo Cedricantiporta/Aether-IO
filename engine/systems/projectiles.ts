@@ -194,7 +194,7 @@ export function fireBasicAttack(): void {
   switch (ptype) {
     case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 4; break; // shorter throw: barbarian is close range
     case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
-    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 3.2; radius = 3.4; break;   // big arcane orbs
+    case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.0; radius = 2.8; break;   // arcane orbs (smaller splash)
     case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 1.8; radius = 1.2; break;   // necromancer: one target, no pierce, a small splash (half damage)
     default: kind = 'ARROW'; speed *= 1.5; life = 2.2; pierce = 1 + extraPierce; break;
   }

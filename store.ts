@@ -328,7 +328,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     if (key) {
       const lvl = skillLevels[key];
       if (lvl === 0) opt.name = `UNLOCK: ${opt.name}`;
-      opt.description = getSkillCardDetails(key, lvl, stats, hero);
+      opt.description = `${getSkillCardDetails(key, lvl, stats, hero)} (this run)`;   // room cards only boost a learned skill for the current run
     }
     if (base.type === 'MULTISHOT') {
       const cur = Math.floor(stats.multishot + 1e-6);
