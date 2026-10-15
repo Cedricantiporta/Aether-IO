@@ -10,7 +10,7 @@ import type { Pickup } from '../engine/types';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, pushHalo } from './fx';
-import { GB, TAU, setInst } from './util';
+import { GB, TAU, commitInst, setInst } from './util';
 import { makeBeamMaterial } from './beam';
 import { useItemPickupsVersion } from './hooks';
 import { labelMaterial } from './label';
@@ -92,7 +92,7 @@ export function Pickups() {
         }
       }
     }
-    for (const [m, n] of [[sys.xp, nx], [sys.coin, nc], [sys.gem, ng], [sys.heart, nh], [sys.shard, ns]] as [InstancedMesh, number][]) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    for (const [m, n] of [[sys.xp, nx], [sys.coin, nc], [sys.gem, ng], [sys.heart, nh], [sys.shard, ns]] as [InstancedMesh, number][]) commitInst(m, n);
     void dtRaw; void paused;
   }, -0.2);
 

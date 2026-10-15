@@ -12,7 +12,7 @@ import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers } from './fx';
-import { clamp, patchFlashRim, setInst } from './util';
+import { clamp, commitInst, liveRange, patchFlashRim, setInst } from './util';
 import { inView } from './view';
 import { MODEL_KINDS, ModelDef, Poser, getModels } from './enemyModels';
 import type { EnemyKind } from '../engine/types';
@@ -113,7 +113,7 @@ export function Enemies() {
     const barMesh = new Mesh(bg, new ShaderMaterial({ vertexShader: BAR_VS, fragmentShader: BAR_FS, transparent: true, depthTest: false, depthWrite: false }));
     barMesh.frustumCulled = false; barMesh.renderOrder = 60;
     group.add(shadows, rings, bubble, ice, stars, halo, barMesh);
-    return { group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX) };
+    return { group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX) };
   }, []);
   useEffect(() => () => { sys.group.traverse((o: any) => { o.geometry?.dispose?.(); }); }, [sys]);
 
@@ -227,16 +227,13 @@ export function Enemies() {
 
     for (let ki = 0; ki < MODEL_KINDS.length; ki++) {
       const K = kinds[MODEL_KINDS[ki]]!, n = counts[ki];
-      for (const m of K.meshes) {
-        m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
-      }
-      K.flash.needsUpdate = true;
+      for (const m of K.meshes) commitInst(m, n);
+      liveRange(K.flash, n);
     }
-    const upd = (m: InstancedMesh, n: number) => { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; };
-    upd(sys.shadows, nSh); sys.shA.needsUpdate = true;
-    upd(sys.rings, nRing); sys.rC.needsUpdate = true; sys.ringMat.uniforms.uTime.value = t;
-    upd(sys.bubble, nBub); upd(sys.ice, nIce); upd(sys.stars, nStar); upd(sys.halo, nHalo);
-    sys.bg.instanceCount = nBar; sys.bPos.needsUpdate = true; sys.bD.needsUpdate = true;
+    commitInst(sys.shadows, nSh); liveRange(sys.shA, nSh);
+    commitInst(sys.rings, nRing); liveRange(sys.rC, nRing); sys.ringMat.uniforms.uTime.value = t;
+    commitInst(sys.bubble, nBub); commitInst(sys.ice, nIce); commitInst(sys.stars, nStar); commitInst(sys.halo, nHalo);
+    sys.bg.instanceCount = nBar; sys.barMesh.visible = nBar > 0; liveRange(sys.bPos, nBar); liveRange(sys.bD, nBar);
   });
 
   return <primitive object={sys.group} visible={status !== GameStatus.HERO_SELECT} />;

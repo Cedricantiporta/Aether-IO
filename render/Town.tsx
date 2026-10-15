@@ -12,7 +12,7 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, smokePuff } from './fx';
 import { GB, glowMat, litMat, TAU, angleLerp, damp } from './util';
-import { useCharacterInstance, useClips, CharKey } from './characters';
+import { disposeMerged, mergeCharacter, useCharacterInstance, useClips, CharKey } from './characters';
 import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
@@ -390,7 +390,9 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
   const clips = useClips();
   const group = useRef<Group>(null!);
   const st = useRef({ mixer: null as AnimationMixer | null, interact: null as AnimationAction | null, run: null as AnimationAction | null, idle: null as AnimationAction | null, wasNear: false, yaw: 0, prevK: 0, runW: 0 });
+  useEffect(() => () => disposeMerged(ch), [ch]);
   useEffect(() => {
+    mergeCharacter(ch);   // 1 draw call instead of 7-9
     const m = new AnimationMixer(ch.root);
     const idle = m.clipAction(clips['Idle_A'] || clips['Idle_B']);
     idle.play(); idle.time = Math.random() * 2;

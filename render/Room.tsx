@@ -20,7 +20,7 @@ import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater, LavaSea } from './RoomWater';
 import { Wanderer } from './Wanderer';
 import { Finale } from './Finale';
-import { GB, fbm, litMat, mulberry32, vnoise } from './util';
+import { GB, commitInst, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
 import { labelMaterial } from './label';
@@ -697,10 +697,7 @@ function SpawnMarkers() {
       fill.setColorAt(n, cc); ring.setColorAt(n, cc);
       n++;
     }
-    fill.count = ring.count = n;
-    fill.instanceMatrix.needsUpdate = ring.instanceMatrix.needsUpdate = true;
-    if (fill.instanceColor) fill.instanceColor.needsUpdate = true;
-    if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
+    commitInst(fill, n); commitInst(ring, n);
   });
   void mf; void mr;
   return (<><primitive object={fill} /><primitive object={ring} /></>);

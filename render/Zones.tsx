@@ -10,7 +10,7 @@ import { gasActive } from '../engine/systems/zones';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
-import { TAU, clamp } from './util';
+import { TAU, clamp, commitInst, liveRange } from './util';
 import { inView } from './view';
 
 const MAXZ = 192;
@@ -309,7 +309,7 @@ export function Zones() {
         default: break;
       }
     }
-    mesh.count = n; mesh.instanceMatrix.needsUpdate = true; sys.iP.needsUpdate = true; sys.iC.needsUpdate = true;
+    commitInst(mesh, n); liveRange(sys.iP, n); liveRange(sys.iC, n);
   });
   return <primitive object={sys.mesh} />;
 }

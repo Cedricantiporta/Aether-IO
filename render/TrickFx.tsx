@@ -6,7 +6,7 @@ import { world } from '../engine/world';
 import { abilityState } from '../engine/systems/abilities';
 import { tether, prism } from '../engine/systems/bossSpecials';
 import { CELL, DECALS, FX, bolt, chunks, dustPuff, flashStar, glowPuff, pushHalo, ringBurst, smokePuff, sparks, splat, gate } from './fx';
-import { TAU } from './util';
+import { TAU, commitInst } from './util';
 
 const rnd = Math.random;
 let tetherAcc = 0;
@@ -184,7 +184,7 @@ export function CrystalWalls() {
       o.position.set(w.x + Math.cos(w.rot) * 0.6, h * 0.3, w.z + Math.sin(w.rot) * 0.6); o.rotation.set(0.25, w.rot + 1, 0.2); o.scale.set(w.r * 0.55, h * 0.3, w.r * 0.55); o.updateMatrix(); im.setMatrixAt(n + 1, o.matrix);
       if (w.rock) nr += 2; else nc += 2;
     }
-    crystal.count = nc; rock.count = nr; crystal.instanceMatrix.needsUpdate = true; rock.instanceMatrix.needsUpdate = true;
+    commitInst(crystal, nc); commitInst(rock, nr);
   });
   return <><primitive object={sys.crystal} /><primitive object={sys.rock} /></>;
 }

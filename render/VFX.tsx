@@ -14,7 +14,7 @@ import {
   CELL, DECALS, FLASHES, FX, Particles, bolt, chunks, dustPuff, embers, flashLight, flashStar, getAtlas, glowPuff,
   ringBurst, scorch, smokePuff, sparks, splat,
 } from './fx';
-import { TAU } from './util';
+import { TAU, liveRange } from './util';
 import { adaptive, getQuality, useQuality } from "./quality";
 
 const PARTICLE_VS = /* glsl */ `
@@ -73,9 +73,8 @@ function ParticleLayer({ sys, additive }: { sys: Particles; additive: boolean })
   useFrame(() => {
     const n = sys.n;
     geo.instanceCount = n;
-    for (const [a, s] of [[attrs.pos, 3], [attrs.vel, 3], [attrs.col, 4], [attrs.data, 4]] as const) {
-      a.clearUpdateRanges(); if (n > 0) a.addUpdateRange(0, n * s); a.needsUpdate = true;
-    }
+    if (ref.current) ref.current.visible = n > 0;   // an empty layer would still be bound + set up every frame
+    liveRange(attrs.pos, n); liveRange(attrs.vel, n); liveRange(attrs.col, n); liveRange(attrs.data, n);
   });
   return <mesh ref={ref} geometry={geo} material={mat} frustumCulled={false} renderOrder={additive ? 12 : 10} />;
 }
@@ -114,11 +113,13 @@ function DecalLayer() {
     const m = new ShaderMaterial({ vertexShader: DECAL_VS, fragmentShader: DECAL_FS, uniforms: { uMap: { value: getAtlas() } }, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     return { geo: g, mat: m, attrs };
   }, []);
+  const dref = useRef<Mesh>(null!);
   useFrame(() => {
     geo.instanceCount = DECALS.n;
-    for (const a of [attrs.pos, attrs.col, attrs.data]) a.needsUpdate = true;
+    if (dref.current) dref.current.visible = DECALS.n > 0;
+    liveRange(attrs.pos, DECALS.n); liveRange(attrs.col, DECALS.n); liveRange(attrs.data, DECALS.n);
   });
-  return <mesh geometry={geo} material={mat} frustumCulled={false} renderOrder={2} />;
+  return <mesh ref={dref} geometry={geo} material={mat} frustumCulled={false} renderOrder={2} />;
 }
 
 function FlashLights() {
