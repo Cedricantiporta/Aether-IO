@@ -1,5 +1,3 @@
-import { summonPool } from '../../summonPool';
-import { shardItem } from '../../shards';
 import { feedReward } from '../../rewardFeed';
 import { RARITY_LABEL_COLOR } from '../../constants';
 import { resetBossMech } from './bossMech';
@@ -20,7 +18,7 @@ import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, type BossKind } from '../enemyDefs';
 import { feat, MAX_FIXED } from '../roomFeatures';
-import { useGameStore, instantiate, makeItemById } from '../../store';
+import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
 import {
@@ -43,7 +41,7 @@ import type { Interactable } from './village';
 import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
-import type { HeroClass, Item, Rarity } from '../../types';
+import type { HeroClass } from '../../types';
 import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper } from '../wanderers';
 import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
 
@@ -778,33 +776,9 @@ function towerCleared(): void {
   const best = st.recordTowerFloor(towerFloor);
   events.emit('towerFloor', { floor: towerFloor, best });
   if (towerFloor % 5 === 0) for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, 0), 2 + Math.floor(towerFloor / 5));   // milestone gems
-  if (towerFloor % 10 === 0) towerMilestone(towerFloor);
+  if (towerFloor % 10 === 0 && best) st.addNotification(`Floor ${towerFloor} milestone reached! Claim its reward at the Endless Tower.`, '#ffd24a', 'BOSS');
 }
 
-/** Every 10th tower floor: a milestone chest straight into the bag. Below floor 100 it alternates gear (Epic, Legendary
- *  from floor 50) and supplies (Upgrade Cores, potions, gems; an Ankh at 50); from floor 100 on every 10th floor pays
- *  shards (Epic, Legendary from 150, Mythic from 300; more the higher you climb). */
-export function towerMilestone(floor: number): void {
-  const st = useGameStore.getState(), got: Item[] = [];
-  let gems = 0;
-  if (floor >= 100) {
-    const r: Rarity = floor >= 300 ? 'MYTHIC' : floor >= 150 ? 'LEGENDARY' : 'EPIC';
-    got.push(shardItem(r, r === 'MYTHIC' ? 1 : 2 + Math.floor((floor - 100) / 50)));
-    if (floor % 50 === 0 && r !== 'MYTHIC') got.push(shardItem(r === 'EPIC' ? 'LEGENDARY' : 'MYTHIC', 1));
-  } else if ((floor / 10) % 2 === 1) {   // 10, 30, 50, 70, 90: a piece of gear
-    const want: Rarity = floor >= 50 ? 'LEGENDARY' : 'EPIC';
-    const pool = summonPool('GEM', st.hero).filter((i) => i.rarity === want && i.type !== 'PET');   // equipment only
-    if (pool.length) got.push(instantiate(pool[Math.floor(Math.random() * pool.length)]));
-    if (floor === 50) got.push(...makeItemById('revive_ankh', 1));
-  } else {   // 20, 40, 60, 80: supplies
-    got.push(...makeItemById('upgrade_core', 2 + floor / 20), ...makeItemById('potion_hp_big', 2));
-    gems = 20 + floor;
-  }
-  for (const it of got) if (!st.addItemToInventory(it)) useGameStore.setState({ warehouse: [...useGameStore.getState().warehouse, it] });   // bag full: to the warehouse
-  if (gems) useGameStore.setState({ gems: useGameStore.getState().gems + gems });
-  st.addNotification(`Floor ${floor} milestone reward!`, '#ffd24a', 'BOSS');
-  feedReward({ items: got, gems });
-}
 
 function onBossCleared(): void {
   const d = dd();

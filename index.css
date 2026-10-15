@@ -2021,3 +2021,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .qt-toast-line { font-family: var(--font-ui, inherit); font-weight: 700; font-size: .78rem; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.8); padding: .15rem .55rem; background: linear-gradient(90deg, rgba(10,8,5,.82), rgba(10,8,5,0)); border-left: 2px solid currentColor; animation: qtToastIn .25s ease-out, qtToastOut .5s ease-in 4.5s forwards; }
 @keyframes qtToastIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 @keyframes qtToastOut { to { opacity: 0; transform: translateX(-8px); } }
+
+/* Endless Tower milestone rewards (tower popup) */
+.so-ms { margin-top: .6rem; display: flex; flex-direction: column; gap: .3rem; max-height: 13rem; overflow-y: auto; }
+.so-ms-row { display: flex; align-items: center; gap: .55rem; padding: .35rem .5rem; border: 1px solid #5a4520; background: linear-gradient(180deg, rgba(40,30,14,.85), rgba(16,12,6,.9)); font-size: .72rem; color: #e8dcc0; }
+.so-ms-row b { color: #ffd76a; min-width: 2.6rem; font-family: var(--font-title, inherit); }
+.so-ms-row span { flex: 1; }
+.so-ms-row i { font-style: normal; font-size: .62rem; color: #8a7e66; white-space: nowrap; }
+.so-ms-row.locked { opacity: .55; }
+.so-ms-row.claim { border-color: #c9a040; box-shadow: 0 0 10px rgba(255, 200, 80, .25) inset; }
+.so-ms-claim { padding: .2rem .7rem; font-weight: 800; font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: #2a1a04; background: linear-gradient(180deg, #ffe7a0, #e0a830); border: 1px solid #fff0b8; cursor: pointer; animation: dotPulse 1.6s ease-in-out infinite; }

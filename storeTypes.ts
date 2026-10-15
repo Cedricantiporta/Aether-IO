@@ -21,7 +21,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number> }
+export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
@@ -193,6 +193,7 @@ export interface GameState {
   setAscension: (lv: number) => void;
   completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
   recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero
+  claimTowerMilestone: (floor: number) => boolean;  // Endless Tower: claim the reward of a reached 10th floor (once per class)
   buyTech: (id: import('./tech').TechId) => boolean;
   setStory: (step: number, p?: number) => void;
   debugSetLevel: (lv: number) => void;               // debug: set the current class level       // main story: move to `step` (progress `p`)   // Tech House: buy the next level of an upgrade

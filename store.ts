@@ -9,6 +9,7 @@ import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
 import { STORY, STORY_V, sanitizeStory, type StorySave } from './story';
+import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, randomPetOf } from './petFusion';
 import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
@@ -500,6 +501,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   ascensionMax: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascensionMax, 0))),
   ascension: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascension, 0))),
   towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0), KNIGHT: num(p?.towerBest?.KNIGHT, 0), NECROMANCER: num(p?.towerBest?.NECROMANCER, 0) },
+  towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
 });
 
 const writeProfile = (s: GameState): void => {
@@ -1117,6 +1119,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       const ascensionMax = Math.min(ASCENSION_MAX, Math.max(p.ascensionMax, cleared + 1));
       set({ progress: { ...p, endings: p.endings + 1, ascensionMax } });
       if (ascensionMax > p.ascensionMax) notify(`Ascension ${ascensionMax} unlocked!`, '#ffd36a', 'BOSS');
+    },
+    claimTowerMilestone: (floor) => {
+      const s = get(), p = s.progress, have = p.towerClaimed[s.hero] ?? [];
+      if (floor % TOWER_STEP !== 0 || floor > (p.towerBest[s.hero] ?? 0) || have.includes(floor)) return false;
+      const { items, gems } = rollMilestone(floor, s.hero, makeItemById, instantiate);
+      set({ progress: { ...p, towerClaimed: { ...p.towerClaimed, [s.hero]: [...have, floor] } }, gems: s.gems + gems });
+      for (const it of items) if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
+      notify(`Floor ${floor} reward claimed!`, '#ffd24a', 'SYSTEM');
+      feedReward({ items, gems });
+      return true;
     },
     recordTowerFloor: (floor) => {
       const s = get(), p = s.progress;

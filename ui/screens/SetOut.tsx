@@ -1,5 +1,6 @@
 // Town gate "Set out" window: pick the run mode. Adventure = the six biomes + the Undying Throne (Ascension level
 // selectable once the ending has been seen); Endless Tower = floor after floor, best floor recorded per class.
+import { milestoneLabel, TOWER_STEP } from '../../towerRewards';
 import React, { useState } from 'react';
 import { Swords, Castle, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { useGameStore } from '../../store';
@@ -35,6 +36,13 @@ export const SetOutWindow: React.FC = () => {
   const asc = Math.min(progress.ascension, progress.ascensionMax);
   const best = progress.towerBest[hero] ?? 0;
   const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Malakar defeated)
+  const claimTower = useGameStore((s) => s.claimTowerMilestone);
+  const claimed = progress.towerClaimed?.[hero] ?? [];
+  // milestones: every reached, unclaimed 10th floor (claimable) + the next three ahead (locked)
+  const reachedTop = Math.floor(best / TOWER_STEP) * TOWER_STEP;
+  const ms: { floor: number; state: 'claim' | 'locked' }[] = [];
+  for (let f = TOWER_STEP; f <= reachedTop; f += TOWER_STEP) if (!claimed.includes(f)) ms.push({ floor: f, state: 'claim' });
+  for (let k = 1; k <= 3; k++) ms.push({ floor: reachedTop + k * TOWER_STEP, state: 'locked' });
   const go = () => { if (mode === 'TOWER' && towerLocked) return; setOpen(false); startMode(mode); };
   return (
     <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={go}>
@@ -51,6 +59,20 @@ export const SetOutWindow: React.FC = () => {
           <span>Climb floor after floor. Elites every 3rd, a champion every 5th, a boss every 10th floor.</span>
           <em>{towerLocked ? 'Sealed: finish a full adventure (defeat Malakar at the end of the Void) to open the tower.' : <><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</>}</em>
         </div>}
+        {mode === 'TOWER' && !towerLocked && (
+          <div className="so-ms" data-testid="tower-milestones">
+            <div className="rpg-label !text-[.65rem] mb-1">Milestone rewards · every {TOWER_STEP}th floor</div>
+            {ms.map((m) => (
+              <div key={m.floor} className={`so-ms-row ${m.state}`}>
+                <b>F{m.floor}</b>
+                <span>{milestoneLabel(m.floor)}</span>
+                {m.state === 'claim'
+                  ? <button className="so-ms-claim pe" onClick={() => claimTower(m.floor)} data-testid={`tower-claim-${m.floor}`}>Claim</button>
+                  : <i>Reach floor {m.floor}</i>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {mode === 'ADVENTURE' && (
         <div className="so-asc" data-testid="so-asc">
