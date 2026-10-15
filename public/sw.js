@@ -1,5 +1,6 @@
 // Minimal offline cache: cache-first for same-origin static assets/models, network-first for pages.
-const CACHE = 'aether-v1';
+// Cache name is per build (index.tsx registers sw.js?v=<build id>), so a new deploy drops the old cache.
+const CACHE = 'aether-' + (new URL(self.location.href).searchParams.get('v') || 'v1');
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
