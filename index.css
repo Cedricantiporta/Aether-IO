@@ -1163,7 +1163,7 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 .fc-burst .fc-card, .fc-result .fc-card { animation: fc-pop .5s cubic-bezier(.2, 1.6, .4, 1); }
 @keyframes fc-pop { from { scale: 1.25; } }
 .fc-ok.fc-result .fc-card { box-shadow: 0 0 0 1px #000, 0 0 50px rgba(255, 200, 90, .7), 0 0 140px 30px rgba(255, 180, 60, .35); border-color: #f3dfa6; }
-.fc-fail.fc-result .fc-card { filter: grayscale(.7) brightness(.7); box-shadow: 0 0 0 1px #000, 0 0 40px rgba(200, 40, 40, .5); border-color: #8a3a35; animation: fc-shake .4s; }
+.fc-fail.fc-result .fc-card { box-shadow: 0 0 0 1px #000, 0 0 40px rgba(200, 40, 40, .5); border-color: #8a3a35; animation: fc-shake .4s; }
 @keyframes fc-shake { 20% { translate: -6px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 3px 0; } }
 .fc-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
 .fc-sparks i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 8px 2px rgba(255, 190, 80, .8); opacity: 0; }

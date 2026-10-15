@@ -20,9 +20,9 @@ export const ItemFuse: React.FC = () => {
   /** plays the fusion cinematic; `fn` performs the fusion at the burst moment (owner: animation + result in the middle) */
   const play = (preview: Item, fn: () => { ok: boolean; item: Item } | null): void => setCine({ preview, run: () => {
     const r = fn(); if (r) setLast(r);
-    return r ? { success: r.ok, item: r.item, title: r.ok ? 'Fusion Success!' : 'Fusion Failed', sub: r.ok ? `${r.item.name} - ${r.item.rarity.charAt(0) + r.item.rarity.slice(1).toLowerCase()}` : `${r.item.name} remains` } : { success: false, item: preview, title: 'Fusion Failed' };
+    return r ? { success: r.ok, item: r.item, title: r.ok ? 'Fusion Success!' : 'Fusion Failed', sub: r.ok ? `${r.item.name} - ${r.item.rarity.charAt(0) + r.item.rarity.slice(1).toLowerCase()}` : `${r.item.name} remains` } : { success: false, item: preview, title: 'Cannot fuse these', sub: 'Pick 5 pieces of the same tier and type. Nothing was used.' };
   } });
-  const gear = inventory.filter(isGear);
+  const gear = inventory.filter((i) => isGear(i) && i.type !== 'PET');   // (pets fuse at the Pet Stable; a pet here made the fusion silently refuse)
   const picked = sel.map((id) => gear.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const tier = picked[0]?.rarity, kind = picked[0]?.type;
   const up = tier ? nextTier(tier) : null;
