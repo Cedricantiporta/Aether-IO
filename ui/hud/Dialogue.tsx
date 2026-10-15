@@ -8,7 +8,7 @@ import { device } from '../../engine/device';
  * X closes. The engine freezes the hero while it is open (engine/systems/village.ts) and handles E there.
  */
 export const Dialogue: React.FC = () => {
-  const { open, name, role, accent, lines, idx, offer, acceptLabel } = useDialogue();
+  const { open, name, role, accent, lines, idx, offer, acceptLabel, hint } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   if (!open) return null;
   const last = idx >= lines.length - 1;
@@ -23,6 +23,7 @@ export const Dialogue: React.FC = () => {
           <button className="dlg-x" aria-label="Close" data-testid="dialogue-close" onPointerDown={(e) => { stop(e); closeDialogue(); }}><X size={18} /></button>
         </div>
         <p className="dlg-text" key={`${name}:${idx}`} data-testid="dialogue-text">{lines[idx]}</p>
+        {last && hint && <p className="dlg-hint" data-testid="dialogue-hint">{hint}</p>}
         <div className="dlg-foot">
           <span className="dlg-dots">{lines.map((_, i) => <i key={i} className={i === idx ? 'on' : i < idx ? 'done' : ''} />)}</span>
           {last && offer

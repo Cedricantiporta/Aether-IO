@@ -8,12 +8,14 @@ import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
 import { useGameStore, makeItemById, instantiate } from '../../store';
 import { events } from '../events';
 import { world } from '../world';
-import { LOOT_BY_ID } from '../../loot';
+import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
+import { spawnPickup } from './pickups';
+import { Vector3 } from 'three';
 import { BOSS_ROTATION } from '../enemyDefs';
 import { NPCS } from '../townData';
-import type { Item } from '../../types';
+import { GameStatus, type Item } from '../../types';
 import {
-  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, npcQuestReady, npcQuestTurnIn, npcMarker,
+  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress,
   type NpcQuestDef, type NpcQuestSave, type NpcObjective,
 } from '../../npcQuests';
 
@@ -95,7 +97,7 @@ function bump(type: NpcObjective['type'], amount: number, hit?: (o: NpcObjective
     if (p === e.p) continue;
     if (!q) q = { ...cur.q };
     q[def.id] = { s: 1, p };
-    if (p >= o.count && o.type !== 'DELIVER') notify(`Objective complete: ${def.title}. Return to ${npcQuestTurnIn(def)}.`);
+    if (p >= o.count && o.type !== 'DELIVER') notify(`Objective complete: ${def.title}. Return to ${npcQuestTurnIn(def)}${st.status === GameStatus.PLAYING ? ' (tap the quest to teleport home)' : ''}.`);
   }
   if (q) useGameStore.setState({ npcQuests: { ...cur, q } });
 }
@@ -169,4 +171,50 @@ export function questDialogueFor(name: string): { mode: 'turnin' | 'offer' | 'pr
   }
   if (offer) return { mode: 'offer', def: offer };
   return prog ? { mode: 'progress', def: prog } : null;
+}
+
+// ----------------------------------------------------------- quest drops ---
+// While an accepted DELIVER quest still needs goods, monsters / harvest nodes that carry them drop them more often
+// (25% per kill, harvest nodes always), so delivery side quests never turn into a 150-kill grind.
+const _qd = new Vector3();
+function wantedDrop(kind: string): string | null {
+  const st = useGameStore.getState();
+  const tbl = LOOT_TABLES[kind];
+  if (!tbl) return null;
+  for (const d of NPC_QUESTS) {
+    const o = d.objective;
+    if (o.type !== 'DELIVER' || st.npcQuests.q[d.id]?.s !== 1) continue;
+    const id = String(o.target);
+    if (tbl.includes(id) && npcQuestProgress(d, st.npcQuests, st.inventory) < o.count) return id;
+  }
+  return null;
+}
+function dropWanted(id: string, x: number, z: number): void {
+  _qd.set(x + (Math.random() - 0.5) * 1.4, 0, z + (Math.random() - 0.5) * 1.4);
+  spawnPickup('ITEM', _qd, 0, lootItem(LOOT_BY_ID[id]));
+}
+events.on('enemyDeath', (e) => {
+  if (e.poof || Math.random() >= 0.25) return;
+  const id = wantedDrop(e.kind);
+  if (id) dropWanted(id, e.pos.x, e.pos.z);
+});
+events.on('crateBreak', (e) => { const id = wantedDrop(e.kind); if (id) dropWanted(id, e.pos.x, e.pos.z); });
+
+/** "Rewards: 1,000 gold · 10 gems · Rare shards x15 · Health Potion x2" for a dialogue hint. */
+export function npcRewardText(r: NpcQuestDef['reward']): string {
+  const parts: string[] = [];
+  if (r.gold) parts.push(`${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
+  if (r.gems) parts.push(`${r.gems} gems`);
+  if (r.shards) parts.push(`${r.shards[0].charAt(0)}${r.shards[0].slice(1).toLowerCase()} shards x${r.shards[1]}`);
+  for (const it of r.items ?? []) { const n = PETS_POOL.find((x) => x.id === it.id)?.name ?? ITEMS_POOL.find((x) => x.id === it.id)?.name ?? it.id; parts.push((it.qty ?? 1) > 1 ? `${n} x${it.qty}` : n); }
+  return parts.length ? `Rewards: ${parts.join(' · ')}` : '';
+}
+/** Lines an NPC says when the hero passes on a message for an accepted TALK quest (said before talkedTo counts it). */
+export function heardLines(name: string): string[] {
+  const st = useGameStore.getState(), out: string[] = [];
+  for (const d of NPC_QUESTS) {
+    const o = d.objective;
+    if (o.type === 'TALK' && o.target === name && d.heard && st.npcQuests.q[d.id]?.s === 1 && (st.npcQuests.q[d.id]?.p ?? 0) < o.count) out.push(d.heard);
+  }
+  return out;
 }

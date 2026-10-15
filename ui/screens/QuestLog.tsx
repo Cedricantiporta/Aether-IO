@@ -9,7 +9,7 @@ import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { CHAPTERS, stepCount, storyIdx, STORY, type StoryStep } from '../../story';
-import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, type NpcReward, type NpcQuestDef } from '../../npcQuests';
+import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, bagCount, type NpcReward, type NpcQuestDef } from '../../npcQuests';
 import { activeQuests, questDone, questTitle, type QuestReward } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
@@ -52,7 +52,8 @@ export const QuestLog: React.FC = () => {
   const step: StoryStep | undefined = STORY[sel];
   const chap = chapIdx.find((c) => sel >= c.a && sel < c.b) ?? chapIdx[0];
   const inRun = status === GameStatus.PLAYING;
-  const track = () => { setOpen(false); if (!offerTeleport(walkToMain)) walkToMain(); };
+  const mainTown = !!(step && (step.npc || step.at)) && !(step?.deliver && bagCount(inv, step.deliver.id) < step.deliver.count);   // continues in town right now
+  const track = () => { setOpen(false); if (!inRun) walkToMain(); else if (mainTown) offerTeleport(walkToMain); };
   const side = [...npcActive, ...npcOpen, ...npcLocked].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0] ?? npcLocked[0];
 
   return (
@@ -108,7 +109,7 @@ export const QuestLog: React.FC = () => {
                 {sel === story.step && (
                   <div className="qw-btns">
                     <button className="qw-btn pe" onClick={track}><MapPin size={15} /> Track</button>
-                    {inRun && (step.npc || step.at) && <button className="qw-btn gold pe" onClick={() => { setOpen(false); offerTeleport(walkToMain); }}><Navigation size={15} /> Teleport</button>}
+                    {inRun && mainTown && <button className="qw-btn gold pe" onClick={() => { setOpen(false); offerTeleport(walkToMain); }}><Navigation size={15} /> Teleport</button>}
                   </div>
                 )}
               </div>
@@ -142,7 +143,7 @@ export const QuestLog: React.FC = () => {
                       <Rewards r={side.reward} scale />
                     </div>
                   </div>
-                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); walkToNpcObjective(side.objective, ready ? side.turnIn ?? side.giver : side.objective.type === 'TALK' ? String(side.objective.target) : null); }}><MapPin size={15} /> Track</button></div>}
+                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
                 </div>
               );
             })()}

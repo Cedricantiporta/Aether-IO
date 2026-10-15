@@ -1,86 +1,59 @@
-// Ground arrow beside the hero in the town hub. Points at the current quest objective in town (claim at the Quest Board,
-// talk to / report to the King, sell loot at the Potion Shop); otherwise at the town gate. Inside the castle it points at
-// the King (royal quest) or the exit (quest ready to claim).
-import { storyTarget } from '../engine/systems/storyLogic';
+// Ground arrow beside the hero in the town hub. Points ALONG THE WALKABLE ROUTE (engine/systems/townPath route hint) to
+// where the current objective continues (engine/systems/questNav): the main quest's NPC / shop first (gold), then a
+// bounty to claim, the King, loot to sell, a side quest to hand in (cyan), then the main quest's field objective (the
+// Adventure Portal). Inside the castle it leads to the King / a castle NPC or the exit.
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { ConeGeometry, Color, Mesh, MeshBasicMaterial } from 'three';
-import { world, QUEST_POS } from '../engine/world';
+import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
-import { GATE, NPCS } from '../engine/townData';
-import { CASTLE_DOOR, CASTLE_EXIT } from '../engine/castleData';
-import { CAVE_EXIT } from '../engine/caveData';
-import { SHOP_POSITIONS, shopFront } from '../constants';
+import { NPCS } from '../engine/townData';
 import { questDone, questNeedsKing } from '../quests';
-import { npcs } from '../engine/systems/npcs';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
+import { mainNav, boardQuestNav, navNpc, npcArea, type NavTarget } from '../engine/systems/questNav';
+import { updateRouteHint } from '../engine/systems/townPath';
+import { gateOpen } from '../story';
 
 const GOLD = new Color('#f2c14e'), QUEST = new Color('#4fe3ff');
-const KING = NPCS.find((n) => n.king);
-const POTION = SHOP_POSITIONS.find((s) => s.type === 'SUPPLIES')!;
-const tgt = { x: 0, z: 0, quest: false, hideR: 14 };
+const tgt = { x: 0, z: 0, reach: 2, quest: false, hideR: 4.5 };
+const use = (t: NavTarget, quest: boolean): boolean => { tgt.x = t.x; tgt.z = t.z; tgt.reach = t.reach; tgt.quest = quest; tgt.hideR = Math.max(4.5, t.reach + 1); return true; };
 
 function pickTarget(): boolean {
-  if (world.village.area !== 'CAVE') return pickTargetIn(world.village.area === 'CASTLE');
-  // crystal cave: every objective is outside, so the arrow points at the way out (only while there is a real objective)
-  if (!pickTargetIn(false) || (!tgt.quest && tgt.x === GATE.x && tgt.z === GATE.z)) return false;
-  tgt.x = CAVE_EXIT.x; tgt.z = CAVE_EXIT.z; tgt.hideR = 4.5;
-  return true;
-}
-function pickTargetIn(castle: boolean): boolean {
   const st = useGameStore.getState(), qs = st.quests;
-  const king = qs.some(questNeedsKing), claim = qs.some(questDone);
-  const sell = qs.some((q) => q.accepted && q.type === 'SELL_LOOT' && q.progress < q.target) && st.inventory.some((i) => i.type === 'LOOT');
-  tgt.quest = true; tgt.hideR = 4.5;
-  // the main story comes first when it waits on someone to talk to (gold arrow); field steps fall through to the gate
-  const ms = storyTarget();
-  if (ms && ms.npc >= 0) {
-    tgt.quest = false;
-    if ((ms.area === 'CASTLE') === castle) { tgt.x = npcs[ms.npc].x; tgt.z = npcs[ms.npc].z; }
-    else if (castle) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; }
-    else { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; }
-    return true;
-  }
-  // a shop / board step (in town; from the castle head for the exit)
-  if (ms && ms.shop) {
-    tgt.quest = false;
-    if (castle) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; } else { tgt.x = ms.x; tgt.z = ms.z; }
-    return true;
-  }
-  // an NPC story quest ready to turn in (lowest priority of the quest targets)
-  const mk = npcMarkers();
+  // 1) the main quest when it waits on someone / a shop in town (gold)
+  const main = mainNav();
+  if (main && !main.field) return use(main, false);
+  // 2) a bounty to claim / report to the King / loot to sell, a side quest ready to hand in (cyan)
+  const q = qs.find(questDone) ?? qs.find(questNeedsKing) ?? qs.find((x) => x.accepted && x.type === 'SELL_LOOT' && x.progress < x.target && st.inventory.some((i) => i.type === 'LOOT'));
+  if (q) return use(boardQuestNav(q), true);
+  const mk = npcMarkers(), here = world.village.area;
   let npcI = -1;
-  for (let i = 0; i < mk.length; i++) if (mk[i] === 3 && (npcI < 0 || (NPCS[i].area === 'CASTLE') === castle)) npcI = i;   // prefer one in the current area
-  if (castle) {
-    if (king && KING?.home) { tgt.x = KING.home[0]; tgt.z = KING.home[1]; return true; }
-    if (claim || sell) { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; return true; }
-    if (npcI >= 0) { if (NPCS[npcI].area === 'CASTLE') { tgt.x = npcs[npcI].x; tgt.z = npcs[npcI].z; } else { tgt.x = CASTLE_EXIT.x; tgt.z = CASTLE_EXIT.z; } return true; }
-    return false;
-  }
-  if (claim) { tgt.x = QUEST_POS[0]; tgt.z = QUEST_POS[2]; return true; }
-  if (king) { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; return true; }
-  if (sell) { const f = shopFront(POTION, 4); tgt.x = f.x; tgt.z = f.z; return true; }
-  if (npcI >= 0) { if (NPCS[npcI].area === 'CASTLE') { tgt.x = CASTLE_DOOR.x; tgt.z = CASTLE_DOOR.z; } else { tgt.x = npcs[npcI].x; tgt.z = npcs[npcI].z; } return true; }
-  tgt.x = GATE.x; tgt.z = GATE.z; tgt.quest = false; tgt.hideR = 14;
-  return true;
+  for (let i = 0; i < mk.length; i++) if (mk[i] === 3 && (npcI < 0 || npcArea(i) === here)) npcI = i;   // prefer one in the current area
+  if (npcI >= 0) return use(navNpc(npcI), true);
+  // 3) the main quest's field objective: out to the Adventure Portal (once the gate is open)
+  if (main && gateOpen(st.story)) { use(main, false); tgt.hideR = 9; return true; }
+  return false;
 }
 
 export function GuideArrow() {
   const geo = useMemo(() => new ConeGeometry(0.55, 1.5, 3).rotateX(Math.PI / 2), []);
   const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false, color: GOLD.clone() }), []);
   const ref = useRef<Mesh>(null!);
-  const acc = useRef(1);
+  const S = useRef({ acc: 1, has: false, ax: 0, az: 0 });
   useFrame(({ clock }, dt) => {
     const m = ref.current; if (!m) return;
-    const on = useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone;
-    acc.current += dt;
-    let has = true;
-    if (acc.current > 0.25) { acc.current = 0; has = pickTarget(); mat.color.copy(tgt.quest ? QUEST : GOLD); (m.userData as { has?: boolean }).has = has; }
-    else has = (m.userData as { has?: boolean }).has !== false;
-    const p = world.player.pos, dx = tgt.x - p.x, dz = tgt.z - p.z, d = Math.hypot(dx, dz);
-    m.visible = on && has && d > tgt.hideR;
+    const on = useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone && !world.village.pending;
+    const s = S.current, p = world.player.pos;
+    s.acc += dt;
+    if (on && s.acc > 0.25) {
+      s.has = pickTarget(); mat.color.copy(tgt.quest ? QUEST : GOLD);
+      if (s.has) { const h = updateRouteHint(p.x, p.z, tgt.x, tgt.z, tgt.reach, s.acc); s.ax = h.x; s.az = h.z; }
+      s.acc = 0;
+    }
+    const dx = s.ax - p.x, dz = s.az - p.z, d = Math.hypot(dx, dz), dt2 = Math.hypot(tgt.x - p.x, tgt.z - p.z);
+    m.visible = on && s.has && dt2 > tgt.hideR && d > 0.3;
     if (!m.visible) return;
     const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
     m.position.set(p.x + (dx / d) * k, (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * k);
