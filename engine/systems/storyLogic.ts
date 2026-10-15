@@ -1,5 +1,6 @@
 // Main story chain runtime: talking to the step's NPC advances it (dialogue.ts), kills of the step's enemy kind count
-// during runs, the ending finishes the Lich step. Also answers "where does the main quest continue?" for the guide
+// during runs (also champions / the depth-10 pre-boss for `goal` steps), freed captives count for rescue steps, town
+// actions (`hub` events) count for shop steps, the ending finishes the Lich step. Also answers "where does the main quest continue?" for the guide
 // arrow, the gate beacon and the tracker click (storyTarget).
 import { events } from '../events';
 import { useGameStore } from '../../store';
@@ -9,8 +10,10 @@ import { spawnPickup } from './pickups';
 import { Vector3 } from 'three';
 import { SHOP_POSITIONS, GOLD_SCALE, ITEMS_POOL } from '../../constants';
 import type { Item } from '../../types';
-import { NPCS, GATE, PORTAL } from '../townData';
+import { NPCS, PORTAL, GATE, TOWER } from '../townData';
 import { CASTLE_DOOR } from '../castleData';
+import { world, TRAINER_POS } from '../world';
+import { storyBias, BIOMES } from '../roomDefs';
 
 /** Loot of `id` in the bag. */
 function bagCount(id: string): number {
@@ -73,11 +76,24 @@ function bumpStory(n: number): void {
   const p = Math.min(c, s.p + n);
   if (p >= c) st.setStory(s.step + 1, 0); else st.setStory(s.step, p);
 }
+/** True when killing this enemy (kind, champion flag) right now advances the current main step: its kill kind, or a
+ *  champion / the depth-10 pre-boss of the step's biome for `goal` steps (also used for the quest icon on targets). */
+export function storyWantsKill(kind: string, mini = false): boolean {
+  const step = STORY[useGameStore.getState().story.step];
+  if (!step) return false;
+  if (step.kill) return kind === step.kill.kind || (step.kill.kind === 'SLIME_KING' && kind === 'SPLITTER' && mini);   // SLIME_KING: the Greenwood's depth-10 mini-boss
+  const g = step.goal;
+  if (!g || !mini || !world.room.active) return false;
+  const pre = !!world.room.plan.preboss, b = world.room.biome;
+  if (g.kind === 'CHAMPION') return !pre && b >= g.biome;   // champion rooms / dark hero duels, not the pre-boss
+  if (g.kind === 'PREBOSS') return pre && b % BIOMES.length === g.biome;
+  return false;
+}
 const _drop = new Vector3();
 events.on('enemyDeath', (e) => {
   const st = useGameStore.getState(), step = STORY[st.story.step];
   if (!step || e.poof) return;
-  if (step.kill && (e.kind === step.kill.kind || (step.kill.kind === 'SLIME_KING' && e.kind === 'SPLITTER' && e.mini))) bumpStory(1);   // SLIME_KING: the Meadow's depth-10 mini-boss
+  if ((step.kill || step.goal) && storyWantsKill(e.kind, !!e.mini)) bumpStory(1);
   // quest drops: while a delivery step still needs goods this enemy carries, they drop often (35%)
   const d = step.deliver ?? (step.kill ? STORY[st.story.step + 1]?.deliver : undefined);   // (also while hunting just before it)
   if (d && LOOT_TABLES[e.kind]?.includes(d.id) && Math.random() < 0.35 && bagCount(d.id) < d.count) {
@@ -89,6 +105,15 @@ events.on('hub', (e) => {
   const step = STORY[useGameStore.getState().story.step];
   if (step?.act && step.act.kind === e.kind) bumpStory(e.n);
 });
+events.on('towerFloor', (e) => {   // post-game Tower step: progress = the best floor cleared
+  const st = useGameStore.getState(), step = STORY[st.story.step];
+  if (step?.act?.kind !== 'tower_floor' || e.floor <= st.story.p) return;
+  if (e.floor >= step.act.count) st.setStory(st.story.step + 1, 0); else st.setStory(st.story.step, e.floor);
+});
+events.on('captiveFreed', () => {   // rescue steps: a captive freed in the step's biome (or deeper)
+  const step = STORY[useGameStore.getState().story.step];
+  if (step?.goal?.kind === 'RESCUE' && world.room.biome >= step.goal.biome) bumpStory(1);
+});
 events.on('crateBreak', (e) => {   // a harvest node that yields what a delivery step needs always gives one
   const st = useGameStore.getState(), step = STORY[st.story.step], d = step?.deliver ?? (step?.kill ? STORY[st.story.step + 1]?.deliver : undefined);
   if (!d || !LOOT_TABLES[e.kind]?.includes(d.id) || bagCount(d.id) >= d.count) return;
@@ -96,10 +121,11 @@ events.on('crateBreak', (e) => {   // a harvest node that yields what a delivery
   spawnPickup('ITEM', _drop, 0, lootItem(LOOT_BY_ID[d.id]));
 });
 // Steps already satisfied by the current state (gear equipped by drag / auto-equip, a pet already owned) finish on their own.
-function stateDone(kind: string): boolean {
-  const eq = useGameStore.getState().equipment;
+function stateDone(kind: string, count: number): boolean {
+  const s = useGameStore.getState(), eq = s.equipment;
   if (kind === 'equip') return !!eq.helmet;   // the Leather Cap step (new heroes start with every slot but the helmet filled)
   if (kind === 'buy_pet') return !!eq.pet;
+  if (kind === 'tower_floor') return (s.progress.towerBest[s.hero] ?? 0) >= count;   // already climbed that high
   return false;
 }
 let lastEq: unknown = null, lastStep = -1;
@@ -107,10 +133,11 @@ setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engi
   if (st.equipment === lastEq && st.story.step === lastStep) return;
   lastEq = st.equipment; lastStep = st.story.step;
   const step = STORY[st.story.step];
+  storyBias.rescue = step?.goal?.kind === 'RESCUE'; storyBias.champion = step?.goal?.kind === 'CHAMPION';   // rooms roll these more often meanwhile
   const at = st.story.step;
-  if (step?.act && stateDone(step.act.kind)) queueMicrotask(() => {
+  if (step?.act && stateDone(step.act.kind, step.act.count)) queueMicrotask(() => {
     const now = useGameStore.getState();
-    if (now.story.step === at && stateDone(step.act!.kind)) now.setStory(at + 1, 0);
+    if (now.story.step === at && stateDone(step.act!.kind, step.act!.count)) now.setStory(at + 1, 0);
   });
 }), 0);
 events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods as they are picked up
@@ -130,9 +157,12 @@ const T: StoryTarget = { x: 0, z: 0, area: 'TOWN', npc: -1, shop: false };
 function atPos(at: StoryAt): { x: number; z: number } | null {
   if (at === 'BAG') return null;
   if (at === 'BOARD') { const h = NPCS.find((n) => n.name === 'Hodge'); return h ? { x: h.home[0], z: h.home[1] } : null; }
+  if (at === 'TRAINER') return { x: TRAINER_POS[0], z: TRAINER_POS[2] + 2.6 };
+  if (at === 'TOWER') return { x: TOWER.door.x, z: TOWER.door.z };
   const sp = SHOP_POSITIONS.find((p) => p.type === at);
   const r = sp?.rot ?? 0;   // shops face +z, rotated by rot
-  return sp ? { x: sp.position[0] + Math.sin(r) * 3, z: sp.position[2] + Math.cos(r) * 3 } : null;   // in front of the counter
+  if (!sp) return at === 'BREWER' ? { x: GATE.x, z: GATE.z + 4 } : null;   // a shop not built (yet): the Brewer's hut is outside the gate
+  return { x: sp.position[0] + Math.sin(r) * 3, z: sp.position[2] + Math.cos(r) * 3 };   // in front of the counter
 }
 /** Where the main quest continues right now (null when the chain is finished or the step is done from the bag).
  *  Talk / delivery steps point at the NPC, shop steps at the shop, field steps at the town gate. */

@@ -9,7 +9,7 @@ import { world } from '../../engine/world';
 import { BIOMES, BOSS_INDEX, ROOMS_PER_BIOME } from '../../engine/roomDefs';
 import { BOSS_ROTATION, BOSS_NAMES } from '../../engine/enemyDefs';
 import { talentsOf } from '../../talents';
-import { gateOpen, storyIdx } from '../../story';
+import { gateOpen, storyIdx, STORY_V } from '../../story';
 import { GameStatus } from '../../types';
 import type { RoomType } from '../../engine/types';
 
@@ -35,7 +35,7 @@ const toast = (msg: string) => useGameStore.getState().addNotification(msg, '#7d
 function unlockAdventure() {
   const st = useGameStore.getState();
   if (gateOpen(st.story)) { toast('Debug: the adventure is already open'); return; }
-  useGameStore.setState({ story: { step: storyIdx('king') + 1, p: 0, v: 3 } });   // no step rewards (direct set)
+  useGameStore.setState({ story: { step: storyIdx('king') + 1, p: 0, v: STORY_V } });   // no step rewards (direct set)
   toast('Debug: adventure unlocked');
 }
 function maxCurrencies() {

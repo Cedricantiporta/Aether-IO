@@ -1708,8 +1708,11 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   font-family: var(--font-title); font-size: .85rem; color: #f1e2b8; text-shadow: 0 1px 2px #000; border: 1px solid #4a3a22;
   background: linear-gradient(90deg, rgba(30, 22, 12, .95), rgba(60, 44, 20, .7)), linear-gradient(120deg, #3a2a14, #14100a); }
 .qw-chap[data-ch='1'] .qw-chap-h { background: linear-gradient(90deg, rgba(18, 26, 12, .95), rgba(40, 60, 20, .65)); }
-.qw-chap[data-ch='2'] .qw-chap-h { background: linear-gradient(90deg, rgba(12, 18, 28, .95), rgba(30, 44, 70, .65)); }
-.qw-chap[data-ch='3'] .qw-chap-h { background: linear-gradient(90deg, rgba(26, 10, 26, .95), rgba(60, 20, 60, .65)); }
+.qw-chap[data-ch='2'] .qw-chap-h { background: linear-gradient(90deg, rgba(22, 20, 18, .95), rgba(70, 64, 54, .65)); }
+.qw-chap[data-ch='3'] .qw-chap-h { background: linear-gradient(90deg, rgba(30, 22, 8, .95), rgba(110, 80, 30, .6)); }
+.qw-chap[data-ch='4'] .qw-chap-h { background: linear-gradient(90deg, rgba(12, 18, 28, .95), rgba(50, 80, 110, .6)); }
+.qw-chap[data-ch='5'] .qw-chap-h { background: linear-gradient(90deg, rgba(30, 10, 6, .95), rgba(110, 40, 20, .6)); }
+.qw-chap[data-ch='6'] .qw-chap-h { background: linear-gradient(90deg, rgba(26, 10, 26, .95), rgba(60, 20, 60, .65)); }
 .qw-chap.locked .qw-chap-h { opacity: .45; cursor: default; } .qw-chap.done .qw-chap-h svg { color: #9be86a; }
 .qw-step { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: 100%; margin-left: .6rem; width: calc(100% - .6rem); padding: .5rem .75rem; text-align: left; cursor: pointer;
   font-size: .78rem; color: #d8cfb8; background: rgba(14, 12, 9, .8); border: 1px solid #2e2618; }
@@ -1718,6 +1721,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .qw-step.cur { border-color: #8a6a32; }
 .qw-step.sel { border-color: #f1d58e; background: linear-gradient(90deg, rgba(90, 66, 24, .9), rgba(30, 22, 10, .85)); box-shadow: 0 0 12px rgba(241, 196, 90, .25), inset 3px 0 0 #f1d58e; color: #fff1c8; }
 .qw-step.lock { opacity: .45; cursor: default; }
+.qw-step.lvlock { opacity: .7; } .qw-step.lvlock.sel { opacity: 1; }
+.qw-lv { display: inline-flex; align-items: center; gap: .2rem; flex: none; padding: .05rem .35rem; border-radius: .6rem; border: 1px solid #6a5a3a; color: #e0c98a; font-size: .64rem; font-weight: 700; white-space: nowrap; }
 .qbadge { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 1.5px solid #f1d58e; color: #f1d58e; font-size: .65rem; font-weight: 800; }
 .qbadge.blue { border-color: #8fc0ff; color: #bcdcff; }
 .qw-grp { margin: .3rem 0 .1rem; font-family: var(--font-title); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: #9ccbff; }
@@ -1725,8 +1730,11 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .qw-banner { display: flex; align-items: center; gap: .8rem; padding: .9rem 1rem; border: 1px solid #5a4626;
   background: linear-gradient(90deg, rgba(20, 15, 8, .95) 0%, rgba(50, 36, 14, .8) 55%, rgba(90, 64, 24, .6) 100%); }
 .qw-banner[data-ch='1'] { background: linear-gradient(90deg, rgba(14, 18, 8, .95), rgba(40, 60, 20, .6)); }
-.qw-banner[data-ch='2'] { background: linear-gradient(90deg, rgba(8, 12, 20, .95), rgba(30, 44, 70, .6)); }
-.qw-banner[data-ch='3'] { background: linear-gradient(90deg, rgba(18, 8, 18, .95), rgba(60, 20, 60, .6)); }
+.qw-banner[data-ch='2'] { background: linear-gradient(90deg, rgba(16, 14, 12, .95), rgba(70, 64, 54, .6)); }
+.qw-banner[data-ch='3'] { background: linear-gradient(90deg, rgba(24, 16, 6, .95), rgba(110, 80, 30, .55)); }
+.qw-banner[data-ch='4'] { background: linear-gradient(90deg, rgba(8, 12, 20, .95), rgba(50, 80, 110, .55)); }
+.qw-banner[data-ch='5'] { background: linear-gradient(90deg, rgba(22, 8, 4, .95), rgba(110, 40, 20, .55)); }
+.qw-banner[data-ch='6'] { background: linear-gradient(90deg, rgba(18, 8, 18, .95), rgba(60, 20, 60, .6)); }
 .qw-banner.npc { background: linear-gradient(90deg, rgba(8, 14, 22, .95), rgba(30, 60, 90, .55)); }
 .qw-banner em { display: block; font-style: normal; font-size: .72rem; letter-spacing: .08em; color: #b8a67e; }
 .qw-banner b { font-family: var(--font-title); font-size: 1.3rem; color: #fff1c8; text-shadow: 0 2px 3px #000; }

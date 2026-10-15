@@ -6,6 +6,7 @@ import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
 import { storyTalk, acceptStory } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
+import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel } from '../../npcQuests';
 
 /** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
 interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string; acceptLabel: string }
@@ -75,7 +76,11 @@ export function openDialogue(npc: number): void {
     lines.length = kingPre;
     lines.push(...qLines);
     if (giftAvailable(npc)) lines.unshift(d.gift!.text);
-  } else if (giftAvailable(npc)) lines.push(d.gift!.text);
+  } else {
+    if (giftAvailable(npc)) lines.push(d.gift!.text);
+    const st = useGameStore.getState(), later = NPC_QUESTS.find((q) => q.giver === d.name && npcQuestLevelLocked(q, st.npcQuests, st.heroRank));
+    if (later) lines.push(`I may have a job for you once you are stronger. Come back at Lv ${npcQuestMinLevel(later)}.`);   // level-gated side quest
+  }
   useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0, offer, turnIn });
   onLine(npc, 0);
 }

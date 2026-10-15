@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from 'lucide-react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameStore } from '../../../store';
+import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
 import { CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
@@ -33,8 +33,10 @@ const HammerOrn: React.FC<{ r: number; x: number }> = ({ r, x }) => (
     <rect x="-17" y="-18" width="34" height="18" rx="3" fill="#6a6f7c" stroke="#050304" strokeWidth="1.5" /><path d="M-14 -14 H14" stroke="#aab" strokeOpacity=".5" />
   </g>
 );
-const ForgeEmpty: React.FC = () => (
+const FreeNote: React.FC = () => <div className="rpg-frame gold w-full p-2 text-[.78rem] text-center" data-testid="forge-free">The smith owes Mira a favour: this upgrade is <b className="text-[var(--good)]">FREE</b> (no gold, no cores, sure success).</div>;
+const ForgeEmpty: React.FC<{ free?: boolean }> = ({ free }) => (
   <div className="forge-empty">
+    {free && <FreeNote />}
     <div className="forge-stage">
       <svg viewBox="0 0 380 190" aria-hidden className="forge-orn">
         <Chain d="M40 6 C60 40 90 70 130 100" /><Chain d="M340 6 C320 40 290 70 250 100" /><Chain d="M10 60 C40 80 70 100 110 120" /><Chain d="M370 60 C340 80 310 100 270 120" />
@@ -54,6 +56,7 @@ export const Upgrade: React.FC = () => {
   const { inventory, gold, upgradeItem, actionResult } = useGameStore(useShallow((s) => ({ inventory: s.inventory, gold: s.gold, upgradeItem: s.upgradeItem, actionResult: s.actionResult })));
   const selected = useUiStore((s) => s.selectedItem);
   const setSelected = useUiStore((s) => s.setSelectedItem);
+  const free = useGameStore((s) => questFree(s, 'forge'));   // tutorial "Temper the Steel": no gold, no cores, sure success
   const [forging, setForging] = useState(false);
   const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? null) : null;
   const cores = inventory.filter((i) => i.type === 'CORE').reduce((n, i) => n + (i.quantity || 1), 0);
@@ -62,10 +65,10 @@ export const Upgrade: React.FC = () => {
     if (actionResult?.type === 'UPGRADE' && actionResult.success && actionResult.item) setSelected(actionResult.item);
   }, [actionResult, setSelected]);
 
-  if (!item || !isGear(item)) return <ForgeEmpty />;
+  if (!item || !isGear(item)) return <ForgeEmpty free={free} />;
   const maxed = item.level >= MAX_ITEM_LEVEL;
-  const goldCost = upgradeGoldCost(item), coreCost = upgradeCoreCost(item);
-  const chance = upgradeChance(item);
+  const goldCost = free ? 0 : upgradeGoldCost(item), coreCost = free ? 0 : upgradeCoreCost(item);
+  const chance = free ? 1 : upgradeChance(item);
   const next = upgradedStats(item);
   const can = !maxed && gold >= goldCost && cores >= coreCost && !forging;
   const forge = () => {
@@ -97,6 +100,7 @@ export const Upgrade: React.FC = () => {
               <span>{fmtItemStat(k, item.stats[k]!)} <ArrowRight size={10} className="inline" /> <b className="pos">{fmtItemStat(k, next[k]!)}</b></span></div>
           ))}
         </div>
+        {free && <FreeNote />}
         <div className="w-full">
           <div className="flex justify-between rpg-label !text-[.6rem] mb-1"><span>Success chance</span><span className="rpg-num !text-[.75rem]" style={{ color: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}>{Math.round(chance * 100)}%</span></div>
           <div className="rpg-bar thin" style={{ ['--fill' as any]: chance, ['--bc' as any]: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}><div className="fill" /></div>

@@ -621,3 +621,32 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - The class dash unlocks at class level 20 (classLevels DASH_UNLOCK_LV; tryDash gate, locked slot, hidden on mobile);
   dash recharge 6 s. Tutorial freebies: the Stock Up potion and the first gem summon are free (store `questFree`).
 - Town: two castle guards (Sir Aldo, Sir Bram) flank the castle steps.
+
+### Story v4: biome errands, second town tour, level-gated side quests
+- `story.ts` chain is save `v: 4` (`STORY_V`); v1/v2/v3 saves map by step id (`V1` / `V3` id lists, every v3 id still
+  exists). Each biome chapter = townsperson errands before the guardian: kill N of the biome's own monsters, free
+  captives, slay champions, then the depth-10 pre-boss, then the boss. New step field `goal: { kind: 'RESCUE' |
+  'CHAMPION' | 'PREBOSS', count, biome }` (storyLogic: `captiveFreed` event from roomEvents.freeCaptive; champions = `mini`
+  kills outside the pre-boss room in that biome or deeper; PREBOSS = the `plan.preboss` room of that biome).
+  `storyWantsKill(kind, mini)` drives the count and the target quest icon. While a RESCUE / CHAMPION step is active,
+  `roomDefs.storyBias` makes rescue objectives / champion doors roll more often.
+- Chapters: Greenwood (slimes -> Lysa gel -> Garrick: 8 Dire Wolves -> Mira's second tour -> King -> Slime King ->
+  Elderroot), Marble Halls (Wren: 10 Haunted Armor -> Sir Aldo: free 2 captives -> Sir Bram: 1 champion -> depth-10 ->
+  Gorath), Sunscorch (Lysa: 12 Giant Scorpions -> Maeve: free 2 -> depth-10 -> Hydra), Frostpeak (Dorn: 10 Yetis ->
+  Guard Tamsin: 2 champions -> depth-10 -> Glacius), Ember (Roan: 12 Hellhounds -> Roan: free 3 -> depth-10 -> Ignar),
+  Void (Wren: 12 Void Stalkers -> Elder Tobin: 1 champion -> depth-10 -> Herald), finale.
+- Second town tour (after the slime + wolf hunts): `armor` (buy_armor at the ARMORY; the first armor piece is free),
+  `forge` (upgrade at the Blacksmith: no gold, no cores, 100%), `train` (learn at the TRAINER: 0 SP), `stash` (Warehouse
+  deposit). Freebies via `questFree(s, 'armor' | 'forge' | 'train')` (store.ts) and shown in Armory / Blacksmith /
+  Skills panels. Mira's old side lessons (mira_storage / mira_training / mira_forge) were removed (now in the chain).
+- Side quests: `NpcQuestDef.minLevel` (class level, `cond.rank` kept as alias). Biome-1 quests Lv 3-10, new ones for
+  the deeper biomes (Sir Aldo Lv 12, Sir Bram Lv 16, Lysa Lv 22, Maeve Lv 24, Dorn Lv 30, Tamsin Lv 33, Roan Lv 38,
+  Fenn Lv 40, Wren Lv 45, Tobin Lv 48). Quest window Side tab lists "Unlocks at a higher level" rows with "Lv N";
+  NPCs whose only quest is level-locked say "Come back at Lv N".
+- Elixir Brewer step (after the Warehouse step): Lysa introduces the brewer (`lysa_brew`), then `elixir` = act
+  `brew_elixir` at `BREWER`. The brewer's brew action must emit `events.emit('hub', { kind: 'brew_elixir', n: 1 })`
+  (kind added to the hub union). Until a `BREWER` entry exists in SHOP_POSITIONS the guide arrow / auto-walk aim just
+  outside the town gate (storyLogic.atPos / village.walkToSpot fallbacks).
+- Post-game: after Malakar (`lich`), King Aldric (`tower_king`) points to the Endless Tower; `tower` = act `tower_floor`
+  count 10 at `TOWER` (walks to the tower door), counted from the `towerFloor` event (progress = best floor cleared) or
+  from `progress.towerBest` when already that high. Old saves that had finished the chain land on `tower_king`.

@@ -259,12 +259,15 @@ function rollReward(type: RoomType): RewardKind {
 
 /** Share of champion doors that become a dark hero duel (a solo fight in a ring arena). */
 export const DUEL_CHANCE = 0.35;
+/** Set by the main story (storyLogic) while its current step wants captives freed / champions slain: rescue
+ *  objectives and champion doors then show up more often, so the errand does not depend on luck. */
+export const storyBias = { rescue: false, champion: false };
 const plan = (type: RoomType, next = 0): RoomPlan => {
   if (type === 'MINIBOSS' && Math.random() < DUEL_CHANCE) type = 'DUEL';
   const p: RoomPlan = { type, reward: rollReward(type) };
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {
-    if (type === 'COMBAT' && Math.random() < 0.35) p.obj = pick<RoomObjective>([['DEFEND', 30], ['RESCUE', 25], ['GOBLIN', 25], ['HUNT', 20]]);
+    if (type === 'COMBAT' && Math.random() < (storyBias.rescue ? 0.55 : 0.35)) p.obj = pick<RoomObjective>([['DEFEND', 30], ['RESCUE', storyBias.rescue ? 110 : 25], ['GOBLIN', 25], ['HUNT', 20]]);
     if (Math.random() < 0.3) p.twist = pick<RoomTwist>([['TRAPS', 35], ['DARK', 25], ['CURSED', 20], ['GOLDEN', 20]]);
   }
   return p;
@@ -297,7 +300,7 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   const used = new Set<RoomType>();
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([
-      ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? 9 : 0], ['TREASURE', 9], ['SHRINE', next >= 2 && shrineOk ? 9 : 0],
+      ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? (storyBias.champion ? 28 : 9) : 0], ['TREASURE', 9], ['SHRINE', next >= 2 && shrineOk ? 9 : 0],
       ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0], ['MERCHANT', next >= 2 && merchantOk ? 8 : 0],
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
