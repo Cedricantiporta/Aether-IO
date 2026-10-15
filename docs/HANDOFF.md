@@ -578,3 +578,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   once, tracked in `merged`); profiles save an empty warehouse. Pet fusion: Pet House > Fuse (ui/panels/shop/PetFuse.tsx,
   petFusion.ts, store.fusePets): 5 bag pets of one tier -> Common 60% / Rare 40% / Epic 20% / Legendary 8% for a random
   pet of the next tier (summon-only pets included), else one random pet of the same tier.
+- Malakar is fought twice (director `finalStage`): stage 1 slower (cooldowns x1.35, orbs x0.85, fewer adds, 1 illusion
+  for 20 s); slain, he rises again (stage 2: +25% HP, x1.15 size, faster, Soul Rain + Void Cross patterns, 2 illusions for
+  40 s). Then `finale` (director.ts + render/Finale.tsx): last words dialogue -> essence collapses, 3 bursts -> portal of
+  light -> epilogue room (`plan.epilogue`, Greenwood CAMP without camp props) with Aelia, Keeper of the Font (Mage model,
+  hat hidden, white dress, black hair; wanderers.ts KEEPER) -> her offer emits `gameEnding` (slides, credits, town).
+- Every boss: periodic absorb barrier (bossMech BARRIER_CD/HP); Hydra has crystal wards; the Lich's guard is cultists.
+  Boss sizes up (Hydra r3.6, Wyrm r3.1, ...), arenas BOSS_ARENA_R 34..50. The Void tiers are lighter.
+- Dashes: flat 4 s, one charge, every class / level (player.ts DASH_CD); dash-cooldown gear, talent and card give dodge.
