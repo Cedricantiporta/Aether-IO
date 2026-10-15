@@ -586,3 +586,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Every boss: periodic absorb barrier (bossMech BARRIER_CD/HP); Hydra has crystal wards; the Lich's guard is cultists.
   Boss sizes up (Hydra r3.6, Wyrm r3.1, ...), arenas BOSS_ARENA_R 34..50. The Void tiers are lighter.
 - Dashes: flat 4 s, one charge, every class / level (player.ts DASH_CD); dash-cooldown gear, talent and card give dodge.
+- Potions 15 s. Instant cards: ULT_FILL / RESTORE / AEGIS (player.aegis absorbs damage first; segmented light-blue bar
+  above the hero bars + see-through sphere, render/Hero.tsx AegisSphere; the sphere turns gold during Shield Wall).
+  Lightpiercer renders as a laser. Settings > Hard mode (difficulty HARD from the next run). Summon: 50% one shard
+  (Rare+, qty 1) / 50% gear (Epic+). Fusion: Pet House > Fuse and Blacksmith > Fuse (gear or shards): 5 of a tier ->
+  60/40/20/8% for the next tier, else one of the same tier (petFusion.ts, store.fusePets / fuseItems / fuseShards).

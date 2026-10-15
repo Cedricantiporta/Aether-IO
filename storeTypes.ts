@@ -210,6 +210,10 @@ export interface GameState {
   buyItem: (item: Item, quantity?: number) => boolean;
   /** Pet fusion: 5 bag pets of one tier -> a chance at one pet of the next tier (else one of the same tier). */
   fusePets: (ids: string[]) => { ok: boolean; item: Item } | null;
+  /** Blacksmith fusion: 5 bag gear pieces of one tier -> a chance at one piece of the next tier (else one of the same tier). */
+  fuseItems: (ids: string[]) => { ok: boolean; item: Item } | null;
+  /** Blacksmith fusion: 5 shards of one tier -> a chance at one shard of the next tier (else one of the same tier). */
+  fuseShards: (r: Rarity) => { ok: boolean; item: Item } | null;
   setAttrs: (a: import('./attributes').Attrs) => boolean;   // allocate attribute points for the current class
   resetAttrs: () => boolean;                               // refund all points (costs gold)
   sellItem: (item: Item, amount?: number) => void;

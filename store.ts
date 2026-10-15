@@ -1325,6 +1325,32 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
       return { ok, item };
     },
+    fuseItems: (ids) => {
+      const s = get();
+      const items = ids.map((id) => s.inventory.find((i) => i.id === id)).filter((i): i is Item => !!i && isGear(i));
+      if (items.length !== FUSE_COUNT || new Set(items.map((i) => i.id)).size !== FUSE_COUNT) return null;
+      const r = items[0].rarity, up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
+      if (!up || chance <= 0 || items.some((i) => i.rarity !== r)) return null;
+      const ok = Math.random() < chance;
+      const pool = summonPool('GEM', s.hero).filter((i) => isGear(i) && i.rarity === (ok ? up : r));
+      if (!pool.length) return null;
+      const item = instantiate(pool[Math.floor(Math.random() * pool.length)]);
+      set({ inventory: [...s.inventory.filter((i) => !ids.includes(i.id)), item] });   // (5 slots freed, 1 used)
+      notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
+      return { ok, item };
+    },
+    fuseShards: (r) => {
+      const s = get();
+      const up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
+      if (!up || chance <= 0 || (s.materials[r] ?? 0) < FUSE_COUNT) return null;
+      const ok = Math.random() < chance;
+      const got: Rarity = ok ? up : r;
+      const materials = { ...s.materials, [r]: s.materials[r] - FUSE_COUNT };
+      materials[got] = (materials[got] ?? 0) + 1;
+      set({ materials, inventory: syncShardStacks(s.inventory, materials) });
+      notify(ok ? `Fusion succeeded: 1 ${up.charAt(0) + up.slice(1).toLowerCase()} shard!` : 'Fusion failed... 1 shard remains.', ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
+      return { ok, item: shardItem(got, 1) };
+    },
     buyItem: (item, quantity = 1) => {
       const s = get();
       const total = firstPetFree(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;
