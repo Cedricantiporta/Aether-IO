@@ -10,7 +10,7 @@
 //   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Skill Trainer (-10.5,-19) on the open paving west of
 //   the castle steps (in front of the dark-roofed house at (-19.5,-14))
 //   west of the plaza Fortune Teller (-12.5, 1.5) / Pet Stable (-21, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
-//   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut top-left by the wall (constants SHOP_POSITIONS
+//   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut out in the west meadow (constants SHOP_POSITIONS
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Adventure Portal at the road's end.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
@@ -32,8 +32,8 @@ export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 60, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
-/** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): top-left of the meadow by the town wall, west of the road, door facing it. */
-export const BREWER_HUT = { x: -14, z: 45, rot: Math.PI / 2 };
+/** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
+export const BREWER_HUT = { x: -22, z: 62, rot: Math.PI / 2 };   // (owner: farther from the town gate; was (-14, 45))
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against the forest edge
@@ -173,6 +173,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
+  // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
+  { x1: 2.4, z1: 76.6, x2: 24, z2: 77.2, w: 2.6, dirt: true }, { x1: 24, z1: 77.2, x2: 43, z2: 77, w: 2.6, dirt: true }, { x1: 43, z1: 77, x2: 48.5, z2: 66.5, w: 2.6, dirt: true },
   // chicken coop -> the mines: east past the coop, up the strip east of the farm, along the east side into the mining camp
   { x1: 41.5, z1: 72.5, x2: 48.5, z2: 66.5, w: 2.6, dirt: true }, { x1: 48.5, z1: 66.5, x2: 54, z2: 57, w: 2.6, dirt: true }, { x1: 54, z1: 57, x2: 58, z2: 45, w: 2.6, dirt: true },
   { x1: 58, z1: 45, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
@@ -387,7 +389,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
 // -------------------------------------------------------------------- NPCs ---
 export type NpcModel = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT' | 'ROGUE';
 export type NpcProp = 'none' | 'staff' | 'hammer' | 'basket' | 'lantern' | 'spear';
-export interface NpcGift { once?: string; gold?: number; item?: 'potion_hp' | 'potion_mana'; qty?: number; text: string }
+export interface NpcGift { /** only while this NPC quest is active (accepted, not handed in) */ quest?: string; once?: string; gold?: number; item?: 'potion_hp' | 'potion_mana'; qty?: number; text: string }
 export interface NpcDef {
   name: string; role: string; model: NpcModel; tint: string; scale: number; prop: NpcProp; accent: string;
   home: [number, number]; patrol?: [number, number][]; speed?: number;
@@ -456,6 +458,7 @@ export const NPCS: NpcDef[] = [
       ['Halt! ...Oh. It is you. Carry on.', 'Follow the road south through the gate to the Adventure Portal in the forest. Step into it when you are ready.'],
       ['Nothing gets past me. Well, nothing except hens. And the Elder\'s cat.', 'Bring back something shiny, will you?'],
       ['Stock up at the potion shop before you set out. Heroes who forget potions tend to come back without their dignity.'],
+      ['I have guarded this gate eleven years. The gate has never once been stolen. You are welcome.'],
     ],
     bubbles: ['Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
   },
@@ -526,6 +529,7 @@ export const NPCS: NpcDef[] = [
     talk: [
       ['Bounties, bounties... the Quest Board north of the plaza is full of them. Slay monsters, earn gold.', 'Come back and claim the reward when you are done.'],
       ['I keep the ledgers straight, and the heroes honest. Check the Quest Board every day for new work.'],
+      ['A hero once asked for a bounty on his own mother-in-law. I said no. Then I met her. I said maybe.'],
     ],
     bubbles: ['Fresh bounties on the board!', 'Hero wanted: apply within.', 'So much paperwork...'],
   },
@@ -610,13 +614,13 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Old Wend', role: 'Hermit', model: 'ROGUE', tint: '#c9b79a', scale: 1, prop: 'staff', accent: '#e6c27a', home: [2.2, -50.2],
     talk: [
-      ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'I have no use for coin, but you do. Take it, and do not tell the Elder.'],
+      ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'Sit, if you like. Not on the bedroll. The bedroll bites.'],
       ['The walls keep the world out, and the world is where the best mushrooms grow. Funny, that.', 'Stay for the fire if you like. I only ask you leave the bedroll alone.'],
       ['Some nights the Frostpeak wind carries singing over the wall. I think it is the bard, lost again.'],
       ['I was a guardian before you. I knew Malakar when he still laughed at supper.', 'He was afraid of dying. Funny, for a man who lived next to the one thing that could have kept him safe.'],
     ],
     bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
-    gift: { once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend drops a heavy sack into your hands. (+10,000 gold)' },
+    gift: { quest: 'pip_secret', once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend pats his pockets, finds a sack he forgot he owned, and drops it in your hands. "Coin is just heavy pebbles. Do not tell the Elder." (+10,000 gold)' },
   },
   // the Skill Trainer beside the training tent west of the castle steps (talking opens the skill panel)
   {

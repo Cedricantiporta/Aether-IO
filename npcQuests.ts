@@ -66,7 +66,7 @@ export interface NpcQuestDef {
 export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
-    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems in a crystal cave',
+    id: 'wend_crystals', minLevel: 4, after: 'pip_secret', giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems in a crystal cave',
     intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'There is a crystal cave in the forest bay east of the town walls, and now and then a door in the wilds opens on a Crystal Cavern too. No monsters, only glowing veins.', 'Mine them and gather ten gemstones, crystals or ore nuggets. Hold on to them, I only want to hear them sing.'],
     progress: 'Ten shards of light, remember. Follow the ring path east of the walls to the cave in the forest bay, or find a Crystal Cavern door in the wilds.',
     done: ['Ahh, look at them sing! You have a good eye, hero.', 'Take this for the trouble.'],
@@ -82,7 +82,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gems: 25, items: [{ id: 'upgrade_core', qty: 2 }] },
   },
   {
-    id: 'wend_warden', minLevel: 8, giver: 'Old Wend', title: 'Warden of the Old Grove', summary: 'Defeat Elderroot the Ancient', after: 'wend_gems',
+    id: 'wend_warden', minLevel: 8, giver: 'Old Wend', title: 'Old Bark, Old Grudges', summary: 'Defeat Elderroot the Ancient', after: 'wend_gems',
     intro: ['Now listen. The Old Grove has a warden, Elderroot, and he has forgotten why he guards it. He walks, he crushes, he does not listen.', 'Put him to rest, hero, and the grove will speak well of you. A friend of mine will follow you home.'],
     progress: 'Elderroot still lumbers through the Old Grove. Strike at his roots and keep moving.',
     done: ['The grove is quiet at last. I felt it from here.', 'A wolf of the wild has taken a liking to you. Treat him kindly.'],
@@ -92,9 +92,9 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- Brenna (farmer): chain of three, ends with a hood
   {
     id: 'brenna_slimes', giver: 'Brenna', title: 'Pests in the Wheat', summary: 'Defeat 30 Slimes',
-    intro: ['Oh, thank the stars. Hero, the slimes keep crawling into my wheat field and I cannot swing a hoe at that many.', 'Could you defeat thirty of them out there?'],
+    intro: ['Oh, thank the stars. Hero, the slimes keep crawling into my wheat field and I cannot swing a hoe at that many.', 'They are not dangerous, just rude. One sat on my lunch. ON it. Could you defeat thirty of them out there?'],
     progress: 'Still green blobs everywhere, thirty of them. I count on you.',
-    done: ['My wheat is saved! Bless you.', 'Here, this is all the spare coin I have.'],
+    done: ['My wheat is saved! Bless you.', 'Here, this is all the spare coin I have. I was saving it for a new lunch.'],
     objective: { type: 'KILL_KIND', target: 'SLIME', count: 30 },
     reward: { gold: 800 },
   },
@@ -119,7 +119,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     id: 'garrick_road', minLevel: 20, giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Sunscorch Desert (biome 3)',
     intro: ['Traders say the road past the Marble Halls turns to sand: the Sunscorch Desert, where the Hydra keeps its mire. Nobody I send comes back with a clear report.', 'Make it to the Sunscorch, hero, and tell me what you see.'],
     progress: 'The Sunscorch Desert is past the Marble Halls: three realms deep. Keep going!',
-    done: ['So the desert is real, and you came back. I am impressed.', 'The watch pays for good scouting.'],
+    done: ['So the desert is real, and you came back. I am impressed. I lost a bet with the cook.', 'The watch pays for good scouting. Shake the sand out of your boots before you walk on my gate.'],
     objective: { type: 'REACH_BIOME', count: 3 },
     reward: { gold: 3000, gems: 20 },
   },
@@ -143,7 +143,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   {
     id: 'dorn_ore', minLevel: 6, giver: 'Dorn', title: 'Ore for the Forge', summary: 'Deliver 15 Ore Nuggets to Dorn',
     intro: ['My veins outside the walls are dry and the smith keeps knocking. Bring me fifteen Ore Nuggets from the wilds and I will make it worth your while.'],
-    progress: 'Fifteen Ore Nuggets. Look for ore veins in the caverns.',
+    progress: 'Fifteen Ore Nuggets. Look for ore veins in the caverns. Shiny brown rocks. No, not that one, that is a potato.',
     done: ['Heavy and honest! This will keep the forge hot a month.', 'My share: cores for your gear, and a fistful of gold.'],
     objective: { type: 'DELIVER', target: 'ore_nugget', count: 15 },
     reward: { gold: 2500, items: [{ id: 'upgrade_core', qty: 3 }] },
@@ -153,7 +153,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     intro: ['Psst! Hero! I found a shiny pebble and I think the old hermit north of town would love it.', 'But I am not allowed past the wall. Could you ask Old Wend what it is? Then come and tell me!'],
     progress: 'Did you see Old Wend yet? He lives behind the north wall of town.',
     heard: 'A shiny pebble, warm to the touch? That is a sunstone, child. Tell little Pip to keep it out of the rain: it sulks when it gets wet.',
-    done: ['He says it is a sunstone?! I knew it! Here, you can have some of my sweets money.'],
+    done: ['He says it is a sunstone?! I KNEW it! I am going to keep it in my sock drawer. With the other socks.', 'Here, you can have some of my sweets money. Not all of it. Some of it.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
   },
@@ -168,7 +168,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   {
     id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', minLevel: 3,
-    intro: ['Something has been raiding the coop at night. Little green thieves with sticky fingers.', 'Goblins, the lot of them. Thin them out for me: twenty ought to teach them.'],
+    intro: ['Something has been raiding the coop at night. Foxes, I reckoned. Then one of the foxes waved at me.', 'Goblins, the lot of them. I am not great with animals, for a farmer. Thin them out: twenty ought to teach them.'],
     progress: 'Goblins skulk in the Meadow and beyond. Twenty, if you please.',
     done: ['Not a feather lost last night! You have my thanks, and the farm\'s.'],
     objective: { type: 'KILL_KIND', target: 'GOBLIN', count: 20 },
@@ -178,7 +178,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     id: 'dalla_eggs', giver: 'Dalla', title: 'Egg Hunt', summary: 'Collect 5 eggs from the coop nests',
     intro: ['Oh good, a pair of free hands! The hens have been laying all over the place.', 'Gather five eggs from the nests in front of the coop. Mind the beaks.'],
     progress: 'The nests are in front of the coop. A hen lays a fresh one every little while.',
-    done: ['Five lovely eggs, not a crack among them!', 'Take these, I baked too much again.'],
+    done: ['Five lovely eggs, not a crack among them!', 'Do not tell the hens I counted. They get competitive. Take these, I baked too much again.'],
     objective: { type: 'INTERACT', target: 'egg', count: 5 },
     reward: { gold: 500, items: [{ id: 'potion_mana', qty: 2 }] },
   },
@@ -186,7 +186,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     id: 'pip_cat', giver: 'Pip', title: 'Where Is Biscuit?', summary: 'Find Pip\'s cat somewhere in town',
     intro: ['Hero! Biscuit ran away again! She is orange and grumpy and she HIDES.', 'She likes quiet corners behind the houses. Please find her!'],
     progress: 'Biscuit loves quiet corners far from the plaza... the other side of town from me, maybe?',
-    done: ['BISCUIT! You found her! Bad kitty. Good hero!', 'Here, this is my whole savings. Do not tell Mum.'],
+    done: ['BISCUIT! You found her! Bad kitty. Good hero!', 'She says thank you. Well, she hissed. That is cat for thank you.', 'Here, this is my whole savings. Do not tell Mum.'],
     objective: { type: 'INTERACT', target: 'cat', count: 1 },
     reward: { gold: 400, gems: 10 },
   },
@@ -318,8 +318,8 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- fishing tutorial (class level UNLOCK_LV.FISHING = 3): Nell sends you to Marlo at the beach, who teaches the rest
   {
     id: 'nell_beach', minLevel: 3, giver: 'Nell', turnIn: 'Marlo', title: 'Gone Fishing', summary: 'Find Marlo the angler at the lakeside beach',
-    intro: ['You look like someone who could use a quiet afternoon. Have you been to the lake beach yet?', 'Follow the new dirt path west, past the Elixir Brewer\'s hut, round the corner tower and down to the boardwalk.', 'Marlo the angler fishes there every day. Tell him Nell sent you. He has been dying to teach somebody.'],
-    progress: 'Marlo is on the lakeside beach, west of the town wall. Take the dirt path past the Elixir Brewer\'s hut.',
+    intro: ['You look like someone who could use a quiet afternoon. Have you been to the lake beach yet?', 'Follow the new dirt path west from the road, past the hay cart, round the corner tower and down to the boardwalk.', 'Marlo the angler fishes there every day. Tell him Nell sent you. He has been dying to teach somebody.'],
+    progress: 'Marlo is on the lakeside beach, west of the town wall. Take the dirt path west from the road, past the hay cart.',
     heard: 'Nell sent you? Ha! Then you want to learn to fish. Pull up a plank, friend.',
     done: ['Welcome to the finest beach on the lake. Here, a little coin for the walk.'],
     objective: { type: 'TALK', target: 'Marlo', count: 1 },
@@ -390,9 +390,13 @@ export function sanitizeNpcQuests(raw: unknown): NpcQuestSave {
 // --------------------------------------------------------------- queries ---
 export type NpcQuestStatus = 'LOCKED' | 'AVAILABLE' | 'ACTIVE' | 'DONE';
 
+/** Side quests open only once the main-story town tutorial is through (the hero has met the Quest Board clerk and taken
+ *  a bounty). Kept in sync with the store by engine/systems/npcQuestLogic.ts (owner: quest availability / order). */
+export const questGate = { open: true };
 export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: number): NpcQuestStatus {
   const e = save.q[def.id];
   if (e) return e.s === 2 ? 'DONE' : 'ACTIVE';
+  if (!questGate.open) return 'LOCKED';
   if (def.after && save.q[def.after]?.s !== 2) return 'LOCKED';
   if (def.cond?.boss && !(save.bossKills[def.cond.boss] > 0)) return 'LOCKED';
   if (rank < npcQuestMinLevel(def)) return 'LOCKED';
@@ -402,7 +406,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
 export const npcQuestMinLevel = (def: NpcQuestDef): number => Math.max(def.minLevel ?? 0, def.cond?.rank ?? 0);
 /** Locked ONLY by the class level (its chain and boss condition are met): listed with "Lv N" in the quest window. */
 export function npcQuestLevelLocked(def: NpcQuestDef, save: NpcQuestSave, rank: number): boolean {
-  return !save.q[def.id] && rank < npcQuestMinLevel(def)
+  return questGate.open && !save.q[def.id] && rank < npcQuestMinLevel(def)
     && (!def.after || save.q[def.after]?.s === 2) && (!def.cond?.boss || save.bossKills[def.cond.boss] > 0);
 }
 

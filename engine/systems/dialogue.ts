@@ -32,6 +32,7 @@ const giftKey = (name: string) => 'aether.npcgift.' + name;
 function giftAvailable(npc: number): boolean {
   const g0 = NPCS[npc].gift;
   if (!g0) return false;
+  if (g0.quest) { const e = useGameStore.getState().npcQuests.q[g0.quest]; if (!e || e.s === 2) return false; }   // (owner: no gold before the quest is on)
   if (g0.once) { try { return !localStorage.getItem(g0.once); } catch { return true; } }
   try { return localStorage.getItem(giftKey(NPCS[npc].name)) !== todayKey(); } catch { return true; }
 }

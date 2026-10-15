@@ -16,7 +16,7 @@ import { addSpareFlasks } from './caveKit';
 import { NPCS } from '../townData';
 import { GameStatus, type Item } from '../../types';
 import {
-  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress,
+  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress,
   type NpcQuestDef, type NpcQuestSave, type NpcObjective,
 } from '../../npcQuests';
 
@@ -175,6 +175,14 @@ export function questDialogueFor(name: string): { mode: 'turnin' | 'offer' | 'pr
   if (offer) return { mode: 'offer', def: offer };
   return prog ? { mode: 'progress', def: prog } : null;
 }
+
+// side quests unlock after the main-story tutorial (story step 'king' reached = the bounty board step is done)
+const GATE_STEP = Math.max(0, STORY.findIndex((st) => st.id === 'king'));
+const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; };
+setTimeout(() => {   // (deferred: this module loads while the store module is still initialising)
+  syncGate(useGameStore.getState().story.step);
+  useGameStore.subscribe((s, p) => { if (s.story !== p.story) syncGate(s.story.step); });
+}, 0);
 
 // ----------------------------------------------------------- quest drops ---
 // While an accepted DELIVER quest still needs goods, monsters / harvest nodes that carry them drop them more often
