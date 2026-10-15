@@ -145,7 +145,7 @@ const GemShopTab: React.FC = () => {
   ];
   return (
     <div className="sw-shop rpg-scroll" data-testid="gem-shop">
-      <div className="sw-pane-h"><Gem size={18} /> Gem Shop <em>Spend gems on supplies, shard bundles and companions you can otherwise only summon</em></div>
+      <div className="sw-pane-h"><Gem size={18} /> Gem Shop <em>Spend gems on supplies, shard bundles and Rare / Epic companions</em></div>
       {groups.map(([title, list]) => (
         <div key={title} className="mb-3">
           <div className="rpg-label mb-2">{title}</div>

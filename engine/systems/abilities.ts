@@ -437,7 +437,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const a = abilityState;
       a.orbN = 3 + (lv >= 3 ? 1 : 0) + (stats.orbBonus | 0);
       if (a.orbN > 6) a.orbN = 6;
-      a.orbT = 4 + stats.stormBonus; a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
+      a.orbT = (4 + stats.stormBonus) * 0.5;   // Storm Orbs: half the duration a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
       a.orbDmg = b * 1.7;
       announce('STORM_ORBS');
     } else {
