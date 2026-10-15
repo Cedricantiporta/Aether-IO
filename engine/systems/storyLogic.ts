@@ -9,7 +9,7 @@ import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
 import { spawnPickup } from './pickups';
 import { Vector3 } from 'three';
 import { SHOP_POSITIONS, GOLD_SCALE, ITEMS_POOL } from '../../constants';
-import type { Item } from '../../types';
+import { GameStatus, type Item } from '../../types';
 import { NPCS, PORTAL, GATE, TOWER } from '../townData';
 import { CASTLE_DOOR } from '../castleData';
 import { world, TRAINER_POS } from '../world';
@@ -126,12 +126,24 @@ function stateDone(kind: string, count: number): boolean {
   if (kind === 'equip') return !!eq.helmet;   // the Leather Cap step (new heroes start with every slot but the helmet filled)
   if (kind === 'buy_pet') return !!eq.pet;
   if (kind === 'tower_floor') return (s.progress.towerBest[s.hero] ?? 0) >= count;   // already climbed that high
+  if (kind === 'accept') return s.quests.some((q) => q.accepted);   // a bounty already taken (all 3 slots full would block a new accept)
   return false;
 }
-let lastEq: unknown = null, lastStep = -1;
+/** Live progress of the current main step for the tracker (delivery steps read the bag, so selling the goods shows). */
+export function storyProgress(): number {
+  const s = useGameStore.getState().story, step = STORY[s.step];
+  if (step?.deliver) return Math.min(step.deliver.count, bagCount(step.deliver.id));
+  return s.p;
+}
+let lastEq: unknown = null, lastStep = -1, lastQ: unknown = null;
 setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engine import cycle)
-  if (st.equipment === lastEq && st.story.step === lastStep) return;
-  lastEq = st.equipment; lastStep = st.story.step;
+  if (st.equipment === lastEq && st.story.step === lastStep && st.quests === lastQ) return;
+  const moved = lastStep >= 0 && st.story.step > lastStep;
+  lastEq = st.equipment; lastStep = st.story.step; lastQ = st.quests;
+  // finished a field step during a run and the chain continues in town: say how to get there (the tracker offers a teleport)
+  const nx = STORY[st.story.step];
+  if (moved && st.status === GameStatus.PLAYING && nx && (nx.npc || nx.at) && !nx.deliver)
+    queueMicrotask(() => useGameStore.getState().addNotification(`Next: ${nx.line}. Tap the main quest to teleport home.`, '#f1d58e', 'SYSTEM'));
   const step = STORY[st.story.step];
   storyBias.rescue = step?.goal?.kind === 'RESCUE'; storyBias.champion = step?.goal?.kind === 'CHAMPION';   // rooms roll these more often meanwhile
   const at = st.story.step;
@@ -143,7 +155,11 @@ setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engi
 events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods as they are picked up
   if (e.kind !== 'ITEM' || !e.name) return;
   const st = useGameStore.getState(), step = STORY[st.story.step];
-  if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === e.name && st.story.p < step.deliver.count) st.setStory(st.story.step, st.story.p + 1);
+  if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === e.name && st.story.p < step.deliver.count) {
+    const have = Math.min(step.deliver.count, bagCount(step.deliver.id));
+    st.setStory(st.story.step, Math.max(st.story.p + 1, have));
+    if (have >= step.deliver.count) st.addNotification(`You have all ${step.deliver.count} ${e.name}. Bring them to ${step.npc}${st.status === GameStatus.PLAYING ? ' (tap the main quest to teleport home)' : ''}.`, '#f1d58e', 'SYSTEM');
+  }
 });
 events.on('gameEnding', () => {
   const st = useGameStore.getState(), s = st.story;

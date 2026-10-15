@@ -1,22 +1,28 @@
 import { GOLD_SCALE } from '../../constants';
 // NPC dialogue state (a tiny zustand store so the DOM box re-renders only when a line changes) + daily gifts.
+// Order of what an NPC says: the message of a TALK quest you pass on ("heard"), then a side quest ready to hand in
+// (paid on its last line), then the main quest (offer / delivery), else a side quest offer / reminder, else small talk
+// (with one-off news after a guardian falls, the daily gift and a "come back at Lv N" hint).
 import { create } from 'zustand';
 import { NPCS } from '../townData';
 import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
-import { storyTalk, acceptStory } from './storyLogic';
-import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo } from './npcQuestLogic';
-import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel } from '../../npcQuests';
+import { STORY } from '../../story';
+import { storyTalk, acceptStory, rewardText } from './storyLogic';
+import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo, heardLines, npcRewardText } from './npcQuestLogic';
+import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel, npcQuestProgress, type NpcQuestDef } from '../../npcQuests';
+import { takeNews } from '../npcLines';
 
-/** `offer`: NPC quest id offered on the last line (Accept / Later); `turnIn`: NPC quest id paid out on the last line. */
-interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string; acceptLabel: string }
-export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0, offer: '', turnIn: '', acceptLabel: 'Accept' }));
+/** `offer`: quest offered on the last line (Accept / Later; `story:<step>` = main quest); `turnIn`: NPC quest id paid out
+ *  when line `turnInAt` is reached; `hint`: small objective / reward line shown under the LAST line. */
+interface DialogueState { open: boolean; npc: number; name: string; role: string; accent: string; lines: string[]; idx: number; offer: string; turnIn: string; turnInAt: number; acceptLabel: string; hint: string }
+export const useDialogue = create<DialogueState>(() => ({ open: false, npc: -1, name: '', role: '', accent: '#ffd36a', lines: [], idx: 0, offer: '', turnIn: '', turnInAt: -1, acceptLabel: 'Accept', hint: '' }));
 
 /** A one-off conversation not tied to a town NPC (wanderers in run rooms): optional offer with its own button. */
 let customAccept: (() => void) | null = null;
 export function openCustomDialogue(name: string, role: string, accent: string, lines: string[], offer?: { label: string; accept: () => void }): void {
   customAccept = offer?.accept ?? null;
-  useDialogue.setState({ open: true, npc: -1, name, role, accent, lines, idx: 0, offer: offer ? 'custom' : '', turnIn: '', acceptLabel: offer?.label ?? 'Accept' });
+  useDialogue.setState({ open: true, npc: -1, name, role, accent, lines, idx: 0, offer: offer ? 'custom' : '', turnIn: '', turnInAt: -1, acceptLabel: offer?.label ?? 'Accept', hint: '' });
 }
 
 const lastConvo: number[] = NPCS.map(() => -1);
@@ -30,7 +36,7 @@ function giftAvailable(npc: number): boolean {
   try { return localStorage.getItem(giftKey(NPCS[npc].name)) !== todayKey(); } catch { return true; }
 }
 function claimGift(npc: number): void {
-  const g = NPCS[npc].gift; if (!g) return;
+  const g = NPCS[npc].gift; if (!g || !giftAvailable(npc)) return;   // (re-checked: a gift is paid once per day / once ever)
   try { if (g.once) localStorage.setItem(g.once, '1'); else localStorage.setItem(giftKey(NPCS[npc].name), todayKey()); } catch { /* ignore */ }
   const st = useGameStore.getState();
   if (g.gold) st.addGold(g.gold * GOLD_SCALE);
@@ -39,6 +45,18 @@ function claimGift(npc: number): void {
 }
 
 export function dialogueOpen(): boolean { return useDialogue.getState().open; }
+
+/** The hint under a main-quest offer: what comes next + what accepting pays. */
+function storyHint(offer: string): string {
+  const n = Number(offer.slice(6)), next = STORY[n + 1], rw = STORY[n] ? rewardText(STORY[n].reward) : '';
+  return [next ? `Next: ${next.line}` : '', rw].filter(Boolean).join('  ·  ');
+}
+/** The hint under a side-quest offer / reminder. */
+function sideHint(def: NpcQuestDef, mode: 'offer' | 'progress'): string {
+  const st = useGameStore.getState(), o = def.objective;
+  if (mode === 'progress') return o.type === 'TALK' ? def.summary : `${def.summary}  ·  ${npcQuestProgress(def, st.npcQuests, st.inventory)} / ${o.count}`;
+  return [`Objective: ${def.summary}`, npcRewardText(def.reward)].filter(Boolean).join('  ·  ');
+}
 
 export function openDialogue(npc: number): void {
   const d = NPCS[npc]; if (!d) return;
@@ -58,37 +76,57 @@ export function openDialogue(npc: number): void {
     else if (useGameStore.getState().quests.some((q) => q.accepted && q.needsKing && !q.reported)) lines.push('A royal commission awaits its end. Finish the deed, hero, then come and tell me of it.');
   }
   if (d.quest && useGameStore.getState().quests.some(questDone)) lines.push('Oh! One of your bounties is complete. Hurry to the Quest Board and claim your reward!');
-  // NPC story quests (npcQuests.ts): a turn-in / offer / reminder replaces the ambient talk (the gift line stays, first)
+  // a message passed on for a TALK quest: the NPC answers it first (then talkedTo counts it)
+  const heard = heardLines(d.name);
   talkedTo(d.name);
+  // a side quest ready to hand in is paid first, even when this NPC also has the main quest (no blocked turn-ins)
+  const nq0 = questDialogueFor(d.name);
+  const pre: string[] = [...heard];
+  let turnIn = '', turnInAt = -1;
+  if (nq0?.mode === 'turnin') { pre.push(...nq0.def.done); turnIn = nq0.def.id; turnInAt = pre.length - 1; }
   // main story: the step's NPC tells its part (replaces the ambient talk) and the chain moves on
   const story = storyTalk(d.name);
   if (story) {
-    useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines: story.lines, idx: 0, offer: story.offer, turnIn: '' });
-    onLine(npc, 0);
+    const all = [...pre, ...story.lines];
+    show(npc, all, story.offer, turnIn, turnInAt, story.offer ? storyHint(story.offer) : '');
     return;
   }
-  const nq = questDialogueFor(d.name);
-  let offer = '', turnIn = '';
+  const nq = turnIn ? null : nq0;
+  let offer = '', hint = '';
   if (nq) {
     const q = nq.def;
-    const qLines = nq.mode === 'offer' ? [`New quest: ${q.title}`, ...q.intro] : nq.mode === 'turnin' ? q.done.slice() : [q.progress];
-    if (nq.mode === 'offer') offer = q.id; else if (nq.mode === 'turnin') turnIn = q.id;
+    const qLines = nq.mode === 'offer' ? [`New quest: ${q.title}`, ...q.intro] : [q.progress];
+    if (nq.mode === 'offer') offer = q.id;
+    hint = sideHint(q, nq.mode === 'offer' ? 'offer' : 'progress');
     lines.length = kingPre;
     lines.push(...qLines);
     if (giftAvailable(npc)) lines.unshift(d.gift!.text);
+    lines.unshift(...heard);
+  } else if (turnIn) {
+    lines.length = kingPre;
+    if (giftAvailable(npc)) lines.push(d.gift!.text);
+    lines.push(...pre);
+    turnInAt = lines.length - 1;   // paid on the last line (then it may roll on into this NPC's next quest)
   } else {
+    const news = takeNews(d.name);   // one-off news after a guardian fell
+    if (news) lines.splice(kingPre, 0, news);
+    lines.unshift(...heard);
     if (giftAvailable(npc)) lines.push(d.gift!.text);
     const st = useGameStore.getState(), later = NPC_QUESTS.find((q) => q.giver === d.name && npcQuestLevelLocked(q, st.npcQuests, st.heroRank));
     if (later) lines.push(`I may have a job for you once you are stronger. Come back at Lv ${npcQuestMinLevel(later)}.`);   // level-gated side quest
   }
-  useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0, offer, turnIn });
+  show(npc, lines, offer, turnIn, turnInAt, hint);
+}
+function show(npc: number, lines: string[], offer: string, turnIn: string, turnInAt: number, hint: string): void {
+  const d = NPCS[npc];
+  useDialogue.setState({ open: true, npc, name: d.name, role: d.role, accent: d.accent, lines, idx: 0, offer, turnIn, turnInAt, hint, acceptLabel: 'Accept' });
   onLine(npc, 0);
 }
 
 export function closeDialogue(): void {
   const s = useDialogue.getState();
   if (!s.open) return;
-  useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '', acceptLabel: 'Accept' });
+  useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '', turnInAt: -1, acceptLabel: 'Accept', hint: '' });
 }
 
 /** Next line; on the last line closes. Reaching a gift line pays it out (once per day per NPC). */
@@ -101,16 +139,16 @@ export function advanceDialogue(): void {
   onLine(s.npc, idx);
 }
 
-/** A line was reached: a gift line pays out (once per day per NPC), the last line of a turn-in dialogue pays the quest rewards. */
+/** A line was reached: a gift line pays out (once per day per NPC); reaching the end of a turn-in pays the quest. */
 function onLine(npc: number, idx: number): void {
   if (npc < 0) return;   // custom conversation
   const s = useDialogue.getState();
   if (s.lines[idx] === NPCS[npc].gift?.text && giftAvailable(npc)) claimGift(npc);
-  if (s.turnIn && idx === s.lines.length - 1) {
-    const id = s.turnIn; useDialogue.setState({ turnIn: '' });
-    if (completeNpcQuest(id)) {   // rewards paid: the talk rolls straight on into this NPC's next quest, if there is one
+  if (s.turnIn && idx >= s.turnInAt) {
+    const id = s.turnIn, atEnd = idx === s.lines.length - 1; useDialogue.setState({ turnIn: '', turnInAt: -1 });
+    if (completeNpcQuest(id) && atEnd && !s.offer) {   // rewards paid: the talk rolls straight on into this NPC's next quest, if there is one
       const nq = questDialogueFor(s.name);
-      if (nq?.mode === 'offer') useDialogue.setState({ lines: [...s.lines, `New quest: ${nq.def.title}`, ...nq.def.intro], offer: nq.def.id });
+      if (nq?.mode === 'offer') useDialogue.setState({ lines: [...s.lines, `New quest: ${nq.def.title}`, ...nq.def.intro], offer: nq.def.id, hint: sideHint(nq.def, 'offer') });
     }
   }
 }
@@ -120,10 +158,17 @@ export function acceptOffer(): void {
   const s = useDialogue.getState();
   if (!s.open || !s.offer || s.idx < s.lines.length - 1) return;
   if (s.offer === 'custom') { const f = customAccept; customAccept = null; closeDialogue(); f?.(); return; }
-  if (s.offer.startsWith('story:')) {   // main quest: take it; when the same NPC has more to say (next offer), keep talking
+  if (s.offer.startsWith('story:')) {   // main quest: take it; when the same NPC has more to say (next offer / a side quest), keep talking
     acceptStory(s.offer);
     const nx = storyTalk(s.name);
-    if (nx) { useDialogue.setState({ lines: nx.lines, idx: 0, offer: nx.offer, turnIn: '' }); return; }
+    if (nx) { useDialogue.setState({ lines: nx.lines, idx: 0, offer: nx.offer, turnIn: '', turnInAt: -1, hint: nx.offer ? storyHint(nx.offer) : '' }); return; }
+    const nq = questDialogueFor(s.name);
+    if (nq && nq.mode !== 'progress') {
+      const turn = nq.mode === 'turnin';
+      useDialogue.setState({ lines: turn ? nq.def.done.slice() : [`New quest: ${nq.def.title}`, ...nq.def.intro], idx: 0, offer: turn ? '' : nq.def.id, turnIn: turn ? nq.def.id : '', turnInAt: turn ? nq.def.done.length - 1 : -1, hint: turn ? '' : sideHint(nq.def, 'offer') });
+      if (turn) onLine(s.npc, 0);
+      return;
+    }
     closeDialogue(); return;
   }
   acceptNpcQuest(s.offer);
