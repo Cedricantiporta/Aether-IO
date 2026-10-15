@@ -18,6 +18,7 @@ import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
+import { dailyMods } from '../../dailyChallenge';
 
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
 const MAX_DASH_CHARGES = 1;
@@ -80,9 +81,14 @@ function tickDown(v: number, dt: number): number {
   return v > 0 ? Math.max(0, v - dt) : 0;
 }
 
+let dryTextT = -10;
 function usePotion(health: boolean): boolean {
   const st = useGameStore.getState();
   const p = world.player;
+  if (dailyMods.noPotions) {   // Daily Trial: Dry Flasks
+    if (world.time - dryTextT > 4) { dryTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'DRY FLASKS: NO POTIONS', color: 0xef5f55, scale: 0.8, dy: 2.6 }); }
+    return false;
+  }
   const item = st.consumeItem((i) =>
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
@@ -302,7 +308,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
     const lerpK = 1 - Math.exp(-12 * dt);
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;

@@ -7,6 +7,7 @@
 // UI components MUST subscribe with selectors: useGameStore(s => s.gold)
 // (or useShallow for multiple fields). Never call useGameStore() bare.
 // ============================================================================
+import type { DailySave, DailyResult } from './dailyChallenge';
 import type { MetaState } from './goals';
 import type {
   GameStatus, HeroClass, PlayerStats, Upgrade, Item, Rarity, SkillLevels,
@@ -21,7 +22,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]> }
+export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
@@ -196,6 +197,10 @@ export interface GameState {
   completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
   recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero
   claimTowerMilestone: (floor: number) => boolean;  // Endless Tower: claim the reward of a reached 10th floor (once per class)
+  startDaily: () => void;                            // Daily Trial: start today's challenge (dailyChallenge.ts) with the current hero
+  completeDaily: (r: DailyResult) => { rewarded: boolean; newBest: boolean };   // records the score; pays the day's reward once
+  startWaves: () => void;                            // Endless Waves (endlessWaves.ts): survival run with the current hero
+  recordWave: (wave: number) => boolean;             // a wave cleared: best per class (true = new best) + one-time milestone rewards
   buyTech: (id: import('./tech').TechId) => boolean;
   setStory: (step: number, p?: number) => void;
   debugSetLevel: (lv: number) => void;               // debug: set the current class level       // main story: move to `step` (progress `p`)   // Tech House: buy the next level of an upgrade

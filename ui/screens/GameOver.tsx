@@ -7,6 +7,8 @@ import { Panel, Ribbon } from '../components/Frame';
 import { Button } from '../components/Button';
 import { timeMMSS } from '../lib/game';
 import { FALL_LINES } from '../../lore';
+import { DailyResultRows } from './DailyCard';
+import { WavesResultRows } from './WavesCard';
 
 const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; record?: boolean; delay: number }> = ({ icon, label, value, record, delay }) => (
   <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 22 }}
@@ -46,6 +48,8 @@ export const GameOver: React.FC = () => {
               <div className="flex justify-center mb-3 -mt-1">
                 <Ribbon tone="red" className="!text-[1rem]">Depth {run.wave} · Level {run.level}</Ribbon>
               </div>
+              <DailyResultRows />
+              <WavesResultRows />
               <div className="rpg-frame px-3 py-1">
                 {run.towerFloor ? <Row delay={.46} icon={<Crown size={16} />} label="Tower floor cleared" value={run.towerFloor} /> : null}
                 <Row delay={.5} icon={<Crown size={16} />} label="Depth reached" value={run.wave} record={waveRecord} />

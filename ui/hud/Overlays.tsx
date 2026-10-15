@@ -1,5 +1,6 @@
 import { runInfo } from '../../engine/runMods';
 import { towerState } from '../../engine/systems/director';
+import { climbTitle, climbFloor } from '../../dailyChallenge';
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { create } from 'zustand';
@@ -40,7 +41,7 @@ export const Announcer: React.FC = () => {
   const push = useBannerStore((s) => s.push);
   useGameEvent('roomEnter', (e) => {
     if (e.boss) return; // the boss gets its own banner on bossSpawn
-    if (runInfo.mode === 'TOWER') { push({ kind: 'wave', title: 'Endless Tower', sub: `Floor ${towerState.floor}`, ms: 1800 }); return; }
+    if (runInfo.mode === 'TOWER') { push({ kind: 'wave', title: climbTitle(), sub: climbFloor(towerState.floor), ms: 1800 }); return; }
     if (e.index === 0) push({ kind: 'wave', title: e.name, sub: e.biome >= 6 ? 'The cycle begins anew... harder' : 'Biome ' + (e.biome % 6 + 1), ms: 2400 });
     else if (e.type === 'ELITE') push({ kind: 'elite', title: 'Elite Hunt', sub: 'Champions guard this room', ms: 2000 });
     else if (e.type === 'SHRINE') push({ kind: 'elite', title: 'Shrine', sub: 'Touch the altar for a challenge - or leave', ms: 2200 });
@@ -50,7 +51,7 @@ export const Announcer: React.FC = () => {
   });
   useEffect(() => { // the first roomEnter fires inside startRun, before this HUD mounts
     const r = world.room;
-    if (r.active && runInfo.mode === 'TOWER' && world.director.phaseT < 1) push({ kind: 'wave', title: 'Endless Tower', sub: `Floor ${towerState.floor}`, ms: 2400 });
+    if (r.active && runInfo.mode === 'TOWER' && world.director.phaseT < 1) push({ kind: 'wave', title: climbTitle(), sub: climbFloor(towerState.floor), ms: 2400 });
     else if (r.active && r.index === 0 && r.biome === 0 && world.director.phaseT < 1) push({ kind: 'wave', title: biomeOf(0).name, sub: 'Biome 1', ms: 2400 });
   }, [push]);
   useGameEvent('pickup', (e) => {
