@@ -2,7 +2,8 @@
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
-import { FARM, WALL, BREWER_HUT } from '../engine/townData';
+import { FARM, WALL, BREWER_HUT, ROADS } from '../engine/townData';
+import { inCampYard } from '../engine/caveData';
 import { BEACH, beachSandK } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
 
@@ -27,7 +28,19 @@ export function inYard(x: number, z: number, m = 0) {
 export function inForecourtUse(x: number, z: number, m = 0) {
   return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m)
     || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x)
-    || beachSandK(x, z) > 0.15;   // the lakeside beach (render/Beach.tsx has its own props)
+    || beachSandK(x, z) > 0.15   // the lakeside beach (render/Beach.tsx has its own props)
+    || inCampYard(x, z, 2 + m) || onDirtPath(x, z, 1.2 + m);   // the mining camp yard + the dirt paths to the camp / the beach
+}
+/** Within `m` of a dirt path (townData ROADS with `dirt`: meadow -> beach, coop -> mines, the camp). */
+const DIRT = ROADS.filter((r) => r.dirt);
+export function onDirtPath(x: number, z: number, m = 0): boolean {
+  for (const r of DIRT) {
+    const dx = r.x2 - r.x1, dz = r.z2 - r.z1, l2 = dx * dx + dz * dz;
+    const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - r.x1) * dx + (z - r.z1) * dz) / l2)) : 0;
+    const ex = x - r.x1 - dx * t, ez = z - r.z1 - dz * t, w = r.w / 2 + m;
+    if (ex * ex + ez * ez < w * w) return true;
+  }
+  return false;
 }
 
 export function pondEdge(a: number) {

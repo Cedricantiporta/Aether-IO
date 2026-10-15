@@ -9,14 +9,16 @@ import { world, QUEST_POS, TRAINER_POS } from '../world';
 import { STORY, type StoryAt } from '../../story';
 import { NPCS, NESTS, ANIMALS, HIDDEN_CAT, WHEEL_PIN, PORTAL, TOWER } from '../townData';
 import { CASTLE_DOOR, CASTLE_EXIT } from '../castleData';
-import { CAVE_DOOR, CAVE_EXIT } from '../caveData';
+import { CAVE_DOOR, CAVE_EXIT, caveLayout } from '../caveData';
+import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
+import { isFishName } from '../../loot';
 import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
 import { npcs, animals, TALK_R } from './npcs';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests';
 import type { ShopTab } from '../../storeTypes';
 
-export type NavAct = 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'none';
+export type NavAct = 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
 type Area = 'TOWN' | 'CASTLE' | 'CAVE';
 export interface NavTarget {
   x: number; z: number;
@@ -63,7 +65,7 @@ function portal(o: NavTarget): NavTarget {
 export function navNpc(i: number, o: NavTarget = mk()): NavTarget {
   return hop(o, npcArea(i)) ?? set(o, npcs[i].x, npcs[i].z, TALK_REACH, 'npc', '', i);
 }
-export type Spot = StoryAt | 'SUMMON';
+export type Spot = StoryAt | 'SUMMON' | 'FISH' | 'MINE';
 /** A shop counter / the quest board / the skill trainer / the tower door (opened on arrival). */
 export function navSpot(at: Spot, o: NavTarget = mk()): NavTarget | null {
   if (at === 'BAG') return null;
@@ -87,7 +89,7 @@ export function mainNav(): NavTarget | null {
   return portal(MAIN);
 }
 
-const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'BREWER', brew: 'BREWER', tower_floor: 'TOWER', buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
+const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'BREWER', brew: 'BREWER', tower_floor: 'TOWER', buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD', buy_flask: 'MINE' };
 const SIDE = mk();
 /** Where an accepted NPC side quest continues: the turn-in NPC when ready, the TALK target, the farm chore, the shop of
  *  an ACTION objective, else the wilds. */
@@ -115,8 +117,39 @@ export function npcQuestNav(def: NpcQuestDef): NavTarget {
     if (bd < 1e9) return set(SIDE, bx, bz, 2.4, 'none');
     return portal(SIDE);   // (all mined: a Crystal Cavern in the wilds)
   }
+  if (o.type === 'ACTION') { const r = fieldAction(String(o.target)); if (r) return r; }
   if (o.type === 'ACTION' && ACTION_SPOT[String(o.target)]) { const r = navSpot(ACTION_SPOT[String(o.target)], SIDE); if (r) return r; }
   return portal(SIDE);
+}
+
+/** The nearest standing vein in the cave (Floor 1 when walking in from town). */
+function nearestVein(o: NavTarget): NavTarget | null {
+  const p = world.player.pos;
+  let bx = 0, bz = 0, bd = 1e9;
+  for (const c of world.crates) { if (!c.active) continue; const d = (c.pos.x - p.x) ** 2 + (c.pos.z - p.z) ** 2; if (d < bd) { bd = d; bx = c.pos.x; bz = c.pos.z; } }
+  return bd < 1e9 ? set(o, bx, bz, 2.4, 'none') : null;
+}
+/** Tutorial actions done out in the village (not at a shop counter): fishing at the beach, selling to the Fishmonger,
+ *  mining veins in the Crystal Cave, taking its stairs down to Floor 2. null = not one of them. */
+function fieldAction(t: string): NavTarget | null {
+  if (t === 'catch_fish' || (t === 'sell_fish' && !useGameStore.getState().inventory.some((i) => i.type === 'LOOT' && isFishName(i.name)))) {
+    if (!inTown()) return exit(SIDE);
+    const p = world.player.pos;   // the nearer shoreline spot (the pier end is over the water, off the walk grid)
+    let best = FISH_SPOTS[1], bd = 1e9;
+    for (const s of FISH_SPOTS) { if (s.x < -80) continue; const d = (s.x - p.x) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = s; } }
+    return set(SIDE, best.x, best.z, FISH_SPOT_R - 0.8, 'none');
+  }
+  if (t === 'sell_fish') return navSpot('FISH', SIDE);
+  if (t === 'cave_vein' || t === 'cave_deep') {
+    if (area() !== 'CAVE') return hop(SIDE, 'CAVE')!;
+    const cv = world.village.cave;
+    if (t === 'cave_vein' || cv.floor > 1) return nearestVein(SIDE) ?? exit(SIDE);
+    if (cv.left > 0) return nearestVein(SIDE) ?? exit(SIDE);   // Floor 1: every vein first, then the stairs down
+    const L = caveLayout(1);
+    if (cv.oil <= 0 && L.bench) return set(SIDE, L.bench.x, L.bench.z, 2, 'none');   // (empty lantern: Grit's bench first)
+    return set(SIDE, L.down.x, L.down.z, Math.max(1.5, L.down.r - 1), 'down');
+  }
+  return null;
 }
 
 const BOARD = mk();

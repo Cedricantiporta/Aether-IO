@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { tripHaul, caveBest } from '../../engine/systems/cave';
+import { spareFlasks } from '../../engine/systems/caveKit';
 import { useRaf } from '../hooks/useRaf';
 
 /** Crystal cave HUD (village area CAVE): floor title + best + veins left, the lantern meter (orange under 25 %, red and
@@ -9,9 +10,9 @@ import { useRaf } from '../hooks/useRaf';
  *  re-renders). */
 export const CaveHud: React.FC = () => {
   const root = useRef<HTMLDivElement>(null), title = useRef<HTMLDivElement>(null), sub = useRef<HTMLDivElement>(null);
-  const bar = useRef<HTMLDivElement>(null), fill = useRef<HTMLDivElement>(null), time = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLDivElement>(null), fill = useRef<HTMLDivElement>(null), time = useRef<HTMLSpanElement>(null), fl = useRef<HTMLSpanElement>(null);
   const risk = useRef<HTMLDivElement>(null), count = useRef<HTMLDivElement>(null), vig = useRef<HTMLDivElement>(null), black = useRef<HTMLDivElement>(null);
-  const last = useRef({ on: false, floor: -1, left: -1, best: -1, sec: -1, state: '', risk: '', cd: -1, slow: 0 });
+  const last = useRef({ on: false, floor: -1, left: -1, best: -1, sec: -1, state: '', risk: '', cd: -1, slow: 0, fl: -1 });
   useRaf((dt, now) => {
     const r = root.current; if (!r) return;
     const v = world.village, cv = v.cave, on = v.area === 'CAVE', L = last.current;
@@ -25,6 +26,8 @@ export const CaveHud: React.FC = () => {
     }
     const sec = Math.ceil(cv.oil);
     if (sec !== L.sec && time.current) { L.sec = sec; time.current.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }
+    const nf = spareFlasks();   // spare oil flasks from the Mining Supplies (pour themselves in when the lantern runs dry)
+    if (nf !== L.fl && fl.current) { L.fl = nf; fl.current.textContent = nf > 0 ? `+${nf}` : ''; fl.current.style.display = nf > 0 ? '' : 'none'; }
     if (fill.current) fill.current.style.width = `${Math.max(0, Math.min(100, k * 100)).toFixed(1)}%`;
     const state = !deep ? 'safe' : k < 0.1 ? 'crit' : k < 0.25 ? 'low' : 'ok';
     if (state !== L.state && fill.current && bar.current) {
@@ -58,6 +61,7 @@ export const CaveHud: React.FC = () => {
             <div ref={fill} style={{ height: '100%', width: '100%', background: 'linear-gradient(90deg,#c98a2a,#ffe08a)', boxShadow: '0 0 8px rgba(255,200,90,.6)' }} />
           </div>
           <span ref={time} className="rpg-num" style={{ fontSize: 'clamp(.7rem, 2.2vw, .85rem)', color: '#fff', minWidth: '2.6rem', textAlign: 'right' }} />
+          <span ref={fl} className="rpg-num" title="Spare oil flasks" style={{ display: 'none', fontSize: 'clamp(.6rem, 1.9vw, .72rem)', color: '#ffb84a', fontWeight: 700 }} data-testid="cave-flasks" />
         </div>
         <div ref={risk} style={{ fontSize: 'clamp(.6rem, 1.9vw, .72rem)', marginTop: '.2rem', textShadow: '0 1px 2px #000' }} data-testid="cave-risk" />
       </div>

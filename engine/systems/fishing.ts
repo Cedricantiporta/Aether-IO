@@ -69,6 +69,7 @@ export function sellAllFish(): number {
   for (const i of fish) { const q = i.quantity || 1; total += i.price * q; count += q; }
   useGameStore.setState({ gold: st.gold + total, inventory: st.inventory.filter((i) => !fish.includes(i)) });
   st.addQuestProgress('SELL_LOOT', count);
+  events.emit('hub', { kind: 'sell_fish', n: count });
   st.addNotification(`Sold ${count} fish for ${total.toLocaleString()}G`, 'yellow', 'SYSTEM');
   return total;
 }
@@ -150,6 +151,7 @@ function catchFish(): void {
   _pos.set(p.pos.x, p.pos.y, p.pos.z);
   events.emit('pickup', { pos: _pos, kind: 'ITEM', value: 1, rarity: def.rarity, name: def.name });
   events.emit('fishing', { kind: 'catch' });
+  events.emit('hub', { kind: 'catch_fish', n: 1 });   // (the fishing tutorial)
   st.addNotification(`Caught a ${def.name}!`, RARITY_LABEL_COLOR[def.rarity] ?? '#ffffff', 'SYSTEM');
 }
 

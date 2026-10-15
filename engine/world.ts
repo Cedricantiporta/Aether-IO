@@ -150,7 +150,7 @@ export const world = {
     cave: { floor: 1, seed: 0, ver: 0, left: 0, best: 1, oil: 120, oilMax: 120, combat: false, ladder: -1, ladderFound: false, lx: 0, lz: 0,
       dark: 0, rare: new Int8Array(MAX_CRATES), flasks: Array.from({ length: 6 }, () => ({ on: false, x: 0, z: 0 })) },
     // click-to-walk: follow waypoints wp[0..n) (current = i, (x, z) = the waypoint being walked to), then do `act`
-    go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
+    go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0 } as BossHud,
   /** Malakar's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
   illusionBars: [0, 1].map(() => ({ active: false, hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),

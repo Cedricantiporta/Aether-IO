@@ -19,7 +19,7 @@ import { BEACH_BOX } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
-export interface RoadSpec { x1: number; z1: number; x2: number; z2: number; w: number }
+export interface RoadSpec { x1: number; z1: number; x2: number; z2: number; w: number; /** a trodden dirt path along its whole length (outside the walls; any angle) */ dirt?: boolean }
 export interface SignSpec { x: number; z: number }
 
 export const GATE = { x: 0, z: 38 };
@@ -50,7 +50,10 @@ export const TOWER = { x: -31, z: 75, r: 4.2, door: { x: -26, z: 75 } };   // de
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
 
 export const ISLAND_BOXES: [number, number, number, number][] = [
-  [-48.5, -60, 62, 56], // walled town + a walkable ring OUTSIDE the walls on the back / east (the west side is the lake)
+  [-48.5, -54, 56.5, 56], // walled town + a NARROW trail outside the walls on the back / east (the west side is the lake)
+  [-9, -58.5, 9, 0],    // the hermit's clearing behind the north wall (Old Wend's camp, HERMIT_CAMP)
+  [-10, -2, 68, 58],    // the wide east side south of the trail: the mining camp at the Crystal Cave (caveData CAVE_BAY) + the way to the farm
+  [0, 0, 57, 77],       // the strip east of the farm clearing: the dirt path from the chicken coop up to the mines
   [-40, -10, 40, 84],   // the open meadow south of the gate (road, wheat field, brewer's hut; the tree line is pushed well back)
   [-12, -10, 12, 99],   // the forest road on to the Adventure Portal clearing (PORTAL)
   [20, 40, 50, 84],     // the farm clearing east of the road (barn, cows, coop)
@@ -76,9 +79,18 @@ export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
 export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }   // 0 broken pillar, 1 ruined wall, 2 fallen arch
 export const RUINS: RuinSpec[] = [
-  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 58, z: -28, rot: -0.4, kind: 2 },
-  { x: 47, z: -47, rot: 0.8, kind: 1 }, { x: 34, z: -56.5, rot: 0.1, kind: 0 }, { x: 26, z: -45.5, rot: -0.2, kind: 1 }, { x: 16, z: -56, rot: 0.4, kind: 2 },
+  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
+  { x: 47, z: -47.5, rot: 0.8, kind: 1 }, { x: 34, z: -51, rot: 0.1, kind: 0 }, { x: 26, z: -44.4, rot: -0.1, kind: 1 }, { x: 16.5, z: -51.5, rot: 0.2, kind: 2 },
   { x: 9, z: -45, rot: 0, kind: 0 },
+];
+/** Big boulders along the narrow back trail (x, z, collider r, render scale): a rocky, half-blocked way round to the hermit,
+ *  always leaving a gap (walk grid checked). Drawn by render/TownScenery (merged rock meshes). */
+export const TRAIL_ROCKS: [number, number, number, number][] = [
+  [59.2, -5.2, 2.3, 2.6], [61.5, -2.8, 1.4, 1.6],          // the corner where the wide camp narrows into the trail
+  [53.4, -9.5, 1.5, 1.8], [53.3, -21.5, 1.6, 1.9], [47.7, -25.5, 0.9, 1.1], [53.6, -34.5, 1.6, 1.9],
+  [54.2, -49, 2.3, 2.6], [51.5, -52, 1.5, 1.8],            // round the north-east corner tower
+  [39, -49.8, 1.6, 1.9], [30.5, -44.2, 0.9, 1.1], [21.5, -50.2, 1.4, 1.7],
+  [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
 ];
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -159,6 +171,14 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x + 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (west of the road)
   { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
   { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
+  // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
+  { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
+  // chicken coop -> the mines: east past the coop, up the strip east of the farm, along the east side into the mining camp
+  { x1: 41.5, z1: 72.5, x2: 48.5, z2: 66.5, w: 2.6, dirt: true }, { x1: 48.5, z1: 66.5, x2: 54, z2: 57, w: 2.6, dirt: true }, { x1: 54, z1: 57, x2: 58, z2: 45, w: 2.6, dirt: true },
+  { x1: 58, z1: 45, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
+  // inside the camp: on to the mine mouth, and the narrow back trail coming down from the north
+  { x1: 62.5, z1: 21, x2: 66.5, z2: 15.2, w: 2.6, dirt: true }, { x1: 66.5, z1: 15.2, x2: 70.4, z2: 12.8, w: 2.6, dirt: true },
+  { x1: 50.6, z1: -8, x2: 55.5, z2: 3.5, w: 2.2, dirt: true }, { x1: 55.5, z1: 3.5, x2: 62.5, z2: 13, w: 2.2, dirt: true },
 ];
 
 // --------------------------------------------------------------- town wall ---
@@ -207,6 +227,8 @@ export const LAMPS: [number, number][] = [
   [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 53.5], [3.2, 61.5], [-3.2, 66], [3.2, 72],
   // south street (north edge), plaza, north street
   [-9.4, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
+  // the dirt path from the meadow to the beach
+  [-11, 53.9], [-27.5, 54.6], [-42.2, 52.3],
 ];
 
 /** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
@@ -238,16 +260,14 @@ export const PLANTERS: PlanterSpec[] = [
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
   // hermit path (outside the walls): east ring and north ring, both sides of the trail
-  { x: 59.5, z: 30, s: 3.4, kind: 1 }, { x: 59, z: 8, s: 3.2, kind: 0 }, { x: 60, z: -12, s: 3.6, kind: 1 }, { x: 59.5, z: -40, s: 3.3, kind: 0 },
-  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 },
-  { x: 52, z: -57, s: 3.4, kind: 1 }, { x: 40, z: -57.5, s: 3.2, kind: 0 }, { x: 22, z: -57.5, s: 3.5, kind: 1 }, { x: 10, z: -58, s: 3.0, kind: 0 },
-  { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
+  { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
+  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 58.6, z: 33.5, s: 3.4, kind: 1 },   // (the mining camp + the way down to the farm)
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
   { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
-  { x: -32, z: 44, s: 3.4, kind: 0 }, { x: -23, z: 54, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
+  { x: -32, z: 44, s: 3.4, kind: 0 }, { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
   { x: -6, z: 70, s: 3.4, kind: 1 }, { x: -31, z: 62, s: 3.9, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 16, z: 72, s: 3.5, kind: 0 }, { x: 24, z: 46, s: 3.4, kind: 0 },
 ];
@@ -292,6 +312,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     for (let i = 0; i <= n; i++) { const o = -len / 2 + r + ((len - 2 * r) * i) / n; c.push([p.x + (alongX ? o : 0), p.z + (alongX ? 0 : o), r]); }
   }
   for (const t of TOWN_TREES) c.push([t.x, t.z, 0.85]);
+  for (const [x, z, r] of TRAIL_ROCKS) c.push([x, z, r]);
   c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.3]);
   // the brewer's cauldron, work table and barrels in front of / beside the hut (hut-local -> world; the hut itself is the shop collider)
   { const { x, z, rot } = BREWER_HUT, cr = Math.cos(rot), sr = Math.sin(rot);
@@ -328,11 +349,12 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   return c;
 })();
 
-/** Harvest nodes around the town: outside the walls along the east side and behind the castle (the back), never by the
- *  gate. They regrow 24 h after the last one is harvested. */
+/** Harvest nodes around the town: outside the walls on the east side (the mining camp at the Crystal Cave and the path
+ *  up from the farm), never by the gate and never on the narrow back trail to the hermit. They regrow 24 h after the last
+ *  one is harvested. */
 export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE' | 'GOLD_VEIN' | 'HERB'; x: number; z: number }[] = [
-  { kind: 'ORE', x: 53, z: 32 }, { kind: 'HERB', x: 50.5, z: 11 }, { kind: 'CRYSTAL', x: 54, z: -12 }, { kind: 'GOLD_VEIN', x: 51, z: -30 },
-  { kind: 'CRYSTAL', x: 24, z: -50 }, { kind: 'ORE', x: -12, z: -52 }, { kind: 'HERB', x: -30, z: -49 },
+  { kind: 'ORE', x: 53, z: 32 }, { kind: 'HERB', x: 50.5, z: 11 }, { kind: 'CRYSTAL', x: 69.5, z: 19.5 }, { kind: 'GOLD_VEIN', x: 65.5, z: 27.5 },
+  { kind: 'ORE', x: 56, z: 18 }, { kind: 'HERB', x: 52, z: 69.5 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */
@@ -641,6 +663,16 @@ export const NPCS: NpcDef[] = [
       ['Old trick: now and then a vein hides a ladder under it. Find one and you can skip the rest of the floor.', 'And if you take the stairs you came down by, they bring you straight back up here. Shortcut my grandfather dug.'],
     ],
     bubbles: ['Every vein, then deeper.', 'Mind the lantern oil!', 'Hear that? The hill breathing.', 'Bigger lanterns at the bench!'],
+  },
+  // ------------------------------------------------------------ lakeside beach (see engine/beachData.ts): the fishing teacher
+  {
+    name: 'Marlo', role: 'Angler', model: 'ARCHER', tint: '#d8e6c8', scale: 1, prop: 'basket', accent: '#7fc8e8', home: [-60.2, 39.2],
+    talk: [
+      ['The lake gives to the patient, friend. And to the ones with a decent rod.', 'Fishing comes to anyone with a bit of experience: Lv 3 and up, I would say. Before that the fish just laugh at you.'],
+      ['Shoreline is fine for perch and trout. The end of the pier reaches deep water, where the rare ones swim.', 'The Fishmonger buys everything, even boots. Do not ask what she does with the boots.'],
+      ['Some nights I see something gold under the pier. The Aetherfin, they call it. I have never caught it. Yet.'],
+    ],
+    bubbles: ['Steady... steady...', 'They are biting today!', 'Mind the line, friend.', 'Pier end for the big ones.'],
   },
 ];
 

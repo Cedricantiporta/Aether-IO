@@ -40,7 +40,7 @@ import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shard
 import { summonPool } from './summonPool';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
-import { LOOT_STACK_LIMIT, LOOT_BY_ID } from './loot';
+import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned } from './crafting';
 import { petPower } from './petGrowth';
@@ -1498,6 +1498,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       else inv[idx] = { ...cur, quantity: qty - sellQty };
       set({ gold: s.gold + value, inventory: inv });
       if (cur.type === 'LOOT') get().addQuestProgress('SELL_LOOT', sellQty);
+      if (cur.type === 'LOOT' && isFishName(cur.name)) events.emit('hub', { kind: 'sell_fish', n: sellQty });   // (the fishing tutorial)
       notify(`Sold ${sellQty}x ${cur.name} for ${value}G`, 'yellow', 'SYSTEM');
     },
 
@@ -1506,8 +1507,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const loot = s.inventory.filter((i) => i.type === 'LOOT');
       if (loot.length === 0) { notify('No loot to sell.', 'white', 'SYSTEM'); return 0; }
       let total = 0, count = 0;
-      loot.forEach((i) => { const q = i.quantity || 1; total += i.price * q; count += q; });
+      let fish = 0;
+      loot.forEach((i) => { const q = i.quantity || 1; total += i.price * q; count += q; if (isFishName(i.name)) fish += q; });
       set({ gold: s.gold + total, inventory: s.inventory.filter((i) => i.type !== 'LOOT') });
+      if (fish) events.emit('hub', { kind: 'sell_fish', n: fish });
       get().addQuestProgress('SELL_LOOT', count);
       notify(`Sold ${count} loot items for ${total}G`, 'yellow', 'SYSTEM');
       return total;

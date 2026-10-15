@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish, Pickaxe } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
@@ -18,6 +18,7 @@ import { ArmoryTab } from './shop/Armory';
 import { WarehouseTab } from './shop/Warehouse';
 import { BrewerTab } from './shop/Brewer';
 import { FishShopTab } from './shop/FishShop';
+import { MineShopTab } from './shop/MineShop';
 import { useDrop } from '../lib/dnd';
 import { useUiStore } from '../uiStore';
 
@@ -33,6 +34,7 @@ const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }
   { id: 'TECH', label: 'Tech', icon: <Cog size={24} />, title: 'Tech House' },
   { id: 'BREWER', label: 'Brewer', icon: <FlaskConical size={24} />, title: 'Elixir Brewer' },
   { id: 'FISH', label: 'Fish', icon: <Fish size={24} />, title: 'Fishmonger' },
+  { id: 'MINE', label: 'Mining', icon: <Pickaxe size={24} />, title: 'Mining Supplies' },
   { id: 'MERCHANT', label: 'Merchant', icon: <Store size={24} />, title: 'Travelling Merchant' },
 ];
 
@@ -67,6 +69,7 @@ export const ShopPanel: React.FC = () => {
           {tab === 'WAREHOUSE' && <WarehouseTab />}
           {tab === 'BREWER' && <BrewerTab />}
           {tab === 'FISH' && <FishShopTab />}
+          {tab === 'MINE' && <MineShopTab />}
         </div>
       </Panel>
     </motion.div>

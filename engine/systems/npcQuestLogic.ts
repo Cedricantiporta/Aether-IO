@@ -12,6 +12,7 @@ import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
 import { spawnPickup } from './pickups';
 import { Vector3 } from 'three';
 import { BOSS_ROTATION } from '../enemyDefs';
+import { addSpareFlasks } from './caveKit';
 import { NPCS } from '../townData';
 import { GameStatus, type Item } from '../../types';
 import {
@@ -80,6 +81,7 @@ export function completeNpcQuest(id: string): boolean {
     npcQuests: { ...s.npcQuests, q: { ...s.npcQuests.q, [id]: { s: 2, p: def.objective.count } } },
   });
   if (def.reward.shards) s.addMaterial(def.reward.shards[0], def.reward.shards[1]);
+  if (def.reward.flasks) { const n = addSpareFlasks(def.reward.flasks); if (n > 0) notify(`+${n} lantern oil flask${n === 1 ? '' : 's'} for the Crystal Cave`, '#ffd070'); }
   notify(`Quest complete: ${def.title}`);
   feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0] }, true);
   return true;
@@ -207,6 +209,7 @@ export function npcRewardText(r: NpcQuestDef['reward']): string {
   if (r.gold) parts.push(`${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
   if (r.gems) parts.push(`${r.gems} gems`);
   if (r.shards) parts.push(`${r.shards[0].charAt(0)}${r.shards[0].slice(1).toLowerCase()} shards x${r.shards[1]}`);
+  if (r.flasks) parts.push(`Lantern Oil Flask x${r.flasks}`);
   for (const it of r.items ?? []) { const n = PETS_POOL.find((x) => x.id === it.id)?.name ?? ITEMS_POOL.find((x) => x.id === it.id)?.name ?? it.id; parts.push((it.qty ?? 1) > 1 ? `${n} x${it.qty}` : n); }
   return parts.length ? `Rewards: ${parts.join(' · ')}` : '';
 }

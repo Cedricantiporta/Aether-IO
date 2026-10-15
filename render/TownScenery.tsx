@@ -8,10 +8,10 @@ import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
-import { useNature } from './models';
+import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import {
-  CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
+  CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH } from '../engine/beachData';
@@ -291,7 +291,7 @@ function buildDirtPaths(): BufferGeometry {
   const r = new GB([1, 1]);
   const rnd = mulberry32(17);
   for (const rd of ROADS) {
-    const seg = clipZ(rd, WALL.z1 + 2.5, 1e9); if (!seg) continue;
+    const seg = rd.dirt ? [rd.x1, rd.z1, rd.x2, rd.z2] : clipZ(rd, WALL.z1 + 2.5, 1e9); if (!seg) continue;   // (dirt: a path outside the walls, whole length)
     const [x1, z1, x2, z2] = seg;
     const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
     const nx = -dz / len, nz = dx / len;   // sideways
@@ -317,6 +317,7 @@ function buildRoads(): BufferGeometry {
   const EDGE = '#cfcac0', SURF = '#ffffff';
   for (const rd of ROADS) {
     // only the part inside the walls is paved (outside: a dirt path, see buildDirtPaths)
+    if (rd.dirt) continue;
     const seg = clipZ(rd, -1e9, WALL.z1 + 2.5); if (!seg) continue;
     const [x1, z1, x2, z2] = seg;
     const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
@@ -702,6 +703,10 @@ function buildTown() {
   put(STATUE.x, STATUE.z, 0, buildStatue());
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
+  // big mossy boulders half-blocking the narrow back trail to the hermit (colliders: townData TOWN_COLLIDERS)
+  { const rocks = [3, 7, 11, 19].map((k) => makeRockGeo(1200 + k, k % 2 ? '#80868e' : '#727980', '#5a8a3a', 0.8)), rr = mulberry32(919);
+    TRAIL_ROCKS.forEach(([x, z, , sc], i) => { const s1 = sc * (0.95 + rr() * 0.2); at(x, z).b.addColored(rocks[i % rocks.length], [x, -0.25 * sc, z], [0, rr() * 6, 0], [s1 * (1 + rr() * 0.25), s1 * (0.9 + rr() * 0.35), s1 * (1 + rr() * 0.25)]); });
+    rocks.forEach((g) => g.dispose()); }
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
   put(GATE.x, GATE.z, 0, buildGate());
   const sign = buildSignpost();

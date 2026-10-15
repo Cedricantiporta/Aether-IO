@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
-import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL } from '../../engine/townData';
+import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL, ROADS, TRAIL_ROCKS } from '../../engine/townData';
 import { HALL } from '../../engine/castleData';
 import { CAVE_DOOR } from '../../engine/caveData';
 import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
-import { isHarvestNode } from '../../engine/mapgen';
+import { isHarvestNode, islandRadius, mapSeed } from '../../engine/mapgen';
 import { BEACH, DOCK } from '../../engine/beachData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
@@ -28,7 +28,18 @@ const SHOP_ICON: Record<string, Poly[]> = {
   TECH: [[true, 0, -0.9, 0.78, -0.45, 0.78, 0.45, 0, 0.9, -0.78, 0.45, -0.78, -0.45], dia(0, 0, 0.32)],   // hex nut
   BREWER: [[true, -0.8, -0.2, 0.8, -0.2, 0.55, 0.75, -0.55, 0.75], [false, -0.95, -0.2, 0.95, -0.2], dia(-0.25, -0.62, 0.14), dia(0.25, -0.75, 0.12)],   // cauldron
   FISH: [[true, -0.9, 0, -0.35, -0.5, 0.3, -0.35, 0.55, 0, 0.95, -0.5, 0.95, 0.5, 0.55, 0, 0.3, 0.35, -0.35, 0.5], dia(-0.5, -0.08, 0.1)],   // fish
+  MINE: [[false, -0.42, -0.8, 0, -0.66, 0.35, -0.45, 0.66, -0.18, 0.9, 0.18], [false, -0.72, 0.9, 0.35, -0.45]],   // pickaxe
 };
+/** The town's walkable outline (polar island edge, recomputed when the map seed changes): x, z pairs. */
+const ISLE_N = 180, isle = new Float32Array(ISLE_N * 2);
+let isleSeed = -1;
+function islePoints(): Float32Array {
+  if (isleSeed !== mapSeed) {
+    isleSeed = mapSeed;
+    for (let i = 0; i < ISLE_N; i++) { const a = (i / ISLE_N) * Math.PI * 2, r = islandRadius(a) - 1.2; isle[i * 2] = Math.cos(a) * r; isle[i * 2 + 1] = Math.sin(a) * r; }
+  }
+  return isle;
+}
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Rectangular minimap — drawn every frame from the world, no React state. */
@@ -81,8 +92,21 @@ export const Minimap: React.FC = () => {
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.closePath();
-    } else if (town) ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
+    } else if (town) {   // the island's walkable outline (narrow back trail, mining camp bay, beach ...), lightly filled
+      const pts = islePoints();
+      for (let i = 0; i < ISLE_N; i++) { const x = cx + pts[i * 2] * k, y = cx + pts[i * 2 + 1] * k; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.closePath(); ctx.fillStyle = 'rgba(132,170,96,.16)'; ctx.fill();
+    }
     ctx.stroke(); ctx.setLineDash([]);
+    if (town) {   // roads: paved (pale) + the dirt paths outside the walls (brown), and the big boulders on the back trail
+      ctx.lineCap = 'round';
+      for (const r of ROADS) {
+        ctx.strokeStyle = r.dirt ? 'rgba(181,142,92,.85)' : 'rgba(214,206,188,.42)'; ctx.lineWidth = Math.max(1.5 * DPR, r.w * k * (r.dirt ? 0.75 : 0.85));
+        ctx.beginPath(); ctx.moveTo(cx + r.x1 * k, cx + r.z1 * k); ctx.lineTo(cx + r.x2 * k, cx + r.z2 * k); ctx.stroke();
+      }
+      ctx.lineCap = 'butt'; ctx.fillStyle = 'rgba(150,150,146,.85)';
+      for (const [x, z, r] of TRAIL_ROCKS) { ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }
+    }
     // indoor areas: the castle hall rectangle / the cave outline (filled rock floor), the way out, the cave's harvest nodes
     if (area === 'CASTLE') {
       ctx.fillStyle = 'rgba(120,112,98,.35)'; ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR;

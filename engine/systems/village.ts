@@ -20,7 +20,8 @@ import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
 import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
-import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT } from '../caveData';
+import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT, CAMP_COLLIDERS } from '../caveData';
+import { UNLOCK_LV } from '../../unlocks';
 import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCave } from './cave';
 import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
@@ -74,6 +75,7 @@ export function placeVillageNodes(): void {
   // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
   for (const [x, z, r] of CAVE_MOUTH_COLLIDERS) addTempCollider(x, z, r, false);   // the crystal cave entrance props
+  for (const [x, z, r] of CAMP_COLLIDERS) addTempCollider(x, z, r, false);   // the mining camp in front of it (carts, heaps, shed ...)
   for (const [x, z, r] of BEACH_COLLIDERS) addTempCollider(x, z, r, false);   // the lakeside beach (headland rocks, palms, props)
   stopFishing();
   spawnTownMonsters();
@@ -117,7 +119,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -129,7 +131,10 @@ const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', n
   const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act; t.color = color;
 };
 const GATE_R = 5.5;
-const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger' };
+const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
+/** Fishing + the Fishmonger need class level UNLOCK_LV.FISHING (unlocks.ts); below it their pills read "Unlocks at Lv N". */
+export const fishingLocked = (): boolean => useGameStore.getState().level < UNLOCK_LV.FISHING;
+const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a';
 
 /** Prompt priority when several NPCs / counters overlap: an NPC with something for you (main quest, new or finished side
  *  quest) and one the hero is facing come first (scales the squared distance used for sorting). */
@@ -155,7 +160,13 @@ function scanNearby(): void {
     d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
     const beach = beachSide(p.pos.x, p.pos.z);   // the Fishmonger + fishing spots only from outside the wall (never through it)
-    for (const s of SHOP_POSITIONS) { if (s.type === 'FISH' && !beach) continue; d = q(s.position[0], s.position[2]); if (d < INTERACT_R * INTERACT_R) push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d); }
+    const fishLock = fishingLocked();
+    for (const s of SHOP_POSITIONS) {
+      if (s.type === 'FISH' && !beach) continue;
+      d = q(s.position[0], s.position[2]); if (d >= INTERACT_R * INTERACT_R) continue;
+      if (s.type === 'FISH' && fishLock) push('E', 'Locked', `Fishmonger · ${FISH_LOCK}`, '', -1, d, 'locked', LOCK_COLOR);
+      else push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d);
+    }
     d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
@@ -165,7 +176,7 @@ function scanNearby(): void {
     if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Hold: Milk', 'Cow', '', 200 + i, d, 'farm'); }
     if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Hold: Collect', 'Egg', '', 300 + k, d, 'farm'); }
     if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Hold: Coax', 'Biscuit the cat', '', 400, d, 'farm'); }
-    if (beach) for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); }   // lakeside fishing
+    if (beach) for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) { if (fishLock) push('E', 'Locked', `Fishing · ${FISH_LOCK}`, '', i, d - 1, 'locked', LOCK_COLOR); else push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); } }   // lakeside fishing
     if (pinHidden()) { d = q(WHEEL_PIN.x, WHEEL_PIN.z); if (d < 7) push('E', 'Hold: Pick up', 'Wheel pin', '', 401, d, 'farm'); }
   }
   for (let i = 0; i < npcs.length; i++) { if (!npcInArea(i)) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d * talkBias(i), 'npc'); }
@@ -185,7 +196,8 @@ function scanNearby(): void {
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
-  if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z)) startFishing(it.node); return; }
+  if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
+  if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'castle') v.pending = 'ENTER';
@@ -229,35 +241,35 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
   const outN = (z: number, x: number) => z < WALL.z0 - 1.5 || x > WALL.x1 + 1.5;
   const outS = (z: number, x: number) => z > WALL.z1 + 1.2 && !outN(z, x);   // the forecourt south of the gate
   // the lakeside beach west of the wall: only reachable round the south-west corner tower (engine/beachData.ts). Fixed
-  // lane (probed clear of the brewer's hut, flower boxes, carts and the beach props): forecourt (-4, 51) -> along the
-  // meadow (-34, 52) -> past the corner tower (-49, 47) -> boardwalk corner (-57.5, 43.5) -> the beach spine x -59.5 (west
+  // lane (probed clear of the brewer's hut, flower boxes, carts and the beach props): forecourt (-4, 52) -> along the
+  // meadow (-36, 53) (the dirt path to the beach) -> past the corner tower (-49, 47) -> boardwalk corner (-57.5, 43.5) -> the beach spine x -59.5 (west
   // of the fish stall and the crates / barrels) at the target's z -> straight across to the target (the pier runs along z).
   const onBeach = (z: number, x: number) => x < WALL.x0 - 1.5 && z > WALL.z0;
   if (world.village.area === 'TOWN' && onBeach(tz, tx) !== onBeach(fz, fx)) {
     const SPINE = -59.5, spineZ = (z: number) => Math.max(BEACH.z0 + 6, Math.min(43.5, z));
     if (onBeach(tz, tx)) {
-      if (!outS(fz, fx)) n = buildRoute(fx, fz, -4, 51, out);   // (out through the gate first)
-      else if (fx > -20) push(-4, 51);
-      push(-34, 52); push(WALL.x0 - 4, WALL.z1 + 9);
+      if (!outS(fz, fx)) n = buildRoute(fx, fz, -4, 52, out);   // (out through the gate first)
+      else if (fx > -20) push(-4, 52);
+      push(-36, 53); push(WALL.x0 - 4, WALL.z1 + 9);
       if (tz < 44) { push(-57.5, 43.5); push(SPINE, spineZ(tz)); }
       push(tx, tz);
       return n;
     }
     if (fz < 44) { push(SPINE, spineZ(fz)); push(-57.5, 43.5); }
-    push(WALL.x0 - 4, WALL.z1 + 9); push(-34, 52);
-    if (tx > -20 || !outS(tz, tx)) push(-4, 51);
+    push(WALL.x0 - 4, WALL.z1 + 9); push(-36, 53);
+    if (tx > -20 || !outS(tz, tx)) push(-4, 52);
     const k = buildRoute(out[n * 2 - 2], out[n * 2 - 1], tx, tz, out.subarray(n * 2));
     return n + k;
   }
   if (world.village.area === 'TOWN' && outN(tz, tx) && !outN(fz, fx)) {
     if (!outS(fz, fx)) n = buildRoute(fx, fz, 0, WALL.z1 - 4, out);   // to the inside of the gate
-    push(0, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z1 + 6); push(WALL.x1 + 8, WALL.z0 - 9); push(tx, tz);
+    push(0, WALL.z1 + 6); push(WALL.x1 + 5.5, WALL.z1 + 6); push(WALL.x1 + 4.5, WALL.z0 - 6); push(tx, tz);   // (the narrow back trail)
     return n;
   }
   // back from the ring outside the north / east wall: along the outside of the wall to the forecourt, then on from there
   if (world.village.area === 'TOWN' && outN(fz, fx) && !outN(tz, tx)) {
-    if (fz < WALL.z0 - 1.5) push(WALL.x1 + 8, WALL.z0 - 9);   // north side: to the north-east corner first
-    push(WALL.x1 + 8, WALL.z1 + 6); push(GATE.x + 6, WALL.z1 + 6);
+    if (fz < WALL.z0 - 1.5) push(WALL.x1 + 4.5, WALL.z0 - 6);   // north side: to the north-east corner first
+    push(WALL.x1 + 5.5, WALL.z1 + 6); push(GATE.x + 6, WALL.z1 + 6);
     const k = buildRoute(GATE.x + 6, WALL.z1 + 6, tx, tz, out.subarray(n * 2));
     return n + k;
   }
@@ -291,7 +303,7 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
  *  street route is the fallback), then do `act` on arrival (open `tab` / enter the castle or cave / talk to NPC `npc` /
  *  nothing). `r` = arrive within this distance of (x, z). An NPC target is followed while it patrols and the walk stops
  *  at talking distance. Instant when already close. Only in town (a tracker click during a run never queues a walk). */
-export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
+export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.status !== GameStatus.MENU) return;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
@@ -387,7 +399,11 @@ function arrive(): void {
   const g = world.village.go, st = useGameStore.getState();
   if (goT.resume && (g.act === 'castle' || g.act === 'cave' || g.act === 'leave')) walkAfterArrive(goT.resume);
   goT.resume = null;
-  if (g.act === 'shop' && g.tab) { if (g.tab !== 'FISH' || beachSide(world.player.pos.x, world.player.pos.z)) st.openSpecificShop(g.tab as ShopTab); }   // (the Fishmonger: never through the wall)
+  if (g.act === 'shop' && g.tab) {
+    if (g.tab === 'FISH' && fishingLocked()) st.addNotification(`The Fishmonger trades with anglers from Lv ${UNLOCK_LV.FISHING}.`, LOCK_COLOR, 'WARNING');
+    else if (g.tab !== 'FISH' || beachSide(world.player.pos.x, world.player.pos.z)) st.openSpecificShop(g.tab as ShopTab);   // (the Fishmonger: never through the wall)
+  }
+  else if (g.act === 'down') interactCave('down', 0);   // (quest walk to the cave stairs: go down when allowed)
   else if (g.act === 'castle') world.village.pending = 'ENTER';
   else if (g.act === 'cave') world.village.pending = 'CAVE';
   else if (g.act === 'leave') world.village.pending = 'LEAVE';

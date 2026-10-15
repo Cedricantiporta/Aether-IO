@@ -32,6 +32,9 @@ import { closeDialogue, dialogueOpen } from './dialogue';
 import { LOOT_BY_ID, lootItem } from '../../loot';
 import { sfxCave } from '../audio';
 import type { EnemyKind } from '../types';
+import { events } from '../events';
+import { UNLOCK_LV } from '../../unlocks';
+import { spareFlasks, takeSpareFlask, SPARE_FLASK_OIL } from './caveKit';
 import type { Rarity } from '../../types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -193,6 +196,7 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
   cv.floor = f; cv.seed = f === 1 ? 0 : tripSeed;
   if (f > caveBest()) setProgress({ caveBest: f });
   cv.best = caveBest();
+  if (f === 1 && arrive === 'TOWN') tutorialVeins();   // (before the veins are placed)
   placeFloor(f);
   const L = caveLayout(f, cv.seed);
   installInterior(L.colliders);
@@ -215,9 +219,18 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
   hazardT = 0; poisonLeft = 0;
   cv.ver++; v.areaVer++;
   if (f > 1 && arrive === 'ABOVE') {
+    events.emit('hub', { kind: 'cave_deep', n: 1 });   // (the mining tutorial: reach Floor 2)
     const note = L.hazard === 'LAVA' ? ' Lava pools: do not stand in them!' : L.hazard === 'POISON' ? ' Poison puddles: keep out!' : '';
     st.addNotification(`Crystal Cave: Floor ${f}${L.twin ? ' (twin chambers)' : ''}.${note}`, L.hazard === 'LAVA' ? '#ff8a4a' : L.hazard === 'POISON' ? '#8aff6a' : '#9fe6ff', 'SYSTEM');
   }
+}
+/** The mining tutorial (npcQuests 'dorn_mine') needs veins on Floor 1: when it is active and Floor 1 was mined out (24 h
+ *  regrow), Grit has already cleared fresh rubble - the floor regrows at once (called before the veins are placed). */
+function tutorialVeins(): void {
+  const q = useGameStore.getState().npcQuests.q.dorn_mine;
+  if (!q || q.s !== 1 || q.p >= 3) return;
+  if (F1N - save.broken.length >= 3 - q.p) return;
+  save.broken = []; save.clearedAt = 0; persist();
 }
 function endTrip(): void { deep.clear(); forgetCaveLayouts(); tripSnap = null; save.oil = world.village.cave.oil; persist(); }
 /** What this trip has gathered so far (the haul at risk; all zero on Floor 1). Reused object. */
@@ -318,6 +331,7 @@ export function updateCave(dt: number): boolean {
     c.respawnT = 0;
     s.broken.push(i); changed = true;
     caveYield(L.nodes[i].kind, s.rare[i] | 0, f, c.pos.x, c.pos.z);
+    events.emit('hub', { kind: 'cave_vein', n: 1 });   // (the mining tutorial)
     if (i === s.ladder) {
       cv.ladderFound = true; cv.lx = c.pos.x; cv.lz = c.pos.z; cv.ver++;
       useGameStore.getState().addNotification('A lucky ladder under the rubble! It leads one floor down.', '#ffe08a', 'SYSTEM');
@@ -332,6 +346,10 @@ export function updateCave(dt: number): boolean {
   // lantern oil: one timer for the whole trip below Floor 1. Empty: ~1.3 s blackout, then the cave-in
   if (f > 1 && !v.pending) {
     if (!busy || cv.oil <= 0) cv.oil = Math.max(0, cv.oil - dt);
+    if (cv.oil <= 0 && cv.dark < 0.4 && takeSpareFlask()) {   // a spare flask from the Mining Supplies pours itself in
+      cv.oil = Math.min(cv.oilMax, SPARE_FLASK_OIL); cv.dark = 0;
+      useGameStore.getState().addNotification(`Your lantern sputters... you pour in a spare flask. +${SPARE_FLASK_OIL} s (${spareFlasks()} left).`, '#ffd070', 'ITEM');
+    }
     if (cv.oil <= 0) {
       if (cv.dark === 0) sfxCave('blackout');
       cv.dark = Math.min(1, cv.dark + dt / 1.3);
@@ -390,6 +408,9 @@ const LOCKED = Array.from({ length: 13 }, (_, n) => `Harvest all veins to go dee
 const FLOOR = Array.from({ length: CAVE_MAX_FLOOR + 2 }, (_, n) => `Floor ${n}`);
 const LADDER = Array.from({ length: CAVE_MAX_FLOOR + 2 }, (_, n) => `Lucky ladder to Floor ${n}`);
 const HARVEST_R2 = 3.6 * 3.6;
+/** Below Floor 1 needs class level UNLOCK_LV.CAVE (unlocks.ts); Floor 1 + Grit are open to everyone. */
+export const caveLocked = (): boolean => useGameStore.getState().level < UNLOCK_LV.CAVE;
+const CAVE_LOCK_LABEL = `Deeper floors · Unlocks at Lv ${UNLOCK_LV.CAVE}`;
 /** The cave's interaction pills (exit / stairs / ladder / lantern bench / veins). */
 export function scanCave(push: Push, px: number, pz: number): void {
   const cv = world.village.cave, f = cv.floor, L = caveLayout(f, cv.seed);
@@ -398,7 +419,8 @@ export function scanCave(push: Push, px: number, pz: number): void {
   if (d < L.exit.r * L.exit.r) { if (f === 1) push('E', 'Leave', 'Crystal Cave', '', -1, d, 'leave'); else push('E', 'Climb out', 'back up to Floor 1', '', -1, d, 'up'); }
   d = q(L.down.x, L.down.z);
   if (d < L.down.r * L.down.r && f < CAVE_MAX_FLOOR) {
-    if (cv.left > 0) push('E', 'Locked', LOCKED[Math.min(12, cv.left)], '', 0, d, 'down', '#ff9a7a');
+    if (f === 1 && caveLocked()) push('E', 'Locked', CAVE_LOCK_LABEL, '', 0, d, 'down', '#ff9a7a');
+    else if (cv.left > 0) push('E', 'Locked', LOCKED[Math.min(12, cv.left)], '', 0, d, 'down', '#ff9a7a');
     else if (f === 1 && cv.oil <= 0) push('E', 'Lantern empty', 'refill at Grit\'s bench', '', 0, d, 'down', '#ff9a7a');
     else push('E', 'Descend', FLOOR[f + 1], '', 0, d, 'down');
   }
@@ -416,6 +438,7 @@ export function interactCave(act: string, node: number): void {
   const v = world.village, cv = v.cave, st = useGameStore.getState();
   if (act === 'up') { v.pending = 'UP'; return; }
   if (act === 'down') {
+    if (cv.floor === 1 && caveLocked()) { st.addNotification(`The deep cave unlocks at Lv ${UNLOCK_LV.CAVE}. Floor 1 is yours to mine until then.`, '#ff9a7a', 'WARNING'); return; }
     if (node === 0 && cv.left > 0) { st.addNotification(`The way down is blocked by rubble. Harvest every vein first (${cv.left} left).`, '#ff9a7a', 'WARNING'); return; }
     if (cv.floor === 1 && cv.oil <= 0) { st.addNotification('Your lantern is empty. Refill it at Grit\'s bench before going down.', '#ff9a7a', 'WARNING'); return; }
     v.pending = 'DOWN'; return;

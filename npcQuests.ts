@@ -20,7 +20,8 @@ export type NpcObjectiveType =
   | 'DELIVER'                                                  // bring loot items to the NPC; they are removed on turn-in
   | 'TALK'                                                     // speak to another NPC (target: its name)
   | 'INTERACT'                                                 // a farm / town action (target: 'milk' | 'egg' | 'cat' | 'pin')
-  | 'ACTION';                                                  // a shop / town action (target: 'buy_potion' | 'store' | 'learn' | 'upgrade' | 'summon')
+  | 'ACTION';                                                  // a shop / town action (target: 'buy_potion' | 'store' | 'learn' | 'upgrade' | 'summon'
+                                                               //   | 'catch_fish' | 'sell_fish' | 'cave_vein' | 'cave_deep' | 'buy_flask', see engine/events hub)
 
 export interface NpcObjective {
   type: NpcObjectiveType;
@@ -36,6 +37,7 @@ export interface NpcReward {
   gems?: number;
   shards?: [Rarity, number];           // crafting shards
   items?: { id: string; qty?: number }[];   // ITEMS_POOL / PETS_POOL ids
+  flasks?: number;                     // spare lantern-oil flasks for the Crystal Cave (engine/systems/caveKit.ts)
 }
 
 export interface NpcQuestDef {
@@ -120,6 +122,23 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     done: ['So the desert is real, and you came back. I am impressed.', 'The watch pays for good scouting.'],
     objective: { type: 'REACH_BIOME', count: 3 },
     reward: { gold: 3000, gems: 20 },
+  },
+  // ---- mining tutorial (class level UNLOCK_LV.CAVE = 5): Dorn sends you to the mining camp + the Crystal Cave, Grit takes over
+  {
+    id: 'dorn_mine', minLevel: 5, giver: 'Dorn', turnIn: 'Grit', title: 'Down the Mine', summary: 'Mine 3 veins in the Crystal Cave, then see Grit',
+    intro: ['You have grown strong enough for real mining, friend. Not those pebbles round the walls: the Crystal Cave.', 'Take the dirt path from the chicken coop by the farm, north-east up to the mining camp. The mine mouth is behind the carts.', 'Go in, hold E on three veins on the first floor, and say hello to old Grit for me. He will show you the rest.'],
+    progress: 'Three veins inside the Crystal Cave. The path starts beside the chicken coop and climbs to the mining camp. Hold E on a vein.',
+    done: ['Dorn sent you, eh? Three veins already, and you still have all your fingers. Good start.', 'Take these flasks of lantern oil. Carry them deep, and they pour themselves into the lantern when it gutters.'],
+    objective: { type: 'ACTION', target: 'cave_vein', count: 3 },
+    reward: { gold: 500, flasks: 2 },
+  },
+  {
+    id: 'grit_deeper', minLevel: 5, giver: 'Grit', after: 'dorn_mine', title: 'Deeper Still', summary: 'Clear every vein on Floor 1 and go down to Floor 2',
+    intro: ['Now the real lesson. The stairs at the back stay blocked until every vein on a floor is mined.', 'Clear this floor, then take the stairs down. Below here there is no daylight: your lantern burns oil the whole trip.', 'Get to Floor 2, then climb back out the way you came and tell me what you saw.'],
+    progress: 'Mine every vein on Floor 1, then take the stairs at the back down to Floor 2. Climb back out by the stairs you arrived on.',
+    done: ['Floor 2 and back in one piece! The deep likes you, I think.', 'Here is your share, and one more flask. The Mining Supplies stall outside sells more.'],
+    objective: { type: 'ACTION', target: 'cave_deep', count: 1 },
+    reward: { gold: 1200, gems: 10, shards: ['RARE', 5], flasks: 1 },
   },
   {
     id: 'dorn_ore', minLevel: 6, giver: 'Dorn', title: 'Ore for the Forge', summary: 'Deliver 15 Ore Nuggets to Dorn',
@@ -295,6 +314,32 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     done: ['Hollis said "about time"? Ha! That is Hollis for "thank you".', 'Here, your share of the milk money. Which is no money. Have some gold instead.'],
     objective: { type: 'TALK', target: 'Hollis', count: 1 },
     reward: { gold: 400, gems: 5 },
+  },
+  // ---- fishing tutorial (class level UNLOCK_LV.FISHING = 3): Nell sends you to Marlo at the beach, who teaches the rest
+  {
+    id: 'nell_beach', minLevel: 3, giver: 'Nell', turnIn: 'Marlo', title: 'Gone Fishing', summary: 'Find Marlo the angler at the lakeside beach',
+    intro: ['You look like someone who could use a quiet afternoon. Have you been to the lake beach yet?', 'Follow the new dirt path west, past the Elixir Brewer\'s hut, round the corner tower and down to the boardwalk.', 'Marlo the angler fishes there every day. Tell him Nell sent you. He has been dying to teach somebody.'],
+    progress: 'Marlo is on the lakeside beach, west of the town wall. Take the dirt path past the Elixir Brewer\'s hut.',
+    heard: 'Nell sent you? Ha! Then you want to learn to fish. Pull up a plank, friend.',
+    done: ['Welcome to the finest beach on the lake. Here, a little coin for the walk.'],
+    objective: { type: 'TALK', target: 'Marlo', count: 1 },
+    reward: { gold: 200 },
+  },
+  {
+    id: 'marlo_catch', minLevel: 3, giver: 'Marlo', after: 'nell_beach', title: 'First Catch', summary: 'Catch 3 fish at the lakeside',
+    intro: ['Fishing is simple. Walk up to the water at the shoreline or the end of the pier and press E to cast.', 'Wait for the bobber to dip and the "!" to show, then press E to hook it. Then tap E each time the marker is in the green.', 'Bring in three fish. Boots count. I am not proud of it, but they count.'],
+    progress: 'Three fish. Stand by the water (the shoreline or the pier end), press E to cast, E again when it bites.',
+    done: ['Three! You have the knack. Keep them, though: the Fishmonger pays good coin.', 'And take these. Fishing makes a body hungry.'],
+    objective: { type: 'ACTION', target: 'catch_fish', count: 3 },
+    reward: { gold: 400, items: [{ id: 'potion_hp', qty: 2 }] },
+  },
+  {
+    id: 'marlo_sell', minLevel: 3, giver: 'Marlo', after: 'marlo_catch', title: 'Fresh off the Pier', summary: 'Sell a fish to the Fishmonger',
+    intro: ['Last lesson: a fish in the bag is worth nothing until somebody pays for it.', 'The Fishmonger\'s stall is right here on the beach. Sell her at least one fish, and see what a good catch is worth.', 'She sells better rods too, once your purse allows.'],
+    progress: 'Sell a fish at the Fishmonger\'s stall, mid-beach.',
+    done: ['Coin in hand! Now you are an angler. Come back any time, the lake never runs out.', 'A little something from my tackle money.'],
+    objective: { type: 'ACTION', target: 'sell_fish', count: 1 },
+    reward: { gold: 600, gems: 10 },
   },
   {
     id: 'nell_wolves', minLevel: 3, giver: 'Nell', title: 'Howls on the Road', summary: 'Defeat 10 Dire Wolves (Greenwood)',

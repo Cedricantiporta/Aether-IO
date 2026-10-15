@@ -35,7 +35,7 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 /** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
 export const GOLD_SCALE = 10;
 
-export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH'; position: [number, number, number]; color: string; rot?: number }[] = [
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; position: [number, number, number]; color: string; rot?: number }[] = [
     { type: 'SUPPLIES', position: [-13, 0, 17.5], color: '#3b82f6', rot: Math.PI },   // potion shop: by the plaza, south of the street (door faces the street)
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
     { type: 'PETS', position: [-21, 0, 2], color: '#10b981' },          // west of the plaza, on the street (moved closer to the centre)
@@ -45,6 +45,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },
     { type: 'BREWER', position: [-14, 0, 45], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: hut outside the gate, top-left by the wall, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
     { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8', rot: -Math.PI / 2 },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL)
+    { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050', rot: 0.15 },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */
 export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffc94a', MYTHIC: '#ff6a5a' };
@@ -54,7 +55,7 @@ export const shopFront = (s: { position: [number, number, number]; rot?: number 
   return { x: s.position[0] + Math.sin(r) * d + Math.cos(r) * side, z: s.position[2] + Math.cos(r) * d - Math.sin(r) * side };
 };
 /** Shop tab each town building opens. */
-export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH', BREWER: 'BREWER', FISH: 'FISH' };
+export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH', BREWER: 'BREWER', FISH: 'FISH', MINE: 'MINE' };
 
 export const COLORS = {
   background: '#87CEEB', 

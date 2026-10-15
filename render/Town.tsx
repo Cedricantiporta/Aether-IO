@@ -21,8 +21,9 @@ import { walkAndOpen, walkTo } from '../engine/systems/village';
 import { TOWER, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { Beach, buildFishStall } from './Beach';
+import { buildMineStall } from './CaveEntrance';
 
-type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH';
+type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE';
 
 // ---------------------------------------------------------------- builders ---
 function lantern(b: GB, g: GB, x: number, y: number, z: number) {
@@ -329,11 +330,11 @@ function buildBrewer() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech, BREWER: buildBrewer, FISH: buildFishStall };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger' };
+const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech, BREWER: buildBrewer, FISH: buildFishStall, MINE: buildMineStall };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9], MINE: [-1.6, -0.9] };
 const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
@@ -344,6 +345,7 @@ const NPC: Record<ShopType, NpcCfg> = {
   TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [0.2, 4.4] },
   BREWER: { key: 'WIZARD', tint: '#d8f5d0', pos: [1.4, 2.25] },   // stirring behind the cauldron
   FISH: { key: 'ROGUE', tint: '#cfe4f0', pos: [0.3, 0.35] },       // behind the counter of the beach stall (render/Beach.tsx)
+  MINE: { key: 'BARBARIAN', tint: '#e8d2b0', pos: [-0.6, 0.35] },  // the camp's supply keeper behind the counter (render/CaveEntrance.tsx)
 };
 /** Bubbling liquid disc of the shops with a cauldron: shop-local [x, y, z, radius]. */
 const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { SUPPLIES: [3.6, 1.55, 2.4, 0.72], BREWER: [1.4, 1.62, 3.4, 0.68] };
@@ -375,6 +377,9 @@ function buildSign(type: ShopType, color: string) {
   } else if (type === 'FISH') {
     b.sph(0.26, [0.05, -0.08, 0.17], '#4fb6d8', [1.5, 0.75, 0.4], 7); b.cone(0.2, 0.3, 3, [-0.42, -0.08, 0.17], '#4fb6d8', [0, 0, Math.PI / 2], [1, 1, 0.35]);
     g.sph(0.04, [0.32, -0.02, 0.28], '#ffffff', 1, 4);
+  } else if (type === 'MINE') {   // crossed pickaxes over a lantern-oil flask
+    for (const sx of [-1, 1]) { b.box(0.07, 0.75, 0.05, [sx * 0.12, -0.02, 0.18], '#6a4828', [0, 0, sx * 0.75]); b.box(0.5, 0.1, 0.06, [sx * 0.3, 0.26, 0.2], '#5c6068', [0, 0, -sx * 0.35]); }
+    g.sph(0.14, [0, -0.25, 0.22], '#ffb84a', [1, 1.1, 0.5], 7);
   } else if (type === 'FORTUNE') {
     g.sph(0.26, [0, -0.08, 0.17], '#b98aff', [1, 1, 0.5], 10); b.box(0.5, 0.1, 0.12, [0, -0.36, 0.17], '#d9b56a'); g.octa(0.08, [0.32, 0.24, 0.2], '#fff3c0');
   } else {
