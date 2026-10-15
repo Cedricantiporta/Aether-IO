@@ -64,6 +64,40 @@ export interface NpcQuestDef {
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
+  // ---- the chapel: Sister Elowen (two in a chain)
+  {
+    id: 'elowen_graves', minLevel: 3, giver: 'Sister Elowen', title: 'Restless Graves', summary: 'Put 12 zombies to rest',
+    intro: ['Child, the dead are not sleeping as they should. The graveyard behind the chapel groans at night.', 'Out in the wilds, the restless walk as zombies. Put twelve of them to rest, and the Flame will be grateful.', '...And so will I. The groaning keeps me up.'],
+    progress: 'Twelve of the restless, child. Zombies roam the Greenwood and the halls beyond it.',
+    done: ['The graves are quiet again. Thank you.', 'The Flame does not pay in gold, but the collection box does. Take this.'],
+    objective: { type: 'KILL_KIND', target: 'ZOMBIE', count: 12 },
+    reward: { gold: 1200, items: [{ id: 'potion_hp_big', qty: 2 }] },
+  },
+  {
+    id: 'elowen_locket', after: 'elowen_graves', giver: 'Sister Elowen', title: 'A Locket for the Lost', summary: 'Bring Sister Elowen a Grave Locket',
+    intro: ['One grave out there has no name, only a carving of a locket.', 'If you ever find a Grave Locket on your travels, bring it to me. We will give that soul a name at last.'],
+    progress: 'A Grave Locket. The dead carry them; so do old tombs.',
+    done: ['There is a name inside... "Aldwin". Rest well, Aldwin.', 'You have done a kind thing. Kindness should be paid, at least a little.'],
+    objective: { type: 'DELIVER', target: 'grave_locket', count: 1 },
+    reward: { gold: 2000, gems: 20, items: [{ id: 'reforge_stone', qty: 1 }] },
+  },
+  // ---- the Golden Tankard: Marta the barkeep and Rodric the regular
+  {
+    id: 'marta_fish', minLevel: 6, giver: 'Marta Goldtap', title: 'Fish Stew Friday', summary: 'Bring Marta 5 Lake Perch',
+    intro: ['It is Fish Stew Friday, and I have no fish. It is also Tuesday, but the regulars do not check.', 'Bring me five Lake Perch from the lake past the west wall and dinner is on the house. Forever. ...For a week.'],
+    progress: 'Five Lake Perch, love. The Fishmonger on the beach lends rods.',
+    done: ['Perfect! Smells like the lake. In a good way, mostly.', 'Here, your cut of the stew money.'],
+    objective: { type: 'DELIVER', target: 'fish_perch', count: 5 },
+    reward: { gold: 1500, items: [{ id: 'temper_oil', qty: 1 }] },
+  },
+  {
+    id: 'rodric_goblets', minLevel: 8, giver: 'Rodric the Tipsy', title: 'The Lost Tankards', summary: 'Find 2 Silver Goblets for Rodric',
+    intro: ['Psst. Hero. I may have... wagered Marta\'s silver goblets. On a duel. With a goblin.', 'I lost. To the goblin. Find me two Silver Goblets out there before she counts them, and I will make it worth your while.'],
+    progress: 'Two Silver Goblets. Quietly. She is counting the mugs again.',
+    done: ['Shh! Put them on the shelf. Behind the cider. Perfect.', 'You saved my life. Or at least my tab. Take this.'],
+    objective: { type: 'DELIVER', target: 'silver_goblet', count: 2 },
+    reward: { gold: 2500, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
+  },
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
     id: 'wend_crystals', minLevel: 4, after: 'pip_secret', giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems in a crystal cave',

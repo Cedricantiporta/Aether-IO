@@ -17,10 +17,11 @@ import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
 import { npcs, animals, TALK_R } from './npcs';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests';
+import { TAVERN_DOOR, TAVERN_EXIT } from '../tavernData';
 import type { ShopTab } from '../../storeTypes';
 
-export type NavAct = 'shop' | 'castle' | 'church' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
-type Area = 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH';
+export type NavAct = 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
+type Area = 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN';
 export interface NavTarget {
   x: number; z: number;
   /** arrive within this distance of (x, z) */
@@ -47,11 +48,13 @@ function set(o: NavTarget, x: number, z: number, reach: number, act: NavAct, tab
 const exit = (o: NavTarget): NavTarget => (area() === 'CAVE'
   ? set(o, CAVE_EXIT.x, CAVE_EXIT.z, 2, 'leave', '', -1, true)
   : area() === 'CHURCH' ? set(o, CHURCH_EXIT.x, CHURCH_EXIT.z, 2, 'leave', '', -1, true)
+  : area() === 'TAVERN' ? set(o, TAVERN_EXIT.x, TAVERN_EXIT.z, 2, 'leave', '', -1, true)
   : set(o, CASTLE_EXIT.x, CASTLE_EXIT.z, 2, 'leave', '', -1, true));
 /** From town: the door into `to` (castle hall / crystal cave). */
 const door = (o: NavTarget, to: Area): NavTarget => (to === 'CAVE'
   ? set(o, CAVE_DOOR.x, CAVE_DOOR.z, 2.4, 'cave', '', -1, true)
   : to === 'CHURCH' ? set(o, CHURCH_DOOR.x, CHURCH_DOOR.z + 1, 2.4, 'church', '', -1, true)
+  : to === 'TAVERN' ? set(o, TAVERN_DOOR.x, TAVERN_DOOR.z + 0.8, 2.4, 'tavern', '', -1, true)
   : set(o, CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 2.4, 'castle', '', -1, true));
 /** The next hop towards area `to` (exit first when inside another interior), or null when already there. */
 function hop(o: NavTarget, to: Area): NavTarget | null {

@@ -1,3 +1,4 @@
+import { TAP } from '../../engine/tavernData';
 import React, { useRef } from 'react';
 import { NAVE } from '../../engine/churchData';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
@@ -109,6 +110,10 @@ export const Minimap: React.FC = () => {
       for (const [x, z, r] of TRAIL_ROCKS) { ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }
     }
     // indoor areas: the castle hall rectangle / the cave outline (filled rock floor), the way out, the cave's harvest nodes
+    if (area === 'TAVERN') {
+      ctx.fillStyle = 'rgba(138,100,64,.4)'; ctx.strokeStyle = 'rgba(200,170,130,.9)'; ctx.lineWidth = 2.2 * DPR;
+      ctx.beginPath(); ctx.rect(cx - TAP.hw * k, cx - TAP.hd * k, TAP.hw * 2 * k, TAP.hd * 2 * k); ctx.fill(); ctx.stroke();
+    }
     if (area === 'CHURCH') {
       ctx.fillStyle = 'rgba(120,112,98,.35)'; ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR;
       ctx.beginPath(); ctx.rect(cx - NAVE.hw * k, cx - NAVE.hd * k, NAVE.hw * 2 * k, NAVE.hd * 2 * k); ctx.fill(); ctx.stroke();
@@ -117,8 +122,8 @@ export const Minimap: React.FC = () => {
       ctx.fillStyle = 'rgba(120,112,98,.35)'; ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR;
       ctx.beginPath(); ctx.rect(cx - HALL.hw * k, cx - HALL.hd * k, HALL.hw * 2 * k, HALL.hd * 2 * k); ctx.fill(); ctx.stroke();
     } else if (area === 'CAVE') drawCaveMinimap(ctx, cx, k, DPR);   // floor outline, pools, stairs, ladder, flasks, veins, the way out
-    if (area === 'CASTLE' || area === 'CHURCH') {   // the way out (gold arrow pointing south)
-      const gx = cx, gy = cx + (area === 'CHURCH' ? NAVE.hd : HALL.hd) * k;
+    if (area === 'CASTLE' || area === 'CHURCH' || area === 'TAVERN') {   // the way out (gold arrow pointing south)
+      const gx = cx, gy = cx + (area === 'CHURCH' ? NAVE.hd : area === 'TAVERN' ? TAP.hd : HALL.hd) * k;
       ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
       ctx.beginPath(); ctx.moveTo(gx - 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx + 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx, gy + 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
     }

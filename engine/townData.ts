@@ -471,7 +471,7 @@ export interface NpcDef {
   /** which map the NPC lives in (default town) */
   /** talking to this NPC ends by opening this shop tab (e.g. the Skill Trainer -> SKILLS) */
   opens?: import('../storeTypes').ShopTab;
-  area?: 'CASTLE' | 'CAVE' | 'CHURCH';   // (CAVE = Floor 1 of the crystal cave)
+  area?: 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN';   // (CAVE = Floor 1 of the crystal cave)
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
   /** gold crown on his head */
@@ -671,6 +671,24 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['May the Flame keep you.', 'Light a candle for the lost.', 'Peace, traveller.'],
     gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 2, text: 'Take these, with the Flame\'s blessing. They have saved braver souls than either of us.' },
+  },
+  // the Golden Tankard (enterable tavern east of the keep): the barkeep behind the bar and a regular at the hearth
+  {
+    name: 'Marta Goldtap', role: 'Barkeep', model: 'ROGUE', tint: '#ffe2c4', scale: 1, prop: 'none', accent: '#ffcf5a', home: [-2, -5.6], area: 'TAVERN',
+    talk: [
+      ['Welcome to the Golden Tankard! Mind the third stool, it bites.', 'Ale, cider, or a story? Stories are free. Ale is not.'],
+      ['Heroes drink here on credit. Dead heroes drink here on credit too, funnily enough. You lot keep coming back.'],
+      ['Rodric by the fire has been "about to leave" since the spring.'],
+    ],
+    bubbles: ['Another round?', 'Mind the stool!', 'Fresh barrel today!'],
+  },
+  {
+    name: 'Rodric the Tipsy', role: 'Retired Adventurer', model: 'KNIGHT', tint: '#e8d8c8', scale: 1, prop: 'none', accent: '#d9a06a', home: [6.4, -1.6], area: 'TAVERN',
+    talk: [
+      ['I once fought a Golem with nothing but a spoon. ...It was a very large spoon.', 'Hic. Pardon.'],
+      ['Ah, to be young and respawning again. My knees stopped respawning years ago.'],
+    ],
+    bubbles: ['Hic!', 'In my day...', 'One more for the road.'],
   },
   {
     name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 94.5], speed: 1.2,
