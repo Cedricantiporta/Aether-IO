@@ -89,6 +89,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
   BOSS_HYDRA: ['marsh_scale', 'hydra_fang'],
   BOSS_WYRM: ['frost_scale', 'glacius_heart'],
   BOSS_WARLORD: ['cinder_core', 'ignar_brand'],
+  BOSS_WARMACH: ['cinder_core', 'ignar_brand'],
   BOSS_VOID: ['echo_of_ruin', 'void_shard'],
   CRATE: ['coin_pouch', 'silver_goblet'],
   BARREL: ['coin_pouch', 'silver_goblet'],
@@ -102,7 +103,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
 
 /** Chance that a kill / break rolls any loot at all (bosses and elites always do). */
 export const LOOT_CHANCE: Record<string, number> = {
-  CRATE: 0.2, BARREL: 0.2, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1, BOSS_TREANT: 1, BOSS_HYDRA: 1, BOSS_WYRM: 1, BOSS_WARLORD: 1, BOSS_VOID: 1,
+  CRATE: 0.2, BARREL: 0.2, POT: 0.1, CHEST: 1, CART: 1, GRAVE: 0.4, CRYSTAL: 0.35, ORE: 0.5, ELITE: 1, BOSS_GOLEM: 1, BOSS_LICH: 1, BOSS_TREANT: 1, BOSS_HYDRA: 1, BOSS_WYRM: 1, BOSS_WARLORD: 1, BOSS_WARMACH: 1, BOSS_VOID: 1,
 };
 export const DEFAULT_LOOT_CHANCE = 0.1;
 

@@ -34,6 +34,7 @@ const MECH: Record<BossKind, Mech> = {
   BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', ward: 'CRYSTALS', heal: true },
   BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0x8ae0ff, rainWord: 'Hailstorm!', ward: 'CRYSTALS', heal: false },
   BOSS_WARLORD: { cc: 'SILENCE', ccDur: 2.2, rain: 'BURN', rainDur: 3, rainColor: 0xff5a1a, rainWord: 'Meteor shower!', ward: 'GUARD', guard: 'HELLHOUND', heal: false },
+  BOSS_WARMACH: { cc: 'STUN', ccDur: 1.0, rain: 'BURN', rainDur: 3, rainColor: 0xffa040, rainWord: 'Shelling!', ward: 'CRYSTALS', heal: false },
   BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void rain!', ward: 'CRYSTALS', heal: true },
   BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', ward: 'GUARD', guard: 'CULTIST', heal: true },
 };

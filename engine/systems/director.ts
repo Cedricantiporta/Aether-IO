@@ -114,6 +114,8 @@ export const bossKeyState = { has: false };
 let finalFight = false, endingDone = false;
 /** Malakar is fought twice: stage 1 (slower, fewer adds); slain, he rises again as stage 2 (stronger, new attacks). */
 let finalStage = 1;
+/** A boss's second form to spawn next in this room (Ignar -> the Molten Colossus); '' = the biome boss. */
+let nextBossKind: EnemyKind | '' = '';
 /** The finale after stage 2 falls: 1 his last words, 2 his essence collapses and bursts, 3 a portal of light opens,
  *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
 export const finale = { step: 0, t: 0, x: 0, z: 0, blasts: 0 };
@@ -227,6 +229,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS' && !p.epilogue) p = { type: 'CAMP', reward: 'NONE' };
   biome = b; index = idx; plan = p;
   if (finalFight && p.type === 'BOSS') { finalStage = 1; finale.step = 0; }
+  nextBossKind = '';
   if (!finalFight) world.boss.final = false;
   depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
   const d = world.director, r = world.room;
@@ -541,7 +544,7 @@ function tickSpawns(dt: number): void {
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
-    const kind = finalFight ? 'BOSS_LICH' : debug.bossOverride || biomeOf(biome).boss;
+    const kind = finalFight ? 'BOSS_LICH' : nextBossKind || debug.bossOverride || biomeOf(biome).boss;
     placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     bossSpawned = true;
   }
@@ -773,6 +776,19 @@ function towerCleared(): void {
 function onBossCleared(): void {
   const d = dd();
   world.boss.active = false;
+  {   // Ignar falls... and his war machine rises: the Molten Colossus (second fight, bosses2.ts)
+    const body = d.bossId >= 0 ? world.enemies[d.bossId] : null;
+    if (!finalFight && body && body.kind === 'BOSS_WARLORD' && nextBossKind === '') {
+      nextBossKind = 'BOSS_WARMACH';
+      for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+      bossSpawned = false; bossDeadT = -1; bossPending = true; roomT = -2.6;
+      useGameStore.getState().addNotification('"You think you have won? Behold my war engine!" The ground splits open...', '#ff7a1a', 'BOSS');
+      events.emit('floatText', { pos: body.pos, text: 'THE COLOSSUS AWAKENS', color: 0xff7a1a, scale: 1.4, dy: 3 });
+      events.emit('shockwave', { pos: body.pos.clone(), radius: 20, color: 0xff7a1a });
+      events.emit('shake', { amount: 0.9 });
+      return;
+    }
+  }
   if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
     bossRewards(); onCleared(); return;

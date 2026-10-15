@@ -12,6 +12,7 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { dustPuff, embers, smokePuff, FX, CELL } from './fx';
 import { GB, TAU, clamp, damp } from './util';
+import { WarMachine } from './WarMachine';
 
 const sin = Math.sin, cos = Math.cos;
 type V3 = [number, number, number];
@@ -273,5 +274,5 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 }
 
 export function Bosses2() {
-  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WYRM" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /></>);
+  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WYRM" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /></>);
 }

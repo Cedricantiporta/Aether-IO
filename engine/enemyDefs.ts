@@ -100,6 +100,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 3.1, scale: 4.8, contactDamage: 24, projectileDamage: 18,
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
+  BOSS_WARMACH: {
+    name: 'The Molten Colossus', hp: 2600, speed: 3.0, radius: 3.4, scale: 4, contactDamage: 30, projectileDamage: 20,
+    xp: 14, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0x6e7a45, knockResist: 1, armor: 75,
+  },
   BOSS_WARLORD: {
     name: 'Ignar the Infernal Warlord', hp: 2300, speed: 3.4, radius: 2.4, scale: 3.6, contactDamage: 28, projectileDamage: 19,
     xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
@@ -203,7 +207,7 @@ export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHE
 export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB'; }
 
 export type BossKind =
-  | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_VOID';
+  | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_WARMACH' | 'BOSS_VOID';
 
 /** Bosses in biome order (the Lich is a mini-boss room option, so it is not part of the order). Used by the Codex. */
 export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID', 'BOSS_LICH'];
@@ -217,11 +221,12 @@ export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_HYDRA: { name: 'The Mire Hydra', title: 'Marsh Terror' },
   BOSS_WYRM: { name: 'Glacius the Frost Wyrm', title: 'Winter Dragon' },
   BOSS_WARLORD: { name: 'Ignar the Infernal Warlord', title: 'Lord of Cinders' },
+  BOSS_WARMACH: { name: 'The Molten Colossus', title: "Ignar's War Engine" },
   BOSS_VOID: { name: 'The Void Herald', title: 'Harbinger of the Abyss' },
 };
 
 export function isBossKind(k: EnemyKind): k is BossKind {
-  return k === 'BOSS_GOLEM' || k === 'BOSS_LICH' || k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_VOID';
+  return k === 'BOSS_GOLEM' || k === 'BOSS_LICH' || k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_WARMACH' || k === 'BOSS_VOID';
 }
 
 /** Mini-boss definitions for mini-boss rooms (biome rosters in roomDefs list which ones appear where). */

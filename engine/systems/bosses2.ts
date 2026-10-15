@@ -17,6 +17,7 @@ import { isBossAdd } from '../enemyDefs';
 import { edgeLimit } from '../mapgen';
 import { useGameStore } from '../../store';
 import { hooks } from './hooks';
+import { damagePlayer, applyPlayerDebuff } from './combat';
 import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
@@ -26,7 +27,7 @@ import {
 } from './bossFx';
 
 export function isBoss2(k: EnemyKind): boolean {
-  return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_VOID';
+  return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_WARMACH' || k === 'BOSS_VOID';
 }
 
 const tv = new Vector3();
@@ -43,6 +44,8 @@ export const S = {
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
   enraged: false, wheelA: 0, ringT: 0, cleaveCd: 0, wheelN: 0,
+  // the Molten Colossus (Ignar's war machine)
+  rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
   // Void Herald
   voidOn: false, gravT: 0, pushed: false,
 };
@@ -50,7 +53,7 @@ export const S = {
 export const bossView = S;
 
 export function resetBosses2(): void {
-  S.id = -1; S.phase = 0; S.cycle = 0;
+  S.id = -1; S.phase = 0; S.cycle = 0; S.stompCd = 0;
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
   S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
@@ -141,7 +144,7 @@ interface Atk {
   windTick?(e: Enemy): void;
 }
 const LISTS: Partial<Record<EnemyKind, Atk[]>> = {};
-const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.8, BOSS_VOID: 1.7 };
+const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.6, BOSS_VOID: 1.7 };
 
 function cdFor(e: Enemy): number {
   return (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.6 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1);
@@ -250,6 +253,7 @@ export function updateBoss2(e: Enemy, dt: number, dist: number): void {
     case 'BOSS_HYDRA': hydra(e, dt, dist, ux, uz); break;
     case 'BOSS_WYRM': wyrm(e, dt, dist, ux, uz); break;
     case 'BOSS_WARLORD': warlord(e, dt, dist, ux, uz); break;
+    case 'BOSS_WARMACH': warmach(e, dt, dist, ux, uz); break;
     default: herald(e, dt, dist, ux, uz); break;
   }
 }
@@ -622,6 +626,96 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   let id: number;
   if (dist < 8 && S.cleaveCd <= 0) { id = I_CLEAVE; S.cleaveCd = 6; }
   else id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
+  beginAtk(e, list, id, ux, uz, dist);
+}
+
+// ============================================================ THE MOLTEN COLOSSUS ===
+// Ignar's second form (director: rises when Ignar falls): a six-legged war machine. Keeps its distance and shells you.
+const M_ARTY = 0, M_RAY = 1, M_STOMP = 2, M_MISSILE = 3, M_RAM = 4;
+const WARMACH_ORDER = [M_ARTY, M_RAY, M_MISSILE, M_ARTY, M_RAM, M_RAY];
+
+LISTS.BOSS_WARMACH = [
+  { // Artillery Barrage: mortar shells rain where you are and where you are heading (each leaves burning ground).
+    name: 'Artillery Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0,
+    begin(e) {
+      const p = world.player, n = 8 + 2 * e.phase;
+      for (let i = 0; i < n; i++) {
+        const life = 1.0 + i * 0.15;
+        let x = p.pos.x + p.vel.x * life * 0.6, z = p.pos.z + p.vel.z * life * 0.6;
+        if (i > 0) { const a = Math.random() * 6.283, rr = 2.5 + Math.random() * 7; x += Math.sin(a) * rr; z += Math.cos(a) * rr; }
+        tv.set(x, 0, z); clampArena(tv, 2);
+        circle(tv.x, tv.z, 2.8, life, BT.PILLAR, pwr(e) * 1.3, 0xffa040);
+      }
+      events.emit('shake', { amount: 0.3 });
+    },
+    fire() { /* shells land as their telegraphs expire */ },
+  },
+  { // Molten Ray: the turret sweeps a stream of molten bolts across the arena.
+    name: 'Molten Ray!', wind: () => 1.1, act: () => 1.7, rec: () => 1.0,
+    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.75; cone(e, ux, uz, 30, 0.8, 1.1, BT.VISUAL, 0, 0xffa040); },
+    fire() { S.rayT = 0; S.rayN = 0; },
+    tick(e, dt) {
+      stand(e);
+      S.rayT -= dt;
+      if (S.rayT > 0) return;
+      S.rayT = 0.05;
+      S.rayA += 1.5 / 34;   // sweeps ~1.5 rad over the attack
+      dirV.set(Math.sin(S.rayA), 0, Math.cos(S.rayA));
+      tv.set(e.pos.x + dirV.x * e.radius, 2.2, e.pos.z + dirV.z * e.radius);
+      fireEnemyProjectile(tv, dirV, 'FLAME', 24, pwr(e) * 0.5, { life: 1.6, radius: 0.7, debuff: 2 });
+      if ((S.rayN++ & 3) === 0) events.emit('shake', { amount: 0.12 });
+    },
+    windTick(e) { requestYaw(S.rayA + 0.75); },
+  },
+  { // Seismic Stomp: all six legs slam down; shockwaves under each leg and around the hull.
+    name: 'Seismic Stomp!', wind: () => 0.9, act: () => 0.3, rec: () => 0.9,
+    begin(e) {
+      for (let i = 0; i < 6; i++) { const a = e.facing + (i / 6) * 6.283 + 0.52; spawnTelegraphCircle(e.pos.x + Math.sin(a) * e.radius * 1.5, e.pos.z + Math.cos(a) * e.radius * 1.5, 3.4, 0.9, pwr(e) * 1.4, 0xff7a1a); }
+      spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2.5, 1.1, pwr(e) * 1.2, 0xffa040);
+    },
+    fire() { events.emit('shake', { amount: 0.7 }); },
+  },
+  { // Missile Swarm: three volleys of seeking fire missiles.
+    name: 'Missile Swarm!', wind: () => 0.8, act: () => 1.6, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 1, 0.8, BT.VISUAL, 0, 0xffa040); },
+    fire() { S.rayT = 0; S.rayN = 0; },
+    tick(e, dt, ux, uz) {
+      stand(e);
+      S.rayT -= dt;
+      if (S.rayT > 0 || S.rayN >= 3) return;
+      S.rayT = 0.5; S.rayN++;
+      const base = Math.atan2(ux, uz), n = 5 + e.phase;
+      for (let i = 0; i < n; i++) {
+        const a = base + (i - (n - 1) / 2) * 0.32;
+        dirV.set(Math.sin(a), 0, Math.cos(a));
+        tv.set(e.pos.x, 3, e.pos.z);
+        fireEnemyProjectile(tv, dirV, 'FLAME', 10, pwr(e) * 0.7, { life: 4, radius: 0.6, homing: 1.4, debuff: 2 });
+      }
+    },
+  },
+  { // Rampage: the machine lowers itself and charges along a lane, trampling anything in the way.
+    name: 'Rampage!', wind: () => 1.0, act: () => 0.9, rec: () => 1.2,
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 28, e.radius * 2 + 1, 1.0, BT.VISUAL, 0, 0xff5a1a); },
+    fire() { events.emit('shake', { amount: 0.5 }); },
+    tick(e) {
+      drive(e, e.dir.x, e.dir.z, e.speed * 9);
+      const p = world.player, d = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
+      if (!S.ramHit && p.alive && d < e.radius + 1.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.6); }
+    },
+    end(e) { stand(e); },
+    windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
+  },
+];
+
+function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
+  const list = LISTS.BOSS_WARMACH!;
+  if (S.stompCd > 0) S.stompCd -= dt;
+  if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
+  keepRange(e, ux, uz, dist, 9, 17, e.speed * (1 + 0.12 * e.phase), 0.35);
+  if (e.attackCd > 0) return;
+  let id: number;
+  if (dist < e.radius + 6 && S.stompCd <= 0) { id = M_STOMP; S.stompCd = 7; }   // too close: stomp you away
+  else id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length];
   beginAtk(e, list, id, ux, uz, dist);
 }
 
