@@ -12,7 +12,7 @@ import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -450,6 +450,52 @@ function addFarm(b: GB, rnd: () => number) {
   b.cyl(1.2, 1.3, 0.9, 9, [hx, 0.45, hz], '#cfae4e'); b.sph(1.2, [hx, 0.95, hz], '#d8b958', [1, 0.95, 1], 8); b.cone(0.3, 0.5, 5, [hx, 2.2, hz], '#c19a3a');
 }
 
+/** An extra crop field (dirt bed + rows of wheat / cabbages / pumpkins). */
+function addField(b: GB, F: FieldSpec, rnd: () => number): void {
+  const { x, z, hw, hd } = F;
+  b.box(hw * 2 - 0.5, 0.06, hd * 2 - 0.5, [x, 0.04, z], '#6d5336');
+  for (let zi = -hd + 1.1; zi <= hd - 0.9; zi += 1.15) {
+    b.box(hw * 2 - 1.0, 0.04, 0.3, [x, 0.08, z + zi], '#58412a');
+    for (let xi = -hw + 1.0; xi <= hw - 0.8; xi += F.crop === 'WHEAT' ? 0.7 : 1.15) {
+      const px = x + xi + (rnd() - 0.5) * 0.12, pz = z + zi + (rnd() - 0.5) * 0.12;
+      if (F.crop === 'WHEAT') { const h = 0.85 + rnd() * 0.25; b.cone(0.19, h, 5, [px, h / 2 + 0.05, pz], ['#d6b64a', '#dec062', '#c9a63c'][(rnd() * 3) | 0], [0, 0, 0], 1, [0.7, 1.1]); }
+      else if (F.crop === 'CABBAGE') { b.sph(0.36, [px, 0.3, pz], ['#6fb04a', '#7cc05a', '#5e9a3e'][(rnd() * 3) | 0], [1, 0.75, 1], 7); b.sph(0.22, [px, 0.5, pz], '#a8d878', [1, 0.7, 1], 6); }
+      else { if (rnd() < 0.6) { b.sph(0.38, [px, 0.32, pz], ['#e8862a', '#f09a3a', '#d8762a'][(rnd() * 3) | 0], [1.15, 0.8, 1.15], 8); b.cyl(0.05, 0.06, 0.2, 5, [px, 0.68, pz], '#4a6a2a'); } b.sph(0.3, [px + 0.4, 0.15, pz + 0.2], '#4f8f3a', [1.3, 0.4, 1], 5); }
+    }
+  }
+}
+
+/** The great cobblestone bridge over the river (deck arching up to BRIDGE.h, parapets, piers and arches, lamps). */
+function addBridge(b: GB, g: GB): void {
+  const { hw, z0, z1, h } = BRIDGE, L = z1 - z0, n = 26, st = '#a8a296', st2 = '#8f897d', cob = '#b9b2a2';
+  const hAt = (z: number) => { const t = (z - z0) / L; return h * (1 - (2 * t - 1) ** 2); };
+  for (let i = 0; i < n; i++) {
+    const za = z0 + (L * i) / n, zb = z0 + (L * (i + 1)) / n, zm = (za + zb) / 2, ya = hAt(za), yb = hAt(zb), ym = (ya + yb) / 2;
+    const ang = Math.atan2(yb - ya, zb - za), len = Math.hypot(zb - za, yb - ya) + 0.05;
+    b.box(hw * 2, 0.7, len, [0, ym - 0.3, zm], i % 2 ? st : st2, [-ang, 0, 0]);   // deck slab
+    b.box(hw * 2 - 0.6, 0.04, len, [0, ym + 0.06, zm], i % 2 ? cob : '#c2bbab', [-ang, 0, 0]);   // cobbles
+    for (const sx of [-1, 1]) { b.box(0.5, 0.95, len, [sx * (hw + 0.3), ym + 0.4, zm], st, [-ang, 0, 0]); b.box(0.66, 0.14, len, [sx * (hw + 0.3), ym + 0.92, zm], '#c9c3b5', [-ang, 0, 0]); }
+  }
+  // piers + arches under the deck (standing in the river), and a stone skirt down to the water
+  for (const pz of [64, 68, 72]) { b.box(hw * 2 + 1.0, 3.2, 1.6, [0, hAt(pz) - 2.0, pz], st2); b.box(hw * 2 + 1.4, 0.4, 2.2, [0, -1.3, pz], '#7d776d'); }
+  for (const [za, zb] of [[61.2, 64], [64, 68], [68, 72], [72, 74.8]]) { const zm = (za + zb) / 2; b.cyl((zb - za) / 2, (zb - za) / 2, hw * 2 + 0.9, 12, [0, hAt(zm) - 1.25, zm], '#6e695f', [0, 0, Math.PI / 2], [1, 1, 0.55]); }
+  // end posts with lamps
+  for (const sx of [-1, 1]) for (const zz of [z0 + 0.4, z1 - 0.4]) {
+    b.box(0.8, 1.4 + hAt(zz), 0.8, [sx * (hw + 0.3), (1.4 + hAt(zz)) / 2, zz], st2); b.box(0.95, 0.15, 0.95, [sx * (hw + 0.3), 1.45 + hAt(zz), zz], '#c9c3b5');
+    b.cyl(0.07, 0.07, 1.3, 6, [sx * (hw + 0.3), 2.15 + hAt(zz), zz], '#2a2a2e'); g.sph(0.26, [sx * (hw + 0.3), 2.9 + hAt(zz), zz], '#ffd070', 1, 8);
+  }
+  for (const sx of [-1, 1]) { g.sph(0.2, [sx * (hw + 0.3), hAt(68) + 1.8, 68], '#ffd070', 1, 6); b.cyl(0.06, 0.06, 0.8, 6, [sx * (hw + 0.3), hAt(68) + 1.3, 68], '#2a2a2e'); }
+}
+/** Rocks along the river banks + a rocky spring where the river starts (its east end). */
+function addRiverBanks(b: GB, rnd: () => number): void {
+  for (let x = RIVER.x0 + 22; x < RIVER.x1; x += 2.6) {
+    if (Math.abs(x) < BRIDGE.hw + 2) continue;
+    for (const zb of [RIVER.z0 - 0.4, RIVER.z1 + 0.4]) if (rnd() < 0.55) b.ico(0.5 + rnd() * 0.7, [x + rnd() * 1.6, -0.1, zb + (rnd() - 0.5) * 0.8], ['#8a8f94', '#7d8288', '#969a9c'][(rnd() * 3) | 0], [1.2, 0.6, 1], 0);
+    if (rnd() < 0.3) { const zr = rnd() < 0.5 ? RIVER.z0 + 0.6 : RIVER.z1 - 0.6; for (let k = 0; k < 3; k++) b.cyl(0.03, 0.05, 1.1 + rnd() * 0.6, 4, [x + rnd(), 0.2, zr + (rnd() - 0.5)], '#6f8f3a'); }
+  }
+  for (let i = 0; i < 9; i++) b.ico(1.0 + rnd() * 1.3, [RIVER.x1 + 0.5 + rnd() * 2, 0.1 + rnd() * 0.6, RIVER.z0 + 1 + rnd() * (RIVER.z1 - RIVER.z0 - 2)], ['#7d8288', '#8a8f94'][i % 2], [1.1, 0.9, 1], 0);
+}
+
 interface Chunk { b: GB; g: GB }
 const CH = 40;
 
@@ -774,6 +820,9 @@ function buildTown() {
   const paving = buildPaving();
   for (const pts of paving.patches) { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } addPatchKerb(at(cx / pts.length, cz / pts.length).b, pts, pr); }
   addFarm(at(FARM.x, FARM.z).b, pr);
+  for (const F of FIELDS) addField(at(F.x, F.z).b, F, pr);
+  { const c = at(0, 68); addBridge(c.b, c.g); }
+  addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   // town wall: runs are cut into ~15-unit pieces so every piece lands in its own spatial chunk (frustum culling)
   const wr = mulberry32(4242);
   for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
@@ -809,9 +858,11 @@ function rippleTexture(): CanvasTexture {
 
 /** The lake west of the town: animated water surface, sandy shore line, reeds and a few shore rocks. */
 function Lake() {
-  const { water, shore, mat, shoreMat } = useMemo(() => {
+  const { water, river, shore, mat, shoreMat } = useMemo(() => {
     const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 - LAKE.z0;
     const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1) / 2);
+    // the river south of the gate (same water, joins the lake at its west end)
+    const river = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 1.2, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
     const bump = rippleTexture();
     const mat = new MeshStandardMaterial({ color: new Color('#2c6f93'), roughness: 0.12, metalness: 0.15, bumpMap: bump, bumpScale: 0.6, transparent: true, opacity: 0.94 });
     const b = new GB([0.85, 1.05]), rnd = mulberry32(303);
@@ -825,13 +876,14 @@ function Lake() {
     }
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     const shore = b.build();
-    return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
+    return { water, river, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
   }, []);
   useFrame((_, dt) => { const m = mat.bumpMap; if (m) { m.offset.x += dt * 0.01; m.offset.y += dt * 0.017; } });
-  useEffect(() => () => { water.dispose(); shore.dispose(); mat.bumpMap?.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, shore, mat, shoreMat]);
+  useEffect(() => () => { water.dispose(); river.dispose(); shore.dispose(); mat.bumpMap?.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, river, shore, mat, shoreMat]);
   return (
     <>
       <mesh geometry={water} material={mat} receiveShadow renderOrder={1} />
+      <mesh geometry={river} material={mat} receiveShadow renderOrder={1} />
       <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
     </>
   );

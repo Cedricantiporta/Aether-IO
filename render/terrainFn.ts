@@ -2,7 +2,7 @@
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
-import { FARM, WALL, BREWER_HUT, ROADS } from '../engine/townData';
+import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS } from '../engine/townData';
 import { inCampYard } from '../engine/caveData';
 import { BEACH, beachSandK } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
@@ -29,7 +29,10 @@ export function inForecourtUse(x: number, z: number, m = 0) {
   return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m)
     || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x)
     || beachSandK(x, z) > 0.15   // the lakeside beach (render/Beach.tsx has its own props)
-    || inCampYard(x, z, 2 + m) || onDirtPath(x, z, 1.2 + m);   // the mining camp yard + the dirt paths to the camp / the beach
+    || inCampYard(x, z, 2 + m) || onDirtPath(x, z, 1.2 + m)
+    || riverK(x, z) > 0 || (z > RIVER.z0 - 2.5 - m && z < RIVER.z1 + 2.5 + m && x > RIVER.x0 && x < RIVER.x1 + 3)   // the river + its banks
+    || FIELDS.some((F) => Math.abs(x - F.x) < F.hw + 1.5 + m && Math.abs(z - F.z) < F.hd + 1.5 + m)
+    || (z > 78 && Math.abs(x) < 4.6 + m);   // the mainland road (fenced)   // the mining camp yard + the dirt paths to the camp / the beach
 }
 /** Within `m` of a dirt path (townData ROADS with `dirt`: meadow -> beach, coop -> mines, the camp). */
 const DIRT = ROADS.filter((r) => r.dirt);
@@ -57,7 +60,18 @@ export function lakeK(x: number, z: number) {
   return inX * inZ;
 }
 
+/** 0..1: how far into the river south of the gate (banks slope down over ~2.5 units, the bed sits at -1.7). */
+export function riverK(x: number, z: number) {
+  if (x < RIVER.x0 || x > RIVER.x1 + 2.5) return 0;
+  const inZ = sstep(RIVER.z0 - 0.6, RIVER.z0 + 1.6, z) * sstep(RIVER.z1 + 0.6, RIVER.z1 - 1.6, z);
+  return inZ * sstep(RIVER.x1 + 2.5, RIVER.x1 - 1.5, x);
+}
 export function groundY(x: number, z: number) {
+  const rk = riverK(x, z);
+  if (rk > 0) { const y0 = groundY0(x, z); return y0 * (1 - rk) - 1.7 * rk; }
+  return groundY0(x, z);
+}
+function groundY0(x: number, z: number) {
   const k = lakeK(x, z);
   if (k > 0) return groundYLand(x, z) * (1 - k) - 1.6 * k;   // lake bed (water sits at y ~ -0.15)
   return groundYLand(x, z);

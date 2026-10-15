@@ -26,25 +26,32 @@ export const GATE = { x: 0, z: 38 };
 export const PLAZA = { x: 0, z: 2, r: 6.5 };
 /** The Adventure Portal: an ancient stone gate in a forest clearing at the end of the road south of the town gate.
  *  Runs start here (the town gate is just a gate). `front` = where the hero stands to step in. */
-export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 84.6 } };   // (front = on top of the platform, before the arch)
+// ---- the outskirts (owner: Mondstadt-like): the walled town + a small green in front of the gate sit north of a river
+// that runs west into the lake (the sea); one long cobblestone bridge crosses it to the mainland (farm, fields, windmill,
+// the Endless Tower and the Adventure Portal), about 34 units further south than the old meadow.
+/** The river south of the gate (water band; banks are colliders, the bridge is the only crossing west of its east end). */
+export const RIVER = { x0: -72, x1: 50, z0: 61, z1: 75 };
+/** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
+export const BRIDGE = { hw: 4.2, z0: 57.5, z1: 78.5, h: 1.6 };
+export const PORTAL = { x: 0, z: 124, r: 6.5, front: { x: 0, z: 120.6 } };   // (front = on top of the platform, before the arch)
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
-export const FARM = { x: 18, z: 60, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
+export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -22, z: 62, rot: Math.PI / 2 };   // (owner: farther from the town gate; was (-14, 45))
+export const BREWER_HUT = { x: -28, z: 45.5, rot: Math.PI / 2 };   // (owner: farther from the town gate; was (-14, 45))
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
-export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
-export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against the forest edge
+export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
+export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge
 /** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
 export const NESTS: [number, number][] = [[COOP.x - 1.8, COOP.z + 2.1], [COOP.x + 0.2, COOP.z + 2.5], [COOP.x + 2, COOP.z + 2]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
-export const WHEEL_PIN = { x: 11.6, z: 52.4 };
+export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
-export const TOWER = { x: -31, z: 75, r: 4.2, door: { x: -26, z: 75 } };   // deep in the dark south-west forest, at the end of a narrow dirt path
+export const TOWER = { x: -31, z: 112, r: 4.2, door: { x: -26, z: 112 } };   // deep in the dark south-west forest, at the end of a narrow dirt path
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -53,11 +60,9 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [-48.5, -54, 56.5, 56], // walled town + a NARROW trail outside the walls on the back / east (the west side is the lake)
   [-9, -58.5, 9, 0],    // the hermit's clearing behind the north wall (Old Wend's camp, HERMIT_CAMP)
   [-10, -2, 68, 58],    // the wide east side south of the trail: the mining camp at the Crystal Cave (caveData CAVE_BAY) + the way to the farm
-  [0, 0, 57, 77],       // the strip east of the farm clearing: the dirt path from the chicken coop up to the mines
-  [-40, -10, 40, 84],   // the open meadow south of the gate (road, wheat field, brewer's hut; the tree line is pushed well back)
-  [-12, -10, 12, 99],   // the forest road on to the Adventure Portal clearing (PORTAL)
-  [20, 40, 50, 84],     // the farm clearing east of the road (barn, cows, coop)
-  [-37, 69, -20, 81],   // the forest nook of the Endless Tower
+  [0, 0, 64, 112],      // the strip east of the farm: the dirt path from the chicken coop up to the mines (round the river's east end)
+  [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
+  [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Endless Tower, the Adventure Portal)
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
 
@@ -100,6 +105,8 @@ export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3.5, stairZ: -15.6 };
 /** Ground height at (x, z) in the town (the terrace + its stairs; 0 elsewhere). */
 export function townLift(x: number, z: number): number {
+  // the bridge deck: a gentle arch over the river
+  if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
   // the Adventure Portal's round stepped platform (tiers r 8 / 6.9 / 5.6 up to 1.2; render/Town buildPortalGeo)
   const pd = Math.hypot(x - PORTAL.x, z - PORTAL.z);
   if (pd < 8.4) return Math.min(1.2, Math.max(0, (8.4 - pd) / 2.6) * 1.2);
@@ -114,7 +121,14 @@ export function townLift(x: number, z: number): number {
  *  WINDMILL: on the meadow by the south-east wall tower; STATUE: the founder's statue in the middle of the plaza. */
 export const CHURCH = { x: -27, z: -27.5, w: 9, d: 14, rot: 0 };
 export const TAVERN = { x: 28, z: -21, w: 9.5, d: 7, rot: 0 };
-export const WINDMILL = { x: 45, z: 46.5, r: 3.4 };
+export const WINDMILL = { x: 38, z: 81, r: 3.4 };
+/** Extra crop fields on the mainland (fenced, drawn by TownScenery): wheat / cabbages / pumpkins. */
+export interface FieldSpec { x: number; z: number; hw: number; hd: number; crop: 'WHEAT' | 'CABBAGE' | 'PUMPKIN' }
+export const FIELDS: FieldSpec[] = [
+  { x: 18, z: 81.6, hw: 7, hd: 3, crop: 'CABBAGE' },
+  { x: -19, z: 89, hw: 7, hd: 4.5, crop: 'WHEAT' },
+  { x: -19, z: 100.5, hw: 7, hd: 3.8, crop: 'PUMPKIN' },
+];
 export const STATUE = { x: 0, z: 2, r: 1.9 };
 /** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
  *  the chapel's side door (east gate) to the crypt at the west end, gravestones in four blocks, a dead tree, lanterns. */
@@ -175,7 +189,7 @@ export const STALLS: StallSpec[] = [
  */
 export const ROAD_W = { main: 5, street: 4, branch: 2.8 };
 export const ROADS: RoadSpec[] = [
-  { x1: 0, z1: 8, x2: 0, z2: 74, w: ROAD_W.main },               // main avenue plaza -> gate -> farm road
+  { x1: 0, z1: 8, x2: 0, z2: BRIDGE.z0 + 0.3, w: ROAD_W.main },   // main avenue plaza -> gate -> the bridge
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
   { x1: -27, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street (on west to the chapel)
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
@@ -194,15 +208,15 @@ export const ROADS: RoadSpec[] = [
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x + 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (west of the road)
-  { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
-  { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
+  { x1: 0, z1: TOWER.z, x2: TOWER.door.x, z2: TOWER.z, w: 1.8 },   // endless tower door (a narrow woodland path)
+  { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
-  { x1: 2.4, z1: 76.6, x2: 24, z2: 77.2, w: 2.6, dirt: true }, { x1: 24, z1: 77.2, x2: 43, z2: 77, w: 2.6, dirt: true }, { x1: 43, z1: 77, x2: 48.5, z2: 66.5, w: 2.6, dirt: true },
+  { x1: 2.4, z1: 110.6, x2: 24, z2: 111.2, w: 2.6, dirt: true }, { x1: 24, z1: 111.2, x2: 43, z2: 111, w: 2.6, dirt: true }, { x1: 43, z1: 111, x2: 48.5, z2: 100.5, w: 2.6, dirt: true },
   // chicken coop -> the mines: east past the coop, up the strip east of the farm, along the east side into the mining camp
-  { x1: 41.5, z1: 72.5, x2: 48.5, z2: 66.5, w: 2.6, dirt: true }, { x1: 48.5, z1: 66.5, x2: 54, z2: 57, w: 2.6, dirt: true }, { x1: 54, z1: 57, x2: 58, z2: 45, w: 2.6, dirt: true },
-  { x1: 58, z1: 45, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
+  { x1: 41.5, z1: 106.5, x2: 48.5, z2: 100.5, w: 2.6, dirt: true }, { x1: 48.5, z1: 100.5, x2: 54, z2: 91, w: 2.6, dirt: true }, { x1: 54, z1: 91, x2: 58, z2: 79, w: 2.6, dirt: true },
+  { x1: 58, z1: 79, x2: 59.5, z2: 60, w: 2.6, dirt: true }, { x1: 59.5, z1: 60, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
   // inside the camp: on to the mine mouth, and the narrow back trail coming down from the north
   { x1: 62.5, z1: 21, x2: 66.5, z2: 15.2, w: 2.6, dirt: true }, { x1: 66.5, z1: 15.2, x2: 70.4, z2: 12.8, w: 2.6, dirt: true },
   { x1: 50.6, z1: -8, x2: 55.5, z2: 3.5, w: 2.2, dirt: true }, { x1: 55.5, z1: 3.5, x2: 62.5, z2: 13, w: 2.2, dirt: true },
@@ -244,6 +258,11 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
+  // the mainland road from the bridge to the portal: rail fences both sides (gaps at the farm gate, the farm track, the tower path)
+  [3.4, 79.5, 3.4, FARM.z - 1.6], [3.4, FARM.z + 1.6, 3.4, 109.2], [3.4, 112, 3.4, 117.5],
+  [-3.4, 79.5, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],
+  // the extra crop fields (each open on the road side)
+  ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
@@ -253,7 +272,7 @@ export const SIGNS: SignSpec[] = [];
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
   // main avenue (+ the road on into the farmland)
-  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 53.5], [3.2, 61.5], [-3.2, 66], [3.2, 72],
+  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
   // south street (north edge), plaza, north street
   [-9.4, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
   // the dirt path from the meadow to the beach
@@ -296,9 +315,11 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
-  { x: -32, z: 44, s: 3.4, kind: 0 }, { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
-  { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
-  { x: -6, z: 70, s: 3.4, kind: 1 }, { x: -31, z: 62, s: 3.9, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 16, z: 72, s: 3.5, kind: 0 }, { x: 24, z: 46, s: 3.4, kind: 0 },
+  { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
+  { x: 24, z: 46, s: 3.4, kind: 0 },
+  // the mainland across the bridge
+  { x: -38, z: 82, s: 3.9, kind: 3 }, { x: -8, z: 83, s: 3.4, kind: 1 }, { x: -40, z: 96, s: 3.9, kind: 2 }, { x: -41, z: 106, s: 3.4, kind: 2 },
+  { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 47, z: 88, s: 3.6, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -311,7 +332,7 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
  *  The cart's bed runs along its local z (rot = yaw); colliders in TOWN_COLLIDERS. */
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
-  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -26, z: 47.5, rot: -0.9, kind: 1 }, { x: 31, z: 48, rot: 2.0, kind: 2 },
+  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
 ];
 export const SCARECROW = { x: FARM.x, z: FARM.z };
 export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
@@ -362,6 +383,10 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   c.push([CHURCH.x - CHURCH.w / 2 + 1.2, CHURCH.z + CHURCH.d / 2 - 1.2, 2.0]);
   c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
   for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
+  // the river: both banks are a chain of circles (gap for the bridge), the east end is closed; the bridge railings
+  for (let x = -49; x <= RIVER.x1 + 0.01; x += 1.0) if (Math.abs(x) > BRIDGE.hw + 0.5) c.push([x, RIVER.z0 - 0.2, 0.7], [x, RIVER.z1 + 0.2, 0.7]);
+  for (let z = RIVER.z0; z <= RIVER.z1; z += 1.0) c.push([RIVER.x1 + 0.4, z, 0.8]);
+  for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * (BRIDGE.hw + 0.35), z, 0.4]);
   c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
@@ -399,6 +424,8 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
   c.push([CASTLE.x, CASTLE.z, 14], [HERMIT_CAMP.x, HERMIT_CAMP.z, 7]);
   c.push([CHURCH.x, CHURCH.z, 9], [TAVERN.x, TAVERN.z, 7], [WINDMILL.x, WINDMILL.z, 9]);
+  for (let x = RIVER.x0; x <= RIVER.x1; x += 6) c.push([x, (RIVER.z0 + RIVER.z1) / 2, 9]);
+  for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([PORTAL.x, PORTAL.z, 13], [PORTAL.x, PORTAL.z - 6, 9]);   // the portal clearing
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
@@ -631,8 +658,8 @@ export const NPCS: NpcDef[] = [
     gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 2, text: 'Take these, with the Flame\'s blessing. They have saved braver souls than either of us.' },
   },
   {
-    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 60.5], speed: 1.2,
-    patrol: [[30.5, 60.5], [28, 57.5], [28, 67.5], [30.5, 66]],   // (between the field fence at x 25 and the barn)
+    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 94.5], speed: 1.2,
+    patrol: [[30.5, 94.5], [28, 91.5], [28, 101.5], [30.5, 100]],   // (between the field fence at x 25 and the barn)
     talk: [['Fine morning for it. The girls are in a good mood today.', 'Cows, I mean. The cows.'], ['That barn has stood longer than the gate. Built it with my grandfather.']],
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
@@ -690,7 +717,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,
-    patrol: [[3.6, 46], [3.6, 58], [3.6, 70]],
+    patrol: [[3.6, 46], [2.4, 56], [2.4, 84], [2.4, 96]],   // over the bridge and back
     talk: [
       ['I walk the portal road every evening. Someone has to wave at the heroes.', 'You would be surprised how many of them wave back. The brave ones, mostly.'],
       ['Follow the ring path east, past the town wall, to where the forest bends into a little bay. There is a mine mouth there, with lanterns on posts.', 'Crystals grow inside, blue and violet, glowing like my lantern. Mine a few, and tell me what colour the walls are. For my book.'],
@@ -733,9 +760,9 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   // farm (outside the gate): cows grazing by the barn, hens by the coop
-  { kind: 'COW', x: 29, z: 57, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 29.5, z: 64.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
-  { kind: 'COW', x: 32, z: 70, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
+  { kind: 'COW', x: 29, z: 91, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 29.5, z: 98.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 32, z: 103, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
   { kind: 'CHICKEN', x: COOP.x - 1.6, z: COOP.z + 3.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x + 1.8, z: COOP.z + 3.8, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },

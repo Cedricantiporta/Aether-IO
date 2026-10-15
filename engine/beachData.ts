@@ -11,10 +11,10 @@
 // ============================================================================
 
 /** Beach extent: sand between the wall (x = -45) and the water line `shoreX`, from the headland (z0) to the forest (z1). */
-export const BEACH = { shoreX: -65, z0: 6, z1: 62, wallX: -45, wallZ: 38, wallHalf: 1.3 };
+export const BEACH = { shoreX: -65, z0: 6, z1: 58, wallX: -45, wallZ: 38, wallHalf: 1.3 };
 /** Walkable island box for the beach (must contain the origin, see townData ISLAND_BOXES / mapgen boxExit). Its north side
  *  (z = -2) is never reached: the headland rocks at z ~ 5 block the way. */
-export const BEACH_BOX: [number, number, number, number] = [-68.5, -2, 0, 62];
+export const BEACH_BOX: [number, number, number, number] = [-68.5, -2, 0, 58];
 
 /** Boardwalk (on the sand, visual only): from the entrance by the corner tower west, then north along the beach. */
 export const BOARDWALK = { z: 47, xE: -46.5, x: -58.5, zN: 12, w: 2.4 };
