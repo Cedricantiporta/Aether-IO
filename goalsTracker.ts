@@ -11,7 +11,7 @@ import { useUiStore } from './ui/uiStore';
 import { COLORS } from './constants';
 import { BIOMES } from './engine/roomDefs';
 import {
-  rollPeriods, STAT_KEYS, DAILY_BONUS_GEMS, WEEKLY_BONUS, allClaimed, goalClaimable,
+  rollPeriods, STAT_KEYS, DAILY_BONUS_GEMS, DAILY_BONUS_CRYSTALS, achCrystals, WEEKLY_BONUS, allClaimed, goalClaimable,
   type MetaState, type StatKey, type GoalInst, type GoalReward,
 } from './goals';
 import { ACHIEVEMENTS, ACH_BY_ID, titleOf, type AchCtx } from './achievements';
@@ -104,12 +104,12 @@ const notify = (msg: string) => useGameStore.getState().addNotification(msg, COL
 const pay = (r: GoalReward): void => {
   const s = useGameStore.getState();
   useGameStore.setState({
-    gems: s.gems + (r.gems ?? 0), gold: s.gold + (r.gold ?? 0),
+    gems: s.gems + (r.gems ?? 0), gold: s.gold + (r.gold ?? 0), crystals: (s.crystals ?? 0) + (r.crystals ?? 0),
     materials: r.shards ? { ...s.materials, COMMON: s.materials.COMMON + r.shards } : s.materials,
   });
-  feedReward({ gold: r.gold, gems: r.gems, shards: r.shards });
+  feedReward({ gold: r.gold, gems: r.gems, shards: r.shards, crystals: r.crystals });
 };
-const rewardMsg = (r: GoalReward): string => [r.gems ? `+${r.gems} gems` : '', r.gold ? `+${r.gold.toLocaleString()} gold` : '', r.shards ? `+${r.shards} shards` : ''].filter(Boolean).join('  ');
+const rewardMsg = (r: GoalReward): string => [r.crystals ? `+${r.crystals} Aether Crystals` : '', r.gems ? `+${r.gems} gems` : '', r.gold ? `+${r.gold.toLocaleString()} gold` : '', r.shards ? `+${r.shards} shards` : ''].filter(Boolean).join('  ');
 
 export function claimGoal(weekly: boolean, id: string): boolean {
   flush();
@@ -126,7 +126,7 @@ export const bonusReady = (m: MetaState, weekly: boolean): boolean => (weekly ? 
 export function claimBonus(weekly: boolean): boolean {
   const s = useGameStore.getState(), m = s.meta;
   if (!bonusReady(m, weekly)) return false;
-  const r: GoalReward = weekly ? WEEKLY_BONUS : { gems: DAILY_BONUS_GEMS };
+  const r: GoalReward = weekly ? WEEKLY_BONUS : { gems: DAILY_BONUS_GEMS, crystals: DAILY_BONUS_CRYSTALS };
   pay(r);
   useGameStore.setState({ meta: weekly ? { ...m, weeklyBonus: true } : { ...m, dailyBonus: true } });
   notify(`${weekly ? 'Weekly' : 'Daily'} bonus chest! ${rewardMsg(r)}`);
@@ -135,9 +135,9 @@ export function claimBonus(weekly: boolean): boolean {
 export function claimAchievement(id: string): boolean {
   const s = useGameStore.getState(), m = s.meta, a = ACH_BY_ID[id];
   if (!a || !m.unlocked.includes(id) || m.claimed.includes(id)) return false;
-  pay({ gems: a.gems });
+  pay({ gems: a.gems, crystals: achCrystals(a.gems) });
   useGameStore.setState({ meta: { ...m, claimed: [...m.claimed, id] } });
-  notify(`${a.name}: +${a.gems} gems`);
+  notify(`${a.name}: +${a.gems} gems  +${achCrystals(a.gems)} Aether Crystals`);
   return true;
 }
 /** Equips the title of achievement `id` (null = no title). Only unlocked titles can be worn. */

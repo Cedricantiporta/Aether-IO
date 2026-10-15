@@ -33,6 +33,8 @@ export function resetPickups(): void {
  * Spawns a pickup at `pos` (y ignored), popping out with a random upward velocity.
  * If the pool is full the reward is granted immediately so nothing is lost.
  */
+/** Seconds an item lies on the ground before it vanishes. */
+export const ITEM_DESPAWN = 180;
 export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?: Item): void {
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
@@ -160,6 +162,11 @@ export function updatePickups(dt: number): void {
     const o = pk[i];
     if (!o.active) continue;
     o.t += dt;
+    if (o.kind === 'ITEM' && o.t > ITEM_DESPAWN && !o.magnet) {   // items left on the field vanish after 3 minutes (owner)
+      o.active = false; if (o.item) droppedItems.delete(o.item.id);
+      events.emit('floatText', { pos: o.pos, text: 'vanished', color: 0x9a9a9a, scale: 0.6, dy: 0.8 });
+      continue;
+    }
     if (o.kind === 'XP') xpCount++;
 
     const dx = p.pos.x - o.pos.x, dz = p.pos.z - o.pos.z;

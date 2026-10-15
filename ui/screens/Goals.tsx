@@ -6,7 +6,7 @@ import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
 import { GoalGlyph } from '../components/MenuGlyphs';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
-import { DAILY_BONUS_GEMS, WEEKLY_BONUS, allClaimed, fmtDuration, goalClaimable, goalText, msToNextDay, msToNextWeek, rewardText, type GoalInst } from '../../goals';
+import { DAILY_BONUS_GEMS, DAILY_BONUS_CRYSTALS, achCrystals, WEEKLY_BONUS, allClaimed, fmtDuration, goalClaimable, goalText, msToNextDay, msToNextWeek, rewardText, type GoalInst } from '../../goals';
 import { ACHIEVEMENTS, type Achievement } from '../../achievements';
 import { bonusReady, claimAchievement, claimBonus, claimGoal, equipTitle, flush } from '../../goalsTracker';
 
@@ -43,7 +43,7 @@ const GoalList: React.FC<{ weekly: boolean }> = ({ weekly }) => {
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 15000); return () => clearInterval(t); }, []);
   const left = weekly ? msToNextWeek() : msToNextDay();
-  const bonus = weekly ? rewardText(WEEKLY_BONUS) : `${DAILY_BONUS_GEMS} gems`;
+  const bonus = weekly ? rewardText(WEEKLY_BONUS) : rewardText({ gems: DAILY_BONUS_GEMS, crystals: DAILY_BONUS_CRYSTALS });
   return (
     <div className="flex flex-col gap-2" data-testid={weekly ? 'goals-weekly' : 'goals-daily'}>
       <div className="flex items-center justify-between">
@@ -76,7 +76,7 @@ const AchRow: React.FC<{ a: Achievement; value: number; unlocked: boolean; claim
       {!unlocked && <><Bar f={value / a.target} /><div className="gl-sub mt-[.2rem]">{fmt(Math.min(value, a.target))} / {fmt(a.target)}</div></>}
     </div>
     <div className="flex flex-col items-end gap-1 shrink-0">
-      <span className="gl-reward flex items-center gap-1"><GemGlyph size={14} />{a.gems} gems</span>
+      <span className="gl-reward flex items-center gap-1"><GemGlyph size={14} />{a.gems} gems + {achCrystals(a.gems)} crystals</span>
       {unlocked && !claimed && <button className="rpg-btn rpg-btn-sm rpg-btn-primary pe" onClick={() => claimAchievement(a.id)} data-testid="ach-claim">Claim</button>}
       {unlocked && a.title && (equipped
         ? <button className="rpg-btn rpg-btn-sm pe" onClick={() => equipTitle(null)} data-testid="title-unequip">Unequip title</button>

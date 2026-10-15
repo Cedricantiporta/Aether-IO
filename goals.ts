@@ -8,7 +8,7 @@ import { GOLD_SCALE } from './constants';
 /** Lifetime / period counters fed by engine events and store actions (see goalsTracker.ts). */
 export type StatKey = 'kills' | 'elites' | 'bosses' | 'rooms' | 'harvest' | 'spent' | 'upgrades' | 'summons' | 'quests' | 'flawless';
 
-export interface GoalReward { gems?: number; gold?: number; shards?: number }
+export interface GoalReward { gems?: number; gold?: number; shards?: number; crystals?: number }
 export interface GoalInst { id: string; stat: StatKey; target: number; progress: number; claimed: boolean; reward: GoalReward }
 
 export interface MetaState {
@@ -25,7 +25,11 @@ export const STAT_KEYS: StatKey[] = ['kills', 'elites', 'bosses', 'rooms', 'harv
 export const emptyStats = (): Record<StatKey, number> => ({ kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0 });
 
 export const DAILY_BONUS_GEMS = 60;
-export const WEEKLY_BONUS: GoalReward = { gems: 400 };
+export const WEEKLY_BONUS: GoalReward = { gems: 400, crystals: 30 };
+/** Aether Crystals (the summon currency) in the daily bonus chest; every goal pays some too (owner). */
+export const DAILY_BONUS_CRYSTALS = 5;
+/** Aether Crystals per achievement (by its gem reward). */
+export const achCrystals = (gems: number): number => Math.max(2, Math.round(gems / 10));
 
 // (the 'spent' goal lists base gold below; the real target is x GOLD_SCALE, and its text shows the real number)
 interface Template { stat: StatKey; text: (n: number) => string; daily: number[]; weekly: number[] }
@@ -89,12 +93,13 @@ export function rollGoals(weekly: boolean, key: string): GoalInst[] {
         : k < 0.8 ? { gold: (2000 + 500 * Math.floor(rnd() * 5)) * GOLD_SCALE }                      // 20k..40k gold (scaled)
           : { shards: 100 + 50 * Math.floor(rnd() * 5) };                                            // 100..300 common shards
     }
+    reward.crystals = weekly ? 10 + 5 * Math.floor(rnd() * 3) : 2 + Math.floor(rnd() * 3);   // daily 2..4, weekly 10..20
     out.push({ id: `${weekly ? 'w' : 'd'}${i}`, stat: t.stat, target, progress: 0, claimed: false, reward });
   }
   return out;
 }
 
-export const rewardText = (r: GoalReward): string => [r.gems ? `${r.gems} gems` : '', r.gold ? `${r.gold.toLocaleString()} gold` : '', r.shards ? `${r.shards} shards` : ''].filter(Boolean).join(' + ');
+export const rewardText = (r: GoalReward): string => [r.crystals ? `${r.crystals} Aether Crystals` : '', r.gems ? `${r.gems} gems` : '', r.gold ? `${r.gold.toLocaleString()} gold` : '', r.shards ? `${r.shards} shards` : ''].filter(Boolean).join(' + ');
 
 // ------------------------------------------------------------- persistence --
 export const freshMeta = (now: Date = new Date()): MetaState => {
@@ -110,7 +115,7 @@ const goals = (a: unknown): GoalInst[] | null => {
   for (const g of a) {
     if (!g || typeof g !== 'object' || !STAT_KEYS.includes((g as GoalInst).stat) || !(nn((g as GoalInst).target) > 0)) return null;
     const x = g as GoalInst, r = (x.reward ?? {}) as GoalReward;
-    out.push({ id: String(x.id), stat: x.stat, target: nn(x.target), progress: Math.min(nn(x.progress), nn(x.target)), claimed: !!x.claimed, reward: { gems: nn(r.gems) || undefined, gold: nn(r.gold) || undefined, shards: nn(r.shards) || undefined } });
+    out.push({ id: String(x.id), stat: x.stat, target: nn(x.target), progress: Math.min(nn(x.progress), nn(x.target)), claimed: !!x.claimed, reward: { gems: nn(r.gems) || undefined, gold: nn(r.gold) || undefined, shards: nn(r.shards) || undefined, crystals: nn(r.crystals) || (x.id?.[0] === 'w' ? 10 : 2) } });
   }
   return out;
 };
