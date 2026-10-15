@@ -41,7 +41,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     title: 'Necromancer', tagline: 'Lord of the Dead', tags: ['Ranged', 'Summoner', 'Curses'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.NECROMANCER.weaponId)?.name ?? 'Bone Wand',
     abilities: [
-      { key: 'R', name: 'Army of the Dead', desc: 'A bone golem crashes down like a meteor and fights for 20s.' },
+      { key: 'R', name: 'Bone Golem', desc: 'A bone golem crashes down like a meteor and fights for 20s.' },
       { key: 'Q', name: 'Raise Dead', desc: 'Skeleton warriors claw out of the ground to fight for you.' },
       { key: 'E', name: 'Bone Spear', desc: 'A spear of bone that impales a whole line.' },
     ],

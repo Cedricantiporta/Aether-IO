@@ -8,7 +8,10 @@ import { world } from '../engine/world';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
 
-const BONE = '#ebe5d0', BONE2 = '#c9c2a8';
+// dark purple bone with soul-fire glowing parts (eyes, heart core, staff orb, golem runes); glow parts are built into a
+// second geometry per part (glowOf) drawn with an unlit, non-tone-mapped violet so they read as light
+const BONE = '#5e4c78', BONE2 = '#43365c';
+const glowOf = new WeakMap<BufferGeometry, BufferGeometry>();
 type V3 = [number, number, number];
 const sub = (p: V3, o: V3): V3 => [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
 
@@ -18,21 +21,22 @@ interface RigDef { hips: V3; head: V3; armL: V3; armR: V3; legL: V3; legR: V3; g
 function skeletonDef(v: 'W' | 'M' | 'A'): RigDef {
   const mage = v === 'M', bow = v === 'A';
   const hips: V3 = [0, 0.8, 0], head: V3 = [0, 1.45, 0], armL: V3 = [-0.28, 1.4, 0], armR: V3 = [0.28, 1.4, 0], legL: V3 = [-0.1, 0.8, 0], legR: V3 = [0.1, 0.8, 0];
-  const mk = (o: V3, f: (g: GB, at: (p: V3) => V3) => void) => { const g = new GB([0.85, 1.1]); f(g, (p) => sub(p, o)); return g.build(); };
+  const mk = (o: V3, f: (g: GB, at: (p: V3) => V3, gl: GB) => void) => { const g = new GB([0.85, 1.1]), gl = new GB([1, 1]); f(g, (p) => sub(p, o), gl); const geo = g.build(); if (gl.parts.length) glowOf.set(geo, gl.build()); return geo; };
   return {
     hips, head, armL, armR, legL, legR,
     geo: {
-      torso: mk(hips, (g, at) => {
+      torso: mk(hips, (g, at, gl) => {
         g.cyl(0.04, 0.045, 0.6, 5, at([0, 1.1, 0]), BONE2);                                   // spine
         for (let i = 0; i < 4; i++) g.torus(0.18 - i * 0.012, 0.02, at([0, 1.3 - i * 0.12, 0]), BONE, [Math.PI / 2, 0, 0], [1, 0.75, 1], 8);
         g.box(0.52, 0.06, 0.09, at([0, 1.42, 0]), BONE); g.box(0.32, 0.1, 0.18, at([0, 0.8, 0]), BONE2);
+        gl.sph(0.09, at([0, 1.18, 0.02]), '#ffffff', 1, 6);                                  // soul-fire heart in the ribcage
         if (mage) g.cyl(0.25, 0.38, 0.75, 8, at([0, 1.0, 0]), '#3a2050');                    // robe
         if (bow) { g.cyl(0.08, 0.07, 0.6, 6, at([0.12, 1.25, -0.2]), '#5a3a2a', [0.3, 0, -0.35]); for (let i = 0; i < 3; i++) g.box(0.02, 0.18, 0.02, at([0.2 + i * 0.03, 1.6, -0.27 + i * 0.02]), '#d8d0b8', [0.3, 0, -0.35]); }   // quiver
       }),
-      head: mk(head, (g, at) => {
+      head: mk(head, (g, at, gl) => {
         g.sph(0.22, at([0, 1.64, 0]), BONE, [1, 1.05, 1.05], 8);                              // skull
         g.box(0.2, 0.06, 0.14, at([0, 1.47, 0.08]), BONE2);                                   // jaw
-        for (const s of [-1, 1]) g.sph(0.06, at([s * 0.08, 1.66, 0.18]), '#1a1020', 1, 5);    // sockets
+        for (const s of [-1, 1]) gl.sph(0.055, at([s * 0.08, 1.66, 0.19]), '#ffffff', 1, 5);  // glowing eyes
         if (mage) g.cone(0.32, 0.55, 8, at([0, 1.87, -0.03]), '#4a2a6a');                    // hood
         else if (bow) g.cone(0.27, 0.3, 7, at([0, 1.86, -0.02]), '#3e4a32');                // ragged green hood
         else g.cone(0.2, 0.28, 6, at([0, 1.9, 0]), '#7a7f88');                                // rusty helm spike
@@ -47,12 +51,12 @@ function skeletonDef(v: 'W' | 'M' | 'A'): RigDef {
           g.box(0.012, 0.012, 0.98, at([G[0], G[1] + 0.13, 0]), '#e8e0c8');
         } else if (!mage) g.cyl(0.28, 0.28, 0.06, 10, at([-0.36, 0.95, 0.08]), '#6a5040', [0, 0, Math.PI / 2]);   // round shield
       }),
-      armR: mk(armR, (g, at) => {
+      armR: mk(armR, (g, at, gl) => {
         g.sph(0.06, at([0.28, 1.4, 0]), BONE, 1, 5);
         g.cyl(0.035, 0.03, 0.55, 5, at([0.3, 1.13, 0]), BONE2);
-        if (bow) g.box(0.015, 0.015, 0.6, at([0.3, 0.84, 0.2]), '#d8d0b8');                // nocked arrow
-        else if (mage) { g.cyl(0.03, 0.03, 1.5, 5, at([0.32, 1.05, 0.06]), '#5a3a2a'); g.sph(0.12, at([0.32, 1.82, 0.06]), '#b08aff', 1, 6); }   // staff
-        else { g.box(0.08, 0.85, 0.02, at([0.32, 0.5, 0.0]), '#9aa0aa'); g.box(0.26, 0.05, 0.06, at([0.32, 0.9, 0]), '#5a4a3a'); }      // sword (points down, swings up)
+        if (bow) gl.box(0.015, 0.015, 0.6, at([0.3, 0.84, 0.2]), '#ffffff');               // nocked arrow (soul-lit)
+        else if (mage) { g.cyl(0.03, 0.03, 1.5, 5, at([0.32, 1.05, 0.06]), '#5a3a2a'); gl.sph(0.12, at([0.32, 1.82, 0.06]), '#ffffff', 1, 6); }   // staff (glowing orb)
+        else { g.box(0.08, 0.85, 0.02, at([0.32, 0.5, 0.0]), '#3a3048'); gl.box(0.02, 0.8, 0.03, at([0.32, 0.48, 0.0]), '#ffffff'); g.box(0.26, 0.05, 0.06, at([0.32, 0.9, 0]), '#5a4a3a'); }      // sword (points down, swings up)
       }),
       legL: mk(legL, (g, at) => { g.cyl(0.04, 0.035, 0.75, 5, at([-0.1, 0.42, 0]), BONE2); g.box(0.1, 0.05, 0.18, at([-0.1, 0.04, 0.05]), BONE); }),
       legR: mk(legR, (g, at) => { g.cyl(0.04, 0.035, 0.75, 5, at([0.1, 0.42, 0]), BONE2); g.box(0.1, 0.05, 0.18, at([0.1, 0.04, 0.05]), BONE); }),
@@ -61,18 +65,20 @@ function skeletonDef(v: 'W' | 'M' | 'A'): RigDef {
 }
 function golemDef(): RigDef {
   const hips: V3 = [0, 1.0, 0], head: V3 = [0, 2.25, 0.3], armL: V3 = [-1.15, 1.8, 0.1], armR: V3 = [1.15, 1.8, 0.1], legL: V3 = [-0.45, 0.9, 0], legR: V3 = [0.45, 0.9, 0];
-  const mk = (o: V3, f: (g: GB, at: (p: V3) => V3) => void) => { const g = new GB([0.85, 1.1]); f(g, (p) => sub(p, o)); return g.build(); };
-  const arm = (s: number, o: V3) => mk(o, (g, at) => { g.sph(0.42, at([s * 1.15, 1.75, 0.1]), '#a8a088', 1, 6); g.cyl(0.3, 0.38, 1.3, 6, at([s * 1.25, 1.0, 0.2]), BONE2); g.sph(0.42, at([s * 1.3, 0.32, 0.3]), '#a8a088', 1, 6); });
-  const leg = (s: number, o: V3) => mk(o, (g, at) => { g.cyl(0.32, 0.36, 0.9, 6, at([s * 0.45, 0.45, 0]), BONE2); g.sph(0.36, at([s * 0.45, 0.08, 0.1]), '#a8a088', [1, 0.5, 1.2], 6); });
+  const mk = (o: V3, f: (g: GB, at: (p: V3) => V3, gl: GB) => void) => { const g = new GB([0.85, 1.1]), gl = new GB([1, 1]); f(g, (p) => sub(p, o), gl); const geo = g.build(); if (gl.parts.length) glowOf.set(geo, gl.build()); return geo; };
+  const arm = (s: number, o: V3) => mk(o, (g, at) => { g.sph(0.42, at([s * 1.15, 1.75, 0.1]), '#4e3f66', 1, 6); g.cyl(0.3, 0.38, 1.3, 6, at([s * 1.25, 1.0, 0.2]), BONE2); g.sph(0.42, at([s * 1.3, 0.32, 0.3]), '#4e3f66', 1, 6); });
+  const leg = (s: number, o: V3) => mk(o, (g, at) => { g.cyl(0.32, 0.36, 0.9, 6, at([s * 0.45, 0.45, 0]), BONE2); g.sph(0.36, at([s * 0.45, 0.08, 0.1]), '#4e3f66', [1, 0.5, 1.2], 6); });
   return {
     hips, head, armL, armR, legL, legR,
     geo: {
-      torso: mk(hips, (g, at) => {
-        g.sph(0.9, at([0, 1.6, 0]), '#bdb59c', [1.2, 1, 0.9], 7);                            // bone-plated torso
+      torso: mk(hips, (g, at, gl) => {
+        gl.sph(0.32, at([0, 1.7, 0.72]), '#ffffff', [1, 1, 0.5], 7);                          // soul core in the chest
+        for (const s of [-1, 1]) gl.box(0.08, 0.5, 0.06, at([s * 0.45, 1.55, 0.78]), '#ffffff', [0, 0, s * 0.4]);   // runes
+        g.sph(0.9, at([0, 1.6, 0]), '#56466e', [1.2, 1, 0.9], 7);                            // bone-plated torso
         for (let i = 0; i < 5; i++) g.cone(0.14, 0.6, 4, at([-0.8 + i * 0.4, 2.4, -0.2]), BONE, [-0.4, 0, 0]);   // spine spikes
         g.box(0.9, 0.35, 0.6, at([0, 0.9, 0]), BONE2);
       }),
-      head: mk(head, (g, at) => { g.sph(0.4, at([0, 2.45, 0.35]), BONE, 1, 7); for (const s of [-1, 1]) g.sph(0.08, at([s * 0.15, 2.5, 0.68]), '#9a6bff', 1, 5); }),
+      head: mk(head, (g, at, gl) => { g.sph(0.4, at([0, 2.45, 0.35]), BONE, 1, 7); for (const s of [-1, 1]) gl.sph(0.09, at([s * 0.15, 2.5, 0.7]), '#ffffff', 1, 5); }),
       armL: arm(-1, armL), armR: arm(1, armR), legL: leg(-1, legL), legR: leg(1, legR),
     },
   };
@@ -81,10 +87,10 @@ function golemDef(): RigDef {
 interface Rig { root: Group; hips: Group; head: Group; armL: Group; armR: Group; legL: Group; legR: Group }
 interface Slot { outer: Group; body: Group; rigs: Rig[]; bar: Group; fill: Mesh }
 
-function buildRig(d: RigDef, mat: Material): Rig {
+function buildRig(d: RigDef, mat: Material, glow: Material): Rig {
   const root = new Group();
   const piv = (p: V3, parent: Group, at: V3 = [0, 0, 0]) => { const g = new Group(); g.position.set(p[0] - at[0], p[1] - at[1], p[2] - at[2]); parent.add(g); return g; };
-  const mesh = (geo: BufferGeometry, g: Group) => { const m = new Mesh(geo, mat); m.castShadow = true; g.add(m); };
+  const mesh = (geo: BufferGeometry, g: Group) => { const m = new Mesh(geo, mat); m.castShadow = true; g.add(m); const gg = glowOf.get(geo); if (gg) g.add(new Mesh(gg, glow)); };
   const hips = piv(d.hips, root);
   mesh(d.geo.torso, hips);
   const head = piv(d.head, hips, d.hips), armL = piv(d.armL, hips, d.hips), armR = piv(d.armR, hips, d.hips);
@@ -100,6 +106,7 @@ export function Minions() {
   const N = world.minions.length;
   const slots = useMemo<Slot[]>(() => {
     const mat = litMat({ roughness: 0.8 });
+    const glow = new MeshBasicMaterial({ color: 0xc27cff, toneMapped: false });
     const defs = [skeletonDef('W'), skeletonDef('M'), golemDef(), skeletonDef('A')];
     const barBg = new MeshBasicMaterial({ color: 0x140c1c, transparent: true, opacity: 0.8, depthTest: false, side: DoubleSide });
     const barFg = new MeshBasicMaterial({ color: 0xb48cff, depthTest: false, side: DoubleSide });
@@ -107,7 +114,7 @@ export function Minions() {
     return Array.from({ length: N }, () => {
       const outer = new Group(), body = new Group();
       outer.visible = false; outer.add(body);
-      const rigs = defs.map((d) => { const r = buildRig(d, mat); body.add(r.root); return r; });
+      const rigs = defs.map((d) => { const r = buildRig(d, mat, glow); body.add(r.root); return r; });
       const bar = new Group(); outer.add(bar);
       const bg = new Mesh(plane, barBg); bg.scale.set(1.04, 0.15, 1); bg.renderOrder = 10; bar.add(bg);
       const fill = new Mesh(plane, barFg); fill.scale.set(1, 0.1, 1); fill.position.z = 0.001; fill.renderOrder = 11; bar.add(fill);

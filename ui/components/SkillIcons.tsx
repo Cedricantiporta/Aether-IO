@@ -273,8 +273,17 @@ Object.assign(ICONS, {
     <circle cx="32" cy="46" r="5" fill="#ebe5d0" stroke={S} strokeWidth="1" />
   </Art>,
   ARMY_DEAD: (k: string) => <Art k={k} c="#9a6bd8">
-    <rect width="64" height="64" fill="#140a20" opacity=".6" />
-    {[[14, 34], [32, 26], [50, 34]].map(([x, y], i) => (<g key={i}><circle cx={x} cy={y} r="8" fill="#ebe5d0" stroke={S} strokeWidth="1.2" /><circle cx={x - 3} cy={y} r="1.8" fill="#9a6bff" /><circle cx={x + 3} cy={y} r="1.8" fill="#9a6bff" /><path d={`M${x - 6} ${y + 22} L${x} ${y + 9} L${x + 6} ${y + 22}`} stroke="#ebe5d0" strokeWidth="2.6" fill="none" /></g>))}
+    {/* the Bone Golem: a hulking bone brute crashing down, purple soul-fire eyes, impact ring */}
+    <rect width="64" height="64" fill="#140a20" opacity=".55" />
+    <ellipse cx="32" cy="56" rx="26" ry="6" fill="#9a6bff" opacity=".35" filter={u(k, 'glow')} />
+    <ellipse cx="32" cy="56" rx="22" ry="4.5" fill="none" stroke="#c9a2ff" strokeWidth="1.6" opacity=".8" />
+    <path d="M14 52 L10 38 L16 26 L24 22 L40 22 L48 26 L54 38 L50 52 L42 52 L42 42 L22 42 L22 52Z" fill="#d9d2bc" stroke={S} strokeWidth="1.4" strokeLinejoin="round" />
+    <path d="M22 30 h20 M22 35 h20" stroke="#8a8270" strokeWidth="2" />
+    <path d="M10 38 L4 46 L8 50 M54 38 L60 46 L56 50" stroke="#d9d2bc" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path d="M24 22 C22 10 42 10 40 22Z" fill="#ebe5d0" stroke={S} strokeWidth="1.3" />
+    <circle cx="28.5" cy="17" r="2.6" fill="#b47cff" /><circle cx="35.5" cy="17" r="2.6" fill="#b47cff" />
+    <circle cx="32" cy="17" r="8" fill="#9a6bff" opacity=".45" filter={u(k, 'glow')} />
+    <path d="M29 21 v2 M32 21 v2 M35 21 v2" stroke={S} strokeWidth="1.1" />
   </Art>,
   STORM_ARROWS: (k: string) => <Art k={k} c="#ffd24a">
     <rect width="64" height="64" fill="#0a0e24" opacity=".55" />

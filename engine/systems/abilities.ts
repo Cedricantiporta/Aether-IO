@@ -485,7 +485,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     } else {   // PLAGUE GROUND: a cursed patch; the fallen rise for you
       aimPoint(26, 7.5, tgt);
       const R = 7.5 + 0.4 * (lv - 1);
-      mkZone('CURSE', tgt.x, tgt.z, R, 5 + 0.3 * lv, b * 0.6, 0x7a3ab0);
+      mkZone('CURSE', tgt.x, tgt.z, R, 5 + 0.3 * lv, b * 0.6, 0x9a3aff);
       abilityState.curseRaise = 2 + Math.floor(lv / 2);
       announce('CURSE_FIELD');
     }

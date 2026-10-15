@@ -59,7 +59,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13.5,
-      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (1 / 2 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
+      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. The cooldown only starts once the last skeleton has fallen, and every summon slain costs you 9% of your max HP. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (1 / 2 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
       per: (lv) => `${[1, 2, 3, 4, 5][Math.min(5, Math.max(1, lv)) - 1]} skeleton${lv > 1 ? 's' : ''} (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
@@ -67,7 +67,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 6,
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
-    { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 18,   // (owner: longer cooldown, was 12)
+    { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
       per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },
   ],
@@ -123,7 +123,7 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
     desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
-  NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Army of the Dead', mana: 0, cd: 0,
+  NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Bone Golem', mana: 0, cd: 0,
     desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning and battering everything in the crater, then fights for you for 20s before it crumbles. Its 90s cooldown starts once the golem is gone; it also needs a full charge bar.',
     per: (lv) => `Impact ${pct(8 * lvMul(lv) * 0.7)} dmg · golem ${pct(3 * lvMul(lv) * 0.8)} per hit · 20s` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,

@@ -87,12 +87,12 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const st = useGameStore.getState().stats;
   // skeleton warriors grow with Raise Dead's level: +10% HP and +4% damage reduction per level (max 40%)
   const rdLv = Math.max(1, useGameStore.getState().skillLevels.q || 1), warrior = kind === MINION_WARRIOR;
-  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.3)   // Raise Dead skeletons +30% HP
+  m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.22)   // Raise Dead skeletons +30% HP; archers / mages are frail (0.22, was 0.3)
     * 1.2                                                    // every summon +20% HP
     * (warrior ? 1 + 0.1 * (rdLv - 1) : 1)
     * (src === SRC_RAISE ? 1.5 : 1)                         // Raise Dead skeletons: +50% HP
     * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
-  m.def = (warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE ? 0.1 : 0);   // Raise Dead skeletons: +10% defense
+  m.def = (warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE && (warrior || kind === MINION_GOLEM) ? 0.1 : 0);   // Raise Dead warriors: +10% defense (archers / mages get none)
   m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
   if (!dropped) events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
@@ -107,7 +107,15 @@ export function damageMinion(i: number, dmg: number): void {
   const m = world.minions[i];
   if (!m || !m.active || m.rise > 0) return;
   m.hp -= dmg * (1 - m.def) * boneArmorMul(); m.hitT = 0.25;   // armour + Bone Armor
-  if (m.hp <= 0) crumble(m);
+  if (m.hp <= 0) {
+    crumble(m);
+    // soul link: every summon slain costs the necromancer 9% of max HP (never the killing blow: stops at 1 HP)
+    const pl = world.player, mx = useGameStore.getState().stats.maxHealth;
+    if (pl.alive && mx > 0) {
+      const loss = Math.min(mx * 0.09, pl.hp - 1);
+      if (loss > 0) { pl.hp -= loss; events.emit('floatText', { pos: pl.pos.clone(), text: `-${Math.round(loss)}`, color: 0xb47cff, scale: 0.9, dy: 2.4 }); }
+    }
+  }
 }
 
 /** The nearest risen minion within r of (x, z), or -1 (monsters use it to pick a target). */
@@ -156,8 +164,10 @@ export function minionCount(kind = -1, src = -1): number { let n = 0; for (const
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
-  let slotI = 0, army = false;
-  for (let i = 0; i < M.length; i++) if (M[i].active && M[i].src === 2) { army = true; break; }
+  let slotI = 0, army = false, raised = false;
+  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE) raised = true; }
+  // Raise Dead: its cooldown stays full while any of its skeletons stands (it only ticks once the last one has fallen)
+  if (raised && pl.cdMax.q > 0) pl.cd.q = pl.cdMax.q;
   // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen
   if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;
   for (let i = 0; i < M.length; i++) {
@@ -199,6 +209,21 @@ export function updateMinions(dt: number): void {
       const s = Math.min(d - stop, speed * dt);
       m.x += (dx / d) * s; m.z += (dz / d) * s;
       mv = dt > 0 ? s / (speed * dt) : 0;
+    }
+    // bodies: never stand inside a monster or another summon (pushed out to touching distance)
+    const mr = golem ? 1.3 : 0.55;
+    const near = world.enemyGrid.query(m.x, m.z, mr + 6, ids);
+    for (let k = 0; k < near.length; k++) {
+      const c = world.enemies[near[k]];
+      if (!c.active || c.state === 'DYING' || c.hideT > 0) continue;
+      const ox = m.x - c.pos.x, oz = m.z - c.pos.z, min = mr + c.radius * 0.9, o2 = ox * ox + oz * oz;
+      if (o2 < min * min) { const od = Math.sqrt(o2) || 0.001, push = min - od; m.x += (od > 0.001 ? ox / od : Math.sin(m.slot)) * push; m.z += (od > 0.001 ? oz / od : Math.cos(m.slot)) * push; }
+    }
+    for (let k = 0; k < M.length; k++) {
+      if (k === i) continue;
+      const o = M[k]; if (!o.active || o.rise > 0) continue;
+      const ox = m.x - o.x, oz = m.z - o.z, min = mr + (o.kind === MINION_GOLEM ? 1.3 : 0.55), o2 = ox * ox + oz * oz;
+      if (o2 < min * min && o2 > 1e-6) { const od = Math.sqrt(o2), push = (min - od) * 0.5; m.x += (ox / od) * push; m.z += (oz / od) * push; }
     }
     m.mv += (mv - m.mv) * Math.min(1, dt * 10);
     m.walk += dt * speed * m.mv * (golem ? 0.9 : 1.6);

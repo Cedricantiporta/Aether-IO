@@ -73,7 +73,7 @@ const NAMES: Record<HeroClass, string[]> = {
   WIZARD: ['', 'Fireballs!', 'Storm Orbs!', 'Singularity!', 'Blink Nova!', 'Meteor Cataclysm!'],
   BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!"],
   KNIGHT: ['', 'Holy Wave!', 'Shield Wall!', 'Judgment!', 'Holy Charge!', 'Divine Avatar!'],
-  NECROMANCER: ['', 'Raise Dead!', 'Bone Spear!', 'Plague Ground!', 'Soul Step!', 'Army of the Dead!'],
+  NECROMANCER: ['', 'Raise Dead!', 'Bone Spear!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
 };
 /** The ultimate unlocks below this share of HP. */
 const ULT_HP = 0.6;
