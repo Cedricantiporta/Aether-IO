@@ -122,7 +122,7 @@ export const bossKeyState = { has: false };
 let finalFight = false, endingDone = false;
 /** Malakar is fought twice: stage 1 (slower, fewer adds); slain, he rises again as stage 2 (stronger, new attacks). */
 let finalStage = 1;
-/** A boss's second form to spawn next in this room (Ignar -> the Molten Colossus); '' = the biome boss. */
+/** A boss kind to spawn next in this room instead of the biome boss (currently unused - Ignar no longer has a second form); '' = the biome boss. */
 let nextBossKind: EnemyKind | '' = '';
 /** Elderroot guards Greenwood, Gorath the Marble Halls. */
 function biomeBoss(b: number): EnemyKind { return biomeOf(b).boss; }
@@ -837,19 +837,6 @@ function nextWave(): void {
 function onBossCleared(): void {
   const d = dd();
   world.boss.active = false;
-  {   // Ignar falls... and his war machine rises: the Molten Colossus (second fight, bosses2.ts)
-    const body = d.bossId >= 0 ? world.enemies[d.bossId] : null;
-    if (!finalFight && body && body.kind === 'BOSS_WARLORD' && nextBossKind === '') {
-      nextBossKind = 'BOSS_WARMACH';
-      for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
-      bossSpawned = false; bossDeadT = -1; bossPending = true; roomT = -2.6;
-      useGameStore.getState().addNotification('"You think you have won? Behold my war engine!" The ground splits open...', '#ff7a1a', 'BOSS');
-      events.emit('floatText', { pos: body.pos, text: 'THE COLOSSUS AWAKENS', color: 0xff7a1a, scale: 1.4, dy: 3 });
-      events.emit('shockwave', { pos: body.pos.clone(), radius: 20, color: 0xff7a1a });
-      events.emit('shake', { amount: 0.9 });
-      return;
-    }
-  }
   if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
     bossRewards(); onCleared(); return;

@@ -101,7 +101,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
   BOSS_WARMACH: {
-    name: 'The Molten Colossus', hp: 2600, speed: 3.0, radius: 3.4, scale: 4, contactDamage: 30, projectileDamage: 20,
+    name: 'The Dune Colossus', hp: 2600, speed: 3.0, radius: 3.4, scale: 4, contactDamage: 30, projectileDamage: 20,
     xp: 14, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0x6e7a45, knockResist: 1, armor: 75,
   },
   BOSS_WARLORD: {
@@ -238,7 +238,7 @@ export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_HYDRA: { name: 'The Tide Hydra', title: 'Terror of the Reef' },
   BOSS_WYRM: { name: 'Glacius the Frost Wyrm', title: 'Winter Dragon' },
   BOSS_WARLORD: { name: 'Ignar the Infernal Warlord', title: 'Lord of Cinders' },
-  BOSS_WARMACH: { name: 'The Molten Colossus', title: "Ignar's War Engine" },
+  BOSS_WARMACH: { name: 'The Dune Colossus', title: 'Engine of the Old Kings' },
   BOSS_VOID: { name: 'The Void Herald', title: 'Harbinger of the Abyss' },
 };
 

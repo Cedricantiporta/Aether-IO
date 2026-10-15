@@ -1,4 +1,4 @@
-// The Molten Colossus (BOSS_WARMACH, engine/systems/bosses2.ts): Ignar's six-legged war machine. An olive armoured hull
+// The Dune Colossus (BOSS_WARMACH, engine/systems/bosses2.ts): the Sunscorch Desert's six-legged war machine. An olive armoured hull
 // with molten vents, a turret that tracks the hero (twin cannons), and six blocky armoured legs that walk in an
 // alternating tripod gait, lift for the stomp and crouch for the rampage. Built once; posed from the boss state.
 import React, { useMemo, useRef } from 'react';

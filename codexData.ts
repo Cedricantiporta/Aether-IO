@@ -39,7 +39,7 @@ const TRICKS: Partial<Record<EnemyKind, string>> = {
   BOSS_TREANT: 'Root lanes that pin you, a sapling brood that heals him, thorn rings to jump, and bark armor until staggered.',
   BOSS_HYDRA: 'Three severable heads shield the body. Acid spit, tail sweep cone and a submerge ambush.',
   BOSS_WYRM: 'Frost breath that chills to a freeze, ice spike lanes, a dive bomb and a blizzard phase.',
-  BOSS_WARMACH: 'Ignar\'s second form: a six-legged war machine. Artillery barrages, a sweeping molten ray, seismic stomps, missile swarms and a rampaging charge.',
+  BOSS_WARMACH: 'An ancient six-legged war machine buried under the Sunscorch dunes. Sand-shell artillery barrages, a sweeping molten ray, seismic stomps, missile swarms and a rampaging charge.',
   BOSS_WARLORD: 'Flame wheel, fire pillar salvos, fire imps and a hellcleave; enrages below 30% hp.',
   DARK_HERO: 'A shadow copy of a hero class fighting with that hero\'s own skills, dash and ultimate. Fights alone in a ring of braziers; guards Champion duels and the Gate of Shadows.',
   SKELETON_WARRIOR: 'Raised by the Dark Necromancer: a sword-and-shield skeleton that hunts you down.', SKELETON_MAGE: 'Raised by the Dark Necromancer: keeps its distance and casts slowing orbs.',

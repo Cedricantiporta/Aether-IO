@@ -60,7 +60,7 @@ export const S = {
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
   enraged: false, wheelA: 0, ringT: 0, cleaveCd: 0, wheelN: 0,
-  // the Molten Colossus (Ignar's war machine)
+  // the Dune Colossus (desert war machine)
   rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
   // Void Herald
   voidOn: false, gravT: 0, pushed: false,
@@ -689,17 +689,17 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   beginAtk(e, list, id, ux, uz, dist);
 }
 
-// ============================================================ THE MOLTEN COLOSSUS ===
-// Ignar's second form (director: rises when Ignar falls): a six-legged war machine. Keeps its distance and shells you.
+// ============================================================ THE DUNE COLOSSUS ===
+// The Sunscorch Desert boss (shown as 'The Dune Colossus', roomDefs bossName): a six-legged war machine. Keeps its distance and shells you.
 const M_ARTY = 0, M_RAY = 1, M_STOMP = 2, M_MISSILE = 3, M_RAM = 4;
 const WARMACH_ORDER = [M_ARTY, M_RAY, M_MISSILE, M_ARTY, M_RAM, M_RAY];
 
 LISTS.BOSS_WARMACH = [
-  { // Artillery Barrage: mortar shells rain where you are and where you are heading (each leaves burning ground).
+  { // Artillery Barrage: mortar shells rain where you are and where you are heading (sand blasts, no fire).
     name: 'Artillery Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0,
     begin(e) {
       const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.6, p.pos.z + p.vel.z * 0.6, 5 + e.phase, 6.5, 13, 7);   // (was 8 + 2 phase, bunched)
-      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.8, 1.0 + i * 0.17, BT.PILLAR, pwr(e) * 1.3, 0xffa040);
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.8, 1.0 + i * 0.17, BT.SHELL, pwr(e) * 1.3, 0xd9b36a);
       events.emit('shake', { amount: 0.3 });
     },
     fire() { /* shells land as their telegraphs expire */ },

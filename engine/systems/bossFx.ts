@@ -17,7 +17,7 @@ import { edgeLimit } from '../mapgen';
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
 export const BT = {
   VISUAL: 30, ROOT: 31, SPIT: 32, SWEEP: 33, BREATH: 34, SPIKES: 35, DIVE: 36, PILLAR: 37, SURFACE: 38,
-  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42,
+  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43,
 } as const;
 
 // ------------------------------------------------------------------ pools --
@@ -194,6 +194,12 @@ export function resolveBossZone(z: Zone): void {
       spawnProp(PROP_PILLAR, z.pos.x, z.pos.z, 0, 0.9, z.radius, 9);
       spawnHostileZone('FIREPATCH', z.pos.x, z.pos.z, z.radius * 0.8, 2.5, pw * 0.12, 0xff5a1a);
       events.emit('trick', { pos: z.pos.clone(), kind: 'PILLAR', radius: z.radius });
+      break;
+    case BT.SHELL:   // the Dune Colossus' mortar shell: a sand blast and a crater, no fire left behind
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('SLOW', 1.5); }
+      events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.4, color: 0xd9b36a });
+      events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x5a4220 });
+      addShake(0.15);
       break;
     case BT.SURFACE:
       if (inside) { damagePlayer(pw * 1.2, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.6); }

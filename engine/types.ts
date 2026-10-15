@@ -29,7 +29,7 @@ export type EnemyKind =
   | 'BOSS_HYDRA'  // wave 40: Mire Hydra (3 targetable heads, acid spit, tail sweep, submerge)
   | 'BOSS_WYRM'   // wave 50: Glacius the Frost Wyrm (frost breath, ice spikes, dive-bomb, blizzard)
   | 'BOSS_WARLORD'// wave 60: Ignar the Infernal Warlord (flame wheel, fire pillars, imps, enrage)
-  | 'BOSS_WARMACH'// Ignar's second form: the Molten Colossus, a six-legged war machine (artillery, molten ray, stomp, missiles, rampage)
+  | 'BOSS_WARMACH'// the Dune Colossus (Sunscorch Desert boss), a six-legged war machine (artillery, molten ray, stomp, missiles, rampage)
   | 'BOSS_VOID'   // wave 70: The Void Herald (portals, gravity flip, echoes, arena shrink)
   | 'BOSS_SAPLING'    // boss add: Elderroot mini-treant (walks, fuses, bursts into thorns)
   | 'BOSS_HYDRA_HEAD' // boss part: separately targetable hydra head (positioned by the hydra AI)

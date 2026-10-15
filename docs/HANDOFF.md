@@ -804,8 +804,9 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Hydra regrows heads (bosses2 `growHead`, every 14 s / 10 s, never below 30% HP). Glacius: spikes / dive / hail chill +
   slow, blizzard slows the whole arena (bossFx `arenaSlow`), "Brood of Ice!" spawns BOSS_WYRMLING. Elderroot (biome 2
   boss, always; Gorath always guards Greenwood): Grasping Vines (cone pull + root) and Seed Barrage.
-- Ignar, slain, is reborn as the Molten Colossus (BOSS_WARMACH, director `nextBossKind`; render/WarMachine.tsx 6-leg rig):
-  Artillery Barrage, Molten Ray, Stomp, Missile Volley, Ram.
+- Ignar is a single fight again (no second form). BOSS_WARMACH is only the Sunscorch Desert boss, "The Dune Colossus"
+  (render/WarMachine.tsx 6-leg rig): Artillery Barrage (sand shells, `BT.SHELL`: blast + crater + short slow, no fire
+  pillars / burning ground), Molten Ray, Stomp, Missile Volley, Ram. Director `nextBossKind` is kept but unused.
 - Boss bar: anchored above the head by size (CameraRig `bossTop`, uses radius for the big bosses), shows `hp / max`.
   Malakar's illusions get identical boss bars (HUD mounts `<BossBar illusion={0|1} />`, world.illusionBars) and mirror
   his max HP, so the player can't tell which is real. Tech House tiles: no inner icon box. Summon ritual tint is purple
