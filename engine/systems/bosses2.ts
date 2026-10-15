@@ -22,7 +22,7 @@ import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
 import {
-  BT, WAVE_THORN, WAVE_VOID, PROP_GLOB, arena, breath, dive,
+  BT, WAVE_THORN, WAVE_VOID, PROP_GLOB, arena, breath, dive, inCone,
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx,
 } from './bossFx';
 
@@ -259,8 +259,8 @@ export function updateBoss2(e: Enemy, dt: number, dist: number): void {
 }
 
 // ============================================================ ELDERROOT =======
-const T_ROOTS = 0, T_BROOD = 1, T_THORN = 2, T_BARK = 3;
-const TREANT_ORDER = [T_ROOTS, T_BROOD, T_THORN, T_ROOTS, T_THORN];
+const T_ROOTS = 0, T_BROOD = 1, T_THORN = 2, T_BARK = 3, T_VINES = 4, T_SEEDS = 5;
+const TREANT_ORDER = [T_ROOTS, T_VINES, T_BROOD, T_SEEDS, T_THORN, T_ROOTS, T_VINES, T_THORN];
 
 LISTS.BOSS_TREANT = [
   { // Root Eruption: lanes of roots burst out of the ground, rooting whoever stands in them. Sidestep or dash through.
@@ -309,6 +309,35 @@ LISTS.BOSS_TREANT = [
       events.emit('floatText', { pos: e.pos, text: 'IRONBARK', color: 0xc8a050, scale: 1.0, dy: 2.4 });
       notify('Elderroot hardens his bark - STAGGER him to break it!', '#c8a050');
     },
+  },
+  { // Grasping Vines: a cone of vines lashes out; anyone caught is dragged to Elderroot and rooted at his feet.
+    name: 'Grasping Vines!', wind: (e) => 1.0 - 0.08 * e.phase, act: () => 0.3, rec: () => 1.0,
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 18, 0.5, 1.0 - 0.08 * e.phase, BT.VISUAL, 0, 0x6aa82a); },
+    fire(e) {
+      const p = world.player;
+      events.emit('trick', { pos: e.pos.clone(), kind: 'ROOTS', radius: 10 });
+      if (!p.alive || !inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, 18, 0.5)) return;
+      const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, pull = Math.max(0, d - (e.radius + 1.5));
+      p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull;
+      damagePlayer(pwr(e), { pos: e.pos, kind: 'PHYSICAL' });
+      applyPlayerDebuff('ROOT', 1.2);
+      events.emit('floatText', { pos: p.pos, text: 'DRAGGED IN', color: 0x9be32a, scale: 0.9, dy: 2.2 });
+    },
+    windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
+  },
+  { // Seed Barrage: seed pods are lobbed around you and burst into lingering poison pools.
+    name: 'Seed Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 0.9,
+    begin(e) {
+      const p = world.player, n = 5 + e.phase * 2;
+      for (let i = 0; i < n; i++) {
+        const life = 1.0 + i * 0.14;
+        let x = p.pos.x + p.vel.x * life * 0.5, z = p.pos.z + p.vel.z * life * 0.5;
+        if (i > 0) { const a = Math.random() * 6.283, r = 2 + Math.random() * 6; x += Math.sin(a) * r; z += Math.cos(a) * r; }
+        tv.set(x, 0, z); clampArena(tv, 2);
+        circle(tv.x, tv.z, 2.4, life, BT.SPIT, pwr(e) * 1.1, 0x84cc16);
+      }
+    },
+    fire() { /* pods burst as their telegraphs expire */ },
   },
 ];
 

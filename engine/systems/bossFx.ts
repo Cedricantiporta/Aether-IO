@@ -117,7 +117,7 @@ export function addChill(n: number): void {
   }
 }
 
-function inCone(px: number, pz: number, ox: number, oz: number, dx: number, dz: number, range: number, half: number): boolean {
+export function inCone(px: number, pz: number, ox: number, oz: number, dx: number, dz: number, range: number, half: number): boolean {
   const rx = px - ox, rz = pz - oz, d = Math.hypot(rx, rz);
   if (d > range + 0.6) return false;
   if (d < 1) return true;
