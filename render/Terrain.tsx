@@ -15,6 +15,7 @@ import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
 import { inCaveClear } from '../engine/caveData';
+import { BEACH, beachSandK } from '../engine/beachData';
 
 const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
 
@@ -51,6 +52,13 @@ function groundColor(x: number, z: number, y: number, out: Color) {
     out.lerp(cT, t * 0.92).multiplyScalar(lerp(1, 0.62, t));
     out.lerp(cT.set('#59606a'), sstep(3.0, 6.5, y + (n2 - 0.5) * 2) * 0.8);
     out.lerp(cT.set('#12200f'), sstep(e + 10, e + 60, r) * 0.7);
+  }
+  // lakeside beach: warm dry sand, darker wet sand toward the water line
+  const sk = beachSandK(x, z);
+  if (sk > 0) {
+    cT.set('#e2cd96').lerp(cD.set('#d4ba82'), n2).multiplyScalar(0.95 + n3 * 0.08);
+    cT.lerp(cD.set('#b49a6c'), sstep(BEACH.shoreX + 3.5, BEACH.shoreX + 0.5, x));
+    out.lerp(cT, sk);
   }
   return out;
 }

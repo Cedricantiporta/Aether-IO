@@ -10,7 +10,8 @@ import type { Item, Rarity } from './types';
 export const LOOT_STACK_LIMIT = 99;
 export type LootGlyph =
   | 'gel' | 'ear' | 'wing' | 'bone' | 'rune' | 'shell' | 'tusk' | 'heart' | 'shard' | 'trophy' | 'goblet' | 'pouch' | 'relic'
-  | 'skull' | 'crown' | 'fang' | 'totem' | 'banner' | 'eye' | 'page' | 'medal' | 'gland' | 'orb' | 'crystal' | 'nugget' | 'locket' | 'seal';
+  | 'skull' | 'crown' | 'fang' | 'totem' | 'banner' | 'eye' | 'page' | 'medal' | 'gland' | 'orb' | 'crystal' | 'nugget' | 'locket' | 'seal'
+  | 'fish' | 'boot';
 
 export interface LootDef {
   id: string; name: string; rarity: Rarity; glyph: LootGlyph;
@@ -73,7 +74,25 @@ export const LOOT: LootDef[] = [
   d('starfire_crystal', 'Starfire Crystal', 'LEGENDARY', 'crystal', ['#ffc83a', '#fff6c8'], 'Warm to the touch, even in the deepest dark.'),
   d('adamant_ore', 'Adamant Ore', 'LEGENDARY', 'nugget', ['#5a6a7a', '#ffd070'], 'No forge in the valley is hot enough. Yet.'),
   d('abyssal_diamond', 'Abyssal Diamond', 'MYTHIC', 'crystal', ['#ff3a5a', '#ffe0f0'], 'Pulled from the bottom of the world.'),
+  // fish from the lake (engine/systems/fishing.ts); sold to the Fishmonger on the beach (or any shop)
+  ...FISH_DEFS(),
 ];
+/** Lake fish, catchable at the beach (engine/systems/fishing.ts). Ordered by rarity. */
+function FISH_DEFS(): LootDef[] {
+  return [
+    d('fish_boot', 'Soggy Boot', 'COMMON', 'boot', ['#6b5a44', '#9ab0a0'], 'Not a fish. Someone will still pay a coin for it.', 0.2),
+    d('fish_minnow', 'Silver Minnow', 'COMMON', 'fish', ['#c8d4dc', '#7e93a6'], 'A tiny, flickering lake fish.', 0.8),
+    d('fish_perch', 'Lake Perch', 'COMMON', 'fish', ['#9ab84a', '#ff9a3a'], 'Striped and spiny. A fine supper.', 1.4),
+    d('fish_trout', 'Rainbow Trout', 'RARE', 'fish', ['#7fb0d8', '#ff7aa8'], 'Its scales shimmer in every colour.'),
+    d('fish_pike', 'Silver Pike', 'RARE', 'fish', ['#a8b8a0', '#e8f0e0'], 'A long, toothy hunter of the reeds.', 1.3),
+    d('fish_carp', 'Golden Carp', 'EPIC', 'fish', ['#ffc94a', '#ff7a2a'], 'Said to bring luck to whoever lands it.'),
+    d('fish_eel', 'Lake Serpent Eel', 'LEGENDARY', 'fish', ['#3f7a6a', '#7dffcf'], 'Glows faintly. Fishermen tell tales of it.'),
+    d('fish_koi', 'Aetherfin Koi', 'MYTHIC', 'fish', ['#b98aff', '#7de8ff'], 'Woven of lake water and starlight. One in a lifetime.'),
+  ];
+}
+export const FISH_IDS = ['fish_boot', 'fish_minnow', 'fish_perch', 'fish_trout', 'fish_pike', 'fish_carp', 'fish_eel', 'fish_koi'];
+/** True for a fish (or the boot) from the lake, by bag item name. */
+export const isFishName = (name: string): boolean => !!LOOT_BY_NAME[name]?.id.startsWith('fish_');
 
 export const LOOT_BY_ID: Record<string, LootDef> = Object.fromEntries(LOOT.map((l) => [l.id, l]));
 export const LOOT_BY_NAME: Record<string, LootDef> = Object.fromEntries(LOOT.map((l) => [l.name, l]));

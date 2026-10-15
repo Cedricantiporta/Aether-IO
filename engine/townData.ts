@@ -15,6 +15,7 @@
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
+import { BEACH_BOX } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
@@ -52,6 +53,7 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [-12, -10, 12, 99],   // the forest road on to the Adventure Portal clearing (PORTAL)
   [20, 40, 50, 84],     // the farm clearing east of the road (barn, cows, coop)
   [-37, 69, -20, 81],   // the forest nook of the Endless Tower
+  BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
 
 const WALLS = ['#e9dfc8', '#e4d8bd', '#dccdb0', '#d6d0c4', '#cfd3c4', '#d8c6b0', '#c9cdd2'];

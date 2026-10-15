@@ -11,6 +11,7 @@ import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
 import { ISLAND_BOXES, FARM } from './townData';
 import { CAVE_BAY } from './caveData';
+import { DECK_RECTS, onDeckRect } from './beachData';
 
 /** Circle collider used for movement push-out and projectile blocking. */
 export interface Collider {
@@ -153,6 +154,20 @@ export function islandRadius(angle: number): number {
 /** Walkable limit radius at (x,z): islandRadius(angle) - margin. Cheap early-out for callers: only needed when |p| > bounds.checkR. */
 export function edgeLimit(x: number, z: number, margin = 2): number {
   return bounds.room ? shapeLimit(x, z) - margin : islandRadius(Math.atan2(z, x)) - margin;
+}
+
+/** Town only: the beach pier decks are walkable over the lake (beachData DECK_RECTS), outside the island edge. Called by the
+ *  player's step resolver when (x, z) is beyond edgeLimit: returns true when the position is fine as is (on a deck) or was
+ *  clamped onto the deck the hero stood on at (px, pz); false = use the normal island edge clamp. Allocation-free. */
+export function clampToDeck(p: { x: number; z: number }, px: number, pz: number): boolean {
+  if (bounds.room || bounds.checkR > 1e5) return false;
+  if (onDeckRect(p.x, p.z) >= 0) return true;
+  const i = onDeckRect(px, pz, 0.05);
+  if (i < 0) return false;
+  const r = DECK_RECTS[i];
+  p.x = p.x < r[0] ? r[0] : p.x > r[2] ? r[2] : p.x;
+  p.z = p.z < r[1] ? r[1] : p.z > r[3] ? r[3] : p.z;
+  return true;
 }
 
 /**

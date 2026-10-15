@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish } from 'lucide-react';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
@@ -17,6 +17,7 @@ import { QuestsTab } from './shop/Quests';
 import { ArmoryTab } from './shop/Armory';
 import { WarehouseTab } from './shop/Warehouse';
 import { BrewerTab } from './shop/Brewer';
+import { FishShopTab } from './shop/FishShop';
 import { useDrop } from '../lib/dnd';
 import { useUiStore } from '../uiStore';
 
@@ -31,6 +32,7 @@ const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }
   { id: 'WAREHOUSE', label: 'Storage', icon: <Warehouse size={24} />, title: 'Warehouse' },
   { id: 'TECH', label: 'Tech', icon: <Cog size={24} />, title: 'Tech House' },
   { id: 'BREWER', label: 'Brewer', icon: <FlaskConical size={24} />, title: 'Elixir Brewer' },
+  { id: 'FISH', label: 'Fish', icon: <Fish size={24} />, title: 'Fishmonger' },
   { id: 'MERCHANT', label: 'Merchant', icon: <Store size={24} />, title: 'Travelling Merchant' },
 ];
 
@@ -41,7 +43,7 @@ export const ShopPanel: React.FC = () => {
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
   // drop a bag item on a shop: sell it (or pick it for upgrading at the blacksmith); the warehouse grid handles its own drops
   const ui = useUiStore.getState();
-  const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH'].includes(tab),
+  const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH', 'FISH'].includes(tab),
     (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -64,6 +66,7 @@ export const ShopPanel: React.FC = () => {
           {tab === 'ARMORY' && <ArmoryTab />}
           {tab === 'WAREHOUSE' && <WarehouseTab />}
           {tab === 'BREWER' && <BrewerTab />}
+          {tab === 'FISH' && <FishShopTab />}
         </div>
       </Panel>
     </motion.div>
