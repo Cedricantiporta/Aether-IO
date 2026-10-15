@@ -7,7 +7,7 @@ import { eggReady, catHidden, pinHidden } from '../engine/systems/village';
 import { NESTS, HIDDEN_CAT, WHEEL_PIN } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial, Sprite, Vector3 } from 'three';
+import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, Object3D, MeshBasicMaterial, Sprite, Vector3 } from 'three';
 import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
 import { npcs, animals, bubbles } from '../engine/systems/npcs';
@@ -50,6 +50,30 @@ function crownGeo(): BufferGeometry {
   return (_crown = b.build());
 }
 
+/** Clothing overlays (king's cape, priest's robe + mitre), white / coloured vertex colours tinted per NPC. */
+const clothMat = litMat({ roughness: 0.85 });
+function capeGeo(col: string): BufferGeometry {   // on the chest bone: shoulders to the ankles, flaring out behind
+  const b = new GB([0.75, 1.05]);
+  b.sph(0.4, [0, 0.02, 0], col, [1.05, 0.38, 0.8], 12);                                    // red mantle over the shoulders (reads from the front)
+  b.box(0.62, 0.08, 0.3, [0, 0.12, -0.08], '#f2efe6');                                     // ermine collar
+  b.cone(0.62, 1.55, 10, [0, -0.62, -0.2], col, [0.12, 0, 0], [1, 1, 0.42]);                  // the cape
+  return b.build();
+}
+function robeGeo(col: string): BufferGeometry {    // on the hips bone: a long robe to the floor
+  const b = new GB([0.82, 1.08]);
+  b.cyl(0.3, 0.5, 0.95, 12, [0, -0.32, 0], col);
+  b.cyl(0.31, 0.31, 0.36, 12, [0, 0.32, 0], col);
+  b.box(0.08, 1.2, 0.02, [0, -0.1, 0.33], '#d8b45a', [0.18, 0, 0]);                          // gold stole down the front
+  return b.build();
+}
+function mitreGeo(col: string): BufferGeometry {
+  const b = new GB([0.85, 1.08]);
+  b.cyl(0.2, 0.22, 0.12, 12, [0, 0, 0], col);
+  b.box(0.36, 0.42, 0.16, [0, 0.24, 0], col); b.cone(0.2, 0.2, 4, [0, 0.52, 0], col, [0, Math.PI / 4, 0], [1, 1, 0.45]);
+  b.box(0.05, 0.5, 0.17, [0, 0.26, 0.002], '#d8b45a');                                       // gold band
+  return b.build();
+}
+
 // --------------------------------------------------------------------- npc ---
 /** Main-quest marker for an NPC (0 none, 4 gold "!", 5 gold "?" delivery ready, 6 dim "?" delivery pending); the
  *  delivery check reads the bag only a few times a second (cached by store identity). */
@@ -79,6 +103,7 @@ function NpcActor({ i }: { i: number }) {
 
   useEffect(() => () => disposeMerged(ch), [ch]);
   useEffect(() => {
+    if (def.noHat) for (const m of ch.meshes) if (/hat|helm|hood|cap|crown/i.test(m.name)) m.visible = false;   // (merging then keeps the parts separate)
     meshes.current = mergeCharacter(ch);   // 1 draw call per NPC instead of 7-9
     // light tints only: blend the authored tint 45% towards white so the KayKit atlas stays bright and readable
     const tint = new Color(def.tint).lerp(WHITE, 0.45);
@@ -106,8 +131,13 @@ function NpcActor({ i }: { i: number }) {
     // gold crown on the head bone
     let crown: Mesh | null = null;
     const head = def.crown ? ch.root.getObjectByName('head') : null;
-    if (head) { crown = new Mesh(crownGeo(), crownMat); crown.position.set(0, 0.34, 0.02); crown.scale.setScalar(1.3); head.add(crown); }
-    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; if (propRoot) ch.handR?.remove(propRoot); if (crown) head?.remove(crown); };
+    if (head) { crown = new Mesh(crownGeo(), crownMat); crown.position.set(0, def.noHat ? 0.92 : 0.34, 0.02); crown.scale.setScalar(def.noHat ? 2.7 : 1.3); head.add(crown); }   // (a big gold crown)
+    const extra: [Object3D, Mesh][] = [];
+    const wear = (bone: string, geo: BufferGeometry, x = 0, y = 0, z = 0, sc = 1) => { const b = ch.root.getObjectByName(bone); if (!b) return; const mm = new Mesh(geo, clothMat); mm.position.set(x, y, z); mm.scale.setScalar(sc); mm.castShadow = true; b.add(mm); extra.push([b, mm]); };
+    if (def.cape) wear('chest', capeGeo(def.cape), 0, 0.2, -0.05, 1.25);
+    if (def.robe) wear('hips', robeGeo(def.robe), 0, 0, 0, 1.25);
+    if (def.mitre) wear('head', mitreGeo(def.mitre), 0, 0.86, 0, 1.9);
+    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; if (propRoot) ch.handR?.remove(propRoot); if (crown) head?.remove(crown); for (const [b, mm] of extra) { b.remove(mm); mm.geometry.dispose(); } };
   }, [ch, clips, def, i, st]);
 
   useFrame((_, dt0) => {

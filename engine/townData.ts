@@ -465,6 +465,10 @@ export interface NpcDef {
   king?: boolean;
   /** gold crown on his head */
   crown?: boolean;
+  /** hide the model's own headgear (helmet / hat / hood) */
+  noHat?: boolean;
+  /** a long robe over the body (colour), a cape down the back (colour), a priest's mitre (colour) */
+  robe?: string; cape?: string; mitre?: string;
   /** floor height (standing on the dais) */
   y?: number;
 }
@@ -602,7 +606,7 @@ export const NPCS: NpcDef[] = [
   },
   // ------------------------------------------------------------ castle (throne hall, see castleData.ts)
   {
-    name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, ordered: true,
+    name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, cape: '#a8141e', ordered: true,
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
       ['Malakar was my archmage, and my friend. He took a shard of the Font and ran into the Void.', 'Bring it home, guardian. The Font will keep bringing you home until you do.'],
@@ -648,7 +652,7 @@ export const NPCS: NpcDef[] = [
   },
   // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: two health potions)
   {
-    name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#f4f0ff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH',
+    name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#ffffff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH', noHat: true, robe: '#f6f4ee', mitre: '#fbfaf5',
     talk: [
       ['Welcome to the chapel of the Undying Flame, child. Every hero who falls out there wakes again in this town. Some say the Flame remembers them.', 'Rest a moment. The road will still be there.'],
       ['The windows were made from the glass of the old Aether spires. On quiet nights they still hum.', 'If the Void Herald ever stirs again, we will ring the bell. Twice.'],
