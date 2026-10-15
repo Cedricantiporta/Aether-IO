@@ -116,7 +116,7 @@ let finalFight = false, endingDone = false;
 let finalStage = 1;
 /** A boss's second form to spawn next in this room (Ignar -> the Molten Colossus); '' = the biome boss. */
 let nextBossKind: EnemyKind | '' = '';
-/** Gorath guards Greenwood, Elderroot the Marble Halls (always). */
+/** Elderroot guards Greenwood, Gorath the Marble Halls. */
 function biomeBoss(b: number): EnemyKind { return biomeOf(b).boss; }
 /** The finale after stage 2 falls: 1 his last words, 2 his essence collapses and bursts, 3 a portal of light opens,
  *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
@@ -496,7 +496,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(ENEMY_DEFS.BOSS_GOLEM.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5); e.hp = e.maxHp;   // half of the (halved) Golem
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5); e.hp = e.maxHp;   // half of the (halved) Elderroot
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
     }

@@ -57,7 +57,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
     if (stag.current && sfs !== s.stag) { s.stag = sfs; stag.current.style.width = `${(b.staggered ? 1 : sf) * 100}%`; }
     if (b.staggered !== s.staggered) {
       s.staggered = b.staggered;
-      if (stag.current) stag.current.style.background = b.staggered ? 'linear-gradient(180deg,#fff2a0,#ffb020)' : 'linear-gradient(180deg,#9ad0ff,#3a7ad0)';
+      if (stag.current) stag.current.style.background = b.staggered ? 'linear-gradient(180deg,#ffffff,#ff9a3a)' : 'linear-gradient(180deg,#fff27a,#e0a810)';
       if (stagLbl.current) stagLbl.current.style.opacity = b.staggered ? '1' : '0';
     }
     const ab = !I && b.abilityT > 0 && !!b.ability;
@@ -88,8 +88,8 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
         </div>
         <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginLeft: '-.6rem' }}><Skull size={14} /></div>
       </div>
-      <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.42rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
-        <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#9ad0ff,#3a7ad0)' }} />
+      <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.5rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
+        <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#fff27a,#e0a810)' }} />
       </div>
       <div ref={stagLbl} className="text-center rpg-label !text-[.6rem]" style={{ color: '#ffd23a', opacity: 0, letterSpacing: '.3em' }}>STAGGERED</div>
       <div className="flex justify-center gap-2 mt-1">

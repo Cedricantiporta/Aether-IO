@@ -65,17 +65,17 @@ export const STORY: StoryStep[] = [
     talk: ['Ten slimes, and the herbalist is singing your praises. Good.', 'Now a real task. The slimes answer to a king of their own: a great ooze deep in the Meadow, ten rooms in.', 'Pop the Slime King and the Meadow will breathe again.'] },
   { id: 'slimeking', title: 'The Slime King', line: 'Defeat the Slime King (Meadow, depth 10)', npc: '', kill: { kind: 'SLIME_KING', count: 1 }, reward: { gold: 800, gems: 15 } },
   { id: 'garrick2', title: 'Rumbling Stones', line: 'Tell Garrick about the Slime King', npc: 'Garrick', reward: { gold: 400, items: [{ id: 'upgrade_core', qty: 1 }] },
-    talk: ['The Slime King, popped! Ha! The lads at the gate owe me a drink.', 'But listen: since it fell, the ground past it shakes. Gorath the Mountain, the stone guardian of the Meadow, has woken angry.', 'He waits at the end of the Meadow. Past the Slime King, look for the Boss Key: it opens his door early. Bring him down.'] },
-  { id: 'golem', title: 'The Mountain Stirs', line: 'Defeat Gorath the Mountain (Meadow boss: find the Boss Key past depth 10, or reach depth 15)', npc: '', kill: { kind: 'BOSS_GOLEM', count: 1 }, reward: { gold: 1200, gems: 20 } },
+    talk: ['The Slime King, popped! Ha! The lads at the gate owe me a drink.', 'But listen: since it fell, the ground past it shakes. Elderroot, the old warden of the Grove, has woken angry.', 'He waits at the end of the Greenwood. Past the Slime King, look for the Boss Key: it opens his door early. Bring him down.'] },
+  { id: 'golem', title: 'Warden of the Old Grove', line: 'Defeat Elderroot the Ancient (Greenwood boss: find the Boss Key past depth 10, or reach depth 15)', npc: '', kill: { kind: 'BOSS_TREANT', count: 1 }, reward: { gold: 1200, gems: 20 } },
   { id: 'dorn', title: 'Heart of Stone', line: 'Bring 2 Ore Nuggets to Dorn the Miner', npc: 'Dorn', deliver: { id: 'ore_nugget', count: 2 }, reward: { gold: 700, items: [{ id: 'upgrade_core', qty: 2 }] },
-    wait: ['Gorath fell? Then the ore veins out there are free again!', 'There are ore veins just outside the town walls, east and behind the castle, and more out in the wilds. Hold E by a vein to mine it. Bring me two nuggets.'],
-    talk: ['Look at that grain. Violet streaks... the Mountain was poisoned, sure as anything.', 'Take these cores for your gear. And tell the King what I saw in this ore.'] },
-  { id: 'report2', title: 'Stone and Shadow', line: 'Tell King Aldric of Gorath\'s fall', npc: 'King Aldric', reward: { gold: 800, gems: 10 },
+    wait: ['Elderroot sleeps? Then his roots no longer choke the ore veins!', 'There are ore veins just outside the town walls, east and behind the castle, and more out in the wilds. Hold E by a vein to mine it. Bring me two nuggets.'],
+    talk: ['Look at that grain. Violet streaks... the old tree drank poison through these veins, sure as anything.', 'Take these cores for your gear. And tell the King what I saw in this ore.'] },
+  { id: 'report2', title: 'Stone and Shadow', line: 'Tell King Aldric of Elderroot\'s fall', npc: 'King Aldric', reward: { gold: 800, gems: 10 },
     talk: ['Violet in the stone... then the stories are true.', 'Malakar, the archmage who stole from the Font, lives on in the Void. His stolen light poisons every guardian it touches.', 'Wren the scholar has studied him longer than anyone. Hear her out before you go deeper.'] },
   // ---------------------------------------------------------------- act II: the guardians
   { id: 'wren', title: 'The Scholar\'s Warning', line: 'Talk to Wren the Scholar', npc: 'Wren', reward: { gold: 300 },
-    talk: ['Malakar\'s light spreads like roots. The Old Grove was the first land it reached.', 'Elderroot, its ancient warden, is the root of it now. Free the Grove and the rest will follow.'] },
-  { id: 'grove', title: 'Warden of the Old Grove', line: 'Defeat Elderroot the Ancient (Old Grove)', npc: '', kill: { kind: 'BOSS_TREANT', count: 1 }, reward: { gold: 1600, gems: 25 } },
+    talk: ['Malakar\'s light spreads like roots. After the Grove it reached the Marble Halls, the old castle of the kings.', 'Gorath the Mountain, the stone guardian of the Halls, walks its corridors now, crushing all he meets. Free the Halls and the rest will follow.'] },
+  { id: 'grove', title: 'The Mountain Stirs', line: 'Defeat Gorath the Mountain (Marble Halls)', npc: '', kill: { kind: 'BOSS_GOLEM', count: 1 }, reward: { gold: 1600, gems: 25 } },
   { id: 'lysa2', title: 'Poisoned Water', line: 'Talk to Lysa about the Mire', npc: 'Lysa', reward: { gold: 400 },
     talk: ['My herbs from the Mire come back black and rotten.', 'Something with many heads has made the swamp its nest. Please: the Hydra must fall, or the whole valley sickens.'] },
   { id: 'mire', title: 'Terror of the Mire', line: 'Defeat the Mire Hydra', npc: '', kill: { kind: 'BOSS_HYDRA', count: 1 }, reward: { gold: 2000, gems: 30 } },
@@ -96,7 +96,7 @@ export const STORY: StoryStep[] = [
 /** Story chapters for the quest window (each starts at a step id and runs to the next chapter). */
 export const CHAPTERS: { id: string; title: string; from: string; blurb: string }[] = [
   { id: 'pro', title: 'Prologue · The New Guard', from: 'guard', blurb: 'The Font brought you back. Aether needs guards again, and its people are glad to show a newcomer around before the King gives the word.' },
-  { id: 'act1', title: 'Chapter 1 · Trial of the Meadow', from: 'slimes', blurb: 'Beyond the gate the Meadow stirs: slimes grow bold, their king grows fat, and the stone guardian Gorath has woken angry.' },
+  { id: 'act1', title: 'Chapter 1 · Trial of the Meadow', from: 'slimes', blurb: 'Beyond the gate the Meadow stirs: slimes grow bold, their king grows fat, and Elderroot, the warden of the Grove, has woken angry.' },
   { id: 'act2', title: 'Chapter 2 · The Fallen Guardians', from: 'wren', blurb: 'Malakar\'s stolen light poisons every guardian it touches. One land at a time, the townsfolk send you to set them free.' },
   { id: 'fin', title: 'Finale · The Undying', from: 'report3', blurb: 'Every guardian is free. Only the Void remains, and the throne Malakar made for himself there.' },
 ];

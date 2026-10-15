@@ -16,8 +16,8 @@ const stat = (k: keyof MetaState['stats']) => (c: AchCtx) => c.meta.stats[k];
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'boss_first', name: 'First Blood', desc: 'Defeat your first boss', target: 1, gems: 30, title: 'Boss Hunter', value: (c) => Math.max(c.meta.stats.bosses, c.meta.bossBiomes.length) },
-  { id: 'boss_golem', name: 'Mountain Breaker', desc: 'Defeat Gorath the Mountain in the Meadow', target: 1, gems: 40, title: 'Mountain Breaker', value: boss(0) },
-  { id: 'boss_treant', name: 'Treant Feller', desc: 'Defeat Elderroot the Ancient in the Old Grove', target: 1, gems: 40, title: 'Treant Feller', value: boss(1) },
+  { id: 'boss_golem', name: 'Mountain Breaker', desc: 'Defeat Gorath the Mountain in the Marble Halls', target: 1, gems: 40, title: 'Mountain Breaker', value: boss(1) },
+  { id: 'boss_treant', name: 'Treant Feller', desc: 'Defeat Elderroot the Ancient in the Greenwood', target: 1, gems: 40, title: 'Treant Feller', value: boss(0) },
   { id: 'boss_hydra', name: 'Hydra Hunter', desc: 'Defeat the Mire Hydra', target: 1, gems: 50, title: 'Hydra Hunter', value: boss(2) },
   { id: 'boss_wyrm', name: 'Wyrm Slayer', desc: 'Defeat Glacius the Frost Wyrm on Frostpeak', target: 1, gems: 50, title: 'Wyrm Slayer', value: boss(3) },
   { id: 'boss_warlord', name: 'Warlord\'s Bane', desc: 'Defeat Ignar the Infernal Warlord in the Ember Wastes', target: 1, gems: 60, title: 'Warlord\'s Bane', value: boss(4) },

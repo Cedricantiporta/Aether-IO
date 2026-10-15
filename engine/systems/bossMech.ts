@@ -139,6 +139,8 @@ export function tickBossStrikes(dt: number): void {
   for (const s of strikes) if (s.on) { s.t -= dt; if (s.t <= 0) { s.on = false; resolve(s); } }
 }
 
+/** Id of the boss whose ward is up (-1 = none): render/BossWard.tsx draws the shield sphere. */
+export function wardedBossId(): number { return S.wardOn ? S.id : -1; }
 /** True while the boss refuses all damage (ward up). */
 export function bossWarded(e: Enemy): boolean { return e.boss && S.wardOn && e.id === S.id; }
 

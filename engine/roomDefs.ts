@@ -71,7 +71,7 @@ export interface BiomeDef {
 }
 
 export const BIOMES: readonly BiomeDef[] = [
-  { // 0 Greenwood: the old Meadow / Old Grove / Mire looks as three room variants of one forest biome (Gorath, the Slime King)
+  { // 0 Greenwood: the old Meadow / Old Grove / Mire looks as three room variants of one forest biome (Elderroot, the Slime King)
     name: 'Greenwood', style: 'GRASS', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], stone: '#a39d90', edge: '#2a4a22', fog: '#cfe6f2',
     hemiSky: '#cfe8ff', hemiGround: '#6f8f45', hemiI: 1.25, sun: '#fff0d2', sunI: 3.1, skyTint: [1, 1, 1], propTint: '#ffffff',
     border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null,
@@ -87,10 +87,10 @@ export const BIOMES: readonly BiomeDef[] = [
         fog: '#4e6254', hemiSky: '#a4bcc8', hemiGround: '#2e4026', hemiI: 1.05, sun: '#d8e2f2', sunI: 2.2, skyTint: [0.5, 0.6, 0.6] },   // dim, not black: glowing mushrooms light it (Room.tsx)
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
-    boss: 'BOSS_GOLEM', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
+    boss: 'BOSS_TREANT', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
     roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7], ['DIREWOLF', 5, 2], ['SPORECAP', 4, 3]],
   },
-  { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Elderroot's roots (Elderroot the Ancient).
+  { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Gorath's tread (Gorath the Mountain).
     // Inside the castle: flagstone floors with a worn red carpet, broken curtain walls with torches, banners and arched
     // windows, toppled pillars and rubble. No water stages here (user request).
     name: 'Marble Halls', style: 'MARBLE', ground: ['#7c766c', '#958f83'], patch: ['#8a8478', '#6a655c', '#4f5a3c'], stone: '#a39d90', edge: '#0c0a08', fog: '#241d17',
@@ -109,7 +109,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     shapes: [['RECT', 30], ['HEX', 12], ['OCT', 16], ['CROSS', 18], ['ROUND', 8], ['SEMI', 8], ['ELLIPSE', 8]],
     crates: ['POT', 'POT', 'CRATE', 'GRAVE', 'BARREL'],
-    boss: 'BOSS_TREANT', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,
+    boss: 'BOSS_GOLEM', minis: ['PHALANX', 'WARDEN'], lichCrypt: true,
     roster: [['SKELETON_ARCHER', 8, 0], ['SHIELDBEARER', 6, 0], ['CULTIST', 6, 0], ['GOBLIN', 5, 0], ['BAT', 4, 0], ['WRAITH', 5, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 3, 2], ['BRUTE', 3, 3], ['HAUNTED_ARMOR', 6, 0], ['GARGOYLE', 5, 1]],
   },
   { // 2 Sunscorch Desert: dunes, cacti, sandstone, bleached bones, quicksand, canyon chasms; oases hide the hydra (The Mire Hydra)

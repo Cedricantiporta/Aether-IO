@@ -16,7 +16,7 @@ import { events } from '../events';
 import type { Enemy, EnemyProjectile } from '../types';
 import type { HeroClass } from '../../types';
 import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
-import { damagePlayer, applyPlayerDebuff } from './combat';
+import { damagePlayer, applyPlayerDebuff, staggerView } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup } from './pickups';
@@ -342,7 +342,7 @@ function finish(e: Enemy): void {
 export function aiDarkHero(e: Enemy, dt: number, px: number, pz: number, d: number): void {
   if (S.id !== e.id) { S.id = e.id; darkView.id = e.id; }
   const b = world.boss;
-  b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; b.stagger = e.staggerMax > 0 ? e.stagger / e.staggerMax : 0; b.staggered = e.staggerT > 0;
+  b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; b.stagger = staggerView(e); b.staggered = e.staggerT > 0;
   if (e.phase === 0 && e.hp < e.maxHp * 0.5) {   // enrage: faster cooldowns, brighter aura
     e.phase = 1; b.phase = 1; darkView.enraged = 1;
     events.emit('bossPhase', { phase: 1 });

@@ -29,7 +29,7 @@ export const WANDERERS: readonly WandererDef[] = [
   { id: 'ALDRIC', name: 'Ser Aldric', title: 'The Last Oathsworn', model: 'KNIGHT', tint: '#b8c4d8', accent: '#c8d4e6', biomes: [0, 1, 2, 3],
     lines: {
       0: ['Hold, friend. I am Aldric, last of the Oathsworn. We swore to guard the old king, and we failed him.', 'Malakar was his court mage once. He drank the Aether until it drank him back.', 'Sit a while. My fire is small, but it mends.'],
-      1: ['These halls were our home. I walked them in white steel when the banners still hung straight.', 'Elderroot\'s roots crack the stone now. Even the castle forgets us.', 'Rest by my fire before you go deeper.'],
+      1: ['These halls were our home. I walked them in white steel when the banners still hung straight.', 'Gorath\'s tread cracks the stone now. Even the castle forgets us.', 'Rest by my fire before you go deeper.'],
       3: ['The cold reminds me of the night the castle fell. Malakar did not need an army. He needed one open door.', 'Warm yourself, hero. You will need the strength.'],
     },
     offer: 'Rest by the fire' },

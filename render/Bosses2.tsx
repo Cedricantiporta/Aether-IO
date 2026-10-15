@@ -2,6 +2,7 @@
 // One generic rig (body / glow / two arms / "extra" part such as a tail, bark plates or orbiting shards) with a per-boss builder
 // and a per-boss animation function that reads the boss's state machine (state / pattern / stateT) from the engine.
 // The hydra heads, saplings and imps are ordinary instanced enemies (enemyModels.ts / Enemies.tsx).
+import { BossWard } from './BossWard';
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, Color, DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
@@ -274,5 +275,5 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 }
 
 export function Bosses2() {
-  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WYRM" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /></>);
+  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WYRM" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /><BossWard /></>);
 }

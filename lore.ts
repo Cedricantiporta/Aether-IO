@@ -31,13 +31,13 @@ export const CHAPTERS: LoreChapter[] = [
     'One winter night he went down into the Font with a crystal vial. He came back up carrying a shard of the light, and something in his eyes had gone out.',
     'He fled past the Mire, past Frostpeak and the Ember Wastes, into the Void beyond the edge of the map. They call him the Undying now. They do not say his name in the market.',
   ] },
-  { id: 'gorath', title: 'III. Gorath of the Meadow', unlock: { kind: 'boss', boss: 'BOSS_GOLEM', hint: 'Defeat the guardian of the Meadow.' }, text: [
-    'Gorath was a hill the shepherds leaned on, a stone giant who kept the wolves off the lambs for a hundred years.',
-    'The stolen light woke him wrong. When he fell, the stones stopped grinding, and for a moment the Meadow sounded the way the old songs say it should.',
-  ] },
-  { id: 'elderroot', title: 'IV. Elderroot', unlock: { kind: 'boss', boss: 'BOSS_TREANT', hint: 'Defeat the guardian of the Old Grove.' }, text: [
+  { id: 'elderroot', title: 'III. Elderroot', unlock: { kind: 'boss', boss: 'BOSS_TREANT', hint: 'Defeat the guardian of the Greenwood.' }, text: [
     'The oldest tree in the Grove once sheltered the first guardians while they dug the well.',
     'His roots drank the poisoned light that ran downhill from the Void. You did not kill Elderroot. You let him sleep again.',
+  ] },
+  { id: 'gorath', title: 'IV. Gorath of the Halls', unlock: { kind: 'boss', boss: 'BOSS_GOLEM', hint: 'Defeat the guardian of the Marble Halls.' }, text: [
+    'Gorath was a hill the shepherds leaned on, a stone giant who kept the old kings\' gates for a hundred years.',
+    'The stolen light woke him wrong. When he fell, the stones stopped grinding, and for a moment the Halls sounded the way the old songs say it should.',
   ] },
   { id: 'hydra', title: 'V. The Mire Hydra', unlock: { kind: 'boss', boss: 'BOSS_HYDRA', hint: 'Defeat the guardian of the Mire.' }, text: [
     'The Mire was a lake of lilies, and the Hydra its shy keeper, with one head that slept and two that sang.',

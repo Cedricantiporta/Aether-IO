@@ -103,8 +103,12 @@ export function wallSlam(e: Enemy): void {
   if (dmg > 0) damageEnemy(e, dmg, { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true });
 }
 
+// ---- Stagger meter (bosses, mini-bosses, the Dark Hero): fills from crowd control (bosses are immune to full stuns),
+// decays when left alone; full = STAGGERED for 2 s (+25% damage taken). It never fills while the boss is immune (ward up).
+/** Bar fill for the HUD (0..1). */
+export function staggerView(e: Enemy): number { return e.staggerMax > 0 ? Math.min(1, Math.max(0, e.stagger / e.staggerMax)) : 0; }
 function gainStagger(e: Enemy, amount: number): void {
-  if (e.staggerT > 0 || e.staggerCd > 0 || e.staggerMax <= 0) return;
+  if (e.staggerT > 0 || e.staggerCd > 0 || e.staggerMax <= 0 || (e.boss && bossWarded(e))) return;
   e.staggerCd = 0.35;
   e.stagger += amount;
   if (e.stagger >= e.staggerMax) {

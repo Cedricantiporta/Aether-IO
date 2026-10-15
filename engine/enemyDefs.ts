@@ -81,7 +81,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 1, armor: 60,
   },
   BOSS_GOLEM: {
-    name: 'Gorath the Mountain', hp: 1625, speed: 2.8, radius: 3.0, scale: 4, contactDamage: 25, projectileDamage: 18,
+    name: 'Gorath the Mountain', hp: 1800, speed: 2.8, radius: 3.0, scale: 4, contactDamage: 25, projectileDamage: 18,
     xp: 7, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1, armor: 80,
   },
   BOSS_LICH: {
@@ -89,7 +89,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
   BOSS_TREANT: {
-    name: 'Elderroot the Ancient', hp: 1800, speed: 2.4, radius: 2.8, scale: 4.0, contactDamage: 22, projectileDamage: 16,
+    name: 'Elderroot the Ancient', hp: 1625, speed: 2.4, radius: 2.8, scale: 4.0, contactDamage: 22, projectileDamage: 16,
     xp: 9, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x4d7c0f, knockResist: 1, armor: 55,
   },
   BOSS_HYDRA: {

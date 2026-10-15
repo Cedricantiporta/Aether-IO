@@ -188,9 +188,9 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'INTERACT', target: 'cat', count: 1 },
     reward: { gold: 400, gems: 10 },
   },
-  // ---- hidden: appears only after Gorath the Mountain (biome 1 boss) fell at least once
+  // ---- hidden: appears only after Elderroot (biome 1 boss) fell at least once
   {
-    id: 'wren_champions', giver: 'Wren', title: 'Echoes of the Fallen', summary: 'Defeat 5 elite champions', cond: { boss: 'BOSS_GOLEM' },
+    id: 'wren_champions', giver: 'Wren', title: 'Echoes of the Fallen', summary: 'Defeat 5 elite champions', cond: { boss: 'BOSS_TREANT' },
     intro: ['You... you felled the Mountain? Then my studies were right: the champions of the wilds carry a piece of its stone.', 'Defeat five elite champions and I will let you read my notes. Rewards included, of course.'],
     progress: 'Elite champions only, hero: the ones with the gold crests. Five of them.',
     done: ['Fascinating! The stone fragments hum just as predicted.', 'Your notes, your reward. Knowledge is its own treasure, but gems are nicer.'],

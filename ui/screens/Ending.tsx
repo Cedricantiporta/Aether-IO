@@ -12,7 +12,7 @@ import { GameStatus } from '../../types';
 const STORY = [
   'Malakar, the Undying, falls at last.',
   'The Void shudders, and the stolen light pours back into the world.',
-  'In the Meadow, the first flowers open. In the Old Grove, Elderroot stirs in his sleep.',
+  'In the Meadow, the first flowers open. In the Old Grove, Elderroot stirs in his sleep; in the Halls, Gorath is only a hill again.',
   'The village bells ring through the night. Somewhere, a hermit laughs.',
   'You were only the village guard.',
   'Now you are its legend.',

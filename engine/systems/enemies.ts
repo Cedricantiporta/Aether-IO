@@ -31,7 +31,7 @@ import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor, isStationary,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
-import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats } from './combat';
+import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys } from './bossSpecials';
@@ -1258,7 +1258,7 @@ function updateEnemy(e: Enemy): void {
     if (e.staggerT > 0) { e.staggerT -= dt; if (e.staggerT <= 0) e.stagger = 0; }
     else if (e.stagger > 0 && e.staggerCd <= 0) e.stagger = Math.max(0, e.stagger - 4 * dt);
     const b = world.boss;
-    if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { b.stagger = e.stagger / e.staggerMax; b.staggered = e.staggerT > 0; }
+    if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { b.stagger = staggerView(e); b.staggered = e.staggerT > 0; }
   }
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
