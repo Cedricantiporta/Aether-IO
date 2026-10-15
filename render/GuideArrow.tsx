@@ -4,7 +4,8 @@
 // Adventure Portal). Inside the castle it leads to the King / a castle NPC or the exit.
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { ConeGeometry, Color, Mesh, MeshBasicMaterial } from 'three';
+import { Color, DoubleSide, Group, MeshBasicMaterial } from 'three';
+import { thinArrowGeo } from './arrowGeo';
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
@@ -15,7 +16,7 @@ import { mainNav, boardQuestNav, navNpc, npcArea, type NavTarget } from '../engi
 import { updateRouteHint } from '../engine/systems/townPath';
 import { gateOpen } from '../story';
 
-const GOLD = new Color('#f2c14e'), QUEST = new Color('#4fe3ff');
+const GOLD = new Color('#e8b545'), QUEST = new Color('#3fd8ff');   // rim colours (the arrow itself is dark)
 const tgt = { x: 0, z: 0, reach: 2, quest: false, hideR: 4.5 };
 const use = (t: NavTarget, quest: boolean): boolean => { tgt.x = t.x; tgt.z = t.z; tgt.reach = t.reach; tgt.quest = quest; tgt.hideR = Math.max(4.5, t.reach + 1); return true; };
 
@@ -38,9 +39,10 @@ function pickTarget(): boolean {
 }
 
 export function GuideArrow() {
-  const geo = useMemo(() => new ConeGeometry(0.55, 1.5, 3).rotateX(Math.PI / 2), []);
-  const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false, color: GOLD.clone() }), []);
-  const ref = useRef<Mesh>(null!);
+  const geo = useMemo(() => ({ core: thinArrowGeo(0.62, 0.6, 1.5, 0.12), rim: thinArrowGeo(0.66, 0.64, 1.56, 0.26) }), []);
+  const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false, side: DoubleSide, color: GOLD.clone() }), []);   // rim
+  const dark = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.92, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#14100c' }), []);
+  const ref = useRef<Group>(null!);
   const S = useRef({ acc: 1, has: false, ax: 0, az: 0 });
   useFrame(({ clock }, dt) => {
     const m = ref.current; if (!m) return;
@@ -56,8 +58,13 @@ export function GuideArrow() {
     m.visible = on && s.has && dt2 > tgt.hideR && d > 0.3;
     if (!m.visible) return;
     const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
-    m.position.set(p.x + (dx / d) * k, (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * k);
+    m.position.set(p.x + (dx / d) * k - (dx / d) * 0.75, (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * k - (dz / d) * 0.75);
     m.rotation.y = Math.atan2(dx, dz);
   });
-  return <mesh ref={ref} geometry={geo} material={mat} visible={false} renderOrder={5} />;
+  return (
+    <group ref={ref} visible={false}>
+      <mesh geometry={geo.rim} material={mat} renderOrder={5} />
+      <mesh geometry={geo.core} material={dark} position={[0, 0.01, 0]} renderOrder={6} />
+    </group>
+  );
 }
