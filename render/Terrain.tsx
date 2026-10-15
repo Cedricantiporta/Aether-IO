@@ -15,7 +15,9 @@ import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
 import { inCaveClear } from '../engine/caveData';
-import { BEACH, beachSandK } from '../engine/beachData';
+import { BEACH, beachSandK, DOCK } from '../engine/beachData';
+/** Keep the shoreline boulders off the pier (and a little either side of it). */
+const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(z - DOCK.z) < 7;
 
 const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
 
@@ -342,7 +344,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       const s = 0.9 + rnd() * 1.3;
       if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
-      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // (the cave mouth stays clear)
+      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1) || nearDock(x, z)) continue;   // (the cave mouth + the pier stay clear)
       setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
     }
     m.count = c;
@@ -354,7 +356,7 @@ function Rim({ q }: { q: QualityCfg }) {
   const stoneFill = useMemo(() => (m: InstancedMesh) => {
     const rnd = mulberry32(55);
     let c = 0;
-    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; const x = Math.cos(a) * r, z = Math.sin(a) * r, ry = rnd() * 6, s1 = 0.7 + rnd() * 0.9, s2 = 0.7 + rnd() * 0.9, s3 = 0.7 + rnd() * 0.9; if (!inCaveClear(x, z)) setInst(m, c++, x, 0, z, ry, s1, s2, s3); }
+    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; const x = Math.cos(a) * r, z = Math.sin(a) * r, ry = rnd() * 6, s1 = 0.7 + rnd() * 0.9, s2 = 0.7 + rnd() * 0.9, s3 = 0.7 + rnd() * 0.9; if (!inCaveClear(x, z) && !nearDock(x, z)) setInst(m, c++, x, 0, z, ry, s1, s2, s3); }
     m.count = c;
   }, []);
 
