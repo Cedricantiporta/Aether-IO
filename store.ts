@@ -903,7 +903,7 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'CRIT_RATE': base.critRate += upgrade.value; break;
           case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
           case 'MULTISHOT': base.multishot += upgrade.value; break;
-          case 'DASH_COOLDOWN': base.dashCooldown = Math.max(0.5, base.dashCooldown - 0.5); break;
+          case 'DASH_COOLDOWN': base.dodge = (base.dodge || 0) + 0.04; break;   // (dashes are a flat 4 s now: Shadow Step gives dodge)
           default: break;
         }
       }

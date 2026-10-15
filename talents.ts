@@ -82,7 +82,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Fleet Foot', '+3% move speed', 3, 'u:SPEED', { mul: { moveSpeed: 0.03 } }],
       ['Evasion', '+2% dodge', 3, 'dash', { add: { dodge: 0.02 } }],
       ['Hardy', '+8 max health', 3, 'u:HEALTH', { add: { maxHealth: 8 } }],
-      ['Second Wind', '-0.3s dash cooldown', 2, 'u:DASH_COOLDOWN', { add: { dashCooldown: -0.3 } }],
+      ['Second Wind', '+3% dodge', 2, 'u:DASH_COOLDOWN', { add: { dodge: 0.03 } }],
       ['Storm Caller', 'Storm of a Thousand Arrows lasts +1.5s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1.5 } }],
       ['Phantom', '+10% dodge, +5% move speed', 1, 'u:SKILL_DASH', { add: { dodge: 0.1 }, mul: { moveSpeed: 0.05 } }],
     ]],

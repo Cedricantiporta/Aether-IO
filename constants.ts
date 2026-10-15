@@ -127,7 +127,7 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
 export const SKILLS_INFO = {
     // Universal Passives
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
-    dash: { name: 'Class Dash', description: 'Your Space dash. Costs no mana and has a fixed recharge (one charge). Each level raises the dash damage.', type: 'PASSIVE' },
+    dash: { name: 'Class Dash', description: 'Your Space dash. Costs no mana. One dash every 4 s for every class at any level; each level only raises the dash damage.', type: 'PASSIVE' },
     weapon: { name: 'Ultimate Mastery', description: 'Ultimate charge fills faster (+10% per level).', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
@@ -161,7 +161,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_spd', type: 'SPEED', name: 'Wind Step', description: 'Move Speed Up', rarity: 'COMMON', value: 0.05 },
   { id: 'u_dmg', type: 'DAMAGE', name: 'Sharpness', description: 'Damage Up', rarity: 'RARE', value: 0.13 },
   { id: 'u_fr', type: 'FIRE_RATE', name: 'Haste', description: 'Atk Speed Up', rarity: 'RARE', value: 0.1 },
-  { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: 'Dash CD Down', rarity: 'RARE', value: 1 }, 
+  { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: '+4% Dodge', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   
@@ -334,11 +334,11 @@ export const ITEMS_POOL: Item[] = [
   { id: 'gloves_4', name: 'Berserker Gauntlets', type: 'GLOVES', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { damage: 4, critRate: 0.06, fireRate: 0.3 } },
   { id: 'gloves_5', name: 'Titan Fists', type: 'GLOVES', rarity: 'MYTHIC', price: 4500, level: 1, stats: { damage: 8, critRate: 0.1, fireRate: 0.5, critDamage: 0.2 } },
 
-  // --- BOOTS (Hermes Boots is the Rare tier): move speed / dodge / dash cooldown ---
+  // --- BOOTS (Hermes Boots is the Rare tier): move speed / dodge ---
   { id: 'boots_0', name: 'Traveler Boots', type: 'BOOTS', rarity: 'COMMON', price: 120, level: 1, stats: { moveSpeed: 0.15 } },
-  { id: 'boots_3', name: 'Windrunner Boots', type: 'BOOTS', rarity: 'EPIC', price: 1300, level: 1, stats: { moveSpeed: 0.5, dodge: 0.05, dashCooldown: -0.3 } },
-  { id: 'boots_4', name: 'Shadowstep Greaves', type: 'BOOTS', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { moveSpeed: 0.7, dodge: 0.08, dashCooldown: -0.5 } },
-  { id: 'boots_5', name: 'Aether Striders', type: 'BOOTS', rarity: 'MYTHIC', price: 4500, level: 1, stats: { moveSpeed: 1.0, dodge: 0.12, dashCooldown: -0.8 } },
+  { id: 'boots_3', name: 'Windrunner Boots', type: 'BOOTS', rarity: 'EPIC', price: 1300, level: 1, stats: { moveSpeed: 0.5, dodge: 0.07 } },
+  { id: 'boots_4', name: 'Shadowstep Greaves', type: 'BOOTS', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { moveSpeed: 0.7, dodge: 0.11 } },
+  { id: 'boots_5', name: 'Aether Striders', type: 'BOOTS', rarity: 'MYTHIC', price: 4500, level: 1, stats: { moveSpeed: 1.0, dodge: 0.16 } },
 
   // --- ACCESSORIES (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---
   { id: 'ring_1', name: 'Ring of Vitality', type: 'ACCESSORY', rarity: 'COMMON', price: 250, level: 1, 

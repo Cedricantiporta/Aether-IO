@@ -20,6 +20,8 @@ import { Vector3 } from 'three';
 
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
 const MAX_DASH_CHARGES = 1;
+/** Every dash (all classes, any level) recharges in exactly 4 s. */
+const DASH_CD = 4;
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
@@ -60,7 +62,7 @@ export function initPlayer(): void {
   p.vel.set(0, 0, 0);
   p.hp = st.stats.maxHealth;
   p.mana = st.stats.maxMana;
-  p.maxDashCharges = Math.min(MAX_DASH_CHARGES, (st.skillLevels[dashKey(st.hero)] >= 5 ? 2 : 1) + (st.stats.dashCharges | 0));
+  p.maxDashCharges = MAX_DASH_CHARGES;   // one dash, every class, every level
   p.dashCharges = p.maxDashCharges;
   p.dashCd = 0;
   p.maxShieldCharges = st.skillLevels.barrier <= 0 ? 0 : st.skillLevels.barrier >= 5 ? 2 : 1;
@@ -195,14 +197,14 @@ export function updatePlayer(dt: number): void {
 
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
   const dLv = lv[dashKey(st.hero)];
-  const maxDash = Math.min(MAX_DASH_CHARGES, (dLv >= 5 ? 2 : 1) + (stats.dashCharges | 0));
+  const maxDash = MAX_DASH_CHARGES;   // one dash, every class, every level
   if (maxDash > p.maxDashCharges) p.dashCharges += maxDash - p.maxDashCharges;
   p.maxDashCharges = maxDash;
   if (p.dashCharges > maxDash) p.dashCharges = maxDash;
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = Math.max(0.5, stats.dashCooldown * 0.6 * (1 - stats.cooldownReduction)) * (st.hero === 'BARBARIAN' ? 1.2 : 1);   // (no per-level recharge cut)   // Bloodrage Leap recharges 20% slower
+  p.dashCdMax = DASH_CD;   // a flat 4 s for every class and dash level (no gear / talent / cooldown-reduction changes)
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
@@ -379,7 +381,7 @@ export function updatePlayerVillage(dt: number): void {
   // skills + class dash work in town too (free: mana stays full; no enemies to hit)
   p.cd.q = tickDown(p.cd.q, dt); p.cd.e = tickDown(p.cd.e, dt); p.cd.s3 = tickDown(p.cd.s3, dt); p.cd.s4 = tickDown(p.cd.s4, dt);
   if (p.maxDashCharges < 1) p.maxDashCharges = 1;
-  if (p.dashCdMax <= 0) p.dashCdMax = Math.max(0.6, st.stats.dashCooldown);
+  if (p.dashCdMax <= 0) p.dashCdMax = DASH_CD;
   if (p.dashCharges < p.maxDashCharges) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashCharges++; p.dashCd = p.dashCharges < p.maxDashCharges ? p.dashCdMax : 0; } }
   updateSkillInput();
   updateAbilities(dt);
