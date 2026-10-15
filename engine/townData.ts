@@ -400,7 +400,7 @@ export interface NpcDef {
   /** which map the NPC lives in (default town) */
   /** talking to this NPC ends by opening this shop tab (e.g. the Skill Trainer -> SKILLS) */
   opens?: import('../storeTypes').ShopTab;
-  area?: 'CASTLE' | 'CAVE';   // (CAVE = Floor 1 of the crystal cave)
+  area?: 'CASTLE' | 'CAVE' | 'CHURCH';   // (CAVE = Floor 1 of the crystal cave)
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
   /** gold crown on his head */
@@ -583,6 +583,17 @@ export const NPCS: NpcDef[] = [
       ['His Majesty is fond of heroes who bring him good news. Shall I tell you a secret? He is terrible at cards.'],
     ],
     bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
+  },
+  // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: two health potions)
+  {
+    name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#f4f0ff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH',
+    talk: [
+      ['Welcome to the chapel of the Undying Flame, child. Every hero who falls out there wakes again in this town. Some say the Flame remembers them.', 'Rest a moment. The road will still be there.'],
+      ['The windows were made from the glass of the old Aether spires. On quiet nights they still hum.', 'If the Void Herald ever stirs again, we will ring the bell. Twice.'],
+      ['I pray for the miners, the fishers and the fools who walk into portals. You are the third kind, I think.', 'Go gently, and come back.'],
+    ],
+    bubbles: ['May the Flame keep you.', 'Light a candle for the lost.', 'Peace, traveller.'],
+    gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 2, text: 'Take these, with the Flame\'s blessing. They have saved braver souls than either of us.' },
   },
   {
     name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 60.5], speed: 1.2,

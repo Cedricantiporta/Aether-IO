@@ -20,6 +20,7 @@ import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
 import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
+import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT } from '../churchData';
 import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT, CAMP_COLLIDERS } from '../caveData';
 import { UNLOCK_LV } from '../../unlocks';
 import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCave } from './cave';
@@ -119,7 +120,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -154,6 +155,8 @@ function scanNearby(): void {
   const area = world.village.area, castle = area === 'CASTLE';
   if (castle) {
     d = q(CASTLE_EXIT.x, CASTLE_EXIT.z); if (d < CASTLE_EXIT.r * CASTLE_EXIT.r) push('E', 'Leave', 'Castle', '', -1, d, 'leave');
+  } else if (area === 'CHURCH') {
+    d = q(CHURCH_EXIT.x, CHURCH_EXIT.z); if (d < CHURCH_EXIT.r * CHURCH_EXIT.r) push('E', 'Leave', 'Chapel', '', -1, d, 'leave');
   } else if (area === 'CAVE') {
     scanCave(push, p.pos.x, p.pos.z);   // exit / stairs / lucky ladder / Grit's bench / veins (cave.ts)
   } else {
@@ -170,6 +173,7 @@ function scanNearby(): void {
     d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
+    d = q(CHURCH_DOOR.x, CHURCH_DOOR.z); if (d < CHURCH_DOOR.r * CHURCH_DOOR.r) push('E', 'Enter', 'Chapel', '', -1, d, 'church');
     d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
     // (only while a quest asks for it)
@@ -201,6 +205,7 @@ export function interact(it: Interactable): void {
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'castle') v.pending = 'ENTER';
+    else if (it.act === 'church') v.pending = 'CHURCH';
     else if (it.act === 'cave') v.pending = 'CAVE';
     else if (it.act === 'leave') v.pending = 'LEAVE';
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
@@ -303,7 +308,7 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
  *  street route is the fallback), then do `act` on arrival (open `tab` / enter the castle or cave / talk to NPC `npc` /
  *  nothing). `r` = arrive within this distance of (x, z). An NPC target is followed while it patrols and the walk stops
  *  at talking distance. Instant when already close. Only in town (a tracker click during a run never queues a walk). */
-export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
+export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.status !== GameStatus.MENU) return;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
@@ -389,6 +394,7 @@ export function walkToNpcQuest(name: string | null): void {
   const i = name ? NPCS.findIndex((n) => n.name === name) : -1;
   if (i >= 0) { const again = (): void => navWalk(navNpc(i), again, true); navWalk(navNpc(i), again); return; }
   if (world.village.area === 'CASTLE') walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
+  else if (world.village.area === 'CHURCH') walkTo(CHURCH_EXIT.x, CHURCH_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'CAVE') walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2);
   else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
@@ -397,7 +403,7 @@ export function walkToSpot(at: Spot): void { const t = navSpot(at); if (t) navWa
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {
   const g = world.village.go, st = useGameStore.getState();
-  if (goT.resume && (g.act === 'castle' || g.act === 'cave' || g.act === 'leave')) walkAfterArrive(goT.resume);
+  if (goT.resume && (g.act === 'castle' || g.act === 'church' || g.act === 'cave' || g.act === 'leave')) walkAfterArrive(goT.resume);
   goT.resume = null;
   if (g.act === 'shop' && g.tab) {
     if (g.tab === 'FISH' && fishingLocked()) st.addNotification(`The Fishmonger trades with anglers from Lv ${UNLOCK_LV.FISHING}.`, LOCK_COLOR, 'WARNING');
@@ -405,6 +411,7 @@ function arrive(): void {
   }
   else if (g.act === 'down') interactCave('down', 0);   // (quest walk to the cave stairs: go down when allowed)
   else if (g.act === 'castle') world.village.pending = 'ENTER';
+  else if (g.act === 'church') world.village.pending = 'CHURCH';
   else if (g.act === 'cave') world.village.pending = 'CAVE';
   else if (g.act === 'leave') world.village.pending = 'LEAVE';
   else if (g.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });
@@ -413,7 +420,7 @@ function arrive(): void {
 
 const FADE_S = 0.2;   // fade out + fade in = ~0.4 s
 /** Swaps the village between the town, the castle throne hall and the crystal cave (called at full black). */
-function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
+function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH'): void {
   const p = world.player, v = world.village, C = world.camera, from = v.area;
   closeDialogue();
   // cave trips: whatever lies on the ground is scooped up on the way (it would otherwise float in the other map)
@@ -430,6 +437,13 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
     resetNpcs();
     p.pos.set(CASTLE_SPAWN.x, 0, CASTLE_SPAWN.z); p.facing = Math.PI;
     C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
+  } else if (to === 'CHURCH') {
+    v.area = 'CHURCH';
+    for (const c of world.crates) { c.active = false; }
+    installInterior(CHURCH_COLLIDERS);
+    resetNpcs();
+    p.pos.set(CHURCH_SPAWN.x, 0, CHURCH_SPAWN.z); p.facing = Math.PI;
+    C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
   } else if (to === 'CAVE') {
     enterCave();   // Floor 1 (cave.ts: veins, colliders, NPCs, spawn, camera)
   } else {
@@ -437,6 +451,9 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
     generateMap(); placeVillageNodes();   // the normal town setup path (rebuilds town colliders, harvest nodes, NPCs)
     if (from === 'CAVE') {   // just outside the cave mouth, facing out over the bay
       p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot;
+      C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
+    } else if (from === 'CHURCH') {   // on the chapel steps, facing the town
+      p.pos.set(CHURCH_OUT.x, 0, CHURCH_OUT.z); p.facing = 0;
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else {
       p.pos.set(CASTLE_STEPS.x, 0, CASTLE_STEPS.z); p.facing = 0;
@@ -454,7 +471,7 @@ export function updateVillage(dt: number): void {
     v.fade = Math.min(1, v.fade + dt / FADE_S);
     if (v.fade >= 1) {
       if (v.pending === 'DOWN' || v.pending === 'UP') switchCaveFloor(v.pending);   // cave floors (cave.ts)
-      else switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN');
+      else switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CHURCH' ? 'CHURCH' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN');
       v.pending = '';
     }
   } else if (v.fade > 0) v.fade = Math.max(0, v.fade - dt / FADE_S);

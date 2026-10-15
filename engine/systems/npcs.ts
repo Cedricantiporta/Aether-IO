@@ -49,7 +49,7 @@ export function resetNpcs(): void {
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
     n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1; n.bubbleT = -99;
-    n.yaw = d.area === 'CASTLE' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
+    n.yaw = d.area === 'CASTLE' || d.area === 'CHURCH' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
   }
   for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
   for (const b of bubbles) b.active = false;

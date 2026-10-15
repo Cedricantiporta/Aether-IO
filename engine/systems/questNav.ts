@@ -4,6 +4,7 @@
 // walkToNpcObjective), the guide arrow and the tracker's distance readout, so all three always agree.
 // NPC targets use the NPC's LIVE position (patrolling NPCs are followed by the walker). Pure TS, no React.
 // ============================================================================
+import { CHURCH_DOOR, CHURCH_EXIT } from '../churchData';
 import { useGameStore } from '../../store';
 import { world, QUEST_POS, TRAINER_POS } from '../world';
 import { STORY, type StoryAt } from '../../story';
@@ -18,8 +19,8 @@ import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests';
 import type { ShopTab } from '../../storeTypes';
 
-export type NavAct = 'shop' | 'castle' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
-type Area = 'TOWN' | 'CASTLE' | 'CAVE';
+export type NavAct = 'shop' | 'castle' | 'church' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
+type Area = 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH';
 export interface NavTarget {
   x: number; z: number;
   /** arrive within this distance of (x, z) */
@@ -45,10 +46,12 @@ function set(o: NavTarget, x: number, z: number, reach: number, act: NavAct, tab
 /** The way out of the current interior (castle hall / crystal cave) back to town. */
 const exit = (o: NavTarget): NavTarget => (area() === 'CAVE'
   ? set(o, CAVE_EXIT.x, CAVE_EXIT.z, 2, 'leave', '', -1, true)
+  : area() === 'CHURCH' ? set(o, CHURCH_EXIT.x, CHURCH_EXIT.z, 2, 'leave', '', -1, true)
   : set(o, CASTLE_EXIT.x, CASTLE_EXIT.z, 2, 'leave', '', -1, true));
 /** From town: the door into `to` (castle hall / crystal cave). */
 const door = (o: NavTarget, to: Area): NavTarget => (to === 'CAVE'
   ? set(o, CAVE_DOOR.x, CAVE_DOOR.z, 2.4, 'cave', '', -1, true)
+  : to === 'CHURCH' ? set(o, CHURCH_DOOR.x, CHURCH_DOOR.z + 1, 2.4, 'church', '', -1, true)
   : set(o, CASTLE_DOOR.x, CASTLE_DOOR.z + 2, 2.4, 'castle', '', -1, true));
 /** The next hop towards area `to` (exit first when inside another interior), or null when already there. */
 function hop(o: NavTarget, to: Area): NavTarget | null {

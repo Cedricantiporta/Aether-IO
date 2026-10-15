@@ -15,6 +15,7 @@ import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
 import { Town } from './Town';
+import { ChurchInterior } from './ChurchInterior';
 import { CastleInterior } from './CastleInterior';
 import { CaveInterior } from './CaveInterior';
 import { CaveEntrance } from './CaveEntrance';
@@ -74,7 +75,9 @@ export function Scene() {
       <LookDriver />
       <CameraRig />
       <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
-      {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
+      {gameplay ? <Room q={q} /> : world.village.area === 'CHURCH' ? (
+        <Suspense fallback={null}><ChurchInterior q={q} /></Suspense>
+      ) : world.village.area === 'CASTLE' ? (
         <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
       ) : cave ? (
         <Suspense fallback={null}><CaveInterior key={cv.floor + ':' + cv.seed} q={q} /></Suspense>
@@ -89,13 +92,13 @@ export function Scene() {
       <Suspense fallback={null}><Hero q={q} /></Suspense>
       <FacingArrow />
       {!gameplay && <GuideArrow />}
-      {(gameplay || (status === GameStatus.MENU && world.village.area !== 'CASTLE')) && (
+      {(gameplay || (status === GameStatus.MENU && world.village.area !== 'CASTLE' && world.village.area !== 'CHURCH')) && (
         <>
           <Crates />
           <Pickups />
         </>
       )}
-      {!gameplay && status === GameStatus.MENU && world.village.area !== 'CASTLE' && (
+      {!gameplay && status === GameStatus.MENU && world.village.area !== 'CASTLE' && world.village.area !== 'CHURCH' && (
         <>{/* town / crystal cave: skills / attacks, the hermit-path monsters and the cave monsters */}
           <Zones />
           <GroundFx />
