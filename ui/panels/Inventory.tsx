@@ -100,6 +100,7 @@ export const InventoryPanel: React.FC = () => {
   };
   const shown = useMemo(() => (cat === 'ALL' ? sorted : sorted.filter((i) => catOf(i) === cat)), [sorted, cat]);
   // better gear than what is worn: red dot on the item and on its category tab (and ALL)
+  const seeItem = useGameStore((s) => s.seeItem);
   const better = useMemo(() => betterGearIds(inventory, equipment, hero, rank), [inventory, equipment, hero, rank]);
   const betterCats = useMemo(() => { const c = new Set<string>(); for (const i of inventory) if (better.has(i.id)) { c.add(catOf(i)); c.add('ALL'); } return c; }, [inventory, better]);
   const empty = cat === 'ALL' ? Math.max(0, max - inventory.length) : Math.max(0, Math.max(12, Math.ceil(shown.length / 4) * 4 + 4) - shown.length);
@@ -157,9 +158,9 @@ export const InventoryPanel: React.FC = () => {
             <div className="bag-grid slot-grid">
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>
-                  <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
+                  <ItemSlot item={it} fluid size="100%" iconSize="78%" locked={lockedFor(it)} onSeen={it.isNew ? () => seeItem(it.id) : undefined} selected={!!selectedLive && selectedLive === it && shopTab === 'BLACKSMITH'}
                     onClick={() => click(it)} tooltip="sell" drag={delMode || sellMode ? null : { from: 'BAG', item: it }} className={(delMode || sellMode) && delSel.includes(it.id) ? (sellMode ? 'is-sell' : 'is-del') : delMode || sellMode ? 'del-pick' : ''}>
-                    {better.has(it.id) && <i className="red-dot" data-testid="item-dot" />}
+                    {better.has(it.id) ? <i className="red-dot" data-testid="item-dot" /> : it.isNew ? <i className="new-dot" data-testid="new-dot" /> : null}
                   </ItemSlot>
                 </DropCell>
               ))}

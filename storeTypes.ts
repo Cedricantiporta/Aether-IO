@@ -201,7 +201,8 @@ export interface GameState {
   reorderItems: (list: 'inventory' | 'warehouse', items: Item[]) => void;   // manual order (drag within the bag / warehouse, Sort)
   depositItem: (id: string) => boolean;            // bag -> warehouse (stacks), false if the warehouse is full
   withdrawItem: (id: string) => boolean;           // warehouse -> bag, false if the bag is full
-  addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full
+  addItemToInventory: (item: Item) => boolean;      // stacks potions/cores/revives; false if full (marks it new, except monster loot)
+  seeItem: (id: string) => void;                     // drops an item's "new" dot (hovered / tapped in the bag)
   canPickUp: (item: Item) => boolean;               // used by pickups magnet
   consumeItem: (pred: (i: Item) => boolean) => Item | null; // removes one from a stack, returns template
   equipItem: (item: Item) => void;

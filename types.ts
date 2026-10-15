@@ -112,6 +112,8 @@ export interface Item {
   stackSize?: number; 
   quantity?: number; 
   classType?: HeroClass; 
+  /** Newly looted / rewarded (not monster loot): a dot in the bag until the player looks at it. */
+  isNew?: boolean;
   
   // Consumable Specifics
   restoreAmount?: number;

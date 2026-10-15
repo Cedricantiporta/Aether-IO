@@ -32,11 +32,12 @@ interface Props {
   className?: string;
   children?: React.ReactNode;
   drag?: DragSrc | null;       // makes the slot draggable (see ui/lib/dnd)
+  onSeen?: () => void;         // hovered / touched (drops a bag item's "new" dot)
 }
 
 /** Metallic rarity-framed item slot. Empty when no item. */
 export const ItemSlot: React.FC<Props> = ({
-  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, gemPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag,
+  item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, gemPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag, onSeen,
 }) => {
   const q = qty ?? item?.quantity ?? 1;
   const cls = `rpg-slot ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
@@ -58,7 +59,7 @@ export const ItemSlot: React.FC<Props> = ({
   const tipProps = item && !noTip ? tip(<ItemTip item={item} price={tooltip} compare={compare} />) : {};
   const dnd = item && drag ? dragProps(drag) : {};
   if (onClick || onContextMenu) {
-    return <button type="button" disabled={disabled} className={cls} style={style} data-rarity={item?.rarity} onClick={onClick} onContextMenu={onContextMenu} {...tipProps} {...dnd}>{content}</button>;
+    return <button type="button" disabled={disabled} className={cls} style={style} data-rarity={item?.rarity} onClick={onClick} onContextMenu={onContextMenu} onPointerEnter={onSeen} {...tipProps} {...dnd}>{content}</button>;
   }
-  return <div className={`${cls} hoverable`} style={style} data-rarity={item?.rarity} {...tipProps} {...dnd}>{content}</div>;
+  return <div className={`${cls} hoverable`} style={style} data-rarity={item?.rarity} onPointerEnter={onSeen} {...tipProps} {...dnd}>{content}</div>;
 };

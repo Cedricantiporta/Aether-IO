@@ -542,6 +542,8 @@ writeSharedWh(sharedWh.items, sharedWh.gold);
 // -------------------------------------------------------------------- store --
 export const useGameStore = create<GameState>()((set, get) => {
   /** Stack-aware insert. Returns the new inventory or null when it does not fit. */
+  /** Newly acquired gear / consumables / pets get the bag's "new" dot; monster loot (goblin ears, pelts...) never does. */
+  const markNew = (item: Item): Item => (item.type === 'LOOT' || item.isNew ? item : { ...item, isNew: true });
   const insertItem = (inventory: Item[], maxSlots: number, item: Item): Item[] | null => {
     const inv = inventory.slice();
     if (isStackable(item)) {
@@ -552,7 +554,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         const q = s.quantity || 1;
         if (q >= stackLimit(item)) continue;
         const add = Math.min(remaining, stackLimit(item) - q);
-        inv[i] = { ...s, quantity: q + add };
+        inv[i] = { ...s, quantity: q + add, ...(item.isNew ? { isNew: true } : {}) };   // a new item merged into a stack marks the stack
         remaining -= add;
       }
       while (remaining > 0) {
@@ -1206,10 +1208,16 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     addItemToInventory: (item) => {
       const s = get();
-      const inv = insertItem(s.inventory, s.maxInventorySlots, item);
+      const inv = insertItem(s.inventory, s.maxInventorySlots, markNew(item));   // looted / rewarded: "new" dot (monster loot excluded)
       if (!inv) return false;
       set({ inventory: inv });
       return true;
+    },
+
+    seeItem: (id) => {   // the player looked at a new item: drop its dot
+      const s = get();
+      if (!s.inventory.some((i) => i.id === id && i.isNew)) return;
+      set({ inventory: s.inventory.map((i) => (i.id === id && i.isNew ? { ...i, isNew: false } : i)) });
     },
 
     canPickUp: (item) => {
@@ -1344,7 +1352,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const pool = summonPool('GEM', s.hero).filter((i) => isGear(i) && i.rarity === (ok ? up : r));
       if (!pool.length) return null;
       const item = instantiate(pool[Math.floor(Math.random() * pool.length)]);
-      set({ inventory: [...s.inventory.filter((i) => !ids.includes(i.id)), item] });   // (5 slots freed, 1 used)
+      set({ inventory: [...s.inventory.filter((i) => !ids.includes(i.id)), markNew(item)] });   // (5 slots freed, 1 used)
       notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
       return { ok, item };
     },
@@ -1671,8 +1679,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const materials = { ...s.materials };
       for (const r of Object.keys(shardGain) as Rarity[]) materials[r] = (materials[r] ?? 0) + shardGain[r]!;
       if (!gem) materials.COMMON -= cost;
-      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut], summonPity, materials });
-      else set({ materials, inventory: [...s.inventory, ...gearOut], summonPity });
+      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials });
+      else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity });
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },

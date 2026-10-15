@@ -43,9 +43,9 @@ export function betterGearIds(inv: Item[], eq: Equipment, hero: string, rank: nu
   return out;
 }
 
-/** Bag dot: only when there is equippable gear better than what is worn (plain new loot does not light it). */
+/** Bag dot: equippable gear better than what is worn, or newly looted / rewarded items not looked at yet. */
 export function useBagAlert(): boolean {
-  return useGameStore((s) => hasBetterGear(s.inventory, s.equipment, s.hero, s.heroRank));
+  return useGameStore((s) => s.inventory.some((i) => i.isNew) || hasBetterGear(s.inventory, s.equipment, s.hero, s.heroRank));
 }
 export function useCodexAlert(): boolean {
   const seen = useSeen((s) => s.codex);

@@ -1425,6 +1425,8 @@ button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
 .sqbtn { position: relative; }
 .red-dot { position: absolute; top: .1rem; right: .1rem; width: .62rem; height: .62rem; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8a80, #e0281e 60%, #9a0f0a); box-shadow: 0 0 0 1.5px #1a0806, 0 0 8px rgba(255, 60, 40, .8); pointer-events: none; z-index: 8; animation: dotPulse 1.6s ease-in-out infinite; }
 .relative > .red-dot { top: .1rem; right: .1rem; }
+/* newly looted / rewarded item: a gold dot until hovered or tapped (red-dot = better gear wins) */
+.new-dot { position: absolute; top: .12rem; right: .12rem; width: .55rem; height: .55rem; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff4b8, #ffc23a 60%, #b07a10); box-shadow: 0 0 0 1.5px #1a1206, 0 0 8px rgba(255, 200, 60, .8); pointer-events: none; z-index: 8; animation: dotPulse 1.6s ease-in-out infinite; }
 @keyframes dotPulse { 50% { transform: scale(1.2); } }
 /* quest tracker: darker plates, white text */
 .qt-row { background: linear-gradient(270deg, rgba(4, 5, 7, .9), rgba(4, 5, 7, .72)); }
