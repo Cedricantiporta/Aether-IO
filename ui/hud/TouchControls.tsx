@@ -221,6 +221,7 @@ export const TouchControls: React.FC = () => {
   useEffect(() => { if (!active) { const i = world.input; i.joy.active = false; i.joy.x = i.joy.z = 0; i.aimStick.active = false; for (const k in i.keys) i.keys[k] = false; } }, [active]);
   const [drag, setDragS] = React.useState<{ on: boolean; cancel: boolean }>({ on: false, cancel: false });
   const setDrag = (on: boolean, cancel: boolean) => setDragS((d) => (d.on === on && d.cancel === cancel ? d : { on, cancel }));
+  const dashOpen = useGameStore((s) => s.level >= DASH_UNLOCK_LV);   // the dash button appears at class level 20 (hook before the early return: panels opening on touch crashed the UI)
   if (!active) return null;
 
   // joystick on the LEFT => skill cluster on the right (and vice versa)
@@ -228,7 +229,6 @@ export const TouchControls: React.FC = () => {
   const defs = activeDefs(hero);
   const order = ACTIVE_ORDER[hero];
   const dDef = dashDef(hero);
-  const dashOpen = useGameStore((s) => s.level >= DASH_UNLOCK_LV);   // the dash button appears at class level 20
   const icon = (i: number) => <PaintedIcon id={defs[i].icon} />;
   const p = world.player;
   const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]] }), mana: () => useGameStore.getState().getManaCost(order[i]) });
