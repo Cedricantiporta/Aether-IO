@@ -55,8 +55,9 @@ function inVisible(x: number, z: number, m: number): boolean {
   return x >= v.minX + m && x <= v.maxX - m && z >= v.minZ + m && z <= v.maxZ - m;
 }
 
-/** Town NPCs live in the town, castle NPCs in the throne hall: only the current area simulates. */
-const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area;
+/** Town NPCs live in the town, castle NPCs in the throne hall, the miner on cave Floor 1: only the current area simulates. */
+export const npcInArea = (i: number): boolean => inArea(i);
+const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === 1);   // (cave NPCs live on Floor 1)
 
 export function updateNpcs(dt: number): void {
   const p = world.player;

@@ -308,7 +308,7 @@ function BubbleProjector() {
 }
 
 /** `area` picks which cast is mounted: the town's villagers (+ animals) or the castle court. */
-export function Npcs({ area = 'TOWN' }: { area?: 'TOWN' | 'CASTLE' }) {
+export function Npcs({ area = 'TOWN' }: { area?: 'TOWN' | 'CASTLE' | 'CAVE' }) {
   return (
     <>
       {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area ? <NpcActor key={i} i={i} /> : null))}

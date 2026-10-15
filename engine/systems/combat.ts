@@ -563,7 +563,7 @@ export function boneArmorMul(): number {
 export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
-  if (!p.alive || st.status !== GameStatus.PLAYING) return;
+  if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
   if (debug.god) return;   // debug god mode
   const isDot = !!o?.dot;
   if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
@@ -608,6 +608,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   if (!isDot) addShake(Math.min(0.4, Math.max(0.15, (reduced / st.stats.maxHealth) * 1.2)));
 
   if (p.hp > 0) return;
+  if (st.status !== GameStatus.PLAYING) { p.hp = 0; return; }   // cave: no game over (engine/systems/cave.ts turns it into a cave-in)
 
   // Death: Phoenix -> Ankh -> game over.
   const pet = st.equipment.pet;

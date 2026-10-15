@@ -10,12 +10,22 @@ const mk = (fog: string, hs: string, hg: string, hi: number, sun: string, si: nu
   ({ fog: new Color(fog), hemiSky: new Color(hs), hemiGround: new Color(hg), hemiI: hi, sun: new Color(sun), sunI: si, sky: new Vector3(...sky), near, far });
 
 export const TOWN_FOG = '#cfe6f2';
+/** Extra multiplier on the hemisphere + sun light (render/CaveInterior lowers it as the cave lantern runs out). */
+export const lookDim = { k: 1 };
 export const look: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
 const target: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
 
-/** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2). `snap` skips the ease (used at full black). */
+/** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2; -3 lava floor, -4 poison floor). `snap` skips the ease (used at full black). */
 export function setLook(biome: number, snap = false, index = 0): void {
-  if (biome === -2) {
+  if (biome === -3) {
+    // crystal cave, lava floor: smoky red-brown fog, warm orange fill
+    target.fog.set('#120604'); target.hemiSky.set('#ffb08a'); target.hemiGround.set('#4a2418'); target.hemiI = 1.0;
+    target.sun.set('#ffc49a'); target.sunI = 1.0; target.sky.set(0.08, 0.03, 0.02); target.near = 42; target.far = 110;
+  } else if (biome === -4) {
+    // crystal cave, poison floor: misty green
+    target.fog.set('#08120a'); target.hemiSky.set('#b4f0a8'); target.hemiGround.set('#2c4024'); target.hemiI = 1.0;
+    target.sun.set('#c8f0b8'); target.sunI = 1.0; target.sky.set(0.03, 0.07, 0.03); target.near = 34; target.far = 100;
+  } else if (biome === -2) {
     // crystal cave (village area CAVE): near-black fog, dim cool fill light; the crystals / torches carry the scene
     target.fog.set('#07090d'); target.hemiSky.set('#9cb0dc'); target.hemiGround.set('#4a4036'); target.hemiI = 1.05;
     target.sun.set('#c4d0ee'); target.sunI = 1.1; target.sky.set(0.03, 0.035, 0.05); target.near = 42; target.far = 100;

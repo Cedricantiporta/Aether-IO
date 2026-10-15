@@ -420,6 +420,13 @@ function sfxCrate(): void {
   tone(160, 70, 0.1, 0.15);
 }
 
+/** Crystal cave lantern cues (engine/systems/cave.ts): low-oil tick, heartbeat under 10%, the blackout when it goes out. */
+export function sfxCave(kind: 'tick' | 'heartbeat' | 'blackout'): void {
+  if (kind === 'tick') tone(1500, 1400, 0.05, 0.05, { type: 'square' });
+  else if (kind === 'heartbeat') { tone(70, 45, 0.16, 0.32, { type: 'sine', priority: true }); tone(62, 40, 0.18, 0.26, { type: 'sine', delay: 0.2, priority: true }); }
+  else { tone(220, 40, 1.6, 0.22, { type: 'sawtooth', priority: true }); noise(1.4, 0.16, 600, 60, { priority: true }); tone(95, 30, 2.2, 0.25, { type: 'sine', delay: 0.3, priority: true }); }
+}
+
 function sfxPlayerDeath(): void {
   tone(440, 45, 1.4, 0.3, { type: 'sawtooth', priority: true });
   noise(0.8, 0.2, 1200, 80, { priority: true });

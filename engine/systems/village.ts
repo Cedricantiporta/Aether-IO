@@ -21,7 +21,9 @@ import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
 import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
-import { CAVE_COLLIDERS, CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_NODES, CAVE_OUT, CAVE_SPAWN } from '../caveData';
+import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT } from '../caveData';
+import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCave } from './cave';
+import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
@@ -33,18 +35,17 @@ const INTERACT_R = 7;
 /** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
 export const HARVEST_REGROW_MS = 24 * 60 * 60 * 1000;
 interface HarvestSave { broken: number[]; clearedAt: number }
-/** One persistent group of harvest nodes (crate pool slots 0..n): the town outskirts, or the crystal cave (own save key,
- *  own 24 h regrow clock; the slots are reused because only one area is loaded at a time). */
+/** One persistent group of harvest nodes (crate pool slots 0..n): the town outskirts (the crystal cave keeps its own
+ *  floors / saves in cave.ts; the slots are reused because only one area is loaded at a time). */
 interface HarvestSet { key: string; nodes: readonly { kind: 'CRYSTAL' | 'ORE' | 'GOLD_VEIN' | 'HERB'; x: number; z: number }[]; h: HarvestSave }
 const TOWN_HARVEST: HarvestSet = { key: 'aether-survivor-harvest-v1', nodes: VILLAGE_NODES, h: { broken: [], clearedAt: 0 } };
-const CAVE_HARVEST: HarvestSet = { key: 'aether-survivor-cave-harvest-v1', nodes: CAVE_NODES, h: { broken: [], clearedAt: 0 } };
 function loadHarvest(key: string): HarvestSave {
   try { const r = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null; if (r) { const h = JSON.parse(r); if (Array.isArray(h.broken)) return { broken: h.broken.filter((x: unknown) => typeof x === 'number'), clearedAt: Number(h.clearedAt) || 0 }; } } catch { /* ignore */ }
   return { broken: [], clearedAt: 0 };
 }
 function saveHarvest(s: HarvestSet): void { try { if (typeof localStorage !== 'undefined') localStorage.setItem(s.key, JSON.stringify(s.h)); } catch { /* ignore */ } }
-/** The harvest group of the current area (none in the castle). */
-const harvestSet = (): HarvestSet | null => (world.village.area === 'TOWN' ? TOWN_HARVEST : world.village.area === 'CAVE' ? CAVE_HARVEST : null);
+/** The harvest group of the current area (the town's; the cave handles its own, the castle has none). */
+const harvestSet = (): HarvestSet | null => (world.village.area === 'TOWN' ? TOWN_HARVEST : null);
 /** ms until the nodes of the current area (the town's when in the castle) regrow (0 = available / nothing harvested out). */
 export function harvestRegrowIn(): number { const h = (harvestSet() ?? TOWN_HARVEST).h; return h.clearedAt > 0 ? Math.max(0, h.clearedAt + HARVEST_REGROW_MS - Date.now()) : 0; }
 const HARVEST_R = 3.6;
@@ -103,7 +104,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -127,7 +128,7 @@ function scanNearby(): void {
   if (castle) {
     d = q(CASTLE_EXIT.x, CASTLE_EXIT.z); if (d < CASTLE_EXIT.r * CASTLE_EXIT.r) push('E', 'Leave', 'Castle', '', -1, d, 'leave');
   } else if (area === 'CAVE') {
-    d = q(CAVE_EXIT.x, CAVE_EXIT.z); if (d < CAVE_EXIT.r * CAVE_EXIT.r) push('E', 'Leave', 'Crystal Cave', '', -1, d, 'leave');
+    scanCave(push, p.pos.x, p.pos.z);   // exit / stairs / lucky ladder / Grit's bench / veins (cave.ts)
   } else {
     d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
@@ -142,8 +143,8 @@ function scanNearby(): void {
     if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Hold: Collect', 'Egg', '', 300 + k, d, 'farm'); }
     if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Hold: Coax', 'Biscuit the cat', '', 400, d, 'farm'); }
   }
-  for (let i = 0; i < npcs.length; i++) { if ((NPCS[i].area ?? 'TOWN') !== area) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
-  if (!castle)   // (town + cave harvest nodes)
+  for (let i = 0; i < npcs.length; i++) { if (!npcInArea(i)) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d, 'npc'); }
+  if (area === 'TOWN')   // (town harvest nodes; the cave's come from scanCave)
   for (let i = 0; i < world.crates.length; i++) {
     const c = world.crates[i]; if (!c.active) continue;
     d = q(c.pos.x, c.pos.z); if (d < HARVEST_R * HARVEST_R) push('E', 'Harvest', HARVEST_NAME[c.kind] ?? 'Node', '', i, d, 'harvest');
@@ -164,6 +165,7 @@ export function interact(it: Interactable): void {
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'cave') v.pending = 'CAVE';
     else if (it.act === 'leave') v.pending = 'LEAVE';
+    else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
     else if (it.act === 'npc') openDialogue(it.node);
     else if (it.act === 'gate') {   // adventure (+ Ascension); sealed until the King's first task (main story)
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
@@ -251,7 +253,7 @@ export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'cave' | '
 }
 /** Quest tracker click: walk to wherever the quest continues (claim at the board, the King, the potion shop, else the gate). */
 export function walkToQuest(q: Quest): void {
-  if (world.village.area === 'CAVE') { walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside)
+  if (world.village.area === 'CAVE') { if (world.village.cave.floor === 1) walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside; deep floors: no shortcut out)
   const st = useGameStore.getState(), castle = world.village.area === 'CASTLE';
   const king = NPCS.findIndex((n) => n.king);
   if (questDone(q)) { if (castle) walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); else walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
@@ -268,7 +270,7 @@ export function walkToQuest(q: Quest): void {
 export function walkToMain(): void {
   const st0 = useGameStore.getState();
   if (STORY[st0.story.step]?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
-  if (world.village.area === 'CAVE') { walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside)
+  if (world.village.area === 'CAVE') { if (world.village.cave.floor === 1) walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside; deep floors: no shortcut out)
   const t = storyTarget(), castle = world.village.area === 'CASTLE';
   if (!t) return;
   if (t.npc >= 0) {
@@ -297,7 +299,7 @@ const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'B
  *  cat, the shop for a shop action), else out through the gate. */
 export function walkToNpcObjective(o: { type: string; target?: string | string[] }, npc: string | null): void {
   if (npc) { walkToNpcQuest(npc); return; }
-  if (world.village.area === 'CAVE') { walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside)
+  if (world.village.area === 'CAVE') { if (world.village.cave.floor === 1) walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside; deep floors: no shortcut out)
   if (world.village.area === 'CASTLE') { walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2); return; }
   const p = world.player, t = String(o.target ?? '');
   if (o.type === 'INTERACT') {
@@ -317,7 +319,7 @@ let afterArrive: (() => void) | null = null, afterT = 0;
 export function walkAfterArrive(fn: () => void): void { afterArrive = fn; afterT = 0.8; }
 /** NPC story quest row click: ready -> the NPC who takes it in; talk objective -> that NPC; otherwise out through the gate. */
 export function walkToNpcQuest(name: string | null): void {
-  if (world.village.area === 'CAVE') { walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside)
+  if (world.village.area === 'CAVE') { if (world.village.cave.floor === 1) walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2); return; }   // (cave: everything is outside; deep floors: no shortcut out)
   const castle = world.village.area === 'CASTLE';
   if (name) {
     const i = NPCS.findIndex((n) => n.name === name);
@@ -349,6 +351,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
   closeDialogue();
   // cave trips: whatever lies on the ground is scooped up on the way (it would otherwise float in the other map)
   if (to === 'CAVE' || from === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
+  if (from === 'CAVE' && to !== 'CAVE') leaveCave();
   for (const b of bubbles) b.active = false;
   p.vel.set(0, 0, 0); p.dashT = 0; p.anim.moveBlend = 0;
   if (to === 'CASTLE') {
@@ -359,12 +362,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE'): void {
     p.pos.set(CASTLE_SPAWN.x, 0, CASTLE_SPAWN.z); p.facing = Math.PI;
     C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
   } else if (to === 'CAVE') {
-    v.area = 'CAVE';
-    placeNodes(CAVE_HARVEST);   // (switches every town crate slot off first)
-    installInterior(CAVE_COLLIDERS);
-    resetNpcs();
-    p.pos.set(CAVE_SPAWN.x, 0, CAVE_SPAWN.z); p.facing = Math.PI;   // walked in from the south, facing into the cave
-    C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
+    enterCave();   // Floor 1 (cave.ts: veins, colliders, NPCs, spawn, camera)
   } else {
     v.area = 'TOWN';
     generateMap(); placeVillageNodes();   // the normal town setup path (rebuilds town colliders, harvest nodes, NPCs)
@@ -385,7 +383,11 @@ export function updateVillage(dt: number): void {
   // area-switch fade: black out, swap the map, fade back in (~0.4 s total)
   if (v.pending) {
     v.fade = Math.min(1, v.fade + dt / FADE_S);
-    if (v.fade >= 1) { switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN'); v.pending = ''; }
+    if (v.fade >= 1) {
+      if (v.pending === 'DOWN' || v.pending === 'UP') switchCaveFloor(v.pending);   // cave floors (cave.ts)
+      else switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN');
+      v.pending = '';
+    }
   } else if (v.fade > 0) v.fade = Math.max(0, v.fade - dt / FADE_S);
   const talking = dialogueOpen();
   if (afterArrive && !v.pending && v.fade <= 0 && !talking && (afterT -= dt) <= 0) { const f = afterArrive; afterArrive = null; f(); }
@@ -423,7 +425,8 @@ export function updateVillage(dt: number): void {
     }
   }
   updatePickups(dt);
-  if (updateTownMonsters(dt)) updateEnemies(dt);   // hermit-path monsters (stationary, harmless)
+  const caveFight = updateCave(dt);   // cave floors: veins, lantern oil, hazards, monsters (cave.ts)
+  if (updateTownMonsters(dt) || caveFight) updateEnemies(dt);   // hermit-path monsters (stationary, harmless) / cave monsters
   updateNpcs(dt);
   // click-to-walk arrival (gives up after 10 s, e.g. blocked by a wall)
   const g = v.go;

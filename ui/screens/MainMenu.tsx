@@ -1,3 +1,5 @@
+import { CaveHud } from '../hud/CaveHud';
+import { LanternPanel } from '../panels/LanternPanel';
 import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph } from '../components/MenuGlyphs';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { ActionBar } from '../hud/ActionBar';
@@ -130,6 +132,9 @@ export const VillageHUD: React.FC = () => {
         </div>
       )}
       {!panel && <ExpStrip />}
+      {/* crystal cave: floor / lantern meter / haul at risk + Grit's lantern bench */}
+      <CaveHud />
+      <LanternPanel />
     </div>
   );
 };

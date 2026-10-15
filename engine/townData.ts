@@ -345,7 +345,7 @@ export interface NpcDef {
   /** replaces the last line with a nudge when a quest is ready to claim */
   quest?: boolean;
   /** which map the NPC lives in (default town) */
-  area?: 'CASTLE';
+  area?: 'CASTLE' | 'CAVE';   // (CAVE = Floor 1 of the crystal cave)
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
   /** gold crown on his head */
@@ -578,6 +578,18 @@ export const NPCS: NpcDef[] = [
       ['They say the forest east of the walls hides a cave full of ore. Bring a pick.'],
     ],
     bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.'],
+  },
+  // ------------------------------------------------------------ crystal cave, Floor 1 (see engine/caveData.ts)
+  {
+    name: 'Grit', role: 'Old Miner', model: 'BARBARIAN', tint: '#c9b8a0', scale: 0.95, prop: 'lantern', accent: '#ffb84a', home: [-4.2, 11.4], area: 'CAVE', ordered: true,
+    talk: [
+      ['Mind your head, youngster. Name is Grit. Forty years under this hill and I still find something new.', 'The stairs at the back go down. But the deep doesn\'t let you pass until you\'ve taken every vein on a floor.'],
+      ['The deeper you go, the better the stone. Epic shards, Legendary geodes... once in a lifetime a Mythic vein. Those glow like a sunset. Takes forever to crack.', 'Rock gets harder down there too. Hold that E and keep at it.'],
+      ['Below the first floor there\'s no daylight. Your lantern burns oil the whole time. When it gutters out, the hill shakes and you\'ll wake up back here, lighter in the pockets.', 'Come back up to fill it. My bench there sells bigger lanterns.'],
+      ['From the third floor down, things live in the dark. Bats, slimes, worse. Keep your blade handy.', 'Some floors run hot with lava, some reek of poison. Don\'t stand in the puddles, eh?'],
+      ['Old trick: now and then a vein hides a ladder under it. Find one and you can skip the rest of the floor.', 'And if you take the stairs you came down by, they bring you straight back up here. Shortcut my grandfather dug.'],
+    ],
+    bubbles: ['Every vein, then deeper.', 'Mind the lantern oil!', 'Hear that? The hill breathing.', 'Bigger lanterns at the bench!'],
   },
 ];
 

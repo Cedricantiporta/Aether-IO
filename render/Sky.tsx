@@ -10,7 +10,7 @@ import { useGameStore } from '../store';
 import { QualityCfg } from './quality';
 import { mulberry32 } from './util';
 import { isLobbyStatus } from './CameraRig';
-import { look } from './biomeLook';
+import { look, lookDim } from './biomeLook';
 
 export const FOG_COLOR = '#cfe6f2';
 export const SUN_DIR = new Vector3(-0.55, 0.72, 0.42).normalize();
@@ -99,8 +99,8 @@ export function Lighting({ q }: { q: QualityCfg }) {
   const half = useRef(38);
   useFrame(() => {
     const l = sun.current; if (!l) return;
-    if (hemi.current) { hemi.current.color.copy(look.hemiSky); hemi.current.groundColor.copy(look.hemiGround); hemi.current.intensity = look.hemiI; }
-    l.color.copy(look.sun); l.intensity = look.sunI;
+    if (hemi.current) { hemi.current.color.copy(look.hemiSky); hemi.current.groundColor.copy(look.hemiGround); hemi.current.intensity = look.hemiI * lookDim.k; }
+    l.color.copy(look.sun); l.intensity = look.sunI * lookDim.k;   // (lookDim: the crystal cave darkens as the lantern runs low)
     const lobby = isLobbyStatus(useGameStore.getState().status);
     const V = world.view;
     // shadow frustum hugs the visible ground rect (quantised so the projection rarely changes)
