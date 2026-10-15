@@ -20,7 +20,23 @@ const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
 
 /** Parchment item tooltip content. `compare` shows green/red deltas vs the equipped item. */
 const tip_ok = (price: string) => price !== 'buy'; // shop templates have no growth
+/** The tooltip: the hovered item, and (owner) the equipped item of that slot side by side for comparison. */
 export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'buy' | 'none' }> = ({ item, compare = true, price = 'sell' }) => {
+  const equipment = useGameStore((s) => s.equipment);
+  const slot = slotOf(item);
+  const equipped = compare && slot ? equipment[slot] : null;
+  if (!equipped || equipped === item || equipped.id === item.id) return <ItemTipCard item={item} compare={compare} price={price} />;
+  return (
+    <div className="flex items-start gap-3" data-testid="tip-compare">
+      <ItemTipCard item={item} compare price={price} />
+      <div style={{ borderLeft: '1px solid rgba(90, 64, 30, .35)', paddingLeft: '.75rem' }}>
+        <div className="tt-sub" style={{ color: '#1f7a2e', fontWeight: 800, marginBottom: '.15rem' }}>Currently equipped</div>
+        <ItemTipCard item={equipped} compare={false} price="none" />
+      </div>
+    </div>
+  );
+};
+const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'buy' | 'none' }> = ({ item, compare = true, price = 'sell' }) => {
   const equipment = useGameStore((s) => s.equipment);
   const heroClass = useGameStore((s) => s.hero);
   const level = useGameStore((s) => s.heroRank);

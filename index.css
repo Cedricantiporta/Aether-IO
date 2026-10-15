@@ -714,6 +714,8 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .rpg-scroll, .allow-scroll { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .is-touch canvas { touch-action: none; }
 .is-touch .rpg-tooltip { max-width: 70vw; }
+.rpg-tooltip:has([data-testid='tip-compare']) { max-width: min(36rem, 96vw); }   /* hovered item + equipped item side by side */
+.is-touch .rpg-tooltip:has([data-testid='tip-compare']) { max-width: 96vw; }
 
 /* virtual joystick / aim stick / action buttons */
 .tc-root { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
