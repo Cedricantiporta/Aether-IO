@@ -5,6 +5,10 @@ import React, { useState } from 'react';
 import type { Item } from '../../types';
 import type { EquipSlot } from '../../storeTypes';
 import { hideTip } from '../components/Tooltip';
+import { Vector3 } from 'three';
+import { useGameStore } from '../../store';
+import { world } from '../../engine/world';
+import { spawnPickup, droppedItems } from '../../engine/systems/pickups';
 
 export type DragFrom = 'BAG' | 'EQUIP' | 'WAREHOUSE';
 export interface DragSrc { from: DragFrom; item: Item; slot?: EquipSlot }
@@ -56,4 +60,34 @@ export function reorder<T extends { id: string }>(list: T[], dragId: string, tar
   if (j < 0 || j === i) return list;
   [a[i], a[j]] = [a[j], a[i]];
   return a;
+}
+
+// ---- drag an item out of a panel onto the game view: it drops on the ground in front of the hero (pick it up again with E)
+const isWorld = (t: EventTarget | null): boolean => {
+  const el = t as HTMLElement | null;
+  if (!el || el.tagName !== 'CANVAS') return false;
+  const r = el.getBoundingClientRect();
+  return r.width * r.height > window.innerWidth * window.innerHeight * 0.6;   // the main 3D view, not a preview canvas
+};
+const dropPos = new Vector3();
+function dropToGround(s: DragSrc): void {
+  if (s.from === 'WAREHOUSE') return;
+  const st = useGameStore.getState(), p = world.player;
+  if (s.from === 'EQUIP' && s.slot) st.unequipItem(s.slot);
+  if (!useGameStore.getState().inventory.some((i) => i.id === s.item.id)) return;
+  st.deleteItems([s.item.id]);
+  dropPos.set(p.pos.x + Math.sin(p.facing) * 1.6, 0, p.pos.z + Math.cos(p.facing) * 1.6);
+  droppedItems.add(s.item.id);
+  spawnPickup('ITEM', dropPos, 0, s.item);
+  st.addNotification(`Dropped ${s.item.name}`, '#d6c08a', 'ITEM');
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('dragover', (e) => { if (current && current.from !== 'WAREHOUSE' && isWorld(e.target)) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; } });
+  document.addEventListener('drop', (e) => {
+    const s = current;
+    if (!s || s.from === 'WAREHOUSE' || !isWorld(e.target)) return;
+    e.preventDefault();
+    current = null; document.body.classList.remove('is-dragging');
+    dropToGround(s);
+  });
 }

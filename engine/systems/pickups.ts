@@ -21,6 +21,8 @@ const MAX_MAGNET_SPEED = 55;
 const PET_COLLECT_RANGE = 20;
 
 let xpActive = 0;
+/** Items the player dropped on purpose (dragged out of the bag): never auto-looted, only picked up by hand (E). */
+export const droppedItems = new Set<string>();
 const tmpPos = new Vector3();
 
 export function resetPickups(): void {
@@ -170,7 +172,7 @@ export function updatePickups(dt: number): void {
     // Common items are looted by hand (E / tap the pill: lootPickup); Rare and better, currency, xp and hearts fly in by themselves
     // (Rare+ items only when you walk up to them: a short grab radius, no long-range pull)
     // (Settings > Auto loot: minimum gear rarity, materials, range, sweep the floor once the room is cleared)
-    const autoItem = o.kind !== 'ITEM' || (!!o.item && (sweep || (autoLootWants(o.item, set) && (farLoot || d2 < ITEM_GRAB_R2))));
+    const autoItem = o.kind !== 'ITEM' || (!!o.item && !droppedItems.has(o.item.id) && (sweep || (autoLootWants(o.item, set) && (farLoot || d2 < ITEM_GRAB_R2))));
     if (canGet && !o.magnet && o.t > 0.35 && (sweep || d2 < magnetR2) && autoItem) o.magnet = true;
     if (o.magnet && !canGet) o.magnet = false;
 
