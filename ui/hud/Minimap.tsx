@@ -1,6 +1,9 @@
 import React, { useRef } from 'react';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import { GATE, WALL_RUNS, WALL_TOWERS } from '../../engine/townData';
+import { HALL } from '../../engine/castleData';
+import { CAVE_DOOR, CAVE_EXIT, caveRadius } from '../../engine/caveData';
+import { isHarvestNode } from '../../engine/mapgen';
 import { shape, SHAPE_N } from '../../engine/roomShape';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
@@ -21,6 +24,7 @@ export const Minimap: React.FC = () => {
     const ctx = c.getContext('2d'); if (!ctx) return;
     const pw = W * DPR, ph = H * DPR, cx = ph / 2, R = cx - 3 * DPR, ox = (pw - ph) / 2;   // square frame of side ph, centred in the wider canvas
     const room = world.room.active;
+    const area = room ? '' : world.village.area, town = area === 'TOWN';
     const rad = room ? shape.maxR : ARENA_RADIUS;
     // zoomed in around the hero (not the whole map): about 30 m of radius in view
     const view = room ? Math.min(rad + 4, 28) : 34;
@@ -62,10 +66,30 @@ export const Minimap: React.FC = () => {
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.closePath();
-    } else ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
+    } else if (town) ctx.arc(cx, cx, rad * k, 0, Math.PI * 2);
     ctx.stroke(); ctx.setLineDash([]);
+    // indoor areas: the castle hall rectangle / the cave outline (filled rock floor), the way out, the cave's harvest nodes
+    if (area === 'CASTLE') {
+      ctx.fillStyle = 'rgba(120,112,98,.35)'; ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR;
+      ctx.beginPath(); ctx.rect(cx - HALL.hw * k, cx - HALL.hd * k, HALL.hw * 2 * k, HALL.hd * 2 * k); ctx.fill(); ctx.stroke();
+    } else if (area === 'CAVE') {
+      ctx.fillStyle = 'rgba(70,64,58,.75)'; ctx.strokeStyle = 'rgba(150,140,128,.95)'; ctx.lineWidth = 2.2 * DPR;
+      ctx.beginPath();
+      for (let i = 0; i <= 48; i++) { const a = (i / 48) * Math.PI * 2, r = caveRadius(a) * k; const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (let i = 0; i < world.crates.length; i++) {
+        const c = world.crates[i]; if (!c.active || !isHarvestNode(c.kind)) continue;
+        ctx.fillStyle = c.kind === 'CRYSTAL' ? '#6fe6ff' : c.kind === 'GOLD_VEIN' ? '#ffd24a' : '#c9a27a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.2 * DPR;
+        ctx.beginPath(); ctx.arc(cx + c.pos.x * k, cx + c.pos.z * k, 3 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+    }
+    if (area === 'CAVE' || area === 'CASTLE') {   // the way out (gold arrow pointing south)
+      const ex = area === 'CAVE' ? CAVE_EXIT.z : HALL.hd, gx = cx, gy = cx + ex * k;
+      ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
+      ctx.beginPath(); ctx.moveTo(gx - 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx + 6 * DPR, gy - 4 * DPR); ctx.lineTo(gx, gy + 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
     // town wall outline + towers (village only; the gate gap is the break in the south side)
-    if (!room) {
+    if (town) {
       ctx.strokeStyle = 'rgba(190,184,170,.9)'; ctx.lineWidth = 2.2 * DPR; ctx.lineCap = 'butt';
       ctx.beginPath();
       for (const [x1, z1, x2, z2] of WALL_RUNS) { ctx.moveTo(cx + x1 * k, cx + z1 * k); ctx.lineTo(cx + x2 * k, cx + z2 * k); }
@@ -76,7 +100,7 @@ export const Minimap: React.FC = () => {
     // obstacles
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     const obs = world.obstacles;
-    for (let i = 0; i < obs.length; i++) {
+    for (let i = 0; (room || town) && i < obs.length; i++) {   // (the town's obstacles are not loaded indoors)
       const o = obs[i]; const p = (o as any).pos ?? (o as any).position; if (!p) continue;
       ctx.beginPath(); ctx.arc(cx + p.x * k, cx + p.z * k, Math.max(1, (o.radius ?? 1) * k), 0, Math.PI * 2); ctx.fill();
     }
@@ -90,7 +114,7 @@ export const Minimap: React.FC = () => {
         ctx.beginPath(); ctx.arc(cx + po.x * k, cx + po.z * k, 4.5 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       }
     }
-    for (let si = 0; !room && si < SHOP_POSITIONS.length; si++) {
+    for (let si = 0; town && si < SHOP_POSITIONS.length; si++) {
       const s = SHOP_POSITIONS[si];
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
       ctx.fillStyle = 'rgba(13,7,3,.85)'; ctx.strokeStyle = s.color; ctx.lineWidth = 1.5 * DPR;
@@ -99,7 +123,12 @@ export const Minimap: React.FC = () => {
       ctx.fillText(SHOP_ICON[s.type] ?? '•', x, y + 0.5 * DPR);
     }
     // village: quest board / altar / trainer (small gold-violet-orange dots) and the town gate (gold arrow, easy to spot)
-    if (!room) {
+    if (town) {
+      // the crystal cave entrance (east, beyond the ring path): a dark disc with a cyan crystal
+      { const x = cx + CAVE_DOOR.x * k, y = cx + CAVE_DOOR.z * k;
+        ctx.fillStyle = 'rgba(13,7,3,.85)'; ctx.strokeStyle = '#6fe6ff'; ctx.lineWidth = 1.5 * DPR;
+        ctx.beginPath(); ctx.arc(x, y, 7 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#6fe6ff'; ctx.beginPath(); ctx.moveTo(x, y - 4.5 * DPR); ctx.lineTo(x + 3 * DPR, y); ctx.lineTo(x, y + 4.5 * DPR); ctx.lineTo(x - 3 * DPR, y); ctx.closePath(); ctx.fill(); }
       const dots: [number[], string][] = [[QUEST_POS, '#ffd24a'], [SHRINE_POS, '#b57cff'], [TRAINER_POS, '#ffb04a']];
       for (const [pp, col] of dots) {
         ctx.fillStyle = col; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.2 * DPR;

@@ -13,9 +13,13 @@ export const TOWN_FOG = '#cfe6f2';
 export const look: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
 const target: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
 
-/** Points the look at a biome (index >= 0) or back at the town (-1). `snap` skips the ease (used at full black). */
+/** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2). `snap` skips the ease (used at full black). */
 export function setLook(biome: number, snap = false, index = 0): void {
-  if (biome < 0) {
+  if (biome === -2) {
+    // crystal cave (village area CAVE): near-black fog, dim cool fill light; the crystals / torches carry the scene
+    target.fog.set('#07090d'); target.hemiSky.set('#9cb0dc'); target.hemiGround.set('#4a4036'); target.hemiI = 1.05;
+    target.sun.set('#c4d0ee'); target.sunI = 1.1; target.sky.set(0.03, 0.035, 0.05); target.near = 42; target.far = 100;
+  } else if (biome < 0) {
     target.fog.set(TOWN_FOG); target.hemiSky.set('#cfe8ff'); target.hemiGround.set('#6f8f45'); target.hemiI = 1.25;
     target.sun.set('#fff0d2'); target.sunI = 3.1; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
   } else if (runInfo.mode === 'TOWER') {

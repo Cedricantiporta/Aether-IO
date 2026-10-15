@@ -14,6 +14,7 @@ import { makeRockGeo, useNature } from './models';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
+import { inCaveClear } from '../engine/caveData';
 
 const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
 
@@ -144,7 +145,7 @@ function Bushes({ q }: { q: QualityCfg }) {
       // thin band just inside the island edge only (the walled yard, avenue and field stay clear)
       const r = e - 1.5 - rnd() * 4, x = Math.cos(a) * r, z = Math.sin(a) * r;
       void pick;
-      if (inYard(x, z, 3) || inForecourtUse(x, z, 2) || Math.hypot(x, z) > e - 1) continue;
+      if (inYard(x, z, 3) || inForecourtUse(x, z, 2) || Math.hypot(x, z) > e - 1 || inCaveClear(x, z)) continue;
       const n = out.length / 4; let tooClose = false;
       for (let i = 0; i < n; i++) { const dx = out[i * 4] - x, dz = out[i * 4 + 1] - z; if (dx * dx + dz * dz < 4.5) { tooClose = true; break; } }
       if (tooClose) continue;
@@ -333,7 +334,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       const s = 0.9 + rnd() * 1.3;
       if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
-      if (lakeK(x, z) > 0.02) continue;
+      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // (the cave mouth stays clear)
       setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
     }
     m.count = c;
@@ -344,7 +345,9 @@ function Rim({ q }: { q: QualityCfg }) {
   const nStone = 70;
   const stoneFill = useMemo(() => (m: InstancedMesh) => {
     const rnd = mulberry32(55);
-    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; setInst(m, i, Math.cos(a) * r, 0, Math.sin(a) * r, rnd() * 6, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9, 0.7 + rnd() * 0.9); }
+    let c = 0;
+    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; const x = Math.cos(a) * r, z = Math.sin(a) * r, ry = rnd() * 6, s1 = 0.7 + rnd() * 0.9, s2 = 0.7 + rnd() * 0.9, s3 = 0.7 + rnd() * 0.9; if (!inCaveClear(x, z)) setInst(m, c++, x, 0, z, ry, s1, s2, s3); }
+    m.count = c;
   }, []);
 
   // forest
@@ -358,7 +361,7 @@ function Rim({ q }: { q: QualityCfg }) {
       const d = Math.pow(rnd(), 1.5) * 58 + 3;
       const r = e + d, x = Math.cos(a) * r, z = Math.sin(a) * r;
       const t = rnd();
-      if (lakeK(x, z) > 0.02) continue;   // no forest in the lake
+      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // no forest in the lake / on the cave mound
       const kind = d < 18 ? (t < 0.38 ? 'oak' : t < 0.52 ? 'palm' : t < 0.76 ? 'pineA' : 'pineB') : (t < 0.1 ? 'oak' : t < 0.55 ? 'pineA' : 'pineB');
       const sc = (kind === 'oak' ? 5 : kind === 'palm' ? 5 : 6) * (0.8 + rnd() * 0.7) * (1 + d * 0.004);
       const arr = d < 16 ? inner[kind] : lists[kind];
