@@ -43,7 +43,21 @@ export interface PetProfile {
   size: number;
   /** Burn applied by melee hits. */
   ignite?: boolean;
+  /** Attack element (PET_EL): drives the hit / projectile look and its on-hit effect. */
+  el?: number;
 }
+/** Pet attack elements. Ranged shots carry tint 20 + el (render/Projectiles.tsx); melee hits emit 'petStrike'. */
+export const PET_EL = { NONE: 0, FIRE: 1, GOLD: 2, LIGHT: 3, WATER: 4, SPIRIT: 5, SHADOW: 6, BLOOD: 7, EARTH: 8, CRYSTAL: 9, NATURE: 10, TREASURE: 11 } as const;
+const PET_ELEMENT: Record<string, number> = {
+  'Green Blob': PET_EL.NATURE, 'Vampire Bat': PET_EL.BLOOD, 'Spirit Wolf': PET_EL.SPIRIT, 'Gold Dragon': PET_EL.GOLD,
+  'Iron Golem': PET_EL.EARTH, 'Phoenix': PET_EL.FIRE, 'Celestial Wisp': PET_EL.LIGHT, 'Ember Fox': PET_EL.FIRE,
+  'Mimic Chest': PET_EL.TREASURE, 'Shadow Cat': PET_EL.SHADOW, 'Crystal Golemling': PET_EL.CRYSTAL, 'Aether Leviathan': PET_EL.WATER,
+};
+// on-hit effects of elemental shots (shared, refreshed per shot: no per-shot allocation)
+const fxBurn = { type: 'BURN' as const, duration: 3, value: 4 };
+const fxEmber = { type: 'BURN' as const, duration: 2.5, value: 3 };
+const fxSlow = { type: 'SLOW' as const, duration: 2, value: 0.35 };
+const fxPoison = { type: 'POISON' as const, duration: 2.5, value: 2 };
 const NO_ATK = { attacks: false, attackMode: 'melee', dmgFactor: 0, atkCd: 1 } as const;
 const NO_FETCH = { fetches: false, fetchSpeed: 0, fetchRange: 0 } as const;
 export const PET_PROFILES: Record<string, PetProfile> = {
@@ -68,6 +82,7 @@ Object.assign(PET_PROFILES, {
   'Aether Leviathan':   { moveSpeed: 1.1, fetches: true, fetchSpeed: 20, fetchRange: 16, attacks: true, attackMode: 'ranged', dmgFactor: 0.6, atkCd: 0.8, heals: false, size: 2.0 },
 } as Record<string, PetProfile>);
 const DEFAULT_PROFILE: PetProfile = { size: 1, moveSpeed: 1, fetches: true, fetchSpeed: 20, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.45, atkCd: 0.9, heals: false };
+for (const k in PET_ELEMENT) if (PET_PROFILES[k]) PET_PROFILES[k].el = PET_ELEMENT[k];
 export function getPetProfile(name: string | undefined | null): PetProfile {
   if (!name) return DEFAULT_PROFILE;
   if (PET_PROFILES[name]) return PET_PROFILES[name];
@@ -196,14 +211,25 @@ export function updatePets(dt: number): void {
       const factor = prof.dmgFactor;
       const base = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * factor;
       wp.attackT = 1;
+      const el = prof.el ?? 0;
       if (ranged) {
         wp.atkCd = prof.atkCd;
-        spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, 30, base,
-          { life: 2.5, pierce: 1, radius: 1.5, homing: 6, y: wp.pos.y });
+        // elemental shots: Phoenix fireballs splash + burn, Gold Dragon embers, Wisp starlight pierces, Leviathan water slows
+        const fire = el === PET_EL.FIRE, gold = el === PET_EL.GOLD, light = el === PET_EL.LIGHT, water = el === PET_EL.WATER;
+        const p = spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, fire ? 22 : water ? 24 : gold ? 26 : light ? 34 : 30, base,
+          { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0 });
+        if (p && el) {
+          p.tint = 20 + el;
+          if (fire) { fxBurn.value = 4 + base * 0.25; p.effect = fxBurn; }
+          else if (gold) { fxEmber.value = 3 + base * 0.15; p.effect = fxEmber; }
+          else if (water) p.effect = fxSlow;
+        }
       } else {
         wp.atkCd = prof.atkCd;
         damageEnemy(enemy, base, meleeOpts);
         if (prof.ignite) applyStatus(enemy, { type: 'BURN', duration: 3, value: 4 + base * 0.2 });
+        if (el === PET_EL.NATURE) { fxPoison.value = 1 + base * 0.15; applyStatus(enemy, fxPoison); }
+        if (el) events.emit('petStrike', { pos: enemy.pos, el, dx: ex / ed, dz: ez / ed, big: prof.size > 1.2 });
       }
     }
   } else if (wp.state === FETCH && target) {

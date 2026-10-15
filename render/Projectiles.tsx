@@ -14,6 +14,8 @@ import { CELL, FX, embers, pushHalo, sparks } from './fx';
 import { GB, TAU, litMat } from './util';
 import { makeAxe } from './weapons';
 import { makeRockGeo } from './models';
+
+const PET_KEYS = ['PET_FIRE', 'PET_GOLD', 'PET_LIGHT', 'PET_WATER'];   // PET_BOLT tint 21..24
 import { inView } from './view';
 
 const MAXP = 900, MAXE = 600;
@@ -177,6 +179,10 @@ export function Projectiles() {
       STORM: mk([[tornA, tornMat], [tornB, tornMat]], 100),
       ORBITAL_BLADE: mk([[bl.build(), glow], [blB, lit]], 100),
       PET_BOLT: mk([[orbG(0.15, '#ffd0f0', '#ffffff'), glow]], 200),
+      PET_FIRE: mk([[orbG(0.34, '#ff6a1a', '#fff2a0'), glow]], 60),    // pet elements (tint 20 + PET_EL)
+      PET_GOLD: mk([[orbG(0.3, '#ffb020', '#fff6c8'), glow]], 60),
+      PET_LIGHT: mk([[orbG(0.26, '#ffffff', '#cfe8ff'), glow]], 60),
+      PET_WATER: mk([[orbG(0.32, '#2a9aff', '#d8f6ff'), glow]], 60),
       SOUL_BOLT: mk([[orbG(0.22, '#a86bff', '#d8ffd0'), glow]], MAXP),   // necromancer: a violet soul with a pale green core
       BONE_SPEAR: mk([[boneSpearG, lit]], 40),
       X_SLASH: mk([[xsG, glow]], 40),
@@ -234,7 +240,8 @@ export function Projectiles() {
     for (let n = 0; n < pr.length; n++) {
       const p = pr[n];
       if (!p.active) continue;
-      const key = p.kind === 'SLASH' ? (p.emp ? 'SLASH_GOLD' : p.tint === 4 ? 'SLASH_RED' : p.tint === 5 ? 'SLASH_DARK' : 'SLASH') : p.kind;   // Divine Avatar = gold; Legendary / Mythic swords = red / black
+      const key = p.kind === 'SLASH' ? (p.emp ? 'SLASH_GOLD' : p.tint === 4 ? 'SLASH_RED' : p.tint === 5 ? 'SLASH_DARK' : 'SLASH')
+        : p.kind === 'PET_BOLT' && p.tint >= 21 && p.tint <= 24 ? PET_KEYS[p.tint - 21] : p.kind;   // Divine Avatar = gold; Legendary / Mythic swords = red / black
       const ims = sys.S[key]; if (!ims) continue;
       if (!inView(p.pos.x, p.pos.z, 6)) continue;
       const i = counts[key]++;
@@ -381,6 +388,34 @@ export function Projectiles() {
           if (emit && Math.random() < dt * 30) FX.norm.emit(x, 0.3, z, (Math.random() - 0.5) * 3, 1.5, (Math.random() - 0.5) * 3, 0.5, 0.4, 0.1, 0.9, 0.88, 0.8, 0.6, CELL.SMOKE);
           break;
         case 'PET_BOLT':
+          if (p.tint === 21) {   // Phoenix: a fireball with a flame trail
+            place(ims, i, x, y, z, yaw, pitch, t * 9, 1.15);
+            pushHalo(x, y, z, 2.6, 2.4, 1.0, 0.25, 0.7, CELL.GLOW);
+            if (emit) {
+              if (Math.random() < dt * 70) FX.add.emit(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, -vx * 0.08, 0.8, -vz * 0.08, 0.35, 0.7, 0.1, 2.4, 1.0, 0.25, 0.9, CELL.FLAME, -0.5, 1);
+              if (Math.random() < dt * 20) embers(x, y, z, 1, 0xff8a2a, 0.3, 2, 0.6, 0.14);
+            }
+            break;
+          }
+          if (p.tint === 22) {   // Gold Dragon: a golden flame bolt
+            place(ims, i, x, y, z, yaw, pitch, t * 9, 1.05);
+            pushHalo(x, y, z, 2.2, 2.4, 1.7, 0.5, 0.65, CELL.GLOW);
+            if (emit && Math.random() < dt * 45) FX.add.emit(x, y, z, -vx * 0.06, 0.6, -vz * 0.06, 0.3, 0.55, 0.08, 2.4, 1.8, 0.5, 0.85, CELL.FLAME, -0.5, 1);
+            break;
+          }
+          if (p.tint === 23) {   // Celestial Wisp: a streak of starlight
+            place(ims, i, x, y, z, yaw, pitch, t * 12, 1.0);
+            pushHalo(x, y, z, 2.0, 2.4, 2.4, 2.6, 0.7, CELL.GLOW);
+            if (emit) FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.25, 0.5, 0.05, 2.2, 2.3, 2.6, 0.85, CELL.STREAK, 0, 0, 0, 0, 0);
+            if (emit && Math.random() < dt * 30) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.4, 0.3, 0.05, 2.4, 2.4, 2.6, 0.9, CELL.STAR, 0, 1, 0, 3);
+            break;
+          }
+          if (p.tint === 24) {   // Aether Leviathan: a water orb shedding droplets
+            place(ims, i, x, y, z, yaw, pitch, t * 6, 1.1);
+            pushHalo(x, y, z, 2.4, 0.5, 1.4, 2.6, 0.6, CELL.GLOW);
+            if (emit && Math.random() < dt * 50) FX.add.emit(x + (Math.random() - 0.5) * 0.4, y, z + (Math.random() - 0.5) * 0.4, -vx * 0.05, 1.5, -vz * 0.05, 0.45, 0.22, 0.05, 0.6, 1.6, 2.6, 0.9, CELL.DISC, 9, 0.5);
+            break;
+          }
           place(ims, i, x, y, z, yaw, pitch, t * 8, 1);
           if (p.tint === 9) { pushHalo(x, y, z, 1.2, 1.2, 0.5, 2.2, 0.55, CELL.GLOW); break; }   // skeleton mage bolt
           pushHalo(x, y, z, 1.0, 1.6, 1.0, 0.7, 0.55, CELL.GLOW);

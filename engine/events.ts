@@ -55,7 +55,8 @@ export interface GameEvents {
   shockwave: { pos: Vector3; radius: number; color: number };
   lightning: { from: Vector3; to: Vector3 };
   frostNova: { pos: Vector3; radius: number };
-  projectileImpact: { pos: Vector3; kind: ProjectileKind | 'ENEMY' };
+  projectileImpact: { pos: Vector3; kind: ProjectileKind | 'ENEMY'; tint?: number };
+  petStrike: { pos: Vector3; el: number; dx: number; dz: number; big?: boolean };   // a pet's melee hit (el = PET_EL)
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string };
   crateBreak: { pos: Vector3; kind: CrateKind };

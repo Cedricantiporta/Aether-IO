@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AdditiveBlending, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, NormalBlending,
+  AdditiveBlending, Color, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, NormalBlending,
   PlaneGeometry, PointLight, ShaderMaterial, Float32BufferAttribute, Sphere, Vector3,
 } from 'three';
 import { events } from '../engine/events';
@@ -154,6 +154,53 @@ let pendingBoss = 0;
 let stepPrev = 0;
 let pollenT = 0;
 
+// ---- pet attacks (engine PET_EL): every pet hit reads as its element
+const EL_HEX = [0xffffff, 0xff7a1a, 0xffc23a, 0xffffff, 0x3aa8ff, 0x9fe8ff, 0xb070ff, 0xff3048, 0x9a7a52, 0x7ae8ff, 0x7ad04a, 0xffd23a];
+const clawC = new Color();
+function claws(x: number, y: number, z: number, dx: number, dz: number, hex: number, big: boolean): void {
+  // three parallel claw rakes across the target
+  const px = -dz, pz = dx, s = big ? 1.4 : 1, c = clawC.setHex(hex);
+  for (let k = -1; k <= 1; k++) {
+    const ox = x + px * k * 0.32 * s - dx * 0.5 * s, oz = z + pz * k * 0.32 * s - dz * 0.5 * s;
+    FX.add.emit(ox, y + 0.5 * s, oz, dx * 9 * s, -6 * s, dz * 9 * s, 0.2, 0.42 * s, 0.1, c.r * 2.2, c.g * 2.2, c.b * 2.2, 1, CELL.STREAK, 0, 2, 0, 0, 0.06);
+  }
+}
+function petFx(x: number, y: number, z: number, el: number, dx: number, dz: number, ranged: boolean, big: boolean): void {
+  const hex = EL_HEX[el] ?? 0xffffff;
+  switch (el) {
+    case 1:   // FIRE: Phoenix fireball burst / Ember Fox burning bite
+      glowPuff(x, y, z, 0xff8a2a, ranged ? 3.4 : 2, 0.3, 1.8); sparks(x, y, z, ranged ? 12 : 6, 0xff7a1a, 8, 0.28, 0.4, 1.8); embers(x, y, z, ranged ? 8 : 4, 0xff8a2a, ranged ? 1.4 : 0.6);
+      for (let i = 0; i < (ranged ? 8 : 3); i++) { const a = Math.random() * TAU, r = Math.random() * (ranged ? 1.8 : 0.6); FX.add.emit(x + Math.cos(a) * r, 0.4, z + Math.sin(a) * r, 0, 2 + Math.random() * 2, 0, 0.45, 0.9, 0.2, 2.4, 1.0, 0.25, 0.9, CELL.FLAME, -0.5, 1); }
+      if (ranged) { ringBurst(x, 0.15, z, 0xff6a1a, 0.6, 2.6, 0.4, 1.6); scorch(x, z, 2.2, 4); }
+      if (!ranged) claws(x, y, z, dx, dz, 0xffa040, big);
+      break;
+    case 2:   // GOLD: dragon fire
+      glowPuff(x, y, z, 0xffc23a, 2.6, 0.28, 1.8); sparks(x, y, z, 10, 0xffd23a, 8, 0.26, 0.4, 1.8); embers(x, y, z, 5, 0xffc23a, 1); ringBurst(x, 0.15, z, 0xffb020, 0.5, 1.9, 0.35, 1.5); break;
+    case 3:   // LIGHT: a starburst
+      flashStar(x, y, z, 0xffffff, 2.6, 0.25); sparks(x, y, z, 10, 0xe8f4ff, 9, 0.24, 0.35, 2.2); glowPuff(x, y, z, 0xcfe8ff, 2, 0.25, 2); break;
+    case 4:   // WATER: splash + ripple
+      glowPuff(x, y, z, 0x3aa8ff, 2.4, 0.3, 1.6); ringBurst(x, 0.12, z, 0x6ac8ff, 0.5, 2.4, 0.5, 1.4);
+      for (let i = 0; i < 12; i++) { const a = Math.random() * TAU, sp = 2 + Math.random() * 3; FX.add.emit(x, y, z, Math.cos(a) * sp, 3 + Math.random() * 3, Math.sin(a) * sp, 0.6, 0.24, 0.06, 0.6, 1.6, 2.6, 0.95, CELL.DISC, 14, 0.3); }
+      break;
+    case 5: case 6: case 7:   // SPIRIT wolf / SHADOW cat / BLOOD bat: claw or fang rakes
+      claws(x, y, z, dx, dz, hex, big); glowPuff(x, y, z, hex, 1.4, 0.2, 1.6); sparks(x, y, z, 4, hex, 6, 0.2, 0.3, 1.8, dx * 4, 0, dz * 4);
+      if (el === 7) chunks(x, y, z, 3, 0xc01830, 0x801020, 3, 0.16);
+      if (el === 6) smokePuff(x, y, z, 2, 0x3a1a5a, 0.8, 0.5, 0.6, 0.8, 0.5);
+      break;
+    case 8:   // EARTH: Iron Golem pound
+      ringBurst(x, 0.12, z, 0xb08a5a, 0.6, big ? 3 : 2, 0.4, 1.2); chunks(x, 0.4, z, 6, 0x8a7a6a, 0x5a4a3a, 5, 0.3); dustPuff(x, z, 4, 1.0); break;
+    case 9:   // CRYSTAL: shards
+      flashStar(x, y, z, 0x8fe8ff, 1.8); chunks(x, y, z, 6, 0x9ff0ff, 0x4ac0ff, 6, 0.24); glowPuff(x, y, z, 0x7ae8ff, 1.6, 0.25, 1.8); break;
+    case 10:  // NATURE: green ooze splat (poisons)
+      glowPuff(x, y, z, 0x7ad04a, 1.6, 0.25, 1.5); sparks(x, y, z, 6, 0x9af060, 5, 0.22, 0.35, 1.6); smokePuff(x, y * 0.5, z, 2, 0x6ab040, 0.7, 0.6, 0.5, 0.8, 0.45); break;
+    case 11:  // TREASURE: a chomp that spits coins
+      flashStar(x, y, z, 0xffe080, 1.4); sparks(x, y, z, 6, 0xffd23a, 6, 0.22, 0.3, 2);
+      for (let i = 0; i < 4; i++) { const a = Math.random() * TAU; FX.add.emit(x, y, z, Math.cos(a) * 2.5, 3 + Math.random() * 2, Math.sin(a) * 2.5, 0.6, 0.3, 0.2, 2.4, 2.0, 0.6, 1, CELL.DISC, 12, 0.4, 0, 6); }
+      break;
+    default: glowPuff(x, y, z, hex, 1.4, 0.2, 1.5); break;
+  }
+}
+
 export function VFX() {
   const q = useQuality();
   useEffect(() => { FX.scale = q.fxScale * adaptive.fxMul; }, [q]);
@@ -248,8 +295,11 @@ export function VFX() {
       }
     }));
 
+    off.push(on('petStrike', (e) => petFx(e.pos.x, 1.1, e.pos.z, e.el, e.dx, e.dz, false, !!e.big)));
+
     off.push(on('projectileImpact', (e) => {
       const p = e.pos;
+      if (e.kind === 'PET_BOLT' && e.tint !== undefined && e.tint > 20) { petFx(p.x, p.y, p.z, e.tint - 20, 0, 1, true, false); return; }
       switch (e.kind) {
         case 'ARROW': case 'RAIN_ARROW': case 'PIERCING_ARROW':
           sparks(p.x, p.y, p.z, 4, e.kind === 'PIERCING_ARROW' ? 0xffffff : 0xffe8b0, 5, 0.2, 0.25, 1.5); chunks(p.x, p.y, p.z, 2, 0x8a5a2a, 0xb88a50, 3, 0.14); break;

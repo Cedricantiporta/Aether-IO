@@ -377,7 +377,7 @@ function ricochet(p: Projectile, fromX: number, fromZ: number, skip: Enemy | nul
   p.vel.set((dx / l) * sp, 0, (dz / l) * sp);
   p.bounces--;
   p.life = Math.max(p.life, 1.5);
-  events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+  events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
   events.emit('explosion', { pos: new Vector3(fromX, 1, fromZ), radius: 1.4, color: 0xffa050 });
   return true;
 }
@@ -407,7 +407,7 @@ function bounceStorm(p: Projectile, from: Enemy): void {
 function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number): void {
   if (e.shellT > 0) { // Tidal Shell reflects projectiles
     p.vel.x = -p.vel.x; p.vel.z = -p.vel.z; p.hitIds.push(e.id);
-    events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+    events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
     events.emit('floatText', { pos: e.pos, text: 'X', color: 0x9ad0ff, scale: 0.6, dy: 0.6 });
     return;
   }
@@ -466,7 +466,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   if (p.procLv > 0) { const l = p.procLv; p.procLv = 0; chainLightning(e, l); }
 
   p.hitIds.push(e.id);
-  events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+  events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
 
   if (p.kind === 'STORM') { bounceStorm(p, e); return; }
   if (p.kind === 'GIANT_AXE') ricochet(p, e.pos.x, e.pos.z, e);
@@ -590,7 +590,7 @@ export function updateProjectiles(dt: number): void {
         if (dx * dx + dz * dz < rr * rr) { blocked = true; break; }
       }
       if (blocked) {
-        events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+        events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
         if (p.kind === 'GIANT_AXE' && ricochet(p, px, pz, null)) { p.pos.x = px; p.pos.z = pz; continue; }
         p.active = false;
         continue;
@@ -608,7 +608,7 @@ export function updateProjectiles(dt: number): void {
       if (p.hitIds.indexOf(key) !== -1) continue;
       p.hitIds.push(key);
       hitCrate(cr, p.damage);
-      events.emit('projectileImpact', { pos: p.pos, kind: p.kind });
+      events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
       p.pierce -= 1;
       if (p.pierce <= 0) { p.active = false; break; }
     }
