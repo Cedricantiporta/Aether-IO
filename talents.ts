@@ -1,19 +1,20 @@
 // ============================================================================
-// Talent trees: permanent (profile) per class, 3 branches x 6 nodes.
+// Talent trees: permanent (profile) per class, 3 branches x 10 nodes laid out left -> right (a landscape strip that
+// scrolls sideways in the narrow panel). Costs rise by column 1..5; stat values are 45% of the old tree (owner).
 // Points: 1 per Hero Rank (+1 bonus every 5 ranks). Respec costs gold.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are
 // read from the new PlayerStats fields by the engine systems.
 // ============================================================================
 import type { HeroClass } from './types';
 import type { StatFx } from './statFx';
-import { accumulate, type FxAcc } from './statFx';
+import { accumulate, describeFx, type FxAcc } from './statFx';
 
 export interface TalentNode {
   id: string;
   hero: HeroClass;
   branch: 0 | 1 | 2;
-  row: number;            // 0 (top) .. 3
-  x: number;              // 0..2 inside the branch
+  row: number;            // column 0 (left) .. 5 (capstone)
+  x: number;              // lane 0..2 (top / middle / bottom)
   name: string;
   desc: string;           // effect per rank
   max: number;
@@ -54,11 +55,54 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
 };
 
 type Row = [name: string, desc: string, max: number, icon: string, fx: StatFx];
-// Branch layout: [root, left1, right1, left2, right2, capstone]
+// Branch layout (left -> right): root, two lanes of four, capstone joining both lanes
 const LAYOUT: { row: number; x: number; req: number[] }[] = [
   { row: 0, x: 1, req: [] }, { row: 1, x: 0, req: [0] }, { row: 1, x: 2, req: [0] },
-  { row: 2, x: 0, req: [1] }, { row: 2, x: 2, req: [2] }, { row: 3, x: 1, req: [3, 4] },
+  { row: 2, x: 0, req: [1] }, { row: 2, x: 2, req: [2] },
+  { row: 3, x: 0, req: [3] }, { row: 3, x: 2, req: [4] }, { row: 4, x: 0, req: [5] }, { row: 4, x: 2, req: [6] },
+  { row: 5, x: 1, req: [7, 8] },
 ];
+/** Extra paths per branch (owner: more talent choices): two more nodes in each lane before the capstone. */
+const EXTRA: Record<HeroClass, Row[][]> = {
+  ARCHER: [
+    [['Steady Hands', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Hunter\'s Mark', '', 2, 'u:DAMAGE', { mul: { damage: 0.03 } }], ['Hawkeye', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Rapid Fire', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }]],
+    [['Kindling', '', 2, 'burning', { add: { onHitBurnChance: 0.05 } }], ['Rime', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Wildfire', '', 2, 'u:SKILL_BURNING', { add: { skillDamage: 0.1 } }], ['Glacial Tips', '', 2, 'u:SKILL_FREEZING', { add: { critDamage: 0.12 } }]],
+    [['Light Step', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Tumble', '', 2, 'dash', { add: { dodge: 0.03 } }], ['Rugged', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Windrunner', '', 2, 'u:SKILL_DASH', { add: { dodge: 0.03 }, mul: { moveSpeed: 0.03 } }]],
+  ],
+  WIZARD: [
+    [['Spellweave', '', 2, 'special', { add: { skillDamage: 0.08 } }], ['Deep Well', '', 2, 'u:MAX_MANA', { add: { maxMana: 25 } }], ['Arcane Echo', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Clarity', '', 2, 'gravity', { add: { manaRegen: 0.8 } }]],
+    [['Conductor', '', 2, 'thunder', { mul: { damage: 0.04 } }], ['Ion Field', '', 2, 'storm', { add: { cooldownReduction: 0.03 } }], ['Thunderhead', '', 2, 'u:SKILL_THUNDER', { add: { skillDamage: 0.1 } }], ['Galvanize', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }]],
+    [['Permafrost', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Ice Armor', '', 2, 'u:DEFENSE', { add: { defense: 3 } }], ['Shatterpoint', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.03 } }], ['Winter\'s Grasp', '', 2, 'freezeSpell', { add: { skillDamage: 0.1 } }]],
+  ],
+  BARBARIAN: [
+    [['Savagery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Bloodthirst', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Rampage', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Gore', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
+    [['Iron Hide', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Giant\'s Blood', '', 2, 'u:HEALTH', { add: { maxHealth: 18 } }], ['Thornmail', '', 2, 'barrier', { add: { thorns: 8 } }], ['Rooted', '', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }]],
+    [['Fault Line', '', 2, 'stamp', { add: { stompPower: 0.2 } }], ['Hurl', '', 2, 'orbital', { add: { axeSize: 0.1 } }], ['Quake', '', 2, 'u:SKILL_STAMP', { add: { stunBonus: 0.3 } }], ['Landslide', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }]],
+  ],
+  NECROMANCER: [
+    [['Bone Armor', '', 2, 'RAISE_DEAD', { add: { minionLife: 1.5 } }], ['Grave Pact', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.1 } }], ['Dread March', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Ossuary', '', 2, 'RAISE_DEAD', { add: { minionDmg: 0.1 } }]],
+    [['Blight', '', 2, 'CURSE_FIELD', { add: { skillDamage: 0.08 } }], ['Miasma', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }], ['Necrosis', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }], ['Contagion', '', 2, 'BONE_SPEAR', { add: { skillDamage: 0.1 } }]],
+    [['Soul Leech', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Spectral Ward', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Undeath', '', 2, 'u:HEALTH', { add: { maxHealth: 15 } }], ['Eternal', '', 2, 'SOUL_STEP', { add: { dmgReduce: 0.03 } }]],
+  ],
+  KNIGHT: [
+    [['Riposte', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Sword Mastery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Flurry', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Coup de Grace', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
+    [['Tower Shield', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Fortitude', '', 2, 'u:HEALTH', { add: { maxHealth: 18 } }], ['Vigil', '', 2, 'regen', { add: { regen: 1 } }], ['Aegis Oath', '', 2, 'u:SKILL_BARRIER', { add: { dmgReduce: 0.03 } }]],
+    [['Litany', '', 2, 'HOLY_WAVE', { add: { skillDamage: 0.08 } }], ['Blessed', '', 2, 'u:MAX_MANA', { add: { maxMana: 25 } }], ['Consecrate', '', 2, 'JUDGMENT', { add: { skillDamage: 0.1 } }], ['Grace', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }]],
+  ],
+};
+/** Count / step mechanics stay whole; every other talent value is cut to 45% (owner: -50% or more). */
+const WHOLE = new Set(['pierceBonus', 'echoEvery', 'thunderChain', 'procHaste', 'burnStacks', 'orbBonus', 'stormTwin', 'axeBounce', 'axeCount', 'minionCount']);
+const TALENT_SCALE = 0.45;
+function scaleFx(fx: StatFx): StatFx {
+  const out: StatFx = {};
+  for (const part of ['add', 'mul'] as const) {
+    const src = fx[part]; if (!src) continue;
+    const dst: Record<string, number> = {};
+    for (const [k, v] of Object.entries(src)) dst[k] = WHOLE.has(k) ? (v as number) : parseFloat(((v as number) * TALENT_SCALE).toFixed(4));
+    (out as Record<string, unknown>)[part] = dst;
+  }
+  return out;
+}
 
 const DEF: Record<HeroClass, [string, Row[]][]> = {
   ARCHER: [
@@ -193,18 +237,21 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
   ],
 };
 
-/** Points per rank by row: the first two tiers 1, the third 2, the capstone 3. */
-const TIER_COST = [1, 1, 2, 3];
+/** Points per rank by column: 1, 1, 2, 3, 4, capstone 5 (owner: talent costs range 1..5). */
+const TIER_COST = [1, 1, 2, 3, 4, 5];
 
 export const TALENTS: TalentNode[] = [];
 (Object.keys(DEF) as HeroClass[]).forEach((hero) => {
   DEF[hero].forEach(([pfx, rows], b) => {
-    rows.forEach((r, i) => {
-      const L = LAYOUT[i];
+    const all = [...rows.slice(0, 5), ...EXTRA[hero][b], rows[5]];
+    const id = (i: number) => `${hero[0].toLowerCase()}2_${pfx}${i}`;   // ('2': the 10-node tree; old ranks are refunded)
+    all.forEach((r, i) => {
+      const L = LAYOUT[i], fx = scaleFx(r[4]);
+      const mech = r[1] && !/^[+\-]/.test(r[1]) ? `${r[1].split(/[;,]/)[0]}. ` : '';   // keep a mechanic's wording (e.g. 'Every 6th attack fires twice')
       TALENTS.push({
-        id: `${hero[0].toLowerCase()}_${pfx}${i}`, hero, branch: b as 0 | 1 | 2, row: L.row, x: L.x,
-        name: r[0], desc: r[1], max: r[2], icon: r[3], fx: r[4],
-        req: L.req.map((q) => `${hero[0].toLowerCase()}_${pfx}${q}`), capstone: i === 5, cost: TIER_COST[L.row],
+        id: id(i), hero, branch: b as 0 | 1 | 2, row: L.row, x: L.x,
+        name: r[0], desc: mech && Object.keys({ ...fx.add, ...fx.mul }).every((k) => WHOLE.has(k)) ? r[1] : describeFx(fx), max: r[2], icon: r[3], fx,
+        req: L.req.map(id), capstone: i === 9, cost: TIER_COST[L.row],
       });
     });
   });
@@ -220,7 +267,7 @@ export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floo
 export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
   talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? (ranks[t.id] || 0) * t.cost : 0), 0);
-export const CAPSTONE_BRANCH_POINTS = 6;
+export const CAPSTONE_BRANCH_POINTS = 20;
 export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? (200 + 150 * s) * 10 : 0; };   // x10 economy
 
 export type AllocBlock = null | 'max' | 'points' | 'prereq' | 'branch';

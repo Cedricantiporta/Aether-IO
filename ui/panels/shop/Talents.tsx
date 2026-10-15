@@ -13,9 +13,11 @@ import { SimpleTip } from '../../components/ItemTip';
 import { tip } from '../../components/Tooltip';
 import { HERO_COLOR } from '../../lib/game';
 
-const COL_W = 130, ROW_H = 92, TOP = 46, BOX_H = TOP + ROW_H * 3 + 56;
-const cx = (n: TalentNode) => 22 + 43 * n.x;
-const cy = (n: TalentNode) => TOP + ROW_H * n.row;
+// Landscape strips (owner): each branch is a row, its tree runs left -> right in 6 columns; the panel scrolls sideways.
+const LEFT = 86, COL_W = 78, LANE_H = 50, TOP = 4, COLS = 6;
+const STRIP_W = LEFT + COL_W * COLS, STRIP_H = TOP + LANE_H * 3 + 8;
+const cx = (n: TalentNode) => LEFT + COL_W * n.row + COL_W / 2;
+const cy = (n: TalentNode) => TOP + LANE_H * n.x + LANE_H / 2 - 6;
 
 const NodeIcon: React.FC<{ icon: string; size: number; dim?: boolean }> = ({ icon, size, dim }) =>
   icon.startsWith('u:')
@@ -48,19 +50,19 @@ export const TalentsView: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex rpg-frame py-2 overflow-x-auto" style={{ ['--hc' as any]: color }}>
-        <div className="flex mx-auto" style={{ width: COL_W * 3, flexShrink: 0 }}>
+      <div className="rpg-frame py-2 overflow-x-auto rpg-scroll" style={{ ['--hc' as any]: color }} data-testid="talent-scroll">
+        <div className="flex flex-col gap-1" style={{ width: STRIP_W, flexShrink: 0 }}>
           {BRANCHES[hero].map((br, b) => {
             const bn = nodes.filter((n) => n.branch === b);
             const bs = branchSpent(hero, b, ranks);
             return (
-              <div key={b} className="relative" style={{ width: COL_W, height: BOX_H }}>
-                <div className="absolute left-0 right-0 text-center" style={{ top: 0, padding: '0 4px' }}>
+              <div key={b} className="relative" style={{ width: STRIP_W, height: STRIP_H, borderTop: b ? '1px solid #3a2c18' : undefined }}>
+                <div className="absolute text-left" style={{ left: 0, top: 0, bottom: 0, width: LEFT - 6, padding: '0 4px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(90deg, #120d07 80%, transparent)', zIndex: 2 }}>
                   <div style={{ fontSize: '.8rem', fontWeight: 700, lineHeight: 1, color: br.color, fontFamily: 'var(--font-title)', textShadow: '0 1px 0 #000' }}>{br.name}</div>
                   <div style={{ fontSize: '.56rem', lineHeight: 1.1, marginTop: 3, color: 'var(--text-dim)' }}>{br.blurb}</div>
                   <div style={{ fontSize: '.56rem', color: bs > 0 ? br.color : 'var(--text-dim)' }}>{bs} pts</div>
                 </div>
-                <svg className="absolute inset-0 pointer-events-none" width={COL_W} height={BOX_H}>
+                <svg className="absolute inset-0 pointer-events-none" width={STRIP_W} height={STRIP_H}>
                   {bn.flatMap((n) => n.req.map((rid) => {
                     const p = TALENT_BY_ID[rid];
                     const on = (ranks[n.id] || 0) > 0;
@@ -73,7 +75,7 @@ export const TalentsView: React.FC = () => {
                   const block = allocBlock(n, ranks, free);
                   const can = block === null;
                   const locked = block === 'prereq' || block === 'branch';
-                  const sz = n.capstone ? 52 : 42;
+                  const sz = n.capstone ? 40 : 32;
                   const lines: React.ReactNode[] = [
                     <span key="r" style={{ fontWeight: 700 }}>Rank {r} / {n.max}</span>,
                     <span key="d" className="pos">Per rank: {n.desc}</span>,
@@ -103,14 +105,14 @@ export const TalentsView: React.FC = () => {
                   );
                 })}
                 {bn.map((n) => (
-                  <div key={'l' + n.id} className="absolute text-center leading-[1.05] pointer-events-none" style={{ left: cx(n) - 25, width: 50, top: cy(n) + (n.capstone ? 38 : 31), fontSize: '.54rem', color: (ranks[n.id] || 0) > 0 ? '#f1d9a0' : '#8a7a5a' }}>{n.name}</div>
+                  <div key={'l' + n.id} className="absolute text-center leading-[1.05] pointer-events-none" style={{ left: cx(n) - 36, width: 72, top: cy(n) + (n.capstone ? 27 : 23), fontSize: '.54rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: (ranks[n.id] || 0) > 0 ? '#f1d9a0' : '#8a7a5a' }}>{n.name}</div>
                 ))}
               </div>
             );
           })}
         </div>
       </div>
-      <div style={{ fontSize: '.64rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Click a node to spend points: the first two tiers cost 1 point per rank, the third tier 2 and capstones 3. Capstones need {CAPSTONE_BRANCH_POINTS} points in their branch and both nodes above them. Talents apply in every run of this class.</div>
+      <div style={{ fontSize: '.64rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Scroll sideways along each branch. Click a node to spend points: costs rise from 1 to 5 points per rank column by column. Capstones need {CAPSTONE_BRANCH_POINTS} points in their branch and both lanes before them. Talents apply in every run of this class.</div>
     </div>
   );
 };
