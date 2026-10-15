@@ -41,6 +41,12 @@ const LICH_CD = [1.6, 1.2, 0.9];
 const CHARGE_DUR = 0.7;
 const BLINK_OUT = 0.5;
 const BLINK_IN = 0.4;
+/** Seconds between the Lich's "don't hug me" blinks (balance pass: it used to blink EVERY time a melee hero got within
+ *  6 u, so a Knight could not land hits and one fight ran ~9 min with 179 cultists summoned). */
+const HUG_BLINK_CD = 4;
+/** The Lich only summons while fewer than this many monsters are alive (was 14: peaks of 12-19 adds). */
+const LICH_SUMMON_CAP = 9;
+let hugBlinkT = 0;
 
 function setVel(e: Enemy, ux: number, uz: number, spd: number): void {
   e.vel.set(ux * spd, 0, uz * spd);
@@ -259,10 +265,11 @@ function lich(e: Enemy, dt: number, dist: number): void {
   switch (e.state) {
     case 'CHASE': {
       lichPosition(e, ux, uz, dist, 1);
-      if (dist < 6) { startLichPattern(e, BLINK); return; } // never let the player hug the lich
+      hugBlinkT -= dt;
+      if (dist < 6 && hugBlinkT <= 0) { hugBlinkT = HUG_BLINK_CD; startLichPattern(e, BLINK); return; } // don't let the player hug the lich (not every second)
       if (e.attackCd <= 0) {
         let next = (e.pattern + 1) % (st2() ? 6 : 4);   // stage 2 adds Soul Rain + the Void Cross
-        if (next === SUMMON && world.director.aliveCount >= 14) next = SPIRAL;
+        if (next === SUMMON && world.director.aliveCount >= LICH_SUMMON_CAP) next = SPIRAL;
         startLichPattern(e, next);
       }
       return;
@@ -389,7 +396,7 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       if (e.patternT === 0) {
         e.patternT = 1;
         // dark mages (cultists); every third one an elite lich acolyte
-        const n = st1() ? 2 + e.phase : 3 + e.phase + (st2() ? 1 : 0);
+        const n = st1() ? 2 + e.phase : 2 + e.phase + (st2() ? 1 : 0);   // (balance pass: one fewer per summon outside Malakar's first fight)
         const base = Math.random() * Math.PI * 2;
         for (let i = 0; i < n; i++) {
           const a = base + (i / n) * Math.PI * 2;

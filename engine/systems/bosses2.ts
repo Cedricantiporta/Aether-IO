@@ -25,6 +25,7 @@ import {
   BT, WAVE_THORN, WAVE_VOID, PROP_GLOB, arena, breath, dive, inCone,
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx,
 } from './bossFx';
+import { wardedBossId } from './bossMech';
 
 export function isBoss2(k: EnemyKind): boolean {
   return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_WARMACH' || k === 'BOSS_VOID';
@@ -39,7 +40,7 @@ export const S = {
   // Elderroot
   bark: false, barkT: 0, wantBark: false, rings: 0, ringN: 0,
   // Mire Hydra
-  heads: [-1, -1, -1] as number[], regrowT: [0, 0, 0] as number[], headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
+  heads: [-1, -1, -1] as number[], regrowT: [0, 0, 0] as number[], regrowN: 0, headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
   // Glacius
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
@@ -55,7 +56,7 @@ export const bossView = S;
 export function resetBosses2(): void {
   S.id = -1; S.phase = 0; S.cycle = 0; S.stompCd = 0;
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
-  S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
+  S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0;
   S.voidOn = false; S.gravT = 0; S.pushed = false;
@@ -294,7 +295,7 @@ LISTS.BOSS_TREANT = [
     tick(e) {
       stand(e);
       while (S.ringN < S.rings && e.stateT >= S.ringN * 0.6) {
-        spawnWave(e.pos.x, e.pos.z, 13, 26, 1.8, pwr(e) * 1.3, WAVE_THORN, 0x84cc16, e.radius);
+        spawnWave(e.pos.x, e.pos.z, 13, 26, 1.8, pwr(e) * 0.9, WAVE_THORN, 0x84cc16, e.radius);   // (balance pass: x1.3 -> x0.9; without the Lv 20 dash the rings are nearly unavoidable)
         events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0x84cc16 });
         events.emit('shake', { amount: 0.35 });
         S.ringN++;
@@ -384,6 +385,8 @@ export function saplingDied(e: Enemy): void {
 
 // ============================================================ MIRE HYDRA =====
 const H_SPIT = 0, H_SWEEP = 1, H_SUBMERGE = 2;
+const HYDRA_REGROWS = 4;          // heads that may grow back per fight (was unlimited)
+const HYDRA_REGROW_HEAL = 0.025;  // hp mended per regrown head (was 4%)
 const HYDRA_ORDER = [H_SPIT, H_SWEEP, H_SUBMERGE, H_SPIT, H_SWEEP];
 
 LISTS.BOSS_HYDRA = [
@@ -455,13 +458,17 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
     if (S.heads[k] >= 0 || S.regrowT[k] <= 0) continue;
     S.regrowT[k] -= dt;
     if (S.regrowT[k] > 0) continue;
-    if (e.hp < e.maxHp * 0.3 || e.state === 'DYING') continue;
+    // (balance pass) never while warded (it can't be hurt then), and at most HYDRA_REGROWS times per fight: low-damage
+    // builds used to lose the race against endless regrowth (3 of 5 classes never finished the fight in 10 min)
+    if (e.hp < e.maxHp * 0.3 || e.state === 'DYING' || S.regrowN >= HYDRA_REGROWS) continue;
+    if (wardedBossId() === e.id) { S.regrowT[k] = 1; continue; }
     growHead(e, k);
     if (S.heads[k] < 0) continue;
+    S.regrowN++;
     S.headsDead = Math.max(0, S.headsDead - 1);
-    e.armor += 12; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.04);
+    e.armor += 12; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * HYDRA_REGROW_HEAL);
     events.emit('floatText', { pos: e.pos, text: 'A HEAD REGROWS!', color: 0x9be32a, scale: 1.0, dy: 2.4 });
-    events.emit('heal', { pos: e.pos, amount: e.maxHp * 0.04 });
+    events.emit('heal', { pos: e.pos, amount: e.maxHp * HYDRA_REGROW_HEAL });
     notify('The Hydra regrows a head! Strike while it is weak.', '#9be32a');
   }
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
@@ -636,10 +643,10 @@ LISTS.BOSS_WARLORD = [
     name: 'Summon Imps!', wind: () => 1.0, act: () => 0.4, rec: () => 0.8,
     begin(e) { circle(e.pos.x, e.pos.z, 5, 1.0, BT.VISUAL, 0, 0xff3a1a); },
     fire(e) {
-      const n = 3 + e.phase, base = Math.random() * 6.283;
+      const n = 2 + e.phase, base = Math.random() * 6.283;   // (balance pass: 2-4 per call, max 6 alive; was 3-5, max 10)
       for (let i = 0; i < n; i++) {
         const a = base + (i / n) * 6.283, r = e.radius + 2;
-        spawnAdd('BOSS_IMP', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 0.5, 0.75, 10);
+        spawnAdd('BOSS_IMP', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 0.5, 0.75, 6);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 6 });
     },

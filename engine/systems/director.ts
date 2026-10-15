@@ -53,6 +53,7 @@ import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
 const BOSS_GRACE = 2.5;        // after the boss falls, before its rewards drop
+const MINI_MAX_ALIVE = 10;     // champion / boss rooms: room-pack adds alive at once (boss summons are capped by the boss AI)
 const REWARD_DELAY = 0.7;      // after the last kill, before the room reward appears
 const VACUUM_AFTER = 1.4;      // loot left on the floor flies to the hero this long after the clear
 const PORTAL_ARM = 0.9;        // seconds a portal must be open before walking in works
@@ -394,6 +395,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
     const kind = rosterPick(def, Math.min(points, 12), 0);
     const cost = ENEMY_DEFS[kind].cost;
     let n = kind === 'SCARAB' ? 7 + Math.floor(Math.random() * 5) : isSwarm(kind) ? 4 + Math.floor(Math.random() * 3) : Math.random() < 0.65 ? Math.max(1, Math.round((3 + Math.random() * 3) / Math.sqrt(cost))) : 1;
+    if (plan.type === 'MINIBOSS' || plan.type === 'BOSS') n = Math.min(n, 4);   // escorts: no 7-11 scarab swarms beside a champion
     n = Math.max(1, Math.min(n, Math.floor(points / cost) || 1));
     pushGroup(kind, n, false);
     points -= n * cost;
@@ -422,7 +424,9 @@ function rollRoomSpawns(type: RoomType): void {
     case 'ELITE': rollPack(0.3, eliteN(2, 14), 2); break;
     case 'TREASURE': rollPack(0.4, 0, 2); break;
     case 'MINIBOSS': {
-      rollPack(0.3, 0, 2);
+      // the champion's escort: a smaller pack (was 0.3 of a skirmish) and at most MINI_MAX_ALIVE at once, so the
+      // fight stays about the champion (balance pass: the desert pre-boss had up to 36 adds alive beside it)
+      rollPack(0.22, 0, 2); dd().maxAlive = MINI_MAX_ALIVE;
       miniPending = true;
       prebossKing = false; prebossRoom = !!plan.preboss;
       if (plan.preboss && runInfo.mode === 'ADVENTURE' && biome % BIOMES.length === 0) {
@@ -436,7 +440,7 @@ function rollRoomSpawns(type: RoomType): void {
       }
       break;
     }
-    case 'BOSS': bossPending = true; if (waves.on && towerFloor >= 20) rollPack(0.35, 1, 2); break;   // Endless Waves: adds join the boss from wave 20
+    case 'BOSS': bossPending = true; dd().maxAlive = MINI_MAX_ALIVE; if (waves.on && towerFloor >= 20) rollPack(0.35, 1, 2); break;   // Endless Waves: adds join the boss from wave 20
     case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
       const own = useGameStore.getState().hero as HeroClass;
       duelCls = plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)];
@@ -577,7 +581,7 @@ function tickSpawns(dt: number): void {
 
   const pending = activeMarkers();
   if (nextUnit < burstEnd[curBurst]) {
-    let cap = ROOM_MAX_ALIVE - d.aliveCount - pending;
+    let cap = d.maxAlive - d.aliveCount - pending;   // (champion / boss rooms hold fewer adds at once: MINI_MAX_ALIVE)
     while (cap > 0 && nextUnit < burstEnd[curBurst]) {
       if (unitGroup[nextUnit] || groupIdx === 0) {
         if (!pickAnchor(10)) break;
@@ -807,7 +811,7 @@ function nextWave(): void {
   biome = waveBiome(w); index = waveIndex(w); plan = wavePlan(w); depth = waveDepth(w);
   r.plan = plan;
   world.boss.active = false; nextBossKind = '';
-  d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.bossId = -1;
+  d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
   unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;

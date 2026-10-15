@@ -368,6 +368,8 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.boss) dealt *= hooks.damageMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
+  else if (e.decoy && e.trickKind === 1) dealt *= 3;   // Malakar's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
+                                                       // kept hitting them and half the bot fights never finished)
   if (e.shield > 0) {
     if (dealt <= e.shield) { e.shield -= dealt; dealt = 0; }
     else { dealt -= e.shield; e.shield = 0; }
