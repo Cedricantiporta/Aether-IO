@@ -95,10 +95,9 @@ export function Projectiles() {
     const frz = arrow('#8ab0c8', '#c8ccd2', '#bfeaff', '#7fe0ff');
     // piercing: huge spectral arrow
     const pa = new GB([1, 1]);
-    // Lightpiercer: a laser beam (white-hot core in a cyan sheath, a bright tip, the beam trailing 14 u behind)
-    pa.cyl(0.11, 0.11, 14, 10, [0, 0, -7], '#ffffff', [Math.PI / 2, 0, 0]);
-    pa.cyl(0.3, 0.22, 14, 12, [0, 0, -7], '#2a86b8', [Math.PI / 2, 0, 0]);
-    pa.sph(0.42, [0, 0, 0], '#ffffff', 1, 10);
+    // Lightpiercer: a slim arrow of white light
+    pa.cyl(0.07, 0.07, 2.6, 6, [0, 0, -0.3], '#ffffff', [Math.PI / 2, 0, 0]); pa.cone(0.2, 0.9, 6, [0, 0, 1.45], '#ffffff', [Math.PI / 2, 0, 0]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; pa.box(0.02, 0.5, 0.8, [Math.sin(a) * 0.12, Math.cos(a) * 0.12, -1.4], '#e8f2ff', [0, 0, -a]); }
     // gale arrow: giant wind arrow with rings
     const ga = new GB([1, 1]);
     ga.cyl(0.1, 0.1, 4.2, 6, [0, 0, -0.6], '#9dffb0', [Math.PI / 2, 0, 0]); ga.cone(0.34, 1.4, 6, [0, 0, 2.0], '#d8ffd8', [Math.PI / 2, 0, 0]);   // green wind arrow
@@ -267,11 +266,9 @@ export function Projectiles() {
           break;
         case 'RAIN_ARROW': place(ims, i, x, y, z, yaw, pitch, 0, 1); break;
         case 'PIERCING_ARROW':
-          { const sz = p.radius / 2.4;   // a charged beam is up to twice as thick
-          place(ims, i, x, y, z, yaw, pitch, 0, 0.85 * sz, 0.85 * sz, 1);   // Lightpiercer: a laser beam (length fixed, thickness by charge)
-          pushHalo(x, y, z, 3.6 * sz, 1.6, 2.4, 2.8, 0.7, CELL.GLOW);
-          const vl = Math.hypot(vx, vz) || 1;
-          for (let k = 1; k <= 3; k++) pushHalo(x - (vx / vl) * k * 3.5, y, z - (vz / vl) * k * 3.5, 2.2 * sz, 0.8, 1.9, 2.6, 0.32, CELL.GLOW); }
+          { const sz = p.radius / 2.4;   // a charged shot is up to twice as big
+          place(ims, i, x, y, z, yaw, pitch, t * 12, 2.6 * (1 + 0.6 * (sz - 1)));   // Lightpiercer: a big arrow of light (up to 1.6x when charged)
+          pushHalo(x, y, z, 4.6 * (1 + 0.6 * (sz - 1)), 2.4, 2.4, 2.5, 0.65, CELL.GLOW); }
           if (emit) {
             FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.35, 0.6, 0.05, 2.2, 2.2, 2.4, 0.85, CELL.STREAK, 0, 0, 0, 0, 0);
             for (let k = 0; k < 2; k++) FX.add.emit(x - vx * 0.015 * k, y, z - vz * 0.015 * k, vx * -0.05, vy * -0.05, vz * -0.05, 0.3, 0.8, 0.2, 2.0, 2.0, 2.3, 0.6, CELL.STREAK, 0, 1, 0, 0, 0.12);

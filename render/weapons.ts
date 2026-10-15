@@ -75,6 +75,21 @@ export function makeAxe(accent: string, tier: number): WeaponGeo {
 }
 
 /** Knight longsword: fuller-grooved steel blade, gold crossguard, leather grip, round pommel (blade up = +y). */
+/** The knight's kite shield (left hand): steel face, gold rim, a cross emblem in the rarity accent. Face normal is +Z. */
+export function makeShield(accent: string, tier: number): WeaponGeo {
+  const b = new GB([0.85, 1.1]), g = new GB([1, 1]);
+  const face = tier >= 3 ? '#e6eaf2' : '#aeb6c4', rim = '#d9b25a';
+  b.box(0.78, 0.8, 0.07, [0, 0.12, 0], face);                                 // upper plate
+  b.cone(0.55, 0.6, 4, [0, -0.5, 0], face, [Math.PI, Math.PI / 4, 0], ) ;    // lower point
+  b.box(0.86, 0.08, 0.1, [0, 0.54, 0], rim);                                   // top rim
+  b.box(0.06, 0.82, 0.1, [-0.41, 0.12, 0], rim); b.box(0.06, 0.82, 0.1, [0.41, 0.12, 0], rim);   // side rims
+  b.box(0.12, 0.62, 0.04, [0, 0.05, 0.05], accent); b.box(0.46, 0.12, 0.04, [0, 0.2, 0.05], accent);   // cross emblem
+  b.sph(0.08, [0, 0.2, 0.08], rim, 1, 8);                                      // boss
+  if (tier >= 1) g.box(0.08, 0.5, 0.03, [0, 0.05, 0.08], accent);
+  if (tier >= 3) g.sph(0.1, [0, 0.2, 0.1], accent, 1, 8);
+  return { body: b.build(), glow: g.build(), tip: [0, 0.2, 0.1] };
+}
+
 export function makeSword(accent: string, tier: number): WeaponGeo {
   const b = new GB([0.82, 1.1]), g = new GB([1, 1]);
   const steel = tier >= 3 ? '#eef2f8' : '#c4cad4', gold = '#d9b25a';

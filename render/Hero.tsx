@@ -17,7 +17,7 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, sparks } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
-import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, WeaponGeo } from './weapons';
+import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, WeaponGeo } from './weapons';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
@@ -25,6 +25,8 @@ import { tintGear } from './gear';
 import { useUiStore } from '../ui/uiStore';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
+/** Knight shield placement in the left hand slot (bone space). */
+const SHIELD_POS: [number, number, number] = [0, 0.05, 0.12], SHIELD_ROT: [number, number, number] = [Math.PI / 2, Math.PI / 2, 0], SHIELD_SCALE = 0.9;
 const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0ff, BARBARIAN: 0xff9a6a, KNIGHT: 0xffe08a, NECROMANCER: 0xb08aff };
 
 const _col = new Color();
@@ -71,6 +73,21 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     (grp as any).userData.tier = tier;
     const g = grp;
     return () => { ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+  }, [ch, cls, rarity]);
+
+  // ---- the knight's shield on the left arm (tinted like the weapon's rarity)
+  useEffect(() => {
+    if (cls !== 'KNIGHT' || !ch.handL) return;
+    const tier = RARITY_TIER[rarity] ?? 0, accent = RARITY_ACCENT[rarity] || RARITY_ACCENT.COMMON;
+    const w = makeShield(accent, tier);
+    const grp = new Group();
+    grp.position.set(SHIELD_POS[0], SHIELD_POS[1], SHIELD_POS[2]); grp.rotation.set(SHIELD_ROT[0], SHIELD_ROT[1], SHIELD_ROT[2]);
+    grp.scale.setScalar(SHIELD_SCALE);
+    const body = new Mesh(w.body, litMat({ roughness: 0.45, metalness: 0.4 })); body.castShadow = true;
+    const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.6) }));
+    grp.add(body, glowM);
+    ch.handL.add(grp);
+    return () => { ch.handL!.remove(grp); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
   }, [ch, cls, rarity]);
 
   // ---- gear look: the model keeps its original design; equipped gear recolours its parts by rarity
