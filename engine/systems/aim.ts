@@ -156,7 +156,10 @@ function fire(id: string, how: 'AIM' | 'CURSOR' | 'AUTO' | 'FACING', ax = 0, az 
   castHold.t = pressAt[id] ? Math.max(0, (performance.now() - pressAt[id]) / 1000) : 0;
   pressAt[id] = 0;
   if (how === 'AIM') { aimOverride.on = true; aimOverride.x = ax; aimOverride.z = az; }
-  else if (how === 'FACING') { const f = facingPoint(); aimOverride.on = true; aimOverride.x = f.x; aimOverride.z = f.z; }
+  else if (how === 'FACING') {   // skills always go at the targeted (locked / auto-aimed / nearest) enemy; the dash keeps the facing
+    const t = id === 'dash' ? null : autoTarget(), f = t ?? facingPoint();
+    aimOverride.on = true; aimOverride.x = f.x; aimOverride.z = f.z;
+  }
   else if (how === 'CURSOR') { aimOverride.on = true; aimOverride.x = p.aim.x; aimOverride.z = p.aim.z; }
   else {
     const t = autoTarget();
