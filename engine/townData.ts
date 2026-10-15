@@ -7,9 +7,12 @@
 // Coordinates are world x / z. A building's door faces +z at rot = 0 (facing vector = (sin rot, cos rot)).
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
-//   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Altar (-17,-13), Skill Trainer (17,-13)
+//   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Skill Trainer (-10.5,-19) on the open paving west of
+//   the castle steps (in front of the dark-roofed house at (-19.5,-14))
 //   west of the plaza Fortune Teller (-12.5, 1.5) / Pet Stable (-21, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
-//   main road. Houses / stalls are decoration. Harvest nodes sit on the outskirts.
+//   main road. Outside the gate: a wide meadow, the wheat field west of the road (FARM), the Elixir Brewer's hut east of
+//   the road (constants SHOP_POSITIONS 'BREWER'), the barn / coop clearing further east, the Adventure Portal at the road's end.
+//   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
 
@@ -26,8 +29,10 @@ export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 81.5 } };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
-/** Fenced wheat field in front of the gate (outside the walls). */
-export const FARM = { x: 13, z: 60, hw: 7, hd: 6 };
+/** Fenced wheat field in front of the gate (outside the walls), west of the road (the gap in its fence faces the road). */
+export const FARM = { x: -17, z: 58, hw: 7, hd: 6 };
+/** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): east of the road, door facing it. */
+export const BREWER_HUT = { x: 11, z: 56, rot: -Math.PI / 2 };
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against the forest edge
@@ -43,9 +48,9 @@ export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
 
 export const ISLAND_BOXES: [number, number, number, number][] = [
   [-48.5, -60, 62, 56], // walled town + a walkable ring OUTSIDE the walls on the back / east (the west side is the lake)
-  [-27, -10, 27, 80],   // modest forecourt south of the gate (farm road, field, trees)
+  [-40, -10, 40, 84],   // the open meadow south of the gate (road, wheat field, brewer's hut; the tree line is pushed well back)
   [-12, -10, 12, 99],   // the forest road on to the Adventure Portal clearing (PORTAL)
-  [20, 44, 44, 80],     // the farm clearing east of the field (barn, cows)
+  [20, 40, 50, 84],     // the farm clearing east of the road (barn, cows, coop)
   [-37, 69, -20, 81],   // the forest nook of the Endless Tower
 ];
 
@@ -81,10 +86,10 @@ export const HOUSES: HouseSpec[] = [
   { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
   // flanking the castle
   H(-17.5, -31, 0, 5.0, 4.4, 2), H(18.5, -28, 0, 5.0, 4.4),
-  // east of the Skill Trainer, door facing the north street
+  // east end of the north street, door facing the street
   H(27, -16.5, -Math.PI / 2, 5.0, 4.4, 2),
-  // where the old summoning shrine stood (north street, door facing the street)
-  H(-17, -14, 0, 5.0, 4.4),
+  // west of the castle steps: the dark-roofed house behind the Skill Trainer (door facing the street)
+  H(-19.5, -14, 0, 5.0, 4.4),
   // (south of the east-west street: the Potion Shop and Armor Shop buildings, see constants SHOP_POSITIONS)
   // the old shop lots on the street now hold houses
   H(-30, 1.5, 0, 5.0, 4.4, 2), H(-37, 1.5, 0, 4.8, 4.2), H(36.5, 1.5, 0, 4.8, 4.2),   // (the west lots by the plaza now hold the Pet Stable + Fortune Teller)
@@ -97,6 +102,8 @@ export const HOUSES: HouseSpec[] = [
   H(-24, -6, Math.PI / 2, 5.0, 4.4, 2),   // (the east one is the Tech House shop)
   H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
   H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
+  // the old Skill Trainer spot east of the quest board (door facing the north street)
+  H(17, -14, 0, 5.0, 4.4),
 ];
 
 /** Decorative market stalls (the useful shops are Supplies / Blacksmith / Pets). */
@@ -129,8 +136,9 @@ export const ROADS: RoadSpec[] = [
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: 14.6, z1: 10, x2: 14.6, z2: 14.6, w: ROAD_W.branch },     // armor shop door
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
-  { x1: 17, z1: -6, x2: 17, z2: -10.6, w: ROAD_W.branch },       // skill trainer
-  { x1: 0, z1: 60, x2: 6.6, z2: 60, w: ROAD_W.branch },        // farm gate
+  { x1: -10.5, z1: -6, x2: -10.5, z2: -16.6, w: ROAD_W.branch }, // skill trainer (west of the castle steps)
+  { x1: 0, z1: FARM.z, x2: FARM.x + FARM.hw - 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (west of the road)
+  { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x - 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (east of the road)
   { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
   { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
 ];
@@ -165,10 +173,10 @@ export const FENCES: [number, number, number, number][] = [
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   // front gardens
   [-18, 15, -18, 20], [18, 14.5, 18, 20],
-  // farm field south of the gate (gap in the west side, facing the avenue)
+  // farm field south of the gate, west of the road (gap in the east side, facing the road)
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
-  [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
-  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],
+  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z + FARM.hd],
+  [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - 1.5], [FARM.x + FARM.hw, FARM.z + 1.5, FARM.x + FARM.hw, FARM.z + FARM.hd],
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
@@ -178,7 +186,7 @@ export const SIGNS: SignSpec[] = [];
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
   // main avenue (+ the road on into the farmland)
-  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 58], [3.2, 68],
+  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 36.5], [-3, 40], [3, 42.5], [3.2, 50], [-3.2, 53.5], [3.2, 61.5], [-3.2, 66], [3.2, 72],
   // south street (north edge), plaza, north street
   [-9.4, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
 ];
@@ -195,7 +203,7 @@ export const PLANTERS: PlanterSpec[] = [
   { x: -14.5, z: 7.0, w: 3.2, d: 1.0, kind: 0 }, { x: 14.5, z: 7.0, w: 3.2, d: 1.0, kind: 1 },
   { x: -22, z: 13.4, w: 3.2, d: 1.0, kind: 1 }, { x: 22, z: 13.4, w: 3.2, d: 1.0, kind: 0 },
   // north street + quest board path
-  { x: -11.5, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 11.5, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
+  { x: -15.2, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 11.5, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
   { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
   // castle approach: flower beds lining the path and the castle front
   { x: -2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 },
@@ -216,12 +224,12 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 52, z: -57, s: 3.4, kind: 1 }, { x: 40, z: -57.5, s: 3.2, kind: 0 }, { x: 22, z: -57.5, s: 3.5, kind: 1 }, { x: 10, z: -58, s: 3.0, kind: 0 },
   { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
-  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -21.5, z: -11, s: 3.30, kind: 0 }, { x: -14, z: -18.5, s: 3.60, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -23.5, z: -10, s: 3.30, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
-  // forecourt south of the gate
-  { x: -12, z: 46, s: 3.8, kind: 0 }, { x: -17, z: 54, s: 3.8, kind: 2 }, { x: -10, z: 62, s: 3.6, kind: 0 }, { x: -18, z: 67, s: 3.9, kind: 3 },
-  { x: -6, z: 69, s: 3.4, kind: 1 }, { x: -25, z: 63, s: 3.9, kind: 2 }, { x: -18, z: 69.5, s: 3.6, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 71, s: 3.3, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: -9, z: 66, s: 3.2, kind: 3 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 12, z: 72, s: 3.5, kind: 0 },
+  // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
+  { x: -14, z: 45, s: 3.8, kind: 0 }, { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
+  { x: -6, z: 70, s: 3.4, kind: 1 }, { x: -31, z: 62, s: 3.9, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 16, z: 72, s: 3.5, kind: 0 }, { x: 24, z: 46, s: 3.4, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -230,7 +238,7 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
 export const SCARECROW = { x: FARM.x, z: FARM.z };
-export const HAYSTACK = { x: FARM.x + 5, z: FARM.z - 4 };
+export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
 
 /** Movement colliders [x, z, r] registered with mapgen.addTempCollider after the island is generated. */
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
@@ -258,6 +266,9 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   }
   for (const t of TOWN_TREES) c.push([t.x, t.z, 0.85]);
   c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.3]);
+  // the brewer's cauldron, work table and barrels in front of / beside the hut (hut-local -> world; the hut itself is the shop collider)
+  { const { x, z, rot } = BREWER_HUT, cr = Math.cos(rot), sr = Math.sin(rot);
+    for (const [lx, lz, r] of [[1.4, 3.4, 1.0], [-1.6, 2.6, 0.75], [-2.4, 2.6, 0.6], [-2.95, 0.1, 0.9], [2.95, 0.9, 0.6]] as const) c.push([x + lx * cr + lz * sr, z - lx * sr + lz * cr, r]); }
   c.push([QUEST_POS[0], QUEST_POS[2], 1.6]); // notice board
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
   for (const [x, z] of LAMPS) c.push([x, z, 0.3]);
@@ -439,7 +450,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-8, -11.2],
     talk: [
-      ['The Aether Altar in the north-west answers wishes with fortune. Offer it gems and see who answers.', 'The Skill Trainer in the north-east will sharpen what you already know.'],
+      ['The Fortune Teller by the plaza answers wishes with fortune. Offer her gems and see who answers.', 'The Skill Trainer, by the castle steps on the west side, will sharpen what you already know.'],
       ['Knowledge is the sharpest weapon. And a very good staff, if I may say.'],
     ],
     bubbles: ['Fascinating...', 'The Altar hums tonight.', 'Spend your skill points!'],

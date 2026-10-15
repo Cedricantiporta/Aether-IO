@@ -5,7 +5,10 @@ import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import { Maximize } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../elixirs';
+import { ItemArt } from '../components/ItemArt';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from 'lucide-react';
@@ -20,7 +23,7 @@ import { useRaf } from '../hooks/useRaf';
 import { tip } from '../components/Tooltip';
 import { SimpleTip } from '../components/ItemTip';
 import { HERO_COLOR } from '../lib/game';
-import type { HeroClass } from '../../types';
+import type { HeroClass, Item } from '../../types';
 
 export const HERO_ICON: Record<HeroClass, LucideIcon> = { ARCHER: Crosshair, WIZARD: Wand2, BARBARIAN: Axe, KNIGHT: Sword, NECROMANCER: Skull };
 
@@ -111,7 +114,21 @@ export const PlayerPlate: React.FC = () => {
           <BuffSlot id="titan" refs={refs} color="#ff8a3a" label="Titan's Wrath" icon={<Mountain size={15} />} />
         </div>
         <DebuffRow />
+        <ElixirRow />
       </div>
+    </div>
+  );
+};
+
+/** Elixir buffs: active this run (solid) and drunk in town, waiting for the next run (dashed). Changes rarely (selectors only). */
+const ElixirRow: React.FC = () => {
+  const { run, next } = useGameStore(useShallow((s) => ({ run: s.elixirsRun, next: s.elixirsNext })));
+  const samples = useMemo(() => Object.fromEntries(ELIXIR_IDS.map((k) => [k, elixirItem(k)])) as Record<ElixirId, Item>, []);
+  if (!run.length && !next.length) return null;
+  return (
+    <div className="elixir-hud" data-testid="elixir-hud">
+      {run.map((k) => <span key={'r' + k} {...tip(<SimpleTip title={ELIXIRS[k].name} sub="Active this run" color={ELIXIRS[k].color} body={ELIXIRS[k].effect} />)}><ItemArt item={samples[k]} size={22} /></span>)}
+      {next.map((k) => <span key={'n' + k} className="next" {...tip(<SimpleTip title={ELIXIRS[k].name} sub="Next run" color={ELIXIRS[k].color} body={`${ELIXIRS[k].effect} when your next run starts`} />)}><ItemArt item={samples[k]} size={22} /></span>)}
     </div>
   );
 };

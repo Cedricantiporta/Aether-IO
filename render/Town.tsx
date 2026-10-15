@@ -21,7 +21,7 @@ import { walkAndOpen, walkTo } from '../engine/systems/village';
 import { TOWER, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 
-type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH';
+type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER';
 
 // ---------------------------------------------------------------- builders ---
 function lantern(b: GB, g: GB, x: number, y: number, z: number) {
@@ -280,11 +280,59 @@ function buildFortune() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House' };
+/** Elixir Brewer's hut (outside the gate): small timber-and-plaster cottage with a dark roof, a stone chimney puffing green
+ *  smoke, a big iron cauldron bubbling in front (liquid + bubbles are animated in Shop), a table of elixir flasks, herbs and
+ *  jars of monster parts. Door faces +z. Props in front are also town colliders (townData BREWER_HUT). */
+function buildBrewer() {
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  const plaster = '#e2d8c0', wood = '#5a3d24', roofC = '#2b2420', stone = '#8f897d', iron = '#2f3139';
+  const cz = -0.4;   // body centre (z)
+  b.box(5.2, 0.5, 4.4, [0, 0.25, cz], stone);
+  b.box(4.6, 2.5, 3.8, [0, 1.75, cz], plaster, [0, 0, 0], [0.86, 1]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.28, 2.6, 0.28, [sx * 2.3, 1.8, cz + sz * 1.9], wood);
+  b.box(4.8, 0.22, 0.28, [0, 2.95, cz + 1.92], wood); b.box(4.8, 0.18, 0.28, [0, 1.15, cz + 1.92], wood);
+  b.box(0.18, 1.8, 0.2, [0.25, 2.05, cz + 1.95], wood, [0, 0, 0.6]); b.box(0.18, 1.8, 0.2, [2.0, 2.05, cz + 1.95], wood, [0, 0, -0.6]);
+  b.prism(5.8, 2.5, 4.9, [0, 3.0, cz], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.box(0.26, 0.26, 5.0, [0, 5.45, cz], '#1a1512');
+  // stone chimney (green smoke, see Shop FX)
+  b.box(0.8, 3.0, 0.8, [1.5, 4.0, cz - 1.0], '#6d6a66'); b.box(0.95, 0.2, 0.95, [1.5, 5.55, cz - 1.0], '#57544f');
+  // door + round window with a green glow
+  b.box(1.05, 1.85, 0.2, [-1.25, 1.42, cz + 1.95], '#3e5a2e'); b.cyl(0.52, 0.52, 0.2, 10, [-1.25, 2.3, cz + 1.95], '#3e5a2e', [Math.PI / 2, 0, 0]);
+  g.cyl(0.5, 0.5, 0.1, 12, [1.1, 2.15, cz + 1.94], '#7dffa0', [Math.PI / 2, 0, 0]); b.torus(0.54, 0.07, [1.1, 2.15, cz + 1.98], wood, [0, 0, 0], 1, 12);
+  // plain cloth awning on two poles over the work area
+  stripedAwning(b, -2.4, 2.4, 2.9, cz + 2.9, '#dfe6cf', '#dfe6cf');
+  pole(b, -2.4, cz + 3.6, 2.6); pole(b, 2.4, cz + 3.6, 2.6);
+  // the cauldron: three iron legs, round belly, thick rim, a fire under it (liquid disc is a separate mesh in Shop)
+  const kx = 1.4, kz = 3.4;
+  for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU + 0.5; b.cyl(0.12, 0.12, 0.55, 5, [kx + Math.cos(a) * 0.62, 0.27, kz + Math.sin(a) * 0.62], '#24252b'); }
+  b.sph(0.9, [kx, 1.05, kz], iron, [1, 0.78, 1], 12); b.torus(0.76, 0.12, [kx, 1.6, kz], '#3d4048', [Math.PI / 2, 0, 0], 1, 16);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; b.box(0.13, 0.55, 0.13, [kx + Math.cos(a) * 0.42, 0.14, kz + Math.sin(a) * 0.42], '#5a3a1e', [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9]); }
+  g.cone(0.26, 0.5, 6, [kx, 0.32, kz], '#ff9a2a'); g.cone(0.14, 0.38, 5, [kx + 0.15, 0.3, kz - 0.1], '#ffe070');
+  b.box(0.07, 1.5, 0.07, [kx + 0.35, 1.9, kz - 0.15], wood, [0.25, 0, -0.35]);   // stirring ladle
+  // work table with elixir flasks (the five elixir colours), a mortar and a jar of monster parts
+  b.box(1.7, 0.85, 0.75, [-1.6, 0.43, 2.6], wood); b.box(1.85, 0.1, 0.9, [-1.6, 0.9, 2.6], '#8a6340');
+  const cols = ['#ff7a2a', '#9eacc2', '#5fd35a', '#ffc94a', '#ff4a5e'];
+  for (let i = 0; i < 5; i++) {
+    const x = -2.3 + i * 0.36, z = 2.45 + (i % 2) * 0.28;
+    g.sph(0.15, [x, 1.1, z], cols[i], [1, 1.05, 1], 7); b.cyl(0.05, 0.05, 0.2, 5, [x, 1.33, z], '#d8c6a0'); b.cyl(0.06, 0.06, 0.06, 5, [x, 1.45, z], '#8a5a30');
+  }
+  b.cyl(0.2, 0.15, 0.22, 8, [-0.95, 1.06, 2.75], '#9a948a'); b.cyl(0.03, 0.03, 0.35, 4, [-0.9, 1.25, 2.72], '#6e4b2b', [0, 0, 0.5]);
+  // shelves of jars on the front wall + hanging herbs under the awning
+  b.box(1.3, 0.08, 0.3, [-0.9, 2.2, cz + 2.12], wood);
+  for (let i = 0; i < 3; i++) { b.cyl(0.13, 0.13, 0.32, 7, [-1.3 + i * 0.4, 2.4, cz + 2.12], '#c8d8c0'); g.cyl(0.1, 0.1, 0.16, 6, [-1.3 + i * 0.4, 2.36, cz + 2.14], ['#9be86a', '#d08aff', '#ff9a5a'][i]); }
+  for (let i = 0; i < 6; i++) b.cone(0.11, 0.42, 5, [-2.0 + i * 0.75, 2.45, cz + 2.75], i % 2 ? '#5aa03a' : '#8a6a3a', [Math.PI, 0, 0]);
+  // barrels + a crate of bones / slime jars on the side
+  for (const [x, z] of [[-2.9, 0.6], [-3.0, -0.5]]) { b.cyl(0.45, 0.5, 0.85, 9, [x, 0.43, z], '#8a5a30'); b.cyl(0.51, 0.51, 0.07, 9, [x, 0.28, z], '#3a3a40'); b.cyl(0.51, 0.51, 0.07, 9, [x, 0.62, z], '#3a3a40'); }
+  b.box(0.8, 0.6, 0.8, [2.95, 0.3, 0.9], '#9c7245'); g.sph(0.16, [2.85, 0.72, 0.8], '#7ddc4a', 1, 6); b.cyl(0.07, 0.07, 0.45, 4, [3.1, 0.75, 1.0], '#e8e0cc', [0, 0, 1.2]);
+  lantern(b, g, -2.0, 2.75, cz + 2.6);
+  return { body: b.build(), glow: g.build() };
+}
+
+const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech, BREWER: buildBrewer };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6], BREWER: [-1.25, 1.7] };
 const NPC: Record<ShopType, NpcCfg> = {
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
   BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
@@ -293,7 +341,10 @@ const NPC: Record<ShopType, NpcCfg> = {
   FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [0.1, 4.2] },
   WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [0.9, 4.4] },
   TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [0.2, 4.4] },
+  BREWER: { key: 'WIZARD', tint: '#d8f5d0', pos: [1.4, 2.25] },   // stirring behind the cauldron
 };
+/** Bubbling liquid disc of the shops with a cauldron: shop-local [x, y, z, radius]. */
+const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { SUPPLIES: [3.6, 1.55, 2.4, 0.72], BREWER: [1.4, 1.62, 3.4, 0.68] };
 
 // -------------------------------------------------------------------- signs ---
 function buildSign(type: ShopType, color: string) {
@@ -316,6 +367,9 @@ function buildSign(type: ShopType, color: string) {
     b.cyl(0.1, 0.1, 0.12, 8, [0, -0.08, 0.2], '#5b4a2a', [Math.PI / 2, 0, 0]);
   } else if (type === 'WAREHOUSE') {
     b.box(0.7, 0.55, 0.12, [0, -0.08, 0.17], '#9c7245'); b.box(0.74, 0.08, 0.14, [0, -0.08, 0.2], '#5a3d24'); b.box(0.08, 0.55, 0.14, [0, -0.08, 0.2], '#5a3d24');
+  } else if (type === 'BREWER') {
+    g.sph(0.24, [0, -0.14, 0.16], '#5fd35a', [1, 1, 0.5], 8); g.cyl(0.07, 0.09, 0.28, 6, [0, 0.18, 0.16], '#9be8a8'); b.cyl(0.09, 0.09, 0.07, 6, [0, 0.35, 0.16], '#8a5a30');
+    g.sph(0.05, [-0.08, -0.06, 0.3], '#ffffff', 1, 4);
   } else if (type === 'FORTUNE') {
     g.sph(0.26, [0, -0.08, 0.17], '#b98aff', [1, 1, 0.5], 10); b.box(0.5, 0.1, 0.12, [0, -0.36, 0.17], '#d9b56a'); g.octa(0.08, [0.32, 0.24, 0.2], '#fff3c0');
   } else {
@@ -441,6 +495,13 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
         if (Math.random() < dt * 5) smokePuff(px + 1.9, 8.1, pz - 1.4, 1, 0x6b6560, 1.8, 3.2, 1.4, 0.3, 0.5);
         if (Math.random() < dt * 4) embers(px + 3.5, 1.2, pz + 2.1, 1, 0xff8a2a, 0.3, 2.2, 0.9, 0.15);
         if (Math.random() < dt * 1.2) embers(px - 0.6, 1.3, pz + 3.5, 3, 0xffb040, 0.2, 2.5, 0.5, 0.1);
+      } else if (type === 'BREWER') {   // bubbles from the cauldron + green smoke from the chimney (shop-local -> world via the facing)
+        const cf = Math.cos(facing), sf = Math.sin(facing);
+        if (Math.random() < dt * 5) {
+          const a = Math.random() * TAU, r = Math.random() * 0.5, lx = 1.4 + Math.cos(a) * r, lz = 3.4 + Math.sin(a) * r;
+          FX.add.emit(px + lx * cf + lz * sf, 1.7, pz - lx * sf + lz * cf, 0, 1.4, 0, 1.0, 0.16, 0.3, 0.5, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
+        }
+        if (Math.random() < dt * 2.5) smokePuff(px + 1.5 * cf - 1.4 * sf, 5.8, pz - 1.5 * sf - 1.4 * cf, 1, 0x7fbf7a, 1.4, 2.6, 1.2, 0.25, 0.45);
       } else if (type === 'PETS' && Math.random() < dt * 1.5) {
         FX.add.emit(px - 0.9 + (Math.random() - 0.5) * 2, 2.6, pz + 3 + Math.random(), 0, 0.9, 0, 1.6, 0.35, 0.3, 0.5, 2.0, 1.1, 0.9, CELL.PLUS, 0, 0.1);
       }
@@ -453,7 +514,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
       <mesh geometry={geos.glow} material={mats.glow} />
-      {type === 'SUPPLIES' && <mesh ref={liquid} material={mats.liquid} position={[3.6, 1.55, 2.4]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.72, 12]} /></mesh>}
+      {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
       <group position={[-3.4, 0, 3.9]}>
         <mesh position={[0, 2.0, 0]} castShadow><boxGeometry args={[0.22, 4.0, 0.22]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
         <mesh position={[0.9, 3.85, 0]} castShadow><boxGeometry args={[1.9, 0.16, 0.16]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>

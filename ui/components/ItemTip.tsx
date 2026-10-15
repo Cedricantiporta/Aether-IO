@@ -5,6 +5,7 @@ import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
 import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
+import { elixirOf, elixirUses } from '../../elixirs';
 import { HERO_STATS } from '../../constants';
 import { affixText, isUnique } from '../../affixes';
 import { weaponPerk, perkText } from '../../weaponPerks';
@@ -40,13 +41,15 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
-        {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && (
+        {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'ELIXIR' && (
           <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
         )}
       </div>
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
       {item.description && <><div className="tt-sep" /><div className="italic muted">{item.type === 'REVIVE' ? 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' : item.description}</div></>}
       {item.type === 'REVIVE' && (() => { const ms = ankhCooldownLeft(); return <div style={{ color: ms > 0 ? '#ff8a7a' : 'var(--good)', fontWeight: 700 }}>{ms > 0 ? `Recharging: ${Math.ceil(ms / 60000)} min left` : 'Ready'}</div>; })()}
+      {item.type === 'ELIXIR' && elixirOf(item) && <div style={{ color: elixirOf(item)!.color, fontWeight: 700 }}>{elixirOf(item)!.effect} · one run · click in the bag to drink</div>}
+      {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && elixirUses(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{elixirUses(LOOT_BY_NAME[item.name].id)}</div>}
       {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {

@@ -2,7 +2,7 @@
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
-import { FARM, WALL } from '../engine/townData';
+import { FARM, WALL, BREWER_HUT } from '../engine/townData';
 import { fbm, lerp, smooth } from './util';
 
 export const POND = { x: ENGINE_POND.x, z: ENGINE_POND.z, r: ENGINE_POND.r - 1.5 };
@@ -24,7 +24,8 @@ export function inYard(x: number, z: number, m = 0) {
 }
 /** Outside the wall but occupied by the avenue / farm field (no random bushes, flowers or pebbles here). */
 export function inForecourtUse(x: number, z: number, m = 0) {
-  return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m);
+  return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m)
+    || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x);
 }
 
 export function pondEdge(a: number) {

@@ -23,7 +23,7 @@ import type { CodexTab, Discovered } from './codexData';
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
 export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH'; // MERCHANT = the travelling merchant room
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER'; // MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -130,6 +130,8 @@ export interface GameState {
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   npcQuests: NpcQuestSave;                          // NPC story quests: state + boss kill counters (saved with the profile)
   materials: Record<Rarity, number>;
+  elixirsNext: import('./elixirs').ElixirId[];        // elixirs drunk in town: their buffs start with the next run (saved with the profile)
+  elixirsRun: import('./elixirs').ElixirId[];         // elixir buffs active in the current run (gone when the run ends)
   equipment: Equipment;
   upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)
 
@@ -227,6 +229,8 @@ export interface GameState {
   combineMaterials: (from: Rarity) => void;
   downgradeMaterials: (from: Rarity) => void;
   craftItem: (recipe: Recipe) => { item: Item | null; outcome: import('./crafting').CraftOutcome } | null;   // null = cannot craft (nothing spent)
+  brewElixir: (id: import('./elixirs').ElixirId, n?: number) => number;   // Elixir Brewer: spend monster parts + gold, add elixirs to the bag; returns how many were brewed
+  drinkElixir: (item: Item) => boolean;            // bag: drink an elixir (town: queued for the next run; in a run: active at once)
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll

@@ -53,6 +53,7 @@ export const InventoryPanel: React.FC = () => {
   const { selected, setSelected, setSell } = useUiStore(useShallow((s) => ({ selected: s.selectedItem, setSelected: s.setSelectedItem, setSell: s.setSellItem })));
   const gold = useGameStore((s) => s.gold);
   const deleteItems = useGameStore((s) => s.deleteItems);
+  const drinkElixir = useGameStore((s) => s.drinkElixir);
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [delMode, setDelMode] = useState(false);
   // bulk sell (any shop but the warehouse): pick items, then sell them together; Epic+ gear asks first
@@ -96,6 +97,7 @@ export const InventoryPanel: React.FC = () => {
     if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
     if (shopTab === 'BLACKSMITH') { setSelected(it); return; }
     if (shopTab === 'SUPPLIES' || shopTab === 'PETS') { setSell(it); return; }
+    if (it.type === 'ELIXIR') { drinkElixir(it); return; }   // drink: buff for the next run (or the rest of this one)
     if (isGear(it) && !lockedFor(it)) equipItem(it);
   };
   const shown = useMemo(() => (cat === 'ALL' ? sorted : sorted.filter((i) => catOf(i) === cat)), [sorted, cat]);
