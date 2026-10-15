@@ -11,6 +11,7 @@ import { SHOP_POSITIONS, GOLD_SCALE, ITEMS_POOL } from '../../constants';
 import type { Item } from '../../types';
 import { NPCS, GATE, PORTAL } from '../townData';
 import { CASTLE_DOOR } from '../castleData';
+import { TRAINER_POS } from '../world';
 
 /** Loot of `id` in the bag. */
 function bagCount(id: string): number {
@@ -130,6 +131,7 @@ const T: StoryTarget = { x: 0, z: 0, area: 'TOWN', npc: -1, shop: false };
 function atPos(at: StoryAt): { x: number; z: number } | null {
   if (at === 'BAG') return null;
   if (at === 'BOARD') { const h = NPCS.find((n) => n.name === 'Hodge'); return h ? { x: h.home[0], z: h.home[1] } : null; }
+  if (at === 'TRAINER') return { x: TRAINER_POS[0], z: TRAINER_POS[2] + 2.6 };
   const sp = SHOP_POSITIONS.find((p) => p.type === at);
   const r = sp?.rot ?? 0;   // shops face +z, rotated by rot
   return sp ? { x: sp.position[0] + Math.sin(r) * 3, z: sp.position[2] + Math.cos(r) * 3 } : null;   // in front of the counter

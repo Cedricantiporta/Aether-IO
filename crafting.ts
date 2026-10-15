@@ -118,7 +118,7 @@ function freedSlots(inv: Item[], recipe: Recipe): number {
 }
 
 /** Removes the recipe's loot from an inventory (returns a new array). */
-export function consumeLoot(inv: Item[], recipe: Recipe): Item[] {
+export function consumeLoot(inv: Item[], recipe: { loot: LootNeed[] }): Item[] {
   let out = inv.slice();
   for (const l of recipe.loot) {
     let left = l.count;

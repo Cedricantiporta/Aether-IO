@@ -2,6 +2,7 @@ import React from 'react';
 import type { Item } from '../../types';
 import { RARITY_TEXT } from '../lib/game';
 import { LOOT, LOOT_BY_NAME } from '../../loot';
+import { ELIXIRS, ELIXIR_IDS, ELIXIR_BY_NAME } from '../../elixirs';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
 import { ART, type Pal, type ArtSpec } from '../../itemCatalog';
 
@@ -448,6 +449,18 @@ const AccP = (sh: number, p: Pal): Draw => () => sh === 0 ? (<g>
 const FAM: Record<ArtSpec['f'], (s: number, p: Pal) => Draw> = { bow: BowP, staff: StaffP, axe: AxeP, sword: SwordP, helm: HelmP, armor: ArmorP, gloves: GlovesP, boots: BootsP, acc: AccP };
 const GENERATED_DRAW: Record<string, Draw> = Object.fromEntries(Object.entries(ART).map(([id, a]) => [id, FAM[a.f](a.s, a.pal)]));
 
+/** Elixir flask: round bottle with a long neck, wax-sealed cork and a glowing liquid of the elixir's colour. */
+const ElixirFlask = (liquid: string): Draw => () => (<g>
+  <circle cx="32" cy="42" r="20" fill={liquid} opacity=".22" />
+  <rect x="27" y="4" width="10" height="7" rx="2" fill={g('wood')} {...st} /><path d="M25 11 H39 V14 H25Z" fill="#a8352b" {...st} />
+  <path d="M28 14 H36 V26 C46 28 52 35 52 43 C52 53 43 60 32 60 C21 60 12 53 12 43 C12 35 18 28 28 26Z" fill={g('glass')} opacity=".55" {...st} />
+  <path d="M15 44 C15 37 21 33 32 33 C43 33 49 37 49 44 C49 52 42 57 32 57 C22 57 15 52 15 44Z" fill={liquid} stroke={S} strokeWidth="1" />
+  <path d="M15 44 C21 41 26 47 32 44 C38 41 43 47 49 44" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="1.3" />
+  <circle cx="26" cy="50" r="2.2" fill="#fff" opacity=".7" /><circle cx="37" cy="47" r="1.5" fill="#fff" opacity=".6" /><circle cx="31" cy="53" r="1.1" fill="#fff" opacity=".6" />
+  <ellipse cx="19" cy="40" rx="2.6" ry="7" fill="#fff" opacity=".45" transform="rotate(18 19 40)" />
+  <path d="M30 16 V25" stroke="#fff" strokeOpacity=".55" strokeWidth="1.4" strokeLinecap="round" />{Spark(50, 22, 3)}
+</g>);
+
 const DRAW: Record<string, Draw> = {
   ...GENERATED_DRAW,
   staff_1: Staff(0), staff_rare: Staff(1), staff_3: Staff(2), staff_legend: Staff(3), staff_god: Staff(4),
@@ -466,6 +479,7 @@ const DRAW: Record<string, Draw> = {
   // generic fallbacks by type / projectile
   sword: Sword, bow: Bow(0), staff: Staff(0), axe: Axe(0), armor: Chest({ body: 'steel', trim: 'gold', mark: 'plate' }), ring: Ring(0), amulet: Amulet(false), core: Core, ankh: Ankh, chest: Treasure,
   potion_hp_fb: Potion('red', false), potion_mp_fb: Potion('blue', false), paw: Paw, ...PETS,
+  ...Object.fromEntries(ELIXIR_IDS.map((k) => ['elixir_' + k, ElixirFlask(ELIXIRS[k].color)])),
 };
 
 const ID_BY_NAME = new Map<string, string>([...ITEMS_POOL, ...PETS_POOL].map((i) => [i.name, i.id]));
@@ -485,6 +499,7 @@ export function artKey(item: Item): string {
     case 'ARMOR': return 'armor';
     case 'ACCESSORY': return item.id.includes('boots') ? 'boots_1' : item.id.includes('ring') ? 'ring' : 'amulet';
     case 'PET': return 'paw';
+    case 'ELIXIR': return ELIXIR_BY_NAME[item.name] ? 'elixir_' + ELIXIR_BY_NAME[item.name].id : 'potion_hp_fb';
     default: return 'chest';
   }
 }

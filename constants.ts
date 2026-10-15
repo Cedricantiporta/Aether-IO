@@ -35,14 +35,15 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 /** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
 export const GOLD_SCALE = 10;
 
-export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH'; position: [number, number, number]; color: string; rot?: number }[] = [
+export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER'; position: [number, number, number]; color: string; rot?: number }[] = [
     { type: 'SUPPLIES', position: [-13, 0, 17.5], color: '#3b82f6', rot: Math.PI },   // potion shop: by the plaza, south of the street (door faces the street)
     { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
     { type: 'PETS', position: [-21, 0, 2], color: '#10b981' },          // west of the plaza, on the street (moved closer to the centre)
     { type: 'ARMORY', position: [13, 0, 17.5], color: '#c9a052', rot: Math.PI },   // armor shop: by the plaza, opposite the potion shop
     { type: 'FORTUNE', position: [-12.5, 0, 1.5], color: '#a46bff' },   // fortune teller (summons): right beside the plaza
     { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
-    { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
+    { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },
+    { type: 'BREWER', position: [11, 0, 56], color: '#5fd38a', rot: -Math.PI / 2 },   // Elixir Brewer: hut outside the gate, east of the road, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */
 export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffc94a', MYTHIC: '#ff6a5a' };
@@ -52,7 +53,7 @@ export const shopFront = (s: { position: [number, number, number]; rot?: number 
   return { x: s.position[0] + Math.sin(r) * d + Math.cos(r) * side, z: s.position[2] + Math.cos(r) * d - Math.sin(r) * side };
 };
 /** Shop tab each town building opens. */
-export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH' };
+export const SHOP_TAB: Record<string, 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'SUMMON' | 'WAREHOUSE' | 'TECH' | 'BREWER'> = { SUPPLIES: 'SUPPLIES', BLACKSMITH: 'BLACKSMITH', PETS: 'PETS', ARMORY: 'ARMORY', FORTUNE: 'SUMMON', WAREHOUSE: 'WAREHOUSE', TECH: 'TECH', BREWER: 'BREWER' };
 
 export const COLORS = {
   background: '#87CEEB', 

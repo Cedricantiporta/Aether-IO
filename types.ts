@@ -35,7 +35,7 @@ export interface Upgrade {
 
 export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'SWORD' | 'FIREBALL' | 'ICE' | 'FIRE_TRAIL' | 'BLACKHOLE' | 'BURNING_ARROW' | 'FREEZING_ARROW' | 'PIERCING_ARROW' | 'STORM' | 'SOUL';   // SOUL: necromancer single-target soul bolt
 export type AbilityType = 'METEOR' | 'ARROW_RAIN' | 'AXE_AURA' | 'FIREBALL' | 'AXE_SPIN' | 'NONE' | 'PIERCING_SHOT' | 'FREEZE_SPELL' | 'GRAVITY_SPELL' | 'MEGA_STAMP' | 'RAGE';
-export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT' | 'SHARD';
+export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT' | 'SHARD' | 'ELIXIR';
 export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON' | 'ARMOR_BREAK' | 'CHILL';
 export type PetSkillType = 'HEAL' | 'ATTACK_RANGED' | 'ATTACK_MELEE' | 'COLLECT' | 'REVIVE' | 'FIRE_TRAIL' | 'CHILL_SWOOP' | 'LOOT_BURP' | 'CHAIN_ZAP' | 'SHIELD' | 'MARK' | 'SLAM' | 'TIDAL_BEAM';
 

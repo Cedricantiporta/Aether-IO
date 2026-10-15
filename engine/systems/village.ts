@@ -105,7 +105,7 @@ const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', n
   const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act; t.color = color;
 };
 const GATE_R = 5.5;
-const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House' };
+const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer' };
 
 function scanNearby(): void {
   const p = world.player;
@@ -266,7 +266,7 @@ export function walkToMain(): void {
   if (at && at !== 'BAG') { walkToSpot(at); return; }
   walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
-type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER';
+type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER' | 'BREWER';
 /** Walk to a shop counter / the quest board / the skill trainer and open it on arrival. */
 function walkToSpot(at: Spot): void {
   if (at === 'BOARD') { walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
@@ -274,7 +274,7 @@ function walkToSpot(at: Spot): void {
   const s = SHOP_POSITIONS.find((x) => x.type === at);
   if (s) { const f = shopFront(s, 3.2); walkTo(f.x, f.z, 'shop', SHOP_TAB[s.type], 1.8); }
 }
-const ACTION_SPOT: Record<string, Spot> = { buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
+const ACTION_SPOT: Record<string, Spot> = { buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', brew: 'BREWER', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
 /** NPC quest row click: hand-in / talk target NPC, else where the objective is done (the cows, the nests, the hiding
  *  cat, the shop for a shop action), else out through the gate. */
 export function walkToNpcObjective(o: { type: string; target?: string | string[] }, npc: string | null): void {

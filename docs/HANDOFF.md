@@ -621,3 +621,17 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - The class dash unlocks at class level 20 (classLevels DASH_UNLOCK_LV; tryDash gate, locked slot, hidden on mobile);
   dash recharge 6 s. Tutorial freebies: the Stock Up potion and the first gem summon are free (store `questFree`).
 - Town: two castle guards (Sir Aldo, Sir Bram) flank the castle steps.
+
+## Town layout pass + Elixir Brewer (Oct 2026)
+- **Skill Trainer** moved to the open paving WEST of the castle steps: `TRAINER_POS` (-10.5, -19) in `engine/world.ts` (was
+  (17, -13)); branch road from the north street at x -10.5; the dark-roofed house behind it moved to (-19.5, -14); a house
+  now fills the old trainer spot (17, -14). Wren's line updated.
+- **Meadow outside the gate** is wider (`ISLAND_BOXES` forecourt [-40,-10,40,84], farm clearing [20,40,50,84]) so the
+  forest edge sits further back. The **wheat field** moved to the WEST side of the road (`FARM` (-17, 58), fence gap +
+  farm path face the road) = the right-hand side when looking from the gate toward the portal. Barn / coop / cows (milk,
+  eggs) stay in the east clearing; Biscuit's hiding spot is unchanged.
+- **Elixir Brewer** (`SHOP_POSITIONS` 'BREWER' (11, 56), door facing the road; `townData.BREWER_HUT`; hut + cauldron FX
+  `buildBrewer` in `render/Town.tsx`; tab `BREWER` -> `ui/panels/shop/Brewer.tsx`). Recipes + buffs in `elixirs.ts`
+  (5 elixirs, 2-3 monster parts + gold each). Store: `brewElixir(id, n)`, `drinkElixir(item)` (click an elixir in the
+  bag), `elixirsNext` (drunk in town, saved, applied to run base stats in `startGame`) and `elixirsRun` (active this run,
+  cleared by `resetGame`). HUD: elixir icons under the player plate (`ElixirRow` in `ui/hud/TopBars.tsx`).

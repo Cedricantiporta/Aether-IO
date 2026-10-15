@@ -37,7 +37,9 @@ import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shard
 import { summonPool } from './summonPool';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
-import { LOOT_STACK_LIMIT } from './loot';
+import { LOOT_STACK_LIMIT, LOOT_BY_ID } from './loot';
+import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
+import { lootOwned } from './crafting';
 import { petPower } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
 import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
@@ -171,13 +173,13 @@ const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
 let uidCounter = 0;
 const uid = (prefix = 'id'): string => `${prefix}_${Date.now().toString(36)}_${(uidCounter++).toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
-const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD';
+const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD' || item.type === 'ELIXIR';
 const stackLimit = (item: Item): number => (item.type === 'SHARD' ? 1e9 : item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
 const isGear = (item: Item): boolean => item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS';
 
 /** Combat power of one item (UI comparison / auto-equip). */
 export const calculateItemCP = (item: Item): number => {
-  if (item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE') return 0;
+  if (item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'ELIXIR') return 0;
   if (!item.stats) return 0;
   const s = item.stats;
   let cp = 0;
@@ -380,6 +382,7 @@ interface Profile {
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
   meta?: MetaState;   // daily / weekly goals, achievements, equipped title (goals.ts)
+  elixirs?: string[]; // elixirs drunk in town, waiting for the next run (elixirs.ts)
 }
 
 export const makeItemById = (id: string, quantity: number): Item[] => {
@@ -469,6 +472,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               discovered: sanitizeDiscovered(p.discovered),
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
               meta: sanitizeMeta(p.meta),
+              elixirs: Array.isArray(p.elixirs) ? p.elixirs.filter(isElixirId) : [],
             },
           };
         }
@@ -500,7 +504,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, gems1k: true, zoom1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -654,6 +658,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     inventory: startLoadout.inventory,
     equipment: startLoadout.equipment,
     materials: profile.materials,
+    elixirsNext: (profile.elixirs ?? []).filter(isElixirId),
+    elixirsRun: [] as ElixirId[],
     maxInventorySlots: profile.maxInventorySlots,
     warehouse: profile.warehouse ?? [],
     warehouseGold: profile.warehouseGold ?? 0,
@@ -714,8 +720,13 @@ export const useGameStore = create<GameState>()((set, get) => {
     startGame: () => {
       const state = get();
       const l = loadoutFor(state.hero, state.inventory, state.equipment);
+      // elixirs drunk in town start working now (for this run only)
+      const elixirs = state.elixirsNext.slice();
+      for (const id of elixirs) applyElixir(l.baseStats, id);
+      if (elixirs.length) l.stats = calc(l.baseStats, l.equipment);
       set({
         ...runState(state.hero, l.baseStats, l.stats),
+        elixirsRun: elixirs, elixirsNext: [],
         status: GameStatus.PLAYING,
         inventory: l.inventory,
         equipment: l.equipment,
@@ -748,6 +759,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const l = loadoutFor(s.hero, s.inventory, s.equipment);
       set({
         ...runState(s.hero, l.baseStats, l.stats),
+        elixirsRun: [],   // run elixir buffs end with the run
         status: GameStatus.MENU,
         inventory: l.inventory,
         equipment: l.equipment,
@@ -772,7 +784,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
+        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
       syncDiscoveries();
       get().resetGame();
@@ -1489,6 +1501,41 @@ export const useGameStore = create<GameState>()((set, get) => {
       return { item, outcome: item.level > 1 ? 'GREAT' as const : 'SUCCESS' as const };
     },
 
+    brewElixir: (id, n = 1) => {
+      const d = ELIXIRS[id];
+      let done = 0;
+      for (let k = 0; k < n; k++) {
+        const s = get();
+        if (s.gold < d.gold) { if (!done) notify('Not enough gold.', 'red', 'WARNING'); break; }
+        const miss = d.parts.find((p) => lootOwned(s.inventory, p.id) < p.count);
+        if (miss) { if (!done) notify(`Missing: ${LOOT_BY_ID[miss.id].name}`, 'red', 'WARNING'); break; }
+        const inv = insertItem(consumeLoot(s.inventory, { loot: d.parts }), s.maxInventorySlots, elixirItem(id));
+        if (!inv) { if (!done) notify('Inventory Full!', 'red', 'WARNING'); break; }
+        set({ gold: s.gold - d.gold, inventory: inv });
+        done++;
+      }
+      if (done) { notify(`Brewed ${done > 1 ? `${done}x ` : ''}${d.name}!`, d.color, 'ITEM'); events.emit('hub', { kind: 'brew', n: done }); }
+      return done;
+    },
+
+    drinkElixir: (item) => {
+      const d = elixirOf(item), s = get();
+      if (!d) return false;
+      const inRun = s.status !== GameStatus.MENU && s.status !== GameStatus.HERO_SELECT && s.status !== GameStatus.GAME_OVER;
+      if ((inRun ? s.elixirsRun : s.elixirsNext).includes(d.id)) { notify(`${d.name} is already ${inRun ? 'active' : 'waiting for your next run'}.`, '#f1d58e', 'WARNING'); return false; }
+      if (!get().consumeItem((i) => i.type === 'ELIXIR' && i.name === d.name)) return false;
+      if (inRun) {
+        const b = { ...get().baseStats };
+        applyElixir(b, d.id);
+        set({ baseStats: b, stats: calc(b, get().equipment), elixirsRun: [...get().elixirsRun, d.id] });
+        notify(`${d.name}: ${d.effect} for the rest of this run`, d.color, 'SYSTEM');
+      } else {
+        set({ elixirsNext: [...get().elixirsNext, d.id] });
+        notify(`${d.name}: ${d.effect} during your next run`, d.color, 'SYSTEM');
+      }
+      return true;
+    },
+
     buyInventorySlots: () => {
       const s = get();
       const cost = s.maxInventorySlots * 1000;
@@ -1711,7 +1758,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {

@@ -74,7 +74,7 @@ export interface GameEvents {
   towerFloor: { floor: number; best: boolean }; // endless tower floor cleared
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };
-  hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest' | 'buy_potion' | 'store' | 'learn' | 'buy_pet' | 'equip' | 'equip_pet' | 'accept' | 'craft_fail'; n: number };   // discrete town actions (goals / achievements)
+  hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest' | 'buy_potion' | 'store' | 'learn' | 'buy_pet' | 'equip' | 'equip_pet' | 'accept' | 'craft_fail' | 'brew'; n: number };   // discrete town actions (goals / achievements)
   runStart: {};
   runEnd: {};
   /** Dark hero champion moments (systems/darkHero.ts), drawn violet by render/VFX: ROAR ULT JUDGMENT NOVA RAIN SPIKE SOUL METEOR AVATAR GUARD ZAP */

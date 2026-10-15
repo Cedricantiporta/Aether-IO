@@ -3,7 +3,7 @@
 // Pure data + helpers (no React); progress lives in the profile (`story` in store.ts).
 
 /** Where a field / shop step is done (the guide arrow, the gate beacon and auto-walk aim here). */
-export type StoryAt = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'BAG';
+export type StoryAt = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BREWER' | 'TRAINER' | 'BOARD' | 'BAG';
 
 export interface StoryStep {
   id: string;
