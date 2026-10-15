@@ -32,11 +32,11 @@ export const SetOutWindow: React.FC = () => {
     if ((p.x - at.x) ** 2 + (p.z - at.z) ** 2 > 7.5 * 7.5) setOpen(false);
   });
   const { progress, hero, startMode, setAscension } = useGameStore(useShallow((s) => ({ progress: s.progress, hero: s.hero, startMode: s.startMode, setAscension: s.setAscension })));
-  if (!open) return null;
+  const claimTower = useGameStore((s) => s.claimTowerMilestone);
+  if (!open) return null;   // hooks above this line only (a hook after it crashed the window)
   const asc = Math.min(progress.ascension, progress.ascensionMax);
   const best = progress.towerBest[hero] ?? 0;
   const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Malakar defeated)
-  const claimTower = useGameStore((s) => s.claimTowerMilestone);
   const claimed = progress.towerClaimed?.[hero] ?? [];
   // milestones: every reached, unclaimed 10th floor (claimable) + the next three ahead (locked)
   const reachedTop = Math.floor(best / TOWER_STEP) * TOWER_STEP;
