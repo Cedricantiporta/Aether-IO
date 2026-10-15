@@ -89,23 +89,23 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
   BOSS_TREANT: {
-    name: 'Elderroot the Ancient', hp: 1800, speed: 2.4, radius: 2.3, scale: 3.4, contactDamage: 22, projectileDamage: 16,
+    name: 'Elderroot the Ancient', hp: 1800, speed: 2.4, radius: 2.8, scale: 4.0, contactDamage: 22, projectileDamage: 16,
     xp: 9, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x4d7c0f, knockResist: 1, armor: 55,
   },
   BOSS_HYDRA: {
-    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 2.7, scale: 3.2, contactDamage: 22, projectileDamage: 17,
+    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 3.6, scale: 4.5, contactDamage: 22, projectileDamage: 17,
     xp: 10, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 50,
   },
   BOSS_WYRM: {
-    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 2.2, scale: 3.4, contactDamage: 24, projectileDamage: 18,
+    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 3.1, scale: 4.8, contactDamage: 24, projectileDamage: 18,
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
   BOSS_WARLORD: {
-    name: 'Ignar the Infernal Warlord', hp: 2300, speed: 3.4, radius: 2.0, scale: 3.1, contactDamage: 28, projectileDamage: 19,
+    name: 'Ignar the Infernal Warlord', hp: 2300, speed: 3.4, radius: 2.4, scale: 3.6, contactDamage: 28, projectileDamage: 19,
     xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
   },
   BOSS_VOID: {
-    name: 'The Void Herald', hp: 2600, speed: 3.0, radius: 1.8, scale: 3.0, contactDamage: 26, projectileDamage: 20,
+    name: 'The Void Herald', hp: 2600, speed: 3.0, radius: 2.1, scale: 3.4, contactDamage: 26, projectileDamage: 20,
     xp: 13, gold: 0, cost: 0, minWave: 70, weight: 0, color: 0xa855f7, knockResist: 1, armor: 50,
   },
   BOSS_SAPLING: {
@@ -113,7 +113,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 0, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x65a30d, knockResist: 0.3, armor: 10,
   },
   BOSS_HYDRA_HEAD: {
-    name: 'Hydra Head', hp: 300, speed: 0, radius: 1.25, scale: 1.5, contactDamage: 0, projectileDamage: 14,
+    name: 'Hydra Head', hp: 300, speed: 0, radius: 1.7, scale: 2.1, contactDamage: 0, projectileDamage: 14,
     xp: 0, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 20,
   },
   BOSS_IMP: {

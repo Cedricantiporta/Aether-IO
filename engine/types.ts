@@ -392,6 +392,8 @@ export interface RoomPlan {
   type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist;
   /** Gatekeeper trial: gate index (0..4) and the room step inside that trial (engine/gates.ts). */
   gate?: number; step?: number;
+  /** The epilogue clearing after Malakar (a quiet forest room with the Keeper of the Font; director.ts finale). */
+  epilogue?: boolean;
 }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 

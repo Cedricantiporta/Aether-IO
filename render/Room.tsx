@@ -19,6 +19,7 @@ import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../en
 import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater, LavaSea } from './RoomWater';
 import { Wanderer } from './Wanderer';
+import { Finale } from './Finale';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
@@ -487,7 +488,7 @@ function CampProps() {
   // floating name tags (like the town buildings) so the storage and the training post read at a glance
   const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini' }) }), []);
   useFrame(({ clock }) => {
-    const on = world.room.active && world.room.plan.type === 'CAMP';
+    const on = world.room.active && world.room.plan.type === 'CAMP' && !world.room.plan.epilogue;
     if (root.current) root.current.visible = on;
     if (!on) return;
     root.current.position.set(campPos.fire[0], 0, campPos.fire[1] - 1);
@@ -720,6 +721,7 @@ export function Room({ q }: { q: QualityCfg }) {
       <Stations />
       <CampProps />
       {!tower && <Suspense fallback={null}><Wanderer /></Suspense>}
+      <Finale />
       <SpecialRooms q={q} />
       <Portals />
       <PortalGuides />

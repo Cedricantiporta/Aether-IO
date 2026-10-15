@@ -4,6 +4,7 @@
 //    are heading), each impact carrying the boss's crowd control (stun, root, slow, silence, burn, poison...).
 //  - Quake: a big telegraphed ring around the boss with its signature crowd control.
 //  - Ward: at 66% and 33% hp the boss turns immune until its crystals (or its summoned guard) are destroyed.
+//  - Barrier: every boss periodically wraps itself in an absorb shield (bigger in later phases).
 //  - Mend: some bosses channel a heal; deal 6% of its max hp during the channel to interrupt it.
 //  - Crush: a heavy melee aimed at the NEAREST unit (summons included, e.g. Necromancer skeletons).
 // All boss telegraphs are also drawn ~30% bigger and resolve ~12% sooner (enemies.ts `bossTel`).
@@ -30,11 +31,11 @@ interface Mech {
 const MECH: Record<BossKind, Mech> = {
   BOSS_GOLEM:   { cc: 'STUN', ccDur: 1.0, rain: 'STUN', rainDur: 0.6, rainColor: 0xb0a090, rainWord: 'Rockfall!', ward: 'CRYSTALS', heal: false },
   BOSS_TREANT:  { cc: 'ROOT', ccDur: 1.6, rain: 'POISON', rainDur: 3, rainColor: 0x84cc16, rainWord: 'Thorn rain!', ward: 'GUARD', guard: 'SPORECAP', heal: true },
-  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', ward: null, heal: true },
+  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', ward: 'CRYSTALS', heal: true },
   BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0x8ae0ff, rainWord: 'Hailstorm!', ward: 'CRYSTALS', heal: false },
   BOSS_WARLORD: { cc: 'SILENCE', ccDur: 2.2, rain: 'BURN', rainDur: 3, rainColor: 0xff5a1a, rainWord: 'Meteor shower!', ward: 'GUARD', guard: 'HELLHOUND', heal: false },
   BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void rain!', ward: 'CRYSTALS', heal: true },
-  BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', ward: 'GUARD', guard: 'SKELETON_ARCHER', heal: true },
+  BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', ward: 'GUARD', guard: 'CULTIST', heal: true },
 };
 
 // ---- tuning
@@ -43,15 +44,16 @@ const QUAKE_CD = 9;
 const HEAL_CD = 26, HEAL_T = 3, HEAL_RATE = 0.025, HEAL_BREAK = 0.06;
 const CRUSH_CD = 3.6, CRUSH_R = 3.4, CRUSH_WIND = 0.65, CRUSH_RANGE = 8;
 const WARD_MAX_T = 35;
+const BARRIER_CD = [20, 17, 14], BARRIER_HP = [0.06, 0.08, 0.1];   // by phase: seconds between barriers, shield as a share of max hp
 
 // ---- strike pool (delayed AoE hits we resolve ourselves so they can carry crowd control and hit minions)
 const MAX_STRIKES = 64;
 const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0 }));
 const tv = new Vector3();
-const S = { id: -1, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, ward: 0, wardOn: false, wardT: 0, wards: [] as number[], healT: 0, healHp0: 0 };
+const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, ward: 0, wardOn: false, wardT: 0, wards: [] as number[], healT: 0, healHp0: 0 };
 
 export function resetBossMech(): void {
-  S.id = -1; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.ward = 0; S.wardOn = false; S.wardT = 0; S.wards.length = 0; S.healT = 0;
+  S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.ward = 0; S.wardOn = false; S.wardT = 0; S.wards.length = 0; S.healT = 0;
   for (const s of strikes) s.on = false;
 }
 
@@ -158,6 +160,18 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
       events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: 0x8ab8ff });
       events.emit('floatText', { pos: e.pos, text: 'WARD BROKEN', color: 0x8ab8ff, scale: 1.3, dy: 5 });
       e.staggerT = Math.max(e.staggerT, 2.5);   // staggered: a window to punish
+    }
+  }
+
+  // barrier: a periodic absorb shield (Malakar's final fight has its own in bosses.ts)
+  if (!S.wardOn && !world.boss.final) {
+    S.barrierCd -= dt;
+    if (S.barrierCd <= 0 && e.shield <= 0) {
+      const ph = Math.min(2, e.phase | 0);
+      S.barrierCd = BARRIER_CD[ph];
+      e.shield = e.maxHp * BARRIER_HP[ph];
+      events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 2.5, color: 0x93c5fd });
+      events.emit('floatText', { pos: e.pos, text: 'BARRIER', color: 0x93c5fd, scale: 1.1, dy: 5 });
     }
   }
 

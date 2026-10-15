@@ -41,8 +41,8 @@ import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
-import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS } from '../wanderers';
-import { dialogueOpen, advanceDialogue, acceptOffer } from './dialogue';
+import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper } from '../wanderers';
+import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
 
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
@@ -112,6 +112,17 @@ let crystalAt = -1;
 export const bossKeyState = { has: false };
 // final fight (after the Void boss) and endless tower state
 let finalFight = false, endingDone = false;
+/** Malakar is fought twice: stage 1 (slower, fewer adds); slain, he rises again as stage 2 (stronger, new attacks). */
+let finalStage = 1;
+/** The finale after stage 2 falls: 1 his last words, 2 his essence collapses and bursts, 3 a portal of light opens,
+ *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
+export const finale = { step: 0, t: 0, x: 0, z: 0, blasts: 0 };
+const MALAKAR_LAST_WORDS = [
+  'Hah... so the village guard makes the Undying bleed.',
+  'Do you know what I saw in the Font, little hero? A world that forgets. Kings, oaths, whole kingdoms... ash in a hundred years.',
+  'I only wanted to keep the light from fading. To hold it. Forever.',
+  'Take it, then. Carry it home. And when it burns you hollow... remember me.',
+];
 let towerFloor = 0;
 export const towerState = { floor: 0 };
 /** Camp room layout (storage chest pile left of the fire, training post right), set on room entry. */
@@ -213,8 +224,10 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (idx === 0) bossKeyState.has = false;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
-  if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS') p = { type: 'CAMP', reward: 'NONE' };
+  if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS' && !p.epilogue) p = { type: 'CAMP', reward: 'NONE' };
   biome = b; index = idx; plan = p;
+  if (finalFight && p.type === 'BOSS') { finalStage = 1; finale.step = 0; }
+  if (!finalFight) world.boss.final = false;
   depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
@@ -259,7 +272,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -501,7 +514,11 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
   hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
-  hud.final = finalFight && kind === 'BOSS_LICH'; hud.stage = 1; hud.shieldCd = 14;   // Malakar: two stages, periodic shield (bosses.ts)
+  hud.final = finalFight && kind === 'BOSS_LICH'; hud.stage = hud.final ? finalStage : 1; hud.shieldCd = 14;   // Malakar: two fights, periodic shield (bosses.ts)
+  if (hud.final && finalStage === 2) {   // risen again: bigger, tougher, angrier
+    e.maxHp = Math.round(e.maxHp * 1.25); e.hp = e.maxHp; e.scale *= 1.15; e.radius *= 1.1; e.projectileDamage *= 1.2; e.contactDamage *= 1.2;
+    hud.hp = e.hp; hud.maxHp = e.maxHp; hud.title = 'Unbound';
+  }
   events.emit('bossSpawn', { name: names.name, title: names.title });
   events.emit('shake', { amount: 0.5 });
   useGameStore.getState().addNotification(`${names.name}, the ${names.title}, approaches!`, '#ef4444', 'BOSS');
@@ -651,9 +668,41 @@ function showPortals(): void {
   for (let i = 0; i < r.portals.length; i++) if (i < choices.length) { const po = r.portals[i]; po.active = true; po.t = 0; }
 }
 
+/** Malakar's finale (after his last words): his essence collapses and bursts, then a portal of light opens. */
+function tickFinale(dt: number): void {
+  finale.t += dt;
+  if (finale.step === 1 && !dialogueOpen() && finale.t > 1) { finale.step = 2; finale.t = 0; }   // (closed without the button)
+  if (finale.step === 2) {
+    // three bursts at 1.6 / 2.1 / 2.6 s, the last one the biggest
+    const due = finale.t >= 2.6 ? 3 : finale.t >= 2.1 ? 2 : finale.t >= 1.6 ? 1 : 0;
+    while (finale.blasts < due) {
+      finale.blasts++;
+      const big = finale.blasts === 3;
+      events.emit('explosion', { pos: at(finale.x, finale.z).clone(), radius: big ? 9 : 4, color: big ? 0xe9d5ff : 0x7c3aed });
+      events.emit('shockwave', { pos: at(finale.x, finale.z).clone(), radius: big ? 34 : 12, color: big ? 0xffffff : 0xa855f7 });
+      events.emit('shake', { amount: big ? 1 : 0.4 });
+    }
+    if (finale.t >= 3.6) {
+      finale.step = 3; finale.t = 0;
+      const r = world.room, po = r.portals[0];
+      for (const q2 of r.portals) q2.active = false;
+      po.active = true; po.big = true; po.t = 0; po.x = finale.x; po.z = finale.z; po.plan = { type: 'CAMP', reward: 'NONE', epilogue: true };
+      events.emit('portalsOpen', {});
+      useGameStore.getState().addNotification('Where Malakar stood, a door of pure light opens.', '#fff3c4', 'SYSTEM');
+    }
+  }
+}
+
 function onCleared(): void {
   const d = dd(), st = useGameStore.getState();
   world.boss.active = false;
+  if (plan.epilogue) {   // the quiet clearing: no portals or rewards, only the Keeper of the Font waiting
+    d.phase = 'CLEARED'; d.phaseT = 0;
+    const [cx, cz] = stationPos(world.room.radius);
+    placeKeeper(cx, cz);
+    st.addNotification('Birdsong. Warm light. Someone is waiting for you in the clearing.', '#fff3c4', 'SYSTEM');
+    return;
+  }
   d.phase = 'CLEARED'; d.phaseT = 0;
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
@@ -734,12 +783,25 @@ function onBossCleared(): void {
     useGameStore.getState().addNotification('The Void Herald falls!', '#fbbf24', 'BOSS');
     bossRewards(); onCleared(); return;
   }
-  if (finalFight) {   // Malakar falls: the ending
-    d.phase = 'BIOME_DONE'; d.phaseT = 0; endingDone = true;
+  if (finalFight) {
+    const body = d.bossId >= 0 ? world.enemies[d.bossId] : null;
+    const bx = body ? body.pos.x : 0, bz = body ? body.pos.z : 0;
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
+    if (finalStage === 1) {   // he rises again: the second fight
+      finalStage = 2;
+      bossSpawned = false; bossDeadT = -1; bossPending = true; roomT = -2.6;   // (the new marker appears ~4 s later)
+      useGameStore.getState().addNotification('"You think death binds me? I AM the Void!" Malakar rises again!', '#c084fc', 'BOSS');
+      events.emit('floatText', { pos: at(bx, bz).clone(), text: 'MALAKAR RISES AGAIN', color: 0xc084fc, scale: 1.4, dy: 3 });
+      events.emit('shockwave', { pos: at(bx, bz).clone(), radius: 18, color: 0x7c3aed });
+      events.emit('shake', { amount: 0.8 });
+      return;
+    }
+    // Malakar falls for good: his last words, then the finale (tickFinale)
+    d.phase = 'BIOME_DONE'; d.phaseT = 0; endingDone = true;
     vacuumT = VACUUM_AFTER; vacuumTick = 0;
     world.run.bossKills = Math.max(world.run.bossKills, 1);
-    events.emit('gameEnding', {});
+    finale.step = 1; finale.t = 0; finale.x = bx; finale.z = bz; finale.blasts = 0;
+    openCustomDialogue('Malakar the Undying', 'his last words', '#c084fc', MALAKAR_LAST_WORDS, { label: 'Let him fade', accept: () => { if (finale.step === 1) { finale.step = 2; finale.t = 0; } } });
     return;
   }
   d.phase = 'BIOME_DONE'; d.phaseT = 0;
@@ -782,7 +844,7 @@ function scanNearby(): void {
     }
     if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
       const po = r.portals[0];
-      if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', nextBiomeLabel(), 20, dist); }
+      if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', finale.step === 3 ? 'The light beyond' : nextBiomeLabel(), 20, dist); }
     }
     // harvest nodes: hold E next to one
     const cr = world.crates;
@@ -805,7 +867,7 @@ function scanNearby(): void {
     }
     if (wander.on) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
     if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
-    if (r.plan.type === 'CAMP') {
+    if (r.plan.type === 'CAMP' && !r.plan.epilogue) {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
       const dt2 = q(campPos.trainer[0], campPos.trainer[1]); if (dt2 < 12) pushNearby('Train', 'Training Post', 31, dt2);
     }
@@ -862,7 +924,11 @@ export function interactRoom(it: Interactable): void {
   }
   if (it.node === 20) {
     const po = r.portals[0];
-    if (po.active && po.big && d.phase === 'BIOME_DONE') { po.active = false; po.big = false; descend(); }
+    if (po.active && po.big && d.phase === 'BIOME_DONE') {
+      po.active = false; po.big = false;
+      if (finale.step === 3) { finale.step = 4; finalFight = false; beginLeave({ type: 'CAMP', reward: 'NONE', epilogue: true }, 0, 1); }
+      else descend();
+    }
     return;
   }
   const s = r.station;
@@ -938,6 +1004,7 @@ export function updateDirector(dt: number): void {
     if (vacuumT > 0) { vacuumT -= dt; vacuumTick = 0; }
     else { vacuumTick -= dt; if (vacuumTick <= 0) { vacuumTick = 0.3; vacuumLoot(); } }
   }
+  if (d.phase === 'BIOME_DONE' && finale.step > 0 && finale.step < 4) tickFinale(dt);
   // after a boss: one big portal to the next biome opens (no return-to-town choice); walking in descends
   if (d.phase === 'BIOME_DONE' && st.status === GameStatus.PLAYING) {
     const pl = world.player, po = r.portals[0];

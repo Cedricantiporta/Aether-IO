@@ -49,6 +49,16 @@ export const WANDERERS: readonly WandererDef[] = [
       5: ['I followed a light into the Void and could not find the way back. If you reach Malakar, end it for all of us.', 'Take these. I will not be needing them.'],
     },
     offer: 'Take the supplies' },
+  // the epilogue (never met at random): the light Malakar stole, waiting in a forest clearing after the final fight
+  { id: 'KEEPER', name: 'Aelia', title: 'Keeper of the Font', model: 'WIZARD', tint: '#ffffff', accent: '#fff3c4', biomes: [],
+    lines: { 0: [
+      'You came through. I knew you would; I have watched you since the night the bells first rang.',
+      'I am Aelia. For a hundred years I was only light in a jar, the warmth Malakar stole from the Font.',
+      'When he fell, the jar broke. The Meadow is waking. The rivers remember their songs.',
+      'He told you the light would burn you hollow. He was wrong. It only burns those who try to keep it.',
+      'Go home, guard. Your village is waiting, and the bells are ringing for you.',
+    ] },
+    offer: 'Return home' },
 ];
 
 /** The wanderer in the current room (render reads it). */
@@ -89,10 +99,19 @@ function linesFor(d: WandererDef): string[] {
   return (d.lines[b] ?? d.lines[0]).slice();
 }
 
+/** The epilogue: Aelia stands in the clearing (director.onCleared of the epilogue room). */
+export function placeKeeper(x: number, z: number): void {
+  wander.on = true; wander.def = WANDERERS.findIndex((w) => w.id === 'KEEPER'); wander.x = x; wander.z = z; wander.used = false; wander.ver++;
+}
+
 /** E at the wanderer: their story, then the offer (once). */
 export function talkWanderer(): void {
   if (!wander.on) return;
   const d = WANDERERS[wander.def], st = useGameStore.getState();
+  if (d.id === 'KEEPER') {   // her words, then the ending slides and home
+    openCustomDialogue(d.name, d.title, d.accent, d.lines[0].slice(), { label: d.offer, accept: () => { if (!wander.used) { wander.used = true; events.emit('gameEnding', {}); } } });
+    return;
+  }
   const lines = linesFor(d);
   if (wander.used) { openCustomDialogue(d.name, d.title, d.accent, ['Safe travels. May we meet again on a kinder road.']); return; }
   const b = world.room.biome % BIOMES.length;

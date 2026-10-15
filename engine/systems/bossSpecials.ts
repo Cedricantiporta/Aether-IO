@@ -122,7 +122,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
         if (e.spStep === 0 && t >= 0.8) {
           e.spStep = 1;
           const s2 = world.boss.stage === 2;
-          spawnIllusions(e, s2 ? 2 : 1, s2 ? 20 : 10);
+          spawnIllusions(e, s2 ? 2 : 1, s2 ? 40 : 20);   // (1 for 20 s in the first fight, 2 for 40 s once he has risen)
           events.emit('trick', { pos: e.pos.clone(), kind: 'CLONES', radius: 6 });
         }
         if (t >= 1.2) e.spKind = 0;

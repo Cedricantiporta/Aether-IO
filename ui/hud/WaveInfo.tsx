@@ -19,6 +19,7 @@ function subText(): string {
   if (d.phase === 'LEAVING') return '';
   if (t === 'GATEKEEPER') return gateState.keys >= GATE_KEYS_NEEDED ? `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · the Dark Castle is open` : `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · enter a gate (E)`;
   if (d.phase === 'CLEARED') {
+    if (r.plan.epilogue) return 'Speak with Aelia (E)';
     if (r.plan.gate !== undefined) return `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · press E at the portal`;
     if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
     if (t === 'TREASURE' && r.station.kind === 'CHEST' && !r.station.used) return 'Open the chest, then pick an exit';

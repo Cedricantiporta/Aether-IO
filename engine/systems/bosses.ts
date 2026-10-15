@@ -228,24 +228,15 @@ function lichPosition(e: Enemy, ux: number, uz: number, dist: number, mul: numbe
   }
 }
 
-/** Malakar (final fight) stage 2: faster patterns, more and bigger, faster orbs. */
+/** Malakar (final fight) stage 2 (he rose again): faster patterns, more / bigger / faster orbs, Soul Rain and the Void Cross. */
 const st2 = (): boolean => world.boss.final && world.boss.stage === 2;
+/** Stage 1 of the final fight: slower patterns and orbs, fewer adds. */
+const st1 = (): boolean => world.boss.final && world.boss.stage === 1;
+const RAIN = 4, CROSS = 5;
 
-/** Malakar in the final fight: stage 2 below half HP, and a periodic damage-absorbing shield. */
+/** Malakar in the final fight: a periodic damage-absorbing shield (both fights). */
 function malakar(e: Enemy, dt: number): void {
   const b = world.boss;
-  if (b.stage === 1 && e.hp <= e.maxHp * 0.5) {
-    b.stage = 2;
-    e.scale *= 1.15; e.radius *= 1.1;
-    e.shield = e.maxHp * 0.1; b.shieldCd = 12;
-    e.attackCd = Math.min(e.attackCd, 0.5);
-    events.emit('bossPhase', { phase: 2 });
-    events.emit('shockwave', { pos: e.pos.clone(), radius: 16, color: 0x7c3aed });
-    events.emit('shake', { amount: 0.9 });
-    events.emit('floatText', { pos: e.pos, text: 'STAGE 2', color: 0xc084fc, scale: 1.5, dy: 5 });
-    useGameStore.getState().addNotification('Malakar casts off his mortal shell: STAGE 2!', '#c084fc', 'BOSS');
-    spawnIllusions(e, 2, 20);
-  }
   if (e.state === 'DYING') return;
   b.shieldCd -= dt;
   if (b.shieldCd <= 0 && e.shield <= 0) {
@@ -270,7 +261,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
       lichPosition(e, ux, uz, dist, 1);
       if (dist < 6) { startLichPattern(e, BLINK); return; } // never let the player hug the lich
       if (e.attackCd <= 0) {
-        let next = (e.pattern + 1) % 4;
+        let next = (e.pattern + 1) % (st2() ? 6 : 4);   // stage 2 adds Soul Rain + the Void Cross
         if (next === SUMMON && world.director.aliveCount >= 14) next = SPIRAL;
         startLichPattern(e, next);
       }
@@ -297,7 +288,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
       lichPosition(e, ux, uz, dist, 0.4);
       const rec = e.pattern === BLINK ? 0.2 : 0.8;
       if (e.stateT >= rec) {
-        e.attackCd = e.pattern === BLINK ? 0.3 : LICH_CD[e.phase] * (st2() ? 0.65 : 1);
+        e.attackCd = e.pattern === BLINK ? 0.3 : LICH_CD[e.phase] * (st2() ? 0.65 : st1() ? 1.35 : 1);
         enter(e, 'CHASE');
       }
       return;
@@ -340,7 +331,7 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
         for (let k = 0; k < arms; k++) {
           const a = e.angle + (k * Math.PI * 2) / arms;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 8.5 * (s2 ? 1.35 : 1), e.projectileDamage * 0.6, { life: 6, radius: s2 ? 0.85 : 0.5 });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 8.5 * (s2 ? 1.35 : st1() ? 0.85 : 1), e.projectileDamage * 0.6, { life: 6, radius: s2 ? 0.85 : 0.5 });
         }
       }
       if (e.stateT >= 3.4 + 0.4 * e.phase) enter(e, 'RECOVER');
@@ -356,7 +347,7 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
         for (let i = -wide; i <= wide; i++) {
           const a = base + i * 0.26;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 13 * (s2 ? 1.35 : 1), e.projectileDamage * 0.9, { life: 4, radius: s2 ? 0.85 : 0.5 });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 13 * (s2 ? 1.35 : st1() ? 0.85 : 1), e.projectileDamage * 0.9, { life: 4, radius: s2 ? 0.85 : 0.5 });
         }
         e.patternT++;
       }
@@ -367,12 +358,38 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       stop(e);
       if (e.stateT >= BLINK_IN) enter(e, 'RECOVER');
       return;
+    case RAIN: {   // Soul Rain (stage 2): 9 soulfire circles walk onto the hero, one every 0.16 s
+      lichPosition(e, ux, uz, dist, 0.3);
+      const pl = world.player;
+      while (e.patternT < 9 && e.stateT >= e.patternT * 0.16) {
+        const lead = e.patternT % 3 === 0 ? 0 : 2.5;
+        const ox = (Math.random() - 0.5) * 6 + pl.vel.x * 0.25 * lead, oz = (Math.random() - 0.5) * 6 + pl.vel.z * 0.25 * lead;
+        spawnTelegraphCircle(pl.pos.x + ox, pl.pos.z + oz, 3.4, 1.0, e.projectileDamage * 1.3, 0xa855f7);
+        e.patternT++;
+      }
+      if (e.patternT >= 9 && e.stateT >= 1.8) enter(e, 'RECOVER');
+      return;
+    }
+    case CROSS: {   // the Void Cross (stage 2): 4 long beams from Malakar, then 4 more turned 45 degrees
+      stop(e);
+      const fire = (off: number) => {
+        for (let k = 0; k < 4; k++) {
+          const a = e.angle + off + (k * Math.PI) / 2;
+          const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 1.1, 0x7c3aed);
+          if (z) z.damage = e.projectileDamage * 1.6;
+        }
+      };
+      if (e.patternT === 0) { e.patternT = 1; fire(0); }
+      if (e.patternT === 1 && e.stateT >= 0.7) { e.patternT = 2; fire(Math.PI / 4); }
+      if (e.stateT >= 2.0) enter(e, 'RECOVER');
+      return;
+    }
     default: { // SUMMON
       stop(e);
       if (e.patternT === 0) {
         e.patternT = 1;
         // dark mages (cultists); every third one an elite lich acolyte
-        const n = 3 + e.phase + (st2() ? 1 : 0);
+        const n = st1() ? 2 + e.phase : 3 + e.phase + (st2() ? 1 : 0);
         const base = Math.random() * Math.PI * 2;
         for (let i = 0; i < n; i++) {
           const a = base + (i / n) * Math.PI * 2;

@@ -38,8 +38,8 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
   return 'PLAIN';
 }
 
-/** Boss arena radius per biome (Gorath 30 ... the Void Herald / Malakar 42). */
-const BOSS_ARENA_R = [30, 33, 35, 37, 40, 42];
+/** Boss arena radius per biome (Gorath 34 ... the Void Herald / Malakar 50): big bosses need room to move. */
+const BOSS_ARENA_R = [34, 38, 42, 46, 48, 50];
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger; BIG stages ~1.4x. */
 export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): number {
