@@ -247,6 +247,11 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.4 * k));
         out.lerp(tmpC.set('#1a0c08'), sstep(2.6, 4.2, u) * 0.85);
       }
+      // rolling hills rising beyond the outer prop ring (owner: more elevation; not in the castle halls, the void or over the lava sea)
+      if (!lavaSea && style !== 'MARBLE' && style !== 'VOID') {
+        const k = sstep(7, 22, u);
+        if (k > 0) pos.setY(i, pos.getY(i) + k * (1.6 + 5.5 * fbm(x * 0.045 + so, z * 0.045 - so, 3)) * (style === 'SAND' ? 0.8 : 1));
+      }
       // floor beyond the walls (marble halls: dark interior void)
       const e = sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
