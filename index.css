@@ -692,6 +692,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .forge-btn.on:not(:disabled) { color: #3b1f04; text-shadow: 0 1px 0 rgba(255, 245, 190, .8); background: linear-gradient(#ffe48a, #e9b949 48%, #b9812e 52%, #d9a23a);
   box-shadow: inset 0 0 0 2px rgba(255, 250, 210, .8), 0 4px 0 #5a3a08, 0 0 18px rgba(233, 185, 73, .5); }
 .forge-btn.on:not(:disabled):hover { filter: brightness(1.12); }
+.forge-btn:disabled { opacity: .55; cursor: not-allowed; }   /* (missing materials / gold: just a greyed-out button, the reason sits in its tooltip) */
 .forge-hint { margin-top: .6rem; font-size: .72rem; color: var(--text-dim); text-align: center; }
 
 /* ---- countdown + wave plaque */

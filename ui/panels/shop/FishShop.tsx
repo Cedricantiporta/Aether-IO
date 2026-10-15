@@ -49,7 +49,7 @@ export const FishShopTab: React.FC = () => {
           {next ? (
             <button className="forge-btn on mt-3" disabled={gold < next.price} data-testid="buy-rod"
               onClick={() => ask({ title: `Buy the ${next.name}?`, body: `${next.desc} (${next.price.toLocaleString()} G)`, confirmLabel: 'Buy', onConfirm: () => { buyRod(); } })}>
-              <Fish size={18} /> {gold < next.price ? `${next.name} · ${next.price.toLocaleString()} G (not enough gold)` : `Upgrade to ${next.name} · ${next.price.toLocaleString()} G`}
+              <Fish size={18} /> {`Upgrade to ${next.name} · ${next.price.toLocaleString()} G`}
             </button>
           ) : <div className="rpg-label !text-[.6rem] mt-2 opacity-80">The finest rod on the lake.</div>}
         </div>

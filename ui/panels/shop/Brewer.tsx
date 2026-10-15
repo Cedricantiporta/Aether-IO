@@ -54,8 +54,8 @@ export const BrewerTab: React.FC = () => {
         </div>
         <div className="rpg-label mt-3 mb-1.5">Quantity</div>
         <QtyStepper value={q} max={maxQty} onChange={setQty} />
-        <button className="forge-btn on" disabled={!!missing} onClick={() => brew(sel, q)} data-testid="brew-btn">
-          <FlaskConical size={20} /> {missing || (q > 1 ? `Brew x${q}` : 'Brew')}
+        <button className={`forge-btn ${missing ? 'off' : 'on'}`} disabled={!!missing} title={missing || undefined} onClick={() => brew(sel, q)} data-testid="brew-btn">
+          <FlaskConical size={20} /> {q > 1 ? `Brew x${q}` : 'Brew'}
         </button>
       </div>
       <div>

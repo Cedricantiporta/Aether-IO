@@ -126,7 +126,7 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
             <div className="ws-sec">Quantity</div>
             <QtyStepper value={q} max={maxQty} onChange={setQty} />
-            <button className="forge-btn on ws-go" disabled={missing.length > 0} onClick={craft} data-testid="craft-btn"><Hammer size={20} /> {missing.length ? reason : q > 1 ? `Craft x${q}` : 'Craft'}</button>
+            <button className={`forge-btn ws-go ${missing.length ? 'off' : 'on'}`} disabled={missing.length > 0} title={reason || undefined} onClick={craft} data-testid="craft-btn"><Hammer size={20} /> {q > 1 ? `Craft x${q}` : 'Craft'}</button>
           </div>
         </div>
       </motion.div>
