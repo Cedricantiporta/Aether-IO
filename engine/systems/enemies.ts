@@ -363,9 +363,8 @@ export function onEnemyDeath(e: Enemy): void {
     const st = useGameStore.getState();
     const luck = 2 * (1 + d.wave * 0.02);
     dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
-    dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
     dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
-    const item = st.rollItemDrop(d.wave >= 25 ? 'LEGENDARY' : d.wave >= 15 ? 'EPIC' : 'RARE');
+    const item = st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE');
     if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
     if (e.kind === 'BANDIT' || e.kind === 'ZOMBIE') for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); } // Bandit Captain's strongbox (humanoids only)
   }

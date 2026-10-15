@@ -80,8 +80,12 @@ needed to see the new game).
 ## Done after handoff
 1. **Town rework** (compact ~60% town, spread-out functional buildings, old shop-style houses/stalls, well on grass, fence/post/lamp colliders, hero-scale NPCs, outskirts harvest nodes, gate signposts + banner + beacon): layout lives in `engine/townData.ts`. Verified by a collider/spawn/NPC-path check across seeds.
 
-
-- NOTE: the user asked to remove HP/MP potions, then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+- **Meadow layout (latest):** the Elixir Brewer hut sits top-left by the town wall (townData `BREWER_HUT` (-14, 45), west of
+  the road; must match constants SHOP_POSITIONS 'BREWER'); the wheat field `FARM` (18, 60) is east of the road next to the
+  barn (fence gap faces the road, cows graze just east of it).
+- **Drop nerf:** normal-kill trade-goods chance 0.1 -> 0.07; boss 2nd trade roll only 40%; mini/champion one MINI roll
+  (was 2); elite gear drop 0.25 -> 0.15, plain 0.015 -> 0.01; boss Legendary/Mythic gear odds ~halved, `rarityForDepth`
+  Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)

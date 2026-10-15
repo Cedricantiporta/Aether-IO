@@ -43,7 +43,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'FORTUNE', position: [-12.5, 0, 1.5], color: '#a46bff' },   // fortune teller (summons): right beside the plaza
     { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
     { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },
-    { type: 'BREWER', position: [11, 0, 56], color: '#5fd38a', rot: -Math.PI / 2 },   // Elixir Brewer: hut outside the gate, east of the road, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
+    { type: 'BREWER', position: [-14, 0, 45], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: hut outside the gate, top-left by the wall, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */
 export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffc94a', MYTHIC: '#ff6a5a' };

@@ -10,8 +10,8 @@
 //   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Skill Trainer (-10.5,-19) on the open paving west of
 //   the castle steps (in front of the dark-roofed house at (-19.5,-14))
 //   west of the plaza Fortune Teller (-12.5, 1.5) / Pet Stable (-21, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
-//   main road. Outside the gate: a wide meadow, the wheat field west of the road (FARM), the Elixir Brewer's hut east of
-//   the road (constants SHOP_POSITIONS 'BREWER'), the barn / coop clearing further east, the Adventure Portal at the road's end.
+//   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut top-left by the wall (constants SHOP_POSITIONS
+//   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Adventure Portal at the road's end.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
@@ -29,10 +29,10 @@ export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 81.5 } };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
-/** Fenced wheat field in front of the gate (outside the walls), west of the road (the gap in its fence faces the road). */
-export const FARM = { x: -17, z: 58, hw: 7, hd: 6 };
-/** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): east of the road, door facing it. */
-export const BREWER_HUT = { x: 11, z: 56, rot: -Math.PI / 2 };
+/** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
+export const FARM = { x: 18, z: 60, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
+/** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): top-left of the meadow by the town wall, west of the road, door facing it. */
+export const BREWER_HUT = { x: -14, z: 45, rot: Math.PI / 2 };
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 60 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 71.5 };   // back of the farm clearing, against the forest edge
@@ -137,8 +137,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 14.6, z1: 10, x2: 14.6, z2: 14.6, w: ROAD_W.branch },     // armor shop door
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: -10.5, z1: -6, x2: -10.5, z2: -16.6, w: ROAD_W.branch }, // skill trainer (west of the castle steps)
-  { x1: 0, z1: FARM.z, x2: FARM.x + FARM.hw - 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (west of the road)
-  { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x - 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (east of the road)
+  { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
+  { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x + 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (west of the road)
   { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
   { x1: 0, z1: 74, x2: 0, z2: 83, w: ROAD_W.main - 0.6 },       // the forest road on to the Adventure Portal
 ];
@@ -173,10 +173,10 @@ export const FENCES: [number, number, number, number][] = [
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   // front gardens
   [-18, 15, -18, 20], [18, 14.5, 18, 20],
-  // farm field south of the gate, west of the road (gap in the east side, facing the road)
+  // farm field south of the gate, east of the road (gap in the west side, facing the road)
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
-  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z + FARM.hd],
-  [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - 1.5], [FARM.x + FARM.hw, FARM.z + 1.5, FARM.x + FARM.hw, FARM.z + FARM.hd],
+  [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
+  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
@@ -228,7 +228,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
-  { x: -14, z: 45, s: 3.8, kind: 0 }, { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
+  { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
   { x: -6, z: 70, s: 3.4, kind: 1 }, { x: -31, z: 62, s: 3.9, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 16, z: 72, s: 3.5, kind: 0 }, { x: 24, z: 46, s: 3.4, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
@@ -555,8 +555,8 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   // farm (outside the gate): cows grazing by the barn, hens by the coop
-  { kind: 'COW', x: 27.5, z: 57, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 28, z: 64.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 29, z: 57, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 29.5, z: 64.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
   { kind: 'COW', x: 32, z: 70, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
   { kind: 'CHICKEN', x: COOP.x - 1.6, z: COOP.z + 3.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x + 1.8, z: COOP.z + 3.8, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
