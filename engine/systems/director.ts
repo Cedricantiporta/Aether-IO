@@ -44,6 +44,11 @@ import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gateP
 import type { HeroClass } from '../../types';
 import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper } from '../wanderers';
 import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
+// Daily Trial (dailyChallenge.ts): a short seeded tower-style climb; these hooks only apply while daily.on
+import { daily, dailyPlan, dailyBiome, dailyRoomSeed, dailyDepth, climbTitle, climbFloor, DAILY_FLOORS } from '../../dailyChallenge';
+import { dailyFloorCleared, tickDaily } from './dailyRun';
+// Endless Waves (endlessWaves.ts): one arena, wave after wave (towerFloor = the wave number); hooks only while waves.on
+import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd, WAVE_BREAK, WAVES_ARENA_R } from '../../endlessWaves';
 
 const FADE_SECONDS = 0.4;
 const FIRST_BURST_AT = 0.9;
@@ -134,8 +139,10 @@ export const towerState = { floor: 0 };
 /** Camp room layout (storage chest pile left of the fire, training post right), set on room entry. */
 export const campPos = { storage: [0, 0] as [number, number], trainer: [0, 0] as [number, number], fire: [0, 0] as [number, number] };   // read by the HUD
 const FINAL_BIOME = BIOMES.length - 1;
-const towerBiome = (f: number): number => Math.floor((f - 1) / 5) % BIOMES.length;
+const towerBiome = (f: number): number => (waves.on ? waveBiome(f) : daily.on ? dailyBiome() : Math.floor((f - 1) / 5) % BIOMES.length);
 function towerPlan(f: number): RoomPlan {
+  if (daily.on) return dailyPlan(f);   // Daily Trial: the day's seeded floor sequence
+  if (waves.on) return wavePlan(f);    // Endless Waves
   if (f % 10 === 0) return { type: 'BOSS', reward: 'NONE' };
   if (f % 5 === 0) return { type: Math.random() < 0.35 ? 'DUEL' : 'MINIBOSS', reward: 'ITEM' };   // some champion floors: a dark hero duel
   if (f % 3 === 0) return { type: 'ELITE', reward: f % 2 ? 'GEMS' : 'CARD' };
@@ -165,7 +172,7 @@ export function startRunRooms(): void {
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
   world.room.fade = 1;
-  if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), 0, towerPlan(1)); return; }
+  if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
   enterRoom(0, 0, firstPlan());
 }
 
@@ -235,13 +242,13 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (finalFight && p.type === 'BOSS') { finalStage = 1; finale.step = 0; }
   nextBossKind = '';
   if (!finalFight) world.boss.final = false;
-  depth = runInfo.mode === 'TOWER' ? 2 + Math.round(towerFloor * 1.5) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
+  depth = runInfo.mode === 'TOWER' ? (daily.on ? dailyDepth(towerFloor) : waves.on ? waveDepth(towerFloor) : 2 + Math.round(towerFloor * 1.5)) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
   clearTransient();
 
-  const seed = (Math.random() * 4294967296) >>> 0;
-  const R = runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);
+  const seed = daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
+  const R = waves.on ? WAVES_ARENA_R : runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);   // (Endless Waves: one boss-size arena)
   buildRoom(b, p.type, R, seed, idx);
   world.room.radius = R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
@@ -279,7 +286,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `Endless Tower · Floor ${towerFloor}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -380,7 +387,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const mods = runMods(useGameStore.getState().difficulty);
   elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
-  const tower = runInfo.mode === 'TOWER' ? 2 : 1;   // Endless Tower: twice the monsters per floor
+  const tower = runInfo.mode === 'TOWER' ? (daily.on ? 1.5 : waves.on ? waveCrowd(towerFloor) : 2) : 1;   // Endless Tower: twice the monsters per floor (Daily Trial: x1.5)
   let points = Math.min(waveBudget(depth) * mult * roomy * tower, 160 * tower) * mods.spawn;
   let guard = 0;
   while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60 * tower) {
@@ -411,7 +418,7 @@ function rollRoomSpawns(type: RoomType): void {
   const def = biomeOf(biome);
   const eliteN = (base: number, per: number) => Math.min(5, base + Math.floor(depth / per));
   switch (type) {
-    case 'COMBAT': rollPack(0.62, 0, depth < 3 ? 2 : 3); break;
+    case 'COMBAT': rollPack(0.62, waves.on ? waveElites(towerFloor) : 0, depth < 3 ? 2 : 3); break;
     case 'ELITE': rollPack(0.3, eliteN(2, 14), 2); break;
     case 'TREASURE': rollPack(0.4, 0, 2); break;
     case 'MINIBOSS': {
@@ -429,7 +436,7 @@ function rollRoomSpawns(type: RoomType): void {
       }
       break;
     }
-    case 'BOSS': bossPending = true; break;
+    case 'BOSS': bossPending = true; if (waves.on && towerFloor >= 20) rollPack(0.35, 1, 2); break;   // Endless Waves: adds join the boss from wave 20
     case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
       const own = useGameStore.getState().hero as HeroClass;
       duelCls = plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)];
@@ -650,6 +657,7 @@ function openPortals(): void {
   if (runInfo.mode === 'TOWER') {   // one way up
     const po = r.portals[0];
     for (const q of r.portals) q.active = false;
+    if (waves.on || (daily.on && towerFloor >= DAILY_FLOORS)) return;   // Endless Waves: no exits (the next wave comes to you)   // the Daily Trial's last floor: no way up (dailyRun ends the run)
     portalSlot(0, 1, r.radius, slot);
     choices.length = 0; choices.push(towerPlan(towerFloor + 1));
     po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[0]; po.big = false;
@@ -771,6 +779,8 @@ function tickFight(dt: number): void {
 }
 
 function towerCleared(): void {
+  if (daily.on) { dailyFloorCleared(towerFloor); return; }   // daily: no tower records / milestones
+  if (waves.on) { wavesCleared(); return; }
   const st = useGameStore.getState();
   world.run.towerFloor = towerFloor;
   const best = st.recordTowerFloor(towerFloor);
@@ -779,6 +789,36 @@ function towerCleared(): void {
   if (towerFloor % 10 === 0 && best) st.addNotification(`Floor ${towerFloor} milestone reached! Claim its reward at the Endless Tower.`, '#ffd24a', 'BOSS');
 }
 
+
+// ------------------------------------------------------------ endless waves --
+/** A wave is down: best wave + milestone (store), then a short breather before the next one. */
+function wavesCleared(): void {
+  const st = useGameStore.getState();
+  const best = st.recordWave(towerFloor);
+  waves.lastWave = towerFloor; if (best) waves.lastBest = towerFloor;
+  waves.breakT = WAVE_BREAK;
+  events.emit('floatText', { pos: world.player.pos, text: `WAVE ${towerFloor} CLEARED`, color: 0xffd24a, scale: 1.1, dy: 2.8 });
+}
+/** The next wave in the same arena (no rebuild: loot on the floor and the hero stay where they are). */
+function nextWave(): void {
+  waves.breakT = -1;
+  towerFloor++; towerState.floor = towerFloor;
+  const w = towerFloor, d = dd(), r = world.room, st = useGameStore.getState();
+  biome = waveBiome(w); index = waveIndex(w); plan = wavePlan(w); depth = waveDepth(w);
+  r.plan = plan;
+  world.boss.active = false; nextBossKind = '';
+  d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.bossId = -1;
+  roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
+  unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
+  groupIdx = 0; inGroup = 0; fixedN = 0;
+  for (const po of r.portals) po.active = false;
+  rollRoomSpawns(plan.type);
+  r.enemiesLeft = unitN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0);
+  st.setWave(depth);
+  const boss = plan.type === 'BOSS';
+  events.emit('waveStart', { wave: depth, boss, elite: plan.type === 'ELITE' });
+  events.emit('roomEnter', { biome: r.biome, index: r.index, type: plan.type, boss, name: `${climbTitle()} · ${climbFloor(w)}` });
+}
 
 function onBossCleared(): void {
   const d = dd();
@@ -1016,6 +1056,8 @@ export function updateDirector(dt: number): void {
   r.fade += Math.sign(r.fadeTarget - r.fade) * Math.min(Math.abs(r.fadeTarget - r.fade), dt / FADE_SECONDS);
 
   if (rewardT >= 0) { rewardT -= dt; if (rewardT < 0) grantReward(rewardKind, rewardBonus); }
+  tickDaily(dt);
+  if (waves.on && waves.breakT >= 0 && d.phase === 'CLEARED' && st.status === GameStatus.PLAYING) { waves.breakT -= dt; if (waves.breakT < 0) nextWave(); }
 
   switch (d.phase) {
     case 'FIGHT': tickFight(dt); break;

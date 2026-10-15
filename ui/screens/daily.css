@@ -1,0 +1,42 @@
+/* Daily Trial: Set Out tab, HUD badge, summary rows. Dark gunmetal + thin gold hairlines, sharp corners. */
+.so-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: .7rem; border: 1px solid rgba(201, 162, 83, .35); }
+.so-tab { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; padding: .45rem .3rem; font-family: var(--font-title); font-size: .64rem;
+  letter-spacing: .04em; text-transform: uppercase; color: #a89a80; white-space: nowrap; background: linear-gradient(180deg, rgba(28, 30, 34, .92), rgba(12, 13, 15, .95)); position: relative; }
+.so-tab + .so-tab { border-left: 1px solid rgba(201, 162, 83, .25); }
+.so-tab.on { color: #f6e6bd; background: linear-gradient(180deg, rgba(48, 44, 36, .95), rgba(18, 17, 14, .96)); box-shadow: inset 0 -2px 0 #e9c46a; }
+.so-tab .dot { position: absolute; top: .3rem; right: .45rem; width: .42rem; height: .42rem; background: #ff4a3a; box-shadow: 0 0 6px #ff4a3a; }
+
+.dc { display: flex; flex-direction: column; gap: .55rem; color: #e6dcc4; }
+.dc-head { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; border: 1px solid rgba(201, 162, 83, .45);
+  background: linear-gradient(135deg, rgba(36, 38, 44, .95), rgba(14, 15, 18, .97)); box-shadow: inset 0 0 18px rgba(233, 196, 106, .08); }
+.dc-head svg { color: #e9c46a; flex: none; }
+.dc-head b { font-family: var(--font-title); font-size: 1.05rem; color: #f6e6bd; letter-spacing: .04em; display: block; }
+.dc-head small { font-size: .66rem; color: #a99a7c; letter-spacing: .04em; }
+.dc-reset { margin-left: auto; text-align: right; font-size: .62rem; color: #a99a7c; line-height: 1.2; }
+.dc-reset span { display: block; font-family: var(--font-num, monospace); font-size: .85rem; color: #ffe69a; letter-spacing: .05em; }
+.dc-label { font-size: .6rem; letter-spacing: .14em; text-transform: uppercase; color: #9c8a64; margin: .1rem 0 -.2rem; }
+.dc-mods { display: flex; flex-direction: column; gap: .3rem; }
+.dc-mod { display: flex; align-items: center; gap: .55rem; padding: .38rem .55rem; background: rgba(10, 11, 13, .82); border: 1px solid rgba(255, 255, 255, .08);
+  border-left: 3px solid var(--c); font-size: .72rem; }
+.dc-mod b { color: var(--c); font-weight: 700; white-space: nowrap; min-width: 6.4rem; }
+.dc-mod span { color: #cbbf9f; }
+.dc-route { font-size: .7rem; color: #cbbf9f; padding: .3rem .55rem; background: rgba(10, 11, 13, .6); border: 1px solid rgba(255, 255, 255, .06); }
+.dc-route i { font-style: normal; color: #f6e6bd; }
+.dc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .3rem; }
+.dc-stat { padding: .4rem .5rem; background: rgba(10, 11, 13, .82); border: 1px solid rgba(201, 162, 83, .22); text-align: center; }
+.dc-stat em { display: block; font-style: normal; font-size: .56rem; letter-spacing: .12em; text-transform: uppercase; color: #9c8a64; }
+.dc-stat b { font-size: 1rem; color: #ffe69a; font-family: var(--font-title); }
+.dc-reward { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .8rem; padding: .45rem .6rem; border: 1px solid rgba(201, 162, 83, .35);
+  background: linear-gradient(90deg, rgba(54, 44, 20, .55), rgba(14, 13, 10, .85)); font-size: .74rem; }
+.dc-reward span { display: inline-flex; align-items: center; gap: .25rem; color: #f1e3bf; }
+.dc-reward .done { color: #9be86a; font-weight: 700; letter-spacing: .04em; }
+.dc-reward .streak { color: #ffb347; margin-left: auto; font-size: .66rem; }
+.dc-note { font-size: .64rem; color: #8f826a; text-align: center; }
+
+/* in-run HUD badge (under the room plaque) */
+.dc-badge { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .3rem; max-width: min(30rem, 92vw); pointer-events: none; }
+.dc-badge .t { display: inline-flex; align-items: center; gap: .3rem; font-family: var(--font-title); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+  color: #ffe69a; padding: .16rem .5rem; background: rgba(8, 9, 11, .72); border: 1px solid rgba(233, 196, 106, .5); text-shadow: 0 1px 2px #000; }
+.dc-badge .m { font-size: .64rem; font-weight: 700; color: var(--c); padding: .14rem .45rem; background: rgba(8, 9, 11, .66); border: 1px solid rgba(255, 255, 255, .1);
+  border-left: 2px solid var(--c); text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.dc-badge .clock { font-family: var(--font-num, monospace); color: #e8dcc0; font-size: .68rem; padding: .14rem .4rem; background: rgba(8, 9, 11, .66); border: 1px solid rgba(255, 255, 255, .1); }

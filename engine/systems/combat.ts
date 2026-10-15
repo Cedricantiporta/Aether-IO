@@ -15,6 +15,7 @@ import { comboMul, registerHit } from './combo';
 import { useGameStore } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo } from '../runMods';
+import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup } from './pickups';
 import { onEnemyDeath, crabArmor, shieldBlock } from './enemies';
@@ -343,6 +344,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (e.boss && bossWarded(e)) { if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
   if (!o.dot && e.kind === 'SHIELDBEARER' && shieldBlock(e)) return;   // braced shield: frontal hits deal 0 (BLOCKED)
   if (!(amount > 0)) return;
+  amount *= dailyMods.dealt;   // Daily Trial: Glass Cannon
   if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)
 
   let dealt = amount;
@@ -480,6 +482,7 @@ export function healPlayer(amount: number): void {
   if (!p.alive || amount <= 0) return;
   amount *= runInfo.ascension >= 4 ? runMods(useGameStore.getState().difficulty).heal : 1;   // Ascension 4: weaker healing
   amount *= world.roomEvt.twist === 'CURSED' && world.director.phase === 'FIGHT' ? 0.35 : 1;   // Cursed Ground twist
+  amount *= dailyMods.heal;   // Daily Trial: Bloodthirst
   const max = useGameStore.getState().stats.maxHealth;
   const before = p.hp;
   p.hp = Math.min(max, p.hp + amount);
@@ -574,7 +577,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
-  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone);
+  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone * dailyMods.taken);   // (dailyMods.taken: Daily Trial Glass Cannon)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);

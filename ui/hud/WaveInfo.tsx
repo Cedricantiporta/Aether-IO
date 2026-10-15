@@ -8,6 +8,8 @@ import { SkullGlyph } from '../components/SkillIcons';
 import { ROOMS_PER_BIOME, BIOMES, BOSS_INDEX, PREBOSS_INDEX, biomeOf, loopOf, shownDepth } from '../../engine/roomDefs';
 import { bossKeyState, descend, finishRunVictory, towerState } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
+import { climbTitle, climbFloor, daily } from '../../dailyChallenge';
+import { waves } from '../../endlessWaves';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { GATES, GATE_KEYS_NEEDED, gateState } from '../../engine/gates';
@@ -19,6 +21,8 @@ function subText(): string {
   if (d.phase === 'LEAVING') return '';
   if (t === 'GATEKEEPER') return gateState.keys >= GATE_KEYS_NEEDED ? `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · the Dark Castle is open` : `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · enter a gate (E)`;
   if (d.phase === 'CLEARED') {
+    if (daily.on && daily.result) return `Trial complete · Score ${daily.result.score.toLocaleString()}`;
+    if (waves.on) return waves.breakT >= 0 ? `Wave cleared · next wave in ${Math.ceil(waves.breakT)}s` : 'Wave cleared';
     if (r.plan.epilogue) return 'Speak with Aelia (E)';
     if (r.plan.gate !== undefined) return `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · press E at the portal`;
     if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
@@ -53,8 +57,8 @@ export const RoomPlaque: React.FC = () => {
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
       const gname = r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
-      if (name.current) name.current.textContent = tower ? 'Endless Tower' : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
-      if (depth.current) depth.current.textContent = tower ? `Floor ${towerState.floor}` : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
+      if (name.current) name.current.textContent = tower ? climbTitle() : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
+      if (depth.current) depth.current.textContent = tower ? climbFloor(towerState.floor) : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
       if (sub.current) sub.current.textContent = text + (bossKeyState.has && r.plan.type !== 'BOSS' ? '  ·  Boss Key ✓' : '');
     }
     const done = d.phase === 'CLEARED' || d.phase === 'BIOME_DONE';

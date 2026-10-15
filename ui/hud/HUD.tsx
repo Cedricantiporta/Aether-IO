@@ -13,6 +13,7 @@ import { UltOverlay } from './UltOverlay';
 import { ComboMeter } from './ComboMeter';
 import { QuestTracker } from './QuestTracker';
 import { BlindOverlay } from './BlindOverlay';
+import { DailyBadge } from './DailyBadge';
 import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
 
@@ -32,6 +33,7 @@ export const HUD: React.FC = () => {
     {/* top-centre */}
     <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
       <div className="pe"><RoomPlaque /></div>
+      <DailyBadge />
       <ComboMeter touch={device.touch} />
     </div>
     {/* the target plate floats over the targeted enemy (screen anchor from CameraRig) */}

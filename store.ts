@@ -15,6 +15,8 @@ import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
+import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
+import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
 import { create } from 'zustand';
 import {
   GameStatus, PlayerStats, Upgrade, Item, SkillLevels, Rarity, HeroClass, ItemType,
@@ -501,11 +503,15 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
 const DIFFICULTIES: Difficulty[] = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
 
 // ---- ending / ascension / endless tower records
+const ALL_HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => ({
   endings: Math.max(0, num(p?.endings, 0)),
   ascensionMax: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascensionMax, 0))),
   ascension: Math.max(0, Math.min(ASCENSION_MAX, num(p?.ascension, 0))),
   towerBest: { ARCHER: num(p?.towerBest?.ARCHER, 0), WIZARD: num(p?.towerBest?.WIZARD, 0), BARBARIAN: num(p?.towerBest?.BARBARIAN, 0), KNIGHT: num(p?.towerBest?.KNIGHT, 0), NECROMANCER: num(p?.towerBest?.NECROMANCER, 0) },
+  daily: sanitizeDaily(p?.daily),   // Daily Trial: today's best, streak, reward claimed
+  wavesBest: Object.fromEntries(ALL_HEROES.map((h) => [h, Math.max(0, num(p?.wavesBest?.[h], 0))])) as Record<HeroClass, number>,   // Endless Waves best wave per class
+  wavesClaimed: Object.fromEntries(ALL_HEROES.map((h) => [h, Array.isArray(p?.wavesClaimed?.[h]) ? (p!.wavesClaimed![h] as unknown[]).map(Number).filter((n) => (WAVE_MILESTONES as readonly number[]).includes(n)) : []])) as Record<HeroClass, number[]>,
   towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
 });
 
@@ -1118,6 +1124,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ----------------------------------------------------------- items --
     // ---- run modes: adventure (+ Ascension) / endless tower
     startMode: (mode: RunMode) => {
+      disarmDaily(); disarmWaves();
       runInfo.mode = mode;
       set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
@@ -1142,6 +1149,52 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Floor ${floor} reward claimed!`, '#ffd24a', 'SYSTEM');
       feedReward({ items, gems });
       return true;
+    },
+    // ---- Daily Trial (dailyChallenge.ts): a seeded tower-style run; rewards once per day, retries chase the best score
+    startDaily: () => {
+      const today = dayKey(), p = get().progress, d = p.daily;
+      disarmWaves(); armDaily(dailyFor(today));
+      runInfo.mode = 'TOWER'; runInfo.ascension = 0;
+      set({ difficulty: 'NORMAL', progress: { ...p, daily: d.day === today ? { ...d, tries: d.tries + 1 } : { ...d, day: today, best: 0, tries: 1 } } });   // same rules for everyone
+      get().startGame();
+    },
+    completeDaily: (r) => {
+      const s = get(), p = s.progress, d = p.daily, day = r.day;
+      const prevBest = d.day === day ? d.best : 0;
+      const first = d.claimed !== day;
+      const streak = first ? (d.lastDone === prevDay(day) ? d.streak + 1 : d.lastDone === day ? d.streak : 1) : d.streak;
+      const daily = { ...d, day, best: Math.max(prevBest, r.score), tries: d.day === day ? d.tries : 1, claimed: day, lastDone: first ? day : d.lastDone, streak, bestEver: Math.max(d.bestEver, r.score) };
+      set({ progress: { ...p, daily } });
+      if (first) {
+        const rw = dailyReward(streak), now = get();
+        set({ gold: now.gold + rw.gold, gems: now.gems + rw.gems, materials: { ...now.materials, [rw.shardRarity]: now.materials[rw.shardRarity] + rw.shards, ...(rw.bonusShards ? { [rw.bonusRarity]: now.materials[rw.bonusRarity] + rw.bonusShards } : {}) } });
+        notify(`Daily Trial reward${streak > 1 ? ` · ${streak}-day streak` : ''}!`, '#ffd24a', 'SYSTEM');
+        feedReward({ gold: rw.gold, gems: rw.gems, shards: rw.shards, shardRarity: rw.shardRarity });
+        if (rw.bonusShards) feedReward({ shards: rw.bonusShards, shardRarity: rw.bonusRarity });
+      }
+      return { rewarded: first, newBest: r.score > prevBest };
+    },
+    // ---- Endless Waves (endlessWaves.ts): one arena, wave after wave until death
+    startWaves: () => {
+      disarmDaily(); armWaves();
+      runInfo.mode = 'TOWER'; runInfo.ascension = 0;
+      set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });
+      get().startGame();
+    },
+    recordWave: (wave) => {
+      const s = get(), p = s.progress, best = p.wavesBest[s.hero] ?? 0, have = p.wavesClaimed[s.hero] ?? [];
+      const m = waveMilestone(wave), grant = !!m && !have.includes(wave);
+      const progress: RunProgress = { ...p,
+        ...(wave > best ? { wavesBest: { ...p.wavesBest, [s.hero]: wave } } : {}),
+        ...(grant ? { wavesClaimed: { ...p.wavesClaimed, [s.hero]: [...have, wave] } } : {}) };
+      set({ progress });
+      if (grant && m) {
+        const now = get();
+        set({ gems: now.gems + m.gems, materials: { ...now.materials, [m.rarity]: now.materials[m.rarity] + m.shards } });
+        notify(`Endless Waves: wave ${wave} milestone reward!`, '#ffd24a', 'BOSS');
+        feedReward({ gems: m.gems, shards: m.shards, shardRarity: m.rarity });
+      }
+      return wave > best;
     },
     recordTowerFloor: (floor) => {
       const s = get(), p = s.progress;
