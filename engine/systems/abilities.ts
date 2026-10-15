@@ -553,16 +553,16 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
     announce('WHIRLWIND');
   } else if (slot === 's3') {
-    const L = 34 + 2 * (lv - 1), n = 18;
+    const L = 9 + 0.6 * (lv - 1), n = 6;   // close-range cleave (was a 34+ unit lane)
     const stun = 0.6 + 0.1 * lv;
     for (let i = 0; i < n; i++) {
-      const d = 3 + (i / (n - 1)) * L;
+      const d = 1.5 + (i / (n - 1)) * L;
       const x = p.pos.x + dx * d, z = p.pos.z + dz * d;
       mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8, b * 5, stun, 0xa89a80, true);
       if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2, z + dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
       else mkFx('SPIKE', x + dz * 2.2, z - dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
     }
-    events.emit('fissure', { from: p.pos.clone(), dir: dir.clone(), length: L + 3 });
+    events.emit('fissure', { from: p.pos.clone(), dir: dir.clone(), length: L + 1.5 });
     announce('EARTHSPLITTER');
   }
 }

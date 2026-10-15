@@ -85,7 +85,9 @@ needed to see the new game).
   barn (fence gap faces the road, cows graze just east of it).
 - **Drop nerf:** normal-kill trade-goods chance 0.1 -> 0.07; boss 2nd trade roll only 40%; mini/champion one MINI roll
   (was 2); elite gear drop 0.25 -> 0.15, plain 0.015 -> 0.01; boss Legendary/Mythic gear odds ~halved, `rarityForDepth`
-  Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+  Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved.
+- **Barbarian:** Earthsplitter (s3) is now a short close-range cleave (length 9 + 0.6/lv, 6 spikes; was 34+); all
+  Barbarian skills cost 60% less mana (store `getManaCost`)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)

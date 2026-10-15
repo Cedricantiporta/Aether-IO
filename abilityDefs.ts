@@ -54,8 +54,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Spin for 1.2s (hold the key to keep spinning, up to 4s), barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
-      desc: 'Cleave a fissure that erupts in a line of stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
-      per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${34 + 2 * (lv - 1)} · stun ${f1(0.6 + 0.1 * lv)}s` },
+      desc: 'Slam the ground in front of you: a short fissure erupts in stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
+      per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13.5,
