@@ -16,16 +16,23 @@ import { weaponPerk, hordeMul } from '../../weaponPerks';
 export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHER = 3;
 /** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
 export const MAX_SKELETONS = 5;
-/** Of the skeletons, at most this many are archers / mages; the rest (3) are always warriors. */
-export const MAX_RANGED_SKELETONS = 2;
-/** The next Raise Dead skeleton: fills the army toward 3 warriors + 2 random archers / mages. */
+const skN = [0, 0, 0, 0];   // live skeletons per minion kind (scratch)
+const SK_KINDS = [MINION_WARRIOR, MINION_ARCHER, MINION_MAGE];
+function countSkeletons(): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM) { skN[m.kind]++; n++; } return n; }
+/** The next Raise Dead skeleton: a random warrior / archer / mage, but the army always holds at least one of each
+ *  (a missing kind rises first). A full army re-raises its OLDEST skeleton as the same kind, so recasting (e.g. in
+ *  the next room) never reshuffles it. */
 export function pickRaiseKind(): number {
-  let war = 0, rng = 0;
-  for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM) { if (m.kind === MINION_WARRIOR) war++; else rng++; }
-  const wFree = Math.max(0, MAX_SKELETONS - MAX_RANGED_SKELETONS - war), rFree = Math.max(0, MAX_RANGED_SKELETONS - rng);
-  // army full: replace within the same group (weighted by the 3 / 2 split), so the mix holds
-  const ranged = wFree + rFree > 0 ? Math.random() * (wFree + rFree) >= wFree : Math.random() * MAX_SKELETONS >= MAX_SKELETONS - MAX_RANGED_SKELETONS;
-  return ranged ? (Math.random() < 0.5 ? MINION_ARCHER : MINION_MAGE) : MINION_WARRIOR;
+  const n = countSkeletons();
+  if (n >= MAX_SKELETONS) {
+    let oldK = MINION_WARRIOR, ol = 1e9;
+    for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.born < ol) { ol = m.born; oldK = m.kind; }
+    return oldK;
+  }
+  let miss = 0;
+  for (const k of SK_KINDS) if (skN[k] === 0) miss++;
+  if (miss > 0) { let r = Math.floor(Math.random() * miss); for (const k of SK_KINDS) if (skN[k] === 0 && r-- === 0) return k; }
+  return SK_KINDS[Math.floor(Math.random() * 3)];
 }
 const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
@@ -52,16 +59,18 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const M = world.minions, mm = minionMul();
   // too many skeletons: the oldest one crumbles to make room
   if (kind !== MINION_GOLEM) {   // (skeletons of every kind share the cap)
-    let n = 0, oldest = -1, ol = 1e9, nr = 0, oldR = -1, olR = 1e9, oldW = -1, olW = 1e9;
-    for (let i = 0; i < M.length; i++) {
-      const m = M[i]; if (!m.active || m.kind === MINION_GOLEM) continue;
-      n++; if (m.born < ol) { ol = m.born; oldest = i; }
-      if (m.kind === MINION_WARRIOR) { if (m.born < olW) { olW = m.born; oldW = i; } }
-      else { nr++; if (m.born < olR) { olR = m.born; oldR = i; } }
+    const n = countSkeletons();
+    if (n >= MAX_SKELETONS) {   // full: the oldest of the same kind crumbles; else the oldest that isn't the last of its kind
+      let same = -1, sOl = 1e9, any = -1, aOl = 1e9, oldest = -1, ol = 1e9;
+      for (let i = 0; i < M.length; i++) {
+        const m = M[i]; if (!m.active || m.kind === MINION_GOLEM) continue;
+        if (m.born < ol) { ol = m.born; oldest = i; }
+        if (m.kind === kind && m.born < sOl) { sOl = m.born; same = i; }
+        if (skN[m.kind] > 1 && m.born < aOl) { aOl = m.born; any = i; }
+      }
+      const k = same >= 0 ? same : any >= 0 ? any : oldest;
+      if (k >= 0) crumble(M[k]);
     }
-    const newRanged = kind !== MINION_WARRIOR;
-    if (newRanged && nr >= MAX_RANGED_SKELETONS && oldR >= 0) crumble(M[oldR]);   // keep at most 2 archers / mages
-    else if (n >= MAX_SKELETONS) { const k = newRanged ? oldR : oldW; crumble(M[k >= 0 ? k : oldest]); }   // full: the oldest of the same group
   }
   const m = M.find((o) => !o.active);
   if (!m) return;
