@@ -383,6 +383,23 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
   },
+  // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
+  {
+    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-4.4, -22],
+    talk: [
+      ['The King receives heroes in the throne hall. Go on in.'],
+      ['I have stood at this door for eleven years. The door has never once tried anything.', 'Still. One must be ready.'],
+    ],
+    bubbles: ['For the King!', 'All quiet at the castle.', 'Stand tall, Bram.'],
+  },
+  {
+    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [4.4, -22],
+    talk: [
+      ['Halt! State your... ah, the new guard. Welcome to the castle.'],
+      ['Aldo snores standing up. Do not tell him I said that.'],
+    ],
+    bubbles: ['Long live King Aldric.', 'I am standing tall, Aldo.', 'No loitering on the steps.'],
+  },
   {
     name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-15, 8.4], speed: 1.4,
     patrol: [[-15, 8.4], [-34, 8.4]],   // strolls past the west shop row
