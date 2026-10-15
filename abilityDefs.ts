@@ -68,8 +68,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 12,
-      desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 4 seconds (up to 5 at a time, separate from Raise Dead).',
-      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 4s (max 5)` },
+      desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 7 seconds (up to 5 at a time, separate from Raise Dead).',
+      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 7s (max 5)` },
   ],
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
