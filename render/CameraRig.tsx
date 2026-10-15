@@ -10,6 +10,9 @@ import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
 import { feel } from '../engine/game';
 import { device } from '../engine/device';
+
+/** World height just above a boss's head: big bosses (Hydra, Colossus...) are sized by radius, not scale. */
+function bossTop(e: { scale: number; radius: number }): number { return 2 + Math.max(e.scale * 2.1, e.radius * 2.6); }
 import { clickReq, selectAt } from '../engine/systems/target';
 
 const CAM_DIST0 = Math.hypot(32, 22);
@@ -112,10 +115,22 @@ export function CameraRig() {
         for (let i = 0; i < world.enemies.length; i++) { const m = world.enemies[i]; if (m.active && m.mini && m.state !== 'DYING') { e = m; break; } }
       }
       if (B.active && e && e.active) {
-        _d.set(e.pos.x, 1.4 + e.scale * 1.55, e.pos.z).project(cam);
+        _d.set(e.pos.x, bossTop(e), e.pos.z).project(cam);
         B.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
         B.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; B.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
       } else B.onScreen = false;
+      // Malakar's illusions: identical bars over each decoy
+      let n = 0;
+      if (B.active) for (let i = 0; i < world.enemies.length && n < 2; i++) {
+        const m = world.enemies[i];
+        if (!m.active || !m.decoy || m.trickKind !== 1 || m.state === 'DYING') continue;
+        const I = world.illusionBars[n++];
+        I.active = true; I.hp = m.hp; I.maxHp = m.maxHp;
+        _d.set(m.pos.x, bossTop(m), m.pos.z).project(cam);
+        I.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
+        I.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; I.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      }
+      for (; n < 2; n++) world.illusionBars[n].active = false;
     }
 
     // ---- target anchor: the name + hp plate floats just above the targeted enemy's head

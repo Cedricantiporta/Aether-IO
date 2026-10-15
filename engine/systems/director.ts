@@ -116,13 +116,8 @@ let finalFight = false, endingDone = false;
 let finalStage = 1;
 /** A boss's second form to spawn next in this room (Ignar -> the Molten Colossus); '' = the biome boss. */
 let nextBossKind: EnemyKind | '' = '';
-/** Some runs swap the first two guardians: Elderroot in Greenwood, Gorath in the Marble Halls. */
-let greenwoodTreant = false;
-function biomeBoss(b: number): EnemyKind {
-  const k = biomeOf(b).boss;
-  if (!greenwoodTreant) return k;
-  return k === 'BOSS_GOLEM' ? 'BOSS_TREANT' : k === 'BOSS_TREANT' ? 'BOSS_GOLEM' : k;
-}
+/** Gorath guards Greenwood, Elderroot the Marble Halls (always). */
+function biomeBoss(b: number): EnemyKind { return biomeOf(b).boss; }
 /** The finale after stage 2 falls: 1 his last words, 2 his essence collapses and bursts, 3 a portal of light opens,
  *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
 export const finale = { step: 0, t: 0, x: 0, z: 0, blasts: 0 };
@@ -165,7 +160,6 @@ export function resetDirector(): void {
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
-  greenwoodTreant = Math.random() < 0.4;   // this run, Elderroot guards Greenwood (and Gorath the Marble Halls)
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
   world.room.fade = 1;

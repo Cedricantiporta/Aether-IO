@@ -591,3 +591,16 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Lightpiercer renders as a laser. Settings > Hard mode (difficulty HARD from the next run). Summon: 50% one shard
   (Rare+, qty 1) / 50% gear (Epic+). Fusion: Pet House > Fuse and Blacksmith > Fuse (gear or shards): 5 of a tier ->
   60/40/20/8% for the next tier, else one of the same tier (petFusion.ts, store.fusePets / fuseItems / fuseShards).
+- Lightpiercer is a big light arrow again (not a laser); the Keeper's hair is blonde. Knight carries a kite shield on
+  `handL` (weapons.ts makeShield). Necro Raise Dead skeletons are random warrior / archer / mage.
+- Level scaling: every enemy and boss scales with the hero level (`spawnEnemy`: LEVEL_HP / LEVEL_DMG / LEVEL_REWARD).
+  Dash ranges shorter for every class. Archer: move speed 12 and cannot attack while moving.
+- Hydra regrows heads (bosses2 `growHead`, every 14 s / 10 s, never below 30% HP). Glacius: spikes / dive / hail chill +
+  slow, blizzard slows the whole arena (bossFx `arenaSlow`), "Brood of Ice!" spawns BOSS_WYRMLING. Elderroot (biome 2
+  boss, always; Gorath always guards Greenwood): Grasping Vines (cone pull + root) and Seed Barrage.
+- Ignar, slain, is reborn as the Molten Colossus (BOSS_WARMACH, director `nextBossKind`; render/WarMachine.tsx 6-leg rig):
+  Artillery Barrage, Molten Ray, Stomp, Missile Volley, Ram.
+- Boss bar: anchored above the head by size (CameraRig `bossTop`, uses radius for the big bosses), shows `hp / max`.
+  Malakar's illusions get identical boss bars (HUD mounts `<BossBar illusion={0|1} />`, world.illusionBars) and mirror
+  his max HP, so the player can't tell which is real. Tech House tiles: no inner icon box. Summon ritual tint is purple
+  when the best pull is Epic.

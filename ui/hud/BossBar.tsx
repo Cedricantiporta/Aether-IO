@@ -3,8 +3,9 @@ import { Skull } from 'lucide-react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
-/** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail. */
-export const BossBar: React.FC = () => {
+/** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail.
+ *  `illusion` = index of a Malakar illusion: the same bar (name, X/X, pips) over the decoy, to confuse the player. */
+export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   const root = useRef<HTMLDivElement>(null);
   const hp = useRef<HTMLDivElement>(null);
   const trail = useRef<HTMLDivElement>(null);
@@ -17,14 +18,20 @@ export const BossBar: React.FC = () => {
   const abil = useRef<HTMLDivElement>(null);
   const st = useRef({ active: false, hp: '', trail: 1, trailS: '', name: '', title: '', val: -1, phase: -1, stag: '', staggered: false, abil: '', abilOn: false });
 
+  const view = useRef({ ...world.boss });   // reused copy of the boss hud for an illusion's bar (no per-frame alloc)
   useRaf((dt) => {
-    const b = world.boss, s = st.current;
-    if (b.active !== s.active) {
-      s.active = b.active;
-      if (root.current) root.current.style.display = b.active ? 'block' : 'none';
-      if (b.active) { s.trail = b.hp / Math.max(1, b.maxHp); s.name = ''; s.title = ''; }
+    const B = world.boss, s = st.current;
+    const I = illusion === undefined ? null : world.illusionBars[illusion];
+    let b = B;
+    if (I) { b = Object.assign(view.current, B); b.hp = I.hp; b.maxHp = I.maxHp; b.sx = I.sx; b.sy = I.sy; b.onScreen = I.onScreen; }
+    const on = B.active && (!I || I.active);
+    if (on !== s.active) {
+      s.active = on;
+      if (root.current) root.current.style.display = on ? 'block' : 'none';
+      if (on) { s.trail = b.hp / Math.max(1, b.maxHp); s.name = ''; s.title = ''; }
     }
-    if (!b.active) return;
+    if (!on) return;
+    if (I && !I.onScreen) { if (root.current) root.current.style.opacity = '0'; return; }
     // follow the boss: anchored above its head (clamped inside the screen)
     if (root.current) {
       const r = root.current, W = window.innerWidth, H = window.innerHeight, hw = r.offsetWidth / 2;
@@ -44,7 +51,7 @@ export const BossBar: React.FC = () => {
     if (name.current && b.name !== s.name) { s.name = b.name; name.current.textContent = b.name; }
     if (title.current && b.title !== s.title) { s.title = b.title; title.current.textContent = b.title; }
     const v = Math.ceil(b.hp);
-    if (val.current && v !== s.val) { s.val = v; val.current.textContent = v.toLocaleString(); }
+    if (val.current && v !== s.val) { s.val = v; val.current.textContent = `${v.toLocaleString()} / ${Math.ceil(b.maxHp).toLocaleString()}`; }
     const sf = Math.max(0, Math.min(1, b.stagger));
     const sfs = b.staggered ? '1' : sf.toFixed(3);
     if (stag.current && sfs !== s.stag) { s.stag = sfs; stag.current.style.width = `${(b.staggered ? 1 : sf) * 100}%`; }
@@ -53,10 +60,10 @@ export const BossBar: React.FC = () => {
       if (stag.current) stag.current.style.background = b.staggered ? 'linear-gradient(180deg,#fff2a0,#ffb020)' : 'linear-gradient(180deg,#9ad0ff,#3a7ad0)';
       if (stagLbl.current) stagLbl.current.style.opacity = b.staggered ? '1' : '0';
     }
-    const on = b.abilityT > 0 && !!b.ability;
+    const ab = !I && b.abilityT > 0 && !!b.ability;
     if (abil.current) {
       if (b.ability !== s.abil) { s.abil = b.ability; abil.current.textContent = b.ability; }
-      if (on !== s.abilOn) { s.abilOn = on; abil.current.style.opacity = on ? '1' : '0'; abil.current.style.transform = on ? 'scale(1)' : 'scale(.8)'; }
+      if (ab !== s.abilOn) { s.abilOn = ab; abil.current.style.opacity = ab ? '1' : '0'; abil.current.style.transform = ab ? 'scale(1)' : 'scale(.8)'; }
     }
     if (b.phase !== s.phase) {
       s.phase = b.phase;

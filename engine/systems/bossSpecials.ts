@@ -324,7 +324,7 @@ export function spawnIllusions(real: Enemy, n: number, life: number): void {
     const a = base + (k / Math.max(1, n)) * 6.283;
     tv.set(real.pos.x + Math.sin(a) * 6, 0, real.pos.z + Math.cos(a) * 6); clampArena(tv, 4);
     e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true; e.trickKind = 1; e.trickT = life;
-    e.pos.set(tv.x, 0, tv.z); e.maxHp = e.hp = Math.max(1, real.hp); e.shield = 0;
+    e.pos.set(tv.x, 0, tv.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as Malakar's bar, to confuse e.shield = 0;
     e.armor = real.armor * 0.5;   // same HP as Malakar, half his defense
     e.speed = real.speed; e.radius = real.radius; e.scale = real.scale;
     e.contactDamage = 0; e.projectileDamage = real.projectileDamage; e.xp = 0; e.gold = 0;

@@ -51,7 +51,7 @@ export const HUD: React.FC = () => {
     <ExpStrip />
 
     {/* boss bar floats above the boss (positioned every frame) */}
-    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /></div>
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /><BossBar illusion={0} /><BossBar illusion={1} /></div>
     <RoomEventHud />
     <LevelUpBurst />
 
