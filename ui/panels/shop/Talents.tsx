@@ -24,6 +24,23 @@ const NodeIcon: React.FC<{ icon: string; size: number; dim?: boolean }> = ({ ico
     ? <span style={{ display: 'block', opacity: dim ? 0.45 : 1, filter: dim ? 'grayscale(.8)' : undefined }}><UpgradeArt upgrade={{ type: icon.slice(2) as UpgradeType }} size={size} /></span>
     : <SkillIcon id={icon} size={size} dim={dim} />;
 
+/** Left-mouse drag pans the talent strips sideways (owner: dragged, no scrollbar); a drag never counts as a node click. */
+function useDragScroll() {
+  const d = React.useRef({ on: false, x: 0, left: 0, moved: false });
+  return {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { if (e.button !== 0) return; d.current = { on: true, x: e.clientX, left: e.currentTarget.scrollLeft, moved: false }; },
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+      const s = d.current; if (!s.on) return;
+      const dx = e.clientX - s.x;
+      if (!s.moved && Math.abs(dx) > 5) { s.moved = true; e.currentTarget.setPointerCapture(e.pointerId); }
+      if (s.moved) e.currentTarget.scrollLeft = s.left - dx;
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => { d.current.on = false; if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); },
+    onPointerCancel: () => { d.current.on = false; },
+    onClickCapture: (e: React.MouseEvent) => { if (d.current.moved) { e.stopPropagation(); e.preventDefault(); d.current.moved = false; } },
+  };
+}
+
 export const TalentsView: React.FC = () => {
   const { hero, ranks, heroRank, gold, allocate, respec } = useGameStore(useShallow((s) => ({
     hero: s.hero, ranks: s.talents[s.hero], heroRank: s.heroRank, gold: s.gold, allocate: s.allocateTalent, respec: s.respecTalents,
@@ -34,6 +51,7 @@ export const TalentsView: React.FC = () => {
   const cost = respecCost(ranks);
   const nodes = talentsOf(hero);
   const color = HERO_COLOR[hero];
+  const dragScroll = useDragScroll();
 
   return (
     <div className="flex flex-col gap-3" data-testid="talents-view">
@@ -50,7 +68,7 @@ export const TalentsView: React.FC = () => {
         </div>
       </div>
 
-      <div className="rpg-frame py-2 overflow-x-auto rpg-scroll" style={{ ['--hc' as any]: color }} data-testid="talent-scroll">
+      <div className="rpg-frame py-2 tal-drag" style={{ ['--hc' as any]: color }} data-testid="talent-scroll" {...dragScroll}>
         <div className="flex flex-col gap-1" style={{ width: STRIP_W, flexShrink: 0 }}>
           {BRANCHES[hero].map((br, b) => {
             const bn = nodes.filter((n) => n.branch === b);

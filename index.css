@@ -2260,3 +2260,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .compact .sm-cards.many .sm-name { font-size: .7rem; min-height: 1.6rem; }
 .compact .sm-cards.many .sm-face { padding: .5rem .35rem .45rem; }
 .compact .sm-root .rpg-btn { min-height: 44px; padding-top: .3rem; padding-bottom: .3rem; }
+
+/* talent strips: panned by dragging with the left mouse / a finger, no scrollbar */
+.tal-drag { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; cursor: grab; user-select: none; touch-action: pan-y; }
+.tal-drag::-webkit-scrollbar { display: none; }
+.tal-drag:active { cursor: grabbing; }
