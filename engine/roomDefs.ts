@@ -256,14 +256,9 @@ export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub
     case 'CRYSTAL': return { title: 'Crystal Cavern', sub: '', icon: 'gem', color: '#7fd8ff' };
     default: break;
   }
+  // combat rooms show only their reward (owner: no 'Elite' / 'Dark Champion' / objective / twist sub-line on the portal)
   const r = REWARD_ICON[plan.reward];
-  const parts: string[] = [];
-  if (plan.obj) parts.push(OBJ_NAME[plan.obj]);
-  else if (plan.type === 'ELITE') parts.push('Elite');
-  else if (plan.type === 'MINIBOSS') parts.push('Champion');
-  else if (plan.type === 'DUEL') parts.push('Dark Champion duel');
-  if (plan.twist) parts.push(TWIST_NAME[plan.twist]);
-  return { title: REWARD_NAME[plan.reward], sub: parts.join(' · '), icon: r.icon, color: r.color };
+  return { title: REWARD_NAME[plan.reward], sub: '', icon: r.icon, color: r.color };
 }
 const REWARD_ICON: Record<RewardKind, { icon: string; color: string }> = {
   CARD: { icon: 'card', color: '#6ab0ff' }, GOLD: { icon: 'coins', color: '#fbbf24' }, SHARDS: { icon: 'shard', color: '#c084fc' },
