@@ -18,9 +18,9 @@ const KEY = 'aether-survivor-cave-kit-v1';
 export const SPARE_FLASK_OIL = 30;
 /** Most flasks the hero can carry (buying stops there; quest rewards may top it up to MAX_SPARE + 3). */
 export const MAX_SPARE = 6;
-export const FLASK_PRICE = 60 * GOLD_SCALE;
+export const FLASK_PRICE = 600 * GOLD_SCALE;   // (owner: way more expensive, was 60)
 /** Miner's Kit: KIT_FLASKS flasks for less. */
-export const KIT_FLASKS = 3, KIT_PRICE = 150 * GOLD_SCALE;
+export const KIT_FLASKS = 3, KIT_PRICE = 1500 * GOLD_SCALE;   // (was 150)
 /** The camp pays this much more than the usual sell price for ore and crystals. */
 export const MINE_PREMIUM = 1.1;
 /** Loot the camp buys (harvest ore / gems + the cave's deep trade goods). */

@@ -166,6 +166,7 @@ function defaultProjectileType(): ProjectileType {
 
 /** Fires the hero's basic attack towards the aim point. Called by player.ts on its fire timer. */
 export function fireBasicAttack(): void {
+  if (world.village.miningT > 0) return;   // busy mining (owner: no attacks while mining)
   const st = useGameStore.getState();
   const stats = st.stats;
   const weapon = st.equipment.weapon;

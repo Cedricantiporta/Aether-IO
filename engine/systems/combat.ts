@@ -571,6 +571,10 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const isDot = !!o?.dot;
   if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
   const kind = o?.kind ?? 'PHYSICAL';
+  if (!isDot && world.village.miningT > 0) {   // a hit knocks the hero out of mining (owner)
+    world.village.miningT = 0; world.village.harvestCd = 1.2;
+    events.emit('floatText', { pos: p.pos, text: 'Interrupted!', color: 0xffb070, scale: 0.9, dy: 2.4 });
+  }
 
   if (!isDot && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
 

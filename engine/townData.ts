@@ -216,8 +216,8 @@ export const ROADS: RoadSpec[] = [
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
   { x1: 2.4, z1: 110.6, x2: 24, z2: 111.2, w: 2.6, dirt: true }, { x1: 24, z1: 111.2, x2: 43, z2: 111, w: 2.6, dirt: true }, { x1: 43, z1: 111, x2: 48.5, z2: 100.5, w: 2.6, dirt: true },
-  // chicken coop -> the mines: east past the coop, up the strip east of the farm, along the east side into the mining camp
-  { x1: 41.5, z1: 106.5, x2: 48.5, z2: 100.5, w: 2.6, dirt: true }, { x1: 48.5, z1: 100.5, x2: 54, z2: 91, w: 2.6, dirt: true }, { x1: 54, z1: 91, x2: 58, z2: 79, w: 2.6, dirt: true },
+  // the mines path: from the farm track's corner up the strip east of the farm, along the east side into the mining camp (owner: no branch to the coop)
+{ x1: 48.5, z1: 100.5, x2: 54, z2: 91, w: 2.6, dirt: true }, { x1: 54, z1: 91, x2: 58, z2: 79, w: 2.6, dirt: true },
   { x1: 58, z1: 79, x2: 59.5, z2: 60, w: 2.6, dirt: true }, { x1: 59.5, z1: 60, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
   // inside the camp: on to the mine mouth, and the narrow back trail coming down from the north
   { x1: 62.5, z1: 21, x2: 66.5, z2: 15.2, w: 2.6, dirt: true }, { x1: 66.5, z1: 15.2, x2: 70.4, z2: 12.8, w: 2.6, dirt: true },

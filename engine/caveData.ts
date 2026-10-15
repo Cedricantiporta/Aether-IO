@@ -306,10 +306,11 @@ export const RARE_COLOR = ['', '#4aa8ff', '#b46aff', '#ffc83a', '#ff3a5a'];
  *  add FLASK_OIL seconds (up to the capacity). */
 export const LANTERN_BASE = 120, LANTERN_STEP = 30, LANTERN_MAX_LV = 6;
 export const LANTERN_COST: { gems: number; shard: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY'; shards: number }[] = [
-  { gems: 50, shard: 'COMMON', shards: 30 }, { gems: 100, shard: 'RARE', shards: 20 }, { gems: 180, shard: 'RARE', shards: 40 },
-  { gems: 300, shard: 'EPIC', shards: 15 }, { gems: 450, shard: 'EPIC', shards: 30 }, { gems: 700, shard: 'LEGENDARY', shards: 8 },
+  // (owner: way more expensive - about 6x the gems and 3x the shards)
+  { gems: 300, shard: 'COMMON', shards: 90 }, { gems: 600, shard: 'RARE', shards: 60 }, { gems: 1100, shard: 'RARE', shards: 120 },
+  { gems: 1800, shard: 'EPIC', shards: 45 }, { gems: 2700, shard: 'EPIC', shards: 90 }, { gems: 4200, shard: 'LEGENDARY', shards: 24 },
 ];
-export const REFILL_PRICE = (lv: number): number => 1500 + 1000 * lv;
+export const REFILL_PRICE = (lv: number): number => 6000 + 4000 * lv;   // (was 1500 + 1000 x lv)
 export const FLASK_OIL = 20;
 /** Chance a deep floor hides an oil flask; chance a cave monster drops one. */
 export const FLASK_FLOOR_CHANCE = 0.45, FLASK_DROP_CHANCE = 0.12;

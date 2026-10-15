@@ -120,6 +120,8 @@ function announce(name: string): void {
   p.anim.castT = 1;
 }
 
+let mineNoteT = -10;
+function noSkillsInMine(): void { if (world.time - mineNoteT < 2) return; mineNoteT = world.time; useGameStore.getState().addNotification('No skills in the mine: swing your pick or your weapon.', '#ffb070', 'WARNING'); }
 /** Cooldown + mana gate. Returns true when the cast may proceed (mana spent, cooldown set). */
 function gate(slot: ActiveSlot): boolean {
   const st = useGameStore.getState();
@@ -129,6 +131,8 @@ function gate(slot: ActiveSlot): boolean {
     if (st.level >= need) st.addNotification('Learn it at the Skill Trainer', 'red', 'WARNING');   // (owner: no 'unlocks at Lv' prompt for locked skills)
     return false;
   }
+  if (world.village.miningT > 0) return false;   // busy mining
+  if (!world.room.active && world.village.area === 'CAVE') { noSkillsInMine(); return false; }   // (owner: no skills in the mine)
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
   if (abilityState.leapT > 0) return false;
   if (gcdUntil > world.time + GCD) gcdUntil = 0;   // (stale stamp from before a world.time reset)
@@ -654,6 +658,8 @@ export function castUlt(): void {
   const p = world.player;
   const a = abilityState;
   if (!p.alive || p.ultT > 0 || a.ultKind !== 0 || a.windupT > 0) return;
+  if (world.village.miningT > 0) return;
+  if (!world.room.active && world.village.area === 'CAVE') { noSkillsInMine(); return; }
   if (p.ult < ULT_MAX - 0.001 || a.ultCd > 0) { notifyCooldown('r'); return; }
   if (world.time < gcdUntil) return;
   gcdUntil = world.time + GCD;

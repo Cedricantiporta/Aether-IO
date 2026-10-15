@@ -25,8 +25,8 @@ export interface RodDef { name: string; price: number; wait: number; zone: numbe
  *  luck = rarity bonus, bite = hook window (s). */
 export const RODS: RodDef[] = [
   { name: 'Willow Rod', price: 0, wait: 1, zone: 1, luck: 1, bite: 1.1, desc: 'A bent stick and some string. It works.' },
-  { name: 'Oak Rod', price: 800 * GOLD_SCALE, wait: 0.8, zone: 1.2, luck: 1.15, bite: 1.3, desc: 'Faster bites, a wider reel zone, slightly rarer fish.' },
-  { name: 'Aether Rod', price: 4000 * GOLD_SCALE, wait: 0.6, zone: 1.4, luck: 1.35, bite: 1.5, desc: 'Hums over the water. The big ones notice it.' },
+  { name: 'Oak Rod', price: 8000 * GOLD_SCALE, wait: 0.8, zone: 1.2, luck: 1.15, bite: 1.3, desc: 'Faster bites, a wider reel zone, slightly rarer fish.' },
+  { name: 'Aether Rod', price: 40000 * GOLD_SCALE, wait: 0.6, zone: 1.4, luck: 1.35, bite: 1.5, desc: 'Hums over the water. The big ones notice it.' },
 ];
 const KEY = 'aether-survivor-fishing-v1';
 interface FishSave { rod: number; caught: number; log: Record<string, number> }
@@ -82,8 +82,9 @@ const R_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 const SPECIES_W: Record<string, number> = { fish_boot: 0.45, fish_minnow: 1.2, fish_perch: 1, fish_trout: 1.1, fish_pike: 0.9 };
 /** Reel minigame per rarity: marker speed (bar widths / s), zone width (0..1), hits needed. */
 const REEL: Record<Rarity, { speed: number; zone: number; need: number }> = {
-  COMMON: { speed: 0.85, zone: 0.32, need: 1 }, RARE: { speed: 1.15, zone: 0.25, need: 2 }, EPIC: { speed: 1.45, zone: 0.2, need: 2 },
-  LEGENDARY: { speed: 1.75, zone: 0.16, need: 3 }, MYTHIC: { speed: 2.1, zone: 0.13, need: 3 },
+  // (owner: the rarer the fish the narrower the target - the rarest ones are a sliver)
+  COMMON: { speed: 0.85, zone: 0.34, need: 1 }, RARE: { speed: 1.15, zone: 0.22, need: 2 }, EPIC: { speed: 1.45, zone: 0.13, need: 2 },
+  LEGENDARY: { speed: 1.75, zone: 0.075, need: 3 }, MYTHIC: { speed: 2.1, zone: 0.045, need: 3 },
 };
 export function rollFish(luck: number): string {
   let total = 0;

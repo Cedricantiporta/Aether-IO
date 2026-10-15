@@ -251,7 +251,7 @@ export function interact(it: Interactable): void {
   if (it.act === 'farm') { farmAct(it.node); return; }
   if (it.act === 'loot') { lootPickup(it.node); return; }
   const c = world.crates[it.node];
-  if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
+  if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; v.miningT = 0.45; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
 }
 
 // ---- click-to-walk along the streets. The town's streets form a "+" through the plaza: the south street (z 10),
@@ -567,7 +567,7 @@ export function updateVillage(dt: number): void {
   updateNpcs(dt);
   tickWalk(dt, talking);   // click-to-walk / quest auto-path
 
-  v.harvestCd = Math.max(0, v.harvestCd - dt);
+  v.harvestCd = Math.max(0, v.harvestCd - dt); v.miningT = Math.max(0, v.miningT - dt);
   // E acts on the NEAREST pill: press = talk / open / set out; press or HOLD = harvest when that nearest thing is a node
   updateFishing(dt);   // lakeside fishing (E drives the cast / hook / reel; moving reels in)
   const top = nearby[0];
