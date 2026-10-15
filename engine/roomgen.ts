@@ -39,7 +39,7 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
 }
 
 /** Boss arena radius per biome (Gorath 34 ... the Void Herald / Malakar 50): big bosses need room to move. */
-const BOSS_ARENA_R = [34, 38, 42, 46, 48, 50];
+const BOSS_ARENA_R = [34, 38, 42, 44, 46, 48, 50];
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger; BIG stages ~1.4x. */
 export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): number {
@@ -185,7 +185,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const s = rand(sp.s[0], sp.s[1]);
     add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true, true, kind === 'LOWWALL' || kind === 'CASTLEWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
   });
-  const n2 = tower || def.lavaSea ? 0 : Math.ceil(P / Math.max(5.2, P / 34));   // (lava sea: nothing stands out in the lava)
+  const n2 = tower || def.lavaSea || def.waterSea ? 0 : Math.ceil(P / Math.max(5.2, P / 34));   // (lava sea: nothing stands out in the lava)
   if (n2 > 0) ringWalk(n2, 5, 0.1, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.5)) return;
     const kind = wallKind(pickKind(outerKinds));

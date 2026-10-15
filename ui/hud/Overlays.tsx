@@ -11,7 +11,7 @@ import { useRaf } from '../hooks/useRaf';
 import { useGameEvent } from '../hooks/useEvent';
 import type { GameNotification } from '../../types';
 import { feel } from '../../engine/game';
-import { biomeOf } from '../../engine/roomDefs';
+import { biomeOf, BIOMES } from '../../engine/roomDefs';
 
 // ---------------------------------------------------------------- banners
 interface Banner { id: number; kind: 'wave' | 'boss' | 'elite' | 'level' | 'info'; title: string; sub?: string; ms: number; }
@@ -42,7 +42,7 @@ export const Announcer: React.FC = () => {
   useGameEvent('roomEnter', (e) => {
     if (e.boss) return; // the boss gets its own banner on bossSpawn
     if (runInfo.mode === 'TOWER') { push({ kind: 'wave', title: climbTitle(), sub: climbFloor(towerState.floor), ms: 1800 }); return; }
-    if (e.index === 0) push({ kind: 'wave', title: e.name, sub: e.biome >= 6 ? 'The cycle begins anew... harder' : 'Biome ' + (e.biome % 6 + 1), ms: 2400 });
+    if (e.index === 0) push({ kind: 'wave', title: e.name, sub: e.biome >= BIOMES.length ? 'The cycle begins anew... harder' : 'Biome ' + (e.biome % BIOMES.length + 1), ms: 2400 });
     else if (e.type === 'ELITE') push({ kind: 'elite', title: 'Elite Hunt', sub: 'Champions guard this room', ms: 2000 });
     else if (e.type === 'SHRINE') push({ kind: 'elite', title: 'Shrine', sub: 'Touch the altar for a challenge - or leave', ms: 2200 });
     else if (e.type === 'TREASURE') push({ kind: 'info', title: 'Treasure', sub: 'Defeat the guards to unlock the chest', ms: 2000 });

@@ -124,7 +124,7 @@ export function sanitizeMeta(m: unknown, now: Date = new Date()): MetaState {
   for (const k of STAT_KEYS) st[k] = nn(o.stats?.[k]);
   const out: MetaState = {
     ...f, stats: st,
-    bossBiomes: Array.isArray(o.bossBiomes) ? o.bossBiomes.filter((x) => typeof x === 'number' && x >= 0 && x < 6) : [],
+    bossBiomes: Array.isArray(o.bossBiomes) ? o.bossBiomes.filter((x) => typeof x === 'number' && x >= 0 && x < 7) : [],
     unlocked: strs(o.unlocked), claimed: strs(o.claimed), title: typeof o.title === 'string' ? o.title : null,
   };
   const d = goals(o.daily), w = goals(o.weekly);

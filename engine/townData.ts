@@ -568,7 +568,7 @@ export const NPCS: NpcDef[] = [
     name: 'Fenn', role: 'Bard', model: 'ARCHER', tint: '#d3e5ff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [-28, 9], speed: 1.7,
     patrol: [[-28, 9], [-14, 9], [0, 9], [14, 9], [28, 9], [14, 11], [0, 11], [-14, 11], [-28, 11]],
     talk: [
-      ['La la laaa... oh, an audience! I am working on a ballad about the Mire Hydra.', 'So far it goes: "Run." Needs work.'],
+      ['La la laaa... oh, an audience! I am working on a ballad about the Tide Hydra.', 'So far it goes: "Run." Then, for the second verse: "Swim." Needs work.'],
       ['They say the Frostpeak winds sing at midnight. I shall go listen, once I find a braver bard.'],
     ],
     bubbles: ['La la laaa~', 'Beware the Mire... it rhymes with nothing!', 'Anyone have a lute string?'],
@@ -606,7 +606,7 @@ export const NPCS: NpcDef[] = [
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
       ['Malakar was my archmage, and my friend. He took a shard of the Font and ran into the Void.', 'Bring it home, guardian. The Font will keep bringing you home until you do.'],
-      ['Beyond the gate lie six realms, each ruled by a beast older than my house. Greenwood, the Marble Halls, the Sunscorch, Frostpeak, the Ember Wastes, the Void... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
+      ['Beyond the gate lie seven realms, each ruled by a beast older than my house. Greenwood, the Marble Halls, the Sunscorch, the Coral Isles, Frostpeak, the Ember Wastes, the Void... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
       ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
       ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
       ['My grandfather sealed the Aether Altar to keep its fortune from the greedy. Spend your gems there wisely, and it may smile on you.', 'Go now. Aether is counting on its heroes.'],

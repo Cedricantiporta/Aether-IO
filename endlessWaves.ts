@@ -10,7 +10,7 @@
 import type { RoomPlan } from './engine/types';
 import type { Rarity } from './types';
 
-export const WAVES_BIOMES = 6;
+export const WAVES_BIOMES = 7;
 export const WAVE_BREAK = 5;          // seconds of breather between waves
 export const WAVES_ARENA_R = 29;      // boss-room size
 

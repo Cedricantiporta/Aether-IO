@@ -39,8 +39,8 @@ export const CHAPTERS: LoreChapter[] = [
     'Gorath was a hill the shepherds leaned on, a stone giant who kept the old kings\' gates for a hundred years.',
     'The stolen light woke him wrong. When he fell, the stones stopped grinding, and for a moment the Halls sounded the way the old songs say it should.',
   ] },
-  { id: 'hydra', title: 'V. The Mire Hydra', unlock: { kind: 'boss', boss: 'BOSS_HYDRA', hint: 'Defeat the guardian of the Mire.' }, text: [
-    'The Mire was a lake of lilies, and the Hydra its shy keeper, with one head that slept and two that sang.',
+  { id: 'hydra', title: 'V. The Tide Hydra', unlock: { kind: 'boss', boss: 'BOSS_HYDRA', hint: 'Defeat the guardian of the Coral Isles.' }, text: [
+    'The reef was a garden of coral and lilies, and the Hydra its shy keeper, with one head that slept and two that sang.',
     'Old Wend says he heard the singing from his fire every night before the light went bad. He has not heard it since.',
   ] },
   { id: 'wyrm', title: 'VI. The Frost Wyrm', unlock: { kind: 'boss', boss: 'BOSS_WYRM', hint: 'Defeat the guardian of Frostpeak.' }, text: [

@@ -3,7 +3,7 @@
 // A run = biomes of ROOMS_PER_BIOME rooms followed by a boss room. See docs/RUN_DESIGN.md.
 // ============================================================================
 import type { EnemyKind, ObstacleKind, CrateKind, RoomPlan, RoomType, RewardKind, RoomObjective, RoomTwist } from './types';
-import type { BossKind } from './enemyDefs';
+import { BOSS_NAMES, type BossKind } from './enemyDefs';
 import type { Rarity } from '../types';
 import { GATES, GATE_KEYS_NEEDED, gateState } from './gates';
 
@@ -63,6 +63,9 @@ export interface BiomeDef {
   hydras: boolean;               // lake stages hide lurking hydras
   variants?: BiomeVariant[];
   lavaSea?: boolean;             // the floor beyond the walls drops into a lava sea (Ember Wastes)
+  waterSea?: boolean;            // ... or into a turquoise sea (Coral Isles: every room is an island)
+  /** this biome's boss under its own name (a re-skinned boss kind) */
+  bossName?: { name: string; title: string };
   crates: CrateKind[];
   boss: BossKind;
   minis: string[];               // keys of enemyDefs.MINI_BOSSES
@@ -128,8 +131,29 @@ export const BIOMES: readonly BiomeDef[] = [
         fog: '#d89a6a', hemiSky: '#ffc890', hemiGround: '#8a5a30', hemiI: 1.15, sun: '#ffa868', sunI: 2.7, skyTint: [1.08, 0.78, 0.6] },
     ],
     crates: ['POT', 'POT', 'BARREL', 'CRATE', 'GRAVE'],
-    boss: 'BOSS_HYDRA', minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
+    boss: 'BOSS_WARMACH', bossName: { name: 'The Dune Colossus', title: 'Engine of the Old Kings' }, minis: ['CAPTAIN', 'SHELLBACK'], lichCrypt: false,
     roster: [['SCARAB', 8, 0], ['BANDIT', 7, 0], ['SKELETON_ARCHER', 5, 0], ['BOMBER', 5, 0], ['ZOMBIE', 5, 1], ['ROCK_CRAB', 4, 1], ['SHIELDBEARER', 4, 2], ['BRUTE', 3, 3], ['SCORPION', 7, 0], ['MUMMY', 6, 1]],
+  },
+  { // 3 Coral Isles (owner: "mostly water, island, beach, native vibes"): every room is an island of pale sand ringed by palms
+    // in a turquoise sea; lagoons and tide channels cut through, tiki totems (statues) and huts (ruins) of the island folk.
+    // Pirates (bandits), crabs, drowned sailors (zombies), bombers. The Tide Hydra rules the reef.
+    name: 'Coral Isles', style: 'SAND', ground: ['#e8d6a8', '#f4e6c0'], patch: ['#7cc56a', '#e2cc94', '#c8a872'], stone: '#d8c8a0', edge: '#d6c08a', fog: '#bfe8f0',
+    hemiSky: '#d8f6ff', hemiGround: '#c8b07a', hemiI: 1.4, sun: '#fff4dc', sunI: 3.4, skyTint: [0.9, 1.06, 1.12], propTint: '#ffffff',
+    border: ['PALM', 'PALM', 'ROCK', 'PALM', 'BOULDER'], interior: ['PALM', 'ROCK', 'STATUE', 'RUIN', 'PALM', 'LOG'], hazard: 'PUDDLE',
+    river: 'WATER', lake: 'WATER', layouts: [24, 16, 8, 24, 28], towers: false, hydras: true, waterSea: true,
+    variants: [
+      { name: 'Coral Shallows', ground: ['#ead8aa', '#f6e8c4'], patch: ['#7cc56a', '#e2cc94', '#c8a872'],
+        border: ['PALM', 'PALM', 'ROCK', 'PALM', 'BOULDER'], interior: ['PALM', 'ROCK', 'STATUE', 'PALM', 'LOG'], hazard: null },
+      { name: 'Palm Atolls', ground: ['#e4d0a0', '#f0e0b8'], patch: ['#5fb24e', '#d8c088', '#b89a64'], propTint: '#f4fff0',
+        border: ['PALM', 'BOULDER', 'PALM', 'PALM'], interior: ['PALM', 'RUIN', 'STATUE', 'ROCK', 'PALM'], hazard: 'PUDDLE',
+        layouts: [20, 14, 8, 26, 32], lakeScale: 1.2, hemiI: 1.35, sun: '#ffeccc', sunI: 3.2 },
+      { name: 'Sunken Reef', ground: ['#cdbf98', '#ddd0aa'], patch: ['#4f9a5a', '#b8a878', '#8a7a5a'], edge: '#9a8a62', propTint: '#d8f0ff',
+        border: ['BOULDER', 'PALM', 'ROCK', 'PALM'], interior: ['RUIN', 'STATUE', 'ROCK', 'PALM', 'BOULDER'], hazard: 'PUDDLE',
+        layouts: [14, 12, 8, 28, 38], lakeScale: 1.45, fog: '#8cc8d8', hemiSky: '#c0ecff', hemiGround: '#6a8a8a', hemiI: 1.25, sun: '#e8f8ff', sunI: 2.8, skyTint: [0.7, 0.9, 1.05] },
+    ],
+    crates: ['BARREL', 'CRATE', 'POT', 'BARREL'],
+    boss: 'BOSS_HYDRA', minis: ['SHELLBACK', 'CAPTAIN'], lichCrypt: false,
+    roster: [['ROCK_CRAB', 9, 0], ['BANDIT', 8, 0], ['SLIME', 5, 0], ['BOMBER', 5, 0], ['SKELETON_ARCHER', 5, 0], ['ZOMBIE', 6, 1], ['BAT', 3, 0], ['SPLITTER', 3, 2], ['BRUTE', 3, 3], ['GOBLIN', 4, 0]],
   },
   { // 3 Frostpeak: snowfields, ice rocks, frozen rivers and lakes of black water
     name: 'Frostpeak', style: 'SNOW', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'], stone: '#a8b4c2', edge: '#aab9c8', fog: '#dbe9f5',
@@ -200,6 +224,11 @@ export function variantOf(def: BiomeDef, index: number): BiomeVariant | null {
 }
 
 export const biomeOf = (biome: number): BiomeDef => BIOMES[biome % BIOMES.length];
+/** A boss's name in a biome (a biome may show its boss under its own name, e.g. the Desert's Dune Colossus). */
+export function bossNameIn(kind: BossKind, biome: number): { name: string; title: string } {
+  const d = biomeOf(biome);
+  return d.boss === kind && d.bossName ? d.bossName : BOSS_NAMES[kind];
+}
 /** Which loop of the six biomes this is (0 = first time through). Harder each loop through depth scaling. */
 export const loopOf = (biome: number): number => Math.floor(biome / BIOMES.length);
 

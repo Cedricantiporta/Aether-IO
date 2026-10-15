@@ -157,7 +157,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const bank = new Color(style === 'BASALT' ? '#1a0e0a' : style === 'SAND' ? (feat.liquid === 'CHASM' ? '#a87440' : '#8a7a4a') : style === 'SNOW' ? '#9ab4c8' : style === 'MARBLE' ? '#8a8272' : style === 'VOID' ? '#160f2a' : '#4a5a2a');
     const hasLiquid = feat.river || feat.nLakes > 0;
     const flatLava = feat.liquid === 'LAVA' && !feat.river;   // lava pools lie flat on the rock (only lava rivers cut channels)
-    const lavaSea = !!def.lavaSea;
+    const lavaSea = !!def.lavaSea, waterSea = !!def.waterSea;
     const path = !boss && (seed % 5) !== 0 && style !== 'MARBLE' && style !== 'VOID';
     const out = new Color(), tmpC = new Color();
     const duneA = (seed % 360) * 0.0174, dux = Math.cos(duneA), duz = Math.sin(duneA);
@@ -247,8 +247,14 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.4 * k));
         out.lerp(tmpC.set('#1a0c08'), sstep(2.6, 4.2, u) * 0.85);
       }
+      // island biome: wet sand at the waterline, then the beach shelves down under the sea
+      if (waterSea) {
+        const k = sstep(3.4, 7.0, u);
+        if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
+        out.lerp(tmpC.set('#c8b07a'), sstep(2.4, 3.8, u) * 0.7);
+      }
       // rolling hills rising beyond the outer prop ring (owner: more elevation; not in the castle halls, the void or over the lava sea)
-      if (!lavaSea && style !== 'MARBLE' && style !== 'VOID') {
+      if (!lavaSea && !waterSea && style !== 'MARBLE' && style !== 'VOID') {
         const k = sstep(7, 22, u);
         if (k > 0) pos.setY(i, pos.getY(i) + k * (1.6 + 5.5 * fbm(x * 0.045 + so, z * 0.045 - so, 3)) * (style === 'SAND' ? 0.8 : 1));
       }
@@ -748,7 +754,7 @@ export function Room({ q }: { q: QualityCfg }) {
     <>
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
       {r.active && !tower && <RoomWater />}
-      {r.active && !tower && def.lavaSea && <LavaSea key={'lava' + ver} />}
+      {r.active && !tower && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
       <Stations />
       <CampProps />

@@ -22,7 +22,7 @@ import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
 import {
-  BIOMES, biomeOf, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, type BiomeDef,
+  BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
@@ -536,7 +536,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const d = dd();
   const e = spawnEnemy(kind, tmp.set(x, 0, z));
   if (!e) return;
-  const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : BOSS_NAMES[kind as BossKind];
+  const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (finalFight) { e.maxHp = Math.round(e.maxHp * 3.2); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain
   d.bossId = e.id;

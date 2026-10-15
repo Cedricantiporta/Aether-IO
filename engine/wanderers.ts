@@ -12,7 +12,7 @@ import { GOLD_SCALE } from '../constants';
 import { openCustomDialogue } from './systems/dialogue';
 import { spawnPickup } from './systems/pickups';
 import { isSpawnable } from './systems/enemies';
-import { rarityForDepth, BIOMES } from './roomDefs';
+import { rarityForDepth, BIOMES, bossNameIn } from './roomDefs';
 import { BOSS_NAMES } from './enemyDefs';
 import { runInfo } from './runMods';
 import type { CharKey } from '../render/characters';
@@ -26,27 +26,28 @@ export interface WandererDef {
 }
 
 export const WANDERERS: readonly WandererDef[] = [
-  { id: 'ALDRIC', name: 'Ser Aldric', title: 'The Last Oathsworn', model: 'KNIGHT', tint: '#b8c4d8', accent: '#c8d4e6', biomes: [0, 1, 2, 3],
+  { id: 'ALDRIC', name: 'Ser Aldric', title: 'The Last Oathsworn', model: 'KNIGHT', tint: '#b8c4d8', accent: '#c8d4e6', biomes: [0, 1, 2, 4],
     lines: {
       0: ['Hold, friend. I am Aldric, last of the Oathsworn. We swore to guard the old king, and we failed him.', 'Malakar was his court mage once. He drank the Aether until it drank him back.', 'Sit a while. My fire is small, but it mends.'],
       1: ['These halls were our home. I walked them in white steel when the banners still hung straight.', 'Gorath\'s tread cracks the stone now. Even the castle forgets us.', 'Rest by my fire before you go deeper.'],
-      3: ['The cold reminds me of the night the castle fell. Malakar did not need an army. He needed one open door.', 'Warm yourself, hero. You will need the strength.'],
+      4: ['The cold reminds me of the night the castle fell. Malakar did not need an army. He needed one open door.', 'Warm yourself, hero. You will need the strength.'],
     },
     offer: 'Rest by the fire' },
-  { id: 'LYRA', name: 'Lyra', title: 'The Wandering Seer', model: 'WIZARD', tint: '#d8c0ff', accent: '#c8a8ff', biomes: [0, 1, 2, 3, 4, 5],
+  { id: 'LYRA', name: 'Lyra', title: 'The Wandering Seer', model: 'WIZARD', tint: '#d8c0ff', accent: '#c8a8ff', biomes: [0, 1, 2, 3, 4, 5, 6],
     lines: { 0: ['I have seen you before, in the smoke. You keep coming back, do you not? The Aether will not let you rest.', 'Cross my palm with patience and I will tell you what waits at the end of this road.'] },
     offer: 'Hear the prophecy' },
-  { id: 'MAGS', name: 'Old Mags', title: 'The Gambler', model: 'ROGUE', tint: '#f0d8a0', accent: '#e8c070', biomes: [1, 2, 3, 4],
+  { id: 'MAGS', name: 'Old Mags', title: 'The Gambler', model: 'ROGUE', tint: '#f0d8a0', accent: '#e8c070', biomes: [1, 2, 3, 4, 5],
     lines: { 0: ['Ha! A live one. Name\'s Mags. I deal in luck, and luck is the only coin that spends down here.', 'Toss me some gold. Heads, you walk away with something shiny. Tails, well, the dark keeps it.'] },
     offer: 'Gamble' },
-  { id: 'FEN', name: 'Brother Fen', title: 'The Gravedigger', model: 'BARBARIAN', tint: '#9a9488', accent: '#b0a890', biomes: [1, 4, 5],
+  { id: 'FEN', name: 'Brother Fen', title: 'The Gravedigger', model: 'BARBARIAN', tint: '#9a9488', accent: '#b0a890', biomes: [1, 5, 6],
     lines: { 0: ['Too many dead walk these roads, and too few stay buried. I bury what I can.', 'Thin their numbers for me. Thirty of them, and I will pay you from the graves\' own purses.'] },
     offer: 'Take the bounty' },
-  { id: 'KAELEN', name: 'Kaelen', title: 'The Lost Scout', model: 'ARCHER', tint: '#c8e0b0', accent: '#9bd26a', biomes: [0, 2, 3, 4, 5],
+  { id: 'KAELEN', name: 'Kaelen', title: 'The Lost Scout', model: 'ARCHER', tint: '#c8e0b0', accent: '#9bd26a', biomes: [0, 2, 3, 4, 5, 6],
     lines: {
       0: ['Easy! I am a scout from Aether Village. Or I was, before the forest swallowed my patrol.', 'I have more potions than sense left. Take some; you will put them to better use.'],
-      2: ['The sand eats tracks faster than I can read them. The hydra drinks from the oases. Stay clear of still water.', 'Here, take my spare flasks.'],
-      5: ['I followed a light into the Void and could not find the way back. If you reach Malakar, end it for all of us.', 'Take these. I will not be needing them.'],
+      2: ['The sand eats tracks faster than I can read them. Something huge walks under the dunes. Stay clear of the deep sand.', 'Here, take my spare flasks.'],
+      3: ['I swam here. Do not ask. The crabs here pinch, the pirates pinch harder, and the Hydra eats both.', 'Take these, they are only a little salty.'],
+      6: ['I followed a light into the Void and could not find the way back. If you reach Malakar, end it for all of us.', 'Take these. I will not be needing them.'],
     },
     offer: 'Take the supplies' },
   // the epilogue (never met at random): the light Malakar stole, waiting in a forest clearing after the final fight
@@ -118,7 +119,7 @@ export function talkWanderer(): void {
   let label = d.offer;
   if (d.id === 'MAGS') { label = `Gamble ${gambleCost(b).toLocaleString()} gold`; }
   if (d.id === 'LYRA') {
-    const boss = BOSS_NAMES[BIOMES[b].boss];
+    const boss = bossNameIn(BIOMES[b].boss, b);
     lines.push(`At the end of ${BIOMES[b].name} waits ${boss.name}, ${boss.title}. I see fire, and a crown of ash, and you still standing.`);
   }
   openCustomDialogue(d.name, d.title, d.accent, lines, { label, accept: () => accept(d, b) });

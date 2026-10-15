@@ -22,7 +22,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'boss_wyrm', name: 'Wyrm Slayer', desc: 'Defeat Glacius the Frost Wyrm on Frostpeak', target: 1, gems: 50, title: 'Wyrm Slayer', value: boss(3) },
   { id: 'boss_warlord', name: 'Warlord\'s Bane', desc: 'Defeat Ignar the Infernal Warlord in the Ember Wastes', target: 1, gems: 60, title: 'Warlord\'s Bane', value: boss(4) },
   { id: 'boss_void', name: 'Void Walker', desc: 'Defeat the Void Herald and cross the Void', target: 1, gems: 80, title: 'Void Walker', value: boss(5) },
-  { id: 'boss_all', name: 'Realm Conqueror', desc: 'Defeat the boss of every biome', target: 6, gems: 150, title: 'Conqueror', value: (c) => c.meta.bossBiomes.length },
+  { id: 'boss_all', name: 'Realm Conqueror', desc: 'Defeat the boss of every biome', target: 7, gems: 150, title: 'Conqueror', value: (c) => c.meta.bossBiomes.length },
   { id: 'rank10', name: 'Seasoned Guard', desc: 'Reach hero rank 10', target: 10, gems: 50, title: 'Veteran', value: (c) => c.rank },
   { id: 'rank20', name: 'Elite Guard', desc: 'Reach hero rank 20', target: 20, gems: 120, title: 'Champion', value: (c) => c.rank },
   { id: 'kills1k', name: 'Slime Slayer', desc: 'Defeat 1,000 enemies', target: 1000, gems: 40, title: 'Slime Slayer', value: stat('kills') },

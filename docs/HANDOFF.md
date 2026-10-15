@@ -149,7 +149,21 @@ needed to see the new game).
 - Skills in facing mode always aim at the target (`aim.ts fire`); attribute gains ~60%; Common gear drops cut (70% of
   Common rolls give nothing, `store.rollItemDrop`); no "unlocks at Lv" toasts.
 
-## Open tasks (do next, in order)
+## Session batch 2 (2026-10-15, latest)
+- **Outskirts (Mondstadt-like)**: `RIVER` south of the gate into the lake, the great arched `BRIDGE` (walkable deck via
+  `townLift`), the mainland beyond (z 78..132): farm + `FIELDS` (wheat / cabbages / pumpkins), windmill, Endless Tower,
+  Adventure Portal (platform walkable, Set Out only on top). Brewer's hut on the green. Fenced mainland road.
+- **Hills**: `engine/townHills.ts` (grid + chamfer distance fade around roads / fields / colliders / river);
+  `render/lift.ts liftAt = townLift + hillAt`; `terrainFn.groundY` adds it. Run rooms: hills rise beyond the outer prop
+  ring (Room.tsx RoomGround).
+- **Coral Isles** (biome index 3, after the Desert): sand islands in a turquoise sea (`waterSea`, OCEAN shader in
+  RoomWater `LavaSea water`), palms / totems / huts, crabs, pirates, drowned. Boss: the Hydra, renamed "The Tide Hydra".
+  The Desert's boss is now `BOSS_WARMACH` shown as "The Dune Colossus" (`BiomeDef.bossName`, `roomDefs.bossNameIn`).
+  Story goals / lines shifted (+1 for Frostpeak, Ember, Void), wanderer biome lists shifted, WAVES_BIOMES 7,
+  achievement "every biome" = 7. Saved `bossBiomes` indices from older saves are not remapped (minor).
+- **Graveyard + chapel side door**, **benches / pews you can sit on** (legs posed on the idle; no sit clip in the
+  packs), Esc closes panels, Set Out portal bug fixed (it checked the old gate distance).
+
 1. Balance/tuning still unverified: boss damage/cadence, town performance on real phones (12 skinned NPCs + wall),
    camera framing in long corridor rooms, boss rooms with new shapes, fountain heal (40%).
 2. (done, see "Phone UI pass") Remaining wood-style screens converted to the dark metal look.

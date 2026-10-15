@@ -117,7 +117,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- singles
   {
     id: 'garrick_road', minLevel: 20, giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Sunscorch Desert (biome 3)',
-    intro: ['Traders say the road past the Marble Halls turns to sand: the Sunscorch Desert, where the Hydra keeps its mire. Nobody I send comes back with a clear report.', 'Make it to the Sunscorch, hero, and tell me what you see.'],
+    intro: ['Traders say the road past the Marble Halls turns to sand: the Sunscorch Desert, where something old and enormous is said to be walking again. Nobody I send comes back with a clear report.', 'Make it to the Sunscorch, hero, and tell me what you see.'],
     progress: 'The Sunscorch Desert is past the Marble Halls: three realms deep. Keep going!',
     done: ['So the desert is real, and you came back. I am impressed. I lost a bet with the cook.', 'The watch pays for good scouting. Shake the sand out of your boots before you walk on my gate.'],
     objective: { type: 'REACH_BIOME', count: 3 },
@@ -201,11 +201,11 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- the King
   {
-    id: 'king_frost', minLevel: 28, giver: 'King Aldric', title: 'The Frozen Frontier', summary: 'Reach Frostpeak (biome 4)',
+    id: 'king_frost', minLevel: 28, giver: 'King Aldric', title: 'The Frozen Frontier', summary: 'Reach Frostpeak (biome 5)',
     intro: ['Hero. Word reaches my court that the Frostpeak is stirring: a winter dragon, they say.', 'Go to the Frostpeak and see it with your own eyes. The crown will reward you.'],
     progress: 'The Frostpeak lies beyond the Sunscorch Desert, hero. Go, and return when you have seen it.',
     done: ['The Frostpeak is real, and so is the danger. Aether owes you.', 'Take the crown\'s thanks.'],
-    objective: { type: 'REACH_BIOME', count: 4 },
+    objective: { type: 'REACH_BIOME', count: 5 },
     reward: { gold: 10000, gems: 50 },
   },
   // ---- level-gated: the deeper biomes (offered once the class level can reach them)

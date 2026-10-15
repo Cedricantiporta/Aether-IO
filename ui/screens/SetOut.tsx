@@ -74,7 +74,7 @@ export const SetOutWindow: React.FC = () => {
         {mode === 'ADVENTURE' && <div className="so-card on" data-testid="so-adventure">
           <Swords size={26} />
           <b>Adventure</b>
-          <span>Six biomes, six guardians, and the Undying Throne at the end of the Void.</span>
+          <span>Seven realms, seven guardians, and the Undying Throne at the end of the Void.</span>
           <em>{progress.endings > 0 ? `Ending seen ${progress.endings}x` : 'Ending not yet seen'}</em>
         </div>}
         {mode === 'TOWER' && <div className="so-card on" data-testid="so-tower">

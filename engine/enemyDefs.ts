@@ -235,7 +235,7 @@ export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },
   BOSS_LICH: { name: 'Malakar the Undying', title: 'Lich King' },
   BOSS_TREANT: { name: 'Elderroot the Ancient', title: 'Ancient Treant' },
-  BOSS_HYDRA: { name: 'The Mire Hydra', title: 'Marsh Terror' },
+  BOSS_HYDRA: { name: 'The Tide Hydra', title: 'Terror of the Reef' },
   BOSS_WYRM: { name: 'Glacius the Frost Wyrm', title: 'Winter Dragon' },
   BOSS_WARLORD: { name: 'Ignar the Infernal Warlord', title: 'Lord of Cinders' },
   BOSS_WARMACH: { name: 'The Molten Colossus', title: "Ignar's War Engine" },

@@ -9,6 +9,7 @@ import { useGameStore } from './store';
 import { events } from './engine/events';
 import { useUiStore } from './ui/uiStore';
 import { COLORS } from './constants';
+import { BIOMES } from './engine/roomDefs';
 import {
   rollPeriods, STAT_KEYS, DAILY_BONUS_GEMS, WEEKLY_BONUS, allClaimed, goalClaimable,
   type MetaState, type StatKey, type GoalInst, type GoalReward,
@@ -72,7 +73,7 @@ events.on('playerHit', () => { hitThisRoom = true; });
 events.on('roomEnter', () => { hitThisRoom = false; });
 events.on('runStart', () => { hitThisRoom = false; });
 events.on('waveClear', () => { add('rooms'); if (!hitThisRoom) add('flawless'); flush(); });
-events.on('biomeClear', (e) => { bufBiomes.push(e.biome % 6); flush(); });
+events.on('biomeClear', (e) => { bufBiomes.push(e.biome % BIOMES.length); flush(); });
 events.on('runEnd', flush);
 events.on('hub', (e) => {
   if (e.kind === 'summon') add('summons', e.n);

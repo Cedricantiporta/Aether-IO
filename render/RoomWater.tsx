@@ -179,15 +179,33 @@ void main(){
   vec3 col = mix(hot * (1.0 + 0.18 * sin(t * 1.5 + n1 * 9.0)), vec3(0.12, 0.045, 0.025), crust * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }`;
-/** Ember Wastes: an animated lava sea around the room (the ground mesh drops below it beyond the wall ring). */
-export function LavaSea() {
+/** Coral Isles: a turquoise sea (shallow green-blue near the island, deeper blue further out, moving sun glints). */
+const OCEAN_FS = `
+uniform float uTime; varying vec2 vP;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+void main(){
+  float t = uTime, r = length(vP);
+  float n1 = fbm(vP * 0.08 + vec2(t * 0.02, t * 0.015)), n2 = fbm(vP * 0.35 - vec2(t * 0.06, t * 0.03));
+  vec3 shallow = vec3(0.25, 0.78, 0.76), deep = vec3(0.05, 0.36, 0.6);
+  vec3 col = mix(shallow, deep, smoothstep(30.0, 75.0, r + n1 * 18.0));
+  col *= 0.92 + n2 * 0.16;
+  float glint = smoothstep(0.78, 0.86, fbm(vP * 0.9 + vec2(t * 0.25, -t * 0.18)));
+  col += vec3(0.55, 0.6, 0.55) * glint * 0.6;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+/** Ember Wastes: an animated lava sea around the room (the ground mesh drops below it beyond the wall ring); with `water`,
+ *  the Coral Isles' turquoise sea instead. */
+export function LavaSea({ water = false }: { water?: boolean }) {
   const built = useMemo(() => {
     const S = 2 * (shape.maxR + 90);
     const geo = new PlaneGeometry(S, S, 1, 1); geo.rotateX(-Math.PI / 2);
-    const mat = new ShaderMaterial({ vertexShader: VS, fragmentShader: SEA_FS, toneMapped: false, uniforms: { uTime: { value: 0 } } });
-    const m = new Mesh(geo, mat); m.position.y = -0.55; m.frustumCulled = false;
+    const mat = new ShaderMaterial({ vertexShader: VS, fragmentShader: water ? OCEAN_FS : SEA_FS, toneMapped: false, uniforms: { uTime: { value: 0 } } });
+    const m = new Mesh(geo, mat); m.position.y = water ? -0.45 : -0.55; m.frustumCulled = false;
     return { m, geo, mat };
-  }, []);
+  }, [water]);
   useEffect(() => () => { built.geo.dispose(); built.mat.dispose(); }, [built]);
   useFrame(({ clock }) => { built.mat.uniforms.uTime.value = clock.elapsedTime; });
   return <primitive object={built.m} />;
