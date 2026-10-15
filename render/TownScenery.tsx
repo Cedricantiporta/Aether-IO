@@ -16,6 +16,7 @@ import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL } from '../engine/townData';
 import { QualityCfg } from './quality';
+import { BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
@@ -612,26 +613,13 @@ function Lake() {
     const b = new GB([0.85, 1.05]), rnd = mulberry32(303);
     // sandy shore strip + reeds + rocks along the waterline
     for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {
+      if (z > BEACH.z0 - 9 && z < BEACH.z1 + 8) { rnd(); continue; }   // the beach stretch has its own shore (render/Beach.tsx)
       b.box(4.2, 0.12, 3.2, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e', [0, (rnd() - 0.5) * 0.3, 0]);
       if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
       if (rnd() < 0.18) b.ico(0.6 + rnd() * 0.6, [LAKE.x1 - 1.5 - rnd() * 3, -0.05, z + rnd()], '#8a8f94', [1.2, 0.6, 1], 0);
       if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
     }
-    // small wooden dock reaching out from the west shore (+ a moored rowboat and a lantern post)
-    {
-      const dz = 22, x0 = LAKE.x1 - 0.5, len = 13, wood = '#7a5634', wood2 = '#5e4026', dark = '#3e2a18';
-      for (let i = 0; i < len / 0.55; i++) b.box(0.5, 0.12, 2.4, [x0 - 0.3 - i * 0.55, 0.35, dz], i % 2 ? wood : '#84603c', [0, 0, (rnd() - 0.5) * 0.04]);
-      for (const sz of [-1.1, 1.1]) b.box(len, 0.16, 0.18, [x0 - len / 2, 0.24, dz + sz], wood2);
-      for (let k = 0; k <= 4; k++) for (const sz of [-1.15, 1.15]) b.cyl(0.13, 0.15, 2.0, 7, [x0 - 0.5 - k * (len / 4), -0.6, dz + sz], dark);
-      b.cyl(0.11, 0.13, 1.1, 7, [x0 - len + 0.2, 0.85, dz + 1.15], dark); b.torus(0.16, 0.035, [x0 - len + 0.2, 0.95, dz + 1.15], '#c9b27a', [Math.PI / 2, 0, 0], 1, 10);
-      // lantern post at the end
-      b.box(0.12, 2.0, 0.12, [x0 - len + 0.3, 1.3, dz - 1.0], dark); b.box(0.5, 0.08, 0.08, [x0 - len + 0.5, 2.25, dz - 1.0], dark);
-      // rowboat alongside
-      const bx = x0 - len + 2.8, bz = dz + 2.4;
-      b.box(3.2, 0.5, 1.2, [bx, -0.02, bz], '#6b4a2e'); b.box(3.4, 0.12, 1.36, [bx, 0.22, bz], '#8a6440');
-      b.cone(0.62, 0.9, 4, [bx - 2.0, -0.02, bz], '#6b4a2e', [0, Math.PI / 4, Math.PI / 2], [1, 1, 0.7]);
-      b.box(0.2, 0.08, 1.1, [bx + 0.4, 0.28, bz], '#a07a50'); b.box(2.6, 0.05, 0.08, [bx, 0.3, bz + 0.55], '#c9b27a', [0, 0.25, 0]);
-    }
+    // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     const shore = b.build();
     return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
   }, []);

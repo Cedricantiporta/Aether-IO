@@ -708,3 +708,19 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (`HarvestSet` in village.ts). Leaving puts the hero at `CAVE_OUT` facing the bay; ground pickups are scooped up on cave
   transitions. Minimap draws the cave outline / nodes / exit (and the hall in the castle), a cyan cave icon in town.
   The ruined wall that stood at the bay mouth moved from (58, 14) to (57.6, 25).
+- **Lakeside beach + fishing** (outside the WEST wall, southern half of the shore only; data `engine/beachData.ts`,
+  drawn by `render/Beach.tsx`): sand strip x -65..-45, z 6..62 (`BEACH_BOX` in `ISLAND_BOXES`, lake shore pushed west
+  in `terrainFn.lakeK`), headland rocks close the north end; boardwalk, palms, campfire, rowboat, driftwood, crates,
+  umbrella, net rack. The **pier** (`DOCK`, T-head at x -87..-80) is walkable over the water via `DECK_RECTS` +
+  `mapgen.clampToDeck` (called from `player.resolveStep` only beyond the island edge); the water itself is not.
+  **Fishing** (`engine/systems/fishing.ts`, state in `world.fishing`, HUD `ui/hud/FishingHud.tsx` with one big
+  E / tap button): 3 spots (`FISH_SPOTS`: pier end luck x1.25 + two shore spots) -> cast -> wait -> bite (hook window)
+  -> "Reel it in!" timing bar (rarer fish: faster marker, smaller zone, 2-3 hits; 2 misses forgiven) -> fish as stackable
+  LOOT (`loot.ts FISH_DEFS`, Soggy Boot .. Aetherfin Koi, Common..Mythic). Moving / opening a panel reels in. Rod level +
+  catch log in localStorage `aether-survivor-fishing-v1`. **Fishmonger** = shop `FISH` (stall `buildFishStall`, at
+  (-52.5, 24) mid-beach, facing the water): sell one / sell all fish, buy Oak / Aether rods, lake fish guide.
+  Wall safety: beach interactions (Fishmonger pill, fishing spots, click-to-walk arrival opening the FISH shop) require
+  `beachSide(x, z)` (outside the west / south wall face), so nothing is reachable through the wall. Click-to-walk
+  (`village.buildRoute`) uses a fixed lane round the south-west corner tower: gate -> (-4, 51) -> (-34, 52) ->
+  (-49, 47) -> (-57.5, 43.5) -> beach spine x -59.5 at the target's z -> target (and the reverse). Minimap: lake, sand,
+  pier and a line fish icon (`SHOP_ICON.FISH`). The old small dock in `TownScenery.Lake` was removed.

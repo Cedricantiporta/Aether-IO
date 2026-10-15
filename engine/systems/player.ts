@@ -16,7 +16,7 @@ import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
-import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
+import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, type Collider } from '../mapgen';
 import { Vector3 } from 'three';
 import { dailyMods } from '../../dailyChallenge';
 
@@ -111,6 +111,7 @@ function resolveObstacles(p: typeof world.player, x: number, z: number): void {
 }
 
 function resolveStep(p: typeof world.player, x: number, z: number): void {
+  const ox = p.pos.x, oz = p.pos.z;   // (pier decks: the deck stood on before this step, see mapgen.clampToDeck)
   const cols = queryColliders(x, z, PLAYER_RADIUS + 6, colOut);
   let nx = x, nz = z;
   for (let pass = 0; pass < 2; pass++) {
@@ -134,7 +135,7 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
   const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;
   if (r2 > bounds.checkR2) {
     const lim = edgeLimit(p.pos.x, p.pos.z, 2);
-    if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; }
+    if (r2 > lim * lim && !clampToDeck(p.pos, ox, oz)) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; }
   }
 }
 

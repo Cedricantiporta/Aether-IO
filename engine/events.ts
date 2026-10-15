@@ -63,6 +63,7 @@ export interface GameEvents {
   crateBreak: { pos: Vector3; kind: CrateKind };
   spawn: { pos: Vector3; kind: EnemyKind; elite: boolean };
   shake: { amount: number }; // adds camera trauma 0..1
+  fishing: { kind: 'cast' | 'splash' | 'bite' | 'hit' | 'miss' | 'catch' | 'escape' };   // lakeside fishing moments (audio)
 
   // flow
   waveStart: { wave: number; boss: boolean; elite: boolean };   // a room was entered (wave = depth)

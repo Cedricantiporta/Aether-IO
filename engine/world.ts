@@ -154,6 +154,12 @@ export const world = {
   input: { keys: {}, pressed: {}, pointerNdc: { x: 0, y: 0 }, mouseDown: false, joy: { x: 0, z: 0, active: false }, aimStick: { x: 0, z: 0, active: false }, touchAim: { active: false, id: '', dx: 0, dz: 0, mag: 0, cancel: false }, cancelAim: false } as InputState,
   /** Visible ground rectangle (camera frustum ∩ ground plane + margin). Written by render/CameraRig every frame; read by renderers and the AI LOD. */
   view: { minX: -1e5, maxX: 1e5, minZ: -1e5, maxZ: 1e5, cx: 0, cz: 0, r: 1e5, on: false },
+  /** Lakeside fishing (systems/fishing.ts; drawn by render/Beach.tsx, HUD ui/hud/FishingHud.tsx). state: 0 idle, 1 casting,
+   *  2 waiting for a bite, 3 bite (hook window), 4 reeling minigame, 5 result. t = time in the state, dur = its length.
+   *  (bx, bz) bobber, (sx, sz) start of the cast. Reel bar: marker 0..1 bouncing at `speed`, green zone zoneC +- zoneW / 2,
+   *  hits / need, misses / maxMiss. fish = loot id being fought / caught ('' = got away), flash: 1 hit / -1 miss (decays). */
+  fishing: { state: 0, spot: -1, t: 0, dur: 0, bx: 0, bz: 0, sx: 0, sz: 0, fish: '', marker: 0, dir: 1, speed: 1, zoneC: 0.5, zoneW: 0.3,
+    hits: 0, need: 1, misses: 0, maxMiss: 2, flash: 0, ok: false, ver: 0 },
 };
 
 export type World = typeof world;

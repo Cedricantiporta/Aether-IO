@@ -36,13 +36,14 @@ import { TutorialHint } from './hud/TutorialHint';
 import { QuestLog } from './screens/QuestLog';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
+import { FishingHud } from './hud/FishingHud';
 
 const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.INVENTORY, GameStatus.SHOP]);
 
 /** UI root. pointer-events none so the canvas still receives clicks; panels opt in with .pe */
 export const GameUI: React.FC = () => {
   const { status, inv, shop, bagShop, chr, summonTab, techTab } = useGameStore(useShallow((s) => ({
-    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY', 'WAREHOUSE', 'BREWER'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON' || s.activeShopTab === 'TECH', techTab: s.activeShopTab === 'TECH',
+    status: s.status, inv: s.isInventoryOpen, shop: s.isShopOpen, bagShop: s.isShopOpen && ['SUPPLIES', 'PETS', 'BLACKSMITH', 'ARMORY', 'WAREHOUSE', 'BREWER', 'FISH'].includes(s.activeShopTab), chr: s.isCharacterSheetOpen, summonTab: s.activeShopTab === 'SUMMON' || s.activeShopTab === 'TECH', techTab: s.activeShopTab === 'TECH',
   })));
   const titleDone = useUiStore((s) => s.titleDone);
   const charSelect = useUiStore((s) => s.charSelect);
@@ -73,6 +74,7 @@ export const GameUI: React.FC = () => {
       {(village || inGame) && <TutorialHint />}
       {(village || inGame) && <Dialogue />}
       {village && <TownFade />}
+      {village && <FishingHud />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}

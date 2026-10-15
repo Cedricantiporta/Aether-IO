@@ -707,6 +707,15 @@ export function initAudio(): () => void {
   offs.push(events.on('trick', safe((p) => sfxTrick(p.kind))));
   offs.push(events.on('playerDebuff', safe((p) => sfxDebuff(p.type))));
   offs.push(events.on('combo', safe((p) => sfxCombo(p.stacks, p.finisher))));
+  offs.push(events.on('fishing', safe((p) => {   // lakeside fishing: whoosh, plop, bite chime, reel ticks, catch fanfare
+    if (p.kind === 'cast') noise(0.25, 0.08, 2400, 600);
+    else if (p.kind === 'splash') { noise(0.18, 0.12, 900, 200); tone(320, 160, 0.12, 0.05, { type: 'sine' }); }
+    else if (p.kind === 'bite') { noise(0.14, 0.14, 1200, 300); tone(880, 1320, 0.14, 0.1, { type: 'sine' }); tone(1320, 1760, 0.16, 0.08, { type: 'sine', delay: 0.1 }); }
+    else if (p.kind === 'hit') tone(700, 1100, 0.1, 0.09, { type: 'triangle' });
+    else if (p.kind === 'miss') tone(260, 160, 0.16, 0.08, { type: 'square' });
+    else if (p.kind === 'catch') { tone(660, 990, 0.2, 0.1, { type: 'sine' }); tone(990, 1480, 0.28, 0.09, { type: 'sine', delay: 0.12 }); noise(0.2, 0.08, 1000, 300); }
+    else if (p.kind === 'escape') { noise(0.2, 0.1, 800, 200); tone(400, 200, 0.25, 0.07, { type: 'sine' }); }
+  })));
   offs.push(events.on('slam', safe(() => { tone(90, 35, 0.3, 0.3, { priority: true }); noise(0.2, 0.2, 900, 150); })));
   offs.push(events.on('stagger', safe(() => { tone(400, 120, 0.4, 0.25, { type: 'square', priority: true }); tone(800, 200, 0.3, 0.12, { type: 'sine' }); })));
   offs.push(events.on('armorBreak', safe(() => { tone(1800, 600, 0.12, 0.1, { type: 'square' }); noise(0.1, 0.1, 4000, 1500); })));
