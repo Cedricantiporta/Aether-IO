@@ -474,8 +474,12 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       events.emit('blink', { from, to: p.pos.clone() });
       announce('SOUL_STEP');
     } else if (slot === 's3') {   // BONE SPEAR: impales a whole line
-      spawnProjectile('BONE_SPEAR', p.pos.x + dx, p.pos.z + dz, dx, dz, 38, b * 2.25,   // -50% (user)
-        { life: 0.95, pierce: Infinity, radius: 1.9, knockback: 0.3, y: 1.1, effect: { type: 'SLOW', duration: 2, value: 0.4 } });
+      const nSp = lv >= 5 ? 3 : lv >= 3 ? 2 : 1;   // more spears with level, fanned out (Lv 3: 2, Lv 5: 3)
+      for (let k = 0; k < nSp; k++) {
+        const a = (k - (nSp - 1) / 2) * 0.32, ca = Math.cos(a), sa = Math.sin(a), sx = dx * ca + dz * sa, sz = -dx * sa + dz * ca;
+        spawnProjectile('BONE_SPEAR', p.pos.x + sx, p.pos.z + sz, sx, sz, 38, b * 2.25,   // -50% (user)
+          { life: 0.95, pierce: Infinity, radius: 1.9, knockback: 0.3, y: 1.1, effect: { type: 'SLOW', duration: 2, value: 0.4 } });
+      }
       p.anim.attackT = 1;
       announce('BONE_SPEAR');
     } else {   // PLAGUE GROUND: a cursed patch; the fallen rise for you

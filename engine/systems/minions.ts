@@ -90,8 +90,9 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.3)   // Raise Dead skeletons +30% HP
     * 1.2                                                    // every summon +20% HP
     * (warrior ? 1 + 0.1 * (rdLv - 1) : 1)
+    * (src === SRC_RAISE ? 1.5 : 1)                         // Raise Dead skeletons: +50% HP
     * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
-  m.def = warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0;
+  m.def = (warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE ? 0.1 : 0);   // Raise Dead skeletons: +10% defense
   m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
   if (!dropped) events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }

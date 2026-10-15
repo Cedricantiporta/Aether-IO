@@ -12,7 +12,7 @@ export const INVENTORY_LIMIT = 50;
 /** Town warehouse (storage house beside the blacksmith): permanent item storage, twice the bag. */
 export const WAREHOUSE_LIMIT = 100;
 export const POTION_STACK_LIMIT = 50;
-export const POTION_COOLDOWN = 15; // seconds, shared by engine + HUD
+export const POTION_COOLDOWN = 30; // seconds, shared by engine + HUD
 
 /** Shard conversion: 5 of a rarity -> 1 of the next; 1 -> 3 of the rarity below. */
 export const MATERIAL_COMBINE_COST = 5;
@@ -96,27 +96,27 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 12, fireRate: 1.75, maxHealth: 80, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 8.4, fireRate: 1.75, maxHealth: 48, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
         description: 'Plant your feet and loose a storm of arrows. High attack rate, low health.'
     },
     WIZARD: {
-        stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
+        stats: { moveSpeed: 7.0, maxMana: 200, damage: 30.5, maxHealth: 30, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     NECROMANCER: {
-        stats: { maxHealth: 85, maxMana: 170, moveSpeed: 11, damage: 22, fireRate: 1.2, manaRegen: 2.4, knockback: 0.4, skillDamage: 1.2 },
+        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 7.7, damage: 22, fireRate: 1.2, manaRegen: 2.4, knockback: 0.4, skillDamage: 1.2 },
         weaponId: 'wand_n1',
         description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
     },
     KNIGHT: {
-        stats: { maxHealth: 160, defense: 22, moveSpeed: 11, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05 },
+        stats: { maxHealth: 96, defense: 22, moveSpeed: 7.7, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05 },
         weaponId: 'sword_1',
         description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 140, defense: 15, moveSpeed: 11, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0 },
+        stats: { maxHealth: 84, defense: 15, moveSpeed: 7.7, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0 },
         weaponId: 'axe_1',
         description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }
@@ -158,14 +158,14 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_hp', type: 'HEALTH', name: 'Vitality Rune', description: 'Max HP Up', rarity: 'COMMON', value: 8 }, 
   { id: 'u_mana', type: 'MAX_MANA', name: 'Mana Crystal', description: 'Max Mana Up', rarity: 'COMMON', value: 10 },
   { id: 'u_def', type: 'DEFENSE', name: 'Iron Skin', description: 'Defense Up', rarity: 'COMMON', value: 3 },
-  { id: 'u_spd', type: 'SPEED', name: 'Wind Step', description: 'Move Speed Up', rarity: 'COMMON', value: 0.05 },
+  { id: 'u_spd', type: 'SPEED', name: 'Wind Step', description: 'Move Speed Up', rarity: 'COMMON', value: 0.025 },
   { id: 'u_dmg', type: 'DAMAGE', name: 'Sharpness', description: 'Damage Up', rarity: 'RARE', value: 0.13 },
   { id: 'u_fr', type: 'FIRE_RATE', name: 'Haste', description: 'Atk Speed Up', rarity: 'RARE', value: 0.1 },
   { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: '+4% Dodge', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   // instant cards (applied on pick)
   { id: 'u_ult', type: 'ULT_FILL', name: 'Surge of Fury', description: 'Fill your Ultimate meter', rarity: 'RARE', value: 100 },
-  { id: 'u_restore', type: 'RESTORE', name: 'Second Breath', description: 'Restore all HP and Mana', rarity: 'RARE', value: 1 },
+  { id: 'u_restore', type: 'RESTORE', name: 'Second Breath', description: 'Restore 30% HP and Mana', rarity: 'RARE', value: 1 },
   { id: 'u_aegis', type: 'AEGIS', name: 'Aegis', description: 'Shield = 50% max HP (absorbs damage until broken)', rarity: 'EPIC', value: 0.5 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   

@@ -717,7 +717,7 @@ function onCleared(): void {
   if (plan.type === 'GATEKEEPER') return;   // the courtyard: nothing to clear, the gates are entered with E
   // the boss key: rooms from the champion on may hold it (more often the deeper you go; chests are the best bet)
   if (runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && !gateBiome() && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
-    const ch = plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : plan.type === 'DUEL' ? 0.35 : 0.2 + 0.08 * (index - PREBOSS_INDEX);
+    const ch = 0.5 * (plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : plan.type === 'DUEL' ? 0.35 : 0.2 + 0.08 * (index - PREBOSS_INDEX));   // halved: a boss before depth 15 is rarer
     if (Math.random() < ch) {
       bossKeyState.has = true;
       st.addNotification('You found the Boss Key! A boss door will open.', '#ffd24a', 'SYSTEM');

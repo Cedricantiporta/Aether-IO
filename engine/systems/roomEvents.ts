@@ -101,9 +101,11 @@ export function updateRoomEvents(dt: number): void {
       // down, unless the hero is right next to it. (Enemies moved toward the hero this frame already: undo that step.)
       let n = 0;
       const reach = e.obj === 'DEFEND' ? 3.2 : 2.6;
+      const guard = Math.hypot(pl.pos.x - e.x, pl.pos.z - e.z) < 7;   // the hero guards it: every monster comes for the hero instead
       for (const m of world.enemies) {
         if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || m.mini || isStationary(m.kind)) continue;
         const dx = e.x - m.pos.x, dz = e.z - m.pos.z, d = Math.hypot(dx, dz) || 0.01;
+        if (guard) continue;
         if (d < reach + m.radius) { n++; m.facing = Math.atan2(dx, dz); continue; }
         const pd = Math.hypot(pl.pos.x - m.pos.x, pl.pos.z - m.pos.z);
         const toTotem = pd > 4 && ((m.id & 1) === 0 || d < pd);
@@ -119,10 +121,10 @@ export function updateRoomEvents(dt: number): void {
       if (e.enemy < 0 && e.t > 1.2) {
         // pops out at the far side of the room from the hero
         const R = world.room.radius, a = Math.atan2(-pl.pos.z, -pl.pos.x);
-        tmp.set(Math.cos(a) * R * 0.45, 0, Math.sin(a) * R * 0.45);
+        tmp.set(Math.cos(a) * R * 0.18, 0, Math.sin(a) * R * 0.18);
         const g = spawnEnemy('GOBLIN', tmp);
         if (g) {
-          g.maxHp = g.hp = Math.round(g.maxHp * 5); g.contactDamage = 0; g.scale *= 1.25; g.elite = false;
+          g.maxHp = g.hp = Math.round(g.maxHp * 2.5); g.contactDamage = 0; g.scale *= 1.25; g.elite = false;
           e.enemy = g.id; e.t = 0;
           events.emit('floatText', { pos: g.pos, text: 'TREASURE GOBLIN!', color: 0xffd24a, scale: 1.0, dy: 2.2 });
         }
@@ -139,8 +141,8 @@ export function updateRoomEvents(dt: number): void {
           const dx = g.pos.x - pl.pos.x, dz = g.pos.z - pl.pos.z, d = Math.hypot(dx, dz) || 1;
           const s = 7.5 * dt * (d < 10 ? 1 : 0.6);
           let nx = g.pos.x + (dx / d) * s, nz = g.pos.z + (dz / d) * s;
-          const R = world.room.radius * 0.78, r = Math.hypot(nx, nz);
-          if (r > R) { const a = Math.atan2(nz, nx) + 0.9 * dt * 3; nx = Math.cos(a) * R; nz = Math.sin(a) * R; }   // slide along the rim
+          const R = world.room.radius * 0.32, r = Math.hypot(nx, nz);   // it keeps to the middle of the room (never the sides)
+          if (r > R) { const a = Math.atan2(nz, nx) + 0.9 * dt * 3; nx = Math.cos(a) * R; nz = Math.sin(a) * R; }   // circles the centre
           g.pos.x = nx; g.pos.z = nz; g.facing = Math.atan2(dx, dz);
         }
       }

@@ -166,6 +166,8 @@ export function Enemies() {
       let r = 1, g = 1, b = 1, fl = e.hitFlash;
       const kt = KIND_TINT[e.kind]; if (kt) { r = kt[0]; g = kt[1]; b = kt[2]; }
       if (e.affix !== 'NONE') { const a = AFFIX_TINT[e.affix]; r *= a[0]; g *= a[1]; b *= a[2]; }
+      const gob = world.roomEvt.obj === 'GOBLIN' && world.roomEvt.enemy === e.id;   // the treasure goblin: gilded and glowing
+      if (gob) { const p = 0.85 + 0.15 * Math.sin(t * 6); r = 1.9 * p; g = 1.5 * p; b = 0.35; }
       if (e.freezeT > 0) { r *= 0.6; g *= 0.92; b *= 1.4; fl = Math.max(fl, 0.14); }
       if (e.burnT > 0) { const p = 0.5 + 0.5 * Math.sin(t * 14 + i); r *= 1.3; g *= 0.78 + 0.12 * p; b *= 0.55; }
       if (e.poisonT > 0) { r *= 0.72; g *= 1.25; b *= 0.62; }
@@ -190,8 +192,9 @@ export function Enemies() {
       if (e.state === 'DYING') continue;
 
       // elite ring / halo / shield
-      if (e.elite) {
-        const hex = e.affix === 'NONE' ? (e.id % 2 ? 0xa855f7 : 0xe8b030) : AFFIX_COL[e.affix];
+      if (gob && dt > 0 && Math.random() < dt * 14) FX.add.emit(e.pos.x + (Math.random() - 0.5) * 1.2, e.pos.y + 0.4 + Math.random() * 1.4, e.pos.z + (Math.random() - 0.5) * 1.2, 0, 1.2, 0, 0.6, 0.28, 0.04, 2.4, 2.0, 0.6, 1, CELL.STAR, 0, 1, 0, 3);
+      if (e.elite || gob) {
+        const hex = gob ? 0xffd23a : e.affix === 'NONE' ? (e.id % 2 ? 0xa855f7 : 0xe8b030) : AFFIX_COL[e.affix];
         _w.setHex(hex);
         if (nRing < 128) { const rr = (e.radius * 1.6 + 1.1) * Math.max(0.8, eliteK); setInst(sys.rings, nRing, e.pos.x, 0.07, e.pos.z, t * 0.5, rr * 2, 1, rr * 2); rCa[nRing * 3] = _w.r; rCa[nRing * 3 + 1] = _w.g; rCa[nRing * 3 + 2] = _w.b; nRing++; }
         if (nHalo < 128) { setInst(sys.halo, nHalo, e.pos.x, e.pos.y + K.def.headY * s + 0.55 + Math.sin(t * 3 + i) * 0.06, e.pos.z, t * 2, 1.0, 1, 1); sys.halo.setColorAt(nHalo, _c.setRGB(_w.r * 1.8, _w.g * 1.8, _w.b * 1.8)); nHalo++; }

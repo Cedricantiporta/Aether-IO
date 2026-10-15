@@ -9,7 +9,7 @@ import { SKILLS_INFO } from './constants';
 export interface ClassProg { lv: number; xp: number; sp: number; skills: SkillLevels }
 export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 export const START_SP = 3;
-export const MAX_LEVEL = 99;
+export const MAX_LEVEL = 50;
 /** The class dash unlocks at this class level (below it Space does nothing). */
 export const DASH_UNLOCK_LV = 20;
 
