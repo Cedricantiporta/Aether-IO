@@ -118,6 +118,7 @@ let merchantBiome = -1, fountainBiome = -1, shrineBiome = -1;
 let crystalAt = -1;
 /** Boss key of the current biome: found in a room after the champion (depth 10); opens a boss door early. */
 export const bossKeyState = { has: false };
+const BOSS_KEY_DROPS = false;
 // final fight (after the Void boss) and endless tower state
 let finalFight = false, endingDone = false;
 /** Malakar is fought twice: stage 1 (slower, fewer adds); slain, he rises again as stage 2 (stronger, new attacks). */
@@ -739,7 +740,8 @@ function onCleared(): void {
   roomEventCleared();
   if (plan.type === 'GATEKEEPER') return;   // the courtyard: nothing to clear, the gates are entered with E
   // the boss key: rooms from the champion on may hold it (more often the deeper you go; chests are the best bet)
-  if (runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && !gateBiome() && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
+  // (owner: disabled - the biome boss is always at depth 15, the merchant always at depth 14)
+  if (BOSS_KEY_DROPS && runInfo.mode === 'ADVENTURE' && !bossKeyState.has && !finalFight && !gateBiome() && index >= PREBOSS_INDEX && index < REST_INDEX && plan.type !== 'BOSS') {
     const ch = 0.5 * (plan.type === 'TREASURE' ? 0.6 : plan.type === 'MINIBOSS' ? 0.25 : plan.type === 'DUEL' ? 0.35 : 0.2 + 0.08 * (index - PREBOSS_INDEX));   // halved: a boss before depth 15 is rarer
     if (Math.random() < ch) {
       bossKeyState.has = true;

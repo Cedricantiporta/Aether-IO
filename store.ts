@@ -323,7 +323,10 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
 
 /** Shadow Step (+4% dodge) can be taken once per run; reset on runStart. */
 let shadowStepTaken = false;
-events.on('runStart', () => { shadowStepTaken = false; });
+/** Aegis is offered at most once per biome (owner): the run/biome key of its last offer. */
+let aegisOffered = '';
+events.on('runStart', () => { shadowStepTaken = false; aegisOffered = ''; });
+const aegisKey = (): string => String(world.room.biome);   // (reset each run on runStart)
 const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 3): Upgrade[] => {
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
@@ -331,6 +334,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     if (key && (skillLevels[key] >= MAX_SKILL_LEVEL || skillLevels[key] <= 0)) return false;   // cards only boost learned skills
     if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
     if (u.type === 'DASH_COOLDOWN' && shadowStepTaken) return false;   // Shadow Step: 4% dodge in total
+    if (u.type === 'AEGIS' && aegisOffered === aegisKey()) return false;   // once per biome
     return true;
   });
   const options: Upgrade[] = [];
@@ -338,6 +342,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     const idx = Math.floor(Math.random() * pool.length);
     const base = pool.splice(idx, 1)[0];
     const opt: Upgrade = { ...base, id: uid('card') };
+    if (base.type === 'AEGIS') aegisOffered = aegisKey();
     const key = skillKeyFor(base.type, hero);
     if (key) {
       const lvl = skillLevels[key];
@@ -947,7 +952,8 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'MULTISHOT': base.multishot += upgrade.value; break;
           case 'ULT_FILL': world.player.ult = Math.max(world.player.ult, Math.min(100, upgrade.value)); break;
           case 'RESTORE': { const hp = state.stats.maxHealth * 0.3; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * 0.3); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
-          case 'AEGIS': { const sh = state.stats.maxHealth * upgrade.value; world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
+          case 'AEGIS': { const sh = upgrade.value;   // a flat 80 HP shield (owner)
+ world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
           case 'DASH_COOLDOWN': if (!shadowStepTaken) { shadowStepTaken = true; base.dodge = (base.dodge || 0) + 0.04; } break;   // Shadow Step: +4% dodge, once per run
           default: break;
         }

@@ -10,7 +10,7 @@ import { GATES, GATE_KEYS_NEEDED, gateState } from './gates';
 export const ROOMS_PER_BIOME = 14;         // normal rooms before the boss room (room index ROOMS_PER_BIOME): 15 depths per biome
 export const BOSS_INDEX = ROOMS_PER_BIOME;   // the biome boss: depth 15
 export const PREBOSS_INDEX = 9;              // the pre-boss: depth 10 (Meadow: the Slime King; elsewhere a biome champion)
-export const REST_INDEX = ROOMS_PER_BIOME - 1; // the room before the boss is always a fountain / merchant
+export const REST_INDEX = ROOMS_PER_BIOME - 1; // the room before the boss (depth 14) is always the merchant
 /** Depth shown to the player (1-based, 15 per biome). */
 export const shownDepth = (biome: number, index: number): number => biome * (BOSS_INDEX + 1) + index + 1;
 
@@ -314,18 +314,13 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'ITEM', preboss: true }); return 1; }
   // the boss key was found: a boss door opens beside the usual ones (fight early, or keep exploring)
   if (bossKey && next > PREBOSS_INDEX) { const n = nextChoices(biome, index, out, merchantOk, fountainOk, shrineOk, crystal, false); if (n >= 3) out.pop(); out.unshift({ type: 'BOSS', reward: 'NONE' }); return out.length; }
-  if (next === REST_INDEX) {
-    if (fountainOk) out.push({ type: 'FOUNTAIN', reward: 'NONE' });
-    if (merchantOk && (!fountainOk || Math.random() < 0.55)) out.push({ type: 'MERCHANT', reward: 'NONE' });
-    if (out.length === 0) out.push(plan('COMBAT', next));
-    return out.length;
-  }
+  if (next === REST_INDEX) { out.push({ type: 'MERCHANT', reward: 'NONE' }); return 1; }   // depth 14 is always the merchant (owner)
   const n = pick<number>([[1, 15], [2, 50], [3, 35]]);
   const used = new Set<RoomType>();
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([
       ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? (storyBias.champion ? 28 : 9) : 0], ['TREASURE', 9], ['SHRINE', next >= 2 && shrineOk ? 9 : 0],
-      ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0], ['MERCHANT', next >= 2 && merchantOk ? 8 : 0],
+      ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0],   // (merchants only at depth 14)
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
     if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT', next)); continue; }

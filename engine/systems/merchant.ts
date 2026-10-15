@@ -1,12 +1,14 @@
 import { world } from '../world';
 // ============================================================================
-// Travelling merchant (merchant rooms): potions + three random gear pieces at a markup, one of them on sale.
+// Travelling merchant (depth 14 of every biome): 1-2 kinds of potion + three random gear pieces at a markup (gear +50%),
+// rarely an Ankh of Life or a Legendary shard at an inflated price; one entry on sale.
 // Stock is rolled when the room is entered and lives in a tiny zustand store so the shop tab can re-render.
 // ============================================================================
 import { create } from 'zustand';
 import type { Item } from '../../types';
 import { useGameStore, makeItemById } from '../../store';
 import { rarityForDepth } from '../roomDefs';
+import { shardItem } from '../../shards';
 
 export interface MerchantEntry { item: Item; price: number; oldPrice: number; left: number; sale: boolean }
 
@@ -24,13 +26,19 @@ export function rollMerchantStock(depth: number): void {
     const oldPrice = Math.max(10, Math.round(item.price * markup));
     items.push({ item, price: oldPrice, oldPrice, left, sale: false });
   };
-  add(makeItemById('potion_hp', 1)[0], 4);
-  add(makeItemById('potion_mana', 1)[0], 4);
-  if (depth >= 8) add(makeItemById(Math.random() < 0.5 ? 'potion_hp_big' : 'potion_mana_big', 1)[0], 2);
+  // potions: one or two kinds (e.g. big HP + HP, HP + mana, or just big mana)
+  const kinds = ['potion_hp', 'potion_hp_big', 'potion_mana', 'potion_mana_big'];
+  for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
+  const nPot = Math.random() < 0.5 ? 1 : 2;
+  for (let i = 0; i < nPot; i++) add(makeItemById(kinds[i], 1)[0], kinds[i].endsWith('_big') ? 2 : 4);
   for (let i = 0; i < 3; i++) {
     const gear = st.rollItemDrop(rarityForDepth(depth, 0.05, world.run.bossKills));
-    if (gear) add({ ...gear, id: `${gear.id}-m${i}` }, 1, MARKUP + 0.2);
+    if (gear) add({ ...gear, id: `${gear.id}-m${i}` }, 1, (MARKUP + 0.2) * 1.5);   // gear +50% (owner)
   }
+  // rarely: an Ankh of Life or a Legendary (gold) shard, at an inflated price
+  const r = Math.random();
+  if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
+  else if (r < 0.22) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);
   // exactly one entry on sale
   const s = items[Math.floor(Math.random() * items.length)];
   if (s) { s.sale = true; s.price = Math.max(1, Math.round(s.oldPrice * (1 - SALE))); }
@@ -46,8 +54,11 @@ export function buyMerchant(i: number): boolean {
   const st = useGameStore.getState();
   if (!e || e.left <= 0) return false;
   if (st.gold < e.price) { st.addNotification('Not enough Gold!', 'red', 'WARNING'); return false; }
-  const copy: Item = { ...e.item, stats: { ...e.item.stats }, id: `${e.item.id}-b${Date.now().toString(36)}`, quantity: 1 };
-  if (!st.addItemToInventory(copy)) { st.addNotification('Inventory Full!', 'red', 'WARNING'); return false; }
+  if (e.item.type === 'SHARD') st.addMaterial(e.item.rarity, 1);   // shards live in the material counts (bag stack synced)
+  else {
+    const copy: Item = { ...e.item, stats: { ...e.item.stats }, id: `${e.item.id}-b${Date.now().toString(36)}`, quantity: 1 };
+    if (!st.addItemToInventory(copy)) { st.addNotification('Inventory Full!', 'red', 'WARNING'); return false; }
+  }
   st.addGold(-e.price);
   st.addNotification(`Bought ${e.item.name}`, 'white', 'SYSTEM');
   useMerchant.setState({ items: entries.map((x, k) => (k === i ? { ...x, left: x.left - 1 } : x)) });
