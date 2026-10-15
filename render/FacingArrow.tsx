@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial } from 'three';
 import { world } from '../engine/world';
-import { thinArrowGeo } from './arrowGeo';
+import { triArrowGeo } from './arrowGeo';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 
@@ -20,8 +20,8 @@ export function FacingArrow() {
     const rimMat = new MeshBasicMaterial({ color: 0xf1e2b8, transparent: true, opacity: 0.55, depthWrite: false, side: DoubleSide, toneMapped: false });
     const chevMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false, side: DoubleSide, toneMapped: false });
     const root = new Group();
-    const arrow = new Mesh(thinArrowGeo(0.42, 0.42, 0, 0.1), arrowMat); arrow.position.set(0, 0.07, 1.25); arrow.renderOrder = 6;
-    const rim = new Mesh(thinArrowGeo(0.45, 0.45, 0, 0.22), rimMat); rim.position.set(0, 0.06, 1.25); rim.renderOrder = 5;
+    const arrow = new Mesh(triArrowGeo(0.4, 0.66, 0.2), arrowMat); arrow.position.set(0, 0.07, 1.35); arrow.renderOrder = 6;
+    const rim = new Mesh(triArrowGeo(0.5, 0.8, 0.18), rimMat); rim.position.set(0, 0.06, 1.28); rim.renderOrder = 5;
     const chev = new Group();
     for (let i = 0; i < 3; i++) { const m = new Mesh(tri(0.42, 0.5, 0.22), chevMat); m.position.set(0, 0.05, 3 + i * ((DASH_REACH - 3) / 2)); m.renderOrder = 5; chev.add(m); }
     root.add(rim, arrow, chev);

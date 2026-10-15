@@ -5,7 +5,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, DoubleSide, Group, MeshBasicMaterial } from 'three';
-import { thinArrowGeo } from './arrowGeo';
+import { triArrowGeo } from './arrowGeo';
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
@@ -39,7 +39,7 @@ function pickTarget(): boolean {
 }
 
 export function GuideArrow() {
-  const geo = useMemo(() => ({ core: thinArrowGeo(0.62, 0.6, 1.5, 0.12), rim: thinArrowGeo(0.66, 0.64, 1.56, 0.26) }), []);
+  const geo = useMemo(() => ({ core: triArrowGeo(0.5, 1.3, 0.38), rim: triArrowGeo(0.62, 1.48, 0.36).translate(0, 0, -0.09) }), []);   // dark notched triangle, coloured rim
   const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false, side: DoubleSide, color: GOLD.clone() }), []);   // rim
   const dark = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.92, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#14100c' }), []);
   const ref = useRef<Group>(null!);
@@ -58,7 +58,7 @@ export function GuideArrow() {
     m.visible = on && s.has && dt2 > tgt.hideR && d > 0.3;
     if (!m.visible) return;
     const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
-    m.position.set(p.x + (dx / d) * k - (dx / d) * 0.75, (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * k - (dz / d) * 0.75);
+    m.position.set(p.x + (dx / d) * (k - 0.6), (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * (k - 0.6));
     m.rotation.y = Math.atan2(dx, dz);
   });
   return (

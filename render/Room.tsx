@@ -21,7 +21,7 @@ import { RoomWater, LavaSea } from './RoomWater';
 import { Wanderer } from './Wanderer';
 import { Finale } from './Finale';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
-import { thinArrowGeo } from './arrowGeo';
+import { triArrowGeo } from './arrowGeo';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
 import { labelMaterial } from './label';
@@ -645,7 +645,7 @@ function Portals() {
 
 /** Small arrows around the hero pointing at exit portals that are off-screen. */
 function PortalGuides() {
-  const geo = useMemo(() => ({ core: thinArrowGeo(0.62, 0.6, 1.5, 0.16), rim: thinArrowGeo(0.67, 0.65, 1.57, 0.32) }), []);   // thin arrows (render/arrowGeo)
+  const geo = useMemo(() => ({ core: triArrowGeo(0.5, 1.3, 0.38), rim: triArrowGeo(0.62, 1.48, 0.36).translate(0, 0, -0.09) }), []);   // notched triangles (render/arrowGeo): vivid core, dark rim
   const mats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false, side: DoubleSide, color: new Color() })), []);
   const rimMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#120e0a' }), []);
   const refs = useRef<(Group | null)[]>([]);
@@ -659,7 +659,7 @@ function PortalGuides() {
       m.visible = po.active && d > 15 && r.fade < 0.5;
       if (!m.visible) continue;
       const k = 4.2 + Math.sin(clock.elapsedTime * 5 + i) * 0.25;
-      m.position.set(p.x + (dx / d) * (k - 0.75), 0.25, p.z + (dz / d) * (k - 0.75));
+      m.position.set(p.x + (dx / d) * (k - 0.6), 0.25, p.z + (dz / d) * (k - 0.6));
       m.rotation.y = Math.atan2(dx, dz);
       const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward];
       if (key !== keys.current[i]) { keys.current[i] = key; mats[i].color.set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)

@@ -17,3 +17,18 @@ export function thinArrowGeo(w: number, h: number, len: number, t: number): Buff
   g.setAttribute('position', new Float32BufferAttribute(v, 3));
   return g;
 }
+
+/** Flat arrowhead ("semi triangle") on the ground pointing +z with a CURVED, concave back edge: tip at z = l, back
+ *  corners at z = 0 (+-w), the back curving in to z = notch at the middle. Triangle fan from the tip. */
+export function triArrowGeo(w: number, l: number, notch: number, seg = 10): BufferGeometry {
+  const v: number[] = [];
+  const px = (t: number) => (1 - t) * (1 - t) * w + t * t * -w;              // quadratic curve (w,0) -> (-w,0), control (0, 2 notch)
+  const pz = (t: number) => 2 * (1 - t) * t * (2 * notch);
+  for (let i = 0; i < seg; i++) {
+    const a = i / seg, b = (i + 1) / seg;
+    v.push(0, 0, l, px(a), 0, pz(a), px(b), 0, pz(b));
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute(v, 3));
+  return g;
+}
