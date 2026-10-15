@@ -1,5 +1,6 @@
 // One white triangle on the ground in front of the hero showing where it faces (= where a dash goes). Two meshes, no allocations per frame.
 import { useMemo } from 'react';
+import { liftAt } from './lift';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial } from 'three';
 import { world } from '../engine/world';
@@ -32,7 +33,7 @@ export function FacingArrow() {
     const run = st === GameStatus.PLAYING, town = st === GameStatus.MENU && world.village.area === 'TOWN';
     root.visible = p.alive && (run || town) && !p.anim.dashing;
     if (!root.visible) return;
-    root.position.set(p.pos.x, 0, p.pos.z);
+    root.position.set(p.pos.x, liftAt(p.pos.x, p.pos.z), p.pos.z);
     root.rotation.y = p.facing;
     arrowMat.opacity = 0.75 + 0.12 * Math.sin(clock.elapsedTime * 4);
     chev.visible = false;   // single arrow only (user preference)

@@ -3,6 +3,7 @@
 // bounty to claim, the King, loot to sell, a side quest to hand in (cyan), then the main quest's field objective (the
 // Adventure Portal). Inside the castle it leads to the King / a castle NPC or the exit.
 import React, { useMemo, useRef } from 'react';
+import { liftAt } from './lift';
 import { useFrame } from '@react-three/fiber';
 import { Color, DoubleSide, Group, MeshBasicMaterial } from 'three';
 import { triArrowGeo } from './arrowGeo';
@@ -58,7 +59,7 @@ export function GuideArrow() {
     m.visible = on && s.has && dt2 > tgt.hideR && d > 0.3;
     if (!m.visible) return;
     const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
-    m.position.set(p.x + (dx / d) * (k - 0.6), (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * (k - 0.6));
+    m.position.set(p.x + (dx / d) * (k - 0.6), (world.village.area !== 'TOWN' ? 0.35 : 0.25 + liftAt(p.x, p.z)), p.z + (dz / d) * (k - 0.6));
     m.rotation.y = Math.atan2(dx, dz);
   });
   return (

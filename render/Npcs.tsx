@@ -1,6 +1,7 @@
 // Town NPCs (shared KayKit GLTFs cloned per NPC, tinted / scaled / props in hand), wandering animals and the
 // projection of speech-bubble anchors to screen space (the DOM layer ui/hud/SpeechBubbles.tsx does the drawing).
 import { CanvasTexture, SRGBColorSpace, SpriteMaterial } from 'three';
+import { liftAt } from './lift';
 import { questNpc } from '../engine/systems/npcQuestLogic';
 import { eggReady, catHidden, pinHidden } from '../engine/systems/village';
 import { NESTS, HIDDEN_CAT, WHEEL_PIN } from '../engine/townData';
@@ -151,7 +152,7 @@ function NpcActor({ i }: { i: number }) {
     // only nearby NPCs cast shadows (skinned shadow draws are the expensive part)
     const sh = pd2 < 324;
     if (sh !== s.shadow) { s.shadow = sh; for (const m of meshes.current) m.castShadow = sh; }
-    g.position.set(st.x, def.y ?? 0, st.z);
+    g.position.set(st.x, def.y ?? (def.area ? 0 : liftAt(st.x, st.z)), st.z);
     s.yaw = angleLerp(s.yaw, st.yaw, 1 - Math.exp(-9 * dt));
     g.rotation.y = s.yaw;
     s.w += ((st.moving ? 1 : 0) - s.w) * Math.min(1, dt * 8);

@@ -83,17 +83,32 @@ export const RUINS: RuinSpec[] = [
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
+/** Raised stone terrace in front of the keep (h above the town paving), reached by a wide flight of stairs in the middle
+ *  of its front edge (x +-stairHw, from z1 down to stairZ). The keep stands on it. */
+export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3.5, stairZ: -15.6 };
+/** Ground height at (x, z) in the town (the terrace + its stairs; 0 elsewhere). */
+export function townLift(x: number, z: number): number {
+  const T = TERRACE;
+  if (x < T.x0 || x > T.x1 || z > T.stairZ || z < T.z0 - 12) return 0;
+  if (z <= T.z1) return T.h;
+  if (Math.abs(x) <= T.stairHw) return T.h * (T.stairZ - z) / (T.stairZ - T.z1);
+  return 0;
+}
+/** Landmarks (owner: "more structure, not more houses"). Doors face +z at rot 0 like the houses.
+ *  CHURCH: the chapel west of the keep (enterable, see churchData); TAVERN: the Golden Tankard east of the keep;
+ *  WINDMILL: on the meadow by the south-east wall tower; STATUE: the founder's statue in the middle of the plaza. */
+export const CHURCH = { x: -27, z: -27.5, w: 9, d: 14, rot: 0 };
+export const TAVERN = { x: 28, z: -21, w: 9.5, d: 7, rot: 0 };
+export const WINDMILL = { x: 45, z: 46.5, r: 3.4 };
+export const STATUE = { x: 0, z: 2, r: 1.9 };
 
 export const HOUSES: HouseSpec[] = [
   // the farm outside the gate: a big red barn by the road and a little chicken coop
   { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
   { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
   // flanking the castle
-  H(-17.5, -31, 0, 5.0, 4.4, 2), H(18.5, -28, 0, 5.0, 4.4),
+  H(18.5, -28.5, 0, 5.0, 4.4),
   // east end of the north street, door facing the street
-  H(27, -16.5, -Math.PI / 2, 5.0, 4.4, 2),
-  // west of the castle steps: the dark-roofed house behind the Skill Trainer (door facing the street)
-  H(-19.5, -14, 0, 5.0, 4.4),
   // (south of the east-west street: the Potion Shop and Armor Shop buildings, see constants SHOP_POSITIONS)
   // the old shop lots on the street now hold houses
   H(-30, 1.5, 0, 5.0, 4.4, 2), H(-37, 1.5, 0, 4.8, 4.2), H(36.5, 1.5, 0, 4.8, 4.2),   // (the west lots by the plaza now hold the Pet Stable + Fortune Teller)
@@ -103,11 +118,7 @@ export const HOUSES: HouseSpec[] = [
   H(-34, 19, Math.PI / 2, 4.6, 4.0), H(34, 19, -Math.PI / 2, 5.0, 4.4, 2),
   H(24, 22, 0, 5.2, 4.4, 2),   // where the pet stable used to be
   // north street ends, facing the street (west end north of the potion shop, east end north of the warehouse)
-  H(-24, -6, Math.PI / 2, 5.0, 4.4, 2),   // (the east one is the Tech House shop)
   H(-33, -9, 0.5, 5.0, 4.4, 2), H(33, -10, -0.5, 4.8, 4.2),
-  H(-31, -24, 0.3, 4.8, 4.2), H(31, -24, -0.3, 5.2, 4.4, 2),
-  // the old Skill Trainer spot east of the quest board (door facing the north street)
-  H(17, -14, 0, 5.0, 4.4),
 ];
 
 /** Decorative market stalls (the useful shops are Supplies / Blacksmith / Pets). */
@@ -129,18 +140,21 @@ export const ROAD_W = { main: 5, street: 4, branch: 2.8 };
 export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 8, x2: 0, z2: 74, w: ROAD_W.main },               // main avenue plaza -> gate -> farm road
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
-  { x1: -18, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street
+  { x1: -27, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street (on west to the chapel)
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
   { x1: -11.6, z1: 10, x2: -11.6, z2: 14.6, w: ROAD_W.branch },   // potion shop door (shop faces north onto the street)
   { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // pet stable door
   { x1: -12.5, z1: 10, x2: -12.5, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 19.5, z1: 10, x2: 19.5, z2: 5.2, w: ROAD_W.branch },     // warehouse barn doors
-  { x1: 0, z1: -6, x2: 0, z2: -24, w: ROAD_W.branch + 0.6 },     // castle path (straight to the keep's steps)
+  { x1: 0, z1: -6, x2: 0, z2: TERRACE.stairZ + 0.3, w: ROAD_W.branch + 0.6 },     // castle path (to the terrace stairs)
+  { x1: CHURCH.x, z1: -6, x2: CHURCH.x, z2: CHURCH.z + CHURCH.d / 2 + 0.4, w: ROAD_W.branch + 0.6 },   // chapel door
+  { x1: TAVERN.x, z1: -12.5, x2: TAVERN.x, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // tavern door
+  { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: 14.6, z1: 10, x2: 14.6, z2: 14.6, w: ROAD_W.branch },     // armor shop door
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
-  { x1: -10.5, z1: -6, x2: -10.5, z2: -16.6, w: ROAD_W.branch }, // skill trainer (west of the castle steps)
+  { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x + 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (west of the road)
   { x1: 0, z1: 75, x2: -26, z2: 75, w: 1.8 },                    // endless tower door (a narrow woodland path)
@@ -210,7 +224,6 @@ export const PLANTERS: PlanterSpec[] = [
   { x: -15.2, z: -9.2, w: 3.2, d: 1.0, kind: 1 }, { x: 11.5, z: -9.2, w: 3.2, d: 1.0, kind: 0 },
   { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
   // castle approach: flower beds lining the path and the castle front
-  { x: -2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -16.5, w: 1.2, d: 3.0, kind: 1 },
   { x: -7.6, z: -24.6, w: 6.0, d: 1.5, kind: 1 }, { x: 7.6, z: -24.6, w: 6.0, d: 1.5, kind: 1 },
   { x: -6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 }, { x: 6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 },
   // pet lane
@@ -230,9 +243,9 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 52, z: -57, s: 3.4, kind: 1 }, { x: 40, z: -57.5, s: 3.2, kind: 0 }, { x: 22, z: -57.5, s: 3.5, kind: 1 }, { x: 10, z: -58, s: 3.0, kind: 0 },
   { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
-  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: -27.5, z: -27.5, s: 3.60, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: 31, z: -29, s: 3.00, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -29, z: -12.5, s: 3.15, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: -15.5, z: -26, s: 3.00, kind: 0 }, { x: -23.5, z: -10, s: 3.30, kind: 0 }, { x: 8.5, z: 20.5, s: 3.15, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 31, z: 23.5, s: 3.00, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
-  { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
+  
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -32, z: 44, s: 3.4, kind: 0 }, { x: -23, z: 54, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
@@ -240,8 +253,8 @@ export const TOWN_TREES: TreeSpec[] = [
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
-  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4], [-22, -22, 3.6, 3.2], [22, -22, 3.6, 3.2],
-  [-10, 24, 2.6, 2.4], [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
+  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4],
+  [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
 /** Parked carts on the meadow in front of the walls (drawn in TownScenery addCart): kind 0 merchant goods, 1 hay, 2 barrels.
@@ -284,6 +297,19 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   { const { x, z, rot } = BREWER_HUT, cr = Math.cos(rot), sr = Math.sin(rot);
     for (const [lx, lz, r] of [[1.4, 3.4, 1.0], [-1.6, 2.6, 0.75], [-2.4, 2.6, 0.6], [-2.95, 0.1, 0.9], [2.95, 0.9, 0.6]] as const) c.push([x + lx * cr + lz * sr, z - lx * sr + lz * cr, r]); }
   c.push([QUEST_POS[0], QUEST_POS[2], 1.6]); // notice board
+  // castle terrace: retaining wall along the front (gap for the stairs) and the sides, stair balustrades
+  { const T = TERRACE;
+    for (let x = T.x0; x <= T.x1 + 0.01; x += 0.8) if (Math.abs(x) > T.stairHw + 0.3) c.push([x, T.z1 + 0.35, 0.5]);
+    for (const x of [T.x0 - 0.35, T.x1 + 0.35]) for (let z = T.z0; z <= T.z1 + 0.35; z += 0.8) c.push([x, z, 0.5]);
+    for (const sx of [-1, 1]) for (let z = T.z1; z <= T.stairZ + 0.01; z += 0.7) c.push([sx * (T.stairHw + 0.35), z, 0.4]); }
+  // landmarks: chapel (+ bell tower at its front-left), tavern, windmill, statue
+  for (const L of [CHURCH, TAVERN]) {
+    const hw = L.w / 2, hd = L.d / 2;
+    for (let x = -hw; x <= hw + 0.01; x += 1.2) c.push([L.x + x, L.z - hd + 0.5, 1.0], [L.x + x, L.z + hd - 0.5, 1.0]);
+    for (let z = -hd; z <= hd + 0.01; z += 1.2) c.push([L.x - hw + 0.5, L.z + z, 1.0], [L.x + hw - 0.5, L.z + z, 1.0]);
+  }
+  c.push([CHURCH.x - CHURCH.w / 2 + 1.2, CHURCH.z + CHURCH.d / 2 - 1.2, 2.0]);
+  c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
   for (const [x, z] of LAMPS) c.push([x, z, 0.3]);
   // fences + fence posts: a continuous chain of small circles along every run
@@ -317,6 +343,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   c.push([0, 8, 40]);
   for (const h of HOUSES) c.push([h.x, h.z, 6.5]);
   c.push([CASTLE.x, CASTLE.z, 14], [HERMIT_CAMP.x, HERMIT_CAMP.z, 7]);
+  c.push([CHURCH.x, CHURCH.z, 9], [TAVERN.x, TAVERN.z, 7], [WINDMILL.x, WINDMILL.z, 9]);
   c.push([PORTAL.x, PORTAL.z, 13], [PORTAL.x, PORTAL.z - 6, 9]);   // the portal clearing
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
@@ -412,7 +439,7 @@ export const NPCS: NpcDef[] = [
   },
   // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
   {
-    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-4.4, -22],
+    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-4.4, -22], y: TERRACE.h,
     talk: [
       ['The King receives heroes in the throne hall. Go on in.'],
       ['I have stood at this door for eleven years. The door has never once tried anything.', 'Still. One must be ready.'],
@@ -420,7 +447,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['For the King!', 'All quiet at the castle.', 'Stand tall, Bram.'],
   },
   {
-    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [4.4, -22],
+    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [4.4, -22], y: TERRACE.h,
     talk: [
       ['Halt! State your... ah, the new guard. Welcome to the castle.'],
       ['Aldo snores standing up. Do not tell him I said that.'],
@@ -464,7 +491,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['La la laaa~', 'Beware the Mire... it rhymes with nothing!', 'Anyone have a lute string?'],
   },
   {
-    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-14.5, -12.6],   // among the houses (clear of the Skill Trainer's tent)
+    name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-21.5, -10.5],   // among the houses (clear of the Skill Trainer's tent)
     talk: [
       ['The Fortune Teller by the plaza answers wishes with fortune. Offer her gems and see who answers.', 'The Skill Trainer, by the castle steps on the west side, will sharpen what you already know.'],
       ['Knowledge is the sharpest weapon. And a very good staff, if I may say.'],
@@ -560,7 +587,7 @@ export const NPCS: NpcDef[] = [
   },
   // the Skill Trainer beside the training tent west of the castle steps (talking opens the skill panel)
   {
-    name: 'Master Varek', role: 'Skill Trainer', model: 'KNIGHT', tint: '#ffe0b0', scale: 1.05, prop: 'spear', accent: '#ffb04a', home: [-7.4, -17.4], opens: 'SKILLS',
+    name: 'Master Varek', role: 'Skill Trainer', model: 'KNIGHT', tint: '#ffe0b0', scale: 1.05, prop: 'spear', accent: '#ffb04a', home: [TRAINER_POS[0] + 3.1, TRAINER_POS[2] + 1.6], opens: 'SKILLS',
     talk: [
       ['Footwork first, flourish later.', 'Spend your skill points here. Every point is a lesson you already paid for in blood.'],
       ['A new skill opens as you grow. Come back after every few levels.', 'Let\'s see what you have learned.'],

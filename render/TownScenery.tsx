@@ -12,7 +12,7 @@ import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -536,6 +536,149 @@ function buildRuin(kind: number, seed: number) {
   return { b: b.build(), g: g.build() };
 }
 
+// --------------------------------------------------------------- landmarks ---
+/** The raised stone terrace in front of the keep: block + paved top, low parapet along the edges (gap for the stairs), a
+ *  wide flight of steps with sloped balustrades and lamp posts, and the foundation the keep stands on. */
+function addTerrace(b: GB, g: GB): void {
+  const T = TERRACE, h = T.h, cx = (T.x0 + T.x1) / 2, w = T.x1 - T.x0, d = T.z1 - T.z0, cz = (T.z0 + T.z1) / 2;
+  const st = '#a39d90', cap = '#c4beb0', top = '#cfc9bb';
+  b.box(w, h, d, [cx, h / 2, cz], st, [0, 0, 0], [0.8, 1.02]);
+  b.box(w - 0.3, 0.04, d - 0.3, [cx, h + 0.02, cz], top);
+  for (let x = T.x0 + 1.2; x < T.x1 - 0.6; x += 2.4) b.box(0.06, 0.05, d - 0.4, [x, h + 0.04, cz], '#b7b1a3');   // paving joints
+  const { x: kx, z: kz, w: kw, d: kd } = CASTLE;
+  b.box(kw + 2.4, h, kd + 1.6, [kx, h / 2, kz - 0.4], st, [0, 0, 0], [0.8, 1.02]);   // the keep's foundation
+  for (let x = T.x0 + 0.6; x < T.x1; x += 1.6) b.box(1.3, 0.12, 0.4, [x, h * 0.5, T.z1 + 0.02], '#958f82');      // stone courses on the front face
+  // parapet: front (both sides of the stairs) + sides
+  for (const sx of [-1, 1]) {
+    const a = T.stairHw + 0.35, bb = sx < 0 ? -T.x0 : T.x1, len = bb - a;
+    b.box(len, 0.55, 0.45, [sx * (a + len / 2), h + 0.27, T.z1 + 0.2], cap);
+    for (let x = a + 0.2; x <= bb; x += 2.0) b.box(0.6, 0.75, 0.6, [sx * x, h + 0.37, T.z1 + 0.2], st);
+    b.box(0.45, 0.55, d, [sx < 0 ? T.x0 + 0.2 : T.x1 - 0.2, h + 0.27, cz], cap);
+  }
+  // stairs (6 steps up to the north) + sloped balustrades with lamp posts at the foot
+  const n = 6, sd = (T.stairZ - T.z1) / n;
+  for (let k = 0; k < n; k++) {
+    const hh = (h * (k + 1)) / n;
+    b.box(T.stairHw * 2, hh, sd + 0.02, [0, hh / 2, T.stairZ - sd * (k + 0.5)], k % 2 ? '#bdb7a9' : '#c6c0b2');
+    b.box(T.stairHw * 2, 0.05, 0.1, [0, hh + 0.01, T.stairZ - sd * k - 0.05], '#9a9487');   // nosing line
+  }
+  const run = T.stairZ - T.z1, ang = Math.atan2(h, run);
+  for (const sx of [-1, 1]) {
+    const x = sx * (T.stairHw + 0.3);
+    b.box(0.5, 0.6, Math.hypot(run, h), [x, h / 2 + 0.3, (T.z1 + T.stairZ) / 2], cap, [-ang, 0, 0]);
+    b.box(0.7, 1.1, 0.7, [x, 0.55, T.stairZ + 0.1], st); b.box(0.85, 0.12, 0.85, [x, 1.14, T.stairZ + 0.1], cap);
+    b.cyl(0.08, 0.08, 1.2, 6, [x, 1.8, T.stairZ + 0.1], '#2a2a2e'); g.sph(0.24, [x, 2.5, T.stairZ + 0.1], '#ffd070', 1, 8);
+    b.box(0.7, 1.0 + h, 0.7, [x, (1.0 + h) / 2, T.z1 - 0.1], st); g.sph(0.2, [x, h + 1.25, T.z1 - 0.1], '#ffd070', 1, 6);
+  }
+}
+
+/** Chapel (local: door faces +z): stone nave with buttresses and a slate roof, a square bell tower with a spire at the
+ *  front-left corner, a big arched door, a glowing rose window and tall stained-glass windows along the sides. */
+function buildChurch(): { b: BufferGeometry; g: BufferGeometry } {
+  const b = new GB([0.8, 1.06]), g = new GB([1, 1]);
+  const { w, d } = CHURCH, wallH = 6.2, base = 0.5, st = '#d9d3c4', st2 = '#b9b2a2', slate = '#3b4150', wood = '#4a2f1c', gold = '#ffd36a';
+  b.box(w + 0.8, base, d + 0.8, [0, base / 2, 0], st2);
+  b.box(w, wallH, d, [0, base + wallH / 2, 0], st, [0, 0, 0], [0.86, 1.02]);
+  b.prism(w + 1.4, 4.4, d + 0.9, [0, base + wallH, 0], slate, [0, 0, 0], [0.75, 1.05]);
+  b.box(0.3, 0.3, d + 1.0, [0, base + wallH + 4.4, 0], '#2a2e38');
+  for (const sx of [-1, 1]) for (let z = -d / 2 + 1.6; z < d / 2 - 1; z += 3.2) {
+    b.box(0.7, wallH * 0.75, 1.0, [sx * (w / 2 + 0.3), base + wallH * 0.375, z], st2);
+    g.box(0.1, 2.8, 1.1, [sx * (w / 2 + 0.03), base + 3.3, z + 1.6], (z * 7) % 2 > 1 ? '#9ec8ff' : '#ffb86a');   // stained glass
+    b.cyl(0.62, 0.62, 0.12, 10, [sx * (w / 2 + 0.04), base + 4.7, z + 1.6], st2, [0, 0, Math.PI / 2], [1, 1, 0.92]);
+  }
+  // front gable: rose window, cross, big arched door with steps
+  g.cyl(1.15, 1.15, 0.1, 16, [0.9, base + 5.6, d / 2 + 0.04], '#ffb85a', [Math.PI / 2, 0, 0]);
+  b.torus(1.2, 0.14, [0.9, base + 5.6, d / 2 + 0.1], st2, [0, 0, 0], 1, 16);
+  for (let k = 0; k < 4; k++) b.box(2.2, 0.08, 0.06, [0.9, base + 5.6, d / 2 + 0.12], '#5a4a3a', [0, 0, (k * Math.PI) / 4]);
+  b.box(0.3, 1.6, 0.25, [0, base + wallH + 4.9, d / 2 + 0.3], gold); b.box(1.0, 0.3, 0.25, [0, base + wallH + 5.2, d / 2 + 0.3], gold);
+  b.box(3.0, 3.8, 0.4, [0.9, base + 1.9, d / 2 + 0.1], st2);
+  b.box(2.2, 3.0, 0.2, [0.9, base + 1.5, d / 2 + 0.3], wood); b.cyl(1.1, 1.1, 0.2, 12, [0.9, base + 3.0, d / 2 + 0.3], wood, [Math.PI / 2, 0, 0]);
+  b.box(0.06, 3.9, 0.06, [0.9, base + 1.95, d / 2 + 0.42], '#2c2c30');
+  for (let k = 0; k < 3; k++) b.box(4.0 - k * 0.6, 0.18, 0.7, [0.9, 0.09 + k * 0.17, d / 2 + 0.9 - k * 0.3], k % 2 ? '#c6c0b2' : '#bdb7a9');
+  // bell tower (front-left) + spire
+  const tx = -w / 2 + 1.2, tz = d / 2 - 1.2, th = 12;
+  b.box(3.6, th, 3.6, [tx, th / 2, tz], st, [0, 0, 0], [0.84, 1.02]);
+  b.box(4.0, 0.4, 4.0, [tx, th, tz], st2);
+  for (const [ox, oz] of [[0, 1.82], [0, -1.82], [1.82, 0], [-1.82, 0]]) g.box(Math.abs(ox) > 0 ? 0.1 : 1.0, 1.6, Math.abs(oz) > 0 ? 0.1 : 1.0, [tx + ox, th - 1.6, tz + oz], '#3a2a18');   // bell openings
+  b.sph(0.55, [tx, th - 1.7, tz], '#b98a3a', [1, 1.1, 1], 8);
+  b.cone(2.9, 6.0, 4, [tx, th + 3.2, tz], slate, [0, Math.PI / 4, 0]);
+  b.box(0.18, 1.3, 0.18, [tx, th + 6.8, tz], gold); b.box(0.75, 0.18, 0.18, [tx, th + 7.0, tz], gold);
+  g.box(0.7, 1.4, 0.1, [tx, base + 4.5, tz + 1.82], '#ffcf7a');
+  // yard: two yews and a bench
+  b.box(2.2, 0.15, 0.6, [w / 2 - 0.6, 0.55, d / 2 + 2.0], wood); for (const sx of [-0.9, 0.9]) b.box(0.15, 0.5, 0.5, [w / 2 - 0.6 + sx, 0.25, d / 2 + 2.0], wood);
+  return { b: b.build(), g: g.build() };
+}
+
+/** The Golden Tankard tavern: a wide two-floor house + hanging sign with a golden tankard, outdoor tables, barrels. */
+function buildTavern(idx: number): { b: BufferGeometry; g: BufferGeometry } {
+  const { w, d } = TAVERN;
+  const spec: HouseSpec = { x: 0, z: 0, rot: 0, w, d, floors: 2, wall: '#e4d4b4', roof: '#4a2a1e', trim: '#6e4b2b', chimney: true, door: '#5a3a1e' };
+  const base = buildHouse(spec, idx);
+  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
+  b.addColored(base.b); g.addColored(base.g); base.b.dispose(); base.g.dispose();
+  // hanging sign on an iron bracket by the door
+  const sx = w / 2 - 1.2, sz = d / 2 + 0.6;
+  b.box(0.12, 0.12, 1.4, [sx, 3.9, sz - 0.2], '#2a2a2e'); b.box(0.08, 0.5, 0.08, [sx, 3.6, sz + 0.4], '#2a2a2e');
+  b.box(1.5, 1.1, 0.12, [sx, 2.95, sz + 0.4], '#6e4b2b'); b.box(1.3, 0.9, 0.14, [sx, 2.95, sz + 0.4], '#2d1f14');
+  g.cyl(0.24, 0.2, 0.5, 8, [sx - 0.08, 2.92, sz + 0.5], '#ffcf4a'); g.torus(0.14, 0.05, [sx + 0.2, 2.94, sz + 0.5], '#ffcf4a', [0, 0, 0], 1, 8);
+  g.sph(0.2, [sx - 0.08, 3.22, sz + 0.5], '#fff4d0', [1.2, 0.6, 1], 6);
+  // outdoor tables + benches + tankards, barrel stack on the side
+  for (const tx of [-w / 2 + 1.0, w / 2 - 1.6]) {
+    const tz = d / 2 + 2.4;
+    b.cyl(0.75, 0.75, 0.1, 10, [tx, 0.95, tz], '#7a5230'); b.cyl(0.12, 0.18, 0.9, 6, [tx, 0.45, tz], '#4a3020');
+    for (const o of [-1.15, 1.15]) b.box(1.5, 0.12, 0.42, [tx, 0.5, tz + o], '#6e4b2b');
+    b.cyl(0.11, 0.1, 0.26, 7, [tx + 0.25, 1.13, tz], '#c9a86a'); b.cyl(0.11, 0.1, 0.26, 7, [tx - 0.3, 1.13, tz + 0.2], '#c9a86a');
+  }
+  for (const [x, z, y] of [[w / 2 + 0.9, 1.4, 0.45], [w / 2 + 0.9, 0.2, 0.45], [w / 2 + 0.9, 0.8, 1.35]]) { b.cyl(0.5, 0.55, 0.9, 9, [x, y, z], '#8a5a30', [Math.PI / 2, 0, 0]); b.cyl(0.56, 0.56, 0.08, 9, [x, y, z + 0.25], '#3a3a40', [Math.PI / 2, 0, 0]); }
+  return { b: b.build(), g: g.build() };
+}
+
+/** Windmill tower (the sails turn: render/TownScenery Windmill component). Local: sails face +z. */
+function buildWindmill(): { b: BufferGeometry; g: BufferGeometry } {
+  const b = new GB([0.8, 1.06]), g = new GB([1, 1]);
+  b.cyl(3.3, 3.5, 0.5, 12, [0, 0.25, 0], '#8d877c');
+  b.cyl(2.3, 3.1, 9, 12, [0, 4.75, 0], '#e6dcc6', [0, 0, 0], 1, [0.85, 1.04]);
+  for (let k = 1; k < 4; k++) b.cyl(3.1 - k * 0.2 + 0.05, 3.1 - k * 0.2 + 0.1, 0.12, 12, [0, 0.5 + k * 2.2, 0], '#cdbf9f');
+  b.cone(3.1, 3.6, 12, [0, 11.0, 0], '#4a3426');
+  b.box(1.3, 1.3, 1.6, [0, 9.2, 2.6], '#5a4030');
+  b.box(1.3, 2.1, 0.2, [0, 1.55, 3.0], '#5a3a1e'); b.cyl(0.65, 0.65, 0.2, 10, [0, 2.6, 3.0], '#5a3a1e', [Math.PI / 2, 0, 0]);
+  for (const [x, y, z] of [[0, 5.6, 2.75], [-2.4, 3.6, 1.2], [2.4, 6.5, 0.6]]) g.box(0.6, 0.8, 0.2, [x, y, z], '#ffd88a', [0, Math.atan2(x, z), 0]);
+  for (const [x, z] of [[2.6, 2.8], [3.4, 2.0]]) b.box(0.8, 0.8, 0.8, [x, 0.4, z], '#c9a070', [0, 0.4, 0]);
+  b.box(1.1, 0.6, 0.8, [-2.6, 0.3, 2.6], '#e8dcbc');
+  return { b: b.build(), g: g.build() };
+}
+function buildSails(): BufferGeometry {
+  const b = new GB([0.85, 1.05]);
+  b.cyl(0.35, 0.35, 0.6, 8, [0, 0, 0], '#3a2a1e', [Math.PI / 2, 0, 0]);
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2, c = Math.cos(a), s = Math.sin(a);
+    b.box(0.22, 6.2, 0.18, [-s * 3.2, c * 3.2, 0.2], '#5a4030', [0, 0, a]);
+    b.box(1.5, 4.6, 0.06, [-s * 3.9 + c * 0.85, c * 3.9 + s * 0.85, 0.25], '#efe6d2', [0, 0, a]);
+    for (let j = 0; j < 4; j++) { const r = 2 + j * 1.3; b.box(1.6, 0.08, 0.1, [-s * r + c * 0.85, c * r + s * 0.85, 0.3], '#6e5038', [0, 0, a]); }
+  }
+  return b.build();
+}
+
+/** Founder's statue on the plaza: octagonal stepped plinth, a knight raising a sword (weathered bronze), plaque. */
+function buildStatue(): { b: BufferGeometry; g: BufferGeometry } {
+  const b = new GB([0.75, 1.1]), g = new GB([1, 1]);
+  const st = '#bdb7aa', st2 = '#a39d90', br = '#6f9a8a', br2 = '#5d8577';
+  b.cyl(1.95, 2.05, 0.35, 8, [0, 0.17, 0], st2); b.cyl(1.55, 1.65, 0.35, 8, [0, 0.52, 0], st);
+  b.cyl(1.05, 1.15, 1.8, 8, [0, 1.6, 0], st); b.cyl(1.25, 1.25, 0.2, 8, [0, 2.6, 0], st2);
+  b.box(0.9, 0.5, 0.06, [0, 1.6, 1.1], '#c9a052', [-0.08, 0, 0]);
+  // the knight
+  for (const sx of [-1, 1]) b.cyl(0.2, 0.22, 1.2, 7, [sx * 0.28, 3.3, 0], br2);
+  b.cyl(0.42, 0.36, 1.3, 8, [0, 4.5, 0], br); b.sph(0.46, [0, 5.25, 0], br, [1.1, 0.8, 0.9], 8);
+  b.sph(0.32, [0, 5.75, 0], br, 1, 8); b.cone(0.36, 0.5, 8, [0, 6.05, 0], br2);
+  b.cone(0.95, 2.4, 8, [0, 4.1, -0.15], br2, [0.12, 0, 0], [1, 1, 0.55]);   // cloak
+  b.cyl(0.13, 0.13, 1.0, 6, [0.55, 5.6, 0.05], br, [0, 0, -0.35]);          // raised arm
+  b.box(0.12, 2.1, 0.05, [0.85, 7.0, 0.1], '#9fbab0', [0, 0, -0.12]); b.box(0.6, 0.1, 0.12, [0.77, 6.05, 0.1], br2);
+  b.cyl(0.13, 0.13, 0.9, 6, [-0.55, 4.6, 0.25], br, [0.5, 0, 0.25]); b.box(0.75, 1.0, 0.12, [-0.75, 4.3, 0.55], br2, [0, 0.3, 0]);   // shield arm
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU + 0.2; b.sph(0.22, [Math.cos(a) * 1.75, 0.45, Math.sin(a) * 1.75], ['#ff7aa8', '#ffe14a', '#ffffff', '#ff9a4a'][i % 4], 1, 5); }
+  g.sph(0.05, [0, 0.01, 0], '#000000', 0.01, 3);
+  return { b: b.build(), g: g.build() };
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -551,7 +694,12 @@ function buildTown() {
   };
   HOUSES.forEach((h, i) => put(h.x, h.z, h.rot, buildHouse(h, i)));
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
-  { const c = at(CASTLE.x, CASTLE.z); addCastle(c.b, c.g); }
+  { const c = at(CASTLE.x, CASTLE.z), tb = new GB([1, 1]), tg = new GB([1, 1]); addCastle(tb, tg); addTerrace(c.b, c.g);
+    const kb = tb.build(), kg = tg.build(); c.b.addColored(kb, [0, TERRACE.h, 0]); c.g.addColored(kg, [0, TERRACE.h, 0]); kb.dispose(); kg.dispose(); }   // (the keep stands on the terrace)
+  put(CHURCH.x, CHURCH.z, CHURCH.rot, buildChurch());
+  put(TAVERN.x, TAVERN.z, TAVERN.rot, buildTavern(HOUSES.length + 3));
+  put(WINDMILL.x, WINDMILL.z, 0, buildWindmill());
+  put(STATUE.x, STATUE.z, 0, buildStatue());
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
@@ -563,7 +711,11 @@ function buildTown() {
   for (const [x1, z1, x2, z2] of FENCES) addFence(at((x1 + x2) / 2, (z1 + z2) / 2).b, x1, z1, x2, z2);
   for (const [x, z] of LAMPS) { const c = at(x, z); addLamp(c.b, c.g, x, z); }
   const pr = mulberry32(555);
-  for (const p of PLANTERS) addPlanter(at(p.x, p.z).b, p, pr);
+  for (const p of PLANTERS) {
+    const y = townLift(p.x, p.z);
+    if (y <= 0) { addPlanter(at(p.x, p.z).b, p, pr); continue; }
+    const tb = new GB([1, 1]); addPlanter(tb, p, pr); const geo = tb.build(); at(p.x, p.z).b.addColored(geo, [0, y, 0]); geo.dispose();   // (on the castle terrace)
+  }
   for (const k of CARTS) addCart(at(k.x, k.z).b, k);
   const paving = buildPaving();
   for (const pts of paving.patches) { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } addPatchKerb(at(cx / pts.length, cz / pts.length).b, pts, pr); }
@@ -629,6 +781,15 @@ function Lake() {
       <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
     </>
   );
+}
+
+/** The windmill's sails, turning slowly. */
+function Windmill() {
+  const geo = useMemo(() => buildSails(), []), mat = useMemo(() => litMat({ roughness: 0.9 }), []);
+  const ref = useRef<Mesh>(null!);
+  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
+  useFrame((_, dt) => { if (ref.current) ref.current.rotation.z += Math.min(dt, 0.05) * 0.45; });
+  return <mesh ref={ref} geometry={geo} material={mat} position={[WINDMILL.x, 9.2, WINDMILL.z + 3.5]} castShadow />;
 }
 
 function TownTrees() {
@@ -706,6 +867,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
+      <Windmill />
       <Lake />
       {town.chunks.map((c, i) => (
         <React.Fragment key={i}>

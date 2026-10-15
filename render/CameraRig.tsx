@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { liftAt } from './lift';
 import { currentTarget } from '../engine/systems/combat';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
@@ -27,7 +28,7 @@ export function isLobbyStatus(s: GameStatus) {
 /** Free-orbit follow camera (MMORPG style: yaw / pitch / zoom from engine/input), screen shake, ground-plane aim, and a cinematic lobby orbit. */
 export function CameraRig() {
   const cam = useThree((s) => s.camera) as PerspectiveCamera;
-  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0 });
+  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0, lift: 0 });
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -51,7 +52,8 @@ export function CameraRig() {
     const zoomSet = setts?.zoomUnlocked ? setts.cameraZoom || 1 : 1;
     if (!setts?.zoomUnlocked) world.camera.dist = 1;   // zoom locked at 1.0 unless unlocked in Settings
     s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
-    _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
+    s.lift = damp(s.lift, liftAt(p.pos.x, p.pos.z), 6, dt);
+    _tgt.set(p.pos.x + lx, 0.8 + s.lift, p.pos.z + lz);
     // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
     const C = world.camera;
     if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view

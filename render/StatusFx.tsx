@@ -6,6 +6,7 @@
 //    (Enemies already draw their own ice / stars / embers / poison in Enemies.tsx.)
 // No per-frame allocations: module scratch objects, fixed instance pools.
 import React, { useMemo } from 'react';
+import { liftAt } from './lift';
 import { useFrame, useThree } from '@react-three/fiber';
 import { IcosahedronGeometry, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Mesh, PlaneGeometry, Quaternion, Vector3, type Texture } from 'three';
 import { world } from '../engine/world';
@@ -94,7 +95,7 @@ export function StatusFx() {
         if (p.rootT > 0) list.push(T_RT);
         if (p.silenceT > 0) list.push(T_SIL);
         if (p.blindT > 0) list.push(T_BLN);
-        place(p.pos.x, 5.3, p.pos.z);   // above the name + HP bar
+        place(p.pos.x, 5.3 + liftAt(p.pos.x, p.pos.z), p.pos.z);   // above the name + HP bar
         // hero effects
         sys.ice.visible = frozen;
         if (frozen) { sys.ice.position.set(p.pos.x, 0.95, p.pos.z); sys.ice.scale.set(0.95, 1.3, 0.95); sys.ice.rotation.y += dt * 0.2; }

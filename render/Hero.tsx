@@ -1,5 +1,6 @@
 // The player hero: KayKit skinned model + animation state machine, weapons, status FX, bars, earthwall, axe spin.
 import { activeChar } from '../characters';
+import { liftAt } from './lift';
 import { titleOf } from '../achievements';
 import { labelMaterial } from './label';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -131,7 +132,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
 
     // transform
     const g = root.current;
-    if (lobby) g.position.set(0, 0, 0); else { g.position.copy(p.pos); g.position.y = p.air; }
+    if (lobby) g.position.set(0, 0, 0); else { g.position.copy(p.pos); g.position.y = p.air + liftAt(p.pos.x, p.pos.z); }
     const tk = !lobby && p.titanT > 0 ? 2.2 : 1;
     s.tscale = damp(s.tscale ?? 1, tk, 5, dt);
     g.scale.setScalar(s.tscale);
@@ -338,7 +339,7 @@ function Effects({ cls }: { cls: HeroClass }) {
       const k = wingK.current;
       wings.current.visible = k > 0.01;
       if (k > 0.01) {
-        wings.current.position.set(p.pos.x, p.pos.y + 1.45, p.pos.z);
+        wings.current.position.set(p.pos.x, p.pos.y + 1.45 + liftAt(p.pos.x, p.pos.z), p.pos.z);
         wings.current.rotation.y = p.facing;
         const flap = Math.sin(t * 3.2) * 0.16, open = 0.3 + (1 - k) * 0.9;
         wingR.current.rotation.set(1.15 + flap, open, 0.25);
@@ -482,7 +483,7 @@ function HeroBars() {
     g.current.visible = show && world.player.alive;
     if (!g.current.visible) return;
     const p = world.player;
-    g.current.position.set(p.pos.x, 3.15 + (p.air || 0), p.pos.z);   // mini HP / MP bars float above the hero's head
+    g.current.position.set(p.pos.x, 3.15 + (p.air || 0) + liftAt(p.pos.x, p.pos.z), p.pos.z);   // mini HP / MP bars float above the hero's head
     g.current.quaternion.copy(camera.quaternion);
     const fh = clamp(p.hp / Math.max(1, st.stats.maxHealth), 0, 1), fm = clamp(p.mana / Math.max(1, st.stats.maxMana), 0, 1);
     hp.current.scale.x = Math.max(0.001, fh); hp.current.position.x = -(1 - fh) * 1.1;

@@ -1,5 +1,6 @@
 // Companion pets: one procedural model per pet id.
 import React, { useMemo, useRef } from 'react';
+import { liftAt } from './lift';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, Material, Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, DoubleSide, Vector3 } from 'three';
 import { world } from '../engine/world';
@@ -329,7 +330,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     let y = (def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0)) * gs;
     let sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
-    root.current.position.set(pet.pos.x, Math.max(0, pet.pos.y - 1) + y, pet.pos.z);
+    root.current.position.set(pet.pos.x, Math.max(0, pet.pos.y - 1) + y + liftAt(pet.pos.x, pet.pos.z), pet.pos.z);
     s.yaw = pet.facing;
     root.current.rotation.y = pet.facing;
     const a = pet.attackT; // 1 -> 0 after a strike: stretch forward then settle
