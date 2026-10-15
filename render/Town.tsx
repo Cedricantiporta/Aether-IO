@@ -19,7 +19,7 @@ import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER, PORTAL } from '../engine/townData';
+import { TOWER, TOWER_KNOLL, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { Beach, buildFishStall } from './Beach';
 import { buildMineStall } from './CaveEntrance';
@@ -796,7 +796,7 @@ function TowerLandmark() {
   });
   const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(TOWER.door.x + 1.2, TOWER.door.z, 'tower', '', 2.2); };
   return (
-    <group position={[TOWER.x, 0, TOWER.z]}>
+    <group position={[TOWER.x, TOWER_KNOLL.h, TOWER.z]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
       <mesh geometry={geos.glow} material={mats.glow} />
       <sprite ref={titleRef} material={label.mat} position={[0, 32.5, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />

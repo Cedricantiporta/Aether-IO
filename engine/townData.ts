@@ -40,7 +40,7 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -28, z: 45.5, rot: Math.PI / 2 };   // (owner: farther from the town gate; was (-14, 45))
+export const BREWER_HUT = { x: -55, z: 107, rot: 0 };   // (owner: beside the path to the Endless Tower, door facing the path)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge
@@ -51,7 +51,10 @@ export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
 export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
-export const TOWER = { x: -31, z: 112, r: 4.2, door: { x: -26, z: 112 } };   // deep in the dark south-west forest, at the end of a narrow dirt path
+/** The Endless Tower: deep in the south-west forest at the end of a long, narrow clearing (owner: deeper in), on a raised
+ *  knoll (townLift TOWER_KNOLL). The Elixir Brewer keeps her hut on the path just before it. */
+export const TOWER = { x: -74, z: 112, r: 4.2, door: { x: -69, z: 112 } };
+export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -62,7 +65,8 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [-10, -2, 68, 58],    // the wide east side south of the trail: the mining camp at the Crystal Cave (caveData CAVE_BAY) + the way to the farm
   [0, 0, 64, 112],      // the strip east of the farm: the dirt path from the chicken coop up to the mines (round the river's east end)
   [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
-  [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Endless Tower, the Adventure Portal)
+  [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Adventure Portal)
+  [-86, 103, -40, 121],  // the long clearing west into the deep forest: the Elixir Brewer and the Endless Tower at its end
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
 
@@ -110,6 +114,8 @@ export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3
 export function townLift(x: number, z: number): number {
   // the bridge deck: a gentle arch over the river
   if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
+  // the Endless Tower's knoll (a raised mound; the path ramps up to the door)
+  { const td = Math.hypot(x - TOWER.x, z - TOWER.z); if (td < TOWER_KNOLL.r + TOWER_KNOLL.ramp) { const k = Math.min(1, (TOWER_KNOLL.r + TOWER_KNOLL.ramp - td) / TOWER_KNOLL.ramp); return TOWER_KNOLL.h * k * k * (3 - 2 * k); } }
   // the Adventure Portal's round stepped platform (tiers r 8 / 6.9 / 5.6 up to 1.2; render/Town buildPortalGeo)
   const pd = Math.hypot(x - PORTAL.x, z - PORTAL.z);
   if (pd < 8.4) return Math.min(1.2, Math.max(0, (8.4 - pd) / 2.6) * 1.2);
@@ -160,6 +166,8 @@ export const HOUSES: HouseSpec[] = [
   // the farm outside the gate: a big red barn by the road and a little chicken coop
   { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
   { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
+  // the hamlet on the meadow west of the coop, beside the portal (doors facing the farm track)
+  H(13, 121, Math.PI, 5.2, 4.4), H(23, 123.5, Math.PI, 5.6, 4.6, 2), H(32, 119.5, Math.PI, 4.8, 4.2),
   // flanking the castle
   H(18.5, -28.5, 0, 5.0, 4.4),
   // east end of the north street, door facing the street
@@ -265,7 +273,7 @@ export const FENCES: [number, number, number, number][] = [
   [-3.4, 79.5, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
-    const pts: [number, number][] = [[48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
+    const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const [ax, az] = pts[i], [bx, bz] = pts[i + 1], l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
       for (const sd of [-1, 1]) f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
@@ -438,6 +446,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = RIVER.x0; x <= RIVER.x1; x += 6) c.push([x, (RIVER.z0 + RIVER.z1) / 2, 9]);
   for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([PORTAL.x, PORTAL.z, 13], [PORTAL.x, PORTAL.z - 6, 9]);   // the portal clearing
+  c.push([TOWER.x, TOWER.z, 11], [BREWER_HUT.x, BREWER_HUT.z, 7.5]);   // the tower knoll + the brewer's yard
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
