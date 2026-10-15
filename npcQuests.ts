@@ -3,7 +3,10 @@
 // Pure data + helpers (no store import): the store keeps `npcQuests: NpcQuestSave` (persistent, saved in the profile),
 // the logic (accept / progress / turn-in) lives in engine/systems/npcQuestLogic.ts, dialogue in systems/dialogue.ts.
 // Chains: a quest with `after: '<id>'` only becomes available once that quest was turned in. `cond` hides a quest until a
-// condition is met (a boss defeated at least once, hero rank).
+// condition is met (a boss defeated at least once). `minLevel` gates it on the class level (store `level` / `heroRank`):
+// the level at which the hero can reach the quest's biome (biome 1 ~ Lv 1-10, Marble Halls 10-20, Sunscorch 20-28,
+// Frostpeak 28-36, Ember Wastes 36-44, the Void 44-50). Level-locked quests are listed (with their level) in the quest
+// window's Side tab once nothing else blocks them.
 // Reward gold is written in BASE units; it is multiplied by GOLD_SCALE when paid out.
 // ============================================================================
 import type { Item, Rarity } from './types';
@@ -48,8 +51,10 @@ export interface NpcQuestDef {
   reward: NpcReward;
   /** chain: the quest id that must be turned in first */
   after?: string;
-  /** hidden quest: not offered (no marker) until this holds */
+  /** hidden quest: not offered (no marker) until this holds (`rank` = legacy alias of minLevel) */
   cond?: { boss?: string; rank?: number };
+  /** class level needed before the quest is offered (shown as "Lv N" while locked) */
+  minLevel?: number;
   /** the turn-in NPC when it is not the giver */
   turnIn?: string;
 }
@@ -57,7 +62,7 @@ export interface NpcQuestDef {
 export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
-    id: 'wend_crystals', giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems from a Crystal Cavern',
+    id: 'wend_crystals', minLevel: 4, giver: 'Old Wend', title: 'A Glimmer in the Dark', summary: 'Gather 10 gems from a Crystal Cavern',
     intro: ['Hm? A hero out here? Good, my knees are no longer fit for caves.', 'Some doors in the wilds lead to a Crystal Cavern: no monsters, only glowing veins. Mine them and bring me back ten gemstones or crystals.'],
     progress: 'Ten shards of light from a Crystal Cavern, remember. The cave doors show up now and then between the fights.',
     done: ['Ahh, look at them sing! You have a good eye, hero.', 'Take this for the trouble.'],
@@ -73,7 +78,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gems: 25, items: [{ id: 'upgrade_core', qty: 2 }] },
   },
   {
-    id: 'wend_warden', giver: 'Old Wend', title: 'Warden of the Old Grove', summary: 'Defeat Elderroot the Ancient', after: 'wend_gems',
+    id: 'wend_warden', minLevel: 8, giver: 'Old Wend', title: 'Warden of the Old Grove', summary: 'Defeat Elderroot the Ancient', after: 'wend_gems',
     intro: ['Now listen. The Old Grove has a warden, Elderroot, and he has forgotten why he guards it. He walks, he crushes, he does not listen.', 'Put him to rest, hero, and the grove will speak well of you. A friend of mine will follow you home.'],
     progress: 'Elderroot still lumbers through the Old Grove. Strike at his roots and keep moving.',
     done: ['The grove is quiet at last. I felt it from here.', 'A wolf of the wild has taken a liking to you. Treat him kindly.'],
@@ -98,7 +103,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gold: 1200, items: [{ id: 'potion_hp_big', qty: 3 }] },
   },
   {
-    id: 'brenna_goblins', giver: 'Brenna', title: 'Thieves in the Night', summary: 'Defeat 25 Goblins', after: 'brenna_gel',
+    id: 'brenna_goblins', minLevel: 3, giver: 'Brenna', title: 'Thieves in the Night', summary: 'Defeat 25 Goblins', after: 'brenna_gel',
     intro: ['Now the goblins are stealing my carrots! I cannot afford it.', 'Drive off twenty-five of them and I will give you my father\'s old hood. It has been in a chest for years.'],
     progress: 'Twenty-five goblins, hero. They are quick, so mind yourself.',
     done: ['No more midnight thieves! A promise is a promise: my father\'s hood. It suits a hero better than a farmer.'],
@@ -107,7 +112,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- singles
   {
-    id: 'garrick_road', giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Mire (biome 3)',
+    id: 'garrick_road', minLevel: 20, giver: 'Garrick', title: 'Mind the Road', summary: 'Reach the Mire (biome 3)',
     intro: ['Traders say the road past the Old Grove sinks into the Mire. Nobody I send comes back with a clear report.', 'Make it to the Mire, hero, and tell me what you see.'],
     progress: 'The Mire is past the Old Grove: three biomes deep. Keep going!',
     done: ['So the Mire is real, and you came back. I am impressed.', 'The watch pays for good scouting.'],
@@ -115,7 +120,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gold: 3000, gems: 20 },
   },
   {
-    id: 'dorn_ore', giver: 'Dorn', title: 'Ore for the Forge', summary: 'Deliver 15 Ore Nuggets to Dorn',
+    id: 'dorn_ore', minLevel: 6, giver: 'Dorn', title: 'Ore for the Forge', summary: 'Deliver 15 Ore Nuggets to Dorn',
     intro: ['My veins outside the gate are dry and the smith keeps knocking. Bring me fifteen Ore Nuggets from the wilds and I will make it worth your while.'],
     progress: 'Fifteen Ore Nuggets. Look for ore veins in the caverns.',
     done: ['Heavy and honest! This will keep the forge hot a month.', 'My share: cores for your gear, and a fistful of gold.'],
@@ -130,31 +135,6 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
     reward: { gold: 500 },
   },
-  // ---- Mira's later lessons (side quests once you reach Lv 2; the shop / pet / summon basics are in the main questline)
-  {
-    id: 'mira_storage', giver: 'Mira', title: 'Safe Keeping', summary: 'Store an item in the Warehouse', cond: { rank: 2 },
-    intro: ['Your bag fills up fast out there. The Warehouse on the south street keeps a hundred things safe.', 'Put one item in it, so you know how it works.'],
-    progress: 'Open the Warehouse and drag (or click) an item from your bag into it.',
-    done: ['There you go. Camps beyond the first biome keep a storage chest that reaches the same warehouse, too.'],
-    objective: { type: 'ACTION', target: 'store', count: 1 },
-    reward: { gold: 400 },
-  },
-  {
-    id: 'mira_training', giver: 'Mira', title: 'Train Hard', summary: 'Learn or upgrade a skill at the Skill Trainer', after: 'mira_storage',
-    intro: ['Skill points come with every level. The trainer by the north street turns them into real skills.', 'Spend a point at the Skill Trainer. The camps out in the wilds have a training post as well.'],
-    progress: 'Talk to the Skill Trainer on the north street and spend a skill point.',
-    done: ['Feel that? New skills unlock as your level climbs: skill 2 at level 5, skill 3 at level 10.'],
-    objective: { type: 'ACTION', target: 'learn', count: 1 },
-    reward: { gold: 500, gems: 5 },
-  },
-  {
-    id: 'mira_forge', giver: 'Mira', title: 'Sharpen Up', summary: 'Upgrade a piece of gear at the Blacksmith', after: 'mira_training',
-    intro: ['Last lesson: gear. The Blacksmith at the east end of the south street can make it stronger.', 'Upgrade any piece once. It costs gold and an Upgrade Core.'],
-    progress: 'Bring gold and an Upgrade Core to the Blacksmith and upgrade one item.',
-    done: ['Now you are ready. Go make the King proud.'],
-    objective: { type: 'ACTION', target: 'upgrade', count: 1 },
-    reward: { gold: 800, items: [{ id: 'upgrade_core', qty: 2 }] },
-  },
   // ---- the farm outside the gate (interaction quests)
   {
     id: 'hollis_milk', giver: 'Hollis', title: 'Milk Run', summary: 'Milk the cows by the barn 3 times',
@@ -165,7 +145,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gold: 600, items: [{ id: 'potion_hp', qty: 2 }] },
   },
   {
-    id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', cond: { rank: 3 },
+    id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', minLevel: 3,
     intro: ['Something has been raiding the coop at night. Little green thieves with sticky fingers.', 'Goblins, the lot of them. Thin them out for me: twenty ought to teach them.'],
     progress: 'Goblins skulk in the Meadow and beyond. Twenty, if you please.',
     done: ['Not a feather lost last night! You have my thanks, and the farm\'s.'],
@@ -190,21 +170,102 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- hidden: appears only after Elderroot (biome 1 boss) fell at least once
   {
-    id: 'wren_champions', giver: 'Wren', title: 'Echoes of the Fallen', summary: 'Defeat 5 elite champions', cond: { boss: 'BOSS_TREANT' },
-    intro: ['You... you felled the Mountain? Then my studies were right: the champions of the wilds carry a piece of its stone.', 'Defeat five elite champions and I will let you read my notes. Rewards included, of course.'],
+    id: 'wren_champions', minLevel: 10, giver: 'Wren', title: 'Echoes of the Fallen', summary: 'Defeat 5 elite champions', cond: { boss: 'BOSS_TREANT' },
+    intro: ['You... you felled Elderroot? Then my studies were right: the champions of the wilds carry a piece of his poisoned heartwood.', 'Defeat five elite champions and I will let you read my notes. Rewards included, of course.'],
     progress: 'Elite champions only, hero: the ones with the gold crests. Five of them.',
-    done: ['Fascinating! The stone fragments hum just as predicted.', 'Your notes, your reward. Knowledge is its own treasure, but gems are nicer.'],
+    done: ['Fascinating! The heartwood splinters hum just as predicted.', 'Your notes, your reward. Knowledge is its own treasure, but gems are nicer.'],
     objective: { type: 'KILL_ELITE', count: 5 },
     reward: { gems: 50, shards: ['RARE', 20] },
   },
   // ---- the King
   {
-    id: 'king_frost', giver: 'King Aldric', title: 'The Frozen Frontier', summary: 'Reach Frostpeak (biome 4)',
+    id: 'king_frost', minLevel: 28, giver: 'King Aldric', title: 'The Frozen Frontier', summary: 'Reach Frostpeak (biome 4)',
     intro: ['Hero. Word reaches my court that the Frostpeak is stirring: a winter dragon, they say.', 'Go to the Frostpeak and see it with your own eyes. The crown will reward you.'],
     progress: 'The Frostpeak lies beyond the Mire, hero. Go, and return when you have seen it.',
     done: ['The Frostpeak is real, and so is the danger. Aether owes you.', 'Take the crown\'s thanks.'],
     objective: { type: 'REACH_BIOME', count: 4 },
     reward: { gold: 10000, gems: 50 },
+  },
+  // ---- level-gated: the deeper biomes (offered once the class level can reach them)
+  {
+    id: 'aldo_gargoyles', minLevel: 12, giver: 'Sir Aldo', title: 'Stone Wings', summary: 'Defeat 15 Gargoyles (Marble Halls)',
+    intro: ['The old castle had gargoyles on every tower. Stone, harmless, pretty.', 'Now they wake when you walk past and dive at your head. Smash fifteen of them in the Marble Halls, would you?'],
+    progress: 'Gargoyles sit still like statues until you come close. Strike first.',
+    done: ['Fifteen! The masons will have work for a year. Take this from the guard\'s purse.'],
+    objective: { type: 'KILL_KIND', target: 'GARGOYLE', count: 15 },
+    reward: { gold: 3500, gems: 20 },
+  },
+  {
+    id: 'bram_gorath', minLevel: 16, giver: 'Sir Bram', title: 'The Mountain Falls Again', summary: 'Defeat Gorath the Mountain', after: 'aldo_gargoyles',
+    intro: ['Gorath keeps rising, they say. Stone does not stay down.', 'Beat him once more and bring me a story worth telling at the gate. I will pay for it.'],
+    progress: 'Gorath waits at the end of the Marble Halls. Watch for the crystals that shield him.',
+    done: ['Felled again! Aldo owes me ten gold, I said you would. Here, your share and then some.'],
+    objective: { type: 'KILL_BOSS', target: 'BOSS_GOLEM', count: 1 },
+    reward: { gold: 6000, shards: ['RARE', 15] },
+  },
+  {
+    id: 'lysa_mummies', minLevel: 22, giver: 'Lysa', title: 'Bandages and Balms', summary: 'Defeat 20 Mummies (Sunscorch Desert)',
+    intro: ['The mummies of the Sunscorch are wrapped in linen soaked with old resins. Strange stuff, and strong.', 'Defeat twenty of them and I can brew the strongest salves you have ever tasted. Well, smelled.'],
+    progress: 'Mummies throw their wraps to root you. Keep moving and strike from the side.',
+    done: ['Oh, the smell! Perfect. Your salves, as promised.'],
+    objective: { type: 'KILL_KIND', target: 'MUMMY', count: 20 },
+    reward: { gold: 5000, items: [{ id: 'potion_hp_big', qty: 5 }] },
+  },
+  {
+    id: 'maeve_scorpions', minLevel: 24, giver: 'Maeve', title: 'Sting Operation', summary: 'Defeat 25 Giant Scorpions (Sunscorch Desert)',
+    intro: ['A cousin of a friend of my neighbour was stung by a giant scorpion. Swelled up like a melon!', 'Teach those pincered pests a lesson: twenty-five of them. And tell me everything after.'],
+    progress: 'Twenty-five giant scorpions. Mind the tail, and the acid it leaves behind.',
+    done: ['Twenty-five! Wait until the street hears. Here, the whole street chipped in.'],
+    objective: { type: 'KILL_KIND', target: 'SCORPION', count: 25 },
+    reward: { gold: 6000, gems: 30 },
+  },
+  {
+    id: 'dorn_yetis', minLevel: 30, giver: 'Dorn', title: 'Ore under the Ice', summary: 'Defeat 15 Yetis (Frostpeak)',
+    intro: ['There is iron under the Frostpeak glaciers, the best I have ever seen. And yetis sitting right on top of it.', 'Clear fifteen of the brutes away and my lads will share the first haul with you.'],
+    progress: 'Fifteen yetis. They charge, then slam: dodge sideways.',
+    done: ['The first cart came down this morning. Your share, as promised: cores, and gold.'],
+    objective: { type: 'KILL_KIND', target: 'YETI', count: 15 },
+    reward: { gold: 7000, items: [{ id: 'upgrade_core', qty: 4 }] },
+  },
+  {
+    id: 'tamsin_wisps', minLevel: 33, giver: 'Guard Tamsin', title: 'Lights in the Snow', summary: 'Defeat 20 Frost Wisps (Frostpeak)',
+    intro: ['Travellers follow lights in the snow and freeze where they stand. Frost wisps.', 'Put out twenty of them, and the passes will be safe to cross by night.'],
+    progress: 'Frost wisps keep their distance and burst when you get close. Close in fast.',
+    done: ['Not a single frozen traveller this week. The castle thanks you.'],
+    objective: { type: 'KILL_KIND', target: 'FROST_WISP', count: 20 },
+    reward: { gold: 8000, gems: 35 },
+  },
+  {
+    id: 'roan_hounds', minLevel: 38, giver: 'Captain Roan', title: 'The Pack Leader', summary: 'Defeat 25 Hellhounds (Ember Wastes)',
+    intro: ['The hellhounds hunt in packs, and the packs are getting bigger.', 'Twenty-five of them, guard. Break the packs before they reach the eastern farms.'],
+    progress: 'Hellhounds leave burning prints behind them. Do not chase them through the fire.',
+    done: ['The farms in the east sleep again. Take this, and my respect.'],
+    objective: { type: 'KILL_KIND', target: 'HELLHOUND', count: 25 },
+    reward: { gold: 10000, shards: ['EPIC', 10] },
+  },
+  {
+    id: 'fenn_shamans', minLevel: 40, giver: 'Fenn', title: 'A Song of Cinders', summary: 'Defeat 15 Cinder Shamans (Ember Wastes)',
+    intro: ['I am writing a ballad about the Ember Wastes, but it lacks a hero. And a villain. And an ending.', 'The cinder shamans call fire from the sky. Defeat fifteen and I will have all three!'],
+    progress: 'The shamans aim where you stand and where you run. Change direction often!',
+    done: ['"And the shamans fell, fifteen in a row..." Perfect! Here, the first coins this song ever earned.'],
+    objective: { type: 'KILL_KIND', target: 'CINDER_SHAMAN', count: 15 },
+    reward: { gold: 11000, gems: 40 },
+  },
+  {
+    id: 'wren_void', minLevel: 45, giver: 'Wren', title: 'Eyes of the Abyss', summary: 'Defeat 15 Void Eyes (the Void)',
+    intro: ['The Void Eyes see everything that moves at the rift\'s edge. I want to know what they see.', 'Defeat fifteen of them. Whatever is left of them may tell me where Malakar looks.'],
+    progress: 'Void Eyes float out of reach and fire rings of orbs. Weave between the rings.',
+    done: ['They were watching the Font. All this time, watching our Font. Thank you; take this, you will need it.'],
+    objective: { type: 'KILL_KIND', target: 'VOID_EYE', count: 15 },
+    reward: { gold: 13000, gems: 50 },
+  },
+  {
+    id: 'tobin_herald', minLevel: 48, giver: 'Elder Tobin', title: 'Silence the Herald', summary: 'Defeat the Void Herald', after: 'wren_void',
+    intro: ['In my youth the Herald came to Aether with a message: kneel. We did not.', 'Silence him for good, guard. An old man would like to see that before the end.'],
+    progress: 'The Herald guards the last of the five gates, at the Gatekeeper.',
+    done: ['So he is silent. I never thought I would live to hear that. Take my old ring money; it was waiting for this.'],
+    objective: { type: 'KILL_BOSS', target: 'BOSS_VOID', count: 1 },
+    reward: { gold: 15000, gems: 60, shards: ['LEGENDARY', 3] },
   },
 ];
 
@@ -244,8 +305,15 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
   if (e) return e.s === 2 ? 'DONE' : 'ACTIVE';
   if (def.after && save.q[def.after]?.s !== 2) return 'LOCKED';
   if (def.cond?.boss && !(save.bossKills[def.cond.boss] > 0)) return 'LOCKED';
-  if (def.cond?.rank && rank < def.cond.rank) return 'LOCKED';
+  if (rank < npcQuestMinLevel(def)) return 'LOCKED';
   return 'AVAILABLE';
+}
+/** Class level a quest needs before it is offered (0 = none). */
+export const npcQuestMinLevel = (def: NpcQuestDef): number => Math.max(def.minLevel ?? 0, def.cond?.rank ?? 0);
+/** Locked ONLY by the class level (its chain and boss condition are met): listed with "Lv N" in the quest window. */
+export function npcQuestLevelLocked(def: NpcQuestDef, save: NpcQuestSave, rank: number): boolean {
+  return !save.q[def.id] && rank < npcQuestMinLevel(def)
+    && (!def.after || save.q[def.after]?.s === 2) && (!def.cond?.boss || save.bossKills[def.cond.boss] > 0);
 }
 
 const lootName = (id: string): string => LOOT_BY_ID[id]?.name ?? id;

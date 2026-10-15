@@ -266,15 +266,17 @@ export function walkToMain(): void {
   if (at && at !== 'BAG') { walkToSpot(at); return; }
   walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
-type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER';
+type Spot = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'TRAINER' | 'ARMORY' | 'BREWER' | 'TOWER';
 /** Walk to a shop counter / the quest board / the skill trainer and open it on arrival. */
 function walkToSpot(at: Spot): void {
   if (at === 'BOARD') { walkTo(QUEST_POS[0], QUEST_POS[2] + 2.6, 'shop', 'QUESTS', 1.8); return; }
   if (at === 'TRAINER') { walkTo(TRAINER_POS[0], TRAINER_POS[2] + 2.6, 'shop', 'SKILLS', 1.8); return; }
-  const s = SHOP_POSITIONS.find((x) => x.type === at);
+  if (at === 'TOWER') { walkTo(TOWER.door.x, TOWER.door.z, 'tower', '', 2.2); return; }
+  const s = SHOP_POSITIONS.find((x) => (x.type as string) === at);
   if (s) { const f = shopFront(s, 3.2); walkTo(f.x, f.z, 'shop', SHOP_TAB[s.type], 1.8); }
+  else if (at === 'BREWER') walkTo(GATE.x, GATE.z + 4, 'none', '', 2.2);   // the Brewer's hut (outside the gate) when it has no shop entry
 }
-const ACTION_SPOT: Record<string, Spot> = { buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
+const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'BREWER', tower_floor: 'TOWER', buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD' };
 /** NPC quest row click: hand-in / talk target NPC, else where the objective is done (the cows, the nests, the hiding
  *  cat, the shop for a shop action), else out through the gate. */
 export function walkToNpcObjective(o: { type: string; target?: string | string[] }, npc: string | null): void {

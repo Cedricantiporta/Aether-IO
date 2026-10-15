@@ -9,7 +9,7 @@ import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { CHAPTERS, stepCount, storyIdx, STORY, type StoryStep } from '../../story';
-import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, type NpcReward, type NpcQuestDef } from '../../npcQuests';
+import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, type NpcReward, type NpcQuestDef } from '../../npcQuests';
 import { activeQuests, questDone, questTitle, type QuestReward } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
@@ -46,12 +46,14 @@ export const QuestLog: React.FC = () => {
   useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
   const npcActive = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'ACTIVE');
   const npcOpen = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'AVAILABLE');
+  // level-gated requests whose only blocker is the class level (lowest level first)
+  const npcLocked = NPC_QUESTS.filter((d) => npcQuestLevelLocked(d, nq, rank)).sort((a, b) => npcQuestMinLevel(a) - npcQuestMinLevel(b));
   const board = activeQuests(quests);
   const step: StoryStep | undefined = STORY[sel];
   const chap = chapIdx.find((c) => sel >= c.a && sel < c.b) ?? chapIdx[0];
   const inRun = status === GameStatus.PLAYING;
   const track = () => { setOpen(false); if (!offerTeleport(walkToMain)) walkToMain(); };
-  const side = [...npcActive, ...npcOpen].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0];
+  const side = [...npcActive, ...npcOpen, ...npcLocked].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0] ?? npcLocked[0];
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} title="Quests" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250}>
@@ -117,14 +119,17 @@ export const QuestLog: React.FC = () => {
         {tab === 'SIDE' && (
           <div className="qw-body">
             <div className="qw-list rpg-scroll">
-              {npcActive.length === 0 && npcOpen.length === 0 && <div className="qw-none">No requests right now. Look for a blue ! above someone's head.</div>}
+              {npcActive.length === 0 && npcOpen.length === 0 && npcLocked.length === 0 && <div className="qw-none">No requests right now. Look for a blue ! above someone's head.</div>}
               {npcActive.length > 0 && <div className="qw-grp">Active</div>}
               {npcActive.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} ready={npcQuestReady(d, nq, inv)} />)}
               {npcOpen.length > 0 && <div className="qw-grp">Offered around town</div>}
               {npcOpen.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} offer />)}
+              {npcLocked.length > 0 && <div className="qw-grp">Unlocks at a higher level</div>}
+              {npcLocked.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} lockLv={npcQuestMinLevel(d)} />)}
             </div>
             {side && (() => {
               const active = npcActive.includes(side), ready = active && npcQuestReady(side, nq, inv), n = npcQuestProgress(side, nq, inv);
+              const lockLv = npcLocked.includes(side) ? npcQuestMinLevel(side) : 0;
               return (
                 <div className="qw-det">
                   <div className="qw-banner npc"><div className="qw-seal"><ScrollText size={20} /></div><div><em>{side.giver}</em><b>{side.title}</b></div></div>
@@ -132,7 +137,7 @@ export const QuestLog: React.FC = () => {
                     <div className="qw-text"><p className="qw-quote">“{side.intro[0]}”<span>{side.giver}</span></p></div>
                     <div className="qw-side">
                       <div className="qw-sec">Objective</div>
-                      <div className="qw-obj">{!active ? `Talk to ${side.giver} to start` : ready ? `Done! Return to ${side.turnIn ?? side.giver}.` : <>{side.summary}{side.objective.count > 1 ? <b> {n} / {side.objective.count}</b> : null}</>}</div>
+                      <div className="qw-obj">{lockLv ? <><Lock size={13} /> Requires Lv {lockLv} (you are Lv {rank}). {side.summary}</> : !active ? `Talk to ${side.giver} to start` : ready ? `Done! Return to ${side.turnIn ?? side.giver}.` : <>{side.summary}{side.objective.count > 1 ? <b> {n} / {side.objective.count}</b> : null}</>}</div>
                       <div className="qw-sec">Rewards</div>
                       <Rewards r={side.reward} scale />
                     </div>
@@ -160,8 +165,9 @@ export const QuestLog: React.FC = () => {
   );
 };
 
-const SideRow: React.FC<{ d: NpcQuestDef; sel: boolean; onSel: (id: string) => void; ready?: boolean; offer?: boolean }> = ({ d, sel, onSel, ready, offer }) => (
-  <button className={`qw-step pe ${sel ? 'sel' : ''} ${ready ? 'ready' : ''} ${offer ? 'offer' : 'cur'}`} onClick={() => onSel(d.id)}>
-    <span>{d.title} <em>· {d.giver}</em></span>{ready ? <Check size={14} className="ok" /> : offer ? <b className="qbadge blue">!</b> : <b className="qbadge blue">Q</b>}
+const SideRow: React.FC<{ d: NpcQuestDef; sel: boolean; onSel: (id: string) => void; ready?: boolean; offer?: boolean; lockLv?: number }> = ({ d, sel, onSel, ready, offer, lockLv }) => (
+  <button className={`qw-step pe ${sel ? 'sel' : ''} ${ready ? 'ready' : ''} ${lockLv ? 'lvlock' : offer ? 'offer' : 'cur'}`} onClick={() => onSel(d.id)} data-testid={lockLv ? 'side-locked' : undefined}>
+    <span>{d.title} <em>· {d.giver}</em></span>
+    {lockLv ? <b className="qw-lv"><Lock size={11} /> Lv {lockLv}</b> : ready ? <Check size={14} className="ok" /> : offer ? <b className="qbadge blue">!</b> : <b className="qbadge blue">Q</b>}
   </button>
 );

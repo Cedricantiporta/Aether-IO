@@ -1,7 +1,7 @@
 import React from 'react';
 import { unlockLevel, skillCost } from '../../../classLevels';
 import { Star } from 'lucide-react';
-import { useGameStore } from '../../../store';
+import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { SKILLS_INFO } from '../../../constants';
 import type { SkillLevels } from '../../../types';
@@ -24,6 +24,7 @@ const costOf = (hero: any, key: string, lvl: number) => skillCost(key, lvl, isDa
 
 const RunSkills: React.FC = () => {
   const { hero, levels, sp, upgrade, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, levels: s.skillLevels, sp: s.skillPoints, upgrade: s.upgradeSkill, heroLv: s.level })));
+  const free = useGameStore((s) => questFree(s, 'train'));   // tutorial "Lessons of the Blade": one skill level without skill points
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === hero));
   const rows: { key: string; name: string; desc: string; icon: React.ReactNode; tag?: string; now?: (l: number) => string; color?: string }[] = [
     ...activeDefs(hero).map((a, i) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: String(i + 1), now: a.per })),
@@ -37,10 +38,11 @@ const RunSkills: React.FC = () => {
         <div className="rpg-label">Skills · {hero}</div>
         <div className="rpg-badge !text-[.75rem]"><Star size={12} /> {sp} skill points</div>
       </div>
+      {free && <div className="rpg-frame gold p-2 text-[.78rem] text-center" data-testid="trainer-free">First lesson on the house: learn or upgrade one skill for <b className="text-[var(--good)]">FREE</b> (no skill points).</div>}
       {rows.map((r) => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
-        const cost = costOf(hero, r.key, lvl);
+        const cost = free ? 0 : costOf(hero, r.key, lvl);
         const need = unlockLevel(hero, r.key), lockedLv = lvl === 0 && heroLv < need;
         const can = !max && !lockedLv && sp >= cost;
         const info: any = (SKILLS_INFO as any)[r.key];
@@ -64,7 +66,7 @@ const RunSkills: React.FC = () => {
               ) : (!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
             </div>
             <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
-              {max ? 'MAX' : lockedLv ? <><span>Locked</span><span className="rpg-num">Lv {need}</span></> : <><span>{lvl === 0 ? 'Learn' : 'Upgrade'}</span><span className="rpg-num">{cost} SP</span></>}
+              {max ? 'MAX' : lockedLv ? <><span>Locked</span><span className="rpg-num">Lv {need}</span></> : <><span>{lvl === 0 ? 'Learn' : 'Upgrade'}</span><span className="rpg-num">{cost === 0 ? 'Free' : `${cost} SP`}</span></>}
             </Button>
           </div>
         );
@@ -76,7 +78,8 @@ const RunSkills: React.FC = () => {
 /** Skill Trainer: skills (learned with skill points from class levels) and talents (points from class levels). */
 export const SkillsTab: React.FC = () => {
   const runDot = useRunSkillAlert(), talentDot = useTalentAlert();
-  const [view, setView] = React.useState<'run' | 'talents'>(() => (!runDot && talentDot ? 'talents' : 'run'));
+  const freeLesson = useGameStore((s) => questFree(s, 'train'));
+  const [view, setView] = React.useState<'run' | 'talents'>(() => (!runDot && talentDot && !freeLesson ? 'talents' : 'run'));
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" role="tablist">

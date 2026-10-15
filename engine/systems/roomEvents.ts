@@ -197,6 +197,7 @@ export function freeCaptive(): void {
   if (e.obj !== 'RESCUE' || e.state !== 4) return;
   e.state = 2;
   reward(50, 5, 'Captive freed! "Thank you, guard! Take this, I will tell everyone in Aether."');
+  events.emit('captiveFreed', {});
   useGameStore.getState().addMaterial('RARE', 2);
 }
 

@@ -8,7 +8,7 @@ import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
-import { STORY, sanitizeStory, type StorySave } from './story';
+import { STORY, STORY_V, sanitizeStory, type StorySave } from './story';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, randomPetOf } from './petFusion';
 import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
@@ -121,11 +121,16 @@ export const saleOf = (item: { id: string }): number => useGameStore.getState().
 /** The Pet House gives a new guard their first pet: the Green Blob is free while you own no pet at all. */
 export const firstPetFree = (s: { equipment: Equipment; inventory: Item[]; warehouse: Item[] }, id: string): boolean =>
   id === 'pet_blob' && !s.equipment.pet && !s.inventory.some((i) => i.type === 'PET') && !s.warehouse.some((i) => i.type === 'PET');
-/** Tutorial freebies like the first pet: while the story step "Stock Up" is active one Health Potion is free, and while
- *  "A Gift from the Stars" is active one gem summon is free. */
-export const questFree = (s: { story: StorySave }, what: 'potion' | 'summon'): boolean => STORY[s.story.step]?.id === what;
-export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[] }, id: string): boolean =>
-  firstPetFree(s, id) || (id === 'potion_hp' && questFree(s, 'potion'));
+/** Tutorial freebies like the first pet: each is free only while its main story step is active (the step ends with the
+ *  action, so it is a one-time gift): "Stock Up" one Health Potion, "A Gift from the Stars" one gem summon, "Suit of
+ *  Steel" one armor piece at the Armory, "Temper the Steel" one Blacksmith upgrade (no gold, no cores, sure success),
+ *  "Lessons of the Blade" one skill level at the Skill Trainer (no skill points). */
+export type QuestFreebie = 'potion' | 'summon' | 'armor' | 'forge' | 'train';
+export const questFree = (s: { story: StorySave }, what: QuestFreebie): boolean => STORY[s.story.step]?.id === what;
+/** Armor pieces (the "Suit of Steel" step): body armor, helmets, gloves, boots. */
+export const isArmorPiece = (i: { type: string }): boolean => i.type === 'ARMOR' || i.type === 'HELMET' || i.type === 'GLOVES' || i.type === 'BOOTS';
+export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[] }, item: { id: string; type: string }): boolean =>
+  firstPetFree(s, item.id) || (item.id === 'potion_hp' && questFree(s, 'potion')) || (isArmorPiece(item) && questFree(s, 'armor'));
 export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -666,7 +671,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     progress: profile.progress ?? sanitizeProgress(undefined),
     tech: profile.tech ?? {},
     summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
-    story: profile.story ?? { step: 0, p: 0, v: 3 },   // a brand-new profile starts the main story
+    story: profile.story ?? { step: 0, p: 0, v: STORY_V },   // a brand-new profile starts the main story
     classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
@@ -776,7 +781,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: 3 }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(),
       });
@@ -934,7 +939,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const lvl = s.skillLevels[skill];
       if (lvl >= MAX_SKILL_LEVEL) return;
-      const cost = skillCost(skill, lvl, skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN'));
+      const cost = questFree(s, 'train') ? 0   // tutorial "Lessons of the Blade": the trainer's first lesson is free
+        : skillCost(skill, lvl, skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN'));
       const need = unlockLevel(s.hero, skill);
       if (s.level < need) { notify(`Unlocks at Lv ${need}`, 'red', 'WARNING'); return; }
       if (s.skillPoints < cost) return;
@@ -1122,7 +1128,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (step === s.story.step && p === s.story.p) return;
       const next = STORY[step];
-      set({ story: { step, p, v: 3 } });
+      set({ story: { step, p, v: STORY_V } });
       // finishing a step pays its reward (main quests always pay: gold, gems, items)
       if (step > s.story.step) for (let k = s.story.step; k < step; k++) {
         const r = STORY[k]?.reward; if (!r) continue;
@@ -1370,7 +1376,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     buyItem: (item, quantity = 1) => {
       const s = get();
-      const total = freeBuy(s, item.id) && quantity === 1 ? 0 : shopPrice(item) * quantity;
+      const total = freeBuy(s, item) && quantity === 1 ? 0 : shopPrice(item) * quantity;
       if (s.gold < total) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
       const toAdd: Item = { ...item, stats: { ...item.stats }, id: uid('buy'), quantity };
       if (!isStackable(item) && quantity > 1) {
@@ -1387,6 +1393,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Bought ${item.name}`, 'white', 'SYSTEM');
       events.emit('hub', { kind: 'buy', n: quantity });
       if (item.type === 'POTION') events.emit('hub', { kind: 'buy_potion', n: quantity });
+      if (isArmorPiece(item)) events.emit('hub', { kind: 'buy_armor', n: quantity });
       if (item.type === 'PET') {
         events.emit('hub', { kind: 'buy_pet', n: quantity });
         const first = !get().equipment.pet && get().inventory.find((i) => i.type === 'PET' && i.name === item.name);
@@ -1517,20 +1524,23 @@ export const useGameStore = create<GameState>()((set, get) => {
       };
       if (item.level >= 10) return fail('Max Level Reached!');
 
+      const free = questFree(s, 'forge');   // tutorial "Temper the Steel": the smith's first upgrade is on the house
       const coreIndex = s.inventory.findIndex((i) => i.type === 'CORE');
       const core = coreIndex >= 0 ? s.inventory[coreIndex] : null;
-      const requiredCores = Math.ceil(item.level / 2);
-      const goldCost = Math.floor(item.price * item.level * 0.5);
+      const requiredCores = free ? 0 : Math.ceil(item.level / 2);
+      const goldCost = free ? 0 : Math.floor(item.price * item.level * 0.5);
       if (s.gold < goldCost) return fail('Not enough Gold!');
-      if (!core || (core.quantity || 1) < requiredCores) return fail(`Need ${requiredCores} Cores`);
+      if (requiredCores > 0 && (!core || (core.quantity || 1) < requiredCores)) return fail(`Need ${requiredCores} Cores`);
 
-      const chance = item.level >= 3 ? Math.max(10, 100 - (item.level - 2) * 10) : 100;
+      const chance = free ? 100 : item.level >= 3 ? Math.max(10, 100 - (item.level - 2) * 10) : 100;
       const success = Math.random() * 100 < chance;
 
       const inv = s.inventory.slice();
-      const coreQty = core.quantity || 1;
-      if (coreQty > requiredCores) inv[coreIndex] = { ...core, quantity: coreQty - requiredCores };
-      else inv.splice(coreIndex, 1);
+      if (core && requiredCores > 0) {
+        const coreQty = core.quantity || 1;
+        if (coreQty > requiredCores) inv[coreIndex] = { ...core, quantity: coreQty - requiredCores };
+        else inv.splice(coreIndex, 1);
+      }
 
       if (!success) {
         set({ gold: s.gold - goldCost, inventory: inv, actionResult: { type: 'UPGRADE', success: false, message: 'Upgrade Failed...' } });

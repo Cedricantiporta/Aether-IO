@@ -3,6 +3,7 @@ import { feedReward } from '../../rewardFeed';
 // per-NPC marker cache read by render/Npcs.tsx. The state lives in the store (`npcQuests`, saved with the profile).
 // Importing this module registers the event listeners (dialogue.ts imports it).
 import { STORY } from '../../story';
+import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
 import { useGameStore, makeItemById, instantiate } from '../../store';
 import { events } from '../events';
@@ -110,8 +111,8 @@ export function questNpc(name: string): boolean {
 }
 /** True when killing this enemy kind advances an active quest (main story, NPC or Quest Board). */
 export function questKill(kind: string, mini = false): boolean {
-  const st = useGameStore.getState(), sk = STORY[st.story.step]?.kill?.kind;
-  if (sk === kind || (sk === 'SLIME_KING' && kind === 'SPLITTER' && mini)) return true;
+  const st = useGameStore.getState();
+  if (storyWantsKill(kind, mini)) return true;
   if (st.quests.some((q) => q.accepted && q.type === 'KILL_KIND' && q.kind === kind && q.progress < q.target)) return true;
   return NPC_QUESTS.some((d) => d.objective.type === 'KILL_KIND' && d.objective.target === kind && npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
     && (st.npcQuests.q[d.id]?.p ?? 0) < d.objective.count);
