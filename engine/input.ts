@@ -65,12 +65,9 @@ export function installInput(): () => void {
     const st = useGameStore.getState();
     const inGame = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || (st.status === GameStatus.MENU && useUiStore.getState().titleDone);
     switch (e.code) {
-      case 'Escape':   // opens Settings (a run pauses underneath)
-        if (inGame) {
-          if (st.status === GameStatus.PLAYING) { st.togglePause(); escPaused = true; }
-          else if (st.status === GameStatus.PAUSED) { st.togglePause(); escPaused = false; break; }
-          useUiStore.getState().openSettings(true);
-        }
+      case 'Escape':   // in a run: the pause menu (Esc again resumes); in town: Settings
+        if (st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED) { st.togglePause(); escPaused = false; }
+        else if (inGame) useUiStore.getState().openSettings(true);
         break;
       case 'KeyI':
         if (inGame) st.toggleInventory();
