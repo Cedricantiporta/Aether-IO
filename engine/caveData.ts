@@ -105,16 +105,17 @@ function floorOne(): CaveLayout {
     floor: 1, rx: CAVE.rx, rz: CAVE.rz, ph: [0.7, 2.1, 0.3], radius, hazard: 'NONE', pools: [], twin: false,
     exit: { x: 0, z: S - 1.4, r: 4.2 }, spawn: { x: 0, z: S - 4.2 }, down: { x: 0, z: -N + 3.4, r: 4.2 },
     nodes: [
-      { kind: 'ORE', x: -9.5, z: 8.5 }, { kind: 'CRYSTAL', x: -11, z: -2.5 }, { kind: 'ORE', x: -6.5, z: -12 },
-      { kind: 'CRYSTAL', x: 3.5, z: -12.5 }, { kind: 'GOLD_VEIN', x: 8.5, z: -9 }, { kind: 'CRYSTAL', x: 11, z: -1 },
-      { kind: 'ORE', x: 10, z: 8.5 }, { kind: 'GOLD_VEIN', x: -2.5, z: -5.5 },
+      // pulled in toward the middle (spaced ~4-6 apart) so none hide against the cave walls
+      { kind: 'ORE', x: -8, z: 1 }, { kind: 'CRYSTAL', x: -6.5, z: -6.5 }, { kind: 'ORE', x: -2, z: -10 },
+      { kind: 'CRYSTAL', x: 3.5, z: -9.5 }, { kind: 'GOLD_VEIN', x: 7.5, z: -5.5 }, { kind: 'CRYSTAL', x: 8.5, z: 1.5 },
+      { kind: 'ORE', x: 7, z: 7 }, { kind: 'GOLD_VEIN', x: -1, z: -3 },
     ],
     stalagmites: [
       [4.2, 0.5, 1.3], [5.6, -1.2, 0.9], [3.4, 2.1, 0.8], [-12.4, 5.2, 1.1], [12.6, 3.8, 1.0], [-5.6, -16, 1.2], [6.4, -15.6, 1.0],
-      [-11.4, -6.8, 1.1], [12.4, -6.2, 0.9], [-7.5, 2.5, 0.7], [7.8, 13.4, 0.9], [-8.2, 13.6, 1.0],
+      [-11.4, -6.8, 1.1], [12.4, -6.2, 0.9], [-12, 8, 0.7], [7.8, 13.4, 0.9], [-8.2, 13.6, 1.0],
     ],
     crystals: [[-13, 1.5, 1.2, 0], [13.2, -3.5, 1.1, 1], [-5.2, -17.6, 1.2, 1], [8.6, -14.4, 1.0, 0], [-9.6, -10.4, 1.0, 1], [11.2, 10.6, 0.9, 0], [4.8, -0.9, 0.7, 0]],
-    mushrooms: [[-10.6, 11, 1], [10.8, 12.4, 0.9], [-12.6, -5.8, 1], [10.2, -7.4, 0.8], [-3.6, -14.2, 1], [-6.8, 4.4, 0.7], [6.6, 5.6, 0.8], [2.6, -8.2, 0.7]],
+    mushrooms: [[-10.6, 11, 1], [10.8, 12.4, 0.9], [-12.6, -5.8, 1], [10.2, -7.4, 0.8], [-3.6, -14.2, 1], [-6.8, 4.4, 0.7], [11, 5, 0.8], [0.5, -14, 0.7]],
     cart: { x: 3.2, z: S - 6.5, rot: 0.25 },
     bench: { x: -5.4, z: 7.2, r: 2.8 },
     tint,
@@ -144,8 +145,13 @@ function floorDeep(floor: number, seed: number): CaveLayout {
   const nN = Math.min(12, Math.round((6 + Math.floor(r() * 3)) * Math.pow(size * (twin ? 1.3 : 1), 0.8)));
   const kinds: CaveNodeKind[] = ['ORE', 'CRYSTAL', 'CRYSTAL', 'ORE', 'GOLD_VEIN'];
   for (let g = 0; g < 400 && nodes.length < nN; g++) {
-    const [x, z] = at(0.3, 0.78);
+    const [x, z] = at(0.12, 0.6);   // toward the middle (never tucked against the walls), still spaced out
     if (!free(x, z, 2.2) || (twin && Math.abs(z) < 3)) continue;   // (twin floors: no vein in the waist)
+    nodes.push({ kind: kinds[Math.floor(r() * kinds.length)], x, z }); keep.push([x, z, 3.4]);
+  }
+  for (let g = 0; g < 300 && nodes.length < nN; g++) {   // (a small chamber can't fit them all in the middle: fill out a little further)
+    const [x, z] = at(0.4, 0.72);
+    if (!free(x, z, 1.6) || (twin && Math.abs(z) < 3)) continue;
     nodes.push({ kind: kinds[Math.floor(r() * kinds.length)], x, z }); keep.push([x, z, 2.4]);
   }
   const stalagmites: [number, number, number][] = [];
