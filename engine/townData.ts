@@ -96,6 +96,9 @@ export const TRAIL_ROCKS: [number, number, number, number][] = [
   [54.2, -49, 2.3, 2.6], [51.5, -52, 1.5, 1.8],            // round the north-east corner tower
   [39, -49.8, 1.6, 1.9], [30.5, -44.2, 0.9, 1.1], [21.5, -50.2, 1.4, 1.7],
   [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
+  // a rockfall from the south-east wall tower down to the river: the green in front of the gate is no shortcut to the
+  // mines (owner) - the way there is over the bridge, past the farm and up the fenced mine path
+  [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9], [51.6, 62.4, 2.4, 2.8], [53.4, 66.2, 2.0, 2.4],
 ];
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -207,7 +210,6 @@ export const ROADS: RoadSpec[] = [
   { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
-  { x1: 0, z1: BREWER_HUT.z, x2: BREWER_HUT.x + 4.6, z2: BREWER_HUT.z, w: ROAD_W.branch },   // elixir brewer (west of the road)
   { x1: 0, z1: TOWER.z, x2: TOWER.door.x, z2: TOWER.z, w: 1.8 },   // endless tower door (a narrow woodland path)
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
@@ -261,6 +263,15 @@ export const FENCES: [number, number, number, number][] = [
   // the mainland road from the bridge to the portal: rail fences both sides (gaps at the farm gate, the farm track, the tower path)
   [3.4, 79.5, 3.4, FARM.z - 1.6], [3.4, FARM.z + 1.6, 3.4, 109.2], [3.4, 112, 3.4, 117.5],
   [-3.4, 79.5, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],
+  // the path from the chicken coop up to the mines: rail fences along both sides (owner)
+  ...(() => {
+    const pts: [number, number][] = [[48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1], l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
+      for (const sd of [-1, 1]) f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
+    }
+    return f;
+  })(),
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
 ];
