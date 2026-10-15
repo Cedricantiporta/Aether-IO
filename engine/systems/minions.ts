@@ -7,7 +7,8 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, type DamageOpts } from './combat';
+import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, applyStatus, type DamageOpts } from './combat';
+import type { Enemy } from '../types';
 import { inCurse } from './zones';
 import { abilityState } from './abilities';
 import { spawnProjectile } from './projectiles';
@@ -16,19 +17,20 @@ import { weaponPerk, hordeMul } from '../../weaponPerks';
 export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHER = 3;
 /** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
 export const MAX_SKELETONS = 5;
-const skN = [0, 0, 0, 0];   // live skeletons per minion kind (scratch)
+/** Summon sources (minion.src), each with its own cap so they never push each other out:
+ *  1 Raise Dead (5, permanent), 3 Plague Ground (5 warriors that crumble after 4 s), 4 weapon perk / Grave Call (2),
+ *  2 the ult's bone golem (no skeleton cap). */
+export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4;
+const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2];
+export const PLAGUE_LIFE = 4;
+const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
 const SK_KINDS = [MINION_WARRIOR, MINION_ARCHER, MINION_MAGE];
-function countSkeletons(): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM) { skN[m.kind]++; n++; } return n; }
+function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === src) { skN[m.kind]++; n++; } return n; }
 /** The next Raise Dead skeleton: a random warrior / archer / mage, but the army always holds at least one of each
- *  (a missing kind rises first). A full army re-raises its OLDEST skeleton as the same kind, so recasting (e.g. in
- *  the next room) never reshuffles it. */
+ *  (a missing kind rises first). Recasting re-rolls the army: each new skeleton replaces the oldest one that isn't
+ *  the last of its kind (spawnMinion). */
 export function pickRaiseKind(): number {
-  const n = countSkeletons();
-  if (n >= MAX_SKELETONS) {
-    let oldK = MINION_WARRIOR, ol = 1e9;
-    for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.born < ol) { ol = m.born; oldK = m.kind; }
-    return oldK;
-  }
+  countSkeletons(SRC_RAISE);
   let miss = 0;
   for (const k of SK_KINDS) if (skN[k] === 0) miss++;
   if (miss > 0) { let r = Math.floor(Math.random() * miss); for (const k of SK_KINDS) if (skN[k] === 0 && r-- === 0) return k; }
@@ -58,17 +60,17 @@ let ultHold = 0;   // the ult cooldown frozen while the ult army stands
 export function spawnMinion(kind: number, x: number, z: number, dmg: number, life: number, src = 0, dropped = false): void {
   const M = world.minions, mm = minionMul();
   // too many skeletons: the oldest one crumbles to make room
-  if (kind !== MINION_GOLEM) {   // (skeletons of every kind share the cap)
-    const n = countSkeletons();
-    if (n >= MAX_SKELETONS) {   // full: the oldest of the same kind crumbles; else the oldest that isn't the last of its kind
-      let same = -1, sOl = 1e9, any = -1, aOl = 1e9, oldest = -1, ol = 1e9;
+  if (kind !== MINION_GOLEM) {   // (each summon source has its own cap)
+    const n = countSkeletons(src);
+    if (n >= (SRC_CAP[src] ?? MAX_SKELETONS)) {   // full: the oldest skeleton of this source that isn't the last of its kind crumbles
+      let any = -1, aOl = 1e9, same = -1, sOl = 1e9, oldest = -1, ol = 1e9;
       for (let i = 0; i < M.length; i++) {
-        const m = M[i]; if (!m.active || m.kind === MINION_GOLEM) continue;
+        const m = M[i]; if (!m.active || m.kind === MINION_GOLEM || m.src !== src) continue;
         if (m.born < ol) { ol = m.born; oldest = i; }
+        if ((skN[m.kind] > 1 || m.kind === kind) && m.born < aOl) { aOl = m.born; any = i; }
         if (m.kind === kind && m.born < sOl) { sOl = m.born; same = i; }
-        if (skN[m.kind] > 1 && m.born < aOl) { aOl = m.born; any = i; }
       }
-      const k = same >= 0 ? same : any >= 0 ? any : oldest;
+      const k = any >= 0 ? any : same >= 0 ? same : oldest;
       if (k >= 0) crumble(M[k]);
     }
   }
@@ -118,8 +120,36 @@ export function nearestMinion(x: number, z: number, r: number): number {
   return best;
 }
 
+// ---- skeleton skills (shared scratch: no per-cast allocation)
+const burnFx = { type: 'BURN' as const, duration: 3, value: 4 };
+const zapOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PET' };
+const zapStun = { type: 'STUN' as const, duration: 0.3 };
+const zapHit: number[] = [];
+const zapIds: number[] = [];
+/** Skeleton mage: lightning from (x, z) into `first`, then jumping to the nearest unhit enemy within 7 (4 targets, -15% per jump). */
+function chainLightning(x: number, z: number, first: Enemy, dmg: number): void {
+  zapHit.length = 0;
+  let cur: Enemy | null = first, fromX = x, fromZ = z;
+  for (let j = 0; j < 4 && cur; j++) {
+    zapHit.push(cur.id);
+    events.emit('lightning', { from: tmp.set(fromX, 1.4, fromZ).clone(), to: cur.pos });
+    damageEnemy(cur, dmg * (1 - j * 0.15), zapOpts);
+    applyStatus(cur, zapStun);
+    fromX = cur.pos.x; fromZ = cur.pos.z;
+    const found = world.enemyGrid.query(fromX, fromZ, 7, zapIds);
+    let next: Enemy | null = null, bd = 1e9;
+    for (let k = 0; k < found.length; k++) {
+      const c = world.enemies[found[k]];
+      if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || zapHit.includes(c.id)) continue;
+      const dd = (c.pos.x - fromX) ** 2 + (c.pos.z - fromZ) ** 2;
+      if (dd < bd) { bd = dd; next = c; }
+    }
+    cur = next;
+  }
+}
+
 export function clearMinions(): void { for (const m of world.minions) m.active = false; }
-export function minionCount(kind = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind)) n++; return n; }
+export function minionCount(kind = -1, src = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind) && (src < 0 || m.src === src)) n++; return n; }
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
@@ -173,9 +203,17 @@ export function updateMinions(dt: number): void {
     m.atkT -= dt;
     if (e && d <= stop + 0.3 && m.atkT <= 0) {
       m.atkT = cd; m.swing = 1;
-      if (mage) {
+      if (mage && m.skillT <= 0) {   // skeleton mage skill: CHAIN LIGHTNING, jumps through up to 4 enemies (brief stun)
+        m.skillT = 7 / haste; m.spin = 1;
+        chainLightning(m.x, m.z, e, m.dmg * 1.3);
+      } else if (mage) {
         const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 0.8, pierce: 1, radius: 0.9, y: 1.2 });
         if (p) p.tint = 9;
+      } else if (bow && m.skillT <= 0) {   // skeleton archer skill: BURNING ARROW, a heavy shot that sets the target ablaze and leaves a burning patch
+        m.skillT = 6 / haste;
+        const p = spawnProjectile('BURNING_ARROW', m.x, m.z, dx / d, dz / d, 30, m.dmg * 1.8, { life: 0.8, pierce: 1, radius: 0.8, y: 1.4 });
+        // tint 10 = minion shot (pet damage, no hero procs); state 2 = leaves a burning patch where it lands (projectiles fanPatch)
+        if (p) { burnFx.value = Math.max(2, m.dmg * 0.35); p.effect = burnFx; p.tint = 10; p.state = 2; }
       } else if (bow) {   // bone arrow (tint 10 = minion arrow: pet damage, violet-white glow)
         const p = spawnProjectile('ARROW', m.x, m.z, dx / d, dz / d, 32, m.dmg, { life: 0.6, pierce: 1, radius: 0.6, y: 1.4 });
         if (p) p.tint = 10;
@@ -198,10 +236,9 @@ events.on('enemyDeath', (d) => {
   const st = useGameStore.getState();
   if (st.hero !== 'NECROMANCER' || d.poof) return;
   const pl = world.player, lv = st.skillLevels;
-  // Plague Ground: the fallen rise as skeletons (a few per cast)
-  if (abilityState.curseRaise > 0 && inCurse(d.pos.x, d.pos.z)) {
-    abilityState.curseRaise--;
-    spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), PERMANENT);
+  // Plague Ground: every enemy that dies in it rises as a skeleton warrior for 4 s (up to 5 at a time)
+  if (lv.s4 > 0 && inCurse(d.pos.x, d.pos.z)) {
+    spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), PLAGUE_LIFE, SRC_PLAGUE);
   }
   // Soul Harvest: kills near you (or near a minion) restore HP and mana
   if (lv.soulHarvest > 0 && pl.alive) {

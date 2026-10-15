@@ -59,7 +59,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 13.5,
-      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5, each a random warrior, archer or mage, always at least one of each. Monsters attack them before you and they stay until slain. Every few seconds a warrior Cleaves (a spinning swing that hits everything close). Higher levels: more skeletons per cast (2 / 3 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
+      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5, each a random warrior, archer or mage, always at least one of each. Monsters attack them before you and they stay until slain. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 3 / 4 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
       per: (lv) => `${[2, 3, 3, 4, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5, at least 1 warrior, archer and mage) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
@@ -68,8 +68,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
       per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 12,
-      desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and anything that dies there rises as a skeleton for you.',
-      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · up to ${2 + Math.floor(lv / 2)} risen` },
+      desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 4 seconds (up to 5 at a time, separate from Raise Dead).',
+      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 4s (max 5)` },
   ],
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,

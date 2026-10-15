@@ -2,7 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
-import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT } from './minions';
+import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT, SRC_WEAPON } from './minions';
 import { weaponPerk, raiseEvery, raiseCap, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
@@ -305,15 +305,15 @@ export function fireBasicAttack(): void {
   if (graveProc) {
     const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const gx = t && t.active ? t.pos.x - dir.x * 1.5 : pl.pos.x + dir.x * 4, gz = t && t.active ? t.pos.z - dir.z * 1.5 : pl.pos.z + dir.z * 4;
-    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, PERMANENT);
+    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, PERMANENT, SRC_WEAPON);
   }
   // wand perk Bone Choir / Grave Archers: every Nth soul bolt a ranged skeleton rises behind you (up to a cap)
   if (kind === 'SOUL_BOLT' && perk && (perk.k === 'MAGES' || perk.k === 'BOWMEN') && ++raiseCount >= raiseEvery(perk.lv)) {
     const mk = perk.k === 'MAGES' ? MINION_MAGE : MINION_ARCHER;
-    if (minionCount(mk) < raiseCap(perk.k, perk.lv)) {
+    if (minionCount(mk, SRC_WEAPON) < raiseCap(perk.k, perk.lv)) {
       raiseCount = 0;
       const a = pl.facing + Math.PI + (Math.random() - 0.5) * 1.6;
-      spawnMinion(mk, pl.pos.x + Math.sin(a) * 2.2, pl.pos.z + Math.cos(a) * 2.2, stats.damage * (mk === MINION_MAGE ? 0.9 : 0.6), PERMANENT);
+      spawnMinion(mk, pl.pos.x + Math.sin(a) * 2.2, pl.pos.z + Math.cos(a) * 2.2, stats.damage * (mk === MINION_MAGE ? 0.9 : 0.6), PERMANENT, SRC_WEAPON);
     } else raiseCount = 0;   // at the cap: the count (the perk's "cooldown") only runs once one has fallen
   }
   pl.anim.attackT = 1;
@@ -423,7 +423,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
 
   const fx = p.effect;
   if (fx && (fx.chance === undefined || Math.random() < fx.chance)) applyStatusFast(e, fx);
-  const petShot = p.kind === 'PET_BOLT' || (p.kind === 'ARROW' && p.tint === 10);   // pet / minion shots: no hero on-hit procs
+  const petShot = p.kind === 'PET_BOLT' || p.tint === 10;   // pet / minion shots (tint 10 = skeleton arrows, burning arrows too): no hero on-hit procs
   if (!petShot) {
     const ps = useGameStore.getState().stats;
     if (ps.onHitBurnChance > 0 && Math.random() < ps.onHitBurnChance) { fxTmp.type = 'BURN'; fxTmp.duration = 3; fxTmp.value = Math.max(3, ps.damage * 0.25); applyStatus(e, fxTmp); }
