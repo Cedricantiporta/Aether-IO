@@ -217,7 +217,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD;   // a flat 5.5 s for every class and dash level (no gear / talent / cooldown-reduction changes)
+  p.dashCdMax = DASH_CD - Math.min(2, 0.3 * Math.max(0, (dLv ?? 1) - 1));   // 5.5 s, -0.3 s per dash level above 1 (capped at -2 s); no gear / talent CDR
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {

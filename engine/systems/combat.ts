@@ -245,6 +245,7 @@ const STATUS_WORD: Partial<Record<string, [string, number]>> = {
 let wordBudget = 6, wordT = 0;
 function statusWord(pos: Vector3, type: string, player = false): void {
   const w = STATUS_WORD[type]; if (!w) return;
+  if (type !== 'DEFDOWN') return;   // statuses now show as persistent tags (render/StatusFx: BRN PSN FRZ ...) instead of a one-off word
   const now = world.time;
   wordBudget = Math.min(6, wordBudget + (now - wordT) * 8); wordT = now;
   if (!player && wordBudget < 1) return;

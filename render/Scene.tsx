@@ -36,6 +36,7 @@ import { Crates } from './Crates';
 import { Pet } from './Pet';
 import { VFX, HaloLayer } from './VFX';
 import { DamageNumbers } from './DamageNumbers';
+import { StatusFx } from './StatusFx';
 import { useWorldCounter } from './hooks';
 import { world } from '../engine/world';
 
@@ -112,6 +113,7 @@ export function Scene() {
       )}
       <VFX />
       <DamageNumbers />
+      <StatusFx />
       <HaloLayer />
     </>
   );
