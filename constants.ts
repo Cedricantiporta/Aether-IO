@@ -45,7 +45,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'FORTUNE', position: [-12.5, 0, 1.5], color: '#a46bff' },   // fortune teller (summons): right beside the plaza
     { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
     { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },
-    { type: 'BREWER', position: [-55, 0, 107], color: '#5fd38a', rot: 0 },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT)   // Elixir Brewer: hut outside the gate, top-left by the wall, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
+    { type: 'BREWER', position: [-10.5, 0, 107.6], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT)   // Elixir Brewer: hut outside the gate, top-left by the wall, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
     { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8', rot: -Math.PI / 2 },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050', rot: 0.15 },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];

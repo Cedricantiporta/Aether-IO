@@ -2,7 +2,7 @@
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
-import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS } from '../engine/townData';
+import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt } from '../engine/townData';
 import { inCampYard } from '../engine/caveData';
 import { hillAt } from '../engine/townHills';
 import { BEACH, beachSandK } from '../engine/beachData';
@@ -31,7 +31,7 @@ export function inForecourtUse(x: number, z: number, m = 0) {
     || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x)
     || beachSandK(x, z) > 0.15   // the lakeside beach (render/Beach.tsx has its own props)
     || inCampYard(x, z, 2 + m) || onDirtPath(x, z, 1.2 + m)
-    || riverK(x, z) > 0 || (z > RIVER.z0 - 2.5 - m && z < RIVER.z1 + 2.5 + m && x > RIVER.x0 && x < RIVER.x1 + 3)   // the river + its banks
+    || riverK(x, z) > 0 || (z > riverBank(x, 0) - 2.5 - m && z < riverBank(x, 1) + 2.5 + m && x > RIVER.x0 && x < RIVER.x1 + 3)   // the river + its banks
     || FIELDS.some((F) => Math.abs(x - F.x) < F.hw + 1.5 + m && Math.abs(z - F.z) < F.hd + 1.5 + m)
     || (z > 78 && Math.abs(x) < 4.6 + m);   // the mainland road (fenced)   // the mining camp yard + the dirt paths to the camp / the beach
 }
@@ -63,9 +63,10 @@ export function lakeK(x: number, z: number) {
 
 /** 0..1: how far into the river south of the gate (banks slope down over ~2.5 units, the bed sits at -1.7). */
 export function riverK(x: number, z: number) {
-  if (x < RIVER.x0 || x > RIVER.x1 + 2.5) return 0;
-  const inZ = sstep(RIVER.z0 - 0.6, RIVER.z0 + 1.6, z) * sstep(RIVER.z1 + 0.6, RIVER.z1 - 1.6, z);
-  return inZ * sstep(RIVER.x1 + 2.5, RIVER.x1 - 1.5, x);
+  if (x < RIVER.x0 || x > RIVER.x1 + 1) return 0;
+  const z0 = riverBank(x, 0), z1 = riverBank(x, 1);   // (wavy banks that close round at the east end)
+  if (z1 - z0 < 0.4) return 0;
+  return sstep(z0 - 0.6, z0 + 1.6, z) * sstep(z1 + 0.6, z1 - 1.6, z) * Math.min(1, (z1 - z0) / 4);
 }
 export function groundY(x: number, z: number) {
   const rk = riverK(x, z);
@@ -81,7 +82,7 @@ function groundYLand(x: number, z: number) {
   const r = Math.hypot(x, z);
   const a = Math.atan2(z, x);
   const e = edgeR(a);
-  const hill = hillAt(x, z);   // rolling hills outside the walls (engine/townHills)
+  const hill = hillAt(x, z) + towerKnollAt(x, z);   // rolling hills outside the walls (engine/townHills) + the Endless Tower's knoll
   if (r < e - 2) return hill;
   const t = sstep(e - 2, e + 9, r);
   let y = t * 4.4 + t * (fbm(x * 0.07, z * 0.07, 3) - 0.5) * 5.5;

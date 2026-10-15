@@ -12,7 +12,7 @@ import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -490,10 +490,10 @@ function addBridge(b: GB, g: GB): void {
 function addRiverBanks(b: GB, rnd: () => number): void {
   for (let x = RIVER.x0 + 22; x < RIVER.x1; x += 2.6) {
     if (Math.abs(x) < BRIDGE.hw + 2) continue;
-    for (const zb of [RIVER.z0 - 0.4, RIVER.z1 + 0.4]) if (rnd() < 0.55) b.ico(0.5 + rnd() * 0.7, [x + rnd() * 1.6, -0.1, zb + (rnd() - 0.5) * 0.8], ['#8a8f94', '#7d8288', '#969a9c'][(rnd() * 3) | 0], [1.2, 0.6, 1], 0);
-    if (rnd() < 0.3) { const zr = rnd() < 0.5 ? RIVER.z0 + 0.6 : RIVER.z1 - 0.6; for (let k = 0; k < 3; k++) b.cyl(0.03, 0.05, 1.1 + rnd() * 0.6, 4, [x + rnd(), 0.2, zr + (rnd() - 0.5)], '#6f8f3a'); }
+    for (const zb of [riverBank(x, 0) - 0.4, riverBank(x, 1) + 0.4]) if (rnd() < 0.55) b.ico(0.5 + rnd() * 0.7, [x + rnd() * 1.6, -0.1, zb + (rnd() - 0.5) * 0.8], ['#8a8f94', '#7d8288', '#969a9c'][(rnd() * 3) | 0], [1.2, 0.6, 1], 0);
+    if (rnd() < 0.3) { const zr = rnd() < 0.5 ? riverBank(x, 0) + 0.6 : riverBank(x, 1) - 0.6; for (let k = 0; k < 3; k++) b.cyl(0.03, 0.05, 1.1 + rnd() * 0.6, 4, [x + rnd(), 0.2, zr + (rnd() - 0.5)], '#6f8f3a'); }
   }
-  for (let i = 0; i < 9; i++) b.ico(1.0 + rnd() * 1.3, [RIVER.x1 + 0.5 + rnd() * 2, 0.1 + rnd() * 0.6, RIVER.z0 + 1 + rnd() * (RIVER.z1 - RIVER.z0 - 2)], ['#7d8288', '#8a8f94'][i % 2], [1.1, 0.9, 1], 0);
+  for (let i = 0; i < 9; i++) b.ico(1.0 + rnd() * 1.3, [RIVER.x1 - 1 + rnd() * 3, 0.1 + rnd() * 0.6, RIVER.z0 + 4 + rnd() * (RIVER.z1 - RIVER.z0 - 8)], ['#7d8288', '#8a8f94'][i % 2], [1.1, 0.9, 1], 0);
 }
 
 interface Chunk { b: GB; g: GB }
@@ -862,7 +862,7 @@ function Lake() {
     const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 - LAKE.z0;
     const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1) / 2);
     // the river south of the gate (same water, joins the lake at its west end)
-    const river = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 1.2, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
+    const river = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 6, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
     const bump = rippleTexture();
     const mat = new MeshStandardMaterial({ color: new Color('#2c6f93'), roughness: 0.12, metalness: 0.15, bumpMap: bump, bumpScale: 0.6, transparent: true, opacity: 0.94 });
     const b = new GB([0.85, 1.05]), rnd = mulberry32(303);

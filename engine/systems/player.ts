@@ -18,6 +18,7 @@ import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, type Collider } from '../mapgen';
+import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
 import { dailyMods } from '../../dailyChallenge';
 
@@ -132,6 +133,9 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
   }
   if (lavaTouch && p.burnT <= 0.3 && p.alive) applyPlayerDebuff('BURN', 2.5, 4 + world.director.wave * 0.8);   // walked into lava
   lavaTouch = false;
+  if (!bounds.room && world.village.area === 'TOWN' && isTownWater(nx, nz)) {   // never walk onto the lake / river (slide along the shore)
+    if (!isTownWater(nx, oz)) nz = oz; else if (!isTownWater(ox, nz)) nx = ox; else { nx = ox; nz = oz; }
+  }
   p.pos.x = nx; p.pos.z = nz; p.pos.y = 0;
   pushOutOfCrates(p.pos, 0.5);
   const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;

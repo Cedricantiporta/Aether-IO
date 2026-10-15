@@ -15,7 +15,7 @@
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
-import { BEACH_BOX } from './beachData';
+import { BEACH_BOX, BEACH, onDeckRect } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
@@ -31,6 +31,30 @@ export const PLAZA = { x: 0, z: 2, r: 6.5 };
 // the Endless Tower and the Adventure Portal), about 34 units further south than the old meadow.
 /** The river south of the gate (water band; banks are colliders, the bridge is the only crossing west of its east end). */
 export const RIVER = { x0: -72, x1: 50, z0: 61, z1: 75 };
+const sstepT = (a: number, b: number, v: number): number => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** True on open water in the town (the lake west of the walls / beach, the river; not the bridge or a pier deck). The
+ *  island edge is a polar outline, so long clearings far out (the Endless Tower's) widen it over the water: the player
+ *  movement refuses water steps with this (engine/systems/player.ts). Mirrors render/terrainFn lakeK / riverK. */
+export function isTownWater(x: number, z: number): boolean {
+  if (onDeckRect(x, z) >= 0) return false;
+  if (Math.abs(x) <= BRIDGE.hw + 0.8 && z > BRIDGE.z0 - 1 && z < BRIDGE.z1 + 1) return false;
+  if (x >= RIVER.x0 - 30 && x <= RIVER.x1 && z > riverBank(x, 0) + 0.3 && z < riverBank(x, 1) - 0.3) return true;
+  if (x < LAKE.x1 && z > LAKE.z0 && z < LAKE.z1) {
+    const sx = LAKE.x1 + (BEACH.shoreX - LAKE.x1) * sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z);
+    if (x < sx - 1.2) return true;
+  }
+  return false;
+}
+/** The river's banks (owner: rounded, a bit irregular, not straight): z of the north (side 0) / south (side 1) bank at x.
+ *  Gentle waves of up to ~2.3 units, straight under the bridge, and the banks close round at the east end (the spring). */
+export function riverBank(x: number, side: 0 | 1): number {
+  const k = Math.min(1, Math.max(0, (Math.abs(x) - 7) / 7));   // (straight near the bridge)
+  const w = (Math.sin(x * 0.105 + side * 2.3) * 1.5 + Math.sin(x * 0.29 + side * 4.7 + 1) * 0.8) * k;
+  const z = side ? RIVER.z1 + w : RIVER.z0 + w;
+  const t = Math.min(1, Math.max(0, (RIVER.x1 - x) / 8));       // round east end: the banks meet at x1
+  const c = (RIVER.z0 + RIVER.z1) / 2;
+  return c + (z - c) * Math.sqrt(1 - (1 - t) * (1 - t));
+}
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
 export const BRIDGE = { hw: 4.2, z0: 57.5, z1: 78.5, h: 1.6 };
 export const PORTAL = { x: 0, z: 124, r: 6.5, front: { x: 0, z: 120.6 } };   // (front = on top of the platform, before the arch)
@@ -40,12 +64,12 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -55, z: 107, rot: 0 };   // (owner: beside the path to the Endless Tower, door facing the path)
+export const BREWER_HUT = { x: -10.5, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge
 /** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
-export const NESTS: [number, number][] = [[COOP.x - 1.8, COOP.z + 2.1], [COOP.x + 0.2, COOP.z + 2.5], [COOP.x + 2, COOP.z + 2]];
+export const NESTS: [number, number][] = [[COOP.x - 2.3, COOP.z - 1.8], [COOP.x - 2.6, COOP.z + 0.1], [COOP.x - 2.3, COOP.z + 2]];   // (the coop faces west like the barn)
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
@@ -55,6 +79,13 @@ export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
  *  knoll (townLift TOWER_KNOLL). The Elixir Brewer keeps her hut on the path just before it. */
 export const TOWER = { x: -74, z: 112, r: 4.2, door: { x: -69, z: 112 } };
 export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
+/** Height of the Endless Tower's knoll at (x, z) (0 off it): the hero (townLift) and the ground mesh (render/terrainFn) both use it. */
+export function towerKnollAt(x: number, z: number): number {
+  const td = Math.hypot(x - TOWER.x, z - TOWER.z);
+  if (td >= TOWER_KNOLL.r + TOWER_KNOLL.ramp) return 0;
+  const k = Math.min(1, (TOWER_KNOLL.r + TOWER_KNOLL.ramp - td) / TOWER_KNOLL.ramp);
+  return TOWER_KNOLL.h * k * k * (3 - 2 * k);
+}
 /** Walkable island = union of axis-aligned boxes [x0, z0, x1, z1], all containing the origin (mapgen turns them into a polar edge). */
 /** Lake west of the town wall (not walkable: the island edge stops just past the wall). */
 export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
@@ -115,7 +146,7 @@ export function townLift(x: number, z: number): number {
   // the bridge deck: a gentle arch over the river
   if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
   // the Endless Tower's knoll (a raised mound; the path ramps up to the door)
-  { const td = Math.hypot(x - TOWER.x, z - TOWER.z); if (td < TOWER_KNOLL.r + TOWER_KNOLL.ramp) { const k = Math.min(1, (TOWER_KNOLL.r + TOWER_KNOLL.ramp - td) / TOWER_KNOLL.ramp); return TOWER_KNOLL.h * k * k * (3 - 2 * k); } }
+  { const kn = towerKnollAt(x, z); if (kn > 0) return kn; }
   // the Adventure Portal's round stepped platform (tiers r 8 / 6.9 / 5.6 up to 1.2; render/Town buildPortalGeo)
   const pd = Math.hypot(x - PORTAL.x, z - PORTAL.z);
   if (pd < 8.4) return Math.min(1.2, Math.max(0, (8.4 - pd) / 2.6) * 1.2);
@@ -165,9 +196,11 @@ export const TOWN_SEATS: SeatSpec[] = [
 export const HOUSES: HouseSpec[] = [
   // the farm outside the gate: a big red barn by the road and a little chicken coop
   { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
-  { x: COOP.x, z: COOP.z, rot: 0, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
+  { x: COOP.x, z: COOP.z, rot: -Math.PI / 2, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
   // the hamlet on the meadow west of the coop, beside the portal (doors facing the farm track)
   H(13, 121, Math.PI, 5.2, 4.4), H(23, 123.5, Math.PI, 5.6, 4.6, 2), H(32, 119.5, Math.PI, 4.8, 4.2),
+  // (owner: more houses right of the portal) a second little hamlet west of the portal, doors facing the tower path
+  H(-13.5, 121, Math.PI, 5.2, 4.4), H(-23.5, 124, Math.PI, 5.4, 4.6, 2), H(-33, 120, Math.PI, 4.8, 4.2), H(-42, 125, Math.PI, 4.6, 4),
   // flanking the castle
   H(18.5, -28.5, 0, 5.0, 4.4),
   // east end of the north street, door facing the street
@@ -270,7 +303,7 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
   // the mainland road from the bridge to the portal: rail fences both sides (gaps at the farm gate, the farm track, the tower path)
   [3.4, 79.5, 3.4, FARM.z - 1.6], [3.4, FARM.z + 1.6, 3.4, 109.2], [3.4, 112, 3.4, 117.5],
-  [-3.4, 79.5, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],
+  [-3.4, 79.5, -3.4, BREWER_HUT.z - 2.2], [-3.4, BREWER_HUT.z + 2.2, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],   // (gap at the Elixir Brewer's door)
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
@@ -280,6 +313,9 @@ export const FENCES: [number, number, number, number][] = [
     }
     return f;
   })(),
+  // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
+  [5, 108.4, 30.5, 108.9], [37.5, 108.9, 42, 108.7],
+  [5, 112.8, 10.6, 112.9], [15.4, 112.95, 20.6, 113.1], [25.4, 113.2, 29.6, 113.3], [34.4, 113.3, 43.6, 113.2],
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
 ];
@@ -403,8 +439,8 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
   for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
   // the river: both banks are a chain of circles (gap for the bridge), the east end is closed; the bridge railings
-  for (let x = -49; x <= RIVER.x1 + 0.01; x += 1.0) if (Math.abs(x) > BRIDGE.hw + 0.5) c.push([x, RIVER.z0 - 0.2, 0.7], [x, RIVER.z1 + 0.2, 0.7]);
-  for (let z = RIVER.z0; z <= RIVER.z1; z += 1.0) c.push([RIVER.x1 + 0.4, z, 0.8]);
+  for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.hw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
+  c.push([RIVER.x1 + 0.4, (RIVER.z0 + RIVER.z1) / 2, 1.2]);
   for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * (BRIDGE.hw + 0.35), z, 0.4]);
   c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
@@ -721,8 +757,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x + 3, COOP.z + 3.3], speed: 1.3,
-    patrol: [[COOP.x + 3, COOP.z + 3.3], [COOP.x - 3.5, COOP.z + 3.3]],   // along the nests only (clear of the coop and the field fence)
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x - 3.6, COOP.z - 2.6], speed: 1.3,
+    patrol: [[COOP.x - 3.6, COOP.z - 2.6], [COOP.x - 3.6, COOP.z + 2.8]],   // along the nests on the coop's west (door) side
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -820,7 +856,7 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'COW', x: 29, z: 91, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
   { kind: 'COW', x: 29.5, z: 98.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
   { kind: 'COW', x: 32, z: 103, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
-  { kind: 'CHICKEN', x: COOP.x - 1.6, z: COOP.z + 3.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x + 1.8, z: COOP.z + 3.8, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: COOP.x - 4.2, z: COOP.z - 0.8, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x - 4.6, z: COOP.z + 1.6, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
 ];
