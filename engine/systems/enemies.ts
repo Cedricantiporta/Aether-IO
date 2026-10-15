@@ -219,6 +219,14 @@ const BOSS_DMG = 0.85;
 /** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
 export const levelHpMul = (): number => 1 + LEVEL_HP * (Math.max(1, useGameStore.getState().level | 0) - 1);
 
+/** Boss / champion pace by biome (first loop only): Greenwood 0.75, biome 2 0.82, biome 3 0.9, later 1 (owner: lower
+ *  biomes' bosses cast a bit slower, with longer gaps between skills). <1 slows stateT (wind-ups, attacks) and attackCd. */
+function bossPace(): number {
+  const b = world.room.biome;
+  if (b >= 6) return 1;
+  return b === 0 ? 0.75 : b === 1 ? 0.82 : b === 2 ? 0.9 : 1;
+}
+
 export function spawnEnemy(
   kind: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix },
 ): Enemy | null {
@@ -1293,8 +1301,10 @@ function updateEnemy(e: Enemy): void {
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {
-    e.stateT += dt;
-    if (e.attackCd > 0) e.attackCd -= dt;
+    // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills
+    const pace = (e.boss || e.mini) ? bossPace() : 1;
+    e.stateT += dt * pace;
+    if (e.attackCd > 0) e.attackCd -= dt * pace;
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
     else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);

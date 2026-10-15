@@ -920,3 +920,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   the cave (cave.ts enterFloor / cave-in, village.ts switchArea). Town drops are still scooped up when entering the cave.
 - Ultimate (R) slot: bigger, and the ready glow/rays finally show (the CSS read data-ready on the wrong element); icon brightens + pulses when full.
 - Beach: shoreline boulders kept off the pier (Terrain.tsx nearDock).
+- Early-biome boss pace (enemies.ts `bossPace`): bosses + champions in biome 1/2/3 (first loop) run stateT and attackCd at
+  x0.75 / x0.82 / x0.9 — slower wind-ups + attacks and longer gaps between skills. Later biomes unchanged.
+- Travelling Merchant: real KayKit character behind the stall + "Travelling Merchant" tag (Room.tsx MerchantNpc).
+- Necromancer: +10% move speed (9.32), Plague Ground cd 18 s; summons arrive beside the hero on room entry.
