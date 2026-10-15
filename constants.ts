@@ -97,27 +97,27 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 9.24, fireRate: 1.75, maxHealth: 48, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 9.24, fireRate: 1.75, maxHealth: 48, manaRegen: 1.2, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
         description: 'Plant your feet and loose a storm of arrows. High attack rate, low health.'
     },
     WIZARD: {
-        stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 30, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },
+        stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 30, manaRegen: 1.5, knockback: 0.5, skillDamage: 1.5 },
         weaponId: 'staff_1',
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     NECROMANCER: {
-        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 8.47, damage: 22, fireRate: 1.2, manaRegen: 2.4, knockback: 0.4, skillDamage: 1.2 },
+        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 8.47, damage: 22, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2 },
         weaponId: 'wand_n1',
         description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
     },
     KNIGHT: {
-        stats: { maxHealth: 96, defense: 22, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05 },
+        stats: { maxHealth: 96, defense: 22, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05, manaRegen: 1.0 },
         weaponId: 'sword_1',
         description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 84, defense: 15, moveSpeed: 8.47, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0 },
+        stats: { maxHealth: 84, defense: 15, moveSpeed: 8.47, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0, manaRegen: 1.0 },
         weaponId: 'axe_1',
         description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }

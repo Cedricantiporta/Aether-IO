@@ -192,7 +192,7 @@ export function fireBasicAttack(): void {
   let aoe = 0;
   let radius = 1.5;
   switch (ptype) {
-    case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 1; break;   // no pierce: one hit out, one on the way back // shorter throw: barbarian is close range
+    case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 6; break;   // boomerang: pierces up to 6 on the way out, 6 more on the way back // shorter throw: barbarian is close range
     case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.0; radius = 2.8; break;   // arcane orbs (smaller splash)
     case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 1.8; radius = 1.2; break;   // necromancer: one target, no pierce, a small splash (half damage)
@@ -470,16 +470,10 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
 
   if (p.kind === 'STORM') { bounceStorm(p, e); return; }
   if (p.kind === 'GIANT_AXE') ricochet(p, e.pos.x, e.pos.z, e);
-  if (p.kind === 'AXE' && p.state === 0) { axeRebound(p); return; }
   p.pierce -= 1;
   if (p.pierce <= 0) p.active = false;
 }
 
-/** Barbarian axe (non-piercing): the first thing it hits on the way out knocks it back toward the hero; one more hit on the return. */
-function axeRebound(p: Projectile) {
-  p.state = 1; p.pierce = 1; p.trailT = 2.4;
-  p.vel.x *= -0.7; p.vel.z *= -0.7;
-}
 
 // Allocation-free status application for projectile effects (same rules as combat.applyStatus).
 const fxTmp: StatusEffect = { type: 'BURN', duration: 0 };
@@ -518,7 +512,7 @@ export function updateProjectiles(dt: number): void {
           const k = Math.exp(-1.5 * dt);
           p.vel.x = vx * k; p.vel.z = vz * k;
           p.trailT += Math.abs(w);
-          if (p.trailT > 2.4) { p.state = 1; p.hitIds.length = 0; p.pierce = 1; }
+          if (p.trailT > 2.4) { p.state = 1; p.hitIds.length = 0; p.pierce = 6; }
         } else {
           const dx = pl.pos.x - p.pos.x, dz = pl.pos.z - p.pos.z;
           const l = Math.sqrt(dx * dx + dz * dz) || 1;
@@ -616,7 +610,6 @@ export function updateProjectiles(dt: number): void {
       p.hitIds.push(key);
       hitCrate(cr, p.damage);
       events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
-      if (p.kind === 'AXE' && p.state === 0) { axeRebound(p); continue; }
       p.pierce -= 1;
       if (p.pierce <= 0) { p.active = false; break; }
     }

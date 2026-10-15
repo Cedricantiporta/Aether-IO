@@ -88,8 +88,10 @@ needed to see the new game).
   Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved.
 - **Barbarian:** Earthsplitter (s3) is now a short close-range cleave (length 9 + 0.6/lv, 6 spikes; was 34+); all
   Barbarian skills cost 60% less mana (store `getManaCost`).
-- **Barbarian basic axe no longer pierces:** pierce 1; the first enemy/crate hit on the way out bounces it back toward the
-  hero (`axeRebound` in projectiles.ts), and it can hit one more enemy on the return., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+- **Barbarian basic axe:** boomerang pierces up to 6 enemies on the way out and 6 more on the way back (a brief
+  non-piercing version was reverted on request).
+- **Mana regen:** every class has a base 1.0-1.5/s (Archer 1.2, Wizard 1.5, Necro 1.4, Knight/Barbarian 1.0), and the old
+  hidden x0.5 in player.ts is gone, so the Character sheet's "Mana regen /s" is now the real rate., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)
