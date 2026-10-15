@@ -537,7 +537,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 60.5], speed: 1.2,
-    patrol: [[30.5, 60.5], [25, 59], [25, 67], [30.5, 66]],
+    patrol: [[30.5, 60.5], [28, 57.5], [28, 67.5], [30.5, 66]],   // (between the field fence at x 25 and the barn)
     talk: [['Fine morning for it. The girls are in a good mood today.', 'Cows, I mean. The cows.'], ['That barn has stood longer than the gate. Built it with my grandfather.']],
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },

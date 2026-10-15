@@ -268,6 +268,15 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   pl.pos.set(sx, 0, sz); pl.vel.set(0, 0, 0); pl.dashT = 0; pl.facing = Math.PI;
   if (p.type === 'GATEKEEPER') enterHub(); else if (p.gate !== undefined) { gateState.on = true; gateState.cur = p.gate; }
   world.pet.pos.set(pl.pos.x + 1.2, 1, pl.pos.z + 1.2);
+  {   // summons (necromancer skeletons / golem) arrive in a ring beside the hero instead of walking in from where the last room left them
+    const M = world.minions; let n = 0, tot = 0;
+    for (let i = 0; i < M.length; i++) if (M[i].active) tot++;
+    for (let i = 0; i < M.length; i++) {
+      const m = M[i]; if (!m.active) continue;
+      const a = Math.PI + ((n + 0.5) / Math.max(1, tot) - 0.5) * Math.PI * 1.4, rr = 2.2 + (n % 2) * 0.9;   // a fan behind the hero
+      m.x = pl.pos.x + Math.sin(a) * rr; m.z = pl.pos.z + Math.cos(a) * rr; n++;
+    }
+  }
 
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.aliveCount = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
   roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;

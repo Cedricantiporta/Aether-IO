@@ -108,7 +108,7 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
         description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
     },
     NECROMANCER: {
-        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 8.47, damage: 22, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2 },
+        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 9.32, damage: 22, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2 },
         weaponId: 'wand_n1',
         description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
     },
