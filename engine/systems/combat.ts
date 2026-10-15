@@ -576,7 +576,9 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
 
   const barrier = st.skillLevels.barrier;
   const mods = runMods(st.difficulty);
-  const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1); // CURSE: defense -30%
+  // CURSE: defense -30%. Deeper monsters pierce armour (defense counts 1/(1 + 2.5% per depth)): late-game gear stacks
+  // hundreds of defense, which made the last biomes easier than the first ones.
+  const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1) / (1 + 0.025 * Math.max(0, world.director.wave - 1));
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();

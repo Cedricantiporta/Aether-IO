@@ -268,7 +268,9 @@ export function waveHpMult(wave: number): number {
   return 1 + 0.16 * w + 0.01 * w * w;
 }
 export function waveDmgMult(wave: number): number {
-  const m = 1 + 0.07 * (wave - 1);
+  // quadratic like HP (was linear 1 + 0.07w: depth 60 hit only 5x while the hero's HP / defense kept growing, so late
+  // biomes felt easier). Depth 10 ~1.9x, 30 ~5.1x, 60 ~17.8x.
+  const w = Math.max(0, wave - 1), m = 1 + 0.07 * w + 0.0035 * w * w;
   // gentler onboarding (balance pass, like waveBudget): waves 1-5 hit for 75%..95%. Fresh Lv 1 heroes used to die in the
   // 3rd-6th room (a Wizard has 30 HP: three goblin arrows).
   return wave <= 5 ? m * (0.75 + 0.05 * (Math.max(1, wave) - 1)) : m;
