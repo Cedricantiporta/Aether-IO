@@ -4,6 +4,7 @@ import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier } from '../../../petFusion';
 import { RARITY_COLOR } from '../../lib/game';
+import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import type { Item } from '../../../types';
 
 export const PetFuse: React.FC = () => {
@@ -11,6 +12,12 @@ export const PetFuse: React.FC = () => {
   const fusePets = useGameStore((s) => s.fusePets);
   const [sel, setSel] = useState<string[]>([]);
   const [last, setLast] = useState<{ ok: boolean; item: Item } | null>(null);
+  const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);
+  /** plays the fusion cinematic; `fn` performs the fusion at the burst moment (owner: animation + result in the middle) */
+  const play = (preview: Item, fn: () => { ok: boolean; item: Item } | null): void => setCine({ preview, run: () => {
+    const r = fn(); if (r) setLast(r);
+    return r ? { success: r.ok, item: r.item, title: r.ok ? 'Fusion Success!' : 'Fusion Failed', sub: r.ok ? `${r.item.name} - ${r.item.rarity.charAt(0) + r.item.rarity.slice(1).toLowerCase()}` : `${r.item.name} remains` } : { success: false, item: preview, title: 'Fusion Failed' };
+  } });
   const pets = inventory.filter((i) => i.type === 'PET');
   const picked = sel.map((id) => pets.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const tier = picked[0]?.rarity;
@@ -23,7 +30,7 @@ export const PetFuse: React.FC = () => {
     if (tier && p.rarity !== tier) { setSel([p.id]); return; }        // another tier: start over with this one
     if (sel.length < FUSE_COUNT) setSel([...sel, p.id]);
   };
-  const go = () => { const r = fusePets(sel); if (r) { setLast(r); setSel([]); } };
+  const go = () => { if (picked.length !== FUSE_COUNT) return; const ids = sel; setSel([]); play(picked[0], () => fusePets(ids)); };
   return (
     <div className="flex flex-col gap-3" data-testid="pet-fuse">
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
@@ -63,6 +70,7 @@ export const PetFuse: React.FC = () => {
             dim={(!!tier && p.rarity !== tier) || !(FUSE_CHANCE[p.rarity] ?? 0)} onClick={() => toggle(p)} />
         )) : <div className="rpg-label">No pets in your bag.</div>}
       </div>
+      {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Fusion Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
 };

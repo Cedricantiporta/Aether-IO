@@ -126,7 +126,7 @@ function gate(slot: ActiveSlot): boolean {
   const p = world.player;
   if ((st.skillLevels[slot] ?? 0) <= 0) {   // not learned yet (skills unlock by class level, then cost skill points)
     const need = unlockLevel(st.hero, slot);
-    st.addNotification(st.level < need ? `Unlocks at Lv ${need}` : 'Learn it at the Skill Trainer', 'red', 'WARNING');
+    if (st.level >= need) st.addNotification('Learn it at the Skill Trainer', 'red', 'WARNING');   // (owner: no 'unlocks at Lv' prompt for locked skills)
     return false;
   }
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
@@ -1223,13 +1223,11 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
 }
 
 // ============================================================ dash entry =====
-let dashLockMsgT = -9;
 /** Space: spends a dash charge and performs the class dash (Shadow Roll / Blink Nova / Shoulder Charge). */
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;
   if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (8)
-    if (world.time - dashLockMsgT > 3) { dashLockMsgT = world.time; useGameStore.getState().addNotification(`Dash unlocks at Lv ${DASH_UNLOCK_LV}`, '#c8c0b0', 'SYSTEM'); }
     return false;
   }
   if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }

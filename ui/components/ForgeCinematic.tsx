@@ -10,7 +10,7 @@ export interface ForgeOutcome { success: boolean; item: Item; title: string; sub
 
 type Phase = 'charge' | 'burst' | 'result';
 
-export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void; heading?: string }> = ({ item, run, onDone, heading = 'Enhancement Result' }) => {
+export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void; heading?: string; noLevel?: boolean }> = ({ item, run, onDone, heading = 'Enhancement Result', noLevel }) => {
   const [phase, setPhase] = useState<Phase>('charge');
   const [out, setOut] = useState<ForgeOutcome | null>(null);
   const runRef = useRef(run); runRef.current = run;
@@ -32,7 +32,7 @@ export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onD
       <div className="fc-card">
         <div className="fc-card-name">{shown.name}</div>
         <div className="fc-card-art"><ItemSlot item={shown} size="7.5rem" iconSize={64} tooltip="none" compare={false} /></div>
-        <div className="fc-card-lv">+{Math.max(0, shown.level - 1)}</div>
+        {noLevel ? <div className="fc-card-lv" style={{ fontSize: '.9rem', letterSpacing: '.15em' }}>{shown.rarity}</div> : <div className="fc-card-lv">+{Math.max(0, shown.level - 1)}</div>}
         <div className="fc-card-flash" />
       </div>
       {phase === 'result' && out && (

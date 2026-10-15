@@ -1133,13 +1133,13 @@ button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { box-shadow: in
 
 /* ---- forge / reveal cinematic */
 .fc-root { position: absolute; inset: 0; z-index: 600; display: grid; place-items: center; overflow: hidden; cursor: default; pointer-events: auto;
-  background: radial-gradient(ellipse at 50% 50%, rgba(30, 28, 26, .85), rgba(4, 4, 6, .97) 70%); animation: fc-in .3s ease-out; }
+  background: radial-gradient(ellipse at 50% 50%, rgba(30, 28, 26, .55), rgba(4, 4, 6, .72) 75%); animation: fc-in .3s ease-out; }   /* (owner: was near-opaque black - read as a black screen on phones) */
 .fc-result ~ * , .fc-root.fc-result { cursor: pointer; }
 @keyframes fc-in { from { opacity: 0; } }
-.fc-smoke { position: absolute; width: 140vmax; height: 140vmax; left: 50%; top: 50%; translate: -50% -50%; pointer-events: none; opacity: .75; mix-blend-mode: screen;
+.fc-smoke { position: absolute; width: 140vmax; height: 140vmax; left: 50%; top: 50%; translate: -50% -50%; pointer-events: none; opacity: .75;
   background: conic-gradient(from 0deg, transparent 0 8%, rgba(200, 205, 220, .22) 12%, transparent 20% 33%, rgba(170, 175, 190, .18) 40%, transparent 48% 66%, rgba(220, 220, 230, .2) 72%, transparent 80%);
   -webkit-mask: radial-gradient(circle, #000 4%, transparent 38%); mask: radial-gradient(circle, #000 4%, transparent 38%);
-  filter: blur(14px); animation: fc-spin 2.4s linear infinite; }
+  animation: fc-spin 2.4s linear infinite; }   /* (no blur filter / blend mode on a 140vmax layer: too heavy for phone GPUs) */
 .fc-smoke.b { animation-duration: 3.4s; animation-direction: reverse; opacity: .5; }
 @keyframes fc-spin { to { rotate: 360deg; } }
 .fc-burst .fc-smoke, .fc-result .fc-smoke { animation-duration: .8s; opacity: 0; transition: opacity .6s; }
