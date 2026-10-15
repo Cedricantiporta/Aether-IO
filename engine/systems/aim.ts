@@ -106,19 +106,19 @@ function shapeFor(id: string, cx: number, cz: number): void {
   const ring = (radius: number) => { A.shape = Shape.RING; A.x = p.pos.x; A.z = p.pos.z; A.radius = radius; A.targetX = cx; A.targetZ = cz; };
   const slot = id === 'ult' ? 'ult' : id === 'dash' ? 'e' : slotOf(id);
   if (hero === 'ARCHER') {
-    if (id === 'dash') { A.shape = Shape.ARROW; A.len = 10.5; A.width = 2.2; A.x = p.pos.x + ux * 10.5; A.z = p.pos.z + uz * 10.5; A.targetX = cx; A.targetZ = cz; }
+    if (id === 'dash') { A.shape = Shape.ARROW; A.len = 6; A.width = 2.2; A.x = p.pos.x + ux * 6; A.z = p.pos.z + uz * 6; A.targetX = cx; A.targetZ = cz; }
     else if (slot === 'q') line(38, 6 * (1 + S.galeWidth) * (1 + 0.1 * (lv.q - 1)));
     else if (slot === 's3') { A.shape = Shape.CONE; A.half = 0.305; A.len = 22; A.x = p.pos.x + ux * 22; A.z = p.pos.z + uz * 22; A.targetX = cx; A.targetZ = cz; }
     else if (slot === 's4') circle(17, 17, 8.5);
     else circle(28, 6, 14);
   } else if (hero === 'WIZARD') {
-    if (id === 'dash') { circle(22 + lv.e, 4, 8.5 + 0.4 * (lv.e - 1)); A.shape = Shape.CIRCLE; }
+    if (id === 'dash') { circle(14 + 0.5 * lv.e, 4, 8.5 + 0.4 * (lv.e - 1)); A.shape = Shape.CIRCLE; }
     else if (slot === 'q') circle(28, 7, 11 + 0.6 * (lv.q - 1));
     else if (slot === 's3') ring(4.5);
     else if (slot === 's4') line(26, 1.8);
     else circle(30, 8, 14);
   } else {
-    if (id === 'dash') circle(18, 4, 7 + 0.5 * (lv.dash - 1));
+    if (id === 'dash') circle(12, 4, 7 + 0.5 * (lv.dash - 1));
     else if (slot === 'q') line(21, 4.6);
     else if (slot === 'e') ring(7.5 + 0.3 * (lv.e - 1));
     else if (slot === 's3') line(37 + 2 * (lv.s3 - 1), 5.6);

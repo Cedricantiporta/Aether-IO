@@ -416,10 +416,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     } else if (slot === 'e') {
       if (dashAuto && !aimOverride.on) { // tap: blink in the movement / facing direction
         const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
-        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 14; aimOverride.z = p.pos.z + md.z * 14;
-        aimPoint(22 + lv, 4, tgt);
+        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 9; aimOverride.z = p.pos.z + md.z * 9;   // (shorter dash range)
+        aimPoint(14 + 0.5 * lv, 4, tgt);
         aimOverride.on = false;
-      } else aimPoint(22 + lv, 4, tgt);
+      } else aimPoint(14 + 0.5 * lv, 4, tgt);
       safeSpot(tgt);
       p.dashIframes = true;
       const R = 5 + 0.25 * (lv - 1);   // smaller nova (user)
@@ -457,10 +457,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     } else if (slot === 'e') {   // SOUL STEP: blink, bone shards burst where you stood
       if (dashAuto && !aimOverride.on) {
         const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
-        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 12; aimOverride.z = p.pos.z + md.z * 12;
-        aimPoint(16 + lv, 4, tgt);
+        aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 8; aimOverride.z = p.pos.z + md.z * 8;   // (shorter dash range)
+        aimPoint(11 + 0.5 * lv, 4, tgt);
         aimOverride.on = false;
-      } else aimPoint(16 + lv, 4, tgt);
+      } else aimPoint(11 + 0.5 * lv, 4, tgt);
       safeSpot(tgt);
       p.dashIframes = true;
       const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
@@ -590,8 +590,8 @@ function barbLeap(auto: boolean): void {
   const tgt = aim;
   if (auto && !aimOverride.on) {
     const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
-    tgt.set(p.pos.x + md.x * 12, 0, p.pos.z + md.z * 12);
-  } else aimPoint(18, 4, tgt);
+    tgt.set(p.pos.x + md.x * 8, 0, p.pos.z + md.z * 8);   // (shorter dash range)
+  } else aimPoint(12, 4, tgt);
   safeSpot(tgt);
   a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
   a.leapDmg = base(lv) * 3.5 * DASH_DMG; a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)

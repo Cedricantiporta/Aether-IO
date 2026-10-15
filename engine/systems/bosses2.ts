@@ -38,7 +38,7 @@ export const S = {
   // Elderroot
   bark: false, barkT: 0, wantBark: false, rings: 0, ringN: 0,
   // Mire Hydra
-  heads: [-1, -1, -1] as number[], headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
+  heads: [-1, -1, -1] as number[], regrowT: [0, 0, 0] as number[], headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
   // Glacius
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
@@ -52,7 +52,7 @@ export const bossView = S;
 export function resetBosses2(): void {
   S.id = -1; S.phase = 0; S.cycle = 0;
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
-  S.heads[0] = S.heads[1] = S.heads[2] = -1; S.headsDead = 0; S.headAng = 0; S.sub = false;
+  S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0;
   S.voidOn = false; S.gravT = 0; S.pushed = false;
@@ -206,15 +206,18 @@ export function initBoss2(e: Enemy): void {
   e.pattern = 0; e.attackCd = 3.2;
   if (e.kind === 'BOSS_HYDRA') {
     S.headAng = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
-    for (let k = 0; k < 3; k++) {
-      const a = S.headAng + (k - 1) * 1.05;
-      tv.set(e.pos.x + Math.sin(a) * (e.radius + 0.6), 0, e.pos.z + Math.cos(a) * (e.radius + 0.6));
-      const h = spawnEnemy('BOSS_HYDRA_HEAD', tv);
-      if (!h) continue;
-      h.pattern = k; h.attackCd = 2.8 + k * 1.4; h.maxHp = Math.round(h.maxHp * 0.7); h.hp = h.maxHp;
-      S.heads[k] = h.id;
-    }
+    for (let k = 0; k < 3; k++) growHead(e, k);
   }
+}
+
+/** (Re)grows hydra head k beside the body. */
+function growHead(e: Enemy, k: number): void {
+  const a = S.headAng + (k - 1) * 1.05;
+  tv.set(e.pos.x + Math.sin(a) * (e.radius + 0.6), 0, e.pos.z + Math.cos(a) * (e.radius + 0.6));
+  const h = spawnEnemy('BOSS_HYDRA_HEAD', tv);
+  if (!h) return;
+  h.pattern = k; h.attackCd = 2.8 + k * 1.4; h.maxHp = Math.round(h.maxHp * 0.7); h.hp = h.maxHp;
+  S.heads[k] = h.id;
 }
 
 export function bossDied2(e: Enemy): void {
@@ -407,12 +410,26 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
     if (id < 0) continue;
     const h = world.enemies[id];
     if (h.active && h.state !== 'DYING' && h.kind === 'BOSS_HYDRA_HEAD') continue;
-    S.heads[k] = -1; S.headsDead++;
+    S.heads[k] = -1; S.headsDead++; S.regrowT[k] = e.phase >= 1 ? 10 : 14;   // it grows back unless the hydra is nearly dead
     e.armor = Math.max(0, e.armor - 12);
     events.emit('floatText', { pos: e.pos, text: 'HEAD SEVERED', color: 0xffd23a, scale: 1.0, dy: 2.4 });
     events.emit('shake', { amount: 0.5 });
     notify(S.headsDead >= 3 ? 'The Hydra is defenseless!' : `The Hydra weakens (${S.headsDead}/3 heads)`, '#9be32a');
     stat('HeadSevered');
+  }
+  // severed heads regrow (and the hydra mends a little) while it is above 30% hp
+  for (let k = 0; k < 3; k++) {
+    if (S.heads[k] >= 0 || S.regrowT[k] <= 0) continue;
+    S.regrowT[k] -= dt;
+    if (S.regrowT[k] > 0) continue;
+    if (e.hp < e.maxHp * 0.3 || e.state === 'DYING') continue;
+    growHead(e, k);
+    if (S.heads[k] < 0) continue;
+    S.headsDead = Math.max(0, S.headsDead - 1);
+    e.armor += 12; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.04);
+    events.emit('floatText', { pos: e.pos, text: 'A HEAD REGROWS!', color: 0x9be32a, scale: 1.0, dy: 2.4 });
+    events.emit('heal', { pos: e.pos, amount: e.maxHp * 0.04 });
+    notify('The Hydra regrows a head! Strike while it is weak.', '#9be32a');
   }
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 6, 11, e.speed * (1 + 0.15 * e.phase), 0.25);

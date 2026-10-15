@@ -17,7 +17,7 @@ import type { Enemy, EnemyProjectile } from '../types';
 import type { HeroClass } from '../../types';
 import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff } from './combat';
-import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies } from './enemies';
+import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup } from './pickups';
 import { dropLoot } from './loot';
@@ -72,7 +72,7 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
   const st = useGameStore.getState();
   const mods = runMods(st.difficulty);
   const wave = world.director.wave;
-  e.maxHp = Math.round(ENEMY_DEFS.DARK_HERO.hp * waveHpMult(wave) * mods.hp * 5); e.hp = e.maxHp;
+  e.maxHp = Math.round(ENEMY_DEFS.DARK_HERO.hp * waveHpMult(wave) * mods.hp * 5 * levelHpMul()); e.hp = e.maxHp;   // (scales with the hero's level too)
   e.mini = true; e.staggerMax = 80; e.armor = Math.round(e.armor * 1.25);
   e.xp *= 20; e.pattern = 0;
   if (!RANGED[cls]) { e.contactDamage *= 1.25; e.speed *= 1.08; }

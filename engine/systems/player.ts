@@ -25,7 +25,7 @@ const DASH_CD = 4;
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
-const DASH_SPEED = 32;   // ~7 units per dash (was 42)
+const DASH_SPEED = 24;   // shorter dashes for every class (was 32, before that 42)
 const DEATH_DELAY = 1.2;
 const COLLIDE_PAD = 0.5;
 let lavaTouch = false;

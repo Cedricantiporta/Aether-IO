@@ -212,6 +212,11 @@ function randomAffix(): EliteAffix {
 }
 
 // ------------------------------------------------------------ spawning --------
+/** Hero-level scaling of every spawned enemy (per level above 1): HP, damage, and xp / gold. */
+const LEVEL_HP = 0.07, LEVEL_DMG = 0.045, LEVEL_REWARD = 0.03;
+/** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
+export const levelHpMul = (): number => 1 + LEVEL_HP * (Math.max(1, useGameStore.getState().level | 0) - 1);
+
 export function spawnEnemy(
   kind: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix },
 ): Enemy | null {
@@ -226,8 +231,10 @@ export function spawnEnemy(
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4); // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
-  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1);
+  // every monster, elite and boss also scales with the hero's level: +7% HP and +4.5% damage per level above 1
+  const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
+  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : 1) * lvDmg;
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
 
@@ -245,8 +252,8 @@ export function spawnEnemy(
   e.contactDamage = def.contactDamage * dmgMul;
   e.projectileDamage = def.projectileDamage * dmgMul;
   // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
-  e.xp = Math.round(def.xp * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1));
-  e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1));
+  e.xp = Math.round(def.xp * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
+  e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
   e.mini = false;
   e.staggerMax = boss ? 100 : 0;
