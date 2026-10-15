@@ -131,8 +131,8 @@ export const SummonReveal: React.FC = () => {
   const best = results.reduce<Item>((b, i) => (RARITY_RANK[i.rarity] > RARITY_RANK[b.rarity] ? i : b), results[0]);
   const many = results.length > 1;
   const allOpen = flipped.length > 0 && flipped.every(Boolean);
-  // ritual colour: gold if a Legendary came out, red for a Mythic, otherwise a calm blue
-  const tint = best.rarity === 'MYTHIC' ? '#ff4a3a' : best.rarity === 'LEGENDARY' ? '#ffc93a' : '#4a9aff';
+  // ritual colour follows the best pull: red Mythic, gold Legendary, purple Epic, otherwise a calm blue
+  const tint = best.rarity === 'MYTHIC' ? '#ff4a3a' : best.rarity === 'LEGENDARY' ? '#ffc93a' : best.rarity === 'EPIC' ? '#b06aff' : '#4a9aff';
   return (
     <motion.div className="absolute inset-0 grid place-items-center pe sm-root" style={{ zIndex: 260, ['--tint' as any]: tint }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="summon-reveal">
       {phase === 'ritual' && (
