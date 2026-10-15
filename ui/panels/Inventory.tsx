@@ -1,5 +1,5 @@
 import { betterGearIds } from '../lib/alerts';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from 'lucide-react';
 import { useGameStore, calculateTotalCP, calculateItemCP, RANK_REQ, RARITY_COLOR } from '../../store';
@@ -15,6 +15,7 @@ import { SORTS, isGear, sortedItems } from '../lib/game';
 import { useDrop, reorder } from '../lib/dnd';
 import { DropCell } from '../components/DropCell';
 import { CoinGlyph } from '../components/SkillIcons';
+import { device } from '../../engine/device';
 
 const TYPE_RANK: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
 
@@ -81,7 +82,13 @@ export const InventoryPanel: React.FC = () => {
   const [sortIdx, setSortIdx] = useState(-1);   // last Sort applied (the bag keeps its manual order otherwise)
   const reorderItems = useGameStore((s) => s.reorderItems);
   const [cat, setCat] = useState<Cat>('ALL');
-  const [equipOpen, setEquipOpen] = useState(true);
+  // phones: beside a shop the bag gets half the screen, so there the paper doll is folded by default (more room for the grid)
+  const [equipWide, setEquipWide] = useState(true);
+  const [equipSplit, setEquipSplit] = useState(false);
+  const split = !!shopTab && document.documentElement.classList.contains('compact');
+  const equipOpen = split ? equipSplit : equipWide;
+  const setEquipOpen = split ? setEquipSplit : setEquipWide;
+  const armed = useRef<string | null>(null);   // touch: the first tap shows the item's tooltip, a second tap equips / drinks
   const HeroIcon = HERO_ICON[hero];
 
   const sorted = inventory;   // manual order: drag items onto each other to swap them, Sort orders the bag once
@@ -97,6 +104,8 @@ export const InventoryPanel: React.FC = () => {
     if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
     if (shopTab === 'BLACKSMITH') { setSelected(it); return; }
     if (shopTab === 'SUPPLIES' || shopTab === 'PETS') { setSell(it); return; }
+    if (device.touch && armed.current !== it.id) { armed.current = it.id; return; }
+    armed.current = null;
     if (it.type === 'ELIXIR') { drinkElixir(it); return; }   // drink: buff for the next run (or the rest of this one)
     if (isGear(it) && !lockedFor(it)) equipItem(it);
   };
@@ -113,7 +122,7 @@ export const InventoryPanel: React.FC = () => {
 
   return (
     <motion.div initial={{ x: '-105%' }} animate={{ x: 0 }} exit={{ x: '-105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex side-panel" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
+      className="absolute pe flex side-panel bag-side" style={{ left: '.7rem', top: '.7rem', bottom: '.7rem', width: '30rem', zIndex: 40 }}>
       <Panel className={`flex flex-col w-full min-h-0 drop-zone ${bagDrop.hot ? 'drop-hot' : ''}`} {...bagDrop.props}>
         <PanelHead icon={<BagGlyph size={34} />} title="Bag" onClose={invOpen ? toggleInventory : closeAllUI}
           right={<CurrencyPill icon={null} label="CP" value={calculateTotalCP(stats).toLocaleString()} />} />

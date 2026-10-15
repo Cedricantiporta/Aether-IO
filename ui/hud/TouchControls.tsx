@@ -196,7 +196,7 @@ const G = {
   atk: { cx: WC - 0.8, cy: WC - 0.8, size: 1.6 },
   s1: arc(-12, 0.95), s2: arc(28, 0.95), s3: arc(64, 0.95),
   ult: arc(102, 1.1), dash: arc(140, 0.95), auto: arc(176, 0.62),
-  hp: { cx: 4.25, cy: 0.12, size: 0.72 }, mp: { cx: 3.4, cy: 0.05, size: 0.72 },
+  hp: { cx: 4.25, cy: 0.5, size: 0.72 }, mp: { cx: 3.4, cy: 0.45, size: 0.72 },   // (centres high enough that the whole button stays on screen)
 };
 const ATK_ICON: Record<string, string> = { ARCHER: 'PIERCING_SHOT', WIZARD: 'FIREBALL', BARBARIAN: 'AXE_SPIN', KNIGHT: 'HOLY_WAVE', NECROMANCER: 'BONE_SPEAR' };
 

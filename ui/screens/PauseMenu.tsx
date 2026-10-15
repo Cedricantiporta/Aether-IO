@@ -33,7 +33,7 @@ export const PauseMenu: React.FC = () => {
         <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and your xp is kept and the room bonus gold is paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run
         </Button>
-        <div className="text-center rpg-label !text-[.6rem] flex items-center justify-center gap-1"><Pause size={10} /> Press Esc to resume</div>
+        <div className="text-center rpg-label !text-[.6rem] flex items-center justify-center gap-1 kbd-hint"><Pause size={10} /> Press Esc to resume</div>
       </div>
     </Modal>
   );
@@ -85,7 +85,7 @@ export const SettingsDialog: React.FC = () => {
   const { hero, rank } = useGameStore(useShallow((s) => ({ hero: s.hero, rank: s.heroRank })));
   const me = activeChar();
   return (
-    <Modal open={open} onClose={() => close(false)} title="Settings" ribbon tone="blue" width="min(46rem, 96vw)" z={250}>
+    <Modal open={open} onClose={() => close(false)} title="Settings" ribbon tone="blue" width="min(46rem, 96vw)" z={250} full>
       <div className="st" data-testid="settings-tabs">
         <nav className="st-nav" role="tablist">
           {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} data-testid={`tab-${t.id}`} className={`st-tab pe ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.icon}<span>{t.label}</span></button>)}

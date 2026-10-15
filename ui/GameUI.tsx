@@ -63,7 +63,8 @@ export const GameUI: React.FC = () => {
   useEffect(() => { hideTip(); }, [status, inv, shop, chr]);
 
   return (
-    <div className="hud-root" style={{ zIndex: 10 }}>
+    // ph-* = which side panels are open (phones split the screen between two of them, see index.css v6)
+    <div className={`hud-root${panels && (inv || bagShop) ? ' ph-bag' : ''}${panels && shop && !summonTab ? ' ph-shop' : ''}${panels && chr ? ' ph-chr' : ''}`} style={{ zIndex: 10 }}>
       {status === GameStatus.MENU && !titleDone && !charSelect && <TitleScreen />}
       {status === GameStatus.MENU && charSelect && <CharacterSelect />}
       {village && <VillageHUD />}

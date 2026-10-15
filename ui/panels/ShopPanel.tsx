@@ -49,7 +49,7 @@ export const ShopPanel: React.FC = () => {
     (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex flex-col side-panel" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>
+      className="absolute pe flex flex-col side-panel shop-side" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>
       <Panel className={`flex flex-col flex-1 min-h-0 drop-zone ${sellDrop.hot ? 'drop-hot' : ''}`} {...sellDrop.props}>
         <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">

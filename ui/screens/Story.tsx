@@ -60,7 +60,7 @@ export const StoryBook: React.FC = () => {
   const cur = CHAPTERS.find((c) => c.id === sel) ?? CHAPTERS[0];
   const unlocked = loreUnlocked(cur, prog);
   return (<>
-    <Modal open={open && !replay} onClose={() => setOpen(false)} title="Story" icon={<BookOpen size={20} />} width="44rem" z={255}>
+    <Modal open={open && !replay} onClose={() => setOpen(false)} title="Story" icon={<BookOpen size={20} />} width="44rem" z={255} full>
       <div className="story-wrap" data-testid="story-book">
         <nav className="story-nav rpg-scroll">
           {CHAPTERS.map((c) => {

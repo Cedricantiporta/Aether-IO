@@ -50,7 +50,7 @@ export const CharacterSheet: React.FC = () => {
   const sets = activeSets(equipment);
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex side-panel" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
+      className="absolute pe flex side-panel char-side" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
       <Panel className="flex flex-col w-full min-h-0">
         <PanelHead icon={<User size={22} />} title="Character" sub={`${hero} · Level ${level}`} onClose={close} />
         <div className="cs2-tabs">
@@ -59,13 +59,10 @@ export const CharacterSheet: React.FC = () => {
         {tab === 'ATTR' && <AttrTree />}
         <div className="flex-1 min-h-0 rpg-scroll p-4 flex flex-col gap-3" style={tab === 'ATTR' ? { display: 'none' } : undefined}>
           <div className="flex items-center gap-3">
-            <div className="rpg-medallion" style={{ width: '4.6rem', height: '4.6rem', ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={32} /></div>
-            <div className="flex-1 rpg-parchment px-3 py-2 text-center">
-              <div className="rpg-label !text-[.6rem]" style={{ color: 'var(--ink-soft)' }}>Combat power</div>
-              <div className="rpg-num text-3xl" style={{ color: '#8a4a00', textShadow: '0 1px 0 rgba(255,255,255,.5)' }}>{calculateTotalCP(stats).toLocaleString()}</div>
-            </div>
+            <div className="rpg-medallion cs-avatar" style={{ width: '4.6rem', height: '4.6rem', ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={32} /></div>
+            <div className="flex-1 cs-cp"><span>Combat power</span><b>{calculateTotalCP(stats).toLocaleString()}</b></div>
           </div>
-          <div className="rpg-frame px-3 py-1">
+          <div className="rpg-frame px-3 py-1 cs-stat-rows">
             {rows.map(([l, v]) => <StatLine key={l} label={l} value={v} />)}
             {extra.map(([l, v]) => <StatLine key={l} label={l} value={v} tone="pos" />)}
           </div>

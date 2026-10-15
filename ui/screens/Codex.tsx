@@ -52,7 +52,7 @@ export const CodexDialog: React.FC = () => {
   const loot = [...LOOT].sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.name.localeCompare(b.name));
 
   return (
-    <Modal open={open} onClose={() => close(false)} title="Codex" icon={<BookOpen size={20} />} width="40rem" z={250}>
+    <Modal open={open} onClose={() => close(false)} title="Codex" icon={<BookOpen size={20} />} width="40rem" z={250} full>
       <div className="flex gap-2 mb-3">
         {TABS.map((t) => <button key={t} className={`rpg-subtab pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
         <button className="rpg-subtab pe ml-auto" onClick={() => useUiStore.getState().openStory(true)} data-testid="open-story">STORY</button>
@@ -66,7 +66,7 @@ export const CodexDialog: React.FC = () => {
         </div>
         <div className="rpg-bar thin"><div className="fill" style={{ ['--fill' as any]: total ? found / total : 0 }} /></div>
       </div>
-      <div className="rpg-frame p-4 rpg-scroll" style={{ height: '26rem' }}>
+      <div className="rpg-frame p-4 rpg-scroll codex-frame" style={{ height: '26rem' }}>
         {tab === 'LOOT' ? (
           <div className="grid grid-cols-2 gap-2" data-testid="codex-loot">
             {loot.map((l) => {

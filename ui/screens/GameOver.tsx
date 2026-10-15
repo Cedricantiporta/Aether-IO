@@ -36,8 +36,8 @@ export const GameOver: React.FC = () => {
   return (
     <motion.div className="absolute inset-0 flex items-center justify-center pe go-root" style={{ zIndex: 120, background: 'radial-gradient(ellipse at center, rgba(70,5,5,.55), rgba(5,0,0,.92))' }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .8 }}>
-      <div className="flex flex-col items-center" style={{ width: '31rem', maxWidth: '94vw' }}>
-        <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 mb-1">
+      <div className="flex flex-col items-center go-wrap" style={{ width: '31rem', maxWidth: '94vw' }}>
+        <motion.div initial={{ scale: 2.4, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 130, damping: 14, delay: .2 }} className="text-center z-10 mb-1 go-head">
           <Skull size={56} color="#ff6b5e" style={{ margin: '0 auto', filter: 'drop-shadow(0 0 18px #f00)' }} />
           <div className="rpg-logo" style={{ fontSize: '2.3rem', whiteSpace: 'nowrap', backgroundImage: 'linear-gradient(105deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%), linear-gradient(180deg,#ffd0c8,#e0554a 48%,#5e0f12 52%,#c93b3b)' }}>{run?.victory ? 'Spoils banked' : 'You have fallen'}</div>
           {!run?.victory && <div className="go-fall">{FALL_LINES[(run?.kills ?? 0) % FALL_LINES.length]}</div>}
@@ -50,7 +50,7 @@ export const GameOver: React.FC = () => {
               </div>
               <DailyResultRows />
               <WavesResultRows />
-              <div className="rpg-frame px-3 py-1">
+              <div className="rpg-frame px-3 py-1 go-rows">
                 {run.towerFloor ? <Row delay={.46} icon={<Crown size={16} />} label="Tower floor cleared" value={run.towerFloor} /> : null}
                 <Row delay={.5} icon={<Crown size={16} />} label="Depth reached" value={run.wave} record={waveRecord} />
                 <Row delay={.58} icon={<Swords size={16} />} label="Enemies slain" value={run.kills.toLocaleString()} />
@@ -67,7 +67,7 @@ export const GameOver: React.FC = () => {
           <div className="flex gap-3 mt-5">
             <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Return to town</Button>
           </div>
-          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero} · press Enter to return to town</div>
+          <div className="text-center rpg-label mt-3 !text-[.6rem]">Playing as {hero}<span className="kbd-hint"> · press Enter to return to town</span></div>
         </Panel>
       </div>
     </motion.div>

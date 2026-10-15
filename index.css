@@ -2044,3 +2044,215 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .elixir-hud { display: flex; gap: .3rem; margin-top: .3rem; pointer-events: auto; }
 .elixir-hud > span { position: relative; width: 1.6rem; height: 1.6rem; display: grid; place-items: center; background: rgba(0, 0, 0, .35); border: 1px solid rgba(214, 186, 122, .35); border-radius: 2px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
 .elixir-hud > span.next { opacity: .6; border-style: dashed; }
+
+/* ============================================================================
+   v6 — last wood pieces -> dark metal (all sizes), then the PHONE UI PASS
+   (.compact = touch + short side < 620 css px, see ui/layout.ts): cramped panels
+   go fullscreen inside the safe area, readable type floors, 40px tap targets.
+   ========================================================================== */
+
+/* ---- ribbons (modal titles, game-over depth banner, countdown): sharp gunmetal plate, gold hairline frame,
+   a tone-coloured diamond at each end instead of the old cloth swallowtails */
+.rpg-ribbon, .rpg-ribbon[data-tone] {
+  --rt: #d9b56a; padding: .42em 2.2em; margin: 0; border-radius: 0; font-weight: 700; letter-spacing: .2em;
+  color: #f6e6bd; text-shadow: 0 1px 0 #000, 0 0 10px rgba(217, 181, 106, .35);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, 0) 55%), linear-gradient(90deg, rgba(14, 15, 19, .97), rgba(30, 31, 37, .97) 50%, rgba(14, 15, 19, .97));
+  border: 1px solid transparent; border-image: var(--gold-frame) 1;
+  box-shadow: 0 0 0 1px #000, inset 0 -2px 0 color-mix(in srgb, var(--rt) 55%, transparent), 0 6px 16px rgba(0, 0, 0, .6);
+}
+.rpg-ribbon::before, .rpg-ribbon::after {
+  top: 50%; width: .45em; height: .45em; z-index: 1; clip-path: none; box-shadow: 0 0 6px var(--rt);
+  background: var(--rt); transform: translateY(-50%) rotate(45deg);
+}
+.rpg-ribbon::before { left: .8em; } .rpg-ribbon::after { right: .8em; }
+.rpg-ribbon[data-tone='red'], .rpg-ribbon:not([data-tone]) { --rt: #d2483f; }
+.rpg-ribbon[data-tone='blue'] { --rt: #6f97e6; } .rpg-ribbon[data-tone='green'] { --rt: #5fbf72; }
+.rpg-ribbon[data-tone='purple'] { --rt: #a874e6; } .rpg-ribbon[data-tone='dark'] { --rt: #8a8070; }
+
+/* ---- touch close button of ribbon dialogs: sharp gunmetal square (was a red rounded candy button) */
+.is-touch .modal-x { border-radius: 2px; color: #efdfb5; border: 1px solid #6f5f3e;
+  background: linear-gradient(180deg, #34353b, #18191d); box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 255, 255, .12), 0 4px 10px rgba(0, 0, 0, .6); }
+.is-touch .modal-x:active { background: linear-gradient(180deg, #7a2a25, #4a1311); }
+/* framed dialogs with a header already have its X: no second one */
+.modal-card:has(.panel-head) > .modal-x { display: none !important; }
+
+/* ---- pills, badges, toggles: sharp corners */
+.rpg-pill { border-radius: 2px; }
+.rpg-badge { border-radius: 2px; }
+.rpg-toggle { border-radius: 2px; box-shadow: inset 0 2px 5px rgba(0, 0, 0, .8), 0 0 0 1px #000; }
+.rpg-toggle[aria-checked='true'] { background: linear-gradient(180deg, rgba(217, 181, 106, .55), rgba(125, 99, 52, .55)); border-color: var(--gold); }
+.rpg-toggle::after { border-radius: 1px; background: linear-gradient(180deg, #f3dc9e, #9c7634); border: 1px solid #000; }
+.rpg-subtab.bevel { border-radius: 2px; background: linear-gradient(180deg, #2c2d33, #15161a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 1px #000; border: 1px solid rgba(214, 186, 122, .25); }
+.rpg-subtab.bevel.is-active { color: #23180a; background: linear-gradient(180deg, #f3dc9e 0%, #cfa85c 45%, #9c7634 55%, #c49a52 100%); border-color: #f6e4b0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px #000, 0 0 12px rgba(217, 181, 106, .3); }
+
+/* ---- character sheet (Stats tab): square class plate + combat power box (were a round medallion + parchment) */
+.cs-avatar.rpg-medallion { border-radius: 0; border: 1px solid transparent; border-image: var(--gold-frame) 1; color: var(--mc);
+  background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--mc) 45%, transparent), transparent 70%), linear-gradient(180deg, #26272d, #0e0f12);
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 0 16px rgba(0, 0, 0, .7), 0 0 14px color-mix(in srgb, var(--mc) 25%, transparent); }
+.cs-avatar.rpg-medallion > svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--mc) 60%, transparent)) drop-shadow(0 2px 2px #000); }
+.cs-cp { display: flex; flex-direction: column; justify-content: center; padding: .45rem .9rem; text-align: center;
+  background: linear-gradient(90deg, rgba(217, 181, 106, .14), rgba(0, 0, 0, .25) 70%); border: 1px solid var(--metal-line); box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 240, 200, .1); }
+.cs-cp > span { font-size: .62rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-dim); }
+.cs-cp > b { font-family: var(--font-body); font-variant-numeric: tabular-nums; font-size: 1.85rem; line-height: 1.1; font-weight: 800; color: transparent;
+  background: linear-gradient(180deg, #fff3cc, #e8c674 55%, #a8803c); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 8px rgba(217, 181, 106, .3)); }
+
+/* ---- game over: dark metal frame, rows on hairlines (no wood bevels) */
+.go-root .rpg-ribbon { font-size: .9rem; }
+.go-rows > div { border-bottom-color: rgba(214, 186, 122, .12); }
+
+/* ========================================================================== phone pass */
+/* fullscreen side panels (bag / shops / character sheet): edge to edge inside the safe area */
+.compact .side-panel { top: var(--sat) !important; bottom: var(--sab) !important; left: var(--sal) !important; right: var(--sar) !important; width: auto !important; }
+.compact .side-panel > .rpg-panel { border-image: none; border: 0; border-left: 1px solid var(--metal-line-soft); border-right: 1px solid var(--metal-line-soft); }
+.compact .side-panel .rpg-corner { display: none; }
+/* two panels open (bag + shop, bag + character sheet): split the screen in halves */
+.compact .ph-bag.ph-shop .bag-side, .compact .ph-bag.ph-chr .bag-side { right: calc(50% + 1px) !important; }
+.compact .ph-bag.ph-shop .shop-side, .compact .ph-bag.ph-chr:not(.ph-shop) .char-side { left: calc(50% + 1px) !important; }
+.compact .ph-shop.ph-chr:not(.ph-bag) .char-side { right: calc(50% + 1px) !important; }
+.compact .ph-shop.ph-chr:not(.ph-bag) .shop-side { left: calc(50% + 1px) !important; }
+.compact .ph-bag.ph-shop.ph-chr .char-side { display: none; }
+/* compact panel header */
+.compact .side-panel .panel-head.v4 { min-height: 0; padding: .35rem .5rem .35rem .8rem; }
+.compact .side-panel .panel-head.v4 .head-title { font-size: 1.15rem; }
+.compact .side-panel .panel-head.v4 .head-icon svg { width: 1.6rem; height: 1.6rem; }
+.compact .rpg-pill { min-width: 0; padding: .2rem .6rem .2rem .3rem; font-size: .9rem; }
+
+/* bag alone: paper doll on the left, tabs + grid + buttons on the right */
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side > .rpg-panel { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .panel-head { grid-column: 1 / -1; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .bag-equip { grid-column: 1; grid-row: 2 / 4; border-bottom: 0; border-right: 1px solid var(--metal-line-soft); overflow-y: auto; padding-bottom: .4rem; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .bag-equip-head { flex-direction: column; align-items: flex-start; gap: .25rem; padding: .45rem .7rem; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .bag-equip-head svg.lucide-chevron-down { display: none; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .bag-equip + div { grid-column: 2; grid-row: 2; }
+.compact .hud-root:not(.ph-shop):not(.ph-chr) .bag-side .bag-foot { grid-column: 2; grid-row: 3; }
+.compact .bag-equip-row { padding: .1rem .6rem .3rem; }
+/* bag footer: one wrapping row (count + gold first, then the buttons) instead of three stacked rows */
+.compact .bag-foot { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .35rem; padding: .35rem .6rem calc(.35rem + 2px); }
+.compact .bag-foot-btns { display: contents; }
+.compact .bag-foot-info { order: -1; margin-right: auto; gap: .9rem; font-size: .8rem; }
+.compact .ph-shop .bag-side .bag-gold { display: none; }   /* (the shop header shows the gold) */
+.compact .bag-tabs { margin: .35rem .5rem 0; }
+.compact .bag-tab { padding: .45rem .2rem; min-height: 40px; font-size: .86rem; }
+
+/* character sheet fullscreen: attribute tree left, detail + buttons right; stats in two columns */
+.compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side [data-testid='attr-tree'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; column-gap: 1.2rem; row-gap: .7rem; align-content: start; }
+.compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side .at-tree { grid-column: 1; grid-row: 1 / 5; width: auto; height: min(100%, 19rem); aspect-ratio: 1 / .92; justify-self: center; align-self: start; max-width: 100%; }
+.compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side .at-points, .compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side .at-detail, .compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side .at-foot { grid-column: 2; }
+.compact .hud-root:not(.ph-bag):not(.ph-shop) .char-side .cs-stat-rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.4rem; }
+.compact .cs2-tab { min-height: 40px; padding: .4rem 0; font-size: .9rem; }
+.compact .at-node .hx { width: 2.9rem; height: 3.25rem; }
+
+/* summon / Tech House / workshop windows: fullscreen */
+.compact .sw-win, .compact .tw-win, .compact .ws-win { width: 100vw; height: 100vh; border: 0; border-image: none; padding: var(--sat) var(--sar) var(--sab) var(--sal); }
+.compact .sw-backdrop, .compact .ws-backdrop { place-items: stretch; }
+.compact .sw-side { width: 11.5rem; padding: .5rem; }
+.compact .sw-tab { padding: .55rem .7rem; min-height: 44px; }
+.compact .sw-x, .compact .ws-head .sw-x { width: 44px; height: 44px; right: .3rem; top: .2rem; border: 1px solid #6f5f3e; background: linear-gradient(180deg, #34353b, #18191d); box-shadow: 0 0 0 1px #000; }
+.compact .sw-banner { padding: .9rem 1.2rem; }
+.compact .sw-title { font-size: 1.7rem; }
+.compact .sw-orb { width: 5.4rem; height: 5.4rem; right: 8%; top: 12%; }
+.compact .sw-foot { padding: .5rem .8rem; }
+.compact .sw-btn { min-width: 8.5rem; padding: .4rem .8rem; }
+.compact .ws-head { padding: .45rem 3.6rem .45rem .9rem; font-size: 1.05rem; }
+.compact .ws-body { grid-template-columns: 11rem 1fr 17.5rem; overflow: hidden; }
+.compact .ws-tree { max-height: none; border-right: 1px solid rgba(214, 186, 122, .18); }
+.compact .ws-side .rpg-btn-sm { min-width: 0; padding-left: .45rem; padding-right: .45rem; letter-spacing: .02em; }
+.compact .ws-go { min-height: 44px; padding-top: .45rem; padding-bottom: .45rem; font-size: .9rem; line-height: 1.15; }
+.compact .ws-rec, .compact .ws-cat-h { min-height: 40px; }
+
+/* framed dialogs: the big lists (codex, goals, quests, settings, story) fill the screen; small dialogs stay centred */
+.compact .modal-card { width: min(94vw, 36rem) !important; max-width: 94vw !important; max-height: calc(100vh - var(--sat) - var(--sab) - 2.2rem) !important; }
+.compact .modal-card .rpg-panel { max-height: calc(100vh - var(--sat) - var(--sab) - 2.2rem) !important; }
+.compact .modal-card.modal-full { position: absolute; top: var(--sat); bottom: var(--sab); left: var(--sal); right: var(--sar); width: auto !important; max-width: none !important; max-height: none !important; }
+.compact .modal-card.modal-full .rpg-panel { height: 100%; max-height: none !important; border-image: none; border: 0; border-left: 1px solid var(--metal-line-soft); border-right: 1px solid var(--metal-line-soft); }
+.compact .modal-card.modal-full .rpg-corner { display: none; }
+.compact .modal-card.modal-full .rpg-panel > .rpg-scroll { padding: .6rem .9rem; display: flex; flex-direction: column; }
+.compact .modal-card .panel-head.v4 { min-height: 0; padding: .35rem .5rem .35rem .8rem; }
+.compact .modal-card .panel-head.v4 .head-title { font-size: 1.15rem; }
+/* ribbon dialogs: the ribbon sits on the top edge, the X outside the right edge (never under a notch / off-screen) */
+.compact .modal-card:not(.modal-full) { margin-top: 1rem; }
+.compact .modal-card .rpg-ribbon { font-size: .95rem; }
+.is-touch .modal-x { width: max(44px, 2.8rem); height: max(44px, 2.8rem); top: 0; right: calc(-1 * max(44px, 2.8rem) - .45rem); }
+/* list windows inside the fullscreen dialogs take the remaining height (no fixed heights / nested scroll traps) */
+.compact .modal-full .codex-frame { flex: 1; height: auto !important; min-height: 0; padding: .7rem; }
+.compact .modal-full .qw { height: auto; flex: 1; min-height: 0; }
+.compact .modal-full .st { height: auto; flex: 1; min-height: 0; margin-top: 0; }
+.compact .qw-body { grid-template-columns: 15rem 1fr; }
+.compact .qw-list { max-height: none; }
+.compact .st-nav { width: 8.6rem; }
+.compact .st-tab { min-height: 40px; padding: .45rem .6rem; }
+.compact .st-row { min-height: 2.6rem; padding: .35rem .6rem; gap: .7rem; }
+.compact .st-seg button { min-height: 36px; padding: .3rem .6rem; }
+.compact .rpg-toggle { width: 3.4rem; height: 1.9rem; }
+.compact .rpg-toggle::after { width: 1.4rem; height: 1.4rem; margin-top: -.7rem; }
+.compact .rpg-toggle[aria-checked='true']::after { left: 1.75rem; }
+
+/* Set Out window: tabs + compact card */
+.compact .so-tab { min-height: 40px; }
+.compact .so-card { padding: .6rem .75rem; }
+.compact .so-step { width: 40px; height: 40px; }
+.compact .so-asc { margin-top: .5rem; padding: .5rem .7rem; }
+
+/* game over: header beside the result list (fits a 360 px tall screen without shrinking the text) */
+.compact .go-root { zoom: 1; padding: var(--sat) var(--sar) var(--sab) var(--sal); }
+.compact .go-wrap { flex-direction: row !important; align-items: center !important; gap: 1.6rem; width: min(96vw, 52rem) !important; max-width: 96vw !important; }
+.compact .go-head { flex: 0 0 15rem; }
+.compact .go-head .rpg-logo { font-size: 1.9rem !important; white-space: normal !important; }
+.compact .go-head svg { width: 42px; height: 42px; }
+.compact .go-wrap > .rpg-panel { flex: 1; min-width: 0; padding: 1.4rem .9rem .8rem !important; }
+.compact .go-rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1rem; }
+.compact .go-rows > div { padding: .25rem 0; }
+.compact .go-wrap .rpg-btn-lg { padding: .5rem 1rem; min-height: 44px; font-size: 1.05rem; }
+.compact .go-wrap .rpg-ribbon { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); }
+
+/* keyboard hints mean nothing on a phone */
+.is-touch .kbd-hint { display: none !important; }
+
+/* ---- type floors: nothing under ~10 css px inside phone panels (labels .8rem, small text .86rem, body .92rem) */
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win, .go-root, .sw-pop-box, .rpg-tooltip) :is(.rpg-label, [class*='text-[.5'], [class*='text-[.6']) { font-size: .8rem !important; letter-spacing: .08em; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win, .go-root, .sw-pop-box, .rpg-tooltip) :is([class*='text-[.7'], .text-xs) { font-size: .86rem !important; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win, .go-root, .sw-pop-box, .rpg-tooltip) :is([class*='text-[.8'], .text-sm) { font-size: .92rem !important; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win, .go-root, .sw-pop-box) :is(.rpg-btn-sm, .wh-btn) { font-size: .8rem; min-height: 40px; padding-left: .7rem; padding-right: .7rem; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win) :is(.rpg-subtab, .qw-tab, .qw-step, .qw-chap-h, .bag-equip-head) { min-height: 40px; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win) .rpg-subtab { font-size: .82rem; }
+.compact .rpg-tooltip { font-size: .92rem; max-width: min(22rem, 58vw); }
+.compact .rpg-tooltip .tt-sub { font-size: .76rem; }
+.compact .pill-label { font-size: .8rem; }
+.compact .head-sub { font-size: .76rem !important; }
+.compact .slot-grid.priced .slot-price, .compact .rpg-slot.fluid .slot-qty { font-size: .9rem; }
+.compact .slot-sale, .compact .slot-old { font-size: .72rem; }
+.compact .bag-equip-row .rpg-label { font-size: .72rem !important; letter-spacing: .04em; }
+.compact :is(.so-tab, .so-card span, .so-card em, .so-asc-list, .so-asc-reward, .so-asc-lock, .so-ms-row) { font-size: .86rem; }
+.compact :is(.dc-label, .dc-reset, .dc-note, .dc-route, .streak) { font-size: .82rem !important; }
+.compact :is(.st-lbl em, .st-p, .st-keys div) { font-size: .82rem; }
+.compact .st-lbl b { font-size: .95rem; }
+.compact :is(.gl-sub, .gl-reward, .gl-eq) { font-size: .8rem; }
+.compact .gl-name { font-size: .95rem; }
+.compact :is(.ws-rec, .ws-stat, .ws-mat-n, .ws-rates, .ws-note, .ws-sec em, .ws-head em) { font-size: .84rem; }
+.compact :is(.sw-tab small, .sw-note, .sw-subt, .sw-prev-h em, .sw-tier-h i, .sw-pity-row, .sw-rate .c, .tw-sub, .tw-per, .tech-row-h em, .sw-pane-h em) { font-size: .82rem; }
+.compact :is(.at-points span, .at-points em, .at-per, .at-desc) { font-size: .82rem; }
+.compact :is(.qw-step em, .qw-lv, .qw-n) { font-size: .78rem; }
+.compact :is(.qw-step) { font-size: .9rem; }
+/* fullscreen ribbon dialogs (settings): ribbon + X on one header row inside the screen */
+.compact .modal-full > .modal-ribbon { top: .4rem; }
+.compact .modal-full > .modal-x { top: .3rem; right: .4rem; }
+.compact .modal-full .rpg-panel > .rpg-scroll.pt-8 { padding-top: 3.5rem; }
+/* fullscreen layers on phones: no backdrop blur (re-blurring the whole 3D view every frame is expensive), near-opaque fill instead */
+.compact :is(.side-panel > .rpg-panel, .modal-full .rpg-panel, .sw-backdrop, .ws-backdrop) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.compact .side-panel > .rpg-panel, .compact .modal-full .rpg-panel { background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, 0) 30%), rgba(11, 12, 15, .965); }
+/* phone pass, second round: the last small bits */
+.compact .ph-shop .bag-side .bag-equip { max-height: 58%; overflow-y: auto; }
+.compact .bag-side .bag-equip + div { overflow: hidden; }
+.compact .bag-equip-head { font-size: .8rem; }
+.compact :is(.side-panel, .modal-card, .sw-win, .tw-win, .ws-win) :is(.rpg-key, .tech-lv, .qbadge, .slot-sale, .slot-old, .rpg-badge, .ws-sec, .sw-rates-btn, .sw-tier-h, .qw-sec, .dc-stat em, .so-card em) { font-size: .8rem; }
+.compact .rpg-badge { padding: .12rem .45rem; }
+.compact .sw-rates-btn { min-height: 40px; }
+/* summon reveal on phones: ten cards + title + Draw / Leave buttons fit a 360 px tall screen */
+.compact .sm-root > .flex-col { gap: .45rem; }
+.compact .sm-root .k-title { font-size: 1.3rem !important; }
+.compact .sm-cards.many { gap: .45rem; }
+.compact .sm-cards.many .sm-card { width: 5.9rem; height: 9.2rem; }
+.compact .sm-cards.many .sm-name { font-size: .7rem; min-height: 1.6rem; }
+.compact .sm-cards.many .sm-face { padding: .5rem .35rem .45rem; }
+.compact .sm-root .rpg-btn { min-height: 44px; padding-top: .3rem; padding-bottom: .3rem; }

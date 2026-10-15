@@ -57,7 +57,7 @@ export const QuestLog: React.FC = () => {
   const side = [...npcActive, ...npcOpen, ...npcLocked].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0] ?? npcLocked[0];
 
   return (
-    <Modal open={open} onClose={() => setOpen(false)} title="Quests" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250}>
+    <Modal open={open} onClose={() => setOpen(false)} title="Quests" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250} full>
       <div className="qw" data-testid="quest-log">
         <div className="qw-tabs">
           {([['MAIN', 'Main'], ['SIDE', 'Side'], ['BOARD', 'Bounties']] as [Tab, string][]).map(([t, l]) => (

@@ -119,7 +119,7 @@ export const GoalsDialog: React.FC = () => {
     : t === 'WEEKLY' ? m.weekly.some(goalClaimable) || (!m.weeklyBonus && allClaimed(m.weekly))
       : m.unlocked.some((id) => !m.claimed.includes(id));
   return (
-    <Modal open={open} onClose={() => close(false)} title="Goals" icon={<GoalGlyph size={22} />} width="40rem" z={250}>
+    <Modal open={open} onClose={() => close(false)} title="Goals" icon={<GoalGlyph size={22} />} width="40rem" z={250} full>
       <div className="flex gap-2 mb-3">
         {TABS.map((t) => (
           <button key={t} className={`rpg-subtab pe relative ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`goals-tab-${t.toLowerCase()}`}>

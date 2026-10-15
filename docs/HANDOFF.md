@@ -103,11 +103,36 @@ needed to see the new game).
   NPCS: Tilda (travelling merchant by her cart), Corin (carter, patrols), Nell (wanderer on the portal road)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
+## Phone UI pass (2026-10-15)
+- **Where:** the "v6" block at the end of `index.css` (all rules scoped to `.compact` = touch + short side < 620 css px,
+  so desktop is unchanged) + small hooks in TSX. Before/after shots were taken at 800x360, 844x390, 915x412, 1024x600
+  (touch) and 1440x900 (desktop).
+- **Type size:** phone root font is now `clamp(11, vh / 29.5, 13.5)` px (`ui/layout.ts`; was vh/34 capped at 12), and
+  inside panels/dialogs/tooltips the tiny Tailwind sizes (`text-[.5x-.6x rem]`, `.rpg-label`) are floored to .8rem,
+  `.7x`/`text-xs` to .86rem, `.8x`/`text-sm` to .92rem (~10-12 css px). Tap targets (tabs, small buttons, X buttons,
+  steppers, settings toggles) are >= 40px on phones.
+- **Fullscreen on phones:** bag / shops / character sheet (`.side-panel` + `bag-side` / `shop-side` / `char-side`) fill
+  the safe area; two open together split the screen in halves (GameUI puts `ph-bag` / `ph-shop` / `ph-chr` on
+  `.hud-root`). Bag alone = paper doll column left + grid right; beside a shop the doll starts folded. Character sheet
+  alone = attribute tree left, detail right; stats in two columns. Summon / Tech House / Workshop windows fullscreen.
+  `Modal` got a `full` prop (codex, goals, quest log, settings, story fill the screen); small dialogs (pause, set out,
+  sell/buy, confirm) stay centred, max 36rem, with the X outside the right edge. No backdrop blur on fullscreen layers on
+  phones (performance).
+- **Touch fixes:** scroll traps fixed generically in `ui/layout.ts` (a touch may pan when it starts inside any
+  overflowing auto/scroll box, not only `.rpg-scroll`; e.g. the Tech House list and workshop columns could not scroll).
+  Bag on touch: first tap shows the item tooltip, second tap equips / drinks (shop actions stay one tap: they open a
+  dialog). Touch potion buttons moved up (they were half off the bottom edge). Keyboard hints (`.kbd-hint`) hidden on
+  touch.
+- **Dark metal (all sizes):** ribbons (`.rpg-ribbon`: modal titles, game-over depth banner, countdown) are sharp gunmetal
+  plates with a gold hairline frame and tone-coloured diamonds; the red rounded touch X is a gunmetal square; pills,
+  badges, toggles and bevel sub-tabs are sharp; character sheet Stats tab uses a square class plate (`.cs-avatar`) and a
+  dark CP box (`.cs-cp`) instead of the round medallion + parchment; game over shows header and results side by side on
+  phones (`.go-wrap` / `.go-head` / `.go-rows`, no more zoom .65).
+
 ## Open tasks (do next, in order)
 1. Balance/tuning still unverified: boss damage/cadence, town performance on real phones (12 skinned NPCs + wall),
    camera framing in long corridor rooms, boss rooms with new shapes, fountain heal (40%).
-2. Remaining wood-style screens to convert to the dark metal look if the user asks: character sheet avatar ring / CP
-   box, pause/settings menus, codex, game-over screen (they inherit the v5 overrides but still use some old pieces).
+2. (done, see "Phone UI pass") Remaining wood-style screens converted to the dark metal look.
 3. Character select shows the low-poly KayKit hero; the user's reference uses painted key art. Free CC0 art only.
 4. Ideas the user liked earlier but not built: village upgrades, daily challenge; item sets/affixes are partly in.
 
