@@ -282,7 +282,7 @@ export function spawnEnemy(
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
-  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 0.625 * 0.75); // mini-bosses: half of the old +25% value, then -25%
+  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 0.625); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
   e.affix = 'NONE';

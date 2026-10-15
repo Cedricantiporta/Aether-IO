@@ -81,6 +81,7 @@ let fixedN = 0;
 let miniKind: EnemyKind = 'BOAR';
 let miniName = '', miniTitle = '';
 let miniIsBoss = false;
+let prebossRoom = false;   // this MINIBOSS room is the depth-10 pre-boss (-25% hp)
 let prebossKing = false;    // the Meadow's depth-10 Slime King      // the Lich: a full boss used as a mini-boss
 let bossPending = false;
 let duelPending = false;          // DUEL room: the dark hero still has to rise
@@ -415,7 +416,7 @@ function rollRoomSpawns(type: RoomType): void {
     case 'MINIBOSS': {
       rollPack(0.3, 0, 2);
       miniPending = true;
-      prebossKing = false;
+      prebossKing = false; prebossRoom = !!plan.preboss;
       if (plan.preboss && runInfo.mode === 'ADVENTURE' && biome % BIOMES.length === 0) {
         // depth 10 of the Meadow: the Slime King (a giant splitter with half the Golem's hp, full boss bar)
         miniIsBoss = false; prebossKing = true; miniKind = 'SPLITTER'; miniName = 'The Slime King'; miniTitle = 'Lord of the Meadow Ooze';
@@ -496,10 +497,11 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 0.75); e.hp = e.maxHp;   // half of the (halved) Elderroot, -25% (mini-boss)
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5); e.hp = e.maxHp;   // half of the (halved) Elderroot
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
     }
+    if (e && prebossRoom) { e.maxHp = Math.round(e.maxHp * 0.75); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // depth-10 pre-boss: -25% hp
     if (e) {
       events.emit('bossSpawn', { name: miniName, title: miniTitle });
       events.emit('shake', { amount: 0.3 });
