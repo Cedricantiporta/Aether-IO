@@ -129,7 +129,7 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
 export const SKILLS_INFO = {
     // Universal Passives
     regen: { name: 'Regeneration', description: 'Recover HP over time.', type: 'PASSIVE' },
-    dash: { name: 'Class Dash', description: 'Your Space dash. Costs no mana. One dash every 4 s for every class at any level; each level only raises the dash damage.', type: 'PASSIVE' },
+    dash: { name: 'Class Dash', description: 'Your Space dash (unlocks at Lv 8). Costs no mana. One dash every 5.5 s for every class at any level; each level (max 5) only raises the dash damage.', type: 'PASSIVE' },
     weapon: { name: 'Ultimate Mastery', description: 'Ultimate charge fills faster (+10% per level).', type: 'PASSIVE' },
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
