@@ -39,6 +39,7 @@ export function rollMerchantStock(depth: number): void {
   const r = Math.random();
   if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
   else if (r < 0.22) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);
+  else if (r < 0.45) add(makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll'][Math.floor(Math.random() * 3)], 1)[0], 1, MARKUP * 1.5);   // a reforging tool
   // exactly one entry on sale
   const s = items[Math.floor(Math.random() * items.length)];
   if (s) { s.sale = true; s.price = Math.max(1, Math.round(s.oldPrice * (1 - SALE))); }

@@ -17,6 +17,9 @@ const shard = (r: Rarity, per: number, gems: number): GemOffer =>
 export const GEM_OFFERS: GemOffer[] = [
   { key: 'core', item: tpl('upgrade_core'), gems: 8, max: 50, give: items('upgrade_core') },
   { key: 'ankh', item: tpl('revive_ankh'), gems: 25, max: 5, give: items('revive_ankh') },
+  { key: 'reforge', item: tpl('reforge_stone'), gems: 30, max: 20, give: items('reforge_stone') },
+  { key: 'temper', item: tpl('temper_oil'), gems: 18, max: 20, give: items('temper_oil') },
+  { key: 'erase', item: tpl('erase_scroll'), gems: 12, max: 20, give: items('erase_scroll') },
   { key: 'hpbig', item: tpl('potion_hp_big'), gems: 3, max: 20, give: items('potion_hp_big') },
   { key: 'mpbig', item: tpl('potion_mana_big'), gems: 3, max: 20, give: items('potion_mana_big') },
   shard('RARE', 10, 6), shard('EPIC', 5, 15), shard('LEGENDARY', 1, 20), shard('MYTHIC', 1, 60),

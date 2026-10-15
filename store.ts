@@ -35,6 +35,8 @@ import { SET_BY_NAME } from './itemSets';
 import { applyPlus, plusMul, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
+import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
+const REFORGE_NAMES = new Set(Object.values(REFORGE_ITEM).map((r) => r.name));
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shards';
 import { summonPool } from './summonPool';
@@ -1459,6 +1461,20 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
       return { ok, item };
     },
+    reforgeItem: (id, mode, line = -1) => {   // Blacksmith > Reforge: spend 1 tool, rework the item's bonus lines (reforge.ts)
+      const s = get(), tool = REFORGE_ITEM[mode];
+      const slot = SLOTS.find((sl) => s.equipment[sl]?.id === id);
+      const item = slot ? s.equipment[slot] : s.inventory.find((i) => i.id === id);
+      if (!item) return null;
+      if (!s.inventory.some((i) => i.name === tool.name)) { notify(`Need a ${tool.name}`, 'red', 'WARNING'); return null; }
+      const out = reforge(item, mode, line);
+      if (!out) return null;
+      if (!get().consumeItem((i) => i.name === tool.name)) return null;
+      const now = get();
+      if (slot) { const equipment = { ...now.equipment, [slot]: out } as Equipment; set({ equipment, stats: calc(now.baseStats, equipment) }); }
+      else set({ inventory: now.inventory.map((i) => (i.id === id ? out : i)) });
+      return out;
+    },
     fuseShards: (r) => {   // (same rule as combineMaterials: SHARD_FUSE_COST of a tier -> 1 of the next, guaranteed)
       const s = get(), up = nextTier(r), cost = SHARD_FUSE_COST[r as keyof typeof SHARD_FUSE_COST];
       if (!up || !cost || (s.materials[r] ?? 0) < cost) return null;
@@ -1515,12 +1531,13 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     sellAllLoot: () => {
       const s = get();
-      const loot = s.inventory.filter((i) => i.type === 'LOOT');
+      const isSellLoot = (i: Item) => i.type === 'LOOT' && !REFORGE_NAMES.has(i.name);   // (reforge tools are not trade goods)
+      const loot = s.inventory.filter(isSellLoot);
       if (loot.length === 0) { notify('No loot to sell.', 'white', 'SYSTEM'); return 0; }
       let total = 0, count = 0;
       let fish = 0;
       loot.forEach((i) => { const q = i.quantity || 1; total += i.price * q; count += q; if (isFishName(i.name)) fish += q; });
-      set({ gold: s.gold + total, inventory: s.inventory.filter((i) => i.type !== 'LOOT') });
+      set({ gold: s.gold + total, inventory: s.inventory.filter((i) => !isSellLoot(i)) });
       if (fish) events.emit('hub', { kind: 'sell_fish', n: fish });
       get().addQuestProgress('SELL_LOOT', count);
       notify(`Sold ${count} loot items for ${total}G`, 'yellow', 'SYSTEM');

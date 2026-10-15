@@ -10,6 +10,8 @@ import { fmtFx } from './statFx';
 export const AFFIX_COUNT: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 const R_IDX: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 export const UNIQUE_CHANCE = 0.4; // MYTHIC only
+/** A perfect bonus line (yellow): rolled at 125% of its tier value. */
+export const PERFECT_CHANCE = 0.05, PERFECT_MUL = 1.25;
 
 export interface AffixDef {
   key: string;
@@ -88,6 +90,14 @@ export function affixCP(item: Item): number {
 
 const round = (v: number): number => parseFloat(v.toFixed(3));
 
+/** One bonus line's value for a rarity: 85-115% of the tier value, or (PERFECT_CHANCE x `luck`) a perfect 125% line. */
+export function rollAffixValue(key: string, rarity: Rarity, rng: () => number = Math.random, luck = 1): ItemAffix {
+  const d = AFFIX_BY_KEY[key], base = d ? d.tiers[R_IDX[rarity]] : 0;
+  if (!d || d.fixed) return { key, value: base };
+  if (rng() < PERFECT_CHANCE * luck) return { key, value: round(base * PERFECT_MUL), perfect: true };
+  return { key, value: round(base * (0.85 + rng() * 0.3)) };
+}
+
 /** Rolls `count` distinct affixes for a rarity. `rng` injectable for tests. */
 export function rollAffixList(rarity: Rarity, rng: () => number = Math.random): ItemAffix[] {
   const n = AFFIX_COUNT[rarity];
@@ -100,8 +110,7 @@ export function rollAffixList(rarity: Rarity, rng: () => number = Math.random): 
     let r = rng() * total, idx = 0;
     for (; idx < pool.length - 1; idx++) { r -= pool[idx].weight; if (r <= 0) break; }
     const d = pool.splice(idx, 1)[0];
-    const base = d.tiers[ri];
-    out.push({ key: d.key, value: d.fixed ? base : round(base * (0.85 + rng() * 0.3)) });
+    out.push(rollAffixValue(d.key, rarity, rng));
   }
   if (rarity === 'MYTHIC' && rng() < UNIQUE_CHANCE) {
     const u = UNIQUES[Math.floor(rng() * UNIQUES.length)];

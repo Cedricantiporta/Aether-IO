@@ -263,6 +263,10 @@ export const ITEMS_POOL: Item[] = [
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your Mana.' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'A rare arcane core used by the Blacksmith to upgrade gear.' },
+  // reforging the blue bonus lines of gear (reforge.ts, Blacksmith > Reforge)
+  { id: 'reforge_stone', name: 'Reforge Stone', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Blacksmith > Reforge: rerolls every bonus line of a piece of gear.' },
+  { id: 'temper_oil', name: 'Tempering Oil', type: 'LOOT', stats: {}, rarity: 'RARE', price: 900, level: 1, description: 'Blacksmith > Reforge: rerolls the values of a piece of gear\'s bonus lines (better odds of a perfect, yellow line).' },
+  { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'Blacksmith > Reforge: deletes one chosen bonus line from a piece of gear.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' },
 
   // --- WEAPONS (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---

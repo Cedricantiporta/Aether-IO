@@ -17,6 +17,7 @@ import { Workshop } from './Workshop';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 import { ItemFuse } from './ItemFuse';
+import { ReforgeTab } from './Reforge';
 
 const Empty: React.FC<{ text: string }> = ({ text }) => (
   <div className="rpg-frame flex flex-col items-center gap-3 py-8 px-4 text-center opacity-80">
@@ -222,12 +223,13 @@ export const BlacksmithTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['UPGRADE', 'RECYCLE', 'CRAFT', 'FUSE', 'SHARDS'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+        {(['UPGRADE', 'RECYCLE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
       {tab === 'RECYCLE' && <RecycleTab />}
       {tab === 'FUSE' && <ItemFuse />}
       {tab === 'SHARDS' && <ShardTab />}
+      {tab === 'REFORGE' && <ReforgeTab />}
       {tab === 'CRAFT' && (<>
         <div className="rpg-frame p-3 text-[.78rem] text-center">The Workshop is open. Pick a recipe on the left, check the materials and forge.</div>
         <Workshop onClose={() => setTab('UPGRADE')} />

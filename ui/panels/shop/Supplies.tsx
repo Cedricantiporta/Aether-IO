@@ -15,7 +15,7 @@ export const SuppliesTab: React.FC = () => {
   const inventory = useGameStore((s) => s.inventory);
   const massSell = useGameStore((s) => s.massSell);
   const sellAllLoot = useGameStore((s) => s.sellAllLoot);
-  const lootStacks = inventory.filter((i) => i.type === 'LOOT');
+  const lootStacks = inventory.filter((i) => i.type === 'LOOT' && !['Reforge Stone', 'Tempering Oil', 'Erasure Scroll'].includes(i.name));
   const lootCount = lootStacks.reduce((n, i) => n + (i.quantity || 1), 0);
   const lootValue = lootStacks.reduce((n, i) => n + i.price * (i.quantity || 1), 0);
   const setBuy = useUiStore((s) => s.setBuyItem);

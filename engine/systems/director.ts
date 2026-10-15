@@ -18,7 +18,7 @@ import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, type BossKind } from '../enemyDefs';
 import { feat, MAX_FIXED } from '../roomFeatures';
-import { useGameStore } from '../../store';
+import { useGameStore, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
 import {
@@ -663,6 +663,7 @@ function bossRewards(): void {
   for (let i = 0; i < 4; i++) spawnPickup('GEM', at(0, -R * 0.1), 4 + biome * 2);
   spawnPickup('SHARD', at(0, -R * 0.1), shardRarity(depth + 12));   // one shard (owner)
   st.addCrystals(4 + biome * 2, { x: world.player.pos.x, z: world.player.pos.z });   // boss drop: Aether Crystals (the Crystal Altar's currency)
+  if (Math.random() < 0.5) { const tool = makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll'][Math.floor(Math.random() * 3)], 1)[0]; if (tool) spawnPickup('ITEM', at(0, -R * 0.1), 0, tool); }   // a reforging tool
   for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(0, -R * 0.1), Math.round(40 + depth * 12));
   st.openWaveReward(true);
 }

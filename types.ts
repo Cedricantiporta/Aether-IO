@@ -96,7 +96,7 @@ export interface PlayerStats {
   berserk: number;          // +fraction damage below 35% HP
 }
 
-export interface ItemAffix { key: string; value: number }
+export interface ItemAffix { key: string; value: number; /** a perfect roll (125% of the tier value): shown in yellow */ perfect?: boolean }
 
 export interface Item {
   id: string;

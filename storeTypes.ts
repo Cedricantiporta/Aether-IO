@@ -225,6 +225,7 @@ export interface GameState {
   /** Blacksmith fusion: 5 bag gear pieces of one tier -> a chance at one piece of the next tier (else one of the same tier). */
   fuseItems: (ids: string[]) => { ok: boolean; item: Item } | null;
   /** Blacksmith fusion: 5 shards of one tier -> a chance at one shard of the next tier (else one of the same tier). */
+  reforgeItem: (id: string, mode: import('./reforge').ReforgeMode, line?: number) => Item | null;
   fuseShards: (r: Rarity) => { ok: boolean; item: Item } | null;
   setAttrs: (a: import('./attributes').Attrs) => boolean;   // allocate attribute points for the current class
   resetAttrs: () => boolean;                               // refund all points (costs gold)
