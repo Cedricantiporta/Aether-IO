@@ -27,6 +27,7 @@ import {
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
+import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
 import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
@@ -213,6 +214,7 @@ export const calculateItemCP = (item: Item): number => {
   if (s.dodge) cp += s.dodge * 500;
   const mult: Record<Rarity, number> = { COMMON: 1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
   cp += affixCP(item);
+  if (charmOf(item)) cp += 350;   // the accessory's special effect
   return Math.floor(cp * petMul * mult[item.rarity]);
 };
 
@@ -254,6 +256,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
       else final[k] += v;
     });
     if (item.affixes) for (const a of item.affixes) accumulate(acc, affixFx(a));
+    accumulate(acc, charmFx(item));   // Epic+ accessories: their special effect (accessoryCharms.ts)
   });
   accumulateSets(acc, equipment);
   accumulateTalents(acc, hero, talents[hero]);

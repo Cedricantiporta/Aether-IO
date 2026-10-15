@@ -7,6 +7,7 @@ import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
 import { elixirOf, elixirUses } from '../../elixirs';
 import { HERO_STATS } from '../../constants';
+import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { petPower, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
@@ -85,6 +86,7 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
           ))}
         </>
       )}
+      {charmText(item) && <div data-testid="charm-line" style={{ color: '#d2691e', fontWeight: 800, fontSize: '.78rem', marginTop: '.15rem' }}>✸ {charmText(item)}</div>}
       {item.setName && SET_BY_NAME[item.setName] && (() => {
         const def = SET_BY_NAME[item.setName!];
         const counts = equippedSetCounts(equipment);
