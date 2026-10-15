@@ -604,3 +604,20 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Malakar's illusions get identical boss bars (HUD mounts `<BossBar illusion={0|1} />`, world.illusionBars) and mirror
   his max HP, so the player can't tell which is real. Tech House tiles: no inner icon box. Summon ritual tint is purple
   when the best pull is Epic.
+- Biome bosses: Elderroot guards Greenwood (biome 1), Gorath the Marble Halls (biome 2); story / lore / achievements /
+  quest gates follow. Warded (immune) bosses show a shield sphere (render/BossWard.tsx); the stagger meter is yellow and
+  never fills while the boss is immune. Only the depth-10 pre-boss has -25% HP (director `prebossRoom`).
+- Esc in a run opens the pause menu (Esc again resumes); in town it opens Settings.
+- Pets attack by element (pets.ts PET_EL): ranged shots carry tint 20+el (Phoenix fireballs splash + burn, Gold Dragon
+  embers, Celestial Wisp starlight pierces, Leviathan water slows); melee pets emit `petStrike` (claw / fang rakes,
+  fire bite, golem pound, crystal shards, ooze poison, coin chomp) drawn by VFX.tsx `petFx`.
+- Shadow Hero (darkHero.ts): each class mirrors the REAL hero kit (basic + 6th-hit proc, three skills, class dash,
+  ultimate below 60% HP), named on the boss bar; duels pick your class half the time, the Gate of Shadows always.
+- Necromancer summons (minions.ts): per-source caps. Raise Dead (src 1) up to 5 permanent: 3 warriors first, then 2
+  random archers / mages; a full-army recast replaces the oldest of the same group (ranged pair re-rolls). Skeletons
+  per cast 1/2/3/4/5 by level. Plague Ground (src 3): every enemy dying in it rises as a warrior for 8 s (max 5).
+  Weapon perk raises (src 4) max 2; Grave Call (src 5) warriors last 8 s + 1 s/level (max 2). Skeleton skills:
+  warriors Cleave, archers Burning Arrow (heavy, burns, leaves a fire patch), mages Chain Lightning (4 targets).
+- The class dash unlocks at class level 20 (classLevels DASH_UNLOCK_LV; tryDash gate, locked slot, hidden on mobile);
+  dash recharge 6 s. Tutorial freebies: the Stock Up potion and the first gem summon are free (store `questFree`).
+- Town: two castle guards (Sir Aldo, Sir Bram) flank the castle steps.
