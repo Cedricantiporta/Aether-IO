@@ -63,6 +63,10 @@ export function installInput(): () => void {
       return;
     }
     const st = useGameStore.getState();
+    if (e.code === 'Escape' && (st.isShopOpen || st.isInventoryOpen || st.isCharacterSheetOpen)) {   // (owner: Esc closes the open panel first)
+      useGameStore.setState({ isShopOpen: false, isInventoryOpen: false, isCharacterSheetOpen: false });
+      return;
+    }
     const inGame = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || (st.status === GameStatus.MENU && useUiStore.getState().titleDone);
     switch (e.code) {
       case 'Escape':   // in a run: the pause menu (Esc again resumes); in town: Settings

@@ -1,7 +1,6 @@
 // Active quest tracker (Korean-MMO style): right side, under the menu icons. Main quest first (gold), then accepted
 // bounties and NPC side quests, each with its objective, progress and (in town) the distance to where it continues.
 // Click = auto-path there; in a run, a quest that continues in town offers a teleport home.
-import { useQuestToast } from '../../rewardFeed';
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
@@ -119,15 +118,10 @@ export const QuestTracker: React.FC = () => {
   const nq = useGameStore((s) => s.npcQuests);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const main = useGameStore((s) => STORY[s.story.step]);
-  const toast = useQuestToast((s) => s.lines);
-  if (act.length === 0 && story.length === 0 && !main && toast.length === 0) return null;
+  if (act.length === 0 && story.length === 0 && !main) return null;
   return (
     <div className="qt pe" data-testid="quest-tracker">
-      {toast.length > 0 && (
-        <div className="qt-toast" data-testid="quest-toast">
-          {toast.map((l) => <div key={l.id} className="qt-toast-line" style={{ color: l.color }}>{l.text}</div>)}
-        </div>
-      )}
+      {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
       {main && <MainRow main={main} />}
       {act.map((q) => <BoardRow key={q.id} q={q} />)}
       {story.map((d) => <SideRow key={d.id} d={d} />)}

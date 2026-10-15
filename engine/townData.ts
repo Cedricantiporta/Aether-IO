@@ -26,7 +26,7 @@ export const GATE = { x: 0, z: 38 };
 export const PLAZA = { x: 0, z: 2, r: 6.5 };
 /** The Adventure Portal: an ancient stone gate in a forest clearing at the end of the road south of the town gate.
  *  Runs start here (the town gate is just a gate). `front` = where the hero stands to step in. */
-export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 81.5 } };
+export const PORTAL = { x: 0, z: 88, r: 6.5, front: { x: 0, z: 84.6 } };   // (front = on top of the platform, before the arch)
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
@@ -100,6 +100,9 @@ export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3.5, stairZ: -15.6 };
 /** Ground height at (x, z) in the town (the terrace + its stairs; 0 elsewhere). */
 export function townLift(x: number, z: number): number {
+  // the Adventure Portal's round stepped platform (tiers r 8 / 6.9 / 5.6 up to 1.2; render/Town buildPortalGeo)
+  const pd = Math.hypot(x - PORTAL.x, z - PORTAL.z);
+  if (pd < 8.4) return Math.min(1.2, Math.max(0, (8.4 - pd) / 2.6) * 1.2);
   const T = TERRACE;
   if (x < T.x0 || x > T.x1 || z > T.stairZ || z < T.z0 - 12) return 0;
   if (z <= T.z1) return T.h;
@@ -113,6 +116,28 @@ export const CHURCH = { x: -27, z: -27.5, w: 9, d: 14, rot: 0 };
 export const TAVERN = { x: 28, z: -21, w: 9.5, d: 7, rot: 0 };
 export const WINDMILL = { x: 45, z: 46.5, r: 3.4 };
 export const STATUE = { x: 0, z: 2, r: 1.9 };
+/** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
+ *  the chapel's side door (east gate) to the crypt at the west end, gravestones in four blocks, a dead tree, lanterns. */
+export const GRAVEYARD = { x0: -43.4, x1: -32.8, z0: -39.6, z1: -21, pathZ: -31.5, gateX: -38 };
+export const CRYPT = { x: -41.6, z: -31.5 };
+/** Gravestones [x, z, kind] (0 slab, 1 cross, 2 rounded). */
+export const GRAVES: [number, number, number][] = (() => {
+  const g: [number, number, number][] = [];
+  let k = 0;
+  for (const z of [-37.6, -35.2, -27.6, -25.2]) for (const x of [-39.8, -37.7, -35.6]) { g.push([x + (k % 3 === 1 ? 0.25 : 0), z, k % 3]); k++; }
+  return g;
+})();
+/** The chapel's side door (west wall) into the graveyard; town side spot + interact radius. */
+export const CHAPEL_SIDE = { x: CHURCH.x - CHURCH.w / 2 - 1.5, z: CHURCH.z - 4, r: 2.6 };
+/** Seats (benches) the hero can sit on in the town: x, z, facing yaw (the way a seated hero looks), seat height. */
+export interface SeatSpec { x: number; z: number; yaw: number; y: number }
+export const TOWN_SEATS: SeatSpec[] = [
+  { x: 8.9, z: 2, yaw: -Math.PI / 2, y: 0.55 }, { x: -8.9, z: 2, yaw: Math.PI / 2, y: 0.55 },   // the plaza, facing the statue
+  { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
+  { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
+  { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
+  { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 },                                               // the meadow, facing the road
+];
 
 export const HOUSES: HouseSpec[] = [
   // the farm outside the gate: a big red barn by the road and a little chicken coop
@@ -213,6 +238,8 @@ export const FENCES: [number, number, number, number][] = [
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   // front gardens
   [-18, 15, -18, 20], [18, 14.5, 18, 20],
+  // the graveyard: south side (gap at the gate), east side (gap at the chapel's side door)
+  [-43.4, -21, -39.4, -21], [-36.6, -21, -32.8, -21], [-32.8, -21, -32.8, -29.8], [-32.8, -33.2, -32.8, -39.6],
   // farm field south of the gate, east of the road (gap in the west side, facing the road)
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
@@ -277,6 +304,7 @@ export const TOWN_TREES: TreeSpec[] = [
 export const GRASS_PATCHES: [number, number, number, number][] = [
   [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4],
   [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
+  [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
 /** Parked carts on the meadow in front of the walls (drawn in TownScenery addCart): kind 0 merchant goods, 1 hay, 2 barrels.
@@ -333,6 +361,9 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   }
   c.push([CHURCH.x - CHURCH.w / 2 + 1.2, CHURCH.z + CHURCH.d / 2 - 1.2, 2.0]);
   c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
+  for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
+  c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
+  for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
   for (const [x, z] of LAMPS) c.push([x, z, 0.3]);
   // fences + fence posts: a continuous chain of small circles along every run
@@ -434,7 +465,7 @@ export const NPCS: NpcDef[] = [
     gift: { gold: 150, text: 'Elder Tobin presses a pouch into your hand. (+150 gold)' },
   },
   {
-    name: 'Pip', role: 'Village Kid', model: 'ROGUE', tint: '#ffe0ea', scale: 1, prop: 'none', accent: '#ff9ac0', home: [-40.5, -36.5], speed: 2.6,   // hiding in the north-west corner behind the houses (knows the hermit's secret)
+    name: 'Pip', role: 'Village Kid', model: 'ROGUE', tint: '#ffe0ea', scale: 1, prop: 'none', accent: '#ff9ac0', home: [-36.4, -30.2], speed: 2.6,   // hiding in the north-west corner behind the houses (knows the hermit's secret)
     talk: [
       ['Have you seen my cat? She is orange, and very rude.', 'Last time I saw her she ran off towards the plaza...'],
       ['When I grow up I will be a hero like you! Do you have a sword? Can I hold it?', 'No? Aww.'],

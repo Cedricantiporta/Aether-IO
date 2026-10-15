@@ -24,6 +24,7 @@ function buildNave() {
   // stained-glass windows on both side walls
   let k = 0;
   for (const sx of [-1, 1]) for (const z of [-9, -3, 3, 9]) {
+    if (sx < 0 && z === -9) continue;   // (the side door to the graveyard is here)
     const x = sx * (hw - 0.05);
     b.box(0.25, 4.0, 1.7, [x, 4.6, z], STONE3); b.cyl(0.85, 0.85, 0.25, 10, [x, 6.6, z], STONE3, [0, 0, Math.PI / 2]);
     for (let j = 0; j < 3; j++) g.box(0.12, 1.1, 1.2, [sx * (hw - 0.2), 3.4 + j * 1.15, z], GLASS[(k + j) % GLASS.length]);
@@ -54,6 +55,9 @@ function buildNave() {
     b.cyl(0.12, 0.25, 1.5, 6, [sx * 2.7, 0.75, -9.4], '#2a2a2e'); b.cyl(0.09, 0.09, 0.35, 6, [sx * 2.7, 1.65, -9.4], '#f4ecd8'); g.sph(0.1, [sx * 2.7, 1.9, -9.4], '#ffd070', [1, 1.6, 1], 6);
     for (let i = 0; i < 3; i++) { b.cyl(0.05, 0.05, 0.25 + i * 0.08, 6, [sx * (0.9 + i * 0.3), APSE.h + 1.3 + i * 0.04, -10.9], '#f4ecd8'); g.sph(0.06, [sx * (0.9 + i * 0.3), APSE.h + 1.47 + i * 0.08, -10.9], '#ffd070', [1, 1.6, 1], 5); }
   }
+  // side door to the graveyard (west wall)
+  b.box(0.3, 3.2, 2.2, [-hw + 0.1, 1.6, -7.4], STONE3); b.box(0.2, 2.6, 1.6, [-hw + 0.2, 1.3, -7.4], WOOD); b.cyl(0.8, 0.8, 0.2, 10, [-hw + 0.2, 2.6, -7.4], WOOD, [0, 0, Math.PI / 2]);
+  g.sph(0.12, [-hw + 0.4, 3.3, -7.4], '#9fe8ff', [1, 1.4, 1], 6);
   // door (inside face) + wall sconces
   b.box(2.6, 3.4, 0.2, [0, 1.7, hd - 0.05], WOOD); b.cyl(1.3, 1.3, 0.2, 12, [0, 3.4, hd - 0.05], WOOD, [Math.PI / 2, 0, 0]);
   for (const sx of [-1, 1]) for (const z of [-6, 0, 6]) { b.box(0.1, 0.5, 0.1, [sx * (hw - 0.25), 3.0, z + 1.5], '#2a2a2e'); g.sph(0.14, [sx * (hw - 0.3), 3.4, z + 1.5], '#ffb860', [1, 1.4, 1], 6); }

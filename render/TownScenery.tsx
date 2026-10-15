@@ -12,7 +12,7 @@ import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -605,6 +605,10 @@ function buildChurch(): { b: BufferGeometry; g: BufferGeometry } {
   b.cone(2.9, 6.0, 4, [tx, th + 3.2, tz], slate, [0, Math.PI / 4, 0]);
   b.box(0.18, 1.3, 0.18, [tx, th + 6.8, tz], gold); b.box(0.75, 0.18, 0.18, [tx, th + 7.0, tz], gold);
   g.box(0.7, 1.4, 0.1, [tx, base + 4.5, tz + 1.82], '#ffcf7a');
+  // side door on the west wall into the graveyard (local z -4)
+  b.box(0.4, 3.0, 2.2, [-w / 2 - 0.1, base + 1.5, -4], st2);
+  b.box(0.2, 2.4, 1.6, [-w / 2 - 0.25, base + 1.2, -4], wood); b.cyl(0.8, 0.8, 0.2, 10, [-w / 2 - 0.25, base + 2.4, -4], wood, [0, 0, Math.PI / 2]);
+  b.box(0.9, 0.18, 2.0, [-w / 2 - 0.75, 0.09, -4], '#bdb7a9');
   // yard: two yews and a bench
   b.box(2.2, 0.15, 0.6, [w / 2 - 0.6, 0.55, d / 2 + 2.0], wood); for (const sx of [-0.9, 0.9]) b.box(0.15, 0.5, 0.5, [w / 2 - 0.6 + sx, 0.25, d / 2 + 2.0], wood);
   return { b: b.build(), g: g.build() };
@@ -680,6 +684,47 @@ function buildStatue(): { b: BufferGeometry; g: BufferGeometry } {
   return { b: b.build(), g: g.build() };
 }
 
+/** Park bench (local: the sitter faces +z, the backrest is behind at -z). */
+function buildBench(): { b: BufferGeometry; g: BufferGeometry } {
+  const b = new GB([0.82, 1.08]), g = new GB([1, 1]);
+  for (const sx of [-0.85, 0.85]) { b.box(0.12, 0.5, 0.5, [sx, 0.25, 0], '#2c2c30'); b.box(0.1, 0.9, 0.1, [sx, 0.75, -0.26], '#2c2c30'); }
+  for (let i = 0; i < 3; i++) b.box(2.0, 0.07, 0.15, [0, 0.52, -0.18 + i * 0.18], '#7a5232');
+  for (let i = 0; i < 2; i++) b.box(2.0, 0.13, 0.06, [0, 0.82 + i * 0.22, -0.28], '#6e4b2b');
+  g.sph(0.04, [0, 0.01, 0], '#000000', 0.01, 3);
+  return { b: b.build(), g: g.build() };
+}
+/** The graveyard: gravestones, the crypt at the west end, a dead tree, lanterns, a gravel path, candles + flowers. */
+function addGraveyard(b: GB, g: GB, rnd: () => number): void {
+  const G = GRAVEYARD, st = '#8f8a80', st2 = '#a8a296', moss = '#5f7a3a';
+  b.box(G.x1 - G.x0 - 1, 0.04, 2.0, [(G.x0 + G.x1) / 2 + 0.5, 0.02, G.pathZ], '#9a9080');   // gravel path
+  b.box(1.8, 0.04, G.z1 - G.pathZ - 1, [G.gateX, 0.02, (G.pathZ + G.z1) / 2], '#9a9080');   // ... and from the south gate
+  for (const [x, z, k] of GRAVES) {
+    const tilt = (rnd() - 0.5) * 0.18, yaw = (rnd() - 0.5) * 0.25, face = z < G.pathZ ? 0 : Math.PI;   // stones face the path
+    if (k === 0) { b.box(0.9, 1.0, 0.22, [x, 0.5, z], st, [tilt, yaw + face, 0]); b.box(1.0, 0.12, 0.3, [x, 1.02, z], st2, [tilt, yaw + face, 0]); }
+    else if (k === 1) { b.box(0.2, 1.3, 0.2, [x, 0.65, z], st2, [tilt, yaw, 0]); b.box(0.8, 0.2, 0.2, [x, 0.95, z], st2, [tilt, yaw, 0]); }
+    else { b.box(0.8, 0.8, 0.24, [x, 0.4, z], st, [tilt, yaw + face, 0]); b.cyl(0.4, 0.4, 0.24, 10, [x, 0.8, z], st, [Math.PI / 2, yaw + face, 0]); }
+    b.box(0.9, 0.06, 1.5, [x, 0.03, z + (z < G.pathZ ? 0.95 : -0.95)], '#5a4a32');   // the mound
+    if (rnd() < 0.5) b.sph(0.18, [x + 0.3, 0.12, z + (z < G.pathZ ? 1.2 : -1.2)], ['#ff7aa8', '#ffffff', '#c79bff'][(rnd() * 3) | 0], [1, 0.6, 1], 5);
+    if (rnd() < 0.35) b.sph(0.22, [x - 0.35, 0.95, z], moss, [1.3, 0.4, 1], 5);
+    if (rnd() < 0.3) { b.cyl(0.05, 0.05, 0.22, 6, [x + 0.4, 0.11, z + (z < G.pathZ ? 0.5 : -0.5)], '#f4ecd8'); g.sph(0.05, [x + 0.4, 0.27, z + (z < G.pathZ ? 0.5 : -0.5)], '#ffd070', [1, 1.6, 1], 5); }
+  }
+  // the crypt (door faces the path, east)
+  const { x, z } = CRYPT;
+  b.box(3.0, 0.4, 4.2, [x, 0.2, z], st);
+  b.box(2.6, 2.6, 3.6, [x, 1.7, z], st2);
+  b.prism(3.4, 1.2, 2.9, [x, 3.0, z], '#5e5a56', [0, Math.PI / 2, 0]);
+  b.box(0.15, 1.8, 1.2, [x + 1.32, 1.3, z], '#2a241e'); b.cyl(0.6, 0.6, 0.15, 10, [x + 1.32, 2.2, z], '#2a241e', [0, 0, Math.PI / 2]);
+  for (const sz of [-1, 1]) { b.cyl(0.18, 0.2, 2.6, 8, [x + 1.45, 1.5, z + sz * 0.95], st); g.sph(0.14, [x + 1.6, 2.2, z + sz * 1.3], '#9fe8ff', 1, 6); }
+  b.box(0.2, 0.9, 0.2, [x, 4.0, z], st2); b.box(0.6, 0.18, 0.2, [x, 4.15, z], st2);
+  // dead tree
+  b.cyl(0.18, 0.32, 3.4, 6, [-34.2, 1.7, -38.4], '#3e3026', [0.08, 0, -0.06]);
+  for (const [a, h, l] of [[0.6, 2.6, 1.6], [-0.9, 3.0, 1.3], [2.4, 2.2, 1.2]]) b.cyl(0.06, 0.12, l, 5, [-34.2 + Math.cos(a) * l * 0.4, h, -38.4 + Math.sin(a) * l * 0.4], '#3e3026', [Math.sin(a) * 0.9, 0, Math.cos(a) * 0.9]);
+  // lanterns on posts by the gates
+  for (const [lx, lz] of [[-39.6, -20.6], [-36.4, -20.6], [-32.4, -29.6], [-32.4, -33.4]]) {
+    b.box(0.14, 1.9, 0.14, [lx, 0.95, lz], '#2a2a2e'); b.box(0.32, 0.36, 0.32, [lx, 2.0, lz], '#2a2a2e'); g.sph(0.14, [lx, 2.0, lz], '#9fe8ff', 1, 6);
+  }
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -701,6 +746,10 @@ function buildTown() {
   put(TAVERN.x, TAVERN.z, TAVERN.rot, buildTavern(HOUSES.length + 3));
   put(WINDMILL.x, WINDMILL.z, 0, buildWindmill());
   put(STATUE.x, STATUE.z, 0, buildStatue());
+  { const c = at(-38, -30); addGraveyard(c.b, c.g, mulberry32(777)); }
+  const bench = buildBench();
+  for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const c = at(s.x, s.z); c.b.addColored(bench.b, [s.x, 0, s.z], [0, s.yaw, 0]); }
+  bench.b.dispose(); bench.g.dispose();
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
   // big mossy boulders half-blocking the narrow back trail to the hermit (colliders: townData TOWN_COLLIDERS)
@@ -863,7 +912,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     let bx = PORTAL.x, bz = PORTAL.front.z;   // default: the Adventure Portal
     if (ms && !ms.field) { bx = ms.x; bz = ms.z; if (ms.act === 'castle') bz -= 0.5; }
     if (beam.current) { beam.current.position.set(bx, 18, bz); beam.current.visible = !hide; }
-    if (ring.current) { ring.current.position.set(bx, 0.12, bz); ring.current.visible = !hide; }
+    if (ring.current) { ring.current.position.set(bx, 0.12 + townLift(bx, bz), bz); ring.current.visible = !hide; }
   });
   const shadows = q.shadowMap > 0;
   return (

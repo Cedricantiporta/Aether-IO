@@ -20,7 +20,23 @@ import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
 import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
-import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT } from '../churchData';
+import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT, CHURCH_SIDE_EXIT, CHURCH_SIDE_SPAWN, PEW_SEATS } from '../churchData';
+import { CHAPEL_SIDE, TOWN_SEATS, type SeatSpec } from '../townData';
+/** The chapel was entered / left by its side door (the graveyard), not the front. */
+let viaSide = false;
+const seatsHere = (): SeatSpec[] => (world.village.area === 'CHURCH' ? PEW_SEATS : world.village.area === 'TOWN' ? TOWN_SEATS : []);
+/** Sit down on seat `i` of the current area (benches, pews): any move key / stick / walk order stands up again. */
+function sitDown(i: number): void {
+  const s = seatsHere()[i]; if (!s) return;
+  const p = world.player, st = world.village.sit;
+  st.on = true; st.x = s.x; st.z = s.z; st.yaw = s.yaw; st.y = s.y;
+  p.pos.set(s.x, 0, s.z); p.vel.set(0, 0, 0); p.facing = s.yaw; world.village.go.on = false;
+}
+export function standUp(): void {
+  const st = world.village.sit; if (!st.on) return;
+  st.on = false;
+  const p = world.player; p.pos.set(st.x + Math.sin(st.yaw) * 0.95, 0, st.z + Math.cos(st.yaw) * 0.95);
+}
 import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT, CAMP_COLLIDERS } from '../caveData';
 import { UNLOCK_LV } from '../../unlocks';
 import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCave } from './cave';
@@ -120,7 +136,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -131,7 +147,7 @@ const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', n
   while (i > 0 && nearby[i - 1].d2 > d2) { const a = nearby[i], b = nearby[i - 1]; a.key = b.key; a.verb = b.verb; a.label = b.label; a.shop = b.shop; a.node = b.node; a.d2 = b.d2; a.act = b.act; a.color = b.color; i--; }
   const t = nearby[i]; t.key = key; t.verb = verb; t.label = label; t.shop = shop; t.node = node; t.d2 = d2; t.act = act; t.color = color;
 };
-const GATE_R = 5.5;
+const GATE_R = 3.2;   // (only on top of the portal platform)
 const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
 /** Fishing + the Fishmonger need class level UNLOCK_LV.FISHING (unlocks.ts); below it their pills read "Unlocks at Lv N". */
 export const fishingLocked = (): boolean => useGameStore.getState().level < UNLOCK_LV.FISHING;
@@ -157,6 +173,7 @@ function scanNearby(): void {
     d = q(CASTLE_EXIT.x, CASTLE_EXIT.z); if (d < CASTLE_EXIT.r * CASTLE_EXIT.r) push('E', 'Leave', 'Castle', '', -1, d, 'leave');
   } else if (area === 'CHURCH') {
     d = q(CHURCH_EXIT.x, CHURCH_EXIT.z); if (d < CHURCH_EXIT.r * CHURCH_EXIT.r) push('E', 'Leave', 'Chapel', '', -1, d, 'leave');
+    d = q(CHURCH_SIDE_EXIT.x, CHURCH_SIDE_EXIT.z); if (d < CHURCH_SIDE_EXIT.r * CHURCH_SIDE_EXIT.r) push('E', 'Out to', 'Graveyard', '', 1, d, 'leave');
   } else if (area === 'CAVE') {
     scanCave(push, p.pos.x, p.pos.z);   // exit / stairs / lucky ladder / Grit's bench / veins (cave.ts)
   } else {
@@ -174,6 +191,7 @@ function scanNearby(): void {
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     d = q(CHURCH_DOOR.x, CHURCH_DOOR.z); if (d < CHURCH_DOOR.r * CHURCH_DOOR.r) push('E', 'Enter', 'Chapel', '', -1, d, 'church');
+    d = q(CHAPEL_SIDE.x, CHAPEL_SIDE.z); if (d < CHAPEL_SIDE.r * CHAPEL_SIDE.r) push('E', 'Enter', 'Chapel (side door)', '', 1, d, 'church');
     d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
     // (only while a quest asks for it)
@@ -183,6 +201,12 @@ function scanNearby(): void {
     if (beach) for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) { if (fishLock) push('E', 'Locked', `Fishing · ${FISH_LOCK}`, '', i, d - 1, 'locked', LOCK_COLOR); else push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); } }   // lakeside fishing
     if (pinHidden()) { d = q(WHEEL_PIN.x, WHEEL_PIN.z); if (d < 7) push('E', 'Hold: Pick up', 'Wheel pin', '', 401, d, 'farm'); }
   }
+  if (world.village.sit.on) {   // seated: the only action is standing up
+    nearbyN = 0; push('E', 'Stand', 'up', '', -1, 0, 'sit');
+    for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
+    return;
+  }
+  { const seats = seatsHere(); for (let i = 0; i < seats.length; i++) { d = q(seats[i].x, seats[i].z); if (d < 1.7 * 1.7) push('E', 'Sit', area === 'CHURCH' ? 'Pew' : 'Bench', '', i, d + 0.6, 'sit'); } }
   for (let i = 0; i < npcs.length; i++) { if (!npcInArea(i)) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d * talkBias(i), 'npc'); }
   if (area === 'TOWN')   // (town harvest nodes; the cave's come from scanCave)
   for (let i = 0; i < world.crates.length; i++) {
@@ -204,10 +228,11 @@ export function interact(it: Interactable): void {
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
+    if (it.act === 'sit') { if (v.sit.on) standUp(); else sitDown(it.node); return; }
     if (it.act === 'castle') v.pending = 'ENTER';
-    else if (it.act === 'church') v.pending = 'CHURCH';
+    else if (it.act === 'church') { viaSide = it.node === 1; v.pending = 'CHURCH'; }
     else if (it.act === 'cave') v.pending = 'CAVE';
-    else if (it.act === 'leave') v.pending = 'LEAVE';
+    else if (it.act === 'leave') { viaSide = v.area === 'CHURCH' && it.node === 1; v.pending = 'LEAVE'; }
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
     else if (it.act === 'npc') openDialogue(it.node);
     else if (it.act === 'gate') {   // adventure (+ Ascension); sealed until the King's first task (main story)
@@ -429,7 +454,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH'): void {
   else if (to === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
   if (from === 'CAVE' && to !== 'CAVE') leaveCave();
   for (const b of bubbles) b.active = false;
-  p.vel.set(0, 0, 0); p.dashT = 0; p.anim.moveBlend = 0;
+  p.vel.set(0, 0, 0); p.dashT = 0; p.anim.moveBlend = 0; world.village.sit.on = false;
   if (to === 'CASTLE') {
     v.area = 'CASTLE';
     for (const c of world.crates) { c.active = false; }
@@ -442,7 +467,8 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH'): void {
     for (const c of world.crates) { c.active = false; }
     installInterior(CHURCH_COLLIDERS);
     resetNpcs();
-    p.pos.set(CHURCH_SPAWN.x, 0, CHURCH_SPAWN.z); p.facing = Math.PI;
+    if (viaSide) { p.pos.set(CHURCH_SIDE_SPAWN.x, 0, CHURCH_SIDE_SPAWN.z); p.facing = Math.PI / 2; }
+    else { p.pos.set(CHURCH_SPAWN.x, 0, CHURCH_SPAWN.z); p.facing = Math.PI; }
     C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
   } else if (to === 'CAVE') {
     enterCave();   // Floor 1 (cave.ts: veins, colliders, NPCs, spawn, camera)
@@ -451,6 +477,9 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH'): void {
     generateMap(); placeVillageNodes();   // the normal town setup path (rebuilds town colliders, harvest nodes, NPCs)
     if (from === 'CAVE') {   // just outside the cave mouth, facing out over the bay
       p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot;
+      C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
+    } else if (from === 'CHURCH' && viaSide) {   // out of the side door, into the graveyard
+      p.pos.set(CHAPEL_SIDE.x - 0.6, 0, CHAPEL_SIDE.z); p.facing = -Math.PI / 2;
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else if (from === 'CHURCH') {   // on the chapel steps, facing the town
       p.pos.set(CHURCH_OUT.x, 0, CHURCH_OUT.z); p.facing = 0;
@@ -488,7 +517,12 @@ export function updateVillage(dt: number): void {
       if (inp.pressed.KeyF) acceptOffer();   // F accepts an NPC quest offer (last line)
       if (inp.pressed.KeyE || inp.pressed.Space) advanceDialogue();
     }
-  } else if (v.pending) { p.vel.x = p.vel.z = 0; } else updatePlayerVillage(dt);
+  } else if (v.pending) { p.vel.x = p.vel.z = 0; }
+  else if (v.sit.on) {   // seated on a bench / pew: any move input (keys, stick, a walk order) stands up
+    const k = inp.keys;
+    if (k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.ArrowUp || k.ArrowDown || k.ArrowLeft || k.ArrowRight || inp.joy.active || v.go.on || inp.pressed.Space) standUp();
+    else { p.vel.x = p.vel.z = 0; p.pos.set(v.sit.x, 0, v.sit.z); p.facing = v.sit.yaw; p.anim.moveBlend *= Math.max(0, 1 - dt * 10); }
+  } else updatePlayerVillage(dt);
   updatePetTown(dt);
   updateCrates(dt);
   // persistent harvest (town nodes / cave nodes, each with its own save): a node that just broke is recorded; when every

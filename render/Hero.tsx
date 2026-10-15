@@ -8,6 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import {
   AdditiveBlending, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
   MeshStandardMaterial, SphereGeometry, DoubleSide, CanvasTexture, SRGBColorSpace, ShaderMaterial, FrontSide,
+  type Object3D,
 } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
@@ -49,7 +50,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   const gearKey = ['helmet', 'armor', 'gloves', 'boots', 'accessory'].map((k) => (eq as any)?.[k]?.rarity || '').join('|');
   const root = useRef<Group>(null!), lean = useRef<Group>(null!), blob = useRef<Mesh>(null!);
   const S = useRef({
-    mixer: null as AnimationMixer | null,
+    mixer: null as AnimationMixer | null, sitK: 0, legs: null as (Object3D | null)[] | null,
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
     wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
@@ -176,6 +177,17 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     env(s.atk, 7); env(s.cast, 7); env(s.hit, 5);
 
     m.update(dt);
+
+    // seated on a bench / pew (no sit clip in the KayKit packs: the legs are posed on top of the idle)
+    const sitOn = !lobby && alive && world.village.sit.on && status === GameStatus.MENU;
+    s.sitK = damp(s.sitK ?? 0, sitOn ? 1 : 0, 10, dt);
+    if (s.sitK > 0.01) {
+      if (!s.legs) s.legs = ['upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'hips'].map((n) => ch.root.getObjectByName(n) ?? null);
+      const [ul, ur, ll, lr] = s.legs, k = s.sitK;
+      if (ul) ul.rotation.x -= 1.5 * k; if (ur) ur.rotation.x -= 1.5 * k;
+      if (ll) ll.rotation.x += 1.55 * k; if (lr) lr.rotation.x += 1.55 * k;
+      g.position.y += (world.village.sit.y - SIT_HIP_DROP) * k;
+    }
 
     // emissive status tint
     let r = 0, gg = 0, bb = 0;
@@ -532,6 +544,8 @@ function AegisSphere() {
   return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>;
 }
 
+/** How far the hips drop from standing to sitting on a seat at height 0 (tuned to the KayKit medium rig). */
+const SIT_HIP_DROP = 0.42;
 export function Hero({ q }: { q: QualityCfg }) {
   const cls = useGameStore((s) => s.hero) as HeroClass;
   return (
