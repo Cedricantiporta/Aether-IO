@@ -2,11 +2,12 @@
 // single station (fountain / merchant / chest / altar), exit portals with reward labels and telegraphed spawn markers.
 // Only the current room exists; it is rebuilt when world.room.version changes (during the black fade). No per-frame allocations.
 import { campPos } from '../engine/systems/director';
-import React, { Suspense, useMemo, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef } from 'react';
+import { useCharacterInstance, useClips } from './characters';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
-  AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
+  AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
   CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
 } from 'three';
 import { Stars } from '@react-three/drei';
@@ -438,8 +439,7 @@ function stationGeos() {
   m.prism(5.02, 1.22, 0.7, [0, 3.0, -0.3], '#efe2c4', [0, Math.PI / 2, 0]); m.prism(5.02, 1.22, 0.7, [0, 3.0, 1.5], '#efe2c4', [0, Math.PI / 2, 0]);
   m.box(1.0, 0.8, 0.8, [-1.5, 1.5, 0.7], '#a8733a'); m.box(0.8, 0.5, 0.7, [-0.4, 1.35, 0.7], '#c9a35f'); m.sph(0.35, [0.6, 1.4, 0.7], '#d94a3a', 1, 6); m.sph(0.3, [1.3, 1.38, 0.75], '#e8c04a', 1, 6);
   m.cyl(0.6, 0.6, 1.2, 8, [-3.0, 0.6, 0.6], wood); m.box(1.1, 0.9, 1.1, [3.0, 0.45, 0.5], '#a8733a');
-  // trader behind the counter
-  m.cyl(0.5, 0.65, 1.5, 8, [0, 1.0, -0.6], '#3e5a8a'); m.sph(0.36, [0, 2.0, -0.6], '#e0b08a', 1, 7); m.cone(0.55, 0.6, 8, [0, 2.45, -0.6], '#6a4a2a');
+  // (the trader behind the counter is a real character: MerchantNpc)
   const ml = new GB([1, 1]);
   ml.sph(0.18, [-2.0, 3.5, 1.6], '#ffd88a', 1, 6); ml.sph(0.18, [2.0, 3.5, 1.6], '#ffd88a', 1, 6);
   // chest
@@ -554,6 +554,7 @@ function Stations() {
       <group ref={stall} rotation={[0, 0, 0]}>
         <mesh geometry={geos.stall} material={mats.lit} castShadow receiveShadow />
         <mesh geometry={geos.stallLamps} material={mats.glow} />
+        <Suspense fallback={null}><MerchantNpc /></Suspense>
       </group>
       <group ref={chest}>
         <mesh geometry={geos.chest} material={mats.lit} castShadow receiveShadow />
@@ -642,6 +643,28 @@ function Portals() {
   );
 }
 
+
+/** The travelling merchant: a KayKit character idling behind the stall counter + a name tag above the awning. */
+const MERCHANT_TAG = labelMaterial('Travelling Merchant', '#f1e2b8', { size: 56 });
+function MerchantNpc() {
+  const ch = useCharacterInstance('ROGUE');
+  const clips = useClips();
+  const mixer = useRef<AnimationMixer | null>(null);
+  useEffect(() => {
+    const tint = new Color('#ffe2b8');
+    ch.mats.forEach((mt: any) => { if (mt.color) mt.color.copy(tint); });
+    const m = new AnimationMixer(ch.root); const idle = clips['Idle_B'] || clips['Idle_A']; if (idle) m.clipAction(idle).play();
+    mixer.current = m;
+    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); mixer.current = null; };
+  }, [ch, clips]);
+  useFrame((_, dt) => { if (world.room.station.kind === 'MERCHANT') mixer.current?.update(Math.min(dt, 0.05)); });
+  return (
+    <group position={[0, 0, -0.7]}>
+      <primitive object={ch.root} />
+      <sprite material={MERCHANT_TAG.mat} position={[0, 4.4, 0.6]} scale={[MERCHANT_TAG.aspect * 0.8, 0.8, 1]} renderOrder={6} />
+    </group>
+  );
+}
 
 /** Small arrows around the hero pointing at exit portals that are off-screen. */
 function PortalGuides() {
