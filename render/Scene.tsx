@@ -1,8 +1,8 @@
 import { RoomEvents } from './RoomEvents';
 import { Minions } from './Minions';
-import React, { Suspense, useLayoutEffect } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useRef } from 'react';
 import { FacingArrow } from './FacingArrow';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { updateGame } from '../engine/game';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -36,6 +36,19 @@ import { DamageNumbers } from './DamageNumbers';
 import { useWorldCounter } from './hooks';
 import { world } from '../engine/world';
 
+/**
+ * Empty effect pools are hidden (render/util `commitInst`), so three no longer compiles their shaders on the first render;
+ * left alone they would compile on first use, mid-fight. Pre-compile every material in the scene (visible or not, with the
+ * current lights) a few frames after the scene / room / area / quality changes, i.e. behind the room fade as before.
+ */
+function ShaderWarmup({ k }: { k: string }) {
+  const gl = useThree((s) => s.gl), scene = useThree((s) => s.scene), camera = useThree((s) => s.camera);
+  const pending = useRef(0);
+  useEffect(() => { pending.current = 3; }, [k]);
+  useFrame(() => { if (pending.current > 0 && --pending.current === 0) gl.compile(scene, camera); });
+  return null;
+}
+
 export function Scene() {
   const q = useQuality();
   const status = useGameStore((s) => s.status);
@@ -55,6 +68,7 @@ export function Scene() {
       <Lighting q={q} />
       <LookDriver />
       <CameraRig />
+      <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
       {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
         <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
       ) : (

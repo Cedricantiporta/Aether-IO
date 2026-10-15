@@ -11,7 +11,7 @@ import { abilityState, chainOrbs } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, gate, pushHalo } from './fx';
-import { GB, TAU, clamp, glowMat, litMat } from './util';
+import { GB, TAU, clamp, commitInst, glowMat, litMat } from './util';
 import { makeBeamMaterial } from './beam';
 
 const o = new Object3D();
@@ -212,7 +212,7 @@ export function GroundFx() {
         default: break;
       }
     }
-    const fin = (im: InstancedMesh, c: number) => { im.count = c; im.instanceMatrix.needsUpdate = true; };
+    const fin = commitInst;
     fin(sys.arrows, n.a); fin(sys.meteors, n.m); fin(sys.spikes, n.s); fin(sys.crystals, n.c); fin(sys.traps, n.t); fin(sys.rocks, n.r);
     sys.big.visible = bigOn; sys.gol.visible = golOn;
 

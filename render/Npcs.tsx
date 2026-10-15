@@ -6,8 +6,7 @@ import { eggReady, catHidden } from '../engine/systems/village';
 import { NESTS, HIDDEN_CAT } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial, SkinnedMesh, Sprite, Vector3 } from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial, Sprite, Vector3 } from 'three';
 import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
 import { npcs, animals, bubbles } from '../engine/systems/npcs';
@@ -15,7 +14,7 @@ import { STORY } from '../story';
 import { useGameStore } from '../store';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
-import { useCharacterInstance, useClips } from './characters';
+import { disposeMerged, mergeCharacter, useCharacterInstance, useClips } from './characters';
 import { HANDSLOT_QUAT } from './weapons';
 import { labelMaterial } from './label';
 import type { NpcProp } from '../engine/townData';
@@ -56,35 +55,6 @@ const MARKS = [null, labelMaterial('!', '#5fb8ff', { size: 120 }), labelMaterial
 const _p = new Vector3();
 const WHITE = new Color(1, 1, 1);
 
-/**
- * A KayKit character is ~8 skinned meshes (arms, legs, head, cape...) that share one texture atlas. Merging them into a single
- * SkinnedMesh on the same skeleton turns 8 draw calls (x2 with shadows) per NPC into 1. Falls back to the original meshes.
- */
-/** True when both skinned meshes deform with exactly the same bones in the same order (vertex skin indices are then interchangeable). */
-function sameSkin(a: SkinnedMesh, b: SkinnedMesh): boolean {
-  const A = a.skeleton, B = b.skeleton;
-  if (A === B) return true;
-  if (A.bones.length !== B.bones.length) return false;
-  for (let i = 0; i < A.bones.length; i++) if (A.bones[i] !== B.bones[i] || !A.boneInverses[i].equals(B.boneInverses[i])) return false;
-  return true;
-}
-
-function mergeSkinned(ch: { meshes: Mesh[] }): Mesh[] {
-  const sk = ch.meshes.filter((m) => (m as SkinnedMesh).isSkinnedMesh) as SkinnedMesh[];
-  if (sk.length < 2 || sk.length !== ch.meshes.length) return ch.meshes;
-  const map = (sk[0].material as any).map;
-  // meshes must share atlas, parent AND bind matrix, otherwise merging would distort the pose (-> fall back to separate meshes)
-  if (sk.some((m) => (m.material as any).map !== map || !m.geometry.attributes.skinIndex || m.parent !== sk[0].parent || !m.bindMatrix.equals(sk[0].bindMatrix) || !m.matrix.equals(sk[0].matrix) || !sameSkin(m, sk[0]))) return ch.meshes;
-  const g = mergeGeometries(sk.map((m) => m.geometry), false);
-  if (!g) return ch.meshes;
-  const merged = new SkinnedMesh(g, sk[0].material);
-  merged.frustumCulled = false; merged.castShadow = true; merged.receiveShadow = true;
-  sk[0].parent!.add(merged);
-  merged.bind(sk[0].skeleton, sk[0].bindMatrix);
-  for (const m of sk) m.parent!.remove(m);
-  return [merged];
-}
-
 function NpcActor({ i }: { i: number }) {
   const def = NPCS[i], st = npcs[i];
   const ch = useCharacterInstance(def.model);
@@ -94,9 +64,9 @@ function NpcActor({ i }: { i: number }) {
   const meshes = useRef<Mesh[]>(ch.meshes);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true, quest: false });
 
+  useEffect(() => () => disposeMerged(ch), [ch]);
   useEffect(() => {
-    if (!(ch as any).__merged) { (ch as any).__merged = mergeSkinned(ch); }
-    meshes.current = (ch as any).__merged;
+    meshes.current = mergeCharacter(ch);   // 1 draw call per NPC instead of 7-9
     // light tints only: blend the authored tint 45% towards white so the KayKit atlas stays bright and readable
     const tint = new Color(def.tint).lerp(WHITE, 0.45);
     ch.mats.forEach((m: any) => { if (m.color) m.color.copy(tint); });

@@ -11,7 +11,7 @@ import { abilityState } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, embers, pushHalo, sparks } from './fx';
-import { GB, TAU, litMat } from './util';
+import { GB, TAU, commitInst, litMat } from './util';
 import { makeAxe } from './weapons';
 import { makeRockGeo } from './models';
 
@@ -478,8 +478,8 @@ export function Projectiles() {
           break;
       }
     }
-    for (const k in sys.S) { const n = counts[k]; for (const m of sys.S[k]) { m.count = n; m.instanceMatrix.needsUpdate = true; } }
-    for (const k in sys.E) { const n = counts['e' + k]; for (const m of sys.E[k]) { m.count = n; m.instanceMatrix.needsUpdate = true; } }
+    for (const k in sys.S) { const n = counts[k]; for (const m of sys.S[k]) commitInst(m, n); }
+    for (const k in sys.E) { const n = counts['e' + k]; for (const m of sys.E[k]) commitInst(m, n); }
   }, -0.2);
   return <primitive object={sys.group} />;
 }

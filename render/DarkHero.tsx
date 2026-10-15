@@ -15,7 +15,7 @@ import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, pushHalo } from './fx';
-import { GB, TAU, angleLerp, clamp, damp, litMat, setInst } from './util';
+import { GB, TAU, angleLerp, clamp, commitInst, damp, litMat, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, type CharKey } from './characters';
 import { HANDSLOT_QUAT, makeAxe, makeBow, makeStaff, makeSword } from './weapons';
 import { useWorldCounter } from './hooks';
@@ -271,7 +271,7 @@ function DarkFx() {
       if (dt > 0 && Math.random() < 0.6) FX.add.emit(p.pos.x, p.pos.y, p.pos.z, 0, 0, 0, 0.25, 1.2, 0.2, 1.6, 0.2, 0.4, 0.5, CELL.GLOW);
       n++;
     }
-    am.count = gm.count = n; am.instanceMatrix.needsUpdate = true; gm.instanceMatrix.needsUpdate = true;
+    commitInst(am, n); commitInst(gm, n);
     // skill shots
     const c = cnt.current;
     for (const tag of SHOT_TAGS) c[tag] = 0;
@@ -302,14 +302,14 @@ function DarkFx() {
         pushHalo(s.x, y, s.z, 2 + s.r * 1.6, tc[0] * 0.6, tc[1] * 0.6, tc[2] * 0.6, 0.35, CELL.GLOW);
       }
     }
-    for (const tag of SHOT_TAGS) { const pr = res.shots[tag]; pr[0].count = pr[1].count = c[tag]; pr[0].instanceMatrix.needsUpdate = pr[1].instanceMatrix.needsUpdate = true; }
+    for (const tag of SHOT_TAGS) { const pr = res.shots[tag]; commitInst(pr[0], c[tag]); commitInst(pr[1], c[tag]); }
     // Storm Orbs (+ the faint zap-range ring around the archmage)
     const om = orbRef.current;
     for (let i = 0; i < darkOrbs.n; i++) {
       setInst(om, i, darkOrbs.x[i], 1.6 + Math.sin(t * 5 + i * 2) * 0.2, darkOrbs.z[i], 0, 1 + Math.sin(t * 30 + i) * 0.12);
       if (dt > 0 && Math.random() < 0.5) FX.add.emit(darkOrbs.x[i], 1.6, darkOrbs.z[i], (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.2, 0.4, 0.05, 1.6, 1.4, 3, 0.9, CELL.STAR);
     }
-    om.count = darkOrbs.n; om.instanceMatrix.needsUpdate = true;
+    commitInst(om, darkOrbs.n);
     const e = world.enemies[darkView.id];
     ring.current.visible = darkView.orbR > 0 && !!e && e.active;
     if (ring.current.visible) { ring.current.position.set(e.pos.x, 0.08, e.pos.z); res.ringMat.opacity = 0.25 + Math.sin(t * 8) * 0.08; }
