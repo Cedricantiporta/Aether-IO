@@ -95,7 +95,11 @@ needed to see the new game).
 - **Town labels:** shop names are small tags over the shopkeeper (Town.tsx, follow the NPC to the door when the shop
   closes, depthTest off so roofs don't hide them); the Town Gate has no floating label/sign labels anymore.
 - **Minimap:** rectangular 284x208 css px (Minimap.tsx W/H; content drawn in a centred square frame, so the sides show
-  extra map), shop icons = dark badge with the shop colour rim + emoji glyph (`SHOP_ICON`)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+  extra map), shop icons = dark badge with the shop colour rim + emoji glyph (`SHOP_ICON`).
+- **Camera zoom** is unlocked by default (base 1.0; `zoom2` one-time migration flips old saves).
+- **Meadow in front of the south wall:** extra trees, four flower boxes along the wall, three parked carts (townData
+  `CARTS`, drawn by TownScenery `addCart`: goods / hay / barrels, colliders in TOWN_COLLIDERS) and three NPCs appended to
+  NPCS: Tilda (travelling merchant by her cart), Corin (carter, patrols), Nell (wanderer on the portal road)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)

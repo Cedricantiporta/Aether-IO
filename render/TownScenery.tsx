@@ -13,8 +13,8 @@ import { Inst } from './Inst';
 import { useNature } from './models';
 import { labelMaterial } from './label';
 import {
-  CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, PORTAL } from '../engine/townData';
+  CASTLE, LAKE, HERMIT_CAMP, RUINS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
@@ -398,6 +398,32 @@ function addPlanter(b: GB, p: PlanterSpec, rnd: () => number) {
   }
 }
 
+/** Parked wooden cart (bed along local z, wheels on local x) with a load by kind: 0 goods (crates, sacks, cloth), 1 hay, 2 barrels. */
+function addCart(b: GB, k: CartSpec) {
+  const c = Math.cos(k.rot), s = Math.sin(k.rot);
+  const P = (lx: number, y: number, lz: number): [number, number, number] => [k.x + lx * c + lz * s, y, k.z - lx * s + lz * c];
+  const R: [number, number, number] = [0, k.rot, 0];
+  const WOOD = '#8a5a32', DARK = '#5a3a1e';
+  b.box(1.8, 0.16, 3.0, P(0, 0.95, 0.2), WOOD, R);
+  b.box(0.1, 0.45, 3.0, P(-0.86, 1.25, 0.2), DARK, R); b.box(0.1, 0.45, 3.0, P(0.86, 1.25, 0.2), DARK, R);
+  b.box(1.8, 0.45, 0.1, P(0, 1.25, 1.66), DARK, R); b.box(1.8, 0.45, 0.1, P(0, 1.25, -1.26), DARK, R);
+  for (const sx of [-1, 1]) {
+    b.cyl(0.62, 0.62, 0.14, 10, P(sx * 1.0, 0.62, 0.35), DARK, [0, k.rot, Math.PI / 2]);
+    b.cyl(0.14, 0.14, 0.2, 6, P(sx * 1.04, 0.62, 0.35), '#3a3a3e', [0, k.rot, Math.PI / 2]);
+    b.box(0.09, 0.09, 1.9, P(sx * 0.5, 0.78, -2.1), WOOD, R);   // shafts resting on the ground
+  }
+  b.box(1.9, 0.1, 0.1, P(0, 0.62, 0.35), '#3a3a3e', R);   // axle
+  if (k.kind === 0) {
+    b.box(0.6, 0.5, 0.6, P(-0.4, 1.3, 0.9), '#a8783e', R); b.box(0.5, 0.42, 0.5, P(0.42, 1.26, 1.0), '#9a6c36', R); b.box(0.45, 0.4, 0.45, P(-0.35, 1.68, 0.9), '#b8884a', R);
+    b.sph(0.34, P(0.35, 1.3, -0.3), '#d8c8a0', [1, 0.8, 1.2], 6); b.sph(0.3, P(-0.38, 1.28, -0.5), '#c9b88e', [1, 0.8, 1.2], 6);
+    b.box(1.5, 0.08, 0.9, P(0, 1.47, -0.4), '#9a3a3a', R);   // a bolt of red cloth
+  } else if (k.kind === 1) {
+    b.sph(0.95, P(0, 1.55, 0.2), '#d9b85a', [0.95, 0.6, 1.7], 7); b.sph(0.6, P(0.15, 2.0, 0.5), '#e6c86a', [1, 0.6, 1.4], 6);
+  } else {
+    for (const [lx, lz] of [[-0.42, 0.9], [0.42, 0.9], [-0.42, -0.2], [0.42, -0.2]]) { b.cyl(0.33, 0.33, 0.8, 9, P(lx, 1.43, lz), '#7a4f2a'); b.cyl(0.35, 0.35, 0.06, 9, P(lx, 1.6, lz), '#3a3a3e'); }
+  }
+}
+
 /** Fenced wheat field: soil bed, rows of merged golden stalks, scarecrow, haystack. */
 function addFarm(b: GB, rnd: () => number) {
   const { x, z, hw, hd } = FARM;
@@ -539,6 +565,7 @@ function buildTown() {
   for (const [x, z] of LAMPS) { const c = at(x, z); addLamp(c.b, c.g, x, z); }
   const pr = mulberry32(555);
   for (const p of PLANTERS) addPlanter(at(p.x, p.z).b, p, pr);
+  for (const k of CARTS) addCart(at(k.x, k.z).b, k);
   const paving = buildPaving();
   for (const pts of paving.patches) { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } addPatchKerb(at(cx / pts.length, cz / pts.length).b, pts, pr); }
   addFarm(at(FARM.x, FARM.z).b, pr);

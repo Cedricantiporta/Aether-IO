@@ -213,6 +213,8 @@ export const PLANTERS: PlanterSpec[] = [
   { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },
   // flower bed in front of the gate (outside)
   { x: -9, z: 49, w: 6, d: 2.4, kind: 1 }, { x: 9, z: 46, w: 4, d: 2, kind: 1 },
+  // flower boxes along the outside of the south wall (clear of the towers at x = +-27 and the brewer's hut)
+  { x: -36, z: 41.6, w: 5, d: 1.1, kind: 1 }, { x: -20.5, z: 41.4, w: 3.4, d: 1.1, kind: 1 }, { x: 17.5, z: 41.4, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.6, w: 5, d: 1.1, kind: 0 },
 ];
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
@@ -228,6 +230,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   { x: -22, z: -22, s: 3.6, kind: 0 }, { x: 22, z: -22, s: 3.5, kind: 3 }, { x: -10, z: 24, s: 3.2, kind: 1 },
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
+  { x: -32, z: 44, s: 3.4, kind: 0 }, { x: -23, z: 54, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: -30, z: 50, s: 3.8, kind: 2 }, { x: -18, z: 68, s: 3.9, kind: 3 },
   { x: -6, z: 70, s: 3.4, kind: 1 }, { x: -31, z: 62, s: 3.9, kind: 2 }, { x: -21, z: 80, s: 3.4, kind: 2 }, { x: -12, z: 79, s: 3.5, kind: 0 }, { x: 9, z: 78, s: 3.7, kind: 0 }, { x: 16, z: 72, s: 3.5, kind: 0 }, { x: 24, z: 46, s: 3.4, kind: 0 },
 ];
@@ -237,6 +240,12 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
   [-10, 24, 2.6, 2.4], [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
+/** Parked carts on the meadow in front of the walls (drawn in TownScenery addCart): kind 0 merchant goods, 1 hay, 2 barrels.
+ *  The cart's bed runs along its local z (rot = yaw); colliders in TOWN_COLLIDERS. */
+export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
+export const CARTS: CartSpec[] = [
+  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -26, z: 47.5, rot: -0.9, kind: 1 }, { x: 31, z: 48, rot: 2.0, kind: 2 },
+];
 export const SCARECROW = { x: FARM.x, z: FARM.z };
 export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
 
@@ -252,6 +261,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
   c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
+  for (const k of CARTS) for (const o of [-0.9, 0.9]) c.push([k.x + Math.sin(k.rot) * o, k.z + Math.cos(k.rot) * o, 1.2]);   // carts: two circles along the bed
   // castle: ring of circles around the hall footprint + corner towers
   {
     const { x, z, w, d } = CASTLE, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
@@ -541,6 +551,33 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
     gift: { once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend drops a heavy sack into your hands. (+10,000 gold)' },
+  },
+  // the meadow in front of the walls: a travelling merchant by her cart, a carter and a wanderer on the road
+  {
+    name: 'Tilda', role: 'Travelling Merchant', model: 'ROGUE', tint: '#ffe6c4', scale: 1, prop: 'basket', accent: '#ffb86a', home: [6.4, 51.5],
+    talk: [
+      ['Fresh from the coast road! Well... fresh-ish.', 'The guards won\'t let my cart through the gate, so I sell from out here. Better view anyway.'],
+      ['I\'ve traded with three kingdoms and a goblin. The goblin haggled best.'],
+    ],
+    bubbles: ['Spices! Silks! Slightly used!', 'Best prices outside the walls!', 'Mind the cart, dear.'],
+  },
+  {
+    name: 'Corin', role: 'Carter', model: 'BARBARIAN', tint: '#e8d8bc', scale: 1, prop: 'none', accent: '#c9a46a', home: [-24, 50.5], speed: 1.3,
+    patrol: [[-24, 50.5], [-12, 52.5], [-5, 51]],
+    talk: [
+      ['Hay for the barn, if the wheel holds.', 'This old cart has seen more roads than I have. Probably smarter too.'],
+      ['Hollis pays in milk. I\'ve stopped asking.'],
+    ],
+    bubbles: ['Hup, hup.', 'Where did I leave that wheel pin...', 'Lovely weather for hauling.'],
+  },
+  {
+    name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,
+    patrol: [[3.6, 46], [3.6, 58], [3.6, 70]],
+    talk: [
+      ['I walk the portal road every evening. Someone has to wave at the heroes.'],
+      ['They say the forest east of the walls hides a cave full of ore. Bring a pick.'],
+    ],
+    bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.'],
   },
 ];
 
