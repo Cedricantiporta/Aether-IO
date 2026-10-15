@@ -22,7 +22,7 @@ export const PetFuse: React.FC = () => {
   const picked = sel.map((id) => pets.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const tier = picked[0]?.rarity;
   const up = tier ? nextTier(tier) : null;
-  const chance = tier ? FUSE_CHANCE[tier] ?? 0 : 0;
+  void FUSE_CHANCE;   // (odds stay hidden from the player)
   const toggle = (p: Item) => {
     setLast(null);
     if (sel.includes(p.id)) { setSel(sel.filter((x) => x !== p.id)); return; }
@@ -36,11 +36,6 @@ export const PetFuse: React.FC = () => {
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
         Offer {FUSE_COUNT} pets of the same tier for a chance at one pet of the next tier. The higher the tier, the lower the
         chance; a failed fusion still leaves you one pet of the same tier. (Your equipped pet is never used.)
-        <div className="flex flex-wrap gap-x-3 mt-1">
-          {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as const).map((r) => (
-            <span key={r} style={{ color: RARITY_COLOR[r] }}>{r.charAt(0) + r.slice(1).toLowerCase()} → {Math.round((FUSE_CHANCE[r] ?? 0) * 100)}%</span>
-          ))}
-        </div>
       </div>
       <div className="flex items-center gap-2">
         <div className="slot-grid flex-1">
@@ -52,7 +47,7 @@ export const PetFuse: React.FC = () => {
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="text-[.8rem]">
-          {tier && up ? <>Chance for a <b style={{ color: RARITY_COLOR[up] }}>{up.charAt(0) + up.slice(1).toLowerCase()}</b> pet: <b className="rpg-num">{Math.round(chance * 100)}%</b></>
+          {tier && up ? <>A chance at a <b style={{ color: RARITY_COLOR[up] }}>{up.charAt(0) + up.slice(1).toLowerCase()}</b> pet</>
             : <span className="rpg-label">Pick {FUSE_COUNT} pets of one tier from your bag below</span>}
         </div>
         <button className="rpg-btn bevel pe px-4 py-1.5" disabled={picked.length !== FUSE_COUNT} onClick={go} data-testid="fuse-go">Fuse</button>

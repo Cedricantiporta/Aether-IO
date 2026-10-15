@@ -6,7 +6,7 @@ import type { Item, Rarity } from './types';
 export const FUSE_COUNT = 5;
 const ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Success chance by the tier being fused (Mythic pets cannot be fused further). */
-export const FUSE_CHANCE: Partial<Record<Rarity, number>> = { COMMON: 0.4, RARE: 0.25, EPIC: 0.1, LEGENDARY: 0.03 };   // (owner: lower, was 60 / 40 / 20 / 8)
+export const FUSE_CHANCE: Partial<Record<Rarity, number>> = { COMMON: 0.6, RARE: 0.4, EPIC: 0.2, LEGENDARY: 0.08 };   // (hidden from the player - owner)
 
 export const nextTier = (r: Rarity): Rarity | null => { const i = ORDER.indexOf(r); return i >= 0 && i < ORDER.length - 1 ? ORDER[i + 1] : null; };
 

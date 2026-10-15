@@ -62,9 +62,6 @@ export const ItemFuse: React.FC = () => {
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
         Fuse {FUSE_COUNT} pieces of gear of the same tier and the same type (5 weapons, 5 boots...) for a chance at one of the next tier. A failed
         fusion still leaves you one of the same tier. Equipped gear is never used.
-        <div className="flex flex-wrap gap-x-3 mt-1">
-          {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as const).map((r) => <span key={r} style={{ color: RARITY_COLOR[r] }}>{cap(r)} → {Math.round((FUSE_CHANCE[r] ?? 0) * 100)}%</span>)}
-        </div>
       </div>
       <div className="slot-grid">
         {Array.from({ length: FUSE_COUNT }, (_, i) => (
@@ -74,7 +71,7 @@ export const ItemFuse: React.FC = () => {
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="text-[.8rem]">
-          {tier && up ? <>Chance for <b style={{ color: RARITY_COLOR[up] }}>{cap(up)}</b> {kind?.toLowerCase()}: <b className="rpg-num">{Math.round((FUSE_CHANCE[tier] ?? 0) * 100)}%</b></>
+          {tier && up ? <>A chance at a <b style={{ color: RARITY_COLOR[up] }}>{cap(up)}</b> {kind?.toLowerCase()}</>
             : <span className="rpg-label">Pick {FUSE_COUNT} pieces of one tier and one type from your bag below</span>}
         </div>
         <div className="flex gap-2">
