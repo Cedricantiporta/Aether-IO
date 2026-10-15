@@ -2,7 +2,7 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
-import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT, SRC_WEAPON } from './minions';
+import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT, SRC_WEAPON, SRC_GRAVE } from './minions';
 import { weaponPerk, raiseEvery, raiseCap, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
 import { Vector3 } from 'three';
@@ -301,11 +301,11 @@ export function fireBasicAttack(): void {
   if (kind === 'SLASH' && pl.avatarT > 0) {
     spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 3.2, y: 1.1 });
   }
-  // Grave Call: a skeleton warrior claws up beside the target
+  // Grave Call: a skeleton warrior claws up beside the target and fights for 8 s (+1 s per level); its own cap (2)
   if (graveProc) {
     const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     const gx = t && t.active ? t.pos.x - dir.x * 1.5 : pl.pos.x + dir.x * 4, gz = t && t.active ? t.pos.z - dir.z * 1.5 : pl.pos.z + dir.z * 4;
-    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, PERMANENT, SRC_WEAPON);
+    spawnMinion(MINION_WARRIOR, gx, gz, stats.damage * 0.8, 8 + (graveProc - 1), SRC_GRAVE);
   }
   // wand perk Bone Choir / Grave Archers: every Nth soul bolt a ranged skeleton rises behind you (up to a cap)
   if (kind === 'SOUL_BOLT' && perk && (perk.k === 'MAGES' || perk.k === 'BOWMEN') && ++raiseCount >= raiseEvery(perk.lv)) {
