@@ -12,7 +12,7 @@ import { ASCENSIONS } from '../../ascension';
 import { HERO_META } from '../lib/heroes';
 import { useRaf } from '../hooks/useRaf';
 import { world } from '../../engine/world';
-import { GATE, TOWER } from '../../engine/townData';
+import { PORTAL, TOWER } from '../../engine/townData';
 import { CalendarDays } from 'lucide-react';
 import { DailyCard, useDailyDay } from './DailyCard';
 import { WavesCard } from './WavesCard';
@@ -32,7 +32,7 @@ export const SetOutWindow: React.FC = () => {
   // walking off (e.g. on through the gate to the outskirts) closes it: it only stays while the hero stands at the gate / tower door
   useRaf(() => {
     if (!open) return;
-    const p = world.player.pos, at = mode === 'TOWER' ? TOWER.door : { x: GATE.x, z: GATE.z - 1 };
+    const p = world.player.pos, at = mode === 'TOWER' ? TOWER.door : PORTAL.front;   // (was the old town gate: the window closed at once at the portal)
     if ((p.x - at.x) ** 2 + (p.z - at.z) ** 2 > 7.5 * 7.5) setOpen(false);
   });
   const { progress, hero, startMode, setAscension, startDaily, startWaves } = useGameStore(useShallow((s) => ({ progress: s.progress, hero: s.hero, startMode: s.startMode, setAscension: s.setAscension, startDaily: s.startDaily, startWaves: s.startWaves })));
