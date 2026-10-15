@@ -10,7 +10,19 @@ import { useRaf } from '../hooks/useRaf';
 const mmPt: [number, number] = [0, 0];
 
 const W = 284, H = 208; // css px (rectangular)
-const SHOP_ICON: Record<string, string> = { SUPPLIES: '🧪', BLACKSMITH: '⚒', PETS: '🐾', ARMORY: '🛡', FORTUNE: '🔮', WAREHOUSE: '📦', TECH: '⚙', BREWER: '⚗' };
+/** Sharp line icons for the shops, as polylines in unit space (-1..1, y down). Each entry: [closed, ...x,y pairs]. */
+type Poly = [boolean, ...number[]];
+const dia = (x: number, y: number, r: number): Poly => [true, x, y - r, x + r, y, x, y + r, x - r, y];
+const SHOP_ICON: Record<string, Poly[]> = {
+  SUPPLIES: [[false, -0.3, -0.85, -0.3, -0.3, -0.8, 0.8, 0.8, 0.8, 0.3, -0.3, 0.3, -0.85], [false, -0.5, -0.85, 0.5, -0.85], [false, -0.55, 0.3, 0.55, 0.3]],   // flask
+  BLACKSMITH: [[true, -0.95, -0.35, 0.95, -0.35, 0.55, 0.05, 0.3, 0.05, 0.3, 0.45, 0.65, 0.8, -0.65, 0.8, -0.3, 0.45, -0.3, 0.05, -0.65, 0.05]],   // anvil
+  ARMORY: [[true, -0.75, -0.85, 0.75, -0.85, 0.75, 0.05, 0, 0.9, -0.75, 0.05], [false, 0, -0.85, 0, 0.9]],   // shield
+  PETS: [[true, -0.45, 0.8, 0.45, 0.8, 0, 0.15], dia(-0.62, -0.05, 0.2), dia(-0.22, -0.55, 0.2), dia(0.22, -0.55, 0.2), dia(0.62, -0.05, 0.2)],   // paw
+  FORTUNE: [[true, -0.95, 0, 0, -0.6, 0.95, 0, 0, 0.6], dia(0, 0, 0.25)],   // eye
+  WAREHOUSE: [[true, -0.75, -0.3, 0.75, -0.3, 0.75, 0.8, -0.75, 0.8], [false, -0.95, -0.25, 0, -0.9, 0.95, -0.25], [false, -0.25, 0.8, -0.25, 0.25, 0.25, 0.25, 0.25, 0.8]],   // storehouse
+  TECH: [[true, 0, -0.9, 0.78, -0.45, 0.78, 0.45, 0, 0.9, -0.78, 0.45, -0.78, -0.45], dia(0, 0, 0.32)],   // hex nut
+  BREWER: [[true, -0.8, -0.2, 0.8, -0.2, 0.55, 0.75, -0.55, 0.75], [false, -0.95, -0.2, 0.95, -0.2], dia(-0.25, -0.62, 0.14), dia(0.25, -0.75, 0.12)],   // cauldron
+};
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Rectangular minimap — drawn every frame from the world, no React state. */
@@ -93,10 +105,19 @@ export const Minimap: React.FC = () => {
     for (let si = 0; !room && si < SHOP_POSITIONS.length; si++) {
       const s = SHOP_POSITIONS[si];
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
-      ctx.fillStyle = 'rgba(13,7,3,.85)'; ctx.strokeStyle = s.color; ctx.lineWidth = 1.5 * DPR;
-      ctx.beginPath(); ctx.arc(x, y, 9 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = s.color; ctx.font = `${11 * DPR}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(SHOP_ICON[s.type] ?? '•', x, y + 0.5 * DPR);
+      const b = 8.5 * DPR, u = 5.2 * DPR;
+      ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+      ctx.fillStyle = 'rgba(10,7,5,.9)'; ctx.strokeStyle = s.color; ctx.lineWidth = 1.2 * DPR;
+      ctx.beginPath(); ctx.rect(x - b, y - b, b * 2, b * 2); ctx.fill(); ctx.stroke();   // sharp square badge
+      const icon = SHOP_ICON[s.type];
+      if (icon) {
+        ctx.lineWidth = 1.25 * DPR; ctx.beginPath();
+        for (const poly of icon) {
+          for (let j = 1; j < poly.length; j += 2) { const px = x + (poly[j] as number) * u, py = y + (poly[j + 1] as number) * u; if (j === 1) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+          if (poly[0]) ctx.closePath();
+        }
+        ctx.stroke();
+      }
     }
     // village: quest board / altar / trainer (small gold-violet-orange dots) and the town gate (gold arrow, easy to spot)
     if (!room) {
