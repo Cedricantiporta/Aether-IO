@@ -129,7 +129,7 @@ export const FIELDS: FieldSpec[] = [
   { x: -19, z: 89, hw: 7, hd: 4.5, crop: 'WHEAT' },
   { x: -19, z: 100.5, hw: 7, hd: 3.8, crop: 'PUMPKIN' },
 ];
-export const STATUE = { x: 0, z: 2, r: 1.9 };
+export const STATUE = { x: 0, z: 2, r: 2.1 };
 /** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
  *  the chapel's side door (east gate) to the crypt at the west end, gravestones in four blocks, a dead tree, lanterns. */
 export const GRAVEYARD = { x0: -43.4, x1: -32.8, z0: -39.6, z1: -21, pathZ: -31.5, gateX: -38 };

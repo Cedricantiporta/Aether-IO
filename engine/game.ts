@@ -145,9 +145,10 @@ export function enterVillage(): void {
   placeVillageNodes();
   resetSystems();
   // every arrival (new game, back from a run) is in the centre of the town plaza, under the arrival light ray
-  world.player.pos.set(PLAZA.x, 0, PLAZA.z);
-  world.player.facing = 0;                       // face south, towards the town gate
-  world.camera.yaw = Math.PI;                    // camera behind the hero, looking at the entrance
+  // just north of the founder's statue (its middle is solid), facing the castle: the walk to the King is a straight line
+  world.player.pos.set(PLAZA.x, 0, PLAZA.z - 4.4);
+  world.player.facing = Math.PI;                 // face north, up the avenue to the castle
+  world.camera.yaw = 0;                          // camera behind the hero
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
   world.village.spawnFx = 1;                     // arrival light pillar on the hero
   useGameStore.getState().rollShopSales();
