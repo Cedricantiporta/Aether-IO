@@ -49,9 +49,11 @@ void main(){ float fill = vD.x; float kind = vD.y; vec2 p = vUv;
   vec3 col = vec3(0.07, 0.06, 0.09);
   vec3 f = mix(vec3(0.85, 0.15, 0.12), vec3(0.3, 0.85, 0.25), fill);
   if (kind > 0.5 && kind < 1.5) f = mix(vec3(0.75, 0.2, 0.9), vec3(1.0, 0.8, 0.2), fill);
-  if (kind > 1.5) f = vec3(0.9, 0.12, 0.2);
+  if (kind > 1.5 && kind < 2.5) f = vec3(0.9, 0.12, 0.2);
+  if (kind > 2.5) f = vec3(0.56, 0.86, 1.0);   // absorb shield: light blue, split in tenths like the hero's Aegis bar
   float inner = step(0.02, p.x) * step(p.x, 0.98) * step(0.16, p.y) * step(p.y, 0.84);
   if (inner > 0.5 && p.x < fill) { col = f * (0.75 + 0.5 * p.y); }
+  if (kind > 2.5 && inner > 0.5 && abs(fract(p.x * 10.0 + 0.5) - 0.5) < 0.04) col = vec3(0.04, 0.12, 0.2);
   if (border > 0.5) col = vec3(0.02, 0.02, 0.03);
   gl_FragColor = vec4(col, 0.95);
 #include <colorspace_fragment>
@@ -113,7 +115,7 @@ export function Enemies() {
     const barMesh = new Mesh(bg, new ShaderMaterial({ vertexShader: BAR_VS, fragmentShader: BAR_FS, transparent: true, depthTest: false, depthWrite: false }));
     barMesh.frustumCulled = false; barMesh.renderOrder = 60;
     group.add(shadows, rings, bubble, ice, stars, halo, barMesh);
-    return { group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX) };
+    return { group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX), shMax: new Float32Array(MAX) };
   }, []);
   useEffect(() => () => { sys.group.traverse((o: any) => { o.geometry?.dispose?.(); }); }, [sys]);
 
@@ -221,6 +223,13 @@ export function Enemies() {
       if ((e.hp < e.maxHp || e.elite) && !(e.decoy && e.trickKind === 1) && e !== framed && e.state !== 'SPAWN' && nBar < MAX && showBars) {
         bP[nBar * 3] = e.pos.x; bP[nBar * 3 + 1] = e.pos.y + K.def.headY * s + (e.elite ? 1.15 : 0.5); bP[nBar * 3 + 2] = e.pos.z;
         bDd[nBar * 3] = clamp(e.hp / e.maxHp, 0, 1); bDd[nBar * 3 + 1] = e.elite ? 1 : 0; bDd[nBar * 3 + 2] = e.elite ? 1.9 : 1.25;
+        nBar++;
+      }
+      // absorb shield bar above it (SHIELDED affix / boss shells; not an invincible ward = shield 1)
+      if (e.shield > 1) { if (e.shield > sys.shMax[i] || e.state === 'SPAWN') sys.shMax[i] = e.shield; } else sys.shMax[i] = 0;
+      if (e.shield > 1 && e !== framed && e.state !== 'SPAWN' && nBar < MAX && showBars) {
+        bP[nBar * 3] = e.pos.x; bP[nBar * 3 + 1] = e.pos.y + K.def.headY * s + (e.elite ? 1.15 : 0.5) + (e.elite ? 0.36 : 0.26); bP[nBar * 3 + 2] = e.pos.z;
+        bDd[nBar * 3] = clamp(e.shield / Math.max(1, sys.shMax[i]), 0, 1); bDd[nBar * 3 + 1] = 3; bDd[nBar * 3 + 2] = e.elite ? 1.9 : 1.25;
         nBar++;
       }
     }

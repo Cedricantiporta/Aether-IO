@@ -53,14 +53,14 @@ export const waveCrowd = (w: number): number => 0.8 + Math.min(1.0, w * 0.035); 
 
 // ------------------------------------------------------- milestones ---
 export const WAVE_MILESTONES = [10, 20, 30, 50] as const;
-export interface WaveMilestone { wave: number; gems: number; shards: number; rarity: Rarity; crystals: number }
+export interface WaveMilestone { wave: number; gems: number; shards: number; rarity: Rarity }
 export function waveMilestone(w: number): WaveMilestone | null {
   switch (w) {
-    case 10: return { wave: 10, crystals: 10, gems: 50, shards: 3, rarity: 'RARE' };
-    case 20: return { wave: 20, crystals: 20, gems: 100, shards: 3, rarity: 'EPIC' };
-    case 30: return { wave: 30, crystals: 30, gems: 150, shards: 2, rarity: 'LEGENDARY' };
-    case 50: return { wave: 50, crystals: 60, gems: 300, shards: 1, rarity: 'MYTHIC' };
+    case 10: return { wave: 10, gems: 50, shards: 3, rarity: 'RARE' };
+    case 20: return { wave: 20, gems: 100, shards: 3, rarity: 'EPIC' };
+    case 30: return { wave: 30, gems: 150, shards: 2, rarity: 'LEGENDARY' };
+    case 50: return { wave: 50, gems: 300, shards: 1, rarity: 'MYTHIC' };
     default: return null;
   }
 }
-export const milestoneText = (m: WaveMilestone): string => `${m.crystals} Aether Crystals + ${m.gems} gems + ${m.shards} ${m.rarity.charAt(0) + m.rarity.slice(1).toLowerCase()} shard${m.shards > 1 ? 's' : ''}`;
+export const milestoneText = (m: WaveMilestone): string => `${m.gems} gems + ${m.shards} ${m.rarity.charAt(0) + m.rarity.slice(1).toLowerCase()} shard${m.shards > 1 ? 's' : ''}`;

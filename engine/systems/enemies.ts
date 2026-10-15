@@ -1309,8 +1309,12 @@ function updateEnemy(e: Enemy): void {
   desiredYaw = Math.atan2(tdx, tdz);
   if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)
     const o = barOwner >= 0 ? world.enemies[barOwner] : null;
-    if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) barOwner = e.id;
-    if (barOwner === e.id) { const b = world.boss; if (!e.boss) b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; }
+    if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) { barOwner = e.id; world.boss.shieldMax = 0; }
+    if (barOwner === e.id) {
+      const b = world.boss; if (!e.boss) b.active = true; b.hp = e.hp; b.maxHp = e.maxHp;
+      b.shield = e.shield > 1 ? e.shield : 0;   // (shield 1 = the invincible ward: no bar)
+      if (b.shield <= 0) b.shieldMax = 0; else if (b.shield > b.shieldMax) b.shieldMax = b.shield;
+    }
   }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still

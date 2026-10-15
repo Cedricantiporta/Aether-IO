@@ -238,6 +238,7 @@ export function damageEnemiesInRadius(
 
 /** Instant XP + coalesced "+N XP" floating text. */
 export function grantKillXp(xp: number, pos: Vector3): void {
+  if (towerMode()) return;   // (no EXP in the tower modes: no floating +xp either)
   const st = useGameStore.getState();
   st.addExperience(xp);
   world.run.xpEarned += xp;

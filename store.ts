@@ -897,6 +897,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     addExperience: (amount) => {
+      if (runInfo.mode === 'TOWER' && get().status !== GameStatus.MENU) return;   // no EXP in the Endless Tower / Daily Trial / Endless Waves (owner)
       let { experience, experienceToNextLevel, level } = get();
       const gain = amount * (1 + get().stats.xpBonus);
       experience += gain;
@@ -1213,9 +1214,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ progress });
       if (grant && m) {
         const now = get();
-        set({ gems: now.gems + m.gems, crystals: (now.crystals ?? 0) + m.crystals, materials: { ...now.materials, [m.rarity]: now.materials[m.rarity] + m.shards } });
+        set({ gems: now.gems + m.gems, materials: { ...now.materials, [m.rarity]: now.materials[m.rarity] + m.shards } });
         notify(`Endless Waves: wave ${wave} milestone reward!`, '#ffd24a', 'BOSS');
-        feedReward({ gems: m.gems, crystals: m.crystals, shards: m.shards, shardRarity: m.rarity });
+        feedReward({ gems: m.gems, shards: m.shards, shardRarity: m.rarity });
       }
       return wave > best;
     },

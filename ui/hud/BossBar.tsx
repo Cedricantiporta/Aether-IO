@@ -9,6 +9,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   const root = useRef<HTMLDivElement>(null);
   const hp = useRef<HTMLDivElement>(null);
   const trail = useRef<HTMLDivElement>(null);
+  const shRow = useRef<HTMLDivElement>(null), shFill = useRef<HTMLDivElement>(null);
   const name = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLDivElement>(null);
   const val = useRef<HTMLSpanElement>(null);
@@ -40,6 +41,11 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
       const y = b.onScreen ? Math.min(H - 40, Math.max(r.offsetHeight + 150, b.sy)) : r.offsetHeight + 150;
       r.style.transform = `translate(${(x - hw).toFixed(1)}px, ${(y - r.offsetHeight).toFixed(1)}px)`;
       r.style.opacity = b.onScreen ? '1' : '0.85';
+    }
+    {   // absorb shield row (light blue, tenths): only for the real boss bar, never an illusion's
+      const fsh = !I && B.shield > 0 && B.shieldMax > 0 ? Math.min(1, B.shield / B.shieldMax) : 0;
+      if (shRow.current) shRow.current.style.visibility = fsh > 0 ? 'visible' : 'hidden';
+      if (shFill.current && fsh > 0) shFill.current.style.width = `${fsh * 100}%`;
     }
     const f = Math.max(0, Math.min(1, b.hp / Math.max(1, b.maxHp)));
     const fs = f.toFixed(4);
@@ -77,6 +83,10 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
       <div className="text-center leading-none mb-1">
         <div ref={name} className="rpg-title text-base" style={{ color: '#ffb3aa' }} />
         <div ref={title} className="rpg-label !text-[.65rem] mt-1" style={{ color: '#d9a8a0' }} />
+      </div>
+      <div ref={shRow} className="relative mx-auto mb-[3px]" data-testid="boss-shield" style={{ visibility: 'hidden', width: 'calc(100% - 2.8rem)', height: '.45rem', background: '#0a1420', border: '1px solid #0d0703', boxShadow: '0 0 0 1px #3a6a8a' }}>
+        <div ref={shFill} className="absolute inset-y-0 left-0" style={{ width: '0%', background: 'linear-gradient(180deg,#d4f3ff,#8fdcff 50%,#3d9ccc)', boxShadow: '0 0 6px #8fdcff' }} />
+        <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(10,30,50,.85) calc(10% - 2px) 10%)' }} />
       </div>
       <div className="relative flex items-center">
         <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginRight: '-.6rem' }}><Skull size={14} /></div>
