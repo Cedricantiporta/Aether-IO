@@ -672,16 +672,11 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
     mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
-  const label = useMemo(() => labelMaterial('Town Gate', '#f1e2b8', { size: 60, plate: 'plate' }), []);
-  const label2 = useMemo(() => labelMaterial('TOWN GATE', '#f1e2b8', { size: 64, plate: 'plate' }), []);
-  const label3 = useMemo(() => labelMaterial('Set out here', '#f1e2b8', { size: 40, plate: 'mini' }), []);
-  const signLabel = useMemo(() => labelMaterial('Town Gate', '#f1e2b8', { size: 44, plate: 'mini' }), []);
-  const ring = useRef<Mesh>(null!), sprite = useRef<Sprite>(null!), beam = useRef<Mesh>(null!);
+  const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     mats.ring.opacity = 0.22 + 0.16 * Math.sin(t * 2.2);
     mats.beam.opacity = 0.1 + 0.05 * Math.sin(t * 1.7);
-    if (sprite.current) sprite.current.position.y = 11.2;
     // the light column + ground ring stand where the main quest continues (an NPC, a shop, the castle door), else on
     // the gate; hidden while the step is done from the bag
     const ms = storyTarget(), hide = !ms && !!STORY[useGameStore.getState().story.step];
@@ -706,9 +701,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
         </React.Fragment>
       ))}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
-      <sprite ref={sprite} material={label.mat} position={[GATE.x, 11.2, GATE.z]} scale={[label.aspect * 1.2, 1.2, 1]} />
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>
-      {SIGNS.map((sg, i) => <sprite key={i} material={signLabel.mat} position={[sg.x, 4.9, sg.z + 0.3]} scale={[signLabel.aspect * 0.6, 0.6, 1]} />)}
     </group>
   );
 }

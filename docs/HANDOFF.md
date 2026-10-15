@@ -91,7 +91,11 @@ needed to see the new game).
 - **Barbarian basic axe:** boomerang pierces up to 6 enemies on the way out and 6 more on the way back (a brief
   non-piercing version was reverted on request).
 - **Mana regen:** every class has a base 1.0-1.5/s (Archer 1.2, Wizard 1.5, Necro 1.4, Knight/Barbarian 1.0), and the old
-  hidden x0.5 in player.ts is gone, so the Character sheet's "Mana regen /s" is now the real rate., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+  hidden x0.5 in player.ts is gone, so the Character sheet's "Mana regen /s" is now the real rate.
+- **Town labels:** shop names are small tags over the shopkeeper (Town.tsx, follow the NPC to the door when the shop
+  closes, depthTest off so roofs don't hide them); the Town Gate has no floating label/sign labels anymore.
+- **Minimap:** rectangular 284x208 css px (Minimap.tsx W/H; content drawn in a centred square frame, so the sides show
+  extra map), shop icons = dark badge with the shop colour rim + emoji glyph (`SHOP_ICON`)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)

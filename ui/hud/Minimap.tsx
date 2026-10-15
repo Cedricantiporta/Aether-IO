@@ -9,29 +9,31 @@ import { useRaf } from '../hooks/useRaf';
 
 const mmPt: [number, number] = [0, 0];
 
-const SIZE = 196; // css px
+const W = 284, H = 208; // css px (rectangular)
+const SHOP_ICON: Record<string, string> = { SUPPLIES: '🧪', BLACKSMITH: '⚒', PETS: '🐾', ARMORY: '🛡', FORTUNE: '🔮', WAREHOUSE: '📦', TECH: '⚙', BREWER: '⚗' };
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
-/** Circular minimap — drawn every frame from the world, no React state. */
+/** Rectangular minimap — drawn every frame from the world, no React state. */
 export const Minimap: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   useRaf(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d'); if (!ctx) return;
-    const px = SIZE * DPR, cx = px / 2, R = cx - 3 * DPR;
+    const pw = W * DPR, ph = H * DPR, cx = ph / 2, R = cx - 3 * DPR, ox = (pw - ph) / 2;   // square frame of side ph, centred in the wider canvas
     const room = world.room.active;
     const rad = room ? shape.maxR : ARENA_RADIUS;
     // zoomed in around the hero (not the whole map): about 30 m of radius in view
     const view = room ? Math.min(rad + 4, 28) : 34;
     const k = R / view;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, px, px);
+    ctx.clearRect(0, 0, pw, ph);
     ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cx, R, 0, Math.PI * 2); ctx.clip();
+    ctx.translate(ox, 0);
+    ctx.beginPath(); ctx.rect(-ox, 0, pw, ph); ctx.clip();
     // parchment-dark map ground
-    const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, R);
-    g.addColorStop(0, '#2f4a2a'); g.addColorStop(.8, '#223a22'); g.addColorStop(1, '#14231a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
+    const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, pw * 0.6);
+    g.addColorStop(0, '#2f4a2a'); g.addColorStop(.7, '#223a22'); g.addColorStop(1, '#14231a');
+    ctx.fillStyle = g; ctx.fillRect(-ox, 0, pw, ph);
     ctx.translate(-world.player.pos.x * k, -world.player.pos.z * k);   // world content follows the hero (hero at the centre)
     // stage liquids (lakes, river / lava / chasm band) and their bridges
     if (room && (feat.river || feat.nLakes > 0)) {
@@ -91,8 +93,10 @@ export const Minimap: React.FC = () => {
     for (let si = 0; !room && si < SHOP_POSITIONS.length; si++) {
       const s = SHOP_POSITIONS[si];
       const x = cx + s.position[0] * k, y = cx + s.position[2] * k;
-      ctx.fillStyle = s.color; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
-      ctx.beginPath(); ctx.rect(x - 3.5 * DPR, y - 3.5 * DPR, 7 * DPR, 7 * DPR); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(13,7,3,.85)'; ctx.strokeStyle = s.color; ctx.lineWidth = 1.5 * DPR;
+      ctx.beginPath(); ctx.arc(x, y, 9 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = s.color; ctx.font = `${11 * DPR}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(SHOP_ICON[s.type] ?? '•', x, y + 0.5 * DPR);
     }
     // village: quest board / altar / trainer (small gold-violet-orange dots) and the town gate (gold arrow, easy to spot)
     if (!room) {
@@ -132,9 +136,9 @@ export const Minimap: React.FC = () => {
     ctx.restore();
   });
   return (
-    <div className="pe relative" style={{ width: `${SIZE / 14.4}rem`, height: `${SIZE / 14.4}rem` }}>
+    <div className="pe relative" style={{ width: `${W / 14.4}rem`, height: `${H / 14.4}rem` }}>
       <div className="absolute mm-ring" />
-      <canvas ref={ref} width={SIZE * DPR} height={SIZE * DPR} className="absolute inset-0 w-full h-full rounded-full" />
+      <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full" style={{ borderRadius: 6 }} />
       <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-.85rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
     </div>
   );

@@ -453,7 +453,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     ring2: new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
-  const label = useMemo(() => labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate' }), [type, color]);
+  const label = useMemo(() => { const l = labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate' }); l.mat.depthTest = false; return l; }, [type, color]);   // drawn over roofs
   const near = useRef(false);
   const closedK = useRef(0);
   const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
@@ -482,7 +482,11 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
     if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
-    if (titleRef.current) titleRef.current.position.y = 9.4; void pz;
+    if (titleRef.current) {   // the name tag rides on the shopkeeper (who walks to the door and in when the shop closes)
+      const e = smooth(closedK.current), c = NPC[type].pos, dr = DOOR[type];
+      titleRef.current.position.set(c[0] + (dr[0] - c[0]) * e, 3.5, c[1] + (dr[1] - c[1]) * e);
+      titleRef.current.visible = closedK.current < 0.985;
+    }
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
     if (liquid.current) { const k = 1.4 + Math.sin(t * 4) * 0.35; mats.liquid.color.setRGB(0.5 * k, 1.8 * k, 0.6 * k); liquid.current.scale.y = 1 + Math.sin(t * 6) * 0.15; }
     // ambient emitters only when nearby (and not paused)
@@ -509,7 +513,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   });
 
   const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : color); };
-  const labelW = label.aspect * 1.0;
+  const labelW = label.aspect * 0.55;   // small name tag over the shopkeeper's head
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
@@ -532,7 +536,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
           </mesh>
         ))}
       </group>
-      <sprite ref={titleRef} material={label.mat} position={[0, 9.4, 1]} scale={[labelW, 1.0, 1]} />
+      <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.5, NPC[type].pos[1]]} scale={[labelW, 0.55, 1]} />
       <Shopkeeper cfg={NPC[type]} door={DOOR[type]} near={near} closed={closedK} onOpen={open} />
       <mesh position={[0, 2.8, 0.2]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <boxGeometry args={[7, 5.6, 6]} />
