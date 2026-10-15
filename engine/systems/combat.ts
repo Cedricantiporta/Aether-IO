@@ -558,7 +558,14 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     triggerBarrier(barrier);
     return;
   }
-  p.hp -= reduced;
+  // Aegis (card): the shield soaks the hit first; only what breaks through reaches health
+  let toHp = reduced;
+  if (p.aegis > 0) {
+    const soak = Math.min(p.aegis, toHp);
+    p.aegis -= soak; toHp -= soak;
+    if (p.aegis <= 0) { p.aegis = 0; p.aegisMax = 0; events.emit('floatText', { pos: p.pos, text: 'SHIELD BROKEN', color: 0x9fdcff, scale: 0.9, dy: 2.6 }); events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0x9fdcff }); }
+  }
+  p.hp -= toHp;
   if (!isDot) p.anim.hurtT = 1;
   if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
 

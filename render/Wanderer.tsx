@@ -12,7 +12,7 @@ import { angleLerp } from './util';
 
 const MARK = labelMaterial('!', '#ffd24a', { size: 120 });
 
-/** Aelia, Keeper of the Font: the Mage model with no hat, a plain white dress and long black hair. Returns an undo. */
+/** Aelia, Keeper of the Font: the Mage model with no hat, a plain white dress and long blonde hair. Returns an undo. */
 function dressKeeper(meshes: Mesh[], root: Object3D): () => void {
   const undo: (() => void)[] = [];
   for (const m of meshes) {
@@ -23,10 +23,10 @@ function dressKeeper(meshes: Mesh[], root: Object3D): () => void {
       undo.push(() => { mat.map = map; mat.color.copy(col); mat.needsUpdate = true; });
     }
   }
-  // long black hair on the head bone: a cap and a fall down the back
+  // long blonde hair on the head bone: a cap and a fall down the back
   const head = root.getObjectByName('head') || root.getObjectByName('Head');
   if (head) {
-    const hairMat = new MeshStandardMaterial({ color: '#1e1a18', roughness: 0.55 });
+    const hairMat = new MeshStandardMaterial({ color: '#f2d27a', roughness: 0.55 });
     const cap = new Mesh(new SphereGeometry(0.4, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
     cap.position.set(0, 0.42, -0.03); cap.scale.set(1.12, 1, 1.12);
     const fall = new Mesh(new CylinderGeometry(0.36, 0.3, 0.75, 14, 1, true, Math.PI * 0.6, Math.PI * 0.8), hairMat);

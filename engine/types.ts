@@ -344,6 +344,8 @@ export interface PlayerRuntime {
   whirlT: number;        // barbarian Whirlwind
   air: number;           // height above ground (leap arc), render only
 
+  /** Aegis card: a damage-absorbing shield (hp) that takes hits before health; aegisMax = its size when granted. */
+  aegis: number; aegisMax: number;
   shieldCharges: number;
   maxShieldCharges: number;
   shieldCd: number;

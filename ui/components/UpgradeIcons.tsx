@@ -118,6 +118,7 @@ const ART: Record<UpgradeType, () => React.ReactNode> = {
   SKILL_FREEZING: Snow, SKILL_FREEZE_SPELL: Snow, SKILL_GRAVITY: BlackHole, SKILL_STAMP: Hammer,
   SKILL_RAGE: () => <g>{SwordA(-40)}{SwordA(40)}</g>, SKILL_STORM: Tornado,
   SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star, SKILL_PIERCE_SHOT: Arrow,
+  ULT_FILL: () => Spark(32, 32, 28, 'gold'), RESTORE: () => <g>{Heart('red')}{Spark(48, 14, 8)}</g>, AEGIS: () => Shield('gold'),
   SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star, SKILL_GRAVECALL: Star, SKILL_SOULHARVEST: Star, SKILL_BONEARMOR: () => Shield('steel'),
 };
 

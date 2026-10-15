@@ -903,6 +903,9 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'CRIT_RATE': base.critRate += upgrade.value; break;
           case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
           case 'MULTISHOT': base.multishot += upgrade.value; break;
+          case 'ULT_FILL': world.player.ult = Math.max(world.player.ult, Math.min(100, upgrade.value)); break;
+          case 'RESTORE': world.player.hp = state.stats.maxHealth; world.player.mana = state.stats.maxMana; events.emit('heal', { pos: world.player.pos, amount: state.stats.maxHealth }); break;
+          case 'AEGIS': { const sh = state.stats.maxHealth * upgrade.value; world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
           case 'DASH_COOLDOWN': base.dodge = (base.dodge || 0) + 0.04; break;   // (dashes are a flat 4 s now: Shadow Step gives dodge)
           default: break;
         }

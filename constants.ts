@@ -12,7 +12,7 @@ export const INVENTORY_LIMIT = 50;
 /** Town warehouse (storage house beside the blacksmith): permanent item storage, twice the bag. */
 export const WAREHOUSE_LIMIT = 100;
 export const POTION_STACK_LIMIT = 50;
-export const POTION_COOLDOWN = 10; // seconds, shared by engine + HUD
+export const POTION_COOLDOWN = 15; // seconds, shared by engine + HUD
 
 /** Shard conversion: 5 of a rarity -> 1 of the next; 1 -> 3 of the rarity below. */
 export const MATERIAL_COMBINE_COST = 5;
@@ -163,6 +163,10 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_fr', type: 'FIRE_RATE', name: 'Haste', description: 'Atk Speed Up', rarity: 'RARE', value: 0.1 },
   { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: '+4% Dodge', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
+  // instant cards (applied on pick)
+  { id: 'u_ult', type: 'ULT_FILL', name: 'Surge of Fury', description: 'Fill your Ultimate meter', rarity: 'RARE', value: 100 },
+  { id: 'u_restore', type: 'RESTORE', name: 'Second Breath', description: 'Restore all HP and Mana', rarity: 'RARE', value: 1 },
+  { id: 'u_aegis', type: 'AEGIS', name: 'Aegis', description: 'Shield = 50% max HP (absorbs damage until broken)', rarity: 'EPIC', value: 0.5 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   
   { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Class Dash Level Up', rarity: 'RARE', value: 1 }, 

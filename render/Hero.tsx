@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   AdditiveBlending, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
-  MeshStandardMaterial, SphereGeometry, DoubleSide,
+  MeshStandardMaterial, SphereGeometry, DoubleSide, CanvasTexture, SRGBColorSpace, ShaderMaterial, FrontSide,
 } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
@@ -448,7 +448,16 @@ function HeroBars() {
   const nameLab = useMemo(() => labelMaterial(activeChar()?.name || hero.charAt(0) + hero.slice(1).toLowerCase(), '#f4ead2', { size: 46 }), [hero]);
   const titleLab = useMemo(() => (title ? labelMaterial(`« ${title} »`, '#ffd24a', { size: 38 }) : null), [title]);
   useEffect(() => { for (const l of [nameLab, titleLab]) if (l) { l.mat.depthTest = false; l.mat.depthWrite = false; } }, [nameLab, titleLab]);
-  const g = useRef<Group>(null!), hp = useRef<Mesh>(null!), mp = useRef<Mesh>(null!);
+  const g = useRef<Group>(null!), hp = useRef<Mesh>(null!), mp = useRef<Mesh>(null!), sh = useRef<Mesh>(null!), shG = useRef<Group>(null!);
+  // Aegis shield bar: light blue, with tick lines splitting it into segments (one per ~10% of the shield)
+  const ticks = useMemo(() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 16;
+    const x = c.getContext('2d')!;
+    x.fillStyle = 'rgba(10,30,50,0.85)';
+    for (let i = 1; i < 10; i++) x.fillRect(Math.round((i / 10) * 256) - 1, 0, 2, 16);
+    const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace;
+    return t;
+  }, []);
   useFrame(() => {
     const st = useGameStore.getState();
     const show = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || st.status === GameStatus.LEVEL_UP;
@@ -462,6 +471,9 @@ function HeroBars() {
     hp.current.scale.x = Math.max(0.001, fh); hp.current.position.x = -(1 - fh) * 1.1;
     mp.current.scale.x = Math.max(0.001, fm); mp.current.position.x = -(1 - fm) * 1.1;
     (hp.current.material as MeshBasicMaterial).color.setRGB(fh < 0.3 ? 1.6 : 1.1, fh < 0.3 ? 0.2 : 0.18, 0.2);
+    const fs = p.aegisMax > 0 ? clamp(p.aegis / p.aegisMax, 0, 1) : 0;
+    shG.current.visible = fs > 0;
+    if (fs > 0) { sh.current.scale.x = Math.max(0.001, fs); sh.current.position.x = -(1 - fs) * 1.1; }
   });
   const bg = <meshBasicMaterial color="#10141c" transparent opacity={0.7} depthTest={false} depthWrite={false} />;
   return (
@@ -469,10 +481,35 @@ function HeroBars() {
       <mesh position={[0, 0.1, 0]} renderOrder={40}><planeGeometry args={[2.36, 0.46]} />{bg}</mesh>
       <mesh ref={hp} position={[0, 0.2, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.16]} /><meshBasicMaterial color="#e0442f" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
       <mesh ref={mp} position={[0, 0.0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#3b82f6" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
+      <group ref={shG} position={[0, 0.47, 0]} visible={false}>
+        <mesh renderOrder={40}><planeGeometry args={[2.36, 0.2]} />{bg}</mesh>
+        <mesh ref={sh} position={[0, 0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#8fdcff" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
+        <mesh position={[0, 0, 0.02]} renderOrder={42}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial map={ticks} transparent depthTest={false} depthWrite={false} /></mesh>
+      </group>
       <sprite material={nameLab.mat} position={[0, 0.8, 0.02]} scale={[nameLab.aspect * 0.78, 0.78, 1]} renderOrder={42} />
       {titleLab && <sprite material={titleLab.mat} position={[0, 1.38, 0.02]} scale={[titleLab.aspect * 0.6, 0.6, 1]} renderOrder={42} />}
     </group>
   );
+}
+
+/** A transparent light-blue sphere around the hero while the Aegis shield holds (bright rim, see-through middle). */
+function AegisSphere() {
+  const m = useRef<Mesh>(null!);
+  const mat = useMemo(() => new ShaderMaterial({
+    transparent: true, depthWrite: false, side: FrontSide, blending: AdditiveBlending,
+    uniforms: { uA: { value: 1 } },
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform float uA; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(vec3(0.45, 0.85, 1.0) * (0.25 + 1.4 * f), (0.08 + 0.6 * f) * uA); }',
+  }), []);
+  useFrame(({ clock }) => {
+    const p = world.player, on = p.aegis > 0 && p.alive;
+    m.current.visible = on;
+    if (!on) return;
+    m.current.position.set(p.pos.x, 1.1 + (p.air || 0), p.pos.z);
+    m.current.scale.setScalar(1.55 + Math.sin(clock.elapsedTime * 3) * 0.04);
+    mat.uniforms.uA.value = 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1);
+  });
+  return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>;
 }
 
 export function Hero({ q }: { q: QualityCfg }) {
@@ -484,6 +521,7 @@ export function Hero({ q }: { q: QualityCfg }) {
       <EarthWall />
       {cls === 'BARBARIAN' && <AxeSpin />}
       <HeroBars />
+      <AegisSphere />
     </>
   );
 }
