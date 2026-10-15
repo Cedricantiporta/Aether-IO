@@ -31,7 +31,7 @@ const MonsterArt: React.FC<{ m: MonsterEntry; size?: number }> = ({ m, size = 44
     </div>
   );
 };
-const srcName = (k: string) => (k === 'ELITE' ? 'Elites' : ENEMY_DEFS[k as keyof typeof ENEMY_DEFS]?.name ?? k.charAt(0) + k.slice(1).toLowerCase().replace('_', ' '));
+const srcName = (k: string) => (k === 'ELITE' ? 'Elites' : k === 'MALAKAR' ? 'Malakar (final fall, very rare)' : ENEMY_DEFS[k as keyof typeof ENEMY_DEFS]?.name ?? k.charAt(0) + k.slice(1).toLowerCase().replace('_', ' '));
 const byRank = (a: Item, b: Item) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.name.localeCompare(b.name);
 
 export const CodexDialog: React.FC = () => {

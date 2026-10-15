@@ -31,22 +31,60 @@ export interface Recipe {
   rankReq: number;
 }
 
-const SHARD_COST: Record<Rarity, number> = { COMMON: 3, RARE: 4, EPIC: 5, LEGENDARY: 6, MYTHIC: 8 };
-const GOLD_COST: Record<Rarity, number> = { COMMON: 1000, RARE: 4000, EPIC: 15000, LEGENDARY: 50000, MYTHIC: 150000 };   // x10 economy
+const SHARD_COST: Record<Rarity, number> = { COMMON: 3, RARE: 5, EPIC: 7, LEGENDARY: 10, MYTHIC: 15 };
+const GOLD_COST: Record<Rarity, number> = { COMMON: 2000, RARE: 10000, EPIC: 40000, LEGENDARY: 150000, MYTHIC: 600000 };   // x10 economy
 
-/** Primary loot per slot + counts for EPIC / LEGENDARY / MYTHIC (cheap drops need more of them). */
-const SLOT_LOOT: Record<Exclude<CraftSlot, 'weapon'>, { id: string; n: [number, number, number] }> = {
-  helmet:    { id: 'bone_crown',     n: [2, 4, 6] },
-  armor:     { id: 'ogre_tusk',      n: [8, 14, 20] },
-  gloves:    { id: 'volatile_gland', n: [4, 7, 10] },
-  boots:     { id: 'bat_wing',       n: [8, 14, 20] },
-  accessory: { id: 'echo_crystal',   n: [4, 7, 10] },
+/** Monster loot family per slot: [common, rare, epic] drops (weapons: by class). */
+const SLOT_FAMILY: Record<Exclude<CraftSlot, 'weapon'>, [string, string, string]> = {
+  helmet:    ['old_bone', 'cursed_skull', 'bone_crown'],
+  armor:     ['ogre_tusk', 'brute_knuckle', 'war_banner'],
+  gloves:    ['beetle_shell', 'volatile_gland', 'marsh_scale'],
+  boots:     ['bat_wing', 'echo_crystal', 'frost_scale'],
+  accessory: ['slime_gel', 'shimmer_core', 'jelly_heart'],
 };
-const WEAPON_LOOT: Record<HeroClass, string> = { ARCHER: 'goblin_totem', WIZARD: 'forbidden_sigil', BARBARIAN: 'war_banner', KNIGHT: 'war_banner', NECROMANCER: 'forbidden_sigil' };
-/** MYTHIC recipes also need one boss relic. */
-const MYTHIC_RELIC: Record<CraftSlot, string> = {
-  weapon: 'golem_heart', armor: 'golem_heart', gloves: 'golem_heart', helmet: 'phylactery', boots: 'phylactery', accessory: 'phylactery',
+const GOBLIN: [string, string, string] = ['goblin_ear', 'goblin_fang', 'goblin_totem'];
+const CULT: [string, string, string] = ['cultist_rune', 'dark_page', 'forbidden_sigil'];
+const BRUTE: [string, string, string] = ['ogre_tusk', 'brute_knuckle', 'war_banner'];
+const WEAPON_FAMILY: Record<HeroClass, [string, string, string]> = { ARCHER: GOBLIN, WIZARD: CULT, NECROMANCER: CULT, BARBARIAN: BRUTE, KNIGHT: BRUTE };
+/** Legendary boss relic per slot (Legendary recipes), all from the late biomes (owner: Gorath's Heartstone etc. are
+ *  farmable in biome 1, so top-tier gear must not hang on them): Hydra (Coral Isles), Glacius (Frostpeak), Ignar (Ember
+ *  Wastes). Weapons need two different ones. */
+const SLOT_RELIC: Record<CraftSlot, string[]> = {
+  weapon: ['ignar_brand', 'glacius_heart'], helmet: ['hydra_fang'], armor: ['glacius_heart'], gloves: ['ignar_brand'],
+  boots: ['glacius_heart'], accessory: ['hydra_fang'],
 };
+/** Mythic recipes: only the last biome (the Void Herald's shards + his very rare Void Heart) and, for weapons, Malakar's
+ *  Soul Ember on top. */
+export const VOID_HEART = 'void_heart';
+/** The last-boss drop every Mythic weapon needs (dropped only when Malakar falls for good, ~5%: director.ts). */
+export const SOUL_EMBER = 'soul_ember';
+
+/** Material list for one recipe (owner: crafting must be extensive, the top tiers built from very rare boss + deep-mine
+ *  materials, Mythic weapons above all). Weapons need 1.5x the counts of armour pieces. */
+function recipeLoot(slot: CraftSlot, rarity: Rarity, hero: HeroClass): LootNeed[] {
+  const fam = slot === 'weapon' ? WEAPON_FAMILY[hero] : SLOT_FAMILY[slot];
+  const w = slot === 'weapon' ? 1.5 : 1;
+  const n = (x: number) => Math.ceil(x * w);
+  const out: LootNeed[] = [];
+  const add = (id: string, count: number) => { const e = out.find((l) => l.id === id); if (e) e.count += count; else out.push({ id, count }); };
+  switch (rarity) {
+    case 'COMMON': add(fam[0], n(5)); add('ore_nugget', n(2)); break;
+    case 'RARE': add(fam[0], n(10)); add(fam[1], n(4)); add('ore_nugget', n(4)); break;
+    case 'EPIC': add(fam[1], n(10)); add(fam[2], n(4)); add('elite_trophy', n(3)); add('raw_gem', n(3)); break;
+    case 'LEGENDARY':
+      add(fam[2], n(10)); add('champion_medal', n(4)); add(slot === 'weapon' ? 'mithril_ore' : 'deep_geode', n(4));
+      add(slot === 'weapon' ? 'adamant_ore' : 'starfire_crystal', 2);
+      for (const r of SLOT_RELIC[slot]) add(r, 1);
+      break;
+    case 'MYTHIC':
+      add(fam[2], n(20)); add('champion_medal', n(10)); add('adamant_ore', n(5)); add('starfire_crystal', n(5));
+      add('void_shard', n(3)); add('ignar_brand', 2); add('abyssal_diamond', slot === 'weapon' ? 3 : 2);
+      add(VOID_HEART, slot === 'weapon' ? 2 : 1);
+      if (slot === 'weapon') add(SOUL_EMBER, 1);
+      break;
+  }
+  return out;
+}
 
 export const SLOT_LABEL: Record<CraftSlot, string> = {
   weapon: 'Weapon', helmet: 'Helmet', armor: 'Armor', gloves: 'Gloves', boots: 'Boots', accessory: 'Accessory',
@@ -58,14 +96,9 @@ for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as
   for (const slot of CRAFT_SLOTS) {
     for (let ri = 0; ri < CRAFT_RARITIES.length; ri++) {
       const rarity = CRAFT_RARITIES[ri];
-      const loot: LootNeed[] = [];
-      if (ri >= 2) {
-        if (slot === 'weapon') loot.push({ id: WEAPON_LOOT[hero], count: [2, 4, 6][ri - 2] });
-        else loot.push({ id: SLOT_LOOT[slot].id, count: SLOT_LOOT[slot].n[ri - 2] });
-        if (rarity === 'MYTHIC') loot.push({ id: MYTHIC_RELIC[slot], count: 1 });
-      }
+      const loot = recipeLoot(slot, rarity, hero);
       const key = `${hero}:${slot}:${rarity}`;
-      RECIPES[key] = { key, slot, rarity, hero, shards: SHARD_COST[rarity], gold: GOLD_COST[rarity], loot, rankReq: RANK_REQ[rarity] };
+      RECIPES[key] = { key, slot, rarity, hero, shards: SHARD_COST[rarity], gold: GOLD_COST[rarity] * (slot === 'weapon' ? 1.5 : 1), loot, rankReq: RANK_REQ[rarity] };
     }
   }
 }
@@ -154,6 +187,15 @@ export const applyPlus = (item: Item, plus: number): void => {
   });
 };
 
+// ------------------------------------------------------------------ upgrade --
+/** Blacksmith upgrade odds/costs by the item's level (level 1 == +0). Owner rules: every + tier fails 10% more, higher +
+ *  needs many more cores, gold x1.8, and going past +7 can shatter the item on a failure. */
+export const upgradeChanceAt = (level: number): number => { const plus = level - 1; return plus <= 0 ? 1 : Math.max(0.05, 0.9 - plus * 0.1); };
+export const upgradeCoresAt = (level: number): number => Math.ceil((level * level) / 3);
+export const upgradeGoldFor = (price: number, level: number): number => Math.floor(price * level * 0.5 * 1.8);
+/** Chance a FAILED upgrade towards +8 or more destroys the item (target +8: 25%, +9: 40%). */
+export const upgradeBreakAt = (level: number): number => (level >= 8 ? 0.25 + (level - 8) * 0.15 : 0);
+
 const roundStat = (v: number): number => (Math.abs(v) >= 10 ? Math.round(v) : parseFloat(v.toFixed(2)));
 
 /** Min/max a single stat can roll at +0 (before the +1/+2 bonus). */
@@ -186,10 +228,10 @@ export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
 export const RECYCLE_BASE: Record<Rarity, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
 export const RECYCLE_CORE_REFUND = 0.3;
 
-/** Cores spent upgrading an item from +0 to +plus (level L -> L+1 costs ceil(L/2)). */
+/** Cores spent upgrading an item from +0 to +plus (level L -> L+1 costs upgradeCoresAt(L)). */
 export const coresSpent = (item: Item): number => {
   let n = 0;
-  for (let l = 1; l < item.level; l++) n += Math.ceil(l / 2);
+  for (let l = 1; l < item.level; l++) n += upgradeCoresAt(l);
   return n;
 };
 export interface RecycleYield { shards: number; cores: number }
@@ -209,5 +251,5 @@ export { MATERIAL_DOWNGRADE_YIELD };
 export function lootCraftUse(id: string): string {
   const slots = new Set<string>();
   for (const r of Object.values(RECIPES)) if (r.loot.some((l) => l.id === id)) slots.add(r.slot === 'weapon' ? 'Weapon' : SLOT_LABEL[r.slot]);
-  return slots.size ? `Crafting (Blacksmith): ${[...slots].join(', ')} recipes, Epic and above` : '';
+  return slots.size ? `Crafting (Blacksmith): ${[...slots].join(', ')} recipes` : '';
 }

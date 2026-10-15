@@ -33,7 +33,7 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, plusMul, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
+import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
@@ -1679,12 +1679,12 @@ export const useGameStore = create<GameState>()((set, get) => {
       const free = questFree(s, 'forge');   // tutorial "Temper the Steel": the smith's first upgrade is on the house
       const coreIndex = s.inventory.findIndex((i) => i.type === 'CORE');
       const core = coreIndex >= 0 ? s.inventory[coreIndex] : null;
-      const requiredCores = free ? 0 : Math.ceil(item.level / 2);
-      const goldCost = free ? 0 : Math.floor(item.price * item.level * 0.5);
+      const requiredCores = free ? 0 : upgradeCoresAt(item.level);
+      const goldCost = free ? 0 : upgradeGoldFor(item.price, item.level);
       if (s.gold < goldCost) return fail('Not enough Gold!');
       if (requiredCores > 0 && (!core || (core.quantity || 1) < requiredCores)) return fail(`Need ${requiredCores} Cores`);
 
-      const chance = free ? 100 : item.level >= 3 ? Math.max(10, 100 - (item.level - 2) * 10) : 100;
+      const chance = free ? 100 : upgradeChanceAt(item.level) * 100;
       const success = Math.random() * 100 < chance;
 
       const inv = s.inventory.slice();
@@ -1694,6 +1694,13 @@ export const useGameStore = create<GameState>()((set, get) => {
         else inv.splice(coreIndex, 1);
       }
 
+      if (!success && !free && Math.random() < upgradeBreakAt(item.level)) {   // past +7 a failure can shatter the item
+        const equipment = { ...s.equipment } as Equipment;
+        for (const sl of SLOTS) if (equipment[sl]?.id === item.id) equipment[sl] = null;
+        const msg = `${item.name} shattered!`;
+        set({ gold: s.gold - goldCost, inventory: inv.filter((i) => i.id !== item.id), equipment, stats: calc(s.baseStats, equipment), actionResult: { type: 'UPGRADE', success: false, message: msg } });
+        return { success: false, msg, newItem: item };
+      }
       if (!success) {
         set({ gold: s.gold - goldCost, inventory: inv, actionResult: { type: 'UPGRADE', success: false, message: 'Upgrade Failed...' } });
         return { success: false, msg: 'Upgrade Failed...', newItem: item };

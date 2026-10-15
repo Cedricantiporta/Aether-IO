@@ -112,7 +112,7 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           {/* materials + rates + craft */}
           <div className="ws-side">
             <div className="ws-sec">Materials</div>
-            <div className="ws-mats">
+            <div className="ws-mats rpg-scroll">
               <Mat art={<ItemArt item={shardItem(rarity, 1)} size="100%" />} name={`${RNAME[rarity]} Shard`} have={materials[rarity]} need={recipe.shards * q} />
               <Mat art={<CoinGlyph size={30} />} name="Gold" have={gold} need={recipe.gold * q} />
               {recipe.loot.map((l) => <Mat key={l.id} art={<ItemArt item={lootItem(l.id)} size="100%" />} name={LOOT_BY_ID[l.id].name} have={lootOwned(inventory, l.id)} need={l.count * q} />)}

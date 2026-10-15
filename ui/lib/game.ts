@@ -1,5 +1,6 @@
 import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
+import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt } from '../../crafting';
 
 export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -47,14 +48,11 @@ export const slotOf = (i: Item): 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boo
 export const sellPrice = (i: Item) => (i.type === 'LOOT' || i.type === 'SHARD' ? i.price : Math.floor(i.price * 0.3));
 export const isHighValue = (i: Item) => i.rarity === 'EPIC' || i.rarity === 'LEGENDARY' || i.rarity === 'MYTHIC' || i.level >= 5;
 
-/** Upgrade chance: 100% up to +2, then -10% per level (min 10%). item.level 1 == +0 */
-export function upgradeChance(item: Item): number {
-  const plus = item.level - 1;
-  if (plus < 2) return 1;
-  return Math.max(0.1, 1 - (plus - 1) * 0.1);
-}
-export const upgradeGoldCost = (i: Item) => Math.floor(i.price * i.level * 0.5);
-export const upgradeCoreCost = (i: Item) => Math.ceil(i.level / 2);
+/** Upgrade odds / costs / shatter chance: crafting.ts (shared with the store). */
+export const upgradeChance = (item: Item): number => upgradeChanceAt(item.level);
+export const upgradeGoldCost = (i: Item) => upgradeGoldFor(i.price, i.level);
+export const upgradeCoreCost = (i: Item) => upgradeCoresAt(i.level);
+export const upgradeBreakChance = (i: Item) => upgradeBreakAt(i.level);
 export const MAX_ITEM_LEVEL = 10;
 export function upgradedStats(i: Item): Partial<PlayerStats> {
   const out: Partial<PlayerStats> = {};

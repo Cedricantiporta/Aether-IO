@@ -15,7 +15,7 @@ import { AnvilGlyph } from '../../components/ItemArt';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { Workshop } from './Workshop';
 import { useUiStore } from '../../uiStore';
-import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
+import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradeBreakChance, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 import { ItemFuse } from './ItemFuse';
 import { ReforgeTab } from './Reforge';
 
@@ -59,7 +59,7 @@ export const Upgrade: React.FC = () => {
   const setSelected = useUiStore((s) => s.setSelectedItem);
   const free = useGameStore((s) => questFree(s, 'forge'));   // tutorial "Temper the Steel": no gold, no cores, sure success
   const [forging, setForging] = useState(false);
-  const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? null) : null;
+  const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? (forging ? selected : null)) : null;   // (a shattered item stays on screen until its cinematic ends)
   const cores = inventory.filter((i) => i.type === 'CORE').reduce((n, i) => n + (i.quantity || 1), 0);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export const Upgrade: React.FC = () => {
   if (!item || !isGear(item)) return <ForgeEmpty free={free} />;
   const maxed = item.level >= MAX_ITEM_LEVEL;
   const goldCost = free ? 0 : upgradeGoldCost(item), coreCost = free ? 0 : upgradeCoreCost(item);
-  const chance = free ? 1 : upgradeChance(item);
+  const chance = free ? 1 : upgradeChance(item), brk = free ? 0 : upgradeBreakChance(item);
   const next = upgradedStats(item);
   const can = !maxed && gold >= goldCost && cores >= coreCost && !forging;
   const forge = () => {
@@ -81,7 +81,7 @@ export const Upgrade: React.FC = () => {
     const it = r.newItem ?? item;
     return r.success
       ? { success: true, item: it, title: 'Great Success!', sub: `${it.name} reached +${it.level - 1}` }
-      : { success: false, item: it, title: 'Enhancement Failed', sub: r.msg };
+      : { success: false, item: it, title: r.msg.endsWith('shattered!') ? 'Shattered!' : 'Enhancement Failed', sub: r.msg };
   };
   const keys = Object.keys(item.stats) as (keyof PlayerStats)[];
 
@@ -106,6 +106,7 @@ export const Upgrade: React.FC = () => {
           <div className="flex justify-between rpg-label !text-[.6rem] mb-1"><span>Success chance</span><span className="rpg-num !text-[.75rem]" style={{ color: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}>{Math.round(chance * 100)}%</span></div>
           <div className="rpg-bar thin" style={{ ['--fill' as any]: chance, ['--bc' as any]: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}><div className="fill" /></div>
         </div>
+        {brk > 0 && !maxed && <div className="w-full text-center text-[.72rem] font-bold" style={{ color: '#f87171' }} data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure)</div>}
         <div className="grid grid-cols-2 gap-2 w-full">
           <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
             <div className="rpg-num" style={{ color: gold >= goldCost ? '#ffe69a' : '#f87171' }}>{goldCost.toLocaleString()}</div></div>

@@ -60,6 +60,7 @@ export const LOOT: LootDef[] = [
   d('ignar_brand', "Ignar's Brand", 'LEGENDARY', 'banner', ['#e8451a', '#ffd070'], 'A glowing warlord sigil. Handle with tongs.', 1.3),
   d('cinder_core', 'Cinder Core', 'EPIC', 'gland', ['#ff5a1a', '#ffe060'], 'The heart of a fire imp, still warm.'),
   d('void_shard', 'Herald Void Shard', 'LEGENDARY', 'crystal', ['#a855f7', '#f0d8ff'], 'Looking at it feels like falling.', 1.3),
+  d('void_heart', 'Heart of the Void', 'MYTHIC', 'heart', ['#6d28d9', '#f0d8ff'], "The Herald's stolen heartbeat. Mythic gear is forged around it.", 1.5),
   d('echo_of_ruin', 'Echo of Ruin', 'EPIC', 'eye', ['#7a3ab0', '#e0c0ff'], 'Replays the last thing it saw.'),
   d('coin_pouch', 'Old Coin Pouch', 'COMMON', 'pouch', ['#9a6a38', '#ffd23a'], 'A few tarnished coins inside.'),
   d('silver_goblet', 'Silver Goblet', 'RARE', 'goblet', ['#dfe6f2', '#8a96ab'], 'Fit for a noble table.', 1.3),
@@ -73,6 +74,7 @@ export const LOOT: LootDef[] = [
   d('mithril_ore', 'Mithril Ore', 'EPIC', 'nugget', ['#9fc8d8', '#f0fbff'], 'Light as a feather, hard as a promise.'),
   d('starfire_crystal', 'Starfire Crystal', 'LEGENDARY', 'crystal', ['#ffc83a', '#fff6c8'], 'Warm to the touch, even in the deepest dark.'),
   d('adamant_ore', 'Adamant Ore', 'LEGENDARY', 'nugget', ['#5a6a7a', '#ffd070'], 'No forge in the valley is hot enough. Yet.'),
+  d('soul_ember', "Malakar's Soul Ember", 'MYTHIC', 'orb', ['#c084fc', '#fff0ff'], 'What was left when the Undying finally died. Every Mythic weapon is forged around one.', 2),
   d('abyssal_diamond', 'Abyssal Diamond', 'MYTHIC', 'crystal', ['#ff3a5a', '#ffe0f0'], 'Pulled from the bottom of the world.'),
   // fish from the lake (engine/systems/fishing.ts); sold to the Fishmonger on the beach (or any shop)
   ...FISH_DEFS(),
@@ -115,7 +117,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
   BOSS_WYRM: ['frost_scale', 'glacius_heart'],
   BOSS_WARLORD: ['cinder_core', 'ignar_brand'],
   BOSS_WARMACH: ['cinder_core', 'ignar_brand'],
-  BOSS_VOID: ['echo_of_ruin', 'void_shard'],
+  BOSS_VOID: ['echo_of_ruin', 'void_shard', 'void_heart'],
   CRATE: ['coin_pouch', 'silver_goblet'],
   BARREL: ['coin_pouch', 'silver_goblet'],
   POT: ['coin_pouch'],
@@ -125,6 +127,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
   CRYSTAL: ['raw_gem', 'echo_crystal'],
   CAVE_DEPTHS: ['deep_geode', 'mithril_ore', 'starfire_crystal', 'adamant_ore', 'abyssal_diamond'],   // (cave veins only, never rolled by rollLoot)
   ORE: ['ore_nugget', 'raw_gem'],
+  MALAKAR: ['soul_ember'],   // (very rare, only when Malakar falls for good: director.ts; never rolled by rollLoot)
 };
 
 /** Chance that a kill / break rolls any loot at all (bosses and elites always do). */

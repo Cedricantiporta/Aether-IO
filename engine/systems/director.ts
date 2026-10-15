@@ -30,6 +30,9 @@ import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
 import { spawnPickup, petCollect, lootPickup } from './pickups';
 import { clearMinions } from './minions';
+import { LOOT_BY_ID, lootItem } from '../../loot';
+import { SOUL_EMBER } from '../../crafting';
+const SOUL_EMBER_CHANCE = 0.05;
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -864,7 +867,11 @@ function onBossCleared(): void {
       events.emit('shake', { amount: 0.8 });
       return;
     }
-    // Malakar falls for good: his last words, then the finale (tickFinale)
+    // Malakar falls for good: his last words, then the finale (tickFinale). Very rarely he leaves his Soul Ember (Mythic weapons)
+    if (Math.random() < SOUL_EMBER_CHANCE) {
+      spawnPickup('ITEM', at(bx, bz).clone(), 0, lootItem(LOOT_BY_ID[SOUL_EMBER]));
+      useGameStore.getState().addNotification("Malakar's Soul Ember! (Mythic weapon material)", '#c084fc', 'ITEM');
+    }
     d.phase = 'BIOME_DONE'; d.phaseT = 0; endingDone = true;
     vacuumT = VACUUM_AFTER; vacuumTick = 0;
     world.run.bossKills = Math.max(world.run.bossKills, 1);
