@@ -6,7 +6,7 @@ import type { Item, Rarity } from './types';
 
 const RAR: Record<Rarity, string> = { COMMON: '#e5e7eb', RARE: '#60a5fa', EPIC: '#c084fc', LEGENDARY: '#fbbf24', MYTHIC: '#f87171' };
 
-export interface FeedReward { gold?: number; gems?: number; items?: Item[]; shards?: number; shardRarity?: Rarity }
+export interface FeedReward { gold?: number; gems?: number; crystals?: number; items?: Item[]; shards?: number; shardRarity?: Rarity }
 
 /** "Received ..." lines shown under the quest tracker for a few seconds after a quest pays out (ui/hud/QuestTracker). */
 export interface QuestToastLine { id: number; text: string; color: string; t: number }
@@ -29,6 +29,7 @@ export function feedReward(r: FeedReward, quest = false): void {
   const add = useGameStore.getState().addNotification;
   if (r.gold) add(`+${Math.round(r.gold).toLocaleString()} Gold`, '#fbd34d', 'ITEM');
   if (r.gems) add(`+${r.gems.toLocaleString()} Gems`, '#5ee0f5', 'ITEM');
+  if (r.crystals) add(`+${r.crystals} Aether Crystal${r.crystals > 1 ? 's' : ''}`, '#b98cff', 'ITEM');
   if (r.shards) { const rr = r.shardRarity ?? 'COMMON'; add(`+${r.shards} ${rr.charAt(0) + rr.slice(1).toLowerCase()} Shard${r.shards > 1 ? 's' : ''}`, RAR[rr], 'ITEM'); }
   for (const it of r.items ?? []) add(`${it.name}${it.quantity && it.quantity > 1 ? ` x${it.quantity}` : ''}`, RAR[it.rarity] ?? '#ffffff', 'ITEM');
 }

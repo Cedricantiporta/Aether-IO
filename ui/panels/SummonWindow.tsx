@@ -20,8 +20,8 @@ import { RARITY_LIGHT } from '../theme';
 const BANNERS = [
   { id: 'GEM', name: 'Gem Altar', sub: 'Premium odds · gems', tone: '#e9b949',
     title: 'Golden Altar', blurb: 'Offer gems for gear and companions with far better odds of Epic, Legendary and Mythic.' },
-  { id: 'SHARD', name: 'Shard Altar', sub: 'Common shards', tone: '#a46bff',
-    title: 'Aether Shard Altar', blurb: 'Feed the altar Common shards from crystals, ore and recycled gear. Standard odds.' },
+  { id: 'SHARD', name: 'Crystal Altar', sub: 'Aether crystals', tone: '#a46bff',
+    title: 'Aether Crystal Altar', blurb: 'Offer Aether Crystals - mined in the deep, won on adventures, dropped by bosses and given by the Gem Altar. Standard odds.' },
   { id: 'SHOP', name: 'Gem Shop', sub: 'Supplies · shards · companions', tone: '#5ee0f5', title: 'Gem Shop', blurb: '' },
   { id: 'TECH', name: 'Tech House', sub: 'Permanent upgrades', tone: '#7dffb0', title: 'Tech House', blurb: '' },
 ] as const;
@@ -30,7 +30,7 @@ const RATE_NAME: Record<string, string> = { COMMON: 'Common', RARE: 'Rare', EPIC
 
 export const SummonWindow: React.FC = () => {
   const gems = useGameStore((s) => s.gems);
-  const shards = useGameStore((s) => s.materials.COMMON);
+  const shards = useGameStore((s) => s.crystals ?? 0);   // (Aether Crystals; the name stays for the altar's id)
   const summon = useGameStore((s) => s.summon);
   const pity = useGameStore((s) => s.summonPity);
   const close = useGameStore((s) => s.closeAllUI);
@@ -60,7 +60,7 @@ export const SummonWindow: React.FC = () => {
           ))}
           <div className="sw-wallet">
             <span><GemGlyph size={14} /> {gems.toLocaleString()} gems</span>
-            <span><Hexagon size={13} color="#c9a8ff" /> {shards.toLocaleString()} common shards</span>
+            <span><Hexagon size={13} color="#c9a8ff" /> {shards.toLocaleString()} Aether Crystals</span>
           </div>
         </div>
         <div className="sw-main">
@@ -119,7 +119,7 @@ export const SummonWindow: React.FC = () => {
           )}
           <div className="sw-foot">
             <button className="sw-rates-btn pe" onClick={() => setRatesOpen(true)} data-testid="summon-rates-btn"><Info size={14} /> Rates</button>
-            <span className="sw-note">{gem ? `10x saves ${SUMMON_COST_1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} shards · get shards from crystals, ore and recycling`}</span>
+            <span className="sw-note">{gem ? `10x saves ${SUMMON_COST_1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} crystals · mine them, win them on adventures and from bosses`}</span>
             <button className="sw-btn" disabled={have < c1} onClick={() => go(1)} data-testid="summon-1">
               Summon x1 <span>{free1 ? 'FREE' : <><Cur size={14} />{c1}</>}</span>
             </button>

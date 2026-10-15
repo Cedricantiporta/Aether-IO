@@ -112,7 +112,7 @@ export const SummonReveal: React.FC = () => {
   const set = useUiStore((s) => s.setSummonResults);
   const summon = useGameStore((s) => s.summon);
   const gems = useGameStore((s) => s.gems);
-  const shards = useGameStore((s) => s.materials.COMMON);
+  const shards = useGameStore((s) => s.crystals ?? 0);
   const [round, setRound] = useState(0);
   const [phase, setPhase] = useState<'ritual' | 'cards'>('ritual');
   const [flipped, setFlipped] = useState<boolean[]>([]);

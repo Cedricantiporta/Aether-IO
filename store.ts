@@ -153,9 +153,9 @@ export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.75,
 /** Gem altar (gold): premium odds. */
 export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
 export const GEM_SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 3, LEGENDARY: 1, MYTHIC: 1 };
-/** Shard summons are paid with Common shards. */
-export const SHARD_COST_1 = 100;
-export const SHARD_COST_10 = 900;
+/** Crystal Altar (was the Shard Altar: owner - summoning with Common shards made no sense): Aether Crystals per pull. */
+export const SHARD_COST_1 = 10;
+export const SHARD_COST_10 = 90;
 /** Max copies of a rarity a single summon (1x or 10x) can yield; extra rolls are downgraded to RARE. */
 /** Gem cost of a single summon and of a 10x summon. */
 /** Summon pity: every PITY_LEGEND-th draw on an altar is a Legendary; every PITY_MYTHIC-th is 80% Legendary / 20% Mythic. */
@@ -382,7 +382,7 @@ const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => 
 // -------------------------------------------------------------- persistence --
 interface Profile {
   v: number;
-  gold: number; gems: number;
+  gold: number; gems: number; crystals?: number;
   inventory: Item[]; equipment: Equipment; materials: Record<Rarity, number>; maxInventorySlots: number;
   warehouse?: Item[]; warehouseGold?: number;
   progress?: RunProgress;   // ending / ascension / endless tower records
@@ -438,7 +438,7 @@ const isStarterId = (id: string | undefined): boolean => !!id && id.startsWith('
 /** A brand-new profile with the welcome gift applied (welcomeGiftClaimed = true). */
 const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile => ({
   v: PROFILE_VERSION,
-  gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems,
+  gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems, crystals: 20,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
   heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
@@ -475,7 +475,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             gift: false,
             profile: {
               v: PROFILE_VERSION,
-              gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems),
+              gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems), crystals: num(p.crystals, 20),
               inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
@@ -529,7 +529,7 @@ const writeProfile = (s: GameState): void => {
   try {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
-      v: PROFILE_VERSION, gold: s.gold, gems: s.gems, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
+      v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, gold10: true,
@@ -685,6 +685,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     shopSales: rollSales(),
     gold: profile.gold,
     gems: profile.gems,
+    crystals: profile.crystals ?? 20,
     inventory: startLoadout.inventory,
     equipment: startLoadout.equipment,
     materials: profile.materials,
@@ -811,7 +812,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       try { if (typeof localStorage !== 'undefined') localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
       const f = freshProfile(get().settings);
       set({
-        gold: f.gold, gems: f.gems, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
+        gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
@@ -866,6 +867,12 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ----------------------------------------------------- progression --
     addGold: (n) => set((s) => ({ gold: s.gold + n })),
     addGems: (n) => set((s) => ({ gems: s.gems + n })),
+    addCrystals: (n, at) => {
+      if (n <= 0) return;
+      set((s) => ({ crystals: (s.crystals ?? 0) + n }));
+      if (at) events.emit('floatText', { pos: world.player.pos.clone().set(at.x, 0, at.z), text: `+${n} Aether Crystal${n > 1 ? 's' : ''}`, color: 0xb98cff, scale: 0.95, dy: 2.4 });
+      feedReward({ crystals: n });
+    },
 
     discover: (tab, keys) => {
       const cur = get().discovered;
@@ -1780,7 +1787,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const cost = gem && n === 1 && questFree(s, 'summon') ? 0   // the tutorial's first summon is on the house
         : gem ? (n === 10 ? SUMMON_COST_10 : n * SUMMON_COST_1) : (n === 10 ? SHARD_COST_10 : n * SHARD_COST_1);
       if (gem && s.gems < cost) { notify('Not enough Gems!', 'red', 'WARNING'); return []; }
-      if (!gem && s.materials.COMMON < cost) { notify('Not enough Common Shards!', 'red', 'WARNING'); return []; }
+      if (!gem && (s.crystals ?? 0) < cost) { notify('Not enough Aether Crystals!', 'red', 'WARNING'); return []; }
       const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
 
       const all = summonPool(altar, s.hero);   // the Shard Altar offers fewer top-tier pieces (summonPool.ts)
@@ -1818,9 +1825,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const summonPity = { ...s.summonPity, [altar]: drawn };
       const materials = { ...s.materials };
       for (const r of Object.keys(shardGain) as Rarity[]) materials[r] = (materials[r] ?? 0) + shardGain[r]!;
-      if (!gem) materials.COMMON -= cost;
-      if (gem) set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials });
-      else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity });
+      // the Gem Altar also hands out an Aether Crystal per pull (owner: crystals come from gem summons too)
+      if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n }); feedReward({ crystals: n }); }
+      else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, crystals: (s.crystals ?? 0) - cost });
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },

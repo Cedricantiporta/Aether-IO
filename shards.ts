@@ -13,7 +13,7 @@ export const shardId = (r: Rarity): string => `shard_${r.toLowerCase()}`;
 export function shardItem(r: Rarity, n: number): Item {
   return {
     id: shardId(r), name: NAME[r], type: 'SHARD', rarity: r, level: 1, stats: {}, quantity: n,
-    price: PRICE[r] * GOLD_SCALE, description: 'Crafting material. Used at the Blacksmith (crafting, upgrades) and to feed and evolve pets; Common Shards also pay for the Shard summon.',
+    price: PRICE[r] * GOLD_SCALE, description: 'Crafting material. Used at the Blacksmith (crafting, upgrades) and to feed and evolve pets; Common Shards are fused up at the Blacksmith.',
   } as Item;
 }
 

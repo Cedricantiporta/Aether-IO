@@ -106,6 +106,8 @@ export interface GameState {
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)
   gold: number;
   gems: number;
+  /** Aether Crystals: the Crystal Altar's summon currency (mined, adventure rewards, boss drops, Gem Altar bonus) */
+  crystals: number;
   level: number;
   experience: number;
   experienceToNextLevel: number;
@@ -172,6 +174,7 @@ export interface GameState {
   // progression (called by engine)
   addGold: (n: number) => void;
   addGems: (n: number) => void;
+  addCrystals: (n: number, at?: { x: number; z: number }) => void;
   discover: (tab: CodexTab, keys: string[]) => void;   // mark Codex entries discovered (idempotent)
   claimCodexReward: (tab: CodexTab) => boolean;         // one-time gems when a tab is 100% discovered
   addExperience: (n: number) => void; // handles level-ups: +SP, +base stats, engine heal + levelUp event
@@ -239,7 +242,7 @@ export interface GameState {
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
   rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll
-  summon: (count: 1 | 10, altar?: 'GEM' | 'SHARD') => Item[]; // gacha: GEM altar (10 / 90 gems, better odds) or SHARD altar (100 / 900 Common shards); pets+gear
+  summon: (count: 1 | 10, altar?: 'GEM' | 'SHARD') => Item[]; // gacha: GEM altar (10 / 90 gems, better odds) or SHARD altar (10 / 90 Aether Crystals); pets+gear
 
   // talents (permanent, per class; 1 point per Hero Rank + 1 per 5 ranks)
   allocateTalent: (id: string) => boolean;

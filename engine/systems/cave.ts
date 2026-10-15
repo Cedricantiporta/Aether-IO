@@ -303,6 +303,7 @@ function good(kind: CaveNodeKind, rarity: number, x: number, z: number): void {
 /** Extra drops of a vein on floor `f` (on top of the normal harvest drops): the depth bonus + a rare vein's guarantee. */
 export function caveYield(kind: CaveNodeKind, tier: number, f: number, x: number, z: number): void {
   const n = Math.min(1, bonusShards(kind, f));   // (owner: one shard per drop)
+  if (Math.random() < 0.12 + 0.04 * f + (tier > 0 ? 0.3 : 0)) useGameStore.getState().addCrystals(1, { x, z });   // mined Aether Crystal
   for (let k = 0; k < n; k++) spawnPickup('SHARD', at(x, z), rollDepthRarity(f, Math.random()));
   if (kind !== 'GOLD_VEIN' && Math.random() < tradeGoodChance(f)) good(kind, rollDepthRarity(f, Math.random()), x, z);
   if (kind === 'GOLD_VEIN' && depthOf(f) > 0) { const each = Math.round(30 * (goldVeinMul(f) - 1)); for (let k = 0; k < 5; k++) spawnPickup('GOLD', at(x, z), each); }

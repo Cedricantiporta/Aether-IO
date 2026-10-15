@@ -630,6 +630,7 @@ function grantReward(kind: RewardKind, bonus: number): void {
     }
     case 'SHARDS': {
       spawnPickup('SHARD', at(sx, cz), shardRarity(depth + 6));   // (owner: shards are rare - one per drop)
+      st.addCrystals(1 + Math.floor(depth / 20), { x: sx, z: cz });   // + Aether Crystals
       break;
     }
     case 'ITEM': {
@@ -661,6 +662,7 @@ function bossRewards(): void {
   }
   for (let i = 0; i < 4; i++) spawnPickup('GEM', at(0, -R * 0.1), 4 + biome * 2);
   spawnPickup('SHARD', at(0, -R * 0.1), shardRarity(depth + 12));   // one shard (owner)
+  st.addCrystals(4 + biome * 2, { x: world.player.pos.x, z: world.player.pos.z });   // boss drop: Aether Crystals (the Crystal Altar's currency)
   for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(0, -R * 0.1), Math.round(40 + depth * 12));
   st.openWaveReward(true);
 }
