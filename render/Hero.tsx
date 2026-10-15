@@ -259,10 +259,10 @@ function Effects({ cls }: { cls: HeroClass }) {
   const wingMat = useMemo(() => new MeshBasicMaterial({ vertexColors: true, color: new Color(1.35, 1.35, 1.45), transparent: true, opacity: 0, side: DoubleSide, depthWrite: false, toneMapped: false }), []);
   const wings = useRef<Group>(null!), wingL = useRef<Mesh>(null!), wingR = useRef<Mesh>(null!);
   const wingK = useRef(0);
-  const flash = useRef({ bubble: 0, radius: 2 });
+  const flash = useRef({ bubble: 0, radius: 2, gold: false });
 
   useEffect(() => {
-    const off = events.on('shieldBlock', (e) => { flash.current.bubble = 1; flash.current.radius = Math.max(1.8, e.radius); });
+    const off = events.on('shieldBlock', (e) => { flash.current.bubble = 1; flash.current.radius = Math.max(1.8, e.radius); flash.current.gold = !!e.gold; });
     return off;
   }, []);
 
@@ -335,7 +335,7 @@ function Effects({ cls }: { cls: HeroClass }) {
     f.bubble = Math.max(0, f.bubble - dt * 3);
     if (bubble.current) {
       bubble.current.visible = f.bubble > 0;
-      if (f.bubble > 0) { bubble.current.position.set(p.pos.x, 1.1, p.pos.z); const s = f.radius * (1.05 + (1 - f.bubble) * 0.3); bubble.current.scale.set(s, s, s); bubbleMat.opacity = f.bubble * 0.45; }
+      if (f.bubble > 0) { bubble.current.position.set(p.pos.x, 1.1, p.pos.z); const s = f.radius * (1.05 + (1 - f.bubble) * 0.3); bubble.current.scale.set(s, s, s); bubbleMat.opacity = f.bubble * 0.45; bubbleMat.color.setRGB(f.gold ? 2.4 : 0.5, f.gold ? 1.9 : 1.6, f.gold ? 0.6 : 2.4); }
     }
   });
   return (
@@ -492,22 +492,24 @@ function HeroBars() {
   );
 }
 
-/** A transparent light-blue sphere around the hero while the Aegis shield holds (bright rim, see-through middle). */
+/** A transparent sphere around the hero (bright rim, see-through middle): light blue while the Aegis shield holds,
+ *  golden while the knight's Shield Wall is up. */
 function AegisSphere() {
   const m = useRef<Mesh>(null!);
   const mat = useMemo(() => new ShaderMaterial({
     transparent: true, depthWrite: false, side: FrontSide, blending: AdditiveBlending,
-    uniforms: { uA: { value: 1 } },
+    uniforms: { uA: { value: 1 }, uC: { value: new Color(0.45, 0.85, 1.0) } },
     vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
-    fragmentShader: 'uniform float uA; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(vec3(0.45, 0.85, 1.0) * (0.25 + 1.4 * f), (0.08 + 0.6 * f) * uA); }',
+    fragmentShader: 'uniform float uA; uniform vec3 uC; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(uC * (0.25 + 1.4 * f), (0.08 + 0.6 * f) * uA); }',
   }), []);
   useFrame(({ clock }) => {
-    const p = world.player, on = p.aegis > 0 && p.alive;
+    const p = world.player, aegis = p.aegis > 0, guard = p.guardT > 0, on = (aegis || guard) && p.alive;   // blue: Aegis; gold: Shield Wall
     m.current.visible = on;
     if (!on) return;
+    if (aegis) mat.uniforms.uC.value.setRGB(0.45, 0.85, 1.0); else mat.uniforms.uC.value.setRGB(1.0, 0.82, 0.3);
     m.current.position.set(p.pos.x, 1.1 + (p.air || 0), p.pos.z);
     m.current.scale.setScalar(1.55 + Math.sin(clock.elapsedTime * 3) * 0.04);
-    mat.uniforms.uA.value = 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1);
+    mat.uniforms.uA.value = aegis ? 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1) : 0.8;
   });
   return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>;
 }

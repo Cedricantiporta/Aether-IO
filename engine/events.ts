@@ -26,7 +26,7 @@ export interface GameEvents {
   playerHit: { pos: Vector3; amount: number };
   playerDeath: { pos: Vector3 };
   playerRevive: { pos: Vector3; source: 'PHOENIX' | 'ANKH' };
-  shieldBlock: { pos: Vector3; radius: number };
+  shieldBlock: { pos: Vector3; radius: number; gold?: boolean };   // gold: the knight's Shield Wall
   heal: { pos: Vector3; amount: number };
 
   // player actions

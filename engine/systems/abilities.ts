@@ -499,7 +499,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const wr = 8 + 0.3 * (lv - 1);
       damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 2.5, physKnock);
       events.emit('shockwave', { pos: p.pos.clone(), radius: wr, color: 0xffe08a });
-      events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4 });
+      events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4, gold: true });
       p.anim.castT = 1; addShake(0.2);
       announce('SHIELD_WALL');
     } else if (slot === 's3') {

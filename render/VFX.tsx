@@ -342,9 +342,10 @@ export function VFX() {
       glowPuff(e.pos.x, e.pos.y + 1.2, e.pos.z, 0xff5050, 2.0, 0.2, 1.3, 0.6);
     }));
     off.push(on('shieldBlock', (e) => {
-      ringBurst(e.pos.x, 1.2, e.pos.z, 0x7ad0ff, e.radius * 0.6, e.radius * 1.3, 0.4, 2);
-      sparks(e.pos.x, 1.2, e.pos.z, 14, 0x9fe4ff, 9, 0.28, 0.4, 2);
-      glowPuff(e.pos.x, 1.2, e.pos.z, 0x9fe4ff, e.radius * 2.4, 0.25, 1.4, 0.7);
+      const ring = e.gold ? 0xffd24a : 0x7ad0ff, spark = e.gold ? 0xffe9a0 : 0x9fe4ff;   // Shield Wall: golden
+      ringBurst(e.pos.x, 1.2, e.pos.z, ring, e.radius * 0.6, e.radius * 1.3, 0.4, 2);
+      sparks(e.pos.x, 1.2, e.pos.z, 14, spark, 9, 0.28, 0.4, 2);
+      glowPuff(e.pos.x, 1.2, e.pos.z, spark, e.radius * 2.4, 0.25, 1.4, 0.7);
     }));
     off.push(on('heal', (e) => {
       for (let i = 0; i < 6; i++) {
