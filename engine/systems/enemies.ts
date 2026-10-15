@@ -54,14 +54,15 @@ const CONTACT_CD = 0.6;
 const ELITE_SCALE = 1.35;
 const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'VOLATILE', 'SHIELDED'];
 
-const ARCHER = { minR: 12, maxR: 18, windup: 0.6, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
-const CULTIST = { minR: 10, maxR: 14, windup: 0.8, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
+// (owner: basic / elite monsters cast their telegraphed attacks faster - every windup below is x0.8 of its old value)
+const ARCHER = { minR: 12, maxR: 18, windup: 0.48, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
+const CULTIST = { minR: 10, maxR: 14, windup: 0.64, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
 const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
-const BRUTE = { cd: 5, windup: 0.9, recover: 0.8, lineWidth: 2.6, chargeMul: 4, minRange: 4, maxRange: 16 };
-const BOAR = { cd: 4, windup: 0.7, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6, minRange: 5, maxRange: 18 };
-const ZOMBIE = { grabR: 2.3, windup: 0.6, lunge: 0.3, recover: 0.7, cd: 2.6 };
-const WRAITH = { windup: 0.75, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
-const BANDIT = { windup: 0.5, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6 };
+const BRUTE = { cd: 5, windup: 0.72, recover: 0.8, lineWidth: 2.6, chargeMul: 4, minRange: 4, maxRange: 16 };
+const BOAR = { cd: 4, windup: 0.56, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6, minRange: 5, maxRange: 18 };
+const ZOMBIE = { grabR: 2.3, windup: 0.48, lunge: 0.3, recover: 0.7, cd: 2.6 };
+const WRAITH = { windup: 0.6, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
+const BANDIT = { windup: 0.4, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6 };
 const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
 const MINI = { hpMul: 8, scaleMul: 1.5, slamCd: 6, slamWindup: 0.9, slamR: 5.5, flag: 7, slamFlag: 8 };
 const SHARDS = 8;
@@ -690,9 +691,9 @@ function miniSlam(e: Enemy): boolean {
 }
 
 // ------------------------------------------------------------ stage monsters + new kinds --------
-const TOWER = { range: 26, windup: 0.75, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
-const LHYDRA = { range: 20, windup: 0.8, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
-const SHIELD = { blockR: 9, block: 2.6, blockCd: 2.0, windup: 0.55, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: 0.3, turn: 2.0 };
+const TOWER = { range: 26, windup: 0.6, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
+const LHYDRA = { range: 20, windup: 0.64, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
+const SHIELD = { blockR: 9, block: 2.6, blockCd: 2.0, windup: 0.44, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: 0.3, turn: 2.0 };
 const shotFrom = new Vector3();
 let lastBlockText = 0;
 
@@ -828,18 +829,18 @@ export function shieldBlock(e: Enemy): boolean {
 }
 
 // ------------------------------------------------------------ biome-unique monsters --
-const SPORE = { range: 3.4, windup: 0.75, r: 3.0, cloud: 4.5, recover: 0.8, cd: 4.5 };
-const WOLF = { range: 7, windup: 0.4, pounce: 0.3, mul: 3.6, recover: 0.5, cd: 2.6, orbit: 9 };
-const ARMOR = { range: 3.6, windup: 0.85, r: 2.5, reach: 2.0, recover: 1.0, cd: 3.2 };
-const GARG = { wake: 10, range: 7, windup: 0.4, dive: 0.38, mul: 3.2, recover: 0.8, cd: 2.4 };
-const SCORP = { range: 3.0, windup: 0.55, r: 1.7, reach: 1.7, recover: 0.6, cd: 2.4 };
-const MUMMY_P = { minR: 4, maxR: 11, windup: 0.65, recover: 0.6, cd: 4.5, speed: 11 };
-const YETI_P = { cd: 5, windup: 0.85, recover: 1.0, lineWidth: 2.8, chargeMul: 3.8, minRange: 4, maxRange: 15 };
-const WISP = { minR: 8, maxR: 13, windup: 0.6, recover: 0.5, cd: 2.8, novaR: 4, novaCd: 6, spread: 0.3 };
+const SPORE = { range: 3.4, windup: 0.6, r: 3.0, cloud: 4.5, recover: 0.8, cd: 4.5 };
+const WOLF = { range: 7, windup: 0.32, pounce: 0.3, mul: 3.6, recover: 0.5, cd: 2.6, orbit: 9 };
+const ARMOR = { range: 3.6, windup: 0.68, r: 2.5, reach: 2.0, recover: 1.0, cd: 3.2 };
+const GARG = { wake: 10, range: 7, windup: 0.32, dive: 0.38, mul: 3.2, recover: 0.8, cd: 2.4 };
+const SCORP = { range: 3.0, windup: 0.44, r: 1.7, reach: 1.7, recover: 0.6, cd: 2.4 };
+const MUMMY_P = { minR: 4, maxR: 11, windup: 0.52, recover: 0.6, cd: 4.5, speed: 11 };
+const YETI_P = { cd: 5, windup: 0.68, recover: 1.0, lineWidth: 2.8, chargeMul: 3.8, minRange: 4, maxRange: 15 };
+const WISP = { minR: 8, maxR: 13, windup: 0.48, recover: 0.5, cd: 2.8, novaR: 4, novaCd: 6, spread: 0.3 };
 const HOUND = { trail: 0.55, trailR: 0.95, trailLife: 2.2 };
-const SHAMAN = { minR: 9, maxR: 15, windup: 0.5, recover: 0.8, cd: 3.4, r: 2.6, fall: 1.1 };
-const STALK = { range: 13, windup: 0.5, r: 1.9, recover: 0.7, cd: 4.6, behind: 2.6 };
-const EYE = { minR: 9, maxR: 14, windup: 0.85, recover: 0.6, cd: 4.2, n: 10, speed: 7 };
+const SHAMAN = { minR: 9, maxR: 15, windup: 0.4, recover: 0.8, cd: 3.4, r: 2.6, fall: 0.88 };
+const STALK = { range: 13, windup: 0.4, r: 1.9, recover: 0.7, cd: 4.6, behind: 2.6 };
+const EYE = { minR: 9, maxR: 14, windup: 0.68, recover: 0.6, cd: 4.2, n: 10, speed: 7 };
 
 /** Generic "wind up, then a damaging circle in front of me" melee (Haunted Armor cleave, Scorpion sting, Sporecap burst). */
 function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; recover: number; cd: number }, reach: number, dmg: number, color: number, onHit?: (x: number, z: number) => void): void {

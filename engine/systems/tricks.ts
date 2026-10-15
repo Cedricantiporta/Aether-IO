@@ -27,20 +27,20 @@ const COLOR: Record<number, number> = {
 
 interface Def { id: number; cd: number; minD: number; maxD: number; windup: number; r: number; atSelf?: boolean; line?: boolean }
 const DEFS: Partial<Record<EnemyKind, Def[]>> = {
-  SLIME: [{ id: TRICK.GOO, cd: 9, minD: 4, maxD: 16, windup: 0.9, r: 3.0 }],
-  GOBLIN: [{ id: TRICK.FIREBOMB, cd: 11, minD: 5, maxD: 15, windup: 1.0, r: 2.6 }],
-  BAT: [{ id: TRICK.SCREECH, cd: 9, minD: 2, maxD: 10, windup: 0.7, r: 8, atSelf: true }],
-  SKELETON_ARCHER: [{ id: TRICK.PIN, cd: 8, minD: 8, maxD: 20, windup: 0.8, r: 1.4, line: true }],
-  CULTIST: [{ id: TRICK.CURSE, cd: 10, minD: 6, maxD: 16, windup: 0.9, r: 3.2 }],
-  BRUTE: [{ id: TRICK.STOMP, cd: 9, minD: 0, maxD: 7, windup: 0.9, r: 6, atSelf: true }],
-  ZOMBIE: [{ id: TRICK.PLAGUE, cd: 10, minD: 3, maxD: 14, windup: 1.0, r: 3.6 }],
-  WRAITH: [{ id: TRICK.TERROR, cd: 9, minD: 2, maxD: 9, windup: 0.8, r: 7, atSelf: true }],
-  CRYSTAL_GOLEMITE: [{ id: TRICK.WALL, cd: 12, minD: 5, maxD: 16, windup: 0.9, r: 1.8, line: true }],
+  SLIME: [{ id: TRICK.GOO, cd: 9, minD: 4, maxD: 16, windup: 0.72, r: 3.0 }],
+  GOBLIN: [{ id: TRICK.FIREBOMB, cd: 11, minD: 5, maxD: 15, windup: 0.8, r: 2.6 }],
+  BAT: [{ id: TRICK.SCREECH, cd: 9, minD: 2, maxD: 10, windup: 0.56, r: 8, atSelf: true }],
+  SKELETON_ARCHER: [{ id: TRICK.PIN, cd: 8, minD: 8, maxD: 20, windup: 0.64, r: 1.4, line: true }],
+  CULTIST: [{ id: TRICK.CURSE, cd: 10, minD: 6, maxD: 16, windup: 0.72, r: 3.2 }],
+  BRUTE: [{ id: TRICK.STOMP, cd: 9, minD: 0, maxD: 7, windup: 0.72, r: 6, atSelf: true }],
+  ZOMBIE: [{ id: TRICK.PLAGUE, cd: 10, minD: 3, maxD: 14, windup: 0.8, r: 3.6 }],
+  WRAITH: [{ id: TRICK.TERROR, cd: 9, minD: 2, maxD: 9, windup: 0.64, r: 7, atSelf: true }],
+  CRYSTAL_GOLEMITE: [{ id: TRICK.WALL, cd: 12, minD: 5, maxD: 16, windup: 0.72, r: 1.8, line: true }],
   BANDIT: [
-    { id: TRICK.CALTROPS, cd: 9, minD: 4, maxD: 14, windup: 0.7, r: 3.0 },
-    { id: TRICK.SMOKE, cd: 9, minD: 0, maxD: 8, windup: 0.6, r: 4, atSelf: true },
+    { id: TRICK.CALTROPS, cd: 9, minD: 4, maxD: 14, windup: 0.56, r: 3.0 },
+    { id: TRICK.SMOKE, cd: 9, minD: 0, maxD: 8, windup: 0.48, r: 4, atSelf: true },
   ],
-  ROCK_CRAB: [{ id: TRICK.PINCH, cd: 7, minD: 0, maxD: 3.8, windup: 0.5, r: 2.6, atSelf: true }],
+  ROCK_CRAB: [{ id: TRICK.PINCH, cd: 7, minD: 0, maxD: 3.8, windup: 0.4, r: 2.6, atSelf: true }],
 };
 
 /** Stats for QA: which tricks were cast / resolved. */
