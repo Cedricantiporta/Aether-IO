@@ -54,7 +54,7 @@ export const SLOT_LABEL: Record<CraftSlot, string> = {
 
 /** The recipe table is derived once per (slot, rarity, hero); weapons depend on the hero class. */
 export const RECIPES: Record<string, Recipe> = {};
-for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN'] as HeroClass[]) {
+for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]) {   // (every class: a missing class crashed the Workshop - the 'pitch black craft' bug)
   for (const slot of CRAFT_SLOTS) {
     for (let ri = 0; ri < CRAFT_RARITIES.length; ri++) {
       const rarity = CRAFT_RARITIES[ri];
