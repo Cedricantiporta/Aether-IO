@@ -40,3 +40,9 @@
 .dc-badge .m { font-size: .64rem; font-weight: 700; color: var(--c); padding: .14rem .45rem; background: rgba(8, 9, 11, .66); border: 1px solid rgba(255, 255, 255, .1);
   border-left: 2px solid var(--c); text-shadow: 0 1px 2px #000; white-space: nowrap; }
 .dc-badge .clock { font-family: var(--font-num, monospace); color: #e8dcc0; font-size: .68rem; padding: .14rem .4rem; background: rgba(8, 9, 11, .66); border: 1px solid rgba(255, 255, 255, .1); }
+
+/* level-locked Set Out tabs (unlocks.ts) */
+.so-tab .so-lock { margin-left: .3rem; font-size: .62rem; color: #9a8f7a; letter-spacing: .04em; }
+.so-locked { display: flex; flex-direction: column; gap: .35rem; align-items: center; text-align: center; padding: 1.4rem .8rem; border: 1px solid rgba(200,150,46,.35); background: rgba(10,8,6,.6); }
+.so-locked b { font-family: var(--font-title); font-size: 1rem; color: var(--gold-light, #f1d58a); }
+.so-locked span { font-size: .8rem; color: #b8ad98; }
