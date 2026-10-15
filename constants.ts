@@ -96,9 +96,9 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 14, fireRate: 1.75, maxHealth: 80, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 12, fireRate: 1.75, maxHealth: 80, damage: 12.2, knockback: 0.3, critRate: 0.1 }, 
         weaponId: 'bow_1',
-        description: 'Shoots on the move. High Speed & Attack Rate (grows with level). Low Health.'
+        description: 'Plant your feet and loose a storm of arrows. High attack rate, low health.'
     },
     WIZARD: {
         stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 50, manaRegen: 3.0, knockback: 0.5, skillDamage: 1.5 },

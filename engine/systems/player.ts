@@ -346,7 +346,7 @@ export function updatePlayer(dt: number): void {
   // casting a skill: no basic attacks until the cast is done
   if (abilityState.castLockT > 0) { p.fireT = Math.max(p.fireT, 0.08); return; }
   const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
-  const archerMoving = (st.hero === 'ARCHER' || manual) && moving && !busy;
+  const archerMoving = manual && moving && !busy;   // (the archer no longer shoots on the move; holding F still forces a shot)
   if (moving && !archerMoving) { if (!autoChase) p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }   // (walking up to the target: swing on arrival)
   // a new target: swing at it right away (no idle wait)
   if (autoAim.id !== lastAimId) { lastAimId = autoAim.id; if (autoAim.id >= 0) p.fireT = Math.min(p.fireT, 0.03); }
