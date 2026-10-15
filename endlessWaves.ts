@@ -40,7 +40,7 @@ export const waveIndex = (w: number): number => Math.min(13, w + 1);
 /** Bonus elites in normal waves (from wave 8 on). */
 export const waveElites = (w: number): number => (w >= 8 ? Math.min(3, Math.floor(w / 8)) : 0);
 /** Spawn budget multiplier (more monsters per wave). */
-export const waveCrowd = (w: number): number => 1 + Math.min(1.5, w * 0.06);
+export const waveCrowd = (w: number): number => 0.8 + Math.min(1.0, w * 0.035);   // (kept moderate: phones; the arena caps live units too)
 
 // ------------------------------------------------------- milestones ---
 export const WAVE_MILESTONES = [10, 20, 30, 50] as const;
