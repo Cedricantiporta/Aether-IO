@@ -170,6 +170,39 @@ needed to see the new game).
 3. Character select shows the low-poly KayKit hero; the user's reference uses painted key art. Free CC0 art only.
 4. Ideas the user liked earlier but not built: village upgrades, daily challenge; item sets/affixes are partly in.
 
+## Session batch 3 (2026-10-15, newest)
+Town / world
+- Villagers (townData `noHat/noCape/tunic/hair/longHair`, Npcs `hairGeo` / `tunicGeo`); tavern exit door; walkable throne
+  dais (`castleData.daisLift`, `render/lift.ts`), quest walk goes straight up the carpet.
+- Brewer hut by the portal (`BREWER_HUT` -10.5,107.6 facing the road, fence gap), west hamlet left of the portal, coop
+  faces west like the barn (nests / Dalla / hens moved), farm track fenced, `riverBank(x, side)` wavy banks + round
+  east end (terrain, colliders, rocks), `towerKnollAt` in the ground mesh, sandy cove south of the river mouth.
+- **No walking on water**: `townData.isTownWater` (lake past the shore/beach line, river; bridge + pier decks allowed);
+  `player.resolveStep` slides along the shore. Needed because the polar island edge widened over the lake.
+Modes / economy
+- Portal: E sets out at once. Endless Tower window = hub (Tower / Daily Trial / Endless Waves / Ascension tabs).
+  Tower modes (`runInfo.mode === 'TOWER'`, `combat.towerMode()`): no item/loot drops (gold + Aether Crystals,
+  `towerCrystals`), no potions, no Ankh, healing -40%, no EXP; return spawns at the tower door (`runInfo.back`).
+- Endless Waves: boss every 5th wave, minis on 5n+3, stacked bosses from 20 (`waveExtraBosses`), minis join boss waves
+  from 15, up to 4 minis; boss bar has one owner (`enemies.barOwner`) and hands off (`director.handOffBoss`).
+  `director.debugJumpWave(n)` for QA. Wave milestones stay gems.
+- Aether Crystals from achievements (`goals.achCrystals`), daily / weekly goals + bonus chests. Field items vanish
+  after 3 min (`pickups.ITEM_DESPAWN`).
+Items
+- Crafting (`crafting.recipeLoot`): every tier needs loot families + ores; Legendary needs late relics (Hydra / Glacius /
+  Ignar); Mythic needs Void Herald shards + new `void_heart` + abyssal diamonds; Mythic weapons also Malakar's
+  `soul_ember` (5% when he falls for good). Weapons 1.5x counts / gold.
+- Upgrades: chance 90% -10%/+, cores level^2/3, gold x1.8, +8/+9 failures can shatter (25% / 40%). Tiered cores:
+  Upgrade (+0..+3) / Refined (+3..+6) / Radiant (+6..+9), fuse 5 -> 1 (Blacksmith > Shards), late bosses drop them.
+- Tooltip shows the equipped item side by side. Absorb-shield bars on enemies + boss bar (ward = shield 1 excluded).
+Talents
+- 4 branches x 10 nodes (two lanes + capstone), landscape strips dragged with the mouse, costs 1..5 by column,
+  values x0.45, ★ special nodes (mechanics: dash charges, pierce, skeletons, axes, chains, orbs...), 4 points per
+  level (200 at Lv 50 >= the fullest tree, 196). Ids `<h>2_<branch><i>`: older ranks were refunded.
+Open
+- Beach ship + captain (60-gem ticket to Coral Isles depth 1), decor on the green before the gate.
+- Owner asked "max levels maybe 50?" (item upgrade cap is +9 / level 10; hero max level is already 50): unanswered.
+
 ## Balance pass (Oct 2026, headless sim)
 Owner asks: "improve gameplay overall, balance the game", "decrease monster spawns on some bosses if there are too many".
 None of the owner's explicit values were touched (drop nerfs, class HP / move speed, mana regen 1.0-1.5, potion 30 s,
