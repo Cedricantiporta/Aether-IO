@@ -87,7 +87,9 @@ needed to see the new game).
   (was 2); elite gear drop 0.25 -> 0.15, plain 0.015 -> 0.01; boss Legendary/Mythic gear odds ~halved, `rarityForDepth`
   Legendary/Mythic halved, mini at wave 25+ only 35% Legendary (else Epic); trade-goods Legendary/Mythic weights halved.
 - **Barbarian:** Earthsplitter (s3) is now a short close-range cleave (length 9 + 0.6/lv, 6 spikes; was 34+); all
-  Barbarian skills cost 60% less mana (store `getManaCost`)., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
+  Barbarian skills cost 60% less mana (store `getManaCost`).
+- **Barbarian basic axe no longer pierces:** pierce 1; the first enemy/crate hit on the way out bounces it back toward the
+  hero (`axeRebound` in projectiles.ts), and it can hit one more enemy on the return., then reversed it ("dont remove potions"). Potions (Z/X, auto-potions
   setting, shop/loot) STAY. Don't remove them.
 
 ## Open tasks (do next, in order)
