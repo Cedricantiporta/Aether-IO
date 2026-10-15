@@ -1,4 +1,5 @@
 // Pickups: XP crystals, coins, gems, hearts (instanced) + rarity loot beams with floating labels (items).
+import { liftAt } from './lift';
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -53,7 +54,7 @@ export function Pickups() {
       if (!p.active || p.kind === 'ITEM') continue;
       if (!inView(p.pos.x, p.pos.z, 3)) continue;
       const bob = Math.sin(t * 3.2 + p.id * 1.7) * 0.1;
-      const y = Math.max(p.pos.y, 0.25) + 0.35 + bob;
+      const y = Math.max(p.pos.y, 0.25) + 0.35 + bob + liftAt(p.pos.x, p.pos.z);
       const pop = Math.min(1, p.t * 5);
       const s = pop * (1 + (1 - Math.min(1, p.t * 4)) * 0.4);
       switch (p.kind) {
@@ -123,7 +124,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
     const vis = p.active && p.kind === 'ITEM' && inView(p.pos.x, p.pos.z, 4);
     g.current.visible = vis;
     if (!vis) return;
-    g.current.position.set(p.pos.x, 0, p.pos.z);
+    g.current.position.set(p.pos.x, liftAt(p.pos.x, p.pos.z), p.pos.z);
     const pop = Math.min(1, p.t * 3);
     beamMat.uniforms.uTime.value = t; beamMat.uniforms.uAlpha.value = (0.55 + 0.15 * Math.sin(t * 4)) * pop * (p.item?.type === 'LOOT' && rarity === 'COMMON' ? 0.3 : 1);
     const hy = Math.max(p.pos.y, 0) + 1.1 + Math.sin(t * 2.4 + p.id) * 0.15;

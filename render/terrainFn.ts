@@ -4,6 +4,7 @@ import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
 import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS } from '../engine/townData';
 import { inCampYard } from '../engine/caveData';
+import { hillAt } from '../engine/townHills';
 import { BEACH, beachSandK } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
 
@@ -80,11 +81,12 @@ function groundYLand(x: number, z: number) {
   const r = Math.hypot(x, z);
   const a = Math.atan2(z, x);
   const e = edgeR(a);
-  if (r < e - 2) return 0;
+  const hill = hillAt(x, z);   // rolling hills outside the walls (engine/townHills)
+  if (r < e - 2) return hill;
   const t = sstep(e - 2, e + 9, r);
   let y = t * 4.4 + t * (fbm(x * 0.07, z * 0.07, 3) - 0.5) * 5.5;
   y += sstep(e + 8, e + 70, r) * 9 * fbm(x * 0.035 + 9, z * 0.035 + 9, 3);
-  return y;
+  return y + hill;
 }
 
 /** Dirt coverage 0..1 (town plaza, paths). */

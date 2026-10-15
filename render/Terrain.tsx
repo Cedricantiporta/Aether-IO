@@ -165,7 +165,7 @@ function Bushes({ q }: { q: QualityCfg }) {
   }, [target]);
   const n = pts.length / 4;
   const fill = useMemo(() => (m: InstancedMesh) => {
-    for (let i = 0; i < n; i++) { const s = pts[i * 4 + 2]; setInst(m, i, pts[i * 4], 0, pts[i * 4 + 1], pts[i * 4 + 3], s, s * 0.9, s); }
+    for (let i = 0; i < n; i++) { const s = pts[i * 4 + 2]; setInst(m, i, pts[i * 4], groundY(pts[i * 4], pts[i * 4 + 1]), pts[i * 4 + 1], pts[i * 4 + 3], s, s * 0.9, s); }
   }, [pts, n]);
   return <Inst geo={geo} mat={mat} count={n} fill={fill} receive />;
 }
@@ -217,8 +217,8 @@ function Flowers({ q }: { q: QualityCfg }) {
   }, [q.flowers]);
   const n = pts.length / 5;
   const palette = useMemo(() => ['#ffffff', '#ffe14a', '#ff7aa8', '#9ac8ff', '#ff9a3a', '#d9a0ff'].map((c) => new Color(c)), []);
-  const fillS = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) setInst(m, i, pts[i * 5], 0, pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); }, [pts, n]);
-  const fillH = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) { setInst(m, i, pts[i * 5], 0, pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); m.setColorAt(i, palette[pts[i * 5 + 4] % palette.length]); } }, [pts, n, palette]);
+  const fillS = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) setInst(m, i, pts[i * 5], groundY(pts[i * 5], pts[i * 5 + 1]), pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); }, [pts, n]);
+  const fillH = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) { setInst(m, i, pts[i * 5], groundY(pts[i * 5], pts[i * 5 + 1]), pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); m.setColorAt(i, palette[pts[i * 5 + 4] % palette.length]); } }, [pts, n, palette]);
   return (<>
     <Inst geo={stem} mat={sm} count={n} fill={fillS} />
     <Inst geo={head} mat={hm} count={n} fill={fillH} />
@@ -238,7 +238,7 @@ function Pebbles({ q }: { q: QualityCfg }) {
       if (r > edgeR(a) - 2 || inYard(x, z, 1) || inForecourtUse(x, z, 0)) continue;
       if (rnd() > 0.25) continue;
       const s = 0.15 + rnd() * 0.35;
-      setInst(m, i, x, 0, z, rnd() * 6, s, s * (0.7 + rnd() * 0.6), s * 1.1);
+      setInst(m, i, x, groundY(x, z), z, rnd() * 6, s, s * (0.7 + rnd() * 0.6), s * 1.1);
       c.set('#8e8f8a').lerp(c.clone().set('#b9a98c'), rnd()).multiplyScalar(0.8 + rnd() * 0.4);
       m.setColorAt(i, c); i++;
     }

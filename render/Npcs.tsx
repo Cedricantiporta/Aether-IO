@@ -265,7 +265,7 @@ function Animals() {
       if (!m) continue;
       const bob = a.moving ? Math.abs(Math.sin(a.hop)) * (d.kind === 'CHICKEN' ? 0.07 : 0.03) : 0;
       const peck = !a.moving && d.kind === 'CHICKEN' ? Math.max(0, Math.sin(a.hop * 2.4)) ** 3 * 0.55 : 0;
-      setInst(m, idx[i], a.x, bob, a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : 1.2, undefined, undefined, peck);
+      setInst(m, idx[i], a.x, bob + liftAt(a.x, a.z), a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : 1.2, undefined, undefined, peck);
     }
     chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true; cows.current.instanceMatrix.needsUpdate = true;
   });
