@@ -1718,7 +1718,11 @@ export const useGameStore = create<GameState>()((set, get) => {
         const r = Math.random();
         if (r > 0.90) pool = notPet.filter((i) => i.type === 'POTION');
         else if (r > 0.82) pool = notPet.filter((i) => i.type === 'CORE'); // cores are rare (8% of item drops)
-        else pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && (i.rarity === 'COMMON' || i.rarity === 'RARE'));
+        else {   // plain gear: Common or Rare (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
+          const tier: Rarity = Math.random() < 0.5 ? 'COMMON' : 'RARE';
+          if (tier === 'COMMON' && Math.random() < 0.7) return null;
+          pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && i.rarity === tier);
+        }
       }
       if (pool.length === 0) return null;
 
