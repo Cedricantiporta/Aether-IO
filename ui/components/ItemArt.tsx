@@ -50,14 +50,15 @@ const Sword: Draw = (c) => (<g transform="rotate(45 32 32)">
   <path d="M29 48 H35 M29 51 H35" stroke={S} strokeOpacity=".5" strokeWidth=".9" />
   <circle cx="32" cy="59" r="3.2" fill={g('gold')} {...st} /><circle cx="32" cy="42.5" r="2" fill={c} stroke={S} strokeWidth="1" />
 </g>);
-const Core: Draw = () => (<g>
-  <circle cx="32" cy="32" r="26" fill="#b26bff" opacity=".28" />
-  <path d="M32 3 L55 16 V44 L32 61 L9 44 V16Z" fill={g('purp')} {...st} />
+const CoreT = (fill: string, halo: string): Draw => () => (<g>
+  <circle cx="32" cy="32" r="26" fill={halo} opacity=".28" />
+  <path d="M32 3 L55 16 V44 L32 61 L9 44 V16Z" fill={g(fill)} {...st} />
   <path d="M32 3 L55 16 L32 30 L9 16Z" fill="#fff" opacity=".4" />
   <path d="M32 30 L55 16 V44 L32 61Z" fill="#000" opacity=".22" />
   <path d="M9 16 L32 30 L55 16 M32 30 V61" stroke="#fff" strokeOpacity=".65" strokeWidth="1.1" fill="none" />
   <path d="M32 18 L42 24 L32 30 L22 24Z" fill="#f3e4ff" opacity=".9" />
 </g>);
+const Core = CoreT('purp', '#b26bff');
 const Ankh: Draw = () => (<g>
   <circle cx="32" cy="32" r="27" fill="#ffd24a" opacity=".16" />
   <path d="M32 4 C44 4 46 20 32 30 C18 20 20 4 32 4Z M32 14 C37 14 37 20 32 24 C27 20 27 14 32 14Z" fill={g('gold')} fillRule="evenodd" {...st} />
@@ -473,7 +474,7 @@ const DRAW: Record<string, Draw> = {
   ...Object.fromEntries(Object.entries(ARMOR).map(([k, v]) => [k, Chest(v)])),
   ring_1: Ring(0), ring_wiz: Ring(1), ring_crit: Ring(2), ring_myth: Ring(3), boots_1: Boots, amulet_mana: Amulet(true), focus_crystal: Focus,
   potion_hp: Potion('red', false), potion_mana: Potion('blue', false), potion_hp_big: Potion('red', true), potion_mana_big: Potion('blue', true),
-  upgrade_core: Core, revive_ankh: Ankh,
+  upgrade_core: Core, upgrade_core_2: CoreT('gold', '#ffd24a'), upgrade_core_3: CoreT('red', '#ff4a6a'), revive_ankh: Ankh,
   reforge_stone: lootDraw('rune', '#5a7cff', '#e8f0ff'), temper_oil: lootDraw('goblet', '#e0a84a', '#fff2c0'), erase_scroll: lootDraw('page', '#efe2c0', '#c0392b'),
   helm_1: Helmet(0), helm_2: Helmet(1), helm_3: Helmet(2), helm_4: Helmet(3), helm_5: Helmet(4),
   gloves_1: Gloves(0), gloves_2: Gloves(1), gloves_3: Gloves(2), gloves_4: Gloves(3), gloves_5: Gloves(4),

@@ -33,7 +33,7 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
+import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierAt, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
@@ -105,7 +105,7 @@ export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Mat
 /** Passive perk: +1% gold find per rank, capped at +50%. */
 export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * rank);
 /** Items each shop can put on sale (potion shop provisions, buyable pets). */
-export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.type === 'CORE' || i.type === 'REVIVE');
+export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.id === 'upgrade_core' || i.type === 'REVIVE');
 export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly).map((p) => p.id)];
 const pickWeighted = <T,>(opts: [T, number][]): T => {
   let r = Math.random() * opts.reduce((n, o) => n + o[1], 0);
@@ -366,9 +366,9 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
 /** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
 const addCores = (inv: Item[], n: number): Item[] => {
   if (n <= 0) return inv;
-  const idx = inv.findIndex((i) => i.type === 'CORE');
+  const idx = inv.findIndex((i) => coreTierOf(i) === 0);
   if (idx >= 0) { const out = inv.slice(); out[idx] = { ...out[idx], quantity: (out[idx].quantity || 1) + n }; return out; }
-  const tpl = ITEMS_POOL.find((i) => i.type === 'CORE')!;
+  const tpl = ITEMS_POOL.find((i) => i.id === 'upgrade_core')!;
   return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
@@ -877,6 +877,21 @@ export const useGameStore = create<GameState>()((set, get) => {
       set((s) => ({ crystals: (s.crystals ?? 0) + n }));
       if (at) events.emit('floatText', { pos: world.player.pos.clone().set(at.x, 0, at.z), text: `+${n} Aether Crystal${n > 1 ? 's' : ''}`, color: 0xb98cff, scale: 0.95, dy: 2.4 });
       feedReward({ crystals: n });
+    },
+
+    fuseCores: (tier) => {   // 5 cores of a tier -> 1 of the next (Blacksmith > Shards)
+      const s = get(); if (tier < 0 || tier > 1) return false;
+      const idx = s.inventory.findIndex((i) => coreTierOf(i) === tier);
+      const have = idx >= 0 ? s.inventory[idx].quantity || 1 : 0;
+      if (have < CORE_FUSE) { notify(`Need ${CORE_FUSE} ${CORE_NAMES[tier]}s`, 'red', 'WARNING'); return false; }
+      let inv = s.inventory.slice();
+      if (have > CORE_FUSE) inv[idx] = { ...inv[idx], quantity: have - CORE_FUSE }; else inv.splice(idx, 1);
+      const up = makeItemById(CORE_IDS[tier + 1], 1)[0];
+      const next = insertItem(inv, s.maxInventorySlots, up);
+      if (!next) { notify('Inventory Full!', 'red', 'WARNING'); return false; }
+      set({ inventory: next });
+      notify(`Fused a ${CORE_NAMES[tier + 1]}!`, '#ffd24a', 'ITEM');
+      return true;
     },
 
     discover: (tab, keys) => {
@@ -1678,12 +1693,13 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (item.level >= 10) return fail('Max Level Reached!');
 
       const free = questFree(s, 'forge');   // tutorial "Temper the Steel": the smith's first upgrade is on the house
-      const coreIndex = s.inventory.findIndex((i) => i.type === 'CORE');
+      const tier = upgradeCoreTierAt(item.level);   // tiered cores: +0..+3 / +3..+6 / +6..+9
+      const coreIndex = s.inventory.findIndex((i) => coreTierOf(i) === tier);
       const core = coreIndex >= 0 ? s.inventory[coreIndex] : null;
       const requiredCores = free ? 0 : upgradeCoresAt(item.level);
       const goldCost = free ? 0 : upgradeGoldFor(item.price, item.level);
       if (s.gold < goldCost) return fail('Not enough Gold!');
-      if (requiredCores > 0 && (!core || (core.quantity || 1) < requiredCores)) return fail(`Need ${requiredCores} Cores`);
+      if (requiredCores > 0 && (!core || (core.quantity || 1) < requiredCores)) return fail(`Need ${requiredCores} ${CORE_NAMES[tier]}s`);
 
       const chance = free ? 100 : upgradeChanceAt(item.level) * 100;
       const success = Math.random() * 100 < chance;
@@ -1756,7 +1772,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       } else {
         const r = Math.random();
         if (r > 0.90) pool = notPet.filter((i) => i.type === 'POTION');
-        else if (r > 0.82) pool = notPet.filter((i) => i.type === 'CORE'); // cores are rare (8% of item drops)
+        else if (r > 0.82) pool = notPet.filter((i) => i.id === 'upgrade_core'); // cores are rare (8% of item drops; tier I only)
         else {   // plain gear: Common or Rare (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
           const tier: Rarity = Math.random() < 0.5 ? 'COMMON' : 'RARE';
           if (tier === 'COMMON' && Math.random() < 0.7) return null;

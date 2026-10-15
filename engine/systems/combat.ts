@@ -12,7 +12,7 @@ import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
-import { useGameStore } from '../../store';
+import { useGameStore, makeItemById } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo } from '../runMods';
 /** The tower modes (Endless Tower, Daily Trial, Endless Waves all run as runInfo.mode 'TOWER'): monsters drop no items
@@ -475,6 +475,9 @@ export function killEnemy(e: Enemy): void {
     else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02)) rarity = 'LEGENDARY';
     const item = st.rollItemDrop(rarity);
     if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
+    // tiered upgrade cores: bosses after the first may leave a Refined Core, late ones (4th boss on) a Radiant Core
+    if (before >= 1 && Math.random() < 0.35) { dropPos.set(px + 1.2, 0, pz); spawnPickup('ITEM', dropPos, 0, makeItemById('upgrade_core_2', 1)[0]); }
+    if (before >= 3 && Math.random() < 0.15) { dropPos.set(px - 1.2, 0, pz); spawnPickup('ITEM', dropPos, 0, makeItemById('upgrade_core_3', 1)[0]); }
   } else if (Math.random() < Math.min(1, (e.elite ? 0.15 : 0.01) * loot)) {
     const item = st.rollItemDrop();
     if (item) { dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5)); spawnPickup('ITEM', dropPos, 0, item); }

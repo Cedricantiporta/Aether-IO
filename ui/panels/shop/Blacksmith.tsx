@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { SHARD_FUSE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
-import { CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
+import { coreTierOf, CORE_NAMES, CORE_FUSE, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
 import { Lock } from 'lucide-react';
 import type { Rarity, PlayerStats, Item } from '../../../types';
@@ -15,7 +15,7 @@ import { AnvilGlyph } from '../../components/ItemArt';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { Workshop } from './Workshop';
 import { useUiStore } from '../../uiStore';
-import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradeBreakChance, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
+import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradeBreakChance, upgradeCoreTier, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 import { ItemFuse } from './ItemFuse';
 import { ReforgeTab } from './Reforge';
 
@@ -60,7 +60,8 @@ export const Upgrade: React.FC = () => {
   const free = useGameStore((s) => questFree(s, 'forge'));   // tutorial "Temper the Steel": no gold, no cores, sure success
   const [forging, setForging] = useState(false);
   const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? (forging ? selected : null)) : null;   // (a shattered item stays on screen until its cinematic ends)
-  const cores = inventory.filter((i) => i.type === 'CORE').reduce((n, i) => n + (i.quantity || 1), 0);
+  const coreTier = selected ? upgradeCoreTier(selected) : 0;   // tiered cores: the one this upgrade needs
+  const cores = inventory.filter((i) => coreTierOf(i) === coreTier).reduce((n, i) => n + (i.quantity || 1), 0);
 
   useEffect(() => {
     if (actionResult?.type === 'UPGRADE' && actionResult.success && actionResult.item) setSelected(actionResult.item);
@@ -110,7 +111,7 @@ export const Upgrade: React.FC = () => {
         <div className="grid grid-cols-2 gap-2 w-full">
           <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
             <div className="rpg-num" style={{ color: gold >= goldCost ? '#ffe69a' : '#f87171' }}>{goldCost.toLocaleString()}</div></div>
-          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> Cores</div>
+          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> {CORE_NAMES[coreTier]}s</div>
             <div className="rpg-num" style={{ color: cores >= coreCost ? '#7cc4ff' : '#f87171' }}>{coreCost} <span className="text-[.65rem] opacity-70">/ {cores}</span></div></div>
         </div>
         <button className="forge-btn on" disabled={!can} onClick={forge}>
@@ -126,9 +127,21 @@ export const Upgrade: React.FC = () => {
 
 /** Blacksmith > Shards: fuse shards up a tier (20 Common / 10 Rare / 5 Epic / 3 Legendary -> 1 of the next) or break one down. */
 export const ShardTab: React.FC = () => {
-  const { materials, combineMaterials, downgradeMaterials } = useGameStore(useShallow((s) => ({ materials: s.materials, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials })));
+  const { materials, combineMaterials, downgradeMaterials, inventory, fuseCores } = useGameStore(useShallow((s) => ({ materials: s.materials, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials, inventory: s.inventory, fuseCores: s.fuseCores })));
+  const coreHave = (t: number) => inventory.filter((i) => coreTierOf(i) === t).reduce((n, i) => n + (i.quantity || 1), 0);
   return (
     <div className="flex flex-col gap-3" data-testid="shard-tab">
+      <div>
+        <div className="rpg-label mb-1.5">Fuse upgrade cores (+0..+3 Upgrade, +3..+6 Refined, +6..+9 Radiant)</div>
+        <div className="flex flex-col gap-1.5">
+          {[0, 1].map((t) => (
+            <button key={t} disabled={coreHave(t) < CORE_FUSE} onClick={() => fuseCores(t)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }} data-testid={`core-fuse-${t}`}>
+              <span className="text-[.72rem] font-bold">{CORE_FUSE} {CORE_NAMES[t]}s <ArrowRight size={10} className="inline" /> 1 {CORE_NAMES[t + 1]}</span>
+              <span className="opacity-70 text-[.7rem]">({coreHave(t)})</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div>
         <div className="rpg-label mb-1.5">Fuse shards (always succeeds)</div>
         <div className="flex flex-col gap-1.5">

@@ -175,6 +175,8 @@ export interface GameState {
   addGold: (n: number) => void;
   addGems: (n: number) => void;
   addCrystals: (n: number, at?: { x: number; z: number }) => void;
+  /** Blacksmith > Shards: 5 cores of `tier` (0 / 1) -> 1 core of the next tier. */
+  fuseCores: (tier: number) => boolean;
   discover: (tab: CodexTab, keys: string[]) => void;   // mark Codex entries discovered (idempotent)
   claimCodexReward: (tab: CodexTab) => boolean;         // one-time gems when a tab is 100% discovered
   addExperience: (n: number) => void; // handles level-ups: +SP, +base stats, engine heal + levelUp event
