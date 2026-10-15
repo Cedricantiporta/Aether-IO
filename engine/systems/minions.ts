@@ -18,12 +18,12 @@ export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHE
 /** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
 export const MAX_SKELETONS = 5;
 /** Summon sources (minion.src), each with its own cap so they never push each other out:
- *  1 Raise Dead (5, permanent), 3 Plague Ground (5 warriors that crumble after 7 s), 4 weapon perk (2),
+ *  1 Raise Dead (5, permanent), 3 Plague Ground (5 warriors that crumble after 8 s), 4 weapon perk (2),
  *  5 Grave Call (2 warriors that crumble after 8 s + 1 s per level),
  *  2 the ult's bone golem (no skeleton cap). */
 export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5;
 const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2];
-export const PLAGUE_LIFE = 7;
+export const PLAGUE_LIFE = 8;
 const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
 function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === src) { skN[m.kind]++; n++; } return n; }
 /** The next Raise Dead skeleton. The army is 3 skeleton warriors + 2 that are each a random archer or mage
@@ -238,7 +238,7 @@ events.on('enemyDeath', (d) => {
   const st = useGameStore.getState();
   if (st.hero !== 'NECROMANCER' || d.poof) return;
   const pl = world.player, lv = st.skillLevels;
-  // Plague Ground: every enemy that dies in it rises as a skeleton warrior for 7 s (up to 5 at a time)
+  // Plague Ground: every enemy that dies in it rises as a skeleton warrior for 8 s (up to 5 at a time)
   if (lv.s4 > 0 && inCurse(d.pos.x, d.pos.z)) {
     spawnMinion(MINION_WARRIOR, d.pos.x, d.pos.z, st.stats.damage * 0.8 * (1 + 0.2 * (lv.s4 - 1)), PLAGUE_LIFE, SRC_PLAGUE);
   }
