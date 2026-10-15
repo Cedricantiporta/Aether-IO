@@ -698,3 +698,13 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Merges: the quests worktree (story v4, level-gated side quests, tutorials) and the town worktree (trainer west of the
   castle, wider meadow, farm west of the road, Elixir Brewer at (11, 56), elixirs.ts) are both merged; the brew action emits
   hub `brew` and `brew_elixir` (the Chapter 1 elixir step).
+- **Crystal Cave** (third village area, `world.village.area = 'CAVE'`, modeled on the castle): outside the east wall the
+  island edge bulges into a rounded forest bay (`CAVE_BAY` sin^2 bulge in `mapgen.baseRadius`; forest / rim rocks / edge
+  bushes follow it, `inCaveClear` keeps the mound free) with a rock mound + dark arched mine opening at its back
+  (`render/CaveEntrance.tsx`, mounted in Scene's town branch; E / click "Enter Crystal Cave", `act 'cave'`, pending
+  `'CAVE'`). Inside: `engine/caveData.ts` (outline `caveRadius`, colliders, 8 harvest nodes ORE / CRYSTAL / GOLD_VEIN,
+  3 point lights) drawn by `render/CaveInterior.tsx` (merged floor / wall / props / glow meshes), dim `setLook(-2)`.
+  Cave nodes reuse crate slots 0..7 with their own save key `aether-survivor-cave-harvest-v1` and own 24 h regrow
+  (`HarvestSet` in village.ts). Leaving puts the hero at `CAVE_OUT` facing the bay; ground pickups are scooped up on cave
+  transitions. Minimap draws the cave outline / nodes / exit (and the hall in the castle), a cyan cave icon in town.
+  The ruined wall that stood at the bay mouth moved from (58, 14) to (57.6, 25).

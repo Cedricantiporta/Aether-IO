@@ -11,6 +11,7 @@ import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
 import { GATE, NPCS } from '../engine/townData';
 import { CASTLE_DOOR, CASTLE_EXIT } from '../engine/castleData';
+import { CAVE_EXIT } from '../engine/caveData';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { questDone, questNeedsKing } from '../quests';
 import { npcs } from '../engine/systems/npcs';
@@ -22,8 +23,14 @@ const POTION = SHOP_POSITIONS.find((s) => s.type === 'SUPPLIES')!;
 const tgt = { x: 0, z: 0, quest: false, hideR: 14 };
 
 function pickTarget(): boolean {
+  if (world.village.area !== 'CAVE') return pickTargetIn(world.village.area === 'CASTLE');
+  // crystal cave: every objective is outside, so the arrow points at the way out (only while there is a real objective)
+  if (!pickTargetIn(false) || (!tgt.quest && tgt.x === GATE.x && tgt.z === GATE.z)) return false;
+  tgt.x = CAVE_EXIT.x; tgt.z = CAVE_EXIT.z; tgt.hideR = 4.5;
+  return true;
+}
+function pickTargetIn(castle: boolean): boolean {
   const st = useGameStore.getState(), qs = st.quests;
-  const castle = world.village.area === 'CASTLE';
   const king = qs.some(questNeedsKing), claim = qs.some(questDone);
   const sell = qs.some((q) => q.accepted && q.type === 'SELL_LOOT' && q.progress < q.target) && st.inventory.some((i) => i.type === 'LOOT');
   tgt.quest = true; tgt.hideR = 4.5;
@@ -76,7 +83,7 @@ export function GuideArrow() {
     m.visible = on && has && d > tgt.hideR;
     if (!m.visible) return;
     const k = 4.2 + Math.sin(clock.elapsedTime * 5) * 0.25;
-    m.position.set(p.x + (dx / d) * k, (world.village.area === 'CASTLE' ? 0.35 : 0.25), p.z + (dz / d) * k);
+    m.position.set(p.x + (dx / d) * k, (world.village.area !== 'TOWN' ? 0.35 : 0.25), p.z + (dz / d) * k);
     m.rotation.y = Math.atan2(dx, dz);
   });
   return <mesh ref={ref} geometry={geo} material={mat} visible={false} renderOrder={5} />;

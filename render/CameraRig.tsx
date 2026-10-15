@@ -54,7 +54,7 @@ export function CameraRig() {
     _tgt.set(p.pos.x + lx, 0.8, p.pos.z + lz);
     // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
     const C = world.camera;
-    if (status === GameStatus.MENU && world.village.area === 'CASTLE' && C.dist > 0.85) C.dist = 0.85;   // indoors: keep the camera close so the walls do not block the view
+    if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
     const R = CAM_DIST0 * s.zoom * s.dist, hr = Math.cos(s.pitch) * R;

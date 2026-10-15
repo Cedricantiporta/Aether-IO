@@ -16,6 +16,8 @@ import { Terrain } from './Terrain';
 import { Props } from './Props';
 import { Town } from './Town';
 import { CastleInterior } from './CastleInterior';
+import { CaveInterior } from './CaveInterior';
+import { CaveEntrance } from './CaveEntrance';
 import { Hero } from './Hero';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
@@ -46,7 +48,8 @@ export function Scene() {
   useFrame((_, dt) => updateGame(dt), -1);
   const gameplay = status !== GameStatus.MENU && status !== GameStatus.HERO_SELECT;
   // town while in the menu / hero select; a run shows only its current room (rebuilt behind the black fade)
-  useLayoutEffect(() => { setLook(gameplay ? world.room.biome : -1, true, world.room.index); }, [gameplay, roomVer]);
+  const cave = !gameplay && world.village.area === 'CAVE';
+  useLayoutEffect(() => { setLook(gameplay ? world.room.biome : cave ? -2 : -1, true, world.room.index); }, [gameplay, roomVer, cave]);
   return (
     <>
       <color attach="background" args={[FOG_COLOR]} />
@@ -57,17 +60,20 @@ export function Scene() {
       <CameraRig />
       {gameplay ? <Room q={q} /> : world.village.area === 'CASTLE' ? (
         <Suspense fallback={null}><CastleInterior q={q} /></Suspense>
+      ) : cave ? (
+        <Suspense fallback={null}><CaveInterior q={q} /></Suspense>
       ) : (
         <>
           <Suspense fallback={null}><Terrain key={q.name + ':' + ver} q={q} /></Suspense>
           <Suspense fallback={null}><Props q={q} /></Suspense>
           <Suspense fallback={null}><Town q={q} /></Suspense>
+          <CaveEntrance q={q} />
         </>
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>
       <FacingArrow />
       {!gameplay && <GuideArrow />}
-      {(gameplay || (status === GameStatus.MENU && world.village.area === 'TOWN')) && (
+      {(gameplay || (status === GameStatus.MENU && world.village.area !== 'CASTLE')) && (
         <>
           <Crates />
           <Pickups />

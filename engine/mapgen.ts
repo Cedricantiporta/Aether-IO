@@ -10,6 +10,7 @@ import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TR
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
 import { ISLAND_BOXES, FARM } from './townData';
+import { CAVE_BAY } from './caveData';
 
 /** Circle collider used for movement push-out and projectile blocking. */
 export interface Collider {
@@ -138,6 +139,10 @@ function baseRadius(angle: number): number {
   const dx = Math.cos(angle), dz = Math.sin(angle);
   let r = 0;
   for (let i = 0; i < ISLAND_BOXES.length; i++) r = Math.max(r, boxExit(ISLAND_BOXES[i], dx, dz));
+  // the cave bay east of the town (engine/caveData CAVE_BAY): a smooth sin^2 bulge of the edge over an angle range, so the
+  // forest edge curves inward in a rounded cove (tangent to the straight edge at both ends)
+  const b = CAVE_BAY;
+  if (angle > b.a0 && angle < b.a1) { const w = Math.sin((Math.PI * (angle - b.a0)) / (b.a1 - b.a0)); r += b.depth * w * w; }
   return r;
 }
 /** Walled town + small forecourt; edge radius for an angle (angle = atan2(z, x)), with a little per-run wobble. */

@@ -72,7 +72,7 @@ export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
 export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }   // 0 broken pillar, 1 ruined wall, 2 fallen arch
 export const RUINS: RuinSpec[] = [
-  { x: 58, z: 14, rot: 0.3, kind: 1 }, { x: 57.5, z: -4, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 58, z: -28, rot: -0.4, kind: 2 },
+  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 58, z: -28, rot: -0.4, kind: 2 },
   { x: 47, z: -47, rot: 0.8, kind: 1 }, { x: 34, z: -56.5, rot: 0.1, kind: 0 }, { x: 26, z: -45.5, rot: -0.2, kind: 1 }, { x: 16, z: -56, rot: 0.4, kind: 2 },
   { x: 9, z: -45, rot: 0, kind: 0 },
 ];
