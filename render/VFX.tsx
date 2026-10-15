@@ -543,6 +543,18 @@ export function VFX() {
       }
     }));
     off.push(on('playerRevive', (e) => {
+      if (e.source === 'ANKH') {   // Ankh of Life: a column of light falls on the hero, golden rings ripple out, motes rise
+        const x = e.pos.x, z = e.pos.z;
+        for (let i = 0; i < 70; i++) {   // the pillar
+          const a = Math.random() * TAU, r = Math.random() * 1.1;
+          FX.add.emit(x + Math.cos(a) * r, Math.random() * 1.5, z + Math.sin(a) * r, 0, 6 + Math.random() * 8, 0, 1.0 + Math.random() * 0.6, 0.55, 0.1, 2.4, 2.1, 1.2, 0.9, CELL.STREAK, -2, 0.4, 0, 0, 0.12);
+        }
+        for (let h = 0; h < 6; h++) glowPuff(x, 0.6 + h * 1.6, z, 0xffe8a0, 4.5 - h * 0.4, 0.9 + h * 0.08, 1.8, 0.75);
+        for (let k = 0; k < 3; k++) window.setTimeout(() => ringBurst(x, 0.25, z, 0xffd76a, 0.6, 6 + k * 3, 0.9, 2.2), k * 220);
+        for (let i = 0; i < 26; i++) { const a = (i / 26) * TAU; FX.add.emit(x + Math.cos(a) * 3.5, 0.3, z + Math.sin(a) * 3.5, -Math.cos(a) * 2.5, 2.5 + Math.random() * 2, -Math.sin(a) * 2.5, 1.3, 0.35, 0.05, 2.4, 2.2, 1.4, 1, CELL.STAR, -1, 0.6, 0, 3); }
+        flashLight(x, 4, z, 0xffe8a0, 90, 1.2);
+        events.emit('floatText', { pos: e.pos, text: 'ANKH OF LIFE', color: 0xffd76a, scale: 1.3, dy: 3 });
+      }
       ringBurst(e.pos.x, 0.3, e.pos.z, 0xfff0a0, 0.5, 7, 0.8, 2);
       sparks(e.pos.x, 1, e.pos.z, 30, 0xfff0a0, 11, 0.32, 0.8, 2);
       glowPuff(e.pos.x, 1.2, e.pos.z, 0xffffff, 5, 0.5, 1.5, 0.8);

@@ -20,6 +20,7 @@ import { useSeen } from './lib/alerts';
 import { useUiStore } from './uiStore';
 import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
+import { AnkhPrompt } from './screens/AnkhPrompt';
 import { SetOutWindow } from './screens/SetOut';
 import { EndingScreen } from './screens/Ending';
 import { Prologue, StoryBook } from './screens/Story';
@@ -80,6 +81,7 @@ export const GameUI: React.FC = () => {
       </AnimatePresence>
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>
       <AnimatePresence>{status === GameStatus.GAME_OVER && <GameOver key="over" />}</AnimatePresence>
+      {status === GameStatus.PLAYING && <AnkhPrompt />}
       {village && <SetOutWindow />}
       <EndingScreen />
       {village && <Prologue />}

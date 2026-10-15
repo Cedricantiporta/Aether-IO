@@ -10,4 +10,6 @@ export const hooks = {
   heroMul: (_e: Enemy): number => 1,
   /** A hostile ground fx (dark hero copy of a hero skill) resolved: darkHero.ts applies its hit to the player. */
   hostileFx: (_f: GroundFx) => {},
+  /** The hero was brought back (Ankh of Life): player.ts resets its death flow. */
+  onRevive: () => {},
 };

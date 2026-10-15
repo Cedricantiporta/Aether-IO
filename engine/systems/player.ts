@@ -8,7 +8,8 @@ import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { lockedEnemy, updateTarget } from './target';
-import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff } from './combat';
+import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable } from './combat';
+import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { updateSkillInput, resetAim } from './aim';
@@ -49,9 +50,10 @@ let deathT = 0;
 let ended = false;
 
 export function resetPlayerSystem(): void {
-  dying = false; deathT = 0; ended = false;
+  dying = false; deathT = 0; ended = false; ankhOffer.open = false; ankhOffer.declined = false;
   resetAim();
 }
+hooks.onRevive = () => { dying = false; deathT = 0; ended = false; ankhOffer.open = false; ankhOffer.declined = false; };
 
 /** Initialises the runtime player from store stats (after clearWorld). */
 export function initPlayer(): void {
@@ -152,6 +154,8 @@ export function updatePlayer(dt: number): void {
     a.dashing = false;
     a.moveBlend = 0;
     if (deathT >= DEATH_DELAY && !ended) {
+      // an Ankh of Life in the bag (off cooldown): offer it on the death screen first (ui/screens/AnkhPrompt.tsx)
+      if (!ankhOffer.declined && ankhAvailable()) { ankhOffer.open = true; return; }
       ended = true;
       st.endRun({ ...world.run, wave: world.director.wave });
     }

@@ -317,6 +317,24 @@ const ANKH_KEY = 'aether-survivor-ankh-cd-v1';
 let ankhReadyAt = (() => { try { return Number(localStorage.getItem(ANKH_KEY)) || 0; } catch { return 0; } })();
 /** ms until an Ankh can revive again (0 = ready). */
 export function ankhCooldownLeft(): number { return Math.max(0, ankhReadyAt - Date.now()); }
+/** Death screen offer: set by the death flow (player.ts) while an Ankh is ready; read by ui/screens/AnkhPrompt.tsx. */
+export const ankhOffer = { open: false, declined: false };
+/** An Ankh in the bag, off cooldown. */
+export function ankhAvailable(): boolean { return ankhCooldownLeft() <= 0 && useGameStore.getState().inventory.some((i) => i.type === 'REVIVE'); }
+/** The player chose to use the Ankh of Life: consume it, start its cooldown and bring the hero back (half HP, 5 s invuln). */
+export function reviveWithAnkh(): boolean {
+  const st = useGameStore.getState(), p = world.player;
+  ankhOffer.open = false;
+  if (ankhCooldownLeft() > 0 || !st.consumeItem((i) => i.type === 'REVIVE')) return false;
+  startAnkhCooldown();
+  p.alive = true; p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
+  p.invulnT = Math.max(p.invulnT, 5);
+  p.reviveFx = 1;
+  hooks.onRevive();
+  st.addNotification('REVIVED BY THE ANKH OF LIFE!', COLORS.rarityEpic, 'SYSTEM');
+  events.emit('playerRevive', { pos: p.pos, source: 'ANKH' });
+  return true;
+}
 function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS; try { localStorage.setItem(ANKH_KEY, String(ankhReadyAt)); } catch { /* ignore */ } }
 
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
@@ -599,16 +617,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     events.emit('playerRevive', { pos: p.pos, source: 'PHOENIX' });
     return;
   }
-  const ankh = ankhCooldownLeft() <= 0 ? st.consumeItem((i) => i.type === 'REVIVE') : null;
-  if (ankh) {
-    startAnkhCooldown();
-    p.hp = st.stats.maxHealth * 0.5;
-    p.invulnT = Math.max(p.invulnT, 5);
-    p.reviveFx = 1;
-    st.addNotification('REVIVED BY ANKH!', COLORS.rarityEpic, 'SYSTEM');
-    events.emit('playerRevive', { pos: p.pos, source: 'ANKH' });
-    return;
-  }
+  // (the Ankh of Life is no longer automatic: the death flow offers it, see ankhOffer / reviveWithAnkh)
 
   p.hp = 0;
   p.alive = false;
