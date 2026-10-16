@@ -457,9 +457,9 @@ export const CoinGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => (
 export const GemGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => (
   <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden>
     <defs><linearGradient id="gm-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#d4f6ff" /><stop offset=".5" stopColor="#3fb8f0" /><stop offset="1" stopColor="#1450b0" /></linearGradient></defs>
-    <circle cx="16" cy="16" r="14" fill="#0e2a52" stroke="#0d0703" strokeWidth="1.5" />
-    <path d="M16 5 L25 13 L16 28 L7 13Z" fill="url(#gm-g)" stroke="#0d0703" strokeWidth="1.3" strokeLinejoin="round" />
-    <path d="M7 13 H25 M12 13 L16 5 L20 13 L16 28 L12 13" stroke="#fff" strokeOpacity=".6" strokeWidth=".9" fill="none" />
+    {/* (owner: no round container behind the gem) */}
+    <path d="M16 3 L28 12.5 L16 30 L4 12.5Z" fill="url(#gm-g)" stroke="#0d0703" strokeWidth="1.4" strokeLinejoin="round" />
+    <path d="M4 12.5 H28 M10.5 12.5 L16 3 L21.5 12.5 L16 30 L10.5 12.5" stroke="#fff" strokeOpacity=".6" strokeWidth=".9" fill="none" />
   </svg>
 );
 
