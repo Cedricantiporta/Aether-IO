@@ -6,6 +6,7 @@ import type { HeroClass, Item, PlayerStats, Rarity } from './types';
 import { ITEMS_POOL, RANK_REQ, MATERIAL_DOWNGRADE_YIELD } from './constants';
 import { LOOT_BY_ID } from './loot';
 import { rollAffixes } from './affixes';
+import { ELIXIRS } from './elixirs';
 
 export type CraftSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory';
 export const CRAFT_SLOTS: CraftSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory'];
@@ -104,7 +105,9 @@ for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as
 }
 
 /** Names of every monster-loot item some recipe uses (bulk sell keeps these unless asked). */
-export const CRAFT_MAT_NAMES: Set<string> = new Set(Object.values(RECIPES).flatMap((r) => r.loot.map((l) => LOOT_BY_ID[l.id]?.name)).filter(Boolean) as string[]);
+/** Crafting materials: Workshop recipe loot + (owner) the Elixir Brewer's ingredients (kept out of "loot only" bulk sells). */
+export const CRAFT_MAT_NAMES: Set<string> = new Set([...Object.values(RECIPES).flatMap((r) => r.loot.map((l) => LOOT_BY_ID[l.id]?.name)),
+  ...Object.values(ELIXIRS).flatMap((e) => e.parts.map((p) => LOOT_BY_ID[p.id]?.name))].filter(Boolean) as string[]);
 
 export const getRecipe = (slot: CraftSlot, rarity: Rarity, hero: HeroClass): Recipe => RECIPES[`${hero}:${slot}:${rarity}`];
 

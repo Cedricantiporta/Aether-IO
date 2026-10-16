@@ -122,6 +122,14 @@ export function questSlotsUsed(s: { quests: Quest[]; npcQuests: NpcQuestSave; st
   return n;
 }
 /** The prologue's "take a bounty" tutorial step may always take one. */
+/** (owner) gems per missing brewing ingredient, by the ingredient's rarity. */
+const BREW_GEM: Record<string, number> = { COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, MYTHIC: 5 };
+/** Gems to replace the ingredients missing for `n` brews of elixir `id` (0 when the bag covers them). */
+export function brewGemCost(inv: Item[], id: ElixirId, n: number): number {
+  let g = 0;
+  for (const p of ELIXIRS[id].parts) g += Math.max(0, p.count * n - lootOwned(inv, p.id)) * (BREW_GEM[LOOT_BY_ID[p.id]?.rarity ?? 'COMMON'] ?? 1);
+  return g;
+}
 export const questSlotsFull = (s: { quests: Quest[]; npcQuests: NpcQuestSave; story: StorySave }): boolean =>
   questSlotsUsed(s) >= QUEST_MAX_ACTIVE && s.story.step !== storyIdx('board');
 
@@ -145,7 +153,7 @@ export const firstPetFree = (s: { equipment: Equipment; inventory: Item[]; wareh
  *  action, so it is a one-time gift): "Stock Up" one Health Potion, "A Gift from the Stars" one gem summon, "Suit of
  *  Steel" one armor piece at the Armory, "Temper the Steel" one Blacksmith upgrade (no gold, no cores, sure success),
  *  "Lessons of the Blade" one skill level at the Skill Trainer (no skill points). */
-export type QuestFreebie = 'potion' | 'summon' | 'armor' | 'forge' | 'train';
+export type QuestFreebie = 'potion' | 'summon' | 'armor' | 'forge' | 'train' | 'elixir';
 export const questFree = (s: { story: StorySave }, what: QuestFreebie): boolean => STORY[s.story.step]?.id === what;
 /** Armor pieces (the "Suit of Steel" step): body armor, helmets, gloves, boots. */
 export const isArmorPiece = (i: { type: string }): boolean => i.type === 'ARMOR' || i.type === 'HELMET' || i.type === 'GLOVES' || i.type === 'BOOTS';
@@ -1696,14 +1704,23 @@ export const useGameStore = create<GameState>()((set, get) => {
     brewElixir: (id, n = 1) => {
       const d = ELIXIRS[id];
       let done = 0;
+      if (id === 'might' && questFree(get(), 'elixir')) {   // (owner) tutorial "A Bitter Brew": one Elixir of Might on the house, no ingredients
+        const s = get(), inv = insertItem(s.inventory, s.maxInventorySlots, elixirItem(id));
+        if (!inv) { notify('Inventory Full!', 'red', 'WARNING'); return 0; }
+        set({ inventory: inv });
+        notify(`Brewed ${d.name}! (on the house)`, d.color, 'ITEM'); events.emit('hub', { kind: 'brew', n: 1 }); events.emit('hub', { kind: 'brew_elixir', n: 1 });
+        return 1;
+      }
       for (let k = 0; k < n; k++) {
         const s = get();
         if (s.gold < d.gold) { if (!done) notify('Not enough gold.', 'red', 'WARNING'); break; }
-        const miss = d.parts.find((p) => lootOwned(s.inventory, p.id) < p.count);
-        if (miss) { if (!done) notify(`Missing: ${LOOT_BY_ID[miss.id].name}`, 'red', 'WARNING'); break; }
-        const inv = insertItem(consumeLoot(s.inventory, { loot: d.parts }), s.maxInventorySlots, elixirItem(id));
+        // (owner) missing ingredients can be paid with gems (1-5 per missing piece, by its rarity)
+        const gemCost = brewGemCost(s.inventory, id, 1);
+        if (gemCost > s.gems) { if (!done) notify(`Missing ingredients: ${gemCost} gems needed to replace them.`, 'red', 'WARNING'); break; }
+        const have = d.parts.map((p) => ({ id: p.id, count: Math.min(p.count, lootOwned(s.inventory, p.id)) })).filter((p) => p.count > 0);
+        const inv = insertItem(consumeLoot(s.inventory, { loot: have }), s.maxInventorySlots, elixirItem(id));
         if (!inv) { if (!done) notify('Inventory Full!', 'red', 'WARNING'); break; }
-        set({ gold: s.gold - d.gold, inventory: inv });
+        set({ gold: s.gold - d.gold, gems: s.gems - gemCost, inventory: inv });
         done++;
       }
       if (done) { notify(`Brewed ${done > 1 ? `${done}x ` : ''}${d.name}!`, d.color, 'ITEM'); events.emit('hub', { kind: 'brew', n: done }); events.emit('hub', { kind: 'brew_elixir', n: done }); }   // (brew_elixir: the main-quest step)
