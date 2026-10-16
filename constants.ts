@@ -135,12 +135,12 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
         description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
     },
     KNIGHT: {
-        stats: { maxHealth: 96, defense: 22, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 1.5, dmgReduce: 0.05, manaRegen: 1.0 },
+        stats: { maxHealth: 96, defense: 22, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.75, dmgReduce: 0.05, manaRegen: 1.0 },
         weaponId: 'sword_1',
         description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 84, defense: 15, moveSpeed: 8.47, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 2.0, manaRegen: 1.0 },
+        stats: { maxHealth: 84, defense: 15, moveSpeed: 8.47, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 1.0, manaRegen: 1.0 },
         weaponId: 'axe_1',
         description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
     }

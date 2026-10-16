@@ -79,7 +79,7 @@ const MAX_ITEM_NOTIFICATIONS = 6;
 const MAX_NOTIFICATIONS = 12;
 
 const INITIAL_STATS: PlayerStats = {
-  maxHealth: 100, maxMana: 100, regen: 0.5, manaRegen: 0.5, moveSpeed: 10, damage: 18,
+  maxHealth: 100, maxMana: 100, regen: 0.25, manaRegen: 0.5,   /* (owner: base HP regen -50%, was 0.5) */ moveSpeed: 10, damage: 18,
   fireRate: 1.4, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
   cooldownReduction: 0, magnetRadius: 5.0, critRate: 0.05, critDamage: 1.5, defense: 0,
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
