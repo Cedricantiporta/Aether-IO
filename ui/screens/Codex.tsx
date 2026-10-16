@@ -38,7 +38,7 @@ export const CodexDialog: React.FC = () => {
   const open = useUiStore((s) => s.codexOpen);
   const close = useUiStore((s) => s.openCodex);
   const [tab, setTab] = useState<typeof TABS[number]>('ITEMS');
-  const items = [...ITEMS_POOL].sort(byRank);
+  const items = ITEMS_POOL.filter((i) => !i.retired).sort(byRank);
   const pets = [...PETS_POOL].sort(byRank);
   const disc = useGameStore((st) => st.discovered);
   const claimed = useGameStore((st) => st.codexClaimed);

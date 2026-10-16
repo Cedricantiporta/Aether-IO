@@ -9,7 +9,7 @@ import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { HERO_COLOR } from '../../lib/game';
 import { TalentsView } from './Talents';
-import { useRunSkillAlert, useTalentAlert } from '../../lib/alerts';
+import { useRunSkillAlert, useTalentAlert, canTrainSkill } from '../../lib/alerts';
 import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityDefs';
 import { PaintedIcon } from '../../components/SkillIcons';
 import { tip } from '../../components/Tooltip';
@@ -36,13 +36,14 @@ const RunSkills: React.FC = () => {
   ];
   // (owner, reference) a compact list: icon, LV x/5, name and the action on the right; the details live in the hover tooltip
   const [tab, setTab] = React.useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
+  const dotA = useGameStore((s) => canTrainSkill(s, 'ACTIVE')), dotP = useGameStore((s) => canTrainSkill(s, 'PASSIVE'));
   const shown = rows.filter((r) => (tab === 'PASSIVE') === !!passives.find(([k]) => k === r.key));
   const short = (t: string) => { const m = t.match(/^[^.!?]*[.!?]/); return m ? m[0] : t; };
   return (
     <div className="flex flex-col gap-2">
       <div className="sk-head">
         <nav className="bag-tabs shop-tabs" style={{ ['--n' as any]: 2, margin: 0, flex: 1 }}>
-          {(['ACTIVE', 'PASSIVE'] as const).map((t) => <button key={t} className={`bag-tab ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`sk-tab-${t}`}>{t === 'ACTIVE' ? 'Active' : 'Passive'}</button>)}
+          {(['ACTIVE', 'PASSIVE'] as const).map((t) => <button key={t} className={`bag-tab relative ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`sk-tab-${t}`}>{t === 'ACTIVE' ? 'Active' : 'Passive'}{(t === 'ACTIVE' ? dotA : dotP) && <i className="red-dot" />}</button>)}
         </nav>
         <span className="sk-sp"><Star size={12} /> {sp} SP</span>
       </div>

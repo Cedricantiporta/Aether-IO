@@ -62,11 +62,13 @@ export function useCodexAlert(): boolean {
 /** Unspent run skill points / permanent talent points (the dot stays until they are spent). */
 /** Something the Skill Trainer can teach right now: an unlocked skill below max whose SP cost is affordable (owner: no dot
  *  when the points don't cover any lesson). */
-export function canTrainSkill(s: ReturnType<typeof useGameStore.getState>): boolean {
-  if (questFree(s, 'train')) return true;
+/** `kind` narrows it to the Skill Trainer's Active / Passive tab (owner: red dots on those tabs too). */
+export function canTrainSkill(s: ReturnType<typeof useGameStore.getState>, kind?: 'ACTIVE' | 'PASSIVE'): boolean {
+  if (questFree(s, 'train') && kind !== 'PASSIVE') return true;
   if (s.skillPoints <= 0) return false;
-  const h = s.hero, keys: string[] = [...activeDefs(h).map((a) => a.slot), dashKey(h), 'ult',
-    ...Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === h)).map(([k]) => k)];
+  const h = s.hero, act: string[] = [...activeDefs(h).map((a) => a.slot), dashKey(h), 'ult'],
+    pas: string[] = Object.entries(SKILLS_INFO).filter(([k, i]: [string, any]) => i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === h)).map(([k]) => k);
+  const keys = kind === 'ACTIVE' ? act : kind === 'PASSIVE' ? pas : [...act, ...pas];
   return keys.some((k) => {
     const lvl = (s.skillLevels as any)[k] ?? 0;
     if (lvl >= 5 || (lvl === 0 && s.level < unlockLevel(h, k))) return false;

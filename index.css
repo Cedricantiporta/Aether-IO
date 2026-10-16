@@ -1986,6 +1986,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sw-rates-btn:hover { color: var(--gold-light); border-color: var(--gold); }
 .sw-pop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(0, 0, 0, .55); }
 .sw-pop-box { position: relative; width: min(44rem, 92%); padding: 1rem 1.1rem; background: linear-gradient(180deg, #1a1610, #0c0a07); border: 1px solid #6b5a3a; border-radius: 3px; box-shadow: 0 16px 50px rgba(0, 0, 0, .8); }
+.sw-pop-wide { width: min(52rem, 94%); }
+.sw-pop-wide .sw-preview { flex: none; max-height: 64vh; }
 .sw-pop-h { font-family: var(--font-title); font-size: 1rem; color: #f6e6bd; margin-bottom: .7rem; }
 .sw-pop-h .sw-x { position: absolute; right: .6rem; top: .55rem; }
 .sw-pop .sw-rates { margin: 0 0 .6rem; }

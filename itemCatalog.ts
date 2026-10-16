@@ -20,7 +20,19 @@ const T: Record<string, [St, number[]]> = {
   mana: ['maxMana', [20, 35, 60, 100, 160]], mregen: ['manaRegen', [.5, .8, 1.2, 1.8, 2.8]], regen: ['regen', [.4, .7, 1.1, 1.7, 2.6]],
   cdr: ['cooldownReduction', [.02, .03, .05, .07, .1]], kb: ['knockback', [.3, .5, .8, 1.2, 1.8]], dashcd: ['dashCooldown', [-.1, -.2, -.3, -.5, -.8]],
   mag: ['magnetRadius', [1, 1.5, 2.2, 3, 4.5]],
+  thorn: ['thorns', [4, 7, 12, 19, 30]], steal: ['lifeSteal', [.006, .01, .015, .022, .032]],
+  gold: ['goldFind', [.05, .08, .12, .18, .27]], xp: ['xpBonus', [.04, .06, .09, .13, .2]],
 };
+/** (owner) wear (helmet / armor / gloves / boots) base stats are defensive only, Defense first; accessories carry the
+ *  less common utility stats; weapons the attack stats. */
+const DEF_KEYS = new Set(['def', 'hp', 'regen', 'dodge', 'move', 'mana', 'mregen', 'thorn', 'mag']);
+const UTIL_KEYS = new Set(['steal', 'cdr', 'move', 'regen', 'mregen', 'dodge', 'mag', 'gold', 'xp']);
+const WEAR_TYPES = new Set(['HELMET', 'ARMOR', 'GLOVES', 'BOOTS']);
+function statList(type: string, list: string[]): string[] {
+  if (WEAR_TYPES.has(type)) { const l = ['def', ...list.filter((k) => DEF_KEYS.has(k) && k !== 'def')]; for (const f of ['hp', 'regen', 'dodge', 'thorn', 'mregen']) if (!l.includes(f)) l.push(f); return l; }
+  if (type === 'ACCESSORY') { const l = list.filter((k) => UTIL_KEYS.has(k)); for (const f of ['regen', 'cdr', 'steal', 'move', 'mregen']) if (!l.includes(f)) l.push(f); return l; }
+  return list;
+}
 /** Tier steps (owner): each rarity is a clear jump over the one below - Rare +25%, Epic +40%, Legendary +75%,
  *  Mythic +120% - anchored on the Epic value of every stat. Uncommon (green) sits halfway between Common and Rare. */
 export const TIER_STEP = [1.25, 1.4, 1.75, 2.2];
@@ -38,11 +50,12 @@ const TAG: Record<string, string> = { light: 'Light and quick.', medium: 'Balanc
 
 /** weapon secondary stat lists per class and flavour */
 const WSEC: Record<HeroClass, Record<string, string[]>> = {
-  ARCHER: { swift: ['aspd', 'move', 'crit', 'dodge'], deadly: ['crit', 'critd', 'kb', 'aspd'] },
-  WIZARD: { arcane: ['skill', 'cdr', 'mregen', 'crit'], fury: ['crit', 'critd', 'skill', 'mana'] },
-  BARBARIAN: { bulwark: ['def', 'hp', 'regen', 'kb'], rampage: ['aspd', 'critd', 'kb', 'hp'] },
-  KNIGHT: { aegis: ['def', 'hp', 'regen', 'crit'], valor: ['crit', 'critd', 'aspd', 'def'] },
-  NECROMANCER: { grave: ['skill', 'mana', 'hp', 'cdr'], blight: ['crit', 'critd', 'skill', 'mregen'] },
+  // (owner: weapons carry attack stats only)
+  ARCHER: { swift: ['aspd', 'crit', 'critd', 'kb'], deadly: ['crit', 'critd', 'kb', 'aspd'] },
+  WIZARD: { arcane: ['skill', 'crit', 'critd', 'aspd'], fury: ['crit', 'critd', 'skill', 'aspd'] },
+  BARBARIAN: { bulwark: ['kb', 'critd', 'aspd', 'crit'], rampage: ['aspd', 'critd', 'kb', 'crit'] },
+  KNIGHT: { aegis: ['crit', 'kb', 'critd', 'aspd'], valor: ['crit', 'critd', 'aspd', 'kb'] },
+  NECROMANCER: { grave: ['skill', 'crit', 'critd', 'aspd'], blight: ['crit', 'critd', 'skill', 'aspd'] },
 };
 const WDMG_RAW: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280], NECROMANCER: [14, 26, 58, 115, 210] };
 const WDMG = Object.fromEntries(Object.entries(WDMG_RAW).map(([h, v]) => [h, tierRow(v[2]).map((x) => Math.round(x))])) as Record<HeroClass, number[]>;   // (6 tiers)
@@ -80,8 +93,8 @@ const pick = (list: string[], ri: number): Partial<PlayerStats> => {
 };
 const r3 = (n: number) => parseFloat(n.toFixed(3));
 
-function gear(id: string, name: string, type: Item['type'], ri: number, flav: string, spec: ArtSpec, extra: Partial<Item> = {}, scale = 1): void {
-  const list = FL[flav];
+function gear(id: string, name: string, type: Item['type'], ri: number, flav: string, spec: ArtSpec, extra: Partial<Item> = {}, scale = 1, own?: string[]): void {
+  const list = statList(type, own ?? FL[flav]);
   const stats = pick(list, ri);
   if (type === 'ARMOR' && stats.defense) stats.defense *= 2; // armour defense is halved in calculateStats
   if (scale !== 1) for (const k of Object.keys(stats) as St[]) stats[k] = r3(stats[k]! * scale);
@@ -112,7 +125,7 @@ const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly']
 for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]) {
   W[hero].forEach((row, ri) => {
     weapon(`w_${hero.toLowerCase()}_${IDX[ri]}a`, row[0], hero, ri, WFLAV[hero][0], 1 + (ri % 3), P(ri, 1));
-    weapon(`w_${hero.toLowerCase()}_${IDX[ri]}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2));
+    weapon(`w_${hero.toLowerCase()}_${IDX[ri]}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2), { retired: true });   // (owner: one weapon per class per rarity)
   });
 }
 
@@ -160,9 +173,45 @@ const ACC: Row[][] = [
 ];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '_').replace(/^_|_$/g, '');
 function fill(rows: Row[][], type: Item['type'], f: ArtSpec['f'], prefix: string): void {
-  rows.forEach((list, ri) => list.forEach(([name, flav, shape], i) => gear(`${prefix}_${slug(name)}`, name, type, ri, flav, { f, s: shape, pal: P(ri, i + shape) })));
+  rows.forEach((list, ri) => list.forEach(([name, flav, shape], i) => gear(`${prefix}_${slug(name)}`, name, type, ri, flav, { f, s: shape, pal: P(ri, i + shape) }, { retired: true })));   // (owner: replaced by the class catalog below)
 }
 fill(HELM, 'HELMET', 'helm', 'h'); fill(ARMOR, 'ARMOR', 'armor', 'a'); fill(GLOVE, 'GLOVES', 'gloves', 'g'); fill(BOOT, 'BOOTS', 'boots', 'b'); fill(ACC, 'ACCESSORY', 'acc', 'x');
+
+// ---- (owner) the catalog: per class one helmet / armor / gloves / boots of every rarity (Defense first, class
+// flavoured defensive secondaries), plus a ring and an amulet of every rarity (utility stats) for everyone.
+const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
+const WEAR_SEC: Record<HeroClass, string[]> = {
+  ARCHER: ['dodge', 'move', 'hp', 'regen'], WIZARD: ['mana', 'mregen', 'hp', 'dodge'], BARBARIAN: ['hp', 'regen', 'thorn', 'dodge'],
+  KNIGHT: ['hp', 'thorn', 'regen', 'mregen'], NECROMANCER: ['hp', 'mana', 'mregen', 'regen'],
+};
+const WEAR_NAME: Record<HeroClass, [string, string, string, string]> = {
+  ARCHER: ['Ranger Hood', 'Ranger Jerkin', 'Ranger Bracers', 'Ranger Boots'], WIZARD: ['Mage Hat', 'Mage Robe', 'Mage Gloves', 'Mage Slippers'],
+  BARBARIAN: ['Raider Helm', 'Raider Harness', 'Raider Wraps', 'Raider Treads'], KNIGHT: ['Guard Helm', 'Guard Plate', 'Guard Gauntlets', 'Guard Sabatons'],
+  NECROMANCER: ['Grave Cowl', 'Grave Shroud', 'Grave Grips', 'Grave Boots'],
+};
+const WEAR_SHAPE: Record<HeroClass, [number, number, number, number]> = { ARCHER: [1, 0, 1, 1], WIZARD: [6, 1, 1, 3], BARBARIAN: [4, 0, 3, 2], KNIGHT: [3, 3, 2, 2], NECROMANCER: [5, 2, 1, 0] };
+const ADJ = ['Worn', 'Sturdy', 'Fine', 'Masterwork', 'Heroic', 'Ascendant'];
+/** class armour weight: Defense multiplier */
+const CLASS_DEF: Record<HeroClass, number> = { ARCHER: 0.85, WIZARD: 0.75, BARBARIAN: 1.3, KNIGHT: 1.35, NECROMANCER: 0.8 };
+const SLOT_DEF: Record<string, number> = { HELMET: 0.8, ARMOR: 1, GLOVES: 0.6, BOOTS: 0.6 };
+const WEAR: [Item['type'], ArtSpec['f']][] = [['HELMET', 'helm'], ['ARMOR', 'armor'], ['GLOVES', 'gloves'], ['BOOTS', 'boots']];
+/** id of a class catalog piece (slot = HELMET / ARMOR / GLOVES / BOOTS, ri = rarity index 0..5) */
+export const classWearId = (hero: HeroClass, slot: string, ri: number): string => `c_${hero.toLowerCase()}_${slot.toLowerCase()}_${ri}`;
+function classWear(hero: HeroClass, k: number, ri: number, id: string, name: string, extra: Partial<Item> = {}): void {
+  const [type, f] = WEAR[k];
+  const sec = WEAR_SEC[hero], own = type === 'BOOTS' ? ['def', 'move', ...sec.filter((s) => s !== 'move')] : ['def', ...sec];
+  gear(id, name, type, ri, 'heavy', { f, s: WEAR_SHAPE[hero][k], pal: P(ri, HEROES.indexOf(hero)) }, { classType: hero, description: `${ADJ[ri]} ${hero.toLowerCase()} gear.`, ...extra }, 1, own);
+  const it = out[out.length - 1];
+  if (it.stats.defense) it.stats.defense = Math.max(1, Math.round(it.stats.defense * CLASS_DEF[hero] * SLOT_DEF[type]));
+}
+for (const hero of HEROES) for (let k = 0; k < WEAR.length; k++) for (let ri = 0; ri < RAR.length; ri++)
+  classWear(hero, k, ri, classWearId(hero, WEAR[k][0], ri), `${ADJ[ri]} ${WEAR_NAME[hero][k]}`);
+const ACC2: [string, string[], string[]][] = [
+  ['ring', ['steal', 'cdr', 'move', 'regen', 'mregen'], ['Copper Band', 'Jade Ring', 'Silver Signet', 'Sapphire Loop', 'Sunfire Ring', 'Ring of Eternity']],
+  ['amulet', ['regen', 'dodge', 'mregen', 'cdr', 'steal'], ['Bone Charm', 'Clover Amulet', 'Moonstone Pendant', 'Wardstone Amulet', 'Phoenix Locket', 'Heart of Aether']],
+];
+for (const [kind, list, names] of ACC2) for (let ri = 0; ri < RAR.length; ri++)
+  gear(`acc_${kind}_${ri}`, names[ri], 'ACCESSORY', ri, 'vital', { f: 'acc', s: kind === 'ring' ? 0 : 1, pal: P(ri, kind === 'ring' ? 0 : 1) }, { description: kind === 'ring' ? 'A band of quiet power.' : 'Worn close to the heart.' }, 1, list);
 
 // ---- class starter gear (COMMON, given by the welcome gift / first class switch) ----
 export const STARTER_GEAR: Record<HeroClass, Record<Exclude<SetSlot, 'weapon'>, string>> = {
@@ -183,11 +232,11 @@ export const STARTER_GEAR: Record<HeroClass, Record<Exclude<SetSlot, 'weapon'>, 
   (Object.keys(S) as HeroClass[]).forEach((h) => {
     const [hn, an, gn, bn, xn, flav, pal] = S[h];
     const id = STARTER_GEAR[h];
-    gear(id.helmet, hn, 'HELMET', 0, flav, { f: 'helm', s: h === 'WIZARD' ? 6 : h === 'BARBARIAN' ? 4 : 0, pal });
-    gear(id.armor, an, 'ARMOR', 0, flav, { f: 'armor', s: h === 'WIZARD' ? 1 : h === 'BARBARIAN' ? 0 : 3, pal });
-    gear(id.gloves, gn, 'GLOVES', 0, flav, { f: 'gloves', s: h === 'BARBARIAN' ? 3 : h === 'WIZARD' ? 1 : 0, pal });
-    gear(id.boots, bn, 'BOOTS', 0, flav === 'light' ? 'swift' : flav, { f: 'boots', s: h === 'WIZARD' ? 3 : h === 'BARBARIAN' ? 2 : 0, pal });
-    gear(id.accessory, xn, 'ACCESSORY', 0, flav, { f: 'acc', s: h === 'BARBARIAN' ? 2 : 1, pal });
+    void flav; void pal;
+    // (owner) starter wear = the class Common pieces (Defense first); no helmet at the start (store.starterEquipment)
+    classWear(h, 0, 0, id.helmet, hn, { retired: true }); classWear(h, 1, 0, id.armor, an, { retired: true });
+    classWear(h, 2, 0, id.gloves, gn, { retired: true }); classWear(h, 3, 0, id.boots, bn, { retired: true });
+    gear(id.accessory, xn, 'ACCESSORY', 0, 'vital', { f: 'acc', s: h === 'BARBARIAN' ? 2 : 1, pal: P(0, 0) }, { retired: true }, 1, ACC2[0][1]);
   });
 }
 

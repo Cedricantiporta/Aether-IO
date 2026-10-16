@@ -31,7 +31,7 @@ import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
 import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
-import { STARTER_GEAR } from './itemCatalog';
+import { STARTER_GEAR, classWearId } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
 import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierFor, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
@@ -149,8 +149,10 @@ export type QuestFreebie = 'potion' | 'summon' | 'armor' | 'forge' | 'train';
 export const questFree = (s: { story: StorySave }, what: QuestFreebie): boolean => STORY[s.story.step]?.id === what;
 /** Armor pieces (the "Suit of Steel" step): body armor, helmets, gloves, boots. */
 export const isArmorPiece = (i: { type: string }): boolean => i.type === 'ARMOR' || i.type === 'HELMET' || i.type === 'GLOVES' || i.type === 'BOOTS';
-export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[] }, item: { id: string; type: string }): boolean =>
-  firstPetFree(s, item.id) || (item.id === 'potion_hp' && questFree(s, 'potion')) || (isArmorPiece(item) && questFree(s, 'armor'));
+/** (owner) the "Suit of Steel" freebie: only the Common helmet of the hero's own class (the hero starts bareheaded). */
+export const freeHelmetId = (hero: HeroClass): string => classWearId(hero, 'HELMET', 0);
+export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: Item[]; warehouse: Item[]; hero: HeroClass }, item: { id: string; type: string }): boolean =>
+  firstPetFree(s, item.id) || (item.id === 'potion_hp' && questFree(s, 'potion')) || (item.id === freeHelmetId(s.hero) && questFree(s, 'armor'));
 /** Skill mana cost multiplier per class (balance pass 2, owner: "Barbarian -60% is too much"). Tuned with the headless sim
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
@@ -164,6 +166,12 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 
 // Summon odds (%): epic is very rare, legendary ultra rare, mythic hyper rare.
 /** Shard altar (purple): the classic odds. */
+/** (owner) summons can also give supplies: upgrade cores (tier I / II) and everything the Gem Shop sells (not shards / pets). */
+export const SUMMON_SUPPLY_SHARE = 0.25;
+export const SUMMON_SUPPLIES: [string, number][] = [
+  ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['erase_scroll', 10], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
+];
+const SUMMON_SUPPLY_TOTAL = SUMMON_SUPPLIES.reduce((n, [, w]) => n + w, 0);
 export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
 /** Gem altar (gold): premium odds. */
 export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, UNCOMMON: 0, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
@@ -455,7 +463,8 @@ const starterEquipment = (hero: HeroClass): Equipment => {
   return {
     ...EMPTY_EQUIPMENT,
     weapon: starterPiece(HERO_STATS[hero].weaponId),
-    helmet: starterPiece(g.helmet), armor: starterPiece(g.armor), gloves: starterPiece(g.gloves), boots: starterPiece(g.boots), accessory: starterPiece(g.accessory),
+    // (owner: no helmet at the start; the Armory gives the first one)
+    helmet: null, armor: starterPiece(g.armor), gloves: starterPiece(g.gloves), boots: starterPiece(g.boots), accessory: starterPiece(g.accessory),
   };
 };
 const isStarterId = (id: string | undefined): boolean => !!id && id.startsWith('start_');
@@ -762,7 +771,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         const bag = inv.slice();
         const has = bag.some((i) => i.type === 'WEAPON' && i.classType === hero);
         if (!has) { const w = starterPiece(HERO_STATS[hero].weaponId); if (w && !(eq.weapon && eq.weapon.classType === hero)) bag.push(w); }
-        for (const slot of ['helmet', 'armor', 'gloves', 'boots', 'accessory'] as const) {
+        for (const slot of ['armor', 'gloves', 'boots', 'accessory'] as const) {   // (no starter helmet)
           const cur = eq[slot];
           if (!cur || isStarterId(cur.id)) { const n = starterPiece(g[slot]); if (n) eq[slot] = n; }
         }
@@ -1793,7 +1802,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     rollItemDrop: (rarityOverride) => {
       const hero = get().hero;
-      const notPet = ITEMS_POOL.filter((i) => i.type !== 'PET');
+      const notPet = ITEMS_POOL.filter((i) => i.type !== 'PET' && !i.retired);
       const usable = (i: Item) => !i.classType || i.classType === hero;
       let pool: Item[];
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
@@ -1869,7 +1878,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     summon: (count, altar = 'GEM') => {
-      const SUMMON_SHARD_SHARE = 0.5;   // shards vs equipment: 50 / 50
+      const SUMMON_SHARD_SHARE = 0.4;   // of the non-supply pulls: shards 40 / equipment 60
       const s = get();
       const space = s.maxInventorySlots - s.inventory.length;
       const n = Math.min(count, space);
@@ -1882,7 +1891,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const W = gem ? GEM_SUMMON_WEIGHTS : SUMMON_WEIGHTS, CAPS = gem ? GEM_SUMMON_CAPS : SUMMON_CAPS;
 
       const all = summonPool(altar, s.hero);   // the Shard Altar offers fewer top-tier pieces (summonPool.ts)
-      const results: Item[] = [], gearOut: Item[] = [];
+      const results: Item[] = [], gearOut: Item[] = [], supplies: Item[] = [];
       const shardGain: Partial<Record<Rarity, number>> = {};
       let drawn = s.summonPity[altar] ?? 0;
       for (let k = 0; k < n; k++) {
@@ -1900,14 +1909,21 @@ export const useGameStore = create<GameState>()((set, get) => {
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
         // half the pulls are shards of the rolled tier (Rare at least; several of the lower tiers), half are gear (Epic at least); pity pulls are gear
         const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
-        if (!pity && Math.random() < SUMMON_SHARD_SHARE) {
+        const tutorial = cost === 0;   // the tutorial's free pull is always a piece of gear (the next step equips it)
+        if (!pity && !tutorial && Math.random() < SUMMON_SUPPLY_SHARE) {   // (owner) upgrade cores (tier I / II) and the gem-shop supplies
+          let w = Math.random() * SUMMON_SUPPLY_TOTAL, id = SUMMON_SUPPLIES[0][0];
+          for (const [sid, sw] of SUMMON_SUPPLIES) { w -= sw; if (w <= 0) { id = sid; break; } }
+          const sup = makeItemById(id, 1)[0];
+          if (sup) { results.push(sup); supplies.push(sup); continue; }
+        }
+        if (!pity && !tutorial && Math.random() < SUMMON_SHARD_SHARE) {
           const sr: Rarity = rarity === 'COMMON' ? 'RARE' : rarity;
           const q = 1;   // (owner: a shard pull is always a single shard)
           shardGain[sr] = (shardGain[sr] ?? 0) + q;
           results.push(shardItem(sr, q));
           continue;
         }
-        if (rarity === 'COMMON' || rarity === 'RARE') rarity = 'EPIC';
+        if (rarity === 'COMMON') rarity = 'RARE';   // (owner: blue gear can come from summons again)
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
         const it = instantiate(pool[Math.floor(Math.random() * pool.length)]);
@@ -1919,6 +1935,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       // the Gem Altar also hands out an Aether Crystal per pull (owner: crystals come from gem summons too)
       if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n }); feedReward({ crystals: n }); }
       else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, crystals: (s.crystals ?? 0) - cost });
+      for (const it of supplies) get().addItemToInventory(it);   // (stack onto existing potions / cores)
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },

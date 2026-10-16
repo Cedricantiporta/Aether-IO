@@ -396,7 +396,10 @@ export const ITEMS_POOL: Item[] = [
     stats: { damage: 50, moveSpeed: 0.2, cooldownReduction: 0.2, skillDamage: 0.5, defense: 30 } },
 ];
 
-// Generated variety (class weapon alternatives, armour flavours, class starter gear, item-set pieces).
+// (owner) the hand-written gear above is the old catalog: kept for saves / starter weapons / ids, but retired from
+// shops, drops, summons and crafting (itemCatalog's class catalog replaces it).
+for (const it of ITEMS_POOL) if (['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY'].includes(it.type)) it.retired = true;
+// Generated variety (class catalog, class starter gear, item-set pieces).
 ITEMS_POOL.push(...GENERATED_ITEMS);
 // bows extend the archer's reach (stat attackRange; owner: shorter base range, gear / talents / DEX raise it)
 { const R: Record<string, number> = { COMMON: 0.5, UNCOMMON: 0.75, RARE: 1, EPIC: 1.5, LEGENDARY: 2.2, MYTHIC: 3 };

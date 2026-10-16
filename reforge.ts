@@ -7,7 +7,7 @@
 // Pure helpers; the store applies them (store.reforgeItem). Sources: Gem Shop, the run merchant, boss chests.
 // ============================================================================
 import type { Item } from './types';
-import { rollAffixList, rollAffixValue, canHaveAffixes, UNIQUE_BY_KEY, AFFIX_COUNT, AFFIXES, R_IDX } from './affixes';
+import { rollAffixList, rollAffixValue, canHaveAffixes, affixAllowed, UNIQUE_BY_KEY, AFFIX_COUNT, AFFIXES, R_IDX } from './affixes';
 
 /** Bonus line slots of an item by rarity (blue 1, purple 2, gold 3, mythic 4; Mythic uniques ride on top). */
 export const affixSlots = (item: Item): number => (canHaveAffixes(item) ? AFFIX_COUNT[item.rarity] : 0);
@@ -30,7 +30,7 @@ export function reforge(item: Item, mode: ReforgeMode, line = -1, rng: () => num
   if (mode === 'REROLL') {
     if (item.rarity === 'COMMON') return null;
     const keepUnique = cur.filter((a) => UNIQUE_BY_KEY[a.key]);
-    const fresh = rollAffixList(item.rarity, rng).filter((a) => !UNIQUE_BY_KEY[a.key]);
+    const fresh = rollAffixList(item.rarity, rng, item.type).filter((a) => !UNIQUE_BY_KEY[a.key]);
     return { ...item, affixes: [...fresh, ...keepUnique] };
   }
   if (mode === 'TEMPER') {
@@ -39,7 +39,7 @@ export function reforge(item: Item, mode: ReforgeMode, line = -1, rng: () => num
   }
   if (mode === 'ADD') {   // fill one empty slot with a new random line (a stat the item does not have yet)
     if (emptyAffixSlots(item) <= 0) return null;
-    const pool = AFFIXES.filter((d) => d.weight > 0 && (!d.minRarity || R_IDX[item.rarity] >= R_IDX[d.minRarity]) && !cur.some((a) => a.key === d.key));
+    const pool = AFFIXES.filter((d) => d.weight > 0 && affixAllowed(d, item.type) && (!d.minRarity || R_IDX[item.rarity] >= R_IDX[d.minRarity]) && !cur.some((a) => a.key === d.key));
     if (!pool.length) return null;
     let total = 0; for (const d of pool) total += d.weight;
     let r = rng() * total, k = 0; for (; k < pool.length - 1; k++) { r -= pool[k].weight; if (r <= 0) break; }

@@ -10,7 +10,7 @@ import { Sparkles, X, Cog, Gem, Info } from '../components/GoldIcons';
 import { TechGrid } from './shop/Tech';
 import { ItemSlot } from '../components/ItemSlot';
 import { GEM_OFFERS, buyGemOffer } from '../../gemShop';
-import { useGameStore, questFree, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC } from '../../store';
+import { useGameStore, questFree, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC, SUMMON_SUPPLIES } from '../../store';
 import { Hexagon } from '../components/GoldIcons';
 import { useUiStore } from '../uiStore';
 import { GemGlyph } from '../components/SkillIcons';
@@ -26,6 +26,8 @@ const BANNERS = [
   { id: 'TECH', name: 'Tech House', sub: 'Permanent upgrades', tone: '#7dffb0', title: 'Tech House', blurb: '' },
 ] as const;
 const PREVIEW_ORDER = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'COMMON'] as const;
+/** the supplies a pull can give (store SUMMON_SUPPLIES) */
+const SUPPLY_ITEMS = SUMMON_SUPPLIES.map(([id]) => ITEMS_POOL.find((i) => i.id === id)).filter(Boolean) as typeof ITEMS_POOL;
 const RATE_NAME: Record<string, string> = { COMMON: 'Common', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 
 export const SummonWindow: React.FC = () => {
@@ -35,7 +37,7 @@ export const SummonWindow: React.FC = () => {
   const pity = useGameStore((s) => s.summonPity);
   const close = useGameStore((s) => s.closeAllUI);
   const setResults = useUiStore((s) => s.setSummonResults);
-  const [ratesOpen, setRatesOpen] = useState(false);
+  const [ratesOpen, setRatesOpen] = useState(false), [rewardsOpen, setRewardsOpen] = useState(false);
   const hero = useGameStore((s) => s.hero);
   const [tab, setTab] = useState<(typeof BANNERS)[number]['id']>(() => (useGameStore.getState().activeShopTab === 'TECH' ? 'TECH' : 'GEM'));
   const gem = tab === 'GEM';
@@ -75,20 +77,29 @@ export const SummonWindow: React.FC = () => {
             <div className="sw-subt">{B.blurb}</div>
             <div className="sw-gems"><Cur size={18} /> {have.toLocaleString()}</div>
           </div>
-          <div className="sw-preview rpg-scroll" data-testid="summon-preview">
-            <div className="sw-prev-h">Possible rewards <em>{hero.charAt(0) + hero.slice(1).toLowerCase()} gear and companions</em></div>
-            {PREVIEW_ORDER.map((r) => {
-              // every pull: 50% one shard of the rolled tier (Rare at least), 50% gear (Epic at least) (store.summon)
-              const list = r === 'COMMON' ? [shardItem('RARE', 1)] : r === 'RARE' ? [shardItem('RARE', 1)] : [shardItem(r, 1), ...pool.filter((i) => i.rarity === r)];
-              if (!list.length) return null;
-              return (
-                <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
-                  <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]}{r === 'COMMON' || r === 'RARE' ? ' · Rare shard or Epic gear' : ' · shard or gear'}<i>{list.length}</i></div>
-                  <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+          {rewardsOpen && (
+            <div className="sw-pop" onClick={() => setRewardsOpen(false)} data-testid="summon-rewards">
+              <div className="sw-pop-box sw-pop-wide" onClick={(e) => e.stopPropagation()}>
+                <div className="sw-pop-h">Possible rewards · {hero.charAt(0) + hero.slice(1).toLowerCase()}<button className="sw-x" onClick={() => setRewardsOpen(false)} aria-label="Close"><X size={18} /></button></div>
+                <div className="sw-preview rpg-scroll" data-testid="summon-preview">
+                  {PREVIEW_ORDER.filter((r) => r !== 'COMMON').map((r) => {
+                    // a pull: 25% a supply, else 40% one shard of the rolled tier / 60% gear (Common rolls become Rare) (store.summon)
+                    const list = [shardItem(r, 1), ...pool.filter((i) => i.rarity === r)];
+                    return (
+                      <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
+                        <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]} · shard or gear<i>{list.length}</i></div>
+                        <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+                      </div>
+                    );
+                  })}
+                  <div className="sw-tier" style={{ ['--rc' as any]: '#e8d6a6' }}>
+                    <div className="sw-tier-h"><span className="rpg-gem" data-rarity="EPIC" />Supplies · cores and Gem Shop goods<i>{SUPPLY_ITEMS.length}</i></div>
+                    <div className="sw-tier-row">{SUPPLY_ITEMS.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          )}
           {ratesOpen && (
             <div className="sw-pop" onClick={() => setRatesOpen(false)} data-testid="summon-rates">
               <div className="sw-pop-box" onClick={(e) => e.stopPropagation()}>
@@ -97,13 +108,13 @@ export const SummonWindow: React.FC = () => {
             {RARITIES.map((r) => (
               <div key={r} className="sw-rate" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
                 <span className="rpg-gem" data-rarity={r} />
-                <span className="n">{RATE_NAME[r]}{r === 'COMMON' || r === 'RARE' ? ' (Rare shard / Epic gear)' : ''}</span>
+                <span className="n">{RATE_NAME[r]}{r === 'COMMON' ? ' (counts as Rare)' : ''}</span>
                 <span className="v">{W[r]}%</span>
                 {CAPS[r] ? <span className="c">max {CAPS[r]} per 10x</span> : <span className="c" />}
               </div>
             ))}
           </div>
-          <div className="sw-note" style={{ display: 'block', margin: '.4rem 0' }}>Every pull is 50% shards of the rolled tier (Rare at least: 2-5 Rare, 1-3 Epic, 1-2 Legendary, 1 Mythic) and 50% a piece of gear (Epic at least). Pity pulls are always gear.</div>
+          <div className="sw-note" style={{ display: 'block', margin: '.4rem 0' }}>Every pull: 25% a supply (Upgrade Core I / II, potions, reforging items, Ankh). Otherwise 40% one shard of the rolled tier and 60% a piece of gear (Rare at least). Pity pulls are always gear.</div>
           <div className="sw-pity" data-testid="summon-pity">
             <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.LEGENDARY }}>
               <span className="n">Guaranteed <b>Legendary</b> in <b className="rpg-num">{PITY_LEGEND - (drawn % PITY_LEGEND)}</b> draws</span>
@@ -119,6 +130,7 @@ export const SummonWindow: React.FC = () => {
           )}
           <div className="sw-foot">
             <button className="sw-rates-btn pe" onClick={() => setRatesOpen(true)} data-testid="summon-rates-btn"><Info size={14} /> Rates</button>
+            <button className="sw-rates-btn pe" onClick={() => setRewardsOpen(true)} data-testid="summon-rewards-btn"><Sparkles size={14} /> View possible rewards</button>
             <span className="sw-note">{gem ? `10x saves ${SUMMON_COST_1 * 10 - c10} gems` : `10x saves ${c1 * 10 - c10} crystals · mine them, win them on adventures and from bosses`}</span>
             <button className="sw-btn" disabled={have < c1} onClick={() => go(1)} data-testid="summon-1">
               Summon x1 <span>{free1 ? 'FREE' : <><Cur size={14} />{c1}</>}</span>

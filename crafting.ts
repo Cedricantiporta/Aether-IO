@@ -172,7 +172,7 @@ export function consumeLoot(inv: Item[], recipe: { loot: LootNeed[] }): Item[] {
 
 /** Templates this recipe can produce (class-matched for weapons). */
 export const recipeTemplates = (recipe: Recipe): Item[] =>
-  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.setName && !i.id.startsWith('start_') && (!i.classType || i.classType === recipe.hero));
+  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.retired && !i.setName && !i.id.startsWith('start_') && (!i.classType || i.classType === recipe.hero));
 
 /** Stat scaling for "+N" items (also used by drops and the blacksmith): each + adds 25% of the base stats (owner: was
  *  x level - a +3 item had 4x its stats and out-ranked the tiers above it). plusMul(level) = 1 + 0.25 * (level - 1). */

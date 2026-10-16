@@ -23,28 +23,33 @@ export interface AffixDef {
   minRarity?: Rarity;
   cp: number;                    // combat-power weight per unit
   fixed?: boolean;               // value is not rolled (+/-15%)
+  /** (owner) which gear may roll it: atk = weapons (+ helmet), def = wear, util = accessories (+ boots for move) */
+  g: 'atk' | 'def' | 'util';
 }
 
 export const AFFIXES: AffixDef[] = [
-  { key: 'dmg',   label: 'Damage',            stat: 'damage',          mul: true, tiers: [0, .04, .06, .09, .12], weight: 10, cp: 600 },
-  { key: 'aspd',  label: 'Attack Speed',      stat: 'fireRate',        mul: true, tiers: [0, .04, .06, .08, .11], weight: 9, cp: 400 },
-  { key: 'crit',  label: 'Crit Rate',         stat: 'critRate',        tiers: [0, .02, .03, .045, .06], weight: 9, cp: 500 },
-  { key: 'critd', label: 'Crit Damage',       stat: 'critDamage',      tiers: [0, .1, .15, .22, .3], weight: 9, cp: 100 },
-  { key: 'hp',    label: 'Max Health',        stat: 'maxHealth',       mul: true, tiers: [0, .04, .06, .09, .12], weight: 9, cp: 300 },
-  { key: 'def',   label: 'Defense',           stat: 'defense',         tiers: [0, 2, 4, 7, 11], weight: 8, cp: 8 },
-  { key: 'move',  label: 'Move Speed',        stat: 'moveSpeed',       mul: true, tiers: [0, .03, .04, .06, .08], weight: 7, cp: 300 },
-  { key: 'skill', label: 'Skill Damage',      stat: 'skillDamage',     tiers: [0, .05, .08, .12, .17], weight: 8, cp: 100 },
-  { key: 'cdr',   label: 'Cooldown Reduction', stat: 'cooldownReduction', tiers: [0, .02, .03, .045, .06], weight: 6, cp: 500 },
-  { key: 'steal', label: 'Life Steal',        stat: 'lifeSteal',       tiers: [0, .005, .008, .012, .016], weight: 5, cp: 3000 },
-  { key: 'thorn', label: 'Thorns',            stat: 'thorns',          tiers: [0, 5, 9, 15, 24], weight: 5, cp: 8 },
-  { key: 'gold',  label: 'Gold Find',         stat: 'goldFind',        tiers: [0, .05, .08, .12, .17], weight: 6, cp: 200 },
-  { key: 'xp',    label: 'XP Gain',           stat: 'xpBonus',         tiers: [0, .04, .06, .09, .12], weight: 6, cp: 200 },
-  { key: 'mag',   label: 'Pickup Range',      stat: 'magnetRadius',    tiers: [0, .8, 1.2, 1.8, 2.5], weight: 5, cp: 20 },
-  { key: 'burn',  label: 'Burn on Hit',       stat: 'onHitBurnChance', tiers: [0, .04, .06, .08, .11], weight: 4, cp: 300 },
-  { key: 'slow',  label: 'Slow on Hit',       stat: 'onHitSlowChance', tiers: [0, .05, .08, .11, .15], weight: 4, cp: 300 },
-  { key: 'range', label: 'Attack Range',      stat: 'attackRange',     tiers: [0, .6, 1, 1.5, 2.2], weight: 4, cp: 120 },
-  { key: 'pierce', label: 'Projectile Pierce', stat: 'pierceBonus',    tiers: [0, 1, 1, 1, 2], weight: 1.6, cp: 150, fixed: true },
-  { key: 'proj',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0,  // retired: extra projectiles come from weapon perks (weaponPerks.ts)
+  { key: 'dmg', g: 'atk',   label: 'Damage',            stat: 'damage',          mul: true, tiers: [0, .04, .06, .09, .12], weight: 10, cp: 600 },
+  { key: 'aspd', g: 'atk',  label: 'Attack Speed',      stat: 'fireRate',        mul: true, tiers: [0, .04, .06, .08, .11], weight: 9, cp: 400 },
+  { key: 'crit', g: 'atk',  label: 'Crit Rate',         stat: 'critRate',        tiers: [0, .02, .03, .045, .06], weight: 9, cp: 500 },
+  { key: 'critd', g: 'atk', label: 'Crit Damage',       stat: 'critDamage',      tiers: [0, .1, .15, .22, .3], weight: 9, cp: 100 },
+  { key: 'hp', g: 'def',    label: 'Max Health',        stat: 'maxHealth',       mul: true, tiers: [0, .04, .06, .09, .12], weight: 9, cp: 300 },
+  { key: 'def', g: 'def',   label: 'Defense',           stat: 'defense',         tiers: [0, 2, 4, 7, 11], weight: 8, cp: 8 },
+  { key: 'move', g: 'util',  label: 'Move Speed',        stat: 'moveSpeed',       mul: true, tiers: [0, .03, .04, .06, .08], weight: 7, cp: 300 },
+  { key: 'skill', g: 'atk', label: 'Skill Damage',      stat: 'skillDamage',     tiers: [0, .05, .08, .12, .17], weight: 8, cp: 100 },
+  { key: 'cdr', g: 'util',   label: 'Cooldown Reduction', stat: 'cooldownReduction', tiers: [0, .02, .03, .045, .06], weight: 6, cp: 500 },
+  { key: 'steal', g: 'util', label: 'Life Steal',        stat: 'lifeSteal',       tiers: [0, .005, .008, .012, .016], weight: 5, cp: 3000 },
+  { key: 'thorn', g: 'def', label: 'Thorns',            stat: 'thorns',          tiers: [0, 5, 9, 15, 24], weight: 5, cp: 8 },
+  { key: 'gold', g: 'util',  label: 'Gold Find',         stat: 'goldFind',        tiers: [0, .05, .08, .12, .17], weight: 6, cp: 200 },
+  { key: 'xp', g: 'util',    label: 'XP Gain',           stat: 'xpBonus',         tiers: [0, .04, .06, .09, .12], weight: 6, cp: 200 },
+  { key: 'mag', g: 'util',   label: 'Pickup Range',      stat: 'magnetRadius',    tiers: [0, .8, 1.2, 1.8, 2.5], weight: 5, cp: 20 },
+  { key: 'burn', g: 'atk',  label: 'Burn on Hit',       stat: 'onHitBurnChance', tiers: [0, .04, .06, .08, .11], weight: 4, cp: 300 },
+  { key: 'slow', g: 'atk',  label: 'Slow on Hit',       stat: 'onHitSlowChance', tiers: [0, .05, .08, .11, .15], weight: 4, cp: 300 },
+  { key: 'range', g: 'atk', label: 'Attack Range',      stat: 'attackRange',     tiers: [0, .6, 1, 1.5, 2.2], weight: 4, cp: 120 },
+  { key: 'pierce', g: 'atk', label: 'Projectile Pierce', stat: 'pierceBonus',    tiers: [0, 1, 1, 1, 2], weight: 1.6, cp: 150, fixed: true },
+  { key: 'dodge', g: 'def', label: 'Dodge',             stat: 'dodge',           tiers: [0, .01, .015, .022, .03], weight: 7, cp: 600 },
+  { key: 'hpr',   g: 'def', label: 'HP Regen',          stat: 'regen',           tiers: [0, .3, .5, .8, 1.2], weight: 7, cp: 80 },
+  { key: 'mpr',   g: 'util', label: 'Mana Regen',       stat: 'manaRegen',       tiers: [0, .3, .5, .8, 1.2], weight: 6, cp: 60 },
+  { key: 'proj', g: 'atk',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0,  // retired: extra projectiles come from weapon perks (weaponPerks.ts)
     minRarity: 'EPIC', cp: 200, fixed: true },
 ];
 export const AFFIX_BY_KEY: Record<string, AffixDef> = Object.fromEntries(AFFIXES.map((a) => [a.key, a]));
@@ -100,10 +105,20 @@ export function rollAffixValue(key: string, rarity: Rarity, rng: () => number = 
 }
 
 /** Rolls `count` distinct affixes for a rarity. `rng` injectable for tests. */
-export function rollAffixList(rarity: Rarity, rng: () => number = Math.random): ItemAffix[] {
+/** (owner) bonus lines a gear slot may roll: weapons attack, wear defense (helmets also attack, boots also move speed),
+ *  accessories the utility lines. No type = everything (old callers). */
+export function affixAllowed(d: AffixDef, type?: string): boolean {
+  if (!type) return true;
+  if (type === 'WEAPON') return d.g === 'atk';
+  if (type === 'ACCESSORY') return d.g === 'util';
+  if (type === 'HELMET') return d.g === 'def' || d.g === 'atk';
+  if (type === 'BOOTS') return d.g === 'def' || d.key === 'move';
+  return d.g === 'def';
+}
+export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, type?: string): ItemAffix[] {
   const n = AFFIX_COUNT[rarity];
   const ri = R_IDX[rarity];
-  const pool = AFFIXES.filter((d) => d.weight > 0 && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]));
+  const pool = AFFIXES.filter((d) => d.weight > 0 && affixAllowed(d, type) && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]));
   const out: ItemAffix[] = [];
   for (let i = 0; i < n && pool.length; i++) {
     let total = 0;
@@ -126,7 +141,7 @@ export const canHaveAffixes = (item: Item): boolean => GEAR.has(item.type);
 /** Rolls affixes onto a gear item in place (no-op for COMMON / non-gear). Bumps the sell price. */
 export function rollAffixes(item: Item, rng: () => number = Math.random): Item {
   if (!canHaveAffixes(item)) return item;
-  const list = rollAffixList(item.rarity, rng);
+  const list = rollAffixList(item.rarity, rng, item.type);
   if (list.length) {
     item.affixes = list;
     item.price = Math.round(item.price * (1 + 0.12 * list.length));

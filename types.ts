@@ -123,7 +123,9 @@ export interface Item {
   petSkill?: PetSkillType;
   petValue?: number; // Heal amount or Dmg
   petCooldown?: number; 
-  summonOnly?: boolean; // not sold in the Pets shop; Summon altar only
+  summonOnly?: boolean;
+  /** old catalog piece: still valid in saves / by id, but no longer sold, dropped, summoned or crafted */
+  retired?: boolean; // not sold in the Pets shop; Summon altar only
   petLv?: number;    // pet growth (see petGrowth.ts): level 1-20, xp into the level, evolution stage 1-3 (all default to 1 / 0 / 1)
   petXp?: number;
   petStage?: number;

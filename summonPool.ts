@@ -7,7 +7,7 @@ import type { HeroClass, Item, Rarity } from './types';
 const isGearItem = (i: Item): boolean => i.type === 'WEAPON' || i.type === 'ARMOR' || i.type === 'HELMET' || i.type === 'GLOVES' || i.type === 'BOOTS' || i.type === 'ACCESSORY';
 
 export function summonPool(altar: 'GEM' | 'SHARD', hero: HeroClass): Item[] {
-  const gear = ITEMS_POOL.filter((i) => isGearItem(i) && (!i.classType || i.classType === hero));
+  const gear = ITEMS_POOL.filter((i) => isGearItem(i) && !i.retired && (!i.classType || i.classType === hero));
   if (altar === 'GEM') return [...PETS_POOL, ...gear];
   const high = (r: Rarity) => r === 'LEGENDARY' || r === 'MYTHIC';
   const base = [...PETS_POOL.filter((p) => !high(p.rarity)), ...gear.filter((i) => !high(i.rarity))];
