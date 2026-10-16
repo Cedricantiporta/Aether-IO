@@ -1,6 +1,6 @@
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { Heart, Wind, Flame, ShieldCheck, Magnet, Star, Target, Snowflake, CloudLightning, Orbit, Tornado, Hammer, Activity, Swords, Megaphone, Sparkles, Sun, Zap, Skull } from 'lucide-react';
+import type { LucideIcon } from './GoldIcons';
+import { Heart, Wind, Flame, ShieldCheck, Magnet, Star, Target, Snowflake, CloudLightning, Orbit, Tornado, Hammer, Activity, Swords, Megaphone, Sparkles, Sun, Zap, Skull } from './GoldIcons';
 import type { Item, Upgrade } from '../../types';
 import { ItemArt } from './ItemArt';
 import { UpgradeArt } from './UpgradeIcons';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock } from 'lucide-react';
+import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
 import { ItemIcon } from './ItemIcon';
 import { isGear } from '../lib/game';

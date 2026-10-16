@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Panel, PanelHead, Ribbon } from './Frame';
 import { Button } from './Button';
-import { X } from 'lucide-react';
+import { X } from './GoldIcons';
 
 interface ModalProps {
   open: boolean; onClose?: () => void; title?: string; ribbon?: boolean; tone?: 'red' | 'gold' | 'blue' | 'green' | 'dark' | 'purple';

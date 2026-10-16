@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X } from './GoldIcons';
 import { CoinGlyph } from './SkillIcons';
 
 export const Corners: React.FC = () => (
