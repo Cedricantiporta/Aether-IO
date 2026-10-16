@@ -2343,3 +2343,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sq-count { font-size: 1.15rem; color: #fff; line-height: 1; text-shadow: 0 1px 2px #000; }
 .sq-btns { display: flex; gap: .25rem; margin-top: auto; }
 .sq-btns .wh-btn { padding: .18rem .4rem; font-size: .6rem; }
+
+/* Blacksmith (owner: fewer line containers, calmer colours): soft panels without outlines */
+.bs-card { background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(0, 0, 0, .25)); border: 0; }
+.bs-cell { background: rgba(0, 0, 0, .28); border: 0; }
+.bs-mass { border: 0 !important; background: rgba(255, 255, 255, .04) !important; box-shadow: none !important; }

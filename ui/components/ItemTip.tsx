@@ -29,11 +29,11 @@ export const ItemTip: React.FC<{ item: Item; compare?: boolean; price?: 'sell' |
   if (!equipped || equipped === item || equipped.id === item.id) return <ItemTipCard item={item} compare={compare} price={price} />;
   return (
     <div className="flex items-start gap-3" data-testid="tip-compare">
-      <ItemTipCard item={item} compare price={price} />
-      <div style={{ borderLeft: '1px solid rgba(90, 64, 30, .35)', paddingLeft: '.75rem' }}>
-        <div className="tt-sub" style={{ color: '#1f7a2e', fontWeight: 800, marginBottom: '.15rem' }}>Currently equipped</div>
+      <div style={{ borderRight: '1px solid rgba(214, 186, 122, .18)', paddingRight: '.75rem' }}>   {/* (owner: the equipped item on the left) */}
+        <div className="tt-sub" style={{ color: '#7be38f', fontWeight: 800, marginBottom: '.15rem' }}>Currently equipped</div>
         <ItemTipCard item={equipped} compare={false} price="none" />
       </div>
+      <ItemTipCard item={item} compare price={price} />
     </div>
   );
 };

@@ -21,7 +21,7 @@ import { ItemFuse } from './ItemFuse';
 import { ReforgeTab } from './Reforge';
 
 const Empty: React.FC<{ text: string }> = ({ text }) => (
-  <div className="rpg-frame flex flex-col items-center gap-3 py-8 px-4 text-center opacity-80">
+  <div className="bs-card flex flex-col items-center gap-3 py-8 px-4 text-center opacity-80">
     <div className="forge-orb sm"><AnvilGlyph size={34} glow /></div>
     <div className="rpg-label">{text}</div>
   </div>
@@ -89,7 +89,7 @@ export const Upgrade: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3 relative">
-      <div className="rpg-frame gold p-4 flex flex-col items-center gap-2" style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255,120,30,.22), rgba(0,0,0,.5) 70%)' }}>
+      <div className="bs-card p-4 flex flex-col items-center gap-2">
         <div className="flex items-center gap-3">
           <ItemSlot item={item} size="5rem" iconSize={38} tooltip="none" compare={false} />
           <div className="text-left">
@@ -97,23 +97,20 @@ export const Upgrade: React.FC = () => {
             <div className="rpg-num text-sm text-[var(--text-dim)]">+{item.level - 1} <ArrowRight size={12} className="inline text-[var(--good)]" /> <b className="text-[var(--good)]">+{item.level}</b></div>
           </div>
         </div>
-        <div className="w-full rpg-parchment p-2.5">
+        <div className="w-full bs-cell p-2.5">
           {keys.map((k) => (
             <div key={k} className="tt-row text-[.78rem]"><span className="muted">{STAT_LABEL[k]}</span>
               <span>{fmtItemStat(k, item.stats[k]!)} <ArrowRight size={10} className="inline" /> <b className="pos">{fmtItemStat(k, next[k]!)}</b></span></div>
           ))}
         </div>
         {free && <FreeNote />}
-        <div className="w-full">
-          <div className="flex justify-between rpg-label !text-[.6rem] mb-1"><span>Success chance</span><span className="rpg-num !text-[.75rem]" style={{ color: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}>{Math.round(chance * 100)}%</span></div>
-          <div className="rpg-bar thin" style={{ ['--fill' as any]: chance, ['--bc' as any]: chance >= 1 ? '#4ade80' : chance >= .6 ? '#e9b949' : '#f87171' }}><div className="fill" /></div>
-        </div>
+        <div className="w-full flex justify-between text-[.74rem]" style={{ color: '#b9b2a2' }} data-testid="upgrade-chance"><span>Success chance</span><span className="rpg-num" style={{ color: '#e8e2d4' }}>{Math.round(chance * 100)}%</span></div>
         {brk > 0 && !maxed && <div className="w-full text-center text-[.72rem] font-bold" style={{ color: '#f87171' }} data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure)</div>}
         <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
-            <div className="rpg-num" style={{ color: gold >= goldCost ? '#ffe69a' : '#f87171' }}>{goldCost.toLocaleString()}</div></div>
-          <div className="rpg-frame text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> {CORE_NAMES[coreTier]}s</div>
-            <div className="rpg-num" style={{ color: cores >= coreCost ? '#7cc4ff' : '#f87171' }}>{coreCost} <span className="text-[.65rem] opacity-70">/ {cores}</span></div></div>
+          <div className="bs-cell text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
+            <div className="rpg-num" style={{ color: gold >= goldCost ? '#f1ece0' : '#e08a84' }}>{goldCost.toLocaleString()}</div></div>
+          <div className="bs-cell text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> {CORE_NAMES[coreTier]}s</div>
+            <div className="rpg-num" style={{ color: cores >= coreCost ? '#f1ece0' : '#e08a84' }}>{coreCost} <span className="text-[.65rem] opacity-70">/ {cores}</span></div></div>
         </div>
         <button className="forge-btn on" disabled={!can} onClick={forge}>
           <Hammer size={20} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}
@@ -196,7 +193,7 @@ export const RecycleTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       {item && isGear(item) ? (
-        <div className="rpg-frame p-3 flex items-center gap-3">
+        <div className="bs-card p-3 flex items-center gap-3">
           <ItemSlot item={item} size="3.8rem" iconSize={28} tooltip="sell" />
           <div className="flex-1 min-w-0"><div className="font-bold leading-tight" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div></div>
           <div className="text-right">
@@ -209,8 +206,8 @@ export const RecycleTab: React.FC = () => {
         <div className="rpg-label mb-1.5">Mass recycle</div>
         <div className="grid grid-cols-5 gap-1.5">
           {RARITIES.map((r) => (
-            <Button key={r} size="sm" disabled={cnt(r) === 0} onClick={() => mass(r)} style={{ padding: '.25rem .1rem', flexDirection: 'column', gap: 0, borderColor: RARITY_COLOR[r], lineHeight: 1.1 }}>
-              <span style={{ color: RARITY_COLOR[r], fontSize: '.55rem' }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</span><span className="rpg-num !text-[.7rem] text-white">{cnt(r)}</span>
+            <Button key={r} size="sm" disabled={cnt(r) === 0} onClick={() => mass(r)} className="bs-mass" style={{ padding: '.3rem .1rem', flexDirection: 'column', gap: 0, lineHeight: 1.1 }}>
+              <span style={{ color: RARITY_TEXT[r], fontSize: '.55rem' }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</span><span className="rpg-num !text-[.7rem] text-white">{cnt(r)}</span>
             </Button>
           ))}
         </div>
