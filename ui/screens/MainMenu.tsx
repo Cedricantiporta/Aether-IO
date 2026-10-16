@@ -1,4 +1,5 @@
 import { CaveHud } from '../hud/CaveHud';
+import { TitleLogo } from '../components/TitleLogo';
 import { LanternPanel } from '../panels/LanternPanel';
 import { HelmGlyph, BagGlyph, TrophyGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph } from '../components/MenuGlyphs';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
@@ -43,13 +44,13 @@ export const TitleScreen: React.FC = () => {
   return (
     <div className="absolute inset-0 pe title-root" style={{ zIndex: 50 }}>
       <div className="absolute inset-x-0 bottom-0 h-[40%] lobby-fade-b pointer-events-none" />
+      <div className="absolute inset-0 title-shade pointer-events-none" />
       <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 16 }}
         className="absolute left-0 right-0 top-[1.6rem] flex flex-col items-center pointer-events-none">
-        <div className="rpg-logo" style={{ fontSize: 'clamp(2.4rem, 5.2vw, 4.6rem)' }}>Aether Survivor</div>
-        <div className="rpg-title mt-1 !text-[.95rem] tracking-[.35em]" style={{ color: '#f6e8c8', opacity: .9 }}>You are the village guard</div>
+        <TitleLogo sub="Guardians of the Font" />
       </motion.div>
       <div className="absolute left-0 right-0 bottom-[2.2rem] flex flex-col items-center gap-3">
-        <Button variant="primary" size="lg" pulse onClick={() => setTitleDone(true)} data-testid="enter-village"><Shield size={22} /> Enter the Village</Button>
+        <Button variant="primary" size="lg" pulse onClick={() => setTitleDone(true)} data-testid="enter-village"><Shield size={22} /> Enter</Button>
         <div className="text-[.68rem] text-outline" style={{ color: '#e8d9b0', opacity: .85 }}>3D characters by KayKit (CC0) · Trees by Kenney (CC0)</div>
       </div>
     </div>

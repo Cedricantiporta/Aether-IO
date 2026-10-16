@@ -2599,3 +2599,38 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   color: #0b2a12; background: linear-gradient(180deg, #b6ffc4, #4fdc74); box-shadow: 0 0 10px rgba(125, 255, 154, .9), 0 1px 2px #000; pointer-events: none; }
 .slot-grid.priced .rpg-slot.is-free .slot-price { color: #7dff9a; font-weight: 800; }
 @keyframes freePulse { 50% { box-shadow: 0 0 0 2px #b6ffc4, 0 0 26px rgba(125, 255, 154, 1) !important; } }
+
+/* ---- title wordmark (ui/components/TitleLogo.tsx; owner reference: crest + mixed-case gold serif + ruled subtitle) */
+.tlogo { position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none; padding: .4rem 4rem 1.2rem; }
+.tlogo::before { content: ''; position: absolute; inset: -6rem -14rem -6rem; z-index: -1; background: radial-gradient(closest-side at 50% 52%, rgba(10, 7, 4, .45) 0%, rgba(10, 7, 4, .35) 45%, rgba(10, 7, 4, .12) 80%, rgba(10, 7, 4, 0) 100%); }
+.tlogo-crest { width: clamp(7.5rem, 13vw, 11rem); height: auto; margin-bottom: -1.5rem; filter: drop-shadow(0 0 18px rgba(255, 200, 90, .55)); }
+.tlogo-pulse { animation: tlPulse 3.2s ease-in-out infinite; transform-origin: 100px 92px; }
+@keyframes tlPulse { 0%, 100% { opacity: .75; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+.tlogo-gem { animation: tlGem 2.4s ease-in-out infinite; }
+@keyframes tlGem { 0%, 100% { fill: #fff2c0; } 50% { fill: #ffffff; filter: drop-shadow(0 0 4px #fff); } }
+.tlogo-wisp { stroke-dasharray: 140; stroke-dashoffset: 140; opacity: .8; animation: tlWisp 4.5s ease-in-out infinite; }
+.tlogo-wisp.w2 { animation-delay: 2.1s; }
+@keyframes tlWisp { 0% { stroke-dashoffset: 140; opacity: 0; } 30% { opacity: .9; } 70% { stroke-dashoffset: 0; opacity: .6; } 100% { stroke-dashoffset: -140; opacity: 0; } }
+.tlogo-word {
+  position: relative; font-family: var(--font-title); font-weight: 700; line-height: 1; letter-spacing: .015em; white-space: nowrap;
+  font-size: clamp(2.6rem, 6vw, 5.2rem);
+  color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image:
+    linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, .85) 50%, transparent 58%),
+    repeating-linear-gradient(172deg, rgba(90, 60, 20, .0) 0 3px, rgba(90, 60, 20, .22) 3px 4px),
+    linear-gradient(180deg, #fff3cc 0%, #f1d08a 28%, #d6ac5c 50%, #a8782e 64%, #e7c579 86%, #fff0c4 100%);
+  background-size: 280% 100%, 100% 100%, 100% 100%; background-repeat: no-repeat; background-position: 160% 0, 0 0, 0 0;
+  animation: logo-shine 6s ease-in-out infinite;
+  filter: drop-shadow(0 1px 0 #2b1a07) drop-shadow(0 3px 2px rgba(0, 0, 0, .7)) drop-shadow(0 0 22px rgba(255, 196, 90, .28));
+}
+.tlogo-word .cap { font-size: 1.32em; font-weight: 800; }
+.tlogo-word .cap.end { font-size: 1.18em; }
+.tlogo-sub { display: flex; align-items: center; gap: .9rem; margin-top: .55rem; }
+.tlogo-sub span { font-family: var(--font-title); font-weight: 700; letter-spacing: .42em; font-size: clamp(.78rem, 1.3vw, 1.05rem); color: #f0dcae; text-shadow: 0 1px 2px #000, 0 0 10px rgba(255, 200, 100, .3); padding-left: .42em; }
+.tlogo-sub i { display: block; width: clamp(3rem, 9vw, 7.5rem); height: 1px; background: linear-gradient(90deg, transparent, #d9b46a 30%, #f4dca0); position: relative; }
+.tlogo-sub i:last-child { transform: scaleX(-1); }
+.tlogo-sub i::after { content: ''; position: absolute; right: -3px; top: -3px; width: 7px; height: 7px; background: #f4dca0; transform: rotate(45deg); box-shadow: 0 0 6px #ffd88a; }
+.tlogo-tag { margin-top: .5rem; font-family: var(--font-title); font-weight: 600; font-size: clamp(.8rem, 1.4vw, 1.15rem); color: #c9b58a; letter-spacing: .08em; text-shadow: 0 1px 2px #000; }
+
+/* (owner) the title area sits in shadow so the gold wordmark reads over the bright village */
+.title-shade { background: radial-gradient(ellipse 75% 48% at 50% 22%, rgba(8, 6, 4, .62) 0%, rgba(8, 6, 4, .45) 40%, rgba(8, 6, 4, .18) 72%, rgba(8, 6, 4, 0) 100%); }
