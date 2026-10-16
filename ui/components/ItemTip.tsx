@@ -11,7 +11,7 @@ import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
 import { emptyAffixSlots } from '../../reforge';
 import { weaponPerk, perkText } from '../../weaponPerks';
-import { petPower, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
+import { petPower, petStatMul, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -71,8 +71,8 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
       {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {
-        const v = item.stats[k] === undefined ? undefined : (item.stats[k] as number) * pm;
-        const ev = equipped && !isEquippedItself && equipped.stats[k] !== undefined ? (equipped.stats[k] as number) * epm : undefined;
+        const v = item.stats[k] === undefined ? undefined : (item.stats[k] as number) * (item.type === 'PET' ? petStatMul(item, k) : pm);
+        const ev = equipped && !isEquippedItself && equipped.stats[k] !== undefined ? (equipped.stats[k] as number) * (equipped.type === 'PET' ? petStatMul(equipped, k) : epm) : undefined;
         const diff = equipped && !isEquippedItself ? (v ?? 0) - (ev ?? 0) : 0;
         const dir = diff > 0.0001 ? 'pos' : diff < -0.0001 ? 'neg' : '';
         return (
@@ -141,7 +141,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
           <div className="tt-sep" />
           <div className="tt-row"><span style={{ color: petStage(item) > 1 ? '#7a2ec2' : undefined, fontWeight: 800 }}>{PET_STAGE_LABEL[petStage(item)]} · Lv {petLv(item)}/{petLvCap(petStage(item))}</span>
             <span className="muted">{petLv(item) >= petLvCap(petStage(item)) ? (petStage(item) < 3 ? 'Ready to evolve' : 'MAX') : `${petXp(item)}/${petXpNeed(petLv(item))} XP`}</span></div>
-          <div className="muted text-[.68rem]">Stats and skill power x{pm.toFixed(2)}</div>
+          <div className="muted text-[.68rem]">Health / damage / defense and skill power x{pm.toFixed(2)} · % stats x{petStatMul(item, 'critRate').toFixed(2)}</div>
         </div>
       )}
       {item.petSkill && <div className="muted mt-1">Pet skill: {item.petSkill.replace('_', ' ').toLowerCase()}{item.petCooldown ? ` (${item.petCooldown}s)` : ''}</div>}

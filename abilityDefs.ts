@@ -137,7 +137,7 @@ export function abilityDef(hero: HeroClass, slot: ActiveSlot | 'ult'): AbilityDe
 }
 export function abilityMana(hero: HeroClass, slot: ActiveSlot, lv: number): number {
   if (!ABILITIES[hero].some((a) => a.slot === slot)) return 0;
-  return Math.round(abilityDef(hero, slot).mana * (1 + 0.04 * Math.max(0, lv - 1)));
+  return Math.round(abilityDef(hero, slot).mana * (1 + 0.12 * Math.max(0, lv - 1)));   // (owner) +12% mana per skill level
 }
 export function abilityCd(hero: HeroClass, slot: ActiveSlot, lv: number): number {
   return Math.max(2, abilityDef(hero, slot).cd * (1 - 0.03 * Math.max(0, lv - 1)));

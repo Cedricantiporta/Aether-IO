@@ -7,7 +7,7 @@ import { CoinGlyph } from '../../components/SkillIcons';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import {
   petLv, petStage, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
-  PET_SHARD_XP, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV,
+  PET_SHARD_XP, petEats, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV,
 } from '../../../petGrowth';
 import { feedLoot, feedShards, evolvePet, lootFoodXp, canAffordEvolve } from '../../../petActions';
 import type { PlayerStats, Rarity } from '../../../types';
@@ -29,10 +29,10 @@ export const PetCare: React.FC = () => {
   const cur = petPowerAt(lv, st);
   const nxt = evolving ? petPowerAt(lv, st + 1) : petPowerAt(nextLv, st);
   const keys = Object.keys(pet.stats ?? {}) as (keyof PlayerStats)[];
-  const food = inv.filter((i) => lootFoodXp(i) > 0);
+  const food = inv.filter((i) => lootFoodXp(i) > 0 && petEats(pet, i.rarity));   // (owner) tiered feeding
   const cost = PET_EVOLVE_COST[st];
   const can = canAffordEvolve(pet, gold, mats);
-  const hasShards = RARITIES.some((r) => (mats[r] ?? 0) > 0);
+  const hasShards = RARITIES.some((r) => (mats[r] ?? 0) > 0 && petEats(pet, r));
 
   return (
     <div className="rpg-frame p-3 flex flex-col gap-2.5" data-testid="pet-care">
@@ -71,7 +71,8 @@ export const PetCare: React.FC = () => {
 
       <div>
         <div className="rpg-label mb-1">Feed</div>
-        {food.length === 0 && !hasShards && <div className="text-[.72rem]" style={{ color: 'var(--text-dim)' }}>No crystals, ore or shards to feed. Crystal Cavern loot and recycled gear work.</div>}
+        <div className="text-[.68rem] mb-1" style={{ color: 'var(--text-dim)' }}>Eats only <b style={{ color: RARITY_TEXT[pet.rarity] }}>{RLABEL[pet.rarity] ?? pet.rarity}</b> shards and food (its own tier).</div>
+        {food.length === 0 && !hasShards && <div className="text-[.72rem]" style={{ color: 'var(--text-dim)' }}>No {RLABEL[pet.rarity] ?? pet.rarity} shards or food to feed.</div>}
         <div className="flex flex-col gap-1" data-testid="pet-feed-list">
           {food.map((i) => (
             <div key={i.id} className="flex items-center gap-2 text-[.74rem]">
@@ -81,7 +82,7 @@ export const PetCare: React.FC = () => {
               <Button size="sm" disabled={atCap} onClick={() => feedLoot(i.id, 999)}>All</Button>
             </div>
           ))}
-          {RARITIES.filter((r) => (mats[r] ?? 0) > 0).map((r) => (
+          {RARITIES.filter((r) => (mats[r] ?? 0) > 0 && petEats(pet, r)).map((r) => (
             <div key={r} className="flex items-center gap-2 text-[.74rem]">
               <span className="flex-1 min-w-0 truncate" style={{ color: RARITY_TEXT[r] }}>{RLABEL[r]} shards <span className="rpg-num" style={{ color: 'var(--text-dim)' }}>x{mats[r].toLocaleString()}</span></span>
               <span className="rpg-num" style={{ color: 'var(--text-dim)' }}>+{PET_SHARD_XP[r]} XP</span>

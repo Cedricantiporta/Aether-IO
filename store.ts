@@ -60,7 +60,7 @@ import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
-import { petPower } from './petGrowth';
+import { petPower, petStatMul, PET_PCT_STATS } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
 import { fillQuests, questDay, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
@@ -267,6 +267,9 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
   return Math.floor(cp);
 };
 
+/** (owner balance) hard caps on the percentage stats, applied last (gear + pet + talents + attributes + sets together). */
+export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.15 } as const;
+
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
 const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>, attrs?: Attrs): PlayerStats => {
   const final: PlayerStats = { ...base };
@@ -280,9 +283,8 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
       if (v === undefined || v === null) return;
       if (item.type === 'WEAPON' && k === 'damage') v *= 0.5;
       if (item.type === 'ARMOR' && k === 'defense') v *= 0.5;
-      if (item.type === 'PET') v *= petPower(item);
-      if (k === 'cooldownReduction') final[k] = Math.min(0.75, final[k] + v);
-      else final[k] += v;
+      if (item.type === 'PET') v *= petStatMul(item, k);
+      final[k] += v;
     });
     if (item.affixes) for (const a of item.affixes) accumulate(acc, affixFx(a));
     accumulate(acc, charmFx(item));   // Epic+ accessories: their special effect (accessoryCharms.ts)
@@ -297,6 +299,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
   if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; final.damage *= 0.85; }   // (damage feeds basic attacks and skills)   // fragile, slow caster (user tuning)
+  for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps
   return final;
 };
 
@@ -760,6 +763,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ------------------------------------------------------------ flow --
     setStatus: (status) => set({ status }),
     debugSetLevel: (lv) => {
+      lv = Math.max(1, Math.min(MAX_LEVEL, Math.floor(lv)));   // (owner) never past the real max level
       const s = get(), cp = s.classProg[s.hero];
       const sp = Math.max(0, cp.sp + (lv - cp.lv));
       set({ classProg: { ...s.classProg, [s.hero]: { ...cp, lv, xp: 0, sp } } });
@@ -1800,7 +1804,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         for (const k of mutableStatKeys(stats)) {
           const v = stats[k];
           if (v === undefined) continue;
-          stats[k] = parseFloat((v * f).toFixed(2));
+          stats[k] = parseFloat((v * (PET_PCT_STATS.has(k) ? 1 + (f - 1) / 3 : f)).toFixed(PET_PCT_STATS.has(k) ? 4 : 2));   // (owner) % stats (crit, cooldown ...) grow a third as fast
         }
         return { ...i, level: i.level + 1, stats };
       };

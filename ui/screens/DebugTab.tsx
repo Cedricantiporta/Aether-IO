@@ -53,7 +53,7 @@ function maxRankAndTalents() {
   }
   toast('Debug: Lv 40 + every talent maxed');
 }
-const MAX_RANK = 99;
+const MAX_RANK = 50;   // = classLevels MAX_LEVEL
 function setRank(r: number) {
   useGameStore.getState().debugSetLevel(Math.max(1, Math.min(MAX_RANK, r)));
   toast(`Debug: class level ${useGameStore.getState().level}`);

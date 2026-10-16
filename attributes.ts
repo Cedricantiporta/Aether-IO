@@ -37,7 +37,7 @@ export function applyAttrs(s: PlayerStats, a: Attrs | undefined): void {
   // (owner: smaller gains per point - ~60% of the original, then ~2/3 of that again)
   s.damage *= 1 + 0.0045 * a.STR; s.knockback += 0.02 * a.STR;
   s.fireRate *= 1 + 0.003 * a.DEX; s.critRate += 0.0012 * a.DEX; s.dodge += 0.0006 * a.DEX; s.attackRange += 0.04 * a.DEX;
-  s.skillDamage += 0.0045 * a.INT; s.maxMana += 1.5 * a.INT; s.cooldownReduction = Math.min(0.75, s.cooldownReduction + 0.001 * a.INT);
+  s.skillDamage += 0.0045 * a.INT; s.maxMana += 1.5 * a.INT; s.cooldownReduction += 0.001 * a.INT;   // (capped in store.calculateStats STAT_CAPS)
   s.maxHealth *= 1 + 0.008 * a.VIT; s.defense += 0.15 * a.VIT; s.regen *= 1 + 0.004 * a.VIT;
   s.critDamage += 0.006 * a.LUK; s.goldFind += 0.004 * a.LUK; s.xpBonus += 0.002 * a.LUK;
 }

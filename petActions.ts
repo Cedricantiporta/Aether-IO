@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 import { world } from './engine/world';
 import {
   petApplyXp, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
-  PET_SHARD_XP, PET_LOOT_XP, PET_FOOD_GLYPHS, PET_STAGE_PREFIX,
+  PET_SHARD_XP, petEats, PET_LOOT_XP, PET_FOOD_GLYPHS, PET_STAGE_PREFIX,
 } from './petGrowth';
 import { LOOT_BY_NAME } from './loot';
 import type { Item, Rarity } from './types';
@@ -70,7 +70,7 @@ export function feedLoot(itemId: string, n: number): number {
   const idx = st.inventory.findIndex((i) => i.id === itemId);
   if (!pet || idx < 0) return 0;
   const it = st.inventory[idx], xp = lootFoodXp(it);
-  if (xp <= 0) return 0;
+  if (xp <= 0 || !petEats(pet, it.rarity)) return 0;   // (owner) tiered feeding
   const units = Math.min(n, it.quantity ?? 1, Math.ceil(petXpToCap(pet) / xp));
   if (units <= 0) return 0;
   const inv = st.inventory.slice();
@@ -86,6 +86,7 @@ export function feedShards(rarity: Rarity, n: number): number {
   const st = useGameStore.getState();
   const pet = st.equipment.pet;
   if (!pet) return 0;
+  if (!petEats(pet, rarity)) return 0;   // (owner) tiered feeding: a pet eats shards of its own rarity
   const xp = PET_SHARD_XP[rarity];
   const units = Math.min(n, st.materials[rarity] ?? 0, Math.ceil(petXpToCap(pet) / xp));
   if (units <= 0) return 0;

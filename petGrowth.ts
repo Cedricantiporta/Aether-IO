@@ -29,6 +29,17 @@ export const petLvCap = (stage: number): number => (stage >= 3 ? PET_MAX_LV : PE
 /** Multiplier on the pet's base stats AND pet skill power. 1.0 at Lv 1 stage 1; Lv 20 stage 3 = 2.7. */
 export const petPowerAt = (lv: number, stage: number): number => 1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage];
 export const petPower = (p: Item): number => (p.type === 'PET' ? petPowerAt(petLv(p), petStage(p)) : 1);
+/** (owner balance) percentage stats a pet gives (crit, cooldown, dodge, speed ...) count half and grow at a quarter of the
+ *  flat-stat rate: a maxed Mythic pet no longer hands out +54% crit. Flat stats (damage, health, defense, regen) use petPower. */
+export const PET_PCT_STATS = new Set(['critRate', 'critDamage', 'cooldownReduction', 'dodge', 'moveSpeed', 'skillDamage', 'lifeSteal', 'fireRate', 'goldFind', 'xpBonus', 'multishot']);
+export const petStatMul = (p: Item, k: string): number => {
+  if (p.type !== 'PET') return 1;
+  const pm = petPower(p);
+  return PET_PCT_STATS.has(k) ? 0.5 * (1 + (pm - 1) * 0.25) : pm;
+};
+/** (owner) feeding is tiered: a pet eats food of its own rarity (Common / Uncommon count as one tier). */
+const FOOD_TIER: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+export const petEats = (p: Item, food: Rarity): boolean => FOOD_TIER[p.rarity] === FOOD_TIER[food];
 
 export const petDisplayName = (p: Item): string => (p.type === 'PET' ? PET_STAGE_PREFIX[petStage(p) - 1] + p.name : p.name);
 

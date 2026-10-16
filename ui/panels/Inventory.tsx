@@ -184,8 +184,7 @@ export const InventoryPanel: React.FC = () => {
               <button className="rpg-btn rpg-btn-sm bag-del-go" disabled={!delSel.length} data-testid="bag-del-go"
                 onClick={() => askConfirm({ title: `Delete ${delSel.length} item${delSel.length > 1 ? 's' : ''}?`, body: 'They are destroyed for good (no gold back). Sell them at a shop instead if you want gold.', confirmLabel: 'Delete', tone: 'danger', onConfirm: () => { deleteItems(delSel); exitDel(); } })}>Delete ({delSel.length})</button>
             </>) : (<>
-              {canSell && <button className="rpg-btn rpg-btn-sm" onClick={() => sellAllLoot()} title="Sell every monster loot stack" data-testid="bag-sell-loot">Sell loot</button>}
-              {canSell && <button className="rpg-btn rpg-btn-sm" onClick={() => setSellMode(true)} title="Select items to sell together" data-testid="bag-bulk-sell">Bulk sell</button>}
+              {/* (owner: Sell loot / Bulk sell live in the shops only - redundant in the bag) */}
               <button className="rpg-btn rpg-btn-sm" onClick={() => setDelMode(true)} title="Select items to delete" data-testid="bag-del">Delete</button>
               <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
                 title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
