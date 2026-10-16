@@ -129,7 +129,7 @@ export const bonusReady = (m: MetaState, weekly: boolean): boolean => (weekly ? 
 export function claimBonus(weekly: boolean): boolean {
   const s = useGameStore.getState(), m = s.meta;
   if (!bonusReady(m, weekly)) return false;
-  const r: GoalReward = weekly ? WEEKLY_BONUS : { gems: DAILY_BONUS_GEMS, crystals: DAILY_BONUS_CRYSTALS };
+  const r: GoalReward = weekly ? WEEKLY_BONUS : { crystals: DAILY_BONUS_CRYSTALS };   // (owner: crystals only)
   pay(r);
   useGameStore.setState({ meta: weekly ? { ...m, weeklyBonus: true } : { ...m, dailyBonus: true } });
   notify(`${weekly ? 'Weekly' : 'Daily'} bonus chest! ${rewardMsg(r)}`);
@@ -138,9 +138,9 @@ export function claimBonus(weekly: boolean): boolean {
 export function claimAchievement(id: string): boolean {
   const s = useGameStore.getState(), m = s.meta, a = ACH_BY_ID[id];
   if (!a || !m.unlocked.includes(id) || m.claimed.includes(id)) return false;
-  pay({ gems: a.gems, crystals: achCrystals(a.gems) });
+  pay({ crystals: achCrystals(a.gems) });   // (owner: achievements pay Aether Crystals only; a.gems only sizes the payout)
   useGameStore.setState({ meta: { ...m, claimed: [...m.claimed, id] } });
-  notify(`${a.name}: +${a.gems} gems  +${achCrystals(a.gems)} Aether Crystals`);
+  notify(`${a.name}: +${achCrystals(a.gems)} Aether Crystals`);
   return true;
 }
 /** Equips the title of achievement `id` (null = no title). Only unlocked titles can be worn. */

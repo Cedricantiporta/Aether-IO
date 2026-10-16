@@ -26,7 +26,7 @@ export const STAT_KEYS: StatKey[] = ['kills', 'elites', 'bosses', 'rooms', 'harv
 export const emptyStats = (): Record<StatKey, number> => ({ kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0, trapKills: 0, barrelKills: 0, slamKills: 0, hazardKills: 0 });
 
 export const DAILY_BONUS_GEMS = 60;
-export const WEEKLY_BONUS: GoalReward = { gems: 400, crystals: 30 };
+export const WEEKLY_BONUS: GoalReward = { crystals: 30 };   // (owner: crystals only)
 /** Aether Crystals (the summon currency) in the daily bonus chest; every goal pays some too (owner). */
 export const DAILY_BONUS_CRYSTALS = 5;
 /** Aether Crystals per achievement (by its gem reward). */
@@ -86,15 +86,8 @@ export function rollGoals(weekly: boolean, key: string): GoalInst[] {
     const t = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
     const opts = weekly ? t.weekly : t.daily;
     const target = opts[Math.floor(rnd() * opts.length)] * (t.stat === 'spent' ? GOLD_SCALE : 1);   // 'spent' counts real (scaled) gold
-    let reward: GoalReward;
-    if (!weekly) reward = { gems: 20 + 5 * Math.floor(rnd() * 5) };                                   // 20..40
-    else {
-      const k = rnd();
-      reward = k < 0.5 ? { gems: 150 + 25 * Math.floor(rnd() * 7) }                                   // 150..300
-        : k < 0.8 ? { gold: (2000 + 500 * Math.floor(rnd() * 5)) * GOLD_SCALE }                      // 20k..40k gold (scaled)
-          : { shards: 100 + 50 * Math.floor(rnd() * 5) };                                            // 100..300 common shards
-    }
-    reward.crystals = weekly ? 10 + 5 * Math.floor(rnd() * 3) : 2 + Math.floor(rnd() * 3);   // daily 2..4, weekly 10..20
+    // (owner: daily / weekly goals pay Aether Crystals only)
+    const reward: GoalReward = { crystals: weekly ? 10 + 5 * Math.floor(rnd() * 3) : 2 + Math.floor(rnd() * 3) };   // daily 2..4, weekly 10..20
     out.push({ id: `${weekly ? 'w' : 'd'}${i}`, stat: t.stat, target, progress: 0, claimed: false, reward });
   }
   return out;
@@ -116,7 +109,7 @@ const goals = (a: unknown): GoalInst[] | null => {
   for (const g of a) {
     if (!g || typeof g !== 'object' || !STAT_KEYS.includes((g as GoalInst).stat) || !(nn((g as GoalInst).target) > 0)) return null;
     const x = g as GoalInst, r = (x.reward ?? {}) as GoalReward;
-    out.push({ id: String(x.id), stat: x.stat, target: nn(x.target), progress: Math.min(nn(x.progress), nn(x.target)), claimed: !!x.claimed, reward: { gems: nn(r.gems) || undefined, gold: nn(r.gold) || undefined, shards: nn(r.shards) || undefined, crystals: nn(r.crystals) || (x.id?.[0] === 'w' ? 10 : 2) } });
+    out.push({ id: String(x.id), stat: x.stat, target: nn(x.target), progress: Math.min(nn(x.progress), nn(x.target)), claimed: !!x.claimed, reward: { crystals: nn(r.crystals) || (x.id?.[0] === 'w' ? 10 : 2) } });
   }
   return out;
 };

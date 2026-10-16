@@ -43,7 +43,7 @@ const GoalList: React.FC<{ weekly: boolean }> = ({ weekly }) => {
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 15000); return () => clearInterval(t); }, []);
   const left = weekly ? msToNextWeek() : msToNextDay();
-  const bonus = weekly ? rewardText(WEEKLY_BONUS) : rewardText({ gems: DAILY_BONUS_GEMS, crystals: DAILY_BONUS_CRYSTALS });
+  const bonus = weekly ? rewardText(WEEKLY_BONUS) : rewardText({ crystals: DAILY_BONUS_CRYSTALS });
   return (
     <div className="flex flex-col gap-2" data-testid={weekly ? 'goals-weekly' : 'goals-daily'}>
       <div className="flex items-center justify-between">
@@ -76,7 +76,7 @@ const AchRow: React.FC<{ a: Achievement; value: number; unlocked: boolean; claim
       {!unlocked && <><Bar f={value / a.target} /><div className="gl-sub mt-[.2rem]">{fmt(Math.min(value, a.target))} / {fmt(a.target)}</div></>}
     </div>
     <div className="flex flex-col items-end gap-1 shrink-0">
-      <span className="gl-reward flex items-center gap-1"><GemGlyph size={14} />{a.gems} gems + {achCrystals(a.gems)} crystals</span>
+      <span className="gl-reward flex items-center gap-1">{achCrystals(a.gems)} Aether Crystals</span>
       {unlocked && !claimed && <button className="rpg-btn rpg-btn-sm rpg-btn-primary pe" onClick={() => claimAchievement(a.id)} data-testid="ach-claim">Claim</button>}
       {unlocked && a.title && (equipped
         ? <button className="rpg-btn rpg-btn-sm pe" onClick={() => equipTitle(null)} data-testid="title-unequip">Unequip title</button>
