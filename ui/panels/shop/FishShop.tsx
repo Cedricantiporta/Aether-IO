@@ -6,6 +6,7 @@ import { useGameStore } from '../../../store';
 import { LOOT_BY_ID, FISH_IDS, isFishName } from '../../../loot';
 import type { Item } from '../../../types';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITY_TEXT } from '../../lib/game';
@@ -32,9 +33,9 @@ export const FishShopTab: React.FC = () => {
       <div>
         <div className="rpg-label mb-2">Your catch</div>
         {stacks.length > 0 ? (
-          <div className="slot-grid priced">
+          <ShopGrid>
             {stacks.map((it) => <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={it.price} tooltip="sell" compare={false} onClick={() => setSell(it)} />)}
-          </div>
+          </ShopGrid>
         ) : <div className="muted text-[.78rem]">No fish in your bag yet. Cast a line from the pier or the shore (walk up to the water and press E).</div>}
         <Button className="w-full mt-2" variant="green" disabled={count === 0} onClick={() => sellAllFish()} data-testid="sell-all-fish">
           Sell all fish · {count} · {value.toLocaleString()} G

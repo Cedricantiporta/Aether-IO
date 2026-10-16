@@ -39,8 +39,8 @@ const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }
 ];
 
 export const ShopPanel: React.FC = () => {
-  const { tab, close, gold, gems, sp } = useGameStore(useShallow((s) => ({
-    tab: s.activeShopTab, close: s.closeAllUI, gold: s.gold, gems: s.gems, sp: s.skillPoints,
+  const { tab, close, gems, sp } = useGameStore(useShallow((s) => ({
+    tab: s.activeShopTab, close: s.closeAllUI, gems: s.gems, sp: s.skillPoints,
   })));
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
   // drop a bag item on a shop: sell it (or pick it for upgrading at the blacksmith); the warehouse grid handles its own drops
@@ -53,7 +53,6 @@ export const ShopPanel: React.FC = () => {
       <Panel className={`flex flex-col flex-1 min-h-0 drop-zone ${sellDrop.hot ? 'drop-hot' : ''}`} {...sellDrop.props}>
         <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">
-            {tab !== 'WAREHOUSE' && <CurrencyPill value={gold.toLocaleString()} />}   {/* (the warehouse shows its stored gold at the bottom instead) */}
             {tab === 'SUMMON' && <CurrencyPill icon={<GemGlyph size={20} />} value={gems.toLocaleString()} />}
             {tab === 'SKILLS' && <CurrencyPill icon={<Star size={16} className="text-[var(--gold-light)]" />} value={`${sp} SP`} />}
           </div>} />

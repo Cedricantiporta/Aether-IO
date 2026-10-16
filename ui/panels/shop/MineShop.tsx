@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Pickaxe, FlaskConical } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { UNLOCK_LV } from '../../../unlocks';
@@ -55,12 +56,12 @@ export const MineShopTab: React.FC = () => {
       <div>
         <div className="rpg-label mb-2">Ore &amp; crystals (+{Math.round((MINE_PREMIUM - 1) * 100)}% over the town price)</div>
         {goods.length > 0 ? (
-          <div className="slot-grid priced">
+          <ShopGrid>
             {goods.map((it) => (
               <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={minePrice(it)} tooltip="sell" compare={false}
                 onClick={() => ask({ title: `Sell ${it.name}?`, body: `${(it.quantity || 1)} x ${minePrice(it).toLocaleString()} G (anything an active quest still needs is kept).`, confirmLabel: 'Sell', onConfirm: () => { sellMineGoods(it); } })} />
             ))}
-          </div>
+          </ShopGrid>
         ) : <div className="muted text-[.78rem]">No ore or crystals in your bag. Mine the veins around the camp and inside the Crystal Cave.</div>}
         <Button className="w-full mt-2" variant="green" disabled={count === 0} data-testid="sell-all-ore"
           onClick={() => ask({ title: 'Sell all ore & crystals?', body: `${count} pieces for about ${value.toLocaleString()} G. Anything your quests still need stays in your bag.`, confirmLabel: 'Sell all', onConfirm: () => { sellMineGoods(); } })}>

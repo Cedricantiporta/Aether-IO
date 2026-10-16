@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore, shopPrice, SUPPLY_STOCK, questFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, isGear } from '../../lib/game';
@@ -33,9 +34,9 @@ export const SuppliesTab: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div>
         <div className="rpg-label mb-2">Provisions</div>
-        <div className="slot-grid priced">
+        <ShopGrid>
           {STOCK.map((it) => { const free = freeHp && it.id === 'potion_hp'; return <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={free ? 0 : shopPrice(it)} sale={free ? undefined : sales[it.id]} oldPrice={it.price} cantAfford={!free && gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => (free ? setBuy(it, { price: 0, max: 1 }) : setBuy(it))} />; })}
-        </div>
+        </ShopGrid>
       </div>
       <div>
         <div className="rpg-label mb-2">Monster spoils</div>

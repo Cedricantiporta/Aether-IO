@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { PETS_POOL } from '../../../constants';
 import { useGameStore, shopPrice, firstPetFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ShopGrid } from '../../components/ShopGrid';
 import { ItemArt } from '../../components/ItemArt';
 import { PetCare } from './PetCare';
 import { PetFuse } from './PetFuse';
@@ -48,7 +49,7 @@ export const PetsTab: React.FC = () => {
         {(['SHOP', 'CARE', 'FUSE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : t === 'CARE' ? 'Pet Care' : 'Fuse'}</button>)}
       </div>
       {tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
-        <div className="pet-grid slot-grid priced" data-testid="pet-grid">
+        <ShopGrid className="pet-grid" testId="pet-grid">
           {PETS_POOL.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>
               <ItemSlot item={q} fluid size="100%" iconSize="78%" tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
@@ -56,7 +57,7 @@ export const PetsTab: React.FC = () => {
                 onClick={() => { setSel(q.id); if (!q.summonOnly) setBuy(q, { price: freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q), max: 1 }); }} />
             </div>
           ))}
-        </div>
+        </ShopGrid>
         <div className="rpg-frame p-3 flex flex-col gap-1.5" data-testid="pet-detail">
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">

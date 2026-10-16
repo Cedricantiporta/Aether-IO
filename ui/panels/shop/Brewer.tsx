@@ -10,6 +10,7 @@ import { lootOwned } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
 import { GameStatus, type Item } from '../../../types';
 import { ItemSlot } from '../../components/ItemSlot';
+import { ShopGrid } from '../../components/ShopGrid';
 import { ItemArt } from '../../components/ItemArt';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { QtyStepper } from '../../components/Modal';
@@ -37,12 +38,12 @@ export const BrewerTab: React.FC = () => {
     <div className="flex flex-col gap-4" data-testid="brewer">
       <div>
         <div className="rpg-label mb-2">Elixirs</div>
-        <div className="slot-grid priced">
+        <ShopGrid>
           {ELIXIR_IDS.map((k) => (
             <ItemSlot key={k} item={samples[k]} fluid size="100%" iconSize="78%" price={ELIXIRS[k].gold} cantAfford={gold < ELIXIRS[k].gold} tooltip="none" compare={false}
               selected={sel === k} qty={owned(k)} onClick={() => { setSel(k); setQty(1); }} />
           ))}
-        </div>
+        </ShopGrid>
       </div>
       <div className="brew-card">
         <div className="brew-name" style={{ color: RARITY_TEXT[d.rarity] }}><FlaskConical size={16} /> {d.name}</div>

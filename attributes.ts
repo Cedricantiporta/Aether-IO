@@ -41,3 +41,21 @@ export function applyAttrs(s: PlayerStats, a: Attrs | undefined): void {
   s.maxHealth *= 1 + 0.008 * a.VIT; s.defense += 0.15 * a.VIT; s.regen *= 1 + 0.004 * a.VIT;
   s.critDamage += 0.006 * a.LUK; s.goldFind += 0.004 * a.LUK; s.xpBonus += 0.002 * a.LUK;
 }
+
+/** Which final stats each attribute moves (for the allocation preview). */
+export const ATTR_STATS: Record<AttrKey, (keyof PlayerStats)[]> = {
+  STR: ['damage', 'knockback'], DEX: ['fireRate', 'critRate', 'dodge'], INT: ['skillDamage', 'maxMana', 'cooldownReduction'],
+  VIT: ['maxHealth', 'defense', 'regen'], LUK: ['critDamage', 'goldFind', 'xpBonus'],
+};
+
+/** Final stats as they would be with `to` allocated instead of `from` (inverse of applyAttrs, then re-applied). UI preview only. */
+export function attrPreview(s: PlayerStats, from: Attrs, to: Attrs): PlayerStats {
+  const o = { ...s };
+  const d = (k: AttrKey) => to[k] - from[k];
+  o.damage *= (1 + 0.0045 * to.STR) / (1 + 0.0045 * from.STR); o.knockback += 0.02 * d('STR');
+  o.fireRate *= (1 + 0.003 * to.DEX) / (1 + 0.003 * from.DEX); o.critRate += 0.0012 * d('DEX'); o.dodge += 0.0006 * d('DEX');
+  o.skillDamage += 0.0045 * d('INT'); o.maxMana += 1.5 * d('INT'); o.cooldownReduction = Math.min(0.75, o.cooldownReduction + 0.001 * d('INT'));
+  o.maxHealth *= (1 + 0.008 * to.VIT) / (1 + 0.008 * from.VIT); o.defense += 0.15 * d('VIT'); o.regen *= (1 + 0.004 * to.VIT) / (1 + 0.004 * from.VIT);
+  o.critDamage += 0.006 * d('LUK'); o.goldFind += 0.004 * d('LUK'); o.xpBonus += 0.002 * d('LUK');
+  return o;
+}
