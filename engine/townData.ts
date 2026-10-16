@@ -119,7 +119,7 @@ export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
 export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }   // 0 broken pillar, 1 ruined wall, 2 fallen arch
 export const RUINS: RuinSpec[] = [
-  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 49, z: -20, rot: 1.2, kind: 0 }, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
+  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 55.5, z: -16, rot: 1.2, kind: 0 } /* (moved off the trail: it blocked the way to Old Wend) */, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
   { x: 47, z: -47.5, rot: 0.8, kind: 1 }, { x: 34, z: -51, rot: 0.1, kind: 0 }, { x: 26, z: -44.4, rot: -0.1, kind: 1 }, { x: 16.5, z: -51.5, rot: 0.2, kind: 2 },
   { x: 9, z: -45, rot: 0, kind: 0 },
 ];
@@ -127,7 +127,7 @@ export const RUINS: RuinSpec[] = [
  *  always leaving a gap (walk grid checked). Drawn by render/TownScenery (merged rock meshes). */
 export const TRAIL_ROCKS: [number, number, number, number][] = [
   [59.2, -5.2, 2.3, 2.6], [61.5, -2.8, 1.4, 1.6],          // the corner where the wide camp narrows into the trail
-  [53.4, -9.5, 1.5, 1.8], [53.3, -21.5, 1.6, 1.9], [47.7, -25.5, 0.9, 1.1], [53.6, -34.5, 1.6, 1.9],
+  [53.4, -9.5, 1.5, 1.8], [54.6, -21.5, 1.6, 1.9], [53.6, -34.5, 1.6, 1.9],
   [54.2, -49, 2.3, 2.6], [51.5, -52, 1.5, 1.8],            // round the north-east corner tower
   [39, -49.8, 1.6, 1.9], [30.5, -44.2, 0.9, 1.1], [21.5, -50.2, 1.4, 1.7],
   [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
@@ -303,8 +303,9 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
-  // (owner) the road's west side along the wheat / pumpkin fields only, stopping before the Elixir Brewer (nothing on to the portal)
-  [-3.4, 82.5, -3.4, BREWER_HUT.z - 3.2],
+  // (owner, red lines) the road from the bridge up to the cross paths, both sides; nothing on toward the portal
+  [-3.4, 78.5, -3.4, BREWER_HUT.z - 2.2], [-3.4, BREWER_HUT.z + 2.2, -3.4, TOWER.z - 2],   // west side: bridge -> tower path (gap at the Brewer's door)
+  [3.4, 78.5, 3.4, FARM.z - 1.8], [3.4, FARM.z + 1.8, 3.4, 108.2],                       // east side: bridge -> farm track (gap at the farm path)
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
@@ -758,7 +759,7 @@ export const NPCS: NpcDef[] = [
   { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
     talk: [['Have you met my sister? She never stops talking.']], bubbles: ['Have you met my sister? She never stops talking.', 'Lovely flowers by the gate.'] },
   // (owner: more folk outside the walls) the hamlets by the portal, the riverside green, the beach
-  { name: 'Pip', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.85, prop: 'none', accent: '#d9c9a8', home: [8, 110.6], speed: 1.4, patrol: [[8, 110.6], [28, 110.6]], noHat: true, noCape: true, tunic: '#e0cfa8', hair: '#c07a3a', longHair: false,
+  { name: 'Tam', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.85, prop: 'none', accent: '#d9c9a8', home: [8, 110.6], speed: 1.4, patrol: [[8, 110.6], [28, 110.6]], noHat: true, noCape: true, tunic: '#e0cfa8', hair: '#c07a3a', longHair: false,
     talk: [['Are you a real hero? Can I hold your sword?']], bubbles: ['Race you to the coop!', 'I saw a fox!', 'Mum says no portals.'] },
   { name: 'Wenna', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#d9c9a8', home: [-8, 112], speed: 1.0, patrol: [[-8, 112], [-38, 112]], noHat: true, noCape: true, tunic: '#d8c7a6', hair: '#6a4024', longHair: true,
     talk: [['The tower hums at night. I sleep with the window shut.']], bubbles: ['Lovely mushrooms in these woods.', 'Mind the tower, dear.', 'Fresh eggs for sale!'] },
