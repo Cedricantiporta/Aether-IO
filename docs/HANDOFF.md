@@ -1095,3 +1095,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Loot (monster goods, fish, ore) sells for 2x its listed value (`constants.LOOT_SELL_MUL`, via `sellUnit` in every sell
   path incl. Bulk Sell, Sell all, fish / mine stalls). Surge of Fury card is Epic and much rarer (card weight 0.25).
 - Monster EXP -40% (`enemies.MONSTER_XP_MUL` 0.6). Quests give no EXP (no quest reward type carries any).
+- Item slots no longer show the +N upgrade badge; it shows only in tooltips / previews (ItemTip, item dialogs, Blacksmith).
