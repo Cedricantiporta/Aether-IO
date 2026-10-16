@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import type { UpgradeType } from '../../../types';
 import {
-  BRANCHES, TALENT_BY_ID, allocBlock, branchSpent, childrenOf, isMaxed, respecCost, talentPointsTotal, talentsOf, talentsSpent, type TalentNode,
+  BRANCHES, TALENT_BY_ID, allocBlock, branchSpent, childrenOf, reqMet, respecCost, talentPointsTotal, talentsOf, talentsSpent, type TalentNode,
 } from '../../../talents';
 import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
@@ -16,7 +16,7 @@ import { HERO_COLOR } from '../../lib/game';
 
 // Radial talent tree (owner reference): class emblem in the centre, four branches (up / right / down / left) fanning out
 // over five rings. Square nodes = root / special / capstone, round nodes = plain stat talents. A node opens once its
-// parent(s) are MAXED and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
+// parent(s) are learned (MAXED for a capstone) and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
 const RING_R = [118, 200, 290, 372, 448];
 const AXIS = [-90, 0, 90, 180];
 const SIZE = 2 * (RING_R[4] + 70);
@@ -112,7 +112,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <circle cx={C} cy={C} r={RING_R[0]} className={`inner ${nodes.some((n) => n.row === 0 && ranks[n.id] > 0) ? 'lit' : ''}`} />
                   {nodes.flatMap((n) => n.req.map((q) => {
                     const p = TALENT_BY_ID[q], [x1, y1] = pos(p), [x2, y2] = pos(n);
-                    const st = (ranks[n.id] || 0) > 0 ? 'lit' : isMaxed(q, ranks) ? 'open' : '';
+                    const st = (ranks[n.id] || 0) > 0 ? 'lit' : reqMet(n, q, ranks) ? 'open' : '';
                     return <line key={n.id + q} x1={x1} y1={y1} x2={x2} y2={y2} className={`lk ${st}`} />;
                   }))}
                   {nodes.filter((n) => n.row === 0).map((n) => { const [x, y] = pos(n); return <line key={'c' + n.id} x1={C} y1={C} x2={x} y2={y} className={`lk ${(ranks[n.id] || 0) > 0 ? 'lit' : 'open'}`} />; })}
@@ -158,7 +158,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="tt-sec">Requirements</div>
               <ul className="tt-req">
                 <li className={lv >= sel.lvReq ? 'ok' : ''}>{lv >= sel.lvReq ? <Check size={13} /> : <Lock size={12} />} Class level {sel.lvReq}</li>
-                {sel.req.map((q) => { const p = TALENT_BY_ID[q], ok = isMaxed(q, ranks); return <li key={q} className={ok ? 'ok' : ''}>{ok ? <Check size={13} /> : <Lock size={12} />} Max {p.name} ({ranks[q] || 0}/{p.max})</li>; })}
+                {sel.req.map((q) => { const p = TALENT_BY_ID[q], ok = reqMet(sel, q, ranks); return <li key={q} className={ok ? 'ok' : ''}>{ok ? <Check size={13} /> : <Lock size={12} />} {sel.capstone ? 'Max' : 'Learn'} {p.name} ({ranks[q] || 0}/{sel.capstone ? p.max : 1})</li>; })}
                 {!sel.req.length && <li className="ok"><Check size={13} /> Branch root</li>}
               </ul>
               {childrenOf(sel).length > 0 && (<>
