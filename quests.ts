@@ -91,7 +91,7 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
     case 'COLLECT_LOOT': lootName = pick(['Goblin Ear', 'Slime Gel', 'Bat Wing', 'Old Bone', 'Beetle Shell', 'Cultist Rune', 'Ogre Tusk'].slice(0, Math.min(7, 3 + r))); target = 4 + r; break;
   }
   const e = EFFORT[type];
-  const reward: QuestReward = { gold: Math.round((100 + 55 * r) * e / 10) * 100 };   // x10 economy
+  const reward: QuestReward = { gold: Math.round((100 + 55 * r) * e / 20) * 100 };   // x10 economy (owner: -50%)
   const extra = Math.random();
   if (extra < 0.3) reward.gems = Math.round((6 + 2 * r) * e);
   else if (extra < 0.55) reward.cores = 1 + Math.floor(r / 3) + (e > 1.3 ? 1 : 0);

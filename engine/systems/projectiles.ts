@@ -32,6 +32,10 @@ export interface ProjSpec {
   emp?: boolean;
 }
 
+/** Boomerang axe: initial turn against its curve (rad) so its loop straddles the aim line (see the AXE steering). */
+const AXE_PRE_TURN = 0.48;
+/** Boomerang loop depth per unit of throw speed (simulated with the steering below: ~0.38 u per u/s). */
+const AXE_REACH_PER_SPEED = 0.38;
 const ORIGIN_Y = 1.2;
 const CRATE_HIT_RADIUS = 1.6;
 const CRATE_ID_OFFSET = 10000;
@@ -251,6 +255,13 @@ export function fireBasicAttack(): void {
   // Split shot = forward fan only: whole fan capped at ~50 deg (+-25 deg), however much Spread gear stacks.
   const wideBow = kind === 'ARROW' && count > 3;   // bow multishot: a wider forward fan (still never behind the hero)
   const fanStep = count > 1 ? (kind === 'SLASH' ? 0.4 : Math.min(wideBow ? Math.max(stats.spread, 0.22) : stats.spread, (wideBow ? 1.2 : 0.87) / (count - 1))) : 0;
+  if (kind === 'AXE') {   // (owner) the loop reaches just past the target (~1.5 u) so it hits it going out and coming back
+    const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+    if (t && t.active && t.state !== 'DYING') {
+      const d = Math.hypot(t.pos.x - pl.pos.x, t.pos.z - pl.pos.z) - t.radius * 0.3;
+      speed = Math.max(3.5, Math.min(9.5, d + 1.5)) / AXE_REACH_PER_SPEED;
+    }
+  }
   for (let rp = 0; rp < (echo ? 2 : 1); rp++) for (let i = 0; i < count; i++) {
     const off = i - (count - 1) / 2;
     let dx = dir.x, dz = dir.z, ox = baseX, oz = baseZ;
@@ -295,7 +306,13 @@ export function fireBasicAttack(): void {
     if (np && kind === 'ARROW') np.tint = gp ? 3 : ps ? 1 : hero === 'ARCHER' && pl.buffT > 0 && pl.buffHaste > 0 ? 2 : 0;
     if (np && kind === 'SLASH') np.tint = swordTint;
     if (np && el) { np.tint = el === 'FIRE' ? 6 : el === 'ICE' ? 7 : 8; if (el === 'LIGHTNING') np.procLv = perk!.lv; }
-    if (np && kind === 'AXE') { np.bounces = (i + rp) & 1; np.trailT = 0; }   // boomerang: alternate curve side per axe
+    if (np && kind === 'AXE') {   // boomerang: alternate curve side per axe
+      np.bounces = (i + rp) & 1; np.trailT = 0;
+      // (owner: centre the loop on the aim line) thrown ~27 deg against its curve, so the way out and the way back both
+      // pass within ~1.5 u of the line: an enemy straight ahead is hit going out AND coming back
+      const a0 = -AXE_PRE_TURN * (np.bounces & 1 ? -1 : 1), c0 = Math.cos(a0), s0 = Math.sin(a0), vx0 = np.vel.x;
+      np.vel.x = vx0 * c0 - np.vel.z * s0; np.vel.z = vx0 * s0 + np.vel.z * c0;
+    }
     if (np && kind === 'SLASH') np.bounces = (procCount + i) & 1;              // alternate swing direction (render mirror)
   }
   // Divine Avatar: every sword swing also releases a Holy Wave

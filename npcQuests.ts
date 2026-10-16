@@ -95,7 +95,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'You went out of your way to listen to an old man ramble. Nobody does that any more. Here: my goose money.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 3000, gems: 30 },
+    reward: { gold: 1500, gems: 30 },
   },
   {
     id: 'fenn_ballad', minLevel: 5, giver: 'Fenn', title: 'A Ballad in Ninety-Nine Verses', summary: 'Hear all of Fenn\'s ballad, then talk to him again',
@@ -122,7 +122,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'Take this. A bard pays his audience, that is the rule. I just made it up, but it is a rule now.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 4000, gems: 40, items: [{ id: 'reforge_stone', qty: 1 }] },
+    reward: { gold: 2000, gems: 40, items: [{ id: 'reforge_stone', qty: 1 }] },
   },
   {
     id: 'maren_forms', minLevel: 8, giver: 'Steward Maren', title: 'Terms and Conditions of Heroism', summary: 'Have Steward Maren read you the hero contract, then talk again',
@@ -148,7 +148,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'By royal decree, your patience is hereby rewarded. And may I say, it is a pleasure to meet someone who reads the fine print.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 6000, items: [{ id: 'upgrade_core', qty: 3 }, { id: 'erase_scroll', qty: 1 }] },
+    reward: { gold: 3000, items: [{ id: 'upgrade_core', qty: 3 }, { id: 'erase_scroll', qty: 1 }] },
   },
   {
     id: 'rodric_tale', minLevel: 12, giver: 'Rodric the Tipsy', title: 'The Tale (Again)', summary: 'Hear Rodric\'s legendary adventure, then talk to him again',
@@ -174,7 +174,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'You are a good listener, hero. Most people leave after the bridge. Here, from my adventuring days. Do not tell Marta.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 8000, gems: 40, items: [{ id: 'temper_oil', qty: 2 }] },
+    reward: { gold: 4000, gems: 40, items: [{ id: 'temper_oil', qty: 2 }] },
   },
   {
     id: 'maeve_gossip', minLevel: 15, giver: 'Maeve', title: 'Have You Heard?', summary: 'Hear ALL of Maeve\'s gossip, then talk to her again',
@@ -200,7 +200,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'You are a dear for listening. Here: everybody pays me to keep secrets, so I may as well pay someone to hear them.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 10000, gems: 50, shards: ['EPIC', 3] },
+    reward: { gold: 5000, gems: 50, shards: ['EPIC', 3] },
   },
   {
     id: 'wren_lecture', minLevel: 20, giver: 'Wren', title: 'A Brief Lecture on Slimes', summary: 'Attend Wren\'s "brief" lecture, then talk to her again',
@@ -224,7 +224,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'Your diploma. Well, a reward, the academy is out of diplomas. Apply it to something shiny.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 12000, gems: 60, shards: ['LEGENDARY', 1] },
+    reward: { gold: 6000, gems: 60, shards: ['LEGENDARY', 1] },
   },
   // ---- the chapel: Sister Elowen (two in a chain)
   {
@@ -233,7 +233,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Twelve of the restless, child. Zombies roam the Greenwood and the halls beyond it.',
     done: ['The graves are quiet again. Thank you.', 'The Flame does not pay in gold, but the collection box does. Take this.'],
     objective: { type: 'KILL_KIND', target: 'ZOMBIE', count: 12 },
-    reward: { gold: 1200, items: [{ id: 'potion_hp_big', qty: 2 }] },
+    reward: { gold: 600, items: [{ id: 'potion_hp_big', qty: 2 }] },
   },
   {
     id: 'elowen_locket', after: 'elowen_graves', giver: 'Sister Elowen', title: 'A Locket for the Lost', summary: 'Bring Sister Elowen a Grave Locket',
@@ -241,7 +241,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'A Grave Locket. The dead carry them; so do old tombs.',
     done: ['There is a name inside... "Aldwin". Rest well, Aldwin.', 'You have done a kind thing. Kindness should be paid, at least a little.'],
     objective: { type: 'DELIVER', target: 'grave_locket', count: 1 },
-    reward: { gold: 2000, gems: 20, items: [{ id: 'reforge_stone', qty: 1 }] },
+    reward: { gold: 1000, gems: 20, items: [{ id: 'reforge_stone', qty: 1 }] },
   },
   // ---- the Golden Tankard: Marta the barkeep and Rodric the regular
   {
@@ -250,7 +250,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Five Lake Perch, love. The Fishmonger on the beach lends rods.',
     done: ['Perfect! Smells like the lake. In a good way, mostly.', 'Here, your cut of the stew money.'],
     objective: { type: 'DELIVER', target: 'fish_perch', count: 5 },
-    reward: { gold: 1500, items: [{ id: 'temper_oil', qty: 1 }] },
+    reward: { gold: 750, items: [{ id: 'temper_oil', qty: 1 }] },
   },
   {
     id: 'rodric_goblets', minLevel: 8, giver: 'Rodric the Tipsy', title: 'The Lost Tankards', summary: 'Find 2 Silver Goblets for Rodric',
@@ -258,7 +258,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Two Silver Goblets. Quietly. She is counting the mugs again.',
     done: ['Shh! Put them on the shelf. Behind the cider. Perfect.', 'You saved my life. Or at least my tab. Take this.'],
     objective: { type: 'DELIVER', target: 'silver_goblet', count: 2 },
-    reward: { gold: 2500, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
+    reward: { gold: 1250, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
   },
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
@@ -267,7 +267,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Ten shards of light, remember. Follow the ring path east of the walls to the cave in the forest bay, or find a Crystal Cavern door in the wilds.',
     done: ['Ahh, look at them sing! You have a good eye, hero.', 'Take this for the trouble.'],
     objective: { type: 'COLLECT_LOOT', target: ['raw_gem', 'echo_crystal', 'ore_nugget'], count: 10, room: 'CRYSTAL' },
-    reward: { gold: 1500, shards: ['COMMON', 10] },
+    reward: { gold: 750, shards: ['COMMON', 10] },
   },
   {
     id: 'wend_gems', giver: 'Old Wend', title: 'The Gemcutter\'s Favour', summary: 'Deliver 5 Raw Gemstones to Old Wend', after: 'wend_crystals',
@@ -283,7 +283,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Elderroot still lumbers through the Old Grove. Strike at his roots and keep moving.',
     done: ['The grove is quiet at last. I felt it from here.', 'A wolf of the wild has taken a liking to you. Treat him kindly.'],
     objective: { type: 'KILL_BOSS', target: 'BOSS_TREANT', count: 1 },
-    reward: { gold: 6000, items: [{ id: 'pet_wolf' }] },
+    reward: { gold: 3000, items: [{ id: 'pet_wolf' }] },
   },
   // ---- Brenna (farmer): chain of three, ends with a hood
   {
@@ -292,7 +292,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Still green blobs everywhere, thirty of them. I count on you.',
     done: ['My wheat is saved! Bless you.', 'Here, this is all the spare coin I have. I was saving it for a new lunch.'],
     objective: { type: 'KILL_KIND', target: 'SLIME', count: 30 },
-    reward: { gold: 800 },
+    reward: { gold: 400 },
   },
   {
     id: 'brenna_gel', giver: 'Brenna', title: 'Good for the Soil', summary: 'Deliver 10 Slime Gel to Brenna', after: 'brenna_slimes',
@@ -300,7 +300,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Ten Slime Gel, please. Slimes drop it now and then.',
     done: ['Smells awful, grows wonderfully! Take these potions, you have earned them.'],
     objective: { type: 'DELIVER', target: 'slime_gel', count: 10 },
-    reward: { gold: 1200, items: [{ id: 'potion_hp_big', qty: 3 }] },
+    reward: { gold: 600, items: [{ id: 'potion_hp_big', qty: 3 }] },
   },
   {
     id: 'brenna_goblins', minLevel: 3, giver: 'Brenna', title: 'Thieves in the Night', summary: 'Defeat 25 Goblins', after: 'brenna_gel',
@@ -308,7 +308,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Twenty-five goblins, hero. They are quick, so mind yourself.',
     done: ['No more midnight thieves! A promise is a promise: my father\'s hood. It suits a hero better than a farmer.'],
     objective: { type: 'KILL_KIND', target: 'GOBLIN', count: 25 },
-    reward: { gold: 2000, items: [{ id: 'helm_3' }] },
+    reward: { gold: 1000, items: [{ id: 'helm_3' }] },
   },
   // ---- singles
   {
@@ -317,7 +317,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The Sunscorch Desert is past the Marble Halls: three realms deep. Keep going!',
     done: ['So the desert is real, and you came back. I am impressed. I lost a bet with the cook.', 'The watch pays for good scouting. Shake the sand out of your boots before you walk on my gate.'],
     objective: { type: 'REACH_BIOME', count: 3 },
-    reward: { gold: 3000, gems: 20 },
+    reward: { gold: 1500, gems: 20 },
   },
   // ---- mining tutorial (class level UNLOCK_LV.CAVE = 5): Dorn sends you to the mining camp + the Crystal Cave, Grit takes over
   {
@@ -342,7 +342,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Fifteen Ore Nuggets. Look for ore veins in the caverns. Shiny brown rocks. No, not that one, that is a potato.',
     done: ['Heavy and honest! This will keep the forge hot a month.', 'My share: cores for your gear, and a fistful of gold.'],
     objective: { type: 'DELIVER', target: 'ore_nugget', count: 15 },
-    reward: { gold: 2500, items: [{ id: 'upgrade_core', qty: 3 }] },
+    reward: { gold: 1250, items: [{ id: 'upgrade_core', qty: 3 }] },
   },
   {
     id: 'pip_secret', minLevel: 3, giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
@@ -351,7 +351,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     heard: 'A shiny pebble, warm to the touch? That is a sunstone, child. Tell little Pip to keep it out of the rain: it sulks when it gets wet.',
     done: ['He says it is a sunstone?! I KNEW it! I am going to keep it in my sock drawer. With the other socks.', 'Here, you can have some of my sweets money. Not all of it. Some of it.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
-    reward: { gold: 900, gems: 5 },
+    reward: { gold: 450, gems: 5 },
   },
   // ---- the farm outside the gate (interaction quests)
   {
@@ -360,7 +360,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The cows are right by the barn. Press E next to one. Gently now!',
     done: ['Three full pails! You have a farmer\'s hands under all that armour.', 'Here, a little something, and a bottle for the road.'],
     objective: { type: 'INTERACT', target: 'milk', count: 3 },
-    reward: { gold: 600, items: [{ id: 'potion_hp', qty: 1 }] },
+    reward: { gold: 300, items: [{ id: 'potion_hp', qty: 1 }] },
   },
   {
     id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', minLevel: 3,
@@ -368,7 +368,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Goblins skulk in the Meadow and beyond. Twenty, if you please.',
     done: ['Not a feather lost last night! You have my thanks, and the farm\'s.'],
     objective: { type: 'KILL_KIND', target: 'GOBLIN', count: 20 },
-    reward: { gold: 1800, gems: 15 },
+    reward: { gold: 900, gems: 15 },
   },
   {
     id: 'dalla_eggs', giver: 'Dalla', title: 'Egg Hunt', summary: 'Collect 5 eggs from the coop nests',
@@ -376,7 +376,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The nests are in front of the coop. A hen lays a fresh one every little while.',
     done: ['Five lovely eggs, not a crack among them!', 'Do not tell the hens I counted. They get competitive. Take these, I baked too much again.'],
     objective: { type: 'INTERACT', target: 'egg', count: 5 },
-    reward: { gold: 500, items: [{ id: 'potion_mana', qty: 1 }] },
+    reward: { gold: 250, items: [{ id: 'potion_mana', qty: 1 }] },
   },
   {
     id: 'pip_cat', giver: 'Pip', title: 'Where Is Biscuit?', summary: 'Find Pip\'s cat somewhere in town',
@@ -384,7 +384,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Biscuit loves quiet corners far from the plaza... the other side of town from me, maybe?',
     done: ['BISCUIT! You found her! Bad kitty. Good hero!', 'She says thank you. Well, she hissed. That is cat for thank you.', 'Here, this is my whole savings. Do not tell Mum.'],
     objective: { type: 'INTERACT', target: 'cat', count: 1 },
-    reward: { gold: 400, gems: 10 },
+    reward: { gold: 200, gems: 10 },
   },
   // ---- hidden: appears only after Elderroot (biome 1 boss) fell at least once
   {
@@ -402,7 +402,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The Frostpeak lies beyond the Sunscorch Desert, hero. Go, and return when you have seen it.',
     done: ['The Frostpeak is real, and so is the danger. Aether owes you.', 'Take the crown\'s thanks.'],
     objective: { type: 'REACH_BIOME', count: 5 },
-    reward: { gold: 10000, gems: 50 },
+    reward: { gold: 5000, gems: 50 },
   },
   // ---- level-gated: the deeper biomes (offered once the class level can reach them)
   {
@@ -411,7 +411,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Gargoyles sit still like statues until you come close. Strike first.',
     done: ['Fifteen! The masons will have work for a year. Take this from the guard\'s purse.'],
     objective: { type: 'KILL_KIND', target: 'GARGOYLE', count: 15 },
-    reward: { gold: 3500, gems: 20 },
+    reward: { gold: 1750, gems: 20 },
   },
   {
     id: 'bram_gorath', minLevel: 16, giver: 'Sir Bram', title: 'The Mountain Falls Again', summary: 'Defeat Gorath the Mountain', after: 'aldo_gargoyles',
@@ -419,7 +419,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Gorath waits at the end of the Marble Halls. Watch for the crystals that shield him.',
     done: ['Felled again! Aldo owes me ten gold, I said you would. Here, your share and then some.'],
     objective: { type: 'KILL_BOSS', target: 'BOSS_GOLEM', count: 1 },
-    reward: { gold: 6000, shards: ['RARE', 15] },
+    reward: { gold: 3000, shards: ['RARE', 15] },
   },
   {
     id: 'lysa_mummies', minLevel: 22, giver: 'Lysa', title: 'Bandages and Balms', summary: 'Defeat 20 Mummies (Sunscorch Desert)',
@@ -427,7 +427,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Mummies throw their wraps to root you. Keep moving and strike from the side.',
     done: ['Oh, the smell! Perfect. Your salves, as promised.'],
     objective: { type: 'KILL_KIND', target: 'MUMMY', count: 20 },
-    reward: { gold: 5000, items: [{ id: 'potion_hp_big', qty: 5 }] },
+    reward: { gold: 2500, items: [{ id: 'potion_hp_big', qty: 5 }] },
   },
   {
     id: 'maeve_scorpions', minLevel: 24, giver: 'Maeve', title: 'Sting Operation', summary: 'Defeat 25 Giant Scorpions (Sunscorch Desert)',
@@ -435,7 +435,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Twenty-five giant scorpions. Mind the tail, and the acid it leaves behind.',
     done: ['Twenty-five! Wait until the street hears. Here, the whole street chipped in.'],
     objective: { type: 'KILL_KIND', target: 'SCORPION', count: 25 },
-    reward: { gold: 6000, gems: 30 },
+    reward: { gold: 3000, gems: 30 },
   },
   {
     id: 'dorn_yetis', minLevel: 30, giver: 'Dorn', title: 'Ore under the Ice', summary: 'Defeat 15 Yetis (Frostpeak)',
@@ -443,7 +443,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Fifteen yetis. They charge, then slam: dodge sideways.',
     done: ['The first cart came down this morning. Your share, as promised: cores, and gold.'],
     objective: { type: 'KILL_KIND', target: 'YETI', count: 15 },
-    reward: { gold: 7000, items: [{ id: 'upgrade_core', qty: 4 }] },
+    reward: { gold: 3500, items: [{ id: 'upgrade_core', qty: 4 }] },
   },
   {
     id: 'tamsin_wisps', minLevel: 33, giver: 'Guard Tamsin', title: 'Lights in the Snow', summary: 'Defeat 20 Frost Wisps (Frostpeak)',
@@ -451,7 +451,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Frost wisps keep their distance and burst when you get close. Close in fast.',
     done: ['Not a single frozen traveller this week. The castle thanks you.'],
     objective: { type: 'KILL_KIND', target: 'FROST_WISP', count: 20 },
-    reward: { gold: 8000, gems: 35 },
+    reward: { gold: 4000, gems: 35 },
   },
   {
     id: 'roan_hounds', minLevel: 38, giver: 'Captain Roan', title: 'The Pack Leader', summary: 'Defeat 25 Hellhounds (Ember Wastes)',
@@ -459,7 +459,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Hellhounds leave burning prints behind them. Do not chase them through the fire.',
     done: ['The farms in the east sleep again. Take this, and my respect.'],
     objective: { type: 'KILL_KIND', target: 'HELLHOUND', count: 25 },
-    reward: { gold: 10000, shards: ['EPIC', 10] },
+    reward: { gold: 5000, shards: ['EPIC', 10] },
   },
   {
     id: 'fenn_shamans', minLevel: 40, giver: 'Fenn', title: 'A Song of Cinders', summary: 'Defeat 15 Cinder Shamans (Ember Wastes)',
@@ -467,7 +467,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The shamans aim where you stand and where you run. Change direction often!',
     done: ['"And the shamans fell, fifteen in a row..." Perfect! Here, the first coins this song ever earned.'],
     objective: { type: 'KILL_KIND', target: 'CINDER_SHAMAN', count: 15 },
-    reward: { gold: 11000, gems: 40 },
+    reward: { gold: 5500, gems: 40 },
   },
   {
     id: 'wren_void', minLevel: 45, giver: 'Wren', title: 'Eyes of the Abyss', summary: 'Defeat 15 Void Eyes (the Void)',
@@ -475,7 +475,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Void Eyes float out of reach and fire rings of orbs. Weave between the rings.',
     done: ['They were watching the Font. All this time, watching our Font. Thank you; take this, you will need it.'],
     objective: { type: 'KILL_KIND', target: 'VOID_EYE', count: 15 },
-    reward: { gold: 13000, gems: 50 },
+    reward: { gold: 6500, gems: 50 },
   },
   {
     id: 'tobin_herald', minLevel: 48, giver: 'Elder Tobin', title: 'Silence the Herald', summary: 'Defeat the Void Herald', after: 'wren_void',
@@ -483,7 +483,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The Herald guards the last of the five gates, at the Gatekeeper.',
     done: ['So he is silent. I never thought I would live to hear that. Take my old ring money; it was waiting for this.'],
     objective: { type: 'KILL_BOSS', target: 'BOSS_VOID', count: 1 },
-    reward: { gold: 15000, gems: 60, shards: ['LEGENDARY', 3] },
+    reward: { gold: 7500, gems: 60, shards: ['LEGENDARY', 3] },
   },
   // ---- the meadow in front of the walls (Tilda, Corin, Nell)
   {
@@ -492,7 +492,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Four Bat Wings, dear. Bats flutter about the Greenwood from the second room on.',
     done: ['Lovely, crispy, slightly horrible. Perfect!', 'Here, a fair price. Fairer than fair, because I like you. Do not tell the other customers.'],
     objective: { type: 'DELIVER', target: 'bat_wing', count: 4 },
-    reward: { gold: 900, gems: 10 },
+    reward: { gold: 450, gems: 10 },
   },
   {
     id: 'corin_pin', giver: 'Corin', title: 'A Pin in the Hay', summary: 'Find Corin\'s wheel pin by the haystack',
@@ -500,7 +500,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'By the haystack, next to the wheat field east of the road. A little shiny iron pin.',
     done: ['That is the one! Back in you go, you little runaway.', 'Not much coin in hauling, but take this. And a potion: the road is long.'],
     objective: { type: 'INTERACT', target: 'pin', count: 1 },
-    reward: { gold: 500, items: [{ id: 'potion_hp', qty: 1 }] },
+    reward: { gold: 250, items: [{ id: 'potion_hp', qty: 1 }] },
   },
   {
     id: 'corin_hay', giver: 'Corin', title: 'Hay for Hollis', summary: 'Tell Hollis at the barn that his hay is coming', after: 'corin_pin',
@@ -509,7 +509,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     heard: 'Hay from Corin, finally? About time! Tell him the milk is waiting. As always.',
     done: ['Hollis said "about time"? Ha! That is Hollis for "thank you".', 'Here, your share of the milk money. Which is no money. Have some gold instead.'],
     objective: { type: 'TALK', target: 'Hollis', count: 1 },
-    reward: { gold: 400, gems: 5 },
+    reward: { gold: 200, gems: 5 },
   },
   // ---- fishing tutorial (class level UNLOCK_LV.FISHING = 3): Nell sends you to Marlo at the beach, who teaches the rest
   {
@@ -543,7 +543,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Dire wolves prowl the Greenwood from the third room on. They circle, then lunge in a straight line.',
     done: ['Not a single howl last night. I nearly slept on the road!', 'Here: my savings, and a page of my book with your name on it.'],
     objective: { type: 'KILL_KIND', target: 'DIREWOLF', count: 10 },
-    reward: { gold: 900, gems: 10 },
+    reward: { gold: 450, gems: 10 },
   },
   {
     id: 'nell_halls', minLevel: 10, giver: 'Nell', title: 'A Page for the Marble Halls', summary: 'Reach the Marble Halls (biome 2)', after: 'nell_wolves',
@@ -551,7 +551,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The Marble Halls lie past Elderroot, beyond the Greenwood.',
     done: ['Columns as tall as trees? Armour that walks by itself? I am writing it all down!', 'For the story. Worth every coin.'],
     objective: { type: 'REACH_BIOME', count: 2 },
-    reward: { gold: 1500, gems: 15 },
+    reward: { gold: 750, gems: 15 },
   },
 ];
 
