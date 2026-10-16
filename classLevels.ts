@@ -1,6 +1,6 @@
 // Permanent per-class levels (replace the old shared Hero Rank + per-run level). Each class keeps its own level, xp,
 // unspent skill points and learned skill levels. Gear / crafting / quests / talents read the current class's level.
-// Skills unlock by level: skill 1 (+ the basic utilities) from the start, skill 2 at Lv 5, skill 3 at Lv 7, the ultimate at Lv 10;
+// Skills unlock by level: skill 1 (+ the basic utilities) from the start, skill 2 at Lv 4, the dash at Lv 6, skill 3 at Lv 8, the ultimate at Lv 10;
 // a fresh class starts with 3 skill points. Room upgrade cards are run-only boosts on top of the learned levels.
 import type { HeroClass, SkillLevels, PlayerStats } from './types';
 import { ACTIVE_ORDER } from './abilityDefs';
@@ -11,7 +11,7 @@ export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', '
 export const START_SP = 3;
 export const MAX_LEVEL = 50;
 /** The class dash unlocks at this class level (below it Space does nothing). */
-export const DASH_UNLOCK_LV = 8;   // (owner: was 20)
+export const DASH_UNLOCK_LV = 6;   // (owner: was 20, then 8)
 
 /** The ultimate unlocks (auto-learned, bar pre-filled once) at this class level (owner). */
 export const ULT_UNLOCK_LV = 10;
@@ -22,8 +22,8 @@ export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max
 /** Hero level a skill key unlocks at (0 = available from level 1). */
 export function unlockLevel(hero: HeroClass, key: string): number {
   const order = ACTIVE_ORDER[hero];
-  if (key === order[1]) return 5;
-  if (key === order[2]) return 7;    // (owner: skill 3 at Lv 7)
+  if (key === order[1]) return 4;    // (owner: skill 2 at Lv 4)
+  if (key === order[2]) return 8;    // (owner: skill 3 - e.g. Judgment - at Lv 8)
   if (key === 'ult') return ULT_UNLOCK_LV;
   if (key === 'regen') return 2;
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]) => (i as { type?: string; classType?: string }).type === 'PASSIVE' && (i as { classType?: string }).classType === hero && k !== 'dash').map(([k]) => k);

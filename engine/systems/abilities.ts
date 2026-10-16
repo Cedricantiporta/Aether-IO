@@ -1234,7 +1234,7 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;
-  if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (8)
+  if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (6)
     return false;
   }
   if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }

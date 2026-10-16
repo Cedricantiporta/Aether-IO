@@ -1055,7 +1055,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   NPC quests: level gates reviewed (npcQuests.ts minLevel, L2..L48 by realm); Pip's hermit errand now Lv 3 (the hermit
   trail has monsters; trail un-blocked: ruin + boulders moved so findPath reaches Old Wend).
 - Monster pathing: `enemies.ts steerAround` (look-ahead collider avoidance + stuck -> detour, alternating sides).
-- **Skill unlocks:** skill 2 Lv 5, skill 3 Lv 7, **ultimate Lv 10** (`classLevels.ULT_UNLOCK_LV`, auto-learned via
+- **Skill unlocks:** skill 2 Lv 4, dash Lv 6 (`DASH_UNLOCK_LV`), skill 3 Lv 8 (Judgment etc.), **ultimate Lv 10** (`classLevels.ULT_UNLOCK_LV`, auto-learned via
   `autoLearnActives`; old saves below Lv 10 get the ult re-locked + SP refunded in `sanitizeClassProg`). Locked ult: no
   charge (`combat.addUlt`), no cast, slot shows "Lv 10". On unlock the bar is pre-filled and the "Press R" hint shows only
   for that first charge, per class (`tutorial.ts`, localStorage `aether-survivor-ult-first-v1`).

@@ -22,7 +22,7 @@ const cdLine = (label: string, v: string) => <><span className="muted">{label}</
 
 export const ActionBar: React.FC = () => {
   const { hero, skillLevels, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels, heroLv: s.level })));
-  const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level DASH_UNLOCK_LV (8)
+  const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level DASH_UNLOCK_LV (6)
   const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4')] as const));
   const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3] };
   const cdr = useGameStore((s) => s.stats.cooldownReduction);
