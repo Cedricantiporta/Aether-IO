@@ -113,6 +113,15 @@ export function questNpc(name: string): boolean {
   return NPC_QUESTS.some((d) => npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
     && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
 }
+/** True when a ground item (by bag name) is still wanted by an active DELIVER quest (it gets a small gold light ray). */
+export function questWantsItem(name: string): boolean {
+  const st = useGameStore.getState();
+  return NPC_QUESTS.some((d) => {
+    if (d.objective.type !== 'DELIVER' || npcQuestStatus(d, st.npcQuests, st.heroRank) !== 'ACTIVE') return false;
+    const ids = Array.isArray(d.objective.target) ? d.objective.target : [d.objective.target];
+    return ids.some((id) => LOOT_BY_ID[id as string]?.name === name) && !npcQuestReady(d, st.npcQuests, st.inventory);
+  });
+}
 /** True when killing this enemy kind advances an active quest (main story, NPC or Quest Board). */
 export function questKill(kind: string, mini = false): boolean {
   const st = useGameStore.getState();

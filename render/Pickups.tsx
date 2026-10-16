@@ -1,6 +1,7 @@
 // Pickups: XP crystals, coins, gems, hearts (instanced) + rarity loot beams with floating labels (items).
 import { liftAt } from './lift';
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { questWantsItem } from '../engine/systems/npcQuestLogic';
 import { useFrame } from '@react-three/fiber';
 import {
   AdditiveBlending, CircleGeometry, Color, CylinderGeometry, DynamicDrawUsage, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial,
@@ -106,12 +107,16 @@ export function Pickups() {
 }
 
 const beamGeo = new CylinderGeometry(0.55, 0.8, 11, 16, 1, true).translate(0, 5.5, 0);
+const questBeamGeo = new CylinderGeometry(0.22, 0.36, 5.5, 12, 1, true).translate(0, 2.75, 0);   // (owner) quest items: a small gold ray
 const ringGeo = new CircleGeometry(1.1, 24).rotateX(-Math.PI / 2);
 
 function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   const rarity = p.item?.rarity || 'COMMON';
   const hex = RARITY_HEX[rarity];
   const beam = rarity !== 'COMMON' && rarity !== 'RARE';
+  const quest = useMemo(() => !!p.item && questWantsItem(p.item.name), [p.item]);
+  const qMat = useMemo(() => (quest ? makeBeamMaterial('#ffd24a', { speed: 3, stripes: 4, power: 1.5 }) : null), [quest]);
+  useEffect(() => () => qMat?.dispose(), [qMat]);
   const g = useRef<Group>(null!), icon = useRef<Mesh>(null!), label = useRef<Sprite>(null!), ring = useRef<Mesh>(null!);
   const beamMat = useMemo(() => makeBeamMaterial(hex, { speed: 2.5, stripes: 5, power: 1.3 }), [hex]);
   const iconMat = useMemo(() => new MeshBasicMaterial({ color: new Color(hex).multiplyScalar(2.2), toneMapped: false }), [hex]);
@@ -126,6 +131,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
     if (!vis) return;
     g.current.position.set(p.pos.x, liftAt(p.pos.x, p.pos.z), p.pos.z);
     const pop = Math.min(1, p.t * 3);
+    if (qMat) { qMat.uniforms.uTime.value = t; qMat.uniforms.uAlpha.value = (0.6 + 0.2 * Math.sin(t * 5)) * pop; }
     beamMat.uniforms.uTime.value = t; beamMat.uniforms.uAlpha.value = (0.55 + 0.15 * Math.sin(t * 4)) * pop * (p.item?.type === 'LOOT' && rarity === 'COMMON' ? 0.3 : 1);
     const hy = Math.max(p.pos.y, 0) + 1.1 + Math.sin(t * 2.4 + p.id) * 0.15;
     icon.current.position.y = hy; icon.current.rotation.y = t * 2; icon.current.scale.setScalar(pop * (rarity === 'MYTHIC' ? 1.5 : rarity === 'LEGENDARY' ? 1.3 : 1.1));
@@ -141,6 +147,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   }, -0.2);
   return (
     <group ref={g}>
+      {quest && qMat && <mesh geometry={questBeamGeo} material={qMat} />}
       {beam && <mesh geometry={beamGeo} material={beamMat} />}{/* light beam only for Epic and above */}
       <mesh ref={ring} geometry={ringGeo} material={ringMat} position={[0, 0.07, 0]} />
       <mesh ref={icon} geometry={geo} material={iconMat} />
