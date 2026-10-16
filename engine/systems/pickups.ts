@@ -59,7 +59,7 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   const a = Math.random() * Math.PI * 2;
   const s = 2 + Math.random() * 4;
   p.vel.set(Math.cos(a) * s, 7 + Math.random() * 4, Math.sin(a) * s);
-  if (kind === 'ITEM') world.itemPickupsVersion++;
+  if (kind === 'ITEM') { world.itemPickupsVersion++; if (item) events.emit('lootDrop', { pos: p.pos, rarity: item.rarity }); }
 }
 
 /** Direct reward (pool exhausted fallback). */

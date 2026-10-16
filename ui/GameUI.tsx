@@ -1,5 +1,6 @@
 import { takeAutoplay } from '../characters';
 import React, { useEffect } from 'react';
+import { holdTownMusic } from '../engine/audio';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -48,6 +49,7 @@ export const GameUI: React.FC = () => {
   const titleDone = useUiStore((s) => s.titleDone);
   const charSelect = useUiStore((s) => s.charSelect);
   const village = status === GameStatus.MENU && titleDone;
+  useEffect(() => { holdTownMusic('ui', !titleDone); }, [titleDone]);   // town music only once the hero is in town
   const inGame = HUD_STATUSES.has(status);
   const panels = inGame || village;
 

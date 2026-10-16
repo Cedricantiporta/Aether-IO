@@ -1,5 +1,6 @@
 // The prologue (once, the first time the village appears) and the Story book (chapters unlock with progress).
 import React, { useEffect, useState } from 'react';
+import { holdTownMusic } from '../../engine/audio';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, Lock } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
@@ -18,6 +19,7 @@ export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ f
   const [open, setOpen] = useState(false);
   const [n, setN] = useState(0);
   useEffect(() => { if (force || (titleDone && !seen())) { setN(0); setOpen(true); } }, [titleDone, force]);
+  useEffect(() => { if (!force) { holdTownMusic('prologue', open); return () => holdTownMusic('prologue', false); } }, [open, force]);
   const close = () => { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ } setOpen(false); onDone?.(); };
   const next = () => (n >= PROLOGUE.length - 1 ? close() : setN((x) => x + 1));
   useEffect(() => {   // auto-advance; the last slide closes the prologue

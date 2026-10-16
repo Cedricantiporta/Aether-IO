@@ -165,6 +165,7 @@ function sfxShoot(kind: ProjectileKind, pos: Vector3): void {
 function sfxEnemyHit(pos: Vector3, dmgKind: GameEvents['enemyHit']['dmgKind']): void {
   if (!gate(G.HIT)) return;
   const v = att(pos);
+  if (playSample('hit', 0.55 * v, 0.9 + Math.random() * 0.2)) return;   // recorded hit (slight pitch variety); synth below until it loads
   const base = dmgKind === 'ICE' ? 5200 : dmgKind === 'FIRE' ? 1800 : dmgKind === 'LIGHTNING' ? 4200 : 2800;
   const f = base * (0.8 + Math.random() * 0.5);
   noise(0.03, 0.09 * v, f * 0.8, f * 0.5, { filter: 'bandpass', q: 1.5 });
@@ -240,7 +241,7 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
 }
 
 // (owner) recorded one-shot samples (public/audio): decoded once into buffers, played on the sfx bus.
-const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3', stage: 'audio/stage_clear.mp3' };
+const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3', stage: 'audio/stage_clear.mp3', hit: 'audio/enemy_hit.mp3', epic: 'audio/epic_drop.mp3' };
 const samples: Record<string, AudioBuffer | null> = {};
 function loadSamples(c: AudioContext): void {
   for (const k in SAMPLE_URLS) {
@@ -250,11 +251,11 @@ function loadSamples(c: AudioContext): void {
   }
 }
 /** Plays a sample; false when it is not loaded (yet), so callers can fall back to a synth sound. */
-function playSample(k: string, vol = 1): boolean {
+function playSample(k: string, vol = 1, rate = 1): boolean {
   const buf = samples[k];
   if (!ctx || !sfxGain || !buf) return false;
   const src = ctx.createBufferSource(), g = ctx.createGain();
-  src.buffer = buf; g.gain.value = vol; src.connect(g); g.connect(sfxGain); src.start();
+  src.buffer = buf; src.playbackRate.value = rate; g.gain.value = vol; src.connect(g); g.connect(sfxGain); src.start();
   return true;
 }
 let lastClick = 0;
@@ -492,11 +493,15 @@ export const RECORDED: Partial<Record<string, string>> = {
 interface RecTrack { el: HTMLAudioElement; g: GainNode; lvl: number }
 const rec: Record<string, RecTrack> = {};
 let recBus: GainNode | null = null;
+// Town music waits until the hero actually stands in town: not on the title / character screens or the prologue.
+const townHolds = { ui: true, prologue: false };
+const townHeld = (): boolean => townHolds.ui || townHolds.prologue;
+export function holdTownMusic(src: keyof typeof townHolds, on: boolean): void { townHolds[src] = on; }
 /** The recorded slot that should play now ('' = none: procedural). */
 function recWanted(): string {
   const st = useGameStore.getState().status;
   let k = '';
-  if (st === GameStatus.MENU) k = 'town';
+  if (st === GameStatus.MENU) k = townHeld() ? '' : 'town';
   else if (world.boss.active) k = world.boss.final ? 'final' : 'boss';
   else if (st !== GameStatus.GAME_OVER) k = 'b' + (world.room.biome % 7);
   if (k === 'final' && !RECORDED.final) k = 'boss';
@@ -665,7 +670,7 @@ function musicTick(): void {
   const recorded = recTick();
   if (!ctx || ctx.state !== 'running' || !musicEnabled) return;
   const tg = themeTargets();
-  if (recorded) tg[0] = tg[1] = tg[2] = 0;   // a recorded track plays here instead of the procedural themes
+  if (recorded || (townHeld() && useGameStore.getState().status === GameStatus.MENU)) tg[0] = tg[1] = tg[2] = 0;   // a recorded track plays here instead of the procedural themes (silent before the hero is in town)
   for (let i = 0; i < 3; i++) {
     layerLvl[i] += (tg[i] - layerLvl[i]) * 0.04;
     if (Math.abs(layerLvl[i] - tg[i]) < 0.005) layerLvl[i] = tg[i];
@@ -826,6 +831,7 @@ export function initAudio(): () => void {
   offs.push(events.on('ultReady', safe(() => { tone(660, 990, 0.25, 0.12, { type: 'sine' }); tone(990, 1320, 0.3, 0.1, { type: 'sine', delay: 0.12 }); })));
   offs.push(events.on('lightning', safe(() => sfxLightning())));
   offs.push(events.on('telegraph', safe(() => sfxTelegraph())));
+  offs.push(events.on('lootDrop', safe((p) => { if (p.rarity === 'EPIC' || p.rarity === 'LEGENDARY' || p.rarity === 'MYTHIC') playSample('epic', 0.8); })));
   offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity))));
   offs.push(events.on('crateBreak', safe(() => sfxCrate())));
   offs.push(events.on('levelUp', safe(() => sfxLevelUp())));
