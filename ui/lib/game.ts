@@ -1,6 +1,6 @@
 import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
-import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierAt } from '../../crafting';
+import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierFor } from '../../crafting';
 
 export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -52,7 +52,7 @@ export const isHighValue = (i: Item) => i.rarity === 'EPIC' || i.rarity === 'LEG
 export const upgradeChance = (item: Item): number => upgradeChanceAt(item.level);
 export const upgradeGoldCost = (i: Item) => upgradeGoldFor(i.price, i.level);
 export const upgradeCoreCost = (i: Item) => upgradeCoresAt(i.level);
-export const upgradeCoreTier = (i: Item) => upgradeCoreTierAt(i.level);
+export const upgradeCoreTier = (i: Item) => upgradeCoreTierFor(i.rarity);
 export const upgradeBreakChance = (i: Item) => upgradeBreakAt(i.level);
 export const MAX_ITEM_LEVEL = 10;
 export function upgradedStats(i: Item): Partial<PlayerStats> {

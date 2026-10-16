@@ -262,13 +262,13 @@ export const ITEMS_POOL: Item[] = [
   { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your HP.' },
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your Mana.' },
   
-  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades gear from +0 to +3 with these.' },
+  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades Common and Rare gear with these.' },
   // (owner: tiered cores) higher upgrades need higher-tier cores: fuse 5 into 1 of the next tier (Blacksmith > Shards) or win them from bosses
-  { id: 'upgrade_core_2', name: 'Refined Core', type: 'CORE', stats: {}, rarity: 'LEGENDARY', price: 6000, level: 1, description: 'Tier II core: upgrades gear from +3 to +6. Fuse 5 Upgrade Cores, or win one from a boss.' },
-  { id: 'upgrade_core_3', name: 'Radiant Core', type: 'CORE', stats: {}, rarity: 'MYTHIC', price: 30000, level: 1, description: 'Tier III core: upgrades gear from +6 to +9. Fuse 5 Refined Cores, or win one from a late boss.' },
+  { id: 'upgrade_core_2', name: 'Refined Core', type: 'CORE', stats: {}, rarity: 'LEGENDARY', price: 6000, level: 1, description: 'Tier II core: upgrades Epic, Legendary and Mythic gear. Fuse 5 Upgrade Cores, or win one from a boss.' },
   // reforging the blue bonus lines of gear (reforge.ts, Blacksmith > Reforge)
   { id: 'reforge_stone', name: 'Reforge Stone', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Blacksmith > Reforge: rerolls every bonus line of a piece of gear.' },
   { id: 'temper_oil', name: 'Tempering Oil', type: 'LOOT', stats: {}, rarity: 'RARE', price: 900, level: 1, description: 'Blacksmith > Reforge: rerolls the values of a piece of gear\'s bonus lines (better odds of a perfect, yellow line).' },
+  { id: 'augment_rune', name: 'Augment Rune', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1800, level: 1, description: 'Blacksmith > Reforge: adds a new bonus line into an empty slot (blue 1, purple 2, gold 3, mythic 4 slots).' },
   { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'Blacksmith > Reforge: deletes one chosen bonus line from a piece of gear.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' },
 

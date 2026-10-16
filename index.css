@@ -2330,3 +2330,16 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .bb-cap.l { left: .15rem; } .bb-cap.r { right: .15rem; }
 .bb-shield { position: relative; height: .38rem; margin: 0 0 2px; background: #0a1420; border: 1px solid #050304; box-shadow: 0 0 0 1px #3a6a8a; }
 .bb-shield-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #d4f3ff, #8fdcff 50%, #3d9ccc); box-shadow: 0 0 6px #8fdcff; }
+
+/* an empty bonus-line slot (a line was erased): grey strip, filled again with an Augment Rune */
+.affix-empty { margin-top: .18rem; padding: .12rem .4rem; font-size: .72rem; font-weight: 600; color: #8a8a8a; background: linear-gradient(90deg, rgba(140, 140, 140, .22), rgba(140, 140, 140, 0)); border-left: 2px solid rgba(160, 160, 160, .55); }
+
+/* Blacksmith > Shards: square tiles (owner) */
+.sq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.6rem, 1fr)); gap: .45rem; }
+.sq-tile { display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .45rem .35rem .4rem; aspect-ratio: 3 / 4;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 16%, #1a1b20), #0e0f13); border: 1px solid rgba(255, 255, 255, .05); }
+.sq-art { width: 64%; }
+.sq-name { font-family: var(--font-title); font-size: .72rem; line-height: 1; }
+.sq-count { font-size: 1.15rem; color: #fff; line-height: 1; text-shadow: 0 1px 2px #000; }
+.sq-btns { display: flex; gap: .25rem; margin-top: auto; }
+.sq-btns .wh-btn { padding: .18rem .4rem; font-size: .6rem; }

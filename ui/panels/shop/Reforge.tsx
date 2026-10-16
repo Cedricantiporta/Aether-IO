@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { affixText, isUnique } from '../../../affixes';
-import { REFORGE_ITEM, type ReforgeMode } from '../../../reforge';
+import { REFORGE_ITEM, emptyAffixSlots, type ReforgeMode } from '../../../reforge';
 import { isGear, RARITY_COLOR } from '../../lib/game';
 import type { Item } from '../../../types';
 
@@ -37,14 +37,21 @@ export const ReforgeTab: React.FC = () => {
                 <span style={{ color: isUnique(a) ? '#e08a2a' : a.perfect ? '#ffd24a' : '#7fb0ff', fontWeight: 700 }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}</span>
                 <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('ERASE') < 1} onClick={() => go('ERASE', i)} data-testid={`erase-${i}`}>Erase</button>
               </div>
-            )) : <div className="rpg-label mt-1">No bonus lines.</div>}
+            )) : null}
+            {Array.from({ length: emptyAffixSlots(sel) }).map((_, i) => (   /* empty bonus slots (erased lines): an Augment Rune fills one */
+              <div key={'e' + i} className="affix-empty flex items-center justify-between gap-2 text-[.78rem] mt-1" data-testid={`affix-empty-${i}`}>
+                <span>◇ Empty bonus slot</span>
+                <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('ADD') < 1} onClick={() => go('ADD')} data-testid={`augment-${i}`}>Add line</button>
+              </div>
+            ))}
+            {!lines.length && !emptyAffixSlots(sel) && <div className="rpg-label mt-1">No bonus lines.</div>}
           </> : <div className="rpg-label">Pick a piece of gear below</div>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || sel.rarity === 'COMMON' || have('REROLL') < 1} onClick={() => go('REROLL')} data-testid="reforge-reroll">Reroll lines · {REFORGE_ITEM.REROLL.name} ({have('REROLL')})</button>
         <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || !lines.length || have('TEMPER') < 1} onClick={() => go('TEMPER')} data-testid="reforge-temper">Reroll values · {REFORGE_ITEM.TEMPER.name} ({have('TEMPER')})</button>
-        <span className="rpg-label self-center">{REFORGE_ITEM.ERASE.name}: {have('ERASE')}</span>
+        <span className="rpg-label self-center">{REFORGE_ITEM.ERASE.name}: {have('ERASE')} · {REFORGE_ITEM.ADD.name}: {have('ADD')}</span>
       </div>
       <div className="rpg-label">Your gear</div>
       <div className="slot-grid">

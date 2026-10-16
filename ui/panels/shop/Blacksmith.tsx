@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from 'lucide-react';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameStore, questFree } from '../../../store';
+import { useGameStore, questFree, makeItemById } from '../../../store';
+import { shardItem } from '../../../shards';
 import { useShallow } from 'zustand/react/shallow';
 import { SHARD_FUSE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
-import { coreTierOf, CORE_NAMES, CORE_FUSE, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
+import { coreTierOf, CORE_NAMES, CORE_FUSE, CORE_IDS, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
 import { Lock } from 'lucide-react';
 import type { Rarity, PlayerStats, Item } from '../../../types';
@@ -125,52 +126,57 @@ export const Upgrade: React.FC = () => {
 };
 
 
-/** Blacksmith > Shards: fuse shards up a tier (20 Common / 10 Rare / 5 Epic / 3 Legendary -> 1 of the next) or break one down. */
+/** Blacksmith > Shards (owner: square tiles + fusion animation): one tile per shard tier (art, count, fuse up / break
+ *  down) and one per core tier (fuse 5 -> 1). Fusing plays the forge cinematic with the new shard / core. */
+const NEXT_R: Partial<Record<Rarity, Rarity>> = { COMMON: 'RARE', RARE: 'EPIC', EPIC: 'LEGENDARY', LEGENDARY: 'MYTHIC' };
+const PREV_R: Partial<Record<Rarity, Rarity>> = { RARE: 'COMMON', EPIC: 'RARE', LEGENDARY: 'EPIC', MYTHIC: 'LEGENDARY' };
+const rname = (r: string) => r.charAt(0) + r.slice(1).toLowerCase();
 export const ShardTab: React.FC = () => {
   const { materials, combineMaterials, downgradeMaterials, inventory, fuseCores } = useGameStore(useShallow((s) => ({ materials: s.materials, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials, inventory: s.inventory, fuseCores: s.fuseCores })));
   const coreHave = (t: number) => inventory.filter((i) => coreTierOf(i) === t).reduce((n, i) => n + (i.quantity || 1), 0);
+  const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);
+  const fuseShard = (r: Rarity) => {
+    const up = NEXT_R[r]!; const preview = shardItem(up, 1);
+    setCine({ preview, run: () => { combineMaterials(r); return { success: true, item: preview, title: 'Fusion Success!', sub: `1 ${rname(up)} Shard` }; } });
+  };
+  const fuseCore = (t: number) => {
+    const preview = makeItemById(CORE_IDS[t + 1], 1)[0];
+    setCine({ preview, run: () => { const ok = fuseCores(t); return { success: ok, item: preview, title: ok ? 'Fusion Success!' : 'Cannot fuse', sub: `1 ${CORE_NAMES[t + 1]}` }; } });
+  };
   return (
     <div className="flex flex-col gap-3" data-testid="shard-tab">
-      <div>
-        <div className="rpg-label mb-1.5">Fuse upgrade cores (+0..+3 Upgrade, +3..+6 Refined, +6..+9 Radiant)</div>
-        <div className="flex flex-col gap-1.5">
-          {[0, 1].map((t) => (
-            <button key={t} disabled={coreHave(t) < CORE_FUSE} onClick={() => fuseCores(t)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }} data-testid={`core-fuse-${t}`}>
-              <span className="text-[.72rem] font-bold">{CORE_FUSE} {CORE_NAMES[t]}s <ArrowRight size={10} className="inline" /> 1 {CORE_NAMES[t + 1]}</span>
-              <span className="opacity-70 text-[.7rem]">({coreHave(t)})</span>
-            </button>
-          ))}
-        </div>
+      <div className="rpg-label">Shards · fuse up (always succeeds) or break down</div>
+      <div className="sq-grid">
+        {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[]).map((r) => {
+          const up = NEXT_R[r], down = PREV_R[r], cost = SHARD_FUSE_COST[r as keyof typeof SHARD_FUSE_COST];
+          return (
+            <div key={r} className="sq-tile" style={{ ['--rc' as any]: RARITY_COLOR[r] }} data-testid={`shard-tile-${r}`}>
+              <div className="sq-art"><ItemSlot item={shardItem(r, 1)} fluid size="100%" iconSize="72%" tooltip="none" /></div>
+              <div className="sq-name" style={{ color: RARITY_TEXT[r] }}>{rname(r)}</div>
+              <div className="sq-count rpg-num">{materials[r]}</div>
+              <div className="sq-btns">
+                {up && <button className="wh-btn pe" disabled={materials[r] < cost} onClick={() => fuseShard(r)} title={`${cost} ${rname(r)} -> 1 ${rname(up)}`}>Fuse {cost}</button>}
+                {down && <button className="wh-btn pe" disabled={materials[r] < 1} onClick={() => downgradeMaterials(r)} title={`1 ${rname(r)} -> ${MATERIAL_DOWNGRADE_YIELD} ${rname(down)}`}>Break</button>}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <div>
-        <div className="rpg-label mb-1.5">Fuse shards (always succeeds)</div>
-        <div className="flex flex-col gap-1.5">
-          {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[]).map((r, i) => {
-            const nx = (['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[])[i];
-            const cost = SHARD_FUSE_COST[r as keyof typeof SHARD_FUSE_COST], can = materials[r] >= cost;
-            return (
-              <button key={r} disabled={!can} onClick={() => combineMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
-                <span className="text-[.72rem] font-bold">{cost} <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> 1 <span style={{ color: RARITY_TEXT[nx] }}>{nx}</span></span>
-                <span className="opacity-70 text-[.7rem]">({materials[r]})</span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="rpg-label">Upgrade cores · Upgrade Core: Common / Rare gear · Refined Core: Epic and above</div>
+      <div className="sq-grid">
+        {[0, 1].map((t) => {
+          const it = makeItemById(CORE_IDS[t], 1)[0];
+          return (
+            <div key={t} className="sq-tile" style={{ ['--rc' as any]: RARITY_COLOR[it.rarity] }} data-testid={`core-tile-${t}`}>
+              <div className="sq-art"><ItemSlot item={it} fluid size="100%" iconSize="72%" tooltip="none" /></div>
+              <div className="sq-name" style={{ color: RARITY_TEXT[it.rarity] }}>{CORE_NAMES[t]}</div>
+              <div className="sq-count rpg-num">{coreHave(t)}</div>
+              <div className="sq-btns">{t < 1 && <button className="wh-btn pe" disabled={coreHave(t) < CORE_FUSE} onClick={() => fuseCore(t)} data-testid={`core-fuse-${t}`}>Fuse {CORE_FUSE}</button>}</div>
+            </div>
+          );
+        })}
       </div>
-      <div>
-        <div className="rpg-label mb-1.5">Break shards down</div>
-        <div className="flex flex-col gap-1.5">
-          {(['RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as Rarity[]).map((r, i) => {
-            const lo = (['COMMON', 'RARE', 'EPIC', 'LEGENDARY'] as Rarity[])[i];
-            return (
-              <button key={r} disabled={materials[r] < 1} onClick={() => downgradeMaterials(r)} className="rpg-btn !justify-between !normal-case pe" style={{ padding: '.35rem .7rem' }}>
-                <span className="text-[.72rem] font-bold">1 <span style={{ color: RARITY_TEXT[r] }}>{r}</span> <ArrowRight size={10} className="inline" /> {MATERIAL_DOWNGRADE_YIELD} <span style={{ color: RARITY_TEXT[lo] }}>{lo}</span></span>
-                <RefreshCcw size={13} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Fusion Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
 };

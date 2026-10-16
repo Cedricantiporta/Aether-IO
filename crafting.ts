@@ -192,13 +192,13 @@ export const applyPlus = (item: Item, plus: number): void => {
  *  needs many more cores, gold x1.8, and going past +7 can shatter the item on a failure. */
 export const upgradeChanceAt = (level: number): number => { const plus = level - 1; return plus <= 0 ? 1 : Math.max(0.05, 0.9 - plus * 0.1); };
 export const upgradeCoresAt = (level: number): number => Math.ceil((level * level) / 3);
-/** Tiered cores (owner): +0..+3 use Upgrade Cores, +3..+6 Refined Cores, +6..+9 Radiant Cores. */
-export const CORE_IDS = ['upgrade_core', 'upgrade_core_2', 'upgrade_core_3'] as const;
-export const CORE_NAMES = ['Upgrade Core', 'Refined Core', 'Radiant Core'] as const;
+/** Tiered cores (owner: 2 tiers): Common / Rare gear upgrades with Upgrade Cores, Epic and above with Refined Cores. */
+export const CORE_IDS = ['upgrade_core', 'upgrade_core_2'] as const;
+export const CORE_NAMES = ['Upgrade Core', 'Refined Core'] as const;
 export const CORE_FUSE = 5;
-export const upgradeCoreTierAt = (level: number): number => (level <= 3 ? 0 : level <= 6 ? 1 : 2);
+export const upgradeCoreTierFor = (rarity: string): number => (rarity === 'COMMON' || rarity === 'RARE' ? 0 : 1);
 /** Tier (0..2) of a bag core by its name, -1 when not a core. */
-export const coreTierOf = (item: { type: string; name: string }): number => (item.type === 'CORE' ? Math.max(0, (CORE_NAMES as readonly string[]).indexOf(item.name)) : -1);
+export const coreTierOf = (item: { type: string; name: string }): number => (item.type === 'CORE' ? (item.name === 'Upgrade Core' ? 0 : 1) : -1)   // (an old 'Radiant Core' counts as a Refined Core);
 export const upgradeGoldFor = (price: number, level: number): number => Math.floor(price * level * 0.5 * 1.8);
 /** Chance a FAILED upgrade towards +8 or more destroys the item (target +8: 25%, +9: 40%). */
 export const upgradeBreakAt = (level: number): number => (level >= 8 ? 0.25 + (level - 8) * 0.15 : 0);

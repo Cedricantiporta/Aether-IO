@@ -9,6 +9,7 @@ import { elixirOf, elixirUses } from '../../elixirs';
 import { HERO_STATS } from '../../constants';
 import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
+import { emptyAffixSlots } from '../../reforge';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { petPower, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
@@ -94,12 +95,13 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
           <div style={{ fontSize: '.72rem', opacity: 0.85 }}>{t.desc}</div>
         </>);
       })()}
-      {item.affixes && item.affixes.length > 0 && (
+      {((item.affixes && item.affixes.length > 0) || emptyAffixSlots(item) > 0) && (
         <>
           <div className="tt-sep" />
-          {item.affixes.map((a, i) => (
-            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#b8570a' : a.perfect ? '#e0b21a' : '#1f5fbf', fontWeight: 700, fontSize: '.78rem', ...(a.perfect ? { textShadow: '0 0 6px rgba(255, 210, 60, .55)' } : {}) }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}{a.perfect ? ' (perfect)' : ''}</div>
+          {(item.affixes ?? []).map((a, i) => (
+            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#ff9a3c' : a.perfect ? '#ffd24a' : '#6fa8ff', fontWeight: 700, fontSize: '.78rem', ...(a.perfect ? { textShadow: '0 0 6px rgba(255, 210, 60, .55)' } : {}) }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}{a.perfect ? ' (perfect)' : ''}</div>
           ))}
+          {Array.from({ length: emptyAffixSlots(item) }).map((_, i) => <div key={'e' + i} className="affix-empty" data-testid="affix-empty">◇ Empty bonus slot (Augment Rune)</div>)}
         </>
       )}
       {charmText(item) && <div data-testid="charm-line" style={{ color: '#d2691e', fontWeight: 800, fontSize: '.78rem', marginTop: '.15rem' }}>✸ {charmText(item)}</div>}

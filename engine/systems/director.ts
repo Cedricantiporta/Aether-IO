@@ -694,7 +694,7 @@ function bossRewards(): void {
   for (let i = 0; i < 4; i++) spawnPickup('GEM', at(0, -R * 0.1), 4 + biome * 2);
   spawnPickup('SHARD', at(0, -R * 0.1), shardRarity(depth + 12));   // one shard (owner)
   st.addCrystals(4 + biome * 2, { x: world.player.pos.x, z: world.player.pos.z });   // boss drop: Aether Crystals (the Crystal Altar's currency)
-  if (Math.random() < 0.5) { const tool = makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll'][Math.floor(Math.random() * 3)], 1)[0]; if (tool) spawnPickup('ITEM', at(0, -R * 0.1), 0, tool); }   // a reforging tool
+  if (Math.random() < 0.5) { const tool = makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0]; if (tool) spawnPickup('ITEM', at(0, -R * 0.1), 0, tool); }   // a reforging tool
   for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(0, -R * 0.1), Math.round(40 + depth * 12));
   st.openWaveReward(true);
 }

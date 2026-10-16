@@ -9,7 +9,10 @@ import { ChevronDown, Hammer, Lock, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, calculateItemCP } from '../../../store';
 import { CRAFT_SLOTS, CRAFT_RARITIES, CRAFT_SUCCESS, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, type CraftSlot, type CraftOutcome } from '../../../crafting';
-import { LOOT_BY_ID } from '../../../loot';
+import { LOOT_BY_ID, lootSources } from '../../../loot';
+import { ENEMY_DEFS } from '../../../engine/enemyDefs';
+import { SimpleTip } from '../../components/ItemTip';
+import { tip } from '../../components/Tooltip';
 import { shardItem } from '../../../shards';
 import type { Item, PlayerStats, Rarity } from '../../../types';
 import { ItemSlot } from '../../components/ItemSlot';
@@ -113,9 +116,10 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="ws-side">
             <div className="ws-sec">Materials</div>
             <div className="ws-mats rpg-scroll">
-              <Mat art={<ItemArt item={shardItem(rarity, 1)} size="100%" />} name={`${RNAME[rarity]} Shard`} have={materials[rarity]} need={recipe.shards * q} />
-              <Mat art={<CoinGlyph size={30} />} name="Gold" have={gold} need={recipe.gold * q} />
-              {recipe.loot.map((l) => <Mat key={l.id} art={<ItemArt item={lootItem(l.id)} size="100%" />} name={LOOT_BY_ID[l.id].name} have={lootOwned(inventory, l.id)} need={l.count * q} />)}
+              <Mat art={<ItemArt item={shardItem(rarity, 1)} size="100%" />} name={`${RNAME[rarity]} Shard`} have={materials[rarity]} need={recipe.shards * q}
+                info={<SimpleTip title={`${RNAME[rarity]} Shard`} color={RARITY_TEXT[rarity]} lines={[<span key="h">You have <b>{materials[rarity].toLocaleString()}</b></span>, <span key="s" className="muted">From: monster and boss drops, summons, and fusing lower shards (Blacksmith &gt; Shards)</span>]} />} />
+              <Mat art={<CoinGlyph size={30} />} name="Gold" have={gold} need={recipe.gold * q} info={<SimpleTip title="Gold" lines={[<span key="h">You have <b>{gold.toLocaleString()}</b></span>, <span key="s" className="muted">From: monsters, chests, quests and selling loot</span>]} />} />
+              {recipe.loot.map((l) => <Mat key={l.id} art={<ItemArt item={lootItem(l.id)} size="100%" />} name={LOOT_BY_ID[l.id].name} have={lootOwned(inventory, l.id)} need={l.count * q} info={lootInfo(l.id, lootOwned(inventory, l.id))} />)}
             </div>
             <div className="ws-sec">Rates</div>
             <div className="ws-rates">
@@ -136,8 +140,18 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-const Mat: React.FC<{ art: React.ReactNode; name: string; have: number; need: number }> = ({ art, name, have, need }) => (
-  <div className={`ws-mat ${have >= need ? 'ok' : 'no'}`} data-testid="craft-need">
+/** Where a material comes from (owner: hover / tap a material for its details, how many you have, where it drops). */
+const SRC_NAME: Record<string, string> = { ELITE: 'Elite monsters', MALAKAR: 'Malakar, when he falls for good (very rare)', CAVE_DEPTHS: 'Deep veins in the Crystal Cave', ORE: 'Ore veins',
+  CRATE: 'Crates', BARREL: 'Barrels', POT: 'Pots', CHEST: 'Treasure chests', CART: 'Wrecked carts', GRAVE: 'Graves', CRYSTAL: 'Crystal nodes', MINI: 'Champions' };
+const srcName = (k: string): string => SRC_NAME[k] ?? (ENEMY_DEFS as Record<string, { name?: string }>)[k]?.name ?? k.charAt(0) + k.slice(1).toLowerCase().replace(/_/g, ' ');
+const lootInfo = (id: string, have: number): React.ReactNode => {
+  const d = LOOT_BY_ID[id]; if (!d) return null;
+  const src = lootSources(id).map(srcName);
+  return <SimpleTip title={d.name} sub={`${d.rarity.toLowerCase()} material`} color={RARITY_TEXT[d.rarity]} body={d.desc}
+    lines={[<span key="h">You have <b>{have.toLocaleString()}</b></span>, <span key="s" className="muted">Drops from: {src.length ? src.join(', ') : 'unknown'}</span>]} />;
+};
+const Mat: React.FC<{ art: React.ReactNode; name: string; have: number; need: number; info?: React.ReactNode }> = ({ art, name, have, need, info }) => (
+  <div className={`ws-mat ${have >= need ? 'ok' : 'no'}`} data-testid="craft-need" {...(info ? tip(info) : {})}>
     <span className="ws-mat-art">{art}</span>
     <span className="ws-mat-n">{name}</span>
     <b>{have.toLocaleString()} / {need.toLocaleString()}</b>

@@ -20,6 +20,7 @@ export const GEM_OFFERS: GemOffer[] = [
   { key: 'reforge', item: tpl('reforge_stone'), gems: 30, max: 20, give: items('reforge_stone') },
   { key: 'temper', item: tpl('temper_oil'), gems: 18, max: 20, give: items('temper_oil') },
   { key: 'erase', item: tpl('erase_scroll'), gems: 12, max: 20, give: items('erase_scroll') },
+  { key: 'augment', item: tpl('augment_rune'), gems: 25, max: 20, give: items('augment_rune') },
   { key: 'hpbig', item: tpl('potion_hp_big'), gems: 3, max: 20, give: items('potion_hp_big') },
   { key: 'mpbig', item: tpl('potion_mana_big'), gems: 3, max: 20, give: items('potion_mana_big') },
   shard('RARE', 10, 6), shard('EPIC', 5, 15), shard('LEGENDARY', 1, 20), shard('MYTHIC', 1, 60),

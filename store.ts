@@ -33,7 +33,7 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierAt, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
+import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierFor, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
@@ -880,7 +880,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     fuseCores: (tier) => {   // 5 cores of a tier -> 1 of the next (Blacksmith > Shards)
-      const s = get(); if (tier < 0 || tier > 1) return false;
+      const s = get(); if (tier !== 0) return false;
       const idx = s.inventory.findIndex((i) => coreTierOf(i) === tier);
       const have = idx >= 0 ? s.inventory[idx].quantity || 1 : 0;
       if (have < CORE_FUSE) { notify(`Need ${CORE_FUSE} ${CORE_NAMES[tier]}s`, 'red', 'WARNING'); return false; }
@@ -1693,7 +1693,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (item.level >= 10) return fail('Max Level Reached!');
 
       const free = questFree(s, 'forge');   // tutorial "Temper the Steel": the smith's first upgrade is on the house
-      const tier = upgradeCoreTierAt(item.level);   // tiered cores: +0..+3 / +3..+6 / +6..+9
+      const tier = upgradeCoreTierFor(item.rarity);   // tiered cores: Common / Rare gear -> Upgrade Cores, Epic+ -> Refined Cores
       const coreIndex = s.inventory.findIndex((i) => coreTierOf(i) === tier);
       const core = coreIndex >= 0 ? s.inventory[coreIndex] : null;
       const requiredCores = free ? 0 : upgradeCoresAt(item.level);
