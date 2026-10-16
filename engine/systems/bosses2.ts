@@ -310,7 +310,7 @@ LISTS.BOSS_TREANT = [
     tick(e) {
       stand(e);
       while (S.ringN < S.rings && e.stateT >= S.ringN * 0.6) {
-        spawnWave(e.pos.x, e.pos.z, 13, 26, 1.8, pwr(e) * 1.1, WAVE_THORN, 0x84cc16, e.radius);   // (balance pass 2: x1.1; was x1.3, x0.9 while the dash came at Lv 20 - it now unlocks at Lv 8)
+        spawnWave(e.pos.x, e.pos.z, 13, 26, 1.8, pwr(e) * 1.1, WAVE_THORN, 0x84cc16, e.radius);   // (balance pass 2: x1.1; was x1.3, x0.9 while the dash came at Lv 20 - it now unlocks at Lv 6)
         events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0x84cc16 });
         events.emit('shake', { amount: 0.35 });
         S.ringN++;

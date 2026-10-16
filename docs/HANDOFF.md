@@ -1106,3 +1106,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Fences (owner red lines): tower path closed on the hamlet side too; farm track past the coop closed both sides (joins the road's east fence); mine path's outer fence runs to the track and both sides join the track fences.
 - Bridge: the two wide arch cylinders under the deck no longer poke up through it (no humps).
 - West beach: curvier water line (extra sand-only wobble term in `beachWobble`) and the wet-sand band follows it (render/Terrain.tsx; it was a straight band).
+- Unlocks: Daily Trial Lv 15, Endless Waves Lv 30 (`unlocks.ts`; was 8 / 12). Monsters already scale with class level, so both modes match the new levels. Max camera zoom-out 1.3 (was 1.6). Gem icon has no round container.
