@@ -193,8 +193,8 @@ export function fireBasicAttack(): void {
   let aoe = 0;
   let radius = 1.5;
   switch (ptype) {
-    case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.6; pierce = 6; break;   // boomerang: pierces up to 6 on the way out, 6 more on the way back // shorter throw: barbarian is close range
-    case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.26; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
+    case 'AXE': kind = 'AXE'; speed *= 1.8; life = 2.3; pierce = 6; break;   // boomerang: pierces up to 6 on the way out, 6 more on the way back // shorter throw: barbarian is close range
+    case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.32; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.0; radius = 2.8; break;   // arcane orbs (smaller splash)
     case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 1.8; radius = 1.2; break;   // necromancer: one target, no pierce, a small splash (half damage)
     default: kind = 'ARROW'; speed *= 1.5; life = Math.min(2.2, (16.5 + (stats.attackRange || 0) + 4) / Math.max(1, speed)); pierce = 1 + extraPierce; break;   // (arrows fly about the archer's reach)
