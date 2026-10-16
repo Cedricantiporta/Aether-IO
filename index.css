@@ -875,9 +875,12 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 @keyframes pip-pulse { 50% { transform: scale(1.3); } }
 .wplaque .wsub { justify-content: center; }
 .room-fade { position: absolute; inset: 0; z-index: 85; background: #05060a; pointer-events: none; }
-.portal-tag { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 6px; border-radius: 2rem; white-space: nowrap; pointer-events: none; color: #f6e8c8; font-weight: 700; font-size: 13px; line-height: 1.1;
-  background: linear-gradient(180deg, #2a2620, #0e0b09); box-shadow: 0 0 0 2px var(--pc, #6b5a3a), 0 0 0 3.5px #0a0709, 0 4px 10px rgba(0, 0, 0, .5); }
-.portal-tag .pi { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #10131c; background: var(--pc, #fff); box-shadow: 0 0 0 1.5px #0a0709; }
+.portal-tag { position: relative; display: flex; align-items: center; gap: 7px; padding: 5px 26px; border-radius: 1px; white-space: nowrap; pointer-events: none; color: #f6ead0; font-weight: 700; font-size: 13px; line-height: 1.1; text-shadow: 0 1px 2px #000;
+  /* (owner) dark transparent rectangle, fading out at both ends, a faint wash of the portal's colour */
+  background: linear-gradient(90deg, transparent, rgba(10, 8, 6, .72) 22%, rgba(10, 8, 6, .72) 78%, transparent), linear-gradient(90deg, transparent, color-mix(in srgb, var(--pc, #c9a24c) 22%, transparent) 50%, transparent); }
+.portal-tag::before, .portal-tag::after { content: ''; position: absolute; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--pc, #c9a24c) 75%, transparent), transparent); }
+.portal-tag::before { top: 0; } .portal-tag::after { bottom: 0; }
+.portal-tag .pi { display: grid; place-items: center; width: 22px; height: 22px; color: var(--pc, #fff); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--pc, #fff) 60%, transparent)); }
 .portal-tag .pt small { display: block; font-size: 11px; font-weight: 600; color: var(--text-dim); }
 
 /* town: NPC dialogue (parchment on a bronze frame) + speech bubbles */

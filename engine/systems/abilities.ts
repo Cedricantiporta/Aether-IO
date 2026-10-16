@@ -552,7 +552,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     // Titan's Wrath makes every barbarian skill bigger instead)
     const dmg = b * 4.2;
     spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 12, dmg,
-      { life: 1.05 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 6.0 * titanScale(), y: 1.1 });
+      { life: 1.05 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 4.5 * titanScale(), y: 1.1 });   // (owner: smaller, was 6)
     p.anim.attackT = 1;
     addShake(0.15);
     announce('CROSS_SLASH');

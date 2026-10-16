@@ -296,7 +296,7 @@ export function Projectiles() {
           place(ims, i, x, y, z, yaw, 0, 0, sc);
           pushHalo(x, y, z, 9.5 * sc, 1.9, 0.75, 0.25, 0.45, CELL.GLOW);
           if (emit) {
-            if (Math.random() < dt * 120) { const o = (Math.random() - 0.5) * 10; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
+            if (Math.random() < dt * 120) { const o = (Math.random() - 0.5) * 10 * sc; FX.add.emit(x + Math.cos(yaw) * o, y, z - Math.sin(yaw) * o, -vx * 0.06, 0.6 + Math.random(), -vz * 0.06, 0.35, 0.45, 0.05, 2.4, 1.0, 0.3, 0.8, CELL.FLAME, -0.5, 1); }
             if (Math.random() < dt * 30) embers(x, y, z, 1, 0xff9a40, 0.6, 2.4, 0.8, 0.14);
           }
           break;

@@ -48,9 +48,9 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `${lv >= 5 ? 3 : lv >= 3 ? 2 : 1} x ${pct(2.2 * lvMul(lv))} dmg per enemy · splash ${f1(2.4 + 0.12 * (lv - 1))} · piercing · burn 3s` },
   ],
   BARBARIAN: [
-    { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,
+    { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5.75,   // (owner: +15%, was 5)
       desc: 'Hurl a slow, burning X of crossed axe waves that rolls forward through every enemy in the lane, knocking them back. Titan\'s Wrath makes it (and every other skill) 40% bigger.',
-      per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · slow, pierces all · width 4.6` },
+      per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · slow, pierces all · width 3.5` },
     { slot: 'e', icon: 'WHIRLWIND', name: 'Whirlwind', mana: 24, cd: 12,
       desc: 'Spin for 1.2s (hold the key to keep spinning, up to 4s), barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
