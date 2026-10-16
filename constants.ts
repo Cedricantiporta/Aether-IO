@@ -195,7 +195,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   
   { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Class Dash Level Up', rarity: 'RARE', value: 1 }, 
   { id: 'u_wep', type: 'SKILL_WEAPON', name: 'Ability Mastery', description: 'Ability Level Up', rarity: 'EPIC', value: 1 },
-  { id: 'u_bar', type: 'SKILL_BARRIER', name: 'Energy Shield', description: 'Shield Level Up', rarity: 'EPIC', value: 1 },
+  // (owner: the Energy Shield card is gone)
 
   // Class Specific
   { id: 'u_storm', type: 'SKILL_STORM', name: 'Arcane Shield', description: 'Arcane Shield Level Up', rarity: 'EPIC', value: 1, classType: 'WIZARD' },

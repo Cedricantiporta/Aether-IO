@@ -19,7 +19,7 @@ import {
 import { spawnProjectile } from './projectiles';
 import { hitStop, slowMo, fovKick } from '../game';
 /** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
-const RAISE_N = [1, 2, 3, 4, 5];
+const RAISE_N = [2, 3, 4, 5, 5];   // (owner: starts with 2 skeletons)
 import { hooks } from './hooks';
 
 /** State for render/UI of multi-frame abilities. */
@@ -455,7 +455,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   // ---- NECROMANCER
   if (hero === 'NECROMANCER') {
     if (slot === 'q') {   // RAISE DEAD: skeletons (warriors, archers or mages) claw out of the ground around you
-      const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 1 / 2 / 3 / 4 / 5 by level
+      const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 2 / 3 / 4 / 5 / 5 by level (max 5)
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
         // random warrior / archer / mage, at least one of each in the army

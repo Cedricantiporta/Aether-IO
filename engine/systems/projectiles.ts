@@ -196,7 +196,7 @@ export function fireBasicAttack(): void {
     case 'AXE': kind = 'AXE'; speed *= 0.97; life = 2.3; pierce = 6; if (world.player.titanT > 0) radius = 2.8; break;   // (owner) the boomerang flies ~7.5 out (= the attack range); bigger axes during Titan's Wrath   // boomerang: pierces up to 6 on the way out, 6 more on the way back // shorter throw: barbarian is close range
     case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.32; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.0; radius = 2.8; break;   // arcane orbs (smaller splash)
-    case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 1.8; radius = 1.2; break;   // necromancer: one target, no pierce, a small splash (half damage)
+    case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 3; radius = 1.2; break;   // necromancer: no pierce; the bolt bursts on up to 4 enemies (the target + 3 nearby, half damage)
     default: kind = 'ARROW'; speed *= 1.5; life = Math.min(2.2, (16.5 + (stats.attackRange || 0) + 4) / Math.max(1, speed)); pierce = 1 + extraPierce; break;   // (arrows fly about the archer's reach)
   }
 
@@ -446,9 +446,9 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
       splashStatus.type = fx.type; splashStatus.duration = fx.duration; splashStatus.value = fx.value;
       status = splashStatus;
     }
-    damageEnemiesInRadius(e.pos.x, e.pos.z, p.aoeRadius, dmg * splashMul, splashOpts, status, e.id);
-    if (p.kind === 'BURNING_ARROW' || p.kind === 'FREEZING_ARROW') {
-      events.emit('explosion', { pos: e.pos.clone(), radius: p.aoeRadius, color: p.kind === 'BURNING_ARROW' ? 0xef4444 : 0x38bdf8 });
+    damageEnemiesInRadius(e.pos.x, e.pos.z, p.aoeRadius, dmg * splashMul, splashOpts, status, e.id, p.kind === 'SOUL_BOLT' ? 3 : 1e9);
+    if (p.kind === 'BURNING_ARROW' || p.kind === 'FREEZING_ARROW' || p.kind === 'SOUL_BOLT') {
+      events.emit('explosion', { pos: e.pos.clone(), radius: p.kind === 'SOUL_BOLT' ? 1.6 : p.aoeRadius, color: p.kind === 'BURNING_ARROW' ? 0xef4444 : p.kind === 'SOUL_BOLT' ? 0x9b6bff : 0x38bdf8 });
     }
   }
 

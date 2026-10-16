@@ -220,7 +220,7 @@ const aoeDir = new Vector3();
  * Optionally knocks away from the centre and applies a status. Returns hit count.
  */
 export function damageEnemiesInRadius(
-  x: number, z: number, radius: number, amount: number, o: DamageOpts, status?: StatusEffect, excludeId = -1,
+  x: number, z: number, radius: number, amount: number, o: DamageOpts, status?: StatusEffect, excludeId = -1, maxHits = 1e9,
 ): number {
   const ids = world.enemyGrid.query(x, z, radius + 4, aoeOut);
   const r2 = radius * radius;
@@ -230,6 +230,7 @@ export function damageEnemiesInRadius(
     if (e.id === excludeId || !e.active || e.state === 'DYING') continue;
     const dx = e.pos.x - x, dz = e.pos.z - z;
     if (dx * dx + dz * dz > r2) continue;
+    if (hits >= maxHits) break;
     hits++;
     if (status) applyStatus(e, status);
     if (o.knockback || o.launch) {
