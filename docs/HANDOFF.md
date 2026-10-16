@@ -1160,4 +1160,5 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Potions only drink at or below 70% of that bar (player.ts POTION_MAX_FRAC; float text 'HP ABOVE 70%').
 - Rescue captive is a real KayKit villager (render/RoomEvents CaptiveActor: no hat, tunic + hair, idle / waves when the room is clear / cheers when freed, 'Captive · Help!' tag); cage roof is an open ring so it reads from above.
 - Brewer sign post hangs on the hut's other side (render/Town signSide) so it no longer stands on the tower path.
+- Travelling merchant gear = town shop price (buyMul) x1.5 (it was item.price x2.55, i.e. below the Armory's x4).
 - Environmental-kill achievements: DamageOpts.env ('TRAP' spike traps, 'BARREL' explosive barrels, 'SLAM' wall slams, 'HAZARD' wildfire / gas zones) rides on enemyDeath; goals meta stats trapKills / barrelKills / slamKills / hazardKills; 7 achievements (Watch Your Step, Trap Master, Kaboom!, Demolitionist, Wall Bouncer, Pinball Wizard, Nature's Wrath) with titles.

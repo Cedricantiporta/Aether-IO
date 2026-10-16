@@ -1,6 +1,6 @@
 import { world } from '../world';
 // ============================================================================
-// Travelling merchant (depth 14 of every biome): 1-2 kinds of potion + three random gear pieces at a markup (gear +50%),
+// Travelling merchant (depth 14 of every biome): 1-2 kinds of potion + three random gear pieces at a markup (gear: town price +50%),
 // rarely an Ankh of Life or a Legendary shard at an inflated price; no sales.
 // Stock is rolled when the room is entered and lives in a tiny zustand store so the shop tab can re-render.
 // ============================================================================
@@ -9,6 +9,7 @@ import type { Item } from '../../types';
 import { useGameStore, makeItemById } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { shardItem } from '../../shards';
+import { buyMul } from '../../constants';
 
 export interface MerchantEntry { item: Item; price: number; oldPrice: number; left: number; sale: boolean }
 
@@ -33,7 +34,7 @@ export function rollMerchantStock(depth: number): void {
   for (let i = 0; i < nPot; i++) add(makeItemById(kinds[i], 1)[0], kinds[i].endsWith('_big') ? 2 : 4);
   for (let i = 0; i < 3; i++) {
     const gear = st.rollItemDrop(rarityForDepth(depth, 0.05, world.run.bossKills));
-    if (gear) add({ ...gear, id: `${gear.id}-m${i}` }, 1, (MARKUP + 0.2) * 1.5);   // gear +50% (owner)
+    if (gear) add({ ...gear, id: `${gear.id}-m${i}` }, 1, buyMul(gear.type) * MARKUP);   // gear: the town shop price +50% (owner: it used to undercut the town)
   }
   // rarely: an Ankh of Life or a Legendary (gold) shard, at an inflated price
   const r = Math.random();
