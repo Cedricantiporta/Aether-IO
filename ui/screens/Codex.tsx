@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen } from '../components/GoldIcons';
 import { ITEMS_POOL, PETS_POOL, SKILLS_INFO } from '../../constants';
 import { Modal } from '../components/Modal';
 import { ItemSlot } from '../components/ItemSlot';

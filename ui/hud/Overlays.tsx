@@ -4,7 +4,7 @@ import { climbTitle, climbFloor } from '../../dailyChallenge';
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { create } from 'zustand';
-import { Skull, ArrowUpCircle, Swords, Flame } from 'lucide-react';
+import { Skull, ArrowUpCircle, Swords, Flame } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';

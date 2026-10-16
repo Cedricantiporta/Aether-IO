@@ -1,7 +1,7 @@
 // Daily Trial card (Set Out window tab) + the run summary rows. Today's challenge comes from dailyChallenge.ts (seeded by
 // the local date); the countdown to the reset is written to a ref from the shared rAF loop (no per-frame state).
 import React, { useRef, useState } from 'react';
-import { CalendarDays, Coins, Gem, Sparkles, Flame, Trophy } from 'lucide-react';
+import { CalendarDays, Coins, Gem, Sparkles, Flame, Trophy } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useRaf } from '../hooks/useRaf';
 import { DAILY_FLOORS, DAILY_MODS, daily, dailyBiomeName, dailyFor, dailyMult, dailyReward, dayKey, liveStreak, prevDay, secondsToReset } from '../../dailyChallenge';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Medal } from 'lucide-react';
+import { Medal } from '../components/GoldIcons';
 import { useGameStore, rankXpNeeded, goldFindMul } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { tip } from '../components/Tooltip';

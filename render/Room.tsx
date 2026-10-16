@@ -16,7 +16,7 @@ import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { Stars } from '@react-three/drei';
 import { runInfo } from '../engine/runMods';
-import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from 'lucide-react';
+import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';

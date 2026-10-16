@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '../../components/GoldIcons';
 import { GemGlyph } from '../../components/SkillIcons';
 import { useGameStore, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10 } from '../../../store';
 import { Button } from '../../components/Button';

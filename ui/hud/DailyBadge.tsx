@@ -1,7 +1,7 @@
 // In-run Daily Trial indicator (under the room plaque): the trial's modifiers + a run clock. Mounted with the HUD,
 // which only exists while a run is in progress, so `daily.on` (set at run start) is read once per mount.
 import React, { useRef } from 'react';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays } from '../components/GoldIcons';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { daily, DAILY_MODS } from '../../dailyChallenge';

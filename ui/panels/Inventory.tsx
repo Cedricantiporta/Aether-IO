@@ -1,7 +1,7 @@
 import { betterGearIds } from '../lib/alerts';
 import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from 'lucide-react';
+import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from '../components/GoldIcons';
 import { useGameStore, calculateTotalCP, calculateItemCP, RANK_REQ, RARITY_COLOR } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { Item } from '../../types';

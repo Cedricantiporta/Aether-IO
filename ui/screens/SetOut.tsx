@@ -2,7 +2,7 @@
 // selectable once the ending has been seen); Endless Tower = floor after floor, best floor recorded per class.
 import { milestoneLabel, TOWER_STEP } from '../../towerRewards';
 import React, { useState } from 'react';
-import { Swords, Castle, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { Swords, Castle, ChevronLeft, ChevronRight, Trophy } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
@@ -13,11 +13,11 @@ import { HERO_META } from '../lib/heroes';
 import { useRaf } from '../hooks/useRaf';
 import { world } from '../../engine/world';
 import { PORTAL, TOWER } from '../../engine/townData';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays } from '../components/GoldIcons';
 import { DailyCard, useDailyDay } from './DailyCard';
 import { WavesCard } from './WavesCard';
 import { UNLOCK_LV } from '../../unlocks';
-import { Waves } from 'lucide-react';
+import { Waves } from '../components/GoldIcons';
 
 type Mode = 'ADVENTURE' | 'TOWER';
 

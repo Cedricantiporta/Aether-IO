@@ -1,7 +1,7 @@
 // The prologue (once, the first time the village appears) and the Story book (chapters unlock with progress).
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, Lock } from 'lucide-react';
+import { BookOpen, Lock } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../uiStore';

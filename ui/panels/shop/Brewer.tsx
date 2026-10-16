@@ -2,7 +2,7 @@
 // slot grid), the selected recipe's parts / gold / quantity / Brew button below, then the elixir buffs waiting for the next
 // run (or active in this run). Elixirs land in the bag; clicking one there drinks it (store.drinkElixir).
 import React, { useMemo, useState } from 'react';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical } from '../../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../../elixirs';

@@ -1,7 +1,7 @@
 // Endless Waves card (Set Out window tab) + its run summary line. Data: endlessWaves.ts; records: progress.wavesBest /
 // wavesClaimed (per class).
 import React from 'react';
-import { Waves, Gem, Skull, Crown } from 'lucide-react';
+import { Waves, Gem, Skull, Crown } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { HERO_META } from '../lib/heroes';

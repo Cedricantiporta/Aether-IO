@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish, Pickaxe } from 'lucide-react';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish, Pickaxe } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';

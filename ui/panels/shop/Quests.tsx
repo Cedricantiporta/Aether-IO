@@ -1,7 +1,7 @@
 // Bounty Board (owner: a centred popup laid out like the Quest window): today's offers and the taken bounties on the
 // left, the selected bounty on the right (banner, flavour, objective, rewards) with Accept / Abandon / Claim.
 import React, { useEffect, useState } from 'react';
-import { ScrollText, Check, Lock } from 'lucide-react';
+import { ScrollText, Check, Lock } from '../../components/GoldIcons';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { questDone, questNeedsKing, questTitle, questFlavor, activeQuests, questOffers, QUEST_MAX_ACTIVE, type Quest } from '../../../quests';

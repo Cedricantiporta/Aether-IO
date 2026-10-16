@@ -1,7 +1,7 @@
 // Town top-left profile (Korean-MMO style, no box): class emblem, class name + rank tag, thin rank-xp line, change-class / difficulty chips.
 import { activeChar } from '../../characters';
 import React from 'react';
-import { Repeat } from 'lucide-react';
+import { Repeat } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, rankXpNeeded, goldFindMul } from '../../store';
 import { useUiStore } from '../uiStore';

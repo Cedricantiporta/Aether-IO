@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { ChevronDown, Hammer, Lock, X } from 'lucide-react';
+import { ChevronDown, Hammer, Lock, X } from '../../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, calculateItemCP } from '../../../store';
 import { CRAFT_SLOTS, CRAFT_RARITIES, CRAFT_SUCCESS, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, type CraftSlot, type CraftOutcome } from '../../../crafting';

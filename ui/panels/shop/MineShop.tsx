@@ -2,7 +2,7 @@
 // (single / Miner's Kit; carried into the cave, they pour themselves in when the lantern runs dry below Floor 1) and buys
 // ore, gems and the cave's crystals at a premium (engine/systems/caveKit.ts). Lantern upgrades stay at Grit's bench inside.
 import React, { useEffect, useState } from 'react';
-import { Pickaxe, FlaskConical } from 'lucide-react';
+import { Pickaxe, FlaskConical } from '../../components/GoldIcons';
 import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ShopGrid } from '../../components/ShopGrid';

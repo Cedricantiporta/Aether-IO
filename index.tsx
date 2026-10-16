@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { installTheme } from './ui/theme';
+import { GoldIconDefs } from './ui/components/GoldIcons';
 
 installTheme();
 
@@ -14,6 +15,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
+    <GoldIconDefs />
     <App />
   </React.StrictMode>
 );

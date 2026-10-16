@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from 'lucide-react';
+import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from '../../components/GoldIcons';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore, questFree, makeItemById } from '../../../store';
@@ -8,7 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { SHARD_FUSE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
 import { coreTierOf, CORE_NAMES, CORE_FUSE, CORE_IDS, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
-import { Lock } from 'lucide-react';
+import { Lock } from '../../components/GoldIcons';
 import type { Rarity, PlayerStats, Item } from '../../../types';
 import { Button } from '../../components/Button';
 import { ItemSlot } from '../../components/ItemSlot';

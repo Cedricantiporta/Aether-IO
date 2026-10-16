@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Skull, Sparkles } from 'lucide-react';
+import { Skull, Sparkles } from '../components/GoldIcons';
 import { ankhOffer, reviveWithAnkh } from '../../engine/systems/combat';
 import { useRaf } from '../hooks/useRaf';
 import { Button } from '../components/Button';

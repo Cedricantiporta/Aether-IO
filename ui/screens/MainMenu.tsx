@@ -9,7 +9,7 @@ import { TownProfile } from '../hud/TownProfile';
 import { SkillRow, ExpStrip } from '../hud/Vitals';
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, BookOpen, Settings, Trophy, Skull, Layers, ScrollText, Backpack, User, Store, Swords } from 'lucide-react';
+import { Shield, BookOpen, Settings, Trophy, Skull, Layers, ScrollText, Backpack, User, Store, Swords } from '../components/GoldIcons';
 import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';

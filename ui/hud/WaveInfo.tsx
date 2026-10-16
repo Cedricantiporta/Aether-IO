@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Skull, Home, ChevronsDown } from 'lucide-react';
+import { Skull, Home, ChevronsDown } from '../components/GoldIcons';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { Button } from '../components/Button';

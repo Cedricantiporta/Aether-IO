@@ -2,7 +2,7 @@
 // is its own card (I, II, III ...), unlocked in order; bought cards just read "Owned".
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Cog, X, Lock, Check } from 'lucide-react';
+import { Cog, X, Lock, Check } from '../../components/GoldIcons';
 import { BagGlyph, ItemArtByKey } from '../../components/ItemArt';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';

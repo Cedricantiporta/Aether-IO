@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from 'lucide-react';
+import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { GameStatus } from '../../types';
 import { activeChar } from '../../characters';

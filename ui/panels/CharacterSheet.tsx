@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useIsPresent } from 'framer-motion';
-import { User, Swords, Clock, Skull, Shield, Heart, Plus } from 'lucide-react';
+import { User, Swords, Clock, Skull, Shield, Heart, Plus } from '../components/GoldIcons';
 import type { PlayerStats } from '../../types';
 import { activeChar } from '../../characters';
 import { HERO_META } from '../lib/heroes';

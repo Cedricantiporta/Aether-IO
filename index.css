@@ -2674,3 +2674,5 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .np-btn:hover { filter: brightness(1.12); }
 .np-btn:active { filter: brightness(.92); }
 @media (max-width: 520px) { .np-head span { font-size: 1.2rem; } .np-btn { height: 3rem; font-size: 1.05rem; } .np-rules { font-size: .82rem; } }
+/* solid gold icons (ui/components/GoldIcons) on gold-filled active tabs: darken so they stay readable */
+.bag-cat.is-active .gi, .rpg-btn-primary .gi, .ax-btn.gold .gi { filter: brightness(.32) saturate(.8) !important; }

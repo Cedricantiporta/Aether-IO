@@ -2,7 +2,7 @@
 // done / current / locked), the selected step on the right (chapter banner, story text, objective with progress,
 // rewards, Track / Teleport). Side: NPC quests (active and offered). Bounties: the Quest Board.
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from 'lucide-react';
+import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
 import { useUiStore } from '../uiStore';

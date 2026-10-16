@@ -4,7 +4,7 @@
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
-import { ScrollText, BookOpen, Crown } from 'lucide-react';
+import { ScrollText, BookOpen, Crown } from '../components/GoldIcons';
 import { stepCount, STORY, type StoryStep } from '../../story';
 import { useGameStore } from '../../store';
 import { activeQuests, questDone, questNeedsKing, questTitle, type Quest } from '../../quests';

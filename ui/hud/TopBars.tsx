@@ -4,14 +4,14 @@ import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph, Troph
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
-import { Maximize } from 'lucide-react';
+import { Maximize } from '../components/GoldIcons';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../elixirs';
 import { ItemArt } from '../components/ItemArt';
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '../components/GoldIcons';
 import { motion } from 'framer-motion';
-import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from 'lucide-react';
+import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from '../components/GoldIcons';
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';

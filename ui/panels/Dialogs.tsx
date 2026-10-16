@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Hexagon } from 'lucide-react';
+import { AlertTriangle, Hexagon } from '../components/GoldIcons';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { motion } from 'framer-motion';
 import { POTION_STACK_LIMIT } from '../../constants';

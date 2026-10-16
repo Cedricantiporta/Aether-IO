@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Skull, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from 'lucide-react';
+import { Skull, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { Panel, Ribbon } from '../components/Frame';

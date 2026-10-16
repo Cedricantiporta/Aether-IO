@@ -2,7 +2,7 @@ import { sellUnit } from '../../../constants';
 // Fishmonger (stall on the lakeside beach, shop tab 'FISH'): buys the fish from the bag (sell all, or click a stack for the
 // usual sell dialog), sells better fishing rods (engine/systems/fishing.ts RODS) and lists the lake's fish with prices.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Fish } from 'lucide-react';
+import { Fish } from '../../components/GoldIcons';
 import { useGameStore } from '../../../store';
 import { LOOT_BY_ID, FISH_IDS, isFishName } from '../../../loot';
 import type { Item } from '../../../types';

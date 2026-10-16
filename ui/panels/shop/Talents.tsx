@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Check, Lock, RotateCcw, Sparkles, X } from 'lucide-react';
+import { Check, Lock, RotateCcw, Sparkles, X } from '../../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import type { UpgradeType } from '../../../types';

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X } from '../components/GoldIcons';
 import { useDialogue, advanceDialogue, closeDialogue, acceptOffer } from '../../engine/systems/dialogue';
 import { device } from '../../engine/device';
 import { useGameEvent } from '../hooks/useEvent';

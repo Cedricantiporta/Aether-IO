@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { questKill } from '../../engine/systems/npcQuestLogic';
-import { ScrollText, X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from 'lucide-react';
+import { ScrollText, X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from '../components/GoldIcons';
 import { world } from '../../engine/world';
 import { ENEMY_DEFS } from '../../engine/enemyDefs';
 import type { Enemy } from '../../engine/types';

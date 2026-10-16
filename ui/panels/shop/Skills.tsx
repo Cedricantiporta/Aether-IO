@@ -1,6 +1,6 @@
 import React from 'react';
 import { unlockLevel, skillCost } from '../../../classLevels';
-import { Star } from 'lucide-react';
+import { Star } from '../../components/GoldIcons';
 import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { SKILLS_INFO } from '../../../constants';

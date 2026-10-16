@@ -9,7 +9,7 @@ import {
   AdditiveBlending, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial,
   Object3D, PlaneGeometry, RingGeometry, SRGBColorSpace,
 } from 'three';
-import { Flame, Lock, Unlock, Skull } from 'lucide-react';
+import { Flame, Lock, Unlock, Skull } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { runInfo } from '../engine/runMods';
 import { GATES, GATE_KEYS_NEEDED, gateState, gatePos, CASTLE_DOOR, KEEPER_POS } from '../engine/gates';
