@@ -1,7 +1,7 @@
 import React from 'react';
 import { ankhCooldownLeft } from '../../engine/systems/combat';
 import type { Item, PlayerStats } from '../../types';
-import { useGameStore, calculateItemCP, RANK_REQ } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, shopPrice } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
 import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
@@ -151,7 +151,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
       )}
       {price !== 'none' && (
         <div className="tt-row mt-1" style={{ color: '#8a5a00', fontWeight: 800 }}>
-          <span>{price === 'sell' ? 'Sell value' : 'Price'}</span><span>{(price === 'sell' ? sellPrice(item) : item.price).toLocaleString()} G</span>
+          <span>{price === 'sell' ? 'Sell value' : 'Price'}</span><span>{(price === 'sell' ? sellPrice(item) : shopPrice(item)).toLocaleString()} G</span>
         </div>
       )}
       {isEquippedItself && <div className="tt-sub mt-1" style={{ color: '#1f7a2e' }}>Equipped</div>}

@@ -11,7 +11,7 @@ import { BagGlyph } from '../components/ItemArt';
 import { ItemSlot } from '../components/ItemSlot';
 import { HERO_ICON } from '../hud/TopBars';
 import { useUiStore } from '../uiStore';
-import { SORTS, isGear, sortedItems } from '../lib/game';
+import { SORTS, isGear, sortedItems, sellPrice } from '../lib/game';
 import { useDrop, reorder } from '../lib/dnd';
 import { DropCell } from '../components/DropCell';
 import { CoinGlyph } from '../components/SkillIcons';
@@ -64,7 +64,7 @@ export const InventoryPanel: React.FC = () => {
   const [delSel, setDelSel] = useState<string[]>([]);
   const toggleDel = (id: string) => setDelSel((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const exitDel = () => { setDelMode(false); setSellMode(false); setDelSel([]); };
-  const sellValue = (it: Item) => (it.type === 'LOOT' || it.type === 'SHARD' ? it.price : Math.floor(it.price * 0.3)) * (it.quantity || 1);
+  const sellValue = (it: Item) => sellPrice(it) * (it.quantity || 1);
   const bulkSell = () => {
     const picked = inventory.filter((i) => delSel.includes(i.id));
     if (!picked.length) return;

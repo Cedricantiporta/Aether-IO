@@ -25,6 +25,14 @@ export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
 export const RANK_REQ: Record<Rarity, number> = {
   COMMON: 1, UNCOMMON: 10, RARE: 20, EPIC: 30, LEGENDARY: 40, MYTHIC: 50,
 };
+/** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
+export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 1.4;
+/** Share of the base price gear and pets sell for (owner: 3x the old 30%). Loot / shards sell at full value. */
+export const GEAR_SELL_RATE = 0.9;
+const BUY_GEAR_TYPES = new Set(['WEAPON', 'ARMOR', 'HELMET', 'GLOVES', 'BOOTS', 'ACCESSORY']);
+export const buyMul = (type?: string): number => (type === 'PET' ? BUY_MUL_PET : type && BUY_GEAR_TYPES.has(type) ? BUY_MUL_GEAR : 1);
+/** Gold an item sells for (one unit). */
+export const sellUnit = (i: { type: string; price: number }): number => (i.type === 'LOOT' || i.type === 'SHARD' ? i.price : Math.floor(i.price * GEAR_SELL_RATE));
 /** All six gear tiers, low to high. */
 export const RARITY_LADDER: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** The rarity lowered to the best tier a class of level `lv` can equip (gear drops follow the level gates). */

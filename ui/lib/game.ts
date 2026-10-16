@@ -1,6 +1,7 @@
 import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
 import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierFor } from '../../crafting';
+import { sellUnit } from '../../constants';
 
 export const RARITIES: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -44,8 +45,8 @@ const GEAR_TYPES = new Set<string>(['WEAPON', 'ARMOR', 'ACCESSORY', 'HELMET', 'G
 export const isGear = (i: Item) => GEAR_TYPES.has(i.type);
 export const slotOf = (i: Item): 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | null =>
   GEAR_TYPES.has(i.type) ? (i.type.toLowerCase() as 'weapon') : null;
-/** Gear sells for 30%; trade-goods loot sells at full value. */
-export const sellPrice = (i: Item) => (i.type === 'LOOT' || i.type === 'SHARD' ? i.price : Math.floor(i.price * 0.3));
+/** Gear / pets sell for 90% of the base price (constants.GEAR_SELL_RATE); trade-goods loot sells at full value. */
+export const sellPrice = (i: Item) => sellUnit(i);
 export const isHighValue = (i: Item) => i.rarity === 'EPIC' || i.rarity === 'LEGENDARY' || i.rarity === 'MYTHIC' || i.level >= 5;
 
 /** Upgrade odds / costs / shatter chance: crafting.ts (shared with the store). */

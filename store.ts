@@ -23,7 +23,7 @@ import {
   AbilityType, GameStatistics, UpgradeType, GameNotification,
 } from './types';
 import {
-  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, capRarity, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
+  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, capRarity, buyMul, sellUnit, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
@@ -44,7 +44,7 @@ const REFORGE_NAMES = new Set(Object.values(REFORGE_ITEM).map((r) => r.name));
 export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gold: number; count: number; loot: number; fish: number } {
   const items: Item[] = []; let gold = 0, count = 0, loot = 0, fish = 0;
   for (const i of inv) {
-    if (isGear(i)) { if (o.rarities.includes(i.rarity)) { items.push(i); gold += Math.floor(i.price * 0.3); count++; } continue; }
+    if (isGear(i)) { if (o.rarities.includes(i.rarity)) { items.push(i); gold += sellUnit(i); count++; } continue; }
     if (i.type !== 'LOOT' || REFORGE_NAMES.has(i.name)) continue;
     const mat = CRAFT_MAT_NAMES.has(i.name);
     if (mat ? !o.craftMats : !o.loot) continue;
@@ -157,7 +157,7 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
-export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
+export const shopPrice = (item: { id: string; price: number; type?: string }): number => Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   COMMON: COLORS.rarityCommon, UNCOMMON: COLORS.rarityUncommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,
@@ -1568,7 +1568,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const cur = inv[idx];
       const qty = cur.quantity || 1;
       const sellQty = Math.min(qty, amount);
-      const value = (cur.type === 'LOOT' || cur.type === 'SHARD' ? cur.price : Math.floor(cur.price * 0.3)) * sellQty;
+      const value = sellUnit(cur) * sellQty;
       if (sellQty >= qty) inv.splice(idx, 1);
       else inv[idx] = { ...cur, quantity: qty - sellQty };
       set({ gold: s.gold + value, inventory: inv });
@@ -1596,7 +1596,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const ids = new Set(items.map((i) => i.id));
       let total = 0;
-      items.forEach((i) => { total += Math.floor(i.price * 0.3); });
+      items.forEach((i) => { total += sellUnit(i); });
       set({ gold: s.gold + total, inventory: s.inventory.filter((i) => !ids.has(i.id)) });
       notify(`Sold ${items.length} items for ${total}G`, 'yellow', 'SYSTEM');
     },

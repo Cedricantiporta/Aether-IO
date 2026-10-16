@@ -1089,3 +1089,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   Chest; Legendary Gold Dragon / Shadow Cat / Crystal Golemling; Mythic Phoenix / Celestial Wisp / Aether Leviathan.
   Saved pets re-take their template tier on load (`store.petRetier`). The Pet Stable shop lists Common..Epic only.
   Pet fusion climbs all six tiers. Green Blob is a pure healer (no melee): 10 HP + 3% max HP every 5 s.
+- **Shop economy (owner):** buy price = base price x `buyMul` (gear x4 at the Armory, pets x1.4; `store.shopPrice`,
+  `constants.BUY_MUL_*`). Gear / pets now sell for 90% of the base price (was 30%; `constants.sellUnit`, used by every
+  sell path + tooltips). Upgrade costs still read the base price, so they are unchanged.
