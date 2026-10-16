@@ -103,7 +103,7 @@ export const GlobalConfirm: React.FC = () => {
 
 /** Fast gacha reveal: whole sequence stays well under 2.5 s. */
 /** Summon results as tarot cards. First a short ritual (a spinning sigil and a light pillar tinted by the best rarity,
- *  cards flying out face down), then the cards turn one by one (click a card to turn it early, or Reveal all).
+ *  cards flying out face down), then the cards turn one by one (click a card to turn it early).
  *  Epic+ cards glow; Legendary / Mythic get an aura and rays. Stays until the player draws again or leaves. */
 const ROMAN_N = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export const SummonReveal: React.FC = () => {
@@ -170,7 +170,6 @@ export const SummonReveal: React.FC = () => {
             })}
           </div>
           <div className="flex items-center gap-3 mt-1">
-            {!allOpen && <button className="rpg-btn" onClick={() => setFlipped(results.map(() => true))} data-testid="reveal-all">Reveal all</button>}
             {allOpen && <>   {/* (draw again / leave only once every card is turned) */}
               <button className="rpg-btn" disabled={have < c1} onClick={() => again(1)} data-testid="reveal-draw-1">Draw x1 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c1}</span></button>
               <button className="rpg-btn rpg-btn-primary" disabled={have < c10} onClick={() => again(10)} data-testid="reveal-draw-10">Draw x10 <span className="flex items-center gap-1 rpg-num ml-1"><Cur />{c10}</span></button>

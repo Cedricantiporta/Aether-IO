@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Check, Lock, RotateCcw, Sparkles, X, Minus, Plus } from 'lucide-react';
+import { Check, Lock, RotateCcw, Sparkles, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import type { UpgradeType } from '../../../types';
@@ -16,7 +16,8 @@ import { HERO_COLOR } from '../../lib/game';
 
 // Radial talent tree (owner reference): class emblem in the centre, four branches (up / right / down / left) fanning out
 // over five rings. Square nodes = root / special / capstone, round nodes = plain stat talents. A node opens once its
-// parent(s) are learned (MAXED for special talents / the capstone) and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
+// parent(s) are learned (MAXED for special talents / the capstone) and the hero has the ring's level. Fixed close zoom, drag to pan; click a node for details.
+const ZOOM = 1.1;   // (owner reference: zoomed in on the emblem)
 const RING_R = [118, 200, 290, 372, 448];
 const AXIS = [-90, 0, 90, 180];
 const SIZE = 2 * (RING_R[4] + 70);
@@ -78,23 +79,18 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const nodes = talentsOf(hero);
   const total = talentPointsTotal(lv), free = Math.max(0, total - talentsSpent(ranks)), cost = respecCost(ranks);
   const [selId, setSel] = useState(nodes[0]?.id);
-  const [zoom, setZoom] = useState(0.85);
+  const zoom = ZOOM;
   const sel = TALENT_BY_ID[selId] ?? nodes[0];
   const view = useRef<HTMLDivElement>(null);
   const pan = useDragPan();
   const Icon = HERO_ICON[hero];
-  // keep the centre of the view fixed while zooming; centre the emblem on open
-  const setZoomKeep = (z: number) => {
-    const el = view.current; const nz = Math.max(0.5, Math.min(1.3, z));
-    if (el) { const cx = (el.scrollLeft + el.clientWidth / 2) / zoom, cy = (el.scrollTop + el.clientHeight / 2) / zoom; requestAnimationFrame(() => { el.scrollLeft = cx * nz - el.clientWidth / 2; el.scrollTop = cy * nz - el.clientHeight / 2; }); }
-    setZoom(nz);
-  };
+  // centre the emblem on open (owner: fixed close zoom, drag to pan - no zoom controls)
   useLayoutEffect(() => { const el = view.current; if (el) { el.scrollLeft = C * zoom - el.clientWidth / 2; el.scrollTop = C * zoom - el.clientHeight / 2; } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const block = sel ? allocBlock(sel, ranks, free, lv) : 'max';
   const br = sel ? BRANCHES[hero][sel.branch] : null;
   const r = sel ? ranks[sel.id] || 0 : 0;
-  const why: Record<string, string> = { max: 'Maxed', prereq: 'Max the required talents first', level: `Needs class level ${sel?.lvReq}`, points: `Needs ${sel?.cost} free point${(sel?.cost ?? 1) > 1 ? 's' : ''}` };
+  const why: Record<string, string> = { max: 'Maxed', prereq: sel?.reqMax ? 'Max the required talents first' : 'Learn the required talents first', level: `Needs class level ${sel?.lvReq}`, points: `Needs ${sel?.cost} free point${(sel?.cost ?? 1) > 1 ? 's' : ''}` };
 
   return createPortal(
     <div className="ws-backdrop pe" onClick={onClose} data-testid="talent-tree">
@@ -104,7 +100,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <button className="sw-x" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
         <div className="tt-body">
-          <div className="tt-view" ref={view} {...pan} onWheel={(e) => setZoomKeep(zoom * (e.deltaY > 0 ? 0.92 : 1.08))}>
+          <div className="tt-view" ref={view} {...pan}>
             <div style={{ width: SIZE * zoom, height: SIZE * zoom, position: 'relative' }}>
               <div className="tt-canvas" style={{ width: SIZE, height: SIZE, transform: `scale(${zoom})`, ['--hc' as any]: HERO_COLOR[hero] }}>
                 <svg className="tt-svg" width={SIZE} height={SIZE}>
@@ -118,10 +114,6 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   {nodes.filter((n) => n.row === 0).map((n) => { const [x, y] = pos(n); return <line key={'c' + n.id} x1={C} y1={C} x2={x} y2={y} className={`lk ${(ranks[n.id] || 0) > 0 ? 'lit' : 'open'}`} />; })}
                 </svg>
                 <div className="tt-core" style={{ left: C, top: C }}><Icon size={54} /></div>
-                {BRANCHES[hero].map((b, i) => {
-                  const a = (AXIS[i] * Math.PI) / 180, rr = RING_R[4] + 52;
-                  return <div key={i} className="tt-blabel" style={{ left: C + rr * Math.cos(a), top: C + rr * Math.sin(a), color: b.color }}>{b.name}<em>{branchSpent(hero, i, ranks)} pts</em></div>;
-                })}
                 {nodes.map((n) => {
                   const [x, y] = pos(n), rk = ranks[n.id] || 0, bl = allocBlock(n, ranks, free, lv);
                   const st = rk >= n.max ? 'max' : rk > 0 ? 'part' : bl === null ? 'open' : bl === 'points' ? 'poor' : 'locked';
@@ -137,10 +129,6 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   );
                 })}
               </div>
-            </div>
-            <div className="tt-zoom" onPointerDown={(e) => e.stopPropagation()}>
-              <button onClick={() => setZoomKeep(zoom - 0.1)} aria-label="Zoom out"><Minus size={16} /></button>
-              <button onClick={() => setZoomKeep(zoom + 0.1)} aria-label="Zoom in"><Plus size={16} /></button>
             </div>
           </div>
 
@@ -162,7 +150,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 {!sel.req.length && <li className="ok"><Check size={13} /> Branch root</li>}
               </ul>
               {childrenOf(sel).length > 0 && (<>
-                <div className="tt-sec">Maxing this unlocks</div>
+                <div className="tt-sec">Opens up</div>
                 <div className="tt-unl">{childrenOf(sel).map((c) => <button key={c.id} onClick={() => setSel(c.id)}>{c.name}</button>)}</div>
               </>)}
               <div className="tt-cost">{sel.cost} point{sel.cost > 1 ? 's' : ''} per rank</div>
