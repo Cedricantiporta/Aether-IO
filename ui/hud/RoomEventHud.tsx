@@ -26,19 +26,19 @@ export const RoomEventHud: React.FC = () => {
       }
     }
     const show = live && (!!e.obj || !!e.twist);
-    let t = '', l = '', k = -1, col = '#f1d58e';
+    let t = '', l = '', k = -1, col = '#e8d6a8';
     if (show) {
       if (e.obj) {
         t = OBJ_NAME[e.obj];
-        if (e.state === 2) { l = 'Complete!'; col = '#9be86a'; }
-        else if (e.state === 3) { l = 'Failed'; col = '#ff8a7a'; }
+        if (e.state === 2) { l = 'Complete!'; col = '#bfe0a4'; }
+        else if (e.state === 3) { l = 'Failed'; col = '#e0a49a'; }
         else if (e.state === 4) l = 'Free the captive: press E at the cage';
         else if (e.obj === 'DEFEND' || e.obj === 'RESCUE') { l = e.obj === 'DEFEND' ? 'Keep monsters off the totem' : 'Keep monsters off the cage'; k = e.hp / Math.max(1, e.maxHp); }
         else if (e.obj === 'GOBLIN') { l = e.enemy >= 0 ? `Catch it! ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Something glitters nearby...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
         else if (e.obj === 'HUNT') { l = e.enemy >= 0 ? `Kill the marked monster: ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Marking the bounty...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
       }
-      if (e.twist === 'DARK' && !e.obj) { t = TWIST_NAME.DARK; l = e.lifted ? 'The darkness lifted' : 'Slay the glowing Shadowcaster to lift the darkness'; col = '#c9b6ff'; }
-      else if (e.twist) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#c9b6ff'; void tw; }
+      if (e.twist === 'DARK' && !e.obj) { t = TWIST_NAME.DARK; l = e.lifted ? 'The darkness lifted' : 'Slay the glowing Shadowcaster to lift the darkness'; col = '#e6dcc4'; }
+      else if (e.twist) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#e6dcc4'; void tw; }
     }
     const s = `${show}|${t}|${l}|${col}`;
     if (s !== sig.current) {

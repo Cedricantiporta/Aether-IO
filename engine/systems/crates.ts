@@ -42,6 +42,17 @@ function rollChestRarity(): Rarity {
   return r < 0.05 ? 'LEGENDARY' : r < 0.35 ? 'EPIC' : 'RARE';
 }
 
+/** (owner) area skills break barrels / crates / pots in their radius too (never harvest nodes). */
+export function hitCratesInRadius(x: number, z: number, r: number, amount: number): void {
+  const crates = world.crates, rr = (r + 0.6) * (r + 0.6);
+  for (let i = 0; i < crates.length; i++) {
+    const c = crates[i];
+    if (!c.active || isHarvestNode(c.kind)) continue;
+    const dx = c.pos.x - x, dz = c.pos.z - z;
+    if (dx * dx + dz * dz <= rr) hitCrate(c, amount);
+  }
+}
+
 /** Deals damage to a crate; breaks it at 0 hp. */
 /** `byHand`: a harvest stroke (hold E). Harvest nodes ignore every other hit (attacks, explosions). */
 export function hitCrate(c: Crate, amount: number, byHand = false): void {

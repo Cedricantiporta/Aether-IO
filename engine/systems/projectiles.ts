@@ -18,6 +18,7 @@ import {
 } from './combat';
 import { queryColliders, type Collider } from '../mapgen';
 import { hitCrate } from './crates';
+import { isHarvestNode } from '../mapgen';
 
 export interface ProjSpec {
   life: number;
@@ -621,7 +622,7 @@ export function updateProjectiles(dt: number): void {
     const crates = world.crates;
     for (let c = 0; c < crates.length; c++) {
       const cr = crates[c];
-      if (!cr.active) continue;
+      if (!cr.active || isHarvestNode(cr.kind)) continue;   // (veils / ore are harvested by hand: shots fly past them)
       const dx = cr.pos.x - nx, dz = cr.pos.z - nz;
       if (dx * dx + dz * dz > CRATE_HIT_RADIUS * CRATE_HIT_RADIUS) continue;
       const key = CRATE_ID_OFFSET + cr.id;

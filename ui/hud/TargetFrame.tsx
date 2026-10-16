@@ -46,7 +46,7 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
       const n = def ? def.name : e.kind;
       if (name.current) {
         name.current.textContent = (e.elite ? 'Elite ' : e.mini ? 'Champion ' : '') + n;
-        name.current.style.color = e.elite || e.mini ? '#ffd27a' : '#ffb3aa';
+        name.current.style.color = e.elite || e.mini ? '#e8d3a0' : '#ece4d4';   // (owner: calmer text colours)
       }
       if (sub.current) sub.current.textContent = e.elite && e.affix !== 'NONE' ? (AFFIX_NAME[e.affix] ?? '') : '';
     }

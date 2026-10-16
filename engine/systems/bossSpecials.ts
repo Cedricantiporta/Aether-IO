@@ -35,7 +35,7 @@ export function resetSpecials(): void { for (const k in specialStats) delete spe
 let slimeKingId = -1;
 export function setSlimeKing(id: number): void { slimeKingId = id; }
 // Belly Flop timeline (s): crouch, leap out of sight, hang while the circle hunts you, lock, slam down fast.
-const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.42, end: 4.1, h: 24, r: 6.5 };   // (owner: drop a bit slower, 0.42 s, was 0.22)
+const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.62, end: 4.3, h: 24, r: 5.2 };   // (owner: slower drop 0.62 s, smaller circle 5.2)
 /** Height of an enemy in a Belly Flop (enemies.ts writes it to pos.y; > 2 = airborne: untouchable, no contact). */
 export function flopY(e: Enemy): number {
   if (e.spKind !== SP.SLAM) return 0;
@@ -246,7 +246,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       if (e.spStep === 1 && t >= FLOP.land) {   // SPLAT (the zone's expiry deals the hit + shake)
         e.spStep = 2;
         if (z) { e.pos.x = z.pos.x; e.pos.z = z.pos.z; }
-        spawnHostileZone('ACID', e.pos.x, e.pos.z, 3.8, 4, power(e) * 0.25, 0x9be32a);
+        spawnHostileZone('ACID', e.pos.x, e.pos.z, 3, 4, power(e) * 0.25, 0x9be32a);
         events.emit('trick', { pos: e.pos.clone(), kind: 'ACID', radius: FLOP.r });
         events.emit('shockwave', { pos: e.pos.clone(), radius: FLOP.r, color: 0x9be32a });
         addShake(0.55);
@@ -261,8 +261,8 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
     case SP.FLOOD: {
       if (e.spStep === 0 && t >= 1.5) {
         e.spStep = 1;
-        spawnHostileZone('ACID', d.cx, d.cz, 11, 7, power(e) * 0.32, 0x9be32a);
-        events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'ACID', radius: 11 });
+        spawnHostileZone('ACID', d.cx, d.cz, 8.5, 7, power(e) * 0.32, 0x9be32a);
+        events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'ACID', radius: 8.5 });
         addShake(0.3);
       }
       if (t >= 2.0) e.spKind = 0;
@@ -272,8 +272,8 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       const n = d.slots.length / 2;
       while (e.spStep < n && t >= 1.0 + e.spStep * 0.09) {
         const i = e.spStep++;
-        spawnHostileZone('ACID', d.slots[i * 2], d.slots[i * 2 + 1], 2.6, 6, power(e) * 0.3, 0x9be32a);
-        if ((i & 1) === 0) events.emit('trick', { pos: tv.set(d.slots[i * 2], 0, d.slots[i * 2 + 1]).clone(), kind: 'ACID', radius: 2.6 });
+        spawnHostileZone('ACID', d.slots[i * 2], d.slots[i * 2 + 1], 2.1, 6, power(e) * 0.3, 0x9be32a);
+        if ((i & 1) === 0) events.emit('trick', { pos: tv.set(d.slots[i * 2], 0, d.slots[i * 2 + 1]).clone(), kind: 'ACID', radius: 2.1 });
       }
       if (t >= 1.0 + n * 0.09 + 0.4) e.spKind = 0;
       break;
@@ -363,14 +363,14 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
     }
     case SP.SHELL: break;
     case SP.SLAM: d.zone = tel(p.x, p.z, FLOP.r, FLOP.land, pw * 2.2, 0x9be32a); break;
-    case SP.FLOOD: tel(p.x, p.z, 11, 1.5, 0, 0x9be32a); break;
+    case SP.FLOOD: tel(p.x, p.z, 8.5, 1.5, 0, 0x9be32a); break;
     case SP.RAIN: {
       const N = 9 + 3 * e.phase;
       for (let i = 0; i < N; i++) {
         if (i === 0) tv.set(p.x, 0, p.z);
         else { const a = Math.random() * 6.283, r = 3.5 + Math.random() * 10; tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 2); }
         d.slots.push(tv.x, tv.z);
-        tel(tv.x, tv.z, 2.6, 1.0 + i * 0.09, 0, 0x9be32a);
+        tel(tv.x, tv.z, 2.1, 1.0 + i * 0.09, 0, 0x9be32a);
       }
       break;
     }

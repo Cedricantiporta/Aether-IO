@@ -126,8 +126,13 @@ export function questNpc(name: string): boolean {
     && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
 }
 /** True when a ground item (by bag name) is still wanted by an active DELIVER quest (it gets a small gold light ray). */
+/** A Quest Board bounty still wants crafting shards (harvest veins / crystals drop them: they get the quest icon). */
+export function questWantsShards(): boolean {
+  return useGameStore.getState().quests.some((q) => q.accepted && q.type === 'GATHER_SHARDS' && q.progress < q.target);
+}
 export function questWantsItem(name: string): boolean {
   const st = useGameStore.getState();
+  if (st.quests.some((q) => q.accepted && q.type === 'COLLECT_LOOT' && q.lootName === name && q.progress < q.target)) return true;   // board bounties too
   const step = STORY[st.story.step];   // the main story's current delivery
   if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === name && bagCount(st.inventory, step.deliver.id) < step.deliver.count) return true;
   return NPC_QUESTS.some((d) => {

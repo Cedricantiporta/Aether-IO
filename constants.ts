@@ -23,7 +23,7 @@ export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no bre
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
 /** Class level needed to equip / craft gear of a rarity (owner: Uncommon 10, Rare 20, Epic 30, Legendary 40, Mythic 50). */
 export const RANK_REQ: Record<Rarity, number> = {
-  COMMON: 1, UNCOMMON: 10, RARE: 20, EPIC: 30, LEGENDARY: 40, MYTHIC: 50,
+  COMMON: 1, UNCOMMON: 8, RARE: 16, EPIC: 24, LEGENDARY: 32, MYTHIC: 40,   // (owner: steps of 8)
 };
 /** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
 export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 1.4;
