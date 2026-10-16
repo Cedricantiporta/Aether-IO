@@ -1,5 +1,5 @@
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
-import { meleeT } from '../engine/systems/enemies';
+import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
 import { currentTarget } from '../engine/systems/combat';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -160,8 +160,18 @@ export function Enemies() {
       sys.wasFrozen[i] = hold ? 1 : 0;
       const at = hold ? sys.frozenAt[i] : e.animT;
 
+      // basic melee swing (owner: visible attack): rear back while winding up, then lunge forward on the strike
+      let ax = e.pos.x, az = e.pos.z;
+      if (e.state !== 'DYING' && !e.boss) {
+        const wu = meleeT[e.id] > 0 ? 1 - meleeT[e.id] / MELEE_WINDUP : 0, st = strikeT[e.id];
+        if (wu > 0 || st > 0) {
+          const push = (-0.28 * wu + 0.55 * Math.sin(st * Math.PI)) * Math.max(0.8, s * 0.6);
+          ax += Math.sin(e.facing) * push; az += Math.cos(e.facing) * push;
+          fy *= 1 - 0.1 * wu + 0.08 * st; fx *= 1 + 0.06 * wu;
+        }
+      }
       poser.meshes = K.meshes; poser.idx = idx;
-      poser.begin(e.pos.x, e.pos.y, e.pos.z, e.facing, s, fx, fy, yOff);
+      poser.begin(ax, e.pos.y, az, e.facing, s, fx, fy, yOff);
       K.def.pose(e, poser, at);
 
       // tint + flash

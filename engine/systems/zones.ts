@@ -31,6 +31,7 @@ const boomOpts: DamageOpts = { kind: 'MAGIC', source: 'PLAYER', knockback: 1.5, 
 const burnVisual: StatusEffect = { type: 'BURN', duration: 1, value: 0.01 };
 const holeFreeze: StatusEffect = { type: 'FREEZE', duration: 1.5 };
 const burnReal: StatusEffect = { type: 'BURN', duration: 3, value: 4 };
+const pathBurn: StatusEffect = { type: 'BURN', duration: 0.6, value: 2 };
 
 function fireTick(z: Zone): void {
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
@@ -41,7 +42,8 @@ function fireTick(z: Zone): void {
     const dx = e.pos.x - z.pos.x, dz = e.pos.z - z.pos.z;
     const rr = z.radius + e.radius * 0.5;
     if (dx * dx + dz * dz > rr * rr) continue;
-    if (z.aux > 0) { burnReal.value = Math.max(1, z.damage * 0.5); applyStatus(e, burnReal); } // meteor / pillar craters stack real burn
+    if (z.aux === 2) { pathBurn.value = Math.max(1, z.damage * 2); applyStatus(e, pathBurn); }   // fireball path: burns while inside (short refresh)
+    else if (z.aux > 0) { burnReal.value = Math.max(1, z.damage * 0.5); applyStatus(e, burnReal); } // meteor / pillar craters stack real burn
     else applyStatus(e, burnVisual); // keeps the "burning" tint without adding meaningful extra DoT
     damageEnemy(e, dmg, fireOpts);
   }

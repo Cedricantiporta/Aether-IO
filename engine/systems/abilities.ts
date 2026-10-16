@@ -254,8 +254,10 @@ function castFireballs(lv: number, b: number): void {
   const dir = getAimDir(aim);
   const dmg = b * 2.2;
   fbBurn.value = Math.max(1, dmg * 0.08);
-  for (let i = -1; i <= 1; i++) {
-    const a = i * 0.26, c = Math.cos(a), s2 = Math.sin(a);
+  // (owner) one fireball at Lv 1-2, two at Lv 3-4, three at Lv 5
+  const n = lv >= 5 ? 3 : lv >= 3 ? 2 : 1;
+  for (let k = 0; k < n; k++) {
+    const a = (k - (n - 1) / 2) * 0.26, c = Math.cos(a), s2 = Math.sin(a);
     const vx = dir.x * c - dir.z * s2, vz = dir.x * s2 + dir.z * c;
     // huge, very slow and piercing: rolls through the whole pack (user)
     spawnProjectile('FIREBALL', p.pos.x + vx * 1.6, p.pos.z + vz * 1.6, vx, vz, 8, dmg,

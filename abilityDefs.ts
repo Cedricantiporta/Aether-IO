@@ -44,8 +44,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Three lightning orbs orbit you for 4s, zapping nearby enemies with chain lightning that breaks armor.',
       per: (lv) => `${3 + (lv >= 3 ? 1 : 0)} orbs · zap ${pct(1.7 * lvMul(lv))} dmg · chains ${2 + Math.floor(lv / 2)}` },
     { slot: 's4', icon: 'FIREBALLS', name: 'Fireballs', mana: 30, cd: 9,
-      desc: 'Hurl three huge, slow fireballs in a fan. They roll through every enemy in their path, scorching each one with a splash, setting them ablaze and leaving a trail of fire.',
-      per: (lv) => `3 x ${pct(2.2 * lvMul(lv))} dmg per enemy · splash ${f1(2.4 + 0.12 * (lv - 1))} · piercing · burn 3s` },
+      desc: 'Hurl huge, slow fireballs (1, then 2 at Lv 3 and 3 at Lv 5). They roll through every enemy in their path, scorching each one with a splash and leaving a trail of fire: enemies keep burning for as long as they stand in it.',
+      per: (lv) => `${lv >= 5 ? 3 : lv >= 3 ? 2 : 1} x ${pct(2.2 * lvMul(lv))} dmg per enemy · splash ${f1(2.4 + 0.12 * (lv - 1))} · piercing · burn 3s` },
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5,

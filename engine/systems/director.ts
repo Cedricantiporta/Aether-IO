@@ -949,7 +949,7 @@ function pushNearby(verb: string, label: string, node: number, d2: number, color
 function scanNearby(): void {
   nearbyN = 0;
   const d = dd(), r = world.room, p = world.player.pos;
-  // no harvesting / interacting while monsters are still alive in the room (combat)
+  // no interacting while monsters are still alive in the room (combat); harvesting works mid-fight (owner)
   let fighting = false;
   for (let i = 0; i < world.enemies.length && !fighting; i++) { const e = world.enemies[i]; if (e.active && e.state !== 'DYING') fighting = true; }
   if (r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {
@@ -965,14 +965,6 @@ function scanNearby(): void {
     if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
       const po = r.portals[0];
       if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', finale.step === 3 ? 'The light beyond' : nextBiomeLabel(), 20, dist); }
-    }
-    // harvest nodes: hold E next to one
-    const cr = world.crates;
-    for (let i = 0; i < cr.length; i++) {
-      const c = cr[i];
-      if (!c.active || !isHarvestNode(c.kind)) continue;
-      const dist = q(c.pos.x, c.pos.z);
-      if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
     }
     if (r.plan.type === 'GATEKEEPER' && d.phase === 'CLEARED') {
       for (let i = 0; i < GATES.length; i++) {
@@ -1002,8 +994,15 @@ function scanNearby(): void {
       }
     }
   }
-  // loot on the ground (items are picked up by hand: E / tap), also mid-fight
+  // loot on the ground (items are picked up by hand: E / tap) and harvest nodes (hold E), also mid-fight
   if (r.fade < 0.6 && d.phase !== 'LEAVING') {
+    const cr = world.crates;
+    for (let i = 0; i < cr.length; i++) {
+      const c = cr[i];
+      if (!c.active || !isHarvestNode(c.kind)) continue;
+      const dist = (c.pos.x - p.x) ** 2 + (c.pos.z - p.z) ** 2;
+      if (dist < 9) pushNearby('Harvest', HARVEST_NAME[c.kind] ?? 'Node', 100 + i, dist);
+    }
     const pk = world.pickups;
     for (let i = 0; i < pk.length; i++) {
       const o = pk[i]; if (!o.active || o.kind !== 'ITEM' || !o.item || o.magnet || o.t < 0.35) continue;

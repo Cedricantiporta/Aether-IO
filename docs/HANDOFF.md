@@ -1074,3 +1074,9 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   never roll Uncommon; item fusion climbs Common -> Uncommon -> Rare (`petFusion.nextItemTier`), pets keep 5 tiers.
 - Barbarian: Cross Slash no longer grows with level; Titan's Wrath makes every barbarian skill 40% bigger
   (`abilities.titanScale`: Cross Slash, Whirlwind, Earthsplitter, leap slam). Garrick moved next to the gate door.
+- Melee monsters: follow delay only from afar (> radius + 7; up close they track the real hero, no more walking past);
+  chasers halt at radius + 1.3 and strike from there (`enemies.ts` standoff after the AI); visible swing: rear back during
+  the wind-up, lunge on the strike (`strikeT`, render/Enemies.tsx).
+- Wizard Fireballs: 1 at Lv 1-2, 2 at Lv 3-4, 3 at Lv 5; the fire trail (zone aux 2) burns enemies as long as they stand
+  in it (`zones.fireTick` pathBurn, 0.6 s refresh).
+- Harvest nodes can be harvested mid-fight (director.scanNearby); other room interactions still wait for a clear room.

@@ -287,7 +287,7 @@ export function spawnEnemy(
   e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
   if (isStationary(kind)) { e.dir.set(pos.x, 0, pos.z); e.phase = 0; e.angle = 5 + Math.random() * 3; }   // home spot (towers / lakes)
   e.active = true;
-  contactCd[e.id] = 0.4; meleeT[e.id] = 0;
+  contactCd[e.id] = 0.4; meleeT[e.id] = 0; strikeT[e.id] = 0;
 
   d.aliveCount++;
   events.emit('spawn', { pos: e.pos, kind, elite });
@@ -1230,8 +1230,12 @@ function pushOutOfObstacles(e: Enemy): boolean {
 /** Basic melee: touching the hero does nothing; a monster in reach winds up a short strike (MELEE_WINDUP, it flashes),
  *  then hits only if the hero is still in reach. Skill moves (state ATTACK: charges, lunges, grabs) hit on contact. */
 export const meleeT = new Float32Array(MAX_ENEMIES);
-const MELEE_WINDUP = 0.42, MELEE_CD = 1.1;
+/** 1 -> 0 right after a basic strike lands / whiffs (render: the lunge of the swing). */
+export const strikeT = new Float32Array(MAX_ENEMIES);
+export const MELEE_WINDUP = 0.42;
+const MELEE_CD = 1.1;
 function contactHit(e: Enemy, locked: boolean): void {
+  if (strikeT[e.id] > 0) strikeT[e.id] = Math.max(0, strikeT[e.id] - frameDt * 4);
   if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || (!world.player.alive && curMin < 0)) { meleeT[e.id] = 0; return; }
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
@@ -1242,7 +1246,7 @@ function contactHit(e: Enemy, locked: boolean): void {
     if (meleeT[e.id] > 0) {
       meleeT[e.id] -= frameDt;
       if (meleeT[e.id] > 0) return;
-      meleeT[e.id] = 0; contactCd[e.id] = MELEE_CD;
+      meleeT[e.id] = 0; contactCd[e.id] = MELEE_CD; strikeT[e.id] = 1;
       const d = Math.sqrt(d2) || 1;
       e.pos.x += (dx / d) * 0.35; e.pos.z += (dz / d) * 0.35;   // lunge into the strike
       if (d2 > (r + 0.7) * (r + 0.7)) return;                  // the hero stepped out of reach: whiff
@@ -1294,10 +1298,11 @@ function updateEnemy(e: Enemy): void {
   const still = isStationary(e.kind);
   // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
   // (strike range) they track the real hero so their attacks still connect
-  if (curMin < 0 && !still && !e.boss && !e.mini && (e.state === 'CHASE' || e.state === 'KITE') && tdist > e.radius + 2.6) {
+  // (only from afar: up close a monster aimed at the old spot walked past / through the hero)
+  if (curMin < 0 && !still && !e.boss && !e.mini && (e.state === 'CHASE' || e.state === 'KITE') && tdist > e.radius + 7) {
     heroTrailAt(0.7 + (e.id % 4) * 0.1, trailPt);
-    tdx = trailPt[0] - e.pos.x; tdz = trailPt[1] - e.pos.z;
-    tdist = Math.max(e.radius + 2.6, Math.sqrt(tdx * tdx + tdz * tdz));   // (px / pz stay the real hero: strikes, routing)
+    const ox = trailPt[0] - e.pos.x, oz = trailPt[1] - e.pos.z, od = Math.sqrt(ox * ox + oz * oz);
+    if (od > e.radius + 5) { tdx = ox; tdz = oz; tdist = od; }   // (px / pz stay the real hero: strikes, routing)
   }
   // rivers / lakes: walkers head for a bridge (or round the shore) when liquid separates them from their target
   if ((feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
@@ -1383,6 +1388,16 @@ function updateEnemy(e: Enemy): void {
   }
   bossTel = false;
   if (isDying(e)) return; // bomber exploded
+  // melee standoff (owner): a chasing monster halts a small step short of its target and strikes from there (wind-up +
+  // lunge, contactHit) instead of walking into / past the hero
+  if (e.state === 'CHASE' && !e.boss && !still && e.contactDamage > 0) {
+    const hx = px - e.pos.x, hz = pz - e.pos.z, hd = Math.sqrt(hx * hx + hz * hz), stopAt = e.radius + 1.3;
+    if (hd < stopAt + 0.4 && hd > 1e-3) {
+      const along = (e.vel.x * hx + e.vel.z * hz) / hd;   // speed toward the target
+      if (along > 0) { const k = hd < stopAt ? 1 : (hd - stopAt) < 0.4 ? 1 - (hd - stopAt) / 0.4 : 0; e.vel.x -= (hx / hd) * along * k; e.vel.z -= (hz / hd) * along * k; }
+      desiredYaw = Math.atan2(hx, hz);
+    }
+  }
 
   // ---- motion
   const sm = e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;

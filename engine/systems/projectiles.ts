@@ -350,6 +350,7 @@ function dropFireZone(p: Projectile): void {
   z.life = z.maxLife = 3;
   z.damage = p.damage * 0.03; // dps per zone (trail zones overlap heavily)
   z.color = 0xf97316;
+  z.aux = 2;   // fireball path (owner): enemies keep burning for as long as they stand in it (zones.fireTick)
 }
 
 /** Fan of Flames: small, short fire patch where an arrow hits an enemy / ends. */
