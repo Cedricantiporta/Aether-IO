@@ -14,7 +14,7 @@ import { CAVE_DOOR, CAVE_EXIT, caveLayout } from '../caveData';
 import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
 import { isFishName } from '../../loot';
 import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
-import { npcs, animals, TALK_R } from './npcs';
+import { npcs, animals, TALK_R, npcInStory } from './npcs';
 import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests';
 import { TAVERN_DOOR, TAVERN_EXIT } from '../tavernData';
@@ -161,7 +161,7 @@ function fieldAction(t: string): NavTarget | null {
 const BOARD = mk();
 /** Where a Quest Board bounty continues: claim at the board, the King, selling loot at the Potion Shop, else the wilds. */
 export function boardQuestNav(q: Quest): NavTarget {
-  const st = useGameStore.getState(), king = NPCS.findIndex((n) => n.king);
+  const st = useGameStore.getState(), king = NPCS.findIndex((n, i) => n.king && npcInStory(i));
   if (questDone(q)) return navSpot('BOARD', BOARD)!;
   if (questNeedsKing(q) && king >= 0) return navNpc(king, BOARD);
   if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT')) return navSpot('SUPPLIES', BOARD)!;

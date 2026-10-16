@@ -1,3 +1,4 @@
+import { storyIdx } from '../story';
 // ============================================================================
 // Wanderers: memorable characters met now and then in a cleared adventure room (beyond the King and the townsfolk).
 // Each has a short story told over the run (their lines follow the biome) and one offer: a rest by the fire, a
@@ -53,11 +54,20 @@ export const WANDERERS: readonly WandererDef[] = [
   // the epilogue (never met at random): the light Malakar stole, waiting in a forest clearing after the final fight
   { id: 'KEEPER', name: 'Aelia', title: 'Keeper of the Font', model: 'WIZARD', tint: '#ffffff', accent: '#fff3c4', biomes: [],
     lines: { 0: [
-      'You came through. I knew you would; I have watched you since the night the bells first rang.',
-      'I am Aelia. For ten years I was only light in a jar, the warmth Malakar took from the Font to keep me breathing.',
-      'He was my teacher. He held on too long, and my father let go too soon. Neither of them was the villain they thought the other was.',
-      'He told you the light would burn you hollow. He was wrong. It only burns those who try to keep it.',
-      'Take me home, guard. I would like to see my father. And then I would like a very long word with him.',
+      'You came through again. You always do. You will not remember this; you never do.',
+      'I am Aelia. For ten years I have been light in a jar, the warmth Malakar snatched back from the dark.',
+      'Listen, quickly, before the Font takes you home: the man on my father\'s throne is not my father. He wanted to marry me. I said no.',
+      'He changed the oath. Every time you return, the Font takes what you saw here. Ask Wren about the blank pages.',
+      'There. It is starting. Goodbye, guard. Again.',
+    ], 1: [
+      'You came through. And you are holding the old oath. Good. This time it will stay with you.',
+      'Aldric was a prince who wanted my hand. I refused him, and my father refused him. So he went to the Hollow beneath the Font, and it gave him everything my father had.',
+      'The beasts you fight out there were my father\'s protectors. His knights, his dragon, his captain. Gorath... Gorath was my father. I died the night they changed. Mostly. Malakar caught what was left.',
+      'You have been sent to fetch me for the man who did it. Do not forget it. Go home. Tell Wren. Then come and find me in the castle.',
+    ], 2: [
+      'You again! Out here, for old times\' sake? I do miss the trees.',
+      'Malakar is resting a little easier tonight. You did that.',
+      'Go home, guard. The throne is very uncomfortable, and I would like someone to complain to.',
     ] },
     offer: 'Return home' },
 ];
@@ -105,12 +115,18 @@ export function placeKeeper(x: number, z: number): void {
   wander.on = true; wander.def = WANDERERS.findIndex((w) => w.id === 'KEEPER'); wander.x = x; wander.z = z; wander.used = false; wander.ver++;
 }
 
+/** Aelia's words at the end: 0 = the Font makes you forget (hints), 1 = the run you remember (story 'remember'), 2 = she is queen. */
+function keeperStage(): number {
+  const step = useGameStore.getState().story.step;
+  return step >= storyIdx('wren4') ? 2 : step === storyIdx('remember') ? 1 : 0;
+}
+
 /** E at the wanderer: their story, then the offer (once). */
 export function talkWanderer(): void {
   if (!wander.on) return;
   const d = WANDERERS[wander.def], st = useGameStore.getState();
   if (d.id === 'KEEPER') {   // her words, then the ending slides and home
-    openCustomDialogue(d.name, d.title, d.accent, d.lines[0].slice(), { label: d.offer, accept: () => { if (!wander.used) { wander.used = true; events.emit('gameEnding', {}); } } });
+    openCustomDialogue(d.name, d.title, d.accent, (d.lines[keeperStage()] ?? d.lines[0]).slice(), { label: d.offer, accept: () => { if (!wander.used) { wander.used = true; events.emit('gameEnding', {}); } } });
     return;
   }
   const lines = linesFor(d);

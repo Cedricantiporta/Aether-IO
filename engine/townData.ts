@@ -583,6 +583,8 @@ export interface NpcDef {
   noCape?: boolean; tunic?: string; hair?: string; longHair?: boolean;
   /** floor height (standing on the dais) */
   y?: number;
+  /** only present while the main story is in [from, until) (story step ids; '' = from the start / forever) */
+  storyRange?: [string, string];
 }
 
 export const NPCS: NpcDef[] = [
@@ -598,7 +600,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Elder Tobin', role: 'Village Elder', model: 'BARBARIAN', tint: '#f1ece2', scale: 1, prop: 'none', accent: '#e6d3a0', home: [4.8, -2.2],
-    talk: [
+    talk: [['The old oath at the well used to be twelve words. Now it is thirteen. Nobody will tell me what the new one is.'], 
       ['Ah, a young adventurer. This well has fed our village for three hundred years.', 'The old tales say the Mire swallows the careless. Walk with care.'],
       ['My knees ache, but my memory is sharp. I remember when this valley had no gate at all.', 'Keep your potions stocked and your wits about you.'],
       ['Every hero starts as a stranger here. The Font does not care where you were born, only that you came back.'],
@@ -628,13 +630,13 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Garrick', role: 'Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#bcd0ff', home: [4.1, 35.9],
-    talk: [
+    talk: [['Curfew bell rings at dusk now. King\'s orders. Not to keep the monsters out, mind. To keep us in.', 'Something walks the treeline after dark. Not wolves. Wolves do not stand on two legs and watch the gate.'], 
       ['Halt! ...Oh. It is you. Carry on.', 'Follow the road south through the gate to the Adventure Portal in the forest. Step into it when you are ready.'],
       ['Nothing gets past me. Well, nothing except hens. And the Elder\'s cat.', 'Bring back something shiny, will you?'],
       ['Stock up at the potion shop before you set out. Heroes who forget potions tend to come back without their dignity.'],
       ['I have guarded this gate eleven years. The gate has never once been stolen. You are welcome.'],
     ],
-    bubbles: ['Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
+    bubbles: ['Curfew at dusk. Do not make me ring it twice.', 'Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
   },
   // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
   {
@@ -683,7 +685,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Fenn', role: 'Bard', model: 'ARCHER', tint: '#d3e5ff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [-28, 9], speed: 1.7,
     patrol: [[-28, 9], [-14, 9], [0, 9], [14, 9], [28, 9], [14, 11], [0, 11], [-14, 11], [-28, 11]],
-    talk: [
+    talk: [['I wrote a ballad about the Dimming. The King liked it so much he bought every copy and burned them. I think that is a compliment. I hope.'], 
       ['La la laaa... oh, an audience! I am working on a ballad about the Tide Hydra.', 'So far it goes: "Run." Then, for the second verse: "Swim." Needs work.'],
       ['They say the Frostpeak winds sing at midnight. I shall go listen, once I find a braver bard.'],
     ],
@@ -710,15 +712,26 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Maeve', role: 'Gossip', model: 'WIZARD', tint: '#f0e8f7', scale: 1, prop: 'staff', accent: '#e8d0ff', home: [19, 9], speed: 1.2,
     patrol: [[19, 9], [30, 9], [24, 11], [17, 11]],
-    talk: [
+    talk: [['Did you hear the King\'s new tax? A copper for every window. So now everyone boards up their windows. So now the whole town is dark. He seemed pleased.', 'And old Fenwick said one word about the princess at the tavern and his cart was "requisitioned" the next morning. One word!'], 
       ['I heard the Ember Wastes are so hot the goblins carry parasols. True story.', 'Do not tell Tobin I told you.'],
       ['Hodge fancies the herbalist. Everyone knows. Except Hodge. And Lysa.'],
     ],
-    bubbles: ['Did you hear?', 'Lovely day!', 'Beware the Mire... or so they say.'],
+    bubbles: ['Board up your windows, dear. Tax.', 'Do not say her name too loud.', 'Did you hear?', 'Lovely day!', 'Beware the Mire... or so they say.'],
   },
   // ------------------------------------------------------------ castle (throne hall, see castleData.ts)
+  // the true heir on her father's throne once the Regent is gone (story step 'queen' on; replaces King Aldric)
   {
-    name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, cape: '#a8141e', ordered: true,
+    name: 'Queen Aelia', role: 'Queen of Aether', model: 'WIZARD', tint: '#fff4e0', scale: 1.05, prop: 'staff', accent: '#fff3c4', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, robe: '#f4ecd8', cape: '#3a5fa8', hair: '#e8d29a', longHair: true, ordered: true, storyRange: ['queen', ''],
+    talk: [
+      ['You came. Good. I have had four hundred petitions this morning and three of them were about Hodge\'s poems.', 'Sit, if you like. The throne is very uncomfortable. My father always said so. Aldric never complained once.'],
+      ['Mortimer has been paid. In gold, not candles. Sister Elowen wept. I think from guilt.', 'The Quest Board still carries the people\'s requests. Mine are rarer, and they pay in gems.'],
+      ['The guardians sleep easier now. They never served the dark, you know. They were my father\'s protectors, holding a door shut that Aldric kept opening.', 'Some nights I still hear the Hollow under the well. Malakar is down there with it. Keeping it company. Keeping it hungry.'],
+      ['When the echoes rise in the Void, go and put them out. Every one of them wears his face, and none of them are him.', 'And come home after. That is the only order I will ever give you.'],
+    ],
+    bubbles: ['The realm endures.', 'Paperwork. So much paperwork.', 'Welcome, guardian.'],
+  },
+  {
+    name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, cape: '#a8141e', ordered: true, storyRange: ['', 'queen'],
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
       ['Malakar was my archmage, and my friend. He took a shard of the Font, and my daughter, and ran into the Void.', 'Bring them home, guardian. The Font will keep bringing you home until you do.'],
@@ -731,7 +744,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Captain Roan', role: 'Royal Guard', model: 'KNIGHT', tint: '#c9d6ff', scale: 1.05, prop: 'spear', accent: '#bcd0ff', home: [-4.6, -11.2], area: 'CASTLE',
-    talk: [
+    talk: [['Between us: the King doubled the night patrols. Not on the walls. Facing IN, at the town.', 'I do not ask questions. I have found that questions get you posted to the Ember Wastes.'], 
       ['Keep your voice down in the presence of His Majesty. And your hands off the carpet.', 'The King receives heroes who have proven themselves. You are welcome.'],
       ['Twenty years at this post. Not once has anyone sneaked past me. Not once. Do not ask about the kitchen.'],
     ],
@@ -739,33 +752,33 @@ export const NPCS: NpcDef[] = [
   },
   {
     name: 'Guard Tamsin', role: 'Royal Guard', model: 'KNIGHT', tint: '#c9d6ff', scale: 1.05, prop: 'spear', accent: '#bcd0ff', home: [4.6, -11.2], area: 'CASTLE',
-    talk: [
+    talk: [['The King talks in his sleep. "I asked nicely". Over and over. Then he laughs. I am requesting a transfer.'], 
       ['Standing still all day is harder than any monster. My feet are just two painful rumours.', 'The King is kind though. He asks after our families.'],
       ['If you are going out beyond the gate, bring back something shiny for the throne room. The steward keeps complaining it is drab.'],
     ],
-    bubbles: ['My feet...', 'Do not touch the throne.', 'Is it lunch yet?'],
+    bubbles: ['Quiet in the hall, please.', 'My feet...', 'Do not touch the throne.', 'Is it lunch yet?'],
   },
   {
     name: 'Steward Maren', role: 'Royal Steward', model: 'WIZARD', tint: '#e8d6ff', scale: 1, prop: 'none', accent: '#d9b0ff', home: [-4.6, 11], speed: 1.3, area: 'CASTLE',
     patrol: [[-4.6, 11], [-4.6, -8], [-4.6, 11], [-5, 2]],
-    talk: [
+    talk: [['His Majesty slept badly again. He woke shouting at the mirror. Said his shadow was "late". I did not ask late for what.', 'I have taken to leaving a candle by his door. He blows it out. He says the dark is "listening better" without it.'], 
       ['The King prefers royal bounties handled in person: an audience to start, then reports once the deed is done.', 'Find them on the Quest Board, hero. They pay in gems.'],
       ['I keep the household ledgers. Do you know how many candles a throne room eats in a week? Do not ask.'],
     ],
-    bubbles: ['So many candles...', 'The ledgers will not balance themselves.', 'Mind the carpet, please!'],
+    bubbles: ['The King did not sleep again.', 'Mind the mirrors in the east hall.', 'So many candles...', 'The ledgers will not balance themselves.', 'Mind the carpet, please!'],
   },
   {
     name: 'Lady Isolde', role: 'Noble of the Court', model: 'ROGUE', tint: '#ffd0e0', scale: 1, prop: 'none', accent: '#ff9ac0', home: [8.6, 10], area: 'CASTLE',
-    talk: [
+    talk: [['Have you seen the portraits in the long gallery? All of the old King. Edric. Every one of them turned to face the wall.', 'His Majesty says it is a "mourning custom". From the eastern march. Odd custom.'], 
       ['Oh, a real adventurer, here among the velvet and the dust! Tell me, are the monsters as ugly as they say?', 'Never mind, do not answer. I shall imagine.'],
       ['His Majesty is fond of heroes who bring him good news. Shall I tell you a secret? He is terrible at cards.'],
     ],
-    bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
+    bubbles: ['Such a lovely hall.', 'Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
   // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: a health potion)
   {
     name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#ffffff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH', noHat: true, robe: '#f6f4ee', mitre: '#fbfaf5',
-    talk: [
+    talk: [['The King came to pray last week, alone, at midnight. He did not pray to the Goddess. He knelt facing the floor, toward the well, and whispered "not yet".'], 
       ['Welcome to the chapel of the Undying Flame, child. Every hero who falls out there wakes again in this town. Some say the Flame remembers them.', 'Rest a moment. The road will still be there.'],
       ['The windows were made from the glass of the old Aether spires. On quiet nights they still hum.', 'If the Void Herald ever stirs again, we will ring the bell. Twice.'],
       ['I pray for the miners, the fishers and the fools who walk into portals. You are the third kind, I think.', 'Go gently, and come back.'],
@@ -779,13 +792,13 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Dig, dig, dig...', 'Nobody pays the gravekeeper.', 'Mind the fresh ones.', 'Who goes there? Oh. You again.'] },
   // ambient villagers (owner): plain folk in light / brown clothes, hero faces, varied hair, no hats or capes; they stroll the streets
   { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-30, 10], [-30, 12], [-6, 12]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
-    talk: [['Fine day for it.']], bubbles: ['Fine day for it.', 'Have you seen my goat?', 'Bread\'s fresh at the stall!'] },
+    talk: [['They took my brother into the royal guard. He came back from the well with a new smile and could not remember my name.'], ['Fine day for it.']], bubbles: ['Have you seen my goat?', 'Curfew soon. Best hurry.', 'Fine day for it.', 'Have you seen my goat?', 'Bread\'s fresh at the stall!'] },
   { name: 'Greta', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [6, 10], speed: 1.1, patrol: [[6, 10], [34, 10], [34, 12], [6, 12]], noHat: true, noCape: true, tunic: '#efe2c8', hair: '#b0582a', longHair: true,
-    talk: [['Morning, hero!']], bubbles: ['Morning, hero!', 'Mind the puddles.', 'The market\'s busy today.'] },
+    talk: [['My granny used to sing a song about Princess Aelia. Sing it in the square now and a guard writes your name down.', 'So I hum it. Very quietly.'], ['Morning, hero!']], bubbles: ['Mind the puddles.', 'Morning, hero!', 'Mind the puddles.', 'The market\'s busy today.'] },
   { name: 'Bram', role: 'Villager', model: 'KNIGHT', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-3, 16], speed: 1.1, patrol: [[-3, 16], [-3, 32], [-1, 32], [-1, 16]], noHat: true, noCape: true, tunic: '#c9a77a', hair: '#2a1c12', longHair: false,
     talk: [['Gate\'s that way.']], bubbles: ['Gate\'s that way.', 'Heard the King\'s hiring.', 'Watch your step.'] },
   { name: 'Lina', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-14, -6], speed: 1.1, patrol: [[-14, -6], [14, -6], [14, -4], [-14, -4]], noHat: true, noCape: true, tunic: '#e8d8b8', hair: '#e0c070', longHair: true,
-    talk: [['Lovely weather.']], bubbles: ['Lovely weather.', 'The chapel bells are pretty.', 'Off to the tavern later!'] },
+    talk: [['Do not walk the forest road at night. The trees lean in. My cousin swears one of them whispered "is she with you?"'], ['Lovely weather.']], bubbles: ['The chapel bells are pretty.', 'Do not go in the forest at night.', 'Lovely weather.', 'The chapel bells are pretty.', 'Off to the tavern later!'] },
   { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [12, 50], speed: 1.1, patrol: [[12, 50], [-12, 50], [-12, 50.4], [12, 50.4]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
     talk: [['Ahh, fresh air.']], bubbles: ['Ahh, fresh air.', 'The river\'s high this year.', 'Good fishing at the beach.'] },
   { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
@@ -794,9 +807,9 @@ export const NPCS: NpcDef[] = [
   { name: 'Tam', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.85, prop: 'none', accent: '#d9c9a8', home: [8, 110.6], speed: 1.4, patrol: [[8, 110.6], [28, 110.6]], noHat: true, noCape: true, tunic: '#e0cfa8', hair: '#c07a3a', longHair: false,
     talk: [['Are you a real hero? Can I hold your sword?']], bubbles: ['Race you to the coop!', 'I saw a fox!', 'Mum says no portals.'] },
   { name: 'Wenna', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#d9c9a8', home: [-8, 112], speed: 1.0, patrol: [[-8, 112], [-38, 112]], noHat: true, noCape: true, tunic: '#d8c7a6', hair: '#6a4024', longHair: true,
-    talk: [['The tower hums at night. I sleep with the window shut.']], bubbles: ['Lovely mushrooms in these woods.', 'Mind the tower, dear.', 'Fresh eggs for sale!'] },
+    talk: [['There is something in the forest past the tower. Black, like a hole in the air. The birds fly around it, never over.'], ['The tower hums at night. I sleep with the window shut.']], bubbles: ['Mind the tower, dear.', 'Something watches from the trees.', 'Lovely mushrooms in these woods.', 'Mind the tower, dear.', 'Fresh eggs for sale!'] },
   { name: 'Old Garth', role: 'Villager', model: 'KNIGHT', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-27, 57], speed: 0.8, patrol: [[-27, 57], [-13, 57.5]], noHat: true, noCape: true, tunic: '#a89070', hair: '#c8c8c8', longHair: false,
-    talk: [['I come out here to watch the river. It never does anything new, and that is the best part.']], bubbles: ['Ahh, my knees.', 'Good river, this.', 'Back in my day...'] },
+    talk: [['I remember King Edric. Big laugh. Used to carry the princess on his shoulders through the market. Then one night the laughing stopped, and Aldric came down the castle steps wearing his crown. Nobody remembers it that way but me.'], ['I come out here to watch the river. It never does anything new, and that is the best part.']], bubbles: ['Back in my day...', 'Ahh, my knees.', 'Good river, this.', 'Back in my day...'] },
   { name: 'Ned', role: 'Fisherman', model: 'BARBARIAN', tint: '#ffffff', scale: 1, prop: 'none', accent: '#d9c9a8', home: [-58, 18], speed: 0.9, patrol: [[-58, 18], [-58, 44]], noHat: true, noCape: true, tunic: '#9ab0b8', hair: '#3a2a1c', longHair: false,
     talk: [['The pier end is where the big ones bite. Patience, that is the whole trick.']], bubbles: ['Steady... steady...', 'Nice day for a cast.', 'The one that got away was THIS big.'] },
   // the Golden Tankard (enterable tavern east of the keep): the barkeep behind the bar and a regular at the hearth

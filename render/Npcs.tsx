@@ -10,7 +10,7 @@ import { useFrame } from '@react-three/fiber';
 import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, Object3D, MeshBasicMaterial, Sprite, Vector3 } from 'three';
 import { world } from '../engine/world';
 import { NPCS, ANIMALS } from '../engine/townData';
-import { npcs, animals, bubbles } from '../engine/systems/npcs';
+import { npcs, animals, bubbles, npcInStory } from '../engine/systems/npcs';
 import { STORY } from '../story';
 import { bagCount } from '../npcQuests';
 import { useGameStore } from '../store';
@@ -347,9 +347,10 @@ function BubbleProjector() {
 
 /** `area` picks which cast is mounted: the town's villagers (+ animals) or the castle court. */
 export function Npcs({ area = 'TOWN' }: { area?: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' }) {
+  useGameStore((s) => s.story.step);   // story-gated NPCs (the King / the Queen) swap when the chain moves on
   return (
     <>
-      {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area ? <NpcActor key={i} i={i} /> : null))}
+      {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area && npcInStory(i) ? <NpcActor key={i} i={i} /> : null))}
       {area === 'TOWN' && <Animals />}
       <BubbleProjector />
     </>

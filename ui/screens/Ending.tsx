@@ -8,16 +8,23 @@ import { finishRunVictory } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
 import { ASCENSION_MAX } from '../../ascension';
 import { GameStatus } from '../../types';
+import { storyIdx } from '../../story';
 
-const STORY = [
-  'Malakar, the Undying, falls at last.',
-  'The jar of light breaks, and a girl steps out of it, ten years late for supper.',
+const STORY_BASE = [
+  'Malakar, the Undying, falls.',
+  'The jar of light breaks, and a girl steps out of it, and speaks to you as if she has done this many times before.',
   'In the Meadow, the first flowers open. In the Old Grove, Elderroot stirs in his sleep; in the Halls, Gorath is only a hill again.',
-  'A king kneels in his own courtyard, and does not care who sees.',
   'The village bells ring through the night. Hodge finally asks Lysa. She says "buy something first".',
+  'DREAM',
   'You were only the guard who came out of the well.',
   'Now you are its legend.',
 ];
+/** The line after the bells: the Font takes the memory, unless this was the run you held on to it (story past 'remember'). */
+const storySlides = (): string[] => {
+  const kept = useGameStore.getState().story.step > storyIdx('remember');
+  return STORY_BASE.map((l) => (l !== 'DREAM' ? l : kept ? 'This time, when you wake beside the well, you still remember her voice.' : 'You wake beside the well with the taste of light in your mouth. Already the dream is fading. A song. A name. Gone.'));
+};
+let STORY = storySlides();
 const CREDITS: [string, string][] = [
   ['A game by', 'The Aether Survivor team'], ['3D characters', 'KayKit (CC0)'], ['Trees', 'Kenney (CC0)'], ['Built with', 'three.js · React · Zustand'],
 ];
@@ -30,7 +37,7 @@ export const EndingScreen: React.FC = () => {
   const [step, setStep] = useState(0);
   const [towerNote, setTowerNote] = useState(false);
   const inTown = useGameStore((s) => s.status === GameStatus.MENU);
-  useGameEvent('gameEnding', () => { setTimeout(() => { setStep(0); setOpen(true); }, 2600); });
+  useGameEvent('gameEnding', () => { setTimeout(() => { STORY = storySlides(); setStep(0); setOpen(true); }, 2600); });
   const total = STORY.length + 2;   // story slides, credits, final card
   useEffect(() => {
     if (!open || step >= total - 1) return;

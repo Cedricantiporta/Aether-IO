@@ -29,15 +29,15 @@ export const CHAPTERS: LoreChapter[] = [
   { id: 'malakar', title: 'II. The Archmage', unlock: { kind: 'start' }, text: [
     'Malakar was the finest mind the court ever had. He healed the first plague, taught the castle to light itself, and taught a small princess to read the stars from the tower roof.',
     'One winter night he went down into the Font with a crystal vial. He came back up carrying a shard of the light, and something in his eyes had gone out.',
-    'They call him the Undying now, and the Thief. They do not say his name in the market. The King says it least of all.',
+    'They call him the Undying now, and the Thief. They do not say his name in the market. The King says it often, and always a little too quickly.',
   ] },
   { id: 'elderroot', title: 'III. Elderroot', unlock: { kind: 'boss', boss: 'BOSS_TREANT', hint: 'Defeat the guardian of the Greenwood.' }, text: [
     'The oldest tree in the Grove once sheltered the first guardians while they dug the well.',
     'His roots drank the violet light that ran downhill from the Void, and with it a lullaby he did not know. You did not kill Elderroot. You let him sleep again.',
   ] },
   { id: 'gorath', title: 'IV. Gorath of the Halls', unlock: { kind: 'boss', boss: 'BOSS_GOLEM', hint: 'Defeat the guardian of the Marble Halls.' }, text: [
-    'Gorath was a hill the shepherds leaned on, a stone giant who kept the old kings\' gates and let a little princess climb him every summer.',
-    'The stolen light woke him wrong, but not entirely. He caged the living instead of crushing them, as if waiting for her to come home and tell him who to let in.',
+    'Gorath was a hill the shepherds leaned on, a stone giant who kept the old kings\' gates and let a little princess climb him every summer. So the songs say.',
+    'The songs are wrong. He caged the living instead of crushing them, and he wore no crown, but he stood every night at the door of the princess\'s empty room.',
   ] },
   { id: 'hydra', title: 'V. The Tide Hydra', unlock: { kind: 'boss', boss: 'BOSS_HYDRA', hint: 'Defeat the guardian of the Coral Isles.' }, text: [
     'The reef was a garden of coral and lilies, and the Hydra its shy keeper, with one head that slept and two that sang.',
@@ -48,8 +48,8 @@ export const CHAPTERS: LoreChapter[] = [
     'Malakar did not fight her. He told her what he carried, and asked her to keep everyone away. She agreed. When you broke the frost, the pass beyond lay open.',
   ] },
   { id: 'warlord', title: 'VII. The Ember Warlord', unlock: { kind: 'boss', boss: 'BOSS_WARLORD', hint: 'Defeat the guardian of the Ember Wastes.' }, text: [
-    'Ignar was a guardian once, like you; captain of the guard before Roan. He swore the oath at the same well.',
-    'He followed Malakar into the Wastes to bring the light back and was never pulled home. The Font does not reach that far. Remember that.',
+    'Ignar was captain of King Edric\'s guard before Roan, and swore the oath at the same well. On the night of the Dimming, the Hollow took him with his King.',
+    'The court says he followed Malakar into the Wastes and was never pulled home. The court says a great many things.',
     'At the end he kept his prisoners alive. Roan likes to think that was the captain, still in there, giving orders.',
   ] },
   { id: 'herald', title: 'VIII. The Void Herald', unlock: { kind: 'boss', boss: 'BOSS_VOID', hint: 'Defeat the guardian of the Void.' }, text: [
@@ -58,9 +58,8 @@ export const CHAPTERS: LoreChapter[] = [
   ] },
   { id: 'throne', title: 'IX. The Undying Throne', unlock: { kind: 'ending' }, text: [
     'Malakar fell, and the shard he held for ten years rolled across the throne room floor and broke open.',
-    'What came out of it was not light. It was a girl, blinking, asking why everyone had grown so old.',
-    'The Font is whole again. The King has his daughter, and the town has a story it will tell wrong for a hundred years.',
-    'But the Void remembers the Undying. In its deepest places, echoes of him still gather. The Ascension is the long walk down to put each one out.',
+    'What came out of it was a girl, who spoke to you as if she had done this many times before. Then the Font pulled you home, and by morning she was a dream.',
+    'Malakar is never quite gone. Neither is she. Something beneath the Font makes sure of both.',
   ] },
   { id: 'tower', title: 'X. The Endless Tower', unlock: { kind: 'ending' }, text: [
     'The first guardians built a tower outside the gate to train in. It had nine floors when they finished it.',
@@ -68,7 +67,7 @@ export const CHAPTERS: LoreChapter[] = [
   ] },
   { id: 'echoes', title: 'XI. Echoes', unlock: { kind: 'ascension' }, text: [
     'Every echo of Malakar you put out is a little quieter than the last, and a little sadder.',
-    'Aelia asks you, every time, whether he said anything. King Aldric has stopped asking when it will end. He only asks that you come home.',
+    'They are not him. They are the Hollow beneath the Font wearing his face, and he sits down there in the dark beside it, so it gnaws on him instead of on Aether.',
   ] },
 ];
 

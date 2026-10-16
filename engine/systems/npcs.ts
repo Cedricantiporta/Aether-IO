@@ -8,7 +8,7 @@ import { NPCS, ANIMALS, GENERIC_BUBBLES } from '../townData';
 import { useDialogue } from './dialogue';
 import { queryColliders, type Collider } from '../mapgen';
 import { useGameStore } from '../../store';
-import { STORY } from '../../story';
+import { STORY, storyIdx } from '../../story';
 import { npcMarkers } from './npcQuestLogic';
 import { progressBubble, callBubble } from '../npcLines';
 
@@ -65,7 +65,13 @@ function inVisible(x: number, z: number, m: number): boolean {
 
 /** Town NPCs live in the town, castle NPCs in the throne hall, the miner on cave Floor 1: only the current area simulates. */
 export const npcInArea = (i: number): boolean => inArea(i);
-const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === 1);   // (cave NPCs live on Floor 1)
+/** Story-gated NPCs (townData `storyRange`): only there while the main quest is inside their range. */
+export function npcInStory(i: number): boolean {
+  const r = NPCS[i].storyRange; if (!r) return true;
+  const step = useGameStore.getState().story.step;
+  return (!r[0] || step >= storyIdx(r[0])) && (!r[1] || step < storyIdx(r[1]));
+}
+const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === 1) && npcInStory(i);   // (cave NPCs live on Floor 1)
 
 export function updateNpcs(dt: number): void {
   const p = world.player;
