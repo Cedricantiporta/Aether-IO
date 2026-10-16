@@ -532,6 +532,13 @@ function Stations() {
   const fount = useRef<Group>(null!), stall = useRef<Group>(null!), chest = useRef<Group>(null!), altar = useRef<Group>(null!);
   const lid = useRef<Group>(null!), water = useRef<Mesh>(null!), chestGlow = useRef<Mesh>(null!), altarGlow = useRef<Mesh>(null!);
   const lidT = useRef(0);
+  // (owner) a pillar of golden light over the treasure once the room is cleared, until it is opened
+  const beam = useRef<Mesh>(null!);
+  const beamRes = useMemo(() => ({
+    geo: new CylinderGeometry(0.75, 1.25, 26, 18, 1, true).translate(0, 13, 0),
+    mat: new MeshBasicMaterial({ color: new Color(1.6, 1.25, 0.55), transparent: true, opacity: 0.32, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+  }), []);
+  useEffect(() => () => { beamRes.geo.dispose(); beamRes.mat.dispose(); }, [beamRes]);
   useFrame(({ clock }, dt) => {
     const s = world.room.station, t = clock.elapsedTime;
     const on = world.room.active;
@@ -549,6 +556,8 @@ function Stations() {
       lidT.current += ((s.used ? 1 : 0) - lidT.current) * Math.min(1, dt * 6);
       lid.current.rotation.x = -lidT.current * 1.25;
       chestGlow.current.visible = s.ready && !s.used;
+      beam.current.visible = s.ready && !s.used;
+      if (beam.current.visible) { beamRes.mat.opacity = 0.26 + Math.sin(t * 2.6) * 0.07; beam.current.rotation.y = t * 0.4; }
       chestGlow.current.scale.setScalar(1 + Math.sin(t * 4) * 0.08);
     } else if (altar.current.visible) {
       altarGlow.current.position.y = Math.sin(t * 1.7) * 0.15;
@@ -571,6 +580,7 @@ function Stations() {
         <mesh geometry={geos.chest} material={mats.lit} castShadow receiveShadow />
         <group ref={lid} position={[0, 0.9, -0.65]}><mesh geometry={geos.chestLid} material={mats.lit} position={[0, 0, 0.65]} castShadow /></group>
         <mesh ref={chestGlow} geometry={geos.chestGlow} material={mats.glow} />
+        <mesh ref={beam} geometry={beamRes.geo} material={beamRes.mat} visible={false} renderOrder={3} />
       </group>
       <group ref={altar} scale={1.7}>   {/* a big shrine */}
         <mesh geometry={geos.altar} material={mats.lit} castShadow receiveShadow />

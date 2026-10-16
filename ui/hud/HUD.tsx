@@ -33,12 +33,11 @@ export const HUD: React.FC = () => {
     {/* top-centre */}
     <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
       <div className="pe hud-cur"><Currency /></div>
-      <div className="pe"><RoomPlaque /></div>
+      {/* (owner: the room plaque is gone; this spot shows the targeted monster's HP) */}
+      <TargetFrame docked />
       <DailyBadge />
       <ComboMeter touch={device.touch} />
     </div>
-    {/* the target plate floats over the targeted enemy (screen anchor from CameraRig) */}
-    <div className="absolute left-0 top-0 pointer-events-none" style={{ zIndex: 4 }}><TargetFrame /></div>
 
     {/* top-right */}
     <div className="absolute flex flex-col items-end gap-3 hud-tr" style={{ right: '1.2rem', top: '1rem' }}>

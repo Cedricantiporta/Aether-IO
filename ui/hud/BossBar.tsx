@@ -77,7 +77,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   });
 
   return (
-    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: 'min(34rem, 62vw)', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar">
+    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: '10.5rem', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar" className="bb-slim">
       <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
       <div className="bb-name text-center leading-none">
         <span ref={name} className="bb-n" /><span ref={title} className="bb-t" />
@@ -92,7 +92,8 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
           <div ref={hp} className="bb-fill" style={{ width: '100%' }} />
           <div className="bb-val rpg-num"><span ref={val} /></div>
         </div>
-        <i className="bb-cap l" /><i className="bb-cap r" />
+        {/* (owner: a slim bar, a bit bigger than a monster's, with a solid monster icon on the left) */}
+        <svg className="bb-ic" viewBox="0 0 24 24" aria-hidden><path fill="currentColor" d="M12 2C6.9 2 3 5.7 3 10.4c0 2.7 1.3 5 3.4 6.5V20c0 1.1.9 2 2 2h1.1v-2.4h1.4V22h2.2v-2.4h1.4V22h1.1c1.1 0 2-.9 2-2v-3.1c2.1-1.5 3.4-3.8 3.4-6.5C21 5.7 17.1 2 12 2zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2z" /></svg>
       </div>
       <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.5rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
         <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#fff27a,#e0a810)' }} />

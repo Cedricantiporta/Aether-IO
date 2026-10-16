@@ -2549,3 +2549,21 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .bk-sum { padding: .6rem .7rem; font-size: .84rem; color: #e8dcc0; background: rgba(6, 6, 8, .45); }
 .bk-sum b { font-weight: 400; color: #fff; } .bk-sum b.g { color: #ffd76a; }
 .bk-sum em { display: block; font-style: normal; font-size: .68rem; color: #8f8670; margin-top: .2rem; }
+
+/* top-centre target panel (owner: replaces the room plaque) */
+.target-frame.docked { position: relative; width: min(24rem, 60vw); padding: .45rem .8rem .5rem; border-radius: 3px; gap: .25rem;
+  background: linear-gradient(180deg, rgba(14, 14, 18, .72), rgba(6, 6, 8, .6)) !important; border: 0 !important; box-shadow: 0 0 0 1px rgba(214, 186, 122, .22) !important; }
+.target-frame.docked .tf-bar { height: .7rem; border-radius: 1px; border-width: 1px; box-shadow: none; }
+.target-frame.docked .tf-name { font-size: 14px; }
+
+/* boss floating bar, slim (owner: just a bit bigger than a monster bar + a solid monster icon) */
+.bb-slim .bb-t, .bb-slim [title='Stagger'], .bb-slim [data-testid='stagger-bar'], .bb-slim .boss-pip { display: none !important; }
+.bb-slim .flex.justify-center.gap-2 { display: none; }
+.bb-slim .bb-name { margin-bottom: .12rem; }
+.bb-slim .bb-n { font-size: .8rem; color: #ffb3aa; }
+.bb-slim .bb-bar { padding: 0 0 0 1.25rem; }
+.bb-slim .bb-track { height: .62rem; border-radius: 1px; border: 1px solid #0a0709; box-shadow: none; }
+.bb-slim .bb-val { font-size: .58rem; }
+.bb-slim .bb-shield { height: .22rem; }
+.bb-slim .bb-ic { position: absolute; left: 0; top: 50%; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); color: #e8473a; filter: drop-shadow(0 1px 1px #000) drop-shadow(0 0 3px rgba(0, 0, 0, .8)); }
+.bb-slim .rpg-label { display: none; }

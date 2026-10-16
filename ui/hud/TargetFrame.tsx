@@ -21,7 +21,7 @@ const STATUSES: { id: string; icon: React.ReactNode; color: string; label: strin
 
 /** Glass card for the click-locked enemy: name, hp bar + numbers, status icons. Bosses use the boss bar instead.
  *  Per-frame values go through refs (useRaf), React never re-renders. */
-export const TargetFrame: React.FC = () => {
+export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
   const root = useRef<HTMLDivElement>(null);
   const name = useRef<HTMLSpanElement>(null);
   const qic = useRef<HTMLSpanElement>(null);
@@ -35,8 +35,8 @@ export const TargetFrame: React.FC = () => {
 
   useRaf(() => {
     const e = currentTarget(), s = st.current;
-    const show = !!e && !e.boss && !world.boss.active && world.targetAnchor.on;
-    if (show && root.current) root.current.style.transform = `translate(${Math.round(world.targetAnchor.sx)}px, ${Math.round(world.targetAnchor.sy)}px) translate(-50%, -100%)`;
+    const show = !!e && !e.boss && (docked ? true : !world.boss.active && world.targetAnchor.on);
+    if (show && !docked && root.current) root.current.style.transform = `translate(${Math.round(world.targetAnchor.sx)}px, ${Math.round(world.targetAnchor.sy)}px) translate(-50%, -100%)`;
     if (show !== s.shown) { s.shown = show; if (root.current) root.current.style.display = show ? 'flex' : 'none'; }
     if (!show || !e) { s.id = -1; return; }
     if (++qT.current % 15 === 0 || s.id !== e.id) { if (qic.current) qic.current.style.display = questKill(e.kind, e.mini) ? 'inline-flex' : 'none'; }
@@ -66,7 +66,7 @@ export const TargetFrame: React.FC = () => {
   });
 
   return (
-    <div ref={root} className="pe target-frame bare" data-testid="target-frame" style={{ display: 'none' }}>
+    <div ref={root} className={`pe target-frame ${docked ? 'docked' : 'bare'}`} data-testid="target-frame" style={{ display: 'none' }}>
       <div className="tf-top">
         <span ref={qic} className="tf-quest" style={{ display: 'none' }} title="Quest target"><ScrollText size={12} /></span>
         <span ref={name} className="tf-name" />
