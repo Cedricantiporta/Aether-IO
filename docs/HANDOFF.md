@@ -1021,3 +1021,32 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   every 19/16/13 s (was 12/10/8.5), 9 + 3*phase impacts with >= 8.5 m between centres; Ignar Pillars of Cinder 4 + phase
   (>= 7 m apart), Elderroot Seed Barrage 4 + phase, Hydra Acid Barrage, War Machine Artillery 5 + phase — all placed with
   bosses2 `spreadSpots` (min gap 6.5-7 m).
+
+### Session batch 4 (Oct 2026, owner feedback rounds)
+- **Items / crafting:** upgrade cores are 2 tiers by item rarity (`crafting.upgradeCoreTierFor`: Common/Rare -> Upgrade Core,
+  Epic+ -> Refined Core). Bonus-stat slots per rarity (`affixes.AFFIX_COUNT`), empty slots show as grey strips; Augment Rune
+  (`reforge.ts` mode ADD) fills one. Blacksmith: square shard tiles + fuse cinematic, no success bar, calmer colours.
+- **Shops:** every shop grid is `ui/components/ShopGrid` (bag look, 6 cols, "+" fillers); no gold pill in shop headers; Armory
+  has category tabs; footer **Bulk sell** popup (`ui/panels/shop/BulkSell.tsx`, store `bulkSell` / `bulkSellPick`: gear
+  tiers, loot, optional craft materials = `crafting.CRAFT_MAT_NAMES`). Buy dialog always closes after Buy.
+- **Character:** attribute window = info + tree (left) and an Allocate window that opens to its left from "Points +"
+  (hold-to-repeat steppers, stat preview via `attributes.attrPreview`). New stat `attackRange` (archer base range 16.5;
+  DEX +0.04/pt, archer talents Long Shot / Eagle Eye, bows by rarity in constants, affix `range`).
+- **Talents:** radial tree (`talents.ts` LAYOUT: rings 0..4, nodes unlock when their parents are MAXED, ring level gates
+  `RING_LEVEL`, costs `RING_COST`), ids `x3_*` (older ranks refunded). Full-screen window with pan/zoom + detail pane.
+- **HUD:** quest tracker left, minimap right (no border, grey, faded edges, square N inside), gold + gems top centre, menu
+  icons without containers, compact player plate (no Lv/CP row, buffs only while active). In runs the room plaque is
+  replaced by a top-centre target HP panel (`TargetFrame docked`); boss floating bar is slim with a skull icon; a light
+  beam marks the room treasure until opened. Tooltips are near-opaque.
+- **Skill Trainer:** compact Active / Passive list; long text only in hover tooltips.
+- **Town:** river benches + small park, aligned gate flower beds, fences on the tower path (stop short of the clearing), no
+  fences on the portal road, forest round the Endless Tower, windmill faces like the barn, 4 more villagers outside the
+  walls, villagers steer round / skip blocked waypoints (`npcs.ts` stuck logic). Beach: wavy shoreline (`beachWobble`), no
+  foam strips, no boardwalk (pier only), rounded mainland beach strip, bigger pier head + the **Gull Queen** ship;
+  Captain Rhea sells a 60-gem ticket (`store.sailToIsles`, `runInfo.startBiome = 3`, opens at the Isles camp).
+- **Cave:** Bigger Lantern only in the Tech House (100 gems a tier, `tech.ts` id `lantern`, mirrored into
+  `progress.caveLantern`); Grit's bench only refills.
+- **Balance:** lurking hydras only in the Coral Isles (clear firing lane kept round them), fewer / smaller blocking bushes,
+  fewer interior obstacles, dark hero duels 6% / 15% in the first two realms (`roomDefs.duelChance`), heal / regen / Aegis
+  cards weighted rarer (`store.cardWeight`). Totem HP bar fill anchored in screen space.
+- Still open: more decor on the green in front of the gate (#167); "max levels 50?" question to the owner.
