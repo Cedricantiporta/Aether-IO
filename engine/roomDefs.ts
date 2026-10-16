@@ -286,8 +286,11 @@ export const DUEL_CHANCE = 0.35;
 /** Set by the main story (storyLogic) while its current step wants captives freed / champions slain: rescue
  *  objectives and champion doors then show up more often, so the errand does not depend on luck. */
 export const storyBias = { rescue: false, champion: false };
+/** (owner) dark hero duels are rare in the first realms: 6% / 15% of champion doors, then DUEL_CHANCE. */
+export const duelChance = (biome: number): number => (biome <= 0 ? 0.06 : biome === 1 ? 0.15 : DUEL_CHANCE);
+let planBiome = 0;
 const plan = (type: RoomType, next = 0): RoomPlan => {
-  if (type === 'MINIBOSS' && Math.random() < DUEL_CHANCE) type = 'DUEL';
+  if (type === 'MINIBOSS' && Math.random() < duelChance(planBiome)) type = 'DUEL';
   const p: RoomPlan = { type, reward: rollReward(type) };
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {
@@ -308,6 +311,7 @@ export const TWIST_DESC: Record<RoomTwist, string> = {
  * the room before the boss is a fountain and/or merchant, and the last normal room leads to the boss.
  */
 export function nextChoices(biome: number, index: number, out: RoomPlan[], merchantOk = true, fountainOk = true, shrineOk = true, crystal = false, bossKey = false): number {
+  planBiome = biome;
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }

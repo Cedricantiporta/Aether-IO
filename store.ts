@@ -347,6 +347,7 @@ let shadowStepTaken = false;
 let aegisOffered = '';
 events.on('runStart', () => { shadowStepTaken = false; aegisOffered = ''; });
 const aegisKey = (): string => String(world.room.biome);   // (reset each run on runStart)
+const cardWeight = (u: Upgrade): number => (u.type === 'RESTORE' ? 0.3 : u.type === 'AEGIS' ? 0.5 : /REGEN/.test(u.type) ? 0.45 : 1);
 const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 3): Upgrade[] => {
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
@@ -359,7 +360,10 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
   });
   const options: Upgrade[] = [];
   for (let i = 0; i < count && pool.length > 0; i++) {
-    const idx = Math.floor(Math.random() * pool.length);
+    // weighted pick (owner: heal cards rarer): Second Breath / regen / Aegis come up far less often than the rest
+    let tot = 0; for (const u of pool) tot += cardWeight(u);
+    let r = Math.random() * tot, idx = 0;
+    for (; idx < pool.length - 1; idx++) { r -= cardWeight(pool[idx]); if (r <= 0) break; }
     const base = pool.splice(idx, 1)[0];
     const opt: Upgrade = { ...base, id: uid('card') };
     if (base.type === 'AEGIS') aegisOffered = aegisKey();

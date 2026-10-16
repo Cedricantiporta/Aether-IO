@@ -18,7 +18,7 @@ export function RoomEvents() {
     const frame = new Sprite(new SpriteMaterial({ color: '#c8962e', depthTest: false, transparent: true, opacity: 0.95, toneMapped: false }));
     const bg = new Sprite(new SpriteMaterial({ color: '#0d0a08', depthTest: false, transparent: true, opacity: 0.95, toneMapped: false }));
     const fill = new Sprite(new SpriteMaterial({ color: '#4ade80', depthTest: false, toneMapped: false }));
-    frame.scale.set(3.5, 0.48, 1); bg.scale.set(3.36, 0.36, 1); fill.center.set(0, 0.5); fill.position.x = -1.6; fill.scale.set(3.2, 0.26, 1);
+    frame.scale.set(3.5, 0.48, 1); bg.scale.set(3.36, 0.36, 1); fill.center.set(0.5, 0.5); fill.scale.set(3.2, 0.26, 1);   // (left edge kept in SCREEN space via center.x each frame)
     frame.renderOrder = 20; bg.renderOrder = 21; fill.renderOrder = 22;
     return { frame, bg, fill };
   }, []);
@@ -64,7 +64,8 @@ export function RoomEvents() {
         pushHalo(e.x, 0.15, e.z, 7, 0.4, 1.4, 1.8, e.state === 3 ? 0 : 0.25, CELL.GLOW);
         const alive = e.state !== 3;
         if (barG.current) { barG.current.visible = alive; barG.current.position.set(e.x, 8.4, e.z); }   // (bar above the crystal and its bloom)
-        bar.fill.scale.x = 3.2 * Math.max(0, k);
+        bar.fill.scale.x = Math.max(0.001, 3.2 * Math.max(0, k));
+        bar.fill.center.x = 1.6 / bar.fill.scale.x;   // anchor the fill's left edge to the track's left edge (billboards: a world-x offset drifts with the camera)
         bar.fill.material.color.set(k > 0.5 ? '#4ade80' : k > 0.25 ? '#facc15' : '#ef4444');
       }
     }
