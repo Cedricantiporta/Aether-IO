@@ -2716,3 +2716,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 /* quest EXP reward square */
 .qw-xp { font-family: var(--font-title); font-weight: 800; font-size: 1.05rem; letter-spacing: .04em; color: #b6f27a; text-shadow: 0 0 8px rgba(155, 232, 106, .6), 0 1px 2px #000; transform: translateY(-.35rem); }
 .hud-slot.is-blocked .slot-icon { filter: grayscale(1) brightness(.55); }
+/* quest tracker: the count rides on the title line (no progress bars) */
+.qt-title { display: flex; align-items: baseline; gap: .5rem; }
+.qt-n { margin-left: auto; flex-shrink: 0; font-family: var(--font-body, inherit); font-size: .72rem; font-weight: 700; color: #f1e6cf; letter-spacing: 0; }
+.qt-row.done .qt-n { color: #9be86a; }

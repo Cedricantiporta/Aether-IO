@@ -30,6 +30,8 @@ function mainInTown(step: StoryStep, have: number): boolean {
   if (step.deliver) return have >= step.deliver.count;
   return !!(step.npc || step.at);
 }
+/** Rows the tracker shows at once (owner: 3, the main quest included). */
+const TRACK_MAX = 3;
 const fieldNote = (): void => useGameStore.getState().addNotification('This objective is out in the wilds: keep exploring this run.', '#f1e2b8', 'SYSTEM');
 
 /** Distance readout of one tracker row ("42 m", "castle", "here"), written by the shared rAF loop (no React renders). */
@@ -64,25 +66,21 @@ const MainRow: React.FC<{ main: StoryStep }> = ({ main }) => {
   return (
     <div className="qt-row main" data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={click}>
       <div className="qt-head"><Crown size={13} /><span>Main Quest</span><span className="qt-dist" ref={dist} /></div>
-      <div className="qt-title">{main.title}</div>
-      {c > 1 || main.deliver
-        ? <div className="qt-line"><span className="qt-bar"><i style={{ width: `${Math.min(1, have / Math.max(1, c)) * 100}%` }} /></span><b>{have} / {c}{goods ? ` ${goods}` : ''}</b></div>
-        : null}
+      {/* (owner: no progress bars - the count sits on the title line, the list stays short) */}
+      <div className="qt-title">{main.title}{c > 1 || main.deliver ? <b className="qt-n">{have} / {c}{goods ? ` ${goods}` : ''}</b> : null}</div>
       <div className="qt-line"><b style={{ fontWeight: 500, opacity: 0.85 }}>{main.deliver && have >= c ? `Bring them to ${main.npc}` : main.line}</b></div>
     </div>
   );
 };
 
 const BoardRow: React.FC<{ q: Quest }> = ({ q }) => {
-  const done = questDone(q), king = questNeedsKing(q), f = Math.min(1, q.progress / Math.max(1, q.target));
+  const done = questDone(q), king = questNeedsKing(q);
   const dist = useDistance(() => boardQuestNav(q));
   return (
     <div className={`qt-row board ${done ? 'done' : ''} ${king ? 'king' : ''}`} role="button" title="Click: auto-path" onClick={() => { if (!((done || king) && offerTeleport(() => walkToQuest(q)))) walkToQuest(q); }}>
       <div className="qt-head"><ScrollText size={13} /><span>{done ? 'Ready to claim' : king ? (q.type === 'AUDIENCE' ? 'Talk to the King' : 'Report to the King') : 'Quest'}</span><span className="qt-dist" ref={dist} /></div>
-      <div className="qt-title">{questTitle(q)}</div>
-      {q.type === 'AUDIENCE'
-        ? <div className="qt-line"><b>{done ? 'Done' : 'Castle keep, north of the plaza'}</b></div>
-        : <div className="qt-line"><span className="qt-bar"><i style={{ width: `${(done ? 1 : f) * 100}%` }} /></span><b>{Math.min(q.progress, q.target)} / {q.target}</b></div>}
+      <div className="qt-title">{questTitle(q)}{q.type !== 'AUDIENCE' && <b className="qt-n">{Math.min(q.progress, q.target)} / {q.target}</b>}</div>
+      {q.type === 'AUDIENCE' && <div className="qt-line"><b>{done ? 'Done' : 'Castle keep, north of the plaza'}</b></div>}
     </div>
   );
 };
@@ -100,13 +98,10 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
         go();
       }}>
       <div className="qt-head"><BookOpen size={13} /><span>{ready ? `Return to ${npcQuestTurnIn(d)}` : d.giver}</span><span className="qt-dist" ref={dist} /></div>
-      <div className="qt-title">{d.title}</div>
+      <div className="qt-title">{d.title}{o.type !== 'TALK' && o.type !== 'LISTEN' && <b className="qt-n">{n} / {c}</b>}</div>
       {o.type === 'TALK' || o.type === 'LISTEN'
         ? <div className="qt-line"><b>{ready ? 'Done' : d.summary}</b></div>
-        : <>
-          <div className="qt-line"><span className="qt-bar"><i style={{ width: `${(ready ? 1 : n / Math.max(1, c)) * 100}%` }} /></span><b>{n} / {c}</b></div>
-          {!ready && <div className="qt-line"><b style={{ fontWeight: 500, opacity: 0.75 }}>{d.summary}</b></div>}
-        </>}
+        : !ready && <div className="qt-line"><b style={{ fontWeight: 500, opacity: 0.75 }}>{d.summary}</b></div>}
     </div>
   );
 };
@@ -119,12 +114,19 @@ export const QuestTracker: React.FC = () => {
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const main = useGameStore((s) => STORY[s.story.step]);
   if (act.length === 0 && story.length === 0 && !main) return null;
+  const inv = useGameStore.getState().inventory;
+  const rest = [
+    ...act.filter(questDone).map((q) => ({ q, d: null as NpcQuestDef | null })),
+    ...story.filter((d) => npcQuestReady(d, nq, inv)).map((d) => ({ q: null as Quest | null, d })),
+    ...act.filter((q) => !questDone(q)).map((q) => ({ q, d: null as NpcQuestDef | null })),
+    ...story.filter((d) => !npcQuestReady(d, nq, inv)).map((d) => ({ q: null as Quest | null, d })),
+  ].slice(0, TRACK_MAX - (main ? 1 : 0));
   return (
     <div className="qt pe" data-testid="quest-tracker">
       {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
+      {/* (owner) at most 3 quests on screen: the main quest, then the ones ready to hand in, then the rest */}
       {main && <MainRow main={main} />}
-      {act.map((q) => <BoardRow key={q.id} q={q} />)}
-      {story.map((d) => <SideRow key={d.id} d={d} />)}
+      {rest.map((r) => r.q ? <BoardRow key={r.q.id} q={r.q} /> : <SideRow key={r.d!.id} d={r.d!} />)}
     </div>
   );
 };

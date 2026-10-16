@@ -11,6 +11,7 @@ import { Sky, Lighting, FOG_COLOR } from './Sky';
 import { LookDriver, setLook } from './biomeLook';
 import { Room } from './Room';
 import { GuideArrow } from './GuideArrow';
+import { StationaryArrow } from './StationaryArrow';
 import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
@@ -95,6 +96,7 @@ export function Scene() {
       <Suspense fallback={null}><Hero q={q} /></Suspense>
       <FacingArrow />
       {!gameplay && <GuideArrow />}
+      {gameplay && <StationaryArrow />}
       {(gameplay || (status === GameStatus.MENU && world.village.area !== 'CASTLE' && world.village.area !== 'CHURCH' && world.village.area !== 'TAVERN')) && (
         <>
           <Crates />
