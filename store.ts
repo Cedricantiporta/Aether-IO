@@ -438,6 +438,8 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 
 /** One-time welcome gift for a brand new profile. */
 const WELCOME_GIFT = { gold: 10000, gems: 1000 };
+/** Saved pets take their template's current tier (owner: pets spread over the six tiers). */
+const petRetier = (i: Item): Item => { if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t && t.rarity !== i.rarity ? { ...i, rarity: t.rarity } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
 const baseGameStats = (): GameStatistics => ({
@@ -500,9 +502,9 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             profile: {
               v: PROFILE_VERSION,
               gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems), crystals: num(p.crystals, 20),
-              inventory: Array.isArray(p.inventory) ? p.inventory.map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
-              equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
-              materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
+              inventory: Array.isArray(p.inventory) ? p.inventory.map(petRetier).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
+              equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
+              materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)),
               npcQuests: sanitizeNpcQuests(p.npcQuests),

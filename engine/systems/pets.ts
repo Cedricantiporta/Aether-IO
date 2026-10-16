@@ -63,7 +63,7 @@ const fxPoison = { type: 'POISON' as const, duration: 2.5, value: 2 };
 const NO_ATK = { attacks: false, attackMode: 'melee', dmgFactor: 0, atkCd: 1 } as const;
 const NO_FETCH = { fetches: false, fetchSpeed: 0, fetchRange: 0 } as const;
 export const PET_PROFILES: Record<string, PetProfile> = {
-  'Green Blob':      { moveSpeed: 0.5, fetches: true, fetchSpeed: 5, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.3, atkCd: 1.4, heals: true, size: 0.85 },
+  'Green Blob':      { moveSpeed: 0.5, fetches: true, fetchSpeed: 5, fetchRange: 14, ...NO_ATK, heals: true, size: 0.85 },   // (owner: a pure healer, no melee)
   'Vampire Bat':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 30, fetchRange: 24, attacks: true, attackMode: 'melee', dmgFactor: 0.5, atkCd: 0.8, heals: false, size: 0.85 },
   'Light Fairy':     { moveSpeed: 1.0, fetches: true, fetchSpeed: 14, fetchRange: 14, ...NO_ATK, heals: true, size: 0.5 },
   'Spirit Wolf':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 8, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 1, atkCd: 0.45, heals: false, size: 1.1 },
@@ -315,7 +315,7 @@ export function updatePets(dt: number): void {
   wp.skillT += dt;
   const cd = pet.petCooldown || 10;
   if (wp.skillT >= cd) {
-    if (pl.hp < st.stats.maxHealth) { wp.skillT = 0; healPlayer((pet.petValue || 10) * grow); wp.attackT = 1; }
+    if (pl.hp < st.stats.maxHealth) { wp.skillT = 0; healPlayer(((pet.petValue || 10) + (pet.name.includes('Green Blob') ? st.stats.maxHealth * 0.03 : 0)) * grow); wp.attackT = 1; }
     else wp.skillT = cd;
   }
 }

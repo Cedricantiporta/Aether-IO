@@ -4,7 +4,7 @@ import { PETS_POOL } from './constants';
 import type { Item, Rarity } from './types';
 
 export const FUSE_COUNT = 5;
-const ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+const ORDER: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];   // (pets use all six tiers too)
 /** Success chance by the tier being fused (Mythic pets cannot be fused further). */
 export const FUSE_CHANCE: Partial<Record<Rarity, number>> = { COMMON: 0.6, UNCOMMON: 0.5, RARE: 0.4, EPIC: 0.2, LEGENDARY: 0.08 };   // (hidden from the player - owner)
 

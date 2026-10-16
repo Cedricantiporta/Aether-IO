@@ -217,10 +217,10 @@ export const PETS_POOL: Item[] = [
     { 
         id: 'pet_blob', name: 'Green Blob', type: 'PET', rarity: 'COMMON', price: 500, level: 1, 
         stats: { maxHealth: 20 }, // 1 Stat
-        description: 'Heals 10 HP every 5s.', petSkill: 'HEAL', petValue: 10, petCooldown: 5 
+        description: 'A healer: does not fight, heals you for 10 HP + 3% max HP every 5s.', petSkill: 'HEAL', petValue: 10, petCooldown: 5 
     },
     { 
-        id: 'pet_bat', name: 'Vampire Bat', type: 'PET', rarity: 'COMMON', price: 500, level: 1, 
+        id: 'pet_bat', name: 'Vampire Bat', type: 'PET', rarity: 'UNCOMMON', price: 1000, level: 1, 
         stats: { damage: 5 }, // 1 Stat
         description: 'Collects distant items.', petSkill: 'COLLECT' 
     },
@@ -250,7 +250,7 @@ export const PETS_POOL: Item[] = [
         description: 'Attacks enemies slowly.', petSkill: 'ATTACK_MELEE', petValue: 50 
     },
     { 
-        id: 'pet_phoenix', name: 'Phoenix', type: 'PET', rarity: 'LEGENDARY', summonOnly: true, price: 12000, level: 1, 
+        id: 'pet_phoenix', name: 'Phoenix', type: 'PET', rarity: 'MYTHIC', summonOnly: true, price: 12000, level: 1, 
         stats: { regen: 2.5, maxHealth: 100, fireRate: 0.1, damage: 20 }, // 4 Stats
         description: 'Revives you on death (300s CD).', petSkill: 'REVIVE', petCooldown: 300 
     },

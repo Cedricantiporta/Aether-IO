@@ -1084,3 +1084,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   soon as it is accepted (accept on the last of a 12-18 line intro), then talk to the giver again for the pay-off lines +
   reward. Six so far: Old Garth's goose "dragon" (Lv 2), Fenn's 99-verse ballad (Lv 5), Steward Maren's hero contract
   (Lv 8), Rodric's Ogre King tale (Lv 12), Maeve's gossip round (Lv 15), Wren's "brief" slime lecture (Lv 20).
+- **Pets on six tiers** (same level gates as gear, `equipItem` RANK_REQ): Common Green Blob / Pet Rock; Uncommon Vampire
+  Bat / Ember Fox / Frost Owl; Rare Light Fairy / Storm Sprite / Shield Turtle; Epic Spirit Wolf / Iron Golem / Mimic
+  Chest; Legendary Gold Dragon / Shadow Cat / Crystal Golemling; Mythic Phoenix / Celestial Wisp / Aether Leviathan.
+  Saved pets re-take their template tier on load (`store.petRetier`). The Pet Stable shop lists Common..Epic only.
+  Pet fusion climbs all six tiers. Green Blob is a pure healer (no melee): 10 HP + 3% max HP every 5 s.

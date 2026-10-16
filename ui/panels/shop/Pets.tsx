@@ -35,14 +35,16 @@ const PetBadges: React.FC<{ name: string }> = ({ name }) => {
 
 
 /** Pet House: Shop (bag-style grid; click a pet for details + Buy) and Care (feed / evolve the equipped pet) tabs. */
+/** (owner) the stable sells Common..Epic pets only; Legendary (gold) and Mythic (red) come from summons / fusion. */
+const SHOP_PETS = PETS_POOL.filter((q) => !q.summonOnly && q.rarity !== 'LEGENDARY' && q.rarity !== 'MYTHIC');
 export const PetsTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const sales = useGameStore((s) => s.shopSales);
   const setBuy = useUiStore((s) => s.setBuyItem);
   const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
   const [tab, setTab] = useState<'SHOP' | 'CARE' | 'FUSE'>('SHOP');
-  const [selId, setSel] = useState(PETS_POOL[0]?.id ?? '');
-  const p = PETS_POOL.find((x) => x.id === selId) ?? PETS_POOL[0];
+  const [selId, setSel] = useState(SHOP_PETS[0]?.id ?? '');
+  const p = SHOP_PETS.find((x) => x.id === selId) ?? SHOP_PETS[0];
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
@@ -50,7 +52,7 @@ export const PetsTab: React.FC = () => {
       </div>
       {tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
         <ShopGrid className="pet-grid" testId="pet-grid">
-          {PETS_POOL.map((q) => (
+          {SHOP_PETS.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>
               <ItemSlot item={q} fluid size="100%" iconSize="78%" tooltip="buy" compare={false} selected={q.id === p.id} sale={q.summonOnly ? undefined : sales[q.id]}
                 price={q.summonOnly ? undefined : freeBlob && q.id === 'pet_blob' ? 0 : shopPrice(q)} cantAfford={!q.summonOnly && !(freeBlob && q.id === 'pet_blob') && gold < shopPrice(q)}
