@@ -60,7 +60,7 @@ export interface BiomeDef {
   /** Outline weights for fight rooms (interior biomes prefer halls). */
   shapes?: [string, number][];
   towers: boolean;               // goblin archer towers appear in fight rooms
-  hydras: boolean;               // lake stages hide lurking hydras
+  hydras: boolean;               // lake stages hide lurking hydras (owner: only the Coral Isles)
   variants?: BiomeVariant[];
   lavaSea?: boolean;             // the floor beyond the walls drops into a lava sea (Ember Wastes)
   waterSea?: boolean;            // ... or into a turquoise sea (Coral Isles: every room is an island)
@@ -78,7 +78,7 @@ export const BIOMES: readonly BiomeDef[] = [
     name: 'Greenwood', style: 'GRASS', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], stone: '#a39d90', edge: '#2a4a22', fog: '#cfe6f2',
     hemiSky: '#cfe8ff', hemiGround: '#6f8f45', hemiI: 1.25, sun: '#fff0d2', sunI: 3.1, skyTint: [1, 1, 1], propTint: '#ffffff',
     border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null,
-    river: 'WATER', lake: 'WATER', layouts: [40, 14, 10, 20, 16], towers: true, hydras: true,
+    river: 'WATER', lake: 'WATER', layouts: [40, 14, 10, 20, 16], towers: true, hydras: false,
     variants: [
       { name: 'Sunlit Meadow', ground: ['#43a236', '#7ccc4a'], patch: ['#62bc40', '#bcc85c', '#8f7448'], propTint: '#ffffff',
         border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null, hemiI: 1.35, sunI: 3.3 },
@@ -119,7 +119,7 @@ export const BIOMES: readonly BiomeDef[] = [
     name: 'Sunscorch Desert', style: 'SAND', ground: ['#d9b46a', '#efd08a'], patch: ['#e8c47a', '#c99a55', '#b07a40'], stone: '#c8a070', edge: '#a8824a', fog: '#f0d6a4',
     hemiSky: '#ffe8c0', hemiGround: '#b08850', hemiI: 1.35, sun: '#fff0c8', sunI: 3.4, skyTint: [1.12, 1.0, 0.82], propTint: '#ffffff',
     border: ['SANDSTONE', 'CACTUS', 'ROCK', 'SANDSTONE', 'CACTUS'], interior: ['CACTUS', 'BONES', 'SANDSTONE', 'ROCK', 'CACTUS', 'BONES'], hazard: 'QUICKSAND',
-    river: 'CHASM', lake: 'WATER', layouts: [34, 20, 12, 14, 20], towers: true, hydras: true,
+    river: 'CHASM', lake: 'WATER', layouts: [34, 20, 12, 14, 20], towers: true, hydras: false,
     variants: [
       { name: 'Golden Dunes', ground: ['#d9b46a', '#efd08a'], patch: ['#e8c47a', '#c99a55', '#b07a40'],
         border: ['SANDSTONE', 'CACTUS', 'ROCK', 'SANDSTONE', 'CACTUS'], interior: ['CACTUS', 'BONES', 'SANDSTONE', 'ROCK', 'CACTUS', 'BONES'], hazard: 'QUICKSAND' },
@@ -139,7 +139,7 @@ export const BIOMES: readonly BiomeDef[] = [
     // Pirates (bandits), crabs, drowned sailors (zombies), bombers. The Tide Hydra rules the reef.
     name: 'Coral Isles', style: 'SAND', ground: ['#e8d6a8', '#f4e6c0'], patch: ['#7cc56a', '#e2cc94', '#c8a872'], stone: '#d8c8a0', edge: '#d6c08a', fog: '#bfe8f0',
     hemiSky: '#d8f6ff', hemiGround: '#c8b07a', hemiI: 1.4, sun: '#fff4dc', sunI: 3.4, skyTint: [0.9, 1.06, 1.12], propTint: '#ffffff',
-    border: ['PALM', 'PALM', 'ROCK', 'PALM', 'BOULDER'], interior: ['PALM', 'ROCK', 'STATUE', 'RUIN', 'PALM', 'LOG'], hazard: 'PUDDLE',
+    border: ['PALM', 'PALM', 'ROCK', 'PALM', 'BOULDER'], interior: ['ROCK', 'PALM', 'ROCK', 'STATUE', 'RUIN', 'ROCK'], hazard: 'PUDDLE',
     river: 'WATER', lake: 'WATER', layouts: [24, 16, 8, 24, 28], towers: false, hydras: true, waterSea: true,
     variants: [
       { name: 'Coral Shallows', ground: ['#ead8aa', '#f6e8c4'], patch: ['#7cc56a', '#e2cc94', '#c8a872'],
@@ -159,7 +159,7 @@ export const BIOMES: readonly BiomeDef[] = [
     name: 'Frostpeak', style: 'SNOW', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'], stone: '#a8b4c2', edge: '#aab9c8', fog: '#dbe9f5',
     hemiSky: '#e0f0ff', hemiGround: '#9ab0c8', hemiI: 1.4, sun: '#e8f4ff', sunI: 3.0, skyTint: [0.88, 0.97, 1.1], propTint: '#dff0ff',
     border: ['PINE', 'BOULDER', 'PINE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null,
-    river: 'ICE', lake: 'ICE', layouts: [36, 16, 12, 18, 18], towers: false, hydras: true,
+    river: 'ICE', lake: 'ICE', layouts: [36, 16, 12, 18, 18], towers: false, hydras: false,
     variants: [
       { name: 'Snowfield', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'],
         border: ['PINE', 'BOULDER', 'PINE', 'ICE_ROCK', 'CRYSTAL_SPIRE'], interior: ['ICE_ROCK', 'ROCK', 'CRYSTAL_SPIRE', 'BOULDER', 'PINE'], hazard: null },

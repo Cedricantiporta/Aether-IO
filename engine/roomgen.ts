@@ -146,6 +146,12 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
         riverPoint(feat.bridgeS[i], d, rp); keep.push({ x: rp[0], z: rp[1], r: Math.max(feat.bw + 0.8, 3.2) });
       }
     } else if (layout === 'LAKE') buildLakes(def.lake, rnd, colliders, nearKeep, type, index, def.hydras, vr?.lakeScale ?? 1);
+    // (owner: hydras were hard to hit) keep a clear firing lane: nothing blocking near a hydra or between it and the room centre
+    for (let i = 0; i < feat.nHydras; i++) {
+      const hx = feat.hx[i], hz = feat.hz[i], d = Math.hypot(hx, hz) || 1;
+      keep.push({ x: hx, z: hz, r: 5 });
+      for (const t of [5, 9]) keep.push({ x: hx - (hx / d) * t, z: hz - (hz / d) * t, r: 3.5 });
+    }
   }
 
   // ---- walls ring (blocking) + decorative outer ring
