@@ -2,6 +2,7 @@
 import { liftAt } from './lift';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { questWantsItem } from '../engine/systems/npcQuestLogic';
+import { questIconMat } from './Npcs';
 import { useFrame } from '@react-three/fiber';
 import {
   AdditiveBlending, CircleGeometry, Color, CylinderGeometry, DynamicDrawUsage, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial,
@@ -117,7 +118,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
   const quest = useMemo(() => !!p.item && questWantsItem(p.item.name), [p.item]);
   const qMat = useMemo(() => (quest ? makeBeamMaterial('#ffd24a', { speed: 3, stripes: 4, power: 1.5 }) : null), [quest]);
   useEffect(() => () => qMat?.dispose(), [qMat]);
-  const g = useRef<Group>(null!), icon = useRef<Mesh>(null!), label = useRef<Sprite>(null!), ring = useRef<Mesh>(null!);
+  const g = useRef<Group>(null!), icon = useRef<Mesh>(null!), label = useRef<Sprite>(null!), ring = useRef<Mesh>(null!), qIcon = useRef<Sprite>(null!);
   const beamMat = useMemo(() => makeBeamMaterial(hex, { speed: 2.5, stripes: 5, power: 1.3 }), [hex]);
   const iconMat = useMemo(() => new MeshBasicMaterial({ color: new Color(hex).multiplyScalar(2.2), toneMapped: false }), [hex]);
   const ringMat = useMemo(() => new MeshBasicMaterial({ color: new Color(hex).multiplyScalar(1.5), transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, toneMapped: false }), [hex]);
@@ -136,6 +137,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
     const hy = Math.max(p.pos.y, 0) + 1.1 + Math.sin(t * 2.4 + p.id) * 0.15;
     icon.current.position.y = hy; icon.current.rotation.y = t * 2; icon.current.scale.setScalar(pop * (rarity === 'MYTHIC' ? 1.5 : rarity === 'LEGENDARY' ? 1.3 : 1.1));
     label.current.position.y = hy + 1.0 + Math.sin(t * 2.4) * 0.05;
+    if (qIcon.current) qIcon.current.position.set(-(lab.aspect * 0.62) / 2 - 0.32, label.current.position.y, 0);   // (owner) quest scroll left of the name
     ringMat.opacity = 0.35 + 0.2 * Math.sin(t * 4);
     ring.current.scale.setScalar(1 + 0.06 * Math.sin(t * 4));
     pushHalo(p.pos.x, hy, p.pos.z, 2.0, _c.set(hex).r * 1.4, _c.g * 1.4, _c.b * 1.4, 0.55, CELL.GLOW);
@@ -152,6 +154,7 @@ function ItemPickup({ p, geo }: { p: Pickup; geo: any }) {
       <mesh ref={ring} geometry={ringGeo} material={ringMat} position={[0, 0.07, 0]} />
       <mesh ref={icon} geometry={geo} material={iconMat} />
       <sprite ref={label} material={lab.mat} scale={[lab.aspect * 0.62, 0.62, 1]} />
+      {quest && <sprite ref={qIcon} material={questIconMat()} scale={[0.55, 0.55, 1]} />}
     </group>
   );
 }

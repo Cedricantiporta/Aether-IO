@@ -1115,3 +1115,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - River runs on east out past the island edge (`RIVER.x1` 125, was 50); the mine path crosses it on a plank footbridge
   (`townData.MINE_BRIDGE` at x 58.6: walkable via isTownWater / townLift, railing colliders, bank colliders skip it;
   render `addFootbridge`). Mine-path fences stop at the banks. Surge of Fury cards only once the ultimate is unlocked.
+- Quest icons (owner): quest-kill monsters get a quest scroll above the head (render/Enemies, pool of 24; the target frame already shows one left of the name); loot pills a quest needs show the scroll left of their name (Pickups); harvest nodes whose drops a quest needs get one above them (Crates). `questWantsItem` now also covers COLLECT_LOOT quests and the main story's delivery step. Old Tusk's stampede: 2 lanes.

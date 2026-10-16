@@ -16,7 +16,7 @@ import { addSpareFlasks } from './caveKit';
 import { NPCS } from '../townData';
 import { GameStatus, type Item } from '../../types';
 import {
-  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress,
+  NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress, bagCount,
   type NpcQuestDef, type NpcQuestSave, type NpcObjective,
 } from '../../npcQuests';
 
@@ -116,8 +116,10 @@ export function questNpc(name: string): boolean {
 /** True when a ground item (by bag name) is still wanted by an active DELIVER quest (it gets a small gold light ray). */
 export function questWantsItem(name: string): boolean {
   const st = useGameStore.getState();
+  const step = STORY[st.story.step];   // the main story's current delivery
+  if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === name && bagCount(st.inventory, step.deliver.id) < step.deliver.count) return true;
   return NPC_QUESTS.some((d) => {
-    if (d.objective.type !== 'DELIVER' || npcQuestStatus(d, st.npcQuests, st.heroRank) !== 'ACTIVE') return false;
+    if ((d.objective.type !== 'DELIVER' && d.objective.type !== 'COLLECT_LOOT') || npcQuestStatus(d, st.npcQuests, st.heroRank) !== 'ACTIVE') return false;
     const ids = Array.isArray(d.objective.target) ? d.objective.target : [d.objective.target];
     return ids.some((id) => LOOT_BY_ID[id as string]?.name === name) && !npcQuestReady(d, st.npcQuests, st.inventory);
   });

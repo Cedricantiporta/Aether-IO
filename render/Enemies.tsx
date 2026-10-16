@@ -1,13 +1,17 @@
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
 import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
+import { questKill } from '../engine/systems/npcQuestLogic';
+import { questIconMat } from './Npcs';
+const Q_MAX = 24;
+const qKinds = new Map<string, boolean>();
+let qTick = 0;
 import { currentTarget } from '../engine/systems/combat';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   AdditiveBlending, BufferGeometry, CircleGeometry, Color, DoubleSide, DynamicDrawUsage, FrontSide, IcosahedronGeometry, InstancedBufferAttribute,
   InstancedBufferGeometry, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, Mesh, OctahedronGeometry, PlaneGeometry, ShaderMaterial,
-  Sphere, SphereGeometry, TorusGeometry, Vector3, Group, Matrix4,
-} from 'three';
+  Sphere, SphereGeometry, TorusGeometry, Vector3, Group, Matrix4, Sprite } from 'three';
 import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -115,7 +119,10 @@ export function Enemies() {
     const barMesh = new Mesh(bg, new ShaderMaterial({ vertexShader: BAR_VS, fragmentShader: BAR_FS, transparent: true, depthTest: false, depthWrite: false }));
     barMesh.frustumCulled = false; barMesh.renderOrder = 60;
     group.add(shadows, rings, bubble, ice, stars, halo, barMesh);
-    return { group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX), shMax: new Float32Array(MAX) };
+    // (owner) quest monsters: a small quest scroll above the head (no name plate on monsters)
+    const qIcons: Sprite[] = [];
+    for (let k = 0; k < Q_MAX; k++) { const sp = new Sprite(questIconMat()); sp.scale.set(0.62, 0.62, 1); sp.visible = false; sp.renderOrder = 61; group.add(sp); qIcons.push(sp); }
+    return { qIcons, group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX), shMax: new Float32Array(MAX) };
   }, []);
   useEffect(() => () => { sys.group.traverse((o: any) => { o.geometry?.dispose?.(); }); }, [sys]);
 
@@ -129,7 +136,8 @@ export function Enemies() {
     const t = clock.elapsedTime;
     const { poser, kinds } = sys;
     counts.fill(0);
-    let nSh = 0, nRing = 0, nBub = 0, nIce = 0, nStar = 0, nHalo = 0, nBar = 0;
+    let nSh = 0, nRing = 0, nBub = 0, nIce = 0, nStar = 0, nHalo = 0, nBar = 0, nQ = 0;
+    if (++qTick % 20 === 1) qKinds.clear();   // (quest-kill lookups cached per kind, refreshed ~3x a second)
     const enemies = world.enemies;
     const showBars = useGameStore.getState().settings?.showEnemyBars !== false;
     const tgt0 = currentTarget(), framed = tgt0 && !tgt0.boss && !world.boss.active && world.targetAnchor.on ? tgt0 : null;   // the target frame shows its HP
@@ -237,6 +245,12 @@ export function Enemies() {
       }
       // absorb shield bar above it (SHIELDED affix / boss shells; not an invincible ward = shield 1)
       if (e.shield > 1) { if (e.shield > sys.shMax[i] || e.state === 'SPAWN') sys.shMax[i] = e.shield; } else sys.shMax[i] = 0;
+      if (nQ < Q_MAX && e.state !== 'SPAWN') {
+        const key = e.mini ? e.kind + '*' : e.kind;
+        let want = qKinds.get(key);
+        if (want === undefined) { want = questKill(e.kind, !!e.mini); qKinds.set(key, want); }
+        if (want) { const sp = sys.qIcons[nQ++]; sp.position.set(e.pos.x, e.pos.y + K.def.headY * s + (e.elite ? 1.75 : 1.15) + Math.sin(t * 3 + i) * 0.05, e.pos.z); sp.visible = true; }
+      }
       if (e.shield > 1 && e !== framed && e.state !== 'SPAWN' && nBar < MAX && showBars) {
         bP[nBar * 3] = e.pos.x; bP[nBar * 3 + 1] = e.pos.y + K.def.headY * s + (e.elite ? 1.15 : 0.5) + (e.elite ? 0.36 : 0.26); bP[nBar * 3 + 2] = e.pos.z;
         bDd[nBar * 3] = clamp(e.shield / Math.max(1, sys.shMax[i]), 0, 1); bDd[nBar * 3 + 1] = 3; bDd[nBar * 3 + 2] = e.elite ? 1.9 : 1.25;
@@ -252,6 +266,7 @@ export function Enemies() {
     commitInst(sys.shadows, nSh); liveRange(sys.shA, nSh);
     commitInst(sys.rings, nRing); liveRange(sys.rC, nRing); sys.ringMat.uniforms.uTime.value = t;
     commitInst(sys.bubble, nBub); commitInst(sys.ice, nIce); commitInst(sys.stars, nStar); commitInst(sys.halo, nHalo);
+    for (let k = nQ; k < Q_MAX; k++) { const sp = sys.qIcons[k]; if (sp.visible) sp.visible = false; }
     sys.bg.instanceCount = nBar; sys.barMesh.visible = poolVisible(sys.barMesh, nBar); liveRange(sys.bPos, nBar); liveRange(sys.bD, nBar);
   });
 

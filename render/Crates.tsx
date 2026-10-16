@@ -2,7 +2,13 @@
 import { inView } from './view';
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry } from 'three';
+import { questWantsItem } from '../engine/systems/npcQuestLogic';
+import { questIconMat } from './Npcs';
+import { LOOT_TABLES, LOOT_BY_ID } from '../loot';
+import { isHarvestNode } from '../engine/mapgen';
+const qNode = new Map<string, boolean>();
+let qTick = 0;
+import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry, Sprite } from 'three';
 import { world } from '../engine/world';
 import type { CrateKind } from '../engine/types';
 import { GB, TAU, commitInst, liveRange, patchFlashRim, setInst } from './util';
@@ -141,18 +147,28 @@ export function Crates() {
       if (m.glow) { glow = new InstancedMesh(m.glow, k === 'CRYSTAL' ? crystalM : glowM, MAXC); glow.count = 0; glow.frustumCulled = false; glow.instanceMatrix.setUsage(DynamicDrawUsage); if (k === 'EXPLOSIVE_BARREL') glow.setColorAt(0, new Color(1, 1, 1)); group.add(glow); }
       per[k] = { body, glow, flash };
     }
-    return { group, per, crystalM };
+    // (owner) harvest nodes a quest needs (their loot is wanted): a quest scroll floats above them
+    const qIcons: Sprite[] = [];
+    for (let k = 0; k < 12; k++) { const sp = new Sprite(questIconMat()); sp.scale.set(0.6, 0.6, 1); sp.visible = false; sp.renderOrder = 61; group.add(sp); qIcons.push(sp); }
+    return { group, per, crystalM, qIcons };
   }, []);
   const counts = useMemo(() => ({} as Record<string, number>), []);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     for (const k of KINDS) counts[k] = 0;
+    if (++qTick % 20 === 1) qNode.clear();
+    let nQ = 0;
     const c = world.crates;
     for (let i = 0; i < c.length; i++) {
       const cr = c[i];
       if (!cr.active) continue;
       if (!inView(cr.pos.x, cr.pos.z, 4)) continue;
       const P = sys.per[cr.kind]; if (!P) continue;
+      if (nQ < 12 && isHarvestNode(cr.kind)) {
+        let want = qNode.get(cr.kind);
+        if (want === undefined) { want = (LOOT_TABLES[cr.kind] ?? []).some((id) => !!LOOT_BY_ID[id] && questWantsItem(LOOT_BY_ID[id].name)); qNode.set(cr.kind, want); }
+        if (want) { const sp = sys.qIcons[nQ++]; sp.position.set(cr.pos.x, cr.pos.y + 2.4 + Math.sin(t * 3 + i) * 0.06, cr.pos.z); sp.visible = true; }
+      }
       const n = counts[cr.kind]++;
       const f = cr.hitFlash;
       const jx = f > 0 ? Math.sin(t * 70 + i) * 0.07 * f : 0, jz = f > 0 ? Math.cos(t * 83 + i) * 0.07 * f : 0;
@@ -169,6 +185,7 @@ export function Crates() {
         if (cr.kind === 'CHEST') { if (((t * 1.3 + i) % 3) < 0.15) pushHalo(cr.pos.x, cr.pos.y + 0.6, cr.pos.z + 0.5, 0.9, 2, 1.7, 0.7, 0.8, CELL.STAR); }
       }
     }
+    for (let k = nQ; k < 12; k++) if (sys.qIcons[k].visible) sys.qIcons[k].visible = false;
     for (const k of KINDS) { const P = sys.per[k], n = counts[k]; commitInst(P.body, n); liveRange(P.flash, n); if (P.glow) commitInst(P.glow, n); }
     const k = 1.55 + Math.sin(t * 1.6) * 0.3; sys.crystalM.color.setRGB(k, k, k);
   }, -0.2);
