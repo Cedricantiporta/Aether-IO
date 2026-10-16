@@ -1,14 +1,85 @@
 // Room objective / twist props (engine/systems/roomEvents.ts): the totem, the captive's cage, spike traps, and glows on
 // the treasure goblin / bounty target. Reads world.roomEvt in useFrame; meshes are built once (traps are a fixed pool).
-import React, { useMemo, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, MeshBasicMaterial, Sprite, SpriteMaterial, type Group, type Mesh, type PointLight } from 'three';
+import { AnimationMixer, Color, Mesh as TMesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Sprite, SpriteMaterial, type Group, type Mesh, type PointLight } from 'three';
+import { useCharacterInstance, useClips, type CharKey } from './characters';
+import { labelMaterial } from './label';
+import { useWorldCounter } from './hooks';
+import { angleLerp } from './util';
 import { world } from '../engine/world';
 import { trapPhase } from '../engine/systems/roomEvents';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
 
-const MAXT = 40;   // = world.roomEvt.traps pool (tiles of the trap groups)
+const MAXT = 40;
+
+/** The caged captive (owner: an actual NPC): a KayKit villager (no hat, plain tunic) cowering in idle, waving to be let out
+ *  once the room is clear (state 4) and cheering when freed (state 2). Lives inside the cage group (cage-local origin). */
+const CAPTIVE_MODELS: CharKey[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'ROGUE'];
+const TUNICS = ['#c9a77a', '#d8c4a0', '#b89870', '#e8d8b8'];
+const HAIRS = ['#5a3a22', '#2a1c12', '#b0582a', '#e0c070', '#8a8a8a'];
+const HELP = labelMaterial('Captive · Help!', '#ffe08a', { size: 40, plate: 'mini' });
+function CaptiveActor({ model, tunic, hair }: { model: CharKey; tunic: string; hair: string }) {
+  const ch = useCharacterInstance(model);
+  const clips = useClips();
+  const g = useRef<Group>(null!), tag = useRef<Sprite>(null!);
+  const S = useRef({ mixer: null as AnimationMixer | null, mode: -1, yaw: 0, idle: null as any, wave: null as any, cheer: null as any });
+  useEffect(() => {
+    const undo: (() => void)[] = [];
+    for (const m of ch.meshes) {
+      if (/Hat|Helmet|Hood|Cape|Mask|Quiver/i.test(m.name)) { m.visible = false; undo.push(() => { m.visible = true; }); continue; }
+      if (/Body|Leg|Arm/.test(m.name)) {
+        const mat = m.material as MeshStandardMaterial, map = mat.map, col = mat.color.clone();
+        mat.map = null; mat.color.set(tunic); mat.needsUpdate = true;
+        undo.push(() => { mat.map = map; mat.color.copy(col); mat.needsUpdate = true; });
+      }
+    }
+    const head = ch.root.getObjectByName('head') || ch.root.getObjectByName('Head');
+    if (head) {   // plain villager hair (the hat is hidden)
+      const hm = new MeshStandardMaterial({ color: hair, roughness: 0.6 });
+      const cap = new TMesh(new SphereGeometry(0.4, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hm);
+      cap.position.set(0, 0.42, -0.03); cap.scale.set(1.12, 1, 1.12); head.add(cap);
+      undo.push(() => { head.remove(cap); cap.geometry.dispose(); hm.dispose(); });
+    }
+    return () => { for (const u of undo) u(); };
+  }, [ch, tunic, hair]);
+  useEffect(() => {
+    const m = new AnimationMixer(ch.root), s = S.current;
+    s.idle = (clips['Idle_B'] || clips['Idle_A']) && m.clipAction(clips['Idle_B'] || clips['Idle_A']);
+    s.wave = clips['Interact'] && m.clipAction(clips['Interact']);
+    s.cheer = (clips['Use_Item'] || clips['Interact']) && m.clipAction(clips['Use_Item'] || clips['Interact']);
+    s.mixer = m; s.mode = -1;
+    return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; };
+  }, [ch, clips]);
+  useFrame((_, dt) => {
+    const s = S.current, e = world.roomEvt;
+    if (!s.mixer || !g.current) return;
+    const mode = e.state === 2 ? 2 : e.state === 4 ? 1 : 0;
+    if (mode !== s.mode) {
+      const next = mode === 2 ? s.cheer : mode === 1 ? s.wave : s.idle;
+      for (const a of [s.idle, s.wave, s.cheer]) if (a && a !== next) a.fadeOut(0.25);
+      if (next) next.reset().fadeIn(0.25).play();
+      s.mode = mode;
+    }
+    s.mixer.update(Math.min(dt, 0.05) * (mode === 0 ? 0.6 : 1));   // (trembling, slow idle while the fight goes on)
+    const p = world.player.pos;
+    s.yaw = angleLerp(s.yaw, Math.atan2(p.x - e.x, p.z - e.z), 1 - Math.exp(-3 * dt));
+    g.current.rotation.y = s.yaw;
+    if (tag.current) tag.current.visible = e.state !== 2;
+  });
+  return (
+    <group ref={g} scale={0.9}>
+      <primitive object={ch.root} />
+      <sprite ref={tag} material={HELP.mat} position={[0, 4.4, 0]} scale={[HELP.aspect * 0.9, 0.9, 1]} renderOrder={6} />
+    </group>
+  );
+}
+function Captive() {
+  useWorldCounter(() => world.room.version);   // a new face per room
+  const r = world.room.index, b = world.room.biome;
+  return <CaptiveActor key={`${b}:${r}`} model={CAPTIVE_MODELS[(r * 7 + b * 3) % CAPTIVE_MODELS.length]} tunic={TUNICS[(r + b) % TUNICS.length]} hair={HAIRS[(r * 3 + b) % HAIRS.length]} />;
+}   // = world.roomEvt.traps pool (tiles of the trap groups)
 
 export function RoomEvents() {
   const totemLight = useRef<PointLight>(null!), barG = useRef<Group>(null!);
@@ -35,7 +106,9 @@ export function RoomEvents() {
     v.cyl(0.32, 0.4, 0.9, 8, [0, 0.7, 0], '#c08a5a'); v.sph(0.32, [0, 1.4, 0], '#f0c8a0', 1, 8); v.sph(0.34, [0, 1.55, -0.05], '#5a3a20', [1, 0.6, 1], 8);
     const b = new GB([0.9, 1.1]);
     for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; b.cyl(0.06, 0.06, 2.4, 5, [Math.cos(a) * 1.35, 1.3, Math.sin(a) * 1.35], '#3a3a40'); }
-    b.cyl(1.55, 1.55, 0.2, 12, [0, 2.5, 0], '#4a3a2a');
+    // open roof (a rim + two cross bars) so the captive inside reads from the top-down camera
+    b.torus(1.4, 0.1, [0, 2.5, 0], '#4a3a2a', [Math.PI / 2, 0, 0], 1, 16);
+    b.box(2.8, 0.12, 0.12, [0, 2.55, 0], '#3a3a40'); b.box(0.12, 0.12, 2.8, [0, 2.55, 0], '#3a3a40');
     // square tiles (3.4 wide, edge to edge) so 1x3 / cross / 3x3 groups read as one trap floor; 3x3 holes each
     const plate = new GB([0.9, 1.1]); plate.box(3.3, 0.08, 3.3, [0, 0.04, 0], '#3a3436');
     for (let i = 0; i < 9; i++) plate.cyl(0.18, 0.2, 0.06, 6, [((i % 3) - 1) * 1.05, 0.09, (Math.floor(i / 3) - 1) * 1.05], '#1a1618');
@@ -116,7 +189,7 @@ export function RoomEvents() {
       <group ref={barG} visible={false}><primitive object={bar.frame} /><primitive object={bar.bg} /><primitive object={bar.fill} /></group>
       <group ref={cage} visible={false}>
         <mesh geometry={geo.cageBase} material={mat} receiveShadow />
-        <mesh geometry={geo.villager} material={mat} castShadow />
+        <Suspense fallback={null}><Captive /></Suspense>
         <group ref={bars}><mesh geometry={geo.bars} material={mat} castShadow /></group>
       </group>
       {Array.from({ length: MAXT }, (_, i) => (

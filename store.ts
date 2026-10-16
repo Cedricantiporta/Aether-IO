@@ -8,7 +8,7 @@ import { debug } from './engine/debug';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
-import { STORY, STORY_V, sanitizeStory, type StorySave } from './story';
+import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
@@ -113,6 +113,18 @@ const SLOTS: EquipSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'acc
 const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 });
 
 /** Hero rank needed to equip gear of a rarity. */
+
+/** Quest slots (owner): the main quest, accepted side quests and taken bounties share QUEST_MAX_ACTIVE slots. */
+export function questSlotsUsed(s: { quests: Quest[]; npcQuests: NpcQuestSave; story: StorySave }): number {
+  let n = s.story.step < STORY.length ? 1 : 0;
+  for (const k in s.npcQuests.q) if (s.npcQuests.q[k].s === 1) n++;
+  for (const q of s.quests) if (q.accepted) n++;
+  return n;
+}
+/** The prologue's "take a bounty" tutorial step may always take one. */
+export const questSlotsFull = (s: { quests: Quest[]; npcQuests: NpcQuestSave; story: StorySave }): boolean =>
+  questSlotsUsed(s) >= QUEST_MAX_ACTIVE && s.story.step !== storyIdx('board');
+
 export { RANK_REQ };
 /** Hero rank xp needed to go from rank r to r+1. */
 export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Math.max(1, r), 1.35));
@@ -1142,7 +1154,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const q = s.quests.find((x) => x.id === id);
       if (!q || q.accepted) return false;
-      if (s.quests.filter((x) => x.accepted).length >= QUEST_MAX_ACTIVE) { notify(`You can only take ${QUEST_MAX_ACTIVE} quests at a time.`, 'red', 'WARNING'); return false; }
+      if (questSlotsFull(s)) { notify(`Quest slots full (${QUEST_MAX_ACTIVE}): the main quest, side quests and bounties share them.`, 'red', 'WARNING'); return false; }
       set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x))) });
       notify('Quest accepted!', COLORS.uiAccent, 'SYSTEM');
       events.emit('hub', { kind: 'accept', n: 1 });

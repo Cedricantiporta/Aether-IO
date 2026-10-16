@@ -12,7 +12,7 @@ import {
 } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
-import { abilityState } from '../engine/systems/abilities';
+import { abilityState, LP_CHARGE } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
@@ -479,6 +479,7 @@ function HeroBars() {
   const titleLab = useMemo(() => (title ? labelMaterial(`« ${title} »`, '#ffd24a', { size: 38 }) : null), [title]);
   useEffect(() => { for (const l of [nameLab, titleLab]) if (l) { l.mat.depthTest = false; l.mat.depthWrite = false; } }, [nameLab, titleLab]);
   const g = useRef<Group>(null!), hp = useRef<Mesh>(null!), mp = useRef<Mesh>(null!), sh = useRef<Mesh>(null!), shG = useRef<Group>(null!);
+  const chG = useRef<Group>(null!), ch = useRef<Mesh>(null!);   // Lightpiercer charge meter (archer skill 2, owner)
   // Aegis shield bar: light blue, with tick lines splitting it into segments (one per ~10% of the shield)
   const ticks = useMemo(() => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 16;
@@ -504,6 +505,13 @@ function HeroBars() {
     const fsMax = p.aegisMax + p.arcaneMax, fs = fsMax > 0 ? clamp((p.aegis + p.arcane) / fsMax, 0, 1) : 0;   // Aegis + Arcane Shield
     shG.current.visible = fs > 0;
     if (fs > 0) { sh.current.scale.x = Math.max(0.001, fs); sh.current.position.x = -(1 - fs) * 1.1; }
+    const charging = abilityState.lpT > 0;
+    chG.current.visible = charging;
+    if (charging) {
+      const fc = clamp(abilityState.lpCharge / LP_CHARGE, 0, 1);
+      ch.current.scale.x = Math.max(0.001, fc); ch.current.position.x = -(1 - fc) * 1.1;
+      (ch.current.material as MeshBasicMaterial).color.setRGB(fc >= 1 ? 1.8 : 1.3, fc >= 1 ? 1.7 : 1.1, fc >= 1 ? 1.4 : 0.45);
+    }
   });
   const bg = <meshBasicMaterial color="#10141c" transparent opacity={0.7} depthTest={false} depthWrite={false} />;
   return (
@@ -515,6 +523,10 @@ function HeroBars() {
         <mesh renderOrder={40}><planeGeometry args={[2.36, 0.2]} />{bg}</mesh>
         <mesh ref={sh} position={[0, 0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#8fdcff" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
         <mesh position={[0, 0, 0.02]} renderOrder={42}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial map={ticks} transparent depthTest={false} depthWrite={false} /></mesh>
+      </group>
+      <group ref={chG} position={[0, -0.3, 0]} visible={false}>
+        <mesh renderOrder={40}><planeGeometry args={[2.36, 0.2]} />{bg}</mesh>
+        <mesh ref={ch} position={[0, 0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#ffd36a" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
       </group>
       <sprite material={nameLab.mat} position={[0, 0.8, 0.02]} scale={[nameLab.aspect * 0.78, 0.78, 1]} renderOrder={42} />
       {titleLab && <sprite material={titleLab.mat} position={[0, 1.38, 0.02]} scale={[titleLab.aspect * 0.6, 0.6, 1]} renderOrder={42} />}

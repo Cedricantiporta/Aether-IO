@@ -9,7 +9,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { Vector3 } from 'three';
 import type { Zone } from '../types';
-import { applyPlayerDebuff, damagePlayer, addShake } from './combat';
+import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer } from './combat';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
@@ -111,7 +111,7 @@ export function addChill(n: number): void {
   events.emit('trick', { pos: p.pos.clone(), kind: 'CHILL', radius: 2 });
   if (chill.stacks >= 4) {
     chill.stacks = 0; chill.immuneT = 4;
-    applyPlayerDebuff('STUN', 1.2);
+    freezePlayer(1.2);
     events.emit('trick', { pos: p.pos.clone(), kind: 'FREEZE', radius: 3 });
     stat('Freeze');
   }

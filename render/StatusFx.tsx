@@ -10,6 +10,7 @@ import { liftAt } from './lift';
 import { useFrame, useThree } from '@react-three/fiber';
 import { IcosahedronGeometry, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Mesh, PlaneGeometry, Quaternion, Vector3, type Texture } from 'three';
 import { world } from '../engine/world';
+import { playerFreeze } from '../engine/systems/combat';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { labelMaterial } from './label';
@@ -85,7 +86,7 @@ export function StatusFx() {
       // hero
       const p = world.player;
       if (p.alive) {
-        const frozen = p.stunT > 0 && p.slowT > 0;
+        const frozen = p.stunT > 0 && world.time < playerFreeze.until;   // (owner: a stun is a stun; only real freezes show as ice)
         list.length = 0;
         if (p.burnT > 0) list.push(T_BRN);
         if (p.poisonT > 0) list.push(T_PSN);

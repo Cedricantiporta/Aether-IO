@@ -35,7 +35,7 @@ import { events } from '../events';
 import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
 import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
-import { damagePlayer, applyPlayerDebuff, staggerView, killEnemy, playerTrickImmune } from './combat';
+import { damagePlayer, applyPlayerDebuff, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup } from './pickups';
@@ -316,7 +316,7 @@ function slowPlayer(t: number): void {
 }
 function effects(eff: number, dmg: number, x: number, z: number): void {
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
-  if (eff & FREEZE && Math.random() < 0.35) { if (applyPlayerDebuff('STUN', 0.7)) events.emit('floatText', { pos: world.player.pos, text: 'FROZEN', color: 0x8fe4ff, scale: 0.8, dy: 0.8 }); }
+  if (eff & FREEZE && Math.random() < 0.35) { if (freezePlayer(0.7)) events.emit('floatText', { pos: world.player.pos, text: 'FROZEN', color: 0x8fe4ff, scale: 0.8, dy: 0.8 }); }
   if (eff & SLOW) slowPlayer(2);
   if (eff & BURN) applyPlayerDebuff('BURN', 3, Math.max(2, dmg * 0.1));
   if (eff & POISON) applyPlayerDebuff('POISON', 3, Math.max(2, dmg * 0.1));

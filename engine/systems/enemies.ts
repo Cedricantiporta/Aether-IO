@@ -78,7 +78,7 @@ const FEAR_SLOW_T = 3;   // seconds of 30% slow after a fear ends
 
 // ------------------------------------------------------------ scratch -------
 /** Monster EXP scale (owner: -40%; quests never give EXP, monsters are the only source besides harvest nodes). */
-const MONSTER_XP_MUL = 0.9;   // (owner: more monster EXP again, was 0.6)
+const MONSTER_XP_MUL = 1.35;   // (owner: +50% monster EXP, was 0.9)
 const contactCd = new Float32Array(MAX_ENEMIES);
 const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const sepOut: number[] = [];

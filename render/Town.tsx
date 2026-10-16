@@ -532,15 +532,16 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   });
 
   const labelW = label.aspect * 0.55;   // small name tag over the shopkeeper's head
+  const signSide = type === 'BREWER' ? -1 : 1;   // (owner: the brewer's sign post stood on the tower path; it hangs on the other side)
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
       <mesh geometry={geos.glow} material={mats.glow} />
       {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
-      <group position={[-3.4, 0, 3.9]}>
+      <group position={[-3.4 * signSide, 0, 3.9]}>
         <mesh position={[0, 2.0, 0]} castShadow><boxGeometry args={[0.22, 4.0, 0.22]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
-        <mesh position={[0.9, 3.85, 0]} castShadow><boxGeometry args={[1.9, 0.16, 0.16]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
-        <group ref={signRef} position={[1.2, 3.0, 0]}>
+        <mesh position={[0.9 * signSide, 3.85, 0]} castShadow><boxGeometry args={[1.9, 0.16, 0.16]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
+        <group ref={signRef} position={[1.2 * signSide, 3.0, 0]}>
           <mesh geometry={sign.body} material={mats.lit} position={[0, -0.0, 0]} castShadow />
           <mesh geometry={sign.glow} material={mats.glow} />
         </group>

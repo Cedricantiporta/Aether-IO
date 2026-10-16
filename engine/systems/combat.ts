@@ -552,6 +552,13 @@ export function playerTrickImmune(): boolean {
 }
 
 /** Applies a monster-trick debuff to the player. Dash/i-frames ignore it. Returns true when applied. */
+/** A freeze is a stun shown as ice (StatusFx): set by real freezes only, so other stuns (boar knockdown etc.) read as stuns. */
+export const playerFreeze = { until: 0 };
+export function freezePlayer(duration: number): boolean {
+  if (!applyPlayerDebuff('STUN', duration)) return false;
+  playerFreeze.until = Math.max(playerFreeze.until, world.time + duration);
+  return true;
+}
 export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 0): boolean {
   const p = world.player;
   if (playerTrickImmune()) return false;

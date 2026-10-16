@@ -3,7 +3,7 @@
 import { questXp } from '../../../classLevels';
 import React, { useEffect, useState } from 'react';
 import { ScrollText, Check, Lock } from '../../components/GoldIcons';
-import { useGameStore } from '../../../store';
+import { useGameStore, questSlotsUsed, questSlotsFull } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { questDone, questNeedsKing, questTitle, questFlavor, activeQuests, questOffers, QUEST_MAX_ACTIVE, type Quest } from '../../../quests';
 import { Modal } from '../../components/Modal';
@@ -15,7 +15,8 @@ export const QuestsTab: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { quests, refresh, claim, accept, abandon } = useGameStore(useShallow((s) => ({ quests: s.quests, refresh: s.refreshQuestBoard, claim: s.claimQuest, accept: s.acceptQuest, abandon: s.abandonQuest })));
   useEffect(() => { refresh(); }, [refresh]);
   const active = activeQuests(quests), offers = questOffers(quests);
-  const full = active.length >= QUEST_MAX_ACTIVE;
+  const slots = useGameStore((s) => questSlotsUsed(s));
+  const full = useGameStore((s) => questSlotsFull(s));
   const [selId, setSel] = useState('');
   const q = [...active, ...offers].find((x) => x.id === selId) ?? active[0] ?? offers[0];
   const done = q ? questDone(q) : false, king = q ? questNeedsKing(q) : false;
@@ -33,7 +34,7 @@ export const QuestsTab: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       <div className="qw" data-testid="quests-tab">
         <div className="qw-body">
           <div className="qw-list rpg-scroll">
-            <div className="qw-chap open"><div className="qw-chap-h"><span>Taken · {active.length} / {QUEST_MAX_ACTIVE}</span></div>
+            <div className="qw-chap open"><div className="qw-chap-h"><span>Quest slots · {slots} / {QUEST_MAX_ACTIVE}</span></div>
               {active.length === 0 && <div className="qw-none">No bounties taken yet. Pick one below.</div>}
               {active.map(row)}
             </div>

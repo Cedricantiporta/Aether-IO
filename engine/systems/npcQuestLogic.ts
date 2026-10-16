@@ -6,7 +6,8 @@ import { questXp } from '../../classLevels';
 import { STORY } from '../../story';
 import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
-import { useGameStore, makeItemById, instantiate } from '../../store';
+import { useGameStore, makeItemById, instantiate, questSlotsFull } from '../../store';
+import { QUEST_MAX_ACTIVE } from '../../quests';
 import { events } from '../events';
 import { world } from '../world';
 import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
@@ -37,6 +38,7 @@ export function abandonNpcQuest(id: string): boolean {
 export function acceptNpcQuest(id: string): boolean {
   const def = NPC_QUEST_BY_ID[id], st = useGameStore.getState();
   if (!def || npcQuestStatus(def, st.npcQuests, st.heroRank) !== 'AVAILABLE') return false;
+  if (questSlotsFull(st)) { notify(`Quest slots full (${QUEST_MAX_ACTIVE}): the main quest, side quests and bounties share them.`, 'red'); return false; }
   useGameStore.setState({ npcQuests: { ...st.npcQuests, q: { ...st.npcQuests.q, [id]: { s: 1, p: 0 } } } });
   notify(`Quest accepted: ${def.title}`);
   return true;

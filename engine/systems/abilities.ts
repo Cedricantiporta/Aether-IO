@@ -200,7 +200,8 @@ function safeSpot(o: Vector3): void {
 }
 
 /** Lightpiercer: extra charge time when held (s). Whirlwind: base spin and the longest a held spin can last (s). */
-const LP_CHARGE = 1.5, WHIRL_BASE = 1.2, WHIRL_MAX = 4;
+export const LP_CHARGE = 1.5;
+const WHIRL_BASE = 1.2, WHIRL_MAX = 4;
 /** Hold time of the key / button that cast the current skill (aim.ts sets it; 0 for auto casts). */
 export const castHold = { t: 0 };
 /** Is the key / touch button of this active slot still held down? */

@@ -94,6 +94,8 @@ let fixedN = 0;
 let miniKind: EnemyKind = 'BOAR';
 let miniName = '', miniTitle = '';
 let miniIsBoss = false;
+/** Champion rooms / dark hero duels (not the depth-10 pre-boss): hp factor (owner: -30%). */
+const CHAMPION_HP = 0.7;
 let prebossRoom = false;   // this MINIBOSS room is the depth-10 pre-boss (-25% hp)
 let prebossKing = false;    // the Meadow's depth-10 Slime King      // the Lich: a full boss used as a mini-boss
 let bossPending = false;
@@ -536,19 +538,20 @@ function activeMarkers(): number {
 function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag: number): void {
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
-  if (tag === 3) { spawnDarkHero(duelCls, x, z); return; }
+  if (tag === 3) { const e = spawnDarkHero(duelCls, x, z); if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; } return; }   // dark hero duels are champions too
   if (tag === 4) { spawnEnemy(kind, tmp); events.emit('shake', { amount: 0.4 }); return; }   // an extra Endless Waves boss
   if (tag === 1) {
     const e = spawnMiniBoss(kind, tmp, miniName, miniTitle);
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% (owner)
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5 * 1.5); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% twice (owner)
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
       setSlimeKing(e.id); initSpecial(e);   // (owner: Belly Flop / Acid Flood / Acid Rain)
     }
     if (e && prebossRoom) { e.maxHp = Math.round(e.maxHp * 0.75); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // depth-10 pre-boss: -25% hp
+    else if (e && !waves.on && !miniIsBoss) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // champion rooms (owner: -30%)
     if (e) {
       events.emit('bossSpawn', { name: miniName, title: miniTitle });
       events.emit('shake', { amount: 0.3 });
