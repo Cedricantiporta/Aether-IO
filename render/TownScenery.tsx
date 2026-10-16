@@ -478,7 +478,7 @@ function addBridge(b: GB, g: GB): void {
   }
   // piers + arches under the deck (standing in the river), and a stone skirt down to the water
   for (const pz of [64, 68, 72]) { b.box(hw * 2 + 1.0, 3.2, 1.6, [0, hAt(pz) - 2.0, pz], st2); b.box(hw * 2 + 1.4, 0.4, 2.2, [0, -1.3, pz], '#7d776d'); }
-  for (const [za, zb] of [[61.2, 64], [64, 68], [68, 72], [72, 74.8]]) { const zm = (za + zb) / 2; b.cyl((zb - za) / 2, (zb - za) / 2, hw * 2 + 0.9, 12, [0, hAt(zm) - 1.25, zm], '#6e695f', [0, 0, Math.PI / 2], [1, 1, 0.55]); }
+  for (const [za, zb] of [[61.2, 64], [64, 68], [68, 72], [72, 74.8]]) { const zm = (za + zb) / 2; b.cyl((zb - za) / 2, (zb - za) / 2, hw * 2 + 0.9, 12, [0, hAt(zm) - 0.75 - (zb - za) / 2, zm], '#6e695f', [0, 0, Math.PI / 2], [1, 1, 0.55]); }   // (owner: kept fully under the deck: the wide arches poked up through it as two humps)
   // end posts with lamps
   for (const sx of [-1, 1]) for (const zz of [z0 + 0.4, z1 - 0.4]) {
     b.box(0.8, 1.4 + hAt(zz), 0.8, [sx * (hw + 0.3), (1.4 + hAt(zz)) / 2, zz], st2); b.box(0.95, 0.15, 0.95, [sx * (hw + 0.3), 1.45 + hAt(zz), zz], '#c9c3b5');
