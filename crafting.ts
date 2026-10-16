@@ -103,6 +103,9 @@ for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as
   }
 }
 
+/** Names of every monster-loot item some recipe uses (bulk sell keeps these unless asked). */
+export const CRAFT_MAT_NAMES: Set<string> = new Set(Object.values(RECIPES).flatMap((r) => r.loot.map((l) => LOOT_BY_ID[l.id]?.name)).filter(Boolean) as string[]);
+
 export const getRecipe = (slot: CraftSlot, rarity: Rarity, hero: HeroClass): Recipe => RECIPES[`${hero}:${slot}:${rarity}`];
 
 export interface CraftState {

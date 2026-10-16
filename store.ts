@@ -38,14 +38,26 @@ import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
 const REFORGE_NAMES = new Set(Object.values(REFORGE_ITEM).map((r) => r.name));
+/** What a bulk sell would take from the bag (gear at 30%, loot stacks at full value). Shared by the store and the popup preview. */
+export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gold: number; count: number; loot: number; fish: number } {
+  const items: Item[] = []; let gold = 0, count = 0, loot = 0, fish = 0;
+  for (const i of inv) {
+    if (isGear(i)) { if (o.rarities.includes(i.rarity)) { items.push(i); gold += Math.floor(i.price * 0.3); count++; } continue; }
+    if (i.type !== 'LOOT' || REFORGE_NAMES.has(i.name)) continue;
+    const mat = CRAFT_MAT_NAMES.has(i.name);
+    if (mat ? !o.craftMats : !o.loot) continue;
+    const q = i.quantity || 1; items.push(i); gold += i.price * q; count += q; loot += q; if (isFishName(i.name)) fish += q;
+  }
+  return { items, gold, count, loot, fish };
+}
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shards';
 import { summonPool } from './summonPool';
-import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab } from './storeTypes';
+import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
-import { lootOwned } from './crafting';
+import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { petPower } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
 import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
@@ -1570,6 +1582,18 @@ export const useGameStore = create<GameState>()((set, get) => {
       items.forEach((i) => { total += Math.floor(i.price * 0.3); });
       set({ gold: s.gold + total, inventory: s.inventory.filter((i) => !ids.has(i.id)) });
       notify(`Sold ${items.length} items for ${total}G`, 'yellow', 'SYSTEM');
+    },
+
+    bulkSell: (o) => {
+      const s = get();
+      const pick = bulkSellPick(s.inventory, o);
+      if (!pick.items.length) { notify('Nothing to sell.', 'white', 'SYSTEM'); return 0; }
+      const ids = new Set(pick.items.map((i) => i.id));
+      set({ gold: s.gold + pick.gold, inventory: s.inventory.filter((i) => !ids.has(i.id)) });
+      if (pick.loot) get().addQuestProgress('SELL_LOOT', pick.loot);
+      if (pick.fish) events.emit('hub', { kind: 'sell_fish', n: pick.fish });
+      notify(`Sold ${pick.count} items for ${pick.gold.toLocaleString()}G`, 'yellow', 'SYSTEM');
+      return pick.gold;
     },
 
     massSell: (rarity) => {

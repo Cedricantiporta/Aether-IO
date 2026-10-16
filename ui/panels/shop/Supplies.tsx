@@ -38,24 +38,6 @@ export const SuppliesTab: React.FC = () => {
           {STOCK.map((it) => { const free = freeHp && it.id === 'potion_hp'; return <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" price={free ? 0 : shopPrice(it)} sale={free ? undefined : sales[it.id]} oldPrice={it.price} cantAfford={!free && gold < shopPrice(it)} tooltip="buy" compare={false} onClick={() => (free ? setBuy(it, { price: 0, max: 1 }) : setBuy(it))} />; })}
         </ShopGrid>
       </div>
-      <div>
-        <div className="rpg-label mb-2">Monster spoils</div>
-        <Button className="w-full" variant="green" disabled={lootCount === 0} onClick={sellAllLoot} data-testid="sell-all-loot">
-          Sell all loot · {lootCount} items · {lootValue.toLocaleString()} G
-        </Button>
-      </div>
-      <div>
-        <div className="rpg-label mb-2">Quick sell (from bag)</div>
-        <div className="grid grid-cols-5 gap-1.5">
-          {RARITIES.map((r) => (
-            <Button key={r} size="sm" disabled={count(r) === 0} onClick={() => quickSell(r)} style={{ borderColor: RARITY_COLOR[r], padding: '.25rem .1rem', flexDirection: 'column', gap: 0, lineHeight: 1.1 }}>
-              <span style={{ color: RARITY_COLOR[r], fontSize: '.58rem' }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</span>
-              <span className="rpg-num !text-[.7rem] text-white">{count(r)}</span>
-            </Button>
-          ))}
-        </div>
-        <div className="rpg-label !text-[.55rem] mt-1.5 opacity-70">Items above rare ask for confirmation. Click any bag item to sell a specific one.</div>
-      </div>
     </div>
   );
 };

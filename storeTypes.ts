@@ -235,6 +235,8 @@ export interface GameState {
   sellItems: (items: Item[]) => void;
   sellAllLoot: () => number;                        // sells every LOOT stack at full value; returns gold gained
   massSell: (rarity: Rarity) => void;
+  /** Bulk sell from the bag: gear of the given rarities (equipped kept), plus loot (non-craft) and optionally craft materials. Returns gold gained. */
+  bulkSell: (o: BulkSellOpts) => number;
   recycleItem: (item: Item) => void;
   massRecycle: (rarity: Rarity) => void;
   combineMaterials: (from: Rarity) => void;
@@ -256,3 +258,5 @@ export interface GameState {
   addNotification: (message: string, color?: string, type?: GameNotification['type'], action?: GameNotification['action']) => void;
   removeNotification: (id: string) => void;
 }
+
+export interface BulkSellOpts { rarities: Rarity[]; loot: boolean; craftMats: boolean }

@@ -27,11 +27,13 @@ export interface NpcState {
   /** desired facing; render smooths towards it */
   yaw: number;
   moving: boolean; talking: boolean; wp: number; wait: number;
+  /** seconds without progress towards the waypoint (blocked by a planter / fence / cart): steer around, then skip it */
+  stuck: number; skips: number;
   lastBubble: number;
   /** world.time of this NPC's last bubble (per-NPC cooldown: no spam) */
   bubbleT: number;
 }
-export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], yaw: 0, moving: false, talking: false, wp: 0, wait: Math.random() * 3, lastBubble: -1, bubbleT: -99 }));
+export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], yaw: 0, moving: false, talking: false, wp: 0, wait: Math.random() * 3, lastBubble: -1, bubbleT: -99, stuck: 0, skips: 0 }));
 
 export interface AnimalState { x: number; z: number; yaw: number; moving: boolean; tx: number; tz: number; wait: number; hop: number }
 export const animals: AnimalState[] = ANIMALS.map((a) => ({ x: a.x, z: a.z, yaw: Math.random() * 6.28, moving: false, tx: a.x, tz: a.z, wait: Math.random() * 2, hop: 0 }));
@@ -48,7 +50,7 @@ const BUBBLE_R = 14;
 export function resetNpcs(): void {
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i], d = NPCS[i];
-    n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1; n.bubbleT = -99;
+    n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1; n.bubbleT = -99; n.stuck = 0; n.skips = 0;
     n.yaw = d.area === 'CASTLE' || d.area === 'CHURCH' || d.area === 'TAVERN' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
   }
   for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
@@ -93,8 +95,17 @@ export function updateNpcs(dt: number): void {
       n.x = tgt[0]; n.z = tgt[1]; n.wp = (n.wp + 1) % path.length;
       n.wait = 1.2 + Math.random() * 4; n.moving = false;
     } else {
-      n.x += (dx / dist) * step; n.z += (dz / dist) * step; n.moving = true; n.yaw = Math.atan2(dx, dz);
+      // blocked for a moment: veer ~60 degrees to slide around the obstacle (side alternates per NPC)
+      let ux = dx / dist, uz = dz / dist;
+      if (n.stuck > 0.25) { const sg = i & 1 ? 1 : -1, c = 0.5, sn = 0.866 * sg; const rx = ux * c - uz * sn, rz = ux * sn + uz * c; ux = rx; uz = rz; }
+      n.x += ux * step; n.z += uz * step; n.moving = true; n.yaw = Math.atan2(ux, uz);
       if (town) pushOut(n, 0.45);
+      const nd = Math.sqrt((tgt[0] - n.x) ** 2 + (tgt[1] - n.z) ** 2);
+      if (dist - nd < step * 0.35) n.stuck += dt; else { n.stuck = Math.max(0, n.stuck - dt * 2); n.skips = 0; }
+      if (n.stuck > 1.6) {   // still wedged: give up on this waypoint; wedged on every leg -> quietly back home
+        n.stuck = 0; n.wp = (n.wp + 1) % path.length; n.wait = 0.6;
+        if (++n.skips > path.length) { n.skips = 0; n.x = d.home[0]; n.z = d.home[1]; n.wp = 0; }
+      }
     }
   }
 

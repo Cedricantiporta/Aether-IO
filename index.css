@@ -2534,3 +2534,18 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 /* tooltips stay near-opaque so the details are readable (owner) */
 .rpg-tooltip, .rpg-tooltip.rpg-parchment { background: linear-gradient(180deg, rgba(20, 20, 24, .97), rgba(8, 8, 10, .97)) !important;
   box-shadow: 0 0 0 1px rgba(214, 186, 122, .35), 0 10px 30px rgba(0, 0, 0, .7) !important; }
+
+/* shop footer (bag-style) + bulk sell popup */
+.shop-foot { display: flex; justify-content: flex-end; gap: .5rem; padding: .6rem 1rem; border-top: 1px solid rgba(214, 186, 122, .14); }
+.bk-sec { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: #9a8d72; }
+.bk-tiers { display: grid; grid-template-columns: repeat(5, 1fr); gap: .3rem; }
+.bk-chip { display: flex; flex-direction: column; align-items: center; padding: .4rem .1rem; font-size: .68rem; color: var(--rc); background: rgba(6, 6, 8, .5); border: 1px solid rgba(255, 255, 255, .06); }
+.bk-chip b { font-weight: 400; font-size: .95rem; color: #8f8670; }
+.bk-chip.on { background: color-mix(in srgb, var(--rc) 18%, rgba(6, 6, 8, .6)); border-color: var(--rc); }
+.bk-chip.on b { color: #fff; }
+.bk-row { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: #e8dcc0; cursor: pointer; }
+.bk-row em { font-style: normal; color: #8f8670; font-size: .72rem; }
+.bk-row input { accent-color: #d9a93c; width: 1rem; height: 1rem; }
+.bk-sum { padding: .6rem .7rem; font-size: .84rem; color: #e8dcc0; background: rgba(6, 6, 8, .45); }
+.bk-sum b { font-weight: 400; color: #fff; } .bk-sum b.g { color: #ffd76a; }
+.bk-sum em { display: block; font-style: normal; font-size: .68rem; color: #8f8670; margin-top: .2rem; }

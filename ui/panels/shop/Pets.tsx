@@ -58,18 +58,6 @@ export const PetsTab: React.FC = () => {
             </div>
           ))}
         </ShopGrid>
-        <div className="rpg-frame p-3 flex flex-col gap-1.5" data-testid="pet-detail">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="font-bold leading-tight" style={{ color: RARITY_TEXT[p.rarity], fontFamily: 'var(--font-title)' }}>{p.name} <span className="text-[.7rem]" style={{ color: '#ffd24a' }}>{'★'.repeat(RARITY_STARS[p.rarity] ?? 1)}</span></div>
-              <div className="text-[.72rem] text-[var(--text-dim)] leading-snug">{p.description}</div>
-            </div>
-            {p.summonOnly && <span className="rpg-badge" style={{ color: '#c58bff' }}>Summon only</span>}
-          </div>
-          {!p.summonOnly && <PetBadges name={p.name} />}
-          {PET_SKILL_NAME[p.petSkill as string] && <div className="text-[.7rem]" style={{ color: 'var(--text-dim)' }}>Skill: <b style={{ color: '#f6e6bd' }}>{PET_SKILL_NAME[p.petSkill as string]}</b></div>}
-          <div className="text-[.72rem]">{(Object.keys(p.stats ?? {}) as (keyof PlayerStats)[]).map((k) => <span key={k} className="mr-3"><span style={{ color: 'var(--text-dim)' }}>{STAT_LABEL[k]}</span> <span className="rpg-num">{fmtItemStat(k, p.stats[k] as number)}</span></span>)}</div>
-        </div>
       </>)}
     </div>
   );

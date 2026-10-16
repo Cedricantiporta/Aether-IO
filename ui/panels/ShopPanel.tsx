@@ -21,6 +21,9 @@ import { FishShopTab } from './shop/FishShop';
 import { MineShopTab } from './shop/MineShop';
 import { useDrop } from '../lib/dnd';
 import { useUiStore } from '../uiStore';
+import { BulkSellPopup } from './shop/BulkSell';
+
+const SELL_TABS: ShopTab[] = ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BREWER', 'FISH', 'MINE'];
 
 const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }[] = [
   { id: 'SUPPLIES', label: 'Supplies', icon: <ShoppingBag size={24} />, title: 'Potion Shop' },
@@ -42,6 +45,7 @@ export const ShopPanel: React.FC = () => {
   const { tab, close, gems, sp } = useGameStore(useShallow((s) => ({
     tab: s.activeShopTab, close: s.closeAllUI, gems: s.gems, sp: s.skillPoints,
   })));
+  const [bulk, setBulk] = React.useState(false);
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
   // drop a bag item on a shop: sell it (or pick it for upgrading at the blacksmith); the warehouse grid handles its own drops
   const ui = useUiStore.getState();
@@ -70,7 +74,13 @@ export const ShopPanel: React.FC = () => {
           {tab === 'FISH' && <FishShopTab />}
           {tab === 'MINE' && <MineShopTab />}
         </div>
+        {SELL_TABS.includes(tab) && (
+          <div className="shop-foot">
+            <button className="rpg-btn rpg-btn-sm pe" onClick={() => setBulk(true)} data-testid="shop-bulk-sell">Bulk sell</button>
+          </div>
+        )}
       </Panel>
+      {bulk && <BulkSellPopup onClose={() => setBulk(false)} />}
     </motion.div>
   );
 };
