@@ -231,7 +231,7 @@ export const Minimap: React.FC = () => {
     <div className="pe relative" style={{ width: `${W / 14.4}rem`, height: `${H / 14.4}rem` }}>
       <div className="absolute mm-ring" />
       <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full" style={{ borderRadius: 2 }} />
-      <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-.85rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
+      <span className="absolute left-1/2 grid place-items-center rpg-num mm-north">N</span>
     </div>
   );
 };

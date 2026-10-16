@@ -41,7 +41,7 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
   return (
     <div className="relative pe ult-slot" {...tip(tooltip)} style={{ ['--uc' as any]: color, width: '7.8rem', height: '7.8rem', flex: 'none', margin: '0 .3rem' }}>
       <style>{`
-        .ult-slot .ult-core{position:absolute;inset:17%;border-radius:50%;overflow:hidden;background:#07050a;box-shadow:inset 0 0 12px #000}
+        .ult-slot .ult-core{position:absolute;inset:5%;border-radius:50%;overflow:hidden;background:#07050a;box-shadow:inset 0 0 12px #000}
         .ult-slot .ult-core .ico{position:absolute;inset:0;filter:grayscale(.55) brightness(.75);transition:filter .3s,transform .3s}
         .ult-slot [data-active="1"] .ult-core .ico{filter:none}
         .ult-slot [data-ready="1"] .ult-core .ico{filter:brightness(1.35) saturate(1.35) drop-shadow(0 0 6px rgba(255,226,140,.95));transform:scale(1.12);animation:ultIco 1.1s ease-in-out infinite}
@@ -69,12 +69,17 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
         .ult-slot [data-ready="1"] .ult-txt{color:#fff3c0;font-size:1.05rem;bottom:34%;text-shadow:0 0 8px #c88a10,0 1px 3px #000}
         @keyframes ultPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}
         @keyframes ultSpin{to{transform:rotate(360deg)}}
+        /* thin golden metallic rim (owner: thinner, more golden; bigger icon) */
+        .ult-slot .ult-rim{position:absolute;inset:0;border-radius:50%;pointer-events:none;padding:3px;
+          background:conic-gradient(from 210deg,#7a5a1e,#f6e2a0,#b8862e,#fff2c4,#8d6a26,#f1d58e,#7a5a1e);
+          -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+          filter:drop-shadow(0 0 2px rgba(0,0,0,.9)) drop-shadow(0 0 5px rgba(240,196,90,.35))}
       `}</style>
       <div ref={root} data-ready="0" data-active="0" style={{ position: 'absolute', inset: 0 }}>
         <div className="ult-rays" />
         <div className="ult-glow" />
         <div className="ult-core"><div className="ico">{icon}</div><div ref={fill} className="ult-fill" /></div>
-        <OrnateRing id="ult" spikes={8} />
+        <div className="ult-rim" />
         <span ref={txt} className="ult-txt">0%</span>
       </div>
       <span className="rpg-key">R</span>

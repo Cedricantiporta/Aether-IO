@@ -2515,3 +2515,22 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .tt-cost { margin-top: auto; font-size: .78rem; color: #9a8d72; }
 .tt-learn, .tt-respec { width: 100%; display: flex; align-items: center; justify-content: center; gap: .4rem; }
 .compact .tt-body { grid-template-columns: minmax(0, 1fr) 15rem; }
+
+/* ---- compact HUD plate (owner) ---- */
+.pp-name { display: flex; align-items: baseline; gap: .1rem; line-height: 1; }
+.pp-name .rpg-title { font-size: 1rem; color: #f4e6c0; }
+.pp-name .tp-title { margin: 0; }
+.pp-buffs { display: flex; gap: .3rem; }
+.pp-buffs:not(:has(.buff-slot[data-on='1'])) { display: none; }
+.pp-buffs .buff-slot[data-on='0'] { display: none; }
+.pplate > .flex { gap: .2rem !important; }
+.hud-tl { gap: .35rem !important; }
+.hud-mm-top.hud-mm-left { margin-top: 0; }
+.mm-north { top: .3rem; width: 1.15rem; height: 1.15rem; transform: translateX(-50%); border-radius: 2px; font-size: .68rem; color: #f6e2a0; z-index: 2;
+  background: rgba(8, 8, 10, .78); box-shadow: 0 0 0 1px rgba(214, 186, 122, .7); }
+/* menu icons: no containers (owner) */
+.sqbtn, .sqbtn.is-active { background: none !important; box-shadow: none !important; }
+.sqbtn.is-active svg { filter: drop-shadow(0 0 6px rgba(255, 216, 110, .9)) drop-shadow(0 2px 2px #000); }
+/* tooltips stay near-opaque so the details are readable (owner) */
+.rpg-tooltip, .rpg-tooltip.rpg-parchment { background: linear-gradient(180deg, rgba(20, 20, 24, .97), rgba(8, 8, 10, .97)) !important;
+  box-shadow: 0 0 0 1px rgba(214, 186, 122, .35), 0 10px 30px rgba(0, 0, 0, .7) !important; }

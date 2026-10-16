@@ -76,7 +76,6 @@ export const PlayerPlate: React.FC = () => {
   const hero = useGameStore((s) => s.hero);
   const title = useGameStore((s) => titleOf(s.meta.title));
   const level = useGameStore((s) => s.level);
-  const cp = useGameStore((s) => calculateTotalCP(s.stats));
   const maxHp = useGameStore((s) => s.stats.maxHealth);
   const maxRef = useRef(maxHp); maxRef.current = maxHp;
   const Icon = HERO_ICON[hero];
@@ -100,14 +99,10 @@ export const PlayerPlate: React.FC = () => {
   });
   return (
     <div className="pplate pe">
-      <div className="flex flex-col gap-[.3rem]" style={{ minWidth: '10.5rem' }}>
-        <div className="rpg-title text-[1.05rem] leading-none text-[#f4e6c0]">{hero}</div>
-        {title && <div className="tp-title" data-testid="hero-title">{title}</div>}
-        <motion.div key={level} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="text-[.82rem] text-[#e8dcc0] flex items-center gap-2" style={{ transformOrigin: 'left' }}
-          {...tip(<SimpleTip title="Combat Power" body="Total strength of your hero from stats and equipment." />)}>
-          <span>Lv. {level}</span><span style={{ width: 1, height: '.8rem', background: '#8a7240' }} /><span>CP <span className="rpg-num text-white">{cp.toLocaleString()}</span></span>
-        </motion.div>
-        <div className="flex gap-[.35rem] mt-[.1rem]">
+      <div className="flex flex-col gap-[.3rem]" >
+        {/* (owner: compact - one name row, no Lv / CP row; buff slots only while active) */}
+        <div className="pp-name"><span className="rpg-title">{hero}</span>{title && <span className="tp-title" data-testid="hero-title">{title}</span>}</div>
+        <div className="pp-buffs">
           <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={15} />} />
           <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={15} />} />
           <BuffSlot id="whirl" refs={refs} color="#ffd27a" label="Whirlwind" icon={<Wind size={15} />} />
