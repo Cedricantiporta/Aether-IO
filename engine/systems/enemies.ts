@@ -71,6 +71,8 @@ const SHARDS = 8;
 const FEAR_SLOW_T = 3;   // seconds of 30% slow after a fear ends
 
 // ------------------------------------------------------------ scratch -------
+/** Monster EXP scale (owner: -40%; quests never give EXP, monsters are the only source besides harvest nodes). */
+const MONSTER_XP_MUL = 0.6;
 const contactCd = new Float32Array(MAX_ENEMIES);
 const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const sepOut: number[] = [];
@@ -269,7 +271,7 @@ export function spawnEnemy(
   e.contactDamage = def.contactDamage * dmgMul * biomeDmg;
   e.projectileDamage = def.projectileDamage * dmgMul * biomeDmg;
   // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
-  e.xp = Math.round(def.xp * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
+  e.xp = Math.round(def.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
   e.mini = false;
