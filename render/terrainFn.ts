@@ -2,7 +2,7 @@
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
 import { LAKE } from '../engine/townData';
-import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt } from '../engine/townData';
+import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt, lakeSouth } from '../engine/townData';
 import { inCampYard } from '../engine/caveData';
 import { hillAt } from '../engine/townHills';
 import { BEACH, beachSandK, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff } from '../engine/beachData';
@@ -57,7 +57,8 @@ export function lakeK(x: number, z: number) {
   // the beach (engine/beachData) pushes the shore line west along the southern half of the west side
   const bk = sstep(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstep(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - mainShoreOff(z) * mk;
   const inX = sstep(sx, sx - LAKE.shore, x);
-  const inZ = sstep(LAKE.z0, LAKE.z0 + 14, z) * sstep(LAKE.z1, LAKE.z1 - 14, z);
+  const zs = lakeSouth(x);
+  const inZ = sstep(LAKE.z0, LAKE.z0 + 14, z) * sstep(zs, zs - 14, z);
   return inX * inZ;
 }
 

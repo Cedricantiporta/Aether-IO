@@ -859,8 +859,8 @@ function rippleTexture(): CanvasTexture {
 /** The lake west of the town: animated water surface, sandy shore line, reeds and a few shore rocks. */
 function Lake() {
   const { water, river, shore, mat, shoreMat } = useMemo(() => {
-    const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 - LAKE.z0;
-    const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1) / 2);
+    const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 + 10 - LAKE.z0;   // (+10: the wavy south shore, townData.lakeSouth)
+    const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1 + 10) / 2);
     // the river south of the gate (same water, joins the lake at its west end)
     const river = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 6, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
     const bump = rippleTexture();

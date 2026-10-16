@@ -18,7 +18,7 @@ import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import {
-  BEACH, BOARDWALK, DOCK, SHIP, FISH_SPOTS, HEADLAND, PALMS, CAMPFIRE, UMBRELLA, ROWBOAT, DRIFTWOOD, CRATES, BARRELS, NET_RACK, ENTRY_SIGN,
+  BEACH, BOARDWALK, DOCK, SHIP, FISH_SPOTS, HEADLAND, SOUTH_ROCKS, PALMS, CAMPFIRE, UMBRELLA, ROWBOAT, DRIFTWOOD, CRATES, BARRELS, NET_RACK, ENTRY_SIGN,
 } from '../engine/beachData';
 import { FISH } from '../engine/systems/fishing';
 
@@ -158,6 +158,8 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
     if (rnd() < 0.7) rock(b, x + (rnd() - 0.5) * 2, z + (rnd() < 0.5 ? -1.6 : 1.5) * (0.6 + rnd() * 0.5), r * 0.55, r * 0.7, rnd() * 6, rnd);
   }
   for (let i = 0; i < 5; i++) rock(b, -70.5 - i * 1.4 - rnd(), 4 + (rnd() - 0.5) * 3, 0.9 + rnd() * 0.7, 0.8 + rnd() * 0.6, rnd() * 6, rnd);   // stepping stones out into the lake
+  // ---- rocks along the lake's wavy south shore (by the mainland beach / Endless Tower)
+  for (const [x, z, r] of SOUTH_ROCKS) rock(b, x, z, r, r * (1.1 + rnd() * 0.6), rnd() * 6, rnd);
   // ---- palms
   for (const [x, z, s, lean] of PALMS) palm(b, x, z, s, lean);
   // ---- campfire with stone ring, logs and two log benches

@@ -49,12 +49,29 @@ export const HEADLAND: [number, number, number][] = (() => {
   return r;
 })();
 
+/** The lake's wavy southern shore (townData.lakeSouth = lakeSouthZ(x, LAKE.z1); here to avoid an import cycle). */
+export const lakeSouthZ = (x: number, z1: number): number => z1 + Math.sin(x * 0.13 + 0.8) * 4.2 + Math.sin(x * 0.31 + 2.1) * 2 + Math.sin(x * 0.77) * 0.8;
+const LAKE_Z1 = 85, SHORE_Z = (x: number): number => lakeSouthZ(x, LAKE_Z1) - 3;   // the visible water line (~3 short of the bed ramp end)
+/** (owner) rocks along the lake's south shore by the mainland beach / Endless Tower: x, z, radius (some half in the water). */
+export const SOUTH_ROCKS: [number, number, number][] = (() => {
+  const r: [number, number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    const x = -54 - i * 4.3 - Math.sin(i * 2.3) * 1.2, w = Math.sin(i * 1.7) * 1.4;
+    r.push([x, SHORE_Z(x) + w, 0.8 + ((i * 7) % 5) * 0.22]);
+    if (i % 3 === 1) r.push([x + 1.4, SHORE_Z(x + 1.4) + w + 1.2, 0.5]);
+  }
+  return r;
+})();
+/** Palms / shore trees behind the south shore (x, z, scale, lean). */
+const SOUTH_PALMS: [number, number, number, number][] = [-57, -66, -79, -88, -97].map((x, i) => [x, SHORE_Z(x) + 5 + (i % 2) * 2.2, 1 + (i % 3) * 0.08, 0.6 + i * 1.1]);
+
 // ---- props (drawn by render/Beach.tsx; colliders below) ----
 export const PALMS: [number, number, number, number][] = [   // x, z, scale, lean yaw
   [-49.5, 10.5, 1.0, 0.6], [-60.5, 11, 1.15, 2.4], [-48.6, 18.5, 0.95, 0.2], [-63.2, 22.5, 1.1, 1.7], [-62.4, 37, 1.05, 1.4],
   [-49.6, 56.5, 1.1, -0.6], [-57.5, 59, 1.0, 2.9], [-63.5, 57, 1.15, 1.9],
   // the mainland beach (south of the river mouth)
   [-46.2, 80.5, 1.05, 2.2], [-44.6, 87.5, 1.15, 1.6], [-47.5, 93.5, 1.0, 2.7],
+  ...SOUTH_PALMS,
 ];
 export const CAMPFIRE = { x: -53.5, z: 54 };
 export const UMBRELLA = { x: -54, z: 17 };
@@ -69,6 +86,7 @@ export const ENTRY_SIGN = { x: -46, z: 44.4 };   // signpost at the boardwalk en
 export const BEACH_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HEADLAND) c.push(h);
+  for (const [x, z, r] of SOUTH_ROCKS) c.push([x, z, r * 0.9]);
   for (const p of PALMS) c.push([p[0], p[1], 0.6]);
   c.push([CAMPFIRE.x, CAMPFIRE.z, 1.0], [UMBRELLA.x, UMBRELLA.z, 0.35]);
   for (const o of [-1.1, 0, 1.1]) c.push([ROWBOAT.x + Math.sin(ROWBOAT.rot) * o, ROWBOAT.z + Math.cos(ROWBOAT.rot) * o, 0.8]);
@@ -96,7 +114,8 @@ export const mainBeachK = (z: number): number => Math.min(1, Math.max(0, (z - MA
 /** 0..1 sand coverage at (x, z) (render tint; soft edges, fades into the meadow by the corner tower). */
 export function beachSandK(x: number, z: number): number {
   if (x < -36 && z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6) {   // the mainland beach
-    const k = mainBeachK(z), edge = MAIN_BEACH.innerX + Math.sin(z * 0.37 + 1.3) * 1.4 + Math.sin(z * 0.9) * 0.5;
+    const zs = MAIN_BEACH.z1 + 3 + Math.sin(x * 0.21 + 1.1) * 3 + Math.sin(x * 0.53) * 1.4;   // (wavy south edge of the sand, not a straight line)
+    const k = Math.min(1, Math.max(0, (z - MAIN_BEACH.z0 + 4) / 5)) * Math.min(1, Math.max(0, (zs - z) / 5)), edge = MAIN_BEACH.innerX + Math.sin(z * 0.37 + 1.3) * 1.4 + Math.sin(z * 0.9) * 0.5;
     return k * Math.min(1, Math.max(0, (edge - x) / 3));
   }
   if (x > -38 || z < BEACH.z0 - 9 || z > BEACH.z1 + 8) return 0;
