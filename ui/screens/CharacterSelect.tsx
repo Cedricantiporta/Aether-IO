@@ -64,6 +64,40 @@ const Radar: React.FC<{ stats: [string, number][] }> = ({ stats }) => {
   );
 };
 
+/** Name entry popup (owner reference: ornate dark panel, framed input, rules, grey Cancel / red Confirm). */
+const NAME_RE = /^[A-Za-z0-9]{2,12}$/;
+const NamePopup: React.FC<{ onCancel: () => void; onConfirm: (name: string) => void }> = ({ onCancel, onConfirm }) => {
+  const [v, setV] = useState('');
+  const [err, setErr] = useState('');
+  const ok = () => {
+    const t = v.trim();
+    if (!NAME_RE.test(t)) { setErr(t.length < 2 || t.length > 12 ? 'Names need 2 to 12 characters.' : 'Only letters and numbers, no spaces or symbols.'); return; }
+    onConfirm(t);
+  };
+  return (
+    <motion.div className="np-back pe" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel}>
+      <motion.div className="np-panel" initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.18 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Create name">
+        <i className="np-corner tl" /><i className="np-corner tr" /><i className="np-corner bl" /><i className="np-corner br" />
+        <div className="np-head">
+          <span>Name Your Hero</span>
+          <button className="np-x" onClick={onCancel} aria-label="Close"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 8l8 8M16 8l-8 8" /></svg></button>
+        </div>
+        <div className="np-orn"><svg viewBox="0 0 120 40" aria-hidden><g className="np-rays">{Array.from({ length: 11 }, (_, i) => { const a = Math.PI * (0.15 + 0.7 * i / 10); return <line key={i} x1={60} y1={4} x2={60 + Math.cos(a) * 46} y2={4 + Math.sin(a) * 34} />; })}</g><path d="M50 4 L60 16 L70 4" /><path d="M54 4 L60 11 L66 4" /><rect x="57" y="-3" width="6" height="6" transform="rotate(45 60 0)" /></svg></div>
+        <div className="np-field">
+          <input autoFocus className="np-input" placeholder="Enter a name" maxLength={12} value={v} data-testid="cs-name-input"
+            onChange={(e) => { setV(e.target.value); setErr(''); }}
+            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ok(); if (e.key === 'Escape') onCancel(); }} />
+        </div>
+        <div className={`np-rules ${err ? 'err' : ''}`}>{err || <>Names can use letters and numbers, 2 to 12 characters.<br />Spaces and special characters are not allowed.</>}</div>
+        <div className="np-foot">
+          <button className="np-btn cancel" onClick={onCancel}>Cancel</button>
+          <button className="np-btn confirm" onClick={ok} data-testid="cs-name-confirm">Confirm</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export const CharacterSelect: React.FC = () => {
   const setCharSelect = useUiStore((s) => s.setCharSelect);
   const askConfirm = useUiStore((s) => s.askConfirm);
@@ -72,7 +106,7 @@ export const CharacterSelect: React.FC = () => {
   const [sel, setSel] = useState<string>(active?.id ?? chars[0]?.id ?? '');
   const [mode, setMode] = useState<'list' | 'create'>(chars.length ? 'list' : 'create');
   const [cHero, setCHero] = useState<HeroClass>('ARCHER');
-  const [cName, setCName] = useState('');
+  const [naming, setNaming] = useState(false);
   const [cTint, setCTint] = useState(TINTS[0].id);
   const picked = chars.find((c) => c.id === sel) ?? null;
   const hero: HeroClass = mode === 'create' ? cHero : picked?.hero ?? 'ARCHER';
@@ -81,8 +115,8 @@ export const CharacterSelect: React.FC = () => {
     if (picked.id === active?.id) { setCharSelect(false); return; }   // already loaded
     setActiveChar(picked.id); enterWithReload();
   };
-  const create = () => {
-    const c = createChar(cName || HERO_META[cHero].title, cHero, cTint);
+  const create = (name: string) => {
+    const c = createChar(name, cHero, cTint);
     if (c) enterWithReload();
   };
   const del = () => {
@@ -99,7 +133,8 @@ export const CharacterSelect: React.FC = () => {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
-      if (e.key === 'Enter') { if (mode === 'list') play(); else create(); }
+      if (naming) return;
+      if (e.key === 'Enter') { if (mode === 'list') play(); else setNaming(true); }
       const list = mode === 'list' ? chars.map((c) => c.id) : HERO_ORDER;
       const cur = mode === 'list' ? sel : cHero;
       const i = list.indexOf(cur as never);
@@ -152,9 +187,8 @@ export const CharacterSelect: React.FC = () => {
           <Radar stats={PROFILE[hero]} />
           {mode === 'create' && (<>
             <div className="cs-row"><span>Complexity</span><span className="cs-stars">{[1, 2, 3].map((n) => <i key={n} className={n <= COMPLEXITY[hero] ? 'on' : ''} />)}</span></div>
-            <input className="cs-input pe" placeholder="Character name" maxLength={16} value={cName} onChange={(e) => setCName(e.target.value)} data-testid="cs-name-input" />
             <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
-            <button className="cs-confirm" onClick={create} data-testid="cs-create">Create</button>
+            <button className="cs-confirm" onClick={() => setNaming(true)} data-testid="cs-create">Create</button>
             {chars.length > 0 && <button className="cs-sub" onClick={() => setMode('list')}>Back to characters</button>}
           </>)}
           {mode === 'list' && (<>
@@ -165,6 +199,7 @@ export const CharacterSelect: React.FC = () => {
           </>)}
         </motion.div>
       </AnimatePresence>
+      <AnimatePresence>{naming && <NamePopup onCancel={() => setNaming(false)} onConfirm={create} />}</AnimatePresence>
     </div>
   );
 };

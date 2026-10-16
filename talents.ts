@@ -2,11 +2,12 @@
 // Talent trees: permanent (profile) per class. A radial graph (owner reference): the class emblem in the centre and
 // four branches (up / right / down / left), each fanning out over five rings:
 //   ring 0  root ............................. (no requirement)
-//   ring 1  two nodes ........................ need the root learned (1 rank)
-//   ring 2  four nodes (two per ring-1 node) . need their parent learned
-//   ring 3  two nodes ........................ each needs BOTH ring-2 nodes on its side learned
-//   ring 4  capstone ......................... needs both ring-3 nodes MAXED
-// (owner: only the capstone asks for maxed parents; everything else just needs the previous node unlocked)
+//   ring 1  two nodes ........................ need the root
+//   ring 2  four nodes (two per ring-1 node) . need their parent
+//   ring 3  two nodes ........................ each needs BOTH ring-2 nodes on its side
+//   ring 4  capstone ......................... needs both ring-3 nodes
+// (owner: a mix) plain stat talents need their parents learned (1 rank) and little / no class level; special
+// talents and the capstone need their parents MAXED and the ring's class level (see reqMax).
 // Rings also need a class level (RING_LEVEL) and cost more points per rank (RING_COST). 4 points per class level;
 // a full tree costs 158-164 of the 200 points at Lv 50, so every talent fits at the cap - before that you choose.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are read from PlayerStats by the engine.
@@ -29,6 +30,8 @@ export interface TalentNode {
   icon: string;           // 'u:TYPE' (UpgradeArt) or skill icon id
   fx: StatFx;             // per rank
   capstone?: boolean;
+  /** prerequisites must be MAXED (strong talents), otherwise one rank in each is enough */
+  reqMax?: boolean;
   /** a special talent: changes a mechanic (extra dash / pierce / skeleton / axe / chain...), drawn with a gold star */
   special?: boolean;
   cost: number;           // talent points per rank (deeper tiers cost more)
@@ -316,6 +319,12 @@ export const TALENTS: TalentNode[] = [];
         name: r[0], desc: mech && Object.keys({ ...fx.add, ...fx.mul }).every((k) => WHOLE.has(k)) ? r[1] : describeFx(fx), max: r[2], icon: r[3], fx,
         req: L.req.map(id), capstone: i === 9, cost: RING_COST[L.row], lvReq: RING_LEVEL[L.row], special: Object.keys({ ...fx.add, ...fx.mul }).some((k) => WHOLE.has(k) || SPECIAL_KEYS.has(k)),
       });
+      // (owner: a mix) the strong talents - special mechanics and the capstone - keep the ring's class level and need
+      // their parents MAXED; plain stat talents only need the previous node learned, with a lighter level gate
+      // (none in rings 1-2, half the ring level further out).
+      const t = TALENTS[TALENTS.length - 1];
+      t.reqMax = !!(t.capstone || t.special);
+      if (!t.reqMax) t.lvReq = L.row <= 2 ? 1 : Math.round(RING_LEVEL[L.row] / 2);
     });
   });
 });
@@ -334,8 +343,8 @@ export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks)
 export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? (200 + 150 * s) * 10 : 0; };   // x10 economy
 
 export const isMaxed = (id: string, ranks: TalentRanks): boolean => (ranks[id] || 0) >= (TALENT_BY_ID[id]?.max ?? 1);
-/** Prerequisite `q` of `node` is satisfied: maxed for a capstone, at least one rank for everything else. */
-export const reqMet = (node: TalentNode, q: string, ranks: TalentRanks): boolean => node.capstone ? isMaxed(q, ranks) : (ranks[q] || 0) > 0;
+/** Prerequisite `q` of `node` is satisfied: maxed for a strong talent (reqMax), at least one rank for a plain one. */
+export const reqMet = (node: TalentNode, q: string, ranks: TalentRanks): boolean => node.reqMax ? isMaxed(q, ranks) : (ranks[q] || 0) > 0;
 /** Nodes this one opens up (the ones listing it as a prerequisite). */
 export const childrenOf = (node: TalentNode): TalentNode[] => talentsOf(node.hero).filter((t) => t.req.includes(node.id));
 

@@ -16,7 +16,7 @@ import { HERO_COLOR } from '../../lib/game';
 
 // Radial talent tree (owner reference): class emblem in the centre, four branches (up / right / down / left) fanning out
 // over five rings. Square nodes = root / special / capstone, round nodes = plain stat talents. A node opens once its
-// parent(s) are learned (MAXED for a capstone) and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
+// parent(s) are learned (MAXED for special talents / the capstone) and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
 const RING_R = [118, 200, 290, 372, 448];
 const AXIS = [-90, 0, 90, 180];
 const SIZE = 2 * (RING_R[4] + 70);
@@ -158,7 +158,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="tt-sec">Requirements</div>
               <ul className="tt-req">
                 <li className={lv >= sel.lvReq ? 'ok' : ''}>{lv >= sel.lvReq ? <Check size={13} /> : <Lock size={12} />} Class level {sel.lvReq}</li>
-                {sel.req.map((q) => { const p = TALENT_BY_ID[q], ok = reqMet(sel, q, ranks); return <li key={q} className={ok ? 'ok' : ''}>{ok ? <Check size={13} /> : <Lock size={12} />} {sel.capstone ? 'Max' : 'Learn'} {p.name} ({ranks[q] || 0}/{sel.capstone ? p.max : 1})</li>; })}
+                {sel.req.map((q) => { const p = TALENT_BY_ID[q], ok = reqMet(sel, q, ranks); return <li key={q} className={ok ? 'ok' : ''}>{ok ? <Check size={13} /> : <Lock size={12} />} {sel.reqMax ? 'Max' : 'Learn'} {p.name} ({ranks[q] || 0}/{sel.reqMax ? p.max : 1})</li>; })}
                 {!sel.req.length && <li className="ok"><Check size={13} /> Branch root</li>}
               </ul>
               {childrenOf(sel).length > 0 && (<>
