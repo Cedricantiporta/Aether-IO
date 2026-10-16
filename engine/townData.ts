@@ -312,20 +312,26 @@ export const FENCES: [number, number, number, number][] = [
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
     for (let i = 0; i < pts.length - 1; i++) {
-      const [bx, bz] = pts[i + 1], l0 = Math.hypot(bx - pts[i][0], bz - pts[i][1]), cut = i === 0 ? 4.2 : 0;   // (first run starts clear of the farm track: no fence poking across it)
-      const ax = pts[i][0] + (bx - pts[i][0]) / l0 * cut, az = pts[i][1] + (bz - pts[i][1]) / l0 * cut;
-      const l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
-      for (const sd of [-1, 1]) f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
+      const [bx, bz] = pts[i + 1], l0 = Math.hypot(bx - pts[i][0], bz - pts[i][1]);
+      for (const sd of [-1, 1]) {
+        // (first run, inner side: starts clear of the farm track so it does not poke across it; owner red lines: the
+        // outer side runs all the way to the track, and both join the track's fences)
+        const cut = i === 0 && sd < 0 ? 4.2 : 0;
+        const ax = pts[i][0] + (bx - pts[i][0]) / l0 * cut, az = pts[i][1] + (bz - pts[i][1]) / l0 * cut;
+        const l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
+        f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
+        if (i === 0) f.push(sd < 0 ? [42, 108.7, ax + nx * sd, az + nz * sd] : [43.6, 113.2, ax + nx * sd, az + nz * sd]);   // joints to the track fences
+      }
     }
     return f;
   })(),
   // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
-  [5, 108.4, 30.5, 108.9], [37.5, 108.9, 42, 108.7],
-  [5, 112.8, 10.6, 112.9], [15.4, 112.95, 20.6, 113.1], [25.4, 113.2, 29.6, 113.3], [34.4, 113.3, 43.6, 113.2],
+  // (owner, red lines) closed along both sides now; the south side joins the road's east fence
+  [3.4, 108.3, 30.5, 108.9], [30.5, 108.9, 42, 108.7],
+  [5, 112.8, 20.6, 113.1], [20.6, 113.1, 43.6, 113.2],
   // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
   [-4.4, TOWER.z - 1.8, -55, TOWER.z - 1.8],
-  [-4.4, TOWER.z + 1.8, -11.6, TOWER.z + 1.8], [-15.4, TOWER.z + 1.8, -21.6, TOWER.z + 1.8], [-25.4, TOWER.z + 1.8, -31.1, TOWER.z + 1.8],
-  [-34.9, TOWER.z + 1.8, -40.1, TOWER.z + 1.8], [-43.9, TOWER.z + 1.8, -55, TOWER.z + 1.8],   // (owner: stop short of the tower clearing)
+  [-4.4, TOWER.z + 1.8, -55, TOWER.z + 1.8],   // (owner, red lines: closed along the hamlet side too; stops short of the tower clearing)
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];

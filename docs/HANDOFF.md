@@ -1103,3 +1103,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Bandits: between dashes they circle at ~4.2-5.4 from the hero (back off when closer); the dash stops just short of the hero (`patternT` = gap / dashSpeed) instead of running through to point blank.
 - Elixir Brewer hut moved 2.1 west (x -12.6) so its signboard no longer covers the road.
 - Lake south shore (by the mainland beach / Endless Tower) is wavy (`townData.lakeSouth` / `beachData.lakeSouthZ`, used by terrain lakeK + isTownWater; the water plane extends 10 further south), sand has a wavy south edge, plus SOUTH_ROCKS and 5 palms along it.
+- Fences (owner red lines): tower path closed on the hamlet side too; farm track past the coop closed both sides (joins the road's east fence); mine path's outer fence runs to the track and both sides join the track fences.
