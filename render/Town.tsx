@@ -354,7 +354,7 @@ const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { 
 // -------------------------------------------------------------------- signs ---
 function buildSign(type: ShopType, color: string) {
   const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
-  b.box(2.0, 1.3, 0.16, [0, 0, 0], '#7a5230'); b.box(1.75, 1.05, 0.18, [0, 0, 0.01], '#e8d3a3');
+  b.box(2.0, 1.3, 0.16, [0, 0, 0], '#7a5230'); b.box(1.75, 1.05, 0.14, [0, 0, 0.03], '#e8d3a3');   // (back face inside the frame: no z-fighting on the sign's back)
   b.box(2.06, 0.1, 0.2, [0, 0.64, 0], '#4a3020'); b.box(2.06, 0.1, 0.2, [0, -0.64, 0], '#4a3020');
   b.cyl(0.015, 0.015, 0.5, 4, [-0.8, 0.9, 0], '#555'); b.cyl(0.015, 0.015, 0.5, 4, [0.8, 0.9, 0], '#555');
   if (type === 'SUPPLIES') {
