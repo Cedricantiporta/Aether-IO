@@ -41,8 +41,10 @@ const _mv = { x: 0, z: 0 };
 /** Combat feel: attack only when standing still, auto-target the nearest enemy, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
+/** Basic attack reach: class base (archer 16.5, owner: a bit shorter) + the attackRange stat (DEX, talents, bows, gear lines). */
+const heroRange = (st: { hero: string; stats: { attackRange?: number } }): number => (ATTACK_RANGE[st.hero] ?? 18) + (st.stats.attackRange || 0);
 /** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
-const ATTACK_RANGE: Record<string, number> = { ARCHER: 22, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7, NECROMANCER: 17 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
+const ATTACK_RANGE: Record<string, number> = { ARCHER: 16.5, WIZARD: 18, BARBARIAN: 11, KNIGHT: 7, NECROMANCER: 17 };   // knight: sword arc reach ~ 24 u/s x 0.26 s + its 2.5 width
 const STOP_TO_FIRE_DELAY = 0.12;
 let autoChase = false, lastAimId = -1;
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
@@ -260,7 +262,7 @@ export function updatePlayer(dt: number): void {
       && (cur.pos.x - p.pos.x) ** 2 + (cur.pos.z - p.pos.z) ** 2 < (AUTO_TARGET_RANGE + 4) ** 2;
     updateTarget();
     const lk = lockedEnemy();
-    const lr = (ATTACK_RANGE[st.hero] ?? 18) + (lk ? lk.radius : 0);
+    const lr = (heroRange(st)) + (lk ? lk.radius : 0);
     void lr;
     if (lk) autoAim.id = lk.id;   // a clicked target always wins (the hero walks to it when out of range)
     else if (st.settings.autoAim === false) autoAim.id = -1;
@@ -307,7 +309,7 @@ export function updatePlayer(dt: number): void {
   // weapon range -> walk toward it until it is in range (then the normal auto-attack takes over). Follows the auto-aim setting.
   autoChase = false;
   if (ml === 0 && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
-    const range = ATTACK_RANGE[st.hero] ?? 18;
+    const range = heroRange(st);
     const chaseR = range * CHASE_MUL;
     // the targeted enemy (clicked lock, else the auto-aim pick) is always walked to until it is in weapon range
     const lk = lockedEnemy();
@@ -382,7 +384,7 @@ export function updatePlayer(dt: number): void {
   // a new target: swing at it right away (no idle wait)
   if (autoAim.id !== lastAimId) { lastAimId = autoAim.id; if (autoAim.id >= 0) p.fireT = Math.min(p.fireT, 0.03); }
   // Auto-attack: no target in weapon range → hold fire (no shooting into empty air).
-  const range = ATTACK_RANGE[st.hero] ?? 18;
+  const range = heroRange(st);
   const lkd = lockedEnemy();
   const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
   if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
@@ -453,7 +455,7 @@ export function updatePlayerVillage(dt: number): void {
   a.stepPhase += sp * dt * 1.4;
   // town monsters (hermit path): auto-attack while standing still with one in range, like in a run
   if (ml > 0 || p.dashT > 0 || p.whirlT > 0) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
-  const tgt = findNearestEnemy(p.pos.x, p.pos.z, ATTACK_RANGE[st.hero] ?? 18);
+  const tgt = findNearestEnemy(p.pos.x, p.pos.z, heroRange(st));
   if (!tgt) { p.fireT = Math.max(p.fireT, 0.05); autoAim.id = -1; return; }
   autoAim.id = tgt.id; p.facing = Math.atan2(tgt.pos.x - p.pos.x, tgt.pos.z - p.pos.z);   // aim at it (no run targeting in town)
   p.fireT -= dt;

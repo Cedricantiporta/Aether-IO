@@ -83,7 +83,7 @@ const INITIAL_STATS: PlayerStats = {
   fireRate: 1.4, projectileSpeed: 20, multishot: 1, spread: 0.2, dashCooldown: 4.0,
   cooldownReduction: 0, magnetRadius: 5.0, critRate: 0.05, critDamage: 1.5, defense: 0,
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
-  lifeSteal: 0, minionDmg: 0, minionLife: 0, minionCount: 0, minionHaste: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, onHitBurnChance: 0, onHitSlowChance: 0,
+  lifeSteal: 0, minionDmg: 0, minionLife: 0, minionCount: 0, minionHaste: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, attackRange: 0, onHitBurnChance: 0, onHitSlowChance: 0,
   echoEvery: 0, hawkBonus: 0, galeWidth: 0, orbBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, avatarBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
   stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
   stunBonus: 0, burnStacks: 0, backstab: 0, axeCount: 0, axeBounce: 0, axeSize: 0,
@@ -256,6 +256,7 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
 const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>, attrs?: Attrs): PlayerStats => {
   const final: PlayerStats = { ...base };
+  if (!final.attackRange) final.attackRange = 0;   // (stat added later: older saved base stats lack it)
   const acc = newAcc();
 
   (Object.values(equipment) as (Item | null)[]).forEach((item) => {

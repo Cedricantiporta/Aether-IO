@@ -80,10 +80,10 @@ const LAYOUT: { row: number; x: number; req: number[] }[] = [
 /** Extra paths per branch (owner: more talent choices): two more nodes in each lane before the capstone. */
 const EXTRA: Record<HeroClass, Row[][]> = {
   ARCHER: [
-    [['Steady Hands', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Hunter\'s Mark', '', 2, 'u:DAMAGE', { mul: { damage: 0.03 } }], ['Hawkeye', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Rapid Fire', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }]],
+    [['Long Shot', '', 2, 'GALE_ARROW', { add: { attackRange: 2.2 } }], ['Hunter\'s Mark', '', 2, 'u:DAMAGE', { mul: { damage: 0.03 } }], ['Hawkeye', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Rapid Fire', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }]],
     [['Kindling', '', 2, 'burning', { add: { onHitBurnChance: 0.05 } }], ['Rime', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Wildfire', '', 2, 'u:SKILL_BURNING', { add: { skillDamage: 0.1 } }], ['Glacial Tips', '', 2, 'u:SKILL_FREEZING', { add: { critDamage: 0.12 } }]],
     [['Light Step', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Tumble', '', 2, 'dash', { add: { dodge: 0.03 } }], ['Rugged', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Windrunner', '', 2, 'u:SKILL_DASH', { add: { dodge: 0.03 }, mul: { moveSpeed: 0.03 } }]],
-    [['Scout', '', 2, 'u:CRIT_RATE', { add: { critRate: 0.02 } }], ['Falconer', 'Arrow storm lasts +1s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1 } }], ['Snare Shot', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Deep Quiver', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }]],
+    [['Eagle Eye', '', 2, 'u:CRIT_RATE', { add: { attackRange: 2.2, critRate: 0.01 } }], ['Falconer', 'Arrow storm lasts +1s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1 } }], ['Snare Shot', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Deep Quiver', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }]],
   ],
   WIZARD: [
     [['Spellweave', '', 2, 'special', { add: { skillDamage: 0.08 } }], ['Deep Well', '', 2, 'u:MAX_MANA', { add: { maxMana: 25 } }], ['Arcane Echo', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Clarity', '', 2, 'gravity', { add: { manaRegen: 0.8 } }]],

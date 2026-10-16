@@ -42,6 +42,7 @@ export const AFFIXES: AffixDef[] = [
   { key: 'mag',   label: 'Pickup Range',      stat: 'magnetRadius',    tiers: [0, .8, 1.2, 1.8, 2.5], weight: 5, cp: 20 },
   { key: 'burn',  label: 'Burn on Hit',       stat: 'onHitBurnChance', tiers: [0, .04, .06, .08, .11], weight: 4, cp: 300 },
   { key: 'slow',  label: 'Slow on Hit',       stat: 'onHitSlowChance', tiers: [0, .05, .08, .11, .15], weight: 4, cp: 300 },
+  { key: 'range', label: 'Attack Range',      stat: 'attackRange',     tiers: [0, .6, 1, 1.5, 2.2], weight: 4, cp: 120 },
   { key: 'pierce', label: 'Projectile Pierce', stat: 'pierceBonus',    tiers: [0, 1, 1, 1, 2], weight: 1.6, cp: 150, fixed: true },
   { key: 'proj',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0,  // retired: extra projectiles come from weapon perks (weaponPerks.ts)
     minRarity: 'EPIC', cp: 200, fixed: true },

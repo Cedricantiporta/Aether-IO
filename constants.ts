@@ -379,6 +379,9 @@ export const ITEMS_POOL: Item[] = [
 
 // Generated variety (class weapon alternatives, armour flavours, class starter gear, item-set pieces).
 ITEMS_POOL.push(...GENERATED_ITEMS);
+// bows extend the archer's reach (stat attackRange; owner: shorter base range, gear / talents / DEX raise it)
+{ const R: Record<string, number> = { COMMON: 0.5, RARE: 1, EPIC: 1.5, LEGENDARY: 2.2, MYTHIC: 3 };
+  for (const it of ITEMS_POOL) if (it.type === 'WEAPON' && it.classType === 'ARCHER' && !it.stats.attackRange) it.stats = { ...it.stats, attackRange: R[it.rarity] ?? 0 }; }
 
 // ---- economy inflation: scale every template price exactly once (pools may share objects)
 {

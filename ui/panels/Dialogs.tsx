@@ -61,7 +61,7 @@ export const BuyDialog: React.FC = () => {
   const confirm = () => {
     if (!item || gold < total) return;
     if (opts?.onBuy) { opts.onBuy(a); set(null); return; }
-    buyItem(item, a); if (!(item.type === 'POTION' || item.type === 'CORE')) set(null);
+    buyItem(item, a); set(null);   // (owner: the dialog always closes after Buy)
   };
   return (
     <Modal open={!!item} onClose={() => set(null)} title="How many?" ribbon tone="gold" width="26rem" z={220} onConfirm={confirm}>

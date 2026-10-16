@@ -72,6 +72,7 @@ export interface PlayerStats {
   axeBounce: number;        // Axe Storm: extra ricochets
   axeSize: number;          // Axe Storm: +fraction axe size
   pierceBonus: number;      // extra pierce on basic projectiles
+  attackRange: number;      // + units of basic attack / auto-target reach (archer: DEX, talents, bows, Eagle Eye lines)
   onHitBurnChance: number;  // chance on hit to ignite
   onHitSlowChance: number;  // chance on hit to slow
   echoEvery: number;        // every Nth attack fires twice (0 = off)

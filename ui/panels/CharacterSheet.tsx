@@ -120,7 +120,7 @@ const stem = (k: AttrKey) => { const [x, y] = NODE[k]; return x === 50 ? `M50,${
 const TWIGS = ['M50,60 C44,52 40,48 36,30', 'M50,60 C56,52 60,48 64,30', 'M50,48 C46,38 42,32 40,14', 'M50,48 C54,38 58,32 60,14', 'M31,50 C24,40 22,34 20,26', 'M69,50 C76,40 78,34 80,26'];
 const STAT_ROW: Partial<Record<keyof PlayerStats, [string, (v: number) => string]>> = {
   damage: ['Damage', (v) => Math.floor(v).toLocaleString()], knockback: ['Knockback', (v) => v.toFixed(2)],
-  fireRate: ['Attack speed', (v) => v.toFixed(2)], critRate: ['Crit rate', (v) => `${(v * 100).toFixed(1)}%`], dodge: ['Dodge', (v) => `${(v * 100).toFixed(1)}%`],
+  fireRate: ['Attack speed', (v) => v.toFixed(2)], attackRange: ['Attack range', (v) => `+${v.toFixed(2)}`], critRate: ['Crit rate', (v) => `${(v * 100).toFixed(1)}%`], dodge: ['Dodge', (v) => `${(v * 100).toFixed(1)}%`],
   skillDamage: ['Skill damage', (v) => `${(v * 100).toFixed(1)}%`], maxMana: ['Max mana', (v) => Math.round(v).toString()], cooldownReduction: ['Cooldown red.', (v) => `${(v * 100).toFixed(1)}%`],
   maxHealth: ['Max HP', (v) => Math.round(v).toLocaleString()], defense: ['Defense', (v) => v.toFixed(1)], regen: ['HP regen', (v) => `${v.toFixed(2)}/s`],
   critDamage: ['Crit damage', (v) => `${(v * 100).toFixed(1)}%`], goldFind: ['Gold find', (v) => `${(v * 100).toFixed(1)}%`], xpBonus: ['XP gain', (v) => `${(v * 100).toFixed(1)}%`],
