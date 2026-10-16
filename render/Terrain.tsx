@@ -15,7 +15,7 @@ import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
 import { inCaveClear } from '../engine/caveData';
-import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff } from '../engine/beachData';
+import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
 const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(z - DOCK.z) < 7;
 
@@ -59,7 +59,7 @@ function groundColor(x: number, z: number, y: number, out: Color) {
   const sk = beachSandK(x, z);
   if (sk > 0) {
     cT.set('#e2cd96').lerp(cD.set('#d4ba82'), n2).multiplyScalar(0.95 + n3 * 0.08);
-    const shoreX = z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6 ? -49.5 - mainShoreOff(z) : BEACH.shoreX;   // (LAKE.x1)
+    const shoreX = z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6 ? -49.5 - mainShoreOff(z) : BEACH.shoreX + beachWobble(z);   // (LAKE.x1; the wet band follows the wavy water line)
     cT.lerp(cD.set('#b49a6c'), sstep(shoreX + 3.5, shoreX + 0.5, x));
     out.lerp(cT, sk);
   }

@@ -1105,3 +1105,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Lake south shore (by the mainland beach / Endless Tower) is wavy (`townData.lakeSouth` / `beachData.lakeSouthZ`, used by terrain lakeK + isTownWater; the water plane extends 10 further south), sand has a wavy south edge, plus SOUTH_ROCKS and 5 palms along it.
 - Fences (owner red lines): tower path closed on the hamlet side too; farm track past the coop closed both sides (joins the road's east fence); mine path's outer fence runs to the track and both sides join the track fences.
 - Bridge: the two wide arch cylinders under the deck no longer poke up through it (no humps).
+- West beach: curvier water line (extra sand-only wobble term in `beachWobble`) and the wet-sand band follows it (render/Terrain.tsx; it was a straight band).
