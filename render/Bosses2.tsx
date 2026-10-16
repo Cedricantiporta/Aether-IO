@@ -174,7 +174,8 @@ function targets(e: Enemy, T: Pose, t: number): void {
       break;
     case 'BOSS_WARLORD':
       T.dy = Math.abs(sin(t * 3)) * 0.06 * (st === 'CHASE' ? 1 : 0);
-      if (bossView.enraged) T.glow += 1.4;
+      if (bossView.enraged) T.glow += 1.8;
+      if (bossView.formT > 0) { T.armL = T.armR = -2.8; T.glow += 2.5 + (2 - bossView.formT) * 1.5; T.dy = 0.25; }   // igniting
       if (p === 0) { if (W) { const w = clamp(k, 0, 1); T.armR = -2.9 * w; T.armL = -1.5 * w; T.glow += w * 1.5; } else if (A) { T.armR = -2.4; T.armL = -1.2; T.spin = bossView.enraged ? 11 : 8; T.glow += 1.8; } }
       else if (p === 1) { if (W) { const w = clamp(k, 0, 1); T.armR = -3.0 * w; T.glow += w; } else if (A) { T.armR = 0.5; T.pitch = 0.3; T.dy = -0.2; T.glow += 1.4; } }
       else if (p === 2) { if (W || A) { T.armR = T.armL = -2.7; T.glow += 1.3; } }
@@ -220,7 +221,8 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     const sc = e.radius / rig.r;
     r.position.set(e.pos.x + shx * sc, e.pos.y + yOff, e.pos.z);
     r.rotation.y = e.facing + s.yaw;
-    r.scale.set(sc, sc * fy, sc);
+    const big = kind === 'BOSS_WARLORD' && bossView.enraged ? 1.12 : 1;   // (owner) the Burning Form looms larger
+    r.scale.set(sc * big, sc * fy * big, sc * big);
     const b = body.current;
     b.position.y = s.dy; b.rotation.x = s.pitch; b.rotation.z = e.state === 'CHASE' ? sin(t * (kind === 'BOSS_TREANT' ? 3 : 2.6)) * (kind === 'BOSS_TREANT' ? 0.09 : 0.035) : 0;
     if (aL.current) { aL.current.rotation.x = s.armL; aL.current.rotation.z = s.spread * (kind === 'BOSS_WYRM' ? 1 : 1); }
@@ -232,7 +234,7 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     }
     mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * sin(TT * 5));
     if (kind === 'BOSS_TREANT') mats.lit.color.setRGB(bossView.bark ? 0.62 : 1, bossView.bark ? 0.58 : 1, bossView.bark ? 0.55 : 1);
-    if (kind === 'BOSS_WARLORD') mats.lit.color.setRGB(bossView.enraged ? 1.5 : 1, bossView.enraged ? 0.75 : 1, bossView.enraged ? 0.7 : 1);
+    if (kind === 'BOSS_WARLORD') { const f = bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, fl = 0.15 * sin(TT * 9) * f; mats.lit.color.setRGB(1 + 0.8 * f + fl, 1 - 0.3 * f, 1 - 0.45 * f); }   // charred red-hot body, flickering
 
     // ambient particles / footfalls
     if (dt > 0 && e.state !== 'DYING' && e.state !== 'SPAWN') {
@@ -241,7 +243,10 @@ function Boss2({ kind }: { kind: EnemyKind }) {
         case 'BOSS_TREANT': if (Math.random() < dt * 5) FX.add.emit(wx, 3 + Math.random() * 6, wz, 0, -0.8, 0, 1.6, 0.3, 0.05, 1.0, 0.5, 2.0, 0.9, CELL.DISC, 0, 0.2); break;
         case 'BOSS_HYDRA': if (Math.random() < dt * 3) smokePuff(wx, 0.4, wz, 1, 0x4c8a3a, 1.5, 1.2, 0.6, 1.0, 0.3); break;
         case 'BOSS_WYRM': if (Math.random() < dt * 6) smokePuff(wx, 1.2 + s.dy, wz, 1, 0xd6f1ff, 1.6, 1.2, 0.3, 1.5, 0.3); break;
-        case 'BOSS_WARLORD': if (Math.random() < dt * (bossView.enraged ? 22 : 8)) embers(wx, 1 + Math.random() * 5, wz, 1, 0xff7a1a, 0.3, 2.4, 0.9, 0.2); break;
+        case 'BOSS_WARLORD':
+          if (Math.random() < dt * (bossView.enraged ? 30 : bossView.formT > 0 ? 45 : 8)) embers(wx, 1 + Math.random() * 5, wz, 1, 0xff7a1a, 0.3, 2.4, 0.9, 0.2);
+          if ((bossView.enraged || bossView.formT > 0) && Math.random() < dt * 14) smokePuff(wx, 0.6 + Math.random() * 3, wz, 1, Math.random() < 0.5 ? 0xff5a1a : 0xffb02a, 1.4, 1.6, 0.25, 2.2, 0.35);   // body flames
+          break;
         default: if (Math.random() < dt * 10) FX.add.emit(wx, 1 + Math.random() * 5, wz, 0, 1.5, 0, 0.9, 0.3, 0.05, 1.6, 0.4, 2.0, 0.9, CELL.STAR, 0, 0.3, 0, 2);
       }
       if (kind === 'BOSS_TREANT' || kind === 'BOSS_WARLORD' || kind === 'BOSS_HYDRA') {

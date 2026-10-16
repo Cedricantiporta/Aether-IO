@@ -22,7 +22,7 @@ import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
 import {
-  BT, WAVE_THORN, WAVE_VOID, PROP_GLOB, arena, breath, dive, inCone,
+  BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, PROP_GLOB, arena, breath, dive, inCone,
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx,
 } from './bossFx';
 import { wardedBossId } from './bossMech';
@@ -60,6 +60,7 @@ export const S = {
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
   enraged: false, wheelA: 0, ringT: 0, cleaveCd: 0, wheelN: 0,
+  formT: 0, auraT: 0,   // (owner) Burning Form: formT = the transformation in progress; enraged = in the burning form
   // the Dune Colossus (desert war machine)
   rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
   // Void Herald
@@ -73,7 +74,7 @@ export function resetBosses2(): void {
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
   S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
-  S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0;
+  S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0;
   S.voidOn = false; S.gravT = 0; S.pushed = false;
 }
 
@@ -163,8 +164,13 @@ const LISTS: Partial<Record<EnemyKind, Atk[]>> = {};
 const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.6, BOSS_VOID: 1.7 };
 
 function cdFor(e: Enemy): number {
-  return (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.6 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1);
+  return (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.5 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1);
 }
+
+/** (owner) Ignar's Burning Form: wind-ups, telegraphs and recoveries take 70% of the time. */
+const fast = (e: Enemy): number => (e.kind === 'BOSS_WARLORD' && S.enraged ? 0.7 : 1);
+/** Ignar's hit power (x1.3 in the Burning Form). */
+const ipwr = (e: Enemy): number => pwr(e) * (S.enraged ? 1.3 : 1);
 
 function beginAtk(e: Enemy, list: Atk[], id: number, ux: number, uz: number, dist: number): void {
   const a = list[id];
@@ -184,7 +190,7 @@ function runAtk(e: Enemy, list: Atk[], dt: number, ux: number, uz: number, dist:
     case 'WINDUP':
       if (a.windMove) keepRange(e, ux, uz, dist, 5, 12, e.speed * a.windMove, 0.3); else stand(e);
       if (a.windTick) a.windTick(e);
-      if (e.stateT >= a.wind(e)) { enter(e, 'ATTACK'); a.fire(e, ux, uz); }
+      if (e.stateT >= a.wind(e) * fast(e)) { enter(e, 'ATTACK'); a.fire(e, ux, uz); }
       return true;
     case 'ATTACK':
       if (a.tick) a.tick(e, dt, ux, uz, dist); else stand(e);
@@ -192,7 +198,7 @@ function runAtk(e: Enemy, list: Atk[], dt: number, ux: number, uz: number, dist:
       return true;
     case 'RECOVER':
       stand(e);
-      if (e.stateT >= a.rec(e)) { enter(e, 'CHASE'); e.attackCd = cdFor(e); }
+      if (e.stateT >= a.rec(e) * fast(e)) { enter(e, 'CHASE'); e.attackCd = cdFor(e); }
       return true;
     default: return false;
   }
@@ -215,6 +221,7 @@ hooks.damageMul = (e: Enemy): number => {
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
   if (e.kind === 'BOSS_HYDRA') return HYDRA_MUL[S.headsDead];
+  if (e.kind === 'BOSS_WARLORD' && S.formT > 0) return 0;   // transforming: untouchable
   return 1;
 };
 
@@ -244,7 +251,7 @@ export function bossDied2(e: Enemy): void {
   const list = world.enemies;
   for (let i = 0; i < list.length; i++) { const a = list[i]; if (a.active && isBossAdd(a.kind)) poofAdd(a); }
   endBossFx();
-  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.voidOn = false;
+  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.formT = 0; S.voidOn = false;
   stat('BossDied');
 }
 
@@ -627,7 +634,7 @@ LISTS.BOSS_WARLORD = [
         const a = S.wheelA + (i / n) * 6.283;
         dirV.set(Math.sin(a), 0, Math.cos(a));
         tv.set(e.pos.x, 1.2, e.pos.z);
-        fireEnemyProjectile(tv, dirV, 'FLAME', 9, pwr(e) * 0.6, { life: 4.5, radius: 0.55, debuff: 2 });
+        fireEnemyProjectile(tv, dirV, 'FLAME', S.enraged ? 11.5 : 9, ipwr(e) * 0.6, { life: 4.5, radius: 0.55, debuff: 2 });
       }
       S.wheelN++;
       if ((S.wheelN & 3) === 0) events.emit('shake', { amount: 0.2 });
@@ -639,14 +646,14 @@ LISTS.BOSS_WARLORD = [
       const p = world.player, n = 4 + e.phase + (S.enraged ? 1 : 0);   // (owner: fewer + spread out; was 5 + 2 phase + 2)
       const px: number[] = [], pz: number[] = [];
       for (let i = 0, tries = 0; i < n && tries < n * 10; tries++) {
-        const life = 1.0 + i * 0.2;
+        const life = (1.0 + i * 0.2) * fast(e);
         let x = p.pos.x, z = p.pos.z;
         if (i > 0) { const a = Math.random() * 6.283, r = 6 + Math.random() * 8; x += Math.sin(a) * r + p.vel.x * life * 0.5; z += Math.cos(a) * r + p.vel.z * life * 0.5; }
         tv.set(x, 0, z); clampArena(tv, 2); clampToVoid(tv, 2);
         let ok = true; for (let k = 0; k < px.length; k++) if ((px[k] - tv.x) ** 2 + (pz[k] - tv.z) ** 2 < 7 * 7) { ok = false; break; }
         if (!ok) continue;
         px.push(tv.x); pz.push(tv.z); i++;
-        circle(tv.x, tv.z, 2.6, life, BT.PILLAR, pwr(e) * 1.5, 0xff5a1a);
+        circle(tv.x, tv.z, S.enraged ? 3.0 : 2.6, life, BT.PILLAR, ipwr(e) * 1.5, S.enraged ? 0xff2a0a : 0xff5a1a);
       }
     },
     fire() { /* pillars erupt as their telegraphs expire */ },
@@ -655,7 +662,7 @@ LISTS.BOSS_WARLORD = [
     name: 'Summon Imps!', wind: () => 1.0, act: () => 0.4, rec: () => 0.8,
     begin(e) { circle(e.pos.x, e.pos.z, 5, 1.0, BT.VISUAL, 0, 0xff3a1a); },
     fire(e) {
-      const n = 2 + e.phase, base = Math.random() * 6.283;   // (balance pass: 2-4 per call, max 6 alive; was 3-5, max 10)
+      const n = 2 + e.phase + (S.enraged ? 1 : 0), base = Math.random() * 6.283;   // (balance pass: 2-4 per call, max 6 alive; was 3-5, max 10)
       for (let i = 0; i < n; i++) {
         const a = base + (i / n) * 6.283, r = e.radius + 2;
         spawnAdd('BOSS_IMP', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 0.5, 0.75, 6);
@@ -665,7 +672,7 @@ LISTS.BOSS_WARLORD = [
   },
   { // Hellcleave: a close-range cone slash with a shove and a stun.
     name: 'Hellcleave!', wind: () => 0.8, act: () => 0.3, rec: () => 0.7,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 10, 0.95, 0.8, BT.SWEEP, pwr(e) * 1.6, 0xff6a1a); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, S.enraged ? 12 : 10, 0.95, 0.8 * fast(e), BT.SWEEP, ipwr(e) * 1.6, 0xff6a1a); },
     fire() { /* resolves with the telegraph */ },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
   },
@@ -673,18 +680,45 @@ LISTS.BOSS_WARLORD = [
 
 function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WARLORD!;
-  if (!S.enraged && e.hp < e.maxHp * 0.3) {
-    S.enraged = true; e.speed *= 1.4;
-    events.emit('shake', { amount: 0.8 });
-    events.emit('floatText', { pos: e.pos, text: 'ENRAGED', color: 0xff3a1a, scale: 1.3, dy: 2.6 });
-    notify('IGNAR IS ENRAGED!', '#ff3a1a');
+  // (owner) Second form at half health: Ignar bursts into flame (a short untouchable transformation that ends in a fire
+  // nova), then fights as the Burning Form - faster moves, shorter telegraphs, harder hits, a scorching aura.
+  if (!S.enraged && S.formT <= 0 && e.hp < e.maxHp * 0.5) {
+    const a = list[e.pattern];
+    if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
+    enter(e, 'CHASE'); stand(e);
+    S.formT = 2.0;
+    circle(e.pos.x, e.pos.z, 9, 2.0, BT.PILLAR, pwr(e) * 1.4, 0xff2a0a);   // get out before the nova
+    events.emit('shake', { amount: 0.6 });
+    events.emit('floatText', { pos: e.pos, text: 'IGNITING...', color: 0xff6a1a, scale: 1.3, dy: 2.6 });
+    notify('Ignar ignites - get clear of the flames!', '#ff5a1a');
+    world.boss.ability = 'Burning Form'; world.boss.abilityT = 2.6;
+  }
+  if (S.formT > 0) {
+    S.formT -= dt; stand(e);
+    if (S.formT <= 0) {
+      S.enraged = true; e.speed *= 1.35;
+      spawnWave(e.pos.x, e.pos.z, 16, 22, 1.4, pwr(e) * 0.8, WAVE_FIRE, 0xff4a1a, e.radius);
+      events.emit('shake', { amount: 1.0 });
+      events.emit('floatText', { pos: e.pos, text: 'BURNING FORM', color: 0xff3a1a, scale: 1.5, dy: 2.8 });
+      notify('IGNAR, THE BURNING FORM!', '#ff3a1a');
+      e.attackCd = 0.6; S.cleaveCd = 0;
+    }
+    return;
+  }
+  if (S.enraged) {   // scorching aura: standing close to him burns
+    S.auraT -= dt;
+    if (S.auraT <= 0) {
+      S.auraT = 0.5;
+      const p = world.player;
+      if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true });
+    }
   }
   if (S.cleaveCd > 0) S.cleaveCd -= dt;
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   if (dist > 4.5) drive(e, ux, uz, e.speed * (1 + 0.12 * e.phase)); else stand(e);
   if (e.attackCd > 0) return;
   let id: number;
-  if (dist < 8 && S.cleaveCd <= 0) { id = I_CLEAVE; S.cleaveCd = 6; }
+  if (dist < (S.enraged ? 10 : 8) && S.cleaveCd <= 0) { id = I_CLEAVE; S.cleaveCd = S.enraged ? 3.5 : 6; }
   else id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
   beginAtk(e, list, id, ux, uz, dist);
 }

@@ -105,7 +105,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 14, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0x6e7a45, knockResist: 1, armor: 75,
   },
   BOSS_WARLORD: {
-    name: 'Ignar the Infernal Warlord', hp: 2300, speed: 3.4, radius: 2.4, scale: 3.6, contactDamage: 28, projectileDamage: 19,
+    name: 'Ignar the Infernal Warlord', hp: 3220,   // (owner: +40% for the Burning Form; was 2300)
+    speed: 3.4, radius: 2.4, scale: 3.6, contactDamage: 28, projectileDamage: 19,
     xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
   },
   BOSS_VOID: {
