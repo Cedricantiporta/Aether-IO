@@ -64,7 +64,7 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -10.5, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
+export const BREWER_HUT = { x: -12.6, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge

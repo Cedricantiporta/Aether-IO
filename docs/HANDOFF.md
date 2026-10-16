@@ -1101,3 +1101,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   the QUESTS tab): taken + today's offers on the left, banner / flavour / objective / rewards on the right, Accept /
   Abandon / Claim bottom-right. Harvest nodes give very little EXP (x0.08, `crates.breakCrate`).
 - Bandits: between dashes they circle at ~4.2-5.4 from the hero (back off when closer); the dash stops just short of the hero (`patternT` = gap / dashSpeed) instead of running through to point blank.
+- Elixir Brewer hut moved 2.1 west (x -12.6) so its signboard no longer covers the road.
