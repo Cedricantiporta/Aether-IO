@@ -77,11 +77,11 @@ export const BIOMES: readonly BiomeDef[] = [
   { // 0 Greenwood: the old Meadow / Old Grove / Mire looks as three room variants of one forest biome (Elderroot, the Slime King)
     name: 'Greenwood', style: 'GRASS', ground: ['#3f9c34', '#76c648'], patch: ['#5fb83e', '#b7c45a', '#8f7448'], stone: '#a39d90', edge: '#2a4a22', fog: '#cfe6f2',
     hemiSky: '#cfe8ff', hemiGround: '#6f8f45', hemiI: 1.25, sun: '#fff0d2', sunI: 3.1, skyTint: [1, 1, 1], propTint: '#ffffff',
-    border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null,
+    border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'ROCK', 'STUMP'], hazard: null,
     river: 'WATER', lake: 'WATER', layouts: [40, 14, 10, 20, 16], towers: true, hydras: false,
     variants: [
       { name: 'Sunlit Meadow', ground: ['#43a236', '#7ccc4a'], patch: ['#62bc40', '#bcc85c', '#8f7448'], propTint: '#ffffff',
-        border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'TREE', 'ROCK'], hazard: null, hemiI: 1.35, sunI: 3.3 },
+        border: ['TREE', 'PINE', 'TREE', 'ROCK'], interior: ['ROCK', 'STUMP', 'LOG', 'ROCK', 'STUMP'], hazard: null, hemiI: 1.35, sunI: 3.3 },
       { name: 'Deep Grove', ground: ['#2b6a2f', '#4a8a3a'], patch: ['#3a8a3a', '#7d8a3e', '#5a4630'], edge: '#16301a', propTint: '#c8e0b8',
         border: ['PINE', 'TREE', 'PINE', 'TREE', 'PINE'], interior: ['STUMP', 'LOG', 'RUIN', 'ROCK', 'PINE'], hazard: null,
         fog: '#8faa98', hemiSky: '#b8d0c8', hemiGround: '#3a5a2a', hemiI: 1.0, sun: '#ffe2b0', sunI: 2.3, skyTint: [0.72, 0.82, 0.78] },

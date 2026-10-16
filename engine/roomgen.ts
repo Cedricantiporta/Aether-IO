@@ -202,7 +202,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
 
   // ---- interior obstacles
   const big = layout === 'BIG';
-  const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(9, 14) * (big ? 1.7 : 1)) : 5;
+  const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(7, 11) * (big ? 1.6 : 1)) : 5;
   if (tower) { /* open floor */ } else if (boss) {
     // each biome's boss arena has its own pillar plan (everything else stays open for the dance):
     // rings of [count, radius fraction, angle offset, size]
@@ -248,12 +248,12 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     // desert oases / grove ponds: palms and reeds hug the shore
     if (layout === 'LAKE' && def.lake === 'WATER' && (def.style === 'SAND' || def.style === 'GRASS')) {
       for (let i = 0; i < feat.nLakes; i++) {
-        const n = 2 + Math.floor(rnd() * 3);
+        const n = def.style === 'GRASS' ? (rnd() < 0.5 ? 0 : 1) : 2 + Math.floor(rnd() * 3);   // (owner: grove ponds were walled in by bushes)
         for (let k = 0, t = 0; k < n && t < 20; t++) {
           const a = rnd() * Math.PI * 2, rr = feat.lr[i] + 1.6;
           const x = feat.lx[i] + Math.cos(a) * rr, z = feat.lz[i] + Math.sin(a) * rr;
           if (!insideShape(x, z, 3) || blockedSpot(x, z, 1, 0.6)) continue;
-          add(def.style === 'SAND' ? 'PALM' : 'TREE', x, z, 1.1, rand(1.3, 1.9), true); k++;
+          add(def.style === 'SAND' ? 'PALM' : 'TREE', x, z, 1.0, def.style === 'SAND' ? rand(1.3, 1.9) : rand(1.0, 1.3), true); k++;
         }
       }
     }
