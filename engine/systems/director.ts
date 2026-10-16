@@ -37,7 +37,7 @@ import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from '.
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
-import { resetSpecials } from './bossSpecials';
+import { resetSpecials, setSlimeKing, initSpecial } from './bossSpecials';
 import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
 import type { Interactable } from './village';
@@ -546,6 +546,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
       e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5); e.hp = e.maxHp;   // half of the (halved) Elderroot
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
+      setSlimeKing(e.id); initSpecial(e);   // (owner: Belly Flop / Acid Flood / Acid Rain)
     }
     if (e && prebossRoom) { e.maxHp = Math.round(e.maxHp * 0.75); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // depth-10 pre-boss: -25% hp
     if (e) {

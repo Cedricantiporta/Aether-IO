@@ -35,7 +35,7 @@ import {
 import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
-import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys } from './bossSpecials';
+import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore } from '../../store';
 import { runMods } from '../runMods';
 import { updateBoss } from './bosses';
@@ -120,7 +120,7 @@ export function requestYaw(yaw: number): void {
 
 /** True while an enemy must not be hit by player attacks (kept out of enemyGrid). */
 export function isUntargetable(e: Enemy): boolean {
-  if (e.state === 'SPAWN' || e.hideT > 0) return true;
+  if (e.state === 'SPAWN' || e.hideT > 0 || e.pos.y > 2) return true;   // (y > 2: up in the air, Belly Flop)
   if (e.kind === 'WRAITH') return e.state === 'WINDUP';
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
@@ -1243,7 +1243,7 @@ export const MELEE_WINDUP = 0.42;
 const MELEE_CD = 1.1;
 function contactHit(e: Enemy, locked: boolean): void {
   if (strikeT[e.id] > 0) strikeT[e.id] = Math.max(0, strikeT[e.id] - frameDt * 4);
-  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || (!world.player.alive && curMin < 0)) { meleeT[e.id] = 0; return; }
+  if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || e.pos.y > 1.5 || (!world.player.alive && curMin < 0)) { meleeT[e.id] = 0; return; }
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
   const r = e.radius + 1.15;   // (monsters now stop at radius + 0.95 from the hero: reach covers that gap)
@@ -1450,7 +1450,7 @@ function updateEnemy(e: Enemy): void {
       e.pos.x *= s; e.pos.z *= s;
     }
   }
-  e.pos.y = 0;
+  e.pos.y = flopY(e);   // (Slime King Belly Flop: airborne)
 
   // ---- facing
   const diff = wrapPi(desiredYaw - e.facing);

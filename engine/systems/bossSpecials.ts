@@ -3,6 +3,7 @@
 // Same model as tricks.ts: the caster freezes while a scripted timeline (e.spT) runs; telegraph
 // zones carry the damage / effect. Boss bar shows the ability name while casting.
 //   Gorath   BOULDER PRISON, MAGMA VEINS         Malakar  SOUL CHAINS, DEATH CLONES
+//   Slime King  BELLY FLOP (jump, tracking circle, fast drop), ACID FLOOD (one huge pool), ACID RAIN (many small pools)
 //   Warden   RAISE THE DEAD   Captain AMBUSH   Behemoth PRISM BEAM   Old Tusk STAMPEDE   Shellback TIDAL SHELL
 // ============================================================================
 import { Vector3 } from 'three';
@@ -17,20 +18,42 @@ import { hooks } from './hooks';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 
-export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29 } as const;
+export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
 export const SP_NAME: Record<number, string> = {
-  21: 'Boulder Prison!', 22: 'Magma Veins!', 23: 'Soul Chains!', 24: 'Death Clones!', 25: 'Raise the Dead!', 26: 'Ambush!', 27: 'Prism Beam!', 28: 'Stampede!', 29: 'Tidal Shell!',
+  21: 'Boulder Prison!', 22: 'Magma Veins!', 23: 'Soul Chains!', 24: 'Death Clones!', 25: 'Raise the Dead!', 26: 'Ambush!', 27: 'Prism Beam!', 28: 'Stampede!', 29: 'Tidal Shell!', 30: 'Belly Flop!', 31: 'Acid Flood!', 32: 'Acid Rain!',
 };
 const LIST: Partial<Record<string, number[]>> = {
   BOSS_GOLEM: [SP.PRISON, SP.VEINS], BOSS_LICH: [SP.CHAINS, SP.CLONES],
   ZOMBIE: [SP.DEAD], BANDIT: [SP.AMBUSH], CRYSTAL_GOLEMITE: [SP.PRISM], BOAR: [SP.STAMPEDE], ROCK_CRAB: [SP.SHELL],
+  SPLITTER: [SP.SLAM, SP.FLOOD, SP.SLAM, SP.RAIN],   // only the Slime King (see setSlimeKing)
 };
 /** QA: how many times each special was cast. */
 export const specialStats: Record<string, number> = {};
-export function resetSpecials(): void { for (const k in specialStats) delete specialStats[k]; tether.active = false; prism.zone = null; }
+export function resetSpecials(): void { for (const k in specialStats) delete specialStats[k]; tether.active = false; prism.zone = null; slimeKingId = -1; }
+
+/** The Meadow's depth-10 Slime King (a giant mini-boss SPLITTER): the only splitter with specials. */
+let slimeKingId = -1;
+export function setSlimeKing(id: number): void { slimeKingId = id; }
+// Belly Flop timeline (s): crouch, leap out of sight, hang while the circle hunts you, lock, slam down fast.
+const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.22, end: 3.9, h: 24, r: 6.5 };
+/** Height of an enemy in a Belly Flop (enemies.ts writes it to pos.y; > 2 = airborne: untouchable, no contact). */
+export function flopY(e: Enemy): number {
+  if (e.spKind !== SP.SLAM) return 0;
+  const t = e.spT;
+  if (t < FLOP.up || t >= FLOP.land) return 0;
+  if (t < FLOP.top) { const k = (t - FLOP.up) / (FLOP.top - FLOP.up); return FLOP.h * (1 - (1 - k) * (1 - k)); }
+  if (t < FLOP.drop) return FLOP.h;
+  const k = (t - FLOP.drop) / (FLOP.land - FLOP.drop); return FLOP.h * (1 - k * k);
+}
+/** A telegraph circle at exactly this size / duration (boss telegraph scaling would break the acid pools' match). */
+function tel(x: number, z: number, r: number, life: number, dmg: number, color: number): import('../types').Zone | null {
+  const zn = spawnTelegraphCircle(x, z, r, life, dmg, color);
+  if (zn) { zn.radius = r; zn.life = zn.maxLife = life; }
+  return zn;
+}
 
 const casts = new Map<number, number>();
-interface Data { cx: number; cz: number; slots: number[]; ang: number; dirx: number; dirz: number; power: number; flags: number; }
+interface Data { cx: number; cz: number; slots: number[]; ang: number; dirx: number; dirz: number; power: number; flags: number; zone: import('../types').Zone | null; }
 const data = new Map<number, Data>();
 const tv = new Vector3();
 const tv2 = new Vector3();
@@ -41,7 +64,7 @@ export const tether = { active: false, id: -1, t: 0, maxDist: 0, lx: 0, lz: 0 };
 export const prism: { zone: import('../types').Zone | null } = { zone: null };
 hooks.onCleanse = () => { if (tether.active) { tether.active = false; events.emit('trick', { pos: world.player.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); } };
 
-export function hasSpecial(e: Enemy): boolean { return (e.boss || e.mini) && !!LIST[e.kind]; }
+export function hasSpecial(e: Enemy): boolean { return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId); }
 export function initSpecial(e: Enemy): void { e.spCd = 3.5 + Math.random() * 3; e.spKind = 0; e.spT = 0; e.spStep = 0; }
 
 function clampArena(v: Vector3, margin: number): void {
@@ -55,6 +78,7 @@ export function cancelSpecial(e: Enemy): void {
   if (e.spKind === 0) return;
   if (e.spKind === SP.CHAINS && tether.id === e.id) tether.active = false;
   if (e.spKind === SP.PRISM && prism.zone) { prism.zone.active = false; prism.zone = null; }
+  if (e.spKind === SP.SLAM) { const d = data.get(e.id); if (d?.zone && d.zone.active && e.spT < FLOP.land) d.zone.active = false; if (d) d.zone = null; }
   e.shellT = 0; e.hideT = 0;
   e.spKind = 0; e.spT = 0;
 }
@@ -211,6 +235,49 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       if (t >= 3.8) { e.shellT = 0; e.state = 'CHASE'; e.stateT = 0; e.spKind = 0; }
       break;
     }
+    case SP.SLAM: {
+      const z = d.zone;
+      if (z && z.active && t < FLOP.lock) {   // the shadow circle hunts you (a bit slower than you run)
+        const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z, l = Math.hypot(dx, dz);
+        if (l > 0.05) { const k = Math.min(l, 8.5 * dt) / l; z.pos.x += dx * k; z.pos.z += dz * k; }
+      }
+      if (z && t >= FLOP.top && t < FLOP.land) { e.pos.x = z.pos.x; e.pos.z = z.pos.z; }   // hangs right above it
+      if (e.spStep === 0 && t >= FLOP.up) { e.spStep = 1; events.emit('trick', { pos: e.pos.clone(), kind: 'TAKEOFF', radius: 5 }); addShake(0.15); }
+      if (e.spStep === 1 && t >= FLOP.land) {   // SPLAT (the zone's expiry deals the hit + shake)
+        e.spStep = 2;
+        if (z) { e.pos.x = z.pos.x; e.pos.z = z.pos.z; }
+        spawnHostileZone('ACID', e.pos.x, e.pos.z, 3.8, 4, power(e) * 0.25, 0x9be32a);
+        events.emit('trick', { pos: e.pos.clone(), kind: 'ACID', radius: FLOP.r });
+        events.emit('shockwave', { pos: e.pos.clone(), radius: FLOP.r, color: 0x9be32a });
+        addShake(0.55);
+        if (world.director.aliveCount < 60) for (let i = 0; i < 2 + e.phase; i++) {
+          const a = Math.random() * 6.283; tv.set(e.pos.x + Math.sin(a) * 3, 0, e.pos.z + Math.cos(a) * 3); clampArena(tv, 2);
+          const sl = spawnEnemy('SLIME', tv); if (sl) { sl.stateT = 0.3; sl.knock.set(Math.sin(a) * 7, 0, Math.cos(a) * 7); }
+        }
+      }
+      if (t >= FLOP.end) { d.zone = null; e.spKind = 0; }   // (a short stuck-in-the-mud moment after landing)
+      break;
+    }
+    case SP.FLOOD: {
+      if (e.spStep === 0 && t >= 1.5) {
+        e.spStep = 1;
+        spawnHostileZone('ACID', d.cx, d.cz, 11, 7, power(e) * 0.32, 0x9be32a);
+        events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'ACID', radius: 11 });
+        addShake(0.3);
+      }
+      if (t >= 2.0) e.spKind = 0;
+      break;
+    }
+    case SP.RAIN: {
+      const n = d.slots.length / 2;
+      while (e.spStep < n && t >= 1.0 + e.spStep * 0.09) {
+        const i = e.spStep++;
+        spawnHostileZone('ACID', d.slots[i * 2], d.slots[i * 2 + 1], 2.6, 6, power(e) * 0.3, 0x9be32a);
+        if ((i & 1) === 0) events.emit('trick', { pos: tv.set(d.slots[i * 2], 0, d.slots[i * 2 + 1]).clone(), kind: 'ACID', radius: 2.6 });
+      }
+      if (t >= 1.0 + n * 0.09 + 0.4) e.spKind = 0;
+      break;
+    }
     default: e.spKind = 0;
   }
   if (e.spKind === 0) { cancelSpecial(e); e.attackCd = Math.max(e.attackCd, 0.6); }
@@ -241,7 +308,7 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
   b.ability = SP_NAME[id]; b.abilityT = 2.6;
   const p = world.player.pos;
   const dx = p.x - e.pos.x, dz = p.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
-  const d: Data = { cx: p.x, cz: p.z, slots: [], ang: Math.atan2(dx, dz), dirx: dx / l, dirz: dz / l, power: -10, flags: 0 };
+  const d: Data = { cx: p.x, cz: p.z, slots: [], ang: Math.atan2(dx, dz), dirx: dx / l, dirz: dz / l, power: -10, flags: 0, zone: null };
   data.set(e.id, d);
   const pw = power(e);
   switch (id) {
@@ -295,6 +362,18 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
       break;
     }
     case SP.SHELL: break;
+    case SP.SLAM: d.zone = tel(p.x, p.z, FLOP.r, FLOP.land, pw * 2.2, 0x9be32a); break;
+    case SP.FLOOD: tel(p.x, p.z, 11, 1.5, 0, 0x9be32a); break;
+    case SP.RAIN: {
+      const N = 9 + 3 * e.phase;
+      for (let i = 0; i < N; i++) {
+        if (i === 0) tv.set(p.x, 0, p.z);
+        else { const a = Math.random() * 6.283, r = 3.5 + Math.random() * 10; tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 2); }
+        d.slots.push(tv.x, tv.z);
+        tel(tv.x, tv.z, 2.6, 1.0 + i * 0.09, 0, 0x9be32a);
+      }
+      break;
+    }
     default: break;
   }
   events.emit('trick', { pos: e.pos.clone(), kind: 'BOSS_CAST', radius: 6 });

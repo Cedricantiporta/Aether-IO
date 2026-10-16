@@ -29,7 +29,7 @@ interface Def { id: number; cd: number; minD: number; maxD: number; windup: numb
 const DEFS: Partial<Record<EnemyKind, Def[]>> = {
   SLIME: [{ id: TRICK.GOO, cd: 9, minD: 4, maxD: 16, windup: 0.72, r: 3.0 }],
   GOBLIN: [{ id: TRICK.FIREBOMB, cd: 11, minD: 5, maxD: 15, windup: 0.8, r: 2.6 }],
-  BAT: [{ id: TRICK.SCREECH, cd: 9, minD: 2, maxD: 10, windup: 0.56, r: 8, atSelf: true }],
+  BAT: [{ id: TRICK.SCREECH, cd: 9, minD: 2, maxD: 6, windup: 0.56, r: 4.5, atSelf: true }],   // (owner: smaller screech, was r 8)
   SKELETON_ARCHER: [{ id: TRICK.PIN, cd: 8, minD: 8, maxD: 20, windup: 0.64, r: 1.4, line: true }],
   CULTIST: [{ id: TRICK.CURSE, cd: 10, minD: 6, maxD: 16, windup: 0.72, r: 3.2 }],
   BRUTE: [{ id: TRICK.STOMP, cd: 9, minD: 0, maxD: 7, windup: 0.72, r: 6, atSelf: true }],
