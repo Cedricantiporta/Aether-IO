@@ -240,7 +240,7 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
 }
 
 // (owner) recorded one-shot samples (public/audio): decoded once into buffers, played on the sfx bus.
-const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3' };
+const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3', stage: 'audio/stage_clear.mp3' };
 const samples: Record<string, AudioBuffer | null> = {};
 function loadSamples(c: AudioContext): void {
   for (const k in SAMPLE_URLS) {
@@ -833,7 +833,7 @@ export function initAudio(): () => void {
   offs.push(events.on('noMana', safe(() => sfxBuzz())));
   offs.push(events.on('onCooldown', safe(() => sfxBuzz())));
   offs.push(events.on('waveStart', safe((p) => sfxWaveStart(p.boss))));
-  offs.push(events.on('waveClear', safe(() => sfxWaveClear())));
+  offs.push(events.on('waveClear', safe(() => { if (!playSample('stage', 0.85)) sfxWaveClear(); })));   // (owner) recorded 'stage completed' sting
   offs.push(events.on('bossSpawn', safe(() => sfxBossSpawn())));
   offs.push(events.on('bossPhase', safe(() => sfxShockwave())));
   offs.push(events.on('portalsOpen', safe(() => sfxBell(2))));
