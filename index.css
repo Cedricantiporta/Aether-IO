@@ -2723,3 +2723,5 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .qt-title { display: flex; align-items: baseline; gap: .5rem; }
 .qt-n { margin-left: auto; flex-shrink: 0; font-family: var(--font-body, inherit); font-size: .72rem; font-weight: 700; color: #f1e6cf; letter-spacing: 0; }
 .qt-row.done .qt-n { color: #9be86a; }
+/* controller focus (ui/lib/padNav) */
+.pad-focus { outline: 2px solid #ffd36a !important; outline-offset: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 14px rgba(255, 211, 106, .65) !important; }

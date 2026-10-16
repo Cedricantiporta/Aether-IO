@@ -9,6 +9,7 @@ import { aimState, cancelAim } from './systems/aim';
 /** Settings were opened with Esc and paused the run (closing them resumes). */
 let escPaused = false;
 import { requestClick } from './systems/target';
+import { padMove, padActivate, padTab, padScroll, padSlider, padClear } from '../ui/lib/padNav';
 
 // ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
 const PITCH_MIN = 0.55, PITCH_MAX = 1.3, DIST_MIN = 0.55, DIST_MAX = 1.15;   // (owner: max zoom-out halved again: was 1.3, before 1.6)
@@ -193,6 +194,13 @@ export function installInput(): () => void {
     [4, 'KeyZ', 'z'], [6, 'KeyX', 'x'], [8, 'KeyI', 'i'], [9, 'Escape', 'Escape'], [12, 'KeyJ', 'j'], [13, 'KeyC', 'c'], [14, 'KeyF', 'f'], [15, 'KeyO', 'o'],
   ];
   const padDown = new Set<string>();
+  const padPrev: boolean[] = [];
+  let navMode = false, navDir = 99, navNext = 0;
+  const menuOpen = (): boolean => {
+    const st = useGameStore.getState(), u = useUiStore.getState();
+    return uiOverlayOpen() || st.isShopOpen || st.isInventoryOpen || st.isCharacterSheetOpen || st.status === GameStatus.PAUSED || st.status === GameStatus.LEVEL_UP
+      || st.status === GameStatus.GAME_OVER || st.status === GameStatus.HERO_SELECT || (st.status === GameStatus.MENU && (!u.titleDone || u.charSelect));
+  };
   let padMoving = false, padRaf = 0;
   const dead = (v: number) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);
   const pollPad = () => {
@@ -201,6 +209,31 @@ export function installInput(): () => void {
     let gp: Gamepad | null = null;
     for (const g of pads) if (g && g.connected) { gp = g; break; }
     if (!gp) { if (padMoving) { inp.joy.active = false; inp.joy.x = inp.joy.z = 0; padMoving = false; } return; }
+    const pressedNow = (i: number) => { const b = gp!.buttons[i]; return !!b && (b.pressed || b.value > 0.5); };
+    const edge = (i: number) => { const on = pressedNow(i), was = padPrev[i]; padPrev[i] = on; return on && !was; };
+    // ---- menus / shops / overlays open: the pad navigates the UI instead of playing (ui/lib/padNav)
+    if (menuOpen()) {
+      if (!navMode) { navMode = true; for (const code of padDown) window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); padDown.clear(); }
+      if (padMoving) { inp.joy.active = false; inp.joy.x = inp.joy.z = 0; padMoving = false; }
+      const now = performance.now();
+      const lx0 = gp.axes[0] ?? 0, ly0 = gp.axes[1] ?? 0;
+      let dx = pressedNow(15) ? 1 : pressedNow(14) ? -1 : Math.abs(lx0) > 0.6 ? Math.sign(lx0) : 0;
+      let dy = dx ? 0 : pressedNow(13) ? 1 : pressedNow(12) ? -1 : Math.abs(ly0) > 0.6 ? Math.sign(ly0) : 0;
+      if (dx || dy) {
+        const key = dx * 3 + dy;
+        if (key !== navDir || now >= navNext) { if (!(dx && padSlider(dx))) padMove(dx, dy); navNext = now + (key !== navDir ? 320 : 140); navDir = key; }
+      } else navDir = 99;
+      if (edge(0)) padActivate();
+      if (edge(1) || edge(9)) window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }));
+      if (edge(4)) padTab(-1);
+      if (edge(5)) padTab(1);
+      const ry = gp.axes[3] ?? 0;
+      if (Math.abs(ry) > 0.2) padScroll(ry);
+      for (const i of [2, 3, 6, 7, 8, 12, 13, 14, 15]) padPrev[i] = pressedNow(i);
+      return;
+    }
+    if (navMode) { navMode = false; padClear(); for (let i = 0; i < padPrev.length; i++) if (pressedNow(i)) { const c = PAD.find((q) => q[0] === i)?.[1]; if (c) padDown.add(c); }; }   // (buttons still held from the menu don't fire)
+    for (let i = 0; i < 17; i++) padPrev[i] = pressedNow(i);
     // buttons -> synthetic key events (edge-triggered)
     for (const [i, code, key] of PAD) {
       const b = gp.buttons[i], on = !!b && (b.pressed || b.value > 0.5);
