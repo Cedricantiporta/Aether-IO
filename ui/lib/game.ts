@@ -2,14 +2,14 @@ import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
 import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierFor } from '../../crafting';
 
-export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+export const RARITIES: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const RARITY_COLOR: Record<Rarity, string> = {
-  COMMON: '#e5e7eb', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444',
+  COMMON: '#e5e7eb', UNCOMMON: '#4cc35a', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#f97316', MYTHIC: '#ef4444',
 };
-export const RARITY_RANK: Record<Rarity, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
+export const RARITY_RANK: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 1.5, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
 /** Colour used for item names on dark backgrounds (slightly lifted for contrast). */
 export const RARITY_TEXT: Record<Rarity, string> = {
-  COMMON: '#f1f2f4', RARE: '#6ea8ff', EPIC: '#c58bff', LEGENDARY: '#f5c518', MYTHIC: '#ff6b5e',
+  COMMON: '#f1f2f4', UNCOMMON: '#7ee08a', RARE: '#6ea8ff', EPIC: '#c58bff', LEGENDARY: '#ffa54a', MYTHIC: '#ff6b5e',
 };
 
 export const HERO_COLOR: Record<HeroClass, string> = { ARCHER: '#3fae55', WIZARD: '#4a7fe0', BARBARIAN: '#cf4343', KNIGHT: '#d9b25a', NECROMANCER: '#8a5ad0' };

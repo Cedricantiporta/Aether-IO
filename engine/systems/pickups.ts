@@ -118,7 +118,7 @@ export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): n
 
 /** E / tap on a loot pill: the item flies to the hero and is collected (bag full -> a warning, it stays). */
 const ITEM_GRAB_R2 = 2.4 * 2.4;
-const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0.5, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 const GEAR_MIN: Record<string, number> = { OFF: 99, COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3 };
 const MATERIAL: Record<string, boolean> = { LOOT: true, SHARD: true, POTION: true, REVIVE: true, CORE: true };
 /** Does the auto-loot setting pick this item up by itself? */

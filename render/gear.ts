@@ -178,8 +178,8 @@ export function attachGear(root: Object3D, mats: Material[], set: GearSet): () =
 // Recolour mode (what the hero uses now): the KayKit model keeps its own silhouette; each gear slot only recolours
 // the matching parts of the model by rarity. Helmet -> hat / helmet / hood / mask, armour -> body (+ cape when the
 // cape is not the hood), gloves -> arms, boots -> legs. Common gear leaves the original colours.
-const PART_TINT: Record<string, string> = { RARE: '#a9c8ff', EPIC: '#d6b0ff', LEGENDARY: '#ffe08a', MYTHIC: '#ff9c8c' };
-const PART_GLOW: Record<string, string> = { LEGENDARY: '#3a2a00', MYTHIC: '#3a0804' };
+const PART_TINT: Record<string, string> = { UNCOMMON: '#b8f0b8', RARE: '#a9c8ff', EPIC: '#d6b0ff', LEGENDARY: '#ffc08a', MYTHIC: '#ff9c8c' };
+const PART_GLOW: Record<string, string> = { LEGENDARY: '#3a1800', MYTHIC: '#3a0804' };
 
 export function tintGear(meshes: Mesh[], set: GearSet): () => void {
   // rangers and hooded rogues wear their hood as part of the cape

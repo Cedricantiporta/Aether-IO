@@ -16,7 +16,7 @@ export const CRAFT_PLUS1_CHANCE = 0.15;  // 15% -> +1
 export const CRAFT_PLUS2_CHANCE = 0.03;  // 3%  -> +2
 /** Chance a craft succeeds (a failure spends the gold and shards; monster loot is kept). A success that rolls +1/+2 is a
  *  Great Success. */
-export const CRAFT_SUCCESS: Record<Rarity, number> = { COMMON: 1, RARE: 0.95, EPIC: 0.85, LEGENDARY: 0.75, MYTHIC: 0.65 };
+export const CRAFT_SUCCESS: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 1, RARE: 0.95, EPIC: 0.85, LEGENDARY: 0.75, MYTHIC: 0.65 };
 export type CraftOutcome = 'GREAT' | 'SUCCESS' | 'FAIL';
 
 export interface LootNeed { id: string; count: number }
@@ -31,8 +31,8 @@ export interface Recipe {
   rankReq: number;
 }
 
-const SHARD_COST: Record<Rarity, number> = { COMMON: 3, RARE: 5, EPIC: 7, LEGENDARY: 10, MYTHIC: 15 };
-const GOLD_COST: Record<Rarity, number> = { COMMON: 2000, RARE: 10000, EPIC: 40000, LEGENDARY: 150000, MYTHIC: 600000 };   // x10 economy
+const SHARD_COST: Record<Rarity, number> = { COMMON: 3, UNCOMMON: 4, RARE: 5, EPIC: 7, LEGENDARY: 10, MYTHIC: 15 };
+const GOLD_COST: Record<Rarity, number> = { COMMON: 2000, UNCOMMON: 5000, RARE: 10000, EPIC: 40000, LEGENDARY: 150000, MYTHIC: 600000 };   // x10 economy
 
 /** Monster loot family per slot: [common, rare, epic] drops (weapons: by class). */
 const SLOT_FAMILY: Record<Exclude<CraftSlot, 'weapon'>, [string, string, string]> = {
@@ -235,7 +235,7 @@ export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
 }
 
 // ------------------------------------------------------------------ recycle --
-export const RECYCLE_BASE: Record<Rarity, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
+export const RECYCLE_BASE: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 2, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
 export const RECYCLE_CORE_REFUND = 0.3;
 
 /** Cores spent upgrading an item from +0 to +plus (level L -> L+1 costs upgradeCoresAt(L)). */

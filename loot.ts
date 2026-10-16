@@ -20,7 +20,7 @@ export interface LootDef {
 }
 
 /** Base sell value by rarity (items scale slightly around it). */
-const BASE: Record<Rarity, number> = { COMMON: 5, RARE: 25, EPIC: 120, LEGENDARY: 600, MYTHIC: 3000 };
+const BASE: Record<Rarity, number> = { COMMON: 5, UNCOMMON: 12, RARE: 25, EPIC: 120, LEGENDARY: 600, MYTHIC: 3000 };
 const d = (id: string, name: string, rarity: Rarity, glyph: LootGlyph, colors: [string, string], desc: string, mult = 1): LootDef =>
   ({ id, name, rarity, glyph, colors, desc, price: Math.round(BASE[rarity] * mult) * GOLD_SCALE });
 
@@ -137,7 +137,7 @@ export const LOOT_CHANCE: Record<string, number> = {
 export const DEFAULT_LOOT_CHANCE = 0.07;   // was 0.1
 
 const RARITY_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-const RARITY_W: Record<Rarity, number> = { COMMON: 70, RARE: 22, EPIC: 6, LEGENDARY: 0.45, MYTHIC: 0.02 };   // mythic goods: very rare
+const RARITY_W: Record<Rarity, number> = { COMMON: 70, UNCOMMON: 40, RARE: 22, EPIC: 6, LEGENDARY: 0.45, MYTHIC: 0.02 };   // mythic goods: very rare
 
 /** Picks a loot id from a source table; `luck` (>=1) shifts odds toward higher rarities (wave, difficulty, elites). */
 export function rollLoot(source: string, luck = 1, mythic = true): string | null {

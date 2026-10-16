@@ -76,14 +76,14 @@ export function sellAllFish(): number {
 
 // ------------------------------------------------------------------ fish table
 /** Rarity weights of a bite (luck shifts toward rarer fish like loot.rollLoot). */
-const RW: Record<Rarity, number> = { COMMON: 66, RARE: 24, EPIC: 8, LEGENDARY: 1.7, MYTHIC: 0.25 };
+const RW: Record<Rarity, number> = { COMMON: 66, UNCOMMON: 0, RARE: 24, EPIC: 8, LEGENDARY: 1.7, MYTHIC: 0.25 };
 const R_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Species weight inside its rarity (the boot is a rarer "common"). */
 const SPECIES_W: Record<string, number> = { fish_boot: 0.45, fish_minnow: 1.2, fish_perch: 1, fish_trout: 1.1, fish_pike: 0.9 };
 /** Reel minigame per rarity: marker speed (bar widths / s), zone width (0..1), hits needed. */
 const REEL: Record<Rarity, { speed: number; zone: number; need: number }> = {
   // (owner: the rarer the fish the narrower the target - the rarest ones are a sliver)
-  COMMON: { speed: 0.85, zone: 0.34, need: 1 }, RARE: { speed: 1.15, zone: 0.22, need: 2 }, EPIC: { speed: 1.45, zone: 0.13, need: 2 },
+  COMMON: { speed: 0.85, zone: 0.34, need: 1 }, UNCOMMON: { speed: 1, zone: 0.28, need: 1 }, RARE: { speed: 1.15, zone: 0.22, need: 2 }, EPIC: { speed: 1.45, zone: 0.13, need: 2 },
   LEGENDARY: { speed: 1.75, zone: 0.075, need: 3 }, MYTHIC: { speed: 2.1, zone: 0.045, need: 3 },
 };
 export function rollFish(luck: number): string {

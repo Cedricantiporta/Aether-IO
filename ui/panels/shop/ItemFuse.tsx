@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '../../../store';
 import { useUiStore } from '../../uiStore';
 import { ItemSlot } from '../../components/ItemSlot';
-import { FUSE_COUNT, FUSE_CHANCE, nextTier } from '../../../petFusion';
+import { FUSE_COUNT, FUSE_CHANCE, nextItemTier as nextTier } from '../../../petFusion';
 import { RARITY_COLOR, isGear } from '../../lib/game';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import type { Item, Rarity } from '../../../types';
@@ -38,7 +38,7 @@ export const ItemFuse: React.FC = () => {
   const groups = (): string[][] => {
     const by = new Map<string, Item[]>();
     for (const g of gear) { if (!(FUSE_CHANCE[g.rarity] ?? 0)) continue; const k = `${g.rarity}|${g.type}`; (by.get(k) ?? by.set(k, []).get(k)!).push(g); }
-    const order = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY'];
+    const order = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
     const out: string[][] = [];
     [...by.entries()].sort((a, b) => order.indexOf(a[0].split('|')[0]) - order.indexOf(b[0].split('|')[0])).forEach(([, list]) => {
       for (let i = 0; i + FUSE_COUNT <= list.length; i += FUSE_COUNT) out.push(list.slice(i, i + FUSE_COUNT).map((x) => x.id));

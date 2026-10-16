@@ -18,7 +18,7 @@ import { useItemPickupsVersion } from './hooks';
 import { labelMaterial } from './label';
 import { inView } from './view';
 
-const RARITY_HEX: Record<string, string> = { COMMON: '#e5e7eb', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444' };
+const RARITY_HEX: Record<string, string> = { COMMON: '#e5e7eb', UNCOMMON: '#4cc35a', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#f97316', MYTHIC: '#ef4444' };
 const MAXP = 500;
 const SHARD_RGB: number[][] = [[1.5, 1.5, 1.7], [0.5, 1.2, 2.8], [1.9, 0.6, 2.8], [2.8, 2.1, 0.4], [2.8, 0.5, 0.5]];
 const _c = new Color();

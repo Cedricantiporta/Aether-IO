@@ -10,7 +10,7 @@ import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
 import { STORY, STORY_V, sanitizeStory, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
-import { FUSE_COUNT, FUSE_CHANCE, nextTier, randomPetOf } from './petFusion';
+import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
 import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
@@ -23,7 +23,7 @@ import {
   AbilityType, GameStatistics, UpgradeType, GameNotification,
 } from './types';
 import {
-  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
+  ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, capRarity, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
@@ -53,7 +53,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
   return { items, gold, count, loot, fish };
 }
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
-import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem } from './shards';
+import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
@@ -74,7 +74,7 @@ const LEGACY_KEY = 'aether-survivor-v2';           // gameStats + settings only 
 const PROFILE_KEY = activeProfileKey();   // the active character's save (characters.ts; the first one keeps 'aether-survivor-profile-v1')
 const PROFILE_VERSION = 1;
 const MAX_SKILL_LEVEL = 5;
-const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];   // shard / summon ladder (no Uncommon tier)
 const MAX_ITEM_NOTIFICATIONS = 6;
 const MAX_NOTIFICATIONS = 12;
 
@@ -110,7 +110,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
 const SLOTS: EquipSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory', 'pet'];
-const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 });
+const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 });
 
 /** Hero rank needed to equip gear of a rarity. */
 export { RANK_REQ };
@@ -160,15 +160,15 @@ export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0,
 export const shopPrice = (item: { id: string; price: number }): number => Math.max(1, Math.round(item.price * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
-  COMMON: COLORS.rarityCommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,
+  COMMON: COLORS.rarityCommon, UNCOMMON: COLORS.rarityUncommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,
   LEGENDARY: COLORS.rarityLegendary, MYTHIC: COLORS.rarityMythic,
 };
 
 // Summon odds (%): epic is very rare, legendary ultra rare, mythic hyper rare.
 /** Shard altar (purple): the classic odds. */
-export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
+export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
 /** Gem altar (gold): premium odds. */
-export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
+export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, UNCOMMON: 0, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
 export const GEM_SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 3, LEGENDARY: 1, MYTHIC: 1 };
 /** Crystal Altar (was the Shard Altar: owner - summoning with Common shards made no sense): Aether Crystals per pull. */
 export const SHARD_COST_1 = 10;
@@ -226,7 +226,7 @@ export const calculateItemCP = (item: Item): number => {
   if (s.skillDamage) cp += s.skillDamage * 100;
   if (s.multishot) cp += s.multishot * 200;
   if (s.dodge) cp += s.dodge * 500;
-  const mult: Record<Rarity, number> = { COMMON: 1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
+  const mult: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 1.1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
   cp += affixCP(item);
   if (charmOf(item)) cp += 350;   // the accessory's special effect
   return Math.floor(cp * petMul * mult[item.rarity]);
@@ -1496,7 +1496,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const items = ids.map((id) => s.inventory.find((i) => i.id === id)).filter((i): i is Item => !!i && isGear(i));
       if (items.length !== FUSE_COUNT || new Set(items.map((i) => i.id)).size !== FUSE_COUNT) return null;
-      const r = items[0].rarity, up = nextTier(r), chance = FUSE_CHANCE[r] ?? 0;
+      const r = items[0].rarity, up = nextItemTier(r), chance = FUSE_CHANCE[r] ?? 0;
       // (owner: five of the SAME type - 5 weapons, 5 boots... - and the result is that type too)
       if (!up || chance <= 0 || items.some((i) => i.rarity !== r || i.type !== items[0].type)) return null;
       const ok = Math.random() < chance;
@@ -1622,9 +1622,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const y = recycleYield(item);
       set({
         inventory: addCores(s.inventory.filter((i) => i.id !== item.id), y.cores),
-        materials: { ...s.materials, [item.rarity]: s.materials[item.rarity] + y.shards },
+        materials: { ...s.materials, [shardTier(item.rarity)]: s.materials[shardTier(item.rarity)] + y.shards },
       });
-      notify(`Recycled for ${y.shards} ${item.rarity} Shard(s)${y.cores ? ` + ${y.cores} Core(s)` : ''}`, COLORS.uiAccent, 'SYSTEM');
+      notify(`Recycled for ${y.shards} ${shardTier(item.rarity)} Shard(s)${y.cores ? ` + ${y.cores} Core(s)` : ''}`, COLORS.uiAccent, 'SYSTEM');
     },
 
     massRecycle: (rarity) => {
@@ -1793,8 +1793,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const usable = (i: Item) => !i.classType || i.classType === hero;
       let pool: Item[];
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
-      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? 'RARE' : null);
-      const setChance: Record<Rarity, number> = { COMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
+      const lvNow = get().level;
+      if (rarityOverride) rarityOverride = capRarity(rarityOverride, lvNow);   // (owner: tiers unlock at Lv 10 / 20 / 30 / 40 / 50)
+      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? capRarity('RARE', lvNow) : null);
+      const setChance: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
       if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
         const sets = notPet.filter((i) => i.setName && i.rarity === setRarity && usable(i)
           && (SET_BY_NAME[i.setName!]?.hero ? SET_BY_NAME[i.setName!].hero === hero : true));
@@ -1812,8 +1814,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         const r = Math.random();
         if (r > 0.95) pool = notPet.filter((i) => i.type === 'POTION');   // (owner: fewer potion drops, 5%)
         else if (r > 0.87) pool = notPet.filter((i) => i.id === 'upgrade_core'); // cores are rare (8% of item drops; tier I only)
-        else {   // plain gear: Common or Rare (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
-          const tier: Rarity = Math.random() < 0.5 ? 'COMMON' : 'RARE';
+        else {   // plain gear: Common / Uncommon / Rare, capped by level (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
+          const tr = Math.random();
+          const tier: Rarity = capRarity(tr < 0.4 ? 'COMMON' : tr < 0.75 ? 'UNCOMMON' : 'RARE', lvNow);
           if (tier === 'COMMON' && Math.random() < 0.7) return null;
           pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && i.rarity === tier);
         }

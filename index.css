@@ -24,9 +24,10 @@
   --outline: #0d0703;
 
   --c-common: #e5e7eb;
+  --c-uncommon: #4cc35a;
   --c-rare: #3b82f6;
   --c-epic: #a855f7;
-  --c-legendary: #eab308;
+  --c-legendary: #f97316;
   --c-mythic: #ef4444;
 
   --hp: #d6252b;
@@ -269,6 +270,7 @@ button:disabled { cursor: not-allowed; }
   transition: transform .12s, box-shadow .12s, filter .12s;
 }
 .rpg-slot[data-rarity='COMMON'] { --rc: var(--c-common); }
+.rpg-slot[data-rarity='UNCOMMON'] { --rc: var(--c-uncommon); }
 .rpg-slot[data-rarity='RARE'] { --rc: var(--c-rare); }
 .rpg-slot[data-rarity='EPIC'] { --rc: var(--c-epic); }
 .rpg-slot[data-rarity='LEGENDARY'] { --rc: var(--c-legendary); }
@@ -332,7 +334,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 /* rarity gem */
 .rpg-gem { --rc: var(--c-common); width: .9rem; height: .9rem; flex: none; transform: rotate(45deg); border: 1.5px solid var(--outline);
   background: linear-gradient(135deg, #fff, var(--rc) 45%, color-mix(in srgb, var(--rc) 55%, #000)); box-shadow: 0 0 8px var(--rc); }
-.rpg-gem[data-rarity='RARE'] { --rc: var(--c-rare); } .rpg-gem[data-rarity='EPIC'] { --rc: var(--c-epic); }
+.rpg-gem[data-rarity='UNCOMMON'] { --rc: var(--c-uncommon); } .rpg-gem[data-rarity='RARE'] { --rc: var(--c-rare); } .rpg-gem[data-rarity='EPIC'] { --rc: var(--c-epic); }
 .rpg-gem[data-rarity='LEGENDARY'] { --rc: var(--c-legendary); } .rpg-gem[data-rarity='MYTHIC'] { --rc: var(--c-mythic); }
 
 /* medallion (round emblem) */
@@ -501,10 +503,10 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .rpg-toggle[aria-checked='true']::after { left: 1.7rem; }
 
 /* rarity text */
-[data-rt='COMMON'] { color: var(--c-common); } [data-rt='RARE'] { color: #6ea8ff; } [data-rt='EPIC'] { color: #c58bff; }
-[data-rt='LEGENDARY'] { color: #f5c518; } [data-rt='MYTHIC'] { color: #ff6b5e; }
-.rpg-parchment [data-rt='COMMON'] { color: #4b4b52; } .rpg-parchment [data-rt='RARE'] { color: #1f56c4; } .rpg-parchment [data-rt='EPIC'] { color: #7a2ec2; }
-.rpg-parchment [data-rt='LEGENDARY'] { color: #a87400; } .rpg-parchment [data-rt='MYTHIC'] { color: #b3261e; }
+[data-rt='COMMON'] { color: var(--c-common); } [data-rt='UNCOMMON'] { color: #7ee08a; } [data-rt='RARE'] { color: #6ea8ff; } [data-rt='EPIC'] { color: #c58bff; }
+[data-rt='LEGENDARY'] { color: #ffa54a; } [data-rt='MYTHIC'] { color: #ff6b5e; }
+.rpg-parchment [data-rt='COMMON'] { color: #4b4b52; } .rpg-parchment [data-rt='UNCOMMON'] { color: #2f8a3a; } .rpg-parchment [data-rt='RARE'] { color: #1f56c4; } .rpg-parchment [data-rt='EPIC'] { color: #7a2ec2; }
+.rpg-parchment [data-rt='LEGENDARY'] { color: #b8520a; } .rpg-parchment [data-rt='MYTHIC'] { color: #b3261e; }
 
 /* reward cards */
 .rpg-card {
@@ -517,7 +519,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
     0 0 0 2px var(--outline), 0 0 26px color-mix(in srgb, var(--rc) 55%, transparent), 0 14px 30px rgba(0, 0, 0, .7);
   transition: box-shadow .2s;
 }
-.rpg-card[data-rarity='RARE'] { --rc: var(--c-rare); } .rpg-card[data-rarity='EPIC'] { --rc: var(--c-epic); }
+.rpg-card[data-rarity='UNCOMMON'] { --rc: var(--c-uncommon); } .rpg-card[data-rarity='RARE'] { --rc: var(--c-rare); } .rpg-card[data-rarity='EPIC'] { --rc: var(--c-epic); }
 .rpg-card[data-rarity='LEGENDARY'] { --rc: var(--c-legendary); } .rpg-card[data-rarity='MYTHIC'] { --rc: var(--c-mythic); }
 .rpg-card:hover { box-shadow: inset 0 0 0 2px var(--outline), inset 0 0 0 4px color-mix(in srgb, var(--rc) 60%, #3a2008), inset 0 0 26px rgba(0, 0, 0, .5),
   0 0 0 2px var(--outline), 0 0 50px var(--rc), 0 20px 40px rgba(0, 0, 0, .7); }
@@ -1603,8 +1605,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sr-aura { position: absolute; z-index: 1; left: 50%; top: 2.3rem; width: 5rem; height: 5rem; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; }
 .sr-epic .sr-aura { background: radial-gradient(circle, rgba(168, 85, 247, .75), rgba(168, 85, 247, 0) 70%); width: 7.5rem; height: 7.5rem; animation: srPulse 1.8s ease-in-out infinite; }
 .sr-epic .rpg-slot { box-shadow: 0 0 16px 2px rgba(168, 85, 247, .9); }
-.sr-legendary .sr-aura { background: radial-gradient(circle, rgba(255, 215, 90, .95), rgba(234, 179, 8, .45) 40%, rgba(234, 179, 8, 0) 72%); width: 12.5rem; height: 12.5rem; filter: brightness(1.25); animation: srPulse 1.4s ease-in-out infinite; }
-.sr-legendary .rpg-slot { box-shadow: 0 0 0 2px #ffd24a, 0 0 24px 4px rgba(255, 210, 80, 1), 0 0 56px 10px rgba(234, 179, 8, .75); }
+.sr-legendary .sr-aura { background: radial-gradient(circle, rgba(255, 180, 90, .95), rgba(249, 115, 22, .45) 40%, rgba(249, 115, 22, 0) 72%); width: 12.5rem; height: 12.5rem; filter: brightness(1.25); animation: srPulse 1.4s ease-in-out infinite; }
+.sr-legendary .rpg-slot { box-shadow: 0 0 0 2px #ffa54a, 0 0 24px 4px rgba(255, 160, 70, 1), 0 0 56px 10px rgba(249, 115, 22, .75); }
 .sr-mythic .sr-aura { background: radial-gradient(circle, rgba(255, 120, 100, 1), rgba(239, 68, 68, .6) 35%, rgba(239, 68, 68, 0) 72%); width: 15rem; height: 15rem; animation: srPulse 1.1s ease-in-out infinite; }
 .sr-mythic .rpg-slot { box-shadow: 0 0 0 2px #ff6b5e, 0 0 26px 6px rgba(255, 80, 60, 1), 0 0 70px 18px rgba(239, 68, 68, .75); animation: srBorder 1.1s ease-in-out infinite; }
 .sr-ray { position: absolute; z-index: 1; left: 50%; top: 2.3rem; width: 15rem; height: 15rem; transform: translate(-50%, -50%); pointer-events: none; border-radius: 50%;

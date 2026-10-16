@@ -8,7 +8,9 @@ import type { HeroClass, Item, PlayerStats, Rarity, ProjectileType, AbilityType 
 import { SETS, SET_SLOTS, setPieceId, setPieceName, type SetSlot } from './itemSets';
 
 type St = keyof PlayerStats;
-const RAR: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+const RAR: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+/** Id suffix per tier: the five original tiers keep their old ids (saves, recipes); Uncommon pieces get 'u'. */
+const IDX = ['0', 'u', '1', '2', '3', '4'];
 
 /** stat key -> [stat, value by rarity] */
 const T: Record<string, [St, number[]]> = {
@@ -20,9 +22,9 @@ const T: Record<string, [St, number[]]> = {
   mag: ['magnetRadius', [1, 1.5, 2.2, 3, 4.5]],
 };
 /** Tier steps (owner): each rarity is a clear jump over the one below - Rare +25%, Epic +40%, Legendary +75%,
- *  Mythic +120% - anchored on the Epic value of every stat. */
+ *  Mythic +120% - anchored on the Epic value of every stat. Uncommon (green) sits halfway between Common and Rare. */
 export const TIER_STEP = [1.25, 1.4, 1.75, 2.2];
-const tierRow = (epic: number): number[] => { const r = epic / TIER_STEP[1], c = r / TIER_STEP[0], l = epic * TIER_STEP[2]; return [c, r, epic, l, l * TIER_STEP[3]].map((v) => parseFloat(v.toPrecision(3))); };
+const tierRow = (epic: number): number[] => { const r = epic / TIER_STEP[1], c = r / TIER_STEP[0], l = epic * TIER_STEP[2]; return [c, Math.sqrt(c * r), r, epic, l, l * TIER_STEP[3]].map((v) => parseFloat(v.toPrecision(3))); };
 for (const k of Object.keys(T)) T[k][1] = tierRow(T[k][1][2]);
 const FL: Record<string, string[]> = {
   light: ['crit', 'aspd', 'dodge', 'move', 'critd'],
@@ -43,12 +45,12 @@ const WSEC: Record<HeroClass, Record<string, string[]>> = {
   NECROMANCER: { grave: ['skill', 'mana', 'hp', 'cdr'], blight: ['crit', 'critd', 'skill', 'mregen'] },
 };
 const WDMG_RAW: Record<HeroClass, number[]> = { ARCHER: [8, 15, 30, 50, 100], WIZARD: [15, 25, 60, 120, 200], BARBARIAN: [18, 35, 70, 150, 300], KNIGHT: [17, 33, 66, 140, 280], NECROMANCER: [14, 26, 58, 115, 210] };
-const WDMG = Object.fromEntries(Object.entries(WDMG_RAW).map(([h, v]) => [h, tierRow(v[2]).map((x) => Math.round(x))])) as Record<HeroClass, number[]>;
+const WDMG = Object.fromEntries(Object.entries(WDMG_RAW).map(([h, v]) => [h, tierRow(v[2]).map((x) => Math.round(x))])) as Record<HeroClass, number[]>;   // (6 tiers)
 const WMETA: Record<HeroClass, { projectileType: ProjectileType; ability: AbilityType }> = {
   ARCHER: { projectileType: 'ARROW', ability: 'ARROW_RAIN' }, WIZARD: { projectileType: 'MAGIC', ability: 'FIREBALL' }, BARBARIAN: { projectileType: 'AXE', ability: 'AXE_SPIN' }, KNIGHT: { projectileType: 'SWORD', ability: 'AXE_SPIN' }, NECROMANCER: { projectileType: 'SOUL', ability: 'NONE' },
 };
-const WPRICE = [100, 600, 1500, 3000, 5000];
-const GPRICE = [120, 560, 1300, 2200, 4500];
+const WPRICE = [100, 300, 600, 1500, 3000, 5000];
+const GPRICE = [120, 300, 560, 1300, 2200, 4500];
 
 // ------------------------------------------------------------------ art -----
 export interface Pal { a: string; b: string; gem: string }
@@ -56,6 +58,7 @@ export interface ArtSpec { f: 'bow' | 'staff' | 'axe' | 'sword' | 'helm' | 'armo
 export const ART: Record<string, ArtSpec> = {};
 const PALS: Pal[][] = [
   [{ a: 'leather', b: 'wood', gem: '#f0d8a0' }, { a: 'wood', b: 'leather', gem: '#9ad07a' }, { a: 'steel', b: 'dark', gem: '#e8e8e8' }],
+  [{ a: 'green', b: 'leather', gem: '#8af0a0' }, { a: 'wood', b: 'green', gem: '#c8ff8a' }, { a: 'steel', b: 'green', gem: '#7ee08a' }],
   [{ a: 'steel', b: 'blue', gem: '#6ea8ff' }, { a: 'green', b: 'gold', gem: '#8af0a0' }, { a: 'leather', b: 'steel', gem: '#ffcf5a' }],
   [{ a: 'purp', b: 'gold', gem: '#e8a6ff' }, { a: 'blue', b: 'steel', gem: '#7ff0ff' }, { a: 'dark', b: 'purp', gem: '#ff7ad0' }],
   [{ a: 'gold', b: 'red', gem: '#ff6a3c' }, { a: 'fire', b: 'dark', gem: '#fff2a0' }, { a: 'red', b: 'gold', gem: '#ffd24a' }],
@@ -68,16 +71,18 @@ export const SET_PAL: Record<string, Pal> = {
 
 // -------------------------------------------------------------- builders ----
 const out: Item[] = [];
-const pick = (list: string[], n: number): Partial<PlayerStats> => {
+/** Stat lines per tier (Uncommon has as many as Rare, at lower values). */
+const NSTAT = [1, 2, 2, 3, 4, 5];
+const pick = (list: string[], ri: number): Partial<PlayerStats> => {
   const s: Partial<PlayerStats> = {};
-  for (let i = 0; i < n && i < list.length; i++) { const [k, v] = T[list[i]]; s[k] = (s[k] ?? 0) + v[Math.min(4, Math.max(0, n - 1))]; }
+  for (let i = 0; i < NSTAT[ri] && i < list.length; i++) { const [k, v] = T[list[i]]; s[k] = (s[k] ?? 0) + v[ri]; }
   return s;
 };
 const r3 = (n: number) => parseFloat(n.toFixed(3));
 
 function gear(id: string, name: string, type: Item['type'], ri: number, flav: string, spec: ArtSpec, extra: Partial<Item> = {}, scale = 1): void {
   const list = FL[flav];
-  const stats = pick(list, ri + 1);
+  const stats = pick(list, ri);
   if (type === 'ARMOR' && stats.defense) stats.defense *= 2; // armour defense is halved in calculateStats
   if (scale !== 1) for (const k of Object.keys(stats) as St[]) stats[k] = r3(stats[k]! * scale);
   for (const k of Object.keys(stats) as St[]) stats[k] = Math.abs(stats[k]!) >= 10 ? Math.round(stats[k]!) : r3(stats[k]!);
@@ -88,7 +93,7 @@ function weapon(id: string, name: string, hero: HeroClass, ri: number, flav: str
   const sec = WSEC[hero][flav] ?? Object.values(WSEC[hero])[1];
   const stats: Partial<PlayerStats> = { damage: r3(WDMG[hero][ri] * (flav === 'swift' || flav === 'arcane' || flav === 'bulwark' || flav === 'aegis' ? 0.9 : 0.95) * scale) };
   stats.damage = Math.round(stats.damage!);
-  for (let i = 0; i < ri && i < sec.length; i++) { const [k, v] = T[sec[i]]; stats[k] = r3((stats[k] ?? 0) + v[ri] * scale); }
+  for (let i = 0; i < NSTAT[ri] - 1 && i < sec.length; i++) { const [k, v] = T[sec[i]]; stats[k] = r3((stats[k] ?? 0) + v[ri] * scale); }
   const f = hero === 'ARCHER' ? 'bow' : hero === 'WIZARD' ? 'staff' : hero === 'KNIGHT' ? 'sword' : hero === 'NECROMANCER' ? 'staff' : 'axe';
   out.push({ id, name, type: 'WEAPON', rarity: RAR[ri], price: WPRICE[ri], level: 1, classType: hero, ...WMETA[hero], stats, description: `${flav[0].toUpperCase()}${flav.slice(1)} ${hero.toLowerCase()} weapon.`, ...extra });
   ART[id] = { f, s, pal };
@@ -97,17 +102,17 @@ const P = (ri: number, v: number): Pal => PALS[ri][v % 3];
 
 // ---- weapons: 2 alternatives per rarity per class ----
 const W: Record<HeroClass, [string, string, string][]> = {   // [rarity][name A, flav A, name B] ; flavours fixed per column
-  ARCHER: [['Hunter\'s Bow', 'Willow Longbow', ''], ['Hornet Recurve', 'Falconer\'s Bow', ''], ['Stormpiercer', 'Frostfang Bow', ''], ['Skyreaver', 'Phoenix Longbow', ''], ['Starfall Arc', 'Eclipse Bow', '']],
-  WIZARD: [['Twig Wand', 'Ember Rod', ''], ['Sage\'s Staff', 'Cinder Wand', ''], ['Tidecaller', 'Stormglass Rod', ''], ['Moonlit Scepter', 'Cataclysm Staff', ''], ['Astral Scepter', 'Oblivion Rod', '']],
-  BARBARIAN: [['Woodcutter Axe', 'Bone Cleaver', ''], ['Battle Axe', 'Raider Hatchet', ''], ['Bearded Greataxe', 'Bloodletter', ''], ['Juggernaut Axe', 'Ragnarok Axe', ''], ['Colossus Cleaver', 'Doomcleaver', '']],
-  NECROMANCER: [['Bone Wand', 'Grave Rod', ''], ['Ossuary Staff', 'Wraith Wand', ''], ['Soulreaper', 'Plaguebringer', ''], ['Lichbane Scepter', 'Deathknell', ''], ['Crown of Bones', 'Requiem', '']],
-  KNIGHT: [['Militia Sword', 'Arming Sword', ''], ['Knight\'s Longsword', 'Silver Sabre', ''], ['Oathkeeper', 'Dawnblade', ''], ['Lionheart', 'Radiant Claymore', ''], ['Excalibur', 'Seraph\'s Edge', '']],
+  ARCHER: [['Hunter\'s Bow', 'Willow Longbow', ''], ['Greenwood Bow', 'Ranger\'s Shortbow', ''], ['Hornet Recurve', 'Falconer\'s Bow', ''], ['Stormpiercer', 'Frostfang Bow', ''], ['Skyreaver', 'Phoenix Longbow', ''], ['Starfall Arc', 'Eclipse Bow', '']],
+  WIZARD: [['Twig Wand', 'Ember Rod', ''], ['Mossy Staff', 'Spark Wand', ''], ['Sage\'s Staff', 'Cinder Wand', ''], ['Tidecaller', 'Stormglass Rod', ''], ['Moonlit Scepter', 'Cataclysm Staff', ''], ['Astral Scepter', 'Oblivion Rod', '']],
+  BARBARIAN: [['Woodcutter Axe', 'Bone Cleaver', ''], ['Iron Hatchet', 'Tribal Axe', ''], ['Battle Axe', 'Raider Hatchet', ''], ['Bearded Greataxe', 'Bloodletter', ''], ['Juggernaut Axe', 'Ragnarok Axe', ''], ['Colossus Cleaver', 'Doomcleaver', '']],
+  NECROMANCER: [['Bone Wand', 'Grave Rod', ''], ['Mourner\'s Staff', 'Ghoul Wand', ''], ['Ossuary Staff', 'Wraith Wand', ''], ['Soulreaper', 'Plaguebringer', ''], ['Lichbane Scepter', 'Deathknell', ''], ['Crown of Bones', 'Requiem', '']],
+  KNIGHT: [['Militia Sword', 'Arming Sword', ''], ['Footman\'s Blade', 'Squire\'s Sabre', ''], ['Knight\'s Longsword', 'Silver Sabre', ''], ['Oathkeeper', 'Dawnblade', ''], ['Lionheart', 'Radiant Claymore', ''], ['Excalibur', 'Seraph\'s Edge', '']],
 };
 const WFLAV: Record<HeroClass, [string, string]> = { ARCHER: ['swift', 'deadly'], WIZARD: ['arcane', 'fury'], BARBARIAN: ['bulwark', 'rampage'], KNIGHT: ['aegis', 'valor'], NECROMANCER: ['grave', 'blight'] };
 for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]) {
   W[hero].forEach((row, ri) => {
-    weapon(`w_${hero.toLowerCase()}_${ri}a`, row[0], hero, ri, WFLAV[hero][0], 1 + (ri % 3), P(ri, 1));
-    weapon(`w_${hero.toLowerCase()}_${ri}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2));
+    weapon(`w_${hero.toLowerCase()}_${IDX[ri]}a`, row[0], hero, ri, WFLAV[hero][0], 1 + (ri % 3), P(ri, 1));
+    weapon(`w_${hero.toLowerCase()}_${IDX[ri]}b`, row[1], hero, ri, WFLAV[hero][1], 2 + (ri % 2), P(ri, 2));
   });
 }
 
@@ -115,6 +120,7 @@ for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as
 type Row = [string, string, number];
 const HELM: Row[][] = [
   [['Padded Coif', 'light', 1]],
+  [['Ranger Hood', 'light', 1], ['Iron Cap', 'heavy', 3]],
   [['Scout Bandana', 'light', 7], ['Acolyte Circlet', 'arcane', 5]],
   [['Bastion Greathelm', 'heavy', 3], ['Sage Cowl', 'arcane', 6]],
   [['Wraithveil Hood', 'light', 1], ['Warden Visage', 'heavy', 3]],
@@ -122,6 +128,7 @@ const HELM: Row[][] = [
 ];
 const ARMOR: Row[][] = [
   [],
+  [['Leafweave Tunic', 'light', 0], ['Studded Vest', 'medium', 0]],
   [['Mystic Vestments', 'arcane', 1]],
   [['Shadow Cloak', 'light', 2], ['Runed Robes', 'arcane', 1], ['Warden Brigandine', 'medium', 0]],
   [['Stormweave Jerkin', 'light', 0], ['Archon Raiment', 'arcane', 1]],
@@ -129,6 +136,7 @@ const ARMOR: Row[][] = [
 ];
 const GLOVE: Row[][] = [
   [['Cloth Wraps', 'light', 0]],
+  [['Archer\'s Bracers', 'light', 1], ['Chain Mitts', 'heavy', 2]],
   [['Thief\'s Gloves', 'light', 1], ['Stoneguard Gauntlets', 'heavy', 2]],
   [['Spellweave Gloves', 'arcane', 1], ['Ironfist Gauntlets', 'heavy', 2]],
   [['Gale Grips', 'light', 1], ['Bulwark Gauntlets', 'heavy', 2]],
@@ -136,6 +144,7 @@ const GLOVE: Row[][] = [
 ];
 const BOOT: Row[][] = [
   [['Leather Sandals', 'swift', 0]],
+  [['Traveler Boots', 'swift', 1], ['Mossy Treads', 'vital', 0]],
   [['Marsh Walkers', 'vital', 1], ['Iron Greaves', 'heavy', 2]],
   [['Sentinel Sabatons', 'heavy', 2], ['Mystic Slippers', 'arcane', 3]],
   [['Dragonhide Boots', 'vital', 1], ['Stormtread', 'swift', 1]],
@@ -143,6 +152,7 @@ const BOOT: Row[][] = [
 ];
 const ACC: Row[][] = [
   [['Hunter\'s Charm', 'light', 2], ['Apprentice Pendant', 'arcane', 1]],
+  [['Clover Charm', 'vital', 2], ['Copper Ring', 'medium', 0]],
   [['Silver Signet', 'medium', 0], ['Jade Talisman', 'vital', 2]],
   [['Eagle Brooch', 'light', 2]],
   [['Ember Pendant', 'medium', 1], ['Guardian Seal', 'heavy', 0]],

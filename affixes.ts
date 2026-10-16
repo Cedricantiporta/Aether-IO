@@ -7,8 +7,8 @@ import type { Item, ItemAffix, Rarity } from './types';
 import type { StatFx } from './statFx';
 import { fmtFx } from './statFx';
 
-export const AFFIX_COUNT: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
-export const R_IDX: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+export const AFFIX_COUNT: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+export const R_IDX: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 export const UNIQUE_CHANCE = 0.4; // MYTHIC only
 /** A perfect bonus line (yellow): rolled at 125% of its tier value. */
 export const PERFECT_CHANCE = 0.05, PERFECT_MUL = 1.25;

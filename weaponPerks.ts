@@ -18,7 +18,7 @@ const BY_CLASS: Record<HeroClass, PerkKind[]> = {
   // wand: stronger, longer-lived minions, bigger soul bolts, or bolts that raise skeleton mages / skeleton bowmen
   NECROMANCER: ['HORDE', 'BIG', 'MAGES', 'BOWMEN'],
 };
-const LV: Record<Rarity, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+const LV: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 const ELS: PerkElement[] = ['FIRE', 'ICE', 'LIGHTNING'];
 const ROMAN = ['', 'I', 'II', 'III', 'IV'];
 

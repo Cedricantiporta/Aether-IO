@@ -22,7 +22,7 @@ import { QtyStepper } from '../../components/Modal';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat } from '../../lib/game';
 
-const RNAME: Record<Rarity, string> = { COMMON: 'Common', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
+const RNAME: Record<Rarity, string> = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 const pc = (v: number) => `${Math.round(v * 100)}%`;
 const lootItem = (id: string): Item => ({ id, name: LOOT_BY_ID[id].name, type: 'LOOT', rarity: LOOT_BY_ID[id].rarity, level: 1, stats: {}, price: 0, description: LOOT_BY_ID[id].desc } as Item);
 

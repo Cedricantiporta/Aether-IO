@@ -11,16 +11,17 @@ const SLOT_ORDER = ['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY']
 const SLOT_NAME: Record<string, string> = { ALL: 'All', WEAPON: 'Weapon', HELMET: 'Helmet', ARMOR: 'Armor', GLOVES: 'Gloves', BOOTS: 'Boots', ACCESSORY: 'Trinket' };
 
 /** Armor shop: basic (Common / Rare) gear for the current class at fixed prices. */
+const TIER_N: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2 };
 export const ArmoryTab: React.FC = () => {
   const hero = useGameStore((s) => s.hero);
   const gold = useGameStore((s) => s.gold);
   const freeArmor = useGameStore((s) => questFree(s, 'armor'));   // tutorial "Suit of Steel": one armor piece on the house
   const setBuy = useUiStore((s) => s.setBuyItem);
   const groups = useMemo(() => {
-    const stock = ITEMS_POOL.filter((i) => isGear(i) && (i.rarity === 'COMMON' || i.rarity === 'RARE') && (!i.classType || i.classType === hero));
+    const stock = ITEMS_POOL.filter((i) => isGear(i) && (i.rarity === 'COMMON' || i.rarity === 'UNCOMMON' || i.rarity === 'RARE') && (!i.classType || i.classType === hero));
     const by: Record<string, Item[]> = {};
     for (const it of stock) (by[it.type] ||= []).push(it);
-    return SLOT_ORDER.filter((k) => by[k]?.length).map((k) => ({ k, items: by[k].sort((a, b) => (a.rarity === b.rarity ? a.price - b.price : a.rarity === 'COMMON' ? -1 : 1)) }));
+    return SLOT_ORDER.filter((k) => by[k]?.length).map((k) => ({ k, items: by[k].sort((a, b) => (a.rarity === b.rarity ? a.price - b.price : TIER_N[a.rarity] - TIER_N[b.rarity])) }));
   }, [hero]);
   const [cat, setCat] = useState('ALL');
   const tabs = ['ALL', ...groups.map((g) => g.k)];

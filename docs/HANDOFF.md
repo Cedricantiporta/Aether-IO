@@ -1066,3 +1066,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (CHASE / KITE, not bosses / minis / stationary, farther than radius + 2.6) steer for where the hero was 0.7-1.0 s ago;
   up close they track the real hero (strikes use the real position). Pets (0.9 s) and necro summons (0.8-1.0 s) follow
   the trail too. Monsters stop at radius + 0.95 from the hero (was + 0.55); melee reach radius + 1.15 to match.
+- **Six gear tiers (owner):** Common (white) Lv 1, **Uncommon (green, new)** Lv 10, Rare (blue) Lv 20, Epic (purple) Lv 30,
+  Legendary (now **orange**) Lv 40, Mythic (red) Lv 50 (`constants.RANK_REQ`, `RARITY_LADDER`). Gear drops / room rewards
+  are capped to the best tier the class level can equip (`constants.capRarity`, used in `store.rollItemDrop`).
+  `itemCatalog.ts` builds 6-tier rows (Uncommon halfway between Common and Rare; new Uncommon weapons / armour use id
+  suffix `u`, older ids unchanged). No Uncommon shards: `shards.shardTier` maps Uncommon gear to Common shards; summons
+  never roll Uncommon; item fusion climbs Common -> Uncommon -> Rare (`petFusion.nextItemTier`), pets keep 5 tiers.
+- Barbarian: Cross Slash no longer grows with level; Titan's Wrath makes every barbarian skill 40% bigger
+  (`abilities.titanScale`: Cross Slash, Whirlwind, Earthsplitter, leap slam). Garrick moved next to the gate door.

@@ -40,7 +40,7 @@ function unlockAdventure() {
 }
 function maxCurrencies() {
   const s = useGameStore.getState();
-  useGameStore.setState({ gold: BIG, gems: BIG, materials: { COMMON: 99_999, RARE: 99_999, EPIC: 99_999, LEGENDARY: 99_999, MYTHIC: 99_999 } });
+  useGameStore.setState({ gold: BIG, gems: BIG, materials: { COMMON: 99_999, UNCOMMON: 0, RARE: 99_999, EPIC: 99_999, LEGENDARY: 99_999, MYTHIC: 99_999 } });
   void s; toast('Debug: gold, gems and shards maxed');
 }
 function maxRankAndTalents() {

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { useGameStore } from './store';
 import type { Item, Rarity } from './types';
 
-const RAR: Record<Rarity, string> = { COMMON: '#e5e7eb', RARE: '#60a5fa', EPIC: '#c084fc', LEGENDARY: '#fbbf24', MYTHIC: '#f87171' };
+const RAR: Record<Rarity, string> = { COMMON: '#e5e7eb', UNCOMMON: '#5fd36a', RARE: '#60a5fa', EPIC: '#c084fc', LEGENDARY: '#ff9a3c', MYTHIC: '#f87171' };
 
 export interface FeedReward { gold?: number; gems?: number; crystals?: number; items?: Item[]; shards?: number; shardRarity?: Rarity }
 

@@ -359,7 +359,8 @@ export function rarityForDepth(depth: number, bonus = 0, bosses = 0): Rarity {
   if (r < mythic) return LEVELS[4];
   if (r < mythic + legendary) return LEVELS[3];
   if (r < mythic + legendary + epic) return LEVELS[2];
-  if (r < mythic + legendary + epic + rare) return LEVELS[1];
+  if (r < mythic + legendary + epic + rare * 0.5) return LEVELS[1];
+  if (r < mythic + legendary + epic + rare) return 'UNCOMMON';   // (6 tiers: half the old 'rare' band is Uncommon)
   return LEVELS[0];
 }
 /** Index into SHARD pickups' rarity (0 common .. 4 mythic). */

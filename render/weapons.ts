@@ -4,9 +4,9 @@ import { BufferGeometry, Matrix4, Quaternion, Vector3 } from 'three';
 import { GB, TAU } from './util';
 
 export const RARITY_ACCENT: Record<string, string> = {
-  COMMON: '#cfd6dd', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#eab308', MYTHIC: '#ef4444',
+  COMMON: '#cfd6dd', UNCOMMON: '#4cc35a', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#f97316', MYTHIC: '#ef4444',
 };
-export const RARITY_TIER: Record<string, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
+export const RARITY_TIER: Record<string, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
 
 /** Quaternion mapping authored weapon axes onto KayKit `handslot` local axes (X->-Z, Y->-X, Z->+Y). */
 export const HANDSLOT_QUAT = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, 0, -1), new Vector3(-1, 0, 0), new Vector3(0, 1, 0)));

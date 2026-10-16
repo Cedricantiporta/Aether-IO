@@ -599,7 +599,7 @@ export const NPCS: NpcDef[] = [
     gift: { item: 'potion_hp', qty: 1, text: 'Brenna hands you a healing potion. (+1 Health Potion)' },
   },
   {
-    name: 'Garrick', role: 'Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#bcd0ff', home: [5, 34.8],
+    name: 'Garrick', role: 'Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#bcd0ff', home: [4.1, 35.9],
     talk: [
       ['Halt! ...Oh. It is you. Carry on.', 'Follow the road south through the gate to the Adventure Portal in the forest. Step into it when you are ready.'],
       ['Nothing gets past me. Well, nothing except hens. And the Elder\'s cat.', 'Bring back something shiny, will you?'],

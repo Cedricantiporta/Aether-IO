@@ -545,31 +545,35 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
 
   // ---- BARBARIAN
   if (slot === 'q') {
-    // Cross Slash: a slow, wide burning X that rolls forward piercing everything in the lane; it grows with the skill level
+    // Cross Slash: a slow, wide burning X that rolls forward piercing everything in the lane (owner: no growth with level;
+    // Titan's Wrath makes every barbarian skill bigger instead)
     const dmg = b * 4.2;
     spawnProjectile('X_SLASH', p.pos.x + dx * 1.6, p.pos.z + dz * 1.6, dx, dz, 12, dmg,
-      { life: 1.05 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 6.0 + 0.6 * (lv - 1), y: 1.1 });   // ~3x the old X (user)
+      { life: 1.05 + 0.03 * (lv - 1), pierce: 999, knockback: 1.4, radius: 6.0 * titanScale(), y: 1.1 });
     p.anim.attackT = 1;
     addShake(0.15);
     announce('CROSS_SLASH');
   } else if (slot === 'e') {
     const a = abilityState;
-    p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = 7.5 + 0.3 * (lv - 1);
+    p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = (7.5 + 0.3 * (lv - 1)) * titanScale();
     announce('WHIRLWIND');
   } else if (slot === 's3') {
-    const L = 9 + 0.6 * (lv - 1), n = 6;   // close-range cleave (was a 34+ unit lane)
+    const ts = titanScale(), L = (9 + 0.6 * (lv - 1)) * ts, n = 6;   // close-range cleave (was a 34+ unit lane)
     const stun = 0.6 + 0.1 * lv;
     for (let i = 0; i < n; i++) {
       const d = 1.5 + (i / (n - 1)) * L;
       const x = p.pos.x + dx * d, z = p.pos.z + dz * d;
-      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8, b * 5, stun, 0xa89a80, true);
-      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2, z + dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
-      else mkFx('SPIKE', x + dz * 2.2, z - dx * 2.2, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4, b * 2, 0.3, 0xa89a80, true);
+      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8 * ts, b * 5, stun, 0xa89a80, true);
+      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2 * ts, z + dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 2, 0.3, 0xa89a80, true);
+      else mkFx('SPIKE', x + dz * 2.2 * ts, z - dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 2, 0.3, 0xa89a80, true);
     }
     events.emit('fissure', { from: p.pos.clone(), dir: dir.clone(), length: L + 1.5 });
     announce('EARTHSPLITTER');
   }
 }
+
+/** Titan's Wrath (barbarian ult) makes every barbarian skill bigger while it lasts (owner). */
+function titanScale(): number { return world.player.titanT > 0 ? 1.4 : 1; }
 
 /** Battle Cry folded into Titan's Wrath: a roar that stuns and terrifies nearby enemies. */
 function battleCryRoar(b: number, lv: number): void {
@@ -1082,7 +1086,7 @@ export function updateAbilities(dt: number): void {
     if (a.leapT <= 0) {
       p.air = 0; p.vel.set(0, 0, 0);
       const lv = a.leapLv;
-      const R = (a.leapDash ? 7 : 9) + 0.5 * (lv - 1);
+      const R = ((a.leapDash ? 7 : 9) + 0.5 * (lv - 1)) * titanScale();
       stunSt.duration = a.leapDash ? 0.6 : 1;
       damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.leapDmg, physKnock, stunSt);
       p.rageT = Math.max(p.rageT, (a.leapDash ? 1.5 + 0.5 * lv : 3 + lv) + st.stats.rageBonus);

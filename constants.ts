@@ -21,10 +21,18 @@ export const SHARD_FUSE_COST: Record<'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY', n
 export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no break-down / fuse loop)
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
-/** Hero rank needed to equip / craft gear of a rarity. */
+/** Class level needed to equip / craft gear of a rarity (owner: Uncommon 10, Rare 20, Epic 30, Legendary 40, Mythic 50). */
 export const RANK_REQ: Record<Rarity, number> = {
-  COMMON: 1, RARE: 3, EPIC: 8, LEGENDARY: 15, MYTHIC: 25,
+  COMMON: 1, UNCOMMON: 10, RARE: 20, EPIC: 30, LEGENDARY: 40, MYTHIC: 50,
 };
+/** All six gear tiers, low to high. */
+export const RARITY_LADDER: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+/** The rarity lowered to the best tier a class of level `lv` can equip (gear drops follow the level gates). */
+export function capRarity(r: Rarity, lv: number): Rarity {
+  let i = RARITY_LADDER.indexOf(r);
+  while (i > 0 && RANK_REQ[RARITY_LADDER[i]] > lv) i--;
+  return RARITY_LADDER[Math.max(0, i)];
+}
 
 /** Per-difficulty multipliers (read by the director / enemies / combat). */
 export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spawn: number; loot: number; label: string; desc: string }> = {
@@ -50,7 +58,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050', rot: 0.15 },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */
-export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffc94a', MYTHIC: '#ff6a5a' };
+export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', UNCOMMON: '#7ee08a', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffa54a', MYTHIC: '#ff6a5a' };
 /** The point `d` m in front of a shop's counter (shops face +z, turned by `rot`). */
 export const shopFront = (s: { position: [number, number, number]; rot?: number }, d: number, side = 0): { x: number; z: number } => {
   const r = s.rot ?? 0;
@@ -93,9 +101,10 @@ export const COLORS = {
   water: '#3b82f6',
   
   rarityCommon: '#ffffff',
+  rarityUncommon: '#4cc35a',
   rarityRare: '#3b82f6',     
   rarityEpic: '#a855f7',     
-  rarityLegendary: '#eab308', 
+  rarityLegendary: '#f97316', 
   rarityMythic: '#ef4444'    
 };
 
@@ -380,7 +389,7 @@ export const ITEMS_POOL: Item[] = [
 // Generated variety (class weapon alternatives, armour flavours, class starter gear, item-set pieces).
 ITEMS_POOL.push(...GENERATED_ITEMS);
 // bows extend the archer's reach (stat attackRange; owner: shorter base range, gear / talents / DEX raise it)
-{ const R: Record<string, number> = { COMMON: 0.5, RARE: 1, EPIC: 1.5, LEGENDARY: 2.2, MYTHIC: 3 };
+{ const R: Record<string, number> = { COMMON: 0.5, UNCOMMON: 0.75, RARE: 1, EPIC: 1.5, LEGENDARY: 2.2, MYTHIC: 3 };
   for (const it of ITEMS_POOL) if (it.type === 'WEAPON' && it.classType === 'ARCHER' && !it.stats.attackRange) it.stats = { ...it.stats, attackRange: R[it.rarity] ?? 0 }; }
 
 // ---- economy inflation: scale every template price exactly once (pools may share objects)

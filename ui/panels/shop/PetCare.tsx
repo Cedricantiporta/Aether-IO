@@ -13,7 +13,7 @@ import { feedLoot, feedShards, evolvePet, lootFoodXp, canAffordEvolve } from '..
 import type { PlayerStats, Rarity } from '../../../types';
 
 const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-const RLABEL: Record<Rarity, string> = { COMMON: 'Common', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
+const RLABEL: Record<Rarity, string> = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 const BAD = '#ff6b5e';
 
 /** Pet Stable "Care" section: level bar, next-level stat preview, feeding (crystal/ore loot, shards) and evolution. Equipped pet only. */

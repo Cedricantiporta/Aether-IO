@@ -5,9 +5,11 @@
 import type { Item, Rarity } from './types';
 import { GOLD_SCALE } from './constants';
 
-export const SHARD_RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-const NAME: Record<Rarity, string> = { COMMON: 'Common Shard', RARE: 'Rare Shard', EPIC: 'Epic Shard', LEGENDARY: 'Legendary Shard', MYTHIC: 'Mythic Shard' };
-const PRICE: Record<Rarity, number> = { COMMON: 1, RARE: 4, EPIC: 15, LEGENDARY: 60, MYTHIC: 240 };
+export const SHARD_RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];   // (no Uncommon shards: shardTier)
+/** Shard tier for an item rarity: Uncommon gear recycles / counts as Common shards. */
+export const shardTier = (r: Rarity): Rarity => (r === 'UNCOMMON' ? 'COMMON' : r);
+const NAME: Record<Rarity, string> = { COMMON: 'Common Shard', UNCOMMON: 'Common Shard', RARE: 'Rare Shard', EPIC: 'Epic Shard', LEGENDARY: 'Legendary Shard', MYTHIC: 'Mythic Shard' };
+const PRICE: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 1, RARE: 4, EPIC: 15, LEGENDARY: 60, MYTHIC: 240 };
 
 export const shardId = (r: Rarity): string => `shard_${r.toLowerCase()}`;
 export function shardItem(r: Rarity, n: number): Item {
@@ -19,8 +21,8 @@ export function shardItem(r: Rarity, n: number): Item {
 
 /** Shard totals per rarity found in a bag. */
 export function shardCounts(inv: Item[]): Record<Rarity, number> {
-  const c: Record<Rarity, number> = { COMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 };
-  for (const it of inv) if (it.type === 'SHARD') c[it.rarity] += it.quantity || 1;
+  const c: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 };
+  for (const it of inv) if (it.type === 'SHARD') c[shardTier(it.rarity)] += it.quantity || 1;
   return c;
 }
 

@@ -21,7 +21,7 @@ export type UpgradeType =
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA' |
   'ULT_FILL' | 'RESTORE' | 'AEGIS';   // instant cards: fill the ultimate, restore HP + MP, a damage-absorbing shield
 
-export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
+export type Rarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
 
 export interface Upgrade {
   id: string;

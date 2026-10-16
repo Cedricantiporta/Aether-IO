@@ -5,17 +5,17 @@ import type { HeroClass, Rarity } from '../types';
 
 export const ACCENT = '#f2a93b';
 
-export const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-export const RARITY_STARS: Record<Rarity, number> = { COMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
-export const RARITY_NAME: Record<Rarity, string> = { COMMON: 'Common', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
+export const RARITIES: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+export const RARITY_STARS: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, MYTHIC: 6 };
+export const RARITY_NAME: Record<Rarity, string> = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 
 /** Stripe / star / accent colour of a rarity (works on both glass and cream surfaces). */
 export const RARITY_COLOR: Record<Rarity, string> = {
-  COMMON: '#9aa0ac', RARE: '#4d9be8', EPIC: '#a470ec', LEGENDARY: '#f0a92b', MYTHIC: '#ee5a52',
+  COMMON: '#9aa0ac', UNCOMMON: '#4cbf5a', RARE: '#4d9be8', EPIC: '#a470ec', LEGENDARY: '#f5832a', MYTHIC: '#ee5a52',
 };
 /** Rarity text on dark surfaces (glass HUD, painted icon backgrounds). */
 export const RARITY_LIGHT: Record<Rarity, string> = {
-  COMMON: '#e4e6ea', RARE: '#79b4f2', EPIC: '#c3a0f6', LEGENDARY: '#ffc861', MYTHIC: '#ff8a82',
+  COMMON: '#e4e6ea', UNCOMMON: '#86e092', RARE: '#79b4f2', EPIC: '#c3a0f6', LEGENDARY: '#ffaa5e', MYTHIC: '#ff8a82',
 };
 /** Rarity text on menu surfaces (dark metal theme: same as the light variants). */
 export const RARITY_INK: Record<Rarity, string> = RARITY_LIGHT;

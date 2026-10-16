@@ -43,8 +43,8 @@ export const PET_EVOLVE_COST: Record<number, EvolveCost> = {
 };
 
 /** XP granted per feed unit. Shards: 1 shard; loot: 1 crystal / ore item. */
-export const PET_SHARD_XP: Record<Rarity, number> = { COMMON: 5, RARE: 20, EPIC: 80, LEGENDARY: 300, MYTHIC: 1200 };
-export const PET_LOOT_XP: Record<Rarity, number> = { COMMON: 10, RARE: 40, EPIC: 160, LEGENDARY: 640, MYTHIC: 2500 };
+export const PET_SHARD_XP: Record<Rarity, number> = { COMMON: 5, UNCOMMON: 10, RARE: 20, EPIC: 80, LEGENDARY: 300, MYTHIC: 1200 };
+export const PET_LOOT_XP: Record<Rarity, number> = { COMMON: 10, UNCOMMON: 20, RARE: 40, EPIC: 160, LEGENDARY: 640, MYTHIC: 2500 };
 /** Loot glyphs that count as pet food (crystals and ore). */
 export const PET_FOOD_GLYPHS = ['crystal', 'nugget', 'orb', 'shard'];
 
