@@ -10,10 +10,12 @@ import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { CHAPTERS, stepCount, storyIdx, STORY, type StoryStep } from '../../story';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, bagCount, type NpcReward, type NpcQuestDef } from '../../npcQuests';
-import { activeQuests, questDone, questTitle, type QuestReward } from '../../quests';
+import { activeQuests, questDone, questTitle, type QuestReward, type Quest } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
-import { walkToMain, walkToNpcObjective } from '../../engine/systems/village';
+import { walkToMain, walkToNpcObjective, walkToNpcQuest, walkToQuest } from '../../engine/systems/village';
+import { abandonNpcQuest } from '../../engine/systems/npcQuestLogic';
+import { questXp } from '../../classLevels';
 import { offerTeleport } from '../hud/QuestTracker';
 import { ItemSlot } from '../components/ItemSlot';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
@@ -36,11 +38,12 @@ const CurSlot: React.FC<{ icon: React.ReactNode; n: number; label: string }> = (
     <div className="rpg-slot fluid qw-cur">{icon}<span className="slot-qty">{n.toLocaleString()}</span></div>
   </div>
 );
-export const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean }> = ({ r, scale }) => {
+export const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean; xp?: number }> = ({ r, scale, xp }) => {
   const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items, cores = (r as QuestReward).cores, potions = (r as QuestReward).potions;
   const list: [string, number][] = [...(cores ? [['upgrade_core', cores] as [string, number]] : []), ...(potions ? [['potion_hp', potions] as [string, number]] : []), ...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
   return (
     <div className="qw-rew">
+      {!!xp && <CurSlot icon={<span className="qw-xp">EXP</span>} n={xp} label="EXP" />}
       {!!g && <CurSlot icon={<CoinGlyph size={34} />} n={scale ? g * GOLD_SCALE : g} label="Gold" />}
       {!!gems && <CurSlot icon={<GemGlyph size={34} />} n={gems} label="Gems" />}
       {list.map(([id, n]) => { const it = rewardItem(id, n); return it ? <div key={id} className="qw-ri"><ItemSlot item={it} fluid size="100%" iconSize="78%" qty={n} tooltip="none" compare={false} /></div> : null; })}
@@ -52,7 +55,9 @@ type Tab = 'MAIN' | 'SIDE' | 'BOARD';
 
 export const QuestLog: React.FC = () => {
   const open = useUiStore((s) => s.questLogOpen), setOpen = useUiStore((s) => s.openQuestLog);
-  const { story, nq, inv, rank, quests, status } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, quests: s.quests, status: s.status })));
+  const { story, nq, inv, rank, quests, status, level, abandonBounty } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, quests: s.quests, status: s.status, level: s.level, abandonBounty: s.abandonQuest })));
+  const askConfirm = useUiStore((s) => s.askConfirm);
+  const [boardSel, setBoardSel] = useState<string>('');
   const [tab, setTab] = useState<Tab>('MAIN');
   const chapIdx = useMemo(() => CHAPTERS.map((c, i) => ({ ...c, a: storyIdx(c.from), b: i + 1 < CHAPTERS.length ? storyIdx(CHAPTERS[i + 1].from) : STORY.length })), []);
   const curChap = Math.max(0, chapIdx.findIndex((c) => story.step >= c.a && story.step < c.b));
@@ -120,7 +125,7 @@ export const QuestLog: React.FC = () => {
                     <div className="qw-sec">Objective</div>
                     <div className="qw-obj">{sel < story.step ? <><Check size={14} /> Completed</> : <>{step.line}{stepCount(step) > 1 ? <b> {Math.min(story.p, stepCount(step))} / {stepCount(step)}</b> : null}</>}</div>
                     <div className="qw-sec">Rewards</div>
-                    <Rewards r={step.reward} scale />
+                    <Rewards r={step.reward} scale xp={questXp('STORY', level)} />
                   </div>
                 </div>
                 {sel === story.step && (
@@ -157,27 +162,54 @@ export const QuestLog: React.FC = () => {
                       <div className="qw-sec">Objective</div>
                       <div className="qw-obj">{lockLv ? <><Lock size={13} /> Requires Lv {lockLv} (you are Lv {rank}). {side.summary}</> : !active ? `Talk to ${side.giver} to start` : ready ? `Done! Return to ${side.turnIn ?? side.giver}.` : <>{side.summary}{side.objective.count > 1 ? <b> {n} / {side.objective.count}</b> : null}</>}</div>
                       <div className="qw-sec">Rewards</div>
-                      <Rewards r={side.reward} scale />
+                      <Rewards r={side.reward} scale xp={questXp('SIDE', level)} />
                     </div>
                   </div>
-                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION', 'LISTEN'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
+                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION', 'LISTEN'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button>
+                    {!ready && <button className="qw-btn pe" data-testid="side-abandon" onClick={() => askConfirm({ title: `Abandon ${side.title}?`, body: `It goes back to ${side.giver}'s offers; your progress on it is lost.`, confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => { abandonNpcQuest(side.id); } })}>Abandon</button>}</div>}
+                  {!active && !lockLv && <div className="qw-btns"><button className="qw-btn pe" data-testid="side-track-offer" onClick={() => { setOpen(false); const go = () => walkToNpcQuest(side.giver); if (!(inRun && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
                 </div>
               );
             })()}
           </div>
         )}
 
-        {tab === 'BOARD' && (
-          <div className="qw-board rpg-scroll">
-            {board.length === 0 && <div className="qw-none">No bounties taken. The Quest Board in the plaza has new ones every day.</div>}
-            {board.map((q) => (
-              <div key={q.id} className={`qw-bounty ${questDone(q) ? 'ready' : ''}`}>
-                <div><b>{questTitle(q)}</b><span>{questDone(q) ? 'Done! Claim it at the Quest Board.' : `${Math.min(q.progress, q.target)} / ${q.target}`}</span></div>
-                <Rewards r={q.reward} />
+        {tab === 'BOARD' && (() => {
+          // (owner) the same list + detail layout as the Side tab
+          const bq: Quest | undefined = board.find((q) => q.id === boardSel) ?? board[0];
+          return (
+            <div className="qw-body">
+              <div className="qw-list rpg-scroll">
+                {board.length === 0 && <div className="qw-none">No bounties taken. The Quest Board in the plaza has new ones every day.</div>}
+                {board.length > 0 && <div className="qw-grp">Accepted bounties</div>}
+                {board.map((q) => (
+                  <button key={q.id} className={`qw-step pe cur ${bq?.id === q.id ? 'sel' : ''} ${questDone(q) ? 'ready' : ''}`} onClick={() => setBoardSel(q.id)}>
+                    <span>{questTitle(q)} <em>· Bounty</em></span>
+                    {questDone(q) ? <Check size={14} className="ok" /> : <b className="qbadge blue">Q</b>}
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+              {bq && (
+                <div className="qw-det">
+                  <div className="qw-banner npc"><div className="qw-seal"><ScrollText size={20} /></div><div><em>Quest Board</em><b>{questTitle(bq)}</b></div></div>
+                  <div className="qw-cols">
+                    <div className="qw-text"><p className="qw-quote">“{bq.bounty ? 'Wanted, by order of the Guard. Bring proof, collect the purse.' : 'Posted on the Quest Board in the plaza. Any able hand may take it.'}”<span>Hodge, Quest Board</span></p></div>
+                    <div className="qw-side">
+                      <div className="qw-sec">Objective</div>
+                      <div className="qw-obj">{questDone(bq) ? 'Done! Claim it at the Quest Board.' : <>{questTitle(bq)}<b> {Math.min(bq.progress, bq.target)} / {bq.target}</b></>}</div>
+                      <div className="qw-sec">Rewards</div>
+                      <Rewards r={bq.reward} xp={questXp('BOUNTY', level)} />
+                    </div>
+                  </div>
+                  <div className="qw-btns">
+                    <button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToQuest(bq); if (!((questDone(bq) || inRun) && inRun && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button>
+                    {!questDone(bq) && <button className="qw-btn pe" data-testid="board-abandon" onClick={() => askConfirm({ title: 'Abandon this bounty?', body: 'It goes back to the Quest Board offers; your progress on it is lost.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => abandonBounty(bq.id) })}>Abandon</button>}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </Modal>
   );

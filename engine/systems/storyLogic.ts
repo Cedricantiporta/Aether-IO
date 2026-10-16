@@ -2,6 +2,7 @@
 // during runs (also champions / the depth-10 pre-boss for `goal` steps), freed captives count for rescue steps, town
 // actions (`hub` events) count for shop steps, the ending finishes the Lich step. (Where the main quest continues for the guide
 // arrow, the gate beacon and the tracker click: engine/systems/questNav.ts mainNav.)
+import { questXp } from '../../classLevels';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { STORY, stepCount, type StoryStep } from '../../story';
@@ -35,6 +36,7 @@ function takeLoot(id: string, count: number): void {
 /** "Rewards: 1,000 gold · 10 gems · Upgrade Core x2" for a dialogue line. */
 export function rewardText(r: StoryStep['reward']): string {
   const parts: string[] = [];
+  parts.push(`${questXp('STORY', useGameStore.getState().level).toLocaleString()} EXP`);
   if (r.gold) parts.push(`${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
   if (r.gems) parts.push(`${r.gems} gems`);
   for (const it of r.items ?? []) { const n = ITEMS_POOL.find((x) => x.id === it.id)?.name ?? it.id; parts.push((it.qty ?? 1) > 1 ? `${n} x${it.qty}` : n); }

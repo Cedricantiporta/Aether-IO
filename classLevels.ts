@@ -87,3 +87,7 @@ export function sanitizeClassProg(raw: unknown, base: SkillLevels, legacyLevel: 
   }
   return out;
 }
+
+/** (owner) every quest pays EXP: a share of what the hero's current level needs (story step 12%, side quest 20%, bounty 10%). */
+export const QUEST_XP_SHARE = { STORY: 0.12, SIDE: 0.2, BOUNTY: 0.1 } as const;
+export const questXp = (kind: keyof typeof QUEST_XP_SHARE, lv: number): number => Math.max(10, Math.round(xpNeed(Math.max(1, lv)) * QUEST_XP_SHARE[kind]));

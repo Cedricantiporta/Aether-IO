@@ -1,5 +1,6 @@
 // Bounty Board (owner: a centred popup laid out like the Quest window): today's offers and the taken bounties on the
 // left, the selected bounty on the right (banner, flavour, objective, rewards) with Accept / Abandon / Claim.
+import { questXp } from '../../../classLevels';
 import React, { useEffect, useState } from 'react';
 import { ScrollText, Check, Lock } from '../../components/GoldIcons';
 import { useGameStore } from '../../../store';
@@ -57,7 +58,7 @@ export const QuestsTab: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <div className="qw-obj">{q.accepted && done ? <><Check size={14} /> Completed</> : <>{questTitle(q)}{q.accepted && <b> {progressText(q)}</b>}</>}</div>
                   {q.accepted && king && <div className="qw-obj" data-testid="quest-king">{q.type === 'AUDIENCE' ? 'Talk to the King in the castle keep' : 'Report to the King in the castle'}</div>}
                   <div className="qw-sec">Rewards</div>
-                  <Rewards r={q.reward} />
+                  <Rewards r={q.reward} xp={questXp('BOUNTY', useGameStore.getState().level)} />
                   {q.reward.item && <div className="qw-obj" style={{ marginTop: '.3rem' }}>+ one {q.reward.item.charAt(0) + q.reward.item.slice(1).toLowerCase()} gear piece</div>}
                 </div>
               </div>

@@ -11,7 +11,7 @@ import { activeChar, activeProfileKey } from './characters';
 import { STORY, STORY_V, sanitizeStory, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
-import { xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
+import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
@@ -62,7 +62,7 @@ import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId }
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { petPower } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
-import { fillQuests, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
+import { fillQuests, questDay, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
@@ -1114,8 +1114,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         inventory: inv,
         quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
       });
+      const qxp = questXp('BOUNTY', s.level); get().addExperience(qxp);   // (owner) every quest pays EXP
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
-      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts }, true);
+      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts, xp: qxp }, true);
       events.emit('hub', { kind: 'quest', n: 1 });
       return true;
     },
@@ -1151,7 +1152,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     abandonQuest: (id) => {
       const s = get();
       if (!s.quests.some((x) => x.id === id && x.accepted)) return;
-      set({ quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)) });
+      // (owner) back among the board offers (progress reset), not thrown away
+      set({ quests: s.quests.map((x) => (x.id === id ? { ...x, accepted: false, progress: 0, day: questDay() } : x)) });
     },
 
     refreshQuestBoard: () => {
@@ -1266,13 +1268,14 @@ export const useGameStore = create<GameState>()((set, get) => {
         const r = STORY[k]?.reward; if (!r) continue;
         const now = get();
         set({ gold: now.gold + (r.gold ?? 0) * GOLD_SCALE, gems: now.gems + (r.gems ?? 0) });
+        const qxp = questXp('STORY', now.level); get().addExperience(qxp);   // (owner) every quest pays EXP
         const gotItems: Item[] = [];
         for (const it of r.items ?? []) for (const item of makeItemById(it.id, it.qty ?? 1)) {
           gotItems.push(item);
           if (!get().addItemToInventory(item)) { set({ warehouse: [...get().warehouse, item] }); }
         }
         notify(`Main quest complete: ${STORY[k].title}`, '#f1d58e', 'SYSTEM');
-        feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems }, true);   // the rewards in the loot feed + under the tracker
+        feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems, xp: qxp }, true);   // the rewards in the loot feed + under the tracker
       }
       if (step !== s.story.step) {
         if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
@@ -1782,10 +1785,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const usable = (i: Item) => !i.classType || i.classType === hero;
       let pool: Item[];
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
-      const lvNow = get().level;
-      if (rarityOverride) rarityOverride = capRarity(rarityOverride, lvNow);   // (owner: tiers unlock at Lv 10 / 20 / 30 / 40 / 50)
+      const lvNow = get().level, dropLv = lvNow + 10;   // (owner) drops may be one tier above what the hero can equip yet (Uncommon from Lv 1)
+      if (rarityOverride) rarityOverride = capRarity(rarityOverride, dropLv);   // (owner: tiers unlock at Lv 10 / 20 / 30 / 40 / 50)
       if (rarityOverride === 'COMMON') rarityOverride = 'UNCOMMON';   // (owner) treasures / rewards / bosses (every override roll) are never Common
-      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? capRarity('RARE', lvNow) : null);
+      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? capRarity('RARE', dropLv) : null);
       const setChance: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
       if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
         const sets = notPet.filter((i) => i.setName && i.rarity === setRarity && usable(i)
@@ -1806,7 +1809,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         else if (r > 0.87) pool = notPet.filter((i) => i.id === 'upgrade_core'); // cores are rare (8% of item drops; tier I only)
         else {   // plain gear: Common / Uncommon / Rare, capped by level (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
           const tr = Math.random();
-          const tier: Rarity = capRarity(tr < 0.4 ? 'COMMON' : tr < 0.75 ? 'UNCOMMON' : 'RARE', lvNow);
+          const tier: Rarity = capRarity(tr < 0.4 ? 'COMMON' : tr < 0.75 ? 'UNCOMMON' : 'RARE', dropLv);
           if (tier === 'COMMON' && Math.random() < 0.7) return null;
           pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && i.rarity === tier);
         }

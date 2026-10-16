@@ -2,6 +2,7 @@ import { feedReward } from '../../rewardFeed';
 // NPC story quest logic (data in npcQuests.ts): accept, progress from engine events, turn-in + rewards, and the
 // per-NPC marker cache read by render/Npcs.tsx. The state lives in the store (`npcQuests`, saved with the profile).
 // Importing this module registers the event listeners (dialogue.ts imports it).
+import { questXp } from '../../classLevels';
 import { STORY } from '../../story';
 import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
@@ -22,6 +23,16 @@ import {
 
 const save = (): NpcQuestSave => useGameStore.getState().npcQuests;
 const notify = (msg: string, color: string = COLORS.uiAccent) => useGameStore.getState().addNotification(msg, color, 'SYSTEM');
+
+/** (owner) abandon an accepted side quest: it goes back to being offered (progress lost; delivered goods stay in the bag). */
+export function abandonNpcQuest(id: string): boolean {
+  const st = useGameStore.getState(), e = st.npcQuests.q[id], def = NPC_QUEST_BY_ID[id];
+  if (!def || !e || e.s !== 1) return false;
+  const q = { ...st.npcQuests.q }; delete q[id];
+  useGameStore.setState({ npcQuests: { ...st.npcQuests, q } });
+  notify(`Quest abandoned: ${def.title}`);
+  return true;
+}
 
 export function acceptNpcQuest(id: string): boolean {
   const def = NPC_QUEST_BY_ID[id], st = useGameStore.getState();
@@ -82,8 +93,9 @@ export function completeNpcQuest(id: string): boolean {
   });
   if (def.reward.shards) s.addMaterial(def.reward.shards[0], def.reward.shards[1]);
   if (def.reward.flasks) { const n = addSpareFlasks(def.reward.flasks); if (n > 0) notify(`+${n} lantern oil flask${n === 1 ? '' : 's'} for the Crystal Cave`, '#ffd070'); }
+  const qxp = questXp('SIDE', s.level); useGameStore.getState().addExperience(qxp);   // (owner) every quest pays EXP
   notify(`Quest complete: ${def.title}`);
-  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0] }, true);
+  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
   return true;
 }
 
@@ -225,6 +237,7 @@ events.on('crateBreak', (e) => { const id = wantedDrop(e.kind); if (id) dropWant
 /** "Rewards: 1,000 gold · 10 gems · Rare shards x15 · Health Potion x2" for a dialogue hint. */
 export function npcRewardText(r: NpcQuestDef['reward']): string {
   const parts: string[] = [];
+  parts.push(`${questXp('SIDE', useGameStore.getState().level).toLocaleString()} EXP`);
   if (r.gold) parts.push(`${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
   if (r.gems) parts.push(`${r.gems} gems`);
   if (r.shards) parts.push(`${r.shards[0].charAt(0)}${r.shards[0].slice(1).toLowerCase()} shards x${r.shards[1]}`);
