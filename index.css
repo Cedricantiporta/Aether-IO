@@ -2725,3 +2725,5 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .qt-row.done .qt-n { color: #9be86a; }
 /* controller focus (ui/lib/padNav) */
 .pad-focus { outline: 2px solid #ffd36a !important; outline-offset: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 14px rgba(255, 211, 106, .65) !important; }
+/* (owner) gold / gems above open panels: same spot as the HUD counters */
+.cur-float { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + .8rem); transform: translateX(-50%); z-index: 1000; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }

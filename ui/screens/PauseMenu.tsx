@@ -16,6 +16,22 @@ import { DebugTab } from './DebugTab';
 import type { GraphicsQuality, Settings as SettingsT } from '../../storeTypes';
 type Settings = SettingsT;
 
+
+/** Every shortcut, shown in Settings > Controls (engine/input.ts is the source of truth). */
+const KEYS_KB: [string, string][] = [
+  ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'], ['Wheel', 'Zoom'],
+  ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: attack manually · accept a quest offer'],
+  ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
+  ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Esc', 'Pause / Settings · close a window'],
+];
+const KEYS_PAD: [string, string][] = [
+  ['Left stick', 'Move'], ['Right stick', 'Rotate camera'], ['A', 'Class dash'], ['B', 'Interact / talk / loot (hold: harvest)'],
+  ['X', 'Ability 1'], ['Y', 'Ability 2'], ['RB', 'Ability 3'], ['RT', 'Ultimate'], ['LB', 'Health potion'], ['LT', 'Mana potion'],
+  ['L3', 'Click left stick: auto-path to the tracked quest'], ['R3', 'Click right stick: reset camera'],
+  ['D-pad up', 'Quests'], ['D-pad down', 'Hero'], ['D-pad left', 'Accept a quest offer'], ['D-pad right', 'Achievements'],
+  ['Back / View', 'Bag'], ['Start / Menu', 'Pause / Settings'],
+];
+
 export const PauseMenu: React.FC = () => {
   const open = useGameStore((s) => s.isPauseMenuOpen);
   const togglePause = useGameStore((s) => s.togglePause);
@@ -158,10 +174,16 @@ export const SettingsDialog: React.FC = () => {
             </Row>
             <Row label="Joystick side" hint="Touch: move stick and ability buttons swap sides."><Seg tid="seg-joy" value={settings.joystickSide} opts={[{ v: 'LEFT', l: 'Left' }, { v: 'RIGHT', l: 'Right' }]} onChange={(v) => update({ joystickSide: v })} /></Row>
           </Sec>
-          <Sec title="Keyboard">
+          <Sec title="Keyboard & mouse">
             <div className="st-keys">
-              {([['WASD', 'Move'], ['Mouse', 'Aim'], ['Space', 'Class dash'], ['1 2 3', 'Abilities'], ['R', 'Ultimate'], ['Z / X', 'Potions'], ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['E', 'Interact / loot (hold: harvest)'], ['Esc', 'Pause']] as [string, string][]).map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
+              {KEYS_KB.map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
             </div>
+          </Sec>
+          <Sec title="Controller">
+            <div className="st-keys">
+              {KEYS_PAD.map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
+            </div>
+            <p className="st-p" style={{ marginTop: '.6rem' }}>In menus and shops: D-pad / left stick move the highlight, A selects, B or Start goes back, LB / RB switch tabs, right stick scrolls, left / right adjust sliders.</p>
           </Sec>
           <Sec title="Touch">
             <p className="st-p">Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Tap an ability to cast at the auto-target, or drag from it to aim (release to cast, drag back to cancel).</p>

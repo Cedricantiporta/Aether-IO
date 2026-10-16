@@ -182,3 +182,11 @@ export const MenuButtons: React.FC = () => {
     </div>
   );
 };
+
+/** (owner) Gold / gems stay visible above any open panel, shop, popup or summon (the HUD copy sits under the backdrops). */
+export const CurrencyFloat: React.FC = () => {
+  const panel = useGameStore((s) => s.isShopOpen || s.isInventoryOpen || s.isCharacterSheetOpen);
+  const overlay = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults);
+  if (!panel && !overlay) return null;
+  return <div className="cur-float hud-cur pe"><Currency /></div>;
+};

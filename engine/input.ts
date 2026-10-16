@@ -1,7 +1,7 @@
 // ============================================================================
 // Keyboard + pointer -> world.input. Global hotkeys live here and nowhere else.
 // ============================================================================
-import { world } from './world';
+import { world, CAM_PITCH0 } from './world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { uiOverlayOpen, closeTopOverlay, useUiStore } from '../ui/uiStore';
@@ -85,6 +85,15 @@ export function installInput(): () => void {
         break;
       case 'KeyC':
         if (inGame) st.toggleCharacterSheet();
+        break;
+      case 'KeyG':   // (owner) auto-path to the top quest in the tracker (same as clicking that row: walk in town, teleport offer in a run)
+        if (inGame) {
+          const row = document.querySelector<HTMLElement>('[data-testid="quest-tracker"] .qt-row');
+          if (row) row.click(); else st.addNotification('No quest to follow right now.', '#ffd08a', 'SYSTEM');
+        }
+        break;
+      case 'KeyV':   // reset the camera (default angle, zoom and facing)
+        if (inGame) { const c = world.camera; c.yaw = Math.round(c.yaw / (Math.PI * 2)) * Math.PI * 2; c.pitch = CAM_PITCH0; c.dist = 1; }   // (nearest full turn: it swings back, no spin)
         break;
       default: break;
     }
@@ -192,6 +201,7 @@ export function installInput(): () => void {
   const PAD: [number, string, string][] = [
     [0, 'Space', ' '], [1, 'KeyE', 'e'], [2, 'Digit1', '1'], [3, 'Digit2', '2'], [5, 'Digit3', '3'], [7, 'KeyR', 'r'],
     [4, 'KeyZ', 'z'], [6, 'KeyX', 'x'], [8, 'KeyI', 'i'], [9, 'Escape', 'Escape'], [12, 'KeyJ', 'j'], [13, 'KeyC', 'c'], [14, 'KeyF', 'f'], [15, 'KeyO', 'o'],
+    [10, 'KeyG', 'g'], [11, 'KeyV', 'v'],   // L3: auto-path to the quest · R3: reset camera
   ];
   const padDown = new Set<string>();
   const padPrev: boolean[] = [];
