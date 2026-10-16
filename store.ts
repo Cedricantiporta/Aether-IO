@@ -1784,6 +1784,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
       const lvNow = get().level;
       if (rarityOverride) rarityOverride = capRarity(rarityOverride, lvNow);   // (owner: tiers unlock at Lv 10 / 20 / 30 / 40 / 50)
+      if (rarityOverride === 'COMMON') rarityOverride = 'UNCOMMON';   // (owner) treasures / rewards / bosses (every override roll) are never Common
       const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? capRarity('RARE', lvNow) : null);
       const setChance: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
       if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
