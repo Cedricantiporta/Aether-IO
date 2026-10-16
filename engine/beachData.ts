@@ -19,7 +19,9 @@ export const BEACH_BOX: [number, number, number, number] = [-68.5, -2, 0, 58];
 /** Boardwalk (on the sand, visual only): from the entrance by the corner tower west, then north along the beach. */
 export const BOARDWALK = { z: 47, xE: -46.5, x: -58.5, zN: 12, w: 2.4 };
 /** The pier: a plank walkway west into the lake from the boardwalk + a wide T-head at its end. Deck top y = DOCK.y. */
-export const DOCK = { z: 30, x0: -57.3, x1: -80, hw: 1.3, head: { x0: -87, x1: -80, z0: 26, z1: 34 }, y: 0.12 };
+export const DOCK = { z: 30, x0: -57.3, x1: -80, hw: 1.3, head: { x0: -94, x1: -80, z0: 22, z1: 36 }, y: 0.12 };   // (owner: a bigger head)
+/** The Coral Isles ship, moored along the south side of the pier head (visual; the water around it is not walkable). */
+export const SHIP = { x: -91, z: 15.2, len: 26, beam: 7 };
 /** Walkable deck rectangles [x0, z0, x1, z1] (a hero-radius inside the planks): walkable over water. */
 export const DECK_RECTS: [number, number, number, number][] = [
   [DOCK.x1 - 0.6, DOCK.z - DOCK.hw + 0.3, DOCK.x0 + 0.3, DOCK.z + DOCK.hw - 0.3],
@@ -30,7 +32,7 @@ export const DECK_RECTS: [number, number, number, number][] = [
  *  luck: rarity bonus (the pier reaches deeper water). */
 export interface FishSpot { x: number; z: number; dx: number; dz: number; dist: number; luck: number; label: string }
 export const FISH_SPOTS: FishSpot[] = [
-  { x: -85.6, z: 30, dx: -1, dz: 0, dist: 7.5, luck: 1.25, label: 'Pier end' },
+  { x: -92.6, z: 31, dx: -1, dz: 0, dist: 7.5, luck: 1.25, label: 'Pier end' },
   { x: -63.6, z: 16, dx: -0.995, dz: -0.1, dist: 6.5, luck: 1, label: 'Shoreline' },
   { x: -63.8, z: 41.5, dx: -0.995, dz: 0.1, dist: 6.5, luck: 1, label: 'Shoreline' },
 ];

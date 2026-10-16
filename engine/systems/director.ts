@@ -181,6 +181,8 @@ export function startRunRooms(): void {
   resetGates();
   world.room.fade = 1;
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
+  const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens at that biome's camp)
+  if (sb > 0) { enterRoom(sb, 0, firstPlan()); return; }
   enterRoom(0, 0, firstPlan());
 }
 

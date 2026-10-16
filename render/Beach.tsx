@@ -18,7 +18,7 @@ import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import {
-  BEACH, BOARDWALK, DOCK, FISH_SPOTS, HEADLAND, PALMS, CAMPFIRE, UMBRELLA, ROWBOAT, DRIFTWOOD, CRATES, BARRELS, NET_RACK, ENTRY_SIGN,
+  BEACH, BOARDWALK, DOCK, SHIP, FISH_SPOTS, HEADLAND, PALMS, CAMPFIRE, UMBRELLA, ROWBOAT, DRIFTWOOD, CRATES, BARRELS, NET_RACK, ENTRY_SIGN,
 } from '../engine/beachData';
 import { FISH } from '../engine/systems/fishing';
 
@@ -97,6 +97,31 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   const b = new GB([0.82, 1.06]), g = new GB([1, 1]), rnd = mulberry32(4242);
   const yTop = DOCK.y;
   // (owner: no boardwalk on the sand - the pier is the only wooden walkway)
+  // ---- the Coral Isles ship (owner: a huge ship at the pier; the captain on the head sells the ticket)
+  {
+    const { x, z, len, beam } = SHIP, HULL = '#5a3a22', HULL2 = '#6e4b2b', DECK = '#a07a4e', SAIL = '#efe6d2', TRIM = '#c9a24c';
+    b.box(len - 2, 2.2, beam - 1.2, [x, -0.5, z], HULL);                                   // lower hull (below the waterline)
+    b.box(len, 1.5, beam, [x, 1.0, z], HULL2);                                            // upper hull
+    b.box(len + 0.2, 0.18, beam + 0.2, [x, 1.78, z], TRIM);                               // gilded strake
+    for (const s2 of [-1, 1]) b.box(3.6, 2.4, 3.6, [x + s2 * (len / 2 + 0.6), 0.5, z], s2 > 0 ? HULL2 : HULL, [0, Math.PI / 4, 0]);   // bow / stern points
+    b.box(len - 0.6, 0.16, beam - 0.5, [x, 1.72, z], DECK);                               // main deck
+    b.box(6.5, 2.0, beam, [x - len / 2 + 3.4, 2.7, z], HULL2);                            // stern castle
+    b.box(6.7, 0.16, beam + 0.2, [x - len / 2 + 3.4, 3.76, z], TRIM);
+    for (const s2 of [-1, 1]) b.box(len - 7, 0.5, 0.18, [x + 3, 2.05, z + s2 * (beam / 2 - 0.1)], HULL);   // bulwarks
+    for (let k = 0; k < 6; k++) for (const s2 of [-1, 1]) b.box(0.7, 0.5, 0.1, [x - 7 + k * 3.1, 1.0, z + s2 * (beam / 2 + 0.02)], '#2a1a10');   // gun ports
+    const masts: [number, number][] = [[x + 7.5, 13], [x, 15.5], [x - 7, 11]];
+    for (const [mx, h] of masts) {
+      b.cyl(0.26, 0.36, h, 8, [mx, 1.8 + h / 2, z], '#4a3220');
+      b.box(0.18, 0.18, beam + 1.2, [mx, 1.8 + h * 0.82, z], '#4a3220'); b.box(0.18, 0.18, beam + 0.4, [mx, 1.8 + h * 0.46, z], '#4a3220');   // yards
+      b.box(0.14, h * 0.32, beam + 0.6, [mx + 0.25, 1.8 + h * 0.66, z], SAIL, [0, 0, 0.06]);                                                   // sails
+      b.box(0.14, h * 0.26, beam - 0.2, [mx + 0.25, 1.8 + h * 0.3, z], SAIL, [0, 0, 0.05]);
+      b.box(0.08, 0.9, 1.6, [mx, 1.8 + h + 0.4, z + 0.8], '#b8322a');                                                                       // pennant
+    }
+    b.box(5.5, 0.22, 0.22, [x + len / 2 + 2.6, 2.3, z], '#4a3220', [0, 0, 0.35]);          // bowsprit
+    // gangplank from the pier head down onto the deck
+    b.box(1.4, 0.12, DOCK.head.z0 - (z + beam / 2) + 0.8, [x + 2, 1.0, (DOCK.head.z0 + z + beam / 2) / 2], WOOD, [0.28, 0, 0]);
+    lanternPost(b, g, x - len / 2 + 1.2, z, 3.8);
+  }
   // ---- the pier: walkway planks across, stringers, posts into the water, T-head with rails, lanterns, bollards
   {
     const z = DOCK.z, hw = DOCK.hw, x0 = BOARDWALK.x - BOARDWALK.w / 2, x1 = DOCK.x1;

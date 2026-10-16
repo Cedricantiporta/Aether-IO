@@ -528,6 +528,8 @@ export interface NpcDef {
   /** which map the NPC lives in (default town) */
   /** talking to this NPC ends by opening this shop tab (e.g. the Skill Trainer -> SKILLS) */
   opens?: import('../storeTypes').ShopTab;
+  /** the ship's captain: talking ends with the offer of a ticket to the Coral Isles */
+  ship?: boolean;
   area?: 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN';   // (CAVE = Floor 1 of the crystal cave)
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
@@ -761,6 +763,15 @@ export const NPCS: NpcDef[] = [
       ['Ah, to be young and respawning again. My knees stopped respawning years ago.'],
     ],
     bubbles: ['Hic!', 'In my day...', 'One more for the road.'],
+  },
+  // the Coral Isles ship at the pier head (render/Beach SHIP): the captain sells a ticket (store.sailToIsles)
+  {
+    name: 'Captain Rhea Saltwind', role: 'Ship Captain', model: 'KNIGHT', tint: '#f3e3c3', scale: 1.05, prop: 'none', accent: '#6fd0e0', home: [-89, 23.4], ship: true, noHat: true,
+    talk: [
+      ['Ahoy! The Gull Queen sails for the Coral Isles at every tide.', 'Sixty gems and you skip the long walk through three realms. Interested?'],
+      ['The Isles are warm, the water is clear and the locals bite. Mostly the crabs.', 'A ticket is sixty gems. You start right on the first island.'],
+    ],
+    bubbles: ['All aboard for the Coral Isles!', 'Sixty gems a ticket!', 'Fair winds today.'],
   },
   {
     name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 94.5], speed: 1.2,

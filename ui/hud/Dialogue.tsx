@@ -2,12 +2,27 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useDialogue, advanceDialogue, closeDialogue, acceptOffer } from '../../engine/systems/dialogue';
 import { device } from '../../engine/device';
+import { useGameEvent } from '../hooks/useEvent';
+import { useUiStore } from '../uiStore';
+import { useGameStore, SHIP_TICKET_GEMS } from '../../store';
 
 /**
  * NPC dialogue: a cream card at the bottom of the screen. Tap / click the card or press E / Space to advance,
  * X closes. The engine freezes the hero while it is open (engine/systems/village.ts) and handles E there.
  */
+/** The captain's ticket (engine/systems/dialogue emits hub 'ship' at the end of the talk). */
+const useShipOffer = () => useGameEvent('hub', (e) => {
+  if (e.kind !== 'ship') return;
+  const gems = useGameStore.getState().gems;
+  useUiStore.getState().askConfirm({
+    title: 'Sail to the Coral Isles?', confirmLabel: gems >= SHIP_TICKET_GEMS ? `Buy ticket · ${SHIP_TICKET_GEMS} gems` : 'Not enough gems',
+    body: `A run that starts straight in the Coral Isles (depth 1), skipping the first three realms. You have ${gems} gems.`,
+    onConfirm: () => { useGameStore.getState().sailToIsles(); },
+  });
+});
+
 export const Dialogue: React.FC = () => {
+  useShipOffer();
   const { open, name, role, accent, lines, idx, offer, acceptLabel, hint } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   if (!open) return null;

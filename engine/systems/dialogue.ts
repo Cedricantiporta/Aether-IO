@@ -5,6 +5,7 @@ import { GOLD_SCALE } from '../../constants';
 // (with one-off news after a guardian falls, the daily gift and a "come back at Lv N" hint).
 import { create } from 'zustand';
 import { NPCS } from '../townData';
+import { events } from '../events';
 import { useGameStore, makeItemById } from '../../store';
 import { questDone } from '../../quests';
 import { STORY } from '../../story';
@@ -136,8 +137,10 @@ export function advanceDialogue(): void {
   if (!s.open) return;
   if (s.idx >= s.lines.length - 1) {
     const tab = s.npc >= 0 && !s.offer && !s.turnIn ? NPCS[s.npc].opens : undefined;
+    const ship = s.npc >= 0 && !s.offer && !s.turnIn && !!NPCS[s.npc].ship;
     closeDialogue();
     if (tab) useGameStore.getState().openSpecificShop(tab);   // e.g. the Skill Trainer opens the skill panel
+    if (ship) events.emit('hub', { kind: 'ship', n: 1 });     // the captain: the ticket offer (ui/hud/Dialogue)   // e.g. the Skill Trainer opens the skill panel
     return;
   }
   const idx = s.idx + 1;
