@@ -94,7 +94,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
   }, [keyCode]);
 
   return (
-    <div className="relative pe" {...tip(tooltip)}>
+    <div className="relative pe act-wrap" {...tip(tooltip)}>
       <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
         <span className="slot-icon">{icon}</span>
         <div ref={sweep} className="cd-sweep"><span ref={txt} className="cd-text" /></div>

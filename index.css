@@ -2265,3 +2265,68 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .tal-drag { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; cursor: grab; user-select: none; touch-action: pan-y; }
 .tal-drag::-webkit-scrollbar { display: none; }
 .tal-drag:active { cursor: grabbing; }
+
+/* warehouse: compact gold bar under the storage grid */
+.wh-bottom { position: sticky; bottom: -1rem; display: flex; flex-direction: column; gap: .35rem; padding: .45rem .5rem; margin: 0 -.25rem -.5rem; background: rgba(14, 12, 10, .96); border-top: 1px solid rgba(214, 186, 122, .16); }
+.wh-bottom .wh-btn { padding: .25rem .55rem; font-size: .66rem; }
+.wh-bottom .wh-search { height: 1.8rem; font-size: .72rem; width: 7.5rem; }
+.wh-goldbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+
+/* Item slots (owner, Korean MMO reference): no visible line borders - a rarity-tinted fill with a barely-there edge;
+   empty slots are dark glass with an almost invisible edge. Hover / selected rings stay. */
+.rpg-slot, .rpg-slot.fluid {
+  border: 1px solid rgba(255, 255, 255, .045);
+  background: radial-gradient(circle at 50% 115%, color-mix(in srgb, var(--rc) 34%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--rc) 20%, #23242a), color-mix(in srgb, var(--rc) 9%, #111216));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), inset 0 0 10px rgba(0, 0, 0, .55);
+}
+.rpg-slot.is-empty, .rpg-slot.fluid.is-empty, .rpg-slot.is-dim {
+  border: 1px solid rgba(255, 255, 255, .035);
+  background: linear-gradient(180deg, rgba(30, 31, 37, .55), rgba(14, 15, 19, .55));
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .55);
+}
+
+/* Quest tracker rows (owner, reference): subtle fading strips, no full line container - dark on the left fading out to
+   the right, a hairline underneath that fades too, and a soft accent bar on the left edge in the quest's colour. */
+.qt-row, .qt-row.done, .qt-row.king, .qt-row.npc, .qt-row.npc.done, .qt-row.main, .qt-row.board:not(.done):not(.king), .qt-row.npc:not(.done) {
+  --qa: 111, 168, 255;
+  box-shadow: none; animation: none;
+  background: linear-gradient(90deg, rgba(6, 6, 8, .72) 0%, rgba(6, 6, 8, .45) 55%, rgba(6, 6, 8, 0) 100%);
+  border: 0; border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(var(--qa), .45), rgba(var(--qa), .12) 60%, transparent) 1;
+}
+.qt-row.main { --qa: 241, 213, 142; background: linear-gradient(90deg, rgba(40, 30, 10, .78) 0%, rgba(20, 15, 6, .45) 55%, rgba(10, 8, 4, 0) 100%); }
+.qt-row.npc:not(.done) { --qa: 95, 208, 192; }
+.qt-row.king { --qa: 200, 69, 79; }
+.qt-row.done, .qt-row.npc.done { --qa: 123, 227, 143; }
+.qt-row::before, .qt-row.main::before { content: ''; position: absolute; left: 0; top: 12%; bottom: 12%; width: 2px; box-shadow: none;
+  background: linear-gradient(180deg, transparent, rgba(var(--qa), .95) 30%, rgba(var(--qa), .95) 70%, transparent); }
+.qt-row.main::before { width: 3px; filter: drop-shadow(0 0 4px rgba(var(--qa), .8)); }
+
+/* minimap (owner: sharper container): crisp square frame - dark hairline, a thin gold line, no soft inner glow */
+.mm-ring { inset: -3px; border-radius: 3px; box-shadow: 0 0 0 1px #050304, inset 0 0 0 1.5px #d2a24a, inset 0 0 0 2.5px #050304, 0 3px 10px rgba(0, 0, 0, .55); }
+
+/* Action bar (owner, reference): counters are big plain numbers (no badge box), key labels only on hover */
+.hud-slot .slot-qty, .hud-slot .slot-plus { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; min-width: 0 !important;
+  right: .22rem !important; bottom: .05rem !important; left: auto !important; top: auto !important;
+  font-family: var(--font-num, inherit); font-size: 1.05rem !important; font-weight: 700; line-height: 1; color: #fff;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .9); }
+.act-wrap > .rpg-key, .ult-slot > .rpg-key { opacity: 0; transition: opacity .12s; pointer-events: none; }
+.act-wrap:hover > .rpg-key, .ult-slot:hover > .rpg-key { opacity: 1; }
+
+/* Boss / mini-boss / champion bar (owner, reference): name above, long thin bar with diamond caps */
+.bb-name { margin-bottom: .3rem; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0, 0, 0, .8); }
+.bb-n { font-family: var(--font-title); font-size: 1.15rem; color: #f3e9d2; letter-spacing: .02em; }
+.bb-t { margin-left: .5rem; font-family: var(--font-title); font-size: .78rem; color: #b9ab8e; }
+.bb-bar { position: relative; padding: 0 .9rem; }
+.bb-track { position: relative; height: 1.05rem; background: linear-gradient(180deg, #120808, #1e0d0d); border: 1px solid #8a7246;
+  box-shadow: 0 0 0 1px #050304, inset 0 2px 6px rgba(0, 0, 0, .8), 0 3px 10px rgba(0, 0, 0, .55); overflow: hidden; }
+.bb-trail { position: absolute; inset: 0 auto 0 0; background: rgba(255, 210, 200, .45); }
+.bb-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #e0242c 0%, #b3121a 45%, #7d0a10 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 2px 0 0 #ff4a52, 3px 0 8px rgba(255, 60, 60, .9); }
+.bb-val { position: absolute; inset: 0; display: grid; place-items: center; font-size: .8rem; color: #fff; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+.bb-cap { position: absolute; top: 50%; width: .62rem; height: .62rem; transform: translateY(-50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff1c4, #b98a3a); border: 1px solid #2a1a07; box-shadow: 0 0 4px rgba(0, 0, 0, .7); }
+.bb-cap.l { left: .15rem; } .bb-cap.r { right: .15rem; }
+.bb-shield { position: relative; height: .38rem; margin: 0 0 2px; background: #0a1420; border: 1px solid #050304; box-shadow: 0 0 0 1px #3a6a8a; }
+.bb-shield-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #d4f3ff, #8fdcff 50%, #3d9ccc); box-shadow: 0 0 6px #8fdcff; }

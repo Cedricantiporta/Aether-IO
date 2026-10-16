@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { Skull } from 'lucide-react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
@@ -78,25 +77,22 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   });
 
   return (
-    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: 'min(22rem, 46vw)', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar">
+    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: 'min(34rem, 62vw)', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar">
       <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
-      <div className="text-center leading-none mb-1">
-        <div ref={name} className="rpg-title text-base" style={{ color: '#ffb3aa' }} />
-        <div ref={title} className="rpg-label !text-[.65rem] mt-1" style={{ color: '#d9a8a0' }} />
+      <div className="bb-name text-center leading-none">
+        <span ref={name} className="bb-n" /><span ref={title} className="bb-t" />
       </div>
-      <div ref={shRow} className="relative mx-auto mb-[3px]" data-testid="boss-shield" style={{ visibility: 'hidden', width: 'calc(100% - 2.8rem)', height: '.45rem', background: '#0a1420', border: '1px solid #0d0703', boxShadow: '0 0 0 1px #3a6a8a' }}>
-        <div ref={shFill} className="absolute inset-y-0 left-0" style={{ width: '0%', background: 'linear-gradient(180deg,#d4f3ff,#8fdcff 50%,#3d9ccc)', boxShadow: '0 0 6px #8fdcff' }} />
-        <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(10,30,50,.85) calc(10% - 2px) 10%)' }} />
-      </div>
-      <div className="relative flex items-center">
-        <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginRight: '-.6rem' }}><Skull size={14} /></div>
-        <div className="rpg-bar flex-1" style={{ height: '1.05rem', borderWidth: 2, boxShadow: '0 0 0 2px #8b5a16, 0 0 0 4px #0d0703, inset 0 3px 8px rgba(0,0,0,.9), 0 6px 14px rgba(0,0,0,.6)' }}>
-          <div ref={trail} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'rgba(255,255,255,.9)' }} />
-          <div ref={hp} className="absolute inset-y-0 left-0" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8a85,#d6252b 45%,#7e0f14)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.5)' }} />
-          <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(0,0,0,.6) calc(10% - 2px) 10%)' }} />
-          <div className="absolute inset-0 grid place-items-center rpg-num text-[.78rem] text-white text-outline"><span ref={val} /></div>
+      {/* (owner, reference) long thin bar with diamond end caps, dark red fill, centred value, bright edge at the fill end */}
+      <div className="bb-bar">
+        <div ref={shRow} className="bb-shield" data-testid="boss-shield" style={{ visibility: 'hidden' }}>
+          <div ref={shFill} className="bb-shield-fill" style={{ width: '0%' }} />
         </div>
-        <div className="rpg-medallion z-10" style={{ width: '2rem', height: '2rem', ['--mc' as any]: '#8e1c1f', marginLeft: '-.6rem' }}><Skull size={14} /></div>
+        <div className="bb-track">
+          <div ref={trail} className="bb-trail" style={{ width: '100%' }} />
+          <div ref={hp} className="bb-fill" style={{ width: '100%' }} />
+          <div className="bb-val rpg-num"><span ref={val} /></div>
+        </div>
+        <i className="bb-cap l" /><i className="bb-cap r" />
       </div>
       <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.5rem', background: '#0d0703', border: '1px solid #3a2a14', borderRadius: 3, overflow: 'hidden' }} title="Stagger">
         <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: 'linear-gradient(180deg,#fff27a,#e0a810)' }} />

@@ -1,6 +1,6 @@
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
-import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph } from '../components/MenuGlyphs';
+import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph, TrophyGlyph } from '../components/MenuGlyphs';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
@@ -180,8 +180,8 @@ export const MenuButtons: React.FC = () => {
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
       <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
-      <MenuBtn icon={<ScrollText size={24} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
-      <MenuBtn icon={<Trophy size={24} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
+      <MenuBtn icon={<GoalGlyph />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
+      <MenuBtn icon={<TrophyGlyph />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
       <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
     </div>

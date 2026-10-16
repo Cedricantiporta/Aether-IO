@@ -189,17 +189,6 @@ export const RecycleTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <div className="rpg-label mb-1.5">Materials</div>
-        <div className="grid grid-cols-5 gap-1.5">
-          {RARITIES.map((r) => (
-            <div key={r} className="rpg-frame text-center py-1.5" style={{ boxShadow: `inset 0 0 0 1px ${RARITY_COLOR[r]}88, inset 0 3px 8px rgba(0,0,0,.6)` }}>
-              <div className="rpg-label !text-[.5rem]" style={{ color: RARITY_TEXT[r] }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</div>
-              <div className="rpg-num text-base">{materials[r]}</div>
-            </div>
-          ))}
-        </div>
-      </div>
       {item && isGear(item) ? (
         <div className="rpg-frame p-3 flex items-center gap-3">
           <ItemSlot item={item} size="3.8rem" iconSize={28} tooltip="sell" />

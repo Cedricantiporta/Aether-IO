@@ -156,16 +156,6 @@ export const InventoryPanel: React.FC = () => {
             ))}
           </nav>
           <div className="flex-1 min-w-0 min-h-0 rpg-scroll p-2.5">
-            {cat === 'ETC' && (
-              <div className="flex flex-wrap gap-1.5 mb-2.5" aria-label="Crafting shards">
-                {(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as const).map((r) => (
-                  <div key={r} className="rpg-frame px-2 py-1 text-center" style={{ minWidth: '3.6rem' }}>
-                    <div className="rpg-num text-base" style={{ color: RARITY_COLOR[r] }}>{materials[r]}</div>
-                    <div className="rpg-label !text-[.5rem]">{r.charAt(0) + r.slice(1).toLowerCase()} shard</div>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="bag-grid slot-grid">
               {shown.map((it, i) => (
                 <DropCell key={`${it.id}-${i}`} accept={(d) => d.from === 'BAG' && d.item.id !== it.id} onDrop={(d) => reorderItems('inventory', reorder(inventory, d.item.id, it.id))}>

@@ -53,7 +53,7 @@ export const ShopPanel: React.FC = () => {
       <Panel className={`flex flex-col flex-1 min-h-0 drop-zone ${sellDrop.hot ? 'drop-hot' : ''}`} {...sellDrop.props}>
         <PanelHead title={cur.title} icon={tab === 'BLACKSMITH' ? <AnvilGlyph size={36} /> : cur.icon} onClose={close}
           right={<div className="flex gap-1.5">
-            <CurrencyPill value={gold.toLocaleString()} />
+            {tab !== 'WAREHOUSE' && <CurrencyPill value={gold.toLocaleString()} />}   {/* (the warehouse shows its stored gold at the bottom instead) */}
             {tab === 'SUMMON' && <CurrencyPill icon={<GemGlyph size={20} />} value={gems.toLocaleString()} />}
             {tab === 'SKILLS' && <CurrencyPill icon={<Star size={16} className="text-[var(--gold-light)]" />} value={`${sp} SP`} />}
           </div>} />

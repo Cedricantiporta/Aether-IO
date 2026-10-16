@@ -42,13 +42,19 @@ function islePoints(): Float32Array {
   }
   return isle;
 }
-const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+/** Canvas pixels per css px of the design size W x H: follows the real displayed size x devicePixelRatio (owner: sharper map). */
+let DPR = Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 /** Rectangular minimap — drawn every frame from the world, no React state. */
 export const Minimap: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   useRaf(() => {
     const c = ref.current; if (!c) return;
+    { // keep the backing store 1:1 with screen pixels (the frame is sized in rem, so it rarely equals W css px)
+      const cw = c.clientWidth; const want = Math.round(cw * Math.min(3, window.devicePixelRatio || 1));
+      if (want > 0 && c.width !== want) { c.width = want; c.height = Math.round(want * H / W); }
+      DPR = c.width / W;
+    }
     const ctx = c.getContext('2d'); if (!ctx) return;
     const pw = W * DPR, ph = H * DPR, cx = ph / 2, R = cx - 3 * DPR, ox = (pw - ph) / 2;   // square frame of side ph, centred in the wider canvas
     const room = world.room.active;
@@ -224,7 +230,7 @@ export const Minimap: React.FC = () => {
   return (
     <div className="pe relative" style={{ width: `${W / 14.4}rem`, height: `${H / 14.4}rem` }}>
       <div className="absolute mm-ring" />
-      <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full" style={{ borderRadius: 6 }} />
+      <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full" style={{ borderRadius: 2 }} />
       <span className="absolute left-1/2 grid place-items-center rpg-num" style={{ top: '-.85rem', width: '1.5rem', height: '1.5rem', transform: 'translateX(-50%)', borderRadius: '50%', fontSize: '.8rem', color: 'var(--gold-light)', background: 'radial-gradient(circle at 40% 30%, #3a342a, #0f0c09 75%)', boxShadow: '0 0 0 1.5px #c8962e, 0 0 0 3px #0a0709', zIndex: 2 }}>N</span>
     </div>
   );
