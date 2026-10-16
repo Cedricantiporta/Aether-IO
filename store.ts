@@ -11,7 +11,7 @@ import { activeChar, activeProfileKey } from './characters';
 import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
-import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
+import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
@@ -443,6 +443,7 @@ interface Profile {
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
+  sp2?: boolean;      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
   mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
   gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
@@ -460,6 +461,14 @@ const WELCOME_GIFT = { gold: 5000, gems: 500 };   // (owner: start with 5k gold,
 /** Saved pets take their template's current tier (owner: pets spread over the six tiers). */
 const petRetier = (i: Item): Item => { if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t && t.rarity !== i.rarity ? { ...i, rarity: t.rarity } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
+
+/** One-time (owner): skill points went from 1 to 2 per level - each class gets +1 SP for every level it already has. */
+const spMigrate = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<HeroClass, ClassProg> => {
+  if (done) return cp;
+  const out = { ...cp };
+  for (const h of Object.keys(out) as HeroClass[]) out[h] = { ...out[h], sp: out[h].sp + (SP_PER_LEVEL - 1) * Math.max(0, out[h].lv - 1) };
+  return out;
+};
 
 const baseGameStats = (): GameStatistics => ({
   ...INITIAL_GAME_STATS, classRuns: { ...INITIAL_GAME_STATS.classRuns }, classHighestWave: { ...INITIAL_GAME_STATS.classHighestWave },
@@ -526,7 +535,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
@@ -578,7 +587,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -765,7 +774,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     debugSetLevel: (lv) => {
       lv = Math.max(1, Math.min(MAX_LEVEL, Math.floor(lv)));   // (owner) never past the real max level
       const s = get(), cp = s.classProg[s.hero];
-      const sp = Math.max(0, cp.sp + (lv - cp.lv));
+      const sp = Math.max(0, cp.sp + SP_PER_LEVEL * (lv - cp.lv));
       set({ classProg: { ...s.classProg, [s.hero]: { ...cp, lv, xp: 0, sp } } });
       if (s.status === GameStatus.MENU) get().selectHero(s.hero);   // rebuild stats / skills from the new level
       else set({ level: lv, heroRank: lv, experience: 0, experienceToNextLevel: xpNeed(lv), skillPoints: sp });
@@ -967,7 +976,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (level >= MAX_LEVEL) { experience = 0; break; }
         level += 1;
         experienceToNextLevel = xpNeed(level);
-        sp += 1;
+        sp += SP_PER_LEVEL;
         base = growBase(base, get().hero);   // class scaling per level (shown on the character sheet)
       }
 
