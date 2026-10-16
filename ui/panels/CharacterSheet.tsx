@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { User, Swords, Clock, Skull, Shield, Heart } from 'lucide-react';
+import { motion, useIsPresent } from 'framer-motion';
+import { User, Swords, Clock, Skull, Shield, Heart, Plus } from 'lucide-react';
 import type { PlayerStats } from '../../types';
 import { activeChar } from '../../characters';
 import { HERO_META } from '../lib/heroes';
@@ -22,6 +22,9 @@ export const CharacterSheet: React.FC = () => {
   })));
   const Icon = HERO_ICON[hero];
   const [tab, setTab] = useState<'ATTR' | 'STATS'>('ATTR');
+  const ad = useAttrDraft();
+  const [alloc, setAlloc] = useState(false);
+  const present = useIsPresent();   // hide the allocation window while the sheet slides out
   const free = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) - attrSpent(s.attrs[s.hero]));
   const kills = useRef<HTMLSpanElement>(null);
   const time = useRef<HTMLSpanElement>(null);
@@ -53,13 +56,13 @@ export const CharacterSheet: React.FC = () => {
   const sets = activeSets(equipment);
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute pe flex side-panel char-side" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: tab === 'ATTR' && !shiftRight ? '46rem' : '24rem', zIndex: shiftRight ? 39 : 40 }}>
+      className="absolute pe flex side-panel char-side" style={{ right: shiftRight ? '32.5rem' : '.7rem', top: '.7rem', bottom: '.7rem', width: '24rem', zIndex: shiftRight ? 39 : 40 }}>
       <Panel className="flex flex-col w-full min-h-0">
         <PanelHead icon={<User size={22} />} title="Character" sub={`${hero} · Level ${level}`} onClose={close} />
         <div className="cs2-tabs">
-          {(['ATTR', 'STATS'] as const).map((t) => <button key={t} className={`cs2-tab pe ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)} data-testid={`char-tab-${t}`}>{t === 'ATTR' ? 'Attributes' : 'Stats'}{t === 'ATTR' && free > 0 && <i className="red-dot" />}</button>)}
+          {(['ATTR', 'STATS'] as const).map((t) => <button key={t} className={`cs2-tab pe ${tab === t ? 'on' : ''}`} onClick={() => { setTab(t); if (t === 'STATS') setAlloc(false); }} data-testid={`char-tab-${t}`}>{t === 'ATTR' ? 'Attributes' : 'Stats'}{t === 'ATTR' && free > 0 && <i className="red-dot" />}</button>)}
         </div>
-        {tab === 'ATTR' && <AttrTree onDetails={() => setTab('STATS')} />}
+        {tab === 'ATTR' && <AttrTree d={ad} allocOpen={alloc} onAlloc={() => setAlloc((v) => !v)} onDetails={() => { setAlloc(false); setTab('STATS'); }} />}
         <div className="flex-1 min-h-0 rpg-scroll p-4 flex flex-col gap-3" style={tab === 'ATTR' ? { display: 'none' } : undefined}>
           <div className="flex items-center gap-3">
             <div className="rpg-medallion cs-avatar" style={{ width: '4.6rem', height: '4.6rem', ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={32} /></div>
@@ -94,6 +97,14 @@ export const CharacterSheet: React.FC = () => {
           </div>
         </div>
       </Panel>
+      {tab === 'ATTR' && alloc && present && (
+        <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} className="ax-pop pe">
+          <Panel className="flex flex-col h-full min-h-0">
+            <PanelHead icon={<Plus size={20} />} title="Allocate" onClose={() => setAlloc(false)} />
+            <AttrAlloc d={ad} />
+          </Panel>
+        </motion.div>
+      )}
     </motion.div>
   );
 };
@@ -127,86 +138,100 @@ const useHold = () => {
   });
 };
 
-const AttrTree: React.FC<{ onDetails: () => void }> = ({ onDetails }) => {
+/** Staged attribute points, shared by the character panel (tree) and the allocation window opened beside it. */
+const useAttrDraft = () => {
   const { hero, lv, saved, gold, stats, setAttrs, resetAttrs } = useGameStore(useShallow((s) => ({
     hero: s.hero, lv: s.classProg[s.hero]?.lv ?? 1, saved: s.attrs[s.hero], gold: s.gold, stats: s.stats, setAttrs: s.setAttrs, resetAttrs: s.resetAttrs,
   })));
   const [draft, setDraft] = useState<Attrs>(saved);
   const [sel, setSel] = useState<AttrKey>('STR');
   useEffect(() => setDraft(saved), [saved]);
-  const hold = useHold();
   const total = attrPointsTotal(lv), left = total - attrSpent(draft);
   const dirty = ATTR_KEYS.some((k) => draft[k] !== saved[k]);
   const add = (k: AttrKey, n: number) => { setSel(k); setDraft((d) => ({ ...d, [k]: Math.max(saved[k], Math.min(d[k] + n, d[k] + (total - attrSpent(d)))) })); };
+  const prev = attrPreview(stats, saved, draft);
+  return { hero, lv, saved, gold, stats, draft, setDraft, sel, setSel, left, dirty, add, prev, apply: () => setAttrs(draft), resetAttrs };
+};
+type AttrDraft = ReturnType<typeof useAttrDraft>;
+
+const AttrTree: React.FC<{ d: AttrDraft; onDetails: () => void; onAlloc: () => void; allocOpen: boolean }> = ({ d, onDetails, onAlloc, allocOpen }) => {
+  const { hero, lv, saved, gold, draft, sel, setSel, left, prev, resetAttrs } = d;
   const Icon = HERO_ICON[hero];
   const cost = ATTR_RESET_GOLD * GOLD_SCALE;
-  const prev = attrPreview(stats, saved, draft);
-  const changed = ATTR_KEYS.filter((k) => draft[k] !== saved[k]);
-  const keys = [...new Set((changed.length ? changed : [sel]).flatMap((k) => ATTR_STATS[k]))];
   const name = activeChar()?.name ?? HERO_META[hero].title;
   return (
     <div className="ax flex-1 min-h-0 rpg-scroll" data-testid="attr-tree">
-      <div className="ax-grid">
-        <section className="ax-left">
-          <div className="ax-crest" style={{ ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={30} /></div>
-          <div className="ax-name">{name}</div>
-          <div className="ax-lv">Lv. {lv}</div>
-          <div className="ax-sum">
-            <div><Swords size={14} /><span>Attack</span><b>{Math.floor(prev.damage).toLocaleString()}</b></div>
-            <div><Shield size={14} /><span>Defense</span><b>{prev.defense.toFixed(0)}</b></div>
-            <div><Heart size={14} /><span>Health</span><b>{Math.round(prev.maxHealth).toLocaleString()}</b></div>
-          </div>
-          <div className="ax-tree">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="ax-svg" aria-hidden>
-              <path d="M4,96 Q50,72 96,96" className="arc" />
-              {TWIGS.map((d) => <path key={d} d={d} className="twig" />)}
-              {TREE_ORDER.map((k) => <path key={k} d={stem(k)} className={`stem ${draft[k] > 0 ? 'lit' : ''} ${draft[k] !== saved[k] ? 'new' : ''}`} />)}
-            </svg>
-            {TREE_ORDER.map((k) => (
-              <button key={k} className={`ax-node pe ${sel === k ? 'sel' : ''} ${draft[k] > 0 ? 'on' : ''} ${draft[k] !== saved[k] ? 'new' : ''}`}
-                style={{ left: `${NODE[k][0]}%`, top: `${NODE[k][1]}%` }} onClick={() => setSel(k)} data-testid={`attr-${k}`} title={`${ATTR_INFO[k].name}: ${ATTR_INFO[k].per}`}>
-                <em>{k}</em><b>{draft[k]}</b>
-              </button>
-            ))}
-            <div className={`ax-root ${left > 0 ? 'has' : ''}`} style={{ left: `${ROOT[0]}%`, top: `${ROOT[1]}%` }}><b>{left}</b></div>
-          </div>
-          <div className="ax-held">Unspent points <b>{left}</b> · {ATTR_PER} per level</div>
-          <div className="ax-foot">
-            <button className="ax-btn pe" disabled={attrSpent(saved) === 0} title={`Refund every point for ${cost.toLocaleString()} gold`}
-              onClick={() => useUiStore.getState().askConfirm({ title: 'Reset attributes?', body: `Refund all ${attrSpent(saved)} points for ${cost.toLocaleString()} gold.`, confirmLabel: 'Reset', tone: 'danger', onConfirm: () => { resetAttrs(); } })}
-              style={gold < cost ? { opacity: 0.6 } : undefined}>Reset</button>
-            <button className="ax-btn pe" onClick={onDetails}>Details</button>
-          </div>
-        </section>
-        <section className="ax-right">
-          <div className="ax-banner">Available points <b className={left > 0 ? 'has' : ''} data-testid="attr-left">{left}</b></div>
-          <div className="ax-rows">
-            {ATTR_KEYS.map((k) => {
-              const st = draft[k] - saved[k];
-              return (
-                <div key={k} className={`ax-row ${sel === k ? 'sel' : ''}`} onClick={() => setSel(k)} data-testid={`attr-row-${k}`}>
-                  <span className="ax-k" style={{ color: ATTR_INFO[k].color }}>{k}</span>
-                  <span className="ax-v">{saved[k]}</span>
-                  <button className="ax-step pe" disabled={st <= 0} {...hold(() => add(k, -1))} aria-label={`Remove a point from ${k}`}>−</button>
-                  <span className={`ax-staged ${st > 0 ? 'on' : ''}`}>{st}</span>
-                  <button className="ax-step pe" disabled={left <= 0} {...hold(() => add(k, 1))} data-testid={`attr-plus-${k}`} aria-label={`Add a point to ${k}`}>+</button>
-                </div>
-              );
-            })}
-          </div>
-          <div className="ax-info">
-            <div className="ax-ih"><b style={{ color: ATTR_INFO[sel].color }}>{ATTR_INFO[sel].name}</b><span>{ATTR_INFO[sel].desc}</span></div>
-            <div className="ax-per">Per point: {ATTR_INFO[sel].per}</div>
-          </div>
-          <div className="ax-prev" data-testid="attr-preview">
-            {keys.map((k) => { const row = STAT_ROW[k]; if (!row) return null; const d = (prev[k] as number) - (stats[k] as number);
-              return <div key={k}><span>{row[0]}</span><b>{row[1](prev[k] as number)}</b>{Math.abs(d) > 1e-6 && !/^0(\.0+)?%?$/.test(fmtDelta(k, d)) ? <i className={d > 0 ? 'up' : 'dn'}>({d > 0 ? '' : '-'}{fmtDelta(k, d)} {d > 0 ? '▲' : '▼'})</i> : <i />}</div>; })}
-          </div>
-          <div className="ax-apply">
-            <button className="ax-btn pe" disabled={!dirty} onClick={() => setDraft(saved)}>Undo</button>
-            <button className="ax-btn gold pe" disabled={!dirty} onClick={() => setAttrs(draft)} data-testid="attr-apply">Apply</button>
-          </div>
-        </section>
+      <section className="ax-left">
+        <div className="ax-crest" style={{ ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={30} /></div>
+        <div className="ax-name">{name}</div>
+        <div className="ax-lv">Lv. {lv}</div>
+        <div className="ax-sum">
+          <div><Swords size={14} /><span>Attack</span><b>{Math.floor(prev.damage).toLocaleString()}</b></div>
+          <div><Shield size={14} /><span>Defense</span><b>{prev.defense.toFixed(0)}</b></div>
+          <div><Heart size={14} /><span>Health</span><b>{Math.round(prev.maxHealth).toLocaleString()}</b></div>
+        </div>
+        <div className="ax-tree">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="ax-svg" aria-hidden>
+            <path d="M4,96 Q50,72 96,96" className="arc" />
+            {TWIGS.map((p) => <path key={p} d={p} className="twig" />)}
+            {TREE_ORDER.map((k) => <path key={k} d={stem(k)} className={`stem ${draft[k] > 0 ? 'lit' : ''} ${draft[k] !== saved[k] ? 'new' : ''}`} />)}
+          </svg>
+          {TREE_ORDER.map((k) => (
+            <button key={k} className={`ax-node pe ${allocOpen && sel === k ? 'sel' : ''} ${draft[k] > 0 ? 'on' : ''} ${draft[k] !== saved[k] ? 'new' : ''}`}
+              style={{ left: `${NODE[k][0]}%`, top: `${NODE[k][1]}%` }} onClick={() => { setSel(k); onAlloc(); }} data-testid={`attr-${k}`} title={`${ATTR_INFO[k].name}: ${ATTR_INFO[k].per}`}>
+              <em>{k}</em><b>{draft[k]}</b>
+            </button>
+          ))}
+          <div className={`ax-root ${left > 0 ? 'has' : ''}`} style={{ left: `${ROOT[0]}%`, top: `${ROOT[1]}%` }}><b>{left}</b></div>
+        </div>
+        <button className={`ax-held pe ${left > 0 ? 'has' : ''} ${allocOpen ? 'on' : ''}`} onClick={onAlloc} data-testid="attr-open">
+          <span>Points</span><b>{left}</b><i>+</i>
+        </button>
+        <div className="ax-foot">
+          <button className="ax-btn pe" disabled={attrSpent(saved) === 0} title={`Refund every point for ${cost.toLocaleString()} gold`}
+            onClick={() => useUiStore.getState().askConfirm({ title: 'Reset attributes?', body: `Refund all ${attrSpent(saved)} points for ${cost.toLocaleString()} gold.`, confirmLabel: 'Reset', tone: 'danger', onConfirm: () => { resetAttrs(); } })}
+            style={gold < cost ? { opacity: 0.6 } : undefined}>Reset</button>
+          <button className="ax-btn pe" onClick={onDetails}>Details</button>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+/** The allocation window (opens to the left of the character panel): - [staged] + per attribute (hold to repeat), stat preview, Apply. */
+const AttrAlloc: React.FC<{ d: AttrDraft }> = ({ d }) => {
+  const { saved, draft, setDraft, sel, setSel, left, dirty, add, prev, stats, apply } = d;
+  const hold = useHold();
+  const changed = ATTR_KEYS.filter((k) => draft[k] !== saved[k]);
+  const keys = [...new Set((changed.length ? changed : [sel]).flatMap((k) => ATTR_STATS[k]))];
+  return (
+    <div className="ax-right flex-1 min-h-0 rpg-scroll" data-testid="attr-alloc">
+      <div className="ax-banner">Available points <b className={left > 0 ? 'has' : ''} data-testid="attr-left">{left}</b></div>
+      <div className="ax-rows">
+        {ATTR_KEYS.map((k) => {
+          const st = draft[k] - saved[k];
+          return (
+            <div key={k} className={`ax-row ${sel === k ? 'sel' : ''}`} onClick={() => setSel(k)} data-testid={`attr-row-${k}`}>
+              <span className="ax-k" style={{ color: ATTR_INFO[k].color }}>{k}</span>
+              <span className="ax-v">{saved[k]}</span>
+              <button className="ax-step pe" disabled={st <= 0} {...hold(() => add(k, -1))} aria-label={`Remove a point from ${k}`}>−</button>
+              <span className={`ax-staged ${st > 0 ? 'on' : ''}`}>{st}</span>
+              <button className="ax-step pe" disabled={left <= 0} {...hold(() => add(k, 1))} data-testid={`attr-plus-${k}`} aria-label={`Add a point to ${k}`}>+</button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="ax-info">
+        <div className="ax-ih"><b style={{ color: ATTR_INFO[sel].color }}>{ATTR_INFO[sel].name}</b><span>{ATTR_INFO[sel].desc}</span></div>
+        <div className="ax-per">Per point: {ATTR_INFO[sel].per}</div>
+      </div>
+      <div className="ax-prev" data-testid="attr-preview">
+        {keys.map((k) => { const row = STAT_ROW[k]; if (!row) return null; const dv = (prev[k] as number) - (stats[k] as number);
+          return <div key={k}><span>{row[0]}</span><b>{row[1](prev[k] as number)}</b>{Math.abs(dv) > 1e-6 && !/^0(\.0+)?%?$/.test(fmtDelta(k, dv)) ? <i className={dv > 0 ? 'up' : 'dn'}>({dv > 0 ? '' : '-'}{fmtDelta(k, dv)} {dv > 0 ? '▲' : '▼'})</i> : <i />}</div>; })}
+      </div>
+      <div className="ax-apply">
+        <button className="ax-btn pe" disabled={!dirty} onClick={() => setDraft(saved)}>Undo</button>
+        <button className="ax-btn gold pe" disabled={!dirty} onClick={apply} data-testid="attr-apply">Apply</button>
       </div>
     </div>
   );

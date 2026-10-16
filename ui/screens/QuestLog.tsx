@@ -2,7 +2,7 @@
 // done / current / locked), the selected step on the right (chapter banner, story text, objective with progress,
 // rewards, Track / Teleport). Side: NPC quests (active and offered). Bounties: the Quest Board.
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollText, Coins, Gem, Package, Check, ChevronDown, Lock, MapPin, Navigation } from 'lucide-react';
+import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
 import { useUiStore } from '../uiStore';
@@ -15,18 +15,35 @@ import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
 import { walkToMain, walkToNpcObjective } from '../../engine/systems/village';
 import { offerTeleport } from '../hud/QuestTracker';
+import { ItemSlot } from '../components/ItemSlot';
+import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
+import { tip } from '../components/Tooltip';
+import { SimpleTip } from '../components/ItemTip';
+import { lootItem } from '../../loot';
+import type { Item } from '../../types';
 
 const itemName = (id: string) => ITEMS_POOL.find((i) => i.id === id)?.name ?? PETS_POOL.find((i) => i.id === id)?.name ?? LOOT_BY_ID[id]?.name ?? id;
 
+// rewards as bag slots: the real item art (rarity tint, stack count, hover tooltip); gold / gems as coin / gem squares
+const rewardItem = (id: string, qty: number): Item | null => {
+  const tpl = ITEMS_POOL.find((i) => i.id === id) ?? PETS_POOL.find((i) => i.id === id);
+  if (tpl) return { ...tpl, quantity: qty };
+  const def = LOOT_BY_ID[id];
+  return def ? lootItem(def, qty) : null;
+};
+const CurSlot: React.FC<{ icon: React.ReactNode; n: number; label: string }> = ({ icon, n, label }) => (
+  <div className="qw-ri" {...tip(<SimpleTip title={`${n.toLocaleString()} ${label}`} />)}>
+    <div className="rpg-slot fluid qw-cur">{icon}<span className="slot-qty">{n.toLocaleString()}</span></div>
+  </div>
+);
 const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean }> = ({ r, scale }) => {
   const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items, cores = (r as QuestReward).cores, potions = (r as QuestReward).potions;
+  const list: [string, number][] = [...(cores ? [['upgrade_core', cores] as [string, number]] : []), ...(potions ? [['potion_hp', potions] as [string, number]] : []), ...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
   return (
     <div className="qw-rew">
-      {!!g && <div className="qw-ri"><Coins size={18} /><b>{(scale ? g * GOLD_SCALE : g).toLocaleString()}</b></div>}
-      {!!gems && <div className="qw-ri gem"><Gem size={18} /><b>{gems}</b></div>}
-      {!!cores && <div className="qw-ri"><Package size={18} /><b>{cores}</b><em>Cores</em></div>}
-      {!!potions && <div className="qw-ri"><Package size={18} /><b>{potions}</b><em>Potions</em></div>}
-      {(items ?? []).map((it) => <div key={it.id} className="qw-ri item"><Package size={18} /><b>{it.qty ?? 1}</b><em>{itemName(it.id)}</em></div>)}
+      {!!g && <CurSlot icon={<CoinGlyph size={34} />} n={scale ? g * GOLD_SCALE : g} label="Gold" />}
+      {!!gems && <CurSlot icon={<GemGlyph size={34} />} n={gems} label="Gems" />}
+      {list.map(([id, n]) => { const it = rewardItem(id, n); return it ? <div key={id} className="qw-ri"><ItemSlot item={it} fluid size="100%" iconSize="78%" qty={n} tooltip="none" compare={false} /></div> : null; })}
     </div>
   );
 };
