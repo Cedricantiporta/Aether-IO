@@ -1,3 +1,5 @@
+import { cullRegister } from './distCull';
+import type { Material as Mat3, Group as Group3 } from 'three';
 // Town scenery: houses, market stalls, well, fences, lamp posts, roads/plaza and the town gate.
 // Everything static is merged into per-chunk vertex-coloured meshes (frustum-culled by three), roads and the plaza
 // are one flat mesh without shadows, lamp bulbs are emissive only (no real lights).
@@ -942,6 +944,18 @@ export function GateGuideOld() {
   return <mesh ref={ref} geometry={geo} material={mat} visible={false} renderOrder={5} />;
 }
 
+/** One merged town chunk (body + glow), hidden past the fog by the draw-distance culler (render/distCull). */
+function TownChunk({ body, glow, lit, glowMat, shadows }: { body: BufferGeometry; glow: BufferGeometry; lit: Mat3; glowMat: Mat3; shadows: boolean }) {
+  const g = useRef<Group3>(null!);
+  useEffect(() => { if (!body.boundingSphere) body.computeBoundingSphere(); const s = body.boundingSphere!; return cullRegister(g.current, s.center.x, s.center.z, s.radius, false); }, [body]);
+  return (
+    <group ref={g}>
+      <mesh geometry={body} material={lit} castShadow={shadows} receiveShadow={shadows} />
+      <mesh geometry={glow} material={glowMat} />
+    </group>
+  );
+}
+
 export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
   const mats = useMemo(() => ({
@@ -980,12 +994,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
       <Windmill />
       <Lake />
-      {town.chunks.map((c, i) => (
-        <React.Fragment key={i}>
-          <mesh geometry={c.body} material={mats.lit} castShadow={shadows} receiveShadow={shadows} />
-          <mesh geometry={c.glow} material={mats.glow} />
-        </React.Fragment>
-      ))}
+      {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>
     </group>

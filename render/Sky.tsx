@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   BackSide, CanvasTexture, Color, DirectionalLight, Group, HemisphereLight, Mesh, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
-  SRGBColorSpace, Vector3,
-} from 'three';
+  SRGBColorSpace, Vector3, type PerspectiveCamera } from 'three';
 import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -63,13 +62,16 @@ export function Sky({ q }: { q: QualityCfg }) {
 
   useFrame((_, dt) => {
     dome.current.position.copy(camera.position);
+    // (perf) the camera's far plane follows the fog (biomeLook): keep the dome + clouds inside it
+    const fit = Math.min(1, ((camera as PerspectiveCamera).far * 0.9) / 330);
+    if (dome.current.scale.x !== fit) dome.current.scale.setScalar(fit);
     mat.uniforms.uTint.value.copy(look.sky);
     cloudMat.opacity = 0.95 * Math.min(1, look.sky.x * 1.4);   // night skies (tower) hide the clouds
     clouds.current.position.set(camera.position.x, 0, camera.position.z);
     const ch = clouds.current.children;
     for (let i = 0; i < ch.length; i++) {
       const c = list[i]; c.a += c.sp * dt;
-      ch[i].position.set(Math.cos(c.a) * c.d, c.h, Math.sin(c.a) * c.d);
+      ch[i].position.set(Math.cos(c.a) * c.d * fit, c.h * fit, Math.sin(c.a) * c.d * fit);
     }
   });
   return (

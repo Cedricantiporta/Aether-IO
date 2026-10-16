@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
+import { cullRegister } from './distCull';
 import { BufferGeometry, Group, InstancedBufferAttribute, InstancedMesh, Material } from 'three';
 
 /** World-space chunk edge (units). Static scenery is split into chunks so three's frustum / shadow-frustum culling drops whole chunks. */
@@ -48,7 +49,11 @@ export function Inst({ geo, mat, count, fill, cast = false, receive = false }: {
       made.push(m);
     });
     tmp.dispose();
-    return () => { for (const m of made) { group.remove(m); m.dispose(); } };
+    // draw distance (render/distCull): chunks past the fog are hidden; tiny geometry (grass, pebbles) a lot sooner
+    if (!geo.boundingSphere) geo.computeBoundingSphere();
+    const small = (geo.boundingSphere?.radius ?? 1) < 0.7;
+    const offs = made.map((m) => { const b = m.boundingSphere!; group.updateWorldMatrix(true, false); const c = b.center.clone().applyMatrix4(group.matrixWorld); return cullRegister(m, c.x, c.z, b.radius, small); });
+    return () => { for (const f of offs) f(); for (const m of made) { group.remove(m); m.dispose(); } };
   }, [fill, geo, mat, count, cast, receive]);
   return <group ref={ref} />;
 }

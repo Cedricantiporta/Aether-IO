@@ -1,6 +1,7 @@
 // Shared "look" of the current place (town = the original palette, run rooms = their biome): fog / background, sky tint,
 // hemisphere + sun light. Sky and Lighting read `look` every frame; LookDriver eases it towards the target and applies fog.
-import { Color, Fog, Vector3 } from 'three';
+import { Color, Fog, Vector3, type PerspectiveCamera } from 'three';
+import { updateDistCull } from './distCull';
 import { useFrame } from '@react-three/fiber';
 import { biomeOf, variantOf } from '../engine/roomDefs';
 import { runInfo } from '../engine/runMods';
@@ -52,11 +53,15 @@ function copy(a: Look, b: Look, k: number): void {
 }
 
 export function LookDriver() {
-  useFrame(({ scene }, dt) => {
+  useFrame(({ scene, camera }, dt) => {
     copy(look, target, 1 - Math.exp(-4 * Math.min(dt, 0.1)));
     if (scene.background instanceof Color) scene.background.copy(look.fog);
     const f = scene.fog as Fog | null;
     if (f) { f.color.copy(look.fog); f.near = look.near; f.far = look.far; }
+    // (perf) nothing past the fog's end is visible: the far plane follows it, so fully-fogged geometry is never drawn
+    const cam = camera as PerspectiveCamera, wantFar = Math.max(80, look.far + 25);
+    if (Math.abs(cam.far - wantFar) > 2) { cam.far = wantFar; cam.updateProjectionMatrix(); }
+    updateDistCull();
   }, -0.3);
   return null;
 }

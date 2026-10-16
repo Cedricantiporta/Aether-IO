@@ -1107,3 +1107,8 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Bridge: the two wide arch cylinders under the deck no longer poke up through it (no humps).
 - West beach: curvier water line (extra sand-only wobble term in `beachWobble`) and the wet-sand band follows it (render/Terrain.tsx; it was a straight band).
 - Unlocks: Daily Trial Lv 15, Endless Waves Lv 30 (`unlocks.ts`; was 8 / 12). Monsters already scale with class level, so both modes match the new levels. Max camera zoom-out 1.3 (was 1.6). Gem icon has no round container.
+- **Performance (owner: don't draw far-away things):** `render/distCull.ts` registers every static Inst chunk + town
+  merged chunk (TownScenery `TownChunk`) and hides them past the fog end (tiny geometry, r < 0.7 = grass / pebbles /
+  flowers, already ~40 past the fog start); checked every 6th frame in `biomeLook.LookDriver`. The camera far plane now
+  follows the fog end (+25), so fully fogged geometry is never rasterised; the sky dome / clouds scale to stay inside it.
+  Existing layers: frustum-culled 24-unit chunks (Inst), NPC view culling + animation LOD, adaptive DPR (PerfGovernor).
