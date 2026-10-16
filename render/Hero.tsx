@@ -498,7 +498,7 @@ function HeroBars() {
     if (barsG.current) barsG.current.visible = run;
     if (!g.current.visible) return;
     const p = world.player;
-    g.current.position.set(p.pos.x, 3.15 + (p.air || 0) + liftAt(p.pos.x, p.pos.z), p.pos.z);   // mini HP / MP bars float above the hero's head
+    g.current.position.set(p.pos.x, (run ? 3.15 : 1.95) + (p.air || 0) + liftAt(p.pos.x, p.pos.z), p.pos.z);   // (owner: in town no bars, so the name sits just above the head like NPC names)   // mini HP / MP bars float above the hero's head
     g.current.quaternion.copy(camera.quaternion);
     const fh = clamp(p.hp / Math.max(1, st.stats.maxHealth), 0, 1), fm = clamp(p.mana / Math.max(1, st.stats.maxMana), 0, 1);
     hp.current.scale.x = Math.max(0.001, fh); hp.current.position.x = -(1 - fh) * 1.1;

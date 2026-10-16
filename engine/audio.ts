@@ -1,5 +1,5 @@
 // ============================================================================
-// Procedural WebAudio: SFX + generative ambient music, plus one recorded track (the town theme, public/audio/town.mp3).
+// Procedural WebAudio: SFX + generative ambient music, plus recorded tracks (town, biomes, bosses: RECORDED, public/audio).
 //   voices -> sfxGain \
 //                      > master -> compressor -> destination
 //   music  -> musicGain /
@@ -239,7 +239,36 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
   }
 }
 
+// (owner) recorded one-shot samples (public/audio): decoded once into buffers, played on the sfx bus.
+const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3' };
+const samples: Record<string, AudioBuffer | null> = {};
+function loadSamples(c: AudioContext): void {
+  for (const k in SAMPLE_URLS) {
+    if (k in samples) continue;
+    samples[k] = null;
+    fetch(`${import.meta.env.BASE_URL}${SAMPLE_URLS[k]}`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { samples[k] = buf; }).catch(() => undefined);
+  }
+}
+/** Plays a sample; false when it is not loaded (yet), so callers can fall back to a synth sound. */
+function playSample(k: string, vol = 1): boolean {
+  const buf = samples[k];
+  if (!ctx || !sfxGain || !buf) return false;
+  const src = ctx.createBufferSource(), g = ctx.createGain();
+  src.buffer = buf; g.gain.value = vol; src.connect(g); g.connect(sfxGain); src.start();
+  return true;
+}
+let lastClick = 0;
+/** UI click (buttons / tabs / slots): engine/audio installs a capture listener for it. */
+export function uiClick(): void {
+  if (!ensureContext()) return;
+  const now = performance.now();
+  if (now - lastClick < 45) return;
+  lastClick = now;
+  playSample('click', 0.7);
+}
+
 function sfxLevelUp(): void {
+  if (playSample('levelup', 0.9)) return;   // the owner's recorded fanfare (synth arpeggio below until it has loaded)
   for (let i = 0; i < 6; i++) {
     tone(pentFreq(440, i + 1), pentFreq(440, i + 1), 0.35, 0.14, { type: 'triangle', delay: i * 0.07, priority: true });
   }
@@ -450,12 +479,39 @@ type Theme = 0 | 1 | 2; // village, combat (rooms), boss
 const layerG: (GainNode | null)[] = [null, null, null];
 const layerLvl = [1, 0, 0];
 let musicEnabled = true;
-// (owner) the town theme: a recorded track (public/audio/town.mp3) looping while the hero is in town / the hub; the
-// procedural village layer stays for calm moments in runs. Own gain (music volume), crossfaded in musicTick.
-let townEl: HTMLAudioElement | null = null;
-let townG: GainNode | null = null;
-let townLvl = 0;
-let townBus: GainNode | null = null;
+// (owner) recorded tracks: the town theme, one loop per biome, regular boss fights and the final boss (Malakar). Each slot
+// plays its file (public/audio/...) when one is listed in RECORDED, else the procedural themes play there. Elements are
+// created lazily (only tracks actually heard are downloaded) and crossfaded in recTick on one bus (music volume).
+export const RECORDED: Partial<Record<string, string>> = {
+  town: 'audio/town.mp3',
+  // b0..b6 = biomes (Greenwood, Marble Halls, Sunscorch, Coral Isles, Frostpeak, Ember Wastes, Void): ~1 min seamless loops
+  // cut from the owner's tracks (ffmpeg: loudnorm -16 LUFS, 3 s end->start crossfade, 96 kbps; Biome 1 skips its first 2 s)
+  b0: 'audio/biome1.mp3', b1: 'audio/biome2.mp3', b2: 'audio/biome3.mp3', b3: 'audio/biome4.mp3', b4: 'audio/biome5.mp3', b5: 'audio/biome6.mp3', b6: 'audio/biome7.mp3',
+  boss: 'audio/boss.mp3', final: 'audio/final_boss.mp3',
+};
+interface RecTrack { el: HTMLAudioElement; g: GainNode; lvl: number }
+const rec: Record<string, RecTrack> = {};
+let recBus: GainNode | null = null;
+/** The recorded slot that should play now ('' = none: procedural). */
+function recWanted(): string {
+  const st = useGameStore.getState().status;
+  let k = '';
+  if (st === GameStatus.MENU) k = 'town';
+  else if (world.boss.active) k = world.boss.final ? 'final' : 'boss';
+  else if (st !== GameStatus.GAME_OVER) k = 'b' + (world.room.biome % 7);
+  if (k === 'final' && !RECORDED.final) k = 'boss';
+  return k && RECORDED[k] ? k : '';
+}
+function recTrack(k: string): RecTrack | null {
+  if (rec[k]) return rec[k];
+  if (!ctx || !recBus || !RECORDED[k]) return null;
+  try {
+    const el = new Audio(`${import.meta.env.BASE_URL}${RECORDED[k]}`); el.loop = true; el.preload = 'auto';
+    const src = ctx.createMediaElementSource(el), g = ctx.createGain();
+    g.gain.value = 0; src.connect(g); g.connect(recBus);
+    return (rec[k] = { el, g, lvl: 0 });
+  } catch { return null; }
+}
 let musicTimer: number | null = null;
 let nextStepTime = 0;
 let step = 0;
@@ -590,21 +646,26 @@ function scheduleStep(t: number, sd: number): void {
   if (layerLvl[2] > 0.04) bossStep(t, sd);
 }
 
-function townTick(): void {
-  if (!ctx || !townEl || !townG) return;
-  const want = musicEnabled && useGameStore.getState().status === GameStatus.MENU ? 1 : 0;
-  townLvl += (want - townLvl) * 0.05;
-  if (Math.abs(townLvl - want) < 0.005) townLvl = want;
-  townG.gain.setTargetAtTime(townLvl, ctx.currentTime, 0.1);
-  if (townLvl > 0.001 && townEl.paused) void townEl.play().catch(() => undefined);
-  else if (townLvl <= 0.001 && !townEl.paused) townEl.pause();
+function recTick(): string {
+  if (!ctx || !recBus) return '';
+  const want = musicEnabled ? recWanted() : '';
+  if (want) recTrack(want);
+  for (const k in rec) {
+    const t = rec[k], target = k === want ? 1 : 0;
+    t.lvl += (target - t.lvl) * 0.05;
+    if (Math.abs(t.lvl - target) < 0.005) t.lvl = target;
+    t.g.gain.setTargetAtTime(t.lvl, ctx.currentTime, 0.1);
+    if (t.lvl > 0.001 && t.el.paused) { if (target && t.el.ended) t.el.currentTime = 0; void t.el.play().catch(() => undefined); }
+    else if (t.lvl <= 0.001 && !t.el.paused) { t.el.pause(); if (k === 'boss' || k === 'final') t.el.currentTime = 0; }   // boss themes restart per fight
+  }
+  return want;
 }
 
 function musicTick(): void {
-  townTick();
+  const recorded = recTick();
   if (!ctx || ctx.state !== 'running' || !musicEnabled) return;
   const tg = themeTargets();
-  if (useGameStore.getState().status === GameStatus.MENU) tg[0] = 0;   // in town the recorded theme plays instead
+  if (recorded) tg[0] = tg[1] = tg[2] = 0;   // a recorded track plays here instead of the procedural themes
   for (let i = 0; i < 3; i++) {
     layerLvl[i] += (tg[i] - layerLvl[i]) * 0.04;
     if (Math.abs(layerLvl[i] - tg[i]) < 0.005) layerLvl[i] = tg[i];
@@ -646,7 +707,7 @@ function applyVolumes(): void {
   // music was 0.55 * volume; now ~35% of that (0.19) and further softened by the music lowpass
   const mv = Math.max(0, Math.min(1, s.musicVolume));
   musicGain.gain.setTargetAtTime(mv * 0.19, t, 0.08);
-  if (townBus) townBus.gain.setTargetAtTime(mv * 0.45, t, 0.08);   // the recorded town theme (mastered louder than the synth)
+  if (recBus) recBus.gain.setTargetAtTime(mv * 0.45, t, 0.08);   // recorded tracks (mastered louder than the synth)
   musicEnabled = mv > 0.01; // volume 0: stop scheduling entirely (saves CPU)
 }
 
@@ -678,18 +739,14 @@ function ensureContext(): boolean {
     mg.connect(mlp); mlp.connect(m); mlp.connect(conv); conv.connect(wet); wet.connect(m);
     for (let i = 0; i < 3; i++) { const lg = c.createGain(); lg.gain.value = layerLvl[i]; lg.connect(mg); layerG[i] = lg; }
     m.connect(comp); comp.connect(c.destination);
-    try {   // the recorded town theme: <audio> -> fade gain -> volume bus -> master (no music lowpass: it is a finished mix)
-      const el = new Audio(`${import.meta.env.BASE_URL}audio/town.mp3`); el.loop = true; el.preload = 'auto';
-      const src = c.createMediaElementSource(el), fg = c.createGain(), bus = c.createGain();
-      fg.gain.value = 0; src.connect(fg); fg.connect(bus); bus.connect(m);
-      townEl = el; townG = fg; townBus = bus; townLvl = 0;
-    } catch { townEl = null; townG = null; townBus = null; }
+    { const bus = c.createGain(); bus.connect(m); recBus = bus; }   // recorded tracks: <audio> -> fade gain -> this bus -> master (no music lowpass)
 
     const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const ch = buf.getChannelData(0);
     for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
 
     ctx = c; master = m; sfxGain = sg; musicGain = mg; noiseBuf = buf;
+    loadSamples(c);
     applyVolumes();
     if (c.state === 'suspended') void c.resume().catch(() => undefined);
     nextStepTime = 0; step = 0; bar = 0;
@@ -722,6 +779,16 @@ export function initAudio(): () => void {
   window.addEventListener('keydown', unlock);
 
   const offs: Array<() => void> = [];
+  // (owner) UI click sound: any press on a button / tab / clickable UI element (not the game canvas)
+  const onUiPress = (e: PointerEvent) => {
+    const t = e.target as HTMLElement | null;
+    if (!t || t.tagName === 'CANVAS' || !t.closest || t.closest('.action-tray, .act-wrap, .rbtn, .tc-zone, .skill-wheel')) return;   // (combat controls stay silent)
+    const hit = t.closest('button:not([disabled]), [role="button"], [role="tab"], select, input[type="checkbox"], input[type="range"], label')
+      ?? (getComputedStyle(t).cursor === 'pointer' ? t : null);
+    if (hit) uiClick();
+  };
+  window.addEventListener('pointerdown', onUiPress, true);
+  offs.push(() => window.removeEventListener('pointerdown', onUiPress, true));
   offs.push(events.on('shoot', safe((p) => sfxShoot(p.kind, p.pos))));
   offs.push(events.on('enemyHit', safe((p) => sfxEnemyHit(p.pos, p.dmgKind))));
   offs.push(events.on('enemyDeath', safe((p) => sfxEnemyDeath(p.pos, p.elite, p.boss))));
@@ -783,7 +850,7 @@ export function initAudio(): () => void {
     unsubStore();
     if (musicTimer !== null) { window.clearInterval(musicTimer); musicTimer = null; }
     if (ctx) { void ctx.close().catch(() => undefined); }
-    if (townEl) { townEl.pause(); townEl.src = ''; } townEl = null; townG = null; townBus = null; townLvl = 0;
+    for (const k in rec) { rec[k].el.pause(); rec[k].el.src = ''; delete rec[k]; } recBus = null;
     ctx = null; master = null; sfxGain = null; musicGain = null; noiseBuf = null; layerG[0] = layerG[1] = layerG[2] = null;
     activeVoices = 0;
   };
