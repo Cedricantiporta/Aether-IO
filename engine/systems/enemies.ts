@@ -1165,6 +1165,43 @@ function separate(e: Enemy): void {
 
 const colScratch: Collider[] = [];
 const wayPt: [number, number] = [0, 0];
+// ---- obstacle steering (owner: monsters try another way instead of pushing into a rock)
+const stuckT = new Float32Array(MAX_ENEMIES), detourT = new Float32Array(MAX_ENEMIES), detourSide = new Int8Array(MAX_ENEMIES);
+const lastX = new Float32Array(MAX_ENEMIES), lastZ = new Float32Array(MAX_ENEMIES);
+const steerCols: Collider[] = [];
+const AVOID_A = 1.15, DETOUR_A = 1.35;   // radians: veer round an obstacle ahead / swing wide when stuck
+/** Rotates the target vector (tdx, tdz) so the monster walks round blockers; tdist (used for attack ranges) is untouched. */
+function steerAround(e: Enemy): void {
+  const id = e.id, dt = frameDt;
+  const moved = Math.hypot(e.pos.x - lastX[id], e.pos.z - lastZ[id]); lastX[id] = e.pos.x; lastZ[id] = e.pos.z;
+  const wants = e.vel.x * e.vel.x + e.vel.z * e.vel.z > 0.25;
+  if (wants && moved < Math.sqrt(e.vel.x * e.vel.x + e.vel.z * e.vel.z) * dt * 0.3) stuckT[id] += dt; else stuckT[id] = Math.max(0, stuckT[id] - dt * 2);
+  let ux = tdx / tdist, uz = tdz / tdist, ang = 0;
+  if (detourT[id] > 0) { detourT[id] -= dt; ang = DETOUR_A * detourSide[id]; }
+  else {
+    // the nearest blocking collider on the way ahead (a short look-ahead segment)
+    const look = Math.min(tdist - e.radius, 3.2 + e.radius), mx = e.pos.x + ux * look * 0.5, mz = e.pos.z + uz * look * 0.5;
+    const cols = queryColliders(mx, mz, look * 0.5 + e.radius + 1, steerCols);
+    let bestT = 1e9, side = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const o = cols[i];
+      if (o.liquid) continue;   // (water / lava: routeAround handles those)
+      const ox = o.x - e.pos.x, oz = o.z - e.pos.z, t = ox * ux + oz * uz;
+      if (t < 0 || t > look + o.r) continue;
+      const perp = ox * uz - oz * ux, rr = o.r + e.radius * 0.9;
+      if (perp > rr || perp < -rr) continue;
+      if (t < bestT) { bestT = t; side = ux * oz - uz * ox > 0 ? 1 : -1; }
+    }
+    if (side !== 0) ang = -AVOID_A * side * Math.min(1, 1.6 - Math.min(1.2, bestT / Math.max(1, look)));
+  }
+  if (stuckT[id] > 0.45) {   // still wedged: commit to a detour, alternating sides each time it fails
+    stuckT[id] = 0; detourT[id] = 0.9 + Math.random() * 0.5;
+    detourSide[id] = detourSide[id] === 0 ? (Math.random() < 0.5 ? 1 : -1) : (-detourSide[id] as 1 | -1);
+    ang = DETOUR_A * detourSide[id];
+  }
+  if (ang !== 0) { const c = Math.cos(ang), sn = Math.sin(ang); const rx = ux * c - uz * sn, rz = ux * sn + uz * c; ux = rx; uz = rz; tdx = ux * tdist; tdz = uz * tdist; }
+}
+
 function pushOutOfObstacles(e: Enemy): boolean {
   let hit = false;
   const rr = e.radius * 0.8;
@@ -1261,6 +1298,9 @@ function updateEnemy(e: Enemy): void {
     tdx = wx; tdz = wz; tdist = wd + rest;
     if (wd > 1e-3) { tdx = (wx / wd) * tdist; tdz = (wz / wd) * tdist; }   // keep the direction, report the walking distance
   }
+
+  // obstacles (rocks / trees / pillars): steer round the one ahead; when stuck anyway, take a detour to one side (then the other)
+  if (!still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'SPAWN' && e.state !== 'ATTACK' && e.state !== 'KITE' && tdist > e.radius + 1.5) steerAround(e);   // (ranged kiters aim along tdx: never bent)
 
   // leash: stray enemies re-enter near the arena edge close to the player
   if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
