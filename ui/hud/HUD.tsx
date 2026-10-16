@@ -27,8 +27,8 @@ export const HUD: React.FC = () => {
     <Vignettes />
     <RoomFade />
 
-    {/* top-left: vitals, plate, minimap · top-centre: gold + gems · top-right: menu icons, quest tracker */}
-    <div className="absolute hud-tl flex flex-col gap-2" style={{ left: '1.2rem', top: '1rem' }}><VitalBars /><PlayerPlate />{showMap && <div className="hud-mm hud-mm-top hud-mm-left"><Minimap /></div>}</div>
+    {/* top-left: vitals, plate, quest tracker · top-centre: gold + gems · top-right: menu icons, minimap */}
+    <div className="absolute hud-tl flex flex-col gap-2" style={{ left: '1.2rem', top: '1rem' }}><VitalBars /><PlayerPlate /><div className="qt-left"><QuestTracker /></div></div>
 
     {/* top-centre */}
     <div className="absolute left-0 right-0 flex flex-col items-center gap-3 hud-tc" style={{ top: '.8rem' }}>
@@ -43,7 +43,7 @@ export const HUD: React.FC = () => {
     {/* top-right */}
     <div className="absolute flex flex-col items-end gap-3 hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
       <MenuButtons />
-      <div className="qt-right"><QuestTracker /></div>
+      {showMap && <div className="hud-mm hud-mm-top"><Minimap /></div>}
     </div>
 
     {/* bottom-centre: individual skill slots (ult first) + EXP strip along the screen edge */}
