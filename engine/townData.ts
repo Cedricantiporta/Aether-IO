@@ -198,7 +198,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
-  { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 },                                               // the meadow, facing the road
+  { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 46, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 17.5, 26.5, 35].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),
 ];
@@ -392,6 +392,8 @@ export const PLANTERS: PlanterSpec[] = [
   { x: -36, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: -19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.5, w: 5, d: 1.1, kind: 1 },
   // little riverside park east of the bridge (owner): flower beds behind the river benches
   { x: 22, z: 54.5, w: 3.2, d: 1.1, kind: 1 }, { x: 31, z: 54.5, w: 3.2, d: 1.1, kind: 0 },
+  // (owner #167) the green in front of the gate
+  { x: -22, z: 45.2, w: 3.2, d: 1.1, kind: 0 }, { x: 17, z: 49.6, w: 3.2, d: 1.1, kind: 0 },
 ];
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
@@ -407,6 +409,8 @@ export const TOWN_TREES: TreeSpec[] = [
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: 24, z: 46, s: 3.4, kind: 0 },
+  // (owner #167: more on the green in front of the gate) west side, clear of the dirt path at z 52
+  { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 }, { x: 29.5, z: 49.5, s: 3.2, kind: 2 },
   // (owner: more trees, like a forest) the Endless Tower clearing: both edges, clear of the path (z = 112 +- 3) and the knoll
   ...(() => {
     const t: TreeSpec[] = [];
@@ -434,7 +438,7 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
  *  The cart's bed runs along its local z (rot = yaw); colliders in TOWN_COLLIDERS. */
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
-  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
+  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -10, z: 55.2, rot: -0.45, kind: 2 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
 ];
 export const SCARECROW = { x: FARM.x, z: FARM.z };
 export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
