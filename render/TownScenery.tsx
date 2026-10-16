@@ -870,16 +870,17 @@ function Lake() {
     for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {
       if (z > BEACH.z0 - 9 && z < BEACH.z1 + 8) { rnd(); continue; }   // the beach stretch has its own shore (render/Beach.tsx)
       if (z > riverBank(LAKE.x1, 0) - 3 && z < riverBank(LAKE.x1, 1) + 3) { rnd(); continue; }   // (no slab floating in the river mouth)
-      b.box(4.2, 0.12, 3.2, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e', [0, (rnd() - 0.5) * 0.3, 0]);
+      { const r = 2.1 + rnd() * 0.4; b.cyl(r, r + 0.15, 0.12, 14, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e'); }   // (rounded, not slabs)
       if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
       if (rnd() < 0.18) b.ico(0.6 + rnd() * 0.6, [LAKE.x1 - 1.5 - rnd() * 3, -0.05, z + rnd()], '#8a8f94', [1.2, 0.6, 1], 0);
       if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
     }
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     // (owner) a little sandy cove on the mainland shore south of the river mouth: overlapping sand slabs, boulders, driftwood
-    for (let z = riverBank(LAKE.x1, 1) + 2.5; z < LAKE.z1 + 6; z += 2.2) {
-      const w = 5 + rnd() * 3;
-      b.box(w, 0.14, 3.4, [LAKE.x1 + 1.2 - w * 0.25 + (rnd() - 0.5), -0.02, z], ['#e6cf98', '#dcc58c', '#ead69f'][(rnd() * 3) | 0], [0, (rnd() - 0.5) * 0.5, 0]);
+    // (rounded sand: overlapping flat discs of one colour, each a hair higher so they never z-fight; edges taper into the grass)
+    for (let z = riverBank(LAKE.x1, 1) + 2.5, k = 0; z < LAKE.z1 + 6; z += 2.2, k++) {
+      const r = 2.3 + rnd() * 1.2;
+      b.cyl(r, r + 0.25, 0.1, 18, [LAKE.x1 + 1.4 + (rnd() - 0.5) * 1.6, 0.01 + k * 0.002, z], '#e2cb93');
       if (rnd() < 0.45) b.ico(0.7 + rnd() * 1.1, [LAKE.x1 - 0.5 + rnd() * 4, 0.05, z + (rnd() - 0.5) * 2], ['#8a8f94', '#7d8288', '#969a9c'][(rnd() * 3) | 0], [1.2, 0.7, 1.05], 0);
       if (rnd() < 0.3) b.ico(0.3 + rnd() * 0.3, [LAKE.x1 + 1 + rnd() * 3, 0.02, z + rnd()], '#a3a69e', [1.3, 0.6, 1], 0);
       if (rnd() < 0.2) b.cyl(0.14, 0.18, 2.2 + rnd(), 6, [LAKE.x1 + 1.5 + rnd() * 2, 0.12, z], '#7a5a3a', [0, 0, Math.PI / 2 + (rnd() - 0.5) * 0.4]);   // driftwood

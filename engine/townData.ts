@@ -191,6 +191,8 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 },                                               // the meadow, facing the road
+  // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
+  ...[-30, -20, 17.5, 26.5, 35].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),
 ];
 
 export const HOUSES: HouseSpec[] = [
@@ -308,7 +310,9 @@ export const FENCES: [number, number, number, number][] = [
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
     for (let i = 0; i < pts.length - 1; i++) {
-      const [ax, az] = pts[i], [bx, bz] = pts[i + 1], l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
+      const [bx, bz] = pts[i + 1], l0 = Math.hypot(bx - pts[i][0], bz - pts[i][1]), cut = i === 0 ? 4.2 : 0;   // (first run starts clear of the farm track: no fence poking across it)
+      const ax = pts[i][0] + (bx - pts[i][0]) / l0 * cut, az = pts[i][1] + (bz - pts[i][1]) / l0 * cut;
+      const l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
       for (const sd of [-1, 1]) f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
     }
     return f;
@@ -316,6 +320,10 @@ export const FENCES: [number, number, number, number][] = [
   // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
   [5, 108.4, 30.5, 108.9], [37.5, 108.9, 42, 108.7],
   [5, 112.8, 10.6, 112.9], [15.4, 112.95, 20.6, 113.1], [25.4, 113.2, 29.6, 113.3], [34.4, 113.3, 43.6, 113.2],
+  // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
+  [-4.4, TOWER.z - 1.8, -62, TOWER.z - 1.8],
+  [-4.4, TOWER.z + 1.8, -11.6, TOWER.z + 1.8], [-15.4, TOWER.z + 1.8, -21.6, TOWER.z + 1.8], [-25.4, TOWER.z + 1.8, -31.1, TOWER.z + 1.8],
+  [-34.9, TOWER.z + 1.8, -40.1, TOWER.z + 1.8], [-43.9, TOWER.z + 1.8, -62, TOWER.z + 1.8],
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
 ];
@@ -332,6 +340,8 @@ export const LAMPS: [number, number][] = [
   [-9.4, 7.2], [11, 7.2], [-20, 7.2], [20, 7.2], [-6, 6.2], [6, 6.2], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
   // the dirt path from the meadow to the beach
   [-11, 53.9], [-27.5, 54.6], [-42.2, 52.3],
+  // the riverside park
+  [22, riverBank(22, 0) - 3.4], [31, riverBank(31, 0) - 3.4],
 ];
 
 /** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
@@ -354,9 +364,11 @@ export const PLANTERS: PlanterSpec[] = [
   // pet lane
   { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },
   // flower bed in front of the gate (outside)
-  { x: -9, z: 49, w: 6, d: 2.4, kind: 1 }, { x: 9, z: 46, w: 4, d: 2, kind: 1 },
+  { x: -10.5, z: 46.5, w: 5, d: 2, kind: 1 }, { x: 10.5, z: 46.5, w: 5, d: 2, kind: 1 },   // (owner: aligned pair)
   // flower boxes along the outside of the south wall (clear of the towers at x = +-27 and the brewer's hut)
-  { x: -36, z: 41.6, w: 5, d: 1.1, kind: 1 }, { x: -20.5, z: 41.4, w: 3.4, d: 1.1, kind: 1 }, { x: 17.5, z: 41.4, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.6, w: 5, d: 1.1, kind: 0 },
+  { x: -36, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: -19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.5, w: 5, d: 1.1, kind: 1 },
+  // little riverside park east of the bridge (owner): flower beds behind the river benches
+  { x: 22, z: 54.5, w: 3.2, d: 1.1, kind: 1 }, { x: 31, z: 54.5, w: 3.2, d: 1.1, kind: 0 },
 ];
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
@@ -364,7 +376,7 @@ export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3
 export const TOWN_TREES: TreeSpec[] = [
   // hermit path (outside the walls): east ring and north ring, both sides of the trail
   { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
-  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 58.6, z: 33.5, s: 3.4, kind: 1 },   // (the mining camp + the way down to the farm)
+  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
   { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
@@ -728,7 +740,7 @@ export const NPCS: NpcDef[] = [
     talk: [['Gate\'s that way.']], bubbles: ['Gate\'s that way.', 'Heard the King\'s hiring.', 'Watch your step.'] },
   { name: 'Lina', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-14, -6], speed: 1.1, patrol: [[-14, -6], [14, -6], [14, -4], [-14, -4]], noHat: true, noCape: true, tunic: '#e8d8b8', hair: '#e0c070', longHair: true,
     talk: [['Lovely weather.']], bubbles: ['Lovely weather.', 'The chapel bells are pretty.', 'Off to the tavern later!'] },
-  { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [10, 52], speed: 1.1, patrol: [[10, 52], [-10, 52], [-10, 48], [10, 48]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
+  { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [12, 50], speed: 1.1, patrol: [[12, 50], [-12, 50], [-12, 50.4], [12, 50.4]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
     talk: [['Ahh, fresh air.']], bubbles: ['Ahh, fresh air.', 'The river\'s high this year.', 'Good fishing at the beach.'] },
   { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
     talk: [['Have you met my sister? She never stops talking.']], bubbles: ['Have you met my sister? She never stops talking.', 'Lovely flowers by the gate.'] },

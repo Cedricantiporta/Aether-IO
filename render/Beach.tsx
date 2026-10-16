@@ -96,16 +96,7 @@ function lanternPost(b: GB, g: GB, x: number, z: number, y0: number, h = 2.2) {
 function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: BufferGeometry } {
   const b = new GB([0.82, 1.06]), g = new GB([1, 1]), rnd = mulberry32(4242);
   const yTop = DOCK.y;
-  // ---- boardwalk: along z = BOARDWALK.z from the entrance west, then north along x = BOARDWALK.x
-  {
-    const { z: bz, xE, x: bx, zN, w } = BOARDWALK;
-    for (let x = xE; x > bx - w / 2; x -= 0.52) b.box(0.46, 0.12, w, [x, 0.06, bz], rnd() < 0.5 ? WOOD : WOOD2, [0, (rnd() - 0.5) * 0.04, 0]);
-    for (const s of [-1, 1]) b.box(xE - bx + w / 2, 0.08, 0.14, [(xE + bx - w / 2) / 2, 0.04, bz + s * (w / 2 - 0.08)], WOOD_D);
-    for (let z = bz - w / 2; z > zN; z -= 0.52) b.box(w, 0.12, 0.46, [bx, 0.06, z], rnd() < 0.5 ? WOOD : WOOD2, [0, (rnd() - 0.5) * 0.04, 0]);
-    for (const s of [-1, 1]) b.box(0.14, 0.08, bz - zN, [bx + s * (w / 2 - 0.08), 0.04, (bz + zN) / 2], WOOD_D);
-    // rope posts along the water side of the north run
-    for (let z = bz - 3; z > zN + 1; z -= 4.5) { if (Math.abs(z - DOCK.z) < 2.2) continue; b.cyl(0.08, 0.09, 0.8, 5, [bx - w / 2 - 0.15, 0.4, z], DARK); }
-  }
+  // (owner: no boardwalk on the sand - the pier is the only wooden walkway)
   // ---- the pier: walkway planks across, stringers, posts into the water, T-head with rails, lanterns, bollards
   {
     const z = DOCK.z, hw = DOCK.hw, x0 = BOARDWALK.x - BOARDWALK.w / 2, x1 = DOCK.x1;
@@ -208,7 +199,7 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   // ---- shells / starfish on the sand
   for (let i = 0; i < 26; i++) {
     const x = -48 - rnd() * 16, z = BEACH.z0 + 3 + rnd() * (BEACH.z1 - BEACH.z0 - 6);
-    if (Math.abs(z - BOARDWALK.z) < 1.8 || Math.abs(x - BOARDWALK.x) < 1.8 || Math.abs(z - DOCK.z) < 1.8) continue;
+    if (Math.abs(z - DOCK.z) < 1.8) continue;
     if (rnd() < 0.4) { for (let k = 0; k < 5; k++) { const a = (k / 5) * TAU; b.box(0.2, 0.04, 0.06, [x + Math.cos(a) * 0.09, 0.03, z + Math.sin(a) * 0.09], '#ff9a6a', [0, -a, 0]); } }
     else b.sph(0.09, [x, 0.03, z], rnd() < 0.5 ? '#f4e8d8' : '#f0c8b8', [1, 0.5, 1.2], 5, [0, rnd() * 6, 0]);
   }
