@@ -184,6 +184,43 @@ export function installInput(): () => void {
   const onBlur = () => { rmb.on = false; lmb.down = false; touches.clear(); };
   window.addEventListener('blur', onBlur);
 
+  // ---- (owner) controller support (standard-mapping gamepads via the Gamepad API): left stick = move (like the touch
+  // joystick), right stick = camera, buttons press the keyboard keys so every hotkey / skill / dialogue path just works.
+  //   A dash · B interact (E) · X skill 1 · Y skill 2 · RB skill 3 · RT ultimate · LB HP potion · LT MP potion
+  //   Back bag · Start menu (Esc) · D-pad up quests · down character · left accept offer (F) · right achievements
+  const PAD: [number, string, string][] = [
+    [0, 'Space', ' '], [1, 'KeyE', 'e'], [2, 'Digit1', '1'], [3, 'Digit2', '2'], [5, 'Digit3', '3'], [7, 'KeyR', 'r'],
+    [4, 'KeyZ', 'z'], [6, 'KeyX', 'x'], [8, 'KeyI', 'i'], [9, 'Escape', 'Escape'], [12, 'KeyJ', 'j'], [13, 'KeyC', 'c'], [14, 'KeyF', 'f'], [15, 'KeyO', 'o'],
+  ];
+  const padDown = new Set<string>();
+  let padMoving = false, padRaf = 0;
+  const dead = (v: number) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);
+  const pollPad = () => {
+    padRaf = requestAnimationFrame(pollPad);
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let gp: Gamepad | null = null;
+    for (const g of pads) if (g && g.connected) { gp = g; break; }
+    if (!gp) { if (padMoving) { inp.joy.active = false; inp.joy.x = inp.joy.z = 0; padMoving = false; } return; }
+    // buttons -> synthetic key events (edge-triggered)
+    for (const [i, code, key] of PAD) {
+      const b = gp.buttons[i], on = !!b && (b.pressed || b.value > 0.5);
+      if (on && !padDown.has(code)) { padDown.add(code); window.dispatchEvent(new KeyboardEvent('keydown', { code, key, bubbles: true })); }
+      else if (!on && padDown.has(code)) { padDown.delete(code); window.dispatchEvent(new KeyboardEvent('keyup', { code, key, bubbles: true })); }
+    }
+    // left stick -> movement (camera-relative, like WASD / the touch joystick)
+    const lx = dead(gp.axes[0] ?? 0), ly = dead(gp.axes[1] ?? 0);
+    if (lx || ly) { inp.joy.active = true; inp.joy.x = lx; inp.joy.z = ly; padMoving = true; }
+    else if (padMoving) { inp.joy.active = false; inp.joy.x = inp.joy.z = 0; padMoving = false; }
+    // right stick -> orbit the camera
+    const rx = dead(gp.axes[2] ?? 0), ry = dead(gp.axes[3] ?? 0);
+    if ((rx || ry) && orbitAllowed()) orbit(rx * 9, ry * 6);
+  };
+  const onPadConnect = (e: GamepadEvent) => {
+    useGameStore.getState().addNotification(`Controller connected: ${e.gamepad.id.split('(')[0].trim() || 'gamepad'}. A dash · X/Y/RB skills · RT ultimate · B interact · Start menu`, '#9fd3ff', 'SYSTEM');
+  };
+  window.addEventListener('gamepadconnected', onPadConnect);
+  padRaf = requestAnimationFrame(pollPad);
+
   return () => {
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
@@ -202,5 +239,7 @@ export function installInput(): () => void {
     window.removeEventListener('pointerup', onTouchUp);
     window.removeEventListener('pointercancel', onTouchUp);
     window.removeEventListener('blur', onBlur);
+    window.removeEventListener('gamepadconnected', onPadConnect);
+    cancelAnimationFrame(padRaf);
   };
 }

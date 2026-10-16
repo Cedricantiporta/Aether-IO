@@ -1,8 +1,7 @@
 # Handoff — Aether Survivor (status as of 2026-10-14)
 
-Branch: `claude/charming-shannon-nq5wcd` (contains all of `claude/festive-shannon-tspv5k` + the work below; `main` is
-the old version — the Vercel production deploy builds `main`, so preview deployments of this branch or a merge/PR are
-needed to see the new game).
+Branch: `claude/charming-shannon-nq5wcd` (contains all of `claude/festive-shannon-tspv5k` + the work below). The Vercel
+production deploy builds `main`; the owner asked to fast-forward `main` to this branch after each push so Vercel deploys it.
 
 ## The owner (how to work with them)
 - Not a coder. Gives short, informal feedback, often several requests in one message, frequently with screenshots.
@@ -1170,4 +1169,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Settings > 'Click to move' (settings.clickMove, default off = WASD): left-click the ground to walk there. Town: CameraRig ground ray -> village walkTo (yields to building / NPC clicks via walkStamp). Runs: target.clickMoveTo steered in player.ts (any movement input cancels; clicking an enemy still selects it).
 - Tutorial fix: the free tutorial summon is the class Common weapon (w_<class>_0a, Lv 1); 'Suit Up' = equip it (storyLogic stateDone 'equip': equipped weapon is not the starter). Saves stuck on 'equip' (pet / Lv 16 piece from the old pull) get that weapon once.
 - Max zoom-out halved again: input DIST_MAX 1.15 (was 1.3); Settings zoom slider 0.8-1.15.
+- Controller support (engine/input.ts pollPad, standard-mapping gamepads): left stick = move (world.input.joy), right stick = camera orbit; buttons dispatch synthetic key events: A dash (Space) · B interact (E) · X/Y/RB skills 1-3 · RT ultimate (R) · LB/LT HP/MP potion (Z/X) · Back bag (I) · Start menu (Esc) · D-pad up quests (J) / down character (C) / left accept offer (F) / right achievements (O). A toast lists the layout when a pad connects. Menus are not yet navigable with the pad (mouse/touch).
+- Town music: the owner's recorded track public/audio/town.mp3 loops while status is MENU (town / hub), crossfaded in audio.ts townTick on its own bus (music volume x0.45); the procedural village layer is muted in town, procedural themes stay for runs.
 - Environmental-kill achievements: DamageOpts.env ('TRAP' spike traps, 'BARREL' explosive barrels, 'SLAM' wall slams, 'HAZARD' wildfire / gas zones) rides on enemyDeath; goals meta stats trapKills / barrelKills / slamKills / hazardKills; 7 achievements (Watch Your Step, Trap Master, Kaboom!, Demolitionist, Wall Bouncer, Pinball Wizard, Nature's Wrath) with titles.

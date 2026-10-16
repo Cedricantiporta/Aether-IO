@@ -1,5 +1,5 @@
 // ============================================================================
-// Procedural WebAudio: SFX + generative ambient music. No asset files.
+// Procedural WebAudio: SFX + generative ambient music, plus one recorded track (the town theme, public/audio/town.mp3).
 //   voices -> sfxGain \
 //                      > master -> compressor -> destination
 //   music  -> musicGain /
@@ -450,6 +450,12 @@ type Theme = 0 | 1 | 2; // village, combat (rooms), boss
 const layerG: (GainNode | null)[] = [null, null, null];
 const layerLvl = [1, 0, 0];
 let musicEnabled = true;
+// (owner) the town theme: a recorded track (public/audio/town.mp3) looping while the hero is in town / the hub; the
+// procedural village layer stays for calm moments in runs. Own gain (music volume), crossfaded in musicTick.
+let townEl: HTMLAudioElement | null = null;
+let townG: GainNode | null = null;
+let townLvl = 0;
+let townBus: GainNode | null = null;
 let musicTimer: number | null = null;
 let nextStepTime = 0;
 let step = 0;
@@ -584,9 +590,21 @@ function scheduleStep(t: number, sd: number): void {
   if (layerLvl[2] > 0.04) bossStep(t, sd);
 }
 
+function townTick(): void {
+  if (!ctx || !townEl || !townG) return;
+  const want = musicEnabled && useGameStore.getState().status === GameStatus.MENU ? 1 : 0;
+  townLvl += (want - townLvl) * 0.05;
+  if (Math.abs(townLvl - want) < 0.005) townLvl = want;
+  townG.gain.setTargetAtTime(townLvl, ctx.currentTime, 0.1);
+  if (townLvl > 0.001 && townEl.paused) void townEl.play().catch(() => undefined);
+  else if (townLvl <= 0.001 && !townEl.paused) townEl.pause();
+}
+
 function musicTick(): void {
+  townTick();
   if (!ctx || ctx.state !== 'running' || !musicEnabled) return;
   const tg = themeTargets();
+  if (useGameStore.getState().status === GameStatus.MENU) tg[0] = 0;   // in town the recorded theme plays instead
   for (let i = 0; i < 3; i++) {
     layerLvl[i] += (tg[i] - layerLvl[i]) * 0.04;
     if (Math.abs(layerLvl[i] - tg[i]) < 0.005) layerLvl[i] = tg[i];
@@ -628,6 +646,7 @@ function applyVolumes(): void {
   // music was 0.55 * volume; now ~35% of that (0.19) and further softened by the music lowpass
   const mv = Math.max(0, Math.min(1, s.musicVolume));
   musicGain.gain.setTargetAtTime(mv * 0.19, t, 0.08);
+  if (townBus) townBus.gain.setTargetAtTime(mv * 0.45, t, 0.08);   // the recorded town theme (mastered louder than the synth)
   musicEnabled = mv > 0.01; // volume 0: stop scheduling entirely (saves CPU)
 }
 
@@ -659,6 +678,12 @@ function ensureContext(): boolean {
     mg.connect(mlp); mlp.connect(m); mlp.connect(conv); conv.connect(wet); wet.connect(m);
     for (let i = 0; i < 3; i++) { const lg = c.createGain(); lg.gain.value = layerLvl[i]; lg.connect(mg); layerG[i] = lg; }
     m.connect(comp); comp.connect(c.destination);
+    try {   // the recorded town theme: <audio> -> fade gain -> volume bus -> master (no music lowpass: it is a finished mix)
+      const el = new Audio(`${import.meta.env.BASE_URL}audio/town.mp3`); el.loop = true; el.preload = 'auto';
+      const src = c.createMediaElementSource(el), fg = c.createGain(), bus = c.createGain();
+      fg.gain.value = 0; src.connect(fg); fg.connect(bus); bus.connect(m);
+      townEl = el; townG = fg; townBus = bus; townLvl = 0;
+    } catch { townEl = null; townG = null; townBus = null; }
 
     const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const ch = buf.getChannelData(0);
@@ -758,6 +783,7 @@ export function initAudio(): () => void {
     unsubStore();
     if (musicTimer !== null) { window.clearInterval(musicTimer); musicTimer = null; }
     if (ctx) { void ctx.close().catch(() => undefined); }
+    if (townEl) { townEl.pause(); townEl.src = ''; } townEl = null; townG = null; townBus = null; townLvl = 0;
     ctx = null; master = null; sfxGain = null; musicGain = null; noiseBuf = null; layerG[0] = layerG[1] = layerG[2] = null;
     activeVoices = 0;
   };
