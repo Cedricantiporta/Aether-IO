@@ -5,6 +5,7 @@ import { device } from '../../engine/device';
 import { useGameEvent } from '../hooks/useEvent';
 import { useUiStore } from '../uiStore';
 import { useGameStore, SHIP_TICKET_GEMS } from '../../store';
+import { activeChar } from '../../characters';
 
 /**
  * NPC dialogue: a cream card at the bottom of the screen. Tap / click the card or press E / Space to advance,
@@ -21,23 +22,32 @@ const useShipOffer = () => useGameEvent('hub', (e) => {
   });
 });
 
+/** A line may name its own speaker: "You:: Why me?" (the hero) or "Marta Goldtap:: OUT!" (anyone else in the scene). */
+function splitSpeaker(line: string): { who: string; text: string; hero: boolean } | null {
+  const i = line.indexOf(':: ');
+  if (i <= 0 || i > 28) return null;
+  const who = line.slice(0, i), hero = who === 'You';
+  return { who: hero ? (activeChar()?.name || 'You') : who, text: line.slice(i + 3), hero };
+}
+
 export const Dialogue: React.FC = () => {
   useShipOffer();
   const { open, name, role, accent, lines, idx, offer, acceptLabel, hint } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   if (!open) return null;
   const last = idx >= lines.length - 1;
+  const sp = splitSpeaker(lines[idx] ?? '');
   const stop = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); };
   return (
     <div className={`dlg-root ${device.touch ? 'touch' : ''}`} data-testid="dialogue-root">
       <div className="dlg pe" data-testid="dialogue" role="dialog" aria-label={`${name} says`} onPointerDown={(e) => { stop(e); advanceDialogue(); }}>
         <div className="dlg-head">
           <span className="dlg-badge" style={{ background: accent }} />
-          <span className="dlg-name">{name}</span>
-          <span className="dlg-role">{role}</span>
+          <span className={`dlg-name${sp?.hero ? ' is-hero' : ''}`}>{sp ? sp.who : name}</span>
+          <span className="dlg-role">{sp ? (sp.hero && sp.who !== 'You' ? 'You' : '') : role}</span>
           <button className="dlg-x" aria-label="Close" data-testid="dialogue-close" onPointerDown={(e) => { stop(e); closeDialogue(); }}><X size={18} /></button>
         </div>
-        <p className="dlg-text" key={`${name}:${idx}`} data-testid="dialogue-text">{lines[idx]}</p>
+        <p className="dlg-text" key={`${name}:${idx}`} data-testid="dialogue-text">{sp ? sp.text : lines[idx]}</p>
         {last && hint && <p className="dlg-hint" data-testid="dialogue-hint">{hint}</p>}
         <div className="dlg-foot">
           <span className="dlg-dots">{lines.map((_, i) => <i key={i} className={i === idx ? 'on' : i < idx ? 'done' : ''} />)}</span>

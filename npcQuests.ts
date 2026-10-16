@@ -61,7 +61,7 @@ export interface NpcQuestDef {
   /** the turn-in NPC when it is not the giver */
   turnIn?: string;
   /** TALK objectives: what the target NPC says when you pass the message on (shown first in their dialogue) */
-  heard?: string;
+  heard?: string | string[];
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
@@ -242,6 +242,72 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     done: ['There is a name inside... "Aldwin". Rest well, Aldwin.', 'You have done a kind thing. Kindness should be paid, at least a little.'],
     objective: { type: 'DELIVER', target: 'grave_locket', count: 1 },
     reward: { gold: 1000, gems: 20, items: [{ id: 'reforge_stone', qty: 1 }] },
+  },
+  // ---- the graveyard behind the chapel: the man Sister Elowen keeps forgetting she employs
+  {
+    id: 'elowen_stranger', minLevel: 2, giver: 'Sister Elowen', title: 'The Man in the Graveyard', summary: 'See who is lurking in the graveyard', turnIn: 'Sister Elowen',
+    intro: ['Child, I must confess I am frightened. There is a man in the graveyard behind the chapel. Every night. Pale, muddy, and he carries a shovel.',
+      'He DIGS. In the Goddess\'s own soil! I know every one of the four hundred and twelve verses of the Litany of the Flame, and not one of them covers this.',
+      'Go out the side door and see what he wants. Gently. And if he is a ghoul, less gently.'],
+    progress: 'The graveyard, child, through the chapel\'s side door. The muddy man with the shovel.',
+    objective: { type: 'TALK', target: 'Mortimer', count: 1 },
+    heard: ['Eh? The Sister sent you? To see who is "lurking"? ...I am the GRAVEKEEPER. I have been the gravekeeper for seven years.',
+      'She hired me herself. Shook my hand. Said "the Goddess thanks you, Mortimer". Then she never paid me. Not once. Not a copper.',
+      'You:: So you have just... kept digging? For seven years?',
+      'Someone has to. The Font keeps bringing you guards back, see, but not all of you comes back. Whatever stays out there, I bury here. Little empty boxes.',
+      'There is one with your face carved on it. Three, actually. Go and tell her who I am. Again.'],
+    done: ['Mortimer? Who is Morti... oh. OH. The gravekeeper. We have a gravekeeper.',
+      'You:: He says you have not paid him in seven years.',
+      'Seven? I can recite the Goddess\'s eleven sacred names backwards, and I forgot my own gravekeeper. The Goddess must be laughing at me.',
+      'Here, take this for your trouble. And... do not tell the bishop.'],
+    reward: { gold: 500, items: [{ id: 'potion_hp', qty: 2 }] },
+  },
+  {
+    id: 'mortimer_wages', after: 'elowen_stranger', minLevel: 3, giver: 'Mortimer', title: 'Seven Years of Back Pay', summary: 'Ask Sister Elowen for Mortimer\'s wages',
+    intro: ['She remembers me now? Lovely. Then she can remember my wages.',
+      'Seven years, a copper a grave, two on holy days. I did the sums. On a headstone. It is the only flat thing out here.',
+      'Go and ask her. If I go in there she will bless me and forget me again before I reach the door.'],
+    progress: 'My wages. From the Sister. Seven years of them. I will be here. Digging. As always.',
+    objective: { type: 'TALK', target: 'Sister Elowen', count: 1 },
+    heard: ['His WAGES. Yes. Of course. I have them right here, in... the collection box. Which is... empty. Because I paid the candle-maker.',
+      'You:: You paid the candle-maker but not the gravekeeper?',
+      'The candle-maker comes INSIDE, child. I see him. Give Mortimer these, with the Goddess\'s apologies. Three hundred candles. He can sell them. Or light them. It is quite dark out there.'],
+    done: ['Candles. Three hundred candles.',
+      '...Well. It is more than last year.',
+      'Here, you take some of them, and a little something I dug up. Not from a grave. Probably. The Sister will forget this too, mind. See you in seven years.'],
+    reward: { gold: 750, gems: 10, items: [{ id: 'reforge_stone', qty: 1 }] },
+  },
+  // ---- the Golden Tankard: Rodric's hangover, and whose fault it is
+  {
+    id: 'rodric_cure', minLevel: 4, giver: 'Rodric the Tipsy', title: 'Hair of the Wolf', summary: 'Fetch a hangover cure from Lysa for Rodric',
+    intro: ['Hero. Hero. Speak quietly. Speak quieter than that. My head is a bell and someone keeps ringing it.',
+      'Lysa the herbalist brews a cure. Green stuff. Tastes like a swamp died in a boot. Ask her for a bottle for me; she will not sell to me any more. Something about "the incident".',
+      'Go. Quietly. Walk on your toes.'],
+    progress: 'The cure. From Lysa. Why are you still here. Why are you so LOUD.',
+    objective: { type: 'TALK', target: 'Lysa', count: 1 },
+    heard: ['For Rodric? Again? Fine. One bottle. It is mostly Font water, wolfsbane and regret.',
+      'Tell him to drink it slowly, sitting down, nowhere near anything he loves. Font water does not like being swallowed by drunks. It tries to come back up and go home.'],
+    turnIn: 'Rodric the Tipsy',
+    done: ['You brought it! You beautiful, beautiful... *glug glug glug*',
+      '...',
+      '*BLEEEARGH*',
+      'Marta Goldtap:: OI! Who did that on my floor?! YOU! You brought him that swamp-juice, did you not?!',
+      'You:: Why me?! He is the one who drank it!',
+      'Marta Goldtap:: He is a regular. You are a stranger who comes back from the dead. The mop is by the door, love.',
+      'Ahh. I feel wonderful. Here, for your trouble. And your boots. Mostly your boots.'],
+    reward: { gold: 600, items: [{ id: 'potion_hp', qty: 2 }] },
+  },
+  {
+    id: 'rodric_oath', after: 'rodric_cure', minLevel: 9, giver: 'Rodric the Tipsy', title: 'What the Font Keeps', summary: 'Listen to Rodric when he is sober',
+    intro: ['Sit down. I am sober, for once, thanks to you and that swamp. While it lasts, I want to tell you something.',
+      'I was a guard once, like you. Came up out of that well coughing light. Died out there seven times. The Font fetched me home every time.',
+      'After the third, I forgot my mother\'s face. After the fifth, I forgot why I liked the sea. After the seventh I stopped going out, and started drinking so I would not notice what else was missing.',
+      'The Font brings you back, hero. It does not bring ALL of you back. Count what you lose. Somebody should.',
+      '...Right. That is enough sober. Marta! A cider! And do not look at the hero like that, it was not their fault this time.'],
+    progress: 'Talk to me again. Before the cider kicks in.',
+    done: ['Thank you for listening. Most people just nod and leave.', 'Take this. I will not be needing it; I do not go out there any more.'],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 1000, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
   },
   // ---- the Golden Tankard: Marta the barkeep and Rodric the regular
   {

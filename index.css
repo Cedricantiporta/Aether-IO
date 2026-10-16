@@ -891,6 +891,7 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .dlg-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
 .dlg-badge { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px #0d0703; }
 .dlg-name { font-family: var(--font-title); font-size: 15px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.dlg-name.is-hero { color: #9fd3ff !important; }
 .dlg-role { font-size: 12px; font-weight: 700; color: var(--ink-soft); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dlg-x { width: 36px; height: 36px; margin: -4px -8px -4px 0; display: grid; place-items: center; border-radius: 50%; color: var(--ink-soft); background: transparent; border: 0; cursor: pointer; flex: none; min-height: 0; }
 .dlg-x:hover { color: var(--ink); filter: brightness(.8); }

@@ -255,7 +255,7 @@ export function heardLines(name: string): string[] {
   const st = useGameStore.getState(), out: string[] = [];
   for (const d of NPC_QUESTS) {
     const o = d.objective;
-    if (o.type === 'TALK' && o.target === name && d.heard && st.npcQuests.q[d.id]?.s === 1 && (st.npcQuests.q[d.id]?.p ?? 0) < o.count) out.push(d.heard);
+    if (o.type === 'TALK' && o.target === name && d.heard && st.npcQuests.q[d.id]?.s === 1 && (st.npcQuests.q[d.id]?.p ?? 0) < o.count) out.push(...(Array.isArray(d.heard) ? d.heard : [d.heard]));
   }
   return out;
 }

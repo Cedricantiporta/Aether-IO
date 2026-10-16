@@ -68,7 +68,7 @@ export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -12.6, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
+export const BREWER_HUT = { x: -15.6, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
 export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge
@@ -174,8 +174,8 @@ export const WINDMILL = { x: 38, z: 81, r: 3.4 };
 export interface FieldSpec { x: number; z: number; hw: number; hd: number; crop: 'WHEAT' | 'CABBAGE' | 'PUMPKIN' }
 export const FIELDS: FieldSpec[] = [
   { x: 18, z: 81.6, hw: 7, hd: 3, crop: 'CABBAGE' },
-  { x: -19, z: 89, hw: 7, hd: 4.5, crop: 'WHEAT' },
-  { x: -19, z: 100.5, hw: 7, hd: 3.8, crop: 'PUMPKIN' },
+  { x: -22, z: 89, hw: 7, hd: 4.5, crop: 'WHEAT' },
+  { x: -22, z: 100.5, hw: 7, hd: 3.8, crop: 'PUMPKIN' },
 ];
 export const STATUE = { x: 0, z: 2, r: 2.1 };
 /** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
@@ -773,6 +773,10 @@ export const NPCS: NpcDef[] = [
     bubbles: ['May the Flame keep you.', 'Light a candle for the lost.', 'Peace, traveller.'],
     gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 1, text: 'Take this, with the Flame\'s blessing. It has saved braver souls than either of us.' },
   },
+  // the graveyard behind the chapel: the gravekeeper Sister Elowen hired and forgot (quests elowen_stranger / mortimer_wages)
+  { name: 'Mortimer', role: 'Gravekeeper', model: 'BARBARIAN', tint: '#d8d4c8', scale: 1, prop: 'lantern', accent: '#9aa38a', home: [-38.6, GRAVEYARD.pathZ + 1.2], noHat: true, noCape: true, tunic: '#5b5446', hair: '#3a3a36', longHair: false,
+    talk: [['Mind the fresh ones. They are fresh.'], ['Seven years. Seven. I keep a tally on the crypt door.'], ['The small grave by the dead tree? The King had that one dug ten years ago. Never filled. Never will be, if you ask me.']],
+    bubbles: ['Dig, dig, dig...', 'Nobody pays the gravekeeper.', 'Mind the fresh ones.', 'Who goes there? Oh. You again.'] },
   // ambient villagers (owner): plain folk in light / brown clothes, hero faces, varied hair, no hats or capes; they stroll the streets
   { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-30, 10], [-30, 12], [-6, 12]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
     talk: [['Fine day for it.']], bubbles: ['Fine day for it.', 'Have you seen my goat?', 'Bread\'s fresh at the stall!'] },
