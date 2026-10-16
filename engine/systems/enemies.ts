@@ -19,6 +19,7 @@
 //   * BOSS_LICH pattern 2 (blink): WINDUP = fading out (alpha 1 - stateT/0.5),
 //     ATTACK = fading in (alpha stateT/0.4). Untargetable meanwhile.
 // ============================================================================
+import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
 import {
   world, allocEnemy, allocEnemyProjectile, allocZone, ARENA_RADIUS, MAX_ENEMIES,
@@ -71,6 +72,7 @@ const FEAR_SLOW_T = 3;   // seconds of 30% slow after a fear ends
 
 // ------------------------------------------------------------ scratch -------
 const contactCd = new Float32Array(MAX_ENEMIES);
+const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const sepOut: number[] = [];
 const tmpV = new Vector3();
 const bladeX: number[] = [];
@@ -1233,7 +1235,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   if (e.contactDamage <= 0 || locked || e.state === 'SPAWN' || e.state === 'DYING' || e.hideT > 0 || (!world.player.alive && curMin < 0)) { meleeT[e.id] = 0; return; }
   const dx = px - e.pos.x;
   const dz = pz - e.pos.z;
-  const r = e.radius + 0.8;
+  const r = e.radius + 1.15;   // (monsters now stop at radius + 0.95 from the hero: reach covers that gap)
   const d2 = dx * dx + dz * dz;
   if (e.state !== 'ATTACK') {
     if (e.stunT > 0 || e.freezeT > 0) { meleeT[e.id] = 0; return; }
@@ -1290,6 +1292,13 @@ function updateEnemy(e: Enemy): void {
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
   const still = isStationary(e.kind);
+  // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
+  // (strike range) they track the real hero so their attacks still connect
+  if (curMin < 0 && !still && !e.boss && !e.mini && (e.state === 'CHASE' || e.state === 'KITE') && tdist > e.radius + 2.6) {
+    heroTrailAt(0.7 + (e.id % 4) * 0.1, trailPt);
+    tdx = trailPt[0] - e.pos.x; tdz = trailPt[1] - e.pos.z;
+    tdist = Math.max(e.radius + 2.6, Math.sqrt(tdx * tdx + tdz * tdz));   // (px / pz stay the real hero: strikes, routing)
+  }
   // rivers / lakes: walkers head for a bridge (or round the shore) when liquid separates them from their target
   if ((feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
     && routeAround(e.pos.x, e.pos.z, px, pz, e.radius, wayPt)) {
@@ -1387,9 +1396,9 @@ function updateEnemy(e: Enemy): void {
   // ---- collisions
   if (still) { e.pos.x = e.dir.x; e.pos.z = e.dir.z; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0); }   // towers / lakes: pinned to the home spot
   if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
-  // never inside the hero: monsters stop a little short of its body (they still reach it with their strikes)
+  // never inside the hero: monsters stop short of its body (owner: a bit more room) (they still reach it with their strikes)
   if (world.player.alive && !still && e.kind !== 'BOSS_HYDRA_HEAD') {
-    const hx = e.pos.x - world.player.pos.x, hz = e.pos.z - world.player.pos.z, minD = e.radius + 0.55, hd2 = hx * hx + hz * hz;
+    const hx = e.pos.x - world.player.pos.x, hz = e.pos.z - world.player.pos.z, minD = e.radius + 0.95, hd2 = hx * hx + hz * hz;
     if (hd2 < minD * minD) { const hd = Math.sqrt(hd2) || 1e-3; e.pos.x = world.player.pos.x + (hx / hd) * minD; e.pos.z = world.player.pos.z + (hz / hd) * minD; }
   }
   if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD' && !still) {

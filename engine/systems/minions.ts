@@ -3,6 +3,7 @@
 // A fixed pool in world.minions; each minion hunts the nearest enemy (spatial grid), otherwise trails the hero, and
 // stays until its HP is gone. Nearby monsters attack minions before the hero (enemies.ts
 // minionTarget), so the skeletons hold the line.
+import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
@@ -22,6 +23,7 @@ export const MAX_SKELETONS = 5;
  *  5 Grave Call (2 warriors that crumble after 8 s + 1 s per level),
  *  2 the ult's bone golem (no skeleton cap). */
 export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5;
+const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2];
 export const PLAGUE_LIFE = 8;
 const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
@@ -200,7 +202,8 @@ export function updateMinions(dt: number): void {
     if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
     else {   // trail the hero in a loose ring
       const a = m.slot + slotI++ * 0.9;
-      tx = pl.pos.x + Math.cos(a) * 3.2; tz = pl.pos.z + Math.sin(a) * 3.2; stop = 0.6;
+      heroTrailAt(0.8 + (m.slot % 3) * 0.1, trailPt);   // (owner: summons follow with a ~1 s delay)
+      tx = trailPt[0] + Math.cos(a) * 3.2; tz = trailPt[1] + Math.sin(a) * 3.2; stop = 0.6;
     }
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
     if (d > 30) { m.x = pl.pos.x; m.z = pl.pos.z; continue; }   // left far behind (room change): catch up

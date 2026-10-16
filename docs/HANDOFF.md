@@ -1062,3 +1062,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Aegis card is Legendary (gold). Potion rewards cut: bounty quests 1 + r/6 each, story/NPC quest potions 1, tower SUPPLY
   1 big potion, wanderer 1+1, chapel blessing 1, plain item drops 5% potions (was 10%).
 - Gear level requirements by rarity (`constants.RANK_REQ`): Common 1, Rare 3, Epic 8, Legendary 15, Mythic 25.
+- **Follow delay (owner):** `engine/systems/heroTrail.ts` keeps a 2.4 s ring buffer of hero positions. Chasing monsters
+  (CHASE / KITE, not bosses / minis / stationary, farther than radius + 2.6) steer for where the hero was 0.7-1.0 s ago;
+  up close they track the real hero (strikes use the real position). Pets (0.9 s) and necro summons (0.8-1.0 s) follow
+  the trail too. Monsters stop at radius + 0.95 from the hero (was + 0.55); melee reach radius + 1.15 to match.

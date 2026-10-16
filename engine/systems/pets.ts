@@ -6,6 +6,7 @@
 // (HEAL timer here, ATTACK_RANGED shoots bolts, COLLECT fetches farther/faster,
 // REVIVE is handled in combat.damagePlayer). The pet is invulnerable.
 // ============================================================================
+import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { useGameStore } from '../../store';
@@ -25,6 +26,7 @@ events.on('waveClear', flushPetXp);
 events.on('playerDeath', flushPetXp);
 events.on('runEnd', flushPetXp);
 
+const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const meleeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 const FOLLOW = 0, FETCH = 1, ATTACK = 2;
 const ENGAGE_R = 10;       // enemy distance from player that triggers ATTACK
@@ -204,8 +206,9 @@ export function updatePets(dt: number): void {
   const sf = Math.sin(pl.facing), cf = Math.cos(pl.facing);
   const big = Math.max(0, prof.size - 1);          // big pets trail further back/aside so they don't clip the hero
   const fb = 1.8 + big * 1.0, fs = 1.5 + big * 0.5;
-  let gx = pl.pos.x - sf * fb + cf * fs;
-  let gz = pl.pos.z - cf * fb - sf * fs;
+  heroTrailAt(0.9, trailPt);   // (owner: the pet follows where the hero was ~1 s ago)
+  let gx = trailPt[0] - sf * fb + cf * fs;
+  let gz = trailPt[1] - cf * fb - sf * fs;
   let maxSp = Math.max(10, st.stats.moveSpeed * 1.4) * (wp.state === FOLLOW ? Math.max(1, prof.moveSpeed) : prof.moveSpeed);
   let stopR = 0.3;
   const ranged = prof.attacks && prof.attackMode === 'ranged';
