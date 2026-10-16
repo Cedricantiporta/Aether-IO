@@ -12,6 +12,8 @@ import { TalentsView } from './Talents';
 import { useRunSkillAlert, useTalentAlert } from '../../lib/alerts';
 import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityDefs';
 import { PaintedIcon } from '../../components/SkillIcons';
+import { tip } from '../../components/Tooltip';
+import { SimpleTip } from '../../components/ItemTip';
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown. Level 5 grants +1 dash charge.',
@@ -32,42 +34,39 @@ const RunSkills: React.FC = () => {
     { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: '#ff9a3a' },
     ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <SkillIcon id={k} size={26} dim={(levels[k as keyof SkillLevels] ?? 0) <= 0} /> })),
   ];
+  // (owner, reference) a compact list: icon, LV x/5, name and the action on the right; the details live in the hover tooltip
+  const [tab, setTab] = React.useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
+  const shown = rows.filter((r) => (tab === 'PASSIVE') === !!passives.find(([k]) => k === r.key));
+  const short = (t: string) => { const m = t.match(/^[^.!?]*[.!?]/); return m ? m[0] : t; };
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
-        <div className="rpg-label">Skills · {hero}</div>
-        <div className="rpg-badge !text-[.75rem]"><Star size={12} /> {sp} skill points</div>
+    <div className="flex flex-col gap-2">
+      <div className="sk-head">
+        <nav className="bag-tabs shop-tabs" style={{ ['--n' as any]: 2, margin: 0, flex: 1 }}>
+          {(['ACTIVE', 'PASSIVE'] as const).map((t) => <button key={t} className={`bag-tab ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`sk-tab-${t}`}>{t === 'ACTIVE' ? 'Active' : 'Passive'}</button>)}
+        </nav>
+        <span className="sk-sp"><Star size={12} /> {sp} SP</span>
       </div>
-      {free && <div className="rpg-frame gold p-2 text-[.78rem] text-center" data-testid="trainer-free">First lesson on the house: learn or upgrade one skill for <b className="text-[var(--good)]">FREE</b> (no skill points).</div>}
-      {rows.map((r) => {
+      {free && <div className="sk-free" data-testid="trainer-free">First lesson free: learn or upgrade one skill at no cost.</div>}
+      {shown.map((r) => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
         const cost = free ? 0 : costOf(hero, r.key, lvl);
         const need = unlockLevel(hero, r.key), lockedLv = lvl === 0 && heroLv < need;
         const can = !max && !lockedLv && sp >= cost;
         const info: any = (SKILLS_INFO as any)[r.key];
+        const lines: React.ReactNode[] = r.now
+          ? [<span key="a" className="muted">Lv {lvl}: {r.now(lvl)}</span>, ...(!max ? [<span key="b" className="pos">Lv {lvl + 1}: {r.now(lvl + 1)}</span>] : [])]
+          : (!max && HINT[r.key] ? [<span key="c" className="pos">Next: {HINT[r.key]}</span>] : []);
         return (
-          <div key={r.key} className="rpg-frame flex items-center gap-3 p-2.5" data-testid={`skill-${r.key}`}>
-            <div className="rpg-slot hoverable relative" style={{ ['--slot' as any]: '3.4rem', ['--rc' as any]: r.color ?? (info?.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949') }}>
-              <span className="slot-icon">{r.icon}</span>
-              {r.tag && <span className="rpg-key">{r.tag}</span>}
+          <div key={r.key} className={`sk-row ${lvl > 0 ? 'on' : ''}`} data-testid={`skill-${r.key}`} {...tip(<SimpleTip title={r.name} sub={r.tag ? `Key ${r.tag}` : 'Passive'} body={short(r.desc)} lines={lines} />)}>
+            <div className="sk-ic" style={{ ['--rc' as any]: r.color ?? (info?.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949') }}>{r.icon}</div>
+            <div className="sk-txt">
+              <span className="sk-lv">LV {lvl}/5</span>
+              <span className="sk-name">{r.name}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold leading-tight text-[var(--gold-light)]" style={{ fontFamily: 'var(--font-title)' }}>{r.name}</span>
-                <div className="flex gap-[3px]">{[0, 1, 2, 3, 4].map((i) => <i key={i} className="pip" data-s={i < lvl ? 'full' : 'empty'} style={i < lvl ? { background: 'radial-gradient(circle at 35% 30%, #fff6c8, #e9b949 55%, #8b5a16)', boxShadow: '0 0 6px #e9b949' } : undefined} />)}</div>
-              </div>
-              <div className="text-[.7rem] text-[var(--text-dim)] leading-snug">{r.desc}</div>
-              {r.now ? (
-                <>
-                  <div className="text-[.66rem] mt-0.5 text-[var(--text-dim)]">Lv {lvl}: {r.now(lvl)}</div>
-                  {!max && <div className="text-[.66rem] text-[var(--good)]">Lv {lvl + 1}: {r.now(lvl + 1)}</div>}
-                </>
-              ) : (!max && <div className="text-[.66rem] mt-0.5 text-[var(--good)]">Lv {lvl} → {lvl + 1}: {HINT[r.key]}</div>)}
-            </div>
-            <Button size="sm" variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)} style={{ minWidth: '3.6rem', flexDirection: 'column', gap: 0 }}>
-              {max ? 'MAX' : lockedLv ? <><span>Locked</span><span className="rpg-num">Lv {need}</span></> : <><span>{lvl === 0 ? 'Learn' : 'Upgrade'}</span><span className="rpg-num">{cost === 0 ? 'Free' : `${cost} SP`}</span></>}
-            </Button>
+            {max ? <span className="sk-state max">Mastered</span>
+              : lockedLv ? <span className="sk-state lock">Lv {need}</span>
+              : <button className={`sk-btn pe ${can ? 'can' : ''}`} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)}>{lvl === 0 ? 'Learn' : 'Upgrade'} <em>{cost === 0 ? 'Free' : `${cost} SP`}</em></button>}
           </div>
         );
       })}

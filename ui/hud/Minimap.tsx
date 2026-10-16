@@ -70,7 +70,7 @@ export const Minimap: React.FC = () => {
     ctx.beginPath(); ctx.rect(-ox, 0, pw, ph); ctx.clip();
     // parchment-dark map ground
     const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, pw * 0.6);
-    g.addColorStop(0, '#2f4a2a'); g.addColorStop(.7, '#223a22'); g.addColorStop(1, '#14231a');
+    g.addColorStop(0, '#30343a'); g.addColorStop(.7, '#24272c'); g.addColorStop(1, '#17191d');   // (owner: darker, greyer)
     ctx.fillStyle = g; ctx.fillRect(-ox, 0, pw, ph);
     ctx.translate(-world.player.pos.x * k, -world.player.pos.z * k);   // world content follows the hero (hero at the centre)
     // stage liquids (lakes, river / lava / chasm band) and their bridges
@@ -103,13 +103,13 @@ export const Minimap: React.FC = () => {
     } else if (town) {   // the island's walkable outline (narrow back trail, mining camp bay, beach ...), lightly filled
       const pts = islePoints();
       for (let i = 0; i < ISLE_N; i++) { const x = cx + pts[i * 2] * k, y = cx + pts[i * 2 + 1] * k; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
-      ctx.closePath(); ctx.fillStyle = 'rgba(132,170,96,.16)'; ctx.fill();
+      ctx.closePath(); ctx.fillStyle = 'rgba(120,128,120,.14)'; ctx.fill();
     }
     ctx.stroke(); ctx.setLineDash([]);
     if (town) {   // roads: paved (pale) + the dirt paths outside the walls (brown), and the big boulders on the back trail
       ctx.lineCap = 'round';
       for (const r of ROADS) {
-        ctx.strokeStyle = r.dirt ? 'rgba(181,142,92,.85)' : 'rgba(214,206,188,.42)'; ctx.lineWidth = Math.max(1.5 * DPR, r.w * k * (r.dirt ? 0.75 : 0.85));
+        ctx.strokeStyle = r.dirt ? 'rgba(170,140,100,.95)' : 'rgba(208,204,196,.85)';   // (crisper roads) ctx.lineWidth = Math.max(1.5 * DPR, r.w * k * (r.dirt ? 0.75 : 0.85));
         ctx.beginPath(); ctx.moveTo(cx + r.x1 * k, cx + r.z1 * k); ctx.lineTo(cx + r.x2 * k, cx + r.z2 * k); ctx.stroke();
       }
       ctx.lineCap = 'butt'; ctx.fillStyle = 'rgba(150,150,146,.85)';
@@ -229,8 +229,7 @@ export const Minimap: React.FC = () => {
   });
   return (
     <div className="pe relative" style={{ width: `${W / 14.4}rem`, height: `${H / 14.4}rem` }}>
-      <div className="absolute mm-ring" />
-      <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full" style={{ borderRadius: 2 }} />
+      <canvas ref={ref} width={W * DPR} height={H * DPR} className="absolute inset-0 w-full h-full mm-canvas" />
       <span className="absolute left-1/2 grid place-items-center rpg-num mm-north">N</span>
     </div>
   );
