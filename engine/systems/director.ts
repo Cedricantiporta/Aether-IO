@@ -137,10 +137,10 @@ function biomeBoss(b: number): EnemyKind { return biomeOf(b).boss; }
  *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
 export const finale = { step: 0, t: 0, x: 0, z: 0, blasts: 0 };
 const MALAKAR_LAST_WORDS = [
-  'Hah... so the village guard makes the Undying bleed.',
-  'Do you know what I saw in the Font, little hero? A world that forgets. Kings, oaths, whole kingdoms... ash in a hundred years.',
-  'I only wanted to keep the light from fading. To hold it. Forever.',
-  'Take it, then. Carry it home. And when it burns you hollow... remember me.',
+  'Hah... so the village guard makes the Undying bleed. Again. You always do, eventually.',
+  'Did Aldric tell you? That he sent me into the Font to save her, then ordered me to give her back to the water when the light ran thin?',
+  'I would not. I held her light for ten years. I held it until it was the only thing left of me.',
+  'Take her home. Tell her the stars are still where I showed her. And tell her father... no. Tell him nothing.',
 ];
 let towerFloor = 0;
 export const towerState = { floor: 0 };

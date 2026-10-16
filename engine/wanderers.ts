@@ -54,10 +54,10 @@ export const WANDERERS: readonly WandererDef[] = [
   { id: 'KEEPER', name: 'Aelia', title: 'Keeper of the Font', model: 'WIZARD', tint: '#ffffff', accent: '#fff3c4', biomes: [],
     lines: { 0: [
       'You came through. I knew you would; I have watched you since the night the bells first rang.',
-      'I am Aelia. For a hundred years I was only light in a jar, the warmth Malakar stole from the Font.',
-      'When he fell, the jar broke. The Meadow is waking. The rivers remember their songs.',
+      'I am Aelia. For ten years I was only light in a jar, the warmth Malakar took from the Font to keep me breathing.',
+      'He was my teacher. He held on too long, and my father let go too soon. Neither of them was the villain they thought the other was.',
       'He told you the light would burn you hollow. He was wrong. It only burns those who try to keep it.',
-      'Go home, guard. Your village is waiting, and the bells are ringing for you.',
+      'Take me home, guard. I would like to see my father. And then I would like a very long word with him.',
     ] },
     offer: 'Return home' },
 ];

@@ -11,10 +11,11 @@ import { GameStatus } from '../../types';
 
 const STORY = [
   'Malakar, the Undying, falls at last.',
-  'The Void shudders, and the stolen light pours back into the world.',
+  'The jar of light breaks, and a girl steps out of it, ten years late for supper.',
   'In the Meadow, the first flowers open. In the Old Grove, Elderroot stirs in his sleep; in the Halls, Gorath is only a hill again.',
-  'The village bells ring through the night. Somewhere, a hermit laughs.',
-  'You were only the village guard.',
+  'A king kneels in his own courtyard, and does not care who sees.',
+  'The village bells ring through the night. Hodge finally asks Lysa. She says "buy something first".',
+  'You were only the guard who came out of the well.',
   'Now you are its legend.',
 ];
 const CREDITS: [string, string][] = [

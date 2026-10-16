@@ -721,7 +721,7 @@ export const NPCS: NpcDef[] = [
     name: 'King Aldric', role: 'King of Aether', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.15, prop: 'none', accent: '#ffd36a', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, cape: '#a8141e', ordered: true,
     talk: [
       ['Rise, hero. The crown has heard your name whispered in the market and in the barracks alike.', 'Aether was a green kingdom once. Then the Mire woke, and the old guardians stirred in their sleep.'],
-      ['Malakar was my archmage, and my friend. He took a shard of the Font and ran into the Void.', 'Bring it home, guardian. The Font will keep bringing you home until you do.'],
+      ['Malakar was my archmage, and my friend. He took a shard of the Font, and my daughter, and ran into the Void.', 'Bring them home, guardian. The Font will keep bringing you home until you do.'],
       ['Beyond the gate lie seven realms, each ruled by a beast older than my house. Greenwood, the Marble Halls, the Sunscorch, the Coral Isles, Frostpeak, the Ember Wastes, the Void... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
       ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
       ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
