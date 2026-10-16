@@ -285,8 +285,9 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
     }
     case SP.STAMPEDE: {
       const ux = d.dirx, uz = d.dirz, vx = -uz, vz = ux;
-      for (let i = 0; i < 3; i++) {
-        const off = (i - 1) * 5.6;
+      const side = Math.random() < 0.5 ? -1 : 1;   // (owner: only 2 lanes: one on the hero, one beside it)
+      for (let i = 0; i < 2; i++) {
+        const off = i === 0 ? 0 : side * 6;
         tv.set(p.x - ux * 22 + vx * off, 0, p.z - uz * 22 + vz * off);
         const z = spawnTelegraphLine(tv.x, tv.z, ux, uz, 44, 3.4, 1.0 + i * 0.18, 0xfbbf24);
         if (z) { z.trick = TRICK.STAMPEDE; z.damage = pw * 1.6; }
