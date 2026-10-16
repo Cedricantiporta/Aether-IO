@@ -30,7 +30,7 @@ export const PLAZA = { x: 0, z: 2, r: 6.5 };
 // that runs west into the lake (the sea); one long cobblestone bridge crosses it to the mainland (farm, fields, windmill,
 // the Endless Tower and the Adventure Portal), about 34 units further south than the old meadow.
 /** The river south of the gate (water band; banks are colliders, the bridge is the only crossing west of its east end). */
-export const RIVER = { x0: -72, x1: 50, z0: 61, z1: 75 };
+export const RIVER = { x0: -72, x1: 125, z0: 61, z1: 75 };   // (owner: runs on east out past the island edge; was x1 50)
 const sstepT = (a: number, b: number, v: number): number => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** True on open water in the town (the lake west of the walls / beach, the river; not the bridge or a pier deck). The
  *  island edge is a polar outline, so long clearings far out (the Endless Tower's) widen it over the water: the player
@@ -38,6 +38,7 @@ const sstepT = (a: number, b: number, v: number): number => { const t = Math.min
 export function isTownWater(x: number, z: number): boolean {
   if (onDeckRect(x, z) >= 0) return false;
   if (Math.abs(x) <= BRIDGE.hw + 0.8 && z > BRIDGE.z0 - 1 && z < BRIDGE.z1 + 1) return false;
+  if (onMineBridge(x, z, 0.4)) return false;
   if (x >= RIVER.x0 - 30 && x <= RIVER.x1 && z > riverBank(x, 0) + 0.3 && z < riverBank(x, 1) - 0.3) return true;
   if (x < LAKE.x1 && z > LAKE.z0 && z < lakeSouth(x) - 3) {
     const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - mainShoreOff(z) * mk;
@@ -55,6 +56,9 @@ export function riverBank(x: number, side: 0 | 1): number {
   const c = (RIVER.z0 + RIVER.z1) / 2;
   return c + (z - c) * Math.sqrt(1 - (1 - t) * (1 - t));
 }
+/** (owner) a plank footbridge where the mine path crosses the river (deck arches up to h; railings are colliders). */
+export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riverBank(x, 0) - 1.4, z1: riverBank(x, 1) + 1.4, h: 0.55 }; })();
+export const onMineBridge = (x: number, z: number, m = 0): boolean => Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.hw + m && z > MINE_BRIDGE.z0 - m && z < MINE_BRIDGE.z1 + m;
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
 export const BRIDGE = { hw: 4.2, z0: 57.5, z1: 78.5, h: 1.6 };
 export const PORTAL = { x: 0, z: 124, r: 6.5, front: { x: 0, z: 120.6 } };   // (front = on top of the platform, before the arch)
@@ -135,7 +139,8 @@ export const TRAIL_ROCKS: [number, number, number, number][] = [
   [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
   // a rockfall from the south-east wall tower down to the river: the green in front of the gate is no shortcut to the
   // mines (owner) - the way there is over the bridge, past the farm and up the fenced mine path
-  [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9], [51.6, 62.4, 2.4, 2.8], [53.4, 66.2, 2.0, 2.4],
+  [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9],
+  // (the last two boulders stood where the river now runs on east: the river itself closes the gap)
 ];
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -147,6 +152,7 @@ export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3
 export function townLift(x: number, z: number): number {
   // the bridge deck: a gentle arch over the river
   if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
+  if (onMineBridge(x, z, 0.3)) { const t = (z - MINE_BRIDGE.z0) / (MINE_BRIDGE.z1 - MINE_BRIDGE.z0); return MINE_BRIDGE.h * (1 - (2 * t - 1) ** 2); }
   // the Endless Tower's knoll (a raised mound; the path ramps up to the door)
   { const kn = towerKnollAt(x, z); if (kn > 0) return kn; }
   // the Adventure Portal's round stepped platform (tiers r 8 / 6.9 / 5.6 up to 1.2; render/Town buildPortalGeo)
@@ -319,7 +325,15 @@ export const FENCES: [number, number, number, number][] = [
         const cut = i === 0 && sd < 0 ? 4.2 : 0;
         const ax = pts[i][0] + (bx - pts[i][0]) / l0 * cut, az = pts[i][1] + (bz - pts[i][1]) / l0 * cut;
         const l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
-        f.push([ax + nx * sd, az + nz * sd, bx + nx * sd, bz + nz * sd]);
+        const sx0 = ax + nx * sd, sz0 = az + nz * sd, sx1 = bx + nx * sd, sz1 = bz + nz * sd;
+        // (the river now runs on east under this path: the fences stop at the banks, the footbridge's railings take over)
+        const rx = (sx0 + sx1) / 2, rN = riverBank(rx, 0) - 1.4, rS = riverBank(rx, 1) + 1.4;
+        if (Math.min(sz0, sz1) < rS && Math.max(sz0, sz1) > rN) {
+          const at = (zz: number): [number, number] => { const t = (zz - sz0) / (sz1 - sz0); return [sx0 + (sx1 - sx0) * t, zz]; };
+          const hi = sz0 > sz1 ? [sx0, sz0] : [sx1, sz1], lo = sz0 > sz1 ? [sx1, sz1] : [sx0, sz0];
+          if (hi[1] > rS) { const p = at(rS); f.push([hi[0], hi[1], p[0], p[1]]); }
+          if (lo[1] < rN) { const p = at(rN); f.push([lo[0], lo[1], p[0], p[1]]); }
+        } else f.push([sx0, sz0, sx1, sz1]);
         if (i === 0) f.push(sd < 0 ? [42, 108.7, ax + nx * sd, az + nz * sd] : [43.6, 113.2, ax + nx * sd, az + nz * sd]);   // joints to the track fences
       }
     }
@@ -471,9 +485,10 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
   for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
   // the river: both banks are a chain of circles (gap for the bridge), the east end is closed; the bridge railings
-  for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.hw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
+  for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.hw + 0.5 && Math.abs(x - MINE_BRIDGE.x) > MINE_BRIDGE.hw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
   c.push([RIVER.x1 + 0.4, (RIVER.z0 + RIVER.z1) / 2, 1.2]);
   for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * (BRIDGE.hw + 0.35), z, 0.4]);
+  for (const sx of [-1, 1]) for (let z = MINE_BRIDGE.z0 + 0.5; z <= MINE_BRIDGE.z1 - 0.49; z += 0.7) c.push([MINE_BRIDGE.x + sx * (MINE_BRIDGE.hw + 0.25), z, 0.3]);   // footbridge railings
   c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);

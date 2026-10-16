@@ -14,7 +14,7 @@ import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -488,6 +488,25 @@ function addBridge(b: GB, g: GB): void {
   }
   for (const sx of [-1, 1]) { g.sph(0.2, [sx * (hw + 0.3), hAt(68) + 1.8, 68], '#ffd070', 1, 6); b.cyl(0.06, 0.06, 0.8, 6, [sx * (hw + 0.3), hAt(68) + 1.3, 68], '#2a2a2e'); }
 }
+/** (owner) the plank footbridge where the mine path crosses the river: planks on two stringers, rope-and-post railings. */
+function addFootbridge(b: GB): void {
+  const { x, hw, z0, z1, h } = MINE_BRIDGE, L = z1 - z0, n = Math.round(L / 0.55);
+  const hAt = (z: number) => { const t = (z - z0) / L; return h * (1 - (2 * t - 1) ** 2); };
+  const W1 = '#8a6440', W2 = '#76532f', WD = '#5a3d22';
+  for (let i = 0; i < n; i++) {
+    const z = z0 + (i + 0.5) * (L / n), y = hAt(z) + 0.05;
+    b.box(hw * 2 + 0.3, 0.12, L / n - 0.06, [x + Math.sin(i * 2.7) * 0.05, y, z], i % 3 ? W1 : W2, [0, Math.sin(i * 1.3) * 0.03, 0]);
+  }
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 10; i++) {   // stringers (under the planks, follow the arch)
+      const za = z0 + (L * i) / 10, zb = z0 + (L * (i + 1)) / 10, ya = hAt(za), yb = hAt(zb);
+      b.box(0.22, 0.26, Math.hypot(zb - za, yb - ya) + 0.04, [x + sx * (hw - 0.2), (ya + yb) / 2 - 0.12, (za + zb) / 2], WD, [-Math.atan2(yb - ya, zb - za), 0, 0]);
+      b.box(0.08, 0.08, Math.hypot(zb - za, yb - ya) + 0.04, [x + sx * (hw + 0.25), (ya + yb) / 2 + 0.85, (za + zb) / 2], W2, [-Math.atan2(yb - ya, zb - za), 0, 0]);   // hand rail
+    }
+    for (let k = 0; k <= 5; k++) { const z = z0 + 0.25 + (L - 0.5) * (k / 5); b.box(0.16, 1.0, 0.16, [x + sx * (hw + 0.25), hAt(z) + 0.45, z], WD); }
+    for (const z of [z0 + 0.25, z1 - 0.25]) b.cyl(0.22, 0.26, 1.4, 6, [x + sx * (hw + 0.25), -0.6, z], WD);   // piles into the bank
+  }
+}
 /** Rocks along the river banks + a rocky spring where the river starts (its east end). */
 function addRiverBanks(b: GB, rnd: () => number): void {
   for (let x = RIVER.x0 + 22; x < RIVER.x1; x += 2.6) {
@@ -824,6 +843,7 @@ function buildTown() {
   addFarm(at(FARM.x, FARM.z).b, pr);
   for (const F of FIELDS) addField(at(F.x, F.z).b, F, pr);
   { const c = at(0, 68); addBridge(c.b, c.g); }
+  { const c = at(MINE_BRIDGE.x, 68); addFootbridge(c.b); }
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   // town wall: runs are cut into ~15-unit pieces so every piece lands in its own spatial chunk (frustum culling)
   const wr = mulberry32(4242);

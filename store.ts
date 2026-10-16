@@ -356,6 +356,7 @@ const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats
     if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
     if (u.type === 'DASH_COOLDOWN' && shadowStepTaken) return false;   // Shadow Step: 4% dodge in total
     if (u.type === 'AEGIS' && aegisOffered === aegisKey()) return false;   // once per biome
+    if (u.type === 'ULT_FILL' && (skillLevels.ult ?? 0) <= 0) return false;   // (owner) Surge of Fury only once the ultimate is unlocked
     return true;
   });
   const options: Upgrade[] = [];

@@ -1112,3 +1112,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   flowers, already ~40 past the fog start); checked every 6th frame in `biomeLook.LookDriver`. The camera far plane now
   follows the fog end (+25), so fully fogged geometry is never rasterised; the sky dome / clouds scale to stay inside it.
   Existing layers: frustum-culled 24-unit chunks (Inst), NPC view culling + animation LOD, adaptive DPR (PerfGovernor).
+- River runs on east out past the island edge (`RIVER.x1` 125, was 50); the mine path crosses it on a plank footbridge
+  (`townData.MINE_BRIDGE` at x 58.6: walkable via isTownWater / townLift, railing colliders, bank colliders skip it;
+  render `addFootbridge`). Mine-path fences stop at the banks. Surge of Fury cards only once the ultimate is unlocked.
