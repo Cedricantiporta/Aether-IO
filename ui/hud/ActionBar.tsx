@@ -20,6 +20,8 @@ type PKey = typeof PASSIVE_KEYS[number];
 const Sep = () => <div className="tray-sep" />;
 const cdLine = (label: string, v: string) => <><span className="muted">{label}</span><span>{v}</span></>;
 
+/** Bone Ward has nothing to shield without summons (owner: disabled then). */
+const noSummons = (): boolean => { for (const m of world.minions) if (m.active) return false; return true; };
 export const ActionBar: React.FC = () => {
   const { hero, skillLevels, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels, heroLv: s.level })));
   const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level DASH_UNLOCK_LV (6)
@@ -53,6 +55,7 @@ export const ActionBar: React.FC = () => {
         const cd = abilityCd(hero, slot, lv) * (1 - cdr);
         return (
           <ActionSlot key={slot} id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost} active={lv > 0}
+            blocked={hero === 'NECROMANCER' && slot === 's3' ? noSummons : undefined}
             getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot] })}
             tooltip={<SimpleTip title={def.name} sub={lv <= 0 ? `Locked · unlocks at Lv ${unlockLevel(hero, def.slot)}, then learn it at the Skill Trainer` : `Active [${key}] · Lv ${lv} · hold to aim, release to cast`} body={def.desc}
               lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />

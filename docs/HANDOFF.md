@@ -1146,4 +1146,5 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Quest icons also for Quest Board bounties: COLLECT_LOOT loot pills (`questWantsItem`) and, with a GATHER_SHARDS bounty, the shard-dropping harvest nodes CRYSTAL / ORE / GOLD_VEIN (`questWantsShards`, render/Crates).
 - Calmer HUD text colours: target names cream (elites muted gold), room twist titles cream instead of lilac, objective complete / failed muted.
 - Slime King: Belly Flop drop 0.62 s and circle r 5.2 (was 6.5); acid smaller (splash 3, Acid Flood 8.5, Acid Rain pools 2.1).
+- Bone Ward is disabled with no summons out (owner): the cast is refused before mana / cooldown ('No summons to ward'), auto-battle skips it, and the action-bar slot greys out (`ActionSlot.blocked`, `.is-blocked`).
 - Environmental-kill achievements: DamageOpts.env ('TRAP' spike traps, 'BARREL' explosive barrels, 'SLAM' wall slams, 'HAZARD' wildfire / gas zones) rides on enemyDeath; goals meta stats trapKills / barrelKills / slamKills / hazardKills; 7 achievements (Watch Your Step, Trap Master, Kaboom!, Demolitionist, Wall Bouncer, Pinball Wizard, Nature's Wrath) with titles.

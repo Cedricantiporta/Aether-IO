@@ -124,6 +124,7 @@ function announce(name: string): void {
 let mineNoteT = -10;
 function noSkillsInMine(): void { if (world.time - mineNoteT < 2) return; mineNoteT = world.time; useGameStore.getState().addNotification('No skills in the mine: swing your pick or your weapon.', '#ffb070', 'WARNING'); }
 /** Cooldown + mana gate. Returns true when the cast may proceed (mana spent, cooldown set). */
+function anyMinion(): boolean { for (const m of world.minions) if (m.active) return true; return false; }
 function gate(slot: ActiveSlot): boolean {
   const st = useGameStore.getState();
   const p = world.player;
@@ -135,6 +136,7 @@ function gate(slot: ActiveSlot): boolean {
   if (world.village.miningT > 0) return false;   // busy mining
   if (!world.room.active && world.village.area === 'CAVE') { noSkillsInMine(); return false; }   // (owner: no skills in the mine)
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
+  if (st.hero === 'NECROMANCER' && slot === 's3' && !anyMinion()) { st.addNotification('No summons to ward', 'red', 'WARNING'); return false; }   // (owner) Bone Ward needs summons
   if (abilityState.leapT > 0) return false;
   if (gcdUntil > world.time + GCD) gcdUntil = 0;   // (stale stamp from before a world.time reset)
   if (world.time < gcdUntil) return false;   // global skill lock: one skill at a time
@@ -317,6 +319,7 @@ export function autoCast(): void {
   for (let i = 0; i < order.length; i++) {
     const s = order[i];
     if ((st.skillLevels[s] ?? 0) <= 0 || p.cd[s] > 0 || p.mana < st.getManaCost(s)) continue;
+    if (st.hero === 'NECROMANCER' && s === 's3' && !anyMinion()) continue;
     castActive(i); return;
   }
   if (p.ult >= 100 && abilityState.ultCd <= 0 && p.ultT <= 0) castUlt();

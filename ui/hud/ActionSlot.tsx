@@ -16,6 +16,8 @@ interface Props {
   size?: string;
   active?: boolean;                 // false => dimmed/locked
   lockLabel?: string;               // overlay text when locked (e.g. '5 SP')
+  /** true while the skill can't be used right now (e.g. Bone Ward with no summons): greyed out */
+  blocked?: () => boolean;
   level?: number;
   qty?: number;
   manaCost?: number;
@@ -28,14 +30,14 @@ interface Props {
 const fmtCd = (t: number) => (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1));
 
 /** Framed action-bar slot. All per-frame state (sweep, text, pips, mana-lack) is written via refs. */
-export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent }) => {
+export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent, blocked }) => {
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
   const lack = useRef<HTMLDivElement>(null);
   const ready = useRef<HTMLDivElement>(null);
   const pips = useRef<(HTMLElement | null)[]>([]);
-  const st = useRef({ cd: '', text: '', lack: false, prevT: 0, peak: 0, pips: '', lastPress: -1 });
+  const st = useRef({ cd: '', text: '', lack: false, blk: false, prevT: 0, peak: 0, pips: '', lastPress: -1 });
 
   useRaf(() => {
     const s = st.current;
@@ -64,6 +66,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
       const tx = show && !pipInfo ? (hits ? String(Math.ceil(t)) : fmtCd(t)) : '';
       if (tx !== s.text) { s.text = tx; txt.current.textContent = tx; }
     }
+    if (blocked && root.current) { const b = active && blocked(); if (b !== s.blk) { s.blk = b; root.current.classList.toggle('is-blocked', b); } }
     if (lack.current) {
       const l = active && manaCost > 0 && world.player.mana < manaCost;
       if (l !== s.lack) { s.lack = l; lack.current.classList.toggle('on', l); }
