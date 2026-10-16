@@ -339,7 +339,7 @@ export function Projectiles() {
           if (emit && Math.random() < dt * 50) FX.add.emit(x, y, z, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2 + 0.5, (Math.random() - 0.5) * 2, 0.5, 0.3, 0.05, 1.4, 0.7, 2.2, 0.9, CELL.STAR, 0, 1, Math.random() * 3, 4);
           break;
         case 'AXE':
-          place(ims, i, x, y, z, p.spin, 0, 0, 1.15);
+          place(ims, i, x, y, z, p.spin, 0, 0, 1.15 * Math.max(1, p.radius / 1.5));   // (bigger during Titan's Wrath)
           if (emit) FX.add.emit(x, y, z, 0, 0, 0, 0.18, 1.4, 0.3, 1.2, 0.9, 0.5, 0.35, CELL.GLOW);
           break;
         case 'GIANT_AXE': {

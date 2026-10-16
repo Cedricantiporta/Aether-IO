@@ -164,7 +164,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Three veins inside the Crystal Cave. The path starts beside the chicken coop and climbs to the mining camp. Hold E on a vein.',
     done: ['Dorn sent you, eh? Three veins already, and you still have all your fingers. Good start.', 'Take these flasks of lantern oil. Carry them deep, and they pour themselves into the lantern when it gutters.'],
     objective: { type: 'ACTION', target: 'cave_vein', count: 3 },
-    reward: { gold: 500, flasks: 2 },
+    reward: { gold: 900, flasks: 2 },
   },
   {
     id: 'grit_deeper', minLevel: 5, giver: 'Grit', after: 'dorn_mine', title: 'Deeper Still', summary: 'Clear every vein on Floor 1 and go down to Floor 2',
@@ -183,13 +183,13 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     reward: { gold: 2500, items: [{ id: 'upgrade_core', qty: 3 }] },
   },
   {
-    id: 'pip_secret', giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
+    id: 'pip_secret', minLevel: 3, giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
     intro: ['Psst! Hero! I found a shiny pebble and I think the old hermit north of town would love it.', 'But I am not allowed past the wall. Could you ask Old Wend what it is? Then come and tell me!'],
     progress: 'Did you see Old Wend yet? He lives behind the north wall of town.',
     heard: 'A shiny pebble, warm to the touch? That is a sunstone, child. Tell little Pip to keep it out of the rain: it sulks when it gets wet.',
     done: ['He says it is a sunstone?! I KNEW it! I am going to keep it in my sock drawer. With the other socks.', 'Here, you can have some of my sweets money. Not all of it. Some of it.'],
     objective: { type: 'TALK', target: 'Old Wend', count: 1 },
-    reward: { gold: 500 },
+    reward: { gold: 900, gems: 5 },
   },
   // ---- the farm outside the gate (interaction quests)
   {

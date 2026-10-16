@@ -1050,3 +1050,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   fewer interior obstacles, dark hero duels 6% / 15% in the first two realms (`roomDefs.duelChance`), heal / regen / Aegis
   cards weighted rarer (`store.cardWeight`). Totem HP bar fill anchored in screen space.
 - Still open: more decor on the green in front of the gate (#167); "max levels 50?" question to the owner.
+- Later in batch 4: barbarian range 7.5 (boomerang tuned to fly ~7.5 out: AXE speed x0.97), Cross Slash 40% shorter
+  (life 1.05 + 0.03/lv), bigger axes during Titan's Wrath (radius 2.8, render scales with radius); knight range 8.5.
+  NPC quests: level gates reviewed (npcQuests.ts minLevel, L2..L48 by realm); Pip's hermit errand now Lv 3 (the hermit
+  trail has monsters; trail un-blocked: ruin + boulders moved so findPath reaches Old Wend).
