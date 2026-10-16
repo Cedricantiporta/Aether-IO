@@ -87,37 +87,49 @@ export const Upgrade: React.FC = () => {
   };
   const keys = Object.keys(item.stats) as (keyof PlayerStats)[];
 
+  // (owner reference: enchant screen) "+8 -> +9" header, the item in an ornate diamond frame between the material
+  // circle (cores, left) and the success-chance circle (right), stat rows old > new, big red Upgrade with the gold cost.
   return (
-    <div className="flex flex-col gap-3 relative">
-      <div className="bs-card p-4 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-3">
-          <ItemSlot item={item} size="5rem" iconSize={38} tooltip="none" compare={false} />
-          <div className="text-left">
-            <div className="rpg-title text-lg leading-tight" data-rt={item.rarity}>{item.name}</div>
-            <div className="rpg-num text-sm text-[var(--text-dim)]">+{item.level - 1} <ArrowRight size={12} className="inline text-[var(--good)]" /> <b className="text-[var(--good)]">+{item.level}</b></div>
-          </div>
-        </div>
-        <div className="w-full bs-cell p-2.5">
-          {keys.map((k) => (
-            <div key={k} className="tt-row text-[.78rem]"><span className="muted">{STAT_LABEL[k]}</span>
-              <span>{fmtItemStat(k, item.stats[k]!)} <ArrowRight size={10} className="inline" /> <b className="pos">{fmtItemStat(k, next[k]!)}</b></span></div>
-          ))}
-        </div>
-        {free && <FreeNote />}
-        <div className="w-full flex justify-between text-[.74rem]" style={{ color: '#b9b2a2' }} data-testid="upgrade-chance"><span>Success chance</span><span className="rpg-num" style={{ color: '#e8e2d4' }}>{Math.round(chance * 100)}%</span></div>
-        {brk > 0 && !maxed && <div className="w-full text-center text-[.72rem] font-bold" style={{ color: '#f87171' }} data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure)</div>}
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="bs-cell text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><CoinGlyph size={12} /> Gold</div>
-            <div className="rpg-num" style={{ color: gold >= goldCost ? '#f1ece0' : '#e08a84' }}>{goldCost.toLocaleString()}</div></div>
-          <div className="bs-cell text-center py-1.5"><div className="rpg-label !text-[.55rem] flex items-center justify-center gap-1"><Hexagon size={10} /> {CORE_NAMES[coreTier]}s</div>
-            <div className="rpg-num" style={{ color: cores >= coreCost ? '#f1ece0' : '#e08a84' }}>{coreCost} <span className="text-[.65rem] opacity-70">/ {cores}</span></div></div>
-        </div>
-        <button className="forge-btn on" disabled={!can} onClick={forge}>
-          <Hammer size={20} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}
-        </button>
-        <div className="forge-hint">Improve the stats of your equipment.</div>
-        {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
+    <div className="enc relative" data-testid="upgrade-view">
+      <div className="enc-lv">
+        <span className="rpg-num">+{item.level - 1}</span>
+        <i className="enc-arrow" aria-hidden><b /><b /><b /></i>
+        <span className="rpg-num nx">{maxed ? 'MAX' : `+${item.level}`}</span>
       </div>
+      <div className="enc-stage">
+        <svg className="enc-orn" viewBox="0 0 360 200" aria-hidden>
+          <path d="M20 100 H118 M242 100 H340" />
+          <path d="M180 18 L262 100 L180 182 L98 100 Z" className="o1" />
+          <path d="M180 32 L248 100 L180 168 L112 100 Z" className="o2" />
+          <path d="M180 4 V18 M180 182 V196 M88 100 l10 -6 v12 Z M272 100 l-10 -6 v12 Z" className="o3" />
+        </svg>
+        <div className={`enc-mat ${cores >= coreCost ? '' : 'short'}`} title={`${CORE_NAMES[coreTier]}s`}>
+          <Hexagon size={30} />
+          <span className="rpg-num">{cores}/{coreCost}</span>
+        </div>
+        <div className="enc-item" style={{ ['--rc' as any]: RARITY_COLOR[item.rarity] }}>
+          <ItemSlot item={item} size="4.6rem" iconSize={40} tooltip="none" compare={false} />
+        </div>
+        <div className={`enc-mat chance ${chance < 0.5 ? 'low' : ''}`} data-testid="upgrade-chance" title="Success chance">
+          <b className="rpg-num">{Math.round(chance * 100)}%</b>
+          <span>chance</span>
+        </div>
+      </div>
+      <div className="enc-name rpg-title" data-rt={item.rarity}>{item.name}</div>
+      <div className="enc-sub">{CORE_NAMES[coreTier]} x{coreCost}</div>
+      <div className="enc-stats">
+        {keys.map((k) => (
+          <div key={k} className="enc-row"><span>{STAT_LABEL[k]}</span>
+            <span className="rpg-num">{fmtItemStat(k, item.stats[k]!)}</span><i aria-hidden>&gt;</i><b className="rpg-num">{fmtItemStat(k, next[k]!)}</b></div>
+        ))}
+      </div>
+      {free && <FreeNote />}
+      {brk > 0 && !maxed && <div className="enc-warn" data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure)</div>}
+      <button className="enc-btn" disabled={!can} onClick={forge}>
+        <span className="enc-btn-t"><Hammer size={18} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}</span>
+        {!maxed && <span className="enc-btn-c rpg-num" style={{ color: gold >= goldCost ? undefined : '#ffb4a8' }}><CoinGlyph size={14} /> {goldCost.toLocaleString()}</span>}
+      </button>
+      {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
     </div>
   );
 };
