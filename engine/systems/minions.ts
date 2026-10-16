@@ -84,6 +84,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   m.life = m.maxLife = life <= 0 ? Infinity : dropped ? life : life * mm.life;   // (the ult golem lasts exactly its timer)
   m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.04 : 1);   // (the bone golem hits 4% harder: 1.3 x 0.8)
   m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
+  m.shield = 0; m.shieldT = 0;
   m.rise = dropped ? 0 : 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
@@ -108,7 +109,9 @@ function crumble(m: (typeof world.minions)[number]): void {
 export function damageMinion(i: number, dmg: number): void {
   const m = world.minions[i];
   if (!m || !m.active || m.rise > 0) return;
-  m.hp -= dmg * (1 - m.def) * boneArmorMul(); m.hitT = 0.25;   // armour + Bone Armor
+  let hit = dmg * (1 - m.def) * boneArmorMul(); m.hitT = 0.25;   // armour + Bone Armor
+  if (m.shield > 0) { const a = Math.min(m.shield, hit); m.shield -= a; hit -= a; }   // Bone Ward soaks it first
+  m.hp -= hit;
   if (m.hp <= 0) {
     crumble(m);
     // soul link: every summon slain costs the necromancer 9% of max HP (never the killing blow: stops at 1 HP)
@@ -180,6 +183,7 @@ export function updateMinions(dt: number): void {
     if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
+    if (m.shieldT > 0) { m.shieldT -= dt; if (m.shieldT <= 0) m.shield = 0; }
     if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
     if (m.skillT > 0) m.skillT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;

@@ -267,6 +267,14 @@ Object.assign(ICONS, {
     <path d="M58 6 L44 11 L53 20Z" fill="#f4efe0" stroke={S} strokeWidth="1.3" strokeLinejoin="round" />
     <path d="M22 42 l-6 -2 M30 34 l-6 -2 M38 26 l-6 -2" stroke="#c9c2a8" strokeWidth="2.4" strokeLinecap="round" />
   </Art>,
+  BONE_WARD: (k: string) => <Art k={k} c="#b48cff">
+    <path d="M32 8 L52 15 V30 C52 43 43 52 32 57 C21 52 12 43 12 30 V15 Z" fill="#2a1840" stroke="#d8c8ff" strokeWidth="2.6" strokeLinejoin="round" />
+    <path d="M32 14 L46 19 V30 C46 39 40 46 32 50 C24 46 18 39 18 30 V19 Z" fill="none" stroke="#b48cff" strokeWidth="1.4" opacity=".8" />
+    <circle cx="32" cy="29" r="8" fill="#ebe5d0" stroke={S} strokeWidth="1.2" />
+    <circle cx="29" cy="28.5" r="1.9" fill="#2a1840" /><circle cx="35" cy="28.5" r="1.9" fill="#2a1840" />
+    <path d="M28.5 35.5 h7 M30 35.5 v3 M32 35.5 v3 M34 35.5 v3" stroke="#ebe5d0" strokeWidth="1.6" />
+    <path d="M17 44 l-5 6 M47 44 l5 6" stroke="#ebe5d0" strokeWidth="2.6" strokeLinecap="round" />
+  </Art>,
   CURSE_FIELD: (k: string) => <Art k={k} c="#8a4ad0">
     <ellipse cx="32" cy="44" rx="26" ry="11" fill="#5a2a8a" opacity=".7" stroke="#b08aff" strokeWidth="1.5" />
     <path d="M18 40 C20 30 26 34 24 22 M32 42 C36 30 30 26 34 14 M46 40 C44 30 40 32 42 22" fill="none" stroke="#8be05a" strokeWidth="3" strokeLinecap="round" opacity=".85" />

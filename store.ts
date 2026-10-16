@@ -121,22 +121,8 @@ export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * ra
 /** Items each shop can put on sale (potion shop provisions, buyable pets). */
 export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.id === 'upgrade_core' || i.type === 'REVIVE');
 export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly).map((p) => p.id)];
-const pickWeighted = <T,>(opts: [T, number][]): T => {
-  let r = Math.random() * opts.reduce((n, o) => n + o[1], 0);
-  for (const [v, w] of opts) { r -= w; if (r <= 0) return v; }
-  return opts[0][0];
-};
-/** Per shop: 1 item on sale most often, sometimes 2-5, each with its own 10-30% off (weighted low). */
-export function rollSales(): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const ids of SHOP_STOCK_IDS) {
-    if (!ids.length) continue;
-    const n = Math.min(ids.length, pickWeighted<number>([[1, 55], [2, 25], [3, 13], [4, 4], [5, 3]]));
-    const pool = [...ids];
-    for (let i = 0; i < n; i++) out[pool.splice(Math.floor(Math.random() * pool.length), 1)[0]] = pickWeighted<number>([[0.1, 40], [0.15, 25], [0.2, 18], [0.25, 10], [0.3, 7]]);
-  }
-  return out;
-}
+/** (owner: no more random 'X% off' shop sales) kept as a no-op so old callers still work. */
+export function rollSales(): Record<string, number> { return {}; }
 /** Current sale fraction for a shop item (0 when not on sale). */
 export const saleOf = (item: { id: string }): number => useGameStore.getState().shopSales[item.id] ?? 0;
 /** Shop price after the item's random sale. */

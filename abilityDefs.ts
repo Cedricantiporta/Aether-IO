@@ -65,9 +65,9 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
       per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
-    { slot: 's3', icon: 'BONE_SPEAR', name: 'Bone Spear', mana: 20, cd: 9,   // (owner: +50%, was 6)
-      desc: 'Hurl a huge spear of bone that impales every enemy in a long line and slows them.',
-      per: (lv) => `${pct(2.25 * lvMul(lv))} dmg · pierces all · slow 40%` },
+    { slot: 's3', icon: 'BONE_WARD', name: 'Bone Ward', mana: 22, cd: 14,   // (owner: replaces Bone Spear)
+      desc: 'Wrap every one of your summons in a shield of bone that soaks damage before their health (a shield worth 30% of their max HP, more with level). Lasts a few seconds.',
+      per: (lv) => `shield ${Math.round((0.3 + 0.05 * (lv - 1)) * 100)}% of each summon's max HP · ${8 + lv - 1}s` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
       per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },

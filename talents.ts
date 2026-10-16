@@ -103,7 +103,7 @@ const EXTRA: Record<HeroClass, Row[][]> = {
   ],
   NECROMANCER: [
     [['Bone Armor', '', 2, 'RAISE_DEAD', { add: { minionLife: 1.5 } }], ['Grave Pact', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.1 } }], ['Dread March', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Ossuary', '', 2, 'RAISE_DEAD', { add: { minionDmg: 0.1 } }]],
-    [['Blight', '', 2, 'CURSE_FIELD', { add: { skillDamage: 0.08 } }], ['Miasma', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }], ['Necrosis', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }], ['Contagion', '', 2, 'BONE_SPEAR', { add: { skillDamage: 0.1 } }]],
+    [['Blight', '', 2, 'CURSE_FIELD', { add: { skillDamage: 0.08 } }], ['Miasma', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }], ['Necrosis', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }], ['Contagion', '', 2, 'BONE_WARD', { add: { skillDamage: 0.1 } }]],
     [['Soul Leech', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Spectral Ward', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Undeath', '', 2, 'u:HEALTH', { add: { maxHealth: 15 } }], ['Eternal', '', 2, 'SOUL_STEP', { add: { dmgReduce: 0.03 } }]],
     [['Marrow Feast', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Rattle', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Bone Wall', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Grim Tide', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.12 } }]],
   ],
@@ -247,7 +247,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Dark Focus', '+2% crit rate', 3, 'u:CRIT_RATE', { add: { critRate: 0.02 } }],
       ['Withering', '+10% skill damage', 2, 'CURSE_FIELD', { add: { skillDamage: 0.1 } }],
       ['Bone Shards', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
-      ['Pestilence', '+20% skill damage, +6% cooldown reduction', 1, 'BONE_SPEAR', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
+      ['Pestilence', '+20% skill damage, +6% cooldown reduction', 1, 'BONE_WARD', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
     ]],
     ['l', [
       ['Phylactery', '+12 max health', 3, 'u:HEALTH', { add: { maxHealth: 12 } }],

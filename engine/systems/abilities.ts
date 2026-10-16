@@ -80,6 +80,7 @@ const elecBreak: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', armorBreak:
 const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9 };
 const holyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true, knockback: 0.6 };
 const aimTmp = new Vector3();
+const wardTmp = new Vector3();
 const frostOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
 const trapOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
 const chillSt: StatusEffect = { type: 'CHILL', duration: 4 };
@@ -479,15 +480,15 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.invulnT = Math.max(p.invulnT, 0.35);
       events.emit('blink', { from, to: p.pos.clone() });
       announce('SOUL_STEP');
-    } else if (slot === 's3') {   // BONE SPEAR: impales a whole line
-      const nSp = lv >= 5 ? 3 : lv >= 3 ? 2 : 1;   // more spears with level, fanned out (Lv 3: 2, Lv 5: 3)
-      for (let k = 0; k < nSp; k++) {
-        const a = (k - (nSp - 1) / 2) * 0.32, ca = Math.cos(a), sa = Math.sin(a), sx = dx * ca + dz * sa, sz = -dx * sa + dz * ca;
-        spawnProjectile('BONE_SPEAR', p.pos.x + sx, p.pos.z + sz, sx, sz, 38, b * 2.25,   // -50% (user)
-          { life: 0.95, pierce: Infinity, radius: 1.9, knockback: 0.3, y: 1.1, effect: { type: 'SLOW', duration: 2, value: 0.4 } });
+    } else if (slot === 's3') {   // BONE WARD (owner: replaces Bone Spear): every summon gets a bone shield of 30% of its max HP
+      const frac = boneWardFrac(lv), dur = boneWardDur(lv);
+      for (const m of world.minions) {
+        if (!m.active) continue;
+        m.shield = Math.max(m.shield, m.maxHp * frac); m.shieldT = dur;
+        events.emit('shockwave', { pos: wardTmp.set(m.x, 0, m.z).clone(), radius: 1.6, color: 0xd8c8ff });
       }
-      p.anim.attackT = 1;
-      announce('BONE_SPEAR');
+      events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xb48cff });
+      announce('BONE_WARD');
     } else {   // PLAGUE GROUND: a cursed patch; the fallen rise for you
       aimPoint(26, 7.5, tgt);
       const R = 7.5 + 0.4 * (lv - 1);
@@ -1250,3 +1251,7 @@ export function tryDash(auto: boolean): boolean {
   castDashSkill(auto);
   return true;
 }
+
+/** Bone Ward (necromancer s3): shield = this fraction of each summon's max HP (30% at Lv 1, +5% per level) for `boneWardDur` s. */
+export const boneWardFrac = (lv: number): number => 0.3 + 0.05 * (Math.max(1, lv) - 1);
+export const boneWardDur = (lv: number): number => 8 + Math.max(1, lv) - 1;

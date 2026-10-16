@@ -5,14 +5,14 @@ import { ShopGrid } from '../../components/ShopGrid';
 import { useMerchant, buyMerchant } from '../../../engine/systems/merchant';
 import { useUiStore } from '../../uiStore';
 
-/** Travelling merchant (run room): potions + three random pieces at a markup, one on sale. Stock lives in engine/systems/merchant. */
+/** Travelling merchant (run room): potions + three random pieces at a markup. Stock lives in engine/systems/merchant. */
 export const MerchantTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const items = useMerchant((s) => s.items);
   const setBuy = useUiStore((s) => s.setBuyItem);
   return (
     <div className="flex flex-col gap-4" data-testid="merchant-tab">
-      <div className="rpg-label">A wandering trader sets up shop. Prices include a travelling markup; one item is on sale. The stock is gone when you leave the room.</div>
+      <div className="rpg-label">A wandering trader sets up shop. Prices include a travelling markup. The stock is gone when you leave the room.</div>
       <ShopGrid>
         {items.map((e, i) => (
           <ItemSlot key={e.item.id} item={e.left > 0 ? e.item : null} fluid size="100%" iconSize="78%" price={e.left > 0 ? e.price : undefined}

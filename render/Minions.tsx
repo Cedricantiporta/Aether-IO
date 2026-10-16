@@ -3,7 +3,7 @@
 // swing, cast, flinch and claw out of the ground; poses are written in useFrame. A thin HP bar shows once hurt.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BufferGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, PlaneGeometry, type Material } from 'three';
+import { AdditiveBlending, BufferGeometry, DoubleSide, Group, IcosahedronGeometry, Mesh, MeshBasicMaterial, PlaneGeometry, type Material } from 'three';
 import { world } from '../engine/world';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
@@ -85,7 +85,7 @@ function golemDef(): RigDef {
 }
 
 interface Rig { root: Group; hips: Group; head: Group; armL: Group; armR: Group; legL: Group; legR: Group }
-interface Slot { outer: Group; body: Group; rigs: Rig[]; bar: Group; fill: Mesh }
+interface Slot { outer: Group; body: Group; rigs: Rig[]; bar: Group; fill: Mesh; ward: Mesh }
 
 function buildRig(d: RigDef, mat: Material, glow: Material): Rig {
   const root = new Group();
@@ -111,6 +111,8 @@ export function Minions() {
     const barBg = new MeshBasicMaterial({ color: 0x140c1c, transparent: true, opacity: 0.8, depthTest: false, side: DoubleSide });
     const barFg = new MeshBasicMaterial({ color: 0xb48cff, depthTest: false, side: DoubleSide });
     const plane = new PlaneGeometry(1, 1);
+    // Bone Ward: a faceted lilac bubble while a summon carries a bone shield
+    const wardGeo = new IcosahedronGeometry(1, 1), wardMat = new MeshBasicMaterial({ color: 0xc9b4ff, transparent: true, opacity: 0.22, blending: AdditiveBlending, depthWrite: false, toneMapped: false, wireframe: false });
     return Array.from({ length: N }, () => {
       const outer = new Group(), body = new Group();
       outer.visible = false; outer.add(body);
@@ -118,7 +120,8 @@ export function Minions() {
       const bar = new Group(); outer.add(bar);
       const bg = new Mesh(plane, barBg); bg.scale.set(1.04, 0.15, 1); bg.renderOrder = 10; bar.add(bg);
       const fill = new Mesh(plane, barFg); fill.scale.set(1, 0.1, 1); fill.position.z = 0.001; fill.renderOrder = 11; bar.add(fill);
-      return { outer, body, rigs, bar, fill };
+      const ward = new Mesh(wardGeo, wardMat); ward.visible = false; outer.add(ward);
+      return { outer, body, rigs, bar, fill, ward };
     });
   }, [N]);
 
@@ -175,6 +178,8 @@ export function Minions() {
 
       // HP bar once hurt, always facing the camera
       const frac = m.maxHp > 0 ? Math.max(0, m.hp / m.maxHp) : 1;
+      S.ward.visible = m.shield > 0 && rise <= 0;
+      if (S.ward.visible) { const r = (golem ? 2.3 : 1.25) * (1 + Math.sin(t * 5 + i) * 0.03); S.ward.scale.set(r, r * 1.15, r); S.ward.position.y = golem ? 2.4 : 1.25; S.ward.rotation.y = t * 0.6; }
       S.bar.visible = frac < 0.999 && rise <= 0;
       if (S.bar.visible) {
         S.bar.position.y = BAR_Y[k] * fade;

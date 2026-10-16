@@ -1,7 +1,7 @@
 import { world } from '../world';
 // ============================================================================
 // Travelling merchant (depth 14 of every biome): 1-2 kinds of potion + three random gear pieces at a markup (gear +50%),
-// rarely an Ankh of Life or a Legendary shard at an inflated price; one entry on sale.
+// rarely an Ankh of Life or a Legendary shard at an inflated price; no sales.
 // Stock is rolled when the room is entered and lives in a tiny zustand store so the shop tab can re-render.
 // ============================================================================
 import { create } from 'zustand';
@@ -40,9 +40,7 @@ export function rollMerchantStock(depth: number): void {
   if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
   else if (r < 0.22) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);
   else if (r < 0.45) add(makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0], 1, MARKUP * 1.5);   // a reforging tool
-  // exactly one entry on sale
-  const s = items[Math.floor(Math.random() * items.length)];
-  if (s) { s.sale = true; s.price = Math.max(1, Math.round(s.oldPrice * (1 - SALE))); }
+  // (owner: no 'X% off' sale entry any more)
   useMerchant.setState({ items });
 }
 
