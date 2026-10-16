@@ -1097,3 +1097,6 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Monster EXP -40% (`enemies.MONSTER_XP_MUL` 0.6). Quests give no EXP (no quest reward type carries any).
 - Item slots no longer show the +N upgrade badge; it shows only in tooltips / previews (ItemTip, item dialogs, Blacksmith).
 - Start: 5,000 gold + 500 gems (`store.WELCOME_GIFT`). Prologue story quests (guard..board) pay 500 gold each (base 50).
+- **Bounty Board** is a centred popup in the Quest-window layout (`ui/panels/shop/Quests.tsx`, ShopPanel returns it for
+  the QUESTS tab): taken + today's offers on the left, banner / flavour / objective / rewards on the right, Accept /
+  Abandon / Claim bottom-right. Harvest nodes give very little EXP (x0.08, `crates.breakCrate`).

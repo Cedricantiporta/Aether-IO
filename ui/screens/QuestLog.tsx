@@ -36,7 +36,7 @@ const CurSlot: React.FC<{ icon: React.ReactNode; n: number; label: string }> = (
     <div className="rpg-slot fluid qw-cur">{icon}<span className="slot-qty">{n.toLocaleString()}</span></div>
   </div>
 );
-const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean }> = ({ r, scale }) => {
+export const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean }> = ({ r, scale }) => {
   const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items, cores = (r as QuestReward).cores, potions = (r as QuestReward).potions;
   const list: [string, number][] = [...(cores ? [['upgrade_core', cores] as [string, number]] : []), ...(potions ? [['potion_hp', potions] as [string, number]] : []), ...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
   return (

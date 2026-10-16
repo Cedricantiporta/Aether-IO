@@ -1,70 +1,78 @@
-import React, { useEffect } from 'react';
-import { Coins, Gem, FlaskConical, Hexagon, Sword } from 'lucide-react';
+// Bounty Board (owner: a centred popup laid out like the Quest window): today's offers and the taken bounties on the
+// left, the selected bounty on the right (banner, flavour, objective, rewards) with Accept / Abandon / Claim.
+import React, { useEffect, useState } from 'react';
+import { ScrollText, Check, Lock } from 'lucide-react';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { questDone, questNeedsKing, questTitle, questFlavor, activeQuests, questOffers, QUEST_MAX_ACTIVE, type Quest } from '../../../quests';
-import { Button } from '../../components/Button';
+import { Modal } from '../../components/Modal';
+import { Rewards } from '../../screens/QuestLog';
 
-const Chip: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
-  <span className="rpg-badge !text-[.6rem] inline-flex items-center gap-1">{icon}{text}</span>
-);
+const progressText = (q: Quest): string => (q.type === 'AUDIENCE' ? (questDone(q) ? 'Done' : 'Pending') : `${Math.min(q.progress, q.target).toLocaleString()} / ${q.target.toLocaleString()}`);
 
-const RewardChips: React.FC<{ q: Quest }> = ({ q }) => {
-  const r = q.reward;
-  return (
-    <div className="flex gap-1.5 flex-wrap">
-      {r.gold ? <Chip icon={<Coins size={11} />} text={`${r.gold} gold`} /> : null}
-      {r.gems ? <Chip icon={<Gem size={11} />} text={`${r.gems} gems`} /> : null}
-      {r.cores ? <Chip icon={<Hexagon size={11} />} text={`${r.cores} cores`} /> : null}
-      {r.potions ? <Chip icon={<FlaskConical size={11} />} text={`${r.potions} HP + ${r.potions} MP potions`} /> : null}
-      {r.item ? <Chip icon={<Sword size={11} />} text={`${r.item.charAt(0) + r.item.slice(1).toLowerCase()} gear`} /> : null}
-    </div>
-  );
-};
-
-const QuestCard: React.FC<{ q: Quest; full: boolean }> = ({ q, full }) => {
-  const { claim, accept, abandon } = useGameStore(useShallow((s) => ({ claim: s.claimQuest, accept: s.acceptQuest, abandon: s.abandonQuest })));
-  const done = questDone(q), king = questNeedsKing(q);
-  return (
-    <div className="rpg-frame p-3 flex flex-col gap-2" data-testid={q.accepted ? 'quest' : 'quest-offer'} data-done={done ? '1' : '0'}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="rpg-title text-base">{questTitle(q)}</span>
-        {q.accepted && <span className="rpg-num text-[var(--gold-light)]" data-testid="quest-progress">{q.type === 'AUDIENCE' ? (done ? 'Done' : 'Pending') : `${Math.min(q.progress, q.target).toLocaleString()} / ${q.target.toLocaleString()}`}</span>}
-      </div>
-      <div className="text-xs text-[var(--text-dim)]">{questFlavor(q)}</div>
-      {q.accepted && king && <div className="king-note" data-testid="quest-king">{q.type === 'AUDIENCE' ? 'Talk to the King in the castle keep' : 'Objective complete: report to the King in the castle'}</div>}
-      {q.accepted && <div className="rpg-bar thin" style={{ ['--bc' as any]: done ? '#4ade80' : '#e9b949', ['--fill' as any]: done ? 1 : Math.min(1, q.progress / q.target) }}><div className="fill" /></div>}
-      <div className="flex items-center justify-between gap-2">
-        <RewardChips q={q} />
-        {q.accepted ? (
-          <div className="flex gap-1.5">
-            {!done && <Button size="sm" variant="default" onClick={() => abandon(q.id)} data-testid="abandon">Abandon</Button>}
-            <Button size="sm" variant={done ? 'green' : 'default'} disabled={!done} onClick={() => claim(q.id)} data-testid="claim">{done ? 'Claim' : king ? 'See the King' : 'In progress'}</Button>
-          </div>
-        ) : (
-          <Button size="sm" variant="primary" disabled={full} onClick={() => accept(q.id)} data-testid="accept">{full ? 'Slots full' : 'Accept'}</Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export const QuestsTab: React.FC = () => {
-  const { quests, refresh } = useGameStore(useShallow((s) => ({ quests: s.quests, refresh: s.refreshQuestBoard })));
+export const QuestsTab: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { quests, refresh, claim, accept, abandon } = useGameStore(useShallow((s) => ({ quests: s.quests, refresh: s.refreshQuestBoard, claim: s.claimQuest, accept: s.acceptQuest, abandon: s.abandonQuest })));
   useEffect(() => { refresh(); }, [refresh]);
   const active = activeQuests(quests), offers = questOffers(quests);
   const full = active.length >= QUEST_MAX_ACTIVE;
+  const [selId, setSel] = useState('');
+  const q = [...active, ...offers].find((x) => x.id === selId) ?? active[0] ?? offers[0];
+  const done = q ? questDone(q) : false, king = q ? questNeedsKing(q) : false;
+  const row = (x: Quest) => {
+    const d = x.accepted && questDone(x);
+    return (
+      <button key={x.id} className={`qw-step pe ${q?.id === x.id ? 'sel' : ''} ${x.accepted ? (d ? 'done ready' : 'cur') : 'offer'}`} onClick={() => setSel(x.id)} data-testid={x.accepted ? 'quest' : 'quest-offer'} data-done={d ? '1' : '0'}>
+        <span>{questTitle(x)}{x.accepted && !d && <em> · {progressText(x)}</em>}</span>
+        {d ? <Check size={14} className="ok" /> : x.accepted ? <b className="qbadge">Q</b> : <b className="qbadge blue">!</b>}
+      </button>
+    );
+  };
   return (
-    <div className="flex flex-col gap-3" data-testid="quests-tab">
-      <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
-        Pick up to {QUEST_MAX_ACTIVE} quests from the board. Only accepted quests make progress during your runs.
-        New offers are posted every day; abandoning a quest frees its slot.
+    <Modal open onClose={onClose} title="Bounty Board" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250} full portal>
+      <div className="qw" data-testid="quests-tab">
+        <div className="qw-body">
+          <div className="qw-list rpg-scroll">
+            <div className="qw-chap open"><div className="qw-chap-h"><span>Taken · {active.length} / {QUEST_MAX_ACTIVE}</span></div>
+              {active.length === 0 && <div className="qw-none">No bounties taken yet. Pick one below.</div>}
+              {active.map(row)}
+            </div>
+            <div className="qw-chap open"><div className="qw-chap-h"><span>Today's offers</span>{full && <Lock size={14} />}</div>
+              {offers.length === 0 && <div className="qw-none">No new offers today. Come back tomorrow.</div>}
+              {offers.map(row)}
+            </div>
+          </div>
+          {q ? (
+            <div className="qw-det">
+              <div className="qw-banner">
+                <div className="qw-seal"><ScrollText size={20} /></div>
+                <div><em>{q.accepted ? 'Bounty · taken' : 'Bounty · offer'}</em><b>{questTitle(q)}</b></div>
+              </div>
+              <div className="qw-cols">
+                <div className="qw-text">
+                  <p>{questFlavor(q)}</p>
+                  <p className="qw-quote">“Only accepted bounties make progress during your runs. New offers are posted every day.”<span>Hodge, Bounty Clerk</span></p>
+                </div>
+                <div className="qw-side">
+                  <div className="qw-sec">Objective</div>
+                  <div className="qw-obj">{q.accepted && done ? <><Check size={14} /> Completed</> : <>{questTitle(q)}{q.accepted && <b> {progressText(q)}</b>}</>}</div>
+                  {q.accepted && king && <div className="qw-obj" data-testid="quest-king">{q.type === 'AUDIENCE' ? 'Talk to the King in the castle keep' : 'Report to the King in the castle'}</div>}
+                  <div className="qw-sec">Rewards</div>
+                  <Rewards r={q.reward} />
+                  {q.reward.item && <div className="qw-obj" style={{ marginTop: '.3rem' }}>+ one {q.reward.item.charAt(0) + q.reward.item.slice(1).toLowerCase()} gear piece</div>}
+                </div>
+              </div>
+              <div className="qw-btns">
+                {q.accepted ? (<>
+                  {!done && <button className="qw-btn pe" onClick={() => abandon(q.id)} data-testid="abandon">Abandon</button>}
+                  <button className={`qw-btn pe ${done ? 'gold' : ''}`} disabled={!done} onClick={() => claim(q.id)} data-testid="claim">{done ? 'Claim' : king ? 'See the King' : 'In progress'}</button>
+                </>) : (
+                  <button className="qw-btn gold pe" disabled={full} onClick={() => accept(q.id)} data-testid="accept">{full ? 'Slots full' : 'Accept'}</button>
+                )}
+              </div>
+            </div>
+          ) : <div className="qw-det"><div className="qw-text"><p>The board is empty.</p></div></div>}
+        </div>
       </div>
-      <div className="rpg-title text-sm">Active quests ({active.length} / {QUEST_MAX_ACTIVE})</div>
-      {active.length === 0 && <div className="text-xs text-[var(--text-dim)]">No quests taken yet. Accept one from the board below.</div>}
-      {active.map((q) => <QuestCard key={q.id} q={q} full={full} />)}
-      <div className="rpg-title text-sm mt-1">Board — today's offers</div>
-      {offers.map((q) => <QuestCard key={q.id} q={q} full={full} />)}
-    </div>
+    </Modal>
   );
 };

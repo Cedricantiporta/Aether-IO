@@ -51,6 +51,7 @@ export const ShopPanel: React.FC = () => {
   const ui = useUiStore.getState();
   const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH', 'FISH'].includes(tab),
     (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
+  if (tab === 'QUESTS') return <QuestsTab onClose={close} />;   // (owner) the Bounty Board is a centred popup, not a side panel
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex flex-col side-panel shop-side" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>
@@ -66,7 +67,6 @@ export const ShopPanel: React.FC = () => {
           {tab === 'SUMMON' && <SummonTab />}
           {tab === 'BLACKSMITH' && <BlacksmithTab />}
           {tab === 'SKILLS' && <SkillsTab />}
-          {tab === 'QUESTS' && <QuestsTab />}
           {tab === 'MERCHANT' && <MerchantTab />}
           {tab === 'ARMORY' && <ArmoryTab />}
           {tab === 'WAREHOUSE' && <WarehouseTab />}

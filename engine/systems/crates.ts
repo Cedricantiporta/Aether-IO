@@ -95,7 +95,7 @@ export function breakCrate(c: Crate): void {
   const st = useGameStore.getState();
   const wave = world.director.wave;
   const inRun = st.status === GameStatus.PLAYING;
-  const xp = Math.round(BASE_XP[c.kind] * (1 + 0.05 * (wave - 1)));
+  const xp = Math.max(1, Math.round(BASE_XP[c.kind] * (1 + 0.05 * (wave - 1)) * (isHarvestNode(c.kind) ? 0.08 : 1)));   // (owner: harvesting gives very little EXP)
   if (inRun) spawnPickup('XP', dropAt(c, 0, 0), xp); // village harvesting never grants run xp
 
   switch (c.kind) {
