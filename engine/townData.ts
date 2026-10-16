@@ -15,7 +15,7 @@
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
-import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH } from './beachData';
+import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
@@ -40,7 +40,7 @@ export function isTownWater(x: number, z: number): boolean {
   if (Math.abs(x) <= BRIDGE.hw + 0.8 && z > BRIDGE.z0 - 1 && z < BRIDGE.z1 + 1) return false;
   if (x >= RIVER.x0 - 30 && x <= RIVER.x1 && z > riverBank(x, 0) + 0.3 && z < riverBank(x, 1) - 0.3) return true;
   if (x < LAKE.x1 && z > LAKE.z0 && z < LAKE.z1) {
-    const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - (MAIN_BEACH.push - beachWobble(z) * 0.5) * mk;
+    const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - mainShoreOff(z) * mk;
     if (x < sx - 1.2) return true;
   }
   return false;

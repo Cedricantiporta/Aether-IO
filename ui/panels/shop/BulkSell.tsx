@@ -18,7 +18,7 @@ export const BulkSellPopup: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   const go = () => { bulkSell(o); onClose(); };
   const risky = o.rarities.some((r) => r === 'EPIC' || r === 'LEGENDARY' || r === 'MYTHIC') || o.craftMats;
   return (
-    <Modal open ribbon title="Bulk sell" tone="gold" width="22rem" z={180} onClose={onClose}>
+    <Modal open portal ribbon title="Bulk sell" tone="gold" width="22rem" z={180} onClose={onClose}>
       <div className="flex flex-col gap-3" data-testid="bulk-sell">
         <div className="bk-sec">Gear tiers</div>
         <div className="bk-tiers">

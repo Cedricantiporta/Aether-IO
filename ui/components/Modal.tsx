@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Panel, PanelHead, Ribbon } from './Frame';
 import { Button } from './Button';
@@ -9,10 +10,16 @@ interface ModalProps {
   width?: string; children: React.ReactNode; z?: number; onConfirm?: () => void; icon?: React.ReactNode; dim?: number;
   /** phones: fill the screen (big lists: codex, goals, quests, settings) */
   full?: boolean;
+  /** render at the HUD root (centred on screen) instead of inside the parent panel */
+  portal?: boolean;
 }
 
 /** Generic framed dialog with dim backdrop and spring-in animation. */
-export const Modal: React.FC<ModalProps> = ({ open, onClose, title, ribbon, tone = 'gold', width = '26rem', children, z = 200, onConfirm, icon, dim = .6, full }) => {
+export const Modal: React.FC<ModalProps> = (props) => {
+  if (props.portal) return createPortal(<ModalBody {...props} />, (document.querySelector('.hud-root') as HTMLElement) ?? document.body);
+  return <ModalBody {...props} />;
+};
+const ModalBody: React.FC<ModalProps> = ({ open, onClose, title, ribbon, tone = 'gold', width = '26rem', children, z = 200, onConfirm, icon, dim = .6, full }) => {
   useEffect(() => {
     if (!open) return;
     const h = (e: KeyboardEvent) => {

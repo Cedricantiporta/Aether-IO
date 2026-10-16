@@ -70,7 +70,7 @@ const GoldPopup: React.FC<{ mode: 'IN' | 'OUT'; max: number; onDone: (v: number)
   const [amt, setAmt] = useState('');
   const n = Math.min(max, Math.max(0, Math.floor(Number(amt.replace(/[^0-9]/g, '')) || 0)));
   return (
-    <Modal open ribbon title={mode === 'IN' ? 'Deposit gold' : 'Withdraw gold'} tone="gold" width="19rem" z={180} onClose={() => onDone(0)} onConfirm={() => onDone(n)}>
+    <Modal open portal ribbon title={mode === 'IN' ? 'Deposit gold' : 'Withdraw gold'} tone="gold" width="19rem" z={180} onClose={() => onDone(0)} onConfirm={() => onDone(n)}>
       <div className="flex flex-col gap-2.5" data-testid="wh-gold-popup">
         <div className="text-[.75rem]" style={{ color: 'var(--text-dim)' }}>{mode === 'IN' ? 'In your bag' : 'In the warehouse'}: <b className="rpg-num text-white">{max.toLocaleString()}</b></div>
         <div className="flex gap-1.5">

@@ -83,11 +83,13 @@ export const BEACH_COLLIDERS: [number, number, number][] = (() => {
 })();
 
 /** Wavy offset of the beach water line (owner: rounded, irregular shore instead of a straight edge). */
-export const beachWobble = (z: number): number => Math.sin(z * 0.19 + 0.7) * 2.4 + Math.sin(z * 0.47 + 2.1) * 1.1;
+export const beachWobble = (z: number): number => Math.sin(z * 0.19 + 0.7) * 2.4 + Math.sin(z * 0.47 + 2.1) * 1.1 + Math.sin(z * 1.13 + 0.3) * 0.6;
 
 /** (owner) the mainland beach south of the river mouth, styled like the lakeside beach: sand from the water line to
  *  innerX, a little west-pushed wavy shore (SHORE_PUSH) over z0..z1. */
-export const MAIN_BEACH = { z0: 78, z1: 97, innerX: -41.5, push: 2.2 };
+export const MAIN_BEACH = { z0: 78, z1: 97, innerX: -41.5, push: 3.2 };
+/** How far the mainland beach's water line is pushed west at z (owner: irregular, not a straight edge). */
+export const mainShoreOff = (z: number): number => MAIN_BEACH.push + Math.sin(z * 0.23 + 0.4) * 2.6 + Math.sin(z * 0.61 + 2) * 1.3 + Math.sin(z * 1.37) * 0.55;
 /** 0..1 blend of the mainland beach band at z (soft ends). */
 export const mainBeachK = (z: number): number => Math.min(1, Math.max(0, (z - MAIN_BEACH.z0 + 4) / 5)) * Math.min(1, Math.max(0, (MAIN_BEACH.z1 + 3 - z) / 5));
 
