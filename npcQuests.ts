@@ -20,6 +20,7 @@ export type NpcObjectiveType =
   | 'DELIVER'                                                  // bring loot items to the NPC; they are removed on turn-in
   | 'TALK'                                                     // speak to another NPC (target: its name)
   | 'INTERACT'                                                 // a farm / town action (target: 'milk' | 'egg' | 'cat' | 'pin')
+  | 'LISTEN'                                                   // just sit through the giver's (very long) story: done once accepted
   | 'ACTION';                                                  // a shop / town action (target: 'buy_potion' | 'store' | 'learn' | 'upgrade' | 'summon'
                                                                //   | 'catch_fish' | 'sell_fish' | 'cave_vein' | 'cave_deep' | 'buy_flask', see engine/events hub)
 
@@ -64,6 +65,167 @@ export interface NpcQuestDef {
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
+  // ---- LISTEN quests (owner: very, very long dialogue, good reward). Accept on the last line, talk again for the pay-off.
+  {
+    id: 'garth_story', minLevel: 2, giver: 'Old Garth', title: 'The Longest Story Ever Told', summary: 'Listen to Old Garth\'s story, then talk to him again',
+    intro: [
+      'Oh! A young hero. Sit, sit. Have I told you about the time I fought a dragon?',
+      'It was forty years ago. Or fifty. It was a Tuesday. I remember because Tuesday was soup day.',
+      'The soup was leek. No, potato. Leek AND potato. That is important, you will see why.',
+      'You will not see why. It is not important. But it was good soup.',
+      'So there I was, walking home from the soup, when I heard it. A terrible hiss, from the reeds.',
+      'I drew my sword. Well, it was a spoon. I had just come from soup. But I held it like a sword.',
+      'The reeds parted. And out stepped... the beast. White as snow. Eyes like coals. Wings like a storm.',
+      'It looked at me. I looked at it. Neither of us blinked. My eyes were very dry.',
+      'Then it charged! HONK, it roared. HONK! The most terrible roar I ever heard.',
+      '...Yes, fine, it was a goose. But it was a very big goose. Practically a dragon. A dragon\'s cousin.',
+      'I ran. Three miles. Uphill. In the rain. The goose followed me the whole way.',
+      'I hid in the mill. The goose waited outside. For TWO DAYS.',
+      'On the third day, the miller\'s wife came out with bread. The goose ate the bread and left.',
+      'I married her. The miller\'s wife, not the goose. The miller was not happy. Long story.',
+      'Shall I tell you the miller story? No? Ah, you young people. Always in a hurry.',
+      'Where was I. The goose. Every spring since, a goose comes to my door. I think it is the same one.',
+      'It must be very old now. Like me. We nod at each other. Two old warriors.',
+      'Anyway, that is how I became the bravest man in Aether. Do you want to hear the ending?',
+    ],
+    progress: 'Come back, come back, I have not finished!',
+    done: [
+      'The ending! Right. The ending is: the goose is still out there. Watching.',
+      'Also, I left a sack of gold in that mill and never went back for it. Too scared of the goose.',
+      'You went out of your way to listen to an old man ramble. Nobody does that any more. Here: my goose money.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 3000, gems: 30 },
+  },
+  {
+    id: 'fenn_ballad', minLevel: 5, giver: 'Fenn', title: 'A Ballad in Ninety-Nine Verses', summary: 'Hear all of Fenn\'s ballad, then talk to him again',
+    intro: [
+      'A hero! At last, an audience who cannot run. I have written you a ballad. Ninety-nine verses. Ready?',
+      'Verse one! "Oh, the hero walked out of the gate, / and the hero was not late."',
+      'Verse two! "Oh, the hero was strong and brave, / and the hero did not shave."',
+      'Verse three! "Oh the hero... met a slime, / and the slime... was a crime." Hm. I will polish that one.',
+      '(Verses four through thirty are about your boots. They are very good boots. Fenn sings about them at length.)',
+      'Verse thirty-one! The tragic love story between your sword and a goblin\'s shield. Everyone cries.',
+      'Verse forty-four. The instrumental part. Fenn hums it. For a long time. A really long time.',
+      'Verse fifty! "Halfway there, halfway there, / the hero still has lovely hair."',
+      '(Verses fifty-one to seventy rhyme every line with "orange". Fenn has invented several new words.)',
+      'Verse seventy-one! The key change! Fenn goes up an octave. A nearby bird leaves.',
+      'Verse eighty! The hero\'s mother appears. She is proud. She also asks why you never write.',
+      'Verse ninety! The big finale begins. Fenn stands on the bench.',
+      'Verse ninety-eight! The hero saves the world, and also remembers to feed the cat.',
+      'And verse ninety-nine! The final verse! Are you ready? Are you SURE you are ready?',
+    ],
+    progress: 'Do not go, the final verse is the best one!',
+    done: [
+      'Verse ninety-nine: "...and that is the end, / thank you, my friend." *takes a very deep bow*',
+      'You stayed for ALL of it. You are the first. The first! The last one fell asleep at verse twelve.',
+      'Take this. A bard pays his audience, that is the rule. I just made it up, but it is a rule now.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 4000, gems: 40, items: [{ id: 'reforge_stone', qty: 1 }] },
+  },
+  {
+    id: 'maren_forms', minLevel: 8, giver: 'Steward Maren', title: 'Terms and Conditions of Heroism', summary: 'Have Steward Maren read you the hero contract, then talk again',
+    intro: [
+      'Ah, the hero. Before the crown can pay you a bonus, I am obliged to read you the Royal Hero Contract. In full.',
+      'Article One. The Hero (hereafter "the Hero") agrees to be heroic, valiant, and at least somewhat punctual.',
+      'Article Two. The Hero shall not stand in the fountain. Clause 2b: this includes "just to cool off".',
+      'Article Three. Monsters slain on royal land remain royal property. The Hero may keep the smell.',
+      'Article Four. Treasure. Section one. Subsection one. Paragraph one. ...I will skip to the important bit.',
+      'I have been told I am not allowed to skip. Paragraph one: treasure is shiny. Paragraph two: treasure is also nice.',
+      'Article Five. The Hero shall not name their sword after a member of the court. We have had incidents. Sir Bram knows.',
+      'Article Six. Respawning. The crown is not responsible for anything the Hero loses on the way back from being dead.',
+      'Article Seven. The Hero agrees not to ask the King about his crown. It is a sensitive subject. It is a little small.',
+      'Article Eight. Dragons. See Appendix D. Appendix D is blank. We have never needed it. We are very hopeful.',
+      'Article Nine. Geese. See Old Garth. Do not see Old Garth. You will be there all day.',
+      'Article Ten. Holidays. The Hero is entitled to one holiday per year, to be taken when the world is not ending.',
+      'The world has been ending for eleven years. Please plan accordingly.',
+      'Article Eleven. Signatures. Please sign here, here, here, initial here, and here. And here. Do you agree to all terms?',
+    ],
+    progress: 'We are not done, hero. There is still the appendix about cheese.',
+    done: [
+      'Splendid. All forty-one signatures, filed in triplicate. Most heroes give up at Article Two.',
+      'By royal decree, your patience is hereby rewarded. And may I say, it is a pleasure to meet someone who reads the fine print.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 6000, items: [{ id: 'upgrade_core', qty: 3 }, { id: 'erase_scroll', qty: 1 }] },
+  },
+  {
+    id: 'rodric_tale', minLevel: 12, giver: 'Rodric the Tipsy', title: 'The Tale (Again)', summary: 'Hear Rodric\'s legendary adventure, then talk to him again',
+    intro: [
+      'Have I told you how I slew the Ogre King of the Northern Pass? *hic* Pull up a stool.',
+      'It was a dark and stormy night. Or day. It was dark, anyway. I had my trusty axe, Bertha.',
+      'No, Bertha was my horse. My axe was called... also Bertha. I am not good with names.',
+      'So the Ogre King comes at me. Nine feet tall. Twelve feet. Eight feet and a big hat.',
+      'He swings his club! I duck! He swings again! I duck again! I was very good at ducking.',
+      'Then I... wait. Did I already tell you about the bridge? There was a bridge. Let me start again.',
+      'It was a dark and stormy night, and there was a bridge. Bertha the horse would not cross it.',
+      'So I carried her. Over the bridge. A horse. On my back. That is how I hurt my knee.',
+      'And on the other side: the Ogre King! Ten feet tall. In a hat. With a very nice feather.',
+      'We fought for three days. On the fourth day we stopped for lunch. He had brought sandwiches.',
+      'Good sandwiches, too. Ham. We talked. Turns out he was not a king at all. He just liked the hat.',
+      'We became pen friends. He writes every winter. Lovely handwriting for an ogre.',
+      'So technically I did not slay him. But I did out-eat him. At lunch. That counts, in the north.',
+      'Marta! Another cider for my friend here! ...No? Fine. Want to hear the best part?',
+    ],
+    progress: 'Sit down, sit down, I am getting to the best part. *hic*',
+    done: [
+      'The best part is: he sent me his hat. I traded it for a map. Which I lost. In a duel. With a goblin.',
+      'You are a good listener, hero. Most people leave after the bridge. Here, from my adventuring days. Do not tell Marta.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 8000, gems: 40, items: [{ id: 'temper_oil', qty: 2 }] },
+  },
+  {
+    id: 'maeve_gossip', minLevel: 15, giver: 'Maeve', title: 'Have You Heard?', summary: 'Hear ALL of Maeve\'s gossip, then talk to her again',
+    intro: [
+      'Oh, come here, come here. Have you heard? Of course you have not heard, you are always out stabbing things.',
+      'Well! Brenna\'s slimes are back. Again. She says they are a "different family" of slimes. I say a slime is a slime.',
+      'And Pip! Pip has a sunstone in a sock drawer. In a SOCK drawer! The whole street can see it glow at night.',
+      'Rodric owes Marta for forty-three ciders. Forty-four. He just ordered another one, I can hear it.',
+      'And Dorn found a potato in the mine. A potato! He says it was "very rock-shaped". Nobody believes him.',
+      'Sir Bram named his sword "Steward Maren". The steward found out. There was a meeting. There is now a rule.',
+      'Fenn wrote a song about me. Ninety verses. I only came up in verse eighty-two, which I find rude.',
+      'Old Garth is still on about that goose. I have SEEN the goose. It is a perfectly normal goose. A bit big.',
+      'Lysa\'s mint mana potions? Not mint. Boiled socks. I am not saying whose socks. Pip\'s, probably.',
+      'The King tried on his crown again this morning. Still small. Nobody has the heart to tell him.',
+      'And Sister Elowen... no. No, I will not say. Well. She hums during sermons. The same three notes. Every week.',
+      'And between you and me... Captain Rhea\'s ship? Named after an old flame. Not saying who. Rhymes with "Lodric".',
+      'Oh, and someone keeps standing in the fountain. Probably a hero. Not you, of course. Unless it was you.',
+      'Anyway, that is just this week. Do you want to hear last week too?',
+    ],
+    progress: 'Do not run off, I have not even got to the scandal!',
+    done: [
+      'Last week was quiet. A cat got stuck on the church. Rodric got stuck getting it down. Very quiet week.',
+      'You are a dear for listening. Here: everybody pays me to keep secrets, so I may as well pay someone to hear them.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 10000, gems: 50, shards: ['EPIC', 3] },
+  },
+  {
+    id: 'wren_lecture', minLevel: 20, giver: 'Wren', title: 'A Brief Lecture on Slimes', summary: 'Attend Wren\'s "brief" lecture, then talk to her again',
+    intro: [
+      'You! You have killed many slimes, yes? Excellent. You qualify for my lecture. It is brief. Very brief.',
+      'Chapter One: What Is A Slime? A slime is a slime. Thank you. ...No, that was a joke. Scholars are allowed one per year.',
+      'A slime is a gelatinous creature of the order Blobbidae. Seventeen known species. Eighteen if you count Brenna\'s.',
+      'Chapter Two: The Slime Life Cycle. A slime begins life as a smaller slime. It ends life as a slime-shaped puddle, usually near you.',
+      'Chapter Three: Slime Diet. Slimes eat everything. Grass. Boots. Lunch. Brenna\'s lunch, specifically, on three occasions.',
+      'Chapter Four: Slime Emotions. Slimes have one emotion. It is "bounce". It is a very strong emotion.',
+      'Chapter Five: Slime Romance. I will skip Chapter Five. Nobody needs Chapter Five.',
+      'Chapter Six: The Slime King. Larger slime. Crown. We do not know where the crown comes from. Further study is needed.',
+      'I applied for a grant to study the crown. The King said no. I suspect it is about his own crown. It is a little small.',
+      'Chapter Seven: Why Do Slimes Wobble? Excellent question. Nobody knows. I have a theory. It is very long.',
+      'The theory, in brief: they are nervous. Chapter Eight explains why. Chapter Eight is forty pages.',
+      'Chapter Eight, page one... I am being told the lecture hall closes at sundown. It is sundown. Shall I go on?',
+    ],
+    progress: 'The lecture continues! Take your seat, there will be a quiz.',
+    done: [
+      'Quiz! Question one: what is a slime? ...Correct! A slime is a slime. You have passed with honours.',
+      'Your diploma. Well, a reward, the academy is out of diplomas. Apply it to something shiny.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 12000, gems: 60, shards: ['LEGENDARY', 1] },
+  },
   // ---- the chapel: Sister Elowen (two in a chain)
   {
     id: 'elowen_graves', minLevel: 3, giver: 'Sister Elowen', title: 'Restless Graves', summary: 'Put 12 zombies to rest',
@@ -459,6 +621,7 @@ export function bagCount(inv: readonly Item[], id: string): number {
 export function npcQuestProgress(def: NpcQuestDef, save: NpcQuestSave, inv: readonly Item[]): number {
   const o = def.objective;
   if (o.type === 'DELIVER') return Math.min(o.count, bagCount(inv, idsOf(o.target)[0]));
+  if (o.type === 'LISTEN') return save.q[def.id]?.s === 1 ? o.count : 0;   // you listened: talk to them again for the reward
   return Math.min(o.count, save.q[def.id]?.p ?? 0);
 }
 export const npcQuestReady = (def: NpcQuestDef, save: NpcQuestSave, inv: readonly Item[]): boolean =>

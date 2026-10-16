@@ -1080,3 +1080,7 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Wizard Fireballs: 1 at Lv 1-2, 2 at Lv 3-4, 3 at Lv 5; the fire trail (zone aux 2) burns enemies as long as they stand
   in it (`zones.fireTick` pathBurn, 0.6 s refresh).
 - Harvest nodes can be harvested mid-fight (director.scanNearby); other room interactions still wait for a clear room.
+- **LISTEN quests (owner: very long funny dialogue, good reward):** objective type `LISTEN` (npcQuests.ts) is complete as
+  soon as it is accepted (accept on the last of a 12-18 line intro), then talk to the giver again for the pay-off lines +
+  reward. Six so far: Old Garth's goose "dragon" (Lv 2), Fenn's 99-verse ballad (Lv 5), Steward Maren's hero contract
+  (Lv 8), Rodric's Ogre King tale (Lv 12), Maeve's gossip round (Lv 15), Wren's "brief" slime lecture (Lv 20).

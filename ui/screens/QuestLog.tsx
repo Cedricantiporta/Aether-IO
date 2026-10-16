@@ -160,7 +160,7 @@ export const QuestLog: React.FC = () => {
                       <Rewards r={side.reward} scale />
                     </div>
                   </div>
-                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
+                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION', 'LISTEN'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
                 </div>
               );
             })()}

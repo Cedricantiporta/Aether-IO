@@ -91,7 +91,7 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   const nq = useGameStore((s) => s.npcQuests), inv = useGameStore((s) => s.inventory);
   const ready = npcQuestReady(d, nq, inv), n = npcQuestProgress(d, nq, inv), c = d.objective.count;
   const dist = useDistance(() => npcQuestNav(d));
-  const o = d.objective, town = ready || o.type === 'TALK' || o.type === 'INTERACT' || o.type === 'ACTION';
+  const o = d.objective, town = ready || o.type === 'TALK' || o.type === 'INTERACT' || o.type === 'ACTION' || o.type === 'LISTEN';
   return (
     <div className={`qt-row npc ${ready ? 'done' : ''}`} data-testid="npc-quest-row" role="button" title="Click: auto-path"
       onClick={() => {
@@ -101,7 +101,7 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
       }}>
       <div className="qt-head"><BookOpen size={13} /><span>{ready ? `Return to ${npcQuestTurnIn(d)}` : d.giver}</span><span className="qt-dist" ref={dist} /></div>
       <div className="qt-title">{d.title}</div>
-      {o.type === 'TALK'
+      {o.type === 'TALK' || o.type === 'LISTEN'
         ? <div className="qt-line"><b>{ready ? 'Done' : d.summary}</b></div>
         : <>
           <div className="qt-line"><span className="qt-bar"><i style={{ width: `${(ready ? 1 : n / Math.max(1, c)) * 100}%` }} /></span><b>{n} / {c}</b></div>
