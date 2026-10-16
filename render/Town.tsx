@@ -332,7 +332,9 @@ function buildBrewer() {
 }
 
 const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech, BREWER: buildBrewer, FISH: buildFishStall, MINE: buildMineStall };
-const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet Stable', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
+const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Merchant', BLACKSMITH: 'Blacksmith', PETS: 'Pet Merchant', ARMORY: 'Armor Merchant', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse Keeper', TECH: 'Tinkerer', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplier' };
+/** (owner) shopkeepers have their own names: the name tag shows the role on top, the name below. */
+const KEEPER: Record<ShopType, string> = { SUPPLIES: 'Rosalind', BLACKSMITH: 'Brakk', PETS: 'Jev', ARMORY: 'Hald', FORTUNE: 'Madame Zora', WAREHOUSE: 'Otto', TECH: 'Quill', BREWER: 'Nessa', FISH: 'Salty Pell', MINE: 'Durgan' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
 const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9], MINE: [-1.6, -0.9] };
@@ -467,7 +469,9 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
   const craftDot = useGameStore((s) => type === 'BLACKSMITH' && canCraftAny(s));   // red dot: something can be forged
-  const label = useMemo(() => { const l = labelMaterial(TITLES[type], '#f1e2b8', { size: 64, plate: 'plate', dot: craftDot }); l.mat.depthTest = false; return l; }, [type, color, craftDot]);   // drawn over roofs
+  const label = useMemo(() => { const l = labelMaterial(KEEPER[type], '#f6efe0', { size: 64, plate: 'plate', dot: craftDot }); l.mat.depthTest = false; return l; }, [type, color, craftDot]);   // drawn over roofs
+  const role = useMemo(() => { const l = labelMaterial(TITLES[type], '#e9c46a', { size: 50, plate: 'mini' }); l.mat.depthTest = false; return l; }, [type]);
+  const roleRef = useRef<Sprite>(null);
   const near = useRef(false);
   const closedK = useRef(0);
   const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
@@ -498,8 +502,9 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
     if (titleRef.current) {   // the name tag rides on the shopkeeper (who walks to the door and in when the shop closes)
       const e = smooth(closedK.current), c = NPC[type].pos, dr = DOOR[type];
-      titleRef.current.position.set(c[0] + (dr[0] - c[0]) * e, 3.5, c[1] + (dr[1] - c[1]) * e);
+      titleRef.current.position.set(c[0] + (dr[0] - c[0]) * e, 3.45, c[1] + (dr[1] - c[1]) * e);
       titleRef.current.visible = closedK.current < 0.985;
+      if (roleRef.current) { roleRef.current.position.set(titleRef.current.position.x, 4.0, titleRef.current.position.z); roleRef.current.visible = titleRef.current.visible; }
     }
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
     if (liquid.current) { const k = 1.4 + Math.sin(t * 4) * 0.35; mats.liquid.color.setRGB(0.5 * k, 1.8 * k, 0.6 * k); liquid.current.scale.y = 1 + Math.sin(t * 6) * 0.15; }
@@ -526,7 +531,6 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     }
   });
 
-  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : color); };
   const labelW = label.aspect * 0.55;   // small name tag over the shopkeeper's head
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
@@ -550,12 +554,10 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
           </mesh>
         ))}
       </group>
-      <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.5, NPC[type].pos[1]]} scale={[labelW, 0.55, 1]} />
+      <sprite ref={roleRef} material={role.mat} renderOrder={5} position={[NPC[type].pos[0], 4.0, NPC[type].pos[1]]} scale={[role.aspect * 0.46, 0.46, 1]} />
+      <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.45, NPC[type].pos[1]]} scale={[labelW, 0.55, 1]} />
+      {/* (owner: only the shopkeeper is clickable, not the building) */}
       <Shopkeeper cfg={NPC[type]} door={DOOR[type]} near={near} closed={closedK} onOpen={open} />
-      <mesh position={[0, 2.8, 0.2]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
-        <boxGeometry args={[7, 5.6, 6]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
       {q.lights && <pointLight ref={light} position={[0, 3.6, 4.2]} color="#ffc47a" distance={14} decay={1.6} intensity={14} />}
     </group>
   );
