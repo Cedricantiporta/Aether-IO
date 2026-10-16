@@ -17,7 +17,8 @@
 //               taken + slow heal) | Judgment (holy rays strike around you one after another, stun) | dash Holy Charge
 //               (invulnerable charge) | ult Divine Avatar (column of light, then 8 s radiant: faster, stronger, every
 //               swing releases a Holy Wave)
-//   NECROMANCER soul bolts | Raise Dead (skeleton warriors / archers / mages, hostile) | Bone Spear (impaling lane, slow) |
+//   NECROMANCER soul bolts | Raise Dead (skeleton warriors / archers / mages, hostile) | Bone Ward (bone shield on its
+//               skeletons, 30% of their max HP, like the hero's) |
 //               Plague Ground (cursed field: poison + slow) | dash Soul Step (blink, bone burst behind) | ult Army of
 //               the Dead (a bone golem crashes down and fights for 20 s)
 // The ultimate unlocks below 60% HP (long cooldown, big telegraph, its name on the boss bar). Every cast names the skill
@@ -64,9 +65,9 @@ const DASH = 4, ULT = 5, SWING = 6;
 const CD: Record<HeroClass, number[]> = {
   ARCHER: [1.1, 7, 8, 11, 5, 30],
   WIZARD: [1.6, 9, 14, 12, 6, 32],
-  BARBARIAN: [1.4, 6, 12, 10, 6, 32],
+  BARBARIAN: [1.4, 6.9, 12, 10, 6, 32],   // (Cross Slash +15% like the hero's)
   KNIGHT: [1.1, 5.5, 13, 9, 6, 32],
-  NECROMANCER: [1.4, 14, 6, 12, 6, 34],
+  NECROMANCER: [1.4, 11, 14, 12, 6, 34],   // (Raise Dead 11 s, Bone Ward 14 s like the hero's)
 };
 /** Skill names shown on the boss bar (same names as the hero's kit). */
 const NAMES: Record<HeroClass, string[]> = {
@@ -74,7 +75,7 @@ const NAMES: Record<HeroClass, string[]> = {
   WIZARD: ['', 'Fireballs!', 'Storm Orbs!', 'Singularity!', 'Blink Nova!', 'Meteor Cataclysm!'],
   BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!"],
   KNIGHT: ['', 'Holy Wave!', 'Shield Wall!', 'Judgment!', 'Holy Charge!', 'Divine Avatar!'],
-  NECROMANCER: ['', 'Raise Dead!', 'Bone Spear!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
+  NECROMANCER: ['', 'Raise Dead!', 'Bone Ward!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
 };
 /** The ultimate unlocks below this share of HP. */
 const ULT_HP = 0.6;
@@ -159,7 +160,7 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
 
 function resetFight(): void {
   S.inv = 0; S.mul = 1; S.rainT = 0; S.orbT = 0; S.titanT = 0; S.avatarT = 0; S.guardT = 0; S.rageT = 0; S.golemId = -1; S.golemT = 0;
-  S.ultArmed = false; S.basicN = 0; S.flag = false; S.healAcc = 0;
+  S.ultArmed = false; S.basicN = 0; S.flag = false; S.healAcc = 0; wardT = 0;
   for (let i = 0; i < axes.length; i++) { const a = axes[i]; if (a && a.kind === 'AXE') a.active = false; axes[i] = null; }
   for (const s of darkShots) s.active = false;
   for (const p of pend) p.active = false;
@@ -328,6 +329,13 @@ function fx(kind: string, x: number, z: number, r: number): void {
 function blinkFx(from: Vector3, to: Vector3): void {
   events.emit('darkFx', { pos: from.clone(), kind: 'BLINK', radius: 4.5, to: to.clone() });
 }
+/** Bone Ward: seconds its shields last (they drop when it runs out). */
+let wardT = 0;
+function unwardedAdds(): number {
+  let n = 0;
+  for (const o of world.enemies) if (o.active && o.state !== 'DYING' && o.kind !== 'DARK_HERO' && o.shield <= 1) n++;
+  return n;
+}
 function aliveAdds(): number {
   let n = 0;
   for (const o of world.enemies) if (o.active && o.state !== 'DYING' && o.kind !== 'DARK_HERO') n++;
@@ -346,7 +354,7 @@ function wants(k: number, d: number): boolean {
     case 'WIZARD': return k === 1 ? d < 20 : k === 2 ? d < 10 && S.orbT <= 0 : k === 3 ? d < 20 : d < 5.5;
     case 'BARBARIAN': return k === 1 ? d > 3 && d < 16 : k === 2 ? d < 6 : k === 3 ? d > 4 && d < 22 : d > 6 && d < 14;
     case 'KNIGHT': return k === 1 ? d < 14 : k === 2 ? d < 7 && S.guardT <= 0 : k === 3 ? d < 20 : d > 5 && d < 15;
-    default: return k === 1 ? aliveAdds() < 3 : k === 2 ? d < 26 : k === 3 ? d < 20 : d < 5.5;   // NECROMANCER
+    default: return k === 1 ? aliveAdds() < 3 : k === 2 ? unwardedAdds() > 0 : k === 3 ? d < 20 : d < 5.5;   // NECROMANCER
   }
 }
 
@@ -432,7 +440,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
         if (rainX[i] * rainX[i] + rainZ[i] * rainZ[i] > lim * lim) { rainX[i] = e.pos.x; rainZ[i] = e.pos.z; }
         mark(rainX[i], rainZ[i], 1.3, 1.0, C_BONE);
       }
-    } else if (k === 2) { S.wind = 0.7; S.act = 0.15; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 36, 2.6, 0.7, C_BONE); }
+    } else if (k === 2) { S.wind = 0.6; S.act = 0.15; }   // Bone Ward: a short cast, no telegraph (it only buffs its skeletons)
     else if (k === 3) { S.wind = 0.7; S.act = 0.15; tmp.set(px, 0, pz); clampIn(tmp); S.toX = tmp.x; S.toZ = tmp.z; warnCircle(S.toX, S.toZ, 6.5, 0.7, 0x7a3ab0); }
     else if (k === DASH) { S.wind = 0.2; S.act = 0.12; }
     else {   // ULT: the golem's shadow on the hero
@@ -482,7 +490,7 @@ function release(e: Enemy, px: number, pz: number): void {
       strike(dirV.x, dirV.z, 5, 0.3, P * 0.9, FREEZE | SLOW, 'NOVA', C_ICE, 'ICE');
     } else events.emit('shake', { amount: 0.25 });
   } else if (c === 'BARBARIAN') {
-    if (k === 1) { shot(e, SHOT_XSLASH, S.dirX, S.dirZ, 12, 1.75, 2.2, P * 1.6, 1.6, true); darkView.atk++; events.emit('shake', { amount: 0.15 }); }
+    if (k === 1) { shot(e, SHOT_XSLASH, S.dirX, S.dirZ, 12, 1.75, 1.65, P * 1.6, 1.6, true); darkView.atk++; events.emit('shake', { amount: 0.15 }); }   // (r 1.65: smaller like the hero's, was 2.2)
     else if (k === 2) { darkView.spin = 1; darkView.spinR = 4.5; }
     else if (k === 3) {   // Earthsplitter: a fissure of erupting spikes down the lane
       const L = 28, n = 14;
@@ -520,7 +528,15 @@ function release(e: Enemy, px: number, pz: number): void {
         if (sk) { sk.maxHp = Math.round(sk.maxHp * 0.8); sk.hp = sk.maxHp; sk.xp = 0; sk.gold = 0; }
       }
       events.emit('shockwave', { pos: e.pos, radius: 4, color: C_BONE });
-    } else if (k === 2) { shot(e, SHOT_BONE, S.dirX, S.dirZ, 38, 0.95, 1.2, P * 1.6, 1.2); darkView.atk++; }
+    } else if (k === 2) {   // Bone Ward: every skeleton gets a bone shield worth 30% of its max HP (8 s, like the hero's)
+      for (const o of world.enemies) {
+        if (!o.active || o.state === 'DYING' || o.kind === 'DARK_HERO') continue;
+        o.shield = Math.max(o.shield, o.maxHp * 0.3);
+        events.emit('shockwave', { pos: o.pos, radius: 1.6, color: C_BONE });
+      }
+      wardT = 8;
+      events.emit('shockwave', { pos: e.pos, radius: 6, color: C_BONE });
+    }
     else if (k === 3) { field('CURSE', S.toX, S.toZ, 6.5, 5, P * 0.22, 0x7a3ab0); }
     else if (k === DASH) {   // Soul Step: bone shards burst where it stood, it reappears away from the hero
       strike(e.pos.x, e.pos.z, 5, 0.4, P * 0.9, SLOW, 'SOUL', C_BONE);
@@ -705,6 +721,7 @@ export function tickDarkHero(dt: number): void {
   if (S.id < 0) return;
   const e = world.enemies[S.id];
   if (!e || !e.active || e.kind !== 'DARK_HERO') { S.id = -1; resetFight(); return; }
+  if (wardT > 0) { wardT -= dt; if (wardT <= 0) for (const o of world.enemies) if (o.active && o.kind !== 'DARK_HERO' && o.affix !== 'SHIELDED') o.shield = 0; }   // Bone Ward wears off
   if (e.state === 'DYING') return;
   const b = world.boss;
   b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; b.stagger = staggerView(e); b.staggered = e.staggerT > 0;
