@@ -103,7 +103,7 @@ const INITIAL_GAME_STATS: GameStatistics = {
 const _dd = deviceDefaults();
 const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.5, quality: _dd.quality,
-  showDamageNumbers: true, screenShake: true, autoPotions: true,
+  showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: false,
   autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1, zoomUnlocked: true,
   showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, autoLootGear: 'RARE', autoLootMaterials: false, autoLootRange: 'NEAR', autoLootOnClear: false,
 };
@@ -1926,7 +1926,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
         // half the pulls are shards of the rolled tier (Rare at least; several of the lower tiers), half are gear (Epic at least); pity pulls are gear
         const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
-        const tutorial = cost === 0;   // the tutorial's free pull is always a piece of gear (the next step equips it)
+        const tutorial = cost === 0;   // the tutorial's free pull is the class Common weapon (the next step equips it; Lv 1)
+        if (tutorial) { const w = makeItemById(`w_${s.hero.toLowerCase()}_0a`, 1)[0]; if (w) { results.push(w); gearOut.push(w); continue; } }
         if (!pity && !tutorial && Math.random() < SUMMON_SUPPLY_SHARE) {   // (owner) upgrade cores (tier I / II) and the gem-shop supplies
           let w = Math.random() * SUMMON_SUPPLY_TOTAL, id = SUMMON_SUPPLIES[0][0];
           for (const [sid, sw] of SUMMON_SUPPLIES) { w -= sw; if (w <= 0) { id = sid; break; } }

@@ -11,7 +11,7 @@ let escPaused = false;
 import { requestClick } from './systems/target';
 
 // ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
-const PITCH_MIN = 0.55, PITCH_MAX = 1.3, DIST_MIN = 0.55, DIST_MAX = 1.3;   // (owner: max zoom-out halved: was 1.6)
+const PITCH_MIN = 0.55, PITCH_MAX = 1.3, DIST_MIN = 0.55, DIST_MAX = 1.15;   // (owner: max zoom-out halved again: was 1.3, before 1.6)
 const orbitAllowed = () => {
   const st = useGameStore.getState().status;
   return st === GameStatus.PLAYING || (st === GameStatus.MENU && useUiStore.getState().titleDone);

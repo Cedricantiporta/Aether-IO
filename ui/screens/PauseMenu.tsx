@@ -98,6 +98,7 @@ export const SettingsDialog: React.FC = () => {
             {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
             {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
+            {tog('Click to move', 'clickMove', 'Left-click the ground to walk there (in town and on adventures). WASD still works; any key press cancels the walk.')}
           </Sec>
           <Sec title="Auto loot">
             <Row label="Auto-pick gear" hint="Lowest rarity of equipment that flies to you by itself. Lower ones wait for E / a tap.">
@@ -114,7 +115,7 @@ export const SettingsDialog: React.FC = () => {
             {tog('Screen shake', 'screenShake')}
             {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}
             {settings.zoomUnlocked && <Row label="Camera zoom" hint="Close to far">
-              <div className="flex-1"><Slider value={(settings.cameraZoom - 0.8) / 0.5} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.5) * 100) / 100 })} /></div>
+              <div className="flex-1"><Slider value={(Math.min(1.15, settings.cameraZoom) - 0.8) / 0.35} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.35) * 100) / 100 })} /></div>
               <span className="st-num">{settings.cameraZoom.toFixed(2)}</span>
             </Row>}
           </Sec>

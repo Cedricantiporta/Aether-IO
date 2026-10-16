@@ -338,11 +338,14 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
  *  street route is the fallback), then do `act` on arrival (open `tab` / enter the castle or cave / talk to NPC `npc` /
  *  nothing). `r` = arrive within this distance of (x, z). An NPC target is followed while it patrols and the walk stops
  *  at talking distance. Instant when already close. Only in town (a tracker click during a run never queues a walk). */
+/** performance.now() of the last walkTo (a building / NPC click): a ground click in the same moment yields to it. */
+export const walkStamp = { t: -1e9 };
 export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.status !== GameStatus.MENU) return;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
   if (act === 'npc' && npc >= 0 && npcs[npc]) { x = npcs[npc].x; z = npcs[npc].z; r = TALK_REACH; }
+  walkStamp.t = performance.now();
   g.act = act; g.tab = tab; g.npc = npc; g.r = 0.9;
   goT.x = x; goT.z = z; goT.reach = r; goT.repaths = 0; goT.track = 0.4;
   goT.resume = hopNext; hopNext = null;   // (a quest walk through a door carries on in the next area)

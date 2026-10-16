@@ -36,6 +36,7 @@ export interface Settings {
   showDamageNumbers: boolean;
   screenShake: boolean;
   autoPotions: boolean;   // auto-drink at <30% hp/mana (designer default: true)
+  clickMove?: boolean;    // (owner) left-click the ground to walk there (town and runs); default off = WASD
   autoAim: boolean;       // lock the nearest enemy; off = mouse aim (desktop) / right aim stick (touch)
   autoQuality: boolean;   // adaptive resolution / particle budget from measured frame time
   fpsLimit: 30 | 60 | 0;  // 0 = unlimited

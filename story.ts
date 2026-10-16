@@ -58,7 +58,7 @@ export const STORY: StoryStep[] = [
   { id: 'mira3', title: 'Read the Stars', line: 'Show Mira your new pet', npc: 'Mira', reward: { gems: 10 },
     talk: ['Aww, it already likes you! Or it is trying to eat your sleeve. Same thing, with blobs.', 'Last stop: Madame Zora\'s Fortune tent, beside the square on the west side. She pulls gear out of the stars for gems.', 'She also told me I would marry a duke. I married Hodge\'s cousin. Here are some gems; try one summon anyway.'] },
   { id: 'summon', title: 'A Gift from the Stars', line: 'Summon once at the Fortune tent', npc: '', at: 'FORTUNE', act: { kind: 'summon', count: 1 }, reward: { gold: 50, items: [{ id: 'potion_mana', qty: 1 }] } },
-  { id: 'equip', title: 'Suit Up', line: 'Equip the gear you summoned from your bag (I)', npc: '', at: 'BAG', act: { kind: 'equip', count: 1 }, reward: { gold: 50 } },
+  { id: 'equip', title: 'Suit Up', line: 'Equip the weapon you summoned from your bag (I)', npc: '', at: 'BAG', act: { kind: 'equip', count: 1 }, reward: { gold: 50 } },
   { id: 'mira4', title: 'Ready for Work', line: 'Talk to Mira again', npc: 'Mira', reward: { gold: 50 },
     talk: ['Look at you! Almost a real guard. From a distance. In bad light.', 'Coin comes from bounties. Hodge keeps the Quest Board by the castle steps. He will talk your ear off about Lysa. Just nod.', 'Take one bounty, then go and see the King. And... be gentle with him. He has not been well since the princess.'] },
   { id: 'hodge', title: 'The Bounty Clerk', line: 'Talk to Hodge at the Quest Board', npc: 'Hodge', reward: { gold: 50 },

@@ -47,6 +47,8 @@ export function pickEnemyAt(x: number, z: number): Enemy | null {
 export function lockEnemy(e: Enemy): void { target.id = e.id; target.kind = e.kind; target.boss = e.boss; target.at = world.time; }
 
 /** Click at a ground point: lock the enemy there, or clear the lock on empty ground. */
+/** (owner setting) left-click walk target in runs: the hero heads there until it arrives or any movement key is pressed. */
+export const clickMoveTo = { on: false, x: 0, z: 0 };
 export function selectAt(x: number, z: number): void {
   const e = pickEnemyAt(x, z);
   if (e) { if (target.id !== e.id) lockEnemy(e); } else clearTarget();

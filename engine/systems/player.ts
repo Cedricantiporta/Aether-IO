@@ -7,7 +7,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
-import { lockedEnemy, updateTarget } from './target';
+import { lockedEnemy, updateTarget, clickMoveTo } from './target';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
@@ -312,6 +312,11 @@ export function updatePlayer(dt: number): void {
   if (ml > 0) { mx /= ml; mz /= ml; }
   if (inp.joy.active) { mx = inp.joy.x; mz = inp.joy.z; ml = Math.sqrt(mx * mx + mz * mz); if (ml > 1) { mx /= ml; mz /= ml; ml = 1; } if (ml < 0.05) ml = 0; }
   if (ml > 0) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }   // W = away from the camera
+  // click-to-move (setting): walk to the clicked ground point; any movement input cancels it
+  if (clickMoveTo.on) {
+    if (ml > 0) clickMoveTo.on = false;
+    else { const dx = clickMoveTo.x - p.pos.x, dz = clickMoveTo.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > 0.4) { mx = dx / d; mz = dz / d; ml = 1; } else clickMoveTo.on = false; }
+  }
 
   // ---- auto-chase: no movement input + an enemy inside the chase ring (a bit beyond weapon range) but outside
   // weapon range -> walk toward it until it is in range (then the normal auto-attack takes over). Follows the auto-aim setting.

@@ -4,7 +4,7 @@
 // arrow, the gate beacon and the tracker click: engine/systems/questNav.ts mainNav.)
 import { questXp } from '../../classLevels';
 import { events } from '../events';
-import { useGameStore } from '../../store';
+import { useGameStore, makeItemById } from '../../store';
 import { STORY, stepCount, type StoryStep } from '../../story';
 import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
 import { spawnPickup } from './pickups';
@@ -123,7 +123,7 @@ events.on('crateBreak', (e) => {   // a harvest node that yields what a delivery
 // Steps already satisfied by the current state (gear equipped by drag / auto-equip, a pet already owned) finish on their own.
 function stateDone(kind: string, count: number): boolean {
   const s = useGameStore.getState(), eq = s.equipment;
-  if (kind === 'equip') return !!eq.helmet;   // the Leather Cap step (new heroes start with every slot but the helmet filled)
+  if (kind === 'equip') return !!eq.weapon && !eq.weapon.id.startsWith('start');   // the summoned class weapon (the starter one has a 'start' id)
   if (kind === 'buy_pet') return !!eq.pet;
   if (kind === 'tower_floor') return (s.progress.towerBest[s.hero] ?? 0) >= count;   // already climbed that high
   if (kind === 'accept') return s.quests.some((q) => q.accepted);   // a bounty already taken (all 3 slots full would block a new accept)
@@ -147,6 +147,14 @@ setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engi
   const step = STORY[st.story.step];
   storyBias.rescue = step?.goal?.kind === 'RESCUE'; storyBias.champion = step?.goal?.kind === 'CHAMPION';   // rooms roll these more often meanwhile
   const at = st.story.step;
+  // (fix) "Suit Up" needs a weapon the hero can wear: saves whose tutorial pull was a pet / high-level piece get the class
+  // Common weapon once
+  if (step?.id === 'equip' && !stateDone('equip', 1) && !st.inventory.some((i) => i.type === 'WEAPON' && i.classType === st.hero && !i.id.startsWith('start'))) queueMicrotask(() => {
+    const now = useGameStore.getState();
+    if (STORY[now.story.step]?.id !== 'equip') return;
+    const w = makeItemById(`w_${now.hero.toLowerCase()}_0a`, 1)[0];
+    if (w && now.addItemToInventory(w)) now.addNotification(`Received ${w.name}: equip it from your bag (I).`, '#f1d58e', 'ITEM');
+  });
   if (step?.act && stateDone(step.act.kind, step.act.count)) queueMicrotask(() => {
     const now = useGameStore.getState();
     if (now.story.step === at && stateDone(step.act!.kind, step.act!.count)) now.setStory(at + 1, 0);

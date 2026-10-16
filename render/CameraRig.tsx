@@ -14,7 +14,8 @@ import { device } from '../engine/device';
 
 /** World height just above a boss's head: big bosses (Hydra, Colossus...) are sized by radius, not scale. */
 function bossTop(e: { scale: number; radius: number }): number { return 2 + Math.max(e.scale * 2.1, e.radius * 2.6); }
-import { clickReq, selectAt } from '../engine/systems/target';
+import { clickReq, selectAt, clickMoveTo, pickEnemyAt } from '../engine/systems/target';
+import { walkTo, walkStamp } from '../engine/systems/village';
 
 const CAM_DIST0 = Math.hypot(32, 22);
 const _rel = { x: 0, z: 0 };
@@ -49,7 +50,7 @@ export function CameraRig() {
       lx = ax * k; lz = az * k;
     }
     const setts = useGameStore.getState().settings;
-    const zoomSet = setts?.zoomUnlocked ? setts.cameraZoom || 1 : 1;
+    const zoomSet = setts?.zoomUnlocked ? Math.min(1.15, setts.cameraZoom || 1) : 1;   // (owner: max zoom-out halved: 1.15)
     if (!setts?.zoomUnlocked) world.camera.dist = 1;   // zoom locked at 1.0 unless unlocked in Settings
     s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
     s.lift = damp(s.lift, liftAt(p.pos.x, p.pos.z), 6, dt);
@@ -196,12 +197,19 @@ export function CameraRig() {
     // ---- click / tap target selection: pointer ray -> ground plane -> nearest enemy
     if (clickReq.pending) {
       clickReq.pending = false;
-      if (status === GameStatus.PLAYING && !lobby) {
+      const move = !!useGameStore.getState().settings.clickMove;
+      const town = status === GameStatus.MENU && useUiStore.getState().titleDone;
+      if ((status === GameStatus.PLAYING && !lobby) || (town && move)) {
         _v.set(clamp(clickReq.nx, -1, 1), clamp(clickReq.ny, -1, 1), 0.5).unproject(cam);
         _v.sub(cam.position);
         if (_v.y < -1e-4) {
-          const t = -cam.position.y / _v.y;
-          selectAt(cam.position.x + _v.x * t, cam.position.z + _v.z * t);
+          const t = -cam.position.y / _v.y, gx = cam.position.x + _v.x * t, gz = cam.position.z + _v.z * t;
+          if (town) { if (performance.now() - walkStamp.t > 250) walkTo(gx, gz, 'none', '', 0.5); }   // (a building / NPC click already walks there)
+          else {
+            const onEnemy = !!pickEnemyAt(gx, gz);
+            selectAt(gx, gz);
+            if (move && !onEnemy) { clickMoveTo.on = true; clickMoveTo.x = gx; clickMoveTo.z = gz; }   // (owner setting) left-click the ground to walk there
+          }
         }
       }
     }

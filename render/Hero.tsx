@@ -479,7 +479,7 @@ function HeroBars() {
   const titleLab = useMemo(() => (title ? labelMaterial(`« ${title} »`, '#ffd24a', { size: 38 }) : null), [title]);
   useEffect(() => { for (const l of [nameLab, titleLab]) if (l) { l.mat.depthTest = false; l.mat.depthWrite = false; } }, [nameLab, titleLab]);
   const g = useRef<Group>(null!), hp = useRef<Mesh>(null!), mp = useRef<Mesh>(null!), sh = useRef<Mesh>(null!), shG = useRef<Group>(null!);
-  const chG = useRef<Group>(null!), ch = useRef<Mesh>(null!);   // Lightpiercer charge meter (archer skill 2, owner)
+  const chG = useRef<Group>(null!), ch = useRef<Mesh>(null!), barsG = useRef<Group>(null!);   // Lightpiercer charge meter (archer skill 2, owner)
   // Aegis shield bar: light blue, with tick lines splitting it into segments (one per ~10% of the shield)
   const ticks = useMemo(() => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 16;
@@ -491,9 +491,11 @@ function HeroBars() {
   }, []);
   useFrame(() => {
     const st = useGameStore.getState();
-    const show = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || st.status === GameStatus.LEVEL_UP;
+    const run = st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || st.status === GameStatus.LEVEL_UP;
+    const town = st.status === GameStatus.MENU && useUiStore.getState().titleDone && !useUiStore.getState().charSelect;   // (owner) name + title in town too, without the bars
     if (!g.current) return;
-    g.current.visible = show && world.player.alive;
+    g.current.visible = (run || town) && world.player.alive;
+    if (barsG.current) barsG.current.visible = run;
     if (!g.current.visible) return;
     const p = world.player;
     g.current.position.set(p.pos.x, 3.15 + (p.air || 0) + liftAt(p.pos.x, p.pos.z), p.pos.z);   // mini HP / MP bars float above the hero's head
@@ -516,6 +518,7 @@ function HeroBars() {
   const bg = <meshBasicMaterial color="#10141c" transparent opacity={0.7} depthTest={false} depthWrite={false} />;
   return (
     <group ref={g} renderOrder={40}>
+      <group ref={barsG}>
       <mesh position={[0, 0.1, 0]} renderOrder={40}><planeGeometry args={[2.36, 0.46]} />{bg}</mesh>
       <mesh ref={hp} position={[0, 0.2, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.16]} /><meshBasicMaterial color="#e0442f" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
       <mesh ref={mp} position={[0, 0.0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#3b82f6" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
@@ -527,6 +530,7 @@ function HeroBars() {
       <group ref={chG} position={[0, -0.3, 0]} visible={false}>
         <mesh renderOrder={40}><planeGeometry args={[2.36, 0.2]} />{bg}</mesh>
         <mesh ref={ch} position={[0, 0, 0.01]} renderOrder={41}><planeGeometry args={[2.2, 0.12]} /><meshBasicMaterial color="#ffd36a" depthTest={false} depthWrite={false} toneMapped={false} /></mesh>
+      </group>
       </group>
       <sprite material={nameLab.mat} position={[0, 0.8, 0.02]} scale={[nameLab.aspect * 0.78, 0.78, 1]} renderOrder={42} />
       {titleLab && <sprite material={titleLab.mat} position={[0, 1.38, 0.02]} scale={[titleLab.aspect * 0.6, 0.6, 1]} renderOrder={42} />}
