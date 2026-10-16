@@ -1,39 +1,47 @@
-import React from 'react';
-import { Lock, RotateCcw, Sparkles } from 'lucide-react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
+import { Check, Lock, RotateCcw, Sparkles, X, Minus, Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import type { UpgradeType } from '../../../types';
 import {
-  BRANCHES, CAPSTONE_BRANCH_POINTS, TALENT_BY_ID, allocBlock, branchSpent, respecCost, talentPointsTotal, talentsOf, talentsSpent, type TalentNode,
+  BRANCHES, TALENT_BY_ID, allocBlock, branchSpent, childrenOf, isMaxed, respecCost, talentPointsTotal, talentsOf, talentsSpent, type TalentNode,
 } from '../../../talents';
 import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
 import { UpgradeArt } from '../../components/UpgradeIcons';
-import { SimpleTip } from '../../components/ItemTip';
-import { tip } from '../../components/Tooltip';
+import { HERO_ICON } from '../../hud/TopBars';
 import { HERO_COLOR } from '../../lib/game';
 
-// Landscape strips (owner): each branch is a row, its tree runs left -> right in 6 columns; the panel scrolls sideways.
-const LEFT = 86, COL_W = 78, LANE_H = 50, TOP = 4, COLS = 6;
-const STRIP_W = LEFT + COL_W * COLS, STRIP_H = TOP + LANE_H * 3 + 8;
-const cx = (n: TalentNode) => LEFT + COL_W * n.row + COL_W / 2;
-const cy = (n: TalentNode) => TOP + LANE_H * n.x + LANE_H / 2 - 6;
+// Radial talent tree (owner reference): class emblem in the centre, four branches (up / right / down / left) fanning out
+// over five rings. Square nodes = root / special / capstone, round nodes = plain stat talents. A node opens once its
+// parent(s) are MAXED and the hero has the ring's level. Drag to pan, wheel / buttons to zoom; click a node for details.
+const RING_R = [118, 200, 290, 372, 448];
+const AXIS = [-90, 0, 90, 180];
+const SIZE = 2 * (RING_R[4] + 70);
+const C = SIZE / 2;
+const pos = (n: TalentNode): [number, number] => {
+  const a = ((AXIS[n.branch] + n.x) * Math.PI) / 180, r = RING_R[n.row];
+  return [C + r * Math.cos(a), C + r * Math.sin(a)];
+};
+const square = (n: TalentNode) => n.row === 0 || n.capstone || !!n.special;
 
 const NodeIcon: React.FC<{ icon: string; size: number; dim?: boolean }> = ({ icon, size, dim }) =>
   icon.startsWith('u:')
-    ? <span style={{ display: 'block', opacity: dim ? 0.45 : 1, filter: dim ? 'grayscale(.8)' : undefined }}><UpgradeArt upgrade={{ type: icon.slice(2) as UpgradeType }} size={size} /></span>
+    ? <span style={{ display: 'block', opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(.9)' : undefined }}><UpgradeArt upgrade={{ type: icon.slice(2) as UpgradeType }} size={size} /></span>
     : <SkillIcon id={icon} size={size} dim={dim} />;
 
-/** Left-mouse drag pans the talent strips sideways (owner: dragged, no scrollbar); a drag never counts as a node click. */
-function useDragScroll() {
-  const d = React.useRef({ on: false, x: 0, left: 0, moved: false });
+/** Drag-to-pan in both axes; a drag never counts as a node click. */
+function useDragPan() {
+  const d = useRef({ on: false, x: 0, y: 0, l: 0, t: 0, moved: false });
   return {
-    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { if (e.button !== 0) return; d.current = { on: true, x: e.clientX, left: e.currentTarget.scrollLeft, moved: false }; },
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { if (e.button !== 0) return; d.current = { on: true, x: e.clientX, y: e.clientY, l: e.currentTarget.scrollLeft, t: e.currentTarget.scrollTop, moved: false }; },
     onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
       const s = d.current; if (!s.on) return;
-      const dx = e.clientX - s.x;
-      if (!s.moved && Math.abs(dx) > 5) { s.moved = true; e.currentTarget.setPointerCapture(e.pointerId); }
-      if (s.moved) e.currentTarget.scrollLeft = s.left - dx;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (!s.moved && Math.hypot(dx, dy) > 5) { s.moved = true; e.currentTarget.setPointerCapture(e.pointerId); }
+      if (s.moved) { e.currentTarget.scrollLeft = s.l - dx; e.currentTarget.scrollTop = s.t - dy; }
     },
     onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => { d.current.on = false; if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); },
     onPointerCancel: () => { d.current.on = false; },
@@ -41,98 +49,130 @@ function useDragScroll() {
   };
 }
 
-export const TalentsView: React.FC = () => {
-  const { hero, ranks, heroRank, gold, allocate, respec } = useGameStore(useShallow((s) => ({
-    hero: s.hero, ranks: s.talents[s.hero], heroRank: s.heroRank, gold: s.gold, allocate: s.allocateTalent, respec: s.respecTalents,
-  })));
-  const total = talentPointsTotal(heroRank);
-  const spent = talentsSpent(ranks);
-  const free = Math.max(0, total - spent);
-  const cost = respecCost(ranks);
-  const nodes = talentsOf(hero);
-  const color = HERO_COLOR[hero];
-  const dragScroll = useDragScroll();
+const useTalentState = () => useGameStore(useShallow((s) => ({
+  hero: s.hero, ranks: s.talents[s.hero], lv: s.heroRank, gold: s.gold, allocate: s.allocateTalent, respec: s.respecTalents,
+})));
 
+/** Skill Trainer "Talents" tab: points + branch progress, and the button that opens the full-screen tree. */
+export const TalentsView: React.FC = () => {
+  const { hero, ranks, lv, gold, respec } = useTalentState();
+  const [open, setOpen] = useState(true);
+  const total = talentPointsTotal(lv), free = Math.max(0, total - talentsSpent(ranks)), cost = respecCost(ranks);
   return (
     <div className="flex flex-col gap-3" data-testid="talents-view">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="rpg-label">Talents · {hero}</div>
-          <div style={{ fontSize: '.66rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Permanent. 4 points per class level: at the max level every talent is full. ★ = special talent. Deeper tiers cost more points.</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="rpg-badge !text-[.75rem]" data-testid="talent-points"><Sparkles size={12} /> {free} / {total} points</div>
-          <Button size="sm" disabled={cost <= 0 || gold < cost} onClick={() => respec()} data-testid="talent-respec">
-            <RotateCcw size={12} /> Respec{cost > 0 ? ` ${cost.toLocaleString()}g` : ''}
-          </Button>
-        </div>
+      <div className="tt-sum">
+        <div className="tt-pts"><Sparkles size={14} /> <b data-testid="talent-points">{free}</b> / {total} points</div>
+        {BRANCHES[hero].map((br, b) => <div key={b} className="tt-br"><span style={{ color: br.color }}>{br.name}</span><b>{branchSpent(hero, b, ranks)}</b></div>)}
       </div>
+      <div className="flex gap-2">
+        <Button className="flex-1" variant="primary" onClick={() => setOpen(true)} data-testid="talent-open">Open talent tree</Button>
+        <Button disabled={cost <= 0 || gold < cost} onClick={() => respec()} data-testid="talent-respec"><RotateCcw size={12} /> Respec{cost > 0 ? ` ${cost.toLocaleString()}g` : ''}</Button>
+      </div>
+      {open && <TalentTree onClose={() => setOpen(false)} />}
+    </div>
+  );
+};
 
-      <div className="rpg-frame py-2 tal-drag" style={{ ['--hc' as any]: color }} data-testid="talent-scroll" {...dragScroll}>
-        <div className="flex flex-col gap-1" style={{ width: STRIP_W, flexShrink: 0 }}>
-          {BRANCHES[hero].map((br, b) => {
-            const bn = nodes.filter((n) => n.branch === b);
-            const bs = branchSpent(hero, b, ranks);
-            return (
-              <div key={b} className="relative" style={{ width: STRIP_W, height: STRIP_H, borderTop: b ? '1px solid #3a2c18' : undefined }}>
-                <div className="absolute text-left" style={{ left: 0, top: 0, bottom: 0, width: LEFT - 6, padding: '0 4px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(90deg, #120d07 80%, transparent)', zIndex: 2 }}>
-                  <div style={{ fontSize: '.8rem', fontWeight: 700, lineHeight: 1, color: br.color, fontFamily: 'var(--font-title)', textShadow: '0 1px 0 #000' }}>{br.name}</div>
-                  <div style={{ fontSize: '.56rem', lineHeight: 1.1, marginTop: 3, color: 'var(--text-dim)' }}>{br.blurb}</div>
-                  <div style={{ fontSize: '.56rem', color: bs > 0 ? br.color : 'var(--text-dim)' }}>{bs} pts</div>
-                </div>
-                <svg className="absolute inset-0 pointer-events-none" width={STRIP_W} height={STRIP_H}>
-                  {bn.flatMap((n) => n.req.map((rid) => {
-                    const p = TALENT_BY_ID[rid];
-                    const on = (ranks[n.id] || 0) > 0;
-                    const open = (ranks[rid] || 0) > 0;
-                    return <line key={n.id + rid} x1={cx(p)} y1={cy(p)} x2={cx(n)} y2={cy(n)} stroke={on ? br.color : open ? '#e9b949' : '#4a3d2a'} strokeWidth={on ? 3.2 : 2.2} strokeOpacity={on ? 1 : open ? 0.8 : 0.6} strokeDasharray={on ? undefined : '4 3'} />;
+const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { hero, ranks, lv, gold, allocate, respec } = useTalentState();
+  const nodes = talentsOf(hero);
+  const total = talentPointsTotal(lv), free = Math.max(0, total - talentsSpent(ranks)), cost = respecCost(ranks);
+  const [selId, setSel] = useState(nodes[0]?.id);
+  const [zoom, setZoom] = useState(0.85);
+  const sel = TALENT_BY_ID[selId] ?? nodes[0];
+  const view = useRef<HTMLDivElement>(null);
+  const pan = useDragPan();
+  const Icon = HERO_ICON[hero];
+  // keep the centre of the view fixed while zooming; centre the emblem on open
+  const setZoomKeep = (z: number) => {
+    const el = view.current; const nz = Math.max(0.5, Math.min(1.3, z));
+    if (el) { const cx = (el.scrollLeft + el.clientWidth / 2) / zoom, cy = (el.scrollTop + el.clientHeight / 2) / zoom; requestAnimationFrame(() => { el.scrollLeft = cx * nz - el.clientWidth / 2; el.scrollTop = cy * nz - el.clientHeight / 2; }); }
+    setZoom(nz);
+  };
+  useLayoutEffect(() => { const el = view.current; if (el) { el.scrollLeft = C * zoom - el.clientWidth / 2; el.scrollTop = C * zoom - el.clientHeight / 2; } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const block = sel ? allocBlock(sel, ranks, free, lv) : 'max';
+  const br = sel ? BRANCHES[hero][sel.branch] : null;
+  const r = sel ? ranks[sel.id] || 0 : 0;
+  const why: Record<string, string> = { max: 'Maxed', prereq: 'Max the required talents first', level: `Needs class level ${sel?.lvReq}`, points: `Needs ${sel?.cost} free point${(sel?.cost ?? 1) > 1 ? 's' : ''}` };
+
+  return createPortal(
+    <div className="ws-backdrop pe" onClick={onClose} data-testid="talent-tree">
+      <motion.div className="ws-win tt-win" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}>
+        <div className="ws-head"><Sparkles size={20} /> Talents <em>{hero.toLowerCase()} · class level {lv}</em>
+          <span className="tt-head-pts"><b>{free}</b> / {total} points</span>
+          <button className="sw-x" onClick={onClose} aria-label="Close"><X size={20} /></button>
+        </div>
+        <div className="tt-body">
+          <div className="tt-view" ref={view} {...pan} onWheel={(e) => setZoomKeep(zoom * (e.deltaY > 0 ? 0.92 : 1.08))}>
+            <div style={{ width: SIZE * zoom, height: SIZE * zoom, position: 'relative' }}>
+              <div className="tt-canvas" style={{ width: SIZE, height: SIZE, transform: `scale(${zoom})`, ['--hc' as any]: HERO_COLOR[hero] }}>
+                <svg className="tt-svg" width={SIZE} height={SIZE}>
+                  {RING_R.map((rr, i) => <circle key={i} cx={C} cy={C} r={rr} className={`ring r${i}`} />)}
+                  <circle cx={C} cy={C} r={RING_R[0]} className={`inner ${nodes.some((n) => n.row === 0 && ranks[n.id] > 0) ? 'lit' : ''}`} />
+                  {nodes.flatMap((n) => n.req.map((q) => {
+                    const p = TALENT_BY_ID[q], [x1, y1] = pos(p), [x2, y2] = pos(n);
+                    const st = (ranks[n.id] || 0) > 0 ? 'lit' : isMaxed(q, ranks) ? 'open' : '';
+                    return <line key={n.id + q} x1={x1} y1={y1} x2={x2} y2={y2} className={`lk ${st}`} />;
                   }))}
+                  {nodes.filter((n) => n.row === 0).map((n) => { const [x, y] = pos(n); return <line key={'c' + n.id} x1={C} y1={C} x2={x} y2={y} className={`lk ${(ranks[n.id] || 0) > 0 ? 'lit' : 'open'}`} />; })}
                 </svg>
-                {bn.map((n) => {
-                  const r = ranks[n.id] || 0;
-                  const block = allocBlock(n, ranks, free);
-                  const can = block === null;
-                  const locked = block === 'prereq' || block === 'branch';
-                  const sz = n.capstone ? 40 : 32;
-                  const lines: React.ReactNode[] = [
-                    <span key="r" style={{ fontWeight: 700 }}>Rank {r} / {n.max}</span>,
-                    <span key="d" className="pos">Per rank: {n.desc}</span>,
-                    <span key="k" className={free >= n.cost || r >= n.max ? 'muted' : 'neg'}>Costs {n.cost} point{n.cost > 1 ? 's' : ''} per rank</span>,
-                  ];
-                  if (n.special) lines.push(<span key="s" style={{ color: '#ffd24a', fontWeight: 700 }}>★ Special talent: changes how a skill or move works</span>);
-                  if (n.req.length) lines.push(<span key="q" className={n.req.every((q) => ranks[q] > 0) ? 'muted' : 'neg'}>Requires: {n.req.map((q) => TALENT_BY_ID[q].name).join(' + ')}</span>);
-                  if (n.capstone) lines.push(<span key="c" className={bs >= CAPSTONE_BRANCH_POINTS ? 'muted' : 'neg'}>Requires {CAPSTONE_BRANCH_POINTS} points in {br.name} ({bs})</span>);
+                <div className="tt-core" style={{ left: C, top: C }}><Icon size={54} /></div>
+                {BRANCHES[hero].map((b, i) => {
+                  const a = (AXIS[i] * Math.PI) / 180, rr = RING_R[4] + 52;
+                  return <div key={i} className="tt-blabel" style={{ left: C + rr * Math.cos(a), top: C + rr * Math.sin(a), color: b.color }}>{b.name}<em>{branchSpent(hero, i, ranks)} pts</em></div>;
+                })}
+                {nodes.map((n) => {
+                  const [x, y] = pos(n), rk = ranks[n.id] || 0, bl = allocBlock(n, ranks, free, lv);
+                  const st = rk >= n.max ? 'max' : rk > 0 ? 'part' : bl === null ? 'open' : bl === 'points' ? 'poor' : 'locked';
+                  const sz = n.capstone ? 74 : square(n) ? 62 : 46;
                   return (
-                    <button
-                      key={n.id} type="button" aria-disabled={!can} data-testid={`talent-${n.id}`} data-rank={r} data-state={r >= n.max ? 'max' : can ? 'open' : locked ? 'locked' : 'closed'}
-                      onClick={() => { if (can) allocate(n.id); }}
-                      {...tip(<SimpleTip title={n.name} sub={n.capstone ? `${br.name} capstone` : n.special ? `${br.name} · special` : br.name} color={br.color} lines={lines} />)}
-                      className="absolute flex items-center justify-center"
-                      style={{
-                        left: cx(n) - sz / 2, top: cy(n) - sz / 2, width: sz, height: sz, borderRadius: n.capstone ? 14 : '50%',
-                        background: r > 0 ? `radial-gradient(circle at 35% 28%, ${br.color}55, #1a1208 75%)` : 'radial-gradient(circle at 35% 28%, #3a2c18, #120d07 75%)',
-                        border: `2px solid ${r >= n.max ? '#ffe08a' : r > 0 ? br.color : can ? '#e9b949' : '#4a3d2a'}`,
-                        boxShadow: r > 0 ? `0 0 10px ${br.color}99` : can ? '0 0 8px #e9b94988' : 'none',
-                        cursor: can ? 'pointer' : 'default', transform: n.capstone ? 'rotate(0deg)' : undefined,
-                      }}
-                    >
-                      <NodeIcon icon={n.icon} size={sz - 16} dim={r <= 0 && !can} />
-                      {n.cost > 1 && r < n.max && <span className="absolute rpg-num" style={{ top: -7, right: -9, fontSize: '.52rem', padding: '0 3px', borderRadius: 5, background: '#0d0703', color: free >= n.cost ? '#e9b949' : '#8a7a5a', border: '1px solid #3a2c18' }} title="Points per rank">{n.cost}P</span>}
-                      {n.special && <span className="absolute" style={{ top: -8, left: -7, fontSize: '.7rem', color: '#ffd24a', textShadow: '0 0 4px #000, 0 0 6px #ffb000' }}>★</span>}
-                      {locked && r <= 0 && <span className="absolute inset-0 flex items-center justify-center"><Lock size={12} color="#cbbd9a" /></span>}
-                      <span className="absolute rpg-num" style={{ bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: '.58rem', padding: '0 4px', borderRadius: 6, background: '#0d0703', color: r >= n.max ? '#ffe08a' : r > 0 ? br.color : '#9a8a6a', border: '1px solid #3a2c18' }}>{r}/{n.max}</span>
+                    <button key={n.id} type="button" className={`tt-node ${square(n) ? 'sq' : 'rd'} ${st} ${sel?.id === n.id ? 'sel' : ''}`} style={{ left: x, top: y, width: sz, height: sz, ['--bc' as any]: BRANCHES[hero][n.branch].color }}
+                      onClick={() => setSel(n.id)} onDoubleClick={() => { if (allocBlock(n, ranks, free, lv) === null) allocate(n.id); }}
+                      data-testid={`talent-${n.id}`} data-rank={rk} data-state={st} aria-label={n.name}>
+                      <NodeIcon icon={n.icon} size={Math.round(sz * 0.62)} dim={st === 'locked'} />
+                      {st === 'locked' && <span className="tt-lock"><Lock size={square(n) ? 16 : 13} /></span>}
+                      <span className="tt-rk">{rk}/{n.max}</span>
                     </button>
                   );
                 })}
-                {bn.map((n) => (
-                  <div key={'l' + n.id} className="absolute text-center leading-[1.05] pointer-events-none" style={{ left: cx(n) - 36, width: 72, top: cy(n) + (n.capstone ? 27 : 23), fontSize: '.54rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: (ranks[n.id] || 0) > 0 ? '#f1d9a0' : '#8a7a5a' }}>{n.name}</div>
-                ))}
               </div>
-            );
-          })}
+            </div>
+            <div className="tt-zoom" onPointerDown={(e) => e.stopPropagation()}>
+              <button onClick={() => setZoomKeep(zoom - 0.1)} aria-label="Zoom out"><Minus size={16} /></button>
+              <button onClick={() => setZoomKeep(zoom + 0.1)} aria-label="Zoom in"><Plus size={16} /></button>
+            </div>
+          </div>
+
+          {sel && br && (
+            <aside className="tt-side" data-testid="talent-detail">
+              <div className="tt-dh">
+                <div className={`tt-dicon ${square(sel) ? 'sq' : 'rd'}`} style={{ ['--bc' as any]: br.color }}><NodeIcon icon={sel.icon} size={44} /></div>
+                <div>
+                  <div className="tt-dname">{sel.name}</div>
+                  <div className="tt-dsub" style={{ color: br.color }}>{br.name}{sel.capstone ? ' · capstone' : sel.special ? ' · special' : ''}</div>
+                </div>
+              </div>
+              <div className="tt-drank">Rank <b>{r}</b> / {sel.max}</div>
+              <div className="tt-ddesc">{sel.desc}<em> per rank</em></div>
+              <div className="tt-sec">Requirements</div>
+              <ul className="tt-req">
+                <li className={lv >= sel.lvReq ? 'ok' : ''}>{lv >= sel.lvReq ? <Check size={13} /> : <Lock size={12} />} Class level {sel.lvReq}</li>
+                {sel.req.map((q) => { const p = TALENT_BY_ID[q], ok = isMaxed(q, ranks); return <li key={q} className={ok ? 'ok' : ''}>{ok ? <Check size={13} /> : <Lock size={12} />} Max {p.name} ({ranks[q] || 0}/{p.max})</li>; })}
+                {!sel.req.length && <li className="ok"><Check size={13} /> Branch root</li>}
+              </ul>
+              {childrenOf(sel).length > 0 && (<>
+                <div className="tt-sec">Maxing this unlocks</div>
+                <div className="tt-unl">{childrenOf(sel).map((c) => <button key={c.id} onClick={() => setSel(c.id)}>{c.name}</button>)}</div>
+              </>)}
+              <div className="tt-cost">{sel.cost} point{sel.cost > 1 ? 's' : ''} per rank</div>
+              <button className="ax-btn gold tt-learn" disabled={block !== null} onClick={() => allocate(sel.id)} data-testid="talent-learn">{block === null ? `Learn · ${sel.cost} pt${sel.cost > 1 ? 's' : ''}` : why[block]}</button>
+              <button className="ax-btn tt-respec" disabled={cost <= 0 || gold < cost} onClick={() => respec()}><RotateCcw size={13} /> Respec{cost > 0 ? ` · ${cost.toLocaleString()} g` : ''}</button>
+            </aside>
+          )}
         </div>
-      </div>
-      <div style={{ fontSize: '.64rem', lineHeight: 1.3, color: 'var(--text-dim)' }}>Scroll sideways along each branch. Click a node to spend points: costs rise from 1 to 5 points per rank column by column. Capstones need {CAPSTONE_BRANCH_POINTS} points in their branch and both lanes before them. Talents apply in every run of this class.</div>
-    </div>
+      </motion.div>
+    </div>,
+    (document.querySelector('.hud-root') as HTMLElement) ?? document.body,
   );
 };

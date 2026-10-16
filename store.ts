@@ -1802,7 +1802,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!node || node.hero !== s.hero) return false;
       const ranks = s.talents[s.hero];
       const free = talentPointsTotal(s.heroRank) - talentsSpent(ranks);
-      if (allocBlock(node, ranks, free)) return false;
+      if (allocBlock(node, ranks, free, s.heroRank)) return false;
       const talents = { ...s.talents, [s.hero]: { ...ranks, [id]: (ranks[id] || 0) + 1 } };
       set({ talents });
       set({ stats: calculateStats(s.baseStats, s.equipment, s.hero, talents, s.attrs?.[s.hero]) });

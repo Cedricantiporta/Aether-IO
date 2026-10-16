@@ -1,9 +1,14 @@
 // ============================================================================
-// Talent trees: permanent (profile) per class, 3 branches x 10 nodes laid out left -> right (a landscape strip that
-// scrolls sideways in the narrow panel). Costs rise by column 1..5; stat values are 45% of the old tree (owner).
-// Points: 4 per class level (a full tree at the max level). Respec costs gold.
-// Effects are plain StatFx merged in store.calculateStats; the mechanics are
-// read from the new PlayerStats fields by the engine systems.
+// Talent trees: permanent (profile) per class. A radial graph (owner reference): the class emblem in the centre and
+// four branches (up / right / down / left), each fanning out over five rings:
+//   ring 0  root ............................. (no requirement)
+//   ring 1  two nodes ........................ need the root MAXED
+//   ring 2  four nodes (two per ring-1 node) . need their parent MAXED
+//   ring 3  two nodes ........................ each needs BOTH ring-2 nodes on its side MAXED
+//   ring 4  capstone ......................... needs both ring-3 nodes MAXED (= the whole branch)
+// Rings also need a class level (RING_LEVEL) and cost more points per rank (RING_COST). 4 points per class level;
+// a full branch is ~42 points, so the whole tree (~168) only fits near the level cap - before that you choose.
+// Effects are plain StatFx merged in store.calculateStats; the mechanics are read from PlayerStats by the engine.
 // ============================================================================
 import type { HeroClass } from './types';
 import type { StatFx } from './statFx';
@@ -13,12 +18,13 @@ export interface TalentNode {
   id: string;
   hero: HeroClass;
   branch: number;
-  row: number;            // column 0 (left) .. 5 (capstone)
-  x: number;              // lane 0..2 (top / middle / bottom)
+  row: number;            // ring 0 (next to the emblem) .. 4 (capstone)
+  x: number;              // angle offset (degrees) from the branch axis
+  lvReq: number;          // class level needed (by ring)
   name: string;
   desc: string;           // effect per rank
   max: number;
-  req: string[];          // every listed node needs >= 1 rank
+  req: string[];          // every listed node must be MAXED first
   icon: string;           // 'u:TYPE' (UpgradeArt) or skill icon id
   fx: StatFx;             // per rank
   capstone?: boolean;
@@ -62,12 +68,14 @@ export const BRANCHES: Record<HeroClass, TalentBranch[]> = {
 };
 
 type Row = [name: string, desc: string, max: number, icon: string, fx: StatFx];
-// Branch layout (left -> right): root, two lanes of four, capstone joining both lanes
+// Branch layout: node index -> ring, angle offset from the branch axis, prerequisites (must be maxed). Content order:
+// DEF rows 0..4, EXTRA rows 0..3, DEF row 5 (capstone).
 const LAYOUT: { row: number; x: number; req: number[] }[] = [
-  { row: 0, x: 1, req: [] }, { row: 1, x: 0, req: [0] }, { row: 1, x: 2, req: [0] },
-  { row: 2, x: 0, req: [1] }, { row: 2, x: 2, req: [2] },
-  { row: 3, x: 0, req: [3] }, { row: 3, x: 2, req: [4] }, { row: 4, x: 0, req: [5] }, { row: 4, x: 2, req: [6] },
-  { row: 5, x: 1, req: [7, 8] },
+  { row: 0, x: 0, req: [] },
+  { row: 1, x: -20, req: [0] }, { row: 1, x: 20, req: [0] },
+  { row: 2, x: -38, req: [1] }, { row: 2, x: 38, req: [2] }, { row: 2, x: -13, req: [1] }, { row: 2, x: 13, req: [2] },
+  { row: 3, x: -22, req: [3, 5] }, { row: 3, x: 22, req: [4, 6] },
+  { row: 4, x: 0, req: [7, 8] },
 ];
 /** Extra paths per branch (owner: more talent choices): two more nodes in each lane before the capstone. */
 const EXTRA: Record<HeroClass, Row[][]> = {
@@ -290,21 +298,22 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
   ],
 };
 
-/** Points per rank by column: 1, 1, 2, 3, 4, capstone 5 (owner: talent costs range 1..5). */
-const TIER_COST = [1, 1, 2, 3, 4, 5];
+/** Points per rank by ring (owner: talent costs range 1..5) and the class level each ring needs. */
+export const RING_COST = [1, 1, 2, 3, 5];
+export const RING_LEVEL = [1, 4, 10, 20, 30];
 
 export const TALENTS: TalentNode[] = [];
 (Object.keys(DEF) as HeroClass[]).forEach((hero) => {
   DEF[hero].forEach(([pfx, rows], b) => {
     const all = [...rows.slice(0, 5), ...EXTRA[hero][b], rows[5]];
-    const id = (i: number) => `${hero[0].toLowerCase()}2_${pfx}${i}`;   // ('2': the 10-node tree; old ranks are refunded)
+    const id = (i: number) => `${hero[0].toLowerCase()}3_${pfx}${i}`;   // ('3': the radial tree; older ranks are refunded)
     all.forEach((r, i) => {
       const L = LAYOUT[i], fx = scaleFx(r[4]);
       const mech = r[1] && !/^[+\-]/.test(r[1]) ? `${r[1].split(/[;,]/)[0]}. ` : '';   // keep a mechanic's wording (e.g. 'Every 6th attack fires twice')
       TALENTS.push({
         id: id(i), hero, branch: b, row: L.row, x: L.x,
         name: r[0], desc: mech && Object.keys({ ...fx.add, ...fx.mul }).every((k) => WHOLE.has(k)) ? r[1] : describeFx(fx), max: r[2], icon: r[3], fx,
-        req: L.req.map(id), capstone: i === 9, cost: TIER_COST[L.row], special: Object.keys({ ...fx.add, ...fx.mul }).some((k) => WHOLE.has(k) || SPECIAL_KEYS.has(k)),
+        req: L.req.map(id), capstone: i === 9, cost: RING_COST[L.row], lvReq: RING_LEVEL[L.row], special: Object.keys({ ...fx.add, ...fx.mul }).some((k) => WHOLE.has(k) || SPECIAL_KEYS.has(k)),
       });
     });
   });
@@ -321,14 +330,17 @@ export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floo
 export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
   talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? (ranks[t.id] || 0) * t.cost : 0), 0);
-export const CAPSTONE_BRANCH_POINTS = 20;
 export const respecCost = (ranks: TalentRanks): number => { const s = talentsSpent(ranks); return s > 0 ? (200 + 150 * s) * 10 : 0; };   // x10 economy
 
-export type AllocBlock = null | 'max' | 'points' | 'prereq' | 'branch';
-export function allocBlock(node: TalentNode, ranks: TalentRanks, free: number): AllocBlock {
+export const isMaxed = (id: string, ranks: TalentRanks): boolean => (ranks[id] || 0) >= (TALENT_BY_ID[id]?.max ?? 1);
+/** Nodes this one opens up (the ones listing it as a prerequisite). */
+export const childrenOf = (node: TalentNode): TalentNode[] => talentsOf(node.hero).filter((t) => t.req.includes(node.id));
+
+export type AllocBlock = null | 'max' | 'points' | 'prereq' | 'level';
+export function allocBlock(node: TalentNode, ranks: TalentRanks, free: number, lv = 99): AllocBlock {
   if ((ranks[node.id] || 0) >= node.max) return 'max';
-  if (node.req.some((r) => !(ranks[r] > 0))) return 'prereq';
-  if (node.capstone && branchSpent(node.hero, node.branch, ranks) < CAPSTONE_BRANCH_POINTS) return 'branch';
+  if (node.req.some((r) => !isMaxed(r, ranks))) return 'prereq';
+  if (lv < node.lvReq) return 'level';
   if (free < node.cost) return 'points';
   return null;
 }

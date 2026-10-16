@@ -75,7 +75,7 @@ export function canTrainSkill(s: ReturnType<typeof useGameStore.getState>): bool
 }
 export function canBuyTalent(s: ReturnType<typeof useGameStore.getState>): boolean {
   const ranks = s.talents[s.hero], free = talentPointsTotal(s.heroRank) - talentsSpent(ranks);
-  return free > 0 && talentsOf(s.hero).some((n) => allocBlock(n, ranks, free) === null);
+  return free > 0 && talentsOf(s.hero).some((n) => allocBlock(n, ranks, free, s.heroRank) === null);
 }
 /** Any Workshop recipe the hero can forge right now (owner: red dot on the Blacksmith and on the recipe). */
 export function canCraftAny(s: ReturnType<typeof useGameStore.getState>): boolean {
