@@ -35,7 +35,7 @@ export function resetSpecials(): void { for (const k in specialStats) delete spe
 let slimeKingId = -1;
 export function setSlimeKing(id: number): void { slimeKingId = id; }
 // Belly Flop timeline (s): crouch, leap out of sight, hang while the circle hunts you, lock, slam down fast.
-const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.22, end: 3.9, h: 24, r: 6.5 };
+const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.42, end: 4.1, h: 24, r: 6.5 };   // (owner: drop a bit slower, 0.42 s, was 0.22)
 /** Height of an enemy in a Belly Flop (enemies.ts writes it to pos.y; > 2 = airborne: untouchable, no contact). */
 export function flopY(e: Enemy): number {
   if (e.spKind !== SP.SLAM) return 0;

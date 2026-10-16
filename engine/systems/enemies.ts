@@ -57,6 +57,12 @@ const ELITE_SCALE = 1.35;
 const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'VOLATILE', 'SHIELDED'];
 
 // (owner: basic / elite monsters cast their telegraphed attacks faster - every windup below is x0.8 of its old value)
+/** Chance that a monster spawned while a biome boss lives (= one of its summons) gets a 50%-HP shield. */
+const BOSS_ADD_SHIELD_CHANCE = 0.35;
+/** A biome boss is alive (discrete spawns only: a short scan, no per-frame cost). */
+function bossAlive(): boolean { for (const o of world.enemies) if (o.active && o.boss && o.state !== 'DYING') return true; return false; }
+/** Elite HP multiplier (owner: -30%, was 4). */
+const ELITE_HP = 2.8;
 const ARCHER = { minR: 12, maxR: 18, windup: 0.48, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
 const CULTIST = { minR: 10, maxR: 14, windup: 0.64, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
 const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
@@ -249,7 +255,7 @@ export function spawnEnemy(
 
   // every monster, elite and boss also scales with the hero's level: +7% HP and +4.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? 4 : 1) * (boss ? 0.25 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) (x Ascension boss hp)
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg;
   // later biomes breed tougher monsters on top of the depth curve (owner): +15% HP and +10% damage per biome
   const bi = Math.max(0, Math.min(7, world.room.biome | 0));
@@ -290,6 +296,8 @@ export function spawnEnemy(
   if (isStationary(kind)) { e.dir.set(pos.x, 0, pos.z); e.phase = 0; e.angle = 5 + Math.random() * 3; }   // home spot (towers / lakes)
   e.active = true;
   contactCd[e.id] = 0.4; meleeT[e.id] = 0; strikeT[e.id] = 0;
+  // (owner) summons of a biome boss sometimes arrive warded: a shield worth 50% of their own HP (bubble + shield bar)
+  if (!boss && Math.random() < BOSS_ADD_SHIELD_CHANCE && bossAlive()) e.shield = Math.max(e.shield, e.maxHp * 0.5);
 
   d.aliveCount++;
   events.emit('spawn', { pos: e.pos, kind, elite });
@@ -303,7 +311,7 @@ let barOwner = -1;
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
-  e.maxHp = Math.round(e.maxHp / (4 * 1.4) * MINI.hpMul * 0.625); // mini-bosses: half of the old +25% value
+  e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
   e.affix = 'NONE';
@@ -504,7 +512,7 @@ function aiCultist(e: Enemy): void {
 
 /** Keep the player inside [minR, maxR]; strafe while inside the band. */
 function kiteMove(e: Enemy, ux: number, uz: number, minR: number, maxR: number): void {
-  if (tdist < minR) setVel(e, -ux, -uz, e.speed * 1.1);
+  if (tdist < minR * 0.82) setVel(e, -ux, -uz, e.speed);   // (owner: backs off a little less often / less eagerly; was < minR at 1.1x speed)
   else if (tdist > maxR) setVel(e, ux, uz, e.speed);
   else {
     const s = (e.id & 1) === 0 ? 1 : -1;
