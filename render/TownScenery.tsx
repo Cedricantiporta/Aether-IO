@@ -790,7 +790,7 @@ function buildTown() {
     const kb = tb.build(), kg = tg.build(); c.b.addColored(kb, [0, TERRACE.h, 0]); c.g.addColored(kg, [0, TERRACE.h, 0]); kb.dispose(); kg.dispose(); }   // (the keep stands on the terrace)
   put(CHURCH.x, CHURCH.z, CHURCH.rot, buildChurch());
   put(TAVERN.x, TAVERN.z, TAVERN.rot, buildTavern(HOUSES.length + 3));
-  put(WINDMILL.x, WINDMILL.z, 0, buildWindmill());
+  put(WINDMILL.x, WINDMILL.z, WINDMILL_ROT, buildWindmill());   // (owner: faces the way the barn faces, -x)
   put(STATUE.x, STATUE.z, 0, buildStatue());
   { const c = at(-38, -30); addGraveyard(c.b, c.g, mulberry32(777)); }
   const bench = buildBench();
@@ -878,9 +878,10 @@ function Lake() {
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     // (owner) a little sandy cove on the mainland shore south of the river mouth: overlapping sand slabs, boulders, driftwood
     // (rounded sand: overlapping flat discs of one colour, each a hair higher so they never z-fight; edges taper into the grass)
-    for (let z = riverBank(LAKE.x1, 1) + 2.5, k = 0; z < LAKE.z1 + 6; z += 2.2, k++) {
+    for (let z = riverBank(LAKE.x1, 1) + 2.5, k = 0; z < LAKE.z1 + 12; z += 2.2, k++) {
       const r = 2.3 + rnd() * 1.2;
       b.cyl(r, r + 0.25, 0.1, 18, [LAKE.x1 + 1.4 + (rnd() - 0.5) * 1.6, 0.01 + k * 0.002, z], '#e2cb93');
+      { const r2 = 2.0 + rnd() * 1.4; b.cyl(r2, r2 + 0.25, 0.1, 18, [LAKE.x1 + 4.6 + (rnd() - 0.5) * 2.4, 0.012 + k * 0.002, z + 1.1], '#e2cb93'); }   // (a wider beach strip)
       if (rnd() < 0.45) b.ico(0.7 + rnd() * 1.1, [LAKE.x1 - 0.5 + rnd() * 4, 0.05, z + (rnd() - 0.5) * 2], ['#8a8f94', '#7d8288', '#969a9c'][(rnd() * 3) | 0], [1.2, 0.7, 1.05], 0);
       if (rnd() < 0.3) b.ico(0.3 + rnd() * 0.3, [LAKE.x1 + 1 + rnd() * 3, 0.02, z + rnd()], '#a3a69e', [1.3, 0.6, 1], 0);
       if (rnd() < 0.2) b.cyl(0.14, 0.18, 2.2 + rnd(), 6, [LAKE.x1 + 1.5 + rnd() * 2, 0.12, z], '#7a5a3a', [0, 0, Math.PI / 2 + (rnd() - 0.5) * 0.4]);   // driftwood
@@ -900,13 +901,15 @@ function Lake() {
   );
 }
 
+const WINDMILL_ROT = -Math.PI / 2;   // same facing as the barn (rot -PI/2: its door looks west, toward the road)
+
 /** The windmill's sails, turning slowly. */
 function Windmill() {
   const geo = useMemo(() => buildSails(), []), mat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const ref = useRef<Mesh>(null!);
   useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
   useFrame((_, dt) => { if (ref.current) ref.current.rotation.z += Math.min(dt, 0.05) * 0.45; });
-  return <mesh ref={ref} geometry={geo} material={mat} position={[WINDMILL.x, 9.2, WINDMILL.z + 3.5]} castShadow />;
+  return <mesh ref={ref} geometry={geo} material={mat} position={[WINDMILL.x + Math.sin(WINDMILL_ROT) * 3.5, 9.2, WINDMILL.z + Math.cos(WINDMILL_ROT) * 3.5]} rotation={[0, WINDMILL_ROT, 0]} castShadow />;
 }
 
 function TownTrees() {

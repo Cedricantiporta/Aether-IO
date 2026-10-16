@@ -231,10 +231,9 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   // ---- foam along the water line (where the sand dips under the lake surface y = -0.15) + a few reeds at the ends
   for (let z = BEACH.z0 + 1; z < BEACH.z1 + 4; z += 1.4) {
     let wx = BEACH.shoreX;
-    for (let x = -60; x > -76; x -= 0.25) if (groundY(x, z) < -0.15) { wx = x; break; }
+    for (let x = -56; x > -80; x -= 0.25) if (groundY(x, z) < -0.15) { wx = x; break; }
     if (Math.abs(z - DOCK.z) < 1.5) continue;
-    b.box(0.35 + rnd() * 0.4, 0.02, 1.0 + rnd() * 0.8, [wx - 0.1 + (rnd() - 0.5) * 0.4, -0.125, z], '#eef6f2', [0, (rnd() - 0.5) * 0.4, 0]);
-    if (rnd() < 0.3) b.box(0.25, 0.02, 0.6, [wx - 0.9 - rnd() * 0.6, -0.13, z + rnd()], '#dcecea', [0, rnd(), 0]);
+    rnd(); rnd(); rnd(); rnd();   // (owner: no white foam strips on the shore)
     if ((z < BEACH.z0 + 8 || z > BEACH.z1 - 6) && rnd() < 0.7) for (let k = 0; k < 4; k++) { const rx = wx - 0.4 - rnd() * 1.6, rz = z + (rnd() - 0.5) * 1.4, h = 1.0 + rnd() * 0.8; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); }
   }
   // ---- campfire flames (emissive, local to the fire so they can flicker)

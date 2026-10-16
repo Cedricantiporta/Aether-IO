@@ -15,7 +15,7 @@
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
-import { BEACH_BOX, BEACH, onDeckRect } from './beachData';
+import { BEACH_BOX, BEACH, onDeckRect, beachWobble } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
@@ -40,7 +40,7 @@ export function isTownWater(x: number, z: number): boolean {
   if (Math.abs(x) <= BRIDGE.hw + 0.8 && z > BRIDGE.z0 - 1 && z < BRIDGE.z1 + 1) return false;
   if (x >= RIVER.x0 - 30 && x <= RIVER.x1 && z > riverBank(x, 0) + 0.3 && z < riverBank(x, 1) - 0.3) return true;
   if (x < LAKE.x1 && z > LAKE.z0 && z < LAKE.z1) {
-    const sx = LAKE.x1 + (BEACH.shoreX - LAKE.x1) * sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z);
+    const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk;
     if (x < sx - 1.2) return true;
   }
   return false;
@@ -303,9 +303,7 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
-  // the mainland road from the bridge to the portal: rail fences both sides (gaps at the farm gate, the farm track, the tower path)
-  [3.4, 79.5, 3.4, FARM.z - 1.6], [3.4, FARM.z + 1.6, 3.4, 109.2], [3.4, 112, 3.4, 117.5],
-  [-3.4, 79.5, -3.4, BREWER_HUT.z - 2.2], [-3.4, BREWER_HUT.z + 2.2, -3.4, TOWER.z - 1.4], [-3.4, TOWER.z + 1.4, -3.4, 117.5],   // (gap at the Elixir Brewer's door)
+  // (owner: no fences along the road to the portal)
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
@@ -321,9 +319,9 @@ export const FENCES: [number, number, number, number][] = [
   [5, 108.4, 30.5, 108.9], [37.5, 108.9, 42, 108.7],
   [5, 112.8, 10.6, 112.9], [15.4, 112.95, 20.6, 113.1], [25.4, 113.2, 29.6, 113.3], [34.4, 113.3, 43.6, 113.2],
   // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
-  [-4.4, TOWER.z - 1.8, -62, TOWER.z - 1.8],
+  [-4.4, TOWER.z - 1.8, -55, TOWER.z - 1.8],
   [-4.4, TOWER.z + 1.8, -11.6, TOWER.z + 1.8], [-15.4, TOWER.z + 1.8, -21.6, TOWER.z + 1.8], [-25.4, TOWER.z + 1.8, -31.1, TOWER.z + 1.8],
-  [-34.9, TOWER.z + 1.8, -40.1, TOWER.z + 1.8], [-43.9, TOWER.z + 1.8, -62, TOWER.z + 1.8],
+  [-34.9, TOWER.z + 1.8, -40.1, TOWER.z + 1.8], [-43.9, TOWER.z + 1.8, -55, TOWER.z + 1.8],   // (owner: stop short of the tower clearing)
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
 ];
@@ -384,6 +382,18 @@ export const TOWN_TREES: TreeSpec[] = [
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: 24, z: 46, s: 3.4, kind: 0 },
+  // (owner: more trees, like a forest) the Endless Tower clearing: both edges, clear of the path (z = 112 +- 3) and the knoll
+  ...(() => {
+    const t: TreeSpec[] = [];
+    for (let i = 0; i < 9; i++) {
+      const x = -47 - i * 4.4 + (i % 2) * 1.3;
+      if (Math.hypot(x + 74, 0) < 12) continue;   // (the knoll)
+      t.push({ x, z: 104.6 + (i % 3) * 0.9, s: 3.1 + (i % 4) * 0.25, kind: (i % 3) as 0 | 1 | 2 });
+      if (x < -45) t.push({ x: x - 1.8, z: 119.4 - (i % 3) * 0.8, s: 3.0 + ((i + 1) % 4) * 0.25, kind: ((i + 1) % 3) as 0 | 1 | 2 });
+    }
+    t.push({ x: -82.5, z: 104.5, s: 3.5, kind: 0 }, { x: -84, z: 119, s: 3.4, kind: 2 }, { x: -64, z: 103.6, s: 3.3, kind: 1 }, { x: -86, z: 112, s: 3.6, kind: 1 });
+    return t;
+  })(),
   // the mainland across the bridge
   { x: -38, z: 82, s: 3.9, kind: 3 }, { x: -8, z: 83, s: 3.4, kind: 1 }, { x: -40, z: 96, s: 3.9, kind: 2 }, { x: -41, z: 106, s: 3.4, kind: 2 },
   { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 47, z: 88, s: 3.6, kind: 0 },
@@ -746,6 +756,15 @@ export const NPCS: NpcDef[] = [
     talk: [['Ahh, fresh air.']], bubbles: ['Ahh, fresh air.', 'The river\'s high this year.', 'Good fishing at the beach.'] },
   { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
     talk: [['Have you met my sister? She never stops talking.']], bubbles: ['Have you met my sister? She never stops talking.', 'Lovely flowers by the gate.'] },
+  // (owner: more folk outside the walls) the hamlets by the portal, the riverside green, the beach
+  { name: 'Pip', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.85, prop: 'none', accent: '#d9c9a8', home: [8, 110.6], speed: 1.4, patrol: [[8, 110.6], [28, 110.6]], noHat: true, noCape: true, tunic: '#e0cfa8', hair: '#c07a3a', longHair: false,
+    talk: [['Are you a real hero? Can I hold your sword?']], bubbles: ['Race you to the coop!', 'I saw a fox!', 'Mum says no portals.'] },
+  { name: 'Wenna', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#d9c9a8', home: [-8, 112], speed: 1.0, patrol: [[-8, 112], [-38, 112]], noHat: true, noCape: true, tunic: '#d8c7a6', hair: '#6a4024', longHair: true,
+    talk: [['The tower hums at night. I sleep with the window shut.']], bubbles: ['Lovely mushrooms in these woods.', 'Mind the tower, dear.', 'Fresh eggs for sale!'] },
+  { name: 'Old Garth', role: 'Villager', model: 'KNIGHT', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-27, 57], speed: 0.8, patrol: [[-27, 57], [-13, 57.5]], noHat: true, noCape: true, tunic: '#a89070', hair: '#c8c8c8', longHair: false,
+    talk: [['I come out here to watch the river. It never does anything new, and that is the best part.']], bubbles: ['Ahh, my knees.', 'Good river, this.', 'Back in my day...'] },
+  { name: 'Ned', role: 'Fisherman', model: 'BARBARIAN', tint: '#ffffff', scale: 1, prop: 'none', accent: '#d9c9a8', home: [-58, 18], speed: 0.9, patrol: [[-58, 18], [-58, 44]], noHat: true, noCape: true, tunic: '#9ab0b8', hair: '#3a2a1c', longHair: false,
+    talk: [['The pier end is where the big ones bite. Patience, that is the whole trick.']], bubbles: ['Steady... steady...', 'Nice day for a cast.', 'The one that got away was THIS big.'] },
   // the Golden Tankard (enterable tavern east of the keep): the barkeep behind the bar and a regular at the hearth
   {
     name: 'Marta Goldtap', role: 'Barkeep', model: 'ROGUE', tint: '#ffe2c4', scale: 1, prop: 'none', accent: '#ffcf5a', home: [-2, -5.6], area: 'TAVERN',

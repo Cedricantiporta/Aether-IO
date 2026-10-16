@@ -80,10 +80,15 @@ export const BEACH_COLLIDERS: [number, number, number][] = (() => {
   return c;
 })();
 
+/** Wavy offset of the beach water line (owner: rounded, irregular shore instead of a straight edge). */
+export const beachWobble = (z: number): number => Math.sin(z * 0.19 + 0.7) * 2.4 + Math.sin(z * 0.47 + 2.1) * 1.1;
+
 /** 0..1 sand coverage at (x, z) (render tint; soft edges, fades into the meadow by the corner tower). */
 export function beachSandK(x: number, z: number): number {
   if (x > -38 || z < BEACH.z0 - 9 || z > BEACH.z1 + 8) return 0;
-  const sz = Math.min(1, Math.max(0, (z - (BEACH.z0 - 6)) / 6)) * Math.min(1, Math.max(0, (BEACH.z1 + 6 - z) / 8));
+  // rounded ends: the sand's north / south limits bulge with x (no square corners)
+  const bx = Math.max(0, -40 - x), bulge = Math.sin(bx * 0.22) * 2.5;
+  const sz = Math.min(1, Math.max(0, (z - (BEACH.z0 - 6) - bulge) / 6)) * Math.min(1, Math.max(0, (BEACH.z1 + 6 - z - bulge) / 8));
   // west of the wall: all sand; south of the corner tower it fades toward the meadow (x -44 .. -40)
   const edgeX = z > 40 ? -40 - (z - 40) * 0.1 : -44.5;
   const sx = Math.min(1, Math.max(0, (edgeX - x) / 4));
