@@ -53,11 +53,13 @@ export const HEADLAND: [number, number, number][] = (() => {
 export const PALMS: [number, number, number, number][] = [   // x, z, scale, lean yaw
   [-49.5, 10.5, 1.0, 0.6], [-60.5, 11, 1.15, 2.4], [-48.6, 18.5, 0.95, 0.2], [-63.2, 22.5, 1.1, 1.7], [-62.4, 37, 1.05, 1.4],
   [-49.6, 56.5, 1.1, -0.6], [-57.5, 59, 1.0, 2.9], [-63.5, 57, 1.15, 1.9],
+  // the mainland beach (south of the river mouth)
+  [-46.2, 80.5, 1.05, 2.2], [-44.6, 87.5, 1.15, 1.6], [-47.5, 93.5, 1.0, 2.7],
 ];
 export const CAMPFIRE = { x: -53.5, z: 54 };
 export const UMBRELLA = { x: -54, z: 17 };
 export const ROWBOAT = { x: -62.2, z: 50, rot: 0.5 };      // beached on the sand, bow toward the water
-export const DRIFTWOOD: [number, number, number][] = [[-63.4, 34.2, 0.3], [-61, 25.5, 1.2], [-62.8, 45.2, -0.4], [-53, 29.6, 0.9]];
+export const DRIFTWOOD: [number, number, number][] = [[-63.4, 34.2, 0.3], [-61, 25.5, 1.2], [-62.8, 45.2, -0.4], [-53, 29.6, 0.9], [-48.6, 84.2, 0.5], [-46.8, 91.2, -0.7]];
 export const CRATES: [number, number, number][] = [[-56.4, 26.8, 0.2], [-55.5, 27.9, -0.3], [-56.2, 27.6, 0.5]];   // 3rd is stacked on the first
 export const BARRELS: [number, number][] = [[-56.4, 33.5], [-55.6, 34.4]];
 export const NET_RACK = { x: -49.2, z: 31, rot: Math.PI / 2 };   // fishing nets drying on a rack along the wall
@@ -83,8 +85,18 @@ export const BEACH_COLLIDERS: [number, number, number][] = (() => {
 /** Wavy offset of the beach water line (owner: rounded, irregular shore instead of a straight edge). */
 export const beachWobble = (z: number): number => Math.sin(z * 0.19 + 0.7) * 2.4 + Math.sin(z * 0.47 + 2.1) * 1.1;
 
+/** (owner) the mainland beach south of the river mouth, styled like the lakeside beach: sand from the water line to
+ *  innerX, a little west-pushed wavy shore (SHORE_PUSH) over z0..z1. */
+export const MAIN_BEACH = { z0: 78, z1: 97, innerX: -41.5, push: 2.2 };
+/** 0..1 blend of the mainland beach band at z (soft ends). */
+export const mainBeachK = (z: number): number => Math.min(1, Math.max(0, (z - MAIN_BEACH.z0 + 4) / 5)) * Math.min(1, Math.max(0, (MAIN_BEACH.z1 + 3 - z) / 5));
+
 /** 0..1 sand coverage at (x, z) (render tint; soft edges, fades into the meadow by the corner tower). */
 export function beachSandK(x: number, z: number): number {
+  if (x < -36 && z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6) {   // the mainland beach
+    const k = mainBeachK(z), edge = MAIN_BEACH.innerX + Math.sin(z * 0.37 + 1.3) * 1.4 + Math.sin(z * 0.9) * 0.5;
+    return k * Math.min(1, Math.max(0, (edge - x) / 3));
+  }
   if (x > -38 || z < BEACH.z0 - 9 || z > BEACH.z1 + 8) return 0;
   // rounded ends: the sand's north / south limits bulge with x (no square corners)
   const bx = Math.max(0, -40 - x), bulge = Math.sin(bx * 0.22) * 2.5;

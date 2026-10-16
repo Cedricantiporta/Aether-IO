@@ -346,6 +346,12 @@ function FishingRig() {
 }
 
 // --------------------------------------------------------------------- beach ---
+/** (owner) a floating "Fishing" tag over every fishing spot (pier end + shoreline), like the shop / NPC names. */
+function FishLabels() {
+  const lab = useMemo(() => { const l = labelMaterial('Fishing', '#9fe6ff', { size: 56, plate: 'plate' }); l.mat.depthTest = false; return l; }, []);
+  return <>{FISH_SPOTS.map((f, i) => <sprite key={i} material={lab.mat} renderOrder={5} position={[f.x + f.dx * 1.2, (f.label === 'Pier end' ? DOCK.y : 0) + 2.6, f.z + f.dz * 1.2]} scale={[lab.aspect * 0.6, 0.6, 1]} />)}</>;
+}
+
 export function Beach({ q }: { q: QualityCfg }) {
   const geo = useMemo(() => buildBeach(), []);
   const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) }) }), []);
@@ -367,6 +373,7 @@ export function Beach({ q }: { q: QualityCfg }) {
       <mesh geometry={geo.glow} material={mats.glow} />
       <mesh ref={flame} geometry={geo.fire} material={mats.glow} position={[CAMPFIRE.x, 0, CAMPFIRE.z]} />
       <FishingRig />
+      <FishLabels />
     </group>
   );
 }

@@ -2552,7 +2552,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 
 /* top-centre target panel (owner: replaces the room plaque) */
 .target-frame.docked { position: relative; width: min(24rem, 60vw); padding: .45rem .8rem .5rem; border-radius: 3px; gap: .25rem;
-  background: linear-gradient(180deg, rgba(14, 14, 18, .72), rgba(6, 6, 8, .6)) !important; border: 0 !important; box-shadow: 0 0 0 1px rgba(214, 186, 122, .22) !important; }
+  background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none; backdrop-filter: none; }   /* (owner: no container) */
+.target-frame.docked .tf-name, .target-frame.docked .tf-val { text-shadow: 0 0 3px #000, 0 1px 2px #000; }
 .target-frame.docked .tf-bar { height: .7rem; border-radius: 1px; border-width: 1px; box-shadow: none; }
 .target-frame.docked .tf-name { font-size: 14px; }
 
@@ -2589,3 +2590,10 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 
 /* minimap (owner): no border, dark grey, the edges fade out */
 .mm-canvas { opacity: .92; -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 60%, transparent 100%); mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 60%, transparent 100%); }
+
+/* (owner) quest freebies in shops: impossible to miss */
+.rpg-slot.is-free { box-shadow: 0 0 0 2px #7dff9a, 0 0 16px rgba(125, 255, 154, .75) !important; animation: freePulse 1.2s ease-in-out infinite; z-index: 2; }
+.slot-free-badge { position: absolute; top: .15rem; left: 50%; transform: translateX(-50%); z-index: 6; padding: .05rem .4rem; font-family: var(--font-title); font-size: .7rem; letter-spacing: .08em;
+  color: #0b2a12; background: linear-gradient(180deg, #b6ffc4, #4fdc74); box-shadow: 0 0 10px rgba(125, 255, 154, .9), 0 1px 2px #000; pointer-events: none; }
+.slot-grid.priced .rpg-slot.is-free .slot-price { color: #7dff9a; font-weight: 800; }
+@keyframes freePulse { 50% { box-shadow: 0 0 0 2px #b6ffc4, 0 0 26px rgba(125, 255, 154, 1) !important; } }

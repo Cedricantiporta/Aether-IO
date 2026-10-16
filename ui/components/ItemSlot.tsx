@@ -40,7 +40,7 @@ export const ItemSlot: React.FC<Props> = ({
   item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, gemPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag, onSeen,
 }) => {
   const q = qty ?? item?.quantity ?? 1;
-  const cls = `rpg-slot ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
+  const cls = `rpg-slot ${price === 0 && item ? 'is-free' : ''} ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
   const style = { ['--slot' as any]: size } as React.CSSProperties;
   const content = (
     <>
@@ -53,6 +53,7 @@ export const ItemSlot: React.FC<Props> = ({
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}
       {price !== undefined && <span className={`slot-price ${cantAfford ? 'cant' : ''} ${gemPrice ? 'gem' : ''}`}>{price === 0 ? 'Free' : price.toLocaleString()}</span>}
+      {price === 0 && item && <span className="slot-free-badge" data-testid="free-badge">FREE</span>}
       {children}
     </>
   );

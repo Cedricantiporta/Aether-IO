@@ -5,7 +5,7 @@ import { LAKE } from '../engine/townData';
 import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt } from '../engine/townData';
 import { inCampYard } from '../engine/caveData';
 import { hillAt } from '../engine/townHills';
-import { BEACH, beachSandK, beachWobble } from '../engine/beachData';
+import { BEACH, beachSandK, beachWobble, mainBeachK, MAIN_BEACH } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
 
 export const POND = { x: ENGINE_POND.x, z: ENGINE_POND.z, r: ENGINE_POND.r - 1.5 };
@@ -55,7 +55,7 @@ export function pondEdge(a: number) {
 export function lakeK(x: number, z: number) {
   if (x > LAKE.x1) return 0;
   // the beach (engine/beachData) pushes the shore line west along the southern half of the west side
-  const bk = sstep(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstep(BEACH.z1 + 9, BEACH.z1 + 1, z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk;
+  const bk = sstep(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstep(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - (MAIN_BEACH.push - beachWobble(z) * 0.5) * mk;
   const inX = sstep(sx, sx - LAKE.shore, x);
   const inZ = sstep(LAKE.z0, LAKE.z0 + 14, z) * sstep(LAKE.z1, LAKE.z1 - 14, z);
   return inX * inZ;

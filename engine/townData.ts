@@ -15,7 +15,7 @@
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
 import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
-import { BEACH_BOX, BEACH, onDeckRect, beachWobble } from './beachData';
+import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH } from './beachData';
 
 export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
@@ -40,7 +40,7 @@ export function isTownWater(x: number, z: number): boolean {
   if (Math.abs(x) <= BRIDGE.hw + 0.8 && z > BRIDGE.z0 - 1 && z < BRIDGE.z1 + 1) return false;
   if (x >= RIVER.x0 - 30 && x <= RIVER.x1 && z > riverBank(x, 0) + 0.3 && z < riverBank(x, 1) - 0.3) return true;
   if (x < LAKE.x1 && z > LAKE.z0 && z < LAKE.z1) {
-    const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk;
+    const bk = sstepT(BEACH.z0 - 11, BEACH.z0 - 2, z) * sstepT(BEACH.z1 + 9, BEACH.z1 + 1, z), mk = mainBeachK(z), sx = LAKE.x1 + (BEACH.shoreX + beachWobble(z) - LAKE.x1) * bk - (MAIN_BEACH.push - beachWobble(z) * 0.5) * mk;
     if (x < sx - 1.2) return true;
   }
   return false;
@@ -303,7 +303,8 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
-  // (owner: no fences along the road to the portal)
+  // (owner) the road's west side along the wheat / pumpkin fields only, stopping before the Elixir Brewer (nothing on to the portal)
+  [-3.4, 82.5, -3.4, BREWER_HUT.z - 3.2],
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
     const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
@@ -323,7 +324,7 @@ export const FENCES: [number, number, number, number][] = [
   [-4.4, TOWER.z + 1.8, -11.6, TOWER.z + 1.8], [-15.4, TOWER.z + 1.8, -21.6, TOWER.z + 1.8], [-25.4, TOWER.z + 1.8, -31.1, TOWER.z + 1.8],
   [-34.9, TOWER.z + 1.8, -40.1, TOWER.z + 1.8], [-43.9, TOWER.z + 1.8, -55, TOWER.z + 1.8],   // (owner: stop short of the tower clearing)
   // the extra crop fields (each open on the road side)
-  ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1], [roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),
+  ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
