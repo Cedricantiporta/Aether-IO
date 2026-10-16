@@ -137,7 +137,9 @@ function gainStagger(e: Enemy, amount: number): void {
 export function addUlt(n: number): void {
   const p = world.player;
   if (p.ultT > 0 || p.ult >= 100) return;
-  const wl = useGameStore.getState().skillLevels.weapon;
+  const sl = useGameStore.getState().skillLevels;
+  if (sl.ult <= 0) return;   // the ult is locked until Lv 10 (no charge)
+  const wl = sl.weapon;
   p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1))); // ult charge (+40% vs 0.62)
   if (p.ult >= 100) events.emit('ultReady', {});
 }

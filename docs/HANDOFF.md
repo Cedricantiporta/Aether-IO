@@ -1054,3 +1054,11 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   (life 1.05 + 0.03/lv), bigger axes during Titan's Wrath (radius 2.8, render scales with radius); knight range 8.5.
   NPC quests: level gates reviewed (npcQuests.ts minLevel, L2..L48 by realm); Pip's hermit errand now Lv 3 (the hermit
   trail has monsters; trail un-blocked: ruin + boulders moved so findPath reaches Old Wend).
+- Monster pathing: `enemies.ts steerAround` (look-ahead collider avoidance + stuck -> detour, alternating sides).
+- **Skill unlocks:** skill 2 Lv 5, skill 3 Lv 7, **ultimate Lv 10** (`classLevels.ULT_UNLOCK_LV`, auto-learned via
+  `autoLearnActives`; old saves below Lv 10 get the ult re-locked + SP refunded in `sanitizeClassProg`). Locked ult: no
+  charge (`combat.addUlt`), no cast, slot shows "Lv 10". On unlock the bar is pre-filled and the "Press R" hint shows only
+  for that first charge, per class (`tutorial.ts`, localStorage `aether-survivor-ult-first-v1`).
+- Aegis card is Legendary (gold). Potion rewards cut: bounty quests 1 + r/6 each, story/NPC quest potions 1, tower SUPPLY
+  1 big potion, wanderer 1+1, chapel blessing 1, plain item drops 5% potions (was 10%).
+- Gear level requirements by rarity (`constants.RANK_REQ`): Common 1, Rare 3, Epic 8, Legendary 15, Mythic 25.

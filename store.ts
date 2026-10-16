@@ -1810,8 +1810,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (pool.length === 0) pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i));
       } else {
         const r = Math.random();
-        if (r > 0.90) pool = notPet.filter((i) => i.type === 'POTION');
-        else if (r > 0.82) pool = notPet.filter((i) => i.id === 'upgrade_core'); // cores are rare (8% of item drops; tier I only)
+        if (r > 0.95) pool = notPet.filter((i) => i.type === 'POTION');   // (owner: fewer potion drops, 5%)
+        else if (r > 0.87) pool = notPet.filter((i) => i.id === 'upgrade_core'); // cores are rare (8% of item drops; tier I only)
         else {   // plain gear: Common or Rare (owner: far fewer Common pieces - 70% of the Common rolls drop nothing)
           const tier: Rarity = Math.random() < 0.5 ? 'COMMON' : 'RARE';
           if (tier === 'COMMON' && Math.random() < 0.7) return null;
@@ -2039,9 +2039,9 @@ const autoLearn = (): void => {
   const perm = autoLearnActives(st.hero, cp.lv, cp.skills);
   const run = autoLearnActives(st.hero, cp.lv, st.skillLevels);
   if (!perm && !run) return;
-  const learned = ACTIVE_ORDER[st.hero].filter((k) => (perm ?? cp.skills)[k] > 0 && !(cp.skills[k] > 0));
+  const learned = [...ACTIVE_ORDER[st.hero], 'ult' as const].filter((k) => (perm ?? cp.skills)[k] > 0 && !(cp.skills[k] > 0));
   useGameStore.setState({ classProg: perm ? { ...st.classProg, [st.hero]: { ...cp, skills: perm } } : st.classProg, ...(run ? { skillLevels: run } : {}) });
-  for (const k of learned) st.addNotification(`New skill learned: ${activeDefs(st.hero).find((a) => a.slot === k)?.name ?? k}`, '#f1d58e', 'SYSTEM');
+  for (const k of learned) st.addNotification(k === 'ult' ? 'Ultimate unlocked! It is fully charged' : `New skill learned: ${activeDefs(st.hero).find((a) => a.slot === k)?.name ?? k}`, '#f1d58e', 'SYSTEM');
 };
 autoLearn();
 useGameStore.subscribe((s, p) => { if (s.hero !== p.hero || s.classProg !== p.classProg || s.skillLevels !== p.skillLevels) autoLearn(); });

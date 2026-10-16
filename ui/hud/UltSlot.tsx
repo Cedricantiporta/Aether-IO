@@ -6,15 +6,16 @@ import { useGameEvent } from '../hooks/useEvent';
 import { tip } from '../components/Tooltip';
 import { OrnateRing } from '../components/Ornate';
 
-interface Props { icon: React.ReactNode; tooltip: React.ReactNode; color: string }
+interface Props { icon: React.ReactNode; tooltip: React.ReactNode; color: string; locked?: number }
 
 /** Ornate ultimate slot: radial charge fill that glows and pulses when ready (key R). */
-export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
+export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) => {
   const root = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
   const last = useRef({ v: -1, ready: false, active: false });
   useRaf(() => {
+    if (locked) return;   // (static 'Lv N' label below)
     const p = world.player;
     const v = Math.floor(p.ult);
     const cd = abilityState.ultCd;
@@ -44,6 +45,7 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
         .ult-slot .ult-core{position:absolute;inset:5%;border-radius:50%;overflow:hidden;background:#07050a;box-shadow:inset 0 0 12px #000}
         .ult-slot .ult-core .ico{position:absolute;inset:0;filter:grayscale(.55) brightness(.75);transition:filter .3s,transform .3s}
         .ult-slot [data-active="1"] .ult-core .ico{filter:none}
+        .ult-slot [data-locked="1"] .ult-core .ico{filter:grayscale(1) brightness(.4)}
         .ult-slot [data-ready="1"] .ult-core .ico{filter:brightness(1.35) saturate(1.35) drop-shadow(0 0 6px rgba(255,226,140,.95));transform:scale(1.12);animation:ultIco 1.1s ease-in-out infinite}
         @keyframes ultIco{0%,100%{transform:scale(1.08)}50%{transform:scale(1.16)}}
         .ult-slot [data-ready="1"]{filter:drop-shadow(0 0 14px rgba(255,200,70,.85))}
@@ -75,12 +77,12 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color }) => {
           -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
           filter:drop-shadow(0 0 2px rgba(0,0,0,.9)) drop-shadow(0 0 5px rgba(240,196,90,.35))}
       `}</style>
-      <div ref={root} data-ready="0" data-active="0" style={{ position: 'absolute', inset: 0 }}>
+      <div ref={root} data-ready="0" data-active="0" data-locked={locked ? '1' : '0'} style={{ position: 'absolute', inset: 0 }}>
         <div className="ult-rays" />
         <div className="ult-glow" />
         <div className="ult-core"><div className="ico">{icon}</div><div ref={fill} className="ult-fill" /></div>
         <div className="ult-rim" />
-        <span ref={txt} className="ult-txt">0%</span>
+        <span ref={txt} className="ult-txt">{locked ? `Lv ${locked}` : '0%'}</span>
       </div>
       <span className="rpg-key">R</span>
     </div>

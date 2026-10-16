@@ -1,5 +1,5 @@
 import React from 'react';
-import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
+import { unlockLevel, DASH_UNLOCK_LV, ULT_UNLOCK_LV } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
 import { SKILLS_INFO, POTION_COOLDOWN } from '../../constants';
@@ -43,8 +43,8 @@ export const ActionBar: React.FC = () => {
 
   return (
     <div className="action-tray pe">
-      <UltSlot color={hero === 'ARCHER' ? '#ffd24a' : hero === 'WIZARD' ? '#ff6a2a' : '#e9a04a'} icon={<PaintedIcon id={ult.icon} />}
-        tooltip={<SimpleTip title={ult.name} sub={`Ultimate [R] · Lv ${ulv}`} color="#ffd98a" body={ult.desc}
+      <UltSlot color={hero === 'ARCHER' ? '#ffd24a' : hero === 'WIZARD' ? '#ff6a2a' : '#e9a04a'} icon={<PaintedIcon id={ult.icon} />} locked={ulv <= 0 ? ULT_UNLOCK_LV : 0}
+        tooltip={<SimpleTip title={ult.name} sub={ulv <= 0 ? `Locked · unlocks at Lv ${ULT_UNLOCK_LV}` : `Ultimate [R] · Lv ${ulv}`} color="#ffd98a" body={ult.desc}
           lines={[cdLine('Charge', 'Fill by dealing damage and killing (100%)'), cdLine(`Lv ${ulv}`, ult.per(ulv)), ...(ulv < 5 ? [cdLine(`Lv ${ulv + 1}`, ult.per(ulv + 1))] : [])]} />} />
       {SLOTS.map(({ slot, key, code }, i) => {
         const def = activeDefs(hero)[i];

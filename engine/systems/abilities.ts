@@ -658,6 +658,7 @@ export function castUlt(): void {
   const p = world.player;
   const a = abilityState;
   if (!p.alive || p.ultT > 0 || a.ultKind !== 0 || a.windupT > 0) return;
+  if ((st.skillLevels.ult ?? 0) <= 0) return;   // locked until Lv 10
   if (world.village.miningT > 0) return;
   if (!world.room.active && world.village.area === 'CAVE') { noSkillsInMine(); return; }
   if (p.ult < ULT_MAX - 0.001 || a.ultCd > 0) { notifyCooldown('r'); return; }

@@ -171,7 +171,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   // instant cards (applied on pick)
   { id: 'u_ult', type: 'ULT_FILL', name: 'Surge of Fury', description: 'Fill your Ultimate meter', rarity: 'RARE', value: 100 },
   { id: 'u_restore', type: 'RESTORE', name: 'Second Breath', description: 'Restore 30% HP and Mana', rarity: 'RARE', value: 1 },
-  { id: 'u_aegis', type: 'AEGIS', name: 'Aegis', description: 'An 80 HP shield (absorbs damage until broken) · once per biome', rarity: 'EPIC', value: 80 },
+  { id: 'u_aegis', type: 'AEGIS', name: 'Aegis', description: 'An 80 HP shield (absorbs damage until broken) · once per biome', rarity: 'LEGENDARY', value: 80 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },
   
   { id: 'u_dash', type: 'SKILL_DASH', name: 'Agility Training', description: 'Class Dash Level Up', rarity: 'RARE', value: 1 }, 

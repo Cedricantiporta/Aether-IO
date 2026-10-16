@@ -95,7 +95,7 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
   const extra = Math.random();
   if (extra < 0.3) reward.gems = Math.round((6 + 2 * r) * e);
   else if (extra < 0.55) reward.cores = 1 + Math.floor(r / 3) + (e > 1.3 ? 1 : 0);
-  else if (extra < 0.8) reward.potions = 3 + Math.floor(r / 4);
+  else if (extra < 0.8) reward.potions = 1 + Math.floor(r / 6);   // (owner: fewer potion rewards)
   else reward.item = itemRarityFor(r);
   // royal commissions pay in gems (and gear for the bounties)
   if (type === 'AUDIENCE') { reward.gems = 10 + 3 * r; delete reward.cores; delete reward.potions; delete reward.item; }

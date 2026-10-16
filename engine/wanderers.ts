@@ -159,7 +159,7 @@ function accept(d: WandererDef, b: number): void {
       st.addNotification('Bounty: slay 30 monsters for Brother Fen.', d.accent, 'SYSTEM');
       break;
     case 'KAELEN': {
-      const items = [...makeItemById('potion_hp', 2), ...makeItemById('potion_mana', 1)];
+      const items = [...makeItemById('potion_hp', 1), ...makeItemById('potion_mana', 1)];
       let ok = true;
       for (const it of items) if (!st.addItemToInventory(it)) ok = false;
       st.addNotification(ok ? 'Kaelen\'s supplies: 2 Health Potions, 1 Mana Potion' : 'Bag is full!', ok ? d.accent : 'red', ok ? 'SYSTEM' : 'WARNING');

@@ -1,6 +1,6 @@
 // Permanent per-class levels (replace the old shared Hero Rank + per-run level). Each class keeps its own level, xp,
 // unspent skill points and learned skill levels. Gear / crafting / quests / talents read the current class's level.
-// Skills unlock by level: skill 1 (+ dash, ultimate and the basic utilities) from the start, the rest at set levels;
+// Skills unlock by level: skill 1 (+ the basic utilities) from the start, skill 2 at Lv 5, skill 3 at Lv 7, the ultimate at Lv 10;
 // a fresh class starts with 3 skill points. Room upgrade cards are run-only boosts on top of the learned levels.
 import type { HeroClass, SkillLevels, PlayerStats } from './types';
 import { ACTIVE_ORDER } from './abilityDefs';
@@ -13,6 +13,9 @@ export const MAX_LEVEL = 50;
 /** The class dash unlocks at this class level (below it Space does nothing). */
 export const DASH_UNLOCK_LV = 8;   // (owner: was 20)
 
+/** The ultimate unlocks (auto-learned, bar pre-filled once) at this class level (owner). */
+export const ULT_UNLOCK_LV = 10;
+
 /** XP needed to go from `lv` to `lv + 1`. */
 export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max(1, lv), 1.5));
 
@@ -20,7 +23,8 @@ export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max
 export function unlockLevel(hero: HeroClass, key: string): number {
   const order = ACTIVE_ORDER[hero];
   if (key === order[1]) return 5;
-  if (key === order[2]) return 10;
+  if (key === order[2]) return 7;    // (owner: skill 3 at Lv 7)
+  if (key === 'ult') return ULT_UNLOCK_LV;
   if (key === 'regen') return 2;
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]) => (i as { type?: string; classType?: string }).type === 'PASSIVE' && (i as { classType?: string }).classType === hero && k !== 'dash').map(([k]) => k);
   const i = passives.indexOf(key);
@@ -37,15 +41,15 @@ export function skillCost(key: string, lvl: number, dash = false): number {
   return 2 + lvl;
 }
 
-/** Active skills auto-learn (level 1, free) once the class reaches their unlock level. Returns null when nothing changes. */
+/** Active skills (and the ultimate) auto-learn (level 1, free) once the class reaches their unlock level. Returns null when nothing changes. */
 export function autoLearnActives(hero: HeroClass, lv: number, skills: SkillLevels): SkillLevels | null {
   const s = skills as unknown as Record<string, number>;
   let out: Record<string, number> | null = null;
-  for (const k of ACTIVE_ORDER[hero]) if ((s[k] ?? 0) <= 0 && lv >= unlockLevel(hero, k)) { out = out ?? { ...s }; out[k] = 1; }
+  for (const k of [...ACTIVE_ORDER[hero], 'ult']) if ((s[k] ?? 0) <= 0 && lv >= unlockLevel(hero, k)) { out = out ?? { ...s }; out[k] = 1; }
   return out as unknown as SkillLevels | null;
 }
 
-/** Learned skills of a fresh class: skill 1, the class dash, the ultimate and the basic utilities. Everything else 0. */
+/** Learned skills of a fresh class: skill 1, the class dash and the basic utilities. Everything else 0. */
 export function freshSkills(hero: HeroClass, base: SkillLevels): SkillLevels {
   const s = { ...base } as unknown as Record<string, number>;
   for (const k of Object.keys(s)) if (unlockLevel(hero, k) > 0) s[k] = 0;
@@ -72,7 +76,13 @@ export function sanitizeClassProg(raw: unknown, base: SkillLevels, legacyLevel: 
     const e = r?.[h];
     if (e && typeof e === 'object') {
       const skills = { ...freshSkills(h, base), ...(e.skills ?? {}) } as SkillLevels;
-      out[h] = { lv: Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(e.lv) || 1))), xp: Math.max(0, Number(e.xp) || 0), sp: Math.max(0, Math.floor(Number(e.sp) || 0)), skills };
+      const lv = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(e.lv) || 1)));
+      let sp = Math.max(0, Math.floor(Number(e.sp) || 0));
+      if (lv < ULT_UNLOCK_LV && skills.ult > 0) {   // old saves had the ult from Lv 1: re-lock it, refund the SP spent past Lv 1
+        for (let l = 1; l < skills.ult; l++) sp += skillCost('ult', l);
+        skills.ult = 0;
+      }
+      out[h] = { lv, xp: Math.max(0, Number(e.xp) || 0), sp, skills };
     } else out[h] = freshClass(h, base, Math.max(1, Math.min(MAX_LEVEL, Math.floor(legacyLevel || 1))));   // old saves: every class starts at the old shared rank
   }
   return out;

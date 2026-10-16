@@ -33,7 +33,7 @@ export function milestoneLabel(floor: number): string {
   switch (p.kind) {
     case 'GEAR': return `${cap(p.rarity)} gear${extra}`;
     case 'PET': return `${cap(p.rarity)} pet`;
-    case 'SUPPLY': return `${2 + floor / 20} Upgrade Cores, 2 Big Health Potions, ${20 + floor} gems`;
+    case 'SUPPLY': return `${2 + floor / 20} Upgrade Cores, 1 Big Health Potion, ${20 + floor} gems`;
     case 'SHARDS': return `${shardQty(floor, p.rarity)} ${cap(p.rarity)} shard${shardQty(floor, p.rarity) > 1 ? 's' : ''}${floor % 50 === 0 && p.rarity !== 'MYTHIC' ? ` + 1 ${p.rarity === 'EPIC' ? 'Legendary' : 'Mythic'}` : ''}${extra}`;
   }
 }
@@ -50,7 +50,7 @@ export function rollMilestone(floor: number, hero: HeroClass, make: (id: string,
   };
   if (p.kind === 'GEAR') pick('GEAR', p.rarity);
   else if (p.kind === 'PET') pick('PET', p.rarity);
-  else if (p.kind === 'SUPPLY') { items.push(...make('upgrade_core', 2 + floor / 20), ...make('potion_hp_big', 2)); gems = 20 + floor; }
+  else if (p.kind === 'SUPPLY') { items.push(...make('upgrade_core', 2 + floor / 20), ...make('potion_hp_big', 1)); gems = 20 + floor; }
   else {
     items.push(shardItem(p.rarity, shardQty(floor, p.rarity)));
     if (floor % 50 === 0 && p.rarity !== 'MYTHIC') items.push(shardItem(p.rarity === 'EPIC' ? 'LEGENDARY' : 'MYTHIC', 1));

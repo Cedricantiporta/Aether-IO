@@ -198,7 +198,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The cows are right by the barn. Press E next to one. Gently now!',
     done: ['Three full pails! You have a farmer\'s hands under all that armour.', 'Here, a little something, and a bottle for the road.'],
     objective: { type: 'INTERACT', target: 'milk', count: 3 },
-    reward: { gold: 600, items: [{ id: 'potion_hp', qty: 2 }] },
+    reward: { gold: 600, items: [{ id: 'potion_hp', qty: 1 }] },
   },
   {
     id: 'hollis_fox', giver: 'Hollis', title: 'Foxes in the Henhouse', summary: 'Defeat 20 Goblins', after: 'hollis_milk', minLevel: 3,
@@ -214,7 +214,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'The nests are in front of the coop. A hen lays a fresh one every little while.',
     done: ['Five lovely eggs, not a crack among them!', 'Do not tell the hens I counted. They get competitive. Take these, I baked too much again.'],
     objective: { type: 'INTERACT', target: 'egg', count: 5 },
-    reward: { gold: 500, items: [{ id: 'potion_mana', qty: 2 }] },
+    reward: { gold: 500, items: [{ id: 'potion_mana', qty: 1 }] },
   },
   {
     id: 'pip_cat', giver: 'Pip', title: 'Where Is Biscuit?', summary: 'Find Pip\'s cat somewhere in town',
@@ -365,7 +365,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Three fish. Stand by the water (the shoreline or the pier end), press E to cast, E again when it bites.',
     done: ['Three! You have the knack. Keep them, though: the Fishmonger pays good coin.', 'And take these. Fishing makes a body hungry.'],
     objective: { type: 'ACTION', target: 'catch_fish', count: 3 },
-    reward: { gold: 400, items: [{ id: 'potion_hp', qty: 2 }] },
+    reward: { gold: 400, items: [{ id: 'potion_hp', qty: 1 }] },
   },
   {
     id: 'marlo_sell', minLevel: 3, giver: 'Marlo', after: 'marlo_catch', title: 'Fresh off the Pier', summary: 'Sell a fish to the Fishmonger',

@@ -734,7 +734,7 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
-  // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: two health potions)
+  // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: a health potion)
   {
     name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#ffffff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH', noHat: true, robe: '#f6f4ee', mitre: '#fbfaf5',
     talk: [
@@ -743,7 +743,7 @@ export const NPCS: NpcDef[] = [
       ['I pray for the miners, the fishers and the fools who walk into portals. You are the third kind, I think.', 'Go gently, and come back.'],
     ],
     bubbles: ['May the Flame keep you.', 'Light a candle for the lost.', 'Peace, traveller.'],
-    gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 2, text: 'Take these, with the Flame\'s blessing. They have saved braver souls than either of us.' },
+    gift: { once: 'elowen_blessing', item: 'potion_hp', qty: 1, text: 'Take this, with the Flame\'s blessing. It has saved braver souls than either of us.' },
   },
   // ambient villagers (owner): plain folk in light / brown clothes, hero faces, varied hair, no hats or capes; they stroll the streets
   { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-30, 10], [-30, 12], [-6, 12]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
