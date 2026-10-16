@@ -9,7 +9,11 @@ import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
   CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
+  ShaderMaterial, Shape, ShapeGeometry, type BufferGeometry,
 } from 'three';
+import { FX, CELL } from './fx';
+import { useGameStore } from '../store';
+import { GameStatus } from '../types';
 import { Stars } from '@react-three/drei';
 import { runInfo } from '../engine/runMods';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from 'lucide-react';
@@ -605,7 +609,7 @@ function PortalLabel({ i }: { i: number }) {
   const nb = BIOMES[(world.room.biome + 1) % BIOMES.length];
   const l = p.big ? { title: 'Next biome', sub: nb.name, icon: 'boss', color: '#f2c14e' } : portalLabel(p.plan, world.room.biome);
   return (
-    <Html position={[0, 3.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+    <Html position={[0, 5.6, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: l.color }} data-testid={`portal-${i}`}>
         <span className="pi">{ICONS[l.icon]}</span>
         <span className="pt">{l.title}{l.sub && <small>{l.sub}</small>}</span>
@@ -614,49 +618,132 @@ function PortalLabel({ i }: { i: number }) {
   );
 }
 
+// Exit portals (owner): an ancient ruined stone arch that rises out of the ground when the room is cleared, filled with
+// a swirling vortex in the portal's reward colour, glowing runes, a ground sigil and sparks drifting up through it.
+const VORTEX_VS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const VORTEX_FS = `
+uniform float uTime; uniform vec3 uColor; uniform float uAlpha; varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+void main() {
+  vec2 c = vUv - vec2(0.5, 0.42); c.x *= 1.25;
+  float r = length(c), a = atan(c.y, c.x);
+  float sw = a + 3.2 / (r + 0.18) - uTime * 1.6;                       // spiral swirl, tighter toward the eye
+  float n = noise(vec2(sw * 1.6, r * 6.0 - uTime * 0.8)) * 0.65 + noise(vec2(sw * 3.4, r * 14.0 + uTime)) * 0.35;
+  float arms = 0.5 + 0.5 * sin(sw * 3.0 + n * 3.0);
+  float core = smoothstep(0.32, 0.0, r);
+  vec3 col = mix(uColor * 0.55, uColor * 1.6, arms * n) + vec3(1.0, 0.97, 0.9) * core * 1.4;
+  float edge = smoothstep(0.62, 0.38, r);
+  float alpha = (0.55 + 0.45 * arms * n + core) * edge * uAlpha;
+  gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
+}`;
+/** The arch opening (portal plane): a rectangle with a round top, x -1.45..1.45, y 0.25..3.0 + a semicircle to 4.45. */
+function archOpening(): ShapeGeometry {
+  const sh = new Shape();
+  sh.moveTo(-1.45, 0.25); sh.lineTo(1.45, 0.25); sh.lineTo(1.45, 3.0);
+  sh.absarc(0, 3.0, 1.45, 0, Math.PI, false); sh.lineTo(-1.45, 0.25);
+  const g = new ShapeGeometry(sh, 24);
+  const pos = g.attributes.position, uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getX(i) + 1.6) / 3.2; uv[i * 2 + 1] = pos.getY(i) / 4.6; }
+  g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  return g;
+}
+/** Weathered stone arch: stacked irregular pillar blocks, a ring of wedge stones (one fallen), a stepped round dais,
+ *  moss, rubble; `runes` gets the glowing rune inlays (tinted per portal). */
+function buildRuinArch(): { stone: BufferGeometry; runes: BufferGeometry } {
+  const b = new GB([0.72, 1.08]), g = new GB([1, 1]), rnd = mulberry32(911);
+  const ST = ['#8c8a92', '#7c7a84', '#9a97a2', '#85838c'], MOSS = '#5f8a3e';
+  // dais: two worn round steps + cracked flagstones
+  b.cyl(2.85, 3.0, 0.28, 14, [0, 0.14, 0], '#6f6c76'); b.cyl(2.35, 2.5, 0.22, 14, [0, 0.38, 0], '#7d7a85');
+  for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2 + rnd() * 0.4; b.box(0.7 + rnd() * 0.4, 0.06, 0.5 + rnd() * 0.3, [Math.cos(a) * 1.6, 0.5, Math.sin(a) * 1.6], ST[k % 4], [0, a, 0]); }
+  // pillars: 4 stacked blocks each, slightly offset / tilted; the left one is broken lower and leans
+  for (const sx of [-1, 1]) {
+    let y = 0.5;
+    for (let k = 0; k < 4; k++) {
+      const h = 0.62 + rnd() * 0.12, w = 0.78 - k * 0.03 + rnd() * 0.06;
+      b.box(w, h, 0.8 + rnd() * 0.08, [sx * 1.95 + (rnd() - 0.5) * 0.08, y + h / 2, (rnd() - 0.5) * 0.06], ST[(k + (sx > 0 ? 1 : 0)) % 4], [0, (rnd() - 0.5) * 0.12, (rnd() - 0.5) * 0.05]);
+      if (rnd() < 0.55) b.box(w * 0.7, 0.07, 0.5, [sx * 1.95, y + h + 0.02, 0.1], MOSS);   // moss on the ledge
+      // rune inlay on the front face
+      g.box(0.08, h * 0.5, 0.04, [sx * 1.95, y + h / 2, 0.43], '#ffffff'); g.box(0.26, 0.05, 0.04, [sx * 1.95, y + h * 0.62, 0.43], '#ffffff');
+      y += h;
+    }
+    b.box(1.0, 0.24, 1.0, [sx * 1.95, 0.62, 0], '#6a6772');   // plinth
+  }
+  // arch: 9 wedge stones on a radius-1.95 half ring centred at y 3.0 (the 7th has fallen to the ground)
+  for (let k = 0; k < 9; k++) {
+    const a = Math.PI - (k + 0.5) * (Math.PI / 9), cx = Math.cos(a) * 1.95, cy = 3.0 + Math.sin(a) * 1.95;
+    if (k === 6) { b.box(0.72, 0.6, 0.82, [1.9, 0.78, 1.25], ST[k % 4], [0.4, 0.7, 0.3]); continue; }
+    b.box(0.72, 0.62, 0.84, [cx, cy, 0], ST[k % 4], [0, 0, a - Math.PI / 2]);
+    if (k === 4) { b.box(0.5, 0.5, 0.9, [cx, cy + 0.05, 0], '#a8a4b0', [0, 0, a - Math.PI / 2]); g.octa(0.18, [cx, cy, 0.46], '#ffffff'); }   // keystone + gem
+    else g.box(0.18, 0.06, 0.04, [cx * 0.86, 3.0 + Math.sin(a) * 1.68, 0.43], '#ffffff', [0, 0, a]);
+  }
+  // rubble + moss tufts round the base
+  for (let k = 0; k < 9; k++) { const a = rnd() * Math.PI * 2, d = 2.6 + rnd() * 1.1; b.ico(0.18 + rnd() * 0.22, [Math.cos(a) * d, 0.12, Math.sin(a) * d], ST[k % 4], [1, 0.7, 1], 0, [rnd(), rnd(), rnd()]); }
+  for (let k = 0; k < 6; k++) { const a = rnd() * Math.PI * 2; b.sph(0.2 + rnd() * 0.15, [Math.cos(a) * 2.7, 0.3, Math.sin(a) * 2.7], MOSS, [1.3, 0.5, 1.3], 5); }
+  return { stone: b.build(), runes: g.build() };
+}
+
+const RISE = 1.25;   // seconds for the arch to rise out of the ground
 function Portals() {
-  const geos = useMemo(() => ({
-    ring: (() => { const g = new GB([1, 1]); g.torus(1.55, 0.14, [0, 1.9, 0], '#ffffff', [0, 0, 0], [0.8, 1.15, 1], 28); return g.build(); })(),
-    disc: new CircleGeometry(1.45, 28),
-    floor: new RingGeometry(1.2, 2.2, 28).rotateX(-Math.PI / 2),
-    pillar: (() => { const g = new GB([0.8, 1.1]); for (const s of [-1, 1]) { g.box(0.5, 2.4, 0.5, [s * 1.9, 1.2, 0], '#7d7a88'); g.box(0.7, 0.3, 0.7, [s * 1.9, 2.55, 0], '#9a97a8'); g.box(0.8, 0.3, 0.8, [s * 1.9, 0.15, 0], '#6a6776'); } return g.build(); })(),
-  }), []);
-  const groups = useRef<(Group | null)[]>([]);
-  const ringMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, color: new Color(), vertexColors: true })), []);
-  const discMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, color: new Color() })), []);
-  const floorMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.55, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
-  const lit = useMemo(() => litMat({ roughness: 0.9 }), []);
+  const geos = useMemo(() => {
+    const { stone, runes } = buildRuinArch();
+    return { stone, runes, opening: archOpening(), sigil: new RingGeometry(2.0, 2.9, 40).rotateX(-Math.PI / 2), inner: new CircleGeometry(2.0, 32).rotateX(-Math.PI / 2) };
+  }, []);
+  const groups = useRef<(Group | null)[]>([]), lifts = useRef<(Group | null)[]>([]);
+  const runeMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, color: new Color(), vertexColors: true })), []);
+  const vortexMats = useMemo(() => [0, 1, 2].map(() => new ShaderMaterial({ vertexShader: VORTEX_VS, fragmentShader: VORTEX_FS, transparent: true, depthWrite: false, side: DoubleSide, blending: AdditiveBlending, uniforms: { uTime: { value: 0 }, uColor: { value: new Color() }, uAlpha: { value: 0 } } })), []);
+  const sigilMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.55, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
+  const innerMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.18, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
+  const lit = useMemo(() => litMat({ roughness: 0.95 }), []);
   const last = useRef<number[]>([-1, -1, -1]);
-  const discs = useRef<(Mesh | null)[]>([]);
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+  const cols = useMemo(() => [0, 1, 2].map(() => new Color()), []);
+  const sigils = useRef<(Mesh | null)[]>([]);
+  useFrame(({ clock }, dt) => {
+    const t = clock.elapsedTime, paused = useGameStore.getState().status === GameStatus.PAUSED;
     for (let i = 0; i < 3; i++) {
-      const g = groups.current[i]; if (!g) continue;
+      const g = groups.current[i], L = lifts.current[i]; if (!g || !L) continue;
       const p = world.room.portals[i];
       g.visible = p.active;
       if (!p.active) { last.current[i] = -1; continue; }
-      g.position.set(p.x, 0, p.z);
-      const k = Math.min(1, p.t * (p.big ? 0.8 : 1.6)), grow = (1 - (1 - k) * (1 - k)) * (p.big ? 2.1 : 1);
-      g.scale.set(grow, grow, grow);
+      const sc = p.big ? 2.1 : 1;
+      g.position.set(p.x, 0, p.z); g.scale.setScalar(sc);
       const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0);
       if (key !== last.current[i]) {
         last.current[i] = key;
-        const c = p.big ? '#f2c14e' : portalLabel(p.plan, world.room.biome).color;
-        ringMats[i].color.set(c).multiplyScalar(1.8); discMats[i].color.set(c); floorMats[i].color.set(c);
+        cols[i].set(p.big ? '#f2c14e' : portalLabel(p.plan, world.room.biome).color);
+        runeMats[i].color.copy(cols[i]).multiplyScalar(2.0); vortexMats[i].uniforms.uColor.value.copy(cols[i]); sigilMats[i].color.copy(cols[i]); innerMats[i].color.copy(cols[i]);
       }
-      const d = discs.current[i];
-      if (d) { d.rotation.z = t * 0.6 + i; d.scale.setScalar(0.95 + Math.sin(t * 3 + i) * 0.05); }
-      floorMats[i].opacity = 0.4 + Math.sin(t * 3 + i) * 0.15;
+      // rise out of the ground (ease-out with a little settle), then the vortex ignites
+      const k = Math.min(1, p.t / RISE), e = 1 - Math.pow(1 - k, 3), settle = k < 1 ? 0 : Math.max(0, 0.06 * Math.sin(Math.min(1, (p.t - RISE) / 0.35) * Math.PI));
+      L.position.y = -4.9 * (1 - e) - settle; L.rotation.z = (1 - e) * 0.05 * Math.sin(t * 40);   // (tremble while rising)
+      const ign = Math.min(1, Math.max(0, (p.t - RISE * 0.8) / 0.6));
+      vortexMats[i].uniforms.uTime.value = t + i * 3; vortexMats[i].uniforms.uAlpha.value = ign * (0.85 + 0.15 * Math.sin(t * 2.3 + i));
+      runeMats[i].color.copy(cols[i]).multiplyScalar(0.4 + 1.8 * ign * (0.8 + 0.2 * Math.sin(t * 3 + i)));
+      sigilMats[i].opacity = (0.25 + 0.3 * ign) * (0.8 + 0.2 * Math.sin(t * 2.5 + i)); innerMats[i].opacity = 0.08 + 0.14 * ign;
+      const sg = sigils.current[i]; if (sg) sg.rotation.y = t * 0.35 + i;
+      if (paused || dt <= 0) continue;
+      const cr = cols[i].r, cg = cols[i].g, cb = cols[i].b;
+      if (k < 1) {   // dust + rubble bursting up round the dais while it rises
+        for (let n = 0; n < 2; n++) { const a = Math.random() * Math.PI * 2, d = (2.4 + Math.random() * 0.9) * sc;
+          FX.norm.emit(p.x + Math.cos(a) * d, 0.2, p.z + Math.sin(a) * d, Math.cos(a) * 1.2, 1.5 + Math.random() * 2, Math.sin(a) * 1.2, 0.7 + Math.random() * 0.5, 0.6 * sc, 1.6 * sc, 0.62, 0.58, 0.52, 0.55, CELL.SMOKE); }
+      } else if (Math.random() < dt * 14 * ign) {   // sparks drifting up through the opening + motes swirling in
+        const x = (Math.random() - 0.5) * 2.4 * sc, y = (0.4 + Math.random() * 3.2) * sc;
+        FX.add.emit(p.x + x, y, p.z + (Math.random() - 0.5) * 0.4, -x * 0.25, 1.4 + Math.random() * 1.4, 0, 0.9 + Math.random() * 0.6, 0.22 * sc, 0.03, cr * 2.2, cg * 2.2, cb * 2.2, 0.95, CELL.STAR, 0, 0.3, Math.random() * 3, 3);
+      }
     }
   });
   return (
     <>
       {[0, 1, 2].map((i) => (
         <group key={i} ref={(g) => { groups.current[i] = g; }} visible={false}>
-          <mesh geometry={geos.pillar} material={lit} castShadow />
-          <mesh geometry={geos.ring} material={ringMats[i]} />
-          <mesh ref={(m) => { discs.current[i] = m; }} geometry={geos.disc} material={discMats[i]} position={[0, 1.9, 0]} scale={[0.8, 1.15, 1]} renderOrder={4} />
-          <mesh geometry={geos.floor} material={floorMats[i]} position={[0, 0.05, 0]} renderOrder={3} />
+          <group ref={(g) => { lifts.current[i] = g; }}>
+            <mesh geometry={geos.stone} material={lit} castShadow receiveShadow />
+            <mesh geometry={geos.runes} material={runeMats[i]} />
+            <mesh geometry={geos.opening} material={vortexMats[i]} position={[0, 0.3, 0]} renderOrder={4} />
+          </group>
+          <mesh ref={(m) => { sigils.current[i] = m; }} geometry={geos.sigil} material={sigilMats[i]} position={[0, 0.06, 0]} renderOrder={3} />
+          <mesh geometry={geos.inner} material={innerMats[i]} position={[0, 0.055, 0]} renderOrder={3} />
           <PortalLabel i={i} />
         </group>
       ))}
