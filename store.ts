@@ -48,7 +48,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
     if (i.type !== 'LOOT' || REFORGE_NAMES.has(i.name)) continue;
     const mat = CRAFT_MAT_NAMES.has(i.name);
     if (mat ? !o.craftMats : !o.loot) continue;
-    const q = i.quantity || 1; items.push(i); gold += i.price * q; count += q; loot += q; if (isFishName(i.name)) fish += q;
+    const q = i.quantity || 1; items.push(i); gold += sellUnit(i) * q; count += q; loot += q; if (isFishName(i.name)) fish += q;
   }
   return { items, gold, count, loot, fish };
 }
@@ -347,7 +347,7 @@ let shadowStepTaken = false;
 let aegisOffered = '';
 events.on('runStart', () => { shadowStepTaken = false; aegisOffered = ''; });
 const aegisKey = (): string => String(world.room.biome);   // (reset each run on runStart)
-const cardWeight = (u: Upgrade): number => (u.type === 'RESTORE' ? 0.3 : u.type === 'AEGIS' ? 0.5 : /REGEN/.test(u.type) ? 0.45 : 1);
+const cardWeight = (u: Upgrade): number => (u.type === 'RESTORE' ? 0.3 : u.type === 'AEGIS' ? 0.5 : u.type === 'ULT_FILL' ? 0.25 : /REGEN/.test(u.type) ? 0.45 : 1);
 const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 3): Upgrade[] => {
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
@@ -1584,7 +1584,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (loot.length === 0) { notify('No loot to sell.', 'white', 'SYSTEM'); return 0; }
       let total = 0, count = 0;
       let fish = 0;
-      loot.forEach((i) => { const q = i.quantity || 1; total += i.price * q; count += q; if (isFishName(i.name)) fish += q; });
+      loot.forEach((i) => { const q = i.quantity || 1; total += sellUnit(i) * q; count += q; if (isFishName(i.name)) fish += q; });
       set({ gold: s.gold + total, inventory: s.inventory.filter((i) => !isSellLoot(i)) });
       if (fish) events.emit('hub', { kind: 'sell_fish', n: fish });
       get().addQuestProgress('SELL_LOOT', count);

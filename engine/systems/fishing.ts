@@ -14,7 +14,7 @@ import { events } from '../events';
 import { useGameStore } from '../../store';
 import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
 import { LOOT_BY_ID, FISH_IDS, lootItem, isFishName } from '../../loot';
-import { GOLD_SCALE, RARITY_LABEL_COLOR } from '../../constants';
+import { GOLD_SCALE, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
 import type { Rarity } from '../../types';
 
 export const FISH = { IDLE: 0, CAST: 1, WAIT: 2, BITE: 3, REEL: 4, RESULT: 5 } as const;
@@ -66,7 +66,7 @@ export function sellAllFish(): number {
   const fish = st.inventory.filter((i) => i.type === 'LOOT' && isFishName(i.name));
   if (fish.length === 0) { st.addNotification('No fish to sell.', '#ffffff', 'SYSTEM'); return 0; }
   let total = 0, count = 0;
-  for (const i of fish) { const q = i.quantity || 1; total += i.price * q; count += q; }
+  for (const i of fish) { const q = i.quantity || 1; total += sellUnit(i) * q; count += q; }
   useGameStore.setState({ gold: st.gold + total, inventory: st.inventory.filter((i) => !fish.includes(i)) });
   st.addQuestProgress('SELL_LOOT', count);
   events.emit('hub', { kind: 'sell_fish', n: count });

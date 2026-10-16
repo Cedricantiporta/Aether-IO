@@ -1,3 +1,4 @@
+import { sellUnit } from '../../../constants';
 // Fishmonger (stall on the lakeside beach, shop tab 'FISH'): buys the fish from the bag (sell all, or click a stack for the
 // usual sell dialog), sells better fishing rods (engine/systems/fishing.ts RODS) and lists the lake's fish with prices.
 import React, { useEffect, useMemo, useState } from 'react';
@@ -23,7 +24,7 @@ export const FishShopTab: React.FC = () => {
   useEffect(() => onFishSave(() => bump((n) => n + 1)), []);
   const stacks = inventory.filter((i) => i.type === 'LOOT' && isFishName(i.name));
   const count = stacks.reduce((n, i) => n + (i.quantity || 1), 0);
-  const value = stacks.reduce((n, i) => n + i.price * (i.quantity || 1), 0);
+  const value = stacks.reduce((n, i) => n + sellUnit(i) * (i.quantity || 1), 0);
   const guide = useMemo(() => FISH_IDS.map(fishIcon), []);
   const lv = rodLevel(), rod = RODS[lv], next = RODS[lv + 1];
   const pct = (x: number) => `${x >= 1 ? '+' : ''}${Math.round((x - 1) * 100)}%`;

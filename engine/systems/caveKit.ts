@@ -6,7 +6,7 @@
 // The carried flasks are a small localStorage save (like the fishing rod / cave saves), so the store contract stays as is.
 // ============================================================================
 import { useGameStore } from '../../store';
-import { GOLD_SCALE, RARITY_LABEL_COLOR } from '../../constants';
+import { GOLD_SCALE, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
 import { STORY } from '../../story';
 import { NPC_QUESTS } from '../../npcQuests';
@@ -70,7 +70,7 @@ function reserved(id: string): number {
   for (const d of NPC_QUESTS) if (d.objective.type === 'DELIVER' && String(d.objective.target) === id && st.npcQuests.q[d.id]?.s === 1) n = Math.max(n, d.objective.count);
   return n;
 }
-export const minePrice = (it: Item): number => Math.round(it.price * MINE_PREMIUM);
+export const minePrice = (it: Item): number => Math.round(sellUnit(it) * MINE_PREMIUM);
 /** Sells `items` (stacks from the bag; all = every ore / crystal stack), keeping what active quests still need. */
 export function sellMineGoods(only?: Item): number {
   const st = useGameStore.getState();

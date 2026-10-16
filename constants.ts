@@ -31,8 +31,10 @@ export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 1.4;
 export const GEAR_SELL_RATE = 0.9;
 const BUY_GEAR_TYPES = new Set(['WEAPON', 'ARMOR', 'HELMET', 'GLOVES', 'BOOTS', 'ACCESSORY']);
 export const buyMul = (type?: string): number => (type === 'PET' ? BUY_MUL_PET : type && BUY_GEAR_TYPES.has(type) ? BUY_MUL_GEAR : 1);
+/** Monster loot / fish / ore sell for 2x their listed value (owner). */
+export const LOOT_SELL_MUL = 2;
 /** Gold an item sells for (one unit). */
-export const sellUnit = (i: { type: string; price: number }): number => (i.type === 'LOOT' || i.type === 'SHARD' ? i.price : Math.floor(i.price * GEAR_SELL_RATE));
+export const sellUnit = (i: { type: string; price: number }): number => (i.type === 'LOOT' ? i.price * LOOT_SELL_MUL : i.type === 'SHARD' ? i.price : Math.floor(i.price * GEAR_SELL_RATE));
 /** All six gear tiers, low to high. */
 export const RARITY_LADDER: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** The rarity lowered to the best tier a class of level `lv` can equip (gear drops follow the level gates). */
@@ -186,7 +188,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_dashcd', type: 'DASH_COOLDOWN', name: 'Shadow Step', description: '+4% Dodge', rarity: 'RARE', value: 1 }, 
   { id: 'u_critr', type: 'CRIT_RATE', name: 'Precision', description: 'Crit Rate Up', rarity: 'RARE', value: 0.05 },
   // instant cards (applied on pick)
-  { id: 'u_ult', type: 'ULT_FILL', name: 'Surge of Fury', description: 'Fill your Ultimate meter', rarity: 'RARE', value: 100 },
+  { id: 'u_ult', type: 'ULT_FILL', name: 'Surge of Fury', description: 'Fill your Ultimate meter', rarity: 'EPIC', value: 100 },
   { id: 'u_restore', type: 'RESTORE', name: 'Second Breath', description: 'Restore 30% HP and Mana', rarity: 'RARE', value: 1 },
   { id: 'u_aegis', type: 'AEGIS', name: 'Aegis', description: 'An 80 HP shield (absorbs damage until broken) · once per biome', rarity: 'LEGENDARY', value: 80 },
   { id: 'u_critd', type: 'CRIT_DAMAGE', name: 'Lethality', description: 'Crit Dmg Up', rarity: 'RARE', value: 0.25 },

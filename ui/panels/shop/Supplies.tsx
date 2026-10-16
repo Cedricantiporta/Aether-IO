@@ -1,3 +1,4 @@
+import { sellUnit } from '../../../constants';
 import React from 'react';
 import { useGameStore, shopPrice, SUPPLY_STOCK, questFree } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
@@ -18,7 +19,7 @@ export const SuppliesTab: React.FC = () => {
   const sellAllLoot = useGameStore((s) => s.sellAllLoot);
   const lootStacks = inventory.filter((i) => i.type === 'LOOT' && !['Reforge Stone', 'Tempering Oil', 'Erasure Scroll'].includes(i.name));
   const lootCount = lootStacks.reduce((n, i) => n + (i.quantity || 1), 0);
-  const lootValue = lootStacks.reduce((n, i) => n + i.price * (i.quantity || 1), 0);
+  const lootValue = lootStacks.reduce((n, i) => n + sellUnit(i) * (i.quantity || 1), 0);
   const setBuy = useUiStore((s) => s.setBuyItem);
   const ask = useUiStore((s) => s.askConfirm);
   const count = (r: Rarity) => inventory.filter((i) => i.rarity === r && isGear(i)).length;
