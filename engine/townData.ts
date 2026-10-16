@@ -9,7 +9,7 @@
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
 //   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Skill Trainer (-10.5,-19) on the open paving west of
 //   the castle steps (in front of the dark-roofed house at (-19.5,-14))
-//   west of the plaza Fortune Teller (-12.5, 1.5) / Pet Stable (-21, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
+//   west of the plaza Fortune Teller (-21, 1.5) / Pet Stable (-30, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
 //   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut out in the west meadow (constants SHOP_POSITIONS
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Adventure Portal at the road's end.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
@@ -216,7 +216,7 @@ export const HOUSES: HouseSpec[] = [
   // east end of the north street, door facing the street
   // (south of the east-west street: the Potion Shop and Armor Shop buildings, see constants SHOP_POSITIONS)
   // the old shop lots on the street now hold houses
-  H(-30, 1.5, 0, 5.0, 4.4, 2), H(-37, 1.5, 0, 4.8, 4.2), H(36.5, 1.5, 0, 4.8, 4.2),   // (the west lots by the plaza now hold the Pet Stable + Fortune Teller)
+  H(-37, 1.5, 0, 4.8, 4.2), H(36.5, 1.5, 0, 4.8, 4.2),   // (owner: the west lots now hold the Pet Stable (-30) + Fortune Teller (-21); a market stall by the plaza)
   // along the road to the gate
   H(-9, 30, Math.PI / 2, 4.6, 4.2), H(9, 31.5, -Math.PI / 2, 5.0, 4.4, 2),
   // outskirts
@@ -229,6 +229,7 @@ export const HOUSES: HouseSpec[] = [
 /** Decorative market stalls (the useful shops are Supplies / Blacksmith / Pets). */
 export const STALLS: StallSpec[] = [
   { x: 11.5, z: -1, rot: -Math.PI / 2, c1: '#efe8d8', c2: '#efe8d8', goods: 1 },
+  { x: -12.5, z: 1.5, rot: 0, c1: '#efe8d8', c2: '#efe8d8', goods: 1 },   // the old fortune teller lot by the plaza
   { x: -8.5, z: 15, rot: Math.PI, c1: '#e2d4b4', c2: '#e2d4b4', goods: 2 },
   { x: 8.5, z: 15, rot: Math.PI, c1: '#ece2c8', c2: '#ece2c8', goods: 3 },
 ];
@@ -248,8 +249,8 @@ export const ROADS: RoadSpec[] = [
   { x1: -27, z1: -6, x2: 18, z2: -6, w: ROAD_W.street },         // north street (on west to the chapel)
   { x1: 0, z1: 26.5, x2: 25.1, z2: 26.5, w: ROAD_W.street },   // east lane (old pet stable spot, now a house)
   { x1: -11.6, z1: 10, x2: -11.6, z2: 14.6, w: ROAD_W.branch },   // potion shop door (shop faces north onto the street)
-  { x1: -21.9, z1: 10, x2: -21.9, z2: 4.5, w: ROAD_W.branch },   // pet stable door
-  { x1: -12.5, z1: 10, x2: -12.5, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
+  { x1: -30.9, z1: 10, x2: -30.9, z2: 4.5, w: ROAD_W.branch },   // pet stable door
+  { x1: -21, z1: 10, x2: -21, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
   { x1: 25.4, z1: 10, x2: 25.4, z2: 4.5, w: ROAD_W.branch },     // blacksmith door
   { x1: 19.5, z1: 10, x2: 19.5, z2: 5.2, w: ROAD_W.branch },     // warehouse barn doors
   { x1: 0, z1: -6, x2: 0, z2: TERRACE.stairZ + 0.3, w: ROAD_W.branch + 0.6 },     // castle path (to the terrace stairs)
@@ -258,7 +259,7 @@ export const ROADS: RoadSpec[] = [
   { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: 14.6, z1: 10, x2: 14.6, z2: 14.6, w: ROAD_W.branch },     // armor shop door
-  { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // fortune teller door
+  { x1: -37.9, z1: 10, x2: -37.9, z2: 4.5, w: ROAD_W.branch },   // west house door
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: TOWER.z, x2: TOWER.door.x, z2: TOWER.z, w: 1.8 },   // endless tower door (a narrow woodland path)
