@@ -1096,3 +1096,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
   path incl. Bulk Sell, Sell all, fish / mine stalls). Surge of Fury card is Epic and much rarer (card weight 0.25).
 - Monster EXP -40% (`enemies.MONSTER_XP_MUL` 0.6). Quests give no EXP (no quest reward type carries any).
 - Item slots no longer show the +N upgrade badge; it shows only in tooltips / previews (ItemTip, item dialogs, Blacksmith).
+- Start: 5,000 gold + 500 gems (`store.WELCOME_GIFT`). Prologue story quests (guard..board) pay 500 gold each (base 50).

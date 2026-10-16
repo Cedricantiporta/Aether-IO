@@ -437,7 +437,7 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 };
 
 /** One-time welcome gift for a brand new profile. */
-const WELCOME_GIFT = { gold: 10000, gems: 1000 };
+const WELCOME_GIFT = { gold: 5000, gems: 500 };   // (owner: start with 5k gold, 500 gems)
 /** Saved pets take their template's current tier (owner: pets spread over the six tiers). */
 const petRetier = (i: Item): Item => { if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t && t.rarity !== i.rarity ? { ...i, rarity: t.rarity } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
@@ -1967,7 +1967,7 @@ if (typeof window !== 'undefined') {
 }
 if (loaded.gift) {
   flushProfile(); // fresh profile (gift included) is written immediately: a reload can never grant it twice
-  useGameStore.getState().addNotification('Welcome gift: 10,000 gold, 1,000 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
+  useGameStore.getState().addNotification('Welcome gift: 5,000 gold, 500 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
 }
 
 // ---- codex discovery: sync from inventory / equipment / skills on every change, plus engine events for monsters.
