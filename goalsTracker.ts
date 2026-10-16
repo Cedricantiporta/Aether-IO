@@ -17,7 +17,7 @@ import {
 import { ACHIEVEMENTS, ACH_BY_ID, titleOf, type AchCtx } from './achievements';
 
 const FLUSH_MS = 6000;
-const buf: Record<StatKey, number> = { kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0 };
+const buf: Record<StatKey, number> = { kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0, trapKills: 0, barrelKills: 0, slamKills: 0, hazardKills: 0 };
 let bufBiomes: number[] = [];
 let dirty = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -67,7 +67,10 @@ export function flush(): void {
 }
 
 // ------------------------------------------------------------------ feeds --
-events.on('enemyDeath', (e) => { if (e.poof) return; add('kills'); if (e.elite) add('elites'); if (e.boss) add('bosses'); });
+events.on('enemyDeath', (e) => {
+  if (e.poof) return; add('kills'); if (e.elite) add('elites'); if (e.boss) add('bosses');
+  if (e.env === 'TRAP') add('trapKills'); else if (e.env === 'BARREL') add('barrelKills'); else if (e.env === 'SLAM') add('slamKills'); else if (e.env === 'HAZARD') add('hazardKills');
+});
 events.on('crateBreak', (e) => { if (e.kind === 'CRYSTAL' || e.kind === 'ORE') add('harvest'); });
 events.on('playerHit', () => { hitThisRoom = true; });
 events.on('roomEnter', () => { hitThisRoom = false; });

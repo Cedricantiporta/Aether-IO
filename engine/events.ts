@@ -22,7 +22,7 @@ export interface GameEvents {
   stagger: { pos: Vector3; boss: boolean };
   damage: { pos: Vector3; amount: number; crit: boolean; kind: DamageKind; toPlayer: boolean; dot?: boolean };
   enemyHit: { pos: Vector3; kind: EnemyKind; dmgKind: DamageKind; dir?: Vector3 };
-  enemyDeath: { pos: Vector3; kind: EnemyKind; elite: boolean; boss: boolean; scale: number; poof?: boolean; mini?: boolean };
+  enemyDeath: { pos: Vector3; kind: EnemyKind; elite: boolean; boss: boolean; scale: number; poof?: boolean; mini?: boolean; env?: 'TRAP' | 'BARREL' | 'SLAM' | 'HAZARD' };
   playerHit: { pos: Vector3; amount: number };
   playerDeath: { pos: Vector3 };
   playerRevive: { pos: Vector3; source: 'PHOENIX' | 'ANKH' };

@@ -37,6 +37,14 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'warehouse', name: 'Hoarder', desc: `Fill half of the warehouse (${WAREHOUSE_HALF} items)`, target: WAREHOUSE_HALF, gems: 40, value: (c) => c.warehouse },
   { id: 'quests25', name: 'Dutiful Guard', desc: 'Complete 25 quests', target: 25, gems: 60, value: stat('quests') },
   { id: 'upgrades25', name: 'Master Smith', desc: 'Upgrade items at the Blacksmith 25 times', target: 25, gems: 60, value: stat('upgrades') },
+  // environmental kills (owner): spike traps, exploding barrels, wall slams, room hazards
+  { id: 'trap1', name: 'Watch Your Step', desc: 'Let a spike trap finish off a monster', target: 1, gems: 20, value: stat('trapKills') },
+  { id: 'trap50', name: 'Trap Master', desc: 'Defeat 50 monsters with spike traps', target: 50, gems: 80, title: 'Trapper', value: stat('trapKills') },
+  { id: 'barrel1', name: 'Kaboom!', desc: 'Blow up a monster with an explosive barrel', target: 1, gems: 20, value: stat('barrelKills') },
+  { id: 'barrel25', name: 'Demolitionist', desc: 'Defeat 25 monsters with explosive barrels', target: 25, gems: 70, title: 'Demolitionist', value: stat('barrelKills') },
+  { id: 'slam10', name: 'Wall Bouncer', desc: 'Defeat 10 monsters by slamming them into walls and rocks', target: 10, gems: 40, value: stat('slamKills') },
+  { id: 'slam100', name: 'Pinball Wizard', desc: 'Defeat 100 monsters with wall slams', target: 100, gems: 100, title: 'Pinball Wizard', value: stat('slamKills') },
+  { id: 'hazard25', name: "Nature's Wrath", desc: 'Let wildfire or poison gas finish off 25 monsters', target: 25, gems: 60, title: 'Stormcaller', value: stat('hazardKills') },
   { id: 'spent', name: 'Big Spender', desc: 'Spend 1,000,000 gold', target: 1000000, gems: 80, value: stat('spent') },
 ];
 export const ACH_BY_ID: Record<string, Achievement> = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

@@ -56,7 +56,11 @@ export interface DamageOpts {
   noBackstab?: boolean;
   /** Marks the target chilled (Archer Shatter synergy). */
   frost?: boolean;
+  /** Environmental source (achievements count kills by it): spike trap, exploding barrel, wall slam, room hazard. */
+  env?: 'TRAP' | 'BARREL' | 'SLAM' | 'HAZARD';
 }
+/** The env of the hit that is killing an enemy right now (read when enemyDeath is emitted). */
+let killEnv: DamageOpts['env'] | undefined;
 
 export interface StatusEffect {
   type: StatusEffectType;
@@ -112,7 +116,7 @@ export function wallSlam(e: Enemy): void {
   applyStatus(e, { type: 'STUN', duration: 0.5 });
   events.emit('slam', { pos: e.pos, damage: dmg });
   if (world.time - lastSlamText > 0.3) { lastSlamText = world.time; events.emit('floatText', { pos: e.pos, text: 'SLAM', color: 0xff8a3a, scale: 0.9, dy: 0.6 }); }
-  if (dmg > 0) damageEnemy(e, dmg, { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true });
+  if (dmg > 0) damageEnemy(e, dmg, { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true, env: 'SLAM' });
 }
 
 // ---- Stagger meter (bosses, mini-bosses, the Dark Hero): fills from crowd control (bosses are immune to full stuns),
@@ -418,7 +422,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   events.emit('damage', { pos: e.pos, amount: dealt > 0 ? dealt : amount, crit: !!o.crit, kind: o.kind, toPlayer: false, dot: o.dot });
   if (!o.dot) events.emit('enemyHit', { pos: e.pos, kind: e.kind, dmgKind: o.kind, dir: o.knockDir });
 
-  if (e.hp <= 0) killEnemy(e);
+  if (e.hp <= 0) { killEnv = o.env; killEnemy(e); killEnv = undefined; }
 }
 
 export function killEnemy(e: Enemy): void {
@@ -490,7 +494,7 @@ export function killEnemy(e: Enemy): void {
   }
 
   onEnemyDeath(e);
-  events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, mini: e.mini });
+  events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, mini: e.mini, env: killEnv });
   if (e.boss) addShake(0.8);
   else if (e.elite) addShake(0.25);
 }

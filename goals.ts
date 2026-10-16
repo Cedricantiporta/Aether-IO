@@ -6,7 +6,8 @@
 import { GOLD_SCALE } from './constants';
 
 /** Lifetime / period counters fed by engine events and store actions (see goalsTracker.ts). */
-export type StatKey = 'kills' | 'elites' | 'bosses' | 'rooms' | 'harvest' | 'spent' | 'upgrades' | 'summons' | 'quests' | 'flawless';
+export type StatKey = 'kills' | 'elites' | 'bosses' | 'rooms' | 'harvest' | 'spent' | 'upgrades' | 'summons' | 'quests' | 'flawless'
+  | 'trapKills' | 'barrelKills' | 'slamKills' | 'hazardKills';   // (environmental kills: achievements)
 
 export interface GoalReward { gems?: number; gold?: number; shards?: number; crystals?: number }
 export interface GoalInst { id: string; stat: StatKey; target: number; progress: number; claimed: boolean; reward: GoalReward }
@@ -21,8 +22,8 @@ export interface MetaState {
   title: string | null;                            // equipped title (an achievement id)
 }
 
-export const STAT_KEYS: StatKey[] = ['kills', 'elites', 'bosses', 'rooms', 'harvest', 'spent', 'upgrades', 'summons', 'quests', 'flawless'];
-export const emptyStats = (): Record<StatKey, number> => ({ kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0 });
+export const STAT_KEYS: StatKey[] = ['kills', 'elites', 'bosses', 'rooms', 'harvest', 'spent', 'upgrades', 'summons', 'quests', 'flawless', 'trapKills', 'barrelKills', 'slamKills', 'hazardKills'];
+export const emptyStats = (): Record<StatKey, number> => ({ kills: 0, elites: 0, bosses: 0, rooms: 0, harvest: 0, spent: 0, upgrades: 0, summons: 0, quests: 0, flawless: 0, trapKills: 0, barrelKills: 0, slamKills: 0, hazardKills: 0 });
 
 export const DAILY_BONUS_GEMS = 60;
 export const WEEKLY_BONUS: GoalReward = { gems: 400, crystals: 30 };

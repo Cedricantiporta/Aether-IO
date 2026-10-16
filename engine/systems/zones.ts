@@ -24,8 +24,8 @@ const PUDDLE_FACTOR = 0.35;
 export let envSlow = 1;
 
 const out: number[] = [];
-const gasOpts: DamageOpts = { kind: 'POISON', dot: true };
-const wildOpts: DamageOpts = { kind: 'FIRE', dot: true };
+const gasOpts: DamageOpts = { kind: 'POISON', dot: true, env: 'HAZARD' };
+const wildOpts: DamageOpts = { kind: 'FIRE', dot: true, env: 'HAZARD' };
 const fireOpts: DamageOpts = { kind: 'FIRE', dot: true, source: 'PLAYER' };
 const boomOpts: DamageOpts = { kind: 'MAGIC', source: 'PLAYER', knockback: 1.5, launch: 11, slam: 0 };
 const burnVisual: StatusEffect = { type: 'BURN', duration: 1, value: 0.01 };

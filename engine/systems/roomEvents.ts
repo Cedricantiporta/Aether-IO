@@ -219,7 +219,7 @@ export function updateRoomEvents(dt: number): void {
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
         if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12, { pos: tmp }); }
-        damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER' });
+        damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER', env: 'TRAP' });
       }
     }
   }

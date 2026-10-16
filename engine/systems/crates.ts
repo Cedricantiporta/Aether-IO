@@ -25,7 +25,7 @@ const RESPAWN_PLAYER_DIST2 = 25 * 25;
 const EXPLOSION_RADIUS = 6;
 const CHAIN_DELAY = 0.15;
 const fuse = new Float32Array(MAX_CRATES);
-const boomOpts: DamageOpts = { kind: 'FIRE', knockback: 1.6 };
+const boomOpts: DamageOpts = { kind: 'FIRE', knockback: 1.6, env: 'BARREL' };
 let lastTime = 0;
 
 const BASE_XP: Record<Crate['kind'], number> = {
