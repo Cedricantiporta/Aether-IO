@@ -14,8 +14,11 @@ import { device } from '../engine/device';
 
 /** World height just above a boss's head: big bosses (Hydra, Colossus...) are sized by radius, not scale. */
 function bossTop(e: { scale: number; radius: number }): number { return 2 + Math.max(e.scale * 2.1, e.radius * 2.6); }
-import { clickReq, selectAt, clickMoveTo, pickEnemyAt } from '../engine/systems/target';
+import { clickReq, selectAt, clickMoveTo, pickEnemyAt, clickMark } from '../engine/systems/target';
 import { walkTo, walkStamp } from '../engine/systems/village';
+
+let curState = '';
+const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
 
 const CAM_DIST0 = Math.hypot(32, 22);
 const _rel = { x: 0, z: 0 };
@@ -194,6 +197,10 @@ export function CameraRig() {
     }
     void settings;
 
+    // ---- (owner) sword cursor while the mouse is over an enemy in a run (DOM write only on change)
+    const hov = !device.touch && status === GameStatus.PLAYING && !lobby && !!pickEnemyAt(p.aim.x, p.aim.z) ? 'attack' : '';
+    if (hov !== curState) { curState = hov; if (hov) document.body.dataset.cur = hov; else delete document.body.dataset.cur; }
+
     // ---- click / tap target selection: pointer ray -> ground plane -> nearest enemy
     if (clickReq.pending) {
       clickReq.pending = false;
@@ -204,11 +211,12 @@ export function CameraRig() {
         _v.sub(cam.position);
         if (_v.y < -1e-4) {
           const t = -cam.position.y / _v.y, gx = cam.position.x + _v.x * t, gz = cam.position.z + _v.z * t;
-          if (town) { if (performance.now() - walkStamp.t > 250) walkTo(gx, gz, 'none', '', 0.5); }   // (a building / NPC click already walks there)
+          if (town) { if (performance.now() - walkStamp.t > 250) { walkTo(gx, gz, 'none', '', 0.5); if (world.village.go.on) mark(gx, gz, false); } }   // (a building / NPC click already walks there)
           else {
-            const onEnemy = !!pickEnemyAt(gx, gz);
+            const en = pickEnemyAt(gx, gz);
             selectAt(gx, gz);
-            if (move && !onEnemy) { clickMoveTo.on = true; clickMoveTo.x = gx; clickMoveTo.z = gz; }   // (owner setting) left-click the ground to walk there
+            if (en) mark(en.pos.x, en.pos.z, true);
+            else if (move) { clickMoveTo.on = true; clickMoveTo.x = gx; clickMoveTo.z = gz; mark(gx, gz, false); }   // (owner setting) left-click the ground to walk there
           }
         }
       }

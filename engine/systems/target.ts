@@ -9,6 +9,8 @@ import type { Enemy, EnemyKind } from '../types';
 export const target = { id: -1, kind: '' as EnemyKind | '', boss: false, at: 0 };
 /** Pending click in NDC, written by input.ts and consumed by CameraRig. */
 export const clickReq = { pending: false, nx: 0, ny: 0 };
+/** Last ground click for the click marker (render/ClickMarker): t = performance.now() ms, attack = clicked an enemy. */
+export const clickMark = { x: 0, z: 0, t: -1e9, attack: false };
 
 export const TARGET_DROP_RANGE = 40;
 const PICK_SLACK = 1.2;

@@ -1,4 +1,5 @@
 import { world } from '../world';
+import { events } from '../events';
 // ============================================================================
 // Travelling merchant (depth 14 of every biome): 1-2 kinds of potion + three random gear pieces at a markup (gear: town price +50%),
 // rarely an Ankh of Life or a Legendary shard at an inflated price; no sales.
@@ -59,7 +60,7 @@ export function buyMerchant(i: number): boolean {
     const copy: Item = { ...e.item, stats: { ...e.item.stats }, id: `${e.item.id}-b${Date.now().toString(36)}`, quantity: 1 };
     if (!st.addItemToInventory(copy)) { st.addNotification('Inventory Full!', 'red', 'WARNING'); return false; }
   }
-  st.addGold(-e.price);
+  st.addGold(-e.price); events.emit('purchase', {}); 
   st.addNotification(`Bought ${e.item.name}`, 'white', 'SYSTEM');
   useMerchant.setState({ items: entries.map((x, k) => (k === i ? { ...x, left: x.left - 1 } : x)) });
   return true;

@@ -54,7 +54,7 @@ export function buyRod(): boolean {
   const s = load(), st = useGameStore.getState(), next = RODS[s.rod + 1];
   if (!next) return false;
   if (st.gold < next.price) { st.addNotification('Not enough gold for the ' + next.name + '.', '#ff8a7a', 'WARNING'); return false; }
-  st.addGold(-next.price);
+  st.addGold(-next.price); events.emit('purchase', {}); 
   s.rod++; changed();
   st.addNotification(`Bought the ${next.name}!`, '#7fd8ff', 'SYSTEM');
   return true;

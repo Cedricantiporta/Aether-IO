@@ -4,6 +4,7 @@ import { useGameStore, makeItemById } from './store';
 import { ITEMS_POOL, PETS_POOL } from './constants';
 import { shardItem } from './shards';
 import { feedReward } from './rewardFeed';
+import { events } from './engine/events';
 import type { Item, Rarity } from './types';
 
 export interface GemOffer { key: string; item: Item; gems: number; max: number; give: (n: number) => Item[] | null; shards?: [Rarity, number] }
@@ -36,7 +37,7 @@ export function buyGemOffer(o: GemOffer, n: number): boolean {
   const st = useGameStore.getState(), cost = o.gems * n;
   if (st.gems < cost) { st.addNotification('Not enough gems!', 'red', 'WARNING'); return false; }
   if (o.shards) {
-    useGameStore.setState({ gems: st.gems - cost });
+    useGameStore.setState({ gems: st.gems - cost }); events.emit('purchase', {}); 
     st.addMaterial(o.shards[0], o.shards[1] * n);
     feedReward({ shards: o.shards[1] * n, shardRarity: o.shards[0] });
     return true;
@@ -48,7 +49,7 @@ export function buyGemOffer(o: GemOffer, n: number): boolean {
     st.addNotification('Inventory Full!', 'red', 'WARNING');
     return false;
   }
-  useGameStore.setState({ gems: useGameStore.getState().gems - cost });
+  useGameStore.setState({ gems: useGameStore.getState().gems - cost }); events.emit('purchase', {}); 
   feedReward({ items: got.length > 1 && got[0].quantity === n ? [got[0]] : got });
   return true;
 }

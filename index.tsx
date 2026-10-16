@@ -3,9 +3,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { installTheme } from './ui/theme';
+import { installCursors } from './ui/lib/cursors';
 import { GoldIconDefs } from './ui/components/GoldIcons';
 
 installTheme();
+installCursors();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

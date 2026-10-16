@@ -102,7 +102,7 @@ const INITIAL_GAME_STATS: GameStatistics = {
 
 const _dd = deviceDefaults();
 const DEFAULT_SETTINGS: Settings = {
-  masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.5, quality: _dd.quality,
+  masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.4, quality: _dd.quality,
   showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: false,
   autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1, zoomUnlocked: true,
   showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, autoLootGear: 'RARE', autoLootMaterials: false, autoLootRange: 'NEAR', autoLootOnClear: false,
@@ -440,6 +440,7 @@ interface Profile {
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
+  mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
   gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
   meta?: MetaState;   // daily / weekly goals, achievements, equipped title (goals.ts)
@@ -526,7 +527,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
-              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }) },
+              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.settings?.hardMode ? 'HARD' : 'NORMAL',   // (Hard mode is a Settings toggle)
@@ -574,7 +575,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -1204,7 +1205,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     sailToIsles: () => {
       const s = get();
       if (s.gems < SHIP_TICKET_GEMS) { notify(`A ticket costs ${SHIP_TICKET_GEMS} gems.`, '#ff8a80', 'SYSTEM'); return false; }
-      set({ gems: s.gems - SHIP_TICKET_GEMS });
+      set({ gems: s.gems - SHIP_TICKET_GEMS }); events.emit('purchase', {}); 
       get().startMode('ADVENTURE', 3);
       return true;
     },
@@ -1335,6 +1336,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const tech = { ...s.tech, [id]: lv + 1 };
       set({ gems: s.gems - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}),
         ...(id === 'lantern' ? { progress: { ...s.progress, caveLantern: Math.max(s.progress.caveLantern ?? 0, lv + 1) } } : {}) });
+      events.emit('purchase', {}); 
       notify(`${d.name} ${ROMAN[lv]} unlocked!`, '#7dd3fc', 'SYSTEM');
       return true;
     },
@@ -1561,11 +1563,11 @@ export const useGameStore = create<GameState>()((set, get) => {
         let inv: Item[] | null = s.inventory;
         for (let i = 0; i < quantity && inv; i++) inv = insertItem(inv, s.maxInventorySlots, { ...toAdd, id: uid('buy'), quantity: 1 });
         if (!inv) { notify('Inventory Full!', 'red', 'WARNING'); return false; }
-        set({ gold: s.gold - total, inventory: inv });
+        set({ gold: s.gold - total, inventory: inv }); events.emit('purchase', {}); 
       } else {
         const inv = insertItem(s.inventory, s.maxInventorySlots, toAdd);
         if (!inv) { notify('Inventory Full!', 'red', 'WARNING'); return false; }
-        set({ gold: s.gold - total, inventory: inv });
+        set({ gold: s.gold - total, inventory: inv }); events.emit('purchase', {}); 
       }
       notify(`Bought ${item.name}`, 'white', 'SYSTEM');
       events.emit('hub', { kind: 'buy', n: quantity });
@@ -1749,7 +1751,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const cost = s.maxInventorySlots * 1000;
       if (s.gold < cost) return false;
-      set({ gold: s.gold - cost, maxInventorySlots: s.maxInventorySlots + 5 });
+      set({ gold: s.gold - cost, maxInventorySlots: s.maxInventorySlots + 5 }); events.emit('purchase', {}); 
       return true;
     },
 
@@ -1951,6 +1953,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const materials = { ...s.materials };
       for (const r of Object.keys(shardGain) as Rarity[]) materials[r] = (materials[r] ?? 0) + shardGain[r]!;
       // the Gem Altar also hands out an Aether Crystal per pull (owner: crystals come from gem summons too)
+      events.emit('summonCast', {});
       if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n }); feedReward({ crystals: n }); }
       else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, crystals: (s.crystals ?? 0) - cost });
       for (const it of supplies) get().addItemToInventory(it);   // (stack onto existing potions / cores)

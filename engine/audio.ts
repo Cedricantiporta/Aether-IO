@@ -241,7 +241,7 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
 }
 
 // (owner) recorded one-shot samples (public/audio): decoded once into buffers, played on the sfx bus.
-const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3', stage: 'audio/stage_clear.mp3', hit: 'audio/enemy_hit.mp3', epic: 'audio/epic_drop.mp3' };
+const SAMPLE_URLS: Record<string, string> = { click: 'audio/click.mp3', levelup: 'audio/levelup.mp3', stage: 'audio/stage_clear.mp3', hit: 'audio/enemy_hit.mp3', epic: 'audio/epic_drop.mp3', buy: 'audio/buy.mp3', summon: 'audio/summon.mp3' };
 const samples: Record<string, AudioBuffer | null> = {};
 function loadSamples(c: AudioContext): void {
   for (const k in SAMPLE_URLS) {
@@ -789,7 +789,7 @@ export function initAudio(): () => void {
     const t = e.target as HTMLElement | null;
     if (!t || t.tagName === 'CANVAS' || !t.closest || t.closest('.action-tray, .act-wrap, .rbtn, .tc-zone, .skill-wheel')) return;   // (combat controls stay silent)
     const hit = t.closest('button:not([disabled]), [role="button"], [role="tab"], select, input[type="checkbox"], input[type="range"], label')
-      ?? (getComputedStyle(t).cursor === 'pointer' ? t : null);
+      ?? (getComputedStyle(t).cursor.endsWith('pointer') ? t : null);
     if (hit) uiClick();
   };
   window.addEventListener('pointerdown', onUiPress, true);
@@ -831,6 +831,8 @@ export function initAudio(): () => void {
   offs.push(events.on('ultReady', safe(() => { tone(660, 990, 0.25, 0.12, { type: 'sine' }); tone(990, 1320, 0.3, 0.1, { type: 'sine', delay: 0.12 }); })));
   offs.push(events.on('lightning', safe(() => sfxLightning())));
   offs.push(events.on('telegraph', safe(() => sfxTelegraph())));
+  offs.push(events.on('purchase', safe(() => { playSample('buy', 0.8); })));
+  offs.push(events.on('summonCast', safe(() => { playSample('summon', 0.85); })));
   offs.push(events.on('lootDrop', safe((p) => { if (p.rarity === 'EPIC' || p.rarity === 'LEGENDARY' || p.rarity === 'MYTHIC') playSample('epic', 0.8); })));
   offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity))));
   offs.push(events.on('crateBreak', safe(() => sfxCrate())));

@@ -53,7 +53,7 @@ export function buyFlasks(n: number, price: number): boolean {
   const st = useGameStore.getState(), cur = load();
   if (cur >= MAX_SPARE) { st.addNotification(`You can carry at most ${MAX_SPARE} spare flasks.`, '#ffd08a', 'SYSTEM'); return false; }
   if (st.gold < price) { st.addNotification('Not enough gold.', '#ff8a7a', 'WARNING'); return false; }
-  useGameStore.setState({ gold: st.gold - price });
+  useGameStore.setState({ gold: st.gold - price }); events.emit('purchase', {}); 
   const got = Math.min(n, MAX_SPARE - cur);
   set(cur + got);
   st.addNotification(`+${got} lantern oil flask${got === 1 ? '' : 's'} (${cur + got} carried).`, '#ffd070', 'ITEM');

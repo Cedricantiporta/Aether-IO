@@ -460,7 +460,7 @@ export function refillLantern(): boolean {
   else {
     const price = REFILL_PRICE(lanternLevel());
     if (st.gold < price) { st.addNotification(`Not enough gold (${price.toLocaleString()} needed).`, '#ff7a7a', 'WARNING'); return false; }
-    useGameStore.setState({ gold: st.gold - price });
+    useGameStore.setState({ gold: st.gold - price }); events.emit('purchase', {}); 
   }
   cv.oil = cv.oilMax; save.oil = cv.oil; persist();
   st.addNotification(`Lantern refilled: ${Math.round(cv.oilMax)} s of light.`, '#ffd08a', 'SYSTEM');
@@ -474,7 +474,7 @@ export function upgradeLantern(pay: 'GEMS' | 'SHARDS'): boolean {
   const c = LANTERN_COST[lv];
   if (pay === 'GEMS') {
     if (st.gems < c.gems) { st.addNotification(`Not enough gems (${c.gems} needed).`, '#ff7a7a', 'WARNING'); return false; }
-    useGameStore.setState({ gems: st.gems - c.gems });
+    useGameStore.setState({ gems: st.gems - c.gems }); events.emit('purchase', {}); 
   } else {
     if ((st.materials[c.shard] ?? 0) < c.shards) { st.addNotification(`Not enough ${c.shard.toLowerCase()} shards (${c.shards} needed).`, '#ff7a7a', 'WARNING'); return false; }
     useGameStore.setState({ materials: { ...st.materials, [c.shard]: st.materials[c.shard] - c.shards } });

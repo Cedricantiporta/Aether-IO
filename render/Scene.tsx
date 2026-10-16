@@ -12,6 +12,7 @@ import { LookDriver, setLook } from './biomeLook';
 import { Room } from './Room';
 import { GuideArrow } from './GuideArrow';
 import { StationaryArrow } from './StationaryArrow';
+import { ClickMarker } from './ClickMarker';
 import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
@@ -76,6 +77,7 @@ export function Scene() {
       <Lighting q={q} />
       <LookDriver />
       <CameraRig />
+      <ClickMarker />
       <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
       {gameplay ? <Room q={q} /> : world.village.area === 'TAVERN' ? (
         <Suspense fallback={null}><TavernInterior q={q} /></Suspense>

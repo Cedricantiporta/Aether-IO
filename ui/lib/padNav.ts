@@ -23,10 +23,10 @@ function candidates(): { el: HTMLElement; r: DOMRect }[] {
     if (el instanceof SVGElement || el.closest('canvas')) continue;
     if ((el as HTMLButtonElement).disabled) continue;
     const cs = getComputedStyle(el);
-    const clickable = cs.cursor === 'pointer' || el.tagName === 'BUTTON' || el.getAttribute('role') === 'tab' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type !== 'hidden') || el.tagName === 'SELECT';
+    const clickable = cs.cursor.endsWith('pointer') || el.tagName === 'BUTTON' || el.getAttribute('role') === 'tab' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type !== 'hidden') || el.tagName === 'SELECT';
     if (!clickable || cs.visibility === 'hidden' || cs.pointerEvents === 'none') continue;
     const p = el.parentElement;
-    if (p && p !== document.body && getComputedStyle(p).cursor === 'pointer' && p.tagName !== 'LABEL') continue;   // keep the outermost clickable
+    if (p && p !== document.body && getComputedStyle(p).cursor.endsWith('pointer') && p.tagName !== 'LABEL') continue;   // keep the outermost clickable
     const r = visible(el);
     if (r) out.push({ el, r });
   }

@@ -60,6 +60,8 @@ export interface GameEvents {
   petBurst: { pos: Vector3; el: number; r: number; tier: number };   // a Legendary / Mythic pet's elemental area burst
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string };
+  purchase: Record<string, never>;            // something was bought with gold / gems (audio)
+  summonCast: Record<string, never>;          // a summon was pulled (audio)
   lootDrop: { pos: Vector3; rarity: Rarity };   // an item landed on the ground (audio: Epic+ chime)
   crateBreak: { pos: Vector3; kind: CrateKind };
   spawn: { pos: Vector3; kind: EnemyKind; elite: boolean };
