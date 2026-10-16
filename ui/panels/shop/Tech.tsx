@@ -16,8 +16,18 @@ import { useUiStore } from '../../uiStore';
 const ART: Record<TechId, React.ReactNode> = {
   bag: <BagGlyph size={44} />, warehouse: <ItemArtByKey k="chest" size={44} />, potion: <ItemArtByKey k="potion_hp_big" size={44} />,
   gold: <ItemArtByKey k="loot_coin_pouch" size={44} />, xp: <ItemArtByKey k="loot_dark_page" size={44} />, vitality: <ItemArtByKey k="loot_golem_heart" size={44} />,
+  lantern: (
+    <svg width={44} height={44} viewBox="0 0 48 48" aria-hidden>
+      <path d="M18 8h12M24 4v4" stroke="#6b5a3a" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <rect x="14" y="10" width="20" height="5" rx="2" fill="#4a3a26" />
+      <rect x="15" y="15" width="18" height="21" rx="3" fill="#ffd56a" opacity=".9" />
+      <ellipse cx="24" cy="26" rx="5" ry="7" fill="#fff4c8" />
+      <path d="M15 15v21M33 15v21M24 15v21" stroke="#4a3a26" strokeWidth="2" />
+      <rect x="13" y="36" width="22" height="5" rx="2" fill="#4a3a26" />
+    </svg>
+  ),
 };
-const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0' };
+const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0', lantern: '#ffc85a' };
 
 export const TechWindow: React.FC = () => {
   const { gems, close } = useGameStore(useShallow((s) => ({ gems: s.gems, close: s.closeAllUI })));

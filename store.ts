@@ -500,7 +500,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
@@ -1308,7 +1308,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const cost = d.cost(lv);
       if (s.gems < cost) { notify('Not enough gems!', 'red', 'WARNING'); return false; }
       const tech = { ...s.tech, [id]: lv + 1 };
-      set({ gems: s.gems - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}) });
+      set({ gems: s.gems - cost, tech, ...(id === 'bag' ? { maxInventorySlots: Math.max(s.maxInventorySlots, INVENTORY_LIMIT + 10 * (lv + 1)) } : {}),
+        ...(id === 'lantern' ? { progress: { ...s.progress, caveLantern: Math.max(s.progress.caveLantern ?? 0, lv + 1) } } : {}) });
       notify(`${d.name} ${ROMAN[lv]} unlocked!`, '#7dd3fc', 'SYSTEM');
       return true;
     },

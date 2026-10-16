@@ -38,15 +38,7 @@ export const LanternPanel: React.FC = () => {
           <button style={btn(!full && (free || gold >= price))} onClick={() => refillLantern()} data-testid="lantern-refill">{full ? 'Lantern is full' : free ? 'Refill (free today)' : `Refill · ${price.toLocaleString()} gold`}</button>
         </div>
         <div style={{ font: '600 .9rem Georgia, serif', color: '#f2d58a', marginBottom: '.35rem' }}>Bigger lantern</div>
-        {cost ? (
-          <>
-            <div style={{ fontSize: '.8rem', marginBottom: '.45rem' }}>Lv {L + 1} → Lv {L + 2}: capacity {fmt(cap)} → <b style={{ color: '#ffe08a' }}>{fmt(next)}</b></div>
-            <div className="flex gap-2">
-              <button style={btn(gems >= cost.gems)} onClick={() => upgradeLantern('GEMS')} data-testid="lantern-up-gems">{cost.gems} gems</button>
-              <button style={btn((materials[cost.shard] ?? 0) >= cost.shards)} onClick={() => upgradeLantern('SHARDS')} data-testid="lantern-up-shards">{cost.shards} {cost.shard.charAt(0) + cost.shard.slice(1).toLowerCase()} shards <span style={{ color: '#999' }}>({materials[cost.shard] ?? 0})</span></button>
-            </div>
-          </>
-        ) : <div style={{ fontSize: '.8rem', color: '#9fe6ff' }}>Max level: the biggest lantern Grit makes.</div>}
+        <div style={{ fontSize: '.8rem' }}>Lv {L + 1}: capacity {fmt(cap)}.{next ? <> Bigger lanterns (100 gems a tier) are sold at the <b style={{ color: '#ffe08a' }}>Tech House</b>.</> : ' The biggest lantern there is.'}</div>
       </div>
     </div>
   );
