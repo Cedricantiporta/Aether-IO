@@ -64,7 +64,7 @@ const BRUTE = { cd: 5, windup: 0.72, recover: 0.8, lineWidth: 2.6, chargeMul: 4,
 const BOAR = { cd: 4, windup: 0.56, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6, minRange: 5, maxRange: 18 };
 const ZOMBIE = { grabR: 2.3, windup: 0.48, lunge: 0.3, recover: 0.7, cd: 2.6 };
 const WRAITH = { windup: 0.6, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
-const BANDIT = { windup: 0.4, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6 };
+const BANDIT = { windup: 0.4, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6, ring: 4.2 };
 const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
 const MINI = { hpMul: 8, scaleMul: 1.5, slamCd: 6, slamWindup: 0.9, slamR: 5.5, flag: 7, slamFlag: 8 };
 const SHARDS = 8;
@@ -638,7 +638,7 @@ function aiBandit(e: Enemy): void {
     case 'ATTACK':
       setVel(e, e.dir.x, e.dir.z, BANDIT.dashSpeed);
       desiredYaw = Math.atan2(e.dir.x, e.dir.z);
-      if (e.stateT >= BANDIT.dash) enter(e, 'RECOVER');
+      if (e.stateT >= e.patternT) enter(e, 'RECOVER');   // (the dash stops a step short of the hero: patternT)
       return;
     case 'RECOVER':
       stop(e);
@@ -647,11 +647,16 @@ function aiBandit(e: Enemy): void {
     default: {
       if (e.state !== 'CHASE') enter(e, 'CHASE');
       const s = (e.id & 1) === 0 ? 1 : -1;
-      const w = tdist < 9 ? 0.6 : 0.15; // circle-strafe when close
-      setVel(e, tdx * inv + tdz * inv * s * w, tdz * inv - tdx * inv * s * w, e.speed);
+      // (owner: no face-to-face hugging) between dashes a bandit circles at a duelling distance, backing off when crowded
+      const ring = BANDIT.ring + (e.id % 3) * 0.6;
+      if (tdist < ring + 3) {
+        const toward = tdist < ring - 0.8 ? -0.75 : tdist > ring + 0.8 ? 0.45 : 0;
+        setVel(e, tdx * inv * toward + tdz * inv * s, tdz * inv * toward - tdx * inv * s, e.speed * 0.8);
+      } else setVel(e, tdx * inv + tdz * inv * s * 0.15, tdz * inv - tdx * inv * s * 0.15, e.speed);
       if (e.attackCd <= 0 && tdist < BANDIT.range && tdist > 2.2) {
         e.dir.set(tdx * inv, 0, tdz * inv);
-        spawnTelegraphLine(e.pos.x, e.pos.z, e.dir.x, e.dir.z, BANDIT.dashSpeed * BANDIT.dash + e.radius + 1.5, BANDIT.lineW, BANDIT.windup, 0xef4444);
+        e.patternT = Math.max(0.08, Math.min(BANDIT.dash, (tdist - e.radius - 0.9) / BANDIT.dashSpeed));
+        spawnTelegraphLine(e.pos.x, e.pos.z, e.dir.x, e.dir.z, BANDIT.dashSpeed * e.patternT + e.radius + 1.5, BANDIT.lineW, BANDIT.windup, 0xef4444);
         enter(e, 'WINDUP'); stop(e);
       }
     }

@@ -1100,3 +1100,4 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - **Bounty Board** is a centred popup in the Quest-window layout (`ui/panels/shop/Quests.tsx`, ShopPanel returns it for
   the QUESTS tab): taken + today's offers on the left, banner / flavour / objective / rewards on the right, Accept /
   Abandon / Claim bottom-right. Harvest nodes give very little EXP (x0.08, `crates.breakCrate`).
+- Bandits: between dashes they circle at ~4.2-5.4 from the hero (back off when closer); the dash stops just short of the hero (`patternT` = gap / dashSpeed) instead of running through to point blank.
