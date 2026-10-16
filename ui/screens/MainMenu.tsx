@@ -110,18 +110,18 @@ export const VillageHUD: React.FC = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 30 }} data-testid="village-hud">
-      {/* same HUD as in runs: vitals + plate + quest tracker (left), currency + menu + minimap (right) */}
+      {/* same HUD as in runs: vitals + plate + minimap (left), gold + gems (centre), menu + quest tracker (right) */}
       {!panel && (
         <div className="absolute hud-tl flex flex-col gap-2 pe" style={{ left: '1.2rem', top: '1rem' }}>
           <VitalBars /><PlayerPlate />
-          <div className="qt-left"><QuestTracker /></div>
+          {showMap && <div className="hud-mm hud-mm-top hud-mm-left"><Minimap /></div>}
         </div>
       )}
+      {!panel && <div className="absolute left-0 right-0 flex justify-center hud-tc" style={{ top: '.8rem' }}><div className="pe hud-cur"><Currency /></div></div>}
       {!panel && (
         <div className="absolute flex flex-col items-end gap-3 pe hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
-          <Currency />
           <MenuButtons />
-          {showMap && <div className="hud-mm hud-mm-top"><Minimap /></div>}
+          <div className="qt-right"><QuestTracker /></div>
         </div>
       )}
 
