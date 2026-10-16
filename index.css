@@ -2727,3 +2727,10 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .pad-focus { outline: 2px solid #ffd36a !important; outline-offset: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 14px rgba(255, 211, 106, .65) !important; }
 /* (owner) gold / gems above open panels: same spot as the HUD counters */
 .cur-float { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + .8rem); transform: translateX(-50%); z-index: 1000; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+/* (owner) face-down Epic / Legendary / Mythic cards already glow in their rarity colour (purple / gold / red aura) */
+.sm-card:not(.open).sm-epic .sm-back, .sm-card:not(.open).sm-legendary .sm-back, .sm-card:not(.open).sm-mythic .sm-back {
+  box-shadow: 0 0 14px 2px var(--rc), 0 0 34px 6px color-mix(in srgb, var(--rc) 55%, transparent), inset 0 0 26px color-mix(in srgb, var(--rc) 45%, transparent);
+  outline: 1.5px solid var(--rc); animation: sm-aura-back 1.5s ease-in-out infinite alternate; }
+.sm-card:not(.open).sm-legendary .sm-back, .sm-card:not(.open).sm-mythic .sm-back { animation-duration: 1.05s; }
+.sm-card:not(.open).sm-epic .sm-back-sigil, .sm-card:not(.open).sm-legendary .sm-back-sigil, .sm-card:not(.open).sm-mythic .sm-back-sigil { color: var(--rc); text-shadow: 0 0 16px var(--rc); }
+@keyframes sm-aura-back { from { filter: brightness(.92); } to { filter: brightness(1.22); } }
