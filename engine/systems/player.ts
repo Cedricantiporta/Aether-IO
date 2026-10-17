@@ -409,6 +409,8 @@ export function updatePlayer(dt: number): void {
   }
 }
 
+/** Town horseback speed multiplier (village.ride). */
+export const RIDE_SPEED = 2;
 /** Village mode: walking only (movement, collisions, animation). No dash, attacks, abilities or regen drain. */
 export function updatePlayerVillage(dt: number): void {
   const st = useGameStore.getState();
@@ -429,7 +431,8 @@ export function updatePlayerVillage(dt: number): void {
   if (p.maxDashCharges < 1) p.maxDashCharges = 1;
   if (p.dashCdMax <= 0) p.dashCdMax = DASH_CD;
   if (p.dashCharges < p.maxDashCharges) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashCharges++; p.dashCd = p.dashCharges < p.maxDashCharges ? p.dashCdMax : 0; } }
-  updateSkillInput();
+  const riding = world.village.ride.on;   // (owner) on a stable horse: faster, no skills / dash / attacks
+  if (!riding) updateSkillInput();
   updateAbilities(dt);
   a.dashing = p.dashT > 0;
   if (abilityState.leapT > 0) return;
@@ -456,16 +459,17 @@ export function updatePlayerVillage(dt: number): void {
     else { const dx = go.x - p.pos.x, dz = go.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > (go.i >= go.n - 1 ? go.r * 0.6 : 0.3)) { mx = dx / d; mz = dz / d; ml = 1; worldDir = true; } }
   }
   if (ml > 0 && !worldDir) { camRel(mx, mz, _mv); mx = _mv.x; mz = _mv.z; }
-  const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE;
-  const lerpK = 1 - Math.exp(-12 * dt);
+  const speed = st.stats.moveSpeed * MOVE_SPEED_SCALE * (riding ? RIDE_SPEED : 1);
+  const lerpK = 1 - Math.exp(-(riding ? 6 : 12) * dt);
   p.vel.x += (mx * speed - p.vel.x) * lerpK;
   p.vel.z += (mz * speed - p.vel.z) * lerpK;
   resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
   const sp = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
   if (ml > 0 && sp > 0.5) p.facing = Math.atan2(p.vel.x, p.vel.z);
-  const target = Math.min(1, sp / Math.max(1, st.stats.moveSpeed));
+  const target = riding ? 0 : Math.min(1, sp / Math.max(1, st.stats.moveSpeed));   // (in the saddle: no walk cycle)
   a.moveBlend += (target - a.moveBlend) * Math.min(1, 10 * dt);
   a.stepPhase += sp * dt * 1.4;
+  if (riding) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   // town monsters (hermit path): auto-attack while standing still with one in range, like in a run
   if (ml > 0 || p.dashT > 0 || p.whirlT > 0) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   const tgt = findNearestEnemy(p.pos.x, p.pos.z, heroRange(st));

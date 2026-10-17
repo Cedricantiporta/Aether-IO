@@ -55,9 +55,9 @@ export const MINE_CAMP = {
   /** tool rack with pickaxes and shovels (along the wall side, tools facing local +z) */
   rack: { x: 56.6, z: 22.4, rot: Math.PI / 2 },
   /** lantern posts (glow only) */
-  lanterns: [[60.3, 15.2], [66.4, 19.9], [59.9, 29], [57.4, 4.6], [67.6, 6.0]] as [number, number][],
+  lanterns: [[60.3, 15.2], [66.4, 19.9], [56.6, 30.2], [57.4, 4.6], [67.6, 6.0]] as [number, number][],
   /** signpost where the coop path enters the camp */
-  sign: { x: 58.4, z: 32.2 },
+  sign: { x: 55.8, z: 33.4 },
 };
 /** Town colliders of the camp props [x, z, r] (registered by village.placeVillageNodes). */
 export const CAMP_COLLIDERS: [number, number, number][] = (() => {

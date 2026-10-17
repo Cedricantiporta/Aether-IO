@@ -261,6 +261,22 @@ function buildCow(): BufferGeometry {
   b.cyl(0.03, 0.02, 0.6, 4, [0, 1.0, -0.9], '#ffffff', [0.5, 0, 0]); b.sph(0.12, [0, 0.62, 0.2], '#f0b0a8', [1.2, 0.6, 1.2], 6);   // tail, udder
   return b.build();
 }
+function buildHorse(): BufferGeometry {
+  const b = new GB([0.82, 1.06]);
+  b.box(0.62, 0.66, 1.75, [0, 1.22, 0], '#ffffff');                                               // body
+  b.box(0.36, 0.78, 0.42, [0, 1.72, 0.86], '#ffffff', [-0.55, 0, 0]);                              // neck
+  b.box(0.3, 0.32, 0.66, [0, 2.0, 1.22], '#ffffff', [0.35, 0, 0]);                                 // head
+  b.box(0.24, 0.2, 0.2, [0, 1.86, 1.52], '#d8d0c8', [0.35, 0, 0]);                                 // muzzle
+  for (const s of [-1, 1]) { b.cone(0.06, 0.18, 4, [s * 0.1, 2.24, 1.05], '#ffffff'); b.sph(0.035, [s * 0.15, 2.06, 1.32], '#141414', 1, 4); }
+  b.box(0.1, 0.62, 0.36, [0, 1.95, 0.78], '#2a1c14', [-0.55, 0, 0]);                               // mane
+  b.box(0.12, 0.66, 0.16, [0, 1.12, -0.95], '#2a1c14', [0.45, 0, 0]);                              // tail
+  for (const x of [-0.21, 0.21]) for (const z of [-0.66, 0.66]) { b.cyl(0.085, 0.07, 0.92, 6, [x, 0.46, z], '#ffffff'); b.cyl(0.09, 0.09, 0.1, 6, [x, 0.05, z], '#2a2420'); }
+  b.box(0.68, 0.12, 0.62, [0, 1.58, -0.02], '#7a2e1c'); b.box(0.06, 0.4, 0.14, [-0.36, 1.32, -0.02], '#7a2e1c'); b.box(0.06, 0.4, 0.14, [0.36, 1.32, -0.02], '#7a2e1c');   // saddle + flaps
+  b.box(0.08, 0.1, 0.12, [0, 1.7, 0.22], '#5a2014');                                              // pommel
+  return b.build();
+}
+/** Bubble anchor height per animal (petting lines). */
+const ANIMAL_BUBBLE_Y: Record<string, number> = { CHICKEN: 1.1, CAT: 1.1, COW: 2.0, HORSE: 2.7 };
 /** Egg nests in front of the coop (an egg shows when one is ready) + Pip's hidden cat while her quest is on. */
 function FarmBits() {
   const geos = useMemo(() => {
@@ -293,38 +309,40 @@ function FarmBits() {
 }
 
 function Animals() {
-  const chickens = useRef<InstancedMesh>(null!), cats = useRef<InstancedMesh>(null!), cows = useRef<InstancedMesh>(null!);
-  const geos = useMemo(() => ({ chicken: buildChicken(), cat: buildCat(), cow: buildCow() }), []);
+  const chickens = useRef<InstancedMesh>(null!), cats = useRef<InstancedMesh>(null!), cows = useRef<InstancedMesh>(null!), horses = useRef<InstancedMesh>(null!);
+  const geos = useMemo(() => ({ chicken: buildChicken(), cat: buildCat(), cow: buildCow(), horse: buildHorse() }), []);
   const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const idx = useMemo(() => {
-    let c = 0, k = 0, w = 0;
-    return ANIMALS.map((a) => (a.kind === 'CHICKEN' ? c++ : a.kind === 'COW' ? w++ : k++));
+    let c = 0, k = 0, w = 0, h = 0;
+    return ANIMALS.map((a) => (a.kind === 'CHICKEN' ? c++ : a.kind === 'COW' ? w++ : a.kind === 'HORSE' ? h++ : k++));
   }, []);
-  const counts = useMemo(() => ({ c: ANIMALS.filter((a) => a.kind === 'CHICKEN').length, k: ANIMALS.filter((a) => a.kind === 'CAT').length, w: ANIMALS.filter((a) => a.kind === 'COW').length }), []);
-  const meshOf = (kind: string) => (kind === 'CHICKEN' ? chickens.current : kind === 'COW' ? cows.current : cats.current);
+  const counts = useMemo(() => ({ c: ANIMALS.filter((a) => a.kind === 'CHICKEN').length, k: ANIMALS.filter((a) => a.kind === 'CAT').length, w: ANIMALS.filter((a) => a.kind === 'COW').length, h: ANIMALS.filter((a) => a.kind === 'HORSE').length }), []);
+  const meshOf = (kind: string) => (kind === 'CHICKEN' ? chickens.current : kind === 'COW' ? cows.current : kind === 'HORSE' ? horses.current : cats.current);
   useEffect(() => {
     const col = new Color();
     ANIMALS.forEach((a, i) => { const m = meshOf(a.kind); m.setColorAt(idx[i], col.set(a.tint)); });
     if (cows.current.instanceColor) cows.current.instanceColor.needsUpdate = true;
     if (chickens.current.instanceColor) chickens.current.instanceColor.needsUpdate = true;
     if (cats.current.instanceColor) cats.current.instanceColor.needsUpdate = true;
-    return () => { geos.chicken.dispose(); geos.cat.dispose(); geos.cow.dispose(); mat.dispose(); };
+    if (horses.current.instanceColor) horses.current.instanceColor.needsUpdate = true;
+    return () => { geos.chicken.dispose(); geos.cat.dispose(); geos.cow.dispose(); geos.horse.dispose(); mat.dispose(); };
   }, [geos, mat, idx]);
   useFrame(() => {
     for (let i = 0; i < animals.length; i++) {
       const a = animals[i], d = ANIMALS[i], m = meshOf(d.kind);
       if (!m) continue;
-      const bob = a.moving ? Math.abs(Math.sin(a.hop)) * (d.kind === 'CHICKEN' ? 0.07 : 0.03) : 0;
-      const peck = !a.moving && d.kind === 'CHICKEN' ? Math.max(0, Math.sin(a.hop * 2.4)) ** 3 * 0.55 : 0;
-      setInst(m, idx[i], a.x, bob + liftAt(a.x, a.z), a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : 1.2, undefined, undefined, peck);
+      const bob = a.moving ? Math.abs(Math.sin(a.hop)) * (d.kind === 'CHICKEN' ? 0.07 : d.kind === 'HORSE' ? (a.ridden ? 0.12 : 0.05) : 0.03) : a.joy > 0 ? Math.abs(Math.sin(a.hop * 2)) * (d.kind === 'COW' || d.kind === 'HORSE' ? 0.1 : 0.22) : 0;
+      const peck = !a.moving && a.joy <= 0 && d.kind === 'CHICKEN' ? Math.max(0, Math.sin(a.hop * 2.4)) ** 3 * 0.55 : 0;
+      setInst(m, idx[i], a.x, bob + liftAt(a.x, a.z), a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : d.kind === 'HORSE' ? 1 : 1.2, undefined, undefined, peck);
     }
-    chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true; cows.current.instanceMatrix.needsUpdate = true;
+    chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true; cows.current.instanceMatrix.needsUpdate = true; horses.current.instanceMatrix.needsUpdate = true;
   });
   return (
     <>
       <instancedMesh ref={chickens} args={[geos.chicken, mat, counts.c]} frustumCulled={false} castShadow />
       <instancedMesh ref={cats} args={[geos.cat, mat, counts.k]} frustumCulled={false} castShadow />
       <instancedMesh ref={cows} args={[geos.cow, mat, counts.w]} frustumCulled={false} castShadow />
+      <instancedMesh ref={horses} args={[geos.horse, mat, counts.h]} frustumCulled={false} castShadow />
       <FarmBits />
     </>
   );
@@ -336,8 +354,8 @@ function BubbleProjector() {
   useFrame(({ camera, size }) => {
     for (let i = 0; i < bubbles.length; i++) {
       const b = bubbles[i]; if (!b.active) continue;
-      const n = npcs[b.npc];
-      _p.set(n.x, 2.8 * (NPCS[b.npc].scale || 1) + (NPCS[b.npc].y ?? 0), n.z).project(camera);
+      if (b.animal >= 0) { const a = animals[b.animal]; _p.set(a.x, ANIMAL_BUBBLE_Y[ANIMALS[b.animal].kind] ?? 1.4, a.z).project(camera); }
+      else { const n = npcs[b.npc]; _p.set(n.x, 2.8 * (NPCS[b.npc].scale || 1) + (NPCS[b.npc].y ?? 0), n.z).project(camera); }
       b.sx = (_p.x * 0.5 + 0.5) * size.width; b.sy = (-_p.y * 0.5 + 0.5) * size.height;
       b.onScreen = _p.z < 1 && _p.x > -1.05 && _p.x < 1.05 && _p.y > -1.05 && _p.y < 1.05;
     }

@@ -28,7 +28,7 @@ export function comboTier(): number {
 }
 
 /** Damage multiplier for player hits from the current chain. */
-export function comboMul(): number { return 1 + Math.min(0.25, Math.floor(combo.stacks / 10) * 0.025); }
+export function comboMul(): number { return 1 + Math.min(0.05, Math.floor(combo.stacks / 10) * 0.005); }
 
 /** Called by damageEnemy for every direct player hit. */
 export function registerHit(): void {

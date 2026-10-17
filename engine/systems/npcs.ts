@@ -35,12 +35,15 @@ export interface NpcState {
 }
 export const npcs: NpcState[] = NPCS.map((d) => ({ x: d.home[0], z: d.home[1], yaw: 0, moving: false, talking: false, wp: 0, wait: Math.random() * 3, lastBubble: -1, bubbleT: -99, stuck: 0, skips: 0 }));
 
-export interface AnimalState { x: number; z: number; yaw: number; moving: boolean; tx: number; tz: number; wait: number; hop: number }
-export const animals: AnimalState[] = ANIMALS.map((a) => ({ x: a.x, z: a.z, yaw: Math.random() * 6.28, moving: false, tx: a.x, tz: a.z, wait: Math.random() * 2, hop: 0 }));
+/** hx/hz: where it wanders round (its pen; a horse left somewhere grazes there until the town is reloaded); joy > 0 while it
+ *  enjoys being petted (hops, render/Npcs.tsx); ridden: the hero is on it (village.ts moves it with the hero) */
+export interface AnimalState { x: number; z: number; yaw: number; moving: boolean; tx: number; tz: number; wait: number; hop: number; hx: number; hz: number; joy: number; ridden: boolean }
+export const animals: AnimalState[] = ANIMALS.map((a) => ({ x: a.x, z: a.z, yaw: Math.random() * 6.28, moving: false, tx: a.x, tz: a.z, wait: Math.random() * 2, hop: 0, hx: a.x, hz: a.z, joy: 0, ridden: false }));
 
 export const MAX_BUBBLES = 4;
-export interface Bubble { active: boolean; npc: number; text: string; t: number; life: number; sx: number; sy: number; onScreen: boolean }
-export const bubbles: Bubble[] = Array.from({ length: MAX_BUBBLES }, () => ({ active: false, npc: -1, text: '', t: 0, life: 3.2, sx: 0, sy: 0, onScreen: false }));
+/** animal >= 0: the bubble hangs over that animal (a petted cat's purr), not over npcs[npc] */
+export interface Bubble { active: boolean; npc: number; animal: number; text: string; t: number; life: number; sx: number; sy: number; onScreen: boolean }
+export const bubbles: Bubble[] = Array.from({ length: MAX_BUBBLES }, () => ({ active: false, npc: -1, animal: -1, text: '', t: 0, life: 3.2, sx: 0, sy: 0, onScreen: false }));
 let bubbleCd = 6;
 
 export const TALK_R = 3.8;
@@ -53,7 +56,7 @@ export function resetNpcs(): void {
     n.x = d.home[0]; n.z = d.home[1]; n.moving = false; n.talking = false; n.wp = 0; n.wait = Math.random() * 3; n.lastBubble = -1; n.bubbleT = -99; n.stuck = 0; n.skips = 0;
     n.yaw = d.area === 'CASTLE' || d.area === 'CHURCH' || d.area === 'TAVERN' ? 0 : Math.atan2(-n.x, 2 - n.z); // idle town NPCs face the spawn plaza, castle NPCs the hall door
   }
-  for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = d.x; a.z = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; }
+  for (let i = 0; i < animals.length; i++) { const a = animals[i], d = ANIMALS[i]; a.x = a.hx = d.x; a.z = a.hz = d.z; a.tx = d.x; a.tz = d.z; a.wait = Math.random() * 2; a.moving = false; a.joy = 0; a.ridden = false; }
   for (const b of bubbles) b.active = false;
   bubbleCd = 2 + Math.random() * 2;
 }
@@ -122,13 +125,15 @@ export function updateNpcs(dt: number): void {
   // ---- animals (cheap random wander inside an ellipse around their home)
   for (let i = 0; i < animals.length && town; i++) {
     const a = animals[i], d = ANIMALS[i];
+    if (a.ridden) continue;   // (moved with the hero, village.ts)
     a.hop += dt * (a.moving ? 9 : 3);
+    if (a.joy > 0) { a.joy -= dt; a.moving = false; a.hop += dt * 6; continue; }
     if (a.wait > 0) { a.wait -= dt; a.moving = false; continue; }
     const dx = a.tx - a.x, dz = a.tz - a.z, dist = Math.sqrt(dx * dx + dz * dz), step = d.speed * dt;
     if (dist <= step + 0.05) {
       a.moving = false; a.wait = 0.8 + Math.random() * 3.5;
       const ang = Math.random() * 6.283, rr = Math.sqrt(Math.random());
-      a.tx = d.x + Math.cos(ang) * d.rx * rr; a.tz = d.z + Math.sin(ang) * d.rz * rr;
+      a.tx = a.hx + Math.cos(ang) * d.rx * rr; a.tz = a.hz + Math.sin(ang) * d.rz * rr;
     } else { a.x += (dx / dist) * step; a.z += (dz / dist) * step; a.moving = true; a.yaw = Math.atan2(dx, dz); pushOut(a, 0.3); }
   }
 
@@ -137,8 +142,8 @@ export function updateNpcs(dt: number): void {
   for (let i = 0; i < MAX_BUBBLES; i++) {
     const b = bubbles[i]; if (!b.active) continue;
     b.t += dt;
-    const n = npcs[b.npc];
-    if (b.t >= b.life || n.talking || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > 24 * 24) b.active = false; else active++;
+    const n = b.animal >= 0 ? animals[b.animal] : npcs[b.npc];
+    if (b.t >= b.life || (b.animal < 0 && npcs[b.npc].talking) || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > 24 * 24) b.active = false; else active++;
   }
   bubbleCd -= dt;
   if (bubbleCd <= 0 && talkNpc < 0) {
@@ -165,7 +170,7 @@ export function updateNpcs(dt: number): void {
         const mk = STORY[useGameStore.getState().story.step]?.npc === d.name ? 4 : npcMarkers()[pick], r = Math.random();
         const call = mk ? callBubble(mk) : null, news = r >= 0.4 && r < 0.65 ? progressBubble() : null;
         if (call && r < 0.4) b.text = call; else if (news) b.text = news;
-        b.npc = pick; b.t = 0; b.life = 4; b.active = true; b.onScreen = false;
+        b.npc = pick; b.animal = -1; b.t = 0; b.life = 4; b.active = true; b.onScreen = false;
         break;
       }
       bubbleCd = 4 + Math.random() * 4;   // NPCs chatter regularly (user: periodic bubbles)
@@ -178,8 +183,24 @@ const n_last = (i: number) => npcs[i].lastBubble;
 export function npcShout(i: number, text: string, life = 3): void {
   let b = bubbles.find((x) => x.active && x.npc === i) ?? bubbles.find((x) => !x.active);
   if (!b) b = bubbles[0];
-  b.text = text; b.npc = i; b.t = 0; b.life = life; b.active = true; b.onScreen = false;
+  b.text = text; b.npc = i; b.animal = -1; b.t = 0; b.life = life; b.active = true; b.onScreen = false;
   npcs[i].bubbleT = world.time;
+}
+const PET_LINES: Record<string, string[]> = {
+  CAT: ['Purrrr... ♥', 'Mrrow~ ♥', '*headbutts your hand*', 'Mew! ♥'],
+  CHICKEN: ['Bawk! ♥', 'Cluck cluck? ♥', '*happy pecking*', 'Bok bok~'],
+  COW: ['Mooo~ ♥', '*slow happy blink*', 'Moo. ♥'],
+  HORSE: ['*happy snort* ♥', 'Neigh~ ♥', '*nuzzles you*'],
+};
+/** (owner) E next to an animal: it stops, turns to the hero, hops for joy and says something (a bubble over it). */
+export function petAnimal(i: number): void {
+  const a = animals[i], d = ANIMALS[i]; if (!a || a.ridden) return;
+  const p = world.player.pos;
+  a.joy = 1.4; a.moving = false; a.yaw = Math.atan2(p.x - a.x, p.z - a.z); a.tx = a.x; a.tz = a.z; a.wait = 1;
+  const pool = PET_LINES[d.kind] ?? ['♥'];
+  let b = bubbles.find((x) => x.active && x.animal === i) ?? bubbles.find((x) => !x.active);
+  if (!b) b = bubbles[0];
+  b.text = pool[(Math.random() * pool.length) | 0]; b.npc = -1; b.animal = i; b.t = 0; b.life = 2.4; b.active = true; b.onScreen = false;
 }
 /** (owner) Stepping into the cabbage field makes the Cabbage Man yell (6 s cooldown). */
 const CABBAGE_FIELD = FIELDS.find((f) => f.crop === 'CABBAGE'), CABBAGE_NPC = NPCS.findIndex((d) => d.name === 'Cabbage Man');

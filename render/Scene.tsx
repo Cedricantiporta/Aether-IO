@@ -10,6 +10,7 @@ import { useGameStore } from '../store';
 import { useQuality } from './quality';
 import { Sky, Lighting, FOG_COLOR } from './Sky';
 import { LookDriver, setLook } from './biomeLook';
+import { DreamGarden } from './DreamGarden';
 import { Room } from './Room';
 import { GuideArrow } from './GuideArrow';
 import { StationaryArrow } from './StationaryArrow';
@@ -80,7 +81,7 @@ export function Scene() {
       <CameraRig />
       <ClickMarker />
       <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
-      {gameplay ? <Room q={q} /> : world.village.area === 'HOME' ? (
+      {gameplay ? <><Room q={q} /><DreamGarden /></> : world.village.area === 'HOME' ? (
         <Suspense fallback={null}><HomeInterior q={q} /></Suspense>
       ) : world.village.area === 'TAVERN' ? (
         <Suspense fallback={null}><TavernInterior q={q} /></Suspense>

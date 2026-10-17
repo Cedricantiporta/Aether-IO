@@ -5,7 +5,7 @@
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
 import { interacted, wantsInteract, npcMarkers } from './npcQuestLogic';
-import { animals } from './npcs';
+import { animals, petAnimal } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT, WHEEL_PIN } from '../townData';
 import { STORY, gateOpen } from '../../story';
 import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
@@ -34,6 +34,29 @@ function sitDown(i: number): void {
   const p = world.player, st = world.village.sit;
   st.on = true; st.x = s.x; st.z = s.z; st.yaw = s.yaw; st.y = s.y;
   p.pos.set(s.x, 0, s.z); p.vel.set(0, 0, 0); p.facing = s.yaw; world.village.go.on = false;
+}
+const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse' };
+/** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
+function mount(i: number): void {
+  const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
+  v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 0;
+  p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
+}
+/** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). */
+export function dismount(): void {
+  const v = world.village; if (!v.ride.on) return;
+  const a = animals[v.ride.horse], p = world.player;
+  v.ride.on = false; v.ride.horse = -1;
+  if (!a) return;
+  a.ridden = false; a.moving = false; a.wait = 1.5; a.hx = a.tx = a.x; a.hz = a.tz = a.z;
+  p.pos.set(a.x + Math.cos(a.yaw) * 1.1, 0, a.z - Math.sin(a.yaw) * 1.1);   // step off to the horse's left
+  p.vel.set(0, 0, 0);
+}
+/** The ridden horse follows the hero (called after the hero moved). */
+function syncRide(dt: number): void {
+  const v = world.village, a = animals[v.ride.horse], p = world.player; if (!a) { v.ride.on = false; return; }
+  const sp = Math.hypot(p.vel.x, p.vel.z);
+  a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing; a.moving = sp > 0.6; a.hop += dt * Math.min(16, 4 + sp * 1.3);
 }
 export function standUp(): void {
   const st = world.village.sit; if (!st.on) return;
@@ -154,7 +177,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'ride' | 'pet';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -226,6 +249,16 @@ function scanNearby(): void {
     if (beach) for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) { if (fishLock) push('E', 'Locked', `Fishing · ${FISH_LOCK}`, '', i, d - 1, 'locked', LOCK_COLOR); else push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); } }   // lakeside fishing
     if (pinHidden()) { d = q(WHEEL_PIN.x, WHEEL_PIN.z); if (d < 7) push('E', 'Hold: Pick up', 'Wheel pin', '', 401, d, 'farm'); }
   }
+  if (world.village.ride.on) {   // (owner) on horseback: the only action is getting off
+    nearbyN = 0; push('E', 'Dismount', 'Horse', '', -1, 0, 'ride');
+    for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
+    return;
+  }
+  if (area === 'TOWN') for (let i = 0; i < animals.length; i++) {   // (owner) pet the animals, ride the stable horses
+    const a = animals[i], k = ANIMALS[i].kind; d = q(a.x, a.z);
+    const r = k === 'HORSE' || k === 'COW' ? 2.6 : 1.9;
+    if (d < r * r) { if (k === 'HORSE') push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
+  }
   if (world.village.sit.on) {   // seated: the only action is standing up
     nearbyN = 0; push('E', 'Stand', 'up', '', -1, 0, 'sit');
     for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
@@ -254,6 +287,8 @@ export function interact(it: Interactable): void {
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
     if (it.act === 'sit') { if (v.sit.on) standUp(); else sitDown(it.node); return; }
+    if (it.act === 'ride') { if (v.ride.on) dismount(); else mount(it.node); return; }
+    if (it.act === 'pet') { petAnimal(it.node); p.anim.castT = Math.max(p.anim.castT, 0.5); p.facing = Math.atan2(animals[it.node].x - p.pos.x, animals[it.node].z - p.pos.z); return; }
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'church') { viaSide = it.node === 1; v.pending = 'CHURCH'; }
     else if (it.act === 'tavern') v.pending = 'TAVERN';
@@ -488,6 +523,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME
   else if (to === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
   if (from === 'CAVE' && to !== 'CAVE') leaveCave();
   for (const b of bubbles) b.active = false;
+  dismount();
   p.vel.set(0, 0, 0); p.dashT = 0; p.anim.moveBlend = 0; world.village.sit.on = false;
   if (to === 'CASTLE') {
     v.area = 'CASTLE';
@@ -576,7 +612,7 @@ export function updateVillage(dt: number): void {
     const k = inp.keys;
     if (k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.ArrowUp || k.ArrowDown || k.ArrowLeft || k.ArrowRight || inp.joy.active || v.go.on || inp.pressed.Space) standUp();
     else { p.vel.x = p.vel.z = 0; p.pos.set(v.sit.x, 0, v.sit.z); p.facing = v.sit.yaw; p.anim.moveBlend *= Math.max(0, 1 - dt * 10); }
-  } else updatePlayerVillage(dt);
+  } else { updatePlayerVillage(dt); if (v.ride.on) syncRide(dt); }
   updatePetTown(dt);
   updateCrates(dt);
   // persistent harvest (town nodes / cave nodes, each with its own save): a node that just broke is recorded; when every

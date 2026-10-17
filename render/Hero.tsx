@@ -11,6 +11,7 @@ import {
   type Object3D,
 } from 'three';
 import { world } from '../engine/world';
+import { animals } from '../engine/systems/npcs';
 import { events } from '../engine/events';
 import { abilityState, LP_CHARGE } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
@@ -179,14 +180,23 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     m.update(dt);
 
     // seated on a bench / pew (no sit clip in the KayKit packs: the legs are posed on top of the idle)
-    const sitOn = !lobby && alive && world.village.sit.on && status === GameStatus.MENU;
+    const rideOn = !lobby && alive && world.village.ride.on && status === GameStatus.MENU;   // (owner) astride a stable horse
+    const sitOn = !lobby && alive && (world.village.sit.on || rideOn) && status === GameStatus.MENU;
     s.sitK = damp(s.sitK ?? 0, sitOn ? 1 : 0, 10, dt);
     if (s.sitK > 0.01) {
       if (!s.legs) s.legs = ['upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'hips'].map((n) => ch.root.getObjectByName(n) ?? null);
       const [ul, ur, ll, lr] = s.legs, k = s.sitK;
-      if (ul) ul.rotation.x -= 1.5 * k; if (ur) ur.rotation.x -= 1.5 * k;
-      if (ll) ll.rotation.x += 1.55 * k; if (lr) lr.rotation.x += 1.55 * k;
-      g.position.y += (world.village.sit.y - SIT_HIP_DROP) * k;
+      if (rideOn) {   // legs apart round the horse's flanks, knees bent a little
+        if (ul) { ul.rotation.x -= 0.75 * k; ul.rotation.z -= 0.5 * k; } if (ur) { ur.rotation.x -= 0.75 * k; ur.rotation.z += 0.5 * k; }
+        if (ll) ll.rotation.x += 0.9 * k; if (lr) lr.rotation.x += 0.9 * k;
+        const hv = world.village.ride.horse, hz = hv >= 0 ? animals[hv] : null;
+        const bob = hz && hz.moving ? Math.abs(Math.sin(hz.hop)) * 0.12 : 0;
+        g.position.y += (RIDE_SEAT_Y + bob - SIT_HIP_DROP) * k;
+      } else {
+        if (ul) ul.rotation.x -= 1.5 * k; if (ur) ur.rotation.x -= 1.5 * k;
+        if (ll) ll.rotation.x += 1.55 * k; if (lr) lr.rotation.x += 1.55 * k;
+        g.position.y += (world.village.sit.y - SIT_HIP_DROP) * k;
+      }
     }
 
     // emissive status tint
@@ -562,6 +572,8 @@ function AegisSphere() {
 
 /** How far the hips drop from standing to sitting on a seat at height 0 (tuned to the KayKit medium rig). */
 const SIT_HIP_DROP = 0.42;
+/** saddle height of the stable horses (render/Npcs buildHorse, scale 1) */
+const RIDE_SEAT_Y = 1.62;
 export function Hero({ q }: { q: QualityCfg }) {
   const cls = useGameStore((s) => s.hero) as HeroClass;
   return (

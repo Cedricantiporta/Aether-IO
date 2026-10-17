@@ -65,6 +65,9 @@ export const PORTAL = { x: 5, z: 152, r: 6.5, front: { x: 5, z: 148.6 } };   // 
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
+/** (owner) the horse stable against the town wall just east of the gate: an open-fronted shed (front faces south) and a fenced paddock
+ *  in front of it (gap in the west side). The horses (ANIMALS 'HORSE') can be ridden (village.ts mount / dismount). */
+export const STABLE = { x: 12.9, z: 41.5, w: 7, d: 3.4, paddock: { x0: 9.4, x1: 18.4, z0: 43.4, z1: 48.2 } };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
@@ -314,6 +317,10 @@ export const WALL_RUNS: [number, number, number, number, number, number][] = [
 export const FENCES: [number, number, number, number][] = [
   // road to the gate (east side has a gap for the pet-stable lane)
   [-3.9, 20, -3.9, 33], [3.9, 20, 3.9, 24.3], [3.9, 28.7, 3.9, 33],
+  // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
+  [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
+  [STABLE.paddock.x1, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z1], [STABLE.paddock.x0, STABLE.paddock.z1, STABLE.paddock.x1, STABLE.paddock.z1],
+  [STABLE.paddock.x0, STABLE.paddock.z0, STABLE.paddock.x0, 44.9], [STABLE.paddock.x0, 46.7, STABLE.paddock.x0, STABLE.paddock.z1],
   // chicken pen
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z - PEN.hd], [PEN.x - PEN.hw, PEN.z + PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
@@ -400,7 +407,7 @@ export const PLANTERS: PlanterSpec[] = [
   // pet lane
   { x: 9, z: 23.6, w: 3.2, d: 1.0, kind: 1 }, { x: 15, z: 23.6, w: 3.2, d: 1.0, kind: 0 },
   // flower bed in front of the gate (outside)
-  { x: -10.5, z: 46.5, w: 5, d: 2, kind: 1 }, { x: 10.5, z: 46.5, w: 5, d: 2, kind: 1 },   // (owner: aligned pair)
+  { x: -10.5, z: 46.5, w: 5, d: 2, kind: 1 },   // (its east twin made way for the horse paddock)
   // flower boxes along the outside of the south wall (clear of the towers at x = +-27 and the brewer's hut)
   { x: -36, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: -19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.5, w: 5, d: 1.1, kind: 1 },
   // little riverside park east of the bridge (owner): flower beds behind the river benches
@@ -420,7 +427,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -31, z: 34.6, s: 3.4, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
-  { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
+  { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: 24, z: 46, s: 3.4, kind: 0 },
   // (owner #167: more on the green in front of the gate) west side, clear of the dirt path at z 52
   { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 }, { x: 30, z: 52.8, s: 3.2, kind: 2 },
@@ -478,6 +485,10 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.5]);
+  { const S = STABLE, z0 = S.z - S.d / 2;   // the stable: back wall + side walls (the front is open to the paddock)
+    for (let x = S.x - S.w / 2; x <= S.x + S.w / 2 + 0.01; x += 0.8) c.push([x, z0, 0.5]);
+    for (const sx of [-1, 1]) for (let z = z0; z <= S.z + S.d / 2 + 0.01; z += 0.8) c.push([S.x + sx * S.w / 2, z, 0.5]);
+    for (const o of [-0.5, 0.5]) c.push([S.paddock.x1 - 0.9, S.paddock.z1 - 1.3 + o, 0.5]); }   // (+ the paddock's water trough)
   c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
   for (const k of CARTS) for (const o of [-0.9, 0.9]) c.push([k.x + Math.sin(k.rot) * o, k.z + Math.cos(k.rot) * o, 1.2]);   // carts: two circles along the bed
   // castle: ring of circles around the hall footprint + corner towers
@@ -989,7 +1000,7 @@ export const NPCS: NpcDef[] = [
 
 export const GENERIC_BUBBLES = ['Lovely day!', 'Beware the Mire...', 'Good luck out there!', 'Stay safe, hero.', 'Is that the hero?'];
 
-export interface AnimalDef { kind: 'CHICKEN' | 'CAT' | 'COW'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
+export interface AnimalDef { kind: 'CHICKEN' | 'CAT' | 'COW' | 'HORSE'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
 export const ANIMALS: AnimalDef[] = [
   // wander ellipses stay well inside the fenced pen
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.1, tint: '#ffffff' },
@@ -1004,4 +1015,8 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: COOP.x - 4.2, z: COOP.z - 0.8, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x - 4.6, z: COOP.z + 1.6, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
+  // (owner) the stable's horses, grazing in the paddock (rideable: E)
+  { kind: 'HORSE', x: 11.6, z: 45.9, rx: 0.8, rz: 0.7, speed: 0.7, tint: '#8a5a36' },
+  { kind: 'HORSE', x: 14.0, z: 45.6, rx: 0.8, rz: 0.6, speed: 0.6, tint: '#f2ece0' },
+  { kind: 'HORSE', x: 15.9, z: 44.9, rx: 0.6, rz: 0.4, speed: 0.7, tint: '#3a2c26' },
 ];
