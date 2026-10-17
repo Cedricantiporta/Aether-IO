@@ -17,6 +17,9 @@ export const POTION_CD_STACKS_MAX = 3;
 export const POTION_CD_CAP = 0.5;   // total potion cooldown reduction from Quickdraw Flask never exceeds -50%
 /** Hard mode shifts the card rarity odds up: tiers above Common get these weight multipliers (Common x0.7). */
 const HARD_TIER_MUL = [0.7, 1.25, 1.6, 1.6, 1.6];
+/** Early biomes roll lower: per-tier weight multipliers for biome 0 and 1 (later biomes use the base odds). */
+const EARLY_TIER_MUL = [[1.3, 0.6, 0.4, 0.35, 0.35], [1.15, 0.8, 0.65, 0.6, 0.6]];
+let earlyMul: number[] | null = null;
 
 /** Live per-run card state. */
 export const runCards = {
@@ -118,12 +121,12 @@ export const ARCANA_NUMERAL: Record<string, string> = {
 // ------------------------------------------------------------------- rolling --
 /** Picks a tier in [min, max] with the base odds renormalised inside the range (mythic only when allowed). */
 function rollTier(min: number, max: number, allowMythic: boolean): number {
-  const hm = runInfo.hard;
+  const hm = runInfo.hard, em = earlyMul;
   let tot = 0;
-  for (let i = min; i <= max; i++) tot += i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1);
+  for (let i = min; i <= max; i++) tot += i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1) * (em ? em[i] : 1);
   if (tot <= 0) return min;
   let r = Math.random() * tot;
-  for (let i = min; i <= max; i++) { r -= i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1); if (r <= 0) return i; }
+  for (let i = min; i <= max; i++) { r -= i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1) * (em ? em[i] : 1); if (r <= 0) return i; }
   return min;
 }
 
@@ -151,13 +154,13 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   }
   out.push({ weight: 0.3, make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
   if (ultUnlocked) out.push({ weight: 0.25, make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
-  if (aegisBiome !== biomeKey) out.push({ weight: 0.3, make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
+  if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
   if (runCards.defianceTaken < DEFIANCE_MAX) {
-    out.push({ weight: 0.2, make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
+    out.push({ weight: 0.2 * (earlyMul?.[3] ?? 1), make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
   }
   for (const s of SPECIALS) {
     if (runCards.taken[s.id]) continue;
-    out.push({ weight: s.weight, make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
+    out.push({ weight: s.weight * (earlyMul?.[3] ?? 1), make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
   }
   void multishotOk;
   return out;
@@ -165,6 +168,7 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
 
 /** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome. */
 export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: string): Omit<Upgrade, 'id'>[] {
+  earlyMul = EARLY_TIER_MUL[Number(biomeKey)] ?? null;
   const pool = candidates(ultUnlocked, true, biomeKey);
   const cards: Omit<Upgrade, 'id'>[] = [];
   for (let i = 0; i < count && pool.length > 0; i++) {
