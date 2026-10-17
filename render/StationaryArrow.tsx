@@ -1,4 +1,4 @@
-// (owner) In a run, once only STATIONARY monsters are left (goblin archer towers, lake hydras, crystals: engine/enemyDefs
+// (owner) In a run, once only STATIONARY monsters are left (goblin archer towers, lake hydras, crystals, gargoyles: engine/enemyDefs
 // isStationary), a red ground arrow beside the hero points at the nearest one so a cleared-looking room is never a
 // mystery. Hidden while one is close by. Scans the enemy pool a few times a second (no per-frame allocations).
 import React, { useMemo, useRef } from 'react';
@@ -29,7 +29,7 @@ export function StationaryArrow() {
         for (const e of world.enemies) {
           if (!e.active || e.state === 'DYING' || e.decoy) continue;
           any = true;
-          if (!isStationary(e.kind)) { onlyStill = false; break; }
+          if (!isStationary(e.kind) && e.kind !== 'GARGOYLE') { onlyStill = false; break; }   // gargoyles perch and barely move: point at them too
           const d = (e.pos.x - p.x) ** 2 + (e.pos.z - p.z) ** 2;
           if (d < best) { best = d; s.x = e.pos.x; s.z = e.pos.z; }
         }
