@@ -4,7 +4,8 @@ import { TAP } from '../../engine/tavernData';
 import React, { useRef } from 'react';
 import { NAVE } from '../../engine/churchData';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
-import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../../engine/townData';
+import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS } from '../../engine/townData';
+import { animals } from '../../engine/systems/npcs';
 import { HALL } from '../../engine/castleData';
 import { CAVE_DOOR } from '../../engine/caveData';
 import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
@@ -34,6 +35,8 @@ const SHOP_ICON: Record<string, Poly[]> = {
   FISH: [[true, -0.9, 0, -0.35, -0.5, 0.3, -0.35, 0.55, 0, 0.95, -0.5, 0.95, 0.5, 0.55, 0, 0.3, 0.35, -0.35, 0.5], dia(-0.5, -0.08, 0.1)],   // fish
   MINE: [[false, -0.42, -0.8, 0, -0.66, 0.35, -0.45, 0.66, -0.18, 0.9, 0.18], [false, -0.72, 0.9, 0.35, -0.45]],   // pickaxe
 };
+/** (owner) the horse stable: a horseshoe (open at the bottom) with nail dots */
+const HORSESHOE: Poly[] = [[false, -0.55, 0.85, -0.78, 0.1, -0.7, -0.45, -0.35, -0.82, 0, -0.9, 0.35, -0.82, 0.7, -0.45, 0.78, 0.1, 0.55, 0.85], dia(-0.62, 0.05, 0.1), dia(0.62, 0.05, 0.1), dia(0, -0.62, 0.1)];
 /** The town's walkable outline (polar island edge, recomputed when the map seed changes): x, z pairs. */
 const ISLE_N = 180, isle = new Float32Array(ISLE_N * 2);
 let isleSeed = -1;
@@ -198,6 +201,18 @@ export const Minimap: React.FC = () => {
         ctx.fillStyle = 'rgba(13,7,3,.85)'; ctx.strokeStyle = '#6fe6ff'; ctx.lineWidth = 1.5 * DPR;
         ctx.beginPath(); ctx.arc(x, y, 7 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#6fe6ff'; ctx.beginPath(); ctx.moveTo(x, y - 4.5 * DPR); ctx.lineTo(x + 3 * DPR, y); ctx.lineTo(x, y + 4.5 * DPR); ctx.lineTo(x - 3 * DPR, y); ctx.closePath(); ctx.fill(); }
+      // (owner) the horse stable: a badge like the shops' (horseshoe), and each free horse as a small chestnut dot
+      { const x = cx + STABLE.x * k, y = cx + (STABLE.paddock.z0 + STABLE.paddock.z1) / 2 * k, b = 8.5 * DPR, u = 5.2 * DPR;
+        ctx.fillStyle = 'rgba(10,7,5,.9)'; ctx.strokeStyle = '#d9a066'; ctx.lineWidth = 1.2 * DPR;
+        ctx.beginPath(); ctx.rect(x - b, y - b, b * 2, b * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 1.4 * DPR; ctx.beginPath();
+        for (const poly of HORSESHOE) { for (let j = 1; j < poly.length; j += 2) { const px = x + (poly[j] as number) * u, py = y + (poly[j + 1] as number) * u; if (j === 1) ctx.moveTo(px, py); else ctx.lineTo(px, py); } if (poly[0]) ctx.closePath(); }
+        ctx.stroke(); }
+      for (let i = 0; i < animals.length; i++) {
+        if (ANIMALS[i].kind !== 'HORSE' || animals[i].ridden) continue;
+        ctx.fillStyle = '#c98a4a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1 * DPR;
+        ctx.beginPath(); ctx.arc(cx + animals[i].x * k, cx + animals[i].z * k, 2.2 * DPR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
       const dots: [number[], string][] = [[QUEST_POS, '#ffd24a'], [SHRINE_POS, '#b57cff'], [TRAINER_POS, '#ffb04a']];
       for (const [pp, col] of dots) {
         ctx.fillStyle = col; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.2 * DPR;
@@ -227,6 +242,9 @@ export const Minimap: React.FC = () => {
     // player arrow (facing: atan2(dx, dz) => canvas dir = (sin f, cos f))
     const p = world.player;
     const px2 = cx + p.pos.x * k, py2 = cx + p.pos.z * k;
+    if (town && world.village.ride.on) {   // (owner) on horseback: a chestnut ring round the arrow
+      ctx.strokeStyle = '#d9a066'; ctx.lineWidth = 2 * DPR; ctx.beginPath(); ctx.arc(px2, py2, 8.5 * DPR, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.save(); ctx.translate(px2, py2); ctx.rotate(Math.PI - p.facing);
     ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
     ctx.beginPath(); ctx.moveTo(0, -6 * DPR); ctx.lineTo(4.5 * DPR, 5 * DPR); ctx.lineTo(0, 2.5 * DPR); ctx.lineTo(-4.5 * DPR, 5 * DPR); ctx.closePath(); ctx.fill(); ctx.stroke();
