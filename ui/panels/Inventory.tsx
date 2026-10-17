@@ -15,7 +15,6 @@ import { SORTS, isGear, sortedItems, sellPrice, RARITY_TEXT } from '../lib/game'
 import { recycleYieldAll } from '../../crafting';
 import { useDrop, reorder } from '../lib/dnd';
 import { DropCell } from '../components/DropCell';
-import { CoinGlyph } from '../components/SkillIcons';
 import { device } from '../../engine/device';
 
 const TYPE_RANK: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
@@ -53,7 +52,6 @@ export const InventoryPanel: React.FC = () => {
   })));
   const shopTab = useGameStore((s) => (s.isShopOpen ? s.activeShopTab : null));
   const { selected, setSelected, setSell } = useUiStore(useShallow((s) => ({ selected: s.selectedItem, setSelected: s.setSelectedItem, setSell: s.setSellItem })));
-  const gold = useGameStore((s) => s.gold);
   const recycleItems = useGameStore((s) => s.recycleItems);
   const drinkElixir = useGameStore((s) => s.drinkElixir);
   const askConfirm = useUiStore((s) => s.askConfirm);
@@ -175,6 +173,10 @@ export const InventoryPanel: React.FC = () => {
           </div>
         </div>
         <div className="bag-foot">
+          {/* (owner) bag count on the same row as the buttons; no gold here (the HUD shows it) */}
+          <div className="bag-foot-info">
+            <span className="flex items-center gap-1.5 rpg-label !text-[.66rem]"><BagGlyph size={16} /> <span className="rpg-num text-white">{inventory.length}/{max}</span></span>
+          </div>
           <div className="bag-foot-btns">
             {sellMode ? (<>
               <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
@@ -201,10 +203,6 @@ export const InventoryPanel: React.FC = () => {
                 title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
               <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>
             </>)}
-          </div>
-          <div className="bag-foot-info">
-            <span className="flex items-center gap-1.5 rpg-label !text-[.66rem]"><BagGlyph size={16} /> <span className="rpg-num text-white">{inventory.length}/{max}</span></span>
-            <span className="bag-gold" data-testid="bag-gold"><CoinGlyph size={14} /><span className="rpg-num">{gold.toLocaleString()}</span></span>
           </div>
         </div>
       </Panel>
