@@ -6,8 +6,8 @@
 //   ring 2  four nodes (two per ring-1 node) . need their parent
 //   ring 3  two nodes ........................ each needs BOTH ring-2 nodes on its side
 //   ring 4  capstone ......................... needs both ring-3 nodes
-// (owner: a mix) plain stat talents need their parents learned (1 rank) and little / no class level; special
-// talents and the capstone need their parents MAXED and the ring's class level (see reqMax).
+// (owner) gating: the first rings (0-1) only need 1 point in their parent; from ring 2 outward every talent needs its
+// parents MAXED (see reqMax). Special talents and the capstone also keep the ring's class level.
 // Rings also need a class level (RING_LEVEL) and cost more points per rank (RING_COST). 4 points per class level;
 // a full tree costs 158-164 of the 200 points at Lv 50, so every talent fits at the cap - before that you choose.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are read from PlayerStats by the engine.
@@ -323,7 +323,7 @@ export const TALENTS: TalentNode[] = [];
       // their parents MAXED; plain stat talents only need the previous node learned, with a lighter level gate
       // (none in rings 1-2, half the ring level further out).
       const t = TALENTS[TALENTS.length - 1];
-      t.reqMax = !!(t.capstone || t.special);
+      t.reqMax = !!(t.capstone || t.special) || L.row >= 2;   // (owner) rings 0-1: one point in the parent opens the next; ring 2 on: the parent must be MAXED
       if (!t.reqMax) t.lvReq = L.row <= 2 ? 1 : Math.round(RING_LEVEL[L.row] / 2);
     });
   });
