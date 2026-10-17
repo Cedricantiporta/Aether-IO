@@ -1,3 +1,4 @@
+import { KILL_XP_MUL } from '../../classLevels';
 // ============================================================================
 // Combat: damage in/out, death + loot, healing, status effects.
 // Engine-B (enemies/bosses/director) calls into this module.
@@ -248,6 +249,7 @@ export function damageEnemiesInRadius(
 /** Instant XP + coalesced "+N XP" floating text. */
 export function grantKillXp(xp: number, pos: Vector3): void {
   if (towerMode()) return;   // (no EXP in the tower modes: no floating +xp either)
+  xp *= KILL_XP_MUL;
   const st = useGameStore.getState();
   st.addExperience(xp);
   world.run.xpEarned += xp;
