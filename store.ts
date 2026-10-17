@@ -269,6 +269,9 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 };
 
 /** (owner balance) hard caps on the percentage stats, applied last (gear + pet + talents + attributes + sets together). */
+/** (owner) hero HP and every source of bonus HP x2 (heals / regen stay as they are); incoming damage is x2 too
+ *  (engine/systems/combat.ts damagePlayer: monsters, bosses, traps, lava, spikes). */
+export const HP_INFLATE = 2, DMG_INFLATE = 2;
 export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.15 } as const;
 
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
@@ -301,6 +304,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
   if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; final.damage *= 0.85; }   // (damage feeds basic attacks and skills)   // fragile, slow caster (user tuning)
   for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps
+  final.maxHealth = Math.round(final.maxHealth * HP_INFLATE);   // (owner) every HP source doubled
   return final;
 };
 
@@ -366,7 +370,7 @@ let aegisOffered = '';
 events.on('runStart', () => { shadowStepTaken = false; aegisOffered = ''; });
 const aegisKey = (): string => String(world.room.biome);   // (reset each run on runStart)
 const cardWeight = (u: Upgrade): number => (u.type === 'RESTORE' ? 0.3 : u.type === 'AEGIS' ? 0.5 : u.type === 'ULT_FILL' ? 0.25 : /REGEN/.test(u.type) ? 0.45 : 1);
-const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 3): Upgrade[] => {
+const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 2): Upgrade[] => {
   const pool = UPGRADES_POOL.filter((u) => {
     if (u.classType && u.classType !== hero) return false;
     const key = skillKeyFor(u.type, hero);
@@ -1011,7 +1015,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const extraCard = bonus;
       if (extraCard) notify('Bonus reward card!', COLORS.uiAccent, 'SYSTEM');
       set({
-        upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, extraCard ? 4 : 3),
+        upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, (Math.random() < 0.25 ? 3 : 2) + (extraCard ? 1 : 0)),
         accumulatedWaveGold: s.accumulatedWaveGold + 1000,
         status: GameStatus.LEVEL_UP,
       });
@@ -1027,7 +1031,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         levels[key] = Math.min(MAX_SKILL_LEVEL, levels[key] + 1);
       } else {
         switch (upgrade.type) {
-          case 'HEALTH': base.maxHealth += upgrade.value; world.player.hp += upgrade.value; break;
+          case 'HEALTH': base.maxHealth += upgrade.value; world.player.hp += upgrade.value * HP_INFLATE; break;
           case 'MAX_MANA': base.maxMana += upgrade.value; world.player.mana += upgrade.value; break;
           case 'DAMAGE': base.damage += base.damage * upgrade.value; break;
           case 'SPEED': base.moveSpeed += base.moveSpeed * upgrade.value; break;

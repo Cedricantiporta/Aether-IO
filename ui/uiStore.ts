@@ -27,6 +27,8 @@ interface UiState {
   buyOpts: BuyOpts | null;
   selectedItem: Item | null;            // blacksmith selection
   blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT' | 'FUSE' | 'SHARDS' | 'REFORGE';
+  petsTab: 'SHOP' | 'CARE' | 'FUSE';    // Pet House tab (the upgrade hints open Care / Fuse directly)
+  setPetsTab: (t: UiState['petsTab']) => void;
   confirm: ConfirmRequest | null;
   bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)
   summonResults: Item[] | null;
@@ -63,6 +65,8 @@ export const useUiStore = create<UiState>((set) => ({
   buyItem: null, buyOpts: null,
   selectedItem: null,
   blacksmithTab: 'UPGRADE',
+  petsTab: 'SHOP',
+  setPetsTab: (t) => set({ petsTab: t }),
   confirm: null,
   bagView: false,
   summonResults: null,

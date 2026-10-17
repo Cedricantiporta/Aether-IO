@@ -42,7 +42,7 @@ export const PetsTab: React.FC = () => {
   const sales = useGameStore((s) => s.shopSales);
   const setBuy = useUiStore((s) => s.setBuyItem);
   const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
-  const [tab, setTab] = useState<'SHOP' | 'CARE' | 'FUSE'>('SHOP');
+  const tab = useUiStore((s) => s.petsTab), setTab = useUiStore((s) => s.setPetsTab);
   const [selId, setSel] = useState(SHOP_PETS[0]?.id ?? '');
   const p = SHOP_PETS.find((x) => x.id === selId) ?? SHOP_PETS[0];
   return (

@@ -9,7 +9,7 @@
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
-import { useGameStore } from '../../store';
+import { useGameStore, DMG_INFLATE } from '../../store';
 import type { RoomPlan } from '../types';
 import { spawnEnemy } from './enemies';
 import { spawnPickup } from './pickups';
@@ -218,7 +218,7 @@ export function updateRoomEvents(dt: number): void {
       if (tr.t >= TRAP_PERIOD) { tr.t -= TRAP_PERIOD; tr.hit = false; }
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
-        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12, { pos: tmp }); }
+        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 / DMG_INFLATE, { pos: tmp }); /* (12% max HP: already scales with the x2 HP) */ }
         damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER', env: 'TRAP' });
       }
     }

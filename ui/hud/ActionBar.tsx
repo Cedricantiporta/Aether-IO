@@ -62,8 +62,8 @@ export const ActionBar: React.FC = () => {
         );
       })}
       <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dashOpen ? dLv : 0} active={dashOpen}
-        getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} getPips={() => ({ cur: p.dashCharges, max: p.maxDashCharges })}
-        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s per charge`), cdLine(`Lv ${dLv}`, dDef.per(dLv)), cdLine('Level 5', '+1 dash charge')]} />} />
+        getCd={() => ({ t: p.dashCd, max: p.dashCdMax })}
+        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`), cdLine(`Lv ${dLv}`, dDef.per(dLv))]} />} />
 
       <Sep />
       {classPassives.map((k) => {

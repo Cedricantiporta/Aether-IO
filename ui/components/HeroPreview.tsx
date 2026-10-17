@@ -7,10 +7,11 @@ import type { HeroClass } from '../../types';
 import { useCharacterInstance, useClips, type CharKey } from '../../render/characters';
 import { makeBow, makeStaff, makeSword, makeAxe, HANDSLOT_QUAT, NECRO_TINT } from '../../render/weapons';
 import { litMat } from '../../render/util';
+import { tintGear } from '../../render/gear';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
 
-function Model({ hero, tint }: { hero: HeroClass; tint: string }) {
+function Model({ hero, tint, gear }: { hero: HeroClass; tint: string; gear?: string }) {
   const ch = useCharacterInstance(CHAR[hero]);
   const clips = useClips();
   const spin = useRef<Group>(null!);
@@ -21,6 +22,11 @@ function Model({ hero, tint }: { hero: HeroClass; tint: string }) {
     return () => { mixer.stopAllAction(); };
   }, [mixer, clips]);
   useEffect(() => { for (const m of ch.mats as MeshStandardMaterial[]) if (m.color) { m.color.set(tint); if (hero === 'NECROMANCER') m.color.multiply(NECRO_TINT); } }, [ch, tint, hero]);
+  // equipped gear recolours the matching parts by rarity (same as the in-game hero); gear = 'helmet|armor|gloves|boots|accessory' rarities
+  useEffect(() => {
+    const [helmet = '', armor = '', gloves = '', boots = '', accessory = ''] = (gear ?? '').split('|');
+    return tintGear(ch.meshes, { helmet, armor, gloves, boots, accessory, hero });
+  }, [ch, gear, tint, hero]);
   // the class weapon in the right hand
   useEffect(() => {
     if (!ch.handR) return;
@@ -37,13 +43,13 @@ function Model({ hero, tint }: { hero: HeroClass; tint: string }) {
   return <group ref={spin}><primitive object={ch.root} /></group>;
 }
 
-export const HeroPreview: React.FC<{ hero: HeroClass; tint: string }> = ({ hero, tint }) => (
+export const HeroPreview: React.FC<{ hero: HeroClass; tint: string; gear?: string }> = ({ hero, tint, gear }) => (
   <div className="cs-preview" aria-hidden>
     <Canvas camera={{ position: [0, 1.25, 6.4], fov: 30 }} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }} onCreated={({ camera }) => camera.lookAt(0, 0.9, 0)}>
       <ambientLight intensity={0.9} color="#ffe2b0" />
       <directionalLight position={[3, 5, 4]} intensity={2.2} color="#fff0d0" />
       <directionalLight position={[-4, 2, -3]} intensity={1.0} color="#c9a052" />
-      <Suspense fallback={null}><Model key={hero} hero={hero} tint={tint} /></Suspense>
+      <Suspense fallback={null}><Model key={hero} hero={hero} tint={tint} gear={gear} /></Suspense>
     </Canvas>
   </div>
 );

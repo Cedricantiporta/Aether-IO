@@ -9,7 +9,11 @@ import { Modal } from '../components/Modal';
 import { hasBetterGear, canTrainSkill, canBuyTalent, canCraftAny } from '../lib/alerts';
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { upgradeCoreTierFor, coreTierOf, upgradeCoresAt, upgradeGoldFor } from '../../crafting';
-import { canAffordEvolve } from '../../petActions';
+import { canAffordEvolve, lootFoodXp } from '../../petActions';
+import { petLv, petStage, petLvCap, petEats, petCanEvolve } from '../../petGrowth';
+import { FUSE_COUNT, FUSE_CHANCE } from '../../petFusion';
+import { useUiStore } from '../uiStore';
+import type { Rarity } from '../../types';
 import type { Item } from '../../types';
 import { GameStatus } from '../../types';
 import { world } from '../../engine/world';
@@ -32,6 +36,18 @@ function upgradable(s: St): Item | null {
   return null;
 }
 
+/** Food in the bag / shards the equipped pet eats (its own food tier). */
+function petHasFood(s: St, pet: Item): boolean {
+  for (const i of s.inventory) if (lootFoodXp(i) > 0 && petEats(pet, i.rarity)) return true;
+  return (Object.keys(s.materials) as Rarity[]).some((r) => (s.materials[r] ?? 0) > 0 && petEats(pet, r));
+}
+/** FUSE_COUNT bag pets of one fusable tier (the equipped pet is never used). */
+function petsFusable(s: St): boolean {
+  const n: Partial<Record<Rarity, number>> = {};
+  for (const i of s.inventory) if (i.type === 'PET' && (FUSE_CHANCE[i.rarity] ?? 0) > 0) { n[i.rarity] = (n[i.rarity] ?? 0) + 1; if (n[i.rarity]! >= FUSE_COUNT) return true; }
+  return false;
+}
+
 export function upgradesOf(s: St): Up[] {
   const out: Up[] = [];
   if (hasBetterGear(s.inventory, s.equipment, s.hero, s.heroRank)) out.push({ key: 'gear', title: 'Better gear in your bag', sub: 'Equip it (or use Auto equip in the bag).', go: (g) => { if (!g.isInventoryOpen) g.toggleInventory(); } });
@@ -43,7 +59,10 @@ export function upgradesOf(s: St): Up[] {
   if (up) out.push({ key: 'forge', title: 'Gear you can upgrade', sub: `${up.name} +${up.level - 1} → +${up.level}: you have the gold and cores.`, go: (g) => g.openSpecificShop('BLACKSMITH'), town: true });
   if (canCraftAny(s)) out.push({ key: 'craft', title: 'Gear you can craft', sub: 'You have the materials for a Workshop recipe.', go: (g) => g.openSpecificShop('BLACKSMITH'), town: true });
   const pet = s.equipment.pet;
-  if (pet && canAffordEvolve(pet, s.gold, s.materials)) out.push({ key: 'pet', title: 'Your pet can evolve', sub: 'Evolving raises all its stats.', go: (g) => g.openSpecificShop('PETS'), town: true });
+  const openPets = (tab: 'CARE' | 'FUSE') => (g: St) => { useUiStore.getState().setPetsTab(tab); g.openSpecificShop('PETS'); };
+  if (pet && canAffordEvolve(pet, s.gold, s.materials)) out.push({ key: 'pet', title: 'Your pet can evolve', sub: 'Evolving raises all its stats.', go: openPets('CARE'), town: true });
+  else if (pet && !petCanEvolve(pet) && petLv(pet) < petLvCap(petStage(pet)) && petHasFood(s, pet)) out.push({ key: 'petlv', title: 'Your pet can level up', sub: 'You have food for it: feed it at Pet Care.', go: openPets('CARE'), town: true });
+  if (petsFusable(s)) out.push({ key: 'petfuse', title: 'Pets you can fuse', sub: `You have ${FUSE_COUNT} pets of one tier: fuse them at the Pet House.`, go: openPets('FUSE'), town: true });
   return out;
 }
 

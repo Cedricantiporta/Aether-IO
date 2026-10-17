@@ -15,7 +15,7 @@ import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
-import { useGameStore, makeItemById } from '../../store';
+import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo } from '../runMods';
 /** The tower modes (Endless Tower, Daily Trial, Endless Waves all run as runInfo.mode 'TOWER'): monsters drop no items
@@ -606,6 +606,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
   if (debug.god) return;   // debug god mode
+  amount *= DMG_INFLATE;   // (owner) monsters / bosses / hazards hit twice as hard (hero HP is x2 too, store HP_INFLATE)
   const isDot = !!o?.dot;
   if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
   const kind = o?.kind ?? 'PHYSICAL';

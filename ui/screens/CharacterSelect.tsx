@@ -1,6 +1,6 @@
 // Full-screen class selection (Korean MMO style): class list on the left, the 3D hero centred in the scene
 // (CameraRig frames it while `charSelect` is on), emblem + role + profile bars + Confirm on the right.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useUiStore } from '../uiStore';
@@ -8,8 +8,9 @@ import type { HeroClass } from '../../types';
 import type { Difficulty } from '../../storeTypes';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
 import { HeroPreview } from '../components/HeroPreview';
-import { characters, activeChar, charLevel, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
+import { characters, activeChar, charLevel, charEquipment, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
 import { HERO_ICON } from '../hud/TopBars';
+import { ItemSlot } from '../components/ItemSlot';
 
 const ROLE: Record<HeroClass, string> = { ARCHER: 'Ranged  |  Damage', WIZARD: 'Ranged  |  Magic', BARBARIAN: 'Melee  |  Defense', KNIGHT: 'Melee  |  Tank', NECROMANCER: 'Ranged  |  Summoner' };
 const BLURB: Record<HeroClass, string> = {
@@ -63,6 +64,19 @@ const Radar: React.FC<{ stats: [string, number][] }> = ({ stats }) => {
     </svg>
   );
 };
+
+/** Compact row of a character's equipped items (read from its saved profile; empty slots dim). */
+const EQ_SLOTS: [keyof ReturnType<typeof charEquipment>, string][] = [['weapon', 'Weapon'], ['helmet', 'Helmet'], ['armor', 'Armor'], ['gloves', 'Gloves'], ['boots', 'Boots'], ['accessory', 'Accessory'], ['pet', 'Pet']];
+const EquipRow: React.FC<{ eq: ReturnType<typeof charEquipment> }> = ({ eq }) => (
+  <div className="cs-equip" data-testid="cs-equip">
+    {EQ_SLOTS.map(([k, label]) => {
+      const it = eq[k];
+      return <span key={k} className="cs-eq-cell" title={it ? `${label}: ${it.name}${it.rarity ? ` (${it.rarity.toLowerCase()})` : ''}` : `${label}: empty`}>
+        <ItemSlot item={it} size="2.5rem" iconSize={20} dim={!it} noTip tooltip="none" />
+      </span>;
+    })}
+  </div>
+);
 
 /** Name entry popup (owner reference: ornate dark panel, framed input, rules, grey Cancel / red Confirm). */
 const NAME_RE = /^[A-Za-z0-9]{2,12}$/;
@@ -145,10 +159,12 @@ export const CharacterSelect: React.FC = () => {
     return () => window.removeEventListener('keydown', h);
   });
   const meta = HERO_META[hero];
+  const equip = useMemo(() => (picked ? charEquipment(picked) : null), [picked]);
+  const gearKey = equip ? [equip.helmet, equip.armor, equip.gloves, equip.boots, equip.accessory].map((i) => i?.rarity ?? '').join('|') : '';
   return (
     <div className="absolute inset-0 pe cs-root" style={{ zIndex: 55 }} data-testid="char-select">
       <div className="cs-vig" />
-      <HeroPreview hero={hero} tint={mode === 'create' ? cTint : picked?.tint ?? '#ffffff'} />
+      <HeroPreview hero={hero} tint={mode === 'create' ? cTint : picked?.tint ?? '#ffffff'} gear={mode === 'create' ? '' : gearKey} />
       <div className="cs-head">{mode === 'list' ? 'Choose your character' : 'Create a character'}</div>
 
       {mode === 'list' ? (
@@ -194,6 +210,7 @@ export const CharacterSelect: React.FC = () => {
           {mode === 'list' && (<>
             <div className="cs-sep" />
             <div className="cs-weapon">Weapon: <b>{meta.weapon}</b></div>
+            {equip && <EquipRow eq={equip} />}
             <button className="cs-confirm" onClick={play} disabled={!picked} data-testid="cs-confirm">Play</button>
             {picked && <button className="cs-sub danger" onClick={del} data-testid="cs-delete">Delete character</button>}
           </>)}

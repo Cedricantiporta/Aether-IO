@@ -284,23 +284,21 @@ export function updateSkills(dt: number): void {
     }
   }
 
-  // Radiant Burst (knight): a ring of holy crescents every 10 s while enemies are near
+  // Radiant Burst (knight, owner): a ring of holy crescents bursts out whenever the knight drops to 50% HP or lower,
+  // then a 25 s cooldown (in fights only)
   if (lv.radiant > 0) {
-    const max = 10 * cdrMul();
-    radT += dt * chargeMul;
+    const max = 25 * cdrMul();
+    radT = Math.min(max, radT + dt * chargeMul);
     setCd('radiant', max - radT, max);
-    if (radT >= max) {
-      if (!findNearestEnemy(pl.pos.x, pl.pos.z, 22)) radT = max;
-      else {
-        radT = 0;
-        const n = 7 + lv.radiant, dmg = stats.damage * 1.6 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
-        for (let i = 0; i < n; i++) {
-          const a = a0 + (i / n) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
-          spawnProjectile('HOLY_WAVE', pl.pos.x + dx * 1.2, pl.pos.z + dz * 1.2, dx, dz, 16, dmg, { life: 0.75, pierce: 999, knockback: 1, radius: 2.2, y: 1.1 });
-        }
-        events.emit('shockwave', { pos: pl.pos.clone(), radius: 5, color: 0xffe08a });
-        pl.anim.castT = 1;
+    if (radT >= max && pl.hp <= stats.maxHealth * 0.5 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
+      radT = 0;
+      const n = 7 + lv.radiant, dmg = stats.damage * 1.6 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i / n) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
+        spawnProjectile('HOLY_WAVE', pl.pos.x + dx * 1.2, pl.pos.z + dz * 1.2, dx, dz, 16, dmg, { life: 0.75, pierce: 999, knockback: 1, radius: 2.2, y: 1.1 });
       }
+      events.emit('shockwave', { pos: pl.pos.clone(), radius: 5, color: 0xffe08a });
+      pl.anim.castT = 1;
     }
   }
 

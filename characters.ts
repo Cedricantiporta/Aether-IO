@@ -2,7 +2,7 @@
 // character) and an outfit tint. The index lives in localStorage; store.ts loads the ACTIVE character's profile at
 // start-up, so switching characters = set active + reload the page (clean store, clean engine).
 // The very first character (and any pre-slot save) uses the original profile key, so old saves become character #1.
-import type { HeroClass } from './types';
+import type { HeroClass, Item } from './types';
 
 export interface CharEntry { id: string; name: string; hero: HeroClass; tint: string; created: number }
 interface CharIndex { list: CharEntry[]; active: string }
@@ -58,6 +58,17 @@ export const activeProfileKey = (): string => profileKeyFor(read().active);
 /** Saved level of a character's class (read from its profile; 1 when unknown). */
 export function charLevel(c: CharEntry): number {
   try { const p = JSON.parse(ls()?.getItem(profileKeyFor(c.id)) ?? 'null'); return Math.max(1, Number(p?.classProg?.[c.hero]?.lv) || 1); } catch { return 1; }
+}
+
+/** Read-only: a character's saved equipped items (profile `equipment`; missing slots are null). Never throws. */
+export type EquipSlotKey = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
+export function charEquipment(c: CharEntry): Record<EquipSlotKey, Item | null> {
+  const out: Record<EquipSlotKey, Item | null> = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
+  try {
+    const eq = JSON.parse(ls()?.getItem(profileKeyFor(c.id)) ?? 'null')?.equipment;
+    if (eq) for (const k of Object.keys(out) as EquipSlotKey[]) { const it = eq[k]; if (it && typeof it === 'object' && it.name) out[k] = it as Item; }
+  } catch { /* ignore */ }
+  return out;
 }
 
 /** Creates a character (becomes active) and returns it. The first one ever uses the base save key. */
