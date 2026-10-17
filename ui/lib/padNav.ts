@@ -34,9 +34,17 @@ function candidates(): { el: HTMLElement; r: DOMRect }[] {
 }
 
 function setFocus(el: HTMLElement | null): void {
-  if (cur && cur !== el) cur.classList.remove(FOCUS);
+  const old = cur;
+  if (old && old !== el) { old.classList.remove(FOCUS); old.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: el ?? document.body })); }
   cur = el;
-  if (el) { el.classList.add(FOCUS); el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); el.dispatchEvent(new PointerEvent('pointerover', { bubbles: true })); el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false })); }
+  if (el) {
+    el.classList.add(FOCUS); el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // (owner) focusing a slot acts like hovering it: React builds onMouseEnter from mouseover, the tooltip follows mousemove
+    const r = el.getBoundingClientRect(), o = { bubbles: true, clientX: r.right - 4, clientY: r.top + r.height / 2 };
+    el.dispatchEvent(new PointerEvent('pointerover', o));
+    el.dispatchEvent(new MouseEvent('mouseover', { ...o, relatedTarget: old && old !== el ? old : document.body }));
+    window.dispatchEvent(new MouseEvent('mousemove', o));
+  }
 }
 
 function valid(): boolean { return !!cur && document.body.contains(cur) && !!visible(cur); }
@@ -105,4 +113,4 @@ export function padSlider(dx: number): boolean {
   return true;
 }
 
-export function padClear(): void { if (cur) cur.classList.remove(FOCUS); cur = null; }
+export function padClear(): void { if (cur) { cur.classList.remove(FOCUS); cur.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })); } cur = null; }

@@ -465,6 +465,9 @@ const petRetier = (i: Item): Item => { if (i && i.type === 'POTION') { const t =
   if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t ? { ...i, rarity: t.rarity, petSkill: t.petSkill, petValue: t.petValue, petCooldown: t.petCooldown, description: t.description } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
+/** Deepest biome reached (0-based), for bounty sizes. */
+const qBiome = (s: { gameStats: { highestWave?: number } }): number => Math.floor((s.gameStats?.highestWave ?? 0) / 15);
+
 /** One-time (owner): skill points went from 1 to 2 per level - each class gets +1 SP for every level it already has. */
 const spMigrate = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<HeroClass, ClassProg> => {
   if (done) return cp;
@@ -1158,7 +1161,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: s.gold + (rw.gold ?? 0),
         gems: s.gems + (rw.gems ?? 0),
         inventory: inv,
-        quests: fillQuests(s.heroRank, s.quests.filter((x) => x.id !== id)),
+        quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: false, claimed: true, day: questDay() } : x)), qBiome(s)),   // (owner) a paid bounty is gone for today
       });
       const qxp = questXp('BOUNTY', s.level); get().addExperience(qxp);   // (owner) every quest pays EXP
       notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
@@ -1187,9 +1190,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     acceptQuest: (id) => {
       const s = get();
       const q = s.quests.find((x) => x.id === id);
-      if (!q || q.accepted) return false;
+      if (!q || q.accepted || q.claimed) return false;
       if (questSlotsFull(s)) { notify(`Quest slots full (${QUEST_MAX_ACTIVE}): the main quest, side quests and bounties share them.`, 'red', 'WARNING'); return false; }
-      set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x))) });
+      set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x)), qBiome(s)) });
       notify('Quest accepted!', COLORS.uiAccent, 'SYSTEM');
       events.emit('hub', { kind: 'accept', n: 1 });
       return true;
@@ -1204,7 +1207,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     refreshQuestBoard: () => {
       const s = get();
-      const q = fillQuests(s.heroRank, s.quests);
+      const q = fillQuests(s.heroRank, s.quests, qBiome(s));
       if (q !== s.quests) set({ quests: q });
     },
 

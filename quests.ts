@@ -37,6 +37,8 @@ export interface Quest {
   reported?: boolean; // the King has been told
   accepted?: boolean; // only accepted quests make progress
   day?: string;       // board day it was offered on (unaccepted offers expire when the day changes)
+  /** (owner) paid out today: hidden, holds its board slot until the day changes (a bounty cannot be repeated) */
+  claimed?: boolean;
 }
 
 /** Offers shown on the board (besides the accepted ones) and the active-quest cap. */
@@ -60,12 +62,20 @@ function itemRarityFor(rank: number): Rarity {
   return rank >= 2 ? 'RARE' : 'COMMON';
 }
 
-/** New quest scaled by hero rank; avoids the given types so the board stays varied. */
-export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
-  const r = Math.max(1, rank);
-  let types = ALL_TYPES.filter((t) => !avoid.includes(t));
-  if (types.length === 0) types = ALL_TYPES;
-  const type = pick(types);
+/** (owner) bounties unlock with the hero level, and most of the board is slaying: [type, min level, weight]. */
+const TYPE_GATE: [QuestType, number, number][] = [
+  ['KILL_KIND', 1, 40], ['KILL_TOTAL', 1, 30], ['COLLECT_LOOT', 3, 6], ['BREAK_CRATES', 2, 4], ['COLLECT_GOLD', 4, 4], ['SELL_LOOT', 5, 3],
+  ['REACH_WAVE', 6, 5], ['DASH', 3, 2], ['GATHER_SHARDS', 8, 4], ['FAST_CLEARS', 10, 4], ['AUDIENCE', 6, 3], ['KING_BOUNTY', 12, 8], ['KILL_BOSS', 15, 6],
+];
+/** New quest scaled by hero level and the deepest biome reached; avoids repeating types already on the board. */
+export function makeQuest(rank: number, avoid: QuestType[] = [], biome = 0): Quest {
+  const r = Math.max(1, rank), b = Math.max(0, biome);
+  const open = TYPE_GATE.filter(([, lv]) => r >= lv);
+  let pool = open.filter(([t]) => t === 'KILL_KIND' || t === 'KILL_TOTAL' || !avoid.includes(t));   // slaying may repeat (different monsters)
+  if (pool.length === 0) pool = open;
+  let tot = 0; for (const [, , w] of pool) tot += w;
+  let roll = Math.random() * tot, type: QuestType = pool[0][0];
+  for (const [t, , w] of pool) { roll -= w; if (roll <= 0) { type = t; break; } }
   let target = 10;
   let kind: EnemyKind | undefined;
   let lootName: string | undefined;
@@ -74,10 +84,10 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
     case 'KILL_KIND': {
       const pool = KIND_POOL.filter((k) => ENEMY_DEFS[k].minWave <= 2 + r * 1.5);
       kind = pick(pool);
-      target = Math.max(5, Math.round((22 + 4 * r) / Math.pow(ENEMY_DEFS[kind].cost, 0.8)));
+      target = Math.max(10, Math.round((40 + 6 * r + 30 * b) / Math.pow(ENEMY_DEFS[kind].cost, 0.8)));   // (owner) big hunts that grow with level + depth
       break;
     }
-    case 'KILL_TOTAL': target = 60 + 20 * r; break;
+    case 'KILL_TOTAL': target = 120 + 30 * r + 100 * b; break;
     case 'REACH_WAVE': target = Math.min(40, 4 + 2 * r); break;
     case 'FAST_CLEARS': target = Math.min(8, 2 + Math.floor(r / 3)); break;
     case 'BREAK_CRATES': target = 8 + 3 * r; break;
@@ -90,7 +100,7 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
     case 'KING_BOUNTY': bounty = Math.random() < 0.4 ? 'KILL_BOSS' : 'KILL_TOTAL'; target = bounty === 'KILL_BOSS' ? 1 + Math.floor(r / 14) : 50 + 15 * r; break;
     case 'COLLECT_LOOT': lootName = pick(['Goblin Ear', 'Slime Gel', 'Bat Wing', 'Old Bone', 'Beetle Shell', 'Cultist Rune', 'Ogre Tusk'].slice(0, Math.min(7, 3 + r))); target = 4 + r; break;
   }
-  const e = EFFORT[type];
+  const e = EFFORT[type] * (type === 'KILL_KIND' || type === 'KILL_TOTAL' ? 1 + 0.15 * b : 1);   // bigger hunts pay more
   const reward: QuestReward = { gold: Math.round((100 + 55 * r) * e / 20) * 100 };   // x10 economy (owner: -50%)
   const extra = Math.random();
   if (extra < 0.3) reward.gems = Math.round((6 + 2 * r) * e);
@@ -106,25 +116,25 @@ export function makeQuest(rank: number, avoid: QuestType[] = []): Quest {
 
 /** Board upkeep: keeps accepted quests (old saves: the 3 legacy quests count as accepted), drops offers from an
  *  earlier day, and tops the offers up to QUEST_OFFERS. Returns `existing` itself when nothing changed. */
-export function fillQuests(rank: number, existing: Quest[]): Quest[] {
+export function fillQuests(rank: number, existing: Quest[], biome = 0): Quest[] {
   const today = questDay();
   let changed = false;
   const list: Quest[] = [];
   for (const q of existing) {
     if (q.accepted === undefined && q.day === undefined) { list.push({ ...q, accepted: true, day: today }); changed = true; continue; }
-    if (!q.accepted && q.day !== today) { changed = true; continue; }
+    if (!q.accepted && q.day !== today) { changed = true; continue; }   // (yesterday's offers and paid-out bounties go)
     list.push(q);
   }
   let active = 0;
   for (const q of list) if (q.accepted) active++;
   if (active > QUEST_MAX_ACTIVE) changed = true;
   const kept = active > QUEST_MAX_ACTIVE ? list.filter((q, i) => !q.accepted || list.slice(0, i + 1).filter((x) => x.accepted).length <= QUEST_MAX_ACTIVE) : list;
-  while (kept.length - Math.min(active, QUEST_MAX_ACTIVE) < QUEST_OFFERS) { kept.push(makeQuest(rank, kept.map((q) => q.type))); changed = true; }
+  while (kept.length - Math.min(active, QUEST_MAX_ACTIVE) < QUEST_OFFERS) { kept.push(makeQuest(rank, kept.filter((q) => !q.claimed).map((q) => q.type), biome)); changed = true; }   // (claimed ones hold their slot until tomorrow)
   return changed ? kept : existing;
 }
 
 export const activeQuests = (qs: Quest[]): Quest[] => qs.filter((q) => q.accepted);
-export const questOffers = (qs: Quest[]): Quest[] => qs.filter((q) => !q.accepted);
+export const questOffers = (qs: Quest[]): Quest[] => qs.filter((q) => !q.accepted && !q.claimed);
 /** Accepted and finished (ready to claim). */
 export const questDone = (q: Quest): boolean => !!q.accepted && q.progress >= q.target && (!q.needsKing || !!q.reported);
 /** Accepted royal quest still waiting for the King: AUDIENCE (go and talk to him) or KING_BOUNTY whose count is done (report). */
