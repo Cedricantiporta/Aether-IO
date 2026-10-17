@@ -30,13 +30,13 @@ const MAX_VOICES_PRIORITY = 42;
 // time gates (seconds) per sound id
 const enum G {
   SHOOT, HIT, DEATH, PLAYER_HIT, EXPLOSION, XP, GOLD, ITEM, DASH, LIGHTNING, SHIELD,
-  BUZZ, TELEGRAPH, CRATE, HEAL, SHOCK, SKILL, RAIN, COUNT,
+  BUZZ, TELEGRAPH, CRATE, HEAL, SHOCK, SKILL, RAIN, QUEST, COUNT,
 }
 const GATE: number[] = [];
 GATE[G.SHOOT] = 0.11; GATE[G.HIT] = 0.03; GATE[G.DEATH] = 0.045; GATE[G.PLAYER_HIT] = 0.1;
 GATE[G.EXPLOSION] = 0.08; GATE[G.XP] = 0.035; GATE[G.GOLD] = 0.06; GATE[G.ITEM] = 0.1;
 GATE[G.DASH] = 0.15; GATE[G.LIGHTNING] = 0.06; GATE[G.SHIELD] = 0.15; GATE[G.BUZZ] = 0.25;
-GATE[G.TELEGRAPH] = 0.2; GATE[G.CRATE] = 0.08; GATE[G.HEAL] = 0.2; GATE[G.SHOCK] = 0.15; GATE[G.SKILL] = 0.05; GATE[G.RAIN] = 0.07;
+GATE[G.TELEGRAPH] = 0.2; GATE[G.CRATE] = 0.08; GATE[G.HEAL] = 0.2; GATE[G.SHOCK] = 0.15; GATE[G.SKILL] = 0.05; GATE[G.RAIN] = 0.07; GATE[G.QUEST] = 1.2;
 const lastPlay = new Float64Array(G.COUNT).fill(-10);
 
 function gate(id: number): boolean {
@@ -274,6 +274,19 @@ function sfxLevelUp(): void {
     tone(pentFreq(440, i + 1), pentFreq(440, i + 1), 0.35, 0.14, { type: 'triangle', delay: i * 0.07, priority: true });
   }
   tone(880, 880, 0.9, 0.08, { delay: 0.4, priority: true });
+}
+
+/** Quest complete: a short bright major fanfare (rising triad, then a held top note with a shimmer). Gated so a claim that
+ *  triggers several payouts at once plays it a single time. */
+function sfxQuestComplete(): void {
+  if (!gate(G.QUEST)) return;
+  const root = 523.25;   // C5
+  const notes = [0, 4, 7, 12];
+  for (let i = 0; i < notes.length; i++) tone(semis(root, notes[i]), semis(root, notes[i]), 0.22, 0.13, { type: 'triangle', delay: i * 0.1, priority: true });
+  tone(semis(root, 12), semis(root, 12), 0.8, 0.12, { type: 'triangle', delay: 0.4, priority: true });
+  tone(semis(root, 16), semis(root, 16), 0.7, 0.07, { type: 'sine', delay: 0.42, priority: true });
+  tone(semis(root, 19), semis(root, 19), 0.6, 0.05, { type: 'sine', delay: 0.46, priority: true });
+  tone(semis(root, 24), semis(root, 24), 0.5, 0.035, { type: 'sine', delay: 0.5, priority: true });
 }
 
 function sfxDash(): void {
@@ -837,6 +850,7 @@ export function initAudio(): () => void {
   offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity))));
   offs.push(events.on('crateBreak', safe(() => sfxCrate())));
   offs.push(events.on('levelUp', safe(() => sfxLevelUp())));
+  offs.push(events.on('questComplete', safe(() => sfxQuestComplete())));
   offs.push(events.on('dash', safe(() => sfxDash())));
   offs.push(events.on('noMana', safe(() => sfxBuzz())));
   offs.push(events.on('onCooldown', safe(() => sfxBuzz())));

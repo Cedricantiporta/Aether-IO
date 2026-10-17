@@ -624,7 +624,17 @@ export function boneArmorMul(): number {
 /** Second Wind (run card): heal a share of max HP whenever a room is cleared. */
 events.on('waveClear', () => { if (runCards.secondWind > 0) healPlayer(useGameStore.getState().stats.maxHealth * runCards.secondWind); });
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean }): void {
+const reflectOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true };
+/** Radiant shield reflect: to the known attacker, else the nearest enemy within 6 units of the hero. */
+function reflectRadiant(dmg: number, src?: Enemy): void {
+  const p = world.player;
+  const t = src && src.active && src.state !== 'DYING' ? src : findNearestEnemy(p.pos.x, p.pos.z, 6);
+  if (!t) return;
+  events.emit('floatText', { pos: t.pos, text: 'REFLECT', color: 0xffe08a, scale: 0.6, dy: 2.0 });
+  damageEnemy(t, dmg, reflectOpts);
+}
+
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
@@ -656,6 +666,16 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   }
   // Aegis (card): the shield soaks the hit first; only what breaks through reaches health
   let toHp = reduced;
+  if (p.radiant > 0) {   // Knight Radiant shield (gold): soaks first and reflects 20% of the hit to the attacker
+    const soak = Math.min(p.radiant, toHp);
+    p.radiant -= soak; toHp -= soak;
+    if (!isDot) reflectRadiant(reduced * 0.2, o?.src);
+    if (p.radiant <= 0) {
+      p.radiant = 0; p.radiantMax = 0; p.radiantT = 0;
+      events.emit('floatText', { pos: p.pos, text: 'RADIANCE FADES', color: 0xffe08a, scale: 0.9, dy: 2.6 });
+      events.emit('shockwave', { pos: p.pos.clone(), radius: 3.4, color: 0xffe08a });
+    }
+  }
   if (p.arcane > 0) {   // Wizard Arcane Shield (purple) soaks first
     const soak = Math.min(p.arcane, toHp);
     p.arcane -= soak; toHp -= soak;

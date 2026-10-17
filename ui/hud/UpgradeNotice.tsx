@@ -18,10 +18,11 @@ import type { Item } from '../../types';
 import { GameStatus } from '../../types';
 import { world } from '../../engine/world';
 import { offerTeleport } from './QuestTracker';
-import { walkToSpot } from '../../engine/systems/village';
+import { walkToSpot, walkToNpcQuest } from '../../engine/systems/village';
+import { NPC_QUESTS, npcQuestStatus, npcQuestReady, npcQuestTurnIn, npcQuestLevelLocked } from '../../npcQuests';
 
 type St = ReturnType<typeof useGameStore.getState>;
-interface Up { key: string; title: string; sub: string; go: (s: St) => void; town?: boolean }
+export interface Up { key: string; title: string; sub: string; go: (s: St) => void; town?: boolean; /** a side quest (ready to hand in / available to accept), not a power upgrade */ quest?: boolean }
 
 const SLOTS = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory'] as const;
 /** An equipped piece the Blacksmith can raise right now (gold + the right tier of cores). */
@@ -63,8 +64,23 @@ export function upgradesOf(s: St): Up[] {
   if (pet && canAffordEvolve(pet, s.gold, s.materials)) out.push({ key: 'pet', title: 'Your pet can evolve', sub: 'Evolving raises all its stats.', go: openPets('CARE'), town: true });
   else if (pet && !petCanEvolve(pet) && petLv(pet) < petLvCap(petStage(pet)) && petHasFood(s, pet)) out.push({ key: 'petlv', title: 'Your pet can level up', sub: 'You have food for it: feed it at Pet Care.', go: openPets('CARE'), town: true });
   if (petsFusable(s)) out.push({ key: 'petfuse', title: 'Pets you can fuse', sub: `You have ${FUSE_COUNT} pets of one tier: fuse them at the Pet House.`, go: openPets('FUSE'), town: true });
+  // side quests: ready to hand in first, then ones available to accept (a few at most); Go auto-paths to the NPC
+  const nq = s.npcQuests;
+  let offered = 0;
+  for (const d of NPC_QUESTS) {
+    const st = npcQuestStatus(d, nq, s.heroRank);
+    if (st === 'ACTIVE' && npcQuestReady(d, nq, s.inventory)) out.push({ key: 'q:' + d.id, quest: true, town: true, title: `Hand in: ${d.title}`, sub: `Ready: talk to ${npcQuestTurnIn(d)} for the reward.`, go: () => walkToNpcQuest(npcQuestTurnIn(d)) });
+  }
+  for (const d of NPC_QUESTS) {
+    if (offered >= MAX_OFFERED_QUESTS) break;
+    if (npcQuestStatus(d, nq, s.heroRank) !== 'AVAILABLE' || npcQuestLevelLocked(d, nq, s.heroRank)) continue;
+    offered++;
+    out.push({ key: 'q:' + d.id, quest: true, town: true, title: `New side quest: ${d.title}`, sub: `${d.giver} has a quest for you.`, go: () => walkToNpcQuest(d.giver) });
+  }
   return out;
 }
+/** At most this many "available" side quests are listed (the ones ready to hand in are always listed). */
+const MAX_OFFERED_QUESTS = 3;
 
 /** (owner) skills / talents can be trained right here at a biome camp (its Training Post): no teleport needed. */
 const reachable = (key: string): boolean => (key === 'skill' || key === 'talent') && world.room.active && world.room.plan.type === 'CAMP';
@@ -96,7 +112,7 @@ export const UpgradeNotice: React.FC = () => {
       )}
       {keys.length > 0 && (
         <div className="upn pe" data-testid="upgrade-notice">
-          <span>Upgrade available</span><b>{keys.length}</b>
+          <span>{keys.every((k) => k.startsWith('q:')) ? 'Side quest available' : 'Upgrade available'}</span><b>{keys.length}</b>
           <button className="upn-btn" onClick={() => setOpen(true)} data-testid="upgrade-view">View</button>
         </div>
       )}

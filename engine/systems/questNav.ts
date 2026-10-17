@@ -21,7 +21,7 @@ import { TAVERN_DOOR, TAVERN_EXIT } from '../tavernData';
 import { HOME_EXIT } from '../homeData';
 import type { ShopTab } from '../../storeTypes';
 
-export type NavAct = 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none';
+export type NavAct = 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none';
 type Area = 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME';
 export interface NavTarget {
   x: number; z: number;
@@ -47,11 +47,18 @@ function set(o: NavTarget, x: number, z: number, reach: number, act: NavAct, tab
 }
 /** The way out of the current interior (castle hall / crystal cave) back to town. */
 const exit = (o: NavTarget): NavTarget => (area() === 'CAVE'
-  ? set(o, CAVE_EXIT.x, CAVE_EXIT.z, 2, 'leave', '', -1, true)
+  ? caveExit(o)
   : area() === 'CHURCH' ? set(o, CHURCH_EXIT.x, CHURCH_EXIT.z, 2, 'leave', '', -1, true)
   : area() === 'TAVERN' ? set(o, TAVERN_EXIT.x, TAVERN_EXIT.z, 2, 'leave', '', -1, true)
   : area() === 'HOME' ? set(o, HOME_EXIT.x, HOME_EXIT.z, 2, 'leave', '', -1, true)
   : set(o, CASTLE_EXIT.x, CASTLE_EXIT.z, 2, 'leave', '', -1, true));
+/** The way out of the crystal cave: Floor 1's mouth to town, or on a deeper floor the stairs back UP to Floor 1 (where Grit
+ *  waits). (Deep floors used to aim at Floor 1's exit coordinates, a point that does not exist down there.) */
+function caveExit(o: NavTarget): NavTarget {
+  const cv = world.village.cave;
+  if (cv.floor > 1) { const L = caveLayout(cv.floor, cv.seed); return set(o, L.exit.x, L.exit.z, Math.max(1.5, L.exit.r - 0.8), 'up', '', -1, true); }
+  return set(o, CAVE_EXIT.x, CAVE_EXIT.z, 2, 'leave', '', -1, true);
+}
 /** From town: the door into `to` (castle hall / crystal cave). */
 const door = (o: NavTarget, to: Area): NavTarget => (to === 'CAVE'
   ? set(o, CAVE_DOOR.x, CAVE_DOOR.z, 2.4, 'cave', '', -1, true)
@@ -61,7 +68,7 @@ const door = (o: NavTarget, to: Area): NavTarget => (to === 'CAVE'
 /** The next hop towards area `to` (exit first when inside another interior), or null when already there. */
 function hop(o: NavTarget, to: Area): NavTarget | null {
   const a = area();
-  if (a === to) return null;
+  if (a === to) return a === 'CAVE' && world.village.cave.floor > 1 ? caveExit(o) : null;   // (Grit and the cave quests live on Floor 1)
   return a !== 'TOWN' ? exit(o) : door(o, to);
 }
 /** The Adventure Portal (field objectives: kills, rescues, deliveries gathered in runs). */

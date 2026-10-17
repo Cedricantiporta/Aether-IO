@@ -20,7 +20,7 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, sparks } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
-import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, WeaponGeo } from './weapons';
+import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, makePickaxe, WeaponGeo } from './weapons';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
@@ -55,7 +55,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
     wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
-    emissiveKey: '', gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
+    pick: null as Group | null, wpn: null as Group | null, pickT: 0, emissiveKey: '', gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
   });
 
   // ---- weapon attachment
@@ -72,11 +72,30 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5 + 0.35 * tier, 1.5 + 0.35 * tier, 1.5 + 0.35 * tier) }));
     grp.add(body, glowM);
     ch.handR.add(grp);
+    S.current.wpn = grp;
     S.current.gem = w.tip;
     (grp as any).userData.tier = tier;
     const g = grp;
-    return () => { ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+    return () => { S.current.wpn = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
   }, [ch, cls, rarity]);
+
+  // ---- Mining Pickaxe (tool slot): shown in the right hand while mining / harvesting instead of the weapon
+  const hasPick = useGameStore((s) => s.equipment?.tool?.id === 'tool_pickaxe');
+  useEffect(() => {
+    const hand = ch.handR;
+    S.current.pick = null;
+    if (!hand || !hasPick) return;
+    const w = makePickaxe();
+    const grp = new Group();
+    grp.quaternion.copy(HANDSLOT_QUAT);
+    grp.visible = false;
+    const body = new Mesh(w.body, litMat({ roughness: 0.6, metalness: 0.35 })); body.castShadow = true;
+    const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.2, 1.2, 1.2) }));
+    grp.add(body, glowM);
+    hand.add(grp);
+    S.current.pick = grp;
+    return () => { hand.remove(grp); S.current.pick = null; w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+  }, [ch, hasPick]);
 
   // ---- the knight's shield on the left arm (tinted like the weapon's rarity)
   useEffect(() => {
@@ -167,6 +186,13 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
       if (a.castT > 0.85 && s.prevCast < 0.6 && (s.cast || s.atk)) { const c = s.cast || s.atk!; c.reset(); c.timeScale = 1.5; c.play(); (s as any).castAct = c; }
       if (a.hurtT > 0.85 && s.prevHurt < 0.6 && s.hit) { s.hit.reset(); s.hit.timeScale = 1.6; s.hit.play(); }
     }
+    // pickaxe in hand while mining / harvesting (short linger so the swing finishes), weapon hidden meanwhile
+    if (s.pick) {
+      s.pickT = !lobby && world.village.miningT > 0 ? 0.3 : Math.max(0, s.pickT - dt);
+      const show = s.pickT > 0;
+      s.pick.visible = show;
+      if (s.wpn) s.wpn.visible = !show;
+    } else if (s.wpn && !s.wpn.visible) s.wpn.visible = true;
     s.prevAtk = lobby ? 0 : a.attackT; s.prevCast = lobby ? 0 : a.castT; s.prevHurt = lobby ? 0 : a.hurtT;
     const env = (act: AnimationAction | null, W: number) => {
       if (!act) return;
@@ -514,7 +540,7 @@ function HeroBars() {
     hp.current.scale.x = Math.max(0.001, fh); hp.current.position.x = -(1 - fh) * 1.1;
     mp.current.scale.x = Math.max(0.001, fm); mp.current.position.x = -(1 - fm) * 1.1;
     (hp.current.material as MeshBasicMaterial).color.setRGB(fh < 0.3 ? 1.6 : 1.1, fh < 0.3 ? 0.2 : 0.18, 0.2);
-    const fsMax = p.aegisMax + p.arcaneMax, fs = fsMax > 0 ? clamp((p.aegis + p.arcane) / fsMax, 0, 1) : 0;   // Aegis + Arcane Shield
+    const fsMax = p.aegisMax + p.arcaneMax + p.radiantMax, fs = fsMax > 0 ? clamp((p.aegis + p.arcane + p.radiant) / fsMax, 0, 1) : 0;   // Aegis + Arcane + Radiant Shield
     shG.current.visible = fs > 0;
     if (fs > 0) { sh.current.scale.x = Math.max(0.001, fs); sh.current.position.x = -(1 - fs) * 1.1; }
     const charging = abilityState.lpT > 0;
@@ -552,6 +578,13 @@ function HeroBars() {
  *  light blue while the Aegis shield holds, golden while the knight's Shield Wall is up. */
 function AegisSphere() {
   const m = useRef<Mesh>(null!);
+  const rm = useRef<Mesh>(null!);
+  const rmat = useMemo(() => new ShaderMaterial({   // Radiant Burst shield: a slightly bigger white / golden bubble
+    transparent: true, depthWrite: false, side: FrontSide, blending: AdditiveBlending,
+    uniforms: { uA: { value: 1 }, uC: { value: new Color(1.0, 0.92, 0.6) } },
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform float uA; uniform vec3 uC; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.0); gl_FragColor = vec4(uC * (0.3 + 1.5 * f), (0.08 + 0.6 * f) * uA); }',
+  }), []);
   const mat = useMemo(() => new ShaderMaterial({
     transparent: true, depthWrite: false, side: FrontSide, blending: AdditiveBlending,
     uniforms: { uA: { value: 1 }, uC: { value: new Color(0.45, 0.85, 1.0) } },
@@ -559,6 +592,14 @@ function AegisSphere() {
     fragmentShader: 'uniform float uA; uniform vec3 uC; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); gl_FragColor = vec4(uC * (0.25 + 1.4 * f), (0.08 + 0.6 * f) * uA); }',
   }), []);
   useFrame(({ clock }) => {
+    const pr = world.player;
+    const ron = pr.radiant > 0 && pr.alive;
+    rm.current.visible = ron;
+    if (ron) {
+      rm.current.position.set(pr.pos.x, 1.1 + (pr.air || 0), pr.pos.z);
+      rm.current.scale.setScalar(1.85 + Math.sin(clock.elapsedTime * 3.4) * 0.05);
+      rmat.uniforms.uA.value = 0.6 + 0.5 * clamp(pr.radiant / Math.max(1, pr.radiantMax), 0, 1);
+    }
     const p = world.player, arcane = p.arcane > 0, aegis = p.aegis > 0, guard = p.guardT > 0, on = (arcane || aegis || guard) && p.alive;   // purple: Arcane Shield; blue: Aegis; gold: Shield Wall
     m.current.visible = on;
     if (!on) return;
@@ -567,7 +608,10 @@ function AegisSphere() {
     m.current.scale.setScalar(1.55 + Math.sin(clock.elapsedTime * 3) * 0.04);
     mat.uniforms.uA.value = arcane ? 0.7 + 0.5 * clamp(p.arcane / Math.max(1, p.arcaneMax), 0, 1) : aegis ? 0.6 + 0.4 * clamp(p.aegis / Math.max(1, p.aegisMax), 0, 1) : 0.8;
   });
-  return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>;
+  return <>
+    <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 32, 20]} /></mesh>
+    <mesh ref={rm} material={rmat} visible={false} renderOrder={31}><sphereGeometry args={[1, 32, 20]} /></mesh>
+  </>;
 }
 
 /** How far the hips drop from standing to sitting on a seat at height 0 (tuned to the KayKit medium rig). */

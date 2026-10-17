@@ -79,7 +79,13 @@ export function sellAllFish(): number {
 const RW: Record<Rarity, number> = { COMMON: 66, UNCOMMON: 0, RARE: 24, EPIC: 8, LEGENDARY: 1.7, MYTHIC: 0.25 };
 const R_ORDER: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Species weight inside its rarity (the boot is a rarer "common"). */
-const SPECIES_W: Record<string, number> = { fish_boot: 0.45, fish_minnow: 1.2, fish_perch: 1, fish_trout: 1.1, fish_pike: 0.9 };
+const SPECIES_W: Record<string, number> = {
+  fish_boot: 0.45, fish_tin: 0.4, fish_minnow: 1.2, fish_perch: 1, fish_gudgeon: 1.1,   // COMMON (the junk is rarer)
+  fish_trout: 1.1, fish_pike: 0.9, fish_bream: 0.8, fish_salmon: 0.7,                    // RARE
+  fish_carp: 1, fish_catfish: 0.8, fish_lantern: 0.6,                                    // EPIC
+  fish_eel: 1, fish_sturgeon: 0.6,                                                       // LEGENDARY
+  fish_koi: 1, fish_dragoncarp: 0.4,                                                     // MYTHIC
+};
 /** Reel minigame per rarity: marker speed (bar widths / s), zone width (0..1), hits needed. */
 const REEL: Record<Rarity, { speed: number; zone: number; need: number }> = {
   // (owner: the rarer the fish the narrower the target - the rarest ones are a sliver)

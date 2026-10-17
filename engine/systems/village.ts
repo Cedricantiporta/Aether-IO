@@ -399,7 +399,7 @@ function buildRoute(fx: number, fz: number, tx: number, tz: number, out: Float32
  *  at talking distance. Instant when already close. Only in town (a tracker click during a run never queues a walk). */
 /** performance.now() of the last walkTo (a building / NPC click): a ground click in the same moment yields to it. */
 export const walkStamp = { t: -1e9 };
-export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
+export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none', tab: ShopTab | '' = '', r = 1.6, npc = -1): void {
   const st = useGameStore.getState(), p = world.player, g = world.village.go;
   if (st.status !== GameStatus.MENU) return;
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
@@ -453,7 +453,7 @@ function tickWalk(dt: number, talking: boolean): void {
 /** Walks to a quest target; when it is only a door / exit on the way (`hop`), `again` re-runs the quest walk once the
  *  next area has faded in, so one tracker click leads all the way (e.g. cave -> town -> castle hall -> the King). */
 function navWalk(t: NavTarget, again?: () => void, chained = false): void {
-  if (world.village.area === 'CAVE' && world.village.cave.floor > 1) return;   // deep cave floors: no quest shortcut out of a trip
+  if (world.village.area === 'CAVE' && world.village.cave.floor > 1 && t.act !== 'up') return;   // deep cave floors: no quest shortcut out of a trip, except climbing back up to Floor 1 (Grit)
   if (!chained) goT.hops = 0;
   hopNext = t.hop && again && goT.hops < 3 ? () => { goT.hops++; again(); } : null;
   walkTo(t.x, t.z, t.act, t.tab, t.reach, t.npc);
@@ -497,12 +497,13 @@ export function walkToSpot(at: Spot): void { const t = navSpot(at); if (t) navWa
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {
   const g = world.village.go, st = useGameStore.getState();
-  if (goT.resume && (g.act === 'castle' || g.act === 'church' || g.act === 'tavern' || g.act === 'cave' || g.act === 'leave')) walkAfterArrive(goT.resume);
+  if (goT.resume && (g.act === 'castle' || g.act === 'church' || g.act === 'tavern' || g.act === 'cave' || g.act === 'leave' || g.act === 'up')) walkAfterArrive(goT.resume);
   goT.resume = null;
   if (g.act === 'shop' && g.tab) {
     if (g.tab === 'FISH' && fishingLocked()) st.addNotification(`The Fishmonger trades with anglers from Lv ${UNLOCK_LV.FISHING}.`, LOCK_COLOR, 'WARNING');
     else if (g.tab !== 'FISH' || beachSide(world.player.pos.x, world.player.pos.z)) st.openSpecificShop(g.tab as ShopTab);   // (the Fishmonger: never through the wall)
   }
+  else if (g.act === 'up') interactCave('up', 0);
   else if (g.act === 'down') interactCave('down', 0);   // (quest walk to the cave stairs: go down when allowed)
   else if (g.act === 'castle') world.village.pending = 'ENTER';
   else if (g.act === 'church') world.village.pending = 'CHURCH';

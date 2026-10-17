@@ -15,6 +15,20 @@ export const HANDSLOT_QUAT = new Quaternion().setFromRotationMatrix(new Matrix4(
 export const NECRO_TINT = new Color('#7d6a9a');
 export interface WeaponGeo { body: BufferGeometry; glow: BufferGeometry; tip: [number, number, number] }
 
+/** Mining Pickaxe (tool slot): wooden haft + iron double-pointed head (authored like the other weapons: grip at origin, +Y long axis, head curves toward +Z). */
+export function makePickaxe(): WeaponGeo {
+  const b = new GB([0.8, 1.1]), g = new GB([1, 1]);
+  b.cyl(0.05, 0.06, 1.7, 7, [0, 0.45, 0], '#7a5230');
+  b.box(0.1, 0.2, 0.1, [0, -0.45, 0], '#3a2616');
+  b.box(0.16, 0.14, 0.2, [0, 1.3, 0], '#5a5f68');
+  for (const s of [1, -1]) {
+    b.box(0.12, 0.1, 0.5, [0, 1.3 + 0.03, s * 0.42], '#aab2bd', [s * 0.18, 0, 0]);
+    b.cone(0.06, 0.34, 5, [0, 1.3 - 0.06, s * 0.78], '#d6dde6', [s * (Math.PI / 2 + 0.35), 0, 0]);
+  }
+  g.box(0.04, 0.04, 0.9, [0, 1.38, 0], '#e8eef5');
+  return { body: b.build(), glow: g.build(), tip: [0, 1.3, 0.78] };
+}
+
 export function makeBow(accent: string, tier: number): WeaponGeo {
   const b = new GB([0.85, 1.1]), g = new GB([1, 1]);
   const wood = tier >= 3 ? '#caa24a' : '#8a5a2e';

@@ -82,6 +82,7 @@ export interface GameEvents {
   bossPhase: { phase: number };
   hub: { kind: 'summon' | 'upgrade' | 'buy' | 'craft' | 'quest' | 'buy_potion' | 'store' | 'learn' | 'buy_pet' | 'equip' | 'equip_pet' | 'accept' | 'craft_fail' | 'buy_armor' | 'brew_elixir' | 'brew' | 'catch_fish' | 'sell_fish' | 'cave_vein' | 'cave_deep' | 'buy_flask' | 'ship'; n: number };   // discrete town actions (goals / achievements)
   runStart: {};
+  questComplete: {};                            // a quest paid out (side / bounty / main story step): celebratory fanfare (engine/audio.ts)
   runEnd: {};
   /** Dark hero champion moments (systems/darkHero.ts), drawn violet by render/VFX: ROAR ULT JUDGMENT NOVA RAIN SPIKE SOUL METEOR AVATAR GUARD ZAP */
   darkFx: { pos: Vector3; kind: string; radius: number; to?: Vector3 };

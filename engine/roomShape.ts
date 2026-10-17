@@ -167,6 +167,12 @@ export function startPoint(out: [number, number]): void {
 export function stationPoint(out: [number, number]): void {
   out[0] = shape.fx * shape.baseR * 0.1; out[1] = shape.fz * shape.baseR * 0.1;
 }
+/** The boss-shortcut door: behind the middle exit, 10 units further into the room. */
+export function shortcutPoint(out: [number, number]): void {
+  portalPoint(1, 3, out);
+  const l = Math.hypot(out[0], out[1]);
+  if (l > 14) { const k = (l - 10) / l; out[0] *= k; out[1] *= k; }
+}
 /** Exit portal i of n: spread across the width at the front-most spot that keeps >= 5 of clearance to the outline. */
 export function portalPoint(i: number, n: number, out: [number, number]): void {
   const fa = Math.atan2(shape.fz, shape.fx);

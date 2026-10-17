@@ -284,14 +284,19 @@ export function updateSkills(dt: number): void {
     }
   }
 
-  // Radiant Burst (knight, owner): a ring of holy crescents bursts out whenever the knight drops to 50% HP or lower,
-  // then a 25 s cooldown (in fights only)
+  // Radiant Burst (knight, owner): when HP drops below 60% (17 s cooldown, fights only) a ring of holy crescents bursts out and
+  // the knight gains a radiant shield worth 25% (+3% per level beyond 1) of max HP for 8 s; while it holds, 20% of the damage
+  // taken is reflected to the attacker (combat.damagePlayer). It stacks with the Aegis / Arcane shields in the same HUD bar.
+  if (pl.radiantT > 0) { pl.radiantT -= dt; if (pl.radiantT <= 0) { pl.radiantT = 0; pl.radiant = 0; pl.radiantMax = 0; } }
   if (lv.radiant > 0) {
-    const max = 25 * cdrMul();
+    const max = 17 * cdrMul();
     radT = Math.min(max, radT + dt * chargeMul);
     setCd('radiant', max - radT, max);
-    if (radT >= max && pl.hp <= stats.maxHealth * 0.5 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
+    if (radT >= max && pl.hp < stats.maxHealth * 0.6 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
       radT = 0;
+      const rsize = stats.maxHealth * (0.25 + 0.03 * (lv.radiant - 1));
+      pl.radiant = Math.max(pl.radiant, rsize); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = 8;
+      events.emit('floatText', { pos: pl.pos, text: 'RADIANT SHIELD', color: 0xffe08a, scale: 0.9, dy: 2.4 });
       const n = 7 + lv.radiant, dmg = stats.damage * 1.6 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
       for (let i = 0; i < n; i++) {
         const a = a0 + (i / n) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);

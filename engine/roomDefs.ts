@@ -240,12 +240,17 @@ export const TYPE_NAME: Record<RoomType, string> = {
 export const REWARD_NAME: Record<RewardKind, string> = {
   CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Crystals', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
 };
+/** Red-gold of the boss shortcut door (a completed biome; room 5 or 7 of the run). */
+export const SHORTCUT_COLOR = '#ff7a2e';
+/** The extra exit that skips to this biome's boss room. */
+export const shortcutPlan = (): RoomPlan => ({ type: 'BOSS', reward: 'NONE', shortcut: true });
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
   if (plan.gate !== undefined) {   // the next room of a Gatekeeper trial
     const g = GATES[plan.gate];
     return { title: g.name, sub: `Trial room ${(plan.step ?? 0) + 1}/${g.steps.length}`, icon: plan.type === 'BOSS' ? 'boss' : 'shrine', color: g.color };
   }
+  if (plan.shortcut) return { title: `Shortcut to ${bossNameIn(biomeOf(biome).boss, biome).name}`, sub: 'Skips to depth 15', icon: 'boss', color: SHORTCUT_COLOR };
   switch (plan.type) {
     case 'GATEKEEPER': return { title: 'The Gatekeeper', sub: `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED}`, icon: 'shrine', color: '#c9a2ff' };
     case 'FOUNTAIN': return { title: 'Fountain', sub: '', icon: 'fountain', color: '#5fd6ff' };

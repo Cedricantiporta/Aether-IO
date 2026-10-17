@@ -558,6 +558,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   wavesClaimed: Object.fromEntries(ALL_HEROES.map((h) => [h, Array.isArray(p?.wavesClaimed?.[h]) ? (p!.wavesClaimed![h] as unknown[]).map(Number).filter((n) => (WAVE_MILESTONES as readonly number[]).includes(n)) : []])) as Record<HeroClass, number[]>,
   towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
   caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
+  biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
 const writeProfile = (s: GameState): void => {

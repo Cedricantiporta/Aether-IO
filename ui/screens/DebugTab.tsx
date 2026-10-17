@@ -108,6 +108,10 @@ export const DebugTab: React.FC = () => {
     <Line label="Unlock adventure" hint="Skips the opening story steps so the Adventure Portal is open right away (main quest jumps to the King's first task).">
       <Button size="sm" onClick={unlockAdventure} data-testid="dbg-unlock-adv">Unlock now</Button>
     </Line>
+    <Line label="Boss shortcuts">
+      <Button size="sm" data-testid="dbg-biomes-done" onClick={() => { const s = useGameStore.getState(); useGameStore.setState({ progress: { ...s.progress, biomesDone: BIOMES.map((_, i) => i), shortcutSeen: false } }); toast('Debug: all biomes completed (shortcut door in room 5 or 7)'); }}>Mark all biomes completed</Button>
+      <Button size="sm" onClick={() => { const s = useGameStore.getState(); useGameStore.setState({ progress: { ...s.progress, biomesDone: [], shortcutSeen: false } }); toast('Debug: biome completions cleared'); }}>Clear</Button>
+    </Line>
     <Line label="Currencies"><Button size="sm" onClick={maxCurrencies} data-testid="dbg-money">Max gold / gems / shards</Button></Line>
     <Line label="Class level" hint="Unlocks every rank-gated item and enough talent points for all talents.">
       <Button size="sm" onClick={() => setRank(useGameStore.getState().heroRank + 1)}>+1</Button>

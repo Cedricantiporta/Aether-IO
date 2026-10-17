@@ -79,7 +79,7 @@ export function initPlayer(): void {
   p.dashCdMax = DASH_CD;
   p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = 0;
   p.ult = 0;
-  p.arcane = p.arcaneMax = p.arcaneT = 0;
+  p.arcane = p.arcaneMax = p.arcaneT = 0; p.radiant = p.radiantMax = p.radiantT = 0;
   resetPlayerSystem();
 }
 

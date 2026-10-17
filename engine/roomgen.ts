@@ -12,7 +12,7 @@ import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
 import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
-import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, type ShapeKind } from './roomShape';
+import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, shortcutPoint, type ShapeKind } from './roomShape';
 import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
 import { isArenaRoom, buildArena } from './arenaRooms';
 
@@ -65,6 +65,8 @@ export const startPos = (_R?: number): [number, number] => { startPoint(tmpA); r
 export const stationPos = (_R?: number): [number, number] => { stationPoint(tmpA); return [tmpA[0], tmpA[1]]; };
 /** Exit portal slot i of n, across the front (far) end of the room. */
 export function portalSlot(i: number, n: number, _R: number, out: [number, number]): void { portalPoint(i, n, out); }
+/** The boss-shortcut door's spot (completed biomes). */
+export function shortcutSlot(out: [number, number]): void { shortcutPoint(out); }
 
 interface KindSpec { r: (rnd: () => number, s: number) => number; s: [number, number]; blocks: boolean; walk?: boolean }
 const SPEC: Record<string, KindSpec> = {
@@ -132,6 +134,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   keep.push({ x: sx, z: sz, r: 4.5 });
   if (!boss) keep.push({ x: stx, z: stz, r: type === 'MINIBOSS' ? 12 : type === 'SHRINE' ? 8 : 5 });   // mini-boss rooms: a wide open arena where the champion spawns (big ones never wedge in rocks)
   for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
+  shortcutSlot(tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 });
   const nearKeep = (x: number, z: number, r: number): boolean => { for (const k of keep) if (Math.hypot(x - k.x, z - k.z) < k.r + r) return true; return false; };
   const blockedSpot = (x: number, z: number, r: number, gap: number): boolean => {
     if (nearKeep(x, z, r)) return true;

@@ -757,9 +757,9 @@ function miniSlam(e: Enemy): boolean {
 const TOWER = { range: 26, windup: 0.6, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
 const LHYDRA = { range: 20, windup: 0.64, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
 // Blocking stance: facing is LOCKED for the whole stance (turn 0, so the shieldbearer can be walked around), frontal arc = within
-// ~100 deg of its facing (frontCos = cos 100 deg); hits from behind / the side bypass the block and take SHIELD.backstab (+50%).
+// ~75 deg of its facing (frontCos = cos 75 deg; the flanks are NOT covered); hits from behind / the side bypass the block and take SHIELD.backstab (+50%).
 // block 2.2 s (was 2.6, now exploitable but not endless), cooldown 3.0 s (was 2.0) so it cannot chain-brace.
-const SHIELD = { blockR: 9, block: 2.2, blockCd: 3.0, windup: 0.44, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: -0.1736, turn: 0, backstab: 1.5 };
+const SHIELD = { blockR: 9, block: 2.2, blockCd: 3.0, windup: 0.44, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: 0.26, turn: 0, backstab: 1.5 };
 const shotFrom = new Vector3();
 let lastBlockText = 0, lastBackstabFx = -10;
 
@@ -1331,7 +1331,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   if (curMin >= 0) { damageMinion(curMin, dmg); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton
   const grab = e.kind === 'ZOMBIE';
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined });
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e });
   if (e.kind === 'BOAR' && e.state === 'ATTACK') {
     const k = 3.2 / Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
     world.player.pos.x += dx * k; world.player.pos.z += dz * k; // knockback shove

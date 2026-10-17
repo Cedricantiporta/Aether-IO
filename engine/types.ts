@@ -358,6 +358,8 @@ export interface PlayerRuntime {
   aegis: number; aegisMax: number;
   /** Wizard Arcane Shield passive (skill key 'storm'): purple absorb shield (hp), its size when cast, seconds left. */
   arcane: number; arcaneMax: number; arcaneT: number;
+  /** Knight Radiant Burst passive: golden absorb shield (hp, size when cast, seconds left); reflects part of the damage it takes. */
+  radiant: number; radiantMax: number; radiantT: number;
   shieldCharges: number;
   maxShieldCharges: number;
   shieldCd: number;
@@ -410,6 +412,8 @@ export interface RoomPlan {
   epilogue?: boolean;
   /** (owner) a Font dream: the same quiet clearing in the Greenwood, Aelia at its far end; talking to her wakes you in town. */
   dream?: boolean;
+  /** (owner) a completed biome's shortcut door: skips straight to the biome boss (depth 15). */
+  shortcut?: boolean;
 }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 

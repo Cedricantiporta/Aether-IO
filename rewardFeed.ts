@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { useGameStore } from './store';
 import type { Item, Rarity } from './types';
+import { events } from './engine/events';
 
 const RAR: Record<Rarity, string> = { COMMON: '#e5e7eb', UNCOMMON: '#5fd36a', RARE: '#60a5fa', EPIC: '#c084fc', LEGENDARY: '#ff9a3c', MYTHIC: '#f87171' };
 
@@ -25,7 +26,7 @@ function questToast(r: FeedReward): void {
 
 /** gold / gems are the final amounts paid (already scaled). `quest`: also list it under the quest tracker. */
 export function feedReward(r: FeedReward, quest = false): void {
-  if (quest) questToast(r);
+  if (quest) { questToast(r); events.emit('questComplete', {}); }   // (every quest payout goes through here with quest = true: one fanfare per claim)
   const add = useGameStore.getState().addNotification;
   if (r.gold) add(`+${Math.round(r.gold).toLocaleString()} Gold`, '#fbd34d', 'ITEM');
   if (r.gems) add(`+${r.gems.toLocaleString()} Gems`, '#5ee0f5', 'ITEM');

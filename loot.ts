@@ -85,14 +85,22 @@ function FISH_DEFS(): LootDef[] {
     d('fish_boot', 'Soggy Boot', 'COMMON', 'boot', ['#6b5a44', '#9ab0a0'], 'Not a fish. Someone will still pay a coin for it.', 0.2),
     d('fish_minnow', 'Silver Minnow', 'COMMON', 'fish', ['#c8d4dc', '#7e93a6'], 'A tiny, flickering lake fish.', 0.8),
     d('fish_perch', 'Lake Perch', 'COMMON', 'fish', ['#9ab84a', '#ff9a3a'], 'Striped and spiny. A fine supper.', 1.4),
+    d('fish_gudgeon', 'Reed Gudgeon', 'COMMON', 'fish', ['#8a9a5a', '#d8c88a'], 'Hides in the reeds. Brenna swears it tastes like slime.', 1),
+    d('fish_tin', 'Rusty Tin Can', 'COMMON', 'goblet', ['#8a8f94', '#c9a37a'], 'Also not a fish. Pip insists it is a "can-fish".', 0.25),
     d('fish_trout', 'Rainbow Trout', 'RARE', 'fish', ['#7fb0d8', '#ff7aa8'], 'Its scales shimmer in every colour.'),
     d('fish_pike', 'Silver Pike', 'RARE', 'fish', ['#a8b8a0', '#e8f0e0'], 'A long, toothy hunter of the reeds.', 1.3),
+    d('fish_bream', 'Moonlit Bream', 'RARE', 'fish', ['#b8c8e8', '#f4f0ff'], 'Only bites at dusk, when the lake turns to pewter.', 1.2),
+    d('fish_salmon', 'Crimson Salmon', 'RARE', 'fish', ['#e0605a', '#ffc8b0'], 'Swam a very long way to end up in your bag.', 1.5),
     d('fish_carp', 'Golden Carp', 'EPIC', 'fish', ['#ffc94a', '#ff7a2a'], 'Said to bring luck to whoever lands it.'),
+    d('fish_catfish', 'Ghost Catfish', 'EPIC', 'fish', ['#c8d0e0', '#7a88b0'], 'Pale and whiskered. It looks at you as if it knows you.', 1.1),
+    d('fish_lantern', 'Lanternfish', 'EPIC', 'fish', ['#2a3a5a', '#ffe070'], 'A glowing bulb dangles from its brow. Wren wants one for her desk.', 1.3),
     d('fish_eel', 'Lake Serpent Eel', 'LEGENDARY', 'fish', ['#3f7a6a', '#7dffcf'], 'Glows faintly. Fishermen tell tales of it.'),
+    d('fish_sturgeon', 'Crystal Sturgeon', 'LEGENDARY', 'fish', ['#8ae0ff', '#e8fbff'], 'Armoured in scales like cut glass. Older than the village.', 1.15),
     d('fish_koi', 'Aetherfin Koi', 'MYTHIC', 'fish', ['#b98aff', '#7de8ff'], 'Woven of lake water and starlight. One in a lifetime.'),
+    d('fish_dragoncarp', 'Moon Dragon Carp', 'MYTHIC', 'fish', ['#ff8ad8', '#fff0a8'], 'Leaps the waterfall once a century and becomes a dragon. This one skipped the waterfall.', 1.2),
   ];
 }
-export const FISH_IDS = ['fish_boot', 'fish_minnow', 'fish_perch', 'fish_trout', 'fish_pike', 'fish_carp', 'fish_eel', 'fish_koi'];
+export const FISH_IDS = ['fish_boot', 'fish_tin', 'fish_minnow', 'fish_perch', 'fish_gudgeon', 'fish_trout', 'fish_pike', 'fish_bream', 'fish_salmon', 'fish_carp', 'fish_catfish', 'fish_lantern', 'fish_eel', 'fish_sturgeon', 'fish_koi', 'fish_dragoncarp'];
 /** True for a fish (or the boot) from the lake, by bag item name. */
 export const isFishName = (name: string): boolean => !!LOOT_BY_NAME[name]?.id.startsWith('fish_');
 

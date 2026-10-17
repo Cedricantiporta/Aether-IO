@@ -624,7 +624,7 @@ const TYPE_I: Record<string, number> = { COMBAT: 1, ELITE: 2, MINIBOSS: 3, FOUNT
 const REW_I: Record<string, number> = { NONE: 0, CARD: 1, GOLD: 2, SHARDS: 3, ITEM: 4, HEAL: 5, GEMS: 6 };
 
 function PortalLabel({ i }: { i: number }) {
-  const sig = useWorldCounter(() => { const p = world.room.portals[i]; return p.active ? TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + 1000 * world.room.version + (p.big ? 500 : 0) : 0; });
+  const sig = useWorldCounter(() => { const p = world.room.portals[i]; return p.active ? TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + 1000 * world.room.version + (p.big ? 500 : 0) + (p.plan.shortcut ? 250 : 0) : 0; });
   if (!sig) return null;
   const p = world.room.portals[i];
   const nb = BIOMES[(world.room.biome + 1) % BIOMES.length];
@@ -712,24 +712,24 @@ function Portals() {
     return { stone, runes, opening: archOpening(), sigil: new RingGeometry(2.0, 2.9, 40).rotateX(-Math.PI / 2), inner: new CircleGeometry(2.0, 32).rotateX(-Math.PI / 2) };
   }, []);
   const groups = useRef<(Group | null)[]>([]), lifts = useRef<(Group | null)[]>([]);
-  const runeMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, color: new Color(), vertexColors: true })), []);
-  const vortexMats = useMemo(() => [0, 1, 2].map(() => new ShaderMaterial({ vertexShader: VORTEX_VS, fragmentShader: VORTEX_FS, transparent: true, depthWrite: false, side: DoubleSide, blending: AdditiveBlending, uniforms: { uTime: { value: 0 }, uColor: { value: new Color() }, uAlpha: { value: 0 } } })), []);
-  const sigilMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.55, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
-  const innerMats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.18, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
+  const runeMats = useMemo(() => [0, 1, 2, 3].map(() => new MeshBasicMaterial({ toneMapped: false, color: new Color(), vertexColors: true })), []);
+  const vortexMats = useMemo(() => [0, 1, 2, 3].map(() => new ShaderMaterial({ vertexShader: VORTEX_VS, fragmentShader: VORTEX_FS, transparent: true, depthWrite: false, side: DoubleSide, blending: AdditiveBlending, uniforms: { uTime: { value: 0 }, uColor: { value: new Color() }, uAlpha: { value: 0 } } })), []);
+  const sigilMats = useMemo(() => [0, 1, 2, 3].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.55, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
+  const innerMats = useMemo(() => [0, 1, 2, 3].map(() => new MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.18, blending: AdditiveBlending, depthWrite: false, color: new Color() })), []);
   const lit = useMemo(() => litMat({ roughness: 0.95 }), []);
-  const last = useRef<number[]>([-1, -1, -1]);
-  const cols = useMemo(() => [0, 1, 2].map(() => new Color()), []);
+  const last = useRef<number[]>([-1, -1, -1, -1]);
+  const cols = useMemo(() => [0, 1, 2, 3].map(() => new Color()), []);
   const sigils = useRef<(Mesh | null)[]>([]);
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime, paused = useGameStore.getState().status === GameStatus.PAUSED;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const g = groups.current[i], L = lifts.current[i]; if (!g || !L) continue;
       const p = world.room.portals[i];
       g.visible = p.active;
       if (!p.active) { last.current[i] = -1; continue; }
       const sc = p.big ? 2.1 : 1;
       g.position.set(p.x, 0, p.z); g.scale.setScalar(sc);
-      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0);
+      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0) + (p.plan.shortcut ? 250 : 0);
       if (key !== last.current[i]) {
         last.current[i] = key;
         cols[i].set(p.big ? '#f2c14e' : portalLabel(p.plan, world.room.biome).color);
@@ -756,7 +756,7 @@ function Portals() {
   });
   return (
     <>
-      {[0, 1, 2].map((i) => (
+      {[0, 1, 2, 3].map((i) => (
         <group key={i} ref={(g) => { groups.current[i] = g; }} visible={false}>
           <group ref={(g) => { lifts.current[i] = g; }}>
             <mesh geometry={geos.stone} material={lit} castShadow receiveShadow />
@@ -798,13 +798,13 @@ function MerchantNpc() {
 /** Small arrows around the hero pointing at exit portals that are off-screen. */
 function PortalGuides() {
   const geo = useMemo(() => ({ core: triArrowGeo(0.5, 1.3, 0.38), rim: triArrowGeo(0.62, 1.48, 0.36).translate(0, 0, -0.09) }), []);   // notched triangles (render/arrowGeo): vivid core, dark rim
-  const mats = useMemo(() => [0, 1, 2].map(() => new MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false, side: DoubleSide, color: new Color() })), []);
+  const mats = useMemo(() => [0, 1, 2, 3].map(() => new MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false, side: DoubleSide, color: new Color() })), []);
   const rimMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#120e0a' }), []);
   const refs = useRef<(Group | null)[]>([]);
-  const keys = useRef([-1, -1, -1]);
+  const keys = useRef([-1, -1, -1, -1]);
   useFrame(({ clock }) => {
     const r = world.room, p = world.player.pos;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const m = refs.current[i]; if (!m) continue;
       const po = r.portals[i];
       const dx = po.x - p.x, dz = po.z - p.z, d = Math.hypot(dx, dz);
@@ -813,11 +813,11 @@ function PortalGuides() {
       const k = 4.2 + Math.sin(clock.elapsedTime * 5 + i) * 0.25;
       m.position.set(p.x + (dx / d) * (k - 0.6), 0.25, p.z + (dz / d) * (k - 0.6));
       m.rotation.y = Math.atan2(dx, dz);
-      const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward];
+      const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward] + (po.plan.shortcut ? 250 : 0);
       if (key !== keys.current[i]) { keys.current[i] = key; mats[i].color.set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)
     }
   });
-  return <>{[0, 1, 2].map((i) => (
+  return <>{[0, 1, 2, 3].map((i) => (
     <group key={i} ref={(m) => { refs.current[i] = m; }} visible={false}>
       <mesh geometry={geo.rim} material={rimMat} renderOrder={5} />
       <mesh geometry={geo.core} material={mats[i]} position={[0, 0.01, 0]} renderOrder={6} />

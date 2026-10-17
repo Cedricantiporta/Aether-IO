@@ -80,7 +80,7 @@ function makePlayer(): PlayerRuntime {
     dashT: 0, dashDir: v(), dashIframes: true, dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
     cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
     ult: 0, ultT: 0, cryT: 0, buffT: 0, buffDmg: 0, buffDef: 0, buffHaste: 0, guardT: 0, guardRed: 0, avatarT: 0, titanT: 0, whirlT: 0, air: 0,
-    aegis: 0, aegisMax: 0, arcane: 0, arcaneMax: 0, arcaneT: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
+    aegis: 0, aegisMax: 0, arcane: 0, arcaneMax: 0, arcaneT: 0, radiant: 0, radiantMax: 0, radiantT: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
     invulnT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
     stunT: 0, rootT: 0, silenceT: 0, defDownT: 0, blindT: 0,
@@ -142,7 +142,7 @@ export const world = {
   room: {
     active: false, version: 0, seed: 0, biome: 0, index: 0, plan: { type: 'COMBAT', reward: 'CARD' }, radius: 24,
     fade: 1, fadeTarget: 0, enemiesLeft: 0,
-    portals: Array.from({ length: 3 }, () => ({ active: false, x: 0, z: 0, t: 0, plan: { type: 'COMBAT', reward: 'CARD' } })),
+    portals: Array.from({ length: 4 }, () => ({ active: false, x: 0, z: 0, t: 0, plan: { type: 'COMBAT', reward: 'CARD' } })),
     markers: Array.from({ length: 48 }, () => ({ active: false, x: 0, z: 0, t: 0, dur: 1, kind: 'SLIME', elite: false, tag: 0 })),
     station: { kind: 'NONE', x: 0, z: 0, used: false, ready: false },
     chests: [0, 1].map(() => ({ on: false, x: 0, z: 0, used: false })),
@@ -156,7 +156,7 @@ export const world = {
     cave: { floor: 1, seed: 0, ver: 0, left: 0, best: 1, oil: 120, oilMax: 120, combat: false, ladder: -1, ladderFound: false, lx: 0, lz: 0,
       dark: 0, rare: new Int8Array(MAX_CRATES), flasks: Array.from({ length: 6 }, () => ({ on: false, x: 0, z: 0 })) },
     // click-to-walk: follow waypoints wp[0..n) (current = i, (x, z) = the waypoint being walked to), then do `act`
-    go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
+    go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
   boss: { active: false, stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0, shield: 0, shieldMax: 0 } as BossHud,
   /** Malakar's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
   illusionBars: [0, 1].map(() => ({ active: false, hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),

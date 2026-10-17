@@ -199,7 +199,7 @@ hooks.humanMul = (e: Enemy, fx: number, fz: number): number => {
     if (S.wallT > 0 && e.state === 'ATTACK' && e.pattern === 1 && e.staggerT <= 0) {
       const dx = fx - e.pos.x, dz = fz - e.pos.z, l = Math.hypot(dx, dz) || 1;
       const fwd = (dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / l;
-      if (fwd > -0.17) {   // within ~100 deg of his facing
+      if (fwd > 0.26) {   // within ~75 deg of his facing (flanks are open)
         e.hitFlash = Math.max(e.hitFlash, 0.25);
         if (world.time - S.blockText > 0.35) { S.blockText = world.time; events.emit('floatText', { pos: e.pos, text: 'BLOCKED', color: 0xc8d4e6, scale: 0.9, dy: 2.4 }); events.emit('projectileImpact', { pos: e.pos, kind: 'ENEMY' }); }
         return 0;
@@ -366,10 +366,8 @@ function release(e: Enemy, px: number, pz: number): void {
 function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
   const k = e.pattern, P = pw(e);
   if (S.kind === 'VARN') {
-    if (k === 1) {   // Shield Wall: facing nearly locked (slow turn), shuffles forward
-      const want = Math.atan2(px - e.pos.x, pz - e.pos.z);
-      let da = want - S.lockYaw; while (da > Math.PI) da -= 6.283; while (da < -Math.PI) da += 6.283;
-      S.lockYaw += Math.max(-0.7 * dt, Math.min(0.7 * dt, da));
+    if (k === 1) {   // Shield Wall: facing locked, shuffles forward
+      // (facing fully locked at the yaw it started with: S.lockYaw never turns during the wall)
       requestYaw(S.lockYaw);
       e.vel.set(Math.sin(S.lockYaw) * e.speed * 0.35, 0, Math.cos(S.lockYaw) * e.speed * 0.35);
       S.wallT -= dt;

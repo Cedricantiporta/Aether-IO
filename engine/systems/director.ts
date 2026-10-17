@@ -23,12 +23,12 @@ import { useGameStore, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
 import { runMods, runInfo } from '../runMods';
 import {
-  BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, type BiomeDef,
+  BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { hitCrate } from './crates';
-import { buildRoom, roomRadius, startPos, stationPos, portalSlot } from '../roomgen';
+import { buildRoom, roomRadius, startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
 import { spawnPickup, dropCrystals, petCollect, lootPickup } from './pickups';
 import { clearMinions } from './minions';
 import { LOOT_BY_ID, lootItem } from '../../loot';
@@ -130,6 +130,9 @@ const rm = () => world.room;
 /** Biome in which a merchant door was already offered (-1 = none this run). */
 let merchantBiome = -1, fountainBiome = -1, shrineBiome = -1;
 let crystalAt = -1;
+/** Completed biomes: the boss shortcut door opens in room `shortcutAt` (4 or 6, drawn when the biome starts). */
+let shortcutAt = -1, shortcutOn = false;
+const biomeDone = (b: number): boolean => !!useGameStore.getState().progress.biomesDone?.includes(b % BIOMES.length);
 /** Boss key of the current biome: found in a room after the champion (depth 10); opens a boss door early. */
 export const bossKeyState = { has: false };
 const BOSS_KEY_DROPS = false;
@@ -264,6 +267,8 @@ function clearTransient(): void {
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
   clearWanderer(); removeAlly();
   if (idx === 0) bossKeyState.has = false;
+  shortcutOn = false;
+  if (idx === 0) shortcutAt = Math.random() < 0.5 ? 4 : 6;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
   if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS' && !p.epilogue) p = { type: 'CAMP', reward: 'NONE' };
@@ -806,6 +811,19 @@ function openPortals(): void {
     portalSlot(i, n, r.radius, slot);
     po.active = true; po.x = slot[0]; po.z = slot[1]; po.t = 0; po.plan = choices[i]; po.big = false;
   }
+  // a conquered biome: an extra red-gold door straight to the boss (depth 15), beside the usual exits (no boss key needed)
+  const sp = r.portals[3];
+  sp.active = false; shortcutOn = false;
+  if (runInfo.mode === 'ADVENTURE' && !finalFight && !gateBiome() && !plan.epilogue && plan.gate === undefined && index === shortcutAt && index + 1 < REST_INDEX && biomeDone(biome)) {
+    shortcutOn = true;
+    shortcutSlot(slot);
+    sp.active = true; sp.x = slot[0]; sp.z = slot[1]; sp.t = 0; sp.plan = shortcutPlan(); sp.big = false;
+    const st = useGameStore.getState();
+    if (!st.progress.shortcutSeen) {
+      useGameStore.setState({ progress: { ...st.progress, shortcutSeen: true } });
+      st.addNotification(`A shortcut opens: you know this ${biomeOf(biome).name.toLowerCase()} well.`, '#ff9a4a', 'SYSTEM');
+    }
+  }
   events.emit('portalsOpen', {});
 }
 
@@ -813,6 +831,7 @@ function showPortals(): void {
   // shrine: reopen the same doors after the challenge
   const r = world.room;
   for (let i = 0; i < r.portals.length; i++) if (i < choices.length) { const po = r.portals[i]; po.active = true; po.t = 0; }
+  if (shortcutOn) { const sp = r.portals[3]; sp.active = true; sp.t = 0; }
 }
 
 /** Malakar's finale (after his last words): his essence collapses and bursts, then a portal of light opens. */
@@ -1020,6 +1039,10 @@ function onBossCleared(): void {
   events.emit('waveClear', { wave: depth, fast: false });
   events.emit('biomeClear', { biome });
   st.addNotification(`${biomeOf(biome).name} conquered!`, '#fbbf24', 'BOSS');
+  if (runInfo.mode === 'ADVENTURE') {   // remembered per character: this biome now has a boss shortcut in later runs
+    const prog = st.progress, bi = biome % BIOMES.length;
+    if (!prog.biomesDone?.includes(bi)) useGameStore.setState({ progress: { ...prog, biomesDone: [...(prog.biomesDone ?? []), bi] } });
+  }
   bossRewards();
 }
 
@@ -1107,10 +1130,11 @@ const LOOT_R = 2.4;   // the E-loot prompt shows from the same distance auto loo
 export function interactRoom(it: Interactable): void {
   const d = dd(), r = world.room, st = useGameStore.getState();
   if (st.status !== GameStatus.PLAYING) return;
-  if (it.node >= 0 && it.node < 3) {
+  if (it.node >= 0 && it.node < 4) {
     const po = r.portals[it.node];
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
       if (runInfo.mode === 'TOWER') { towerFloor++; towerState.floor = towerFloor; beginLeave(po.plan, towerBiome(towerFloor), (towerFloor - 1) % ROOMS_PER_BIOME); }
+      else if (po.plan.shortcut) beginLeave(po.plan, biome, BOSS_INDEX);   // the conquered biome's shortcut: straight to the boss (depth 15)
       else if (po.plan.gate !== undefined || po.plan.type === 'GATEKEEPER') beginLeave(po.plan, biome, BOSS_INDEX);   // trials and the courtyard keep the boss depth
       else beginLeave(po.plan, biome, index + 1);
     }
