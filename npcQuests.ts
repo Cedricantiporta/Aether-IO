@@ -619,6 +619,47 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'REACH_BIOME', count: 2 },
     reward: { gold: 750, gems: 15 },
   },
+  // ---- (owner) Lv 30: Erin and the rockfall. Done -> the rocks shatter (townData rockfallCleared) and the old miners' road
+  //      over the green is a shortcut to the mines.
+  {
+    id: 'erin_boulder', minLevel: 30, giver: 'Erin', title: 'Beyond the Rocks', summary: 'Ask Grit in the Crystal Cave how to break the rockfall',
+    intro: [
+      'You! You look strong. Stronger than me. For now.',
+      'This rockfall came down the night the kingdom fell. The whole hill shook, the south-east tower cracked, and half the hillside slid onto the miners\' road.',
+      'Nobody has cleared it since. "Too big," they say. "Go round," they say. I am done going round!',
+      'Old Grit has been digging under that hill for forty years. If anyone knows how to break it, he does. Ask him for me?',
+    ],
+    progress: 'Grit works the first floor of the Crystal Cave, in the east bay.',
+    done: ['Frost? Wyrm frost?! Of course. Cold splits stone. I have been pushing the wrong way this whole time!'],
+    objective: { type: 'TALK', target: 'Grit', count: 1 },
+    heard: [
+      'Erin sent you? Ha! That boy has been shoving those rocks since he could walk.',
+      'Can\'t dig that rockfall, can\'t burn it. That\'s heart-stone from deep under the hill, harder than my pick.',
+      'But stone has one weakness: cold. Water creeps into the cracks, freezes, and splits the rock wide open. Takes a hundred winters... unless the cold is strong enough.',
+      'Wyrm frost. The scales of the frost wyrms up in Frostpeak never thaw. Pack three of them into the cracks, give it one good hit, and the whole heap comes apart.',
+      'Tell the boy. And tell him to stop headbutting it, he\'s scaring my mules.',
+    ],
+    reward: { gold: 1500 },
+    turnIn: 'Erin',
+  },
+  {
+    id: 'erin_frost', minLevel: 30, after: 'erin_boulder', giver: 'Erin', title: 'Frost That Splits Stone', summary: 'Bring Erin 3 Wyrm Frostscales',
+    intro: [
+      'Frost wyrm scales? Packed into the cracks? That is... actually brilliant. I hate that I did not think of it.',
+      'Frostpeak is far beyond anything I can reach. But you can. Bring me three Frostscales, and we break it. Together.',
+    ],
+    progress: 'Wyrm Frostscales drop from Glacius, the frost wyrm of Frostpeak.',
+    done: [
+      'Three Frostscales. I can feel the cold from here.',
+      'Into the cracks, one, two, three... now hit it! Everything you have!',
+      '...',
+      'IT BROKE! The whole rockfall! Look at it, it\'s rubble! The miners\' road is open!',
+      'I always said I would move that boulder. I just needed a hero and a dragon. Same thing, basically.',
+      'The way to the mines runs straight across the green now. Go on, you first. You earned it.',
+    ],
+    objective: { type: 'DELIVER', target: 'frost_scale', count: 3 },
+    reward: { gold: 4000, gems: 60, shards: ['EPIC', 3] },
+  },
 ];
 
 export const NPC_QUEST_BY_ID: Record<string, NpcQuestDef> = Object.fromEntries(NPC_QUESTS.map((q) => [q.id, q]));

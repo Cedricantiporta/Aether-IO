@@ -138,11 +138,15 @@ export const TRAIL_ROCKS: [number, number, number, number][] = [
   [54.2, -49, 2.3, 2.6], [51.5, -52, 1.5, 1.8],            // round the north-east corner tower
   [39, -49.8, 1.6, 1.9], [30.5, -44.2, 0.9, 1.1], [21.5, -50.2, 1.4, 1.7],
   [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
-  // a rockfall from the south-east wall tower down to the river: the green in front of the gate is no shortcut to the
-  // mines (owner) - the way there is over the bridge, past the farm and up the fenced mine path
-  [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9],
-  // (the last two boulders stood where the river now runs on east: the river itself closes the gap)
 ];
+/** (owner) the rockfall from the south-east wall tower down to the river: until Erin's quest chain is done (the boulders are
+ *  frozen and split, npcQuests 'erin_frost' turned in) the green in front of the gate is no shortcut to the mines - the way
+ *  there is over the bridge, past the farm and up the fenced mine path. Drawn by render/Rockfall, colliders in village.ts. */
+export const ROCKFALL: [number, number, number, number][] = [
+  [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9],
+];
+/** Erin's chain is done: the rockfall is gone (takes the store's npcQuests). */
+export const rockfallCleared = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.erin_frost?.s === 2;
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
@@ -268,6 +272,9 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.x, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
+  // (owner) the old miners' road: east across the green to the rockfall (Erin's boulders), then on up to the mining camp
+  { x1: 2.5, z1: 48.6, x2: 26, z2: 48.6, w: 2.4, dirt: true }, { x1: 26, z1: 48.6, x2: 45.4, z2: 48.6, w: 2.4, dirt: true },
+  { x1: 45.4, z1: 48.6, x2: 53, z2: 48.2, w: 2.4, dirt: true }, { x1: 53, z1: 48.2, x2: 57, z2: 39.5, w: 2.4, dirt: true }, { x1: 57, z1: 39.5, x2: 62.5, z2: 21, w: 2.4, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
   { x1: 2.4, z1: 110.6, x2: 24, z2: 111.2, w: 2.6, dirt: true }, { x1: 24, z1: 111.2, x2: 43, z2: 111, w: 2.6, dirt: true }, { x1: 43, z1: 111, x2: 48.5, z2: 100.5, w: 2.6, dirt: true },
   // the mines path: from the farm track's corner up the strip east of the farm, along the east side into the mining camp (owner: no branch to the coop)
@@ -412,7 +419,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
   { x: 24, z: 46, s: 3.4, kind: 0 },
   // (owner #167: more on the green in front of the gate) west side, clear of the dirt path at z 52
-  { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 }, { x: 29.5, z: 49.5, s: 3.2, kind: 2 },
+  { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 }, { x: 30, z: 52.8, s: 3.2, kind: 2 },
   // (owner: more trees, like a forest) the Endless Tower clearing: both edges, clear of the path (z = 112 +- 3) and the knoll
   ...(() => {
     const t: TreeSpec[] = [];
@@ -909,6 +916,15 @@ export const NPCS: NpcDef[] = [
       ['Twenty-two years on this road. I know every stone by name.', 'That one is Gerald. Do not step on Gerald.'],
     ],
     bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
+  },
+  {   // (owner: anime cameo, Attack on Titan) a hot-headed youth glaring at the rockfall that seals the old miners' road
+    name: 'Erin', role: 'Boulder Glarer', model: 'KNIGHT', tint: '#e8dcc4', scale: 0.95, prop: 'none', accent: '#3e6b3a', home: [44.2, 47.2],
+    talk: [
+      ['Someday I will lift that boulder. With my own two hands.', 'Everyone says it cannot be moved. That is exactly why I have to move it!'],
+      ['Beyond those rocks is the old miners\' road. Straight to the mines. My father walked it every morning.', 'Now everyone has to go round by the bridge like cattle in a pen. I hate it. I hate being walled in.'],
+      ['I pushed it for three hours yesterday. It moved. I think. A little. Maybe that was me.', 'I will destroy every last one of these rocks!'],
+    ],
+    bubbles: ['Someday I will lift you.', 'Move. MOVE!', 'I will not be walled in!', 'Hnnnngh!', 'Tomorrow. Tomorrow for sure.', 'Beyond the rocks... freedom. And ore.'],
   },
   {
     name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,

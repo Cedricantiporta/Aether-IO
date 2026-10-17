@@ -18,7 +18,7 @@ import { updatePickups, lootPickup, petCollect } from './pickups';
 import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
 import { updateEnemies } from './enemies';
 import { updatePetTown } from './pets';
-import { CRATE_HP, HARVEST_NAME, addTempCollider, generateMap, installInterior } from '../mapgen';
+import { CRATE_HP, HARVEST_NAME, addTempCollider, removeTempCollider, generateMap, installInterior, type Collider } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { TAVERN_COLLIDERS, TAVERN_DOOR, TAVERN_EXIT, TAVERN_SPAWN, TAVERN_OUT } from '../tavernData';
 import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT, CHURCH_SIDE_EXIT, CHURCH_SIDE_SPAWN, PEW_SEATS } from '../churchData';
@@ -45,7 +45,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import type { Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, rockfallCleared } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
 import { mainNav, npcQuestNav, boardQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
@@ -87,6 +87,17 @@ function placeNodes(set: HarvestSet): void {
   });
 }
 
+const rockCols: Collider[] = [];
+/** The rockfall shatters (Erin's 'erin_frost' turned in): its colliders go, the walk grid rebuilds, render/Rockfall bursts. */
+function clearRockfall(): void {
+  if (!rockCols.length) return;
+  for (const c of rockCols) removeTempCollider(c);
+  rockCols.length = 0;
+  world.obstaclesVersion++;
+  events.emit('shake', { amount: 0.8 });
+}
+let rockSub = false;   // (subscribed on the first town build: the store is not ready while this module loads)
+
 /** Replaces the island's run crates with the few village harvest nodes. */
 export function placeVillageNodes(): void {
   placeNodes(TOWN_HARVEST);
@@ -95,6 +106,9 @@ export function placeVillageNodes(): void {
   for (const [x, z, r] of CAVE_MOUTH_COLLIDERS) addTempCollider(x, z, r, false);   // the crystal cave entrance props
   for (const [x, z, r] of CAMP_COLLIDERS) addTempCollider(x, z, r, false);   // the mining camp in front of it (carts, heaps, shed ...)
   for (const [x, z, r] of BEACH_COLLIDERS) addTempCollider(x, z, r, false);   // the lakeside beach (headland rocks, palms, props)
+  if (!rockSub) { rockSub = true; useGameStore.subscribe((s, p) => { if (s.npcQuests !== p.npcQuests && rockfallCleared(s.npcQuests)) clearRockfall(); }); }
+  rockCols.length = 0;   // (owner) Erin's rockfall blocks the old miners' road until his quest chain is done
+  if (!rockfallCleared(useGameStore.getState().npcQuests)) for (const [x, z, r] of ROCKFALL) { const c = addTempCollider(x, z, r, true); if (c) rockCols.push(c); }
   stopFishing();
   spawnTownMonsters();
   resetNpcs();

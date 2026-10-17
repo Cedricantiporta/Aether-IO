@@ -17,6 +17,7 @@ import { disposeMerged, mergeCharacter, useCharacterInstance, useClips, CharKey 
 import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
 import { TownScenery } from './TownScenery';
+import { Rockfall } from './Rockfall';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
 import { TOWER, TOWER_KNOLL, PORTAL } from '../engine/townData';
@@ -895,6 +896,7 @@ export function Town({ q }: { q: QualityCfg }) {
   return (
     <>
       {village && <TownScenery q={q} />}
+      {village && <Rockfall />}
       {village && <Npcs />}
       {village && <TowerLandmark />}
       {village && <PortalLandmark />}
