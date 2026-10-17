@@ -63,12 +63,12 @@ export const DARK_NAMES: Record<HeroClass, { name: string; title: string }> = {
 const RANGED: Record<HeroClass, boolean> = { ARCHER: true, WIZARD: true, BARBARIAN: false, KNIGHT: false, NECROMANCER: true };
 
 /** Pattern ids (e.pattern): 1..3 the class skills (keys 1-3 of the hero), then the class dash, the ultimate, a basic swing. */
-const DASH = 4, ULT = 5, SWING = 6, CLEAVE = 7, RUPTURE = 8;   // (CLEAVE / RUPTURE: the dark berserker's signature moves)
+const DASH = 4, ULT = 5, SWING = 6, CLEAVE = 9, RUPTURE = 10;   // (the dark berserker's signature moves. NOT 7 / 8: enemies.ts reserves e.pattern 7 / 8 for the mini-boss slam (MINI.flag / slamFlag) and hijacked the cast)
 /** Cooldowns (s) per class: [basic, skill 1, skill 2, skill 3, dash, ultimate]. */
 const CD: Record<HeroClass, number[]> = {
   ARCHER: [1.1, 7, 8, 11, 5, 30],
   WIZARD: [1.6, 9, 14, 12, 6, 32],
-  BARBARIAN: [1.4, 6.9, 12, 10, 6, 32, 0, 7, 11],   // (Cross Slash +15% like the hero's)
+  BARBARIAN: [1.4, 6.9, 12, 10, 6, 32, 0, 0, 0, 7, 11],   // (Cross Slash +15% like the hero's)
   KNIGHT: [1.1, 5.5, 13, 9, 6, 32],
   NECROMANCER: [1.4, 11, 14, 12, 6, 34],   // (Raise Dead 11 s, Bone Ward 14 s like the hero's)
 };
@@ -76,7 +76,7 @@ const CD: Record<HeroClass, number[]> = {
 const NAMES: Record<HeroClass, string[]> = {
   ARCHER: ['', 'Gale Arrow!', 'Lightpiercer!', 'Frost Field!', 'Shadow Roll!', 'Storm of a Thousand Arrows!'],
   WIZARD: ['', 'Fireballs!', 'Storm Orbs!', 'Singularity!', 'Blink Nova!', 'Meteor Cataclysm!'],
-  BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!", '', 'Blood Cleave!', 'Ground Rupture!'],
+  BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!", '', '', '', 'Blood Cleave!', 'Ground Rupture!'],
   KNIGHT: ['', 'Holy Wave!', 'Shield Wall!', 'Judgment!', 'Holy Charge!', 'Divine Avatar!'],
   NECROMANCER: ['', 'Raise Dead!', 'Bone Ward!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
 };
@@ -107,7 +107,7 @@ export const darkOrbs = { n: 0, x: [0, 0, 0], z: [0, 0, 0] };
 
 const S = {
   id: -1, cls: 'KNIGHT' as HeroClass,
-  cd: [0, 0, 0, 0, 0, 0, 0, 0, 0], gap: 0, strafe: 1, strafeT: 0, backT: 0, comboN: 0, jab: false, baseRadius: 1,
+  cd: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], gap: 0, strafe: 1, strafeT: 0, backT: 0, comboN: 0, jab: false, baseRadius: 1,
   wind: 0, act: 0, dirX: 0, dirZ: 1, fromX: 0, fromZ: 0, toX: 0, toZ: 0, tick: 0, len: 0, flag: false,
   basicN: 0, inv: 0, blockText: 0, mul: 1, baseScale: 1.2, baseSpeed: 4.6,
   rainT: 0, rainX: 0, rainZ: 0, rainAcc: 0,
@@ -516,8 +516,8 @@ function release(e: Enemy, px: number, pz: number): void {
       const base = Math.atan2(S.dirX, S.dirZ);
       for (let l = -1; l <= 1; l++) {
         const a = base + l * 0.34, ax = Math.sin(a), az = Math.cos(a);
-        for (let i = 0; i < 8; i++) {
-          const dd = 2.2 + i * 1.6, x = e.pos.x + ax * dd, z = e.pos.z + az * dd;
+        for (let i = 0; i < 9; i++) {   // (reaches the telegraphed 15: 1.6 .. 15)
+          const dd = 1.6 + i * 1.675, x = e.pos.x + ax * dd, z = e.pos.z + az * dd;
           hostileFx('SPIKE', x, z, 0.05 + i * 0.06, 1.2 + i * 0.06, 1.7, P * 1.1, 0.4, 0xa03a4a);
         }
         tmp.set(e.pos.x + ax * 15, 0, e.pos.z + az * 15); tmp2.set(e.pos.x, 0, e.pos.z);
