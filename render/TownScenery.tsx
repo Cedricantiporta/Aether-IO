@@ -12,6 +12,7 @@ import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
 import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
+import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
@@ -1014,14 +1015,14 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     lit: litMat({ roughness: 0.85 }),
     road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.map = cobbleTexture(); return m; })(),
     paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = pavingTexture(); return m; })(),
-    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) }),
+    glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) })),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     dirt: litMat({ roughness: 1 }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), []);
   useEffect(() => () => {
     town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
   const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {

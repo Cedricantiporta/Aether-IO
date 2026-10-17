@@ -172,14 +172,21 @@ export function startRun(): void {
   startRunRooms();
 }
 
+/** Real seconds per full town day. */
+const TOWN_DAY_SEC = 480;
+let prevStatus: GameStatus | null = null;
 export function updateGame(rawDt: number): void {
   watchRank();
   tickFeel(rawDt);
   const status = useGameStore.getState().status;
+  // coming home from a run (anything but the hero-select screen) moves the town clock on by 0.15..0.35 of a day
+  if (status === GameStatus.MENU && prevStatus !== null && prevStatus !== GameStatus.MENU && prevStatus !== GameStatus.HERO_SELECT) world.townTime = (world.townTime + 0.15 + Math.random() * 0.2) % 1;
+  prevStatus = status;
   if (status === GameStatus.MENU) {
     if (!villageReady) enterVillage();
     const vdt = Math.min(rawDt, MAX_DT);
     if (vdt > 0 && useUiStore.getState().titleDone) {
+      world.townTime = (world.townTime + vdt / TOWN_DAY_SEC) % 1;
       updateVillage(vdt);
       // skill / dash effects cast in town (harmless: no enemies)
       updateProjectiles(vdt); updateSkills(vdt); updateZones(vdt); updateCombatFx(vdt);

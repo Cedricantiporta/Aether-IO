@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
-  BackSide, CanvasTexture, Color, DirectionalLight, Group, HemisphereLight, Mesh, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
+  BackSide, BufferAttribute, BufferGeometry, CanvasTexture, Points, PointsMaterial, Color, DirectionalLight, Group, HemisphereLight, Mesh, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
   SRGBColorSpace, Vector3, type PerspectiveCamera } from 'three';
 import { world } from '../engine/world';
 import { GameStatus } from '../types';
@@ -9,27 +9,27 @@ import { useGameStore } from '../store';
 import { QualityCfg } from './quality';
 import { mulberry32 } from './util';
 import { isLobbyStatus } from './CameraRig';
-import { look, lookDim } from './biomeLook';
+import { look, lookDim, townSky, townFx } from './biomeLook';
 
 export const FOG_COLOR = '#cfe6f2';
 export const SUN_DIR = new Vector3(-0.55, 0.72, 0.42).normalize();
 
 const SKY_VS = /* glsl */ `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * p; gl_Position.z = gl_Position.w; }`;
 const SKY_FS = /* glsl */ `
-varying vec3 vDir; uniform vec3 uSun; uniform vec3 uTint;
+varying vec3 vDir; uniform vec3 uSun; uniform vec3 uTint; uniform vec3 uHor; uniform vec3 uMid; uniform vec3 uZen; uniform vec3 uSunCol;
 void main(){
   vec3 d = normalize(vDir);
   float h = clamp(d.y, -0.2, 1.0);
-  vec3 horizon = vec3(1.0, 0.93, 0.78);
-  vec3 mid = vec3(0.55, 0.80, 1.0);
-  vec3 zenith = vec3(0.20, 0.50, 0.92);
+  vec3 horizon = uHor;
+  vec3 mid = uMid;
+  vec3 zenith = uZen;
   vec3 col = mix(horizon, mid, smoothstep(0.0, 0.22, h));
   col = mix(col, zenith, smoothstep(0.18, 0.85, h));
-  col = mix(vec3(0.82, 0.90, 0.88), col, smoothstep(-0.2, 0.02, h));
+  col = mix(uHor * vec3(0.82, 0.97, 1.13), col, smoothstep(-0.2, 0.02, h));
   float s = max(dot(d, normalize(uSun)), 0.0);
-  col += vec3(1.0, 0.85, 0.55) * pow(s, 14.0) * 0.45;
-  col += vec3(1.0, 0.95, 0.8) * smoothstep(0.9985, 0.9995, s) * 3.0;
-  col += vec3(1.0, 0.9, 0.7) * pow(s, 400.0) * 1.5;
+  col += uSunCol * vec3(1.0, 0.85, 0.55) * pow(s, 14.0) * 0.45;
+  col += uSunCol * vec3(1.0, 0.95, 0.8) * smoothstep(0.9985, 0.9995, s) * 3.0;
+  col += uSunCol * vec3(1.0, 0.9, 0.7) * pow(s, 400.0) * 1.5;
   col *= uTint;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -53,8 +53,15 @@ export function Sky({ q }: { q: QualityCfg }) {
   const dome = useRef<Mesh>(null!);
   const clouds = useRef<Group>(null!);
   const { camera } = useThree();
-  const mat = useMemo(() => new ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, uniforms: { uSun: { value: new Vector3(-0.45, 0.4, -0.78) }, uTint: { value: new Vector3(1, 1, 1) } }, side: BackSide, depthWrite: false, fog: false }), []);
+  const mat = useMemo(() => new ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, uniforms: { uSun: { value: new Vector3(-0.45, 0.4, -0.78) }, uTint: { value: new Vector3(1, 1, 1) }, uHor: { value: new Color(1, 0.93, 0.78) }, uMid: { value: new Color(0.55, 0.8, 1) }, uZen: { value: new Color(0.2, 0.5, 0.92) }, uSunCol: { value: new Color(1, 1, 1) } }, side: BackSide, depthWrite: false, fog: false }), []);
   const cloudMat = useMemo(() => new SpriteMaterial({ map: cloudTexture(), transparent: true, depthWrite: false, fog: false, opacity: 0.95, color: new Color(1, 1, 1) }), []);
+  const stars = useRef<Points>(null!);
+  const starGeo = useMemo(() => {   // ~220 stars on the upper dome: one Points draw, only visible at night
+    const r = mulberry32(5), n = 220, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const th = r() * Math.PI * 2, y = 0.08 + r() * 0.92, s = Math.sqrt(1 - y * y); a[i * 3] = Math.cos(th) * s * 318; a[i * 3 + 1] = y * 318; a[i * 3 + 2] = Math.sin(th) * s * 318; }
+    const g = new BufferGeometry(); g.setAttribute('position', new BufferAttribute(a, 3)); return g;
+  }, []);
+  const starMat = useMemo(() => new PointsMaterial({ color: 0xdfe8ff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false }), []);
   const list = useMemo(() => {
     const r = mulberry32(21);
     return Array.from({ length: q.clouds }, (_, i) => ({ a: (i / q.clouds) * Math.PI * 2 + r() * 0.5, h: 30 + r() * 45, d: 200 + r() * 60, s: 90 + r() * 70, sp: 0.002 + r() * 0.003 }));
@@ -66,7 +73,13 @@ export function Sky({ q }: { q: QualityCfg }) {
     const fit = Math.min(1, ((camera as PerspectiveCamera).far * 0.9) / 330);
     if (dome.current.scale.x !== fit) dome.current.scale.setScalar(fit);
     mat.uniforms.uTint.value.copy(look.sky);
+    const U = mat.uniforms;
+    U.uHor.value.copy(townSky.hor); U.uMid.value.copy(townSky.mid); U.uZen.value.copy(townSky.zen);
+    if (townSky.on) { U.uSun.value.copy(look.dir); U.uSunCol.value.copy(look.sun).multiplyScalar(look.sunI > 1 ? 1 : 1.4); }   // town: the disc follows the sun (the moon at night)
+    else { U.uSun.value.set(-0.45, 0.4, -0.78); U.uSunCol.value.setRGB(1, 1, 1); }
     cloudMat.opacity = 0.95 * Math.min(1, look.sky.x * 1.4);   // night skies (tower) hide the clouds
+    cloudMat.color.setRGB(1 - 0.78 * townFx.stars, 1 - 0.74 * townFx.stars, 1 - 0.55 * townFx.stars);   // clouds go dusky at night
+    const st = stars.current; st.visible = townFx.stars > 0.01; starMat.opacity = townFx.stars;
     clouds.current.position.set(camera.position.x, 0, camera.position.z);
     const ch = clouds.current.children;
     for (let i = 0; i < ch.length; i++) {
@@ -78,6 +91,7 @@ export function Sky({ q }: { q: QualityCfg }) {
     <>
       <mesh ref={dome} material={mat} renderOrder={-10} frustumCulled={false}>
         <sphereGeometry args={[330, 32, 16]} />
+        <points ref={stars} geometry={starGeo} material={starMat} renderOrder={-9} frustumCulled={false} visible={false} />
       </mesh>
       <group ref={clouds}>
         {list.map((c, i) => <sprite key={i} material={cloudMat} scale={[c.s, c.s * 0.42, 1]} renderOrder={-9} />)}
@@ -117,7 +131,7 @@ export function Lighting({ q }: { q: QualityCfg }) {
     const tx = Math.round(px / texel) * texel, tz = Math.round(pz / texel) * texel;
     t.current.set(tx, 0, tz);
     l.target.position.copy(t.current);
-    l.position.copy(t.current).addScaledVector(SUN_DIR, 90);
+    l.position.copy(t.current).addScaledVector(look.dir, 90 / (look.dir.length() || 1));   // (look.dir: the town sun / moon path; the old SUN_DIR for runs)
     l.target.updateMatrixWorld();
   });
   return (

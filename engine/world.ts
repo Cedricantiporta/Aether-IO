@@ -98,6 +98,8 @@ export const world = {
   /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */
   targetAnchor: { on: false, sx: 0, sy: 0 },
   time: 0,              // total simulated seconds (only advances while PLAYING)
+  /** Town time of day 0..1 (0 / 1 dawn, 0.25 noon, 0.5 dusk, 0.75 midnight); ~8 min per day, only runs in town (engine/game.ts). Not persisted. */
+  townTime: 0.15,
   frame: 0,
   player: makePlayer(),
   // state: 0 FOLLOW, 1 FETCH, 2 ATTACK. carry = PickupKind being carried back (cosmetic), carryT = seconds left.

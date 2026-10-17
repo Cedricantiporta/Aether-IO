@@ -20,6 +20,7 @@ import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
 import { Town } from './Town';
+import { Fireflies } from './Fireflies';
 import { ChurchInterior } from './ChurchInterior';
 import { TavernInterior } from './TavernInterior';
 import { CastleInterior } from './CastleInterior';
@@ -99,6 +100,7 @@ export function Scene() {
           <Suspense fallback={null}><Props q={q} /></Suspense>
           <Suspense fallback={null}><Town q={q} /></Suspense>
           <CaveEntrance q={q} />
+          <Fireflies q={q} />
         </>
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>

@@ -23,6 +23,7 @@ import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
 import { TOWER, TOWER_KNOLL, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
+import { nightGlow } from './biomeLook';
 import { Beach, buildFishStall } from './Beach';
 import { buildMineStall } from './CaveEntrance';
 
@@ -466,7 +467,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   const sign = useMemo(() => buildSign(type, color), [type, color]);
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
-    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }),
+    glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) })),
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
   const craftDot = useGameStore((s) => type === 'BLACKSMITH' && canCraftAny(s));   // red dot: something can be forged
@@ -564,7 +565,7 @@ const questNpc: NpcCfg = { key: 'KNIGHT', tint: '#ffd9a0', pos: [2.9, 1.3] };
 
 function QuestBoard() {
   const geos = useMemo(() => buildBoard(), []);
-  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }) }), []);
+  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) })) }), []);
   const label = useMemo(() => labelMaterial('Quest Board', '#f1e2b8', { size: 60, plate: 'plate' }), []);
   const mark = useMemo(() => labelMaterial('!', '#ffd24a', { size: 120 }), []);
   const near = useRef(false), k = useRef(0);
@@ -678,7 +679,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
   const col = shrine ? '#b57cff' : '#ffb04a';
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
-    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }),
+    glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) })),
     crystal: new MeshBasicMaterial({ color: new Color(1.8, 0.9, 2.6), toneMapped: false }),
     rune: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 0.5), transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), [col]);
