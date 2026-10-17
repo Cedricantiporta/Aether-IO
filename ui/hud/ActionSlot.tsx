@@ -1,5 +1,6 @@
 import { forceAutoCast } from '../../engine/systems/aim';
 import { useInputMode, PAD_LABEL } from '../lib/inputMode';
+import { PadBtn } from '../components/PadBtn';
 import React, { useEffect, useRef } from 'react';
 import { LockGlyph } from '../components/SkillIcons';
 import { world } from '../../engine/world';
@@ -127,7 +128,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
           </div>
         )}
       </div>
-      {keyLabel && <span className="rpg-key">{pad && keyCode ? PAD_LABEL[keyCode] ?? keyLabel : keyLabel}</span>}
+      {keyLabel && (pad && keyCode && PAD_LABEL[keyCode] ? <PadBtn b={PAD_LABEL[keyCode]} className="pad-badge" /> : <span className="rpg-key">{keyLabel}</span>)}
     </div>
   );
 };

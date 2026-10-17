@@ -37,7 +37,10 @@ export const InteractPrompt: React.FC = () => {
       sig.current[i] = key;
       el.style.display = n.active ? 'flex' : 'none';
       if (n.active) {
-        (el.children[0] as HTMLElement).textContent = keyHint(n.key, pad);
+        const k0 = el.children[0] as HTMLElement, kh = keyHint(n.key, pad);
+        k0.textContent = kh;
+        k0.className = pad && kh !== n.key ? 'pbtn pb-face hold-key' : 'rpg-key hold-key';   // (owner) controller: the coloured button badge
+        k0.dataset.b = kh;
         (el.children[1] as HTMLElement).textContent = n.verb;
         (el.children[2] as HTMLElement).textContent = n.label;
         (el.children[2] as HTMLElement).style.color = n.color || '';   // loot: rarity colour

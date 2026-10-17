@@ -1,4 +1,5 @@
 import { useInputMode } from '../lib/inputMode';
+import { ControllerMap } from '../components/ControllerMap';
 import React, { useState } from 'react';
 import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
@@ -25,14 +26,6 @@ const KEYS_KB: [string, string][] = [
   ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
   ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Esc', 'Pause / Settings · close a window'],
 ];
-const KEYS_PAD: [string, string][] = [
-  ['Left stick', 'Move'], ['Right stick', 'Rotate camera'], ['A', 'Class dash'], ['B', 'Interact / talk / loot (hold: harvest)'],
-  ['X', 'Ability 1'], ['Y', 'Ability 2'], ['RB', 'Ability 3'], ['RT', 'Ultimate'], ['LB', 'Health potion'], ['LT', 'Mana potion'],
-  ['L3', 'Click left stick: auto-path to the tracked quest'], ['R3', 'Click right stick: reset camera'],
-  ['D-pad up', 'Quests'], ['D-pad down', 'Hero'], ['D-pad left', 'Accept a quest offer'], ['D-pad right', 'Achievements'],
-  ['Back / View', 'Bag'], ['Start / Menu', 'Pause / Settings'],
-];
-
 export const PauseMenu: React.FC = () => {
   const open = useGameStore((s) => s.isPauseMenuOpen);
   const togglePause = useGameStore((s) => s.togglePause);
@@ -183,9 +176,7 @@ export const SettingsDialog: React.FC = () => {
             <p className="st-p" style={{ marginTop: '.5rem' }}>Using a controller? Press any button on it and this list switches to the controller layout.</p>
           </Sec>}
           {padMode && <Sec title="Controller">
-            <div className="st-keys">
-              {KEYS_PAD.map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
-            </div>
+            <ControllerMap />
             <p className="st-p" style={{ marginTop: '.6rem' }}>In menus and shops: D-pad / left stick move the highlight, A selects, B or Start goes back, LB / RB switch tabs, right stick scrolls, left / right adjust sliders. (Use the keyboard or mouse to see the keyboard list.)</p>
           </Sec>}
           <Sec title="Touch">

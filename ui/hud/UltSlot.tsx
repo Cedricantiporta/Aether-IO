@@ -1,5 +1,6 @@
 import { forceAutoCast } from '../../engine/systems/aim';
-import { useInputMode } from '../lib/inputMode';
+import { useInputMode, keyHint } from '../lib/inputMode';
+import { PadBtn } from '../components/PadBtn';
 import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { abilityState } from '../../engine/systems/abilities';
@@ -28,13 +29,13 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
     if (v !== l.v && fill.current && txt.current) {
       l.v = v;
       fill.current.style.setProperty('--ult', String(p.ult / 100));
-      txt.current.textContent = ready ? 'R' : `${v}%`;
+      txt.current.textContent = ready ? keyHint('R') : `${v}%`;
     }
     if (ready !== l.ready || active !== l.active) {
       l.ready = ready; l.active = active;
       root.current?.setAttribute('data-ready', ready ? '1' : '0');
       root.current?.setAttribute('data-active', active ? '1' : '0');
-      if (txt.current) txt.current.textContent = ready ? 'R' : active ? '...' : cd > 0 ? `${Math.ceil(cd)}s` : `${Math.floor(p.ult)}%`;
+      if (txt.current) txt.current.textContent = ready ? keyHint('R') : active ? '...' : cd > 0 ? `${Math.ceil(cd)}s` : `${Math.floor(p.ult)}%`;
     }
   });
   const shake = () => {
@@ -88,7 +89,7 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
         <div className="ult-rim" />
         <span ref={txt} className="ult-txt">{locked ? `Lv ${locked}` : '0%'}</span>
       </div>
-      <span className="rpg-key">{pad ? 'RT' : 'R'}</span>
+      {pad ? <PadBtn b="RT" className="pad-badge" /> : <span className="rpg-key">R</span>}
     </div>
   );
 };

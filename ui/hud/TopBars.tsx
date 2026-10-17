@@ -1,4 +1,5 @@
 import { keyHint } from '../lib/inputMode';
+import { PadHint } from '../components/PadBtn';
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
 import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph, TrophyGlyph } from '../components/MenuGlyphs';
@@ -156,9 +157,11 @@ export const Currency: React.FC = () => {
   );
 };
 
+const HINT_CODE: Record<string, string> = { C: 'KeyC', I: 'KeyI', J: 'KeyJ', O: 'KeyO', Esc: 'Escape' };
 const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean }> = ({ icon, label, hint, onClick, active, dot }) => (
-  <button className={`sqbtn pe ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={`Hotkey: ${keyHint(hint)}`} />)}>
+  <button className={`sqbtn pe relative ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={`Hotkey: ${keyHint(hint)}`} />)}>
     {icon}{dot && <i className="red-dot" />}
+    {HINT_CODE[hint] && <PadHint code={HINT_CODE[hint]} className="pad-corner" style={{ top: 'auto', bottom: '-.45rem', right: '-.4rem' }} />}
   </button>
 );
 

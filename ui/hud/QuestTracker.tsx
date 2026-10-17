@@ -2,6 +2,7 @@
 // bounties and NPC side quests, each with its objective, progress and (in town) the distance to where it continues.
 // Click = auto-path there; in a run, a quest that continues in town offers a teleport home.
 import { GameStatus } from '../../types';
+import { PadHint } from '../components/PadBtn';
 import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
 import { ScrollText, BookOpen, Crown } from '../components/GoldIcons';
@@ -123,6 +124,7 @@ export const QuestTracker: React.FC = () => {
   ].slice(0, TRACK_MAX - (main ? 1 : 0));
   return (
     <div className="qt pe" data-testid="quest-tracker">
+      <PadHint code="KeyG" className="qt-pad" />
       {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
       {/* (owner) at most 3 quests on screen: the main quest, then the ones ready to hand in, then the rest */}
       {main && <MainRow main={main} />}
