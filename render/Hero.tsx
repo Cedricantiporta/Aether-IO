@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   AdditiveBlending, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
-  MeshStandardMaterial, SphereGeometry, DoubleSide, CanvasTexture, SRGBColorSpace, ShaderMaterial, FrontSide,
+  MeshStandardMaterial, SphereGeometry, Points, PointsMaterial, Float32BufferAttribute, BufferAttribute, DoubleSide, CanvasTexture, SRGBColorSpace, ShaderMaterial, FrontSide,
   type Object3D,
 } from 'three';
 import { world } from '../engine/world';
@@ -24,7 +24,8 @@ import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
-import { tintGear } from './gear';
+import { tintGear, collectWearGlow, type WearGlow } from './gear';
+import { WEAR_SLOTS, glowAmt, glowKeyOf, parseGlowKey, glowColor, bestGlow } from './gearGlow';
 import { useUiStore } from '../ui/uiStore';
 
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
@@ -48,14 +49,17 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   }, [ch, cls]);
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
   const eq = useGameStore((s) => s.equipment);
+  const weaponGlowKey = useGameStore((s) => glowKeyOf(s.equipment?.weapon));
+  const wearGlowKey = useGameStore((s) => WEAR_SLOTS.map((k) => glowKeyOf((s.equipment as any)?.[k])).join('|'));
   const gearKey = ['helmet', 'armor', 'gloves', 'boots', 'accessory'].map((k) => (eq as any)?.[k]?.rarity || '').join('|');
+  const auraKeys = weaponGlowKey + '|' + wearGlowKey;
   const root = useRef<Group>(null!), lean = useRef<Group>(null!), blob = useRef<Mesh>(null!);
   const S = useRef({
     mixer: null as AnimationMixer | null, sitK: 0, legs: null as (Object3D | null)[] | null,
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
     wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
-    pick: null as Group | null, wpn: null as Group | null, pickT: 0, emissiveKey: '', gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
+    pick: null as Group | null, wpn: null as Group | null, pickT: 0, emissiveKey: '', wearGlow: [] as WearGlow[], wpnGlow: null as null | { body: MeshStandardMaterial; glow: MeshBasicMaterial; gr: number; gg: number; gb: number; amt: number; base: number }, gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
   });
 
   // ---- weapon attachment
@@ -73,11 +77,14 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     grp.add(body, glowM);
     ch.handR.add(grp);
     S.current.wpn = grp;
+    // enhanced weapon (+7): its materials (created just above, private to this weapon) get a rarity-coloured emissive pulse in useFrame
+    const wg = parseGlowKey(weaponGlowKey), wamt = wg ? glowAmt(wg.plus) : 0;
+    if (wg && wamt > 0) { const c = glowColor(wg.rarity); S.current.wpnGlow = { body: body.material as MeshStandardMaterial, glow: glowM.material as MeshBasicMaterial, gr: c.r, gg: c.g, gb: c.b, amt: wamt, base: 1.5 + 0.35 * tier }; }
     S.current.gem = w.tip;
     (grp as any).userData.tier = tier;
     const g = grp;
-    return () => { S.current.wpn = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
-  }, [ch, cls, rarity]);
+    return () => { S.current.wpn = null; S.current.wpnGlow = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+  }, [ch, cls, rarity, weaponGlowKey]);
 
   // ---- Mining Pickaxe (tool slot): shown in the right hand while mining / harvesting instead of the weapon
   const hasPick = useGameStore((s) => s.equipment?.tool?.id === 'tool_pickaxe');
@@ -118,6 +125,15 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     const [helmet, armor, gloves, boots, accessory] = gearKey.split('|');
     return tintGear(ch.meshes, { helmet, armor, gloves, boots, accessory, hero: cls });
   }, [ch, gearKey, cls]);
+
+  // ---- enhanced wear glow (+7 helmet / armor / gloves / boots): rarity-coloured emissive pulse on that slot's parts
+  useEffect(() => {
+    const keys = wearGlowKey.split('|'), amts: Record<string, number> = {}, cols: Record<string, Color> = {};
+    WEAR_SLOTS.forEach((k, i) => { const g = parseGlowKey(keys[i]); if (g && glowAmt(g.plus) > 0) { amts[k] = glowAmt(g.plus); cols[k] = glowColor(g.rarity); } });
+    const list = collectWearGlow(ch.meshes, amts, cols);
+    S.current.wearGlow = list;
+    return () => { S.current.wearGlow = []; S.current.emissiveKey = ''; };   // force the status-tint pass to rewrite emissive
+  }, [ch, wearGlowKey]);
 
   // ---- mixer + actions
   useEffect(() => {
@@ -240,6 +256,22 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     const key = (r * 100 | 0) + ',' + (gg * 100 | 0) + ',' + (bb * 100 | 0);
     if (key !== s.emissiveKey) { s.emissiveKey = key; for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.emissive) mt.emissive.setRGB(r, gg, bb); }
 
+    // enhanced gear pulse (+7..max): added on top of the status tint, only on the few glowing materials (no allocation)
+    const wgl = s.wearGlow;
+    if (wgl.length) {
+      for (let i = 0; i < wgl.length; i++) {
+        const e = wgl[i], k = e.amt * (e.amt >= 1 ? 0.75 : 0.5) * (0.6 + 0.4 * Math.sin(t * 2.6 + e.ph));
+        e.mat.emissive.setRGB(r + e.r * k, gg + e.g * k, bb + e.b * k);
+      }
+    }
+    const wp = s.wpnGlow;
+    if (wp) {
+      const pl = 0.65 + 0.35 * Math.sin(t * 3.1), k = wp.amt * pl;
+      wp.body.emissive.setRGB(wp.gr * k * 0.7, wp.gg * k * 0.7, wp.gb * k * 0.7);
+      const b = wp.base + k * 0.9;
+      wp.glow.color.setRGB(b + wp.gr * k * 1.2, b + wp.gg * k * 1.2, b + wp.gb * k * 1.2);
+    }
+
     // blob shadow
     if (blob.current) { blob.current.visible = alive; (blob.current.material as MeshBasicMaterial).opacity = q.shadowMap ? 0.14 : 0.32; }
 
@@ -272,12 +304,54 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   return (
     <group ref={root}>
       <group ref={lean}><primitive object={ch.root} /></group>
+      <GearAura keys={auraKeys} />
       <mesh ref={blob} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]} renderOrder={1}>
         <circleGeometry args={[0.95, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.3} depthWrite={false} />
       </mesh>
     </group>
   );
+}
+
+// ------------------------------------------------- enhanced-gear sparkles --
+const AURA_N = 18;
+let _auraTex: CanvasTexture | null = null;
+const auraTex = () => {
+  if (_auraTex) return _auraTex;
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const x = c.getContext('2d')!, gr = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+  _auraTex = new CanvasTexture(c); _auraTex.colorSpace = SRGBColorSpace; return _auraTex;
+};
+/** ONE additive Points system around the hero: a few sparkles at +7, more and brighter at higher levels, a full swirling aura at max. */
+function GearAura({ keys }: { keys: string }) {
+  const { geo, mat, pos } = useMemo(() => {
+    const pos = new Float32Array(AURA_N * 3);
+    const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+    const mat = new PointsMaterial({ size: 0.2, map: auraTex(), transparent: true, depthWrite: false, blending: AdditiveBlending, toneMapped: false, sizeAttenuation: true, opacity: 0 });
+    return { geo, mat, pos };
+  }, []);
+  const ref = useRef<Points>(null!);
+  const cfg = useMemo(() => bestGlow(keys.split('|')), [keys]);
+  useEffect(() => { mat.color.set(cfg.color).multiplyScalar(1.5); mat.size = 0.16 + 0.12 * cfg.amt; geo.setDrawRange(0, cfg.amt > 0 ? 4 + Math.round(AURA_N * 0.78 * cfg.amt) : 0); }, [cfg, mat, geo]);
+  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
+  useFrame(({ clock }) => {
+    const pts = ref.current; if (!pts) return;
+    const amt = cfg.amt;
+    pts.visible = amt > 0 && world.player.alive;
+    if (!pts.visible) return;
+    const t = clock.elapsedTime, spd = 0.5 + 0.5 * amt, rad = 0.55 + 0.25 * amt;
+    mat.opacity = 0.55 + 0.3 * amt + 0.15 * Math.sin(t * 4);
+    for (let i = 0; i < AURA_N; i++) {
+      const ph = (t * spd * 0.35 + i * 0.618) % 1;           // life 0..1: rise from the feet to the head
+      const a = i * 2.399 + t * (0.8 + 0.6 * amt);
+      const r = rad * (0.75 + 0.25 * Math.sin(i * 1.7));
+      pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = 0.1 + ph * 2.0; pos[i * 3 + 2] = Math.sin(a) * r;
+    }
+    (geo.attributes.position as BufferAttribute).needsUpdate = true;
+  });
+  return <points ref={ref} geometry={geo} material={mat} frustumCulled={false} renderOrder={7} visible={false} />;
 }
 
 // ------------------------------------------------------ afterimage + pillars --

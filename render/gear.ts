@@ -181,17 +181,35 @@ export function attachGear(root: Object3D, mats: Material[], set: GearSet): () =
 const PART_TINT: Record<string, string> = { UNCOMMON: '#b8f0b8', RARE: '#a9c8ff', EPIC: '#d6b0ff', LEGENDARY: '#ffc08a', MYTHIC: '#ff9c8c' };
 const PART_GLOW: Record<string, string> = { LEGENDARY: '#3a1800', MYTHIC: '#3a0804' };
 
+/** Which gear slot a character mesh belongs to (by KayKit part name). */
+export const slotOfMesh = (n: string, hoodIsCape: boolean): keyof GearSet | null => {
+  if (/Hat|Helmet|Visor|Mask/i.test(n)) return 'helmet';
+  if (/Cape/.test(n)) return hoodIsCape ? 'helmet' : 'armor';
+  if (/Body/.test(n)) return 'armor';
+  if (/Arm(Left|Right)/.test(n)) return 'gloves';
+  if (/Leg(Left|Right)/.test(n)) return 'boots';
+  return null;
+};
+
+/** One glowing body part: its (private, already cloned) material + the rarity colour pulsed into `emissive` each frame. */
+export interface WearGlow { mat: any; r: number; g: number; b: number; amt: number; ph: number }
+/** Collect the parts of enhanced (+7) wear. `amts`/`colors` are per slot; built once per equipment change, never per frame. */
+export function collectWearGlow(meshes: Mesh[], amts: Partial<Record<keyof GearSet, number>>, colors: Partial<Record<keyof GearSet, Color>>): WearGlow[] {
+  const hoodIsCape = meshes.some((m) => /Ranger_Cape|RogueHooded_Cape/.test(m.name));
+  const out: WearGlow[] = [];
+  for (const m of meshes) {
+    const slot = slotOfMesh(m.name, hoodIsCape); if (!slot) continue;
+    const amt = amts[slot], c = colors[slot], mat = m.material as any;
+    if (!amt || !c || !mat?.emissive) continue;
+    out.push({ mat, r: c.r, g: c.g, b: c.b, amt, ph: out.length * 0.9 });
+  }
+  return out;
+}
+
 export function tintGear(meshes: Mesh[], set: GearSet): () => void {
   // rangers and hooded rogues wear their hood as part of the cape
   const hoodIsCape = meshes.some((m) => /Ranger_Cape|RogueHooded_Cape/.test(m.name));
-  const slotOf = (n: string): keyof GearSet | null => {
-    if (/Hat|Helmet|Visor|Mask/i.test(n)) return 'helmet';
-    if (/Cape/.test(n)) return hoodIsCape ? 'helmet' : 'armor';
-    if (/Body/.test(n)) return 'armor';
-    if (/Arm(Left|Right)/.test(n)) return 'gloves';
-    if (/Leg(Left|Right)/.test(n)) return 'boots';
-    return null;
-  };
+  const slotOf = (n: string) => slotOfMesh(n, hoodIsCape);
   const undo: [any, Color, Color | null][] = [];
   for (const m of meshes) {
     const slot = slotOf(m.name); if (!slot) continue;

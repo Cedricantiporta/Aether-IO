@@ -284,6 +284,14 @@ button:disabled { cursor: var(--cur-no, not-allowed); }
 @keyframes slot-shimmer { from { background-position: 220% 0; } to { background-position: -120% 0; } }
 button.rpg-slot:hover:not(:disabled), .rpg-slot.hoverable:hover { transform: translateY(-2px); filter: brightness(1.2); z-index: 5;
   box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1px var(--gold), 0 0 12px color-mix(in srgb, var(--rc) 60%, transparent); }
+/* enhanced gear (+7 and up): soft pulsing rarity-coloured glow, stronger at +8 and max */
+@keyframes slot-plus-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0,0,0,.8), 0 0 0 1px #4a3a22, 0 0 calc(var(--pg, 6px) * .6) color-mix(in srgb, var(--rc) 55%, transparent); }
+  50% { box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0,0,0,.8), 0 0 0 1px #4a3a22, 0 0 var(--pg, 6px) color-mix(in srgb, var(--rc) 90%, transparent); } }
+.rpg-slot.is-plus { --pg: 7px; animation: slot-plus-pulse 2.4s ease-in-out infinite; }
+.rpg-slot.is-plus-hi { --pg: 11px; animation: slot-plus-pulse 2s ease-in-out infinite; }
+.rpg-slot.is-plus-max { --pg: 16px; animation: slot-plus-pulse 1.5s ease-in-out infinite; }
+.rpg-slot.is-plus > .slot-icon, .rpg-slot.is-plus-hi > .slot-icon, .rpg-slot.is-plus-max > .slot-icon { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--rc) 80%, transparent)) drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+@media (prefers-reduced-motion: reduce) { .rpg-slot.is-plus, .rpg-slot.is-plus-hi, .rpg-slot.is-plus-max { animation: none; } }
 button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .rpg-slot.is-selected { box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 2px var(--gold-light), 0 0 14px rgba(255, 230, 154, .6); }
 .rpg-slot.is-empty { background: radial-gradient(circle at 50% 40%, #241d2b, #0f0c13 80%); box-shadow: inset 0 0 0 1px #4a3a22, inset 0 0 12px rgba(0, 0, 0, .9), 0 0 0 1px #5a4020; }

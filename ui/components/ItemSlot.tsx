@@ -2,7 +2,7 @@ import React from 'react';
 import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
 import { ItemIcon } from './ItemIcon';
-import { isGear } from '../lib/game';
+import { isGear, MAX_ITEM_LEVEL } from '../lib/game';
 import { petLv, petStage } from '../../petGrowth';
 import { tip } from './Tooltip';
 import { ItemTip } from './ItemTip';
@@ -44,7 +44,9 @@ export const ItemSlot: React.FC<Props> = ({
   const hero = useGameStore((s) => s.hero);
   const otherClass = !!item && isGear(item) && !canUseClass(item, hero);   // class-exclusive gear of another class: icon dimmed
   const q = qty ?? item?.quantity ?? 1;
-  const cls = `rpg-slot ${price === 0 && item ? 'is-free' : ''} ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
+  const plus = item && isGear(item) && item.level > 1 ? item.level - 1 : 0;
+  const enh = plus >= MAX_ITEM_LEVEL - 1 ? 'is-plus-max' : plus >= 8 ? 'is-plus-hi' : plus >= 7 ? 'is-plus' : '';   // +7 and up: rarity-coloured glow
+  const cls = `${enh} rpg-slot ${price === 0 && item ? 'is-free' : ''} ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
   const style = { ['--slot' as any]: size } as React.CSSProperties;
   const content = (
     <>
