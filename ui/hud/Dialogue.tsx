@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from '../components/GoldIcons';
-import { useDialogue, advanceDialogue, closeDialogue, acceptOffer } from '../../engine/systems/dialogue';
+import { useDialogue, advanceDialogue, closeDialogue, acceptOffer, replyAt } from '../../engine/systems/dialogue';
 import { device } from '../../engine/device';
 import { useGameEvent } from '../hooks/useEvent';
 import { useUiStore } from '../uiStore';
@@ -35,7 +35,8 @@ export const Dialogue: React.FC = () => {
   const { open, name, role, accent, lines, idx, offer, acceptLabel, hint } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   if (!open) return null;
-  const last = idx >= lines.length - 1;
+  const reply = replyAt(lines, idx + 1);   // (owner) the hero's reply sits on the Next / Close button
+  const last = idx >= lines.length - 1 || (!!reply && idx + 1 >= lines.length - 1 && !offer);
   const sp = splitSpeaker(lines[idx] ?? '');
   const stop = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); };
   return (
@@ -58,7 +59,7 @@ export const Dialogue: React.FC = () => {
                 <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); }}>{acceptLabel}{!device.touch && <kbd>F</kbd>}</button>
               </span>
             )
-            : <span className="dlg-next">{last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span>}
+            : <span className={`dlg-next${reply ? ' reply' : ''}`} data-testid="dialogue-next">{reply ? `“${reply}”` : last ? 'Okay' : '...'}{!device.touch && <kbd>E</kbd>}</span>}
         </div>
       </div>
     </div>

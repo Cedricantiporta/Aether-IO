@@ -131,11 +131,23 @@ export function closeDialogue(): void {
   useDialogue.setState({ open: false, npc: -1, offer: '', turnIn: '', turnInAt: -1, acceptLabel: 'Accept', hint: '' });
 }
 
+/** (owner) A short hero line ("You:: ...") right after the current one is not shown as its own page: it becomes the
+ *  label of the Next / Close button (the hero's reply), and pressing it moves past it. */
+export const REPLY_MAX = 72;
+export function replyAt(lines: readonly string[], i: number): string | null {
+  const l = lines[i];
+  if (!l || !l.startsWith('You:: ')) return null;
+  const t = l.slice(6);
+  return t.length <= REPLY_MAX ? t : null;
+}
 /** Next line; on the last line closes. Reaching a gift line pays it out (once per day per NPC). */
 export function advanceDialogue(): void {
   const s = useDialogue.getState();
   if (!s.open) return;
-  if (s.idx >= s.lines.length - 1) {
+  const reply = replyAt(s.lines, s.idx + 1) !== null && !(s.offer && s.idx + 1 >= s.lines.length - 1);   // the button said the hero's reply: skip that line
+  if (reply && s.idx + 1 < s.lines.length - 1) { onLine(s.npc, s.idx + 1); const idx = s.idx + 2; useDialogue.setState({ idx }); onLine(s.npc, idx); return; }
+  if (s.idx >= s.lines.length - 1 || reply) {
+    if (reply) onLine(s.npc, s.idx + 1);
     const tab = s.npc >= 0 && !s.offer && !s.turnIn ? NPCS[s.npc].opens : undefined;
     const ship = s.npc >= 0 && !s.offer && !s.turnIn && !!NPCS[s.npc].ship;
     closeDialogue();
