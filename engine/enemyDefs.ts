@@ -200,6 +200,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Ward Crystal', hp: 100, speed: 0, radius: 1.1, scale: 1.3, contactDamage: 0, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 1, weight: 0, color: 0x8ab8ff, knockResist: 1, armor: 0,
   },
+  HUMAN_BOSS: {   // humanoid mini boss (systems/humanBosses.ts sets the real hp: ~1.25x a guardian of the depth)
+    name: 'Humanoid Champion', hp: 170, speed: 4.2, radius: 0.75, scale: 1.15, contactDamage: 12, projectileDamage: 12,
+    xp: 14, gold: 0, cost: 0, minWave: 3, weight: 0, color: 0xb0b8c8, knockResist: 0.7, armor: 25,
+  },
   DARK_HERO: {   // champion duel (systems/darkHero.ts sets the real hp: ~5x an elite of the depth)
     name: 'Dark Champion', hp: 130, speed: 4.6, radius: 0.75, scale: 1.2, contactDamage: 15, projectileDamage: 13,
     xp: 14, gold: 0, cost: 0, minWave: 3, weight: 0, color: 0x8b3dff, knockResist: 0.7, armor: 30,

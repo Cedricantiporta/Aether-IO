@@ -39,7 +39,7 @@ import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial,
 import { useGameStore } from '../../store';
 import { runMods } from '../runMods';
 import { updateBoss } from './bosses';
-import { updateBossMech, bossMechDied, tickBossStrikes } from './bossMech';
+import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -48,6 +48,7 @@ import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround } from '../roomFeatures';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
+import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -72,6 +73,39 @@ const ZOMBIE = { grabR: 2.3, windup: 0.48, lunge: 0.3, recover: 0.7, cd: 2.6 };
 const WRAITH = { windup: 0.6, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
 const BANDIT = { windup: 0.4, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6, ring: 4.2 };
 const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
+/**
+ * Free-hit window ("WINDED") for bosses + mini-bosses: after a big attack / combo (a WINDUP / ATTACK / RECOVER / special has just
+ * ended) the boss pants for 1.2-2.0 s: no movement, no new attacks (contact damage still hurts), +10% damage taken, a
+ * 'WINDED' tag + dizzy stars above it. At most one per 10-16 s of fighting (so never twice within 8 s), never while shielded /
+ * warded / healing / staggered / phase-changing / mid-cast.
+ * HP compensation: a ~1.7 s window per ~13 s cycle leaves the boss open 13% of the time with +10% damage, i.e. the hero deals
+ * about +1.3% extra damage on average while the boss ALSO stops attacking, so the hero effectively gets ~13% more uptime
+ * on a stationary target (no kiting needed). Bosses get +15% max HP, mini-bosses +12% (windows are shorter), so the total
+ * fight length stays about the same, only moving damage into readable moments.
+ */
+const WIND = { bossHp: 1.15, miniHp: 1.12, firstMin: 9, firstMax: 15, cdMin: 10, cdMax: 16, bossDurMin: 1.5, bossDurMax: 2.0, miniDurMin: 1.2, miniDurMax: 1.6, dmgTaken: 1.1 };
+export const WINDED_DMG_MULT = WIND.dmgTaken;
+/** Ticks the free-hit window; true while the boss is winded (its AI must be skipped this frame). */
+function tickWinded(e: Enemy, dt: number, locked: boolean): boolean {
+  if (e.state === 'SPAWN' || e.state === 'DYING') return false;
+  if (e.winT > 0) {
+    e.winT -= dt;
+    if (e.winT <= 0 || bossWarded(e)) { e.winT = 0; return false; }
+    return !locked;
+  }
+  if (e.winCd > 0) e.winCd -= dt;
+  const busy = e.state === 'WINDUP' || e.state === 'ATTACK' || e.state === 'RECOVER' || e.spKind !== 0;
+  const justDone = e.winBusy && !busy;
+  e.winBusy = busy;
+  if (!justDone || e.winCd > 0) return false;
+  if (e.phase !== e.winPhase) { e.winPhase = e.phase; e.winCd = Math.max(e.winCd, 4); return false; }   // phase transition: no window
+  if (locked || e.shield > 0 || e.shellT > 0 || e.hideT > 0 || e.decoy || e.fearT > 0 || bossWarded(e) || bossMending(e) || (e.state !== 'CHASE' && e.state !== 'KITE')) return false;
+  e.winT = e.boss ? WIND.bossDurMin + Math.random() * (WIND.bossDurMax - WIND.bossDurMin) : WIND.miniDurMin + Math.random() * (WIND.miniDurMax - WIND.miniDurMin);
+  e.winCd = WIND.cdMin + Math.random() * (WIND.cdMax - WIND.cdMin);
+  events.emit('floatText', { pos: e.pos, text: 'WINDED!', color: 0xffe27a, scale: 1.3, dy: 5 });
+  return true;
+}
+
 const MINI = { hpMul: 8, scaleMul: 1.5, slamCd: 6, slamWindup: 0.9, slamR: 5.5, flag: 7, slamFlag: 8 };
 const SHARDS = 8;
 const FEAR_SLOW_T = 3;   // seconds of 30% slow after a fear ends
@@ -255,7 +289,7 @@ export function spawnEnemy(
 
   // every monster, elite and boss also scales with the hero's level: +10% HP and +6.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg;
   // later biomes breed tougher monsters on top of the depth curve (owner): +15% HP and +10% damage per biome
   const bi = Math.max(0, Math.min(7, world.room.biome | 0));
@@ -287,6 +321,7 @@ export function spawnEnemy(
   if (boss) initSpecial(e);
   e.state = 'SPAWN';
   e.stateT = 0;
+  e.winT = 0; e.winCd = WIND.firstMin + Math.random() * (WIND.firstMax - WIND.firstMin); e.winPhase = 0; e.winBusy = false;
   e.phase = 0;
   e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 3 : 0; // so first boss pattern is index 0
   e.patternT = 0;
@@ -311,7 +346,7 @@ let barOwner = -1;
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
-  e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625); // mini-bosses: half of the old +25% value
+  e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625 * WIND.miniHp); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
   e.affix = 'NONE';
@@ -350,6 +385,7 @@ export function onEnemyDeath(e: Enemy): void {
 
   if (e.kind === 'BOSS_SAPLING') saplingDied(e);
   if (e.kind === 'DARK_HERO') darkHeroDied(e);
+  if (e.kind === 'HUMAN_BOSS') humanBossDied(e);
   if (e.boss) {
     bossDied2(e);
     bossMechDied();
@@ -720,9 +756,12 @@ function miniSlam(e: Enemy): boolean {
 // ------------------------------------------------------------ stage monsters + new kinds --------
 const TOWER = { range: 26, windup: 0.6, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
 const LHYDRA = { range: 20, windup: 0.64, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
-const SHIELD = { blockR: 9, block: 2.6, blockCd: 2.0, windup: 0.44, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: 0.3, turn: 2.0 };
+// Blocking stance: facing is LOCKED for the whole stance (turn 0, so the shieldbearer can be walked around), frontal arc = within
+// ~100 deg of its facing (frontCos = cos 100 deg); hits from behind / the side bypass the block and take SHIELD.backstab (+50%).
+// block 2.2 s (was 2.6, now exploitable but not endless), cooldown 3.0 s (was 2.0) so it cannot chain-brace.
+const SHIELD = { blockR: 9, block: 2.2, blockCd: 3.0, windup: 0.44, bash: 0.28, bashMul: 4.2, recover: 0.9, frontCos: -0.1736, turn: 0, backstab: 1.5 };
 const shotFrom = new Vector3();
-let lastBlockText = 0;
+let lastBlockText = 0, lastBackstabFx = -10;
 
 /** Goblin archer on its tower: never moves; aimed arrows (every third shot a 3-arrow volley) from the tower top. */
 function aiTowerArcher(e: Enemy): void {
@@ -809,8 +848,9 @@ function aiShieldbearer(e: Enemy): void {
   const inv = 1 / Math.max(tdist, 0.001);
   const ux = tdx * inv, uz = tdz * inv;
   switch (e.state) {
-    case 'KITE':   // braced
-      setVel(e, ux, uz, e.speed * 0.3);
+    case 'KITE':   // braced: facing locked (see the facing step), shuffles forward along its own facing only
+      setVel(e, Math.sin(e.facing), Math.cos(e.facing), e.speed * 0.2);
+      desiredYaw = e.facing;
       if (e.stateT >= SHIELD.block) {
         if (tdist < 6) {
           e.dir.set(ux, 0, uz);
@@ -840,20 +880,33 @@ function aiShieldbearer(e: Enemy): void {
   }
 }
 
-/** Shieldbearer block: braced (KITE) and the hit comes from the front arc -> 0 damage + a BLOCKED word. */
-export function shieldBlock(e: Enemy): boolean {
-  if (e.kind !== 'SHIELDBEARER' || e.state !== 'KITE' || e.stunT > 0 || e.freezeT > 0 || e.staggerT > 0) return false;
-  const dx = world.player.pos.x - e.pos.x, dz = world.player.pos.z - e.pos.z;
+/**
+ * Shieldbearer block. Braced (KITE) and the attacker (ax, az) is inside the front arc -> 1 (0 damage + BLOCKED word).
+ * Braced but the attacker is behind / beside it -> 2 (the block is bypassed: caller applies SHIELD.backstab, +50%).
+ * Not braced -> 0.
+ */
+export function shieldBlock(e: Enemy, ax: number, az: number): 0 | 1 | 2 {
+  if (e.kind !== 'SHIELDBEARER' || e.state !== 'KITE' || e.stunT > 0 || e.freezeT > 0 || e.staggerT > 0) return 0;
+  const dx = ax - e.pos.x, dz = az - e.pos.z;
   const d = Math.sqrt(dx * dx + dz * dz) || 1;
-  if ((dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / d < SHIELD.frontCos) return false;
+  if ((dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / d < SHIELD.frontCos) {
+    if (world.time - lastBackstabFx > 0.5) {
+      lastBackstabFx = world.time;
+      events.emit('floatText', { pos: e.pos, text: 'BACKSTAB!', color: 0xffc23a, scale: 1.0, dy: 2.3 });
+      events.emit('projectileImpact', { pos: e.pos, kind: 'SLASH' });
+    }
+    return 2;
+  }
   e.hitFlash = Math.max(e.hitFlash, 0.25);
   if (world.time - lastBlockText > 0.35) {
     lastBlockText = world.time;
     events.emit('floatText', { pos: e.pos, text: 'BLOCKED', color: 0xc8d4e6, scale: 0.85, dy: 2.3 });
     events.emit('projectileImpact', { pos: e.pos, kind: 'ENEMY' });
   }
-  return true;
+  return 1;
 }
+/** Damage multiplier of a hit that bypassed a block from behind. */
+export const SHIELD_BACKSTAB_MULT = SHIELD.backstab;
 
 // ------------------------------------------------------------ biome-unique monsters --
 const SPORE = { range: 3.4, windup: 0.6, r: 3.0, cloud: 4.5, recover: 0.8, cd: 4.5 };
@@ -1149,6 +1202,7 @@ function runAI(e: Enemy): void {
     case 'VOID_EYE': aiVoidEye(e); break;
     case 'BOSS_CRYSTAL': stop(e); break;
     case 'DARK_HERO': aiDarkHero(e, frameDt, px, pz, tdist); break;
+    case 'HUMAN_BOSS': aiHumanBoss(e, frameDt, px, pz, tdist); break;
     case 'SKELETON_WARRIOR': aiChaser(e, false); break;   // the dark necromancer's raised dead
     case 'SKELETON_MAGE': aiCultist(e); break;
     case 'BONE_GOLEM': aiBrute(e, BRUTE); break;
@@ -1386,7 +1440,9 @@ function updateEnemy(e: Enemy): void {
     }
   }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
-  if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
+  const winded = (e.boss || e.mini) && !e.decoy && tickWinded(e, dt, locked);
+  if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }   // free-hit window: stands there panting (no attacks, no new casts)
+  else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {
     // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills
     const pace = (e.boss || e.mini) ? bossPace() : 1;
@@ -1525,6 +1581,7 @@ export function updateEnemies(dt: number): void {
     if (e.active && !isDying(e)) alive++;
   }
   world.director.aliveCount = alive;
+  tickHumanBoss(dt);   // humanoid mini boss: boss bar, strikes, traps, banner / ward
   tickDarkHero(dt);   // dark hero champion: its shots, fields, delayed strikes (run even while it is staggered)
 
   // rebuild spatial hash for the rest of the frame (combat, skills, pets)

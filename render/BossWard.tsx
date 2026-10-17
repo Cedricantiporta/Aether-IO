@@ -4,7 +4,7 @@ import { AdditiveBlending, Color, FrontSide, Mesh, ShaderMaterial } from 'three'
 import { world } from '../engine/world';
 import { wardedBossId } from '../engine/systems/bossMech';
 
-/** The shield sphere around a warded (immune) boss: fresnel rim + slow rising hex-like bands, pulses while it holds. */
+/** The shield sphere around a warded (immune) boss, or a boss holding a damage shield (e.shield): fresnel rim + slow rising hex-like bands, pulses while it holds. */
 export function BossWard() {
   const m = useRef<Mesh>(null!);
   const mat = useMemo(() => new ShaderMaterial({
@@ -18,7 +18,9 @@ export function BossWard() {
       + ' gl_FragColor = vec4(uC * (0.3 + 1.5 * f + 0.7 * hex), (0.06 + 0.55 * f + 0.22 * hex) * uA); }',
   }), []);
   useFrame((_, dt) => {
-    const id = wardedBossId(), e = id >= 0 ? world.enemies[id] : null;
+    let id = wardedBossId();
+    if (id < 0) for (let i = 0; i < world.enemies.length; i++) { const x = world.enemies[i]; if (x.active && x.boss && !x.decoy && x.shield > 1) { id = i; break; } }   // (owner) a boss with a damage shield (Slime King's 30%) shows the sphere too
+    const e = id >= 0 ? world.enemies[id] : null;
     const on = !!e && e.active && e.state !== 'DYING';
     mat.uniforms.uA.value = on ? Math.min(1, mat.uniforms.uA.value + dt * 3) : Math.max(0, mat.uniforms.uA.value - dt * 4);
     m.current.visible = mat.uniforms.uA.value > 0.01;

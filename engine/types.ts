@@ -53,6 +53,7 @@ export type EnemyKind =
   | 'VOID_STALKER'    // Void: blinks behind you and strikes
   | 'VOID_EYE'        // Void: floating eye, fires rings of void orbs
   | 'BOSS_CRYSTAL'    // boss ward crystal: the boss is immune until every crystal is destroyed
+  | 'HUMAN_BOSS'      // humanoid mini boss (Captain Varn / Sable / Rook: systems/humanBosses.ts, render/HumanBosses.tsx)
   | 'DARK_HERO'       // champion duel: a shadow copy of a hero class (systems/darkHero.ts, render/DarkHero.tsx)
   // ---- raised by the Dark Necromancer (hostile copies of the necromancer's own minions; never rolled in rosters)
   | 'SKELETON_WARRIOR' // sword-and-shield skeleton: melee chaser
@@ -123,6 +124,7 @@ export interface Enemy {
   slamDmg: number; slamT: number; // wall-slam bonus damage while launched (slamT>0)
 
   // boss bookkeeping
+  winT: number; winCd: number; winPhase: number; winBusy: boolean; // boss / mini-boss free-hit window (WINDED): time left, cooldown to the next, phase seen, was mid-attack last frame
   phase: number;         // 0,1,2 (enrage at 66% / 33% hp)
   pattern: number;
   patternT: number;

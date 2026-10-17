@@ -20,9 +20,9 @@ import { CELL, FX, embers } from './fx';
 
 const TAGS: [string, string][] = [
   ['BRN', '#ff8a3a'], ['PSN', '#8be05a'], ['BLD', '#ff5a5a'], ['FRZ', '#9fe4ff'], ['STN', '#ffe27a'],
-  ['SLW', '#7fc8ff'], ['RT', '#d0a868'], ['SIL', '#c79bff'], ['BLN', '#c0c0c0'], ['FEAR', '#d08aff'],
+  ['SLW', '#7fc8ff'], ['RT', '#d0a868'], ['SIL', '#c79bff'], ['BLN', '#c0c0c0'], ['FEAR', '#d08aff'], ['WINDED', '#ffe27a'],
 ];
-const T_BRN = 0, T_PSN = 1, T_BLD = 2, T_FRZ = 3, T_STN = 4, T_SLW = 5, T_RT = 6, T_SIL = 7, T_BLN = 8, T_FEAR = 9;
+const T_BRN = 0, T_PSN = 1, T_BLD = 2, T_FRZ = 3, T_STN = 4, T_SLW = 5, T_RT = 6, T_SIL = 7, T_BLN = 8, T_FEAR = 9, T_WIN = 10;
 const MAX_PER = 96, H = 0.66, GAP = 0.12;
 
 const _m = new Matrix4(), _p = new Vector3(), _s = new Vector3(1, 1, 1), _q = new Quaternion();
@@ -79,8 +79,14 @@ export function StatusFx() {
         else if (e.stunT > 0) list.push(T_STN);
         if (e.fearT > 0) list.push(T_FEAR);
         if (e.slowT > 0.05 && e.freezeT <= 0) list.push(T_SLW);
+        if (e.winT > 0) list.push(T_WIN);   // boss / mini-boss free-hit window
         if (list.length === 0) continue;
         const s = e.scale || 1, head = (models[e.kind]?.headY ?? e.radius * 1.6 + 0.6) * s;
+        if (e.winT > 0 && dt > 0 && Math.random() < dt * 14) {   // dizzy stars circling the head + a pant puff
+          const a = world.time * 5 + Math.random() * 6.283, rr = (e.radius + 0.25) * 0.8;
+          FX.add.emit(e.pos.x + Math.cos(a) * rr, e.pos.y + head + 0.2, e.pos.z + Math.sin(a) * rr, 0, 0.15, 0, 0.5, 0.3, 0.05, 2.4, 2.1, 0.6, 1, CELL.STAR);
+          if (Math.random() < 0.3) FX.add.emit(e.pos.x, e.pos.y + head * 0.7, e.pos.z, 0, 0.8, 0, 0.8, 0.5, 0.2, 1.5, 1.5, 1.5, 0.5, CELL.DISC);
+        }
         place(e.pos.x, e.pos.y + head + (e.elite ? 1.75 : 1.05), e.pos.z);
       }
       // hero

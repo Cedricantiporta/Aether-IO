@@ -181,6 +181,8 @@ export function tickBossStrikes(dt: number): void {
 
 /** Id of the boss whose ward is up (-1 = none): render/BossWard.tsx draws the shield sphere. */
 export function wardedBossId(): number { return S.wardOn ? S.id : -1; }
+/** True while the boss channels its heal (mid-cast: no free-hit window). */
+export function bossMending(e: Enemy): boolean { return S.healT > 0 && S.id === e.id; }
 /** True while the boss refuses all damage (ward up). */
 export function bossWarded(e: Enemy): boolean { return e.boss && S.wardOn && e.id === S.id; }
 

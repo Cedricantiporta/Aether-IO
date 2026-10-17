@@ -44,6 +44,7 @@ import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
 import type { Interactable } from './village';
 import { spawnDarkHero, DARK_CLASSES } from './darkHero';
+import { spawnHumanBoss, HUMAN_KINDS, debugHuman, type HumanKind } from './humanBosses';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
@@ -96,6 +97,8 @@ const fixedX = new Float32Array(MAX_FIXED * 2), fixedZ = new Float32Array(MAX_FI
 let fixedN = 0;
 let miniKind: EnemyKind = 'BOAR';
 let miniName = '', miniTitle = '';
+let miniHuman: HumanKind | '' = '';   // this MINIBOSS room's guardian is a humanoid mini boss (Varn / Sable / Rook) instead of a monster
+let debugDuelCls: HeroClass | '' = '';   // debug: the dark hero class of the next DUEL room
 let miniIsBoss = false;
 /** Champion rooms / dark hero duels (not the depth-10 pre-boss): hp factor (owner: -30%). */
 const CHAMPION_HP = 0.7;
@@ -199,6 +202,10 @@ export function debugJump(b: number, idx: number, type: RoomType): void {
   if (type === 'GATEKEEPER') { finalFight = false; endingDone = false; enterRoom(b, BOSS_INDEX, hubPlan()); return; }
   enterRoom(b, idx, { type, reward: type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'DUEL' ? 'CARD' : 'NONE', preboss: type === 'MINIBOSS' && idx === PREBOSS_INDEX });
 }
+/** Debug: a champion room whose guardian is the humanoid mini boss `kind` (current biome, room `idx`). Run must be in progress. */
+export function debugHumanBoss(b: number, idx: number, kind: HumanKind): void { debugHuman.kind = kind; debugJump(b, idx, 'MINIBOSS'); }
+/** Debug: a dark champion duel against the dark hero of class `cls`. Run must be in progress. */
+export function debugDarkHero(b: number, idx: number, cls: HeroClass): void { debugDuelCls = cls; debugJump(b, idx, 'DUEL'); }
 /** Debug / QA: walk into gate `g`'s trial (as if E was pressed at it), or straight into the throne room. */
 export function debugGate(g: number): void {
   world.room.fade = 1;
@@ -457,6 +464,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
 }
 
 function rollRoomSpawns(type: RoomType): void {
+  miniHuman = '';
   const def = biomeOf(biome);
   const eliteN = (base: number, per: number) => Math.min(5, base + Math.floor(depth / per));
   switch (type) {
@@ -478,6 +486,13 @@ function rollRoomSpawns(type: RoomType): void {
         const m = MINI_BOSSES[def.minis[Math.floor(Math.random() * def.minis.length)]];
         miniIsBoss = false; miniKind = m.kind; miniName = m.name; miniTitle = m.title;
       }
+      // ~35-40% of guardian rooms (by biome) field a humanoid mini boss instead of the monster guardian (never the Slime King / Lich, never in Endless Waves)
+      miniHuman = '';
+      if (!waves.on && !prebossKing && !miniIsBoss && (debugHuman.kind || Math.random() < 0.35 + 0.01 * Math.min(5, biome))) {
+        miniHuman = debugHuman.kind || HUMAN_KINDS[Math.floor(Math.random() * HUMAN_KINDS.length)];
+        debugHuman.kind = '';
+        miniCount = 1;
+      }
       break;
     }
     case 'BOSS': {
@@ -498,7 +513,8 @@ function rollRoomSpawns(type: RoomType): void {
     }
     case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
       const own = useGameStore.getState().hero as HeroClass;
-      duelCls = plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)];
+      duelCls = debugDuelCls || (plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)]);
+      debugDuelCls = '';
       duelPending = true;
       break;
     }
@@ -559,6 +575,11 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
   if (tag === 3) { const e = spawnDarkHero(duelCls, x, z); if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; } return; }   // dark hero duels are champions too
+  if (tag === 5) {   // humanoid mini boss: champion hp factor like a guardian (-25% more in the depth-10 pre-boss)
+    const e = spawnHumanBoss(miniHuman || 'VARN', x, z);
+    if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP * (prebossRoom ? 0.75 : 1)); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }
+    return;
+  }
   if (tag === 4) { spawnEnemy(kind, tmp); events.emit('shake', { amount: 0.4 }); return; }   // an extra Endless Waves boss
   if (tag === 1) {
     const e = spawnMiniBoss(kind, tmp, miniName, miniTitle);
@@ -638,8 +659,8 @@ function tickSpawns(dt: number): void {
     {   // spawns in the open arena kept clear by roomgen (stationPos of a MINIBOSS room, radius 12)
       miniPending = false;
       const [mx, mz] = stationPos(R.radius);
-      placeMarker(miniKind, mx, mz, false, 1.5, miniIsBoss ? 2 : 1);
-      for (let i = 1; i < miniCount; i++) {   // Endless Waves: several mini-bosses at once
+      placeMarker(miniHuman ? 'HUMAN_BOSS' : miniKind, mx, mz, false, 1.5, miniHuman ? 5 : miniIsBoss ? 2 : 1);
+      for (let i = 1; i < (miniHuman ? 1 : miniCount); i++) {   // Endless Waves: several mini-bosses at once
         const a = (i / miniCount) * Math.PI * 2, rr = Math.min(9, R.radius * 0.4);
         const x = mx + Math.cos(a) * rr, z = mz + Math.sin(a) * rr;
         placeMarker(miniKind, isSpawnable(x, z) ? x : mx, isSpawnable(x, z) ? z : mz, false, 1.5, 1);

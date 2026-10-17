@@ -481,7 +481,11 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.knockback = p.knockback;
   hitOpts.source = petShot ? 'PET' : 'PLAYER';
   if (p.kind === 'BURNING_ARROW' && p.state === 2) fanPatch(p, e.pos.x, e.pos.z);
+  // attacker origin for block / backstab checks: a point behind the projectile along its travel direction
+  const vl = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
+  if (vl > 0.01) { hitOpts.fromX = p.pos.x - (p.vel.x / vl) * 6; hitOpts.fromZ = p.pos.z - (p.vel.z / vl) * 6; } else { hitOpts.fromX = undefined; hitOpts.fromZ = undefined; }
   damageEnemy(e, dmg, hitOpts);
+  hitOpts.fromX = undefined; hitOpts.fromZ = undefined;
 
   if (p.procLv > 0) { const l = p.procLv; p.procLv = 0; chainLightning(e, l); }
 

@@ -32,7 +32,7 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup, dropCrystals } from './pickups';
-import { onEnemyDeath, crabArmor, shieldBlock, bossAlive } from './enemies';
+import { onEnemyDeath, crabArmor, shieldBlock, bossAlive, SHIELD_BACKSTAB_MULT, WINDED_DMG_MULT } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
 import { hooks } from './hooks';
@@ -62,6 +62,8 @@ export interface DamageOpts {
   frost?: boolean;
   /** Environmental source (achievements count kills by it): spike trap, exploding barrel, wall slam, room hazard. */
   env?: 'TRAP' | 'BARREL' | 'SLAM' | 'HAZARD';
+  /** Where the hit comes from (a projectile's point behind its travel direction); default = the hero's position. Used by block / backstab checks. */
+  fromX?: number; fromZ?: number;
 }
 /** The env of the hit that is killing an enemy right now (read when enemyDeath is emitted). */
 let killEnv: DamageOpts['env'] | undefined;
@@ -370,7 +372,17 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
   if (e.boss && bossWarded(e)) { if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
-  if (!o.dot && e.kind === 'SHIELDBEARER' && shieldBlock(e)) return;   // braced shield: frontal hits deal 0 (BLOCKED)
+  let blockBackstab = false;
+  if (!o.dot && e.kind === 'SHIELDBEARER') {   // braced shield: frontal hits deal 0 (BLOCKED); from behind / the side they bypass it for +50%
+    const sb = o.fromX !== undefined ? shieldBlock(e, o.fromX, o.fromZ!) : shieldBlock(e, world.player.pos.x, world.player.pos.z);
+    if (sb === 1) return;
+    blockBackstab = sb === 2;
+  }
+  if (!o.dot && e.kind === 'HUMAN_BOSS') {   // humanoid mini boss: Varn's Shield Wall blocks the front arc, his banner soaks 75%
+    const hm = hooks.humanMul(e, o.fromX ?? world.player.pos.x, o.fromZ ?? world.player.pos.z);
+    if (hm <= 0) return;
+    amount *= hm;
+  }
   if (!(amount > 0)) return;
   amount *= dailyMods.dealt;   // Daily Trial: Glass Cannon
   if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)
@@ -381,8 +393,10 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!o.dot) {
     if (e.armor > 0) dealt *= 100 / (100 + e.armor * (e.armorBreakT > 0 ? ARMOR_BREAK_FACTOR : 1));
     if (e.staggerT > 0) dealt *= 1.25;
+    if (e.winT > 0) dealt *= WINDED_DMG_MULT;   // boss / mini-boss free-hit window
     // BACK ATTACK: the player is behind the enemy's facing
-    if (o.source === 'PLAYER' && !o.noBackstab) {
+    if (blockBackstab) { dealt *= SHIELD_BACKSTAB_MULT; combatStats.backstabs++; }
+    else if (o.source === 'PLAYER' && !o.noBackstab) {
       const pdx = world.player.pos.x - e.pos.x, pdz = world.player.pos.z - e.pos.z;
       const pl = Math.sqrt(pdx * pdx + pdz * pdz);
       if (pl > 0.5 && (pdx * Math.sin(e.facing) + pdz * Math.cos(e.facing)) / pl < BACKSTAB_DOT) {

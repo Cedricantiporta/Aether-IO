@@ -6,7 +6,9 @@ import { useGameStore } from '../../store';
 import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { debug, setDebug } from '../../engine/debug';
-import { debugJump, debugMalakar } from '../../engine/systems/director';
+import { debugJump, debugMalakar, debugHumanBoss, debugDarkHero } from '../../engine/systems/director';
+import { HUMAN_KINDS, HUMAN_INFO } from '../../engine/systems/humanBosses';
+import { DARK_CLASSES, DARK_NAMES } from '../../engine/systems/darkHero';
 import { ally, debugAlly } from '../../engine/systems/ally';
 import { riruru } from '../../engine/systems/riruru';
 import { world } from '../../engine/world';
@@ -130,6 +132,12 @@ export const DebugTab: React.FC = () => {
     <Line label="Special fights" hint="Malakar: the Void throne room. Riruru: a Greenwood room; the blue slime hops in once you clear it.">
       <Button size="sm" data-testid="dbg-malakar" onClick={() => fight(() => debugMalakar())}>Fight Malakar</Button>
       <Button size="sm" data-testid="dbg-riruru" onClick={() => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); })}>Fight Riruru</Button>
+    </Line>
+    <Line label="Humanoid mini boss" hint="Fight Varn / Sable / Rook in a champion room of the biome and room chosen above.">
+      {HUMAN_KINDS.map((k) => <Button key={k} size="sm" data-testid={`dbg-human-${k.toLowerCase()}`} onClick={() => fight(() => debugHumanBoss(biome, room, k))}>Fight humanoid mini boss: {HUMAN_INFO[k].name}</Button>)}
+    </Line>
+    <Line label="Fight Dark Hero" hint="A dark champion duel of the class you pick, in the biome and room chosen above.">
+      {DARK_CLASSES.map((c) => <Button key={c} size="sm" data-testid={`dbg-dark-${c.toLowerCase()}`} onClick={() => fight(() => debugDarkHero(biome, room, c))}>{DARK_NAMES[c].name.replace('The ', '')}</Button>)}
     </Line>
     <Line label="Ally encounter" hint="An adventurer fights beside you for one combat room (normally once per biome). Fight: a fresh Greenwood room with the ally. Join now: adds the ally to the fight you are in (or, between fights, to the next combat room).">
       <Button size="sm" data-testid="dbg-ally" onClick={() => fight(() => { ally.force = true; debugJump(0, 1, 'COMBAT'); })}>Fight with ally</Button>

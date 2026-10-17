@@ -36,6 +36,7 @@ function makeEnemy(id: number): Enemy {
     burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, fearT: 0, slowT: 0, slowFactor: 0,
     armor: 0, armorBreakT: 0, burnStacks: 0, burnStackCd: 0, mini: false, stagger: 0, staggerMax: 0, staggerT: 0, staggerCd: 0,
     trickCd: 0, trickT: 0, trickKind: 0, slamDmg: 0, slamT: 0, chillStacks: 0, chillT: 0, frostT: 0, spKind: 0, spT: 0, spStep: 0, spCd: 0, decoy: false, hideT: 0, shellT: 0,
+    winT: 0, winCd: 0, winPhase: 0, winBusy: false,
     phase: 0, pattern: 0, patternT: 0, angle: 0, pullCount: 0,
   };
 }
