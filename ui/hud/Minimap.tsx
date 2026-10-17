@@ -12,6 +12,7 @@ import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
 import { isHarvestNode, islandRadius, mapSeed } from '../../engine/mapgen';
 import { BEACH, DOCK } from '../../engine/beachData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
+import { camp, campOn } from '../../engine/campPaths';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel } from '../../engine/roomDefs';
 import { feat, riverPoint } from '../../engine/roomFeatures';
@@ -97,7 +98,14 @@ export const Minimap: React.FC = () => {
     // arena edge
     ctx.strokeStyle = 'rgba(233,185,73,.55)'; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 4 * DPR]);
     ctx.beginPath();
-    if (room) {
+    if (room && campOn() && camp.cur) {
+      // biome camp: the winding road (both edges of the walkable strip, filled)
+      const P = camp.cur;
+      ctx.beginPath();
+      for (let i = 0; i < P.n; i++) { const x = cx + (P.px[i] + P.tz[i] * P.hw[i]) * k, y = cx + (P.pz[i] - P.tx[i] * P.hw[i]) * k; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      for (let i = P.n - 1; i >= 0; i--) ctx.lineTo(cx + (P.px[i] - P.tz[i] * P.hw[i]) * k, cx + (P.pz[i] + P.tx[i] * P.hw[i]) * k);
+      ctx.closePath(); ctx.fillStyle = 'rgba(120,128,120,.22)'; ctx.fill();
+    } else if (room) {
       // run room: the star-convex outline from the shape table (theta_i = -PI + i*TAU/N)
       for (let i = 0; i <= SHAPE_N; i += 4) {
         const th = -Math.PI + (i * Math.PI * 2) / SHAPE_N, rr = shape.table[i] * k;

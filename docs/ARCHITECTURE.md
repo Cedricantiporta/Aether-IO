@@ -77,6 +77,13 @@ pointer) every frame — the engine never touches the camera.
   (`finishRunVictory` -> `endRun({victory})`). After biome 6 the cycle loops with ever higher depth. Death = GAME_OVER, loot kept.
   Render: `render/Room.tsx` (ground, stations, portals + labels, spawn markers) + `Props` (same instanced scenery path, biome tint) +
   `biomeLook.tsx` (fog / sky / light per biome). Scene shows Room during a run and Terrain/Town only in the town.
+* Biome camps (first floor of every biome after Greenwood, `CAMP` room): a hand-authored TRANSITION PATH, not a procedural disc.
+  `engine/campPaths.ts` = one `CampLayout` per transition (centre line, width + bulges, ground blend, wall / decor stretches,
+  props, scatter, set pieces, shards, edge treatment; all deterministic) + one generic builder `buildCampRoom` (called from
+  `roomgen.buildRoom(..., campPath)`): continuous collider chains down both sides + caps (so walls/edges are ordinary
+  obstacles), a polar envelope in `roomShape.shape` for every `edgeLimit` clamp, and `roomShape.fixed` (arrival / waystation /
+  exit spots; `buildShape` switches it off for every other room). Render: `render/CampPath.tsx` (two-layer old->new ground,
+  set pieces, void shards) + the usual `Props`; the minimap draws the road polygon.
 * Quests (`quests.ts`): 3 persistent villager quests, progress from engine events, claim draws a replacement.
 * Loot (`loot.ts`): stackable (99) sellable trade goods per source with COMMON..MYTHIC tables; coin drops are rare,
   income = selling loot ("Sell all loot" in Supplies) + room bonus. Crystals/ore drop SHARD pickups (materials).

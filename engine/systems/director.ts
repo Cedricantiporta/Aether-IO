@@ -26,6 +26,7 @@ import {
   BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
+import { camp, campStartFacing } from '../campPaths';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
@@ -50,7 +51,7 @@ import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
 import { maybeAlly, resetAlly, removeAlly } from './ally';
-import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper } from '../wanderers';
+import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper, placeCampWanderer } from '../wanderers';
 import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
 // Daily Trial (dailyChallenge.ts): a short seeded tower-style climb; these hooks only apply while daily.on
 import { daily, dailyPlan, dailyBiome, dailyRoomSeed, dailyDepth, climbTitle, climbFloor, DAILY_FLOORS } from '../../dailyChallenge';
@@ -290,12 +291,13 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
 
   const seed = daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
   const R = waves.on ? WAVES_ARENA_R : runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);   // (Endless Waves: one boss-size arena)
-  buildRoom(b, p.type, R, seed, idx);
-  world.room.radius = R;
+  const campPath = p.type === 'CAMP' && !p.epilogue && !p.dream && runInfo.mode === 'ADVENTURE';   // the biome camp is a hand-authored transition path (engine/campPaths.ts)
+  buildRoom(b, p.type, R, seed, idx, campPath);
+  world.room.radius = campPath && camp.cur ? Math.round(camp.cur.len / 2) : R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
 
-  r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = R;
+  r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false;
   for (const po of r.portals) po.active = false;
   for (const m of r.markers) m.active = false;
@@ -315,7 +317,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
 
   const pl = world.player;
   const [sx, sz] = startPos(R);
-  pl.pos.set(sx, 0, sz); pl.vel.set(0, 0, 0); pl.dashT = 0; pl.facing = Math.PI;
+  pl.pos.set(sx, 0, sz); pl.vel.set(0, 0, 0); pl.dashT = 0; pl.facing = campPath ? campStartFacing() : Math.PI;
   if (p.type === 'GATEKEEPER') enterHub(); else if (p.gate !== undefined) { gateState.on = true; gateState.cur = p.gate; }
   world.pet.pos.set(pl.pos.x + 1.2, 1, pl.pos.z + 1.2);
   {   // summons (necromancer skeletons / golem) arrive in a ring beside the hero instead of walking in from where the last room left them
@@ -351,6 +353,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
   maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
+  if (campPath) placeCampWanderer(b, cx, cz + 5);   // a traveller rests at the waystation (the camp's NPC)
   if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
 }
 

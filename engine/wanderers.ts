@@ -117,6 +117,17 @@ export function maybeWanderer(biome: number, index: number, type: string, gateOr
   }
 }
 
+/** The biome camp's waystation: a traveller (a wanderer of this biome not met yet this run) is resting by the fire. */
+export function placeCampWanderer(biome: number, x: number, z: number): void {
+  if (runInfo.mode !== 'ADVENTURE') return;
+  const b = biome % BIOMES.length;
+  const pool = WANDERERS.map((w, i) => i).filter((i) => !met.has(WANDERERS[i].id) && WANDERERS[i].biomes.includes(b) && !(WANDERERS[i].id === 'FEN' && bounty.on));
+  if (!pool.length) return;
+  const i = pool[Math.floor(Math.random() * pool.length)];
+  met.add(WANDERERS[i].id);
+  wander.on = true; wander.def = i; wander.x = x; wander.z = z; wander.used = false; wander.ver++;
+}
+
 function linesFor(d: WandererDef): string[] {
   const b = world.room.biome % BIOMES.length;
   return (d.lines[b] ?? d.lines[0]).slice();

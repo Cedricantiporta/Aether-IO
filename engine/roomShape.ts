@@ -23,6 +23,10 @@ export const shape = {
   version: 0,
 };
 
+/** Hand-authored rooms (engine/campPaths.ts: the biome camp's transition path) pin the arrival / station / exit spots here;
+ *  buildShape() switches it off again, so every procedural room keeps the shape-derived spots. */
+export const fixed = { on: false, sx: 0, sz: 0, stx: 0, stz: 0, ex: 0, ez: 0, dx: 0, dz: -1 };
+
 /** QA hook: set `dbg.force` to build every following room with that outline (also reachable from tests via import). */
 export const dbg: { force: ShapeKind | null } = { force: null };
 
@@ -95,6 +99,7 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 /** Builds the outline for a room of nominal radius R (walkable limit ~ R + 1 for a disc). Fills `shape`. */
 export interface ShapeOpts { force?: ShapeKind; weights?: [string, number][]; long?: boolean }
 export function buildShape(type: string, R: number, seed: number, opts?: ShapeOpts): ShapeKind {
+  fixed.on = false;
   const rnd = mulberry(seed ^ 0x7f4a7c15);
   let picked = pickKind(type, rnd);
   if (opts?.weights && type !== 'BOSS') {   // biome outline table (interior halls prefer rectangles / crosses)
@@ -160,21 +165,29 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
 
 /** Hero arrival point (back side of the room). */
 export function startPoint(out: [number, number]): void {
+  if (fixed.on) { out[0] = fixed.sx; out[1] = fixed.sz; return; }
   const k = 0.55 * shapeAt(Math.atan2(-shape.fz, -shape.fx));
   out[0] = -shape.fx * k; out[1] = -shape.fz * k;
 }
 /** Station (fountain / merchant / chest / altar) point, just ahead of the centroid. */
 export function stationPoint(out: [number, number]): void {
+  if (fixed.on) { out[0] = fixed.stx; out[1] = fixed.stz; return; }
   out[0] = shape.fx * shape.baseR * 0.1; out[1] = shape.fz * shape.baseR * 0.1;
 }
 /** The boss-shortcut door: behind the middle exit, 10 units further into the room. */
 export function shortcutPoint(out: [number, number]): void {
+  if (fixed.on) { out[0] = fixed.ex - fixed.dx * 9; out[1] = fixed.ez - fixed.dz * 9; return; }
   portalPoint(1, 3, out);
   const l = Math.hypot(out[0], out[1]);
   if (l > 14) { const k = (l - 10) / l; out[0] *= k; out[1] *= k; }
 }
 /** Exit portal i of n: spread across the width at the front-most spot that keeps >= 5 of clearance to the outline. */
 export function portalPoint(i: number, n: number, out: [number, number]): void {
+  if (fixed.on) {   // the far end of the authored path: the slots spread across it
+    const lat = n === 2 ? (i === 0 ? -1 : 1) * 4.2 : n === 3 ? (i - 1) * 5.2 : 0;
+    out[0] = fixed.ex - fixed.dz * lat; out[1] = fixed.ez + fixed.dx * lat;
+    return;
+  }
   const fa = Math.atan2(shape.fz, shape.fx);
   const w = Math.min(shapeAt(fa + Math.PI / 2), shapeAt(fa - Math.PI / 2));
   let lat = 0;

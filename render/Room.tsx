@@ -34,6 +34,8 @@ import { Props } from './Props';
 import { labelMaterial } from './label';
 import type { QualityCfg } from './quality';
 import { SpecialRooms } from './SpecialRooms';
+import { CampGround, CampPieces, CampShards } from './CampPath';
+import { camp, campOn } from '../engine/campPaths';
 
 const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
@@ -41,7 +43,7 @@ const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
 // ------------------------------------------------------------------ ground ---
 /** Tileable detail textures per ground style (built once each): [albedo multiplier, emissive glow or null]. */
 const detailTex: Partial<Record<GroundStyle, [CanvasTexture, CanvasTexture | null]>> = {};
-function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null] {
+export function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null] {
   const hit = detailTex[style]; if (hit) return hit;
   const N = 512, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
   const c = mk(), g = c.getContext('2d')!;
@@ -135,7 +137,7 @@ function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null]
 /** World units covered by one repeat of the detail texture. */
 /** How far the floor sinks under rivers / lakes (the liquid surface sits a little above the bed). */
 export const SINK = 2.4;
-const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 7, MARBLE: 6, SAND: 9, SNOW: 8, BASALT: 10, VOID: 9 };
+export const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 7, MARBLE: 6, SAND: 9, SNOW: 8, BASALT: 10, VOID: 9 };
 
 /** Distance outside the nearest liquid edge (negative = inside the liquid). */
 function liquidEdge(x: number, z: number): number {
@@ -868,12 +870,16 @@ export function Room({ q }: { q: QualityCfg }) {
   const r = world.room;
   const def = biomeOf(r.biome);
   const tower = runInfo.mode === 'TOWER';
+  const isCamp = r.active && !tower && r.plan.type === 'CAMP' && campOn();   // the biome camp: a hand-authored transition path (render/CampPath.tsx)
+  const campSea = isCamp && camp.cur ? (camp.cur.layout.edge.some((e) => e[1] === 'sea') ? 'sea' : camp.cur.layout.edge.some((e) => e[1] === 'lava') ? 'lava' : null) : null;
   return (
     <>
-      {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
+      {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : isCamp ? <CampGround key={ver} ver={ver} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
+      {r.active && isCamp && <><CampPieces key={'cp' + ver} ver={ver} /><CampShards key={'cs' + ver} ver={ver} /></>}
       {r.active && !tower && <RoomWater />}
-      {r.active && !tower && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
+      {r.active && !tower && !isCamp && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
+      {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
       <Stations />
       <CampProps />
       {!tower && <Suspense fallback={null}><Wanderer /><AllyActor /></Suspense>}
