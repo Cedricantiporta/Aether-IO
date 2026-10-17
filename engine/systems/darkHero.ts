@@ -11,8 +11,11 @@
 //               damage) | dash Blink Nova (frost nova at both ends, may freeze) | ult Meteor Cataclysm (colossal
 //               meteor, 2 fire rings, molten crater with lava spouts)
 //   BARBARIAN   thrown boomerang axes + melee (every 6th throw a Stamp) | Cross Slash (rolling burning X) | Whirlwind
-//               (spins, tugs you in, heals on hits) | Earthsplitter (fissure of stone spikes, stun) | dash Bloodrage
-//               Leap (slam + Rage) | ult Titan's Wrath (terrifying roar, giant form with quaking steps, final slam)
+//               (spins, tugs you in, heals on hits) | Earthsplitter (fissure of stone spikes, stun) | Blood Cleave (close
+//               double crescent slash) | Ground Rupture (3 lanes of erupting spikes) | dash Bloodrage Leap (slam + Rage) |
+//               ult Titan's Wrath (terrifying roar, giant form with quaking steps, final slam)
+// Spacing: melee champions hold ~2.2-2.8 u from the hero (their weapon reach), circle-strafe between attacks and step back
+// after a combo; casters kite at range. keepApart() hard-separates the bodies so a champion never sits inside the hero.
 //   KNIGHT      sword arcs (every 6th a Smite ray) | Holy Wave (wide crescent) | Shield Wall (burst, then -50% damage
 //               taken + slow heal) | Judgment (holy rays strike around you one after another, stun) | dash Holy Charge
 //               (invulnerable charge) | ult Divine Avatar (column of light, then 8 s radiant: faster, stronger, every
@@ -36,7 +39,7 @@ import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } f
 import type { HeroClass } from '../../types';
 import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
-import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul } from './enemies';
+import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul, strikeT } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -60,12 +63,12 @@ export const DARK_NAMES: Record<HeroClass, { name: string; title: string }> = {
 const RANGED: Record<HeroClass, boolean> = { ARCHER: true, WIZARD: true, BARBARIAN: false, KNIGHT: false, NECROMANCER: true };
 
 /** Pattern ids (e.pattern): 1..3 the class skills (keys 1-3 of the hero), then the class dash, the ultimate, a basic swing. */
-const DASH = 4, ULT = 5, SWING = 6;
+const DASH = 4, ULT = 5, SWING = 6, CLEAVE = 7, RUPTURE = 8;   // (CLEAVE / RUPTURE: the dark berserker's signature moves)
 /** Cooldowns (s) per class: [basic, skill 1, skill 2, skill 3, dash, ultimate]. */
 const CD: Record<HeroClass, number[]> = {
   ARCHER: [1.1, 7, 8, 11, 5, 30],
   WIZARD: [1.6, 9, 14, 12, 6, 32],
-  BARBARIAN: [1.4, 6.9, 12, 10, 6, 32],   // (Cross Slash +15% like the hero's)
+  BARBARIAN: [1.4, 6.9, 12, 10, 6, 32, 0, 7, 11],   // (Cross Slash +15% like the hero's)
   KNIGHT: [1.1, 5.5, 13, 9, 6, 32],
   NECROMANCER: [1.4, 11, 14, 12, 6, 34],   // (Raise Dead 11 s, Bone Ward 14 s like the hero's)
 };
@@ -73,7 +76,7 @@ const CD: Record<HeroClass, number[]> = {
 const NAMES: Record<HeroClass, string[]> = {
   ARCHER: ['', 'Gale Arrow!', 'Lightpiercer!', 'Frost Field!', 'Shadow Roll!', 'Storm of a Thousand Arrows!'],
   WIZARD: ['', 'Fireballs!', 'Storm Orbs!', 'Singularity!', 'Blink Nova!', 'Meteor Cataclysm!'],
-  BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!"],
+  BARBARIAN: ['', 'Cross Slash!', 'Whirlwind!', 'Earthsplitter!', 'Bloodrage Leap!', "Titan's Wrath!", '', 'Blood Cleave!', 'Ground Rupture!'],
   KNIGHT: ['', 'Holy Wave!', 'Shield Wall!', 'Judgment!', 'Holy Charge!', 'Divine Avatar!'],
   NECROMANCER: ['', 'Raise Dead!', 'Bone Ward!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
 };
@@ -86,6 +89,7 @@ const C_VIOLET = 0xa04aff, C_ICE = 0x8fd8ff, C_FIRE = 0xff6a3a, C_BLOOD = 0xff3a
 /** Read by render/DarkHero.tsx. atk / cast / ult are pulse counters (a change = play the one-shot). */
 export const darkView = {
   id: -1, cls: 'KNIGHT' as HeroClass, atk: 0, cast: 0, ult: 0, air: 0, spin: 0, spinR: 4.5, guard: 0, enraged: 0,
+  dash: 0,       // a dash / roll / charge / leap is running (afterimage trail)
   slash: 0, slashX: 0, slashZ: 0, slashYaw: 0,   // (legacy crescent pulse, unused: Holy Wave is a real shot now)
   charge: 0,     // 0..1 charging a ball of light / fire in front of the hero (Lightpiercer, Fireballs, Bone Spear...)
   avatar: 0,     // Divine Avatar running
@@ -95,7 +99,7 @@ export const darkView = {
 };
 
 /** Skill shots (own pool, own collision: they pierce and hit the hero once). Tags drive the render look. */
-export const SHOT_GALE = 1, SHOT_LIGHT = 2, SHOT_FIRE = 3, SHOT_XSLASH = 4, SHOT_HOLY = 5, SHOT_BONE = 6, SHOT_SLASH = 7;
+export const SHOT_GALE = 1, SHOT_LIGHT = 2, SHOT_FIRE = 3, SHOT_XSLASH = 4, SHOT_HOLY = 5, SHOT_BONE = 6, SHOT_SLASH = 7, SHOT_CLEAVE = 8;
 export interface DarkShot { active: boolean; tag: number; x: number; z: number; vx: number; vz: number; life: number; maxLife: number; r: number; dmg: number; hit: boolean; trail: number; n: number; big: boolean }
 export const darkShots: DarkShot[] = Array.from({ length: 20 }, () => ({ active: false, tag: 0, x: 0, z: 0, vx: 0, vz: 0, life: 0, maxLife: 1, r: 1, dmg: 0, hit: false, trail: 0, n: 0, big: false }));
 /** Storm Orbs (wizard): positions written each frame while they spin. */
@@ -103,7 +107,7 @@ export const darkOrbs = { n: 0, x: [0, 0, 0], z: [0, 0, 0] };
 
 const S = {
   id: -1, cls: 'KNIGHT' as HeroClass,
-  cd: [0, 0, 0, 0, 0, 0, 0], gap: 0, strafe: 1, strafeT: 0,
+  cd: [0, 0, 0, 0, 0, 0, 0, 0, 0], gap: 0, strafe: 1, strafeT: 0, backT: 0, comboN: 0, jab: false, baseRadius: 1,
   wind: 0, act: 0, dirX: 0, dirZ: 1, fromX: 0, fromZ: 0, toX: 0, toZ: 0, tick: 0, len: 0, flag: false,
   basicN: 0, inv: 0, blockText: 0, mul: 1, baseScale: 1.2, baseSpeed: 4.6,
   rainT: 0, rainX: 0, rainZ: 0, rainAcc: 0,
@@ -141,13 +145,15 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
   e.mini = true; e.staggerMax = 80; e.armor = Math.round(e.armor * 1.25);
   rollEliteShield(e);
   e.xp *= 20; e.pattern = 0;
+  e.radius = 1.0;   // (a body that reads as the model's size: bigger standoff + melee reach, see keepApart / aiDarkHero)
   if (!RANGED[cls]) { e.contactDamage *= 1.25; e.speed *= 1.08; }
   else e.contactDamage *= 0.6;
   resetFight();
-  S.id = e.id; S.cls = cls; S.baseScale = e.scale; S.baseSpeed = e.speed;
+  S.id = e.id; S.cls = cls; S.baseScale = e.scale; S.baseSpeed = e.speed; S.baseRadius = e.radius;
   const c = CD[cls];
   S.cd[0] = 1.2; S.cd[1] = c[1] * 0.4; S.cd[2] = c[2] * 0.6; S.cd[3] = c[3] * 0.5; S.cd[DASH] = 2.5; S.cd[ULT] = 999; S.cd[SWING] = 0; S.gap = 1.2;
   S.strafe = Math.random() < 0.5 ? 1 : -1; S.strafeT = 2;
+  if (cls === 'BARBARIAN') { S.cd[CLEAVE] = 3; S.cd[RUPTURE] = 7; }
   if (cls === 'NECROMANCER') S.cd[1] = 2.5;   // opens with Raise Dead
   if (cls === 'WIZARD') S.cd[2] = 5;
   darkView.id = e.id; darkView.cls = cls;
@@ -161,13 +167,13 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
 
 function resetFight(): void {
   S.inv = 0; S.mul = 1; S.rainT = 0; S.orbT = 0; S.titanT = 0; S.avatarT = 0; S.guardT = 0; S.rageT = 0; S.golemId = -1; S.golemT = 0;
-  S.ultArmed = false; S.basicN = 0; S.flag = false; S.healAcc = 0; wardT = 0;
+  S.ultArmed = false; S.basicN = 0; S.flag = false; S.healAcc = 0; wardT = 0; S.backT = 0; S.comboN = 0; S.jab = false;
   for (let i = 0; i < axes.length; i++) { const a = axes[i]; if (a && a.kind === 'AXE') a.active = false; axes[i] = null; }
   for (const s of darkShots) s.active = false;
   for (const p of pend) p.active = false;
   for (const f of fields) { if (f.z && f.z.hostile && f.z.kind === f.kind) f.z.active = false; f.z = null; }
   darkOrbs.n = 0;
-  darkView.air = 0; darkView.spin = 0; darkView.guard = 0; darkView.enraged = 0; darkView.charge = 0; darkView.avatar = 0; darkView.titan = 0; darkView.rage = 0; darkView.orbR = 0;
+  darkView.air = 0; darkView.spin = 0; darkView.guard = 0; darkView.enraged = 0; darkView.charge = 0; darkView.avatar = 0; darkView.titan = 0; darkView.rage = 0; darkView.orbR = 0; darkView.dash = 0;
 }
 
 /** Called from enemies.onEnemyDeath: rewards, raised skeletons crumble, boss bar off. */
@@ -178,7 +184,7 @@ export function darkHeroDied(e: Enemy): void {
   }
   S.id = -1;
   resetFight();
-  e.scale = S.baseScale;
+  e.scale = S.baseScale; e.radius = S.baseRadius;
   world.boss.active = false; world.boss.hp = 0; world.boss.abilityT = 0;
   poofAllEnemies();   // a duel: whatever it raised goes down with it
   events.emit('shake', { amount: 0.7 });
@@ -323,9 +329,11 @@ function effects(eff: number, dmg: number, x: number, z: number): void {
   if (eff & POISON) applyPlayerDebuff('POISON', 3, Math.max(2, dmg * 0.1));
   if (eff & KNOCK) { const p = world.player.pos, dx = p.x - x, dz = p.z - z, l = Math.hypot(dx, dz) || 1; shove(dx / l, dz / l, 2.2); }
 }
-function fx(kind: string, x: number, z: number, r: number): void {
-  events.emit('darkFx', { pos: fxPos.set(x, 0, z), kind, radius: r });
+function fx(kind: string, x: number, z: number, r: number, yaw?: number): void {
+  events.emit('darkFx', { pos: fxPos.set(x, 0, z), kind, radius: r, yaw });
 }
+/** Impact sparks on the hero (a champion's hit landed). */
+function hitSpark(): void { const p = world.player.pos; fx('HIT', p.x, p.z, 1.6); }
 /** Blink / Soul Step look (not the 'blink' event: that one counts the hero's own dashes). */
 function blinkFx(from: Vector3, to: Vector3): void {
   events.emit('darkFx', { pos: from.clone(), kind: 'BLINK', radius: 4.5, to: to.clone() });
@@ -353,7 +361,7 @@ function wants(k: number, d: number): boolean {
   switch (S.cls) {
     case 'ARCHER': return k === 1 ? d < 22 : k === 2 ? d < 26 : k === 3 ? d > 4 && d < 19 : d < 5.5;
     case 'WIZARD': return k === 1 ? d < 20 : k === 2 ? d < 10 && S.orbT <= 0 : k === 3 ? d < 20 : d < 5.5;
-    case 'BARBARIAN': return k === 1 ? d > 3 && d < 16 : k === 2 ? d < 6 : k === 3 ? d > 4 && d < 22 : d > 6 && d < 14;
+    case 'BARBARIAN': return k === 1 ? d > 3 && d < 16 : k === 2 ? d < 6 : k === 3 ? d > 4 && d < 22 : k === CLEAVE ? d < 4.5 : k === RUPTURE ? d > 3 && d < 14 : d > 6 && d < 14;
     case 'KNIGHT': return k === 1 ? d < 14 : k === 2 ? d < 7 && S.guardT <= 0 : k === 3 ? d < 20 : d > 5 && d < 15;
     default: return k === 1 ? aliveAdds() < 3 : k === 2 ? unwardedAdds() > 0 : k === 3 ? d < 20 : d < 5.5;   // NECROMANCER
   }
@@ -414,11 +422,20 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
     else if (k === 3) { S.wind = 0.7; S.act = 0.3; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 30, 3.2, 0.7 + 0.5, 0xd8a070); }
     else if (k === DASH) {   // Bloodrage Leap onto the hero
       S.wind = 0.3; S.act = 0.6; S.fromX = e.pos.x; S.fromZ = e.pos.z;
-      const l = Math.min(d, 14); S.toX = e.pos.x + S.dirX * l; S.toZ = e.pos.z + S.dirZ * l;
+      const l = Math.min(Math.max(d - 2.6, 2), 14); S.toX = e.pos.x + S.dirX * l; S.toZ = e.pos.z + S.dirZ * l;   // (lands a weapon's reach short: never on top of the hero)
       strike(S.toX, S.toZ, 4.5, S.wind + S.act, P * 1.6, STUN, 'SLAM', C_BLOOD);
-    } else { S.wind = 0.8; S.act = 0.3; warnCircle(e.pos.x, e.pos.z, 9, 0.8, C_BLOOD); }
+      warnCircle(S.toX, S.toZ, 1.6, S.wind + S.act, C_VIOLET);   // inner mark: the touchdown point
+    } else if (k === CLEAVE) {   // Blood Cleave: two wide crescent slashes right in front of it
+      S.wind = 0.5; S.act = 0.55;
+      warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 7, 6.4, 0.5, C_BLOOD);
+      warnCircle(e.pos.x, e.pos.z, 3.2, 0.5, C_VIOLET);
+    } else if (k === RUPTURE) {   // Ground Rupture: three lanes of spikes fan out
+      S.wind = 0.7; S.act = 0.5;
+      const base = Math.atan2(S.dirX, S.dirZ);
+      for (let i = -1; i <= 1; i++) { const a = base + i * 0.34; warnLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 15, 2.4, 0.7, i === 0 ? C_BLOOD : C_VIOLET); }
+    } else { S.wind = 0.8; S.act = 0.3; warnCircle(e.pos.x, e.pos.z, 9, 0.8, C_BLOOD); warnCircle(e.pos.x, e.pos.z, 4.5, 0.8, C_VIOLET); }
   } else if (c === 'KNIGHT') {
-    if (k === SWING) { S.wind = 0.3; S.act = 0.15; }
+    if (k === SWING) { S.wind = 0.3; S.act = 0.15; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 6, 3.4, 0.3, C_HOLY); }
     else if (k === 1) { S.wind = 0.55; S.act = 0.2; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 19, 6, 0.55, C_HOLY); }
     else if (k === 2) { S.wind = 0.35; S.act = 0.2; strike(e.pos.x, e.pos.z, 6.5, 0.35, P * 1.2, KNOCK, 'GUARD', C_HOLY); }
     else if (k === 3) {   // Judgment: rays fall around the hero one after another
@@ -429,7 +446,8 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
         tmp.set(px + Math.cos(a) * rr, 0, pz + Math.sin(a) * rr); clampIn(tmp);
         strike(tmp.x, tmp.z, 3, 0.9 + i * 0.22, P * 1.1, STUN, 'JUDGMENT', C_HOLY, 'MAGIC');
       }
-    } else if (k === DASH) { S.wind = 0.55; S.len = Math.min(d + 3, 14); S.act = S.len / 26; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, S.len, 2.4, 0.55, C_HOLY); }
+    } else if (k === DASH) { S.wind = 0.55; S.len = Math.min(Math.max(d - 1.9, 3), 14); S.act = S.len / 26;   // (stops at the hero, never through it)
+      warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, S.len, 2.4, 0.55, C_HOLY); }
     else { S.wind = 0.9; S.act = 0.3; strike(e.pos.x, e.pos.z, 8, 0.9, P * 1.8, STUN, 'AVATAR', C_HOLY, 'MAGIC'); }
   } else {   // NECROMANCER
     if (k === 1) {
@@ -453,7 +471,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
       warnCircle(S.toX, S.toZ, 5.5, T, C_VIOLET);
     }
   }
-  if (k !== SWING && k !== DASH) darkView.cast++;
+  if (k !== SWING && k !== DASH && k !== CLEAVE) darkView.cast++;
 }
 /** Windup over: the skill fires. */
 function release(e: Enemy, px: number, pz: number): void {
@@ -492,7 +510,21 @@ function release(e: Enemy, px: number, pz: number): void {
     } else events.emit('shake', { amount: 0.25 });
   } else if (c === 'BARBARIAN') {
     if (k === 1) { shot(e, SHOT_XSLASH, S.dirX, S.dirZ, 12, 1.75, 1.65, P * 1.6, 1.6, true); darkView.atk++; events.emit('shake', { amount: 0.15 }); }   // (r 1.65: smaller like the hero's, was 2.2)
-    else if (k === 2) { darkView.spin = 1; darkView.spinR = 4.5; }
+    else if (k === 2) { darkView.spin = 1; darkView.spinR = 4.5; fx('WHIRL', e.pos.x, e.pos.z, 4.5); events.emit('shake', { amount: 0.18 }); }
+    else if (k === CLEAVE) { cleave(e); }
+    else if (k === RUPTURE) {   // Ground Rupture: 3 lanes, spikes erupt outward one after another
+      const base = Math.atan2(S.dirX, S.dirZ);
+      for (let l = -1; l <= 1; l++) {
+        const a = base + l * 0.34, ax = Math.sin(a), az = Math.cos(a);
+        for (let i = 0; i < 8; i++) {
+          const dd = 2.2 + i * 1.6, x = e.pos.x + ax * dd, z = e.pos.z + az * dd;
+          hostileFx('SPIKE', x, z, 0.05 + i * 0.06, 1.2 + i * 0.06, 1.7, P * 1.1, 0.4, 0xa03a4a);
+        }
+        tmp.set(e.pos.x + ax * 15, 0, e.pos.z + az * 15); tmp2.set(e.pos.x, 0, e.pos.z);
+        events.emit('darkFx', { pos: tmp2.clone(), kind: 'RUPTURE', radius: 15, to: tmp.clone(), yaw: a });
+      }
+      darkView.atk++; events.emit('shake', { amount: 0.22 });
+    }
     else if (k === 3) {   // Earthsplitter: a fissure of erupting spikes down the lane
       const L = 28, n = 14;
       for (let i = 0; i < n; i++) {
@@ -503,11 +535,11 @@ function release(e: Enemy, px: number, pz: number): void {
       }
       events.emit('fissure', { from: e.pos.clone(), dir: new Vector3(S.dirX, 0, S.dirZ), length: L + 3 });
       darkView.atk++;
-    } else if (k === DASH) { tmp.set(S.fromX, 0, S.fromZ); tmp2.set(S.toX, 0, S.toZ); events.emit('leap', { from: tmp.clone(), to: tmp2.clone(), dur: S.act }); S.inv = S.act; }
+    } else if (k === DASH) { tmp.set(S.fromX, 0, S.fromZ); tmp2.set(S.toX, 0, S.toZ); events.emit('leap', { from: tmp.clone(), to: tmp2.clone(), dur: S.act }); S.inv = S.act; fx('LEAP', S.fromX, S.fromZ, 4.5); }
     else {   // ULT: the roar terrifies (stun + slow), then giant form
       if (playerIn(e.pos.x, e.pos.z, 9)) { damagePlayer(P * 0.8, { pos: e.pos, kind: 'PHYSICAL' }); if (applyPlayerDebuff('STUN', 0.9)) events.emit('floatText', { pos: world.player.pos, text: 'TERRIFIED', color: 0xff8a6a, scale: 0.8, dy: 0.9 }); slowPlayer(3); }
       fx('ROAR', e.pos.x, e.pos.z, 9);
-      S.titanT = 6; S.stepT = 0.5; S.mul = 1.4; e.scale = S.baseScale * 1.8; e.speed = S.baseSpeed * 1.15; darkView.titan = 1;
+      S.titanT = 6; S.stepT = 0.5; S.mul = 1.4; e.scale = S.baseScale * 1.8; e.radius = S.baseRadius * 1.5; e.speed = S.baseSpeed * 1.15; darkView.titan = 1;
       events.emit('shake', { amount: 0.5 });
     }
   } else if (c === 'KNIGHT') {
@@ -548,9 +580,26 @@ function release(e: Enemy, px: number, pz: number): void {
   }
 }
 
+/** One Blood Cleave crescent (the dark berserker's wide arc slash). */
+function cleave(e: Enemy): void {
+  aimAt(e, world.player.pos.x, world.player.pos.z);
+  requestYaw(Math.atan2(S.dirX, S.dirZ));
+  shot(e, SHOT_CLEAVE, S.dirX, S.dirZ, 24, 0.3, 3.4, pw(e) * 1.5, 0.8, true);
+  fx('CLEAVE', e.pos.x, e.pos.z, 4, Math.atan2(S.dirX, S.dirZ));
+  darkView.atk++; events.emit('shake', { amount: 0.18 });
+}
+
 /** Skill active phase (dashes, leaps, whirlwind). */
 function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
   const k = e.pattern, c = S.cls;
+  darkView.dash = k === DASH ? 1 : 0;
+  if (c === 'BARBARIAN' && k === CLEAVE) {   // step into the first slash, then the second one cuts back
+    aimAt(e, px, pz);
+    const d = Math.hypot(px - e.pos.x, pz - e.pos.z), sp = d > 2.7 ? 8 : 0;
+    e.vel.set(S.dirX * sp, 0, S.dirZ * sp); requestYaw(Math.atan2(S.dirX, S.dirZ));
+    if (!S.flag && e.stateT >= 0.28) { S.flag = true; cleave(e); }
+    return;
+  }
   if (c === 'ARCHER' && k === DASH) { e.vel.set(S.dirX * 20, 0, S.dirZ * 20); requestYaw(Math.atan2(S.dirX, S.dirZ)); return; }
   if (c === 'BARBARIAN' && k === DASH) {
     const f = Math.min(1, e.stateT / S.act);
@@ -562,14 +611,15 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
   }
   if (c === 'BARBARIAN' && k === 2) {   // Whirlwind: chase at reduced speed, tug the hero in, hit every 0.3 s in r 4.5, heal on hits
     aimAt(e, px, pz);
-    e.vel.set(S.dirX * e.speed * 0.7, 0, S.dirZ * e.speed * 0.7);
+    const wd = Math.hypot(px - e.pos.x, pz - e.pos.z), ws = wd > 2.9 ? e.speed * 0.7 : wd < 2.2 ? -e.speed * 0.4 : 0;   // (spins at melee spacing, never through the hero)
+    e.vel.set(S.dirX * ws, 0, S.dirZ * ws);
     const p = world.player.pos, dx = e.pos.x - p.x, dz = e.pos.z - p.z, dd = Math.hypot(dx, dz) || 1;
-    if (dd < 7 && dd > 1.6) shove(dx / dd, dz / dd, 1.4 * dt);
+    if (dd < 7 && dd > 2.5) shove(dx / dd, dz / dd, 1.4 * dt);
     S.tick -= dt;
     if (S.tick <= 0) {
       S.tick = 0.3;
       if (dd < 4.5 + 0.6 && world.player.alive) {
-        damagePlayer(mdmg(e) * 0.4, { pos: e.pos, kind: 'PHYSICAL' });
+        damagePlayer(mdmg(e) * 0.4, { pos: e.pos, kind: 'PHYSICAL' }); hitSpark();
         if (S.healAcc < e.maxHp * 0.06) { const h = e.maxHp * 0.01; e.hp = Math.min(e.maxHp, e.hp + h); S.healAcc += h; }
       }
     }
@@ -584,6 +634,7 @@ function finish(e: Enemy): void {
   if (c === 'BARBARIAN' && k === DASH) {
     darkView.air = 0;
     events.emit('quake', { pos: e.pos, radius: 4.5 }); events.emit('crater', { pos: e.pos, radius: 2.4, color: 0x2a1030 }); events.emit('shake', { amount: 0.45 });
+    events.emit('shockwave', { pos: e.pos, radius: 7, color: C_BLOOD }); fx('ROAR', e.pos.x, e.pos.z, 7);   // the landing warcry
     S.rageT = 3; darkView.rage = 1;   // Bloodrage: faster throws and steps
   }
   if (c === 'BARBARIAN' && k === 2) { darkView.spin = 0; S.healAcc = 0; }
@@ -592,13 +643,15 @@ function finish(e: Enemy): void {
   if (k === SWING) S.cd[0] = CD[c][0] * (0.85 + Math.random() * 0.3) / rate;
   else S.cd[k] = CD[c][k] * (k === ULT ? 1 : 0.85 + Math.random() * 0.3);
   S.gap = k === SWING ? 0.15 : RANGED[c] ? 0.9 : 1.0;
+  if (!RANGED[c]) { if (k !== SWING || ++S.comboN >= 3) { S.comboN = 0; S.backT = k === SWING ? 0.5 : 0.6; } }   // a step back after a skill / a 3-hit combo
+  darkView.dash = 0;
   e.pattern = 0; e.vel.set(0, 0, 0);
   enter(e, 'RECOVER');
 }
 
 /** Interrupts a skill in progress (the champion got staggered). */
 function cancel(e: Enemy): void {
-  darkView.air = 0; darkView.spin = 0; darkView.charge = 0; S.inv = 0; S.healAcc = 0;
+  darkView.air = 0; darkView.spin = 0; darkView.charge = 0; darkView.dash = 0; S.inv = 0; S.healAcc = 0;
   if (e.pattern > 0) { S.cd[e.pattern === SWING ? 0 : e.pattern] = 1.5; e.pattern = 0; }
   enter(e, 'RECOVER');
 }
@@ -611,6 +664,7 @@ export function aiDarkHero(e: Enemy, dt: number, px: number, pz: number, d: numb
     e.phase = 1; world.boss.phase = 1; darkView.enraged = 1;
     events.emit('bossPhase', { phase: 1 });
     events.emit('floatText', { pos: e.pos, text: 'ENRAGED', color: 0xff3a5a, scale: 1, dy: 2.4 });
+    fx('ENRAGE', e.pos.x, e.pos.z, 8); events.emit('shake', { amount: 0.4 });
   }
   if (!S.ultArmed && e.hp < e.maxHp * ULT_HP) { S.ultArmed = true; S.cd[ULT] = 1.5; }
   const rate = (e.phase > 0 ? 1.4 : 1) * (S.avatarT > 0 ? 1.5 : 1);
@@ -623,7 +677,7 @@ export function aiDarkHero(e: Enemy, dt: number, px: number, pz: number, d: numb
       if (S.cls === 'KNIGHT' && e.pattern === DASH) requestYaw(Math.atan2(S.dirX, S.dirZ));
       if (S.cls === 'KNIGHT' && e.pattern === SWING) { aimAt(e, px, pz); requestYaw(Math.atan2(S.dirX, S.dirZ)); }
       else requestYaw(Math.atan2(S.dirX, S.dirZ));
-      if (e.pattern !== SWING && e.pattern !== DASH) darkView.charge = Math.min(1, e.stateT / Math.max(0.1, S.wind));
+      if (e.pattern !== SWING && e.pattern !== DASH && e.pattern !== CLEAVE) darkView.charge = Math.min(1, e.stateT / Math.max(0.1, S.wind));
       if (e.stateT >= S.wind) release(e, px, pz);
       return;
     case 'ATTACK':
@@ -645,29 +699,65 @@ export function aiDarkHero(e: Enemy, dt: number, px: number, pz: number, d: numb
       const kk = ((k + (world.frame % 3)) % 3) + 1;   // rotate the check order so no skill starves
       if (S.cd[kk] <= 0 && wants(kk, d)) { begin(e, kk, px, pz); return; }
     }
+    if (S.cls === 'BARBARIAN') {   // signature moves
+      if (S.cd[CLEAVE] <= 0 && wants(CLEAVE, d)) { begin(e, CLEAVE, px, pz); return; }
+      if (S.cd[RUPTURE] <= 0 && wants(RUPTURE, d)) { begin(e, RUPTURE, px, pz); return; }
+    }
   }
 
   // ---- move + basic attack
   const inv = 1 / Math.max(0.001, d);
   const ux = (px - e.pos.x) * inv, uz = (pz - e.pos.z) * inv;
+  S.strafeT -= dt;
+  if (S.strafeT <= 0) { S.strafeT = 1.2 + Math.random() * 1.6; S.strafe = -S.strafe; }
   if (!RANGED[S.cls]) {
-    const spd = e.speed * (S.rageT > 0 ? 1.15 : 1);
-    if (d > 2.3) e.vel.set(ux * spd, 0, uz * spd); else e.vel.set(0, 0, 0);   // close in (melee jabs come from contactHit)
+    // melee spacing: hold ~2.2-2.8 u (the weapon's reach), circle-strafe between attacks, step back after a combo
+    const spd = e.speed * (S.rageT > 0 ? 1.15 : 1), reach = e.radius + 1.25, lo = reach - 0.15, hi = reach + 0.45;
+    let vx = 0, vz = 0, sp = spd;
+    if (S.backT > 0) { S.backT -= dt; vx = -ux * 0.9 - uz * S.strafe * 0.5; vz = -uz * 0.9 + ux * S.strafe * 0.5; sp = spd * 0.9; if (d > reach + 1.2) S.backT = 0; }
+    else if (d > hi) { vx = ux - uz * S.strafe * 0.25; vz = uz + ux * S.strafe * 0.25; }   // close in on a slight arc
+    else if (d < lo) { vx = -ux * 0.8; vz = -uz * 0.8; sp = spd * 0.8; }                      // too close: give ground
+    else { vx = -uz * S.strafe; vz = ux * S.strafe; sp = spd * 0.5; }                         // in reach: circle
+    const lim = edgeLimit(e.pos.x + vx * 1.5, e.pos.z + vz * 1.5, 2.2);
+    if ((e.pos.x + vx * 1.5) ** 2 + (e.pos.z + vz * 1.5) ** 2 > lim * lim) { S.strafe = -S.strafe; S.backT = 0; vx = ux * 0.3 - uz * S.strafe; vz = uz * 0.3 + ux * S.strafe; }
+    const vl = Math.hypot(vx, vz) || 1;
+    e.vel.set((vx / vl) * sp, 0, (vz / vl) * sp);
+    // landed jabs (contactHit) count towards the combo, with impact sparks
+    const st = strikeT[e.id];
+    if (st > 0.9 && !S.jab) { S.jab = true; hitSpark(); if (++S.comboN >= 3) { S.comboN = 0; S.backT = 0.5; } }
+    else if (st < 0.5) S.jab = false;
     if (!world.player.alive || S.cd[0] > 0) return;
     if (S.cls === 'KNIGHT') { if (d < 6.5) begin(e, SWING, px, pz); return; }
     if (d > 2.5 && d < 13) throwAxe(e, ux, uz);   // barbarian: the thrown boomerang axe
     return;
   }
-  S.strafeT -= dt;
-  if (S.strafeT <= 0) { S.strafeT = 1.6 + Math.random() * 1.8; S.strafe = -S.strafe; }
+  // casters kite: back off when the hero closes in (never into the wall: slide along it), circle at range
   const lo = S.cls === 'WIZARD' ? 8 : 9, hi = S.cls === 'WIZARD' ? 13 : 14;
-  let vx = -uz * S.strafe * 0.65, vz = ux * S.strafe * 0.65;   // circle the hero
-  if (d < lo) { vx -= ux; vz -= uz; } else if (d > hi) { vx += ux; vz += uz; }
+  let vx = -uz * S.strafe * 0.65, vz = ux * S.strafe * 0.65, sp = e.speed * 0.85;
+  if (d < lo) { vx -= ux; vz -= uz; if (d < 5) sp = e.speed * 1.1; } else if (d > hi) { vx += ux; vz += uz; }
   const lim = edgeLimit(e.pos.x + vx * 2, e.pos.z + vz * 2, 2.5);
-  if ((e.pos.x + vx * 2) ** 2 + (e.pos.z + vz * 2) ** 2 > lim * lim) { S.strafe = -S.strafe; vx = ux * 0.4; vz = uz * 0.4; }   // back to the wall: slide in
+  if ((e.pos.x + vx * 2) ** 2 + (e.pos.z + vz * 2) ** 2 > lim * lim) {   // cornered: run along the wall (tangent), away from the hero
+    S.strafe = -S.strafe;
+    let tx = -e.pos.z, tz = e.pos.x; const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+    if (tx * ux + tz * uz > 0) { tx = -tx; tz = -tz; }
+    vx = tx; vz = tz; sp = e.speed * (d < 5 ? 1.1 : 0.85);
+  }
   const vl = Math.hypot(vx, vz) || 1;
-  e.vel.set((vx / vl) * e.speed * 0.85, 0, (vz / vl) * e.speed * 0.85);
+  e.vel.set((vx / vl) * sp, 0, (vz / vl) * sp);
   if (S.cd[0] <= 0 && d < 20 && world.player.alive) basic(e, ux, uz, px, pz);
+}
+
+/** Hard body separation: a champion never ends a frame inside the hero (melee: just outside its weapon-reach standoff). */
+function keepApart(e: Enemy): void {
+  const p = world.player;
+  if (!p.alive || e.state === 'DYING' || e.state === 'SPAWN' || S.inv > 0 && darkView.air > 0) return;
+  const minD = RANGED[S.cls] ? e.radius + 1.4 : e.radius + 1.0;
+  const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d2 = dx * dx + dz * dz;
+  if (d2 >= minD * minD) return;
+  const d = Math.sqrt(d2) || 1e-3, nx = d2 < 1e-6 ? 1 : dx / d, nz = d2 < 1e-6 ? 0 : dz / d;
+  e.pos.x = p.pos.x + nx * minD; e.pos.z = p.pos.z + nz * minD;
+  const r = Math.hypot(e.pos.x, e.pos.z), lim = edgeLimit(e.pos.x, e.pos.z, 1.2);
+  if (r > lim) { e.pos.x *= lim / r; e.pos.z *= lim / r; }
 }
 
 /** Ranged basic attacks (+ the class's on-attack passive every 6th shot). */
@@ -696,6 +786,7 @@ function throwAxe(e: Enemy, ux: number, uz: number): void {
     axes[i] = a; axeT[i] = 0;
     S.cd[0] = CD.BARBARIAN[0] * (0.85 + Math.random() * 0.3) * (S.rageT > 0 ? 0.6 : 1);
     darkView.atk++;
+    if (++S.comboN >= 3) { S.comboN = 0; S.backT = 0.5; }
     if (++S.basicN >= 6) { S.basicN = 0; strike(e.pos.x, e.pos.z, 4.5, 0.55, mdmg(e) * 0.9, 0, 'STAMP', C_BLOOD); }   // passive Stamp
     return;
   }
@@ -728,6 +819,7 @@ export function tickDarkHero(dt: number): void {
   b.active = true; b.hp = e.hp; b.maxHp = e.maxHp; b.stagger = staggerView(e); b.staggered = e.staggerT > 0;
   if (e.staggerT > 0 && (e.state === 'WINDUP' || e.state === 'ATTACK')) cancel(e);
   if (S.inv > 0) S.inv -= dt;
+  keepApart(e);
   tickAxes(e, dt);
   tickShots(e, dt);
   tickFields(dt);
@@ -779,7 +871,7 @@ export function tickDarkHero(dt: number): void {
     if (S.titanT <= 0) {
       strike(e.pos.x, e.pos.z, 9, 0.9, mdmg(e) * 2.2, STUN | KNOCK, 'SLAM', C_BLOOD);
       for (let i = 0; i < 30; i++) { const a = (i / 30) * 6.283, r = 6 + Math.random() * 3.5; hostileFx('SPIKE', e.pos.x + Math.cos(a) * r, e.pos.z + Math.sin(a) * r, 0.9 + Math.random() * 0.12, 2.2, 1.6, 0, 0); }
-      S.mul = S.avatarT > 0 ? 1.5 : 1; e.scale = S.baseScale; e.speed = S.baseSpeed; darkView.titan = 0;
+      S.mul = S.avatarT > 0 ? 1.5 : 1; e.scale = S.baseScale; e.radius = S.baseRadius; e.speed = S.baseSpeed; darkView.titan = 0;
     }
   }
   if (S.avatarT > 0) { S.avatarT -= dt; if (S.avatarT <= 0) { S.mul = 1; darkView.avatar = 0; events.emit('shockwave', { pos: e.pos, radius: 6, color: C_HOLY }); } }
@@ -799,6 +891,7 @@ export function tickDarkHero(dt: number): void {
 
 function hitPlayerShot(s: DarkShot, e: Enemy): void {
   const p = world.player;
+  hitSpark();
   const l = Math.hypot(s.vx, s.vz) || 1, dx = s.vx / l, dz = s.vz / l;
   switch (s.tag) {
     case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('DEFDOWN', 4); shove(dx, dz, 1.6); break;
@@ -806,6 +899,7 @@ function hitPlayerShot(s: DarkShot, e: Enemy): void {
     case SHOT_FIRE: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 3, Math.max(2, s.dmg * 0.1)); events.emit('explosion', { pos: p.pos, radius: 2.4, color: 0xff6a3a }); break;
     case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); shove(dx, dz, 2.4); break;
     case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); shove(dx, dz, 2.6); break;
+    case SHOT_CLEAVE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); shove(dx, dz, 2.0); break;   // (bleeding)
     case SHOT_BONE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', slow: 0.4 }); slowPlayer(2); break;
     default: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); break;
   }
@@ -875,6 +969,7 @@ function tickPending(dt: number): void {
     else events.emit('explosion', { pos: tmp.set(p.x, 0, p.z), radius: p.r, color: C_VIOLET });
     if (playerIn(p.x, p.z, p.r)) {
       damagePlayer(p.dmg, { pos: tmp.set(p.x, 0, p.z), kind: p.dk });
+      hitSpark();
       effects(p.eff, p.dmg, p.x, p.z);
     }
   }

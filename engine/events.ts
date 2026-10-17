@@ -85,7 +85,7 @@ export interface GameEvents {
   questComplete: {};                            // a quest paid out (side / bounty / main story step): celebratory fanfare (engine/audio.ts)
   runEnd: {};
   /** Dark hero champion moments (systems/darkHero.ts), drawn violet by render/VFX: ROAR ULT JUDGMENT NOVA RAIN SPIKE SOUL METEOR AVATAR GUARD ZAP */
-  darkFx: { pos: Vector3; kind: string; radius: number; to?: Vector3 };
+  darkFx: { pos: Vector3; kind: string; radius: number; to?: Vector3; yaw?: number };
 }
 
 type Handler<T> = (payload: T) => void;

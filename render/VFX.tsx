@@ -658,6 +658,48 @@ export function VFX() {
           if (quality().lights) flashLight(x, 3, z, 0xb050ff, 40, 0.5);
           break;
         }
+        case 'HIT':   // a champion's blow lands on the hero: red / violet impact sparks
+          flashStar(x, 1.2, z, 0xffb0c0, 2.8, 0.14);
+          sparks(x, 1.2, z, 14, 0xff4a6a, 9, 0.26, 0.3, 2.4);
+          sparks(x, 1.2, z, 6, 0xb060ff, 6, 0.22, 0.3, 2.2);
+          break;
+        case 'WHIRL':   // Whirlwind starts: a blood ring blasts out, dust kicked up
+          ringBurst(x, 0.3, z, 0xff3a5a, r * 0.3, r * 1.1, 0.4, 2);
+          ringBurst(x, 0.5, z, 0xa04aff, r * 0.2, r, 0.5, 1.8);
+          dustPuff(x, z, 6, 1.4, 0x6a4a5a, r * 0.6);
+          break;
+        case 'LEAP':   // Bloodrage Leap: take-off blast, dark smoke
+          ringBurst(x, 0.2, z, 0xff3a5a, 0.5, r, 0.4, 2);
+          smokePuff(x, 0.6, z, 4, 0x2a1030, 1.6, 0.9, 1.4, 1.4, 0.6);
+          sparks(x, 0.8, z, 14, 0xff6a8a, 9, 0.3, 0.4, 2.2);
+          break;
+        case 'CLEAVE': {   // Blood Cleave: a crescent of streaks across the front, sparks at the edge of the arc
+          const yaw = e.yaw ?? 0;
+          for (let i = 0; i < 14; i++) {
+            const a = yaw - 1.0 + (i / 13) * 2, rr = 2.2 + Math.random() * 1.2, ax = Math.sin(a), az = Math.cos(a);
+            FX.add.emit(x + ax * rr, 1.1, z + az * rr, az * 5, 0, -ax * 5, 0.28, 0.7, 0.05, 2.6, 0.3, 0.6, 1, CELL.STREAK, 0, 1.8, 0, 0, 0.1);
+          }
+          glowPuff(x + Math.sin(yaw) * 2.2, 1.2, z + Math.cos(yaw) * 2.2, 0xff3a5a, 4, 0.25, 1.8, 0.8);
+          sparks(x + Math.sin(yaw) * 2.4, 1.1, z + Math.cos(yaw) * 2.4, 12, 0xff6a8a, 10, 0.28, 0.35, 2.4, Math.sin(yaw), 0, Math.cos(yaw), 0.6);
+          break;
+        }
+        case 'RUPTURE': {   // Ground Rupture: cracks + red glow + debris along the lane
+          const yaw = e.yaw ?? 0, tx = e.to ? e.to.x : x, tz = e.to ? e.to.z : z, n = 6;
+          for (let i = 0; i < n; i++) {
+            const k = (i + 0.5) / n, px = x + (tx - x) * k, pz = z + (tz - z) * k;
+            DECALS.add(px, pz, 4.2, 4.2, 5, 0.05, 0.03, 0.04, 0.7, CELL.CRACK, yaw + (Math.random() - 0.5) * 0.3);
+            DECALS.add(px, pz, 2.2, 2.2, 4, 1.8, 0.2, 0.4, 0.4, CELL.GLOW);
+            setTimeout(() => { chunks(px, 0.5, pz, 4, 0x5a3a48, 0x2a1a24, 4.5, 0.28); dustPuff(px, pz, 2, 1.0, 0x6a4a5a, 1.2); }, 60 + i * 60);
+          }
+          break;
+        }
+        case 'ENRAGE':   // a champion goes into a rage: red shockwave, flame burst, roar rings
+          for (let i = 0; i < 3; i++) setTimeout(() => ringBurst(x, 0.3 + i * 0.3, z, i === 1 ? 0xff7a3a : 0xff2a4a, r * 0.1, r, 0.5, 2), i * 110);
+          glowPuff(x, 1.4, z, 0xff2a4a, r * 0.8, 0.45, 1.8, 0.7);
+          for (let i = 0; i < 24; i++) { const a = Math.random() * TAU; FX.add.emit(x + Math.cos(a) * 0.8, 0.3, z + Math.sin(a) * 0.8, Math.cos(a) * 3, 3 + Math.random() * 4, Math.sin(a) * 3, 0.7, 0.8, 0.05, 2.8, 0.4, 0.4, 0.9, CELL.FLAME); }
+          sparks(x, 1.4, z, 26, 0xff5a6a, r * 1.3, 0.32, 0.6, 2.2);
+          if (quality().lights) flashLight(x, 3, z, 0xff3040, 50, 0.6);
+          break;
         case 'ULT': {   // a champion begins its ultimate
           for (let i = 0; i < 2; i++) setTimeout(() => ringBurst(x, 0.3, z, 0xb060ff, 1, 9 + i * 5, 0.7, 2), i * 140);
           sparks(x, 1.2, z, 28, 0xd090ff, 14, 0.4, 0.8, 2.2);

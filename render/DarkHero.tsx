@@ -10,7 +10,7 @@ import {
   RingGeometry, SphereGeometry, TorusGeometry, Vector3,
 } from 'three';
 import { world } from '../engine/world';
-import { darkView, DARK_CLASSES, darkShots, darkOrbs, SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH } from '../engine/systems/darkHero';
+import { darkView, DARK_CLASSES, darkShots, darkOrbs, SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH, SHOT_CLEAVE } from '../engine/systems/darkHero';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
@@ -37,12 +37,13 @@ function DarkHeroModel({ cls }: { cls: HeroClass }) {
   const ch = useCharacterInstance(CHAR[cls]);
   const clips = useClips();
   const root = useRef<Group>(null!), body = useRef<Group>(null!), aura = useRef<Mesh>(null!), eyes = useRef<Group>(null!), guard = useRef<Mesh>(null!), spinRing = useRef<Mesh>(null!);
-  const orb = useRef<Mesh>(null!), halo = useRef<Mesh>(null!);
+  const orb = useRef<Mesh>(null!), halo = useRef<Mesh>(null!), blades = useRef<Mesh>(null!);
   const mats = useMemo(() => ({
     eye: new MeshBasicMaterial({ color: new Color(3.2, 0.35, 0.45), toneMapped: false }),
     eyeGlow: new MeshBasicMaterial({ color: new Color(1.6, 0.1, 0.25), transparent: true, opacity: 0.55, blending: AdditiveBlending, depthWrite: false, toneMapped: false }),
     aura: new MeshBasicMaterial({ color: new Color(0.9, 0.25, 1.6), transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }),
     guard: new MeshBasicMaterial({ color: new Color(0.6, 0.8, 2.2), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }),
+    blades: new MeshBasicMaterial({ color: new Color(2.6, 0.35, 0.7), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }),
     spin: new MeshBasicMaterial({ color: new Color(2.0, 0.3, 0.5), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }),
     orb: new MeshBasicMaterial({ color: ORB_COL[cls], transparent: true, opacity: 0.9, blending: AdditiveBlending, depthWrite: false, toneMapped: false }),
     halo: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 2.6), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }),
@@ -50,11 +51,12 @@ function DarkHeroModel({ cls }: { cls: HeroClass }) {
   const geos = useMemo(() => ({
     eye: new SphereGeometry(0.06, 8, 6), eyeGlow: new SphereGeometry(0.16, 8, 6),
     aura: new RingGeometry(0.9, 1.6, 40).rotateX(-Math.PI / 2), guard: new SphereGeometry(1.7, 20, 14), spin: new RingGeometry(4.1, 4.8, 56).rotateX(-Math.PI / 2),
+    blades: (() => { const g = new GB([1, 1]); for (let b = 0; b < 3; b++) for (let i = 0; i < 9; i++) { const a = b * (Math.PI * 2 / 3) + i * 0.085, r = 3.9; g.box(0.9 - i * 0.06, 0.06, 0.34 - i * 0.025, [Math.sin(a) * r, 0.9, Math.cos(a) * r], '#ff3a6a', [0, a + 1.57, 0]); } return g.build(); })(),
     orb: new SphereGeometry(0.32, 12, 10), halo: new TorusGeometry(0.42, 0.06, 6, 24).rotateX(Math.PI / 2),
   }), []);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, run: null as AnimationAction | null, atk: null as AnimationAction | null,
     cast: null as AnimationAction | null, death: null as AnimationAction | null, hit: null as AnimationAction | null,
-    wRun: 0, yaw: 0, atk0: -1, cast0: -1, flash0: 0, dead: false, emis: '', puff: 0 });
+    wRun: 0, yaw: 0, atk0: -1, cast0: -1, flash0: 0, dead: false, emis: '', puff: 0, flame: 0 });
 
   // shadow dye
   useEffect(() => {
@@ -149,6 +151,36 @@ function DarkHeroModel({ cls }: { cls: HeroClass }) {
     guard.current.visible = mats.guard.opacity > 0.02;
     mats.spin.opacity = damp(mats.spin.opacity, darkView.spin > 0 && !dying ? 0.55 : 0, 10, dt);
     spinRing.current.visible = mats.spin.opacity > 0.02; spinRing.current.rotation.y = -t * 6;
+    // Whirlwind: three crescent blades orbit at the ring's edge, each shedding a red / violet trail
+    const spinning = darkView.spin > 0 && !dying;
+    mats.blades.opacity = damp(mats.blades.opacity, spinning ? 0.95 : 0, 14, dt);
+    blades.current.visible = mats.blades.opacity > 0.02; blades.current.rotation.y = -t * 15;
+    if (spinning && dt > 0) {
+      for (let b = 0; b < 3; b++) {
+        const a = -t * 15 + b * (TAU / 3) + 0.4, rr = 3.9;
+        const bx = e.pos.x + Math.sin(a) * rr, bz = e.pos.z + Math.cos(a) * rr;
+        FX.add.emit(bx, 0.9, bz, Math.cos(a) * 6, 0.3, -Math.sin(a) * 6, 0.32, 0.55, 0.05, 2.6, 0.3, 0.6, 0.9, CELL.STREAK, 0, 1.2, 0, 0, 0.1);
+        if (Math.random() < 0.5) FX.add.emit(bx, 0.9, bz, 0, 0.5, 0, 0.45, 0.7, 0.05, 1.2, 0.2, 1.8, 0.7, CELL.GLOW);
+      }
+      if (Math.random() < dt * 40) FX.add.emit(e.pos.x + (Math.random() - 0.5) * 8, 0.15, e.pos.z + (Math.random() - 0.5) * 8, 0, 1.2, 0, 0.5, 0.6, 0.1, 0.5, 0.3, 0.4, 0.45, CELL.SMOKE);
+      pushHalo(e.pos.x, 0.2, e.pos.z, 11, 1.4, 0.12, 0.3, 0.3, CELL.GLOW);
+    }
+    // Enrage / Bloodrage / Titan: red flames licking up the body, a pulsing red ground glow
+    if ((darkView.enraged || darkView.rage > 0 || darkView.titan > 0) && !dying && dt > 0) {
+      const k = (darkView.titan > 0 ? 1.8 : 1) * e.scale / 1.2;
+      s.flame += dt * (darkView.titan > 0 || darkView.rage > 0 ? 55 : 32);
+      while (s.flame > 1) {
+        s.flame -= 1;
+        const a = Math.random() * TAU, rr = (0.2 + Math.random() * 0.55) * k;
+        FX.add.emit(e.pos.x + Math.cos(a) * rr, 0.2 + Math.random() * 1.8 * k, e.pos.z + Math.sin(a) * rr, 0, 2.2 + Math.random() * 2, 0, 0.5, 0.55 * k, 0.05, 2.8, 0.35 + Math.random() * 0.3, 0.35, 0.85, CELL.FLAME);
+      }
+      pushHalo(e.pos.x, 0.25, e.pos.z, 5.5 * k + Math.sin(t * 7) * 0.5, 1.8, 0.1, 0.25, 0.4, CELL.GLOW);
+    }
+    // dash / roll / charge / leap: dark afterimage streaks + a fading shadow
+    if (darkView.dash > 0 && !dying && dt > 0) {
+      for (let q = 0; q < 3; q++) FX.add.emit(e.pos.x + (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.8, e.pos.z + (Math.random() - 0.5) * 0.8, -e.vel.x * 0.15, 0, -e.vel.z * 0.15, 0.4, 0.7, 0.1, 1.5, 0.25, 2.2, 0.8, CELL.GLOW);
+      if (darkView.air > 0.3) { FX.add.emit(e.pos.x, darkView.air + 0.8, e.pos.z, 0, 0, 0, 0.5, 1.5, 0.2, 2.4, 0.3, 0.7, 0.7, CELL.GLOW); pushHalo(e.pos.x, 0.12, e.pos.z, 3 + darkView.air * 0.3, 0.1, 0.0, 0.1, 0.55, CELL.GLOW); }
+    }
     // the ball of light / fire charging in front of the hero during a cast
     const chg = dying ? 0 : darkView.charge;
     orb.current.visible = chg > 0.02;
@@ -183,6 +215,7 @@ function DarkHeroModel({ cls }: { cls: HeroClass }) {
       <mesh ref={guard} geometry={geos.guard} material={mats.guard} position={[0, 1.1, 0]} renderOrder={4} visible={false} />
       <mesh ref={orb} geometry={geos.orb} material={mats.orb} position={[0.15, 1.35, 0.95]} renderOrder={5} visible={false} />
       <mesh ref={halo} geometry={geos.halo} material={mats.halo} position={[0, 2.45, 0]} renderOrder={5} visible={false} />
+      <mesh ref={blades} geometry={geos.blades} material={mats.blades} renderOrder={5} visible={false} />
       <mesh ref={spinRing} geometry={geos.spin} material={mats.spin} position={[0, 0.1, 0]} renderOrder={3} visible={false} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]} renderOrder={1}>
         <circleGeometry args={[0.95, 20]} />
@@ -216,6 +249,8 @@ function shotGeos() {
   const xG = xg.build();
   // Holy Wave / sword arc: a wide crescent (scaled by the shot radius)
   const holyG = arc(3, 1.1, '#e8c8ff');
+  // Blood Cleave: a fat blood-red / violet crescent
+  const cleaveG = arc(3, 1.5, '#ff3a5a');
   // Bone Spear: a long bone lance
   const bone = new GB([0.85, 1.1]);
   bone.cyl(0.1, 0.14, 3.2, 6, [0, 0, -1.4], '#d8d0b8', [Math.PI / 2, 0, 0]); bone.cone(0.3, 1.1, 6, [0, 0, 0.7], '#ebe5d0', [Math.PI / 2, 0, 0]);
@@ -223,14 +258,14 @@ function shotGeos() {
   const boneG = new GB([1, 1]).sph(0.5, [0, 0, -1], '#a070ff', [1, 1, 3.6], 8).build();
   return {
     [SHOT_GALE]: [gale.build(), galeG], [SHOT_LIGHT]: [empty, lightG], [SHOT_FIRE]: [fireB, fireG], [SHOT_XSLASH]: [empty, xG],
-    [SHOT_HOLY]: [empty, holyG], [SHOT_BONE]: [bone.build(), boneG], [SHOT_SLASH]: [empty, holyG],
+    [SHOT_HOLY]: [empty, holyG], [SHOT_BONE]: [bone.build(), boneG], [SHOT_SLASH]: [empty, holyG], [SHOT_CLEAVE]: [empty, cleaveG],
   } as Record<number, [BufferGeometry, BufferGeometry]>;
 }
-const SHOT_TAGS = [SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH];
+const SHOT_TAGS = [SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH, SHOT_CLEAVE];
 /** Trail particle colour per tag (r, g, b boosted). */
 const TRAIL: Record<number, [number, number, number]> = {
   [SHOT_GALE]: [1.4, 1.1, 2.4], [SHOT_LIGHT]: [2.4, 2.0, 2.8], [SHOT_FIRE]: [2.4, 0.7, 0.9], [SHOT_XSLASH]: [2.4, 0.4, 0.8],
-  [SHOT_HOLY]: [2.2, 1.6, 2.6], [SHOT_BONE]: [1.6, 1.2, 2.2], [SHOT_SLASH]: [2.0, 1.4, 2.4],
+  [SHOT_HOLY]: [2.2, 1.6, 2.6], [SHOT_BONE]: [1.6, 1.2, 2.2], [SHOT_SLASH]: [2.0, 1.4, 2.4], [SHOT_CLEAVE]: [2.6, 0.3, 0.7],
 };
 
 /** The champion's skill shots, the dark barbarian's thrown axes (enemy projectiles of kind AXE) and the Storm Orbs. */
@@ -268,7 +303,13 @@ function DarkFx() {
       if (!p.active || p.kind !== 'AXE') continue;
       setInst(am, n, p.pos.x, p.pos.y, p.pos.z, t * 16, 1.6, 1.6, 1.6, Math.PI / 2, 0);
       setInst(gm, n, p.pos.x, p.pos.y, p.pos.z, t * 16, 1.6, 1.6, 1.6, Math.PI / 2, 0);
-      if (dt > 0 && Math.random() < 0.6) FX.add.emit(p.pos.x, p.pos.y, p.pos.z, 0, 0, 0, 0.25, 1.2, 0.2, 1.6, 0.2, 0.4, 0.5, CELL.GLOW);
+      if (dt > 0) {   // a spinning blood-red trail: glow smear + violet streak + halo, the blade ring it cuts
+        FX.add.emit(p.pos.x, p.pos.y, p.pos.z, 0, 0, 0, 0.3, 1.3, 0.2, 2.2, 0.25, 0.5, 0.6, CELL.GLOW);
+        FX.add.emit(p.pos.x, p.pos.y, p.pos.z, -p.vel.x * 0.12, 0.2, -p.vel.z * 0.12, 0.35, 0.5, 0.05, 1.4, 0.2, 2.0, 0.8, CELL.STREAK, 0, 1.4, 0, 0, 0.1);
+        const aa = t * 16;
+        FX.add.emit(p.pos.x + Math.sin(aa) * 0.9, p.pos.y, p.pos.z + Math.cos(aa) * 0.9, 0, 0, 0, 0.22, 0.4, 0.05, 2.8, 0.4, 0.6, 0.9, CELL.STAR);
+        pushHalo(p.pos.x, p.pos.y, p.pos.z, 3.2, 1.6, 0.15, 0.5, 0.4, CELL.GLOW);
+      }
       n++;
     }
     commitInst(am, n); commitInst(gm, n);
@@ -288,6 +329,7 @@ function DarkFx() {
         case SHOT_FIRE: sc = s.r / 1.6; y = 1.4; spin = t * 6; break;
         case SHOT_XSLASH: sc = s.r / 2.2 * 1.4; y = 1.1; break;
         case SHOT_HOLY: case SHOT_SLASH: sc = s.r / 3; y = 1.1; break;
+        case SHOT_CLEAVE: sc = s.r / 3 * 1.25; y = 1.2; break;
         default: break;
       }
       const f = sc * grow * (0.6 + 0.4 * fade);
