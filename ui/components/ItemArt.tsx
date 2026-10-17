@@ -244,6 +244,18 @@ export const ShardArt: React.FC<{ rarity: Item['rarity']; size?: number | string
   </Svg>);
 });
 ShardArt.displayName = 'ShardArt';
+/** (owner) Aether Crystal: a violet crystal cluster with a soft glow. */
+export const CrystalArt: React.FC<{ size?: number | string }> = React.memo(({ size = 26 }) => (
+  <Svg size={size}>
+    <circle cx="32" cy="36" r="27" fill="#a46bff" opacity=".22" />
+    <path d="M14 54 L10 34 L18 24 L24 44Z" fill="#7b4fd6" {...st} /><path d="M50 54 L54 32 L46 22 L40 44Z" fill="#7b4fd6" {...st} />
+    <path d="M32 4 L44 22 L40 56 L24 56 L20 22Z" fill="#b98cff" {...st} />
+    <path d="M32 4 L44 22 L32 28 L20 22Z" fill="#fff" opacity=".55" /><path d="M32 28 L44 22 L40 56 L32 56Z" fill="#2a0e5a" opacity=".3" />
+    <path d="M32 28 V56" stroke="#fff" strokeOpacity=".6" strokeWidth="1" />
+    <path d="M8 58 H56" stroke={S} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+));
+CrystalArt.displayName = 'CrystalArt';
 // ---- pets ----
 const Eyes: React.FC<{ y?: number; dx?: number; r?: number }> = ({ y = 30, dx = 8, r = 2.4 }) => (
   <g><circle cx={32 - dx} cy={y} r={r} fill="#120804" /><circle cx={32 + dx} cy={y} r={r} fill="#120804" />
@@ -516,7 +528,7 @@ Art.displayName = 'ItemArt';
 
 /** Painted icon for an item. `size` is px or a css length / percentage. */
 export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => (
-  item.type === 'SHARD' ? <ShardArt rarity={item.rarity} size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
+  item.type === 'SHARD' ? <ShardArt rarity={item.rarity} size={size} /> : item.type === 'CRYSTAL' ? <CrystalArt size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
 );
 export const ItemArtByKey: React.FC<{ k: string; c?: string; size?: number | string }> = ({ k, c = '#e9b949', size = 26 }) => <Art k={k} c={c} size={size} />;
 

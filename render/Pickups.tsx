@@ -87,6 +87,12 @@ export function Pickups() {
           pushHalo(p.pos.x, y + 0.1, p.pos.z, 0.9 * s, c[0] * 0.35, c[1] * 0.35, c[2] * 0.35, 0.5, CELL.GLOW);
           break;
         }
+        case 'CRYSTAL': {   // (owner) Aether Crystal: a bigger violet shard
+          setInst(sys.shard, ns, p.pos.x, y + 0.15, p.pos.z, t * 1.8 + p.id, s * 1.6, s * 1.6, s * 1.6, 0, Math.sin(t * 2.5 + p.id) * 0.2);
+          _c.setRGB(1.6, 0.8, 3.0); sys.shard.setColorAt(ns, _c); ns++;
+          pushHalo(p.pos.x, y + 0.15, p.pos.z, 1.3 * s, 0.55, 0.3, 1.0, 0.6, CELL.GLOW);
+          break;
+        }
         case 'HEALTH': {
           const sc = (1 + Math.sin(t * 6 + p.id) * 0.08) * s * 1.2;
           setInst(sys.heart, nh++, p.pos.x, y + 0.1, p.pos.z, t * 1.5 + p.id, sc, sc, sc, 0, 0);

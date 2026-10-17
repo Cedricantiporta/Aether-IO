@@ -62,6 +62,15 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   if (kind === 'ITEM') { world.itemPickupsVersion++; if (item) events.emit('lootDrop', { pos: p.pos, rarity: item.rarity }); }
 }
 
+/** (owner) Aether Crystals drop as glowing pickups (up to 5 pieces sharing `n`) that fly to the hero like coins. */
+const crystalAt = new Vector3();
+export function dropCrystals(n: number, at: { x: number; z: number }): void {
+  n = Math.floor(n);
+  if (n <= 0) return;
+  const k = Math.min(5, n);
+  for (let i = 0; i < k; i++) spawnPickup('CRYSTAL', crystalAt.set(at.x, 0, at.z), Math.floor(n / k) + (i < n % k ? 1 : 0));
+}
+
 /** Direct reward (pool exhausted fallback). */
 function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
@@ -69,6 +78,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
     case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
+    case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;
     case 'ITEM': if (item) st.addItemToInventory(item); break;
@@ -236,6 +246,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
     case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
     case 'SHARD': giveShard(value, st); break;
+    case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); feedCoin('gems', value); break;
     case 'HEALTH': healPlayer(value); break;
     case 'ITEM': {

@@ -38,7 +38,7 @@ import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul } from './enemies';
 import { hooks } from './hooks';
-import { spawnPickup } from './pickups';
+import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { towerMode, towerCrystals } from './combat';
 import { spawnHostileZone } from './tricks';
@@ -187,7 +187,7 @@ export function darkHeroDied(e: Enemy): void {
   const wave = world.director.wave;
   const luck = 2.4 * (1 + wave * 0.02);
   if (towerMode()) {   // tower modes (the tower's champion floors): crystals instead of loot / gear
-    st.addCrystals(towerCrystals(true, false, false, wave), e.pos);
+    dropCrystals(towerCrystals(true, false, false, wave), e.pos);
     for (let i = 0; i < 6; i++) spawnPickup('GOLD', tmp.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3), 12 + wave);
     return;
   }

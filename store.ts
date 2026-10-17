@@ -55,6 +55,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
+import { crystalCount, syncCrystalStack } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
@@ -216,8 +217,8 @@ const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
 let uidCounter = 0;
 const uid = (prefix = 'id'): string => `${prefix}_${Date.now().toString(36)}_${(uidCounter++).toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
-const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD' || item.type === 'ELIXIR';
-const stackLimit = (item: Item): number => (item.type === 'SHARD' ? 1e9 : item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
+const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD' || item.type === 'ELIXIR' || item.type === 'CRYSTAL';
+const stackLimit = (item: Item): number => (item.type === 'SHARD' || item.type === 'CRYSTAL' ? 1e9 : item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
 const isGear = (item: Item): boolean => item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS';
 
 /** Combat power of one item (UI comparison / auto-equip). */
@@ -1606,6 +1607,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (idx === -1) return;
       const inv = s.inventory.slice();
       const cur = inv[idx];
+      if (cur.type === 'CRYSTAL') { notify('Aether Crystals cannot be sold.', 'red', 'WARNING'); return; }
       const qty = cur.quantity || 1;
       const sellQty = Math.min(qty, amount);
       const value = sellUnit(cur) * sellQty;
@@ -1634,6 +1636,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     sellItems: (items) => {
       const s = get();
+      items = items.filter((i) => i.type !== 'CRYSTAL');
       const ids = new Set(items.map((i) => i.id));
       let total = 0;
       items.forEach((i) => { total += sellUnit(i); });
@@ -2094,6 +2097,21 @@ useGameStore.subscribe((s, p) => {
   } else if (s.inventory !== p.inventory) {   // a stack was sold / deleted / stored / retrieved -> counts
     const c = shardCounts(s.inventory);
     if (SHARD_RARITIES.some((r) => c[r] !== s.materials[r])) useGameStore.setState({ materials: c });
+  }
+});
+
+// ---- Aether Crystals are a bag item too: the `crystals` count and the crystal stack stay in sync (crystals.ts)
+{
+  const st = useGameStore.getState(), inv = syncCrystalStack(st.inventory, st.crystals ?? 0);
+  if (inv !== st.inventory) useGameStore.setState({ inventory: inv });   // old saves: count -> stack
+}
+useGameStore.subscribe((s, p) => {
+  if (s.crystals !== p.crystals) {            // gained / spent -> stack
+    const inv = syncCrystalStack(s.inventory, s.crystals ?? 0);
+    if (inv !== s.inventory) useGameStore.setState({ inventory: inv });
+  } else if (s.inventory !== p.inventory) {   // the stack was deleted / stored / retrieved -> count
+    const c = crystalCount(s.inventory);
+    if (c !== (s.crystals ?? 0)) useGameStore.setState({ crystals: c });
   }
 });
 

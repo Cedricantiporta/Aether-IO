@@ -217,7 +217,7 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
       tone(1318, 1318, 0.12, 0.1, { type: 'triangle' });
       tone(1760, 1760, 0.25, 0.1, { type: 'triangle', delay: 0.06 });
       break;
-    case 'GEM':
+    case 'GEM': case 'CRYSTAL':
       if (!gate(G.GOLD)) return;
       tone(1568, 1568, 0.2, 0.08);
       tone(2093, 2093, 0.3, 0.08, { delay: 0.05 });

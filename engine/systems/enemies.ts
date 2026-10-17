@@ -41,7 +41,7 @@ import { runMods } from '../runMods';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
-import { spawnPickup } from './pickups';
+import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { towerMode, towerCrystals } from './combat';
 import '../lootExtra';
@@ -392,7 +392,7 @@ export function onEnemyDeath(e: Enemy): void {
     events.emit('explosion', { pos: e.pos, radius: e.radius * 2, color: ENEMY_DEFS[e.kind].color });
     const st = useGameStore.getState();
     const luck = 2 * (1 + d.wave * 0.02);
-    if (towerMode()) st.addCrystals(towerCrystals(false, true, false, d.wave), e.pos);   // tower modes: crystals, no items / loot
+    if (towerMode()) dropCrystals(towerCrystals(false, true, false, d.wave), e.pos);   // tower modes: crystals, no items / loot
     else {
       dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
       dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);

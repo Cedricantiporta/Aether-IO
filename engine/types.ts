@@ -251,7 +251,7 @@ export interface GroundFx {
 }
 
 // ---------------------------------------------------------------- pickups --
-export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'ITEM' | 'SHARD'; // SHARD: value = rarity index (0 COMMON..4 MYTHIC)
+export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'ITEM' | 'SHARD' | 'CRYSTAL'; // SHARD: value = rarity index (0 COMMON..4 MYTHIC); CRYSTAL: value = Aether Crystals
 
 export interface Pickup {
   id: number;

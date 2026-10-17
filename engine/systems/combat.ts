@@ -29,7 +29,7 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
 }
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
-import { spawnPickup } from './pickups';
+import { spawnPickup, dropCrystals } from './pickups';
 import { onEnemyDeath, crabArmor, shieldBlock } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
@@ -466,7 +466,7 @@ export function killEnemy(e: Enemy): void {
   // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
   {
     const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
-    if (towerMode()) { const c = towerCrystals(e.boss, e.mini, e.elite, wave); if (c > 0) st.addCrystals(c, e.pos); }   // tower modes: crystals, never loot
+    if (towerMode()) { const c = towerCrystals(e.boss, e.mini, e.elite, wave); if (c > 0) dropCrystals(c, e.pos); }   // tower modes: crystals, never loot
     else if (e.boss) { const my = run.bossKills >= 2; dropLoot(e.kind, luck, px, pz, true, my); if (Math.random() < 0.4) dropLoot(e.kind, luck, px, pz, false, my); }
     else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
   }

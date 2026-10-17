@@ -66,7 +66,7 @@ export function upgradedStats(i: Item): Partial<PlayerStats> {
 }
 
 export const TYPE_LABEL: Record<Item['type'], string> = {
-  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot', SHARD: 'Material', ELIXIR: 'Elixir',
+  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot', SHARD: 'Material', ELIXIR: 'Elixir', CRYSTAL: 'Summon currency',
 };
 
 export const SORTS = ['RARITY', 'TYPE', 'POWER'] as const;
