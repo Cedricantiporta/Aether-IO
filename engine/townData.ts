@@ -61,7 +61,7 @@ export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riv
 export const onMineBridge = (x: number, z: number, m = 0): boolean => Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.hw + m && z > MINE_BRIDGE.z0 - m && z < MINE_BRIDGE.z1 + m;
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
 export const BRIDGE = { hw: 4.2, z0: 57.5, z1: 78.5, h: 1.6 };
-export const PORTAL = { x: 0, z: 124, r: 6.5, front: { x: 0, z: 120.6 } };   // (front = on top of the platform, before the arch)
+export const PORTAL = { x: 5, z: 152, r: 6.5, front: { x: 5, z: 148.6 } };   // (owner) deep in the forest past the hamlets, in a horseshoe of trees at the end of a bending road   // (front = on top of the platform, before the arch)
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
@@ -103,6 +103,7 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [0, 0, 64, 112],      // the strip east of the farm: the dirt path from the chicken coop up to the mines (round the river's east end)
   [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
   [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Adventure Portal)
+  [-18, -10, 28, 168],   // (owner) the forest road south past the hamlets to the Adventure Portal's clearing
   [-86, 103, -40, 121],  // the long clearing west into the deep forest: the Elixir Brewer and the Endless Tower at its end
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
@@ -263,7 +264,8 @@ export const ROADS: RoadSpec[] = [
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: TOWER.z, x2: TOWER.door.x, z2: TOWER.z, w: 1.8 },   // endless tower door (a narrow woodland path)
-  { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland to the Adventure Portal
+  { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
+  { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.x, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
@@ -421,6 +423,17 @@ export const TOWN_TREES: TreeSpec[] = [
       if (x < -45) t.push({ x: x - 1.8, z: 119.4 - (i % 3) * 0.8, s: 3.0 + ((i + 1) % 4) * 0.25, kind: ((i + 1) % 3) as 0 | 1 | 2 });
     }
     t.push({ x: -82.5, z: 104.5, s: 3.5, kind: 0 }, { x: -84, z: 119, s: 3.4, kind: 2 }, { x: -64, z: 103.6, s: 3.3, kind: 1 }, { x: -86, z: 112, s: 3.6, kind: 1 });
+    return t;
+  })(),
+  // (owner) the Adventure Portal deep in the forest: trees along the bending road, then a horseshoe round the clearing (open to the road)
+  ...(() => {
+    const t: TreeSpec[] = [];
+    const road: [number, number][] = [[0, 130], [1.8, 134], [3.6, 138.5], [4.4, 142.5]];
+    road.forEach(([x, z], i) => { t.push({ x: x - 7.5 - (i % 2), z, s: 3.2 + (i % 3) * 0.3, kind: (i % 3) as 0 | 1 | 2 }); t.push({ x: x + 7.5 + ((i + 1) % 2), z: z + 1, s: 3.3 + ((i + 1) % 3) * 0.3, kind: ((i + 2) % 3) as 0 | 1 | 2 }); });
+    for (let i = 0; i <= 10; i++) {
+      const a = -1.95 + (3.9 * i) / 10, r = 13 + (i % 2) * 1.6;   // angle from +z (south): the arc wraps the back and sides
+      t.push({ x: PORTAL.x + Math.sin(a) * r, z: PORTAL.z + Math.cos(a) * r, s: 3.4 + (i % 3) * 0.35, kind: ((i + 1) % 4) as 0 | 1 | 2 | 3 });
+    }
     return t;
   })(),
   // the mainland across the bridge
