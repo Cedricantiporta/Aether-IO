@@ -8,7 +8,7 @@ import type { Rarity, SpecialId, Upgrade, UpgradeType } from '../types';
 
 export const TIERS: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Base odds (percent) per tier; renormalised inside a card's own rarity range. Mythic only while none was offered this run. */
-const TIER_WEIGHT = [55, 28, 12, 4.5, 0.5];
+const TIER_WEIGHT = [56, 29, 12.5, 2.2, 0.25];
 
 export const REGEN_CAP_BASE = 0.7;   // HP regeneration stops at 70% of max HP (potions / heals are not limited)
 export const DEFIANCE_MAX = 2;
@@ -95,16 +95,16 @@ const STATS: StatDef[] = [
 interface SpecialDef { id: SpecialId; name: string; vals: [number, number]; fmt: (v: number, tier: number) => string; weight: number }
 /** vals = [LEGENDARY, MYTHIC] */
 const SPECIALS: SpecialDef[] = [
-  { id: 'AFFLICT', name: 'Afflictor', vals: [0.20, 0.30], weight: 0.3, fmt: (v) => `+${pct(v)} damage to enemies with 3 or more status effects (burn, poison, freeze, slow, stun...)` },
-  { id: 'SUNDER', name: 'Shieldbreaker', vals: [0.20, 0.35], weight: 0.3, fmt: (v) => `Enemy shields (bosses excepted) are ${pct(v)} weaker` },
-  { id: 'GUARDIAN', name: 'Guardian’s Spoils', vals: [0, 1], weight: 0.3, fmt: (_v, t) => `Every guardian or mini-boss stage also gives a card selection when cleared${t >= 4 ? ' (one more card to choose from)' : ''}` },
-  { id: 'SLAYER', name: 'Giant Slayer', vals: [0.15, 0.25], weight: 0.3, fmt: (v) => `Against bosses: deal +${pct(v)} damage and take ${pct(v)} less damage` },
-  { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.3, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${t >= 4 ? 90 : 85}% of max HP instead of 70%` },
-  { id: 'EXECUTE', name: 'Executioner', vals: [0.25, 0.40], weight: 0.3, fmt: (v) => `+${pct(v)} damage to enemies below 30% HP` },
-  { id: 'FIRST_STRIKE', name: 'First Strike', vals: [0.40, 0.70], weight: 0.3, fmt: (v) => `+${pct(v)} damage to enemies at full HP` },
-  { id: 'SECOND_WIND', name: 'Second Wind', vals: [0.15, 0.25], weight: 0.3, fmt: (v) => `Heal ${pct(v)} of max HP when a room is cleared` },
-  { id: 'GOLD_RUSH', name: 'Gold Rush', vals: [0.30, 0.50], weight: 0.3, fmt: (v) => `+${pct(v)} gold from all sources` },
-  { id: 'LINGER', name: 'Lingering Malice', vals: [0.30, 0.50], weight: 0.3, fmt: (v) => `Status effects you inflict last ${pct(v)} longer` },
+  { id: 'AFFLICT', name: 'Afflictor', vals: [0.20, 0.30], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies with 3 or more status effects (burn, poison, freeze, slow, stun...)` },
+  { id: 'SUNDER', name: 'Shieldbreaker', vals: [0.20, 0.35], weight: 0.15, fmt: (v) => `Enemy shields (bosses excepted) are ${pct(v)} weaker` },
+  { id: 'GUARDIAN', name: 'Guardian’s Spoils', vals: [0, 1], weight: 0.15, fmt: (_v, t) => `Every guardian or mini-boss stage also gives a card selection when cleared${t >= 4 ? ' (one more card to choose from)' : ''}` },
+  { id: 'SLAYER', name: 'Giant Slayer', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Against bosses: deal +${pct(v)} damage and take ${pct(v)} less damage` },
+  { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.15, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${t >= 4 ? 90 : 85}% of max HP instead of 70%` },
+  { id: 'EXECUTE', name: 'Executioner', vals: [0.25, 0.40], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies below 30% HP` },
+  { id: 'FIRST_STRIKE', name: 'First Strike', vals: [0.40, 0.70], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies at full HP` },
+  { id: 'SECOND_WIND', name: 'Second Wind', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Heal ${pct(v)} of max HP when a room is cleared` },
+  { id: 'GOLD_RUSH', name: 'Gold Rush', vals: [0.30, 0.50], weight: 0.15, fmt: (v) => `+${pct(v)} gold from all sources` },
+  { id: 'LINGER', name: 'Lingering Malice', vals: [0.30, 0.50], weight: 0.15, fmt: (v) => `Status effects you inflict last ${pct(v)} longer` },
 ];
 
 /** Roman numeral plaque of the arcana-style cards (keyed by card type or special id). */
@@ -151,13 +151,13 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   }
   out.push({ weight: 0.3, make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
   if (ultUnlocked) out.push({ weight: 0.25, make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
-  if (aegisBiome !== biomeKey) out.push({ weight: 0.5, make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
+  if (aegisBiome !== biomeKey) out.push({ weight: 0.3, make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
   if (runCards.defianceTaken < DEFIANCE_MAX) {
-    out.push({ weight: 0.35, make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
+    out.push({ weight: 0.2, make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
   }
   for (const s of SPECIALS) {
     if (runCards.taken[s.id]) continue;
-    out.push({ weight: s.weight, make: (am) => { const t = am && Math.random() < 0.06 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
+    out.push({ weight: s.weight, make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
   }
   void multishotOk;
   return out;
