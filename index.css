@@ -2780,3 +2780,9 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .ctl-map .ctl-btn.sm { font-size: 9px; }
 .ctl-map .ctl-act { font: 600 15px var(--font-body, sans-serif); fill: #efe4cb; }
 .ctl-map .ctl-key { font: 800 11px var(--font-title); fill: var(--gold-light, #f1d58e); letter-spacing: .06em; }
+
+/* (owner) a dream at the Font (ui/screens/DreamOverlay.tsx): the town fades behind a soft gold-white haze */
+.dream-haze { position: fixed; inset: 0; z-index: 44; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255,250,232,.55), rgba(255,236,190,.42) 45%, rgba(40,32,20,.55) 100%);
+  backdrop-filter: blur(3px) saturate(.7); animation: dreamIn 1.6s ease-out both; }
+@keyframes dreamIn { from { opacity: 0; } to { opacity: 1; } }

@@ -544,7 +544,7 @@ export function updateVillage(dt: number): void {
     // frozen in conversation: face the speaker, E / Space advances, opening a panel ends it
     const st0 = useGameStore.getState();
     const n = npcs[useDialogueNpc()];
-    if (st0.isShopOpen || st0.isInventoryOpen || st0.isCharacterSheetOpen || st0.isPauseMenuOpen || !n || (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > 64) closeDialogue();
+    if (st0.isShopOpen || st0.isInventoryOpen || st0.isCharacterSheetOpen || st0.isPauseMenuOpen || (n ? (n.x - p.pos.x) ** 2 + (n.z - p.pos.z) ** 2 > 64 : useDialogueNpc() >= 0)) closeDialogue();   // (npc -1: a scene with no speaker in the world, e.g. a Font dream)
     else {
       p.vel.x = p.vel.z = 0; p.anim.moveBlend *= Math.max(0, 1 - dt * 10);
       if (n) p.facing = Math.atan2(n.x - p.pos.x, n.z - p.pos.z);

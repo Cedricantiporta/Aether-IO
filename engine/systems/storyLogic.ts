@@ -1,3 +1,4 @@
+import { trueEndingReady, trueEndingNeed } from '../../dreams';
 // Main story chain runtime: talking to the step's NPC advances it (dialogue.ts), kills of the step's enemy kind count
 // during runs (also champions / the depth-10 pre-boss for `goal` steps), freed captives count for rescue steps, town
 // actions (`hub` events) count for shop steps, the ending finishes the Lich step. (Where the main quest continues for the guide
@@ -171,5 +172,10 @@ events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods a
 });
 events.on('gameEnding', () => {
   const st = useGameStore.getState(), s = st.story;
-  if (STORY[s.step]?.ending) st.setStory(s.step + 1, 0);
+  if (!STORY[s.step]?.ending) return;
+  if (STORY[s.step].id === 'remember' && !trueEndingReady(st.progress.endings)) {   // (owner, Hades-like) not yet: the memory slips away
+    st.addNotification(`Her words slip away as the Font pulls you home... (${trueEndingNeed(st.progress.endings)})`, '#fff3c4', 'SYSTEM');
+    return;
+  }
+  st.setStory(s.step + 1, 0);
 });

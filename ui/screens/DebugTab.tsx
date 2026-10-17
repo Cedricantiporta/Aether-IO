@@ -1,3 +1,5 @@
+import { playNextDream } from './DreamOverlay';
+import { markDreamSeen } from '../../dreams';
 // Settings > Debug: cheats for testing (god mode, currencies, skills, rank) and jumping to any biome / room / boss.
 import React, { useState } from 'react';
 import { useGameStore } from '../../store';
@@ -127,6 +129,10 @@ export const DebugTab: React.FC = () => {
     <Line label="Special fights" hint="Malakar: the Void throne room. Riruru: a Greenwood room; the blue slime hops in once you clear it.">
       <Button size="sm" data-testid="dbg-malakar" onClick={() => fight(() => debugMalakar())}>Fight Malakar</Button>
       <Button size="sm" data-testid="dbg-riruru" onClick={() => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); })}>Fight Riruru</Button>
+    </Line>
+    <Line label="Dreams" hint="In town: play the next Font dream now (ignores its milestone), or forget all of them.">
+      <Button size="sm" disabled={inRun} onClick={() => { useUiStore.getState().openSettings(false); setTimeout(() => playNextDream(), 200); }}>Play next dream</Button>
+      <Button size="sm" onClick={() => markDreamSeen(0)}>Reset dreams</Button>
     </Line>
     <div className="py-2"><Button className="w-full" variant="primary" onClick={go} data-testid="dbg-go">{inRun ? 'Jump now' : 'Start run here'}</Button></div>
   </>);

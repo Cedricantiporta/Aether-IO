@@ -173,6 +173,9 @@ export function townLift(x: number, z: number): number {
  *  CHURCH: the chapel west of the keep (enterable, see churchData); TAVERN: the Golden Tankard east of the keep;
  *  WINDMILL: on the meadow by the south-east wall tower; STATUE: the founder's statue in the middle of the plaza. */
 export const CHURCH = { x: -27, z: -27.5, w: 9, d: 14, rot: 0 };
+/** (owner) the adventurer's own little house in the south-west corner of the walls, door facing the town: after every run
+ *  the Font carries the hero home and they wake here (engine/game.enterVillage spawns them at `wake`, outside the door). */
+export const HERO_HOUSE = { x: -39.6, z: 33.2, w: 4.4, d: 3.8, rot: Math.PI, wake: { x: -39.6, z: 29.4 } };
 export const TAVERN = { x: 28, z: -21, w: 9.5, d: 7, rot: 0 };
 export const WINDMILL = { x: 38, z: 81, r: 3.4 };
 /** Extra crop fields on the mainland (fenced, drawn by TownScenery): wheat / cabbages / pumpkins. */
@@ -216,6 +219,8 @@ export const HOUSES: HouseSpec[] = [
   H(13, 121, Math.PI, 5.2, 4.4), H(23, 123.5, Math.PI, 5.6, 4.6, 2), H(32, 119.5, Math.PI, 4.8, 4.2),
   // (owner: more houses right of the portal) a second little hamlet west of the portal, doors facing the tower path
   H(-13.5, 121, Math.PI, 5.2, 4.4), H(-23.5, 124, Math.PI, 5.4, 4.6, 2), H(-33, 120, Math.PI, 4.8, 4.2), H(-42, 125, Math.PI, 4.6, 4),
+  // (owner) the adventurer's house (HERO_HOUSE): small, one floor, a warm red door
+  { x: HERO_HOUSE.x, z: HERO_HOUSE.z, rot: HERO_HOUSE.rot, w: HERO_HOUSE.w, d: HERO_HOUSE.d, floors: 1, wall: '#e9dfc8', roof: '#4a3426', trim: '#6e4b2b', chimney: true, door: '#8a2f22' },
   // flanking the castle
   H(18.5, -28.5, 0, 5.0, 4.4),
   // east end of the north street, door facing the street
@@ -413,7 +418,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
   { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
-  { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -37, z: 30, s: 3.7, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
+  { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -31, z: 34.6, s: 3.4, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: 13.5, z: 44.5, s: 3.1, kind: 1 }, { x: -39, z: 58, s: 3.6, kind: 0 },
@@ -449,7 +454,7 @@ export const TOWN_TREES: TreeSpec[] = [
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
-  [-37, -15, 3, 3], [37, -16, 3, 3], [-37, 30, 3.4, 3.4], [38, 30, 3.4, 3.4],
+  [-37, -15, 3, 3], [37, -16, 3, 3], [-31, 34.6, 2.8, 2.6], [38, 30, 3.4, 3.4],
   [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
   [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
 ];

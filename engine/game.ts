@@ -1,6 +1,6 @@
 import { CAM_PITCH0 } from './world';
 import { resetBossMech } from './systems/bossMech';
-import { PLAZA, TOWER } from './townData';
+import { PLAZA, TOWER, HERO_HOUSE } from './townData';
 import { runInfo } from './runMods';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
@@ -137,6 +137,8 @@ function resetSystems(): void {
   clearPressed();
 }
 
+/** A run happened since the last town load: the next arrival is at the hero's house, not the plaza. */
+let backFromRun = false;
 /** Peaceful town: shops always open, island scenery + a few harvest nodes, hero standing in the square. */
 export function enterVillage(): void {
   world.village.area = 'TOWN'; world.village.pending = ''; world.village.fade = 0; world.village.areaVer++;   // always back in the town (never inside the castle)
@@ -150,6 +152,10 @@ export function enterVillage(): void {
   world.player.pos.set(PLAZA.x, 0, PLAZA.z - 4.4);
   world.player.facing = Math.PI;                 // face north, up the avenue to the castle
   world.camera.yaw = 0;                          // camera behind the hero
+  if (backFromRun) {                             // (owner) after a run the hero wakes at home: outside their own front door
+    world.player.pos.set(HERO_HOUSE.wake.x, 0, HERO_HOUSE.wake.z); world.player.facing = Math.PI;
+  }
+  backFromRun = false;
   if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
     world.player.pos.set(TOWER.door.x + 3.2, 0, TOWER.door.z); world.player.facing = Math.PI / 2;
   }
@@ -163,6 +169,7 @@ export function enterVillage(): void {
 
 /** A run: leaves the town and loads room 1 of the first biome (the town map is rebuilt by enterVillage when it ends). */
 export function startRun(): void {
+  backFromRun = true;
   clearWorld();
   world.enemyGrid.clear();
   resetSystems();

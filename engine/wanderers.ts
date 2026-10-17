@@ -1,3 +1,4 @@
+import { trueEndingReady } from '../dreams';
 import { storyIdx } from '../story';
 // ============================================================================
 // Wanderers: memorable characters met now and then in a cleared adventure room (beyond the King and the townsfolk).
@@ -128,7 +129,7 @@ export function placeKeeper(x: number, z: number): void {
 /** Aelia's words at the end: 0 = the Font makes you forget (hints), 1 = the run you remember (story 'remember'), 2 = she is queen. */
 function keeperStage(): number {
   const step = useGameStore.getState().story.step;
-  return step >= storyIdx('wren4') ? 2 : step === storyIdx('remember') ? 1 : 0;
+  return step >= storyIdx('wren4') ? 2 : step === storyIdx('remember') && trueEndingReady(useGameStore.getState().progress.endings) ? 1 : 0;   // (true ending only on the 10th clear, every dream seen)
 }
 
 /** E at the wanderer: their story, then the offer (once). */
