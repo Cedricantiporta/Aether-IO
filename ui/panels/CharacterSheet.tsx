@@ -12,7 +12,7 @@ import { Panel, PanelHead, StatLine } from '../components/Frame';
 import { HERO_ICON } from '../hud/TopBars';
 import { HERO_COLOR, timeMMSS } from '../lib/game';
 import { activeSets, SET_COLOR_DARK } from '../../itemSets';
-import { ATTR_INFO, ATTR_KEYS, ATTR_RESET_GOLD, attrPointsTotal, attrSpent, ATTR_STATS, attrPreview, type AttrKey, type Attrs } from '../../attributes';
+import { ATTR_INFO, ATTR_KEYS, ATTR_RESET_GOLD, attrPointsTotal, attrSpent, ATTR_STATS, attrPreview, type AttrKey, type Attrs, autoAllocate } from '../../attributes';
 import { GOLD_SCALE } from '../../constants';
 import { useUiStore } from '../uiStore';
 
@@ -231,6 +231,7 @@ const AttrAlloc: React.FC<{ d: AttrDraft }> = ({ d }) => {
       </div>
       <div className="ax-apply">
         <button className="ax-btn pe" disabled={!dirty} onClick={() => setDraft(saved)}>Undo</button>
+        <button className="ax-btn pe" disabled={left <= 0} onClick={() => setDraft(autoAllocate(d.hero, draft, left))} data-testid="attr-auto" title="Spread the free points for your class (review, then Apply)">Auto</button>
         <button className="ax-btn gold pe" disabled={!dirty} onClick={apply} data-testid="attr-apply">Apply</button>
       </div>
     </div>

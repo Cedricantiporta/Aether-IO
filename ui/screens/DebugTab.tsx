@@ -130,6 +130,10 @@ export const DebugTab: React.FC = () => {
       <Button size="sm" data-testid="dbg-malakar" onClick={() => fight(() => debugMalakar())}>Fight Malakar</Button>
       <Button size="sm" data-testid="dbg-riruru" onClick={() => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); })}>Fight Riruru</Button>
     </Line>
+    <Line label="Erin's rockfall" hint="Break the boulders on the old miners' road now (Erin's Lv 30 quest chain marked done), or put them back.">
+      <Button size="sm" onClick={() => { const s = useGameStore.getState(); useGameStore.setState({ npcQuests: { ...s.npcQuests, q: { ...s.npcQuests.q, erin_boulder: { s: 2, p: 1 }, erin_frost: { s: 2, p: 0 } } } }); toast('Debug: the rockfall is broken'); }}>Break it</Button>
+      <Button size="sm" onClick={() => { const s = useGameStore.getState(), q = { ...s.npcQuests.q }; delete q.erin_boulder; delete q.erin_frost; useGameStore.setState({ npcQuests: { ...s.npcQuests, q } }); toast('Debug: rockfall restored (re-enter town)'); }}>Restore</Button>
+    </Line>
     <Line label="Dreams" hint="In town: play the next Font dream now (ignores its milestone), or forget all of them.">
       <Button size="sm" disabled={inRun} onClick={() => { useUiStore.getState().openSettings(false); setTimeout(() => playNextDream(), 200); }}>Play next dream</Button>
       <Button size="sm" onClick={() => markDreamSeen(0)}>Reset dreams</Button>

@@ -173,8 +173,8 @@ export function townLift(x: number, z: number): number {
  *  CHURCH: the chapel west of the keep (enterable, see churchData); TAVERN: the Golden Tankard east of the keep;
  *  WINDMILL: on the meadow by the south-east wall tower; STATUE: the founder's statue in the middle of the plaza. */
 export const CHURCH = { x: -27, z: -27.5, w: 9, d: 14, rot: 0 };
-/** (owner) the adventurer's own little house in the south-west corner of the walls, door facing the town: after every run
- *  the Font carries the hero home and they wake here (engine/game.enterVillage spawns them at `wake`, outside the door). */
+/** (owner) the adventurer's own little house in the south-west corner of the walls, door facing the town (enterable:
+ *  the HOME area, engine/homeData.ts). */
 export const HERO_HOUSE = { x: -39.6, z: 33.2, w: 4.4, d: 3.8, rot: Math.PI, wake: { x: -39.6, z: 29.4 } };
 export const TAVERN = { x: 28, z: -21, w: 9.5, d: 7, rot: 0 };
 export const WINDMILL = { x: 38, z: 81, r: 3.4 };
@@ -925,7 +925,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
   },
   {   // (owner: anime cameo, Attack on Titan) a hot-headed youth glaring at the rockfall that seals the old miners' road
-    name: 'Erin', role: 'Boulder Glarer', model: 'KNIGHT', tint: '#e8dcc4', scale: 0.95, prop: 'none', accent: '#3e6b3a', home: [44.2, 47.2],
+    name: 'Erin', role: 'Boulder Glarer', model: 'ARCHER', tint: '#ffffff', scale: 0.78, prop: 'none', accent: '#3e6b3a', home: [44.2, 47.2], noHat: true, noCape: true, tunic: '#4f6a3a', hair: '#3a2616', longHair: false,   // (owner: a kid)
     talk: [
       ['Someday I will lift that boulder. With my own two hands.', 'Everyone says it cannot be moved. That is exactly why I have to move it!'],
       ['Beyond those rocks is the old miners\' road. Straight to the mines. My father walked it every morning.', 'Now everyone has to go round by the bridge like cattle in a pen. I hate it. I hate being walled in.'],

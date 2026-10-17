@@ -9,6 +9,26 @@ export const ATTR_START = 3, ATTR_PER_LEVEL = 2;
 export const ATTR_RESET_GOLD = 1000;   // x GOLD_SCALE (charged by the store)
 
 export const emptyAttrs = (): Attrs => ({ STR: 0, DEX: 0, INT: 0, VIT: 0, LUK: 0 });
+
+/** (owner) Auto allocate: the share of points each class wants in each attribute. */
+const AUTO_SPLIT: Record<HeroClass, Partial<Attrs>> = {
+  ARCHER: { DEX: 0.5, STR: 0.25, VIT: 0.2, LUK: 0.05 },
+  WIZARD: { INT: 0.55, VIT: 0.25, DEX: 0.1, LUK: 0.1 },
+  BARBARIAN: { STR: 0.5, VIT: 0.35, DEX: 0.15 },
+  KNIGHT: { VIT: 0.45, STR: 0.4, DEX: 0.15 },
+  NECROMANCER: { INT: 0.55, VIT: 0.3, LUK: 0.15 },
+};
+/** `a` plus `free` points spread by the class split (each point to the attribute furthest below its target share). */
+export function autoAllocate(hero: HeroClass, a: Attrs, free: number): Attrs {
+  const out = { ...a }, w = AUTO_SPLIT[hero];
+  for (let n = 0; n < free; n++) {
+    const tot = attrSpent(out) + 1;
+    let best: AttrKey = 'VIT', gap = -1e9;
+    for (const k of ATTR_KEYS) { const g = (w[k] ?? 0) * tot - out[k]; if ((w[k] ?? 0) > 0 && g > gap) { gap = g; best = k; } }
+    out[best]++;
+  }
+  return out;
+}
 export const attrPointsTotal = (lv: number): number => ATTR_START + ATTR_PER_LEVEL * Math.max(0, lv - 1);
 export const attrSpent = (a: Attrs): number => ATTR_KEYS.reduce((n, k) => n + (a[k] | 0), 0);
 
