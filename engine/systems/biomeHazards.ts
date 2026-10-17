@@ -52,7 +52,6 @@ const colOut: Collider[] = [];
 const ids: number[] = [];
 const sx = new Float32Array(world.enemies.length), sz = new Float32Array(world.enemies.length);   // per-enemy ice slide velocity
 const maxHp = () => useGameStore.getState().stats.maxHealth;
-const notify = (msg: string, color: string) => useGameStore.getState().addNotification(msg, color, 'SYSTEM');
 const psn: StatusEffect = { type: 'POISON', duration: 1.0, value: 3 };
 const riftOpts: DamageOpts = { kind: 'MAGIC', dot: true, env: 'HAZARD' };
 
@@ -134,10 +133,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     }
     hz.flip.next = 9 + Math.random() * 6;
   }
-  if (kind !== HZ.VOID && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its gravity flips even when no rift fit)
-  else if (kind === HZ.GREEN) notify('Thorny brambles and spore mushrooms grow here.', '#9bd26a');
-  else if (kind === HZ.FROST) notify('Slippery ice and falling icicles!', '#9fe0ff');
-  else notify('Void rifts tear the floor. Gravity is unstable.', '#c9a2ff');
+  if (kind !== HZ.VOID && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its gravity flips even when no rift fit; no 'hazards here' toast: the owner found them noisy)
 }
 
 // ---------------------------------------------------------------------- tick --
