@@ -10,6 +10,7 @@ export enum GameStatus {
   SHOP = 'SHOP',
 }
 
+export type ArmorGroup = 'HEAVY' | 'LIGHT' | 'ARCANE';   // wear is shared by group: HEAVY = Knight + Barbarian, LIGHT = Archer + Necromancer, ARCANE = Wizard
 export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT' | 'NECROMANCER';
 
 export type UpgradeType = 
@@ -119,7 +120,8 @@ export interface Item {
   description?: string;
   stackSize?: number; 
   quantity?: number; 
-  classType?: HeroClass; 
+  classType?: HeroClass;   // weapons: the one class that wields it
+  armorGroup?: ArmorGroup; // helmet / armor / gloves / boots: who can wear it (undefined = anyone)
   /** Newly looted / rewarded (not monster loot): a dot in the bag until the player looks at it. */
   isNew?: boolean;
   

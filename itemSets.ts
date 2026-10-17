@@ -102,8 +102,24 @@ export const SETS: SetDef[] = [
 ];
 export const SET_BY_NAME: Record<string, SetDef> = Object.fromEntries(SETS.map((s) => [s.name, s]));
 
-export const setPieceName = (s: SetDef, slot: SetSlot, hero: HeroClass): string =>
-  slot === 'weapon' ? (typeof s.names.weapon === 'string' ? s.names.weapon : s.names.weapon[hero]) : s.names[slot];
+/** (owner) class wear identity: Knight = plate, Barbarian = hide / fur / bone, Archer = leather, Wizard = cloth, Necromancer = dark bone robes.
+ *  Order: helmet, armor, gloves, boots. */
+export const WEAR_NAME: Record<HeroClass, [string, string, string, string]> = {
+  KNIGHT: ['Plate Helm', 'Steel Cuirass', 'Gauntlets', 'Sabatons'],
+  BARBARIAN: ['Horned Helm', 'Wolfhide Vest', 'Fur Wraps', 'Hide Boots'],
+  ARCHER: ['Ranger Hood', 'Leather Jerkin', 'Ranger Bracers', 'Ranger Boots'],
+  WIZARD: ['Arcane Hat', 'Silk Robe', 'Silk Gloves', 'Silk Slippers'],
+  NECROMANCER: ['Bone Crown', 'Grave Shroud', 'Grave Grips', 'Bone Treads'],
+};
+export const WEAR_SLOT_INDEX: Record<string, number> = { helmet: 0, armor: 1, gloves: 2, boots: 3 };
+
+/** Set pieces: weapons are per class; helmet / armor / gloves / boots of a class-agnostic set are per class too
+ *  (the set's first word + the class's wear noun, e.g. "Shadowstep Steel Cuirass"); accessories are universal. */
+export const setPieceName = (s: SetDef, slot: SetSlot, hero: HeroClass): string => {
+  if (slot === 'weapon') return typeof s.names.weapon === 'string' ? s.names.weapon : s.names.weapon[hero];
+  if (!s.hero && slot !== 'accessory') return `${s.names[slot].split(' ')[0]} ${WEAR_NAME[hero][WEAR_SLOT_INDEX[slot]]}`;
+  return s.names[slot];
+};
 export const setPieceId = (s: SetDef, slot: SetSlot, hero?: HeroClass): string => `set_${s.id}_${slot}${hero ? '_' + hero.toLowerCase() : ''}`;
 
 /** Equipped piece count per set name. */

@@ -6,7 +6,8 @@ import { SKILLS_INFO } from '../../constants';
 import { activeDefs, dashKey, isDashKey } from '../../abilityDefs';
 import { unlockLevel, skillCost, DASH_UNLOCK_LV } from '../../classLevels';
 import { RECIPES, canCraft } from '../../crafting';
-import type { Item, ItemType } from '../../types';
+import type { HeroClass, Item, ItemType } from '../../types';
+import { canUseClass } from '../../itemClass';
 import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
 import { allocBlock, talentPointsTotal, talentsOf, talentsSpent } from '../../talents';
@@ -32,7 +33,7 @@ const SLOT: [keyof Equipment, ItemType][] = [['weapon', 'WEAPON'], ['helmet', 'H
 export function hasBetterGear(inv: Item[], eq: Equipment, hero: string, rank: number): boolean {
   for (const [slot, type] of SLOT) {
     const cur = eq[slot] as Item | null; const cp = cur ? calculateItemCP(cur) : -1;
-    for (const i of inv) if (i.type === type && rank >= RANK_REQ[i.rarity] && (!i.classType || i.classType === hero) && calculateItemCP(i) > cp) return true;
+    for (const i of inv) if (i.type === type && rank >= RANK_REQ[i.rarity] && canUseClass(i, hero as HeroClass) && calculateItemCP(i) > cp) return true;
   }
   return false;
 }
@@ -42,7 +43,7 @@ export function betterGearIds(inv: Item[], eq: Equipment, hero: string, rank: nu
   const out = new Set<string>();
   for (const [slot, type] of SLOT) {
     const cur = eq[slot] as Item | null; const cp = cur ? calculateItemCP(cur) : -1;
-    for (const i of inv) if (i.type === type && rank >= RANK_REQ[i.rarity] && (!i.classType || i.classType === hero) && calculateItemCP(i) > cp) out.add(i.id);
+    for (const i of inv) if (i.type === type && rank >= RANK_REQ[i.rarity] && canUseClass(i, hero as HeroClass) && calculateItemCP(i) > cp) out.add(i.id);
   }
   return out;
 }

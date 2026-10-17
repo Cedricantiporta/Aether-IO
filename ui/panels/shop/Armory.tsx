@@ -6,6 +6,7 @@ import { ShopGrid } from '../../components/ShopGrid';
 import { useUiStore } from '../../uiStore';
 import { isGear } from '../../lib/game';
 import type { Item } from '../../../types';
+import { canUseClass } from '../../../itemClass';
 
 const SLOT_ORDER = ['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY'];
 const SLOT_NAME: Record<string, string> = { ALL: 'All', WEAPON: 'Weapon', HELMET: 'Helmet', ARMOR: 'Armor', GLOVES: 'Gloves', BOOTS: 'Boots', ACCESSORY: 'Trinket' };
@@ -18,7 +19,7 @@ export const ArmoryTab: React.FC = () => {
   const freeArmor = useGameStore((s) => questFree(s, 'armor'));   // tutorial "Suit of Steel": one armor piece on the house
   const setBuy = useUiStore((s) => s.setBuyItem);
   const groups = useMemo(() => {
-    const stock = ITEMS_POOL.filter((i) => isGear(i) && !i.retired && !i.setName && (i.rarity === 'COMMON' || i.rarity === 'UNCOMMON' || i.rarity === 'RARE') && (!i.classType || i.classType === hero));
+    const stock = ITEMS_POOL.filter((i) => isGear(i) && !i.retired && !i.setName && (i.rarity === 'COMMON' || i.rarity === 'UNCOMMON' || i.rarity === 'RARE') && canUseClass(i, hero));
     const by: Record<string, Item[]> = {};
     for (const it of stock) (by[it.type] ||= []).push(it);
     return SLOT_ORDER.filter((k) => by[k]?.length).map((k) => ({ k, items: by[k].sort((a, b) => (a.rarity === b.rarity ? a.price - b.price : TIER_N[a.rarity] - TIER_N[b.rarity])) }));

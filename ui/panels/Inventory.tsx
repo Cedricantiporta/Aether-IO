@@ -12,6 +12,7 @@ import { ItemSlot } from '../components/ItemSlot';
 import { HERO_ICON } from '../hud/TopBars';
 import { useUiStore } from '../uiStore';
 import { SORTS, isGear, sortedItems, sellPrice, RARITY_TEXT } from '../lib/game';
+import { canUseClass } from '../../itemClass';
 import { recycleYieldAll } from '../../crafting';
 import { useDrop, reorder } from '../lib/dnd';
 import { DropCell } from '../components/DropCell';
@@ -94,7 +95,7 @@ export const InventoryPanel: React.FC = () => {
 
   const selectedLive = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id)) : null;
 
-  const lockedFor = (it: Item) => isGear(it) && (RANK_REQ[it.rarity] > rank || (!!it.classType && it.classType !== hero));
+  const lockedFor = (it: Item) => isGear(it) && (RANK_REQ[it.rarity] > rank || !canUseClass(it, hero));
   const { deposit, withdraw } = useGameStore(useShallow((s) => ({ deposit: s.depositItem, withdraw: s.withdrawItem })));
   // the bag accepts equipped items (unequip) and warehouse items (withdraw)
   const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });

@@ -5,7 +5,8 @@
 // Pure data; no store / React imports.
 // ============================================================================
 import type { HeroClass, Item, PlayerStats, Rarity, ProjectileType, AbilityType } from './types';
-import { SETS, SET_SLOTS, setPieceId, setPieceName, type SetSlot } from './itemSets';
+import { GROUP_OF } from './itemClass';
+import { SETS, SET_SLOTS, setPieceId, setPieceName, WEAR_NAME, type SetSlot } from './itemSets';
 
 type St = keyof PlayerStats;
 const RAR: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
@@ -184,12 +185,8 @@ const WEAR_SEC: Record<HeroClass, string[]> = {
   ARCHER: ['dodge', 'move', 'hp', 'regen'], WIZARD: ['mana', 'mregen', 'hp', 'dodge'], BARBARIAN: ['hp', 'regen', 'thorn', 'dodge'],
   KNIGHT: ['hp', 'thorn', 'regen', 'mregen'], NECROMANCER: ['hp', 'mana', 'mregen', 'regen'],
 };
-const WEAR_NAME: Record<HeroClass, [string, string, string, string]> = {
-  ARCHER: ['Ranger Hood', 'Ranger Jerkin', 'Ranger Bracers', 'Ranger Boots'], WIZARD: ['Mage Hat', 'Mage Robe', 'Mage Gloves', 'Mage Slippers'],
-  BARBARIAN: ['Raider Helm', 'Raider Harness', 'Raider Wraps', 'Raider Treads'], KNIGHT: ['Guard Helm', 'Guard Plate', 'Guard Gauntlets', 'Guard Sabatons'],
-  NECROMANCER: ['Grave Cowl', 'Grave Shroud', 'Grave Grips', 'Grave Boots'],
-};
 const WEAR_SHAPE: Record<HeroClass, [number, number, number, number]> = { ARCHER: [1, 0, 1, 1], WIZARD: [6, 1, 1, 3], BARBARIAN: [4, 0, 3, 2], KNIGHT: [3, 3, 2, 2], NECROMANCER: [5, 2, 1, 0] };
+const WEAR_MAT: Record<HeroClass, string> = { KNIGHT: 'plate armour', BARBARIAN: 'hide and fur', ARCHER: 'ranger leathers', WIZARD: 'silk robes', NECROMANCER: 'dark bone-trimmed robes' };
 const ADJ = ['Worn', 'Sturdy', 'Fine', 'Masterwork', 'Heroic', 'Ascendant'];
 /** class armour weight: Defense multiplier */
 const CLASS_DEF: Record<HeroClass, number> = { ARCHER: 0.85, WIZARD: 0.75, BARBARIAN: 1.3, KNIGHT: 1.35, NECROMANCER: 0.8 };
@@ -200,7 +197,7 @@ export const classWearId = (hero: HeroClass, slot: string, ri: number): string =
 function classWear(hero: HeroClass, k: number, ri: number, id: string, name: string, extra: Partial<Item> = {}): void {
   const [type, f] = WEAR[k];
   const sec = WEAR_SEC[hero], own = type === 'BOOTS' ? ['def', 'move', ...sec.filter((s) => s !== 'move')] : ['def', ...sec];
-  gear(id, name, type, ri, 'heavy', { f, s: WEAR_SHAPE[hero][k], pal: P(ri, HEROES.indexOf(hero)) }, { classType: hero, description: `${ADJ[ri]} ${hero.toLowerCase()} gear.`, ...extra }, 1, own);
+  gear(id, name, type, ri, 'heavy', { f, s: WEAR_SHAPE[hero][k], pal: P(ri, HEROES.indexOf(hero)) }, { armorGroup: GROUP_OF[hero], description: `${ADJ[ri]} ${WEAR_MAT[hero]} (${GROUP_OF[hero] === 'HEAVY' ? 'heavy' : 'light'} armor).`, ...extra }, 1, own);
   const it = out[out.length - 1];
   if (it.stats.defense) it.stats.defense = Math.max(1, Math.round(it.stats.defense * CLASS_DEF[hero] * SLOT_DEF[type]));
 }
@@ -247,7 +244,8 @@ for (const set of SETS) {
   const pal = SET_PAL[set.id];
   for (const slot of SET_SLOTS) {
     const type = slot.toUpperCase() as Item['type'];
-    const heroes: (HeroClass | undefined)[] = slot === 'weapon' ? (set.hero ? [set.hero] : ['ARCHER', 'WIZARD', 'BARBARIAN']) : [undefined];
+    const perClass = slot === 'weapon' || (!set.hero && slot !== 'accessory');   // weapons + wear of class-agnostic sets: one piece per class
+    const heroes: (HeroClass | undefined)[] = perClass ? (set.hero ? [set.hero] : HEROES) : [undefined];
     for (const h of heroes) {
       const id = setPieceId(set, slot, set.hero ? undefined : h);
       const name = setPieceName(set, slot, h ?? set.hero ?? 'ARCHER');
@@ -255,7 +253,11 @@ for (const set of SETS) {
         const flav = WSEC[h][set.flavour.weapon] ? set.flavour.weapon : Object.keys(WSEC[h])[1];
         weapon(id, name, h, ri, flav, SET_SHAPES.weapon, pal, { setName: set.name, description: set.blurb }, 1.12);
       } else {
-        gear(id, name, type, ri, set.flavour[slot], { f: slot === 'accessory' ? 'acc' : slot === 'armor' ? 'armor' : slot === 'helmet' ? 'helm' : slot as 'gloves' | 'boots', s: SET_SHAPES[slot], pal }, { setName: set.name, description: set.blurb, price: Math.round(GPRICE[ri] * 1.2) }, 1.12);
+        const cls = slot === 'accessory' ? undefined : (h ?? set.hero);   // wear carries the class, accessories are universal
+        const shape = cls && slot !== 'accessory' ? WEAR_SHAPE[cls][WEAR.findIndex((w) => w[0] === type)] : SET_SHAPES[slot];
+        gear(id, name, type, ri, set.flavour[slot], { f: slot === 'accessory' ? 'acc' : slot === 'armor' ? 'armor' : slot === 'helmet' ? 'helm' : slot as 'gloves' | 'boots', s: shape ?? SET_SHAPES[slot], pal }, { setName: set.name, description: set.blurb, price: Math.round(GPRICE[ri] * 1.2), ...(cls ? { armorGroup: GROUP_OF[cls] } : {}) }, 1.12);
+        // the old universal piece of a class-agnostic set stays as a retired template (saves / ids), never dropped again
+        if (perClass && !set.hero && h === HEROES[0]) gear(`set_${set.id}_${slot}`, set.names[slot] as string, type, ri, set.flavour[slot], { f: slot === 'armor' ? 'armor' : slot === 'helmet' ? 'helm' : slot as 'gloves' | 'boots', s: SET_SHAPES[slot], pal }, { setName: set.name, description: set.blurb, price: Math.round(GPRICE[ri] * 1.2), retired: true }, 1.12);
       }
     }
   }

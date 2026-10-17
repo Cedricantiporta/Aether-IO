@@ -3,6 +3,7 @@
 // store, the Blacksmith UI and tests can share it.
 // ============================================================================
 import type { HeroClass, Item, PlayerStats, Rarity } from './types';
+import { canUseClass } from './itemClass';
 import { ITEMS_POOL, RANK_REQ, MATERIAL_DOWNGRADE_YIELD } from './constants';
 import { LOOT_BY_ID } from './loot';
 import { rollAffixes } from './affixes';
@@ -175,7 +176,7 @@ export function consumeLoot(inv: Item[], recipe: { loot: LootNeed[] }): Item[] {
 
 /** Templates this recipe can produce (class-matched for weapons). */
 export const recipeTemplates = (recipe: Recipe): Item[] =>
-  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.retired && !i.setName && !i.id.startsWith('start_') && (!i.classType || i.classType === recipe.hero));
+  ITEMS_POOL.filter((i) => i.type === recipe.slot.toUpperCase() && i.rarity === recipe.rarity && !i.retired && !i.setName && !i.id.startsWith('start_') && canUseClass(i, recipe.hero));
 
 /** Stat scaling for "+N" items (also used by drops and the blacksmith): each + adds 25% of the base stats (owner: was
  *  x level - a +3 item had 4x its stats and out-ranked the tiers above it). plusMul(level) = 1 + 0.25 * (level - 1). */

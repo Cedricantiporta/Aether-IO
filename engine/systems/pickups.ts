@@ -10,6 +10,7 @@ import { events } from '../events';
 import type { PickupKind } from '../types';
 import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
+import { canUseClass } from '../../itemClass';
 import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg } from '../../store';
 import { healPlayer, grantKillXp } from './combat';
 
@@ -112,7 +113,7 @@ function notifyLoot(item: Item): void {
     const slot = item.type.toLowerCase() as 'weapon';
     const cur = st.equipment[slot];
     const better = calculateItemCP(item) > (cur ? calculateItemCP(cur) : 0);
-    const usable = st.heroRank >= RANK_REQ[item.rarity] && (!item.classType || item.classType === st.hero);
+    const usable = st.heroRank >= RANK_REQ[item.rarity] && canUseClass(item, st.hero);
     if (better && usable) action = { label: 'EQUIP', onClick: () => useGameStore.getState().equipItem(item) };
   }
   const plus = item.level > 1 && item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'LOOT' ? ` +${item.level - 1}` : '';

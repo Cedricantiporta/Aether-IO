@@ -7,6 +7,7 @@ import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
 import { elixirOf, elixirUses } from '../../elixirs';
 import { HERO_STATS } from '../../constants';
+import { classTag, canUseClass } from '../../itemClass';
 import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
 import { emptyAffixSlots } from '../../reforge';
@@ -46,7 +47,8 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
   const equipped = compare && slot ? equipment[slot] : null;
   const isEquippedItself = equipped === item;
   const req = RANK_REQ[item.rarity];
-  const wrongClass = item.classType && item.classType !== heroClass;
+  const tag = classTag(item);
+  const wrongClass = isGear(item) && !canUseClass(item, heroClass);
   const cp = calculateItemCP(item);
   const cpDelta = equipped && !isEquippedItself ? cp - calculateItemCP(equipped) : 0;
   const pm = petPower(item), epm = equipped ? petPower(equipped) : 1; // pet growth scales displayed stats
@@ -58,13 +60,13 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
         {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
       </div>
       <div className="tt-sub">
-        {TYPE_LABEL[item.type]}{item.classType ? ` · ${item.classType}` : ''}
+        {TYPE_LABEL[item.type]}
         {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'ELIXIR' && (
           <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
         )}
       </div>
       {potionKind(item) && <div className="text-[.7rem] font-bold">Carried: {potionCount(inventory, potionKind(item)!)}/{POTION_CAP}</div>}
-      {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
+      {tag && <div className={`text-[.7rem] font-bold ${wrongClass ? 'neg' : ''}`}>{tag}</div>}
       {item.description && <><div className="tt-sep" /><div className="italic muted">{item.type === 'REVIVE' ? 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' : item.description}</div></>}
       {item.type === 'REVIVE' && (() => { const ms = ankhCooldownLeft(); return <div style={{ color: ms > 0 ? '#ff8a7a' : 'var(--good)', fontWeight: 700 }}>{ms > 0 ? `Recharging: ${Math.ceil(ms / 60000)} min left` : 'Ready'}</div>; })()}
       {item.type === 'ELIXIR' && elixirOf(item) && <div style={{ color: elixirOf(item)!.color, fontWeight: 700 }}>{elixirOf(item)!.effect} · one run · click in the bag to drink</div>}

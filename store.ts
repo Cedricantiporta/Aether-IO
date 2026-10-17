@@ -56,6 +56,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
+import { itemClass, canUseClass, classOnlyMsg, classFilter, OTHER_CLASS_SHARE } from './itemClass';
 import { crystalCount, syncCrystalStack } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
@@ -640,7 +641,7 @@ export const useGameStore = create<GameState>()((set, get) => {
   };
 
   const classOf = (item: Item): AbilityType | null =>
-    item.type === 'WEAPON' && item.classType ? WEAPON_Q[item.classType] : null;
+    item.type === 'WEAPON' && itemClass(item) ? WEAPON_Q[itemClass(item)!] : null;
 
   const notify = (msg: string, color = 'white', type: GameNotification['type'] = 'SYSTEM', action?: GameNotification['action']) =>
     get().addNotification(msg, color, type, action);
@@ -668,9 +669,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     baseStats.maxHealth = Math.round(baseStats.maxHealth * (1 + 0.03 * techLv(tech, 'vitality')));
     const inventory = inv.slice();
     const equipment: Equipment = { ...eq };
-    if (equipment.weapon && equipment.weapon.classType && equipment.weapon.classType !== hero) {
-      inventory.push(equipment.weapon);
-      equipment.weapon = null;
+    for (const sl of ['weapon', 'helmet', 'armor', 'gloves', 'boots'] as const) {   // other-class gear goes back to the bag
+      const w = equipment[sl];
+      if (w && !canUseClass(w, hero)) { inventory.push(w); equipment[sl] = null; }
     }
     if (!equipment.weapon) {
       // prefer the best class weapon already in the bag; only mint a starter when there is none
@@ -1434,8 +1435,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const req = RANK_REQ[item.rarity];
       if (s.heroRank < req) { notify(`Requires Lv ${req}!`, 'red', 'WARNING'); return; }
-      if (item.type === 'WEAPON' && item.classType && item.classType !== s.hero) {
-        notify(`Only for ${item.classType}!`, 'red', 'WARNING');
+      if (!canUseClass(item, s.hero)) {   // (owner) weapons and wear are class exclusive
+        notify(classOnlyMsg(item), 'red', 'WARNING');
         return;
       }
       if (!isGear(item) && item.type !== 'PET' && item.type !== 'TOOL') return;
@@ -1481,7 +1482,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const tryEquip = (slot: EquipSlot, type: ItemType) => {
         const candidates = inventory.filter((i) =>
-          i.type === type && s.heroRank >= RANK_REQ[i.rarity] && (!i.classType || i.classType === s.hero));
+          i.type === type && s.heroRank >= RANK_REQ[i.rarity] && canUseClass(i, s.hero));
         if (candidates.length === 0) return;
         let best = candidates[0];
         let bestCP = calculateItemCP(best);
@@ -1854,7 +1855,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     rollItemDrop: (rarityOverride) => {
       const hero = get().hero;
       const notPet = ITEMS_POOL.filter((i) => i.type !== 'PET' && !i.retired);
-      const usable = (i: Item) => !i.classType || i.classType === hero;
+      // (owner) 85% gear for the active class, 15% other classes' gear (shared warehouse / alts); universal pieces always fit
+      const other = Math.random() < OTHER_CLASS_SHARE;
+      const usable = classFilter(hero, other);
       let pool: Item[];
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
       const lvNow = get().level, dropLv = lvNow + 8;   // (owner) drops may be one tier above what the hero can equip yet (Uncommon from Lv 1)
@@ -1864,7 +1867,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const setChance: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
       if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
         const sets = notPet.filter((i) => i.setName && i.rarity === setRarity && usable(i)
-          && (SET_BY_NAME[i.setName!]?.hero ? SET_BY_NAME[i.setName!].hero === hero : true));
+          );
         if (sets.length) {
           const it = instantiate(sets[Math.floor(Math.random() * sets.length)]);
           const roll = Math.random();
@@ -1892,7 +1895,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const weighted: Item[] = [];
       for (const p of pool) {
         weighted.push(p, p);
-        if (p.type === 'WEAPON' && p.classType === hero) weighted.push(p);
+        if (p.type === 'WEAPON' && canUseClass(p, hero)) weighted.push(p);
       }
       const item = instantiate(weighted[Math.floor(Math.random() * weighted.length)]);
       if (isGear(item)) {
@@ -1978,6 +1981,10 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (rarity === 'COMMON') rarity = 'RARE';   // (owner: blue gear can come from summons again)
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
+        if (Math.random() < OTHER_CLASS_SHARE) {   // (owner) ~15% of gear pulls are another class's piece (shared warehouse / alts)
+          const alt = ITEMS_POOL.filter((i) => isGear(i) && !i.retired && i.rarity === rarity && !canUseClass(i, s.hero) && !(altar === 'SHARD' && (rarity === 'LEGENDARY' || rarity === 'MYTHIC')));
+          if (alt.length) pool = alt;
+        }
         const it = instantiate(pool[Math.floor(Math.random() * pool.length)]);
         results.push(it); gearOut.push(it);
       }

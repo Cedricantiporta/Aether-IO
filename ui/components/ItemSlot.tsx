@@ -6,6 +6,8 @@ import { isGear } from '../lib/game';
 import { petLv, petStage } from '../../petGrowth';
 import { tip } from './Tooltip';
 import { ItemTip } from './ItemTip';
+import { useGameStore } from '../../store';
+import { canUseClass } from '../../itemClass';
 import { dragProps, type DragSrc } from '../lib/dnd';
 
 interface Props {
@@ -39,12 +41,14 @@ interface Props {
 export const ItemSlot: React.FC<Props> = ({
   item, size = '3.6rem', iconSize = 26, fluid, onClick, onContextMenu, selected, locked, dim, price, sale, oldPrice, gemPrice, cantAfford, qty, emptyLabel, tooltip = 'sell', compare = true, noTip, disabled, className = '', children, drag, onSeen,
 }) => {
+  const hero = useGameStore((s) => s.hero);
+  const otherClass = !!item && isGear(item) && !canUseClass(item, hero);   // class-exclusive gear of another class: icon dimmed
   const q = qty ?? item?.quantity ?? 1;
   const cls = `rpg-slot ${price === 0 && item ? 'is-free' : ''} ${item ? '' : 'is-empty'} ${fluid ? 'fluid' : ''} ${locked ? 'is-locked' : ''} ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${className}`;
   const style = { ['--slot' as any]: size } as React.CSSProperties;
   const content = (
     <>
-      {item ? <span className="slot-icon" style={dim ? undefined : undefined}><ItemIcon item={item} size={iconSize} /></span>
+      {item ? <span className="slot-icon" style={otherClass ? { opacity: 0.55, filter: 'saturate(.6)' } : undefined}><ItemIcon item={item} size={iconSize} /></span>
         : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && item.type === 'PET' && tooltip !== 'buy' && <span className="slot-plus" data-testid="pet-lv-badge" style={petStage(item) > 1 ? { color: petStage(item) > 2 ? '#d8a8ff' : '#ffe08a' } : undefined}>Lv {petLv(item)}</span>}
