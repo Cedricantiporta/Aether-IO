@@ -13,6 +13,7 @@ import { applyPlayerDebuff, damagePlayer } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { addTempCollider, removeTempCollider, type Collider } from '../mapgen';
 import { WEAK_KINDS } from '../enemyDefs';
+import { isEliteBigTrick, resolveEliteBig } from './eliteBig';
 
 export const TRICK = {
   NONE: 0, STAMPEDE: 15, GOO: 1, FIREBOMB: 2, SCREECH: 3, PIN: 4, CURSE: 5, STOMP: 7, PLAGUE: 9, TERROR: 10, WALL: 11, CALTROPS: 12, SMOKE: 13, PINCH: 14,
@@ -134,6 +135,7 @@ function inside(z: Zone): boolean {
 }
 
 export function resolveTrick(z: Zone): void {
+  if (isEliteBigTrick(z.trick)) { resolveEliteBig(z); return; }   // elite signature big attacks (eliteBig.ts)
   const id = z.trick;
   const power = z.damage;
   const p = world.player;

@@ -34,6 +34,7 @@ import {
 } from '../enemyDefs';
 import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
+import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore } from '../../store';
@@ -327,6 +328,7 @@ export function spawnEnemy(
   e.mini = false;
   e.staggerMax = boss ? 100 : 0;
   if (!boss) initTrick(e);
+  initEliteBig(e);
   e.decoy = false; e.hideT = 0; e.shellT = 0; e.spKind = 0;
   if (boss) initSpecial(e);
   e.state = 'SPAWN';
@@ -1462,6 +1464,7 @@ function updateEnemy(e: Enemy): void {
     e.stateT += dt * pace;
     if (e.attackCd > 0) e.attackCd -= dt * pace;
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
+    else if (e.elite && !e.boss && !e.mini && e.trickT <= 0 && e.state !== 'SPAWN' && hasEliteBig(e.kind) && (updateEliteBig(e, dt) || (e.fearT <= 0 && tryStartEliteBig(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { /* signature big attack (eliteBig.ts) owns the enemy */ }
     else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)

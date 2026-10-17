@@ -12,13 +12,15 @@ import type { DamageKind } from '../engine/events';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 
-const GLYPHS = '0123456789!+-XPBACKSTLMHERINGF';
-const POOL = 256, MAXG = 10;
+// (the label atlas needs every letter of the words it shows: BLOCKED was drawn as "BLCKE" while O and D were missing)
+const GLYPHS = '0123456789!+-XPBACKSTLMHERINGFDJOQUVWYZ?.';
+const POOL = 256, MAXG = 14;
+const ATLAS_ROWS = 6;
 
 let tex: CanvasTexture | null = null;
 function atlas() {
   if (tex) return tex;
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = ATLAS_ROWS * 64;
   const ctx = cv.getContext('2d')!;
   ctx.font = '900 54px "Arial Black", Impact, system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -110,7 +112,7 @@ void main(){
   mv.xy += vec2(iG.x + position.x * scale * 0.9, position.y * scale * 0.9);
   gl_Position = projectionMatrix * mv;
   float col = mod(iG.y, 8.0); float row = floor(iG.y / 8.0);
-  vUv = (vec2(col, 3.0 - row) + position.xy + 0.5) / vec2(8.0, 4.0);
+  vUv = (vec2(col, 5.0 - row) + position.xy + 0.5) / vec2(8.0, 6.0);
   vCol = vec4(iCol.rgb, iG.w);
 }`;
 const FS = /* glsl */ `

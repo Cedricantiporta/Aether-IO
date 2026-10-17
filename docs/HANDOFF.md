@@ -1234,4 +1234,5 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Rarer Legendary+ cards: TIER_WEIGHT legendary 4.5→2.2, mythic 0.5→0.25; specials weight 0.3→0.15 each, mythic special 6%→4%; Aegis 0.5→0.3, Death Defiance 0.35→0.2.
 - Early-biome card odds: EARLY_TIER_MUL biome 0 [1.3,.6,.4,.35,.35], biome 1 [1.15,.8,.65,.6,.6]; also scales Aegis/Death Defiance/special weights.
 - Run Upgrades panel (`ui/panels/RunUpgrades.tsx`): store `runPicks` (reset at run start), totals + cards + abilities; Tab / HUD button / pause menu, Esc closes.
+- Elite big attacks (`engine/systems/eliteBig.ts`): per-family slam/cone/line lunge/rain/ring, 0.85-1.1 s windup, 6-9 s CD, punish window via winT; DamageNumbers glyph atlas now has all letters (BLOCKED showed as BLCKE).
 - Environmental-kill achievements: DamageOpts.env ('TRAP' spike traps, 'BARREL' explosive barrels, 'SLAM' wall slams, 'HAZARD' wildfire / gas zones) rides on enemyDeath; goals meta stats trapKills / barrelKills / slamKills / hazardKills; 7 achievements (Watch Your Step, Trap Master, Kaboom!, Demolitionist, Wall Bouncer, Pinball Wizard, Nature's Wrath) with titles.

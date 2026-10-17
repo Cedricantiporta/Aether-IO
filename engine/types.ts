@@ -118,6 +118,7 @@ export interface Enemy {
   mini: boolean;         // mini-boss (stagger bar, no full stun, reduced knockback)
   stagger: number; staggerMax: number; staggerT: number; staggerCd: number; // boss/mini-boss stagger bar; staggerT>0 = staggered (+25% dmg)
   trickCd: number; trickT: number; trickKind: number; // monster signature trick (telegraphed, own cooldown)
+  bigCd: number; bigT: number; bigRec: number; bigDash: number; bigKind: number; // elite signature big attack (systems/eliteBig.ts)
   spKind: number; spT: number; spStep: number; spCd: number; // boss / mini-boss signature attack (see bossSpecials.ts)
   decoy: boolean; hideT: number; shellT: number; // Lich clone, ambush vanish, Shellback shell
   frostT: number;        // chilled by Frost Field / Chain Frost (Archer synergy: Gale Arrow SHATTER +30%)
