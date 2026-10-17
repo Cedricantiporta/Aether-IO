@@ -8,14 +8,14 @@ import { useDialogue } from '../../engine/systems/dialogue';
 import { openCustomDialogue } from '../../engine/systems/dialogue';
 import { GameStatus } from '../../types';
 import { DREAMS, nextDream, dreamsSeen, markDreamSeen, dreamLines } from '../../dreams';
-import { dreamView } from '../../dreams';
+import { dreamView, dreamHooks } from '../../dreams';
 import { runInfo } from '../../engine/runMods';
 
 const RUN = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.GAME_OVER]);
 
-let show: ((force: boolean) => void) | null = null;
+let show: ((force: boolean) => boolean) | null = null;
 /** Debug: play the next dream now, milestone or not (null when all are seen). */
-export function playNextDream(): string | null { const d = DREAMS[dreamsSeen()]; if (!d || !show) return null; show(true); return d.title; }
+export function playNextDream(): string | null { const d = DREAMS[dreamsSeen()]; if (!d || !show) return null; return show(true) ? d.title : null; }
 
 export const DreamOverlay: React.FC = () => {
   const [on, setOn] = useState(false);
@@ -23,25 +23,27 @@ export const DreamOverlay: React.FC = () => {
   useEffect(() => {
     show = (force) => {
       const st = useGameStore.getState();
-      if (st.status !== GameStatus.MENU || useDialogue.getState().open) return;
+      if (st.status !== GameStatus.MENU || useDialogue.getState().open) return false;
       const d = force ? DREAMS[dreamsSeen()] : nextDream(st.story.step, st.progress.endings);
-      if (!d) return;
+      if (!d) return false;
       if (d.voice === 'AELIA') {   // (owner) her dreams are walked: a quiet Greenwood clearing, Aelia at the end of the path
         dreamView.pending = d;
         st.addNotification('The Font holds you a moment longer... you drift into a dream.', '#fff3c4', 'SYSTEM');
         runInfo.dream = true; st.startMode('ADVENTURE');
-        return;
+        return true;
       }
       markDreamSeen(Math.max(dreamsSeen(), DREAMS.indexOf(d) + 1));
       const memory = d.voice === 'MEMORY';
       openCustomDialogue(memory ? 'A Memory' : 'Aelia', `${memory ? 'Your past' : 'A dream at the Font'} · ${d.title}`, memory ? '#c8d8ff' : '#fff3c4',
         dreamLines(d, st.hero), { label: 'Wake up', accept: () => setOn(false) });
       setOn(true);
+      return true;
     };
+    dreamHooks.sleep = () => show?.(false) ?? false;
     const off = useGameStore.subscribe((s, p) => {
       if (s.status === GameStatus.MENU && RUN.has(p.status)) setTimeout(() => show?.(false), 1800);   // (after the town has loaded)
     });
-    return () => { off(); show = null; };
+    return () => { off(); show = null; dreamHooks.sleep = null; };
   }, []);
   useEffect(() => { if (on && !open) setOn(false); }, [on, open]);
   if (!on) return null;

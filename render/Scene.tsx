@@ -1,3 +1,4 @@
+import { HomeInterior } from './HomeInterior';
 import { RoomEvents } from './RoomEvents';
 import { Minions } from './Minions';
 import React, { Suspense, useEffect, useLayoutEffect } from 'react';
@@ -79,7 +80,9 @@ export function Scene() {
       <CameraRig />
       <ClickMarker />
       <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
-      {gameplay ? <Room q={q} /> : world.village.area === 'TAVERN' ? (
+      {gameplay ? <Room q={q} /> : world.village.area === 'HOME' ? (
+        <Suspense fallback={null}><HomeInterior q={q} /></Suspense>
+      ) : world.village.area === 'TAVERN' ? (
         <Suspense fallback={null}><TavernInterior q={q} /></Suspense>
       ) : world.village.area === 'CHURCH' ? (
         <Suspense fallback={null}><ChurchInterior q={q} /></Suspense>
@@ -105,7 +108,7 @@ export function Scene() {
           <Pickups />
         </>
       )}
-      {!gameplay && status === GameStatus.MENU && world.village.area !== 'CASTLE' && world.village.area !== 'CHURCH' && world.village.area !== 'TAVERN' && (
+      {!gameplay && status === GameStatus.MENU && world.village.area !== 'CASTLE' && world.village.area !== 'CHURCH' && world.village.area !== 'TAVERN' && world.village.area !== 'HOME' && (
         <>{/* town / crystal cave: skills / attacks, the hermit-path monsters and the cave monsters */}
           <Zones />
           <GroundFx />

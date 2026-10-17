@@ -230,3 +230,5 @@ export const trueEndingNeed = (endings: number): string => {
 
 /** The Aelia dream being walked right now (a dream run: director plan.dream; wanderers.talkWanderer plays its lines). */
 export const dreamView = { pending: null as Dream | null };
+/** Sleeping in the hero's bed (engine/systems/village 'sleep'): plays the next due dream; false when none is due. */
+export const dreamHooks = { sleep: null as null | (() => boolean) };

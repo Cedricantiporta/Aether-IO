@@ -148,7 +148,7 @@ export const world = {
     shrineOn: false, hint: '',
   } as RoomState,
   /** Town state (harvest node cooldown). */
-  village: { sit: { on: false, x: 0, z: 0, yaw: 0, y: 0 }, harvestCd: 0, /** > 0 while the hero is mining / harvesting (no attacks or skills; a hit interrupts it) */ miningT: 0, area: 'TOWN' as 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE' | 'CAVE' | 'DOWN' | 'UP' | 'CHURCH' | 'TAVERN', spawnFx: 0,
+  village: { sit: { on: false, x: 0, z: 0, yaw: 0, y: 0 }, harvestCd: 0, /** > 0 while the hero is mining / harvesting (no attacks or skills; a hit interrupts it) */ miningT: 0, area: 'TOWN' as 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE' | 'CAVE' | 'DOWN' | 'UP' | 'CHURCH' | 'TAVERN' | 'HOME', spawnFx: 0,
     // crystal cave (engine/systems/cave.ts): current floor + the trip's seed (deep floors are new every trip), veins left,
     // lantern oil (s, one timer for the whole trip), combat on deep floors, the lucky ladder of this floor (node index, -1
     // none) + whether it is found, rare-vein tier per crate slot (0 normal, 1..4), oil flasks lying on the floor

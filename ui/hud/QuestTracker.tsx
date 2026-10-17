@@ -47,7 +47,7 @@ function useDistance(get: () => NavTarget | null) {
       const t = get();
       if (t) {
         const d = navDist(t);
-        txt = t.hop ? (world.village.area === 'CASTLE' ? 'leave castle' : world.village.area === 'CHURCH' ? 'leave chapel' : world.village.area === 'TAVERN' ? 'leave tavern' : world.village.area === 'CAVE' ? 'leave cave' : t.act === 'cave' ? 'in the cave' : 'in the castle') : t.field ? (d < 12 ? 'portal' : `portal ${Math.round(d)} m`) : d <= t.reach + 1 ? 'here' : `${Math.round(d)} m`;
+        txt = t.hop ? (world.village.area === 'CASTLE' ? 'leave castle' : world.village.area === 'CHURCH' ? 'leave chapel' : world.village.area === 'TAVERN' ? 'leave tavern' : world.village.area === 'HOME' ? 'leave house' : world.village.area === 'CAVE' ? 'leave cave' : t.act === 'cave' ? 'in the cave' : 'in the castle') : t.field ? (d < 12 ? 'portal' : `portal ${Math.round(d)} m`) : d <= t.reach + 1 ? 'here' : `${Math.round(d)} m`;
       }
     }
     if (txt !== last.current) { last.current = txt; ref.current.textContent = txt; }

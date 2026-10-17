@@ -21,6 +21,8 @@ import { updatePetTown } from './pets';
 import { CRATE_HP, HARVEST_NAME, addTempCollider, removeTempCollider, generateMap, installInterior, type Collider } from '../mapgen';
 import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS } from '../castleData';
 import { TAVERN_COLLIDERS, TAVERN_DOOR, TAVERN_EXIT, TAVERN_SPAWN, TAVERN_OUT } from '../tavernData';
+import { HOME_COLLIDERS, HOME_DOOR, HOME_EXIT, HOME_SPAWN, HOME_OUT, BED } from '../homeData';
+import { dreamHooks } from '../../dreams';
 import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT, CHURCH_SIDE_EXIT, CHURCH_SIDE_SPAWN, PEW_SEATS } from '../churchData';
 import { CHAPEL_SIDE, TOWN_SEATS, type SeatSpec } from '../townData';
 /** The chapel was entered / left by its side door (the graveyard), not the front. */
@@ -151,7 +153,7 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -191,6 +193,9 @@ function scanNearby(): void {
     d = q(CHURCH_SIDE_EXIT.x, CHURCH_SIDE_EXIT.z); if (d < CHURCH_SIDE_EXIT.r * CHURCH_SIDE_EXIT.r) push('E', 'Out to', 'Graveyard', '', 1, d, 'leave');
   } else if (area === 'TAVERN') {
     d = q(TAVERN_EXIT.x, TAVERN_EXIT.z); if (d < TAVERN_EXIT.r * TAVERN_EXIT.r) push('E', 'Leave', 'Golden Tankard', '', -1, d, 'leave');
+  } else if (area === 'HOME') {   // (owner) the adventurer's house: the door out, the bed (sleep: a Font dream if one is due)
+    d = q(HOME_EXIT.x, HOME_EXIT.z); if (d < HOME_EXIT.r * HOME_EXIT.r) push('E', 'Leave', 'Your house', '', -1, d, 'leave');
+    d = q(BED.x + 1.4, BED.z); if (d < 2.4 * 2.4) push('E', 'Sleep', 'Your bed', '', -1, d, 'sleep');
   } else if (area === 'CAVE') {
     scanCave(push, p.pos.x, p.pos.z);   // exit / stairs / lucky ladder / Grit's bench / veins (cave.ts)
   } else {
@@ -209,6 +214,7 @@ function scanNearby(): void {
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     d = q(CHURCH_DOOR.x, CHURCH_DOOR.z); if (d < CHURCH_DOOR.r * CHURCH_DOOR.r) push('E', 'Enter', 'Chapel', '', -1, d, 'church');
     d = q(TAVERN_DOOR.x, TAVERN_DOOR.z); if (d < TAVERN_DOOR.r * TAVERN_DOOR.r) push('E', 'Enter', 'Golden Tankard', '', -1, d, 'tavern');
+    d = q(HOME_DOOR.x, HOME_DOOR.z); if (d < HOME_DOOR.r * HOME_DOOR.r) push('E', 'Enter', 'Your house', '', -1, d, 'home');
     d = q(CHAPEL_SIDE.x, CHAPEL_SIDE.z); if (d < CHAPEL_SIDE.r * CHAPEL_SIDE.r) push('E', 'Enter', 'Chapel (side door)', '', 1, d, 'church');
     d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
@@ -250,6 +256,8 @@ export function interact(it: Interactable): void {
     if (it.act === 'castle') v.pending = 'ENTER';
     else if (it.act === 'church') { viaSide = it.node === 1; v.pending = 'CHURCH'; }
     else if (it.act === 'tavern') v.pending = 'TAVERN';
+    else if (it.act === 'home') v.pending = 'HOME';
+    else if (it.act === 'sleep') { if (!dreamHooks.sleep?.()) st.addNotification('You nap for a while by the fire. No dreams come tonight.', '#fff3c4', 'SYSTEM'); }
     else if (it.act === 'cave') v.pending = 'CAVE';
     else if (it.act === 'leave') { viaSide = v.area === 'CHURCH' && it.node === 1; v.pending = 'LEAVE'; }
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
@@ -443,6 +451,7 @@ export function walkToNpcQuest(name: string | null): void {
   if (world.village.area === 'CASTLE') walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'CHURCH') walkTo(CHURCH_EXIT.x, CHURCH_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'TAVERN') walkTo(TAVERN_EXIT.x, TAVERN_EXIT.z, 'leave', '', 2);
+  else if (world.village.area === 'HOME') walkTo(HOME_EXIT.x, HOME_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'CAVE') walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2);
   else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
@@ -469,7 +478,7 @@ function arrive(): void {
 
 const FADE_S = 0.2;   // fade out + fade in = ~0.4 s
 /** Swaps the village between the town, the castle throne hall and the crystal cave (called at full black). */
-function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN'): void {
+function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME'): void {
   const p = world.player, v = world.village, C = world.camera, from = v.area;
   closeDialogue();
   // cave trips: whatever lies on the ground is scooped up on the way (it would otherwise float in the other map)
@@ -501,6 +510,13 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN'): void 
     resetNpcs();
     p.pos.set(TAVERN_SPAWN.x, 0, TAVERN_SPAWN.z); p.facing = Math.PI;
     C.yaw = 0; C.dist = 0.8; C.pitch = CAM_PITCH0;
+  } else if (to === 'HOME') {
+    v.area = 'HOME';
+    for (const c of world.crates) { c.active = false; }
+    installInterior(HOME_COLLIDERS);
+    resetNpcs();
+    p.pos.set(HOME_SPAWN.x, 0, HOME_SPAWN.z); p.facing = Math.PI;
+    C.yaw = 0; C.dist = 0.7; C.pitch = CAM_PITCH0;
   } else if (to === 'CAVE') {
     enterCave();   // Floor 1 (cave.ts: veins, colliders, NPCs, spawn, camera)
   } else {
@@ -511,6 +527,9 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN'): void 
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else if (from === 'CHURCH' && viaSide) {   // out of the side door, into the graveyard
       p.pos.set(CHAPEL_SIDE.x - 0.6, 0, CHAPEL_SIDE.z); p.facing = -Math.PI / 2;
+      C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
+    } else if (from === 'HOME') {   // on the doorstep of the hero's house, facing the town
+      p.pos.set(HOME_OUT.x, 0, HOME_OUT.z); p.facing = Math.PI;
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else if (from === 'TAVERN') {   // in front of the Golden Tankard, facing the town
       p.pos.set(TAVERN_OUT.x, 0, TAVERN_OUT.z); p.facing = 0;
@@ -534,7 +553,7 @@ export function updateVillage(dt: number): void {
     v.fade = Math.min(1, v.fade + dt / FADE_S);
     if (v.fade >= 1) {
       if (v.pending === 'DOWN' || v.pending === 'UP') switchCaveFloor(v.pending);   // cave floors (cave.ts)
-      else switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CHURCH' ? 'CHURCH' : v.pending === 'TAVERN' ? 'TAVERN' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN');
+      else switchArea(v.pending === 'ENTER' ? 'CASTLE' : v.pending === 'CHURCH' ? 'CHURCH' : v.pending === 'TAVERN' ? 'TAVERN' : v.pending === 'HOME' ? 'HOME' : v.pending === 'CAVE' ? 'CAVE' : 'TOWN');
       v.pending = '';
     }
   } else if (v.fade > 0) v.fade = Math.max(0, v.fade - dt / FADE_S);
