@@ -7,6 +7,7 @@ import { world, allocProjectile, allocZone } from '../world';
 import { events } from '../events';
 import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
+import { GameStatus } from '../../types';
 import {
   damageEnemy, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer,
   type DamageOpts, type StatusEffect,
@@ -218,6 +219,17 @@ export function updateSkills(dt: number): void {
 
   // On-attack procs: HUD counters (logic lives in projectiles.fireBasicAttack).
   for (const k of ['burning', 'freezing', 'thunder', 'stamp', 'smite'] as const) procHud(k, passiveCooldowns[k]);
+
+  // (owner) timed passives only work in a fight: never in town (the cave's monster floors aside), never once the room is
+  // empty (cleared / idle). Blades already out finish their flight but nothing new charges or fires.
+  const fighting = st.status === GameStatus.MENU ? world.village.area === 'CAVE' && world.village.cave.combat : world.director.aliveCount > 0;
+  if (!fighting) {
+    if (lv.orbital > 0) {
+      if (orbState === 0) { for (const b of blades) b.active = false; blades.length = 0; orbState = 2; orbT = 0; }   // circling blades fade out
+      else updateOrbitals(dt, lv.orbital, 0);
+    }
+    return;
+  }
 
   if (lv.freezeSpell > 0) {
     blizzT += dt * chargeMul;

@@ -11,7 +11,7 @@ import { activeChar, activeProfileKey } from './characters';
 import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
-import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, type ClassProg, autoLearnActives } from './classLevels';
+import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, type RunMode } from './engine/runMods';
@@ -1059,7 +1059,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (lvl >= MAX_SKILL_LEVEL) return;
       const cost = questFree(s, 'train') ? 0   // tutorial "Lessons of the Blade": the trainer's first lesson is free
         : skillCost(skill, lvl, skill === 'dash' || (skill === 'e' && s.hero !== 'BARBARIAN'));
-      const need = unlockLevel(s.hero, skill);
+      const need = skill === dashKey(s.hero) ? DASH_UNLOCK_LV : unlockLevel(s.hero, skill);   // (the dash starts at Lv 1 but trains from DASH_UNLOCK_LV)
       if (s.level < need) { notify(`Unlocks at Lv ${need}`, 'red', 'WARNING'); return; }
       if (s.skillPoints < cost) return;
       const cp = s.classProg[s.hero];

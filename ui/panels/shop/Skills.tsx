@@ -1,5 +1,5 @@
 import React from 'react';
-import { unlockLevel, skillCost } from '../../../classLevels';
+import { unlockLevel, skillCost, DASH_UNLOCK_LV } from '../../../classLevels';
 import { Star } from '../../components/GoldIcons';
 import { useGameStore, questFree } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -54,7 +54,7 @@ const RunSkills: React.FC = () => {
         const lvl = levels[r.key as keyof SkillLevels] ?? 0;
         const max = lvl >= 5;
         const cost = free ? 0 : costOf(hero, r.key, lvl);
-        const need = unlockLevel(hero, r.key), lockedLv = lvl === 0 && heroLv < need;
+        const dash = isDashKey(hero, r.key), need = dash ? DASH_UNLOCK_LV : unlockLevel(hero, r.key), lockedLv = (lvl === 0 || dash) && heroLv < need;   // (the dash starts at Lv 1 but only unlocks at DASH_UNLOCK_LV)
         const can = !max && !lockedLv && sp >= cost;
         const info: any = (SKILLS_INFO as any)[r.key];
         const lines: React.ReactNode[] = r.now

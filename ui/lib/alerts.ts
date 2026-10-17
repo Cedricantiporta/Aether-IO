@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { useGameStore, calculateItemCP, RANK_REQ, questFree } from '../../store';
 import { SKILLS_INFO } from '../../constants';
 import { activeDefs, dashKey, isDashKey } from '../../abilityDefs';
-import { unlockLevel, skillCost } from '../../classLevels';
+import { unlockLevel, skillCost, DASH_UNLOCK_LV } from '../../classLevels';
 import { RECIPES, canCraft } from '../../crafting';
 import type { Item, ItemType } from '../../types';
 import type { Equipment } from '../../storeTypes';
@@ -71,7 +71,7 @@ export function canTrainSkill(s: ReturnType<typeof useGameStore.getState>, kind?
   const keys = kind === 'ACTIVE' ? act : kind === 'PASSIVE' ? pas : [...act, ...pas];
   return keys.some((k) => {
     const lvl = (s.skillLevels as any)[k] ?? 0;
-    if (lvl >= 5 || (lvl === 0 && s.level < unlockLevel(h, k))) return false;
+    if (lvl >= 5 || (lvl === 0 && s.level < unlockLevel(h, k)) || (isDashKey(h, k) && s.level < DASH_UNLOCK_LV)) return false;
     return s.skillPoints >= skillCost(k, lvl, isDashKey(h, k));
   });
 }
