@@ -20,6 +20,9 @@ interface UiState {
   goalsOpen: boolean;                   // Goals panel (daily / weekly / achievements)
   questLogOpen: boolean;                // Quest log (main / NPC / board quests + rewards)
   openQuestLog: (v: boolean) => void;
+  /** tab the quest log opens on next ('' = keep its default) */
+  questLogTab: '' | 'MAIN' | 'SIDE' | 'BOARD';
+  setQuestLogTab: (t: '' | 'MAIN' | 'SIDE' | 'BOARD') => void;
   settingsOpen: boolean;
   todoPending: boolean;                 // set on Return to town after a defeat: the town popup opens once
   setTodoPending: (v: boolean) => void;
@@ -66,6 +69,8 @@ export const useUiStore = create<UiState>((set) => ({
   goalsTab: 'DAILY',
   questLogOpen: false,
   openQuestLog: (v) => set({ questLogOpen: v }),
+  questLogTab: '',
+  setQuestLogTab: (t) => set({ questLogTab: t }),
   settingsOpen: false,
   todoPending: false,
   setTodoPending: (v) => set({ todoPending: v }),

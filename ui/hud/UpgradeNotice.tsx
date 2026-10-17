@@ -71,16 +71,11 @@ export function upgradesOf(s: St): Up[] {
     const st = npcQuestStatus(d, nq, s.heroRank);
     if (st === 'ACTIVE' && npcQuestReady(d, nq, s.inventory)) out.push({ key: 'q:' + d.id, quest: true, town: true, title: `Hand in: ${d.title}`, sub: `Ready: talk to ${npcQuestTurnIn(d)} for the reward.`, go: () => walkToNpcQuest(npcQuestTurnIn(d)) });
   }
-  for (const d of NPC_QUESTS) {
-    if (offered >= MAX_OFFERED_QUESTS) break;
-    if (npcQuestStatus(d, nq, s.heroRank) !== 'AVAILABLE' || npcQuestLevelLocked(d, nq, s.heroRank)) continue;
-    offered++;
-    out.push({ key: 'q:' + d.id, quest: true, town: true, title: `New side quest: ${d.title}`, sub: `${d.giver} has a quest for you.`, go: () => walkToNpcQuest(d.giver) });
-  }
+  // (owner) new offers are one row: Go opens the quest log on its Side tab
+  for (const d of NPC_QUESTS) if (npcQuestStatus(d, nq, s.heroRank) === 'AVAILABLE' && !npcQuestLevelLocked(d, nq, s.heroRank)) offered++;
+  if (offered > 0) out.push({ key: 'q:new', quest: true, town: false, title: offered === 1 ? 'New side quest' : `New side quests (${offered})`, sub: 'See them in Quests → Side.', go: () => { const u = useUiStore.getState(); u.setQuestLogTab('SIDE'); u.openQuestLog(true); } });
   return out;
 }
-/** At most this many "available" side quests are listed (the ones ready to hand in are always listed). */
-const MAX_OFFERED_QUESTS = 3;
 
 /** (owner) skills / talents can be trained right here at a biome camp (its Training Post): no teleport needed. */
 const reachable = (key: string): boolean => (key === 'skill' || key === 'talent') && world.room.active && world.room.plan.type === 'CAMP';

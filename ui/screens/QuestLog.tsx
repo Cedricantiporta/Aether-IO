@@ -65,7 +65,7 @@ export const QuestLog: React.FC = () => {
   const [sel, setSel] = useState<number>(() => Math.min(story.step, STORY.length - 1));
   const [sideSel, setSideSel] = useState<string>('');
   // opening the window jumps to the current chapter and step
-  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); const t = useUiStore.getState().questLogTab; if (t) { setTab(t); useUiStore.getState().setQuestLogTab(''); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
   const npcActive = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'ACTIVE');
   const npcOpen = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'AVAILABLE');
   // level-gated requests whose only blocker is the class level (lowest level first)
