@@ -3,7 +3,7 @@ import { AlertTriangle, Hexagon } from '../components/GoldIcons';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { motion } from 'framer-motion';
 import { POTION_STACK_LIMIT } from '../../constants';
-import { useGameStore, shopPrice, SUMMON_COST_1, SUMMON_COST_10, SHARD_COST_1, SHARD_COST_10 } from '../../store';
+import { useGameStore, shopPrice, potionKind, potionCount, potionCapMsg, POTION_CAP, SUMMON_COST_1, SUMMON_COST_10, SHARD_COST_1, SHARD_COST_10 } from '../../store';
 import { useUiStore } from '../uiStore';
 import { Modal, ConfirmDialog, QtyStepper } from '../components/Modal';
 import { Button } from '../components/Button';
@@ -54,7 +54,10 @@ export const BuyDialog: React.FC = () => {
   const afford = unit > 0 ? Math.max(0, Math.floor(gold / unit)) : 99;
   const stackable = item ? item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' : false;
   const limit = opts?.max ?? (stackable ? POTION_STACK_LIMIT : 1);
-  const cap = Math.max(1, Math.min(limit, afford));
+  const pk = potionKind(item);
+  const carried = useGameStore((s) => (pk ? potionCount(s.inventory, pk) : 0));
+  const room = pk ? Math.max(1, POTION_CAP - carried) : limit;   // (owner) carry cap: 50 health / 50 mana potions
+  const cap = Math.max(1, Math.min(limit, afford, room));
   useEffect(() => setAmount(1), [item]);
   const a = Math.min(amount, cap);
   const total = unit * a;
@@ -76,6 +79,7 @@ export const BuyDialog: React.FC = () => {
             </div>
           </div>
           <QtyStepper value={a} max={cap} onChange={setAmount} />
+          {pk && <div className="text-xs" style={{ color: carried >= POTION_CAP ? '#f87171' : 'var(--text-dim)' }}>Carrying {carried}/{POTION_CAP}{carried >= POTION_CAP ? ` - ${potionCapMsg(pk)}` : ''}</div>}
           <div className="rpg-frame gold w-full text-center py-2">
             <div className="rpg-label !text-[.6rem]">Total cost</div>
             <div className="rpg-num text-3xl flex items-center justify-center gap-2" style={{ color: gold >= total ? '#ffe69a' : '#f87171' }}><Coin size={26} />{total.toLocaleString()}</div>

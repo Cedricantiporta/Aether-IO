@@ -18,6 +18,7 @@ import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
+import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, type Collider } from '../mapgen';
 import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
@@ -346,14 +347,14 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow;
-    const lerpK = 1 - Math.exp(-12 * dt);
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow;
+    const lerpK = 1 - Math.exp(-12 * dt * iceGrip);   // (Frostpeak ice: x0.25 grip)
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;
   }
   if (abilityState.leapT <= 0) {
     a.dashing = p.dashT > 0;
-    resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+    resolveObstacles(p, p.pos.x + (p.vel.x + driftX) * dt, p.pos.z + (p.vel.z + driftZ) * dt);   // (Void gravity flip / rift pull drift)
   }
 
   // ---- walking crates into pieces

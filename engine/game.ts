@@ -25,6 +25,7 @@ import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
 import { updateRoomEvents } from './systems/roomEvents';
+import { updateBiomeHazards } from './systems/biomeHazards';
 import { updateMinions } from './systems/minions';
 import { updateCombatFx, resetCombat } from './systems/combat';
 import { resetTricks } from './systems/tricks';
@@ -200,6 +201,7 @@ export function updateGame(rawDt: number): void {
   updateDirector(dt);
   updateEnemies(dt);
   updateRoomEvents(dt);
+  updateBiomeHazards(dt);
   updateMinions(dt);
   updateEnemyProjectiles(dt);
   updateProjectiles(dt);

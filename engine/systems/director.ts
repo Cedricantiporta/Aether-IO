@@ -35,6 +35,7 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { SOUL_EMBER } from '../../crafting';
 const SOUL_EMBER_CHANCE = 0.05;
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
+import { setupBiomeHazards } from './biomeHazards';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -208,6 +209,12 @@ export function debugJump(b: number, idx: number, type: RoomType): void {
 /** Debug: a champion room whose guardian is the humanoid mini boss `kind` (current biome, room `idx`). Run must be in progress. */
 export function debugHumanBoss(b: number, idx: number, kind: HumanKind): void { debugHuman.kind = kind; debugJump(b, idx, 'MINIBOSS'); }
 /** Debug: a dark champion duel against the dark hero of class `cls`. Run must be in progress. */
+/** Debug: Endless Tower floor `n` as a champion floor whose guardian is the humanoid mini boss `kind`. Starts the tower if it is not the current run. */
+export function debugTowerHuman(n: number, kind: HumanKind): void {
+  if (runInfo.mode !== 'TOWER' || waves.on || daily.on) return;
+  debugHuman.kind = kind; towerFloor = n; towerState.floor = n; world.run.towerFloor = n - 1; world.room.fade = 1;
+  enterRoom(towerBiome(n), (n - 1) % ROOMS_PER_BIOME, { type: 'MINIBOSS', reward: 'ITEM' });
+}
 export function debugDarkHero(b: number, idx: number, cls: HeroClass): void { debugDuelCls = cls; debugJump(b, idx, 'DUEL'); }
 /** Debug / QA: walk into gate `g`'s trial (as if E was pressed at it), or straight into the throne room. */
 export function debugGate(g: number): void {
@@ -286,6 +293,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   buildRoom(b, p.type, R, seed, idx);
   world.room.radius = R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
+  setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = R;
   r.fadeTarget = 0; r.shrineOn = false;
@@ -493,10 +501,12 @@ function rollRoomSpawns(type: RoomType): void {
       }
       // ~35-40% of guardian rooms (by biome) field a humanoid mini boss instead of the monster guardian (never the Slime King / Lich, never in Endless Waves)
       miniHuman = '';
-      if (!waves.on && !prebossKing && !miniIsBoss && (debugHuman.kind || Math.random() < 0.35 + 0.01 * Math.min(5, biome))) {
+      // Tower modes: champion floors roll them too (Endless Tower: 45% +2%/10 floors, max 65%; Daily Trial 40%; Endless Waves 30%, one of the wave's mini-bosses)
+      const humanP = runInfo.mode !== 'TOWER' ? 0.35 + 0.01 * Math.min(5, biome) : waves.on ? 0.3 : daily.on ? 0.4 : Math.min(0.65, 0.45 + 0.02 * Math.floor(towerFloor / 10));
+      if (!prebossKing && !miniIsBoss && (debugHuman.kind || Math.random() < humanP)) {
         miniHuman = debugHuman.kind || HUMAN_KINDS[Math.floor(Math.random() * HUMAN_KINDS.length)];
         debugHuman.kind = '';
-        miniCount = 1;
+        if (!waves.on) miniCount = 1;   // (Endless Waves: the humanoid takes one of the wave's mini-boss slots)
       }
       break;
     }
@@ -665,7 +675,7 @@ function tickSpawns(dt: number): void {
       miniPending = false;
       const [mx, mz] = stationPos(R.radius);
       placeMarker(miniHuman ? 'HUMAN_BOSS' : miniKind, mx, mz, false, 1.5, miniHuman ? 5 : miniIsBoss ? 2 : 1);
-      for (let i = 1; i < (miniHuman ? 1 : miniCount); i++) {   // Endless Waves: several mini-bosses at once
+      for (let i = 1; i < (miniHuman && !waves.on ? 1 : miniCount); i++) {   // Endless Waves: several mini-bosses at once
         const a = (i / miniCount) * Math.PI * 2, rr = Math.min(9, R.radius * 0.4);
         const x = mx + Math.cos(a) * rr, z = mz + Math.sin(a) * rr;
         placeMarker(miniKind, isSpawnable(x, z) ? x : mx, isSpawnable(x, z) ? z : mz, false, 1.5, 1);

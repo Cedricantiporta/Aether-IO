@@ -2,12 +2,14 @@
 // swing and hit flinch come from its world.minions slot; this draws the model, a name tag, an HP bar and a speech line.
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AnimationMixer, Color, Group, LoopOnce, Sprite, SpriteMaterial, type AnimationAction } from 'three';
+import { AnimationMixer, Color, Group, LoopOnce, Mesh, MeshBasicMaterial, Sprite, SpriteMaterial, type AnimationAction, type Material } from 'three';
+import { HANDSLOT_QUAT, makeBow, makeShield, makeStaff, makeSword } from './weapons';
 import { world } from '../engine/world';
 import { ally, ALLIES } from '../engine/systems/ally';
 import { useWorldCounter } from './hooks';
 import { useCharacterInstance, useClips } from './characters';
 import { labelMaterial } from './label';
+import { litMat } from './util';
 
 type Lab = ReturnType<typeof labelMaterial>;
 
@@ -31,6 +33,31 @@ function Actor({ def }: { def: number }) {
   useEffect(() => {
     const tint = new Color(d.tint).lerp(WHITE, 0.35);
     ch.mats.forEach((m: any) => { if (m.color) m.color.copy(tint); });
+  }, [ch, d]);
+  const wmats = useRef<Material[]>([]);
+  // weapon on the hand bones (owner): knight sword + shield, ranger bow, mage staff
+  useEffect(() => {
+    const added: { p: { remove: (o: any) => void }; o: Group }[] = [];
+    const mats: Material[] = [];
+    const style = d.style, acc = d.accent;
+    const w = style === 'MELEE' ? makeSword(acc, 2) : style === 'BOW' ? makeBow(acc, 2) : makeStaff(acc, 2);
+    if (ch.handR) {
+      const g = new Group();
+      g.quaternion.copy(HANDSLOT_QUAT); g.scale.setScalar(1.15);
+      const bm = litMat({ roughness: 0.4, metalness: 0.4 });
+      const gm = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2.2, 1.6, 1.8) });
+      const b = new Mesh(w.body, bm); b.castShadow = true;
+      g.add(b, new Mesh(w.glow, gm)); ch.handR.add(g); added.push({ p: ch.handR, o: g }); mats.push(bm, gm);
+    }
+    if (style === 'MELEE' && ch.handL) {
+      const sh = makeShield(acc, 2), g = new Group();
+      const sm = litMat({ roughness: 0.45, metalness: 0.5 });
+      g.add(new Mesh(sh.body, sm));
+      g.rotation.set(0, Math.PI / 2, 0); g.scale.setScalar(1.5); g.position.set(0, 0.1, 0.05);
+      ch.handL.add(g); added.push({ p: ch.handL, o: g }); mats.push(sm);
+    }
+    wmats.current = mats;
+    return () => { for (const a of added) a.p.remove(a.o); for (const m of mats) m.dispose(); wmats.current = []; };
   }, [ch, d]);
   useEffect(() => {
     const m = new AnimationMixer(ch.root), s = S.current;
@@ -61,7 +88,7 @@ function Actor({ def }: { def: number }) {
     body.current.position.set(Math.sin(m.facing) * m.swing * 0.25, 0, Math.cos(m.facing) * m.swing * 0.25);
     // fade in / out
     const f = Math.round(ally.fade * 20) / 20;
-    if (f !== s.fade) { s.fade = f; ch.mats.forEach((mt: any) => { mt.transparent = f < 1; mt.opacity = f; mt.needsUpdate = true; }); }
+    if (f !== s.fade) { s.fade = f; ch.mats.forEach((mt: any) => { mt.transparent = f < 1; mt.opacity = f; mt.needsUpdate = true; }); for (const mt of wmats.current) { mt.transparent = f < 1; mt.opacity = f; mt.needsUpdate = true; } }
     // HP bar
     const k = Math.max(0, Math.min(1, m.hp / m.maxHp));
     fg.current.scale.set(1.2 * k, 0.12, 1); fg.current.position.x = -0.6 * (1 - k);

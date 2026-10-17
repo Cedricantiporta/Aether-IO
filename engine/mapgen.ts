@@ -14,6 +14,7 @@ import { CAVE_BAY } from './caveData';
 import { DECK_RECTS, onDeckRect } from './beachData';
 
 /** Circle collider used for movement push-out and projectile blocking. */
+import { pushOutOfRift } from './roomFeatures';
 export interface Collider {
   x: number;
   z: number;
@@ -26,6 +27,7 @@ export interface Collider {
 /** Pushes (x, z) out of every collider (props and liquids) by `pad`; used for loot that lands in a lake or on a rock. */
 const pushCols: Collider[] = [];
 export function pushOutOfColliders(p: { x: number; z: number }, pad: number): void {
+  pushOutOfRift(p, pad);
   for (let pass = 0; pass < 3; pass++) {
     const cols = queryColliders(p.x, p.z, pad + 4, pushCols);
     let moved = false;

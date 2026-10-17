@@ -27,6 +27,8 @@ export const feat = {
   // ---- river / channel: a band across the room, perpendicular to the room's forward axis (arrival -> exits).
   // Signed distance d(x,z) = (p . n) - off - amp * sin(freq * s + ph), s = p . t (t = n rotated +90 deg).
   river: false,
+  /** Ember Wastes lava rift: a narrow (3-3.6 wide, < one dash) walkable-but-burning band with no bridges and no colliders. */
+  rift: false,
   nx: 0, nz: -1, off: 0, hw: 2.5, amp: 0, freq: 0.1, ph: 0, straight: false,
   // second meander harmonic + width wobble (uneven banks): hw(s) = hw * (1 + wAmp * sin(wFreq * s + wPh))
   amp2: 0, freq2: 0.2, ph2: 0, wAmp: 0, wFreq: 0.2, wPh: 0,
@@ -39,7 +41,7 @@ export const feat = {
 };
 
 export function resetFeatures(): void {
-  feat.layout = 'PLAIN'; feat.river = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0;
+  feat.layout = 'PLAIN'; feat.river = false; feat.rift = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0;
   feat.version++;
 }
 
@@ -62,6 +64,14 @@ export function riverPoint(s: number, d: number, out: [number, number]): void {
 export function bridgeAt(s: number, pad = 0): number {
   for (let i = 0; i < feat.nb; i++) if (Math.abs(s - feat.bridgeS[i]) < feat.bw + pad) return i;
   return -1;
+}
+/** Pushes a point (loot) out of the lava rift along its normal; no-op in rooms without one. */
+export function pushOutOfRift(p: { x: number; z: number }, pad: number): void {
+  if (!feat.rift) return;
+  const d = riverD(p.x, p.z), hw = hwAt(riverS(p.x, p.z)) + pad;
+  if (Math.abs(d) >= hw) return;
+  const k = (d >= 0 ? 1 : -1) * (hw - Math.abs(d) + 0.1);
+  p.x += feat.nx * k; p.z += feat.nz * k;
 }
 /** Is (x, z) on open liquid (river band outside the bridges, or inside a lake)? `pad` grows the liquid. */
 export function inLiquid(x: number, z: number, pad = 0): boolean {

@@ -17,7 +17,7 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { damagePlayer, damageEnemiesInRadius } from './combat';
 import { stationPos, startPos } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
-import { OBJ_NAME } from '../roomDefs';
+import { OBJ_NAME, BIOMES } from '../roomDefs';
 import { isStationary } from '../enemyDefs';
 
 const E = () => world.roomEvt;
@@ -25,7 +25,15 @@ const tmp = new Vector3();
 const colOut: Collider[] = [];
 const notify = (msg: string, color = '#f1d58e') => useGameStore.getState().addNotification(msg, color, 'SYSTEM');
 
-const GOBLIN_TIME = 15, HUNT_TIME = 30, TRAP_PERIOD = 3.2, TRAP_WARN = 2.1, TRAP_FIRE = 2.75, TRAP_R = 1.7;
+const GOBLIN_TIME = 15, HUNT_TIME = 30, TRAP_PERIOD0 = 3.2, TRAP_WARN0 = 2.1, TRAP_FIRE0 = 2.75, TRAP_R0 = 1.7;
+// Spike-trap tuning (live values: Marble Halls, biome #2 = index 1, gets bigger / more / faster / longer-lasting traps).
+let TRAP_PERIOD = TRAP_PERIOD0, TRAP_WARN = TRAP_WARN0, TRAP_FIRE = TRAP_FIRE0, TRAP_R = TRAP_R0, TRAP_TILE = TRAP_R0 * 2;
+let trapDrain = false;   // spikes stay up long enough to hurt anyone who steps on them (Marble Halls)
+/** Size multiplier of this room's trap tiles (render scales the plates / spikes by it). */
+export let trapScale = 1;
+let plTrapCd = 0;
+const MARBLE_BIOME = 1;
+const TRAP_W_STD = [30, 30, 20, 20], TRAP_W_MARBLE = [10, 10, 35, 45];
 
 export function resetRoomEvent(): void {
   const e = E();
@@ -57,15 +65,19 @@ const TRAP_PATTERNS: readonly (readonly [number, number])[][] = [
   [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]],
   [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]],
 ];
-const TRAP_W = [30, 30, 20, 20];
-const TRAP_TILE = TRAP_R * 2;   // square tiles, edge to edge
 const tileX: number[] = [], tileZ: number[] = [];
 
 function placeTraps(): void {
   const e = E(), R = world.room.radius, cap = e.traps.length;
+  const marble = world.room.biome % BIOMES.length === MARBLE_BIOME;
+  // Marble Halls: tiles x1.4, warning->spike 0.75x faster cycle, spikes up 1.6x longer, 1.75x the groups, 3x3 / cross favoured
+  const up = (TRAP_PERIOD0 - TRAP_FIRE0) * (marble ? 1.6 : 1), warn = (TRAP_FIRE0 - TRAP_WARN0) * (marble ? 0.8 : 1);
+  TRAP_WARN = TRAP_WARN0 * (marble ? 0.75 : 1); TRAP_FIRE = TRAP_WARN + warn; TRAP_PERIOD = TRAP_FIRE + up;
+  trapScale = marble ? 1.4 : 1; TRAP_R = TRAP_R0 * trapScale; TRAP_TILE = TRAP_R * 2; trapDrain = marble; plTrapCd = 0;
+  const TRAP_W = marble ? TRAP_W_MARBLE : TRAP_W_STD, maxGroups = marble ? 10 : 6;
   const [sx, sz] = startPos(R);
   let n = 0, groups = 0;
-  for (let t = 0; t < 300 && groups < 6 && n < cap; t++) {
+  for (let t = 0; t < 300 && groups < maxGroups && n < cap; t++) {
     let r = Math.random() * 100, pi = 0;
     for (; pi < TRAP_W.length - 1; pi++) { r -= TRAP_W[pi]; if (r <= 0) break; }
     const pat = TRAP_PATTERNS[pi], swap = Math.random() < 0.5;   // 1x3 lines run along x or z
@@ -213,14 +225,18 @@ export function updateRoomEvents(dt: number): void {
     }
   }
   if (e.twist === 'TRAPS' && fighting) {
+    if (plTrapCd > 0) plTrapCd -= dt;
     for (let i = 0; i < e.nTraps; i++) {
       const tr = e.traps[i];
       tr.t += dt;
       if (tr.t >= TRAP_PERIOD) { tr.t -= TRAP_PERIOD; tr.hit = false; }
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
-        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 / DMG_INFLATE, { pos: tmp }); /* (12% max HP: already scales with the x2 HP) */ }
+        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 / DMG_INFLATE, { pos: tmp }); plTrapCd = 0.8; /* (12% max HP: already scales with the x2 HP) */ }
         damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER', env: 'TRAP' });
+      } else if (trapDrain && tr.t >= TRAP_FIRE && plTrapCd <= 0 && pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) {
+        // long-lived spikes: stepping onto a raised tile still hurts (at most one hit per 0.8 s, 60% of the burst)
+        plTrapCd = 0.8; tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.07 / DMG_INFLATE, { pos: tmp });
       }
     }
   }

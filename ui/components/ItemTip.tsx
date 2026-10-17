@@ -1,7 +1,7 @@
 import React from 'react';
 import { ankhCooldownLeft } from '../../engine/systems/combat';
 import type { Item, PlayerStats } from '../../types';
-import { useGameStore, calculateItemCP, RANK_REQ, shopPrice } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, shopPrice, potionKind, potionCount, POTION_CAP } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
 import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
@@ -63,6 +63,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
           <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
         )}
       </div>
+      {potionKind(item) && <div className="text-[.7rem] font-bold">Carried: {potionCount(inventory, potionKind(item)!)}/{POTION_CAP}</div>}
       {wrongClass && <div className="neg text-[.7rem] font-bold">Cannot be used by {HERO_STATS[heroClass] ? heroClass : 'this hero'}</div>}
       {item.description && <><div className="tt-sep" /><div className="italic muted">{item.type === 'REVIVE' ? 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' : item.description}</div></>}
       {item.type === 'REVIVE' && (() => { const ms = ankhCooldownLeft(); return <div style={{ color: ms > 0 ? '#ff8a7a' : 'var(--good)', fontWeight: 700 }}>{ms > 0 ? `Recharging: ${Math.ceil(ms / 60000)} min left` : 'Ready'}</div>; })()}

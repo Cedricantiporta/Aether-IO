@@ -219,6 +219,12 @@ export function findNearestEnemy(x: number, z: number, maxR: number): Enemy | nu
   return best;
 }
 
+/** (owner) "In a fight": a live hostile within ~22 units of the hero (runs, hermit-path / cave monsters). Never true in an empty town. Pets / item procs gate their timers on it. */
+export function inFight(): boolean {
+  const pl = world.player;
+  return findNearestEnemy(pl.pos.x, pl.pos.z, 22) !== null;
+}
+
 const aoeOut: number[] = [];
 const aoeDir = new Vector3();
 /**

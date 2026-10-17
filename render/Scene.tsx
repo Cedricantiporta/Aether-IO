@@ -1,5 +1,6 @@
 import { HomeInterior } from './HomeInterior';
 import { RoomEvents } from './RoomEvents';
+import { BiomeHazards } from './BiomeHazards';
 import { Minions } from './Minions';
 import React, { Suspense, useEffect, useLayoutEffect } from 'react';
 import { FacingArrow } from './FacingArrow';
@@ -134,6 +135,7 @@ export function Scene() {
           <HumanBosses />
           <BossFx />
           <RoomEvents />
+          <BiomeHazards />
           <Minions />
           <Projectiles />
           <Pet />

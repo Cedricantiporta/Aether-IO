@@ -23,6 +23,10 @@ export interface EnemyDef {
   armor: number;            // damage taken x 100/(100+armor); elites/bosses scale it up in spawnEnemy
 }
 
+/** Water-type monsters: shrug off water puddles and run faster in them (Coral Isles); stationary ones (lake hydra) can move there. */
+const AQUATIC = new Set<EnemyKind>(['SLIME', 'SPLITTER', 'ROCK_CRAB', 'LAKE_HYDRA']);
+export const isAquatic = (k: EnemyKind): boolean => AQUATIC.has(k);
+
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   SLIME: {
     name: 'Slime', hp: 15, speed: 3.2, radius: 0.7, scale: 1, contactDamage: 7, projectileDamage: 0,

@@ -18,7 +18,7 @@ import { world } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
 import { damagePlayer, applyPlayerDebuff, staggerView, towerMode, towerCrystals, playerTrickImmune } from './combat';
-import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
+import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -125,6 +125,7 @@ export function spawnHumanBoss(kind: HumanKind, x: number, z: number): Enemy | n
   // spawnEnemy gave def.hp * wave * mods * 1.4 * level * biome; a guardian is that / 1.4 * 5 (spawnMiniBoss): +25% for these
   e.maxHp = Math.round(e.maxHp / 1.4 * 5 * 1.25 * info.hp); e.hp = e.maxHp;
   e.mini = true; e.staggerMax = 70; e.armor = Math.round(e.armor * 1.2);
+  rollEliteShield(e);
   e.xp *= 12; e.gold = 0; e.pattern = 0; e.elite = false;
   e.contactDamage *= 0.7;
   if (kind === 'VARN') { e.armor = Math.round(e.armor * 1.3); e.speed *= 0.95; }

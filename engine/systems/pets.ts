@@ -10,7 +10,7 @@ import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { useGameStore } from '../../store';
-import { damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, healPlayer, type DamageOpts } from './combat';
+import { damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, healPlayer, inFight, type DamageOpts } from './combat';
 import { events } from '../events';
 import { spawnPickup } from './pickups';
 import type { Enemy } from '../types';
@@ -312,6 +312,7 @@ export function updatePets(dt: number): void {
 
   // ---- specialty: HEAL timer ----------------------------------------------
   if (!(prof.heals && skill === 'HEAL') || !alive) return;
+  if (!inFight()) return;   // (owner) heal pulses only in a fight, timer holds
   wp.skillT += dt;
   const cd = pet.petCooldown || 10;
   if (wp.skillT >= cd) {
@@ -404,6 +405,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
   for (let i = 0; i < 3; i++) { const m = MARKS[i]; if (m.t > 0) { m.t -= dt; if (m.t <= 0 || !m.e || !m.e.active || m.e.state === 'DYING') { m.t = 0; m.e = null; } } }
   if (BEAM.t > 0) BEAM.t -= dt;
   if (!skill) return;
+  if (!inFight()) return;   // (owner) pet abilities only act in a fight; the cooldown holds while idle / in town
   abT += dt;
 
   switch (skill) {

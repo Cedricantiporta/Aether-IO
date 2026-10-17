@@ -10,7 +10,7 @@ import { events } from '../events';
 import type { PickupKind } from '../types';
 import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
-import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg } from '../../store';
 import { healPlayer, grantKillXp } from './combat';
 
 const GRAVITY = 28;
@@ -139,6 +139,12 @@ function autoLootWants(it: Item, set: { autoLootGear: string; autoLootMaterials:
 }
 /** "Bag is full!" at most once per 3 s (many drops grabbed / vacuumed at once used to stack a dozen toasts). */
 let lastBagFull = -1e9;
+export function warnPotionCap(st: { addNotification: (m: string, c?: string, t?: any) => void }, pk: 'hp' | 'mp'): void {
+  const now = performance.now();
+  if (now - lastBagFull < 3000) return;
+  lastBagFull = now;
+  st.addNotification(potionCapMsg(pk), 'red', 'WARNING');
+}
 export function warnBagFull(st: { addNotification: (m: string, c?: string, t?: any) => void }): void {
   const now = performance.now();
   if (now - lastBagFull < 3000) return;
@@ -148,7 +154,7 @@ export function warnBagFull(st: { addNotification: (m: string, c?: string, t?: a
 export function lootPickup(i: number): void {
   const o = world.pickups[i], st = useGameStore.getState();
   if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
-  if (!st.canPickUp(o.item)) { warnBagFull(st); return; }
+  if (!st.canPickUp(o.item)) { const pk = potionKind(o.item); if (pk) warnPotionCap(st, pk); else warnBagFull(st); return; }
   o.magnet = true; o.t = Math.max(o.t, 0.4);
 }
 /** Nearest lootable item pickup within r of (x, z): index or -1. */

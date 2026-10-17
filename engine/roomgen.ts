@@ -145,7 +145,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   // ---- stage liquids first (everything else is placed around them)
   if (!tower && !boss) {
     if (layout === 'RIVER') {
-      buildRiver(def.river, rnd, colliders);
+      buildRiver(def.river, rnd, colliders, !!def.lavaSea && def.river === 'LAVA');
       // nothing may block a bridge deck or its two mouths
       for (let i = 0; i < feat.nb; i++) for (const d of [0, -(feat.hw + 2), feat.hw + 2]) {
         riverPoint(feat.bridgeS[i], d, rp); keep.push({ x: rp[0], z: rp[1], r: Math.max(feat.bw + 0.8, 3.2) });
@@ -316,9 +316,12 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   // ---- permanent environmental hazards (swamp puddles, quicksand, ember gas vents)
   if (hazard && !tower && !boss && type !== 'CAMP' && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
     const hz: { x: number; z: number; r: number }[] = [];
-    const n = Math.round(rand(1, 2.4) * (big ? 1.5 : 1)) + (hazard === 'PUDDLE' && layout === 'LAKE' ? 1 : 0);
-    for (let t = 0; t < 80 && hz.length < n; t++) {
-      const r = hazard === 'GAS' ? rand(3, 4.2) : rand(3.6, 5.5);
+    const coral = hazard === 'PUDDLE' && biome % BIOMES.length === 3;   // Coral Isles (biome #4): wider, more numerous water puddles
+    const n = Math.round(rand(1, 2.4) * (big ? 1.5 : 1) * (coral ? 1.7 : 1)) + (hazard === 'PUDDLE' && layout === 'LAKE' ? 1 : 0);
+    const sandPits = hazard === 'QUICKSAND';   // Sunscorch Desert (biome #3): 2-4 whirlpool pits, radius 4-7
+    const nPits = sandPits ? Math.round(rand(2, 4)) : n;
+    for (let t = 0; t < 80 && hz.length < nPits; t++) {
+      const r = hazard === 'GAS' ? rand(3, 4.2) : sandPits ? rand(4, 7) : rand(3.6, 5.5) * (coral ? 1.7 : 1);
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 5 - r);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (!insideShape(x, z, 5 + r)) continue;
@@ -347,13 +350,13 @@ function pickLakeShape(seed: number): ShapeKind {
 }
 
 /** River / lava / chasm channel across the room (perpendicular to the forward axis, between arrival and station), 1-3 bridges. */
-function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, colliders: Collider[]): void {
+function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, colliders: Collider[], rift = false): void {
   // Two land masses split by a wide, meandering, uneven channel that sits well below the ground (render/Room.tsx sinks
   // the floor along it), joined by one or two wide bridges.
   feat.river = true; feat.liquid = liq;
   feat.nx = shape.fx; feat.nz = shape.fz;
   feat.straight = false;
-  feat.hw = liq === 'CHASM' ? 5.0 + rnd() * 1.0 : 4.4 + rnd() * 1.2;
+  feat.hw = rift ? 1.5 + rnd() * 0.3 : liq === 'CHASM' ? 5.0 + rnd() * 1.0 : 4.4 + rnd() * 1.2;   // rift: 3.0-3.6 wide, under one dash (~4.3)
   feat.amp = 1.8 + rnd() * 1.4;
   feat.freq = 0.06 + rnd() * 0.04; feat.ph = rnd() * Math.PI * 2;
   feat.amp2 = 0.7 + rnd() * 0.6; feat.freq2 = feat.freq * (2.3 + rnd() * 0.6); feat.ph2 = rnd() * Math.PI * 2;
@@ -369,6 +372,7 @@ function buildRiver(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, 
   for (let s = 0; s < 120; s += 0.5) { riverPoint(s, 0, rp); if (!insideShape(rp[0], rp[1], 2.5)) break; sMax = s; }
   for (let s = 0; s > -120; s -= 0.5) { riverPoint(s, 0, rp); if (!insideShape(rp[0], rp[1], 2.5)) break; sMin = s; }
   const span = sMax - sMin;
+  if (rift) { feat.rift = true; feat.nb = 0; feat.wAmp = Math.min(feat.wAmp, 0.1); return; }   // the hero dashes across: no deck, no colliders (walkable but burns)
   const nb = span > 24 ? 2 : 1;
   feat.bw = 3.0 + rnd() * 0.4;   // wide decks (~6-7 m): room for the hero, minions and a crowd
   const lo = sMin + feat.bw + 3, hi = sMax - feat.bw - 3;
@@ -425,9 +429,9 @@ function buildLakes(liq: 'WATER' | 'LAVA' | 'CHASM' | 'ICE', rnd: () => number, 
       const first = feat.nLakes;
       if (first >= MAX_LAKES || !free(x, z, r, first)) continue;
       put(x, z, r);
-      const lobes = 2 + Math.floor(rnd() * 3), a0 = rnd() * Math.PI * 2;
+      const lobes = (liq === 'LAVA' ? 4 + Math.floor(rnd() * 3) : 2 + Math.floor(rnd() * 3)), a0 = rnd() * Math.PI * 2;
       for (let j = 0; j < lobes && feat.nLakes < MAX_LAKES; j++) {
-        const la = a0 + (j / lobes) * Math.PI * 2 + (rnd() - 0.5) * 1.2, lr = r * (0.42 + rnd() * 0.3), ld = r * (0.55 + rnd() * 0.35);
+        const la = a0 + (j / lobes) * Math.PI * 2 + (rnd() - 0.5) * 1.2, lr = r * (liq === 'LAVA' ? 0.3 + rnd() * 0.45 : 0.42 + rnd() * 0.3), ld = r * (liq === 'LAVA' ? 0.45 + rnd() * 0.6 : 0.55 + rnd() * 0.35);
         const lx = x + Math.cos(la) * ld, lz = z + Math.sin(la) * ld;
         if (free(lx, lz, lr, first)) put(lx, lz, lr);
       }

@@ -110,6 +110,7 @@ export interface Enemy {
   stunT: number;         // stunned (spinning stars, no move/attack)
   fearT: number;         // terrified: cowers in place (no move / attack), then 30% slow for 3 s
   slowT: number; slowFactor: number; // speed *= (1 - slowFactor)
+  waterT: number;        // aquatic monster standing in a water puddle (refreshed by zones.puddleUpdate): faster, stationary ones mobile
   // combat-depth systems
   armor: number;         // damage taken x 100/(100+armor)
   armorBreakT: number;   // ARMOR BREAK: armor -25% while > 0

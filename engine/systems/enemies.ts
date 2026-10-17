@@ -46,7 +46,7 @@ import { dropLoot } from './loot';
 import { towerMode, towerCrystals } from './combat';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
-import { feat, routeAround } from '../roomFeatures';
+import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 
@@ -185,6 +185,11 @@ export function isSpawnable(x: number, z: number): boolean {
     const lim = edgeLimit(x, z, 3);
     if (r2 > lim * lim) return false;
   }
+  if (feat.rift) {   // Ember lava rift: never in the lava; mostly on the hero's side of it (ranged / stragglers may spawn across)
+    const d = riverD(x, z), hw = hwAt(riverS(x, z));
+    if (Math.abs(d) < hw + 1.5) return false;
+    if ((d > 0) !== (riverD(world.player.pos.x, world.player.pos.z) > 0) && Math.random() < 0.7) return false;
+  }
   return !blockedAt(x, z, 1.5);
 }
 
@@ -273,6 +278,10 @@ function bossPace(): number {
   return b === 0 ? 0.75 : b === 1 ? 0.82 : b === 2 ? 0.9 : 1;
 }
 
+/** (owner) elites / mini-bosses: 30% chance to arrive with a shield worth 50-100% of max HP (one roll per enemy). Shieldbreaker is applied at damage time (combat.ts). */
+export function rollEliteShield(e: Enemy): void {
+  if (Math.random() < 0.3) e.shield = Math.max(e.shield, e.maxHp * (0.5 + Math.random() * 0.5));
+}
 export function spawnEnemy(
   kind: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix },
 ): Enemy | null {
@@ -305,6 +314,7 @@ export function spawnEnemy(
   e.maxHp = Math.round(def.hp * hpMul * biomeHp);
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
+  if (elite && !boss) rollEliteShield(e);
   e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed;
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
@@ -349,6 +359,7 @@ export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title
   e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625 * WIND.miniHp); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
+  rollEliteShield(e);   // (maxHp is final here)
   e.affix = 'NONE';
   e.radius *= MINI.scaleMul; e.scale *= MINI.scaleMul;
   e.xp *= 4; e.gold *= 4;
@@ -798,6 +809,7 @@ function aiLakeHydra(e: Enemy): void {
   stop(e);
   const inv = 1 / Math.max(tdist, 0.001);
   const ux = tdx * inv, uz = tdz * inv;
+  if (e.waterT > 0 && e.state !== 'WINDUP' && tdist > 7) setVel(e, ux, uz, 5.5);   // in a puddle it swims after the hero (x1.35 in the motion step)
   // dive cycle on e.angle: counts down while surfaced; dives for LHYDRA.down seconds
   if (e.hideT > 0) return;
   e.angle -= frameDt;
@@ -1364,7 +1376,7 @@ function updateEnemy(e: Enemy): void {
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
-  const still = isStationary(e.kind);
+  const still = isStationary(e.kind) && !(e.waterT > 0);   // (a lake hydra that reached a water puddle is free to move)
   // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
   // (strike range) they track the real hero so their attacks still connect
   // (only from afar: up close a monster aimed at the old spot walked past / through the hero)
@@ -1413,6 +1425,7 @@ function updateEnemy(e: Enemy): void {
     if (e.fearT <= 0) { e.slowT = Math.max(e.slowT, FEAR_SLOW_T); e.slowFactor = Math.max(e.slowFactor, 0.3); }
   }
   if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 0; }
+  if (e.waterT > 0) { e.waterT -= dt; if (e.waterT <= 0 && isStationary(e.kind)) e.dir.set(e.pos.x, 0, e.pos.z); }   // (stationary again: pinned where it ended up)
   if (e.burnT > 0) {
     e.burnT -= dt;
     if (frameDotTick) damageEnemy(e, e.burnDps * 0.5 * Math.max(1, e.burnStacks), { kind: 'FIRE', dot: true });
@@ -1471,7 +1484,7 @@ function updateEnemy(e: Enemy): void {
   }
 
   // ---- motion
-  const sm = e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;
+  const sm = e.waterT > 0 ? 1.35 : e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;   // aquatic monsters in water: +35%
   const kr = e.mini ? 0 : 1 - ENEMY_DEFS[e.kind].knockResist;   // bosses, mini-bosses and big monsters can't be knocked back
   e.pos.x += (e.vel.x * sm + e.knock.x * kr) * dt;
   e.pos.z += (e.vel.z * sm + e.knock.z * kr) * dt;

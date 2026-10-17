@@ -33,7 +33,7 @@ function makeEnemy(id: number): Enemy {
     hp: 1, maxHp: 1, shield: 0, speed: 1, radius: 0.6, scale: 1,
     contactDamage: 0, projectileDamage: 0, xp: 0, gold: 0,
     state: 'SPAWN', stateT: 0, attackCd: 0, animT: 0, hitFlash: 0, deathT: 0,
-    burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, fearT: 0, slowT: 0, slowFactor: 0,
+    burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, fearT: 0, slowT: 0, slowFactor: 0, waterT: 0,
     armor: 0, armorBreakT: 0, burnStacks: 0, burnStackCd: 0, mini: false, stagger: 0, staggerMax: 0, staggerT: 0, staggerCd: 0,
     trickCd: 0, trickT: 0, trickKind: 0, slamDmg: 0, slamT: 0, chillStacks: 0, chillT: 0, frostT: 0, spKind: 0, spT: 0, spStep: 0, spCd: 0, decoy: false, hideT: 0, shellT: 0,
     winT: 0, winCd: 0, winPhase: 0, winBusy: false,
@@ -133,7 +133,7 @@ export const world = {
     darkId: -1, darkT: 0, lifted: false,
     /** the Shadowcaster's screen spot (CameraRig): the darkness overlay keeps a small lit hole around it */
     dOn: false, dsx: 0, dsy: 0,
-    traps: Array.from({ length: 40 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
+    traps: Array.from({ length: 80 }, () => ({ x: 0, z: 0, t: 0, hit: false })), nTraps: 0,
   },
   director: {
     wave: 1, phase: 'FIGHT', phaseT: 0, maxAlive: ROOM_MAX_ALIVE, aliveCount: 0, bossId: -1,

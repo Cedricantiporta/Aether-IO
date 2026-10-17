@@ -5,6 +5,8 @@
 import { world, allocZone } from '../world';
 import { useGameStore } from '../../store';
 import { events } from '../events';
+import { isAquatic, isStationary } from '../enemyDefs';
+import { feat, riverD, riverS, hwAt } from '../roomFeatures';
 import type { Zone } from '../types';
 import {
   damageEnemy, damageEnemiesInRadius, applyStatus, damagePlayer, addShake, applyPlayerDebuff, type DamageOpts, type StatusEffect,
@@ -172,7 +174,41 @@ function inZone(z: Zone, x: number, y: number, pad: number): boolean {
   return dx * dx + dz * dz < rr * rr;
 }
 
-function puddleUpdate(z: Zone): void {
+const sandOpts: DamageOpts = { kind: 'PHYSICAL', dot: true, env: 'HAZARD' };
+const SAND_SLOW = 0.4, SAND_CORE = 0.35;
+
+/** Desert quicksand pit (PUDDLE zone, aux 1): slows everyone 40%, pulls toward the centre (2-3.5 u/s, stronger near it), the inner core sinks (DoT). */
+function quicksandUpdate(z: Zone, dt: number): void {
+  const p = world.player, R = z.radius;
+  z.tickT += dt;
+  const tick = z.tickT >= HAZARD_TICK;
+  if (tick) z.tickT -= HAZARD_TICK;
+  const dps = 6 + world.director.wave * 1.1;
+  if (p.alive) {
+    const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z, d2 = dx * dx + dz * dz, rr = R + PLAYER_RADIUS * 0.5;
+    if (d2 < rr * rr) {
+      envSlow = Math.min(envSlow, 1 - SAND_SLOW);
+      const d = Math.sqrt(d2) || 1e-3;
+      if (p.dashT <= 0) { const pull = (2 + 1.5 * (1 - Math.min(1, d / R))) * dt; if (d > pull) { p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull; } }   // (a dash breaks free)
+      if (tick && d < R * SAND_CORE && p.dashT <= 0) damagePlayer(dps * HAZARD_TICK, { pos: z.pos });
+    }
+  }
+  const ids = world.enemyGrid.query(z.pos.x, z.pos.z, R + 4, out);
+  for (let i = 0; i < ids.length; i++) {
+    const e = world.enemies[ids[i]];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.kind === 'BAT' || e.kind === 'WRAITH') continue;
+    const dx = z.pos.x - e.pos.x, dz = z.pos.z - e.pos.z, d2 = dx * dx + dz * dz, rr = R + e.radius * 0.5;
+    if (d2 >= rr * rr) continue;
+    const d = Math.sqrt(d2) || 1e-3;
+    if (e.slowT < 0.1) e.slowT = 0.1;
+    if (e.slowFactor < SAND_SLOW) e.slowFactor = SAND_SLOW;
+    if (!e.boss && !isStationary(e.kind)) { const pull = (2 + 1.5 * (1 - Math.min(1, d / R))) * dt; if (d > pull) { e.pos.x += (dx / d) * pull; e.pos.z += (dz / d) * pull; } }
+    if (tick && d < R * SAND_CORE && !isStationary(e.kind)) damageEnemy(e, dps * 2 * HAZARD_TICK, sandOpts);
+  }
+}
+
+function puddleUpdate(z: Zone, dt = 0): void {
+  if (z.aux === 1) { quicksandUpdate(z, dt); return; }
   const p = world.player;
   if (p.alive && inZone(z, p.pos.x, p.pos.z, PLAYER_RADIUS * 0.5)) envSlow = Math.min(envSlow, 1 - PUDDLE_FACTOR);
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
@@ -180,6 +216,7 @@ function puddleUpdate(z: Zone): void {
     const e = world.enemies[ids[i]];
     if (!e.active || e.state === 'DYING' || e.kind === 'BAT') continue;
     if (!inZone(z, e.pos.x, e.pos.z, e.radius * 0.5)) continue;
+    if (z.aux === 0 && isAquatic(e.kind)) { e.waterT = 0.15; continue; }   // water monsters swim: faster, no slow (quicksand still holds them)
     if (e.slowT < 0.1) e.slowT = 0.1;
     if (e.slowFactor < PUDDLE_FACTOR) e.slowFactor = PUDDLE_FACTOR;
   }
@@ -288,6 +325,29 @@ function expire(z: Zone): void {
   z.active = false;
 }
 
+const RIFT_BURN: StatusEffect = { type: 'BURN', duration: 2, value: 6 };
+let riftT = 0;
+/** Ember Wastes lava rift (walkable, not a wall): the hero is slowed and burns heavily unless dashing across it; monsters that wade in burn too. */
+function riftUpdate(dt: number): void {
+  const p = world.player;
+  if (p.alive && p.dashT <= 0) {
+    const d = riverD(p.pos.x, p.pos.z);
+    if (Math.abs(d) < hwAt(riverS(p.pos.x, p.pos.z)) + 0.2) {
+      envSlow = Math.min(envSlow, 0.55);
+      if (p.burnT <= 0.5) applyPlayerDebuff('BURN', 3, 10 + world.director.wave * 1.6);
+    }
+  }
+  riftT += dt;
+  if (riftT < 0.25) return;
+  riftT = 0;
+  const es = world.enemies;
+  for (let i = 0; i < es.length; i++) {
+    const e = es[i];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss || e.kind === 'BAT' || e.kind === 'WRAITH') continue;
+    if (Math.abs(riverD(e.pos.x, e.pos.z)) < hwAt(riverS(e.pos.x, e.pos.z))) { RIFT_BURN.value = Math.max(1, e.maxHp * 0.03); applyStatus(e, RIFT_BURN); }
+  }
+}
+
 export function updateZones(dt: number): void {
   const ew = world.player.earthwall;
   if (ew.active) {
@@ -296,13 +356,14 @@ export function updateZones(dt: number): void {
   }
 
   envSlow = arenaSlow(); // Glacius blizzard slows the whole arena
+  if (feat.rift) riftUpdate(dt);
   updateWalls(dt);
   const zones = world.zones;
   for (let i = 0; i < zones.length; i++) {
     const z = zones[i];
     if (!z.active) continue;
     if (z.permanent) {
-      if (z.kind === 'PUDDLE') puddleUpdate(z);
+      if (z.kind === 'PUDDLE') puddleUpdate(z, dt);
       else if (z.kind === 'GAS') {
         z.tickT += dt;
         if (z.tickT >= HAZARD_TICK) { z.tickT -= HAZARD_TICK; if (gasActive(z)) hazardTick(z); }
@@ -340,7 +401,7 @@ export function updateZones(dt: number): void {
           z.tickT += dt;
           if (z.tickT >= POISON_TICK) { z.tickT -= POISON_TICK; poisonTick(z); }
           break;
-        case 'PUDDLE': puddleUpdate(z); break;
+        case 'PUDDLE': puddleUpdate(z, dt); break;
         case 'GOO': case 'CALTROPS': case 'FIREPATCH': case 'ACID': case 'PLAGUE': case 'SMOKE': hostilePatch(z, dt); break;
         case 'GAS':
           z.tickT += dt;

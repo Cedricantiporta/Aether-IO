@@ -220,6 +220,11 @@ const uid = (prefix = 'id'): string => `${prefix}_${Date.now().toString(36)}_${(
 
 const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD' || item.type === 'ELIXIR' || item.type === 'CRYSTAL';
 const stackLimit = (item: Item): number => (item.type === 'SHARD' || item.type === 'CRYSTAL' ? 1e9 : item.type === 'LOOT' ? LOOT_STACK_LIMIT : POTION_STACK_LIMIT);
+/** (owner) carry cap: at most POTION_CAP health potions (small + big together) and POTION_CAP mana potions. */
+export const POTION_CAP = 50;
+export const potionKind = (item: Item | null | undefined): 'hp' | 'mp' | null => (!item || item.type !== 'POTION' ? null : /health/i.test(item.name) ? 'hp' : /mana/i.test(item.name) ? 'mp' : null);
+export const potionCount = (inv: Item[], kind: 'hp' | 'mp'): number => { let n = 0; for (const i of inv) if (potionKind(i) === kind) n += i.quantity || 1; return n; };
+export const potionCapMsg = (kind: 'hp' | 'mp'): string => `You can carry at most ${POTION_CAP} ${kind === 'hp' ? 'health' : 'mana'} potions.`;
 const isGear = (item: Item): boolean => item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS';
 
 /** Combat power of one item (UI comparison / auto-equip). */
@@ -1385,6 +1390,12 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     addItemToInventory: (item) => {
       const s = get();
+      const pk = potionKind(item);
+      if (pk) {   // potion carry cap: add only what fits; nothing fits -> refused (pickups stay on the ground)
+        const room = POTION_CAP - potionCount(s.inventory, pk);
+        if (room <= 0) return false;
+        if ((item.quantity || 1) > room) item = { ...item, quantity: room };
+      }
       const inv = insertItem(s.inventory, s.maxInventorySlots, markNew(item));   // looted / rewarded: "new" dot (monster loot excluded)
       if (!inv) return false;
       set({ inventory: inv });
@@ -1399,6 +1410,8 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     canPickUp: (item) => {
       const s = get();
+      const pk = potionKind(item);
+      if (pk && potionCount(s.inventory, pk) >= POTION_CAP) return false;
       if (s.inventory.length < s.maxInventorySlots) return true;
       if (!isStackable(item)) return false;
       return s.inventory.some((i) => i.name === item.name && i.type === item.type && (i.quantity || 1) < stackLimit(item));
@@ -1560,6 +1573,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     buyItem: (item, quantity = 1) => {
       const s = get();
       const total = freeBuy(s, item) && quantity === 1 ? 0 : shopPrice(item) * quantity;
+      const pk = potionKind(item);
+      if (pk && potionCount(s.inventory, pk) + quantity > POTION_CAP) { notify(potionCapMsg(pk), 'red', 'WARNING'); return false; }
       if (s.gold < total) { notify('Not enough Gold!', 'red', 'WARNING'); return false; }
       const toAdd: Item = { ...item, stats: { ...item.stats }, id: uid('buy'), quantity };
       if (!isStackable(item) && quantity > 1) {

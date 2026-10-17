@@ -8,11 +8,11 @@ import { labelMaterial } from './label';
 import { useWorldCounter } from './hooks';
 import { angleLerp } from './util';
 import { world } from '../engine/world';
-import { trapPhase } from '../engine/systems/roomEvents';
+import { trapPhase, trapScale } from '../engine/systems/roomEvents';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
 
-const MAXT = 40;
+const MAXT = 80;
 
 /** The caged captive (owner: an actual NPC): a KayKit villager (no hat, plain tunic) cowering in idle, waving to be let out
  *  once the room is clear (state 4) and cheering when freed (state 2). Lives inside the cage group (cage-local origin). */
@@ -177,10 +177,10 @@ export function RoomEvents() {
       g.visible = on;
       if (!on) continue;
       const tr = e.traps[i], ph = trapPhase(tr.t);
-      g.position.set(tr.x, 0, tr.z);
+      g.position.set(tr.x, 0, tr.z); g.scale.set(trapScale, 1, trapScale);   // (Marble Halls: bigger tiles)
       const s = spikes.current[i];
       if (s) { const up = ph === 2 ? 1 : ph > 0 ? 0.12 * ph : 0; s.scale.set(1, Math.max(0.01, up), 1); s.visible = up > 0.02; }
-      if (ph > 0 && ph < 2) pushHalo(tr.x, 0.3, tr.z, 2.6 + ph, 2.6, 0.3, 0.2, 0.2 + 0.35 * ph, CELL.GLOW);
+      if (ph > 0 && ph < 2) pushHalo(tr.x, 0.3, tr.z, (2.6 + ph) * trapScale, 2.6, 0.3, 0.2, 0.2 + 0.35 * ph, CELL.GLOW);
     }
     // the Shadowcaster (darkness twist): a pulsing violet aura
     if (live && e.twist === 'DARK' && e.darkId >= 0) {

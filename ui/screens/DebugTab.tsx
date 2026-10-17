@@ -6,12 +6,13 @@ import { useGameStore } from '../../store';
 import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { debug, setDebug } from '../../engine/debug';
-import { debugJump, debugMalakar, debugHumanBoss, debugDarkHero } from '../../engine/systems/director';
+import { debugJump, debugMalakar, debugHumanBoss, debugDarkHero, debugTowerHuman } from '../../engine/systems/director';
 import { HUMAN_KINDS, HUMAN_INFO } from '../../engine/systems/humanBosses';
 import { DARK_CLASSES, DARK_NAMES } from '../../engine/systems/darkHero';
 import { ally, debugAlly } from '../../engine/systems/ally';
 import { riruru } from '../../engine/systems/riruru';
 import { world } from '../../engine/world';
+import { runInfo } from '../../engine/runMods';
 import { BIOMES, BOSS_INDEX, ROOMS_PER_BIOME } from '../../engine/roomDefs';
 import { BOSS_ROTATION, BOSS_NAMES } from '../../engine/enemyDefs';
 import { talentsOf } from '../../talents';
@@ -139,6 +140,9 @@ export const DebugTab: React.FC = () => {
     </Line>
     <Line label="Humanoid mini boss" hint="Fight Varn / Sable / Rook in a champion room of the biome and room chosen above.">
       {HUMAN_KINDS.map((k) => <Button key={k} size="sm" data-testid={`dbg-human-${k.toLowerCase()}`} onClick={() => fight(() => debugHumanBoss(biome, room, k))}>Fight humanoid mini boss: {HUMAN_INFO[k].name}</Button>)}
+    </Line>
+    <Line label="Tower humanoid mini boss" hint="Starts the Endless Tower (if needed) and jumps to floor 15 (a champion floor) with a humanoid mini boss.">
+      {HUMAN_KINDS.map((k) => <Button key={k} size="sm" data-testid={`dbg-tower-human-${k.toLowerCase()}`} onClick={() => { const st = useGameStore.getState(); if (!(inRun && runInfo.mode === 'TOWER')) st.startMode('TOWER'); if (st.isPauseMenuOpen) st.togglePause(); debugTowerHuman(15, k); useUiStore.getState().openSettings(false); }}>Tower floor 15: {HUMAN_INFO[k].name}</Button>)}
     </Line>
     <Line label="Fight Dark Hero" hint="A dark champion duel of the class you pick, in the biome and room chosen above.">
       {DARK_CLASSES.map((c) => <Button key={c} size="sm" data-testid={`dbg-dark-${c.toLowerCase()}`} onClick={() => fight(() => debugDarkHero(biome, room, c))}>{DARK_NAMES[c].name.replace('The ', '')}</Button>)}

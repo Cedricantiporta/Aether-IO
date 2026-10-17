@@ -7,7 +7,7 @@ import { events } from '../events';
 // ============================================================================
 import { create } from 'zustand';
 import type { Item } from '../../types';
-import { useGameStore, makeItemById } from '../../store';
+import { useGameStore, makeItemById, potionKind, potionCount, potionCapMsg, POTION_CAP } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { shardItem } from '../../shards';
 import { buyMul } from '../../constants';
@@ -57,6 +57,8 @@ export function buyMerchant(i: number): boolean {
   if (st.gold < e.price) { st.addNotification('Not enough Gold!', 'red', 'WARNING'); return false; }
   if (e.item.type === 'SHARD') st.addMaterial(e.item.rarity, 1);   // shards live in the material counts (bag stack synced)
   else {
+    const pk = potionKind(e.item);
+    if (pk && potionCount(st.inventory, pk) >= POTION_CAP) { st.addNotification(potionCapMsg(pk), 'red', 'WARNING'); return false; }
     const copy: Item = { ...e.item, stats: { ...e.item.stats }, id: `${e.item.id}-b${Date.now().toString(36)}`, quantity: 1 };
     if (!st.addItemToInventory(copy)) { st.addNotification('Inventory Full!', 'red', 'WARNING'); return false; }
   }
