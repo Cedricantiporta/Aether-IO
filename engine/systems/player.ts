@@ -258,8 +258,9 @@ export function updatePlayer(dt: number): void {
   if (inp.pressed.KeyZ && p.hpPotCd <= 0) usePotion(true);
   if (inp.pressed.KeyX && p.mpPotCd <= 0) usePotion(false);
   if (st.settings.autoPotions) {
-    if (p.hpPotCd <= 0 && p.hp < stats.maxHealth * 0.3) usePotion(true);
-    if (p.mpPotCd <= 0 && p.mana < stats.maxMana * 0.3) usePotion(false);
+    // (owner) auto-drink as soon as a potion is allowed (at or below 70%), not only below 30%
+    if (p.hpPotCd <= 0 && p.alive && p.hp <= stats.maxHealth * POTION_MAX_FRAC) usePotion(true);
+    if (p.mpPotCd <= 0 && p.mana <= stats.maxMana * POTION_MAX_FRAC) usePotion(false);
   }
 
   // ---- auto-target: the clicked lock, else the closest enemy

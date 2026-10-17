@@ -538,6 +538,7 @@ function Stations() {
   const fount = useRef<Group>(null!), stall = useRef<Group>(null!), chest = useRef<Group>(null!), altar = useRef<Group>(null!);
   const lid = useRef<Group>(null!), water = useRef<Mesh>(null!), chestGlow = useRef<Mesh>(null!), altarGlow = useRef<Mesh>(null!);
   const lidT = useRef(0);
+  const xc = useRef<(Group | null)[]>([]), xl = useRef<(Group | null)[]>([]), xb = useRef<(Mesh | null)[]>([]), xlid = useRef([0, 0]);   // (owner) extra chests
   // (owner) a pillar of golden light over the treasure once the room is cleared, until it is opened
   const beam = useRef<Mesh>(null!);
   const beamRes = useMemo(() => ({
@@ -565,7 +566,17 @@ function Stations() {
       beam.current.visible = s.ready && !s.used;
       if (beam.current.visible) { beamRes.mat.opacity = 0.26 + Math.sin(t * 2.6) * 0.07; beam.current.rotation.y = t * 0.4; }
       chestGlow.current.scale.setScalar(1 + Math.sin(t * 4) * 0.08);
-    } else if (altar.current.visible) {
+    }
+    for (let i = 0; i < 2; i++) {   // extra chests (positions relative to the station)
+      const g = xc.current[i], c = world.room.chests[i]; if (!g) continue;
+      g.visible = on && s.kind === 'CHEST' && c.on;
+      if (!g.visible) continue;
+      g.position.set(c.x - s.x, 0, c.z - s.z);
+      xlid.current[i] += ((c.used ? 1 : 0) - xlid.current[i]) * Math.min(1, dt * 6);
+      if (xl.current[i]) xl.current[i]!.rotation.x = -xlid.current[i] * 1.25;
+      if (xb.current[i]) { xb.current[i]!.visible = s.ready && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
+    }
+    if (altar.current.visible) {
       altarGlow.current.position.y = Math.sin(t * 1.7) * 0.15;
       altarGlow.current.rotation.y = t * 0.8;
       altarGlow.current.visible = !s.used || world.room.shrineOn;
@@ -588,6 +599,13 @@ function Stations() {
         <mesh ref={chestGlow} geometry={geos.chestGlow} material={mats.glow} />
         <mesh ref={beam} geometry={beamRes.geo} material={beamRes.mat} visible={false} renderOrder={3} />
       </group>
+      {[0, 1].map((i) => (
+        <group key={i} ref={(g) => { xc.current[i] = g; }} visible={false}>
+          <mesh geometry={geos.chest} material={mats.lit} castShadow receiveShadow />
+          <group ref={(g) => { xl.current[i] = g; }} position={[0, 0.9, -0.65]}><mesh geometry={geos.chestLid} material={mats.lit} position={[0, 0, 0.65]} castShadow /></group>
+          <mesh ref={(m) => { xb.current[i] = m; }} geometry={beamRes.geo} material={beamRes.mat} visible={false} renderOrder={3} />
+        </group>
+      ))}
       <group ref={altar} scale={1.7}>   {/* a big shrine */}
         <mesh geometry={geos.altar} material={mats.lit} castShadow receiveShadow />
         <mesh ref={altarGlow} geometry={geos.altarGlow} material={mats.glow} />

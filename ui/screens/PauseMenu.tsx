@@ -113,12 +113,12 @@ export const SettingsDialog: React.FC = () => {
             {tog('Hard mode', 'hardMode', 'Enemies have +40% HP, deal +35% damage and come in greater numbers; loot is 25% better. Takes effect from your next run.')}
             {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
-            {tog('Auto potions', 'autoPotions', 'Drink below 30% HP / MP.')}
+            {tog('Auto potions', 'autoPotions', 'Drink a potion at 70% HP / MP or lower.')}
             {tog('Click to move', 'clickMove', 'Left-click the ground to walk there (in town and on adventures). WASD still works; any key press cancels the walk.')}
           </Sec>
           <Sec title="Auto loot">
             <Row label="Auto-pick gear" hint="Lowest rarity of equipment that flies to you by itself. Lower ones wait for E / a tap.">
-              <Seg tid="seg-autoloot" value={settings.autoLootGear} opts={[{ v: 'OFF', l: 'Off' }, { v: 'COMMON', l: 'All' }, { v: 'RARE', l: 'Rare+' }, { v: 'EPIC', l: 'Epic+' }, { v: 'LEGENDARY', l: 'Leg.+' }]} onChange={(v) => update({ autoLootGear: v })} />
+              <Seg tid="seg-autoloot" value={settings.autoLootGear} opts={[{ v: 'OFF', l: 'Off' }, { v: 'COMMON', l: 'All' }, { v: 'UNCOMMON', l: 'Unc.+' }, { v: 'RARE', l: 'Rare+' }, { v: 'EPIC', l: 'Epic+' }, { v: 'LEGENDARY', l: 'Leg.+' }]} onChange={(v) => update({ autoLootGear: v })} />
             </Row>
             {tog('Auto-pick materials', 'autoLootMaterials', 'Monster loot, shards and potions fly to you at any rarity.')}
             <Row label="Pickup range" hint="Near: walk up to items. Far: your magnet radius pulls them in.">

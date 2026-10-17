@@ -273,6 +273,15 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   campPos.storage[0] = cx - 6; campPos.storage[1] = cz; campPos.trainer[0] = cx + 6; campPos.trainer[1] = cz; campPos.fire[0] = cx; campPos.fire[1] = cz + 1;
   const kind = p.type === 'FOUNTAIN' ? 'FOUNTAIN' : p.type === 'MERCHANT' ? 'MERCHANT' : p.type === 'TREASURE' ? 'CHEST' : p.type === 'SHRINE' ? 'ALTAR' : 'NONE';
   r.station.kind = kind; r.station.x = cx; r.station.z = cz; r.station.used = false; r.station.ready = kind === 'FOUNTAIN' || kind === 'MERCHANT' || kind === 'ALTAR';
+  {   // (owner) a Treasure stage sometimes holds more chests: 15% two, 5% three, set either side of the main one
+    const roll = Math.random(), extra = kind === 'CHEST' ? (roll < 0.05 ? 2 : roll < 0.2 ? 1 : 0) : 0;
+    for (let i = 0; i < r.chests.length; i++) {
+      const c = r.chests[i]; c.used = false; c.on = i < extra;
+      if (!c.on) continue;
+      const side = i === 0 ? 1 : -1, tx = cx + side * 5, tz = cz + 1.5;
+      if (isSpawnable(tx, tz)) { c.x = tx; c.z = tz; } else { c.x = cx; c.z = cz + side * 5; }
+    }
+  }
 
   const pl = world.player;
   const [sx, sz] = startPos(R);
@@ -1013,6 +1022,7 @@ function scanNearby(): void {
       if (dk < 30) pushNearby('Talk', 'The Gatekeeper', 56, dk);
     }
     if (wander.on) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
+    if (r.station.kind === 'CHEST' && r.station.ready) for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; if (c.on && !c.used) { const dc = q(c.x, c.z); if (dc < 20) pushNearby('Open', 'Treasure Chest', 12 + i, dc); } }
     if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP' && !r.plan.epilogue) {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
@@ -1060,6 +1070,11 @@ export function interactRoom(it: Interactable): void {
       else if (po.plan.gate !== undefined || po.plan.type === 'GATEKEEPER') beginLeave(po.plan, biome, BOSS_INDEX);   // trials and the courtyard keep the boss depth
       else beginLeave(po.plan, biome, index + 1);
     }
+    return;
+  }
+  if (it.node === 12 || it.node === 13) {   // an extra treasure chest
+    const c = r.chests[it.node - 12];
+    if (c && c.on && !c.used && r.station.ready && world.player.alive) { c.used = true; chestLoot(c.x, c.z); events.emit('shake', { amount: 0.25 }); vacuumT = 1.2; }
     return;
   }
   if (it.node === 40) { freeCaptive(); return; }   // rescue objective

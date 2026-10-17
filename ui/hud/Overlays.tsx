@@ -153,7 +153,7 @@ export const Notifications: React.FC = () => {
       {notes.map((n) => <NoteTimer key={n.id} id={n.id} ms={n.action ? 9000 : NOTE_MS[n.type]} onDone={remove} />)}{/* equip suggestions stay 9 s */}
 
       {/* loot feed: text only, no container, color coded, fades out */}
-      <div className="absolute flex flex-col-reverse gap-[.2rem] items-start pointer-events-none" style={{ left: '1.2rem', bottom: '10.5rem', maxWidth: '20rem', zIndex: 20 }}>
+      <div className="absolute flex flex-col-reverse gap-[.2rem] items-start pointer-events-none" style={{ left: '1.2rem', bottom: '12.6rem', maxWidth: '20rem', zIndex: 20 }}>
         <AnimatePresence initial={false}>
           {items.slice(-6).reverse().map((n) => (
             <motion.div key={n.id} layout initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, x: -10 }} transition={{ type: 'spring', stiffness: 400, damping: 28 }}

@@ -41,7 +41,10 @@ function holdSkill(id: string): boolean {
 }
 const lastTouch = { active: false, maxMag: 0 };
 
+/** (owner) a click on the skill bar casts at the auto-target (the cursor is on the button, not the battlefield). */
+export const forceAutoCast = { on: false };
 function mode(): 'AIMED' | 'QUICK' | 'AUTO' {
+  if (forceAutoCast.on) return 'AUTO';
   return (useGameStore.getState().settings as { castMode?: 'AIMED' | 'QUICK' | 'AUTO' }).castMode ?? 'AIMED';
 }
 

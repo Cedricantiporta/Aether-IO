@@ -103,9 +103,9 @@ const INITIAL_GAME_STATS: GameStatistics = {
 const _dd = deviceDefaults();
 const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.4, quality: _dd.quality,
-  showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: false,
+  showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: true,
   autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1, zoomUnlocked: true,
-  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, autoLootGear: 'RARE', autoLootMaterials: false, autoLootRange: 'NEAR', autoLootOnClear: false,
+  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, autoLootGear: 'UNCOMMON', autoLootMaterials: true, autoLootRange: 'NEAR', autoLootOnClear: false,
 };
 
 const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
@@ -443,6 +443,7 @@ interface Profile {
   discovered?: Discovered; codexClaimed?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
+  al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
   sp2?: boolean;      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
   mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
@@ -541,7 +542,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
-              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }) },
+              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.settings?.hardMode ? 'HARD' : 'NORMAL',   // (Hard mode is a Settings toggle)
@@ -589,7 +590,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));

@@ -81,7 +81,7 @@ export const GameUI: React.FC = () => {
       {village && <TownFade />}
       {village && <FishingHud />}
       {(village || inGame) && <CurrencyFloat />}
-      {village && <UpgradeNotice />}
+      {(village || inGame) && <UpgradeNotice />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}

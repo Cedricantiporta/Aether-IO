@@ -144,6 +144,7 @@ export const world = {
     portals: Array.from({ length: 3 }, () => ({ active: false, x: 0, z: 0, t: 0, plan: { type: 'COMBAT', reward: 'CARD' } })),
     markers: Array.from({ length: 48 }, () => ({ active: false, x: 0, z: 0, t: 0, dur: 1, kind: 'SLIME', elite: false, tag: 0 })),
     station: { kind: 'NONE', x: 0, z: 0, used: false, ready: false },
+    chests: [0, 1].map(() => ({ on: false, x: 0, z: 0, used: false })),
     shrineOn: false, hint: '',
   } as RoomState,
   /** Town state (harvest node cooldown). */

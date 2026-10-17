@@ -1,3 +1,4 @@
+import { forceAutoCast } from '../../engine/systems/aim';
 import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { abilityState } from '../../engine/systems/abilities';
@@ -40,7 +41,8 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
   };
   useGameEvent('onCooldown', (p) => { if (p.slot === 'r') shake(); });
   return (
-    <div className="relative pe ult-slot" {...tip(tooltip)} style={{ ['--uc' as any]: color, width: '7.8rem', height: '7.8rem', flex: 'none', margin: '0 .3rem' }}>
+    <div className="relative pe ult-slot" {...tip(tooltip)} style={{ ['--uc' as any]: color, width: '7.8rem', height: '7.8rem', flex: 'none', margin: '0 .3rem', cursor: 'pointer' }}
+      onClick={() => { forceAutoCast.on = true; window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyR', bubbles: true })); setTimeout(() => { window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyR', bubbles: true })); setTimeout(() => { forceAutoCast.on = false; }, 120); }, 60); }}>
       <style>{`
         .ult-slot .ult-core{position:absolute;inset:5%;border-radius:50%;overflow:hidden;background:#07050a;box-shadow:inset 0 0 12px #000}
         .ult-slot .ult-core .ico{position:absolute;inset:0;filter:grayscale(.55) brightness(.75);transition:filter .3s,transform .3s}

@@ -1,3 +1,4 @@
+import { forceAutoCast } from '../../engine/systems/aim';
 import React, { useEffect, useRef } from 'react';
 import { LockGlyph } from '../components/SkillIcons';
 import { world } from '../../engine/world';
@@ -30,6 +31,13 @@ interface Props {
 const fmtCd = (t: number) => (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1));
 
 /** Framed action-bar slot. All per-frame state (sweep, text, pips, mana-lack) is written via refs. */
+/** (owner) clicking a slot presses its key: a tap that casts at the auto-target. */
+function pressKey(code: string): void {
+  forceAutoCast.on = true;
+  window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
+  setTimeout(() => { window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); setTimeout(() => { forceAutoCast.on = false; }, 120); }, 60);
+}
+
 export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent, blocked }) => {
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
@@ -97,7 +105,8 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
   }, [keyCode]);
 
   return (
-    <div className="relative pe act-wrap" {...tip(tooltip)}>
+    <div className="relative pe act-wrap" {...tip(tooltip)} style={keyCode && active ? { cursor: 'pointer' } : undefined}
+      onClick={keyCode && active ? () => pressKey(keyCode) : undefined}>
       <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
         <span className="slot-icon">{icon}</span>
         <div ref={sweep} className="cd-sweep"><span ref={txt} className="cd-text" /></div>

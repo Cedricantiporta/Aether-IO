@@ -2,7 +2,7 @@
 // the treasure goblin / bounty target. Reads world.roomEvt in useFrame; meshes are built once (traps are a fixed pool).
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AnimationMixer, Color, Mesh as TMesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Sprite, SpriteMaterial, type Group, type Mesh, type PointLight } from 'three';
+import { AdditiveBlending, AnimationMixer, Color, CylinderGeometry, DoubleSide, Mesh as TMesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Sprite, SpriteMaterial, type Group, type Mesh, type PointLight } from 'three';
 import { useCharacterInstance, useClips, type CharKey } from './characters';
 import { labelMaterial } from './label';
 import { useWorldCounter } from './hooks';
@@ -108,7 +108,9 @@ export function RoomEvents() {
     return { frame, bg, fill };
   }, []);
   const glowMat = useMemo(() => new MeshBasicMaterial({ color: new Color(1.1, 2.4, 2.8), toneMapped: false }), []);
-  const totem = useRef<Group>(null!), cage = useRef<Group>(null!), bars = useRef<Group>(null!);
+  const totem = useRef<Group>(null!), cage = useRef<Group>(null!), bars = useRef<Group>(null!), cbeam = useRef<Mesh>(null!);
+  // (owner) a pillar of light over the cage once the room is clear, until the captive is freed (like the treasure chest)
+  const beamRes = useMemo(() => ({ geo: new CylinderGeometry(0.85, 1.4, 26, 18, 1, true).translate(0, 13, 0), mat: new MeshBasicMaterial({ color: new Color(1.5, 1.35, 0.7), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }) }), []);
   const traps = useRef<(Group | null)[]>([]), spikes = useRef<(Mesh | null)[]>([]);
   const mat = useMemo(() => litMat({ roughness: 0.7, metalness: 0.15 }), []);
   const geo = useMemo(() => {
@@ -163,6 +165,7 @@ export function RoomEvents() {
       if (showC) {
         cage.current.position.set(e.x, 0, e.z);
         if (bars.current) bars.current.visible = e.state !== 2;
+        if (cbeam.current) { cbeam.current.visible = e.state === 4; if (e.state === 4) { beamRes.mat.opacity = 0.24 + Math.sin(t * 2.6) * 0.07; cbeam.current.rotation.y = t * 0.4; } }
         if (e.state === 4) pushHalo(e.x, 1.5, e.z, 3.2 + Math.sin(t * 4) * 0.4, 2.2, 1.9, 0.6, 0.45, CELL.GLOW);   // free me!
         else if (e.hurtT > 0) pushHalo(e.x, 1.4, e.z, 2.6, 2.6, 0.5, 0.4, 0.45, CELL.GLOW);
       }
@@ -205,6 +208,7 @@ export function RoomEvents() {
         <mesh geometry={geo.cageBase} material={mat} receiveShadow />
         <Suspense fallback={null}><Captive /></Suspense>
         <group ref={bars}><mesh geometry={geo.bars} material={mat} castShadow /></group>
+        <mesh ref={cbeam} geometry={beamRes.geo} material={beamRes.mat} visible={false} renderOrder={3} />
       </group>
       {Array.from({ length: MAXT }, (_, i) => (
         <group key={i} ref={(g) => { traps.current[i] = g; }} visible={false}>

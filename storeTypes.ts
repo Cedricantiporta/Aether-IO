@@ -35,7 +35,7 @@ export interface Settings {
   quality: GraphicsQuality;
   showDamageNumbers: boolean;
   screenShake: boolean;
-  autoPotions: boolean;   // auto-drink at <30% hp/mana (designer default: true)
+  autoPotions: boolean;   // auto-drink at <= 70% hp/mana (owner; default: true)
   clickMove?: boolean;    // (owner) left-click the ground to walk there (town and runs); default off = WASD
   autoAim: boolean;       // lock the nearest enemy; off = mouse aim (desktop) / right aim stick (touch)
   autoQuality: boolean;   // adaptive resolution / particle budget from measured frame time
@@ -55,7 +55,7 @@ export interface Settings {
   /** Hard mode (Settings): runs started while it is on use the HARD difficulty (tougher, more enemies, better loot). */
   hardMode?: boolean;
   autoSkills: boolean;    // auto-cast skills 1/2/3 + ult at the auto-target (dash stays manual)
-  autoLootGear: 'OFF' | 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';   // lowest gear rarity that flies in by itself (default RARE)
+  autoLootGear: 'OFF' | 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';   // lowest gear rarity that flies in by itself (default UNCOMMON)
   autoLootMaterials: boolean;  // monster loot, shards, potions fly in at any rarity
   autoLootRange: 'NEAR' | 'FAR';  // NEAR: walk up to items; FAR: the full magnet radius pulls them
   autoLootOnClear: boolean;    // once a room is cleared every item on the floor flies to you

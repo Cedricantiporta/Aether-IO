@@ -22,7 +22,7 @@ const BANNERS = [
     title: 'Golden Altar', blurb: 'Offer gems for gear and companions with far better odds of Epic, Legendary and Mythic.' },
   { id: 'SHARD', name: 'Crystal Altar', sub: 'Aether crystals', tone: '#a46bff',
     title: 'Aether Crystal Altar', blurb: 'Offer Aether Crystals - mined in the deep, won on adventures, dropped by bosses and given by the Gem Altar. Standard odds.' },
-  { id: 'SHOP', name: 'Gem Shop', sub: 'Supplies · shards · companions', tone: '#5ee0f5', title: 'Gem Shop', blurb: '' },
+  { id: 'SHOP', name: 'Gem Shop', sub: 'Supplies · shards', tone: '#5ee0f5', title: 'Gem Shop', blurb: '' },
   { id: 'TECH', name: 'Tech House', sub: 'Permanent upgrades', tone: '#7dffb0', title: 'Tech House', blurb: '' },
 ] as const;
 const PREVIEW_ORDER = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'COMMON'] as const;
@@ -153,11 +153,10 @@ const GemShopTab: React.FC = () => {
   const groups: [string, typeof GEM_OFFERS][] = [
     ['Supplies', GEM_OFFERS.filter((o) => o.item.type !== 'PET' && !o.shards)],
     ['Shard bundles', GEM_OFFERS.filter((o) => o.shards)],
-    ['Companions', GEM_OFFERS.filter((o) => o.item.type === 'PET')],
   ];
   return (
     <div className="sw-shop rpg-scroll" data-testid="gem-shop">
-      <div className="sw-pane-h"><Gem size={18} /> Gem Shop <em>Spend gems on supplies, shard bundles and Rare / Epic companions</em></div>
+      <div className="sw-pane-h"><Gem size={18} /> Gem Shop <em>Spend gems on supplies and shard bundles</em></div>
       {groups.map(([title, list]) => (
         <div key={title} className="mb-3">
           <div className="rpg-label mb-2">{title}</div>

@@ -1,7 +1,7 @@
-// Gem Shop (a tab of the Summon window): consumables, shard bundles and a few Rare / Epic companions sold for gems.
+// Gem Shop (a tab of the Summon window): consumables and shard bundles sold for gems (owner: no companions).
 // Purchases go through the shared BuyDialog (quantity window) with `gems: true`.
 import { useGameStore, makeItemById } from './store';
-import { ITEMS_POOL, PETS_POOL } from './constants';
+import { ITEMS_POOL } from './constants';
 import { shardItem } from './shards';
 import { feedReward } from './rewardFeed';
 import { events } from './engine/events';
@@ -10,7 +10,6 @@ import type { Item, Rarity } from './types';
 export interface GemOffer { key: string; item: Item; gems: number; max: number; give: (n: number) => Item[] | null; shards?: [Rarity, number] }
 
 const tpl = (id: string): Item => ITEMS_POOL.find((i) => i.id === id)!;
-const pet = (id: string): Item | undefined => PETS_POOL.find((i) => i.id === id);
 const items = (id: string) => (n: number) => makeItemById(id, n);
 const shard = (r: Rarity, per: number, gems: number): GemOffer =>
   ({ key: `sh_${r}`, item: { ...shardItem(r, per) }, gems, max: 50, give: () => [], shards: [r, per] });
@@ -25,11 +24,7 @@ export const GEM_OFFERS: GemOffer[] = [
   { key: 'hpbig', item: tpl('potion_hp_big'), gems: 3, max: 20, give: items('potion_hp_big') },
   { key: 'mpbig', item: tpl('potion_mana_big'), gems: 3, max: 20, give: items('potion_mana_big') },
   shard('RARE', 10, 6), shard('EPIC', 5, 15), shard('LEGENDARY', 1, 20), shard('MYTHIC', 1, 60),
-  // companions: some Rare (300 gems) and some Epic (500 gems) pets; Legendary / Mythic ones stay summon-only
-  ...(['pet_fox', 'pet_owl', 'pet_sprite', 'pet_turtle'].map((id) => pet(id)).filter(Boolean) as Item[]).map((p): GemOffer => ({
-    key: p.id, item: p, gems: p.rarity === 'EPIC' ? 500 : 300, max: 1,
-    give: (n) => Array.from({ length: n }, () => ({ ...p, stats: { ...p.stats }, id: `gem-${p.id}-${Date.now().toString(36)}`, quantity: 1 })),
-  })),
+  // (owner) no companions here any more: pets come from summons / the Pet House
 ];
 
 /** Buys n of an offer. False (nothing spent) when gems or bag space are short. */

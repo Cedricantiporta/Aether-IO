@@ -119,11 +119,11 @@ export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): n
 /** E / tap on a loot pill: the item flies to the hero and is collected (bag full -> a warning, it stays). */
 const ITEM_GRAB_R2 = 2.4 * 2.4;
 const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0.5, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
-const GEAR_MIN: Record<string, number> = { OFF: 99, COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3 };
+const GEAR_MIN: Record<string, number> = { OFF: 99, COMMON: 0, UNCOMMON: 0.5, RARE: 1, EPIC: 2, LEGENDARY: 3 };
 const MATERIAL: Record<string, boolean> = { LOOT: true, SHARD: true, POTION: true, REVIVE: true, CORE: true };
 /** Does the auto-loot setting pick this item up by itself? */
 function autoLootWants(it: Item, set: { autoLootGear: string; autoLootMaterials: boolean }): boolean {
-  if (MATERIAL[it.type]) return set.autoLootMaterials || it.rarity !== 'COMMON';
+  if (MATERIAL[it.type]) return set.autoLootMaterials || it.rarity !== 'COMMON';   // (owner default: materials on = every tier)
   return RARITY_RANK[it.rarity] >= GEAR_MIN[set.autoLootGear];
 }
 export function lootPickup(i: number): void {
@@ -213,6 +213,19 @@ export function updatePickups(dt: number): void {
   xpActive = xpCount;
 }
 
+/** (owner) every pickup shows in the loot feed: gold / gems picked up close together (a chest, a pile) become one line. */
+const coin = { gold: 0, gems: 0, t: 0 as ReturnType<typeof setTimeout> | 0 };
+function feedCoin(k: 'gold' | 'gems', n: number): void {
+  coin[k] += n;
+  if (coin.t) return;
+  coin.t = setTimeout(() => {
+    const add = useGameStore.getState().addNotification;
+    if (coin.gold > 0) add(`+${coin.gold.toLocaleString()} Gold`, '#fbd34d', 'ITEM');
+    if (coin.gems > 0) add(`+${coin.gems.toLocaleString()} Gems`, '#5ee0f5', 'ITEM');
+    coin.gold = 0; coin.gems = 0; coin.t = 0;
+  }, 700);
+}
+
 function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGameStore.getState>): void {
   const kind = o.kind;
   const value = o.value;
@@ -221,9 +234,9 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
     case 'SHARD': giveShard(value, st); break;
-    case 'GEM': st.addGems(value); break;
+    case 'GEM': st.addGems(value); feedCoin('gems', value); break;
     case 'HEALTH': healPlayer(value); break;
     case 'ITEM': {
       const item = o.item;

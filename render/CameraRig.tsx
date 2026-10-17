@@ -20,7 +20,7 @@ import { walkTo, walkStamp } from '../engine/systems/village';
 let curState = '';
 /** An open room portal within reach of a ground point (click / hover target). */
 const portalAt = (x: number, z: number): { x: number; z: number } | null => {
-  for (const po of world.room.portals) if (po.active && (po.x - x) ** 2 + (po.z - z) ** 2 < 3.2 * 3.2) return po;
+  for (const po of world.room.portals) if (po.active && (po.x - x) ** 2 + (po.z - z) ** 2 < 5 * 5) return po;   // (wide: a click on the tall arch lands on the ground behind it)
   return null;
 };
 const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
@@ -220,7 +220,7 @@ export function CameraRig() {
           if (town) { if (performance.now() - walkStamp.t > 250) { walkTo(gx, gz, 'none', '', 0.5); if (world.village.go.on) mark(gx, gz, false); } }   // (a building / NPC click already walks there)
           else {
             const po = portalAt(gx, gz);
-            if (po) { clickMoveTo.on = true; clickMoveTo.x = po.x; clickMoveTo.z = po.z; mark(po.x, po.z, false); return; }   // (owner) click a portal: walk to it (any movement setting)
+            if (po) { clickMoveTo.on = true; clickMoveTo.x = po.x; clickMoveTo.z = po.z; mark(po.x, po.z, false); return; }   // (owner) click a portal: walk to it (any movement setting; E to enter)
             const en = pickEnemyAt(gx, gz);
             selectAt(gx, gz);
             if (en) mark(en.pos.x, en.pos.z, true);
