@@ -10,7 +10,7 @@ production deploy builds `main`; the owner asked to fast-forward `main` to this 
   edits, few screenshots, don't re-verify things needlessly.
 - **Use cheaper sub-agents** (owner, 2026-10-17): delegate searches, headless QA runs and well-scoped edits to Sonnet / Haiku
   sub-agents (Agent tool `model: "sonnet"` / `"haiku"`); keep the main model for planning, review and tricky code.
-- **Push to `main` only** (owner, 2026-10-17): `git push origin HEAD:main`; do not also push the claude/* branch (each push
+- **Push to `main` first** (owner, 2026-10-17): `git push origin HEAD:main`, then the claude/* branch (a branch push FIRST makes Vercel build the commit as a Preview only and skip Production; each push
   is a Vercel deployment).
 - Wants "a real development studio" result: game-like polish, performance on phones (Android APK is the target).
 - Free/lightweight assets only (KayKit + Kenney CC0 already in `public/models`, meshopt-compressed). Only
