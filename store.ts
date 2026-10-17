@@ -5,6 +5,7 @@
 import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
+import { runCards, rollRunCards, takeRunCard } from './engine/runCards';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
@@ -272,6 +273,8 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 /** (owner) hero HP and every source of bonus HP x2 (heals / regen stay as they are); incoming damage is x2 too
  *  (engine/systems/combat.ts damagePlayer: monsters, bosses, traps, lava, spikes). */
 export const HP_INFLATE = 2, DMG_INFLATE = 2;
+/** last time each WARNING toast text was shown (addNotification de-dupes repeats within 3 s) */
+const warnAt = new Map<string, number>();
 export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.15 } as const;
 
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
@@ -363,47 +366,13 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
   return 'Improves skill stats & mana cost.';
 };
 
-/** Shadow Step (+4% dodge) can be taken once per run; reset on runStart. */
-let shadowStepTaken = false;
-/** Aegis is offered at most once per biome (owner): the run/biome key of its last offer. */
-let aegisOffered = '';
-events.on('runStart', () => { shadowStepTaken = false; aegisOffered = ''; });
-const aegisKey = (): string => String(world.room.biome);   // (reset each run on runStart)
-const cardWeight = (u: Upgrade): number => (u.type === 'RESTORE' ? 0.3 : u.type === 'AEGIS' ? 0.5 : u.type === 'ULT_FILL' ? 0.25 : /REGEN/.test(u.type) ? 0.45 : 1);
-const generateUpgradeOptions = (hero: HeroClass, skillLevels: SkillLevels, stats: PlayerStats, count = 2): Upgrade[] => {
-  const pool = UPGRADES_POOL.filter((u) => {
-    if (u.classType && u.classType !== hero) return false;
-    const key = skillKeyFor(u.type, hero);
-    if (key && (skillLevels[key] >= MAX_SKILL_LEVEL || skillLevels[key] <= 0)) return false;   // cards only boost learned skills
-    if (u.type === 'MULTISHOT' && Math.floor(stats.multishot + 1e-6) >= MULTISHOT_CAP) return false;
-    if (u.type === 'DASH_COOLDOWN' && shadowStepTaken) return false;   // Shadow Step: 4% dodge in total
-    if (u.type === 'AEGIS' && aegisOffered === aegisKey()) return false;   // once per biome
-    if (u.type === 'ULT_FILL' && (skillLevels.ult ?? 0) <= 0) return false;   // (owner) Surge of Fury only once the ultimate is unlocked
-    return true;
+/** Rolls the run reward cards (rarity tiers, specials, Death Defiance: engine/runCards.ts). Skill cards are no longer offered (Skill Trainer). */
+const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _stats: PlayerStats, count = 2): Upgrade[] =>
+  rollRunCards(count, (skillLevels.ult ?? 0) > 0, String(world.room.biome)).map((c) => {
+    const opt: Upgrade = { ...c, id: uid('card') };
+    if (c.type === 'HEALTH') opt.description = `+${Math.round(c.value * HP_INFLATE)} Max HP`;
+    return opt;
   });
-  const options: Upgrade[] = [];
-  for (let i = 0; i < count && pool.length > 0; i++) {
-    // weighted pick (owner: heal cards rarer): Second Breath / regen / Aegis come up far less often than the rest
-    let tot = 0; for (const u of pool) tot += cardWeight(u);
-    let r = Math.random() * tot, idx = 0;
-    for (; idx < pool.length - 1; idx++) { r -= cardWeight(pool[idx]); if (r <= 0) break; }
-    const base = pool.splice(idx, 1)[0];
-    const opt: Upgrade = { ...base, id: uid('card') };
-    if (base.type === 'AEGIS') aegisOffered = aegisKey();
-    const key = skillKeyFor(base.type, hero);
-    if (key) {
-      const lvl = skillLevels[key];
-      if (lvl === 0) opt.name = `UNLOCK: ${opt.name}`;
-      opt.description = `${getSkillCardDetails(key, lvl, stats, hero)} (this run)`;   // room cards only boost a learned skill for the current run
-    }
-    if (base.type === 'MULTISHOT') {
-      const cur = Math.floor(stats.multishot + 1e-6);
-      opt.description = `Projectiles: ${cur} → ${Math.min(MULTISHOT_CAP, cur + 1)} (max ${MULTISHOT_CAP})`;
-    }
-    options.push(opt);
-  }
-  return options;
-};
 
 /** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
 const addCores = (inv: Item[], n: number): Item[] => {
@@ -1044,16 +1013,25 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'RESTORE': { const hp = state.stats.maxHealth * 0.3; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * 0.3); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
           case 'AEGIS': { const sh = upgrade.value;   // a flat 80 HP shield (owner)
  world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
-          case 'DASH_COOLDOWN': if (!shadowStepTaken) { shadowStepTaken = true; base.dodge = (base.dodge || 0) + 0.04; } break;   // Shadow Step: +4% dodge, once per run
+          case 'COOLDOWN': base.cooldownReduction += upgrade.value; break;
+          case 'KNOCKBACK': base.knockback += base.knockback * upgrade.value; break;
+          case 'LIFESTEAL': base.lifeSteal += upgrade.value; break;
+          case 'DMG_REDUCE': base.dmgReduce += upgrade.value; break;
+          case 'MANA_REGEN': base.manaRegen += upgrade.value; break;
+          case 'SPECIAL': if (upgrade.special === 'GOLD_RUSH' && !runCards.taken.GOLD_RUSH) base.goldFind += upgrade.value; break;
+          // DASH_COOLDOWN (-10% dash cooldown) and DEATH_DEFIANCE are engine-side (runCards)
           default: break;
         }
       }
+      takeRunCard(upgrade);
+      const more = runCards.extraPicks > 0;   // Guardian's Spoils: another selection right behind this one
+      if (more) runCards.extraPicks--;
       set({
         baseStats: base,
         skillLevels: levels,
         stats: calc(base, state.equipment),
-        upgradeOptions: [],
-        status: GameStatus.PLAYING,
+        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0)) : [],
+        status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });
     },
 
@@ -2009,6 +1987,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ equipment, stats: calc(s.baseStats, equipment), gold: s.gold - (spend?.gold ?? 0), materials, ...(spend?.inventory ? { inventory: spend.inventory } : {}) });
     },
     addNotification: (message, color = 'white', type = 'ITEM', action) => {
+      // (owner) the same warning fired many times in a row (e.g. "Bag is full!" while vacuuming drops) shows once per 3 s
+      if (type === 'WARNING') { const now = performance.now(), last = warnAt.get(message) ?? -1e9; if (now - last < 3000) return; warnAt.set(message, now); }
       set((s) => {
         let list = [...s.notifications, { id: uid('n'), message, color, type, action }];
         let itemCount = list.reduce((n, x) => n + (x.type === 'ITEM' ? 1 : 0), 0);

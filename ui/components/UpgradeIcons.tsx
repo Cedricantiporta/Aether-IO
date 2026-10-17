@@ -1,6 +1,6 @@
 import React from 'react';
 import { PaintedIcon } from './SkillIcons';
-import type { Upgrade, UpgradeType } from '../../types';
+import type { Upgrade, UpgradeType, SpecialId } from '../../types';
 
 /** Painted emblems for every UpgradeType (64x64, transparent bg) — shown inside the glowing reward-card medallion. */
 const S = '#0d0703';
@@ -110,6 +110,59 @@ const Multicast = () => (<g>
   {Spark(52, 12, 8)}{Spark(12, 12, 6)}{Spark(54, 52, 6)}
 </g>);
 
+
+// ---- run-card emblems (new stat cards, Death Defiance, special abilities)
+const Ankh = () => (<g>
+  <ellipse cx="32" cy="17" rx="11" ry="13" fill="none" stroke={S} strokeWidth="9" /><ellipse cx="32" cy="17" rx="11" ry="13" fill="none" stroke={u('gold')} strokeWidth="5" />
+  <path d="M32 30 V60 M16 40 H48" stroke={S} strokeWidth="10" strokeLinecap="round" /><path d="M32 30 V60 M16 40 H48" stroke={u('gold')} strokeWidth="6" strokeLinecap="round" />
+  {Spark(50, 10, 7)}
+</g>);
+const Clock = () => (<g>
+  <circle cx="32" cy="32" r="27" fill={u('steel')} {...st} /><circle cx="32" cy="32" r="21" fill="#10131c" stroke={u('gold')} strokeWidth="2" />
+  <path d="M32 16 V32 L43 38" stroke={u('gold')} strokeWidth="4" strokeLinecap="round" fill="none" /><circle cx="32" cy="32" r="3" fill="#fff" />
+</g>);
+const Chevrons = () => (<g fill="none" strokeLinecap="round" strokeLinejoin="round">
+  <path d="M10 10 L28 32 L10 54 M26 10 L44 32 L26 54 M42 10 L60 32 L42 54" stroke={S} strokeWidth="11" /><path d="M10 10 L28 32 L10 54 M26 10 L44 32 L26 54 M42 10 L60 32 L42 54" stroke={u('fire')} strokeWidth="6" />
+</g>);
+const Fang = () => (<g>
+  <path d="M32 3 C40 18 54 30 54 42 C54 54 44 61 32 61 C20 61 10 54 10 42 C10 30 24 18 32 3Z" fill={u('red')} {...st} />
+  <path d="M20 44 L25 58 L30 44Z M34 44 L39 58 L44 44Z" fill="#fff" stroke={S} strokeWidth="1.2" />
+</g>);
+const ManaSpring = () => (<g>
+  <path d="M32 3 C40 18 54 30 54 42 C54 54 44 61 32 61 C20 61 10 54 10 42 C10 30 24 18 32 3Z" fill={u('blue')} {...st} />
+  <path d="M10 44 C18 38 24 50 32 44 C40 38 46 50 54 44" stroke="#e8f4ff" strokeWidth="3" fill="none" strokeLinecap="round" />{Spark(46, 18, 7)}
+</g>);
+const Crown = () => (<g>
+  <path d="M8 48 L4 18 L20 32 L32 10 L44 32 L60 18 L56 48Z" fill={u('gold')} {...st} /><rect x="8" y="48" width="48" height="9" rx="2" fill={u('gold')} {...st} />
+  <circle cx="32" cy="10" r="3.5" fill={u('red')} {...st} /><circle cx="4" cy="18" r="3" fill={u('red')} {...st} /><circle cx="60" cy="18" r="3" fill={u('red')} {...st} />
+</g>);
+const Flask = () => (<g>
+  <path d="M26 4 H38 V22 L56 52 C58 58 54 61 50 61 H14 C10 61 6 58 8 52 L26 22Z" fill="#dff2ff" fillOpacity=".55" {...st} />
+  <path d="M17 40 H47 L56 52 C58 58 54 61 50 61 H14 C10 61 6 58 8 52Z" fill={u('green')} {...st} />
+  <rect x="24" y="2" width="16" height="6" rx="2" fill={u('wood')} {...st} /><circle cx="26" cy="50" r="3" fill="#fff" opacity=".6" /><circle cx="38" cy="46" r="2" fill="#fff" opacity=".6" />
+</g>);
+const Coins = () => (<g>
+  <ellipse cx="32" cy="48" rx="24" ry="9" fill={u('gold')} {...st} /><path d="M8 40 V48 C8 53 56 53 56 48 V40" fill={u('gold')} {...st} />
+  <ellipse cx="32" cy="40" rx="24" ry="9" fill={u('gold')} {...st} /><ellipse cx="32" cy="30" rx="24" ry="9" fill={u('gold')} {...st} /><ellipse cx="32" cy="20" rx="24" ry="9" fill={u('gold')} {...st} />
+  <text x="32" y="25" textAnchor="middle" fontSize="12" fontWeight="900" fill="#7a4a10">$</text>
+</g>);
+const Hourglass = () => (<g>
+  <path d="M12 4 H52 M12 60 H52" stroke={S} strokeWidth="8" strokeLinecap="round" /><path d="M12 4 H52 M12 60 H52" stroke={u('gold')} strokeWidth="4.5" strokeLinecap="round" />
+  <path d="M16 8 H48 C48 24 36 28 36 32 C36 36 48 40 48 56 H16 C16 40 28 36 28 32 C28 28 16 24 16 8Z" fill="#e8f4ff" fillOpacity=".45" {...st} />
+  <path d="M20 54 H44 C42 44 36 40 32 38 C28 40 22 44 20 54Z" fill={u('purp')} /><path d="M32 30 V38" stroke={u('purp')} strokeWidth="2" />
+</g>);
+const Cracked = () => (<g>{Shield('steel')}<path d="M34 4 L28 24 L38 30 L26 44 L32 61" fill="none" stroke={S} strokeWidth="3" strokeLinejoin="round" /><path d="M34 4 L28 24 L38 30 L26 44 L32 61" fill="none" stroke="#ffe08a" strokeWidth="1.2" /></g>);
+const Deathmark = () => (<g>
+  <g transform="translate(9 12) scale(.72)">{Skull()}</g>
+  <g transform="translate(36 -2) scale(.42)">{Flame()}</g><g transform="translate(-2 -2) scale(.42)">{Snow()}</g>
+  <path d="M46 40 C54 46 58 54 56 60" stroke={u('green')} strokeWidth="4" fill="none" strokeLinecap="round" />
+</g>);
+const ART_SPECIAL: Record<SpecialId, () => React.ReactNode> = {
+  AFFLICT: Deathmark, SUNDER: Cracked, GUARDIAN: Crown, SLAYER: () => <g><g transform="translate(8 10) scale(.85)">{SwordA(0)}</g>{Spark(50, 14, 9, 'red')}</g>,
+  ALCHEMIST: Flask, EXECUTE: () => <g>{Target()}<g transform="translate(14 6) scale(.7)">{SwordA(180)}</g></g>, FIRST_STRIKE: () => <g>{Bolt()}{Spark(10, 14, 8)}{Spark(54, 50, 7)}</g>,
+  SECOND_WIND: () => <g>{Heart('green')}<g transform="translate(12 16) scale(.6)">{Wind()}</g></g>, GOLD_RUSH: Coins, LINGER: Hourglass,
+};
+
 const ART: Record<UpgradeType, () => React.ReactNode> = {
   HEALTH: () => Heart('red'), MAX_MANA: Drop, DEFENSE: () => Shield('steel'), SPEED: Boot, DAMAGE: () => SwordA(45), FIRE_RATE: Bolt, MULTISHOT: Multicast,
   DASH_COOLDOWN: Wind, CRIT_RATE: Target, CRIT_DAMAGE: Skull,
@@ -118,6 +171,7 @@ const ART: Record<UpgradeType, () => React.ReactNode> = {
   SKILL_FREEZING: Snow, SKILL_FREEZE_SPELL: Snow, SKILL_GRAVITY: BlackHole, SKILL_STAMP: Hammer,
   SKILL_RAGE: () => <g>{SwordA(-40)}{SwordA(40)}</g>, SKILL_STORM: () => <g><circle cx="32" cy="32" r="28" fill="none" stroke={u('purp')} strokeWidth="4" opacity=".8" />{Shield('purp')}</g>,
   SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star, SKILL_PIERCE_SHOT: Arrow,
+  COOLDOWN: Clock, KNOCKBACK: Chevrons, LIFESTEAL: Fang, DMG_REDUCE: () => Shield('blue'), MANA_REGEN: ManaSpring, DEATH_DEFIANCE: Ankh, SPECIAL: Star,
   ULT_FILL: () => Spark(32, 32, 28, 'gold'), RESTORE: () => <g>{Heart('red')}{Spark(48, 14, 8)}</g>, AEGIS: () => Shield('gold'),
   SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star, SKILL_GRAVECALL: Star, SKILL_SOULHARVEST: Star, SKILL_BONEARMOR: () => Shield('steel'),
 };
@@ -132,7 +186,12 @@ Emblem.displayName = 'UpgradeEmblem';
 const PAINTED: Partial<Record<UpgradeType, string>> = {
   SKILL_PIERCING: 'GALE_ARROW', SKILL_GRAVITY: 'SINGULARITY', SKILL_RAGE: 'BLOODRAGE_LEAP', SKILL_BURNING: 'burning', SKILL_FREEZING: 'freezing', SKILL_PIERCE_SHOT: 'pierceShot', SKILL_THUNDER: 'thunder', SKILL_STAMP: 'stamp', SKILL_DASH: 'DASH',
 };
-export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
+/** Nested 64x64 glyph for the arcana scene (draws inside an outer <svg>). */
+export const ArcanaGlyph: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; x: number; y: number; size: number }> = ({ upgrade, x, y, size }) => (
+  <svg x={x} y={y} width={size} height={size} viewBox="0 0 64 64" overflow="visible"><Defs />{(upgrade.special ? ART_SPECIAL[upgrade.special] : ART[upgrade.type] ?? Star)()}</svg>
+);
+export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
+  if (upgrade.special) return <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden style={{ display: 'block', overflow: 'visible', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><Defs />{ART_SPECIAL[upgrade.special]()}</svg>;
   const pk = PAINTED[upgrade.type];
   if (pk) return <span style={{ display: 'block', width: size, height: size, borderRadius: 8, overflow: 'hidden', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><PaintedIcon id={pk} /></span>;
   return <Emblem t={upgrade.type} size={size} />;

@@ -4,6 +4,7 @@ import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { motion } from 'framer-motion';
 import { OrnateRing } from '../components/Ornate';
+import { runCards } from '../../engine/runCards';
 
 /** Diablo-style liquid orb. Fill + numbers updated through refs every frame. */
 export const VitalOrb: React.FC<{ kind: 'hp' | 'mp' }> = ({ kind }) => {
@@ -81,7 +82,8 @@ export const VitalBars: React.FC = () => {
   const mx = useRef({ hp: maxHp, mp: maxMp }); mx.current.hp = maxHp; mx.current.mp = maxMp;
   const hp = useRef<HTMLDivElement>(null), mp = useRef<HTMLDivElement>(null);
   const hpT = useRef<HTMLSpanElement>(null), mpT = useRef<HTMLSpanElement>(null);
-  const last = useRef({ hp: '', mp: '', ht: -1, mt: -1, low: false });
+  const dd = useRef<HTMLSpanElement>(null);
+  const last = useRef({ hp: '', mp: '', ht: -1, mt: -1, low: false, dd: -1 });
   useRaf(() => {
     const p = world.player, l = last.current;
     const fh = Math.min(1, Math.max(0, p.hp / Math.max(1, mx.current.hp))), fm = Math.min(1, Math.max(0, p.mana / Math.max(1, mx.current.mp)));
@@ -91,6 +93,7 @@ export const VitalBars: React.FC = () => {
     const ht = Math.ceil(Math.max(0, p.hp)), mt = Math.ceil(Math.max(0, p.mana));
     if (ht !== l.ht && hpT.current) { l.ht = ht; hpT.current.textContent = `${ht} / ${Math.round(mx.current.hp)}`; }
     if (mt !== l.mt && mpT.current) { l.mt = mt; mpT.current.textContent = `${mt} / ${Math.round(mx.current.mp)}`; }
+    if (runCards.defiance !== l.dd && dd.current) { l.dd = runCards.defiance; dd.current.style.display = l.dd > 0 ? '' : 'none'; dd.current.textContent = `\u2625 \u00d7${l.dd}`; }
     const low = fh < 0.3 && p.alive;
     if (low !== l.low && hp.current) { l.low = low; hp.current.dataset.low = low ? '1' : '0'; }
   });
@@ -100,6 +103,7 @@ export const VitalBars: React.FC = () => {
       <div className="vb-col">
         <div ref={hp} className="vb-bar hp" data-low="0"><i /><span ref={hpT} /></div>
         <div ref={mp} className="vb-bar mp"><i /><span ref={mpT} /></div>
+        <span ref={dd} className="vb-dd" title="Death Defiance charges" style={{ display: 'none' }} />
       </div>
     </div>
   );

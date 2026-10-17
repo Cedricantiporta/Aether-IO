@@ -129,8 +129,8 @@ export function Minions() {
     const t = clock.elapsedTime;
     for (let i = 0; i < N; i++) {
       const S = slots[i], m = world.minions[i];
-      S.outer.visible = m.active;
-      if (!m.active) continue;
+      S.outer.visible = m.active && m.src !== 6;   // (src 6 = the run ally, drawn by render/Ally.tsx)
+      if (!m.active || m.src === 6) continue;
       const k = m.kind;
       for (let r = 0; r < S.rigs.length; r++) S.rigs[r].root.visible = r === k;
       const R = S.rigs[k], golem = k === 2, mage = k === 1, bow = k === 3;

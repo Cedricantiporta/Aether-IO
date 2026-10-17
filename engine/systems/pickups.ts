@@ -136,10 +136,18 @@ function autoLootWants(it: Item, set: { autoLootGear: string; autoLootMaterials:
   if (MATERIAL[it.type]) return set.autoLootMaterials || it.rarity !== 'COMMON';   // (owner default: materials on = every tier)
   return RARITY_RANK[it.rarity] >= GEAR_MIN[set.autoLootGear];
 }
+/** "Bag is full!" at most once per 3 s (many drops grabbed / vacuumed at once used to stack a dozen toasts). */
+let lastBagFull = -1e9;
+export function warnBagFull(st: { addNotification: (m: string, c?: string, t?: any) => void }): void {
+  const now = performance.now();
+  if (now - lastBagFull < 3000) return;
+  lastBagFull = now;
+  st.addNotification('Bag is full!', 'red', 'WARNING');
+}
 export function lootPickup(i: number): void {
   const o = world.pickups[i], st = useGameStore.getState();
   if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
-  if (!st.canPickUp(o.item)) { st.addNotification('Bag is full!', 'red', 'WARNING'); return; }
+  if (!st.canPickUp(o.item)) { warnBagFull(st); return; }
   o.magnet = true; o.t = Math.max(o.t, 0.4);
 }
 /** Nearest lootable item pickup within r of (x, z): index or -1. */

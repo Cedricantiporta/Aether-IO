@@ -14,6 +14,7 @@ import { inCurse } from './zones';
 import { abilityState } from './abilities';
 import { spawnProjectile } from './projectiles';
 import { weaponPerk, hordeMul } from '../../weaponPerks';
+import { SRC_ALLY, allyHurt, updateAlly } from './ally';
 
 export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHER = 3;
 /** Skeleton warriors alive at once (Raise Dead, Grave Call, Plague Ground, the ult army): the oldest crumbles. */
@@ -109,6 +110,7 @@ function crumble(m: (typeof world.minions)[number]): void {
 export function damageMinion(i: number, dmg: number): void {
   const m = world.minions[i];
   if (!m || !m.active || m.rise > 0) return;
+  if (m.src === SRC_ALLY) { allyHurt(m, dmg); return; }   // the run ally (ally.ts): retreats at 0 HP, no soul link
   let hit = dmg * (1 - m.def) * boneArmorMul(); m.hitT = 0.25;   // armour + Bone Armor
   if (m.shield > 0) { const a = Math.min(m.shield, hit); m.shield -= a; hit -= a; }   // Bone Ward soaks it first
   m.hp -= hit;
@@ -169,6 +171,7 @@ export function minionCount(kind = -1, src = -1): number { let n = 0; for (const
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
+  updateAlly(dt);   // the run ally lives in a minion slot but has its own brain
   let slotI = 0, army = false, raised = false;
   for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE) raised = true; }
   // Raise Dead: its cooldown stays full while any of its skeletons stands (it only ticks once the last one has fallen)
@@ -177,7 +180,7 @@ export function updateMinions(dt: number): void {
   if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;
   for (let i = 0; i < M.length; i++) {
     const m = M[i];
-    if (!m.active) continue;
+    if (!m.active || m.src === SRC_ALLY) continue;
     m.life -= dt;
     if (m.life <= 0 || !pl.alive) { crumble(m); continue; }
     if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground

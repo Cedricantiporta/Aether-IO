@@ -2789,3 +2789,25 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   background: radial-gradient(ellipse at 50% 45%, rgba(255,250,232,.08) 0%, rgba(255,240,205,.32) 38%, rgba(250,236,200,.7) 75%, rgba(60,48,30,.7) 100%);
   animation: dreamIn 1.6s ease-out both; }   /* (clear in the middle: Aelia stands there) */
 @keyframes dreamIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---- Death Defiance charges (HUD, under the MP bar) */
+.vb-dd { font-family: var(--font-title); font-weight: 800; font-size: .8rem; letter-spacing: .08em; color: #ffd76a; text-shadow: 0 0 6px rgba(255, 190, 60, .7), 0 1px 2px #000; }
+
+/* ---- reward cards: every rarity shares the same frame; the rarity tints border / label, rare+ get richer art */
+.rw-card[data-rarity='COMMON'] { --rc: #aab0bc; --gold: #aab0bc; }
+.rw-card[data-rarity='RARE'] { --rc: #4d9be8; --gold: #5aa6ee; }
+.rw-card[data-rarity='EPIC'] { --rc: #a470ec; --gold: #b583f2; }
+.rw-card[data-rarity='LEGENDARY'] { --rc: #ffbf47; --gold: #f1c75a; }
+.rw-card[data-rarity='MYTHIC'] { --rc: #ff4a4a; --gold: #ff6a5a; }
+.rw-card[data-arcana='1'] { box-shadow: 0 0 0 1px #000, 0 18px 40px rgba(0, 0, 0, .6), 0 0 22px color-mix(in srgb, var(--rc) 40%, transparent), inset 0 0 0 1px var(--gold), inset 0 0 0 5px #0c0d10, inset 0 0 0 6px color-mix(in srgb, var(--gold) 55%, transparent); }
+.rw-rar { position: absolute; top: 12px; right: 12px; z-index: 2; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--rc); text-shadow: 0 0 6px color-mix(in srgb, var(--rc) 60%, transparent), 0 1px 1px #000; }
+.rw-emblem.arc { padding: 0; overflow: hidden; width: 86%; max-height: none; flex: 1 1 auto; border: 1px solid var(--gold) !important; background: none !important; }
+.rw-emblem.arc > svg.arc-scene { position: absolute; inset: 0; width: 100% !important; height: 100% !important; filter: none; }
+.rw-emblem.arc .arc-num { position: absolute; left: 0; right: 0; bottom: 3px; z-index: 2; text-align: center; font-family: 'Cinzel', Georgia, serif; font-weight: 800; font-size: 12px; letter-spacing: .3em; padding-left: .3em; color: var(--gold); text-shadow: 0 1px 2px #000, 0 0 8px color-mix(in srgb, var(--rc) 70%, transparent); }
+.rw-emblem.arc .arc-num::before, .rw-emblem.arc .arc-num::after { content: ''; display: inline-block; width: 18px; height: 1px; background: var(--gold); vertical-align: middle; margin: 0 6px; opacity: .8; }
+.rw-emblem.arc .arc-cor { position: absolute; width: 18px; height: 18px; z-index: 2; fill: none; stroke: var(--gold); stroke-width: 1.4; }
+.rw-emblem.arc .arc-cor.a { top: 2px; left: 2px; } .rw-emblem.arc .arc-cor.b { top: 2px; right: 2px; transform: scaleX(-1); }
+.rw-emblem.arc .arc-cor.c { bottom: 2px; left: 2px; transform: scaleY(-1); } .rw-emblem.arc .arc-cor.d { bottom: 2px; right: 2px; transform: scale(-1, -1); }
+.rw-emblem.rich { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 55%, transparent) 0%, transparent 65%), linear-gradient(#17181d, #0b0c0f) !important; }
+.rw-emblem.arc .arc-cor { width: 18px !important; height: 18px !important; filter: none; }
+.rw-emblem.arc .arc-num { width: 100% !important; height: auto !important; filter: none; }

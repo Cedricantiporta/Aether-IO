@@ -19,12 +19,19 @@ export type UpgradeType =
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 
   'SKILL_FREEZE_SPELL' | 'SKILL_GRAVITY' | 'SKILL_STAMP' | 'SKILL_RAGE' | 'SKILL_STORM' | 'SKILL_WARCRY' | 'SKILL_INSPIRE' | 'SKILL_PIERCE_SHOT' | 'SKILL_HOLY_WAVE' | 'SKILL_CONSECRATE' | 'SKILL_SMITE' | 'SKILL_RADIANT' | 'SKILL_GRAVECALL' | 'SKILL_SOULHARVEST' | 'SKILL_BONEARMOR' |
   'CRIT_RATE' | 'CRIT_DAMAGE' | 'DEFENSE' | 'MAX_MANA' |
-  'ULT_FILL' | 'RESTORE' | 'AEGIS';   // instant cards: fill the ultimate, restore HP + MP, a damage-absorbing shield
+  'ULT_FILL' | 'RESTORE' | 'AEGIS' |
+  'COOLDOWN' | 'KNOCKBACK' | 'LIFESTEAL' | 'DMG_REDUCE' | 'MANA_REGEN' | 'DEATH_DEFIANCE' | 'SPECIAL';   // instant cards: fill the ultimate, restore HP + MP, a damage-absorbing shield
 
 export type Rarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
 
+/** Run-card special abilities (engine/runCards.ts): one of each per run, never stack. */
+export type SpecialId = 'AFFLICT' | 'SUNDER' | 'GUARDIAN' | 'SLAYER' | 'ALCHEMIST' | 'EXECUTE' | 'FIRST_STRIKE' | 'SECOND_WIND' | 'GOLD_RUSH' | 'LINGER';
+
 export interface Upgrade {
   id: string;
+  /** rolled rarity tier 0..4 (COMMON..MYTHIC) for run cards; `value` already scales with it */
+  tier?: number;
+  special?: SpecialId;
   type: UpgradeType;
   name: string;
   description: string;

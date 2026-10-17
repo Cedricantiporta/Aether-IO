@@ -60,7 +60,7 @@ const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'V
 /** Chance that a monster spawned while a biome boss lives (= one of its summons) gets a 50%-HP shield. */
 const BOSS_ADD_SHIELD_CHANCE = 0.35;
 /** A biome boss is alive (discrete spawns only: a short scan, no per-frame cost). */
-function bossAlive(): boolean { for (const o of world.enemies) if (o.active && o.boss && o.state !== 'DYING') return true; return false; }
+export function bossAlive(): boolean { for (const o of world.enemies) if (o.active && o.boss && o.state !== 'DYING') return true; return false; }
 /** Elite HP multiplier (owner: -30%, was 4). */
 const ELITE_HP = 2.8;
 const ARCHER = { minR: 12, maxR: 18, windup: 0.48, recover: 0.5, cd: 2.4, arrowSpeed: 18 };

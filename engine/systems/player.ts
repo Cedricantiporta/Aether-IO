@@ -6,6 +6,7 @@ import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
+import { runCards } from '../runCards';
 import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo } from './target';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
@@ -106,7 +107,7 @@ function usePotion(health: boolean): boolean {
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
   // (owner) a flat amount: 100 HP / MP (Big potions 200), Tech House Potion Brewing on top
-  const amt = ((item.restoreAmount || 50) >= 75 ? 200 : 100) * (1 + 0.12 * techLv(st.tech, 'potion'));
+  const amt = ((item.restoreAmount || 50) >= 75 ? 200 : 100) * (1 + 0.12 * techLv(st.tech, 'potion')) * (1 + runCards.potionBonus);
   if (health) { healPlayer(amt); p.hpPotCd = POTION_COOLDOWN; }
   else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
   return true;
@@ -230,7 +231,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD - Math.min(2, 0.3 * Math.max(0, (dLv ?? 1) - 1));   // 5.5 s, -0.3 s per dash level above 1 (capped at -2 s); no gear / talent CDR
+  p.dashCdMax = (DASH_CD - Math.min(2, 0.3 * Math.max(0, (dLv ?? 1) - 1))) * (1 - 0.1 * runCards.dashStacks);   // 5.5 s, -0.3 s per dash level above 1 (capped at -2 s); no gear / talent CDR
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
@@ -249,7 +250,8 @@ export function updatePlayer(dt: number): void {
   }
 
   // ---- regen / vitality
-  p.hp = Math.min(stats.maxHealth, p.hp + (stats.regen + lv.regen * 0.5) * 0.5 * dt);   // all HP regen halved
+  const regenCap = stats.maxHealth * runCards.regenCap;   // regeneration only heals up to 70% of max HP (85% with the Alchemist card); potions / heals ignore it
+  if (p.hp < regenCap) p.hp = Math.min(regenCap, p.hp + (stats.regen + lv.regen * 0.5) * 0.5 * dt);   // all HP regen halved
   p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * dt);   // class bases 1.0-1.5/s (constants HERO_STATS); the sheet shows the real rate
   if (p.hp > stats.maxHealth) p.hp = stats.maxHealth;
   if (p.mana > stats.maxMana) p.mana = stats.maxMana;

@@ -9,10 +9,11 @@
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
-import { useGameStore, DMG_INFLATE } from '../../store';
+import { useGameStore, DMG_INFLATE, makeItemById } from '../../store';
 import type { RoomPlan } from '../types';
 import { spawnEnemy } from './enemies';
 import { spawnPickup } from './pickups';
+import { LOOT_BY_ID, lootItem } from '../../loot';
 import { damagePlayer, damageEnemiesInRadius } from './combat';
 import { stationPos, startPos } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
@@ -239,9 +240,42 @@ export function freeCaptive(): void {
   const e = E();
   if (e.obj !== 'RESCUE' || e.state !== 4) return;
   e.state = 2;
-  reward(50, 5, 'Captive freed! "Thank you, guard! Take this, I will tell everyone in Aether."');
+  captiveReward();
   events.emit('captiveFreed', {});
-  useGameStore.getState().addMaterial('RARE', 2);
+}
+
+/** Captive thank-you: ONE non-gear reward (never wearables / weapons), weighted by rarity, amounts scale a little with depth. */
+const CAPTIVE_POOL: readonly (readonly [string, number])[] = [
+  ['gold', 30], ['potion_small', 20], ['loot_common', 18], ['shard_common', 12],
+  ['potion_big', 6], ['shard_rare', 5], ['core', 4], ['medal', 3], ['shard_epic', 1.5], ['core2', 0.5],
+];
+function captiveReward(): void {
+  const depth = world.director.wave, p = world.player.pos;
+  let tot = 0; for (const [, w] of CAPTIVE_POOL) tot += w;
+  let r = Math.random() * tot, pick = 'gold';
+  for (const [id, w] of CAPTIVE_POOL) { r -= w; if (r <= 0) { pick = id; break; } }
+  const at = () => tmp.set(p.x + (Math.random() - 0.5) * 1.6, 0, p.z + 1 + Math.random() * 0.6);
+  const give = (it: import('../../types').Item | undefined) => { if (it) spawnPickup('ITEM', at(), 0, it); };
+  const q = 1 + Math.floor(depth / 12);
+  let what = '';
+  switch (pick) {
+    case 'gold': { const g = Math.round(60 * (1 + depth * 0.15)); for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(), Math.max(1, Math.round(g / 6))); what = 'a purse of gold'; break; }
+    case 'potion_small': give(makeItemById(Math.random() < 0.5 ? 'potion_hp' : 'potion_mana', 1 + Math.floor(depth / 10))[0]); what = 'a potion'; break;
+    case 'potion_big': give(makeItemById(Math.random() < 0.5 ? 'potion_hp_big' : 'potion_mana_big', 1)[0]); what = 'a big potion'; break;
+    case 'loot_common': {
+      const pool = Object.values(LOOT_BY_ID).filter((l) => l.rarity === 'COMMON' || l.rarity === 'UNCOMMON');
+      if (pool.length) give(lootItem(pool[Math.floor(Math.random() * pool.length)], q + 1));
+      what = 'some trade goods'; break;
+    }
+    case 'shard_common': for (let i = 0; i < 2 + q; i++) spawnPickup('SHARD', at(), 0); what = 'shards'; break;
+    case 'shard_rare': for (let i = 0; i < 1 + q; i++) spawnPickup('SHARD', at(), 1); what = 'rare shards'; break;
+    case 'shard_epic': spawnPickup('SHARD', at(), 2); what = 'an epic shard'; break;
+    case 'core': give(makeItemById('upgrade_core', 1)[0]); what = 'an Upgrade Core'; break;
+    case 'core2': give(makeItemById('upgrade_core_2', 1)[0]); what = 'a Refined Core'; break;
+    case 'medal': { const m = LOOT_BY_ID['champion_medal']; if (m) give(lootItem(m, 1)); what = "a Champion's Medal"; break; }
+  }
+  notify(`Captive freed! "Thank you, guard! Take ${what}, I will tell everyone in Aether."`, '#ffd24a');
+  events.emit('floatText', { pos: world.player.pos, text: 'OBJECTIVE!', color: 0xffd24a, scale: 1.1, dy: 2.4 });
 }
 
 /** Healing multiplier of the current room (Cursed Ground). */

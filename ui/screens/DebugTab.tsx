@@ -7,6 +7,7 @@ import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { debug, setDebug } from '../../engine/debug';
 import { debugJump, debugMalakar } from '../../engine/systems/director';
+import { ally, debugAlly } from '../../engine/systems/ally';
 import { riruru } from '../../engine/systems/riruru';
 import { world } from '../../engine/world';
 import { BIOMES, BOSS_INDEX, ROOMS_PER_BIOME } from '../../engine/roomDefs';
@@ -129,6 +130,10 @@ export const DebugTab: React.FC = () => {
     <Line label="Special fights" hint="Malakar: the Void throne room. Riruru: a Greenwood room; the blue slime hops in once you clear it.">
       <Button size="sm" data-testid="dbg-malakar" onClick={() => fight(() => debugMalakar())}>Fight Malakar</Button>
       <Button size="sm" data-testid="dbg-riruru" onClick={() => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); })}>Fight Riruru</Button>
+    </Line>
+    <Line label="Ally encounter" hint="An adventurer fights beside you for one combat room (normally once per biome). Fight: a fresh Greenwood room with the ally. Join now: adds the ally to the fight you are in (or, between fights, to the next combat room).">
+      <Button size="sm" data-testid="dbg-ally" onClick={() => fight(() => { ally.force = true; debugJump(0, 1, 'COMBAT'); })}>Fight with ally</Button>
+      <Button size="sm" disabled={!inRun} data-testid="dbg-ally-now" onClick={() => { toast(debugAlly() ? 'Debug: ally joined the fight' : 'Debug: ally will join the next combat room'); }}>Join now</Button>
     </Line>
     <Line label="Erin's rockfall" hint="Break the boulders on the old miners' road now (Erin's Lv 30 quest chain marked done), or put them back.">
       <Button size="sm" onClick={() => { const s = useGameStore.getState(); useGameStore.setState({ npcQuests: { ...s.npcQuests, q: { ...s.npcQuests.q, erin_boulder: { s: 2, p: 1 }, erin_frost: { s: 2, p: 0 } } } }); toast('Debug: the rockfall is broken'); }}>Break it</Button>

@@ -1,4 +1,5 @@
 import { feedReward } from '../../rewardFeed';
+import { runCards } from '../runCards';
 import { RARITY_LABEL_COLOR } from '../../constants';
 import { resetBossMech } from './bossMech';
 // ============================================================================
@@ -46,6 +47,7 @@ import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
+import { maybeAlly, resetAlly, removeAlly } from './ally';
 import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper } from '../wanderers';
 import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
 // Daily Trial (dailyChallenge.ts): a short seeded tower-style climb; these hooks only apply while daily.on
@@ -161,7 +163,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates(); resetWanderers(); resetRiruru();
+  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates(); resetWanderers(); resetRiruru(); resetAlly();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -253,7 +255,7 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
-  clearWanderer();
+  clearWanderer(); removeAlly();
   if (idx === 0) bossKeyState.has = false;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
@@ -328,6 +330,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
+  maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
   if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
 }
 
@@ -674,6 +677,9 @@ const at = (x: number, z: number): Vector3 => tmp2.set(x, 0, z);
 
 function grantReward(kind: RewardKind, bonus: number): void {
   const st = useGameStore.getState();
+  if (runCards.guardian > 0 && (plan.type === 'MINIBOSS' || plan.type === 'DUEL' || plan.gate !== undefined)) {   // Guardian's Spoils: these stages also give a card selection
+    if (kind === 'CARD') runCards.extraPicks++; else st.openWaveReward(false);
+  }
   const sx = world.room.station.x, cz = world.room.station.z;   // the station spot: always kept clear (never in a lake / river)
   switch (kind) {
     case 'CARD': st.openWaveReward(Math.random() < (plan.type === 'COMBAT' ? 0.12 : 0.4)); break;

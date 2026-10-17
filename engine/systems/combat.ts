@@ -32,10 +32,11 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup, dropCrystals } from './pickups';
-import { onEnemyDeath, crabArmor, shieldBlock } from './enemies';
+import { onEnemyDeath, crabArmor, shieldBlock, bossAlive } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
 import { hooks } from './hooks';
+import { runCards, cardDamageMul } from '../runCards';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
@@ -287,6 +288,7 @@ export function applyStatus(e: Enemy, effect: StatusEffect): void {
 }
 
 function applyStatusRaw(e: Enemy, effect: StatusEffect): void {
+  const lm = 1 + runCards.linger;   // Lingering Malice: statuses last longer
   const durMult = e.boss ? 0.25 : e.elite ? 0.5 : 1;
   switch (effect.type) {
     case 'BURN': {
@@ -295,18 +297,18 @@ function applyStatusRaw(e: Enemy, effect: StatusEffect): void {
         if (e.burnT <= 0) { e.burnStacks = 1; e.burnStackCd = 0.3; }
         else if (e.burnStackCd <= 0) { e.burnStacks = Math.min(3 + (useGameStore.getState().stats.burnStacks | 0), e.burnStacks + 1); e.burnStackCd = 0.3; }
       } else if (e.burnT <= 0) e.burnStacks = Math.max(1, e.burnStacks);
-      e.burnT = Math.max(e.burnT, effect.duration);
+      e.burnT = Math.max(e.burnT, effect.duration * lm);
       e.burnDps = Math.max(e.burnDps, v);
       break;
     }
     case 'POISON':
-      e.poisonT = Math.max(e.poisonT, effect.duration);
+      e.poisonT = Math.max(e.poisonT, effect.duration * lm);
       e.poisonDps = Math.max(e.poisonDps, effect.value ?? 3);
       break;
     case 'FREEZE':
     case 'STUN': {
       const bonus = useGameStore.getState().stats.stunBonus || 0;
-      const dur = effect.duration + (bonus > 0 ? bonus : 0);
+      const dur = (effect.duration + (bonus > 0 ? bonus : 0)) * lm;
       if (e.boss || e.mini) { gainStagger(e, dur * (effect.type === 'STUN' ? 30 : 24)); return; } // immune to full stun: fills STAGGER instead
       if (effect.type === 'FREEZE') e.freezeT = Math.max(e.freezeT, dur * durMult);
       else e.stunT = Math.max(e.stunT, dur * durMult);
@@ -314,7 +316,7 @@ function applyStatusRaw(e: Enemy, effect: StatusEffect): void {
     }
     case 'SLOW': {
       const f = Math.min(0.9, Math.max(0, effect.value ?? 0.5)) * (e.boss ? 0.5 : 1);
-      e.slowT = Math.max(e.slowT, effect.duration);
+      e.slowT = Math.max(e.slowT, effect.duration * lm);
       e.slowFactor = Math.max(e.slowFactor, f);
       break;
     }
@@ -329,7 +331,7 @@ function applyStatusRaw(e: Enemy, effect: StatusEffect): void {
     }
     case 'ARMOR_BREAK':
       if (e.armorBreakT <= 0) { combatStats.armorBreaks++; events.emit('armorBreak', { pos: e.pos }); }
-      e.armorBreakT = Math.max(e.armorBreakT, effect.duration || ARMOR_BREAK_TIME);
+      e.armorBreakT = Math.max(e.armorBreakT, (effect.duration || ARMOR_BREAK_TIME) * lm);
       break;
   }
 }
@@ -391,14 +393,17 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     }
   }
   if (!o.dot && o.source !== 'PET') { dealt *= comboMul(); registerHit(); }
+  if (o.source === 'PLAYER') dealt *= cardDamageMul(e);   // special cards: Afflictor / Giant Slayer / Executioner / First Strike
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.boss) dealt *= hooks.damageMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
   else if (e.decoy && e.trickKind === 1) dealt *= 3;   // Malakar's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
                                                        // kept hitting them and half the bot fights never finished)
   if (e.shield > 0) {
-    if (dealt <= e.shield) { e.shield -= dealt; dealt = 0; }
-    else { dealt -= e.shield; e.shield = 0; }
+    const sw = !e.boss && runCards.sunder > 0 ? 1 / (1 - runCards.sunder) : 1;   // Shieldbreaker: non-boss shields are weaker
+    const sd = dealt * sw;
+    if (sd <= e.shield) { e.shield -= sd; dealt = 0; }
+    else { dealt -= e.shield / sw; e.shield = 0; }
   }
 
   e.hitFlash = o.dot ? Math.max(e.hitFlash, 0.35) : 1;
@@ -601,6 +606,9 @@ export function boneArmorMul(): number {
   return 1 - Math.min(0.3, n * (0.03 + 0.01 * (st.skillLevels.boneArmor - 1)));
 }
 
+/** Second Wind (run card): heal a share of max HP whenever a room is cleared. */
+events.on('waveClear', () => { if (runCards.secondWind > 0) healPlayer(useGameStore.getState().stats.maxHealth * runCards.secondWind); });
+
 export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
@@ -625,7 +633,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
-  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone * dailyMods.taken);   // (dailyMods.taken: Daily Trial Glass Cannon)
+  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);
@@ -677,6 +685,16 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     p.reviveFx = 1;
     st.addNotification('PHOENIX REVIVE!', phoenixColor, 'SYSTEM');
     events.emit('playerRevive', { pos: p.pos, source: 'PHOENIX' });
+    return;
+  }
+  // Death Defiance (run card): spend a charge, rise again at half HP (automatic, no prompt)
+  if (runCards.defiance > 0) {
+    runCards.defiance--;
+    p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
+    p.invulnT = Math.max(p.invulnT, 5);
+    p.reviveFx = 1;
+    st.addNotification(`DEATH DEFIED! (${runCards.defiance} charge${runCards.defiance === 1 ? '' : 's'} left)`, COLORS.rarityLegendary ?? COLORS.rarityEpic, 'SYSTEM');
+    events.emit('playerRevive', { pos: p.pos, source: 'DEFIANCE' });
     return;
   }
   // (the Ankh of Life is no longer automatic: the death flow offers it, see ankhOffer / reviveWithAnkh)
