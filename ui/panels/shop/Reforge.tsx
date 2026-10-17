@@ -1,6 +1,6 @@
 // Blacksmith > Reforge: rework the blue bonus lines of a piece of gear (reforge.ts / store.reforgeItem). Reforge Stone =
-// reroll every line, Tempering Oil = reroll the values (better odds of a perfect, yellow line), Erasure Scroll = delete one
-// chosen line. Equipped gear can be reforged too.
+// reroll every line, or (Reroll on a line) just that one line; Tempering Oil = reroll the values (better odds of a perfect,
+// yellow line); Augment Rune = fill an empty slot. Equipped gear can be reforged too.
 import React, { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
@@ -35,10 +35,10 @@ export const ReforgeTab: React.FC = () => {
             {lines.length ? lines.map((a, i) => (
               <div key={i} className="flex items-center justify-between gap-2 text-[.78rem] mt-1">
                 <span style={{ color: isUnique(a) ? '#e08a2a' : a.perfect ? '#ffd24a' : '#7fb0ff', fontWeight: 700 }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}</span>
-                <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('ERASE') < 1} onClick={() => go('ERASE', i)} data-testid={`erase-${i}`}>Erase</button>
+                {!isUnique(a) && <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('LINE') < 1} onClick={() => go('LINE', i)} data-testid={`reroll-line-${i}`} title="Reroll only this line (1 Reforge Stone)">Reroll</button>}
               </div>
             )) : null}
-            {Array.from({ length: emptyAffixSlots(sel) }).map((_, i) => (   /* empty bonus slots (erased lines): an Augment Rune fills one */
+            {Array.from({ length: emptyAffixSlots(sel) }).map((_, i) => (   /* empty bonus slots (old saves' erased lines): an Augment Rune fills one */
               <div key={'e' + i} className="affix-empty flex items-center justify-between gap-2 text-[.78rem] mt-1" data-testid={`affix-empty-${i}`}>
                 <span>◇ Empty bonus slot</span>
                 <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('ADD') < 1} onClick={() => go('ADD')} data-testid={`augment-${i}`}>Add line</button>
@@ -51,7 +51,7 @@ export const ReforgeTab: React.FC = () => {
       <div className="flex flex-wrap gap-2">
         <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || sel.rarity === 'COMMON' || have('REROLL') < 1} onClick={() => go('REROLL')} data-testid="reforge-reroll">Reroll lines · {REFORGE_ITEM.REROLL.name} ({have('REROLL')})</button>
         <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || !lines.length || have('TEMPER') < 1} onClick={() => go('TEMPER')} data-testid="reforge-temper">Reroll values · {REFORGE_ITEM.TEMPER.name} ({have('TEMPER')})</button>
-        <span className="rpg-label self-center">{REFORGE_ITEM.ERASE.name}: {have('ERASE')} · {REFORGE_ITEM.ADD.name}: {have('ADD')}</span>
+        <span className="rpg-label self-center">{REFORGE_ITEM.ADD.name}: {have('ADD')}</span>
       </div>
       <div className="rpg-label">Your gear</div>
       <div className="slot-grid">

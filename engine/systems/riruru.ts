@@ -8,17 +8,20 @@ import { spawnEnemy, isSpawnable } from './enemies';
 import { spawnPickup } from './pickups';
 import type { Enemy } from '../types';
 
-export const riruru = { id: -1, done: false };
+export const riruru = { id: -1, done: false, force: false };   // force: debug - the next quiet room always gets Riruru
 const CHANCE = 0.05;
 const at = new Vector3();
 
-export function resetRiruru(): void { riruru.id = -1; riruru.done = false; }
+export function resetRiruru(): void { riruru.id = -1; riruru.done = false; }   // (keeps a pending debug force)
 export const isRiruru = (e: Enemy): boolean => e.id === riruru.id && e.active;
 
 /** The room just went quiet: maybe Riruru appears (true = it did, the room is not cleared yet). */
 export function maybeRiruru(biome: number, type: string): boolean {
-  if (riruru.done || biome !== 0 || (type !== 'COMBAT' && type !== 'ELITE')) return false;
-  if (Math.random() >= CHANCE) { return false; }
+  if (riruru.force) riruru.force = false;
+  else {
+    if (riruru.done || biome !== 0 || (type !== 'COMBAT' && type !== 'ELITE')) return false;
+    if (Math.random() >= CHANCE) return false;
+  }
   const p = world.player.pos;
   for (let t = 0; t < 20; t++) {
     const a = Math.random() * Math.PI * 2, d = 6 + Math.random() * 4;

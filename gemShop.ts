@@ -19,7 +19,6 @@ export const GEM_OFFERS: GemOffer[] = [
   { key: 'ankh', item: tpl('revive_ankh'), gems: 25, max: 5, give: items('revive_ankh') },
   { key: 'reforge', item: tpl('reforge_stone'), gems: 30, max: 20, give: items('reforge_stone') },
   { key: 'temper', item: tpl('temper_oil'), gems: 18, max: 20, give: items('temper_oil') },
-  { key: 'erase', item: tpl('erase_scroll'), gems: 12, max: 20, give: items('erase_scroll') },
   { key: 'augment', item: tpl('augment_rune'), gems: 25, max: 20, give: items('augment_rune') },
   { key: 'hpbig', item: tpl('potion_hp_big'), gems: 3, max: 20, give: items('potion_hp_big') },
   { key: 'mpbig', item: tpl('potion_mana_big'), gems: 3, max: 20, give: items('potion_mana_big') },

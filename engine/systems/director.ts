@@ -203,6 +203,12 @@ export function debugGate(g: number): void {
   gateState.on = true; enterRoom(biome, BOSS_INDEX, gatePlan(g, 0));
 }
 
+/** Debug / QA: straight into the Void throne room against Malakar (the final fight). */
+export function debugMalakar(): void {
+  world.room.fade = 1; finalFight = true; endingDone = false;
+  enterRoom(FINAL_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' });
+}
+
 /** After a boss: continue into the next biome (harder, same hero). */
 export function descend(): void {
   const d = dd();
@@ -722,7 +728,7 @@ function chestLoot(x: number, z: number): void {
       }
       case 'shard': spawnPickup('SHARD', at(x, z), shardRarity(depth + 4)); break;
       case 'potions': give(makeItemById(Math.random() < 0.5 ? (depth >= 25 ? 'potion_hp_big' : 'potion_hp') : (depth >= 25 ? 'potion_mana_big' : 'potion_mana'), 2)[0]); break;
-      case 'reforge': give(makeItemById(['reforge_stone', 'temper_oil', 'augment_rune', 'erase_scroll'][Math.floor(Math.random() * 4)], 1)[0]); break;
+      case 'reforge': give(makeItemById(['reforge_stone', 'temper_oil', 'reforge_stone', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0]); break;
       case 'core': give(makeItemById(biome >= 3 && Math.random() < 0.35 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]); break;
       case 'crystals': dropCrystals(2 + Math.floor(depth / 10), { x, z }); break;
     }
@@ -741,7 +747,7 @@ function bossRewards(): void {
   for (let i = 0; i < 4; i++) spawnPickup('GEM', at(0, -R * 0.1), 4 + biome * 2);
   spawnPickup('SHARD', at(0, -R * 0.1), shardRarity(depth + 12));   // one shard (owner)
   dropCrystals(4 + biome * 2, { x: world.player.pos.x, z: world.player.pos.z });   // boss drop: Aether Crystals (the Crystal Altar's currency)
-  if (Math.random() < 0.5) { const tool = makeItemById(['reforge_stone', 'temper_oil', 'erase_scroll', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0]; if (tool) spawnPickup('ITEM', at(0, -R * 0.1), 0, tool); }   // a reforging tool
+  if (Math.random() < 0.5) { const tool = makeItemById(['reforge_stone', 'temper_oil', 'reforge_stone', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0]; if (tool) spawnPickup('ITEM', at(0, -R * 0.1), 0, tool); }   // a reforging tool
   for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(0, -R * 0.1), Math.round(40 + depth * 12));
   st.openWaveReward(true);
 }

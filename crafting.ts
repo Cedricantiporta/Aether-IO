@@ -32,7 +32,7 @@ export interface Recipe {
   rankReq: number;
 }
 
-const SHARD_COST: Record<Rarity, number> = { COMMON: 3, UNCOMMON: 4, RARE: 5, EPIC: 7, LEGENDARY: 10, MYTHIC: 15 };
+const SHARD_COST: Record<Rarity, number> = { COMMON: 20, UNCOMMON: 15, RARE: 10, EPIC: 6, LEGENDARY: 4, MYTHIC: 3 };   // (owner: common shards are plentiful, rare ones scarce: higher tiers need fewer)
 const GOLD_COST: Record<Rarity, number> = { COMMON: 2000, UNCOMMON: 5000, RARE: 10000, EPIC: 40000, LEGENDARY: 150000, MYTHIC: 600000 };   // x10 economy
 
 /** Monster loot family per slot: [common, rare, epic] drops (weapons: by class). */

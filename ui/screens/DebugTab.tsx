@@ -4,7 +4,8 @@ import { useGameStore } from '../../store';
 import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { debug, setDebug } from '../../engine/debug';
-import { debugJump } from '../../engine/systems/director';
+import { debugJump, debugMalakar } from '../../engine/systems/director';
+import { riruru } from '../../engine/systems/riruru';
 import { world } from '../../engine/world';
 import { BIOMES, BOSS_INDEX, ROOMS_PER_BIOME } from '../../engine/roomDefs';
 import { BOSS_ROTATION, BOSS_NAMES } from '../../engine/enemyDefs';
@@ -81,6 +82,13 @@ export const DebugTab: React.FC = () => {
     debugJump(biome, type === 'BOSS' ? BOSS_INDEX : room, type);
     useUiStore.getState().openSettings(false);
   };
+  const fight = (jump: () => void) => {
+    const st = useGameStore.getState();
+    if (!inRun) st.startMode('ADVENTURE');
+    if (st.isPauseMenuOpen) st.togglePause();
+    jump();
+    useUiStore.getState().openSettings(false);
+  };
   const sel = (v: string | number, on: (v: string) => void, opts: { v: string | number; l: string }[], tid: string) => (
     <select className="wh-search pe" style={{ width: 'auto', minWidth: '8.5rem' }} value={v} onChange={(e) => on(e.target.value)} data-testid={tid}>
       {opts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
@@ -115,6 +123,10 @@ export const DebugTab: React.FC = () => {
     </Line>
     <Line label="Boss" hint="Used by boss rooms (Default = the biome's own boss).">
       {sel(boss, setBoss, [{ v: '', l: 'Default' }, ...BOSS_ROTATION.map((k) => ({ v: k, l: BOSS_NAMES[k].name }))], 'dbg-boss')}
+    </Line>
+    <Line label="Special fights" hint="Malakar: the Void throne room. Riruru: a Greenwood room; the blue slime hops in once you clear it.">
+      <Button size="sm" data-testid="dbg-malakar" onClick={() => fight(() => debugMalakar())}>Fight Malakar</Button>
+      <Button size="sm" data-testid="dbg-riruru" onClick={() => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); })}>Fight Riruru</Button>
     </Line>
     <div className="py-2"><Button className="w-full" variant="primary" onClick={go} data-testid="dbg-go">{inRun ? 'Jump now' : 'Start run here'}</Button></div>
   </>);

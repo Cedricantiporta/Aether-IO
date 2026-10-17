@@ -288,7 +288,7 @@ export const ITEMS_POOL: Item[] = [
   { id: 'reforge_stone', name: 'Reforge Stone', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Blacksmith > Reforge: rerolls every bonus line of a piece of gear.' },
   { id: 'temper_oil', name: 'Tempering Oil', type: 'LOOT', stats: {}, rarity: 'RARE', price: 900, level: 1, description: 'Blacksmith > Reforge: rerolls the values of a piece of gear\'s bonus lines (better odds of a perfect, yellow line).' },
   { id: 'augment_rune', name: 'Augment Rune', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1800, level: 1, description: 'Blacksmith > Reforge: adds a new bonus line into an empty slot (blue 1, purple 2, gold 3, mythic 4 slots).' },
-  { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'Blacksmith > Reforge: deletes one chosen bonus line from a piece of gear.' },
+  { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'An old reforging tool, no longer used (reroll single lines with a Reforge Stone now). Sell it.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' },
 
   // --- WEAPONS (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---

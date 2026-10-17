@@ -178,7 +178,7 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 /** (owner) summons can also give supplies: upgrade cores (tier I / II) and everything the Gem Shop sells (not shards / pets). */
 export const SUMMON_SUPPLY_SHARE = 0.25;
 export const SUMMON_SUPPLIES: [string, number][] = [
-  ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['erase_scroll', 10], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
+  ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
 ];
 const SUMMON_SUPPLY_TOTAL = SUMMON_SUPPLIES.reduce((n, [, w]) => n + w, 0);
 export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)

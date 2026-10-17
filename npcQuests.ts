@@ -148,7 +148,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
       'By royal decree, your patience is hereby rewarded. And may I say, it is a pleasure to meet someone who reads the fine print.',
     ],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 3000, items: [{ id: 'upgrade_core', qty: 3 }, { id: 'erase_scroll', qty: 1 }] },
+    reward: { gold: 3000, items: [{ id: 'upgrade_core', qty: 3 }, { id: 'reforge_stone', qty: 1 }] },
   },
   {
     id: 'rodric_tale', minLevel: 12, giver: 'Rodric the Tipsy', title: 'The Tale (Again)', summary: 'Hear Rodric\'s legendary adventure, then talk to him again',
@@ -307,7 +307,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Talk to me again. Before the cider kicks in.',
     done: ['Thank you for listening. Most people just nod and leave.', 'Take this. I will not be needing it; I do not go out there any more.'],
     objective: { type: 'LISTEN', count: 1 },
-    reward: { gold: 1000, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
+    reward: { gold: 1000, gems: 15, items: [{ id: 'reforge_stone', qty: 1 }] },
   },
   // ---- the Golden Tankard: Marta the barkeep and Rodric the regular
   {
@@ -324,7 +324,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     progress: 'Two Silver Goblets. Quietly. She is counting the mugs again.',
     done: ['Shh! Put them on the shelf. Behind the cider. Perfect.', 'You saved my life. Or at least my tab. Take this.'],
     objective: { type: 'DELIVER', target: 'silver_goblet', count: 2 },
-    reward: { gold: 1250, gems: 15, items: [{ id: 'erase_scroll', qty: 1 }] },
+    reward: { gold: 1250, gems: 15, items: [{ id: 'reforge_stone', qty: 1 }] },
   },
   // ---- Old Wend (hermit): chain of three, ends with a pet
   {
