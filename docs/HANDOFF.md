@@ -8,6 +8,10 @@ production deploy builds `main`; the owner asked to fast-forward `main` to this 
   Reply in plain language: what changed, what to try, what's still pending. No code jargon.
 - **Very cost-sensitive** (complained twice about usage): keep at most 1–2 sub-agents running, prefer small direct
   edits, few screenshots, don't re-verify things needlessly.
+- **Use cheaper sub-agents** (owner, 2026-10-17): delegate searches, headless QA runs and well-scoped edits to Sonnet / Haiku
+  sub-agents (Agent tool `model: "sonnet"` / `"haiku"`); keep the main model for planning, review and tricky code.
+- **Push to `main` only** (owner, 2026-10-17): `git push origin HEAD:main`; do not also push the claude/* branch (each push
+  is a Vercel deployment).
 - Wants "a real development studio" result: game-like polish, performance on phones (Android APK is the target).
 - Free/lightweight assets only (KayKit + Kenney CC0 already in `public/models`, meshopt-compressed). Only
   registry.npmjs.org is reachable from the cloud container (no other downloads).
