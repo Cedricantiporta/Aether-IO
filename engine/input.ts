@@ -9,6 +9,7 @@ import { aimState, cancelAim } from './systems/aim';
 /** Settings were opened with Esc and paused the run (closing them resumes). */
 let escPaused = false;
 import { requestClick } from './systems/target';
+import { setPadMode } from '../ui/lib/inputMode';
 import { padMove, padActivate, padTab, padScroll, padSlider, padClear } from '../ui/lib/padNav';
 
 // ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
@@ -48,6 +49,7 @@ export function installInput(): () => void {
   const inp = world.input;
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (e.isTrusted) setPadMode(false);
     if (isTypingTarget(e.target)) return;
     if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
     if (e.repeat) return;
@@ -106,6 +108,7 @@ export function installInput(): () => void {
 
   const onPointerMove = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;   // touch uses the virtual joystick / aim stick
+    if (e.isTrusted && Math.abs(e.movementX) + Math.abs(e.movementY) > 6) setPadMode(false);
     inp.pointerNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
     inp.pointerNdc.y = -((e.clientY / window.innerHeight) * 2 - 1);
   };
@@ -220,6 +223,7 @@ export function installInput(): () => void {
     for (const g of pads) if (g && g.connected) { gp = g; break; }
     if (!gp) { if (padMoving) { inp.joy.active = false; inp.joy.x = inp.joy.z = 0; padMoving = false; } return; }
     const pressedNow = (i: number) => { const b = gp!.buttons[i]; return !!b && (b.pressed || b.value > 0.5); };
+    if (gp.buttons.some((b) => b.pressed || b.value > 0.5) || gp.axes.some((a) => Math.abs(a) > 0.5)) setPadMode(true);   // (owner) key hints follow the input in use
     const edge = (i: number) => { const on = pressedNow(i), was = padPrev[i]; padPrev[i] = on; return on && !was; };
     // ---- menus / shops / overlays open: the pad navigates the UI instead of playing (ui/lib/padNav)
     if (menuOpen()) {

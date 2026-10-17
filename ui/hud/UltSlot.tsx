@@ -1,4 +1,5 @@
 import { forceAutoCast } from '../../engine/systems/aim';
+import { useInputMode } from '../lib/inputMode';
 import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { abilityState } from '../../engine/systems/abilities';
@@ -11,6 +12,7 @@ interface Props { icon: React.ReactNode; tooltip: React.ReactNode; color: string
 
 /** Ornate ultimate slot: radial charge fill that glows and pulses when ready (key R). */
 export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) => {
+  const pad = useInputMode((m) => m.pad);
   const root = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
@@ -86,7 +88,7 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
         <div className="ult-rim" />
         <span ref={txt} className="ult-txt">{locked ? `Lv ${locked}` : '0%'}</span>
       </div>
-      <span className="rpg-key">R</span>
+      <span className="rpg-key">{pad ? 'RT' : 'R'}</span>
     </div>
   );
 };

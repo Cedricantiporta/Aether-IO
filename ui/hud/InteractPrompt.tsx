@@ -1,3 +1,4 @@
+import { useInputMode, keyHint } from '../lib/inputMode';
 import React, { useRef } from 'react';
 import { nearby, interact, MAX_NEARBY, farmHold, FARM_HOLD_S } from '../../engine/systems/village';
 import { roomNearby, interactRoom } from '../../engine/systems/director';
@@ -30,12 +31,13 @@ export const InteractPrompt: React.FC = () => {
         const h = n.active && n.act === 'farm' && farmHold.node === n.node ? Math.min(1, farmHold.t / FARM_HOLD_S) : 0;
         if (h !== hold.current[i]) { hold.current[i] = h; (el.children[0] as HTMLElement).style.setProperty('--hold', String(h)); }
       }
-      const key = n.active ? `${n.key}|${n.verb}|${n.label}|${n.color ?? ''}` : '';
+      const pad = useInputMode.getState().pad;
+      const key = n.active ? `${n.key}|${n.verb}|${n.label}|${n.color ?? ''}|${pad}` : '';
       if (key === sig.current[i]) continue;
       sig.current[i] = key;
       el.style.display = n.active ? 'flex' : 'none';
       if (n.active) {
-        (el.children[0] as HTMLElement).textContent = n.key;
+        (el.children[0] as HTMLElement).textContent = keyHint(n.key, pad);
         (el.children[1] as HTMLElement).textContent = n.verb;
         (el.children[2] as HTMLElement).textContent = n.label;
         (el.children[2] as HTMLElement).style.color = n.color || '';   // loot: rarity colour

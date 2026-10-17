@@ -12,6 +12,7 @@ import { upgradeCoreTierFor, coreTierOf, upgradeCoresAt, upgradeGoldFor } from '
 import { canAffordEvolve } from '../../petActions';
 import type { Item } from '../../types';
 import { GameStatus } from '../../types';
+import { world } from '../../engine/world';
 import { offerTeleport } from './QuestTracker';
 import { walkToSpot } from '../../engine/systems/village';
 
@@ -45,6 +46,9 @@ export function upgradesOf(s: St): Up[] {
   if (pet && canAffordEvolve(pet, s.gold, s.materials)) out.push({ key: 'pet', title: 'Your pet can evolve', sub: 'Evolving raises all its stats.', go: (g) => g.openSpecificShop('PETS'), town: true });
   return out;
 }
+
+/** (owner) skills / talents can be trained right here at a biome camp (its Training Post): no teleport needed. */
+const reachable = (key: string): boolean => (key === 'skill' || key === 'talent') && world.room.active && world.room.plan.type === 'CAMP';
 
 /** (owner) fewer than 3 health / mana potions in the bag: '' when stocked. */
 const POT_LOW = 3;
@@ -93,7 +97,7 @@ const UpgradePopup: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         {list.map((u) => (
           <div key={u.key} className="upn-row">
             <div className="min-w-0"><b>{u.title}</b><em>{u.sub}</em></div>
-            <button className="rpg-btn rpg-btn-sm rpg-btn-primary" onClick={() => { onClose(); const g = useGameStore.getState(); if (u.town && g.status !== GameStatus.MENU) offerTeleport(() => u.go(useGameStore.getState())); else u.go(g); }}>{u.town && inRun ? 'Town' : 'Go'}</button>
+            <button className="rpg-btn rpg-btn-sm rpg-btn-primary" onClick={() => { onClose(); const g = useGameStore.getState(); if (u.town && g.status !== GameStatus.MENU && !reachable(u.key)) offerTeleport(() => u.go(useGameStore.getState())); else u.go(g); }}>{u.town && inRun && !reachable(u.key) ? 'Town' : 'Go'}</button>
           </div>
         ))}
       </div>

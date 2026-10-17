@@ -1,4 +1,5 @@
 import { forceAutoCast } from '../../engine/systems/aim';
+import { useInputMode, PAD_LABEL } from '../lib/inputMode';
 import React, { useEffect, useRef } from 'react';
 import { LockGlyph } from '../components/SkillIcons';
 import { world } from '../../engine/world';
@@ -39,6 +40,7 @@ function pressKey(code: string): void {
 }
 
 export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent, blocked }) => {
+  const pad = useInputMode((m) => m.pad);
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
@@ -125,7 +127,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
           </div>
         )}
       </div>
-      {keyLabel && <span className="rpg-key">{keyLabel}</span>}
+      {keyLabel && <span className="rpg-key">{pad && keyCode ? PAD_LABEL[keyCode] ?? keyLabel : keyLabel}</span>}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { useInputMode } from '../lib/inputMode';
 import React, { useState } from 'react';
 import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
@@ -84,6 +85,7 @@ export const SettingsDialog: React.FC = () => {
   const open = useUiStore((s) => s.settingsOpen);
   const close = useUiStore((s) => s.openSettings);
   const settings = useGameStore((s) => s.settings);
+  const padMode = useInputMode((m) => m.pad);   // (owner) Controls shows the layout of the input in use
   const update = useGameStore((s) => s.updateSettings);
   const resetProfile = useGameStore((s) => s.resetProfile);
   const askConfirm = useUiStore((s) => s.askConfirm);
@@ -174,17 +176,18 @@ export const SettingsDialog: React.FC = () => {
             </Row>
             <Row label="Joystick side" hint="Touch: move stick and ability buttons swap sides."><Seg tid="seg-joy" value={settings.joystickSide} opts={[{ v: 'LEFT', l: 'Left' }, { v: 'RIGHT', l: 'Right' }]} onChange={(v) => update({ joystickSide: v })} /></Row>
           </Sec>
-          <Sec title="Keyboard & mouse">
+          {!padMode && <Sec title="Keyboard & mouse">
             <div className="st-keys">
               {KEYS_KB.map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
             </div>
-          </Sec>
-          <Sec title="Controller">
+            <p className="st-p" style={{ marginTop: '.5rem' }}>Using a controller? Press any button on it and this list switches to the controller layout.</p>
+          </Sec>}
+          {padMode && <Sec title="Controller">
             <div className="st-keys">
               {KEYS_PAD.map(([k, l]) => <div key={k}><kbd>{k}</kbd><span>{l}</span></div>)}
             </div>
-            <p className="st-p" style={{ marginTop: '.6rem' }}>In menus and shops: D-pad / left stick move the highlight, A selects, B or Start goes back, LB / RB switch tabs, right stick scrolls, left / right adjust sliders.</p>
-          </Sec>
+            <p className="st-p" style={{ marginTop: '.6rem' }}>In menus and shops: D-pad / left stick move the highlight, A selects, B or Start goes back, LB / RB switch tabs, right stick scrolls, left / right adjust sliders. (Use the keyboard or mouse to see the keyboard list.)</p>
+          </Sec>}
           <Sec title="Touch">
             <p className="st-p">Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Tap an ability to cast at the auto-target, or drag from it to aim (release to cast, drag back to cancel).</p>
           </Sec>
