@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlayerPlate, Currency, MenuButtons } from './TopBars';
+import { PlayerPlate, Currency, MenuButtons, RunUpgradesBtn } from './TopBars';
 import { RoomPlaque, RoomFade } from './WaveInfo';
 import { BossBar } from './BossBar';
 import { RoomEventHud } from './RoomEventHud';
@@ -44,6 +44,7 @@ export const HUD: React.FC = () => {
     <div className="absolute flex flex-col items-end gap-3 hud-tr" style={{ right: '1.2rem', top: '1rem' }}>
       <MenuButtons />
       {showMap && <div className="hud-mm hud-mm-top"><Minimap /></div>}
+      <RunUpgradesBtn />
     </div>
 
     {/* bottom-centre: individual skill slots (ult first) + EXP strip along the screen edge */}

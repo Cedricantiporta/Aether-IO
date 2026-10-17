@@ -174,21 +174,26 @@ export const MenuButtons: React.FC = () => {
   const i = useGameStore((s) => s.isInventoryOpen);
   const openShop = useGameStore((s) => s.openSpecificShop);
   const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert();
-  const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
-  const upCount = useGameStore((s) => s.runPicks.length);
-  const upOpen = useUiStore((s) => s.runUpgradesOpen);
   const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
       <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
-      {inRun && <MenuBtn icon={<Layers size={26} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
       <MenuBtn icon={<GoalGlyph />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
       <MenuBtn icon={<TrophyGlyph />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
       <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
     </div>
   );
+};
+
+/** Run Upgrades (Tab): sits just below the minimap's bottom-right corner, runs only. Same .sqbtn gold icon + drop-shadow as the menu row. */
+export const RunUpgradesBtn: React.FC = () => {
+  const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
+  const upCount = useGameStore((s) => s.runPicks.length);
+  const upOpen = useUiStore((s) => s.runUpgradesOpen);
+  if (!inRun) return null;
+  return <MenuBtn icon={<Layers size={26} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />;
 };
 
 /** (owner) Gold / gems stay visible above any open panel, shop, popup or summon (the HUD copy sits under the backdrops). */
