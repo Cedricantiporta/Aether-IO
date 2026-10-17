@@ -227,7 +227,7 @@ export const PETS_POOL: Item[] = [
     { 
         id: 'pet_blob', name: 'Green Blob', type: 'PET', rarity: 'COMMON', price: 500, level: 1, 
         stats: { maxHealth: 20 }, // 1 Stat
-        description: 'A healer: does not fight, heals you for 10 HP + 3% max HP every 5s.', petSkill: 'HEAL', petValue: 10, petCooldown: 5 
+        description: 'Bounces into nearby enemies.', petSkill: 'ATTACK_MELEE', petValue: 10 
     },
     { 
         id: 'pet_bat', name: 'Vampire Bat', type: 'PET', rarity: 'UNCOMMON', price: 1000, level: 1, 
@@ -237,7 +237,7 @@ export const PETS_POOL: Item[] = [
     { 
         id: 'pet_fairy', name: 'Light Fairy', type: 'PET', rarity: 'RARE', price: 1500, level: 1, 
         stats: { manaRegen: 0.5, regen: 0.5 }, // 2 Stats
-        description: 'Heals 20 HP every 8s.', petSkill: 'HEAL', petValue: 20, petCooldown: 8 
+        description: 'Heals 10 HP every 8s.', petSkill: 'HEAL', petValue: 10, petCooldown: 8 
     },
     { 
         id: 'pet_wolf', name: 'Spirit Wolf', type: 'PET', rarity: 'EPIC', price: 3000, level: 1, 
@@ -275,11 +275,11 @@ export const PETS_POOL: Item[] = [
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
   // --- CONSUMABLES ---
-  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 70% of your max HP.' },
-  { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 70% of your max Mana.' },
+  { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 HP. Only works at 70% HP or lower.' },
+  { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 Mana. Only works at 70% Mana or lower.' },
   // BIG POTIONS
-  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your HP.' },
-  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Fully restores your Mana.' },
+  { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 HP. Only works at 70% HP or lower.' },
+  { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 Mana. Only works at 70% Mana or lower.' },
   
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades Common and Rare gear with these.' },
   // (owner: tiered cores) higher upgrades need higher-tier cores: fuse 5 into 1 of the next tier (Blacksmith > Shards) or win them from bosses

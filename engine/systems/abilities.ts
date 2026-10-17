@@ -513,7 +513,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.anim.attackT = 1; addShake(0.12);
       announce('HOLY_WAVE');
     } else if (slot === 'e') {
-      // Shield Wall: knockback burst, then heavy damage reduction + slow heal
+      // Shield Wall: knockback burst, then heavy damage reduction
       p.guardT = 3 + 0.4 * (lv - 1); p.guardRed = Math.min(0.75, 0.5 + 0.04 * (lv - 1));
       const wr = 8 + 0.3 * (lv - 1);
       damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 2.5, physKnock);

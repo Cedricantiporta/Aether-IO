@@ -1,6 +1,7 @@
 // The run room: biome-tinted ground disc, walls ring (via Props: the same instanced scenery path as the town), the room's
 // single station (fountain / merchant / chest / altar), exit portals with reward labels and telegraphed spawn markers.
 // Only the current room exists; it is rebuilt when world.room.version changes (during the black fade). No per-frame allocations.
+import { canTrainSkill } from '../ui/lib/alerts';
 import { campPos } from '../engine/systems/director';
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useCharacterInstance, useClips } from './characters';
@@ -502,7 +503,8 @@ function CampProps() {
   const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.4, 1.0) }) }), []);
   const root = useRef<Group>(null!), fire = useRef<Mesh>(null!), st = useRef<Group>(null!), tr = useRef<Group>(null!);
   // floating name tags (like the town buildings) so the storage and the training post read at a glance
-  const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini' }) }), []);
+  const trDot = useGameStore((s) => canTrainSkill(s));   // (owner) red dot: a skill can be learned / upgraded
+  const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini', dot: trDot }) }), [trDot]);
   useFrame(({ clock }) => {
     const on = world.room.active && world.room.plan.type === 'CAMP' && !world.room.plan.epilogue;
     if (root.current) root.current.visible = on;

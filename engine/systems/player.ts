@@ -105,11 +105,10 @@ function usePotion(health: boolean): boolean {
   const item = st.consumeItem((i) =>
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
-  const amt = (item.restoreAmount || 50) * (1 + 0.12 * techLv(st.tech, 'potion'));   // Tech House: Potion Brewing
-  // health potions restore a share of max HP: 70% (Big: 100%), Potion Brewing on top
-  if (health) { healPlayer(st.stats.maxHealth * ((item.restoreAmount || 50) >= 75 ? 1 : 0.7) * (1 + 0.12 * techLv(st.tech, 'potion'))); p.hpPotCd = POTION_COOLDOWN; }
-  else { p.mana = Math.min(st.stats.maxMana, p.mana + st.stats.maxMana * ((item.restoreAmount || 50) >= 75 ? 1 : 0.7) * (1 + 0.12 * techLv(st.tech, 'potion'))); p.mpPotCd = POTION_COOLDOWN; }   // 70% (Big: 100%)
-  void amt;
+  // (owner) a flat amount: 100 HP / MP (Big potions 200), Tech House Potion Brewing on top
+  const amt = ((item.restoreAmount || 50) >= 75 ? 200 : 100) * (1 + 0.12 * techLv(st.tech, 'potion'));
+  if (health) { healPlayer(amt); p.hpPotCd = POTION_COOLDOWN; }
+  else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
   return true;
 }
 
@@ -199,7 +198,7 @@ export function updatePlayer(dt: number): void {
   p.cd.s4 = tickDown(p.cd.s4, dt);
   p.cryT = tickDown(p.cryT, dt);
   p.buffT = tickDown(p.buffT, dt);
-  if (p.guardT > 0) { p.guardT = tickDown(p.guardT, dt); healPlayer(st.stats.maxHealth * 0.02 * dt); }   // Shield Wall: slow heal
+  if (p.guardT > 0) p.guardT = tickDown(p.guardT, dt);   // Shield Wall (owner: no heal)
   p.avatarT = tickDown(p.avatarT, dt);
   if (p.buffT <= 0) { p.buffDmg = 0; p.buffDef = 0; p.buffHaste = 0; }
 

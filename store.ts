@@ -459,7 +459,9 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 /** One-time welcome gift for a brand new profile. */
 const WELCOME_GIFT = { gold: 5000, gems: 500 };   // (owner: start with 5k gold, 500 gems)
 /** Saved pets take their template's current tier (owner: pets spread over the six tiers). */
-const petRetier = (i: Item): Item => { if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t && t.rarity !== i.rarity ? { ...i, rarity: t.rarity } : i; };
+/** Saved pets follow their template's current tier and skill (owner: e.g. the Green Blob became a fighter, the Fairy heals less). */
+const petRetier = (i: Item): Item => { if (i && i.type === 'POTION') { const t = ITEMS_POOL.find((q) => q.name === i.name); return t ? { ...i, description: t.description } : i; }   // (potion texts follow the catalog)
+  if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t ? { ...i, rarity: t.rarity, petSkill: t.petSkill, petValue: t.petValue, petCooldown: t.petCooldown, description: t.description } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
 /** One-time (owner): skill points went from 1 to 2 per level - each class gets +1 SP for every level it already has. */

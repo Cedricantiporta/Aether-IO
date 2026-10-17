@@ -79,6 +79,7 @@ a[href], button, select, summary, label, [role="button"], [role="tab"], input[ty
 [style*="cursor: default"] { cursor: var(--cur-arrow) !important; }
 button:disabled, button[disabled], .cursor-not-allowed { cursor: var(--cur-no) !important; }
 body[data-cur="attack"] canvas { cursor: var(--cur-attack); }
+body[data-cur="hand"] canvas { cursor: var(--cur-hand); }
 `;
   document.head.appendChild(st);
 }

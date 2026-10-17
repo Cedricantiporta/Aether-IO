@@ -24,7 +24,7 @@ function CaptiveActor({ model, tunic, hair }: { model: CharKey; tunic: string; h
   const ch = useCharacterInstance(model);
   const clips = useClips();
   const g = useRef<Group>(null!), tag = useRef<Sprite>(null!);
-  const S = useRef({ mixer: null as AnimationMixer | null, mode: -1, yaw: 0, idle: null as any, wave: null as any, cheer: null as any });
+  const S = useRef({ mixer: null as AnimationMixer | null, mode: -1, yaw: 0, idle: null as any, wave: null as any, cheer: null as any, run: null as any, freedT: 0, rx: 0, rz: 0, mats: [] as MeshStandardMaterial[] });
   useEffect(() => {
     const undo: (() => void)[] = [];
     for (const m of ch.meshes) {
@@ -42,30 +42,44 @@ function CaptiveActor({ model, tunic, hair }: { model: CharKey; tunic: string; h
       cap.position.set(0, 0.42, -0.03); cap.scale.set(1.12, 1, 1.12); head.add(cap);
       undo.push(() => { head.remove(cap); cap.geometry.dispose(); hm.dispose(); });
     }
-    return () => { for (const u of undo) u(); };
+    S.current.mats = ch.meshes.map((m) => m.material as MeshStandardMaterial).filter((m) => m && 'emissive' in m);
+    return () => { for (const m of S.current.mats) m.emissive.setRGB(0, 0, 0); for (const u of undo) u(); };
   }, [ch, tunic, hair]);
   useEffect(() => {
     const m = new AnimationMixer(ch.root), s = S.current;
     s.idle = (clips['Idle_B'] || clips['Idle_A']) && m.clipAction(clips['Idle_B'] || clips['Idle_A']);
     s.wave = clips['Interact'] && m.clipAction(clips['Interact']);
     s.cheer = (clips['Use_Item'] || clips['Interact']) && m.clipAction(clips['Use_Item'] || clips['Interact']);
+    s.run = (clips['Running_A'] || clips['Running_B']) && m.clipAction(clips['Running_A'] || clips['Running_B']);
     s.mixer = m; s.mode = -1;
     return () => { m.stopAllAction(); m.uncacheRoot(ch.root); s.mixer = null; };
   }, [ch, clips]);
   useFrame((_, dt) => {
     const s = S.current, e = world.roomEvt;
     if (!s.mixer || !g.current) return;
-    const mode = e.state === 2 ? 2 : e.state === 4 ? 1 : 0;
+    const p = world.player.pos;
+    // (owner) freed: a short cheer, then the captive runs away from you and out of the room
+    if (e.state === 2) s.freedT += Math.min(dt, 0.05); else { s.freedT = 0; s.rx = 0; s.rz = 0; g.current.visible = true; g.current.position.set(0, 0, 0); }
+    const fleeing = e.state === 2 && s.freedT > 0.9;
+    const mode = fleeing ? 3 : e.state === 2 ? 2 : e.state === 4 ? 1 : 0;
     if (mode !== s.mode) {
-      const next = mode === 2 ? s.cheer : mode === 1 ? s.wave : s.idle;
-      for (const a of [s.idle, s.wave, s.cheer]) if (a && a !== next) a.fadeOut(0.25);
+      const next = mode === 3 ? (s.run || s.cheer) : mode === 2 ? s.cheer : mode === 1 ? s.wave : s.idle;
+      for (const a of [s.idle, s.wave, s.cheer, s.run]) if (a && a !== next) a.fadeOut(0.25);
       if (next) next.reset().fadeIn(0.25).play();
       s.mode = mode;
     }
     s.mixer.update(Math.min(dt, 0.05) * (mode === 0 ? 0.6 : 1));   // (trembling, slow idle while the fight goes on)
-    const p = world.player.pos;
-    s.yaw = angleLerp(s.yaw, Math.atan2(p.x - e.x, p.z - e.z), 1 - Math.exp(-3 * dt));
+    if (fleeing) {
+      if (s.rx === 0 && s.rz === 0) { const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1; s.rx = dx / d; s.rz = dz / d; }   // away from the hero
+      const k = s.freedT - 0.9, v = 9 * Math.min(1, k * 2);
+      g.current.position.x += s.rx * v * Math.min(dt, 0.05); g.current.position.z += s.rz * v * Math.min(dt, 0.05);
+      s.yaw = angleLerp(s.yaw, Math.atan2(s.rx, s.rz), 1 - Math.exp(-10 * dt));
+      if (k > 3.2) g.current.visible = false;   // gone past the edge of the room
+    } else s.yaw = angleLerp(s.yaw, Math.atan2(p.x - e.x, p.z - e.z), 1 - Math.exp(-3 * dt));
     g.current.rotation.y = s.yaw;
+    // (owner) the room is clear: the captive glows (pulsing gold) until you free them
+    const glow = e.state === 4 ? 0.35 + 0.25 * Math.sin(performance.now() * 0.006) : 0;
+    for (const m of s.mats) m.emissive.setRGB(glow, glow * 0.8, glow * 0.35);
     if (tag.current) tag.current.visible = e.state !== 2;
   });
   return (

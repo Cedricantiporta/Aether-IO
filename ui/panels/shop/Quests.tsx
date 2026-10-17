@@ -14,7 +14,7 @@ const progressText = (q: Quest): string => (q.type === 'AUDIENCE' ? (questDone(q
 export const QuestsTab: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { quests, refresh, claim, accept, abandon } = useGameStore(useShallow((s) => ({ quests: s.quests, refresh: s.refreshQuestBoard, claim: s.claimQuest, accept: s.acceptQuest, abandon: s.abandonQuest })));
   useEffect(() => { refresh(); }, [refresh]);
-  const active = activeQuests(quests), offers = questOffers(quests);
+  const active = activeQuests(quests).slice().sort((a, b) => Number(questDone(b)) - Number(questDone(a))), offers = questOffers(quests);   // (owner) completed bounties always first
   const slots = useGameStore((s) => questSlotsUsed(s));
   const full = useGameStore((s) => questSlotsFull(s));
   const [selId, setSel] = useState('');

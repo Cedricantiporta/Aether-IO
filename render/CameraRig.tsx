@@ -18,6 +18,11 @@ import { clickReq, selectAt, clickMoveTo, pickEnemyAt, clickMark } from '../engi
 import { walkTo, walkStamp } from '../engine/systems/village';
 
 let curState = '';
+/** An open room portal within reach of a ground point (click / hover target). */
+const portalAt = (x: number, z: number): { x: number; z: number } | null => {
+  for (const po of world.room.portals) if (po.active && (po.x - x) ** 2 + (po.z - z) ** 2 < 3.2 * 3.2) return po;
+  return null;
+};
 const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
 
 const CAM_DIST0 = Math.hypot(32, 22);
@@ -198,7 +203,8 @@ export function CameraRig() {
     void settings;
 
     // ---- (owner) sword cursor while the mouse is over an enemy in a run (DOM write only on change)
-    const hov = !device.touch && status === GameStatus.PLAYING && !lobby && !!pickEnemyAt(p.aim.x, p.aim.z) ? 'attack' : '';
+    const run = !device.touch && status === GameStatus.PLAYING && !lobby;
+    const hov = run && pickEnemyAt(p.aim.x, p.aim.z) ? 'attack' : run && portalAt(p.aim.x, p.aim.z) ? 'hand' : '';
     if (hov !== curState) { curState = hov; if (hov) document.body.dataset.cur = hov; else delete document.body.dataset.cur; }
 
     // ---- click / tap target selection: pointer ray -> ground plane -> nearest enemy
@@ -213,6 +219,8 @@ export function CameraRig() {
           const t = -cam.position.y / _v.y, gx = cam.position.x + _v.x * t, gz = cam.position.z + _v.z * t;
           if (town) { if (performance.now() - walkStamp.t > 250) { walkTo(gx, gz, 'none', '', 0.5); if (world.village.go.on) mark(gx, gz, false); } }   // (a building / NPC click already walks there)
           else {
+            const po = portalAt(gx, gz);
+            if (po) { clickMoveTo.on = true; clickMoveTo.x = po.x; clickMoveTo.z = po.z; mark(po.x, po.z, false); return; }   // (owner) click a portal: walk to it (any movement setting)
             const en = pickEnemyAt(gx, gz);
             selectAt(gx, gz);
             if (en) mark(en.pos.x, en.pos.z, true);

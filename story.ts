@@ -59,8 +59,17 @@ export const STORY: StoryStep[] = [
     talk: ['Aww, it already likes you! Or it is trying to eat your sleeve. Same thing, with blobs.', 'Last stop: Madame Zora\'s Fortune tent, beside the square on the west side. She pulls gear out of the stars for gems.', 'She also told me I would marry a duke. I married Hodge\'s cousin. Here are some gems; try one summon anyway.'] },
   { id: 'summon', title: 'A Gift from the Stars', line: 'Summon once at the Fortune tent', npc: '', at: 'FORTUNE', act: { kind: 'summon', count: 1 }, reward: { gold: 50, items: [{ id: 'potion_mana', qty: 1 }] } },
   { id: 'equip', title: 'Suit Up', line: 'Equip the weapon you summoned from your bag (I)', npc: '', at: 'BAG', act: { kind: 'equip', count: 1 }, reward: { gold: 50 } },
-  { id: 'mira4', title: 'Ready for Work', line: 'Talk to Mira again', npc: 'Mira', reward: { gold: 50 },
-    talk: ['Look at you! Almost a real guard. From a distance. In bad light.', 'Coin comes from bounties. Hodge keeps the Quest Board by the castle steps. He will talk your ear off about Lysa. Just nod.', 'Take one bounty, then go and see the King. And... be gentle with him. He has not been well since the princess.'] },
+  { id: 'mira4', title: 'Dress the Part', line: 'Talk to Mira again', npc: 'Mira', reward: { gold: 50 },
+    talk: ['Look at you! Almost a real guard. From a distance. In bad light.', 'Before the King sees you, a few more stops. Rule nine: never walk into the wilds bareheaded.', 'The Armory beside the plaza sells sturdy pieces. Brakk owes me a favour (do not ask about the goat), so a helmet for your class is on the house. Put it on. Then we will make something stronger.'] },
+  { id: 'armor', title: 'Suit of Steel', line: 'Get your free helmet at the Armory (the Common helmet of your class)', npc: '', at: 'ARMORY', act: { kind: 'buy_armor', count: 1 }, reward: { gold: 50 } },
+  { id: 'forge', title: 'Temper the Steel', line: 'Upgrade a piece of gear from your bag at the Blacksmith (free this time)', npc: '', at: 'BLACKSMITH', act: { kind: 'upgrade', count: 1 }, reward: { gold: 100, items: [{ id: 'upgrade_core', qty: 1 }] } },
+  { id: 'mira6', title: 'Sharper Skills', line: 'Talk to Mira again', npc: 'Mira', reward: { gold: 50 },
+    talk: ['Hear that ring? Good steel. The Blacksmith upgrades with gold and Upgrade Cores; this one was a gift.', 'Now your head. The Skill Trainer, by the castle steps on the west side, turns skill points into real skills. Your first lesson is free. Duck when he swings.', 'And your bag will fill up fast. Put something in the Warehouse east of the square, beside the Blacksmith. Things you leave in the wilds do not come back with you. Neither do some guards.'] },
+  { id: 'train', title: 'Lessons of the Blade', line: 'Learn or upgrade a skill at the Skill Trainer (free this time)', npc: '', at: 'TRAINER', act: { kind: 'learn', count: 1 }, reward: { gold: 100 } },
+  { id: 'stash', title: 'Safe Keeping', line: 'Store an item in the Warehouse', npc: '', at: 'WAREHOUSE', act: { kind: 'store', count: 1 }, reward: { gold: 100, gems: 5 } },
+  { id: 'lysa_brew', title: 'Monster Remedies', line: 'Talk to Lysa the Herbalist', npc: 'Lysa', reward: { gold: 50 },
+    talk: ['Mira says you have seen the whole town now. Not quite!', 'Down the road past the gate, off to the west in the meadow, an old friend of mine keeps the Elixir Brewer\'s hut. Far from town, on account of the smell. And the explosions. Mostly the smell.', 'He boils monster parts into elixirs: fangs, gel, scales, whatever you drag home. Brew one. A good elixir has saved more guards than any sword. Then go and see Hodge at the Quest Board, and after that the King.'] },
+  { id: 'elixir', title: 'A Bitter Brew', line: 'Brew an Elixir of Might at the Elixir Brewer (outside the gate, west of the road; the first one is free)', npc: '', at: 'BREWER', act: { kind: 'brew_elixir', count: 1 }, reward: { gold: 100, gems: 5 } },
   { id: 'hodge', title: 'The Bounty Clerk', line: 'Talk to Hodge at the Quest Board', npc: 'Hodge', reward: { gold: 50 },
     talk: ['Bounties! Bounties! Kill this, fetch that, gold for all of it! Has Lysa said anything about me? No? Not important. Bounties!', 'Pick any one off the board and it is yours. Come back when it is done and I pay out. And if you pass the herb shop, mention I am very brave.'] },
   { id: 'board', title: 'Odd Jobs', line: 'Accept a bounty from the Quest Board', npc: '', at: 'BOARD', act: { kind: 'accept', count: 1 }, reward: { gold: 50 } },
@@ -74,17 +83,6 @@ export const STORY: StoryStep[] = [
   { id: 'garrick_wolves', title: 'Wolves at the Door', line: 'Talk to Garrick at the gate', npc: 'Garrick', reward: { gold: 100 },
     talk: ['There you are. A trader came in at dawn with his cart in splinters and his trousers in worse shape.', 'Dire wolves, down from the Deep Grove. They circle, then pounce in a straight line: step aside and strike back. That is the whole secret. Took me three bites to learn it.', 'Their eyes glow violet now. Wolves should not glow. Thin the pack: eight of them.'] },
   { id: 'wolves', title: 'Thin the Pack', line: 'Defeat Dire Wolves in the Greenwood', npc: '', kill: { kind: 'DIREWOLF', count: 8 }, reward: { gold: 300, gems: 5 } },
-  { id: 'mira5', title: 'Proper Armor', line: 'Talk to Mira by the fountain', npc: 'Mira', reward: { gold: 50 },
-    talk: ['Wolf bites, right through the leather! I told you! Well, I meant to tell you. It was rule nine.', 'And you are still bareheaded! The Armory beside the plaza sells sturdy pieces. Brakk owes me a favour (do not ask about the goat), so a helmet for your class is on the house.', 'Put it on. Then we will make something stronger.'] },
-  { id: 'armor', title: 'Suit of Steel', line: 'Get your free helmet at the Armory (the Common helmet of your class)', npc: '', at: 'ARMORY', act: { kind: 'buy_armor', count: 1 }, reward: { gold: 50 } },
-  { id: 'forge', title: 'Temper the Steel', line: 'Upgrade a piece of gear from your bag at the Blacksmith (free this time)', npc: '', at: 'BLACKSMITH', act: { kind: 'upgrade', count: 1 }, reward: { gold: 100, items: [{ id: 'upgrade_core', qty: 1 }] } },
-  { id: 'mira6', title: 'Sharper Skills', line: 'Talk to Mira again', npc: 'Mira', reward: { gold: 50 },
-    talk: ['Hear that ring? Good steel. The Blacksmith upgrades with gold and Upgrade Cores; this one was a gift.', 'Now your head. The Skill Trainer, by the castle steps on the west side, turns skill points into real skills. Your first lesson is free. Duck when he swings.', 'And your bag will fill up fast. Put something in the Warehouse east of the square, beside the Blacksmith. Things you leave in the wilds do not come back with you. Neither do some guards.'] },
-  { id: 'train', title: 'Lessons of the Blade', line: 'Learn or upgrade a skill at the Skill Trainer (free this time)', npc: '', at: 'TRAINER', act: { kind: 'learn', count: 1 }, reward: { gold: 100 } },
-  { id: 'stash', title: 'Safe Keeping', line: 'Store an item in the Warehouse', npc: '', at: 'WAREHOUSE', act: { kind: 'store', count: 1 }, reward: { gold: 100, gems: 5 } },
-  { id: 'lysa_brew', title: 'Monster Remedies', line: 'Talk to Lysa the Herbalist', npc: 'Lysa', reward: { gold: 50 },
-    talk: ['Mira says you have seen the whole town now. Not quite!', 'Down the road past the gate, off to the west in the meadow, an old friend of mine keeps the Elixir Brewer\'s hut. Far from town, on account of the smell. And the explosions. Mostly the smell.', 'He boils monster parts into elixirs: fangs, gel, scales, whatever you drag home. Brew one. A good elixir has saved more guards than any sword.'] },
-  { id: 'elixir', title: 'A Bitter Brew', line: 'Brew an Elixir of Might at the Elixir Brewer (outside the gate, west of the road; the first one is free)', npc: '', at: 'BREWER', act: { kind: 'brew_elixir', count: 1 }, reward: { gold: 100, gems: 5 } },
   { id: 'report', title: 'The King Awaits', line: 'Report back to King Aldric', npc: 'King Aldric', reward: { gold: 300, gems: 10 },
     talk: ['Slimes cut, wolves thinned, and Mira says you are properly kitted out. She also says you are "a sweetheart". I do not know what you did.', 'Lysa found violet in the gel. Malakar\'s colour. The slimes answer to a king of their own now: a great ooze deep in the Greenwood, ten rooms in.', 'Pop the Slime King. A kingdom with two kings is one too many. Ha. That was a joke. I used to make those.'] },
   { id: 'slimeking', title: 'The Slime King', line: 'Defeat the Slime King (Greenwood, depth 10)', npc: '', kill: { kind: 'SLIME_KING', count: 1 }, reward: { gold: 400, gems: 15 } },
@@ -182,11 +180,13 @@ const IDX: Record<string, number> = Object.fromEntries(STORY.map((s, i) => [s.id
 /** Index of a step id (STORY.length if unknown). */
 export const storyIdx = (id: string): number => IDX[id] ?? STORY.length;
 /** Save version of the chain (v4: biome chapters with errands + the second town tour). */
-export const STORY_V = 4;
+export const STORY_V = 5;
 /** Step ids of the first story version (saves without `v`): mapped by id onto this chain. */
 const V1 = ['guard', 'king', 'slimes', 'report', 'golem', 'report2', 'grove', 'mire', 'frost', 'cinders', 'herald', 'report3', 'lich'];
 /** Index of 'golem' in story v2 (before the two Slime King steps were added). */
 const V2_GOLEM = 15;
+/** Step ids of story v4, by index (owner v5: the town tutorial moved right after the first one; 'mira5' merged into 'mira4'). */
+const V4 = ['guard', 'mira', 'potion', 'mira2', 'pet', 'mira3', 'summon', 'equip', 'mira4', 'hodge', 'board', 'king', 'slimes', 'lysa', 'garrick_wolves', 'wolves', 'mira5', 'armor', 'forge', 'mira6', 'train', 'stash', 'lysa_brew', 'elixir', 'report', 'slimeking', 'garrick2', 'golem', 'dorn', 'report2', 'wren', 'halls_armor', 'aldo', 'halls_rescue', 'bram', 'halls_champion', 'halls_warden', 'grove', 'lysa2', 'scorpions', 'maeve', 'desert_rescue', 'desert_warden', 'mire', 'dorn2', 'yetis', 'tamsin', 'frost_champions', 'frost_warden', 'frost', 'roan', 'hounds', 'roan2', 'ember_rescue', 'ember_warden', 'cinders', 'wren2', 'stalkers', 'tobin', 'void_champion', 'void_warden', 'herald', 'report3', 'lich', 'tower_king', 'tower', 'wren3', 'remember', 'wren4', 'usurper', 'queen', 'pro', 'act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'fin', 'post', 'heir'];
 /** Step ids of story v3, by index (every one of them still exists in this chain). */
 const V3 = ['guard', 'mira', 'potion', 'mira2', 'pet', 'mira3', 'summon', 'equip', 'mira4', 'hodge', 'board', 'king', 'slimes', 'lysa', 'report',
   'slimeking', 'garrick2', 'golem', 'dorn', 'report2', 'wren', 'grove', 'lysa2', 'mire', 'dorn2', 'frost', 'roan', 'cinders', 'wren2', 'herald', 'report3', 'lich'];
@@ -201,6 +201,10 @@ export function sanitizeStory(raw: unknown, endings: number, isNew: boolean): St
     const r = raw as Record<string, unknown>;
     let step = Math.max(0, Math.floor(Number(r.step) || 0)), p = Math.max(0, Math.floor(Number(r.p) || 0));
     if (r.v === STORY_V) return { step: Math.min(STORY.length, step), p, v: STORY_V };
+    if (r.v === 4) {   // v4 -> v5 by id (the merged 'mira5' continues at the free helmet)
+      const id = V4[step] === 'mira5' ? 'armor' : V4[step];
+      return { step: id ? storyIdx(id) : Math.min(STORY.length, step), p: id === V4[step] ? p : 0, v: STORY_V };
+    }
     if (r.v !== 2 && r.v !== 3) {   // v1 save: same step by id (a finished chain: the post-game Tower quest)
       const id = V1[step]; step = id ? storyIdx(id) : POST; if (id === 'guard') step = 0;
       return { step: Math.min(STORY.length, step), p: id ? p : 0, v: STORY_V };
