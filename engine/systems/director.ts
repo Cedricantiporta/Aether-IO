@@ -568,10 +568,12 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
       e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5 * 1.5); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% twice (owner)
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
+      { const f = 100 / (100 + e.armor); e.armor = Math.round(100 / (1 - 1.5 * (1 - f)) - 100); }   // +50% damage reduction (owner)
       setSlimeKing(e.id); initSpecial(e);   // (owner: Belly Flop / Acid Flood / Acid Rain)
     }
     if (e && prebossRoom) { e.maxHp = Math.round(e.maxHp * 0.75); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // depth-10 pre-boss: -25% hp
     else if (e && !waves.on && !miniIsBoss) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // champion rooms (owner: -30%)
+    if (e && prebossKing) e.shield = Math.round(e.maxHp * 0.3);   // Slime King: a shield worth 30% of its max HP (boss bar shows it)
     if (e) {
       events.emit('bossSpawn', { name: miniName, title: miniTitle });
       events.emit('shake', { amount: 0.3 });

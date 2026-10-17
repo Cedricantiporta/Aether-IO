@@ -151,6 +151,9 @@ export const ROCKFALL: [number, number, number, number][] = [
 /** (owner) only this boulder of the rockfall breaks (the middle one): the others stay, leaving a gap through. */
 export const ROCKFALL_BREAK = 2;
 /** Erin's chain is done: the middle boulder is gone (takes the store's npcQuests). */
+/** (owner) the stable horses can be ridden once Hilda the Stablemaster's quest 'hilda_shoes' (Lv 15) is turned in. */
+export const horsesUnlocked = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.hilda_shoes?.s === 2;
+export const HORSE_UNLOCK_LV = 15;
 export const rockfallCleared = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.erin_frost?.s === 2;
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -952,6 +955,15 @@ export const NPCS: NpcDef[] = [
       ['I pushed it for three hours yesterday. It moved. I think. A little. Maybe that was me.', 'I will destroy every last one of these rocks!'],
     ],
     bubbles: ['Someday I will lift you.', 'Move. MOVE!', 'I will not be walled in!', 'Hnnnngh!', 'Tomorrow. Tomorrow for sure.', 'Beyond the rocks... freedom. And ore.'],
+  },
+  {   // (owner) the Stablemaster: her Lv 15 quest ('hilda_shoes') unlocks riding the stable horses (see horsesUnlocked)
+    name: 'Hilda', role: 'Stablemaster', model: 'BARBARIAN', tint: '#f1e2cf', scale: 1, prop: 'none', accent: '#b9783c', home: [7.8, 42.6], speed: 1.2, noHat: true, noCape: true, tunic: '#7a4a2a', hair: '#8a4a22', longHair: true,
+    talk: [
+      ['Easy, Chestnut. Easy. You are not getting the apple until you stop chewing the fence.', 'Welcome to the stable, traveller. These are good horses. The best in the valley, and they know it.'],
+      ['A horse knows a rider by the way they sit. Heroes mostly sit like sacks of turnips.', 'You:: I resent that.', 'Come back when you have some proper experience and we will talk about a saddle.'],
+      ['Hay in the morning, oats at noon, a gallop at dusk. That is the whole secret.', 'Well, that and shoes. Always shoes.'],
+    ],
+    bubbles: ['Easy, easy...', 'Who left the gate open?!', 'Hay in the morning, oats at noon.', 'Heroes sit like sacks of turnips.', 'Chestnut, NO.'],
   },
   {
     name: 'Nell', role: 'Wanderer', model: 'ARCHER', tint: '#d6ecff', scale: 1, prop: 'lantern', accent: '#8fd0ff', home: [3.6, 46], speed: 1.4,

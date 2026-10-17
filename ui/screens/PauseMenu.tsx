@@ -89,9 +89,10 @@ export const SettingsDialog: React.FC = () => {
       <span className="st-num">{Math.round(settings[k] * 100)}</span>
     </Row>
   );
-  const tog = (label: string, k: keyof Settings, hint?: string) => (
-    <Row label={label} hint={hint}><Toggle checked={!!settings[k]} onChange={(v) => update({ [k]: v } as Partial<Settings>)} label={label} /></Row>
+  const tog = (label: string, k: keyof Settings, hint?: string, locked = false) => (
+    <Row label={label} hint={hint}><Toggle checked={!locked && !!settings[k]} disabled={locked} onChange={(v) => update({ [k]: v } as Partial<Settings>)} label={label} /></Row>
   );
+  const hardUnlocked = useGameStore((s) => s.progress.endings > 0);
   const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED);
   const { hero, rank } = useGameStore(useShallow((s) => ({ hero: s.hero, rank: s.heroRank })));
   const me = activeChar();
@@ -105,7 +106,7 @@ export const SettingsDialog: React.FC = () => {
         {tab === 'GAMEPLAY' && (<>
           <Sec title="Combat">
             {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
-            {tog('Hard mode', 'hardMode', 'Enemies have +40% HP, deal +35% damage and come in greater numbers; loot is 25% better. Takes effect from your next run.')}
+            {tog('Hard mode', 'hardMode', hardUnlocked ? 'Enemies have +40% HP, deal +35% damage and come in greater numbers. Rewards: +50% gold and XP, better item and card rarity odds. Takes effect from your next run.' : 'Clear a full run to unlock', !hardUnlocked)}
             {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
             {tog('Auto potions', 'autoPotions', 'Drink a potion at 70% HP / MP or lower.')}

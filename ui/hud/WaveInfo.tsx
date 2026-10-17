@@ -51,14 +51,14 @@ export const RoomPlaque: React.FC = () => {
     const r = world.room, d = world.director;
     if (!r.active) return;
     const text = subText();
-    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}|${bossKeyState.has}|${r.plan.type}|${r.plan.gate}`;
+    const key = `${r.biome}|${r.index}|${d.wave}|${text}|${towerState.floor}|${world.boss.name}|${bossKeyState.has}|${r.plan.type}|${r.plan.gate}|${runInfo.hard ? 1 : 0}`;
     if (key !== sig.current) {
       sig.current = key;
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
       const gname = r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
       if (name.current) name.current.textContent = tower ? climbTitle() : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
-      if (depth.current) depth.current.textContent = tower ? climbFloor(towerState.floor) : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`;
+      if (depth.current) depth.current.textContent = (tower ? climbFloor(towerState.floor) : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`) + (runInfo.hard ? ' · HARD' : '');
       if (sub.current) sub.current.textContent = text + (bossKeyState.has && r.plan.type !== 'BOSS' ? '  ·  Boss Key ✓' : '');
     }
     const done = d.phase === 'CLEARED' || d.phase === 'BIOME_DONE';

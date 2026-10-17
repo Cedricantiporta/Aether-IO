@@ -51,6 +51,7 @@ export const EndingScreen: React.FC = () => {
         <motion.div className="tower-note" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
           <div className="ending-title" style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.4rem)' }}>The Endless Tower is open</div>
           <p>With Malakar gone, the old tower outside the village gate has woken. Climb it floor by floor, as high as you dare.</p>
+          <p data-testid="hard-unlocked"><b>Hard mode unlocked.</b> Turn it on in Settings: tougher monsters, but +50% gold and XP and better item and card odds.</p>
           <button className="rpg-btn rpg-btn-primary ending-go" onClick={() => setTowerNote(false)} data-testid="tower-unlocked-ok">Onward</button>
         </motion.div>
       </div>

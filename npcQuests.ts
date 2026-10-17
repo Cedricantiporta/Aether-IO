@@ -704,6 +704,25 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'DELIVER', target: 'frost_scale', count: 3 },
     reward: { gold: 4000, gems: 60, shards: ['EPIC', 3] },
   },
+  {   // (owner) unlocks riding the stable horses (townData horsesUnlocked)
+    id: 'hilda_shoes', minLevel: 15, giver: 'Hilda', title: 'Shoes for the Stable', summary: 'Bring Hilda 6 Ore Nuggets for horseshoes',
+    intro: [
+      'You again! You have the look of someone who has done some real fighting. Level fifteen, if I am any judge.',
+      'You:: You can tell?',
+      'I can tell. You walk like a hero who is tired of walking. Which brings me to the horses.',
+      'I do not lend them to just anyone. But the smith is out of iron and my poor ladies need new shoes before they can carry a rider at speed.',
+      'Bring me six Ore Nuggets from the Crystal Cave. Do that, and the horses are yours to ride.',
+    ],
+    progress: 'Six Ore Nuggets, please. You will find them mining in the Crystal Cave.',
+    done: [
+      'Good iron! Look at that, not a flaw in it. Hold still, Chestnut, hold STILL.',
+      'You:: Do they always fight the farrier?',
+      'Only the ones with taste. There. Fresh shoes all round.',
+      'The stable horses are yours to ride, hero. Walk up and press E. And Space makes them charge, just a short burst, mind.',
+    ],
+    objective: { type: 'DELIVER', target: 'ore_nugget', count: 6 },
+    reward: { gold: 800 },
+  },
 ];
 
 export const NPC_QUEST_BY_ID: Record<string, NpcQuestDef> = Object.fromEntries(NPC_QUESTS.map((q) => [q.id, q]));

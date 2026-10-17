@@ -6,8 +6,8 @@ import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { runCards } from '../runCards';
-import { PLAYER_RADIUS, POTION_COOLDOWN } from '../../constants';
+import { runCards, potionCooldown } from '../runCards';
+import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo } from './target';
 import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
@@ -108,8 +108,8 @@ function usePotion(health: boolean): boolean {
   if (!item) return false;
   // (owner) a flat amount: 100 HP / MP (Big potions 200), Tech House Potion Brewing on top
   const amt = ((item.restoreAmount || 50) >= 75 ? 200 : 100) * (1 + 0.12 * techLv(st.tech, 'potion')) * (1 + runCards.potionBonus);
-  if (health) { healPlayer(amt); p.hpPotCd = POTION_COOLDOWN; }
-  else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = POTION_COOLDOWN; }
+  if (health) { healPlayer(amt); p.hpPotCd = potionCooldown(); }
+  else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = potionCooldown(); }
   return true;
 }
 
@@ -413,6 +413,8 @@ export function updatePlayer(dt: number): void {
 
 /** Town horseback speed multiplier (village.ride). */
 export const RIDE_SPEED = 2;
+let rideTouchWas = false;
+export const RIDE_DASH_T = 0.35, RIDE_DASH_CD = 6;
 /** Village mode: walking only (movement, collisions, animation). No dash, attacks, abilities or regen drain. */
 export function updatePlayerVillage(dt: number): void {
   const st = useGameStore.getState();
@@ -434,8 +436,26 @@ export function updatePlayerVillage(dt: number): void {
   if (p.dashCdMax <= 0) p.dashCdMax = DASH_CD;
   if (p.dashCharges < p.maxDashCharges) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashCharges++; p.dashCd = p.dashCharges < p.maxDashCharges ? p.dashCdMax : 0; } }
   const riding = world.village.ride.on;   // (owner) on a stable horse: faster, no skills / dash / attacks
+  const rd = world.village.ride;
   if (!riding) updateSkillInput();
   updateAbilities(dt);
+  const ta = world.input.touchAim, tDash = ta.active && ta.id === 'dash', tEdge = tDash && !rideTouchWas; rideTouchWas = tDash;
+  if (riding) {   // (owner) horse dash: Space / dash button = a short forward charge, 6 s recharge, no damage
+    rd.dashCd = tickDown(rd.dashCd, dt);
+    if (rd.dashT <= 0 && rd.dashCd <= 0 && (world.input.pressed.Space || tEdge)) {
+      rd.dashT = RIDE_DASH_T; rd.dashCd = RIDE_DASH_CD; rd.puff = true;
+      rd.dx = Math.sin(p.facing); rd.dz = Math.cos(p.facing);
+    }
+  } else rd.dashT = 0;
+  if (riding && rd.dashT > 0) {
+    rd.dashT -= dt;
+    const sp = st.stats.moveSpeed * MOVE_SPEED_SCALE * RIDE_SPEED * 2.5;
+    p.vel.set(rd.dx * sp, 0, rd.dz * sp);
+    resolveObstacles(p, p.pos.x + p.vel.x * dt, p.pos.z + p.vel.z * dt);
+    a.moveBlend += (0 - a.moveBlend) * Math.min(1, 10 * dt);
+    p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY);
+    return;
+  }
   a.dashing = p.dashT > 0;
   if (abilityState.leapT > 0) return;
   if (p.dashT > 0) {

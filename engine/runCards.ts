@@ -2,6 +2,8 @@
 // Pure TS (no React). Per-run state is reset on 'runStart'; the engine reads `runCards` directly (never the store).
 import { events } from './events';
 import type { Enemy } from './types';
+import { POTION_COOLDOWN } from '../constants';
+import { runInfo } from './runMods';
 import type { Rarity, SpecialId, Upgrade, UpgradeType } from '../types';
 
 export const TIERS: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
@@ -11,6 +13,10 @@ const TIER_WEIGHT = [55, 28, 12, 4.5, 0.5];
 export const REGEN_CAP_BASE = 0.7;   // HP regeneration stops at 70% of max HP (potions / heals are not limited)
 export const DEFIANCE_MAX = 2;
 export const DASH_CARD_MAX = 3;
+export const POTION_CD_STACKS_MAX = 3;
+export const POTION_CD_CAP = 0.5;   // total potion cooldown reduction from Quickdraw Flask never exceeds -50%
+/** Hard mode shifts the card rarity odds up: tiers above Common get these weight multipliers (Common x0.7). */
+const HARD_TIER_MUL = [0.7, 1.25, 1.6, 1.6, 1.6];
 
 /** Live per-run card state. */
 export const runCards = {
@@ -18,6 +24,8 @@ export const runCards = {
   defiance: 0, defianceTaken: 0,
   mythicOffered: false,
   dashStacks: 0,
+  /** Quickdraw Flask: cards taken and the total potion cooldown reduction (0..POTION_CD_CAP) */
+  potionCdStacks: 0, potionCdCut: 0,
   /** extra card selections queued behind the one on screen (Guardian's Spoils) */
   extraPicks: 0,
   regenCap: REGEN_CAP_BASE,
@@ -31,7 +39,7 @@ export const runCards = {
 
 export function resetRunCards(): void {
   const r = runCards;
-  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.extraPicks = 0;
+  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
   r.afflict = 0; r.sunder = 0; r.guardian = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
   r.anyDmg = false; r.taken = {};
@@ -41,6 +49,9 @@ events.on('runStart', resetRunCards);
 
 /** Aegis is offered at most once per biome. */
 let aegisBiome = '';
+
+/** Potion cooldown in seconds (shared by the engine and the HUD), after Quickdraw Flask cards. */
+export function potionCooldown(): number { return POTION_COOLDOWN * (1 - runCards.potionCdCut); }
 
 // ------------------------------------------------------------------ effects --
 /** Statuses currently on an enemy (burn, poison, freeze, stun, slow, armor break, fear, chill). No allocation. */
@@ -101,19 +112,23 @@ export const ARCANA_NUMERAL: Record<string, string> = {
   DEATH_DEFIANCE: 'XIII', AEGIS: 'XI', AFFLICT: 'XV', SUNDER: 'XVI', GUARDIAN: 'IV', SLAYER: 'VIII', ALCHEMIST: 'XIV', EXECUTE: 'XII',
   FIRST_STRIKE: 'I', SECOND_WIND: 'XVII', GOLD_RUSH: 'X', LINGER: 'IX',
   DAMAGE: 'VII', HEALTH: 'III', DEFENSE: 'V', FIRE_RATE: 'VI', SPEED: 'XVIII', CRIT_RATE: 'XIX', CRIT_DAMAGE: 'XX', COOLDOWN: 'XXI',
-  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', RESTORE: 'III', ULT_FILL: 'XVI',
+  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', POTION_CD: 'XIV', RESTORE: 'III', ULT_FILL: 'XVI',
 };
 
 // ------------------------------------------------------------------- rolling --
 /** Picks a tier in [min, max] with the base odds renormalised inside the range (mythic only when allowed). */
 function rollTier(min: number, max: number, allowMythic: boolean): number {
+  const hm = runInfo.hard;
   let tot = 0;
-  for (let i = min; i <= max; i++) tot += i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i];
+  for (let i = min; i <= max; i++) tot += i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1);
   if (tot <= 0) return min;
   let r = Math.random() * tot;
-  for (let i = min; i <= max; i++) { r -= i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i]; if (r <= 0) return i; }
+  for (let i = min; i <= max; i++) { r -= i === 4 && !allowMythic ? 0 : TIER_WEIGHT[i] * (hm ? HARD_TIER_MUL[i] : 1); if (r <= 0) return i; }
   return min;
 }
+
+/** Quickdraw Flask: potion cooldown cut per tier [COMMON, RARE, EPIC, LEGENDARY] */
+const POTION_CD_VALS = [0.10, 0.15, 0.20, 0.28];
 
 interface Entry { weight: number; make: (allowMythic: boolean) => Omit<Upgrade, 'id'> }
 const mk = (type: UpgradeType, name: string, description: string, tier: number, value: number, special?: SpecialId): Omit<Upgrade, 'id'> =>
@@ -127,6 +142,12 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   }
   if (runCards.dashStacks < DASH_CARD_MAX) {
     out.push({ weight: 0.7, make: () => mk('DASH_COOLDOWN', 'Shadow Step', `-10% Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, 1, 0.1) });
+  }
+  if (runCards.potionCdStacks < POTION_CD_STACKS_MAX && runCards.potionCdCut < POTION_CD_CAP - 1e-6) {
+    out.push({ weight: 0.6, make: () => {
+      const t = rollTier(0, 3, false), v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut);
+      return mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v);
+    } });
   }
   out.push({ weight: 0.3, make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
   if (ultUnlocked) out.push({ weight: 0.25, make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
@@ -163,6 +184,7 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
 export function takeRunCard(u: Upgrade): boolean {
   const r = runCards, v = u.value;
   if (u.type === 'DASH_COOLDOWN') { r.dashStacks = Math.min(DASH_CARD_MAX, r.dashStacks + 1); return true; }
+  if (u.type === 'POTION_CD') { r.potionCdStacks = Math.min(POTION_CD_STACKS_MAX, r.potionCdStacks + 1); r.potionCdCut = Math.min(POTION_CD_CAP, r.potionCdCut + v); return true; }
   if (u.type === 'DEATH_DEFIANCE') { if (r.defianceTaken < DEFIANCE_MAX) { r.defianceTaken++; r.defiance++; } return true; }
   if (u.type !== 'SPECIAL' || !u.special) return false;
   if (r.taken[u.special]) return true;

@@ -8,8 +8,13 @@ import { dailyMods } from '../dailyChallenge';
 export type RunMode = 'ADVENTURE' | 'TOWER';
 /** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; '': the plaza). */
 /** startBiome: the biome an ADVENTURE run opens in (0; the captain's ship to the Coral Isles sets 3). */
-export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false };
+export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false, /** this run is on Hard mode (set at run start; better gold / XP / drop and card odds) */ hard: false };
 
+/** Hard mode reward multipliers (gold + XP, epic-and-better item odds). Applied only while a Hard run is in progress. */
+export const HARD_GOLD_XP = 1.5;
+export const HARD_EPIC_MUL = 1.6;
+/** Hard-run reward multiplier for gold / XP (1 in town or on a non-Hard run). */
+export const hardMul = (inTown: boolean): number => (runInfo.hard && !inTown ? HARD_GOLD_XP : 1);
 export interface RunMods extends AscMods { loot: number }
 const asc: AscMods = { hp: 1, dmg: 1, spawn: 1, heal: 1, bossHp: 1, speed: 1, elites: 0, reward: 1 };
 const out: RunMods = { ...asc, loot: 1 };

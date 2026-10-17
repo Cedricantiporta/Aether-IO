@@ -38,7 +38,7 @@ function sitDown(i: number): void {
 const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse' };
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
 function mount(i: number): void {
-  const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
+  const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on || !horsesUnlocked(useGameStore.getState().npcQuests)) return;
   v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
   p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
 }
@@ -46,7 +46,7 @@ function mount(i: number): void {
 export function dismount(): void {
   const v = world.village; if (!v.ride.on) return;
   const a = animals[v.ride.horse], p = world.player;
-  v.ride.on = false; v.ride.horse = -1;
+  v.ride.on = false; v.ride.horse = -1; v.ride.dashT = 0;
   if (!a) return;
   a.ridden = false; a.moving = false; a.wait = 1.5; a.hx = a.tx = a.x; a.hz = a.tz = a.z;
   p.pos.set(a.x + Math.cos(a.yaw) * 1.1, 0, a.z - Math.sin(a.yaw) * 1.1);   // step off to the horse's left
@@ -56,7 +56,7 @@ export function dismount(): void {
 function syncRide(dt: number): void {
   const v = world.village, a = animals[v.ride.horse], p = world.player; if (!a) { v.ride.on = false; return; }
   const sp = Math.hypot(p.vel.x, p.vel.z);
-  a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing; a.moving = sp > 0.6; a.joy = Math.max(0, a.joy - dt); a.hop += dt * Math.min(16, 4 + sp * 1.3);
+  a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing; a.moving = sp > 0.6; a.joy = Math.max(0, a.joy - dt); a.hop += dt * (v.ride.dashT > 0 ? 24 : Math.min(16, 4 + sp * 1.3));
 }
 export function standUp(): void {
   const st = world.village.sit; if (!st.on) return;
@@ -70,7 +70,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import type { Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, horsesUnlocked, HORSE_UNLOCK_LV } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
 import { mainNav, npcQuestNav, boardQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
@@ -257,7 +257,7 @@ function scanNearby(): void {
   if (area === 'TOWN') for (let i = 0; i < animals.length; i++) {   // (owner) pet the animals, ride the stable horses
     const a = animals[i], k = ANIMALS[i].kind; d = q(a.x, a.z);
     const r = k === 'HORSE' || k === 'COW' ? 2.6 : 1.9;
-    if (d < r * r) { if (k === 'HORSE') push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
+    if (d < r * r) { if (k === 'HORSE') { if (horsesUnlocked(useGameStore.getState().npcQuests)) push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Locked', `Horse · Lv ${HORSE_UNLOCK_LV} quest`, '', i, d + 0.4, 'locked', LOCK_COLOR); } else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
   }
   if (world.village.sit.on) {   // seated: the only action is standing up
     nearbyN = 0; push('E', 'Stand', 'up', '', -1, 0, 'sit');
@@ -282,6 +282,7 @@ function scanNearby(): void {
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
+  if (it.act === 'locked' && it.label.startsWith('Horse')) { st.addNotification(`The horses are locked. Reach Lv ${HORSE_UNLOCK_LV} and help Hilda the Stablemaster first.`, LOCK_COLOR, 'WARNING'); return; }
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {

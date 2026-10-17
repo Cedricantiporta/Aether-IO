@@ -15,7 +15,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { runInfo, type RunMode } from './engine/runMods';
+import { runInfo, hardMul, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
 import { create } from 'zustand';
@@ -522,7 +522,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
-              difficulty: p.settings?.hardMode ? 'HARD' : 'NORMAL',   // (Hard mode is a Settings toggle)
+              difficulty: p.settings?.hardMode && sanitizeProgress(p.progress).endings > 0 ? 'HARD' : 'NORMAL',   // (Hard mode: Settings toggle, locked until the first ending)
               attrs: sanitizeAttrs(p.attrs),
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
@@ -806,6 +806,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
       });
       runStartLevel = get().level;
+      runInfo.hard = get().difficulty === 'HARD';
       if (debug.maxSkills) get().debugMaxSkills();
       startRun();
     },
@@ -945,7 +946,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     addExperience: (amount) => {
       if (runInfo.mode === 'TOWER' && get().status !== GameStatus.MENU) return;   // no EXP in the Endless Tower / Daily Trial / Endless Waves (owner)
       let { experience, experienceToNextLevel, level } = get();
-      const gain = amount * (1 + get().stats.xpBonus);
+      const gain = amount * (1 + get().stats.xpBonus) * hardMul(get().status === GameStatus.MENU);   // (Hard run: +50% XP)
       experience += gain;
       const startLevel = level;
       let base = get().baseStats;
@@ -1214,7 +1215,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     startMode: (mode: RunMode, startBiome = 0) => {
       disarmDaily(); disarmWaves();
       runInfo.mode = mode; runInfo.back = mode === 'TOWER' ? 'TOWER' : ''; runInfo.startBiome = mode === 'ADVENTURE' ? startBiome : 0;
-      set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
+      set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
       get().startGame();
     },
@@ -1266,7 +1267,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     startWaves: () => {
       disarmDaily(); armWaves();
       runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
-      set({ difficulty: get().settings.hardMode ? 'HARD' : 'NORMAL' });
+      set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });
       get().startGame();
     },
     recordWave: (wave) => {

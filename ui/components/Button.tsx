@@ -11,8 +11,8 @@ export const Button = React.forwardRef<HTMLButtonElement, Props>(({ variant = 'd
 });
 Button.displayName = 'Button';
 
-export const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label?: string }> = ({ checked, onChange, label }) => (
-  <button role="switch" aria-checked={checked} aria-label={label} className="rpg-toggle" onClick={() => onChange(!checked)} />
+export const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }> = ({ checked, onChange, label, disabled }) => (
+  <button role="switch" aria-checked={checked} aria-label={label} className="rpg-toggle" disabled={disabled} style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : undefined} onClick={() => { if (!disabled) onChange(!checked); }} />
 );
 
 export const Slider: React.FC<{ value: number; onChange: (v: number) => void }> = ({ value, onChange }) => (

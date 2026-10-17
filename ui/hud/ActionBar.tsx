@@ -2,7 +2,8 @@ import React from 'react';
 import { unlockLevel, DASH_UNLOCK_LV, ULT_UNLOCK_LV } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
-import { SKILLS_INFO, POTION_COOLDOWN } from '../../constants';
+import { SKILLS_INFO } from '../../constants';
+import { potionCooldown } from '../../engine/runCards';
 import { world } from '../../engine/world';
 import { passiveCooldowns } from '../../engine/systems/skills';
 import { ActionSlot } from './ActionSlot';
@@ -62,7 +63,7 @@ export const ActionBar: React.FC = () => {
         );
       })}
       <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dashOpen ? dLv : 0} active={dashOpen}
-        getCd={() => ({ t: p.dashCd, max: p.dashCdMax })}
+        getCd={() => (world.village.ride.on ? { t: world.village.ride.dashCd, max: 6 } : { t: p.dashCd, max: p.dashCdMax })}
         tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`), cdLine(`Lv ${dLv}`, dDef.per(dLv))]} />} />
 
       <Sep />
@@ -84,10 +85,10 @@ export const ActionBar: React.FC = () => {
         tooltip={<SimpleTip title="Regeneration" sub={`Passive · Lv ${sk('regen')}`} body={SKILLS_INFO.regen.description} />} />
       <Sep />
       <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="4.3rem" qty={hpQty} active={true} accent="#d6252b"
-        icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: POTION_COOLDOWN })}
+        icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: potionCooldown() })}
         tooltip={<SimpleTip title="Health Potion" sub="Consumable [Z]" color="#b3261e" body="Restores health. Auto-drinks below 30% HP when enabled in settings." lines={[cdLine('In bag', `${hpQty}`)]} />} />
       <ActionSlot id="mp" keyLabel="X" keyCode="KeyX" size="4.3rem" qty={mpQty} active={true} accent="#2f6fe0"
-        icon={<PaintedIcon id="MP" />} getCd={() => ({ t: p.mpPotCd, max: POTION_COOLDOWN })}
+        icon={<PaintedIcon id="MP" />} getCd={() => ({ t: p.mpPotCd, max: potionCooldown() })}
         tooltip={<SimpleTip title="Mana Potion" sub="Consumable [X]" color="#1f56c4" body="Restores mana. Auto-drinks below 30% mana when enabled in settings." lines={[cdLine('In bag', `${mpQty}`)]} />} />
     </div>
   );

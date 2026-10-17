@@ -8,6 +8,7 @@ import { world, allocPickup } from '../world';
 import { edgeLimit, bounds, pushOutOfColliders } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
+import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
 import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul } from '../../store';
 import { healPlayer, grantKillXp } from './combat';
@@ -76,7 +77,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); break;
@@ -252,7 +253,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind)); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
+    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); feedCoin('gems', value); break;

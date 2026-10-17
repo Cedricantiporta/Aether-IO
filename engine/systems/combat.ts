@@ -17,7 +17,7 @@ import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
 import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
 import { COLORS } from '../../constants';
-import { runMods, runInfo } from '../runMods';
+import { runMods, runInfo, HARD_EPIC_MUL, hardMul } from '../runMods';
 /** The tower modes (Endless Tower, Daily Trial, Endless Waves all run as runInfo.mode 'TOWER'): monsters drop no items
  *  or loot there, only gold and Aether Crystals (owner: that currency is for summoning). */
 export const towerMode = (): boolean => runInfo.mode === 'TOWER';
@@ -256,7 +256,7 @@ export function grantKillXp(xp: number, pos: Vector3): void {
   st.addExperience(xp);
   world.run.xpEarned += xp;
   combatStats.xpFromKills += xp;
-  const gain = (st.level >= 10 ? xp * 2 : xp) * 2 * (1 + st.stats.xpBonus);
+  const gain = (st.level >= 10 ? xp * 2 : xp) * 2 * (1 + st.stats.xpBonus) * hardMul(false);
   xpAcc += gain; xpPos.copy(pos);
 }
 
@@ -489,8 +489,9 @@ export function killEnemy(e: Enemy): void {
     // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
     const before = run.bossKills - 1;
     let rarity: Rarity = 'EPIC';
-    if (before >= 1 && Math.random() < Math.min(0.012, 0.004 * before)) rarity = 'MYTHIC';
-    else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02)) rarity = 'LEGENDARY';
+    const hm = runInfo.hard ? HARD_EPIC_MUL : 1;   // Hard mode: legendary+ odds x1.6
+    if (before >= 1 && Math.random() < Math.min(0.012, 0.004 * before) * hm) rarity = 'MYTHIC';
+    else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02) * hm) rarity = 'LEGENDARY';
     const item = st.rollItemDrop(rarity);
     if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
     // tiered upgrade cores: bosses after the first may leave a Refined Core (Epic+ gear)

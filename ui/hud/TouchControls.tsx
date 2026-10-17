@@ -10,7 +10,7 @@ import { useRaf } from '../hooks/useRaf';
 import { activeDefs, dashDef, ACTIVE_ORDER, ULTS } from '../../abilityDefs';
 import { DASH_UNLOCK_LV } from '../../classLevels';
 import { PaintedIcon } from '../components/SkillIcons';
-import { POTION_COOLDOWN } from '../../constants';
+import { potionCooldown } from '../../engine/runCards';
 import { requestClick } from '../../engine/systems/target';
 
 const R_BASE = 56;   // joystick radius in css px (scaled by --ui-scale via the zone's size)
@@ -237,7 +237,7 @@ export const TouchControls: React.FC = () => {
   const potion = (k: 'hp' | 'mp') => (
     <div style={slotStyle(G[k], left)}>
       <TBtn code={k === 'hp' ? 'KeyZ' : 'KeyX'} label={k === 'hp' ? 'Health potion' : 'Mana potion'} size={G[k].size} accent={k === 'hp' ? '#ef5f55' : '#4f8df5'} icon={<PaintedIcon id={k === 'hp' ? 'HP' : 'MP'} />}
-        getCd={() => ({ t: k === 'hp' ? p.hpPotCd : p.mpPotCd, max: POTION_COOLDOWN })} qty={k === 'hp' ? hpQty : mpQty} />
+        getCd={() => ({ t: k === 'hp' ? p.hpPotCd : p.mpPotCd, max: potionCooldown() })} qty={k === 'hp' ? hpQty : mpQty} />
     </div>
   );
 
@@ -266,7 +266,7 @@ export const TouchControls: React.FC = () => {
         <SkillBtn skill="s1" label="Skill 1" at={G.s1} left={left} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
         <SkillBtn skill="s2" label="Skill 2" at={G.s2} left={left} icon={icon(1)} {...sk(1)} onDrag={setDrag} />
         <SkillBtn skill="s3" label="Skill 3" at={G.s3} left={left} icon={icon(2)} {...sk(2)} onDrag={setDrag} />
- {dashOpen && <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => ({ t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />}
+ {dashOpen && <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => (world.village.ride.on ? { t: world.village.ride.dashCd, max: 6 } : { t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />}
         {potion('hp')}
         {potion('mp')}
         {!village && <AutoBtn at={G.auto} left={left} />}

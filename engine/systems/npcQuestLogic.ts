@@ -97,6 +97,7 @@ export function completeNpcQuest(id: string): boolean {
   if (def.reward.flasks) { const n = addSpareFlasks(def.reward.flasks); if (n > 0) notify(`+${n} lantern oil flask${n === 1 ? '' : 's'} for the Crystal Cave`, '#ffd070'); }
   const qxp = questXp('SIDE', s.level); useGameStore.getState().addExperience(qxp);   // (owner) every quest pays EXP
   notify(`Quest complete: ${def.title}`);
+  if (id === 'hilda_shoes') notify('You can now ride the stable horses! Press E by a horse.', '#ffd070');
   feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
   return true;
 }

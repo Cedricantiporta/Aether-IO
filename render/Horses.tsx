@@ -8,6 +8,7 @@ import { ANIMALS } from '../engine/townData';
 import { animals } from '../engine/systems/npcs';
 import { world } from '../engine/world';
 import { liftAt } from './lift';
+import { dustPuff } from './fx';
 
 const HORSES = ANIMALS.map((a, i) => ({ a, i })).filter((h) => h.a.kind === 'HORSE');
 const MANE: Record<string, string> = { '#8a5a36': '#2a1a12', '#f2ece0': '#c9bfae', '#3a2c26': '#120d0b' };
@@ -48,7 +49,11 @@ function Horse({ i, tint, geos }: { i: number; tint: string; geos: ReturnType<ty
   const graze = useRef(0);
   useFrame((_, dt) => {
     const a = animals[i]; if (!a || !root.current) return;
-    const t = world.time + i * 3.7, ph = a.hop;
+    const t = world.time + i * 3.7, ph = a.hop, rd = world.village.ride;
+    if (a.ridden && rd.horse === i) {   // horse dash: dust burst at the start, a trail of puffs while charging
+      if (rd.puff) { rd.puff = false; dustPuff(a.x, a.z, 6, 1.0, 0xcdbd98, 1.6); }
+      else if (rd.dashT > 0 && Math.sin(ph * 2) > 0.9) dustPuff(a.x - Math.sin(a.yaw) * 0.8, a.z - Math.cos(a.yaw) * 0.8, 1, 0.7, 0xcdbd98, 0.8);
+    }
     const gallop = a.ridden && a.moving, amp = !a.moving ? 0 : gallop ? 0.75 : 0.38;
     root.current.position.set(a.x, liftAt(a.x, a.z) + bobOf(a.moving, a.ridden, ph), a.z);
     root.current.rotation.y = a.yaw;

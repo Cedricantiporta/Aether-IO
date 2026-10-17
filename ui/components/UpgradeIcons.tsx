@@ -165,7 +165,7 @@ const ART_SPECIAL: Record<SpecialId, () => React.ReactNode> = {
 
 const ART: Record<UpgradeType, () => React.ReactNode> = {
   HEALTH: () => Heart('red'), MAX_MANA: Drop, DEFENSE: () => Shield('steel'), SPEED: Boot, DAMAGE: () => SwordA(45), FIRE_RATE: Bolt, MULTISHOT: Multicast,
-  DASH_COOLDOWN: Wind, CRIT_RATE: Target, CRIT_DAMAGE: Skull,
+  DASH_COOLDOWN: Wind, POTION_CD: () => <g><g transform="translate(-4 4) scale(.85)">{Flask()}</g><g transform="translate(30 -2) scale(.5)">{Clock()}</g></g>, CRIT_RATE: Target, CRIT_DAMAGE: Skull,
   SKILL_ORBITAL: Orbit, SKILL_THUNDER: Cloud, SKILL_REGEN: () => <g>{Heart('green')}<path d="M32 22 V44 M21 33 H43" stroke="#fff" strokeWidth="5" strokeLinecap="round" /></g>,
   SKILL_MAGNET: Magnet, SKILL_DASH: Wind, SKILL_WEAPON: Star, SKILL_BARRIER: () => Shield('gold'), SKILL_PIERCING: Arrow, SKILL_BURNING: Flame,
   SKILL_FREEZING: Snow, SKILL_FREEZE_SPELL: Snow, SKILL_GRAVITY: BlackHole, SKILL_STAMP: Hammer,
