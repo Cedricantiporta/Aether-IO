@@ -11,10 +11,12 @@ const mk = (fog: string, hs: string, hg: string, hi: number, sun: string, si: nu
   ({ fog: new Color(fog), hemiSky: new Color(hs), hemiGround: new Color(hg), hemiI: hi, sun: new Color(sun), sunI: si, sky: new Vector3(...sky), near, far });
 
 export const TOWN_FOG = '#cfe6f2';
+// Town mood: a warm low-ish sun against a cool sky fill and a green-olive bounce (more colour contrast, less washed-out pale ground)
+const TOWN_HEMI_SKY = '#bcd8f4', TOWN_HEMI_GROUND = '#7b8c4a', TOWN_HEMI_I = 1.1, TOWN_SUN = '#ffe7bd', TOWN_SUN_I = 2.95;
 /** Extra multiplier on the hemisphere + sun light (render/CaveInterior lowers it as the cave lantern runs out). */
 export const lookDim = { k: 1 };
-export const look: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
-const target: Look = mk(TOWN_FOG, '#cfe8ff', '#6f8f45', 1.25, '#fff0d2', 3.1, [1, 1, 1], 75, 210);
+export const look: Look = mk(TOWN_FOG, TOWN_HEMI_SKY, TOWN_HEMI_GROUND, TOWN_HEMI_I, TOWN_SUN, TOWN_SUN_I, [1, 1, 1], 75, 210);
+const target: Look = mk(TOWN_FOG, TOWN_HEMI_SKY, TOWN_HEMI_GROUND, TOWN_HEMI_I, TOWN_SUN, TOWN_SUN_I, [1, 1, 1], 75, 210);
 
 /** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2; -3 lava floor, -4 poison floor). `snap` skips the ease (used at full black). */
 export function setLook(biome: number, snap = false, index = 0): void {
@@ -31,8 +33,8 @@ export function setLook(biome: number, snap = false, index = 0): void {
     target.fog.set('#07090d'); target.hemiSky.set('#9cb0dc'); target.hemiGround.set('#4a4036'); target.hemiI = 1.05;
     target.sun.set('#c4d0ee'); target.sunI = 1.1; target.sky.set(0.03, 0.035, 0.05); target.near = 42; target.far = 100;
   } else if (biome < 0) {
-    target.fog.set(TOWN_FOG); target.hemiSky.set('#cfe8ff'); target.hemiGround.set('#6f8f45'); target.hemiI = 1.25;
-    target.sun.set('#fff0d2'); target.sunI = 3.1; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
+    target.fog.set(TOWN_FOG); target.hemiSky.set(TOWN_HEMI_SKY); target.hemiGround.set(TOWN_HEMI_GROUND); target.hemiI = TOWN_HEMI_I;
+    target.sun.set(TOWN_SUN); target.sunI = TOWN_SUN_I; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
   } else if (runInfo.mode === 'TOWER') {
     // Endless Tower: open-air floors under a deep night sky, cool moonlight
     target.fog.set('#0b1230'); target.hemiSky.set('#8fa6e0'); target.hemiGround.set('#2a2a38'); target.hemiI = 0.95;

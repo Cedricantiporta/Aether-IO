@@ -458,7 +458,8 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
 }
 
 // --------------------------------------------------------------------- shop ---
-const ringGeo1 = new RingGeometry(4.6, 5.05, 72), ringGeo2 = new RingGeometry(5.25, 5.4, 72);
+/** The shop sign's post + arm as one static geometry (the board itself sways); [right-hand, left-hand (brewer)]. */
+const SIGN_POST = [1, -1].map((side) => { const b = new GB([1, 1]); b.box(0.22, 4.0, 0.22, [0, 2.0, 0], '#6e4b2b'); b.box(1.9, 0.16, 0.16, [0.9 * side, 3.85, 0], '#6e4b2b'); return b.build(); });
 
 function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; position: number[]; color: string; q: QualityCfg; facing?: number }) {
   const geos = useMemo(() => BUILD[type](), [type]);
@@ -466,8 +467,6 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }),
-    ring: new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
-    ring2: new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     liquid: new MeshBasicMaterial({ color: new Color(0.6, 2.0, 0.7), toneMapped: false }),
   }), [color]);
   const craftDot = useGameStore((s) => type === 'BLACKSMITH' && canCraftAny(s));   // red dot: something can be forged
@@ -476,8 +475,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   const roleRef = useRef<Sprite>(null);
   const near = useRef(false);
   const closedK = useRef(0);
-  const ringRef = useRef<Group>(null!), signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
-  const rot = useRef(0);
+  const signRef = useRef<Group>(null!), titleRef = useRef<Sprite>(null!), light = useRef<PointLight>(null!), liquid = useRef<Mesh>(null!);
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
@@ -495,12 +493,6 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     const dx = world.player.pos.x - px, dz = world.player.pos.z - pz;
     const d = Math.hypot(dx, dz);
     near.current = !lobby && !closed && d < 6;
-    // ring
-    rot.current += dt * (near.current ? 1.2 : 0.3);
-    const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
-    mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
-    mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
-    if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; const s = near.current ? 1 + pulse * 0.04 : 1; ringRef.current.scale.set(s, 1, s); }
     if (signRef.current) signRef.current.rotation.z = Math.sin(t * 1.3 + px) * 0.05;
     if (titleRef.current) {   // the name tag rides on the shopkeeper (who walks to the door and in when the shop closes)
       const e = smooth(closedK.current), c = NPC[type].pos, dr = DOOR[type];
@@ -541,21 +533,11 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
       <mesh geometry={geos.glow} material={mats.glow} />
       {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
       <group position={[-3.4 * signSide, 0, 3.9]}>
-        <mesh position={[0, 2.0, 0]} castShadow><boxGeometry args={[0.22, 4.0, 0.22]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
-        <mesh position={[0.9 * signSide, 3.85, 0]} castShadow><boxGeometry args={[1.9, 0.16, 0.16]} /><meshStandardMaterial color="#6e4b2b" flatShading /></mesh>
+        <mesh geometry={signSide > 0 ? SIGN_POST[0] : SIGN_POST[1]} material={mats.lit} castShadow />
         <group ref={signRef} position={[1.2 * signSide, 3.0, 0]}>
           <mesh geometry={sign.body} material={mats.lit} position={[0, -0.0, 0]} castShadow />
           <mesh geometry={sign.glow} material={mats.glow} />
         </group>
-      </group>
-      <group ref={ringRef} position={[0, 0.07, 0]}>
-        <mesh geometry={ringGeo1} material={mats.ring} rotation={[-Math.PI / 2, 0, 0]} />
-        <mesh geometry={ringGeo2} material={mats.ring2} rotation={[-Math.PI / 2, 0, 0]} />
-        {Array.from({ length: 12 }, (_, i) => (
-          <mesh key={i} position={[Math.cos((i / 12) * TAU) * 5.32, 0.02, Math.sin((i / 12) * TAU) * 5.32]} rotation={[-Math.PI / 2, 0, -(i / 12) * TAU]}>
-            <circleGeometry args={[0.2, 3]} /><primitive object={mats.ring2} attach="material" />
-          </mesh>
-        ))}
       </group>
       <sprite ref={roleRef} material={role.mat} renderOrder={5} position={[NPC[type].pos[0], 4.0, NPC[type].pos[1]]} scale={[role.aspect * 0.46, 0.46, 1]} />
       <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.45, NPC[type].pos[1]]} scale={[labelW, 0.55, 1]} />
@@ -697,8 +679,6 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) }),
-    ring: new MeshBasicMaterial({ color: new Color(col), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
-    ring2: new MeshBasicMaterial({ color: new Color(col), transparent: true, opacity: 0.2, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     crystal: new MeshBasicMaterial({ color: new Color(1.8, 0.9, 2.6), toneMapped: false }),
     rune: new MeshBasicMaterial({ color: new Color(2.2, 1.6, 0.5), transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), [col]);
@@ -707,8 +687,8 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
   const label = useMemo(() => labelMaterial(shrine ? 'Summoning Shrine' : 'Skill Trainer', '#f1e2b8', { size: 60, plate: 'plate', dot: trainDot }), [shrine, trainDot]);
   const sp = useGameStore((s) => s.skillPoints);
   const spLabel = useMemo(() => (canTrain && sp > 0 ? labelMaterial(`${sp} SP to spend!`, '#ffffff', { size: 50, bg: 'rgba(10,8,6,0.86)', border: '#c8962e' }) : null), [sp]);
-  const near = useRef(false), closedK = useRef(0), rot = useRef(0);
-  const ringRef = useRef<Group>(null!), crystalRef = useRef<Mesh>(null!), runeRef = useRef<Mesh>(null!), titleRef = useRef<Sprite>(null!), spRef = useRef<Sprite>(null!);
+  const near = useRef(false), closedK = useRef(0);
+  const crystalRef = useRef<Mesh>(null!), runeRef = useRef<Mesh>(null!), titleRef = useRef<Sprite>(null!), spRef = useRef<Sprite>(null!);
   const px = position[0], pz = position[2];
   const open = () => {
     const st = useGameStore.getState().status;
@@ -723,11 +703,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
     const closed = closedK.current > 0.5;
     const d = Math.hypot(world.player.pos.x - px, world.player.pos.z - pz);
     near.current = !lobby && !closed && d < 6;
-    rot.current += dt * (near.current ? 1.2 : 0.3);
     const pulse = 0.5 + 0.5 * Math.sin(t * (near.current ? 5 : 1.6));
-    mats.ring.opacity = near.current ? 0.55 + 0.4 * pulse : 0.2 + 0.1 * pulse;
-    mats.ring2.opacity = near.current ? 0.4 + 0.3 * pulse : 0.12;
-    if (ringRef.current) { ringRef.current.visible = false; ringRef.current.rotation.y = rot.current; }
     if (titleRef.current) titleRef.current.visible = !closed;
     if (spRef.current) { spRef.current.visible = !closed; spRef.current.position.y = 7.4; }
     if (shrine) {
@@ -739,7 +715,7 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
       }
     }
   });
-  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; mats.ring2.color.set(on ? '#ffffff' : col); };
+  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; };
   return (
     <group position={position}>
       <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
@@ -749,10 +725,6 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
         <mesh ref={runeRef} material={mats.rune} position={[0, 0.8, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[1.35, 1.55, 8]} /></mesh>
         {q_light(col)}
       </>}
-      <group ref={ringRef} position={[0, 0.07, 0]}>
-        <mesh geometry={ringGeo1} material={mats.ring} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
-        <mesh geometry={ringGeo2} material={mats.ring2} rotation={[-Math.PI / 2, 0, 0]} scale={0.8} />
-      </group>
       <sprite ref={titleRef} material={label.mat} position={[0, shrine ? 5.4 : 6.2, 0]} scale={[label.aspect * 0.85, 0.85, 1]} />
       {spLabel && !shrine && <sprite ref={spRef} material={spLabel.mat} position={[0, 7.4, 0]} scale={[spLabel.aspect * 0.8, 0.8, 1]} />}
       <mesh position={[0, 1.8, shrine ? 0 : 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>

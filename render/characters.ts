@@ -81,10 +81,10 @@ export function useCharacterInstance(key: CharKey): CharInstance {
 export function mergeCharacter(ch: CharInstance): Mesh[] {
   const c = ch as CharInstance & { __merged?: Mesh[] };
   if (c.__merged) return c.__merged;
-  const sk = ch.meshes as SkinnedMesh[];
+  const sk = (ch.meshes as SkinnedMesh[]).filter((m) => m.visible);   // (parts an NPC hides - hat / cape / quiver - stay hidden and are simply not merged)
   const s0 = sk[0];
   const map = s0 ? (s0.material as any).map : null;
-  if (sk.length < 2 || sk.some((m) => !m.isSkinnedMesh || !m.visible || (m.material as any).map !== map || !m.geometry.attributes.skinIndex
+  if (sk.length < 2 || sk.some((m) => !m.isSkinnedMesh || (m.material as any).map !== map || !m.geometry.attributes.skinIndex
     || m.parent !== s0.parent || !m.bindMatrix.equals(s0.bindMatrix) || !m.matrix.equals(s0.matrix))) return (c.__merged = ch.meshes);
   const bones: Bone[] = [], inverses: Matrix4[] = [];
   const parts = sk.map((m) => {

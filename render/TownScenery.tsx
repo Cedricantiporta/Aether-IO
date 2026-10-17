@@ -18,6 +18,7 @@ import {
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
+import { smokePuff } from './fx';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
@@ -214,54 +215,67 @@ function addLamp(b: GB, g: GB, x: number, z: number) {
   b.box(0.38, 0.06, 0.38, [x, 2.82, z], '#2a2a2e'); b.cone(0.3, 0.3, 4, [x, 3.06, z], '#2a2a2e', [0, Math.PI / 4, 0]);
   g.box(0.24, 0.34, 0.24, [x, 2.55, z], '#ffd070');
 }
-/** Procedural cobblestone texture for roads / plaza: pale off-white stones, thin soft mortar, very low contrast. */
+/** Per-pixel grain + a few specks, baked into a canvas once (cheap detail that survives mipmapping). */
+function grain(x: CanvasRenderingContext2D, N: number, rnd: () => number, amp: number, specks: number, speck: string) {
+  const img = x.getImageData(0, 0, N, N), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const k = (rnd() - 0.5) * amp; d[i] += k; d[i + 1] += k; d[i + 2] += k; }
+  x.putImageData(img, 0, 0);
+  x.fillStyle = speck;
+  for (let i = 0; i < specks; i++) { const sx = rnd() * N, sy = rnd() * N, r = 0.8 + rnd() * 2.2; x.globalAlpha = 0.25 + rnd() * 0.35; x.beginPath(); x.ellipse(sx, sy, r, r * 0.7, rnd() * 3, 0, TAU); x.fill(); }
+  x.globalAlpha = 1;
+}
+/** Procedural cobblestone texture for roads / plaza: warm + cool grey-beige stones (per-stone tone), darker mortar, grain and moss specks. */
 function cobbleTexture(): CanvasTexture {
-  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
   const x = c.getContext('2d')!;
-  x.fillStyle = '#cdc8be'; x.fillRect(0, 0, N, N);                 // soft mortar
+  x.fillStyle = '#9d978b'; x.fillRect(0, 0, N, N);                 // mortar
   const rnd = mulberry32(7);
   const rows = 6, h = N / rows;
   for (let r = 0; r < rows; r++) {
-    let px = (r % 2) * -h * 0.55 - rnd() * 6;
+    let px = (r % 2) * -h * 0.55 - rnd() * 12;
     while (px < N) {
       const w = h * (0.95 + rnd() * 0.55), y = r * h;
-      const tone = 226 + Math.floor(rnd() * 10), warm = Math.floor(rnd() * 4);
+      const tone = 196 + Math.floor(rnd() * 26), warm = Math.floor(rnd() * 12) - 4, cool = rnd() < 0.3;   // some stones lean cool (blue-grey), most warm
       for (const ox of [0, N, -N]) {
-        const sx = px + ox + 1.2, sy = y + 1.2, sw = w - 2.4, sh = h - 2.4;
-        x.beginPath(); x.roundRect(sx, sy, sw, sh, 6);
-        x.fillStyle = `rgb(${tone + warm},${tone + warm * 0.7},${tone - 3})`; x.fill();
+        const sx = px + ox + 2.4, sy = y + 2.4, sw = w - 4.8, sh = h - 4.8;
+        x.beginPath(); x.roundRect(sx, sy, sw, sh, 12);
+        x.fillStyle = cool ? `rgb(${tone - 8},${tone - 3},${tone + 2})` : `rgb(${tone + warm},${tone + warm * 0.6},${tone - 8 + warm * 0.2})`; x.fill();
         x.save(); x.clip();
         const gr = x.createLinearGradient(sx, sy, sx + sw, sy + sh);
-        gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(0,0,0,.06)');
+        gr.addColorStop(0, 'rgba(255,255,255,.14)'); gr.addColorStop(0.6, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.14)');
         x.fillStyle = gr; x.fillRect(sx, sy, sw, sh);
         x.restore();
       }
       px += w;
     }
   }
+  grain(x, N, rnd, 16, 90, '#5e7a3a');
   const t = new CanvasTexture(c);
   t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
   return t;
 }
-/** Second subtle texture for the yard: large pale flagstone / cement slabs with hairline joints. */
+/** Second texture for the yard: large pale flagstone slabs with joints, tone variation, grain and moss specks. */
 function pavingTexture(): CanvasTexture {
-  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
   const x = c.getContext('2d')!;
-  x.fillStyle = '#bdb8ae'; x.fillRect(0, 0, N, N);
+  x.fillStyle = '#8f8a7f'; x.fillRect(0, 0, N, N);
   const rnd = mulberry32(19);
   const rows = 3, h = N / rows;
   for (let r = 0; r < rows; r++) {
-    let px = -rnd() * 60;
+    let px = -rnd() * 120;
     while (px < N) {
-      const w = 96 + rnd() * 70, y = r * h;
-      const tone = 199 + Math.floor(rnd() * 9);
+      const w = 192 + rnd() * 140, y = r * h, tone = 190 + Math.floor(rnd() * 22), warm = Math.floor(rnd() * 8) - 3;
       for (const ox of [0, N, -N]) {
-        x.fillStyle = `rgb(${tone},${tone - 1},${tone - 5})`;
-        x.fillRect(px + ox + 1.5, y + 1.5, w - 3, h - 3);
+        x.fillStyle = `rgb(${tone + warm},${tone + warm * 0.5},${tone - 5})`;
+        x.beginPath(); x.roundRect(px + ox + 3, y + 3, w - 6, h - 6, 5); x.fill();
+        const gr = x.createLinearGradient(px + ox, y, px + ox + w, y + h);
+        gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(0,0,0,.10)');
+        x.fillStyle = gr; x.fillRect(px + ox + 3, y + 3, w - 6, h - 6);
       }
       px += w;
     }
   }
+  grain(x, N, rnd, 14, 70, '#6a7f45');
   const t = new CanvasTexture(c);
   t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
   return t;
@@ -316,7 +330,7 @@ function buildDirtPaths(): BufferGeometry {
  *  junctions are seamless; higher road tops simply cover lower edge strips). */
 function buildRoads(): BufferGeometry {
   const r = new GB([1, 1]);
-  const EDGE = '#cfcac0', SURF = '#ffffff';
+  const EDGE = '#b4aea1', SURF = '#e6dfcf';
   for (const rd of ROADS) {
     // only the part inside the walls is paved (outside: a dirt path, see buildDirtPaths)
     if (rd.dirt) continue;
@@ -328,14 +342,14 @@ function buildRoads(): BufferGeometry {
     r.box(len, 0.06, rd.w, [mx, 0.045, mz], SURF, [0, yaw, 0]);
   }
   // plaza: pale concentric discs (above the road layer, so roads simply end at its rim)
-  r.cyl(PLAZA.r, PLAZA.r, 0.08, 32, [PLAZA.x, 0.05, PLAZA.z], '#cbc6bb');
-  r.cyl(PLAZA.r - 0.7, PLAZA.r - 0.7, 0.1, 32, [PLAZA.x, 0.06, PLAZA.z], '#f4f0e6');
-  r.cyl(PLAZA.r * 0.62, PLAZA.r * 0.62, 0.11, 28, [PLAZA.x, 0.065, PLAZA.z], '#fbf8ef');
+  r.cyl(PLAZA.r, PLAZA.r, 0.08, 32, [PLAZA.x, 0.05, PLAZA.z], '#aaa598');
+  r.cyl(PLAZA.r - 0.7, PLAZA.r - 0.7, 0.1, 32, [PLAZA.x, 0.06, PLAZA.z], '#dcd5c4');
+  r.cyl(PLAZA.r * 0.62, PLAZA.r * 0.62, 0.11, 28, [PLAZA.x, 0.065, PLAZA.z], '#e9e2d1');
   r.cyl(2.2, 2.2, 0.12, 24, [PLAZA.x, 0.07, PLAZA.z], '#d9ccaa');
   r.cyl(1.7, 1.7, 0.13, 24, [PLAZA.x, 0.075, PLAZA.z], '#e9deba');
-  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; r.box(0.5, 0.13, 1.5, [PLAZA.x + Math.cos(a) * 4.3, 0.075, PLAZA.z + Math.sin(a) * 4.3], '#c4bfb3', [0, -a + Math.PI / 2, 0]); }
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; r.box(0.5, 0.13, 1.5, [PLAZA.x + Math.cos(a) * 4.3, 0.075, PLAZA.z + Math.sin(a) * 4.3], '#a69f90', [0, -a + Math.PI / 2, 0]); }
   // gate forecourt
-  r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], '#cbc6bb'); r.cyl(5.8, 5.8, 0.1, 24, [GATE.x, 0.06, GATE.z], '#f4f0e6');
+  r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], '#aaa598'); r.cyl(5.8, 5.8, 0.1, 24, [GATE.x, 0.06, GATE.z], '#dcd5c4');
   return planarUv(r.build(), 4);
 }
 
@@ -976,6 +990,24 @@ function TownChunk({ body, glow, lit, glowMat, shadows }: { body: BufferGeometry
   );
 }
 
+/** Thin smoke curling out of the cottage chimneys near the hero (existing FX pool: no extra draw calls; the pool's own quality gate thins it on phones). */
+const CHIMNEYS: [number, number, number][] = HOUSES.filter((h) => h.chimney).map((h) => {
+  const top = 0.6 + h.floors * 2.7, rh = Math.min(h.w, h.d) * 0.55 + 1.1, lx = h.w * 0.24, lz = -h.d * 0.2, c = Math.cos(h.rot), s = Math.sin(h.rot);
+  return [h.x + lx * c + lz * s, top + rh + 1.45, h.z - lx * s + lz * c];
+});
+function ChimneySmoke({ q }: { q: QualityCfg }) {
+  const on = q.fxScale >= 0.7;   // (a live smoke particle keeps the FX pool uploading: skipped on the low / phone tiers)
+  useFrame((_, dt0) => {
+    if (!on || useGameStore.getState().status === GameStatus.PAUSED) return;
+    const dt = Math.min(dt0, 0.05), px = world.player.pos.x, pz = world.player.pos.z;
+    for (let i = 0; i < CHIMNEYS.length; i++) {
+      const c = CHIMNEYS[i], dx = c[0] - px, dz = c[2] - pz;
+      if (dx * dx + dz * dz < 900 && Math.random() < dt * 0.8) smokePuff(c[0], c[1], c[2], 1, 0xc9c5be, 1.5, 3.0, 1.1, 0.25, 0.32);
+    }
+  });
+  return null;
+}
+
 export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
   const mats = useMemo(() => ({
@@ -1013,6 +1045,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <React.Suspense fallback={null}><TownTrees /></React.Suspense>
       <Windmill />
+      <ChimneySmoke q={q} />
       <Lake />
       {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
