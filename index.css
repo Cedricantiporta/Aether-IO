@@ -2798,6 +2798,13 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
   animation: dreamIn 1.6s ease-out both; }   /* (clear in the middle: Aelia stands there) */
 @keyframes dreamIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* (owner) the dream room's haze: low contrast + saturation, a warm-lavender glow and soft vignette; the wake-up veil is soft gold */
+.dream-mist { position: fixed; inset: 0; z-index: 40; pointer-events: none; visibility: hidden; opacity: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(255,244,214,.10) 0%, rgba(255,236,206,.14) 45%, rgba(226,208,244,.38) 85%, rgba(196,176,226,.5) 100%);
+  animation: dreamBreathe 7s ease-in-out infinite; }
+@keyframes dreamBreathe { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.07); } }
+.dream-veil { position: fixed; inset: 0; z-index: 95; visibility: hidden; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, #fffaf0 0%, #ffeec4 100%); }
+
 /* ---- Death Defiance charges (HUD, under the MP bar) */
 .vb-dd { font-family: var(--font-title); font-weight: 800; font-size: .8rem; letter-spacing: .08em; color: #ffd76a; text-shadow: 0 0 6px rgba(255, 190, 60, .7), 0 1px 2px #000; }
 

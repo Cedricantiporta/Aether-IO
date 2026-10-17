@@ -2,6 +2,7 @@ import { CAM_PITCH0 } from './world';
 import { resetBossMech } from './systems/bossMech';
 import { PLAZA, TOWER } from './townData';
 import { runInfo } from './runMods';
+import { dreamFx, blockInput } from './dreamFx';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
 // No React in here. Called from the store (start/stop) and render/Scene (update).
@@ -176,6 +177,7 @@ export function startRun(): void {
 const TOWN_DAY_SEC = 480;
 let prevStatus: GameStatus | null = null;
 export function updateGame(rawDt: number): void {
+  if (dreamFx.busy) blockInput();   // (the wake-up fade: no input)
   watchRank();
   tickFeel(rawDt);
   const status = useGameStore.getState().status;

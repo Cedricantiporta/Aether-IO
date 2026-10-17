@@ -6,6 +6,7 @@ import { useFrame } from '@react-three/fiber';
 import { biomeOf, variantOf } from '../engine/roomDefs';
 import { runInfo } from '../engine/runMods';
 import { world } from '../engine/world';
+import { dreamFx, tickDreamFx } from '../engine/dreamFx';
 import type { MeshBasicMaterial } from 'three';
 
 interface Look { fog: Color; hemiSky: Color; hemiGround: Color; hemiI: number; sun: Color; sunI: number; sky: Vector3; near: number; far: number; dir: Vector3 }
@@ -100,9 +101,16 @@ let glowK = -1;
 export function nightGlow<T extends MeshBasicMaterial>(m: T): T { glowMats.push(m); glowBase.push(m.color.clone()); glowK = -1; return m; }
 export function forgetNightGlow(m: MeshBasicMaterial): void { const i = glowMats.indexOf(m); if (i >= 0) { glowMats.splice(i, 1); glowBase.splice(i, 1); } }
 
+/** (owner) Font dream look: pale gold-lavender haze (denser fog), softer warm light, a hazy pale sky. Restored by the next setLook. */
+function applyDream(): void {
+  dreamFx.inDream = true; runSky = false; runFx.fireflies = 0;
+  target.fog.set('#efe2ee'); target.hemiSky.set('#fff0d8'); target.hemiGround.set('#cdb8d8'); target.hemiI = 1.25;
+  target.sun.set('#ffe2b0'); target.sunI = 2.0; target.sky.set(1, 0.96, 1); target.near = 12; target.far = 62;
+}
+
 /** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2; -3 lava floor, -4 poison floor). `snap` skips the ease (used at full black). */
 export function setLook(biome: number, snap = false, index = 0): void {
-  townMode = false; runSky = false; runFx.fireflies = 0; target.dir.copy(DAY_DIR);
+  townMode = false; runSky = false; runFx.fireflies = 0; target.dir.copy(DAY_DIR); dreamFx.inDream = false;
   if (biome === -3) {
     // crystal cave, lava floor: smoky red-brown fog, warm orange fill
     target.fog.set('#120604'); target.hemiSky.set('#ffb08a'); target.hemiGround.set('#4a2418'); target.hemiI = 1.0;
@@ -130,6 +138,7 @@ export function setLook(biome: number, snap = false, index = 0): void {
     target.sun.set(v?.sun ?? b.sun); target.sunI = v?.sunI ?? b.sunI; target.sky.set(...(v?.skyTint ?? b.skyTint)); target.near = 50;
     target.far = b.style === 'VOID' || b.style === 'BASALT' || (v?.fog && v.hemiI !== undefined && v.hemiI < 0.9) ? 115 : 150;
     applyRunPhase(biome, index);
+    if (world.room.plan?.dream) applyDream();
   }
   if (snap) copy(look, target, 1);
 }
@@ -141,6 +150,8 @@ function copy(a: Look, b: Look, k: number): void {
 
 export function LookDriver() {
   useFrame(({ scene, camera }, dt) => {
+    tickDreamFx(dt);
+    if (dreamFx.haze > 0) lookDim.k = 1 + Math.sin(performance.now() * 0.0009) * 0.07 * dreamFx.haze; else if (lookDim.k !== 1 && !dreamFx.inDream && world.village.area !== 'CAVE') lookDim.k = 1;   // (the light breathes)
     if (townMode) applyTown(townT());
     else if (townSky.on && !runSky) { townSky.on = false; townSky.hor.setRGB(1, 0.93, 0.78); townSky.mid.setRGB(0.55, 0.8, 1); townSky.zen.setRGB(0.2, 0.5, 0.92); townFx.lamp = 0; townFx.stars = 0; }
     const gk = 1 + 0.8 * townFx.lamp;

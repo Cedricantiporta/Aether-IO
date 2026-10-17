@@ -1,4 +1,4 @@
-import { DreamOverlay } from './screens/DreamOverlay';
+import { DreamOverlay, DreamVeil } from './screens/DreamOverlay';
 import { takeAutoplay } from '../characters';
 import React, { useEffect } from 'react';
 import { holdTownMusic } from '../engine/audio';
@@ -81,6 +81,7 @@ export const GameUI: React.FC = () => {
       {(village || inGame) && <InteractPrompt />}
       {(village || inGame) && <TutorialHint />}
       <DreamOverlay />
+      <DreamVeil />
       {(village || inGame) && <Dialogue />}
       {village && <TownFade />}
       {village && <FishingHud />}

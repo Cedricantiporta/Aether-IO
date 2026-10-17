@@ -3,7 +3,7 @@
 // Decoration only (the stream is shallow: no colliders). Built once per dream room from where the hero woke.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
+import { AdditiveBlending, BufferAttribute, CanvasTexture, Points, PointsMaterial, SRGBColorSpace, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
 import { GB, litMat, mulberry32 } from './util';
@@ -96,7 +96,36 @@ function GardenMeshes({ g }: { g: Garden }) {
     <>
       <instancedMesh ref={inst} args={[geo, mat, MAX_FLOWERS]} frustumCulled={false} receiveShadow />
       <mesh geometry={g.river} material={water} receiveShadow />
+      <DreamMotes />
       <mesh geometry={g.deco} material={decoMat} castShadow receiveShadow />
     </>
   );
+}
+
+/** Slow drifting light motes / petals round the hero: one Points draw (40 points), updated per frame without allocation. */
+const N_MOTES = 40;
+function DreamMotes() {
+  const pts = useRef<Points>(null!);
+  const { geo, base, mat } = useMemo(() => {
+    const r = mulberry32(5), base = new Float32Array(N_MOTES * 5);   // dx, y, dz, phase, speed
+    for (let i = 0; i < N_MOTES; i++) { const a = r() * 6.283, d = 2 + r() * 20; base[i * 5] = Math.cos(a) * d; base[i * 5 + 1] = 0.4 + r() * 3.2; base[i * 5 + 2] = Math.sin(a) * d; base[i * 5 + 3] = r() * 6.283; base[i * 5 + 4] = 0.15 + r() * 0.3; }
+    const geo = new BufferGeometry(); geo.setAttribute('position', new BufferAttribute(new Float32Array(N_MOTES * 3), 3));
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d')!;
+    const g = x.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, 'rgba(255,250,225,1)'); g.addColorStop(0.4, 'rgba(255,225,190,0.5)'); g.addColorStop(1, 'rgba(255,210,230,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 32, 32);
+    const map = new CanvasTexture(cv); map.colorSpace = SRGBColorSpace;
+    const mat = new PointsMaterial({ map, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 0.8, depthWrite: false, blending: AdditiveBlending, toneMapped: false, fog: false });
+    return { geo, base, mat };
+  }, []);
+  useEffect(() => () => { geo.dispose(); mat.map?.dispose(); mat.dispose(); }, [geo, mat]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime, a = geo.attributes.position.array as Float32Array, px = world.player.pos.x, pz = world.player.pos.z;
+    mat.opacity = 0.55 + 0.25 * Math.sin(t * 0.8);
+    for (let i = 0; i < N_MOTES; i++) {
+      const b = i * 5, ph = base[b + 3] + t * base[b + 4];
+      a[i * 3] = px + base[b] + Math.sin(ph) * 1.8; a[i * 3 + 1] = base[b + 1] + Math.sin(ph * 1.3) * 0.6 + ((t * 0.08 + base[b + 3]) % 1) * 0.5; a[i * 3 + 2] = pz + base[b + 2] + Math.cos(ph * 0.8) * 1.8;
+    }
+    geo.attributes.position.needsUpdate = true;
+  });
+  return <points ref={pts} geometry={geo} material={mat} frustumCulled={false} renderOrder={6} />;
 }
