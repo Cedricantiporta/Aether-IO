@@ -706,6 +706,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     skillLevels: { ...progOf(hero).skills },   // a run copy: room cards boost it for this run only
     activeAbilityQ: WEAPON_Q[hero] as AbilityType | null,
     upgradeOptions: [] as Upgrade[],
+    runPicks: [] as Upgrade[],
     isInventoryOpen: false,
     isShopOpen: false,
     isCharacterSheetOpen: false,
@@ -808,6 +809,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         isShopOpen: false,
         isCharacterSheetOpen: false,
         isPauseMenuOpen: false,
+        runPicks: [],
         notifications: [],
         actionResult: null,
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
@@ -1038,6 +1040,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         baseStats: base,
         skillLevels: levels,
         stats: calc(base, state.equipment),
+        runPicks: [...state.runPicks, upgrade],
         upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0)) : [],
         status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });

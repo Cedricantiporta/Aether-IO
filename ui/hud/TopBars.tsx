@@ -6,7 +6,7 @@ import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph, Troph
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
-import { Maximize } from '../components/GoldIcons';
+import { Maximize, Layers } from '../components/GoldIcons';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../elixirs';
@@ -174,11 +174,15 @@ export const MenuButtons: React.FC = () => {
   const i = useGameStore((s) => s.isInventoryOpen);
   const openShop = useGameStore((s) => s.openSpecificShop);
   const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert();
+  const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
+  const upCount = useGameStore((s) => s.runPicks.length);
+  const upOpen = useUiStore((s) => s.runUpgradesOpen);
   const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
     <div className="flex gap-[.6rem] pb-1">
       <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
       <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
+      {inRun && <MenuBtn icon={<Layers size={26} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
       <MenuBtn icon={<GoalGlyph />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
       <MenuBtn icon={<TrophyGlyph />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />

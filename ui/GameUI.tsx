@@ -30,6 +30,7 @@ import { EndingScreen } from './screens/Ending';
 import { Prologue, StoryBook } from './screens/Story';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
 import { CodexDialog } from './screens/Codex';
+import { RunUpgradesDialog } from './panels/RunUpgrades';
 import { GoalsDialog } from './screens/Goals';
 import '../goalsTracker';
 import { InventoryPanel } from './panels/Inventory';
@@ -103,6 +104,7 @@ export const GameUI: React.FC = () => {
       <SellDialog />
       <BuyDialog />
       <SettingsDialog />
+      {inGame && <RunUpgradesDialog />}
       <CodexDialog />
       <GoalsDialog />
       <QuestLog />

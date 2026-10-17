@@ -76,6 +76,9 @@ export function installInput(): () => void {
         if (st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED) { st.togglePause(); escPaused = false; }
         else if (inGame) useUiStore.getState().openSettings(true);
         break;
+      case 'Tab':   // Run Upgrades panel (runs only)
+        if (st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED) { const u = useUiStore.getState(); u.openRunUpgrades(!u.runUpgradesOpen); }
+        break;
       case 'KeyI':
         if (inGame) st.toggleInventory();
         break;

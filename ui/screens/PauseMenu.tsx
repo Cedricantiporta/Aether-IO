@@ -1,7 +1,7 @@
 import { useInputMode } from '../lib/inputMode';
 import { ControllerMap } from '../components/ControllerMap';
 import React, { useState } from 'react';
-import { Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from '../components/GoldIcons';
+import { Layers, Play, Settings, BookOpen, Flag, Pause, Maximize, Swords, Monitor, Volume2, Gamepad2, UserRound, Bug, Repeat } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { GameStatus } from '../../types';
 import { activeChar } from '../../characters';
@@ -24,7 +24,7 @@ const KEYS_KB: [string, string][] = [
   ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'], ['Wheel', 'Zoom'],
   ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: attack manually · accept a quest offer'],
   ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
-  ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Esc', 'Pause / Settings · close a window'],
+  ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Tab', 'Run upgrades (in a run)'], ['Esc', 'Pause / Settings · close a window'],
 ];
 export const PauseMenu: React.FC = () => {
   const open = useGameStore((s) => s.isPauseMenuOpen);
@@ -32,13 +32,15 @@ export const PauseMenu: React.FC = () => {
   const abandonRun = useGameStore((s) => s.abandonRun);
   const openSettings = useUiStore((s) => s.openSettings);
   const openCodex = useUiStore((s) => s.openCodex);
+  const openRunUpgrades = useUiStore((s) => s.openRunUpgrades);
   const askConfirm = useUiStore((s) => s.askConfirm);
-  const blocked = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || !!s.confirm);
+  const blocked = useUiStore((s) => s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || !!s.confirm);
   return (
     <Modal open={open} title="Paused" ribbon tone="gold" width="21rem" z={150} onClose={() => !blocked && togglePause()} onConfirm={blocked ? undefined : togglePause}>
       <div className="flex flex-col gap-3 pt-2">
         <Button variant="primary" size="lg" onClick={togglePause}><Play size={18} fill="currentColor" /> Resume</Button>
         <Button onClick={() => openSettings(true)}><Settings size={16} /> Settings</Button>
+        <Button onClick={() => openRunUpgrades(true)}><Layers size={16} /> Run Upgrades</Button>
         <Button onClick={() => openCodex(true)}><BookOpen size={16} /> Codex</Button>
         <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and your xp is kept and the room bonus gold is paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run

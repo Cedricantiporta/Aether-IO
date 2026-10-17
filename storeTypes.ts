@@ -140,6 +140,7 @@ export interface GameState {
   elixirsRun: import('./elixirs').ElixirId[];         // elixir buffs active in the current run (gone when the run ends)
   equipment: Equipment;
   upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)
+  runPicks: Upgrade[];                // every reward card picked this run, in order (reset on run start; feeds the Run Upgrades panel)
 
   // ---- UI panels
   isInventoryOpen: boolean;

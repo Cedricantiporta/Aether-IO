@@ -21,6 +21,8 @@ interface UiState {
   questLogOpen: boolean;                // Quest log (main / NPC / board quests + rewards)
   openQuestLog: (v: boolean) => void;
   settingsOpen: boolean;
+  runUpgradesOpen: boolean;             // in-run Run Upgrades panel (Tab)
+  openRunUpgrades: (v: boolean) => void;
   sellItem: Item | null;
   buyItem: Item | null;
   /** buy dialog overrides (merchant / pets): unit price, how many are left, and the purchase itself */
@@ -61,6 +63,8 @@ export const useUiStore = create<UiState>((set) => ({
   questLogOpen: false,
   openQuestLog: (v) => set({ questLogOpen: v }),
   settingsOpen: false,
+  runUpgradesOpen: false,
+  openRunUpgrades: (v) => set({ runUpgradesOpen: v }),
   sellItem: null,
   buyItem: null, buyOpts: null,
   selectedItem: null,
@@ -93,7 +97,7 @@ export type { Rarity };
 /** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
 export function uiOverlayOpen(): boolean {
   const s = useUiStore.getState();
-  return s.settingsOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+  return s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
 }
 
 /** Closes the top-most overlay. Returns true if something was closed. */
@@ -104,6 +108,7 @@ export function closeTopOverlay(): boolean {
   if (s.sellItem) { s.setSellItem(null); return true; }
   if (s.buyItem) { s.setBuyItem(null); return true; }
   if (s.storyOpen) { s.openStory(false); return true; }
+  if (s.runUpgradesOpen) { s.openRunUpgrades(false); return true; }
   if (s.settingsOpen) { s.openSettings(false); return true; }
   if (s.codexOpen) { s.openCodex(false); return true; }
   if (s.goalsOpen) { s.openGoals(false); return true; }
