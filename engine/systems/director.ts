@@ -665,13 +665,13 @@ function grantReward(kind: RewardKind, bonus: number): void {
       for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(sx, cz), Math.round(total / 6));
       break;
     }
-    case 'SHARDS': {
-      spawnPickup('SHARD', at(sx, cz), shardRarity(depth + 6));   // (owner: shards are rare - one per drop)
-      st.addCrystals(1 + Math.floor(depth / 20), { x: sx, z: cz });   // + Aether Crystals
+    case 'SHARDS': {   // (owner) the crystal altar: Aether Crystals first, sometimes a shard on top
+      st.addCrystals(2 + Math.floor(depth / 8) + biome, { x: sx, z: cz });
+      if (Math.random() < 0.3) spawnPickup('SHARD', at(sx, cz), shardRarity(depth + 6));
       break;
     }
-    case 'ITEM': {
-      const it = st.rollItemDrop(rarityForDepth(depth, bonus, world.run.bossKills));
+    case 'ITEM': {   // (owner) gear only; deeper biomes push the odds toward purple and up
+      const it = st.rollItemDrop(rarityForDepth(depth, bonus + 0.12 + 0.12 * biome, world.run.bossKills));
       if (it) spawnPickup('ITEM', at(sx, cz), 0, it);
       break;
     }
@@ -687,6 +687,37 @@ function grantReward(kind: RewardKind, bonus: number): void {
     }
     default: break;
   }
+}
+
+/** (owner) Treasure chest: 1-2 different picks from a wide pool - a gold hoard, gems, a valuable trinket, a shard,
+ *  potions, a reforge item, an Upgrade Core (Tier II deeper in), Aether Crystals, or now and then a piece of gear. */
+const CHEST_POOL: readonly (readonly [string, number])[] = [['gold', 22], ['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 9], ['crystals', 8]];
+function chestLoot(x: number, z: number): void {
+  const st = useGameStore.getState();
+  const n = Math.random() < 0.4 ? 2 : 1, used = new Set<string>();
+  const give = (it: import('../../types').Item | undefined) => { if (it) spawnPickup('ITEM', at(x, z), 0, it); };
+  for (let k = 0; k < n; k++) {
+    let tot = 0; for (const [id, w] of CHEST_POOL) if (!used.has(id)) tot += w;
+    let r = Math.random() * tot, pick = 'gold';
+    for (const [id, w] of CHEST_POOL) { if (used.has(id)) continue; r -= w; if (r <= 0) { pick = id; break; } }
+    used.add(pick);
+    switch (pick) {
+      case 'gold': for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(x, z), Math.round(50 + depth * 14)); break;
+      case 'gems': for (let i = 0; i < 3; i++) spawnPickup('GEM', at(x, z), 2 + Math.floor(depth / 6)); break;
+      case 'trinket': {   // a valuable sell-only trinket (Rare+, Epic+ deeper)
+        const min = depth >= 30 ? 'EPIC' : 'RARE', order = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+        const pool = Object.values(LOOT_BY_ID).filter((l) => order.indexOf(l.rarity) >= order.indexOf(min) && order.indexOf(l.rarity) <= order.indexOf(min) + 1);
+        if (pool.length) give(lootItem(pool[Math.floor(Math.random() * pool.length)], 1));
+        break;
+      }
+      case 'shard': spawnPickup('SHARD', at(x, z), shardRarity(depth + 4)); break;
+      case 'potions': give(makeItemById(Math.random() < 0.5 ? (depth >= 25 ? 'potion_hp_big' : 'potion_hp') : (depth >= 25 ? 'potion_mana_big' : 'potion_mana'), 2)[0]); break;
+      case 'reforge': give(makeItemById(['reforge_stone', 'temper_oil', 'augment_rune', 'erase_scroll'][Math.floor(Math.random() * 4)], 1)[0]); break;
+      case 'core': give(makeItemById(biome >= 3 && Math.random() < 0.35 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]); break;
+      case 'crystals': st.addCrystals(2 + Math.floor(depth / 10), { x, z }); break;
+    }
+  }
+  if (Math.random() < 0.15) give(st.rollItemDrop(rarityForDepth(depth, 0.2, world.run.bossKills)) ?? undefined);   // now and then a piece of gear
 }
 
 function bossRewards(): void {
@@ -1077,10 +1108,7 @@ export function interactRoom(it: Interactable): void {
     if (!st.isShopOpen) st.openSpecificShop('MERCHANT');
   } else if (s.kind === 'CHEST' && s.ready && !s.used) {
     s.used = true;
-    const it2 = st.rollItemDrop(rarityForDepth(depth, 0.2, world.run.bossKills));
-    if (it2) spawnPickup('ITEM', at(s.x, s.z), 0, it2);
-    for (let i = 0; i < 4; i++) spawnPickup('GOLD', at(s.x, s.z), Math.round(30 + depth * 8));
-    spawnPickup('SHARD', at(s.x, s.z), shardRarity(depth));   // one shard (owner)
+    chestLoot(s.x, s.z);   // (owner) a surprise: 1-2 picks from a wide pool
     events.emit('shake', { amount: 0.25 });
     vacuumT = 1.2; // pick it all up soon
   } else if (s.kind === 'ALTAR' && !s.used && d.phase === 'CLEARED') {

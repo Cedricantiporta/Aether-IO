@@ -237,7 +237,7 @@ export const TYPE_NAME: Record<RoomType, string> = {
   DUEL: 'Champion Duel', GATEKEEPER: 'The Gatekeeper',
 };
 export const REWARD_NAME: Record<RewardKind, string> = {
-  CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Shards', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
+  CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Crystals', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
 };
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
@@ -324,7 +324,8 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([
       ['COMBAT', i === 0 ? 100 : 50], ['ELITE', next >= 2 ? 16 : 0], ['MINIBOSS', next >= 3 ? (storyBias.champion ? 28 : 9) : 0], ['TREASURE', 9], ['SHRINE', next >= 2 && shrineOk ? 9 : 0],
-      ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0],   // (merchants only at depth 14)
+      ['FOUNTAIN', next >= 2 && fountainOk ? 8 : 0],
+      ['MERCHANT', next >= 4 && merchantOk ? 7 : 0],   // (owner) the travelling merchant can also turn up mid-biome (once per biome; depth 14 always has one)
     ]);
     // reward kinds may repeat between two combat doors, but special rooms only once per set
     if (t !== 'COMBAT' && used.has(t)) { out.push(plan('COMBAT', next)); continue; }

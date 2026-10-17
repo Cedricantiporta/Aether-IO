@@ -2734,3 +2734,24 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .sm-card:not(.open).sm-legendary .sm-back, .sm-card:not(.open).sm-mythic .sm-back { animation-duration: 1.05s; }
 .sm-card:not(.open).sm-epic .sm-back-sigil, .sm-card:not(.open).sm-legendary .sm-back-sigil, .sm-card:not(.open).sm-mythic .sm-back-sigil { color: var(--rc); text-shadow: 0 0 16px var(--rc); }
 @keyframes sm-aura-back { from { filter: brightness(.92); } to { filter: brightness(1.22); } }
+/* (owner) "Upgrade available" pill (bottom-left notification area) + its popup list */
+.upn { position: absolute; left: calc(env(safe-area-inset-left, 0px) + 1.2rem); bottom: 8.6rem; z-index: 21; display: flex; align-items: center; gap: .55rem;
+  padding: .22rem .3rem .22rem .75rem; background: linear-gradient(90deg, rgba(14,10,8,.88), rgba(14,10,8,.62)); border: 1px solid rgba(201,150,46,.55);
+  box-shadow: 0 2px 10px rgba(0,0,0,.45), inset 0 0 12px rgba(201,150,46,.08); color: #f3e4bd; font-family: var(--font-title); font-size: .78rem; font-weight: 700; letter-spacing: .04em; animation: upn-in .3s ease-out; }
+.upn b { min-width: 1.15rem; height: 1.15rem; display: grid; place-items: center; border-radius: 50%; background: #c8352b; color: #fff; font-size: .62rem; font-family: var(--font-body, inherit); }
+.upn-btn { padding: .12rem .6rem; border: 1px solid #c9962e; background: linear-gradient(#3a2d17, #1e160b); color: #ffd98a; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; min-height: 0; }
+.upn-btn:hover { filter: brightness(1.25); }
+@keyframes upn-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+.upn-list { display: flex; flex-direction: column; gap: .45rem; }
+.upn-row { display: flex; align-items: center; gap: .75rem; padding: .55rem .7rem; background: rgba(255,255,255,.035); border: 1px solid rgba(201,150,46,.25); }
+.upn-row > div { flex: 1; display: flex; flex-direction: column; gap: .1rem; }
+.upn-row b { color: #f3e4bd; font-size: .86rem; } .upn-row em { font-style: normal; color: #b9ab8c; font-size: .72rem; }
+.upn-none { color: #b9ab8c; font-size: .8rem; text-align: center; padding: 1rem 0; }
+/* (owner) Summon / Gem Shop / Tech House: a slim dark-gold scrollbar inside the window instead of the bright native one */
+.sw-win, .sw-win * { scrollbar-width: thin; scrollbar-color: #8b6420 transparent; }
+.sw-win ::-webkit-scrollbar, .sw-win::-webkit-scrollbar { width: 6px; height: 6px; }
+.sw-win ::-webkit-scrollbar-track, .sw-win::-webkit-scrollbar-track { background: transparent; }
+.sw-win ::-webkit-scrollbar-thumb, .sw-win::-webkit-scrollbar-thumb { background: linear-gradient(#c9962e, #7a5418); border-radius: 3px; }
+.sw-win ::-webkit-scrollbar-button { display: none; height: 0; }
+.sw-win { overflow: hidden; }
+.sw-main { min-height: 0; overflow: hidden; }

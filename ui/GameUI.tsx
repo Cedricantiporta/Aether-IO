@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { GameStatus } from '../types';
 import { HUD } from './hud/HUD';
 import { CurrencyFloat } from './hud/TopBars';
+import { UpgradeNotice } from './hud/UpgradeNotice';
 import { TouchControls } from './hud/TouchControls';
 import { InteractPrompt } from './hud/InteractPrompt';
 import { Dialogue } from './hud/Dialogue';
@@ -80,6 +81,7 @@ export const GameUI: React.FC = () => {
       {village && <TownFade />}
       {village && <FishingHud />}
       {(village || inGame) && <CurrencyFloat />}
+      {village && <UpgradeNotice />}
       <AnimatePresence>
         {panels && (inv || bagShop) && <InventoryPanel key="inv" />}
         {panels && shop && !summonTab && <ShopPanel key="shop" />}
