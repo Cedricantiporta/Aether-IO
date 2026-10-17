@@ -20,7 +20,7 @@ import { CameraRig } from './CameraRig';
 import { Terrain } from './Terrain';
 import { Props } from './Props';
 import { Town } from './Town';
-import { Fireflies } from './Fireflies';
+import { Fireflies, RunFireflies } from './Fireflies';
 import { ChurchInterior } from './ChurchInterior';
 import { TavernInterior } from './TavernInterior';
 import { CastleInterior } from './CastleInterior';
@@ -84,7 +84,7 @@ export function Scene() {
       <CameraRig />
       <ClickMarker />
       <ShaderWarmup k={`${q.name}:${gameplay}:${roomVer}:${world.village.area}`} />
-      {gameplay ? <><Room q={q} /><DreamGarden /></> : world.village.area === 'HOME' ? (
+      {gameplay ? <><Room q={q} /><DreamGarden /><RunFireflies q={q} /></> : world.village.area === 'HOME' ? (
         <Suspense fallback={null}><HomeInterior q={q} /></Suspense>
       ) : world.village.area === 'TAVERN' ? (
         <Suspense fallback={null}><TavernInterior q={q} /></Suspense>

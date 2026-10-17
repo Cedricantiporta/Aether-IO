@@ -100,6 +100,8 @@ export const world = {
   time: 0,              // total simulated seconds (only advances while PLAYING)
   /** Town time of day 0..1 (0 / 1 dawn, 0.25 noon, 0.5 dusk, 0.75 midnight); ~8 min per day, only runs in town (engine/game.ts). Not persisted. */
   townTime: 0.15,
+  /** Time of day of the current run (snapshot of townTime at run start; fixed for the whole run) and its phase: 0 day, 1 dusk, 2 night, 3 dawn. Tower / waves / daily stay day. Only biomes 0, 2, 3, 4 use it (render/biomeLook). */
+  runTime: 0.25, runPhase: 0,
   frame: 0,
   player: makePlayer(),
   // state: 0 FOLLOW, 1 FETCH, 2 ATTACK. carry = PickupKind being carried back (cosmetic), carryT = seconds left.

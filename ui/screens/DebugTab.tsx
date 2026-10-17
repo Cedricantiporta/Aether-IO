@@ -106,7 +106,7 @@ export const DebugTab: React.FC = () => {
     <Line label="God mode" hint="Your hero takes no damage."><Toggle checked={debug.god} onChange={(v) => flip('god', v)} label="God mode" /></Line>
     <Line label="One-hit kills" hint="Every hit kills, bosses included."><Toggle checked={debug.oneHit} onChange={(v) => flip('oneHit', v)} label="One-hit kills" /></Line>
     <Line label="Max skills" hint="Every run starts with all of this hero's skills at max level."><Toggle checked={debug.maxSkills} onChange={(v) => { flip('maxSkills', v); if (v && inRun) useGameStore.getState().debugMaxSkills(); }} label="Max skills" /></Line>
-    <Line label="Town time" hint="Sets the town's time of day (the clock keeps running).">
+    <Line label="Town time" hint="Sets the town's time of day (the clock keeps running). The next run snapshots it as its time of day (Greenwood d1-10, Desert, Isles, Frostpeak).">
       {([['Morning', 0.15], ['Noon', 0.25], ['Dusk', 0.5], ['Night', 0.75]] as const).map(([l, t]) => <Button key={l} size="sm" data-testid={`dbg-time-${l.toLowerCase()}`} onClick={() => { world.townTime = t; toast(`Debug: town time ${l.toLowerCase()}`); }}>{l}</Button>)}
     </Line>
     <Line label="Unlock adventure" hint="Skips the opening story steps so the Adventure Portal is open right away (main quest jumps to the King's first task).">

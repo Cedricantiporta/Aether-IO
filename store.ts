@@ -15,7 +15,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { runInfo, hardMul, type RunMode } from './engine/runMods';
+import { runInfo, hardMul, phaseOfTime, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
 import { create } from 'zustand';
@@ -794,6 +794,8 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     startGame: () => {
       const state = get();
+      // the run's time of day: a snapshot of the town clock (the endless tower, waves and daily keep day)
+      world.runTime = world.townTime; world.runPhase = runInfo.mode === 'TOWER' ? 0 : phaseOfTime(world.townTime);
       const l = loadoutFor(state.hero, state.inventory, state.equipment);
       // elixirs drunk in town start working now (for this run only)
       const elixirs = state.elixirsNext.slice();

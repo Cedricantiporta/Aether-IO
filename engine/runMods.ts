@@ -28,3 +28,6 @@ export function runMods(difficulty: Difficulty): RunMods {
   out.hp *= dailyMods.hp; out.spawn *= dailyMods.spawn; out.speed *= dailyMods.enemySpeed; out.elites += dailyMods.elites;
   return out;
 }
+
+/** Town-clock time 0..1 (0 dawn, .25 noon, .5 dusk, .75 midnight) to a run phase: 0 day, 1 dusk, 2 night, 3 dawn. */
+export const phaseOfTime = (t: number): number => { const k = Math.round((t - Math.floor(t)) * 4) & 3; return k === 0 ? 3 : k === 1 ? 0 : k === 2 ? 1 : 2; };
