@@ -39,6 +39,7 @@ import { ShopPanel } from './panels/ShopPanel';
 import { SummonWindow } from './panels/SummonWindow';
 import { TutorialHint } from './hud/TutorialHint';
 import { QuestLog } from './screens/QuestLog';
+import { TodoInTown } from './screens/TodoInTown';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
 import { FishingHud } from './hud/FishingHud';
@@ -108,6 +109,7 @@ export const GameUI: React.FC = () => {
       <CodexDialog />
       <GoalsDialog />
       <QuestLog />
+      {village && <TodoInTown />}
       <GlobalConfirm />
       <SummonReveal />
       <TooltipLayer />

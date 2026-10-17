@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ScrollText, Skull, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from '../components/GoldIcons';
+import { Skull, Home, Swords, Clock, Coins, Crown, Zap, Flame, ArrowUpCircle, Trophy, Medal } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { Panel, Ribbon } from '../components/Frame';
@@ -9,7 +9,7 @@ import { timeMMSS } from '../lib/game';
 import { FALL_LINES } from '../../lore';
 import { DailyResultRows } from './DailyCard';
 import { WavesResultRows } from './WavesCard';
-import { upgradesOf } from '../hud/UpgradeNotice';
+import { useUiStore } from '../uiStore';
 
 const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; record?: boolean; delay: number }> = ({ icon, label, value, record, delay }) => (
   <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 22 }}
@@ -21,29 +21,11 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNo
   </motion.div>
 );
 
-/** (owner) things worth doing once back in town: the "Ways to grow stronger" entries + available side quests (max 5). */
-const SUGGEST_MAX = 5;
-const Suggestions: React.FC = () => {
-  const sig = useGameStore(useShallow((s) => upgradesOf(s).slice(0, SUGGEST_MAX).map((u) => u.key + u.title)));
-  const [hint, setHint] = useState('');
-  if (sig.length === 0) return null;
-  const list = upgradesOf(useGameStore.getState()).slice(0, SUGGEST_MAX);
-  return (
-    <div className="rpg-frame px-3 py-2 mt-3" data-testid="death-suggestions">
-      <div className="rpg-label !text-[.6rem] mb-1">To do in town</div>
-      {list.map((u) => (
-        <button key={u.key} className="flex items-center gap-2 w-full text-left py-[.2rem] bg-transparent border-0 cursor-pointer" style={{ color: 'inherit' }} onClick={() => setHint(`${u.title}: do it in town.`)}>
-          <span className="text-[var(--gold)]">{u.quest ? <ScrollText size={14} /> : <ArrowUpCircle size={14} />}</span>
-          <span className="min-w-0 flex-1 text-[.78rem] truncate">{u.title}</span>
-        </button>
-      ))}
-      {hint && <div className="text-[.7rem] mt-1" style={{ opacity: 0.75 }}>{hint}</div>}
-    </div>
-  );
-};
-
 export const GameOver: React.FC = () => {
-  const { run, stats, resetGame, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, resetGame: s.resetGame, hero: s.hero })));
+  const { run, stats, resetGame: reset, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, resetGame: s.resetGame, hero: s.hero })));
+  const victory = !!run?.victory;
+  // after a defeat (not a victory) the town shows the "To do in town" popup once the hero spawns there
+  const resetGame = React.useCallback(() => { useUiStore.getState().setTodoPending(!victory); reset(); }, [reset, victory]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Enter') resetGame(); };
@@ -86,7 +68,6 @@ export const GameOver: React.FC = () => {
               </div>
             </>
           )}
-          <Suggestions />
           <div className="flex gap-3 mt-5">
             <Button className="flex-1 whitespace-nowrap !px-3" variant="primary" size="lg" onClick={resetGame} pulse data-testid="to-village"><Home size={18} /> Return to town</Button>
           </div>

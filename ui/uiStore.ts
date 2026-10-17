@@ -21,6 +21,10 @@ interface UiState {
   questLogOpen: boolean;                // Quest log (main / NPC / board quests + rewards)
   openQuestLog: (v: boolean) => void;
   settingsOpen: boolean;
+  todoPending: boolean;                 // set on Return to town after a defeat: the town popup opens once
+  setTodoPending: (v: boolean) => void;
+  todoTownOpen: boolean;                // "To do in town" popup
+  setTodoTownOpen: (v: boolean) => void;
   runUpgradesOpen: boolean;             // in-run Run Upgrades panel (Tab)
   openRunUpgrades: (v: boolean) => void;
   sellItem: Item | null;
@@ -63,6 +67,10 @@ export const useUiStore = create<UiState>((set) => ({
   questLogOpen: false,
   openQuestLog: (v) => set({ questLogOpen: v }),
   settingsOpen: false,
+  todoPending: false,
+  setTodoPending: (v) => set({ todoPending: v }),
+  todoTownOpen: false,
+  setTodoTownOpen: (v) => set({ todoTownOpen: v }),
   runUpgradesOpen: false,
   openRunUpgrades: (v) => set({ runUpgradesOpen: v }),
   sellItem: null,
@@ -97,7 +105,7 @@ export type { Rarity };
 /** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
 export function uiOverlayOpen(): boolean {
   const s = useUiStore.getState();
-  return s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+  return s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || s.todoTownOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
 }
 
 /** Closes the top-most overlay. Returns true if something was closed. */
@@ -113,5 +121,6 @@ export function closeTopOverlay(): boolean {
   if (s.codexOpen) { s.openCodex(false); return true; }
   if (s.goalsOpen) { s.openGoals(false); return true; }
   if (s.questLogOpen) { s.openQuestLog(false); return true; }
+  if (s.todoTownOpen) { s.setTodoTownOpen(false); return true; }
   return false;
 }
