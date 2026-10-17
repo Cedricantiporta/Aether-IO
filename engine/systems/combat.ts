@@ -1,3 +1,4 @@
+import { riruruDied } from './riruru';
 import { KILL_XP_MUL } from '../../classLevels';
 // ============================================================================
 // Combat: damage in/out, death + loot, healing, status effects.
@@ -442,6 +443,7 @@ export function killEnemy(e: Enemy): void {
     return;
   }
 
+  riruruDied(e);   // (owner cameo) Riruru drops 3 Mana Potions
   const run = world.run;
   run.kills++;
   if (e.elite) run.eliteKills++;

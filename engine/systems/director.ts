@@ -35,6 +35,7 @@ import { SOUL_EMBER } from '../../crafting';
 const SOUL_EMBER_CHANCE = 0.05;
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
+import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
 import { resetSpecials, setSlimeKing, initSpecial } from './bossSpecials';
@@ -160,7 +161,7 @@ function towerPlan(f: number): RoomPlan {
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
 
 export function resetDirector(): void {
-  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates(); resetWanderers();
+  resetRoomEvent(); bossKeyState.has = false; clearMinions(); resetGates(); resetWanderers(); resetRiruru();
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
@@ -883,7 +884,10 @@ function tickFight(dt: number): void {
   }
   const idle = nextUnit >= unitN && fixedN === 0 && !miniPending && !duelPending && markers === 0 && d.aliveCount === 0;
   if (r.shrineOn) { if (roomT > 1.2 && idle && unitN > 0) onCleared(); return; }
-  if (roomT > (unitN === 0 && !miniPending && fixedN === 0 && plan.type !== 'DUEL' ? 0.6 : 1.2) && idle) onCleared();
+  if (roomT > (unitN === 0 && !miniPending && fixedN === 0 && plan.type !== 'DUEL' ? 0.6 : 1.2) && idle) {
+    if (runInfo.mode === 'ADVENTURE' && maybeRiruru(biome % BIOMES.length, plan.type)) return;   // (owner cameo) a small blue slime first
+    onCleared();
+  }
 }
 
 function towerCleared(): void {

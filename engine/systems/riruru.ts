@@ -1,0 +1,45 @@
+// (owner cameo) Riruru, the friendly blue slime: in biome 1, once per run, a cleared combat room has a 5% chance that a
+// lone small blue slime hops in after the last monster falls. It never deals damage but has 10x a slime's HP; the room
+// only clears once it is down, and it drops 3 Mana Potions. render/Enemies tints it blue, the target frame names it.
+import { Vector3 } from 'three';
+import { world } from '../world';
+import { useGameStore, makeItemById } from '../../store';
+import { spawnEnemy, isSpawnable } from './enemies';
+import { spawnPickup } from './pickups';
+import type { Enemy } from '../types';
+
+export const riruru = { id: -1, done: false };
+const CHANCE = 0.05;
+const at = new Vector3();
+
+export function resetRiruru(): void { riruru.id = -1; riruru.done = false; }
+export const isRiruru = (e: Enemy): boolean => e.id === riruru.id && e.active;
+
+/** The room just went quiet: maybe Riruru appears (true = it did, the room is not cleared yet). */
+export function maybeRiruru(biome: number, type: string): boolean {
+  if (riruru.done || biome !== 0 || (type !== 'COMBAT' && type !== 'ELITE')) return false;
+  if (Math.random() >= CHANCE) { return false; }
+  const p = world.player.pos;
+  for (let t = 0; t < 20; t++) {
+    const a = Math.random() * Math.PI * 2, d = 6 + Math.random() * 4;
+    const x = p.x + Math.sin(a) * d, z = p.z + Math.cos(a) * d;
+    if (!isSpawnable(x, z)) continue;
+    const e = spawnEnemy('SLIME', at.set(x, 0, z));
+    if (!e) return false;
+    riruru.done = true; riruru.id = e.id;
+    e.maxHp *= 10; e.hp = e.maxHp; e.contactDamage = 0; e.projectileDamage = 0; e.attackCd = 1e9;
+    e.scale *= 0.75; e.radius *= 0.8;   // a small slime
+    useGameStore.getState().addNotification('A small blue slime bounces in... "Hi! I am Riruru! Please do not hit me!"', '#6cc4ff', 'SYSTEM');
+    return true;
+  }
+  return false;
+}
+
+/** Riruru fell: 3 Mana Potions pop out. */
+export function riruruDied(e: Enemy): void {
+  if (e.id !== riruru.id) return;
+  riruru.id = -1;
+  const pots = makeItemById('potion_mana', 1);
+  for (let k = 0; k < 3; k++) if (pots[0]) spawnPickup('ITEM', at.set(e.pos.x + (k - 1) * 0.9, 0, e.pos.z), 0, { ...pots[0], id: `${pots[0].id}_rr${Date.now()}_${k}` });
+  useGameStore.getState().addNotification('Riruru: "Ow... here, take these. No hard feelings!"', '#6cc4ff', 'SYSTEM');
+}

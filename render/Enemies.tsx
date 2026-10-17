@@ -1,3 +1,4 @@
+import { riruru } from '../engine/systems/riruru';
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
 import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
 import { questKill } from '../engine/systems/npcQuestLogic';
@@ -188,6 +189,7 @@ export function Enemies() {
       if (e.affix !== 'NONE') { const a = AFFIX_TINT[e.affix]; r *= a[0]; g *= a[1]; b *= a[2]; }
       const gob = world.roomEvt.obj === 'GOBLIN' && world.roomEvt.enemy === e.id;   // the treasure goblin: gilded and glowing
       if (gob) { const p = 0.85 + 0.15 * Math.sin(t * 6); r = 1.9 * p; g = 1.5 * p; b = 0.35; }
+      if (e.id === riruru.id) { r = 0.35; g = 0.8; b = 2.1; }   // (owner cameo) Riruru: a bright blue slime
       if (e.freezeT > 0) { r *= 0.6; g *= 0.92; b *= 1.4; fl = Math.max(fl, 0.14); }
       if (e.burnT > 0) { const p = 0.5 + 0.5 * Math.sin(t * 14 + i); r *= 1.3; g *= 0.78 + 0.12 * p; b *= 0.55; }
       if (e.poisonT > 0) { r *= 0.72; g *= 1.25; b *= 0.62; }

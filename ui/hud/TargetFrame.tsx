@@ -1,3 +1,4 @@
+import { riruru } from '../../engine/systems/riruru';
 import React, { useRef } from 'react';
 import { questKill } from '../../engine/systems/npcQuestLogic';
 import { ScrollText, X, Flame, Snowflake, Star, ShieldOff, Skull, ChevronsDown, Ghost } from '../components/GoldIcons';
@@ -43,7 +44,7 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
     if (s.id !== e.id) {
       s.id = e.id; s.hp = ''; s.val = ''; s.ic = ''; s.sh = '';
       const def = ENEMY_DEFS[e.kind];
-      const n = def ? def.name : e.kind;
+      const n = e.id === riruru.id ? 'Riruru' : def ? def.name : e.kind;
       if (name.current) {
         name.current.textContent = (e.elite ? 'Elite ' : e.mini ? 'Champion ' : '') + n;
         name.current.style.color = e.elite || e.mini ? '#e8d3a0' : '#ece4d4';   // (owner: calmer text colours)

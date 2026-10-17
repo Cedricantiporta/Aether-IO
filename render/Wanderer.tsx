@@ -58,37 +58,6 @@ function dressKeeto(mats: any[], root: Object3D): () => void {
   };
 }
 
-/** (owner) Riruru: a round, glossy blue slime that bounces in place and turns to look at the hero. */
-function SlimeActor({ def }: { def: number }) {
-  const d = WANDERERS[def];
-  const g = useRef<Group>(null!), body = useRef<Mesh>(null!), mark = useRef<Sprite>(null!);
-  const tag = useMemo(() => labelMaterial(`${d.name} · ${d.title}`, d.accent, { size: 44, plate: 'mini' }), [d]);
-  const mats = useMemo(() => ({
-    gel: new MeshStandardMaterial({ color: '#3d9bff', roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.88, emissive: '#1a4fa0', emissiveIntensity: 0.35 }),
-    eye: new MeshStandardMaterial({ color: '#10131c', roughness: 0.3 }),
-  }), []);
-  useEffect(() => () => { mats.gel.dispose(); mats.eye.dispose(); }, [mats]);
-  const yaw = useRef(0);
-  useFrame((_, dt) => {
-    if (!g.current) return;
-    const t = world.time, hop = Math.abs(Math.sin(t * 3.2));
-    const p = world.player.pos;
-    yaw.current = angleLerp(yaw.current, Math.atan2(p.x - wander.x, p.z - wander.z), 1 - Math.exp(-4 * dt));
-    g.current.position.set(wander.x, hop * 0.35, wander.z); g.current.rotation.y = yaw.current;
-    body.current.scale.set(1 + (1 - hop) * 0.12, 0.85 - (1 - hop) * 0.1, 1 + (1 - hop) * 0.12);
-    if (mark.current) { mark.current.visible = !wander.used; mark.current.position.y = 2.6 + Math.sin(t * 3) * 0.1; }
-  });
-  return (
-    <group ref={g} position={[wander.x, 0, wander.z]}>
-      <mesh ref={body} material={mats.gel} position={[0, 0.62, 0]} castShadow><sphereGeometry args={[0.75, 24, 16]} /></mesh>
-      <mesh material={mats.eye} position={[-0.24, 0.78, 0.6]} scale={[0.6, 1.4, 0.5]}><sphereGeometry args={[0.08, 10, 8]} /></mesh>
-      <mesh material={mats.eye} position={[0.24, 0.78, 0.6]} scale={[0.6, 1.4, 0.5]}><sphereGeometry args={[0.08, 10, 8]} /></mesh>
-      <sprite ref={mark} material={MARK.mat} position={[0, 2.6, 0]} scale={[MARK.aspect * 1.2, 1.2, 1]} renderOrder={6} />
-      <sprite material={tag.mat} position={[0, 2.0, 0]} scale={[tag.aspect * 0.75, 0.75, 1]} />
-      <pointLight position={[0, 1.2, 0.8]} color="#7cc4ff" intensity={4} distance={6} decay={1.6} />
-    </group>
-  );
-}
 
 function Actor({ def }: { def: number }) {
   const d = WANDERERS[def];
@@ -134,5 +103,5 @@ function Actor({ def }: { def: number }) {
 export function Wanderer() {
   const ver = useWorldCounter(() => wander.ver);
   if (!wander.on || !world.room.active) return null;
-  return WANDERERS[wander.def].look === 'SLIME' ? <SlimeActor key={ver} def={wander.def} /> : <Actor key={ver} def={wander.def} />;
+  return <Actor key={ver} def={wander.def} />;
 }
