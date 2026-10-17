@@ -67,7 +67,7 @@ export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** (owner) the horse stable against the town wall just east of the gate: an open-fronted shed (front faces south) and a fenced paddock
  *  in front of it (gap in the west side). The horses (ANIMALS 'HORSE') can be ridden (village.ts mount / dismount). */
-export const STABLE = { x: 12.9, z: 41.5, w: 7, d: 3.4, paddock: { x0: 9.4, x1: 18.4, z0: 43.4, z1: 48.2 } };
+export const STABLE = { x: 12.9, z: 41.5, w: 7, d: 3.4, paddock: { x0: 9.4, x1: 21, z0: 43.4, z1: 50.4 } };
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
@@ -211,7 +211,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
-  { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 46, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
+  { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 17.5, 26.5, 35].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),
 ];
@@ -320,7 +320,7 @@ export const FENCES: [number, number, number, number][] = [
   // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
   [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
   [STABLE.paddock.x1, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z1], [STABLE.paddock.x0, STABLE.paddock.z1, STABLE.paddock.x1, STABLE.paddock.z1],
-  [STABLE.paddock.x0, STABLE.paddock.z0, STABLE.paddock.x0, 44.9], [STABLE.paddock.x0, 46.7, STABLE.paddock.x0, STABLE.paddock.z1],
+  [STABLE.paddock.x0, STABLE.paddock.z0, STABLE.paddock.x0, 44.6], [STABLE.paddock.x0, 49.0, STABLE.paddock.x0, STABLE.paddock.z1],   // (wide gate on the road side)
   // chicken pen
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z - PEN.hd], [PEN.x - PEN.hw, PEN.z + PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
@@ -413,7 +413,7 @@ export const PLANTERS: PlanterSpec[] = [
   // little riverside park east of the bridge (owner): flower beds behind the river benches
   { x: 22, z: 54.5, w: 3.2, d: 1.1, kind: 1 }, { x: 31, z: 54.5, w: 3.2, d: 1.1, kind: 0 },
   // (owner #167) the green in front of the gate
-  { x: -22, z: 45.2, w: 3.2, d: 1.1, kind: 0 }, { x: 17, z: 49.6, w: 3.2, d: 1.1, kind: 0 },
+  { x: -22, z: 45.2, w: 3.2, d: 1.1, kind: 0 }, { x: 25, z: 50.6, w: 3.2, d: 1.1, kind: 0 },
 ];
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
@@ -469,7 +469,7 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
  *  The cart's bed runs along its local z (rot = yaw); colliders in TOWN_COLLIDERS. */
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
-  { x: 9, z: 52.5, rot: 0.35, kind: 0 }, { x: -10, z: 55.2, rot: -0.45, kind: 2 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
+  { x: 13.6, z: 55.4, rot: 0.35, kind: 0 }, { x: -10, z: 55.2, rot: -0.45, kind: 2 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
 ];
 export const SCARECROW = { x: FARM.x, z: FARM.z };
 export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
@@ -488,7 +488,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   { const S = STABLE, z0 = S.z - S.d / 2;   // the stable: back wall + side walls (the front is open to the paddock)
     for (let x = S.x - S.w / 2; x <= S.x + S.w / 2 + 0.01; x += 0.8) c.push([x, z0, 0.5]);
     for (const sx of [-1, 1]) for (let z = z0; z <= S.z + S.d / 2 + 0.01; z += 0.8) c.push([S.x + sx * S.w / 2, z, 0.5]);
-    for (const o of [-0.5, 0.5]) c.push([S.paddock.x1 - 0.9, S.paddock.z1 - 1.3 + o, 0.5]); }   // (+ the paddock's water trough)
+    for (const o of [-0.5, 0.5]) c.push([S.paddock.x1 - 0.9, S.paddock.z1 - 1.4 + o, 0.5]); }   // (+ the paddock's water trough)
   c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
   for (const k of CARTS) for (const o of [-0.9, 0.9]) c.push([k.x + Math.sin(k.rot) * o, k.z + Math.cos(k.rot) * o, 1.2]);   // carts: two circles along the bed
   // castle: ring of circles around the hall footprint + corner towers
@@ -837,7 +837,7 @@ export const NPCS: NpcDef[] = [
     talk: [['Gate\'s that way.']], bubbles: ['Gate\'s that way.', 'Heard the King\'s hiring.', 'Watch your step.'] },
   { name: 'Lina', role: 'Villager', model: 'WIZARD', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-14, -6], speed: 1.1, patrol: [[-14, -6], [14, -6], [14, -4], [-14, -4]], noHat: true, noCape: true, tunic: '#e8d8b8', hair: '#e0c070', longHair: true,
     talk: [['Do not walk the forest road at night. The trees lean in. My cousin swears one of them whispered "is she with you?"'], ['Lovely weather.']], bubbles: ['The chapel bells are pretty.', 'Do not go in the forest at night.', 'Lovely weather.', 'The chapel bells are pretty.', 'Off to the tavern later!'] },
-  { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [12, 50], speed: 1.1, patrol: [[12, 50], [-12, 50], [-12, 50.4], [12, 50.4]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
+  { name: 'Oskar', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [7, 52.4], speed: 1.1, patrol: [[7, 52.4], [-12, 52.4], [-12, 52.8], [7, 52.8]], noHat: true, noCape: true, tunic: '#b89870', hair: '#8a8a8a', longHair: false,
     talk: [['Ahh, fresh air.']], bubbles: ['Ahh, fresh air.', 'The river\'s high this year.', 'Good fishing at the beach.'] },
   { name: 'Mira\'s sister Elsa', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [20, 26.5], speed: 1.1, patrol: [[20, 26.5], [4, 26.5], [4, 28], [20, 28]], noHat: true, noCape: true, tunic: '#d6c09a', hair: '#3a2416', longHair: true,
     talk: [['Have you met my sister? She never stops talking.']], bubbles: ['Have you met my sister? She never stops talking.', 'Lovely flowers by the gate.'] },
@@ -912,7 +912,7 @@ export const NPCS: NpcDef[] = [
   },
   // the meadow in front of the walls: a travelling merchant by her cart, a carter and a wanderer on the road
   {
-    name: 'Tilda', role: 'Travelling Merchant', model: 'ROGUE', tint: '#ffe6c4', scale: 1, prop: 'basket', accent: '#ffb86a', home: [6.4, 51.5],
+    name: 'Tilda', role: 'Travelling Merchant', model: 'ROGUE', tint: '#ffe6c4', scale: 1, prop: 'basket', accent: '#ffb86a', home: [10.8, 54.4],
     talk: [
       ['Fresh from the coast road! Well... fresh-ish.', 'The guards won\'t let my cart through the gate, so I sell from out here. Better view anyway.'],
       ['I\'ve traded with three kingdoms and a goblin. The goblin haggled best.', 'Never trust a price that doesn\'t argue back, dear.'],
@@ -1016,7 +1016,7 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: COOP.x - 4.6, z: COOP.z + 1.6, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
   // (owner) the stable's horses, grazing in the paddock (rideable: E)
-  { kind: 'HORSE', x: 11.6, z: 45.9, rx: 0.8, rz: 0.7, speed: 0.7, tint: '#8a5a36' },
-  { kind: 'HORSE', x: 14.0, z: 45.6, rx: 0.8, rz: 0.6, speed: 0.6, tint: '#f2ece0' },
-  { kind: 'HORSE', x: 15.9, z: 44.9, rx: 0.6, rz: 0.4, speed: 0.7, tint: '#3a2c26' },
+  { kind: 'HORSE', x: 12.6, z: 47.2, rx: 1.3, rz: 1.1, speed: 0.8, tint: '#8a5a36' },
+  { kind: 'HORSE', x: 15.6, z: 48.0, rx: 1.3, rz: 1.0, speed: 0.7, tint: '#f2ece0' },
+  { kind: 'HORSE', x: 18.4, z: 46.6, rx: 1.0, rz: 1.1, speed: 0.8, tint: '#3a2c26' },
 ];

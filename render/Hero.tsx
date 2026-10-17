@@ -573,7 +573,7 @@ function AegisSphere() {
 /** How far the hips drop from standing to sitting on a seat at height 0 (tuned to the KayKit medium rig). */
 const SIT_HIP_DROP = 0.42;
 /** saddle height of the stable horses (render/Npcs buildHorse, scale 1) */
-const RIDE_SEAT_Y = 1.62;
+const RIDE_SEAT_Y = 1.66;
 export function Hero({ q }: { q: QualityCfg }) {
   const cls = useGameStore((s) => s.hero) as HeroClass;
   return (

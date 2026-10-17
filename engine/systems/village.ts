@@ -39,7 +39,7 @@ const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', CO
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
 function mount(i: number): void {
   const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
-  v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 0;
+  v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
   p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
 }
 /** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). */
@@ -56,7 +56,7 @@ export function dismount(): void {
 function syncRide(dt: number): void {
   const v = world.village, a = animals[v.ride.horse], p = world.player; if (!a) { v.ride.on = false; return; }
   const sp = Math.hypot(p.vel.x, p.vel.z);
-  a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing; a.moving = sp > 0.6; a.hop += dt * Math.min(16, 4 + sp * 1.3);
+  a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing; a.moving = sp > 0.6; a.joy = Math.max(0, a.joy - dt); a.hop += dt * Math.min(16, 4 + sp * 1.3);
 }
 export function standUp(): void {
   const st = world.village.sit; if (!st.on) return;

@@ -902,7 +902,7 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 .dlg-dots i.done { background: rgba(59, 39, 19, .45); }
 .dlg-dots i.on { background: var(--gold-dark); box-shadow: 0 0 0 2px rgba(139, 90, 22, .3); }
 .dlg-next { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-title); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-dark); }
-.dlg-next.reply { text-transform: none; letter-spacing: .01em; font-family: var(--font-body, inherit); font-size: 13px; font-style: italic; color: var(--gold-dark); max-width: 70%; text-align: right; }
+.dlg-next.reply { text-transform: none; letter-spacing: .01em; font-family: var(--font-body, inherit); font-size: 13px; font-style: italic; color: #d6b26a; max-width: 70%; text-align: right; }
 .dlg-next kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 4px; font: inherit; font-size: 11px; color: var(--gold-light); background: linear-gradient(#2a241c, #0f0c09); border: 1.5px solid #6b5a3a; }
 .dlg-choices { display: inline-flex; gap: 8px; }
 .dlg-btn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; font-family: var(--font-title); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: var(--cur-hand, pointer); color: var(--gold-light); background: linear-gradient(#2a241c, #0f0c09); border: 1.5px solid #6b5a3a; border-radius: 0; min-height: 0; }

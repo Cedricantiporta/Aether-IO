@@ -21,7 +21,7 @@ export function Stable() {
       b.box(0.9, 0.58, 0.8, [hx, hy, hz], '#dcbc5c'); b.box(0.92, 0.04, 0.82, [hx, hy + 0.1, hz], '#b8963c');   // hay bales (+ twine)
     }
     for (const o of [-w / 3, 0, w / 3]) { b.box(0.8, 0.35, 0.36, [x + o, 0.9, z0 + 0.3], DARK); b.box(0.7, 0.12, 0.28, [x + o, 1.08, z0 + 0.3], '#cfae4e'); }   // mangers
-    { const tx = STABLE.paddock.x1 - 0.9, tz = STABLE.paddock.z1 - 1.3;                             // water trough
+    { const tx = STABLE.paddock.x1 - 0.9, tz = STABLE.paddock.z1 - 1.4;                             // water trough
       b.box(0.8, 0.5, 1.7, [tx, 0.25, tz], WOOD); b.box(0.62, 0.04, 1.5, [tx, 0.48, tz], '#4a86b0'); }
     b.box(1.6, 0.5, 0.08, [x, 2.4, z1 + 0.16], '#e8d8a8'); b.box(1.7, 0.6, 0.06, [x, 2.4, z1 + 0.13], DARK);   // name board
     for (const sx of [-1, 1]) b.cyl(0.05, 0.05, 0.12, 6, [x + sx * 0.35, 2.4, z1 + 0.22], '#6a4a2a', [Math.PI / 2, 0, 0]);   // (horseshoe studs)
