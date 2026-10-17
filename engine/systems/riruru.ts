@@ -30,7 +30,7 @@ export function maybeRiruru(biome: number, type: string): boolean {
     const e = spawnEnemy('SLIME', at.set(x, 0, z));
     if (!e) return false;
     riruru.done = true; riruru.id = e.id;
-    e.maxHp *= 30; e.hp = e.maxHp; e.armor = Math.max(e.armor * 4, 300);   // (owner) 30x HP and 4x tankier (armour 300+: takes 1/4 of the damage)
+    e.maxHp *= 21; e.hp = e.maxHp; e.armor = Math.max(e.armor * 4, 300);   // (owner) 21x HP (30x, then -30%) and 4x tankier (armour 300+: takes 1/4 of the damage)
     e.contactDamage = 0; e.projectileDamage = 0; e.attackCd = 1e9;   // harmless
     e.scale *= 0.75; e.radius *= 0.8;   // a small slime
     useGameStore.getState().addNotification('A small blue slime bounces in... "Hi! I am Riruru! Please do not hit me!"', '#6cc4ff', 'SYSTEM');

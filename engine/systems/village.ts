@@ -47,7 +47,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import type { Quest } from '../../quests';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, rockfallCleared } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
 import { mainNav, npcQuestNav, boardQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
@@ -110,7 +110,8 @@ export function placeVillageNodes(): void {
   for (const [x, z, r] of BEACH_COLLIDERS) addTempCollider(x, z, r, false);   // the lakeside beach (headland rocks, palms, props)
   if (!rockSub) { rockSub = true; useGameStore.subscribe((s, p) => { if (s.npcQuests !== p.npcQuests && rockfallCleared(s.npcQuests)) clearRockfall(); }); }
   rockCols.length = 0;   // (owner) Erin's rockfall blocks the old miners' road until his quest chain is done
-  if (!rockfallCleared(useGameStore.getState().npcQuests)) for (const [x, z, r] of ROCKFALL) { const c = addTempCollider(x, z, r, true); if (c) rockCols.push(c); }
+  const broken = rockfallCleared(useGameStore.getState().npcQuests);
+  ROCKFALL.forEach(([x, z, r], i) => { if (i === ROCKFALL_BREAK && broken) return; const c = addTempCollider(x, z, r, true); if (c && i === ROCKFALL_BREAK) rockCols.push(c); });   // (only the middle boulder can break)
   stopFishing();
   spawnTownMonsters();
   resetNpcs();

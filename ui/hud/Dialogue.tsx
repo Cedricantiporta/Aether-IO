@@ -59,7 +59,7 @@ export const Dialogue: React.FC = () => {
                 <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); }}>{acceptLabel}{!device.touch && <kbd>F</kbd>}</button>
               </span>
             )
-            : <span className={`dlg-next${reply ? ' reply' : ''}`} data-testid="dialogue-next">{reply ? `“${reply}”` : last ? 'Okay' : '...'}{!device.touch && <kbd>E</kbd>}</span>}
+            : <span className={`dlg-next${reply ? ' reply' : ''}`} data-testid="dialogue-next">{reply ? `“${reply}”` : last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span>}
         </div>
       </div>
     </div>

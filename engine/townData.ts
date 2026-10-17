@@ -145,7 +145,9 @@ export const TRAIL_ROCKS: [number, number, number, number][] = [
 export const ROCKFALL: [number, number, number, number][] = [
   [48.2, 41.8, 2.5, 2.9], [49.2, 45.9, 2.4, 2.8], [49.8, 50.1, 2.5, 2.9], [50.4, 54.3, 2.4, 2.8], [51.0, 58.4, 2.5, 2.9],
 ];
-/** Erin's chain is done: the rockfall is gone (takes the store's npcQuests). */
+/** (owner) only this boulder of the rockfall breaks (the middle one): the others stay, leaving a gap through. */
+export const ROCKFALL_BREAK = 2;
+/** Erin's chain is done: the middle boulder is gone (takes the store's npcQuests). */
 export const rockfallCleared = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.erin_frost?.s === 2;
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -277,9 +279,6 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.x, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
-  // (owner) the old miners' road: east across the green to the rockfall (Erin's boulders), then on up to the mining camp
-  { x1: 2.5, z1: 48.6, x2: 26, z2: 48.6, w: 2.4, dirt: true }, { x1: 26, z1: 48.6, x2: 45.4, z2: 48.6, w: 2.4, dirt: true },
-  { x1: 45.4, z1: 48.6, x2: 53, z2: 48.2, w: 2.4, dirt: true }, { x1: 53, z1: 48.2, x2: 57, z2: 39.5, w: 2.4, dirt: true }, { x1: 57, z1: 39.5, x2: 62.5, z2: 21, w: 2.4, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
   { x1: 2.4, z1: 110.6, x2: 24, z2: 111.2, w: 2.6, dirt: true }, { x1: 24, z1: 111.2, x2: 43, z2: 111, w: 2.6, dirt: true }, { x1: 43, z1: 111, x2: 48.5, z2: 100.5, w: 2.6, dirt: true },
   // the mines path: from the farm track's corner up the strip east of the farm, along the east side into the mining camp (owner: no branch to the coop)

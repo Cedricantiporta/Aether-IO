@@ -4,7 +4,7 @@ import { TAP } from '../../engine/tavernData';
 import React, { useRef } from 'react';
 import { NAVE } from '../../engine/churchData';
 import { world, ARENA_RADIUS, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
-import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL, ROADS, TRAIL_ROCKS, ROCKFALL, rockfallCleared } from '../../engine/townData';
+import { GATE, WALL_RUNS, WALL_TOWERS, LAKE, WALL, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../../engine/townData';
 import { HALL } from '../../engine/castleData';
 import { CAVE_DOOR } from '../../engine/caveData';
 import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
@@ -116,7 +116,7 @@ export const Minimap: React.FC = () => {
       }
       ctx.lineCap = 'butt'; ctx.fillStyle = 'rgba(150,150,146,.85)';
       for (const [x, z, r] of TRAIL_ROCKS) { ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }
-      if (!rockfallCleared(useGameStore.getState().npcQuests)) for (const [x, z, r] of ROCKFALL) { ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }   // (Erin's rockfall)
+      { const br = rockfallCleared(useGameStore.getState().npcQuests); ROCKFALL.forEach(([x, z, r], i) => { if (br && i === ROCKFALL_BREAK) return; ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }); }   // (Erin's rockfall: the middle boulder breaks)
     }
     // indoor areas: the castle hall rectangle / the cave outline (filled rock floor), the way out, the cave's harvest nodes
     if (area === 'HOME') {
