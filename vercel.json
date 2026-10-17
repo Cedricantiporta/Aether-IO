@@ -1,9 +1,4 @@
 {
-  "git": {
-    "deploymentEnabled": {
-      "claude/**": false
-    }
-  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
