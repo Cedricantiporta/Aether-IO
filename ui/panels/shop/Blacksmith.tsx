@@ -190,44 +190,6 @@ export const ShardTab: React.FC = () => {
   );
 };
 
-export const RecycleTab: React.FC = () => {
-  const { inventory, materials, recycleItem, massRecycle, combineMaterials, downgradeMaterials } = useGameStore(useShallow((s) => ({
-    inventory: s.inventory, materials: s.materials, recycleItem: s.recycleItem, massRecycle: s.massRecycle, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials,
-  })));
-  const selected = useUiStore((s) => s.selectedItem);
-  const setSelected = useUiStore((s) => s.setSelectedItem);
-  const ask = useUiStore((s) => s.askConfirm);
-  const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? null) : null;
-  const cnt = (r: Rarity) => inventory.filter((i) => i.rarity === r && isGear(i)).length;
-  const yieldTxt = (y: { shards: number; cores: number }, r: Rarity) => `${y.shards} ${r.toLowerCase()} shard(s)${y.cores ? ` + ${y.cores} core(s)` : ''}`;
-  const mass = (r: Rarity) => ask({ title: `Recycle all ${r.toLowerCase()}?`, body: `Every ${r.toLowerCase()} piece of gear in your bag (${cnt(r)}) will be destroyed. You receive ${yieldTxt(recycleYieldAll(inventory.filter((i) => i.rarity === r && isGear(i))), r)}.`, confirmLabel: 'Recycle all', tone: 'danger', onConfirm: () => massRecycle(r) });
-
-  return (
-    <div className="flex flex-col gap-4">
-      {item && isGear(item) ? (
-        <div className="bs-card p-3 flex items-center gap-3">
-          <ItemSlot item={item} size="3.8rem" iconSize={28} tooltip="sell" />
-          <div className="flex-1 min-w-0"><div className="font-bold leading-tight" style={{ color: RARITY_TEXT[item.rarity] }}>{item.name}</div></div>
-          <div className="text-right">
-            <Button variant="danger" onClick={() => ask({ title: `Recycle ${item.name}?`, body: `You receive ${yieldTxt(recycleYield(item), item.rarity)}.`, confirmLabel: 'Recycle', tone: 'danger', onConfirm: () => { recycleItem(item); setSelected(null); } })}><Recycle size={15} /> +{recycleYield(item).shards} {item.rarity.slice(0, 3)}{recycleYield(item).cores > 0 && <> +{recycleYield(item).cores} <Hexagon size={11} /></>}</Button>
-            <div className="text-[.6rem] text-[var(--text-dim)] mt-0.5" data-testid="recycle-yield">{yieldTxt(recycleYield(item), item.rarity)}</div>
-          </div>
-        </div>
-      ) : <Empty text="Select an item from your bag to recycle" />}
-      <div>
-        <div className="rpg-label mb-1.5">Mass recycle</div>
-        <div className="grid grid-cols-5 gap-1.5">
-          {RARITIES.map((r) => (
-            <Button key={r} size="sm" disabled={cnt(r) === 0} onClick={() => mass(r)} className="bs-mass" style={{ padding: '.3rem .1rem', flexDirection: 'column', gap: 0, lineHeight: 1.1 }}>
-              <span style={{ color: RARITY_TEXT[r], fontSize: '.55rem' }}>{r === 'LEGENDARY' ? 'LEGEND' : r}</span><span className="rpg-num !text-[.7rem] text-white">{cnt(r)}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const BlacksmithTab: React.FC = () => {
   const tab = useUiStore((s) => s.blacksmithTab);
   const setTab = useUiStore((s) => s.setBlacksmithTab);
@@ -241,10 +203,9 @@ export const BlacksmithTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['UPGRADE', 'RECYCLE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+        {(['UPGRADE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
-      {tab === 'RECYCLE' && <RecycleTab />}
       {tab === 'FUSE' && <ItemFuse />}
       {tab === 'SHARDS' && <ShardTab />}
       {tab === 'REFORGE' && <ReforgeTab />}

@@ -11,7 +11,8 @@ import { BagGlyph } from '../components/ItemArt';
 import { ItemSlot } from '../components/ItemSlot';
 import { HERO_ICON } from '../hud/TopBars';
 import { useUiStore } from '../uiStore';
-import { SORTS, isGear, sortedItems, sellPrice } from '../lib/game';
+import { SORTS, isGear, sortedItems, sellPrice, RARITY_TEXT } from '../lib/game';
+import { recycleYieldAll } from '../../crafting';
 import { useDrop, reorder } from '../lib/dnd';
 import { DropCell } from '../components/DropCell';
 import { CoinGlyph } from '../components/SkillIcons';
@@ -53,7 +54,7 @@ export const InventoryPanel: React.FC = () => {
   const shopTab = useGameStore((s) => (s.isShopOpen ? s.activeShopTab : null));
   const { selected, setSelected, setSell } = useUiStore(useShallow((s) => ({ selected: s.selectedItem, setSelected: s.setSelectedItem, setSell: s.setSellItem })));
   const gold = useGameStore((s) => s.gold);
-  const deleteItems = useGameStore((s) => s.deleteItems);
+  const recycleItems = useGameStore((s) => s.recycleItems);
   const drinkElixir = useGameStore((s) => s.drinkElixir);
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [delMode, setDelMode] = useState(false);
@@ -181,11 +182,21 @@ export const InventoryPanel: React.FC = () => {
                 Sell ({delSel.length}) · {inventory.filter((i) => delSel.includes(i.id)).reduce((n, i) => n + sellValue(i), 0).toLocaleString()}g</button>
             </>) : delMode ? (<>
               <button className="rpg-btn rpg-btn-sm" onClick={exitDel}>Cancel</button>
-              <button className="rpg-btn rpg-btn-sm bag-del-go" disabled={!delSel.length} data-testid="bag-del-go"
-                onClick={() => askConfirm({ title: `Delete ${delSel.length} item${delSel.length > 1 ? 's' : ''}?`, body: 'They are destroyed for good (no gold back). Sell them at a shop instead if you want gold.', confirmLabel: 'Delete', tone: 'danger', onConfirm: () => { deleteItems(delSel); exitDel(); } })}>Delete ({delSel.length})</button>
+              {(['COMMON', 'UNCOMMON', 'RARE', 'EPIC'] as const).map((r) => {   // quick picks: every unequipped piece of gear of a tier
+                const ids = inventory.filter((i) => i.rarity === r && isGear(i)).map((i) => i.id);
+                return ids.length ? <button key={r} className="rpg-btn rpg-btn-sm" style={{ color: RARITY_TEXT[r] }} title={`Select all ${r.toLowerCase()} gear`}
+                  onClick={() => setDelSel((l) => (ids.every((id) => l.includes(id)) ? l.filter((x) => !ids.includes(x)) : [...new Set([...l, ...ids])]))}>{r.slice(0, 3)} {ids.length}</button> : null;
+              })}
+              <button className="rpg-btn rpg-btn-sm bag-del-go" disabled={!delSel.length} data-testid="bag-del-go" onClick={() => {
+                const picked = inventory.filter((i) => delSel.includes(i.id)), gear = picked.filter(isGear), other = picked.length - gear.length;
+                const y = recycleYieldAll(gear), precious = gear.filter((i) => RANK[i.rarity] >= 2).length;
+                askConfirm({ title: `Recycle ${picked.length} item${picked.length > 1 ? 's' : ''}?`,
+                  body: `${gear.length ? `Gear becomes ${y.shards} shard${y.shards === 1 ? '' : 's'} of its tier${y.cores ? ` + ${y.cores} core${y.cores > 1 ? 's' : ''}` : ''}.` : ''}${precious ? ` ${precious} of them ${precious > 1 ? 'are' : 'is'} Epic or better.` : ''}${other ? ` ${other} other item${other > 1 ? 's are' : ' is'} discarded for nothing.` : ''}`,
+                  confirmLabel: 'Recycle', tone: 'danger', onConfirm: () => { recycleItems(delSel); exitDel(); } });
+              }}>Recycle ({delSel.length})</button>
             </>) : (<>
               {/* (owner: Sell loot / Bulk sell live in the shops only - redundant in the bag) */}
-              <button className="rpg-btn rpg-btn-sm" onClick={() => setDelMode(true)} title="Select items to delete" data-testid="bag-del">Delete</button>
+              <button className="rpg-btn rpg-btn-sm" onClick={() => setDelMode(true)} title="Select items to recycle into shards" data-testid="bag-del">Recycle</button>
               <button className="rpg-btn rpg-btn-sm" onClick={() => { const n = (sortIdx + 1) % SORTS.length; setSortIdx(n); reorderItems('inventory', sortedItems(inventory, SORTS[n], calculateItemCP)); }}
                 title={`Sort by ${SORTS[(sortIdx + 1) % SORTS.length].toLowerCase()}`}>Sort</button>
               <button className="rpg-btn rpg-btn-primary rpg-btn-sm" onClick={autoEquip}>Auto equip</button>

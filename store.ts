@@ -1685,6 +1685,17 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`Recycled ${list.length} items for ${y.shards} ${rarity} Shards${y.cores ? ` + ${y.cores} Cores` : ''}`, COLORS.uiAccent, 'SYSTEM');
     },
 
+    recycleItems: (ids) => {
+      const s = get(), pick = new Set(ids);
+      const list = s.inventory.filter((i) => pick.has(i.id));
+      if (!list.length) return 0;
+      const mats = { ...s.materials }; let cores = 0, shards = 0;
+      for (const it of list) if (isGear(it)) { const y = recycleYield(it); mats[shardTier(it.rarity)] += y.shards; shards += y.shards; cores += y.cores; }
+      set({ inventory: addCores(s.inventory.filter((i) => !pick.has(i.id)), cores), materials: mats });
+      notify(`Recycled ${list.length} item${list.length > 1 ? 's' : ''}: +${shards} shard${shards === 1 ? '' : 's'}${cores ? ` + ${cores} core${cores > 1 ? 's' : ''}` : ''}`, COLORS.uiAccent, 'SYSTEM');
+      return list.length;
+    },
+
     combineMaterials: (from) => {   // shard fusion: SHARD_FUSE_COST shards -> 1 of the next tier (always succeeds)
       const s = get();
       const idx = RARITIES.indexOf(from);

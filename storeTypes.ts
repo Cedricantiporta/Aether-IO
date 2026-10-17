@@ -241,6 +241,8 @@ export interface GameState {
   bulkSell: (o: BulkSellOpts) => number;
   recycleItem: (item: Item) => void;
   massRecycle: (rarity: Rarity) => void;
+  /** (owner) bag multi-select recycle: gear -> shards of its tier (+ cores); anything else is discarded. Returns items removed. */
+  recycleItems: (ids: string[]) => number;
   combineMaterials: (from: Rarity) => void;
   downgradeMaterials: (from: Rarity) => void;
   craftItem: (recipe: Recipe) => { item: Item | null; outcome: import('./crafting').CraftOutcome } | null;   // null = cannot craft (nothing spent)
