@@ -8,7 +8,7 @@ import { dailyMods } from '../dailyChallenge';
 export type RunMode = 'ADVENTURE' | 'TOWER';
 /** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; '': the plaza). */
 /** startBiome: the biome an ADVENTURE run opens in (0; the captain's ship to the Coral Isles sets 3). */
-export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0 };
+export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false };
 
 export interface RunMods extends AscMods { loot: number }
 const asc: AscMods = { hp: 1, dmg: 1, spawn: 1, heal: 1, bossHp: 1, speed: 1, elites: 0, reward: 1 };

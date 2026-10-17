@@ -405,6 +405,8 @@ export interface RoomPlan {
   gate?: number; step?: number;
   /** The epilogue clearing after Malakar (a quiet forest room with the Keeper of the Font; director.ts finale). */
   epilogue?: boolean;
+  /** (owner) a Font dream: the same quiet clearing in the Greenwood, Aelia at its far end; talking to her wakes you in town. */
+  dream?: boolean;
 }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 

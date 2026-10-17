@@ -1,4 +1,4 @@
-import { trueEndingReady } from '../dreams';
+import { trueEndingReady, dreamView, dreamLines, markDreamSeen, dreamsSeen, DREAMS } from '../dreams';
 import { storyIdx } from '../story';
 // ============================================================================
 // Wanderers: memorable characters met now and then in a cleared adventure room (beyond the King and the townsfolk).
@@ -136,6 +136,15 @@ function keeperStage(): number {
 export function talkWanderer(): void {
   if (!wander.on) return;
   const d = WANDERERS[wander.def], st = useGameStore.getState();
+  if (d.id === 'KEEPER' && world.room.plan.dream) {   // (owner) a Font dream: her lines, then you wake in town
+    const dr = dreamView.pending;
+    openCustomDialogue('Aelia', `A dream at the Font${dr ? ` · ${dr.title}` : ''}`, d.accent, dr ? dreamLines(dr, useGameStore.getState().hero) : ['...'], { label: 'Wake up', accept: () => {
+      if (dr) markDreamSeen(Math.max(dreamsSeen(), DREAMS.indexOf(dr) + 1));
+      dreamView.pending = null;
+      useGameStore.getState().resetGame();
+    } });
+    return;
+  }
   if (d.id === 'KEEPER') {   // her words, then the ending slides and home
     openCustomDialogue(d.name, d.title, d.accent, (d.lines[keeperStage()] ?? d.lines[0]).slice(), { label: d.offer, accept: () => { if (!wander.used) { wander.used = true; events.emit('gameEnding', {}); } } });
     return;

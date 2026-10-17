@@ -184,6 +184,7 @@ export function startRunRooms(): void {
   resetGates();
   world.room.fade = 1;
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
+  if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
   const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens at that biome's camp)
   if (sb > 0) { enterRoom(sb, 0, firstPlan()); return; }
   enterRoom(0, 0, firstPlan());
@@ -323,7 +324,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -815,9 +816,13 @@ function onCleared(): void {
   world.boss.active = false;
   if (plan.epilogue) {   // the quiet clearing: no portals or rewards, only the Keeper of the Font waiting
     d.phase = 'CLEARED'; d.phaseT = 0;
-    const [cx, cz] = stationPos(world.room.radius);
+    let [cx, cz] = stationPos(world.room.radius);
+    if (plan.dream) {   // (owner) a long walk: Aelia waits on the far side of the clearing from where you woke
+      const p = world.player.pos, l = Math.hypot(p.x, p.z) || 1, R = world.room.radius * 0.8;
+      for (const k of [1, 0.85, 0.7, 0.55]) { const x = (-p.x / l) * R * k, z = (-p.z / l) * R * k; if (isSpawnable(x, z)) { cx = x; cz = z; break; } }
+    }
     placeKeeper(cx, cz);
-    st.addNotification('Birdsong. Warm light. Someone is waiting for you in the clearing.', '#fff3c4', 'SYSTEM');
+    st.addNotification(plan.dream ? 'You are dreaming. The forest is quiet and warm, and a girl in white waits at the end of the path.' : 'Birdsong. Warm light. Someone is waiting for you in the clearing.', '#fff3c4', 'SYSTEM');
     return;
   }
   d.phase = 'CLEARED'; d.phaseT = 0;

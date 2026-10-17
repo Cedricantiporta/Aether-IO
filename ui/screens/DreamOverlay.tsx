@@ -1,12 +1,15 @@
 // (owner, Hades-style) After a run the hero wakes at home; if the story has reached the next dream's milestone (dreams.ts),
 // the Font holds them a moment longer: a pale gold haze over the town and a short scene with Aelia (or one of the hero's
-// own memories), then the bell and they wake. One dream per return, in order.
+// own memories), then the bell and they wake. One dream per return, in order. Aelia's dreams are walked instead: a dream
+// run (runInfo.dream) into a quiet Greenwood clearing with her at the end of the path (director plan.dream).
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../store';
 import { useDialogue } from '../../engine/systems/dialogue';
 import { openCustomDialogue } from '../../engine/systems/dialogue';
 import { GameStatus } from '../../types';
 import { DREAMS, nextDream, dreamsSeen, markDreamSeen, dreamLines } from '../../dreams';
+import { dreamView } from '../../dreams';
+import { runInfo } from '../../engine/runMods';
 
 const RUN = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.GAME_OVER]);
 
@@ -23,6 +26,12 @@ export const DreamOverlay: React.FC = () => {
       if (st.status !== GameStatus.MENU || useDialogue.getState().open) return;
       const d = force ? DREAMS[dreamsSeen()] : nextDream(st.story.step, st.progress.endings);
       if (!d) return;
+      if (d.voice === 'AELIA') {   // (owner) her dreams are walked: a quiet Greenwood clearing, Aelia at the end of the path
+        dreamView.pending = d;
+        st.addNotification('The Font holds you a moment longer... you drift into a dream.', '#fff3c4', 'SYSTEM');
+        runInfo.dream = true; st.startMode('ADVENTURE');
+        return;
+      }
       markDreamSeen(Math.max(dreamsSeen(), DREAMS.indexOf(d) + 1));
       const memory = d.voice === 'MEMORY';
       openCustomDialogue(memory ? 'A Memory' : 'Aelia', `${memory ? 'Your past' : 'A dream at the Font'} · ${d.title}`, memory ? '#c8d8ff' : '#fff3c4',

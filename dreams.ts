@@ -227,3 +227,6 @@ export const trueEndingNeed = (endings: number): string => {
   const c = Math.min(TRUE_END_CLEARS, endings + 1), d = Math.min(BEFORE_TRUE, dreamsSeen());
   return `adventures finished ${c}/${TRUE_END_CLEARS} · dreams ${d}/${BEFORE_TRUE}`;
 };
+
+/** The Aelia dream being walked right now (a dream run: director plan.dream; wanderers.talkWanderer plays its lines). */
+export const dreamView = { pending: null as Dream | null };

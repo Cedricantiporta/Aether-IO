@@ -2783,6 +2783,6 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 
 /* (owner) a dream at the Font (ui/screens/DreamOverlay.tsx): the town fades behind a soft gold-white haze */
 .dream-haze { position: fixed; inset: 0; z-index: 44; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 40%, rgba(255,250,232,.55), rgba(255,236,190,.42) 45%, rgba(40,32,20,.55) 100%);
-  backdrop-filter: blur(3px) saturate(.7); animation: dreamIn 1.6s ease-out both; }
+  background: radial-gradient(ellipse at 50% 45%, rgba(255,250,232,.08) 0%, rgba(255,240,205,.32) 38%, rgba(250,236,200,.7) 75%, rgba(60,48,30,.7) 100%);
+  animation: dreamIn 1.6s ease-out both; }   /* (clear in the middle: Aelia stands there) */
 @keyframes dreamIn { from { opacity: 0; } to { opacity: 1; } }

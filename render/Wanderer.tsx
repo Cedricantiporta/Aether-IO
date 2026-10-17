@@ -13,7 +13,7 @@ import { angleLerp } from './util';
 const MARK = labelMaterial('!', '#ffd24a', { size: 120 });
 
 /** Aelia, Keeper of the Font: the Mage model with no hat, a plain white dress and long blonde hair. Returns an undo. */
-function dressKeeper(meshes: Mesh[], root: Object3D): () => void {
+export function dressKeeper(meshes: Mesh[], root: Object3D): () => void {
   const undo: (() => void)[] = [];
   for (const m of meshes) {
     if (/Hat/i.test(m.name)) { m.visible = false; undo.push(() => { m.visible = true; }); continue; }
