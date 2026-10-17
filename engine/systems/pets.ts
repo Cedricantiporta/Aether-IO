@@ -255,8 +255,10 @@ export function updatePets(dt: number): void {
         }
       } else {
         wp.atkCd = atkCd;
+        meleeOpts.fromX = wp.pos.x; meleeOpts.fromZ = wp.pos.z;   // (backstab / block origin = the pet)
         damageEnemy(enemy, base, meleeOpts);
         if (tier > 0) damageEnemiesInRadius(enemy.pos.x, enemy.pos.z, 2.2, base * 0.5, meleeOpts, undefined, enemy.id);   // Legendary+: a mini splash
+        meleeOpts.fromX = undefined; meleeOpts.fromZ = undefined;
         if (prof.ignite) applyStatus(enemy, { type: 'BURN', duration: 3, value: 4 + base * 0.2 });
         if (el === PET_EL.NATURE) { fxPoison.value = 1 + base * 0.15; applyStatus(enemy, fxPoison); }
         if (el) events.emit('petStrike', { pos: enemy.pos, el, dx: ex / ed, dz: ez / ed, big: prof.size > 1.2 });

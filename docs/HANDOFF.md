@@ -1235,4 +1235,5 @@ target lock → room shapes → tarot cards → old UI restored → F attack, fa
 - Early-biome card odds: EARLY_TIER_MUL biome 0 [1.3,.6,.4,.35,.35], biome 1 [1.15,.8,.65,.6,.6]; also scales Aegis/Death Defiance/special weights.
 - Run Upgrades panel (`ui/panels/RunUpgrades.tsx`): store `runPicks` (reset at run start), totals + cards + abilities; Tab / HUD button / pause menu, Esc closes.
 - Elite big attacks (`engine/systems/eliteBig.ts`): per-family slam/cone/line lunge/rain/ring, 0.85-1.1 s windup, 6-9 s CD, punish window via winT; DamageNumbers glyph atlas now has all letters (BLOCKED showed as BLCKE).
+- Shieldbearer block 2.2→4.4 s; backstab for all hit sources (pets/minions pass origin, projectiles use their origin), 120° rear arc (BACKSTAB_DOT -0.5), bypassed block keeps talent bonus.
 - Environmental-kill achievements: DamageOpts.env ('TRAP' spike traps, 'BARREL' explosive barrels, 'SLAM' wall slams, 'HAZARD' wildfire / gas zones) rides on enemyDeath; goals meta stats trapKills / barrelKills / slamKills / hazardKills; 7 achievements (Watch Your Step, Trap Master, Kaboom!, Demolitionist, Wall Bouncer, Pinball Wizard, Nature's Wrath) with titles.

@@ -257,6 +257,7 @@ export function updateMinions(dt: number): void {
         if (p) p.tint = 10;
       } else {
         hitO.knockback = golem ? 1.2 : 0.3;
+        hitO.fromX = cleaveO.fromX = m.x; hitO.fromZ = cleaveO.fromZ = m.z;   // (backstab / block origin = the minion)
         if (!golem && m.skillT <= 0) {   // skeleton skill: CLEAVE, a spinning swing that hits everything close (small AoE)
           m.skillT = 5 / haste; m.spin = 1; m.swing = 0;
           cleaveO.knockback = 0.6;
