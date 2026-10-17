@@ -2,7 +2,7 @@
 // name tag and a gold "!" until their offer has been taken.
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { AnimationMixer, Color, Group, Mesh, MeshStandardMaterial, Sprite, SphereGeometry, CylinderGeometry, type Object3D } from 'three';
+import { AnimationMixer, Color, Group, Mesh, MeshStandardMaterial, Sprite, SphereGeometry, CylinderGeometry, BoxGeometry, type Object3D } from 'three';
 import { world } from '../engine/world';
 import { wander, WANDERERS } from '../engine/wanderers';
 import { useWorldCounter } from './hooks';
@@ -39,6 +39,57 @@ function dressKeeper(meshes: Mesh[], root: Object3D): () => void {
 }
 const WHITE = new Color(1, 1, 1);
 
+/** (owner) Keeto: black coat and boots, and a long blade in each hand (a dark one and a pale one). Returns an undo. */
+function dressKeeto(mats: any[], root: Object3D): () => void {
+  const old = mats.map((m) => (m.color ? m.color.clone() : null));
+  mats.forEach((m) => { if (m.color) m.color.set('#2a2a33'); });
+  const blades: Mesh[] = [];
+  const mk = (col: string, glow: string) => {
+    const m = new MeshStandardMaterial({ color: col, metalness: 0.85, roughness: 0.25, emissive: glow, emissiveIntensity: 0.35 });
+    const b = new Mesh(new BoxGeometry(0.07, 1.25, 0.02), m); b.position.set(0, 0.62, 0); return b;
+  };
+  for (const [bone, col, glow] of [['handslotr', '#1b1b24', '#202060'], ['handslotl', '#dfe8f2', '#5a8aff']] as const) {
+    const h = root.getObjectByName(bone); if (!h) continue;
+    const b = mk(col, glow); h.add(b); blades.push(b);
+  }
+  return () => {
+    mats.forEach((m, i) => { if (m.color && old[i]) m.color.copy(old[i]); });
+    for (const b of blades) { b.parent?.remove(b); b.geometry.dispose(); (b.material as MeshStandardMaterial).dispose(); }
+  };
+}
+
+/** (owner) Riruru: a round, glossy blue slime that bounces in place and turns to look at the hero. */
+function SlimeActor({ def }: { def: number }) {
+  const d = WANDERERS[def];
+  const g = useRef<Group>(null!), body = useRef<Mesh>(null!), mark = useRef<Sprite>(null!);
+  const tag = useMemo(() => labelMaterial(`${d.name} · ${d.title}`, d.accent, { size: 44, plate: 'mini' }), [d]);
+  const mats = useMemo(() => ({
+    gel: new MeshStandardMaterial({ color: '#3d9bff', roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.88, emissive: '#1a4fa0', emissiveIntensity: 0.35 }),
+    eye: new MeshStandardMaterial({ color: '#10131c', roughness: 0.3 }),
+  }), []);
+  useEffect(() => () => { mats.gel.dispose(); mats.eye.dispose(); }, [mats]);
+  const yaw = useRef(0);
+  useFrame((_, dt) => {
+    if (!g.current) return;
+    const t = world.time, hop = Math.abs(Math.sin(t * 3.2));
+    const p = world.player.pos;
+    yaw.current = angleLerp(yaw.current, Math.atan2(p.x - wander.x, p.z - wander.z), 1 - Math.exp(-4 * dt));
+    g.current.position.set(wander.x, hop * 0.35, wander.z); g.current.rotation.y = yaw.current;
+    body.current.scale.set(1 + (1 - hop) * 0.12, 0.85 - (1 - hop) * 0.1, 1 + (1 - hop) * 0.12);
+    if (mark.current) { mark.current.visible = !wander.used; mark.current.position.y = 2.6 + Math.sin(t * 3) * 0.1; }
+  });
+  return (
+    <group ref={g} position={[wander.x, 0, wander.z]}>
+      <mesh ref={body} material={mats.gel} position={[0, 0.62, 0]} castShadow><sphereGeometry args={[0.75, 24, 16]} /></mesh>
+      <mesh material={mats.eye} position={[-0.24, 0.78, 0.6]} scale={[0.6, 1.4, 0.5]}><sphereGeometry args={[0.08, 10, 8]} /></mesh>
+      <mesh material={mats.eye} position={[0.24, 0.78, 0.6]} scale={[0.6, 1.4, 0.5]}><sphereGeometry args={[0.08, 10, 8]} /></mesh>
+      <sprite ref={mark} material={MARK.mat} position={[0, 2.6, 0]} scale={[MARK.aspect * 1.2, 1.2, 1]} renderOrder={6} />
+      <sprite material={tag.mat} position={[0, 2.0, 0]} scale={[tag.aspect * 0.75, 0.75, 1]} />
+      <pointLight position={[0, 1.2, 0.8]} color="#7cc4ff" intensity={4} distance={6} decay={1.6} />
+    </group>
+  );
+}
+
 function Actor({ def }: { def: number }) {
   const d = WANDERERS[def];
   const ch = useCharacterInstance(d.model);
@@ -48,6 +99,7 @@ function Actor({ def }: { def: number }) {
   const S = useRef({ mixer: null as AnimationMixer | null, yaw: 0 });
   useEffect(() => {
     if (d.id === 'KEEPER') return dressKeeper(ch.meshes, ch.root);
+    if (d.look === 'DUAL_BLACK') return dressKeeto(ch.mats, ch.root);
     const tint = new Color(d.tint).lerp(WHITE, 0.35);
     ch.mats.forEach((m: any) => { if (m.color) m.color.copy(tint); });
     return undefined;
@@ -82,5 +134,5 @@ function Actor({ def }: { def: number }) {
 export function Wanderer() {
   const ver = useWorldCounter(() => wander.ver);
   if (!wander.on || !world.room.active) return null;
-  return <Actor key={ver} def={wander.def} />;
+  return WANDERERS[wander.def].look === 'SLIME' ? <SlimeActor key={ver} def={wander.def} /> : <Actor key={ver} def={wander.def} />;
 }

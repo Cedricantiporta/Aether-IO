@@ -17,6 +17,7 @@ import { GB, TAU, fbm, litMat, mulberry32, vnoise } from './util';
 import { makeRockGeo } from './models';
 import { lookDim } from './biomeLook';
 import { Npcs } from './Npcs';
+import { caveCameo } from '../engine/systems/npcs';
 import { QualityCfg } from './quality';
 
 type V3 = [number, number, number];
@@ -357,6 +358,7 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
       {L.lights.map(([x, y, z, c, i, d], n) => <pointLight key={n} ref={refs[n]} position={[x, y, z]} color={c} intensity={i} distance={d} decay={2} />)}
       <pointLight ref={hero} color="#ffc27a" intensity={12} distance={12} decay={1.6} />
       {L.floor === 1 && <Npcs area="CAVE" />}
+      {L.floor > 1 && L.floor === caveCameo.floor && <Npcs area="CAVE" deep />}
     </group>
   );
 }

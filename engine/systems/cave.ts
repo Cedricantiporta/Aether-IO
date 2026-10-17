@@ -27,7 +27,8 @@ import { useGameStore } from '../../store';
 import { spawnPickup, dropCrystals, petCollect } from './pickups';
 import { spawnEnemy } from './enemies';
 import { damagePlayer, addShake } from './combat';
-import { resetNpcs, bubbles } from './npcs';
+import { resetNpcs, bubbles, npcs, caveCameo } from './npcs';
+import { NPCS } from '../townData';
 import { closeDialogue, dialogueOpen } from './dialogue';
 import { LOOT_BY_ID, lootItem } from '../../loot';
 import { sfxCave } from '../audio';
@@ -201,6 +202,7 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
   const L = caveLayout(f, cv.seed);
   installInterior(L.colliders);
   resetNpcs();
+  if (f > 1 && f === caveCameo.floor) NPCS.forEach((d, i) => { if (d.deep) { npcs[i].x = L.spawn.x + 2.6; npcs[i].z = L.spawn.z - 2.2; npcs[i].yaw = Math.atan2(-2.6, 2.2); } });   // the cameo by the arrival
   spawnMonsters(f);
   cv.combat = f >= MONSTER_FLOOR;
   if (!cv.combat || arrive !== 'ABOVE') p.hp = st.stats.maxHealth;
@@ -274,7 +276,7 @@ export function leaveCave(): void {
 export function switchCaveFloor(dir: 'DOWN' | 'UP'): void {
   const cv = world.village.cave;
   if (dir === 'DOWN') {
-    if (cv.floor === 1) { deep.clear(); forgetCaveLayouts(); tripSeed = (Math.random() * 1e9) | 0; }
+    if (cv.floor === 1) { deep.clear(); forgetCaveLayouts(); tripSeed = (Math.random() * 1e9) | 0; caveCameo.floor = 3 + Math.floor(Math.random() * 6); }   // (Steve waits on one floor 3..8)
     enterFloor(Math.min(CAVE_MAX_FLOOR, cv.floor + 1), 'ABOVE'); return;
   }
   const why = caveInWhy; caveInWhy = '';

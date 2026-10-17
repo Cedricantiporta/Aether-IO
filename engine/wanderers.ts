@@ -11,7 +11,7 @@ import { events } from './events';
 import { useGameStore, makeItemById } from '../store';
 import { GOLD_SCALE } from '../constants';
 import { openCustomDialogue } from './systems/dialogue';
-import { spawnPickup } from './systems/pickups';
+import { spawnPickup, dropCrystals } from './systems/pickups';
 import { isSpawnable } from './systems/enemies';
 import { rarityForDepth, BIOMES, bossNameIn } from './roomDefs';
 import { BOSS_NAMES } from './enemyDefs';
@@ -24,6 +24,8 @@ export interface WandererDef {
   /** story lines per biome index (falls back to the first) */
   lines: Record<number, string[]> & { 0: string[] };
   offer: string;   // button label
+  /** (owner cameos) KEETO: all-black clothes + a blade in each hand; SLIME: drawn as a blue slime, not a character */
+  look?: 'DUAL_BLACK' | 'SLIME';
 }
 
 export const WANDERERS: readonly WandererDef[] = [
@@ -51,6 +53,21 @@ export const WANDERERS: readonly WandererDef[] = [
       6: ['I followed a light into the Void and could not find the way back. If you reach Malakar, end it for all of us.', 'Take these. I will not be needing them.'],
     },
     offer: 'Take the supplies' },
+  // (owner: anime cameos) a black-clad dual-wielding swordsman, and a very friendly blue slime in the Greenwood
+  { id: 'KEETO', name: 'Keeto', title: 'The Black Swordsman', model: 'ARCHER', tint: '#16161c', accent: '#8fa8ff', biomes: [1, 2, 3, 4, 5], look: 'DUAL_BLACK',
+    lines: { 0: [
+      'Relax, I am not a monster. Just a solo player. I work better alone.',
+      'Most fighters carry one sword. I found out the hard way that one is not enough.',
+      'Sixteen hits, faster than they can blink. That is the whole trick. Want me to show you a few moves?',
+    ] },
+    offer: 'Spar with Keeto' },
+  { id: 'RIRURU', name: 'Riruru', title: 'The Friendly Slime', model: 'ROGUE', tint: '#4aa8ff', accent: '#6cc4ff', biomes: [0], look: 'SLIME',
+    lines: { 0: [
+      'Hi there! Please do not hit me, I am a good slime! My name is Riruru!',
+      'I used to be... something else, I think. Then I woke up as this. Squishy. Round. Very bouncy.',
+      'I can swallow almost anything and keep it safe inside! Here, I ate some shiny things earlier. You can have them!',
+    ] },
+    offer: 'Accept the shiny things' },
   // the epilogue (never met at random): the light Malakar stole, waiting in a forest clearing after the final fight
   { id: 'KEEPER', name: 'Aelia', title: 'Keeper of the Font', model: 'WIZARD', tint: '#ffffff', accent: '#fff3c4', biomes: [],
     lines: { 0: [
@@ -154,6 +171,18 @@ function accept(d: WandererDef, b: number): void {
       st.addNotification('Ser Aldric\'s fire mends you completely.', d.accent, 'SYSTEM');
       break;
     }
+    case 'KEETO': {   // a sparring lesson: a free Rare+ blade-arm drop at this depth
+      const it = st.rollItemDrop(rarityForDepth(b * 10 + 8, 0.8, world.run.bossKills));
+      if (it) spawnPickup('ITEM', p.pos.clone().setX(p.pos.x + 1.2), 0, it);
+      st.addGold(80 * (b + 1) * GOLD_SCALE);
+      st.addNotification('Keeto: "Not bad. You might survive this world after all."', d.accent, 'SYSTEM');
+      break;
+    }
+    case 'RIRURU':   // Predator: the slime coughs up what it swallowed (shards + a couple of potions)
+      for (let k = 0; k < 4; k++) spawnPickup('SHARD', p.pos.clone().setX(p.pos.x + (k - 1.5) * 0.8), k === 0 ? 2 : 1);
+      dropCrystals(3, p.pos);
+      st.addNotification('Riruru: "Predator, release! ...that is what I call it."', d.accent, 'SYSTEM');
+      break;
     case 'LYRA':
       st.addGems(30);
       st.addNotification('Lyra\'s prophecy: +30 gems', d.accent, 'SYSTEM');

@@ -591,6 +591,8 @@ export interface NpcDef {
   /** the ship's captain: talking ends with the offer of a ticket to the Coral Isles */
   ship?: boolean;
   area?: 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN';   // (CAVE = Floor 1 of the crystal cave)
+  /** (owner) cave cameo: not on Floor 1 but on one random deep floor per mining trip (npcs.caveCameo), beside the arrival */
+  deep?: boolean;
   /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
   king?: boolean;
   /** gold crown on his head */
@@ -947,6 +949,17 @@ export const NPCS: NpcDef[] = [
       ['Old trick: now and then a vein hides a ladder under it. Find one and you can skip the rest of the floor.', 'And if you take the stairs you came down by, they bring you straight back up here. Shortcut my grandfather dug.'],
     ],
     bubbles: ['Every vein, then deeper.', 'Mind the lantern oil!', 'Hear that? The hill breathing.', 'Bigger lanterns at the bench!'],
+  },
+  {   // (owner: game cameo, Minecraft) met on one random deep floor per trip, mining away in his own blocky way
+    name: 'Steve', role: 'Lost Block Miner', model: 'BARBARIAN', tint: '#57c3d1', scale: 0.95, prop: 'hammer', accent: '#6fd0e0', home: [0, 0], area: 'CAVE', deep: true, noHat: true,
+    talk: [
+      ['Oh, hi. I dug straight down. Everyone says never dig straight down. I dug straight down.', 'Anyway, have you seen any diamonds? Blue, shiny, sort of... chunky?'],
+      ['These rocks are weird. I hit them and they do not drop as little cubes. How do you carry a whole wall?', 'Where I come from you can fit sixty-four stones in one pocket. Sixty-four!'],
+      ['If you hear a hiss behind you, do not turn around. Just run.', '...It is probably only a bat. Probably.'],
+      ['I tried to punch a tree on the way here. It did not work. Your trees are very rude.', 'Also I cannot find my bed. If I die down here, where do I wake up?'],
+    ],
+    bubbles: ['*mining noises*', 'Diamonds?', 'Hmm.', 'Never dig straight down...', 'Where is my bed?', 'Sssss... oh, just a bat.'],
+    gift: { once: 'steve_torch', gold: 400, text: 'Steve hands you a pile of odd little cubes of ore. They sell surprisingly well. (+400 gold)' },
   },
   // ------------------------------------------------------------ lakeside beach (see engine/beachData.ts): the fishing teacher
   {

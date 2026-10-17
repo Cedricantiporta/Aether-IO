@@ -346,11 +346,11 @@ function BubbleProjector() {
 }
 
 /** `area` picks which cast is mounted: the town's villagers (+ animals) or the castle court. */
-export function Npcs({ area = 'TOWN' }: { area?: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' }) {
+export function Npcs({ area = 'TOWN', deep = false }: { area?: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN'; deep?: boolean }) {
   useGameStore((s) => s.story.step);   // story-gated NPCs (the King / the Queen) swap when the chain moves on
   return (
     <>
-      {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area && npcInStory(i) ? <NpcActor key={i} i={i} /> : null))}
+      {NPCS.map((d, i) => ((d.area ?? 'TOWN') === area && !!d.deep === deep && npcInStory(i) ? <NpcActor key={i} i={i} /> : null))}
       {area === 'TOWN' && <Animals />}
       <BubbleProjector />
     </>

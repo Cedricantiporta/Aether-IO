@@ -71,7 +71,10 @@ export function npcInStory(i: number): boolean {
   const step = useGameStore.getState().story.step;
   return (!r[0] || step >= storyIdx(r[0])) && (!r[1] || step < storyIdx(r[1]));
 }
-const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === 1) && npcInStory(i);   // (cave NPCs live on Floor 1)
+/** (owner) the deep floor the cave cameo (townData `deep`, Steve) is on this mining trip (0 = none; set by cave.ts). */
+export const caveCameo = { floor: 0 };
+const caveFloorOf = (i: number): number => (NPCS[i].deep ? caveCameo.floor : 1);
+const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === caveFloorOf(i)) && npcInStory(i);   // (cave NPCs live on Floor 1, the cameo deeper)
 
 export function updateNpcs(dt: number): void {
   const p = world.player;
