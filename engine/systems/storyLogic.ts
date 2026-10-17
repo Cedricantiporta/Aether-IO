@@ -47,7 +47,7 @@ export function rewardText(r: StoryStep['reward']): string {
 function storyOffer(npcName: string): { lines: string[]; offer: string } | null {
   const s = useGameStore.getState().story, step = STORY[s.step];
   if (!step || step.npc !== npcName || !step.talk || step.deliver) return null;
-  return { lines: [`Main quest: ${step.title}`, ...step.talk], offer: `story:${s.step}` };
+  return { lines: step.talk.slice(), offer: `story:${s.step}` };
 }
 /** What the current step's NPC says (null when `npcName` is not part of the main quest right now). A talk step is offered
  *  (Accept / Later, see acceptStory); a delivery step hands the goods over when they are in the bag, pays the reward and
@@ -57,7 +57,7 @@ export function storyTalk(npcName: string): { lines: string[]; offer: string } |
   if (!step || step.npc !== npcName || !step.talk) return null;
   if (!step.deliver) return storyOffer(npcName);
   const have = bagCount(step.deliver.id), need = step.deliver.count, name = LOOT_BY_ID[step.deliver.id]?.name ?? step.deliver.id;
-  if (have < need) { if (have !== s.p) st.setStory(s.step, have); return { lines: [`Main quest: ${step.title}`, ...(step.wait ?? []), `(${name}: ${have} / ${need})`], offer: '' }; }
+  if (have < need) { if (have !== s.p) st.setStory(s.step, have); return { lines: [...(step.wait ?? []), `(${name}: ${have} / ${need})`], offer: '' }; }
   takeLoot(step.deliver.id, need);
   st.setStory(s.step + 1, 0);
   const lines = [`Quest complete: ${step.title}`, ...step.talk];

@@ -97,7 +97,7 @@ export function openDialogue(npc: number): void {
   let offer = '', hint = '';
   if (nq) {
     const q = nq.def;
-    const qLines = nq.mode === 'offer' ? [`New quest: ${q.title}`, ...q.intro] : [q.progress];
+    const qLines = nq.mode === 'offer' ? q.intro.slice() : [q.progress];
     if (nq.mode === 'offer') offer = q.id;
     hint = sideHint(q, nq.mode === 'offer' ? 'offer' : 'progress');
     lines.length = kingPre;
@@ -169,7 +169,7 @@ function onLine(npc: number, idx: number): void {
     const id = s.turnIn, atEnd = idx === s.lines.length - 1; useDialogue.setState({ turnIn: '', turnInAt: -1 });
     if (completeNpcQuest(id) && atEnd && !s.offer) {   // rewards paid: the talk rolls straight on into this NPC's next quest, if there is one
       const nq = questDialogueFor(s.name);
-      if (nq?.mode === 'offer') useDialogue.setState({ lines: [...s.lines, `New quest: ${nq.def.title}`, ...nq.def.intro], offer: nq.def.id, hint: sideHint(nq.def, 'offer') });
+      if (nq?.mode === 'offer') useDialogue.setState({ lines: [...s.lines, ...nq.def.intro], offer: nq.def.id, hint: sideHint(nq.def, 'offer') });
     }
   }
 }
@@ -186,7 +186,7 @@ export function acceptOffer(): void {
     const nq = questDialogueFor(s.name);
     if (nq && nq.mode !== 'progress') {
       const turn = nq.mode === 'turnin';
-      useDialogue.setState({ lines: turn ? nq.def.done.slice() : [`New quest: ${nq.def.title}`, ...nq.def.intro], idx: 0, offer: turn ? '' : nq.def.id, turnIn: turn ? nq.def.id : '', turnInAt: turn ? nq.def.done.length - 1 : -1, hint: turn ? '' : sideHint(nq.def, 'offer') });
+      useDialogue.setState({ lines: turn ? nq.def.done.slice() : nq.def.intro.slice(), idx: 0, offer: turn ? '' : nq.def.id, turnIn: turn ? nq.def.id : '', turnInAt: turn ? nq.def.done.length - 1 : -1, hint: turn ? '' : sideHint(nq.def, 'offer') });
       if (turn) onLine(s.npc, 0);
       return;
     }

@@ -924,6 +924,15 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
   },
+  {   // (owner) the cabbage farmer: shouts when the hero tramples his field (engine/systems/npcs.ts cabbageWatch)
+    name: 'Cabbage Man', role: 'Cabbage Farmer', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#7fc24a', home: [27.4, 81.6], noHat: true, noCape: true, tunic: '#7a8a4a', hair: '#5a4a3a', longHair: false,
+    talk: [
+      ['Cabbages! Finest cabbages in the kingdom! Crisp, green, and only slightly trampled!', 'You:: Trampled by whom?', 'Monsters. Heroes. Carts. Mostly heroes.'],
+      ['Every week someone comes running through my field. A hero chasing a slime. A slime chasing a hero.', 'You:: That sounds terrible.', 'It IS terrible! My poor cabbages!'],
+      ['Some men dream of gold. I dream of one week where nobody steps on my cabbages.', 'One week. Is that so much to ask?'],
+    ],
+    bubbles: ['Cabbages! Fresh cabbages!', 'Mind the cabbages!', 'Not the cabbages...', 'Cabbage soup, cabbage pie, cabbage... cabbage!'],
+  },
   {   // (owner: anime cameo, Attack on Titan) a hot-headed youth glaring at the rockfall that seals the old miners' road
     name: 'Erin', role: 'Boulder Glarer', model: 'ARCHER', tint: '#ffffff', scale: 0.78, prop: 'none', accent: '#3e6b3a', home: [44.2, 47.2], noHat: true, noCape: true, tunic: '#4f6a3a', hair: '#3a2616', longHair: false,   // (owner: a kid)
     talk: [

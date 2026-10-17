@@ -4,7 +4,7 @@
 // reads `bubbles` (screen positions are written by render/Npcs.tsx each frame).
 // ============================================================================
 import { world } from '../world';
-import { NPCS, ANIMALS, GENERIC_BUBBLES } from '../townData';
+import { NPCS, ANIMALS, GENERIC_BUBBLES, FIELDS } from '../townData';
 import { useDialogue } from './dialogue';
 import { queryColliders, type Collider } from '../mapgen';
 import { useGameStore } from '../../store';
@@ -77,6 +77,7 @@ const caveFloorOf = (i: number): number => (NPCS[i].deep ? caveCameo.floor : 1);
 const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === caveFloorOf(i)) && npcInStory(i);   // (cave NPCs live on Floor 1, the cameo deeper)
 
 export function updateNpcs(dt: number): void {
+  cabbageWatch();
   const p = world.player;
   const town = world.village.area === 'TOWN';
   const talkNpc = useDialogue.getState().open ? useDialogue.getState().npc : -1;
@@ -172,3 +173,22 @@ export function updateNpcs(dt: number): void {
   }
 }
 const n_last = (i: number) => npcs[i].lastBubble;
+
+/** Puts a speech bubble over NPC `i` right now (replacing one it already has). */
+export function npcShout(i: number, text: string, life = 3): void {
+  let b = bubbles.find((x) => x.active && x.npc === i) ?? bubbles.find((x) => !x.active);
+  if (!b) b = bubbles[0];
+  b.text = text; b.npc = i; b.t = 0; b.life = life; b.active = true; b.onScreen = false;
+  npcs[i].bubbleT = world.time;
+}
+/** (owner) Stepping into the cabbage field makes the Cabbage Man yell (6 s cooldown). */
+const CABBAGE_FIELD = FIELDS.find((f) => f.crop === 'CABBAGE'), CABBAGE_NPC = NPCS.findIndex((d) => d.name === 'Cabbage Man');
+const CABBAGE_CRIES = ['OH NO! MY CABBAGES!!', 'MY CABBAGES!!', 'Not my cabbages!', 'Off! Off the cabbages!', 'Every single day...'];
+let cabbageT = -99;
+export function cabbageWatch(): void {
+  if (!CABBAGE_FIELD || CABBAGE_NPC < 0 || world.village.area !== 'TOWN' || world.time - cabbageT < 6) return;
+  const p = world.player.pos;
+  if (Math.abs(p.x - CABBAGE_FIELD.x) > CABBAGE_FIELD.hw || Math.abs(p.z - CABBAGE_FIELD.z) > CABBAGE_FIELD.hd) return;
+  cabbageT = world.time;
+  npcShout(CABBAGE_NPC, CABBAGE_CRIES[(Math.random() * CABBAGE_CRIES.length) | 0], 3.2);
+}
