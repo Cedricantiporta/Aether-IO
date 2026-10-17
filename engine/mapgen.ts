@@ -58,17 +58,17 @@ export const REGIONS: Region[] = [
 ];
 
 /** Harvest nodes: only broken by hand (hold E), never by attacks. */
-export const isHarvestNode = (k: CrateKind): boolean => k === 'CRYSTAL' || k === 'ORE' || k === 'GOLD_VEIN' || k === 'HERB';
-export const HARVEST_NAME: Partial<Record<CrateKind, string>> = { CRYSTAL: 'Aether Crystal', ORE: 'Ore Vein', GOLD_VEIN: 'Gold Vein', HERB: 'Healing Herb' };
+export const isHarvestNode = (k: CrateKind): boolean => k === 'CRYSTAL' || k === 'RARE_VEIN' || k === 'EPIC_VEIN' || k === 'LEGEND_VEIN' || k === 'ORE' || k === 'GOLD_VEIN' || k === 'HERB';
+export const HARVEST_NAME: Partial<Record<CrateKind, string>> = { CRYSTAL: 'Crystal Cluster', RARE_VEIN: 'Rare Shard Vein', EPIC_VEIN: 'Epic Shard Vein', LEGEND_VEIN: 'Legendary Shard Vein', ORE: 'Ore Vein', GOLD_VEIN: 'Gold Vein', HERB: 'Healing Herb' };
 export const CRATE_HP: Record<CrateKind, number> = {
-  CRATE: 30, BARREL: 20, CHEST: 120, POT: 1, HAY: 12, CRYSTAL: 60, ORE: 45, GOLD_VEIN: 45, HERB: 30, EXPLOSIVE_BARREL: 25, GRAVE: 50, CART: 100,
+  CRATE: 30, BARREL: 20, CHEST: 120, POT: 1, HAY: 12, CRYSTAL: 60, RARE_VEIN: 70, EPIC_VEIN: 90, LEGEND_VEIN: 120, ORE: 45, GOLD_VEIN: 45, HERB: 30, EXPLOSIVE_BARREL: 25, GRAVE: 50, CART: 100,
 };
 /** Collision radius while intact (0 = walk-through; POT/HAY break when the player touches them). */
 export const CRATE_RADIUS: Record<CrateKind, number> = {
-  CRATE: 0.8, BARREL: 0.65, CHEST: 0.95, POT: 0, HAY: 0, CRYSTAL: 0.9, ORE: 1.0, GOLD_VEIN: 1.0, HERB: 0.6, EXPLOSIVE_BARREL: 0.65, GRAVE: 0.7, CART: 1.4,
+  CRATE: 0.8, BARREL: 0.65, CHEST: 0.95, POT: 0, HAY: 0, CRYSTAL: 0.9, RARE_VEIN: 0.9, EPIC_VEIN: 0.9, LEGEND_VEIN: 0.9, ORE: 1.0, GOLD_VEIN: 1.0, HERB: 0.6, EXPLOSIVE_BARREL: 0.65, GRAVE: 0.7, CART: 1.4,
 };
 const CRATE_SPACE: Record<CrateKind, number> = {
-  CRATE: 1.0, BARREL: 0.8, CHEST: 1.1, POT: 0.6, HAY: 1.3, CRYSTAL: 1.1, ORE: 1.4, GOLD_VEIN: 1.4, HERB: 1.0, EXPLOSIVE_BARREL: 0.8, GRAVE: 0.9, CART: 1.6,
+  CRATE: 1.0, BARREL: 0.8, CHEST: 1.1, POT: 0.6, HAY: 1.3, CRYSTAL: 1.1, RARE_VEIN: 1.1, EPIC_VEIN: 1.1, LEGEND_VEIN: 1.1, ORE: 1.4, GOLD_VEIN: 1.4, HERB: 1.0, EXPLOSIVE_BARREL: 0.8, GRAVE: 0.9, CART: 1.6,
 };
 
 // ------------------------------------------------------------ collider grid --

@@ -477,8 +477,19 @@ const ElixirFlask = (liquid: string): Draw => () => (<g>
   <path d="M30 16 V25" stroke="#fff" strokeOpacity=".55" strokeWidth="1.4" strokeLinecap="round" />{Spark(50, 22, 3)}
 </g>);
 
+/** Mining Pickaxe: wooden haft, curved steel head. */
+const Pickaxe: Draw = () => (<g transform="rotate(40 32 32)">
+  <rect x="29" y="12" width="6" height="46" rx="2" fill={g('wood')} {...st} />
+  <path d="M29 22 H35 M29 28 H35" stroke={S} strokeOpacity=".4" strokeWidth=".9" />
+  <path d="M6 22 C14 6 50 6 58 22 C50 14 40 13 32 13 C24 13 14 14 6 22Z" fill={g('steel')} {...st} />
+  <path d="M10 20 C18 11 46 11 54 20" stroke="#fff" strokeOpacity=".7" strokeWidth="1.2" fill="none" />
+  <rect x="27" y="10" width="10" height="8" rx="2" fill={g('dark')} {...st} />
+  <circle cx="32" cy="59" r="2.6" fill={g('gold')} {...st} />
+</g>);
+
 const DRAW: Record<string, Draw> = {
   ...GENERATED_DRAW,
+  pickaxe: Pickaxe,
   staff_1: Staff(0), staff_rare: Staff(1), staff_3: Staff(2), staff_legend: Staff(3), staff_god: Staff(4),
   bow_1: Bow(0), bow_2: Bow(1), bow_epic: Bow(2), bow_legend: Bow(3), bow_god: Bow(4),
   sword_1: SwordP(0, { a: 'steel', b: 'gold', gem: '#ffe08a' }),
@@ -516,6 +527,7 @@ export function artKey(item: Item): string {
     case 'ARMOR': return 'armor';
     case 'ACCESSORY': return item.id.includes('boots') ? 'boots_1' : item.id.includes('ring') ? 'ring' : 'amulet';
     case 'PET': return 'paw';
+    case 'TOOL': return 'pickaxe';
     case 'ELIXIR': return ELIXIR_BY_NAME[item.name] ? 'elixir_' + ELIXIR_BY_NAME[item.name].id : 'potion_hp_fb';
     default: return 'chest';
   }

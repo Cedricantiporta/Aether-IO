@@ -290,7 +290,8 @@ export type CrateKind =
   | 'CHEST'            // treasure chest (rare): guaranteed item + gold burst
   | 'POT'              // clay pot (1 hit, clusters of 3-5): small gold / xp / heart
   | 'HAY'              // hay bale (farm area): xp, bursts straw
-  | 'CRYSTAL'          // aether crystal cluster (glowing): gems + crafting shards + big xp
+  | 'CRYSTAL'          // crystal cluster (glowing): Aether Crystals + a crafting shard + a little xp
+  | 'RARE_VEIN' | 'EPIC_VEIN' | 'LEGEND_VEIN'   // crystal-cavern veins (blue / purple / gold): a Rare / Epic / Legendary shard
   | 'ORE'              // ore vein rock (quarry / village): crafting shards
   | 'GOLD_VEIN'        // rock seamed with gold nuggets: a gold burst
   | 'HERB'             // healing herb bush: heals + a little mana

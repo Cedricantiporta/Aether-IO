@@ -61,9 +61,9 @@ export function charLevel(c: CharEntry): number {
 }
 
 /** Read-only: a character's saved equipped items (profile `equipment`; missing slots are null). Never throws. */
-export type EquipSlotKey = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet';
+export type EquipSlotKey = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | 'tool';
 export function charEquipment(c: CharEntry): Record<EquipSlotKey, Item | null> {
-  const out: Record<EquipSlotKey, Item | null> = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
+  const out: Record<EquipSlotKey, Item | null> = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null, tool: null };
   try {
     const eq = JSON.parse(ls()?.getItem(profileKeyFor(c.id)) ?? 'null')?.equipment;
     if (eq) for (const k of Object.keys(out) as EquipSlotKey[]) { const it = eq[k]; if (it && typeof it === 'object' && it.name) out[k] = it as Item; }

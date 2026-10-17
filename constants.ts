@@ -274,6 +274,8 @@ export const PETS_POOL: Item[] = [
 
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
+  // --- TOOLS (own equip slot 'tool'; sold at the Mining Supplies stall) ---
+  { id: 'tool_pickaxe', name: 'Mining Pickaxe', type: 'TOOL', stats: {}, rarity: 'COMMON', price: 150, level: 1, description: 'A sturdy miner\'s pickaxe. While equipped (Tool slot) every ore vein, crystal, herb and other harvest node needs half the effort: mining, in the cave, in town and on adventures.' },
   // --- CONSUMABLES ---
   { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 HP. Only works at 70% HP or lower.' },
   { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 Mana. Only works at 70% Mana or lower.' },

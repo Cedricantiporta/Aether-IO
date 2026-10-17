@@ -9,7 +9,7 @@ import type { Crate } from '../types';
 import type { Rarity } from '../../types';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
-import { spawnPickup } from './pickups';
+import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { CRATE_HP, isHarvestNode } from '../mapgen';
 import { damageEnemiesInRadius, addShake, type DamageOpts } from './combat';
@@ -29,7 +29,7 @@ const boomOpts: DamageOpts = { kind: 'FIRE', knockback: 1.6, env: 'BARREL' };
 let lastTime = 0;
 
 const BASE_XP: Record<Crate['kind'], number> = {
-  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, ORE: 80, GOLD_VEIN: 80, HERB: 60, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
+  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, RARE_VEIN: 120, EPIC_VEIN: 140, LEGEND_VEIN: 180, ORE: 80, GOLD_VEIN: 80, HERB: 60, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
 };
 
 function dropAt(c: Crate, ox: number, oz: number): Vector3 {
@@ -53,11 +53,16 @@ export function hitCratesInRadius(x: number, z: number, r: number, amount: numbe
   }
 }
 
+/** Mining Pickaxe (equipment slot 'tool'): hold-E harvest strokes hit twice as hard = half the hits. */
+export const PICKAXE_ID = 'tool_pickaxe';
+export const hasPickaxe = (): boolean => useGameStore.getState().equipment.tool?.id === PICKAXE_ID;
+
 /** Deals damage to a crate; breaks it at 0 hp. */
 /** `byHand`: a harvest stroke (hold E). Harvest nodes ignore every other hit (attacks, explosions). */
 export function hitCrate(c: Crate, amount: number, byHand = false): void {
   if (!c.active) return;
   if (!byHand && isHarvestNode(c.kind)) return;
+  if (byHand && hasPickaxe()) amount *= 2;
   c.hp -= amount;
   c.hitFlash = 1;
   if (c.hp <= 0) breakCrate(c);
@@ -133,14 +138,16 @@ export function breakCrate(c: Crate): void {
       gold(c, 2, 20);
       break;
     }
-    case 'CRYSTAL': {
-      if (inRun) {
-        const total = 5 + Math.floor(Math.random() * 11); // 5..15 gems
-        const k = Math.min(total, 6);
-        const each = Math.floor(total / k);
-        for (let i = 0; i < k; i++) spawnPickup('GEM', dropAt(c, jit(2.5), jit(2.5)), i === 0 ? each + (total - each * k) : each);
-      }
+    case 'CRYSTAL': {   // Crystal Cluster: Aether Crystals (a bag item, the Crystal Altar's currency) + a rare shard
+      if (inRun) dropCrystals(2 + Math.floor(Math.random() * 3), { x: c.pos.x, z: c.pos.z });   // 2..4 Aether Crystals
       shards(c, 2 + Math.floor(Math.random() * 3), 0.08, 0.01);
+      break;
+    }
+    case 'RARE_VEIN': case 'EPIC_VEIN': case 'LEGEND_VEIN': {   // crystal-cavern veins: one high-tier shard (+ gold)
+      const tier = c.kind === 'RARE_VEIN' ? 1 : c.kind === 'EPIC_VEIN' ? 2 : 3;   // shard rarity index (1 RARE, 2 EPIC, 3 LEGENDARY)
+      const n = c.kind === 'LEGEND_VEIN' ? 1 : 1 + (Math.random() < 0.5 ? 1 : 0);   // Rare / Epic veins: 1-2 shards
+      for (let i = 0; i < n; i++) spawnPickup('SHARD', dropAt(c, jit(2.5), jit(2.5)), tier);
+      gold(c, 3, 25 * tier * (1 + 0.04 * (wave - 1)));
       break;
     }
     case 'ORE':

@@ -8,7 +8,7 @@ import { LOOT_TABLES, LOOT_BY_ID } from '../loot';
 import { isHarvestNode } from '../engine/mapgen';
 const qNode = new Map<string, boolean>();
 /** Harvest nodes that drop crafting shards (crates.ts breakCrate): a GATHER_SHARDS bounty marks them. */
-const SHARD_NODES = new Set(['CRYSTAL', 'ORE', 'GOLD_VEIN']);
+const SHARD_NODES = new Set(['CRYSTAL', 'RARE_VEIN', 'EPIC_VEIN', 'LEGEND_VEIN', 'ORE', 'GOLD_VEIN']);
 let qTick = 0;
 import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry, Sprite } from 'three';
 import { world } from '../engine/world';
@@ -20,7 +20,7 @@ import { useGameStore } from '../store';
 
 const MAXC = 96;
 const _tc = new Color();
-const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'ORE', 'GOLD_VEIN', 'HERB', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
+const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'RARE_VEIN', 'EPIC_VEIN', 'LEGEND_VEIN', 'ORE', 'GOLD_VEIN', 'HERB', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
 
 function crate() {
   const b = new GB([0.82, 1.08]);
@@ -68,13 +68,17 @@ function hay() {
   b.cyl(0.62, 0.62, 0.02, 12, [0.58, 0.62, 0], '#caa840', [0, 0, Math.PI / 2]);
   return { body: b.build(), glow: null };
 }
-function crystal() {
+function crystal(ca = '#6fe8ff', cb = '#c88bff', cc = '#8ff4ff') {
   const b = new GB([0.7, 1.1]), g = new GB([0.75, 1.3]);
   b.ico(0.7, [0, 0.1, 0], '#6a707c', [1.3, 0.5, 1.2], 0); b.sph(0.4, [0.5, 0.3, 0.3], '#5aa03a', [1.2, 0.35, 1], 5);
-  const sp: [number, number, number, number, number, number, string][] = [[0, 0, 0.3, 1.5, 0.08, 0, '#6fe8ff'], [0.4, 0.2, 0.2, 1.0, 0.4, -0.2, '#c88bff'], [-0.35, -0.1, 0.22, 1.15, -0.35, 0.2, '#6fe8ff'], [0.1, -0.4, 0.17, 0.8, 0.2, 0.5, '#c88bff'], [-0.2, 0.35, 0.15, 0.7, -0.3, -0.4, '#8ff4ff']];
+  const sp: [number, number, number, number, number, number, string][] = [[0, 0, 0.3, 1.5, 0.08, 0, ca], [0.4, 0.2, 0.2, 1.0, 0.4, -0.2, cb], [-0.35, -0.1, 0.22, 1.15, -0.35, 0.2, ca], [0.1, -0.4, 0.17, 0.8, 0.2, 0.5, cb], [-0.2, 0.35, 0.15, 0.7, -0.3, -0.4, cc]];
   for (const [x, z, r, h, rz, rx, c] of sp) g.octa(1, [x, h * 0.5 + 0.2, z], c, [r, h * 0.5, r], [rx, 0, rz]);
   return { body: b.build(), glow: g.build() };
 }
+/** Shard veins of the crystal cavern: the crystal cluster tinted blue (Rare), purple (Epic) or gold (Legendary). */
+const rareVein = () => crystal('#3f8cff', '#7fb8ff', '#b8d8ff');
+const epicVein = () => crystal('#a24bff', '#d49bff', '#e6c4ff');
+const legendVein = () => crystal('#ffb52e', '#ffe27a', '#fff0b0');
 function ore() {
   const b = new GB([0.7, 1.1]), g = new GB([0.8, 1.4]);
   b.ico(0.95, [0, 0.45, 0], '#6b6760', [1.2, 0.85, 1.1], 0); b.ico(0.55, [0.65, 0.25, 0.3], '#7a766e', [1, 0.7, 1], 0); b.ico(0.45, [-0.6, 0.2, -0.35], '#5e5a54', [1, 0.7, 1], 0);
@@ -130,7 +134,7 @@ function cart() {
   g.cyl(0.12, 0.12, 0.03, 8, [0.6, 1.0, 0.35], '#ffd23a', [0.4, 0, 0.2]); g.cyl(0.1, 0.1, 0.03, 8, [-0.7, 0.95, 0.25], '#ffd23a', [0.2, 0, 0.5]); g.cyl(0.1, 0.1, 0.03, 8, [1.4, 0.04, 0.5], '#ffd23a', [0, 0, 0]);
   return { body: b.build(), glow: g.build() };
 }
-const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: crystal, ORE: ore, GOLD_VEIN: goldVein, HERB: herb, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
+const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: () => crystal(), RARE_VEIN: rareVein, EPIC_VEIN: epicVein, LEGEND_VEIN: legendVein, ORE: ore, GOLD_VEIN: goldVein, HERB: herb, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
 
 export function Crates() {
   const sys = useMemo(() => {
@@ -146,7 +150,7 @@ export function Crates() {
       const body = new InstancedMesh(m.body, lit, MAXC); body.count = 0; body.frustumCulled = false; body.castShadow = true; body.receiveShadow = true; body.instanceMatrix.setUsage(DynamicDrawUsage);
       group.add(body);
       let glow: InstancedMesh | null = null;
-      if (m.glow) { glow = new InstancedMesh(m.glow, k === 'CRYSTAL' ? crystalM : glowM, MAXC); glow.count = 0; glow.frustumCulled = false; glow.instanceMatrix.setUsage(DynamicDrawUsage); if (k === 'EXPLOSIVE_BARREL') glow.setColorAt(0, new Color(1, 1, 1)); group.add(glow); }
+      if (m.glow) { glow = new InstancedMesh(m.glow, k === 'CRYSTAL' || k === 'RARE_VEIN' || k === 'EPIC_VEIN' || k === 'LEGEND_VEIN' ? crystalM : glowM, MAXC); glow.count = 0; glow.frustumCulled = false; glow.instanceMatrix.setUsage(DynamicDrawUsage); if (k === 'EXPLOSIVE_BARREL') glow.setColorAt(0, new Color(1, 1, 1)); group.add(glow); }
       per[k] = { body, glow, flash };
     }
     // (owner) harvest nodes a quest needs (their loot is wanted): a quest scroll floats above them
@@ -181,6 +185,9 @@ export function Crates() {
         setInst(P.glow, n, cr.pos.x + jx, cr.pos.y, cr.pos.z + jz, cr.rot, sq, 1 - f * 0.04, sq, 0, f * 0.05 * Math.sin(t * 60));
         if (cr.kind === 'EXPLOSIVE_BARREL') { const bl = 0.5 + 0.5 * Math.sin(t * (4 + (1 - cr.hp / cr.maxHp) * 10) + i); P.glow.setColorAt(n, _tc.setRGB(0.4 + bl * 2.4, 0.3 + bl * 1.4, 0.1)); }
         if (cr.kind === 'CRYSTAL') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.0, 0.4, 1.0, 1.6, 0.35 + 0.1 * Math.sin(t * 2 + i), CELL.GLOW);
+        else if (cr.kind === 'RARE_VEIN') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.2, 0.3, 0.6, 2.0, 0.42 + 0.1 * Math.sin(t * 2 + i), CELL.GLOW);
+        else if (cr.kind === 'EPIC_VEIN') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.4, 1.1, 0.35, 2.0, 0.46 + 0.1 * Math.sin(t * 2 + i), CELL.GLOW);
+        else if (cr.kind === 'LEGEND_VEIN') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.8, 2.0, 1.4, 0.3, 0.55 + 0.12 * Math.sin(t * 2.6 + i), CELL.GLOW);
         else if (cr.kind === 'GOLD_VEIN') pushHalo(cr.pos.x, cr.pos.y + 0.8, cr.pos.z, 2.6, 1.6, 1.2, 0.3, 0.25 + 0.08 * Math.sin(t * 2.4 + i), CELL.GLOW);
         else if (cr.kind === 'HERB') pushHalo(cr.pos.x, cr.pos.y + 0.9, cr.pos.z, 2.2, 1.6, 0.5, 0.8, 0.22 + 0.08 * Math.sin(t * 2 + i), CELL.GLOW);
         else if (cr.kind === 'ORE') pushHalo(cr.pos.x, cr.pos.y + 0.8, cr.pos.z, 2.2, 0.6, 0.9, 1.4, 0.16, CELL.GLOW);

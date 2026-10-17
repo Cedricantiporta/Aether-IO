@@ -110,8 +110,8 @@ const DEFAULT_SETTINGS: Settings = {
   showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, autoLootGear: 'UNCOMMON', autoLootMaterials: true, autoLootRange: 'NEAR', autoLootOnClear: false,
 };
 
-const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null };
-const SLOTS: EquipSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory', 'pet'];
+const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null, tool: null };
+const SLOTS: EquipSlot[] = ['weapon', 'helmet', 'armor', 'gloves', 'boots', 'accessory', 'pet', 'tool'];
 const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0, MYTHIC: 0 });
 
 /** Hero rank needed to equip gear of a rarity. */
@@ -1424,7 +1424,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         notify(`Only for ${item.classType}!`, 'red', 'WARNING');
         return;
       }
-      if (!isGear(item) && item.type !== 'PET') return;
+      if (!isGear(item) && item.type !== 'PET' && item.type !== 'TOOL') return;
 
       const slot = item.type.toLowerCase() as EquipSlot;
       const current = s.equipment[slot];

@@ -3,7 +3,8 @@
 // ore, gems and the cave's crystals at a premium (engine/systems/caveKit.ts). Lantern upgrades stay at Grit's bench inside.
 import React, { useEffect, useState } from 'react';
 import { Pickaxe, FlaskConical } from '../../components/GoldIcons';
-import { useGameStore } from '../../../store';
+import { useGameStore, shopPrice } from '../../../store';
+import { ITEMS_POOL } from '../../../constants';
 import { ItemSlot } from '../../components/ItemSlot';
 import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
@@ -19,12 +20,16 @@ export const MineShopTab: React.FC = () => {
   const level = useGameStore((s) => s.level);
   const inventory = useGameStore((s) => s.inventory);
   const ask = useUiStore((s) => s.askConfirm);
+  const setBuy = useUiStore((s) => s.setBuyItem);
+  const equippedTool = useGameStore((s) => s.equipment.tool);
   const [, bump] = useState(0);
   useEffect(() => onKitChange(() => bump((n) => n + 1)), []);
   const have = spareFlasks(), full = have >= MAX_SPARE;
   const goods = inventory.filter(isMineGood);
   const count = goods.reduce((n, i) => n + (i.quantity || 1), 0);
   const value = goods.reduce((n, i) => n + minePrice(i) * (i.quantity || 1), 0);
+  const pick = ITEMS_POOL.find((i) => i.id === 'tool_pickaxe');
+  const ownsPick = equippedTool?.id === 'tool_pickaxe' || inventory.some((i) => i.id === 'tool_pickaxe' || i.name === 'Mining Pickaxe');
   const deepLocked = level < UNLOCK_LV.CAVE;
 
   const offer = (n: number, price: number, title: string, body: string, id: string) => (
@@ -40,6 +45,18 @@ export const MineShopTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4" data-testid="mine-shop">
+      {pick && (
+        <div>
+          <div className="rpg-label mb-2">Tools</div>
+          <div className="muted text-[.78rem] mb-2">
+            The <b style={{ color: '#ffb84a' }}>Mining Pickaxe</b> goes in your Tool slot (Bag &gt; Equipped). While it is equipped every vein, crystal and herb needs <b>half the hits</b> in the cave, in town and on adventures.
+            {ownsPick && <> <span style={{ color: 'var(--good)' }}>You own one.</span></>}
+          </div>
+          <ShopGrid>
+            <ItemSlot item={pick} fluid size="100%" iconSize="78%" price={shopPrice(pick)} cantAfford={!ownsPick && gold < shopPrice(pick)} tooltip="buy" compare={false} onClick={() => setBuy(pick)} />
+          </ShopGrid>
+        </div>
+      )}
       <div>
         <div className="rpg-label mb-2">Lantern oil</div>
         <div className="muted text-[.78rem] mb-2">

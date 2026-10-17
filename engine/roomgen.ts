@@ -92,6 +92,8 @@ const SPEC: Record<string, KindSpec> = {
 const tmpPortal: [number, number] = [0, 0];
 const rp: [number, number] = [0, 0];
 /** Harvest node kind from a 0..1 roll: crystal 30%, ore 30%, gold vein 20%, healing herb 20%. */
+/** Crystal cavern node: mostly Crystal Clusters / ore; now and then a Rare (13%), Epic (6%) or Legendary (1.5%) shard vein. */
+const pickCaveNode = (r: number, r2: number): CrateKind => (r < 0.015 ? 'LEGEND_VEIN' : r < 0.075 ? 'EPIC_VEIN' : r < 0.205 ? 'RARE_VEIN' : r2 < 0.6 ? 'CRYSTAL' : r2 < 0.8 ? 'ORE' : r2 < 0.9 ? 'GOLD_VEIN' : 'HERB');
 const pickHarvest = (r: number): CrateKind => (r < 0.3 ? 'CRYSTAL' : r < 0.6 ? 'ORE' : r < 0.8 ? 'GOLD_VEIN' : 'HERB');
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number, index = 1): void {
@@ -278,9 +280,9 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const crateList: { kind: CrateKind; x: number; z: number }[] = [];
   if (!boss) {
     const cave = type === 'CRYSTAL';   // crystal cavern: a field of harvestable crystals (+ some ore), nothing else
-    const want = type === 'CAMP' ? 2 : tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(13, 17)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9) * (big ? 1.5 : 1));
+    const want = type === 'CAMP' ? 2 : tower ? Math.round(rand(2, 4)) : cave ? Math.round(rand(6.5, 8.5)) : type === 'FOUNTAIN' || type === 'MERCHANT' || type === 'SHRINE' ? 3 : Math.round(rand(5, 9) * (big ? 1.5 : 1));
     for (let t = 0; t < want * 30 && crateList.length < want; t++) {
-      const kind: CrateKind = cave ? (rnd() < 0.6 ? 'CRYSTAL' : pickHarvest(rnd())) : def.crates[Math.floor(rnd() * def.crates.length)];
+      const kind: CrateKind = cave ? pickCaveNode(rnd(), rnd()) : def.crates[Math.floor(rnd() * def.crates.length)];
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (!insideShape(x, z, 3)) continue;

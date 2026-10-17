@@ -41,7 +41,7 @@ const CATS: { id: Cat; label: string; icon: React.ReactNode }[] = [
   { id: 'ACCESSORY', label: 'Accessories', icon: <Gem size={15} /> }, { id: 'ETC', label: 'Other', icon: <Ellipsis size={15} /> },
 ];
 const catOf = (it: Item): Cat => it.type === 'WEAPON' || it.type === 'ARMOR' || it.type === 'HELMET' || it.type === 'GLOVES' || it.type === 'BOOTS' ? 'WEAPON'
-  : it.type === 'ACCESSORY' || it.type === 'PET' ? 'ACCESSORY' : 'ETC';
+  : it.type === 'ACCESSORY' || it.type === 'PET' || it.type === 'TOOL' ? 'ACCESSORY' : 'ETC';
 
 export const InventoryPanel: React.FC = () => {
   const { inventory, max, equipment, level, rank, materials, hero, stats } = useGameStore(useShallow((s) => ({
@@ -106,7 +106,7 @@ export const InventoryPanel: React.FC = () => {
     if (device.touch && armed.current !== it.id) { armed.current = it.id; return; }
     armed.current = null;
     if (it.type === 'ELIXIR') { drinkElixir(it); return; }   // drink: buff for the next run (or the rest of this one)
-    if (isGear(it) && !lockedFor(it)) equipItem(it);
+    if ((isGear(it) && !lockedFor(it)) || it.type === 'TOOL') equipItem(it);
   };
   const shown = useMemo(() => (cat === 'ALL' ? sorted : sorted.filter((i) => catOf(i) === cat)), [sorted, cat]);
   // better gear than what is worn: red dot on the item and on its category tab (and ALL)
@@ -136,7 +136,7 @@ export const InventoryPanel: React.FC = () => {
           </button>
           {equipOpen && (
             <div className="bag-equip-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 4.2rem)', justifyContent: 'center', gap: '.25rem .9rem' }} data-testid="paper-doll">
-              <span />
+              <DollSlot slot="tool" label="Tool" item={equipment.tool} onClick={() => unequipItem('tool')} />
               <DollSlot slot="helmet" label="Helmet" item={equipment.helmet} onClick={() => unequipItem('helmet')} />
               <span />
               <DollSlot slot="weapon" label="Weapon" item={equipment.weapon} onClick={() => unequipItem('weapon')} />

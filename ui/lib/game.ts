@@ -43,8 +43,8 @@ export const timeMMSS = (s: number) => {
 
 const GEAR_TYPES = new Set<string>(['WEAPON', 'ARMOR', 'ACCESSORY', 'HELMET', 'GLOVES', 'BOOTS', 'PET']);
 export const isGear = (i: Item) => GEAR_TYPES.has(i.type);
-export const slotOf = (i: Item): 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | null =>
-  GEAR_TYPES.has(i.type) ? (i.type.toLowerCase() as 'weapon') : null;
+export const slotOf = (i: Item): 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | 'tool' | null =>
+  GEAR_TYPES.has(i.type) || i.type === 'TOOL' ? (i.type.toLowerCase() as 'weapon') : null;
 /** Gear / pets sell for 90% of the base price (constants.GEAR_SELL_RATE); trade-goods loot sells at full value. */
 export const sellPrice = (i: Item) => sellUnit(i);
 export const isHighValue = (i: Item) => i.rarity === 'EPIC' || i.rarity === 'LEGENDARY' || i.rarity === 'MYTHIC' || i.level >= 5;
@@ -66,13 +66,13 @@ export function upgradedStats(i: Item): Partial<PlayerStats> {
 }
 
 export const TYPE_LABEL: Record<Item['type'], string> = {
-  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot', SHARD: 'Material', ELIXIR: 'Elixir', CRYSTAL: 'Summon currency',
+  WEAPON: 'Weapon', ARMOR: 'Armor', ACCESSORY: 'Accessory', POTION: 'Potion', CORE: 'Material', PET: 'Companion', REVIVE: 'Relic', HELMET: 'Helmet', GLOVES: 'Gloves', BOOTS: 'Boots', LOOT: 'Loot', SHARD: 'Material', ELIXIR: 'Elixir', CRYSTAL: 'Summon currency', TOOL: 'Tool',
 };
 
 export const SORTS = ['RARITY', 'TYPE', 'POWER'] as const;
 export type SortMode = typeof SORTS[number];
 
-const TYPE_ORDER: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
+const TYPE_ORDER: Record<string, number> = { WEAPON: 9, HELMET: 8, ARMOR: 7, GLOVES: 6, BOOTS: 5, ACCESSORY: 4, TOOL: 3.5, PET: 3, POTION: 2, CORE: 1, REVIVE: 0, LOOT: 0 };
 /** A sorted copy of `items` (Sort buttons of the bag and the warehouse). `cp` = item power. */
 export function sortedItems(items: Item[], mode: SortMode, cp: (i: Item) => number): Item[] {
   return [...items].sort((a, b) => {
