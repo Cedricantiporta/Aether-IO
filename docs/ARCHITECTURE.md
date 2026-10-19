@@ -1,4 +1,4 @@
-# Aether Survivor — Architecture (v2 rebuild)
+# Aether Survivor — Architecture (v2 rebuild; layers still valid, gameplay section updated 2026-10-17)
 
 Stack: Vite + React 19 + three r182 + @react-three/fiber 9 + drei 10 + postprocessing + Zustand 5 + framer-motion + Tailwind (CDN).
 
@@ -52,47 +52,40 @@ early-outs unless `status === PLAYING`; it clamps dt to 1/20 s.
 `render/CameraRig.tsx` writes `world.player.aim` (ground-plane intersection of the
 pointer) every frame — the engine never touches the camera.
 
-## Gameplay design (designer spec preserved + improved)
-* 3 heroes (Archer / Wizard / Barbarian), class-locked weapons, R weapon ability,
-  Q class active, E class special (5 SP), Space dash with charges, passives.
-* Persistent profile (`localStorage 'aether-survivor-profile-v1'`, versioned, debounced writes, flushed on
-  pagehide): gold, gems, inventory, equipment (7 slots: weapon/helmet/armor/gloves/boots/accessory/pet), materials
-  (crafting shards), maxInventorySlots, heroRank/rankXp, quests, gameStats, settings, welcomeGiftClaimed.
-  Fresh profile = 0 gold + ONE welcome gift (1000 gold, 100 gems, 5 HP + 5 MP potions, 1 Ankh, 5 cores).
-  Runs keep all loot even on death; the +100 gold per card-reward room is paid in full at run end. In-run only: level/xp, skill
-  points/levels, wave cards, baseStats. `resetProfile` (Settings) wipes it.
-* Hero Rank (persistent): rankXp += run xp * 0.5 at run end (also on death); `rankXpNeeded(r)=round(400*r^1.35)`.
-  Gear needs rank (`RANK_REQ` 1/3/8/15/25); +1% gold find per rank (cap 50%).
-* Town (status MENU after the title): `engine/systems/village.ts` runs walking only (no enemies/director). Shops are always open;
-  E interacts. `enterVillage()` rebuilds the island collision map; `startRun()` (engine/game.ts) leaves for the first room.
-* Room runs (`docs/RUN_DESIGN.md`): `engine/roomDefs.ts` (pure data: 6 biomes, rosters, room types, `depthWave`, portal choices, reward
-  rarity), `engine/roomgen.ts` (one room = a disc around 0,0: blocking walls ring + outer decor ring + interior obstacles + crates +
-  biome hazards, installed through `mapgen.installRoom`; `mapgen.bounds` makes `edgeLimit` return the disc), `engine/systems/director.ts`
-  (flow), `engine/systems/merchant.ts` (merchant stock, `MERCHANT` shop tab). Flow: `enterRoom` -> FIGHT (pre-rolled pack list in 2-3 bursts,
-  each unit announced by a telegraph marker in `world.room.markers`, max 36 alive) -> all enemies dead -> CLEARED (room reward after 0.7 s,
-  1-3 portals from `nextChoices`, loot vacuumed after 1.4 s) -> walk into a portal or E (`roomNearby` interact pills) -> LEAVING (0.4 s fade
-  via `world.room.fade`, leftovers collected, everything transient cleared) -> next room. `world.director.wave` = depth wave so all
-  enemy / boss / loot scaling is unchanged. ~7 rooms per biome (the one before the boss is a fountain / merchant) then the boss room;
-  boss dead -> BIOME_DONE: boss loot + 4 cards, then the HUD (`BiomeChoice`) offers "Descend" or "Return to town"
-  (`finishRunVictory` -> `endRun({victory})`). After biome 6 the cycle loops with ever higher depth. Death = GAME_OVER, loot kept.
-  Render: `render/Room.tsx` (ground, stations, portals + labels, spawn markers) + `Props` (same instanced scenery path, biome tint) +
-  `biomeLook.tsx` (fog / sky / light per biome). Scene shows Room during a run and Terrain/Town only in the town.
-* Biome camps (first floor of every biome after Greenwood, `CAMP` room): a hand-authored TRANSITION PATH, not a procedural disc.
-  `engine/campPaths.ts` = one `CampLayout` per transition (centre line, width + bulges, ground blend, wall / decor stretches,
-  props, scatter, set pieces, shards, edge treatment; all deterministic) + one generic builder `buildCampRoom` (called from
-  `roomgen.buildRoom(..., campPath)`): continuous collider chains down both sides + caps (so walls/edges are ordinary
-  obstacles), a polar envelope in `roomShape.shape` for every `edgeLimit` clamp, and `roomShape.fixed` (arrival / waystation /
-  exit spots; `buildShape` switches it off for every other room). Render: `render/CampPath.tsx` (two-layer old->new ground,
-  set pieces, void shards) + the usual `Props`; the minimap draws the road polygon.
-* Quests (`quests.ts`): 3 persistent villager quests, progress from engine events, claim draws a replacement.
-* Loot (`loot.ts`): stackable (99) sellable trade goods per source with COMMON..MYTHIC tables; coin drops are rare,
-  income = selling loot ("Sell all loot" in Supplies) + room bonus. Crystals/ore drop SHARD pickups (materials).
-* Rooms: Combat / Elite / Mini-boss (champion + adds, or the Lich in crypt biomes) / Fountain (40% hp+mp) / Merchant / Treasure (guarded
-  chest) / Shrine (optional challenge) / Boss. Boss rooms use `BIOMES[b].boss` (Golem, Treant, Hydra, Wyrm, Warlord, Void) with the top-centre
-  boss bar. Elites get affixes. No timers, no quotas.
-* Difficulty select: Easy / Normal / Hard / Nightmare multiplies hp, damage,
-  spawn budget and loot luck.
-* Loot: rarity colours white/blue/purple/yellow/red; rank reqs 1/3/8/15/25; bosses drop Epic+, Legendary from wave 30, Mythic from wave 60.
+## Gameplay design (current; see HANDOFF "Current game" for the full list)
+* 5 classes (Archer / Wizard / Barbarian / Knight / Necromancer), one per character slot (`characters.ts`, up to 6 slots, each its
+  own save key). Kit: F hold = manual attack, 1/2/3 class actives, Space class dash (Lv 6), R ultimate (Lv 10), Z / X potions.
+* Persistent profile (`localStorage 'aether-survivor-profile-v1'` for slot c0, `...:<id>` for others; versioned, debounced writes,
+  flushed on pagehide): gold, gems, Aether Crystals, inventory, equipment (8 slots: weapon/helmet/armor/gloves/boots/accessory/pet/tool),
+  materials, quests, story + NPC quest state, per-class levels (`classProg`), talents, attributes, progress (endings, ascension, tower
+  best, cave lantern), goals/achievements `meta`, settings. Fresh profile = 5,000 gold + 500 gems + starter potions/Ankh/cores
+  (`store.WELCOME_GIFT`). `resetProfile` (Settings) wipes it. The warehouse is shared by all characters
+  (`aether-survivor-shared-warehouse-v1`). Death keeps loot and xp.
+* Progression is **per-class permanent levels** (`classLevels.ts`, max Lv 50, XP `250*lv^1.5`, 2 SP per level). `heroRank` is only a
+  legacy alias for the current class level. Gear needs level (`constants.RANK_REQ`: Common 1 / Uncommon 8 / Rare 16 / Epic 24 /
+  Legendary 32 / Mythic 40). In-run only: wave cards (`engine/runCards.ts`) and the run copy of skill levels.
+* Town (status MENU): `engine/systems/village.ts` runs walking only (no director). Shops, quest board, trainer are always open;
+  E interacts; click-to-walk with A* (`systems/townPath.ts`). Areas: TOWN, CASTLE, CHURCH, TAVERN, CAVE, HOME
+  (`world.village.area`). Layout data in `engine/townData.ts`; the Adventure Portal / Endless Tower are buildings in the outskirts and
+  open the Set Out window (`ui/screens/SetOut.tsx`). `startRun()` (engine/game.ts) leaves for the first room.
+* Runs follow `docs/RUN_DESIGN.md` (7 biomes x 15 depths of rooms, final fight, tower modes). Files: `engine/roomDefs.ts`
+  (pure data: biomes, rosters, plans, `depthWave`, portal choices), `engine/roomgen.ts` + `roomShape.ts` (one room = a shaped arena around
+  0,0 installed through `mapgen.installRoom`; `mapgen.bounds`/`roomShape` give `edgeLimit`), `engine/campPaths.ts` (camp rooms are
+  hand-authored transition paths with continuous collider chains, a polar envelope for `edgeLimit` and fixed arrival / waystation /
+  exit spots), `engine/systems/director.ts` (flow: `enterRoom` -> FIGHT with pre-rolled pack bursts announced by telegraph markers in
+  `world.room.markers`, max 36 alive -> CLEARED (reward after 0.7 s, 1-3 portals from `nextChoices`) -> walk into a portal via E / click
+  -> LEAVING fade -> next room; BOSS -> BIOME_DONE -> `BiomeChoice`/big portal), `systems/roomEvents.ts` (objectives + twists),
+  `systems/biomeHazards.ts`, `systems/merchant.ts`. `world.director.wave` = depth wave so enemy / boss / loot scaling is shared by
+  every mode. Render: `render/Room.tsx` (+ `Props`, `CampPath`, `RoomWater`, `biomeLook.tsx` for fog / sky / light and the
+  town day-night cycle). Scene shows Room during a run and Terrain/Town only in town.
+* Tower family (`runInfo.mode === 'TOWER'`): Endless Tower, Daily Trial (`dailyChallenge.ts`), Endless Waves (`endlessWaves.ts`) use
+  round arenas, no item drops / potions / Ankh / EXP (see HANDOFF 3.4).
+* Quests: Quest Board bounties (`quests.ts`), NPC side quests (`npcQuests.ts`), main story (`story.ts`); all share 3 active slots;
+  navigation through `systems/questNav.ts`.
+* Loot (`loot.ts`, `store.rollItemDrop`): stackable sellable trade goods per source; coin drops are rare, income = selling loot + room
+  rewards. Crystals / ore drop shard or Aether Crystal pickups. Tiers white / green / blue / purple / orange / red.
+* Difficulty: no selector; Normal, plus the Hard toggle (unlocked by the first ending) and Ascension 1-10 (`engine/runMods.ts`).
+  Enemies scale with depth and with hero level.
 
 ## Performance rules (all agents)
 1. No `new Vector3()` / closures / array allocs in per-entity per-frame loops —
@@ -114,13 +107,13 @@ pointer) every frame — the engine never touches the camera.
 * Player debuffs live on `world.player` (`stunT rootT silenceT defDownT blindT burnT/poisonT/bleedT`); `combat.applyPlayerDebuff()` ignores dash i-frames
   (`dashIframes`; the Barbarian shoulder charge has none). Enemy statuses: stun/freeze (bosses + minis fill `stagger` instead), stacking burn (<=3), chill, ARMOR BREAK,
   `armor` (100/(100+armor)), backstab (+30%), launch + wall-slam (`DamageOpts.launch/slam`).
-* Kit: keys 1/2/3 = class actives (`abilityDefs.ACTIVE_ORDER`), Space = class dash (`tryDash` -> Shadow Roll / Blink Nova / Shoulder Charge), R = ult (1 s wind-up while the sim is frozen,
-  `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = hit combo (every direct player hit +1, 3 s window; +2.5% dmg per 10 hits, cap +25%; ult at 50+ hits = finisher).
+* Kit: keys 1/2/3 = class actives (`abilityDefs.ACTIVE_ORDER`), Space = class dash (`tryDash`: Shadow Roll / Blink Nova / Bloodrage Leap / Holy Charge / Soul Step), R = ult (1 s wind-up while the sim is frozen,
+  `abilities.tickUltWindup` called from `game.updateGame`), potions on Z / X. `engine/systems/combo.ts` = hit combo (every direct player hit +1, 3 s window; +0.5% dmg per 10 hits, cap +5%; an ult cast at 50+ hits is a finisher).
 * Aimed casting: `engine/systems/aim.ts` (`aimState`, `updateSkillInput`) + `render/AimIndicator.tsx`; skills read `combat.aimOverride` through `getAimDir` / `aimPoint`.
   XP is granted instantly on kill (`combat.grantKillXp`, no XP orbs); coins only from `enemyDefs.GOLD_DROPPERS` + the Lich.
 
-## Wave 30-70 bosses (bosses2 / bossFx)
-* `engine/systems/bosses2.ts` — AIs for Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (dispatched from `bosses.updateBoss`). Each boss is a table of
+## Biome bosses beyond the Golem (bosses2 / bossFx / bossMech)
+* `engine/systems/bosses2.ts` — AIs for Elderroot, the Tide Hydra, the Dune Colossus (war machine, `render/WarMachine.tsx`), Glacius, Ignar, Void Herald (dispatched from `bosses.updateBoss`). Each boss is a table of
   attacks (`Atk`: windup / act / recover + begin / fire / tick / end) run by one shared WINDUP -> ATTACK -> RECOVER runner; `e.pattern` = attack id.
   Extra per-boss memory (bark armor, hydra heads, dive state...) is the single module object `S` (`bossView`, read by `render/Bosses2.tsx`).
   `hooks.onStagger` interrupts the running attack (and breaks bark armor); `hooks.damageMul` applies bark armor / hydra-head shielding in `damageEnemy`.

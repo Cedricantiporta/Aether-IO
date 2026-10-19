@@ -1,74 +1,79 @@
-# Run structure v3 — Town hub + Hades-style rooms
+# Run structure (current design, updated 2026-10-17) — Town hub + Hades-style rooms
 
-Replaces the "village siege / endless waves" loop. The town is the safe hub; a run is a chain of
-small procedurally generated rooms grouped into biomes, each biome ending in a boss.
+The town is the safe hub; an adventure is a chain of procedurally generated rooms grouped into 7 biomes, each ending in a
+boss, followed by a final fight. History: this replaced the original "village siege / endless waves" loop (2026-10-13). The
+first room design had 6 biomes (Meadow, Old Grove, Mire, Frostpeak, Ember, Void) with ~7 rooms each; that is superseded by
+what is below. Source of truth: `engine/roomDefs.ts`, `engine/systems/director.ts`, `engine/roomgen.ts`.
 
 ## Town (hub, no combat)
-* Bigger, alive village: more houses (instanced/chunked, cheap), market stalls, well, fences, lamps.
-* NPCs walk simple loops/idle at points (KayKit character models, tinted / different weapons), a few
-  animals. Near an NPC: Genshin-style interact pill "[E] Talk — Name" → short dialogue box
-  (2–4 lines, portrait-less, tap to advance; some NPCs offer a quest or a freebie). NPCs also pop a
-  random speech bubble ("Lovely day!", "Beware the swamp…") every 15–40 s when the player is near.
-* Shops / smith / quest board / summon shrine are always open (no siege closing). Interaction is via
-  the interact pill only — skill buttons are never replaced.
-* Town gate = run start ("[E] Set out"). A death or "return home" brings you back; loot is kept.
+* A walled town plus large outskirts (see `engine/townData.ts`, HANDOFF 3.2): castle, chapel, tavern, shops, quest board,
+  skill trainer, fishing beach, farm, horses, Crystal Cave, hero house. NPCs patrol, talk (dialogue with accept offers) and
+  pop speech bubbles; interact via the pill ([E]) or by clicking the NPC / shopkeeper (click-to-walk).
+* Shops / smith / quest board / summon / trainer are always open. Skills and the class dash work in town.
+* A run starts at the **Adventure Portal** (deep forest south of the town; E on its platform opens Set Out) or at the
+  Endless Tower building for the tower modes. Death or "abandon run" brings you back; loot and xp are kept.
 
-## Run = biomes of rooms
-* Biome order: Meadow → Old Grove → Mire → Frostpeak → Ember Wastes → The Void (then loops
-  harder). Each biome changes ground colour/texture, props, fog/light tint and enemy roster.
-* Each biome: ~7 rooms then a boss room. Bosses: Meadow → Gorath (Golem), Grove → Elderroot
-  (Treant), Mire → Mire Hydra, Frost → Glacius, Ember → Ignar, Void → Void Herald. Malakar (Lich)
-  is a mini-boss / crypt room option.
-* Difficulty depth → reuse existing scaling: `depthWave = biomeIndex * 10 + roomIndex + 1`
-  feeds waveHpMult / waveDmgMult / budget, so the boss room of biome b is "wave" 10*(b+1).
+## Adventure = 7 biomes x 15 depths
+* Biome order (`BIOMES`): **Greenwood -> Marble Halls -> Sunscorch Desert -> Coral Isles -> Frostpeak -> Ember Wastes -> The Void**.
+  Each biome has three depth tiers (1-5 / 6-10 / 11-15) with their own ground, props, hazard and light. The cycle loops
+  with ever higher depth after the Void if the run continues.
+* Per biome: `ROOMS_PER_BIOME` = 14 rooms then the boss (depth 15). Depth 1 of every biome after Greenwood is a **CAMP**
+  (a hand-authored transition path with a waystation: Storage + Training Post; `engine/campPaths.ts`), depth 10 is the
+  forced **pre-boss** (Greenwood: the Slime King; other biomes: a champion or humanoid mini boss), depth 14 is always the
+  **Merchant**, depth 15 the boss. A Boss Key (found depth 10-13) adds a boss door earlier; once a biome has been completed
+  a red-gold "Shortcut to <boss>" door appears at depth 5 or 7 of it.
+* Bosses: Greenwood **Elderroot** (Treant), Marble Halls **Gorath** (Golem), Desert **The Dune Colossus** (war machine),
+  Coral Isles **The Tide Hydra**, Frostpeak **Glacius** (Wyrm), Ember **Ignar** (Warlord), Void **Void Herald**.
+  **Malakar** (the Lich) is a mini-boss in crypt biomes (Marble Halls, Void) and the final boss. Boss arenas grow per biome
+  (radius 34 -> 50) and have their own pillar plan.
+* **Ending**: the Void's last room is the Gatekeeper courtyard (five trial gates -> five Gate Keys open the Dark Castle),
+  then the two-stage Malakar fight on "The Undying Throne", a finale, an epilogue clearing with Aelia and the ending slides.
+  The first ending unlocks Hard mode, Ascension 1-10 and the Endless Tower story step; the "true ending" needs 10 clears
+  and the Font dreams (HANDOFF 3.4).
+* After a boss: boss loot + cards, then ONE big portal to the next biome. There is no return-to-town choice; the run ends on
+  death (or "abandon run" from the pause menu / teleport offers).
+* Difficulty depth reuses the original scaling: `depthWave(biome, index)` feeds `waveHpMult` / `waveDmgMult` / budget
+  (boss room of biome b = wave 10*(b+1)); enemies also scale with hero level (`enemies.ts LEVEL_*`).
 
 ## Room types
 | Type | Content | Clear condition |
 |---|---|---|
-| Combat | 2–3 spawn bursts with telegraphed spawn points | ALL enemies dead (counter shows remaining, no timer) |
-| Elite | fewer, elite-affix enemies | all dead |
-| Mini-boss | one mini-boss + adds | all dead |
-| Fountain | heal 40% hp/mana, no enemies | immediate |
-| Merchant | travelling merchant (potions, 3 random items, at a markup, 1 on sale) | immediate |
-| Treasure | chest (rarity by depth) guarded by a small pack | all dead |
-| Shrine (challenge, optional) | pick: harder room for a better reward | all dead |
-| Boss | biome boss arena (bigger, round) | boss dead |
+| Combat | 2-3 spawn bursts with telegraphed spawn points, max 36 alive; may carry an objective and/or a twist | ALL enemies dead (counter, no timer) |
+| Elite | fewer, elite-affix enemies with a big telegraphed attack | all dead |
+| Mini-boss | champion / humanoid mini boss (Varn, Sable, Rook) / Lich + adds; pre-boss at depth 10 | all dead |
+| Duel | dark copy of a hero class in a ring arena (rare in the first realms) | dead |
+| Fountain | heal 40% hp/mp, no enemies | immediate |
+| Merchant | travelling merchant (potions, gear at town price +50%); also appears mid-biome once | immediate |
+| Treasure | chest(s) guarded by a small pack (1-2 picks + maybe gear) | all dead |
+| Shrine | optional harder challenge, at most once per biome | all dead |
+| Crystal Cavern | harvest-only room, Aether Crystal nodes | none |
+| Camp | quiet path with Storage + Training Post | immediate |
+| Gatekeeper | five gates; only in the Void | gates |
+| Boss | biome boss arena | boss dead |
 
-* When cleared, 1–3 exit portals appear, each showing its next room's reward icon (Hades doors):
-  upgrade card, gold, shards, item, heal, gems (rare), or the room type icon for fountain/merchant/
-  boss. Walking into a portal (or interact pill) → short fade → next room.
-* Run map pips at top: rooms done / rooms in biome, boss icon at the end.
-* After a boss: big reward (boss trophy + chest), then a choice: "Return to town" (bank, safe) or
-  "Descend" to the next biome (harder, better loot).
+* Objectives rolled on combat rooms (`systems/roomEvents.ts`): Defend the Totem, Rescue (caged captive), Treasure Goblin, Hunt.
+  Twists: Traps, Dark (Shadowcaster), Cursed, Golden. Biome hazards (spikes, quicksand, tide, lava rifts, brambles / spores,
+  ice / icicles, void rifts + gravity flips) are layered on top (`systems/biomeHazards.ts`). Wanderers, an ally fighter
+  and the rare Riruru slime appear occasionally.
+* When cleared, 1-3 exit portals (ruined stone arches) appear, each labelled with its reward: upgrade card, gold, Aether
+  Crystals, gear, heal, gems, or the room-type icon. Entering a portal (E, or click to walk to it) fades to the next room.
+  Harvest nodes may be mined at any time; other interactions wait for a cleared room.
+* Max alive enemies ~36 (10 for champion escorts). Only the current room exists; the scenery is rebuilt from the room seed.
 
-## Performance rules for rooms
-* A room is small (~36–56 units across, boss ~60). Only the current room exists: on room change,
-  clear enemies/projectiles/pickups/zones and rebuild scenery from the room seed (instanced props,
-  ≤ ~150 instances), one ground plane with the biome material. No streaming, no chunk grid needed.
-* Max alive enemies per room ≈ 25–40 (bursts), well under the old 50+.
-* Preload biome assets during the fade; reuse geometries/materials across rooms.
+## Other run modes (tower family, `runInfo.mode === 'TOWER'`)
+Endless Tower (floors, boss every 10th), Daily Trial (seeded 5 floors, Lv 15), Endless Waves (arena survival, Lv 30). They
+use round arenas, give no item drops / potions / Ankh / EXP and pay gold + Aether Crystals. Details: HANDOFF 3.4.
 
-## Removed / changed
-* Siege cutscene, respite timer, shops closing, 45 s wave timer, "X/Y" quota, calling waves early.
-* Wave reward cards → become room rewards (portal choice) instead of every wave.
+## Removed / changed history
+* Removed (2026-10-13): siege cutscene, respite timer, shops closing, 45 s wave timer, "X/Y" quota, calling waves early.
+* Superseded since: 6 biomes -> 7 (Coral Isles added), ~7 rooms -> 15 depths, "return to town or descend" after a boss -> one
+  big portal only, Golem/Lich boss alternation -> a fixed boss per biome, procedural camp discs -> hand-authored paths.
 
-## Proposal: making adventure runs less repetitive (not built yet)
-Goal: not every room = "kill everything, pick a portal". Five layers, cheapest first:
-
-1. **Room objectives** (rolled onto COMBAT rooms, shown on the portal label):
-   - *Defend the Totem*: a crystal in the centre; survive 30 s of waves while enemies attack it. Reward scales with its HP left.
-   - *Treasure Goblin*: a loot goblin flees toward an exit and vanishes after ~15 s. Catch it = big gold/gems; the room's mobs keep coming.
-   - *Rescue*: a caged villager; break the cage while mobs try to finish them. Rescued people move into town (new shopkeeper
-     stock, a tech discount, a side quest) - runs feed the town.
-   - *Rune puzzle*: step on 3 runes in the right order (hint carved on a pillar) to open a vault; wrong order spawns an ambush.
-   - *Hunt*: one marked elite roams; kill it before the room's timer ends for a bounty card.
-2. **Room twists** (random modifier, shown on entry): Darkness (small light radius, enemies glow), Flooded (slow + lightning
-   arcs through water), Cursed Ground (healing off, +loot), Collapsing floor (tiles fall over time), Wind (projectiles drift).
-3. **Run events between rooms**: a wandering NPC choice (pay HP for a relic, gamble gold, free a spirit for a pet buff),
-   a "cursed portal" (harder next room for a guaranteed epic), a rival adventurer who duels you once per biome.
-4. **Path choice with a map**: show the next 2-3 rooms ahead as a small node map (Hades/Slay the Spire), so routing becomes
-   a decision (elite vs. shop vs. objective room), not just picking a portal blind.
-5. **Biome-specific set pieces**: one per biome, e.g. Meadow stampede (dodge boars across the field), Grove living maze,
-   Mire rising water, Frost avalanche escape, Cinders lava bridge run, Void gravity flips.
-
-Suggested first build: objectives (Defend / Goblin / Rescue) + room twists, then the node map.
+## Not built (ideas the owner liked; the first batch of the old proposal was built as objectives + twists)
+* **Run events between rooms**: wandering NPC choices (pay HP for a relic, gamble, free a spirit), a cursed portal (harder
+  next room, guaranteed epic), a rival adventurer duel once per biome (partly covered by wanderers and dark hero duels).
+* **Path choice with a map**: show the next 2-3 rooms as a small node map (Slay the Spire style) instead of picking
+  portals blind.
+* **Biome set pieces**: one per biome, e.g. Meadow stampede, Grove living maze, Mire rising water, Frost avalanche escape,
+  Cinders lava-bridge run, Void gravity flips (hazards exist; scripted set pieces do not).
+* **Rescued villagers move into town** (new stock, tech discount, side quest) — only the rescue objective exists.

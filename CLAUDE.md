@@ -1,16 +1,16 @@
 # Aether Survivor — agent guide
 
-3D action roguelite (town hub + Hades-style room runs). Vite + React 19 + three r182 + @react-three/fiber 9 +
-drei + Zustand 5 + Tailwind (CDN) + framer-motion. Android APK via Capacitor 7; PWA too.
+3D action roguelite (town hub + Hades-style room runs through 7 biomes, tower/daily/waves modes, 5 classes). Vite + React 19 +
+three r182 + @react-three/fiber 9 + drei + Zustand 5 + Tailwind (CDN) + framer-motion. Android APK via Capacitor 7; PWA too.
 
-**Read first:** `docs/HANDOFF.md` (status, open tasks, user preferences), `docs/ARCHITECTURE.md` (layers,
-performance rules), `docs/RUN_DESIGN.md` (run/town design spec).
+**Read first:** `docs/HANDOFF.md` (owner preferences + workflow rules, current game map, open tasks), `docs/ARCHITECTURE.md`
+(layers, performance rules), `docs/RUN_DESIGN.md` (run structure). When code and docs disagree, the code wins: fix the doc.
 
 ## Commands
 - `npm run dev` — dev server (Vite). `npx tsc --noEmit` — typecheck. `npx vite build` — production build.
 - `npm run build:android` — build + `cap sync android`. CI (`.github/workflows/android.yml`) builds a debug APK on
   every push (artifact `aether-survivor-debug-apk`) and a release on `v*` tags.
-- There is no unit-test suite; verify with `tsc` + `vite build` + headless Playwright (see HANDOFF "QA").
+- There is no unit-test suite; verify with `tsc` + `vite build` + headless Playwright (see HANDOFF "QA (headless)").
 
 ## Hard rules (performance + architecture)
 - Per-frame state lives in the mutable `engine/world.ts` singleton, NEVER in the Zustand store. The store
@@ -23,6 +23,11 @@ performance rules), `docs/RUN_DESIGN.md` (run/town design spec).
   through the typed event bus `engine/events.ts`.
 - KayKit GLTF bone names have dots stripped (`handslotr`, not `handslot.r`).
 
-## Git
+## Git and deploy
 - Work on the branch you were given; commit finished files only (`git commit -- <paths>`), run `tsc` + `vite build`
-  before pushing. Never commit `node_modules` / `dist` / `.claude/worktrees`.
+  before pushing. Never commit `node_modules` / `dist` / `.claude/worktrees`. Only commit/push when asked.
+- Owner rule: push to `main` FIRST (`git push origin HEAD:main`), then the claude/* branch. Vercel production builds `main`;
+  a branch push first makes it a Preview only. Each push is a Vercel deployment.
+- Owner rules to remember (details in HANDOFF section 1): potions are permanent (never remove them), the owner is cost
+  sensitive (few sub-agents, prefer Sonnet/Haiku for searches and QA), reply in plain non-technical language.
+- Update `docs/HANDOFF.md` when you change how the game works (keep it a current map, not a changelog).
