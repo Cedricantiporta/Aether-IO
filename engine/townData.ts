@@ -160,9 +160,45 @@ export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BAN
 export const CASTLE = { x: 0, z: -32.5, w: 20, d: 11, h: 9 };
 /** Raised stone terrace in front of the keep (h above the town paving), reached by a wide flight of stairs in the middle
  *  of its front edge (x +-stairHw, from z1 down to stairZ). The keep stands on it. */
-export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 1.2, stairHw: 3.5, stairZ: -15.6 };
-/** Ground height at (x, z) in the town (the terrace + its stairs; 0 elsewhere). */
+export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 2.2, stairHw: 3.5, stairZ: -14.6 };
+/** (owner: "elevation with stairs inside the kingdom, varying height, not all flat") Raised stone districts inside the
+ *  walls: a block with a simple cream retaining wall + low parapet, reached by flights of steps that run OUTWARD from
+ *  the given side (N = toward -z, S = +z, W = -x, E = +x), centred at c along that side, half-width hw. Edges that sit
+ *  against the town wall get no parapet / collider (the wall already blocks). Drawn by TownScenery addTier. */
+export interface TierStair { side: 'N' | 'S' | 'E' | 'W'; c: number; hw: number }
+export interface TierSpec { name: string; x0: number; x1: number; z0: number; z1: number; h: number; stairs: TierStair[] }
+export const STEP_RISE = 0.2, STEP_RUN = 0.42;
+export const stairRun = (h: number) => Math.ceil(h / STEP_RISE - 1e-6) * STEP_RUN;
+export const TIERS: TierSpec[] = [
+  { name: 'Chapel Hill', x0: -43.7, x1: -11.4, z0: -39.7, z1: -19.5, h: 1.6, stairs: [{ side: 'S', c: -27, hw: 2.2 }, { side: 'S', c: -38, hw: 1.4 }] },
+  { name: 'Tavern Row', x0: 11.4, x1: 43.7, z0: -39.7, z1: -16.5, h: 0.9, stairs: [{ side: 'S', c: 28, hw: 1.8 }, { side: 'S', c: 18.5, hw: 1.5 }, { side: 'S', c: 40, hw: 1.5 }] },
+  { name: 'West Rise', x0: -43.7, x1: -29, z0: 13, z1: 36.7, h: 1.2, stairs: [{ side: 'E', c: 19, hw: 1.5 }, { side: 'N', c: -38.5, hw: 1.6 }] },
+  { name: 'East Rise', x0: 29, x1: 43.7, z0: 13, z1: 36.7, h: 0.8, stairs: [{ side: 'W', c: 19, hw: 1.5 }, { side: 'N', c: 33, hw: 1.6 }] },
+];
+/** Edge of a tier that runs along the town wall (no parapet, no collider). */
+export const tierEdgeOnWall = (side: 'N' | 'S' | 'E' | 'W', T: TierSpec) =>
+  side === 'W' ? T.x0 < WALL.x0 + 2 : side === 'E' ? T.x1 > WALL.x1 - 2 : side === 'N' ? T.z0 < WALL.z0 + 2 : T.z1 > WALL.z1 - 2;
+function tierLift(x: number, z: number): number {
+  for (const T of TIERS) {
+    if (x >= T.x0 && x <= T.x1 && z >= T.z0 && z <= T.z1) return T.h;
+    const run = stairRun(T.h);
+    for (const s of T.stairs) {
+      if (s.side === 'S' || s.side === 'N') {
+        if (Math.abs(x - s.c) > s.hw) continue;
+        const d = s.side === 'S' ? z - T.z1 : T.z0 - z;
+        if (d >= 0 && d <= run) return T.h * (1 - d / run);
+      } else {
+        if (Math.abs(z - s.c) > s.hw) continue;
+        const d = s.side === 'E' ? x - T.x1 : T.x0 - x;
+        if (d >= 0 && d <= run) return T.h * (1 - d / run);
+      }
+    }
+  }
+  return 0;
+}
+/** Ground height at (x, z) in the town (the raised districts, the castle terrace + their stairs; 0 elsewhere). */
 export function townLift(x: number, z: number): number {
+  { const t = tierLift(x, z); if (t > 0) return t; }
   // the bridge deck: a gentle arch over the river
   if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
   if (onMineBridge(x, z, 0.3)) { const t = (z - MINE_BRIDGE.z0) / (MINE_BRIDGE.z1 - MINE_BRIDGE.z0); return MINE_BRIDGE.h * (1 - (2 * t - 1) ** 2); }
@@ -426,8 +462,8 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // tall round trees beside houses and along the streets (spots checked against colliders, roads, NPC routes and doors)
-  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 29.5, z: 16, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
-  { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 37, z: -16, s: 3.4, kind: 2 }, { x: -31, z: 34.6, s: 3.4, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
+  { x: -32, z: 14.5, s: 3.00, kind: 0 }, { x: -32, z: 23.5, s: 3.30, kind: 0 }, { x: 39, z: -6.5, s: 3.15, kind: 0 }, { x: -36.5, z: -5, s: 3.60, kind: 0 }, { x: -14, z: -35, s: 3.45, kind: 0 }, { x: 31.2, z: 15.6, s: 3.45, kind: 0 }, { x: 37, z: 14.5, s: 3.30, kind: 0 }, { x: 38.5, z: 22, s: 3.60, kind: 0 },
+  { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 38, z: -24, s: 3.4, kind: 2 }, { x: -31, z: 34.6, s: 3.4, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: -39, z: 58, s: 3.6, kind: 0 },
@@ -463,7 +499,7 @@ export const TOWN_TREES: TreeSpec[] = [
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
-  [-37, -15, 3, 3], [37, -16, 3, 3], [-31, 34.6, 2.8, 2.6], [38, 30, 3.4, 3.4],
+  [-37, -15, 3, 3], [38, -24, 3, 3], [-31, 34.6, 2.8, 2.6], [38, 30, 3.4, 3.4],
   [-21, 18, 3.3, 3.3], [PEN.x, PEN.z, 6.6, 4.6],
   [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
 ];
@@ -518,6 +554,26 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     for (let x = T.x0; x <= T.x1 + 0.01; x += 0.8) if (Math.abs(x) > T.stairHw + 0.3) c.push([x, T.z1 + 0.35, 0.5]);
     for (const x of [T.x0 - 0.35, T.x1 + 0.35]) for (let z = T.z0; z <= T.z1 + 0.35; z += 0.8) c.push([x, z, 0.5]);
     for (const sx of [-1, 1]) for (let z = T.z1; z <= T.stairZ + 0.01; z += 0.7) c.push([sx * (T.stairHw + 0.35), z, 0.4]); }
+  // raised districts: retaining wall along every open edge (gaps for the stairs), stair balustrades
+  for (const T of TIERS) {
+    const run = stairRun(T.h);
+    const edge = (side: 'N' | 'S' | 'E' | 'W') => {
+      if (tierEdgeOnWall(side, T)) return;
+      const alongX = side === 'N' || side === 'S', a0 = alongX ? T.x0 : T.z0, a1 = alongX ? T.x1 : T.z1;
+      const fixed = side === 'N' ? T.z0 : side === 'S' ? T.z1 : side === 'W' ? T.x0 : T.x1;
+      const gaps = T.stairs.filter((st) => st.side === side);
+      for (let a = a0; a <= a1 + 0.01; a += 0.7) {
+        if (gaps.some((g) => Math.abs(a - g.c) < g.hw - 0.1)) continue;
+        c.push(alongX ? [a, fixed, 0.45] : [fixed, a, 0.45]);
+      }
+    };
+    edge('N'); edge('S'); edge('W'); edge('E');
+    for (const st of T.stairs) for (const sd of [-1, 1]) for (let d = 0; d <= run + 0.01; d += 0.6) {
+      const o = st.c + sd * (st.hw + 0.3);
+      if (st.side === 'S') c.push([o, T.z1 + d, 0.4]); else if (st.side === 'N') c.push([o, T.z0 - d, 0.4]);
+      else if (st.side === 'E') c.push([T.x1 + d, o, 0.4]); else c.push([T.x0 - d, o, 0.4]);
+    }
+  }
   // landmarks: chapel (+ bell tower at its front-left), tavern, windmill, statue
   for (const L of [CHURCH, TAVERN]) {
     const hw = L.w / 2, hd = L.d / 2;

@@ -4,7 +4,7 @@ import { CanvasTexture, SRGBColorSpace, SpriteMaterial } from 'three';
 import { liftAt } from './lift';
 import { questNpc } from '../engine/systems/npcQuestLogic';
 import { eggReady, catHidden, pinHidden } from '../engine/systems/village';
-import { NESTS, HIDDEN_CAT, WHEEL_PIN } from '../engine/townData';
+import { NESTS, HIDDEN_CAT, WHEEL_PIN, townLift } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, Object3D, MeshBasicMaterial, Sprite, Vector3 } from 'three';
@@ -289,7 +289,7 @@ function FarmBits() {
           <mesh ref={(m) => { eggs.current[k] = m; }} geometry={geos.egg} material={mat} />
         </group>
       ))}
-      <mesh ref={cat} geometry={geos.cat} material={catMat} position={[HIDDEN_CAT.x, 0, HIDDEN_CAT.z]} scale={1.25} visible={false} castShadow />
+      <mesh ref={cat} geometry={geos.cat} material={catMat} position={[HIDDEN_CAT.x, townLift(HIDDEN_CAT.x, HIDDEN_CAT.z), HIDDEN_CAT.z]} scale={1.25} visible={false} castShadow />
       <mesh ref={pin} geometry={geos.pin} material={pinMat} position={[WHEEL_PIN.x, 0, WHEEL_PIN.z]} rotation={[0, 0.7, 0]} scale={1.4} visible={false} />
     </>
   );
@@ -341,7 +341,7 @@ function BubbleProjector() {
     for (let i = 0; i < bubbles.length; i++) {
       const b = bubbles[i]; if (!b.active) continue;
       if (b.animal >= 0) { const a = animals[b.animal]; _p.set(a.x, ANIMAL_BUBBLE_Y[ANIMALS[b.animal].kind] ?? 1.4, a.z).project(camera); }
-      else { const n = npcs[b.npc]; _p.set(n.x, 2.8 * (NPCS[b.npc].scale || 1) + (NPCS[b.npc].y ?? 0), n.z).project(camera); }
+      else { const n = npcs[b.npc]; _p.set(n.x, 2.8 * (NPCS[b.npc].scale || 1) + (NPCS[b.npc].y ?? liftAt(n.x, n.z)), n.z).project(camera); }
       b.sx = (_p.x * 0.5 + 0.5) * size.width; b.sy = (-_p.y * 0.5 + 0.5) * size.height;
       b.onScreen = _p.z < 1 && _p.x > -1.05 && _p.x < 1.05 && _p.y > -1.05 && _p.y < 1.05;
     }

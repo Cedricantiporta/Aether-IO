@@ -16,7 +16,7 @@ import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
   CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
+  HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -339,9 +339,15 @@ function buildRoads(): BufferGeometry {
     const seg = clipZ(rd, -1e9, WALL.z1 + 2.5); if (!seg) continue;
     const [x1, z1, x2, z2] = seg;
     const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
-    const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
-    r.box(len, 0.05, rd.w + 0.7, [mx, 0.03, mz], EDGE, [0, yaw, 0]);
-    r.box(len, 0.06, rd.w, [mx, 0.045, mz], SURF, [0, yaw, 0]);
+    // in pieces, each on the ground under it (raised districts); pieces on a flight of steps are left out
+    const n = Math.max(1, Math.ceil(len / 1.0)), pl = len / n;
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n, mx = x1 + dx * (t0 + t1) / 2, mz = z1 + dz * (t0 + t1) / 2;
+      const ya = townLift(x1 + dx * t0, z1 + dz * t0), yb = townLift(x1 + dx * t1, z1 + dz * t1), y = townLift(mx, mz);
+      if (Math.abs(ya - yb) > 0.01 || Math.abs(y - ya) > 0.01) continue;
+      r.box(pl + 0.01, 0.05, rd.w + 0.7, [mx, 0.03 + y, mz], EDGE, [0, yaw, 0]);
+      r.box(pl + 0.01, 0.06, rd.w, [mx, 0.045 + y, mz], SURF, [0, yaw, 0]);
+    }
   }
   // plaza: pale concentric discs (above the road layer, so roads simply end at its rim)
   r.cyl(PLAZA.r, PLAZA.r, 0.08, 32, [PLAZA.x, 0.05, PLAZA.z], '#aaa598');
@@ -391,6 +397,15 @@ function addPatchKerb(b: GB, pts: [number, number][], rnd: () => number) {
   let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
   const cols = ['#ece3c8', '#e8c86a', '#e3a9b8', '#b9b0e0'];
   for (let i = 0; i < 6; i++) { const a = rnd() * TAU, d = 1.4 + rnd() * 1.4; b.sph(0.09, [cx + Math.cos(a) * d, 0.2, cz + Math.sin(a) * d * 0.9], cols[i % 4], 1, 4); }
+}
+
+/** Flat lawn polygon (fan) for a grass patch that sits on a raised district (the terrain grass is under the tier). */
+function addGrassCap(b: GB, pts: [number, number][]) {
+  let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, z1] = pts[i], [x2, z2] = pts[(i + 1) % pts.length];
+    b.tri([cx, 0.05, cz], [x2, 0.05, z2], [x1, 0.05, z1], i % 2 ? '#74ad4c' : '#6ea648', [0.95, 1.03]);
+  }
 }
 
 /** Raised stone planter with shrubs (kind 0) or flowers (kind 1). */
@@ -621,6 +636,53 @@ function buildRuin(kind: number, seed: number) {
 }
 
 // --------------------------------------------------------------- landmarks ---
+/** A raised district (townData TIERS): simple cream block retaining wall (big plain blocks, owner: "simple, not too
+ *  detailed full bricks"), a paved top, a low parapet along the open edges with gaps for the stairs, and flights of
+ *  steps with plain side walls + a lamp post at the foot. */
+function addTier(b: GB, g: GB, T: TierSpec): void {
+  const h = T.h, w = T.x1 - T.x0, d = T.z1 - T.z0, cx = (T.x0 + T.x1) / 2, cz = (T.z0 + T.z1) / 2, run = stairRun(h);
+  const face = '#ddd6c4', joint = '#c2bba9', cap = '#ebe5d6', top = '#d4cebf';
+  b.box(w, h, d, [cx, h / 2, cz], face, [0, 0, 0], [0.94, 1.02]);
+  b.box(w - 0.2, 0.04, d - 0.2, [cx, h + 0.02, cz], top);
+  const sides: ('N' | 'S' | 'E' | 'W')[] = ['N', 'S', 'E', 'W'];
+  for (const side of sides) {
+    if (tierEdgeOnWall(side, T)) continue;
+    const alongX = side === 'N' || side === 'S', a0 = alongX ? T.x0 : T.z0, a1 = alongX ? T.x1 : T.z1;
+    const f = side === 'N' ? T.z0 : side === 'S' ? T.z1 : side === 'W' ? T.x0 : T.x1, out = side === 'N' || side === 'W' ? -1 : 1;
+    const P = (a: number, y: number, o = 0): [number, number, number] => alongX ? [a, y, f + out * o] : [f + out * o, y, a];
+    // big plain blocks: one horizontal joint line per course, staggered vertical joints
+    const rows = Math.max(1, Math.round(h / 0.55)), rh = h / rows;
+    for (let r = 1; r < rows; r++) b.box(alongX ? a1 - a0 : 0.04, 0.05, alongX ? 0.04 : a1 - a0, P((a0 + a1) / 2, r * rh, 0.01), joint);
+    for (let r = 0; r < rows; r++) for (let a = a0 + (r % 2 ? 0.8 : 1.6); a < a1 - 0.3; a += 1.6) b.box(alongX ? 0.05 : 0.04, rh - 0.06, alongX ? 0.04 : 0.05, P(a, r * rh + rh / 2, 0.01), joint);
+    // parapet + cap, with gaps for the stairs
+    const gaps = T.stairs.filter((st) => st.side === side).map((st) => [st.c - st.hw - 0.05, st.c + st.hw + 0.05]).sort((p, q) => p[0] - q[0]);
+    let a = a0;
+    const seg = (s0: number, s1: number) => { if (s1 - s0 < 0.2) return; const m = (s0 + s1) / 2, L = s1 - s0;
+      b.box(alongX ? L : 0.42, 0.42, alongX ? 0.42 : L, P(m, h + 0.21, -0.21), face, [0, 0, 0], [0.94, 1.02]);
+      b.box(alongX ? L + 0.06 : 0.52, 0.09, alongX ? 0.52 : L + 0.06, P(m, h + 0.46, -0.21), cap); };
+    for (const [g0, g1] of gaps) { seg(a, g0); a = g1; }
+    seg(a, a1);
+  }
+  // stairs: plain steps running outward + side walls stepping down, a lamp at each foot
+  for (const st of T.stairs) {
+    const n = Math.round(run / STEP_RUN), alongX = st.side === 'N' || st.side === 'S', out = st.side === 'N' || st.side === 'W' ? -1 : 1;
+    const f = st.side === 'N' ? T.z0 : st.side === 'S' ? T.z1 : st.side === 'W' ? T.x0 : T.x1;
+    const P = (a: number, y: number, o: number): [number, number, number] => alongX ? [a, y, f + out * o] : [f + out * o, y, a];
+    for (let k = 0; k < n; k++) {
+      const hh = h * (n - k) / n, o = STEP_RUN * (k + 0.5);
+      b.box(alongX ? st.hw * 2 : STEP_RUN + 0.02, hh, alongX ? STEP_RUN + 0.02 : st.hw * 2, P(st.c, hh / 2, o), k % 2 ? '#e2dccb' : '#d9d2c0');
+    }
+    for (const sd of [-1, 1]) {
+      const a = st.c + sd * (st.hw + 0.22);
+      for (let k = 0; k < n; k++) { const hh = h * (n - k) / n + 0.35; b.box(alongX ? 0.44 : STEP_RUN + 0.02, hh, alongX ? STEP_RUN + 0.02 : 0.44, P(a, hh / 2, STEP_RUN * (k + 0.5)), face); }
+      const [lx, , lz] = P(a, 0, run + 0.25);
+      b.box(0.5, 0.5, 0.5, [lx, 0.25, lz], cap);
+      b.cyl(0.06, 0.08, 1.7, 6, [lx, 1.35, lz], '#34343a'); b.box(0.3, 0.05, 0.3, [lx, 2.25, lz], '#2a2a2e');
+      g.box(0.2, 0.26, 0.2, [lx, 2.08, lz], '#ffd070');
+    }
+  }
+}
+
 /** The raised stone terrace in front of the keep: block + paved top, low parapet along the edges (gap for the stairs), a
  *  wide flight of steps with sloped balustrades and lamp posts, and the foundation the keep stands on. */
 function addTerrace(b: GB, g: GB): void {
@@ -640,7 +702,7 @@ function addTerrace(b: GB, g: GB): void {
     b.box(0.45, 0.55, d, [sx < 0 ? T.x0 + 0.2 : T.x1 - 0.2, h + 0.27, cz], cap);
   }
   // stairs (6 steps up to the north) + sloped balustrades with lamp posts at the foot
-  const n = 6, sd = (T.stairZ - T.z1) / n;
+  const n = Math.max(6, Math.round(h / 0.2)), sd = (T.stairZ - T.z1) / n;
   for (let k = 0; k < n; k++) {
     const hh = (h * (k + 1)) / n;
     b.box(T.stairHw * 2, hh, sd + 0.02, [0, hh / 2, T.stairZ - sd * (k + 0.5)], k % 2 ? '#bdb7a9' : '#c6c0b2');
@@ -817,10 +879,18 @@ function buildTown() {
     return c;
   };
   const put = (x: number, z: number, rot: number, geos: { b: BufferGeometry; g: BufferGeometry }) => {
-    const c = at(x, z);
-    c.b.addColored(geos.b, [x, 0, z], [0, rot, 0]); c.g.addColored(geos.g, [x, 0, z], [0, rot, 0]);
+    const c = at(x, z), y = townLift(x, z);   // (raised districts: everything on them stands on the tier top)
+    c.b.addColored(geos.b, [x, y, z], [0, rot, 0]); c.g.addColored(geos.g, [x, y, z], [0, rot, 0]);
     geos.b.dispose(); geos.g.dispose();
   };
+  /** Build world-space geometry at y = 0 and drop it into the chunk at (x, z), lifted onto the ground there. */
+  const lifted = (x: number, z: number, fn: (b: GB, g: GB) => void) => {
+    const y = townLift(x, z), c = at(x, z);
+    if (y <= 0) { fn(c.b, c.g); return; }
+    const tb = new GB([1, 1]), tg = new GB([1, 1]); fn(tb, tg);
+    const kb = tb.build(), kg = tg.build(); c.b.addColored(kb, [0, y, 0]); c.g.addColored(kg, [0, y, 0]); kb.dispose(); kg.dispose();
+  };
+  for (const T of TIERS) { const c = at((T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2); addTier(c.b, c.g, T); }
   HOUSES.forEach((h, i) => { if (i < KIT_HOUSE_FROM) put(h.x, h.z, h.rot, buildHouse(h, i)); });   // (town houses: Blender kit, render/townKit.tsx)
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
   { const c = at(CASTLE.x, CASTLE.z), tb = new GB([1, 1]), tg = new GB([1, 1]); addCastle(tb, tg); addTerrace(c.b, c.g);
@@ -829,9 +899,9 @@ function buildTown() {
   put(TAVERN.x, TAVERN.z, TAVERN.rot, buildTavern(HOUSES.length + 3));
   put(WINDMILL.x, WINDMILL.z, WINDMILL_ROT, buildWindmill());   // (owner: faces the way the barn faces, -x)
   put(STATUE.x, STATUE.z, 0, buildStatue());
-  { const c = at(-38, -30); addGraveyard(c.b, c.g, mulberry32(777)); }
+  lifted(-38, -30, (b, g) => addGraveyard(b, g, mulberry32(777)));
   const bench = buildBench();
-  for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const c = at(s.x, s.z); c.b.addColored(bench.b, [s.x, 0, s.z], [0, s.yaw, 0]); }
+  for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const c = at(s.x, s.z); c.b.addColored(bench.b, [s.x, townLift(s.x, s.z), s.z], [0, s.yaw, 0]); }
   bench.b.dispose(); bench.g.dispose();
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
@@ -845,17 +915,20 @@ function buildTown() {
   for (const sg of SIGNS) put(sg.x, sg.z, 0, { b: sign.b.clone(), g: sign.g.clone() });
   sign.b.dispose(); sign.g.dispose();
   // fences + lamps go straight into the chunk of their midpoint / position
-  for (const [x1, z1, x2, z2] of FENCES) addFence(at((x1 + x2) / 2, (z1 + z2) / 2).b, x1, z1, x2, z2);
-  for (const [x, z] of LAMPS) { const c = at(x, z); addLamp(c.b, c.g, x, z); }
+  for (const [x1, z1, x2, z2] of FENCES) lifted((x1 + x2) / 2, (z1 + z2) / 2, (b) => addFence(b, x1, z1, x2, z2));
+  for (const [x, z] of LAMPS) lifted(x, z, (b, g) => addLamp(b, g, x, z));
   const pr = mulberry32(555);
   for (const p of PLANTERS) {
     const y = townLift(p.x, p.z);
     if (y <= 0) { addPlanter(at(p.x, p.z).b, p, pr); continue; }
     const tb = new GB([1, 1]); addPlanter(tb, p, pr); const geo = tb.build(); at(p.x, p.z).b.addColored(geo, [0, y, 0]); geo.dispose();   // (on the castle terrace)
   }
-  for (const k of CARTS) addCart(at(k.x, k.z).b, k);
+  for (const k of CARTS) lifted(k.x, k.z, (b) => addCart(b, k));
   const paving = buildPaving();
-  for (const pts of paving.patches) { let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } addPatchKerb(at(cx / pts.length, cz / pts.length).b, pts, pr); }
+  for (const pts of paving.patches) {
+    let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
+    lifted(cx, cz, (b) => { addPatchKerb(b, pts, pr); if (townLift(cx, cz) > 0) addGrassCap(b, pts); });   // (on a raised district: a grass top, the lawn below is covered)
+  }
   addFarm(at(FARM.x, FARM.z).b, pr);
   for (const F of FIELDS) addField(at(F.x, F.z).b, F, pr);
   { const c = at(0, 68); addBridge(c.b, c.g); }
@@ -944,7 +1017,7 @@ function TownTrees() {
     <>
       {lists.map((list, k) => list.length > 0 && (
         <Inst key={k} geo={geos[k]} mat={nat.mat} count={list.length} cast receive fill={(m: InstancedMesh) => {
-          list.forEach((t, i) => { const sc = t.s * 1.75; setInst(m, i, t.x, -0.05, t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc, sc * (1.0 + (i % 3) * 0.08), sc); });   // tall trunk + round crown
+          list.forEach((t, i) => { const sc = t.s * 1.75; setInst(m, i, t.x, -0.05 + townLift(t.x, t.z), t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc, sc * (1.0 + (i % 3) * 0.08), sc); });   // tall trunk + round crown
         }} />
       ))}
     </>
@@ -985,7 +1058,7 @@ function TownChunk({ body, glow, lit, glowMat, shadows }: { body: BufferGeometry
 /** Thin smoke curling out of the cottage chimneys near the hero (existing FX pool: no extra draw calls; the pool's own quality gate thins it on phones). */
 const CHIMNEYS: [number, number, number][] = HOUSES.filter((h) => h.chimney).map((h) => {
   const top = 0.6 + h.floors * 2.7, rh = Math.min(h.w, h.d) * 0.55 + 1.1, lx = h.w * 0.24, lz = -h.d * 0.2, c = Math.cos(h.rot), s = Math.sin(h.rot);
-  return [h.x + lx * c + lz * s, top + rh + 1.45, h.z - lx * s + lz * c];
+  return [h.x + lx * c + lz * s, top + rh + 1.45 + townLift(h.x, h.z), h.z - lx * s + lz * c];
 });
 function ChimneySmoke({ q }: { q: QualityCfg }) {
   const on = q.fxScale >= 0.7;   // (a live smoke particle keeps the FX pool uploading: skipped on the low / phone tiers)

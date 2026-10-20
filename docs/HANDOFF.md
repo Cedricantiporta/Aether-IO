@@ -236,7 +236,11 @@ screens, max-level question: class level cap is 50) have been removed.
   harvest/cave/fishing/tutorial/dream/ankh flags (`aether-survivor-*`). Old saves migrate through flags (`gold10`, `sp2`, `al1`, `mus1`...).
 - **Events**: `engine/events.ts` typed bus; `hub` event (buy/summon/upgrade/craft/brew/...) feeds quests and goals.
 - **Town vs run rendering**: `render/Scene.tsx` shows `Room` in a run, `Terrain/Town` in town; `render/lift.ts liftAt()`
-  adds terrace/hill height on top of the engine's flat y = 0.
+  adds terrace/hill height on top of the engine's flat y = 0. Inside the walls the town has raised districts
+  (`townData.TIERS`: Chapel Hill 1.6, Tavern Row 0.9, West Rise 1.2, East Rise 0.8; castle terrace 2.2) with stairs;
+  `townLift` gives their height, TOWN_COLLIDERS fence their edges, TownScenery `addTier` draws them and lifts
+  everything placed on them (put/lifted, roads in 1 m pieces). Houses, wall runs, towers and gate are the Blender kit
+  (`render/townKit.tsx`, `public/models/town/town_kit.glb`, Higgsfield project "Aether Town Kit").
 - **Rooms**: one disc/shape around 0,0 built from a seed (`roomgen.buildRoom`, `roomShape` polar table, `mapgen.installRoom`),
   only the current room exists; camp rooms use `roomShape.fixed` spots.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.

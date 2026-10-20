@@ -12,7 +12,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BASE } from './models';
 import { Inst } from './Inst';
 import { setInst } from './util';
-import { HOUSES, WALL_RUNS, WALL_TOWERS, GATE, type HouseSpec } from '../engine/townData';
+import { HOUSES, WALL_RUNS, WALL_TOWERS, GATE, townLift, type HouseSpec } from '../engine/townData';
 
 const KIT_URL = `${BASE}models/town/town_kit.glb`;
 export interface KitPiece { body: BufferGeometry; glow: BufferGeometry | null }
@@ -85,7 +85,7 @@ function placements(): Record<string, Place[]> {
     if (i < KIT_HOUSE_FROM) return;
     const v = houseVariant(h, i), [kw, kd] = HOUSE_KIT[v];
     const sx = h.w / kw, sz = h.d / kd;
-    add(v, { x: h.x, z: h.z, ry: h.rot, sx, sz, sy: (sx + sz) / 2 });
+    add(v, { x: h.x, y: townLift(h.x, h.z), z: h.z, ry: h.rot, sx, sz, sy: (sx + sz) / 2 });
   });
   for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 4)), L = len / n;
