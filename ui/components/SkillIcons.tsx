@@ -446,7 +446,7 @@ export const PAINTED_ART = new Set([
   'SOUL_STEP', 'ARMY_DEAD', 'PIERCING_SHOT', 'FIREBALL', 'AXE_SPIN', 'BONE_SPEAR', 'HP', 'MP',
   // passives (keyed by skill-level key)
   'regen', 'barrier', 'weapon', 'burning', 'freezing', 'inspire', 'thunder', 'freezeSpell', 'storm', 'orbital', 'warcry',
-  'stamp', 'consecrate', 'smite', 'radiant', 'soulHarvest',
+  'stamp', 'consecrate', 'smite', 'radiant', 'soulHarvest', 'graveCall', 'boneArmor',
 ]);
 
 export const PaintedIcon: React.FC<{ id: string }> = React.memo(({ id }) => {
