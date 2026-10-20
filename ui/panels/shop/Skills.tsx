@@ -11,7 +11,7 @@ import { HERO_COLOR } from '../../lib/game';
 import { TalentsView } from './Talents';
 import { useRunSkillAlert, useTalentAlert, canTrainSkill } from '../../lib/alerts';
 import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityDefs';
-import { PaintedIcon, SKILL_KEYS } from '../../components/SkillIcons';
+import { PAINTED_ART, PaintedIcon, SKILL_KEYS } from '../../components/SkillIcons';
 import { tip } from '../../components/Tooltip';
 import { SimpleTip } from '../../components/ItemTip';
 
@@ -34,7 +34,7 @@ const RunSkills: React.FC = () => {
     ...activeDefs(hero).map((a, i) => ({ key: a.slot, name: a.name, desc: a.desc, icon: <PaintedIcon id={a.icon} />, tag: String(i + 1), now: a.per })),
     { key: dashKey(hero), name: `Dash: ${dashDef(hero).name}`, desc: dashDef(hero).desc, icon: <PaintedIcon id={dashDef(hero).icon} />, tag: 'SPACE', now: dashDef(hero).per, color: '#7ad0ff' },
     { key: 'ult', name: ULTS[hero].name, desc: ULTS[hero].desc, icon: <PaintedIcon id={ULTS[hero].icon} />, tag: 'R', now: ULTS[hero].per, color: '#ff9a3a' },
-    ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <PaintedIcon id={SKILL_KEYS.includes(k) ? k : PASSIVE_ART[k] ?? 'STAR'} /> })),   // (owner) painted skill art like the actives
+    ...passives.map(([k, i]: [string, any]) => ({ key: k, name: i.name, desc: i.description, icon: <PaintedIcon id={PAINTED_ART.has(k) || SKILL_KEYS.includes(k) ? k : PASSIVE_ART[k] ?? 'STAR'} /> })),   // (owner) painted skill art like the actives
   ];
   // (owner, reference) a compact list: icon, LV x/5, name and the action on the right; the details live in the hover tooltip
   const [tab, setTab] = React.useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');

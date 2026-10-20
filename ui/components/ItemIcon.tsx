@@ -4,7 +4,7 @@ import { Heart, Wind, Flame, ShieldCheck, Magnet, Star, Target, Snowflake, Cloud
 import type { Item, Upgrade } from '../../types';
 import { ItemArt } from './ItemArt';
 import { UpgradeArt } from './UpgradeIcons';
-import { PaintedIcon } from './SkillIcons';
+import { PAINTED_ART, PaintedIcon } from './SkillIcons';
 
 /** Painted item icon (see ItemArt). `size` is px or a css length / percentage. */
 export const ItemIcon: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => <ItemArt item={item} size={size} />;
@@ -19,7 +19,7 @@ const SKILL_ICON: Record<string, [LucideIcon, string]> = {
 };
 const PAINTED_SKILLS = new Set(['GALE_ARROW', 'SHADOW_ROLL', 'FAN_FLAMES', 'LIGHT_ARROW', 'FROST_FIELD', 'STORM_ARROWS', 'SINGULARITY', 'BLINK_NOVA', 'STORM_ORBS', 'CHAIN_FROST', 'METEOR_CATA', 'BLOODRAGE_LEAP', 'WHIRLWIND', 'EARTHSPLITTER', 'BATTLE_CRY', 'TITAN_WRATH', 'RAISE_DEAD', 'SOUL_STEP', 'BONE_SPEAR', 'BONE_WARD', 'CURSE_FIELD', 'ARMY_DEAD', 'piercing', 'burning', 'freezing', 'thunder', 'stamp', 'dash']);
 export const SkillIcon: React.FC<{ id: string; size?: number; dim?: boolean }> = ({ id, size = 26, dim }) => {
-  if (PAINTED_SKILLS.has(id)) return <span style={{ display: 'block', width: size, height: size, borderRadius: 6, overflow: 'hidden', opacity: dim ? 0.45 : 1 }}><PaintedIcon id={id} /></span>;
+  if (PAINTED_SKILLS.has(id) || PAINTED_ART.has(id)) return <span style={{ display: 'block', width: size, height: size, borderRadius: 6, overflow: 'hidden', opacity: dim ? 0.45 : 1 }}><PaintedIcon id={id} /></span>;
   const [I, c] = SKILL_ICON[id] ?? [Star, '#ffd24a'];
   return <I size={size} color={dim ? '#8a7a60' : c} strokeWidth={2.1} />;
 };
