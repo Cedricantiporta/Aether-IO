@@ -256,6 +256,19 @@ screens, max-level question: class level cap is 50) have been removed.
    `public/models/town/town_kit.glb`. Walls + towers were rebuilt plain (big cream blocks, revision 10). Open: kit shops / castle / chapel /
    tavern (still procedural, dark roofs), place kit fountain/well/stall/lamps, hedges + stepping-stone paths on the
    raised districts (Link's Awakening exterior reference), chimney smoke positions vs kit chimneys.
+   **Kit v2 (assets only, NOT wired in yet)**: `public/models/town/town_kit_v2.glb` (578 KB, weld + meshopt medium), built by
+   `art/blender/town_kit_v2.py` (bpy module; geometry authored in game space, flat shaded, one mesh root node per piece,
+   origin = ground centre, front = +Z). Pieces: house_small, house_two_storey, house_gabled_narrow, house_tower,
+   shop_stall_house, tavern, chapel, castle_keep, castle_wall_segment, castle_gatehouse, lamp_post, banner,
+   flower_planter, market_stall, barrel, crate, fountain_small. 12 shared flat materials (stone, stone_dark, wood,
+   timber, roof_blue #3c56a8, gold, window_glow [emissive, name contains "glow" so `townKit.tsx` puts it in the glow
+   geometry], flower_red, flower_pink, leaf, awning_blue, iron) and NO textures: add the new names to
+   `townPalette.kitColor` when wiring. Rebuild: `python3 art/blender/town_kit_v2.py [--no-render]` (writes
+   `town_kit_v2.raw.glb`, renders to `$KITV2_SHOTS` = `art/renders/kitv2/`; `--only=sheet,castle,props,town`,
+   `--closeup=<piece>[,yaw,pitch,ortho,y,x,z]` for single-piece debug shots), then
+   `npx @gltf-transform/cli weld raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb town_kit_v2.glb --level medium`
+   (delete the raw file). The node names are final, so no KIT_LOC offset table is needed (every piece sits at the origin).
+   Gotcha: never overlap coplanar faces in the script (Cycles renders them black); use `B.arch` (half-disc prism) for arches.
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
