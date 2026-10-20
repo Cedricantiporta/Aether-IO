@@ -15,7 +15,32 @@ cuts apart and wires into the UI. Fewer generations, consistent style.
 
 ---
 
-## STYLE v2 — cute rounded "Switch / Zelda: Echoes" look (owner, 2026-10-20: USE THIS ONE)
+## STYLE v3 — 3D toy objects like the Echoes of Wisdom item bar (owner, 2026-10-20: USE THIS ONE for ALL icons, skills too)
+Every icon (skills, passives, items, pets, UI) is a single small 3D object rendered like a miniature toy / clay figurine,
+floating alone on flat magenta (cut-out), so the game draws it on its own soft rounded tile. Skills are shown as a
+physical object that stands for the skill (e.g. a toy arrow wrapped in a wind swirl, a little clay fireball).
+```
+Style: each icon is ONE small 3D object rendered like a handmade miniature toy / clay-and-vinyl figurine, exactly
+like the item icons in The Legend of Zelda: Echoes of Wisdom (Nintendo Switch). Soft rounded chunky shapes, gentle
+bevels, matte clay / painted-wood / soft-plastic materials with subtle surface texture (fine clay grain, light
+brush-painted detail), soft studio lighting from the top-left, soft ambient occlusion, a faint soft contact shadow
+directly under the object. Three-quarter view, slightly from above, object centered and filling about 75% of its
+cell. Warm, cheerful, natural colours; magical effects (fire, ice, light, wind, lightning, shadow) are modelled as
+soft solid sculpted shapes (swirls, flames, crystals, puffs) attached to the object, like toy VFX, never glowing
+neon or painted 2D strokes. Cute and charming, simple readable silhouette at 40 px. No outlines, no 2D painting,
+no realism, no text, no letters, no numbers, no frames, no scenery.
+```
+Layout for EVERY sheet (skills included):
+```
+Layout: one 1024x1024 image, a 4x4 grid of 16 separate objects, each centered in its own equal square cell.
+Background of the WHOLE image: perfectly flat solid pure magenta (#FF00FF), no gradients, no texture, no floor,
+no cast shadows on the background except a tiny soft shadow right under each object, no frames, no gutters.
+Each object fills about 75% of its cell, fully inside the cell, not touching other cells. Do not use magenta or
+pink-purple colours inside the objects. Same camera angle, lighting, size and material style for all 16.
+Order: left to right, top to bottom, exactly as listed.
+```
+
+## STYLE v2 — cute rounded "Switch / Zelda: Echoes" look (superseded by v3)
 Replaces the painted-MMO STYLE block below for every new sheet (skills, passives, cards, items, pets, UI). Same sheet
 codes, same order, same GRID / CUT-OUT rules, so the slicer and ids do not change.
 ```
