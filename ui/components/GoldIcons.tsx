@@ -1,4 +1,5 @@
-// Solid gold icon set (owner reference: filled, engraved gold glyphs - no thin line icons). Drop-in replacement for
+// Flat soft icon set (v12: solid rounded shapes, no outlines, soft white / one soft colour per meaning; file name kept for imports)
+// (old note:) Solid gold icon set (owner reference: filled, engraved gold glyphs - no thin line icons). Drop-in replacement for
 // the lucide-react icons the UI used: same names, same `size` / `className` / `style` / `color` props. Each glyph is a
 // filled silhouette painted with the shared gold gradient (`GoldIconDefs`, mounted once in index.tsx) plus darker
 // "engraved" detail lines. Passing `color` paints the silhouette in that colour instead (status effects, rarity).
@@ -14,7 +15,7 @@ export type IconType = React.FC<IconProps>;
 /** (compat with code typed against lucide) */
 export type LucideIcon = IconType;
 
-const GOLD = 'url(#gi-gold)';
+const GOLD = '#fff7ec';   // soft white by default; some meanings get one soft colour (SOFT below)
 const ENGRAVE = '#2a1d0c';
 /** inline so stray `svg { stroke }` rules can't outline the glyphs; a soft shadow lifts them off dark panels */
 const BASE: React.CSSProperties = { stroke: 'none', flexShrink: 0, overflow: 'visible', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.55))' };
@@ -23,15 +24,19 @@ const BASE: React.CSSProperties = { stroke: 'none', flexShrink: 0, overflow: 'vi
 type Draw = (g: string) => React.ReactNode;
 
 /** Engraved detail line (dark, on top of the gold). */
-const E: React.FC<{ d: string; w?: number }> = ({ d, w = 1.2 }) =>
+const E: React.FC<{ d: string; w?: number }> = ({ d, w = 1.2 }) => w < 1.8 ? null :
   <path d={d} fill="none" stroke={ENGRAVE} strokeOpacity={0.6} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />;
 /** Bold stroked shape painted gold (for arcs / arrows that read better as thick bands). */
 const B: React.FC<{ d: string; g: string; w?: number }> = ({ d, g, w = 3 }) =>
   <path d={d} fill="none" stroke={g} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />;
 
+const SOFT: Record<string, string> = {
+  Heart: '#ff9aa2', Flame: '#ffb38a', Droplet: '#8fc8ff', Droplets: '#8fc8ff', Waves: '#8fc8ff', Snowflake: '#bfe6ff', Star: '#ffe08a', Sparkles: '#ffe08a', Coins: '#ffd36b',
+  Crown: '#ffe08a', Trophy: '#ffe08a', Medal: '#ffe08a', Leaf: '#a8e6b8', Sprout: '#a8e6b8', Trees: '#a8e6b8', Clover: '#a8e6b8', Zap: '#ffe08a',
+};
 function make(name: string, draw: Draw): IconType {
   const C: IconType = ({ size = 24, color, className, style, strokeWidth: _sw, absoluteStrokeWidth: _a, fill: _f, ...rest }) => {
-    const g = color && color !== 'currentColor' ? color : GOLD;
+    const g = color && color !== 'currentColor' ? color : (SOFT[name] ?? GOLD);
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" className={`gi ${className ?? ''}`} style={{ ...BASE, ...style }} aria-hidden="true" {...rest}>
         {draw(g)}
@@ -61,18 +66,8 @@ const SPEAKER = 'M2.5 9h4l6-5v16l-6-5h-4Z';
 const DROP = 'M12 2.5c3.5 4.4 6.5 8 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10.5 8.5 6.9 12 2.5Z';
 const WAVE = 'M2 6.5c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2v2.8c-2.5 0-2.5-2-5-2s-2.5 2-5 2-2.5-2-5-2-2.5 2-5 2Z';
 
-export const GoldIconDefs: React.FC = () => (
-  <svg width="0" height="0" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true" focusable="false">
-    <defs>
-      <linearGradient id="gi-gold" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#fff3c4" />
-        <stop offset=".38" stopColor="#f0cf7c" />
-        <stop offset=".7" stopColor="#c9993f" />
-        <stop offset="1" stopColor="#8e6624" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
+/** (no gradient defs any more: icons are flat solid fills) */
+export const GoldIconDefs: React.FC = () => null;
 
 // ---------------------------------------------------------------- glyphs --
 export const X = make('X', (g) => <path fill={g} d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4Z" />);

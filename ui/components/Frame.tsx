@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { X } from './GoldIcons';
 import { CoinGlyph } from './SkillIcons';
+import { CloseX } from './CloseX';
 
 export const Corners: React.FC = () => (
   <>
@@ -49,7 +50,7 @@ export const PanelHead: React.FC<{ icon?: React.ReactNode; title: string; sub?: 
     </div>
     <div className="flex items-center gap-2">
       {right}
-      {onClose && <button className="close-x" onClick={onClose} aria-label="Close"><X size={18} strokeWidth={3.2} /></button>}
+      {onClose && <CloseX onClick={onClose} />}
     </div>
   </div>
 );

@@ -213,6 +213,7 @@ DPR (`PerfGovernor`), NPC view culling + animation LOD, merged NPC meshes, range
 effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
 
 ### 3.9 UI style direction (owner-driven)
+**Minimal (owner, v12 block at the end of `index.css`):** as few containers as possible; content floats; group by spacing, not boxes.
 **v11 (owner, 2026-10-20; font + window sweep, the LAST block of `index.css`):** the UI font is **"M PLUS Rounded 1c"** (Rodin-like rounded humanist
 sans; "Zen Maru Gothic" is the fallback, both loaded in `index.html` at weights 500 + 700, Nunito removed). Titles = 700, upright, normal case (no
 Cinzel caps, no letter-spacing); body = 500; dialogue = 500 upright (no italics anywhere in the UI). **Cinzel is only for the 3D town labels

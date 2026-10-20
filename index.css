@@ -3479,3 +3479,92 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .rw-emblem.arc .arc-num, .sm-roman, .rw-roman, .story-ch.replay, .rw-title { font-family: var(--font-title) !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important; }
 .rpg-logo { color: #fff !important; -webkit-text-fill-color: #fff; background: none !important; background-image: none !important; animation: none !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .5)) !important; }
+
+/* ======================================================================================================
+   v12 "minimal" (owner, 2026-10-20): "less containers / separation". Echoes of Wisdom: text + icons FLOAT on the game with a soft
+   text shadow; only a few soft panels exist (dialogue, quest offer, potion count, cooldown numbers, one panel per window).
+   Inside a window: no nested cards / boxes / group frames / row backgrounds; group by spacing + small dim section titles; hover or
+   selection = soft highlight only. Item slots stay soft rarity tiles (content). KEEP LAST.
+   ====================================================================================================== */
+:root { --z-float: 0 1px 3px rgba(0, 0, 0, .6), 0 0 8px rgba(0, 0, 0, .35); --z-hover: rgba(255, 255, 255, .1); }
+
+/* ---------- HUD: float, no pills ---------- */
+.qt-row, .qt-row.main, .qt-row.done, .qt-row.king, .qt-row.npc, .qt-row.board, .qt-right .qt-row, .qt-right .qt-row.main, .qt-left .qt-row {
+  background: none !important; background-image: none !important; box-shadow: none !important; border-radius: 10px; animation: none !important; padding: .25rem .4rem;
+}
+.qt-row[role="button"]:hover { background: var(--z-hover) !important; filter: none; }
+.qt-row .qt-head, .qt-row .qt-title, .qt-row .qt-line, .qt-row .qt-n, .qt-row .qt-dist { text-shadow: var(--z-float); }
+.qt-bar { background: rgba(255, 255, 255, .22) !important; box-shadow: 0 1px 3px rgba(0, 0, 0, .4); border-radius: 999px; }
+.qt-bar i { box-shadow: none !important; border-radius: 999px; }
+.qt-toast-line { background: none !important; box-shadow: none !important; padding: .1rem .3rem; text-shadow: var(--z-float) !important; }
+.area-pill { background: none !important; box-shadow: none !important; padding: 0 .3rem; text-shadow: var(--z-float); }
+.area-pill .ap-name, .area-pill .ap-time { text-shadow: var(--z-float); }
+.upn-pill { background: none !important; box-shadow: none !important; padding: .25rem .7rem; text-shadow: var(--z-float); transition: background .14s ease; }
+.upn-pill:hover { background: var(--z-hover) !important; filter: none; }
+.upn-pill.low { box-shadow: none !important; }
+.vbars .vb-badge { background: none !important; box-shadow: none !important; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
+.vb-lv, .vb-lv .vb-cls, .vb-lv small { text-shadow: var(--z-float); }
+.vb-bar { box-shadow: 0 1px 4px rgba(0, 0, 0, .4) !important; background: rgba(0, 0, 0, .38); }
+.cpill, .cur-float .cpill { background: none !important; box-shadow: none !important; }
+.cpill .val { text-shadow: var(--z-float); }
+.corner-btns .cb, .cb.cb-big { background: none !important; box-shadow: none !important; text-shadow: var(--z-float); }
+.cb.cb-big:hover { background: var(--z-hover) !important; filter: none; transform: none; }
+.cb.cb-big.on { background: none !important; color: #fff6e0; box-shadow: none !important; text-shadow: 0 0 10px rgba(255, 246, 224, .8), 0 1px 3px rgba(0, 0, 0, .6); }
+.toast-pill, .toast-pill.warn { background: none !important; box-shadow: none !important; padding: .15rem .3rem; text-shadow: var(--z-float); }
+.toast-pill > span { text-shadow: var(--z-float); }
+.target-frame, .target-frame.docked, .target-frame.bare { background: none !important; box-shadow: none !important; border-radius: 0 !important; }
+.tf-name, .tf-sub, .tf-val, .target-frame.docked .tf-name, .target-frame.docked .tf-val { text-shadow: var(--z-float); }
+.tf-bar, .target-frame.docked .tf-bar { background: rgba(0, 0, 0, .38) !important; border: 0 !important; border-radius: 999px !important; box-shadow: 0 1px 4px rgba(0, 0, 0, .4) !important; }
+.tf-hp { border-radius: 999px; }
+.tf-ic[data-on='1'] { background: none; }
+.buff-dot, .buff-slot, .debuff-slot { box-shadow: none; }
+.mm-north { background: none !important; color: #fff; text-shadow: var(--z-float); }
+.sqbtn .mb-lbl { text-shadow: var(--z-float) !important; }
+/* kept boxed on purpose: dialogue (.dlg), quest offer (.dlg-offer), potion count bubbles, cooldown numbers, tooltips */
+
+/* ---------- Windows: ONE panel, no nested boxes ---------- */
+.rpg-frame:not(.rpg-panel), .rpg-frame.gold:not(.rpg-panel), .rpg-parchment:not(.big):not(.rpg-panel), .rpg-card, .upn-row, .sw-side, .ws-side, .tt-side, .bag-side, .qw-side, .qw-det,
+.qw-sec, .qw-cur, .qw-obj, .qw-rew, .at-detail, .at-points, .ws-stage, .ws-stats, .ws-result, .ws-mats, .ws-rates, .ws-rates div, .sw-preview, .sw-rates, .sw-pity, .sw-tier, .sw-wallet,
+.tech-row, .cs-stat-rows, .cs-info, .cs-preview, .cs-equip, .cs-tags, .brew-card, .st-row, .st-char, .dc-head, .dc-mod, .dc-route, .dc-stat, .dc-reward, .dc-badge .m, .enc-row,
+.enc-stats, .enc-item, .wh-bottom, .wh-goldbar, .wh-search, .go-rows, .go-root :is(.go-row, .go-rows > *), .bag-equip, .bag-foot, .fc-row, .sr-row, .ql-row, .qw-grp, .ax-held, .qw-banner, .qw-banner[data-ch], .cs-dia-frame {
+  background: none !important; background-image: none !important; box-shadow: none !important; border-radius: 12px !important;
+}
+/* list rows: no background, spacing only; hover / selection = soft highlight */
+:is(.ws-rec, .qw-list > *, .cs-row, .cs-item, .st-row, .at-row, .sk-row, .fc-row, .sr-row, .ql-row, .enc-row, .sw-tier-row, .upn-row, .tt-row.btn) {
+  background-color: transparent !important; background-image: none !important; box-shadow: none !important; transition: background-color .14s ease;
+}
+:is(.ws-rec, .qw-list > *, .cs-row, .cs-item, .st-row, .at-row, .sk-row, .fc-row, .sr-row, .ql-row, .enc-row, .sw-tier-row, .upn-row, .tt-row.btn):hover { background-color: var(--z-hover) !important; }
+:is(.ws-rec, .qw-list > *, .cs-row, .cs-item, .st-row, .sw-tier-row, .so-tab, .at-row, .sk-row, .fc-row, .sr-row, .ql-row, .qw-grp, .tp-chip, .cs-diff, .cs-slot, .brew-chip):is(.sel, .on, .is-active, .is-selected, .active, [aria-selected='true']) {
+  background-color: rgba(255, 255, 255, .14) !important; box-shadow: none !important;
+}
+/* stat lists: plain label / value rows */
+.cs-stat-rows > *, .ws-stats > *, .enc-stats > *, .dc-stat, .st-row { padding: .15rem .1rem; }
+/* section titles: small, dim, no box */
+.ws-sec, .tt-sec, .st-sec-h, .sw-pane-h, .sw-pop-h, .sw-tier-h, .qw-chap-h, .bag-equip-head, .cs-head { font-size: .78rem; color: var(--z-dim) !important; font-weight: 700 !important; }
+/* tabs: no container pill, just text; selected = soft pill */
+:is(.bag-tabs, .cs2-tabs, .qw-tabs, .so-tabs, .sw-tabs, .rpg-tabs, .ws-cats, .tp-chips, .st-segs, .tt-tabs) { background: none !important; padding: 0; }
+.so-tabs { display: grid; }
+/* secondary actions = plain text buttons (primary / go stay pills) */
+:is(.cs-change, .np-back, .sw-rates-btn, .bag-del-go, .tt-respec, .story-skip, .rpg-btn-sm:not(.rpg-btn-primary):not(.rpg-btn-green)) {
+  background-color: transparent !important; box-shadow: none !important; color: var(--z-dim) !important;
+}
+:is(.cs-change, .np-back, .sw-rates-btn, .bag-del-go, .tt-respec, .story-skip):hover:not(:disabled) { background-color: var(--z-hover) !important; color: #fff !important; filter: none; }
+/* panel headers float on the panel */
+.panel-head, .panel-head.v4, .ws-head, .np-head, .sw-side-head { background: none !important; box-shadow: none !important; }
+
+/* ---------- v12: the ONE close button (`ui/components/CloseX.tsx`): soft round 36px, white rounded X, top-right inside the panel ---------- */
+.win-x, .win-x.modal-x, .is-touch .win-x.modal-x, .compact .win-x {
+  position: absolute !important; top: .9rem !important; right: .9rem !important; left: auto !important; bottom: auto !important; z-index: 20;
+  width: 36px !important; height: 36px !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; display: grid !important; place-items: center;
+  border: 0 !important; outline: 0 !important; border-radius: 50% !important; color: #fff !important; background: rgba(60, 60, 68, .7) !important; box-shadow: none !important;
+  cursor: pointer; transition: background .14s ease, transform .14s ease;
+}
+.win-x:hover, .win-x.modal-x:hover { background: rgba(255, 255, 255, .24) !important; transform: scale(1.08); filter: none; }
+.win-x:active { transform: scale(.96); }
+.win-x svg { display: block; filter: none !important; }
+/* inside a header row it sits in the flow (the header already reserves its corner); lists the title never runs under it */
+.panel-head .win-x, .win-x.inline { position: static !important; flex: none; }
+.ws-head, .sw-side-head, .sw-pop-h, .np-head { padding-right: 3.6rem !important; }
+.sw-pop-h { position: relative; }
+/* dialogues have no close button; framed dialogs with a header keep only the header X */
+.modal-card:has(.panel-head) > .win-x { display: none !important; }

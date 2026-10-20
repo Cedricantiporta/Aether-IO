@@ -4,6 +4,7 @@ import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { LANTERN_COST, LANTERN_MAX_LV, REFILL_PRICE } from '../../engine/caveData';
 import { useLanternPanel, lanternLevel, oilMaxFor, refillLantern, upgradeLantern, freeRefillToday, caveBest } from '../../engine/systems/cave';
+import { CloseX } from '../components/CloseX';
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, '0')}`;
 
@@ -29,7 +30,7 @@ export const LanternPanel: React.FC = () => {
       <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(25rem, 92vw)', background: 'rgba(32,32,38,.92)', border: 0, borderRadius: 22, padding: '1.2rem', color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,.42)' }}>
         <div className="flex items-center justify-between" style={{ marginBottom: '.5rem' }}>
           <div style={{ fontFamily: 'var(--font-title)', fontWeight: 700, fontSize: '1.1rem', color: '#fff' }}>Grit's Lantern Bench</div>
-          <button style={{ color: '#ccc', fontSize: '1.1rem' }} onClick={() => useLanternPanel.setState({ open: false })}>✕</button>
+          <CloseX className="inline" onClick={() => useLanternPanel.setState({ open: false })} />
         </div>
         <div style={{ fontSize: '.78rem', color: '#b8b2a4', marginBottom: '.7rem' }}>"Oil burns the whole trip, floor after floor. Run dry and the dark keeps your loot." Personal best: <b style={{ color: '#9fe6ff' }}>Floor {caveBest()}</b></div>
         <div style={{ fontSize: '.85rem', marginBottom: '.35rem' }}>Lantern <b>Lv {L + 1}</b> · capacity <b>{fmt(cap)}</b> · oil now <b>{fmt(oil)}</b></div>

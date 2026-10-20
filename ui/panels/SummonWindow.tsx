@@ -16,6 +16,7 @@ import { useUiStore } from '../uiStore';
 import { GemGlyph } from '../components/SkillIcons';
 import { RARITIES } from '../lib/game';
 import { RARITY_LIGHT } from '../theme';
+import { CloseX } from '../components/CloseX';
 
 const BANNERS = [
   { id: 'GEM', name: 'Gem Altar', sub: 'Premium odds · gems', tone: '#e9b949',
@@ -66,7 +67,7 @@ export const SummonWindow: React.FC = () => {
           </div>
         </div>
         <div className="sw-main">
-          <button className="sw-x" onClick={close} aria-label="Close"><X size={20} /></button>
+          <CloseX onClick={close} />
           {tab === 'SHOP' && <GemShopTab />}
           {tab === 'TECH' && <div className="sw-tech"><div className="sw-pane-h"><Cog size={18} /> Tech House <em>Permanent upgrades for every hero and every run</em></div><TechGrid /></div>}
           {altar && (<>
@@ -80,7 +81,7 @@ export const SummonWindow: React.FC = () => {
           {rewardsOpen && (
             <div className="sw-pop" onClick={() => setRewardsOpen(false)} data-testid="summon-rewards">
               <div className="sw-pop-box sw-pop-wide" onClick={(e) => e.stopPropagation()}>
-                <div className="sw-pop-h">Possible rewards · {hero.charAt(0) + hero.slice(1).toLowerCase()}<button className="sw-x" onClick={() => setRewardsOpen(false)} aria-label="Close"><X size={18} /></button></div>
+                <div className="sw-pop-h">Possible rewards · {hero.charAt(0) + hero.slice(1).toLowerCase()}<CloseX onClick={() => setRewardsOpen(false)} /></div>
                 <div className="sw-preview rpg-scroll" data-testid="summon-preview">
                   {PREVIEW_ORDER.filter((r) => r !== 'COMMON').map((r) => {
                     // a pull: 25% a supply, else 40% one shard of the rolled tier / 60% gear (Common rolls become Rare) (store.summon)
@@ -103,7 +104,7 @@ export const SummonWindow: React.FC = () => {
           {ratesOpen && (
             <div className="sw-pop" onClick={() => setRatesOpen(false)} data-testid="summon-rates">
               <div className="sw-pop-box" onClick={(e) => e.stopPropagation()}>
-                <div className="sw-pop-h">Summon rates · {B.name}<button className="sw-x" onClick={() => setRatesOpen(false)} aria-label="Close"><X size={18} /></button></div>
+                <div className="sw-pop-h">Summon rates · {B.name}<CloseX onClick={() => setRatesOpen(false)} /></div>
           <div className="sw-rates">
             {RARITIES.map((r) => (
               <div key={r} className="sw-rate" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>

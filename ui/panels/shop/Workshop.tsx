@@ -21,6 +21,7 @@ import { CoinGlyph } from '../../components/SkillIcons';
 import { QtyStepper } from '../../components/Modal';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat } from '../../lib/game';
+import { CloseX } from '../../components/CloseX';
 
 const RNAME: Record<Rarity, string> = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 const pc = (v: number) => `${Math.round(v * 100)}%`;
@@ -71,7 +72,7 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return createPortal(
     <div className="ws-backdrop pe" onClick={onClose} data-testid="workshop">
       <motion.div className="ws-win" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}>
-        <div className="ws-head"><Hammer size={20} /> Workshop <em>Forge new gear from shards, gold and monster loot</em><button className="sw-x" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
+        <div className="ws-head"><Hammer size={20} /> Workshop <em>Forge new gear from shards, gold and monster loot</em><CloseX onClick={onClose} /></div>
         <div className="ws-body">
           {/* category tree */}
           <div className="ws-tree rpg-scroll" data-testid="craft-slots">

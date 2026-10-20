@@ -11,6 +11,7 @@ import { GemGlyph } from '../../components/SkillIcons';
 import { tip } from '../../components/Tooltip';
 import { SimpleTip } from '../../components/ItemTip';
 import { useUiStore } from '../../uiStore';
+import { CloseX } from '../../components/CloseX';
 
 /** Painted item art for each upgrade (the same art the bag uses for real items). */
 const ART: Record<TechId, React.ReactNode> = {
@@ -38,7 +39,7 @@ export const TechWindow: React.FC = () => {
           <span className="tw-title"><Cog size={20} /> Tech House</span>
           <span className="tw-sub">Permanent upgrades for every hero and every run</span>
           <span className="tw-wallet"><GemGlyph size={18} /> {gems.toLocaleString()}</span>
-          <button className="sw-x" onClick={close} aria-label="Close"><X size={20} /></button>
+          <CloseX onClick={close} />
         </div>
         <TechGrid />
       </motion.div>

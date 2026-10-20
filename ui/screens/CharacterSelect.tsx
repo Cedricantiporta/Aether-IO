@@ -11,6 +11,7 @@ import { HeroPreview } from '../components/HeroPreview';
 import { characters, activeChar, charLevel, charEquipment, createChar, deleteChar, setActiveChar, enterWithReload, MAX_CHARS, TINTS, type CharEntry } from '../../characters';
 import { HERO_ICON } from '../hud/TopBars';
 import { ItemSlot } from '../components/ItemSlot';
+import { CloseX } from '../components/CloseX';
 
 const ROLE: Record<HeroClass, string> = { ARCHER: 'Ranged  |  Damage', WIZARD: 'Ranged  |  Magic', BARBARIAN: 'Melee  |  Defense', KNIGHT: 'Melee  |  Tank', NECROMANCER: 'Ranged  |  Summoner' };
 const BLURB: Record<HeroClass, string> = {
@@ -94,7 +95,7 @@ const NamePopup: React.FC<{ onCancel: () => void; onConfirm: (name: string) => v
         <i className="np-corner tl" /><i className="np-corner tr" /><i className="np-corner bl" /><i className="np-corner br" />
         <div className="np-head">
           <span>Name Your Hero</span>
-          <button className="np-x" onClick={onCancel} aria-label="Close"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 8l8 8M16 8l-8 8" /></svg></button>
+          <CloseX onClick={onCancel} />
         </div>
         <div className="np-orn"><svg viewBox="0 0 120 40" aria-hidden><g className="np-rays">{Array.from({ length: 11 }, (_, i) => { const a = Math.PI * (0.15 + 0.7 * i / 10); return <line key={i} x1={60} y1={4} x2={60 + Math.cos(a) * 46} y2={4 + Math.sin(a) * 34} />; })}</g><path d="M50 4 L60 16 L70 4" /><path d="M54 4 L60 11 L66 4" /><rect x="57" y="-3" width="6" height="6" transform="rotate(45 60 0)" /></svg></div>
         <div className="np-field">

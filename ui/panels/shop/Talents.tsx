@@ -15,6 +15,7 @@ import { CARD_ART } from '../../components/UpgradeIcons';
 import { UpgradeArt } from '../../components/UpgradeIcons';
 import { HERO_ICON } from '../../hud/TopBars';
 import { HERO_COLOR } from '../../lib/game';
+import { CloseX } from '../../components/CloseX';
 
 // Radial talent tree (owner reference): class emblem in the centre, four branches (up / right / down / left) fanning out
 // over five rings. Square nodes = root / special / capstone, round nodes = plain stat talents. A node opens once its
@@ -103,7 +104,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       <motion.div className="ws-win tt-win" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}>
         <div className="ws-head"><Sparkles size={20} /> Talents <em>{hero.toLowerCase()} · class level {lv}</em>
           <span className="tt-head-pts"><b>{free}</b> / {total} points</span>
-          <button className="sw-x" onClick={onClose} aria-label="Close"><X size={20} /></button>
+          <CloseX onClick={onClose} />
         </div>
         <div className="tt-body">
           <div className="tt-view" ref={view} {...pan}>

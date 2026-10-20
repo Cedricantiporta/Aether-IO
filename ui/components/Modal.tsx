@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Panel, PanelHead, Ribbon } from './Frame';
 import { Button } from './Button';
 import { X } from './GoldIcons';
+import { CloseX } from './CloseX';
 
 interface ModalProps {
   open: boolean; onClose?: () => void; title?: string; ribbon?: boolean; tone?: 'red' | 'gold' | 'blue' | 'green' | 'dark' | 'purple';
@@ -35,7 +36,7 @@ const ModalBody: React.FC<ModalProps> = ({ open, onClose, title, ribbon, tone = 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onPointerDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
           <motion.div initial={{ scale: .85, y: 24, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: .9, y: 10, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ width, maxWidth: '94vw', maxHeight: '92vh' }} className={`relative modal-card${full ? ' modal-full' : ''}`}>
-            {onClose && <button className="modal-x" aria-label="Close" onClick={onClose}><X size={22} strokeWidth={3.4} /></button>}
+            {onClose && <CloseX className="modal-x" onClick={onClose} />}
             {ribbon && title && <div className="absolute left-1/2 -top-5 -translate-x-1/2 z-10 modal-ribbon"><Ribbon tone={tone}>{title}</Ribbon></div>}
             <Panel className="flex flex-col" style={{ maxHeight: '92vh' }}>
               {!ribbon && title && <PanelHead icon={icon} title={title} onClose={onClose} />}
