@@ -3316,7 +3316,7 @@ hr, .tab-underline { display: none !important; }
 .skill-row .hud-slot.is-round { border-radius: 50% !important; }
 .skill-row .hud-slot.is-round .cd-sweep, .skill-row .hud-slot.is-round .mana-lack, .skill-row .hud-slot.is-round .cd-ready, .skill-row .hud-slot.is-round.slot-shake::after { border-radius: 50%; }
 .skill-row .hud-slot.is-round .cd-text { font-size: .95rem; }
-.skill-row .hud-slot.is-round .slot-qty { left: 0; right: 0; bottom: .1rem; text-align: center; font-size: .78rem; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7); }
+.skill-row .hud-slot.is-round .slot-qty { left: 50%; right: auto; bottom: .3rem; transform: translateX(-50%); min-width: 1.35rem; padding: 0 .35rem; line-height: 1.15rem; border-radius: 999px; background: rgba(20,20,24,.72); text-align: center; font-size: .82rem; font-weight: 800; color: #fff; text-shadow: none; z-index: 3; }
 .skill-row .act-wrap:has(.is-round) > .rpg-key { right: -.35rem; top: -.35rem; bottom: auto; }
 
 /* AUTO: a small soft pill */

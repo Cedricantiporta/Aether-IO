@@ -53,10 +53,10 @@ export const ActionBar: React.FC = () => {
         getCd={() => (world.village.ride.on ? { t: world.village.ride.dashCd, max: 6 } : { t: p.dashCd, max: p.dashCdMax })}
         tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`), cdLine(`Lv ${dLv}`, dDef.per(dLv))]} />} />
 
-      <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="3rem" round qty={hpQty} active={true} accent="#d6252b"
+      <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="3.7rem" round qty={hpQty} active={true} accent="#d6252b"
         icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: potionCooldown() })}
         tooltip={<SimpleTip title="Health Potion" sub="Consumable [Z]" color="#b3261e" body="Restores health. Auto-drinks below 30% HP when enabled in settings." lines={[cdLine('In bag', `${hpQty}`)]} />} />
-      <ActionSlot id="mp" keyLabel="X" keyCode="KeyX" size="3rem" round qty={mpQty} active={true} accent="#2f6fe0"
+      <ActionSlot id="mp" keyLabel="X" keyCode="KeyX" size="3.7rem" round qty={mpQty} active={true} accent="#2f6fe0"
         icon={<PaintedIcon id="MP" />} getCd={() => ({ t: p.mpPotCd, max: potionCooldown() })}
         tooltip={<SimpleTip title="Mana Potion" sub="Consumable [X]" color="#1f56c4" body="Restores mana. Auto-drinks below 30% mana when enabled in settings." lines={[cdLine('In bag', `${mpQty}`)]} />} />
     </div>
