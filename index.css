@@ -3213,3 +3213,39 @@ input:focus-visible, select:focus-visible { outline: 0; box-shadow: var(--z-acce
 .wplaque .pips .pip { border: 0; box-shadow: none; } .wplaque .pips .pip[data-s='done'] { background: var(--z-accent); } .wplaque .pips .pip[data-s='cur'] { background: #fff; box-shadow: 0 0 8px var(--z-accent); }
 .combo-label { font-family: var(--font-title); letter-spacing: .02em; }
 .hud-cur .rpg-num, .hud-cur span { font-family: var(--font-title); }
+
+/* ======================================================================================================
+   v8b (owner fixes): quest cards = soft rounded translucent cards (NO side bars / lines), distinct "!" marker colours,
+   cute round menu buttons, pill tooltip. Keep LAST.
+   ====================================================================================================== */
+.hud-root .qt .qt-row.qt-row.qt-row, .hud-root .qt .qt-row.qt-row.qt-row.done, .hud-root .qt .qt-row.qt-row.qt-row.npc, .hud-root .qt .qt-row.qt-row.qt-row.board, .hud-root .qt .qt-row.qt-row.qt-row.main, .hud-root .qt .qt-row.qt-row.qt-row.king {
+  border: 0 !important; border-left: 0 !important; border-image: none !important; outline: 0 !important; animation: none !important;
+  border-radius: 18px !important; background: rgba(30, 30, 34, .6) !important; box-shadow: var(--z-shadow-sm) !important; filter: none;
+}
+.hud-root .qt .qt-row.qt-row.qt-row.main { background: rgba(62, 60, 66, .66) !important; }   /* the tracked / main quest: a lighter fill instead of a line */
+.hud-root .qt .qt-row[role="button"]:hover { filter: none; background: rgba(70, 68, 76, .7) !important; }
+.qt-row::before, .qt-row::after, .qt-row.main::before, .qt-right .qt-row::before, .hud-root .qt .qt-row::before, .hud-root .qt .qt-row::after { content: none !important; display: none !important; }
+.hud-root .qt .qt-row[data-k='main'] { --qc: #ffe48a; }
+.hud-root .qt .qt-row[data-k='npc'] { --qc: #8cc4ff; }
+.hud-root .qt .qt-row[data-k='board'] { --qc: #7fe39a; }
+.hud-root .qt .qt-row[data-s='done'] .qt-mark { background: #fff6e0; color: #2fae6a; }
+.hud-root .qt .qt-row .qt-mark { background: var(--qc); color: #3a3320; box-shadow: none; }
+.hud-root .qt .qt-row .qt-head { color: var(--z-dim); }
+.hud-root .qt .qt-row.done .qt-head, .hud-root .qt .qt-row.npc.done .qt-head { color: var(--z-dim); }
+
+/* top-right menu: circular translucent charcoal buttons with cute cream icons */
+.sqbtn.sqbtn { background: none !important; border-radius: 16px !important; }
+.sqbtn .mb-ic { width: 3.25rem; height: 3.25rem; border-radius: 50%; background: rgba(30, 30, 34, .6); box-shadow: 0 3px 10px rgba(0, 0, 0, .3); transition: transform .14s ease, box-shadow .14s ease; }
+.sqbtn.mb-mini .mb-ic { width: 2.4rem; height: 2.4rem; }
+.sqbtn.sqbtn.mb-mini { width: 2.4rem; height: 2.4rem; }
+.sqbtn.sqbtn.mb-cap { width: 3.6rem; }
+.sqbtn svg, .sqbtn.is-active svg { filter: none; }
+.cute-ic { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); display: block; }
+.sqbtn:hover { filter: none; transform: none; }
+.sqbtn:hover .mb-ic, .sqbtn.is-active .mb-ic { transform: scale(1.08); box-shadow: 0 0 0 2.5px #5fd3e6, 0 3px 12px rgba(95, 211, 230, .35); }
+.sqbtn.is-active .mb-ic::after { display: none; }
+.sqbtn .mb-ic .red-dot { top: -.05rem; right: -.05rem; width: .8rem; height: .8rem; background: #ff7f8e; box-shadow: 0 0 0 2px #fff; }
+.sqbtn.mb-mini .mb-ic .red-dot { width: .65rem; height: .65rem; }
+.tip-pill { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .8rem; border-radius: 999px; background: rgba(30, 30, 34, .92); color: #fff; font-family: var(--font-title); font-weight: 800; font-size: .78rem; white-space: nowrap; box-shadow: var(--z-shadow-sm); }
+.tip-pill kbd { font: inherit; font-size: .66rem; padding: .05rem .4rem; border-radius: 999px; background: rgba(255, 255, 255, .18); color: var(--z-cream); }
+.rpg-tooltip:has(.tip-pill) { padding: 0 !important; background: none !important; box-shadow: none !important; border: 0 !important; width: max-content; }
