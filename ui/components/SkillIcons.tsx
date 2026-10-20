@@ -442,6 +442,8 @@ const ART_BASE = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/
 export const PAINTED_ART = new Set([
   'GALE_ARROW', 'LIGHT_ARROW', 'FROST_FIELD', 'SHADOW_ROLL', 'STORM_ARROWS', 'FIREBALLS', 'STORM_ORBS', 'SINGULARITY',
   'BLINK_NOVA', 'METEOR_CATA', 'CROSS_SLASH', 'WHIRLWIND', 'EARTHSPLITTER', 'BLOODRAGE_LEAP', 'TITAN_WRATH', 'DASH',
+  'HOLY_WAVE', 'SHIELD_WALL', 'JUDGMENT', 'HOLY_CHARGE', 'DIVINE_AVATAR', 'RAISE_DEAD', 'BONE_WARD', 'CURSE_FIELD',
+  'SOUL_STEP', 'ARMY_DEAD', 'PIERCING_SHOT', 'FIREBALL', 'AXE_SPIN', 'BONE_SPEAR', 'HP', 'MP',
 ]);
 
 export const PaintedIcon: React.FC<{ id: string }> = React.memo(({ id }) => {
