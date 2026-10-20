@@ -30,4 +30,6 @@ three r182 + @react-three/fiber 9 + drei + Zustand 5 + Tailwind (CDN) + framer-m
   a branch push first makes it a Preview only. Each push is a Vercel deployment.
 - Owner rules to remember (details in HANDOFF section 1): potions are permanent (never remove them), the owner is cost
   sensitive (few sub-agents; model split: Opus plans/reviews, Sonnet writes code, Haiku verifies/navigates), reply in plain non-technical language.
+- **Art/UI style is Zelda (Echoes of Wisdom / Link's Awakening) or casual cute Nintendo style** for everything new:
+  rounded, soft, toy-like, bright; no Korean-MMO dark-metal / gold-line look (HANDOFF section 1 + 3.9).
 - Update `docs/HANDOFF.md` when you change how the game works (keep it a current map, not a changelog).

@@ -36,8 +36,12 @@ daily, so the code wins: `constants.ts`, `classLevels.ts`, `engine/roomDefs.ts`,
 - Many requests are marked "(owner: ...)" in code comments: those values were chosen by the owner. Do not silently
   revert them (drop nerfs, class HP / move speed, mana regen, potion cooldown, Barbarian kit, Necro summon rules, boss HP
   and cadence, unlock levels, EXP multipliers, gold scale).
-- Keep the existing UI direction (section 3.9). Icons are solid gold glyphs from `ui/components/GoldIcons.tsx` (add new
-  ones there; lucide-react is no longer imported).
+- **ART + UI DIRECTION (owner, 2026-10-20, non-negotiable): everything must look like The Legend of Zelda (Echoes of
+  Wisdom / Link's Awakening remake) or a similar cute, casual Nintendo-style game.** Soft, rounded, chunky, toy-like,
+  bright and friendly: rounded UI pills with no line containers, cute cream icons (`ui/components/CuteIcons.tsx`),
+  blue-roof fairy-tale town, close three-quarter diorama camera with tilt-shift. NOT the old Korean-MMO / dark-metal /
+  gold-hairline look, not gritty or realistic. New art prompts use STYLE v2 in `docs/ART_PROMPTS.md`; new UI follows
+  section 3.9. When in doubt, ask "would this fit in Echoes of Wisdom?".
 
 ## 2. Map of the code
 
