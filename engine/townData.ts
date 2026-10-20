@@ -21,7 +21,7 @@ import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, main
 /** `kit` = which town_kit_v2 piece draws it (render/townKit.tsx; undefined = the procedural barn / coop), `s` = uniform scale of that
  *  piece. Every house faces south (+z, rot 0) so the north-up camera always sees its front (owner: Echoes-of-Wisdom framing). */
 export type HouseKit = 'house_small' | 'house_two_storey' | 'house_gabled_narrow' | 'house_tower';
-export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string; kit?: HouseKit; s?: number }
+export interface HouseSpec { x: number; z: number; rot: number; w: number; d: number; floors: 1 | 2; wall: string; roof: string; trim: string; chimney: boolean; door: string; kit?: HouseKit; s?: number; /** drawn by a nature_kit_v1 building piece (render/natureKit): barn, farmhouse, chicken_coop (scale `s`) */ nk?: string }
 export interface StallSpec { x: number; z: number; rot: number; c1: string; c2: string; goods: 0 | 1 | 2 | 3 }
 export interface RoadSpec { x1: number; z1: number; x2: number; z2: number; w: number; /** a trodden dirt path along its whole length (outside the walls; any angle) */ dirt?: boolean }
 export interface SignSpec { x: number; z: number }
@@ -71,16 +71,17 @@ export const WELL_POS = { x: -21, z: 18 };
 export const PEN = { x: -22, z: 27, hw: 5, hd: 3 };
 /** (owner) the horse stable against the town wall just east of the gate: an open-fronted shed (front faces south) and a fenced paddock
  *  in front of it (gap in the west side). The horses (ANIMALS 'HORSE') can be ridden (village.ts mount / dismount). */
-export const STABLE = { x: 12.9, z: 41.5, w: 7, d: 3.4, paddock: { x0: 9.4, x1: 21, z0: 43.4, z1: 50.4 } };
+export const STABLE = { x: 14, z: 43, w: 10, d: 6, paddock: { x0: 8.8, x1: 21.5, z0: 46.3, z1: 51.0 } };   // (nature_kit_v1 'stable', 10 x 6, open front facing south; paddock = fenced yard in front)
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -15.6, z: 107.6, rot: Math.PI / 2 };   // (owner: near the Adventure Portal; west of the mainland road, door facing it)
+export const BREWER_HUT = { x: -10.2, z: 106.2, rot: 0 };   // (owner: near the Adventure Portal; west of the mainland road. nature_kit_v1 'brewer_hut', door faces south onto the tower path)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
-export const BARN = { x: 35, z: 94 };   // in the farm clearing east of the field, well away from the town walls
-export const COOP = { x: 38, z: 105.5 };   // back of the farm clearing, against the forest edge
-/** Egg nests in front of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
-export const NESTS: [number, number][] = [[COOP.x - 2.3, COOP.z - 1.8], [COOP.x - 2.6, COOP.z + 0.1], [COOP.x - 2.3, COOP.z + 2]];   // (the coop faces west like the barn)
+export const BARN = { x: 41.5, z: 96.8, s: 0.85 };   // nature_kit_v1 'barn' (front = south onto the farm yard), east column of the farm clearing
+export const FARMHOUSE = { x: 31, z: 96.2, s: 0.85 };   // nature_kit_v1 'farmhouse', west column (Hollis lives here)
+export const COOP = { x: 26.2, z: 103.2, s: 1 };   // nature_kit_v1 'chicken_coop', back-left of the farm yard
+/** Egg nests in front (south) of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
+export const NESTS: [number, number][] = [[COOP.x - 1.4, COOP.z + 3.4], [COOP.x, COOP.z + 3.7], [COOP.x + 1.4, COOP.z + 3.4]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.5, z: -36.5 };
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
@@ -88,7 +89,8 @@ export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
 /** The Endless Tower: deep in the south-west forest at the end of a long, narrow clearing (owner: deeper in), on a raised
  *  knoll (townLift TOWER_KNOLL). The Elixir Brewer keeps her hut on the path just before it. */
-export const TOWER = { x: -74, z: 112, r: 4.2, door: { x: -69, z: 112 } };
+export const TOWER_PATH_Z = 112;   // the woodland path from the road runs along this z, straight on past the tower's front
+export const TOWER = { x: -74, z: 106.2, r: 3.9, door: { x: -74, z: 112.9 } };   // nature_kit_v1 'endless_tower' (front = south, on the path); door = where the hero stands to go in
 export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
 /** Height of the Endless Tower's knoll at (x, z) (0 off it): the hero (townLift) and the ground mesh (render/terrainFn) both use it. */
 export function towerKnollAt(x: number, z: number): number {
@@ -231,7 +233,7 @@ export const HERO_HOUSE = { x: -40.3, z: 27, w: 4.25, d: 3.9, rot: 0, wake: { x:
 /** The Golden Tankard = town_kit_v2 'tavern' drawn TAVERN_DZ south-of-centre-minus (piece origin = TAVERN.z + TAVERN_DZ); its front door sits at z + d/2. */
 export const TAVERN = { x: 28, z: -21, w: 9.6, d: 6.2, rot: 0 };
 export const TAVERN_DZ = -1.4;
-export const WINDMILL = { x: 38, z: 81, r: 3.4 };
+export const WINDMILL = { x: 31, z: 83.6, r: 3.4, s: 0.95 };   // nature_kit_v1 'windmill' (the blades spin at the hub on its south face)
 /** Extra crop fields on the mainland (fenced, drawn by TownScenery): wheat / cabbages / pumpkins. */
 export interface FieldSpec { x: number; z: number; hw: number; hd: number; crop: 'WHEAT' | 'CABBAGE' | 'PUMPKIN' }
 export const FIELDS: FieldSpec[] = [
@@ -262,9 +264,23 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
-  ...[-30, -20, 17.5, 26.5, 35].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),
+  ...[-30, -20, 22.6, 34, 39.6].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),   // (the east park's benches flank the gazebo)
 ];
 
+/** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
+export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
+/** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
+export const WELLS: [number, number][] = [[30.8, 107.3], [18, 123.2], [-18.6, 123.4]];
+/** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
+export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6]];
+/** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
+export const STEP_PATHS: [number, number, number, number][] = [
+  [30.1, 100.2, 30.1, 101.6], [41.4, 102.0, 41.4, 103.4],   // farmhouse + barn doors
+  [-9.2, 110.0, -9.2, 111.2],                                // the brewer's door, onto the path
+  [-74, 112.9, -74, 111.6],                                  // the tower's door
+  [4.6, 54.4, 25.2, 54.4], [26.4, 53.8, 27.6, 53.0],       // the park path from the road to the gazebo steps
+  [-42, 50.2, -46.5, 47.4],                                  // the dirt path's last steps to the beach boardwalk
+];
 /** Kit footprint (w x d at scale 1) + door x offset of each house piece (public/models/town/town_kit_v2.glb). */
 export const HOUSE_KIT: Record<HouseKit, { w: number; d: number; doorX: number; chimney: [number, number, number] }> = {
   house_small: { w: 5.0, d: 4.6, doorX: -0.95, chimney: [1.2, 6.0, -0.6] },
@@ -276,12 +292,33 @@ const K = (kit: HouseKit, x: number, z: number, s = 0.9): HouseSpec => {
   const n = HOUSE_COUNT++, k = HOUSE_KIT[kit];
   return { x, z, rot: 0, w: k.w * s, d: k.d * s, floors: kit === 'house_two_storey' || kit === 'house_gabled_narrow' ? 2 : 1, wall: WALLS[(n * 3 + 1) % WALLS.length], roof: ROOFS[(n * 5 + 2) % ROOFS.length], trim: '#f4ead2', chimney: n % 2 === 0, door: DOORS[n % DOORS.length], kit, s };
 };
+/** nature_kit_v1 piece footprints at scale 1: [x0, x1, z0, z1, height] (front = +z, origin = ground centre), measured from public/models/town/nature_kit_v1.glb.
+ *  The colliders (kitRing below), the minimap and the layout checks all read this one table. */
+export const NK: Record<string, [number, number, number, number, number]> = {
+  barn: [-4.22, 4.22, -5.23, 5.23, 6.0], farmhouse: [-3.7, 3.7, -3.18, 3.55, 5.9], windmill: [-2.85, 2.85, -2.8, 3.35, 8.2], stable: [-4.98, 4.98, -2.99, 2.99, 4.65],
+  chicken_coop: [-1.3, 1.75, -1.0, 1.91, 2.7], mining_camp_tent: [-2.82, 2.95, -2.65, 2.65, 2.75], mine_entrance: [-3.66, 3.65, -2.6, 5.4, 5.04], brewer_hut: [-2.95, 3.3, -2.81, 3.14, 5.2],
+  endless_tower: [-3.9, 3.9, -3.9, 5.75, 27.5], gazebo: [-3.4, 3.4, -3.4, 4.0, 5.24], well: [-1.57, 1.57, -1.24, 1.24, 4.2], park_fountain: [-2.05, 2.05, -2.05, 2.05, 2.95],
+  market_cart: [-1.25, 1.25, -0.96, 2.65, 3.11], haystack: [-2.07, 2.11, -2.21, 1.62, 2.45], small_boat: [-0.94, 0.94, -1.75, 1.75, 1.07], park_bench: [-0.95, 0.95, -0.41, 0.33, 1.22],
+};
+/** Movement colliders of a kit piece's rectangular footprint (piece scale `s`, at x, z): a ring of circles of radius r along its outline,
+ *  inset so the outermost reach is the footprint edge + 0.3. `open: 'front'` leaves the south side free (the stable's open shed). */
+export function kitRing(c: [number, number, number][], piece: string, x: number, z: number, s = 1, r = 1.0, open: '' | 'front' = ''): void {
+  const f = NK[piece], x0 = x + f[0] * s + r - 0.3, x1 = x + f[1] * s - r + 0.3, z0 = z + f[2] * s + r - 0.3, z1 = z + f[3] * s - r + 0.3;
+  const nx = Math.max(1, Math.ceil((x1 - x0) / (r * 1.5))), nz = Math.max(1, Math.ceil((z1 - z0) / (r * 1.5)));
+  for (let i = 0; i <= nx; i++) { const px = x0 + ((x1 - x0) * i) / nx; c.push([px, z0, r]); if (open !== 'front') c.push([px, z1, r]); }
+  for (let j = 1; j < nz; j++) { const pz = z0 + ((z1 - z0) * j) / nz; c.push([x0, pz, r], [x1, pz, r]); }
+  if (open === 'front') c.push([x0, z1, r], [x1, z1, r]);
+}
+const NKB = (nk: string, x: number, z: number, s: number): HouseSpec => { const f = NK[nk]; return { x, z, rot: 0, w: (f[1] - f[0]) * s, d: (f[3] - f[2]) * s, floors: 1, wall: '#e9dfc8', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e', nk, s }; };
+/** Chimney cap of the farmhouse piece (piece space, scale 1) for the smoke FX. */
+export const NK_CHIMNEY: Record<string, [number, number, number]> = { farmhouse: [-2.3, 6.0, -0.8] };
 /** Decorative houses: every front faces south (+z, toward the north-up camera) and none stands in front of a shop (the shops
  *  line the south street's north side at z 1.5; houses go behind them, between the streets or out on the rises / hamlets). */
 export const HOUSES: HouseSpec[] = [
-  // the farm outside the gate: a big red barn by the road and a little chicken coop (procedural)
-  { x: BARN.x, z: BARN.z, rot: -Math.PI / 2, w: 7.5, d: 6, floors: 1, wall: '#9a3a2a', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e' },
-  { x: COOP.x, z: COOP.z, rot: -Math.PI / 2, w: 3.2, d: 2.4, floors: 1, wall: '#c9a070', roof: '#4a3426', trim: '#f4ead2', chimney: false, door: '#6e4b2b' },
+  // the farm outside the gate (nature_kit_v1, fronts south): the farmhouse (west column), the red barn (east column), the chicken coop in the yard
+  { ...NKB('farmhouse', FARMHOUSE.x, FARMHOUSE.z, FARMHOUSE.s), chimney: true },
+  NKB('barn', BARN.x, BARN.z, BARN.s),
+  NKB('chicken_coop', COOP.x, COOP.z, COOP.s),
   // the hamlet on the meadow west of the coop, beside the portal
   K('house_small', 13, 121, 0.95), K('house_two_storey', 23, 123.5, 0.8), K('house_gabled_narrow', 32, 119.5, 0.8),
   // a second little hamlet west of the portal
@@ -334,13 +371,16 @@ export const ROADS: RoadSpec[] = [
   { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
-  { x1: 0, z1: TOWER.z, x2: TOWER.door.x, z2: TOWER.z, w: 1.8 },   // endless tower door (a narrow woodland path)
+  { x1: 0, z1: TOWER_PATH_Z, x2: TOWER.door.x, z2: TOWER_PATH_Z, w: 1.8 },   // endless tower door (a narrow woodland path, straight on past the tower's front)
+  { x1: TOWER.door.x, z1: TOWER_PATH_Z, x2: TOWER.door.x, z2: TOWER.door.z - 0.2, w: 2.2 },   // (the last step up to the door)
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.x, z2: PORTAL.front.z - 3, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
   { x1: 2.4, z1: 110.6, x2: 24, z2: 111.2, w: 2.6, dirt: true }, { x1: 24, z1: 111.2, x2: 43, z2: 111, w: 2.6, dirt: true }, { x1: 43, z1: 111, x2: 48.5, z2: 100.5, w: 2.6, dirt: true },
+  // up through the fence gap into the farm yard, to the farmhouse door and the barn doors
+  { x1: 35.8, z1: 110.8, x2: 35.8, z2: 104.6, w: 2.8, dirt: true }, { x1: 35.8, z1: 104.6, x2: 30.1, z2: 100.9, w: 2.4, dirt: true }, { x1: 35.8, z1: 104.6, x2: 41.4, z2: 102.7, w: 2.4, dirt: true },
   // the mines path: from the farm track's corner up the strip east of the farm, along the east side into the mining camp (owner: no branch to the coop)
 { x1: 48.5, z1: 100.5, x2: 54, z2: 91, w: 2.6, dirt: true }, { x1: 54, z1: 91, x2: 58, z2: 79, w: 2.6, dirt: true },
   { x1: 58, z1: 79, x2: 59.5, z2: 60, w: 2.6, dirt: true }, { x1: 59.5, z1: 60, x2: 60, z2: 33, w: 2.6, dirt: true }, { x1: 60, z1: 33, x2: 62.5, z2: 21, w: 2.6, dirt: true },
@@ -377,7 +417,7 @@ export const FENCES: [number, number, number, number][] = [
   // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
   [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
   [STABLE.paddock.x1, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z1], [STABLE.paddock.x0, STABLE.paddock.z1, STABLE.paddock.x1, STABLE.paddock.z1],
-  [STABLE.paddock.x0, STABLE.paddock.z0, STABLE.paddock.x0, 44.6], [STABLE.paddock.x0, 49.0, STABLE.paddock.x0, STABLE.paddock.z1],   // (wide gate on the road side)
+  [STABLE.paddock.x0, STABLE.paddock.z0, STABLE.paddock.x0, 47.8],   // (wide gate on the road side: the corner at x0 is open from z 47.8 to the south fence)
   // chicken pen
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z - PEN.hd], [PEN.x - PEN.hw, PEN.z + PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
   [PEN.x - PEN.hw, PEN.z - PEN.hd, PEN.x - PEN.hw, PEN.z + PEN.hd], [PEN.x + PEN.hw, PEN.z - PEN.hd, PEN.x + PEN.hw, PEN.z + PEN.hd],
@@ -390,7 +430,7 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
   // (owner, red lines) the road from the bridge up to the cross paths, both sides; nothing on toward the portal
-  [-3.4, 78.5, -3.4, BREWER_HUT.z - 2.2], [-3.4, BREWER_HUT.z + 2.2, -3.4, TOWER.z - 2],   // west side: bridge -> tower path (gap at the Brewer's door)
+  [-3.4, 78.5, -3.4, TOWER_PATH_Z - 2],   // west side: bridge -> tower path
   [3.4, 78.5, 3.4, FARM.z - 1.8], [3.4, FARM.z + 1.8, 3.4, 108.2],                       // east side: bridge -> farm track (gap at the farm path)
   // the path from the chicken coop up to the mines: rail fences along both sides (owner)
   ...(() => {
@@ -419,11 +459,11 @@ export const FENCES: [number, number, number, number][] = [
   })(),
   // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
   // (owner, red lines) closed along both sides now; the south side joins the road's east fence
-  [3.4, 108.3, 30.5, 108.9], [30.5, 108.9, 42, 108.7],
+  [3.4, 108.3, 30.5, 108.9], [30.5, 108.9, 33.2, 108.9], [38.4, 108.8, 42, 108.7],   // (gap at x 33..38: the way up into the farm yard)
   [5, 112.8, 20.6, 113.1], [20.6, 113.1, 43.6, 113.2],
   // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
-  [-4.4, TOWER.z - 1.8, -55, TOWER.z - 1.8],
-  [-4.4, TOWER.z + 1.8, -55, TOWER.z + 1.8],   // (owner, red lines: closed along the hamlet side too; stops short of the tower clearing)
+  [-4.4, TOWER_PATH_Z - 1.8, -5.6, TOWER_PATH_Z - 1.8], [-14.8, TOWER_PATH_Z - 1.8, -55, TOWER_PATH_Z - 1.8],   // (gap in front of the Brewer's door)
+  [-4.4, TOWER_PATH_Z + 1.8, -55, TOWER_PATH_Z + 1.8],   // (owner, red lines: closed along the hamlet side too; stops short of the tower clearing)
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
@@ -465,11 +505,10 @@ export const PLANTERS: PlanterSpec[] = [
   // flower bed in front of the gate (outside)
   { x: -10.5, z: 46.5, w: 5, d: 2, kind: 1 },   // (its east twin made way for the horse paddock)
   // flower boxes along the outside of the south wall (clear of the towers at x = +-27 and the brewer's hut)
-  { x: -36, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: -19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.5, w: 5, d: 1.1, kind: 1 },
-  // little riverside park east of the bridge (owner): flower beds behind the river benches
-  { x: 22, z: 54.5, w: 3.2, d: 1.1, kind: 1 }, { x: 31, z: 54.5, w: 3.2, d: 1.1, kind: 0 },
+  { x: -36, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: -19, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 24, z: 41.5, w: 5, d: 1.1, kind: 1 }, { x: 36, z: 41.5, w: 5, d: 1.1, kind: 1 },   // (the stable now fills x 9..19)
+  // little riverside park east of the bridge (owner): a flower bed beside the gazebo (the fountain + gazebo are nature_kit_v1, PARK_EAST)
   // (owner #167) the green in front of the gate
-  { x: -22, z: 45.2, w: 3.2, d: 1.1, kind: 0 }, { x: 25, z: 50.6, w: 3.2, d: 1.1, kind: 0 },
+  { x: -22, z: 45.2, w: 3.2, d: 1.1, kind: 0 },
 ];
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
@@ -483,10 +522,10 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -37, z: -15, s: 3.6, kind: 0 }, { x: 38, z: -24, s: 3.4, kind: 2 }, { x: -31, z: 34.6, s: 3.4, kind: 0 }, { x: 38, z: 30, s: 3.5, kind: 1 },
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
-  { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 34, z: 43.5, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: -39, z: 58, s: 3.6, kind: 0 },
-  { x: 24, z: 46, s: 3.4, kind: 0 },
+  { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 32.6, z: 42.6, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: -39, z: 58, s: 3.6, kind: 0 },
+  { x: 23.6, z: 43.4, s: 3.4, kind: 0 },
   // (owner #167: more on the green in front of the gate) west side, clear of the dirt path at z 52
-  { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 }, { x: 30, z: 52.8, s: 3.2, kind: 2 },
+  { x: -15, z: 45.5, s: 3.1, kind: 0 }, { x: -27, z: 47.5, s: 3.4, kind: 2 }, { x: -34.5, z: 45, s: 3.0, kind: 0 },
   // (owner: more trees, like a forest) the Endless Tower clearing: both edges, clear of the path (z = 112 +- 3) and the knoll
   ...(() => {
     const t: TreeSpec[] = [];
@@ -512,7 +551,7 @@ export const TOWN_TREES: TreeSpec[] = [
   })(),
   // the mainland across the bridge
   { x: -38, z: 82, s: 3.9, kind: 3 }, { x: -8, z: 83, s: 3.4, kind: 1 }, { x: -40, z: 96, s: 3.9, kind: 2 }, { x: -41, z: 106, s: 3.4, kind: 2 },
-  { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 47, z: 88, s: 3.6, kind: 0 },
+  { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 50.4, z: 84.2, s: 3.6, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number][] = [
@@ -521,11 +560,10 @@ export const GRASS_PATCHES: [number, number, number, number][] = [
   [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
-/** Parked carts on the meadow in front of the walls (drawn in TownScenery addCart): kind 0 merchant goods, 1 hay, 2 barrels.
- *  The cart's bed runs along its local z (rot = yaw); colliders in TOWN_COLLIDERS. */
+/** Parked market carts on the meadow in front of the walls (nature_kit_v1 'market_cart'; kind 1 = a haystack instead). Colliders in TOWN_COLLIDERS. */
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
-  { x: 13.6, z: 55.4, rot: 0.35, kind: 0 }, { x: -10, z: 55.2, rot: -0.45, kind: 2 }, { x: -36, z: 57, rot: -0.9, kind: 1 }, { x: 30, z: 87, rot: 2.0, kind: 2 },
+  { x: 13.6, z: 57.0, rot: 0, kind: 0 }, { x: -9.4, z: 56.6, rot: 0, kind: 2 }, { x: -37, z: 56.8, rot: 0, kind: 1 }, { x: -33.5, z: 81.4, rot: 0, kind: 2 },   // (market carts: fronts south; kind 1 is a haystack)
 ];
 export const SCARECROW = { x: FARM.x, z: FARM.z };
 export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
@@ -533,20 +571,22 @@ export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
 /** Movement colliders [x, z, r] registered with mapgen.addTempCollider after the island is generated. */
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
-  for (const h of HOUSES) c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]);
-  c.push([TOWER.x, TOWER.z, TOWER.r]);
+  for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
+  c.push([TOWER.x, TOWER.z + 0.3, TOWER.r]);
   for (const sx of [-1, 1]) c.push([PORTAL.x + sx * 4.3, PORTAL.z, 1.5]);   // the portal's two great pillars
   c.push([PORTAL.x, PORTAL.z + 2.2, 3.4]);                                       // the stone back of the arch
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
   c.push([WELL_POS.x, WELL_POS.z, 1.9]);   // (the plaza fountain, town_kit_v2 fountain_small)
-  { const S = STABLE, z0 = S.z - S.d / 2;   // the stable: back wall + side walls (the front is open to the paddock)
-    for (let x = S.x - S.w / 2; x <= S.x + S.w / 2 + 0.01; x += 0.8) c.push([x, z0, 0.5]);
-    for (const sx of [-1, 1]) for (let z = z0; z <= S.z + S.d / 2 + 0.01; z += 0.8) c.push([S.x + sx * S.w / 2, z, 0.5]);
+  c.push([PARK_EAST.fountain.x, PARK_EAST.fountain.z, 2.0]); kitRing(c, 'gazebo', PARK_EAST.gazebo.x, PARK_EAST.gazebo.z, 1, 0.9, 'front');   // the east park
+  for (const [x, z] of WELLS) c.push([x, z, 1.35]);
+  for (const [x, z] of SIGNPOSTS) c.push([x, z, 0.35]);
+  { const S = STABLE;   // the stable (nature_kit_v1, 10 x 6): back wall + side walls (the front is open to the paddock)
+    kitRing(c, 'stable', S.x, S.z, 1, 0.6, 'front');
     for (const o of [-0.5, 0.5]) c.push([S.paddock.x1 - 0.9, S.paddock.z1 - 1.4 + o, 0.5]); }   // (+ the paddock's water trough)
   c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
-  for (const k of CARTS) for (const o of [-0.9, 0.9]) c.push([k.x + Math.sin(k.rot) * o, k.z + Math.cos(k.rot) * o, 1.2]);   // carts: two circles along the bed
+  for (const k of CARTS) { if (k.kind === 1) c.push([k.x, k.z + 0.2, 1.7]); else kitRing(c, 'market_cart', k.x, k.z, 1, 0.8); }   // carts: footprint rings (a hay cart is a haystack)
   // castle: ring of circles around the hall footprint + corner towers
   {
     const { x, z, w, d } = CASTLE, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
@@ -561,10 +601,10 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   }
   for (const t of TOWN_TREES) c.push([t.x, t.z, 0.85]);
   for (const [x, z, r] of TRAIL_ROCKS) c.push([x, z, r]);
-  c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.3]);
+  c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.7]);   // (the haystack is the kit piece at scale 0.85)
   // the brewer's cauldron, work table and barrels in front of / beside the hut (hut-local -> world; the hut itself is the shop collider)
-  { const { x, z, rot } = BREWER_HUT, cr = Math.cos(rot), sr = Math.sin(rot);
-    for (const [lx, lz, r] of [[1.4, 3.4, 1.0], [-1.6, 2.6, 0.75], [-2.4, 2.6, 0.6], [-2.95, 0.1, 0.9], [2.95, 0.9, 0.6]] as const) c.push([x + lx * cr + lz * sr, z - lx * sr + lz * cr, r]); }
+  { const { x, z } = BREWER_HUT;   // (the kit's round hut + the barrel and bottles by its door)
+    c.push([x + 0.17, z + 0.17, 2.9], [x - 2.0, z + 2.5, 0.8]); }
   c.push([QUEST_POS[0], QUEST_POS[2], 1.6]); // notice board
   // the shop row (town_kit_v2 shop_stall_house, 6 x 4.8, awning + counter in front): body corners + the counter (the shop obstacle in mapgen covers the middle)
   for (const sp of SHOP_POSITIONS) {
@@ -604,7 +644,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     for (let z = -hd; z <= hd + 0.01; z += 1.2) c.push([L.x - hw + 0.5, L.z + z, 1.0], [L.x + hw - 0.5, L.z + z, 1.0]);
   }
   c.push([CHURCH.x - 4.15, CHURCH.z + 1.6, 2.2]);   // the bell tower beside the nave
-  c.push([WINDMILL.x, WINDMILL.z, WINDMILL.r], [STATUE.x, STATUE.z, STATUE.r]);
+  kitRing(c, 'windmill', WINDMILL.x, WINDMILL.z, WINDMILL.s, 1.0); c.push([STATUE.x, STATUE.z, STATUE.r]);
   for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
   // the river: both banks are a chain of circles (gap for the bridge), the east end is closed; the bridge railings
   for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.hw + 0.5 && Math.abs(x - MINE_BRIDGE.x) > MINE_BRIDGE.hw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
@@ -636,7 +676,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
  *  one is harvested. */
 export const VILLAGE_NODES: { kind: 'CRYSTAL' | 'ORE' | 'GOLD_VEIN' | 'HERB'; x: number; z: number }[] = [
   { kind: 'ORE', x: 53, z: 32 }, { kind: 'HERB', x: 50.5, z: 11 }, { kind: 'CRYSTAL', x: 69.5, z: 19.5 }, { kind: 'GOLD_VEIN', x: 65.5, z: 27.5 },
-  { kind: 'ORE', x: 56, z: 18 }, { kind: 'HERB', x: 52, z: 69.5 },
+  { kind: 'ORE', x: 56, z: 18 }, { kind: 'HERB', x: 51.2, z: 79.6 },
 ];
 
 /** Circles kept free of random trees / rocks / crates by mapgen. */
@@ -960,14 +1000,14 @@ export const NPCS: NpcDef[] = [
     bubbles: ['All aboard for the Coral Isles!', 'Sixty gems a ticket!', 'Fair winds today.'],
   },
   {
-    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [30.5, 94.5], speed: 1.2,
-    patrol: [[30.5, 94.5], [28, 91.5], [28, 101.5], [30.5, 100]],   // (between the field fence at x 25 and the barn)
+    name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [36.2, 101.9], speed: 1.2,
+    patrol: [[34.8, 102.2], [38.4, 102.6], [37.4, 103.8], [33.6, 103.6]],   // (the strip of the yard between the farmhouse door and the barn door)
     talk: [['Fine morning for it. The girls are in a good mood today.', 'Cows, I mean. The cows.'], ['That barn has stood longer than the gate. Built it with my grandfather.']],
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x - 3.6, COOP.z - 2.6], speed: 1.3,
-    patrol: [[COOP.x - 3.6, COOP.z - 2.6], [COOP.x - 3.6, COOP.z + 2.8]],   // along the nests on the coop's west (door) side
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x - 3.8, COOP.z + 2.0], speed: 1.3,
+    patrol: [[COOP.x - 4.2, COOP.z + 2.4], [COOP.x - 4.2, COOP.z + 4.4]],   // beside the nests in front of the coop
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -1018,7 +1058,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Hup, hup.', 'Lovely weather for hauling.', 'Left wheel squeaks. Right wheel complains.', 'One more load, then lunch.', 'Morning, Gerald.'],
   },
   {   // (owner) the cabbage farmer: shouts when the hero tramples his field (engine/systems/npcs.ts cabbageWatch)
-    name: 'Cabbage Man', role: 'Cabbage Farmer', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#7fc24a', home: [27.4, 81.6], noHat: true, noCape: true, tunic: '#7a8a4a', hair: '#5a4a3a', longHair: false,
+    name: 'Cabbage Man', role: 'Cabbage Farmer', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'basket', accent: '#7fc24a', home: [23.4, 81.0], noHat: true, noCape: true, tunic: '#7a8a4a', hair: '#5a4a3a', longHair: false,
     talk: [
       ['Cabbages! Finest cabbages in the kingdom! Crisp, green, and only slightly trampled!', 'You:: Trampled by whom?', 'Monsters. Heroes. Carts. Mostly heroes.'],
       ['Every week someone comes running through my field. A hero chasing a slime. A slime chasing a hero.', 'You:: That sounds terrible.', 'It IS terrible! My poor cabbages!'],
@@ -1036,7 +1076,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Someday I will lift you.', 'Move. MOVE!', 'I will not be walled in!', 'Hnnnngh!', 'Tomorrow. Tomorrow for sure.', 'Beyond the rocks... freedom. And ore.'],
   },
   {   // (owner) the Stablemaster: her Lv 15 quest ('hilda_shoes') unlocks riding the stable horses (see horsesUnlocked)
-    name: 'Hilda', role: 'Stablemaster', model: 'BARBARIAN', tint: '#f1e2cf', scale: 1, prop: 'none', accent: '#b9783c', home: [7.8, 42.6], speed: 1.2, noHat: true, noCape: true, tunic: '#7a4a2a', hair: '#8a4a22', longHair: true,
+    name: 'Hilda', role: 'Stablemaster', model: 'BARBARIAN', tint: '#f1e2cf', scale: 1, prop: 'none', accent: '#b9783c', home: [6.6, 49.4], speed: 1.2, noHat: true, noCape: true, tunic: '#7a4a2a', hair: '#8a4a22', longHair: true,
     talk: [
       ['Easy, Chestnut. Easy. You are not getting the apple until you stop chewing the fence.', 'Welcome to the stable, traveller. These are good horses. The best in the valley, and they know it.'],
       ['A horse knows a rider by the way they sit. Heroes mostly sit like sacks of turnips.', 'You:: I resent that.', 'Come back when you have some proper experience and we will talk about a saddle.'],
@@ -1091,7 +1131,7 @@ export const NPCS: NpcDef[] = [
 
 export const GENERIC_BUBBLES = ['Lovely day!', 'Beware the Mire...', 'Good luck out there!', 'Stay safe, hero.', 'Is that the hero?'];
 
-export interface AnimalDef { kind: 'CHICKEN' | 'CAT' | 'COW' | 'HORSE'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
+export interface AnimalDef { kind: 'CHICKEN' | 'CAT' | 'COW' | 'HORSE' | 'SHEEP' | 'PIG' | 'DOG' | 'DUCK'; x: number; z: number; rx: number; rz: number; speed: number; tint: string }
 export const ANIMALS: AnimalDef[] = [
   // wander ellipses stay well inside the fenced pen
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.1, tint: '#ffffff' },
@@ -1099,15 +1139,25 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: PEN.x + 1.5, z: PEN.z - 0.6, rx: 1.6, rz: 0.9, speed: 1.2, tint: '#e0a070' },
   { kind: 'CHICKEN', x: PEN.x - 1.5, z: PEN.z + 0.6, rx: 1.6, rz: 0.9, speed: 1.0, tint: '#ffffff' },
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
-  // farm (outside the gate): cows grazing by the barn, hens by the coop
-  { kind: 'COW', x: 29, z: 91, rx: 1.6, rz: 1.6, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 29.5, z: 98.5, rx: 1.4, rz: 1.4, speed: 0.5, tint: '#8a5a3a' },
-  { kind: 'COW', x: 32, z: 103, rx: 1.4, rz: 1.2, speed: 0.5, tint: '#e8e0d0' },
-  { kind: 'CHICKEN', x: COOP.x - 4.2, z: COOP.z - 0.8, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x - 4.6, z: COOP.z + 1.6, rx: 1.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
+  // farm (outside the gate, nature_kit_v1 round animals): cows + a dog in the yard in front of the barn, sheep and pigs in the pasture
+  // behind it, hens by the coop
+  { kind: 'COW', x: 32.5, z: 105.2, rx: 1.4, rz: 0.9, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 37.5, z: 105.9, rx: 1.4, rz: 0.8, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 42.2, z: 104.9, rx: 1.3, rz: 0.9, speed: 0.5, tint: '#e8e0d0' },
+  { kind: 'SHEEP', x: 39.5, z: 84.6, rx: 2.0, rz: 1.8, speed: 0.6, tint: '#ffffff' },
+  { kind: 'SHEEP', x: 44.5, z: 86.4, rx: 1.8, rz: 1.6, speed: 0.55, tint: '#efe4d0' },
+  { kind: 'SHEEP', x: 41.5, z: 82.4, rx: 1.8, rz: 1.2, speed: 0.6, tint: '#8a7358' },
+  { kind: 'PIG', x: 47.2, z: 83.4, rx: 1.4, rz: 1.4, speed: 0.7, tint: '#f6a6b8' },
+  { kind: 'PIG', x: 47.6, z: 88.2, rx: 1.2, rz: 1.2, speed: 0.7, tint: '#e8949e' },
+  { kind: 'DOG', x: 35, z: 102.6, rx: 3.2, rz: 0.8, speed: 1.8, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x - 3.4, z: COOP.z + 2.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x + 3.4, z: COOP.z - 0.6, rx: 1.2, rz: 1.0, speed: 1.0, tint: '#e0a070' },
   { kind: 'CAT', x: 12.5, z: 3.4, rx: 1.8, rz: 0.9, speed: 1.7, tint: '#8a8a96' },
+  // the east riverside park
+  { kind: 'DUCK', x: 26.6, z: 57.6, rx: 1.8, rz: 0.8, speed: 0.9, tint: '#ffffff' },
+  { kind: 'DUCK', x: 29.8, z: 58.0, rx: 1.8, rz: 0.8, speed: 0.8, tint: '#ffffff' },
   // (owner) the stable's horses, grazing in the paddock (rideable: E)
-  { kind: 'HORSE', x: 12.6, z: 47.2, rx: 1.3, rz: 1.1, speed: 0.8, tint: '#8a5a36' },
-  { kind: 'HORSE', x: 15.6, z: 48.0, rx: 1.3, rz: 1.0, speed: 0.7, tint: '#f2ece0' },
-  { kind: 'HORSE', x: 18.4, z: 46.6, rx: 1.0, rz: 1.1, speed: 0.8, tint: '#3a2c26' },
+  { kind: 'HORSE', x: 12.6, z: 48.9, rx: 1.3, rz: 0.9, speed: 0.8, tint: '#8a5a36' },
+  { kind: 'HORSE', x: 15.8, z: 49.4, rx: 1.3, rz: 0.8, speed: 0.7, tint: '#f2ece0' },
+  { kind: 'HORSE', x: 18.6, z: 48.6, rx: 0.9, rz: 0.9, speed: 0.8, tint: '#3a2c26' },
 ];

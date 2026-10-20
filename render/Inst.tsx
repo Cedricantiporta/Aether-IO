@@ -12,8 +12,10 @@ const CHUNK_MIN = 2;
  * The fill result is bucketed into 24x24 spatial chunks; each chunk is its own InstancedMesh with a tight bounding sphere
  * (frustumCulled = true), so only on-screen chunks are drawn (and only chunks inside the bounded shadow camera cast).
  */
-export function Inst({ geo, mat, count, fill, cast = false, receive = false }: {
+export function Inst({ geo, mat, count, fill, cast = false, receive = false, chunk = CHUNK }: {
   geo: BufferGeometry; mat: Material | Material[]; count: number; fill: (m: InstancedMesh) => void; cast?: boolean; receive?: boolean; culled?: boolean;
+  /** chunk edge (world units): larger = fewer draw calls for sparse, light sets (the nature kit uses 48 / 64), smaller = tighter culling */
+  chunk?: number;
 }) {
   const ref = useRef<Group>(null!);
   useLayoutEffect(() => {
@@ -27,7 +29,7 @@ export function Inst({ geo, mat, count, fill, cast = false, receive = false }: {
     // sparse sets stay one mesh (one draw call beats several tiny chunks); dense sets are chunked
     const chunked = n >= CHUNK_MIN;
     for (let i = 0; i < n; i++) {
-      const key = !chunked ? 0 : (Math.floor(src[i * 16 + 12] / CHUNK) + 512) * 1024 + (Math.floor(src[i * 16 + 14] / CHUNK) + 512);
+      const key = !chunked ? 0 : (Math.floor(src[i * 16 + 12] / chunk) + 512) * 1024 + (Math.floor(src[i * 16 + 14] / chunk) + 512);
       let b = buckets.get(key);
       if (!b) { b = []; buckets.set(key, b); }
       b.push(i);
@@ -54,6 +56,6 @@ export function Inst({ geo, mat, count, fill, cast = false, receive = false }: {
     const small = (geo.boundingSphere?.radius ?? 1) < 0.7;
     const offs = made.map((m) => { const b = m.boundingSphere!; group.updateWorldMatrix(true, false); const c = b.center.clone().applyMatrix4(group.matrixWorld); return cullRegister(m, c.x, c.z, b.radius, small); });
     return () => { for (const f of offs) f(); for (const m of made) { group.remove(m); m.dispose(); } };
-  }, [fill, geo, mat, count, cast, receive]);
+  }, [fill, geo, mat, count, cast, receive, chunk]);
   return <group ref={ref} />;
 }

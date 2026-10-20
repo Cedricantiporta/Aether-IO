@@ -65,9 +65,9 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'WAREHOUSE', position: [22.5, 0, 1.5], color: '#b08850' },   // item storage (100 slots)
     { type: 'BLACKSMITH', position: [31, 0, 1.5], color: '#ef4444' },
     { type: 'TECH', position: [39.5, 0, 1.5], color: '#5fc8e8' },        // Tech House (permanent upgrades)
-    { type: 'BREWER', position: [-15.6, 0, 107.6], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT)
-    { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8', rot: -Math.PI / 2 },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL)
-    { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050', rot: 0.15 },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
+    { type: 'BREWER', position: [-10.2, 0, 106.2], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
+    { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
+    { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050' },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */
 export const RARITY_LABEL_COLOR: Record<string, string> = { COMMON: '#ece7da', UNCOMMON: '#7ee08a', RARE: '#6fb0ff', EPIC: '#c58bff', LEGENDARY: '#ffa54a', MYTHIC: '#ff6a5a' };

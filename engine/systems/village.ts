@@ -36,7 +36,7 @@ function sitDown(i: number): void {
   st.on = true; st.x = s.x; st.z = s.z; st.yaw = s.yaw; st.y = s.y;
   p.pos.set(s.x, 0, s.z); p.vel.set(0, 0, 0); p.facing = s.yaw; world.village.go.on = false;
 }
-const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse' };
+const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse', SHEEP: 'Sheep', PIG: 'Pig', DOG: 'Dog', DUCK: 'Duck' };
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
 function mount(i: number): void {
   const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on || !horsesUnlocked(useGameStore.getState().npcQuests)) return;

@@ -10,7 +10,7 @@ import { useGameStore } from '../store';
 import { isLobbyStatus } from './CameraRig';
 import { GB, fbm, litMat, mulberry32, setInst, TAU, vnoise, lerp } from './util';
 import { GROUND_SIZE, POND, edgeR, groundY, lakeK, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
-import { makeRockGeo, useNature } from './models';
+import { NatureBatch } from './NatureBatch';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { SUN_DIR } from './Sky';
@@ -134,97 +134,7 @@ function Ground({ q }: { q: QualityCfg }) {
 
 function isLobbyNow() { return isLobbyStatus(useGameStore.getState().status); }
 
-// ------------------------------------------------------------------ bushes ---
-// Sparse leafy bushes that frame the open fighting ground: along the island edge, around the pond and lining
-// dirt paths. Static instancing (2 draw calls), no shadows, nothing in the open centre of fights.
-function Bushes({ q }: { q: QualityCfg }) {
-  const { geo, mat } = useMemo(() => {
-    const g = new GB([0.88, 1.12]);
-    g.sph(0.62, [0, 0.42, 0], '#3f8f3a', [1, 0.82, 1], 6);
-    g.sph(0.48, [0.5, 0.34, 0.18], '#4fa443', [1, 0.85, 1], 6);
-    g.sph(0.44, [-0.42, 0.3, 0.26], '#468f3c', [1, 0.85, 1], 6);
-    g.sph(0.4, [0.05, 0.3, -0.48], '#55ad48', [1, 0.85, 1], 6);
-    return { geo: g.build(), mat: litMat({ flatShading: true, roughness: 0.9 }) };
-  }, []);
-  const target = q.name === 'LOW' ? 40 : q.name === 'MEDIUM' ? 70 : 100;
-  const pts = useMemo(() => {
-    const rnd = mulberry32(77), out: number[] = [];
-    let guard = 0;
-    while (out.length < target * 4 && guard++ < target * 60) {
-      const a = rnd() * TAU, e = edgeR(a);
-      const pick = rnd();
-      // thin band just inside the island edge only (the walled yard, avenue and field stay clear)
-      const r = e - 1.5 - rnd() * 4, x = Math.cos(a) * r, z = Math.sin(a) * r;
-      void pick;
-      if (inYard(x, z, 3) || inForecourtUse(x, z, 2) || Math.hypot(x, z) > e - 1 || inCaveClear(x, z)) continue;
-      const n = out.length / 4; let tooClose = false;
-      for (let i = 0; i < n; i++) { const dx = out[i * 4] - x, dz = out[i * 4 + 1] - z; if (dx * dx + dz * dz < 4.5) { tooClose = true; break; } }
-      if (tooClose) continue;
-      out.push(x, z, 0.8 + rnd() * 0.9, rnd() * TAU);
-    }
-    return out;
-  }, [target]);
-  const n = pts.length / 4;
-  const fill = useMemo(() => (m: InstancedMesh) => {
-    for (let i = 0; i < n; i++) { const s = pts[i * 4 + 2]; setInst(m, i, pts[i * 4], groundY(pts[i * 4], pts[i * 4 + 1]), pts[i * 4 + 1], pts[i * 4 + 3], s, s * 0.9, s); }
-  }, [pts, n]);
-  return <Inst geo={geo} mat={mat} count={n} fill={fill} receive />;
-}
-
-// ---------------------------------------------------- flowers and pebbles ---
-function Flowers({ q }: { q: QualityCfg }) {
-  const { stem, head, sm, hm } = useMemo(() => {
-    const s = new GB([1, 1]).cyl(0.02, 0.025, 0.5, 4, [0, 0.25, 0], '#3f8a30').build();
-    const h = new GB([0.9, 1.1]);
-    for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; h.sph(0.085, [Math.cos(a) * 0.09, 0.52, Math.sin(a) * 0.09], '#ffffff', [1, 0.5, 1], 5); }
-    h.sph(0.06, [0, 0.54, 0], '#ffd23a', 1, 5);
-    return { stem: s, head: h.build(), sm: litMat({ flatShading: true }), hm: litMat({ flatShading: true }) };
-  }, []);
-  // Flowers mostly grow in a few dense flower fields (each field leans to 1-2 colours), with only a sprinkle elsewhere.
-  const pts = useMemo(() => {
-    const rnd = mulberry32(31), out: number[] = [];
-    const ok = (x: number, z: number) => {
-      const a = Math.atan2(z, x), r = Math.hypot(x, z);
-      if (r > edgeR(a) - 3 || inYard(x, z, 2) || inForecourtUse(x, z, 1)) return false;
-      return true;
-    };
-    // pick 4 field centres in open meadow, away from town, pond and busy regions
-    const fields: { x: number; z: number; r: number; c0: number; c1: number }[] = [];
-    for (let t = 0; t < 800 && fields.length < 3; t++) {
-      const a = rnd() * TAU, d = 30 + rnd() * 50;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (!ok(x, z)) continue;
-      if (fields.some((f) => Math.hypot(x - f.x, z - f.z) < 14)) continue;
-      fields.push({ x, z, r: 3.5 + rnd() * 2, c0: Math.floor(rnd() * 6), c1: Math.floor(rnd() * 6) });
-    }
-    const fieldBudget = Math.round(q.flowers * 0.12), scatter = Math.round(q.flowers * 0.03);
-    let g = 0;
-    while (out.length < fieldBudget * 5 && fields.length && g++ < fieldBudget * 8) {
-      const f = fields[Math.floor(rnd() * fields.length)];
-      const a = rnd() * TAU, d = Math.sqrt(rnd()) * f.r * (0.6 + rnd() * 0.5);
-      const x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d;
-      if (!ok(x, z)) continue;
-      out.push(x, z, 0.75 + rnd() * 0.6, rnd(), rnd() < 0.7 ? f.c0 : f.c1);
-    }
-    g = 0;
-    let k = 0;
-    while (k < scatter && g++ < scatter * 20) {
-      const a = rnd() * TAU, r = Math.sqrt(rnd()) * (ARENA_RADIUS + 2);
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (!ok(x, z)) continue;
-      out.push(x, z, 0.7 + rnd() * 0.5, rnd(), Math.floor(rnd() * 6)); k++;
-    }
-    return out;
-  }, [q.flowers]);
-  const n = pts.length / 5;
-  const palette = useMemo(() => ['#ffffff', '#ffe14a', '#ff7aa8', '#9ac8ff', '#ff9a3a', '#d9a0ff'].map((c) => new Color(c)), []);
-  const fillS = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) setInst(m, i, pts[i * 5], groundY(pts[i * 5], pts[i * 5 + 1]), pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); }, [pts, n]);
-  const fillH = useMemo(() => (m: InstancedMesh) => { for (let i = 0; i < n; i++) { setInst(m, i, pts[i * 5], groundY(pts[i * 5], pts[i * 5 + 1]), pts[i * 5 + 1], pts[i * 5 + 3] * 6, pts[i * 5 + 2]); m.setColorAt(i, palette[pts[i * 5 + 4] % palette.length]); } }, [pts, n, palette]);
-  return (<>
-    <Inst geo={stem} mat={sm} count={n} fill={fillS} />
-    <Inst geo={head} mat={hm} count={n} fill={fillH} />
-  </>);
-}
+// (bushes, flower patches, grass tufts, mushrooms, the forest ring and the rim boulders are nature_kit_v1 pieces: render/natureLayout.ts + render/NatureBatch.tsx)
 
 function Pebbles({ q }: { q: QualityCfg }) {
   const geo = useMemo(() => new GB([0.8, 1.05]).dodeca(0.5, [0, 0.12, 0], '#9a9a94', [1, 0.55, 0.85]).build(), []);
@@ -330,80 +240,12 @@ function Pond({ q }: { q: QualityCfg }) {
   );
 }
 
-// --------------------------------------------------------------------- rim ---
-function Rim({ q }: { q: QualityCfg }) {
-  const nat = useNature();
-  const rocks = useMemo(() => [1, 2, 3, 4].map((s) => makeRockGeo(s * 17, s % 2 ? '#8a929c' : '#76808a', '#5fa73c', 0.85 + s * 0.12)), []);
-  const rockMat = useMemo(() => litMat({ roughness: 0.92 }), []);
-  const nRock = Math.round(70 * q.forest) + 24;   // few rim rocks (the owner wants no wall of giant boulders behind / beside the town)
-  const rockFills = useMemo(() => rocks.map((_, k) => (m: InstancedMesh) => {
-    const rnd = mulberry32(100 + k); let c = 0;
-    const per = Math.ceil(nRock / rocks.length);
-    for (let i = 0; i < per; i++) {
-      const a = ((i + rnd()) / per) * TAU; const e = edgeR(a);
-      const r = e + (rnd() - 0.3) * 6;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const s = 0.9 + rnd() * 1.3;
-      if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
-      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1) || nearDock(x, z)) continue;   // (the cave mouth + the pier stay clear)
-      setInst(m, c++, x, groundY(x, z) - s * 0.15, z, rnd() * 6, s * (0.9 + rnd() * 0.6), s * (0.9 + rnd() * 1.1), s * (0.9 + rnd() * 0.6), (rnd() - 0.5) * 0.3, (rnd() - 0.5) * 0.3);
-    }
-    m.count = c;
-  }), [rocks, nRock]);
-  const perRock = Math.ceil(nRock / rocks.length);
-  // boundary stones just beyond playable radius
-  const stones = useMemo(() => makeRockGeo(333, '#9aa2a8', '#6cb844', 0.8), []);
-  const nStone = 70;
-  const stoneFill = useMemo(() => (m: InstancedMesh) => {
-    const rnd = mulberry32(55);
-    let c = 0;
-    for (let i = 0; i < nStone; i++) { const a = ((i + rnd() * 0.5) / nStone) * TAU; const r = edgeR(a) - 0.4 + rnd() * 1.2; const x = Math.cos(a) * r, z = Math.sin(a) * r, ry = rnd() * 6, s1 = 0.7 + rnd() * 0.9, s2 = 0.7 + rnd() * 0.9, s3 = 0.7 + rnd() * 0.9; if (!inCaveClear(x, z) && !nearDock(x, z)) setInst(m, c++, x, 0, z, ry, s1, s2, s3); }
-    m.count = c;
-  }, []);
-
-  // forest
-  const total = Math.round(1100 * q.forest);
-  const spec = useMemo(() => {
-    const rnd = mulberry32(2024);
-    const lists = { oak: [] as number[], palm: [] as number[], pineA: [] as number[], pineB: [] as number[] };
-    const inner = { oak: [] as number[], palm: [] as number[], pineA: [] as number[], pineB: [] as number[] };
-    for (let i = 0; i < total; i++) {
-      const a = rnd() * TAU, e = edgeR(a);
-      const d = Math.pow(rnd(), 1.5) * 58 + 3;
-      const r = e + d, x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const t = rnd();
-      if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // no forest in the lake / on the cave mound
-      const kind = d < 18 ? (t < 0.38 ? 'oak' : t < 0.52 ? 'palm' : t < 0.76 ? 'pineA' : 'pineB') : (t < 0.1 ? 'oak' : t < 0.55 ? 'pineA' : 'pineB');
-      const sc = (kind === 'oak' ? 5 : kind === 'palm' ? 5 : 6) * (0.8 + rnd() * 0.7) * (1 + d * 0.004);
-      const arr = d < 16 ? inner[kind] : lists[kind];
-      arr.push(x, groundY(x, z) - 0.2, z, rnd() * 6.28, sc);
-    }
-    return { lists, inner };
-  }, [total]);
-  const mkFill = (arr: number[]) => (m: InstancedMesh) => { for (let i = 0; i < arr.length / 5; i++) setInst(m, i, arr[i * 5], arr[i * 5 + 1], arr[i * 5 + 2], arr[i * 5 + 3], arr[i * 5 + 4], arr[i * 5 + 4] * (0.9 + (i % 5) * 0.08), arr[i * 5 + 4]); };
-  const fills = useMemo(() => ({
-    inner: (['oak', 'palm', 'pineA', 'pineB'] as const).map((k) => mkFill(spec.inner[k])),
-    outer: (['oak', 'palm', 'pineA', 'pineB'] as const).map((k) => mkFill(spec.lists[k])),
-  }), [spec]);
-  const keys = ['oak', 'palm', 'pineA', 'pineB'] as const;
-  return (
-    <>
-      {rocks.map((g, k) => <Inst key={'r' + k} geo={g} mat={rockMat} count={perRock} fill={rockFills[k]} receive />)}
-      <Inst geo={stones} mat={rockMat} count={nStone} fill={stoneFill} cast receive />
-      {keys.map((k, i) => (spec.inner[k].length ? <Inst key={'i' + k} geo={nat[k]} mat={nat.mat} count={spec.inner[k].length / 5} fill={fills.inner[i]} receive /> : null))}
-      {keys.map((k, i) => (spec.lists[k].length ? <Inst key={'o' + k} geo={nat[k]} mat={nat.mat} count={spec.lists[k].length / 5} fill={fills.outer[i]} /> : null))}
-    </>
-  );
-}
-
 export function Terrain({ q }: { q: QualityCfg }) {
   return (
     <>
       <Ground q={q} />
-      <Bushes q={q} />
-      <Flowers q={q} />
       <Pebbles q={q} />
-      <Rim q={q} />
+      <React.Suspense fallback={null}><NatureBatch q={q} /></React.Suspense>
     </>
   );
 }

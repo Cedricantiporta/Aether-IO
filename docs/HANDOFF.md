@@ -84,6 +84,19 @@ town (and closes the open panel first).
   banners and barrel/crate clusters are all kit v2 instances (`render/townKit.tsx`, one place for every placement list). Door /
   entry triggers (`castleData CASTLE_DOOR`, `churchData`, `tavernData`, `homeData`, `townData CHAPEL_SIDE`) derive from CASTLE /
   CHURCH / TAVERN / HERO_HOUSE (the hero's house now faces south, on the West Rise). Gate towers are colliders at x +-3.8.
+- **Outskirts = nature kit v1 (2026-10-20, north-up camera)**: every building outside the walls is a `nature_kit_v1.glb` piece with its front
+  on +z (rot 0). Layout (all in `townData.ts` / `caveData.ts` / `beachData.ts`, footprints in `townData.NK`, colliders from `kitRing()`): the
+  **stable** (14, 43; open front onto the fenced paddock x 8.8-21.5, z 46.3-51; gap in its west fence), the **east park** (gazebo 28, 48.8,
+  park fountain 36.4, 49.4, benches `TOWN_SEATS` along the river, stepping stones `STEP_PATHS`; keep the lane z 52-59 free), the **farm** across the
+  bridge (windmill 31, 83.6 with spinning blades; farmhouse 31, 96.2 = west column and barn 41.5, 96.8 = east column; cows + dog in the yard
+  z 102-107, chicken coop 26.2, 103.2 with the egg nests in front, a well; sheep + pigs in the pasture x 38-50, z 80-90; the yard is entered through
+  the gap x 33-38 of the farm track's north fence), the **Elixir Brewer's hut** (-10.2, 106.2, door onto the tower path), the **Endless Tower**
+  (-74, 106.2 on its knoll, door = `TOWER.door`, the hero stands on the path z 112), the **mine entrance** (72.4, 4.8), two tents and a siding in the
+  camp, the **pier** (dock segments + posts + `fence_wood` rails, kit boats), market carts, haystacks, crops, wells, signposts. The Fishmonger and
+  Mining Supplies stalls are town_kit_v2 `shop_stall_house` pieces (same keeper offsets as the town shops); the Brewer's `NPC/DOOR/CAULDRON`
+  offsets in `render/Town.tsx` are for the kit hut. The portal keeps its old model (its steps face north, the road comes from there).
+  Animals: `townData.ANIMALS` (cows, sheep, pigs, chickens, cats, dogs, ducks, horses; AI + petting + milking + riding unchanged in
+  `systems/npcs.ts`) are drawn by `render/KitAnimals.tsx` (see task 9). Re-check the layout with the A* test in "QA (headless)".
 - A walled town (stone wall + gate, castle on a raised terrace, plaza with the founder's statue / fountain, chapel + graveyard,
   Golden Tankard tavern, windmill) with a large outskirts: meadow before the gate, a river with a great arched bridge,
   lake + west beach with pier and fishing, farm + barns + fields, hamlets, hills (`townHills.ts`), the Endless Tower far
@@ -221,7 +234,7 @@ in town.
 ### 3.8 Performance features
 Frustum-culled instanced chunks + distance cull to the fog end (`render/distCull.ts`), camera far plane follows fog, adaptive
 DPR (`PerfGovernor`), NPC view culling + animation LOD, merged NPC meshes, range-limited per-frame uploads, hidden empty
-effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
+effect pools; the town's nature kit (trees, forest, fences, buildings ... ) is ONE `BatchedMesh` (+ one for window glow) and every animal species is one instanced, shader-posed mesh (see task 9). Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
 
 ### 3.9 UI style direction (owner-driven)
 **Minimal (owner, v12 block at the end of `index.css`):** as few containers as possible; content floats; group by spacing, not boxes.
@@ -285,7 +298,7 @@ screens, max-level question: class level cap is 50) have been removed.
    (ItemArt; drawn at scale 1.22 in slots on rarity-gradient backgrounds). Images sent while Claude works are NOT
    saved: ask for a re-send. Waiting for re-sends: weapons, armor, rings/amulets, cards 2, gear, drops, ores, fish,
    enemy/boss portraits, status icons, summon banners + card back (list in REFERENCES).
-9. **Town 3D (Blender kit v2, wired 2026-10-20)**: `public/models/town/town_kit_v2.glb` (17 pieces, built by `art/blender/town_kit_v2.py`,
+9. **Town 3D (Blender kit v2 + nature kit v1, wired 2026-10-20)**: `public/models/town/town_kit_v2.glb` (17 pieces, built by `art/blender/town_kit_v2.py`,
    weld + meshopt medium, quantized: `townKit.tsx` bakes every mesh with its world matrix) now draws all town houses, the 7 shops,
    keep, chapel, tavern, gatehouse, wall segments, lamps, planters, stalls, fountain, banners and barrel/crate clusters (instanced per
    piece: body + glow draw, chunked + culled; clutter = one merged geometry). Material colours: `townPalette.KIT_RECOLOR` (v2 names
@@ -293,8 +306,52 @@ screens, max-level question: class level cap is 50) have been removed.
    at most), triangles 440-525 k -> 360-400 k. Rebuild the GLB: `python3 art/blender/town_kit_v2.py` then
    `npx @gltf-transform/cli weld raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb town_kit_v2.glb --level medium` (never
    overlap coplanar faces: Cycles renders them black; use `B.arch` for arches). Open: round wall towers are still the old kit
-   (v2 has none); hedges + stepping-stone paths on the raised districts; the Brewer / Fishmonger / Mining stalls and the barn / coop
-   are still procedural; chimney smoke uses `townData.HOUSE_KIT[kit].chimney`; shop FX use `townKit.SHOP_CHIMNEY`.
+   (v2 has none); hedges on the raised districts; chimney smoke uses `townData.HOUSE_KIT[kit].chimney` (nature kit: `NK_CHIMNEY`); shop FX use
+   `townKit.SHOP_CHIMNEY`.
+   **Nature kit v1 (wired 2026-10-20, see 3.2 "Outskirts")**: `public/models/town/nature_kit_v1.glb` (765 KB, weld + meshopt medium), built
+   by `art/blender/nature_kit_v1.py` (same builder/material approach as v2, organic parts smooth-shaded, buildings flat with
+   chamfered boxes). 48 root nodes: trees `tree_round_a/b/c`, `tree_pine_a/b`, `palm_a/b`; plants `bush_round`, `bush_flower`,
+   `hedge_block` (2 m), `flower_patch`, `grass_tuft`, `mushroom_cluster`, `rock_round_a/b`; park `park_bench`, `park_fountain`
+   (water = `awning_blue`), `stone_path_tile`, `fence_wood` (2 m), `gazebo`, `well`, `signpost`; animals `cow`, `sheep`, `pig`,
+   `chicken`, `horse`, `cat`, `dog`, `duck`; outskirts `barn`, `farmhouse`, `windmill`, `stable`, `chicken_coop`,
+   `mining_camp_tent`, `mine_entrance`, `brewer_hut`, `endless_tower` (~27 m with the flag), `dock_segment` (4 m, deck top y 0.55,
+   posts go below y 0), `dock_post`, `small_boat`, `market_cart`, `haystack`, `crop_wheat`, `crop_cabbage`, `crop_pumpkin`,
+   `crop_row`. 14 flat materials, no textures: the 12 v2 names/colours + `leaf_light` #86cc5a and `barn_red` #a8452f (add both to
+   `townPalette.kitColor` when wiring; `window_glow` is the emissive one). Fronts face +Z, origin = ground centre. Triangles:
+   trees 240-860, animals 520-1160, buildings 0.6-3.1k.
+   **Animal rig**: each animal is an Empty root (`cow`) whose children are JOINT nodes named `<animal>_body`, `_head`, `_tail`,
+   `_legFL/_legFR/_legBL/_legBR` (chicken + duck: `_legL/_legR`, `_wingL/_wingR`, `_tail`; horse also `horse_saddle`, whose origin
+   equals the body's, so copy the body bob onto it). A joint node is an Empty whose origin IS the pivot (hip, neck base, rump,
+   shoulder) and holds one child mesh node `<name>_mesh`: rotate/translate the joint node (leg swing = rotation.x, head turn =
+   rotation.y, bob = body.position.y). Do not rotate the `_mesh` node. The joint wrapper is deliberate: `meshopt` quantization moves
+   the origin of any node that directly holds a mesh to its bbox centre (that is also why static piece nodes carry a
+   translation/scale, same as v2; it is visually identical), but a node with children stays exact. `windmill_blades` is the same
+   (joint at the hub, local z axis = spin axis, child of `windmill`). Rebuild: `python3 art/blender/nature_kit_v1.py [--no-render]`
+   (`--only=nature,animals,outskirts,scene`, `--closeup=name+name2[,yaw,pitch,ortho,y]`, renders to `$NATUREKIT_SHOTS` = `art/renders/naturekit/`:
+   `sheet_nature/animals/outskirts.png` + `scene.png` farm-and-park vignette at the game camera, pitch 50, yaw 0), then
+   `npx @gltf-transform/cli weld nature_kit_v1.raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb nature_kit_v1.glb --level medium`
+   (delete the raw/weld files). Lathe helper `B.lathe(profile, ...)` revolves closed (r, y) profiles (basins, roofs, bottles).
+   **How the nature kit is wired**: `render/natureKit.tsx` loads + bakes it like `townKit` (de-quantize, bake world matrices, material colour ->
+   vertex colour, `window_glow` -> separate emissive geometry; `townPalette.kitColor` has the two new colours `leaf_light` + `barn_red`;
+   `natureLit()` is a smooth-shaded lit material). `render/natureLayout.ts` is pure data: every placement (piece -> instances) of the town +
+   outskirts from the engine data (trees = `TOWN_TREES`, fences = every `FENCES` run, benches = `TOWN_SEATS`, buildings, dock, crops, rocks ...) plus
+   the quality-scaled dressing (forest ring of 5 species, rim boulders, edge bushes, flower patches, grass tufts, mushrooms; old counts kept or lower).
+   `render/NatureBatch.tsx` (mounted by `Terrain.tsx`) draws ALL of it with ONE `three.BatchedMesh` (one geometry per piece, one instance per
+   placement, culled per instance, one multi-draw call) + one more for the window glow (`nightGlow` material); without `WEBGL_multi_draw` it
+   falls back to chunked `Inst` sets (+ one merged mesh per 48 m chunk for pieces placed <= 4 times). Build the batches in an effect:
+   `BatchedMesh.dispose()` empties it for good and React strict mode double-mounts. The windmill blades are a separate spinning mesh.
+   **Animals** (`render/KitAnimals.tsx`): each species is ONE
+   merged geometry (all `<animal>_*` joint meshes baked in animal space, with per-vertex pivot / part id / leg phase / coat flag) drawn by one
+   `InstancedMesh`; a vertex shader (`natureKit.animalMats`: one program for all species + a custom depth material for shadows) rotates the
+   joints about their pivots from per-instance values (gait phase + amplitude, head yaw / pitch, tail wag, wing flap, gallop): idle breath +
+   occasional head turns + grazing, walk = leg swing + bob, tail wag, chicken / duck peck, duck waddle, horse gallop while ridden (saddle
+   height `kitSeatY()` read by `render/Hero.tsx`), coat colour = `ANIMALS[i].tint`. Pose maths runs on the CPU only for animals in view, no
+   allocation. Biscuit (Pip's hidden cat) is an extra cat instance. Main-camera draw calls vs the old procedural outskirts (headless probe,
+   hero at the old probe spots, default quality): farm 100 -> 76, beach/dock 88 -> 80, tower clearing 83 -> 54, mining camp 141 -> 103;
+   triangles 254 k -> 270 k, 264 k -> 281 k, 252 k -> 234 k, 283 k -> 270 k.
+   Gotchas: `ANIMALS` indices matter (milking uses `milkCd[16]`, quest nodes 200 + index); the pier deck is walkable in the A* grid
+   (`townPath` marks `DECK_RECTS`, grid box now starts at x -100); never put a building / fountain across the lanes of the east park or the
+   farm track (the park behind the paddock was cut off once: run the A* test).
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
@@ -353,6 +410,11 @@ relative findings as valid. QA gotcha: restart Vite after every engine edit or t
   taking a screenshot (the camera damps toward the hero); restart Vite after editing a module the probe imports (Vite then serves
   the app a `?t=` URL, a probe's `import('/engine/world.ts')` becomes a SECOND module copy and writes to a dead `world`); a
   `pkill -f` whose pattern also appears in your own command line kills your shell.
+- Outskirts layout test (kit placements, 2026-10-20): in-page `import('/engine/systems/townPath.ts')`, `findPath(0, 40.8, tx, tz, reach, buf)` from the
+  gate to every outskirts shop front, door, NPC home, fishing spot (the pier is walkable in the grid), nest, well, animal home, harvest node, bench
+  must return > 0 (70 targets passed) and `walkableAt(standing spot)` must hold; dump `TOWN_COLLIDERS` + `NK` footprints to a PNG to eyeball overlaps.
+  Perf: hook `onAfterRender` of every mesh (town_views.mjs style) and count main-camera calls / triangles; `world.village.spawnFx = 0` hides the arrival
+  beam; wait ~25 s after a teleport (SwiftShader ~0.5 fps, the camera damps).
 - There is no unit-test suite: verify with `npx tsc --noEmit`, `npx vite build` and scripted headless runs.
 
 ### History (big milestones, oldest first)

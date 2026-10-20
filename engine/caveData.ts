@@ -13,23 +13,23 @@
  *  angles a0..a1 (atan2(z, x) around the town centre), i.e. a wide rounded bay about x 56..74, z -2..30 that holds the
  *  mining camp (walkable; the forest, rim rocks and edge bushes follow the new edge automatically). */
 export const CAVE_BAY = { a0: -0.15, a1: 0.5, depth: 12 };
-/** The rock mound with the cave opening at the back of the bay; `rot` turns local +z (the opening) to face west-south-west,
- *  out over the bay and towards the usual camera (south), so the dark arch reads from the default view. */
-export const CAVE_MOUTH = { x: 75.4, z: 9.4, rot: -0.97 };
+/** The mine entrance = nature_kit_v1 'mine_entrance' (a rocky mound with a timber-framed arch and a short rail track, 7.3 x 8 m) at the
+ *  back of the bay; its front faces south like every building, toward the camera and the camp yard. */
+export const CAVE_MOUTH = { x: 72.4, z: 4.8, rot: 0 };
 const FX = Math.sin(CAVE_MOUTH.rot), FZ = Math.cos(CAVE_MOUTH.rot);   // the opening's facing (unit xz)
 /** Interact spot in front of the opening (E: "Enter Crystal Cave"). */
-export const CAVE_DOOR = { x: CAVE_MOUTH.x + FX * 5.6, z: CAVE_MOUTH.z + FZ * 5.6, r: 4.6 };
+export const CAVE_DOOR = { x: CAVE_MOUTH.x + FX * 7.2, z: CAVE_MOUTH.z + FZ * 7.2, r: 3.8 };
 /** Where the hero stands after leaving the cave (just outside the opening, facing the bay along CAVE_MOUTH.rot). */
-export const CAVE_OUT = { x: CAVE_MOUTH.x + FX * 7, z: CAVE_MOUTH.z + FZ * 7 };
+export const CAVE_OUT = { x: CAVE_MOUTH.x + FX * 8.4, z: CAVE_MOUTH.z + FZ * 8.4 };
 /** Kept free of random forest trees / rim rocks / edge bushes (the mound and the opening stay readable). */
-export const CAVE_CLEAR = { x: CAVE_MOUTH.x - FX * 0.5, z: CAVE_MOUTH.z - FZ * 0.5, r: 8.5 };
-/** Town colliders [x, z, r] of the entrance props (jamb rocks, foot boulders, lantern posts, crate, ore pile), from the
- *  mound's local layout in render/CaveEntrance.tsx (local +z = the opening's facing). */
-export const CAVE_MOUTH_COLLIDERS: [number, number, number][] = ([
-  [-3.9, -0.4, 2.0], [3.9, -0.5, 2.0], [-5.2, 2.6, 1.0], [5.4, 2.4, 0.9], [-2.75, 2.1, 0.3], [2.75, 2.1, 0.3], [-3.7, 3.0, 0.7], [4.0, 3.2, 0.7],
-  // the mound itself + its shoulders (the bay is deep enough now to reach round them)
-  [0, -5.2, 4.6], [-6.4, -3.2, 3.2], [6.6, -3.0, 3.2], [-9.6, -0.6, 2.2], [9.6, -0.2, 2.0],
-] as [number, number, number][]).map(([lx, lz, r]) => [CAVE_MOUTH.x + lx * FZ + lz * FX, CAVE_MOUTH.z - lx * FX + lz * FZ, r]);
+export const CAVE_CLEAR = { x: CAVE_MOUTH.x + FX * 1.5, z: CAVE_MOUTH.z + FZ * 1.5, r: 9.5 };
+/** Town colliders [x, z, r] of the entrance: the mound's footprint (x -3.7..3.7, z -2.6..3.4 of the kit piece; the rail track in front of the arch stays walkable). */
+export const CAVE_MOUTH_COLLIDERS: [number, number, number][] = ((): [number, number, number][] => {
+  const c: [number, number, number][] = [];
+  for (const z of [-1.7, 0.4, 2.3]) for (let x = -2.9; x <= 2.91; x += 1.45) c.push([CAVE_MOUTH.x + x, CAVE_MOUTH.z + z, 1.15]);
+  c.push([CAVE_MOUTH.x - 0.4, CAVE_MOUTH.z - 3.4, 2.2]);   // (the back of the mound)
+  return c;
+})();
 export const inCaveClear = (x: number, z: number, m = 0): boolean => (x - CAVE_CLEAR.x) ** 2 + (z - CAVE_CLEAR.z) ** 2 < (CAVE_CLEAR.r + m) ** 2;
 
 // ------------------------------------------------------------- mining camp ---
@@ -39,25 +39,24 @@ export const inCaveClear = (x: number, z: number, m = 0): boolean => (x - CAVE_C
  *  are townData VILLAGE_NODES. Everything here keeps the crossing in front of the mouth (~63, 14) clear. */
 export const MINE_CAMP = {
   /** centre + radii of the trodden yard (no bushes / flowers on it, see render/terrainFn inForecourtUse) */
-  yard: { x: 63, z: 14, rx: 9, rz: 11 },
-  /** rail tracks [x1, z1, x2, z2] (sleepers + two rails; walk-over decoration): one out of the mine mouth to the ore heap,
-   *  one short siding by the shed */
-  rails: [[71.8, 11.9, 66.6, 8.9], [70.2, 21.8, 66.2, 25.6]] as [number, number, number, number][],
+  yard: { x: 64.5, z: 15, rx: 10, rz: 10 },
+  /** rail tracks [x1, z1, x2, z2] (sleepers + two rails; walk-over decoration): one short siding by the second tent (the mine's own track is part of the kit piece) */
+  rails: [[70.2, 21.8, 66.2, 25.6]] as [number, number, number, number][],
   /** mine carts on the rails: x, z, yaw (bed along local z), load 0 ore / 1 crystals / 2 empty */
-  carts: [{ x: 68.7, z: 10.1, rot: -2.1, load: 0 }, { x: 68.4, z: 23.5, rot: -0.81, load: 1 }] as { x: number; z: number; rot: number; load: 0 | 1 | 2 }[],
+  carts: [{ x: 68.4, z: 23.5, rot: -0.81, load: 1 }] as { x: number; z: number; rot: number; load: 0 | 1 | 2 }[],
   /** ore heaps x, z, size */
-  ore: [[64.6, 9.6, 1.2], [56.4, 13.4, 1.0]] as [number, number, number][],
+  ore: [[66.2, 12.6, 1.2], [58.6, 17.4, 1.0]] as [number, number, number][],
   /** crate stacks / barrels x, z, yaw */
-  crates: [[58.4, 8.6, 0.3], [70.3, 17.0, -0.5]] as [number, number, number][],
-  barrels: [[65.6, 3.4], [66.3, 4.3], [72.2, 25.2]] as [number, number][],
-  /** open timber shed (logs, sacks, a hanging lantern): x, z, yaw (open side faces local +z) */
-  shed: { x: 70.4, z: 27.6, rot: -2.0 },
+  crates: [[56.6, 8.8, 0.3], [72.6, 18.2, -0.5]] as [number, number, number][],
+  barrels: [[67.2, 2.4], [68.0, 3.3], [73.4, 22.0]] as [number, number][],
+  /** nature_kit_v1 'mining_camp_tent' (open triangle faces +z): the foreman's tent beside the stall, a second one by the siding */
+  tents: [{ x: 57.4, z: 12.2 }, { x: 72.2, z: 26.4 }] as { x: number; z: number }[],
   /** tool rack with pickaxes and shovels (along the wall side, tools facing local +z) */
-  rack: { x: 56.6, z: 22.4, rot: Math.PI / 2 },
+  rack: { x: 56.2, z: 22.4, rot: Math.PI / 2 },
   /** lantern posts (glow only) */
-  lanterns: [[60.3, 15.2], [66.4, 19.9], [56.6, 30.2], [57.4, 4.6], [67.6, 6.0]] as [number, number][],
-  /** signpost where the coop path enters the camp */
-  sign: { x: 55.8, z: 33.4 },
+  lanterns: [[60.6, 17.2], [67.6, 18.6], [56.6, 30.2], [66.4, 6.6], [75.6, 9.4]] as [number, number][],
+  /** signpost where the coop path enters the camp (nature_kit_v1 'signpost') */
+  sign: { x: 56.4, z: 33.4 },
 };
 /** Town colliders of the camp props [x, z, r] (registered by village.placeVillageNodes). */
 export const CAMP_COLLIDERS: [number, number, number][] = (() => {
@@ -67,7 +66,7 @@ export const CAMP_COLLIDERS: [number, number, number][] = (() => {
   for (const [x, z, s] of m.ore) c.push([x, z, 1.1 * s]);
   for (const [x, z] of m.crates) c.push([x, z, 0.9]);
   for (const [x, z] of m.barrels) c.push([x, z, 0.55]);
-  { const { x, z, rot } = m.shed, cr = Math.cos(rot), sr = Math.sin(rot); for (const o of [-1.5, 0, 1.5]) c.push([x + cr * o, z - sr * o, 1.4]); }
+  for (const t of m.tents) for (let ox = -1.7; ox <= 1.71; ox += 1.7) for (const oz of [-1.2, 1.0]) c.push([t.x + 0.07 + ox, t.z + oz, 1.1]);   // (tent footprint 5.8 x 5.3)
   { const { x, z, rot } = m.rack, cr = Math.cos(rot), sr = Math.sin(rot); for (const o of [-0.8, 0.8]) c.push([x + cr * o, z - sr * o, 0.5]); }
   for (const [x, z] of m.lanterns) c.push([x, z, 0.3]);
   c.push([m.sign.x, m.sign.z, 0.3]);

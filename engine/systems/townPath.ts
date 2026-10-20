@@ -8,12 +8,13 @@
 // ============================================================================
 import { world } from '../world';
 import { queryColliders, edgeLimit, bounds, CRATE_RADIUS, type Collider } from '../mapgen';
+import { DECK_RECTS } from '../beachData';
 
 const CELL = 0.5;
 /** Hero centre clearance: the hero is pushed to collider r + 0.5, keep a little extra so routes never graze a corner. */
 const CLEAR = 0.78;
 /** Grid box per area (town: the whole island incl. the outer ring, farm, tower nook, portal road and the cave bay). */
-const BOX = { TOWN: [-90, -64, 84, 170], OTHER: [-64, -64, 64, 64] } as const;   // (town: incl. the mainland, the portal and the tower clearing)
+const BOX = { TOWN: [-100, -64, 84, 170], OTHER: [-64, -64, 64, 64] } as const;   // (town: incl. the mainland, the portal and the tower clearing)
 const MAX_W = Math.ceil((BOX.OTHER[2] - BOX.OTHER[0]) / CELL), MAX_H = Math.ceil((BOX.TOWN[3] - BOX.TOWN[1]) / CELL);
 const MAX_N = Math.max(MAX_W, Math.ceil((BOX.TOWN[2] - BOX.TOWN[0]) / CELL)) * MAX_H;
 
@@ -48,6 +49,10 @@ function ensureGrid(): void {
       const lim = edgeLimit(x, z, 2) - 0.3;
       if (lim <= 0 || r2 > lim * lim) walk[j * W + i] = 0;
     }
+  }
+  // the beach pier decks are walkable over the lake (mapgen.clampToDeck): the route to the pier end, the ship and the pier fishing spot
+  if (v.area === 'TOWN') for (const [rx0, rz0, rx1, rz1] of DECK_RECTS) {
+    for (let j = Math.max(0, cz(rz0)); j <= Math.min(H - 1, cz(rz1)); j++) for (let i = Math.max(0, cx(rx0)); i <= Math.min(W - 1, cx(rx1)); i++) walk[j * W + i] = 1;
   }
   // every collider (buildings, walls, fences, trees, props), deduplicated from the coarse collider grid
   const hw = (b[2] - b[0]) / 2, hh = (b[3] - b[1]) / 2;

@@ -26,8 +26,7 @@ import { walkAndOpen, walkTo } from '../engine/systems/village';
 import { TOWER, TOWER_KNOLL, PORTAL } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
-import { Beach, buildFishStall } from './Beach';
-import { buildMineStall } from './CaveEntrance';
+import { Beach } from './Beach';
 
 type ShopType = 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE';
 
@@ -45,62 +44,14 @@ function stripedAwning(b: GB, x0: number, x1: number, y: number, z: number, c1: 
 }
 function pole(b: GB, x: number, z: number, h: number, c = '#6e4b2b') { b.box(0.22, h, 0.22, [x, h / 2, z], c); }
 
-/** Elixir Brewer's hut (outside the gate): small timber-and-plaster cottage with a dark roof, a stone chimney puffing green
- *  smoke, a big iron cauldron bubbling in front (liquid + bubbles are animated in Shop), a table of elixir flasks, herbs and
- *  jars of monster parts. Door faces +z. Props in front are also town colliders (townData BREWER_HUT). */
-function buildBrewer() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const plaster = '#e2d8c0', wood = '#5a3d24', roofC = ROYAL_ROOF, stone = '#8f897d', iron = '#2f3139';
-  const cz = -0.4;   // body centre (z)
-  b.box(5.2, 0.5, 4.4, [0, 0.25, cz], stone);
-  b.box(4.6, 2.5, 3.8, [0, 1.75, cz], plaster, [0, 0, 0], [0.86, 1]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.28, 2.6, 0.28, [sx * 2.3, 1.8, cz + sz * 1.9], wood);
-  b.box(4.8, 0.22, 0.28, [0, 2.95, cz + 1.92], wood); b.box(4.8, 0.18, 0.28, [0, 1.15, cz + 1.92], wood);
-  b.box(0.18, 1.8, 0.2, [0.25, 2.05, cz + 1.95], wood, [0, 0, 0.6]); b.box(0.18, 1.8, 0.2, [2.0, 2.05, cz + 1.95], wood, [0, 0, -0.6]);
-  b.prism(5.8, 2.5, 4.9, [0, 3.0, cz], roofC, [0, 0, 0], [0.78, 1.08]); b.box(0.3, 0.26, 4.9 + 0.2, [0, 3.0 + 2.5, cz], TOWN_GOLD);
-  b.box(0.26, 0.26, 5.0, [0, 5.45, cz], '#1a1512');
-  // stone chimney (green smoke, see Shop FX)
-  b.box(0.8, 3.0, 0.8, [1.5, 4.0, cz - 1.0], '#6d6a66'); b.box(0.95, 0.2, 0.95, [1.5, 5.55, cz - 1.0], '#57544f');
-  // door + round window with a green glow
-  b.box(1.05, 1.85, 0.2, [-1.25, 1.42, cz + 1.95], '#3e5a2e'); b.cyl(0.52, 0.52, 0.2, 10, [-1.25, 2.3, cz + 1.95], '#3e5a2e', [Math.PI / 2, 0, 0]);
-  g.cyl(0.5, 0.5, 0.1, 12, [1.1, 2.15, cz + 1.94], '#7dffa0', [Math.PI / 2, 0, 0]); b.torus(0.54, 0.07, [1.1, 2.15, cz + 1.98], wood, [0, 0, 0], 1, 12);
-  // plain cloth awning on two poles over the work area
-  stripedAwning(b, -2.4, 2.4, 2.9, cz + 2.9, '#dfe6cf', '#dfe6cf');
-  pole(b, -2.4, cz + 3.6, 2.6); pole(b, 2.4, cz + 3.6, 2.6);
-  // the cauldron: three iron legs, round belly, thick rim, a fire under it (liquid disc is a separate mesh in Shop)
-  const kx = 1.4, kz = 3.4;
-  for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU + 0.5; b.cyl(0.12, 0.12, 0.55, 5, [kx + Math.cos(a) * 0.62, 0.27, kz + Math.sin(a) * 0.62], '#24252b'); }
-  b.sph(0.9, [kx, 1.05, kz], iron, [1, 0.78, 1], 12); b.torus(0.76, 0.12, [kx, 1.6, kz], '#3d4048', [Math.PI / 2, 0, 0], 1, 16);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; b.box(0.13, 0.55, 0.13, [kx + Math.cos(a) * 0.42, 0.14, kz + Math.sin(a) * 0.42], '#5a3a1e', [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9]); }
-  g.cone(0.26, 0.5, 6, [kx, 0.32, kz], '#ff9a2a'); g.cone(0.14, 0.38, 5, [kx + 0.15, 0.3, kz - 0.1], '#ffe070');
-  b.box(0.07, 1.5, 0.07, [kx + 0.35, 1.9, kz - 0.15], wood, [0.25, 0, -0.35]);   // stirring ladle
-  // work table with elixir flasks (the five elixir colours), a mortar and a jar of monster parts
-  b.box(1.7, 0.85, 0.75, [-1.6, 0.43, 2.6], wood); b.box(1.85, 0.1, 0.9, [-1.6, 0.9, 2.6], '#8a6340');
-  const cols = ['#ff7a2a', '#9eacc2', '#5fd35a', '#ffc94a', '#ff4a5e'];
-  for (let i = 0; i < 5; i++) {
-    const x = -2.3 + i * 0.36, z = 2.45 + (i % 2) * 0.28;
-    g.sph(0.15, [x, 1.1, z], cols[i], [1, 1.05, 1], 7); b.cyl(0.05, 0.05, 0.2, 5, [x, 1.33, z], '#d8c6a0'); b.cyl(0.06, 0.06, 0.06, 5, [x, 1.45, z], '#8a5a30');
-  }
-  b.cyl(0.2, 0.15, 0.22, 8, [-0.95, 1.06, 2.75], '#9a948a'); b.cyl(0.03, 0.03, 0.35, 4, [-0.9, 1.25, 2.72], '#6e4b2b', [0, 0, 0.5]);
-  // shelves of jars on the front wall + hanging herbs under the awning
-  b.box(1.3, 0.08, 0.3, [-0.9, 2.2, cz + 2.12], wood);
-  for (let i = 0; i < 3; i++) { b.cyl(0.13, 0.13, 0.32, 7, [-1.3 + i * 0.4, 2.4, cz + 2.12], '#c8d8c0'); g.cyl(0.1, 0.1, 0.16, 6, [-1.3 + i * 0.4, 2.36, cz + 2.14], ['#9be86a', '#d08aff', '#ff9a5a'][i]); }
-  for (let i = 0; i < 6; i++) b.cone(0.11, 0.42, 5, [-2.0 + i * 0.75, 2.45, cz + 2.75], i % 2 ? '#5aa03a' : '#8a6a3a', [Math.PI, 0, 0]);
-  // barrels + a crate of bones / slime jars on the side
-  for (const [x, z] of [[-2.9, 0.6], [-3.0, -0.5]]) { b.cyl(0.45, 0.5, 0.85, 9, [x, 0.43, z], '#8a5a30'); b.cyl(0.51, 0.51, 0.07, 9, [x, 0.28, z], '#3a3a40'); b.cyl(0.51, 0.51, 0.07, 9, [x, 0.62, z], '#3a3a40'); }
-  b.box(0.8, 0.6, 0.8, [2.95, 0.3, 0.9], '#9c7245'); g.sph(0.16, [2.85, 0.72, 0.8], '#7ddc4a', 1, 6); b.cyl(0.07, 0.07, 0.45, 4, [3.1, 0.75, 1.0], '#e8e0cc', [0, 0, 1.2]);
-  lantern(b, g, -2.0, 2.75, cz + 2.6);
-  return { body: b.build(), glow: g.build() };
-}
-
-/** Own-body shops (the seven town shops are town_kit_v2 shop_stall_house pieces placed by render/townKit.tsx; the Shop below adds the sign, keeper, name tags and FX). */
-const BUILD: Partial<Record<ShopType, () => { body: any; glow: any }>> = { BREWER: buildBrewer, FISH: buildFishStall, MINE: buildMineStall };
+/** Every shop building is a Blender kit piece: town_kit_v2 shop_stall_house for all but the Elixir Brewer (nature_kit_v1 brewer_hut), placed by render/townKit.tsx /
+ *  render/NatureScenery.tsx; the Shop below adds the sign, keeper, name tags and FX. */
 const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Merchant', BLACKSMITH: 'Blacksmith', PETS: 'Pet Merchant', ARMORY: 'Armor Merchant', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse Keeper', TECH: 'Tinkerer', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplier' };
 /** (owner) shopkeepers have their own names: the name tag shows the role on top, the name below. */
 const KEEPER: Record<ShopType, string> = { SUPPLIES: 'Rosalind', BLACKSMITH: 'Brakk', PETS: 'Jev', ARMORY: 'Hald', FORTUNE: 'Madame Zora', WAREHOUSE: 'Otto', TECH: 'Quill', BREWER: 'Nessa', FISH: 'Salty Pell', MINE: 'Durgan' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-2, 2.6], BLACKSMITH: [-2, 2.6], PETS: [-2, 2.6], ARMORY: [-2, 2.6], FORTUNE: [-2, 2.6], WAREHOUSE: [-2, 2.6], TECH: [-2, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9], MINE: [-1.6, -0.9] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-2, 2.6], BLACKSMITH: [-2, 2.6], PETS: [-2, 2.6], ARMORY: [-2, 2.6], FORTUNE: [-2, 2.6], WAREHOUSE: [-2, 2.6], TECH: [-2, 2.6], BREWER: [0.3, 2.3], FISH: [-2, 2.6], MINE: [-2, 2.6] };
 const NPC: Record<ShopType, NpcCfg> = {
   // (kit shops: the keeper stands just outside the awning, right of the door, so the camera always sees him; the counter is behind him)
   SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [1.0, 4.9] },
@@ -110,12 +61,12 @@ const NPC: Record<ShopType, NpcCfg> = {
   FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [1.0, 4.9] },
   WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [1.0, 4.9] },
   TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [1.0, 4.9] },
-  BREWER: { key: 'WIZARD', tint: '#d8f5d0', pos: [1.4, 2.25] },   // stirring behind the cauldron
-  FISH: { key: 'ROGUE', tint: '#cfe4f0', pos: [0.3, 0.35] },       // behind the counter of the beach stall (render/Beach.tsx)
-  MINE: { key: 'BARBARIAN', tint: '#e8d2b0', pos: [-0.6, 0.35] },  // the camp's supply keeper behind the counter (render/CaveEntrance.tsx)
+  BREWER: { key: 'WIZARD', tint: '#d8f5d0', pos: [0.7, 3.9] },    // in front of the hut's door, by the little cauldron
+  FISH: { key: 'ROGUE', tint: '#cfe4f0', pos: [1.0, 4.9] },       // (kit shop: outside the awning, right of the door)
+  MINE: { key: 'BARBARIAN', tint: '#e8d2b0', pos: [1.0, 4.9] },
 };
 /** Bubbling liquid disc of the shops with a cauldron: shop-local [x, y, z, radius]. */
-const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { BREWER: [1.4, 1.62, 3.4, 0.68] };
+const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { BREWER: [-1.5, 0.8, 2.7, 0.34] };
 
 // -------------------------------------------------------------------- signs ---
 function buildSign(type: ShopType, color: string) {
@@ -224,8 +175,7 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
 const SIGN_POST = [1, -1].map((side) => { const b = new GB([1, 1]); b.box(0.22, 4.0, 0.22, [0, 2.0, 0], '#6e4b2b'); b.box(1.9, 0.16, 0.16, [0.9 * side, 3.85, 0], '#6e4b2b'); return b.build(); });
 
 function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; position: number[]; color: string; q: QualityCfg; facing?: number }) {
-  const kit = KIT_SHOPS.has(type);   // body = town_kit_v2 shop_stall_house (render/townKit.tsx)
-  const geos = useMemo(() => (kit ? null : BUILD[type]!()), [type, kit]);
+  const kit = KIT_SHOPS.has(type);   // body = town_kit_v2 shop_stall_house (render/townKit.tsx); the brewer's = nature_kit_v1 brewer_hut
   const sign = useMemo(() => buildSign(type, color), [type, color]);
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
@@ -277,10 +227,10 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
       } else if (type === 'BREWER') {   // bubbles from the cauldron + green smoke from the chimney (shop-local -> world via the facing)
         const cf = Math.cos(facing), sf = Math.sin(facing);
         if (Math.random() < dt * 5) {
-          const a = Math.random() * TAU, r = Math.random() * 0.5, lx = 1.4 + Math.cos(a) * r, lz = 3.4 + Math.sin(a) * r;
-          FX.add.emit(px + lx * cf + lz * sf, 1.7, pz - lx * sf + lz * cf, 0, 1.4, 0, 1.0, 0.16, 0.3, 0.5, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
+          const a = Math.random() * TAU, r = Math.random() * 0.3, lx = -1.5 + Math.cos(a) * r, lz = 2.7 + Math.sin(a) * r;
+          FX.add.emit(px + lx * cf + lz * sf, 0.95, pz - lx * sf + lz * cf, 0, 1.2, 0, 1.0, 0.14, 0.3, 0.5, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
         }
-        if (Math.random() < dt * 2.5) smokePuff(px + 1.5 * cf - 1.4 * sf, 5.8, pz - 1.5 * sf - 1.4 * cf, 1, 0x7fbf7a, 1.4, 2.6, 1.2, 0.25, 0.45);
+        if (Math.random() < dt * 2.5) smokePuff(px + 1.9 * cf - 1.3 * sf, 5.5, pz - 1.9 * sf - 1.3 * cf, 1, 0x7fbf7a, 1.4, 2.6, 1.2, 0.25, 0.45);
       } else if (type === 'PETS' && Math.random() < dt * 1.5) {
         FX.add.emit(px - 0.9 + (Math.random() - 0.5) * 2, 2.6, pz + 3 + Math.random(), 0, 0.9, 0, 1.6, 0.35, 0.3, 0.5, 2.0, 1.1, 0.9, CELL.PLUS, 0, 0.1);
       }
@@ -291,10 +241,8 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   const signSide = type === 'BREWER' || kit ? -1 : 1;   // (owner: the brewer's sign post stood on the tower path; it hangs on the other side)
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
-      {geos && <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />}
-      {geos && <mesh geometry={geos.glow} material={mats.glow} />}
       {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
-      <group position={kit ? [4.25, 0, 5.0] : [-3.4 * signSide, 0, 3.9]}>   {/* (kit shops: the sign stands in the gap between two shops, in front of the awnings) */}
+      <group position={kit ? [4.25, 0, 5.0] : [4.6, 0, 3.6]}>   {/* (kit shops: the sign stands in the gap between two shops, in front of the awnings) */}
         <mesh geometry={signSide > 0 ? SIGN_POST[0] : SIGN_POST[1]} material={mats.lit} castShadow />
         <group ref={signRef} position={[1.2 * signSide, 3.0, 0]}>
           <mesh geometry={sign.body} material={mats.lit} position={[0, -0.0, 0]} castShadow />
@@ -499,50 +447,20 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
 const q_light = (c: string) => <pointLight position={[0, 3, 0]} color={c} distance={12} decay={1.6} intensity={10} />;
 
 // ------------------------------------------------------------- endless tower ---
-/** The Endless Tower: a tall round stone tower in the forecourt, purple-lit windows, a glowing rune door facing the road. */
-function buildTowerGeo() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const st = ['#a29fab', '#94919e', '#aeabb8'], dark = '#2a2733';
-  b.cyl(5.0, 5.4, 1.2, 16, [0, 0.6, 0], '#5d5a66');
-  for (let i = 0; i < 7; i++) b.cyl(4.05 - i * 0.12, 4.15 - i * 0.12, 3.2, 14, [0, 1.2 + 1.6 + i * 3.2, 0], st[i % 3]);   // stacked drums
-  for (let i = 1; i < 7; i++) b.cyl(4.2 - i * 0.12, 4.2 - i * 0.12, 0.25, 14, [0, 1.2 + i * 3.2, 0], '#56535f');           // course lines
-  const top = 1.2 + 7 * 3.2;
-  b.cyl(4.6, 3.6, 0.8, 16, [0, top + 0.4, 0], st[1]);
-  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; b.box(1.0, 1.1, 0.7, [Math.cos(a) * 4.2, top + 1.35, Math.sin(a) * 4.2], st[i % 3], [0, -a, 0]); }   // crenellations
-  b.cone(3.4, 5.5, 12, [0, top + 3.6, 0], '#3a2f4a'); b.cyl(0.08, 0.08, 2.4, 6, [0, top + 7.4, 0], dark);
-  g.sph(0.35, [0, top + 8.7, 0], '#c58bff', 1, 8);
-  // glowing windows spiralling up
-  for (let i = 0; i < 9; i++) { const a = i * 1.15 + 0.4, y = 4 + i * 2.25, r = 4.0 - (y / 30) * 0.8; g.box(0.55, 1.0, 0.12, [Math.cos(a) * r, y, Math.sin(a) * r], '#b77dff', [0, -a + Math.PI / 2, 0]); }
-  // door (faces +x): stone frame, dark doorway, rune arch
-  b.box(0.6, 4.2, 3.2, [4.1, 2.6, 0], st[2]);
-  b.box(0.3, 3.2, 2.0, [4.35, 2.2, 0], dark);
-  g.torus(1.2, 0.09, [4.45, 3.7, 0], '#c58bff', [0, Math.PI / 2, 0], 1, 16, Math.PI);
-  for (const sz of [-1, 1]) { b.box(0.9, 1.4, 0.9, [4.9, 0.7, sz * 2.1], st[0]); g.sph(0.28, [4.9, 1.65, sz * 2.1], '#d9b4ff', 1, 7); }   // braziers
-  b.box(2.6, 0.25, 3.4, [5.4, 0.12, 0], '#5d5a66');   // threshold
-  return { body: b.build(), glow: g.build() };
-}
+/** The Endless Tower's name tag + click target + door glow (the tower itself is nature_kit_v1 'endless_tower', drawn by render/NatureScenery.tsx;
+ *  its door faces south onto the woodland path: townData TOWER). */
 function TowerLandmark() {
-  const geos = useMemo(() => buildTowerGeo(), []);
-  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.9 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.5, 2.2) }) }), []);
   const label = useMemo(() => labelMaterial('Endless Tower', '#e9d6ff', { size: 64, plate: 'plate' }), []);
   const best = useGameStore((s) => s.progress.towerBest[s.hero] ?? 0);
   const sub = useMemo(() => (best > 0 ? labelMaterial(`Best floor ${best}`, '#c9a6ff', { size: 46 }) : null), [best]);
-  const titleRef = useRef<Sprite>(null!);
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    mats.glow.color.setRGB(1.6 + Math.sin(t * 2) * 0.3, 1.3 + Math.sin(t * 2.4) * 0.2, 2.2);
-    if (titleRef.current) titleRef.current.position.y = 32.5;
-  });
-  const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(TOWER.door.x + 1.2, TOWER.door.z, 'tower', '', 2.2); };
+  const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(TOWER.door.x, TOWER.door.z, 'tower', '', 2.2); };
   return (
     <group position={[TOWER.x, TOWER_KNOLL.h, TOWER.z]}>
-      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
-      <mesh geometry={geos.glow} material={mats.glow} />
-      <sprite ref={titleRef} material={label.mat} position={[0, 32.5, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
-      {sub && <sprite material={sub.mat} position={[0, 31.0, 0]} scale={[sub.aspect * 0.8, 0.8, 1]} />}
-      <pointLight position={[6.5, 3, 0]} color="#b77dff" distance={12} decay={1.6} intensity={12} />
-      <mesh position={[1, 6, 0]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
-        <cylinderGeometry args={[5, 5, 12, 12]} />
+      <sprite material={label.mat} position={[0, 30.4, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
+      {sub && <sprite material={sub.mat} position={[0, 28.9, 0]} scale={[sub.aspect * 0.8, 0.8, 1]} />}
+      <pointLight position={[0, 3, 7.4]} color="#b77dff" distance={12} decay={1.6} intensity={12} />
+      <mesh position={[0, 6, 1.6]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+        <cylinderGeometry args={[4.4, 4.4, 12, 12]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>

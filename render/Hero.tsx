@@ -12,6 +12,7 @@ import {
 } from 'three';
 import { world } from '../engine/world';
 import { animals } from '../engine/systems/npcs';
+import { kitSeatY } from './natureKit';
 import { events } from '../engine/events';
 import { abilityState, LP_CHARGE } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
@@ -241,7 +242,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
         if (ll) ll.rotation.x += 0.9 * k; if (lr) lr.rotation.x += 0.9 * k;
         const hv = world.village.ride.horse, hz = hv >= 0 ? animals[hv] : null;
         const bob = hz && hz.moving ? Math.abs(Math.sin(hz.hop)) * 0.12 : 0;
-        g.position.y += (RIDE_SEAT_Y + bob - SIT_HIP_DROP) * k;
+        g.position.y += (rideSeatY() + bob - SIT_HIP_DROP) * k;
       } else {
         if (ul) ul.rotation.x -= 1.5 * k; if (ur) ur.rotation.x -= 1.5 * k;
         if (ll) ll.rotation.x += 1.55 * k; if (lr) lr.rotation.x += 1.55 * k;
@@ -698,8 +699,8 @@ function AegisSphere() {
 
 /** How far the hips drop from standing to sitting on a seat at height 0 (tuned to the KayKit medium rig). */
 const SIT_HIP_DROP = 0.42;
-/** saddle height of the stable horses (render/Npcs buildHorse, scale 1) */
-const RIDE_SEAT_Y = 1.66;
+/** saddle height of the stable horses (nature_kit_v1 horse, scale 1: the top of its saddle blanket, hips sink in a little) */
+const rideSeatY = (): number => kitSeatY() - 0.06;
 export function Hero({ q }: { q: QualityCfg }) {
   const cls = useGameStore((s) => s.hero) as HeroClass;
   return (

@@ -191,6 +191,10 @@ const PET_LINES: Record<string, string[]> = {
   CHICKEN: ['Bawk! ♥', 'Cluck cluck? ♥', '*happy pecking*', 'Bok bok~'],
   COW: ['Mooo~ ♥', '*slow happy blink*', 'Moo. ♥'],
   HORSE: ['*happy snort* ♥', 'Neigh~ ♥', '*nuzzles you*'],
+  SHEEP: ['Baaa~ ♥', '*fluffy wiggle*', 'Meh-eh! ♥'],
+  PIG: ['Oink! ♥', '*happy snuffle*', 'Snrrrt~ ♥'],
+  DOG: ['Woof! ♥', '*tail goes wild*', 'Arf arf! ♥'],
+  DUCK: ['Quack! ♥', '*waddles in a circle*', 'Quaaack~ ♥'],
 };
 /** (owner) E next to an animal: it stops, turns to the hero, hops for joy and says something (a bubble over it). */
 export function petAnimal(i: number): void {

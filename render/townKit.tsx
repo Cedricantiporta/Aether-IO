@@ -74,10 +74,8 @@ function useKit(url: string, loc: Record<string, [number, number]> | null): Kit 
   return useMemo(() => { let k = cache.get(url); if (!k) { k = bakeKit(gltf.scene, loc); cache.set(url, k); } return k; }, [gltf, url, loc]);
 }
 
-/** Shop types drawn by a v2 shop_stall_house (the Brewer / Fishmonger / Mining stalls keep their own look). */
-export const KIT_SHOPS = new Set(['SUPPLIES', 'BLACKSMITH', 'PETS', 'ARMORY', 'FORTUNE', 'WAREHOUSE', 'TECH']);
-/** Barn + coop (HOUSES 0, 1) keep their procedural look; every other house is a v2 piece. */
-export const KIT_HOUSE_FROM = 2;
+/** Shop types drawn by a v2 shop_stall_house (the outskirts Fishmonger + Mining Supplies stalls too; the Elixir Brewer's hut is nature_kit_v1 'brewer_hut', render/NatureScenery.tsx). */
+export const KIT_SHOPS = new Set(['SUPPLIES', 'BLACKSMITH', 'PETS', 'ARMORY', 'FORTUNE', 'WAREHOUSE', 'TECH', 'FISH', 'MINE']);
 
 type Place = { x: number; y?: number; z: number; ry: number; sx: number; sy: number; sz: number };
 /** A piece of a placement set: `v` = which kit file. */
@@ -90,7 +88,7 @@ function placements(): Record<string, Place[]> {
   const add = (v: 1 | 2, k: string, p: Place) => (P[key(v, k)] ??= []).push(p);
   const lift = (x: number, z: number) => townLift(x, z);
   // houses (fronts south)
-  HOUSES.forEach((h, i) => { if (i >= KIT_HOUSE_FROM && h.kit) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
+  HOUSES.forEach((h) => { if (h.kit) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
   // the shop row
   for (const sp of SHOP_POSITIONS) if (KIT_SHOPS.has(sp.type)) add(2, 'shop_stall_house', { x: sp.position[0], y: lift(sp.position[0], sp.position[2]), z: sp.position[2], ry: sp.rot ?? 0, sx: 1, sy: 1, sz: 1 });
   // landmarks

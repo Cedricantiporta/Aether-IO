@@ -87,7 +87,7 @@ export function navSpot(at: Spot, o: NavTarget = mk()): NavTarget | null {
   if (!inTown()) return exit(o);
   if (at === 'BOARD') return set(o, QUEST_POS[0], QUEST_POS[2] + 2.6, 1.8, 'shop', 'QUESTS');
   if (at === 'TRAINER') return set(o, TRAINER_POS[0], TRAINER_POS[2] + 2.6, 1.8, 'shop', 'SKILLS');
-  if (at === 'TOWER') return set(o, TOWER.door.x + 1.2, TOWER.door.z, 2.2, 'tower');
+  if (at === 'TOWER') return set(o, TOWER.door.x, TOWER.door.z, 2.2, 'tower');
   const s = SHOP_POSITIONS.find((x) => (x.type as string) === (at === 'SUMMON' ? 'FORTUNE' : at));
   if (!s) return portal(o);
   const f = shopFront(s, 3.2);

@@ -10,13 +10,12 @@ import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
-import { TownKit, KIT_HOUSE_FROM } from './townKit';
+import { TownKit } from './townKit';
 import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
-import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
-  CASTLE, LAKE, HERMIT_CAMP, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
+  CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
@@ -182,12 +181,6 @@ function addWallTower(b: GB, g: GB, t: TowerSpec, idx: number) {
 }
 
 // ------------------------------------------------------------------- misc ---
-function addFence(b: GB, x1: number, z1: number, x2: number, z2: number) {
-  const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), n = Math.max(1, Math.round(len / 1.7)), yaw = -Math.atan2(dz, dx);
-  for (let i = 0; i <= n; i++) b.box(0.16, 1.0, 0.16, [x1 + (dx * i) / n, 0.5, z1 + (dz * i) / n], WOOD);
-  const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
-  b.box(len, 0.1, 0.08, [mx, 0.8, mz], '#8a5a30', [0, yaw, 0]); b.box(len, 0.1, 0.08, [mx, 0.45, mz], '#8a5a30', [0, yaw, 0]);
-}
 /** Per-pixel grain + a few specks, baked into a canvas once (cheap detail that survives mipmapping). */
 function grain(x: CanvasRenderingContext2D, N: number, rnd: () => number, amp: number, specks: number, speck: string) {
   const img = x.getImageData(0, 0, N, N), d = img.data;
@@ -380,71 +373,25 @@ function addGrassCap(b: GB, pts: [number, number][]) {
 }
 
 
-/** Parked wooden cart (bed along local z, wheels on local x) with a load by kind: 0 goods (crates, sacks, cloth), 1 hay, 2 barrels. */
-function addCart(b: GB, k: CartSpec) {
-  const c = Math.cos(k.rot), s = Math.sin(k.rot);
-  const P = (lx: number, y: number, lz: number): [number, number, number] => [k.x + lx * c + lz * s, y, k.z - lx * s + lz * c];
-  const R: [number, number, number] = [0, k.rot, 0];
-  const WOOD = '#8a5a32', DARK = '#5a3a1e';
-  b.box(1.8, 0.16, 3.0, P(0, 0.95, 0.2), WOOD, R);
-  b.box(0.1, 0.45, 3.0, P(-0.86, 1.25, 0.2), DARK, R); b.box(0.1, 0.45, 3.0, P(0.86, 1.25, 0.2), DARK, R);
-  b.box(1.8, 0.45, 0.1, P(0, 1.25, 1.66), DARK, R); b.box(1.8, 0.45, 0.1, P(0, 1.25, -1.26), DARK, R);
-  for (const sx of [-1, 1]) {
-    b.cyl(0.62, 0.62, 0.14, 10, P(sx * 1.0, 0.62, 0.35), DARK, [0, k.rot, Math.PI / 2]);
-    b.cyl(0.14, 0.14, 0.2, 6, P(sx * 1.04, 0.62, 0.35), '#3a3a3e', [0, k.rot, Math.PI / 2]);
-    b.box(0.09, 0.09, 1.9, P(sx * 0.5, 0.78, -2.1), WOOD, R);   // shafts resting on the ground
-  }
-  b.box(1.9, 0.1, 0.1, P(0, 0.62, 0.35), '#3a3a3e', R);   // axle
-  if (k.kind === 0) {
-    b.box(0.6, 0.5, 0.6, P(-0.4, 1.3, 0.9), '#a8783e', R); b.box(0.5, 0.42, 0.5, P(0.42, 1.26, 1.0), '#9a6c36', R); b.box(0.45, 0.4, 0.45, P(-0.35, 1.68, 0.9), '#b8884a', R);
-    b.sph(0.34, P(0.35, 1.3, -0.3), '#d8c8a0', [1, 0.8, 1.2], 6); b.sph(0.3, P(-0.38, 1.28, -0.5), '#c9b88e', [1, 0.8, 1.2], 6);
-    b.box(1.5, 0.08, 0.9, P(0, 1.47, -0.4), '#9a3a3a', R);   // a bolt of red cloth
-  } else if (k.kind === 1) {
-    b.sph(0.95, P(0, 1.55, 0.2), '#d9b85a', [0.95, 0.6, 1.7], 7); b.sph(0.6, P(0.15, 2.0, 0.5), '#e6c86a', [1, 0.6, 1.4], 6);
-  } else {
-    for (const [lx, lz] of [[-0.42, 0.9], [0.42, 0.9], [-0.42, -0.2], [0.42, -0.2]]) { b.cyl(0.33, 0.33, 0.8, 9, P(lx, 1.43, lz), '#7a4f2a'); b.cyl(0.35, 0.35, 0.06, 9, P(lx, 1.6, lz), '#3a3a3e'); }
-  }
-}
 
-/** Fenced wheat field: soil bed, rows of merged golden stalks, scarecrow, haystack. */
-function addFarm(b: GB, rnd: () => number) {
+/** Wheat field ground: soil bed + furrows + the scarecrow (the wheat stalks and the haystack are nature_kit_v1 pieces, render/NatureScenery.tsx). */
+function addFarm(b: GB) {
   const { x, z, hw, hd } = FARM;
   b.box(hw * 2 - 0.5, 0.06, hd * 2 - 0.5, [x, 0.04, z], '#6d5336');
-  const gold = ['#d6b64a', '#dec062', '#c9a63c', '#e0c870'];
-  for (let zi = -hd + 1.3; zi <= hd - 1.0; zi += 1.1) {
-    b.box(hw * 2 - 1.0, 0.04, 0.28, [x, 0.08, z + zi], '#58412a');
-    for (let xi = -hw + 1.1; xi <= hw - 0.9; xi += 0.7) {
-      const px = x + xi + (rnd() - 0.5) * 0.15, pz = z + zi + (rnd() - 0.5) * 0.15;
-      if (Math.hypot(px - SCARECROW.x, pz - SCARECROW.z) < 1.3 || Math.hypot(px - HAYSTACK.x, pz - HAYSTACK.z) < 2.0) continue;
-      const h = 0.85 + rnd() * 0.25, c = gold[Math.floor(rnd() * 4)];
-      b.cone(0.19, h, 5, [px, h / 2 + 0.05, pz], c, [0, 0, 0], 1, [0.7, 1.1]);
-      b.cone(0.1, h * 0.8, 4, [px + 0.12, h * 0.4 + 0.05, pz + 0.05], gold[Math.floor(rnd() * 4)], [0.12, 0, -0.18]);
-    }
-  }
+  for (let zi = -hd + 1.3; zi <= hd - 1.0; zi += 1.1) b.box(hw * 2 - 1.0, 0.04, 0.28, [x, 0.08, z + zi], '#58412a');
   // scarecrow
   const sx = SCARECROW.x, sz = SCARECROW.z;
   b.box(0.12, 2.3, 0.12, [sx, 1.15, sz], '#6e4b2b'); b.box(1.6, 0.1, 0.1, [sx, 1.75, sz], '#6e4b2b');
   b.box(0.55, 0.8, 0.32, [sx, 1.5, sz], '#8d7a58'); b.sph(0.24, [sx, 2.15, sz], '#d8c08a', 1, 6);
   b.cone(0.38, 0.35, 6, [sx, 2.5, sz], '#3b2a20'); b.cyl(0.46, 0.46, 0.04, 8, [sx, 2.33, sz], '#3b2a20');
   b.box(0.12, 0.45, 0.06, [sx - 0.8, 1.55, sz], '#d6b64a'); b.box(0.12, 0.45, 0.06, [sx + 0.8, 1.55, sz], '#d6b64a');
-  // haystack
-  const hx = HAYSTACK.x, hz = HAYSTACK.z;
-  b.cyl(1.2, 1.3, 0.9, 9, [hx, 0.45, hz], '#cfae4e'); b.sph(1.2, [hx, 0.95, hz], '#d8b958', [1, 0.95, 1], 8); b.cone(0.3, 0.5, 5, [hx, 2.2, hz], '#c19a3a');
 }
 
-/** An extra crop field (dirt bed + rows of wheat / cabbages / pumpkins). */
-function addField(b: GB, F: FieldSpec, rnd: () => number): void {
+/** An extra crop field's ground (dirt bed + furrows; the plants are nature_kit_v1 pieces). */
+function addField(b: GB, F: FieldSpec): void {
   const { x, z, hw, hd } = F;
   b.box(hw * 2 - 0.5, 0.06, hd * 2 - 0.5, [x, 0.04, z], '#6d5336');
-  for (let zi = -hd + 1.1; zi <= hd - 0.9; zi += 1.15) {
-    b.box(hw * 2 - 1.0, 0.04, 0.3, [x, 0.08, z + zi], '#58412a');
-    for (let xi = -hw + 1.0; xi <= hw - 0.8; xi += F.crop === 'WHEAT' ? 0.7 : 1.15) {
-      const px = x + xi + (rnd() - 0.5) * 0.12, pz = z + zi + (rnd() - 0.5) * 0.12;
-      if (F.crop === 'WHEAT') { const h = 0.85 + rnd() * 0.25; b.cone(0.19, h, 5, [px, h / 2 + 0.05, pz], ['#d6b64a', '#dec062', '#c9a63c'][(rnd() * 3) | 0], [0, 0, 0], 1, [0.7, 1.1]); }
-      else if (F.crop === 'CABBAGE') { b.sph(0.36, [px, 0.3, pz], ['#6fb04a', '#7cc05a', '#5e9a3e'][(rnd() * 3) | 0], [1, 0.75, 1], 7); b.sph(0.22, [px, 0.5, pz], '#a8d878', [1, 0.7, 1], 6); }
-      else { if (rnd() < 0.6) { b.sph(0.38, [px, 0.32, pz], ['#e8862a', '#f09a3a', '#d8762a'][(rnd() * 3) | 0], [1.15, 0.8, 1.15], 8); b.cyl(0.05, 0.06, 0.2, 5, [px, 0.68, pz], '#4a6a2a'); } b.sph(0.3, [px + 0.4, 0.15, pz + 0.2], '#4f8f3a', [1.3, 0.4, 1], 5); }
-    }
-  }
+  for (let zi = -hd + 1.1; zi <= hd - 0.9; zi += 1.15) b.box(hw * 2 - 1.0, 0.04, 0.3, [x, 0.08, z + zi], '#58412a');
 }
 
 /** The great cobblestone bridge over the river (deck arching up to BRIDGE.h, parapets, piers and arches, lamps). */
@@ -637,31 +584,6 @@ function addTerrace(b: GB, g: GB): void {
 
 
 
-/** Windmill tower (the sails turn: render/TownScenery Windmill component). Local: sails face +z. */
-function buildWindmill(): { b: BufferGeometry; g: BufferGeometry } {
-  const b = new GB([0.8, 1.06]), g = new GB([1, 1]);
-  b.cyl(3.3, 3.5, 0.5, 12, [0, 0.25, 0], '#8d877c');
-  b.cyl(2.3, 3.1, 9, 12, [0, 4.75, 0], '#e6dcc6', [0, 0, 0], 1, [0.85, 1.04]);
-  for (let k = 1; k < 4; k++) b.cyl(3.1 - k * 0.2 + 0.05, 3.1 - k * 0.2 + 0.1, 0.12, 12, [0, 0.5 + k * 2.2, 0], '#cdbf9f');
-  b.cone(3.1, 3.6, 12, [0, 11.0, 0], '#4a3426');
-  b.box(1.3, 1.3, 1.6, [0, 9.2, 2.6], '#5a4030');
-  b.box(1.3, 2.1, 0.2, [0, 1.55, 3.0], '#5a3a1e'); b.cyl(0.65, 0.65, 0.2, 10, [0, 2.6, 3.0], '#5a3a1e', [Math.PI / 2, 0, 0]);
-  for (const [x, y, z] of [[0, 5.6, 2.75], [-2.4, 3.6, 1.2], [2.4, 6.5, 0.6]]) g.box(0.6, 0.8, 0.2, [x, y, z], '#ffd88a', [0, Math.atan2(x, z), 0]);
-  for (const [x, z] of [[2.6, 2.8], [3.4, 2.0]]) b.box(0.8, 0.8, 0.8, [x, 0.4, z], '#c9a070', [0, 0.4, 0]);
-  b.box(1.1, 0.6, 0.8, [-2.6, 0.3, 2.6], '#e8dcbc');
-  return { b: b.build(), g: g.build() };
-}
-function buildSails(): BufferGeometry {
-  const b = new GB([0.85, 1.05]);
-  b.cyl(0.35, 0.35, 0.6, 8, [0, 0, 0], '#3a2a1e', [Math.PI / 2, 0, 0]);
-  for (let k = 0; k < 4; k++) {
-    const a = (k * Math.PI) / 2, c = Math.cos(a), s = Math.sin(a);
-    b.box(0.22, 6.2, 0.18, [-s * 3.2, c * 3.2, 0.2], '#5a4030', [0, 0, a]);
-    b.box(1.5, 4.6, 0.06, [-s * 3.9 + c * 0.85, c * 3.9 + s * 0.85, 0.25], '#efe6d2', [0, 0, a]);
-    for (let j = 0; j < 4; j++) { const r = 2 + j * 1.3; b.box(1.6, 0.08, 0.1, [-s * r + c * 0.85, c * r + s * 0.85, 0.3], '#6e5038', [0, 0, a]); }
-  }
-  return b.build();
-}
 
 /** Founder's statue on the plaza: octagonal stepped plinth, a knight raising a sword (weathered bronze), plaque. */
 function buildStatue(): { b: BufferGeometry; g: BufferGeometry } {
@@ -683,15 +605,6 @@ function buildStatue(): { b: BufferGeometry; g: BufferGeometry } {
   return { b: b.build(), g: g.build() };
 }
 
-/** Park bench (local: the sitter faces +z, the backrest is behind at -z). */
-function buildBench(): { b: BufferGeometry; g: BufferGeometry } {
-  const b = new GB([0.82, 1.08]), g = new GB([1, 1]);
-  for (const sx of [-0.85, 0.85]) { b.box(0.12, 0.5, 0.5, [sx, 0.25, 0], '#2c2c30'); b.box(0.1, 0.9, 0.1, [sx, 0.75, -0.26], '#2c2c30'); }
-  for (let i = 0; i < 3; i++) b.box(2.0, 0.07, 0.15, [0, 0.52, -0.18 + i * 0.18], '#7a5232');
-  for (let i = 0; i < 2; i++) b.box(2.0, 0.13, 0.06, [0, 0.82 + i * 0.22, -0.28], '#6e4b2b');
-  g.sph(0.04, [0, 0.01, 0], '#000000', 0.01, 3);
-  return { b: b.build(), g: g.build() };
-}
 /** The graveyard: gravestones, the crypt at the west end, a dead tree, lanterns, a gravel path, candles + flowers. */
 function addGraveyard(b: GB, g: GB, rnd: () => number): void {
   const G = GRAVEYARD, st = '#8f8a80', st2 = '#a8a296', moss = '#5f7a3a';
@@ -745,36 +658,28 @@ function buildTown() {
     const kb = tb.build(), kg = tg.build(); c.b.addColored(kb, [0, y, 0]); c.g.addColored(kg, [0, y, 0]); kb.dispose(); kg.dispose();
   };
   for (const T of TIERS) { const c = at((T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2); addTier(c.b, c.g, T); }
-  HOUSES.forEach((h, i) => { if (i < KIT_HOUSE_FROM) put(h.x, h.z, h.rot, buildHouse(h, i)); });   // (town houses: Blender kit, render/townKit.tsx)
+  HOUSES.forEach((h, i) => { if (!h.kit && !h.nk) put(h.x, h.z, h.rot, buildHouse(h, i)); });   // (every house is a Blender kit piece: town_kit_v2 in render/townKit.tsx, the farm buildings nature_kit_v1 in render/NatureScenery.tsx)
   { const c = at(CASTLE.x, CASTLE.z); addTerrace(c.b, c.g); }
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
-  put(WINDMILL.x, WINDMILL.z, WINDMILL_ROT, buildWindmill());   // (owner: faces the way the barn faces, -x)
   put(STATUE.x, STATUE.z, 0, buildStatue());
   lifted(-38, -30, (b, g) => addGraveyard(b, g, mulberry32(777)));
-  const bench = buildBench();
-  for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const c = at(s.x, s.z); c.b.addColored(bench.b, [s.x, townLift(s.x, s.z), s.z], [0, s.yaw, 0]); }
-  bench.b.dispose(); bench.g.dispose();
+  // (benches: nature_kit_v1 park_bench at every TOWN_SEATS spot, render/NatureScenery.tsx)
   { const c = at(HERMIT_CAMP.x, HERMIT_CAMP.z); addCamp(c.b, c.g, HERMIT_CAMP.x, HERMIT_CAMP.z); }
   RUINS.forEach((r, i) => put(r.x, r.z, r.rot, buildRuin(r.kind, 900 + i)));
-  // big mossy boulders half-blocking the narrow back trail to the hermit (colliders: townData TOWN_COLLIDERS)
-  { const rocks = [3, 7, 11, 19].map((k) => makeRockGeo(1200 + k, k % 2 ? '#80868e' : '#727980', '#5a8a3a', 0.8)), rr = mulberry32(919);
-    TRAIL_ROCKS.forEach(([x, z, , sc], i) => { const s1 = sc * (0.95 + rr() * 0.2); at(x, z).b.addColored(rocks[i % rocks.length], [x, -0.25 * sc, z], [0, rr() * 6, 0], [s1 * (1 + rr() * 0.25), s1 * (0.9 + rr() * 0.35), s1 * (1 + rr() * 0.25)]); });
-    rocks.forEach((g) => g.dispose()); }
+  // (the boulders on the back trail are nature_kit_v1 rock_round pieces, render/NatureScenery.tsx; colliders: townData TRAIL_ROCKS)
   // (gate, wall runs and wall towers: Blender kit, render/townKit.tsx)
   const sign = buildSignpost();
   for (const sg of SIGNS) put(sg.x, sg.z, 0, { b: sign.b.clone(), g: sign.g.clone() });
   sign.b.dispose(); sign.g.dispose();
-  // fences + lamps go straight into the chunk of their midpoint / position
-  for (const [x1, z1, x2, z2] of FENCES) lifted((x1 + x2) / 2, (z1 + z2) / 2, (b) => addFence(b, x1, z1, x2, z2));
+  // (fences: nature_kit_v1 fence_wood along every FENCES run, market carts: market_cart; render/NatureScenery.tsx)
   const pr = mulberry32(555);
-  for (const k of CARTS) lifted(k.x, k.z, (b) => addCart(b, k));
   const paving = buildPaving();
   for (const pts of paving.patches) {
     let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
     lifted(cx, cz, (b) => { addPatchKerb(b, pts, pr); if (townLift(cx, cz) > 0) addGrassCap(b, pts); });   // (on a raised district: a grass top, the lawn below is covered)
   }
-  addFarm(at(FARM.x, FARM.z).b, pr);
-  for (const F of FIELDS) addField(at(F.x, F.z).b, F, pr);
+  addFarm(at(FARM.x, FARM.z).b);
+  for (const F of FIELDS) addField(at(F.x, F.z).b, F);
   { const c = at(0, 68); addBridge(c.b, c.g); }
   { const c = at(MINE_BRIDGE.x, 68); addFootbridge(c.b); }
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
@@ -818,7 +723,7 @@ function Lake() {
       if (z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6) { rnd(); continue; }   // (the mainland beach has its own sand)
       { const r = 2.1 + rnd() * 0.4; b.cyl(r, r + 0.15, 0.12, 14, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e'); }   // (rounded, not slabs)
       if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
-      if (rnd() < 0.18) b.ico(0.6 + rnd() * 0.6, [LAKE.x1 - 1.5 - rnd() * 3, -0.05, z + rnd()], '#8a8f94', [1.2, 0.6, 1], 0);
+      rnd(); rnd(); rnd();   // (the shore rocks are nature_kit_v1 rock_round pieces, render/NatureScenery.tsx)
       if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
     }
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
@@ -833,37 +738,6 @@ function Lake() {
       <mesh geometry={water} material={mat} receiveShadow renderOrder={1} />
       <mesh geometry={river} material={mat} receiveShadow renderOrder={1} />
       <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
-    </>
-  );
-}
-
-const WINDMILL_ROT = -Math.PI / 2;   // same facing as the barn (rot -PI/2: its door looks west, toward the road)
-
-/** The windmill's sails, turning slowly. */
-function Windmill() {
-  const geo = useMemo(() => buildSails(), []), mat = useMemo(() => litMat({ roughness: 0.9 }), []);
-  const ref = useRef<Mesh>(null!);
-  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
-  useFrame((_, dt) => { if (ref.current) ref.current.rotation.z += Math.min(dt, 0.05) * 0.45; });
-  return <mesh ref={ref} geometry={geo} material={mat} position={[WINDMILL.x + Math.sin(WINDMILL_ROT) * 3.5, 9.2, WINDMILL.z + Math.cos(WINDMILL_ROT) * 3.5]} rotation={[0, WINDMILL_ROT, 0]} castShadow />;
-}
-
-function TownTrees() {
-  const nat = useNature();
-  const lists = useMemo(() => {
-    // every town tree is the tall round broadleaf (no evergreen cones inside / around the town)
-    const l: TreeSpec[][] = [[], [], [], []];
-    for (const t of TOWN_TREES) l[0].push(t);
-    return l;
-  }, []);
-  const geos = [nat.park, nat.palm, nat.pineA, nat.pineB];
-  return (
-    <>
-      {lists.map((list, k) => list.length > 0 && (
-        <Inst key={k} geo={geos[k]} mat={nat.mat} count={list.length} cast receive fill={(m: InstancedMesh) => {
-          list.forEach((t, i) => { const sc = t.s * 1.75; setInst(m, i, t.x, -0.05 + townLift(t.x, t.z), t.z, (t.x * 7.3 + t.z * 3.1) % 6.28, sc, sc * (1.0 + (i % 3) * 0.08), sc); });   // tall trunk + round crown
-        }} />
-      ))}
     </>
   );
 }
@@ -901,6 +775,7 @@ function TownChunk({ body, glow, lit, glowMat, shadows }: { body: BufferGeometry
 
 /** Thin smoke curling out of the cottage chimneys near the hero (existing FX pool: no extra draw calls; the pool's own quality gate thins it on phones). */
 const CHIMNEYS: [number, number, number][] = HOUSES.filter((h) => h.chimney).map((h) => {
+  if (h.nk) { const k = NK_CHIMNEY[h.nk] ?? [0, 5, 0], s = h.s ?? 1; return [h.x + k[0] * s, k[1] * s + 0.4 + townLift(h.x, h.z), h.z + k[2] * s]; }   // (nature kit: the farmhouse's chimney cap)
   if (h.kit) { const k = HOUSE_KIT[h.kit].chimney, s = h.s ?? 1; return [h.x + k[0] * s, k[1] * s + 0.4 + townLift(h.x, h.z), h.z + k[2] * s]; }   // (v2 kit: chimney cap position from the Blender script)
   const top = 0.6 + h.floors * 2.7, rh = Math.min(h.w, h.d) * 0.55 + 1.1, lx = h.w * 0.24, lz = -h.d * 0.2, c = Math.cos(h.rot), s = Math.sin(h.rot);
   return [h.x + lx * c + lz * s, top + rh + 1.45 + townLift(h.x, h.z), h.z - lx * s + lz * c];
@@ -953,8 +828,6 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
-      <React.Suspense fallback={null}><TownTrees /></React.Suspense>
-      <Windmill />
       <ChimneySmoke q={q} />
       <Lake />
       <React.Suspense fallback={null}><TownKit lit={mats.lit} glow={mats.glow} shadows={shadows} /></React.Suspense>

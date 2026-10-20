@@ -3,8 +3,8 @@
 import { CanvasTexture, SRGBColorSpace, SpriteMaterial } from 'three';
 import { liftAt } from './lift';
 import { questNpc } from '../engine/systems/npcQuestLogic';
-import { eggReady, catHidden, pinHidden } from '../engine/systems/village';
-import { NESTS, HIDDEN_CAT, WHEEL_PIN, townLift } from '../engine/townData';
+import { eggReady, pinHidden } from '../engine/systems/village';
+import { NESTS, WHEEL_PIN } from '../engine/townData';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AnimationAction, AnimationMixer, BufferGeometry, Color, Group, InstancedMesh, LoopOnce, Mesh, Object3D, MeshBasicMaterial, Sprite, Vector3 } from 'three';
@@ -18,6 +18,7 @@ import { canTrainSkill, canBuyTalent, canCraftAny } from '../ui/lib/alerts';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { GB, angleLerp, litMat, setInst } from './util';
 import { Horses } from './Horses';
+import { KitAnimals } from './KitAnimals';
 import { disposeMerged, mergeCharacter, useCharacterInstance, useClips } from './characters';
 import { HANDSLOT_QUAT } from './weapons';
 import { labelMaterial } from './label';
@@ -233,52 +234,22 @@ export function questIconMat(): SpriteMaterial {
 }
 
 // ----------------------------------------------------------------- animals ---
-function buildChicken(): BufferGeometry {
-  const b = new GB([0.85, 1.05]);
-  b.sph(0.26, [0, 0.34, 0], '#ffffff', [0.85, 0.95, 1.2], 7); b.sph(0.14, [0, 0.62, 0.22], '#ffffff', 1, 6);
-  b.cone(0.05, 0.14, 4, [0, 0.6, 0.38], '#f0a030', [Math.PI / 2, 0, 0]); b.box(0.04, 0.1, 0.12, [0, 0.76, 0.2], '#e03a3a');
-  b.box(0.06, 0.26, 0.26, [0, 0.46, -0.3], '#e8e8e8', [0.7, 0, 0]);
-  b.cyl(0.015, 0.015, 0.2, 4, [-0.08, 0.1, 0.02], '#f0a030'); b.cyl(0.015, 0.015, 0.2, 4, [0.08, 0.1, 0.02], '#f0a030');
-  b.sph(0.02, [0.07, 0.65, 0.3], '#1a1a1a', 1, 4); b.sph(0.02, [-0.07, 0.65, 0.3], '#1a1a1a', 1, 4);
-  return b.build();
-}
-function buildCat(): BufferGeometry {
-  const b = new GB([0.85, 1.05]);
-  b.sph(0.22, [0, 0.3, 0], '#ffffff', [0.8, 0.85, 1.7], 7); b.sph(0.16, [0, 0.46, 0.38], '#ffffff', 1, 7);
-  b.cone(0.06, 0.13, 4, [-0.09, 0.62, 0.38], '#ffffff'); b.cone(0.06, 0.13, 4, [0.09, 0.62, 0.38], '#ffffff');
-  b.sph(0.025, [-0.06, 0.48, 0.53], '#2a2a2a', 1, 4); b.sph(0.025, [0.06, 0.48, 0.53], '#2a2a2a', 1, 4); b.sph(0.02, [0, 0.43, 0.54], '#e07a8a', 1, 4);
-  b.cyl(0.035, 0.03, 0.5, 5, [0, 0.45, -0.52], '#ffffff', [-0.9, 0, 0]);
-  for (const x of [-0.1, 0.1]) for (const z of [-0.22, 0.24]) b.cyl(0.04, 0.035, 0.22, 5, [x, 0.11, z], '#f2f2f2');
-  return b.build();
-}
-
-function buildCow(): BufferGeometry {
-  const b = new GB([0.82, 1.06]);
-  b.box(0.9, 0.62, 1.55, [0, 0.95, 0], '#ffffff');                       // body
-  for (const [x, z, s] of [[0.3, 0.3, 0.32], [-0.25, -0.35, 0.28], [0.1, -0.1, 0.2]] as number[][]) b.box(s, 0.05, s * 1.3, [x, 1.27, z], '#2a2420');   // spots
-  b.box(0.5, 0.48, 0.55, [0, 1.15, 0.95], '#ffffff'); b.box(0.42, 0.24, 0.2, [0, 1.0, 1.25], '#f0b0a8');   // head + muzzle
-  for (const s of [-1, 1]) { b.cone(0.05, 0.22, 5, [s * 0.2, 1.48, 0.95], '#e8dcc0', [0, 0, s * -0.6]); b.box(0.16, 0.08, 0.1, [s * 0.32, 1.25, 0.9], '#ffffff'); b.sph(0.04, [s * 0.14, 1.22, 1.23], '#1a1a1a', 1, 4); }
-  for (const x of [-0.3, 0.3]) for (const z of [-0.55, 0.55]) b.cyl(0.09, 0.08, 0.66, 6, [x, 0.33, z], '#e8e8e8');
-  b.cyl(0.03, 0.02, 0.6, 4, [0, 1.0, -0.9], '#ffffff', [0.5, 0, 0]); b.sph(0.12, [0, 0.62, 0.2], '#f0b0a8', [1.2, 0.6, 1.2], 6);   // tail, udder
-  return b.build();
-}
+// (the animals themselves are nature_kit_v1 round animals, render/KitAnimals.tsx; the AI is engine/systems/npcs.ts)
 /** Bubble anchor height per animal (petting lines). */
-const ANIMAL_BUBBLE_Y: Record<string, number> = { CHICKEN: 1.1, CAT: 1.1, COW: 2.0, HORSE: 2.7 };
-/** Egg nests in front of the coop (an egg shows when one is ready) + Pip's hidden cat while her quest is on. */
+const ANIMAL_BUBBLE_Y: Record<string, number> = { CHICKEN: 1.6, CAT: 1.5, COW: 2.6, HORSE: 3.0, SHEEP: 2.2, PIG: 1.8, DOG: 1.7, DUCK: 1.4 };
+/** Egg nests in front of the coop (an egg shows when one is ready) + Pip's wheel-pin mate: Corin's lost wheel pin (Biscuit the cat is a KitAnimals instance). */
 function FarmBits() {
   const geos = useMemo(() => {
     const n = new GB([0.8, 1.05]); n.cyl(0.42, 0.34, 0.16, 10, [0, 0.08, 0], '#c9a050'); n.cyl(0.3, 0.3, 0.05, 10, [0, 0.16, 0], '#8a6a30');
     const e = new GB([0.85, 1.1]); e.sph(0.12, [0, 0.27, 0], '#fff6e6', [0.85, 1.15, 0.85], 7);
     const pn = new GB([0.9, 1.1]); pn.cyl(0.07, 0.07, 0.62, 6, [0, 0.07, 0], '#c8ccd4', [0, 0, Math.PI / 2]); pn.cyl(0.13, 0.13, 0.06, 8, [0.33, 0.07, 0], '#e8ecf2', [0, 0, Math.PI / 2]);   // Corin's wheel pin, lying in the grass
-    return { nest: n.build(), egg: e.build(), cat: buildCat(), pin: pn.build() };
+    return { nest: n.build(), egg: e.build(), pin: pn.build() };
   }, []);
   const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
-  const catMat = useMemo(() => litMat({ roughness: 0.9, color: '#ff9a4a' }), []);
   const pinMat = useMemo(() => litMat({ roughness: 0.25, metalness: 0.8, emissive: new Color('#fff2c0'), emissiveIntensity: 0.35 }), []);
-  const eggs = useRef<(Mesh | null)[]>([]), cat = useRef<Mesh>(null!), pin = useRef<Mesh>(null!);
+  const eggs = useRef<(Mesh | null)[]>([]), pin = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
     for (let k = 0; k < NESTS.length; k++) { const m = eggs.current[k]; if (m) m.visible = eggReady(k); }
-    if (cat.current) { cat.current.visible = catHidden(); cat.current.rotation.y = 2.2 + Math.sin(clock.elapsedTime * 0.7) * 0.4; }
     if (pin.current) { pin.current.visible = pinHidden(); pinMat.emissiveIntensity = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 4)); }   // glints
   });
   return (
@@ -289,45 +260,15 @@ function FarmBits() {
           <mesh ref={(m) => { eggs.current[k] = m; }} geometry={geos.egg} material={mat} />
         </group>
       ))}
-      <mesh ref={cat} geometry={geos.cat} material={catMat} position={[HIDDEN_CAT.x, townLift(HIDDEN_CAT.x, HIDDEN_CAT.z), HIDDEN_CAT.z]} scale={1.25} visible={false} castShadow />
       <mesh ref={pin} geometry={geos.pin} material={pinMat} position={[WHEEL_PIN.x, 0, WHEEL_PIN.z]} rotation={[0, 0.7, 0]} scale={1.4} visible={false} />
     </>
   );
 }
 
 function Animals() {
-  const chickens = useRef<InstancedMesh>(null!), cats = useRef<InstancedMesh>(null!), cows = useRef<InstancedMesh>(null!);
-  const geos = useMemo(() => ({ chicken: buildChicken(), cat: buildCat(), cow: buildCow() }), []);
-  const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
-  const idx = useMemo(() => {
-    let c = 0, k = 0, w = 0, h = 0;
-    return ANIMALS.map((a) => (a.kind === 'CHICKEN' ? c++ : a.kind === 'COW' ? w++ : a.kind === 'HORSE' ? h++ : k++));
-  }, []);
-  const counts = useMemo(() => ({ c: ANIMALS.filter((a) => a.kind === 'CHICKEN').length, k: ANIMALS.filter((a) => a.kind === 'CAT').length, w: ANIMALS.filter((a) => a.kind === 'COW').length }), []);
-  const meshOf = (kind: string) => (kind === 'CHICKEN' ? chickens.current : kind === 'COW' ? cows.current : kind === 'HORSE' ? null : cats.current);   // (horses: render/Horses.tsx)
-  useEffect(() => {
-    const col = new Color();
-    ANIMALS.forEach((a, i) => { const m = meshOf(a.kind); if (m) m.setColorAt(idx[i], col.set(a.tint)); });
-    if (cows.current.instanceColor) cows.current.instanceColor.needsUpdate = true;
-    if (chickens.current.instanceColor) chickens.current.instanceColor.needsUpdate = true;
-    if (cats.current.instanceColor) cats.current.instanceColor.needsUpdate = true;
-    return () => { geos.chicken.dispose(); geos.cat.dispose(); geos.cow.dispose(); mat.dispose(); };
-  }, [geos, mat, idx]);
-  useFrame(() => {
-    for (let i = 0; i < animals.length; i++) {
-      const a = animals[i], d = ANIMALS[i], m = meshOf(d.kind);
-      if (!m) continue;
-      const bob = a.moving ? Math.abs(Math.sin(a.hop)) * (d.kind === 'CHICKEN' ? 0.07 : d.kind === 'HORSE' ? (a.ridden ? 0.12 : 0.05) : 0.03) : a.joy > 0 ? Math.abs(Math.sin(a.hop * 2)) * (d.kind === 'COW' || d.kind === 'HORSE' ? 0.1 : 0.22) : 0;
-      const peck = !a.moving && a.joy <= 0 && d.kind === 'CHICKEN' ? Math.max(0, Math.sin(a.hop * 2.4)) ** 3 * 0.55 : 0;
-      setInst(m, idx[i], a.x, bob + liftAt(a.x, a.z), a.z, a.yaw, d.kind === 'CHICKEN' ? 1.15 : d.kind === 'COW' ? 1.1 : d.kind === 'HORSE' ? 1 : 1.2, undefined, undefined, peck);
-    }
-    chickens.current.instanceMatrix.needsUpdate = true; cats.current.instanceMatrix.needsUpdate = true; cows.current.instanceMatrix.needsUpdate = true;
-  });
   return (
     <>
-      <instancedMesh ref={chickens} args={[geos.chicken, mat, counts.c]} frustumCulled={false} castShadow />
-      <instancedMesh ref={cats} args={[geos.cat, mat, counts.k]} frustumCulled={false} castShadow />
-      <instancedMesh ref={cows} args={[geos.cow, mat, counts.w]} frustumCulled={false} castShadow />
+      <React.Suspense fallback={null}><KitAnimals /></React.Suspense>
       <Horses />
       <FarmBits />
     </>

@@ -1,7 +1,7 @@
 // Shared fairy-tale kingdom palette (owner mockups): cream stone, dark timber, royal-blue slate roofs, gold trim.
 import { Color } from 'three';
 export const ROYAL_ROOF = '#3c56a8', ROYAL_ROOF_DARK = '#2d4488', ROYAL_ROOF_LIGHT = '#4b6bc0', TOWN_GOLD = '#e6b43c', TOWN_CREAM = '#efe4c8', TOWN_BLUE_CLOTH = '#2f4ea8';
-/** Kit GLB material overrides by name: the old kit's towers (k_*, recoloured to the blue-roof palette) and the v2 kit's 12 flat materials. window_glow is left alone (emissive). */
+/** Kit GLB material overrides by name: the old kit's towers (k_*, recoloured to the blue-roof palette), the v2 kit's 12 flat materials and nature_kit_v1's leaf_light + barn_red. window_glow is left alone (emissive). */
 export const KIT_RECOLOR: Record<string, string> = {
   k_roof: ROYAL_ROOF, k_roof2: ROYAL_ROOF_DARK, k_roof3: ROYAL_ROOF_LIGHT, k_roof_dark: '#243876',
   k_gold: TOWN_GOLD, k_banner: TOWN_BLUE_CLOTH, k_cloth_blue: TOWN_BLUE_CLOTH,
@@ -10,6 +10,8 @@ export const KIT_RECOLOR: Record<string, string> = {
   // town_kit_v2 material names (same hues as the Blender palette, nudged warmer / brighter for the golden-morning grade)
   stone: '#f4ead3', stone_dark: '#bcae90', wood: '#9a6a40', timber: '#4d2e1c', roof_blue: ROYAL_ROOF, gold: TOWN_GOLD,
   flower_red: '#e24444', flower_pink: '#f580ae', leaf: '#58a63f', awning_blue: '#5b8de0', iron: '#34363d',
+  // nature_kit_v1 adds two flat materials (the other twelve share the v2 names)
+  leaf_light: '#8fd45f', barn_red: '#b04a32',
 };
 const _c = new Color();
 /** Linear-space colour for a KIT_RECOLOR entry (matches how material.color is stored). */

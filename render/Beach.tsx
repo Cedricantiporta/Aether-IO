@@ -2,7 +2,7 @@
 // palms, a rocky headland closing the north end, a beached rowboat, campfire, umbrella + towels, driftwood, crates,
 // barrels, a net-drying rack, foam along the water line. Everything static is ONE merged vertex-coloured mesh (+ one
 // emissive mesh for lanterns / fire). FishingRig draws the rod, line, bobber and "!" from world.fishing (no React state).
-// buildFishStall() is the Fishmonger's stall model (used by render/Town.tsx Shop, type 'FISH').
+// (the Fishmonger's stall is a town_kit_v2 shop_stall_house; palms, pier planks, boats and signposts are nature_kit_v1 pieces, render/NatureScenery.tsx.)
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -124,20 +124,7 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   }
   // ---- the pier: walkway planks across, stringers, posts into the water, T-head with rails, lanterns, bollards
   {
-    const z = DOCK.z, hw = DOCK.hw, x0 = BOARDWALK.x - BOARDWALK.w / 2, x1 = DOCK.x1;
-    for (let x = x0; x > x1; x -= 0.5) b.box(0.44, 0.12, hw * 2, [x, yTop - 0.06, z + (rnd() - 0.5) * 0.06], rnd() < 0.5 ? WOOD : '#84603c', [0, (rnd() - 0.5) * 0.03, (rnd() - 0.5) * 0.03]);
-    for (const s of [-1, 1]) b.box(x0 - x1, 0.16, 0.16, [(x0 + x1) / 2, yTop - 0.18, z + s * (hw - 0.1)], WOOD_D);
-    for (let x = -64; x > x1; x -= 2.6) for (const s of [-1, 1]) b.cyl(0.13, 0.15, 2.0, 7, [x, yTop - 1.0, z + s * (hw + 0.05)], DARK);
-    const H = DOCK.head;
-    for (let zz = H.z0 + 0.25; zz < H.z1; zz += 0.5) b.box(H.x1 - H.x0, 0.12, 0.44, [(H.x0 + H.x1) / 2, yTop - 0.06, zz], rnd() < 0.5 ? WOOD : '#84603c', [0, (rnd() - 0.5) * 0.02, 0]);
-    for (const zz of [H.z0 + 0.1, H.z1 - 0.1]) b.box(H.x1 - H.x0, 0.16, 0.16, [(H.x0 + H.x1) / 2, yTop - 0.18, zz], WOOD_D);
-    for (const xx of [H.x0, (H.x0 + H.x1) / 2, H.x1]) for (const zz of [H.z0, (H.z0 + H.z1) / 2, H.z1]) b.cyl(0.15, 0.17, 2.1, 7, [xx, yTop - 1.0, zz], DARK);
-    // rails along the north and south edges of the head (the west end stays open for fishing)
-    for (const zz of [H.z0 + 0.12, H.z1 - 0.12]) {
-      for (let xx = H.x1 - 0.3; xx > H.x0 + 0.8; xx -= 1.5) b.box(0.12, 0.9, 0.12, [xx, yTop + 0.45, zz], WOOD_D);
-      b.box(H.x1 - H.x0 - 1.0, 0.1, 0.1, [(H.x0 + H.x1) / 2 + 0.4, yTop + 0.88, zz], WOOD);
-      b.box(H.x1 - H.x0 - 1.0, 0.08, 0.08, [(H.x0 + H.x1) / 2 + 0.4, yTop + 0.48, zz], WOOD);
-    }
+    const z = DOCK.z, H = DOCK.head;   // (the planks, posts and rails are nature_kit_v1 dock pieces, render/NatureScenery.tsx; the lanterns, bollards and props stay)
     lanternPost(b, g, H.x0 + 0.5, H.z0 + 0.5, yTop); lanternPost(b, g, H.x0 + 0.5, H.z1 - 0.5, yTop);
     // bollards + rope coil, a bench, a bucket, a lifebuoy on the rail
     for (const zz of [H.z0 + 0.6, H.z1 - 0.6]) { b.cyl(0.16, 0.18, 0.45, 8, [H.x1 - 0.6, yTop + 0.22, zz], DARK); b.cyl(0.22, 0.22, 0.06, 8, [H.x1 - 0.6, yTop + 0.47, zz], DARK); }
@@ -147,21 +134,11 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
     fishShape(b, H.x0 + 1.6, yTop + 0.46, z + 1.4, 0.4, 0.9, '#b8c8d4');
     b.torus(0.32, 0.09, [H.x1 - 3.8, yTop + 0.6, H.z0 + 0.22], '#e8553a', [0, 0, 0], 1, 12, Math.PI);
     b.torus(0.32, 0.09, [H.x1 - 3.8, yTop + 0.6, H.z0 + 0.22], '#f2efe6', [0, 0, Math.PI], 1, 12, Math.PI);
-    // a rowboat moored on the north side of the head
-    boat(b, H.x0 + 3.0, -0.22, H.z1 + 1.6, Math.PI / 2 + 0.12, 0, '#3f5a6e', '#8a6440');
+    // (the rowboat moored on the north side of the head is a kit small_boat; its mooring rope stays)
     b.box(0.05, 0.05, 1.6, [H.x1 - 0.6, yTop + 0.3, H.z1 + 0.7], '#c9b27a', [0.3, 0.6, 0]);
   }
-  // ---- rocky headland closing the north end (partly in the water)
-  for (let i = 0; i < HEADLAND.length; i++) {
-    const [x, z, r] = HEADLAND[i];
-    rock(b, x, z, r * 0.95, r * (1.2 + rnd() * 0.7), rnd() * 6, rnd);
-    if (rnd() < 0.7) rock(b, x + (rnd() - 0.5) * 2, z + (rnd() < 0.5 ? -1.6 : 1.5) * (0.6 + rnd() * 0.5), r * 0.55, r * 0.7, rnd() * 6, rnd);
-  }
-  for (let i = 0; i < 5; i++) rock(b, -70.5 - i * 1.4 - rnd(), 4 + (rnd() - 0.5) * 3, 0.9 + rnd() * 0.7, 0.8 + rnd() * 0.6, rnd() * 6, rnd);   // stepping stones out into the lake
-  // ---- rocks along the lake's wavy south shore (by the mainland beach / Endless Tower)
-  for (const [x, z, r] of SOUTH_ROCKS) rock(b, x, z, r, r * (1.1 + rnd() * 0.6), rnd() * 6, rnd);
-  // ---- palms
-  for (const [x, z, s, lean] of PALMS) palm(b, x, z, s, lean);
+  // (the rocky headland, the stepping stones and the rocks along the lake's south shore are nature_kit_v1 rock_round pieces, render/NatureScenery.tsx)
+  // (palms: nature_kit_v1 palm_a / palm_b, render/NatureScenery.tsx)
   // ---- campfire with stone ring, logs and two log benches
   {
     const { x, z } = CAMPFIRE;
@@ -188,8 +165,7 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
     b.box(0.9, 0.35, 0.9, [sx, 0.17, sz], '#d8c08a'); for (const [ox, oz] of [[-0.42, -0.42], [0.42, -0.42], [-0.42, 0.42], [0.42, 0.42]]) b.cyl(0.14, 0.17, 0.6, 6, [sx + ox, 0.3, sz + oz], '#d4bc86');
     b.cyl(0.2, 0.26, 0.45, 6, [sx, 0.55, sz], '#dcc590'); b.cone(0.22, 0.3, 6, [sx, 0.92, sz], '#d0b880'); b.box(0.02, 0.3, 0.02, [sx, 1.2, sz], '#6e4b2b'); b.box(0.2, 0.12, 0.02, [sx + 0.1, 1.3, sz], '#e8553a');
   }
-  // ---- beached rowboat (bow pulled up the sand toward the land), tilted on its keel
-  boat(b, ROWBOAT.x, 0.05, ROWBOAT.z, ROWBOAT.rot + Math.PI, 0.05);
+  // (the beached rowboat is a kit small_boat)
   // ---- driftwood logs
   for (const [x, z, rot] of DRIFTWOOD) {
     b.cyl(0.16, 0.2, 2.2, 6, [x, 0.14, z], BLEACH, [0, rot, Math.PI / 2]);
@@ -207,14 +183,7 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
     for (let i = 0; i < 4; i++) b.box(0.04, 1.3, 0.72, [x + 0.05 + (i % 2) * 0.05, 1.3, z - 1.05 + i * 0.7], '#4c5e4a', [(i % 2 ? 0.08 : -0.06), 0, 0.06]);
     for (let i = 0; i < 5; i++) b.sph(0.08, [x + 0.1, 1.9 - (i % 2) * 0.05, z - 1.2 + i * 0.6], i % 2 ? '#e8553a' : '#f4efe4', 1, 5);
   }
-  // ---- signpost at the entrance (planks pointing to the beach, a fish emblem)
-  {
-    const { x, z } = ENTRY_SIGN;
-    b.box(0.16, 2.1, 0.16, [x, 1.05, z], WOOD_D);
-    b.box(1.4, 0.38, 0.08, [x - 0.55, 1.75, z], WOOD2); b.cone(0.22, 0.25, 3, [x - 1.35, 1.75, z], WOOD2, [0, 0, Math.PI / 2], [1, 1, 0.35]);
-    fishShape(b, x - 0.6, 1.76, z + 0.06, 0, 1.3, '#4fb6d8');
-    b.box(1.1, 0.32, 0.08, [x + 0.3, 1.3, z], '#7a5634', [0, 0, -0.06]);
-  }
+  // (the entrance signpost is a kit signpost)
   // ---- shore spots: a forked rod rest, a bucket and a stool behind each shore fishing spot
   for (let i = 1; i < FISH_SPOTS.length; i++) {
     const s = FISH_SPOTS[i], x = s.x + 1.4, z = s.z + 1.3;
@@ -242,39 +211,6 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   const fire = new GB([0.85, 1.15]);
   fire.cone(0.32, 0.8, 6, [0, 0.42, 0], '#ff8a2a'); fire.cone(0.18, 0.55, 5, [0.1, 0.4, -0.08], '#ffe070'); fire.cone(0.14, 0.45, 5, [-0.12, 0.3, 0.1], '#ffb040');
   return { body: b.build(), glow: g.build(), fire: fire.build() };
-}
-
-/** The Fishmonger's stall (shop-local, door / counter faces +z): plank platform, back wall, a counter with fish on ice, a plain
- *  pale cloth awning, fish hanging from a line, barrels, a crate of fish, nets on the side and a lantern. */
-export function buildFishStall(): { body: BufferGeometry; glow: BufferGeometry } {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  b.box(5.0, 0.22, 3.8, [0, 0.11, 0], WOOD_D);
-  for (let i = 0; i < 9; i++) b.box(0.52, 0.04, 3.7, [-2.2 + i * 0.55, 0.23, 0], i % 2 ? WOOD : WOOD2);
-  b.box(4.7, 2.7, 0.18, [0, 1.55, -1.7], '#9a7a56', [0, 0, 0], [0.86, 1]);
-  for (let i = 0; i < 5; i++) b.box(4.72, 0.05, 0.2, [0, 0.6 + i * 0.55, -1.6], '#6e5236');
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.24, 3.2, 0.24, [sx * 2.3, 1.6, sz * 1.65 - 0.05], DARK);
-  b.box(0.16, 1.4, 3.2, [-2.3, 0.92, 0], '#8a6a48');   // low side wall (left)
-  // counter + ice tray with fish
-  b.box(4.2, 1.0, 0.8, [0, 0.72, 1.25], WOOD2); b.box(4.4, 0.1, 1.0, [0, 1.25, 1.25], '#a07a50');
-  b.box(2.4, 0.12, 0.72, [0.5, 1.36, 1.25], '#dff2fa');
-  for (let i = 0; i < 6; i++) fishShape(b, -0.4 + i * 0.36, 1.48, 1.12 + (i % 2) * 0.25, 0.3 + (i % 3) * 0.9, 1.1, ['#b8c8d4', '#ff9a3a', '#9ab84a', '#7fb0d8', '#ffc94a', '#c8d4dc'][i]);
-  b.box(0.7, 0.4, 0.5, [-1.5, 1.5, 1.2], '#5a3d24'); b.box(0.5, 0.04, 0.32, [-1.5, 1.72, 1.15], '#e8dcc0', [0.4, 0, 0]);   // scale + slate
-  // plain pale cloth awning (slopes down to the front) + valance
-  b.box(5.4, 0.1, 4.3, [0, 3.15, 0.25], '#e6ebe8', [0.2, 0, 0]);
-  for (let i = 0; i < 6; i++) b.box(0.9, 0.3, 0.06, [-2.25 + i * 0.9, 2.62, 2.36], '#e6ebe8');
-  // hanging fish on a line under the awning
-  b.box(4.4, 0.03, 0.03, [0, 2.45, 1.65], '#c9b27a');
-  for (let i = 0; i < 5; i++) { const x = -1.8 + i * 0.9; b.box(0.02, 0.25, 0.02, [x, 2.3, 1.65], '#c9b27a'); fishShape(b, x, 1.95, 1.65, 0, 1.15, ['#b8c8d4', '#9ab84a', '#ff9a3a', '#7fb0d8', '#c8d4dc'][i], true); }
-  // sign board on the awning front: a big blue fish
-  b.box(2.2, 0.6, 0.1, [0, 3.45, 2.3], '#7a5634', [0.2, 0, 0]); fishShape(b, 0, 3.45, 2.38, 0, 2.6, '#4fb6d8');
-  // barrels, a crate of fish, a net, buckets
-  barrel(b, 3.0, 0.4); barrel(b, 3.0, -0.6);
-  crate(b, -3.0, 0, 1.0, 0.2, 0.8); for (let i = 0; i < 3; i++) fishShape(b, -3.1 + i * 0.18, 0.86, 0.95 + (i % 2) * 0.15, 1.2 + i, 1, '#b8c8d4');
-  b.box(0.04, 1.2, 1.6, [-2.42, 1.9, -0.5], '#4c5e4a', [0, 0, 0.05]); for (let i = 0; i < 3; i++) b.sph(0.07, [-2.45, 2.45, -1.1 + i * 0.6], '#e8553a', 1, 5);
-  b.cyl(0.24, 0.2, 0.4, 8, [2.0, 0.45, 1.9], '#7f8a94');
-  b.box(0.06, 0.5, 0.06, [-2.0, 2.4, 1.95], '#2a2a2e'); b.box(0.24, 0.05, 0.24, [-2.0, 2.12, 1.95], '#2a2a2e'); b.box(0.24, 0.05, 0.24, [-2.0, 1.84, 1.95], '#2a2a2e');
-  g.sph(0.13, [-2.0, 1.98, 1.95], '#ffd070', 1, 6);
-  return { body: b.build(), glow: g.build() };
 }
 
 // --------------------------------------------------------------- fishing rig ---

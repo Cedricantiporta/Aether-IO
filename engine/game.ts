@@ -153,7 +153,7 @@ export function enterVillage(): void {
   world.player.facing = Math.PI;                 // face north, up the avenue to the castle
   world.camera.yaw = 0;                          // camera behind the hero
   if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
-    world.player.pos.set(TOWER.door.x + 3.2, 0, TOWER.door.z); world.player.facing = Math.PI / 2;
+    world.player.pos.set(TOWER.door.x, 0, TOWER.door.z + 2.6); world.player.facing = Math.PI;   // (the tower's door faces south: step out, look back at it)
   }
   runInfo.back = '';
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0

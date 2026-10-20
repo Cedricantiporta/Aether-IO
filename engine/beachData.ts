@@ -40,7 +40,7 @@ export const FISH_SPOTS: FishSpot[] = [
 export const FISH_SPOT_R = 3.2;
 
 /** Fishmonger's stall (the shop itself is constants SHOP_POSITIONS 'FISH'): on the beach, facing the boardwalk / water. */
-export const FISH_STALL = { x: -52.5, z: 24, rot: -Math.PI / 2 };   // mid-beach, well clear of the corner tower (never seen / reached through the wall)
+export const FISH_STALL = { x: -52.5, z: 24, rot: 0 };   // mid-beach, well clear of the corner tower (never seen / reached through the wall)
 
 /** Rocky headland closing the north end of the beach (rock centres x, z, radius). */
 export const HEADLAND: [number, number, number][] = (() => {
