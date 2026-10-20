@@ -205,12 +205,25 @@ DPR (`PerfGovernor`), NPC view culling + animation LOD, merged NPC meshes, range
 effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
 
 ### 3.9 UI style direction (owner-driven)
-**Korean MMORPG look ("v5" override layers at the end of `index.css`, phone "v6" block scoped to `.compact`)**: dark
-smoked-glass panels, gunmetal surfaces, thin gold hairlines, sharp corners, NO wood/parchment, as few containers as possible
-(HUD text and icons float with soft shadows), solid gold icons, tarot-style reward cards with gold frames, Cinzel/serif
-titles. HUD: top-left level + HP/MP bars, quest tracker left (max 3 rows, no bars), minimap right (Run Upgrades button
-under it), gold/gems top centre, menu icons without containers, bottom skill slots (ult first, bigger) + thin EXP strip,
-interact pills, target frame top centre in runs. Phones (`.compact`): bigger type, fullscreen panels, tap-to-inspect in the bag.
+**Nintendo Switch / Zelda: Echoes of Wisdom ("v8 Zelda" override layer, the LAST block of `index.css`; it replaces the earlier
+Korean-MMORPG v5/v6/v7 look but keeps the v7 HUD layout)**: simple and roundy. No line containers (no gold hairlines, double frames
+or corner ornaments; ornament pseudo-elements are switched off in the v8 block), soft translucent charcoal pills and rounded panels
+(`rgba(30,30,34,.72)` surfaces, 14-22 px radius, soft drop shadow, no borders), Nunito (loaded in `index.html`; fallback
+"M PLUS Rounded 1c", "Varela Round", ui-rounded) with bold sentence/Title Case titles (no Cinzel caps in the UI), white/cream text.
+One gentle accent: cyan `#5fd3e6` (CSS var `--z-accent`) for selected/focus states as a small dot, underline or glow. Gold only on
+currency icons; red only for HP and warnings. Buttons are pills: primary = cream/white fill with dark text, secondary = translucent
+dark with white text. Item slots stay rarity-tinted but are soft rounded tiles. Avoid backdrop-filter on big layers.
+- **Dialogue** (`ui/hud/Dialogue.tsx`): wide (62%) rounded box (28 px) at the bottom, very dark charcoal with a faint CSS diamond
+  lattice, no border; speaker name is plain italic white text above the box's top-left edge; large italic body typed out
+  character by character (DOM writes, a tap completes the line first); bouncing ▼ bottom-right; reply / Later / Accept buttons are
+  small pills above the box's right side.
+- **Quest banner** (`ui/hud/QuestBanner.tsx`, mounted in `GameUI`): wide soft band with an italic type line ("Side Quest accepted",
+  "New Main Quest"), a big bold title and hint pills "Destination" (cyan dot; track + auto-path via `walkToMain` / `walkToNpcObjective`,
+  teleport offer in a run) and "Open Log" (quest log). Fades in, holds ~3 s, fades out. Fired when a quest is offered on the last
+  dialogue line, when a side quest is accepted (the `Quest accepted:` system toast is intercepted in `Overlays.tsx`) and on main quest accept.
+- **Toasts** (`Overlays.tsx`): plain rounded `.toast-pill`s with white text; only the small dot carries the colour.
+- **HUD**: rounded pills, quest tracker rows as rounded cards, minimap with a soft rounded corner + shadow (no gold edge), captions in Nunito.
+Phones (`.compact`): bigger type, fullscreen panels, tap-to-inspect in the bag.
 
 ## 4. Open tasks and known issues
 

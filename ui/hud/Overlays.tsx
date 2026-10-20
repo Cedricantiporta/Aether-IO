@@ -4,7 +4,7 @@ import { climbTitle, climbFloor } from '../../dailyChallenge';
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { create } from 'zustand';
-import { Skull, ArrowUpCircle, Swords, Flame } from '../components/GoldIcons';
+import { Skull, ArrowUpCircle, Swords } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
@@ -12,6 +12,7 @@ import { useGameEvent } from '../hooks/useEvent';
 import type { GameNotification } from '../../types';
 import { feel } from '../../engine/game';
 import { biomeOf, BIOMES } from '../../engine/roomDefs';
+import { questBanner } from './QuestBanner';
 
 // ---------------------------------------------------------------- banners
 interface Banner { id: number; kind: 'wave' | 'boss' | 'elite' | 'level' | 'info'; title: string; sub?: string; ms: number; }
@@ -145,6 +146,12 @@ export const Notifications: React.FC = () => {
     if (last && last.type === 'BOSS') push({ kind: 'boss', title: last.message, ms: 3500 });
   }, [notes, push]);
 
+  useEffect(() => {   // quest accepted: the wide quest banner replaces the toast
+    const last = notes[notes.length - 1];
+    const m = last && last.type === 'SYSTEM' ? /^Quest accepted: (.+)$/.exec(last.message) : null;
+    if (m) { questBanner('side', m[1], 'accepted'); remove(last.id); }
+  }, [notes, remove]);
+
   const items = notes.filter((n) => n.type === 'ITEM');
   const warnings = notes.filter((n) => n.type === 'WARNING');
   const system = notes.filter((n) => n.type === 'SYSTEM');
@@ -157,8 +164,9 @@ export const Notifications: React.FC = () => {
         <AnimatePresence initial={false}>
           {items.slice(-6).reverse().map((n) => (
             <motion.div key={n.id} layout initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, x: -10 }} transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-              className="flex items-center gap-2 pointer-events-none">
-              <span className="font-bold text-[.9rem] text-outline" style={{ color: n.color }}>{n.message}</span>
+              className="toast-pill pointer-events-none">
+              <i className="toast-dot" style={{ background: n.color }} />
+              <span>{n.message}</span>
               {n.action && (
                 <button className="rpg-btn rpg-btn-green rpg-btn-sm pe" style={{ minHeight: '1.4rem', padding: '.05rem .5rem', fontSize: '.6rem' }}
                   onClick={() => { n.action!.onClick(); remove(n.id); }}>{n.action.label}</button>
@@ -174,8 +182,9 @@ export const Notifications: React.FC = () => {
           {warnings.map((n) => (
             <motion.div key={n.id} initial={{ y: -30, opacity: 0, scale: .6 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -20, opacity: 0, scale: .8 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              className="rpg-title text-[2rem]" style={{ color: '#ff6b5e', WebkitTextStroke: '1px #2a0505', textShadow: '0 3px 0 #4a0d0d, 0 0 18px rgba(255,60,40,.7)' }}>
-              {n.message}
+              className="toast-pill warn">
+              <i className="toast-dot" style={{ background: '#ff7b72' }} />
+              <span>{n.message}</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -185,9 +194,9 @@ export const Notifications: React.FC = () => {
       <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none" style={{ top: '10.5rem', zIndex: 65 }}>
         <AnimatePresence>
           {system.map((n) => (
-            <motion.div key={n.id} initial={{ y: -16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -16, opacity: 0 }} className="rpg-panel slim flat-shadow px-4 py-1.5 flex items-center gap-2 pe">
-              <Flame size={14} style={{ color: n.color }} />
-              <span className="font-semibold text-sm">{n.message}</span>
+            <motion.div key={n.id} initial={{ y: -16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -16, opacity: 0 }} className="toast-pill pe">
+              <i className="toast-dot" style={{ background: n.color }} />
+              <span>{n.message}</span>
               {n.action && <button className="rpg-btn rpg-btn-sm" onClick={() => { n.action!.onClick(); remove(n.id); }}>{n.action.label}</button>}
             </motion.div>
           ))}

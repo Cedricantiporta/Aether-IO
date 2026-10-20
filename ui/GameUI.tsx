@@ -18,6 +18,7 @@ import { device } from '../engine/device';
 import { FpsCounter } from './hud/FpsCounter';
 import { RotateHint } from './screens/RotateHint';
 import { Notifications } from './hud/Overlays';
+import { QuestBanner } from './hud/QuestBanner';
 import { TitleScreen, VillageHUD } from './screens/MainMenu';
 import { CharacterSelect } from './screens/CharacterSelect';
 import { useSeen } from './lib/alerts';
@@ -102,6 +103,7 @@ export const GameUI: React.FC = () => {
       <StoryBook />
 
       <Notifications />
+      <QuestBanner />
       <PauseMenu />
       <SellDialog />
       <BuyDialog />
