@@ -27,9 +27,9 @@ const _rg = { w: 0, style: null as any, grass: 1, kind: '' };
 function groundColor(x: number, z: number, y: number, out: Color) {
   const r = Math.hypot(x, z), a = Math.atan2(z, x), e = edgeR(a);
   const n1 = fbm(x * 0.03 + 20, z * 0.03, 3), n2 = fbm(x * 0.11 + 5, z * 0.11, 3), n3 = vnoise(x * 0.9, z * 0.9);
-  cG.set('#3f9c34').lerp(cT.set('#76c648'), sstep(0.3, 0.75, n2));
-  cG.lerp(cT.set('#2b7430'), sstep(0.52, 0.7, n1) * 0.8);
-  cG.lerp(cT.set('#9bd04e'), sstep(0.42, 0.28, n1) * 0.45);
+  cG.set('#4cb83a').lerp(cT.set('#86d84a'), sstep(0.3, 0.75, n2));
+  cG.lerp(cT.set('#37923a'), sstep(0.52, 0.7, n1) * 0.7);
+  cG.lerp(cT.set('#a8dc50'), sstep(0.42, 0.28, n1) * 0.45);
   cG.multiplyScalar(0.94 + n3 * 0.12);
   const d = 0;
   const rg = regionAt(x, z, _rg);

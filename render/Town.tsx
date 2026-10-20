@@ -16,6 +16,8 @@ import { GB, glowMat, litMat, TAU, angleLerp, damp } from './util';
 import { disposeMerged, mergeCharacter, useCharacterInstance, useClips, CharKey } from './characters';
 import { labelMaterial } from './label';
 import { QualityCfg } from './quality';
+import { ROYAL_ROOF, TOWN_GOLD } from './townPalette';
+import { KIT_SHOPS, SHOP_CHIMNEY } from './townKit';
 import { TownScenery } from './TownScenery';
 import { Rockfall } from './Rockfall';
 import { Stable } from './Stable';
@@ -43,262 +45,19 @@ function stripedAwning(b: GB, x0: number, x1: number, y: number, z: number, c1: 
 }
 function pole(b: GB, x: number, z: number, h: number, c = '#6e4b2b') { b.box(0.22, h, 0.22, [x, h / 2, z], c); }
 
-function buildSupplies() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const cream = '#f3e6c6', roofC = '#372a21', wood = '#6e4b2b';
-  b.box(5.9, 0.6, 4.9, [0, 0.3, 0], '#9b9488');
-  b.box(5.4, 2.8, 4.4, [0, 2.0, 0], cream, [0, 0, 0], [0.86, 1]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 2.9, 0.3, [sx * 2.7, 2.05, sz * 2.2], wood);
-  b.box(5.6, 0.25, 0.3, [0, 3.35, 2.22], wood); b.box(5.6, 0.2, 0.3, [0, 1.2, 2.22], wood);
-  b.prism(6.9, 2.8, 5.7, [0, 3.35, 0], roofC, [0, 0, 0], [0.78, 1.08]);
-  b.box(0.3, 0.3, 5.8, [0, 6.15, 0], '#1f1814');
-  b.box(0.18, 0.18, 5.9, [-3.4, 3.4, 0], wood, [0, 0, -0.78]); b.box(0.18, 0.18, 5.9, [3.4, 3.4, 0], wood, [0, 0, 0.78]);
-  // alchemist tower
-  b.cyl(1.15, 1.3, 5.0, 10, [-3.2, 2.5, -0.8], cream); b.cone(1.6, 2.6, 10, [-3.2, 6.3, -0.8], '#2e2420'); b.octa(0.3, [-3.2, 7.8, -0.8], '#ffe14a');
-  b.torus(1.2, 0.08, [-3.2, 4.4, -0.8], wood, [Math.PI / 2, 0, 0], 1, 12);
-  g.cyl(0.4, 0.4, 0.1, 8, [-3.2, 3.6, 0.35], '#9ad8ff', [Math.PI / 2, 0, 0]);
-  // door + round window
-  b.box(1.2, 2.0, 0.2, [-1.4, 1.6, 2.25], '#5a3a1e'); b.cyl(0.6, 0.6, 0.2, 10, [-1.4, 2.6, 2.25], '#5a3a1e', [Math.PI / 2, 0, 0]);
-  g.cyl(0.75, 0.75, 0.1, 12, [1.2, 2.7, 2.24], '#8fd2ff', [Math.PI / 2, 0, 0]); b.torus(0.78, 0.09, [1.2, 2.7, 2.27], wood, [0, 0, 0], 1, 12);
-  stripedAwning(b, -2.6, 2.6, 3.2, 3.0, '#e6dac0', '#e6dac0');
-  pole(b, -2.6, 3.7, 2.8); pole(b, 2.6, 3.7, 2.8);
-  // counter and bottles
-  b.box(3.2, 0.95, 0.9, [0.9, 0.5, 3.1], wood); b.box(3.4, 0.12, 1.1, [0.9, 1.0, 3.1], '#b88556');
-  const cols = ['#4ac0ff', '#ff5a6a', '#7aff7a', '#d08aff', '#ffd23a', '#4ac0ff', '#ff5a6a'];
-  for (let i = 0; i < 7; i++) {
-    const x = -0.3 + i * 0.45, h = 0.34 + (i % 3) * 0.1;
-    g.cyl(0.14, 0.17, h, 7, [x, 1.06 + h / 2, 3.0 + (i % 2) * 0.2], cols[i]);
-    b.cyl(0.06, 0.06, 0.18, 5, [x, 1.06 + h + 0.08, 3.0 + (i % 2) * 0.2], '#d8c6a0'); b.cyl(0.07, 0.07, 0.06, 5, [x, 1.06 + h + 0.2, 3.0 + (i % 2) * 0.2], '#8a5a30');
-  }
-  // cauldron
-  for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU; b.cyl(0.14, 0.14, 0.5, 5, [3.6 + Math.cos(a) * 0.65, 0.25, 2.4 + Math.sin(a) * 0.65], '#2a2a30'); }
-  b.sph(0.95, [3.6, 1.05, 2.4], '#2f3139', [1, 0.8, 1], 10); b.torus(0.78, 0.12, [3.6, 1.6, 2.4], '#3d4048', [Math.PI / 2, 0, 0], 1, 14);
-  for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; b.box(0.12, 0.7, 0.12, [3.6 + Math.cos(a) * 0.4, 0.15, 2.4 + Math.sin(a) * 0.4], '#6e4b2b', [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9]); }
-  g.cone(0.22, 0.5, 5, [3.6, 0.35, 2.4], '#ff9a2a');
-  // barrels, crates, mushrooms
-  for (const [x, z] of [[-3.7, 2.9], [-4.3, 2.0]]) { b.cyl(0.5, 0.55, 0.9, 9, [x, 0.45, z], '#8a5a30'); b.cyl(0.56, 0.56, 0.08, 9, [x, 0.3, z], '#3a3a40'); b.cyl(0.56, 0.56, 0.08, 9, [x, 0.65, z], '#3a3a40'); }
-  for (const [x, z, s] of [[2.0, -2.8, 1], [-1.2, -2.9, 0.7], [4.4, 0.4, 0.8]]) { b.cyl(0.14 * s, 0.18 * s, 0.7 * s, 6, [x, 0.35 * s, z], '#f1e6d0'); b.sph(0.55 * s, [x, 0.75 * s, z], '#e0443a', [1, 0.6, 1], 8); for (let k = 0; k < 4; k++) b.sph(0.1 * s, [x + Math.cos(k * 1.7) * 0.3 * s, 0.95 * s, z + Math.sin(k * 1.7) * 0.3 * s], '#fff', 1, 4); }
-  lantern(b, g, -2.3, 2.9, 2.5); lantern(b, g, 3.0, 2.9, 2.0);
-  // hanging herbs
-  for (let i = 0; i < 4; i++) b.cone(0.12, 0.45, 5, [-2.2 + i * 0.5, 2.85, 2.6], i % 2 ? '#5aa03a' : '#8a6a3a', [Math.PI, 0, 0]);
-  return { body: b.build(), glow: g.build() };
-}
-
-function buildBlacksmith() {
-  const b = new GB([0.78, 1.08]), g = new GB([1, 1]);
-  const stone = '#8f8b86', dark = '#4a3626', slate = '#2f2c2d', steel = '#aeb4be';
-  b.box(5.9, 0.6, 4.9, [0, 0.3, 0], '#6f6c68');
-  b.box(5.4, 2.9, 4.4, [0, 2.05, 0], stone, [0, 0, 0], [0.82, 1.05]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.34, 3.0, 0.34, [sx * 2.7, 2.1, sz * 2.2], dark);
-  b.box(5.6, 0.3, 0.34, [0, 3.45, 2.22], dark);
-  for (let i = 0; i < 9; i++) b.box(0.3, 0.2, 0.06, [-2.0 + (i % 5) * 0.9 + (Math.floor(i / 5) ? 0.45 : 0), 0.9 + Math.floor(i / 5) * 0.5 + (i > 8 ? 0.5 : 0), 2.24], '#a29d97');
-  b.prism(6.8, 2.2, 5.6, [0, 3.55, 0], slate, [0, 0, 0], [0.8, 1.05]); b.box(0.3, 0.26, 5.7, [0, 5.75, 0], '#1f1c1d');
-  // canopy over the anvil
-  b.box(5.2, 0.16, 2.4, [0, 3.35, 3.4], slate, [0.18, 0, 0]); pole(b, -2.5, 4.5, 3.0, dark); pole(b, 2.5, 4.5, 3.0, dark);
-  // big chimney
-  b.cyl(0.8, 1.0, 6.4, 8, [1.9, 4.4, -1.4], '#85796f'); b.cyl(1.05, 0.8, 0.5, 8, [1.9, 7.8, -1.4], '#5e554d');
-  for (let i = 0; i < 4; i++) b.torus(0.92 - i * 0.03, 0.05, [1.9, 2.2 + i * 1.3, -1.4], '#5e554d', [Math.PI / 2, 0, 0], 1, 8);
-  // door and window
-  b.box(1.3, 2.1, 0.2, [-1.6, 1.65, 2.25], '#3e2c1e'); b.box(0.12, 2.1, 0.22, [-1.6, 1.65, 2.27], '#2a2a2e'); for (let i = 0; i < 3; i++) b.box(1.3, 0.1, 0.22, [-1.6, 0.9 + i * 0.7, 2.27], '#2a2a2e');
-  g.box(0.9, 0.9, 0.1, [1.4, 2.5, 2.23], '#ffb04a'); b.box(1.15, 0.12, 0.2, [1.4, 3.0, 2.25], dark); b.box(1.15, 0.12, 0.2, [1.4, 2.0, 2.25], dark);
-  // furnace outside right
-  b.box(2.0, 1.7, 1.5, [3.5, 0.95, 1.2], '#7d756d'); b.box(2.2, 0.25, 1.7, [3.5, 1.9, 1.2], '#5e554d');
-  b.box(1.1, 0.9, 0.2, [3.5, 0.9, 2.0], '#1c1a1a'); g.box(0.85, 0.65, 0.12, [3.5, 0.85, 2.05], '#ff7a1a'); g.box(0.5, 0.4, 0.14, [3.5, 0.8, 2.08], '#ffe060');
-  b.cyl(0.3, 0.4, 2.0, 7, [3.5, 3.0, 1.0], '#6f665d');
-  // anvil on stump
-  b.cyl(0.55, 0.65, 0.75, 9, [-0.6, 0.38, 3.5], '#6a4828');
-  b.box(0.9, 0.32, 0.5, [-0.6, 0.95, 3.5], steel); b.box(0.6, 0.3, 0.38, [-0.6, 0.72, 3.5], '#7c828c'); b.cone(0.22, 0.6, 5, [0.2, 0.98, 3.5], steel, [0, 0, -Math.PI / 2]); b.box(0.5, 0.1, 0.5, [-0.6, 1.14, 3.5], '#c4cad4');
-  g.box(0.7, 0.05, 0.1, [-0.7, 1.2, 3.5], '#ff8a2a', [0, 0.3, 0]);
-  b.box(0.1, 0.9, 0.1, [0.3, 0.55, 4.0], '#6a4828', [0.1, 0, 0.5]); b.box(0.35, 0.22, 0.22, [0.45, 0.95, 4.0], '#6e7480', [0.1, 0, 0.5]);
-  // weapon rack on left wall
-  b.box(0.12, 1.8, 2.0, [-2.78, 1.9, 0.4], dark);
-  for (let i = 0; i < 3; i++) { b.box(0.08, 1.2, 0.12, [-2.88, 2.0, -0.2 + i * 0.6], steel); b.box(0.1, 0.1, 0.34, [-2.88, 1.35, -0.2 + i * 0.6], '#8a5a30'); }
-  b.cyl(0.5, 0.5, 0.1, 10, [-2.9, 2.9, 1.2], '#b83a3a', [0, 0, Math.PI / 2]); b.sph(0.12, [-2.96, 2.9, 1.2], steel, 1, 5);
-  // grindstone + water barrel + coal
-  b.box(0.12, 0.9, 0.12, [-3.9, 0.45, 2.0], dark); b.box(0.12, 0.9, 0.12, [-3.9, 0.45, 3.0], dark); b.cyl(0.55, 0.55, 0.3, 12, [-3.9, 1.0, 2.5], '#a9a49e', [0, 0, Math.PI / 2]);
-  b.cyl(0.5, 0.55, 0.95, 9, [-3.7, 0.48, 0.8], '#6a4828'); b.cyl(0.46, 0.46, 0.04, 9, [-3.7, 0.92, 0.8], '#3a6a9a');
-  for (let i = 0; i < 6; i++) b.ico(0.16, [3.4 + Math.cos(i * 2.1) * 0.5, 0.12, 3.1 + Math.sin(i * 2.1) * 0.4], '#2a2626');
-  g.ico(0.12, [3.45, 0.15, 3.1], '#ff7a1a'); g.ico(0.1, [3.2, 0.14, 3.3], '#ffb040');
-  lantern(b, g, -2.2, 3.0, 2.6); lantern(b, g, 2.4, 3.0, 4.4);
-  return { body: b.build(), glow: g.build() };
-}
-
-function buildPets() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const plank = '#b98a52', trim = '#f1e6d0', thatch = '#3d2e22', dthatch = '#2a2019', wood = '#6e4b2b', hay = '#e6c85e';
-  b.box(5.9, 0.5, 4.9, [0, 0.25, 0], '#7b5a38');
-  b.box(5.5, 2.9, 4.5, [0, 1.95, 0], plank, [0, 0, 0], [0.85, 1.05]);
-  for (let i = 0; i < 12; i++) b.box(0.06, 2.8, 0.05, [-2.4 + i * 0.44, 1.95, 2.27], '#8f6838');
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.0, 0.3, [sx * 2.75, 2.0, sz * 2.25], trim);
-  b.box(5.7, 0.2, 0.3, [0, 3.45, 2.28], trim);
-  b.prism(7.1, 3.1, 5.9, [0, 3.4, 0], thatch, [0, 0, 0], [0.78, 1.08]);
-  for (let i = 0; i < 4; i++) b.box(0.07, 0.12, 6.0, [-2.6 + i * 0.35 + 0.0, 3.8 + i * 0.55, 0], dthatch, [0, 0, 0.0]);
-  b.box(0.3, 0.3, 6.0, [0, 6.55, 0], dthatch);
-  // big barn doors
-  b.box(2.5, 2.3, 0.2, [-0.9, 1.65, 2.3], '#27190f'); b.box(1.15, 2.3, 0.14, [-1.75, 1.65, 2.5], '#9a6a38', [0, -0.7, 0]); b.box(1.15, 2.3, 0.14, [0.0, 1.65, 2.5], '#9a6a38', [0, 0.7, 0]);
-  b.box(2.7, 0.18, 0.26, [-0.9, 2.9, 2.35], trim); b.box(0.2, 2.5, 0.26, [-2.2, 1.7, 2.35], trim); b.box(0.2, 2.5, 0.26, [0.4, 1.7, 2.35], trim);
-  // hay loft window
-  g.box(0.9, 0.9, 0.1, [1.5, 3.4, 2.3], '#ffd88a'); b.box(1.1, 0.14, 0.2, [1.5, 3.9, 2.3], trim); b.box(1.1, 0.14, 0.2, [1.5, 2.9, 2.3], trim); b.box(0.14, 1.0, 0.2, [1.5, 3.4, 2.3], trim);
-  g.box(0.9, 0.9, 0.1, [1.5, 1.7, 2.3], '#ffd88a');
-  // hay bales
-  const bale = (x: number, y: number, z: number, r = 0) => { b.box(1.0, 0.6, 0.7, [x, y, z], hay, [0, r, 0]); b.box(1.02, 0.06, 0.72, [x, y, z], '#8a6a2a', [0, r, 0]); };
-  bale(3.6, 0.3, 1.0); bale(3.6, 0.3, 2.1, 0.1); bale(3.5, 0.9, 1.5, 0.3); bale(-3.6, 0.3, 2.9, 0.4);
-  // pen on right
-  for (let i = 0; i < 6; i++) { const z = -2 + i * 1.0; pole(b, 4.9, z, 1.1, wood); }
-  b.box(0.1, 0.12, 5.2, [4.9, 0.45, 0.5], wood); b.box(0.1, 0.12, 5.2, [4.9, 0.85, 0.5], wood);
-  b.box(2.6, 0.12, 0.1, [3.6, 0.45, -2.1], wood); b.box(2.6, 0.12, 0.1, [3.6, 0.85, -2.1], wood);
-  b.cyl(0.55, 0.6, 0.18, 10, [4.0, 0.1, -0.8], '#d94a5a'); b.cyl(0.4, 0.4, 0.2, 10, [4.0, 0.2, -0.8], '#c43a4a');
-  b.cyl(0.4, 0.5, 0.2, 10, [3.9, 0.1, 0.3], '#4a8fd9');
-  // trough
-  b.box(1.5, 0.4, 0.55, [-3.7, 0.3, -1.4], wood); b.box(1.3, 0.05, 0.4, [-3.7, 0.52, -1.4], '#4a8fd9');
-  // weather vane
-  b.cyl(0.04, 0.04, 1.2, 4, [0, 7.1, 0], '#333'); b.box(1.1, 0.14, 0.05, [0, 7.6, 0], '#d94a2a'); b.cone(0.18, 0.4, 4, [0.6, 7.6, 0], '#d94a2a', [0, 0, -Math.PI / 2]);
-  lantern(b, g, -2.3, 3.0, 2.7); lantern(b, g, 1.9, 3.0, 2.7);
-  // flowers
-  for (let i = 0; i < 6; i++) { b.sph(0.12, [-2.2 + i * 0.35, 0.3, 2.9], ['#ff7aa8', '#ffe14a', '#fff', '#9ac8ff'][i % 4], 1, 5); }
-  return { body: b.build(), glow: g.build() };
-}
-
-/** Armor shop: stone-and-timber store with a dark roof, mannequins in plate, a shield wall and a weapon rack out front. */
-function buildArmory() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const stone = '#a39e93', plaster = '#e9e0cc', wood = '#5e4026', roofC = '#2b2420', steel = '#b8bec8', steel2 = '#8e959f';
-  b.box(6.2, 0.6, 5.0, [0, 0.3, 0], '#8f897d');
-  b.box(5.8, 1.4, 4.6, [0, 1.3, 0], stone);
-  b.box(5.6, 2.2, 4.4, [0, 3.1, 0], plaster);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.6, 0.3, [sx * 2.85, 2.4, sz * 2.25], wood);
-  b.box(5.8, 0.24, 0.3, [0, 4.15, 2.27], wood); b.box(5.8, 0.2, 0.3, [0, 2.05, 2.27], wood);
-  b.prism(7.0, 2.6, 5.8, [0, 4.2, 0], roofC, [0, 0, 0], [0.78, 1.08]);
-  b.box(0.3, 0.3, 5.9, [0, 6.85, 0], '#1a1512');
-  // door + windows
-  b.box(1.25, 2.1, 0.2, [-1.6, 1.65, 2.32], '#3e2a18'); b.box(1.45, 0.18, 0.24, [-1.6, 2.8, 2.34], wood);
-  g.box(0.9, 0.9, 0.1, [1.3, 3.1, 2.32], '#ffd88a'); b.box(1.1, 0.12, 0.2, [1.3, 3.6, 2.35], wood); b.box(1.1, 0.12, 0.2, [1.3, 2.6, 2.35], wood); b.box(0.08, 0.9, 0.16, [1.3, 3.1, 2.36], wood);
-  // plain cloth awning over the display
-  stripedAwning(b, 0.0, 2.9, 2.75, 3.1, '#e2d8c4', '#e2d8c4'); pole(b, 0.05, 3.8, 2.4); pole(b, 2.85, 3.8, 2.4);
-  // two mannequins in plate armour
-  for (const mx of [0.7, 2.2]) {
-    b.box(0.12, 1.0, 0.12, [mx, 0.5, 3.4], wood); b.box(0.6, 0.08, 0.6, [mx, 0.04, 3.4], wood);
-    b.cyl(0.32, 0.27, 0.75, 12, [mx, 1.35, 3.4], steel, [0, 0, 0], [1, 1, 0.75]);
-    for (const s2 of [-1, 1]) b.sph(0.17, [mx + s2 * 0.36, 1.66, 3.4], steel2, [1.1, 0.7, 1], 10);
-    b.sph(0.2, [mx, 1.98, 3.4], steel, [1, 1.05, 1], 12); b.box(0.24, 0.05, 0.05, [mx, 1.97, 3.6], '#2a2a2e');
-  }
-  // shield wall on the left side
-  for (let i = 0; i < 3; i++) { const z = -1.4 + i * 1.3; b.cyl(0.45, 0.45, 0.1, 14, [-2.98, 2.6, z], i === 1 ? '#7a1f22' : steel2, [0, 0, Math.PI / 2]); b.sph(0.1, [-3.06, 2.6, z], '#d9b56a', 1, 6); }
-  // weapon rack
-  b.box(1.6, 0.12, 0.12, [-2.3, 1.4, 3.3], wood); b.box(0.12, 1.4, 0.12, [-3.05, 0.7, 3.3], wood); b.box(0.12, 1.4, 0.12, [-1.55, 0.7, 3.3], wood);
-  for (let i = 0; i < 3; i++) b.box(0.08, 1.5, 0.06, [-2.75 + i * 0.45, 1.3, 3.36], steel, [0, 0, 0.08 - i * 0.08]);
-  lantern(b, g, -2.6, 3.1, 2.7);
-  return { body: b.build(), glow: g.build() };
-}
-
-/** Warehouse: long timber storehouse on a stone plinth, wide barn doors, a loading hoist, crates, barrels and grain sacks out front. */
-function buildWarehouse() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const stone = '#9d978a', plank = '#d9ccb0', beam = '#5a3d24', roofC = '#3a2e26', crate = '#9c7245', crate2 = '#7d5733', sack = '#d8c8a0';
-  b.box(7.2, 0.6, 5.4, [0, 0.3, 0], '#8a8478');
-  b.box(6.8, 1.0, 5.0, [0, 1.1, 0], stone);
-  b.box(6.6, 3.2, 4.8, [0, 3.2, 0], plank);
-  for (const sx of [-1, -0.33, 0.33, 1]) b.box(0.3, 4.4, 0.3, [sx * 3.3, 2.6, 2.42], beam);
-  for (const sx of [-1, 1]) b.box(0.3, 4.4, 0.3, [sx * 3.3, 2.6, -2.42], beam);
-  b.box(6.9, 0.26, 0.3, [0, 4.75, 2.44], beam); b.box(6.9, 0.22, 0.3, [0, 1.6, 2.44], beam);
-  // roof + loft gable with a hoist beam
-  b.prism(8.0, 2.8, 6.0, [0, 4.85, 0], roofC, [0, 0, 0], [0.78, 1.08]);
-  b.box(0.3, 0.3, 6.1, [0, 7.65, 0], '#1d1713');
-  b.box(1.4, 1.2, 0.2, [0, 5.6, 2.62], '#3e2a18'); b.box(1.6, 0.14, 0.24, [0, 6.25, 2.66], beam);
-  b.box(0.2, 0.2, 1.6, [0, 6.6, 3.2], beam); b.cyl(0.03, 0.03, 2.4, 4, [0, 5.4, 3.95], '#6b5a44'); b.box(0.5, 0.4, 0.5, [0, 4.1, 3.95], crate);
-  // wide double barn doors (X braces)
-  for (const sx of [-1, 1]) {
-    const x = sx * 0.78;
-    b.box(1.5, 2.9, 0.18, [x, 3.05, 2.5], '#6e4a2a');
-    b.box(1.5, 0.14, 0.22, [x, 4.4, 2.53], beam); b.box(1.5, 0.14, 0.22, [x, 1.7, 2.53], beam);
-    b.box(0.14, 2.9, 0.22, [x, 3.05, 2.54], beam, [0, 0, sx * 0.5]);
-  }
-  b.box(0.08, 0.5, 0.1, [-0.12, 3.0, 2.64], '#2a2a2e'); b.box(0.08, 0.5, 0.1, [0.12, 3.0, 2.64], '#2a2a2e');
-  b.box(3.4, 0.25, 1.4, [0, 1.47, 3.1], '#7a6a56');   // loading step
-  // small side windows
-  for (const sx of [-1, 1]) { g.box(0.8, 0.7, 0.1, [sx * 2.35, 3.5, 2.47], '#ffd88a'); b.box(1.0, 0.12, 0.18, [sx * 2.35, 3.9, 2.5], beam); b.box(1.0, 0.12, 0.18, [sx * 2.35, 3.1, 2.5], beam); }
-  // goods out front: crates, barrels, sacks
-  const crateAt = (x: number, y: number, z: number, sz: number, c: string, r = 0) => { b.box(sz, sz, sz, [x, y + sz / 2, z], c, [0, r, 0]); b.box(sz + 0.04, 0.08, sz * 0.3, [x, y + sz / 2, z], beam, [0, r, 0]); };
-  crateAt(-2.9, 0, 3.6, 0.9, crate, 0.2); crateAt(-2.0, 0, 3.9, 0.75, crate2, -0.3); crateAt(-2.75, 0.9, 3.6, 0.6, crate2, 0.5);
-  crateAt(2.9, 0, 3.2, 0.8, crate2, -0.15);
-  for (const [x, z] of [[2.1, 3.9], [2.9, 4.2]]) { b.cyl(0.38, 0.34, 0.95, 10, [x, 0.48, z], '#7a5432'); b.cyl(0.4, 0.4, 0.07, 10, [x, 0.2, z], '#3a3a3e'); b.cyl(0.4, 0.4, 0.07, 10, [x, 0.78, z], '#3a3a3e'); }
-  for (const [x, z, r] of [[-1.2, 4.1, 0.3], [-0.7, 4.3, -0.4]]) b.sph(0.36, [x, 0.3, z], sack, [1, 0.8, 1.25], 8, [0, r, 0]);
-  lantern(b, g, 1.9, 3.3, 2.7);
-  return { body: b.build(), glow: g.build() };
-}
-
-/** Tech House: tinkerer's workshop - stone + timber, copper roof trim, big brass gears on the wall, pipes, a chimney,
- *  a lens window and a workbench with gadgets out front. */
-function buildTech() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const stone = '#8f8a80', plaster = '#e4dccb', wood = '#5a3d24', roofC = '#2a2f36', brass = '#c9a24a', copper = '#b8693a', steel = '#9aa2ae';
-  b.box(6.2, 0.6, 5.0, [0, 0.3, 0], '#857f74');
-  b.box(5.8, 1.3, 4.6, [0, 1.25, 0], stone);
-  b.box(5.6, 2.3, 4.4, [0, 3.1, 0], plaster);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.7, 0.3, [sx * 2.85, 2.4, sz * 2.25], wood);
-  b.box(5.8, 0.22, 0.3, [0, 4.2, 2.27], wood);
-  b.prism(7.0, 2.4, 5.8, [0, 4.25, 0], roofC, [0, 0, 0], [0.78, 1.08]);
-  b.box(7.1, 0.16, 0.2, [0, 4.3, 2.95], copper); b.box(0.3, 0.3, 5.9, [0, 6.7, 0], copper);
-  // chimney with a brass cap, steam pipe
-  b.box(0.8, 2.4, 0.8, [1.8, 6.2, -1.2], stone); b.cyl(0.5, 0.45, 0.25, 10, [1.8, 7.5, -1.2], brass);
-  b.cyl(0.12, 0.12, 3.2, 8, [-2.95, 2.4, 1.4], copper); b.cyl(0.12, 0.12, 1.2, 8, [-2.95, 4.0, 0.8], copper, [Math.PI / 2, 0, 0]);
-  // door + round lens window
-  b.box(1.2, 2.1, 0.2, [-1.4, 1.65, 2.32], '#3a2a1c'); b.box(1.4, 0.16, 0.24, [-1.4, 2.8, 2.34], wood); b.sph(0.07, [-1.0, 1.6, 2.45], brass, 1, 6);
-  b.torus(0.62, 0.1, [1.3, 3.1, 2.3], brass, [0, 0, 0], 1, 16); g.cyl(0.55, 0.55, 0.06, 16, [1.3, 3.1, 2.28], '#9fe8ff', [Math.PI / 2, 0, 0]);
-  // big gears on the front wall
-  const gear = (x: number, y: number, z: number, r: number, teeth: number, c: string) => {
-    b.cyl(r, r, 0.12, 16, [x, y, z], c, [Math.PI / 2, 0, 0]); b.cyl(r * 0.3, r * 0.3, 0.16, 10, [x, y, z + 0.02], '#5b4a2a', [Math.PI / 2, 0, 0]);
-    for (let i = 0; i < teeth; i++) { const a = (i / teeth) * Math.PI * 2; b.box(r * 0.28, r * 0.28, 0.12, [x + Math.cos(a) * r, y + Math.sin(a) * r, z], c, [0, 0, a]); }
-  };
-  gear(-0.1, 3.55, 2.33, 0.42, 9, brass); gear(0.5, 3.0, 2.34, 0.26, 7, copper);
-  // workbench out front with gadgets
-  b.box(1.9, 0.12, 0.8, [1.9, 0.95, 3.5], wood); for (const x of [1.1, 2.7]) b.box(0.12, 0.9, 0.7, [x, 0.48, 3.5], wood);
-  b.box(0.5, 0.35, 0.4, [1.5, 1.2, 3.5], steel); g.sph(0.1, [1.5, 1.45, 3.5], '#7df3ff', 1, 6);
-  b.cyl(0.06, 0.06, 0.6, 6, [2.3, 1.3, 3.4], brass, [0, 0, 0.6]); b.sph(0.18, [2.5, 1.55, 3.4], copper, 1, 8);
-  b.box(0.9, 0.7, 0.6, [-2.4, 0.35, 3.3], '#7d5733'); b.cyl(0.3, 0.3, 0.8, 10, [-2.6, 0.4, 2.7], steel);
-  lantern(b, g, -2.2, 3.0, 2.7);
-  return { body: b.build(), glow: g.build() };
-}
-
-/** Fortune teller's house: crooked dark-roofed cottage, round window, crystal ball on a draped table, moon & star charms. */
-function buildFortune() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const plaster = '#e6dccb', wood = '#4e3524', roofC = '#241e1c', cloth = '#3a2550', gold = '#d9b56a';
-  b.box(5.8, 0.6, 4.8, [0, 0.3, 0], '#8f897d');
-  b.box(5.2, 3.0, 4.3, [0, 2.1, 0], plaster, [0, 0, 0], [0.86, 1]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.3, 3.1, 0.3, [sx * 2.6, 2.15, sz * 2.15], wood);
-  b.box(5.4, 0.24, 0.3, [0, 3.55, 2.18], wood); b.box(5.4, 0.2, 0.3, [0, 1.3, 2.18], wood);
-  b.prism(6.6, 3.4, 5.6, [0, 3.55, 0], roofC, [0, 0, 0.05], [0.78, 1.08]);
-  b.box(0.28, 0.28, 5.7, [0.12, 6.9, 0], '#1a1512', [0, 0, 0.05]);
-  // little tower with a pointed hat
-  b.cyl(1.0, 1.1, 5.2, 12, [2.6, 2.6, -1.0], plaster); b.cone(1.45, 3.0, 12, [2.6, 6.7, -1.0], roofC, [0.08, 0, -0.1]);
-  g.octa(0.22, [2.75, 8.3, -1.1], gold);
-  // door + round window with violet glow
-  b.box(1.2, 2.1, 0.2, [-1.4, 1.65, 2.2], '#3a2618'); b.cyl(0.6, 0.6, 0.2, 12, [-1.4, 2.7, 2.2], '#3a2618', [Math.PI / 2, 0, 0]);
-  g.cyl(0.62, 0.62, 0.1, 14, [1.2, 2.7, 2.21], '#c9a0ff', [Math.PI / 2, 0, 0]); b.torus(0.66, 0.08, [1.2, 2.7, 2.25], wood, [0, 0, 0], 1, 14);
-  // draped table with the crystal ball
-  b.box(1.6, 0.9, 1.0, [1.2, 0.45, 3.3], cloth); b.box(1.75, 0.08, 1.15, [1.2, 0.92, 3.3], '#5a3a78');
-  b.cyl(0.18, 0.24, 0.16, 10, [1.2, 1.02, 3.3], gold); g.sph(0.32, [1.2, 1.38, 3.3], '#b98aff', 1, 14);
-  // hanging moon & star charms under the eave
-  for (const [x, c] of [[-2.4, gold], [0.0, '#e8e0ff'], [2.3, gold]] as [number, string][]) { b.cyl(0.01, 0.01, 0.6, 3, [x, 3.15, 2.45], '#444'); g.octa(0.12, [x, 2.8, 2.45], c, [1, 1.3, 0.4]); }
-  b.torus(0.22, 0.05, [-1.2, 2.85, 2.45], gold, [0, 0, 0], 1, 10, 4.2);
-  lantern(b, g, -2.4, 3.0, 2.6);
-  return { body: b.build(), glow: g.build() };
-}
-
 /** Elixir Brewer's hut (outside the gate): small timber-and-plaster cottage with a dark roof, a stone chimney puffing green
  *  smoke, a big iron cauldron bubbling in front (liquid + bubbles are animated in Shop), a table of elixir flasks, herbs and
  *  jars of monster parts. Door faces +z. Props in front are also town colliders (townData BREWER_HUT). */
 function buildBrewer() {
   const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const plaster = '#e2d8c0', wood = '#5a3d24', roofC = '#2b2420', stone = '#8f897d', iron = '#2f3139';
+  const plaster = '#e2d8c0', wood = '#5a3d24', roofC = ROYAL_ROOF, stone = '#8f897d', iron = '#2f3139';
   const cz = -0.4;   // body centre (z)
   b.box(5.2, 0.5, 4.4, [0, 0.25, cz], stone);
   b.box(4.6, 2.5, 3.8, [0, 1.75, cz], plaster, [0, 0, 0], [0.86, 1]);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.28, 2.6, 0.28, [sx * 2.3, 1.8, cz + sz * 1.9], wood);
   b.box(4.8, 0.22, 0.28, [0, 2.95, cz + 1.92], wood); b.box(4.8, 0.18, 0.28, [0, 1.15, cz + 1.92], wood);
   b.box(0.18, 1.8, 0.2, [0.25, 2.05, cz + 1.95], wood, [0, 0, 0.6]); b.box(0.18, 1.8, 0.2, [2.0, 2.05, cz + 1.95], wood, [0, 0, -0.6]);
-  b.prism(5.8, 2.5, 4.9, [0, 3.0, cz], roofC, [0, 0, 0], [0.78, 1.08]);
+  b.prism(5.8, 2.5, 4.9, [0, 3.0, cz], roofC, [0, 0, 0], [0.78, 1.08]); b.box(0.3, 0.26, 4.9 + 0.2, [0, 3.0 + 2.5, cz], TOWN_GOLD);
   b.box(0.26, 0.26, 5.0, [0, 5.45, cz], '#1a1512');
   // stone chimney (green smoke, see Shop FX)
   b.box(0.8, 3.0, 0.8, [1.5, 4.0, cz - 1.0], '#6d6a66'); b.box(0.95, 0.2, 0.95, [1.5, 5.55, cz - 1.0], '#57544f');
@@ -334,27 +93,29 @@ function buildBrewer() {
   return { body: b.build(), glow: g.build() };
 }
 
-const BUILD: Record<ShopType, () => { body: any; glow: any }> = { SUPPLIES: buildSupplies, BLACKSMITH: buildBlacksmith, PETS: buildPets, ARMORY: buildArmory, FORTUNE: buildFortune, WAREHOUSE: buildWarehouse, TECH: buildTech, BREWER: buildBrewer, FISH: buildFishStall, MINE: buildMineStall };
+/** Own-body shops (the seven town shops are town_kit_v2 shop_stall_house pieces placed by render/townKit.tsx; the Shop below adds the sign, keeper, name tags and FX). */
+const BUILD: Partial<Record<ShopType, () => { body: any; glow: any }>> = { BREWER: buildBrewer, FISH: buildFishStall, MINE: buildMineStall };
 const TITLES: Record<ShopType, string> = { SUPPLIES: 'Potion Merchant', BLACKSMITH: 'Blacksmith', PETS: 'Pet Merchant', ARMORY: 'Armor Merchant', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse Keeper', TECH: 'Tinkerer', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplier' };
 /** (owner) shopkeepers have their own names: the name tag shows the role on top, the name below. */
 const KEEPER: Record<ShopType, string> = { SUPPLIES: 'Rosalind', BLACKSMITH: 'Brakk', PETS: 'Jev', ARMORY: 'Hald', FORTUNE: 'Madame Zora', WAREHOUSE: 'Otto', TECH: 'Quill', BREWER: 'Nessa', FISH: 'Salty Pell', MINE: 'Durgan' };
 type NpcCfg = { key: CharKey; tint: string; pos: [number, number] };
 /** Shop-local door the keeper runs to when the siege starts. */
-const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-1.4, 2.6], BLACKSMITH: [-1.6, 2.6], PETS: [-0.9, 2.7], ARMORY: [-1.6, 2.7], FORTUNE: [-1.4, 2.6], WAREHOUSE: [0, 2.7], TECH: [-1.4, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9], MINE: [-1.6, -0.9] };
+const DOOR: Record<ShopType, [number, number]> = { SUPPLIES: [-2, 2.6], BLACKSMITH: [-2, 2.6], PETS: [-2, 2.6], ARMORY: [-2, 2.6], FORTUNE: [-2, 2.6], WAREHOUSE: [-2, 2.6], TECH: [-2, 2.6], BREWER: [-1.25, 1.7], FISH: [-1.6, -0.9], MINE: [-1.6, -0.9] };
 const NPC: Record<ShopType, NpcCfg> = {
-  SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [2.4, 4.7] },
-  BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.6, 4.9] },
-  PETS: { key: 'ROGUE', tint: '#bfffcf', pos: [2.2, 4.7] },
-  ARMORY: { key: 'KNIGHT', tint: '#e8e0d0', pos: [-0.6, 4.6] },
-  FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [0.1, 4.2] },
-  WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [0.9, 4.4] },
-  TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [0.2, 4.4] },
+  // (kit shops: the keeper stands just outside the awning, right of the door, so the camera always sees him; the counter is behind him)
+  SUPPLIES: { key: 'ROGUE', tint: '#ffffff', pos: [1.0, 4.9] },
+  BLACKSMITH: { key: 'KNIGHT', tint: '#ffffff', pos: [1.0, 4.9] },
+  PETS: { key: 'ROGUE', tint: '#bfffcf', pos: [1.0, 4.9] },
+  ARMORY: { key: 'KNIGHT', tint: '#e8e0d0', pos: [1.0, 4.9] },
+  FORTUNE: { key: 'WIZARD', tint: '#e6dcff', pos: [1.0, 4.9] },
+  WAREHOUSE: { key: 'ROGUE', tint: '#f0dcc0', pos: [1.0, 4.9] },
+  TECH: { key: 'WIZARD', tint: '#cfe6ff', pos: [1.0, 4.9] },
   BREWER: { key: 'WIZARD', tint: '#d8f5d0', pos: [1.4, 2.25] },   // stirring behind the cauldron
   FISH: { key: 'ROGUE', tint: '#cfe4f0', pos: [0.3, 0.35] },       // behind the counter of the beach stall (render/Beach.tsx)
   MINE: { key: 'BARBARIAN', tint: '#e8d2b0', pos: [-0.6, 0.35] },  // the camp's supply keeper behind the counter (render/CaveEntrance.tsx)
 };
 /** Bubbling liquid disc of the shops with a cauldron: shop-local [x, y, z, radius]. */
-const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { SUPPLIES: [3.6, 1.55, 2.4, 0.72], BREWER: [1.4, 1.62, 3.4, 0.68] };
+const CAULDRON: Partial<Record<ShopType, [number, number, number, number]>> = { BREWER: [1.4, 1.62, 3.4, 0.68] };
 
 // -------------------------------------------------------------------- signs ---
 function buildSign(type: ShopType, color: string) {
@@ -463,7 +224,8 @@ function Shopkeeper({ cfg, door, near, closed, onOpen }: { cfg: NpcCfg; door: [n
 const SIGN_POST = [1, -1].map((side) => { const b = new GB([1, 1]); b.box(0.22, 4.0, 0.22, [0, 2.0, 0], '#6e4b2b'); b.box(1.9, 0.16, 0.16, [0.9 * side, 3.85, 0], '#6e4b2b'); return b.build(); });
 
 function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; position: number[]; color: string; q: QualityCfg; facing?: number }) {
-  const geos = useMemo(() => BUILD[type](), [type]);
+  const kit = KIT_SHOPS.has(type);   // body = town_kit_v2 shop_stall_house (render/townKit.tsx)
+  const geos = useMemo(() => (kit ? null : BUILD[type]!()), [type, kit]);
   const sign = useMemo(() => buildSign(type, color), [type, color]);
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.85 }),
@@ -507,12 +269,11 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     if (d < 55 && useGameStore.getState().status !== GameStatus.PAUSED) {
       if (type === 'SUPPLIES' && Math.random() < dt * 6) {
         const a = Math.random() * TAU, r = Math.random() * 0.55;
-        FX.add.emit(px + 3.6 + Math.cos(a) * r, 1.6, pz + 2.4 + Math.sin(a) * r, 0, 1.6, 0, 1.0, 0.18, 0.3, 0.6, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
-        if (Math.random() < 0.4) FX.add.emit(px + 3.6 + (Math.random() - 0.5) * 0.8, 1.7, pz + 2.4 + (Math.random() - 0.5) * 0.8, 0, 2.2, 0, 1.6, 0.12, 0.02, 0.7, 2.0, 0.8, 0.9, CELL.DISC, -0.3, 0.2);
+        FX.add.emit(px + 1.9 + Math.cos(a) * r, 1.6, pz + 3.7 + Math.sin(a) * r, 0, 1.6, 0, 1.0, 0.18, 0.3, 0.6, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
+        if (Math.random() < 0.4) FX.add.emit(px + 1.9 + (Math.random() - 0.5) * 0.8, 1.7, pz + 3.7 + (Math.random() - 0.5) * 0.8, 0, 2.2, 0, 1.6, 0.12, 0.02, 0.7, 2.0, 0.8, 0.9, CELL.DISC, -0.3, 0.2);
       } else if (type === 'BLACKSMITH') {
-        if (Math.random() < dt * 5) smokePuff(px + 1.9, 8.1, pz - 1.4, 1, 0x6b6560, 1.8, 3.2, 1.4, 0.3, 0.5);
-        if (Math.random() < dt * 4) embers(px + 3.5, 1.2, pz + 2.1, 1, 0xff8a2a, 0.3, 2.2, 0.9, 0.15);
-        if (Math.random() < dt * 1.2) embers(px - 0.6, 1.3, pz + 3.5, 3, 0xffb040, 0.2, 2.5, 0.5, 0.1);
+        if (Math.random() < dt * 5) smokePuff(px + SHOP_CHIMNEY[0], SHOP_CHIMNEY[1] + 0.2, pz + SHOP_CHIMNEY[2], 1, 0x6b6560, 1.8, 3.2, 1.4, 0.3, 0.5);
+        if (Math.random() < dt * 1.6) embers(px + SHOP_CHIMNEY[0], SHOP_CHIMNEY[1], pz + SHOP_CHIMNEY[2], 2, 0xffa040, 0.25, 2.2, 0.6, 0.12);   // sparks from the forge chimney
       } else if (type === 'BREWER') {   // bubbles from the cauldron + green smoke from the chimney (shop-local -> world via the facing)
         const cf = Math.cos(facing), sf = Math.sin(facing);
         if (Math.random() < dt * 5) {
@@ -527,13 +288,13 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   });
 
   const labelW = label.aspect * 0.55;   // small name tag over the shopkeeper's head
-  const signSide = type === 'BREWER' ? -1 : 1;   // (owner: the brewer's sign post stood on the tower path; it hangs on the other side)
+  const signSide = type === 'BREWER' || kit ? -1 : 1;   // (owner: the brewer's sign post stood on the tower path; it hangs on the other side)
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
-      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
-      <mesh geometry={geos.glow} material={mats.glow} />
+      {geos && <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />}
+      {geos && <mesh geometry={geos.glow} material={mats.glow} />}
       {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
-      <group position={[-3.4 * signSide, 0, 3.9]}>
+      <group position={kit ? [4.25, 0, 5.0] : [-3.4 * signSide, 0, 3.9]}>   {/* (kit shops: the sign stands in the gap between two shops, in front of the awnings) */}
         <mesh geometry={signSide > 0 ? SIGN_POST[0] : SIGN_POST[1]} material={mats.lit} castShadow />
         <group ref={signRef} position={[1.2 * signSide, 3.0, 0]}>
           <mesh geometry={sign.body} material={mats.lit} position={[0, -0.0, 0]} castShadow />
@@ -882,4 +643,4 @@ export function Town({ q }: { q: QualityCfg }) {
     </>
   );
 }
-export const __builders = { buildSupplies, buildBlacksmith, buildPets, buildSign };
+export const __builders = { buildSign };

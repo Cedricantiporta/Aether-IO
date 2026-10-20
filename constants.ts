@@ -56,14 +56,16 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 export const GOLD_SCALE = 10;
 
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; position: [number, number, number]; color: string; rot?: number }[] = [
-    { type: 'SUPPLIES', position: [-13, 0, 17.5], color: '#3b82f6', rot: Math.PI },   // potion shop: by the plaza, south of the street (door faces the street)
-    { type: 'BLACKSMITH', position: [27, 0, 2], color: '#ef4444' },
-    { type: 'PETS', position: [-30, 0, 2], color: '#10b981' },          // west of the plaza, on the street (owner: in the old second house lot)
-    { type: 'ARMORY', position: [13, 0, 17.5], color: '#c9a052', rot: Math.PI },   // armor shop: by the plaza, opposite the potion shop
-    { type: 'FORTUNE', position: [-21, 0, 1.5], color: '#a46bff' },   // fortune teller (summons): beside the plaza, next to the Pet Stable
-    { type: 'WAREHOUSE', position: [19.5, 0, 2], color: '#b08850' },
-    { type: 'TECH', position: [23, 0, -6], color: '#5fc8e8', rot: -Math.PI / 2 },
-    { type: 'BREWER', position: [-15.6, 0, 107.6], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT)   // Elixir Brewer: hut outside the gate, top-left by the wall, door facing the road (= townData BREWER_HUT)   // Tech House (permanent upgrades), faces the north street end   // item storage (100 slots), beside the blacksmith (plaza side)
+    // The shop row: seven town_kit_v2 shop_stall_house pieces in a line at z 1.5 along the north side of the south street, every front
+    // facing south (+z, rot 0) toward the north-up camera; the plaza sits in the middle (render/townKit KIT_SHOPS + townData SHOP_ROW_X).
+    { type: 'PETS', position: [-39.5, 0, 1.5], color: '#10b981' },
+    { type: 'FORTUNE', position: [-31, 0, 1.5], color: '#a46bff' },     // fortune teller (summons)
+    { type: 'SUPPLIES', position: [-22.5, 0, 1.5], color: '#3b82f6' },   // potion shop
+    { type: 'ARMORY', position: [14, 0, 1.5], color: '#c9a052' },
+    { type: 'WAREHOUSE', position: [22.5, 0, 1.5], color: '#b08850' },   // item storage (100 slots)
+    { type: 'BLACKSMITH', position: [31, 0, 1.5], color: '#ef4444' },
+    { type: 'TECH', position: [39.5, 0, 1.5], color: '#5fc8e8' },        // Tech House (permanent upgrades)
+    { type: 'BREWER', position: [-15.6, 0, 107.6], color: '#5fd38a', rot: Math.PI / 2 },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT)
     { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8', rot: -Math.PI / 2 },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050', rot: 0.15 },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];

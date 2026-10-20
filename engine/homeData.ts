@@ -12,10 +12,10 @@ export const HOME_HEARTH = { x: 4.4, z: -1.6 };
 export const HOME_TABLE = { x: 1.2, z: 0.4 };
 export const HOME_SPAWN = { x: 0, z: 2.8 };
 export const HOME_EXIT = { x: 0, z: 4.2, r: 2.6 };
-/** The house door in the town (the house faces north, -z: rot PI). */
-export const HOME_DOOR = { x: HERO_HOUSE.x, z: HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, r: 2.6 };
+/** The house door in the town (the house faces south, +z, toward the camera; the kit door sits 0.8 left of the centre line). */
+export const HOME_DOOR = { x: HERO_HOUSE.x - 0.8, z: HERO_HOUSE.z + HERO_HOUSE.d / 2 + 1.1, r: 2.6 };
 /** Where the hero stands after walking out of the house (facing the town). */
-export const HOME_OUT = { x: HERO_HOUSE.x, z: HERO_HOUSE.z - HERO_HOUSE.d / 2 - 2.2 };
+export const HOME_OUT = { x: HERO_HOUSE.x - 0.8, z: HERO_HOUSE.z + HERO_HOUSE.d / 2 + 2.2 };
 
 export const HOME_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];

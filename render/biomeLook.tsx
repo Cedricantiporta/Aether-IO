@@ -13,9 +13,9 @@ interface Look { fog: Color; hemiSky: Color; hemiGround: Color; hemiI: number; s
 const mk = (fog: string, hs: string, hg: string, hi: number, sun: string, si: number, sky: [number, number, number], near: number, far: number): Look =>
   ({ fog: new Color(fog), hemiSky: new Color(hs), hemiGround: new Color(hg), hemiI: hi, sun: new Color(sun), sunI: si, sky: new Vector3(...sky), near, far, dir: new Vector3(-0.55, 0.72, 0.42).normalize() });
 
-export const TOWN_FOG = '#cfe6f2';
+export const TOWN_FOG = '#dbe9ec';
 // Town mood: a warm low-ish sun against a cool sky fill and a green-olive bounce (more colour contrast, less washed-out pale ground)
-const TOWN_HEMI_SKY = '#bcd8f4', TOWN_HEMI_GROUND = '#7b8c4a', TOWN_HEMI_I = 1.1, TOWN_SUN = '#ffe7bd', TOWN_SUN_I = 2.95;
+const TOWN_HEMI_SKY = '#c6dcf0', TOWN_HEMI_GROUND = '#92a257', TOWN_HEMI_I = 1.22, TOWN_SUN = '#ffdc9c', TOWN_SUN_I = 3.15;
 /** Extra multiplier on the hemisphere + sun light (render/CaveInterior lowers it as the cave lantern runs out). */
 export const lookDim = { k: 1 };
 export const look: Look = mk(TOWN_FOG, TOWN_HEMI_SKY, TOWN_HEMI_GROUND, TOWN_HEMI_I, TOWN_SUN, TOWN_SUN_I, [1, 1, 1], 75, 210);
@@ -28,9 +28,9 @@ interface TownKey { fog: Color; hs: Color; hg: Color; hi: number; sun: Color; si
 const tk = (fog: string, hs: string, hg: string, hi: number, sun: string, si: number, hor: number[], mid: number[], zen: number[]): TownKey =>
   ({ fog: new Color(fog), hs: new Color(hs), hg: new Color(hg), hi, sun: new Color(sun), si, hor: new Color(hor[0], hor[1], hor[2]), mid: new Color(mid[0], mid[1], mid[2]), zen: new Color(zen[0], zen[1], zen[2]) });
 const TOWN_KEYS: TownKey[] = [
-  tk('#f0cdc2', '#f0c8d8', '#7a7048', 0.98, '#ffc794', 2.1, [1, 0.72, 0.6], [0.82, 0.7, 0.86], [0.4, 0.5, 0.82]),                       // dawn: pink-gold
-  tk(TOWN_FOG, TOWN_HEMI_SKY, TOWN_HEMI_GROUND, TOWN_HEMI_I, TOWN_SUN, TOWN_SUN_I, [1, 0.93, 0.78], [0.55, 0.8, 1], [0.2, 0.5, 0.92]),  // noon (the original look)
-  tk('#cf9a9c', '#b69ad2', '#6e5a5c', 0.9, '#ff9650', 1.75, [1, 0.52, 0.26], [0.74, 0.44, 0.62], [0.3, 0.27, 0.58]),                    // dusk: warm orange sun, purple-ish sky
+  tk('#f2d2c0', '#f2cfd0', '#847a4c', 1.05, '#ffc27c', 2.35, [1, 0.72, 0.6], [0.82, 0.7, 0.86], [0.4, 0.5, 0.82]),                       // dawn: pink-gold
+  tk(TOWN_FOG, TOWN_HEMI_SKY, TOWN_HEMI_GROUND, TOWN_HEMI_I, TOWN_SUN, TOWN_SUN_I, [1, 0.92, 0.74], [0.55, 0.8, 1], [0.2, 0.5, 0.92]),  // noon (warm golden grade) (the original look)
+  tk('#d9a08e', '#c0a0c8', '#76625a', 0.98, '#ff9440', 2.0, [1, 0.52, 0.26], [0.74, 0.44, 0.62], [0.3, 0.27, 0.58]),                    // dusk: warm orange sun, purple-ish sky
   tk('#26335a', '#86a2e6', '#41506c', 0.92, '#a4c0ff', 0.5, [0.14, 0.18, 0.34], [0.07, 0.1, 0.24], [0.03, 0.045, 0.13]),               // night: cool moonlight
 ];
 /** Day sky gradient colours (non-town looks use these) + night amounts for the lamps / stars / fireflies. */
@@ -149,7 +149,7 @@ function copy(a: Look, b: Look, k: number): void {
 }
 
 /** (owner) the lower camera angle sees ~13% farther across the ground: fog + far plane + draw distance are pushed out by this. */
-export const FOG_K = 1.12;
+export const FOG_K = 0.85;   // closer camera (CameraRig CAM_CLOSE) sees less ground: fog + cull range shrink with it
 
 export function LookDriver() {
   useFrame(({ scene, camera }, dt) => {

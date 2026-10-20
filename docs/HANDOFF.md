@@ -73,7 +73,18 @@ Death returns to town, loot kept (GameOver screen -> "To do in town" popup on ar
 town (and closes the open panel first).
 
 ### 3.2 Town hub (`status MENU`; `engine/townData.ts`, `engine/systems/village.ts`, `render/Town*.tsx`)
-- A walled town (stone wall + gate, castle on a raised terrace, plaza with the founder's statue/well, chapel + graveyard,
+- **Town kit v2 layout (2026-10-20, north-up camera)**: every building front faces south (+z, rot 0) toward the fixed camera.
+  The seven town shops (Pets -39.5, Fortune -31, Potions -22.5 | plaza | Armory 14, Warehouse 22.5, Blacksmith 31, Tech 39.5; all
+  at z 1.5, `constants.ts SHOP_POSITIONS`, `townData SHOP_ROW_X / SHOP_GAPS`) are `shop_stall_house` pieces in one row on the north side
+  of the south street; keepers stand in front of the awning (right of the door), signs in the gaps, a market stall holds the free
+  west slot. Houses (`HOUSES[i].kit/.s`, all rot 0) go behind the row (north), on the rises, along the gate road and in the
+  hamlets, never south of a shop front (the camera sits ~19 m south of the hero, 50 deg pitch: a roof H high hides ~H/1.2 m behind it).
+  Keep, chapel (bell tower on its WEST side, side door added procedurally in TownScenery `addChapelSideDoor`), tavern (piece drawn at
+  `TAVERN.z + TAVERN_DZ`), gatehouse (x1.15, `WALL.gateHalf` 5), wall segments, lamps, planters, stalls, fountain (at `WELL_POS`),
+  banners and barrel/crate clusters are all kit v2 instances (`render/townKit.tsx`, one place for every placement list). Door /
+  entry triggers (`castleData CASTLE_DOOR`, `churchData`, `tavernData`, `homeData`, `townData CHAPEL_SIDE`) derive from CASTLE /
+  CHURCH / TAVERN / HERO_HOUSE (the hero's house now faces south, on the West Rise). Gate towers are colliders at x +-3.8.
+- A walled town (stone wall + gate, castle on a raised terrace, plaza with the founder's statue / fountain, chapel + graveyard,
   Golden Tankard tavern, windmill) with a large outskirts: meadow before the gate, a river with a great arched bridge,
   lake + west beach with pier and fishing, farm + barns + fields, hamlets, hills (`townHills.ts`), the Endless Tower far
   to the south-west, the **Adventure Portal** deep in the south forest (platform is walkable, E on it opens Set Out), a
@@ -274,48 +285,16 @@ screens, max-level question: class level cap is 50) have been removed.
    (ItemArt; drawn at scale 1.22 in slots on rarity-gradient backgrounds). Images sent while Claude works are NOT
    saved: ask for a re-send. Waiting for re-sends: weapons, armor, rings/amulets, cards 2, gear, drops, ores, fish,
    enemy/boss portraits, status icons, summon banners + card back (list in REFERENCES).
-9. **Town 3D (Blender kit, Higgsfield project "Aether Town Kit", revision 10)**: houses, wall runs, towers, gate are kit
-   pieces (`render/townKit.tsx`; GLB is meshopt + quantized, so meshes are de-quantized before baking). Update flow:
-   edit in Blender -> `scene_builder_3d_get_glb` -> `gltf-transform weld` + `meshopt --level medium` ->
-   `public/models/town/town_kit.glb`. Walls + towers were rebuilt plain (big cream blocks, revision 10). Open: kit shops / castle / chapel /
-   tavern (still procedural, dark roofs), place kit fountain/well/stall/lamps, hedges + stepping-stone paths on the
-   raised districts (Link's Awakening exterior reference), chimney smoke positions vs kit chimneys.
-   **Kit v2 (assets only, NOT wired in yet)**: `public/models/town/town_kit_v2.glb` (578 KB, weld + meshopt medium), built by
-   `art/blender/town_kit_v2.py` (bpy module; geometry authored in game space, flat shaded, one mesh root node per piece,
-   origin = ground centre, front = +Z). Pieces: house_small, house_two_storey, house_gabled_narrow, house_tower,
-   shop_stall_house, tavern, chapel, castle_keep, castle_wall_segment, castle_gatehouse, lamp_post, banner,
-   flower_planter, market_stall, barrel, crate, fountain_small. 12 shared flat materials (stone, stone_dark, wood,
-   timber, roof_blue #3c56a8, gold, window_glow [emissive, name contains "glow" so `townKit.tsx` puts it in the glow
-   geometry], flower_red, flower_pink, leaf, awning_blue, iron) and NO textures: add the new names to
-   `townPalette.kitColor` when wiring. Rebuild: `python3 art/blender/town_kit_v2.py [--no-render]` (writes
-   `town_kit_v2.raw.glb`, renders to `$KITV2_SHOTS` = `art/renders/kitv2/`; `--only=sheet,castle,props,town`,
-   `--closeup=<piece>[,yaw,pitch,ortho,y,x,z]` for single-piece debug shots), then
-   `npx @gltf-transform/cli weld raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb town_kit_v2.glb --level medium`
-   (delete the raw file). The node names are final, so no KIT_LOC offset table is needed (every piece sits at the origin).
-   Gotcha: never overlap coplanar faces in the script (Cycles renders them black); use `B.arch` (half-disc prism) for arches.
-   **Nature kit v1 (assets only, NOT wired in yet)**: `public/models/town/nature_kit_v1.glb` (765 KB, weld + meshopt medium), built
-   by `art/blender/nature_kit_v1.py` (same builder/material approach as v2, organic parts smooth-shaded, buildings flat with
-   chamfered boxes). 48 root nodes: trees `tree_round_a/b/c`, `tree_pine_a/b`, `palm_a/b`; plants `bush_round`, `bush_flower`,
-   `hedge_block` (2 m), `flower_patch`, `grass_tuft`, `mushroom_cluster`, `rock_round_a/b`; park `park_bench`, `park_fountain`
-   (water = `awning_blue`), `stone_path_tile`, `fence_wood` (2 m), `gazebo`, `well`, `signpost`; animals `cow`, `sheep`, `pig`,
-   `chicken`, `horse`, `cat`, `dog`, `duck`; outskirts `barn`, `farmhouse`, `windmill`, `stable`, `chicken_coop`,
-   `mining_camp_tent`, `mine_entrance`, `brewer_hut`, `endless_tower` (~27 m with the flag), `dock_segment` (4 m, deck top y 0.55,
-   posts go below y 0), `dock_post`, `small_boat`, `market_cart`, `haystack`, `crop_wheat`, `crop_cabbage`, `crop_pumpkin`,
-   `crop_row`. 14 flat materials, no textures: the 12 v2 names/colours + `leaf_light` #86cc5a and `barn_red` #a8452f (add both to
-   `townPalette.kitColor` when wiring; `window_glow` is the emissive one). Fronts face +Z, origin = ground centre. Triangles:
-   trees 240-860, animals 520-1160, buildings 0.6-3.1k.
-   **Animal rig**: each animal is an Empty root (`cow`) whose children are JOINT nodes named `<animal>_body`, `_head`, `_tail`,
-   `_legFL/_legFR/_legBL/_legBR` (chicken + duck: `_legL/_legR`, `_wingL/_wingR`, `_tail`; horse also `horse_saddle`, whose origin
-   equals the body's, so copy the body bob onto it). A joint node is an Empty whose origin IS the pivot (hip, neck base, rump,
-   shoulder) and holds one child mesh node `<name>_mesh`: rotate/translate the joint node (leg swing = rotation.x, head turn =
-   rotation.y, bob = body.position.y). Do not rotate the `_mesh` node. The joint wrapper is deliberate: `meshopt` quantization moves
-   the origin of any node that directly holds a mesh to its bbox centre (that is also why static piece nodes carry a
-   translation/scale, same as v2; it is visually identical), but a node with children stays exact. `windmill_blades` is the same
-   (joint at the hub, local z axis = spin axis, child of `windmill`). Rebuild: `python3 art/blender/nature_kit_v1.py [--no-render]`
-   (`--only=nature,animals,outskirts,scene`, `--closeup=name+name2[,yaw,pitch,ortho,y]`, renders to `$NATUREKIT_SHOTS` = `art/renders/naturekit/`:
-   `sheet_nature/animals/outskirts.png` + `scene.png` farm-and-park vignette at the game camera, pitch 50, yaw 0), then
-   `npx @gltf-transform/cli weld nature_kit_v1.raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb nature_kit_v1.glb --level medium`
-   (delete the raw/weld files). Lathe helper `B.lathe(profile, ...)` revolves closed (r, y) profiles (basins, roofs, bottles).
+9. **Town 3D (Blender kit v2, wired 2026-10-20)**: `public/models/town/town_kit_v2.glb` (17 pieces, built by `art/blender/town_kit_v2.py`,
+   weld + meshopt medium, quantized: `townKit.tsx` bakes every mesh with its world matrix) now draws all town houses, the 7 shops,
+   keep, chapel, tavern, gatehouse, wall segments, lamps, planters, stalls, fountain, banners and barrel/crate clusters (instanced per
+   piece: body + glow draw, chunked + culled; clutter = one merged geometry). Material colours: `townPalette.KIT_RECOLOR` (v2 names
+   + the old k_* names). Town draw calls vs the old procedural town: gate 175 -> ~186, plaza 185 -> ~186, castle 140 -> ~140 (+6%
+   at most), triangles 440-525 k -> 360-400 k. Rebuild the GLB: `python3 art/blender/town_kit_v2.py` then
+   `npx @gltf-transform/cli weld raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb town_kit_v2.glb --level medium` (never
+   overlap coplanar faces: Cycles renders them black; use `B.arch` for arches). Open: round wall towers are still the old kit
+   (v2 has none); hedges + stepping-stone paths on the raised districts; the Brewer / Fishmonger / Mining stalls and the barn / coop
+   are still procedural; chimney smoke uses `townData.HOUSE_KIT[kit].chimney`; shop FX use `townKit.SHOP_CHIMNEY`.
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
@@ -335,8 +314,9 @@ screens, max-level question: class level cap is 50) have been removed.
   adds terrace/hill height on top of the engine's flat y = 0. Inside the walls the town has raised districts
   (`townData.TIERS`: Chapel Hill 1.6, Tavern Row 0.9, West Rise 1.2, East Rise 0.8; castle terrace 2.2) with stairs;
   `townLift` gives their height, TOWN_COLLIDERS fence their edges, TownScenery `addTier` draws them and lifts
-  everything placed on them (put/lifted, roads in 1 m pieces). Houses, wall runs, towers and gate are the Blender kit
-  (`render/townKit.tsx`, `public/models/town/town_kit.glb`, Higgsfield project "Aether Town Kit").
+  everything placed on them (put/lifted, roads in 1 m pieces). Houses, shops, keep, chapel, tavern, gatehouse, wall segments and
+  street props are Blender kit v2 (`render/townKit.tsx`, `public/models/town/town_kit_v2.glb`); only the four round wall towers
+  still come from the old `town_kit.glb`.
 - **Rooms**: one disc/shape around 0,0 built from a seed (`roomgen.buildRoom`, `roomShape` polar table, `mapgen.installRoom`),
   only the current room exists; camp rooms use `roomShape.fixed` spots.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.
@@ -369,6 +349,10 @@ relative findings as valid. QA gotcha: restart Vite after every engine edit or t
   --port <p>`, then import modules in-page via `performance.getEntriesByType('resource')` to reach `engine/world.ts` /
   `store.ts` / `engine/game.ts` and drive `updateGame(dt)` deterministically. Kill Vite with `pkill -f "[v]ite --port <p>"`
   in a SEPARATE shell call. Kill stale servers before each run.
+- Gotchas (town probes): SwiftShader renders ~0.5 fps, so after teleporting `world.player.pos` wait ~14 frames before measuring or
+  taking a screenshot (the camera damps toward the hero); restart Vite after editing a module the probe imports (Vite then serves
+  the app a `?t=` URL, a probe's `import('/engine/world.ts')` becomes a SECOND module copy and writes to a dead `world`); a
+  `pkill -f` whose pattern also appears in your own command line kills your shell.
 - There is no unit-test suite: verify with `npx tsc --noEmit`, `npx vite build` and scripted headless runs.
 
 ### History (big milestones, oldest first)

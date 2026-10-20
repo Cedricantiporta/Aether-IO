@@ -20,7 +20,7 @@ export const MAX_ZONES = 192;
 export const MAX_PICKUPS = 500;
 export const MAX_FX = 420;
 export const MAX_CRATES = 96;
-export const SHRINE_POS: [number, number, number] = [-36.5, 0, 2]; // fortune teller (summons) - the old shrine is gone
+export const SHRINE_POS: [number, number, number] = [-31, 0, 1.5]; // fortune teller (summons) - the old shrine is gone
 export const TRAINER_POS: [number, number, number] = [-16, 0, -17]; // skill trainer: open paving west of the castle terrace (faces south)
 export const QUEST_POS: [number, number, number] = [7.5, 0, -13]; // quest giver + notice board (beside the castle path)
 
