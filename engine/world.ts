@@ -81,7 +81,7 @@ function makePlayer(): PlayerRuntime {
     cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
     ult: 0, ultT: 0, cryT: 0, buffT: 0, buffDmg: 0, buffDef: 0, buffHaste: 0, guardT: 0, guardRed: 0, avatarT: 0, titanT: 0, whirlT: 0, air: 0,
     aegis: 0, aegisMax: 0, arcane: 0, arcaneMax: 0, arcaneT: 0, radiant: 0, radiantMax: 0, radiantT: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
-    invulnT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
+    invulnT: 0, knockT: 0, knockDur: 0.2, knockDist: 0, knockDx: 0, knockDz: 0, knockDone: 0, downT: 0, downMax: 0, knockImmuneT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
     stunT: 0, rootT: 0, silenceT: 0, defDownT: 0, blindT: 0,
     burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, bleedT: 0, bleedDps: 0, dotAcc: 0,
@@ -93,8 +93,8 @@ function makePlayer(): PlayerRuntime {
 
 /** Default camera elevation (the classic 32 up / 22 back framing). */
 /** Town camera yaw (three-quarter diagonal view, camera south-west of the hero so the south + west faces of buildings are lit). */
-export const CAM_YAW_TOWN = -0.62;
-export const CAM_PITCH0 = 41 * Math.PI / 180;   // (owner) low, frontal view (was atan2(32,22) = 55.5 deg)
+export const CAM_YAW_TOWN = 0;   // (owner) straight north-up like Echoes of Wisdom (the diagonal -0.62 view was dropped)
+export const CAM_PITCH0 = 50 * Math.PI / 180;   // (owner) Echoes-of-Wisdom top-down: high enough to read the ground, low enough to see fronts and faces
 
 export const world = {
   /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */
