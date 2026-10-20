@@ -13,7 +13,8 @@ export const LoadingScreen: React.FC = () => {
   if (gone) return null;
   const p = Math.max(0, Math.min(100, done ? 100 : progress));
   return (
-    <div className={`loading-screen pe ${done ? 'done' : ''}`} data-testid="loading-screen">
+    <div className={`loading-screen pe ${done ? 'done' : ''}`} data-testid="loading-screen"
+      style={{ backgroundImage: `linear-gradient(180deg, rgba(8,10,16,.15) 0%, rgba(8,10,16,.25) 55%, rgba(8,10,16,.85) 100%), url(${((import.meta as any).env?.BASE_URL || '/') + 'art/keyart.webp'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="rpg-logo" style={{ fontSize: '2.6rem', whiteSpace: 'nowrap' }}>AETHER SURVIVOR</div>
       <div className="loading-bar">
         <div className="xp-bar" style={{ ['--fill' as any]: p / 100, height: '1.3rem' }}><div className="fill" /></div>

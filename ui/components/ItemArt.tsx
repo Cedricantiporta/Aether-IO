@@ -533,14 +533,31 @@ export function artKey(item: Item): string {
   }
 }
 
+/** Painted raster icons (public/art/items/<file>.webp, cut-out sheets A6-A8 — docs/ART_PROMPTS.md), keyed by art key. */
+const ITEM_PAINT: Record<string, string> = {
+  pet_blob: 'pet_blob', pet_rock: 'pet_rock', pet_bat: 'pet_bat', pet_fox: 'pet_fox', pet_owl: 'pet_owl', pet_fairy: 'pet_fairy',
+  pet_sprite: 'pet_sprite', pet_turtle: 'pet_turtle', pet_wolf: 'pet_wolf', pet_golem: 'pet_golem', pet_mimic: 'pet_mimic',
+  pet_dragon: 'pet_dragon', pet_shadowcat: 'pet_shadowcat', pet_crystal: 'pet_crystal', pet_phoenix: 'pet_phoenix', pet_demigod: 'pet_demigod',
+  potion_hp: 'potion_hp', potion_hp_fb: 'potion_hp', potion_hp_big: 'potion_hp_big', potion_mana: 'potion_mana', potion_mp_fb: 'potion_mana', potion_mana_big: 'potion_mana_big',
+  upgrade_core: 'upgrade_core', core: 'upgrade_core', upgrade_core_2: 'upgrade_core_2', upgrade_core_3: 'upgrade_core_3',
+  revive_ankh: 'revive_ankh', ankh: 'revive_ankh', reforge_stone: 'reforge_stone', temper_oil: 'temper_oil', augment_rune: 'augment_rune',
+  erase_scroll: 'erase_scroll', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
+  elixir_might: 'elixir_might', elixir_iron: 'elixir_iron', elixir_swift: 'elixir_swift', elixir_fortune: 'elixir_fortune', elixir_vigor: 'elixir_vigor',
+};
+const ART_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/items/';
+export const PaintImg: React.FC<{ file: string; size: number | string }> = React.memo(({ file, size }) => (
+  <img src={`${ART_URL}${file}.webp`} alt="" draggable={false} decoding="async"
+    style={{ display: 'block', width: size, height: size, objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} />
+));
 const Art: React.FC<{ k: string; c: string; size: number | string }> = React.memo(({ k, c, size }) => (
-  <Svg size={size}>{(DRAW[k] ?? Treasure)(k === 'paw' ? '#c8a878' : c)}</Svg>
+  ITEM_PAINT[k] ? <PaintImg file={ITEM_PAINT[k]} size={size} /> : <Svg size={size}>{(DRAW[k] ?? Treasure)(k === 'paw' ? '#c8a878' : c)}</Svg>
 ));
 Art.displayName = 'ItemArt';
 
+const SHARD_PAINT = new Set(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']);
 /** Painted icon for an item. `size` is px or a css length / percentage. */
 export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => (
-  item.type === 'SHARD' ? <ShardArt rarity={item.rarity} size={size} /> : item.type === 'CRYSTAL' ? <CrystalArt size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
+  item.type === 'SHARD' ? (SHARD_PAINT.has(item.rarity) ? <PaintImg file={`shard_${item.rarity}`} size={size} /> : <ShardArt rarity={item.rarity} size={size} />) : item.type === 'CRYSTAL' ? <PaintImg file="aether_crystal" size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
 );
 export const ItemArtByKey: React.FC<{ k: string; c?: string; size?: number | string }> = ({ k, c = '#e9b949', size = 26 }) => <Art k={k} c={c} size={size} />;
 

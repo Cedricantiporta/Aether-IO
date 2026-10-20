@@ -10,6 +10,7 @@ import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
+import { TownKit, KIT_HOUSE_FROM } from './townKit';
 import { useNature, makeRockGeo } from './models';
 import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
@@ -820,7 +821,7 @@ function buildTown() {
     c.b.addColored(geos.b, [x, 0, z], [0, rot, 0]); c.g.addColored(geos.g, [x, 0, z], [0, rot, 0]);
     geos.b.dispose(); geos.g.dispose();
   };
-  HOUSES.forEach((h, i) => put(h.x, h.z, h.rot, buildHouse(h, i)));
+  HOUSES.forEach((h, i) => { if (i < KIT_HOUSE_FROM) put(h.x, h.z, h.rot, buildHouse(h, i)); });   // (town houses: Blender kit, render/townKit.tsx)
   STALLS.forEach((s) => put(s.x, s.z, s.rot, buildStall(s)));
   { const c = at(CASTLE.x, CASTLE.z), tb = new GB([1, 1]), tg = new GB([1, 1]); addCastle(tb, tg); addTerrace(c.b, c.g);
     const kb = tb.build(), kg = tg.build(); c.b.addColored(kb, [0, TERRACE.h, 0]); c.g.addColored(kg, [0, TERRACE.h, 0]); kb.dispose(); kg.dispose(); }   // (the keep stands on the terrace)
@@ -839,7 +840,7 @@ function buildTown() {
     TRAIL_ROCKS.forEach(([x, z, , sc], i) => { const s1 = sc * (0.95 + rr() * 0.2); at(x, z).b.addColored(rocks[i % rocks.length], [x, -0.25 * sc, z], [0, rr() * 6, 0], [s1 * (1 + rr() * 0.25), s1 * (0.9 + rr() * 0.35), s1 * (1 + rr() * 0.25)]); });
     rocks.forEach((g) => g.dispose()); }
   put(WELL_POS.x, WELL_POS.z, 0, buildWell());
-  put(GATE.x, GATE.z, 0, buildGate());
+  // (gate, wall runs and wall towers: Blender kit, render/townKit.tsx)
   const sign = buildSignpost();
   for (const sg of SIGNS) put(sg.x, sg.z, 0, { b: sign.b.clone(), g: sign.g.clone() });
   sign.b.dispose(); sign.g.dispose();
@@ -860,16 +861,6 @@ function buildTown() {
   { const c = at(0, 68); addBridge(c.b, c.g); }
   { const c = at(MINE_BRIDGE.x, 68); addFootbridge(c.b); }
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
-  // town wall: runs are cut into ~15-unit pieces so every piece lands in its own spatial chunk (frustum culling)
-  const wr = mulberry32(4242);
-  for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
-    const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 15));
-    for (let i = 0; i < n; i++) {
-      const ax = x1 + ((x2 - x1) * i) / n, az = z1 + ((z2 - z1) * i) / n, bx = x1 + ((x2 - x1) * (i + 1)) / n, bz = z1 + ((z2 - z1) * (i + 1)) / n;
-      addWallRun(at((ax + bx) / 2, (az + bz) / 2).b, ax, az, bx, bz, ox, oz, wr);
-    }
-  }
-  WALL_TOWERS.forEach((t, i) => { const c = at(t.x, t.z); addWallTower(c.b, c.g, t, i); });
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
   return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo };
@@ -1048,6 +1039,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <Windmill />
       <ChimneySmoke q={q} />
       <Lake />
+      <React.Suspense fallback={null}><TownKit lit={mats.lit} glow={mats.glow} shadows={shadows} /></React.Suspense>
       {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>

@@ -17,10 +17,12 @@ if cut:
     a = np.asarray(im).astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     # magenta-ness: high R and B, low G
-    m = np.clip(((r + b) / 2 - g - 60) / 80, 0, 1)
-    alpha = (1 - m) * 255
+    # distance from pure magenta: only near-#FF00FF pixels become transparent (purple / pink objects survive)
+    dist = np.sqrt((255 - r) ** 2 + g ** 2 + (255 - b) ** 2)
+    alpha = np.clip((dist - 45) / 55, 0, 1) * 255
+    m = 1 - alpha / 255
     # de-spill: pull magenta fringe toward neutral
-    spill = np.clip((np.minimum(r, b) - g) / 255, 0, 1)[..., None]
+    spill = (m * np.clip((np.minimum(r, b) - g) / 255, 0, 1))[..., None]
     a2 = a.copy(); a2[..., 0] -= spill[..., 0] * (r - g) * 0.8; a2[..., 2] -= spill[..., 0] * (b - g) * 0.8
     rgba = Image.fromarray(np.dstack([np.clip(a2, 0, 255), alpha]).astype(np.uint8), 'RGBA')
     rgba.putalpha(rgba.getchannel('A').filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.6)))
