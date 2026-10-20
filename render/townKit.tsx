@@ -18,18 +18,36 @@ const KIT_URL = `${BASE}models/town/town_kit.glb`;
 export interface KitPiece { body: BufferGeometry; glow: BufferGeometry | null }
 let cache: Record<string, KitPiece> | null = null;
 
+/** Where each piece was built in the Blender scene (Blender x, y), so it can be moved back to the origin.
+ *  (The GLB is meshopt-quantized: vertex positions are normalized and the node transform carries the real scale +
+ *  offset, so every mesh is baked with its full world matrix, then re-centred by this location.) */
+const KIT_LOC: Record<string, [number, number]> = {
+  house_s: [0, 0], house_l: [14, 0], house_w: [28, 0], house_g1: [42, 0], house_g2: [56, 0],
+  wall_seg: [0, 16], tower_mid: [14, 16], tower_corner: [28, 16], gate: [14, 34],
+  lamp: [-8, 0], banner_pole: [-8, 6], planter: [-8, 12], well: [-8, 20], stall: [-8, 28], fountain: [-14, 24],
+};
 function bakeKit(scene: any): Record<string, KitPiece> {
   const out: Record<string, KitPiece> = {};
+  scene.updateMatrixWorld(true);
   scene.traverse((o: any) => {
     if (!(o as Mesh).isMesh) return;
     const m = o as Mesh;
     const name = (m.parent && m.parent.type !== 'Scene' && m.parent.name ? m.parent.name : m.name).replace(/_\d+$/, '');
-    const g = m.geometry.clone().toNonIndexed();
+    const src = m.geometry.toNonIndexed(), g = new BufferGeometry();
+    // de-quantize (int16 normalized -> float) BEFORE transforming, or world-space values get clamped to [-1, 1]
+    for (const a of ['position', 'normal'] as const) {
+      const at = src.attributes[a]; if (!at) continue;
+      const f = new Float32Array(at.count * 3);
+      for (let i = 0; i < at.count; i++) { f[i * 3] = at.getX(i); f[i * 3 + 1] = at.getY(i); f[i * 3 + 2] = at.getZ(i); }
+      g.setAttribute(a, new Float32BufferAttribute(f, 3));
+    }
+    g.applyMatrix4(m.matrixWorld);
+    const loc = KIT_LOC[name];
+    if (loc) g.translate(-loc[0], 0, loc[1]);   // Blender (x, y) -> glTF (x, -z)
     const mat = m.material as MeshStandardMaterial;
     const c = mat.color, n = g.attributes.position.count, col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
-    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') g.deleteAttribute(k);
     const isGlow = (mat.name || '').includes('glow');
     const e = (out[name] ??= { body: null as any, glow: null }) as any;
     (e[isGlow ? '_g' : '_b'] ??= []).push(g);
