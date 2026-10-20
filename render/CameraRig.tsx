@@ -3,7 +3,7 @@ import { liftAt } from './lift';
 import { currentTarget } from '../engine/systems/combat';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { world, TOWN_CENTER, CAM_PITCH0, CAM_YAW_TOWN } from '../engine/world';
+import { world, TOWN_CENTER, CAM_PITCH0 } from '../engine/world';
 import { camRel } from '../engine/camera';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -69,7 +69,7 @@ export function CameraRig() {
     // free orbit camera: yaw / pitch / orbit around the hero
     const C = world.camera;
     const free = !!setts?.freeCamera;
-    if (!free) { C.yaw = status === GameStatus.MENU && world.village.area === 'TOWN' ? CAM_YAW_TOWN : 0; C.pitch = CAM_PITCH0; }   // (owner mockups) fixed three-quarter diagonal diorama view in the town; north-up in runs / interiors
+    if (!free) C.pitch = CAM_PITCH0;   // default: fixed diorama tilt, but the player may turn the camera (drag / right stick; V resets to north-up). Free camera also tilts.
     if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);

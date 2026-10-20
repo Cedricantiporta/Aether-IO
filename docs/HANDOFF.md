@@ -380,8 +380,19 @@ screens, max-level question: class level cap is 50) have been removed.
    Authoring helpers worth reusing: `B.blob` (noise-displaced soft sphere), `B.tube` (swept tube), `B.surf`/`B.cloth` (parametric sheets/cloth), `B.lathe`
    with `lobes`, per-piece `b.grads[material] = fn(co, normal)` vertex-colour gradients, `b.jit` / `j=` hand-made irregularity. Never overlap coplanar
    faces (Cycles renders them black). Rebuild preview takes ~1 min per sheet (Cycles CPU, 20 samples).
-10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
-   CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
+   **Interiors on kit v3 (done 2026-10-20)**: `render/kitV3.tsx` is the general kit-v3 loader: `useKitV3()` bakes the GLB once (de-quantize, world matrix, material
+   colour x glTF `COLOR_0` -> vertex colour; `*_glow` materials -> emissive geometry; `light_shaft` -> additive no-depth-write beam geometry using COLOR_0 alpha),
+   `kitV3Box(piece)` gives a piece's local bounding box (colliders), `buildKitV3Static(kit, items)` / `<KitV3Static items />` merge `{piece,x,y,z,rotY,scale,tint,glow}`
+   items (`glow` recolours the emissive parts, e.g. cave crystals) into ONE lit + ONE glow + ONE beam mesh (shared materials `kitV3Lit/Glow/Shaft`). `render/interiorKit.ts`
+   = placement helpers (`floorGrid` squeezed 4 m tiles, `floorCells` free outline, `wallRun` / `onWall` by room side N/S/W/E, +Z of wall pieces = room side). The five
+   interiors (`CastleInterior`, `ChurchInterior`, `TavernInterior`, `HomeInterior`, `CaveInterior`) are item lists on it (3-5 kit draw calls each; castle ~100k tris, chapel
+   ~45k, tavern ~35k). Every south wall is cut low (camera looks in from the south) around a gate arch / timber door frame. Room sizes, NPC homes, exits, sit points
+   unchanged; furniture positions + colliders live together in `castleData / churchData / tavernData / homeData / caveData` (TABLES + TABLE_STOOLS, ARMORS,
+   HALL_PLANTS, CHURCH_PLANTS, TAP_BARRELS / TAP_PLANTS / TAP_CRATES, HOME_WARDROBE / SHELF / DESK / BARREL, cave `colliders()`): move a piece there AND in the colliders.
+   Cave: the rock walls / boulders / stalagmites / mushrooms stay procedural (`buildWall`, `buildProps`); floor = `floor_stone_cave` tiles, crystals / cart / rails /
+   desk / lantern posts / pit-prop frames = kit pieces (`propItems`). QA: grid-BFS over the collider circles reached every NPC home / exit / sit point / vein.
+10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` starts north-up (yaw 0) and forces pitch
+   CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on; the player can always turn the camera (drag / right stick, V resets), and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
    `tiltShift`, only on tiers with the composer). Next: interiors in that style (REFERENCES "Interiors").
 11. Desktop only now (owner: no phone play) — phone-specific tuning is no longer a priority.
