@@ -18,7 +18,6 @@ import type { Item } from '../../types';
 import { GameStatus } from '../../types';
 import { world } from '../../engine/world';
 import { offerTeleport } from './QuestTracker';
-import { walkToSpot, walkToNpcQuest } from '../../engine/systems/village';
 import { NPC_QUESTS, npcQuestStatus, npcQuestReady, npcQuestTurnIn, npcQuestLevelLocked } from '../../npcQuests';
 
 type St = ReturnType<typeof useGameStore.getState>;
@@ -64,12 +63,12 @@ export function upgradesOf(s: St): Up[] {
   if (pet && canAffordEvolve(pet, s.gold, s.materials)) out.push({ key: 'pet', title: 'Your pet can evolve', sub: 'Evolving raises all its stats.', go: openPets('CARE'), town: true });
   else if (pet && !petCanEvolve(pet) && petLv(pet) < petLvCap(petStage(pet)) && petHasFood(s, pet)) out.push({ key: 'petlv', title: 'Your pet can level up', sub: 'You have food for it: feed it at Pet Care.', go: openPets('CARE'), town: true });
   if (petsFusable(s)) out.push({ key: 'petfuse', title: 'Pets you can fuse', sub: `You have ${FUSE_COUNT} pets of one tier: fuse them at the Pet House.`, go: openPets('FUSE'), town: true });
-  // side quests: ready to hand in first, then ones available to accept (a few at most); Go auto-paths to the NPC
+  // side quests: ready to hand in first, then ones available to accept (a few at most); Go shows a hint (no auto-pathing)
   const nq = s.npcQuests;
   let offered = 0;
   for (const d of NPC_QUESTS) {
     const st = npcQuestStatus(d, nq, s.heroRank);
-    if (st === 'ACTIVE' && npcQuestReady(d, nq, s.inventory)) out.push({ key: 'q:' + d.id, quest: true, town: true, title: `Hand in: ${d.title}`, sub: `Ready: talk to ${npcQuestTurnIn(d)} for the reward.`, go: () => walkToNpcQuest(npcQuestTurnIn(d)) });
+    if (st === 'ACTIVE' && npcQuestReady(d, nq, s.inventory)) out.push({ key: 'q:' + d.id, quest: true, town: true, title: `Hand in: ${d.title}`, sub: `Ready: talk to ${npcQuestTurnIn(d)} for the reward.`, go: () => { const g = useGameStore.getState(); g.addNotification(`Talk to ${npcQuestTurnIn(d)} to hand it in.`, '#f1e2b8', 'SYSTEM'); useUiStore.getState().setTrackedQuest('side:' + d.id); } });
   }
   // (owner) new offers are one row: Go opens the quest log on its Side tab
   for (const d of NPC_QUESTS) if (npcQuestStatus(d, nq, s.heroRank) === 'AVAILABLE' && !npcQuestLevelLocked(d, nq, s.heroRank)) offered++;
@@ -87,10 +86,10 @@ function lowPotions(s: St): string {
   for (const i of s.inventory) if (i.type === 'POTION') { if (i.name.includes('Health')) hp += i.quantity || 1; else if (i.name.includes('Mana')) mp += i.quantity || 1; }
   return hp < POT_LOW && mp < POT_LOW ? 'HP and MP potions' : hp < POT_LOW ? 'HP potions' : mp < POT_LOW ? 'MP potions' : '';
 }
-/** Walk to the potion shop (in a run: offer the teleport home first). */
+/** Potions button: opens the Potion Shop panel directly (in a run: offer the trip home first). No auto-pathing. */
 function goPotions(): void {
-  if (useGameStore.getState().status === GameStatus.MENU) walkToSpot('SUPPLIES');
-  else offerTeleport(() => walkToSpot('SUPPLIES'));
+  const g = useGameStore.getState(), open = () => useGameStore.getState().openSpecificShop('SUPPLIES');
+  if (g.status === GameStatus.MENU) open(); else offerTeleport(open);
 }
 
 export const UpgradeNotice: React.FC = () => {

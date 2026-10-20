@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { X } from '../components/GoldIcons';
+import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
+import { CuteStar } from '../components/CuteIcons';
+import { ItemArtByKey, PaintImg } from '../components/ItemArt';
 import { useDialogue, advanceDialogue, closeDialogue, acceptOffer, replyAt } from '../../engine/systems/dialogue';
 import { device } from '../../engine/device';
 import { useGameEvent } from '../hooks/useEvent';
@@ -9,6 +11,52 @@ import { activeChar } from '../../characters';
 import { questBanner } from './QuestBanner';
 import { STORY } from '../../story';
 import { NPC_QUEST_BY_ID } from '../../npcQuests';
+import { questXp } from '../../classLevels';
+import { GOLD_SCALE, PETS_POOL, ITEMS_POOL } from '../../constants';
+
+/** What the quest-offer card shows: a short objective line + reward chips (icon + amount). */
+interface OfferChip { key: string; icon: React.ReactNode; label: string }
+interface OfferInfo { title: string; goal: string; chips: OfferChip[] }
+const itemChip = (id: string, qty: number | undefined, i: number): OfferChip => {
+  const n = PETS_POOL.find((x) => x.id === id)?.name ?? ITEMS_POOL.find((x) => x.id === id)?.name ?? id;
+  return { key: `it${i}`, icon: <ItemArtByKey k={id} size={26} />, label: (qty ?? 1) > 1 ? `x${qty}` : n };
+};
+function offerInfo(offer: string, level: number): OfferInfo | null {
+  const chips: OfferChip[] = [];
+  const pushCommon = (gold?: number, gems?: number) => {
+    if (gold) chips.push({ key: 'gold', icon: <CoinGlyph size={24} />, label: (gold * GOLD_SCALE).toLocaleString() });
+    if (gems) chips.push({ key: 'gems', icon: <GemGlyph size={24} />, label: String(gems) });
+  };
+  if (offer.startsWith('story:')) {
+    const n = Number(offer.slice(6)), st = STORY[n]; if (!st) return null;
+    chips.push({ key: 'exp', icon: <CuteStar size={22} />, label: `${questXp('STORY', level).toLocaleString()} EXP` });
+    pushCommon(st.reward.gold, st.reward.gems);
+    (st.reward.items ?? []).forEach((it, i) => chips.push(itemChip(it.id, it.qty, i)));
+    return { title: 'New Quest', goal: (STORY[n + 1]?.line ?? st.line), chips };
+  }
+  const d = NPC_QUEST_BY_ID[offer]; if (!d) return null;
+  const r = d.reward;
+  chips.push({ key: 'exp', icon: <CuteStar size={22} />, label: `${questXp('SIDE', level).toLocaleString()} EXP` });
+  pushCommon(r.gold, r.gems);
+  if (r.shards) chips.push({ key: 'shards', icon: <PaintImg file={`shard_${r.shards[0]}`} size={26} />, label: `x${r.shards[1]}` });
+  if (r.flasks) chips.push({ key: 'flasks', icon: <ItemArtByKey k="potion_hp_big" size={26} />, label: `x${r.flasks}` });
+  (r.items ?? []).forEach((it, i) => chips.push(itemChip(it.id, it.qty, i)));
+  return { title: 'Side Quest', goal: d.summary, chips };
+}
+const OfferCard: React.FC<{ offer: string }> = ({ offer }) => {
+  const level = useGameStore((s) => s.level);
+  const info = offerInfo(offer, level);
+  if (!info) return null;
+  return (
+    <div className="dlg-offer" data-testid="dialogue-offer">
+      <span className="dlg-offer-title">{info.title}</span>
+      <span className="dlg-offer-goal">{info.goal}</span>
+      <span className="dlg-offer-rewards">
+        {info.chips.map((c) => <span key={c.key} className="dlg-chip">{c.icon}{c.label && <b>{c.label}</b>}</span>)}
+      </span>
+    </div>
+  );
+};
 
 /** Typewriter: writes the line into the DOM node character by character (no React state, no per-frame renders).
  *  A tap while it types completes the line first; the next tap advances. */
@@ -52,7 +100,7 @@ function splitSpeaker(line: string): { who: string; text: string; hero: boolean 
 
 export const Dialogue: React.FC = () => {
   useShipOffer();
-  const { open, name, role, accent, lines, idx, offer, acceptLabel, hint } = useDialogue();
+  const { open, name, role, accent, lines, idx, offer, acceptLabel } = useDialogue();
   useEffect(() => () => closeDialogue(), []);
   const reply = open ? replyAt(lines, idx + 1) : null;   // (owner) the hero's reply sits on the Next / Close button
   const last = idx >= lines.length - 1 || (!!reply && idx + 1 >= lines.length - 1 && !offer);
@@ -66,6 +114,8 @@ export const Dialogue: React.FC = () => {
   const stop = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); };
   const text = sp ? sp.text : lines[idx] ?? '';
   return (
+    <>
+    {last && offer && <OfferCard offer={offer} />}
     <div className={`dlg-root ${device.touch ? 'touch' : ''}`} data-testid="dialogue-root">
       <div className="dlg pe" data-testid="dialogue" role="dialog" aria-label={`${name} says`}
         onPointerDown={(e) => { stop(e); if (finishTyping && finishTyping()) return; advanceDialogue(); }}>
@@ -74,9 +124,7 @@ export const Dialogue: React.FC = () => {
           <span className={`dlg-name${sp?.hero ? ' is-hero' : ''}`}>{sp ? sp.who : name}</span>
           <span className="dlg-role">{sp ? (sp.hero && sp.who !== 'You' ? 'You' : '') : role}</span>
         </div>
-        <button className="dlg-x" aria-label="Close" data-testid="dialogue-close" onPointerDown={(e) => { stop(e); closeDialogue(); }}><X size={16} /></button>
         <Typed key={`${name}:${idx}`} text={text} testId="dialogue-text" />
-        {last && hint && <p className="dlg-hint" data-testid="dialogue-hint">{hint}</p>}
         {last && offer
           ? (
             <span className="dlg-choices">
@@ -84,9 +132,9 @@ export const Dialogue: React.FC = () => {
               <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); if (offer.startsWith('story:')) { const st = STORY[Number(offer.slice(6))]; if (st) questBanner('main', st.title, 'accepted'); } }}>{acceptLabel}{!device.touch && <kbd>F</kbd>}</button>
             </span>
           )
-          : reply && <span className="dlg-choices"><span className="dlg-btn reply" data-testid="dialogue-next">{`\u201c${reply}\u201d`}{!device.touch && <kbd>E</kbd>}</span></span>}
-        {!(last && offer) && <span className="dlg-arrow" data-testid={reply ? undefined : 'dialogue-next'} aria-label={last ? 'Close' : 'Next'}>{'\u25bc'}</span>}
+          : <span className="dlg-choices"><span className={`dlg-btn${reply ? ' reply' : ''}`} data-testid="dialogue-next" aria-label={last ? 'Close' : 'Next'}>{reply ? `\u201c${reply}\u201d` : last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span></span>}
       </div>
     </div>
+    </>
   );
 };

@@ -3346,3 +3346,24 @@ hr, .tab-underline { display: none !important; }
 .dlg-x:hover { background: rgba(255, 255, 255, .26) !important; opacity: 1; }
 .dlg-root { z-index: 70; }
 body:has([data-testid='dialogue-root']) :is(.hud-bottom, .exp-strip, .corner-btns) { opacity: 0 !important; pointer-events: none !important; transition: opacity .15s; }
+
+/* ---- dialogue (v10): buttons bottom-right (reply = same size as Later / Accept / Next), no close X, quest offer card mid-screen ---- */
+.dlg { padding-bottom: 5rem; }
+.dlg-x, .dlg-arrow, .dlg-hint { display: none !important; }
+.dlg-choices { left: 2.2rem; right: 1.8rem; justify-content: flex-end; flex-wrap: nowrap; }
+.dlg-btn, .dlg-btn.reply { font-size: 1rem; font-weight: 800; font-style: normal; padding: .5rem 1.4rem; min-height: 2.6rem; border-radius: 999px !important; max-width: 60%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: var(--cur-hand, pointer); background: rgba(255, 255, 255, .14) !important; }
+.dlg-btn.accept { background: #fff6e0 !important; }
+.dlg-btn.reply kbd { margin-left: .5rem; }
+.dlg-offer { position: fixed; left: 50%; top: 34%; transform: translate(-50%, -50%); z-index: 71; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: .45rem; min-width: min(22rem, 86vw); max-width: 92vw; padding: 1rem 1.8rem 1.1rem; border-radius: 26px; background: rgba(36, 36, 40, .94); color: #fff; box-shadow: 0 10px 28px rgba(0, 0, 0, .4); animation: dlg-in .22s ease-out; }
+.dlg-offer-title { font-size: .8rem; font-weight: 800; letter-spacing: .04em; color: rgba(255, 255, 255, .62); }
+.dlg-offer-goal { font-size: 1.25rem; font-weight: 800; text-align: center; line-height: 1.25; color: #fff; }
+.dlg-offer-rewards { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin-top: .3rem; }
+.dlg-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .8rem .25rem .45rem; border-radius: 999px; background: rgba(255, 255, 255, .13); font-size: .95rem; font-weight: 800; color: #fff; }
+.dlg-chip b { font-weight: 800; }
+.dlg-chip .cute-ic { filter: none; }
+
+/* ---- minimap (v10): round Zelda map, ~200 px, feathered edge (radial alpha mask), no ring / border, soft shadow, tiny "N" dot ---- */
+.hud-mm-top .pe.relative.mm-wrap { border-radius: 50%; filter: drop-shadow(0 6px 10px rgba(30, 40, 30, .38)); }
+.hud-mm-top .mm-canvas, .mm-canvas { opacity: 1; border-radius: 50% !important; box-shadow: none !important;
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 80%, rgba(0, 0, 0, .55) 91%, transparent 100%); mask-image: radial-gradient(circle closest-side, #000 80%, rgba(0, 0, 0, .55) 91%, transparent 100%); }
+.mm-north { top: .5rem; width: .95rem; height: .95rem; border-radius: 50% !important; transform: translateX(-50%); font-size: .52rem; font-weight: 800; color: #5a4636; background: rgba(255, 246, 224, .85); box-shadow: none !important; z-index: 2; pointer-events: none; }

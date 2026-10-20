@@ -1,11 +1,8 @@
 import React, { useEffect } from 'react';
 import { create } from 'zustand';
-import { GameStatus } from '../../types';
 import { useGameStore } from '../../store';
 import { useUiStore } from '../uiStore';
-import { walkToMain, walkToNpcObjective } from '../../engine/systems/village';
 import { NPC_QUESTS } from '../../npcQuests';
-import { offerTeleport } from './QuestTracker';
 
 /** Quest popup (Zelda style): a wide soft band with a small italic type line, a big title and two hint pills.
  *  Fades in, holds ~3 s, fades out (pure CSS animation; the store only changes when a banner starts / ends). */
@@ -21,7 +18,8 @@ export const useQuestBanner = create<QBState>((set) => ({
 /** Shows the banner for a side quest (by title) or the main quest. */
 export function questBanner(kind: 'side' | 'main', title: string, state: 'offered' | 'accepted'): void {
   const def = kind === 'side' ? NPC_QUESTS.find((d) => d.title === title) : null;
-  const track = kind === 'main' ? () => walkToMain() : def ? () => walkToNpcObjective(def) : null;
+  const key = kind === 'main' ? 'main' : def ? 'side:' + def.id : '';
+  const track = key ? () => { useUiStore.getState().setTrackedQuest(key); useGameStore.getState().addNotification('Tracking: ' + title, '#f1e2b8', 'SYSTEM'); } : null;
   const base = kind === 'main' ? 'Main Quest' : 'Side Quest';
   useQuestBanner.getState().show({ type: state === 'offered' ? `New ${base}` : `${base} accepted`, title, track });
 }
@@ -37,11 +35,7 @@ export const QuestBanner: React.FC = () => {
     return () => clearTimeout(t);
   }, [cur, clear]);
   if (!cur) return null;
-  const go = () => {
-    if (!cur.track) return;
-    if (useGameStore.getState().status === GameStatus.PLAYING) { offerTeleport(cur.track); return; }
-    cur.track();
-  };
+  const go = () => { if (cur.track) cur.track(); };
   const stop = (e: React.PointerEvent) => e.stopPropagation();
   return (
     <div className="qb-root" key={cur.id} data-testid="quest-banner">

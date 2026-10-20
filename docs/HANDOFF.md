@@ -93,8 +93,11 @@ town (and closes the open panel first).
 - **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe tool slot halves effort),
   harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (needs Lv 15 quest
   `hilda_shoes`; 2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
-- **Navigation**: click-to-walk with A* (`systems/townPath.ts`), area-aware quest navigation (`systems/questNav.ts`; one
-  source of truth for guide arrow, tracker click, beacon, G key), NPC patrols with stuck handling.
+- **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). **Quest auto-pathing was removed by
+  owner request ("no autopath, only indicators"): no G key, tracker rows / banner "Destination" / quest-log Track / Upgrades "Go"
+  never walk.** Indicators only: area-aware quest targets (`systems/questNav.ts`) feed the guide arrow, the beacon and the round
+  minimap's tracked-quest ring (`uiStore.trackedQuest`: set by Track / Destination, '' = automatic). Tracker rows open the quest log on
+  that quest (`uiStore.openQuestLogOn`). NPC patrols with stuck handling.
 - Town shows a few ambient cameo NPCs (Erin, Cabbage Man, Tilda, Corin, Nell ...) and speech bubbles; dialogue box has
   hero "reply" lines on the Next/Close button (`dialogue.replyAt`).
 
@@ -221,7 +224,7 @@ effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS
 - **Bottom bar**: ultimate (round, soft fill-meter glow) + active skills (14 px rounded tiles, art clipped, radial cooldown sweep with a big
   white number, white key chip) + dash (Space) + two round potion bubbles. No passive slots (passives with timers show as tiny bubbles under the
   HP bar, `ui/hud/BuffTray.tsx`), no corner horse/dash buttons (E interacts/mounts); AUTO is a small pill. The bar hides during dialogue.
-- **Dialogue**: flat translucent charcoal, ~30 px radius, no lattice; the hero reply + Accept/Later sit bottom-left of the box.
+- **Dialogue**: flat translucent charcoal, ~30 px radius, no lattice, no close X; Later / Accept / Next and the hero reply (same pill size) sit bottom-right of the box. A quest offer shows a separate rounded charcoal card mid-screen ("New Quest" / "Side Quest", goal line, reward chips: EXP, coin, gems, item icons) while the offer line is up.
 
 **Nintendo Switch / Zelda: Echoes of Wisdom ("v8 Zelda" override layer, the LAST block of `index.css`; it replaces the earlier
 Korean-MMORPG v5/v6/v7 look but keeps the v7 HUD layout)**: simple and roundy. No line containers (no gold hairlines, double frames
@@ -234,13 +237,12 @@ dark with white text. Item slots stay rarity-tinted but are soft rounded tiles. 
 - **Dialogue** (`ui/hud/Dialogue.tsx`): wide (62%) rounded box (28 px) at the bottom, very dark charcoal with a faint CSS diamond
   lattice, no border; speaker name is plain italic white text above the box's top-left edge; large italic body typed out
   character by character (DOM writes, a tap completes the line first); bouncing ▼ bottom-right; reply / Later / Accept buttons are
-  small pills above the box's right side.
+  small pills in the box's bottom-right (v10).
 - **Quest banner** (`ui/hud/QuestBanner.tsx`, mounted in `GameUI`): wide soft band with an italic type line ("Side Quest accepted",
-  "New Main Quest"), a big bold title and hint pills "Destination" (cyan dot; track + auto-path via `walkToMain` / `walkToNpcObjective`,
-  teleport offer in a run) and "Open Log" (quest log). Fades in, holds ~3 s, fades out. Fired when a quest is offered on the last
+  "New Main Quest"), a big bold title and hint pills "Destination" (cyan dot; only marks the quest as tracked, no walking) and "Open Log" (quest log). Fades in, holds ~3 s, fades out. Fired when a quest is offered on the last
   dialogue line, when a side quest is accepted (the `Quest accepted:` system toast is intercepted in `Overlays.tsx`) and on main quest accept.
 - **Toasts** (`Overlays.tsx`): plain rounded `.toast-pill`s with white text; only the small dot carries the colour.
-- **HUD**: rounded pills, quest tracker rows as rounded cards, minimap with a soft rounded corner + shadow (no gold edge), captions in Nunito.
+- **HUD**: rounded pills, quest tracker rows as rounded cards, minimap = a round ~200 px painted map (feathered alpha-mask edge, soft shadow, terrain baked once per area/room offscreen, cream hero badge with a face, cream NPC dots with a yellow "!", red enemy dots, gate glyphs, glowing tracked-quest ring clamped to the edge), captions in Nunito.
 Phones (`.compact`): bigger type, fullscreen panels, tap-to-inspect in the bag.
 
 ## 4. Open tasks and known issues

@@ -13,7 +13,6 @@ import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLe
 import { activeQuests, questDone, questTitle, type QuestReward, type Quest } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
-import { walkToMain, walkToNpcObjective, walkToNpcQuest, walkToQuest } from '../../engine/systems/village';
 import { abandonNpcQuest } from '../../engine/systems/npcQuestLogic';
 import { questXp } from '../../classLevels';
 import { offerTeleport } from '../hud/QuestTracker';
@@ -24,6 +23,8 @@ import { SimpleTip } from '../components/ItemTip';
 import { lootItem } from '../../loot';
 import type { Item } from '../../types';
 
+/** Track = the minimap marker / guide follow this quest (indicators only, nothing walks). */
+const trackQuest = (key: string, title: string): void => { useUiStore.getState().setTrackedQuest(key); useGameStore.getState().addNotification('Tracking: ' + title, '#f1e2b8', 'SYSTEM'); };
 const itemName = (id: string) => ITEMS_POOL.find((i) => i.id === id)?.name ?? PETS_POOL.find((i) => i.id === id)?.name ?? LOOT_BY_ID[id]?.name ?? id;
 
 // rewards as bag slots: the real item art (rarity tint, stack count, hover tooltip); gold / gems as coin / gem squares
@@ -65,7 +66,9 @@ export const QuestLog: React.FC = () => {
   const [sel, setSel] = useState<number>(() => Math.min(story.step, STORY.length - 1));
   const [sideSel, setSideSel] = useState<string>('');
   // opening the window jumps to the current chapter and step
-  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); const t = useUiStore.getState().questLogTab; if (t) { setTab(t); useUiStore.getState().setQuestLogTab(''); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); const u = useUiStore.getState(), t = u.questLogTab; if (t) { setTab(t); u.setQuestLogTab(''); }
+    const f = u.questLogFocus;   // a tracker row opened the log on this quest
+    if (f) { useUiStore.setState({ questLogFocus: '' }); if (f.startsWith('side:')) setSideSel(f.slice(5)); else if (f.startsWith('board:')) setBoardSel(f.slice(6)); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
   const npcActive = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'ACTIVE');
   const npcOpen = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'AVAILABLE');
   // level-gated requests whose only blocker is the class level (lowest level first)
@@ -75,7 +78,7 @@ export const QuestLog: React.FC = () => {
   const chap = chapIdx.find((c) => sel >= c.a && sel < c.b) ?? chapIdx[0];
   const inRun = status === GameStatus.PLAYING;
   const mainTown = !!(step && (step.npc || step.at)) && !(step?.deliver && bagCount(inv, step.deliver.id) < step.deliver.count);   // continues in town right now
-  const track = () => { setOpen(false); if (!inRun) walkToMain(); else if (mainTown) offerTeleport(walkToMain); };
+  const track = () => { setOpen(false); useUiStore.getState().setTrackedQuest('main'); useGameStore.getState().addNotification('Tracking: ' + (step?.title ?? 'main quest'), '#f1e2b8', 'SYSTEM'); };
   const side = [...npcActive, ...npcOpen, ...npcLocked].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0] ?? npcLocked[0];
 
   return (
@@ -131,7 +134,7 @@ export const QuestLog: React.FC = () => {
                 {sel === story.step && (
                   <div className="qw-btns">
                     <button className="qw-btn pe" onClick={track}><MapPin size={15} /> Track</button>
-                    {inRun && mainTown && <button className="qw-btn gold pe" onClick={() => { setOpen(false); offerTeleport(walkToMain); }}><Navigation size={15} /> Teleport</button>}
+                    {inRun && mainTown && <button className="qw-btn gold pe" onClick={() => { setOpen(false); offerTeleport(); }}><Navigation size={15} /> Back to town</button>}
                   </div>
                 )}
               </div>
@@ -165,9 +168,9 @@ export const QuestLog: React.FC = () => {
                       <Rewards r={side.reward} scale xp={questXp('SIDE', level)} />
                     </div>
                   </div>
-                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToNpcObjective(side); if (!(inRun && (ready || ['TALK', 'INTERACT', 'ACTION', 'LISTEN'].includes(side.objective.type)) && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button>
+                  {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); trackQuest('side:' + side.id, side.title); }}><MapPin size={15} /> Track</button>
                     {!ready && <button className="qw-btn pe" data-testid="side-abandon" onClick={() => askConfirm({ title: `Abandon ${side.title}?`, body: `It goes back to ${side.giver}'s offers; your progress on it is lost.`, confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => { abandonNpcQuest(side.id); } })}>Abandon</button>}</div>}
-                  {!active && !lockLv && <div className="qw-btns"><button className="qw-btn pe" data-testid="side-track-offer" onClick={() => { setOpen(false); const go = () => walkToNpcQuest(side.giver); if (!(inRun && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button></div>}
+                  {!active && !lockLv && <div className="qw-btns"><button className="qw-btn pe" data-testid="side-track-offer" onClick={() => { setOpen(false); trackQuest('side:' + side.id, side.title); }}><MapPin size={15} /> Track</button></div>}
                 </div>
               );
             })()}
@@ -202,7 +205,7 @@ export const QuestLog: React.FC = () => {
                     </div>
                   </div>
                   <div className="qw-btns">
-                    <button className="qw-btn pe" onClick={() => { setOpen(false); const go = () => walkToQuest(bq); if (!((questDone(bq) || inRun) && inRun && offerTeleport(go))) go(); }}><MapPin size={15} /> Track</button>
+                    <button className="qw-btn pe" onClick={() => { setOpen(false); trackQuest('board:' + bq.id, questTitle(bq)); }}><MapPin size={15} /> Track</button>
                     {!questDone(bq) && <button className="qw-btn pe" data-testid="board-abandon" onClick={() => askConfirm({ title: 'Abandon this bounty?', body: 'It goes back to the Quest Board offers; your progress on it is lost.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => abandonBounty(bq.id) })}>Abandon</button>}
                   </div>
                 </div>

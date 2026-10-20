@@ -23,7 +23,7 @@ type Settings = SettingsT;
 const KEYS_KB: [string, string][] = [
   ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'],
   ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: basic attack (no auto-attack; you can walk while attacking) · accept a quest offer'],
-  ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
+  ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['V', 'Reset camera'],
   ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Tab', 'Run upgrades (in a run)'], ['Esc', 'Pause / Settings · close a window'],
 ];
 export const PauseMenu: React.FC = () => {
