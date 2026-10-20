@@ -547,7 +547,7 @@ const ITEM_PAINT: Record<string, string> = {
 const ART_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/items/';
 export const PaintImg: React.FC<{ file: string; size: number | string }> = React.memo(({ file, size }) => (
   <img src={`${ART_URL}${file}.webp`} alt="" draggable={false} decoding="async"
-    style={{ display: 'block', width: size, height: size, objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} />
+    style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} />
 ));
 const Art: React.FC<{ k: string; c: string; size: number | string }> = React.memo(({ k, c, size }) => (
   ITEM_PAINT[k] ? <PaintImg file={ITEM_PAINT[k]} size={size} /> : <Svg size={size}>{(DRAW[k] ?? Treasure)(k === 'paw' ? '#c8a878' : c)}</Svg>
