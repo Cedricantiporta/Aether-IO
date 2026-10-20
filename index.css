@@ -565,6 +565,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 
 /* ================================================================ HUD v3 (mockup style) */
 .painted { display: block; width: 100%; height: 100%; }
+.painted-art { object-fit: cover; border-radius: inherit; pointer-events: none; user-select: none; }
 .hud-slot {
   --slot: 4.3rem; position: relative; flex: none; width: var(--slot); height: var(--slot); overflow: hidden; border-radius: .35rem;
   background: #07050a; border: 2px solid #0a0709;

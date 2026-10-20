@@ -437,7 +437,15 @@ Object.assign(ICONS, {
 export const SKILL_KEYS = Object.keys(ICONS);
 
 /** Painted icon filling its parent. `id` is an ability / skill / potion key. */
+/** Painted raster art (public/art/skills/<id>.webp, sliced from the art/raw sheets — docs/ART_PROMPTS.md). Falls back to the SVG. */
+const ART_BASE = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/skills/';
+export const PAINTED_ART = new Set([
+  'GALE_ARROW', 'LIGHT_ARROW', 'FROST_FIELD', 'SHADOW_ROLL', 'STORM_ARROWS', 'FIREBALLS', 'STORM_ORBS', 'SINGULARITY',
+  'BLINK_NOVA', 'METEOR_CATA', 'CROSS_SLASH', 'WHIRLWIND', 'EARTHSPLITTER', 'BLOODRAGE_LEAP', 'TITAN_WRATH', 'DASH',
+]);
+
 export const PaintedIcon: React.FC<{ id: string }> = React.memo(({ id }) => {
+  if (PAINTED_ART.has(id)) return <img className="painted painted-art" src={`${ART_BASE}${id}.webp`} alt="" draggable={false} decoding="async" />;
   const f = ICONS[id] ?? ICONS.STAR;
   return <span className="painted">{f(`pi-${id}`)}</span>;
 });
