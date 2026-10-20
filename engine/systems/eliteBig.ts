@@ -12,7 +12,7 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyKind, Zone } from '../types';
-import { damagePlayer, applyPlayerDebuff } from './combat';
+import { damagePlayer, applyPlayerDebuff, KB } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile, enter, requestYaw } from './enemies';
 import { inCone } from './bossFx';
 
@@ -151,20 +151,20 @@ export function resolveEliteBig(z: Zone): void {
   const inside = p.alive && rx * rx + rz * rz < rr * rr;
   switch (z.trick) {
     case EB.SLAM:
-      if (inside) { damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.5); }
+      if (inside) { damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); }
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius, color: 0xf97316 });
       events.emit('trick', { pos: z.pos.clone(), kind: 'STOMP', radius: z.radius });
       events.emit('shake', { amount: 0.5 });
       break;
     case EB.CONE:
-      if (p.alive && inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL' });
+      if (p.alive && inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH });
       tv.set(z.pos.x + z.dir.x * z.radius * 0.5, 0, z.pos.z + z.dir.z * z.radius * 0.5);
       events.emit('trick', { pos: tv.clone(), kind: 'TAIL_SWEEP', radius: z.radius });
       events.emit('shake', { amount: 0.35 });
       break;
     case EB.LINE: {
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL' });
+      if (p.alive && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM });
       for (let d = 0; d < z.length; d += 4) events.emit('trick', { pos: tv.set(z.pos.x + z.dir.x * d, 0, z.pos.z + z.dir.z * d).clone(), kind: 'STAMPEDE_DUST', radius: z.radius });
       events.emit('shake', { amount: 0.3 });
       break;

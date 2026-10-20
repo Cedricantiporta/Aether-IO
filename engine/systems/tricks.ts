@@ -9,7 +9,7 @@ import { Vector3 } from 'three';
 import { world, allocZone } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyKind, Zone, ZoneKind } from '../types';
-import { applyPlayerDebuff, damagePlayer } from './combat';
+import { applyPlayerDebuff, damagePlayer, KB } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { addTempCollider, removeTempCollider, type Collider } from '../mapgen';
 import { WEAK_KINDS } from '../enemyDefs';
@@ -161,7 +161,7 @@ export function resolveTrick(z: Zone): void {
       if (inside(z)) hit = applyPlayerDebuff('DEFDOWN', 5);
       break;
     case TRICK.STOMP:
-      if (inside(z)) { damagePlayer(power * 1.1, { pos: z.pos, kind: 'PHYSICAL' }); hit = applyPlayerDebuff('STUN', 0.8); }
+      if (inside(z)) { damagePlayer(power * 1.1, { pos: z.pos, kind: 'PHYSICAL', ...KB.HEAVY }); hit = applyPlayerDebuff('STUN', 0.8); }
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius, color: 0xef4444 });
       events.emit('shake', { amount: 0.3 });
       break;
@@ -181,7 +181,7 @@ export function resolveTrick(z: Zone): void {
     case TRICK.STAMPEDE: {
       const rx = p.pos.x - z.pos.x, rz = p.pos.z - z.pos.z;
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(power, { pos: z.pos, kind: 'PHYSICAL' }); hit = applyPlayerDebuff('STUN', 0.6); }
+      if (p.alive && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(power, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); hit = applyPlayerDebuff('STUN', 0.6); }
       for (let d = 0; d < z.length; d += 4) events.emit('trick', { pos: tv.set(z.pos.x + z.dir.x * d, 0, z.pos.z + z.dir.z * d).clone(), kind: 'STAMPEDE_DUST', radius: z.radius });
       break;
     }

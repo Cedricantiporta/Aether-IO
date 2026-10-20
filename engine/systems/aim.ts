@@ -66,11 +66,11 @@ function slotOf(id: string): ActiveSlot | null {
 function isCastable(id: string): boolean {
   const p = world.player, st = useGameStore.getState();
   if (!p.alive) return false;
-  if (id === 'ult') return ultReady() && p.stunT <= 0 && p.silenceT <= 0;
-  if (id === 'dash') return p.dashCharges > 0 && p.stunT <= 0;
+  if (id === 'ult') return ultReady() && p.stunT <= 0 && p.downT <= 0 && p.silenceT <= 0;
+  if (id === 'dash') return p.dashCharges > 0 && p.stunT <= 0 && p.downT <= 0;
   const slot = slotOf(id);
   if (!slot) return false;
-  return p.cd[slot] <= 0 && p.mana >= st.getManaCost(slot) && p.stunT <= 0 && p.silenceT <= 0;
+  return p.cd[slot] <= 0 && p.mana >= st.getManaCost(slot) && p.stunT <= 0 && p.downT <= 0 && p.silenceT <= 0;
 }
 
 /** Does this skill use an aim indicator? (Barbarian dash is a plain instant dash.) */

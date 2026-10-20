@@ -22,7 +22,7 @@ type Settings = SettingsT;
 /** Every shortcut, shown in Settings > Controls (engine/input.ts is the source of truth). */
 const KEYS_KB: [string, string][] = [
   ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'],
-  ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: attack manually · accept a quest offer'],
+  ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: basic attack (no auto-attack; you can walk while attacking) · accept a quest offer'],
   ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
   ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Tab', 'Run upgrades (in a run)'], ['Esc', 'Pause / Settings · close a window'],
 ];
@@ -180,7 +180,7 @@ export const SettingsDialog: React.FC = () => {
             <p className="st-p" style={{ marginTop: '.6rem' }}>In menus and shops: D-pad / left stick move the highlight, A selects, B or Start goes back, LB / RB switch tabs, right stick scrolls, left / right adjust sliders. (Use the keyboard or mouse to see the keyboard list.)</p>
           </Sec>}
           <Sec title="Touch">
-            <p className="st-p">Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Tap an ability to cast at the auto-target, or drag from it to aim (release to cast, drag back to cancel).</p>
+            <p className="st-p">Drag on the {settings.joystickSide === 'LEFT' ? 'left' : 'right'} side to move. Hold the ATTACK button to attack (nothing fires on its own; you can walk while attacking). Tap an ability to cast at the auto-target, or drag from it to aim (release to cast, drag back to cancel).</p>
           </Sec>
         </>)}
         {tab === 'PROFILE' && (<>

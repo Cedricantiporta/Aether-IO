@@ -9,7 +9,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { Vector3 } from 'three';
 import type { Zone } from '../types';
-import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer } from './combat';
+import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer, KB } from './combat';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
@@ -158,9 +158,8 @@ export function resolveBossZone(z: Zone): void {
       const hit = inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux);
       if (z.trick === BT.SWEEP) {
         if (hit && p.alive) {
-          damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' });
+          damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.HEAVY });   // shoved away (eased, collides)
           applyPlayerDebuff('STUN', 0.5);
-          const d = Math.hypot(rx, rz) || 1; p.pos.x += (rx / d) * 4; p.pos.z += (rz / d) * 4; // shoved away
         }
         events.emit('trick', { pos: z.pos.clone(), kind: 'TAIL_SWEEP', radius: z.radius });
         events.emit('shake', { amount: 0.4 });
@@ -186,31 +185,31 @@ export function resolveBossZone(z: Zone): void {
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.8, color: 0xbfe8ff });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x16303f });
       addShake(0.7);
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3); }
       diveLanded(z.pos.x, z.pos.z);
       break;
     case BT.PILLAR:
-      if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
+      if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
       spawnProp(PROP_PILLAR, z.pos.x, z.pos.z, 0, 0.9, z.radius, 9);
       spawnHostileZone('FIREPATCH', z.pos.x, z.pos.z, z.radius * 0.8, 2.5, pw * 0.12, 0xff5a1a);
       events.emit('trick', { pos: z.pos.clone(), kind: 'PILLAR', radius: z.radius });
       break;
     case BT.SHELL:   // the Dune Colossus' mortar shell: a sand blast and a crater, no fire left behind
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('SLOW', 1.5); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.5); }
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.4, color: 0xd9b36a });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x5a4220 });
       addShake(0.15);
       break;
     case BT.SURFACE:
-      if (inside) { damagePlayer(pw * 1.2, { pos: z.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.6); }
+      if (inside) { damagePlayer(pw * 1.2, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
       events.emit('trick', { pos: z.pos.clone(), kind: 'SURFACE', radius: z.radius });
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.5, color: 0x6b8f5a });
       break;
     case BT.CORE:
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'MAGIC' }); applyPlayerDebuff('STUN', 0.7); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'MAGIC', ...KB.HEAVY }); applyPlayerDebuff('STUN', 0.7); }
       break;
     case BT.ECHO_SLAM:
-      if (inside) damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' });
+      if (inside) damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM });
       events.emit('trick', { pos: z.pos.clone(), kind: 'ECHO_SLAM', radius: z.radius });
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.5, color: 0xa8a29e });
       addShake(0.3);
@@ -250,8 +249,8 @@ export function updateBossFx(dt: number): void {
     const d = Math.hypot(pa.x - w.x, pa.z - w.z);
     if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && p.air < 0.5) {
       w.hit = true;
-      damagePlayer(w.dmg, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : 'PHYSICAL' });
-      if (w.kind === WAVE_VOID) { const k = 5 / (d || 1); pa.x += (pa.x - w.x) * k; pa.z += (pa.z - w.z) * k; applyPlayerDebuff('SLOW', 1.0); }
+      damagePlayer(w.dmg, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : 'PHYSICAL', ...KB.PUSH });
+      if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0);
       if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
     }
   }

@@ -1,5 +1,5 @@
 // ============================================================================
-// Player: movement, dash, auto-fire, cooldowns, regen, potions, death flow.
+// Player: movement, dash, manual attack, cooldowns, regen, potions, death flow.
 // ============================================================================
 import { GameStatus } from '../../types';
 import { techLv } from '../../tech';
@@ -9,7 +9,7 @@ import { useGameStore } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo } from './target';
-import { autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
+import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
@@ -40,15 +40,18 @@ const colOut: Collider[] = [];
 const aim = new Vector3();
 const _mv = { x: 0, z: 0 };
 
-/** Combat feel: attack only when standing still, auto-target the nearest enemy, slower movement. */
+/** Combat feel: attacks are manual (F / ATTACK / pad button; AUTO-battle is an opt-in bot), aimed at the lock or nearest enemy, walking is allowed while attacking, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
 /** Basic attack reach: class base (archer 16.5, owner: a bit shorter) + the attackRange stat (DEX, talents, bows, gear lines). */
 const heroRange = (st: { hero: string; stats: { attackRange?: number } }): number => (ATTACK_RANGE[st.hero] ?? 18) + (st.stats.attackRange || 0);
-/** Basic-attack range per class: heroes only auto-attack when an enemy is this close. */
+/** Basic-attack range per class: used for the AUTO-battle bot, the chase ring and the town hermit hits (manual attacks fire at any range). */
 const ATTACK_RANGE: Record<string, number> = { ARCHER: 16.5, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 17 };   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
 const STOP_TO_FIRE_DELAY = 0.12;
+/** Move-speed multiplier right after a basic attack / cast: every class can attack while walking, a bit slower (owner: ~12%). */
+const ATTACK_MOVE_MUL = 0.88;
 let autoChase = false, lastAimId = -1;
+const KNOCK_EASE = (x: number): number => 1 - (1 - x) * (1 - x) * (1 - x);   // easeOutCubic
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
 const CHASE_MUL = 1.35;
 
@@ -59,6 +62,7 @@ let ended = false;
 export function resetPlayerSystem(): void {
   dying = false; deathT = 0; ended = false; ankhOffer.open = false; ankhOffer.declined = false;
   resetAim();
+  const p = world.player; p.knockT = 0; p.knockDone = 0; p.downT = 0; p.downMax = 0; p.knockImmuneT = 0;
 }
 hooks.onRevive = () => { dying = false; deathT = 0; ended = false; ankhOffer.open = false; ankhOffer.declined = false; };
 
@@ -221,7 +225,23 @@ export function updatePlayer(dt: number): void {
       if (!p.alive) return;
     }
   } else p.dotAcc = 0;
-  const stunned = p.stunT > 0;
+  // ---- knockdown / knockback (combat.knockHero): eased slide through the normal collision, then the get-up
+  p.knockImmuneT = tickDown(p.knockImmuneT, dt);
+  if (p.downT > 0) {
+    // a dash during the get-up window (last ~40%) cancels the rest of it
+    if (p.downT < p.downMax * 0.4 && p.dashCharges > 0 && (inp.pressed.Space || world.input.touchAim.active && world.input.touchAim.id === 'dash')) p.downT = 0.001;
+    p.downT -= dt;
+    if (p.downT <= 0) { p.downT = 0; p.invulnT = Math.max(p.invulnT, GETUP_INVULN); }
+    if (abilityState.lpT > 0) abilityState.lpT = 0;   // an interrupted Lightpiercer charge is lost
+    clickMoveTo.on = false;
+  }
+  if (p.knockT > 0) {
+    p.knockT = Math.max(0, p.knockT - dt);
+    const k = KNOCK_EASE(1 - p.knockT / p.knockDur), step = (k - p.knockDone) * p.knockDist;
+    p.knockDone = k;
+    if (step > 0) resolveObstacles(p, p.pos.x + p.knockDx * step, p.pos.z + p.knockDz * step);
+  }
+  const stunned = p.stunT > 0 || p.downT > 0;
 
   // ---- charge capacity follows skill levels (cards / skill shop mid-run)
   const dLv = lv[dashKey(st.hero)];
@@ -321,10 +341,10 @@ export function updatePlayer(dt: number): void {
     else { const dx = clickMoveTo.x - p.pos.x, dz = clickMoveTo.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > 0.4) { mx = dx / d; mz = dz / d; ml = 1; } else clickMoveTo.on = false; }
   }
 
-  // ---- auto-chase: no movement input + an enemy inside the chase ring (a bit beyond weapon range) but outside
-  // weapon range -> walk toward it until it is in range (then the normal auto-attack takes over). Follows the auto-aim setting.
+  // ---- auto-chase (AUTO-battle bot only): no movement input + an enemy inside the chase ring but outside weapon range -> walk toward it.
+  // Manual play never walks by itself: attacks only fire from the attack input.
   autoChase = false;
-  if (ml === 0 && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
+  if (ml === 0 && world.autoBattle.on && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
     const range = heroRange(st);
     const chaseR = range * CHASE_MUL;
     // the targeted enemy (clicked lock, else the auto-aim pick) is always walked to until it is in weapon range
@@ -347,7 +367,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow;
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow;
     const lerpK = 1 - Math.exp(-12 * dt * iceGrip);   // (Frostpeak ice: x0.25 grip)
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;
@@ -385,28 +405,28 @@ export function updatePlayer(dt: number): void {
     if (findNearestEnemy(p.pos.x, p.pos.z, 13)) autoCast();
   }
 
-  // ---- auto-fire: only while standing still (stop to shoot). Short draw time after stopping.
-  // Archer (mobile kiter) keeps shooting while walking at 80% rate; never during a dash/leap.
-  // Holding F (or the touch ATTACK button) = manual attack: fires while moving (80% rate) and even with no target in range.
+  // ---- basic attack: ONLY while the attack input is held (F key / touch ATTACK hub / gamepad button all set KeyF).
+  // No automatic firing; the AUTO-battle toggle (opt-in, default off) is the only bot. Works while walking for every class.
   if (stunned) { p.fireT = Math.max(p.fireT, 0.1); return; }
-  // the swing timer keeps counting down while walking, so arriving at a target swings at once (no idle second)
+  // the swing timer keeps counting down, so pressing attack swings at once (no idle second)
   p.fireT = Math.max(-0.05, p.fireT - dt);
   const manual = !!world.input.keys.KeyF;
+  const bot = !manual && world.autoBattle.on && st.status === GameStatus.PLAYING;
+  if (!manual && !bot) return;
   // casting a skill: no basic attacks until the cast is done
   if (abilityState.castLockT > 0) { p.fireT = Math.max(p.fireT, 0.08); return; }
-  const busy = p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0;
-  const archerMoving = manual && moving && !busy;   // (the archer no longer shoots on the move; holding F still forces a shot)
-  if (moving && !archerMoving) { if (!autoChase) p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }   // (walking up to the target: swing on arrival)
+  if (p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0) return;
   // a new target: swing at it right away (no idle wait)
   if (autoAim.id !== lastAimId) { lastAimId = autoAim.id; if (autoAim.id >= 0) p.fireT = Math.min(p.fireT, 0.03); }
-  // Auto-attack: no target in weapon range → hold fire (no shooting into empty air).
-  const range = heroRange(st);
-  const lkd = lockedEnemy();
-  const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
-  if (!manual && !lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
+  if (bot) {   // AUTO-battle: only with a target in weapon range (no shooting into empty air)
+    const range = heroRange(st);
+    const lkd = lockedEnemy();
+    const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
+    if (!lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
+  }
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste * (archerMoving ? 0.8 : 1));
+    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste);
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }
@@ -493,11 +513,11 @@ export function updatePlayerVillage(dt: number): void {
   a.moveBlend += (target - a.moveBlend) * Math.min(1, 10 * dt);
   a.stepPhase += sp * dt * 1.4;
   if (riding) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
-  // town monsters (hermit path): auto-attack while standing still with one in range, like in a run
-  if (ml > 0 || p.dashT > 0 || p.whirlT > 0) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
+  // town monsters (hermit path): attack only while the attack input is held (no auto-attack), with one in range
+  if (!k.KeyF || p.dashT > 0 || p.whirlT > 0) { p.fireT = Math.max(p.fireT, STOP_TO_FIRE_DELAY); return; }
   const tgt = findNearestEnemy(p.pos.x, p.pos.z, heroRange(st));
   if (!tgt) { p.fireT = Math.max(p.fireT, 0.05); autoAim.id = -1; return; }
-  autoAim.id = tgt.id; p.facing = Math.atan2(tgt.pos.x - p.pos.x, tgt.pos.z - p.pos.z);   // aim at it (no run targeting in town)
+  autoAim.id = tgt.id; if (ml <= 0) p.facing = Math.atan2(tgt.pos.x - p.pos.x, tgt.pos.z - p.pos.z);   // aim at it (no run targeting in town)
   p.fireT -= dt;
   if (p.fireT <= 0) { fireBasicAttack(); p.fireT = Math.max(0, p.fireT + 1 / Math.max(0.1, st.stats.fireRate)); }
 }

@@ -17,7 +17,7 @@ import { isBossAdd } from '../enemyDefs';
 import { edgeLimit } from '../mapgen';
 import { useGameStore } from '../../store';
 import { hooks } from './hooks';
-import { damagePlayer, applyPlayerDebuff } from './combat';
+import { damagePlayer, applyPlayerDebuff, KB } from './combat';
 import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
@@ -788,7 +788,7 @@ LISTS.BOSS_WARMACH = [
     tick(e) {
       drive(e, e.dir.x, e.dir.z, e.speed * 9);
       const p = world.player, d = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
-      if (!S.ramHit && p.alive && d < e.radius + 1.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('STUN', 0.6); }
+      if (!S.ramHit && p.alive && d < e.radius + 1.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
     },
     end(e) { stand(e); },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },

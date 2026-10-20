@@ -368,6 +368,9 @@ export interface PlayerRuntime {
   shieldCdMax: number;
 
   invulnT: number;
+  /** Hero knockback / knockdown (combat.knockHero, applied in player.ts): eased slide, "down" timer, chain-knock immunity. */
+  knockT: number; knockDur: number; knockDist: number; knockDx: number; knockDz: number; knockDone: number;
+  downT: number; downMax: number; knockImmuneT: number;
   hawkT: number;         // archer R: Hawk's Focus (+60% attack speed, +40% damage)
   rageT: number;         // barbarian Q: attack speed x2
   sprintT: number;       // archer E: speed x2 + invuln

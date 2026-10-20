@@ -38,7 +38,7 @@ import { events } from '../events';
 import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
 import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
-import { damagePlayer, applyPlayerDebuff, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
+import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul, strikeT } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -316,6 +316,11 @@ function shove(dx: number, dz: number, dist: number): void {
   const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
   if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
 }
+/** Eased, collision-respecting push along (dx, dz) (a unit direction) via knockHero. */
+function push(dx: number, dz: number, dist: number): void {
+  const p = world.player.pos;
+  knockHero(p.x - dx, p.z - dz, dist, 0);
+}
 function slowPlayer(t: number): void {
   const p = world.player;
   if (p.slowT < 0.05) applyPlayerDebuff('SLOW', t);
@@ -327,7 +332,7 @@ function effects(eff: number, dmg: number, x: number, z: number): void {
   if (eff & SLOW) slowPlayer(2);
   if (eff & BURN) applyPlayerDebuff('BURN', 3, Math.max(2, dmg * 0.1));
   if (eff & POISON) applyPlayerDebuff('POISON', 3, Math.max(2, dmg * 0.1));
-  if (eff & KNOCK) { const p = world.player.pos, dx = p.x - x, dz = p.z - z, l = Math.hypot(dx, dz) || 1; shove(dx / l, dz / l, 2.2); }
+  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning slams = knockdown)
 }
 function fx(kind: string, x: number, z: number, r: number, yaw?: number): void {
   events.emit('darkFx', { pos: fxPos.set(x, 0, z), kind, radius: r, yaw });
@@ -537,7 +542,7 @@ function release(e: Enemy, px: number, pz: number): void {
       darkView.atk++;
     } else if (k === DASH) { tmp.set(S.fromX, 0, S.fromZ); tmp2.set(S.toX, 0, S.toZ); events.emit('leap', { from: tmp.clone(), to: tmp2.clone(), dur: S.act }); S.inv = S.act; fx('LEAP', S.fromX, S.fromZ, 4.5); }
     else {   // ULT: the roar terrifies (stun + slow), then giant form
-      if (playerIn(e.pos.x, e.pos.z, 9)) { damagePlayer(P * 0.8, { pos: e.pos, kind: 'PHYSICAL' }); if (applyPlayerDebuff('STUN', 0.9)) events.emit('floatText', { pos: world.player.pos, text: 'TERRIFIED', color: 0xff8a6a, scale: 0.8, dy: 0.9 }); slowPlayer(3); }
+      if (playerIn(e.pos.x, e.pos.z, 9)) { damagePlayer(P * 0.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); if (applyPlayerDebuff('STUN', 0.9)) events.emit('floatText', { pos: world.player.pos, text: 'TERRIFIED', color: 0xff8a6a, scale: 0.8, dy: 0.9 }); slowPlayer(3); }
       fx('ROAR', e.pos.x, e.pos.z, 9);
       S.titanT = 6; S.stepT = 0.5; S.mul = 1.4; e.scale = S.baseScale * 1.8; e.radius = S.baseRadius * 1.5; e.speed = S.baseSpeed * 1.15; darkView.titan = 1;
       events.emit('shake', { amount: 0.5 });
@@ -894,12 +899,12 @@ function hitPlayerShot(s: DarkShot, e: Enemy): void {
   hitSpark();
   const l = Math.hypot(s.vx, s.vz) || 1, dx = s.vx / l, dz = s.vz / l;
   switch (s.tag) {
-    case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('DEFDOWN', 4); shove(dx, dz, 1.6); break;
+    case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('DEFDOWN', 4); push(dx, dz, 1.6); break;
     case SHOT_LIGHT: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); break;
     case SHOT_FIRE: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 3, Math.max(2, s.dmg * 0.1)); events.emit('explosion', { pos: p.pos, radius: 2.4, color: 0xff6a3a }); break;
-    case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); shove(dx, dz, 2.4); break;
-    case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); shove(dx, dz, 2.6); break;
-    case SHOT_CLEAVE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); shove(dx, dz, 2.0); break;   // (bleeding)
+    case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.4); break;
+    case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); push(dx, dz, 2.6); break;
+    case SHOT_CLEAVE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.0); break;   // (bleeding)
     case SHOT_BONE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', slow: 0.4 }); slowPlayer(2); break;
     default: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); break;
   }

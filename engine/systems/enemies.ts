@@ -32,7 +32,7 @@ import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor, isStationary,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
-import { damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
+import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
@@ -1345,12 +1345,12 @@ function contactHit(e: Enemy, locked: boolean): void {
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   if (curMin >= 0) { damageMinion(curMin, dmg); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton
   const grab = e.kind === 'ZOMBIE';
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e });
-  if (e.kind === 'BOAR' && e.state === 'ATTACK') {
-    const k = 3.2 / Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
-    world.player.pos.x += dx * k; world.player.pos.z += dz * k; // knockback shove
+  const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
+  const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : big ? KB.FLINCH : null) });
+  if (charge) {
     world.player.slowT = Math.max(world.player.slowT, 0.6);
-    if (applyPlayerDebuff('STUN', 0.6)) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });
+    if (world.player.downT > 0) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });
   }
   if (e.affix === 'VAMPIRIC') e.hp = Math.min(e.maxHp, e.hp + dmg * 0.2);
   if (e.kind === 'BAT') enter(e, 'RECOVER');

@@ -643,7 +643,50 @@ function reflectRadiant(dmg: number, src?: Enemy): void {
   damageEnemy(t, dmg, reflectOpts);
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy }): void {
+/** Hero knockback / knockdown tuning (owner: big telegraphed hits push the hero, the heaviest knock it down; ordinary hits never). */
+export const KNOCK_TIME = 0.2;          // s of the eased slide
+export const KNOCK_IMMUNE = 1.6;        // s after a knockdown starts during which no new knockdown lands (down + get-up + invuln gap)
+export const GETUP_INVULN = 0.6;        // s of invulnerability after getting up
+export const KB_MAX = 6;                // clamp for a single push (units)
+/** Attack-strength presets: { kb: push distance (u), down: knockdown seconds (0 = none) }. Passed as damagePlayer `kb`/`down`. */
+export const KB = {
+  FLINCH: { kb: 0.5, down: 0 },    // big monsters' ordinary swings
+  PUSH:   { kb: 3.2, down: 0 },    // mini-boss / elite cones, charges that clip, boss secondary hits
+  HEAVY:  { kb: 4.5, down: 0 },    // big telegraphed strikes that stun
+  SLAM:   { kb: 5, down: 0.75 },   // boss signature slams, elite ground slams, charges that connect
+  CRUSH:  { kb: 6, down: 0.9 },    // the very heaviest (final bosses' ults)
+} as const;
+let knockWordT = -10;
+
+/** Knocks the hero back from (fromX, fromZ) by `force` units (eased over KNOCK_TIME, resolved against walls / colliders in player.ts)
+ *  and, when `downSec` > 0, knocks it down for that long (no move / attack / skills, get up with GETUP_INVULN s of invulnerability).
+ *  Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown and shorten the push. */
+export function knockHero(fromX: number, fromZ: number, force: number, downSec = 0): void {
+  const p = world.player;
+  if (!p.alive || force <= 0 && downSec <= 0) return;
+  if (((p.dashT > 0 || p.anim.dashing) && p.dashIframes) || p.sprintT > 0 || p.invulnT > 0) return;   // i-frames: not even pushed
+  if (p.downT > 0) return;   // already on the ground
+  const unstoppable = p.guardT > 0 || p.avatarT > 0 || p.titanT > 0 || p.ultT > 0 || p.radiant > 0 || p.whirlT > 0 || boneArmorMul() <= 0.8;
+  if (unstoppable) { force *= 0.35; downSec = 0; }
+  else if (p.arcane > 0 || p.aegis > 0) force *= 0.7;
+  if (downSec > 0 && p.knockImmuneT > 0) { downSec = 0; force *= 0.5; }   // no chain knockdowns
+  force = Math.min(KB_MAX, force);
+  if (force < 0.05 && downSec <= 0) return;
+  let dx = p.pos.x - fromX, dz = p.pos.z - fromZ;
+  let l = Math.sqrt(dx * dx + dz * dz);
+  if (l < 0.05) { dx = -Math.sin(p.facing); dz = -Math.cos(p.facing); l = 1; }   // dead centre: fall backwards
+  p.knockDx = dx / l; p.knockDz = dz / l;
+  p.knockDist = force; p.knockDur = KNOCK_TIME; p.knockT = KNOCK_TIME; p.knockDone = 0;
+  if (downSec > 0) {
+    p.downT = p.downMax = downSec; p.knockImmuneT = downSec + KNOCK_IMMUNE;
+    p.dashT = 0; p.fireT = Math.max(p.fireT, downSec); p.vel.set(0, 0, 0);
+    if (world.village.ride.on) hooks.dismount();
+    if (world.time - knockWordT > 0.8) { knockWordT = world.time; events.emit('floatText', { pos: p.pos, text: 'DOWN', color: 0xffd27a, scale: 1.1, dy: 2.8 }); }
+    addShake(0.35);
+  }
+}
+
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
@@ -702,6 +745,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   }
   p.hp -= toHp;
   if (!isDot) p.anim.hurtT = 1;
+  if (!isDot && o && o.pos && (o.kb || o.down) && p.hp > 0) knockHero(o.pos.x, o.pos.z, o.kb ?? 0, o.down ?? 0);
   if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
 
   const run = world.run;

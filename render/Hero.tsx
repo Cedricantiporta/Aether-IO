@@ -178,8 +178,16 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     g.rotation.y = s.yaw + (!lobby && p.whirlT > 0 ? t * 20 : 0);
     const dashing = !lobby && a.dashing;
     s.lean = damp(s.lean, dashing ? 0.5 : 0, 14, dt);
-    lean.current.rotation.x = s.lean;
-    lean.current.position.y = 0;
+    if (!lobby && p.downT > 0) {   // knocked down: fall back (0.18 s), lie, then rise (last 0.35 s)
+      const fall = clamp((p.downMax - p.downT) / 0.18, 0, 1), rise = clamp(p.downT / 0.35, 0, 1), k = Math.min(fall, rise);
+      const e = k * k * (3 - 2 * k);
+      s.lean = -1.4 * e;
+      lean.current.rotation.x = s.lean;
+      lean.current.position.y = 0.3 * e;
+    } else {
+      lean.current.rotation.x = s.lean;
+      lean.current.position.y = 0;
+    }
 
     // death / revive
     if (!alive && s.wasAlive) { s.death?.reset().play(); s.wDeath = 0; }

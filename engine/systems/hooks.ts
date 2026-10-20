@@ -14,4 +14,6 @@ export const hooks = {
   hostileFx: (_f: GroundFx) => {},
   /** The hero was brought back (Ankh of Life): player.ts resets its death flow. */
   onRevive: () => {},
+  /** The hero was knocked down while on a horse: village.ts dismounts. */
+  dismount: () => {},
 };

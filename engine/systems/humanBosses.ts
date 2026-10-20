@@ -17,7 +17,7 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
-import { damagePlayer, applyPlayerDebuff, staggerView, towerMode, towerCrystals, playerTrickImmune } from './combat';
+import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, towerMode, towerCrystals, playerTrickImmune } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -83,7 +83,7 @@ function shove(dx: number, dz: number, dist: number): void {
 function effects(eff: number, x: number, z: number): void {
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
   if (eff & SLOW) applyPlayerDebuff('SLOW', 2, 0.4);
-  if (eff & KNOCK) { const p = world.player.pos, dx = p.x - x, dz = p.z - z, l = Math.hypot(dx, dz) || 1; shove(dx / l, dz / l, 2.4); }
+  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning strikes = knockdown)
 }
 function clampIn(out: Vector3, pad = 3): Vector3 {
   const r = Math.hypot(out.x, out.z), lim = edgeLimit(out.x, out.z, pad);
@@ -358,7 +358,7 @@ function release(e: Enemy, px: number, pz: number): void {
       events.emit('lightning', { from: new Vector3(e.pos.x, 1.4, e.pos.z), to: new Vector3(e.pos.x + S.dirX * 36, 1.2, e.pos.z + S.dirZ * 36) });
       events.emit('shake', { amount: 0.3 });
       const rx = px - e.pos.x, rz = pz - e.pos.z, t = rx * S.dirX + rz * S.dirZ, perp = Math.abs(rx * S.dirZ - rz * S.dirX);
-      if (world.player.alive && t > -0.6 && t < 36.6 && perp < 1.5) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }
+      if (world.player.alive && t > -0.6 && t < 36.6 && perp < 1.5) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }
       humanView.atk++;
     }
   }
@@ -378,8 +378,8 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
       e.vel.set(S.dirX * 26, 0, S.dirZ * 26); requestYaw(Math.atan2(S.dirX, S.dirZ));
       if (!S.flag && playerIn(e.pos.x, e.pos.z, 1.6)) {
         S.flag = true;
-        damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL' });
-        shove(S.dirX, S.dirZ, 4.5); applyPlayerDebuff('STUN', 0.4);
+        damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });   // shield bash connects: knockdown
+        applyPlayerDebuff('STUN', 0.4);
         events.emit('shake', { amount: 0.3 });
       }
       return;

@@ -13,6 +13,7 @@ import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB, RARITY_LABEL_COLOR } from '../../constants';
 import { useGameStore } from '../../store';
 import { updatePlayerVillage } from './player';
+import { hooks } from './hooks';
 import { updateCrates, hitCrate } from './crates';
 import { updatePickups, lootPickup, petCollect } from './pickups';
 import { spawnTownMonsters, updateTownMonsters } from './townMonsters';
@@ -42,6 +43,7 @@ function mount(i: number): void {
   v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
   p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
 }
+hooks.dismount = () => dismount();
 /** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). */
 export function dismount(): void {
   const v = world.village; if (!v.ride.on) return;
