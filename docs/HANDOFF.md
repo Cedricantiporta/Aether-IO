@@ -293,6 +293,29 @@ screens, max-level question: class level cap is 50) have been removed.
    `npx @gltf-transform/cli weld raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb town_kit_v2.glb --level medium`
    (delete the raw file). The node names are final, so no KIT_LOC offset table is needed (every piece sits at the origin).
    Gotcha: never overlap coplanar faces in the script (Cycles renders them black); use `B.arch` (half-disc prism) for arches.
+   **Nature kit v1 (assets only, NOT wired in yet)**: `public/models/town/nature_kit_v1.glb` (765 KB, weld + meshopt medium), built
+   by `art/blender/nature_kit_v1.py` (same builder/material approach as v2, organic parts smooth-shaded, buildings flat with
+   chamfered boxes). 48 root nodes: trees `tree_round_a/b/c`, `tree_pine_a/b`, `palm_a/b`; plants `bush_round`, `bush_flower`,
+   `hedge_block` (2 m), `flower_patch`, `grass_tuft`, `mushroom_cluster`, `rock_round_a/b`; park `park_bench`, `park_fountain`
+   (water = `awning_blue`), `stone_path_tile`, `fence_wood` (2 m), `gazebo`, `well`, `signpost`; animals `cow`, `sheep`, `pig`,
+   `chicken`, `horse`, `cat`, `dog`, `duck`; outskirts `barn`, `farmhouse`, `windmill`, `stable`, `chicken_coop`,
+   `mining_camp_tent`, `mine_entrance`, `brewer_hut`, `endless_tower` (~27 m with the flag), `dock_segment` (4 m, deck top y 0.55,
+   posts go below y 0), `dock_post`, `small_boat`, `market_cart`, `haystack`, `crop_wheat`, `crop_cabbage`, `crop_pumpkin`,
+   `crop_row`. 14 flat materials, no textures: the 12 v2 names/colours + `leaf_light` #86cc5a and `barn_red` #a8452f (add both to
+   `townPalette.kitColor` when wiring; `window_glow` is the emissive one). Fronts face +Z, origin = ground centre. Triangles:
+   trees 240-860, animals 520-1160, buildings 0.6-3.1k.
+   **Animal rig**: each animal is an Empty root (`cow`) whose children are JOINT nodes named `<animal>_body`, `_head`, `_tail`,
+   `_legFL/_legFR/_legBL/_legBR` (chicken + duck: `_legL/_legR`, `_wingL/_wingR`, `_tail`; horse also `horse_saddle`, whose origin
+   equals the body's, so copy the body bob onto it). A joint node is an Empty whose origin IS the pivot (hip, neck base, rump,
+   shoulder) and holds one child mesh node `<name>_mesh`: rotate/translate the joint node (leg swing = rotation.x, head turn =
+   rotation.y, bob = body.position.y). Do not rotate the `_mesh` node. The joint wrapper is deliberate: `meshopt` quantization moves
+   the origin of any node that directly holds a mesh to its bbox centre (that is also why static piece nodes carry a
+   translation/scale, same as v2; it is visually identical), but a node with children stays exact. `windmill_blades` is the same
+   (joint at the hub, local z axis = spin axis, child of `windmill`). Rebuild: `python3 art/blender/nature_kit_v1.py [--no-render]`
+   (`--only=nature,animals,outskirts,scene`, `--closeup=name+name2[,yaw,pitch,ortho,y]`, renders to `$NATUREKIT_SHOTS` = `art/renders/naturekit/`:
+   `sheet_nature/animals/outskirts.png` + `scene.png` farm-and-park vignette at the game camera, pitch 50, yaw 0), then
+   `npx @gltf-transform/cli weld nature_kit_v1.raw.glb w.glb && npx @gltf-transform/cli meshopt w.glb nature_kit_v1.glb --level medium`
+   (delete the raw/weld files). Lathe helper `B.lathe(profile, ...)` revolves closed (r, y) profiles (basins, roofs, bottles).
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
