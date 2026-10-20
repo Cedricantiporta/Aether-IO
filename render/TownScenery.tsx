@@ -768,7 +768,7 @@ function TownChunk({ body, glow, lit, glowMat, shadows }: { body: BufferGeometry
   return (
     <group ref={g}>
       <mesh geometry={body} material={lit} castShadow={shadows} receiveShadow={shadows} />
-      <mesh geometry={glow} material={glowMat} />
+      {(glow.attributes.position?.count ?? 0) > 0 && <mesh geometry={glow} material={glowMat} />}
     </group>
   );
 }

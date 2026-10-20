@@ -72,6 +72,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import type { Quest } from '../../quests';
+import { FILL_COLLIDERS } from '../townFill';
 import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, horsesUnlocked, HORSE_UNLOCK_LV } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
@@ -130,6 +131,7 @@ export function placeVillageNodes(): void {
   placeNodes(TOWN_HARVEST);
   // houses / stalls / well / fences + posts / lamps / gate towers (mapgen rebuilt its collider grid just before this is called)
   for (const [x, z, r] of TOWN_COLLIDERS) addTempCollider(x, z, r, false);
+  for (const [x, z, r] of FILL_COLLIDERS) addTempCollider(x, z, r, false);   // hedges, groves, bushes, rocks, hay (engine/townFill.ts)
   for (const [x, z, r] of CAVE_MOUTH_COLLIDERS) addTempCollider(x, z, r, false);   // the crystal cave entrance props
   for (const [x, z, r] of CAMP_COLLIDERS) addTempCollider(x, z, r, false);   // the mining camp in front of it (carts, heaps, shed ...)
   for (const [x, z, r] of BEACH_COLLIDERS) addTempCollider(x, z, r, false);   // the lakeside beach (headland rocks, palms, props)

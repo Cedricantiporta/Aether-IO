@@ -73,7 +73,15 @@ Death returns to town, loot kept (GameOver screen -> "To do in town" popup on ar
 town (and closes the open panel first).
 
 ### 3.2 Town hub (`status MENU`; `engine/townData.ts`, `engine/systems/village.ts`, `render/Town*.tsx`)
-- **Town kit v2 layout (2026-10-20, north-up camera)**: every building front faces south (+z, rot 0) toward the fixed camera.
+- **Kingdom v4 (2026-10-20): dense districts, seven separate shops** (full map + coordinates: `docs/TOWN_PLAN.md`). Inside the walls: castle terrace N, plaza + statue, market street
+  (the avenue, 4 stalls a side), residential lanes (lane z 23.2 each side, houses 6 m apart at z 16.2 / 29.6, auto yards = lawn + planters from `HOUSES`), chapel quarter + graveyard (NW),
+  tavern square (NE), park + fountain (SW), cottages on both rises, the old shop-row line (z 1.2) is cottages now. **The seven town shops are NOT a row any more**: each has its own spot
+  (`constants SHOP_POSITIONS`, yaw <= 17 deg) and look (`townData SHOP_LOOK`: v2 `shop_stall_house` counter + extra pieces / props / nature props / barrel clusters, table of piece names).
+  Roads: main 5.2, streets 3.4, lanes 3. Everything else is dressing in `engine/townFill.ts` (`PIECES` role -> piece names, hedge / grove / carpet tables, `FILL` + `FILL_COLLIDERS`,
+  `CLUTTER_SPOTS`; drawn by `natureLayout` / `townKit`, solid via village.placeVillageNodes). Kit v3 = rename pieces in those tables. Small v2 pieces are baked per 32 m chunk in `TownKit`
+  (draw calls); tier stairs are >= 4 m wide because the A* grid keeps 0.78 m clearance. Check layout changes in node (esbuild-bundle townPath + mapgen + data, no browser): see TOWN_PLAN.md
+  (176 targets passed incl. all 10 shops, doors, NPC homes / patrols, fishing, nests, benches, nodes, animals).
+- **Town kit v2 layout (2026-10-20, north-up camera; the shop row described here was replaced by the bullet above)**: every building front faces south (+z, rot 0) toward the fixed camera.
   The seven town shops (Pets -39.5, Fortune -31, Potions -22.5 | plaza | Armory 14, Warehouse 22.5, Blacksmith 31, Tech 39.5; all
   at z 1.5, `constants.ts SHOP_POSITIONS`, `townData SHOP_ROW_X / SHOP_GAPS`) are `shop_stall_house` pieces in one row on the north side
   of the south street; keepers stand in front of the awning (right of the door), signs in the gaps, a market stall holds the free

@@ -6,6 +6,12 @@
 //                   the pier (dock segments, deck tiles, posts, rails, boats), shore rocks and the crops of the fields
 //   * natureLayout(q)  townPlaces + the terrain dressing that depends on the quality tier: forest ring, rim boulders, edge bushes,
 //                   flower patches, grass tufts, mushroom clusters
+//   * FILL (engine/townFill.ts, the dense dressing): every hedge, grove, bush, flower bed, rock, hay bale and cart that fills the space between the buildings
+// DISTRICT PLAN (docs/TOWN_PLAN.md): inside the walls the castle terrace N, the plaza + statue centre, the market street (avenue) with stalls, residential lanes W / E of it
+// (houses 6 m apart, lawns, planters, hedged back gardens), the chapel quarter + graveyard NW, the tavern square NE, the park + fountain SW; seven shops each on its own spot
+// (SHOP_LOOK). Outside: gate meadow (groves, stable, east park), the portal road through a forest, the farm district, the river + bridges, lake + beach + pier, mining camp, tower
+// clearing; everything else forest, hedges, rocks and props. All placements are DATA TABLES with piece names (townData lists, townFill PIECES + tables, SHOP_LOOK): kit v3 =
+// rename pieces there, nothing in this file changes.
 // render/NatureBatch.tsx draws all of it with ONE batched mesh (or chunked instancing where multi-draw is missing).
 // ============================================================================
 import {
@@ -13,6 +19,7 @@ import {
   STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec,
 } from '../engine/townData';
 import { hillAt } from '../engine/townHills';
+import { FILL, PIECES } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
 import { CAVE_MOUTH, MINE_CAMP, inCaveClear } from '../engine/caveData';
 import { ARENA_RADIUS } from '../engine/world';
@@ -47,6 +54,11 @@ export function townPlaces(): Sets {
   for (const t of TOWN_TREES) {
     const h = hash2(t.x, t.z), sc = t.s * 0.3 * (0.9 + hash2(t.x, t.z, 2) * 0.22);
     put(S, treeFor(t.kind, h), P(t.x, groundAt(t.x, t.z), t.z, hash2(t.x, t.z, 1) * TAU, sc, sc * (0.95 + hash2(t.x, t.z, 3) * 0.14)));
+  }
+  // ---- the dense dressing (engine/townFill.ts): rows are [x, z, yaw, sx, sy, sz]; the ground height is added here
+  for (const name of Object.keys(FILL)) for (const [x, z, ry, sx, sy, sz] of FILL[name]) {
+    const low = /rock/.test(name) ? 0.2 * sx : /tree|palm|pine/.test(name) ? 0.1 : 0;
+    put(S, name as NKPiece, { x, y: groundAt(x, z) - low, z, ry, sx, sy, sz });
   }
   // ---- palms along the beach and the lake shore (beachData PALMS: x, z, scale, lean yaw)
   PALMS.forEach(([x, z, s, lean], i) => put(S, i % 2 ? 'palm_b' : 'palm_a', P(x, Math.max(0, groundAt(x, z)), z, lean, s * (0.9 + hash2(x, z) * 0.2))));

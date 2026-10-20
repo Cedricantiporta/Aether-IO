@@ -56,15 +56,15 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 export const GOLD_SCALE = 10;
 
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; position: [number, number, number]; color: string; rot?: number }[] = [
-    // The shop row: seven town_kit_v2 shop_stall_house pieces in a line at z 1.5 along the north side of the south street, every front
-    // facing south (+z, rot 0) toward the north-up camera; the plaza sits in the middle (render/townKit KIT_SHOPS + townData SHOP_ROW_X).
-    { type: 'PETS', position: [-39.5, 0, 1.5], color: '#10b981' },
-    { type: 'FORTUNE', position: [-31, 0, 1.5], color: '#a46bff' },     // fortune teller (summons)
-    { type: 'SUPPLIES', position: [-22.5, 0, 1.5], color: '#3b82f6' },   // potion shop
-    { type: 'ARMORY', position: [14, 0, 1.5], color: '#c9a052' },
-    { type: 'WAREHOUSE', position: [22.5, 0, 1.5], color: '#b08850' },   // item storage (100 slots)
-    { type: 'BLACKSMITH', position: [31, 0, 1.5], color: '#ef4444' },
-    { type: 'TECH', position: [39.5, 0, 1.5], color: '#5fc8e8' },        // Tech House (permanent upgrades)
+    // The seven town shops each have their own spot and look (owner 2026-10-20: not one row): fronts face south or within ~17 deg of it.
+    // Structure + dressing per shop: engine/townData.ts SHOP_LOOK (data table, piece names; kit v3 swaps pieces there).
+    { type: 'PETS', position: [-12.4, 0, 15.6], color: '#10b981' },          // beside the park (SW quarter)
+    { type: 'FORTUNE', position: [-39, 0, 17], rot: 0.3, color: '#a46bff' },   // fortune teller (summons): the quiet corner on the West Rise
+    { type: 'SUPPLIES', position: [-31.8, 0, -12.4], color: '#3b82f6' },      // potion shop: the herb garden by the chapel / graveyard path
+    { type: 'ARMORY', position: [-8.2, 0, -10.6], color: '#c9a052' },        // by the castle path, the guards' side
+    { type: 'WAREHOUSE', position: [13.8, 0, 15.8], color: '#b08850' },      // item storage (100 slots): market street, cart yard
+    { type: 'BLACKSMITH', position: [13.2, 0, 29.0], rot: -0.12, color: '#ef4444' },   // the forge yard by the gate
+    { type: 'TECH', position: [36.4, 0, 17.4], rot: -0.25, color: '#5fc8e8' },   // Tech House (permanent upgrades): on the East Rise
     { type: 'BREWER', position: [-10.2, 0, 106.2], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
     { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050' },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard

@@ -8,20 +8,24 @@
 // instancing). Everything is static: filled once, no per-frame work.
 // The two round wall towers still come from the old kit (town_kit.glb): v2 has no tower piece.
 // ============================================================================
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { BufferGeometry, Float32BufferAttribute, InstancedMesh, Material, Matrix4, Mesh, MeshStandardMaterial, Euler, Quaternion, Vector3 } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Group, InstancedMesh, Material, Matrix4, Mesh, MeshStandardMaterial, Euler, Quaternion, Vector3 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BASE } from './models';
 import { Inst } from './Inst';
+import { cullRegister } from './distCull';
 import { setInst } from './util';
 import { kitColor } from './townPalette';
 import {
-  HOUSES, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, WELL_POS, STALLS, LAMPS, PLANTERS, SHOP_GAPS, SHOP_ROW_Z, PLAZA,
+  HOUSES, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, WELL_POS, STALLS, LAMPS, PLANTERS, SHOP_LOOK, shopLocal,
   townLift,
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
+import { CLUTTER_SPOTS } from '../engine/townFill';
 
+/** chunk edge of the town kit's instanced sets (the dense town has many more pieces: fewer, larger chunks keep the draw calls down; the camera only sees ~25 m anyway) */
+const CHUNK_V2 = 24;
 const V1_URL = `${BASE}models/town/town_kit.glb`;
 const V2_URL = `${BASE}models/town/town_kit_v2.glb`;
 export interface KitPiece { body: BufferGeometry; glow: BufferGeometry | null }
@@ -91,6 +95,11 @@ function placements(): Record<string, Place[]> {
   HOUSES.forEach((h) => { if (h.kit) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
   // the shop row
   for (const sp of SHOP_POSITIONS) if (KIT_SHOPS.has(sp.type)) add(2, 'shop_stall_house', { x: sp.position[0], y: lift(sp.position[0], sp.position[2]), z: sp.position[2], ry: sp.rot ?? 0, sx: 1, sy: 1, sz: 1 });
+  // each town shop's own extras: more building pieces + props around the counter (engine/townData SHOP_LOOK, piece names; shop-local frame)
+  for (const sp of SHOP_POSITIONS) {
+    const L = SHOP_LOOK[sp.type]; if (!L) continue;
+    for (const [piece, dx, dz, yaw, s] of [...L.extra, ...L.dress]) { const [x, z] = shopLocal(sp.position[0], sp.position[2], sp.rot ?? 0, dx, dz); add(2, piece, { x, y: lift(x, z), z, ry: (sp.rot ?? 0) + yaw, sx: s, sy: s, sz: s }); }
+  }
   // landmarks
   add(2, 'tavern', { x: TAVERN.x, y: lift(TAVERN.x, TAVERN.z), z: TAVERN.z + TAVERN_DZ, ry: 0, sx: 1, sy: 1, sz: 1 });
   add(2, 'chapel', { x: CHURCH.x, y: lift(CHURCH.x, CHURCH.z), z: CHURCH.z, ry: 0, sx: 1, sy: 1, sz: 1 });
@@ -121,10 +130,9 @@ const BANNERS: [number, number, number][] = [
 
 /** Barrel + crate clusters (one merged geometry, one instanced draw): [x, z, ry]. In the gaps of the shop row, by the stalls, at the gate. */
 function clutterSpots(): number[][] {
-  const P: number[][] = [];
-  for (const gx of SHOP_GAPS) P.push([gx, SHOP_ROW_Z + 0.2, gx * 1.7]);
-  for (const s of STALLS) P.push([s.x + 2.7, s.z + 0.4, s.rot + 0.4]);
-  P.push([PLAZA.x - 9.8, PLAZA.z + 6.6, 0.5], [PLAZA.x + 9.8, PLAZA.z + 6.4, -0.4]);
+  const P: number[][] = CLUTTER_SPOTS.map((c) => [c[0], c[1], c[2]]);   // (engine/townFill.ts: only the spots that fit, each one solid)
+  for (const s of STALLS) if (Math.abs(s.x) > 8) P.push([s.x + 2.7, s.z + 0.4, s.rot + 0.4]);
+  for (const sp of SHOP_POSITIONS) { const L = SHOP_LOOK[sp.type]; if (L) for (const [dx, dz, yaw] of L.cluster) { const [x, z] = shopLocal(sp.position[0], sp.position[2], sp.rot ?? 0, dx, dz); P.push([x, z, yaw]); } }
   P.push([GATE.x - 11.2, GATE.z + 3.6, 0.3], [GATE.x + 11.2, GATE.z + 3.6, 2.6]);
   return P;
 }
@@ -145,7 +153,22 @@ function buildClutter(kit: Kit): BufferGeometry | null {
   return g;
 }
 
-/** All kit pieces of the walled town, instanced per piece (body + glow). */
+/** Pieces up to this many vertices (planters, lamps, banners, stalls, wall segments, barrel clusters ...) are baked together per 32 m chunk: one draw call for the lot instead of one per
+ *  piece type per chunk (the dense town has ~25 small piece types). Bigger pieces (houses, shops, landmarks) stay instanced per piece. */
+const LIGHT_VERTS = 1500, MERGE_CH = 32;
+function MergedKitChunk({ body, glow, lit, glowMat, cast, receive }: { body: BufferGeometry; glow: BufferGeometry | null; lit: Material; glowMat: Material; cast: boolean; receive: boolean }) {
+  const g = useRef<Group>(null!);
+  useEffect(() => { if (!body.boundingSphere) body.computeBoundingSphere(); const sp = body.boundingSphere!; return cullRegister(g.current, sp.center.x, sp.center.z, sp.radius, false); }, [body]);
+  useEffect(() => () => { body.dispose(); glow?.dispose(); }, [body, glow]);
+  return (
+    <group ref={g}>
+      <mesh geometry={body} material={lit} castShadow={cast} receiveShadow={receive} />
+      {glow && <mesh geometry={glow} material={glowMat} />}
+    </group>
+  );
+}
+
+/** All kit pieces of the walled town: heavy pieces instanced per piece (body + glow), light ones baked per chunk. */
 export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material; shadows: boolean }) {
   const k1 = useKit(V1_URL, V1_LOC), k2 = useKit(V2_URL, null);
   const sets = useMemo(() => {
@@ -154,19 +177,30 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
       const [v, name] = k.split(':'), piece = (v === '1' ? k1 : k2)[name];
       return piece ? { k, piece, places: P[k], fill: (m: InstancedMesh) => { P[k].forEach((p, i) => setInst(m, i, p.x, p.y ?? 0, p.z, p.ry, p.sx, p.sy, p.sz)); m.count = P[k].length; } } : null;
     }).filter(Boolean) as { k: string; piece: KitPiece; places: Place[]; fill: (m: InstancedMesh) => void }[];
+    const heavy = list.filter((s) => s.piece.body.attributes.position.count >= LIGHT_VERTS), light = list.filter((s) => s.piece.body.attributes.position.count < LIGHT_VERTS);
+    const by = new Map<string, { b: BufferGeometry[]; g: BufferGeometry[] }>();
+    const bake = (geo: BufferGeometry, glowGeo: BufferGeometry | null, p: Place) => {
+      _q.setFromEuler(_e.set(0, p.ry, 0)); _m.compose(_p.set(p.x, p.y ?? 0, p.z), _q, _s.set(p.sx, p.sy, p.sz));
+      const key = Math.floor(p.x / MERGE_CH) + ',' + Math.floor(p.z / MERGE_CH);
+      let e = by.get(key); if (!e) by.set(key, (e = { b: [], g: [] }));
+      e.b.push(geo.clone().applyMatrix4(_m)); if (glowGeo) e.g.push(glowGeo.clone().applyMatrix4(_m));
+    };
+    for (const s of light) for (const p of s.places) bake(s.piece.body, s.piece.glow, p);
     const spots = clutterSpots(), cg = buildClutter(k2);
-    const clutter = cg ? { geo: cg, n: spots.length, fill: (m: InstancedMesh) => { spots.forEach((s, i) => setInst(m, i, s[0], townLift(s[0], s[1]), s[1], s[2], 1, 1, 1)); m.count = spots.length; } } : null;
-    return { list, clutter };
+    if (cg) for (const sp of spots) bake(cg, null, { x: sp[0], y: townLift(sp[0], sp[1]), z: sp[1], ry: sp[2], sx: 1, sy: 1, sz: 1 });
+    const merged = Array.from(by.values()).map((e) => ({ body: mergeGeometries(e.b, false)!, glow: e.g.length ? mergeGeometries(e.g, false) : null }));
+    for (const e of by.values()) for (const x of [...e.b, ...e.g]) x.dispose();
+    return { heavy, merged };
   }, [k1, k2]);
   return (
     <group>
-      {sets.list.map((s) => (
+      {sets.heavy.map((s) => (
         <React.Fragment key={s.k}>
-          <Inst geo={s.piece.body} mat={lit} count={s.places.length} fill={s.fill} cast={shadows} receive={shadows} />
-          {s.piece.glow && <Inst geo={s.piece.glow} mat={glow} count={s.places.length} fill={s.fill} />}
+          <Inst geo={s.piece.body} mat={lit} count={s.places.length} fill={s.fill} cast={shadows} receive={shadows} chunk={CHUNK_V2} />
+          {s.piece.glow && <Inst geo={s.piece.glow} mat={glow} count={s.places.length} fill={s.fill} chunk={CHUNK_V2} />}
         </React.Fragment>
       ))}
-      {sets.clutter && <Inst geo={sets.clutter.geo} mat={lit} count={sets.clutter.n} fill={sets.clutter.fill} cast={false} receive={shadows} />}
+      {sets.merged.map((c, i) => <MergedKitChunk key={i} body={c.body} glow={c.glow} lit={lit} glowMat={glow} cast={shadows} receive={shadows} />)}
     </group>
   );
 }
