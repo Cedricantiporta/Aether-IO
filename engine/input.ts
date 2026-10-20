@@ -1,7 +1,7 @@
 // ============================================================================
 // Keyboard + pointer -> world.input. Global hotkeys live here and nowhere else.
 // ============================================================================
-import { world, CAM_PITCH0 } from './world';
+import { world, CAM_PITCH0, CAM_YAW_TOWN } from './world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { uiOverlayOpen, closeTopOverlay, useUiStore } from '../ui/uiStore';
@@ -94,7 +94,7 @@ export function installInput(): () => void {
         }
         break;
       case 'KeyV':   // reset the camera (default angle, zoom and facing)
-        if (inGame) { const c = world.camera; c.yaw = Math.round(c.yaw / (Math.PI * 2)) * Math.PI * 2; c.pitch = CAM_PITCH0; c.dist = 1; }   // (nearest full turn: it swings back, no spin)
+        if (inGame) { const c = world.camera; c.yaw = (st.status === GameStatus.MENU && world.village.area === 'TOWN' ? CAM_YAW_TOWN : 0) + Math.round(c.yaw / (Math.PI * 2)) * Math.PI * 2; c.pitch = CAM_PITCH0; c.dist = 1; }   // (nearest full turn: it swings back, no spin)
         break;
       default: break;
     }

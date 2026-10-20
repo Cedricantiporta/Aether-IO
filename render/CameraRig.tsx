@@ -3,7 +3,7 @@ import { liftAt } from './lift';
 import { currentTarget } from '../engine/systems/combat';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { world, TOWN_CENTER, CAM_PITCH0 } from '../engine/world';
+import { world, TOWN_CENTER, CAM_PITCH0, CAM_YAW_TOWN } from '../engine/world';
 import { camRel } from '../engine/camera';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -25,7 +25,9 @@ const portalAt = (x: number, z: number): { x: number; z: number } | null => {
 };
 const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
 
-const CAM_DIST0 = Math.hypot(32, 22);   // view distance hero->camera (kept: the hero stays the same size on screen)
+const CAM_DIST0 = Math.hypot(32, 22);
+/** Closer camera (owner: Echoes-of-Wisdom framing, hero ~1.5x bigger); interiors (dist < 1) are scaled less so they do not get too tight. */
+const CAM_CLOSE = 0.55, CAM_CLOSE_IN = 0.8;   // view distance hero->camera (kept: the hero stays the same size on screen)
 const LOOK_AHEAD = 2.8, LOOK_Y = 1.15;   // look-at: a bit ahead of the hero (hero sits below centre) and at chest/face height
 /** Diorama camera: FOV 26 instead of 40, pushed back so the hero area keeps the same size on screen. */
 const FOV0 = 40, FOV_TELE = 26, TELE = Math.tan((FOV0 / 2) * Math.PI / 180) / Math.tan((FOV_TELE / 2) * Math.PI / 180);
@@ -67,13 +69,13 @@ export function CameraRig() {
     // free orbit camera: yaw / pitch / orbit around the hero
     const C = world.camera;
     const free = !!setts?.freeCamera;
-    if (!free) { C.yaw = 0; C.pitch = CAM_PITCH0; }   // (owner: Link's Awakening style) fixed north-up diorama view
+    if (!free) { C.yaw = status === GameStatus.MENU && world.village.area === 'TOWN' ? CAM_YAW_TOWN : 0; C.pitch = CAM_PITCH0; }   // (owner mockups) fixed three-quarter diagonal diorama view in the town; north-up in runs / interiors
     if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
     s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
     _tgt.x -= Math.sin(s.yaw) * LOOK_AHEAD; _tgt.z -= Math.cos(s.yaw) * LOOK_AHEAD;   // away from the camera = north when yaw 0
-    const R = CAM_DIST0 * s.zoom * s.dist * s.tele, hr = Math.cos(s.pitch) * R;
+    const R = CAM_DIST0 * s.zoom * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
     // ---- lobby orbit: sweep around the hero/town

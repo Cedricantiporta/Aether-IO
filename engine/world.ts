@@ -92,6 +92,8 @@ function makePlayer(): PlayerRuntime {
 }
 
 /** Default camera elevation (the classic 32 up / 22 back framing). */
+/** Town camera yaw (three-quarter diagonal view, camera south-west of the hero so the south + west faces of buildings are lit). */
+export const CAM_YAW_TOWN = -0.62;
 export const CAM_PITCH0 = 41 * Math.PI / 180;   // (owner) low, frontal view (was atan2(32,22) = 55.5 deg)
 
 export const world = {
