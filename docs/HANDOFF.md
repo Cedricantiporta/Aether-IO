@@ -231,9 +231,10 @@ screens, max-level question: class level cap is 50) have been removed.
    (ItemArt; drawn at scale 1.22 in slots on rarity-gradient backgrounds). Images sent while Claude works are NOT
    saved: ask for a re-send. Waiting for re-sends: weapons, armor, rings/amulets, cards 2, gear, drops, ores, fish,
    enemy/boss portraits, status icons, summon banners + card back (list in REFERENCES).
-9. **Town 3D (Blender kit, Higgsfield project "Aether Town Kit", revision 9)**: houses, wall runs, towers, gate are kit
-   pieces (`render/townKit.tsx`; GLB is meshopt + quantized, so meshes are de-quantized before baking). Open: rebuild
-   wall/tower blocks bigger + plainer like the gate (owner: no detailed full bricks), kit shops / castle / chapel /
+9. **Town 3D (Blender kit, Higgsfield project "Aether Town Kit", revision 10)**: houses, wall runs, towers, gate are kit
+   pieces (`render/townKit.tsx`; GLB is meshopt + quantized, so meshes are de-quantized before baking). Update flow:
+   edit in Blender -> `scene_builder_3d_get_glb` -> `gltf-transform weld` + `meshopt --level medium` ->
+   `public/models/town/town_kit.glb`. Walls + towers were rebuilt plain (big cream blocks, revision 10). Open: kit shops / castle / chapel /
    tavern (still procedural, dark roofs), place kit fountain/well/stall/lamps, hedges + stepping-stone paths on the
    raised districts (Link's Awakening exterior reference), chimney smoke positions vs kit chimneys.
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
