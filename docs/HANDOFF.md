@@ -352,6 +352,26 @@ screens, max-level question: class level cap is 50) have been removed.
    Gotchas: `ANIMALS` indices matter (milking uses `milkCd[16]`, quest nodes 200 + index); the pier deck is walkable in the A* grid
    (`townPath` marks `DECK_RECTS`, grid box now starts at x -100); never put a building / fountain across the lanes of the east park or the
    farm track (the park behind the paddock was cut off once: run the A* test).
+   **Kit v3 (built 2026-10-20, NOT wired yet)**: `public/models/town/kit_v3.glb` (~1.9 MB, weld + meshopt medium), built by
+   `art/blender/kit_v3.py` (`--no-render`, `--only=trees,town,props,shops,interiors,scene,throne`, `--closeup=name+name2[,yaw,pitch,ortho,y,spacing]`;
+   previews in `$KITV3_SHOTS` = `art/renders/kitv3/`; compress: `npx @gltf-transform/cli weld raw.glb w.glb && ... meshopt w.glb kit_v3.glb --level medium`).
+   104 root Empties, each with one child mesh `<piece>_mesh` (joint wrapper like nature kit v1; fronts +Z, origin = ground centre; for wall-mount pieces
+   `window_flowerbox`, `awning_*`, `window_curtained`, `painting_frame`, `banner_wall_red`, `shop_sign_hanging` the back is the z=0 plane and the
+   sign hangs at y 0.2-1.0). 18 flat materials = the 14 nature-kit ones + `cream_white`, `rune_glow` (emissive, cyan), `awning_green`, `awning_red`.
+   **NEW: every mesh has a vertex colour layer (glTF `COLOR_0`, RGBA) that MULTIPLIES the material colour** (material = lightest tone; canopies get a
+   dark teal underside -> sun-kissed top, walls/roofs a darker base, `fortune_tent` is tinted purple through it). The loader (`townKit`/`natureKit`
+   bake) must multiply COLOR_0 into its material->vertex colour step instead of overwriting it; `light_shaft` also uses COLOR_0 alpha (soft beam,
+   `window_glow` material, needs a transparent/additive material). Trees (all 500-1600 tris): `tree_oak_big/oak_small/birch/fruit/blossom/willow`,
+   `tree_pine_layered_a/b`, `palm_v3`, `bush_cluster`. Town: houses `house_corner_L` (4.9k), `house_row_3`, `house_bakery`, `house_flowerbox` (3.9-4.9k),
+   `wall_tower_round`, `adventure_portal`, `ship_big` (14 m, bow +Z, waterline y 0), `bridge_stone_arch` (10 m along X), `bridge_wood_small`, `stairs_stone`,
+   `statue_hero`, `hedge_arch`; props `beach_umbrella/crates`, `fishing_net_rack`, `campfire`, `flower_bed_round/long`, `laundry_line`, `notice_board`,
+   `lamp_post_double`, `banner_pole(_red)`, `market_tent_red/green`, `fruit_crate`, `flower_cart`, `cliff_rock_large`, `rock_cluster_small`, `reed_cluster`,
+   `lily_pads`; shop flavour (blacksmith/pets/fortune/potions/armory/warehouse/tech) + generic `potted_plant_a/b`, `awning_red/green`, `shop_sign_hanging`,
+   `window_flowerbox`; interiors (castle throne room / chapel / tavern / house / cave: floors 4x4, walls 4 m with +Z = room side, throne, dais, carpet,
+   `light_shaft`, pews, bar, fireplace/hearth with glow, bed, bookshelf, crystals, mine cart ...). Small props 130-900 tris, houses 3.9-4.9k.
+   Authoring helpers worth reusing: `B.blob` (noise-displaced soft sphere), `B.tube` (swept tube), `B.surf`/`B.cloth` (parametric sheets/cloth), `B.lathe`
+   with `lobes`, per-piece `b.grads[material] = fn(co, normal)` vertex-colour gradients, `b.jit` / `j=` hand-made irregularity. Never overlap coplanar
+   faces (Cycles renders them black). Rebuild preview takes ~1 min per sheet (Cycles CPU, 20 samples).
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
