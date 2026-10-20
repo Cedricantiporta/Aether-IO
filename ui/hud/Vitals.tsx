@@ -5,6 +5,7 @@ import { useRaf } from '../hooks/useRaf';
 import { motion } from 'framer-motion';
 import { OrnateRing } from '../components/Ornate';
 import { runCards } from '../../engine/runCards';
+import { BuffTray } from './BuffTray';
 import { Shield, Megaphone, Swords, Wind, Mountain } from '../components/GoldIcons';
 
 /** Diablo-style liquid orb. Fill + numbers updated through refs every frame. */
@@ -110,6 +111,7 @@ export const VitalBars: React.FC = () => {
         <div ref={hp} className="vb-bar hp" data-low="0"><i /><span ref={hpT} /></div>
         <div ref={mp} className="vb-bar mp"><i /><span ref={mpT} /></div>
         <span ref={dd} className="vb-dd" title="Death Defiance charges" style={{ display: 'none' }} />
+        <BuffTray />
       </div>
       <div ref={badge} className="vb-badge" data-k="shield" title="Active buff / passive">
         <span data-i="shield"><Shield size={16} /></span><span data-i="cry"><Megaphone size={16} /></span><span data-i="rage"><Swords size={16} /></span>

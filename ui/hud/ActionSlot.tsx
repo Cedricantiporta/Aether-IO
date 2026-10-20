@@ -27,7 +27,8 @@ interface Props {
   getCd?: () => CdInfo;
   getPips?: () => PipInfo;          // charge pips (dash / shield)
   tooltip: React.ReactNode;
-  accent?: string;                  // ring colour (css) for the slot
+  accent?: string;                  // tint colour (css) for the slot's soft glow
+  round?: boolean;                  // small round bubble (potions)
 }
 
 const fmtCd = (t: number) => (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1));
@@ -40,7 +41,7 @@ function pressKey(code: string): void {
   setTimeout(() => { window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); setTimeout(() => { forceAutoCast.on = false; }, 120); }, 60);
 }
 
-export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent, blocked }) => {
+export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size = '3.4rem', active = true, lockLabel, level, qty, manaCost = 0, getCd, getPips, tooltip, accent, blocked, round }) => {
   const pad = useInputMode((m) => m.pad);
   const root = useRef<HTMLDivElement>(null);
   const sweep = useRef<HTMLDivElement>(null);
@@ -110,7 +111,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
   return (
     <div className="relative pe act-wrap" {...tip(tooltip)} style={keyCode && active ? { cursor: 'pointer' } : undefined}
       onClick={keyCode && active ? () => pressKey(keyCode) : undefined}>
-      <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
+      <div ref={root} className={`hud-slot ${active ? '' : 'is-dim'}${round ? ' is-round' : ''}`} style={{ ['--slot' as any]: size, ...(accent && active ? { ['--rc' as any]: accent } : {}) }}>
         <span className="slot-icon">{icon}</span>
         <div ref={sweep} className="cd-sweep"><span ref={txt} className="cd-text" /></div>
         <div ref={lack} className="mana-lack" />

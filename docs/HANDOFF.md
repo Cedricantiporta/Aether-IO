@@ -140,7 +140,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
 
 ### 3.5 Combat and classes
 - Controls (`engine/input.ts`, listed in Settings > Controls = `KEYS_KB` in `ui/screens/PauseMenu.tsx`; keep in sync):
-  WASD move · **F hold = manual attack** (auto-attack fires only with an enemy in range) · 1/2/3 class actives (hold to aim,
+  WASD move · **F hold = basic attack** (no auto-attack any more; every class attacks while walking at ~88% speed right after a swing; the AUTO-battle toggle is an opt-in bot, default off) · 1/2/3 class actives (hold to aim,
   release to cast; tap = auto-target) · Space class dash · R ultimate (needs full bar) · Z / X health / mana potion · E
   interact / loot (hold = harvest, chores) · G auto-path to the tracked quest · V reset camera · I bag · C hero sheet ·
   J quests · O achievements · Tab Run Upgrades (runs) · Esc pause / close. There is no K / skills hotkey: skills are learned
@@ -156,11 +156,12 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   (`constants.POTION_COOLDOWN`), only drink at <= 70% of the bar, restore a flat 100 (Big 200), cap 50 each. Auto-potions setting.
 - HP and incoming damage are both doubled (`store.HP_INFLATE` / `DMG_INFLATE`); stat caps in `store.STAT_CAPS`.
 - **Classes** (all have 3 actives, a dash, an ultimate, passives; kits in `abilityDefs.ts`, `systems/abilities.ts`, `skills.ts`):
-  Archer (ranged, cannot attack while moving, Lightpiercer charge), Wizard (Arcane Shield passive replaces Storm, Fireballs),
+  Archer (ranged, Lightpiercer charge), Wizard (Arcane Shield passive replaces Storm, Fireballs),
   Barbarian (boomerang axe, Cross Slash, Whirlwind, Bloodrage Leap), Knight (sword arcs, Shield Wall, Judgment, Divine Avatar,
   Consecration/Smite/Radiant Burst), Necromancer (minions in `systems/minions.ts`, Raise Dead, Bone Ward, Plague Ground, Army of the Dead golem).
   Gear is class-gated by wear group (`itemClass.ts`: Heavy = Knight+Barbarian, Light = Archer+Necromancer, Arcane = Wizard;
   Wizard and Necromancer share weapons).
+- **Hero knockback / knockdown**: `combat.knockHero(fromX, fromZ, force, downSec)`, fed by `damagePlayer(..., { ...KB.SLAM })` (`KB` presets in combat.ts: FLINCH 0.5 u, PUSH 3.2, HEAVY 4.5, SLAM 5 u + 0.75 s down, CRUSH 6 u + 0.9 s). Eased slide over 0.2 s through `resolveObstacles` (player.ts), DOWN pose in `render/Hero.tsx`, 0.6 s invuln after the get-up, ~1.6 s no-chain window; Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown.
 - Combat layer: monster tricks (`tricks.ts`), statuses, backstab/shield blocking, elite big attacks (`eliteBig.ts`), winded
   free-hit windows on bosses, follow delay (`heroTrail.ts`), combo meter, aimed casting (`aim.ts`), no contact damage
   (monsters wind up a strike).
@@ -209,6 +210,19 @@ DPR (`PerfGovernor`), NPC view culling + animation LOD, merged NPC meshes, range
 effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
 
 ### 3.9 UI style direction (owner-driven)
+**v9 rules (owner, 2026-10-20, override anything below that says otherwise; the LAST block of `index.css`):**
+- **No line borders anywhere**: no border, outline, `0 0 0 Npx` ring, hairline, `::before/::after` frame. v9 makes every border/outline colour
+  transparent and the ring / hard-edge box-shadows were neutralised. Only exception: the touch joystick (`.tc-base`, `.tc-ring`).
+- **No line or underline designs**: no tab underlines, side bars, dividers, hr, gold EXP line. The EXP bar is a soft thin rounded bar.
+- **Selection = lighter fill + soft glow** (`--z-accent-glow` is a blurred glow, `--z-sel` a lighter fill), never a stroke. Tabs are a
+  segmented control (selected = lighter rounded pill, others plain text).
+- **Icons = flat solid white glyphs** (`ui/components/CuteIcons.tsx`, #ffffff, soft drop shadow, no circle/background), small white captions,
+  soft red notification dots, hover = slight scale + brightness only.
+- **Bottom bar**: ultimate (round, soft fill-meter glow) + active skills (14 px rounded tiles, art clipped, radial cooldown sweep with a big
+  white number, white key chip) + dash (Space) + two round potion bubbles. No passive slots (passives with timers show as tiny bubbles under the
+  HP bar, `ui/hud/BuffTray.tsx`), no corner horse/dash buttons (E interacts/mounts); AUTO is a small pill. The bar hides during dialogue.
+- **Dialogue**: flat translucent charcoal, ~30 px radius, no lattice; the hero reply + Accept/Later sit bottom-left of the box.
+
 **Nintendo Switch / Zelda: Echoes of Wisdom ("v8 Zelda" override layer, the LAST block of `index.css`; it replaces the earlier
 Korean-MMORPG v5/v6/v7 look but keeps the v7 HUD layout)**: simple and roundy. No line containers (no gold hairlines, double frames
 or corner ornaments; ornament pseudo-elements are switched off in the v8 block), soft translucent charcoal pills and rounded panels
