@@ -107,7 +107,7 @@ const _dd = deviceDefaults();
 const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.4, quality: _dd.quality,
   showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: true,
-  autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale, cameraZoom: 1, zoomUnlocked: true,
+  autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale,
   showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, freeCamera: false, tiltShift: true, autoLootGear: 'UNCOMMON', autoLootMaterials: true, autoLootRange: 'NEAR', autoLootOnClear: false,
 };
 
@@ -525,7 +525,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
-              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.zoom1 ? {} : { cameraZoom: 1 }), ...(p.zoom2 ? {} : { zoomUnlocked: true, cameraZoom: 1 }), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
+              gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.settings?.hardMode && sanitizeProgress(p.progress).endings > 0 ? 'HARD' : 'NORMAL',   // (Hard mode: Settings toggle, locked until the first ending)

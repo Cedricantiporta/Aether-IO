@@ -21,7 +21,7 @@ type Settings = SettingsT;
 
 /** Every shortcut, shown in Settings > Controls (engine/input.ts is the source of truth). */
 const KEYS_KB: [string, string][] = [
-  ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'], ['Wheel', 'Zoom'],
+  ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'],
   ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: attack manually · accept a quest offer'],
   ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['G', 'Auto-path to the tracked quest'], ['V', 'Reset camera'],
   ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Tab', 'Run upgrades (in a run)'], ['Esc', 'Pause / Settings · close a window'],
@@ -125,15 +125,10 @@ export const SettingsDialog: React.FC = () => {
             {tog('Collect all when room is cleared', 'autoLootOnClear', 'Once the fight is over every item on the floor flies to you (bag space allowing).')}
           </Sec>
           <Sec title="Camera">
-            {tog('Free camera', 'freeCamera', 'Off: a fixed top-down "diorama" view, north always up. On: drag to turn and tilt the camera.')}
+            {tog('Free camera', 'freeCamera', 'Off: a fixed low-angle "diorama" view, north always up. On: drag to turn and tilt the camera.')}
             {tog('Tilt-shift blur', 'tiltShift', 'Soft blur at the top and bottom of the screen (miniature look).')}
             {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
             {tog('Screen shake', 'screenShake')}
-            {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}
-            {settings.zoomUnlocked && <Row label="Camera zoom" hint="Close to far">
-              <div className="flex-1"><Slider value={(Math.min(1.15, settings.cameraZoom) - 0.8) / 0.35} onChange={(v) => update({ cameraZoom: Math.round((0.8 + v * 0.35) * 100) / 100 })} /></div>
-              <span className="st-num">{settings.cameraZoom.toFixed(2)}</span>
-            </Row>}
           </Sec>
           <Sec title="Interface">
             {tog('Damage numbers', 'showDamageNumbers')}

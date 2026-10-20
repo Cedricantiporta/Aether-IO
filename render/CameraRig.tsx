@@ -25,7 +25,8 @@ const portalAt = (x: number, z: number): { x: number; z: number } | null => {
 };
 const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
 
-const CAM_DIST0 = Math.hypot(32, 22);
+const CAM_DIST0 = Math.hypot(32, 22);   // view distance hero->camera (kept: the hero stays the same size on screen)
+const LOOK_AHEAD = 2.8, LOOK_Y = 1.15;   // look-at: a bit ahead of the hero (hero sits below centre) and at chest/face height
 /** Diorama camera: FOV 26 instead of 40, pushed back so the hero area keeps the same size on screen. */
 const FOV0 = 40, FOV_TELE = 26, TELE = Math.tan((FOV0 / 2) * Math.PI / 180) / Math.tan((FOV_TELE / 2) * Math.PI / 180);
 const _rel = { x: 0, z: 0 };
@@ -60,12 +61,10 @@ export function CameraRig() {
       lx = ax * k; lz = az * k;
     }
     const setts = useGameStore.getState().settings;
-    const zoomSet = setts?.zoomUnlocked ? Math.min(1.15, setts.cameraZoom || 1) : 1;   // (owner: max zoom-out halved: 1.15)
-    if (!setts?.zoomUnlocked) world.camera.dist = 1;   // zoom locked at 1.0 unless unlocked in Settings
-    s.zoom = damp(s.zoom, (world.camera.zoom || 1) * (lobby ? 1 : zoomSet), 2.5, dt);
+    s.zoom = damp(s.zoom, world.camera.zoom || 1, 2.5, dt);   // (cinematic zoom only: abilities / bosses; the player has no zoom)
     s.lift = damp(s.lift, liftAt(p.pos.x, p.pos.z), 6, dt);
-    _tgt.set(p.pos.x + lx, 0.8 + s.lift, p.pos.z + lz);
-    // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
+    _tgt.set(p.pos.x + lx, LOOK_Y + s.lift, p.pos.z + lz);
+    // free orbit camera: yaw / pitch / orbit around the hero
     const C = world.camera;
     const free = !!setts?.freeCamera;
     if (!free) { C.yaw = 0; C.pitch = CAM_PITCH0; }   // (owner: Link's Awakening style) fixed north-up diorama view
@@ -73,6 +72,7 @@ export function CameraRig() {
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
     s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
+    _tgt.x -= Math.sin(s.yaw) * LOOK_AHEAD; _tgt.z -= Math.cos(s.yaw) * LOOK_AHEAD;   // away from the camera = north when yaw 0
     const R = CAM_DIST0 * s.zoom * s.dist * s.tele, hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 

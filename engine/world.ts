@@ -92,7 +92,7 @@ function makePlayer(): PlayerRuntime {
 }
 
 /** Default camera elevation (the classic 32 up / 22 back framing). */
-export const CAM_PITCH0 = Math.atan2(32, 22);
+export const CAM_PITCH0 = 41 * Math.PI / 180;   // (owner) low, frontal view (was atan2(32,22) = 55.5 deg)
 
 export const world = {
   /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */

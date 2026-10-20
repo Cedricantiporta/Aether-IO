@@ -148,6 +148,9 @@ function copy(a: Look, b: Look, k: number): void {
   a.dir.lerp(b.dir, k); a.hemiI += (b.hemiI - a.hemiI) * k; a.sunI += (b.sunI - a.sunI) * k; a.near += (b.near - a.near) * k; a.far += (b.far - a.far) * k;
 }
 
+/** (owner) the lower camera angle sees ~13% farther across the ground: fog + far plane + draw distance are pushed out by this. */
+export const FOG_K = 1.12;
+
 export function LookDriver() {
   useFrame(({ scene, camera }, dt) => {
     tickDreamFx(dt);
@@ -159,9 +162,9 @@ export function LookDriver() {
     copy(look, target, 1 - Math.exp(-4 * Math.min(dt, 0.1)));
     if (scene.background instanceof Color) scene.background.copy(look.fog);
     const f = scene.fog as Fog | null;
-    if (f) { f.color.copy(look.fog); f.near = look.near; f.far = look.far; }
+    if (f) { f.color.copy(look.fog); f.near = look.near * FOG_K; f.far = look.far * FOG_K; }
     // (perf) nothing past the fog's end is visible: the far plane follows it, so fully-fogged geometry is never drawn
-    const cam = camera as PerspectiveCamera, wantFar = Math.max(80, look.far + 25);
+    const cam = camera as PerspectiveCamera, wantFar = Math.max(80, look.far * FOG_K + 25);
     if (Math.abs(cam.far - wantFar) > 2) { cam.far = wantFar; cam.updateProjectionMatrix(); }
     updateDistCull();
   }, -0.3);

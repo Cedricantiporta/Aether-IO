@@ -42,8 +42,6 @@ export interface Settings {
   fpsLimit: 30 | 60 | 0;  // 0 = unlimited
   showFps: boolean;
   uiScale: 'SMALL' | 'NORMAL' | 'LARGE';
-  cameraZoom: number;     // 0.8 (close) .. 1.3 (far)
-  zoomUnlocked: boolean;  // on (default, base 1.0); off: camera locked at zoom 1.0 (wheel / pinch / slider do nothing)
   showEnemyBars: boolean;
   showMinimap: boolean;
   vibration: boolean;     // navigator.vibrate on being hit (touch devices)

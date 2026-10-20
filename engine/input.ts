@@ -12,8 +12,8 @@ import { requestClick } from './systems/target';
 import { setPadMode } from '../ui/lib/inputMode';
 import { padMove, padActivate, padTab, padScroll, padSlider, padClear } from '../ui/lib/padNav';
 
-// ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, wheel / pinch = zoom
-const PITCH_MIN = 0.55, PITCH_MAX = 1.3, DIST_MIN = 0.55, DIST_MAX = 1.15;   // (owner: max zoom-out halved again: was 1.3, before 1.6)
+// ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, no zoom (wheel / pinch do nothing)
+const PITCH_MIN = 0.55, PITCH_MAX = 1.3;   // (owner: no camera zoom at all)
 const orbitAllowed = () => {
   const st = useGameStore.getState().status;
   return st === GameStatus.PLAYING || (st === GameStatus.MENU && useUiStore.getState().titleDone);
@@ -22,10 +22,6 @@ function orbit(dxPx: number, dyPx: number): void {
   const c = world.camera;
   c.yaw -= dxPx * 0.0065;
   c.pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, c.pitch + dyPx * 0.0045));
-}
-function zoomBy(f: number): void {
-  const c = world.camera;
-  c.dist = Math.min(DIST_MAX, Math.max(DIST_MIN, c.dist * f));
 }
 
 function isTypingTarget(t: EventTarget | null): boolean {
@@ -140,30 +136,18 @@ export function installInput(): () => void {
     orbit(e.clientX - rmb.x, e.clientY - rmb.y);
     rmb.x = e.clientX; rmb.y = e.clientY;
   };
-  const onWheel = (e: WheelEvent) => {
-    if (onUi(e) || !orbitAllowed()) return;
-    zoomBy(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.0022));
-  };
-  // touch: drags that start on empty screen (not joystick / buttons / panels) orbit; two fingers pinch-zoom
+  // touch: drags that start on empty screen (not joystick / buttons / panels) orbit; two fingers do nothing (no zoom)
   const touches = new Map<number, { x: number; y: number }>();
-  let pinchD = 0;
   const onTouchDown = (e: PointerEvent) => {
     if (e.pointerType !== 'touch' || onUi(e) || !orbitAllowed()) return;
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); }
   };
   const onTouchMove = (e: PointerEvent) => {
     const t = touches.get(e.pointerId); if (!t) return;
     if (touches.size === 1) orbit((e.clientX - t.x) * 1.15, (e.clientY - t.y) * 1.15);
     t.x = e.clientX; t.y = e.clientY;
-    if (touches.size === 2) {
-      const [a, b] = [...touches.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchD > 10 && d > 10) zoomBy(pinchD / d);
-      pinchD = d;
-    }
   };
-  const onTouchUp = (e: PointerEvent) => { touches.delete(e.pointerId); pinchD = 0; };
+  const onTouchUp = (e: PointerEvent) => { touches.delete(e.pointerId); };
   // click / tap = select a target (processed by CameraRig). Drags and holds are not clicks; UI (.pe) is ignored.
   const downs: Record<number, { x: number; y: number; t: number }> = {};
   const onPtrDown = (e: PointerEvent) => {
@@ -192,7 +176,6 @@ export function installInput(): () => void {
   window.addEventListener('contextmenu', onContext);
   window.addEventListener('blur', clearAll);
   window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('wheel', onWheel, { passive: true });
   window.addEventListener('pointerdown', onTouchDown);
   window.addEventListener('pointermove', onTouchMove);
   window.addEventListener('pointerup', onTouchUp);
@@ -283,7 +266,6 @@ export function installInput(): () => void {
     window.removeEventListener('contextmenu', onContext);
     window.removeEventListener('blur', clearAll);
     window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('wheel', onWheel);
     window.removeEventListener('pointerdown', onTouchDown);
     window.removeEventListener('pointermove', onTouchMove);
     window.removeEventListener('pointerup', onTouchUp);

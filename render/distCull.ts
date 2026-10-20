@@ -4,7 +4,7 @@
 // start. The camera's far plane also follows the fog end (biomeLook.LookDriver), so fully-fogged geometry is never drawn.
 import type { Object3D } from 'three';
 import { world } from '../engine/world';
-import { look } from './biomeLook';
+import { look, FOG_K } from './biomeLook';
 
 interface Item { o: Object3D; x: number; z: number; r: number; small: boolean }
 const items: Item[] = [];
@@ -21,7 +21,7 @@ let tick = 0;
 export function updateDistCull(): void {
   if (++tick % 6 !== 0 || items.length === 0) return;
   const px = world.player.pos.x, pz = world.player.pos.z;
-  const far = look.far + 8, near = Math.min(far, look.near + 40);
+  const far = look.far * FOG_K + 8, near = Math.min(far, look.near * FOG_K + 40);
   for (let i = 0; i < items.length; i++) {
     const it = items[i], dx = it.x - px, dz = it.z - pz, lim = (it.small ? near : far) + it.r;
     const vis = dx * dx + dz * dz < lim * lim;
