@@ -9,7 +9,7 @@ import { SimpleTip } from '../components/ItemTip';
 import { Stars } from '../components/Stars';
 import { RARITY_NAME } from '../theme';
 import { device } from '../../engine/device';
-import { ArcanaGlyph } from '../components/UpgradeIcons';
+import { ArcanaGlyph, cardArtKey, cardArtUrl } from '../components/UpgradeIcons';
 import { ARCANA_NUMERAL } from '../../engine/runCards';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
@@ -44,6 +44,7 @@ const CORNER = 'M2 16 V6 C2 3.5 3.5 2 6 2 H16 M2 9 C6 9 9 6 9 2';
 const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, i, onPick }) => {
   const arcana = opt.rarity === 'LEGENDARY' || opt.rarity === 'MYTHIC' || opt.type === 'DEATH_DEFIANCE' || opt.type === 'SPECIAL';
   const numeral = ARCANA_NUMERAL[opt.special ?? opt.type] ?? ROMAN[i] ?? String(i + 1);
+  const art = cardArtKey(opt);
   return (
     <motion.button className="rw-card" data-rarity={opt.rarity} data-arcana={arcana ? '1' : '0'} onClick={onPick}
       initial={{ y: 40, opacity: 0, scale: .92 }} animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -52,12 +53,13 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
       {!device.touch && <span className="rw-num rpg-key" style={{ color: '#f3f1ea' }}>{i + 1}</span>}
       <span className="rw-rar" {...tip(<SimpleTip title={RARITY_NAME[opt.rarity]} sub={opt.special || opt.type === 'DEATH_DEFIANCE' ? 'Special ability \u00b7 lasts the whole run' : 'Reward rarity \u00b7 higher rarity = stronger bonus'} />)}>{RARITY_NAME[opt.rarity]}</span>
       <span className="rw-roman">{arcana ? '' : ROMAN[i] ?? i + 1}</span>
-      <div className={`rw-emblem${arcana ? ' arc' : ''}`}>
+      <div className={`rw-emblem${arcana ? ' arc' : ''}${art ? ' has-art' : ''}`}>
+        {art && <img className="rw-art" src={cardArtUrl(art)} alt="" draggable={false} decoding="async" />}
         {arcana ? <>
-          <ArcanaScene opt={opt} />
+          {!art && <ArcanaScene opt={opt} />}
           {['a', 'b', 'c', 'd'].map((k) => <svg key={k} className={`arc-cor ${k}`} viewBox="0 0 18 18" aria-hidden><path d={CORNER} /></svg>)}
           <span className="arc-num">{numeral}</span>
-        </> : <UpgradeIcon upgrade={opt} size={64} />}
+        </> : !art && <UpgradeIcon upgrade={opt} size={64} />}
       </div>
       <div className="rw-body flex flex-col items-center gap-1.5 min-h-0 flex-1 w-full">
         <Stars rarity={opt.rarity} />

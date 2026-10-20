@@ -190,7 +190,17 @@ const PAINTED: Partial<Record<UpgradeType, string>> = {
 export const ArcanaGlyph: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; x: number; y: number; size: number }> = ({ upgrade, x, y, size }) => (
   <svg x={x} y={y} width={size} height={size} viewBox="0 0 64 64" overflow="visible"><Defs />{(upgrade.special ? ART_SPECIAL[upgrade.special] : ART[upgrade.type] ?? Star)()}</svg>
 );
+/** Painted tarot card art (public/art/cards/<type>.webp, sheet A4/A5 — docs/ART_PROMPTS.md). */
+export const CARD_ART = new Set(['DAMAGE', 'HEALTH', 'DEFENSE', 'FIRE_RATE', 'SPEED', 'CRIT_RATE', 'CRIT_DAMAGE', 'COOLDOWN', 'KNOCKBACK',
+  'LIFESTEAL', 'DMG_REDUCE', 'MAX_MANA', 'MANA_REGEN', 'DASH_COOLDOWN', 'POTION_CD', 'RESTORE']);
+export const cardArtKey = (u: Pick<Upgrade, 'type' | 'special'>): string | null => {
+  const k = (u.special as string | undefined) ?? u.type;
+  return CARD_ART.has(k) ? k : null;
+};
+export const cardArtUrl = (k: string): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/${k}.webp`;
 export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
+  const ck = cardArtKey(upgrade);
+  if (ck) return <img src={cardArtUrl(ck)} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'cover', borderRadius: 8 }} />;
   if (upgrade.special) return <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden style={{ display: 'block', overflow: 'visible', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><Defs />{ART_SPECIAL[upgrade.special]()}</svg>;
   const pk = PAINTED[upgrade.type];
   if (pk) return <span style={{ display: 'block', width: size, height: size, borderRadius: 8, overflow: 'hidden', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><PaintedIcon id={pk} /></span>;

@@ -2827,3 +2827,8 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .rw-emblem.rich { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 55%, transparent) 0%, transparent 65%), linear-gradient(#17181d, #0b0c0f) !important; }
 .rw-emblem.arc .arc-cor { width: 18px !important; height: 18px !important; filter: none; }
 .rw-emblem.arc .arc-num { width: 100% !important; height: auto !important; filter: none; }
+
+/* painted tarot art fills the arched card window */
+.rw-emblem.has-art { overflow: hidden; padding: 0; }
+.rw-emblem.has-art > .rw-art { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; filter: none; }
+.rw-emblem.has-art::before { display: none; }
