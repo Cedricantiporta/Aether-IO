@@ -1,11 +1,39 @@
 #!/usr/bin/env python3
-"""Slice a 4x4 painted icon sheet (black gutters) into public/art/<folder>/<id>.webp (256 px).
-Usage: python3 scripts/slice_sheet.py art/raw/A2_skills_2.webp skills ID1 ID2 ... ID16"""
+"""Slice a 4x4 painted sheet into public/art/<folder>/<id>.webp (256 px).
+Usage: python3 scripts/slice_sheet.py [--cutout] art/raw/SHEET.png <folder> ID1 ... ID16
+  default : cells separated by black gutters (skills / cards)
+  --cutout: flat magenta (#FF00FF) background, equal 4x4 cells; magenta is keyed out to transparency (items / pets)"""
 import sys, os
 import numpy as np
-from PIL import Image
-src, folder, ids = sys.argv[1], sys.argv[2], sys.argv[3:]
-im = Image.open(src).convert('RGB'); a = np.asarray(im).astype(float).mean(axis=2)
+from PIL import Image, ImageFilter
+args = sys.argv[1:]
+cut = args[0] == '--cutout'
+if cut: args = args[1:]
+src, folder, ids = args[0], args[1], args[2:]
+os.makedirs(f'public/art/{folder}', exist_ok=True)
+im = Image.open(src).convert('RGB')
+if cut:
+    n = int(round(len(ids) ** 0.5)); W, H = im.size
+    a = np.asarray(im).astype(np.float32)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    # magenta-ness: high R and B, low G
+    m = np.clip(((r + b) / 2 - g - 60) / 80, 0, 1)
+    alpha = (1 - m) * 255
+    # de-spill: pull magenta fringe toward neutral
+    spill = np.clip((np.minimum(r, b) - g) / 255, 0, 1)[..., None]
+    a2 = a.copy(); a2[..., 0] -= spill[..., 0] * (r - g) * 0.8; a2[..., 2] -= spill[..., 0] * (b - g) * 0.8
+    rgba = Image.fromarray(np.dstack([np.clip(a2, 0, 255), alpha]).astype(np.uint8), 'RGBA')
+    rgba.putalpha(rgba.getchannel('A').filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.6)))
+    k = 0
+    for row in range(n):
+        for col in range(n):
+            cell = rgba.crop((col * W // n, row * H // n, (col + 1) * W // n, (row + 1) * H // n))
+            bb = cell.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, cell.width, cell.height)
+            obj = cell.crop(bb); s = max(obj.width, obj.height) / 0.88
+            canvas = Image.new('RGBA', (int(s), int(s)), (0, 0, 0, 0)); canvas.paste(obj, ((int(s) - obj.width) // 2, (int(s) - obj.height) // 2))
+            canvas.resize((256, 256), Image.LANCZOS).save(f'public/art/{folder}/{ids[k]}.webp', quality=90); k += 1
+    print('sliced (cutout)', k, 'tiles ->', f'public/art/{folder}/'); sys.exit()
+a = np.asarray(im).astype(float).mean(axis=2)
 def spans(prof, size):
     out, s = [], None
     for i, v in enumerate(prof):
@@ -15,7 +43,6 @@ def spans(prof, size):
     return [sp for sp in out if sp[1] - sp[0] > size * 0.1]
 cols, rows = spans(a.mean(axis=0), im.width), spans(a.mean(axis=1), im.height)
 assert len(cols) * len(rows) == len(ids), (cols, rows, len(ids))
-os.makedirs(f'public/art/{folder}', exist_ok=True)
 k = 0
 for r0, r1 in rows:
     for c0, c1 in cols:
