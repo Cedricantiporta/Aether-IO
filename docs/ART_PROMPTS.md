@@ -15,7 +15,25 @@ cuts apart and wires into the UI. Fewer generations, consistent style.
 
 ---
 
-## STYLE block (paste first, every time)
+## STYLE v2 — cute rounded "Switch / Zelda: Echoes" look (owner, 2026-10-20: USE THIS ONE)
+Replaces the painted-MMO STYLE block below for every new sheet (skills, passives, cards, items, pets, UI). Same sheet
+codes, same order, same GRID / CUT-OUT rules, so the slicer and ids do not change.
+```
+Style: cute, chunky, rounded 3D-toy game icons in the style of a modern Nintendo Switch adventure game (soft clay /
+vinyl-toy look, like Zelda: Echoes of Wisdom or Link's Awakening remake). Simple bold shapes with rounded edges and
+soft bevels, big readable silhouette that reads at 40 px, very little fine detail. Soft diffuse studio light from
+the top-left, gentle ambient occlusion, soft contact shadow, slight satin sheen (not glossy chrome). Bright,
+cheerful, saturated but harmonious colours; each icon uses its element colour (fire = warm orange/red, ice = pale
+cyan/white, holy = warm gold/cream, nature/heal = fresh green, poison = lime/olive, shadow/death = soft teal-grey and
+bone, arcane/void = soft violet). Friendly and charming, never gritty, no realism, no painterly brush texture, no
+dark grungy outlines (a soft darker rim of the same colour is fine), no neon, no heavy glow, no sparkle spam.
+No text, no letters, no numbers, no watermarks, no UI frames or borders around the icons.
+```
+GRID rule for this style: use the GRID rule below but replace "softly vignetted dark muted background" with
+"a soft, plain, light pastel background tinted to the icon's element colour, with a subtle radial lighten in the
+centre". Items / pets / loot keep the CUT-OUT (magenta) rule.
+
+## STYLE block (old painted-MMO look, kept for reference)
 ```
 Style: hand-painted fantasy MMORPG game icons, professional and polished but slightly casual and friendly
 (stylized-realistic, like a modern mobile MMORPG item/skill icon set). Painterly brush texture, clean readable
