@@ -213,6 +213,13 @@ DPR (`PerfGovernor`), NPC view culling + animation LOD, merged NPC meshes, range
 effect pools. Judge perf by draw calls / triangles / sim ms, not SwiftShader FPS.
 
 ### 3.9 UI style direction (owner-driven)
+**v11 (owner, 2026-10-20; font + window sweep, the LAST block of `index.css`):** the UI font is **"M PLUS Rounded 1c"** (Rodin-like rounded humanist
+sans; "Zen Maru Gothic" is the fallback, both loaded in `index.html` at weights 500 + 700, Nunito removed). Titles = 700, upright, normal case (no
+Cinzel caps, no letter-spacing); body = 500; dialogue = 500 upright (no italics anywhere in the UI). **Cinzel is only for the 3D town labels
+(`render/label.ts`).** v11 also re-skins every window (bag, hero sheet, talents, trainer, quest log, goals, codex, settings, all shops, character select,
+title, game over, level up, rewards, run upgrades, set out, tooltips, dialogs) to the same rules: 22 px panels, 14 px tiles, pill buttons, segmented pill
+tabs, flat translucent charcoal, no frames / gradients / dividers, selection = lighter fill + soft glow. Prefer adding selectors to v11 over inline styles.
+
 **v9 rules (owner, 2026-10-20, override anything below that says otherwise; the LAST block of `index.css`):**
 - **No line borders anywhere**: no border, outline, `0 0 0 Npx` ring, hairline, `::before/::after` frame. v9 makes every border/outline colour
   transparent and the ring / hard-edge box-shadows were neutralised. Only exception: the touch joystick (`.tc-base`, `.tc-ring`).

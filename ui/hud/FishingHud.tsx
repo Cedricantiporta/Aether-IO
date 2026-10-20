@@ -43,7 +43,7 @@ export const FishingHud: React.FC = () => {
       if (pips.current) {
         let h = '';
         if (F.state === FISH.REEL) {
-          for (let i = 0; i < F.need; i++) h += `<span style="display:inline-block;width:10px;height:10px;margin:0 3px;transform:rotate(45deg);border:1px solid ${GOLD};background:${i < F.hits ? '#5fe08a' : 'transparent'}"></span>`;
+          for (let i = 0; i < F.need; i++) h += `<span style="display:inline-block;width:10px;height:10px;margin:0 3px;border-radius:50%;background:${i < F.hits ? "#5fe08a" : "rgba(255,255,255,.25)"}"></span>`;
           h += '<span style="display:inline-block;width:14px"></span>';
           for (let i = 0; i <= F.maxMiss; i++) h += `<span style="display:inline-block;margin:0 2px;font-weight:800;color:${i < F.misses ? '#ff6a5a' : 'rgba(255,255,255,.25)'}">✕</span>`;
         }
@@ -66,13 +66,13 @@ export const FishingHud: React.FC = () => {
   const act = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); const F = world.fishing; if (F.state === FISH.CAST || F.state === FISH.WAIT) stopFishing('You reel in the line.'); else fishAction(); };
   return (
     <div ref={root} data-testid="fishing-hud" style={{ display: 'none', position: 'absolute', left: '50%', bottom: device.touch ? '30%' : '22%', transform: 'translateX(-50%)', zIndex: 31,
-      width: 'min(420px, 86vw)', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 14px 12px', pointerEvents: 'none',
-      background: 'linear-gradient(180deg, rgba(14,11,8,.78), rgba(8,6,5,.66))', border: '1px solid rgba(201,150,46,.55)', boxShadow: '0 6px 24px rgba(0,0,0,.45)' }}>
-      <div ref={title} style={{ fontFamily: 'var(--font-title)', fontSize: 18, fontWeight: 700, letterSpacing: '.04em', textShadow: '0 2px 6px rgba(0,0,0,.8)' }} />
+      width: 'min(420px, 86vw)', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 18px 14px', pointerEvents: 'none', borderRadius: 22,
+      background: 'rgba(30,30,34,.78)', boxShadow: '0 6px 18px rgba(0,0,0,.38)' }}>
+      <div ref={title} style={{ fontFamily: 'var(--font-title)', fontSize: 18, fontWeight: 700, letterSpacing: '.01em', textShadow: '0 2px 6px rgba(0,0,0,.8)' }} />
       <div ref={sub} style={{ fontSize: 12, color: 'rgba(246,232,200,.75)', textShadow: '0 1px 3px rgba(0,0,0,.8)' }} />
-      <div ref={bar} data-testid="fishing-bar" style={{ display: 'none', position: 'relative', width: '100%', height: 18, marginTop: 4, background: 'linear-gradient(180deg, #11202a, #0a141b)', border: `1px solid ${GOLD}` }}>
-        <div ref={zone} style={{ position: 'absolute', top: 0, bottom: 0, background: 'linear-gradient(180deg, rgba(95,224,138,.85), rgba(46,160,90,.85))', boxShadow: 'inset 0 0 0 1px rgba(200,255,210,.6)' }} />
-        <div ref={marker} style={{ position: 'absolute', top: -4, bottom: -4, width: 6, background: '#ffd24a', boxShadow: '0 0 6px rgba(255,220,120,.9)' }} />
+      <div ref={bar} data-testid="fishing-bar" style={{ display: 'none', position: 'relative', width: '100%', height: 18, marginTop: 4, background: 'rgba(0,0,0,.35)', borderRadius: 999, overflow: 'hidden' }}>
+        <div ref={zone} style={{ position: 'absolute', top: 0, bottom: 0, background: 'rgba(110,225,150,.8)', borderRadius: 999 }} />
+        <div ref={marker} style={{ position: 'absolute', top: 0, bottom: 0, width: 8, borderRadius: 999, background: '#fff6e0', boxShadow: '0 0 6px rgba(255,220,120,.9)' }} />
       </div>
       <div ref={pips} style={{ minHeight: 14, fontSize: 12, lineHeight: '14px' }} />
       <button ref={btn} className="interact-pill pe" data-testid="fishing-action" onPointerDown={act}

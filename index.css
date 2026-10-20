@@ -3367,3 +3367,115 @@ body:has([data-testid='dialogue-root']) :is(.hud-bottom, .exp-strip, .corner-btn
 .hud-mm-top .mm-canvas, .mm-canvas { opacity: 1; border-radius: 50% !important; box-shadow: none !important;
   -webkit-mask-image: radial-gradient(circle closest-side, #000 80%, rgba(0, 0, 0, .55) 91%, transparent 100%); mask-image: radial-gradient(circle closest-side, #000 80%, rgba(0, 0, 0, .55) 91%, transparent 100%); }
 .mm-north { top: .5rem; width: .95rem; height: .95rem; border-radius: 50% !important; transform: translateX(-50%); font-size: .52rem; font-weight: 800; color: #5a4636; background: rgba(255, 246, 224, .85); box-shadow: none !important; z-index: 2; pointer-events: none; }
+
+/* ======================================================================================================
+   v11 (owner, 2026-10-20): "M PLUS Rounded 1c" (Rodin-like humanist rounded sans; Zen Maru Gothic fallback) at 500 / 700 only.
+   Titles 700, normal case, never italic; body 500; dialogue 500 upright. Cinzel is ONLY for the 3D town labels (render/label.ts).
+   Sweep of every window so none keeps the old Korean-MMO look: panels 22px, tiles 14px, pills fully round, flat translucent
+   charcoal, no frames / gradients-as-frames / ornaments / dividers, white text, selection = lighter fill + soft glow. KEEP LAST.
+   ====================================================================================================== */
+:root {
+  --font-title: 'M PLUS Rounded 1c', 'Zen Maru Gothic', 'Nunito', ui-rounded, system-ui, sans-serif;
+  --font-body: 'M PLUS Rounded 1c', 'Zen Maru Gothic', 'Nunito', ui-rounded, system-ui, sans-serif;
+  --z-panel: rgba(32, 32, 38, .9);
+  --z-tile: rgba(255, 255, 255, .08);
+  --z-r-tile: 14px;
+}
+html, body, #root, button, input, select, textarea, kbd { font-family: var(--font-body); }
+body { font-weight: 500; }
+/* titles / headings: 700, upright, normal case */
+:is(h1, h2, h3, h4, .rpg-title, .rpg-label, .f-title, .head-title, .ws-title, .sw-title, .qw-title, .k-title, .qb-title, .rw-title, .sm-name, .sm-back b, .rw-roman,
+  .tt-name, .tt-dname, .cs-name, .cs-charname, .cs-head, .go-head, .dc-head b, .so-locked b, .bag-equip-head, .ws-sec, .tt-sec, .sw-pane-h, .sw-pop-h, .sw-tier-h,
+  .qw-chap-h, .tlogo-sub, .np-head span, .enc-name, .panel-head .head-title, .wh-goldbar, .brew-name, .upn b) {
+  font-family: var(--font-title) !important; font-weight: 700 !important; font-style: normal !important; text-transform: none !important; letter-spacing: .01em !important;
+}
+/* sub labels / captions: upright, normal case (no tracked caps) */
+:is(.head-sub, .tt-sub, .tt-drank, .tt-dsub, .rpg-pill .pill-label, .rw-rar, .rw-num, .qw-chap, .qw-lv, .enc-sub, .enc-lv, .cs-sub, .cs-tag, .portal-tag, .dc-badge .t, .so-tab, .exp-lbl, .st-sec-h, .ws-note, .sw-note) {
+  text-transform: none !important; letter-spacing: .01em !important; font-style: normal !important; font-family: var(--font-title);
+}
+/* no italics anywhere in the UI; emphasis is weight, not slant */
+em, i, cite, .italic, .dlg-name, .dlg-role, .dlg-hint, .qb-type, .dlg-btn, .qw-banner em, .rpg-tooltip em, .rpg-tooltip .italic { font-style: normal !important; }
+.dlg-text, .dlg-hint, .dlg-role, .dlg-btn, .dlg-offer-goal, .npc-bubble { font-weight: 500 !important; }
+.dlg-name { font-weight: 700 !important; }
+.dlg-btn, .dlg-btn.reply, .rpg-btn, .qw-btn, .sw-btn, .np-btn, .ws-go, .upn-btn, .cs-confirm, .cs-change, .bag-del-go, .story-skip, .toast-pill, .k-sub, .qb-hint, .dlg-chip, .rpg-tab, .rpg-subtab, .bag-tab, .cs2-tab, .qw-tab, .sw-tab, .ws-cat-h, .bag-cat {
+  font-weight: 700 !important; font-style: normal !important; text-transform: none !important;
+}
+.rpg-num, .rpg-title, .rw-title, .go-head, .qb-title, .k-title, .dlg-offer-goal { font-weight: 700; }
+.rpg-logo, .tlogo, .tlogo * { font-style: normal !important; }
+.rpg-tooltip, .tt-win { font-weight: 500; }
+.rpg-tooltip .muted.italic, .rpg-tooltip .italic { color: var(--z-dim); }
+
+/* ---- windows: one flat translucent charcoal surface, ~22px radius, soft shadow, no frame ---- */
+.rpg-panel, .rpg-panel.stone, .sw-win, .ws-win, .np-panel, .tt-win, .modal-card .rpg-panel, .go-root > *:is(.rpg-panel, .go-wrap), .cs-confirm-box, .sw-pop-box,
+.so-win, .sm-window, .rpg-parchment.big, .lp-win {
+  background: var(--z-panel) !important; border: 0 !important; border-radius: 22px !important; box-shadow: 0 10px 30px rgba(0, 0, 0, .42) !important; color: #fff;
+}
+/* inner groups: soft tinted rounded blocks, no lines */
+.rpg-frame, .rpg-frame.gold, .rpg-parchment, .rpg-card, .sw-side, .ws-side, .tt-side, .bag-side, .qw-side, .qw-det, .qw-sec, .qw-cur, .qw-obj, .qw-rew, .at-detail, .at-points, .ws-stage,
+.ws-stats, .ws-result, .ws-mats, .ws-rates, .ws-rates div, .sw-preview, .sw-rates, .sw-pity, .sw-tier, .sw-wallet, .tech-row, .tech-slot, .cs-stat-rows, .cs-info, .cs-preview, .cs-equip,
+.cs-tags, .brew-card, .st-row, .st-char, .dc-head, .dc-mod, .dc-route, .dc-stat, .dc-reward, .dc-badge .m, .enc-row, .enc-stats, .enc-item, .wh-bottom, .wh-goldbar, .wh-search,
+.go-rows, .bag-equip, .bag-foot, .fc-row, .sr-row, .ql-row, .qw-grp, .ax-held {
+  background: var(--z-tile) !important; background-image: none !important; border: 0 !important; border-radius: 18px !important; box-shadow: none !important;
+}
+.ws-win .ws-side, .sw-win .sw-side { margin: .5rem; }
+/* list rows / tiles */
+:is(.ws-rec, .ws-mat, .ws-stat, .st-seg, .st-seg button, .ws-can, .qw-list > *, .cs-row, .cs-item, .cs-dia-frame, .tt-row.btn, .wh-btn, .enc-btn, .at-row, .sk-row, .tw-ic) {
+  border: 0 !important; border-radius: var(--z-r-tile) !important; box-shadow: none !important;
+}
+:is(.ws-rec, .qw-list > *, .cs-row, .cs-item, .st-row, .at-row, .sk-row, .fc-row, .sr-row, .ql-row) { background-image: none !important; background-color: var(--z-tile) !important; }
+/* selection: lighter fill + soft glow (never a stroke) */
+:is(.ws-rec, .qw-list > *, .cs-row, .cs-item, .st-row, .sw-tier-row, .so-tab, .at-row, .sk-row, .fc-row, .sr-row, .ql-row, .qw-grp, .tp-chip, .cs-diff, .cs-slot, .brew-chip):is(.sel, .on, .is-active, .is-selected, .active, [aria-selected='true'], [aria-pressed='true']) {
+  background-color: rgba(255, 255, 255, .2) !important; box-shadow: 0 0 18px 2px rgba(255, 255, 255, .22) !important; color: #fff !important;
+}
+/* item slots / grids: rarity tint kept, rounded soft tiles */
+.rpg-slot, .cs-eq-cell, .slot-grid > *, .bag-grid > *, .forge-slot, .tech-slot, .debuff-slot, .ws-mat-art, .tw-ic, .sk-ic, .tt-art > *, .rw-art, .rw-emblem { border-radius: var(--z-r-tile) !important; border: 0 !important; }
+.tt-node.sq { border-radius: 12px !important; }
+/* tabs = segmented pill control (containers + every tab strip) */
+:is(.bag-tabs, .cs2-tabs, .qw-tabs, .so-tabs, .sw-tabs, .rpg-tabs, .ws-cats, .tp-chips, .st-segs, .tt-tabs) {
+  display: inline-flex; background: var(--z-tile) !important; border: 0 !important; border-radius: 999px !important; padding: .22rem; gap: .2rem; box-shadow: none !important;
+}
+.so-tabs { display: grid; width: 100%; }
+.so-tab { border: 0 !important; border-radius: 999px !important; background: transparent !important; color: var(--z-dim); font-size: .8rem; text-shadow: none !important; }
+.so-tab + .so-tab { border-left: 0 !important; }
+.so-tab.on, .so-tab.is-active { background: var(--z-sel) !important; color: #fff !important; box-shadow: 0 0 14px rgba(255, 255, 255, .2) !important; }
+/* buttons: rounded pills everywhere (also those that only exist in the new windows) */
+:is(.enc-btn, .wh-btn, .tt-learn, .tt-respec, .sw-rates-btn, .go-btn, .so-go, .lp-btn, .cs-change, .np-back, .qw-btn, .bag-del-go, .rw-btn, .fc-btn, .sr-btn) {
+  border: 0 !important; border-radius: 999px !important; background-image: none !important; background-color: rgba(255, 255, 255, .14) !important; color: #fff !important;
+  text-shadow: none !important; box-shadow: var(--z-shadow-sm) !important; font-weight: 700 !important; text-transform: none !important; letter-spacing: .01em !important;
+}
+:is(.enc-btn, .wh-btn, .tt-learn, .sw-rates-btn, .go-btn, .so-go):hover:not(:disabled) { filter: brightness(1.2); }
+:is(.enc-btn, .wh-btn, .tt-learn, .sw-rates-btn, .go-btn, .so-go):disabled { opacity: .45; box-shadow: none !important; }
+.enc-btn.go, .enc-btn.primary, .wh-btn.go, .tt-learn:not(:disabled), .go-btn.primary, .rpg-btn-primary { color: #2b2a2e !important; background-color: #fff6e0 !important; background-image: none !important; }
+.enc-btn.go *, .enc-btn.primary *, .tt-learn:not(:disabled) * { color: #2b2a2e !important; }
+/* headers: flat, no gold gradient, no frame */
+.panel-head, .panel-head.v4, .ws-head, .np-head, .sw-side-head, .qw-banner, .bag-equip-head, .dc-head, .go-head { background: none !important; background-image: none !important; border: 0 !important; box-shadow: none !important; }
+.qw-banner { background: var(--z-tile) !important; border-radius: 18px !important; }
+.qw-banner[data-ch] { background: var(--z-tile) !important; }
+/* text colours: white, soft grey for secondary (gold stays on currency only) */
+.panel-head .head-title, .ws-title, .sw-title, .qw-title, .dc-head b, .so-locked b, .go-head, .tt-name, .enc-name { color: #fff !important; text-shadow: none !important; }
+.dc-stat b, .so-locked b { color: #fff; }
+.dc-head b { color: #fff; }
+/* left stripes / side bars on cards (daily modifiers, quest cards) -> plain soft chips */
+.dc-mod { border-left: 0 !important; }
+/* progress bars / meters inside windows: soft round, flat */
+:is(.at-bar, .xp-bar, .st-bar, .tt-bar, .ws-bar, .qw-bar, .cs-bar, .sw-bar, .wbar, .hp-strip) { border: 0 !important; border-radius: 999px !important; box-shadow: none !important; }
+:is(.xp-bar, .wbar) > .fill, :is(.xp-bar, .wbar) > i { border-radius: 999px !important; }
+/* tooltips / item comparison: one charcoal card, no frame, no gradient rule */
+.rpg-tooltip, .tt-pop, .cmp-tip { background: rgba(28, 28, 32, .96) !important; background-image: none !important; border-radius: 18px !important; box-shadow: 0 8px 24px rgba(0, 0, 0, .45) !important; color: #fff; }
+.rpg-tooltip .tt-sep { background: none !important; height: .35rem !important; }
+.rpg-tooltip .muted { color: var(--z-dim); }
+/* confirm / generic dialogs and the modal backdrop */
+.modal-backdrop, .modal-root, .sw-backdrop, .ws-backdrop { background: rgba(10, 10, 14, .5) !important; }
+.modal-card .rpg-panel .rpg-title { color: #fff; }
+/* stray fixed-width decorations */
+.rpg-corner, .np-corner, .np-orn, .enc-orn, .cs-orn, .ax-crest::before, .ax-crest::after, .qw-seal, .rpg-medallion { display: none !important; }
+/* title screen / game over: soft pill menu, white text, no gold gradient lettering frames */
+.np-btn { min-height: 2.8rem; padding: .6rem 1.8rem; background: rgba(60, 60, 68, .78) !important; color: #fff !important; }
+.np-btn.primary, .np-btn.big { background: #fff6e0 !important; color: #2b2a2e !important; }
+.np-sub, .np-ver, .tlogo-sub { color: var(--z-dim); text-transform: none; letter-spacing: .02em; }
+.go-root :is(.go-row, .go-rows > *) { background: var(--z-tile) !important; border-radius: 14px !important; }
+/* kbd chips */
+kbd { border: 0 !important; border-radius: 999px !important; background: rgba(255, 255, 255, .18) !important; color: inherit; box-shadow: none !important; font-weight: 700; }
+.rw-emblem.arc .arc-num, .sm-roman, .rw-roman, .story-ch.replay, .rw-title { font-family: var(--font-title) !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important; }
+.rpg-logo { color: #fff !important; -webkit-text-fill-color: #fff; background: none !important; background-image: none !important; animation: none !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .5)) !important; }

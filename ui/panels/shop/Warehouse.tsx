@@ -79,7 +79,7 @@ const GoldPopup: React.FC<{ mode: 'IN' | 'OUT'; max: number; onDone: (v: number)
         </div>
         <div className="flex gap-1.5 justify-end">
           <button className="wh-btn pe" onClick={() => onDone(0)}>Cancel</button>
-          <button className="wh-btn pe" style={{ borderColor: 'var(--gold-dark)', color: 'var(--gold-light)' }} disabled={n <= 0} onClick={() => onDone(n)} data-testid="wh-gold-ok">{mode === 'IN' ? 'Deposit' : 'Withdraw'}</button>
+          <button className="wh-btn pe" disabled={n <= 0} onClick={() => onDone(n)} data-testid="wh-gold-ok">{mode === 'IN' ? 'Deposit' : 'Withdraw'}</button>
         </div>
       </div>
     </Modal>

@@ -28,7 +28,7 @@ const ROOM_TYPES: { v: RoomType; l: string }[] = [
 ];
 
 const Line: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
-  <div className="flex items-center gap-4 py-2 border-b border-black/30 last:border-0" style={{ minHeight: '2.6rem' }}>
+  <div className="flex items-center gap-4 py-2" style={{ minHeight: '2.6rem' }}>
     <div className="shrink-0" style={{ width: '9.5rem' }}>
       <div className="rpg-label !text-[.72rem]">{label}</div>
       {hint && <div style={{ fontSize: '.58rem', color: 'var(--text-dim)', lineHeight: 1.2, marginTop: '.1rem' }}>{hint}</div>}

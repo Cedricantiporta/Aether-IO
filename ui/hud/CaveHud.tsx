@@ -48,7 +48,7 @@ export const CaveHud: React.FC = () => {
     if (vig.current) vig.current.style.opacity = deep && k < 0.1 ? String(0.55 + 0.25 * Math.sin(now * 7.4)) : deep && k < 0.25 ? '0.3' : '0';
     if (black.current) black.current.style.opacity = String(cv.dark);
   });
-  const glass = { background: 'rgba(8,10,14,.62)', border: '1px solid rgba(201,150,46,.45)', borderRadius: '.35rem' };
+  const glass = { background: 'rgba(8,10,14,.62)', borderRadius: 18 };
   return (
     <div ref={root} className="pointer-events-none" style={{ display: 'none' }} data-testid="cave-hud">
       <div ref={vig} className="fixed inset-0" style={{ opacity: 0, background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(40,0,0,.85) 100%)', transition: 'opacity .3s', zIndex: 5 }} />
@@ -57,8 +57,8 @@ export const CaveHud: React.FC = () => {
         <div ref={sub} style={{ fontSize: 'clamp(.62rem, 2vw, .74rem)', color: '#d8d2c4', textShadow: '0 1px 2px #000' }} />
         <div ref={bar} className="flex items-center gap-2" style={{ ...glass, marginTop: '.3rem', padding: '.25rem .45rem', width: '100%' }} data-testid="lantern-meter">
           <span style={{ fontSize: 'clamp(.6rem, 1.9vw, .72rem)', color: '#ffe08a', fontWeight: 700, letterSpacing: '.08em' }}>LANTERN</span>
-          <div style={{ flex: 1, height: 'clamp(.55rem, 1.8vw, .7rem)', background: 'rgba(255,255,255,.08)', borderRadius: '.2rem', overflow: 'hidden', border: '1px solid rgba(0,0,0,.6)' }}>
-            <div ref={fill} style={{ height: '100%', width: '100%', background: 'linear-gradient(90deg,#c98a2a,#ffe08a)', boxShadow: '0 0 8px rgba(255,200,90,.6)' }} />
+          <div style={{ flex: 1, height: 'clamp(.55rem, 1.8vw, .7rem)', background: 'rgba(255,255,255,.08)', borderRadius: 999, overflow: 'hidden' }}>
+            <div ref={fill} style={{ height: '100%', width: '100%', background: '#fff6e0', borderRadius: 999 }} />
           </div>
           <span ref={time} className="rpg-num" style={{ fontSize: 'clamp(.7rem, 2.2vw, .85rem)', color: '#fff', minWidth: '2.6rem', textAlign: 'right' }} />
           <span ref={fl} className="rpg-num" title="Spare oil flasks" style={{ display: 'none', fontSize: 'clamp(.6rem, 1.9vw, .72rem)', color: '#ffb84a', fontWeight: 700 }} data-testid="cave-flasks" />

@@ -55,7 +55,7 @@ export const PanelHead: React.FC<{ icon?: React.ReactNode; title: string; sub?: 
 );
 
 export const StatLine: React.FC<{ label: string; value: React.ReactNode; tone?: 'pos' | 'neg' }> = ({ label, value, tone }) => (
-  <div className="flex items-center justify-between gap-3 py-[.28rem] border-b border-black/30 last:border-0">
+  <div className="flex items-center justify-between gap-3 py-[.28rem]">
     <span className="rpg-label !text-[.66rem]">{label}</span>
     <span className={`rpg-num text-sm ${tone === 'pos' ? 'text-[var(--good)]' : tone === 'neg' ? 'text-[var(--bad)]' : ''}`}>{value}</span>
   </div>

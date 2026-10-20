@@ -67,7 +67,7 @@ export const BrewerTab: React.FC = () => {
         <div className="rpg-label mb-2">{inRun ? 'Active this run' : 'Ready for your next run'}</div>
         {active.length === 0
           ? <div className="rpg-label !text-[.6rem] opacity-70">None yet. Click an elixir in your bag to drink it.</div>
-          : <div className="flex flex-wrap gap-1.5">{active.map((k) => <span key={k} className="brew-chip" style={{ borderColor: ELIXIRS[k].color }}><ItemArt item={samples[k]} size={20} /> {ELIXIRS[k].effect}</span>)}</div>}
+          : <div className="flex flex-wrap gap-1.5">{active.map((k) => <span key={k} className="brew-chip" ><ItemArt item={samples[k]} size={20} /> {ELIXIRS[k].effect}</span>)}</div>}
         <div className="rpg-label !text-[.55rem] mt-2 opacity-70">Drink an elixir in town and its buff lasts through your next adventure; drink it during a run and it lasts until that run ends. One of each kind at a time.</div>
       </div>
     </div>

@@ -94,7 +94,7 @@ export const PetCare: React.FC = () => {
       </div>
 
       {st < 3 && cost && (
-        <div className="flex items-center gap-3 pt-1" style={{ borderTop: '1px solid rgba(217,181,106,.25)' }}>
+        <div className="flex items-center gap-3 pt-1" >
           <div className="flex-1 min-w-0 text-[.72rem]" data-testid="pet-evolve-cost">
             <div className="rpg-label">Evolve to {PET_STAGE_PREFIX[st]}{pet.name}</div>
             <div className="flex flex-wrap gap-x-3 rpg-num" style={{ color: 'var(--text-dim)' }}>
