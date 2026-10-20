@@ -38,6 +38,19 @@ level of detail and painting style across all 16 cells. Order: left to right, to
 ```
 For portrait/card sheets the sheet text below overrides the grid size.
 
+## CUT-OUT rule (paste second INSTEAD of the GRID rule, for items, pets, loot, materials, gear)
+The game draws a rarity-coloured background behind every item and pet, so these icons must have NO scenery:
+```
+Layout: one 1024x1024 image, a 4x4 grid of 16 separate objects, each centered in its own equal square cell.
+Background of the WHOLE image: perfectly flat solid pure magenta (#FF00FF), no gradients, no texture, no floor,
+no scenery, no cast shadows on the background, no frames, no gutters needed (the magenta separates them).
+Each object fills about 80% of its cell, fully inside the cell, not touching other cells, clean silhouette with a
+thin dark outline so it can be cut out cleanly. Do not use magenta or pink-purple colours inside the objects.
+Same lighting, size, outline and painting style for all 16. Order: left to right, top to bottom, exactly as listed.
+```
+Pets: same rule, each pet shown as a full-body cute portrait (not only a face), three-quarter view.
+
+
 ---
 
 # TIER A — do these first (10 images)
@@ -148,9 +161,9 @@ elegant, not busy.
 16 BACKDROP common: empty calm night sky with a few stars (no object)
 ```
 
-### A6_pets_1 — pets (4×4)
+### A6_pets_1 — pets (4×4) — use the CUT-OUT rule
 ```
-Each cell: a cute but well-crafted bust portrait of the pet, facing three-quarters, friendly expression.
+Each cell: the whole pet, cute but well-crafted, three-quarter view, friendly expression, no background.
 1  pet_blob Green Blob: a small green slime
 2  pet_rock Pet Rock: a smooth grey rock with tiny eyes and a moss tuft
 3  pet_bat Vampire Bat: a small dark bat with red eyes, wings spread
@@ -169,7 +182,7 @@ Each cell: a cute but well-crafted bust portrait of the pet, facing three-quarte
 16 pet_demigod Celestial Wisp: a soft golden-white spirit wisp with a tiny face
 ```
 
-### A7_items_consumables (4×4)
+### A7_items_consumables (4×4) — use the CUT-OUT rule
 ```
 1  potion_hp: small red health potion flask
 2  potion_hp_big: big red health potion bottle with gold cap
@@ -189,7 +202,7 @@ Each cell: a cute but well-crafted bust portrait of the pet, facing three-quarte
 16 gem: a single cut cyan gemstone (premium currency)
 ```
 
-### A8_items_materials (4×4)
+### A8_items_materials (4×4) — use the CUT-OUT rule
 ```
 1  shard_common: a small grey crystal shard
 2  shard_rare: a blue crystal shard
@@ -246,7 +259,7 @@ emptier for a logo. Painterly, grounded colours, no text.
 Gear note: rarity is shown by the UI frame colour, so paint each gear icon once in natural materials (the
 Mythic/Legendary named weapons may look more ornate).
 
-### B1_weapons_1 (4×4) — Archer bows, Wizard staves, Barbarian axes (low → high rarity)
+### B1_weapons_1 (4×4) — use the CUT-OUT rule — Archer bows, Wizard staves, Barbarian axes (low → high rarity)
 ```
 1 Hunter's Bow (plain wood)  2 Greenwood Bow (leafy)  3 Hornet Recurve (black-yellow)  4 Stormpiercer (silver, wind)
 5 Skyreaver (white-gold, feathers)  6 Starfall Arc (night-blue with star inlays)
@@ -254,7 +267,7 @@ Mythic/Legendary named weapons may look more ornate).
 12 Astral Scepter (gold with star orb)  13 Woodcutter Axe  14 Iron Hatchet  15 Battle Axe  16 Bearded Greataxe
 ```
 
-### B2_weapons_2 (4×4)
+### B2_weapons_2 (4×4) — use the CUT-OUT rule
 ```
 1 Juggernaut Axe (huge dark steel)  2 Colossus Cleaver (gold-trimmed giant cleaver)
 3 Militia Sword  4 Footman's Blade  5 Knight's Longsword  6 Oathkeeper (white-gold)  7 Lionheart (lion pommel)
@@ -263,7 +276,7 @@ Mythic/Legendary named weapons may look more ornate).
 15 Shortbow (starter)  16 Squire Sword (starter)
 ```
 
-### B3_armor_1 (4×4) — one look per class + slot
+### B3_armor_1 (4×4) — use the CUT-OUT rule — one look per class + slot
 ```
 1 Ranger Hood  2 Leather Jerkin  3 Ranger Bracers  4 Ranger Boots
 5 Arcane Hat (pointed wizard hat)  6 Silk Robe  7 Silk Gloves  8 Silk Slippers
@@ -271,42 +284,42 @@ Mythic/Legendary named weapons may look more ornate).
 13 Plate Helm  14 Steel Cuirass  15 Gauntlets  16 Sabatons
 ```
 
-### B4_armor_2 (4×4)
+### B4_armor_2 (4×4) — use the CUT-OUT rule
 ```
 1 Bone Crown  2 Grave Shroud  3 Grave Grips  4 Bone Treads
 5 Copper Band (ring)  6 Jade Ring  7 Silver Signet  8 Sapphire Loop  9 Sunfire Ring  10 Ring of Eternity
 11 Bone Charm  12 Clover Amulet  13 Moonstone Pendant  14 Wardstone Amulet  15 Phoenix Locket  16 Heart of Aether (amulet)
 ```
 
-### B5_sets (4×4) — set armour, one "hero piece" per set + helmets
+### B5_sets (4×4) — use the CUT-OUT rule — set armour, one "hero piece" per set + helmets
 ```
 1 Gale Longbow  2 Gale Hood  3 Archmage's Scepter  4 Archmage's Circlet  5 Warlord's Greataxe  6 Warlord's Helm
 7 Oathbound Blade  8 Paladin Greathelm  9 Shadowstep Cowl  10 Shadowstep Leathers  11 Dragonbone Visage
 12 Dragonbone Hauberk  13 Sovereign's Diadem  14 Sovereign's Mantle  15 Sovereign's Orb  16 Dragonbone Fang (pendant)
 ```
 
-### B6_loot_1 (4×4) — trade goods
+### B6_loot_1 (4×4) — use the CUT-OUT rule — trade goods
 ```
 1 Slime Gel  2 Pulsing Jelly Heart  3 Shimmering Core  4 Goblin Ear  5 Goblin Fang Necklace  6 Goblin Chief's Totem
 7 Bat Wing  8 Echo Crystal  9 Old Bone  10 Cursed Skull  11 Bone Crown (loot)  12 Cultist Rune
 13 Dark Tome Page  14 Beetle Shell  15 Volatile Gland  16 Ogre Tusk
 ```
 
-### B7_loot_2 (4×4)
+### B7_loot_2 (4×4) — use the CUT-OUT rule
 ```
 1 Iron Knuckle  2 Ogre War Banner  3 Elite Trophy  4 Champion's Medal  5 Old Coin Pouch  6 Silver Goblet
 7 Ancient Relic  8 Royal Seal  9 Grave Locket  10 Soggy Boot  11 Rusty Tin Can  12 Raw Gemstone
 13 Ore Nugget  14 Mithril Ore  15 Adamant Ore  16 Abyssal Diamond
 ```
 
-### B8_loot_bosses (4×4) — boss trophies
+### B8_loot_bosses (4×4) — use the CUT-OUT rule — boss trophies
 ```
 1 Golem Heartstone  2 Crown of the Mountain  3 Lich Phylactery Shard  4 Lich's Eye  5 Ancient Acorn
 6 Elderroot Heartwood  7 Marsh Scale  8 Hydra Fang  9 Wyrm Frostscale  10 Heart of Glacius  11 Cinder Core
 12 Ignar's Brand  13 Echo of Ruin  14 Herald Void Shard  15 Heart of the Void  16 Malakar's Soul Ember
 ```
 
-### B9_fish (4×4)
+### B9_fish (4×4) — use the CUT-OUT rule
 ```
 1 Silver Minnow  2 Lake Perch  3 Reed Gudgeon  4 Rainbow Trout  5 Silver Pike  6 Moonlit Bream  7 Crimson Salmon
 8 Golden Carp  9 Ghost Catfish  10 Lanternfish  11 Lake Serpent Eel  12 Crystal Sturgeon  13 Aetherfin Koi
