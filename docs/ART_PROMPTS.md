@@ -40,6 +40,34 @@ pink-purple colours inside the objects. Same camera angle, lighting, size and ma
 Order: left to right, top to bottom, exactly as listed.
 ```
 
+## CARDS v3 — whole tarot reward cards (owner, 2026-10-20)
+The game builds each reward card from two images: a FRAME per rarity (sheet A4F) and the centre ART per card
+(sheets A4 / A5, regenerate them in STYLE v3 but as a scene, see below). Text (name, numbers) is drawn by the game.
+
+### A4F_card_frames (1536x1024) — 6 empty card frames
+```
+Style: cute chunky 3D toy / clay-and-painted-wood look like Zelda: Echoes of Wisdom, soft rounded bevels, matte
+materials, soft studio light from the top-left, soft ambient occlusion. No text, no letters, no numbers.
+Layout: one 1536x1024 image on a flat pure magenta (#FF00FF) background, 6 vertical tarot cards in one row of 6
+(each about 230x400 px, portrait 4:7), evenly spaced, each card fully separate and not touching the others, no
+shadows on the background. Each card is an empty rounded card with a soft rounded 3D frame and a large EMPTY window
+in the middle (the window filled with flat pure magenta so the game can place art inside), a small empty rounded
+banner area at the bottom for the name (plain, no letters), and a small emblem at the top. Order and theme:
+1 COMMON: smooth pale grey-white clay frame, simple
+2 UNCOMMON: soft mint-green frame with a little leaf emblem
+3 RARE: soft sky-blue frame with a water-drop emblem
+4 EPIC: soft lavender-violet frame with a crystal emblem
+5 LEGENDARY: warm golden frame with small sun rays and a star emblem
+6 MYTHIC: red-orange frame with sculpted flame edges and a crown emblem
+```
+Card ART (A4 / A5 lists unchanged): paste STYLE v3, then this instead of the CUT-OUT layout:
+```
+Layout: one 1024x1024 image, 4x4 grid of 16 separate square illustrations with 8 px pure black gutters and border.
+Each cell is a tiny cute 3D toy diorama: the listed object as a clay/vinyl figurine standing on a small rounded
+patch of ground in front of a soft simple pastel background (sky, clouds or a soft gradient matching the card's
+colour). Calm, symbolic, uncluttered, like a miniature tarot scene. No text.
+```
+
 ## STYLE v2 — cute rounded "Switch / Zelda: Echoes" look (superseded by v3)
 Replaces the painted-MMO STYLE block below for every new sheet (skills, passives, cards, items, pets, UI). Same sheet
 codes, same order, same GRID / CUT-OUT rules, so the slicer and ids do not change.
