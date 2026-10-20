@@ -236,9 +236,10 @@ screens, max-level question: class level cap is 50) have been removed.
    wall/tower blocks bigger + plainer like the gate (owner: no detailed full bricks), kit shops / castle / chapel /
    tavern (still procedural, dark roofs), place kit fountain/well/stall/lamps, hedges + stepping-stone paths on the
    raised districts (Link's Awakening exterior reference), chimney smoke positions vs kit chimneys.
-10. **Camera (owner asked, not started)**: Link's Awakening / Echoes of Wisdom look — fixed north-up yaw (orbit only as
-   a setting), steeper angle with a long lens (lower FOV, farther), tilt-shift blur (e.g. TiltShift2 in the
-   GameCanvas EffectComposer); movement stays camera-relative. Then interiors in that style (REFERENCES "Interiors").
+10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` forces yaw 0 / pitch
+   CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on, and uses a long lens (FOV 26, pushed back
+   by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
+   `tiltShift`, only on tiers with the composer). Next: interiors in that style (REFERENCES "Interiors").
 11. Desktop only now (owner: no phone play) — phone-specific tuning is no longer a priority.
 7. Process hazards: stopped sub-agents leave work in `.claude/worktrees/*` — check `git status` and `git worktree list`
    before assuming something is merged; never commit that folder.

@@ -51,6 +51,8 @@ export interface Settings {
   castMode: 'AIMED' | 'QUICK' | 'AUTO'; // skill casting: hold & release / instant at cursor / instant at auto-target (touch: tap = auto, drag = aim)
   batterySaver: boolean;  // FPS 30 + LOW quality
   cameraLead: boolean;    // desktop: the camera drifts toward the mouse cursor (off by default)
+  freeCamera: boolean;    // off (default): fixed north-up "diorama" camera (Link's Awakening style); on: free orbit (yaw / pitch drag)
+  tiltShift: boolean;     // tilt-shift blur at the top + bottom of the screen (diorama look; on by default)
   aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)
   /** Hard mode (Settings): runs started while it is on use the HARD difficulty (tougher, more enemies, better loot). */
   hardMode?: boolean;

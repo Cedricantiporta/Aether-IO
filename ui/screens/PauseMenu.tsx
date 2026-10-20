@@ -125,6 +125,8 @@ export const SettingsDialog: React.FC = () => {
             {tog('Collect all when room is cleared', 'autoLootOnClear', 'Once the fight is over every item on the floor flies to you (bag space allowing).')}
           </Sec>
           <Sec title="Camera">
+            {tog('Free camera', 'freeCamera', 'Off: a fixed top-down "diorama" view, north always up. On: drag to turn and tilt the camera.')}
+            {tog('Tilt-shift blur', 'tiltShift', 'Soft blur at the top and bottom of the screen (miniature look).')}
             {tog('Camera follows mouse', 'cameraLead', 'On: the camera drifts a little toward the mouse cursor. Off: it stays centred on your hero.')}
             {tog('Screen shake', 'screenShake')}
             {tog('Unlock camera zoom', 'zoomUnlocked', 'Off: the camera stays at zoom 1.0. On: mouse wheel / pinch and the slider below change it.')}

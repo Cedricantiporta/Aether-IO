@@ -26,6 +26,8 @@ const portalAt = (x: number, z: number): { x: number; z: number } | null => {
 const mark = (x: number, z: number, attack: boolean): void => { clickMark.x = x; clickMark.z = z; clickMark.attack = attack; clickMark.t = performance.now(); };
 
 const CAM_DIST0 = Math.hypot(32, 22);
+/** Diorama camera: FOV 26 instead of 40, pushed back so the hero area keeps the same size on screen. */
+const FOV0 = 40, FOV_TELE = 26, TELE = Math.tan((FOV0 / 2) * Math.PI / 180) / Math.tan((FOV_TELE / 2) * Math.PI / 180);
 const _rel = { x: 0, z: 0 };
 const _tgt = new Vector3(), _pos = new Vector3(), _v = new Vector3(), _d = new Vector3();
 
@@ -37,7 +39,7 @@ export function isLobbyStatus(s: GameStatus) {
 /** Free-orbit follow camera (MMORPG style: yaw / pitch / zoom from engine/input), screen shake, ground-plane aim, and a cinematic lobby orbit. */
 export function CameraRig() {
   const cam = useThree((s) => s.camera) as PerspectiveCamera;
-  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0, lift: 0 });
+  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0, lift: 0, tele: TELE });
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -65,10 +67,13 @@ export function CameraRig() {
     _tgt.set(p.pos.x + lx, 0.8 + s.lift, p.pos.z + lz);
     // free orbit camera: yaw / pitch / player zoom (wheel, pinch) around the hero
     const C = world.camera;
+    const free = !!setts?.freeCamera;
+    if (!free) { C.yaw = 0; C.pitch = CAM_PITCH0; }   // (owner: Link's Awakening style) fixed north-up diorama view
     if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
-    const R = CAM_DIST0 * s.zoom * s.dist, hr = Math.cos(s.pitch) * R;
+    s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
+    const R = CAM_DIST0 * s.zoom * s.dist * s.tele, hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
     // ---- lobby orbit: sweep around the hero/town
@@ -110,7 +115,7 @@ export function CameraRig() {
       }
     }
     // ---- FOV punch (big explosions / boss slams): quick zoom-in that eases back
-    const fk = feel.fov, fovT = 40 - fk * fk * 4.5;
+    const fk = feel.fov, fovT = (FOV0 + (FOV_TELE - FOV0) * (TELE - s.tele) / (TELE - 1)) * (1 - fk * fk * 0.11);
     if (Math.abs(cam.fov - fovT) > 0.01) { cam.fov = fovT; cam.updateProjectionMatrix(); }
     cam.position.set(s.pos.x + sx, s.pos.y + sy, s.pos.z);
     cam.lookAt(s.tgt);
