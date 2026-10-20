@@ -29,5 +29,5 @@ three r182 + @react-three/fiber 9 + drei + Zustand 5 + Tailwind (CDN) + framer-m
 - Owner rule: push to `main` FIRST (`git push origin HEAD:main`), then the claude/* branch. Vercel production builds `main`;
   a branch push first makes it a Preview only. Each push is a Vercel deployment.
 - Owner rules to remember (details in HANDOFF section 1): potions are permanent (never remove them), the owner is cost
-  sensitive (few sub-agents, prefer Sonnet/Haiku for searches and QA), reply in plain non-technical language.
+  sensitive (few sub-agents; model split: Opus plans/reviews, Sonnet writes code, Haiku verifies/navigates), reply in plain non-technical language.
 - Update `docs/HANDOFF.md` when you change how the game works (keep it a current map, not a changelog).

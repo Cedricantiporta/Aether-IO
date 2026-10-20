@@ -15,8 +15,10 @@ daily, so the code wins: `constants.ts`, `classLevels.ts`, `engine/roomDefs.ts`,
   language: what changed, what to try, what is still pending. No code jargon.
 - **Very cost-sensitive** (complained twice about usage): at most 1-2 sub-agents at a time, prefer small direct edits,
   few screenshots, do not re-verify things needlessly.
-- **Use cheaper sub-agents** (owner, 2026-10-17): delegate searches, headless QA runs and well-scoped edits to Sonnet /
-  Haiku sub-agents (Agent tool `model: "sonnet"` / `"haiku"`); keep the main model for planning, review and tricky code.
+- **Model split** (owner, 2026-10-20): **Opus = planning + review** (the main session: break the request down, write
+  the brief, review the diff, commit). **Sonnet = execution** (all code writing: Agent tool `model: "sonnet"`).
+  **Haiku = verification + navigation** (finding files/symbols, headless screenshot/QA runs, checking a change landed:
+  `model: "haiku"`). Do not write large code changes in the main session.
 - **Push to `main` first** (owner, 2026-10-17): `git push origin HEAD:main`, then the claude/* branch. Vercel's production
   deploy builds `main`; a branch push FIRST makes Vercel build that commit as a Preview only and skip Production. Every push
   is a Vercel deployment (there is a daily quota; `vercel.json` only has the SPA rewrite, no branch filter: an attempt to
