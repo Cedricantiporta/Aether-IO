@@ -6,7 +6,7 @@ import { HelmGlyph, BagGlyph, BookGlyph, GearGlyph, SkillGlyph, GoalGlyph, Troph
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
-import { Maximize, Layers } from '../components/GoldIcons';
+import { Maximize, Layers, MapPin } from '../components/GoldIcons';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../elixirs';
@@ -21,6 +21,8 @@ import { titleOf } from '../../achievements';
 import { useUiStore } from '../uiStore';
 import { useGameStore, calculateTotalCP } from '../../store';
 import { world } from '../../engine/world';
+import { offerTeleport } from './QuestTracker';
+import { reachable } from './UpgradeNotice';
 import { useRaf } from '../hooks/useRaf';
 import { tip } from '../components/Tooltip';
 import { SimpleTip } from '../components/ItemTip';
@@ -103,7 +105,7 @@ export const PlayerPlate: React.FC = () => {
     <div className="pplate pe">
       <div className="flex flex-col gap-[.3rem]" >
         {/* (owner: compact - one name row, no Lv / CP row; buff slots only while active) */}
-        <div className="pp-name"><span className="rpg-title">{hero}</span>{title && <span className="tp-title" data-testid="hero-title">{title}</span>}</div>
+        {title && <div className="pp-name"><span className="tp-title" data-testid="hero-title">{title}</span></div>}
         <div className="pp-buffs">
           <BuffSlot id="cry" refs={refs} color="#ffb04a" label="Battle Cry (+30% damage)" icon={<Megaphone size={15} />} />
           <BuffSlot id="rage" refs={refs} color="#ff6a5a" label="Rage" icon={<Swords size={15} />} />
@@ -158,12 +160,20 @@ export const Currency: React.FC = () => {
 };
 
 const HINT_CODE: Record<string, string> = { C: 'KeyC', I: 'KeyI', J: 'KeyJ', O: 'KeyO', Esc: 'Escape' };
-const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean }> = ({ icon, label, hint, onClick, active, dot }) => (
-  <button className={`sqbtn pe relative ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={`Hotkey: ${keyHint(hint)}`} />)}>
-    {icon}{dot && <i className="red-dot" />}
+const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean; caption?: string; mini?: boolean }> = ({ icon, label, hint, onClick, active, dot, caption, mini }) => (
+  <button className={`sqbtn pe relative ${active ? 'is-active' : ''} ${caption ? 'mb-cap' : ''} ${mini ? 'mb-mini' : ''}`} onClick={onClick} aria-label={label} {...tip(<SimpleTip title={label} sub={hint ? `Hotkey: ${keyHint(hint)}` : undefined} />)}>
+    <span className="mb-ic">{icon}{dot && <i className="red-dot" />}</span>
+    {caption && <span className="mb-lbl">{caption}</span>}
     {HINT_CODE[hint] && <PadHint code={HINT_CODE[hint]} className="pad-corner" style={{ top: 'auto', bottom: '-.45rem', right: '-.4rem' }} />}
   </button>
 );
+
+/** Opens a town service from anywhere: straight away in town / at a camp, otherwise offers the trip home first. */
+function openTownShop(tab: 'SKILLS' | 'SUMMON'): void {
+  const g = useGameStore.getState();
+  const open = () => useGameStore.getState().openSpecificShop(tab);
+  if (g.status === GameStatus.MENU || (tab === 'SKILLS' && reachable('skill'))) open(); else offerTeleport(open);
+}
 
 export const MenuButtons: React.FC = () => {
   const toggleCharacterSheet = useGameStore((s) => s.toggleCharacterSheet);
@@ -172,28 +182,38 @@ export const MenuButtons: React.FC = () => {
   const openCodex = useUiStore((s) => s.openCodex);
   const c = useGameStore((s) => s.isCharacterSheetOpen);
   const i = useGameStore((s) => s.isInventoryOpen);
-  const openShop = useGameStore((s) => s.openSpecificShop);
+  const shopOpen = useGameStore((s) => s.isShopOpen);
+  const showMap = useGameStore((s) => s.settings.showMinimap !== false);
+  const updateSettings = useGameStore((s) => s.updateSettings);
   const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert();
   const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
-    <div className="flex gap-[.6rem] pb-1">
-      <MenuBtn icon={<HelmGlyph />} label="Hero" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
-      <MenuBtn icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
-      <MenuBtn icon={<GoalGlyph />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
-      <MenuBtn icon={<TrophyGlyph />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
-      <MenuBtn icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => openCodex(true)} dot={codexDot} />
-      <MenuBtn icon={<GearGlyph />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
+    <div className="menu-row">
+      <MenuBtn caption="Character" icon={<HelmGlyph />} label="Character" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
+      <MenuBtn caption="Bag" icon={<BagGlyph />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
+      <MenuBtn caption="Skills" icon={<SkillGlyph />} label="Skill Trainer" hint="" onClick={() => openTownShop('SKILLS')} dot={skillDot} />
+      <MenuBtn caption="Quest" icon={<GoalGlyph />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
+      {/* (no big map exists: this shows / hides the minimap) */}
+      <MenuBtn caption="Map" icon={<MapPin size={26} />} label={showMap ? 'Hide minimap' : 'Show minimap'} hint="" onClick={() => updateSettings({ showMinimap: !showMap })} active={showMap} />
+      <MenuBtn caption="Shop" icon={<Store size={26} />} label="Summon shop" hint="" onClick={() => openTownShop('SUMMON')} active={shopOpen} />
+      <MenuBtn caption="Menu" icon={<GearGlyph />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
     </div>
   );
 };
 
-/** Run Upgrades (Tab): sits just below the minimap's bottom-right corner, runs only. Same .sqbtn gold icon + drop-shadow as the menu row. */
-export const RunUpgradesBtn: React.FC = () => {
+/** Small icon row under the area pill: Run Upgrades (runs only) + the two entries the 7-button row has no room for. */
+export const SubMenuButtons: React.FC = () => {
   const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
   const upCount = useGameStore((s) => s.runPicks.length);
   const upOpen = useUiStore((s) => s.runUpgradesOpen);
-  if (!inRun) return null;
-  return <MenuBtn icon={<Layers size={26} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />;
+  const goalsDot = useGoalsAlert(), codexDot = useCodexAlert();
+  return (
+    <div className="submenu-row">
+      {inRun && <MenuBtn mini icon={<Layers size={22} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
+      <MenuBtn mini icon={<TrophyGlyph />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
+      <MenuBtn mini icon={<BookGlyph />} label="Codex" hint="Bestiary" onClick={() => useUiStore.getState().openCodex(true)} dot={codexDot} />
+    </div>
+  );
 };
 
 /** (owner) Gold / gems stay visible above any open panel, shop, popup or summon (the HUD copy sits under the backdrops). */

@@ -21,7 +21,8 @@ import { Button } from '../components/Button';
 import { HERO_META, HERO_ORDER } from '../lib/heroes';
 import { ClassEmblem } from './CharacterSelect';
 import { HERO_COLOR } from '../lib/game';
-import { HERO_ICON, Currency, MenuButtons, PlayerPlate } from '../hud/TopBars';
+import { HERO_ICON, Currency, MenuButtons, SubMenuButtons, PlayerPlate } from '../hud/TopBars';
+import { CornerButtons } from '../hud/CornerButtons';
 import { TownClock } from '../hud/TownClock';
 import { Minimap } from '../hud/Minimap';
 import { VitalBars } from '../hud/Vitals';
@@ -125,6 +126,7 @@ export const VillageHUD: React.FC = () => {
           <MenuButtons />
           {showMap && <div className="hud-mm hud-mm-top"><Minimap /></div>}
           <TownClock />
+          <SubMenuButtons />
         </div>
       )}
 
@@ -135,6 +137,7 @@ export const VillageHUD: React.FC = () => {
         </div>
       )}
       {!panel && <ExpStrip />}
+      {!panel && !device.touch && <CornerButtons />}
       {/* crystal cave: floor / lantern meter / haul at risk + Grit's lantern bench */}
       <CaveHud />
       <LanternPanel />

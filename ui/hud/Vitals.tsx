@@ -5,6 +5,7 @@ import { useRaf } from '../hooks/useRaf';
 import { motion } from 'framer-motion';
 import { OrnateRing } from '../components/Ornate';
 import { runCards } from '../../engine/runCards';
+import { Shield, Megaphone, Swords, Wind, Mountain } from '../components/GoldIcons';
 
 /** Diablo-style liquid orb. Fill + numbers updated through refs every frame. */
 export const VitalOrb: React.FC<{ kind: 'hp' | 'mp' }> = ({ kind }) => {
@@ -69,7 +70,7 @@ export const ExpStrip: React.FC = () => {
   const f = Math.min(1, Math.max(0, xp / Math.max(1, need)));
   return (
     <div className="exp-strip" style={{ ['--fill' as any]: f }} data-testid="exp-strip">
-      <span className="exp-lbl">EXP <b>{(f * 100).toFixed(2)}%</b></span>
+      <span className="exp-lbl">EXP <b>{(f * 100).toFixed(1)}%</b></span>
       <div className="exp-line"><i /></div>
     </div>
   );
@@ -78,12 +79,14 @@ export const ExpStrip: React.FC = () => {
 /** Top-left vitals: big level number + HP / MP bars with values (replaces the round orbs). */
 export const VitalBars: React.FC = () => {
   const level = useGameStore((s) => s.level);
+  const hero = useGameStore((s) => s.hero);
+  const badge = useRef<HTMLDivElement>(null);
   const maxHp = useGameStore((s) => s.stats.maxHealth), maxMp = useGameStore((s) => s.stats.maxMana);
   const mx = useRef({ hp: maxHp, mp: maxMp }); mx.current.hp = maxHp; mx.current.mp = maxMp;
   const hp = useRef<HTMLDivElement>(null), mp = useRef<HTMLDivElement>(null);
   const hpT = useRef<HTMLSpanElement>(null), mpT = useRef<HTMLSpanElement>(null);
   const dd = useRef<HTMLSpanElement>(null);
-  const last = useRef({ hp: '', mp: '', ht: -1, mt: -1, low: false, dd: -1 });
+  const last = useRef({ hp: '', mp: '', ht: -1, mt: -1, low: false, dd: -1, bd: '' });
   useRaf(() => {
     const p = world.player, l = last.current;
     const fh = Math.min(1, Math.max(0, p.hp / Math.max(1, mx.current.hp))), fm = Math.min(1, Math.max(0, p.mana / Math.max(1, mx.current.mp)));
@@ -94,16 +97,23 @@ export const VitalBars: React.FC = () => {
     if (ht !== l.ht && hpT.current) { l.ht = ht; hpT.current.textContent = `${ht} / ${Math.round(mx.current.hp)}`; }
     if (mt !== l.mt && mpT.current) { l.mt = mt; mpT.current.textContent = `${mt} / ${Math.round(mx.current.mp)}`; }
     if (runCards.defiance !== l.dd && dd.current) { l.dd = runCards.defiance; dd.current.style.display = l.dd > 0 ? '' : 'none'; dd.current.textContent = `\u2625 \u00d7${l.dd}`; }
+    // badge: the active buff (else the default shield)
+    const bd = p.cryT > 0 ? 'cry' : p.rageT > 0 ? 'rage' : p.whirlT > 0 ? 'whirl' : p.titanT > 0 ? 'titan' : 'shield';
+    if (bd !== l.bd && badge.current) { l.bd = bd; badge.current.dataset.k = bd; }
     const low = fh < 0.3 && p.alive;
     if (low !== l.low && hp.current) { l.low = low; hp.current.dataset.low = low ? '1' : '0'; }
   });
   return (
     <div className="vbars pe" data-testid="vital-bars">
-      <motion.div key={level} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="vb-lv"><small>LV</small>{level}</motion.div>
+      <motion.div key={level} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="vb-lv"><small>LV</small>{level}<em className="vb-cls">{hero}</em></motion.div>
       <div className="vb-col">
         <div ref={hp} className="vb-bar hp" data-low="0"><i /><span ref={hpT} /></div>
         <div ref={mp} className="vb-bar mp"><i /><span ref={mpT} /></div>
         <span ref={dd} className="vb-dd" title="Death Defiance charges" style={{ display: 'none' }} />
+      </div>
+      <div ref={badge} className="vb-badge" data-k="shield" title="Active buff / passive">
+        <span data-i="shield"><Shield size={16} /></span><span data-i="cry"><Megaphone size={16} /></span><span data-i="rage"><Swords size={16} /></span>
+        <span data-i="whirl"><Wind size={16} /></span><span data-i="titan"><Mountain size={16} /></span>
       </div>
     </div>
   );

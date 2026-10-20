@@ -120,7 +120,7 @@ export const ActionSlot: React.FC<Props> = ({ id, keyLabel, keyCode, icon, size 
             <span className="flex flex-col items-center gap-[1px]"><LockGlyph size={22} />{lockLabel && <span className="lock-lbl">{lockLabel}</span>}</span>
           </span>
         )}
-        {active && level !== undefined && level > 0 && <span className="slot-plus" style={{ left: 'auto', right: '.1rem', top: 'auto', bottom: '.1rem' }}>{level}</span>}
+        {active && level !== undefined && level > 0 && <span className="slot-plus">{level}</span>}
         {qty !== undefined && <span className="slot-qty" style={qty <= 0 ? { color: '#ff8a80' } : undefined}>{qty}</span>}
         {getPips && (
           <div className="absolute left-1/2 -translate-x-1/2 flex gap-[3px]" style={{ top: '.2rem', zIndex: 6 }}>

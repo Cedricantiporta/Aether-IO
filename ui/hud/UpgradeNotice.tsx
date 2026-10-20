@@ -78,7 +78,7 @@ export function upgradesOf(s: St): Up[] {
 }
 
 /** (owner) skills / talents can be trained right here at a biome camp (its Training Post): no teleport needed. */
-const reachable = (key: string): boolean => (key === 'skill' || key === 'talent') && world.room.active && world.room.plan.type === 'CAMP';
+export const reachable = (key: string): boolean => (key === 'skill' || key === 'talent') && world.room.active && world.room.plan.type === 'CAMP';
 
 /** (owner) fewer than 3 health / mana potions in the bag: '' when stocked. */
 const POT_LOW = 3;
@@ -94,23 +94,20 @@ function goPotions(): void {
 }
 
 export const UpgradeNotice: React.FC = () => {
-  const keys = useGameStore(useShallow((s) => upgradesOf(s).map((u) => u.key)));
+  const count = useGameStore((s) => upgradesOf(s).length);
   const [open, setOpen] = useState(false);
   const low = useGameStore((s) => lowPotions(s));
   return (<>
     <div className="upn-stack">
-      {low && (
-        <div className="upn pe" data-testid="potion-notice">
-          <span>Low on {low}</span>
-          <button className="upn-btn" onClick={goPotions}>{useGameStore.getState().status === GameStatus.MENU ? 'Go' : 'Town'}</button>
-        </div>
-      )}
-      {keys.length > 0 && (
-        <div className="upn pe" data-testid="upgrade-notice">
-          <span>{keys.every((k) => k.startsWith('q:')) ? 'Side quest available' : 'Upgrade available'}</span><b>{keys.length}</b>
-          <button className="upn-btn" onClick={() => setOpen(true)} data-testid="upgrade-view">View</button>
-        </div>
-      )}
+      <div className="upn-row-pills">
+        <button className="upn-pill pe" data-testid="upgrade-notice" onClick={() => setOpen(true)}>
+          <span data-testid="upgrade-view">Upgrades</span>{count > 0 && <b>{count}</b>}
+        </button>
+        <button className={`upn-pill pe ${low ? 'low' : ''}`} data-testid="potion-notice" onClick={goPotions}>
+          <span>Potions</span>{low && <b>!</b>}
+        </button>
+      </div>
+      {low && <div className="upn-hint pe">Low on {low}</div>}
     </div>
     {open && <UpgradePopup onClose={() => setOpen(false)} />}
   </>);
