@@ -225,6 +225,21 @@ screens, max-level question: class level cap is 50) have been removed.
 5. Ideas the owner liked but not built: village upgrades (rescued people moving into town), run events between rooms,
    a node map for picking routes (see RUN_DESIGN "Not built").
 6. `README.md` is stale (describes the early siege loop); the docs in `docs/` and this file are current.
+8. **Art + 3D pipeline (2026-10-20, read `docs/REFERENCES.md` and `docs/ART_PROMPTS.md`)**: painted art comes from
+   owner-made ChatGPT sheets in `art/raw/`, sliced by `scripts/slice_sheet.py` (`--cutout` for magenta sheets) into
+   `public/art/{skills,cards,items,ui}`; wired via `PAINTED_ART` (SkillIcons), `CARD_ART` (UpgradeIcons), `ITEM_PAINT`
+   (ItemArt; drawn at scale 1.22 in slots on rarity-gradient backgrounds). Images sent while Claude works are NOT
+   saved: ask for a re-send. Waiting for re-sends: weapons, armor, rings/amulets, cards 2, gear, drops, ores, fish,
+   enemy/boss portraits, status icons, summon banners + card back (list in REFERENCES).
+9. **Town 3D (Blender kit, Higgsfield project "Aether Town Kit", revision 9)**: houses, wall runs, towers, gate are kit
+   pieces (`render/townKit.tsx`; GLB is meshopt + quantized, so meshes are de-quantized before baking). Open: rebuild
+   wall/tower blocks bigger + plainer like the gate (owner: no detailed full bricks), kit shops / castle / chapel /
+   tavern (still procedural, dark roofs), place kit fountain/well/stall/lamps, hedges + stepping-stone paths on the
+   raised districts (Link's Awakening exterior reference), chimney smoke positions vs kit chimneys.
+10. **Camera (owner asked, not started)**: Link's Awakening / Echoes of Wisdom look — fixed north-up yaw (orbit only as
+   a setting), steeper angle with a long lens (lower FOV, farther), tilt-shift blur (e.g. TiltShift2 in the
+   GameCanvas EffectComposer); movement stays camera-relative. Then interiors in that style (REFERENCES "Interiors").
+11. Desktop only now (owner: no phone play) — phone-specific tuning is no longer a priority.
 7. Process hazards: stopped sub-agents leave work in `.claude/worktrees/*` — check `git status` and `git worktree list`
    before assuming something is merged; never commit that folder.
 
