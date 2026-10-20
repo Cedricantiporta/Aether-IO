@@ -10,6 +10,8 @@ import {
 } from '../../../talents';
 import { Button } from '../../components/Button';
 import { SkillIcon } from '../../components/ItemIcon';
+import { PAINTED_ART } from '../../components/SkillIcons';
+import { CARD_ART } from '../../components/UpgradeIcons';
 import { UpgradeArt } from '../../components/UpgradeIcons';
 import { HERO_ICON } from '../../hud/TopBars';
 import { HERO_COLOR } from '../../lib/game';
@@ -28,6 +30,10 @@ const pos = (n: TalentNode): [number, number] => {
 };
 const square = (n: TalentNode) => n.row === 0 || n.capstone || !!n.special;
 
+/** Painted raster art fills the whole node (circle or square); SVG glyphs stay inset. */
+const painted = (icon: string): boolean => (icon.startsWith('u:') ? CARD_ART.has(icon.slice(2)) : PAINTED_ART.has(icon));
+const NodeArt: React.FC<{ icon: string; size: number; dim?: boolean }> = ({ icon, size, dim }) =>
+  painted(icon) ? <span className={`tt-art${dim ? ' dim' : ''}`}><NodeIcon icon={icon} size={size} /></span> : <NodeIcon icon={icon} size={Math.round(size * 0.62)} dim={dim} />;
 const NodeIcon: React.FC<{ icon: string; size: number; dim?: boolean }> = ({ icon, size, dim }) =>
   icon.startsWith('u:')
     ? <span style={{ display: 'block', opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(.9)' : undefined }}><UpgradeArt upgrade={{ type: icon.slice(2) as UpgradeType }} size={size} /></span>
@@ -122,7 +128,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <button key={n.id} type="button" className={`tt-node ${square(n) ? 'sq' : 'rd'} ${st} ${sel?.id === n.id ? 'sel' : ''}`} style={{ left: x, top: y, width: sz, height: sz, ['--bc' as any]: BRANCHES[hero][n.branch].color }}
                       onClick={() => setSel(n.id)} onDoubleClick={() => { if (allocBlock(n, ranks, free, lv) === null) allocate(n.id); }}
                       data-testid={`talent-${n.id}`} data-rank={rk} data-state={st} aria-label={n.name}>
-                      <NodeIcon icon={n.icon} size={Math.round(sz * 0.62)} dim={st === 'locked'} />
+                      <NodeArt icon={n.icon} size={sz} dim={st === 'locked'} />
                       {st === 'locked' && <span className="tt-lock"><Lock size={square(n) ? 16 : 13} /></span>}
                       <span className="tt-rk">{rk}/{n.max}</span>
                     </button>
@@ -135,7 +141,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           {sel && br && (
             <aside className="tt-side" data-testid="talent-detail">
               <div className="tt-dh">
-                <div className={`tt-dicon ${square(sel) ? 'sq' : 'rd'}`} style={{ ['--bc' as any]: br.color }}><NodeIcon icon={sel.icon} size={44} /></div>
+                <div className={`tt-dicon ${square(sel) ? 'sq' : 'rd'}`} style={{ ['--bc' as any]: br.color }}><NodeArt icon={sel.icon} size={64} /></div>
                 <div>
                   <div className="tt-dname">{sel.name}</div>
                   <div className="tt-dsub" style={{ color: br.color }}>{br.name}{sel.capstone ? ' · capstone' : sel.special ? ' · special' : ''}</div>

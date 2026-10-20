@@ -2832,3 +2832,12 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .rw-emblem.has-art { overflow: hidden; padding: 0; }
 .rw-emblem.has-art > .rw-art { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; filter: none; }
 .rw-emblem.has-art::before { display: none; }
+
+/* talent nodes: painted art fills the whole circle / square */
+
+.tt-dicon { position: relative; overflow: hidden; }
+.tt-art { position: absolute; inset: 2px; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.tt-art > *, .tt-art img, .tt-art span { display: block; width: 100% !important; height: 100% !important; border-radius: 0 !important; opacity: 1 !important; }
+.tt-art img { object-fit: cover; }
+.tt-art.dim { filter: grayscale(.9) brightness(.55); }
+.tt-node .tt-lock, .tt-node .tt-rk { z-index: 1; }
