@@ -27,6 +27,8 @@ import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
 import { AnkhPrompt } from './screens/AnkhPrompt';
 import { SetOutWindow } from './screens/SetOut';
+import { ShowcaseLauncher, ShowcaseOverlay } from './screens/Showcase';
+import { DailyPopup } from './screens/DailyPopup';
 import { EndingScreen } from './screens/Ending';
 import { Prologue, StoryBook } from './screens/Story';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
@@ -98,6 +100,9 @@ export const GameUI: React.FC = () => {
       <AnimatePresence>{status === GameStatus.GAME_OVER && <GameOver key="over" />}</AnimatePresence>
       {status === GameStatus.PLAYING && <AnkhPrompt />}
       {village && <SetOutWindow />}
+      {village && <ShowcaseLauncher />}
+      {village && <DailyPopup />}
+      {inGame && <ShowcaseOverlay />}
       <EndingScreen />
       {village && <Prologue />}
       <StoryBook />

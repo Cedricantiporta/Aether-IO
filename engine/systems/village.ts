@@ -26,6 +26,7 @@ import { CASTLE_COLLIDERS, CASTLE_DOOR, CASTLE_EXIT, CASTLE_SPAWN, CASTLE_STEPS 
 import { TAVERN_COLLIDERS, TAVERN_DOOR, TAVERN_EXIT, TAVERN_SPAWN, TAVERN_OUT } from '../tavernData';
 import { HOME_COLLIDERS, HOME_DOOR, HOME_EXIT, HOME_SPAWN, HOME_OUT, BED } from '../homeData';
 import { dreamHooks } from '../../dreams';
+import { wake, SLEEP_FADE, dreamFx } from '../dreamFx';
 import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT, CHURCH_SIDE_EXIT, CHURCH_SIDE_SPAWN, PEW_SEATS } from '../churchData';
 import { CHAPEL_SIDE, TOWN_SEATS, type SeatSpec } from '../townData';
 /** The chapel was entered / left by its side door (the graveyard), not the front. */
@@ -182,6 +183,19 @@ function farmAct(node: number): void {
 }
 
 /** what an E pill does: open a shop panel, talk to NPC `node`, leave through the town gate (harvest = hold E, crate `node`) */
+/** (owner) Sleep in the hero's bed: a short fade, the town clock moves 8 hours on, HP + MP are full again, then the next Font dream plays if one is due. */
+function sleepAtHome(): void {
+  if (dreamFx.busy) return;
+  wake(() => {
+    const st = useGameStore.getState(), p = world.player;
+    world.townTime = (world.townTime + 8 / 24) % 1;
+    p.hp = st.stats.maxHealth; p.mana = st.stats.maxMana;
+    p.poisonT = p.burnT = p.bleedT = p.stunT = p.rootT = p.silenceT = p.defDownT = p.blindT = p.slowT = 0;
+    st.addNotification('You sleep soundly under the patchwork quilt. Eight hours pass, and you wake rested: HP and MP restored.', '#fff3c4', 'SYSTEM');
+    dreamHooks.sleep?.();
+  }, SLEEP_FADE);
+}
+
 export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'ride' | 'pet';
 export const MAX_NEARBY = 3;
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
@@ -297,7 +311,7 @@ export function interact(it: Interactable): void {
     else if (it.act === 'church') { viaSide = it.node === 1; v.pending = 'CHURCH'; }
     else if (it.act === 'tavern') v.pending = 'TAVERN';
     else if (it.act === 'home') v.pending = 'HOME';
-    else if (it.act === 'sleep') { if (!dreamHooks.sleep?.()) st.addNotification('You nap for a while by the fire. No dreams come tonight.', '#fff3c4', 'SYSTEM'); }
+    else if (it.act === 'sleep') sleepAtHome();
     else if (it.act === 'cave') v.pending = 'CAVE';
     else if (it.act === 'leave') { viaSide = v.area === 'CHURCH' && it.node === 1; v.pending = 'LEAVE'; }
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);

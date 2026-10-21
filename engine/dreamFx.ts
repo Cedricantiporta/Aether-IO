@@ -14,15 +14,17 @@ export const dreamFx = {
   phase: 'idle' as 'idle' | 'out' | 'hold' | 'in',
   t: 0,
   then: null as null | (() => void),
+  /** fade-out / hold / fade-in seconds of the running fade (wake: the slow dream wake-up; sleep: a short nap fade) */
+  dur: [WAKE_OUT, WAKE_HOLD, WAKE_IN] as [number, number, number],
   get busy(): boolean { return this.phase !== 'idle'; },
 };
 
 const ease = (x: number) => x * x * (3 - 2 * x);
 
 /** Starts the wake-up: fade out, hold, run `then` (the teleport), fade in. Ignored when already waking. */
-export function wake(then: () => void): void {
+export function wake(then: () => void, dur: [number, number, number] = [WAKE_OUT, WAKE_HOLD, WAKE_IN]): void {
   if (dreamFx.phase !== 'idle') return;
-  dreamFx.phase = 'out'; dreamFx.t = 0; dreamFx.then = then;
+  dreamFx.dur = dur; dreamFx.phase = 'out'; dreamFx.t = 0; dreamFx.then = then;
 }
 
 /** Per-frame tick (real dt) from LookDriver. */
@@ -32,9 +34,9 @@ export function tickDreamFx(dt: number): void {
   if (d.haze < 0.002 && !d.inDream) d.haze = 0;
   if (d.phase === 'idle') return;
   d.t += dt;
-  if (d.phase === 'out') { d.veil = ease(Math.min(1, d.t / WAKE_OUT)); if (d.t >= WAKE_OUT) { d.phase = 'hold'; d.t = 0; } }
-  else if (d.phase === 'hold') { d.veil = 1; if (d.t >= WAKE_HOLD) { const f = d.then; d.then = null; d.phase = 'in'; d.t = 0; f?.(); } }
-  else { d.veil = 1 - ease(Math.min(1, d.t / WAKE_IN)); if (d.t >= WAKE_IN) { d.phase = 'idle'; d.veil = 0; } }
+  if (d.phase === 'out') { d.veil = ease(Math.min(1, d.t / d.dur[0])); if (d.t >= d.dur[0]) { d.phase = 'hold'; d.t = 0; } }
+  else if (d.phase === 'hold') { d.veil = 1; if (d.t >= d.dur[1]) { const f = d.then; d.then = null; d.phase = 'in'; d.t = 0; f?.(); } }
+  else { d.veil = 1 - ease(Math.min(1, d.t / d.dur[2])); if (d.t >= d.dur[2]) { d.phase = 'idle'; d.veil = 0; } }
 }
 
 /** Drops held keys / clicks / joystick (called each frame while `busy`). */
@@ -44,3 +46,6 @@ export function blockInput(): void {
   for (const k in i.pressed) i.pressed[k] = false;
   i.mouseDown = false; i.joy.x = 0; i.joy.z = 0; i.joy.active = false;
 }
+
+/** Sleeping in the hero's bed: a short fade (0.9 s out, 0.3 s hold, 0.9 s in) around `then`. */
+export const SLEEP_FADE: [number, number, number] = [0.9, 0.3, 0.9];

@@ -97,7 +97,7 @@ const rp: [number, number] = [0, 0];
 /** Harvest node kind from a 0..1 roll: crystal 30%, ore 30%, gold vein 20%, healing herb 20%. */
 /** Crystal cavern node: mostly Crystal Clusters / ore; now and then a Rare (13%), Epic (6%) or Legendary (1.5%) shard vein. */
 const pickCaveNode = (r: number, r2: number): CrateKind => (r < 0.015 ? 'LEGEND_VEIN' : r < 0.075 ? 'EPIC_VEIN' : r < 0.205 ? 'RARE_VEIN' : r2 < 0.6 ? 'CRYSTAL' : r2 < 0.8 ? 'ORE' : r2 < 0.9 ? 'GOLD_VEIN' : 'HERB');
-const pickHarvest = (r: number): CrateKind => (r < 0.3 ? 'CRYSTAL' : r < 0.6 ? 'ORE' : r < 0.8 ? 'GOLD_VEIN' : 'HERB');
+const pickHarvest = (r: number): CrateKind => (r < 0.24 ? 'CRYSTAL' : r < 0.48 ? 'ORE' : r < 0.66 ? 'GOLD_VEIN' : r < 0.82 ? 'HERB' : 'MANA_BLOOM');
 
 export function buildRoom(biome: number, type: RoomType, R: number, seed: number, index = 1, campPath = false): void {
   if (campPath && type === 'CAMP' && runInfo.mode !== 'TOWER') { resetFeatures(); feat.layout = 'PLAIN'; buildCampRoom(biome); feat.version++; return; }   // the biome camp: a hand-authored transition path (engine/campPaths.ts)

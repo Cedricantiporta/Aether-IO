@@ -22,6 +22,7 @@ import { QtyStepper } from '../../components/Modal';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat } from '../../lib/game';
 import { CloseX } from '../../components/CloseX';
+import { canCraftRecipe, canCraftSlot } from '../../lib/alerts';
 
 const RNAME: Record<Rarity, string> = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EPIC: 'Epic', LEGENDARY: 'Legendary', MYTHIC: 'Mythic' };
 const pc = (v: number) => `${Math.round(v * 100)}%`;
@@ -78,13 +79,13 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="ws-tree rpg-scroll" data-testid="craft-slots">
             {CRAFT_SLOTS.map((sl) => (
               <div key={sl} className={`ws-cat ${open === sl ? 'open' : ''}`}>
-                <button className="ws-cat-h pe" onClick={() => setOpen(open === sl ? ('' as CraftSlot) : sl)}><span>{SLOT_LABEL[sl]}</span>{CRAFT_RARITIES.some((r) => canCraft(st, getRecipe(sl, r, hero)).length === 0) && <b className="ws-can" title="Something here can be crafted" />}<ChevronDown size={14} /></button>
+                <button className="ws-cat-h pe" onClick={() => setOpen(open === sl ? ('' as CraftSlot) : sl)}><span>{SLOT_LABEL[sl]}</span>{canCraftSlot(useGameStore.getState(), sl) && <i className="red-dot ws-dot" data-testid="craft-cat-dot" />}<ChevronDown size={14} /></button>
                 {open === sl && CRAFT_RARITIES.map((r) => {
                   const rc = getRecipe(sl, r, hero), lk = heroRank < rc.rankReq, can = canCraft(st, rc).length === 0;
                   return (
                     <button key={r} className={`ws-rec pe ${slot === sl && rarity === r ? 'sel' : ''} ${lk ? 'lk' : ''}`} style={{ ['--rc' as any]: RARITY_COLOR[r] }}
                       onClick={() => { setSlot(sl); setRarity(r); setQty(1); }} data-testid={`craft-${sl}-${r}`}>
-                      <i /><span>{RNAME[r]} {SLOT_LABEL[sl]}</span>{lk ? <Lock size={11} /> : can ? <b className="ws-can" title="Craftable" /> : null}
+                      <i /><span>{RNAME[r]} {SLOT_LABEL[sl]}</span>{lk ? <Lock size={11} /> : can ? <i className="red-dot ws-dot" data-testid="craft-dot" /> : null}
                     </button>
                   );
                 })}

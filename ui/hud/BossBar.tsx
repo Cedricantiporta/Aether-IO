@@ -16,7 +16,8 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   const stag = useRef<HTMLDivElement>(null);
   const stagLbl = useRef<HTMLDivElement>(null);
   const abil = useRef<HTMLDivElement>(null);
-  const st = useRef({ active: false, hp: '', trail: 1, trailS: '', name: '', title: '', val: -1, phase: -1, stag: '', staggered: false, abil: '', abilOn: false });
+  const intRow = useRef<HTMLDivElement>(null), intFill = useRef<HTMLDivElement>(null), intLbl = useRef<HTMLSpanElement>(null);
+  const st = useRef({ active: false, hp: '', trail: 1, trailS: '', name: '', title: '', val: -1, phase: -1, stag: '', staggered: false, abil: '', abilOn: false, int: '', intOn: false, intLbl: '' });
 
   const view = useRef({ ...world.boss });   // reused copy of the boss hud for an illusion's bar (no per-frame alloc)
   useRaf((dt) => {
@@ -70,6 +71,12 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
       if (b.ability !== s.abil) { s.abil = b.ability; abil.current.textContent = b.ability; }
       if (ab !== s.abilOn) { s.abilOn = ab; abil.current.style.opacity = ab ? '1' : '0'; abil.current.style.transform = ab ? 'scale(1)' : 'scale(.8)'; }
     }
+    {   // interrupt meter (systems/interrupt.ts): only while the boss casts something stoppable
+      const io = !I && b.interruptOn, fi = io ? Math.max(0, Math.min(1, b.interrupt)) : 0, fk = fi.toFixed(3);
+      if (io !== s.intOn) { s.intOn = io; if (intRow.current) intRow.current.style.opacity = io ? '1' : '0'; }
+      if (io && fk !== s.int) { s.int = fk; if (intFill.current) intFill.current.style.width = `${fi * 100}%`; }
+      if (io && b.interruptLabel !== s.intLbl) { s.intLbl = b.interruptLabel; if (intLbl.current) intLbl.current.textContent = `Interrupt · ${b.interruptLabel}`; }
+    }
     if (b.phase !== s.phase) {
       s.phase = b.phase;
       pips.current.forEach((el, i) => { if (el) el.dataset.on = i <= b.phase ? '1' : '0'; });
@@ -97,6 +104,12 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
       </div>
       <div className="relative mx-auto mt-1" style={{ width: '70%', height: '.5rem', background: 'rgba(0,0,0,.35)', borderRadius: 999, overflow: 'hidden' }} title="Stagger">
         <div ref={stag} data-testid="stagger-bar" style={{ width: '0%', height: '100%', background: '#fff6e0', borderRadius: 999 }} />
+      </div>
+      <div ref={intRow} data-testid="boss-interrupt" style={{ opacity: 0, transition: 'opacity .15s' }}>
+        <div className="text-center" style={{ fontSize: '.6rem', fontWeight: 700, color: '#bfe8ff', marginTop: '.2rem' }}><span ref={intLbl} /></div>
+        <div className="relative mx-auto" style={{ width: '70%', height: '.45rem', background: 'rgba(0,0,0,.35)', borderRadius: 999, overflow: 'hidden' }}>
+          <div ref={intFill} data-testid="interrupt-bar" style={{ width: '0%', height: '100%', background: '#7fd3ff', borderRadius: 999 }} />
+        </div>
       </div>
       <div ref={stagLbl} className="text-center rpg-label !text-[.6rem]" style={{ color: '#ffd23a', opacity: 0, letterSpacing: '.3em' }}>STAGGERED</div>
       <div className="flex justify-center gap-2 mt-1">

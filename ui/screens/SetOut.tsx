@@ -24,14 +24,15 @@ type Mode = 'ADVENTURE' | 'TOWER';
 export const SetOutWindow: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('ADVENTURE');
+  const [remote, setRemote] = useState(false);
   const [tab, setTab] = useState<'RUN' | 'DAILY' | 'WAVES' | 'ASC'>('RUN');   // the tower hub: Endless Tower | Daily Trial | Endless Waves | Ascension (owner: all at the tower; the portal sets out on E)
   useGameEvent('openSetOut', (e) => {
     // (the gate window always opens now: the Daily Trial tab is a choice even before Ascension unlocks)
-    setMode(e.mode); setTab('RUN'); setOpen(true);
+    setMode(e.mode); setTab(e.tab ?? 'RUN'); setRemote(!!e.remote); setOpen(true);
   });   // gate = Adventure, the tower building = Endless Tower
   // walking off (e.g. on through the gate to the outskirts) closes it: it only stays while the hero stands at the gate / tower door
   useRaf(() => {
-    if (!open) return;
+    if (!open || remote) return;
     const p = world.player.pos, at = mode === 'TOWER' ? TOWER.door : PORTAL.front;   // (was the old town gate: the window closed at once at the portal)
     if ((p.x - at.x) ** 2 + (p.z - at.z) ** 2 > 7.5 * 7.5) setOpen(false);
   });

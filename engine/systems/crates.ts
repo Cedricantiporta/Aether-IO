@@ -29,7 +29,7 @@ const boomOpts: DamageOpts = { kind: 'FIRE', knockback: 1.6, env: 'BARREL' };
 let lastTime = 0;
 
 const BASE_XP: Record<Crate['kind'], number> = {
-  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, RARE_VEIN: 120, EPIC_VEIN: 140, LEGEND_VEIN: 180, ORE: 80, GOLD_VEIN: 80, HERB: 60, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
+  CRATE: 50, BARREL: 40, CHEST: 150, POT: 8, HAY: 14, CRYSTAL: 120, RARE_VEIN: 120, EPIC_VEIN: 140, LEGEND_VEIN: 180, ORE: 80, GOLD_VEIN: 80, HERB: 60, MANA_BLOOM: 60, EXPLOSIVE_BARREL: 25, GRAVE: 70, CART: 100,
 };
 
 function dropAt(c: Crate, ox: number, oz: number): Vector3 {
@@ -160,6 +160,15 @@ export function breakCrate(c: Crate): void {
     case 'HERB': {
       if (inRun) { spawnPickup('HEALTH', dropAt(c, 0.6, 0), 30); spawnPickup('HEALTH', dropAt(c, -0.6, 0.3), 30); spawnPickup('HEALTH', dropAt(c, 0, -0.6), 30); }
       else gold(c, 2, 15);
+      break;
+    }
+    case 'MANA_BLOOM': {   // (owner) a glowing blue flower: hold E in a run room to drink its light, +45% of the mana bar (at least 40)
+      const p = world.player, max = st.stats.maxMana;
+      if (inRun && p.alive) {
+        const before = p.mana;
+        p.mana = Math.min(max, p.mana + Math.max(40, max * 0.45));
+        events.emit('floatText', { pos: p.pos, text: `+${Math.round(p.mana - before)} MP`, color: 0x6ab8ff, scale: 1.1, dy: 2.4 });
+      } else gold(c, 2, 15);
       break;
     }
     case 'EXPLOSIVE_BARREL':

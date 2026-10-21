@@ -28,6 +28,7 @@ import {
 import { shape, insideShape } from '../roomShape';
 import { camp, campStartFacing } from '../campPaths';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
+import { showcase, showcaseVictory, SHOWCASE_BIOME, SHOWCASE_DEPTH } from '../showcase';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
 import { spawnPickup, dropCrystals, petCollect, lootPickup } from './pickups';
@@ -193,6 +194,7 @@ export function startRunRooms(): void {
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
   world.room.fade = 1;
+  if (showcase.on) { enterRoom(SHOWCASE_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // (owner) the new character's fully powered showcase arena (engine/showcase.ts)
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
   if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
   const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens at that biome's camp)
@@ -286,6 +288,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   nextBossKind = '';
   if (!finalFight) world.boss.final = false;
   depth = runInfo.mode === 'TOWER' ? (daily.on ? dailyDepth(towerFloor) : waves.on ? waveDepth(towerFloor) : 2 + Math.round(towerFloor * 1.5)) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
+  if (showcase.on) depth = SHOWCASE_DEPTH;   // a late-biome pack and guardian
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
   clearTransient();
@@ -516,6 +519,7 @@ function rollRoomSpawns(type: RoomType): void {
     }
     case 'BOSS': {
       bossPending = true; dd().maxAlive = MINI_MAX_ALIVE;
+      if (showcase.on) { rollPack(0.5, 3, 2); miniPending = true; miniCount = 2; miniIsBoss = false; prebossKing = false; prebossRoom = false; const mm = MINI_BOSSES[def.minis[0]]; miniKind = mm.kind; miniName = mm.name; miniTitle = mm.title; break; }   // showcase: a strong pack, two champions and the guardian
       if (waves.on) {   // Endless Waves: deeper waves stack bosses, mini-bosses and elites together (owner)
         const main = biomeBoss(biome);
         const pool = [...new Set(BIOMES.map((x) => x.boss))].filter((k) => k !== main && k !== 'BOSS_LICH');
@@ -951,7 +955,7 @@ function tickFight(dt: number): void {
     if (waves.on && bossSpawned && bossDefeated() && handOffBoss()) return;   // another boss of the wave still stands
     if (bossSpawned && bossDefeated() && !(waves.on && (miniPending || markers > 0))) {
       bossDeadT = bossDeadT < 0 ? 0 : bossDeadT + dt;
-      if (bossDeadT >= BOSS_GRACE) onBossCleared();
+      if (bossDeadT >= BOSS_GRACE) { if (showcase.on) { if (d.aliveCount === 0 && markers === 0) showcaseVictory(); } else onBossCleared(); }
     }
     return;
   }

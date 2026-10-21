@@ -14,6 +14,8 @@ export interface ConfirmRequest {
 
 interface UiState {
   titleDone: boolean;                   // false until the player leaves the title screen (cinematic orbit camera)
+  prologueOpen: boolean;                // the first-launch prologue slides are showing (the showcase fight / daily popup wait)
+  setPrologueOpen: (v: boolean) => void;
   charSelect: boolean;                  // full-screen class selection (after the title, or from the town)
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
@@ -69,6 +71,8 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   titleDone: false,
+  prologueOpen: false,
+  setPrologueOpen: (v) => set({ prologueOpen: v }),
   charSelect: false,
   recordsOpen: false,
   codexOpen: false,

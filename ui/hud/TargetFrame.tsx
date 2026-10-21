@@ -8,6 +8,7 @@ import type { Enemy } from '../../engine/types';
 import { clearTarget } from '../../engine/systems/target';
 import { currentTarget } from '../../engine/systems/combat';
 import { useRaf } from '../hooks/useRaf';
+import { traitList } from '../../engine/enemyTraits';
 
 const AFFIX_NAME: Record<string, string> = { HASTED: 'Hasted', VAMPIRIC: 'Vampiric', FROZEN: 'Frozen', VOLATILE: 'Volatile', SHIELDED: 'Shielded' };
 const STATUSES: { id: string; icon: React.ReactNode; color: string; label: string; get: (e: Enemy) => number }[] = [
@@ -31,6 +32,7 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
   const hp = useRef<HTMLDivElement>(null);
   const val = useRef<HTMLSpanElement>(null);
   const shield = useRef<HTMLSpanElement>(null);
+  const traitsEl = useRef<HTMLDivElement>(null);
   const icons = useRef<(HTMLElement | null)[]>([]);
   const st = useRef({ shown: false, id: -1, hp: '', val: '', ic: '', sh: '' });
 
@@ -48,6 +50,11 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
       if (name.current) {
         name.current.textContent = (e.elite ? 'Elite ' : e.mini ? 'Champion ' : '') + n;
         name.current.style.color = e.elite || e.mini ? '#e8d3a0' : '#ece4d4';   // (owner: calmer text colours)
+      }
+      if (traitsEl.current) {   // trait chips (glyph + name, tooltip = what it does): rebuilt only when the target changes
+        const box = traitsEl.current; box.textContent = '';
+        for (const tr of traitList(e.traits)) { const c = document.createElement('span'); c.className = 'tf-trait'; c.title = tr.desc; c.dataset.trait = tr.id; c.style.color = tr.color; c.textContent = `${tr.glyph} ${tr.name}`; box.appendChild(c); }
+        box.style.display = e.traits ? 'flex' : 'none';
       }
       if (sub.current) sub.current.textContent = e.elite && e.affix !== 'NONE' ? (AFFIX_NAME[e.affix] ?? '') : '';
     }
@@ -74,6 +81,7 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
         <span ref={sub} className="tf-sub" />
         <button type="button" className="tf-x" aria-label="Clear target" data-testid="target-clear" onClick={clearTarget}><X size={14} /></button>
       </div>
+      <div ref={traitsEl} className="tf-traits" data-testid="target-traits" style={{ display: 'none' }} />
       <div className="tf-bar"><div ref={hp} className="tf-hp" /></div>
       <div className="tf-bot">
         <span className="tf-icons">

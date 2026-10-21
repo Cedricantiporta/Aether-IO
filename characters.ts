@@ -3,6 +3,7 @@
 // start-up, so switching characters = set active + reload the page (clean store, clean engine).
 // The very first character (and any pre-slot save) uses the original profile key, so old saves become character #1.
 import type { HeroClass, Item } from './types';
+import { markShowcasePending } from './engine/showcase';
 
 export interface CharEntry { id: string; name: string; hero: HeroClass; tint: string; created: number }
 interface CharIndex { list: CharEntry[]; active: string }
@@ -78,6 +79,7 @@ export function createChar(name: string, hero: HeroClass, tint: string): CharEnt
   const id = i.list.length === 0 ? 'c0' : `c${Date.now().toString(36)}`;
   const c: CharEntry = { id, name: name.trim().slice(0, 16) || 'Guardian', hero, tint, created: Date.now() };
   write({ list: [...i.list, c], active: id });
+  markShowcasePending(id);   // (owner) the new character's first start: the fully powered showcase fight (engine/showcase.ts)
   return c;
 }
 export function setActiveChar(id: string): void { const i = read(); if (i.list.some((c) => c.id === id)) write({ ...i, active: id }); }

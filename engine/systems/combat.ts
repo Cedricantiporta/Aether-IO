@@ -1,4 +1,7 @@
 import { riruruDied } from './riruru';
+import { interruptHit, resetInterrupt } from './interrupt';
+import { showcase, ULT_CHARGE_MUL } from '../showcase';
+import { TR } from '../enemyTraits';
 import { KILL_XP_MUL } from '../../classLevels';
 // ============================================================================
 // Combat: damage in/out, death + loot, healing, status effects.
@@ -101,7 +104,7 @@ export function updateCombatFx(dt: number): void {
     xpAcc = 0; xpTextT = 0.45;
   }
 }
-export function resetCombat(): void { xpAcc = 0; xpTextT = 0; lastBackstabText = -10; lastSlamText = -10; }
+export function resetCombat(): void { resetInterrupt(); xpAcc = 0; xpTextT = 0; lastBackstabText = -10; lastSlamText = -10; }
 
 /** Big knockback: launches the enemy `dist` units away along (dx,dz); slam damage if it hits an obstacle while flying. */
 export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam = 0): void {
@@ -150,7 +153,7 @@ export function addUlt(n: number): void {
   const sl = useGameStore.getState().skillLevels;
   if (sl.ult <= 0) return;   // the ult is locked until Lv 10 (no charge)
   const wl = sl.weapon;
-  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1))); // ult charge (+40% vs 0.62)
+  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1)); // ult charge (+40% vs 0.62)
   if (p.ult >= 100) events.emit('ultReady', {});
 }
 
@@ -390,10 +393,12 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     amount *= hm;
   }
   if (!(amount > 0)) return;
+  if (!o.dot && (e.boss || e.mini) && !e.decoy) interruptHit(e, amount);   // (owner) boss interrupt meter
   amount *= dailyMods.dealt;   // Daily Trial: Glass Cannon
   if (debug.oneHit) { e.shield = 0; amount = Math.max(amount, (e.hp + 1) * 20); }   // debug: one-hit kills (armor-proof)
 
   let dealt = amount;
+  if (e.traits & TR.ELEM_RESIST && o.kind && o.kind !== 'PHYSICAL' && o.kind !== 'TRUE') dealt *= 0.5;   // Warded trait
   if (o.armorBreak) applyStatus(e, abStatus);
   if (o.frost) e.frostT = Math.max(e.frostT, 4);
   if (!o.dot) {
@@ -696,7 +701,7 @@ let knockWordT = -10;
 /** Knocks the hero back from (fromX, fromZ) by `force` units (eased over KNOCK_TIME, resolved against walls / colliders in player.ts)
  *  and, when `downSec` > 0, knocks it down for that long (no move / attack / skills, get up with GETUP_INVULN s of invulnerability).
  *  Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown and shorten the push. */
-export function knockHero(fromX: number, fromZ: number, force: number, downSec = 0): void {
+export function knockHero(fromX: number, fromZ: number, force: number, downSec = 0, cancel = false): void {
   const p = world.player;
   if (!p.alive || force <= 0 && downSec <= 0) return;
   if (((p.dashT > 0 || p.anim.dashing) && p.dashIframes) || p.sprintT > 0 || p.invulnT > 0) return;   // i-frames: not even pushed
@@ -712,6 +717,7 @@ export function knockHero(fromX: number, fromZ: number, force: number, downSec =
   if (l < 0.05) { dx = -Math.sin(p.facing); dz = -Math.cos(p.facing); l = 1; }   // dead centre: fall backwards
   p.knockDx = dx / l; p.knockDz = dz / l;
   p.knockDist = force; p.knockDur = KNOCK_TIME; p.knockT = KNOCK_TIME; p.knockDone = 0;
+  if (cancel) { hooks.cancelCast(); p.fireT = Math.max(p.fireT, KNOCK_TIME + 0.25); }   // (monster trait) the shove interrupts the cast and pauses basic attacks during the knockback
   if (downSec > 0) {
     p.downT = p.downMax = downSec; p.knockImmuneT = downSec + KNOCK_IMMUNE;
     p.dashT = 0; p.fireT = Math.max(p.fireT, downSec); p.vel.set(0, 0, 0);
@@ -721,13 +727,40 @@ export function knockHero(fromX: number, fromZ: number, force: number, downSec =
   }
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number }): void {
+/** (owner) ticking damage on the hero (poison / burn / bleed, lava, rifts, spikes, thorns, gas, fire patches) is multiplied by this. */
+export const HERO_DOT_MUL = 4;
+
+/** (monster traits) the on-hit effects of a trait-carrying monster's hit on the hero: poison / defense / attack / slow debuffs, stun, knockback (cancels the
+ *  cast), knockdown. Each has a chance or short duration so a pack of them stays fair. */
+let hindGuard = -10;
+/** Slow / root on the hero with diminishing returns: right after one the next root is skipped and slows are cut short, so the hero is never perma-rooted. */
+function hinder(type: 'SLOW' | 'ROOT', dur: number): void {
+  const now = world.time;
+  if (now < hindGuard) { if (type === 'ROOT') return; dur *= 0.4; }
+  if (applyPlayerDebuff(type, dur)) hindGuard = Math.max(hindGuard, now + dur + (type === 'ROOT' ? 3 : 1));
+}
+function applyTraitHit(tr: number, from?: Vector3): void {
+  const p = world.player, wave = world.director.wave;
+  if (tr & TR.POISON) applyPlayerDebuff('POISON', 4, 1 + wave * 0.3);
+  if (tr & TR.DEF_BREAK) applyPlayerDebuff('DEFDOWN', 5);
+  if (tr & TR.ATK_BREAK && !playerTrickImmune()) { p.buffDmg = Math.min(p.buffDmg, -0.25); p.buffT = Math.max(p.buffT, 6); events.emit('floatText', { pos: p.pos, text: 'WEAKENED', color: 0xcbd5e1, scale: 0.9, dy: 2.6 }); }
+  if (tr & TR.SLOW) hinder('SLOW', 1.5);
+  if (tr & TR.HIND_SLOW) hinder('SLOW', 1.1);
+  if (tr & TR.HIND_ROOT) hinder('ROOT', 0.8);
+  if (tr & TR.STUN && Math.random() < 0.3) applyPlayerDebuff('STUN', 0.8);
+  if (!from) return;
+  if (tr & TR.KNOCKDOWN && Math.random() < 0.35) knockHero(from.x, from.z, 3.4, 0.7);
+  else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
+}
+
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
   if (debug.god) return;   // debug god mode
   amount *= DMG_INFLATE;   // (owner) monsters / bosses / hazards hit twice as hard (hero HP is x2 too, store HP_INFLATE)
   const isDot = !!o?.dot;
+  if ((isDot || o?.env) && !o?.noDotMul) amount *= HERO_DOT_MUL;   // (owner) ticking damage hurts the hero 4x more
   if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
   const kind = o?.kind ?? 'PHYSICAL';
   if (!isDot && world.village.miningT > 0) {   // a hit knocks the hero out of mining (owner)
@@ -782,6 +815,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   if (!isDot) p.anim.hurtT = 1;
   if (!isDot && o && o.pos && (o.kb || o.down) && p.hp > 0) knockHero(o.pos.x, o.pos.z, o.kb ?? 0, o.down ?? 0);
   if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
+  { const tr = o?.tr ?? o?.src?.traits ?? 0; if (!isDot && tr && p.hp > 0) applyTraitHit(tr, o?.pos ?? o?.src?.pos); }
 
   const run = world.run;
   run.damageTaken += reduced;

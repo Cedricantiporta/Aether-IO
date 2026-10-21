@@ -132,6 +132,10 @@ export interface Enemy {
   patternT: number;
   angle: number;
   pullCount: number;     // gravity well bookkeeping (reset each frame)
+  traits: number;        // TR.* bitmask (engine/enemyTraits.ts)
+  comboN: number; comboT: number;   // COMBO trait: strikes still to chain, time to the next one
+  dodgeT: number; dodgeCd: number; dodgeX: number; dodgeZ: number;   // sidestep (smarter monsters): time left, cooldown, direction
+  retreatT: number; packed: boolean; // low-hp back-off (pack behaviour): time left; already used
 }
 
 // ------------------------------------------------------- player projectiles --
@@ -181,6 +185,7 @@ export interface EnemyProjectile {
   homing: number;        // rad/s
   slow?: number;         // applies slow to player on hit (0..1)
   debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
+  traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
 }
 
 // --------------------------------------------------------------- ground zones --
@@ -297,6 +302,7 @@ export type CrateKind =
   | 'ORE'              // ore vein rock (quarry / village): crafting shards
   | 'GOLD_VEIN'        // rock seamed with gold nuggets: a gold burst
   | 'HERB'             // healing herb bush: heals + a little mana
+  | 'MANA_BLOOM'       // glowing blue mana flower (hold E in run rooms): restores mana
   | 'EXPLOSIVE_BARREL' // red powder keg: explodes (r 6) damaging ENEMIES when broken
   | 'GRAVE'            // cracked tombstone (graveyard): xp, may release a bat swarm
   | 'CART';            // broken merchant cart (high hp): gold shower + item chance
@@ -459,6 +465,9 @@ export interface BossHud {
   stagger: number;       // 0..1 fill of the stagger bar
   staggered: boolean;
   ability: string;       // name of the signature attack being cast (shown on the boss bar)
+  interrupt: number;     // 0..1 interrupt meter (systems/interrupt.ts) while the boss casts something stoppable
+  interruptOn: boolean;
+  interruptLabel: string;
   abilityT: number;
   name: string;
   title: string;

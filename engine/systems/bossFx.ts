@@ -330,7 +330,7 @@ export function updateBossFx(dt: number): void {
       arena.edgeT = 0.4;
       const d = Math.hypot(pa.x - arena.cx, pa.z - arena.cz);
       if (d > arena.r) {
-        damagePlayer(Math.max(6, world.boss.maxHp * 0.0022), { pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true });
+        damagePlayer(Math.max(6, world.boss.maxHp * 0.0022), { pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true, noDotMul: true });
         applyPlayerDebuff('SLOW', 0.6);
         if (world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: p.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
       }

@@ -161,7 +161,7 @@ export function updateBiomeHazards(dt: number): void {
     if (brCd > 0) brCd -= dt;
     if (inB) {
       brHold = BRAMBLE_HOLD;
-      if (brCd <= 0) { brCd = BRAMBLE_TICK; tmp.set(px, 0, pz); damagePlayer(maxHp() * BRAMBLE_DMG / DMG_INFLATE, { pos: tmp, kind: 'PHYSICAL' }); }
+      if (brCd <= 0) { brCd = BRAMBLE_TICK; tmp.set(px, 0, pz); damagePlayer(maxHp() * BRAMBLE_DMG / DMG_INFLATE, { pos: tmp, kind: 'PHYSICAL', env: true }); }
     } else if (brHold > 0) brHold -= dt;
     hazSlow = brHold > 0 ? BRAMBLE_SLOW : 1;
     // ---- spore mushrooms: anyone (hero or monster) steps close -> a poison cloud, then a cooldown

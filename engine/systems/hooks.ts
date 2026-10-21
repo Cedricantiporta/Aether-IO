@@ -16,4 +16,6 @@ export const hooks = {
   onRevive: () => {},
   /** The hero was knocked down while on a horse: village.ts dismounts. */
   dismount: () => {},
+  /** A knockback (monster trait) cancels the hero's current skill cast / aim: player.ts clears it. */
+  cancelCast: () => {},
 };

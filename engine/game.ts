@@ -37,6 +37,7 @@ import { resetSpecials } from './systems/bossSpecials';
 import { updateBossFx, resetBossFx } from './systems/bossFx';
 import { resetBosses2 } from './systems/bosses2';
 import { tickUltWindup } from './systems/abilities';
+import { showcase, tickShowcase } from './showcase';
 
 const MAX_DT = 0.05;
 
@@ -184,7 +185,7 @@ export function startRun(): void {
   world.enemyGrid.clear();
   resetSystems();
   events.emit('runStart', {});
-  saveSpot(runInfo.mode === 'ADVENTURE' ? 'RUN' : 'TOWER');   // a refresh mid-run comes back outside the portal / tower
+  if (!showcase.on) saveSpot(runInfo.mode === 'ADVENTURE' ? 'RUN' : 'TOWER');   // a refresh mid-run comes back outside the portal / tower
   spotPending = false;
   world.camera.yaw = 0; world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;
   startRunRooms();
@@ -240,6 +241,7 @@ export function updateGame(rawDt: number): void {
   updateCrates(dt);
   updateCombatFx(dt);
   updateCombo(dt);
+  tickShowcase(dt);
 
   world.camera.trauma = Math.max(0, world.camera.trauma - dt * 1.5);
   world.time += dt;

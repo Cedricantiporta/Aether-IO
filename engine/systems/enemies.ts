@@ -50,12 +50,18 @@ import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } fro
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
+import { TR, rollTraits, innateHinder } from '../enemyTraits';
+import { tickInterrupt, interruptView } from './interrupt';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
 const LEASH_DIST = 110;
 const CONTACT_CD = 0.6;
 const ELITE_SCALE = 1.35;
+/** (owner) ordinary monsters move a bit faster than before. */
+const MOVE_MUL = 1.11;
+/** Quickdraw trait: state timers (wind-ups, recoveries) run this much faster; telegraph zones last 1 / this. */
+const QUICK_RATE = 1.38;
 const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'VOLATILE', 'SHIELDED'];
 
 // (owner: basic / elite monsters cast their telegraphed attacks faster - every windup below is x0.8 of its old value)
@@ -134,6 +140,7 @@ const MINION_AGGRO = 12;
 const minTgt = new Int8Array(MAX_ENEMIES).fill(-1);
 const minRe = new Float32Array(MAX_ENEMIES);
 let anyMinion = false;
+let routed = false;   // this monster is being routed round a river / lake (no flanking)
 let curMin = -1;
 
 /** Non-narrowing state check (killEnemy may flip state inside callees). */
@@ -216,14 +223,18 @@ export function findSpawnPoint(minD: number, maxD: number, out: Vector3, baseAng
 
 /** True while a boss runs its AI: its telegraphs are drawn bigger and resolve sooner (harder to dodge). */
 let bossTel = false;
+/** TR.* bits of the enemy being updated right now (telegraphs / projectiles it spawns inherit them). */
+let curTraits = 0;
 const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
 
 export function spawnTelegraphCircle(
   x: number, z: number, radius: number, life: number, damage: number, color: number,
 ): Zone | null {
   if (bossTel) { radius *= BOSS_TEL_R; life *= BOSS_TEL_T; }
+  if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
+  zn.aux = curTraits;   // (trait on-hit debuffs ride on the strike)
   zn.active = true; zn.kind = 'TELEGRAPH_CIRCLE'; zn.hostile = true;
   zn.pos.set(x, 0, z); zn.radius = radius; zn.life = life; zn.maxLife = life;
   zn.damage = damage; zn.color = color;
@@ -236,6 +247,7 @@ export function spawnTelegraphLine(
   x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
 ): Zone | null {
   if (bossTel) { width *= BOSS_TEL_R; length *= 1.12; life *= BOSS_TEL_T; }
+  if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_LINE'; zn.hostile = true;
@@ -317,7 +329,7 @@ export function spawnEnemy(
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   if (elite && !boss) rollEliteShield(e);
   else if (veteran.on && !boss && Math.random() < VET.shieldChance) e.shield = Math.max(e.shield, e.maxHp * 0.4);   // conquered biome: normal monsters with shields too
-  e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed;
+  e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed * (boss ? 1 : MOVE_MUL);   // (owner) ordinary monsters move ~11% faster; bosses keep their pace
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
   e.contactDamage = def.contactDamage * dmgMul * biomeDmg;
@@ -327,6 +339,8 @@ export function spawnEnemy(
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
   e.mini = false;
+  e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
+  e.dodgeCd = 1 + Math.random() * 2.5;
   e.staggerMax = boss ? 100 : 0;
   if (!boss) initTrick(e);
   initEliteBig(e);
@@ -561,12 +575,13 @@ function aiCultist(e: Enemy): void {
 
 /** Keep the player inside [minR, maxR]; strafe while inside the band. */
 function kiteMove(e: Enemy, ux: number, uz: number, minR: number, maxR: number): void {
-  if (tdist < minR * 0.82) setVel(e, -ux, -uz, e.speed);   // (owner: backs off a little less often / less eagerly; was < minR at 1.1x speed)
+  // (owner: smarter ranged) they hold their preferred band, strafe sideways (flipping direction every few seconds) while the shot reloads,
+  // stand their ground when ready to fire, and back away (still sidestepping) when the hero closes in
+  const s = Math.sin(e.animT * 0.7 + e.id * 2.1) >= 0 ? 1 : -1;
+  if (tdist < minR * 0.82) setVel(e, -ux * 0.9 + uz * s * 0.45, -uz * 0.9 - ux * s * 0.45, e.speed * 1.05);
   else if (tdist > maxR) setVel(e, ux, uz, e.speed);
-  else {
-    const s = (e.id & 1) === 0 ? 1 : -1;
-    setVel(e, uz * s, -ux * s, e.speed * 0.5);
-  }
+  else if (e.attackCd > 0.5) setVel(e, uz * s + ux * (tdist < (minR + maxR) * 0.5 ? -0.25 : 0.1), -ux * s + uz * (tdist < (minR + maxR) * 0.5 ? -0.25 : 0.1), e.speed * 0.75);
+  else setVel(e, uz * s, -ux * s, e.speed * 0.25);
 }
 
 function aiBomber(e: Enemy): void {
@@ -1330,18 +1345,22 @@ function contactHit(e: Enemy, locked: boolean): void {
       meleeT[e.id] -= frameDt;
       if (meleeT[e.id] > 0) return;
       meleeT[e.id] = 0; contactCd[e.id] = MELEE_CD; strikeT[e.id] = 1;
+      if (e.traits & TR.COMBO) {   // (Flurry trait) 2-3 quick strikes in a row, then the usual pause
+        if (e.comboT > 0) { e.comboN--; if (e.comboN <= 0) { e.comboT = 0; contactCd[e.id] = MELEE_CD * 1.5; } else contactCd[e.id] = 0.05; }
+        else { e.comboT = 1; e.comboN = 1 + (Math.random() < 0.5 ? 1 : 0); contactCd[e.id] = 0.05; }
+      }
       const d = Math.sqrt(d2) || 1;
       e.pos.x += (dx / d) * 0.35; e.pos.z += (dz / d) * 0.35;   // lunge into the strike
-      if (d2 > (r + 0.7) * (r + 0.7)) return;                  // the hero stepped out of reach: whiff
+      if (d2 > (r + 0.7) * (r + 0.7)) { e.comboT = 0; if (e.traits & TR.COMBO) contactCd[e.id] = MELEE_CD; return; }   // the hero stepped out of reach: whiff (the combo ends)
     } else {
       if (contactCd[e.id] > 0 || d2 >= (r + 0.3) * (r + 0.3)) return;
-      meleeT[e.id] = MELEE_WINDUP;
+      meleeT[e.id] = e.comboT > 0 ? 0.2 : MELEE_WINDUP;   // (combo follow-ups come fast)
       return;
     }
   } else {
     if (contactCd[e.id] > 0 || d2 >= r * r) return;
   }
-  const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1);
+  const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1) * (e.traits & TR.COMBO && e.state !== 'ATTACK' ? 0.7 : 1);
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   if (curMin >= 0) { damageMinion(curMin, dmg); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton
   const grab = e.kind === 'ZOMBIE';
@@ -1378,6 +1397,7 @@ function updateEnemy(e: Enemy): void {
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
+  curTraits = e.traits;
   const still = isStationary(e.kind) && !(e.waterT > 0);   // (a lake hydra that reached a water puddle is free to move)
   // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
   // (strike range) they track the real hero so their attacks still connect
@@ -1387,9 +1407,11 @@ function updateEnemy(e: Enemy): void {
     const ox = trailPt[0] - e.pos.x, oz = trailPt[1] - e.pos.z, od = Math.sqrt(ox * ox + oz * oz);
     if (od > e.radius + 5) { tdx = ox; tdz = oz; tdist = od; }   // (px / pz stay the real hero: strikes, routing)
   }
+  routed = false;
   // rivers / lakes: walkers head for a bridge (or round the shore) when liquid separates them from their target
   if ((feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
     && routeAround(e.pos.x, e.pos.z, px, pz, e.radius, wayPt)) {
+    routed = true;
     const wx = wayPt[0] - e.pos.x, wz = wayPt[1] - e.pos.z, wd = Math.sqrt(wx * wx + wz * wz);
     const rest = Math.hypot(px - wayPt[0], pz - wayPt[1]);
     tdx = wx; tdz = wz; tdist = wd + rest;
@@ -1420,8 +1442,10 @@ function updateEnemy(e: Enemy): void {
     const b = world.boss;
     if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) { b.stagger = staggerView(e); b.staggered = e.staggerT > 0; }
   }
+  if (e.boss || e.mini) tickInterrupt(e, dt);
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
+  if (e.traits & TR.CC_RESIST) { if (e.freezeT > 0) e.freezeT -= dt * 1.5; if (e.stunT > 0) e.stunT -= dt * 1.5; if (e.fearT > 0) e.fearT -= dt * 1.5; }   // Steadfast: CC wears off ~2.5x sooner
   if (e.fearT > 0) {   // terrified: frozen in place; when it wears off, slowed 30% for a while
     e.fearT -= dt;
     if (e.fearT <= 0) { e.slowT = Math.max(e.slowT, FEAR_SLOW_T); e.slowFactor = Math.max(e.slowFactor, 0.3); }
@@ -1450,22 +1474,26 @@ function updateEnemy(e: Enemy): void {
     if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) { barOwner = e.id; world.boss.shieldMax = 0; }
     if (barOwner === e.id) {
       const b = world.boss; if (!e.boss) b.active = true; b.hp = e.hp; b.maxHp = e.maxHp;
+      interruptView(e);
       b.shield = e.shield > 1 ? e.shield : 0;   // (shield 1 = the invincible ward: no bar)
       if (b.shield <= 0) b.shieldMax = 0; else if (b.shield > b.shieldMax) b.shieldMax = b.shield;
     }
   }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   const winded = (e.boss || e.mini) && !e.decoy && tickWinded(e, dt, locked);
-  if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }   // free-hit window: stands there panting (no attacks, no new casts)
+  const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
+  const dodging = !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
+  if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
+  else if (dodging) { /* velocity set by tickDodge */ }   // free-hit window: stands there panting (no attacks, no new casts)
   else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {
     // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills
     const pace = (e.boss || e.mini) ? bossPace() : 1;
-    e.stateT += dt * pace;
+    e.stateT += dt * pace * qm;
     if (e.attackCd > 0) e.attackCd -= dt * pace;
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
     else if (e.elite && !e.boss && !e.mini && e.trickT <= 0 && e.state !== 'SPAWN' && hasEliteBig(e.kind) && (updateEliteBig(e, dt) || (e.fearT <= 0 && tryStartEliteBig(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { /* signature big attack (eliteBig.ts) owns the enemy */ }
-    else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
+    else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt * qm) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)
     else runAI(e);
@@ -1474,7 +1502,9 @@ function updateEnemy(e: Enemy): void {
     stop(e);
   }
   bossTel = false;
+  curTraits = 0;
   if (isDying(e)) return; // bomber exploded
+  if (!dodging && !still && !e.boss && !e.mini && !locked && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0) packAndFlank(e);
   // melee standoff (owner): a chasing monster halts a small step short of its target and strikes from there (wind-up +
   // lunge, contactHit) instead of walking into / past the hero
   if (e.state === 'CHASE' && !e.boss && !still && e.contactDamage > 0) {
@@ -1487,8 +1517,9 @@ function updateEnemy(e: Enemy): void {
   }
 
   // ---- motion
-  const sm = e.waterT > 0 ? 1.35 : e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;   // aquatic monsters in water: +35%
-  const kr = e.mini ? 0 : 1 - ENEMY_DEFS[e.kind].knockResist;   // bosses, mini-bosses and big monsters can't be knocked back
+  let sm = e.waterT > 0 ? 1.35 : e.slowT > 0 ? Math.max(0.1, 1 - e.slowFactor) : 1;   // aquatic monsters in water: +35%
+  if (packPushT > 0 && e.state === 'CHASE' && !e.boss && e.retreatT <= 0) sm *= 1.12;   // a packmate fell back: the rest push in
+  const kr = (e.mini ? 0 : 1 - ENEMY_DEFS[e.kind].knockResist) * (e.traits & TR.KB_RESIST ? 0.2 : 1);   // bosses, mini-bosses and big monsters can't be knocked back
   e.pos.x += (e.vel.x * sm + e.knock.x * kr) * dt;
   e.pos.z += (e.vel.z * sm + e.knock.z * kr) * dt;
   e.knock.x *= frameDecay;
@@ -1541,6 +1572,80 @@ function updateEnemy(e: Enemy): void {
 }
 
 // ------------------------------------------------------------ main loop --------
+// ------------------------------------------------------------ smarter monsters (owner): dodge, flank, pack --------
+const AGILE: ReadonlySet<string> = new Set(['GOBLIN', 'BAT', 'DIREWOLF', 'HELLHOUND', 'SKELETON_ARCHER', 'SCARAB', 'VOID_STALKER', 'BANDIT', 'GARGOYLE', 'FROST_WISP', 'WRAITH']);
+const RANGED_KIND: ReadonlySet<string> = new Set(['SKELETON_ARCHER', 'CULTIST', 'SKELETON_MAGE', 'FROST_WISP', 'CINDER_SHAMAN', 'VOID_EYE', 'GOBLIN_ARCHER', 'LAKE_HYDRA', 'BOMBER']);
+const MAXT = 40;
+const thX = new Float32Array(MAXT), thZ = new Float32Array(MAXT), thVX = new Float32Array(MAXT), thVZ = new Float32Array(MAXT), thR = new Float32Array(MAXT);
+let thN = 0;
+const fxX = new Float32Array(16), fxZ = new Float32Array(16), fxR = new Float32Array(16);
+let fxN = 0, packPushT = 0, lastDodgeText = -10;
+/** Once per frame: the hero's incoming projectiles and the ground skills about to land, as flat arrays the dodge check reads. */
+function buildThreats(): void {
+  thN = 0; fxN = 0;
+  const pl = world.projectiles;
+  for (let i = 0; i < pl.length && thN < MAXT; i++) {
+    const p = pl[i];
+    if (!p.active || p.kind === 'ORBITAL_BLADE' || p.kind === 'PET_BOLT') continue;
+    if (Math.abs(p.vel.x) + Math.abs(p.vel.z) < 5) continue;
+    thX[thN] = p.pos.x; thZ[thN] = p.pos.z; thVX[thN] = p.vel.x; thVZ[thN] = p.vel.z; thR[thN] = p.radius + (p.aoeRadius > 0 ? p.aoeRadius * 0.6 : 0); thN++;
+  }
+  const fx = world.fx;
+  for (let i = 0; i < fx.length && fxN < 16; i++) {
+    const f = fx[i];
+    if (!f.active || f.hostile || f.done || f.radius < 1) continue;
+    const left = f.delay - f.t;
+    if (left < 0.15 || left > 1.0) continue;
+    fxX[fxN] = f.x; fxZ[fxN] = f.z; fxR[fxN] = f.radius; fxN++;
+  }
+}
+/** Agile monsters and elites sidestep / short-dash out of something they can see coming (cooldown per monster, chance grows with depth, never while winding up). */
+function tickDodge(e: Enemy, dt: number): boolean {
+  if (e.dodgeT > 0) { e.dodgeT -= dt; setVel(e, e.dodgeX, e.dodgeZ, e.speed * 3.1); desiredYaw = Math.atan2(tdx, tdz); return true; }
+  if (e.dodgeCd > 0) { e.dodgeCd -= dt; return false; }
+  if (thN + fxN === 0 || (e.state !== 'CHASE' && e.state !== 'KITE') || e.fearT > 0 || isStationary(e.kind) || !(e.elite || AGILE.has(e.kind))) return false;
+  if (((lodTick + e.id) & 3) !== 0) return false;   // ~15 checks a second
+  let dx = 0, dz = 0, hit = false;
+  for (let i = 0; i < thN && !hit; i++) {
+    const rx = e.pos.x - thX[i], rz = e.pos.z - thZ[i], s = Math.hypot(thVX[i], thVZ[i]) || 1;
+    const along = (rx * thVX[i] + rz * thVZ[i]) / s;
+    if (along < 0.5 || along > s * 0.6) continue;   // behind it, or more than ~0.6 s away
+    const cross = (rx * thVZ[i] - rz * thVX[i]) / s;   // signed distance from the flight line
+    if (Math.abs(cross) > e.radius + thR[i] + 0.6) continue;
+    const side = cross >= 0 ? 1 : -1;
+    dx = (thVZ[i] / s) * side; dz = (-thVX[i] / s) * side; hit = true;
+  }
+  for (let i = 0; i < fxN && !hit; i++) {
+    const rx = e.pos.x - fxX[i], rz = e.pos.z - fxZ[i], d = Math.hypot(rx, rz);
+    if (d > fxR[i] + e.radius + 0.5) continue;
+    const k = d > 0.05 ? 1 / d : 0; dx = k ? rx * k : 1; dz = k ? rz * k : 0; hit = true;
+  }
+  if (!hit) return false;
+  const wave = world.director.wave, biome = Math.max(0, world.room.biome | 0);
+  const ch = Math.min(0.5, (0.08 + 0.03 * biome + 0.005 * wave) * (e.elite ? 1.5 : 1) * (wave <= 3 && biome === 0 ? 0.5 : 1));   // early Greenwood stays fair
+  if (Math.random() > ch) { e.dodgeCd = 0.6; return false; }
+  e.dodgeT = 0.26; e.dodgeX = dx; e.dodgeZ = dz; e.dodgeCd = (e.elite ? 2.2 : 3.4) + Math.random() * 1.5;
+  if (world.time - lastDodgeText > 0.5) { lastDodgeText = world.time; events.emit('floatText', { pos: e.pos, text: 'dodge', color: 0xd7e3f2, scale: 0.7, dy: 2.0 }); }
+  setVel(e, dx, dz, e.speed * 3.1);
+  return true;
+}
+/** Melee packs: fan out to different angles instead of one line, and a monster nearly dead falls back for a moment while the others push in. */
+function packAndFlank(e: Enemy): void {
+  if (RANGED_KIND.has(e.kind) || e.contactDamage <= 0) return;
+  if (e.retreatT > 0) {
+    e.retreatT -= frameDt;
+    if (e.state === 'CHASE') { const inv = 1 / Math.max(tdist, 0.001); setVel(e, -tdx * inv, -tdz * inv, e.speed * 0.95); desiredYaw = Math.atan2(tdx, tdz); }
+    return;
+  }
+  if (e.state !== 'CHASE') return;
+  if (!e.packed && e.hp < e.maxHp * 0.22 && tdist < 10 && !e.elite) { e.packed = true; e.retreatT = 1 + Math.random(); packPushT = 1.6; return; }
+  const sp = Math.abs(e.vel.x) + Math.abs(e.vel.z);
+  if (sp < 0.1 || routed || tdist < e.radius + 2.6 || tdist > 16) return;
+  const a = ((((e.id * 37) % 11) / 10) - 0.5) * 1.5 * Math.min(1, (tdist - e.radius - 2.6) / 4);   // up to ~43 degrees either side, fading out near the strike
+  const c = Math.cos(a), s = Math.sin(a), vx = e.vel.x, vz = e.vel.z;
+  e.vel.x = vx * c - vz * s; e.vel.z = vx * s + vz * c;
+}
+
 const lodAcc = new Float32Array(MAX_ENEMIES);
 let lodTick = 0;
 
@@ -1554,6 +1659,8 @@ export function updateEnemies(dt: number): void {
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
+  buildThreats();
+  if (packPushT > 0) packPushT -= dt;
   anyMinion = false;
   for (const m of world.minions) if (m.active && m.rise <= 0) { anyMinion = true; break; }
   const list = world.enemies;
@@ -1638,6 +1745,8 @@ export function fireEnemyProjectile(
   p.homing = opts?.homing ?? 0;
   p.slow = opts?.slow ?? 0;
   p.debuff = opts?.debuff ?? 0;
+  p.traits = curTraits;
+  if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
 }
 
 export function updateEnemyProjectiles(dt: number): void {
@@ -1743,7 +1852,7 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow });
+        damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow, tr: p.traits });
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });

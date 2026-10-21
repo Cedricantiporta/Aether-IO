@@ -711,7 +711,7 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
     if (S.auraT <= 0) {
       S.auraT = 0.5;
       const p = world.player;
-      if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true });
+      if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true, noDotMul: true });
     }
   }
   if (S.cleaveCd > 0) S.cleaveCd -= dt;

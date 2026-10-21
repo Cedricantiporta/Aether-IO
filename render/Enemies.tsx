@@ -1,4 +1,5 @@
 import { riruru } from '../engine/systems/riruru';
+import { TRAIT_LIST } from '../engine/enemyTraits';
 // Instanced multi-part enemies + blob shadows, elite rings, shields, ice, stun stars and health bars.
 import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
 import { questKill } from '../engine/systems/npcQuestLogic';
@@ -26,6 +27,8 @@ const MAX = 400;
 const _c = new Color(), _w = new Color();
 const AFFIX_TINT: Record<string, [number, number, number]> = { HASTED: [1.2, 1.12, 0.75], VAMPIRIC: [1.25, 0.78, 0.82], FROZEN: [0.8, 1.0, 1.3], VOLATILE: [1.3, 0.95, 0.7], SHIELDED: [0.9, 1.0, 1.25], NONE: [1, 1, 1] };
 // per-kind colour multiplier on top of the model's own colours (imps = red-hot goblins)
+const _tt: [number, number, number] = [1, 1, 1];
+const traitTint = (mask: number): [number, number, number] => { for (let i = 0; i < TRAIT_LIST.length; i++) if (mask & TRAIT_LIST[i].bit) { const t = TRAIT_LIST[i].tint; _tt[0] = 1 + (t[0] - 1) * 0.8; _tt[1] = 1 + (t[1] - 1) * 0.8; _tt[2] = 1 + (t[2] - 1) * 0.8; return _tt; } return _tt; };
 const KIND_TINT: Partial<Record<EnemyKind, [number, number, number]>> = { BOSS_IMP: [2.1, 0.5, 0.35] };
 const AFFIX_COL: Record<string, number> = { HASTED: 0xffd23a, VAMPIRIC: 0xd0203a, FROZEN: 0x5ad0ff, VOLATILE: 0xff7a1a, SHIELDED: 0x4a8aff, NONE: 0xe8b030 };
 
@@ -187,6 +190,7 @@ export function Enemies() {
       let r = 1, g = 1, b = 1, fl = e.hitFlash;
       const kt = KIND_TINT[e.kind]; if (kt) { r = kt[0]; g = kt[1]; b = kt[2]; }
       if (e.affix !== 'NONE') { const a = AFFIX_TINT[e.affix]; r *= a[0]; g *= a[1]; b *= a[2]; }
+      if (e.traits) { const tt = traitTint(e.traits); r *= tt[0]; g *= tt[1]; b *= tt[2]; }   // (traits: the first trait's colour wash, readable at a glance)
       const gob = world.roomEvt.obj === 'GOBLIN' && world.roomEvt.enemy === e.id;   // the treasure goblin: gilded and glowing
       if (gob) { const p = 0.85 + 0.15 * Math.sin(t * 6); r = 1.9 * p; g = 1.5 * p; b = 0.35; }
       if (e.id === riruru.id) { r = 0.5; g = 0.75; b = 6.5; }   // (owner cameo) Riruru: the green slime body (#6fc22a) multiplied to a clear sky blue

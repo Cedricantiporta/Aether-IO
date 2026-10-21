@@ -19,6 +19,7 @@ export const Prologue: React.FC<{ force?: boolean; onDone?: () => void }> = ({ f
   const [open, setOpen] = useState(false);
   const [n, setN] = useState(0);
   useEffect(() => { if (force || (titleDone && !seen())) { setN(0); setOpen(true); } }, [titleDone, force]);
+  useEffect(() => { if (!force) { useUiStore.getState().setPrologueOpen(open); return () => useUiStore.getState().setPrologueOpen(false); } }, [open, force]);
   useEffect(() => { if (!force) { holdTownMusic('prologue', open); return () => holdTownMusic('prologue', false); } }, [open, force]);
   const close = () => { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ } setOpen(false); onDone?.(); };
   const next = () => (n >= PROLOGUE.length - 1 ? close() : setN((x) => x + 1));

@@ -2,6 +2,7 @@
 // Player: movement, dash, manual attack, cooldowns, regen, potions, death flow.
 // ============================================================================
 import { GameStatus } from '../../types';
+import { showcase } from '../showcase';
 import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
@@ -64,6 +65,7 @@ export function resetPlayerSystem(): void {
   resetAim();
   const p = world.player; p.knockT = 0; p.knockDone = 0; p.downT = 0; p.downMax = 0; p.knockImmuneT = 0;
 }
+hooks.cancelCast = () => { resetAim(); abilityState.castLockT = 0; world.player.anim.castT = 0; };
 hooks.onRevive = () => { dying = false; deathT = 0; ended = false; ankhOffer.open = false; ankhOffer.declined = false; };
 
 /** Initialises the runtime player from store stats (after clearWorld). */
@@ -183,7 +185,7 @@ export function updatePlayer(dt: number): void {
     a.moveBlend = 0;
     if (deathT >= DEATH_DELAY && !ended) {
       // an Ankh of Life in the bag (off cooldown): offer it on the death screen first (ui/screens/AnkhPrompt.tsx)
-      if (!ankhOffer.declined && ankhAvailable()) { ankhOffer.open = true; return; }
+      if (!showcase.on && !ankhOffer.declined && ankhAvailable()) { ankhOffer.open = true; return; }
       ended = true;
       st.endRun({ ...world.run, wave: world.director.wave });
     }

@@ -18,7 +18,7 @@ import { useGameStore } from '../store';
 
 const MAXC = 96;
 const _tc = new Color();
-const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'RARE_VEIN', 'EPIC_VEIN', 'LEGEND_VEIN', 'ORE', 'GOLD_VEIN', 'HERB', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
+const KINDS: CrateKind[] = ['CRATE', 'BARREL', 'CHEST', 'POT', 'HAY', 'CRYSTAL', 'RARE_VEIN', 'EPIC_VEIN', 'LEGEND_VEIN', 'ORE', 'GOLD_VEIN', 'HERB', 'MANA_BLOOM', 'EXPLOSIVE_BARREL', 'GRAVE', 'CART'];
 
 function crate() {
   const b = new GB([0.82, 1.08]);
@@ -98,6 +98,17 @@ function herb() {
   for (const [x, y, z] of [[0.3, 0.85, 0.15], [-0.25, 0.95, -0.2], [0.05, 1.05, 0.3], [-0.3, 0.78, 0.3], [0.28, 0.9, -0.3]] as number[][]) { g.sph(0.11, [x, y, z], '#ff5a8a', 1, 5); g.sph(0.05, [x, y + 0.08, z], '#fff0a0', 1, 4); }
   return { body: b.build(), glow: g.build() };
 }
+/** Mana bloom: a cute glowing blue flower (big round petals around a bright core) on a leafy tuft; the petals are the glow geometry. */
+function manaBloom() {
+  const b = new GB([0.7, 1.15]), g = new GB([0.9, 1.3]);
+  b.sph(0.34, [0, 0.16, 0], '#2f8a5c', [1.4, 0.55, 1.4], 6);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; b.cone(0.1, 0.7 + (i % 2) * 0.2, 4, [Math.cos(a) * 0.3, 0.38, Math.sin(a) * 0.3], i % 2 ? '#3fae6a' : '#58c97c', [Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55]); }
+  b.cyl(0.05, 0.07, 0.78, 6, [0, 0.55, 0], '#3a9a62');
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; g.sph(0.26, [Math.cos(a) * 0.3, 1.0, Math.sin(a) * 0.3], i % 2 ? '#5aa8ff' : '#8cc8ff', [1, 0.55, 1.3], 6); }
+  g.sph(0.2, [0, 1.06, 0], '#e8f6ff', 1, 6);
+  for (const [x, y, z] of [[0.55, 0.7, 0.2], [-0.5, 0.85, -0.3], [0.1, 1.45, 0.1]] as number[][]) g.sph(0.055, [x, y, z], '#bfe4ff', 1, 4);
+  return { body: b.build(), glow: g.build() };
+}
 function keg() {
   const b = new GB([0.8, 1.1]), g = new GB([1, 1]);
   b.cyl(0.5, 0.53, 1.1, 12, [0, 0.56, 0], '#b8321f'); b.sph(0.58, [0, 0.56, 0], '#b8321f', [1, 0.95, 1], 12);
@@ -132,7 +143,7 @@ function cart() {
   g.cyl(0.12, 0.12, 0.03, 8, [0.6, 1.0, 0.35], '#ffd23a', [0.4, 0, 0.2]); g.cyl(0.1, 0.1, 0.03, 8, [-0.7, 0.95, 0.25], '#ffd23a', [0.2, 0, 0.5]); g.cyl(0.1, 0.1, 0.03, 8, [1.4, 0.04, 0.5], '#ffd23a', [0, 0, 0]);
   return { body: b.build(), glow: g.build() };
 }
-const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: () => crystal(), RARE_VEIN: rareVein, EPIC_VEIN: epicVein, LEGEND_VEIN: legendVein, ORE: ore, GOLD_VEIN: goldVein, HERB: herb, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
+const BUILD: Record<CrateKind, () => { body: BufferGeometry; glow: BufferGeometry | null }> = { CRATE: crate, BARREL: barrel, CHEST: chest, POT: pot, HAY: hay, CRYSTAL: () => crystal(), RARE_VEIN: rareVein, EPIC_VEIN: epicVein, LEGEND_VEIN: legendVein, ORE: ore, GOLD_VEIN: goldVein, HERB: herb, MANA_BLOOM: manaBloom, EXPLOSIVE_BARREL: keg, GRAVE: grave, CART: cart };
 
 export function Crates() {
   const sys = useMemo(() => {
@@ -187,6 +198,7 @@ export function Crates() {
         else if (cr.kind === 'EPIC_VEIN') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.4, 1.1, 0.35, 2.0, 0.46 + 0.1 * Math.sin(t * 2 + i), CELL.GLOW);
         else if (cr.kind === 'LEGEND_VEIN') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.8, 2.0, 1.4, 0.3, 0.55 + 0.12 * Math.sin(t * 2.6 + i), CELL.GLOW);
         else if (cr.kind === 'GOLD_VEIN') pushHalo(cr.pos.x, cr.pos.y + 0.8, cr.pos.z, 2.6, 1.6, 1.2, 0.3, 0.25 + 0.08 * Math.sin(t * 2.4 + i), CELL.GLOW);
+        else if (cr.kind === 'MANA_BLOOM') pushHalo(cr.pos.x, cr.pos.y + 1.0, cr.pos.z, 3.0, 0.35, 0.8, 1.8, 0.4 + 0.12 * Math.sin(t * 2.2 + i), CELL.GLOW);
         else if (cr.kind === 'HERB') pushHalo(cr.pos.x, cr.pos.y + 0.9, cr.pos.z, 2.2, 1.6, 0.5, 0.8, 0.22 + 0.08 * Math.sin(t * 2 + i), CELL.GLOW);
         else if (cr.kind === 'ORE') pushHalo(cr.pos.x, cr.pos.y + 0.8, cr.pos.z, 2.2, 0.6, 0.9, 1.4, 0.16, CELL.GLOW);
         if (cr.kind === 'CHEST') { if (((t * 1.3 + i) % 3) < 0.15) pushHalo(cr.pos.x, cr.pos.y + 0.6, cr.pos.z + 0.5, 0.9, 2, 1.7, 0.7, 0.8, CELL.STAR); }

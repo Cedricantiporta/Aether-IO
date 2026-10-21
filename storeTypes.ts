@@ -202,6 +202,8 @@ export interface GameState {
   startDaily: () => void;                            // Daily Trial: start today's challenge (dailyChallenge.ts) with the current hero
   completeDaily: (r: DailyResult) => { rewarded: boolean; newBest: boolean };   // records the score; pays the day's reward once
   startWaves: () => void;                            // Endless Waves (endlessWaves.ts): survival run with the current hero
+  startShowcase: () => void;                         // the one-off fully powered arena fight for a new character (engine/showcase.ts): a temporary overlay
+  endShowcase: (won: boolean) => void;               // restores the real profile and returns to town
   recordWave: (wave: number) => boolean;             // a wave cleared: best per class (true = new best) + one-time milestone rewards
   buyTech: (id: import('./tech').TechId) => boolean;
   setStory: (step: number, p?: number) => void;

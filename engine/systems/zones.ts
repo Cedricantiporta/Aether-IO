@@ -159,7 +159,7 @@ function poisonTick(z: Zone): void {
   const p = world.player;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
   const rr = z.radius + PLAYER_RADIUS;
-  if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage * POISON_TICK, { pos: z.pos, kind: 'POISON' });
+  if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage * POISON_TICK, { pos: z.pos, kind: 'POISON', env: true });
 }
 
 // ------------------------------------------------------ environmental hazards --
@@ -190,7 +190,7 @@ function quicksandUpdate(z: Zone, dt: number): void {
       envSlow = Math.min(envSlow, 1 - SAND_SLOW);
       const d = Math.sqrt(d2) || 1e-3;
       if (p.dashT <= 0) { const pull = (2 + 1.5 * (1 - Math.min(1, d / R))) * dt; if (d > pull) { p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull; } }   // (a dash breaks free)
-      if (tick && d < R * SAND_CORE && p.dashT <= 0) damagePlayer(dps * HAZARD_TICK, { pos: z.pos });
+      if (tick && d < R * SAND_CORE && p.dashT <= 0) damagePlayer(dps * HAZARD_TICK, { pos: z.pos, env: true });
     }
   }
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, R + 4, out);
@@ -265,7 +265,7 @@ function hazardTick(z: Zone): void {
   const dps = gas ? 7 + wave * 1.2 : 6 + wave * 1.0;
   const p = world.player;
   if (p.alive && inZone(z, p.pos.x, p.pos.z, PLAYER_RADIUS)) {
-    damagePlayer(dps * HAZARD_TICK, { pos: z.pos, kind: gas ? 'POISON' : 'FIRE' });
+    damagePlayer(dps * HAZARD_TICK, { pos: z.pos, kind: gas ? 'POISON' : 'FIRE', env: true });
   }
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
   for (let i = 0; i < ids.length; i++) {
@@ -312,13 +312,13 @@ function expire(z: Zone): void {
       const p = world.player;
       const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
       const rr = z.radius + PLAYER_RADIUS;
-      if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL' });
+      if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0 });
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
       addShake(Math.min(0.5, 0.1 + z.radius * 0.03));
       break;
     }
     case 'TELEGRAPH_LINE':
-      if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL' });
+      if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0 });
       break;
     default: break;
   }

@@ -68,6 +68,8 @@ import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuest
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
+import { showcase, showcaseHooks, resetShowcase, consumeShowcase } from './engine/showcase';
+import { buildShowcaseOverlay } from './showcaseLoadout';
 import { freshMeta, sanitizeMeta, type MetaState } from './goals';
 import { CODEX_KEYS, CODEX_REWARD_GEMS, emptyDiscovered, monsterKeyByName, type CodexTab, type Discovered } from './codexData';
 
@@ -205,6 +207,8 @@ const UPGRADE_SKILL_KEY: Partial<Record<UpgradeType, keyof SkillLevels>> = {
 
 // ------------------------------------------------------------------ helpers --
 let uidCounter = 0;
+/** The real profile while the showcase fight overlay is on (restored by endShowcase). */
+let showcaseSnap: GameState | null = null;
 const uid = (prefix = 'id'): string => `${prefix}_${Date.now().toString(36)}_${(uidCounter++).toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
 const isStackable = (item: Item): boolean => item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'LOOT' || item.type === 'SHARD' || item.type === 'ELIXIR' || item.type === 'CRYSTAL';
@@ -575,6 +579,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
 });
 
 const writeProfile = (s: GameState): void => {
+  if (showcase.on) return;   // (the showcase overlay is never saved)
   try {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
@@ -1071,6 +1076,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     endRun: (summary) => {
+      if (showcase.on) { get().endShowcase(false); return; }   // (dying in the showcase: back to town with the real state, nothing banked)
       const s = get();
       const cp = calculateTotalCP(s.stats);
       const gs = s.gameStats;
@@ -1202,6 +1208,39 @@ export const useGameStore = create<GameState>()((set, get) => {
       runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
       set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });
       get().startGame();
+    },
+    // ---- Showcase fight (engine/showcase.ts): a fully powered one-off battle; the real profile is snapshotted and restored whole
+    startShowcase: () => {
+      if (showcase.on) return;
+      const s = get(), hero = s.hero;
+      showcaseSnap = s;   // (state objects are immutable: this shallow reference IS the snapshot)
+      const ov = buildShowcaseOverlay(hero, s.classProg[hero] ?? freshClass(hero, INITIAL_SKILLS), instantiate, plusOne, uid);
+      showcase.on = true; resetShowcase();
+      const char = activeChar(); if (char) consumeShowcase(char.id);   // (once per character, even if the page is refreshed mid-fight)
+      disarmDaily(); disarmWaves();
+      runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = ''; runInfo.startBiome = 0; runInfo.dream = false;
+      set({
+        difficulty: 'NORMAL',
+        classProg: { ...s.classProg, [hero]: ov.classProg }, talents: { ...s.talents, [hero]: ov.talents }, attrs: { ...s.attrs, [hero]: ov.attrs },
+        equipment: ov.equipment, elixirsNext: [], isShopOpen: false, isInventoryOpen: false, isCharacterSheetOpen: false,
+      });
+      get().startGame();
+      world.player.ult = 100; world.player.mana = get().stats.maxMana; world.player.hp = get().stats.maxHealth;   // full ultimate + resources from the first second
+    },
+    endShowcase: (won) => {
+      if (!showcase.on) return;
+      const snap = showcaseSnap; showcase.on = false; showcaseSnap = null;
+      runInfo.mode = 'ADVENTURE'; runInfo.back = '';
+      if (snap) {   // everything but the screen flow comes back exactly as it was (profile, bag, gear, skills, stats, currencies, codex ...)
+        const keep: Record<string, unknown> = {};
+        for (const k of Object.keys(snap) as (keyof GameState)[]) {
+          if (typeof snap[k] === 'function' || k === 'status' || k === 'notifications' || k === 'lastRun' || k === 'actionResult' || k === 'upgradeOptions' || k === 'runPicks') continue;
+          keep[k] = snap[k];
+        }
+        set(keep as Partial<GameState>);
+      }
+      get().resetGame();
+      get().addNotification(won ? 'That is the hero you will become. Now, your real journey begins!' : 'That was only a taste of the power to come. Now, your real journey begins!', '#fff3c4', 'SYSTEM');
     },
     recordWave: (wave) => {
       const s = get(), p = s.progress, best = p.wavesBest[s.hero] ?? 0, have = p.wavesClaimed[s.hero] ?? [];
@@ -1957,6 +1996,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     removeNotification: (id) => set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
   };
 });
+
+showcaseHooks.end = (won) => useGameStore.getState().endShowcase(won);
 
 // ---- profile persistence: debounced write on any persisted field change, flushed when the page hides.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

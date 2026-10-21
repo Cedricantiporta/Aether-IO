@@ -1,11 +1,13 @@
 // Red-dot alerts for the quick menu: better equippable gear (Bag), new Codex entries or claimable rewards (Codex),
 // unspent skill points (Skills). "Seen" state is per device (localStorage) and cleared when the panel is opened.
 import { create } from 'zustand';
-import { useGameStore, calculateItemCP, RANK_REQ, questFree } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, questFree, brewGemCost } from '../../store';
 import { SKILLS_INFO } from '../../constants';
 import { activeDefs, dashKey, isDashKey } from '../../abilityDefs';
 import { unlockLevel, skillCost, DASH_UNLOCK_LV } from '../../classLevels';
-import { RECIPES, canCraft } from '../../crafting';
+import { RECIPES, canCraft, getRecipe, CRAFT_RARITIES } from '../../crafting';
+import { ELIXIRS, ELIXIR_IDS, type ElixirId } from '../../elixirs';
+import { lootOwned } from '../../crafting';
 import type { HeroClass, Item, ItemType } from '../../types';
 import { canUseClass } from '../../itemClass';
 import type { Equipment } from '../../storeTypes';
@@ -86,6 +88,19 @@ export function canCraftAny(s: ReturnType<typeof useGameStore.getState>): boolea
   for (const k in RECIPES) { const r = RECIPES[k]; if (r.hero === s.hero && canCraft(st, r).length === 0) return true; }
   return false;
 }
+type CraftState = ReturnType<typeof useGameStore.getState>;
+const craftSt = (s: CraftState) => ({ materials: s.materials, gold: s.gold, inventory: s.inventory, heroRank: s.heroRank, maxInventorySlots: s.maxInventorySlots });
+/** The hero can forge this Workshop recipe (slot x rarity) right now: red dot on the recipe row. */
+export const canCraftRecipe = (s: CraftState, slot: Parameters<typeof getRecipe>[0], rarity: Parameters<typeof getRecipe>[1]): boolean => canCraft(craftSt(s), getRecipe(slot, rarity, s.hero)).length === 0;
+/** Any recipe of a Workshop category can be forged right now: red dot on the category header. */
+export const canCraftSlot = (s: CraftState, slot: Parameters<typeof getRecipe>[0]): boolean => CRAFT_RARITIES.some((r) => canCraftRecipe(s, slot, r));
+/** The hero can brew this elixir right now (gold + every ingredient in the bag, no gem top-up): red dot on the Brewer's list. */
+export const canBrewElixir = (s: CraftState, id: ElixirId): boolean => {
+  const d = ELIXIRS[id];
+  return s.gold >= d.gold && brewGemCost(s.inventory, id, 1) === 0 && d.parts.every((p) => lootOwned(s.inventory, p.id) >= p.count);
+};
+export const canBrewAny = (s: CraftState): boolean => ELIXIR_IDS.some((id) => canBrewElixir(s, id));
+export const useBrewAlert = (): boolean => useGameStore(canBrewAny);
 export const useRunSkillAlert = (): boolean => useGameStore(canTrainSkill);
 export const useTalentAlert = (): boolean => useGameStore(canBuyTalent);   // only when something can actually be bought
 export const useCraftAlert = (): boolean => useGameStore(canCraftAny);

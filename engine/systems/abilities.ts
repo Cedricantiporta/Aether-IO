@@ -3,6 +3,7 @@
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
+import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
@@ -676,7 +677,7 @@ export function castUlt(): void {
   if (world.time < gcdUntil) return;
   gcdUntil = world.time + GCD;
   p.ult = 0;
-  a.ultCd = ULT_COOLDOWN * (1 - Math.min(0.75, st.stats.cooldownReduction || 0));
+  a.ultCd = ULT_COOLDOWN * (1 - Math.min(0.75, st.stats.cooldownReduction || 0)) * (showcase.on ? ULT_CD_MUL : 1);
   // combo: an ult cast with a 50+ hit chain is a FINISHER (+50%, refunds 25% charge)
   curMul = 1;
   const fin = registerUlt();

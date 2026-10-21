@@ -18,6 +18,7 @@ import { RARITY_TEXT } from '../../lib/game';
 
 const lootIcon = (id: string): Item => ({ id, name: LOOT_BY_ID[id].name, type: 'LOOT', rarity: LOOT_BY_ID[id].rarity, level: 1, stats: {}, price: 0, description: LOOT_BY_ID[id].desc } as Item);
 
+import { canBrewElixir } from '../../lib/alerts';
 export const BrewerTab: React.FC = () => {
   const { gold, gems, inventory, next, run, brew, inRun } = useGameStore(useShallow((s) => ({
     gold: s.gold, gems: s.gems, inventory: s.inventory, next: s.elixirsNext, run: s.elixirsRun, brew: s.brewElixir, inRun: s.status !== GameStatus.MENU && s.status !== GameStatus.GAME_OVER,
@@ -43,7 +44,7 @@ export const BrewerTab: React.FC = () => {
         <ShopGrid>
           {ELIXIR_IDS.map((k) => (
             <ItemSlot key={k} item={samples[k]} fluid size="100%" iconSize="78%" price={ELIXIRS[k].gold} cantAfford={gold < ELIXIRS[k].gold} tooltip="none" compare={false}
-              selected={sel === k} qty={owned(k)} onClick={() => { setSel(k); setQty(1); }} />
+              selected={sel === k} qty={owned(k)} onClick={() => { setSel(k); setQty(1); }}>{canBrewElixir(useGameStore.getState(), k) && <i className="red-dot" data-testid="brew-dot" />}</ItemSlot>
           ))}
         </ShopGrid>
       </div>

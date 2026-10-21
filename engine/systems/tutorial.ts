@@ -2,6 +2,7 @@
 // The ultimate unlocks at Lv 10 with a full bar; the 'Press R' hint shows only for that first charge (per class).
 // Flags persist in localStorage; each hint finishes when the player actually does the thing.
 import { events } from '../events';
+import { showcase } from '../showcase';
 import { world } from '../world';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
@@ -16,7 +17,7 @@ type Flag = 'harvest' | 'skill1' | 'ult';
 const flags: Record<Flag, boolean> = (() => {
   try { return { harvest: false, skill1: false, ult: false, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { harvest: false, skill1: false, ult: false }; }
 })();
-function done(f: Flag): void { if (flags[f]) return; flags[f] = true; try { localStorage.setItem(KEY, JSON.stringify(flags)); } catch { /* ignore */ } }
+function done(f: Flag): void { if (flags[f] || showcase.on) return; flags[f] = true; try { localStorage.setItem(KEY, JSON.stringify(flags)); } catch { /* ignore */ } }
 
 events.on('ability', () => done('skill1'));
 // per class: the ult just unlocked and has not been cast yet (bar pre-filled, the 'Press R' hint shows)

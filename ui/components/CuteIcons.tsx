@@ -84,3 +84,29 @@ export const CuteLayers: React.FC<P> = (p) => (
     <path d="M4.600 16l11.400 5.700L27.400 16M4.600 21.800L16 27.500l11.400-5.700" fill="none" stroke={W} strokeWidth="2.600" />
   </Svg>
 );
+
+/** Calendar page with a header bar and a day dot (Daily Trial). */
+export const CuteCalendar: React.FC<P> = (p) => (
+  <Svg {...p}>
+    <path fillRule="evenodd" d="M8.600 6.200h14.800a3.800 3.800 0 0 1 3.800 3.800v13.800a3.800 3.800 0 0 1-3.800 3.800H8.600a3.800 3.800 0 0 1-3.800-3.800V10a3.800 3.800 0 0 1 3.800-3.800zM7.400 12.400v11.200a1.400 1.400 0 0 0 1.400 1.400h14.400a1.400 1.400 0 0 0 1.400-1.400V12.400zM13.600 15.200h4.800v4.800h-4.800z" />
+    <rect x="9.800" y="3" width="3" height="6" rx="1.500" /><rect x="19.200" y="3" width="3" height="6" rx="1.500" />
+  </Svg>
+);
+
+/** A chunky round tower with a flag and a door (Endless Tower). */
+export const CuteTower: React.FC<P> = (p) => (
+  <Svg {...p}>
+    <path fillRule="evenodd" d="M9.600 11.400h12.800l1.200 16.400a1.400 1.400 0 0 1-1.400 1.500H9.800a1.400 1.400 0 0 1-1.400-1.500zM14.200 29.300v-5a1.800 1.800 0 0 1 3.600 0v5z" />
+    <path d="M8 11.400V8.200h3.200v1.600h2V8.200h2.400v1.600h2V8.200H21.800v1.600H24V8.200h0v3.200z" />
+    <path d="M16 8V2.800" fill="none" stroke={W} strokeWidth="2" /><path d="M16 3.200l6 2.100-6 2.100z" />
+  </Svg>
+);
+
+/** Three rolling waves (Endless Waves). */
+export const CuteWaves: React.FC<P> = (p) => (
+  <Svg {...p}>
+    <path d="M3 10.500c3.200-4 6.400-4 9.600 0s6.400 4 9.600 0 4.200-3 6.800-1.200" fill="none" stroke={W} strokeWidth="3.200" />
+    <path d="M3 17.500c3.200-4 6.400-4 9.600 0s6.400 4 9.600 0 4.200-3 6.800-1.200" fill="none" stroke={W} strokeWidth="3.200" />
+    <path d="M3 24.500c3.200-4 6.400-4 9.600 0s6.400 4 9.600 0 4.200-3 6.800-1.200" fill="none" stroke={W} strokeWidth="3.200" />
+  </Svg>
+);

@@ -2,7 +2,7 @@ import { keyHint } from '../lib/inputMode';
 import { PadHint } from '../components/PadBtn';
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
-import { CuteHero, CuteBag, CuteStar, CuteScroll, CuteMapPin, CuteShop, CuteGear, CuteTrophy, CuteBook, CuteLayers } from '../components/CuteIcons';
+import { CuteHero, CuteBag, CuteStar, CuteScroll, CuteMapPin, CuteShop, CuteGear, CuteTrophy, CuteBook, CuteLayers, CuteCalendar, CuteTower, CuteWaves } from '../components/CuteIcons';
 import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
@@ -18,6 +18,9 @@ import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
 import { titleOf } from '../../achievements';
 import { useUiStore } from '../uiStore';
+import { UNLOCK_LV } from '../../unlocks';
+import { dayKey } from '../../dailyChallenge';
+import { events } from '../../engine/events';
 import { useGameStore, calculateTotalCP } from '../../store';
 import { world } from '../../engine/world';
 import { offerTeleport } from './QuestTracker';
@@ -45,6 +48,7 @@ const DEBUFFS: { id: string; icon: React.ReactNode; color: string; label: string
   { id: 'burn', icon: <Flame size={14} />, color: '#ff7a1a', label: 'Burning', body: 'Taking fire damage over time.', get: () => world.player.burnT },
   { id: 'poison', icon: <Skull size={14} />, color: '#84cc16', label: 'Poisoned', body: 'Taking poison damage over time.', get: () => world.player.poisonT },
   { id: 'bleed', icon: <Droplet size={14} />, color: '#ef4444', label: 'Bleeding', body: 'Taking bleed damage over time.', get: () => world.player.bleedT },
+  { id: 'atkdown', icon: <Swords size={14} />, color: '#cbd5e1', label: 'Weakened', body: 'Your attack is reduced.', get: () => (world.player.buffDmg < 0 ? world.player.buffT : 0) },
   { id: 'slow', icon: <ChevronsDown size={14} />, color: '#60a5fa', label: 'Slowed', body: 'Movement speed reduced. Dash cleanses it.', get: () => (world.player.slowT > 0 ? world.player.slowT : envSlow < 0.99 ? 0.01 : 0) },
 ];
 
@@ -159,9 +163,9 @@ export const Currency: React.FC = () => {
 };
 
 const HINT_CODE: Record<string, string> = { C: 'KeyC', I: 'KeyI', J: 'KeyJ', O: 'KeyO', Esc: 'Escape' };
-const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean; caption?: string; mini?: boolean }> = ({ icon, label, hint, onClick, active, dot, caption, mini }) => (
-  <button className={`sqbtn pe relative ${active ? 'is-active' : ''} ${caption ? 'mb-cap' : ''} ${mini ? 'mb-mini' : ''}`} onClick={onClick} aria-label={label} {...tip(<div className="tip-pill">{label}{hint && <kbd>{keyHint(hint)}</kbd>}</div>)}>
-    <span className="mb-ic">{icon}{dot && <i className="red-dot" />}</span>
+const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean; caption?: string; mini?: boolean; locked?: boolean; testid?: string }> = ({ icon, label, hint, onClick, active, dot, caption, mini, locked, testid }) => (
+  <button data-testid={testid} data-locked={locked ? '1' : undefined} className={`sqbtn pe relative ${active ? 'is-active' : ''} ${caption ? 'mb-cap' : ''} ${mini ? 'mb-mini' : ''} ${locked ? 'is-locked' : ''}`} onClick={onClick} aria-label={label} {...tip(<div className="tip-pill">{label}{hint && <kbd>{keyHint(hint)}</kbd>}</div>)}>
+    <span className="mb-ic">{icon}{dot && !locked && <i className="red-dot" />}{locked && <i className="mb-lock" aria-hidden />}</span>
     {caption && <span className="mb-lbl">{caption}</span>}
     {HINT_CODE[hint] && <PadHint code={HINT_CODE[hint]} className="pad-corner" style={{ top: 'auto', bottom: '-.45rem', right: '-.4rem' }} />}
   </button>
@@ -200,6 +204,24 @@ export const MenuButtons: React.FC = () => {
   );
 };
 
+/** Corner icons for the three tower-hub modes (Daily Trial, Endless Tower, Endless Waves): open their start window from anywhere in
+ *  town (not in a run), greyed with a small lock while the level / ending unlock is missing. */
+const ModeIcons: React.FC = () => {
+  const level = useGameStore((s) => s.level), endings = useGameStore((s) => s.progress.endings);
+  const dailyDot = useGameStore((s) => s.level >= UNLOCK_LV.DAILY && s.progress.daily.claimed !== dayKey());
+  const go = (tab: 'RUN' | 'DAILY' | 'WAVES') => {
+    const g = useGameStore.getState();
+    if (g.status !== GameStatus.MENU) { g.addNotification('The trials are started from the town.', '#fff3c4', 'SYSTEM'); return; }
+    events.emit('openSetOut', { mode: 'TOWER', tab, remote: true });
+  };
+  const dLock = level < UNLOCK_LV.DAILY, wLock = level < UNLOCK_LV.WAVES, tLock = endings <= 0;
+  return (<>
+    <MenuBtn mini testid="cb-daily" icon={<CuteCalendar size={22} />} label={dLock ? `Daily Trial (unlocks at Lv ${UNLOCK_LV.DAILY})` : 'Daily Trial'} hint="" onClick={() => go('DAILY')} dot={dailyDot} locked={dLock} />
+    <MenuBtn mini testid="cb-tower" icon={<CuteTower size={22} />} label={tLock ? 'Endless Tower (finish one adventure to open it)' : 'Endless Tower'} hint="" onClick={() => go('RUN')} locked={tLock} />
+    <MenuBtn mini testid="cb-waves" icon={<CuteWaves size={22} />} label={wLock ? `Endless Waves (unlocks at Lv ${UNLOCK_LV.WAVES})` : 'Endless Waves'} hint="" onClick={() => go('WAVES')} locked={wLock} />
+  </>);
+};
+
 /** Small icon row under the area pill: Run Upgrades (runs only) + the two entries the 7-button row has no room for. */
 export const SubMenuButtons: React.FC = () => {
   const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
@@ -209,6 +231,7 @@ export const SubMenuButtons: React.FC = () => {
   return (
     <div className="submenu-row">
       {inRun && <MenuBtn mini icon={<CuteLayers size={22} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
+      <ModeIcons />
       <MenuBtn mini icon={<CuteTrophy size={22} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn mini icon={<CuteBook size={22} />} label="Codex" hint="Bestiary" onClick={() => useUiStore.getState().openCodex(true)} dot={codexDot} />
     </div>
