@@ -116,15 +116,15 @@ town (and closes the open panel first).
   (depth 1-10), Desert, Coral Isles and Frostpeak take their time of day from the town clock at run start.
 - **Shops** (shopkeepers are the click targets; each has a name): Supplies (potions), Armory, Blacksmith (Upgrade / Craft /
   Reforge / Fuse / Shards), Pet Stable, Fortune Teller (Summon window), Warehouse (shared storage), Tech House (permanent
-  gem upgrades), Elixir Brewer, Fishmonger, Mining Supplies, Skill Trainer (Master Varek), Quest Board (Bounties). Panels:
+  gem upgrades), Elixir Brewer, Fishmonger, Mining Supplies, Skill Trainer (Master Varek). Panels:
   `ui/panels/shop/*`, `ui/panels/SummonWindow.tsx`. Prices: gear x4 at the Armory, pets x1.4; gear/pets sell for 90%,
   loot for 2x (`constants.ts`).
 - **Areas** (`world.village.area`): TOWN, CASTLE (King Aldric, throne dais), CHURCH (Sister Elowen), TAVERN, CAVE
   (Crystal Cave: persistent Floor 1 with Grit + per-trip deeper floors, lantern-oil timer, `engine/systems/cave.ts`),
   HOME (the adventurer's house: bed = sleep to dream). Same plumbing for each (`pending` area, `switchArea`, exit pill).
 - **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe tool slot halves effort),
-  harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (needs Lv 15 quest
-  `hilda_shoes`; 2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
+  harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (from the start;
+  2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
 - **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). **Quest auto-pathing was removed by
   owner request ("no autopath, only indicators"): no G key, tracker rows / banner "Destination" / quest-log Track / Upgrades "Go"
   never walk.** Indicators only: area-aware quest targets (`systems/questNav.ts`) feed the guide arrow, the beacon and the round
@@ -226,10 +226,18 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   upgrades (bag slots, warehouse, potion power, gold/xp/hp, bigger lantern). Elixirs at the Brewer (`elixirs.ts`).
 - **Pets**: six tiers, growth Lv 1-20 + 3 evolution stages (`petGrowth.ts`, `petActions.ts`: feed loot/shards, evolve),
   fusion (`petFusion.ts`), elemental attacks, follow the hero in town and runs.
-- **Quests**: Quest Board = 6 daily offers, level-gated bounty types (`quests.ts`); main + side + bounties share
-  `QUEST_MAX_ACTIVE` (3) slots. Main story `story.ts` (`STORY_V` 5; townsfolk tutorial chain -> biome errands -> Malakar
-  -> Endless Tower -> true-heir arc), NPC side quests `npcQuests.ts` (level-gated, LISTEN / DELIVER / INTERACT / ACTION
-  types), logic `systems/npcQuestLogic.ts` + `storyLogic.ts`. Lore in `lore.ts`; Codex + Story book in `ui/screens/Codex.tsx`.
+- **Quests** ("less quest, more roguelite": there is NO Quest Board / bounty board and no daily offers any more). Main story
+  `story.ts` (`STORY_V` 6; townsfolk tutorial chain -> the Brewer -> the King -> biome errands -> Malakar -> Endless Tower ->
+  true-heir arc; the old Hodge / board steps were cut, saves on them continue at 'king'). Side quests `npcQuests.ts`: only 7
+  (LISTEN / DELIVER / INTERACT / TALK / KILL types, logic `systems/npcQuestLogic.ts` + `storyLogic.ts`, no slot cap):
+  Hollis "Milk Run" (milk cows x3), Dalla "Egg Hunt" (5 eggs), Pip "Where Is Biscuit?" (find the cat), Pip "A Secret for the
+  Hermit" (talk to Old Wend; also gates his sunstone gold gift), Sister Elowen "Restless Graves" (12 zombies in runs), Rodric
+  "The Lost Tankards" (2 Silver Goblets from run crates / barrels), Erin Lv 30 "Beyond the Rocks" -> "Frost That Splits Stone"
+  (Grit tip, 3 Wyrm Frostscales; shatters the rockfall = mine shortcut, `rockfallCleared`). NPCs whose quests were cut (Hodge,
+  Garth, Fenn, Maren, Brenna, Tilda, Nell, Marlo, Hilda ...) stay as flavour. Stable horses are rideable from the start (Hilda's
+  quest was cut). Run-side "bounties" that remain are roguelite things: the HUNT room objective and Brother Fen's wanderer
+  bounty. Old saves: unknown `npcQuests` ids are dropped by `sanitizeNpcQuests`, the old `quests` / board state is ignored.
+  Lore in `lore.ts`; Codex + Story book in `ui/screens/Codex.tsx`.
 - **Goals / achievements** (`goals.ts`, `goalsTracker.ts`, `achievements.ts`, `ui/screens/Goals.tsx`): daily/weekly goals with
   chests, ~30 achievements with titles (shown under the name).
 - **Hero Rank wording is gone**: UI says Lv / Level everywhere.
@@ -380,6 +388,11 @@ screens, max-level question: class level cap is 50) have been removed.
    Authoring helpers worth reusing: `B.blob` (noise-displaced soft sphere), `B.tube` (swept tube), `B.surf`/`B.cloth` (parametric sheets/cloth), `B.lathe`
    with `lobes`, per-piece `b.grads[material] = fn(co, normal)` vertex-colour gradients, `b.jit` / `j=` hand-made irregularity. Never overlap coplanar
    faces (Cycles renders them black). Rebuild preview takes ~1 min per sheet (Cycles CPU, 20 samples).
+   **Creature kit v1 (built 2026-10-21, NOT wired yet)**: `public/models/creatures/creature_kit_v1.glb` (~1.9 MB), built by `art/blender/creature_kit_v1.py`
+   (reuses kit_v3 helpers; `--no-render`, `--no-compress`, `--only=`, `--closeup=`; previews in `$CREATURE_SHOTS` = `art/renders/creatures/`). 63 root Empties:
+   33 monsters, 8 bosses + 5 boss adds, 17 pets (every ENEMY_DEFS kind and pet id except the humanoid `HUMAN_BOSS` / `DARK_HERO`, which keep the KayKit rigs).
+   Each root has joint Empties `<name>_body/_head/_legL/_wingR/_tail/...` wrapping one `<joint>_mesh` (pivot at the joint, front +Z, ground-centre origin, metres,
+   in-game size with def.scale applied; some nested, e.g. hydra necks). Roster, joints, sizes and animation hints: `docs/CREATURE_PLAN.md`.
    **Interiors on kit v3 (done 2026-10-20)**: `render/kitV3.tsx` is the general kit-v3 loader: `useKitV3()` bakes the GLB once (de-quantize, world matrix, material
    colour x glTF `COLOR_0` -> vertex colour; `*_glow` materials -> emissive geometry; `light_shaft` -> additive no-depth-write beam geometry using COLOR_0 alpha),
    `kitV3Box(piece)` gives a piece's local bounding box (colliders), `buildKitV3Static(kit, items)` / `<KitV3Static items />` merge `{piece,x,y,z,rotY,scale,tint,glow}`
@@ -389,8 +402,7 @@ screens, max-level question: class level cap is 50) have been removed.
    ~45k, tavern ~35k). Every south wall is cut low (camera looks in from the south) around a gate arch / timber door frame. Room sizes, NPC homes, exits, sit points
    unchanged; furniture positions + colliders live together in `castleData / churchData / tavernData / homeData / caveData` (TABLES + TABLE_STOOLS, ARMORS,
    HALL_PLANTS, CHURCH_PLANTS, TAP_BARRELS / TAP_PLANTS / TAP_CRATES, HOME_WARDROBE / SHELF / DESK / BARREL, cave `colliders()`): move a piece there AND in the colliders.
-   Cave: the rock walls / boulders / stalagmites / mushrooms stay procedural (`buildWall`, `buildProps`); floor = `floor_stone_cave` tiles, crystals / cart / rails /
-   desk / lantern posts / pit-prop frames = kit pieces (`propItems`). QA: grid-BFS over the collider circles reached every NPC home / exit / sit point / vein.
+   Cave: kept on its ORIGINAL procedural look (owner preferred it; floor rings, rocks, crystals, cart, bench all from `buildFloor` / `buildProps`), not kit v3. Cave HUD sits below the gold / gem counters. QA: grid-BFS over the collider circles reached every NPC home / exit / sit point / vein.
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` starts north-up (yaw 0) and forces pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on; the player can always turn the camera (drag / right stick, V resets), and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting

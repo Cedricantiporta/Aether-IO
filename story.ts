@@ -3,7 +3,7 @@
 // Pure data + helpers (no React); progress lives in the profile (`story` in store.ts).
 
 /** Where a field / shop step is done (the guide arrow, the gate beacon and auto-walk aim here). */
-export type StoryAt = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BOARD' | 'BAG' | 'ARMORY' | 'TRAINER' | 'BREWER' | 'TOWER';
+export type StoryAt = 'SUPPLIES' | 'PETS' | 'FORTUNE' | 'BLACKSMITH' | 'WAREHOUSE' | 'BAG' | 'ARMORY' | 'TRAINER' | 'BREWER' | 'TOWER';
 
 /** Run objectives counted from engine events (storyLogic): free caged captives (RESCUE rooms), slay champions (champion
  *  rooms / dark hero duels, not the depth-10 pre-boss), or the biome's depth-10 pre-boss. `biome` = 0-based biome index;
@@ -41,7 +41,7 @@ export interface StoryStep {
 export const stepCount = (s: StoryStep): number => s.kill?.count ?? s.goal?.count ?? s.act?.count ?? s.deliver?.count ?? 0;
 
 // The questline (see docs/RUN_DESIGN.md "Main questline"): townsfolk hand out each task, Genshin / MMO style.
-// Prologue (town tutorials): Garrick -> Mira's shop tour (potion, first pet, summon, gear) -> Hodge's bounty board -> the King.
+// Prologue (town tutorials): Garrick -> Mira's shop tour (potion, first pet, summon, gear) -> the Brewer -> the King.
 // Every biome chapter: a townsperson's errand (slay N of the biome's monsters, free captives, slay champions), then the
 // biome's depth-10 pre-boss, then its guardian. Chapter 1 also holds the second town tour (Armory, Blacksmith, Skill
 // Trainer, Warehouse; the first armor piece, upgrade and skill lesson are free while their step is active).
@@ -68,11 +68,8 @@ export const STORY: StoryStep[] = [
   { id: 'train', title: 'Lessons of the Blade', line: 'Learn or upgrade a skill at the Skill Trainer (free this time)', npc: '', at: 'TRAINER', act: { kind: 'learn', count: 1 }, reward: { gold: 100 } },
   { id: 'stash', title: 'Safe Keeping', line: 'Store an item in the Warehouse', npc: '', at: 'WAREHOUSE', act: { kind: 'store', count: 1 }, reward: { gold: 100, gems: 5 } },
   { id: 'lysa_brew', title: 'Monster Remedies', line: 'Talk to Lysa the Herbalist', npc: 'Lysa', reward: { gold: 50 },
-    talk: ['Mira says you have seen the whole town now. Not quite!', 'Down the road past the gate, off to the west in the meadow, an old friend of mine keeps the Elixir Brewer\'s hut. Far from town, on account of the smell. And the explosions. Mostly the smell.', 'You:: Worse than the explosions?', 'You get used to explosions. Nobody gets used to the smell.', 'He boils monster parts into elixirs: fangs, gel, scales, whatever you drag home. Brew one. A good elixir has saved more guards than any sword. Then go and see Hodge at the Quest Board, and after that the King.'] },
+    talk: ['Mira says you have seen the whole town now. Not quite!', 'Down the road past the gate, off to the west in the meadow, an old friend of mine keeps the Elixir Brewer\'s hut. Far from town, on account of the smell. And the explosions. Mostly the smell.', 'You:: Worse than the explosions?', 'You get used to explosions. Nobody gets used to the smell.', 'He boils monster parts into elixirs: fangs, gel, scales, whatever you drag home. Brew one. A good elixir has saved more guards than any sword. Then go and see the King.'] },
   { id: 'elixir', title: 'A Bitter Brew', line: 'Brew an Elixir of Might at the Elixir Brewer (outside the gate, west of the road; the first one is free)', npc: '', at: 'BREWER', act: { kind: 'brew_elixir', count: 1 }, reward: { gold: 100, gems: 5 } },
-  { id: 'hodge', title: 'The Bounty Clerk', line: 'Talk to Hodge at the Quest Board', npc: 'Hodge', reward: { gold: 50 },
-    talk: ['Bounties! Bounties! Kill this, fetch that, gold for all of it! Has Lysa said anything about me? No? Not important. Bounties!', 'You:: She did mention you. She sighed, mostly.', 'Pick any one off the board and it is yours. Come back when it is done and I pay out. And if you pass the herb shop, mention I am very brave.'] },
-  { id: 'board', title: 'Odd Jobs', line: 'Accept a bounty from the Quest Board', npc: '', at: 'BOARD', act: { kind: 'accept', count: 1 }, reward: { gold: 50 } },
   { id: 'king', title: 'The Grieving King', line: 'Speak with King Aldric in the castle', npc: 'King Aldric', reward: { gold: 300, items: [{ id: 'potion_hp', qty: 1 }] },
     talk: ['So the Font sent me another one. Rise, guard. You have its light about you; few do any more.', 'You:: Your Majesty.', 'Ten years ago, on the night of the Dimming, my archmage Malakar went down into the Font and came back with a shard of its light. That same night my daughter, Princess Aelia, vanished.', 'You:: I am sorry, Majesty.', 'Since then the wilds have twisted, and the old guardians of each land have turned on us. Bring back the light, guard. Bring back... whatever you can.', 'Start small: the slimes of the Greenwood grow bold. Cut down ten. The Adventure Portal past the gate is open to you now. Go with the Font.'] },
   // ---------------------------------------------------------------- chapter 1: the Greenwood
@@ -179,9 +176,13 @@ export const CHAPTERS: { id: string; title: string; from: string; blurb: string 
 const IDX: Record<string, number> = Object.fromEntries(STORY.map((s, i) => [s.id, i]));
 /** Index of a step id (STORY.length if unknown). */
 export const storyIdx = (id: string): number => IDX[id] ?? STORY.length;
-/** Save version of the chain (v4: biome chapters with errands + the second town tour). */
-export const STORY_V = 5;
+/** Save version of the chain (v4: biome chapters with errands + the second town tour; v6: the Quest Board steps are gone). */
+export const STORY_V = 6;
+/** Step ids of story v5 (before the Quest Board steps 'hodge' / 'board' were cut: saves on them continue at 'king'). */
+const V5 = ['guard', 'mira', 'potion', 'mira2', 'pet', 'mira3', 'summon', 'equip', 'mira4', 'armor', 'forge', 'mira6', 'train', 'stash', 'lysa_brew', 'elixir', 'hodge', 'board', 'king', 'slimes', 'lysa', 'garrick_wolves', 'wolves', 'report', 'slimeking', 'garrick2', 'golem', 'dorn', 'report2', 'wren', 'halls_armor', 'aldo', 'halls_rescue', 'bram', 'halls_champion', 'halls_warden', 'grove', 'lysa2', 'scorpions', 'maeve', 'desert_rescue', 'desert_warden', 'mire', 'dorn2', 'yetis', 'tamsin', 'frost_champions', 'frost_warden', 'frost', 'roan', 'hounds', 'roan2', 'ember_rescue', 'ember_warden', 'cinders', 'wren2', 'stalkers', 'tobin', 'void_champion', 'void_warden', 'herald', 'report3', 'lich', 'tower_king', 'tower', 'wren3', 'remember', 'wren4', 'usurper', 'queen', 'pro', 'act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'fin', 'post', 'heir'];
 /** Step ids of the first story version (saves without `v`): mapped by id onto this chain. */
+/** Removed steps -> the step that replaces them. */
+const GONE: Record<string, string> = { hodge: 'king', board: 'king' };
 const V1 = ['guard', 'king', 'slimes', 'report', 'golem', 'report2', 'grove', 'mire', 'frost', 'cinders', 'herald', 'report3', 'lich'];
 /** Index of 'golem' in story v2 (before the two Slime King steps were added). */
 const V2_GOLEM = 15;
@@ -201,9 +202,13 @@ export function sanitizeStory(raw: unknown, endings: number, isNew: boolean): St
     const r = raw as Record<string, unknown>;
     let step = Math.max(0, Math.floor(Number(r.step) || 0)), p = Math.max(0, Math.floor(Number(r.p) || 0));
     if (r.v === STORY_V) return { step: Math.min(STORY.length, step), p, v: STORY_V };
+    if (r.v === 5) {   // v5 -> v6 by id (the cut Quest Board steps continue at the King)
+      const id = V5[step];
+      return { step: id ? storyIdx(GONE[id] ?? id) : Math.min(STORY.length, step), p: id && !GONE[id] ? p : 0, v: STORY_V };
+    }
     if (r.v === 4) {   // v4 -> v5 by id (the merged 'mira5' continues at the free helmet)
       const id = V4[step] === 'mira5' ? 'armor' : V4[step];
-      return { step: id ? storyIdx(id) : Math.min(STORY.length, step), p: id === V4[step] ? p : 0, v: STORY_V };
+      return { step: id ? storyIdx(GONE[id] ?? id) : Math.min(STORY.length, step), p: id === V4[step] && !GONE[id] ? p : 0, v: STORY_V };
     }
     if (r.v !== 2 && r.v !== 3) {   // v1 save: same step by id (a finished chain: the post-game Tower quest)
       const id = V1[step]; step = id ? storyIdx(id) : POST; if (id === 'guard') step = 0;
@@ -211,7 +216,7 @@ export function sanitizeStory(raw: unknown, endings: number, isNew: boolean): St
     }
     if (r.v === 2 && step >= V2_GOLEM) { step = step === V2_GOLEM ? 15 : step + 2; if (step === 15) p = 0; }   // v2 -> v3: the Slime King steps were added before the Golem
     const id = V3[step];   // v3 index -> id -> this chain (a finished chain: the post-game Tower quest)
-    return { step: id ? storyIdx(id) : POST, p: id ? p : 0, v: STORY_V };
+    return { step: id ? storyIdx(GONE[id] ?? id) : POST, p: id && !GONE[id] ? p : 0, v: STORY_V };
   }
   if (isNew) return { step: 0, p: 0, v: STORY_V };
   return { step: endings > 0 ? POST : storyIdx('slimeking'), p: 0, v: STORY_V };   // pre-story saves: straight to the first guardian

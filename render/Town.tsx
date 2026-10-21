@@ -5,9 +5,8 @@ import {
   AdditiveBlending, AnimationAction, AnimationMixer, Color, DoubleSide, Group, LoopOnce, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight, RingGeometry, Sprite,
 } from 'three';
 import { SHOP_TAB, SHOP_POSITIONS } from '../constants';
-import { world, QUEST_POS, TRAINER_POS } from '../engine/world';
+import { world, TRAINER_POS } from '../engine/world';
 import { isLobbyStatus } from './CameraRig';
-import { questDone } from '../quests';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { canTrainSkill, canBuyTalent, canCraftAny } from '../ui/lib/alerts';
@@ -258,59 +257,6 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   );
 }
 
-// -------------------------------------------------------------- quest board ---
-function buildBoard() {
-  const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
-  const wood = '#6e4b2b', paper = '#eadbb2';
-  b.box(0.22, 3.0, 0.22, [-1.2, 1.5, 0], wood); b.box(0.22, 3.0, 0.22, [1.2, 1.5, 0], wood);
-  b.box(2.9, 1.8, 0.18, [0, 2.0, 0.02], '#8a5a30'); b.box(3.1, 0.14, 0.26, [0, 2.95, 0.02], '#4a3020'); b.box(3.1, 0.14, 0.26, [0, 1.08, 0.02], '#4a3020');
-  b.prism(3.5, 0.7, 0.9, [0, 3.0, 0], '#2d2520', [0, 0, 0], [0.9, 1]);
-  for (const [x, y, r] of [[-0.8, 2.3, 0.1], [0.1, 2.5, -0.08], [0.85, 2.2, 0.06], [-0.2, 1.75, 0.04]] as number[][]) { b.box(0.62, 0.78, 0.04, [x, y, 0.14], paper, [0, 0, r]); g.sph(0.05, [x, y + 0.3, 0.18], '#e33a3a', 1, 4); }
-  b.box(0.6, 0.3, 0.5, [1.9, 0.15, 0.6], '#8a5a30'); b.cyl(0.4, 0.45, 0.8, 8, [-1.9, 0.4, 0.7], '#7a4a28');
-  g.sph(0.12, [-1.35, 2.9, 0.2], '#ffd070', 1, 6); g.sph(0.12, [1.35, 2.9, 0.2], '#ffd070', 1, 6);
-  return { body: b.build(), glow: g.build() };
-}
-const questNpc: NpcCfg = { key: 'KNIGHT', tint: '#ffd9a0', pos: [2.9, 1.3] };
-
-function QuestBoard() {
-  const geos = useMemo(() => buildBoard(), []);
-  const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5, 1.35, 1.1) })) }), []);
-  const label = useMemo(() => labelMaterial('Quest Board', '#f1e2b8', { size: 60, plate: 'plate' }), []);
-  const mark = useMemo(() => labelMaterial('!', '#ffd24a', { size: 120 }), []);
-  const near = useRef(false), k = useRef(0);
-  const markRef = useRef<Sprite>(null!), titleRef = useRef<Sprite>(null!);
-  const open = () => {
-    const st = useGameStore.getState().status;
-    if (st === GameStatus.MENU && useUiStore.getState().titleDone) walkAndOpen(QUEST_POS[0], QUEST_POS[2] + 2.6, 'QUESTS', 1.8);
-    else if (st === GameStatus.PLAYING) useGameStore.getState().openSpecificShop('QUESTS');
-  };
-  useFrame(({ clock }, dt0) => {
-    const dt = Math.min(dt0, 0.05), t = clock.elapsedTime;
-    const status = useGameStore.getState().status;
-    const lobby = isLobbyStatus(status) || status === GameStatus.GAME_OVER;
-    k.current += (0 - k.current) * Math.min(1, dt * 2.2);
-    if (k.current > 0.999) k.current = 1; else if (k.current < 0.001) k.current = 0;
-    near.current = !lobby && k.current < 0.5 && Math.hypot(world.player.pos.x - QUEST_POS[0], world.player.pos.z - QUEST_POS[2]) < 6;
-    const claimable = k.current < 0.5 && useGameStore.getState().quests.some(questDone);
-    if (markRef.current) { markRef.current.visible = claimable; markRef.current.position.y = 5.3 + Math.sin(t * 3.4) * 0.25; const sc = 1.5 + Math.sin(t * 6) * 0.1; markRef.current.scale.set(sc * mark.aspect, sc, 1); }
-    if (titleRef.current) titleRef.current.visible = k.current < 0.5;
-  });
-  const hover = (on: boolean) => { document.body.style.cursor = on ? 'pointer' : ''; };
-  return (
-    <group position={QUEST_POS}>
-      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
-      <mesh geometry={geos.glow} material={mats.glow} />
-      <sprite ref={titleRef} material={label.mat} position={[0, 4.4, 0.5]} scale={[label.aspect * 0.8, 0.8, 1]} />
-      <sprite ref={markRef} material={mark.mat} position={[0, 5.3, 0.5]} scale={[1.5, 1.5, 1]} visible={false} />
-      <Shopkeeper cfg={questNpc} door={questNpc.pos} near={near} closed={k} onOpen={open} />
-      <mesh position={[0, 1.8, 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
-        <boxGeometry args={[3.4, 3.6, 1.4]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-    </group>
-  );
-}
-
 // ------------------------------------------------- shrine + skill trainer ---
 function buildShrine() {
   const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
@@ -556,7 +502,6 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <PortalLandmark />}
       {village && <Beach q={q} />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
-      <QuestBoard />
       <Station kind="TRAINER" position={TRAINER_POS} />
     </>
   );

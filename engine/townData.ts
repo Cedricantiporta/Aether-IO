@@ -7,14 +7,14 @@
 // Coordinates are world x / z. A building's door faces +z at rot = 0 (facing vector = (sin rot, cos rot)).
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
-//   spawn / plaza (0, 2) -> north: castle path, Quest Board (7.5,-13), Skill Trainer (-10.5,-19) on the open paving west of
+//   spawn / plaza (0, 2) -> north: castle path, Skill Trainer (-10.5,-19) on the open paving west of
 //   the castle steps (in front of the dark-roofed house at (-19.5,-14))
 //   west of the plaza Fortune Teller (-21, 1.5) / Pet Stable (-30, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
 //   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut out in the west meadow (constants SHOP_POSITIONS
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Adventure Portal at the road's end.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
-import { QUEST_POS, SHRINE_POS, TRAINER_POS } from './world';
+import { SHRINE_POS, TRAINER_POS } from './world';
 import { SHOP_POSITIONS } from '../constants';
 import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff, lakeSouthZ } from './beachData';
 
@@ -130,7 +130,7 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 };
 
 /** Decorative houses (old shop-style: stone footing, timber frame, big gabled roof, striped awning). */
-/** Castle keep against the north wall, behind the quest board (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
+/** Castle keep against the north wall, (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
 /** Hermit's camp outside the north wall (campfire + bedroll, drawn in TownScenery). */
 export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
@@ -158,9 +158,6 @@ export const ROCKFALL: [number, number, number, number][] = [
 /** (owner) only this boulder of the rockfall breaks (the middle one): the others stay, leaving a gap through. */
 export const ROCKFALL_BREAK = 2;
 /** Erin's chain is done: the middle boulder is gone (takes the store's npcQuests). */
-/** (owner) the stable horses can be ridden once Hilda the Stablemaster's quest 'hilda_shoes' (Lv 15) is turned in. */
-export const horsesUnlocked = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.hilda_shoes?.s === 2;
-export const HORSE_UNLOCK_LV = 15;
 export const rockfallCleared = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.erin_frost?.s === 2;
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
@@ -420,7 +417,7 @@ export const ROADS: RoadSpec[] = [
   { x1: CHURCH.x, z1: -6, x2: CHURCH.x, z2: CHURCH.z + CHURCH.d / 2 + 0.4, w: ROAD_W.branch + 0.6 },   // chapel door
   { x1: TAVERN.x, z1: -12.5, x2: TAVERN.x, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // tavern door
   { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
-  { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // quest board
+  { x1: 7.5, z1: -6, x2: 7.5, z2: -11.6, w: ROAD_W.branch },     // castle path branch
   { x1: -8.2, z1: -6, x2: -8.2, z2: -7.4, w: 3.2 },                // armory counter
   { x1: -11.4, z1: 23.2, x2: -11.4, z2: 19.4, w: 3.0 }, { x1: 14.8, z1: 23.2, x2: 14.8, z2: 19.6, w: 3.0 }, { x1: 19.2, z1: 23.2, x2: 19.2, z2: 33.6, w: 3.0 },   // pets / warehouse / the forge yard's way in
   { x1: -38, z1: 23.2, x2: -38, z2: 20.2, w: 3.0 }, { x1: 35.6, z1: 23.2, x2: 35.6, z2: 20.6, w: 3.0 },   // fortune teller / tech house
@@ -543,7 +540,7 @@ export const PLANTERS: PlanterSpec[] = [
   // plaza ring
   { x: -7.8, z: 6.6, w: 1.4, d: 3.0, kind: 1 }, { x: 7.8, z: 6.6, w: 1.4, d: 3.0, kind: 0 },
   { x: -7.8, z: -2.6, w: 1.4, d: 3.0, kind: 0 }, { x: 7.8, z: -2.6, w: 1.4, d: 3.0, kind: 1 },
-  // north street + quest board path
+  // north street + castle path
   { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
   // castle approach: flower beds lining the path and the castle front
   { x: -4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 }, { x: 4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 },   // (flanking the keep's door steps)
@@ -655,7 +652,6 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   // the brewer's cauldron, work table and barrels in front of / beside the hut (hut-local -> world; the hut itself is the shop collider)
   { const { x, z } = BREWER_HUT;   // (the kit's round hut + the barrel and bottles by its door)
     c.push([x + 0.17, z + 0.17, 2.9], [x - 2.0, z + 2.5, 0.8]); }
-  c.push([QUEST_POS[0], QUEST_POS[2], 1.6]); // notice board
   // the shops (town_kit_v2 shop_stall_house, 6 x 4.8, awning + counter in front; yaw `rot`): body corners + the counter, then each shop's extra buildings / props (SHOP_LOOK)
   for (const sp of SHOP_POSITIONS) {
     if (sp.position[2] > 40 || sp.position[2] < -40 || Math.abs(sp.position[0]) > 44) continue;
@@ -748,7 +744,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
   c.push([WELL_POS.x, WELL_POS.z, 3], [PLAZA.x, PLAZA.z, PLAZA.r + 1], [PEN.x, PEN.z, 8], [GATE.x, GATE.z, 11]);
-  c.push([QUEST_POS[0], QUEST_POS[2], 6], [SHRINE_POS[0], SHRINE_POS[2], 6.5], [TRAINER_POS[0], TRAINER_POS[2], 6.5]);
+  c.push([SHRINE_POS[0], SHRINE_POS[2], 6.5], [TRAINER_POS[0], TRAINER_POS[2], 6.5]);
   // keep the wall line (and a margin either side) free of random trees / rocks
   for (const [x1, z1, x2, z2] of WALL_RUNS) {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len / 8));
@@ -783,7 +779,7 @@ export interface NpcDef {
   area?: 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN';   // (CAVE = Floor 1 of the crystal cave)
   /** (owner) cave cameo: not on Floor 1 but on one random deep floor per mining trip (npcs.caveCameo), beside the arrival */
   deep?: boolean;
-  /** talking to him settles AUDIENCE / KING_BOUNTY quests (store.reportToKing) */
+  /** the King / Queen of the castle keep */
   king?: boolean;
   /** gold crown on his head */
   crown?: boolean;
@@ -913,14 +909,14 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Fascinating...', 'The Altar hums tonight.', 'Spend your skill points!'],
   },
   {
-    name: 'Hodge', role: 'Bounty Clerk', model: 'KNIGHT', tint: '#ffe8c7', scale: 1, prop: 'none', accent: '#ffcf70', home: [4.5, -12], speed: 1.5, quest: true,
+    name: 'Hodge', role: 'Clerk', model: 'KNIGHT', tint: '#ffe8c7', scale: 1, prop: 'none', accent: '#ffcf70', home: [4.5, -12], speed: 1.5,
     patrol: [[4.5, -12], [8, -6.4], [-3, -6.4], [8, -6.4]],   // there and back (never across the castle path planters)
     talk: [
-      ['Bounties, bounties... the Quest Board north of the plaza is full of them. Slay monsters, earn gold.', 'Come back and claim the reward when you are done.'],
-      ['I keep the ledgers straight, and the heroes honest. Check the Quest Board every day for new work.'],
+      ['Paperwork, paperwork... the old notice board north of the plaza is empty now. Heroes want runs, not errands.', 'Go and fight something, then come back and tell me about it.'],
+      ['I keep the ledgers straight, and the heroes honest. Mostly the ledgers.'],
       ['A hero once asked for a bounty on his own mother-in-law. I said no. Then I met her. I said maybe.'],
     ],
-    bubbles: ['Fresh bounties on the board!', 'Hero wanted: apply within.', 'So much paperwork...'],
+    bubbles: ['Hero wanted: apply within.', 'So much paperwork...', 'Has Lysa said anything about me?'],
   },
   {
     name: 'Maeve', role: 'Gossip', model: 'WIZARD', tint: '#f0e8f7', scale: 1, prop: 'staff', accent: '#e8d0ff', home: [19, 9], speed: 1.2,
@@ -937,7 +933,7 @@ export const NPCS: NpcDef[] = [
     name: 'Queen Aelia', role: 'Queen of Aether', model: 'WIZARD', tint: '#fff4e0', scale: 1.05, prop: 'staff', accent: '#fff3c4', home: [0, -15.2], y: 0.6, area: 'CASTLE', king: true, crown: true, noHat: true, robe: '#f4ecd8', cape: '#3a5fa8', hair: '#e8d29a', longHair: true, ordered: true, storyRange: ['queen', ''],
     talk: [
       ['You came. Good. I have had four hundred petitions this morning and three of them were about Hodge\'s poems.', 'Sit, if you like. The throne is very uncomfortable. My father always said so. Aldric never complained once.'],
-      ['Mortimer has been paid. In gold, not candles. Sister Elowen wept. I think from guilt.', 'The Quest Board still carries the people\'s requests. Mine are rarer, and they pay in gems.'],
+      ['Mortimer has been paid. In gold, not candles. Sister Elowen wept. I think from guilt.', 'Go and put the echoes out, and come home after.'],
       ['The guardians sleep easier now. They never served the dark, you know. They were my father\'s protectors, holding a door shut that Aldric kept opening.', 'Some nights I still hear the Hollow under the well. Malakar is down there with it. Keeping it company. Keeping it hungry.'],
       ['When the echoes rise in the Void, go and put them out. Every one of them wears his face, and none of them are him.', 'And come home after. That is the only order I will ever give you.'],
     ],
@@ -950,7 +946,7 @@ export const NPCS: NpcDef[] = [
       ['Malakar was my archmage, and my friend. He took a shard of the Font, and my daughter, and ran into the Void.', 'Bring them home, guardian. The Font will keep bringing you home until you do.'],
       ['Beyond the gate lie seven realms, each ruled by a beast older than my house. Greenwood, the Marble Halls, the Sunscorch, the Coral Isles, Frostpeak, the Ember Wastes, the Void... each deeper than the last.', 'Be wary of the elite ones: they hit harder, but they hoard the finest spoils.'],
       ['A king hears much. The Void Herald is said to wait at the bottom of the world, and the Lich haunts the halls in between.', 'Gather your strength before you descend. Forge, enchant, and never walk into the dark with empty potion belts.'],
-      ['The Quest Board in the square carries the people\'s requests. Mine are rarer, and they pay in gems.', 'Take an audience-bounty or a royal commission, finish the deed, and report back to me in person.'],
+      ['The people in town have their own small troubles, hero. Lend a hand when you are home, and the Font will lend one back in the wilds.'],
       ['My grandfather sealed the Aether Altar to keep its fortune from the greedy. Spend your gems there wisely, and it may smile on you.', 'Go now. Aether is counting on its heroes.'],
     ],
     bubbles: ['Aether endures.', 'Hmm... the realm weighs heavy.', 'Speak, if you have a deed to report.'],
@@ -975,7 +971,7 @@ export const NPCS: NpcDef[] = [
     name: 'Steward Maren', role: 'Royal Steward', model: 'WIZARD', tint: '#e8d6ff', scale: 1, prop: 'none', accent: '#d9b0ff', home: [-4.6, 11], speed: 1.3, area: 'CASTLE',
     patrol: [[-4.6, 11], [-4.6, -8], [-4.6, 11], [-5, 2]],
     talk: [['His Majesty slept badly again. He woke shouting at the mirror. Said his shadow was "late". I did not ask late for what.', 'I have taken to leaving a candle by his door. He blows it out. He says the dark is "listening better" without it.'], 
-      ['The King prefers royal bounties handled in person: an audience to start, then reports once the deed is done.', 'Find them on the Quest Board, hero. They pay in gems.'],
+      ['The King prefers heroes to report in person, once a deed is done. He asks about them for days.'],
       ['I keep the household ledgers. Do you know how many candles a throne room eats in a week? Do not ask.'],
     ],
     bubbles: ['The King did not sleep again.', 'Mind the mirrors in the east hall.', 'So many candles...', 'The ledgers will not balance themselves.', 'Mind the carpet, please!'],
@@ -1128,11 +1124,11 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Someday I will lift you.', 'Move. MOVE!', 'I will not be walled in!', 'Hnnnngh!', 'Tomorrow. Tomorrow for sure.', 'Beyond the rocks... freedom. And ore.'],
   },
-  {   // (owner) the Stablemaster: her Lv 15 quest ('hilda_shoes') unlocks riding the stable horses (see horsesUnlocked)
+  {   // (owner) the Stablemaster: the stable horses can be ridden from the start (her old 'hilda_shoes' quest was cut)
     name: 'Hilda', role: 'Stablemaster', model: 'BARBARIAN', tint: '#f1e2cf', scale: 1, prop: 'none', accent: '#b9783c', home: [6.6, 49.4], speed: 1.2, noHat: true, noCape: true, tunic: '#7a4a2a', hair: '#8a4a22', longHair: true,
     talk: [
       ['Easy, Chestnut. Easy. You are not getting the apple until you stop chewing the fence.', 'Welcome to the stable, traveller. These are good horses. The best in the valley, and they know it.'],
-      ['A horse knows a rider by the way they sit. Heroes mostly sit like sacks of turnips.', 'You:: I resent that.', 'Come back when you have some proper experience and we will talk about a saddle.'],
+      ['A horse knows a rider by the way they sit. Heroes mostly sit like sacks of turnips.', 'You:: I resent that.', 'Fine, fine. Walk up, press E, and Space makes them charge. Mind the mane.'],
       ['Hay in the morning, oats at noon, a gallop at dusk. That is the whole secret.', 'Well, that and shoes. Always shoes.'],
     ],
     bubbles: ['Easy, easy...', 'Who left the gate open?!', 'Hay in the morning, oats at noon.', 'Heroes sit like sacks of turnips.', 'Chestnut, NO.'],

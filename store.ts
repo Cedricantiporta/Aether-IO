@@ -65,7 +65,6 @@ import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId }
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { petPower, petStatMul, PET_PCT_STATS } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, type NpcQuestSave } from './npcQuests';
-import { fillQuests, questDay, questDone, questCounts, questNeedsKing, QUEST_MAX_ACTIVE, type Quest, type QuestType } from './quests';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
@@ -117,14 +116,6 @@ const emptyMaterials = (): Record<Rarity, number> => ({ COMMON: 0, UNCOMMON: 0, 
 
 /** Hero rank needed to equip gear of a rarity. */
 
-/** Quest slots (owner): the main quest, accepted side quests and taken bounties share QUEST_MAX_ACTIVE slots. */
-export function questSlotsUsed(s: { quests: Quest[]; npcQuests: NpcQuestSave; story: StorySave }): number {
-  let n = s.story.step < STORY.length ? 1 : 0;
-  for (const k in s.npcQuests.q) if (s.npcQuests.q[k].s === 1) n++;
-  for (const q of s.quests) if (q.accepted) n++;
-  return n;
-}
-/** The prologue's "take a bounty" tutorial step may always take one. */
 /** (owner) gems per missing brewing ingredient, by the ingredient's rarity. */
 const BREW_GEM: Record<string, number> = { COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, MYTHIC: 5 };
 /** Gems to replace the ingredients missing for `n` brews of elixir `id` (0 when the bag covers them). */
@@ -133,9 +124,6 @@ export function brewGemCost(inv: Item[], id: ElixirId, n: number): number {
   for (const p of ELIXIRS[id].parts) g += Math.max(0, p.count * n - lootOwned(inv, p.id)) * (BREW_GEM[LOOT_BY_ID[p.id]?.rarity ?? 'COMMON'] ?? 1);
   return g;
 }
-export const questSlotsFull = (s: { quests: Quest[]; npcQuests: NpcQuestSave; story: StorySave }): boolean =>
-  questSlotsUsed(s) >= QUEST_MAX_ACTIVE && s.story.step !== storyIdx('board');
-
 export { RANK_REQ };
 /** Hero rank xp needed to go from rank r to r+1. */
 export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Math.max(1, r), 1.35));
@@ -413,7 +401,7 @@ interface Profile {
   classProg?: Record<HeroClass, ClassProg>;   // permanent per-class level / xp / skill points / learned skills
   summonPity?: SummonPity;  // draws so far per altar (guaranteed Legendary every 60, Legendary/Mythic every 240)
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
-  heroRank: number; rankXp: number; quests: Quest[];
+  heroRank: number; rankXp: number;
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
   hero: HeroClass; difficulty: Difficulty;
@@ -445,8 +433,6 @@ const petRetier = (i: Item): Item => { if (i && i.type === 'POTION') { const t =
   if (!i || i.type !== 'PET') return i; const t = PETS_POOL.find((q) => q.name === i.name); return t ? { ...i, rarity: t.rarity, petSkill: t.petSkill, petValue: t.petValue, petCooldown: t.petCooldown, description: t.description } : i; };
 const welcomeItems = (): Item[] => [...makeItemById('potion_hp', 3), ...makeItemById('potion_mana', 3), ...makeItemById('revive_ankh', 1), ...makeItemById('upgrade_core', 5)];
 
-/** Deepest biome reached (0-based), for bounty sizes. */
-const qBiome = (s: { gameStats: { highestWave?: number } }): number => Math.floor((s.gameStats?.highestWave ?? 0) / 15);
 
 /** One-time (owner): skill points went from 1 to 2 per level - each class gets +1 SP for every level it already has. */
 const spMigrate = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<HeroClass, ClassProg> => {
@@ -481,7 +467,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   v: PROFILE_VERSION,
   gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems, crystals: 20,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
-  heroRank: 1, rankXp: 0, quests: fillQuests(1, []), npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
+  heroRank: 1, rankXp: 0, npcQuests: emptyNpcQuests(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
@@ -524,7 +510,6 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
-              quests: fillQuests(Math.max(1, num(p.heroRank, 1)), Array.isArray(p.quests) ? p.quests : []),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
@@ -572,7 +557,7 @@ const writeProfile = (s: GameState): void => {
     if (typeof localStorage === 'undefined') return;
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp, quests: s.quests,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
@@ -745,7 +730,6 @@ export const useGameStore = create<GameState>()((set, get) => {
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
-    quests: profile.quests,
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
     talents: profile.talents,
     attrs: profile.attrs ?? sanitizeAttrs(undefined),
@@ -861,7 +845,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, quests: f.quests, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: 0, p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
@@ -1105,67 +1089,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ materials: { ...s.materials, [rarity]: s.materials[rarity] + n } });
     },
 
-    addQuestProgress: (type, amount = 1, kind, lootName) => {
-      const s = get();
-      let changed = false;
-      const quests = s.quests.map((q) => {
-        if (!q.accepted || questCounts(q) !== type || q.progress >= q.target) return q;
-        if (type === 'KILL_KIND' && q.kind !== kind) return q;
-        if (type === 'COLLECT_LOOT' && q.lootName !== lootName) return q;
-        changed = true;
-        // REACH_WAVE tracks the best wave reached; everything else accumulates
-        const progress = type === 'REACH_WAVE' ? Math.max(q.progress, amount) : q.progress + amount;
-        return { ...q, progress: Math.min(q.target, progress) };
-      });
-      if (!changed) return;
-      set({ quests });
-      for (let i = 0; i < quests.length; i++) {
-        if (quests[i] === s.quests[i] || quests[i].progress < quests[i].target) continue;
-        if (questNeedsKing(quests[i])) notify('Objective complete! Report to the King in the castle.', COLORS.uiAccent, 'SYSTEM');
-        else notify('Quest complete! Visit the quest board.', COLORS.uiAccent, 'SYSTEM');
-      }
-    },
-
-    reportToKing: () => {
-      const s = get();
-      let audience = 0, reports = 0;
-      const quests = s.quests.map((q) => {
-        if (!questNeedsKing(q)) return q;
-        if (q.type === 'AUDIENCE') { audience++; return { ...q, progress: q.target, reported: true }; }
-        reports++; return { ...q, reported: true };
-      });
-      if (audience + reports === 0) return { audience: 0, reports: 0 };
-      set({ quests });
-      notify('The King has acknowledged your deeds. Claim your reward at the Quest Board!', COLORS.uiAccent, 'SYSTEM');
-      return { audience, reports };
-    },
-
-    claimQuest: (id) => {
-      const s = get();
-      const q = s.quests.find((x) => x.id === id);
-      if (!q || !questDone(q)) return false;
-      const rw = q.reward;
-      // build the item rewards first so a full bag blocks the claim instead of eating them
-      const gifts: Item[] = [];
-      if (rw.cores) gifts.push(...makeItemById('upgrade_core', rw.cores));
-      if (rw.potions) gifts.push(...makeItemById('potion_hp', rw.potions), ...makeItemById('potion_mana', rw.potions));
-      if (rw.item) { const it = get().rollItemDrop(rw.item); if (it) gifts.push(it); }
-      let inv: Item[] | null = s.inventory;
-      for (const g of gifts) { inv = inv ? insertItem(inv, s.maxInventorySlots, g) : null; }
-      if (!inv) { notify('Bag is full! Make room to claim.', 'red', 'WARNING'); return false; }
-      set({
-        gold: s.gold + (rw.gold ?? 0),
-        gems: s.gems + (rw.gems ?? 0),
-        inventory: inv,
-        quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: false, claimed: true, day: questDay() } : x)), qBiome(s)),   // (owner) a paid bounty is gone for today
-      });
-      const qxp = questXp('BOUNTY', s.level); get().addExperience(qxp);   // (owner) every quest pays EXP
-      notify('Quest reward claimed!', COLORS.uiAccent, 'SYSTEM');
-      feedReward({ gold: rw.gold, gems: rw.gems, items: gifts, xp: qxp }, true);
-      events.emit('hub', { kind: 'quest', n: 1 });
-      return true;
-    },
-
     applyBlessing: (kind) => {
       const s = get();
       const b = { ...s.baseStats };
@@ -1181,30 +1104,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ baseStats: b, stats: calc(b, s.equipment) });
       notify(label + ' (this run)', '#ffd36a', 'SYSTEM');
       return label;
-    },
-
-    acceptQuest: (id) => {
-      const s = get();
-      const q = s.quests.find((x) => x.id === id);
-      if (!q || q.accepted || q.claimed) return false;
-      if (questSlotsFull(s)) { notify(`Quest slots full (${QUEST_MAX_ACTIVE}): the main quest, side quests and bounties share them.`, 'red', 'WARNING'); return false; }
-      set({ quests: fillQuests(s.heroRank, s.quests.map((x) => (x.id === id ? { ...x, accepted: true, progress: 0 } : x)), qBiome(s)) });
-      notify('Quest accepted!', COLORS.uiAccent, 'SYSTEM');
-      events.emit('hub', { kind: 'accept', n: 1 });
-      return true;
-    },
-
-    abandonQuest: (id) => {
-      const s = get();
-      if (!s.quests.some((x) => x.id === id && x.accepted)) return;
-      // (owner) back among the board offers (progress reset), not thrown away
-      set({ quests: s.quests.map((x) => (x.id === id ? { ...x, accepted: false, progress: 0, day: questDay() } : x)) });
-    },
-
-    refreshQuestBoard: () => {
-      const s = get();
-      const q = fillQuests(s.heroRank, s.quests, qBiome(s));
-      if (q !== s.quests) set({ quests: q });
     },
 
     getManaCost: (skill) => {
@@ -1619,7 +1518,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (sellQty >= qty) inv.splice(idx, 1);
       else inv[idx] = { ...cur, quantity: qty - sellQty };
       set({ gold: s.gold + value, inventory: inv });
-      if (cur.type === 'LOOT') get().addQuestProgress('SELL_LOOT', sellQty);
       if (cur.type === 'LOOT' && isFishName(cur.name)) events.emit('hub', { kind: 'sell_fish', n: sellQty });   // (the fishing tutorial)
       notify(`Sold ${sellQty}x ${cur.name} for ${value}G`, 'yellow', 'SYSTEM');
     },
@@ -1634,7 +1532,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       loot.forEach((i) => { const q = i.quantity || 1; total += sellUnit(i) * q; count += q; if (isFishName(i.name)) fish += q; });
       set({ gold: s.gold + total, inventory: s.inventory.filter((i) => !isSellLoot(i)) });
       if (fish) events.emit('hub', { kind: 'sell_fish', n: fish });
-      get().addQuestProgress('SELL_LOOT', count);
       notify(`Sold ${count} loot items for ${total}G`, 'yellow', 'SYSTEM');
       return total;
     },
@@ -1655,7 +1552,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (!pick.items.length) { notify('Nothing to sell.', 'white', 'SYSTEM'); return 0; }
       const ids = new Set(pick.items.map((i) => i.id));
       set({ gold: s.gold + pick.gold, inventory: s.inventory.filter((i) => !ids.has(i.id)) });
-      if (pick.loot) get().addQuestProgress('SELL_LOOT', pick.loot);
       if (pick.fish) events.emit('hub', { kind: 'sell_fish', n: pick.fish });
       notify(`Sold ${pick.count} items for ${pick.gold.toLocaleString()}G`, 'yellow', 'SYSTEM');
       return pick.gold;
@@ -2044,7 +1940,7 @@ const flushProfile = (): void => {
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.heroRank === prev.heroRank
-    && s.rankXp === prev.rankXp && s.quests === prev.quests && s.gameStats === prev.gameStats && s.settings === prev.settings
+    && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
@@ -2080,27 +1976,6 @@ function syncDiscoveries(): void {
   events.on('enemyHit', (e) => mon(e.kind));
   events.on('enemyDeath', (e) => { if (!e.poof) { mon(e.kind); if (e.elite) mon('ELITE'); } });
   events.on('bossSpawn', (e) => { const k = monsterKeyByName(e.name); if (k) mon(k); });
-}
-
-// ---- quest tracking from engine events (runs and village harvesting)
-{
-  const q = (type: QuestType, n = 1, kind?: EnemyKind) => useGameStore.getState().addQuestProgress(type, n, kind);
-  events.on('enemyDeath', (e) => {
-    if (e.poof) return; // wave-end despawn, not a kill
-    q('KILL_TOTAL'); q('KILL_KIND', 1, e.kind);
-    if (e.boss) q('KILL_BOSS');
-  });
-  events.on('crateBreak', () => q('BREAK_CRATES'));
-  events.on('waveStart', (e) => q('REACH_WAVE', e.wave));
-  events.on('waveClear', (e) => { if (e.fast) q('FAST_CLEARS'); });
-  events.on('dash', () => q('DASH'));
-  // blink dashes (Wizard Blink, Necromancer Soul Step) count as dashes too (pet blinks do not)
-  events.on('blink', () => { const h = useGameStore.getState().hero; if ((h === 'WIZARD' || h === 'NECROMANCER') && useGameStore.getState().status === GameStatus.PLAYING) q('DASH'); });
-  events.on('pickup', (e) => {
-    if (e.kind === 'GOLD') q('COLLECT_GOLD', e.value * GOLD_SCALE);
-    else if (e.kind === 'SHARD') q('GATHER_SHARDS');
-    else if (e.kind === 'ITEM' && e.name) useGameStore.getState().addQuestProgress('COLLECT_LOOT', 1, undefined, e.name);
-  });
 }
 
 // The active character's class is fixed (characters.ts): a brand-new character starts on its chosen class.

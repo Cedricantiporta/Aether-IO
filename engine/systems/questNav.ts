@@ -6,7 +6,7 @@
 // ============================================================================
 import { CHURCH_DOOR, CHURCH_EXIT } from '../churchData';
 import { useGameStore } from '../../store';
-import { world, QUEST_POS, TRAINER_POS } from '../world';
+import { world, TRAINER_POS } from '../world';
 import { STORY, type StoryAt } from '../../story';
 import { NPCS, NESTS, ANIMALS, HIDDEN_CAT, WHEEL_PIN, PORTAL, TOWER } from '../townData';
 import { CASTLE_DOOR, CASTLE_EXIT } from '../castleData';
@@ -15,7 +15,6 @@ import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
 import { isFishName } from '../../loot';
 import { SHOP_POSITIONS, SHOP_TAB, shopFront } from '../../constants';
 import { npcs, animals, TALK_R, npcInStory } from './npcs';
-import { questDone, questNeedsKing, type Quest } from '../../quests';
 import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests';
 import { TAVERN_DOOR, TAVERN_EXIT } from '../tavernData';
 import { HOME_EXIT } from '../homeData';
@@ -81,11 +80,10 @@ export function navNpc(i: number, o: NavTarget = mk()): NavTarget {
   return hop(o, npcArea(i)) ?? set(o, npcs[i].x, npcs[i].z, TALK_REACH, 'npc', '', i);
 }
 export type Spot = StoryAt | 'SUMMON' | 'FISH' | 'MINE';
-/** A shop counter / the quest board / the skill trainer / the tower door (opened on arrival). */
+/** A shop counter / the skill trainer / the tower door (opened on arrival). */
 export function navSpot(at: Spot, o: NavTarget = mk()): NavTarget | null {
   if (at === 'BAG') return null;
   if (!inTown()) return exit(o);
-  if (at === 'BOARD') return set(o, QUEST_POS[0], QUEST_POS[2] + 2.6, 1.8, 'shop', 'QUESTS');
   if (at === 'TRAINER') return set(o, TRAINER_POS[0], TRAINER_POS[2] + 2.6, 1.8, 'shop', 'SKILLS');
   if (at === 'TOWER') return set(o, TOWER.door.x, TOWER.door.z, 2.2, 'tower');
   const s = SHOP_POSITIONS.find((x) => (x.type as string) === (at === 'SUMMON' ? 'FORTUNE' : at));
@@ -104,7 +102,7 @@ export function mainNav(): NavTarget | null {
   return portal(MAIN);
 }
 
-const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'BREWER', brew: 'BREWER', tower_floor: 'TOWER', buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', accept: 'BOARD', quest: 'BOARD', buy_flask: 'MINE' };
+const ACTION_SPOT: Record<string, Spot> = { buy_armor: 'ARMORY', brew_elixir: 'BREWER', brew: 'BREWER', tower_floor: 'TOWER', buy_potion: 'SUPPLIES', buy: 'SUPPLIES', buy_pet: 'PETS', summon: 'FORTUNE', upgrade: 'BLACKSMITH', craft: 'BLACKSMITH', store: 'WAREHOUSE', learn: 'TRAINER', buy_flask: 'MINE' };
 const SIDE = mk();
 /** Where an accepted NPC side quest continues: the turn-in NPC when ready, the TALK target, the farm chore, the shop of
  *  an ACTION objective, else the wilds. */
@@ -165,16 +163,6 @@ function fieldAction(t: string): NavTarget | null {
     return set(SIDE, L.down.x, L.down.z, Math.max(1.5, L.down.r - 1), 'down');
   }
   return null;
-}
-
-const BOARD = mk();
-/** Where a Quest Board bounty continues: claim at the board, the King, selling loot at the Potion Shop, else the wilds. */
-export function boardQuestNav(q: Quest): NavTarget {
-  const st = useGameStore.getState(), king = NPCS.findIndex((n, i) => n.king && npcInStory(i));
-  if (questDone(q)) return navSpot('BOARD', BOARD)!;
-  if (questNeedsKing(q) && king >= 0) return navNpc(king, BOARD);
-  if (q.type === 'SELL_LOOT' && st.inventory.some((i) => i.type === 'LOOT')) return navSpot('SUPPLIES', BOARD)!;
-  return portal(BOARD);
 }
 
 /** Straight-line distance from the hero to a target (for the tracker readout). */

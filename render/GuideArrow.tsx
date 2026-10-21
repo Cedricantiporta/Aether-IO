@@ -1,6 +1,6 @@
 // Ground arrow beside the hero in the town hub. Points ALONG THE WALKABLE ROUTE (engine/systems/townPath route hint) to
 // where the current objective continues (engine/systems/questNav): the main quest's NPC / shop first (gold), then a
-// bounty to claim, the King, loot to sell, a side quest to hand in (cyan), then the main quest's field objective (the
+// side quest to hand in (cyan), then the main quest's field objective (the
 // Adventure Portal). Inside the castle it leads to the King / a castle NPC or the exit.
 import React, { useMemo, useRef } from 'react';
 import { liftAt } from './lift';
@@ -11,9 +11,8 @@ import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { useUiStore } from '../ui/uiStore';
-import { questDone, questNeedsKing } from '../quests';
 import { npcMarkers } from '../engine/systems/npcQuestLogic';
-import { mainNav, boardQuestNav, navNpc, npcArea, type NavTarget } from '../engine/systems/questNav';
+import { mainNav, navNpc, npcArea, type NavTarget } from '../engine/systems/questNav';
 import { updateRouteHint } from '../engine/systems/townPath';
 import { gateOpen } from '../story';
 
@@ -23,13 +22,11 @@ const use = (t: NavTarget, quest: boolean): boolean => { tgt.x = t.x; tgt.z = t.
 
 function pickTarget(): boolean {
   if (world.village.area === 'CAVE' && world.village.cave.floor > 1) return false;   // deep cave floors: no arrow (the way out is the trip's business)
-  const st = useGameStore.getState(), qs = st.quests;
+  const st = useGameStore.getState();
   // 1) the main quest when it waits on someone / a shop in town (gold)
   const main = mainNav();
   if (main && !main.field) return use(main, false);
-  // 2) a bounty to claim / report to the King / loot to sell, a side quest ready to hand in (cyan)
-  const q = qs.find(questDone) ?? qs.find(questNeedsKing) ?? qs.find((x) => x.accepted && x.type === 'SELL_LOOT' && x.progress < x.target && st.inventory.some((i) => i.type === 'LOOT'));
-  if (q) return use(boardQuestNav(q), true);
+  // 2) a side quest ready to hand in (cyan)
   const mk = npcMarkers(), here = world.village.area;
   let npcI = -1;
   for (let i = 0; i < mk.length; i++) if (mk[i] === 3 && (npcI < 0 || npcArea(i) === here)) npcI = i;   // prefer one in the current area

@@ -6,8 +6,7 @@ import { questXp } from '../../classLevels';
 import { STORY } from '../../story';
 import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
-import { useGameStore, makeItemById, instantiate, questSlotsFull } from '../../store';
-import { QUEST_MAX_ACTIVE } from '../../quests';
+import { useGameStore, makeItemById, instantiate } from '../../store';
 import { events } from '../events';
 import { world } from '../world';
 import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
@@ -38,7 +37,6 @@ export function abandonNpcQuest(id: string): boolean {
 export function acceptNpcQuest(id: string): boolean {
   const def = NPC_QUEST_BY_ID[id], st = useGameStore.getState();
   if (!def || npcQuestStatus(def, st.npcQuests, st.heroRank) !== 'AVAILABLE') return false;
-  if (questSlotsFull(st)) { notify(`Quest slots full (${QUEST_MAX_ACTIVE}): the main quest, side quests and bounties share them.`, 'red'); return false; }
   useGameStore.setState({ npcQuests: { ...st.npcQuests, q: { ...st.npcQuests.q, [id]: { s: 1, p: 0 } } } });
   notify(`Quest accepted: ${def.title}`);
   return true;
@@ -97,7 +95,7 @@ export function completeNpcQuest(id: string): boolean {
   if (def.reward.flasks) { const n = addSpareFlasks(def.reward.flasks); if (n > 0) notify(`+${n} lantern oil flask${n === 1 ? '' : 's'} for the Crystal Cave`, '#ffd070'); }
   const qxp = questXp('SIDE', s.level); useGameStore.getState().addExperience(qxp);   // (owner) every quest pays EXP
   notify(`Quest complete: ${def.title}`);
-  if (id === 'hilda_shoes') notify('You can now ride the stable horses! Press E by a horse.', '#ffd070');
+  events.emit('hub', { kind: 'quest', n: 1 });   // (daily / weekly goals: 'Complete a quest')
   feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
   return true;
 }
@@ -129,13 +127,8 @@ export function questNpc(name: string): boolean {
     && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
 }
 /** True when a ground item (by bag name) is still wanted by an active DELIVER quest (it gets a small gold light ray). */
-/** A Quest Board bounty still wants crafting shards (harvest veins / crystals drop them: they get the quest icon). */
-export function questWantsShards(): boolean {
-  return useGameStore.getState().quests.some((q) => q.accepted && q.type === 'GATHER_SHARDS' && q.progress < q.target);
-}
 export function questWantsItem(name: string): boolean {
   const st = useGameStore.getState();
-  if (st.quests.some((q) => q.accepted && q.type === 'COLLECT_LOOT' && q.lootName === name && q.progress < q.target)) return true;   // board bounties too
   const step = STORY[st.story.step];   // the main story's current delivery
   if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === name && bagCount(st.inventory, step.deliver.id) < step.deliver.count) return true;
   return NPC_QUESTS.some((d) => {
@@ -144,11 +137,10 @@ export function questWantsItem(name: string): boolean {
     return ids.some((id) => LOOT_BY_ID[id as string]?.name === name) && !npcQuestReady(d, st.npcQuests, st.inventory);
   });
 }
-/** True when killing this enemy kind advances an active quest (main story, NPC or Quest Board). */
+/** True when killing this enemy kind advances an active quest (main story or a side quest). */
 export function questKill(kind: string, mini = false): boolean {
   const st = useGameStore.getState();
   if (storyWantsKill(kind, mini)) return true;
-  if (st.quests.some((q) => q.accepted && q.type === 'KILL_KIND' && q.kind === kind && q.progress < q.target)) return true;
   return NPC_QUESTS.some((d) => d.objective.type === 'KILL_KIND' && d.objective.target === kind && npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
     && (st.npcQuests.q[d.id]?.p ?? 0) < d.objective.count);
 }
@@ -207,7 +199,7 @@ export function questDialogueFor(name: string): { mode: 'turnin' | 'offer' | 'pr
   return prog ? { mode: 'progress', def: prog } : null;
 }
 
-// side quests unlock after the main-story tutorial (story step 'king' reached = the bounty board step is done)
+// side quests unlock after the main-story tutorial (story step 'king' reached = the town tutorial is done)
 const GATE_STEP = Math.max(0, STORY.findIndex((st) => st.id === 'king'));
 const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; };
 setTimeout(() => {   // (deferred: this module loads while the store module is still initialising)

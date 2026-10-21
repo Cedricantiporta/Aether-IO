@@ -1,16 +1,15 @@
 // Active quest tracker (Korean-MMO style): right side, under the menu icons. Main quest first (gold), then accepted
-// bounties and NPC side quests, each with its objective, progress and (in town) the distance to where it continues.
+// NPC side quests, each with its objective, progress and (in town) the distance to where it continues.
 // Click = open the quest log on that quest (indicators only: no auto-pathing; owner).
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
 import { stepCount, STORY, type StoryStep } from '../../story';
 import { useGameStore } from '../../store';
-import { activeQuests, questDone, questNeedsKing, questTitle, type Quest } from '../../quests';
 import { walkAfterArrive } from '../../engine/systems/village';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn, bagCount, type NpcQuestDef } from '../../npcQuests';
 import { LOOT_BY_ID } from '../../loot';
-import { mainNav, npcQuestNav, boardQuestNav, navDist, type NavTarget } from '../../engine/systems/questNav';
+import { mainNav, npcQuestNav, navDist, type NavTarget } from '../../engine/systems/questNav';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
@@ -63,18 +62,6 @@ const MainRow: React.FC<{ main: StoryStep }> = ({ main }) => {
   );
 };
 
-const BoardRow: React.FC<{ q: Quest }> = ({ q }) => {
-  const done = questDone(q), king = questNeedsKing(q);
-  const dist = useDistance(() => boardQuestNav(q));
-  return (
-    <div data-k="board" data-s={done ? 'done' : undefined} className={`qt-row board ${done ? 'done' : ''} ${king ? 'king' : ''}`} role="button" title="Click: open the quest log" onClick={() => useUiStore.getState().openQuestLogOn('board:' + q.id)}>
-      <div className="qt-head"><i className="qt-mark">{done ? '\u2713' : '!'}</i><span>{done ? 'Ready to claim' : king ? (q.type === 'AUDIENCE' ? 'Talk to the King' : 'Report to the King') : 'Quest'}</span><span className="qt-dist" ref={dist} /></div>
-      <div className="qt-title">{questTitle(q)}{q.type !== 'AUDIENCE' && <b className="qt-n">{Math.min(q.progress, q.target)} / {q.target}</b>}</div>
-      {q.type === 'AUDIENCE' && <div className="qt-line"><b>{done ? 'Done' : 'Castle keep, north of the plaza'}</b></div>}
-    </div>
-  );
-};
-
 const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   const nq = useGameStore((s) => s.npcQuests), inv = useGameStore((s) => s.inventory);
   const ready = npcQuestReady(d, nq, inv), n = npcQuestProgress(d, nq, inv), c = d.objective.count;
@@ -93,26 +80,22 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
 };
 
 export const QuestTracker: React.FC = () => {
-  const quests = useGameStore((s) => s.quests);
-  const act = activeQuests(quests);
-  // NPC story quests (blue book icon): accepted, not yet handed in
+  // NPC side quests (blue book icon): accepted, not yet handed in
   const nq = useGameStore((s) => s.npcQuests);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const main = useGameStore((s) => STORY[s.story.step]);
-  if (act.length === 0 && story.length === 0 && !main) return null;
+  if (story.length === 0 && !main) return null;
   const inv = useGameStore.getState().inventory;
   const rest = [
-    ...act.filter(questDone).map((q) => ({ q, d: null as NpcQuestDef | null })),
-    ...story.filter((d) => npcQuestReady(d, nq, inv)).map((d) => ({ q: null as Quest | null, d })),
-    ...act.filter((q) => !questDone(q)).map((q) => ({ q, d: null as NpcQuestDef | null })),
-    ...story.filter((d) => !npcQuestReady(d, nq, inv)).map((d) => ({ q: null as Quest | null, d })),
+    ...story.filter((d) => npcQuestReady(d, nq, inv)),
+    ...story.filter((d) => !npcQuestReady(d, nq, inv)),
   ].slice(0, TRACK_MAX - (main ? 1 : 0));
   return (
     <div className="qt pe" data-testid="quest-tracker">
       {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
       {/* (owner) at most 3 quests on screen: the main quest, then the ones ready to hand in, then the rest */}
       {main && <MainRow main={main} />}
-      {rest.map((r) => r.q ? <BoardRow key={r.q.id} q={r.q} /> : <SideRow key={r.d!.id} d={r.d!} />)}
+      {rest.map((d) => <SideRow key={d.id} d={d} />)}
     </div>
   );
 };

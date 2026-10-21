@@ -2,13 +2,11 @@
 import { inView } from './view';
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { questWantsItem, questWantsShards } from '../engine/systems/npcQuestLogic';
+import { questWantsItem } from '../engine/systems/npcQuestLogic';
 import { questIconMat } from './Npcs';
 import { LOOT_TABLES, LOOT_BY_ID } from '../loot';
 import { isHarvestNode } from '../engine/mapgen';
 const qNode = new Map<string, boolean>();
-/** Harvest nodes that drop crafting shards (crates.ts breakCrate): a GATHER_SHARDS bounty marks them. */
-const SHARD_NODES = new Set(['CRYSTAL', 'RARE_VEIN', 'EPIC_VEIN', 'LEGEND_VEIN', 'ORE', 'GOLD_VEIN']);
 let qTick = 0;
 import { Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Material, MeshBasicMaterial, MeshStandardMaterial, BufferGeometry, Sprite } from 'three';
 import { world } from '../engine/world';
@@ -172,7 +170,7 @@ export function Crates() {
       const P = sys.per[cr.kind]; if (!P) continue;
       if (nQ < 12 && isHarvestNode(cr.kind)) {
         let want = qNode.get(cr.kind);
-        if (want === undefined) { want = (SHARD_NODES.has(cr.kind) && questWantsShards()) || (LOOT_TABLES[cr.kind] ?? []).some((id) => !!LOOT_BY_ID[id] && questWantsItem(LOOT_BY_ID[id].name)); qNode.set(cr.kind, want); }
+        if (want === undefined) { want = (LOOT_TABLES[cr.kind] ?? []).some((id) => !!LOOT_BY_ID[id] && questWantsItem(LOOT_BY_ID[id].name)); qNode.set(cr.kind, want); }
         if (want) { const sp = sys.qIcons[nQ++]; sp.position.set(cr.pos.x, cr.pos.y + 2.4 + Math.sin(t * 3 + i) * 0.06, cr.pos.z); sp.visible = true; }
       }
       const n = counts[cr.kind]++;

@@ -197,7 +197,6 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
   cv.floor = f; cv.seed = f === 1 ? 0 : tripSeed;
   if (f > caveBest()) setProgress({ caveBest: f });
   cv.best = caveBest();
-  if (f === 1 && arrive === 'TOWN') tutorialVeins();   // (before the veins are placed)
   placeFloor(f);
   const L = caveLayout(f, cv.seed);
   installInterior(L.colliders);
@@ -225,14 +224,6 @@ function enterFloor(f: number, arrive: 'TOWN' | 'ABOVE' | 'UP'): void {
     const note = L.hazard === 'LAVA' ? ' Lava pools: do not stand in them!' : L.hazard === 'POISON' ? ' Poison puddles: keep out!' : '';
     st.addNotification(`Crystal Cave: Floor ${f}${L.twin ? ' (twin chambers)' : ''}.${note}`, L.hazard === 'LAVA' ? '#ff8a4a' : L.hazard === 'POISON' ? '#8aff6a' : '#9fe6ff', 'SYSTEM');
   }
-}
-/** The mining tutorial (npcQuests 'dorn_mine') needs veins on Floor 1: when it is active and Floor 1 was mined out (24 h
- *  regrow), Grit has already cleared fresh rubble - the floor regrows at once (called before the veins are placed). */
-function tutorialVeins(): void {
-  const q = useGameStore.getState().npcQuests.q.dorn_mine;
-  if (!q || q.s !== 1 || q.p >= 3) return;
-  if (F1N - save.broken.length >= 3 - q.p) return;
-  save.broken = []; save.clearedAt = 0; persist();
 }
 function endTrip(): void { deep.clear(); forgetCaveLayouts(); tripSnap = null; save.oil = world.village.cave.oil; persist(); }
 /** What this trip has gathered so far (the haul at risk; all zero on Floor 1). Reused object. */

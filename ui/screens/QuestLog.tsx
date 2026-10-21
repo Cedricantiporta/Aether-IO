@@ -1,6 +1,6 @@
-// Quest window (MMO style): tabs Main / Side / Bounties. Main: the story chapters on the left (expand to their steps:
+// Quest window (MMO style): tabs Main / Side. Main: the story chapters on the left (expand to their steps:
 // done / current / locked), the selected step on the right (chapter banner, story text, objective with progress,
-// rewards, Track / Teleport). Side: NPC quests (active and offered). Bounties: the Quest Board.
+// rewards, Track / Teleport). Side: NPC quests (active and offered).
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,7 +10,6 @@ import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import { CHAPTERS, stepCount, storyIdx, STORY, type StoryStep } from '../../story';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, bagCount, type NpcReward, type NpcQuestDef } from '../../npcQuests';
-import { activeQuests, questDone, questTitle, type QuestReward, type Quest } from '../../quests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
 import { abandonNpcQuest } from '../../engine/systems/npcQuestLogic';
@@ -39,9 +38,9 @@ const CurSlot: React.FC<{ icon: React.ReactNode; n: number; label: string }> = (
     <div className="rpg-slot fluid qw-cur">{icon}<span className="slot-qty">{n.toLocaleString()}</span></div>
   </div>
 );
-export const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean; xp?: number }> = ({ r, scale, xp }) => {
-  const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items, cores = (r as QuestReward).cores, potions = (r as QuestReward).potions;
-  const list: [string, number][] = [...(cores ? [['upgrade_core', cores] as [string, number]] : []), ...(potions ? [['potion_hp', potions] as [string, number]] : []), ...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
+export const Rewards: React.FC<{ r: NpcReward; scale?: boolean; xp?: number }> = ({ r, scale, xp }) => {
+  const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items;
+  const list: [string, number][] = [...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
   return (
     <div className="qw-rew">
       {!!xp && <CurSlot icon={<span className="qw-xp">EXP</span>} n={xp} label="EXP" />}
@@ -52,13 +51,12 @@ export const Rewards: React.FC<{ r: NpcReward | QuestReward; scale?: boolean; xp
   );
 };
 
-type Tab = 'MAIN' | 'SIDE' | 'BOARD';
+type Tab = 'MAIN' | 'SIDE';
 
 export const QuestLog: React.FC = () => {
   const open = useUiStore((s) => s.questLogOpen), setOpen = useUiStore((s) => s.openQuestLog);
-  const { story, nq, inv, rank, quests, status, level, abandonBounty } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, quests: s.quests, status: s.status, level: s.level, abandonBounty: s.abandonQuest })));
+  const { story, nq, inv, rank, status, level } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, status: s.status, level: s.level })));
   const askConfirm = useUiStore((s) => s.askConfirm);
-  const [boardSel, setBoardSel] = useState<string>('');
   const [tab, setTab] = useState<Tab>('MAIN');
   const chapIdx = useMemo(() => CHAPTERS.map((c, i) => ({ ...c, a: storyIdx(c.from), b: i + 1 < CHAPTERS.length ? storyIdx(CHAPTERS[i + 1].from) : STORY.length })), []);
   const curChap = Math.max(0, chapIdx.findIndex((c) => story.step >= c.a && story.step < c.b));
@@ -68,12 +66,11 @@ export const QuestLog: React.FC = () => {
   // opening the window jumps to the current chapter and step
   useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); const u = useUiStore.getState(), t = u.questLogTab; if (t) { setTab(t); u.setQuestLogTab(''); }
     const f = u.questLogFocus;   // a tracker row opened the log on this quest
-    if (f) { useUiStore.setState({ questLogFocus: '' }); if (f.startsWith('side:')) setSideSel(f.slice(5)); else if (f.startsWith('board:')) setBoardSel(f.slice(6)); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
+    if (f) { useUiStore.setState({ questLogFocus: '' }); if (f.startsWith('side:')) setSideSel(f.slice(5)); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
   const npcActive = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'ACTIVE');
   const npcOpen = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'AVAILABLE');
   // level-gated requests whose only blocker is the class level (lowest level first)
   const npcLocked = NPC_QUESTS.filter((d) => npcQuestLevelLocked(d, nq, rank)).sort((a, b) => npcQuestMinLevel(a) - npcQuestMinLevel(b));
-  const board = activeQuests(quests);
   const step: StoryStep | undefined = STORY[sel];
   const chap = chapIdx.find((c) => sel >= c.a && sel < c.b) ?? chapIdx[0];
   const inRun = status === GameStatus.PLAYING;
@@ -85,8 +82,8 @@ export const QuestLog: React.FC = () => {
     <Modal open={open} onClose={() => setOpen(false)} title="Quests" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250} full>
       <div className="qw" data-testid="quest-log">
         <div className="qw-tabs">
-          {([['MAIN', 'Main'], ['SIDE', 'Side'], ['BOARD', 'Bounties']] as [Tab, string][]).map(([t, l]) => (
-            <button key={t} className={`qw-tab pe ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>{l}{t === 'SIDE' && npcActive.length > 0 && <span className="qw-n">{npcActive.length}</span>}{t === 'BOARD' && board.length > 0 && <span className="qw-n">{board.length}</span>}</button>
+          {([['MAIN', 'Main'], ['SIDE', 'Side']] as [Tab, string][]).map(([t, l]) => (
+            <button key={t} className={`qw-tab pe ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>{l}{t === 'SIDE' && npcActive.length > 0 && <span className="qw-n">{npcActive.length}</span>}</button>
           ))}
         </div>
 
@@ -176,43 +173,6 @@ export const QuestLog: React.FC = () => {
             })()}
           </div>
         )}
-
-        {tab === 'BOARD' && (() => {
-          // (owner) the same list + detail layout as the Side tab
-          const bq: Quest | undefined = board.find((q) => q.id === boardSel) ?? board[0];
-          return (
-            <div className="qw-body">
-              <div className="qw-list rpg-scroll">
-                {board.length === 0 && <div className="qw-none">No bounties taken. The Quest Board in the plaza has new ones every day.</div>}
-                {board.length > 0 && <div className="qw-grp">Accepted bounties</div>}
-                {board.map((q) => (
-                  <button key={q.id} className={`qw-step pe cur ${bq?.id === q.id ? 'sel' : ''} ${questDone(q) ? 'ready' : ''}`} onClick={() => setBoardSel(q.id)}>
-                    <span>{questTitle(q)} <em>· Bounty</em></span>
-                    {questDone(q) ? <Check size={14} className="ok" /> : <b className="qbadge blue">Q</b>}
-                  </button>
-                ))}
-              </div>
-              {bq && (
-                <div className="qw-det">
-                  <div className="qw-banner npc"><div className="qw-seal"><ScrollText size={20} /></div><div><em>Quest Board</em><b>{questTitle(bq)}</b></div></div>
-                  <div className="qw-cols">
-                    <div className="qw-text"><p className="qw-quote">“{bq.bounty ? 'Wanted, by order of the Guard. Bring proof, collect the purse.' : 'Posted on the Quest Board in the plaza. Any able hand may take it.'}”<span>Hodge, Quest Board</span></p></div>
-                    <div className="qw-side">
-                      <div className="qw-sec">Objective</div>
-                      <div className="qw-obj">{questDone(bq) ? 'Done! Claim it at the Quest Board.' : <>{questTitle(bq)}<b> {Math.min(bq.progress, bq.target)} / {bq.target}</b></>}</div>
-                      <div className="qw-sec">Rewards</div>
-                      <Rewards r={bq.reward} xp={questXp('BOUNTY', level)} />
-                    </div>
-                  </div>
-                  <div className="qw-btns">
-                    <button className="qw-btn pe" onClick={() => { setOpen(false); trackQuest('board:' + bq.id, questTitle(bq)); }}><MapPin size={15} /> Track</button>
-                    {!questDone(bq) && <button className="qw-btn pe" data-testid="board-abandon" onClick={() => askConfirm({ title: 'Abandon this bounty?', body: 'It goes back to the Quest Board offers; your progress on it is lost.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => abandonBounty(bq.id) })}>Abandon</button>}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
       </div>
     </Modal>
   );

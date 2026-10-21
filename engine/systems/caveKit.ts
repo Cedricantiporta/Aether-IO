@@ -87,7 +87,6 @@ export function sellMineGoods(only?: Item): number {
   }
   if (count === 0) { st.addNotification(kept ? 'Those are promised to a quest. The camp keeps its hands off.' : 'No ore or crystals to sell.', '#ffffff', 'SYSTEM'); return 0; }
   useGameStore.setState({ gold: st.gold + total, inventory: inv });
-  st.addQuestProgress('SELL_LOOT', count);
   st.addNotification(`Sold ${count} ore & crystal${count === 1 ? '' : 's'} for ${total.toLocaleString()}G${kept ? ` (kept ${kept} for your quests)` : ''}`, RARITY_LABEL_COLOR.LEGENDARY, 'SYSTEM');
   return total;
 }

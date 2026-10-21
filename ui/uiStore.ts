@@ -18,18 +18,18 @@ interface UiState {
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
   goalsOpen: boolean;                   // Goals panel (daily / weekly / achievements)
-  questLogOpen: boolean;                // Quest log (main / NPC / board quests + rewards)
+  questLogOpen: boolean;                // Quest log (main / side quests + rewards)
   openQuestLog: (v: boolean) => void;
-  /** the quest the indicators (minimap target, guide arrow hint) follow: '' = automatic, 'main', 'side:<id>', 'board:<id>' (no auto-pathing) */
+  /** the quest the indicators (minimap target, guide arrow hint) follow: '' = automatic, 'main', 'side:<id>' (no auto-pathing) */
   trackedQuest: string;
   setTrackedQuest: (k: string) => void;
-  /** a quest the log selects when it opens ('main' | 'side:<id>' | 'board:<id>'); read once by ui/screens/QuestLog */
+  /** a quest the log selects when it opens ('main' | 'side:<id>'); read once by ui/screens/QuestLog */
   questLogFocus: string;
   /** open the quest log on one quest (the tracker rows) */
   openQuestLogOn: (k: string) => void;
   /** tab the quest log opens on next ('' = keep its default) */
-  questLogTab: '' | 'MAIN' | 'SIDE' | 'BOARD';
-  setQuestLogTab: (t: '' | 'MAIN' | 'SIDE' | 'BOARD') => void;
+  questLogTab: '' | 'MAIN' | 'SIDE';
+  setQuestLogTab: (t: '' | 'MAIN' | 'SIDE') => void;
   settingsOpen: boolean;
   todoPending: boolean;                 // set on Return to town after a defeat: the town popup opens once
   setTodoPending: (v: boolean) => void;
@@ -79,7 +79,7 @@ export const useUiStore = create<UiState>((set) => ({
   trackedQuest: '',
   setTrackedQuest: (k) => set({ trackedQuest: k }),
   questLogFocus: '',
-  openQuestLogOn: (k) => set({ questLogFocus: k, questLogTab: k.startsWith('side:') ? 'SIDE' : k.startsWith('board:') ? 'BOARD' : 'MAIN', questLogOpen: true }),
+  openQuestLogOn: (k) => set({ questLogFocus: k, questLogTab: k.startsWith('side:') ? 'SIDE' : 'MAIN', questLogOpen: true }),
   questLogTab: '',
   setQuestLogTab: (t) => set({ questLogTab: t }),
   settingsOpen: false,

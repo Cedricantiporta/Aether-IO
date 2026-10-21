@@ -7,7 +7,7 @@ import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
 import { useGameStore } from '../../store';
 import { TAP } from '../../engine/tavernData';
 import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
-import { world, QUEST_POS, SHRINE_POS, TRAINER_POS } from '../../engine/world';
+import { world, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import {
   GATE, WALL_RUNS, WALL_TOWERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
   WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, GRAVEYARD,
@@ -25,7 +25,7 @@ import { camp, campOn } from '../../engine/campPaths';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel, biomeOf, variantOf } from '../../engine/roomDefs';
 import { feat, riverPoint } from '../../engine/roomFeatures';
-import { mainNav, npcQuestNav, boardQuestNav, navNpc } from '../../engine/systems/questNav';
+import { mainNav, npcQuestNav, navNpc } from '../../engine/systems/questNav';
 import { NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus } from '../../npcQuests';
 import { useUiStore } from '../uiStore';
 import { useRaf } from '../hooks/useRaf';
@@ -150,7 +150,7 @@ function bakeTown(): void {
     g.fillStyle = '#d5e9bf'; rr(g, GRAVEYARD.x0, GRAVEYARD.z0, GRAVEYARD.x1 - GRAVEYARD.x0, GRAVEYARD.z1 - GRAVEYARD.z0, 2); g.fill();
     // shops: soft rounded tiles in each shop's colour; board / altar / trainer as small dots
     for (const s of SHOP_POSITIONS) { const x = s.position[0], z = s.position[2]; g.fillStyle = C.shadow; rr(g, x - 2.4, z - 2.0, 4.8, 4.8, 1.6); g.fill(); g.fillStyle = mix(s.color, '#ffffff', 0.4); rr(g, x - 2.4, z - 2.4, 4.8, 4.8, 1.6); g.fill(); disc(g, x, z, 0.9, C.cream); }
-    disc(g, QUEST_POS[0], QUEST_POS[2], 1.7, C.gold); disc(g, SHRINE_POS[0], SHRINE_POS[2], 1.5, '#c7a2ff'); disc(g, TRAINER_POS[0], TRAINER_POS[2], 1.7, '#ffb05a');
+    disc(g, SHRINE_POS[0], SHRINE_POS[2], 1.5, '#c7a2ff'); disc(g, TRAINER_POS[0], TRAINER_POS[2], 1.7, '#ffb05a');
   });
 }
 
@@ -219,13 +219,10 @@ function resolveTarget(): void {
   if (key.startsWith('side:')) {
     const d = NPC_QUEST_BY_ID[key.slice(5)];
     if (d) { const s = npcQuestStatus(d, st.npcQuests, st.heroRank); if (s === 'ACTIVE') t = npcQuestNav(d); else if (s === 'AVAILABLE') { const i = NPCS.findIndex((n) => n.name === d.giver); if (i >= 0) t = navNpc(i); } }
-  } else if (key.startsWith('board:')) {
-    const q = st.quests.find((x) => x.id === key.slice(6)); if (q && q.accepted) t = boardQuestNav(q);
   } else if (key === 'main') t = mainNav();
-  if (!t && key === '') {   // automatic: the main quest, else the first accepted side quest, else the first bounty
+  if (!t && key === '') {   // automatic: the main quest, else the first accepted side quest
     t = mainNav();
     if (!t) { const d = NPC_QUESTS.find((x) => npcQuestStatus(x, st.npcQuests, st.heroRank) === 'ACTIVE'); if (d) t = npcQuestNav(d); }
-    if (!t) { const q = st.quests.find((x) => x.accepted); if (q) t = boardQuestNav(q); }
   }
   if (t) { tgt.x = t.x; tgt.z = t.z; tgt.on = true; }
 }

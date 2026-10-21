@@ -14,7 +14,6 @@ import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { DIFFICULTY_MODS } from '../../constants';
-import { questDone } from '../../quests';
 import type { Difficulty } from '../../storeTypes';
 import { Panel } from '../components/Frame';
 import { Button } from '../components/Button';
@@ -95,10 +94,10 @@ const VBtn: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void
 
 /** The peaceful village HUD: rank, hero + difficulty, shortcuts and the big DEFEND button. */
 export const VillageHUD: React.FC = () => {
-  const { hero, difficulty, selectHero, setDifficulty, startGame, openShop, toggleInv, toggleChar, panel, claimable } = useGameStore(useShallow((s) => ({
+  const { hero, difficulty, selectHero, setDifficulty, startGame, openShop, toggleInv, toggleChar, panel } = useGameStore(useShallow((s) => ({
     hero: s.hero, difficulty: s.difficulty, selectHero: s.selectHero, setDifficulty: s.setDifficulty, startGame: s.startGame,
     openShop: s.openSpecificShop, toggleInv: s.toggleInventory, toggleChar: s.toggleCharacterSheet,
-    panel: s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen, claimable: s.quests.some(questDone),
+    panel: s.isInventoryOpen || s.isShopOpen || s.isCharacterSheetOpen,
   })));
   const openCodex = useUiStore((s) => s.openCodex);
   const openGoals = useUiStore((s) => s.openGoals);

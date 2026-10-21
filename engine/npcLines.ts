@@ -34,7 +34,7 @@ const NEWS: Record<string, Partial<Record<Milestone, string>>> = {
   Brenna: { slimeking: 'Not one slime in the wheat this week. Bless you!', golem: 'The crops stopped glowing at night. That was you, wasn\'t it?' },
   Dorn: { golem: 'The veins run clean since Elderroot fell. Good ore again!', frost: 'The passes are open! My lads are digging already.' },
   Lysa: { mire: 'Clean water, fresh herbs! My salves have never been better.', golem: 'The Grove herbs are green again, not violet. You did that.' },
-  Hodge: { slimeking: 'Slime bounties are drying up. Not complaining! Well. A little.', grove: 'The board is full of heroes wanting to be you. I tell them to queue.' },
+  Hodge: { slimeking: 'Slime reports are drying up. Not complaining! Well. A little.', grove: 'Every hero in the ledger wants to be you. I tell them to queue.' },
   Wren: { golem: 'Elderroot\'s heartwood was violet. Malakar\'s light, as I feared.', herald: 'The Herald, silenced. Only the Dark Castle remains. Be ready.' },
   Pip: { slimeking: 'You beat a SLIME KING? Was it squishy? Was it gross? Tell me everything!', golem: 'When I grow up I will fight a tree too. A small one.' },
   Tilda: { king: 'A guard with the King\'s seal! Prices just went up. Joking! Mostly.', mire: 'The coast road is open again. Spices for everyone!', lich: 'I am selling "I survived Malakar" scarves. Want one? Hero discount.' },

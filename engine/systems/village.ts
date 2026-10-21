@@ -1,6 +1,6 @@
 // ============================================================================
 // Village mode (status MENU after the title): the hero walks around the peaceful
-// town. No enemies / director / attacks. E = interact with the nearest thing (shop, quest board, NPC to talk
+// town. No enemies / director / attacks. E = interact with the nearest thing (shop, NPC to talk
 // to, the town gate), hold E near a crystal / ore node outside the gate (they regrow 24 h after the last one is harvested). NPC behaviour lives
 // in npcs.ts, dialogue in dialogue.ts, the layout in ../townData.ts.
 // ============================================================================
@@ -8,7 +8,7 @@ import { interacted, wantsInteract, npcMarkers } from './npcQuestLogic';
 import { animals, petAnimal } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT, WHEEL_PIN } from '../townData';
 import { STORY, gateOpen } from '../../story';
-import { world, QUEST_POS, TRAINER_POS, MAX_CRATES } from '../world';
+import { world, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB, RARITY_LABEL_COLOR } from '../../constants';
 import { useGameStore } from '../../store';
@@ -39,7 +39,7 @@ function sitDown(i: number): void {
 const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse', SHEEP: 'Sheep', PIG: 'Pig', DOG: 'Dog', DUCK: 'Duck' };
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
 function mount(i: number): void {
-  const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on || !horsesUnlocked(useGameStore.getState().npcQuests)) return;
+  const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
   v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
   p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
 }
@@ -71,12 +71,11 @@ import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCa
 import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
-import type { Quest } from '../../quests';
 import { FILL_COLLIDERS } from '../townFill';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, horsesUnlocked, HORSE_UNLOCK_LV } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
-import { mainNav, npcQuestNav, boardQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
+import { mainNav, npcQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
 import { GameStatus } from '../../types';
 import type { NpcQuestDef } from '../../npcQuests';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
@@ -227,7 +226,6 @@ function scanNearby(): void {
   } else if (area === 'CAVE') {
     scanCave(push, p.pos.x, p.pos.z);   // exit / stairs / lucky ladder / Grit's bench / veins (cave.ts)
   } else {
-    d = q(QUEST_POS[0], QUEST_POS[2]); if (d < 36) push('E', 'Read', 'Quest Board', 'QUESTS', -1, d);
     d = q(TRAINER_POS[0], TRAINER_POS[2]); if (d < 36) push('E', 'Talk', 'Skill Trainer', 'SKILLS', -1, d);
     const beach = beachSide(p.pos.x, p.pos.z);   // the Fishmonger + fishing spots only from outside the wall (never through it)
     const fishLock = fishingLocked();
@@ -261,7 +259,7 @@ function scanNearby(): void {
   if (area === 'TOWN') for (let i = 0; i < animals.length; i++) {   // (owner) pet the animals, ride the stable horses
     const a = animals[i], k = ANIMALS[i].kind; d = q(a.x, a.z);
     const r = k === 'HORSE' || k === 'COW' ? 2.6 : 1.9;
-    if (d < r * r) { if (k === 'HORSE') { if (horsesUnlocked(useGameStore.getState().npcQuests)) push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Locked', `Horse · Lv ${HORSE_UNLOCK_LV} quest`, '', i, d + 0.4, 'locked', LOCK_COLOR); } else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
+    if (d < r * r) { if (k === 'HORSE') push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
   }
   if (world.village.sit.on) {   // seated: the only action is standing up
     nearbyN = 0; push('E', 'Stand', 'up', '', -1, 0, 'sit');
@@ -286,7 +284,6 @@ function scanNearby(): void {
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
-  if (it.act === 'locked' && it.label.startsWith('Horse')) { st.addNotification(`The horses are locked. Reach Lv ${HORSE_UNLOCK_LV} and help Hilda the Stablemaster first.`, LOCK_COLOR, 'WARNING'); return; }
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
@@ -463,9 +460,6 @@ function navWalk(t: NavTarget, again?: () => void, chained = false): void {
   walkTo(t.x, t.z, t.act, t.tab, t.reach, t.npc);
   hopNext = null;
 }
-/** Quest tracker click (Quest Board bounty): claim at the board, the King, the potion shop (sell loot), else the portal. */
-export function walkToQuest(q: Quest): void { navWalk(boardQuestNav(q), () => walkToQuestHop(q), false); }
-function walkToQuestHop(q: Quest): void { navWalk(boardQuestNav(q), () => walkToQuestHop(q), true); }
 /** Main story row click: the step's NPC (through the castle door / exit when it is in the other area), the step's shop,
  *  else the Adventure Portal. The equip step opens the bag. */
 export function walkToMain(): void {
@@ -496,7 +490,7 @@ export function walkToNpcQuest(name: string | null): void {
   else if (world.village.area === 'CAVE') walkTo(CAVE_EXIT.x, CAVE_EXIT.z, 'leave', '', 2);
   else walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2);
 }
-/** Walk to a shop counter / the quest board / the trainer / the tower door and open it on arrival. */
+/** Walk to a shop counter / the trainer / the tower door and open it on arrival. */
 export function walkToSpot(at: Spot): void { const t = navSpot(at); if (t) navWalk(t); }
 export const walkAndOpen = (x: number, z: number, tab: ShopTab, r = 1.6): void => walkTo(x, z, 'shop', tab, r);
 function arrive(): void {

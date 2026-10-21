@@ -68,7 +68,6 @@ export function sellAllFish(): number {
   let total = 0, count = 0;
   for (const i of fish) { const q = i.quantity || 1; total += sellUnit(i) * q; count += q; }
   useGameStore.setState({ gold: st.gold + total, inventory: st.inventory.filter((i) => !fish.includes(i)) });
-  st.addQuestProgress('SELL_LOOT', count);
   events.emit('hub', { kind: 'sell_fish', n: count });
   st.addNotification(`Sold ${count} fish for ${total.toLocaleString()}G`, 'yellow', 'SYSTEM');
   return total;

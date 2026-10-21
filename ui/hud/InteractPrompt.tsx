@@ -11,7 +11,7 @@ import { device } from '../../engine/device';
 
 /**
  * Genshin-style interact prompts: up to 3 floating pills (nearest first) for whatever is in reach
- * (town: shops, quest board, altar, trainer, harvest nodes; run: exit portals, fountain, merchant, chest, shrine). Reads the engine's preallocated `nearby` list in
+ * (town: shops, altar, trainer, harvest nodes; run: exit portals, fountain, merchant, chest, shrine). Reads the engine's preallocated `nearby` list in
  * the shared rAF loop and writes the DOM through refs, so there is no per-frame React state.
  * Tapping a pill runs the same action as E / F.
  */

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, ScrollText, Store, Shield, Warehouse, Cog, FlaskConical, Fish, Pickaxe } from '../components/GoldIcons';
+import { ShoppingBag, Hammer, BookOpen, Dices, Ghost, Star, Store, Shield, Warehouse, Cog, FlaskConical, Fish, Pickaxe } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { ShopTab } from '../../storeTypes';
@@ -13,7 +13,6 @@ import { PetsTab } from './shop/Pets';
 import { SummonTab } from './shop/Summon';
 import { BlacksmithTab } from './shop/Blacksmith';
 import { SkillsTab } from './shop/Skills';
-import { QuestsTab } from './shop/Quests';
 import { ArmoryTab } from './shop/Armory';
 import { WarehouseTab } from './shop/Warehouse';
 import { BrewerTab } from './shop/Brewer';
@@ -31,7 +30,6 @@ const TABS: { id: ShopTab; label: string; icon: React.ReactNode; title: string }
   { id: 'SUMMON', label: 'Summon', icon: <Dices size={24} />, title: 'Summoning Shrine' },
   { id: 'BLACKSMITH', label: 'Smith', icon: <Hammer size={24} />, title: 'Blacksmith' },
   { id: 'ARMORY', label: 'Armor', icon: <Shield size={24} />, title: 'Armor Shop' },
-  { id: 'QUESTS', label: 'Quests', icon: <ScrollText size={24} />, title: 'Quest Board' },
   { id: 'SKILLS', label: 'Skills', icon: <BookOpen size={24} />, title: 'Skill Trainer' },
   { id: 'WAREHOUSE', label: 'Storage', icon: <Warehouse size={24} />, title: 'Warehouse' },
   { id: 'TECH', label: 'Tech', icon: <Cog size={24} />, title: 'Tech House' },
@@ -51,7 +49,6 @@ export const ShopPanel: React.FC = () => {
   const ui = useUiStore.getState();
   const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH', 'FISH'].includes(tab),
     (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
-  if (tab === 'QUESTS') return <QuestsTab onClose={close} />;   // (owner) the Bounty Board is a centred popup, not a side panel
   return (
     <motion.div initial={{ x: '105%' }} animate={{ x: 0 }} exit={{ x: '105%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="absolute pe flex flex-col side-panel shop-side" style={{ right: '.7rem', top: '.7rem', bottom: '.7rem', width: '31rem', zIndex: 41 }}>

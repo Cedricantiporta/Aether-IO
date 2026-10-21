@@ -7,7 +7,6 @@ import { create } from 'zustand';
 import { NPCS } from '../townData';
 import { events } from '../events';
 import { useGameStore, makeItemById } from '../../store';
-import { questDone } from '../../quests';
 import { STORY } from '../../story';
 import { storyTalk, acceptStory, rewardText } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo, heardLines, npcRewardText } from './npcQuestLogic';
@@ -67,17 +66,6 @@ export function openDialogue(npc: number): void {
   else { ci = Math.floor(Math.random() * d.talk.length); if (d.talk.length > 1 && ci === lastConvo[npc]) ci = (ci + 1) % d.talk.length; }
   lastConvo[npc] = ci;
   const lines = d.talk[ci].slice();
-  let kingPre = 0;   // royal lines added in front (kept when a quest dialogue replaces the ambient talk)
-  if (d.king) {
-    // royal quests: an audience is granted, finished bounties are reported (store.reportToKing)
-    const r = useGameStore.getState().reportToKing();
-    const pre: string[] = [];
-    if (r.audience) pre.push('So you are the hero they speak of. You sought an audience, and you have it. Aether is glad to look upon you.');
-    if (r.reports) pre.push(r.reports > 1 ? 'You bring word of great deeds done in my name. The crown is in your debt. See the Quest Board for your rewards.' : 'You bring word of a deed done in my name. The crown is in your debt. See the Quest Board for your reward.');
-    if (pre.length) { lines.unshift(...pre); kingPre = pre.length; }
-    else if (useGameStore.getState().quests.some((q) => q.accepted && q.needsKing && !q.reported)) lines.push('A royal commission awaits its end. Finish the deed, hero, then come and tell me of it.');
-  }
-  if (d.quest && useGameStore.getState().quests.some(questDone)) lines.push('Oh! One of your bounties is complete. Hurry to the Quest Board and claim your reward!');
   // a message passed on for a TALK quest: the NPC answers it first (then talkedTo counts it)
   const heard = heardLines(d.name);
   talkedTo(d.name);
@@ -100,18 +88,18 @@ export function openDialogue(npc: number): void {
     const qLines = nq.mode === 'offer' ? q.intro.slice() : [q.progress];
     if (nq.mode === 'offer') offer = q.id;
     hint = sideHint(q, nq.mode === 'offer' ? 'offer' : 'progress');
-    lines.length = kingPre;
+    lines.length = 0;
     lines.push(...qLines);
     if (giftAvailable(npc)) lines.unshift(d.gift!.text);
     lines.unshift(...heard);
   } else if (turnIn) {
-    lines.length = kingPre;
+    lines.length = 0;
     if (giftAvailable(npc)) lines.push(d.gift!.text);
     lines.push(...pre);
     turnInAt = lines.length - 1;   // paid on the last line (then it may roll on into this NPC's next quest)
   } else {
     const news = takeNews(d.name);   // one-off news after a guardian fell
-    if (news) lines.splice(kingPre, 0, news);
+    if (news) lines.unshift(news);
     lines.unshift(...heard);
     if (giftAvailable(npc)) lines.push(d.gift!.text);
     const st = useGameStore.getState(), later = NPC_QUESTS.find((q) => q.giver === d.name && npcQuestLevelLocked(q, st.npcQuests, st.heroRank));

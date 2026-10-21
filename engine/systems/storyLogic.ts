@@ -127,7 +127,6 @@ function stateDone(kind: string, count: number): boolean {
   if (kind === 'equip') return !!eq.weapon && !eq.weapon.id.startsWith('start');   // the summoned class weapon (the starter one has a 'start' id)
   if (kind === 'buy_pet') return !!eq.pet;
   if (kind === 'tower_floor') return (s.progress.towerBest[s.hero] ?? 0) >= count;   // already climbed that high
-  if (kind === 'accept') return s.quests.some((q) => q.accepted);   // a bounty already taken (all 3 slots full would block a new accept)
   return false;
 }
 /** Live progress of the current main step for the tracker (delivery steps read the bag, so selling the goods shows). */
@@ -136,11 +135,11 @@ export function storyProgress(): number {
   if (step?.deliver) return Math.min(step.deliver.count, bagCount(step.deliver.id));
   return s.p;
 }
-let lastEq: unknown = null, lastStep = -1, lastQ: unknown = null;
+let lastEq: unknown = null, lastStep = -1;
 setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engine import cycle)
-  if (st.equipment === lastEq && st.story.step === lastStep && st.quests === lastQ) return;
+  if (st.equipment === lastEq && st.story.step === lastStep) return;
   const moved = lastStep >= 0 && st.story.step > lastStep;
-  lastEq = st.equipment; lastStep = st.story.step; lastQ = st.quests;
+  lastEq = st.equipment; lastStep = st.story.step;
   // finished a field step during a run and the chain continues in town: say how to get there (the tracker offers a teleport)
   const nx = STORY[st.story.step];
   if (moved && st.status === GameStatus.PLAYING && nx && (nx.npc || nx.at) && !nx.deliver)

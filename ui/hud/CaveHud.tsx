@@ -52,8 +52,8 @@ export const CaveHud: React.FC = () => {
   return (
     <div ref={root} className="pointer-events-none" style={{ display: 'none' }} data-testid="cave-hud">
       <div ref={vig} className="fixed inset-0" style={{ opacity: 0, background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(40,0,0,.85) 100%)', transition: 'opacity .3s', zIndex: 5 }} />
-      <div className="absolute flex flex-col items-center" style={{ left: '50%', transform: 'translateX(-50%)', top: 'max(.6rem, env(safe-area-inset-top, 0px))', width: 'min(22rem, 62vw)', zIndex: 6 }}>
-        <div ref={title} style={{ font: '600 clamp(.85rem, 2.6vw, 1.05rem) Georgia, serif', color: '#f2d58a', textShadow: '0 1px 3px #000', letterSpacing: '.06em' }} />
+      <div className="absolute flex flex-col items-center" style={{ left: '50%', transform: 'translateX(-50%)', top: 'calc(max(.6rem, env(safe-area-inset-top, 0px)) + 3.2rem)', width: 'min(22rem, 62vw)', zIndex: 6 }}>
+        <div ref={title} style={{ fontWeight: 800, fontSize: 'clamp(.85rem, 2.6vw, 1.05rem)', color: '#f2d58a', textShadow: '0 1px 3px #000', letterSpacing: '.06em' }} />
         <div ref={sub} style={{ fontSize: 'clamp(.62rem, 2vw, .74rem)', color: '#d8d2c4', textShadow: '0 1px 2px #000' }} />
         <div ref={bar} className="flex items-center gap-2" style={{ ...glass, marginTop: '.3rem', padding: '.25rem .45rem', width: '100%' }} data-testid="lantern-meter">
           <span style={{ fontSize: 'clamp(.6rem, 1.9vw, .72rem)', color: '#ffe08a', fontWeight: 700, letterSpacing: '.08em' }}>LANTERN</span>

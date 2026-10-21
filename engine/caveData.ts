@@ -135,11 +135,10 @@ function colliders(L: Omit<CaveLayout, 'colliders'>): [number, number, number][]
   const N = 110;
   for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2, r = L.radius(a) + 0.9; c.push([Math.cos(a) * r, Math.sin(a) * r, 1.2]); }
   for (const [x, z, s] of L.stalagmites) c.push([x, z, 0.55 * s + 0.15]);
-  for (const [x, z, s] of L.crystals) c.push([x, z, 0.85 * s]);
+  for (const [x, z, s] of L.crystals) c.push([x, z, 0.75 * s]);
   if (L.cart) c.push([L.cart.x, L.cart.z, 1.1]);
-  if (L.bench) c.push([L.bench.x - 0.4, L.bench.z, 0.7], [L.bench.x + 0.4, L.bench.z, 0.7], [L.bench.x + 1.9, L.bench.z + 0.5, 0.6]);   // Grit's desk + barrel (kit pieces, see CaveInterior propItems)
+  if (L.bench) c.push([L.bench.x, L.bench.z, 0.85]);
   c.push([L.down.x, L.down.z - 0.4, 1.3]);   // the stairwell (you stand at its lip)
-  c.push([L.down.x - 1.95, L.down.z + 2.6, 0.4], [L.down.x + 1.95, L.down.z + 2.6, 0.4]);   // the pit-prop frame over the way down
   return c;
 }
 

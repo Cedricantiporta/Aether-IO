@@ -15,7 +15,6 @@ import type {
 } from './types';
 import type { Recipe } from './crafting';
 import type { RunStats } from './engine/types';
-import type { Quest, QuestType } from './quests';
 import type { NpcQuestSave } from './npcQuests';
 import type { TalentRanks } from './talents';
 import type { EnemyKind } from './engine/types';
@@ -24,7 +23,7 @@ import type { CodexTab, Discovered } from './codexData';
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
 export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]>; /** crystal cave: lantern upgrade level (0..6) and the deepest floor ever reached */ caveLantern?: number; caveBest?: number; /** biomes whose boss was beaten at least once (index % BIOMES.length): they get a boss shortcut door in later runs */ biomesDone?: number[]; /** the 'a shortcut opens' notice was shown once */ shortcutSeen?: boolean }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
-export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'QUESTS' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; // FISH = the Fishmonger on the beach; MINE = Mining Supplies at the cave camp; MERCHANT = the travelling merchant room
+export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; // FISH = the Fishmonger on the beach; MINE = Mining Supplies at the cave camp; MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | 'tool';
 export type GraphicsQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -98,7 +97,6 @@ export interface GameState {
   // Fresh profile = 0 gold/gems + one-time welcome gift. Runs keep everything looted, even on death.
   heroRank: number;                   // gear requirements use this (RANK_REQ); +1% gold find per rank (cap 50%)
   rankXp: number;                     // xp into the current rank; need rankXpNeeded(heroRank)
-  quests: Quest[];                    // quest board: offers (refresh daily) + up to 3 accepted (only those progress)
   welcomeGiftClaimed: boolean;
   talents: Record<HeroClass, TalentRanks>;   // permanent talent ranks per class (node id -> rank)
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
@@ -187,13 +185,7 @@ export interface GameState {
   setWave: (wave: number) => void;
   openWaveReward: (bonus?: boolean) => void; // room reward: generates upgradeOptions (+a 4th card when `bonus`), accumulatedWaveGold += 100, status = LEVEL_UP
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
-  addQuestProgress: (type: QuestType, amount?: number, kind?: EnemyKind, lootName?: string) => void;
-  reportToKing: () => { audience: number; reports: number }; // talking to the King: finishes AUDIENCE quests, marks finished KING_BOUNTY quests as reported
   applyBlessing: (kind: BlessingKind) => string;   // fountain blessing for the rest of the run (edits baseStats); returns its label
-  claimQuest: (id: string) => boolean; // grants reward, draws a replacement offer
-  acceptQuest: (id: string) => boolean; // takes an offer (max 3 active)
-  abandonQuest: (id: string) => void;   // drops an accepted quest (frees a slot; progress lost)
-  refreshQuestBoard: () => void;        // daily refresh of unaccepted offers
   selectUpgrade: (u: Upgrade) => void;// applies card, status = PLAYING
   upgradeSkill: (k: keyof SkillLevels) => void; // spend SP (skills tab)
   endRun: (summary: Omit<RunSummary, 'hero' | 'difficulty' | 'cp' | 'waveGoldBonus' | 'level' | 'rankXpGained' | 'rankUps' | 'rank'>) => void; // GAME_OVER + stats
