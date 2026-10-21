@@ -2801,7 +2801,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 
 /* (owner) the dream room's haze: low contrast + saturation, a warm-lavender glow and soft vignette; the wake-up veil is soft gold */
 .dream-mist { position: fixed; inset: 0; z-index: 40; pointer-events: none; visibility: hidden; opacity: 0;
-  background: radial-gradient(ellipse at 50% 45%, rgba(255,244,214,.10) 0%, rgba(255,236,206,.14) 45%, rgba(226,208,244,.38) 85%, rgba(196,176,226,.5) 100%);
+  background: radial-gradient(ellipse 70% 65% at 50% 50%, rgba(255,244,214,0) 0%, rgba(255,240,214,0) 48%, rgba(240,226,246,.42) 78%, rgba(214,196,236,.82) 100%);   /* (owner) clear middle, fog on the sides */
   animation: dreamBreathe 7s ease-in-out infinite; }
 @keyframes dreamBreathe { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.07); } }
 .dream-veil { position: fixed; inset: 0; z-index: 95; visibility: hidden; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, #fffaf0 0%, #ffeec4 100%); }

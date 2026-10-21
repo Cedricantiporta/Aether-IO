@@ -105,7 +105,7 @@ export function forgetNightGlow(m: MeshBasicMaterial): void { const i = glowMats
 function applyDream(): void {
   dreamFx.inDream = true; runSky = false; runFx.fireflies = 0;
   target.fog.set('#efe2ee'); target.hemiSky.set('#fff0d8'); target.hemiGround.set('#cdb8d8'); target.hemiI = 1.25;
-  target.sun.set('#ffe2b0'); target.sunI = 2.0; target.sky.set(1, 0.96, 1); target.near = 12; target.far = 62;
+  target.sun.set('#ffe2b0'); target.sunI = 2.0; target.sky.set(1, 0.96, 1); target.near = 34; target.far = 120;   // (owner: clear around the hero, the haze lives at the edges - see .dream-mist)
 }
 
 /** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2; -3 lava floor, -4 poison floor). `snap` skips the ease (used at full black). */
