@@ -69,7 +69,7 @@ function lutOf(model: NpcModel, pt: PartType) {
 export const npcMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0, side: DoubleSide });
 
 const PART_RE: [RegExp, PartType][] = [[/_Head$/, 'head'], [/_Body$/, 'body'], [/_Arm(Left|Right)$/, 'arm'], [/_Leg(Left|Right)$/, 'leg']];
-const _v = new Vector3(), _m = new Matrix4(), _inv = new Matrix4();
+const _v = new Vector3(), _m = new Matrix4(), _inv = new Matrix4(), _hInv = new Matrix4();
 const _skin = new Color(), _hair = new Color(), _shirt = new Color(), _pants = new Color(), _acc = new Color(), _armor = new Color();
 
 export interface NpcBuilt { mesh: SkinnedMesh; dispose(): void }
@@ -83,6 +83,7 @@ export function buildNpc(ch: CharInstance, faceCh: CharInstance, look: NpcLook, 
   if (cached) return cached;
   const roleCol = [_skin.set(look.skin), _hair.set(look.hair), _shirt.set(look.shirt), _pants.set(look.pants), _acc.set(look.acc || '#ffffff'), _armor.set(look.armor || '#ffffff')];
   const roleOn = [true, true, true, true, !!look.acc, !!look.armor];
+  const bald = look.wear.some((w) => w[0] === 'hair_bald_fringe');
 
   const bodyMesh = ch.meshes.find((m) => /_Body$/.test(m.name)) as SkinnedMesh | undefined;
   if (!bodyMesh) return null;
@@ -117,13 +118,21 @@ export function buildNpc(ch: CharInstance, faceCh: CharInstance, look: NpcLook, 
     if (!P || !U || !SI || !SW) continue;
     const at = atlasRgb(model), lut = lutOf(model, pt), n = P.count;
     // bone slots for this part's skeleton (names re-resolved on the BODY rig's clone, so a head borrowed from another rig works)
-    const sb = m.skeleton.bones, remap = new Uint16Array(sb.length);
-    for (let i = 0; i < sb.length; i++) remap[i] = slot(baseBones.get(sb[i].name) || sb[i], m.skeleton.boneInverses[i]);
-    const cellOf = new Int16Array(n), dropV = new Uint8Array(n);
+    const sb = m.skeleton.bones, remap = new Int32Array(sb.length).fill(-1);   // (resolved lazily: only bones that carry vertices enter the skeleton)
+    const rm = (i: number) => remap[i] >= 0 ? remap[i] : (remap[i] = slot(baseBones.get(sb[i].name) || sb[i], m.skeleton.boneInverses[i]));
+    const cellOf = new Int16Array(n), dropV = new Uint8Array(n), skullV = new Uint8Array(n);
+    // The ARCHER / KNIGHT / WIZARD heads have NO skull under their baked hair (back, top and sides of the head all use the hair cell), so dropping it
+    // left a hollow face mask that showed from behind / above (hats and hair looked detached). Those hair triangles are kept as the skull instead:
+    // squashed into the skull box the kit was fitted to (head-bone local x +-0.53, y 0.02..0.72, z -0.39..0.46) and painted hair (skin for bald looks).
+    // BARBARIAN has a complete skin skull (its baked hair cells are only a fringe: dropped); ROGUE keeps its hood.
+    const keepSkull = isHead && (model === 'ARCHER' || model === 'KNIGHT' || model === 'WIZARD');
+    const hi = isHead ? sb.findIndex((b) => b.name === 'head') : -1;
+    const hInv = hi >= 0 ? m.skeleton.boneInverses[hi] : null;
+    if (hInv) _hInv.copy(hInv).invert();
     for (let v = 0; v < n; v++) {
       const c = Math.min(7, Math.max(0, Math.floor(U.getX(v) * 8))), r = Math.min(7, Math.max(0, Math.floor(U.getY(v) * 8)));
       cellOf[v] = r * 8 + c;
-      if (isHead && lut.role[cellOf[v]] === 1 && model !== 'ROGUE') dropV[v] = 1;     // the baked hair of the head: the kit draws all hair
+      if (isHead && lut.role[cellOf[v]] === 1 && model !== 'ROGUE') { if (keepSkull && hInv) skullV[v] = 1; else dropV[v] = 1; }
     }
     const newIndex = new Int32Array(n).fill(-1);
     const add = (v: number) => {
@@ -132,10 +141,16 @@ export function buildNpc(ch: CharInstance, faceCh: CharInstance, look: NpcLook, 
       newIndex[v] = o;
       pos[o * 3] = P.getX(v); pos[o * 3 + 1] = P.getY(v); pos[o * 3 + 2] = P.getZ(v);
       nrm[o * 3] = N.getX(v); nrm[o * 3 + 1] = N.getY(v); nrm[o * 3 + 2] = N.getZ(v);
+      if (skullV[v]) {      // squash into the skull box (bone-local = inverse-bind x raw position), then back to raw
+        _v.set(pos[o * 3], pos[o * 3 + 1], pos[o * 3 + 2]).applyMatrix4(hInv!);
+        _v.set(Math.max(-0.53, Math.min(0.53, _v.x)), Math.max(0.02, Math.min(0.72, _v.y)), Math.max(-0.39, Math.min(0.46, _v.z))).applyMatrix4(_hInv);
+        pos[o * 3] = _v.x; pos[o * 3 + 1] = _v.y; pos[o * 3 + 2] = _v.z;
+      }
       const cell = cellOf[v], ro = lut.role[cell];
-      if (ro >= 0 && roleOn[ro]) { const rc = roleCol[ro], k = lut.k[cell]; col[o * 3] = rc.r * k; col[o * 3 + 1] = rc.g * k; col[o * 3 + 2] = rc.b * k; }
+      if (skullV[v]) { const rc = bald ? roleCol[0] : roleCol[1], k = lut.k[cell]; col[o * 3] = rc.r * k; col[o * 3 + 1] = rc.g * k; col[o * 3 + 2] = rc.b * k; }
+      else if (ro >= 0 && roleOn[ro]) { const rc = roleCol[ro], k = lut.k[cell]; col[o * 3] = rc.r * k; col[o * 3 + 1] = rc.g * k; col[o * 3 + 2] = rc.b * k; }
       else { col[o * 3] = at[cell * 3]; col[o * 3 + 1] = at[cell * 3 + 1]; col[o * 3 + 2] = at[cell * 3 + 2]; }
-      for (let q = 0; q < 4; q++) { sIdx[o * 4 + q] = remap[SI.getComponent(v, q)]; sWgt[o * 4 + q] = SW.getComponent(v, q); }
+      for (let q = 0; q < 4; q++) { { const w = SW.getComponent(v, q); sIdx[o * 4 + q] = w > 0 ? rm(SI.getComponent(v, q)) : 0; } sWgt[o * 4 + q] = SW.getComponent(v, q); }
       return o;
     };
     const tris = ix ? ix.count : n;
