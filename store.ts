@@ -1855,7 +1855,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     summon: (count, altar = 'GEM') => {
-      const SUMMON_SHARD_SHARE = 0.4;   // of the non-supply pulls: shards 40 / equipment 60
+      const SUMMON_SHARD_SHARE = 0.84;   // (owner: gear is rare on summons) of the non-supply pulls: shards 84 / equipment 16 (~12% of all pulls; pity pulls are still gear)
       const s = get();
       const space = s.maxInventorySlots - s.inventory.length;
       const n = Math.min(count, space);

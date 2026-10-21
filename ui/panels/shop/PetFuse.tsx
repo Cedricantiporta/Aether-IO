@@ -31,6 +31,25 @@ export const PetFuse: React.FC = () => {
     if (sel.length < FUSE_COUNT) setSel([...sel, p.id]);
   };
   const go = () => { if (picked.length !== FUSE_COUNT) return; const ids = sel; setSel([]); play(picked[0], () => fusePets(ids)); };
+  /** (owner) Auto fuse: keeps fusing groups of FUSE_COUNT same-tier bag pets, lowest tier first (grown pets above Lv 1 are kept). */
+  const ORDER: Item['rarity'][] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+  const autoGroups = (list: Item[]) => ORDER.filter((r) => (FUSE_CHANCE[r] ?? 0) > 0 && nextTier(r) && list.filter((p) => p.rarity === r && p.level <= 1).length >= FUSE_COUNT);
+  const canAuto = autoGroups(pets).length > 0;
+  const autoFuse = () => {
+    setSel([]);
+    let made = 0, won = 0, best: { ok: boolean; item: Item } | null = null;
+    for (let guard = 0; guard < 200; guard++) {
+      const now = useGameStore.getState().inventory.filter((i) => i.type === 'PET');
+      const r = autoGroups(now)[0];
+      if (!r) break;
+      const ids = now.filter((p) => p.rarity === r && p.level <= 1).slice(0, FUSE_COUNT).map((p) => p.id);
+      const res = fusePets(ids);
+      if (!res) break;
+      made++; if (res.ok) { won++; best = res; }
+    }
+    if (best) setLast(best);
+    if (made) useGameStore.getState().addNotification(`Auto fuse: ${made} fusion${made > 1 ? 's' : ''}, ${won} succeeded`, '#ffd24a', 'SYSTEM');
+  };
   return (
     <div className="flex flex-col gap-3" data-testid="pet-fuse">
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
@@ -51,6 +70,7 @@ export const PetFuse: React.FC = () => {
             : <span className="rpg-label">Pick {FUSE_COUNT} pets of one tier from your bag below</span>}
         </div>
         <button className="rpg-btn bevel pe px-4 py-1.5" disabled={picked.length !== FUSE_COUNT} onClick={go} data-testid="fuse-go">Fuse</button>
+        <button className="rpg-btn bevel pe px-4 py-1.5" disabled={!canAuto} onClick={autoFuse} data-testid="fuse-auto" title="Fuse every group of 5 same-tier pets, lowest tier first (pets above Lv 1 are kept)">Auto fuse</button>
       </div>
       {last && (
         <div className="rpg-frame p-2 flex items-center gap-3" data-testid="fuse-result">
