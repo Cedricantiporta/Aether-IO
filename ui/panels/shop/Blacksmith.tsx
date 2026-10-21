@@ -183,7 +183,7 @@ export const ShardTab: React.FC = () => {
           );
         })}
       </div>
-      <div className="rpg-label">Upgrade cores · Upgrade Core: Common / Rare gear · Refined Core: Epic and above</div>
+      <div className="rpg-label">Upgrade cores · Upgrade Core: Common to Epic gear · Refined Core: Legendary and above</div>
       <div className="sq-grid">
         {[0, 1].map((t) => {
           const it = makeItemById(CORE_IDS[t], 1)[0];

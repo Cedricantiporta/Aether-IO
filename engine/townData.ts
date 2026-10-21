@@ -335,12 +335,13 @@ export const HOUSES: HouseSpec[] = [
   // fronts flush to the street / walkway (~0.6 m of kerb), 0.2 m between neighbours; none within 1.5 m of a stair flight or its approach (lot script in docs/TOWN_PLAN.md).
   // chapel quarter (on Chapel Hill): the sexton's cottage
   K('house_small', -17, -34.5, 0.85),
-  // Tavern Row tier: a back terrace of six (fronts z -30) and the tavern's flanking cottages (fronts z -21)
-  K('house_small', 14.32, -33.15, 0.85), K('house_two_storey', 19.96, -33.04, 0.8), K('house_tower', 25.6, -32.88, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 36.5, -33.6, 0.8), K('house_gabled_narrow', 41.3, -33.6, 0.8),
-  K('house_two_storey', 17, -24.2, 0.8), K('house_small', 36, -24.3, 0.85), K('house_gabled_narrow', 41.2, -24.7, 0.8),
-  // the old shop row, north of the south street (fronts z 6.9): west terrace of four, east pair
-  K('house_two_storey', -40.2, 3.86, 0.8), K('house_gabled_narrow', -34.96, 3.3, 0.8), K('house_small', -29.72, 3.75, 0.85), K('house_tower', -24.08, 4.0, 0.8),
-  K('house_two_storey', 31.3, 3.86, 0.8), K('house_gabled_narrow', 36.6, 3.3, 0.8),
+  // Tavern Row tier (owner: fewer houses up here): three on the back row (fronts z -30), one cottage beside the tavern (front z -21)
+  K('house_two_storey', 19.96, -33.04, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 41.3, -33.6, 0.8),
+  K('house_two_storey', 17, -24.2, 0.8),
+  // the old shop row, north of the south street (fronts z 6.9)
+  // (owner: more space) two houses west with a gap, the Armory beside them; east: the Potion Shop, then one narrow house
+  K('house_two_storey', -40.2, 3.86, 0.8), K('house_small', -29.72, 3.75, 0.85),
+  K('house_gabled_narrow', 38.8, 3.3, 0.8),
   // south of the south street, east of the avenue (door north onto the street), then the rises (fronts on the lane z 21) and the south walkway (fronts z 32.5)
   K('house_tower', 22.8, 15.3, 0.8, Math.PI),
   K('house_two_storey', -38.4, 17.96, 0.8), K('house_small', 38.8, 17.85, 0.85),
@@ -365,9 +366,9 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
       ['bird_cage', 5.0, 2.6, 0.3, 1.0, 0.4], ['potted_plant_a', 3.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
   FORTUNE: { note: 'a striped fortune_tent beside, hanging lanterns', extra: [], dress: [['lamp_post', 3.2, 5.6, 0, 0.8, 0.3], ['flower_planter', -2.4, 4.6, 0, 1, 0.8]],
     nk: [['fortune_tent', -3.4, -3.0, 0.4, 0.7, -1.0], ['hanging_lantern', -3.6, 4.9, 0, 1.0, 0.3], ['hanging_lantern', 3.5, 3.6, 0, 1.0, 0.3], ['potted_plant_b', -3.8, 3.5, 0, 1.0, 0.35], ['awning_red', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
-  SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.0, 5.0, 0, 1, 0.8], ['lamp_post', 4.3, 5.6, 0, 0.72, 0.3]],
+  SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.6, 3.6, 0, 1, 0.8], ['lamp_post', 3.9, 3.8, 0, 0.72, 0.3]],
     nk: [['herb_garden_box', 0.4, -4.8, 0.1, 1.0, -0.55], ['potion_shelf_cart', 3.6, -4.2, -0.2, 1.0, -0.6], ['cauldron', -4.1, 3.4, 0.3, 1.0, 0.9], ['potted_plant_a', 3.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },   // (the shop stands between the graveyard aisle x -38 and the chapel road x -26: props in front + behind only)
-  ARMORY: { note: 'shield rack, armor stand, red banner poles', extra: [], dress: [['lamp_post', 3.6, 5.8, 0, 0.72, 0.3]],
+  ARMORY: { note: 'shield rack, armor stand, red banner poles', extra: [], dress: [['lamp_post', 3.9, 3.8, 0, 0.72, 0.3]],
     nk: [['shield_rack', -5.4, 2.4, 0.3, 1.0, -0.5], ['armor_stand', 5.3, 2.0, -0.4, 1.0, 0.6], ['banner_pole_red', -4.2, 4.6, 0, 0.9, 0.3], ['banner_pole_red', 4.3, 5.3, 0, 0.9, 0.3], ['potted_plant_b', 3.7, 3.4, 0, 1.0, 0.35], ['awning_red', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3]], cluster: [[-6.6, 2.6, 0.4]] },
   WAREHOUSE: { note: 'annex, big crate stack, hay cart', extra: [], dress: [['lamp_post', -4.1, 5.4, 0, 0.72, 0.3]],
     nk: [['crate_stack_big', -5.8, -0.2, 0.2, 1.0, -0.75], ['cart_hay', -5.8, 4.2, 0.45, 1.0, -0.65], ['potted_plant_a', -3.9, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 3.8, 3.4, 0, 1.0, 0.35]], cluster: [] },
@@ -380,12 +381,7 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
 export const shopLocal = (px: number, pz: number, rot: number, dx: number, dz: number): [number, number] => [px + dx * Math.cos(rot) + dz * Math.sin(rot), pz - dx * Math.sin(rot) + dz * Math.cos(rot)];
 
 /** Decorative market stalls (town_kit_v2 'market_stall', fronts to the south; the useful shops are the SHOP_POSITIONS row). */
-export const STALLS: StallSpec[] = [
-  // market street = the avenue between the plaza and the gate: a market_stall + a kit v3 market_tent (red / green, engine/townFill) a side, per block (a lane crosses at z 23.2; the garden strips at z 33+ stay open)
-  ...[19.4, 31.0].flatMap((z, i): StallSpec[] => [
-    { x: -5.8, z, rot: 0, c1: ['#e2d4b4', '#e8c9c0'][i], c2: ['#e2d4b4', '#e8c9c0'][i], goods: ((i + 1) % 4) as 0 | 1 | 2 | 3 },
-    { x: 5.8, z, rot: 0, c1: ['#ece2c8', '#d6e4ee'][i], c2: ['#ece2c8', '#d6e4ee'][i], goods: ((i + 3) % 4) as 0 | 1 | 2 | 3 },
-  ]),
+export const STALLS: StallSpec[] = [   // (owner: the open stalls / tents looked unfinished: none for now)
 ];
 /** Shop row: shop x of the 7 kit shops (z 1.5, rot 0, in constants SHOP_POSITIONS); the gaps between them hold lamps, signs and barrels. */
 export const SHOP_ROW_Z = 1.5;
@@ -412,7 +408,7 @@ const spurPlaza = (type: string): RoadSpec => {
   const sp = SHOP_POSITIONS.find((q) => q.type === type)!, f = shopFront(sp, 4.3), dx = PLAZA.x - f.x, dz = PLAZA.z - f.z, l = Math.hypot(dx, dz), k = (l - (PLAZA.r - 0.4)) / l;
   return { x1: f.x, z1: f.z, x2: f.x + dx * k, z2: f.z + dz * k, w: 2.8 };
 };
-const SHOP_SPURS: RoadSpec[] = [spurPlaza('SUPPLIES'), spurPlaza('ARMORY'), spurPlaza('PETS'), spurPlaza('WAREHOUSE'), spurPlaza('FORTUNE'), spurPlaza('BLACKSMITH'), spurTo('TECH', 10, 'z')];
+const SHOP_SPURS: RoadSpec[] = [spurTo('SUPPLIES', 10, 'z'), spurTo('ARMORY', 10, 'z'), spurPlaza('PETS'), spurPlaza('WAREHOUSE'), spurPlaza('FORTUNE'), spurPlaza('BLACKSMITH'), spurTo('TECH', 10, 'z')];
 export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 8, x2: 0, z2: BRIDGE.z0 + 0.3, w: ROAD_W.main },   // main avenue plaza -> gate -> the bridge
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street
@@ -878,8 +874,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Long live King Aldric.', 'I am standing tall, Aldo.', 'No loitering on the steps.'],
   },
   {
-    name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-15, 8.4], speed: 1.4,
-    patrol: [[-15, 8.4], [-34, 8.4]],   // strolls past the west shop row
+    name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-15, 9.6], speed: 1.4,
+    patrol: [[-15, 9.6], [-34, 9.6]],   // strolls past the west shop row
     talk: [
       ['Moonpetal, ember root, a pinch of swamp moss... the Potion Shop pays well for the good stuff.', 'Do not forget to sell what you do not need.'],
       ['Mana potions taste like mint, health potions like regret. Drink them anyway.', 'Take this one, on the house.'],

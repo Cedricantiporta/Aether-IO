@@ -6,7 +6,7 @@ import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
 import { stepCount, STORY, type StoryStep } from '../../story';
 import { useGameStore } from '../../store';
-import { walkAfterArrive } from '../../engine/systems/village';
+import { walkAfterArrive, walkToMain, walkToNpcObjective } from '../../engine/systems/village';
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn, bagCount, type NpcQuestDef } from '../../npcQuests';
 import { LOOT_BY_ID } from '../../loot';
 import { mainNav, npcQuestNav, navDist, type NavTarget } from '../../engine/systems/questNav';
@@ -50,10 +50,14 @@ const MainRow: React.FC<{ main: StoryStep }> = ({ main }) => {
   const ms = useGameStore((s) => s.story), inv = useGameStore((s) => s.inventory);
   const dist = useDistance(mainNav);
   const c = stepCount(main), have = main.deliver ? Math.min(c, bagCount(inv, main.deliver.id)) : Math.min(ms.p, c);
-  const click = () => useUiStore.getState().openQuestLogOn('main');
+  // (owner) click = auto-path there again; in a run, a step that waits in town offers a teleport home, else the quest log opens
+  const click = () => {
+    if (useGameStore.getState().status === GameStatus.PLAYING) { const t = mainNav(); if (!(t && !t.field && offerTeleport(walkToMain))) useUiStore.getState().openQuestLogOn('main'); return; }
+    walkToMain();
+  };
   const goods = main.deliver ? LOOT_BY_ID[main.deliver.id]?.name : '';
   return (
-    <div className="qt-row main" data-k="main" data-s={main.deliver && have >= c ? 'done' : undefined} data-testid="main-quest-row" role="button" title="Click: open the quest log" onClick={click}>
+    <div className="qt-row main" data-k="main" data-s={main.deliver && have >= c ? 'done' : undefined} data-testid="main-quest-row" role="button" title="Click: auto-path" onClick={click}>
       <div className="qt-head"><i className="qt-mark">{main.deliver && have >= c ? '\u2713' : '!'}</i><span>Main Quest</span><span className="qt-dist" ref={dist} /></div>
       {/* (owner: no progress bars - the count sits on the title line, the list stays short) */}
       <div className="qt-title">{main.title}{c > 1 || main.deliver ? <b className="qt-n">{have} / {c}{goods ? ` ${goods}` : ''}</b> : null}</div>
@@ -68,8 +72,12 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   const dist = useDistance(() => npcQuestNav(d));
   const o = d.objective;
   return (
-    <div data-k="npc" data-s={ready ? 'done' : undefined} className={`qt-row npc ${ready ? 'done' : ''}`} data-testid="npc-quest-row" role="button" title="Click: open the quest log"
-      onClick={() => useUiStore.getState().openQuestLogOn('side:' + d.id)}>
+    <div data-k="npc" data-s={ready ? 'done' : undefined} className={`qt-row npc ${ready ? 'done' : ''}`} data-testid="npc-quest-row" role="button" title="Click: auto-path"
+      onClick={() => {
+        const go = () => walkToNpcObjective(d);
+        if (useGameStore.getState().status === GameStatus.PLAYING) { if (!(ready && offerTeleport(go))) useUiStore.getState().openQuestLogOn('side:' + d.id); return; }
+        go();
+      }}>
       <div className="qt-head"><i className="qt-mark">{ready ? '\u2713' : '!'}</i><span>{ready ? `Return to ${npcQuestTurnIn(d)}` : d.giver}</span><span className="qt-dist" ref={dist} /></div>
       <div className="qt-title">{d.title}{o.type !== 'TALK' && o.type !== 'LISTEN' && <b className="qt-n">{n} / {c}</b>}</div>
       {o.type === 'TALK' || o.type === 'LISTEN'

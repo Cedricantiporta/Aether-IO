@@ -48,3 +48,9 @@ hedges, rocks and props (townFill.ts groves). Walks from the spawn (in front of 
 - Rise N stairs moved to x -31.2 / 31.2 (clear of the houses; Tomas' patrol now turns at x -26).
 **Hero's house**: `HERO_HOUSE` (-38.6, 29.4), faces south; door spot `HOME_DOOR` / `HOME_OUT` (engine/homeData) = 1.1 / 2.2 m in front of the door; the "Your Home" plate floats over the door (render/Town HeroHomeSign).
 **Enterable later** (`ENTERABLE_HOUSES`, yaw 0, door spot = house x + door offset, 0.9 m in front of the door; walk-tested): North Street Cottage (-40.2, 3.86), Market Row House (18.5, 29.46), West Row House (-29.72, 3.75).
+
+## 2026-10-21 owner pass
+- All shops axis-aligned (rot 0 / ±90° / 180°). Armory and Potion Shop moved off the castle entrance onto the old shop row
+  (Armory -21.5, 2.6; Potion Shop 30.5, 2.6, both facing the south street); Tech House faces south.
+- Fewer houses: Tavern Row keeps 3 back-row houses + 1 cottage; the shop-row terraces are thinned (2 west, 1 east) with gaps.
+- Market stalls and market tents removed from the avenue (they looked open / unfinished).

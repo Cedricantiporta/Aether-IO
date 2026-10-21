@@ -58,13 +58,13 @@ export const GOLD_SCALE = 10;
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; position: [number, number, number]; color: string; rot?: number }[] = [
     // The seven town shops RING THE PLAZA (owner 2026-10-21: W / E flanks, NW / NE / SW / SE corners + Tech House on the east outer band), each facing it, each with its own look (owner 2026-10-20: not one row): any yaw (owner 2026-10-21: the camera rotates now, so shops no longer have to face south): the front is +z turned by `rot`.
     // Structure + dressing per shop: engine/townData.ts SHOP_LOOK (data table, piece names; kit v3 swaps pieces there).
-    { type: 'PETS', position: [-12.6, 0, 19.8], rot: 2.75, color: '#10b981' },          // beside the park (SW quarter)
-    { type: 'FORTUNE', position: [-12.4, 0, 1.8], rot: 1.571, color: '#a46bff' },   // fortune teller (summons): the quiet corner on the West Rise
-    { type: 'SUPPLIES', position: [8.0, 0, -15.4], rot: -0.3, color: '#3b82f6' },      // potion shop: the herb garden by the chapel / graveyard path
-    { type: 'ARMORY', position: [-8.0, 0, -15.4], rot: 0.3, color: '#c9a052' },        // by the castle path, the guards' side
-    { type: 'WAREHOUSE', position: [12.6, 0, 19.8], rot: -2.75, color: '#b08850' },      // item storage (100 slots): market street, cart yard
-    { type: 'BLACKSMITH', position: [12.4, 0, 1.8], rot: -1.571, color: '#ef4444' },   // the forge yard by the gate
-    { type: 'TECH', position: [22.0, 0, 2.0], rot: -0.35, color: '#5fc8e8' },   // Tech House (permanent upgrades): on the East Rise
+    { type: 'PETS', position: [-12.6, 0, 19.8], rot: Math.PI, color: '#10b981' },          // beside the park (SW quarter)
+    { type: 'FORTUNE', position: [-12.4, 0, 1.8], rot: Math.PI / 2, color: '#a46bff' },   // fortune teller (summons): the quiet corner on the West Rise
+    { type: 'SUPPLIES', position: [30.5, 0, 2.6], rot: 0, color: '#3b82f6' },      // potion shop: the herb garden by the chapel / graveyard path
+    { type: 'ARMORY', position: [-21.5, 0, 2.6], rot: 0, color: '#c9a052' },        // by the castle path, the guards' side
+    { type: 'WAREHOUSE', position: [12.6, 0, 19.8], rot: Math.PI, color: '#b08850' },      // item storage (100 slots): market street, cart yard
+    { type: 'BLACKSMITH', position: [12.4, 0, 1.8], rot: -Math.PI / 2, color: '#ef4444' },   // the forge yard by the gate
+    { type: 'TECH', position: [22.0, 0, 2.0], rot: 0, color: '#5fc8e8' },   // Tech House (permanent upgrades): on the East Rise
     { type: 'BREWER', position: [-10.2, 0, 106.2], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
     { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050' },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
@@ -285,9 +285,9 @@ export const ITEMS_POOL: Item[] = [
   { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 HP. Only works at 70% HP or lower.' },
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 Mana. Only works at 70% Mana or lower.' },
   
-  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades Common and Rare gear with these.' },
+  { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades Common, Rare and Epic gear with these.' },
   // (owner: tiered cores) higher upgrades need higher-tier cores: fuse 5 into 1 of the next tier (Blacksmith > Shards) or win them from bosses
-  { id: 'upgrade_core_2', name: 'Refined Core', type: 'CORE', stats: {}, rarity: 'LEGENDARY', price: 6000, level: 1, description: 'Tier II core: upgrades Epic, Legendary and Mythic gear. Fuse 5 Upgrade Cores, or win one from a boss.' },
+  { id: 'upgrade_core_2', name: 'Refined Core', type: 'CORE', stats: {}, rarity: 'LEGENDARY', price: 6000, level: 1, description: 'Tier II core: upgrades Legendary and Mythic gear. Fuse 5 Upgrade Cores, or win one from a boss.' },
   // reforging the blue bonus lines of gear (reforge.ts, Blacksmith > Reforge)
   { id: 'reforge_stone', name: 'Reforge Stone', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Blacksmith > Reforge: rerolls every bonus line of a piece of gear.' },
   { id: 'temper_oil', name: 'Tempering Oil', type: 'LOOT', stats: {}, rarity: 'RARE', price: 900, level: 1, description: 'Blacksmith > Reforge: rerolls the values of a piece of gear\'s bonus lines (better odds of a perfect, yellow line).' },

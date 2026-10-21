@@ -266,8 +266,7 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 // ---- the castle terrace's great flight: stairs_stone stretched to the lift ramp (TERRACE: z1 -> stairZ over h; the code-built steps in TownScenery addTerrace are gone)
 { const T = TERRACE, run = T.stairZ - T.z1; put('stairs_stone', 0, T.z1 + run + 0.5 * (-1.9 + 2.23) * 0 - 2.23 * (run / 4.13), 0, (T.stairHw * 2) / 4.18, T.h / 1.75, run / 4.13, 0); }
 // ---- the market street: two market_tents (red / green) a side between the stalls, a flower cart on the south street
-decor('market_tent_red', -5.8, 15.2, 0.12, 1, { solid: 'ring', r: 1.0, force: true }); decor('market_tent_green', 5.8, 15.2, -0.12, 1, { solid: 'ring', r: 1.0, force: true });
-decor('market_tent_green', -5.8, 27.6, -0.1, 1, { solid: 'ring', r: 1.0, force: true }); decor('market_tent_red', 5.8, 27.6, 0.1, 1, { solid: 'ring', r: 1.0, force: true });
+// (owner: the open market tents looked unfinished: removed, with the market stalls in townData STALLS)
 { let n = 0; for (const [x, z, ry] of [[-20.0, 12.9, 0.3], [-4.6, 13.0, 0.2], [4.8, 13.0, -0.2], [17.0, 13.0, -0.3], [-33, 12.9, 0.1]] as const) if (n < 2 && decor('flower_cart', x, z, ry, 1, { solid: 'ring', r: 0.5, rad: 0.8 })) n++; }
 // ---- the notice board where the old quest board stood, 
 for (const [x, z] of [[-3.8, -8.4], [3.8, -8.4], [16.4, -9.0], [-16.4, -9.0]]) if (decor('notice_board', x, z, 0, 1, { solid: 'ring', r: 0.4, rad: 1.0 })) break;

@@ -1759,7 +1759,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (item.level >= 10) return fail('Max Level Reached!');
 
       const free = questFree(s, 'forge');   // tutorial "Temper the Steel": the smith's first upgrade is on the house
-      const tier = upgradeCoreTierFor(item.rarity);   // tiered cores: Common / Rare gear -> Upgrade Cores, Epic+ -> Refined Cores
+      const tier = upgradeCoreTierFor(item.rarity);   // tiered cores: Common..Epic gear -> Upgrade Cores, Legendary+ -> Refined Cores
       const coreIndex = s.inventory.findIndex((i) => coreTierOf(i) === tier);
       const core = coreIndex >= 0 ? s.inventory[coreIndex] : null;
       const requiredCores = free ? 0 : upgradeCoresAt(item.level);
