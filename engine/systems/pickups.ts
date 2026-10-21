@@ -12,6 +12,8 @@ import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
 import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
+/** (owner) gold coins picked up from the ground are worth 70% less (kills, crates, bosses, rewards). */
+const GOLD_LOOT_MUL = 0.3;
 import { healPlayer, grantKillXp } from './combat';
 
 const GRAVITY = 28;
@@ -78,7 +80,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU'))); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); break;
@@ -260,7 +262,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.round(value * GOLD_SCALE * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
+    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU'))); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); feedCoin('gems', value); break;
