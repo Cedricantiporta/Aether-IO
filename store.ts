@@ -266,7 +266,7 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 /** (owner balance) hard caps on the percentage stats, applied last (gear + pet + talents + attributes + sets together). */
 /** (owner) hero HP and every source of bonus HP x2 (heals / regen stay as they are); incoming damage is x2 too
  *  (engine/systems/combat.ts damagePlayer: monsters, bosses, traps, lava, spikes). */
-export const HP_INFLATE = 2, DMG_INFLATE = 2;
+export const HP_INFLATE = 1.6, DMG_INFLATE = 2;   // (owner) hero HP x2 then -20% (every HP source: base, items, upgrades, cards)
 /** last time each WARNING toast text was shown (addNotification de-dupes repeats within 3 s) */
 const warnAt = new Map<string, number>();
 export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.15 } as const;
