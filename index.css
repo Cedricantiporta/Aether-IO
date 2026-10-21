@@ -2977,7 +2977,7 @@ html, body, #root, button, input, select, textarea { font-family: var(--font-bod
 /* ---- remove every ornament / hairline pseudo-element and corner span ---- */
 .rpg-corner, .np-corner, .np-orn, .cs-orn, .rpg-medallion, .qw-seal { display: none !important; }
 .rpg-tab::before, .rpg-tab::after, .rpg-ribbon::before, .rpg-ribbon::after, .rpg-btn::after, .rpg-card::before, .rpg-card::after,
-.rw-card::before, .rw-card::after, .cs-root::before, .rpg-slot[data-rarity='LEGENDARY']::before, .rpg-slot[data-rarity='MYTHIC']::before,
+.cs-root::before, .rpg-slot[data-rarity='LEGENDARY']::before, .rpg-slot[data-rarity='MYTHIC']::before,
 .k-title i, .qw-tab.on::after, .rpg-frame::before, .rpg-frame::after, .rpg-panel::before, .rpg-panel::after { display: none !important; content: none !important; }
 
 /* ---- panels / windows / modals: soft rounded charcoal ---- */
@@ -3105,9 +3105,9 @@ input:focus-visible, select:focus-visible { outline: 0; box-shadow: var(--z-acce
 .tab-underline, hr { border: 0; }
 
 /* ---- reward / summon cards: soft rounded, rarity tint kept ---- */
-.rw-card, .sm-face { border: 0 !important; border-radius: 22px !important; background: rgba(34, 34, 40, .94) !important; box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 18px color-mix(in srgb, var(--rc) 40%, transparent) !important; }
-.rw-title, .rw-roman, .sm-roman, .sm-back b { font-family: var(--font-title) !important; text-transform: none; letter-spacing: .01em; }
-.rw-roman, .sm-roman { display: none; }
+.sm-face { border: 0 !important; border-radius: 22px !important; background: rgba(34, 34, 40, .94) !important; box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 18px color-mix(in srgb, var(--rc) 40%, transparent) !important; }
+.sm-roman, .sm-back b { font-family: var(--font-title) !important; text-transform: none; letter-spacing: .01em; }
+.sm-roman { display: none; }
 
 /* ---- main menu / character select typography ---- */
 .cs-root, .np-panel { font-family: var(--font-body); }
@@ -3260,7 +3260,7 @@ input:focus-visible, select:focus-visible { outline: 0; box-shadow: var(--z-acce
 hr, .tab-underline { display: none !important; }
 /* divider / separator lines and ornament rules */
 .tray-sep, .k-title i, .cs-orn, .cs-sep, .st-sec-h i, .tlogo-sub i, .qt-sep, .portal-tag::before, .portal-tag::after, .qw-tab.on::after,
-.rw-emblem.arc .arc-num::before, .rw-emblem.arc .arc-num::after, .np-foot::before, .np-field::before, .np-field::after, .sqbtn.is-active .mb-ic::after { display: none !important; content: none !important; }
+.np-foot::before, .np-field::before, .np-field::after, .sqbtn.is-active .mb-ic::after { display: none !important; content: none !important; }
 .rpg-tooltip .tt-sep { height: .3rem; background: none !important; margin: 0 !important; }
 .exp-strip .exp-line, .exp-line { height: 6px !important; border-radius: 999px !important; background: rgba(0, 0, 0, .35) !important; }
 .exp-line > i { border-radius: 999px; background: linear-gradient(90deg, #ffe9a8, #fff6e0) !important; box-shadow: 0 0 8px rgba(255, 240, 200, .5) !important; }
@@ -3384,13 +3384,13 @@ body:has([data-testid='dialogue-root']) :is(.hud-bottom, .exp-strip, .corner-btn
 html, body, #root, button, input, select, textarea, kbd { font-family: var(--font-body); }
 body { font-weight: 500; }
 /* titles / headings: 700, upright, normal case */
-:is(h1, h2, h3, h4, .rpg-title, .rpg-label, .f-title, .head-title, .ws-title, .sw-title, .qw-title, .k-title, .qb-title, .rw-title, .sm-name, .sm-back b, .rw-roman,
+:is(h1, h2, h3, h4, .rpg-title, .rpg-label, .f-title, .head-title, .ws-title, .sw-title, .qw-title, .k-title, .qb-title, .sm-name, .sm-back b,
   .tt-name, .tt-dname, .cs-name, .cs-charname, .cs-head, .go-head, .dc-head b, .so-locked b, .bag-equip-head, .ws-sec, .tt-sec, .sw-pane-h, .sw-pop-h, .sw-tier-h,
   .qw-chap-h, .tlogo-sub, .np-head span, .enc-name, .panel-head .head-title, .wh-goldbar, .brew-name, .upn b) {
   font-family: var(--font-title) !important; font-weight: 700 !important; font-style: normal !important; text-transform: none !important; letter-spacing: .01em !important;
 }
 /* sub labels / captions: upright, normal case (no tracked caps) */
-:is(.head-sub, .tt-sub, .tt-drank, .tt-dsub, .rpg-pill .pill-label, .rw-rar, .rw-num, .qw-chap, .qw-lv, .enc-sub, .enc-lv, .cs-sub, .cs-tag, .portal-tag, .dc-badge .t, .so-tab, .exp-lbl, .st-sec-h, .ws-note, .sw-note) {
+:is(.head-sub, .tt-sub, .tt-drank, .tt-dsub, .rpg-pill .pill-label, .qw-chap, .qw-lv, .enc-sub, .enc-lv, .cs-sub, .cs-tag, .portal-tag, .dc-badge .t, .so-tab, .exp-lbl, .st-sec-h, .ws-note, .sw-note) {
   text-transform: none !important; letter-spacing: .01em !important; font-style: normal !important; font-family: var(--font-title);
 }
 /* no italics anywhere in the UI; emphasis is weight, not slant */
@@ -3400,7 +3400,7 @@ em, i, cite, .italic, .dlg-name, .dlg-role, .dlg-hint, .qb-type, .dlg-btn, .qw-b
 .dlg-btn, .dlg-btn.reply, .rpg-btn, .qw-btn, .sw-btn, .np-btn, .ws-go, .upn-btn, .cs-confirm, .cs-change, .bag-del-go, .story-skip, .toast-pill, .k-sub, .qb-hint, .dlg-chip, .rpg-tab, .rpg-subtab, .bag-tab, .cs2-tab, .qw-tab, .sw-tab, .ws-cat-h, .bag-cat {
   font-weight: 700 !important; font-style: normal !important; text-transform: none !important;
 }
-.rpg-num, .rpg-title, .rw-title, .go-head, .qb-title, .k-title, .dlg-offer-goal { font-weight: 700; }
+.rpg-num, .rpg-title, .go-head, .qb-title, .k-title, .dlg-offer-goal { font-weight: 700; }
 .rpg-logo, .tlogo, .tlogo * { font-style: normal !important; }
 .rpg-tooltip, .tt-win { font-weight: 500; }
 .rpg-tooltip .muted.italic, .rpg-tooltip .italic { color: var(--z-dim); }
@@ -3428,7 +3428,7 @@ em, i, cite, .italic, .dlg-name, .dlg-role, .dlg-hint, .qb-type, .dlg-btn, .qw-b
   background-color: rgba(255, 255, 255, .2) !important; box-shadow: 0 0 18px 2px rgba(255, 255, 255, .22) !important; color: #fff !important;
 }
 /* item slots / grids: rarity tint kept, rounded soft tiles */
-.rpg-slot, .cs-eq-cell, .slot-grid > *, .bag-grid > *, .forge-slot, .tech-slot, .debuff-slot, .ws-mat-art, .tw-ic, .sk-ic, .tt-art > *, .rw-art, .rw-emblem { border-radius: var(--z-r-tile) !important; border: 0 !important; }
+.rpg-slot, .cs-eq-cell, .slot-grid > *, .bag-grid > *, .forge-slot, .tech-slot, .debuff-slot, .ws-mat-art, .tw-ic, .sk-ic, .tt-art > * { border-radius: var(--z-r-tile) !important; border: 0 !important; }
 .tt-node.sq { border-radius: 12px !important; }
 /* tabs = segmented pill control (containers + every tab strip) */
 :is(.bag-tabs, .cs2-tabs, .qw-tabs, .so-tabs, .sw-tabs, .rpg-tabs, .ws-cats, .tp-chips, .st-segs, .tt-tabs) {
@@ -3439,7 +3439,7 @@ em, i, cite, .italic, .dlg-name, .dlg-role, .dlg-hint, .qb-type, .dlg-btn, .qw-b
 .so-tab + .so-tab { border-left: 0 !important; }
 .so-tab.on, .so-tab.is-active { background: var(--z-sel) !important; color: #fff !important; box-shadow: 0 0 14px rgba(255, 255, 255, .2) !important; }
 /* buttons: rounded pills everywhere (also those that only exist in the new windows) */
-:is(.enc-btn, .wh-btn, .tt-learn, .tt-respec, .sw-rates-btn, .go-btn, .so-go, .lp-btn, .cs-change, .np-back, .qw-btn, .bag-del-go, .rw-btn, .fc-btn, .sr-btn) {
+:is(.enc-btn, .wh-btn, .tt-learn, .tt-respec, .sw-rates-btn, .go-btn, .so-go, .lp-btn, .cs-change, .np-back, .qw-btn, .bag-del-go, .fc-btn, .sr-btn) {
   border: 0 !important; border-radius: 999px !important; background-image: none !important; background-color: rgba(255, 255, 255, .14) !important; color: #fff !important;
   text-shadow: none !important; box-shadow: var(--z-shadow-sm) !important; font-weight: 700 !important; text-transform: none !important; letter-spacing: .01em !important;
 }
@@ -3476,7 +3476,7 @@ em, i, cite, .italic, .dlg-name, .dlg-role, .dlg-hint, .qb-type, .dlg-btn, .qw-b
 .go-root :is(.go-row, .go-rows > *) { background: var(--z-tile) !important; border-radius: 14px !important; }
 /* kbd chips */
 kbd { border: 0 !important; border-radius: 999px !important; background: rgba(255, 255, 255, .18) !important; color: inherit; box-shadow: none !important; font-weight: 700; }
-.rw-emblem.arc .arc-num, .sm-roman, .rw-roman, .story-ch.replay, .rw-title { font-family: var(--font-title) !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important; }
+.sm-roman, .story-ch.replay { font-family: var(--font-title) !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important; }
 .rpg-logo { color: #fff !important; -webkit-text-fill-color: #fff; background: none !important; background-image: none !important; animation: none !important; text-transform: none !important; letter-spacing: .01em !important; font-weight: 700 !important;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .5)) !important; }
 
