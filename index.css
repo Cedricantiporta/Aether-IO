@@ -3603,3 +3603,6 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
     linear-gradient(165deg, color-mix(in srgb, var(--rc) 88%, #1a1714) 0%, color-mix(in srgb, var(--rc) 62%, #15131a) 60%, color-mix(in srgb, var(--rc) 40%, #0e0d12) 100%) !important;
 }
 .rpg-slot[data-rarity='COMMON']:not(.is-empty):not(.is-dim) { background: linear-gradient(165deg, #5a5d66 0%, #3e4048 60%, #2c2d33 100%) !important; }
+
+/* (owner) showcase: one short instruction pill at a time, no story text */
+.sc-tip { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: .55rem 1.3rem; border-radius: 999px; background: rgba(255, 252, 240, .92); color: #3a3226; font-weight: 700; font-size: clamp(.9rem, 1.8vw, 1.15rem); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); transition: opacity .5s ease; white-space: nowrap; }

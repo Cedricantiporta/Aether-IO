@@ -43,7 +43,7 @@ export function tutorialHint(): string {
   const st = useGameStore.getState().status, touch = device.touch;
   const near = st === GameStatus.MENU ? nearby[0] : roomNearby[0];
   if (!flags.harvest && near?.active && (near.act === 'harvest' || near.node >= 100)) return touch ? 'Hold the interact button to harvest' : 'Hold  E  to harvest';
-  if (st !== GameStatus.PLAYING || !world.room.active) return '';
+  if (st !== GameStatus.PLAYING || !world.room.active || showcase.on) return '';   // (the showcase shows its own tips)
   if (!flags.skill1) return touch ? 'Tap  Skill 1  to unleash your first skill' : 'Press  1  to use your first skill';
   if (ultFirst[useGameStore.getState().hero] && ultReady()) return touch ? 'Your Ultimate is charged! Tap the big  R  button' : 'Your Ultimate is charged! Press  R';
   return '';

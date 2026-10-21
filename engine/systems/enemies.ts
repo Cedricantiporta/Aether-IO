@@ -39,6 +39,7 @@ import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } fro
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore, rollDropPlus } from '../../store';
 import { runMods, veteran, VET } from '../runMods';
+import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
@@ -90,7 +91,7 @@ const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
  * on a stationary target (no kiting needed). Bosses get +15% max HP, mini-bosses +12% (windows are shorter), so the total
  * fight length stays about the same, only moving damage into readable moments.
  */
-const WIND = { bossHp: 1.15, miniHp: 1.12, firstMin: 9, firstMax: 15, cdMin: 10, cdMax: 16, bossDurMin: 1.5, bossDurMax: 2.0, miniDurMin: 1.2, miniDurMax: 1.6, dmgTaken: 1.1 };
+const WIND = { bossHp: 1.15, miniHp: 1.12, firstMin: 9, firstMax: 15, cdMin: 10, cdMax: 16, bossDurMin: 3.75, bossDurMax: 5.0, miniDurMin: 3.0, miniDurMax: 4.0,   /* (owner) 2.5x longer windows */ dmgTaken: 1.1 };
 export const WINDED_DMG_MULT = WIND.dmgTaken;
 /** Ticks the free-hit window; true while the boss is winded (its AI must be skipped this frame). */
 function tickWinded(e: Enemy, dt: number, locked: boolean): boolean {
@@ -109,7 +110,6 @@ function tickWinded(e: Enemy, dt: number, locked: boolean): boolean {
   if (locked || e.shield > 0 || e.shellT > 0 || e.hideT > 0 || e.decoy || e.fearT > 0 || bossWarded(e) || bossMending(e) || (e.state !== 'CHASE' && e.state !== 'KITE')) return false;
   e.winT = e.boss ? WIND.bossDurMin + Math.random() * (WIND.bossDurMax - WIND.bossDurMin) : WIND.miniDurMin + Math.random() * (WIND.miniDurMax - WIND.miniDurMin);
   e.winCd = WIND.cdMin + Math.random() * (WIND.cdMax - WIND.cdMin);
-  events.emit('floatText', { pos: e.pos, text: 'WINDED!', color: 0xffe27a, scale: 1.3, dy: 5 });
   return true;
 }
 
@@ -329,6 +329,7 @@ export function spawnEnemy(
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   if (elite && !boss) rollEliteShield(e);
   else if (veteran.on && !boss && Math.random() < VET.shieldChance) e.shield = Math.max(e.shield, e.maxHp * 0.4);   // conquered biome: normal monsters with shields too
+  else if (showcase.on && !boss && Math.random() < SHOWCASE_SHIELD_CHANCE) e.shield = Math.max(e.shield, e.maxHp * 0.5);   // (owner) the opening power fight: shielded packs
   e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed * (boss ? 1 : MOVE_MUL);   // (owner) ordinary monsters move ~11% faster; bosses keep their pace
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;

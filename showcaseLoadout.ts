@@ -3,7 +3,6 @@
 import type { HeroClass, Item } from './types';
 import type { Equipment } from './storeTypes';
 import type { ClassProg } from './classLevels';
-import { MAX_LEVEL } from './classLevels';
 import { ITEMS_POOL, PETS_POOL, SKILLS_INFO } from './constants';
 import { SETS, setPieceId, SET_SLOTS } from './itemSets';
 import { AFFIX_BY_KEY, PERFECT_MUL, R_IDX } from './affixes';
@@ -12,7 +11,8 @@ import { ATTR_KEYS, attrPointsTotal, autoAllocate, emptyAttrs, type Attrs } from
 import { activeDefs, dashKey } from './abilityDefs';
 import { PET_MAX_LV } from './petGrowth';
 
-const MAX_PLUS_LEVEL = 10;   // item.level 10 = +9 (the blacksmith's cap)
+import { SHOWCASE_LEVEL, SHOWCASE_PLUS } from './engine/showcase';
+const MAX_PLUS_LEVEL = SHOWCASE_PLUS + 1;   // item.level n = +(n-1)
 
 /** Mythic "Aether Sovereign" piece of `slot` for `hero` (class-agnostic set: wear + weapon per class, accessory universal), +9 with perfect bonus lines. */
 function sovereign(slot: (typeof SET_SLOTS)[number], hero: HeroClass, instantiate: (t: Item) => Item, plusOne: (i: Item) => Item): Item | null {
@@ -36,9 +36,9 @@ export function buildShowcaseOverlay(hero: HeroClass, cur: ClassProg, instantiat
   const keys: string[] = [...activeDefs(hero).map((a) => a.slot), dashKey(hero), 'ult'];
   for (const [k, i] of Object.entries(SKILLS_INFO) as [string, { type?: string; classType?: string }][]) if (i.type === 'PASSIVE' && k !== 'dash' && (!i.classType || i.classType === hero)) keys.push(k);
   for (const k of keys) if (k in skills) skills[k] = 5;
-  const talents: TalentRanks = {};
-  for (const n of TALENTS) if (n.hero === hero) talents[n.id] = n.max;
-  const attrs = autoAllocate(hero, emptyAttrs(), attrPointsTotal(MAX_LEVEL));
+  const talents: TalentRanks = {};   // (owner) not everything at once: no talents in the showcase
+  void TALENTS;
+  const attrs = autoAllocate(hero, emptyAttrs(), attrPointsTotal(SHOWCASE_LEVEL));
   void ATTR_KEYS;
-  return { equipment, classProg: { lv: MAX_LEVEL, xp: 0, sp: 0, skills: skills as unknown as ClassProg['skills'] }, talents, attrs };
+  return { equipment, classProg: { lv: SHOWCASE_LEVEL, xp: 0, sp: 0, skills: skills as unknown as ClassProg['skills'] }, talents, attrs };
 }

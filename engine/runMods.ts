@@ -4,6 +4,7 @@ import { DIFFICULTY_MODS } from '../constants';
 import { ascensionMods, type AscMods } from '../ascension';
 import type { Difficulty } from '../storeTypes';
 import { dailyMods } from '../dailyChallenge';
+import { showcase, SHOWCASE_HP_MUL } from './showcase';
 
 export type RunMode = 'ADVENTURE' | 'TOWER';
 /** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; '': the plaza). */
@@ -29,6 +30,7 @@ export function runMods(difficulty: Difficulty): RunMods {
   out.heal = asc.heal; out.bossHp = asc.bossHp; out.speed = asc.speed; out.elites = asc.elites; out.reward = asc.reward;
   // Daily Trial modifiers (neutral outside a daily run)
   out.hp *= dailyMods.hp; out.spawn *= dailyMods.spawn; out.speed *= dailyMods.enemySpeed; out.elites += dailyMods.elites;
+  if (showcase.on) out.hp *= SHOWCASE_HP_MUL;   // (owner) the opening power fight lasts a bit longer
   if (veteran.on) { out.hp *= VET.hp; out.dmg *= VET.dmg; out.spawn *= VET.spawn; out.speed *= VET.speed; out.elites += 1; }
   return out;
 }

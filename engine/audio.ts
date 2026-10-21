@@ -10,6 +10,7 @@ import { events } from './events';
 import type { GameEvents } from './events';
 import { world } from './world';
 import { useGameStore } from '../store';
+import { runInfo } from './runMods';
 import type { Vector3 } from 'three';
 import type { ProjectileKind } from './types';
 import { GameStatus } from '../types';
@@ -515,6 +516,7 @@ function recWanted(): string {
   const st = useGameStore.getState().status;
   let k = '';
   if (st === GameStatus.MENU) k = townHeld() ? '' : 'town';
+  else if (runInfo.mode === 'TOWER' && st !== GameStatus.GAME_OVER) k = world.boss.active ? 'final' : 'boss';   // (owner) Endless Tower / Daily / Waves: boss-fight music throughout, the abyss theme for its bosses
   else if (world.boss.active) k = world.boss.final ? 'final' : 'boss';
   else if (st !== GameStatus.GAME_OVER) k = 'b' + (world.room.biome % 7);
   if (k === 'final' && !RECORDED.final) k = 'boss';

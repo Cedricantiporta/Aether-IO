@@ -17,6 +17,7 @@ import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { Stars } from '@react-three/drei';
 import { runInfo } from '../engine/runMods';
+import { showcase } from '../engine/showcase';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
@@ -869,7 +870,7 @@ export function Room({ q }: { q: QualityCfg }) {
   const ver = useWorldCounter(() => world.room.version);
   const r = world.room;
   const def = biomeOf(r.biome);
-  const tower = runInfo.mode === 'TOWER';
+  const tower = runInfo.mode === 'TOWER' && !showcase.on;   // (owner) the showcase fights in its biome (Frostpeak), not the tower arena
   const isCamp = r.active && !tower && r.plan.type === 'CAMP' && campOn();   // the biome camp: a hand-authored transition path (render/CampPath.tsx)
   const campSea = isCamp && camp.cur ? (camp.cur.layout.edge.some((e) => e[1] === 'sea') ? 'sea' : camp.cur.layout.edge.some((e) => e[1] === 'lava') ? 'lava' : null) : null;
   return (

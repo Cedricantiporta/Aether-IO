@@ -5,6 +5,7 @@ import { updateDistCull } from './distCull';
 import { useFrame } from '@react-three/fiber';
 import { biomeOf, variantOf } from '../engine/roomDefs';
 import { runInfo } from '../engine/runMods';
+import { showcase } from '../engine/showcase';
 import { world } from '../engine/world';
 import { dreamFx, tickDreamFx } from '../engine/dreamFx';
 import type { MeshBasicMaterial } from 'three';
@@ -127,7 +128,7 @@ export function setLook(biome: number, snap = false, index = 0): void {
     target.fog.set(TOWN_FOG); target.hemiSky.set(TOWN_HEMI_SKY); target.hemiGround.set(TOWN_HEMI_GROUND); target.hemiI = TOWN_HEMI_I;
     target.sun.set(TOWN_SUN); target.sunI = TOWN_SUN_I; target.sky.set(1, 1, 1); target.near = 75; target.far = 210;
     townMode = biome === -1; if (townMode) applyTown(townT());   // (day / night cycle; interiors keep the day look)
-  } else if (runInfo.mode === 'TOWER') {
+  } else if (runInfo.mode === 'TOWER' && !showcase.on) {
     // Endless Tower: open-air floors under a deep night sky, cool moonlight
     target.fog.set('#0b1230'); target.hemiSky.set('#8fa6e0'); target.hemiGround.set('#2a2a38'); target.hemiI = 0.95;
     target.sun.set('#c8d6ff'); target.sunI = 2.1; target.sky.set(0.07, 0.09, 0.22); target.near = 45; target.far = 130;

@@ -5,12 +5,16 @@
 // store.endShowcase restores the snapshot (nothing is kept, nothing is written to the save in between).
 // This file is the engine side: run flag + timers + the per-character "pending" marker (localStorage). Pure TS, no store import.
 // ============================================================================
-export const SHOWCASE_BIOME = 1;      // the Marble Halls (Gorath's arena)
+export const SHOWCASE_BIOME = 4;      // (owner) Frostpeak: an ice arena
 export const SHOWCASE_DEPTH = 28;     // monster strength (a late-biome pack)
 export const INTRO_SEC = 5;           // the intro line is up this long
 export const OUTRO_SEC = 6;           // after the last kill: the outro line, then back to town
 export const ULT_CHARGE_MUL = 8;      // basic hits fill the ultimate bar this much faster
 export const ULT_CD_MUL = 0.12;       // ... and its cooldown is this much shorter
+/** (owner) a longer fight: monster HP x this, and most ordinary monsters carry a shield */
+export const SHOWCASE_HP_MUL = 2.2, SHOWCASE_SHIELD_CHANCE = 0.6;
+/** (owner) hero power: every skill maxed, but not everything: this class level, gear at this +level, no talents */
+export const SHOWCASE_LEVEL = 40, SHOWCASE_PLUS = 5;
 
 export const showcase = { on: false, t: 0, victory: false, outroT: 0, ended: false };
 /** Registered by the store (it owns the snapshot): ends the showcase and returns the hero to town. */

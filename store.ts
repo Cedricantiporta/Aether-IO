@@ -1240,7 +1240,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         set(keep as Partial<GameState>);
       }
       get().resetGame();
-      get().addNotification(won ? 'That is the hero you will become. Now, your real journey begins!' : 'That was only a taste of the power to come. Now, your real journey begins!', '#fff3c4', 'SYSTEM');
+      void won;   // (owner) no text after the showcase, only its instructions
     },
     recordWave: (wave) => {
       const s = get(), p = s.progress, best = p.wavesBest[s.hero] ?? 0, have = p.wavesClaimed[s.hero] ?? [];

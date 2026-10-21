@@ -79,7 +79,7 @@ export function StatusFx() {
         else if (e.stunT > 0) list.push(T_STN);
         if (e.fearT > 0) list.push(T_FEAR);
         if (e.slowT > 0.05 && e.freezeT <= 0) list.push(T_SLW);
-        if (e.winT > 0) list.push(T_WIN);   // boss / mini-boss free-hit window
+        // (owner) no WINDED tag: the dizzy stars below show the free-hit window
         if (list.length === 0) continue;
         const s = e.scale || 1, head = (models[e.kind]?.headY ?? e.radius * 1.6 + 0.6) * s;
         if (e.winT > 0 && dt > 0 && Math.random() < dt * 14) {   // dizzy stars circling the head + a pant puff
