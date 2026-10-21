@@ -183,8 +183,8 @@ export const stairRun = (h: number) => Math.ceil(h / STEP_RISE - 1e-6) * STEP_RU
 export const TIERS: TierSpec[] = [
   { name: 'Chapel Hill', x0: -43.7, x1: -11.4, z0: -39.7, z1: -19.5, h: 1.6, stairs: [{ side: 'S', c: -27, hw: 2.2 }, { side: 'S', c: -38, hw: 2.0 }] },
   { name: 'Tavern Row', x0: 11.4, x1: 43.7, z0: -39.7, z1: -16.5, h: 0.9, stairs: [{ side: 'S', c: 28, hw: 2.2 }, { side: 'S', c: 18.5, hw: 2.0 }, { side: 'S', c: 40, hw: 2.0 }] },
-  { name: 'West Rise', x0: -43.7, x1: -29, z0: 13, z1: 36.7, h: 1.2, stairs: [{ side: 'E', c: 23.2, hw: 2.0 }, { side: 'E', c: 32.4, hw: 2.0 }, { side: 'N', c: -38.5, hw: 2.0 }] },
-  { name: 'East Rise', x0: 29, x1: 43.7, z0: 13, z1: 36.7, h: 0.8, stairs: [{ side: 'W', c: 23.2, hw: 2.0 }, { side: 'W', c: 32.4, hw: 2.0 }, { side: 'N', c: 33, hw: 2.0 }] },
+  { name: 'West Rise', x0: -43.7, x1: -29, z0: 13, z1: 36.7, h: 1.2, stairs: [{ side: 'E', c: 23.2, hw: 2.0 }, { side: 'E', c: 32.4, hw: 2.0 }, { side: 'N', c: -31.2, hw: 2.0 }] },
+  { name: 'East Rise', x0: 29, x1: 43.7, z0: 13, z1: 36.7, h: 0.8, stairs: [{ side: 'W', c: 23.2, hw: 2.0 }, { side: 'W', c: 32.4, hw: 2.0 }, { side: 'N', c: 31.2, hw: 2.0 }] },
 ];
 /** Edge of a tier that runs along the town wall (no parapet, no collider). */
 export const tierEdgeOnWall = (side: 'N' | 'S' | 'E' | 'W', T: TierSpec) =>
@@ -228,7 +228,7 @@ export function townLift(x: number, z: number): number {
 export const CHURCH = { x: -26, z: -26, w: 5.6, d: 9, rot: 0 };
 /** (owner) the adventurer's own little house in the south-west corner of the walls, door facing the town (enterable:
  *  the HOME area, engine/homeData.ts). */
-export const HERO_HOUSE = { x: -40.3, z: 27, w: 4.25, d: 3.9, rot: 0, wake: { x: -40.3, z: 31.4 } };   // (on the West Rise, door faces south toward the camera)
+export const HERO_HOUSE = { x: -38.6, z: 29.4, w: 4.25, d: 3.9, rot: 0, wake: { x: -38.6, z: 33.8 } };   // (on the West Rise, door faces south toward the camera)
 /** The Golden Tankard = town_kit_v2 'tavern' drawn TAVERN_DZ south-of-centre-minus (piece origin = TAVERN.z + TAVERN_DZ); its front door sits at z + d/2. */
 export const TAVERN = { x: 28, z: -21, w: 9.6, d: 6.2, rot: 0 };
 export const TAVERN_DZ = -1.4;
@@ -294,9 +294,9 @@ export const HOUSE_KIT: Record<string, { w: number; d: number; doorX: number; ch
   house_gabled_narrow: { w: 3.8, d: 6.2, doorX: 0, chimney: [0, 9.4, -1.2], front: 4.5, half: 2.9 },
   house_tower: { w: 5.2, d: 4.4, doorX: 1.0, chimney: [1.0, 6.0, -0.8], front: 3.6, half: 3.4 },
 };
-const K = (kit: HouseKit, x: number, z: number, s = 0.9): HouseSpec => {
+const K = (kit: HouseKit, x: number, z: number, s = 0.9, rot = 0): HouseSpec => {
   const n = HOUSE_COUNT++, k = HOUSE_KIT[kit] ?? HOUSE_KIT.house_small;
-  return { x, z, rot: 0, w: k.w * s, d: k.d * s, floors: kit === 'house_two_storey' || kit === 'house_gabled_narrow' ? 2 : 1, wall: WALLS[(n * 3 + 1) % WALLS.length], roof: ROOFS[(n * 5 + 2) % ROOFS.length], trim: '#f4ead2', chimney: n % 2 === 0, door: DOORS[n % DOORS.length], kit, s };
+  return { x, z, rot, w: k.w * s, d: k.d * s, floors: kit === 'house_two_storey' || kit === 'house_gabled_narrow' ? 2 : 1, wall: WALLS[(n * 3 + 1) % WALLS.length], roof: ROOFS[(n * 5 + 2) % ROOFS.length], trim: '#f4ead2', chimney: n % 2 === 0, door: DOORS[n % DOORS.length], kit, s };
 };
 /** nature_kit_v1 piece footprints at scale 1: [x0, x1, z0, z1, height] (front = +z, origin = ground centre), measured from public/models/town/nature_kit_v1.glb.
  *  The colliders (kitRing below), the minimap and the layout checks all read this one table. */
@@ -331,72 +331,23 @@ export const HOUSES: HouseSpec[] = [
   K('house_small', -13.5, 121, 0.95), K('house_two_storey', -23.5, 124, 0.8), K('house_tower', -33, 120, 0.8),
   // (owner) the adventurer's house (HERO_HOUSE): small, one floor, on the West Rise, door facing south
   { ...K('house_small', HERO_HOUSE.x, HERO_HOUSE.z, 0.85), w: HERO_HOUSE.w, d: HERO_HOUSE.d, wall: '#e9dfc8', chimney: true, door: '#8a2f22' },
-  // ---- inside the walls (townPlan.ts has the district map): every house faces south; rows are ~6 m apart, a lane / street ~12 m behind each row
+  // ---- inside the walls (owner 2026-10-21: plain medieval houses packed in straight terraces on the streets, no yards): every house is AXIS-ALIGNED (rot 0 = door south, PI = door north),
+  // fronts flush to the street / walkway (~0.6 m of kerb), 0.2 m between neighbours; none within 1.5 m of a stair flight or its approach (lot script in docs/TOWN_PLAN.md).
   // chapel quarter (on Chapel Hill): the sexton's cottage
   K('house_small', -17, -34.5, 0.85),
-  // north-west cottages between the hill and the north street (their front yards face the street)
-  K('house_small', -31.8, -12.4, 0.85),   // (north street, west: its lot's gate faces the street)
-  // tavern square: two cottages at its east end (the Golden Tankard stands on Tavern Row behind it)
-  K('house_small', 35.5, -11.8, 0.85),
-  // Tavern Row: the cottage beside the tavern, the east cottage, and a back row of five
-  K('house_small', 17.5, -27, 0.85), K('house_two_storey', 38.8, -26.4, 0.8),
-  K('house_tower', 28.8, -35.2, 0.8),
-  // south-west quarter (lane at z 23.2 between its two rows): the park takes the north-west corner
-  // (the south-west quarter keeps its lane, park and the West Rise's stair foot clear: no cottage here)
-  // south-east quarter
-  K('house_tower', 25.8, 16.2, 0.8), K('house_two_storey', 25, 28.0, 0.8),   // (the Warehouse + the Blacksmith's forge take the rest of the east side of the avenue: SHOP_LOOK)
-  // West Rise (the adventurer's house is the middle of its south row) and East Rise
-  
-  K('house_small', 34.6, 28.0, 0.85),
-  // the shops that left their old spots (owner 2026-10-21: they ring the plaza now) make room for cottages
-  K('house_gabled_narrow', -39, 17, 0.8), K('house_tower', 36.4, 17.4, 0.8),
-  // the old shop row's houses (z 1.5, between the south street and the plaza): cottages of every kind now
-  K('house_two_storey', -40, 1.2, 0.8), K('house_gabled_narrow', -26.4, 1.2, 0.8),
-  K('house_tower', 34.6, 1.2, 0.8),
+  // Tavern Row tier: a back terrace of six (fronts z -30) and the tavern's flanking cottages (fronts z -21)
+  K('house_small', 14.32, -33.15, 0.85), K('house_two_storey', 19.96, -33.04, 0.8), K('house_tower', 25.6, -32.88, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 36.5, -33.6, 0.8), K('house_gabled_narrow', 41.3, -33.6, 0.8),
+  K('house_two_storey', 17, -24.2, 0.8), K('house_small', 36, -24.3, 0.85), K('house_gabled_narrow', 41.2, -24.7, 0.8),
+  // the old shop row, north of the south street (fronts z 6.9): west terrace of four, east pair
+  K('house_two_storey', -40.2, 3.86, 0.8), K('house_gabled_narrow', -34.96, 3.3, 0.8), K('house_small', -29.72, 3.75, 0.85), K('house_tower', -24.08, 4.0, 0.8),
+  K('house_two_storey', 31.3, 3.86, 0.8), K('house_gabled_narrow', 36.6, 3.3, 0.8),
+  // south of the south street, east of the avenue (door north onto the street), then the rises (fronts on the lane z 21) and the south walkway (fronts z 32.5)
+  K('house_tower', 22.8, 15.3, 0.8, Math.PI),
+  K('house_two_storey', -38.4, 17.96, 0.8), K('house_small', 38.8, 17.85, 0.85),
+  K('house_two_storey', 18.5, 29.46, 0.8), K('house_two_storey', 38.2, 29.46, 0.8),
 ];
 
-/** Houses that will get interiors later (their yaw stays 0: a clear front door spot, see ENTERABLE_HOUSES). */
-const ENTERABLE_AT: [number, number][] = [[-31.8, -12.4], [25, 28.0], [-26.4, 1.2]];
-const inTown = (h: HouseSpec): boolean => !!h.kit && Math.abs(h.x) < 44 && h.z > -40 && h.z < 37;
-
-// ---- house yaws (owner 2026-10-21: "the camera can rotate now, so houses don't have to face front"): a small deterministic turn for every town cottage, bigger for the ones
-// standing alone, never so far that the footprint (incl. the roof) touches a neighbouring house or a shop (checked against every other footprint, the turn is halved until it fits).
-/** Footprint corners of a house piece (roof included) at yaw `rot`: [x, z] x 4. */
-const houseCorners = (h: { x: number; z: number; kit?: string; s?: number }, rot: number): [number, number][] => {
-  const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1, hw = k.half * s, d0 = -(k.d / 2 + 0.4) * s, d1 = k.front * s, cs = Math.cos(rot), sn = Math.sin(rot);
-  return ([[-hw, d0], [hw, d0], [hw, d1], [-hw, d1]] as [number, number][]).map(([lx, lz]) => [h.x + lx * cs + lz * sn, h.z - lx * sn + lz * cs]);
-};
-const sepAxis = (A: [number, number][], B: [number, number][]): boolean => {   // true when two convex quads overlap (separating axis test, with a 0.3 m margin)
-  for (const P of [A, B]) for (let i = 0; i < 4; i++) {
-    const a = P[i], b = P[(i + 1) % 4], nx = -(b[1] - a[1]), nz = b[0] - a[0], l = Math.hypot(nx, nz) || 1;
-    let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
-    for (const q of A) { const t = (q[0] * nx + q[1] * nz) / l; if (t < a0) a0 = t; if (t > a1) a1 = t; }
-    for (const q of B) { const t = (q[0] * nx + q[1] * nz) / l; if (t < b0) b0 = t; if (t > b1) b1 = t; }
-    if (a1 + 0.3 < b0 || b1 + 0.3 < a0) return false;
-  }
-  return true;
-};
-{
-  const TURN = [0.16, -0.2, 0.28, -0.12, 0.24, -0.3, 0.12, -0.18, 0.22, -0.26, 0.1, -0.15];
-  const shopQuads = SHOP_POSITIONS.filter((q) => q.position[2] < 40 && q.position[2] > -40 && Math.abs(q.position[0]) < 44).map((q) => {
-    const r = q.rot ?? 0, cs = Math.cos(r), sn = Math.sin(r);
-    return ([[-3.6, -3.1], [3.6, -3.1], [3.6, 4.4], [-3.6, 4.4]] as [number, number][]).map(([lx, lz]): [number, number] => [q.position[0] + lx * cs + lz * sn, q.position[2] - lx * sn + lz * cs]);
-  });
-  let n = 0;
-  HOUSES.forEach((h, i) => {
-    if (!inTown(h) || (h.x === HERO_HOUSE.x && h.z === HERO_HOUSE.z) || ENTERABLE_AT.some(([x, z]) => x === h.x && z === h.z)) return;   // (the hero's house and the enterable ones face straight south)
-    const alone = !HOUSES.some((o, j) => j !== i && inTown(o) && Math.hypot(o.x - h.x, o.z - h.z) < 8.5);
-    let r = alone ? (n % 2 ? -0.3 : 0.3) + TURN[n % TURN.length] * 0.3 : TURN[n % TURN.length] * 0.7; n++;   // (a turned house turns its whole lot: kept gentle)
-    for (let t = 0; t < 5; t++) {
-      const me = houseCorners(h, r);
-      if (!HOUSES.some((o, j) => j !== i && inTown(o) && Math.hypot(o.x - h.x, o.z - h.z) < 11 && sepAxis(me, houseCorners(o, o.rot))) && !shopQuads.some((q) => sepAxis(me, q))) break;
-      r = t === 4 ? 0 : r * 0.5;
-    }
-    h.rot = r;
-  });
-}
-
-/** (the old front-yard planters are gone: every cottage stands in a landscaped LOT, see LOTS below) */
+/** (no yards: the houses stand directly on the streets, see HOUSES) */
 export const YARD_PLANTERS: { x: number; z: number; w: number; d: number; kind: 0 | 1 }[] = [];
 
 /** Each town shop's own composition (owner 2026-10-20: every shop unique, not one row). The counter + keeper are always the v2 `shop_stall_house`
@@ -523,38 +474,13 @@ export const LOT_FENCES: [number, number, number, number][] = [];
 export const LOT_PATCHES: [number, number, number, number, number, number][] = [];   // [cx, cz, rx, rz, rot, exponent] (rounded-rectangle lawns)
 /** House-local -> world for a lot. */
 export const lotW = (l: { x: number; z: number; rot: number }, lx: number, lz: number): [number, number] => { const c = Math.cos(l.rot), n = Math.sin(l.rot); return [l.x + lx * c + lz * n, l.z - lx * n + lz * c]; };
-{
-  const dSeg = (x: number, z: number, r: { x1: number; z1: number; x2: number; z2: number }): number => { const dx = r.x2 - r.x1, dz = r.z2 - r.z1, L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - r.x1) * dx + (z - r.z1) * dz) / L)); return Math.hypot(x - r.x1 - dx * t, z - r.z1 - dz * t); };
-  const paved = ROADS.filter((r) => !r.dirt);
-  const nearRoad = (x: number, z: number, m: number): boolean => paved.some((r) => dSeg(x, z, r) < r.w / 2 + 0.35 + m);
-  HOUSES.forEach((h, i) => {
-    if (!inTown(h)) return;
-    const hero = h.x === HERO_HOUSE.x && h.z === HERO_HOUSE.z;
-    const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1, hx = k.half * s + (hero ? 2.0 : 1.5), zb = -(k.d * 0.5 * s + 0.9), gx = k.doorX * s, gw = hero ? 4.2 : 3.4;
-    const l0: Lot = { i, x: h.x, z: h.z, rot: h.rot, hx, zb, zf: 0, gx, gw, hero };
-    // the front reaches as far as it can without touching a paved street
-    let ext = hero ? 3.0 : 2.3;
-    for (; ext > 0.7; ext -= 0.4) {
-      const zf = k.front * s + ext;
-      if (!hero && h.z > 20 && [-hx, hx, gx - gw / 2, gx + gw / 2].some((lx) => lotW(l0, lx, zf)[1] > 32.5)) continue;   // (the garden strip along the south wall, z 33..36, stays an open walkway)
-      if (![[-hx, zf], [hx, zf], [gx, zf], [0, zf]].some(([lx, lz]) => { const [wx, wz] = lotW(l0, lx, lz); return nearRoad(wx, wz, 0); })) break;
-    }
-    l0.zf = k.front * s + ext;
-    LOTS.push(l0);
-    // fence: back, both sides, front in two pieces with the gate opening
-    const P = (lx: number, lz: number) => lotW(l0, lx, lz);
-    const seg = (a: [number, number], b: [number, number]) => LOT_FENCES.push([a[0], a[1], b[0], b[1]]);
-    seg(P(-hx, zb), P(hx, zb)); seg(P(-hx, zb), P(-hx, l0.zf)); seg(P(hx, zb), P(hx, l0.zf));
-    seg(P(-hx, l0.zf), P(gx - gw / 2, l0.zf)); seg(P(gx + gw / 2, l0.zf), P(hx, l0.zf));
-    LOT_PATCHES.push([...P(0, (zb + l0.zf) / 2), hx + 0.55, (l0.zf - zb) / 2 + 0.5, h.rot, 6]);
-  });
-}
+// (owner 2026-10-21: no yards / lots: the arrays above stay empty so the scenery + fill code that reads them needs no changes)
 
 /** Houses that will become enterable (another agent may wire their interiors): the door spot is on the path just outside the front door, inside the lot's gate (any yaw); `yaw` = the way the house faces. */
-export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-31.8, -12.4, 'North Street Cottage'], [25, 28.0, 'Market Row House'], [-26.4, 1.2, 'West Row House']] as [number, number, string][]).flatMap(([hx, hz, name]) => {
-  const l = LOTS.find((q) => q.x === hx && q.z === hz); if (!l) return [];
-  const h = HOUSES[l.i], k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, d = lotW(l, l.gx, k.front * (h.s ?? 1) + 0.9);
-  return [{ name: name as string, x: l.x, z: l.z, door: { x: +d[0].toFixed(2), z: +d[1].toFixed(2) }, yaw: l.rot }];
+export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-40.2, 3.86, 'North Street Cottage'], [18.5, 29.46, 'Market Row House'], [-29.72, 3.75, 'West Row House']] as [number, number, string][]).flatMap(([hx, hz, name]) => {
+  const h = HOUSES.find((q) => q.x === hx && q.z === hz); if (!h) return [];
+  const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1;
+  return [{ name: name as string, x: h.x, z: h.z, door: { x: +(h.x + k.doorX * s).toFixed(2), z: +(h.z + k.front * s + 0.9).toFixed(2) }, yaw: h.rot }];
 });
 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
@@ -1087,7 +1013,7 @@ export const NPCS: NpcDef[] = [
     talk: [['Mind the fresh ones. They are fresh.'], ['Seven years. Seven. I keep a tally on the crypt door.'], ['The small grave by the dead tree? The King had that one dug ten years ago. Never filled. Never will be, if you ask me.']],
     bubbles: ['Dig, dig, dig...', 'Nobody pays the gravekeeper.', 'Mind the fresh ones.', 'Who goes there? Oh. You again.'] },
   // ambient villagers (owner): plain folk in light / brown clothes, hero faces, varied hair, no hats or capes; they stroll the streets
-  { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-30, 10], [-30, 10.9], [-6, 10.9]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
+  { name: 'Tomas', role: 'Villager', model: 'BARBARIAN', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [-6, 10], speed: 1.1, patrol: [[-6, 10], [-26, 10], [-26, 10.9], [-6, 10.9]], noHat: true, noCape: true, tunic: '#d8c4a0', hair: '#5a3a22', longHair: false,
     talk: [['They took my brother into the royal guard. He came back from the well with a new smile and could not remember my name.'], ['Fine day for it.']], bubbles: ['Have you seen my goat?', 'Curfew soon. Best hurry.', 'Fine day for it.', 'Have you seen my goat?', 'Bread\'s fresh at the stall!'] },
   { name: 'Greta', role: 'Villager', model: 'ARCHER', tint: '#ffffff', scale: 0.95, prop: 'none', accent: '#d9c9a8', home: [6, 10], speed: 1.1, patrol: [[6, 10], [34, 10], [34, 10.8], [6, 10.8]], noHat: true, noCape: true, tunic: '#efe2c8', hair: '#b0582a', longHair: true,
     talk: [['My granny used to sing a song about Princess Aelia. Sing it in the square now and a guard writes your name down.', 'So I hum it. Very quietly.'], ['Morning, hero!']], bubbles: ['Mind the puddles.', 'Morning, hero!', 'Mind the puddles.', 'The market\'s busy today.'] },

@@ -10,7 +10,7 @@ Camera pitch ~50 deg and it rotates, so buildings may face any yaw (front = +z t
 | Plaza | (0, 2), r 5.8 | the **Adventure Portal** (kit v3 x0.7, front south, front spot (0, 4.6)) on a kerbed round lawn, two guardian statues + flower beds, planters, two benches (north rim), Mira / Tobin; the six main shops ring it |
 | Market street | the avenue x 0, z 8..38 (5.2 m) | four stalls a side (x +-5.8), lamps; lanes cross at z 23.2 |
 | North street | z -6, x -40..40 (3.4 m) | notice board, Trainer yard (-16, -17); Armory / Supplies stand north of it (z -15.4); the old road stub to the quest board is gone |
-| Residential lanes | lane z 23.2 each side of the avenue (3 m) | a few lots only: houses at (25.8, 16.2), (36.4, 17.4), (-39, 17) and the south row (25, 28), (34.6, 28); the south-west quarter is open (park, stair foot) |
+| Residential | terraces of plain houses straight on the streets (see Houses below); lane z 23.2 each side of the avenue (3 m) |
 | Old shop row | z 1.2 | three cottages left: (-40, 1.2), (-26.4, 1.2), (34.6, 1.2) |
 | Chapel quarter | Chapel Hill x -43.7..-11.4, z -39.7..-19.5 (h 1.6) | chapel, graveyard (aisle from the gate x -38 to the crypt), sexton's cottage, cloister garden |
 | Tavern square | z -16..-7, x 12..44, Tavern Row tier behind (h 0.9) | tavern, tables, benches, crates, trees, two cottages, back row of five houses |
@@ -40,11 +40,11 @@ hedges, rocks and props (townFill.ts groves). Walks from the spawn (in front of 
 - Checks (node, no browser): esbuild-bundle a script importing `engine/systems/townPath` + `engine/mapgen` + the data files, add TOWN_COLLIDERS + FILL_COLLIDERS with `addTempCollider`, and run `findPath` from
   `PLAZA.z - 4.4` to every shop front, door, NPC home / patrol point, fishing spot, nest, bench, harvest node and animal.
 
-## Cottage lots + special houses (owner 2026-10-21)
-15 houses inside the walls (hero house included), each with a `LOTS` entry: rounded lawn, picket fence, 3.4 m gate at the door, pavers, mailbox, decorations (see HANDOFF Kingdom v5). Houses: sexton (-17, -34.5), (-31.8, -12.4),
-(35.5, -11.8), (17.5, -27), (38.8, -26.4), (28.8, -35.2), (25.8, 16.2), (36.4, 17.4), (-39, 17), (25, 28), (34.6, 28), (-40, 1.2), (-26.4, 1.2), (34.6, 1.2) + the hero's (-40.3, 27).
-**Hero's house**: the West Rise lot with the blue-and-gold arch, flag, red rug, doghouse, "Your Home" plate; door spot `HOME_DOOR` / `HOME_OUT` (engine/homeData).
-**Enterable later** (`ENTERABLE_HOUSES`, yaw 0, door spot = on the path in front of the door, inside the lot gate; walk-tested):
-- North Street Cottage: house (-31.8, -12.4), door spot (-32.61, -8.36)
-- Market Row House: house (25, 28), door spot see `ENTERABLE_HOUSES` (about (24.1, 32.0))
-- West Row House: house (-26.4, 1.2), door spot (-26.4, 5.7)
+## Houses (owner 2026-10-21: no yards / lots, plain medieval terraces)
+22 houses inside the walls (hero's included), all AXIS-ALIGNED (rot 0 = door south, PI = door north), standing directly on the streets with fronts ~0.6-1.4 m off the kerb and ~0.2 m between neighbours; none within 1.5 m of a stair flight or its approach. There are no lots, lawns, fences, gates, pavers or mailboxes any more (`LOTS` / `LOT_FENCES` / `LOT_PATCHES` stay exported but empty; `townFill` keeps its loose fill out of every house box).
+- Old shop row (fronts z 6.9, south street): west terrace x -42.9..-21.4 (four), east pair x 28.6..38.9.
+- Tavern Row tier: back terrace of six (fronts z -30), flanking cottages (fronts z -21, clear of the S stairs at x 18.5 / 40).
+- South of the south street: tower house at (22.8, 15.3) facing north; West / East Rise north houses (fronts on the lane z 21); south walkway houses (fronts z 32.5): hero's house (-38.6, 29.4), Market Row (18.5, 29.46), East Rise (38.2, 29.46). Chapel Hill: the sexton's cottage (-17, -34.5).
+- Rise N stairs moved to x -31.2 / 31.2 (clear of the houses; Tomas' patrol now turns at x -26).
+**Hero's house**: `HERO_HOUSE` (-38.6, 29.4), faces south; door spot `HOME_DOOR` / `HOME_OUT` (engine/homeData) = 1.1 / 2.2 m in front of the door; the "Your Home" plate floats over the door (render/Town HeroHomeSign).
+**Enterable later** (`ENTERABLE_HOUSES`, yaw 0, door spot = house x + door offset, 0.9 m in front of the door; walk-tested): North Street Cottage (-40.2, 3.86), Market Row House (18.5, 29.46), West Row House (-29.72, 3.75).

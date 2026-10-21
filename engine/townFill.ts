@@ -108,6 +108,8 @@ for (const T of TIERS) {
     else rects.push([T.x0 - run - 1, a, T.x0 + 1, b]);
   }
 }
+// (houses are axis-aligned boxes on the streets: no hedge / grove / bed of the loose fill may run through one)
+for (const h of HOUSES) if (h.kit && Math.abs(h.x) < 44 && h.z > -40 && h.z < 37) { const k = HOUSE_KIT[h.kit], sc = h.s ?? 1, hw = k.half * sc + 0.2, d0 = (k.d / 2 + 0.4) * sc, d1 = k.front * sc; rects.push(h.rot ? [h.x - hw, h.z - d1, h.x + hw, h.z + d0] : [h.x - hw, h.z - d0, h.x + hw, h.z + d1]); }
 rects.push([-BRIDGE.hw - 2, BRIDGE.z0 - 3, BRIDGE.hw + 2, BRIDGE.z1 + 3], [MINE_BRIDGE.x - 3, MINE_BRIDGE.z0 - 3, MINE_BRIDGE.x + 3, MINE_BRIDGE.z1 + 3]);
 // the hermit's trail round the north-east corner and along the north wall (narrow, rocky): keep a 5 m lane
 legs.push([55, -4, 55, -47, 2.6], [55, -47, 10, -47.5, 2.6], [10, -47.5, -44, -47.5, 2.6]);
@@ -215,49 +217,6 @@ const BUSHES = (w: number, s: [number, number] = [0.55, 0.85]) => ({ piece: PIEC
 const ROCKS = (w: number, s: [number, number] = [0.5, 0.9]) => ({ piece: PIECES.rock, w, s });
 
 // ================================================================ INSIDE THE WALLS
-// ---- cottage lots (owner 2026-10-21): every house stands on a lawn island inside a low fence with a gate; the lot's dressing (house-local frame, so it follows the house's yaw):
-//      bushes in the front corners, a flower bed + potted plants by the door, a bench / small tree / herb box / laundry line / barrels at the sides and back (a different mix per house).
-//      The mailbox + the hero's extras are drawn by render/TownScenery (addLots).
-{
-  const lotFree = (x: number, z: number, r: number): boolean => {
-    for (const q of reserved) if ((q.x - x) ** 2 + (q.z - z) ** 2 < (q.r + r) ** 2) return false;
-    for (const l of legs) if (distSeg(x, z, l[0], l[1], l[2], l[3]) < l[4] + r - 0.5) return false;
-    for (const p of placed) if ((p.x - x) ** 2 + (p.z - z) ** 2 < (p.r + r) ** 2) return false;
-    return true;
-  };
-  let k = 0;
-  for (const L of LOTS) {
-    const h = HOUSES[L.i], kt = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1, half = kt.half * s, front = kt.front * s, rot = L.rot;
-    const W = (lx: number, lz: number) => lotW(L, lx, lz);
-    const item = (piece: string, lx: number, lz: number, yaw: number, sc: number, solidR = 0): boolean => {
-      const [x, z] = W(lx, lz), r = Math.max(solidR, 0.3);
-      if (!lotFree(x, z, r)) return false;
-      put(piece, x, z, rot + yaw, sc, sc, sc); claim(x, z, r); if (solidR > 0) addSolid(x, z, solidR);
-      return true;
-    };
-    const gl = L.gx - L.gw / 2, gr = L.gx + L.gw / 2, zf = L.zf;
-    // front corners: round bushes (one in three flowering)
-    item(PIECES.bush[0], -L.hx + 0.85, zf - 0.75, k, 0.5, 0.45); item(PIECES.bush[k % 3 === 0 ? 2 : 1], L.hx - 0.85, zf - 0.75, k * 2, 0.5, 0.45);
-    // flower beds in front of the house either side of the gate path, potted plants flanking the door
-    if (gl + L.hx > 2.6) item('flower_bed_long', (-L.hx + gl) / 2 + 0.1, zf - 0.85, 0, Math.min(0.7, (gl + L.hx - 0.9) / 2.41), 0);
-    if (L.hx - gr > 2.6) item('flower_bed_long', (L.hx + gr) / 2 - 0.1, zf - 0.85, 0, Math.min(0.7, (L.hx - gr - 0.9) / 2.41), 0);
-    item('potted_plant_a', L.gx - 1.15, front + 0.15, 0, 0.5); item('potted_plant_b', L.gx + 1.15, front + 0.15, 0, 0.5);
-    // the side gardens: tree one side, bench or herb box the other
-    const sd = k % 2 ? 1 : -1, tree = ['tree_fruit', 'tree_blossom', 'tree_birch'][k % 3];
-    item(tree, sd * (half + 0.75), L.zb + 1.6, k, 0.5, 0.5);
-    if (k % 3 === 2) item('herb_garden_box', -sd * (half + 0.8), 0.2, Math.PI / 2, 0.8, 0);
-    else item(PIECES.bench, -sd * (half + 0.75), 0.4, -sd * Math.PI / 2, 0.9, 0);
-    // the back: laundry line, barrels, a second small bush
-    if (k % 3 === 0) item('laundry_line', 0, L.zb + 0.4, 0, 0.8, 0);
-    else if (k % 3 === 1) { const [x, z] = W(-sd * (half + 0.7), L.zb + 0.9); if (lotFree(x, z, 1.0)) { CLUTTER_SPOTS.push([x, z, k + rot]); claim(x, z, 1.0); addSolid(x, z, 0.9); } }
-    else item(PIECES.bush[1], -sd * (half + 0.75), L.zb + 1.0, k, 0.45, 0.4);
-    if (L.hero) {   // the adventurer's garden: a doghouse + more flower beds + a fruit tree by the gate (the unique roof, sign and flag are drawn by TownScenery)
-      item('doghouse', half + 0.55, front - 0.2, -0.5, 0.55, 0.5); item('flower_bed_round', L.gx - 2.2, zf - 1.0, 0, 0.4, 0); item('flower_bed_round', L.gx + 2.2, zf - 1.0, 0, 0.4, 0);
-      item('tree_blossom', -L.hx + 1.0, 0.8, 0.4, 0.6, 0.5);
-    }
-    k++;
-  }
-}
 // ---- shop dressing (nature kit pieces of SHOP_LOOK; the v2 pieces are drawn by render/townKit.tsx): placed solid, in the shop's local frame
 for (const sp of SHOP_POSITIONS) {
   const L = SHOP_LOOK[sp.type]; if (!L) continue;
@@ -310,12 +269,8 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 decor('market_tent_red', -5.8, 15.2, 0.12, 1, { solid: 'ring', r: 1.0, force: true }); decor('market_tent_green', 5.8, 15.2, -0.12, 1, { solid: 'ring', r: 1.0, force: true });
 decor('market_tent_green', -5.8, 27.6, -0.1, 1, { solid: 'ring', r: 1.0, force: true }); decor('market_tent_red', 5.8, 27.6, 0.1, 1, { solid: 'ring', r: 1.0, force: true });
 { let n = 0; for (const [x, z, ry] of [[-20.0, 12.9, 0.3], [-4.6, 13.0, 0.2], [4.8, 13.0, -0.2], [17.0, 13.0, -0.3], [-33, 12.9, 0.1]] as const) if (n < 2 && decor('flower_cart', x, z, ry, 1, { solid: 'ring', r: 0.5, rad: 0.8 })) n++; }
-// ---- the notice board where the old quest board stood, laundry lines in the residential lanes
+// ---- the notice board where the old quest board stood, 
 for (const [x, z] of [[-3.8, -8.4], [3.8, -8.4], [16.4, -9.0], [-16.4, -9.0]]) if (decor('notice_board', x, z, 0, 1, { solid: 'ring', r: 0.4, rad: 1.0 })) break;
-{   // laundry lines in the back gardens of the residential lanes (sampled where they fit: thin props, 0.9 m clearance)
-  const r = rng(517);
-  for (const zn of [Z0(-18, 30.6, 13, 2.2), Z0(30, 31.2, 14, 2.4), Z0(37, 26, 5, 2)]) for (let t = 0, k = 0; t < 60 && k < 1; t++) if (decor('laundry_line', zn.cx + (r() * 2 - 1) * zn.rx, zn.cz + (r() * 2 - 1) * zn.rz, (r() - 0.5) * 0.3, 1, { solid: 'ring', r: 0.3, rad: 0.9 })) k++;
-}
 // ---- hedge_arch at the park entrances (the fountain park: north from the south street, east from the Pets shop; the east park: on its lane from the road)
 decor('hedge_arch', WELL_POS.x, 12.3, 0, 1, { solid: 'legs', r: 0.6, force: true });
 decor('hedge_arch', -15.4, 17.6, Math.PI / 2, 1, { solid: 'legs', r: 0.6, force: true });
@@ -346,9 +301,6 @@ put('fishing_net_rack', NET_RACK.x, NET_RACK.z, NET_RACK.rot, 1, 1, 1, 0);
 }
 // ---- the park round the fountain: blossom trees + bushes (the hedge_arch entrances are above)
 grove(Z(WELL_POS.x, WELL_POS.z, 6.4, 3.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
-// ---- back gardens: hedges along the lane side of the two house rows (the lane is 3 m wide, z 23.2; houses' backs are at z ~26.4 / ~19.6)
-hedge(-28.8, 25.6, -9.2, 25.6); hedge(9.2, 25.6, 17.2, 25.6); hedge(21.4, 25.6, 28.2, 25.6);   // (the gap x 17..21 is the forge yard's way in)
-hedge(19.6, 12.7, 28.4, 12.7);   // (south street's south kerb, behind the east row-N houses)
 // ---- the garden strip along the south wall (z 33..36): beds, bushes, small trees; the avenue + hero's door stay free
 carpet(Z(-18, 34.8, 12, 1.2), 12, PIECES.flowers, [0.8, 1.2], 11); carpet(Z(18, 34.8, 12, 1.2), 12, PIECES.flowers, [0.8, 1.2], 12);
 // ---- the rises (cottages at both south corners)
@@ -367,7 +319,6 @@ for (const sx of [-1, 1]) { prop(PIECES.bush[0], sx * 9.3, -15.4, sx, 0.8); prop
 // ---- tavern square + Tavern Row: barrels and crates by the stairs and the tables, a verge of beds, hedged back gardens behind the row
 cluster([22.2, -13.4, 0.5], [34.6, -13.8, -0.4], [14.2, -9.8, 1.6], [24.6, -29.4, 0.9], [33.2, -29.8, 2.2], [43, -22.5, 0.2]);
 carpet(Z(28, -11.4, 3.4, 1.6), 9, PIECES.flowers, [0.8, 1.1], 51);
-hedge(14, -31.3, 21, -31.3); hedge(35.5, -31.3, 43, -31.3); hedge(34.6, -29.4, 35.2, -23.6);
 grove(Z(28.6, -31, 4.2, 1.5), 4, [BUSHES(1)], 52, 0.6, 2.4);
 // ---- plaza + shop row: beds between the shops' backs and the street, banners are in townKit
 for (const gx of [-35.25, -26.75, -18.25, 18.25, 26.75, 35.25]) { cluster([gx, 3.3, gx * 1.7]); }

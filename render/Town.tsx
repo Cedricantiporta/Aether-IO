@@ -22,7 +22,7 @@ import { Rockfall } from './Rockfall';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER, TOWER_KNOLL, PORTAL, PORTAL_S, PLAZA_DECOR, LOTS, lotW, townLift } from '../engine/townData';
+import { TOWER, TOWER_KNOLL, PORTAL, PORTAL_S, PLAZA_DECOR, HERO_HOUSE, townLift } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
 import { Beach } from './Beach';
@@ -419,13 +419,11 @@ function TowerLandmark() {
 }
 
 
-// ---- the adventurer's house (owner: unique): a name plate over its blue-and-gold gate arch (the arch itself: TownScenery addLot)
+// ---- the adventurer's house (owner: unique): a name plate over its blue-and-gold gate arch 
 function HeroHomeSign() {
   const label = useMemo(() => labelMaterial('Your Home', '#ffe9a8', { size: 64, plate: 'plate' }), []);
-  const L = LOTS.find((l) => l.hero);
-  if (!L) return null;
-  const [x, z] = lotW(L, L.gx, L.zf);
-  return <group position={[x, townLift(x, z), z]}><sprite material={label.mat} position={[0, 4.4, 0]} scale={[label.aspect * 0.9, 0.9, 1]} /></group>;
+  const x = HERO_HOUSE.x - 0.8, z = HERO_HOUSE.z + HERO_HOUSE.d / 2;   // (over the front door)
+  return <group position={[x, townLift(x, z), z]}><sprite material={label.mat} position={[0, 5.6, 0]} scale={[label.aspect * 0.9, 0.9, 1]} /></group>;
 }
 
 // ---- Adventure Portal: kit v3 `adventure_portal` (engine/townFill puts it in the plaza lawn at PORTAL, x PORTAL_S, front south); this adds the swirling gateway, rune stones, light + label
