@@ -3568,3 +3568,6 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .sw-pop-h { position: relative; }
 /* dialogues have no close button; framed dialogs with a header keep only the header X */
 .modal-card:has(.panel-head) > .win-x { display: none !important; }
+
+/* hover tooltips keep their soft dark card (the minimal sweep's .rpg-parchment rule above had stripped it); menu pill tips stay bare */
+.rpg-tooltip.rpg-parchment:not(:has(.tip-pill)) { background: rgba(28, 28, 32, .96) !important; border-radius: 18px !important; box-shadow: 0 8px 24px rgba(0, 0, 0, .45) !important; padding: .7rem .85rem !important; }
