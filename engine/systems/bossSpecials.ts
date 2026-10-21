@@ -15,6 +15,7 @@ import {
   damagePlayer, applyPlayerDebuff, addShake,
 } from './combat';
 import { hooks } from './hooks';
+import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 
@@ -72,7 +73,7 @@ function clampArena(v: Vector3, margin: number): void {
   if (d2 > lim * lim) { const s = lim / Math.sqrt(d2); v.x *= s; v.z *= s; }
 }
 function stop(e: Enemy): void { e.vel.set(0, 0, 0); }
-function power(e: Enemy): number { return Math.max(e.contactDamage, e.projectileDamage, 8); }
+function power(e: Enemy): number { return Math.max(e.contactDamage, e.projectileDamage, 8) * (e.boss ? BOSS_SKILL_MUL : 1); }
 
 export function cancelSpecial(e: Enemy): void {
   if (e.spKind === 0) return;

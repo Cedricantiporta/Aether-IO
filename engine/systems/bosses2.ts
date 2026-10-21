@@ -18,6 +18,7 @@ import { edgeLimit } from '../mapgen';
 import { useGameStore } from '../../store';
 import { hooks } from './hooks';
 import { damagePlayer, applyPlayerDebuff, KB } from './combat';
+import { BOSS_SKILL_MUL } from '../enemyDefs';
 import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
@@ -81,7 +82,7 @@ export function resetBosses2(): void {
 // ------------------------------------------------------------------ helpers ---
 function stand(e: Enemy): void { e.vel.set(0, 0, 0); }
 function drive(e: Enemy, ux: number, uz: number, sp: number): void { e.vel.set(ux * sp, 0, uz * sp); }
-function pwr(e: Enemy): number { return Math.max(e.projectileDamage, e.contactDamage * 0.8, 8); }
+function pwr(e: Enemy): number { return Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * BOSS_SKILL_MUL; }
 
 /** Ranged-ish positioning: back off inside `near`, close in beyond `far`, otherwise circle the player. */
 function keepRange(e: Enemy, ux: number, uz: number, dist: number, near: number, far: number, sp: number, strafe: number): void {

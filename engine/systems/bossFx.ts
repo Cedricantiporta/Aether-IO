@@ -10,6 +10,7 @@ import { events } from '../events';
 import { Vector3 } from 'three';
 import type { Zone } from '../types';
 import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer, KB } from './combat';
+import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
@@ -130,7 +131,7 @@ export function resolveBossZone(z: Zone): void {
   const p = world.player;
   const rx = p.pos.x - z.pos.x, rz = p.pos.z - z.pos.z;
   const inside = p.alive && rx * rx + rz * rz < (z.radius + 0.6) * (z.radius + 0.6);
-  const pw = z.damage;
+  const pw = z.damage * BOSS_SKILL_MUL;
   switch (z.trick) {
     case BT.ROOT:
       if (z.kind === 'TELEGRAPH_LINE') {
@@ -249,7 +250,7 @@ export function updateBossFx(dt: number): void {
     const d = Math.hypot(pa.x - w.x, pa.z - w.z);
     if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && p.air < 0.5) {
       w.hit = true;
-      damagePlayer(w.dmg, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : 'PHYSICAL', ...KB.PUSH });
+      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : 'PHYSICAL', ...KB.PUSH });
       if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0);
       if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
     }
@@ -312,7 +313,7 @@ export function updateBossFx(dt: number): void {
     if (breath.tick <= 0) {
       breath.tick = 0.45;
       if (p.alive && inCone(pa.x, pa.z, breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half)) {
-        damagePlayer(breath.dmg * 0.3, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
+        damagePlayer(breath.dmg * 0.3 * BOSS_SKILL_MUL, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
         addChill(1);
       }
     }

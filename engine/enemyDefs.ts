@@ -299,6 +299,8 @@ export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>
 /** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
 /** (owner) enemies hit harder but are softer: damage x1.25 (enemies.spawnEnemy), armour x0.6. */
 export const ENEMY_DMG_MUL = 1.25, ENEMY_ARMOR_MUL = 0.6;
+/** (owner) boss skills (strike zones, waves, breath, specials, phase-2 moves) hit 50% harder. */
+export const BOSS_SKILL_MUL = 1.5;
 export function armorFor(kind: EnemyKind, wave: number, elite: boolean): number {
   const base = ENEMY_DEFS[kind].armor * (1 + 0.02 * (wave - 1));
   return Math.round((elite ? base * 1.6 + 15 : base) * ENEMY_ARMOR_MUL);
