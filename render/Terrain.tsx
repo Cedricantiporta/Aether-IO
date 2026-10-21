@@ -30,7 +30,7 @@ function groundColor(x: number, z: number, y: number, out: Color) {
   cG.set('#4cb83a').lerp(cT.set('#86d84a'), sstep(0.3, 0.75, n2));
   cG.lerp(cT.set('#37923a'), sstep(0.52, 0.7, n1) * 0.7);
   cG.lerp(cT.set('#a8dc50'), sstep(0.42, 0.28, n1) * 0.45);
-  cG.multiplyScalar(0.94 + n3 * 0.12);
+  cG.multiplyScalar(0.975 + n3 * 0.05);   // (gentle: soft colour drifts, no speckle)
   const d = 0;
   const rg = regionAt(x, z, _rg);
   if (rg.style && rg.w > 0) {
@@ -73,8 +73,8 @@ function detailTexture() {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     // tileable noise via wrapped sampling of 2 octaves
     const w = (f: number) => { const u = (x / N) * f, v = (y / N) * f; const xi = Math.floor(u), yi = Math.floor(v); const fx = u - xi, fy = v - yi; const h = (a: number, b: number) => { const m = ((a % f) + f) % f, n = ((b % f) + f) % f; return vnoise(m * 7.13 + 100, n * 5.71 + 100); }; const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy); return lerp(lerp(h(xi, yi), h(xi + 1, yi), sx), lerp(h(xi, yi + 1), h(xi + 1, yi + 1), sx), sy); };
-    const v = 0.5 * w(8) + 0.3 * w(16) + 0.2 * w(32) + (rnd() - 0.5) * 0.12;
-    const g = 206 + v * 49;
+    const v = 0.5 * w(8) + 0.3 * w(16) + 0.2 * w(32) + (rnd() - 0.5) * 0.02;
+    const g = 228 + v * 27;   // (soft: Zelda-style ground, no noisy speckle)
     const i = (y * N + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = g; img.data[i + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);

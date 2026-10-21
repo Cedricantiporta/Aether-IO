@@ -6,7 +6,8 @@
 // is baked with its full world matrix. Each piece becomes one lit body geometry (material colour -> vertex colour, for litMat)
 // and one emissive glow geometry (window_glow: drawn with the nightGlow material), then is placed with <Inst> (chunked + culled
 // instancing). Everything is static: filled once, no per-frame work.
-// The two round wall towers still come from the old kit (town_kit.glb): v2 has no tower piece.
+// (the round wall towers, the gate towers, bridges, tents and every other kit v3 piece are placed by render/natureLayout.ts + render/NatureBatch.tsx; the gate arch is
+//  render/TownScenery buildGateArch: the v2 gatehouse had a solid black plug in its arch.)
 // ============================================================================
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
@@ -26,7 +27,6 @@ import { CLUTTER_SPOTS } from '../engine/townFill';
 
 /** chunk edge of the town kit's instanced sets (the dense town has many more pieces: fewer, larger chunks keep the draw calls down; the camera only sees ~25 m anyway) */
 const CHUNK_V2 = 24;
-const V1_URL = `${BASE}models/town/town_kit.glb`;
 const V2_URL = `${BASE}models/town/town_kit_v2.glb`;
 export interface KitPiece { body: BufferGeometry; glow: BufferGeometry | null }
 type Kit = Record<string, KitPiece>;
@@ -104,13 +104,11 @@ function placements(): Record<string, Place[]> {
   add(2, 'tavern', { x: TAVERN.x, y: lift(TAVERN.x, TAVERN.z), z: TAVERN.z + TAVERN_DZ, ry: 0, sx: 1, sy: 1, sz: 1 });
   add(2, 'chapel', { x: CHURCH.x, y: lift(CHURCH.x, CHURCH.z), z: CHURCH.z, ry: 0, sx: 1, sy: 1, sz: 1 });
   add(2, 'castle_keep', { x: CASTLE.x, y: TERRACE.h, z: CASTLE.z, ry: 0, sx: CASTLE_S, sy: CASTLE_S, sz: CASTLE_S });
-  add(2, 'castle_gatehouse', { x: GATE.x, z: GATE.z, ry: 0, sx: 1.15, sy: 1.15, sz: 1.15 });
   // town wall: v2 segments (6 m, thickness 1.6 -> x1.5 = 2.4, height 4.65 -> x1.2) + the old round towers
   for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 5)), L = len / n, ry = Math.atan2(ox, oz);   // local +Z (outer face) faces outward
     for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; add(2, 'castle_wall_segment', { x: x1 + (x2 - x1) * t, z: z1 + (z2 - z1) * t, ry, sx: (L + 0.04) / 6, sy: 1.2, sz: 1.5 }); }
   }
-  for (const t of WALL_TOWERS) { const s = (t.r / (t.corner ? 3.6 : 3.1)) * 0.85; add(1, t.corner ? 'tower_corner' : 'tower_mid', { x: t.x, z: t.z, ry: 0, sx: s, sy: s, sz: s }); }
   // street furniture
   for (const [x, z] of LAMPS) if (z < 46 && z > -40 && Math.abs(x) < 44) add(2, 'lamp_post', { x, y: lift(x, z), z, ry: 0, sx: 0.72, sy: 0.72, sz: 0.72 });
   for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); add(2, 'flower_planter', { x: p.x, y: lift(p.x, p.z), z: p.z, ry: along ? 0 : Math.PI / 2, sx: len / 1.7, sy: 1, sz: wid / 0.9 }); }
@@ -170,11 +168,11 @@ function MergedKitChunk({ body, glow, lit, glowMat, cast, receive }: { body: Buf
 
 /** All kit pieces of the walled town: heavy pieces instanced per piece (body + glow), light ones baked per chunk. */
 export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material; shadows: boolean }) {
-  const k1 = useKit(V1_URL, V1_LOC), k2 = useKit(V2_URL, null);
+  const k2 = useKit(V2_URL, null);
   const sets = useMemo(() => {
     const P = placements();
     const list = Object.keys(P).map((k) => {
-      const [v, name] = k.split(':'), piece = (v === '1' ? k1 : k2)[name];
+      const [, name] = k.split(':'), piece = k2[name];
       return piece ? { k, piece, places: P[k], fill: (m: InstancedMesh) => { P[k].forEach((p, i) => setInst(m, i, p.x, p.y ?? 0, p.z, p.ry, p.sx, p.sy, p.sz)); m.count = P[k].length; } } : null;
     }).filter(Boolean) as { k: string; piece: KitPiece; places: Place[]; fill: (m: InstancedMesh) => void }[];
     const heavy = list.filter((s) => s.piece.body.attributes.position.count >= LIGHT_VERTS), light = list.filter((s) => s.piece.body.attributes.position.count < LIGHT_VERTS);
@@ -191,7 +189,7 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
     const merged = Array.from(by.values()).map((e) => ({ body: mergeGeometries(e.b, false)!, glow: e.g.length ? mergeGeometries(e.g, false) : null }));
     for (const e of by.values()) for (const x of [...e.b, ...e.g]) x.dispose();
     return { heavy, merged };
-  }, [k1, k2]);
+  }, [k2]);
   return (
     <group>
       {sets.heavy.map((s) => (
@@ -204,7 +202,6 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
     </group>
   );
 }
-useGLTF.preload(V1_URL);
 useGLTF.preload(V2_URL);
 
 /** v2 shop_stall_house geometry for the Shop component (render/Town.tsx): the chimney top, in shop-local metres, for the smoke FX. */

@@ -131,8 +131,8 @@ let spotPending = true;   // (a browser refresh: the last spot is restored once,
 function applyLastSpot(): void {
   const s = loadSpot(), p = world.player;
   if (!s) return;
-  if (s.area === 'RUN') { p.pos.set(PORTAL.front.x, 0, PORTAL.front.z - 4); p.facing = 0; }   // facing the portal
-  else if (s.area === 'TOWER') { p.pos.set(TOWER.door.x, 0, TOWER.door.z + 2.6); p.facing = Math.PI; }
+  if (s.area === 'RUN') { p.pos.set(PORTAL.front.x, 0, PORTAL.front.z + 2.2); p.facing = Math.PI; }   // 2.2 m in front of the portal (south of its door), looking at it
+  else if (s.area === 'TOWER') { p.pos.set(TOWER.out.x, 0, TOWER.out.z); p.facing = 0; }   // (the door faces north onto the road: step out, look back at it)
   else if (s.area === 'CAVE') { p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot; }
   else if (s.area === 'TOWN') { p.pos.set(s.x, 0, s.z); p.facing = s.f; }
   else { restoreInterior(s.area as 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME', s.x, s.z, s.f); return; }
@@ -164,12 +164,12 @@ export function enterVillage(): void {
   placeVillageNodes();
   resetSystems();
   // every arrival (new game, back from a run) is in the centre of the town plaza, under the arrival light ray
-  // just north of the founder's statue (its middle is solid), facing the castle: the walk to the King is a straight line
-  world.player.pos.set(PLAZA.x, 0, PLAZA.z - 4.4);
-  world.player.facing = Math.PI;                 // face north, up the avenue to the castle
+  // in front of the Adventure Portal (the plaza's middle, south side), facing it and the castle road beyond
+  world.player.pos.set(PORTAL.front.x, 0, PORTAL.front.z + 1.4);
+  world.player.facing = Math.PI;                 // face north
   world.camera.yaw = 0;                          // camera behind the hero
   if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
-    world.player.pos.set(TOWER.door.x, 0, TOWER.door.z + 2.6); world.player.facing = Math.PI;   // (the tower's door faces south: step out, look back at it)
+    world.player.pos.set(TOWER.out.x, 0, TOWER.out.z); world.player.facing = 0;   // (the tower's door faces north onto the road: step out, look back at it)
   }
   runInfo.back = '';
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0

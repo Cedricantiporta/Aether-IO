@@ -22,7 +22,7 @@ import { Rockfall } from './Rockfall';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER, TOWER_KNOLL, PORTAL } from '../engine/townData';
+import { TOWER, TOWER_KNOLL, PORTAL, PORTAL_S, PLAZA_DECOR, LOTS, lotW, townLift } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
 import { Beach } from './Beach';
@@ -216,13 +216,18 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     if (liquid.current) { const k = 1.4 + Math.sin(t * 4) * 0.35; mats.liquid.color.setRGB(0.5 * k, 1.8 * k, 0.6 * k); liquid.current.scale.y = 1 + Math.sin(t * 6) * 0.15; }
     // ambient emitters only when nearby (and not paused)
     if (d < 55 && useGameStore.getState().status !== GameStatus.PAUSED) {
+      // (shop-local offsets are turned by the shop's yaw: the shops can face any way, owner 2026-10-21)
+      const fc = Math.cos(facing), fs = Math.sin(facing), wx = (lx: number, lz: number) => px + lx * fc + lz * fs, wz = (lx: number, lz: number) => pz - lx * fs + lz * fc;
       if (type === 'SUPPLIES' && Math.random() < dt * 6) {
-        const a = Math.random() * TAU, r = Math.random() * 0.55;
-        FX.add.emit(px + 1.9 + Math.cos(a) * r, 1.6, pz + 3.7 + Math.sin(a) * r, 0, 1.6, 0, 1.0, 0.18, 0.3, 0.6, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
-        if (Math.random() < 0.4) FX.add.emit(px + 1.9 + (Math.random() - 0.5) * 0.8, 1.7, pz + 3.7 + (Math.random() - 0.5) * 0.8, 0, 2.2, 0, 1.6, 0.12, 0.02, 0.7, 2.0, 0.8, 0.9, CELL.DISC, -0.3, 0.2);
+        const a = Math.random() * TAU, r = Math.random() * 0.55, ox = 1.9 + Math.cos(a) * r, oz = 3.7 + Math.sin(a) * r;
+        FX.add.emit(wx(ox, oz), 1.6, wz(ox, oz), 0, 1.6, 0, 1.0, 0.18, 0.3, 0.6, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5);
+        if (Math.random() < 0.4) { const qx = 1.9 + (Math.random() - 0.5) * 0.8, qz = 3.7 + (Math.random() - 0.5) * 0.8; FX.add.emit(wx(qx, qz), 1.7, wz(qx, qz), 0, 2.2, 0, 1.6, 0.12, 0.02, 0.7, 2.0, 0.8, 0.9, CELL.DISC, -0.3, 0.2); }
+        if (Math.random() < 0.5) { const a2 = Math.random() * TAU, r2 = Math.random() * 0.5, cx = -7.0 + Math.cos(a2) * r2, cz = 4.6 + Math.sin(a2) * r2; FX.add.emit(wx(cx, cz), 1.5, wz(cx, cz), 0, 1.2, 0, 1.0, 0.14, 0.3, 0.6, 2.0, 0.7, 0.8, CELL.RING, 0, 0.5); }   // (the cauldron's bubbles)
       } else if (type === 'BLACKSMITH') {
-        if (Math.random() < dt * 5) smokePuff(px + SHOP_CHIMNEY[0], SHOP_CHIMNEY[1] + 0.2, pz + SHOP_CHIMNEY[2], 1, 0x6b6560, 1.8, 3.2, 1.4, 0.3, 0.5);
-        if (Math.random() < dt * 1.6) embers(px + SHOP_CHIMNEY[0], SHOP_CHIMNEY[1], pz + SHOP_CHIMNEY[2], 2, 0xffa040, 0.25, 2.2, 0.6, 0.12);   // sparks from the forge chimney
+        const sx = wx(SHOP_CHIMNEY[0], SHOP_CHIMNEY[2]), sz = wz(SHOP_CHIMNEY[0], SHOP_CHIMNEY[2]);
+        if (Math.random() < dt * 5) smokePuff(sx, SHOP_CHIMNEY[1] + 0.2, sz, 1, 0x6b6560, 1.8, 3.2, 1.4, 0.3, 0.5);
+        if (Math.random() < dt * 1.6) embers(sx, SHOP_CHIMNEY[1], sz, 2, 0xffa040, 0.25, 2.2, 0.6, 0.12);   // sparks from the forge chimney
+        if (Math.random() < dt * 2.2) embers(wx(-5.3, 0.8), 2.4, wz(-5.3, 0.8), 1, 0xff8a30, 0.2, 1.6, 0.5, 0.1);   // (and from the forge_furnace's stack)
       } else if (type === 'BREWER') {   // bubbles from the cauldron + green smoke from the chimney (shop-local -> world via the facing)
         const cf = Math.cos(facing), sf = Math.sin(facing);
         if (Math.random() < dt * 5) {
@@ -231,7 +236,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
         }
         if (Math.random() < dt * 2.5) smokePuff(px + 1.9 * cf - 1.3 * sf, 5.5, pz - 1.9 * sf - 1.3 * cf, 1, 0x7fbf7a, 1.4, 2.6, 1.2, 0.25, 0.45);
       } else if (type === 'PETS' && Math.random() < dt * 1.5) {
-        FX.add.emit(px - 0.9 + (Math.random() - 0.5) * 2, 2.6, pz + 3 + Math.random(), 0, 0.9, 0, 1.6, 0.35, 0.3, 0.5, 2.0, 1.1, 0.9, CELL.PLUS, 0, 0.1);
+        { const ox = -0.9 + (Math.random() - 0.5) * 2, oz = 3 + Math.random(); FX.add.emit(wx(ox, oz), 2.6, wz(ox, oz), 0, 0.9, 0, 1.6, 0.35, 0.3, 0.5, 2.0, 1.1, 0.9, CELL.PLUS, 0, 0.1); }
       }
     }
   });
@@ -241,7 +246,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
       {CAULDRON[type] && <mesh ref={liquid} material={mats.liquid} position={[CAULDRON[type]![0], CAULDRON[type]![1], CAULDRON[type]![2]]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[CAULDRON[type]![3], 12]} /></mesh>}
-      <group position={kit ? [4.25, 0, 5.0] : [4.6, 0, 3.6]}>   {/* (kit shops: the sign stands in the gap between two shops, in front of the awnings) */}
+      <group position={kit ? [4.25, 0, 5.0] : [4.6, 0, 3.6]} scale={kit ? 1.5 : 1}>   {/* (kit shops: the sign stands in the gap between two shops, in front of the awnings) */}
         <mesh geometry={signSide > 0 ? SIGN_POST[0] : SIGN_POST[1]} material={mats.lit} castShadow />
         <group ref={signRef} position={[1.2 * signSide, 3.0, 0]}>
           <mesh geometry={sign.body} material={mats.lit} position={[0, -0.0, 0]} castShadow />
@@ -394,7 +399,7 @@ const q_light = (c: string) => <pointLight position={[0, 3, 0]} color={c} distan
 
 // ------------------------------------------------------------- endless tower ---
 /** The Endless Tower's name tag + click target + door glow (the tower itself is nature_kit_v1 'endless_tower', drawn by render/NatureScenery.tsx;
- *  its door faces south onto the woodland path: townData TOWER). */
+ *  its door faces north onto the forest road: townData TOWER, ry PI). */
 function TowerLandmark() {
   const label = useMemo(() => labelMaterial('Endless Tower', '#e9d6ff', { size: 64, plate: 'plate' }), []);
   const best = useGameStore((s) => s.progress.towerBest[s.hero] ?? 0);
@@ -404,8 +409,8 @@ function TowerLandmark() {
     <group position={[TOWER.x, TOWER_KNOLL.h, TOWER.z]}>
       <sprite material={label.mat} position={[0, 30.4, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
       {sub && <sprite material={sub.mat} position={[0, 28.9, 0]} scale={[sub.aspect * 0.8, 0.8, 1]} />}
-      <pointLight position={[0, 3, 7.4]} color="#b77dff" distance={12} decay={1.6} intensity={12} />
-      <mesh position={[0, 6, 1.6]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+      <pointLight position={[0, 3, -7.4]} color="#b77dff" distance={12} decay={1.6} intensity={12} />
+      <mesh position={[0, 6, -1.6]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
         <cylinderGeometry args={[4.4, 4.4, 12, 12]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
@@ -413,42 +418,21 @@ function TowerLandmark() {
   );
 }
 
-// ---- Adventure Portal: an ancient stone gate in the forest clearing south of the town (runs start here)
-function buildPortalGeo() {
-  const b = new GB([0.8, 1.08]), g = new GB([1, 1]);
-  const st = ['#8f8c86', '#9c988f', '#85827c', '#a6a299'], dark = '#3a3833', moss = '#5d7a3a';
-  // round stepped platform
-  b.cyl(7.6, 8.0, 0.5, 28, [0, 0.25, 0], '#6f6c66'); b.cyl(6.6, 6.9, 0.4, 28, [0, 0.7, 0], st[0]); b.cyl(5.4, 5.6, 0.3, 28, [0, 1.05, 0], st[1]);
-  for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; g.box(0.28, 0.04, 0.5, [Math.cos(a) * 6.1, 0.92, Math.sin(a) * 6.1], '#7ad8ff', [0, -a, 0]); }   // rune ring
-  // steps up to it (front, -z)
-  for (let i = 0; i < 3; i++) b.box(4.2, 0.35, 0.8, [0, 0.18 + i * 0.32, -8.2 + i * 0.75], st[i % 3]);
-  // two massive carved pillars
-  for (const sx of [-1, 1]) {
-    const x = sx * 4.3;
-    b.box(2.3, 1.0, 2.3, [x, 1.6, 0], st[2]);
-    for (let k = 0; k < 5; k++) b.box(1.7 - (k % 2) * 0.12, 1.9, 1.7 - (k % 2) * 0.12, [x, 3.05 + k * 1.9, 0], st[k % 4]);
-    b.box(2.1, 0.5, 2.1, [x, 12.6, 0], st[0]);
-    for (let k = 0; k < 4; k++) g.box(0.12, 0.7, 0.08, [x - sx * 0.86, 4 + k * 2.1, -0.4], '#7ad8ff');   // glowing runes facing the opening
-    b.box(0.5, 2.4, 1.75, [x + sx * 0.95, 4.2, 0], moss);   // moss streak on the outer face
-  }
-  // arch: stone voussoirs on a semicircle over the pillars, keystone on top
-  const R = 4.3, cy = 12.9;
-  for (let i = 0; i <= 10; i++) {
-    const a = Math.PI * (i / 10), x = Math.cos(a) * R, y = cy + Math.sin(a) * R * 0.75;
-    b.box(1.5, 1.2, 1.9, [x, y, 0], st[i % 4], [0, 0, a - Math.PI / 2]);
-  }
-  b.box(1.4, 1.8, 2.3, [0, cy + R * 0.75 + 0.4, 0], '#b0aca2'); g.sph(0.36, [0, cy + R * 0.75 + 0.4, -1.2], '#9fe8ff', 1, 8);
-  // broken standing stones around the clearing
-  for (let i = 0; i < 6; i++) { const a = -0.4 + (i / 5) * (Math.PI + 0.8) + Math.PI, r = 9.3; b.box(1.0, 2.2 + (i % 3) * 0.8, 0.8, [Math.cos(a) * r, 1.1 + (i % 3) * 0.4, Math.sin(a) * r * -1 + 1], st[i % 4], [0.08 * (i % 2 ? 1 : -1), a, 0.1]); }
-  // braziers flanking the steps
-  for (const sx of [-1, 1]) { b.cyl(0.55, 0.7, 1.6, 10, [sx * 3.4, 0.8, -8.0], '#4a4842'); b.cyl(0.85, 0.6, 0.4, 10, [sx * 3.4, 1.8, -8.0], dark); g.sph(0.5, [sx * 3.4, 2.2, -8.0], '#ffb347', [1, 1.3, 1], 8); }
-  return { body: b.build(), glow: g.build() };
+
+// ---- the adventurer's house (owner: unique): a name plate over its blue-and-gold gate arch (the arch itself: TownScenery addLot)
+function HeroHomeSign() {
+  const label = useMemo(() => labelMaterial('Your Home', '#ffe9a8', { size: 64, plate: 'plate' }), []);
+  const L = LOTS.find((l) => l.hero);
+  if (!L) return null;
+  const [x, z] = lotW(L, L.gx, L.zf);
+  return <group position={[x, townLift(x, z), z]}><sprite material={label.mat} position={[0, 4.4, 0]} scale={[label.aspect * 0.9, 0.9, 1]} /></group>;
 }
+
+// ---- Adventure Portal: kit v3 `adventure_portal` (engine/townFill puts it in the plaza lawn at PORTAL, x PORTAL_S, front south); this adds the swirling gateway, rune stones, light + label
 function PortalLandmark() {
-  const geos = useMemo(() => buildPortalGeo(), []);
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.92 }),
-    glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.8) }),
+    glow: new MeshBasicMaterial({ toneMapped: false, color: new Color(0.9, 1.9, 2.6) }),
     disc: new MeshBasicMaterial({ color: new Color(0.25, 0.6, 1.4), transparent: true, opacity: 0.55, side: DoubleSide, depthWrite: false, toneMapped: false }),
     swirl: new MeshBasicMaterial({ color: new Color(0.7, 1.4, 2.4), transparent: true, opacity: 0.6, side: DoubleSide, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
     swirl2: new MeshBasicMaterial({ color: new Color(1.4, 0.8, 2.2), transparent: true, opacity: 0.45, side: DoubleSide, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
@@ -461,28 +445,27 @@ function PortalLandmark() {
     if (r2.current) r2.current.rotation.z = -t * 1.4;
     if (r3.current) { r3.current.rotation.z = t * 0.4; r3.current.scale.setScalar(1 + Math.sin(t * 2) * 0.04); }
     mats.disc.opacity = 0.45 + Math.sin(t * 1.7) * 0.1;
-    if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = 3 + i * 1.6 + Math.sin(t * 1.5 + i) * 0.35; }); }
+    if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = 1.5 + i * 0.7 + Math.sin(t * 1.5 + i) * 0.18; }); }
   });
   const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2); };
+  const k = PORTAL_S, y0 = PLAZA_DECOR.lawnY;
   return (
-    <group position={[PORTAL.x, 0, PORTAL.z]}>
-      <mesh geometry={geos.body} material={mats.lit} castShadow receiveShadow />
-      <mesh geometry={geos.glow} material={mats.glow} />
-      {/* the swirling gateway between the pillars */}
-      <group position={[0, 7.6, 0]}>
-        <mesh material={mats.disc}><circleGeometry args={[3.3, 40]} /></mesh>
-        <mesh ref={r1} material={mats.swirl} position={[0, 0, -0.02]}><ringGeometry args={[1.2, 3.3, 40, 1, 0, Math.PI * 1.3]} /></mesh>
-        <mesh ref={r2} material={mats.swirl2} position={[0, 0, -0.04]}><ringGeometry args={[0.4, 2.6, 36, 1, 0, Math.PI * 0.9]} /></mesh>
-        <mesh ref={r3} material={mats.swirl} position={[0, 0, -0.06]}><ringGeometry args={[2.9, 3.35, 48]} /></mesh>
+    <group position={[PORTAL.x, y0, PORTAL.z]}>
+      {/* the swirling gateway over the kit piece's stone disc (its front faces south, +z: the hero comes from the plaza) */}
+      <group position={[0, 5.3 * k / 1.5, 0.62 * k / 1.5]} scale={k / 1.5}>
+        <mesh material={mats.disc}><circleGeometry args={[3.35, 40]} /></mesh>
+        <mesh ref={r1} material={mats.swirl} position={[0, 0, 0.02]}><ringGeometry args={[1.2, 3.3, 40, 1, 0, Math.PI * 1.3]} /></mesh>
+        <mesh ref={r2} material={mats.swirl2} position={[0, 0, 0.04]}><ringGeometry args={[0.4, 2.6, 36, 1, 0, Math.PI * 0.9]} /></mesh>
+        <mesh ref={r3} material={mats.swirl} position={[0, 0, 0.06]}><ringGeometry args={[2.9, 3.35, 48]} /></mesh>
       </group>
       {/* rune stones floating around the arch */}
       <group ref={stones}>
-        {[0, 1, 2, 3].map((i) => <mesh key={i} material={mats.glow} position={[Math.cos(i * 1.57) * 6, 3 + i * 1.6, Math.sin(i * 1.57) * 6]}><octahedronGeometry args={[0.45, 0]} /></mesh>)}
+        {[0, 1, 2, 3].map((i) => <mesh key={i} material={mats.glow} position={[Math.cos(i * 1.57) * 4.2, 1.6 + i * 0.7, Math.sin(i * 1.57) * 4.2]}><octahedronGeometry args={[0.24, 0]} /></mesh>)}
       </group>
-      <sprite material={label.mat} position={[0, 20.5, 0]} scale={[label.aspect * 1.4, 1.4, 1]} />
-      <pointLight position={[0, 7, -2.5]} color="#7ad8ff" distance={18} decay={1.6} intensity={18} />
-      <mesh position={[0, 7, 0]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
-        <boxGeometry args={[10, 14, 3]} />
+      <sprite material={label.mat} position={[0, 6.2, 0]} scale={[label.aspect * 0.8, 0.8, 1]} />
+      <pointLight position={[0, 2.6, 2.4]} color="#7ad8ff" distance={10} decay={1.6} intensity={9} />
+      <mesh position={[0, 2.6, 0.6]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+        <boxGeometry args={[6.6, 5.4, 2.4]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
@@ -500,6 +483,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <Npcs />}
       {village && <TowerLandmark />}
       {village && <PortalLandmark />}
+      {village && <HeroHomeSign />}
       {village && <Beach q={q} />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
       <Station kind="TRAINER" position={TRAINER_POS} />

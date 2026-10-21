@@ -73,6 +73,21 @@ Death returns to town, loot kept (GameOver screen -> "To do in town" popup on ar
 town (and closes the open panel first).
 
 ### 3.2 Town hub (`status MENU`; `engine/townData.ts`, `engine/systems/village.ts`, `render/Town*.tsx`)
+- **Kingdom v5 (2026-10-21): shop ring + portal plaza** (on top of v4; any building yaw is fine now, the camera rotates). The six main shops RING THE PLAZA (0, 2) and face it
+  (`SHOP_POSITIONS` rot = any yaw; Armory (-8, -15.4) / Supplies (8, -15.4) north, Fortune (-12.4, 1.8) / Blacksmith (12.4, 1.8) flanks, Pets (-12.6, 19.8) / Warehouse (12.6, 19.8) south,
+  Tech House (22, 2) on the east band); the gaps between them keep the north street (z -6), south street (z 10), castle path and avenue open (the shop dressing in `SHOP_LOOK` is in
+  shop-local coordinates, `shopLocal` / `shopFront` turn it by the yaw; keep dressing out of the street corridors, see TOWN_PLAN). Each shop has its kit v3 signature props, potted
+  plants, an awning. **The Adventure Portal is the plaza's centrepiece** (`PORTAL` {0, 0.9}, `front` {0, 4.6}, kit v3 `adventure_portal` x `PORTAL_S` 0.7, front south) on a kerbed round
+  lawn with two small `statue_hero` guardians (`PLAZA_STATUES`) and flower beds; hero arrival / 'back from a run' spots are in front of it (engine/game.ts), solid = a row of circles in
+  TOWN_COLLIDERS. **The Endless Tower stands in the old portal clearing** (`TOWER` {5, 155.4}, `ry` PI, door faces north onto the forest road, `door` / `out` spots; `TOWER_KNOLL` follows);
+  the old tower site and its long path are gone, the Brewer's hut keeps a short lane (`TOWER_PATH_Z`). The gate arch is a real open passage (`buildGateArch`, `GATE_TOWER`). **Fewer cottages, each on a landscaped lot** (owner 2026-10-21): 15 houses inside the walls
+  (was 31). `LOTS` (engine/townData, derived from `HOUSES`; lot frame = the house's, turned by `rot`) give each one a rounded-rectangle lawn (`LOT_PATCHES`, the paving has a hole + stone kerb),
+  a low picket fence with a 3.4 m gate opening at the door (`LOT_FENCES`, colliders in TOWN_COLLIDERS, drawn in render/natureLayout), stepping-stone pavers gate -> door + a mailbox
+  (`addLot` in TownScenery) and kit dressing placed in house-local space by engine/townFill (corner bushes, flower beds, potted plants, tree, bench / herb box, laundry line / barrels).
+  Lamps inside a lot or its gate are dropped. The south-wall garden strip (z 33..36) and the West Rise stair foot stay open (lots stop at z 32.5). **Hero's house** (`HERO_HOUSE`, the
+  lot with `hero: true`): wider lot, blue-and-gold gate arch, flag pole, red rug, doghouse, "Your Home" name plate (`HeroHomeSign`). **Enterable-later houses**: `ENTERABLE_HOUSES` (yaw 0, door spots, listed in
+  TOWN_PLAN). **Shops stand out**: the hanging icon signs are 1.5x. Cottages carry gentle yaws (`HOUSES[].rot`). Plaza floor: kerbed discs + a blue tile ring + a gold 8-point star (`buildRoads`); streets have a warm kerb. Floors: soft cream flagstones + cobbles (`pavingTexture` / `cobbleTexture`),
+  calm grass colour drifts (Terrain `groundColor`). Old quest-board road stub removed.
 - **Kingdom v4 (2026-10-20): dense districts, seven separate shops** (full map + coordinates: `docs/TOWN_PLAN.md`). Inside the walls: castle terrace N, plaza + statue, market street
   (the avenue, 4 stalls a side), residential lanes (lane z 23.2 each side, houses 6 m apart at z 16.2 / 29.6, auto yards = lawn + planters from `HOUSES`), chapel quarter + graveyard (NW),
   tavern square (NE), park + fountain (SW), cottages on both rises, the old shop-row line (z 1.2) is cottages now. **The seven town shops are NOT a row any more**: each has its own spot
@@ -102,13 +117,13 @@ town (and closes the open panel first).
   (-74, 106.2 on its knoll, door = `TOWER.door`, the hero stands on the path z 112), the **mine entrance** (72.4, 4.8), two tents and a siding in the
   camp, the **pier** (dock segments + posts + `fence_wood` rails, kit boats), market carts, haystacks, crops, wells, signposts. The Fishmonger and
   Mining Supplies stalls are town_kit_v2 `shop_stall_house` pieces (same keeper offsets as the town shops); the Brewer's `NPC/DOOR/CAULDRON`
-  offsets in `render/Town.tsx` are for the kit hut. The portal keeps its old model (its steps face north, the road comes from there).
+  offsets in `render/Town.tsx` are for the kit hut. The portal is kit v3 now and stands in the plaza (see Kingdom v5).
   Animals: `townData.ANIMALS` (cows, sheep, pigs, chickens, cats, dogs, ducks, horses; AI + petting + milking + riding unchanged in
   `systems/npcs.ts`) are drawn by `render/KitAnimals.tsx` (see task 9). Re-check the layout with the A* test in "QA (headless)".
 - A walled town (stone wall + gate, castle on a raised terrace, plaza with the founder's statue / fountain, chapel + graveyard,
   Golden Tankard tavern, windmill) with a large outskirts: meadow before the gate, a river with a great arched bridge,
-  lake + west beach with pier and fishing, farm + barns + fields, hamlets, hills (`townHills.ts`), the Endless Tower far
-  to the south-west, the **Adventure Portal** deep in the south forest (platform is walkable, E on it opens Set Out), a
+  lake + west beach with pier and fishing, farm + barns + fields, hamlets, hills (`townHills.ts`), the Endless Tower at the end of the forest road
+  south of the farms, the **Adventure Portal** in the middle of the plaza (E at its front opens Set Out), a
   horse stable by the gate, Crystal Cave + mining camp east of the wall, the hermit trail. Always read coordinates from
   `townData.ts` / `constants.ts SHOP_POSITIONS`; they moved many times.
 - **Day/night**: `world.townTime` (480 s per day, jumps on return from a run), dawn/noon/dusk/night lighting in
@@ -173,6 +188,10 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   Greenwood clearing (`runInfo.dream`), class MEMORY dreams are a haze overlay; sleeping in the hero's house plays the
   next due one. The "true ending" needs 10 clears + the dreams seen (`dreams.trueEndingReady`).
 
+- **Showcase fight (new characters)**: `characters.createChar` marks the character in localStorage (`engine/showcase.ts`); the first time they stand in town (after title / prologue) `ui/screens/Showcase.tsx ShowcaseLauncher` calls `store.startShowcase`: a snapshot of the whole store is kept, `showcaseLoadout.ts` lays a temporary overlay (class level 50, every skill 5, 6-piece Mythic +9 Aether Sovereign set with perfect lines, max Mythic pet, all talents, auto-attributes), the run starts in a one-off Marble Halls boss arena (`director` hooks: pack + 2 champions + Gorath, `SHOWCASE_DEPTH`), ult starts full and charges x8 (`combat.ts`, `abilities.ts`). `endShowcase` (victory after the outro line, death, or the Skip button / Esc) restores the snapshot and returns to town; `writeProfile` is blocked while `showcase.on`, tutorial hints / spot saving / Ankh are skipped. Intro / outro lines in `Showcase.tsx`.
+- **Daily Trial popup + mode icons**: `ui/screens/DailyPopup.tsx` offers today's trial once per game start (Lv 15+, reward unclaimed); `TopBars.tsx ModeIcons` adds Daily / Endless Tower / Endless Waves icons next to the Run Upgrades / trophy / codex row (locked = dimmed + lock, they emit `openSetOut {tab, remote}`).
+- **Sleep at home**: E at the bed (`village.sleepAtHome`): short fade (`dreamFx.SLEEP_FADE`), `townTime += 8/24`, HP + MP full, then the next due dream plays. **Mana Bloom** (`MANA_BLOOM` crate kind, hold E in run rooms, +45% MP, ~18% of harvest nodes). Red dots on craftable Workshop rows / categories / the CRAFT tab and on brewable elixirs (`ui/lib/alerts.ts canCraftRecipe / canCraftSlot / canBrewElixir`).
+
 ### 3.5 Combat and classes
 - Controls (`engine/input.ts`, listed in Settings > Controls = `KEYS_KB` in `ui/screens/PauseMenu.tsx`; keep in sync):
   WASD move · **F hold = basic attack** (no auto-attack any more; every class attacks while walking at ~88% speed right after a swing; the AUTO-battle toggle is an opt-in bot, default off) · 1/2/3 class actives (hold to aim,
@@ -197,6 +216,8 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   Gear is class-gated by wear group (`itemClass.ts`: Heavy = Knight+Barbarian, Light = Archer+Necromancer, Arcane = Wizard;
   Wizard and Necromancer share weapons).
 - **Hero knockback / knockdown**: `combat.knockHero(fromX, fromZ, force, downSec)`, fed by `damagePlayer(..., { ...KB.SLAM })` (`KB` presets in combat.ts: FLINCH 0.5 u, PUSH 3.2, HEAVY 4.5, SLAM 5 u + 0.75 s down, CRUSH 6 u + 0.9 s). Eased slide over 0.2 s through `resolveObstacles` (player.ts), DOWN pose in `render/Hero.tsx`, 0.6 s invuln after the get-up, ~1.6 s no-chain window; Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown.
+- **Enemy traits + smarter monsters (2026-10-21)**: `engine/enemyTraits.ts` (`TR` bitmask on `Enemy.traits`, rolled in `spawnEnemy`: chance grows with biome + depth, elites ~3x; Heavy = knockback resist, Steadfast = CC wears off sooner, Warded = half elemental damage, Venomous / Corroding / Dazzling / Chilling / Concussive / Shover (knockback that cancels the cast + pauses basic attacks, `hooks.cancelCast`) / Crusher (knockdown), Flurry = 2-3 melee strikes, Quickdraw = faster shots + shorter wind-ups). On-hit effects: `combat.applyTraitHit` (via `damagePlayer` `src` / `tr`; telegraph zones carry the bits in `zone.aux`, projectiles in `p.traits`). Shown as a colour wash (`render/Enemies.tsx`) and chips in the target frame. Hidden innate bits `HIND_SLOW` / `HIND_ROOT` (kinds, some elites, all bosses) go through `combat.hinder` (diminishing returns: no perma-root). Ordinary monsters move +11% (`MOVE_MUL`); agile kinds + elites dodge incoming hero shots / ground skills (`tickDodge`, chance by depth, never while casting), melee packs fan out (`packAndFlank`), nearly dead ones fall back once while the rest push in, ranged kiters strafe while reloading and back off when closed in (`kiteMove`).
+- **Boss interrupt meter** (`systems/interrupt.ts`, bar in `ui/hud/BossBar.tsx`): hero hits fill it during a heal channel or a boss / champion special; full = cast cancelled + stagger; drains when idle. **Ticking damage** (poison / burn / bleed, rifts, hazard zones, brambles, lava) on the hero is x`HERO_DOT_MUL` (4, `combat.ts`; boss auras opt out with `noDotMul`; discrete trap / icicle hits are not multiplied).
 - Combat layer: monster tricks (`tricks.ts`), statuses, backstab/shield blocking, elite big attacks (`eliteBig.ts`), winded
   free-hit windows on bosses, follow delay (`heroTrail.ts`), combo meter, aimed casting (`aim.ts`), no contact damage
   (monsters wind up a strike).
@@ -227,8 +248,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
 - **Pets**: six tiers, growth Lv 1-20 + 3 evolution stages (`petGrowth.ts`, `petActions.ts`: feed loot/shards, evolve),
   fusion (`petFusion.ts`), elemental attacks, follow the hero in town and runs.
 - **Quests** ("less quest, more roguelite": there is NO Quest Board / bounty board and no daily offers any more). Main story
-  `story.ts` (`STORY_V` 6; townsfolk tutorial chain -> the Brewer -> the King -> biome errands -> Malakar -> Endless Tower ->
-  true-heir arc; the old Hodge / board steps were cut, saves on them continue at 'king'). Side quests `npcQuests.ts`: only 7
+  `story.ts` (`STORY_V` 7, fast-paced: NO town tutorial any more (the Mira tour, potion / pet / summon / gear / forge / skill / warehouse / brew steps are gone, so `questFree` freebies never trigger; the first pet is still free); chain = Garrick -> the King (gives 3 HP + 2 MP potions) -> per biome a briefing talk, one hunt, the depth-10 champion and the guardian -> Malakar -> Endless Tower -> true-heir arc. Old saves: `sanitizeStory` maps every older version by step id through the id lists (`V1`..`V6`); a removed step continues at the next surviving one). Side quests `npcQuests.ts`: only 7
   (LISTEN / DELIVER / INTERACT / TALK / KILL types, logic `systems/npcQuestLogic.ts` + `storyLogic.ts`, no slot cap):
   Hollis "Milk Run" (milk cows x3), Dalla "Egg Hunt" (5 eggs), Pip "Where Is Biscuit?" (find the cat), Pip "A Secret for the
   Hermit" (talk to Old Wend; also gates his sunstone gold gift), Sister Elowen "Restless Graves" (12 zombies in runs), Rodric
@@ -403,6 +423,18 @@ screens, max-level question: class level cap is 50) have been removed.
    unchanged; furniture positions + colliders live together in `castleData / churchData / tavernData / homeData / caveData` (TABLES + TABLE_STOOLS, ARMORS,
    HALL_PLANTS, CHURCH_PLANTS, TAP_BARRELS / TAP_PLANTS / TAP_CRATES, HOME_WARDROBE / SHELF / DESK / BARREL, cave `colliders()`): move a piece there AND in the colliders.
    Cave: kept on its ORIGINAL procedural look (owner preferred it; floor rings, rocks, crystals, cart, bench all from `buildFloor` / `buildProps`), not kit v3. Cave HUD sits below the gold / gem counters. QA: grid-BFS over the collider circles reached every NPC home / exit / sit point / vein.
+    **NPC wear kit v1 + look table (done 2026-10-21)**: town NPCs no longer use code-primitive overlays. `art/blender/npc_wear_v1.py` (kit_v3 helpers, imports KayKit
+    heads to fit) builds `public/models/characters/npc_wear_v1.glb` (~0.6 MB): hair (tousled, side part, spiky, long, ponytail, buns, braid, curly, bob, bald+fringe, swept elder),
+    beards / moustaches, hats (straw, toque, feather cap, bonnet, hood, witch, tricorn, kettle helm, nun veil, mitre, crown, tiara, bandana, beanie, flat cap), clothes (dress, apron,
+    smock, robe, capes, vest, sash, scarf, tabard, pauldrons, pouch belt). Root Empty per piece, origin = attach point in its bone frame (head / chest / hips), +Z front, materials
+    main / second / hair / skin = per-NPC tint roles, others fixed colour x COLOR_0. `render/npcWear.ts` bakes it once; `render/npcBuild.ts` merges the recoloured KayKit body parts
+    (atlas cell -> role: skin / shirt / pants / armour), the head with its baked hair dropped (head may come from another KayKit rig = face variety) and the worn pieces into ONE
+    SkinnedMesh per NPC (vertex colours, one shared material; ~1 draw call instead of 7-9 and no per-NPC overlay meshes). `engine/npcLooks.ts` `NPC_LOOKS[name]` is the look table
+    (base rig, face rig, colours, wear list; `defaultLook` fallback). KayKit helmets / hats / capes are never shown; guards / knights keep armour + tabard + kettle helm.
+    Previews: `art/renders/` style sheets via `--closeup`; edit a look = edit the table only.
+    Head fix (2026-10-21): the KayKit ARCHER / KNIGHT / WIZARD heads have no skull under their baked hair (all of it uses the hair atlas cell), so dropping it left a hollow face mask seen from behind / above
+    (hats + hair looked detached). npcBuild now KEEPS those triangles as the skull (squashed into the kit's skull box, hair colour, skin for `hair_bald_fringe`); BARBARIAN still drops its fringe. Only bones that carry vertices
+    enter the merged skeleton (21 instead of 138).
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` starts north-up (yaw 0) and forces pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on; the player can always turn the camera (drag / right stick, V resets), and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting

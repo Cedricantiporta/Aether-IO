@@ -97,30 +97,10 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   const b = new GB([0.82, 1.06]), g = new GB([1, 1]), rnd = mulberry32(4242);
   const yTop = DOCK.y;
   // (owner: no boardwalk on the sand - the pier is the only wooden walkway)
-  // ---- the Coral Isles ship (owner: a huge ship at the pier; the captain on the head sells the ticket)
+  // ---- the Coral Isles ship: kit v3 `ship_big` (engine/townFill puts it at SHIP, x1.5, bow toward the beach); only the gangplank from the pier head down onto its deck is code-built
   {
-    const { x, z, len, beam } = SHIP, HULL = '#5a3a22', HULL2 = '#6e4b2b', DECK = '#a07a4e', SAIL = '#efe6d2', TRIM = '#c9a24c';
-    b.box(len - 2, 2.2, beam - 1.2, [x, -0.5, z], HULL);                                   // lower hull (below the waterline)
-    b.box(len, 1.5, beam, [x, 1.0, z], HULL2);                                            // upper hull
-    b.box(len + 0.2, 0.18, beam + 0.2, [x, 1.78, z], TRIM);                               // gilded strake
-    for (const s2 of [-1, 1]) b.box(3.6, 2.4, 3.6, [x + s2 * (len / 2 + 0.6), 0.5, z], s2 > 0 ? HULL2 : HULL, [0, Math.PI / 4, 0]);   // bow / stern points
-    b.box(len - 0.6, 0.16, beam - 0.5, [x, 1.72, z], DECK);                               // main deck
-    b.box(6.5, 2.0, beam, [x - len / 2 + 3.4, 2.7, z], HULL2);                            // stern castle
-    b.box(6.7, 0.16, beam + 0.2, [x - len / 2 + 3.4, 3.76, z], TRIM);
-    for (const s2 of [-1, 1]) b.box(len - 7, 0.5, 0.18, [x + 3, 2.05, z + s2 * (beam / 2 - 0.1)], HULL);   // bulwarks
-    for (let k = 0; k < 6; k++) for (const s2 of [-1, 1]) b.box(0.7, 0.5, 0.1, [x - 7 + k * 3.1, 1.0, z + s2 * (beam / 2 + 0.02)], '#2a1a10');   // gun ports
-    const masts: [number, number][] = [[x + 7.5, 13], [x, 15.5], [x - 7, 11]];
-    for (const [mx, h] of masts) {
-      b.cyl(0.26, 0.36, h, 8, [mx, 1.8 + h / 2, z], '#4a3220');
-      b.box(0.18, 0.18, beam + 1.2, [mx, 1.8 + h * 0.82, z], '#4a3220'); b.box(0.18, 0.18, beam + 0.4, [mx, 1.8 + h * 0.46, z], '#4a3220');   // yards
-      b.box(0.14, h * 0.32, beam + 0.6, [mx + 0.25, 1.8 + h * 0.66, z], SAIL, [0, 0, 0.06]);                                                   // sails
-      b.box(0.14, h * 0.26, beam - 0.2, [mx + 0.25, 1.8 + h * 0.3, z], SAIL, [0, 0, 0.05]);
-      b.box(0.08, 0.9, 1.6, [mx, 1.8 + h + 0.4, z + 0.8], '#b8322a');                                                                       // pennant
-    }
-    b.box(5.5, 0.22, 0.22, [x + len / 2 + 2.6, 2.3, z], '#4a3220', [0, 0, 0.35]);          // bowsprit
-    // gangplank from the pier head down onto the deck
+    const { x, z, beam } = SHIP;
     b.box(1.4, 0.12, DOCK.head.z0 - (z + beam / 2) + 0.8, [x + 2, 1.0, (DOCK.head.z0 + z + beam / 2) / 2], WOOD, [0.28, 0, 0]);
-    lanternPost(b, g, x - len / 2 + 1.2, z, 3.8);
   }
   // ---- the pier: walkway planks across, stringers, posts into the water, T-head with rails, lanterns, bollards
   {
@@ -142,19 +122,14 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
   // ---- campfire with stone ring, logs and two log benches
   {
     const { x, z } = CAMPFIRE;
-    for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU; b.dodeca(0.22, [x + Math.cos(a) * 0.72, 0.1, z + Math.sin(a) * 0.72], i % 2 ? '#8a8f94' : '#6f747a', [1, 0.7, 1]); }
-    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; b.cyl(0.08, 0.1, 1.0, 5, [x + Math.cos(a) * 0.18, 0.22, z + Math.sin(a) * 0.18], '#4a3020', [0, -a, Math.PI / 2 - 0.45]); }
-    b.cyl(0.42, 0.45, 0.06, 8, [x, 0.03, z], '#2a2420');
+    // (the stone ring + logs are the kit v3 campfire; the flames below flicker)
     b.cyl(0.24, 0.26, 2.0, 7, [x, 0.24, z + 2.2], '#6e5236', [0, 0, Math.PI / 2]);
     b.cyl(0.24, 0.26, 2.0, 7, [x - 2.3, 0.24, z - 0.3], '#6e5236', [Math.PI / 2, 0, 0]);
   }
   // ---- umbrella, towels, a deck chair and a sandcastle
   {
     const { x, z } = UMBRELLA;
-    b.cyl(0.05, 0.05, 2.6, 5, [x, 1.3, z], '#e8e0d0', [0.08, 0, 0]);
-    b.cone(1.7, 0.75, 8, [x + 0.1, 2.7, z + 0.1], '#e8553a', [0.08, 0, 0]);
-    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + TAU / 16; b.cone(0.52, 0.26, 3, [x + 0.1 + Math.cos(a) * 1.05, 2.58, z + 0.1 + Math.sin(a) * 1.05], '#f4efe4', [0.08, -a - Math.PI / 2, 0], [1, 1, 0.2]); }
-    b.sph(0.08, [x + 0.15, 3.1, z + 0.15], '#f4efe4', 1, 5);
+    // (the umbrella itself is the kit v3 beach_umbrella)
     b.box(0.95, 0.03, 1.9, [x - 1.2, 0.02, z + 1.1], '#5fb6d8', [0, 0.2, 0]); b.box(0.95, 0.031, 0.25, [x - 1.17, 0.025, z + 0.5], '#f4efe4', [0, 0.2, 0]);
     b.box(0.95, 0.03, 1.9, [x + 1.3, 0.02, z + 1.4], '#f2c14e', [0, -0.15, 0]);
     // deck chair (seen side-on: slatted back + seat on an A frame)
@@ -172,17 +147,10 @@ function buildBeach(): { body: BufferGeometry; glow: BufferGeometry; fire: Buffe
     b.cyl(0.06, 0.09, 0.7, 5, [x + Math.cos(rot) * 0.4, 0.3, z - Math.sin(rot) * 0.4], BLEACH, [0.4, rot + 0.9, 0.7]);
   }
   // ---- crates (one stacked), barrels, a pile of rope
-  crate(b, CRATES[0][0], 0, CRATES[0][1], CRATES[0][2]); crate(b, CRATES[1][0], 0, CRATES[1][1], CRATES[1][2], 0.75); crate(b, CRATES[0][0] + 0.05, 0.85, CRATES[0][1] + 0.02, CRATES[2][2], 0.62);
+  // (the crates are the kit v3 beach_crates)
   for (const [x, z] of BARRELS) barrel(b, x, z);
   b.torus(0.32, 0.08, [BARRELS[0][0] + 0.9, 0.08, BARRELS[0][1] - 0.6], '#c9b27a', [Math.PI / 2, 0, 0], 1, 10); b.torus(0.22, 0.07, [BARRELS[0][0] + 0.9, 0.2, BARRELS[0][1] - 0.6], '#c9b27a', [Math.PI / 2, 0, 0], 1, 10);
-  // ---- net-drying rack along the wall: two posts, a pole, nets with floats
-  {
-    const { x, z } = NET_RACK;
-    for (const o of [-1.4, 1.4]) b.box(0.16, 2.0, 0.16, [x, 1.0, z + o], WOOD_D);
-    b.cyl(0.06, 0.06, 3.2, 5, [x, 1.95, z], WOOD, [Math.PI / 2, 0, 0]);
-    for (let i = 0; i < 4; i++) b.box(0.04, 1.3, 0.72, [x + 0.05 + (i % 2) * 0.05, 1.3, z - 1.05 + i * 0.7], '#4c5e4a', [(i % 2 ? 0.08 : -0.06), 0, 0.06]);
-    for (let i = 0; i < 5; i++) b.sph(0.08, [x + 0.1, 1.9 - (i % 2) * 0.05, z - 1.2 + i * 0.6], i % 2 ? '#e8553a' : '#f4efe4', 1, 5);
-  }
+  // (the net-drying rack is the kit v3 fishing_net_rack)
   // (the entrance signpost is a kit signpost)
   // ---- shore spots: a forked rod rest, a bucket and a stool behind each shore fishing spot
   for (let i = 1; i < FISH_SPOTS.length; i++) {

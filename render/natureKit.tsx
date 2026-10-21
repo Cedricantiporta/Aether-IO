@@ -21,6 +21,7 @@ import { BASE } from './models';
 import { Inst } from './Inst';
 import { litMat, setInst } from './util';
 import { kitColor } from './townPalette';
+import { useKitV3, type KitV3Data } from './kitV3';
 
 export const NATURE_URL = `${BASE}models/town/nature_kit_v1.glb`;
 
@@ -144,10 +145,28 @@ function bake(scene: Object3D): NatureKitData {
   return { S, A, blades: bg, hub, seatY: seat.length ? Math.max(...seat) : 1.65 };
 }
 
-/** The baked nature kit (loaded once, cached). Suspends until the GLB is in. */
+/** Kit v3 pieces (public/models/town/kit_v3.glb, render/kitV3.tsx) as ordinary static pieces of this kit: the body (vertex colours = material x COLOR_0) and the
+ *  emissive part (window_glow / rune_glow) become non-indexed float geometries with position / normal / color, exactly like the nature pieces, so ONE BatchedMesh
+ *  (render/NatureBatch.tsx) draws trees, props and landmarks of both kits. Piece names never collide (v3: tree_oak_big, palm_v3, bush_cluster ...). */
+function addKitV3(d: NatureKitData, k3: KitV3Data): void {
+  const geo = (c: { pos: Float32Array; nrm: Float32Array; col: Float32Array } | null, name: string): BufferGeometry | null => {
+    if (!c) return null;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new Float32BufferAttribute(c.pos, 3)); g.setAttribute('normal', new Float32BufferAttribute(c.nrm, 3)); g.setAttribute('color', new Float32BufferAttribute(c.col, 3));
+    g.computeBoundingSphere(); g.name = name; return g;
+  };
+  for (const [name, p] of Object.entries(k3.P)) {
+    if (name === 'light_shaft' || d.S[name]) continue;
+    const body = geo(p.body, 'v3:' + name);
+    if (body) d.S[name] = { body, glow: geo(p.glow, 'v3:' + name + ':glow') };
+  }
+}
+
+/** The baked nature kit (loaded once, cached; kit v3's pieces are merged in). Suspends until both GLBs are in. */
 export function useNatureKit(): NatureKitData {
   const gltf = useGLTF(NATURE_URL);
-  return useMemo(() => { if (!cache.data) cache.data = bake(gltf.scene); return cache.data; }, [gltf]);
+  const k3 = useKitV3();
+  return useMemo(() => { if (!cache.data) { cache.data = bake(gltf.scene); addKitV3(cache.data, k3); } return cache.data; }, [gltf, k3]);
 }
 useGLTF.preload(NATURE_URL);
 /** Saddle height of the kit horse (scale 1) once the kit is loaded: where a rider's hips sit (render/Hero.tsx). */

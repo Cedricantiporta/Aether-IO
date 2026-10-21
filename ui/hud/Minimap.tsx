@@ -10,7 +10,7 @@ import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
 import { world, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import {
   GATE, WALL_RUNS, WALL_TOWERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
-  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, GRAVEYARD,
+  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, TOWER, GRAVEYARD,
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
 import { npcMarkers } from '../../engine/systems/npcQuestLogic';
@@ -149,7 +149,7 @@ function bakeTown(): void {
     disc(g, WINDMILL.x, WINDMILL.z, WINDMILL.r, C.cream);
     g.fillStyle = '#d5e9bf'; rr(g, GRAVEYARD.x0, GRAVEYARD.z0, GRAVEYARD.x1 - GRAVEYARD.x0, GRAVEYARD.z1 - GRAVEYARD.z0, 2); g.fill();
     // shops: soft rounded tiles in each shop's colour; board / altar / trainer as small dots
-    for (const s of SHOP_POSITIONS) { const x = s.position[0], z = s.position[2]; g.fillStyle = C.shadow; rr(g, x - 2.4, z - 2.0, 4.8, 4.8, 1.6); g.fill(); g.fillStyle = mix(s.color, '#ffffff', 0.4); rr(g, x - 2.4, z - 2.4, 4.8, 4.8, 1.6); g.fill(); disc(g, x, z, 0.9, C.cream); }
+    for (const s of SHOP_POSITIONS) { const x = s.position[0], z = s.position[2]; g.save(); g.translate(x, z); g.rotate(-(s.rot ?? 0)); g.fillStyle = C.shadow; rr(g, -2.4, -2.0, 4.8, 4.8, 1.6); g.fill(); g.fillStyle = mix(s.color, '#ffffff', 0.4); rr(g, -2.4, -2.4, 4.8, 4.8, 1.6); g.fill(); g.restore(); disc(g, x, z, 0.9, C.cream); }   // (the shops face any way: tiles turn with them)
     disc(g, SHRINE_POS[0], SHRINE_POS[2], 1.5, '#c7a2ff'); disc(g, TRAINER_POS[0], TRAINER_POS[2], 1.7, '#ffb05a');
   });
 }
@@ -275,6 +275,7 @@ export const Minimap: React.FC = () => {
     if (town) {
       gate(ctx, sx(GATE.x), sy(GATE.z), 6 * u, C.gold);
       gate(ctx, sx(PORTAL.front.x), sy(PORTAL.front.z), 6.5 * u, '#9d7cff');
+      gate(ctx, sx(TOWER.door.x), sy(TOWER.door.z), 5.5 * u, '#c9a6ff');
       gate(ctx, sx(CAVE_DOOR.x), sy(CAVE_DOOR.z), 5.5 * u, '#6fd8f0');
       gate(ctx, sx(CASTLE_DOOR.x), sy(CASTLE_DOOR.z), 4.5 * u, '#e48a7c');
       gate(ctx, sx(CHURCH_DOOR.x), sy(CHURCH_DOOR.z), 4 * u, '#c7a2ff');
