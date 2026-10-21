@@ -263,8 +263,18 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   (`itemCatalog.ts`, ids `c_<class>_<slot>_<n>`, older items `retired`), rings/amulets with special effects, weapon perks
   (`weaponPerks.ts`), item sets, bonus lines (`affixes.ts`: slots per rarity, perfect rolls), Mining tool slot. +N upgrades
   at the Blacksmith (cores: Upgrade/Refined/Radiant, fail/shatter at +8/+9), +7 and above glow. Crafting (`crafting.ts`,
-  Workshop window), Reforge (`reforge.ts`: per-line reroll, Augment Rune fills empty slots, Reforge Stone / Tempering Oil),
+  Workshop window), Reforge (`reforge.ts`: Reforge Stone = reroll all / one line, **Tempering Oil = swaps each line's stat TYPE but
+  keeps its quality** (same % of the tier value, perfect stays perfect), **Binding Seal** locks a line (`ItemAffix.locked`: Stone + Oil
+  skip it, persists on the item, max lines-1 locks, unlocking is free; Gem Shop 28 gems, chests / bosses / merchant / summon supplies),
+  Augment Rune fills empty slots),
   Fusion (5 of a tier -> next tier, gear/shards/pets), Recycle in the bag (gear -> shards + cores).
+- **Gear stat ladder + grade** (owner 2026-10-21): base stats are low and every rarity is a big jump (`itemCatalog.ts` `TIER_LADDER`
+  Common 1 / Uncommon 1.7 / Rare 2.9 / Epic 5.5 / Legendary 10.5 / Mythic 20, each x1.7-1.9; anchored at 0.9 of the old Epic, so
+  Low Common ~0.29x, Uncommon ~0.44x, Rare ~0.66x, Epic 0.9x, Legendary ~0.98x, Mythic ~0.85x of the old values). Every gear piece also
+  has a **grade** (`grade.ts`, `Item.grade`): LOW or HIGH (+35% stats, ~22% of drops, 35% when crafted; starter gear always LOW).
+  Shown as "High Epic" tag in the tooltip + a star pill on the slot. Old saves: gear without `grade` is rescaled once by new/old
+  ladder (`migrateGear`, only generated-catalog names) and stamped LOW; `writeProfile` stamps runtime-made gear so it is never
+  rescaled twice (bonus-line values in `affixes.ts` are unchanged).
 - **Currencies**: gold (`GOLD_SCALE` 10), gems, **Aether Crystals** (real bag item `crystals.ts`; daily/weekly goals and
   achievements pay crystals only), shards (bag stacks, `shards.ts`). **Summon** (Fortune Teller window): Gem Altar, Crystal
   Altar (crystals), Gem Shop tab (gear/supplies, no pets), pity at 60 / 240 (`store.summonPity`). Tech House = permanent gem

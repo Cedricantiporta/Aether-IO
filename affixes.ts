@@ -104,6 +104,18 @@ export function rollAffixValue(key: string, rarity: Rarity, rng: () => number = 
   return { key, value: round(base * (0.85 + rng() * 0.3)) };
 }
 
+/** A line's quality as a fraction of its tier value (1 = the tier value, 1.25 = perfect). Tempering Oil carries it to a new stat. */
+export const affixQuality = (a: ItemAffix, rarity: Rarity): number => {
+  const d = AFFIX_BY_KEY[a.key], base = d ? d.tiers[R_IDX[rarity]] : 0;
+  return a.perfect ? PERFECT_MUL : base > 0 ? a.value / base : 1;
+};
+/** The same quality on another stat (fixed-value stats such as Pierce have no quality: they keep their fixed value). */
+export function rollAffixAtQuality(key: string, rarity: Rarity, q: number, perfect: boolean): ItemAffix {
+  const d = AFFIX_BY_KEY[key], base = d ? d.tiers[R_IDX[rarity]] : 0;
+  if (!d || d.fixed) return { key, value: base };
+  return perfect ? { key, value: round(base * PERFECT_MUL), perfect: true } : { key, value: round(base * q) };
+}
+
 /** Rolls `count` distinct affixes for a rarity. `rng` injectable for tests. */
 /** (owner) bonus lines a gear slot may roll: weapons attack, wear defense (helmets also attack, boots also move speed),
  *  accessories the utility lines. No type = everything (old callers). */
@@ -115,10 +127,10 @@ export function affixAllowed(d: AffixDef, type?: string): boolean {
   if (type === 'BOOTS') return d.g === 'def' || d.key === 'move';
   return d.g === 'def';
 }
-export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, type?: string): ItemAffix[] {
-  const n = AFFIX_COUNT[rarity];
+export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, type?: string, skipKeys: readonly string[] = [], count?: number): ItemAffix[] {
+  const n = count ?? AFFIX_COUNT[rarity];
   const ri = R_IDX[rarity];
-  const pool = AFFIXES.filter((d) => d.weight > 0 && affixAllowed(d, type) && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]));
+  const pool = AFFIXES.filter((d) => d.weight > 0 && affixAllowed(d, type) && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]) && !skipKeys.includes(d.key));
   const out: ItemAffix[] = [];
   for (let i = 0; i < n && pool.length; i++) {
     let total = 0;
@@ -128,7 +140,7 @@ export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, t
     const d = pool.splice(idx, 1)[0];
     out.push(rollAffixValue(d.key, rarity, rng));
   }
-  if (rarity === 'MYTHIC' && rng() < UNIQUE_CHANCE) {
+  if (count === undefined && rarity === 'MYTHIC' && rng() < UNIQUE_CHANCE) {
     const u = UNIQUES[Math.floor(rng() * UNIQUES.length)];
     out.push({ key: u.key, value: u.value });
   }

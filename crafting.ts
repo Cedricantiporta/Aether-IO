@@ -7,6 +7,7 @@ import { canUseClass } from './itemClass';
 import { ITEMS_POOL, RANK_REQ, MATERIAL_DOWNGRADE_YIELD } from './constants';
 import { LOOT_BY_ID } from './loot';
 import { rollAffixes } from './affixes';
+import { rollGrade } from './grade';
 import { ELIXIRS } from './elixirs';
 
 export type CraftSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory';
@@ -233,6 +234,7 @@ export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
     affixes: undefined,
   };
   rollAffixes(item, rng);
+  rollGrade(item, rng, 0.35);   // crafted gear: better odds of a High grade piece
   const r = rng();
   applyPlus(item, r < CRAFT_PLUS2_CHANCE ? 2 : r < CRAFT_PLUS2_CHANCE + CRAFT_PLUS1_CHANCE ? 1 : 0);
   return item;

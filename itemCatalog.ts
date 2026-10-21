@@ -34,10 +34,16 @@ function statList(type: string, list: string[]): string[] {
   if (type === 'ACCESSORY') { const l = list.filter((k) => UTIL_KEYS.has(k)); for (const f of ['regen', 'cdr', 'steal', 'move', 'mregen']) if (!l.includes(f)) l.push(f); return l; }
   return list;
 }
-/** Tier steps (owner): each rarity is a clear jump over the one below - Rare +25%, Epic +40%, Legendary +75%,
- *  Mythic +120% - anchored on the Epic value of every stat. Uncommon (green) sits halfway between Common and Rare. */
-export const TIER_STEP = [1.25, 1.4, 1.75, 2.2];
-const tierRow = (epic: number): number[] => { const r = epic / TIER_STEP[1], c = r / TIER_STEP[0], l = epic * TIER_STEP[2]; return [c, Math.sqrt(c * r), r, epic, l, l * TIER_STEP[3]].map((v) => parseFloat(v.toPrecision(3))); };
+/** Tier ladder (owner 2026-10-21): base stats are low, every rarity is a big jump over the one below (x1.7 - x1.9 each;
+ *  Common 1, Uncommon 1.7, Rare 2.9, Epic 5.5, Legendary 10.5, Mythic 20). Relative to the Epic value of every stat (T above
+ *  is written for Epic; EPIC_ANCHOR = 0.9 of the old Epic numbers so a Low Epic is slightly under the old Epic and a High
+ *  Epic, +35%, slightly over). HIGH grade (grade.ts) multiplies a piece by GRADE_HIGH_MUL. */
+export const TIER_LADDER = [1, 1.7, 2.9, 5.5, 10.5, 20];
+export const EPIC_ANCHOR = 0.9;
+/** the pre-rework ladder relative to Epic (old saves are rescaled by TIER_REL / OLD_TIER_REL, see grade.ts) */
+export const OLD_TIER_REL = [1 / 1.4 / 1.25, Math.sqrt((1 / 1.4 / 1.25) * (1 / 1.4)), 1 / 1.4, 1, 1.75, 1.75 * 2.2];
+export const TIER_REL = TIER_LADDER.map((m) => (m / TIER_LADDER[3]) * EPIC_ANCHOR);
+const tierRow = (epic: number): number[] => TIER_REL.map((m) => parseFloat((epic * m).toPrecision(3)));
 for (const k of Object.keys(T)) T[k][1] = tierRow(T[k][1][2]);
 const FL: Record<string, string[]> = {
   light: ['crit', 'aspd', 'dodge', 'move', 'critd'],

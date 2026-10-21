@@ -28,6 +28,7 @@ import {
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
+import { rollGrade, migrateGear, GRADE_HIGH_CHANCE } from './grade';
 import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
 import { newAcc, accumulate, applyAcc } from './statFx';
@@ -170,7 +171,7 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 /** (owner) summons can also give supplies: upgrade cores (tier I / II) and everything the Gem Shop sells (not shards / pets). */
 export const SUMMON_SUPPLY_SHARE = 0.25;
 export const SUMMON_SUPPLIES: [string, number][] = [
-  ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
+  ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['binding_seal', 5], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
 ];
 const SUMMON_SUPPLY_TOTAL = SUMMON_SUPPLIES.reduce((n, [, w]) => n + w, 0);
 export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
@@ -381,15 +382,16 @@ const addCores = (inv: Item[], n: number): Item[] => {
   return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
-export const instantiate = (template: Item): Item => rollAffixes({
+export const instantiate = (template: Item, grade?: import('./types').ItemGrade): Item => rollGrade(rollAffixes({
   ...template,
   level: isGear(template) || template.type === 'PET' ? template.level : 1,
   id: uid('it'),
   stats: { ...template.stats },
   onHitEffect: template.onHitEffect ? { ...template.onHitEffect } : undefined,
   affixes: undefined,
+  grade: undefined,
   quantity: 1,
-});
+}), Math.random, GRADE_HIGH_CHANCE, grade);   // gear rolls LOW / HIGH grade (grade.ts)
 
 const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => Object.keys(stats) as (keyof PlayerStats)[];
 /** One +level on a gear item, the same step as a blacksmith upgrade (+25% of the base per level; % stats a third as fast). */
@@ -416,6 +418,8 @@ export function rollDropPlus(i: Item | null, tier: 0 | 1 | 2): Item | null {
 }
 
 // -------------------------------------------------------------- persistence --
+/** Old saves: gear without a grade is rescaled to the new tier ladder once and stamped LOW (grade.ts migrateGear). */
+const migrateEquipment = (e: Equipment): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, migrateGear(v as Item | null)])) as unknown as Equipment;
 interface Profile {
   v: number;
   gold: number; gems: number; crystals?: number;
@@ -475,7 +479,7 @@ const baseGameStats = (): GameStatistics => ({
 /** Full COMMON starter set (weapon + helmet/armor/gloves/boots/accessory) for a class. */
 const starterPiece = (id: string): Item | null => {
   const tpl = ITEMS_POOL.find((i) => i.id === id);
-  return tpl ? { ...instantiate(tpl), id: uid('start') } : null;
+  return tpl ? { ...instantiate(tpl, 'LOW'), id: uid('start') } : null;
 };
 const starterEquipment = (hero: HeroClass): Equipment => {
   const g = STARTER_GEAR[hero];
@@ -529,8 +533,8 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             profile: {
               v: PROFILE_VERSION,
               gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems), crystals: num(p.crystals, 20),
-              inventory: Array.isArray(p.inventory) ? p.inventory.map(petRetier).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
-              equipment: p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment,
+              inventory: Array.isArray(p.inventory) ? p.inventory.map(petRetier).map(migrateGear).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
+              equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment),
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
@@ -578,10 +582,15 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
+const stampOne = <T extends Item | null | undefined>(i: T): T => (i && !i.grade && ['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY'].includes(i.type) ? { ...i, grade: 'LOW' } : i);
+const stampGrades = (s: GameState): GameState => ({ ...s, inventory: s.inventory.some((i) => stampOne(i) !== i) ? s.inventory.map(stampOne) : s.inventory,
+  warehouse: s.warehouse.some((i) => stampOne(i) !== i) ? s.warehouse.map(stampOne) : s.warehouse,
+  equipment: Object.values(s.equipment).some((i) => stampOne(i as Item | null) !== i) ? Object.fromEntries(Object.entries(s.equipment).map(([k, v]) => [k, stampOne(v as Item | null)])) as unknown as Equipment : s.equipment });
 const writeProfile = (s: GameState): void => {
   if (showcase.on) return;   // (the showcase overlay is never saved)
   try {
     if (typeof localStorage === 'undefined') return;
+    s = stampGrades(s);   // (gear made at runtime always carries a grade, so the load migration never rescales it)
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, heroRank: s.heroRank, rankXp: s.rankXp,
@@ -613,6 +622,7 @@ const sharedWh: SharedWh = (() => {
   if (!w.merged.includes(PROFILE_KEY)) {
     w = { items: [...w.items, ...(profile.warehouse ?? [])], gold: w.gold + (profile.warehouseGold ?? 0), merged: [...w.merged, PROFILE_KEY] };
   }
+  w = { ...w, items: w.items.map(migrateGear) };
   return w;
 })();
 profile.warehouse = sharedWh.items; profile.warehouseGold = sharedWh.gold;
@@ -692,7 +702,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (own) { inventory.splice(inventory.indexOf(own), 1); equipment.weapon = own; }
       else {
         const tpl = ITEMS_POOL.find((i) => i.id === heroInfo.weaponId);
-        if (tpl) equipment.weapon = { ...instantiate(tpl), id: uid('start_wep') };
+        if (tpl) equipment.weapon = { ...instantiate(tpl, 'LOW'), id: uid('start_wep') };
       }
     }
     return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment, hero, talents ?? get().talents, attrsOf(hero)) };
@@ -1514,14 +1524,14 @@ export const useGameStore = create<GameState>()((set, get) => {
       return { ok, item };
     },
     reforgeItem: (id, mode, line = -1) => {   // Blacksmith > Reforge: spend 1 tool, rework the item's bonus lines (reforge.ts)
-      const s = get(), tool = REFORGE_ITEM[mode];
+      const s = get(), tool = mode === 'UNSEAL' ? null : REFORGE_ITEM[mode];
       const slot = SLOTS.find((sl) => s.equipment[sl]?.id === id);
       const item = slot ? s.equipment[slot] : s.inventory.find((i) => i.id === id);
       if (!item) return null;
-      if (!s.inventory.some((i) => i.name === tool.name)) { notify(`Need a ${tool.name}`, 'red', 'WARNING'); return null; }
+      if (tool && !s.inventory.some((i) => i.name === tool.name)) { notify(`Need a ${tool.name}`, 'red', 'WARNING'); return null; }
       const out = reforge(item, mode, line);
       if (!out) return null;
-      if (!get().consumeItem((i) => i.name === tool.name)) return null;
+      if (tool && !get().consumeItem((i) => i.name === tool.name)) return null;
       const now = get();
       if (slot) { const equipment = { ...now.equipment, [slot]: out } as Equipment; set({ equipment, stats: calc(now.baseStats, equipment) }); }
       else set({ inventory: now.inventory.map((i) => (i.id === id ? out : i)) });

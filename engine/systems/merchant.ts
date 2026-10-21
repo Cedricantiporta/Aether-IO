@@ -41,7 +41,7 @@ export function rollMerchantStock(depth: number): void {
   const r = Math.random();
   if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
   else if (r < 0.22) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);
-  else if (r < 0.45) add(makeItemById(['reforge_stone', 'temper_oil', 'reforge_stone', 'augment_rune'][Math.floor(Math.random() * 4)], 1)[0], 1, MARKUP * 1.5);   // a reforging tool
+  else if (r < 0.45) add(makeItemById(['reforge_stone', 'temper_oil', 'reforge_stone', 'augment_rune', 'binding_seal'][Math.floor(Math.random() * 5)], 1)[0], 1, MARKUP * 1.5);   // a reforging tool
   // (owner: no 'X% off' sale entry any more)
   useMerchant.setState({ items });
 }

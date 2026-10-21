@@ -54,6 +54,7 @@ export const ItemSlot: React.FC<Props> = ({
         : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && item.type === 'PET' && tooltip !== 'buy' && <span className="slot-plus" data-testid="pet-lv-badge" style={petStage(item) > 1 ? { color: petStage(item) > 2 ? '#d8a8ff' : '#ffe08a' } : undefined}>Lv {petLv(item)}</span>}
+      {item && isGear(item) && item.grade === 'HIGH' && <span className="slot-grade" data-testid="grade-badge" title="High grade">★</span>}
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}

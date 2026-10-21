@@ -11,6 +11,8 @@ import { classTag, canUseClass } from '../../itemClass';
 import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
 import { emptyAffixSlots } from '../../reforge';
+import { gradeLabel, gradeOf } from '../../grade';
+import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { petPower, petStatMul, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
@@ -58,6 +60,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
     <div style={{ width: '16rem' }}>
       <div className="tt-name" data-rt={item.rarity}>
         {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
+        {isGear(item) && item.type !== 'PET' && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : ''}`} data-testid="grade-tag">{gradeOf(item) === 'HIGH' ? '★ ' : ''}{gradeLabel(item)}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}
@@ -102,7 +105,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
         <>
           <div className="tt-sep" />
           {(item.affixes ?? []).map((a, i) => (
-            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#ff9a3c' : a.perfect ? '#ffd24a' : '#6fa8ff', fontWeight: 700, fontSize: '.78rem', ...(a.perfect ? { textShadow: '0 0 6px rgba(255, 210, 60, .55)' } : {}) }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}{a.perfect ? ' (perfect)' : ''}</div>
+            <div key={i} data-testid="affix-line" style={{ color: isUnique(a) ? '#ff9a3c' : a.perfect ? '#ffd24a' : '#6fa8ff', fontWeight: 700, fontSize: '.78rem', ...(a.perfect ? { textShadow: '0 0 6px rgba(255, 210, 60, .55)' } : {}) }}>{isUnique(a) ? '★ ' : a.perfect ? '✦ ' : '◆ '}{affixText(a)}{a.perfect ? ' (perfect)' : ''}{a.locked && <span data-testid="affix-lock" title="Sealed" style={{ marginLeft: 4, verticalAlign: '-2px', display: 'inline-block' }}><Lock size={11} /></span>}</div>
           ))}
           {Array.from({ length: emptyAffixSlots(item) }).map((_, i) => <div key={'e' + i} className="affix-empty" data-testid="affix-empty">◇ Empty bonus slot (Augment Rune)</div>)}
         </>
