@@ -28,7 +28,7 @@ import { dailyMods } from '../../dailyChallenge';
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
 const MAX_DASH_CHARGES = 1;
 /** Every dash (all classes, any level) recharges in exactly 4 s. */
-const DASH_CD = 5.5;   // (owner: was 6 s)
+const DASH_CD = 5.5 * 0.75;   // (owner: was 6 s, then 5.5 s; -25%)
 import { camRel } from '../camera';
 
 const DASH_TIME = 0.18;
@@ -254,7 +254,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = (DASH_CD - Math.min(2, 0.3 * Math.max(0, (dLv ?? 1) - 1))) * (1 - 0.1 * runCards.dashStacks);   // 5.5 s, -0.3 s per dash level above 1 (capped at -2 s); no gear / talent CDR
+  p.dashCdMax = (DASH_CD - Math.min(1.5, 0.225 * Math.max(0, (dLv ?? 1) - 1))) * (1 - 0.1 * runCards.dashStacks);   // 4.1 s, -0.225 s per dash level above 1 (capped at -1.5 s); no gear / talent CDR
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {

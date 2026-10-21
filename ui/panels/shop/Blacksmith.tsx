@@ -153,14 +153,16 @@ export const ShardTab: React.FC = () => {
   const { materials, combineMaterials, downgradeMaterials, inventory, fuseCores } = useGameStore(useShallow((s) => ({ materials: s.materials, combineMaterials: s.combineMaterials, downgradeMaterials: s.downgradeMaterials, inventory: s.inventory, fuseCores: s.fuseCores })));
   const coreHave = (t: number) => inventory.filter((i) => coreTierOf(i) === t).reduce((n, i) => n + (i.quantity || 1), 0);
   const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);
-  const fuseShard = (r: Rarity) => {
-    const up = NEXT_R[r]!; const preview = shardItem(up, 1);
-    setCine({ preview, run: () => { combineMaterials(r); return { success: true, item: preview, title: 'Fusion Success!', sub: `1 ${rname(up)} Shard` }; } });
+  /** (owner) fuse up to 10 at once: n fusions in one cinematic */
+  const fuseShard = (r: Rarity, n = 1) => {
+    const up = NEXT_R[r]!; const preview = shardItem(up, n);
+    setCine({ preview, run: () => { for (let i = 0; i < n; i++) combineMaterials(r); return { success: true, item: preview, title: 'Fusion Success!', sub: `${n} ${rname(up)} Shard${n > 1 ? 's' : ''}` }; } });
   };
-  const fuseCore = (t: number) => {
-    const preview = makeItemById(CORE_IDS[t + 1], 1)[0];
-    setCine({ preview, run: () => { const ok = fuseCores(t); return { success: ok, item: preview, title: ok ? 'Fusion Success!' : 'Cannot fuse', sub: `1 ${CORE_NAMES[t + 1]}` }; } });
+  const fuseCore = (t: number, n = 1) => {
+    const preview = makeItemById(CORE_IDS[t + 1], n)[0];
+    setCine({ preview, run: () => { let k = 0; for (let i = 0; i < n; i++) if (fuseCores(t)) k++; return { success: k > 0, item: preview, title: k ? 'Fusion Success!' : 'Cannot fuse', sub: `${k} ${CORE_NAMES[t + 1]}${k > 1 ? 's' : ''}` }; } });
   };
+  const many = (have: number, cost: number) => Math.min(10, Math.floor(have / cost));
   return (
     <div className="flex flex-col gap-3" data-testid="shard-tab">
       <div className="rpg-label">Shards · fuse up (always succeeds) or break down</div>
@@ -174,6 +176,7 @@ export const ShardTab: React.FC = () => {
               <div className="sq-count rpg-num">{materials[r]}</div>
               <div className="sq-btns">
                 {up && <button className="wh-btn pe" disabled={materials[r] < cost} onClick={() => fuseShard(r)} title={`${cost} ${rname(r)} -> 1 ${rname(up)}`}>Fuse {cost}</button>}
+                {up && many(materials[r], cost) >= 2 && <button className="wh-btn pe" onClick={() => fuseShard(r, many(materials[r], cost))} title={`${many(materials[r], cost) * cost} ${rname(r)} -> ${many(materials[r], cost)} ${rname(up)}`}>x{many(materials[r], cost)}</button>}
                 {down && <button className="wh-btn pe" disabled={materials[r] < 1} onClick={() => downgradeMaterials(r)} title={`1 ${rname(r)} -> ${MATERIAL_DOWNGRADE_YIELD} ${rname(down)}`}>Break</button>}
               </div>
             </div>
@@ -189,7 +192,7 @@ export const ShardTab: React.FC = () => {
               <div className="sq-art"><ItemSlot item={it} fluid size="100%" iconSize="72%" tooltip="none" /></div>
               <div className="sq-name" style={{ color: RARITY_TEXT[it.rarity] }}>{CORE_NAMES[t]}</div>
               <div className="sq-count rpg-num">{coreHave(t)}</div>
-              <div className="sq-btns">{t < 1 && <button className="wh-btn pe" disabled={coreHave(t) < CORE_FUSE} onClick={() => fuseCore(t)} data-testid={`core-fuse-${t}`}>Fuse {CORE_FUSE}</button>}</div>
+              <div className="sq-btns">{t < 1 && <button className="wh-btn pe" disabled={coreHave(t) < CORE_FUSE} onClick={() => fuseCore(t)} data-testid={`core-fuse-${t}`}>Fuse {CORE_FUSE}</button>}{t < 1 && many(coreHave(t), CORE_FUSE) >= 2 && <button className="wh-btn pe" onClick={() => fuseCore(t, many(coreHave(t), CORE_FUSE))} data-testid={`core-fuse-many-${t}`}>x{many(coreHave(t), CORE_FUSE)}</button>}</div>
             </div>
           );
         })}

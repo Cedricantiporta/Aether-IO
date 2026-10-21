@@ -756,8 +756,9 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     // the light column + ground ring stand where the main quest continues (an NPC, a shop, the castle door), else on
     // the gate; hidden while the step is done from the bag
     // (questNav.mainNav: the same target the guide arrow and the tracker auto-path use)
-    const ms = world.village.area === 'TOWN' ? mainNav() : null, hide = !ms && !!STORY[useGameStore.getState().story.step];
-    let bx = PORTAL.x, bz = PORTAL.front.z;   // default: the Adventure Portal
+    // (owner) no ray on the Adventure Portal: when the quest leads out to a run (or the step is done in the field) it is hidden
+    const ms = world.village.area === 'TOWN' ? mainNav() : null, hide = !ms || !!ms.field;
+    let bx = PORTAL.x, bz = PORTAL.front.z;
     if (ms && !ms.field) { bx = ms.x; bz = ms.z; if (ms.act === 'castle') bz -= 0.5; }
     if (beam.current) { beam.current.position.set(bx, 18, bz); beam.current.visible = !hide; }
     if (ring.current) { ring.current.position.set(bx, 0.12 + townLift(bx, bz), bz); ring.current.visible = !hide; }

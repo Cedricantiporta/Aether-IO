@@ -10,24 +10,47 @@ import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinemat
 import type { Item, Rarity } from '../../../types';
 
 const cap = (r: string) => r.charAt(0) + r.slice(1).toLowerCase();
+/** (owner) the most fusions one press does (Fuse xN, auto fuse) and the most results shown. */
+export const FUSE_BATCH = 10;
+export type FuseResult = { ok: boolean; item: Item };
+/** The outcome of a batch: the best result for the cinematic, plus "k of n succeeded". */
+export const batchOutcome = (rs: FuseResult[], preview: Item): ForgeOutcome => {
+  if (!rs.length) return { success: false, item: preview, title: 'Cannot fuse these', sub: 'Nothing was used.' };
+  const won = rs.filter((r) => r.ok), best = won[won.length - 1] ?? rs[0];
+  return { success: won.length > 0, item: best.item, title: won.length ? 'Fusion Success!' : 'Fusion Failed', sub: rs.length === 1 ? (best.ok ? `${best.item.name} - ${cap(best.item.rarity)}` : `${best.item.name} remains`) : `${won.length} of ${rs.length} fusions succeeded` };
+};
+/** Up to FUSE_BATCH result slots (gold ring = upgraded). */
+export const FuseResults: React.FC<{ rs: FuseResult[]; testid: string }> = ({ rs, testid }) => {
+  if (!rs.length) return null;
+  const won = rs.filter((r) => r.ok).length;
+  return (
+    <div className="rpg-frame p-2 flex flex-col gap-2" data-testid={testid}>
+      <div className="text-[.85rem]" style={{ color: won ? '#ffd24a' : '#c8c0b0' }}>{rs.length === 1 ? (won ? 'Success! ' : 'The fusion failed. ') : `${won} of ${rs.length} fusions succeeded`}{rs.length === 1 && <b style={{ color: RARITY_COLOR[rs[0].item.rarity] }}>{rs[0].item.name}</b>}</div>
+      <div className="slot-grid">
+        {rs.slice(0, FUSE_BATCH).map((r, i) => (
+          <div key={i} style={{ opacity: r.ok ? 1 : 0.6, outline: r.ok ? '2px solid #ffd24a' : 'none', borderRadius: 6 }}><ItemSlot item={r.item} fluid size="100%" iconSize="78%" tooltip="none" /></div>
+        ))}
+      </div>
+      {rs.length > FUSE_BATCH && <div className="rpg-label">+{rs.length - FUSE_BATCH} more</div>}
+    </div>
+  );
+};
 
 export const ItemFuse: React.FC = () => {
   const inventory = useGameStore((s) => s.inventory);
   const fuseItems = useGameStore((s) => s.fuseItems);
   const [sel, setSel] = useState<string[]>([]);
-  const [last, setLast] = useState<{ ok: boolean; item: Item } | null>(null);
+  const [last, setLast] = useState<FuseResult[]>([]);
   const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);
   /** plays the fusion cinematic; `fn` performs the fusion at the burst moment (owner: animation + result in the middle) */
-  const play = (preview: Item, fn: () => { ok: boolean; item: Item } | null): void => setCine({ preview, run: () => {
-    const r = fn(); if (r) setLast(r);
-    return r ? { success: r.ok, item: r.item, title: r.ok ? 'Fusion Success!' : 'Fusion Failed', sub: r.ok ? `${r.item.name} - ${r.item.rarity.charAt(0) + r.item.rarity.slice(1).toLowerCase()}` : `${r.item.name} remains` } : { success: false, item: preview, title: 'Cannot fuse these', sub: 'Pick 5 pieces of the same tier and type. Nothing was used.' };
-  } });
+  /** plays the fusion cinematic; `fn` performs the fusion(s) at the burst moment (owner: animation + result in the middle) */
+  const play = (preview: Item, fn: () => FuseResult[]): void => setCine({ preview, run: () => { const rs = fn(); setLast(rs); return batchOutcome(rs, preview); } });
   const gear = inventory.filter((i) => isGear(i) && i.type !== 'PET');   // (pets fuse at the Pet Stable; a pet here made the fusion silently refuse)
   const picked = sel.map((id) => gear.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const tier = picked[0]?.rarity, kind = picked[0]?.type;
   const up = tier ? nextTier(tier) : null;
   const toggle = (p: Item) => {
-    setLast(null);
+    setLast([]);
     if (sel.includes(p.id)) { setSel(sel.filter((x) => x !== p.id)); return; }
     if (!(FUSE_CHANCE[p.rarity] ?? 0)) return;
     if (tier && (p.rarity !== tier || p.type !== kind)) { setSel([p.id]); return; }   // five of one tier AND one type
@@ -50,13 +73,24 @@ export const ItemFuse: React.FC = () => {
     if (!gs.length) return;
     ask({ title: `Auto fuse ${gs.length} set${gs.length > 1 ? 's' : ''}?`, body: `Every full set of ${FUSE_COUNT} same-tier, same-type gear in your bag (${gs.length * FUSE_COUNT} pieces) will be fused. Equipped gear is never used.`, confirmLabel: 'Auto fuse', tone: 'danger', onConfirm: () => {
       setSel([]);
-      let won = 0, n = 0; let best: { ok: boolean; item: Item } | null = null;
-      for (const ids of gs) { const r = fuseItems(ids); if (!r) continue; n++; if (r.ok) { won++; best = r; } else if (!best) best = r; }
-      if (best) setLast(best);
-      useGameStore.getState().addNotification(`Auto fuse: ${n} fusion${n === 1 ? '' : 's'}, ${won} upgraded`, won ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
+      const rs: FuseResult[] = [];
+      for (const ids of gs) { const r = fuseItems(ids); if (r) rs.push(r); }
+      setLast(rs);
+      const won = rs.filter((r) => r.ok).length;
+      useGameStore.getState().addNotification(`Auto fuse: ${rs.length} fusion${rs.length === 1 ? '' : 's'}, ${won} upgraded`, won ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
     } });
   };
-  const go = () => { if (picked.length !== FUSE_COUNT) return; const ids = sel; setSel([]); play(picked[0], () => fuseItems(ids)); };
+  const go = () => { if (picked.length !== FUSE_COUNT) return; const ids = sel; setSel([]); play(picked[0], () => { const r = fuseItems(ids); return r ? [r] : []; }); };
+  /** (owner) Fuse xN: up to FUSE_BATCH sets of the picked tier + type at once (the picked pieces first, then the rest of the bag) */
+  const sets = (): string[][] => {
+    if (!tier) return [];
+    const pool = [...picked, ...gear.filter((g) => g.rarity === tier && g.type === kind && !sel.includes(g.id))].map((g) => g.id);
+    const out: string[][] = [];
+    for (let i = 0; i + FUSE_COUNT <= pool.length && out.length < FUSE_BATCH; i += FUSE_COUNT) out.push(pool.slice(i, i + FUSE_COUNT));
+    return out;
+  };
+  const nSets = sets().length;
+  const goMany = () => { const ss = sets(); if (ss.length < 2) return; setSel([]); play(picked[0], () => { const rs: FuseResult[] = []; for (const ids of ss) { const r = fuseItems(ids); if (r) rs.push(r); } return rs; }); };
   return (
     <div className="flex flex-col gap-3" data-testid="item-fuse">
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
@@ -77,14 +111,10 @@ export const ItemFuse: React.FC = () => {
         <div className="flex gap-2">
           <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!groups().length} onClick={auto} data-testid="ifuse-auto">Auto Fuse</button>
           <button className="rpg-btn bevel pe px-4 py-1.5" disabled={picked.length !== FUSE_COUNT} onClick={go} data-testid="ifuse-go">Fuse</button>
+          {nSets >= 2 && <button className="rpg-btn bevel pe px-3 py-1.5" onClick={goMany} data-testid="ifuse-many" title={`Fuse ${nSets} sets of ${FUSE_COUNT} at once`}>Fuse x{nSets}</button>}
         </div>
       </div>
-      {last && (
-        <div className="rpg-frame p-2 flex items-center gap-3" data-testid="ifuse-result">
-          <div style={{ width: 'var(--cell)' }}><ItemSlot item={last.item} fluid size="100%" iconSize="78%" tooltip="none" /></div>
-          <div className="text-[.85rem]" style={{ color: last.ok ? '#ffd24a' : '#c8c0b0' }}>{last.ok ? 'Success! ' : 'The fusion failed. '}<b style={{ color: RARITY_COLOR[last.item.rarity] }}>{last.item.name}</b></div>
-        </div>
-      )}
+      <FuseResults rs={last} testid="ifuse-result" />
       <div className="rpg-label">Gear in your bag</div>
       <div className="slot-grid">
         {gear.length ? gear.map((p) => (
