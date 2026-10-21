@@ -323,9 +323,9 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
   if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'ITEM', preboss: true }); return 1; }
   // the boss key was found: a boss door opens beside the usual ones (fight early, or keep exploring)
-  if (bossKey && next > PREBOSS_INDEX) { const n = nextChoices(biome, index, out, merchantOk, fountainOk, shrineOk, crystal, false); if (n >= 3) out.pop(); out.unshift({ type: 'BOSS', reward: 'NONE' }); return out.length; }
+  if (bossKey && next > PREBOSS_INDEX) { const n = nextChoices(biome, index, out, merchantOk, fountainOk, shrineOk, crystal, false); if (n >= 2) out.pop(); out.unshift({ type: 'BOSS', reward: 'NONE' }); return out.length; }
   if (next === REST_INDEX) { out.push({ type: 'MERCHANT', reward: 'NONE' }); return 1; }   // depth 14 is always the merchant (owner)
-  const n = pick<number>([[1, 15], [2, 50], [3, 35]]);
+  const n = pick<number>([[1, 40], [2, 60]]);   // (owner) just 1 or 2 doors after a stage
   const used = new Set<RoomType>();
   for (let i = 0; i < n; i++) {
     const t = pick<RoomType>([

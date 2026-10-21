@@ -980,7 +980,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const extraCard = bonus;
       if (extraCard) notify('Bonus reward card!', COLORS.uiAccent, 'SYSTEM');
       set({
-        upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, (Math.random() < 0.25 ? 3 : 2) + (extraCard ? 1 : 0)),
+        upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, Math.min(3, (Math.random() < 0.12 ? 3 : 2) + (extraCard ? 1 : 0))   /* (owner) 2 cards, rarely 3 */),
         accumulatedWaveGold: s.accumulatedWaveGold + 1000,
         status: GameStatus.LEVEL_UP,
       });
