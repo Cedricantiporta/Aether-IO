@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDrop } from '../../lib/dnd';
 import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from '../../components/GoldIcons';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,6 +16,7 @@ import { ItemSlot } from '../../components/ItemSlot';
 import { AnvilGlyph } from '../../components/ItemArt';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import { Workshop } from './Workshop';
+import { useCraftAlert } from '../../lib/alerts';
 import { useUiStore } from '../../uiStore';
 import { RARITIES, RARITY_COLOR, RARITY_TEXT, STAT_LABEL, fmtItemStat, upgradeChance, upgradeCoreCost, upgradeGoldCost, upgradeBreakChance, upgradeCoreTier, upgradedStats, MAX_ITEM_LEVEL, isGear } from '../../lib/game';
 import { ItemFuse } from './ItemFuse';
@@ -54,13 +56,20 @@ const ForgeEmpty: React.FC<{ free?: boolean }> = ({ free }) => (
   </div>
 );
 
+/** (owner) Drop zone: drag a piece of gear from the bag or straight from the equipped slots onto the upgrade / reforge slot. */
+export const GearDrop: React.FC<{ onItem: (it: Item) => void; children: React.ReactNode }> = ({ onItem, children }) => {
+  const { hot, props } = useDrop((d) => (d.from === 'BAG' || d.from === 'EQUIP') && isGear(d.item) && d.item.type !== 'PET', (d) => onItem(d.item));
+  return <div className={hot ? 'drop-hot' : undefined} {...props}>{children}</div>;
+};
+
 export const Upgrade: React.FC = () => {
-  const { inventory, gold, upgradeItem, actionResult } = useGameStore(useShallow((s) => ({ inventory: s.inventory, gold: s.gold, upgradeItem: s.upgradeItem, actionResult: s.actionResult })));
+  const { inventory, equipment, gold, upgradeItem, actionResult } = useGameStore(useShallow((s) => ({ inventory: s.inventory, equipment: s.equipment, gold: s.gold, upgradeItem: s.upgradeItem, actionResult: s.actionResult })));
   const selected = useUiStore((s) => s.selectedItem);
   const setSelected = useUiStore((s) => s.setSelectedItem);
   const free = useGameStore((s) => questFree(s, 'forge'));   // tutorial "Temper the Steel": no gold, no cores, sure success
   const [forging, setForging] = useState(false);
-  const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? (forging ? selected : null)) : null;   // (a shattered item stays on screen until its cinematic ends)
+  const worn = Object.values(equipment).filter((i): i is NonNullable<typeof i> => !!i);   // equipped gear can be upgraded too (drag it from the equipped slots)
+  const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? worn.find((i) => i.id === selected.id) ?? (forging ? selected : null)) : null;   // (a shattered item stays on screen until its cinematic ends)
   const coreTier = selected ? upgradeCoreTier(selected) : 0;   // tiered cores: the one this upgrade needs
   const cores = inventory.filter((i) => coreTierOf(i) === coreTier).reduce((n, i) => n + (i.quantity || 1), 0);
 
@@ -68,7 +77,7 @@ export const Upgrade: React.FC = () => {
     if (actionResult?.type === 'UPGRADE' && actionResult.success && actionResult.item) setSelected(actionResult.item);
   }, [actionResult, setSelected]);
 
-  if (!item || !isGear(item)) return <ForgeEmpty free={free} />;
+  if (!item || !isGear(item)) return <GearDrop onItem={setSelected}><ForgeEmpty free={free} /></GearDrop>;
   const maxed = item.level >= MAX_ITEM_LEVEL;
   const goldCost = free ? 0 : upgradeGoldCost(item), coreCost = free ? 0 : upgradeCoreCost(item);
   const chance = free ? 1 : upgradeChance(item), brk = free ? 0 : upgradeBreakChance(item);
@@ -90,7 +99,7 @@ export const Upgrade: React.FC = () => {
   // (owner reference: enchant screen) "+8 -> +9" header, the item in an ornate diamond frame between the material
   // circle (cores, left) and the success-chance circle (right), stat rows old > new, big red Upgrade with the gold cost.
   return (
-    <div className="enc relative" data-testid="upgrade-view">
+    <GearDrop onItem={setSelected}><div className="enc relative" data-testid="upgrade-view">
       <div className="enc-lv">
         <span className="rpg-num">+{item.level - 1}</span>
         <i className="enc-arrow" aria-hidden><b /><b /><b /></i>
@@ -130,7 +139,7 @@ export const Upgrade: React.FC = () => {
         {!maxed && <span className="enc-btn-c rpg-num" style={{ color: gold >= goldCost ? undefined : '#ffb4a8' }}><CoinGlyph size={14} /> {goldCost.toLocaleString()}</span>}
       </button>
       {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
-    </div>
+    </div></GearDrop>
   );
 };
 
@@ -193,6 +202,7 @@ export const ShardTab: React.FC = () => {
 export const BlacksmithTab: React.FC = () => {
   const tab = useUiStore((s) => s.blacksmithTab);
   const setTab = useUiStore((s) => s.setBlacksmithTab);
+  const craftDot = useCraftAlert();
   const clear = useGameStore((s) => s.clearActionResult);
   const actionResult = useGameStore((s) => s.actionResult);
   useEffect(() => {
@@ -203,7 +213,7 @@ export const BlacksmithTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['UPGRADE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
+        {(['UPGRADE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe relative ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}{t === 'CRAFT' && craftDot && <i className="red-dot" data-testid="craft-tab-dot" />}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
       {tab === 'FUSE' && <ItemFuse />}

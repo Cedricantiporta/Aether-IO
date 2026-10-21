@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
 import { ItemSlot } from '../../components/ItemSlot';
+import { GearDrop } from './Blacksmith';
 import { affixText, isUnique } from '../../../affixes';
 import { REFORGE_ITEM, emptyAffixSlots, type ReforgeMode } from '../../../reforge';
 import { isGear, RARITY_COLOR } from '../../lib/game';
@@ -28,7 +29,7 @@ export const ReforgeTab: React.FC = () => {
         Tools come from the Gem Shop, the travelling merchant and boss chests.
       </div>
       <div className="rpg-frame p-3 flex gap-3 items-start">
-        <div style={{ width: '4.2rem', flex: 'none' }}>{sel ? <ItemSlot item={sel} fluid size="100%" iconSize="78%" tooltip="none" /> : <div className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }}><span className="slot-plus-faint">+</span></div>}</div>
+        <GearDrop onItem={(it) => setSelId(it.id)}><div style={{ width: '4.2rem', flex: 'none' }}>{sel ? <ItemSlot item={sel} fluid size="100%" iconSize="78%" tooltip="none" /> : <div className="rpg-slot fluid is-empty" style={{ ['--slot' as any]: '100%' }}><span className="slot-plus-faint">+</span></div>}</div></GearDrop>
         <div className="flex-1 min-w-0">
           {sel ? <>
             <div className="font-bold" style={{ color: RARITY_COLOR[sel.rarity] }}>{sel.name}</div>
