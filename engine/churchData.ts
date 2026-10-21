@@ -26,6 +26,9 @@ for (const z of PEW_Z) for (const sx of [-1, 1]) for (const o of [-1.0, 1.0]) PE
 export const NAVE_PILLARS: [number, number][] = [];
 for (const x of [-6, 6]) for (const z of [-6, 0, 6]) NAVE_PILLARS.push([x, z]);
 
+/** Potted plants (visual + colliders): by the door and either side of the altar. */
+export const CHURCH_PLANTS: [number, number][] = [[-5.6, 10.4], [5.6, 10.4], [-5.5, -10.9], [5.5, -10.9]];
+
 export const CHURCH_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   const { hw, hd } = NAVE;
@@ -35,6 +38,7 @@ export const CHURCH_COLLIDERS: [number, number, number][] = (() => {
   for (const z of PEW_Z) for (const sx of [-1, 1]) for (let d = -PEW_HL + 0.4; d <= PEW_HL - 0.39; d += 0.9) c.push([sx * PEW_X + d, z, 0.5]);
   c.push([0, -10.6, 1.4], [-1.2, -10.6, 1.0], [1.2, -10.6, 1.0]);   // altar
   for (const sx of [-1, 1]) c.push([sx * 2.7, -9.4, 0.45]);          // candle stands
+  for (const [x, z] of CHURCH_PLANTS) c.push([x, z, 0.5]);           // potted plants
   // (the west wall chain has a gap for the side door; see the wall loop above)
   return c;
 })();

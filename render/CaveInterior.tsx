@@ -5,6 +5,9 @@
 // lava / poison pools with embers / mist, the lucky ladder, oil flasks, and the rare-vein geodes (rarity-coloured glow,
 // a light beam for Legendary / Mythic). Static scenery is merged (floor + wall + ONE lit mesh + ONE glow mesh); 3 floor
 // lights + the hero's lantern light (its reach shrinks as the oil runs out, with a flicker when low).
+// Kit v3 (render/kitV3.tsx): the floor is 4 m stone-cave tiles (one merged mesh, receives light only), the crystal clusters, the mine
+// cart + rails, Grit's desk and lantern posts, the wooden pit-prop frames at the exits and the lantern posts are kit pieces merged
+// into ONE lit + ONE glow mesh (the glow shares the cave's breathing / oil-dim material).
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -15,6 +18,8 @@ import { CAVE, RARE_COLOR, caveLayout, type CaveLayout } from '../engine/caveDat
 import { world } from '../engine/world';
 import { GB, TAU, fbm, litMat, mulberry32, vnoise } from './util';
 import { makeRockGeo } from './models';
+import { KitV3Static, type KitV3Item } from './kitV3';
+import { floorCells } from './interiorKit';
 import { lookDim } from './biomeLook';
 import { Npcs } from './Npcs';
 import { caveCameo } from '../engine/systems/npcs';
@@ -22,40 +27,46 @@ import { QualityCfg } from './quality';
 
 type V3 = [number, number, number];
 const N = 120;   // outline segments
+const PI = Math.PI;
 const WOOD = '#5a3a1e', WOOD2 = '#6e4b2b', IRON = '#2e2e33';
 const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** Wall height around the outline: tall at the back (north, -z), low at the front so the camera looks over it. */
 const wallH = (a: number) => CAVE.h + (2.2 - CAVE.h) * sstep(-0.15, 0.75, Math.sin(a));
 
-/** Floor: rings of the outline (+ a lip under the walls), vertex coloured dusty stone with darker edges. */
-function buildFloor(L: CaveLayout): BufferGeometry {
-  const R = 12, pos: number[] = [], col: number[] = [], idx: number[] = [];
-  const c = new Color(), a1 = new Color('#4d453c'), a2 = new Color('#62584c'), dust = new Color('#766a5a'), edge = new Color('#2a2521');
-  if (L.hazard === 'LAVA') { a1.set('#4a3a32'); a2.set('#5e4a3e'); dust.set('#6e4a36'); }
-  if (L.hazard === 'POISON') { a1.set('#3e463a'); a2.set('#505a48'); dust.set('#5e6a4e'); }
-  for (let k = 0; k <= R; k++) {
-    for (let i = 0; i < N; i++) {
-      const a = (i / N) * TAU, t = k / R, r = L.radius(a) * t + (k === R ? 2.5 : 0);
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      pos.push(x, 0, z);
-      c.copy(a1).lerp(a2, fbm(x * 0.18 + 3, z * 0.18, 3)).lerp(dust, sstep(0.55, 0.85, fbm(x * 0.07, z * 0.07 + 7, 2)) * 0.6);
-      c.multiplyScalar(0.9 + vnoise(x * 1.3, z * 1.3) * 0.2).lerp(edge, sstep(0.6, 1, t) * 0.75);
-      col.push(c.r, c.g, c.b);
-    }
+/** Floor: kit stone-cave tiles on the 4 m world grid over the outline (+ a lip hidden under the walls), tinted dusty / hot / sickly by hazard. */
+function floorItems(L: CaveLayout): KitV3Item[] {
+  const tint = L.hazard === 'LAVA' ? '#e0a888' : L.hazard === 'POISON' ? '#b4c8a0' : '#d8c8b4';
+  const ext = Math.max(L.rx, L.rz) * 1.2 + 4;
+  return floorCells('floor_stone_cave', (x, z) => Math.hypot(x, z) <= L.radius(Math.atan2(z, x)) + 3.0, ext, -0.16, tint);
+}
+
+/** Kit props: crystal clusters (the layout's + extra ones along the wall foot), Floor 1's cart + rails and Grit's bench corner, pit-prop frames and lantern posts at the exits. */
+function propItems(L: CaveLayout): KitV3Item[] {
+  const it: KitV3Item[] = [], rnd = mulberry32(5150 + L.floor * 31 + Math.round(L.rx * 100));
+  L.crystals.forEach(([x, z, s, k], i) => it.push({ piece: 'crystal_cluster_glow', x, z, rotY: i * 2.3, scale: s * 1.25, glow: L.tint[k] }));
+  const nx = Math.round(10 * (L.rx + L.rz) / (CAVE.rx + CAVE.rz));
+  for (let i = 0; i < nx; i++) {   // extra clusters hugging the back / side walls (never near the way out)
+    const a = Math.PI + 0.35 + ((i + rnd() * 0.7) / nx) * (TAU * 0.5 + 0.9) - 0.45;
+    if (Math.sin(a) > 0.45) continue;
+    const r = L.radius(a) - 0.1, k = rnd() < 0.5 ? 0 : 1;
+    it.push({ piece: 'crystal_cluster_glow', x: Math.cos(a) * r, z: Math.sin(a) * r, rotY: rnd() * TAU, scale: 0.9 + rnd() * 0.7, glow: L.tint[k] });
   }
-  pos.push(0, 0, 0); c.copy(a2); col.push(c.r, c.g, c.b);
-  const ctr = (R + 1) * N;
-  for (let i = 0; i < N; i++) idx.push(ctr, (i + 1) % N, i);
-  for (let k = 0; k < R; k++) for (let i = 0; i < N; i++) {
-    const a = k * N + i, b = k * N + ((i + 1) % N), d = a + N, e = b + N;
-    idx.push(a, b, d, b, e, d);
+  if (L.cart) {
+    const rx = L.cart.x, z0 = L.exit.z + 1.5, z1 = L.cart.z - 4.5;
+    for (let z = z0 - 2; z > z1 - 2; z -= 4) it.push({ piece: 'mine_rails', x: rx, z, rotY: Math.PI / 2 });
+    it.push({ piece: 'mine_cart', x: L.cart.x, z: L.cart.z, rotY: Math.PI / 2 + L.cart.rot });
   }
-  const g = new BufferGeometry();
-  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new Float32BufferAttribute(col, 3));
-  g.setIndex(new BufferAttribute(new Uint32Array(idx), 1));
-  g.computeVertexNormals();
-  return g;
+  if (L.bench) {
+    const { x, z } = L.bench;
+    it.push({ piece: 'desk', x, z, rotY: 0 }, { piece: 'lantern_post', x: x - 1.5, z: z + 0.2, rotY: 0 }, { piece: 'lantern_post', x: x + 1.3, z: z - 0.4, rotY: PI });
+    it.push({ piece: 'barrel_tap', x: x + 1.9, z: z + 0.5, rotY: -0.5 }, { piece: 'fruit_crate', x: x - 0.4, z: z + 1.0, rotY: 0.4 });
+  }
+  const ez = L.radius(PI / 2) + 0.25;
+  it.push({ piece: 'wood_supports', x: 0, z: ez, rotY: PI, scale: [0.9, 1, 1] });
+  for (const sx of [-1, 1]) it.push({ piece: 'lantern_post', x: sx * 3.1, z: ez - 0.9, rotY: sx < 0 ? 0 : PI });
+  it.push({ piece: 'wood_supports', x: L.down.x, z: L.down.z + 2.6, rotY: PI, scale: [0.9, 1, 1] });
+  it.push({ piece: 'lantern_post', x: L.down.x + 2.5, z: L.down.z + 1.0, rotY: PI });
+  return it;
 }
 
 /** Rock wall: a strip around the outline, rows from the floor to the wall top, then a cap running outward (hides the void). */
@@ -116,16 +127,6 @@ function buildProps(L: CaveLayout): { body: BufferGeometry; glow: BufferGeometry
     b.cone(0.3 * s, 1.5 * s, 5, [x + 0.45 * s, 0.85 * s, z + 0.25 * s], c, [0, rnd() * 3, 0.15]);
     if (rnd() < 0.6) b.cone(0.22 * s, 1.0 * s, 5, [x - 0.4 * s, 0.6 * s, z - 0.3 * s], c, [0.1, rnd() * 3, -0.1]);
   }
-  // ---- glowing crystal clusters (lit rock base + glowing shards, tinted by depth)
-  for (const [x, z, s, k] of L.crystals) {
-    b.dodeca(0.7 * s, [x, 0.1, z], '#3e3833', [1.2, 0.55, 1.1]);
-    const n = 5 + Math.floor(rnd() * 3);
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + rnd() * 0.6, d = i === 0 ? 0 : 0.35 * s + rnd() * 0.3 * s, h = (i === 0 ? 1.9 : 0.9 + rnd() * 0.9) * s;
-      const tilt = i === 0 ? 0 : 0.35 + rnd() * 0.35;
-      g.octa(0.28 * s, [x + Math.cos(a) * d, h * 0.42, z + Math.sin(a) * d], L.tint[k], [0.75, h / (0.56 * s) * 0.5, 0.75], [Math.sin(a) * tilt, rnd() * 3, -Math.cos(a) * tilt]);
-    }
-  }
   // ---- glowing mushrooms (pale stems, glowing caps)
   for (const [x, z, s] of L.mushrooms) {
     const n = 3 + Math.floor(rnd() * 3);
@@ -134,26 +135,6 @@ function buildProps(L: CaveLayout): { body: BufferGeometry; glow: BufferGeometry
       b.cyl(0.04 * s, 0.06 * s, h, 5, [cx, h / 2, cz], '#d8d0c0');
       g.sph((0.12 + rnd() * 0.08) * s, [cx, h, cz], rnd() < 0.5 ? '#5fffd0' : '#7fd8ff', [1, 0.45, 1], 6);
     }
-  }
-  // ---- Floor 1: rail track + mine cart, Grit's lantern bench
-  if (L.cart) {
-    const rx = L.cart.x, z0 = L.exit.z + 1.5, z1 = L.cart.z - 4.5;
-    for (const sx of [-1, 1]) b.box(0.09, 0.09, z0 - z1, [rx + sx * 0.58, 0.08, (z0 + z1) / 2], IRON);
-    for (let z = z1 + 0.3; z < z0; z += 0.72) b.box(1.6, 0.07, 0.26, [rx, 0.04, z], WOOD);
-    const { x, z, rot } = L.cart, cr = Math.cos(rot), sr = Math.sin(rot);
-    const at = (lx: number, ly: number, lz: number): V3 => [x + lx * cr + lz * sr, ly, z - lx * sr + lz * cr];
-    b.box(1.5, 0.9, 2.1, at(0, 0.85, 0), WOOD2, [0, rot, 0]);
-    b.box(1.6, 0.1, 2.2, at(0, 1.3, 0), IRON, [0, rot, 0]); b.box(1.6, 0.1, 2.2, at(0, 0.45, 0), IRON, [0, rot, 0]);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(0.3, 0.3, 0.14, 8, at(sx * 0.78, 0.3, sz * 0.65), IRON, [0, rot, Math.PI / 2]);
-    for (let i = 0; i < 9; i++) b.dodeca(0.24 + rnd() * 0.12, at((rnd() - 0.5) * 1.0, 1.35 + rnd() * 0.2, (rnd() - 0.5) * 1.5), i % 3 ? '#6e6a66' : '#a8742e');
-    g.octa(0.14, at(0.3, 1.6, 0.3), '#5fe0ff', [0.8, 1.6, 0.8]);
-  }
-  if (L.bench) {
-    const { x, z } = L.bench;
-    b.box(2.2, 0.12, 1.0, [x, 0.95, z], WOOD2); for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.12, 0.95, 0.12, [x + sx * 0.95, 0.47, z + sz * 0.38], WOOD);
-    for (const [lx, c] of [[-0.6, '#ffc86a'], [0.1, '#ffd890'], [0.7, '#ffb85a']] as const) { b.box(0.26, 0.05, 0.26, [x + lx, 1.03, z], IRON); g.box(0.2, 0.3, 0.2, [x + lx, 1.22, z], c); b.cone(0.18, 0.16, 4, [x + lx, 1.43, z], IRON, [0, Math.PI / 4, 0]); }
-    for (const [ox, oz] of [[1.5, 0.3], [1.6, -0.6]]) { b.cyl(0.36, 0.36, 0.85, 9, [x + ox, 0.43, z + oz], '#6a4526'); b.cyl(0.38, 0.38, 0.08, 9, [x + ox, 0.7, z + oz], IRON); b.cyl(0.38, 0.38, 0.08, 9, [x + ox, 0.2, z + oz], IRON); }
-    b.box(1.6, 1.4, 0.1, [x, 1.75, z - 0.55], WOOD); for (let i = 0; i < 3; i++) b.box(0.08, 0.4, 0.08, [x - 0.5 + i * 0.5, 2.1, z - 0.45], IRON);
   }
   // ---- the way out (south): Floor 1 = timber frame with daylight; deeper = wooden stairs climbing into the rock
   const ez = L.radius(Math.PI / 2) + 0.25, slab = new GB([0.8, 1]).dodeca(1, [0, 0, 0], '#4d4640').build();
@@ -165,19 +146,14 @@ function buildProps(L: CaveLayout): { body: BufferGeometry; glow: BufferGeometry
     g.box(3.0, 2.2, 0.1, [0, 3.0, ez + 1.6], '#ffd9a0'); g.box(3.6, 0.04, 1.8, [0, 0.02, ez - 2.4], '#5d5040');
   }
   for (const sx of [-1, 1]) {
-    b.box(0.34, 3.4, 0.34, [sx * 1.9, 1.7, ez], WOOD); b.box(0.2, 0.9, 0.2, [sx * 1.5, 3.05, ez], WOOD2, [0, 0, sx * 0.8]);
-    b.box(0.18, 2.4, 0.18, [sx * 3.1, 1.2, ez - 0.9], WOOD); b.box(0.3, 0.06, 0.3, [sx * 3.1, 2.42, ez - 0.9], IRON);
-    g.box(0.24, 0.36, 0.24, [sx * 3.1, 2.22, ez - 0.9], '#ffc86a');
     b.addColored(slab, [sx * 3.4, 0.6, ez + 0.6], [0, sx, 0], [1.8, 1.6, 1.2]);
   }
   slab.dispose();
-  b.box(4.4, 0.4, 0.44, [0, 3.5, ez], WOOD2);
-  // ---- the stairs down (north): a dark stairwell with steps going down, a rim of stones, a lantern post
+  // ---- the stairs down (north): a dark stairwell with steps going down, a rim of stones
   const { x: dx, z: dz } = L.down;
   b.box(3.0, 0.04, 3.4, [dx, 0.03, dz - 0.4], '#050405');
   for (let k = 0; k < 4; k++) b.box(2.6, 0.06, 0.5, [dx, 0.05, dz + 0.9 - k * 0.65], k % 2 ? '#3a2a1c' : '#2a1e14', [0, 0, 0], [0.4 + k * 0.1, 0.4]);
   for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; b.dodeca(0.35 + rnd() * 0.15, [dx + Math.cos(a) * 1.85, 0.12, dz - 0.4 + Math.sin(a) * 2.05], '#5a524a', [1, 0.6, 1]); }
-  b.box(0.16, 2.4, 0.16, [dx + 2.3, 1.2, dz + 1.0], WOOD); b.box(0.7, 0.1, 0.1, [dx + 2.0, 2.35, dz + 1.0], WOOD); g.box(0.22, 0.32, 0.22, [dx + 1.75, 2.08, dz + 1.0], '#ffc86a');
   return { body: b.build(), glow: g.build() };
 }
 
@@ -235,9 +211,10 @@ const _m = new Matrix4(), _q = new Quaternion(), _p = new Vector3(), _s = new Ve
 export function CaveInterior({ q }: { q: QualityCfg }) {
   const cv = world.village.cave;
   const L = caveLayout(cv.floor, cv.seed);
-  const geo = useMemo(() => ({ floor: buildFloor(L), wall: buildWall(L), ...buildProps(L), stairs: buildStairState(L), pools: buildPools(L), bits: buildBits() }), [L]);
+  const floor = useMemo(() => floorItems(L), [L]);
+  const props = useMemo(() => propItems(L), [L]);
+  const geo = useMemo(() => ({ wall: buildWall(L), ...buildProps(L), stairs: buildStairState(L), pools: buildPools(L), bits: buildBits() }), [L]);
   const mats = useMemo(() => ({
-    floor: new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }),
     wall: litMat({ roughness: 0.95, flatShading: true, side: DoubleSide }),
     lit: litMat({ roughness: 0.9, flatShading: true }),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.3, 1.3, 1.3) }),
@@ -252,7 +229,7 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
     }),
   }), [L]);
   useEffect(() => () => {
-    geo.floor.dispose(); geo.wall.dispose(); geo.body.dispose(); geo.glow.dispose(); geo.stairs.boards.dispose(); geo.stairs.open.dispose();
+    geo.wall.dispose(); geo.body.dispose(); geo.glow.dispose(); geo.stairs.boards.dispose(); geo.stairs.open.dispose();
     if (geo.pools) { geo.pools.glow.dispose(); geo.pools.rim.dispose(); geo.pools.pts.dispose(); }
     Object.values(geo.bits).forEach((g) => g.dispose());
     Object.values(mats).forEach((m) => m.dispose());
@@ -327,8 +304,9 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
   const refs = [l0, l1, l2];
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} material={mats.outer}><planeGeometry args={[600, 600]} /></mesh>
-      <mesh geometry={geo.floor} material={mats.floor} receiveShadow={sh} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} material={mats.outer}><planeGeometry args={[600, 600]} /></mesh>
+      <KitV3Static items={floor} cast={false} receive={sh} />
+      <KitV3Static items={props} cast={sh} receive={sh} glow={mats.glow} />
       <mesh geometry={geo.wall} material={mats.wall} receiveShadow={sh} />
       <mesh geometry={geo.body} material={mats.lit} castShadow={sh} receiveShadow={sh} />
       <mesh geometry={geo.glow} material={mats.glow} />

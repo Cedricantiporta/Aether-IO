@@ -24,10 +24,20 @@ export const CASTLE_DOOR = { x: 0, z: -23.2, r: 4.6 };
 
 export const PILLARS: [number, number][] = [];
 for (const x of [-7.5, 7.5]) for (const z of [-8, -1, 6, 13]) PILLARS.push([x, z]);
-/** Long tables [x, z, half-length along z]. Benches run on both sides. */
-export const TABLES: [number, number, number][] = [[-10.6, 3.5, 3.2], [10.6, 3.5, 3.2]];
-export const BRAZIERS: [number, number][] = [[-4.4, -11.6], [4.4, -11.6], [-3.4, 14.5], [3.4, 14.5]];
-export const BANNER_Z = [-14, -4, 4, 14];
+/** Banquet tables [x, z]: round tables (kit round_table x1.5, radius ~1.35) with four stools each (TABLE_STOOLS), three on each side of the hall. */
+export const TABLES: [number, number][] = [];
+for (const x of [-10.6, 10.6]) for (const z of [-3.5, 2, 7.5]) TABLES.push([x, z]);
+export const TABLE_STOOLS: [number, number][] = [];
+for (const [x, z] of TABLES) for (const sx of [-1, 1]) for (const sz of [-1, 1]) TABLE_STOOLS.push([x + sx * 1.3, z + sz * 1.3]);
+/** Candle stands (the old braziers): two flanking the dais, two by the door. */
+export const BRAZIERS: [number, number][] = [[-7, -12], [7, -12], [-3.4, 14.5], [3.4, 14.5]];
+export const BANNER_Z = [-14, -6, 6, 14];
+/** Suits of armour (door + dais corners), potted plants and the two bookshelves on the back wall (visual + colliders). */
+export const ARMORS: [number, number][] = [[-5.6, 17.6], [5.6, 17.6], [-9.6, -13.2], [9.6, -13.2]];
+export const HALL_PLANTS: [number, number][] = [[-3.7, 17.8], [3.7, 17.8], [-9.6, -16.4], [9.6, -16.4]];
+export const HALL_SHELVES: [number, number][] = [[-10.4, -19.35], [10.4, -19.35]];
+/** Candle stands on the dais either side of the throne. */
+export const DAIS_CANDLES: [number, number][] = [[-3.7, -17.4], [3.7, -17.4]];
 
 /** Collision circles [x, z, r]: wall ring, pillars, dais front, throne, tables, braziers, weapon racks. */
 export const CASTLE_COLLIDERS: [number, number, number][] = (() => {
@@ -38,8 +48,13 @@ export const CASTLE_COLLIDERS: [number, number, number][] = (() => {
   for (const [x, z] of PILLARS) c.push([x, z, 0.9]);
   // the dais is open (owner: walk straight up the carpet to the King; daisLift raises the hero onto it); only the throne blocks
   c.push([0, THRONE_Z - 0.3, 1.4]);
-  for (const [x, z, hl] of TABLES) { for (let d = -hl; d <= hl + 0.01; d += 1.0) c.push([x, z + d, 0.8]); for (const s of [-1, 1]) for (let d = -hl; d <= hl + 0.01; d += 1.2) c.push([x + s * 1.35, z + d, 0.45]); }
+  for (const [x, z] of DAIS_CANDLES) c.push([x, z, 0.45]);
+  for (const [x, z] of TABLES) c.push([x, z, 1.4]);
+  for (const [x, z] of TABLE_STOOLS) c.push([x, z, 0.4]);
   for (const [x, z] of BRAZIERS) c.push([x, z, 0.55]);
-  for (const x of [-12.8, 12.8]) c.push([x, -8, 0.7], [x, -9.2, 0.7], [x, 9.5, 0.7], [x, 10.7, 0.7]);
+  for (const [x, z] of ARMORS) c.push([x, z, 0.6]);
+  for (const [x, z] of HALL_PLANTS) c.push([x, z, 0.5]);
+  for (const [x, z] of HALL_SHELVES) c.push([x - 0.6, z + 0.3, 0.6], [x + 0.6, z + 0.3, 0.6]);
+  for (const x of [-12.9, 12.9]) c.push([x, -8, 0.7], [x, -9.2, 0.7], [x, 9.5, 0.7], [x, 10.7, 0.7]);
   return c;
 })();
