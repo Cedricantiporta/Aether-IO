@@ -60,7 +60,7 @@ import { dailyFloorCleared, tickDaily } from './dailyRun';
 import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd, waveExtraBosses, waveBossMinis, waveMinis, waveMiniElites, WAVE_BREAK, WAVES_ARENA_R } from '../../endlessWaves';
 
 const FADE_SECONDS = 0.4;
-const FIRST_BURST_AT = 0.9;
+const FIRST_BURST_AT = 0;   // (owner) monsters are already there as you step through the portal
 const BOSS_GRACE = 2.5;        // after the boss falls, before its rewards drop
 const MINI_MAX_ALIVE = 10;     // champion / boss rooms: room-pack adds alive at once (boss summons are capped by the boss AI)
 const REWARD_DELAY = 0.7;      // after the last kill, before the room reward appears
@@ -466,7 +466,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const normal = unitN;
   for (let i = 0; i < elites; i++) pushGroup(rosterPick(def, 99, 1.5), 1, true);
   // bursts: split the normal units in equal parts; elites join the last burst
-  bursts = Math.max(1, Math.min(nBursts, 4));
+  bursts = Math.max(1, Math.min(Math.ceil(nBursts / 2), 2));   // (owner) fewer, bigger groups: 20 enemies = 2 x 10, not 4 x 5
   let prev = 0;
   for (let b = 0; b < bursts; b++) {
     const end = b === bursts - 1 ? unitN : Math.min(normal, Math.round(((b + 1) * normal) / bursts));
@@ -696,7 +696,7 @@ function tickSpawns(dt: number): void {
         if (!pickAnchor(10)) break;
         inGroup = 0; groupIdx++;
       }
-      const dur = 0.95 + Math.min(0.7, (groupIdx % 6) * 0.12);
+      const dur = curBurst === 0 ? 0.15 + Math.min(0.25, (groupIdx % 6) * 0.04) : 0.5 + Math.min(0.35, (groupIdx % 6) * 0.06);   // (owner) near-instant first wave, quick reinforcements
       let x = anchorX, z = anchorZ;
       if (inGroup > 0) {
         const a = inGroup * 2.4 + groupIdx, rr = 0.9 * Math.sqrt(inGroup);
@@ -708,8 +708,8 @@ function tickSpawns(dt: number): void {
     }
   } else if (curBurst + 1 < bursts) {
     burstT += dt;
-    const low = Math.max(2, Math.floor(burstSize[curBurst] * 0.3));
-    if (d.aliveCount + pending <= low || burstT > 18) { curBurst++; burstT = 0; }
+    const low = Math.max(3, Math.floor(burstSize[curBurst] * 0.6));   // (owner) stacking spawns: the next group arrives while this one still fights
+    if (d.aliveCount + pending <= low || burstT > 7) { curBurst++; burstT = 0; }
   }
 }
 

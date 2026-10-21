@@ -269,7 +269,7 @@ export const MINI_BOSSES: Record<string, { kind: EnemyKind; name: string; title:
 export const WEAK_KINDS: readonly EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT'];
 
 // ------------------------------------------------------------ wave scaling --
-export const SPAWN_TIME = 0.6;        // seconds ordinary enemies take to rise
+export const SPAWN_TIME = 0.35;        // seconds ordinary enemies take to rise
 export const BOSS_SPAWN_TIME = 1.6;   // bosses rise slower
 
 export function waveHpMult(wave: number): number {
