@@ -54,3 +54,6 @@ hedges, rocks and props (townFill.ts groves). Walks from the spawn (in front of 
   (Armory -21.5, 2.6; Potion Shop 30.5, 2.6, both facing the south street); Tech House faces south.
 - Fewer houses: Tavern Row keeps 3 back-row houses + 1 cottage; the shop-row terraces are thinned (2 west, 1 east) with gaps.
 - Market stalls and market tents removed from the avenue (they looked open / unfinished).
+
+## Floors (owner ref 2026-10-21: cream flagstones + terracotta kerbs + green lawns)
+Town paving (`render/TownScenery.tsx`): `flagTexture()` (tileable Voronoi canvas: big soft cream slabs, thin warm-grey grout, a few darker) shared by the yard paving and the street strips (world-planar UVs, tile 6 m, so they line up). `buildKerbs()` = ONE merged mesh of terracotta brick kerb along both edges of every paved street (skips street crossings, stairs, plaza/gate mouths) plus rings round the plaza and gate forecourt; grass-patch kerbs and the portal-lawn kerb are terracotta too. Plaza: concentric slab rings (boxes) round the portal lawn + an orange ring inlay; no star (portal covers the centre). Visual only; ROADS data, colliders and the minimap are unchanged. Cost: 1 extra draw call.

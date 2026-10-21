@@ -113,59 +113,29 @@ function grain(x: CanvasRenderingContext2D, N: number, rnd: () => number, amp: n
   for (let i = 0; i < specks; i++) { const sx = rnd() * N, sy = rnd() * N, r = 0.8 + rnd() * 2.2; x.globalAlpha = 0.25 + rnd() * 0.35; x.beginPath(); x.ellipse(sx, sy, r, r * 0.7, rnd() * 3, 0, TAU); x.fill(); }
   x.globalAlpha = 1;
 }
-/** Zelda-style cobbles (owner 2026-10-21: soft rounded stones, clean borders, no noise): warm cream / peach / pale blue-grey stones with generous rounded corners, a soft light top-left
- *  highlight and a gentle shade, set in a pale warm mortar. No per-pixel grain, no specks. */
-function cobbleTexture(): CanvasTexture {
+/** The town's flagstones (owner ref 2026-10-21): big soft irregular polygonal slabs in light cream with thin warm-grey grout, a few slabs a touch darker. A tileable Voronoi baked once into a
+ *  canvas (4x4 jittered seeds per tile; distance to the nearest / second nearest seed gives the grout line, softened so the slabs look rounded). */
+function flagTexture(): CanvasTexture {
   const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
   const x = c.getContext('2d')!;
-  x.fillStyle = '#cdbf9f'; x.fillRect(0, 0, N, N);                 // soft mortar
-  const rnd = mulberry32(7);
-  const rows = 6, h = N / rows;
-  const PAL = [[246, 236, 214], [240, 226, 200], [248, 230, 206], [232, 232, 226], [244, 238, 224], [238, 222, 196]];
-  for (let r = 0; r < rows; r++) {
-    let px = (r % 2) * -h * 0.55;
-    const n = 5 + (r % 2), w = N / n;   // (whole stones per row: the texture tiles seamlessly)
-    px = (r % 2) * -w * 0.5;
-    for (let k = 0; k <= n; k++) {
-      const y = r * h, pal = PAL[Math.floor(rnd() * PAL.length)], j = Math.floor(rnd() * 8) - 4, sx0 = px + k * w;
-      for (const ox of [0, N, -N]) {
-        const sx = sx0 + ox + 4, sy = y + 4, sw = w - 8, sh = h - 8;
-        x.beginPath(); x.roundRect(sx, sy, sw, sh, 20);
-        x.fillStyle = `rgb(${pal[0] + j},${pal[1] + j},${pal[2] + j})`; x.fill();
-        x.save(); x.clip();
-        const gr = x.createLinearGradient(sx, sy, sx + sw * 0.6, sy + sh);
-        gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(120,90,50,.13)');
-        x.fillStyle = gr; x.fillRect(sx, sy, sw, sh);
-        x.restore();
-      }
+  const rnd = mulberry32(31), G = 4, seeds: [number, number, number][] = [];
+  const PAL: [number, number, number][] = [[252, 246, 230], [249, 241, 222], [253, 248, 236], [246, 238, 218], [240, 230, 208], [250, 244, 228]];
+  for (let gy = 0; gy < G; gy++) for (let gx = 0; gx < G; gx++) seeds.push([((gx + 0.5 + (rnd() - 0.5) * 0.7) / G) * N, ((gy + 0.5 + (rnd() - 0.5) * 0.7) / G) * N, rnd() < 0.2 ? 4 : Math.floor(rnd() * 4)]);
+  const img = x.createImageData(N, N), d = img.data, H = N / 2;
+  for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
+    let d1 = 1e9, d2 = 1e9, bi = 0;
+    for (let i = 0; i < seeds.length; i++) {
+      let dx = Math.abs(px - seeds[i][0]), dy = Math.abs(py - seeds[i][1]); if (dx > H) dx = N - dx; if (dy > H) dy = N - dy;
+      const dd = dx * dx + dy * dy;
+      if (dd < d1) { d2 = d1; d1 = dd; bi = i; } else if (dd < d2) d2 = dd;
     }
+    const e = Math.sqrt(d2) - Math.sqrt(d1);                       // 0 on the border between two slabs
+    const groutT = Math.min(1, Math.max(0, (e - 1.8) / 4));         // 0 grout .. 1 slab (soft shoulder)
+    const sm = groutT * groutT * (3 - 2 * groutT), pal = PAL[seeds[bi][2] === 4 ? 4 : seeds[bi][2] % 4], bevel = 1 - 0.07 * Math.max(0, 1 - (e - 2.5) / 22);   // (slab edges roll off a little darker: rounded look)
+    const o = (py * N + px) * 4;
+    d[o] = 196 + (pal[0] * bevel - 196) * sm; d[o + 1] = 186 + (pal[1] * bevel - 186) * sm; d[o + 2] = 168 + (pal[2] * bevel - 168) * sm; d[o + 3] = 255;
   }
-  const t = new CanvasTexture(c);
-  t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
-  return t;
-}
-/** The yard's paving: rounded pastel flagstones in a soft running bond (smaller than the old grey slabs), warm cream with a few peach and pale-blue ones, pale joints. */
-function pavingTexture(): CanvasTexture {
-  const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
-  const x = c.getContext('2d')!;
-  x.fillStyle = '#d3c7ab'; x.fillRect(0, 0, N, N);
-  const rnd = mulberry32(19);
-  const rows = 4, h = N / rows;
-  const PAL = [[240, 231, 208], [236, 224, 198], [243, 228, 205], [228, 230, 224], [239, 234, 218]];
-  for (let r = 0; r < rows; r++) {
-    const n = 3 + (r % 2), w = N / n, off = (r % 2) * -w * 0.5;
-    for (let k = 0; k <= n; k++) {
-      const pal = PAL[Math.floor(rnd() * PAL.length)], j = Math.floor(rnd() * 7) - 3;
-      for (const ox of [0, N, -N]) {
-        const sx = off + k * w + ox + 5, sy = r * h + 5, sw = w - 10, sh = h - 10;
-        x.beginPath(); x.roundRect(sx, sy, sw, sh, 26); x.fillStyle = `rgb(${pal[0] + j},${pal[1] + j},${pal[2] + j})`; x.fill();
-        x.save(); x.clip();
-        const gr = x.createLinearGradient(sx, sy, sx + sw * 0.5, sy + sh);
-        gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(0.6, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(120,90,50,.1)');
-        x.fillStyle = gr; x.fillRect(sx, sy, sw, sh); x.restore();
-      }
-    }
-  }
+  x.putImageData(img, 0, 0);
   const t = new CanvasTexture(c);
   t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
   return t;
@@ -220,7 +190,7 @@ function buildDirtPaths(): BufferGeometry {
  *  junctions are seamless; higher road tops simply cover lower edge strips). */
 function buildRoads(): BufferGeometry {
   const r = new GB([1, 1]);
-  const EDGE = '#d6b98c', SURF = '#fbf3e0';   // (a soft warm kerb along every paved street, owner ref)
+  const SURF = '#ffffff';   // (the terracotta kerb along every paved street is its own mesh, buildKerbs)
   for (const rd of ROADS) {
     // only the part inside the walls is paved (outside: a dirt path, see buildDirtPaths)
     if (rd.dirt) continue;
@@ -233,20 +203,64 @@ function buildRoads(): BufferGeometry {
       const t0 = i / n, t1 = (i + 1) / n, mx = x1 + dx * (t0 + t1) / 2, mz = z1 + dz * (t0 + t1) / 2;
       const ya = townLift(x1 + dx * t0, z1 + dz * t0), yb = townLift(x1 + dx * t1, z1 + dz * t1), y = townLift(mx, mz);
       if (Math.abs(ya - yb) > 0.01 || Math.abs(y - ya) > 0.01) continue;
-      r.box(pl + 0.01, 0.05, rd.w + 0.7, [mx, 0.03 + y, mz], EDGE, [0, yaw, 0]);
       r.box(pl + 0.01, 0.06, rd.w, [mx, 0.045 + y, mz], SURF, [0, yaw, 0]);
     }
   }
-  // plaza (owner 2026-10-21): two clean pale discs and one inlaid ring; the lawn + statue + flower ring stand on top (addPlaza)
-  r.cyl(PLAZA.r, PLAZA.r, 0.08, 48, [PLAZA.x, 0.05, PLAZA.z], '#c4bdac');
-  r.cyl(PLAZA.r - 0.6, PLAZA.r - 0.6, 0.1, 48, [PLAZA.x, 0.06, PLAZA.z], '#ebe4d2');
-  r.torus(PLAZA.r - 1.45, 0.06, [PLAZA.x, 0.11, PLAZA.z], '#d3c9b0', [Math.PI / 2, 0, 0], 1, 56);
-  // painted motif (owner ref: cream flagstones with a ring + a sun star): a blue band of little tiles, a gold 8-point star between the kerb and the band
-  for (let i = 0; i < 56; i++) { const a = (i / 56) * TAU; r.box(0.66, 0.02, 0.34, [PLAZA.x + Math.cos(a) * 5.0, 0.112, PLAZA.z + Math.sin(a) * 5.0], i % 2 ? '#4a72cc' : '#5d86dc', [0, -a + Math.PI / 2, 0], [1, 1]); }
-  for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU + Math.PI / 8, long = i % 2 === 0, L = long ? 1.15 : 0.7, rc = 3.95 + L / 2; r.box(long ? 0.5 : 0.36, 0.02, L, [PLAZA.x + Math.cos(a) * rc, 0.114, PLAZA.z + Math.sin(a) * rc], TOWN_GOLD, [0, -a + Math.PI / 2, 0], [1, 1]); }
+  // plaza (owner ref 2026-10-21): a cream disc paved in concentric rings of soft slabs round the portal lawn, an orange ring inlay between the rings, a terracotta kerb on the rim
+  const px = PLAZA.x, pz = PLAZA.z, rnd = mulberry32(61), CREAM = ['#fffaf0', '#fbf3e0', '#fdf6e6', '#f5ebd2', '#f9f0da'];
+  r.cyl(PLAZA.r, PLAZA.r, 0.08, 48, [px, 0.05, pz], SURF);
+  r.cyl(5.4, 5.4, 0.1, 40, [px, 0.06, pz], '#d8cdb4');                                  // (grout colour under the rings)
+  const ring = (r0: number, r1: number, n: number, gap: number) => {
+    const rm = (r0 + r1) / 2, arc = (TAU * rm) / n - gap;
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU + (r0 * 7), k = rnd() < 0.18 ? 3 : Math.floor(rnd() * 3); r.box(arc, 0.02, r1 - r0 - gap, [px + Math.cos(a) * rm, 0.112, pz + Math.sin(a) * rm], CREAM[k], [0, -a + Math.PI / 2, 0], [1, 1]); }
+  };
+  ring(3.8, 4.55, 24, 0.07); ring(4.6, 5.3, 34, 0.07);
+  r.torus(PLAZA.r - 0.32, 0.075, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 64);   // orange ring inlay
+  r.torus(3.74, 0.06, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 48);              // (and one hugging the lawn kerb)
   // gate forecourt
-  r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], '#c4bdac'); r.cyl(5.8, 5.8, 0.1, 24, [GATE.x, 0.06, GATE.z], '#ebe4d2');
-  return planarUv(r.build(), 4);
+  r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
+  return planarUv(r.build(), 6);
+}
+
+/** Terracotta kerb (owner ref): a thin rounded orange-brick curb along both edges of every paved street inside the walls, round the plaza and the gate forecourt. Pieces that would cross
+ *  another street, sit on a flight of steps or fall inside a plaza are left out. One merged mesh (no per-frame work). */
+function buildKerbs(): BufferGeometry {
+  const r = new GB([1, 1]);
+  const BR = ['#d9703a', '#e07f42', '#d36a36', '#e48a4c'];
+  const paved = ROADS.filter((rd) => !rd.dirt).map((rd) => { const seg = clipZ(rd, -1e9, WALL.z1 + 2.5); return seg ? { rd, seg } : null; }).filter(Boolean) as { rd: typeof ROADS[number]; seg: [number, number, number, number] }[];
+  const inside = (o: typeof paved[number], x: number, z: number, pad: number) => {   // inside street o's rectangle (+pad)?
+    const [x1, z1, x2, z2] = o.seg, dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len;
+    const t = (x - x1) * ux + (z - z1) * uz, s = -(x - x1) * uz + (z - z1) * ux;
+    return t > -pad && t < len + pad && Math.abs(s) < o.rd.w / 2 + pad;
+  };
+  let k = 0;
+  const piece = (len: number, x: number, z: number, yaw: number, y: number) => {
+    r.box(len, 0.12, 0.42, [x, y + 0.085, z], BR[k++ % 4], [0, yaw, 0], [0.92, 1.06]);
+    r.box(len - 0.04, 0.04, 0.3, [x, y + 0.15, z], '#ee9a5c', [0, yaw, 0], [1, 1]);   // (a lighter rounded top)
+  };
+  for (const o of paved) {
+    const [x1, z1, x2, z2] = o.seg, dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx), nx = -dz / len, nz = dx / len;
+    const n = Math.max(1, Math.ceil(len / 0.9)), pl = len / n, off = o.rd.w / 2 + 0.2;
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n, mx = x1 + dx * (t0 + t1) / 2, mz = z1 + dz * (t0 + t1) / 2;
+      const ya = townLift(x1 + dx * t0, z1 + dz * t0), yb = townLift(x1 + dx * t1, z1 + dz * t1), y = townLift(mx, mz);
+      if (Math.abs(ya - yb) > 0.01 || Math.abs(y - ya) > 0.01) continue;
+      for (const sd of [-1, 1]) {
+        const kx = mx + nx * off * sd, kz = mz + nz * off * sd;
+        if (Math.hypot(kx - PLAZA.x, kz - PLAZA.z) < PLAZA.r + 0.5 || Math.hypot(kx - GATE.x, kz - GATE.z) < 6.9) continue;
+        if (paved.some((p) => p !== o && inside(p, kx, kz, 0.12))) continue;
+        piece(pl + 0.02, kx, kz, yaw, y);
+      }
+    }
+  }
+  const ring = (cx: number, cz: number, R: number, n: number, y: number, skip?: (x: number, z: number) => boolean) => {
+    const arc = (TAU * R) / n;
+    for (let i = 0; i < n; i++) { const a = ((i + 0.5) / n) * TAU, kx = cx + Math.cos(a) * R, kz = cz + Math.sin(a) * R; if (skip?.(kx, kz)) continue; piece(arc + 0.02, kx, kz, -a + Math.PI / 2, y); }
+  };
+  const gap = (x: number, z: number) => paved.some((p) => inside(p, x, z, 0.1));   // (leave the street mouths open)
+  ring(PLAZA.x, PLAZA.z, PLAZA.r - 0.1, 60, 0, gap);
+  ring(GATE.x, GATE.z, 6.4, 30, 0, gap);
+  return r.build();
 }
 
 /** Paved yard: one flat polygon over the whole walled area with small grass patches cut out as holes. */
@@ -276,7 +290,7 @@ function buildPaving(): { geo: BufferGeometry; patches: [number, number][][] } {
   g.rotateX(-Math.PI / 2);
   g.translate(0, 0.02, 0);
   g.setAttribute('color', new Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3));
-  return { geo: planarUv(g, 8), patches };
+  return { geo: planarUv(g, 6), patches };
 }
 
 /** Low stone kerb around a grass patch + a few muted wild flowers inside. */
@@ -284,7 +298,7 @@ function addPatchKerb(b: GB, pts: [number, number][], rnd: () => number) {
   for (let i = 0; i < pts.length; i++) {
     const [x1, z1] = pts[i], [x2, z2] = pts[(i + 1) % pts.length];
     const len = Math.hypot(x2 - x1, z2 - z1);
-    b.box(len + 0.08, 0.16, 0.34, [(x1 + x2) / 2, 0.08, (z1 + z2) / 2], i % 2 ? '#bdb8ac' : '#c9c4b8', [0, -Math.atan2(z2 - z1, x2 - x1), 0], [0.9, 1.05]);
+    b.box(len + 0.08, 0.14, 0.26, [(x1 + x2) / 2, 0.07, (z1 + z2) / 2], i % 2 ? '#d9703a' : '#e07f42', [0, -Math.atan2(z2 - z1, x2 - x1), 0], [0.92, 1.06]);
   }
   let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
   const cols = ['#ece3c8', '#e8c86a', '#e3a9b8', '#b9b0e0'];
@@ -503,7 +517,7 @@ function addGraveyard(b: GB, g: GB, rnd: () => number): void {
  *  plinths of the guardian statue_heroes (engine/townFill) beside its door. */
 function addPlaza(b: GB, g: GB): void {
   const D = PLAZA_DECOR, x = PLAZA.x, z = PLAZA.z;
-  b.torus(D.kerbR - 0.12, 0.2, [x, 0.12, z], '#d4cdbb', [Math.PI / 2, 0, 0], 1, 56);                    // rounded kerb stone
+  b.torus(D.kerbR - 0.12, 0.2, [x, 0.12, z], '#e07f42', [Math.PI / 2, 0, 0], 1, 56);                    // rounded kerb stone
   b.cyl(D.lawnR, D.lawnR, D.lawnY, 48, [x, D.lawnY / 2, z], '#74ad4c', [0, 0, 0], 1, [0.96, 1.04]);     // lawn
   for (const m of PLAZA_STATUES) {                                                                      // the guardians' little round plinths
     b.cyl(D.plinthR + 0.12, D.plinthR + 0.16, 0.12, 24, [m.x, D.lawnY + 0.04, m.z], '#bdb5a3');
@@ -625,7 +639,7 @@ function buildTown() {
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
-  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo };
+  return { chunks: out, roads: buildRoads(), kerb: buildKerbs(), dirt: buildDirtPaths(), paving: paving.geo };
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
@@ -735,18 +749,19 @@ function ChimneySmoke({ q }: { q: QualityCfg }) {
 
 export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
-  const mats = useMemo(() => ({
+  const mats = useMemo(() => { const flagTex = flagTexture(); return {
     lit: litMat({ roughness: 0.85 }),
-    road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.map = cobbleTexture(); return m; })(),
-    paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = pavingTexture(); return m; })(),
+    road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.map = flagTex; return m; })(),
+    paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = flagTex; return m; })(),
     glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) })),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     dirt: litMat({ roughness: 1 }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
-  }), []);
+    kerb: litMat({ roughness: 0.9 }),
+  }; }, []);
   useEffect(() => () => {
     town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.map?.dispose(); mats.paving.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); mats.kerb.dispose(); town.kerb.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
   const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
@@ -768,6 +783,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     <group>
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
+      <mesh geometry={town.kerb} material={mats.kerb} receiveShadow={shadows} />
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <ChimneySmoke q={q} />
       <Lake />
