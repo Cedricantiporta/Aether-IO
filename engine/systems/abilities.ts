@@ -323,7 +323,7 @@ export function autoCast(): void {
     if (st.hero === 'NECROMANCER' && s === 's3' && !anyMinion()) continue;
     castActive(i); return;
   }
-  if (p.ult >= 100 && abilityState.ultCd <= 0 && p.ultT <= 0) castUlt();
+  // (owner) the ultimate is never auto-cast: the player fires it
 }
 export function castActive(index: number): void {
   const hero = useGameStore.getState().hero;

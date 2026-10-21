@@ -174,7 +174,7 @@ export function talkWanderer(): void {
   void st;
 }
 
-const gambleCost = (b: number): number => (60 + 25 * b) * GOLD_SCALE;
+const gambleCost = (b: number): number => (60 + 25 * b) * GOLD_SCALE * 10;   // (owner) x10
 
 function accept(d: WandererDef, b: number): void {
   const st = useGameStore.getState(), p = world.player;
@@ -203,7 +203,7 @@ function accept(d: WandererDef, b: number): void {
       st.addGold(-cost);
       if (Math.random() < 0.55) {
         const depth = b * 10 + 5;
-        const it = st.rollItemDrop(rarityForDepth(depth, 0.6, world.run.bossKills));
+        const it = st.rollItemDrop(rarityForDepth(depth, 0, 0));   // (owner) lower rarity odds: no luck bonus, no boss-kill mythic chance
         if (it) spawnPickup('ITEM', p.pos.clone().setX(p.pos.x + 1.2), 0, it);
         st.addNotification('Old Mags: "Heads! Lady Luck likes you."', '#ffd24a', 'SYSTEM');
       } else st.addNotification('Old Mags: "Tails. The dark keeps it. Again?"', '#c8c0b0', 'SYSTEM');

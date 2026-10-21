@@ -124,7 +124,7 @@ export const world = {
   enemyGrid: new SpatialGrid(6, ARENA_RADIUS + 40, MAX_ENEMIES),
 
   /** Auto battle (touch Auto toggle): the hero seeks the nearest enemy anywhere in the room and casts ready skills. */
-  autoBattle: { on: false, castT: 0 },
+  autoBattle: { on: true, castT: 0 },   // (owner) AUTO on by default in adventures (ultimate stays manual, abilities.autoCast)
   /** Necromancer minions (systems/minions.ts): kind 0 warrior, 1 mage, 2 golem. hp: monsters attack them first;
    *  walk = walk-cycle phase, mv = current move speed 0..1 (render animation), hitT = hurt flinch timer.
    *  life = Infinity for permanent summons (they stay until slain); src 1 = Raise Dead, 2 = Army of the Dead (holds the ult
