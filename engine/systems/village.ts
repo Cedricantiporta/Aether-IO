@@ -7,6 +7,8 @@
 import { interacted, wantsInteract, npcMarkers } from './npcQuestLogic';
 import { animals, petAnimal } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT, WHEEL_PIN } from '../townData';
+import { saveSpot } from '../lastSpot';
+import { useUiStore } from '../../ui/uiStore';
 import { STORY, gateOpen } from '../../story';
 import { world, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
@@ -514,6 +516,20 @@ function arrive(): void {
 
 const FADE_S = 0.2;   // fade out + fade in = ~0.4 s
 /** Swaps the village between the town, the castle throne hall and the crystal cave (called at full black). */
+/** A browser refresh inside an interior (game.enterVillage, lastSpot.ts): straight back in, at the saved spot. */
+export function restoreInterior(to: 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME', x: number, z: number, f: number): void {
+  switchArea(to);
+  world.player.pos.set(x, 0, z); world.player.facing = f;
+}
+let spotT = 0;
+/** Every ~1.5 s in the village: remember where the hero stands (the mines remember "outside the cave"). */
+function tickSaveSpot(dt: number): void {
+  const v = world.village;
+  if ((spotT -= dt) > 0 || v.pending || v.fade > 0 || !useUiStore.getState().titleDone) return;   // (not on the title / character select)
+  spotT = 1.5;
+  const p = world.player;
+  if (v.area === 'CAVE') saveSpot('CAVE'); else saveSpot(v.area, p.pos.x, p.pos.z, p.facing);
+}
 function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME'): void {
   const p = world.player, v = world.village, C = world.camera, from = v.area;
   closeDialogue();
@@ -635,6 +651,7 @@ export function updateVillage(dt: number): void {
     }
   }
   updatePickups(dt);
+  tickSaveSpot(dt);
   const caveFight = updateCave(dt);   // cave floors: veins, lantern oil, hazards, monsters (cave.ts)
   if (updateTownMonsters(dt) || caveFight) updateEnemies(dt);   // hermit-path monsters (stationary, harmless) / cave monsters
   updateNpcs(dt);

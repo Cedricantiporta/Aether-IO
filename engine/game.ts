@@ -1,7 +1,9 @@
 import { CAM_PITCH0 } from './world';
 import { resetBossMech } from './systems/bossMech';
-import { PLAZA, TOWER } from './townData';
+import { PLAZA, TOWER, PORTAL } from './townData';
 import { runInfo } from './runMods';
+import { saveSpot, loadSpot } from './lastSpot';
+import { CAVE_OUT, CAVE_MOUTH } from './caveData';
 import { dreamFx, blockInput } from './dreamFx';
 // ============================================================================
 // Engine entry points: startRun / stopRun / updateGame(dt).
@@ -21,7 +23,7 @@ import { updatePickups, resetPickups } from './systems/pickups';
 import { updateCrates } from './systems/crates';
 import { resetAbilities } from './systems/abilities';
 import { updateDirector, resetDirector, startRunRooms } from './systems/director';
-import { updateVillage, placeVillageNodes } from './systems/village';
+import { updateVillage, placeVillageNodes, restoreInterior } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
@@ -122,6 +124,19 @@ function rebuildEnemyGrid(): void {
 }
 
 let villageReady = false;
+let spotPending = true;   // (a browser refresh: the last spot is restored once, when the player leaves the title / character select)
+/** Back where the hero was before the refresh (lastSpot.ts): town spot / inside an interior; a run -> in front of the adventure portal,
+ *  a tower mode -> outside the tower, the mines -> outside the cave mouth. */
+function applyLastSpot(): void {
+  const s = loadSpot(), p = world.player;
+  if (!s) return;
+  if (s.area === 'RUN') { p.pos.set(PORTAL.front.x, 0, PORTAL.front.z - 4); p.facing = 0; }   // facing the portal
+  else if (s.area === 'TOWER') { p.pos.set(TOWER.door.x, 0, TOWER.door.z + 2.6); p.facing = Math.PI; }
+  else if (s.area === 'CAVE') { p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot; }
+  else if (s.area === 'TOWN') { p.pos.set(s.x, 0, s.z); p.facing = s.f; }
+  else { restoreInterior(s.area as 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME', s.x, s.z, s.f); return; }
+  world.village.spawnFx = 1;
+}
 
 function resetSystems(): void {
   initPlayer();
@@ -169,6 +184,8 @@ export function startRun(): void {
   world.enemyGrid.clear();
   resetSystems();
   events.emit('runStart', {});
+  saveSpot(runInfo.mode === 'ADVENTURE' ? 'RUN' : 'TOWER');   // a refresh mid-run comes back outside the portal / tower
+  spotPending = false;
   world.camera.yaw = 0; world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;
   startRunRooms();
 }
@@ -186,6 +203,7 @@ export function updateGame(rawDt: number): void {
   prevStatus = status;
   if (status === GameStatus.MENU) {
     if (!villageReady) enterVillage();
+    if (spotPending && useUiStore.getState().titleDone && world.village.area === 'TOWN' && !world.village.pending) { spotPending = false; applyLastSpot(); }
     const vdt = Math.min(rawDt, MAX_DT);
     if (vdt > 0 && useUiStore.getState().titleDone) {
       world.townTime = (world.townTime + vdt / TOWN_DAY_SEC) % 1;

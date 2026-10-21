@@ -82,7 +82,7 @@ const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 /** Counters for QA / run stats of the combat-depth systems. */
 export const combatStats = { backstabs: 0, slams: 0, staggers: 0, xpFromKills: 0, armorBreaks: 0, debuffs: {} as Record<string, number> };
 export const BACKSTAB_DOT = -0.5;   // rear arc: attacker within 60 deg of straight behind (120 deg total)
-export const BACKSTAB_MULT = 1.3;
+export const BACKSTAB_MULT = 1.5;   // (owner) x1.5 on any hit from behind, every enemy incl. bosses
 const ARMOR_BREAK_FACTOR = 0.75;
 const ARMOR_BREAK_TIME = 6;
 let lastBackstabText = -10;
@@ -408,7 +408,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
       const ox = o.fromX !== undefined ? o.fromX : world.player.pos.x, oz = o.fromZ !== undefined ? o.fromZ : world.player.pos.z;
       const pdx = ox - e.pos.x, pdz = oz - e.pos.z;
       const pl = Math.sqrt(pdx * pdx + pdz * pdz);
-      if (pl > 0.5 && (pdx * Math.sin(e.facing) + pdz * Math.cos(e.facing)) / pl < BACKSTAB_DOT) {
+      if (pl > 0.05 && (pdx * Math.sin(e.facing) + pdz * Math.cos(e.facing)) / pl < BACKSTAB_DOT) {
         dealt *= BACKSTAB_MULT + (o.source === 'PLAYER' ? useGameStore.getState().stats.backstab : 0);
         combatStats.backstabs++;
         if (world.time - lastBackstabText > 0.5) { lastBackstabText = world.time; events.emit('floatText', { pos: e.pos, text: 'BACKSTAB', color: 0xffc23a, scale: 0.7, dy: 0.5 }); }
