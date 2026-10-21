@@ -1904,6 +1904,11 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (rarity === 'COMMON') rarity = 'RARE';   // (owner: blue gear can come from summons again)
         let pool = all.filter((i) => i.rarity === rarity);
         if (pool.length === 0) pool = all;
+        {   // (owner) the special summon-only pets come up more often than gear (60% of these pulls when the tier has one)
+          const special = pool.filter((i) => i.type === 'PET' && (i as { summonOnly?: boolean }).summonOnly);
+          const gearOnly = pool.filter((i) => i.type !== 'PET');
+          if (special.length && Math.random() < 0.6) pool = special; else if (gearOnly.length) pool = gearOnly;
+        }
         if (Math.random() < OTHER_CLASS_SHARE) {   // (owner) ~15% of gear pulls are another class's piece (shared warehouse / alts)
           const alt = ITEMS_POOL.filter((i) => isGear(i) && !i.retired && i.rarity === rarity && !canUseClass(i, s.hero) && !(altar === 'SHARD' && (rarity === 'LEGENDARY' || rarity === 'MYTHIC')));
           if (alt.length) pool = alt;
