@@ -208,7 +208,7 @@ function sleepAtHome(): void {
 }
 
 export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'ride' | 'pet';
-export const MAX_NEARBY = 3;
+export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
 const push = (key: 'E' | 'F', verb: string, label: string, shop: ShopTab | '', node: number, d2: number, act: Act = 'shop', color = '') => {
@@ -294,7 +294,10 @@ function scanNearby(): void {
     return;
   }
   { const seats = seatsHere(); for (let i = 0; i < seats.length; i++) { d = q(seats[i].x, seats[i].z); if (d < 1.7 * 1.7) push('E', 'Sit', area === 'CHURCH' ? 'Pew' : 'Bench', '', i, d + 0.6, 'sit'); } }
-  for (let i = 0; i < npcs.length; i++) { if (!npcInArea(i)) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) push('E', 'Talk', NPCS[i].name, '', i, d * talkBias(i), 'npc'); }
+  // (owner) townsfolk with nothing for you (no quest marker, not the story's next person) only offer Talk when no shop,
+  // door, portal or bench prompt is in reach, so they never cover the thing you came for
+  const busy = nearbyN > 0;
+  for (let i = 0; i < npcs.length; i++) { if (!npcInArea(i)) continue; d = q(npcs[i].x, npcs[i].z); if (d < TALK_R * TALK_R) { const b = talkBias(i); if (busy && b > 0.5) continue; push('E', 'Talk', NPCS[i].name, '', i, d * b, 'npc'); } }
   if (area === 'TOWN')   // (town harvest nodes; the cave's come from scanCave)
   for (let i = 0; i < world.crates.length; i++) {
     const c = world.crates[i]; if (!c.active) continue;
