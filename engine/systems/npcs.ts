@@ -117,7 +117,11 @@ export function updateNpcs(dt: number): void {
       if (dist - nd < step * 0.35) n.stuck += dt; else { n.stuck = Math.max(0, n.stuck - dt * 2); n.skips = 0; }
       if (n.stuck > 1.6) {   // still wedged: give up on this waypoint; wedged on every leg -> quietly back home
         n.stuck = 0; n.wp = (n.wp + 1) % path.length; n.wait = 0.6;
-        if (++n.skips > path.length) { n.skips = 0; n.x = d.home[0]; n.z = d.home[1]; n.wp = 0; }
+        if (++n.skips > path.length) {   // wedged on every leg: walk to the nearest waypoint instead of snapping home (owner: no teleporting NPCs)
+          n.skips = 0; let best = 0, bd = Infinity;
+          for (let k = 0; k < path.length; k++) { const q = (path[k][0] - n.x) ** 2 + (path[k][1] - n.z) ** 2; if (q < bd) { bd = q; best = k; } }
+          n.wp = best; n.wait = 1.5;
+        }
       }
     }
   }
