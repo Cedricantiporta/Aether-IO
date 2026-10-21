@@ -221,6 +221,17 @@ export const TouchControls: React.FC = () => {
   useEffect(() => { if (!active) { const i = world.input; i.joy.active = false; i.joy.x = i.joy.z = 0; i.aimStick.active = false; for (const k in i.keys) i.keys[k] = false; } }, [active]);
   const [drag, setDragS] = React.useState<{ on: boolean; cancel: boolean }>({ on: false, cancel: false });
   const setDrag = (on: boolean, cancel: boolean) => setDragS((d) => (d.on === on && d.cancel === cancel ? d : { on, cancel }));
+  // village fights (cave monster floors, hermit-path monsters): the attack button shows while a hostile is around (polled, not per frame)
+  const [villageFight, setVillageFight] = React.useState(false);
+  useEffect(() => {
+    if (!village) { setVillageFight(false); return; }
+    const id = window.setInterval(() => {
+      let on = false;
+      for (const e of world.enemies) if (e.active && e.state !== 'DYING') { on = true; break; }
+      setVillageFight((v) => (v === on ? v : on));
+    }, 400);
+    return () => window.clearInterval(id);
+  }, [village]);
   const dashOpen = useGameStore((s) => s.level >= DASH_UNLOCK_LV);   // the dash button appears at class level DASH_UNLOCK_LV (6) (hook before the early return: panels opening on touch crashed the UI)
   if (!active) return null;
 
@@ -257,7 +268,7 @@ export const TouchControls: React.FC = () => {
       )}
       {/* skills are always available, also in the village; interacting is done through the floating prompts */}
       <div className={`tc-cluster ${left ? 'left' : ''}`}>
-        {!village && (
+        {(!village || villageFight) && (
           <div style={slotStyle(G.atk, left)}>
             <TBtn code="KeyF" label="Attack (hold)" size={G.atk.size} accent="#ffffff" icon={<PaintedIcon id={ATK_ICON[hero] ?? 'PIERCING_SHOT'} />} testId="tc-attack" />
           </div>

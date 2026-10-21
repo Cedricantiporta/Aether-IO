@@ -11,7 +11,7 @@ import type { PickupKind } from '../types';
 import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
-import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
 import { healPlayer, grantKillXp } from './combat';
 
 const GRAVITY = 28;
@@ -155,7 +155,7 @@ export function warnBagFull(st: { addNotification: (m: string, c?: string, t?: a
 export function lootPickup(i: number): void {
   const o = world.pickups[i], st = useGameStore.getState();
   if (!o || !o.active || o.kind !== 'ITEM' || !o.item) return;
-  if (!st.canPickUp(o.item)) { const pk = potionKind(o.item); if (pk) warnPotionCap(st, pk); else warnBagFull(st); return; }
+  if (!st.canPickUp(o.item)) { const pk = potionKind(o.item); if (pk && potionCount(st.inventory, pk) >= POTION_CAP) warnPotionCap(st, pk); else warnBagFull(st); return; }   // (a full bag is not the potion cap)
   o.magnet = true; o.t = Math.max(o.t, 0.4);
 }
 /** Nearest lootable item pickup within r of (x, z): index or -1. */
