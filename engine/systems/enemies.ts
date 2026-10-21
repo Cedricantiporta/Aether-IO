@@ -29,7 +29,7 @@ import type {
   Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
 } from '../types';
 import {
-  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, isBossKind, armorFor, isStationary,
+  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
@@ -300,7 +300,7 @@ export function spawnEnemy(
   // every monster, elite and boss also scales with the hero's level: +10% HP and +6.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
   const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
-  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg;
+  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg * ENEMY_DMG_MUL;
   // later biomes breed tougher monsters on top of the depth curve (owner): +15% HP and +10% damage per biome
   const bi = Math.max(0, Math.min(7, world.room.biome | 0));
   const biomeHp = 1 + 0.15 * bi, biomeDmg = 1 + 0.1 * bi;

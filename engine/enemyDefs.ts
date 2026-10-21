@@ -297,7 +297,9 @@ export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>
   GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], MUMMY: [0.35, 10], CINDER_SHAMAN: [0.4, 10], HAUNTED_ARMOR: [0.4, 12], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
 };
 /** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
+/** (owner) enemies hit harder but are softer: damage x1.25 (enemies.spawnEnemy), armour x0.6. */
+export const ENEMY_DMG_MUL = 1.25, ENEMY_ARMOR_MUL = 0.6;
 export function armorFor(kind: EnemyKind, wave: number, elite: boolean): number {
   const base = ENEMY_DEFS[kind].armor * (1 + 0.02 * (wave - 1));
-  return Math.round(elite ? base * 1.6 + 15 : base);
+  return Math.round((elite ? base * 1.6 + 15 : base) * ENEMY_ARMOR_MUL);
 }
