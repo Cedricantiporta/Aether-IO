@@ -15,7 +15,7 @@ import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
-import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
+import { useGameStore, makeItemById, DMG_INFLATE, rollDropPlus } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo, HARD_EPIC_MUL, hardMul } from '../runMods';
 /** The tower modes (Endless Tower, Daily Trial, Endless Waves all run as runInfo.mode 'TOWER'): monsters drop no items
@@ -515,12 +515,12 @@ export function killEnemy(e: Enemy): void {
     const hm = runInfo.hard ? HARD_EPIC_MUL : 1;   // Hard mode: legendary+ odds x1.6
     if (before >= 1 && Math.random() < Math.min(0.012, 0.004 * before) * hm) rarity = 'MYTHIC';
     else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02) * hm) rarity = 'LEGENDARY';
-    const item = st.rollItemDrop(rarity);
+    const item = rollDropPlus(st.rollItemDrop(rarity), 2);
     if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
     // tiered upgrade cores: bosses after the first may leave a Refined Core (Epic+ gear)
     if (before >= 1 && Math.random() < 0.35) { dropPos.set(px + 1.2, 0, pz); spawnPickup('ITEM', dropPos, 0, makeItemById('upgrade_core_2', 1)[0]); }
   } else if (Math.random() < Math.min(1, (e.elite ? 0.15 : 0.01) * loot)) {
-    const item = st.rollItemDrop();
+    const item = e.elite ? rollDropPlus(st.rollItemDrop(), 0) : st.rollItemDrop();
     if (item) { dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5)); spawnPickup('ITEM', dropPos, 0, item); }
   }
 

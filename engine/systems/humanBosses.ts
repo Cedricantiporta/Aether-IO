@@ -23,7 +23,7 @@ import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { BT } from './bossFx';
-import { useGameStore } from '../../store';
+import { useGameStore, rollDropPlus } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { edgeLimit } from '../mapgen';
 
@@ -180,9 +180,9 @@ export function humanBossDied(e: Enemy): void {
   if (towerMode()) { dropCrystals(towerCrystals(false, true, false, wave), e.pos); return; }
   dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
   dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
-  const item = st.rollItemDrop(wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : wave >= 15 ? 'EPIC' : 'RARE');
+  const item = rollDropPlus(st.rollItemDrop(wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : wave >= 15 ? 'EPIC' : 'RARE'), 1);
   if (item) spawnPickup('ITEM', tmp.set(e.pos.x, 0, e.pos.z), 0, item);
-  const it2 = st.rollItemDrop(rarityForDepth(wave, 0.5, world.run.bossKills));
+  const it2 = rollDropPlus(st.rollItemDrop(rarityForDepth(wave, 0.5, world.run.bossKills)), 1);
   if (it2) spawnPickup('ITEM', tmp.set(e.pos.x + 0.9, 0, e.pos.z), 0, it2);
   for (let i = 0; i < 5; i++) spawnPickup('GOLD', tmp.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3), 10 + wave);
 }

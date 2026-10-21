@@ -37,7 +37,7 @@ import { damageMinion, nearestMinion } from './minions';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
-import { useGameStore } from '../../store';
+import { useGameStore, rollDropPlus } from '../../store';
 import { runMods, veteran, VET } from '../runMods';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
@@ -447,7 +447,7 @@ export function onEnemyDeath(e: Enemy): void {
     else {
       dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
       dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
-      const item = st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE');
+      const item = rollDropPlus(st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE'), 1);
       if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
     }
     if (e.kind === 'BANDIT' || e.kind === 'ZOMBIE') for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); } // Bandit Captain's strongbox (humanoids only)

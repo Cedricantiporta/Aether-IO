@@ -46,7 +46,7 @@ import { dropLoot } from './loot';
 import { towerMode, towerCrystals } from './combat';
 import { spawnHostileZone } from './tricks';
 import { spawnWave, WAVE_FIRE, BT } from './bossFx';
-import { useGameStore } from '../../store';
+import { useGameStore, rollDropPlus } from '../../store';
 import { runMods } from '../runMods';
 import { rarityForDepth } from '../roomDefs';
 import { edgeLimit } from '../mapgen';
@@ -200,10 +200,10 @@ export function darkHeroDied(e: Enemy): void {
   }
   dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
   const r1 = rarityForDepth(wave, 0.5, world.run.bossKills);
-  const it1 = st.rollItemDrop(r1);
+  const it1 = rollDropPlus(st.rollItemDrop(r1), 1);
   if (it1) spawnPickup('ITEM', tmp.set(e.pos.x - 0.8, 0, e.pos.z), 0, it1);
   const r2 = rarityForDepth(wave, 0.8, world.run.bossKills);
-  const it2 = st.rollItemDrop(r2 === 'COMMON' || r2 === 'RARE' ? 'EPIC' : r2);   // a champion always leaves something good
+  const it2 = rollDropPlus(st.rollItemDrop(r2 === 'COMMON' || r2 === 'RARE' ? 'EPIC' : r2), 1);   // a champion always leaves something good
   if (it2) spawnPickup('ITEM', tmp.set(e.pos.x + 0.8, 0, e.pos.z), 0, it2);
   for (let i = 0; i < 2; i++) spawnPickup('GEM', tmp.set(e.pos.x, 0, e.pos.z), 2 + Math.floor(wave / 8));
   for (let i = 0; i < 6; i++) spawnPickup('GOLD', tmp.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3), 12 + wave);

@@ -388,6 +388,28 @@ export const instantiate = (template: Item): Item => rollAffixes({
 });
 
 const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => Object.keys(stats) as (keyof PlayerStats)[];
+/** One +level on a gear item, the same step as a blacksmith upgrade (+25% of the base per level; % stats a third as fast). */
+export const plusOne = (i: Item): Item => {
+  const stats: Partial<PlayerStats> = { ...i.stats };
+  const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);
+  for (const k of mutableStatKeys(stats)) {
+    const v = stats[k];
+    if (v === undefined) continue;
+    stats[k] = parseFloat((v * (PET_PCT_STATS.has(k) ? 1 + (f - 1) / 3 : f)).toFixed(PET_PCT_STATS.has(k) ? 4 : 2));
+  }
+  return { ...i, level: i.level + 1, stats };
+};
+/** (owner) Gear from elites / mini bosses / bosses can drop already upgraded, up to +4 (each step rarer). tier: 0 elite, 1 mini / champion, 2 boss. */
+export function rollDropPlus(i: Item | null, tier: 0 | 1 | 2): Item | null {
+  if (!i || !isGear(i)) return i;
+  const p = [[0.18, 0.06, 0.015, 0.003], [0.3, 0.12, 0.04, 0.01], [0.42, 0.2, 0.07, 0.02]][tier];   // chance of at least +1, +2, +3, +4
+  const r = Math.random();
+  let n = 0;
+  for (let k = 0; k < 4; k++) if (r < p[k]) n = k + 1;
+  let out = i;
+  for (let k = 0; k < n; k++) out = plusOne(out);
+  return out;
+}
 
 // -------------------------------------------------------------- persistence --
 interface Profile {
