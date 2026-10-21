@@ -13,6 +13,7 @@ import { applyPlayerDebuff, damagePlayer, KB } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { addTempCollider, removeTempCollider, type Collider } from '../mapgen';
 import { WEAK_KINDS } from '../enemyDefs';
+import { veteran, VET } from '../runMods';
 import { isEliteBigTrick, resolveEliteBig } from './eliteBig';
 
 export const TRICK = {
@@ -68,7 +69,7 @@ function isWeak(e: Enemy): boolean { return !e.elite && WEAK_KINDS.includes(e.ki
 export function initTrick(e: Enemy): void {
   e.trickT = 0; e.trickKind = 0;
   if (isWeak(e)) e.trickCd = Math.random() < 0.35 ? NEVER : 4 + Math.random() * 14;
-  else e.trickCd = (e.elite ? 1.5 : 2) + Math.random() * (e.elite ? 4 : 6);
+  else e.trickCd = ((e.elite ? 1.5 : 2) + Math.random() * (e.elite ? 4 : 6)) * (veteran.on ? VET.trickCd : 1);
 }
 
 /** Advances an active cast. Returns true while the enemy is busy casting (AI must be skipped). */
@@ -94,7 +95,7 @@ export function tryStartTrick(e: Enemy, tdist: number, ux: number, uz: number): 
   const weak = isWeak(e);
   const windup = weak ? def.windup * 1.6 : def.windup;
   e.trickKind = def.id; e.trickT = windup;
-  e.trickCd = weak ? NEVER : def.cd * (e.elite ? 0.65 : 1) * (0.85 + Math.random() * 0.3);
+  e.trickCd = weak ? NEVER : def.cd * (e.elite ? 0.65 : 1) * (veteran.on ? VET.trickCd : 1) * (0.85 + Math.random() * 0.3);   // (conquered biome: special attacks come more often)
   stat(def.id).cast++;
   const power = Math.max(e.contactDamage, e.projectileDamage, 6);
   const p = world.player.pos;

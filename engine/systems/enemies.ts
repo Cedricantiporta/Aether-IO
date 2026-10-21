@@ -38,7 +38,7 @@ import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './e
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore } from '../../store';
-import { runMods } from '../runMods';
+import { runMods, veteran, VET } from '../runMods';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
@@ -316,6 +316,7 @@ export function spawnEnemy(
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   if (elite && !boss) rollEliteShield(e);
+  else if (veteran.on && !boss && Math.random() < VET.shieldChance) e.shield = Math.max(e.shield, e.maxHp * 0.4);   // conquered biome: normal monsters with shields too
   e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed;
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
@@ -339,6 +340,7 @@ export function spawnEnemy(
   e.patternT = 0;
   e.angle = 0;
   e.attackCd = boss ? 2.5 : kind === 'BRUTE' ? 2 + Math.random() * 2 : 0.8 + Math.random() * 1.4;
+  if (veteran.on) e.attackCd *= VET.attackCd;   // (conquered biome: they strike sooner)
   e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
   if (isStationary(kind)) { e.dir.set(pos.x, 0, pos.z); e.phase = 0; e.angle = 5 + Math.random() * 3; }   // home spot (towers / lakes)
   e.active = true;

@@ -16,6 +16,9 @@ export const HARD_EPIC_MUL = 1.6;
 /** Hard-run reward multiplier for gold / XP (1 in town or on a non-Hard run). */
 export const hardMul = (inTown: boolean): number => (runInfo.hard && !inTown ? HARD_GOLD_XP : 1);
 export interface RunMods extends AscMods { loot: number }
+/** (owner) Re-entering an already conquered biome (Adventure): more, tougher, angrier monsters (set per room by director.enterRoom). */
+export const veteran = { on: false };
+export const VET = { hp: 1.4, dmg: 1.3, spawn: 1.4, speed: 1.1, shieldChance: 0.25, attackCd: 0.7, trickCd: 0.6 };
 const asc: AscMods = { hp: 1, dmg: 1, spawn: 1, heal: 1, bossHp: 1, speed: 1, elites: 0, reward: 1 };
 const out: RunMods = { ...asc, loot: 1 };
 /** Difficulty x Ascension (one shared object: read it, don't keep it). */
@@ -26,6 +29,7 @@ export function runMods(difficulty: Difficulty): RunMods {
   out.heal = asc.heal; out.bossHp = asc.bossHp; out.speed = asc.speed; out.elites = asc.elites; out.reward = asc.reward;
   // Daily Trial modifiers (neutral outside a daily run)
   out.hp *= dailyMods.hp; out.spawn *= dailyMods.spawn; out.speed *= dailyMods.enemySpeed; out.elites += dailyMods.elites;
+  if (veteran.on) { out.hp *= VET.hp; out.dmg *= VET.dmg; out.spawn *= VET.spawn; out.speed *= VET.speed; out.elites += 1; }
   return out;
 }
 

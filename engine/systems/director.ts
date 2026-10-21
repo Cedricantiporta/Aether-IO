@@ -21,7 +21,7 @@ import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, t
 import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
-import { runMods, runInfo } from '../runMods';
+import { runMods, runInfo, veteran } from '../runMods';
 import {
   BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef,
 } from '../roomDefs';
@@ -276,6 +276,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   clearWanderer(); removeAlly();
   if (idx === 0) bossKeyState.has = false;
   shortcutOn = false;
+  veteran.on = runInfo.mode === 'ADVENTURE' && !finalFight && biomeDone(b);   // a conquered biome hits back harder (runMods VET)
   if (idx === 0) shortcutAt = Math.random() < 0.5 ? 4 : 6;
   if (idx === 0 && runInfo.mode === 'ADVENTURE') crystalAt = Math.random() < 0.5 ? 1 + Math.floor(Math.random() * (REST_INDEX - 1)) : -1;   // 50%: one crystal cavern this biome
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
