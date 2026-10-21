@@ -278,7 +278,7 @@ export function updateSkills(dt: number): void {
         damageEnemy(e, dmg, holyAuraOpts); hits++;
       }
       if (hits > 0) {
-        healPlayer(stats.maxHealth * 0.004 * Math.min(hits, 5));
+        healPlayer(stats.maxHealth * 0.002 * Math.min(hits, 3));   // (owner: heal cut, was 0.4% x up to 5)
         events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xffe08a });
       }
     }
