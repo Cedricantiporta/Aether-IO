@@ -73,7 +73,7 @@ export const TalentsView: React.FC = () => {
         {BRANCHES[hero].map((br, b) => <div key={b} className="tt-br"><span style={{ color: br.color }}>{br.name}</span><b>{branchSpent(hero, b, ranks)}</b></div>)}
       </div>
       <div className="flex gap-2">
-        <Button className="flex-1" variant="primary" onClick={() => setOpen(true)} data-testid="talent-open">Open talent tree</Button>
+        <Button className="flex-1 relative" variant="primary" onClick={() => setOpen(true)} data-testid="talent-open">Open talent tree{free > 0 && talentsOf(hero).some((n) => allocBlock(n, ranks, free, lv) === null) && <span className="red-dot" />}</Button>
         <Button disabled={cost <= 0 || gold < cost} onClick={() => respec()} data-testid="talent-respec"><RotateCcw size={12} /> Respec{cost > 0 ? ` ${cost.toLocaleString()}g` : ''}</Button>
       </div>
       {open && <TalentTree onClose={() => setOpen(false)} />}
@@ -132,6 +132,7 @@ const TalentTree: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <NodeArt icon={n.icon} size={sz} dim={st === 'locked'} />
                       {st === 'locked' && <span className="tt-lock"><Lock size={square(n) ? 16 : 13} /></span>}
                       <span className="tt-rk">{rk}/{n.max}</span>
+                      {bl === null && rk < n.max && <span className="red-dot" data-testid="talent-dot" />}
                     </button>
                   );
                 })}
