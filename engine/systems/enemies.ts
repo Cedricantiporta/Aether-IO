@@ -29,7 +29,7 @@ import type {
   Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
 } from '../types';
 import {
-  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary,
+  ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
   waveHpMult, waveDmgMult, waveSpeedMult,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
@@ -42,6 +42,7 @@ import { runMods, veteran, VET } from '../runMods';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
+import { addChill } from './bossFx';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -56,6 +57,7 @@ import { tickInterrupt, interruptView } from './interrupt';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
+const rootTmp = { x: 0, z: 0 };
 const LEASH_DIST = 110;
 const CONTACT_CD = 0.6;
 const ELITE_SCALE = 1.35;
@@ -73,7 +75,7 @@ export function bossAlive(): boolean { for (const o of world.enemies) if (o.acti
 /** Elite HP multiplier (owner: -30%, was 4). */
 const ELITE_HP = 2.8;
 const ARCHER = { minR: 12, maxR: 18, windup: 0.48, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
-const CULTIST = { minR: 10, maxR: 14, windup: 0.64, recover: 0.6, cd: 3.6, orbSpeed: 6, orbLife: 2.4, spread: 0.38 };
+const CULTIST = { minR: 10, maxR: 14, windup: 0.64, recover: 0.6, cd: 3.6, orbSpeed: 8, orbLife: 2.4, spread: 0.38 };
 const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
 const BRUTE = { cd: 5, windup: 0.72, recover: 0.8, lineWidth: 2.6, chargeMul: 4, minRange: 4, maxRange: 16 };
 const BOAR = { cd: 4, windup: 0.56, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6, minRange: 5, maxRange: 18 };
@@ -225,6 +227,10 @@ export function findSpawnPoint(minD: number, maxD: number, out: Vector3, baseAng
 let bossTel = false;
 /** TR.* bits of the enemy being updated right now (telegraphs / projectiles it spawns inherit them). */
 let curTraits = 0;
+/** (owner) the caster monsters: their spells fly 2x as far and a bit faster (bosses / minis keep their tuning) */
+const MAGE_KINDS: ReadonlySet<string> = new Set(['CULTIST', 'SKELETON_MAGE', 'FROST_WISP', 'CINDER_SHAMAN', 'VOID_EYE']);
+export const MAGE_PROJ = { speed: 1.2, range: 2 };
+let curMage = false;
 const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
 
 export function spawnTelegraphCircle(
@@ -358,6 +364,13 @@ export function spawnEnemy(
   if (veteran.on) e.attackCd *= VET.attackCd;   // (conquered biome: they strike sooner)
   e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
   if (isStationary(kind)) { e.dir.set(pos.x, 0, pos.z); e.phase = 0; e.angle = 5 + Math.random() * 3; }   // home spot (towers / lakes)
+  e.rooted = boss && isRootedBoss(kind);
+  if (e.rooted) {   // (owner) giant rooted boss: pinned at its home spot for the whole fight
+    let slot = 0; for (const o of world.enemies) if (o.active && o !== e && o.rooted && o.state !== 'DYING') slot++;
+    rootedHome(kind, world.room.radius, slot, rootTmp);
+    e.pos.set(rootTmp.x, 0, rootTmp.z); e.rootX = rootTmp.x; e.rootZ = rootTmp.z;
+    e.facing = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
+  }
   e.active = true;
   contactCd[e.id] = 0.4; meleeT[e.id] = 0; strikeT[e.id] = 0;
   // (owner) summons of a biome boss sometimes arrive warded: a shield worth 50% of their own HP (bubble + shield bar)
@@ -527,7 +540,7 @@ function aiArcher(e: Enemy): void {
       stop(e);
       if (e.stateT >= ARCHER.windup) {
         tmpV.set(ux, 0, uz);
-        fireEnemyProjectile(e.pos, tmpV, 'ARROW', ARCHER.arrowSpeed, e.projectileDamage, { life: 2.5, radius: 0.35 });
+        { const k = elemShot(e, 'ARROW'); fireEnemyProjectile(e.pos, tmpV, k, ARCHER.arrowSpeed, e.projectileDamage, { life: 2.5, radius: 0.35 }); }
         e.attackCd = ARCHER.cd * (0.8 + Math.random() * 0.4);
         enter(e, 'RECOVER');
       }
@@ -551,11 +564,12 @@ function aiCultist(e: Enemy): void {
     case 'WINDUP':
       stop(e);
       if (e.stateT >= CULTIST.windup) {
-        const base = Math.atan2(ux, uz);
-        for (let i = -1; i <= 1; i++) {
+        const base = Math.atan2(ux, uz), elem = elemShot(e, 'SLOW_ORB');
+        for (let i = elem === 'BOLT' ? 0 : -1; i <= (elem === 'BOLT' ? 0 : 1); i++) {
           const a = base + i * CULTIST.spread;
           tmpV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, tmpV, 'SLOW_ORB', CULTIST.orbSpeed, e.projectileDamage * 0.5, {
+          if (elem !== 'SLOW_ORB') fireEnemyProjectile(e.pos, tmpV, elem, elem === 'BOLT' ? CULTIST.orbSpeed * 2.1 : CULTIST.orbSpeed * 1.3, e.projectileDamage * 0.6, { life: elem === 'BOLT' ? 1.4 : CULTIST.orbLife });
+          else fireEnemyProjectile(e.pos, tmpV, 'SLOW_ORB', CULTIST.orbSpeed, e.projectileDamage * 0.5, {
             slow: 0.4, life: CULTIST.orbLife, radius: 0.5,
           });
         }
@@ -806,7 +820,7 @@ function aiTowerArcher(e: Enemy): void {
         for (let k = volley ? -1 : 0; k <= (volley ? 1 : 0); k++) {
           const a = Math.atan2(ux, uz) + k * 0.2;
           tmpV.set(Math.sin(a), drop, Math.cos(a)).normalize();
-          fireEnemyProjectile(shotFrom, tmpV, 'ARROW', TOWER.arrowSpeed, e.projectileDamage, { life: 2.2, radius: 0.35 });
+          fireEnemyProjectile(shotFrom, tmpV, elemShot(e, 'ARROW'), TOWER.arrowSpeed, e.projectileDamage, { life: 2.2, radius: 0.35 });
         }
         e.phase++;
         e.attackCd = TOWER.cd * (0.8 + Math.random() * 0.4);
@@ -950,7 +964,7 @@ const WISP = { minR: 8, maxR: 13, windup: 0.48, recover: 0.5, cd: 2.8, novaR: 4,
 const HOUND = { trail: 0.55, trailR: 0.95, trailLife: 2.2 };
 const SHAMAN = { minR: 9, maxR: 15, windup: 0.4, recover: 0.8, cd: 3.4, r: 2.6, fall: 0.88 };
 const STALK = { range: 13, windup: 0.4, r: 1.9, recover: 0.7, cd: 4.6, behind: 2.6 };
-const EYE = { minR: 9, maxR: 14, windup: 0.68, recover: 0.6, cd: 4.2, n: 10, speed: 7 };
+const EYE = { minR: 9, maxR: 14, windup: 0.68, recover: 0.6, cd: 4.2, n: 10, speed: 8.5 };
 
 /** Generic "wind up, then a damaging circle in front of me" melee (Haunted Armor cleave, Scorpion sting, Sporecap burst). */
 function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; recover: number; cd: number }, reach: number, dmg: number, color: number, onHit?: (x: number, z: number) => void): void {
@@ -1086,7 +1100,7 @@ function aiFrostWisp(e: Enemy): void {
       stop(e);
       if (e.stateT >= WISP.windup) {
         const base = Math.atan2(ux, uz);
-        for (let i = -1; i <= 1; i++) { const a = base + i * WISP.spread; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ORB', 12, e.projectileDamage, { slow: 0.45, life: 1.8, radius: 0.4 }); }
+        for (let i = -1; i <= 1; i++) { const a = base + i * WISP.spread; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ICE_SHARD', 14, e.projectileDamage, { life: 1.8, radius: 0.4 }); }
         e.attackCd = WISP.cd * (0.85 + Math.random() * 0.3);
         enter(e, 'RECOVER');
       }
@@ -1398,8 +1412,8 @@ function updateEnemy(e: Enemy): void {
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
-  curTraits = e.traits;
-  const still = isStationary(e.kind) && !(e.waterT > 0);   // (a lake hydra that reached a water puddle is free to move)
+  curTraits = e.traits; curMage = !e.boss && !e.mini && MAGE_KINDS.has(e.kind);
+  const still = (isStationary(e.kind) && !(e.waterT > 0)) || e.rooted;   // (a lake hydra that reached a water puddle is free to move; giant rooted bosses never are)
   // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
   // (strike range) they track the real hero so their attacks still connect
   // (only from afar: up close a monster aimed at the old spot walked past / through the hero)
@@ -1483,7 +1497,8 @@ function updateEnemy(e: Enemy): void {
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   const winded = (e.boss || e.mini) && !e.decoy && tickWinded(e, dt, locked);
   const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
-  const dodging = !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
+  const tg = isTreasureGoblin(e);   // (owner: the treasure goblin flees at a steady, readable speed: no dodge dash / flank / retreat)
+  const dodging = ENEMY_DODGE && !tg && !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
   if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
   else if (dodging) { /* velocity set by tickDodge */ }   // free-hit window: stands there panting (no attacks, no new casts)
   else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
@@ -1496,6 +1511,7 @@ function updateEnemy(e: Enemy): void {
     else if (e.elite && !e.boss && !e.mini && e.trickT <= 0 && e.state !== 'SPAWN' && hasEliteBig(e.kind) && (updateEliteBig(e, dt) || (e.fearT <= 0 && tryStartEliteBig(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { /* signature big attack (eliteBig.ts) owns the enemy */ }
     else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt * qm) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
+    else if (tg && e.state !== 'SPAWN') { goblinFlee(e, dt); desiredYaw = Math.atan2(e.vel.x, e.vel.z); }
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)
     else runAI(e);
   } else {
@@ -1503,9 +1519,9 @@ function updateEnemy(e: Enemy): void {
     stop(e);
   }
   bossTel = false;
-  curTraits = 0;
+  curTraits = 0; curMage = false;
   if (isDying(e)) return; // bomber exploded
-  if (!dodging && !still && !e.boss && !e.mini && !locked && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0) packAndFlank(e);
+  if (!tg && !dodging && !still && !e.boss && !e.mini && !locked && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0) packAndFlank(e);
   // melee standoff (owner): a chasing monster halts a small step short of its target and strikes from there (wind-up +
   // lunge, contactHit) instead of walking into / past the hero
   if (e.state === 'CHASE' && !e.boss && !still && e.contactDamage > 0) {
@@ -1528,7 +1544,13 @@ function updateEnemy(e: Enemy): void {
   if (Math.abs(e.knock.x) < 0.01 && Math.abs(e.knock.z) < 0.01) { e.knock.x = 0; e.knock.z = 0; }
 
   // ---- collisions
-  if (still) { e.pos.x = e.dir.x; e.pos.z = e.dir.z; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0); }   // towers / lakes: pinned to the home spot
+  if (e.rooted) {   // giant rooted bosses: pinned to the root spot; Elderroot's trunk is solid (the hero is pushed out round it)
+    e.pos.x = e.rootX; e.pos.z = e.rootZ; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0);
+    if (e.kind === 'BOSS_TREANT' && world.player.alive) {
+      const hx = world.player.pos.x - e.pos.x, hz = world.player.pos.z - e.pos.z, minD = e.radius * 0.82 + 0.7, hd2 = hx * hx + hz * hz;
+      if (hd2 < minD * minD) { const hd = Math.sqrt(hd2) || 1e-3; world.player.pos.x = e.pos.x + (hx / hd) * minD; world.player.pos.z = e.pos.z + (hz / hd) * minD; }
+    }
+  } else if (still) { e.pos.x = e.dir.x; e.pos.z = e.dir.z; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0); }   // towers / lakes: pinned to the home spot
   if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
   // never inside the hero: monsters stop short of its body (owner: a bit more room) (they still reach it with their strikes)
   if (world.player.alive && !still && e.kind !== 'BOSS_HYDRA_HEAD') {
@@ -1555,7 +1577,7 @@ function updateEnemy(e: Enemy): void {
   }
 
   const r2 = e.pos.x * e.pos.x + e.pos.z * e.pos.z;
-  if (r2 > bounds.checkR2) {
+  if (r2 > bounds.checkR2 && !e.rooted) {   // (a rooted boss may sit beyond the rim: the Hydra's body)
     const lim = edgeLimit(e.pos.x, e.pos.z, 1);
     if (r2 > lim * lim) {
       const s = lim / Math.sqrt(r2);
@@ -1576,10 +1598,12 @@ function updateEnemy(e: Enemy): void {
 // ------------------------------------------------------------ smarter monsters (owner): dodge, flank, pack --------
 const AGILE: ReadonlySet<string> = new Set(['GOBLIN', 'BAT', 'DIREWOLF', 'HELLHOUND', 'SKELETON_ARCHER', 'SCARAB', 'VOID_STALKER', 'BANDIT', 'GARGOYLE', 'FROST_WISP', 'WRAITH']);
 const RANGED_KIND: ReadonlySet<string> = new Set(['SKELETON_ARCHER', 'CULTIST', 'SKELETON_MAGE', 'FROST_WISP', 'CINDER_SHAMAN', 'VOID_EYE', 'GOBLIN_ARCHER', 'LAKE_HYDRA', 'BOMBER']);
-const MAXT = 40;
+const MAXT = 40, DODGE_T = 0.32;
 const thX = new Float32Array(MAXT), thZ = new Float32Array(MAXT), thVX = new Float32Array(MAXT), thVZ = new Float32Array(MAXT), thR = new Float32Array(MAXT);
 let thN = 0;
 const fxX = new Float32Array(16), fxZ = new Float32Array(16), fxR = new Float32Array(16);
+/** (owner) monsters no longer sidestep the hero's attacks (the dodge code stays for later). */
+const ENEMY_DODGE = false;
 let fxN = 0, packPushT = 0, lastDodgeText = -10;
 /** Once per frame: the hero's incoming projectiles and the ground skills about to land, as flat arrays the dodge check reads. */
 function buildThreats(): void {
@@ -1602,7 +1626,8 @@ function buildThreats(): void {
 }
 /** Agile monsters and elites sidestep / short-dash out of something they can see coming (cooldown per monster, chance grows with depth, never while winding up). */
 function tickDodge(e: Enemy, dt: number): boolean {
-  if (e.dodgeT > 0) { e.dodgeT -= dt; setVel(e, e.dodgeX, e.dodgeZ, e.speed * 3.1); desiredYaw = Math.atan2(tdx, tdz); return true; }
+  if (e.dodgeT > 0) { e.dodgeT -= dt; setVel(e, e.dodgeX, e.dodgeZ, e.speed * (1.0 + 1.0 * Math.max(0, e.dodgeT) / DODGE_T));   // (owner: no blink) a short eased sidestep: quick at first, settling back to a walk
+    desiredYaw = Math.atan2(tdx, tdz); return true; }
   if (e.dodgeCd > 0) { e.dodgeCd -= dt; return false; }
   if (thN + fxN === 0 || (e.state !== 'CHASE' && e.state !== 'KITE') || e.fearT > 0 || isStationary(e.kind) || !(e.elite || AGILE.has(e.kind))) return false;
   if (((lodTick + e.id) & 3) !== 0) return false;   // ~15 checks a second
@@ -1625,10 +1650,31 @@ function tickDodge(e: Enemy, dt: number): boolean {
   const wave = world.director.wave, biome = Math.max(0, world.room.biome | 0);
   const ch = Math.min(0.5, (0.08 + 0.03 * biome + 0.005 * wave) * (e.elite ? 1.5 : 1) * (wave <= 3 && biome === 0 ? 0.5 : 1));   // early Greenwood stays fair
   if (Math.random() > ch) { e.dodgeCd = 0.6; return false; }
-  e.dodgeT = 0.26; e.dodgeX = dx; e.dodgeZ = dz; e.dodgeCd = (e.elite ? 2.2 : 3.4) + Math.random() * 1.5;
+  e.dodgeT = DODGE_T; e.dodgeX = dx; e.dodgeZ = dz; e.dodgeCd = (e.elite ? 2.2 : 3.4) + Math.random() * 1.5;
   if (world.time - lastDodgeText > 0.5) { lastDodgeText = world.time; events.emit('floatText', { pos: e.pos, text: 'dodge', color: 0xd7e3f2, scale: 0.7, dy: 2.0 }); }
-  setVel(e, dx, dz, e.speed * 3.1);
+  setVel(e, dx, dz, e.speed * 2.0);
   return true;
+}
+/** The Treasure Goblin room objective's goblin (roomEvents.ts spawns it): excluded from dodge / flank / retreat. */
+function isTreasureGoblin(e: Enemy): boolean { const r = world.roomEvt; return r.obj === 'GOBLIN' && r.state === 1 && r.enemy === e.id; }
+/** Flees from the hero at a steady speed, steering smoothly (velocity eases, no snapping); keeps to the middle of the room by sliding
+ *  tangentially round the keep-in ring (a gentle circle at its own run speed, never a teleport-like orbit). */
+function goblinFlee(e: Enemy, dt: number): void {
+  const ax = e.pos.x - px, az = e.pos.z - pz, ad = Math.sqrt(ax * ax + az * az) || 1;
+  let ux = ax / ad, uz = az / ad;
+  const R = world.room.radius * 0.32, r = Math.sqrt(e.pos.x * e.pos.x + e.pos.z * e.pos.z) || 1;
+  const rx = e.pos.x / r, rz = e.pos.z / r, out = ux * rx + uz * rz;
+  if (r > R * 0.7 && out > 0) {   // heading for the keep-in ring: turn the outward part into a slide along it
+    const k = Math.min(1, (r - R * 0.7) / (R * 0.3));
+    ux -= rx * out * k; uz -= rz * out * k;
+    const l = Math.sqrt(ux * ux + uz * uz);
+    if (l < 0.2) { const sg = ux * -rz + uz * rx >= 0 ? 1 : -1; ux = -rz * sg; uz = rx * sg; } else { ux /= l; uz /= l; }
+  }
+  const spd = ad < 10 ? 6.6 : ad < 15 ? 3.5 : 0;
+  const k = Math.min(1, 7 * dt);
+  e.vel.x += (ux * spd - e.vel.x) * k; e.vel.z += (uz * spd - e.vel.z) * k;
+  const vr = e.vel.x * rx + e.vel.z * rz;   // never push through the ring
+  if (r + vr * dt > R && vr > 0) { e.vel.x -= rx * vr; e.vel.z -= rz * vr; }
 }
 /** Melee packs: fan out to different angles instead of one line, and a monster nearly dead falls back for a moment while the others push in. */
 function packAndFlank(e: Enemy): void {
@@ -1727,7 +1773,43 @@ const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number 
   ROCK: { life: 4, radius: 0.8 },
   FLAME: { life: 4.5, radius: 0.55 },
   AXE: { life: 3, radius: 0.75 },
+  FIRE_BOLT: { life: 2.4, radius: 0.45 },
+  BOLT: { life: 1.4, radius: 0.4 },
+  ICE_SHARD: { life: 2.2, radius: 0.4 },
+  POISON_ARROW: { life: 2.5, radius: 0.35 },
+  BALLISTA: { life: 2.2, radius: 0.55 },
 };
+
+// ------------------------------------------------------------ elemental shots (owner) --------
+// Casters / archers sometimes loose an elemental shot instead of the plain one (never in the first Greenwood rooms): FIRE_BOLT burns, BOLT is a
+// fast lightning streak (short stun, 3.5 s grace), ICE_SHARD chills (bossFx addChill: 4 stacks freeze), POISON_ARROW poisons. Colours / trails: render/Projectiles.tsx.
+let shockGuard = -10;
+const elemRoll = (): number => {
+  const d = world.director, b = Math.max(0, world.room.biome | 0);
+  if (b === 0 && d.wave <= 3) return 0;
+  return Math.min(0.65, 0.18 + 0.05 * b + 0.012 * d.wave);
+};
+/** Which projectile kind this shooter looses right now (falls back to `plain`). */
+function elemShot(e: Enemy, plain: EnemyProjectileKind): EnemyProjectileKind {
+  switch (e.kind) {
+    case 'FROST_WISP': case 'BOSS_WYRMLING': return 'ICE_SHARD';
+    case 'SKELETON_MAGE': return Math.random() < Math.min(0.85, elemRoll() * 2) ? ((e.id & 1) === 0 ? 'FIRE_BOLT' : 'BOLT') : plain;
+    case 'CULTIST': return Math.random() < elemRoll() ? ((e.id % 3) === 0 ? 'BOLT' : 'FIRE_BOLT') : plain;
+    case 'SKELETON_ARCHER': case 'GOBLIN_ARCHER': return Math.random() < elemRoll() * 0.9 ? 'POISON_ARROW' : plain;
+    default: return plain;
+  }
+}
+/** On-hit effect of an elemental enemy shot (damagePlayer already ran). */
+function elemHit(kind: EnemyProjectileKind, dmg: number): void {
+  switch (kind) {
+    case 'FIRE_BOLT': applyPlayerDebuff('BURN', 3, Math.max(2, dmg * 0.12)); break;
+    case 'BOLT': if (world.time - shockGuard > 3.5 && applyPlayerDebuff('STUN', 0.35)) shockGuard = world.time; break;
+    case 'ICE_SHARD': addChill(1); applyPlayerDebuff('SLOW', 1.2); break;
+    case 'POISON_ARROW': applyPlayerDebuff('POISON', 3.5, Math.max(1.5, dmg * 0.1)); break;
+    default: break;
+  }
+}
+const ELEM_DMG: Partial<Record<EnemyProjectileKind, 'FIRE' | 'ICE' | 'POISON' | 'LIGHTNING'>> = { FIRE_BOLT: 'FIRE', BOLT: 'LIGHTNING', ICE_SHARD: 'ICE', POISON_ARROW: 'POISON' };
 
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
@@ -1748,6 +1830,7 @@ export function fireEnemyProjectile(
   p.debuff = opts?.debuff ?? 0;
   p.traits = curTraits;
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
+  if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
 }
 
 export function updateEnemyProjectiles(dt: number): void {
@@ -1853,7 +1936,8 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { pos: p.pos, kind: 'PHYSICAL', slow: p.slow, tr: p.traits });
+        damagePlayer(p.damage, { pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits });
+        if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });

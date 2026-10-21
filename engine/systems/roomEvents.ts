@@ -25,6 +25,8 @@ const tmp = new Vector3();
 const colOut: Collider[] = [];
 const notify = (msg: string, color = '#f1d58e') => useGameStore.getState().addNotification(msg, color, 'SYSTEM');
 
+/** (owner) treasure rooms: kill every monster within this many seconds for a blessed chest (engine/systems/director chestLoot) */
+export const SPEED_TIME = 40;
 const GOBLIN_TIME = 15, HUNT_TIME = 30, TRAP_PERIOD0 = 3.2, TRAP_WARN0 = 2.1, TRAP_FIRE0 = 2.75, TRAP_R0 = 1.7;
 // Spike-trap tuning (live values: Marble Halls, biome #2 = index 1, gets bigger / more / faster / longer-lasting traps).
 let TRAP_PERIOD = TRAP_PERIOD0, TRAP_WARN = TRAP_WARN0, TRAP_FIRE = TRAP_FIRE0, TRAP_R = TRAP_R0, TRAP_TILE = TRAP_R0 * 2;
@@ -37,6 +39,8 @@ let plTrapCd = 0;
 const MARBLE_BIOME = 1;
 const TRAP_W_STD = [30, 30, 20, 20], TRAP_W_MARBLE = [10, 10, 35, 45];
 
+/** True when this room's Speed Clear was won (the treasure chest gives its blessed loot). */
+export const speedWon = (): boolean => E().obj === 'SPEED' && E().state === 2;
 export function resetRoomEvent(): void {
   const e = E();
   e.obj = ''; e.twist = ''; e.state = 0; e.hp = 0; e.maxHp = 1; e.t = 0; e.tmax = 0; e.enemy = -1; e.nTraps = 0; e.hurtT = 0; e.darkId = -1; e.darkT = 0; e.lifted = false;
@@ -55,6 +59,7 @@ export function startRoomEvent(plan: RoomPlan): void {
     if (e.obj === 'DEFEND' || e.obj === 'RESCUE') { e.maxHp = e.hp = e.obj === 'DEFEND' ? 100 : 80; }
     if (e.obj === 'GOBLIN') e.tmax = GOBLIN_TIME;
     if (e.obj === 'HUNT') e.tmax = HUNT_TIME;
+    if (e.obj === 'SPEED') e.tmax = SPEED_TIME;
     notify(`Objective: ${OBJ_NAME[e.obj]}`);
   }
   if (e.twist === 'TRAPS') placeTraps();
@@ -175,15 +180,11 @@ export function updateRoomEvents(dt: number): void {
           events.emit('explosion', { pos: g.pos.clone(), radius: 2, color: 0xffd24a });
           notify('The goblin escaped with its gold.', '#ff8a7a');
         } else {
-          // flee: away from the hero, faster than it chases, kept inside the room
-          const dx = g.pos.x - pl.pos.x, dz = g.pos.z - pl.pos.z, d = Math.hypot(dx, dz) || 1;
-          const s = 7.5 * dt * (d < 10 ? 1 : 0.6);
-          let nx = g.pos.x + (dx / d) * s, nz = g.pos.z + (dz / d) * s;
-          const R = world.room.radius * 0.32, r = Math.hypot(nx, nz);   // it keeps to the middle of the room (never the sides)
-          if (r > R) { const a = Math.atan2(nz, nx) + 0.9 * dt * 3; nx = Math.cos(a) * R; nz = Math.sin(a) * R; }   // circles the centre
-          g.pos.x = nx; g.pos.z = nz; g.facing = Math.atan2(dx, dz);
+          // (the flee itself is steered smoothly in enemies.ts goblinFlee: a readable, constant-speed run)
         }
       }
+    } else if (e.obj === 'SPEED') {
+      if (e.t >= e.tmax) fail('Too slow! The chest stays plain.');
     } else if (e.obj === 'HUNT') {
       if (e.enemy < 0 && e.t > 2.5) {
         let best = -1, bd = 0;
@@ -249,6 +250,7 @@ export function roomEventCleared(): void {
   const e = E();
   if (e.state === 1 && e.obj === 'DEFEND') { e.state = 2; reward(40 + e.hp * 0.4, e.hp > 60 ? 5 : 3, `The totem stands (${Math.round(e.hp)}%)! Its blessing pours out.`); }
   else if (e.state === 1 && e.obj === 'RESCUE') { e.state = 4; notify('Free the captive: press E at the cage.'); }
+  else if (e.state === 1 && e.obj === 'SPEED') { e.state = 2; notify('Cleared in time! The chest glows with a blessing.', '#ffd24a'); events.emit('floatText', { pos: world.player.pos, text: 'IN TIME!', color: 0xffd24a, scale: 1.1, dy: 2.4 }); }
   else if (e.state === 1) fail(e.obj === 'GOBLIN' ? 'The goblin escaped with its gold.' : 'The bounty got away.');
   if (e.twist === 'CURSED') { tmp.set(world.player.pos.x, 0, world.player.pos.z + 1.2); spawnPickup('GEM', tmp, 4); notify('The curse lifts: gems for your trouble.', '#c58bff'); }
 }

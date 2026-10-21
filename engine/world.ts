@@ -37,7 +37,7 @@ function makeEnemy(id: number): Enemy {
     trickCd: 0, trickT: 0, trickKind: 0, bigCd: 0, bigT: 0, bigRec: 0, bigDash: 0, bigKind: 0, slamDmg: 0, slamT: 0, chillStacks: 0, chillT: 0, frostT: 0, spKind: 0, spT: 0, spStep: 0, spCd: 0, decoy: false, hideT: 0, shellT: 0,
     winT: 0, winCd: 0, winPhase: 0, winBusy: false,
     phase: 0, pattern: 0, patternT: 0, angle: 0, pullCount: 0,
-    traits: 0, comboN: 0, comboT: 0, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, retreatT: 0, packed: false,
+    traits: 0, comboN: 0, comboT: 0, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, retreatT: 0, packed: false, rooted: false, rootX: 0, rootZ: 0,
   };
 }
 
@@ -133,7 +133,7 @@ export const world = {
   minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, shield: 0, shieldT: 0, hitT: 0, walk: 0, mv: 0, src: 0, born: 0, def: 0, skillT: 0, spin: 0 })),
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
   roomEvt: {
-    obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
+    obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT' | 'SPEED', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
     state: 0, hp: 0, maxHp: 1, x: 0, z: 0, t: 0, tmax: 0, enemy: -1, hurtT: 0,
     /** Darkness twist: the monster casting it (-1 none yet), darkT = time in the room, lifted once it falls. */
     darkId: -1, darkT: 0, lifted: false,

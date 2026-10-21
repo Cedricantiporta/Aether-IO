@@ -137,7 +137,7 @@ const WARD_TEXT: Record<string, [string, string]> = {
   SHELL: ['FROST SHELL', 'Frost Shell! Shatter the ice armour!'],
   PHASE: ['VOID PHASE', 'Void Phase! It cannot be harmed - survive until it returns!'],
 };
-const HEAD_SLOTS = [3, -1, 4];
+const HEAD_SLOTS = [5, 6, 7];   // (rooted Hydra: the spare heads sit one row further in than its five front heads, bosses2.headAnchor)
 function raiseWard(e: Enemy, m: Mech): void {
   S.wards.length = 0; S.healT = 0;   // (a mend in progress stops)
   const kind = m.ward!, txt = WARD_TEXT[kind];
@@ -153,7 +153,7 @@ function raiseWard(e: Enemy, m: Mech): void {
     const near = kind === 'CORES', R = near ? e.radius + 4.5 : arenaR() * 0.7, n = Math.min(m.guard === 'BOSS_HYDRA_HEAD' ? 3 : 5, (kind === 'GUARD' ? 2 : 3) + e.phase);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
-      if (kind === 'GUARD') tv.set(e.pos.x + Math.cos(a) * 4, 0, e.pos.z + Math.sin(a) * 4);
+      if (kind === 'GUARD') { const gr = e.rooted ? e.radius * 0.9 + 1 : 4; tv.set(e.pos.x + Math.cos(a) * gr, 0, e.pos.z + Math.sin(a) * gr); }
       else if (near) tv.set(e.pos.x + Math.cos(a) * R, 0, e.pos.z + Math.sin(a) * R);
       else tv.set(Math.cos(a) * R, 0, Math.sin(a) * R);
       const w = spawnEnemy(kind === 'GUARD' ? m.guard! : 'BOSS_CRYSTAL', tv);

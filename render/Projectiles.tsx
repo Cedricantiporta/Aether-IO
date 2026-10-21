@@ -161,6 +161,12 @@ export function Projectiles() {
     const earrow = arrow('#3a2a26', '#4a4a50', '#8a1a1a', '#ff3a2a');
     const rockG = makeRockGeo(901, '#8a7a6a', '#6a8a4a', 0.9);
     rockG.scale(0.55, 0.55, 0.55);
+    // elemental enemy shots (owner): fire bolt = fat orange core, lightning = thin white-blue streak, ice = pale crystal, poison arrow = green tipped
+    const fireBoltG = orbG(0.38, '#ff6a1a', '#fff0a0');
+    const boltG = new GB([1, 1]).cone(0.12, 0.9, 5, [0, 0, 0.45], '#fff8c0', [Math.PI / 2, 0, 0]).cone(0.12, 0.9, 5, [0, 0, -0.45], '#8ad0ff', [-Math.PI / 2, 0, 0]).build();
+    const iceG = new GB([1, 1]).cone(0.2, 0.9, 5, [0, 0, 0.35], '#d6f6ff', [Math.PI / 2, 0, 0]).cone(0.2, 0.45, 5, [0, 0, -0.1], '#8fd8ff', [-Math.PI / 2, 0, 0]).octa(0.12, [0, 0, 0.75], '#ffffff').build();
+    const pois = arrow('#3a4a22', '#6a8a2a', '#76d33a', '#8aff3a', 1.2);
+    const ballG = arrow('#5a3a22', '#9aa0aa', '#c8452a', '#ffb060', 1.6);
     const fireG = new IcosahedronGeometry(0.75, 3);
     const tornA = new CylinderGeometry(1.7, 0.25, 3.8, 18, 6, true).translate(0, 1.9, 0);
     const tornB = new CylinderGeometry(1.1, 0.12, 3.3, 16, 5, true).translate(0, 1.65, 0);
@@ -199,6 +205,11 @@ export function Projectiles() {
       BOSS_ORB: mk([[orbG(0.48, '#ff3ae0', '#ffe0ff'), glow]], MAXE),
       ROCK: mk([[rockG, lit]], 200),
       FLAME: mk([[orbG(0.42, '#ff6a1a', '#fff0b0'), glow]], MAXE),
+      FIRE_BOLT: mk([[fireBoltG, glow]], MAXE),
+      BOLT: mk([[boltG, glow]], 120),
+      ICE_SHARD: mk([[iceG, glow]], MAXE),
+      POISON_ARROW: mk([[pois.body, lit], [pois.glow, glow]], MAXE),
+      BALLISTA: mk([[ballG.body, lit], [ballG.glow, glow]], 60),
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
     return { group, S, E, fireMat, tornMat };
@@ -472,6 +483,37 @@ export function Projectiles() {
           if (emit && Math.random() < dt * 34) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.2, 0.6 + Math.random() * 1.2, (Math.random() - 0.5) * 1.2, 0.45, 0.4, 0.05, 2.2, 0.9, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
           break;
         }
+        case 'FIRE_BOLT': {
+          const pu = 1 + 0.2 * Math.sin(t * 18 + n);
+          place(ims, i, x, y, z, t * 3, t * 2, 0, pu);
+          pushHalo(x, y, z, 2.8 * pu, 2.2, 0.8, 0.2, 0.65, CELL.GLOW);
+          pushHalo(x, y, z, 1.2, 2.2, 1.7, 0.9, 0.85, CELL.GLOW);
+          if (emit && Math.random() < dt * 60) FX.add.emit(x, y, z, -vx * 0.1 + (Math.random() - 0.5), 0.5 + Math.random(), -vz * 0.1 + (Math.random() - 0.5), 0.5, 0.5, 0.05, 2.3, 0.8, 0.15, 0.8, CELL.FLAME, -0.6, 0.8);
+          break;
+        }
+        case 'BOLT': {
+          place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.4);
+          pushHalo(x, y, z, 3.0, 1.6, 1.8, 2.6, 0.7, CELL.GLOW);
+          pushHalo(x, y, z, 1.3, 2.4, 2.4, 2.6, 0.9, CELL.GLOW);
+          if (emit && Math.random() < dt * 90) FX.add.emit(x + (Math.random() - 0.5) * 0.5, y + (Math.random() - 0.5) * 0.5, z + (Math.random() - 0.5) * 0.5, -vx * 0.05 + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, -vz * 0.05 + (Math.random() - 0.5) * 3, 0.22, 0.28, 0.03, 1.5, 1.9, 2.6, 0.9, CELL.STAR, 0, 1, 0, 3);
+          break;
+        }
+        case 'ICE_SHARD': {
+          place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), t * 6 + n, 1.1);
+          pushHalo(x, y, z, 2.3, 0.7, 1.7, 2.4, 0.6, CELL.GLOW);
+          if (emit && Math.random() < dt * 40) FX.add.emit(x, y, z, (Math.random() - 0.5) * 0.8, -0.2, (Math.random() - 0.5) * 0.8, 0.5, 0.25, 0.04, 1.2, 2.0, 2.6, 0.8, CELL.STAR, -0.5, 1, 0, 3);
+          break;
+        }
+        case 'POISON_ARROW':
+          place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.2);
+          pushHalo(x, y, z, 2.0, 0.5, 1.8, 0.3, 0.55, CELL.GLOW);
+          if (emit && Math.random() < dt * 36) FX.add.emit(x, y, z, (Math.random() - 0.5) * 0.4, -0.8, (Math.random() - 0.5) * 0.4, 0.55, 0.28, 0.05, 0.7, 1.9, 0.2, 0.75, CELL.DISC, -1, 1);
+          break;
+        case 'BALLISTA':
+          place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.7);
+          pushHalo(x, y, z, 2.4, 2.2, 1.2, 0.4, 0.5, CELL.GLOW);
+          if (emit && Math.random() < dt * 40) FX.norm.emit(x, y, z, (Math.random() - 0.5) * 0.4, 0.2, (Math.random() - 0.5) * 0.4, 0.4, 0.3, 0.9, 0.8, 0.7, 0.6, 0.45, CELL.SMOKE);
+          break;
         case 'ROCK':
           place(ims, i, x, y, z, t * 3 + n, t * 2.2, t * 1.7, 1.3);
           if (emit && Math.random() < dt * 20) FX.norm.emit(x, y, z, (Math.random() - 0.5), 0.3, (Math.random() - 0.5), 0.5, 0.4, 0.9, 0.55, 0.5, 0.42, 0.5, CELL.SMOKE);

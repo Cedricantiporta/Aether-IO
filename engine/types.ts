@@ -136,6 +136,8 @@ export interface Enemy {
   comboN: number; comboT: number;   // COMBO trait: strikes still to chain, time to the next one
   dodgeT: number; dodgeCd: number; dodgeX: number; dodgeZ: number;   // sidestep (smarter monsters): time left, cooldown, direction
   retreatT: number; packed: boolean; // low-hp back-off (pack behaviour): time left; already used
+  /** giant rooted boss (Elderroot / Mire Hydra / Glacius): never walks, pinned at (rootX, rootZ) */
+  rooted: boolean; rootX: number; rootZ: number;
 }
 
 // ------------------------------------------------------- player projectiles --
@@ -171,7 +173,8 @@ export interface Projectile {
 }
 
 // -------------------------------------------------------- enemy projectiles --
-export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME' | 'AXE';   // AXE: dark barbarian boomerang (drawn by render/DarkHero)
+export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME' | 'AXE'
+  | 'FIRE_BOLT' | 'BOLT' | 'ICE_SHARD' | 'POISON_ARROW' | 'BALLISTA';   // elemental shots (enemies.ts elemental table): burn / shock (short stun) / chill (3 stacks freeze) / poison; BALLISTA: room war machine bolt (roomTraps.ts)   // AXE: dark barbarian boomerang (drawn by render/DarkHero)
 
 export interface EnemyProjectile {
   id: number;
@@ -413,7 +416,7 @@ export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT'
   | 'GATEKEEPER';   // the Void's end: the Gatekeeper's courtyard with 5 trial gates and the sealed Dark Castle   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
 export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
 /** Room objective (rolled onto some combat rooms, roomEvents.ts) and room twist (a modifier for the whole room). */
-export type RoomObjective = 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT';
+export type RoomObjective = 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT' | 'SPEED';
 export type RoomTwist = 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN';
 export interface RoomPlan {
   type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist;

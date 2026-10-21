@@ -14,12 +14,16 @@ import { progressBubble, callBubble } from '../npcLines';
 
 const hits: Collider[] = [];
 /** Push a walker out of any building / prop collider it overlaps (safety net: routes are checked to be clear). */
-function pushOut(o: { x: number; z: number }, r: number): void {
+function pushOut(o: { x: number; z: number }, r: number, maxMove = 1e9): void {
+  const x0 = o.x, z0 = o.z;
   queryColliders(o.x, o.z, r, hits);
   for (let i = 0; i < hits.length; i++) {
     const c = hits[i], dx = o.x - c.x, dz = o.z - c.z, d = Math.sqrt(dx * dx + dz * dz), min = c.r + r;
     if (d < min && d > 1e-4) { o.x = c.x + (dx / d) * min; o.z = c.z + (dz / d) * min; }
   }
+  // (owner: NPCs teleported) a big correction (waypoint snapped into a collider's margin) is eased in over a few frames, never a jump
+  const mx = o.x - x0, mz = o.z - z0, m = Math.sqrt(mx * mx + mz * mz);
+  if (m > maxMove) { const k = maxMove / m; o.x = x0 + mx * k; o.z = z0 + mz * k; }
 }
 
 export interface NpcState {
@@ -104,19 +108,19 @@ export function updateNpcs(dt: number): void {
     const tgt = path[n.wp];
     const dx = tgt[0] - n.x, dz = tgt[1] - n.z, dist = Math.sqrt(dx * dx + dz * dz);
     const step = (d.speed ?? 1.4) * dt;
-    if (dist <= step + 0.05) {
+    if (dist <= step) {
       n.x = tgt[0]; n.z = tgt[1]; n.wp = (n.wp + 1) % path.length;
       n.wait = 1.2 + Math.random() * 4; n.moving = false;
     } else {
-      // blocked for a moment: veer ~60 degrees to slide around the obstacle (side alternates per NPC)
-      let ux = dx / dist, uz = dz / dist;
-      if (n.stuck > 0.25) { const sg = i & 1 ? 1 : -1, c = 0.5, sn = 0.866 * sg; const rx = ux * c - uz * sn, rz = ux * sn + uz * c; ux = rx; uz = rz; }
+      // (owner: NPCs teleported / dashed in circles) straight walk to the waypoint, sliding along whatever is in the way; if it makes
+      // no progress for a moment it stops, turns round and heads for the next waypoint (never a veer that spins it around an obstacle)
+      const ux = dx / dist, uz = dz / dist;
       n.x += ux * step; n.z += uz * step; n.moving = true; n.yaw = Math.atan2(ux, uz);
-      if (town) pushOut(n, 0.45);
+      if (town) pushOut(n, 0.45, step * 1.5);
       const nd = Math.sqrt((tgt[0] - n.x) ** 2 + (tgt[1] - n.z) ** 2);
-      if (dist - nd < step * 0.35) n.stuck += dt; else { n.stuck = Math.max(0, n.stuck - dt * 2); n.skips = 0; }
-      if (n.stuck > 1.6) {   // still wedged: give up on this waypoint; wedged on every leg -> quietly back home
-        n.stuck = 0; n.wp = (n.wp + 1) % path.length; n.wait = 0.6;
+      if (dist - nd < step * 0.3) n.stuck += dt; else { n.stuck = Math.max(0, n.stuck - dt * 2); n.skips = 0; }
+      if (n.stuck > 0.9) {   // wedged: give up on this waypoint and pause a moment (a calm stop, then the next leg)
+        n.stuck = 0; n.wp = (n.wp + 1) % path.length; n.wait = 0.8 + Math.random() * 0.8; n.moving = false;
         if (++n.skips > path.length) {   // wedged on every leg: walk to the nearest waypoint instead of snapping home (owner: no teleporting NPCs)
           n.skips = 0; let best = 0, bd = Infinity;
           for (let k = 0; k < path.length; k++) { const q = (path[k][0] - n.x) ** 2 + (path[k][1] - n.z) ** 2; if (q < bd) { bd = q; best = k; } }
@@ -134,7 +138,7 @@ export function updateNpcs(dt: number): void {
     if (a.joy > 0) { a.joy -= dt; a.moving = false; a.hop += dt * 6; continue; }
     if (a.wait > 0) { a.wait -= dt; a.moving = false; continue; }
     const dx = a.tx - a.x, dz = a.tz - a.z, dist = Math.sqrt(dx * dx + dz * dz), step = d.speed * dt;
-    if (dist <= step + 0.05) {
+    if (dist <= step) {
       a.moving = false; a.wait = 0.8 + Math.random() * 3.5;
       const ang = Math.random() * 6.283, rr = Math.sqrt(Math.random());
       a.tx = a.hx + Math.cos(ang) * d.rx * rr; a.tz = a.hz + Math.sin(ang) * d.rz * rr;

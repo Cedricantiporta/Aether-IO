@@ -14,6 +14,7 @@ import { queryColliders, type Collider } from '../mapgen';
 import { insideShape } from '../roomShape';
 import { isStationary } from '../enemyDefs';
 import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect, type DamageOpts } from './combat';
+import { updateRoomTraps, trapMods } from './roomTraps';
 import { Vector3 } from 'three';
 
 export const HZ = { NONE: 0, GREEN: 1, FROST: 2, VOID: 3 } as const;
@@ -146,7 +147,14 @@ function puff(m: { x: number; z: number; cd: number }): void {
   c.on = true; c.x = m.x; c.z = m.z; c.t = CLOUD_T; c.tick = 0.1; c.seed = Math.random() * 10;
 }
 
+/** Every frame: the room's stationary traps (roomTraps.ts), then the biome hazards; the traps' slip / slow combine with the biome's own. */
 export function updateBiomeHazards(dt: number): void {
+  updateRoomTraps(dt);
+  tickBiomeHazards(dt);
+  if (trapMods.grip < iceGrip) iceGrip = trapMods.grip;
+  if (trapMods.slow < hazSlow) hazSlow = trapMods.slow;
+}
+function tickBiomeHazards(dt: number): void {
   const room = world.room, pl = world.player;
   if (!room.active || hz.kind === HZ.NONE) { hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; return; }
   const fighting = world.director.phase === 'FIGHT';

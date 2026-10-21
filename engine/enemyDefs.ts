@@ -93,15 +93,15 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
   BOSS_TREANT: {
-    name: 'Elderroot the Ancient', hp: 1625, speed: 2.4, radius: 2.8, scale: 4.0, contactDamage: 22, projectileDamage: 16,
+    name: 'Elderroot the Ancient', hp: 1625, speed: 2.4, radius: 4.6, scale: 6.4, contactDamage: 22, projectileDamage: 16,
     xp: 9, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x4d7c0f, knockResist: 1, armor: 55,
   },
   BOSS_HYDRA: {
-    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 3.6, scale: 4.5, contactDamage: 22, projectileDamage: 17,
+    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 5.4, scale: 6.4, contactDamage: 22, projectileDamage: 17,
     xp: 10, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 50,
   },
   BOSS_WYRM: {
-    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 3.1, scale: 4.8, contactDamage: 24, projectileDamage: 18,
+    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 4.4, scale: 6.4, contactDamage: 24, projectileDamage: 18,
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
   BOSS_WARMACH: {
@@ -229,6 +229,17 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
 
 /** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */
 export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA' || k === 'BOSS_CRYSTAL'; }
+/** (owner) Giant ROOTED bosses: they never walk. Elderroot stands rooted in the arena, Glacius rises out of the far rim (head / neck / claws), the
+ *  Hydra's body lies beyond the rim with its heads reaching in. They fight with arena-wide telegraphed patterns (systems/bosses2.ts). */
+export function isRootedBoss(k: EnemyKind): boolean { return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM'; }
+/** Home spot (x, z) of a rooted boss in a room of radius R: Elderroot a little behind the centre, Glacius's head just inside the far rim, the Hydra's
+ *  body beyond it. `slot` offsets extra bosses (Endless Waves) sideways. The hero arrives on the +z side. */
+export function rootedHome(k: EnemyKind, R: number, slot: number, out: { x: number; z: number }): void {
+  const side = slot === 0 ? 0 : (slot & 1 ? 1 : -1) * (12 + 11 * ((slot - 1) >> 1));
+  if (k === 'BOSS_TREANT') { out.x = side; out.z = -R * 0.16; }
+  else if (k === 'BOSS_WYRM') { out.x = side * 1.3; out.z = -(R - 3.4) + Math.abs(side) * 0.08; }
+  else { out.x = side * 1.2; out.z = -(R + 4.2); }
+}
 /** Swarm kinds: rolled in big packs. */
 export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB'; }
 

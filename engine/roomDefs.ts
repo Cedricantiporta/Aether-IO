@@ -298,6 +298,7 @@ let planBiome = 0;
 const plan = (type: RoomType, next = 0): RoomPlan => {
   if (type === 'MINIBOSS' && Math.random() < duelChance(planBiome)) type = 'DUEL';
   const p: RoomPlan = { type, reward: rollReward(type) };
+  if (type === 'TREASURE') p.obj = 'SPEED';   // (owner) the treasure is earned: clear the room in time for a blessed chest
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {
     if (type === 'COMBAT' && Math.random() < (storyBias.rescue ? 0.55 : 0.35)) p.obj = pick<RoomObjective>([['DEFEND', 30], ['RESCUE', storyBias.rescue ? 110 : 25], ['GOBLIN', 25], ['HUNT', 20]]);
@@ -305,7 +306,7 @@ const plan = (type: RoomType, next = 0): RoomPlan => {
   }
   return p;
 };
-export const OBJ_NAME: Record<RoomObjective, string> = { DEFEND: 'Defend the Totem', RESCUE: 'Rescue the Captive', GOBLIN: 'Treasure Goblin', HUNT: 'Bounty Hunt' };
+export const OBJ_NAME: Record<RoomObjective, string> = { DEFEND: 'Defend the Totem', RESCUE: 'Rescue the Captive', GOBLIN: 'Treasure Goblin', HUNT: 'Bounty Hunt', SPEED: 'Speed Clear' };
 export const TWIST_NAME: Record<RoomTwist, string> = { DARK: 'Darkness', CURSED: 'Cursed Ground', TRAPS: 'Spike Traps', GOLDEN: 'Golden Hour' };
 export const TWIST_DESC: Record<RoomTwist, string> = {
   DARK: 'A Shadowcaster smothers the light: slay it to see again.', CURSED: 'Healing is weak here, but the clear pays gems.',

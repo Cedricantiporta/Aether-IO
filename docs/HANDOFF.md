@@ -165,6 +165,15 @@ town (and closes the open panel first).
 - **Room objectives / twists** (`systems/roomEvents.ts`): Defend the Totem, Rescue, Treasure Goblin, Hunt; twists Traps, Dark
   (Shadowcaster), Cursed, Golden. **Biome hazards** (`systems/biomeHazards.ts` + biome-specific features in `roomgen`):
   spikes, quicksand, tide puddles, lava rifts, brambles/spores, ice sheets/icicles, void rifts + gravity flips.
+  **Stationary hazards / war machines** (`systems/roomTraps.ts` + `render/RoomTraps.tsx`, set up in `director.enterRoom`
+  after the biome hazards, only in COMBAT / ELITE rooms; kinds, count and strength scale with depth, Greenwood d1-3 only
+  gets bomb barrels / vines): ballista (locks a lane, fast bolt), catapult (lobs a boulder at where you were: floor circle +
+  short stun), magic tower (charge ring, then a 360 degree ring of slow orbs, rotated half a step each volley), fire bars
+  (rotating cross), fire jet (warn / blast / rest), rooting vines (root 1 s, a dash breaks free), freezing pools (slip via
+  `trapMods.grip` + `bossFx.addChill`, 4 stacks freeze) and clusters of bomb barrels (`crates.ts` EXPLOSIVE_BARREL, chain
+  reaction, now also hurts the hero through a short red ring). Burn ticks are x`HERO_DOT_MUL` like every ticking hazard (jets use
+  `env: true`, bars / jets apply BURN). Fair placement: clear of arrival / exits / station / props / each other, turrets hug the
+  rim. QA: `roomTraps.dbgTraps` forces kinds. Fire bars, jets also burn monsters.
   Harvest nodes appear in ~half the rooms (hand-harvest only). Wanderers (story characters, max one per biome), ally
   fighter once per biome, Riruru (rare harmless blue slime, Greenwood). River/lake stages, rolling hills beyond the props.
 - **Camps are hand-authored transition paths** (`engine/campPaths.ts` `CAMP_LAYOUTS`, 7 layouts, waystation mid-path with
@@ -216,7 +225,22 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   Gear is class-gated by wear group (`itemClass.ts`: Heavy = Knight+Barbarian, Light = Archer+Necromancer, Arcane = Wizard;
   Wizard and Necromancer share weapons).
 - **Hero knockback / knockdown**: `combat.knockHero(fromX, fromZ, force, downSec)`, fed by `damagePlayer(..., { ...KB.SLAM })` (`KB` presets in combat.ts: FLINCH 0.5 u, PUSH 3.2, HEAVY 4.5, SLAM 5 u + 0.75 s down, CRUSH 6 u + 0.9 s). Eased slide over 0.2 s through `resolveObstacles` (player.ts), DOWN pose in `render/Hero.tsx`, 0.6 s invuln after the get-up, ~1.6 s no-chain window; Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown.
-- **Enemy traits + smarter monsters (2026-10-21)**: `engine/enemyTraits.ts` (`TR` bitmask on `Enemy.traits`, rolled in `spawnEnemy`: chance grows with biome + depth, elites ~3x; Heavy = knockback resist, Steadfast = CC wears off sooner, Warded = half elemental damage, Venomous / Corroding / Dazzling / Chilling / Concussive / Shover (knockback that cancels the cast + pauses basic attacks, `hooks.cancelCast`) / Crusher (knockdown), Flurry = 2-3 melee strikes, Quickdraw = faster shots + shorter wind-ups). On-hit effects: `combat.applyTraitHit` (via `damagePlayer` `src` / `tr`; telegraph zones carry the bits in `zone.aux`, projectiles in `p.traits`). Shown as a colour wash (`render/Enemies.tsx`) and chips in the target frame. Hidden innate bits `HIND_SLOW` / `HIND_ROOT` (kinds, some elites, all bosses) go through `combat.hinder` (diminishing returns: no perma-root). Ordinary monsters move +11% (`MOVE_MUL`); agile kinds + elites dodge incoming hero shots / ground skills (`tickDodge`, chance by depth, never while casting), melee packs fan out (`packAndFlank`), nearly dead ones fall back once while the rest push in, ranged kiters strafe while reloading and back off when closed in (`kiteMove`).
+- **Enemy traits + smarter monsters (2026-10-21)**: `engine/enemyTraits.ts` (`TR` bitmask on `Enemy.traits`, rolled in `spawnEnemy`: chance grows with biome + depth, elites ~3x; Heavy = knockback resist, Steadfast = CC wears off sooner, Warded = half elemental damage, Venomous / Corroding / Dazzling / Chilling / Concussive / Shover (knockback that cancels the cast + pauses basic attacks, `hooks.cancelCast`) / Crusher (knockdown), Flurry = 2-3 melee strikes, Quickdraw = faster shots + shorter wind-ups). On-hit effects: `combat.applyTraitHit` (via `damagePlayer` `src` / `tr`; telegraph zones carry the bits in `zone.aux`, projectiles in `p.traits`). Shown as a colour wash (`render/Enemies.tsx`) and chips in the target frame. Hidden innate bits `HIND_SLOW` / `HIND_ROOT` (kinds, some elites, all bosses) go through `combat.hinder` (diminishing returns: no perma-root). Ordinary monsters move +11% (`MOVE_MUL`); (owner: dodging is OFF, `ENEMY_DODGE = false` in enemies.ts; the code stays) agile kinds + elites could dodge incoming hero shots / ground skills (`tickDodge`: a short eased sidestep, ~2x speed fading to a walk over 0.32 s, never a blink; chance by depth, never while casting), melee packs fan out (`packAndFlank`), nearly dead ones fall back once while the rest push in, ranged kiters strafe while reloading and back off when closed in (`kiteMove`).
+- **Elemental enemy shots (2026-10-21)**: `enemies.ts` `elemShot` / `elemHit`: mages / archers sometimes loose `FIRE_BOLT` (burn),
+  `BOLT` (fast lightning, 0.35 s stun with a 3.5 s grace), `ICE_SHARD` (`bossFx.addChill`, 4 stacks freeze; frost wisps / wyrmlings
+  always), `POISON_ARROW` (poison); never in Greenwood d1-3, chance grows with biome + depth. Casters shoot faster (Cultist orb 8 u/s,
+  Void Eye 8.5). Render: `render/Projectiles.tsx` (fire = orange core + flame trail, lightning = white-blue streak with sparks,
+  ice = pale crystal, poison = green-tipped arrow with drips).
+- **Giant rooted bosses (2026-10-21)**: Elderroot, the Tide Hydra and Glacius never walk (`isRootedBoss`, `rootedHome` in
+  `enemyDefs.ts`; `Enemy.rooted / rootX / rootZ`, pinned in `updateEnemy`, no bounds clamp so the Hydra's body can lie beyond the
+  rim). **Elderroot**: radius 4.6, rooted a little behind the arena centre, solid trunk (the hero is pushed out round it); arena-wide
+  root lanes (38 u), Branch Sweep (5 lanes one after another, `BT.LASH`), Crushing Roots (slam ring round the trunk + thorn ring),
+  vines cone 24 u, seed pods, brood, Ironbark. **Glacius**: only head / neck / claws / wing bones show (`render/GiantBosses.tsx`),
+  the head sits 3.4 u inside the far rim (radius 4.4); frost breath 40 u, ice lanes 56 u, Hailstorm (replaces the dive bomb),
+  Glacial Ring (`WAVE_FROST`), blizzard, brood. **Tide Hydra**: body beyond the rim, FIVE heads (`NH`, `headAnchor`; ward spare heads
+  sit in a second row) with necks drawn by `GiantBosses`; Acid Barrage, Sweeping Heads (3 staggered cones), Head Slam (heads whip to
+  marked circles and rest there = free hits), Tidal Surge (`WAVE_TIDE`). Boss bar, interrupt meter, wards, stagger, winded windows
+  are unchanged (they live on the boss enemy). QA: `scratchpad` scenario `gp2_giant.mjs` style: `debugJump(biome, 14, 'BOSS')`.
 - **Boss interrupt meter** (`systems/interrupt.ts`, bar in `ui/hud/BossBar.tsx`): hero hits fill it during a heal channel or a boss / champion special; full = cast cancelled + stagger; drains when idle. **Ticking damage** (poison / burn / bleed, rifts, hazard zones, brambles, lava) on the hero is x`HERO_DOT_MUL` (4, `combat.ts`; boss auras opt out with `noDotMul`; discrete trap / icicle hits are not multiplied).
 - Combat layer: monster tricks (`tricks.ts`), statuses, backstab/shield blocking, elite big attacks (`eliteBig.ts`), winded
   free-hit windows on bosses, follow delay (`heroTrail.ts`), combo meter, aimed casting (`aim.ts`), no contact damage
@@ -446,6 +470,10 @@ screens, max-level question: class level cap is 50) have been removed.
 ## 5. Detailed notes (still true; condensed)
 
 ### Systems quick reference
+- **Smooth walkers (2026-10-21)**: town NPC patrols (`npcs.ts updateNpcs`) walk straight to the waypoint (snap only within one step), a
+  collider push-out is eased over a few frames (`pushOut(maxMove)`), and a blocked NPC stops 0.9 s then takes the next leg (no veer /
+  circling). The Treasure Goblin (`roomEvents.ts` objective) is steered by `enemies.goblinFlee`: constant ~6.6 u/s, velocity eased,
+  slides tangentially along the keep-in ring, excluded from dodge / flank / retreat.
 - **Store vs world**: per-frame state in `engine/world.ts`; meta in `store.ts`. Profile saved debounced to localStorage,
   flushed on pagehide; separate keys for the shared warehouse (`aether-survivor-shared-warehouse-v1`), characters index,
   harvest/cave/fishing/tutorial/dream/ankh flags (`aether-survivor-*`). Old saves migrate through flags (`gold10`, `sp2`, `al1`, `mus1`...).

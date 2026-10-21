@@ -35,6 +35,7 @@ export const RoomEventHud: React.FC = () => {
         else if (e.state === 4) l = 'Free the captive: press E at the cage';
         else if (e.obj === 'DEFEND' || e.obj === 'RESCUE') { l = e.obj === 'DEFEND' ? 'Keep monsters off the totem' : 'Keep monsters off the cage'; k = e.hp / Math.max(1, e.maxHp); }
         else if (e.obj === 'GOBLIN') { l = e.enemy >= 0 ? `Catch it! ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Something glitters nearby...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
+        else if (e.obj === 'SPEED') { l = `Kill every monster: ${Math.max(0, Math.ceil(e.tmax - e.t))}s`; k = Math.max(0, 1 - e.t / e.tmax); }
         else if (e.obj === 'HUNT') { l = e.enemy >= 0 ? `Kill the marked monster: ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Marking the bounty...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
       }
       if (e.twist === 'DARK' && !e.obj) { t = TWIST_NAME.DARK; l = e.lifted ? 'The darkness lifted' : 'Slay the glowing Shadowcaster to lift the darkness'; col = '#e6dcc4'; }

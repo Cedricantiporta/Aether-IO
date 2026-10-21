@@ -7,13 +7,13 @@ import { world, MAX_CRATES } from '../world';
 import { events } from '../events';
 import type { Crate } from '../types';
 import type { Rarity } from '../../types';
-import { useGameStore } from '../../store';
+import { useGameStore, DMG_INFLATE } from '../../store';
 import { GameStatus } from '../../types';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { CRATE_HP, isHarvestNode } from '../mapgen';
 import { damageEnemiesInRadius, addShake, type DamageOpts } from './combat';
-import { spawnEnemy } from './enemies';
+import { spawnEnemy, spawnTelegraphCircle } from './enemies';
 import { spawnWildfire } from './zones';
 
 export { CRATE_HP };
@@ -84,7 +84,9 @@ function shards(c: Crate, n: number, epic: number, legendary: number): void {
 function explode(c: Crate): void {
   const wave = world.director.wave;
   const x = c.pos.x, z = c.pos.z;
-  damageEnemiesInRadius(x, z, EXPLOSION_RADIUS, 80 + wave * 30, boomOpts); // enemies only, never the player
+  damageEnemiesInRadius(x, z, EXPLOSION_RADIUS, 80 + wave * 30, boomOpts); // monsters (and every crate in range)
+  // (owner: bomb barrels hurt the hero too) a short red ring where it blew: anyone still standing in it takes ~10% max HP (dash out / stay back)
+  if (useGameStore.getState().status === GameStatus.PLAYING) spawnTelegraphCircle(x, z, 4.3, 0.4, useGameStore.getState().stats.maxHealth * 0.1 / DMG_INFLATE, 0xff7a1a);
   events.emit('explosion', { pos: c.pos, radius: EXPLOSION_RADIUS, color: 0xff7a1a });
   addShake(0.45);
   const n = 2 + Math.floor(Math.random() * 3);

@@ -1,6 +1,8 @@
 import { HomeInterior } from './HomeInterior';
 import { RoomEvents } from './RoomEvents';
 import { BiomeHazards } from './BiomeHazards';
+import { RoomTraps } from './RoomTraps';
+import { GiantBosses } from './GiantBosses';
 import { Minions } from './Minions';
 import React, { Suspense, useEffect, useLayoutEffect } from 'react';
 import { FacingArrow } from './FacingArrow';
@@ -133,11 +135,13 @@ export function Scene() {
           <Enemies />
           <Bosses />
           <Bosses2 />
+          <GiantBosses />
           <DarkHeroes />
           <HumanBosses />
           <BossFx />
           <RoomEvents />
           <BiomeHazards />
+          <RoomTraps />
           <Minions />
           <Projectiles />
           <Pet />

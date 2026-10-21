@@ -18,12 +18,12 @@ import { edgeLimit } from '../mapgen';
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
 export const BT = {
   VISUAL: 30, ROOT: 31, SPIT: 32, SWEEP: 33, BREATH: 34, SPIKES: 35, DIVE: 36, PILLAR: 37, SURFACE: 38,
-  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43,
+  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43, LASH: 44,
 } as const;
 
 // ------------------------------------------------------------------ pools --
 export interface Wave { active: boolean; x: number; z: number; r: number; speed: number; maxR: number; thick: number; dmg: number; color: number; kind: number; hit: boolean; }
-export const WAVE_THORN = 0, WAVE_VOID = 1, WAVE_INWARD = 2, WAVE_FIRE = 3;
+export const WAVE_THORN = 0, WAVE_VOID = 1, WAVE_INWARD = 2, WAVE_FIRE = 3, WAVE_FROST = 4, WAVE_TIDE = 5;   // FROST: chills; TIDE: slows
 export const waves: Wave[] = Array.from({ length: 12 }, () => ({ active: false, x: 0, z: 0, r: 0, speed: 0, maxR: 0, thick: 1, dmg: 0, color: 0xffffff, kind: 0, hit: false }));
 
 /** kind: 0 root, 1 ice spike, 2 fire pillar, 3 acid glob (flies sx,sz -> x,z over `delay`), 4 thorn spike */
@@ -220,6 +220,13 @@ export function resolveBossZone(z: Zone): void {
       spawnProp(PROP_ICE, z.pos.x, z.pos.z, 0, 0.9, 0.9, 2.6);
       events.emit('trick', { pos: z.pos.clone(), kind: 'HAIL', radius: z.radius });
       break;
+    case BT.LASH: {   // Elderroot's branch: a thick lash along a lane (shoves a little, slows)
+      const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.2); }
+      for (let d = 2, i = 0; d < z.length; d += 3, i++) spawnProp(PROP_ROOT, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.03, 0.7, 0.9 + (i % 3) * 0.12, 2.0);
+      events.emit('shake', { amount: 0.12 });
+      break;
+    }
     case BT.THORN:
       if (inside) damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL' });
       spawnProp(PROP_THORN, z.pos.x, z.pos.z, 0, 0.7, z.radius * 0.5, 2.4);
@@ -250,9 +257,11 @@ export function updateBossFx(dt: number): void {
     const d = Math.hypot(pa.x - w.x, pa.z - w.z);
     if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && p.air < 0.5) {
       w.hit = true;
-      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : 'PHYSICAL', ...KB.PUSH });
+      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...KB.PUSH });
       if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0);
       if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
+      if (w.kind === WAVE_FROST) addChill(1);
+      if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6);
     }
   }
 

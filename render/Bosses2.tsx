@@ -38,6 +38,12 @@ function buildTreant(): Rig {
   body.sph(0.3, [0.5, 2.0, 0.6], bark2, [1, 1, 0.6], 6); body.sph(0.25, [-0.55, 2.7, 0.5], bark2, [1, 1, 0.6], 6); body.sph(0.22, [0.1, 1.2, 0.85], bark2, [1, 1, 0.6], 6);
   for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU + 0.3; body.cone(0.3, 1.9, 5, [sin(a) * 1.0, 0.35, cos(a) * 1.0], root, outward(a, 1.25)); }
   for (const [x, y, z, s, c] of [[0, 4.25, 0, 1.15, leaf], [0.9, 4.0, 0.3, 0.8, leaf2], [-0.85, 4.05, -0.2, 0.85, leaf], [0.1, 4.7, -0.4, 0.7, leaf2], [-0.2, 3.9, 0.9, 0.6, leaf]] as [number, number, number, number, string][]) body.ico(s, [x, y, z], c, [1.1, 0.85, 1.1], 1);
+  for (let i = 0; i < 11; i++) {   // (owner: rooted) thick roots creeping far across the ground, with knobs
+    const a = (i / 11) * TAU + 0.15, len = 2.6 + (i % 3) * 0.9, d = 1.0 + len * 0.5;
+    body.cyl(0.14, 0.5 - (i % 3) * 0.05, len, 6, [sin(a) * d, 0.3, cos(a) * d], root, [1.5, a, 0]);   // tapering round root
+    body.sph(0.17, [sin(a) * (d + len * 0.5), 0.2, cos(a) * (d + len * 0.5)], bark2, 1, 5);              // rounded tip
+    body.ico(0.34, [sin(a) * (d - len * 0.2), 0.42, cos(a) * (d - len * 0.2)], bark2, [1, 0.7, 1], 0);   // knuckle
+  }
   body.box(0.46, 0.14, 0.12, [0, 2.75, 0.62], '#1a0e06');                                         // mouth
   for (const s of [-1, 1]) { glow.sph(0.11, [s * 0.24, 3.25, 0.55], '#d8ff5a', [1, 1.2, 0.6], 6); glow.sph(0.06, [s * 0.5, 1.9, 0.78], '#9be32a', 1, 5); }
   glow.torus(0.7, 0.04, [0, 2.2, 0], '#9be32a', [Math.PI / 2, 0, 0], 1, 14);
@@ -149,19 +155,22 @@ function targets(e: Enemy, T: Pose, t: number): void {
   const W = st === 'WINDUP', A = st === 'ATTACK', R = st === 'RECOVER';
   switch (e.kind) {
     case 'BOSS_TREANT':
-      if (st === 'CHASE') { // heavy lumbering stride: lurch up on each step, arms swing opposite
-        const mv = Math.min(1, Math.hypot(e.vel.x, e.vel.z) / Math.max(e.speed, 0.1));
-        T.dy = Math.abs(sin(t * 3)) * 0.22 * mv; T.armL = sin(t * 3) * 0.55 * mv; T.armR = -T.armL; T.pitch = 0.08 * mv;
+      if (st === 'CHASE') { // rooted: he sways slowly, branches creaking (never walks)
+        T.dy = sin(t * 1.1) * 0.08; T.armL = sin(t * 1.3) * 0.32; T.armR = -sin(t * 1.15) * 0.32; T.pitch = 0.03 * sin(t * 0.9);
       }
       if (p === 0) { if (W) { const w = clamp(k / 1.0, 0, 1); T.armL = T.armR = -2.5 * w; T.pitch = -0.15 * w; T.glow += w; } else if (A) { T.armL = T.armR = 0.7; T.pitch = 0.25; T.dy = -0.15; T.glow += 1.2; } }
       else if (p === 1) { if (W || A) { T.armL = T.armR = -2.9; T.spread = 0.5; T.glow += 1.2; } }
       else if (p === 2) { if (W) { T.armL = T.armR = -0.6; T.spread = 1.3 * clamp(k, 0, 1); T.dy = clamp(k, 0, 1) * 0.1; T.glow += clamp(k, 0, 1); } else if (A) { T.dy = -0.2; T.spread = 0.3; T.glow += 1.5; } }
       else if (p === 3) { if (W || A) { T.armL = T.armR = -1.3; T.spread = -0.7; T.glow += 1.5; T.pitch = 0.12; } }
+      else if (p === 6) { if (W) { const w = clamp(k / 1.2, 0, 1); T.armL = T.armR = -2.9 * w; T.spread = 0.9 * w; T.glow += w * 1.3; } else if (A) { T.armL = 0.8; T.armR = -0.6; T.spread = 0.2; T.pitch = 0.25; T.glow += 1.4; } }   // branch sweep: arms up, then across
+      else if (p === 7) { if (W) { const w = clamp(k / 1.25, 0, 1); T.armL = T.armR = -3.1 * w; T.pitch = -0.2 * w; T.dy = w * 0.5; T.glow += w * 1.6; } else if (A) { T.armL = T.armR = 1.0; T.pitch = 0.35; T.dy = -0.45; T.glow += 1.8; } }   // slam
       break;
-    case 'BOSS_HYDRA':
-      if (p === 0) { if (W) T.pitch = -0.22 * clamp(k / 0.9, 0, 1); else if (A) T.pitch = 0.18; }
-      else if (p === 1) { if (W) T.extraY = 1.2 * clamp(k / 1.2, 0, 1); else if (A) T.extraY = 1.2 - 3.0 * clamp(k / 0.35, 0, 1); else if (R) T.extraY = -1.8; }
-      else if (p === 2) { if (W) T.dy = -2.2 * clamp(k / 0.7, 0, 1); else if (R) T.dy = -2.2 * (1 - clamp(k / 0.6, 0, 1)); }
+    case 'BOSS_HYDRA':   // (rooted body beyond the rim) it heaves up on each attack
+      T.dy = sin(t * 1.2) * 0.2;
+      if (p === 0) { if (W) T.dy += 0.9 * clamp(k / 0.9, 0, 1); else if (A) T.dy -= 0.3; }
+      else if (p === 1) { if (W) T.dy += 1.1 * clamp(k / 1.1, 0, 1); T.pitch = W ? -0.12 : 0; }
+      else if (p === 2) { if (W || A) T.dy += 0.8; }
+      else if (p === 3) { if (W) { T.dy += 1.6 * clamp(k / 1.2, 0, 1); T.glow += clamp(k / 1.2, 0, 1) * 1.5; } else if (A) { T.dy -= 0.5; T.glow += 1.4; } }
       T.extraY += sin(t * 1.5) * 0.08;
       break;
     case 'BOSS_WYRM':
@@ -216,7 +225,8 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     s.yaw += T.spin * dt;
     // spawn rise / death sink
     let yOff = 0, fy = 1, shx = 0;
-    if (e.state === 'SPAWN') { const k = clamp(e.stateT / 1.6, 0, 1); yOff = -(1 - k * k) * 4; shx = sin(TT * 60) * 0.05 * (1 - k); }
+    if (kind === 'BOSS_HYDRA') yOff = -2.4;   // (rooted beyond the rim) the body lies low, mostly below the arena edge
+    if (e.state === 'SPAWN') { const k = clamp(e.stateT / 1.6, 0, 1); yOff += -(1 - k * k) * 4; shx = sin(TT * 60) * 0.05 * (1 - k); }
     if (e.state === 'DYING') { const k = clamp(e.deathT / 0.6, 0, 1); fy = 1 - k * 0.7; shx = sin(TT * 80) * 0.08 * (1 - k); s.glow = 3 * (1 - k); }
     const sc = e.radius / rig.r;
     r.position.set(e.pos.x + shx * sc, e.pos.y + yOff, e.pos.z);
@@ -280,5 +290,5 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 }
 
 export function Bosses2() {
-  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WYRM" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /><BossWard /></>);
+  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /><BossWard /></>);
 }

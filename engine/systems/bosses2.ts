@@ -23,7 +23,7 @@ import {
   enter, requestYaw, spawnEnemy, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile,
 } from './enemies';
 import {
-  BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, PROP_GLOB, arena, breath, dive, inCone,
+  BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx,
 } from './bossFx';
 import { wardedBossId } from './bossMech';
@@ -56,7 +56,9 @@ export const S = {
   // Elderroot
   bark: false, barkT: 0, wantBark: false, rings: 0, ringN: 0,
   // Mire Hydra
-  heads: [-1, -1, -1] as number[], regrowT: [0, 0, 0] as number[], regrowN: 0, headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
+  heads: [-1, -1, -1, -1, -1] as number[], regrowT: [0, 0, 0, 0, 0] as number[], regrowN: 0, headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
+  /** (rooted Hydra) per head / spare slot: lunge timer (0 = idle) and where it is whipping to */
+  lungeT: [0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeX: [0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeZ: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
   // Glacius
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
@@ -70,10 +72,14 @@ export const S = {
 /** Read-only view for the renderer. */
 export const bossView = S;
 
+/** (owner) the rooted Hydra grows this many heads (it used to be 3). */
+export const NH = 5;
 export function resetBosses2(): void {
   S.id = -1; S.phase = 0; S.cycle = 0; S.stompCd = 0;
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
-  S.heads[0] = S.heads[1] = S.heads[2] = -1; S.regrowT[0] = S.regrowT[1] = S.regrowT[2] = 0; S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
+  for (let k = 0; k < NH; k++) { S.heads[k] = -1; S.regrowT[k] = 0; }
+  for (let k = 0; k < 8; k++) S.lungeT[k] = 0;
+  S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0;
   S.voidOn = false; S.gravT = 0; S.pushed = false;
@@ -189,7 +195,7 @@ function runAtk(e: Enemy, list: Atk[], dt: number, ux: number, uz: number, dist:
   const a = list[e.pattern];
   switch (e.state) {
     case 'WINDUP':
-      if (a.windMove) keepRange(e, ux, uz, dist, 5, 12, e.speed * a.windMove, 0.3); else stand(e);
+      if (a.windMove && !e.rooted) keepRange(e, ux, uz, dist, 5, 12, e.speed * a.windMove, 0.3); else stand(e);
       if (a.windTick) a.windTick(e);
       if (e.stateT >= a.wind(e) * fast(e)) { enter(e, 'ATTACK'); a.fire(e, ux, uz); }
       return true;
@@ -217,7 +223,7 @@ hooks.onStagger = (e: Enemy): void => {
 };
 
 // Incoming damage: Elderroot's bark armor, Mire Hydra's heads shielding the body.
-const HYDRA_MUL = [0.5, 0.75, 1.0, 1.4];
+const HYDRA_MUL = [0.45, 0.6, 0.8, 1.0, 1.25, 1.5];   // by severed heads (0..5)
 hooks.damageMul = (e: Enemy): number => {
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
@@ -233,18 +239,26 @@ export function initBoss2(e: Enemy): void {
   e.pattern = 0; e.attackCd = 3.2;
   if (e.kind === 'BOSS_HYDRA') {
     S.headAng = Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z);
-    for (let k = 0; k < 3; k++) growHead(e, k);
+    for (let k = 0; k < NH; k++) growHead(e, k);
   }
 }
 
-/** (Re)grows hydra head k beside the body. */
+/** Where hydra head slot k rests (the front row k < NH reaches in along the far rim, spare heads from the ward sit one row further in). */
+export function headAnchor(b: Enemy, k: number, out: { x: number; z: number }): void {
+  const R = world.room.radius, row = k < NH ? 0 : 1, i = row === 0 ? k : k - NH;
+  const th = Math.atan2(b.pos.x, -b.pos.z) + (row === 0 ? (k - (NH - 1) / 2) * 0.36 : (i - 1) * 0.62 + 0.16);
+  const rr = R - 3.4 - row * 6.5;
+  out.x = Math.sin(th) * rr; out.z = -Math.cos(th) * rr;
+}
+const ha = { x: 0, z: 0 };
+/** (Re)grows hydra head k at its rest spot. */
 function growHead(e: Enemy, k: number): void {
-  const a = S.headAng + (k - 1) * 1.05;
-  tv.set(e.pos.x + Math.sin(a) * (e.radius + 0.6), 0, e.pos.z + Math.cos(a) * (e.radius + 0.6));
+  headAnchor(e, k, ha);
+  tv.set(ha.x, 0, ha.z);
   const h = spawnEnemy('BOSS_HYDRA_HEAD', tv);
   if (!h) return;
-  h.pattern = k; h.attackCd = 2.8 + k * 1.4; h.maxHp = Math.round(h.maxHp * 0.7); h.hp = h.maxHp;
-  S.heads[k] = h.id;
+  h.pattern = k; h.attackCd = 3.2 + k * 1.5; h.maxHp = Math.round(h.maxHp * 0.7); h.hp = h.maxHp;
+  S.heads[k] = h.id; S.lungeT[k] = 0;
 }
 
 export function bossDied2(e: Enemy): void {
@@ -268,6 +282,7 @@ function checkPhase2(e: Enemy): void {
 }
 
 export function updateBoss2(e: Enemy, dt: number, dist: number): void {
+  frameDtH = dt;
   if (S.id !== e.id) S.id = e.id; // safety (e.g. hot reload)
   checkPhase2(e);
   const inv = 1 / Math.max(dist, 0.001);
@@ -283,20 +298,21 @@ export function updateBoss2(e: Enemy, dt: number, dist: number): void {
 }
 
 // ============================================================ ELDERROOT =======
-const T_ROOTS = 0, T_BROOD = 1, T_THORN = 2, T_BARK = 3, T_VINES = 4, T_SEEDS = 5;
-const TREANT_ORDER = [T_ROOTS, T_VINES, T_BROOD, T_SEEDS, T_THORN, T_ROOTS, T_VINES, T_THORN];
+const T_ROOTS = 0, T_BROOD = 1, T_THORN = 2, T_BARK = 3, T_VINES = 4, T_SEEDS = 5, T_SWEEP = 6, T_SLAM = 7;
+// (owner) Elderroot is ROOTED now (huge, never walks): arena-wide lanes, sweeping branches, slams round the trunk, seed pods, brood
+const TREANT_ORDER = [T_ROOTS, T_SWEEP, T_BROOD, T_SEEDS, T_SLAM, T_VINES, T_THORN, T_ROOTS, T_SWEEP, T_SEEDS, T_SLAM, T_THORN];
 
 LISTS.BOSS_TREANT = [
   { // Root Eruption: lanes of roots burst out of the ground, rooting whoever stands in them. Sidestep or dash through.
     name: 'Root Eruption!', wind: (e) => 1.15 - 0.1 * e.phase, act: (e) => (e.phase >= 1 ? 0.9 : 0.4), rec: () => 0.9,
     begin(e, ux, uz) {
       const n = 3 + e.phase, base = Math.atan2(ux, uz);
-      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.4); lane(e, Math.sin(a), Math.cos(a), 28, 2.6, 1.15 - 0.1 * e.phase, BT.ROOT, pwr(e) * 1.2, 0x8a5a24); }
+      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.4); lane(e, Math.sin(a), Math.cos(a), 38, 2.6, 1.15 - 0.1 * e.phase, BT.ROOT, pwr(e) * 1.2, 0x8a5a24); }
     },
     fire(e, ux, uz) {
       if (e.phase < 1) return;
       const base = Math.atan2(ux, uz);
-      for (let i = 0; i < e.phase + 1; i++) { const a = base + fan(i, 0.5); lane(e, Math.sin(a), Math.cos(a), 28, 2.6, 0.85, BT.ROOT, pwr(e) * 1.2, 0x8a5a24); }
+      for (let i = 0; i < e.phase + 1; i++) { const a = base + fan(i, 0.5); lane(e, Math.sin(a), Math.cos(a), 38, 2.6, 0.85, BT.ROOT, pwr(e) * 1.2, 0x8a5a24); }
     },
   },
   { // Brood: saplings rise and waddle to Elderroot. Kill them (they burst into thorns) or he fuses with them and heals.
@@ -313,12 +329,12 @@ LISTS.BOSS_TREANT = [
   },
   { // Thorn Ring: expanding rings of thorns. Jump / dash through the ring (i-frames) or outrun it.
     name: 'Thorn Ring!', wind: () => 1.0, act: (e) => 0.6 * (1 + e.phase) + 0.1, rec: () => 1.0,
-    begin(e) { circle(e.pos.x, e.pos.z, 6, 1.0, BT.VISUAL, 0, 0x84cc16); },
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 4, 1.0, BT.VISUAL, 0, 0x84cc16); },
     fire(e) { S.rings = 1 + e.phase; S.ringN = 0; },
     tick(e) {
       stand(e);
       while (S.ringN < S.rings && e.stateT >= S.ringN * 0.6) {
-        spawnWave(e.pos.x, e.pos.z, 13, 26, 1.8, pwr(e) * 1.1, WAVE_THORN, 0x84cc16, e.radius);   // (balance pass 2: x1.1; was x1.3, x0.9 while the dash came at Lv 20 - it now unlocks at Lv 6)
+        spawnWave(e.pos.x, e.pos.z, 13, 40, 1.8, pwr(e) * 1.1, WAVE_THORN, 0x84cc16, e.radius);   // (balance pass 2: x1.1; was x1.3, x0.9 while the dash came at Lv 20 - it now unlocks at Lv 6)
         events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0x84cc16 });
         events.emit('shake', { amount: 0.35 });
         S.ringN++;
@@ -336,11 +352,11 @@ LISTS.BOSS_TREANT = [
   },
   { // Grasping Vines: a cone of vines lashes out; anyone caught is dragged to Elderroot and rooted at his feet.
     name: 'Grasping Vines!', wind: (e) => 1.0 - 0.08 * e.phase, act: () => 0.3, rec: () => 1.0,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 18, 0.5, 1.0 - 0.08 * e.phase, BT.VISUAL, 0, 0x6aa82a); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 24, 0.5, 1.0 - 0.08 * e.phase, BT.VISUAL, 0, 0x6aa82a); },
     fire(e) {
       const p = world.player;
       events.emit('trick', { pos: e.pos.clone(), kind: 'ROOTS', radius: 10 });
-      if (!p.alive || !inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, 18, 0.5)) return;
+      if (!p.alive || !inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, 24, 0.5)) return;
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, pull = Math.max(0, d - (e.radius + 1.5));
       p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull;
       damagePlayer(pwr(e), { pos: e.pos, kind: 'PHYSICAL' });
@@ -357,20 +373,40 @@ LISTS.BOSS_TREANT = [
     },
     fire() { /* pods burst as their telegraphs expire */ },
   },
+  { // Branch Sweep: five thick branches lash across the arena one after another (a sweeping fan; slip through the gaps or dash).
+    name: 'Branch Sweep!', wind: (e) => 1.2 - 0.08 * e.phase, act: () => 0.9, rec: () => 1.1,
+    begin(e, ux, uz) {
+      const base = Math.atan2(ux, uz), dir = (S.cycle & 1) ? 1 : -1, n = 5;
+      for (let i = 0; i < n; i++) { const a = base + (i - (n - 1) / 2) * 0.5 * dir; lane(e, Math.sin(a), Math.cos(a), 40, 3.2, 1.2 + i * 0.26, BT.LASH, pwr(e) * 1.2, 0x8a5a24); }
+    },
+    fire() { /* each branch lashes as its own telegraph expires */ },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
+  },
+  { // Crushing Roots: both fists slam round the trunk (stay away from his feet!), then a thorn ring runs outward.
+    name: 'Crushing Roots!', wind: () => 1.25, act: () => 0.5, rec: () => 1.2,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 4.2, 1.25, BT.SURFACE, pwr(e) * 1.1, 0x8a5a24); },
+    fire(e) {
+      spawnWave(e.pos.x, e.pos.z, 11, 34, 1.8, pwr(e) * 0.9, WAVE_THORN, 0x84cc16, e.radius + 3);
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 10, color: 0x84cc16 });
+      events.emit('shake', { amount: 0.45 });
+    },
+  },
 ];
 
 function treant(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_TREANT!;
   if (S.bark) { S.barkT -= dt; if (S.barkT <= 0) { S.bark = false; events.emit('floatText', { pos: e.pos, text: 'BARK CRACKS', color: 0xffd23a, scale: 0.9, dy: 2.2 }); } }
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  // Elderroot lumbers into melee range and keeps stalking (slow circle when already close).
-  keepRange(e, ux, uz, dist, 2.5, e.radius + 3.5, e.speed * (1 + 0.15 * e.phase), 0.55);
+  stand(e);   // rooted: Elderroot never walks, he waits for the next lash
+  requestYaw(Math.atan2(ux, uz));
   if (e.attackCd > 0) return;
   let id: number;
   if (S.wantBark && !S.bark) { S.wantBark = false; id = T_BARK; }
   else {
     id = TREANT_ORDER[S.cycle++ % TREANT_ORDER.length];
-    if (id === T_BROOD && (S.bark || countAdds('BOSS_SAPLING') >= 5)) id = T_ROOTS;
+    if (id === T_BROOD && (S.bark || countAdds('BOSS_SAPLING') >= 5)) id = T_SEEDS;
+    if (id === T_SLAM && dist > e.radius + 11) id = T_SWEEP;   // (the trunk slam punishes standing at his feet: only when someone is)
+    if (id === T_VINES && dist > 28) id = T_ROOTS;
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -401,17 +437,21 @@ export function saplingDied(e: Enemy): void {
 }
 
 // ============================================================ MIRE HYDRA =====
-const H_SPIT = 0, H_SWEEP = 1, H_SUBMERGE = 2;
+// (owner) ROOTED: the body lies beyond the far rim (only its back shows), FIVE heads reach in along the rim on long necks. Severing heads strips
+// its armour; the body is hurt through the neck stumps at the rim. Patterns: acid barrage, a sweeping fan of three head-beams, head slams
+// (the heads whip across the arena to telegraphed spots and rest there: a free-hit window) and a tidal surge ring from the body.
+const H_SPIT = 0, H_SWEEP = 1, H_SLAM = 2, H_SURGE = 3;
 const HYDRA_REGROWS = 4;          // heads that may grow back per fight (was unlimited)
 const HYDRA_REGROW_HEAL = 0.025;  // hp mended per regrown head (was 4%)
-const HYDRA_ORDER = [H_SPIT, H_SWEEP, H_SUBMERGE, H_SPIT, H_SWEEP];
+const HYDRA_ORDER = [H_SPIT, H_SWEEP, H_SLAM, H_SPIT, H_SURGE, H_SLAM, H_SWEEP];
+const LUNGE_T = 2.4, LUNGE_HIT = 1.2, LUNGE_HOLD = 1.8;   // whip out (telegraph resolves at LUNGE_HIT), hold, snap back
 
 LISTS.BOSS_HYDRA = [
   { // Acid Spit: globs lob onto the player's area, each leaving an acid patch.
-    name: 'Acid Barrage!', wind: () => 0.9, act: () => 0.5, rec: () => 0.9, windMove: 0.4,
+    name: 'Acid Barrage!', wind: () => 0.9, act: () => 0.5, rec: () => 0.9,
     begin() { /* the globs' own telegraphs appear on fire */ },
     fire(e) {
-      const p = world.player.pos, n = spreadSpots(p.x, p.z, 3 + e.phase, 6.5, 11, 7);   // (spread out)
+      const p = world.player.pos, n = spreadSpots(p.x, p.z, 3 + e.phase, 6.5, 12, 7);   // (spread out)
       for (let i = 0; i < n; i++) {
         const x = SPOT_X[i], z = SPOT_Z[i];
         circle(x, z, 2.7, 1.25, BT.SPIT, pwr(e) * 1.1, 0x9be32a);
@@ -420,57 +460,73 @@ LISTS.BOSS_HYDRA = [
       events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
     },
   },
-  { // Tail Sweep: the hydra turns its back and whips its tail through a wide cone.
-    name: 'Tail Sweep!', wind: (e) => 1.2 - 0.1 * e.phase, act: () => 0.5, rec: () => 1.1,
+  { // Sweeping Heads: three beams of the necks sweep the arena one after another (slip between them).
+    name: 'Sweeping Heads!', wind: (e) => 1.1 - 0.08 * e.phase, act: () => 0.6, rec: () => 1.1,
     begin(e, ux, uz) {
-      e.dir.set(ux, 0, uz);
-      cone(e, ux, uz, 17, 1.0, 1.2 - 0.1 * e.phase, BT.SWEEP, pwr(e) * 1.5, 0x6b8f5a);
+      const base = Math.atan2(ux, uz), dir = (S.cycle & 1) ? 1 : -1;
+      for (let i = 0; i < 3; i++) {
+        const a = base + (i - 1) * 0.62 * dir;
+        cone(e, Math.sin(a), Math.cos(a), 56, 0.21, 1.1 + i * 0.4, BT.SWEEP, pwr(e) * 1.4, 0x6b8f5a);
+      }
     },
-    fire() { /* the cone resolves with the telegraph */ },
-    windTick(e) { requestYaw(Math.atan2(-e.dir.x, -e.dir.z)); }, // tail first
-    tick(e) { stand(e); requestYaw(Math.atan2(-e.dir.x, -e.dir.z)); },
+    fire() { /* each cone resolves with its own telegraph */ },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
   },
-  { // Submerge: sinks out of sight (untargetable) and resurfaces under a marked spot, stunning anything above.
-    name: 'Submerge!', wind: () => 0.7, act: () => 1.5, rec: () => 1.3,
-    begin() { /* sinks */ },
+  { // Head Slam: the heads nearest to you whip across the arena, crash down on marked spots, and lie there stunned for a moment.
+    name: 'Head Slam!', wind: () => 0.6, act: () => 0.4, rec: () => 1.4,
+    begin(e) {
+      const p = world.player.pos, want = 2 + e.phase;
+      let used = 0;
+      for (let tries = 0; tries < NH && used < want; tries++) {   // nearest rested heads first
+        let best = -1, bd = 1e9;
+        for (let k = 0; k < NH; k++) {
+          const id = S.heads[k]; if (id < 0 || S.lungeT[k] > 0) continue;
+          const h = world.enemies[id]; if (!h.active || h.state === 'DYING') continue;
+          headAnchor(e, k, ha);
+          const d = (ha.x - p.x) ** 2 + (ha.z - p.z) ** 2;
+          if (d < bd) { bd = d; best = k; }
+        }
+        if (best < 0) break;
+        const a = (used / Math.max(1, want)) * 6.283 + Math.random(), r = used === 0 ? 0 : 3.5 + Math.random() * 3;
+        tv.set(p.x + world.player.vel.x * 0.45 + Math.sin(a) * r, 0, p.z + world.player.vel.z * 0.45 + Math.cos(a) * r); clampArena(tv, 3);
+        S.lungeX[best] = tv.x; S.lungeZ[best] = tv.z; S.lungeT[best] = LUNGE_T;
+        circle(tv.x, tv.z, 3.2, LUNGE_HIT, BT.SURFACE, pwr(e) * 1.2, 0x6b8f5a);
+        used++;
+      }
+      events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
+    },
+    fire() { /* the heads crash as their circles expire */ },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
+  },
+  { // Tidal Surge: a wave rolls out from the body across the whole arena. Dash through it (or jump it).
+    name: 'Tidal Surge!', wind: () => 1.2, act: () => 0.4, rec: () => 1.2,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 5, 1.2, BT.VISUAL, 0, 0x4ad0c0); },
     fire(e) {
-      const p = world.player.pos;
-      S.sub = true; S.subX = p.x; S.subZ = p.z; S.subFx = e.pos.x; S.subFz = e.pos.z;
-      e.hideT = 60;
-      circle(p.x, p.z, 5.5, 1.5, BT.SURFACE, pwr(e) * 1.3, 0x6b8f5a);
-      events.emit('trick', { pos: e.pos.clone(), kind: 'SUBMERGE', radius: 5 });
-    },
-    tick(e) {
-      stand(e);
-      const k = Math.min(1, e.stateT / 1.5);
-      e.pos.x = S.subFx + (S.subX - S.subFx) * k; e.pos.z = S.subFz + (S.subZ - S.subFz) * k;
-    },
-    end(e) {
-      if (!S.sub) return;
-      S.sub = false; e.hideT = 0;
-      e.pos.x = S.subX; e.pos.z = S.subZ;
+      spawnWave(e.pos.x, e.pos.z, 10.5, 2 * world.room.radius + 14, 2.6, pwr(e) * 1.2, WAVE_TIDE, 0x4ad8c8, e.radius);
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 10, color: 0x4ad8c8 });
+      events.emit('shake', { amount: 0.5 });
     },
   },
 ];
 
 function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_HYDRA!;
-  // heads follow the player (angle), count the severed ones
-  S.headAng += Math.max(-3 * dt, Math.min(3 * dt, wrap(Math.atan2(ux, uz) - S.headAng)));
-  for (let k = 0; k < 3; k++) {
+  stand(e);
+  // count the severed heads
+  for (let k = 0; k < NH; k++) {
     const id = S.heads[k];
     if (id < 0) continue;
     const h = world.enemies[id];
     if (h.active && h.state !== 'DYING' && h.kind === 'BOSS_HYDRA_HEAD') continue;
-    S.heads[k] = -1; S.headsDead++; S.regrowT[k] = e.phase >= 1 ? 10 : 14;   // it grows back unless the hydra is nearly dead
-    e.armor = Math.max(0, e.armor - 12);
-    events.emit('floatText', { pos: e.pos, text: 'HEAD SEVERED', color: 0xffd23a, scale: 1.0, dy: 2.4 });
+    S.heads[k] = -1; S.headsDead++; S.regrowT[k] = e.phase >= 1 ? 10 : 14; S.lungeT[k] = 0;   // it grows back unless the hydra is nearly dead
+    e.armor = Math.max(0, e.armor - 7);
+    events.emit('floatText', { pos: h.pos, text: 'HEAD SEVERED', color: 0xffd23a, scale: 1.0, dy: 2.4 });
     events.emit('shake', { amount: 0.5 });
-    notify(S.headsDead >= 3 ? 'The Hydra is defenseless!' : `The Hydra weakens (${S.headsDead}/3 heads)`, '#9be32a');
+    notify(S.headsDead >= NH ? 'The Hydra is defenseless!' : `The Hydra weakens (${S.headsDead}/${NH} heads)`, '#9be32a');
     stat('HeadSevered');
   }
   // severed heads regrow (and the hydra mends a little) while it is above 30% hp
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < NH; k++) {
     if (S.heads[k] >= 0 || S.regrowT[k] <= 0) continue;
     S.regrowT[k] -= dt;
     if (S.regrowT[k] > 0) continue;
@@ -482,16 +538,15 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
     if (S.heads[k] < 0) continue;
     S.regrowN++;
     S.headsDead = Math.max(0, S.headsDead - 1);
-    e.armor += 12; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * HYDRA_REGROW_HEAL);
+    e.armor += 7; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * HYDRA_REGROW_HEAL);
     events.emit('floatText', { pos: e.pos, text: 'A HEAD REGROWS!', color: 0x9be32a, scale: 1.0, dy: 2.4 });
     events.emit('heal', { pos: e.pos, amount: e.maxHp * HYDRA_REGROW_HEAL });
     notify('The Hydra regrows a head! Strike while it is weak.', '#9be32a');
   }
+  requestYaw(Math.atan2(ux, uz));
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  keepRange(e, ux, uz, dist, 6, 11, e.speed * (1 + 0.15 * e.phase), 0.25);
   if (e.attackCd > 0) return;
-  let id = HYDRA_ORDER[S.cycle++ % HYDRA_ORDER.length];
-  if (id === H_SWEEP && dist > 18) id = H_SPIT;
+  const id = HYDRA_ORDER[S.cycle++ % HYDRA_ORDER.length];
   beginAtk(e, list, id, ux, uz, dist);
 }
 function wrap(a: number): number {
@@ -504,31 +559,43 @@ function wrap(a: number): number {
 export function aiHydraHead(e: Enemy): void {
   const b = bossEnemy();
   if (!b || b.kind !== 'BOSS_HYDRA') { poofAdd(e); return; }
-  const a = S.headAng + (e.pattern - 1) * 1.05, r = b.radius + 0.6;
-  e.pos.set(b.pos.x + Math.sin(a) * r, 0, b.pos.z + Math.cos(a) * r);
+  const k = e.pattern;
+  headAnchor(b, k, ha);
+  let x = ha.x + Math.sin(e.animT * 0.8 + k * 1.7) * 1.4, z = ha.z + Math.cos(e.animT * 0.6 + k * 2.3) * 1.0;   // swaying
+  if (S.lungeT[k] > 0) {   // whipping out to its slam spot, resting there, snapping back (the body's Head Slam)
+    S.lungeT[k] = Math.max(0, S.lungeT[k] - frameDtH);
+    const t = LUNGE_T - S.lungeT[k];
+    const f = t < LUNGE_HIT ? 1 - Math.pow(1 - t / LUNGE_HIT, 3) : t < LUNGE_HOLD ? 1 : 1 - Math.pow((t - LUNGE_HOLD) / (LUNGE_T - LUNGE_HOLD), 2);
+    x += (S.lungeX[k] - x) * f * 0.97; z += (S.lungeZ[k] - z) * f * 0.97;
+    if (t >= LUNGE_HIT && t < LUNGE_HIT + 0.06) events.emit('shake', { amount: 0.3 });
+  }
+  e.pos.set(x, 0, z);
   e.vel.set(0, 0, 0);
   e.state = 'CHASE';
-  if (S.sub) { e.hideT = 0.3; return; }
   if (e.hideT > 0 && e.hideT < 0.3) e.hideT = 0;
   const p = world.player.pos;
   requestYaw(Math.atan2(p.x - e.pos.x, p.z - e.pos.z));
-  if (e.attackCd > 0 || !world.player.alive) return;
-  e.attackCd = (5.4 - 0.9 * b.phase) * (0.9 + Math.random() * 0.2);
-  const x = p.x + (Math.random() - 0.5) * 2.5, z = p.z + (Math.random() - 0.5) * 2.5;
-  circle(x, z, 2.5, 1.3, BT.SPIT, e.projectileDamage * 1.1, 0x9be32a);
-  spawnProp(PROP_GLOB, x, z, 1.3, 0.35, 1.0, 1, e.pos.x, e.pos.z);
+  if (S.lungeT[k] > 0 || e.attackCd > 0 || !world.player.alive) return;
+  e.attackCd = (9.5 - 1.2 * b.phase) * (0.9 + Math.random() * 0.2);
+  const sx = p.x + (Math.random() - 0.5) * 2.5, sz = p.z + (Math.random() - 0.5) * 2.5;
+  circle(sx, sz, 2.5, 1.3, BT.SPIT, e.projectileDamage * 1.1, 0x9be32a);
+  spawnProp(PROP_GLOB, sx, sz, 1.3, 0.35, 1.0, 1, e.pos.x, e.pos.z);
   events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 2 });
   stat('HeadSpit');
 }
+let frameDtH = 0.016;
 
 // ============================================================ GLACIUS =========
-const G_BREATH = 0, G_SPIKES = 1, G_DIVE = 2, G_BLIZZ = 3, G_BROOD = 4;
-const WYRM_ORDER = [G_BREATH, G_SPIKES, G_BROOD, G_DIVE, G_SPIKES, G_BLIZZ, G_BREATH];
+// (owner) ROOTED: Glacius is a giant dragon rising out of the far rim of the arena; only his head, neck and front claws show. His head is the
+// target (radius 4.4). Patterns reach the whole arena: a long frost-breath cone, lanes of ice, hail on you, a frost ring, the arena-wide
+// blizzard and a brood of wyrmlings that hatches at his claws.
+const G_BREATH = 0, G_SPIKES = 1, G_HAIL = 2, G_BLIZZ = 3, G_BROOD = 4, G_NOVA = 5;
+const WYRM_ORDER = [G_BREATH, G_HAIL, G_BROOD, G_SPIKES, G_NOVA, G_BLIZZ, G_BREATH, G_HAIL, G_SPIKES];
 
 LISTS.BOSS_WYRM = [
   { // Frost Breath: a cone that chills (4 chill stacks freeze you). The beam drifts toward you - keep moving out of it.
     name: 'Frost Breath!', wind: (e) => 1.2 - 0.1 * e.phase, act: () => 1.9, rec: () => 1.0,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 22, 0.42, 1.2 - 0.1 * e.phase, BT.BREATH, pwr(e), 0x8fdcff); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, 40, 0.4, 1.2 - 0.1 * e.phase, BT.BREATH, pwr(e), 0x8fdcff); },
     fire() { /* the breath starts when the cone resolves */ },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
     tick(e, dt) {
@@ -545,60 +612,53 @@ LISTS.BOSS_WYRM = [
   { // Ice Spikes: lanes of ice erupt from the ground in sequence. Chills.
     name: 'Ice Spikes!', wind: (e) => 1.0 - 0.08 * e.phase, act: (e) => (e.phase >= 1 ? 0.8 : 0.4), rec: () => 0.9,
     begin(e, ux, uz) {
-      const n = 1 + e.phase, base = Math.atan2(ux, uz);
-      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.5); lane(e, Math.sin(a), Math.cos(a), 34, 3.2, 1.0 - 0.08 * e.phase, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
+      const n = 2 + e.phase, base = Math.atan2(ux, uz);
+      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.42); lane(e, Math.sin(a), Math.cos(a), 56, 3.2, 1.0 - 0.08 * e.phase, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
     },
     fire(e, ux, uz) {
       if (e.phase < 1) return;
       const base = Math.atan2(ux, uz);
-      for (let i = 0; i < e.phase; i++) { const a = base + fan(i, 0.6) + 0.3; lane(e, Math.sin(a), Math.cos(a), 34, 3.2, 0.8, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
+      for (let i = 0; i < e.phase; i++) { const a = base + fan(i, 0.5) + 0.25; lane(e, Math.sin(a), Math.cos(a), 56, 3.2, 0.8, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
     },
   },
-  { // Dive Bomb: takes off (untargetable), a circle tracks you and locks in, then Glacius crashes down and is stuck on the ground.
-    name: 'Dive Bomb!', wind: () => 0.9, act: () => 3.2, rec: () => 1.9,
-    begin() { /* wings beat (render) */ },
-    fire(e) {
-      const p = world.player.pos;
-      S.air = true; e.hideT = 60; dive.landed = false;
-      S.diveZone = circle(p.x, p.z, 7.5, 2.0, BT.DIVE, pwr(e) * 1.8, 0x8fdcff);
-      events.emit('trick', { pos: e.pos.clone(), kind: 'TAKEOFF', radius: 6 });
+  { // Hail: the dragon roars at the sky; ice crashes down on marked circles around (and on) you.
+    name: 'Hailstorm!', wind: () => 1.0, act: () => 0.5, rec: () => 1.0,
+    begin(e) {
+      const p = world.player.pos, n = spreadSpots(p.x + world.player.vel.x * 0.5, p.z + world.player.vel.z * 0.5, 5 + e.phase, 3.5, 12, 5.4);
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.7, 1.0 + i * 0.17, BT.HAIL, pwr(e) * 0.95, 0x8fdcff);
+      events.emit('trick', { pos: e.pos.clone(), kind: 'BOSS_CAST', radius: 6 });
     },
-    tick(e, dt) {
-      stand(e);
-      const z = S.diveZone;
-      if (z && z.active && z.trick === BT.DIVE && z.life > 0.7) { // tracks the player until 0.7 s before impact
-        const p = world.player.pos, dx = p.x - z.pos.x, dz = p.z - z.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-        if (d > 0.05) { const s = Math.min(d, 13 * dt) / d; z.pos.x += dx * s; z.pos.z += dz * s; }
-      }
-    },
-    done: (e) => dive.landed || e.stateT > 3.2,
-    end(e) {
-      if (!S.air) return;
-      S.air = false; e.hideT = 0;
-      if (dive.landed) e.pos.set(dive.x, 0, dive.z);
-      else if (S.diveZone && S.diveZone.active) e.pos.set(S.diveZone.pos.x, 0, S.diveZone.pos.z);
-      dive.landed = false; S.diveZone = null;
-    },
+    fire() { /* each ice block lands as its telegraph expires */ },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
   },
   { // Blizzard: the whole arena slows and hail drops around you for a while.
     name: 'Blizzard!', wind: () => 1.4, act: () => 0.4, rec: () => 0.8,
-    begin(e) { circle(e.pos.x, e.pos.z, 14, 1.4, BT.VISUAL, 0, 0x93d8ff); },
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 9, 1.4, BT.VISUAL, 0, 0x93d8ff); },
     fire(e) {
       arena.blizzard = true; S.blizzT = 16;
       events.emit('floatText', { pos: e.pos, text: 'BLIZZARD', color: 0x93d8ff, scale: 1.1, dy: 2.4 });
       notify('A blizzard engulfs the arena!', '#93d8ff');
     },
   },
-  { // Brood of Ice: wyrmlings hatch from the frost around Glacius and harry you with slowing ice shards.
+  { // Brood of Ice: wyrmlings hatch from the frost round Glacius's claws and harry you with slowing ice shards.
     name: 'Brood of Ice!', wind: () => 1.1, act: () => 0.4, rec: () => 0.8,
-    begin(e) { circle(e.pos.x, e.pos.z, 7, 1.1, BT.VISUAL, 0, 0x8fdcff); },
+    begin(e) { circle(e.pos.x, e.pos.z, 8, 1.1, BT.VISUAL, 0, 0x8fdcff); },
     fire(e) {
-      const n = 2 + e.phase, base = Math.random() * 6.283;
+      const n = 2 + e.phase, base = Math.atan2(-e.pos.x, -e.pos.z) - 1;
       for (let i = 0; i < n; i++) {
-        const a = base + (i / n) * 6.283, r = e.radius + 2.5;
+        const a = base + (i / Math.max(1, n - 1)) * 2.0, r = e.radius + 2.5;
         spawnAdd('BOSS_WYRMLING', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 1, 1, 6);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 6 });
+    },
+  },
+  { // Glacial Ring: a ring of frost rolls out across the arena. Dash through it.
+    name: 'Glacial Ring!', wind: () => 1.2, act: () => 0.4, rec: () => 1.1,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 5, 1.2, BT.VISUAL, 0, 0x9be8ff); },
+    fire(e) {
+      spawnWave(e.pos.x, e.pos.z, 12, 2 * world.room.radius + 6, 2.3, pwr(e) * 1.1, WAVE_FROST, 0x9be8ff, e.radius);
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 10, color: 0xbfe8ff });
+      events.emit('shake', { amount: 0.5 });
     },
   },
 ];
@@ -606,12 +666,13 @@ LISTS.BOSS_WYRM = [
 function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WYRM!;
   if (S.blizzT > 0) { S.blizzT -= dt; if (S.blizzT <= 0) arena.blizzard = false; }
+  stand(e);
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  keepRange(e, ux, uz, dist, 7, 14, e.speed * (1 + 0.15 * e.phase), 0.5);
+  requestYaw(Math.atan2(ux, uz));
   if (e.attackCd > 0) return;
   let id: number;
   if (S.wantBlizz && S.blizzT <= 0) { S.wantBlizz = false; id = G_BLIZZ; }
-  else { id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; }
+  else { id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; if (id === G_BROOD && countAdds('BOSS_WYRMLING') >= 4) id = G_HAIL; }
   beginAtk(e, list, id, ux, uz, dist);
 }
 

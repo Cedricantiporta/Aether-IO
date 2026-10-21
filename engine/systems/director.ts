@@ -17,7 +17,8 @@ import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, type BossKind } from '../enemyDefs';
+const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
@@ -36,8 +37,9 @@ import { clearMinions } from './minions';
 import { LOOT_BY_ID, lootItem } from '../../loot';
 import { SOUL_EMBER } from '../../crafting';
 const SOUL_EMBER_CHANCE = 0.05;
-import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive } from './roomEvents';
+import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive, speedWon } from './roomEvents';
 import { setupBiomeHazards } from './biomeHazards';
+import { setupRoomTraps } from './roomTraps';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -300,6 +302,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   world.room.radius = campPath && camp.cur ? Math.round(camp.cur.len / 2) : R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
+  setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false;
@@ -666,7 +669,8 @@ function tickSpawns(dt: number): void {
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
     const kind = finalFight ? 'BOSS_LICH' : nextBossKind || debug.bossOverride || biomeBoss(biome);
-    placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
+    if (isRootedBoss(kind)) { rootedHome(kind, R.radius, 0, rootTmp); placeMarker(kind, rootTmp.x, rootTmp.z, false, 1.8, 2); }   // (giant rooted boss: its marker sits on its root spot)
+    else placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     for (let i = 0; i < extraBosses.length; i++) {   // Endless Waves: more bosses around the arena (no boss bar of their own until the first falls)
       const a = Math.PI * (0.5 + (i + 1) / (extraBosses.length + 1));
       placeMarker(extraBosses[i], Math.cos(a) * R.radius * 0.45, -Math.sin(a) * R.radius * 0.45, false, 1.8, 4);
@@ -763,7 +767,8 @@ function grantReward(kind: RewardKind, bonus: number): void {
 const CHEST_POOL: readonly (readonly [string, number])[] = [['gold', 22], ['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 9], ['crystals', 8]];
 function chestLoot(x: number, z: number): void {
   const st = useGameStore.getState();
-  const n = Math.random() < 0.4 ? 2 : 1, used = new Set<string>();
+  const blessed = speedWon();   // (owner) treasure rooms: cleared in time = a blessed chest
+  const n = blessed ? 3 : 2, used = new Set<string>();   // (owner: better treasure: 2 picks, 3 when blessed)
   const give = (it: import('../../types').Item | undefined) => { if (it) spawnPickup('ITEM', at(x, z), 0, it); };
   for (let k = 0; k < n; k++) {
     let tot = 0; for (const [id, w] of CHEST_POOL) if (!used.has(id)) tot += w;
@@ -786,7 +791,8 @@ function chestLoot(x: number, z: number): void {
       case 'crystals': dropCrystals(2 + Math.floor(depth / 10), { x, z }); break;
     }
   }
-  if (Math.random() < 0.15) give(st.rollItemDrop(rarityForDepth(depth, 0.2, world.run.bossKills)) ?? undefined);   // now and then a piece of gear
+  if (blessed || Math.random() < 0.3) give(st.rollItemDrop(rarityForDepth(depth, blessed ? 0.5 : 0.25, world.run.bossKills)) ?? undefined);   // gear: always when blessed (and better), else 30%
+  if (blessed) { for (let i = 0; i < 4; i++) spawnPickup('GEM', at(x, z), 2 + Math.floor(depth / 5)); give(makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]); }
 }
 
 function bossRewards(): void {
@@ -916,9 +922,11 @@ function onCleared(): void {
   rewardT = rewardKind === 'NONE' ? -1 : REWARD_DELAY;
   if (world.room.shrineOn) {
     // challenge bonus on top of the card
-    const it = st.rollItemDrop(rarityForDepth(depth, 0.3, world.run.bossKills));
-    if (it) spawnPickup('ITEM', at(world.room.station.x, world.room.station.z), 0, it);
-    for (let i = 0; i < 3; i++) spawnPickup('GEM', at(world.room.station.x, world.room.station.z), 2 + Math.floor(depth / 6));
+    // (owner: better altar rewards) a good piece of gear, often a second one, an upgrade core and more gems
+    const sx = world.room.station.x, sz = world.room.station.z;
+    for (let k = 0; k < (Math.random() < 0.5 ? 2 : 1); k++) { const it = st.rollItemDrop(rarityForDepth(depth, 0.5, world.run.bossKills)); if (it) spawnPickup('ITEM', at(sx, sz), 0, it); }
+    spawnPickup('ITEM', at(sx, sz), 0, makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
+    for (let i = 0; i < 5; i++) spawnPickup('GEM', at(sx, sz), 2 + Math.floor(depth / 5));
     shrineBonus = false;
     showPortals();
   } else if (plan.gate !== undefined) trialCleared();
