@@ -499,30 +499,11 @@ export function killEnemy(e: Enemy): void {
   {
     const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
     if (towerMode()) { const c = towerCrystals(e.boss, e.mini, e.elite, wave); if (c > 0) dropCrystals(c, e.pos); }   // tower modes: crystals, never loot
-    else if (e.boss) { const my = run.bossKills >= 2; dropLoot(e.kind, luck, px, pz, true, my); if (Math.random() < 0.4) dropLoot(e.kind, luck, px, pz, false, my); }
-    else { dropLoot(e.kind, luck, px, pz); if (e.elite) dropLoot('ELITE', luck, px, pz, true); }
+    else dropTable(e, luck, px, pz);   // (owner) one weighted table per kill: few drops, each a core / gear / material
   }
 
   // XP is granted instantly (no orbs), scaled by monster strength at spawn time (see spawnEnemy).
   if (e.xp > 0) grantKillXp(e.xp, e.pos);
-
-  // Item drops (none in the tower modes: Endless Tower / Daily Trial / Endless Waves pay gold + Aether Crystals instead).
-  if (towerMode()) { /* no items */ }
-  else if (e.boss) {
-    // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
-    const before = run.bossKills - 1;
-    let rarity: Rarity = 'EPIC';
-    const hm = runInfo.hard ? HARD_EPIC_MUL : 1;   // Hard mode: legendary+ odds x1.6
-    if (before >= 1 && Math.random() < Math.min(0.012, 0.004 * before) * hm) rarity = 'MYTHIC';
-    else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02) * hm) rarity = 'LEGENDARY';
-    const item = rollDropPlus(st.rollItemDrop(rarity), 2);
-    if (item) { dropPos.set(px, 0, pz); spawnPickup('ITEM', dropPos, 0, item); }
-    // tiered upgrade cores: bosses after the first may leave a Refined Core (Epic+ gear)
-    if (before >= 1 && Math.random() < 0.35) { dropPos.set(px + 1.2, 0, pz); spawnPickup('ITEM', dropPos, 0, makeItemById('upgrade_core_2', 1)[0]); }
-  } else if (Math.random() < Math.min(1, (e.elite ? 0.15 : 0.01) * loot)) {
-    const item = e.elite ? rollDropPlus(st.rollItemDrop(), 0) : st.rollItemDrop();
-    if (item) { dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5)); spawnPickup('ITEM', dropPos, 0, item); }
-  }
 
   if (Math.random() < 0.006) {   // heart drops: -80%
     dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5));
@@ -533,6 +514,60 @@ export function killEnemy(e: Enemy): void {
   events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, mini: e.mini, env: killEnv });
   if (e.boss) addShake(0.8);
   else if (e.elite) addShake(0.25);
+}
+
+// ------------------------------------------------------------------- drops ---
+/** (owner) Kill drops: bosses 1-2 rolls (rarely 3), elites 1 (sometimes 2), normal monsters only on a 8% chance, 1 roll.
+ *  Boss roll: 40% upgrade core (Refined: 10% + 4% per biome, max 40%), 30% gear (+0..4), 20% the boss's own rare material, 10% gold.
+ *  Elite roll: 50% gear (capped at Epic), 20% upgrade core, 30% crafting material (+ the elite trophy table).
+ *  Normal roll: 10% upgrade core, 60% monster loot (1 in 6 of those a low-rarity piece of gear), 30% crafting material. */
+const CRAFT_TABLES = ['ORE', 'CRYSTAL'];
+function dropCore(x: number, z: number, refined: number): void {
+  dropPos.set(x + (Math.random() - 0.5) * 1.6, 0, z + (Math.random() - 0.5) * 1.6);
+  spawnPickup('ITEM', dropPos, 0, makeItemById(Math.random() < refined ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
+}
+function dropGear(it: ReturnType<ReturnType<typeof useGameStore.getState>['rollItemDrop']>, x: number, z: number): void {
+  if (!it) return;
+  dropPos.set(x + (Math.random() - 0.5) * 1.6, 0, z + (Math.random() - 0.5) * 1.6);
+  spawnPickup('ITEM', dropPos, 0, it);
+}
+const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
+/** `special`: mini bosses / champions use the elite table with 1-2 rolls and better + odds. */
+export function dropTable(e: Enemy, luck: number, px: number, pz: number, special = false): void {
+  const st = useGameStore.getState(), run = world.run;
+  const biome = Math.max(0, world.room.biome | 0);
+  if (e.boss) {
+    const n = Math.random() < 0.08 ? 3 : Math.random() < 0.4 ? 2 : 1;
+    const before = run.bossKills - 1, hm = runInfo.hard ? HARD_EPIC_MUL : 1;
+    for (let i = 0; i < n; i++) {
+      const r = Math.random();
+      if (r < 0.4) dropCore(px, pz, Math.min(0.4, 0.1 + 0.04 * biome));
+      else if (r < 0.7) {
+        // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
+        let rarity: Rarity = 'EPIC';
+        if (before >= 1 && Math.random() < Math.min(0.012, 0.004 * before) * hm) rarity = 'MYTHIC';
+        else if (Math.random() < (before >= 1 ? Math.min(0.22, 0.07 + 0.04 * before) : 0.02) * hm) rarity = 'LEGENDARY';
+        dropGear(rollDropPlus(st.rollItemDrop(rarity), 2), px, pz);
+      } else if (r < 0.9) dropLoot(e.kind, luck, px, pz, true, run.bossKills >= 2);
+      else for (let k = 0; k < 4; k++) { dropPos.set(px + (Math.random() - 0.5) * 3, 0, pz + (Math.random() - 0.5) * 3); spawnPickup('GOLD', dropPos, 12 + world.director.wave); }
+    }
+    return;
+  }
+  if (e.elite || special) {
+    const n = Math.random() < (special ? 0.45 : 0.15) ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const r = Math.random();
+      if (r < 0.5) { const it = st.rollItemDrop(); dropGear(rollDropPlus(it && RARITY_RANK[it.rarity] > RARITY_RANK.EPIC ? st.rollItemDrop('EPIC') : it, special ? 1 : 0), px, pz); }
+      else if (r < 0.7) dropCore(px, pz, 0.03 + 0.01 * biome);
+      else dropLoot(Math.random() < 0.5 ? 'ELITE' : CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
+    }
+    return;
+  }
+  if (Math.random() >= 0.08 * Math.max(1, luck * 0.5)) return;
+  const r = Math.random();
+  if (r < 0.1) dropCore(px, pz, 0);
+  else if (r < 0.7) { if (Math.random() < 1 / 6) { const it = st.rollItemDrop(); dropGear(it && RARITY_RANK[it.rarity] > RARITY_RANK.RARE ? st.rollItemDrop('RARE') : it, px, pz); } else dropLoot(e.kind, luck, px, pz, true); }
+  else dropLoot(CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
 }
 
 // ------------------------------------------------------------------- player --

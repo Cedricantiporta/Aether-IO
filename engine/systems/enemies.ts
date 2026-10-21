@@ -44,7 +44,7 @@ import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded 
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
-import { towerMode, towerCrystals } from './combat';
+import { towerMode, towerCrystals, dropTable } from './combat';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
@@ -445,10 +445,8 @@ export function onEnemyDeath(e: Enemy): void {
     const luck = 2 * (1 + d.wave * 0.02);
     if (towerMode()) dropCrystals(towerCrystals(false, true, false, d.wave), e.pos);   // tower modes: crystals, no items / loot
     else {
-      dropLoot('MINI', luck, e.pos.x, e.pos.z, true);
-      dropLoot(e.kind, luck, e.pos.x, e.pos.z, true);
-      const item = rollDropPlus(st.rollItemDrop(d.wave >= 25 && Math.random() < 0.35 ? 'LEGENDARY' : d.wave >= 25 ? 'EPIC' : d.wave >= 15 ? 'EPIC' : 'RARE'), 1);
-      if (item) { tmpV.set(e.pos.x, 0, e.pos.z); spawnPickup('ITEM', tmpV, 0, item); }
+      dropLoot('MINI', luck, e.pos.x, e.pos.z, true);   // its trophy
+      dropTable(e, luck, e.pos.x, e.pos.z, true);   // (owner) 1-2 rolls: gear / upgrade core / crafting material
     }
     if (e.kind === 'BANDIT' || e.kind === 'ZOMBIE') for (let i = 0; i < 6; i++) { tmpV.set(e.pos.x + (Math.random() - 0.5) * 3, 0, e.pos.z + (Math.random() - 0.5) * 3); spawnPickup('GOLD', tmpV, 8 + d.wave); } // Bandit Captain's strongbox (humanoids only)
   }
