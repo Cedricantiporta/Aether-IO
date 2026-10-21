@@ -1,3 +1,4 @@
+import { bedWake } from './systems/village';
 import { wake } from './dreamFx';
 import { trueEndingReady, dreamView, dreamLines, markDreamSeen, dreamsSeen, DREAMS } from '../dreams';
 import { storyIdx } from '../story';
@@ -153,7 +154,7 @@ export function talkWanderer(): void {
     openCustomDialogue('Aelia', `A dream at the Font${dr ? ` · ${dr.title}` : ''}`, d.accent, dr ? dreamLines(dr, useGameStore.getState().hero) : ['...'], { label: 'Wake up', accept: () => {
       if (dr) markDreamSeen(Math.max(dreamsSeen(), DREAMS.indexOf(dr) + 1));
       dreamView.pending = null;
-      wake(() => useGameStore.getState().resetGame());   // (slow fade to gold, then the teleport home)
+      wake(() => { bedWake.on = true; useGameStore.getState().resetGame(); });   // (slow fade to gold, then home: awake in bed)
     } });
     return;
   }

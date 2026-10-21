@@ -45,6 +45,8 @@ const projOut: number[] = [];
 const bounceOut: number[] = [];
 const colOut: Collider[] = [];
 const aim = new Vector3();
+/** Projectile kinds fired by the hero's basic attack (ult charge per hit differs from skills). */
+const BASIC_KINDS = new Set<string>(['ARROW', 'AXE', 'SLASH', 'MAGIC', 'SOUL_BOLT', 'BURNING_ARROW', 'FREEZING_ARROW']);
 const hitOpts: DamageOpts = { kind: 'PHYSICAL', crit: false, source: 'PLAYER' };
 const splashOpts: DamageOpts = { kind: 'PHYSICAL', crit: false, source: 'PLAYER' };
 const knockTmp = new Vector3();
@@ -480,6 +482,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.knockDir = knockTmp;
   hitOpts.knockback = p.knockback;
   hitOpts.source = petShot ? 'PET' : 'PLAYER';
+  hitOpts.basic = !petShot && BASIC_KINDS.has(p.kind);
   if (p.kind === 'BURNING_ARROW' && p.state === 2) fanPatch(p, e.pos.x, e.pos.z);
   // attacker origin for block / backstab checks: a point behind the projectile along its travel direction
   const vl = Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);

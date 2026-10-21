@@ -28,6 +28,8 @@ const notify = (msg: string, color = '#f1d58e') => useGameStore.getState().addNo
 const GOBLIN_TIME = 15, HUNT_TIME = 30, TRAP_PERIOD0 = 3.2, TRAP_WARN0 = 2.1, TRAP_FIRE0 = 2.75, TRAP_R0 = 1.7;
 // Spike-trap tuning (live values: Marble Halls, biome #2 = index 1, gets bigger / more / faster / longer-lasting traps).
 let TRAP_PERIOD = TRAP_PERIOD0, TRAP_WARN = TRAP_WARN0, TRAP_FIRE = TRAP_FIRE0, TRAP_R = TRAP_R0, TRAP_TILE = TRAP_R0 * 2;
+/** (owner) spike traps hit the hero 3x harder. */
+const SPIKE_MUL = 3;
 let trapDrain = false;   // spikes stay up long enough to hurt anyone who steps on them (Marble Halls)
 /** Size multiplier of this room's trap tiles (render scales the plates / spikes by it). */
 export let trapScale = 1;
@@ -232,11 +234,11 @@ export function updateRoomEvents(dt: number): void {
       if (tr.t >= TRAP_PERIOD) { tr.t -= TRAP_PERIOD; tr.hit = false; }
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
-        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 / DMG_INFLATE, { pos: tmp }); plTrapCd = 0.8; /* (12% max HP: already scales with the x2 HP) */ }
+        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 * SPIKE_MUL / DMG_INFLATE, { pos: tmp }); plTrapCd = 0.8; /* (12% max HP: already scales with the x2 HP) */ }
         damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER', env: 'TRAP' });
       } else if (trapDrain && tr.t >= TRAP_FIRE && plTrapCd <= 0 && pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) {
         // long-lived spikes: stepping onto a raised tile still hurts (at most one hit per 0.8 s, 60% of the burst)
-        plTrapCd = 0.8; tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.07 / DMG_INFLATE, { pos: tmp });
+        plTrapCd = 0.8; tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.07 * SPIKE_MUL / DMG_INFLATE, { pos: tmp });
       }
     }
   }

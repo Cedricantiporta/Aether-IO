@@ -23,7 +23,7 @@ import { updatePickups, resetPickups } from './systems/pickups';
 import { updateCrates } from './systems/crates';
 import { resetAbilities } from './systems/abilities';
 import { updateDirector, resetDirector, startRunRooms } from './systems/director';
-import { updateVillage, placeVillageNodes, restoreInterior } from './systems/village';
+import { updateVillage, placeVillageNodes, restoreInterior, bedWake, wakeInBed } from './systems/village';
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
@@ -176,6 +176,7 @@ export function enterVillage(): void {
   world.village.spawnFx = 1;                     // arrival light pillar on the hero
   useGameStore.getState().rollShopSales();
   villageReady = true;
+  if (bedWake.on) { bedWake.on = false; wakeInBed(); }   // (owner) woken from a walked dream: in bed at home
   events.emit('runEnd', {});
 }
 

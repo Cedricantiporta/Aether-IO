@@ -56,7 +56,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
   const auraKeys = weaponGlowKey + '|' + wearGlowKey;
   const root = useRef<Group>(null!), lean = useRef<Group>(null!), blob = useRef<Mesh>(null!);
   const S = useRef({
-    mixer: null as AnimationMixer | null, sitK: 0, legs: null as (Object3D | null)[] | null,
+    mixer: null as AnimationMixer | null, sitK: 0, lieK: 0, legs: null as (Object3D | null)[] | null,
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
     wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
@@ -233,7 +233,11 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     // seated on a bench / pew (no sit clip in the KayKit packs: the legs are posed on top of the idle)
     const rideOn = !lobby && alive && world.village.ride.on && status === GameStatus.MENU;   // (owner) astride a stable horse
     const sitOn = !lobby && alive && (world.village.sit.on || rideOn) && status === GameStatus.MENU;
-    s.sitK = damp(s.sitK ?? 0, sitOn ? 1 : 0, 10, dt);
+    const lieOn = sitOn && !rideOn && world.village.sit.lie;   // (owner) woken from a dream: lying on the home bed
+    s.lieK = damp(s.lieK ?? 0, lieOn ? 1 : 0, 6, dt);
+    g.rotation.x = -Math.PI / 2 * s.lieK;   // tipped back around the feet: head to -z (the bed's pillow), face up
+    if (s.lieK > 0.01) g.position.y += world.village.sit.y * s.lieK;
+    s.sitK = damp(s.sitK ?? 0, sitOn && !lieOn ? 1 : 0, 10, dt);
     if (s.sitK > 0.01) {
       if (!s.legs) s.legs = ['upperlegl', 'upperlegr', 'lowerlegl', 'lowerlegr', 'hips'].map((n) => ch.root.getObjectByName(n) ?? null);
       const [ul, ur, ll, lr] = s.legs, k = s.sitK;

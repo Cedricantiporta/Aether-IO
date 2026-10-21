@@ -66,7 +66,18 @@ function syncRide(dt: number): void {
 export function standUp(): void {
   const st = world.village.sit; if (!st.on) return;
   st.on = false;
-  const p = world.player; p.pos.set(st.x + Math.sin(st.yaw) * 0.95, 0, st.z + Math.cos(st.yaw) * 0.95);
+  const p = world.player;
+  if (st.lie) { st.lie = false; p.pos.set(BED.x + 1.6, 0, BED.z + 0.4); p.facing = Math.PI / 2; return; }   // out of bed, onto the floor beside it
+  p.pos.set(st.x + Math.sin(st.yaw) * 0.95, 0, st.z + Math.cos(st.yaw) * 0.95);
+}
+/** (owner) Set by a dream's "Wake up" when the town is about to be (re)loaded: enterVillage then wakes the hero in bed. */
+export const bedWake = { on: false };
+/** (owner) After a dream the hero wakes at home, lying in their bed (feet toward the room); any move input gets them up. */
+export function wakeInBed(): void {
+  const v = world.village, p = world.player, st = v.sit;
+  if (v.area !== 'HOME') switchArea('HOME');
+  st.on = true; st.lie = true; st.x = BED.x; st.z = BED.z + 1.1; st.yaw = 0; st.y = 0.62;
+  p.pos.set(st.x, 0, st.z); p.vel.set(0, 0, 0); p.facing = 0; v.go.on = false; v.spawnFx = 0;
 }
 import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT, CAMP_COLLIDERS } from '../caveData';
 import { UNLOCK_LV } from '../../unlocks';

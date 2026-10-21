@@ -67,6 +67,8 @@ export interface DamageOpts {
   env?: 'TRAP' | 'BARREL' | 'SLAM' | 'HAZARD';
   /** Where the hit comes from (a projectile's point behind its travel direction); default = the hero's position. Used by block / backstab checks. */
   fromX?: number; fromZ?: number;
+  /** A hit from the hero's basic attack (ult charge: 0.1 per basic hit, 0.3 per skill hit). */
+  basic?: boolean;
 }
 /** The env of the hit that is killing an enemy right now (read when enemyDeath is emitted). */
 let killEnv: DamageOpts['env'] | undefined;
@@ -146,6 +148,8 @@ function gainStagger(e: Enemy, amount: number): void {
 }
 
 // ------------------------------------------------------------------ helpers --
+/** (owner) flat ult charge per landed hit (meter 0..100): basic attack 0.1, skill 0.3 (before the weapon-level / showcase multipliers). */
+export const ULT_PER_BASIC = 0.1, ULT_PER_SKILL = 0.3;
 /** Ultimate charge (0..100) from damage dealt and kills. */
 export function addUlt(n: number): void {
   const p = world.player;
@@ -440,7 +444,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     e.hp -= dealt;
     const run = world.run;
     run.damageDealt += dealt;
-    if (o.source === 'PLAYER') addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, dealt / Math.max(1, e.maxHp)) + (o.dot ? 0 : 0.015));
+    if (o.source === 'PLAYER') addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, dealt / Math.max(1, e.maxHp)) + (o.dot ? 0 : o.basic ? ULT_PER_BASIC : ULT_PER_SKILL));
     if (!o.dot && dealt > run.highestHit) run.highestHit = dealt;
     // Life steal (gear affixes / sets / talents): direct player damage only; healed in chunks to limit floating text.
     if (o.source === 'PLAYER' && !o.dot) {
