@@ -235,7 +235,7 @@ for (const sp of SHOP_POSITIONS) {
     else if (piece === 'chicken_coop') addSolid(x, z, 1.1 * sc);
   }
 }
-carpet(Z(-31.5, -9.4, 4.4, 0.9), 12, PIECES.flowers, [0.8, 1.1], 81);   // the herb garden in front of the Potion shop
+// (owner: no flower patches scattered on the town paving)
 // ================================================================ KIT V3 DECOR (owner 2026-10-21): landmarks + props of the new kit
 /** Decor that did not fit (logged by the layout check: engine/townFill DECOR_SKIPPED). */
 export const DECOR_SKIPPED: string[] = [];
@@ -301,32 +301,26 @@ put('fishing_net_rack', NET_RACK.x, NET_RACK.z, NET_RACK.rot, 1, 1, 1, 0);
 // ---- the park round the fountain: blossom trees + bushes (the hedge_arch entrances are above)
 grove(Z(WELL_POS.x, WELL_POS.z, 6.4, 3.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
 // ---- the garden strip along the south wall (z 33..36): beds, bushes, small trees; the avenue + hero's door stay free
-carpet(Z(-18, 34.8, 12, 1.2), 12, PIECES.flowers, [0.8, 1.2], 11); carpet(Z(18, 34.8, 12, 1.2), 12, PIECES.flowers, [0.8, 1.2], 12);
 // ---- the rises (cottages at both south corners)
-grove(Z(-36.5, 22.4, 6.4, 1.8), 6, [BUSHES(3), OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 6, [BUSHES(3), OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);
-carpet(Z(-37, 33.5, 5, 2.2), 8, PIECES.flowers, [0.8, 1.1], 25); carpet(Z(37.5, 33.5, 5, 2.2), 8, PIECES.flowers, [0.8, 1.1], 26);
+grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);   // (owner: no loose bushes on the town paving)
 // ---- chapel quarter: a cloister garden east of the chapel (hedged on three sides, beds inside), pines on the hill's north edge
 hedge(-22.6, -37.2, -13.4, -37.2); hedge(-13.4, -37.2, -13.4, -22.6);
-carpet(Z(-18, -29.8, 3.8, 5), 12, PIECES.flowers, [0.9, 1.3], 31);
 grove(Z(-31, -37.4, 5, 1.4), 4, [PINES(1, [0.8, 1])], 32, 1.0, 2.4); grove(Z(-11.8, -26, 1.2, 9), 5, [PINES(1, [0.8, 1.05])], 33, 1.0, 2.4);
 // ---- trainer yard (north of the street, west of the castle path): hay, crates, a verge of flowers
 cluster([-8.4, -15.4, 0.3], [-23.6, -12.7, 2.4]);
-carpet(Z(-12.5, -17, 2.4, 1.6), 8, PIECES.flowers, [0.8, 1.1], 41);
-grove(Z(-27, -16.4, 3, 2.2), 3, [BUSHES(1)], 42, 0.8, 2.4);
+
 // ---- castle approach: a bush + bed either side of the terrace stairs' foot
-for (const sx of [-1, 1]) { prop(PIECES.bush[0], sx * 9.3, -15.4, sx, 0.8); prop(PIECES.bush[1], sx * 11.5, -17.6, sx + 1, 0.7); deco(PIECES.flowers, sx * 10.3, -16.2, sx, 1.1); }
+
 // ---- tavern square + Tavern Row: barrels and crates by the stairs and the tables, a verge of beds, hedged back gardens behind the row
 cluster([22.2, -13.4, 0.5], [34.6, -13.8, -0.4], [14.2, -9.8, 1.6], [24.6, -29.4, 0.9], [33.2, -29.8, 2.2], [43, -22.5, 0.2]);
-carpet(Z(28, -11.4, 3.4, 1.6), 9, PIECES.flowers, [0.8, 1.1], 51);
-grove(Z(28.6, -31, 4.2, 1.5), 4, [BUSHES(1)], 52, 0.6, 2.4);
+
 // ---- plaza + shop row: beds between the shops' backs and the street, banners are in townKit
 for (const gx of [-35.25, -26.75, -18.25, 18.25, 26.75, 35.25]) { cluster([gx, 3.3, gx * 1.7]); }
-carpet(Z(-30, -2.6, 12, 1.0), 9, PIECES.flowers, [0.8, 1.1], 61); carpet(Z(28, -2.6, 13, 1.0), 9, PIECES.flowers, [0.8, 1.1], 62);
 // ---- along the inside of the wall: a ragged line of bushes (the paving is bare up to the wall otherwise)
 for (const sx of [-1, 1]) {
-  grove(Z(sx * 42.6, 0, 0.7, 38), 22, [BUSHES(4, [0.5, 0.75]), PINES(0.6, [0.55, 0.7])], 71 + sx, 0.5, 1.2);
+  grove(Z(sx * 42.6, 0, 0.7, 38), 22, [PINES(1, [0.55, 0.7])], 71 + sx, 0.5, 1.2);   // (owner: no bushes along the walls)
 }
-grove(Z(0, -38.6, 42, 0.9), 22, [BUSHES(3, [0.5, 0.8]), PINES(1, [0.6, 0.8])], 73, 0.6, 1.2);
+grove(Z(0, -38.6, 42, 0.9), 10, [PINES(1, [0.6, 0.8])], 73, 0.6, 1.2);
 
 // ================================================================ OUTSIDE: THE GATE MEADOW (z 38..60)
 // west half: a thick grove of oaks and pines (the woodcutters' wood) with the beach path + the carts' lane left open; flowers on the clearings
