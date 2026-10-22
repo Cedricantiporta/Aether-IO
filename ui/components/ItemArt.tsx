@@ -541,7 +541,7 @@ const ITEM_PAINT: Record<string, string> = {
   potion_hp: 'potion_hp', potion_hp_fb: 'potion_hp', potion_hp_big: 'potion_hp_big', potion_mana: 'potion_mana', potion_mp_fb: 'potion_mana', potion_mana_big: 'potion_mana_big',
   upgrade_core: 'upgrade_core', core: 'upgrade_core', upgrade_core_2: 'upgrade_core_2', upgrade_core_3: 'upgrade_core_3',
   revive_ankh: 'revive_ankh', ankh: 'revive_ankh', reforge_stone: 'reforge_stone', temper_oil: 'temper_oil', augment_rune: 'augment_rune',
-  erase_scroll: 'erase_scroll', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
+  erase_scroll: 'erase_scroll', binding_seal: 'binding_seal', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
   elixir_might: 'elixir_might', elixir_iron: 'elixir_iron', elixir_swift: 'elixir_swift', elixir_fortune: 'elixir_fortune', elixir_vigor: 'elixir_vigor',
 };
 const ART_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/items/';
