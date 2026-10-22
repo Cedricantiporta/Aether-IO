@@ -17,6 +17,7 @@ import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
+import { liveStep } from '../../questUnlocks';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
@@ -452,6 +453,13 @@ function pushGroup(kind: EnemyKind, n: number, elite: boolean): void {
   }
 }
 
+/** Slimes the open first quest ("Trial of the Meadow") still needs (0: not open, or not the Greenwood / not an adventure). */
+function slimeQuestLeft(): number {
+  if (runInfo.mode !== 'ADVENTURE' || biome % BIOMES.length !== 0 || plan.dream) return 0;
+  const st = useGameStore.getState(), step = liveStep(st);
+  return step?.id === 'slimes' && step.kill ? Math.max(0, step.kill.count - st.story.p) : 0;
+}
+
 /** Rolls the room's pack list (budget from the depth formula, capped) and splits it into bursts. */
 function rollPack(mult: number, elites: number, nBursts: number): void {
   const def = biomeOf(biome);
@@ -460,6 +468,10 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
   const tower = runInfo.mode === 'TOWER' ? (daily.on ? 1.5 : waves.on ? waveCrowd(towerFloor) : 2) : 1;   // Endless Tower: twice the monsters per floor (Daily Trial: x1.5)
   let points = Math.min(waveBudget(depth) * mult * roomy * tower, 160 * tower) * mods.spawn;
+  // (owner) the first quest, "Trial of the Meadow" (defeat slimes): while it is open the Greenwood packs carry a guaranteed slime group,
+  // so it can always be finished in the first rooms of the first run
+  const sl = plan.type === 'COMBAT' || plan.type === 'TREASURE' ? slimeQuestLeft() : 0;
+  if (sl > 0) { const n = Math.min(sl, Math.max(6, Math.ceil(points * 0.7)), MAX_UNITS - elites - 2); pushGroup('SLIME', n, false); points -= n * ENEMY_DEFS.SLIME.cost; }
   let guard = 0;
   while (points > 0.9 && unitN < MAX_UNITS - elites - 2 && guard++ < 60 * tower) {
     const kind = rosterPick(def, Math.min(points, 12), 0);

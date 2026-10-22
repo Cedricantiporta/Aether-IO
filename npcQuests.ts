@@ -13,6 +13,7 @@ import type { Item, Rarity } from './types';
 import type { RoomType } from './engine/types';
 import { LOOT_BY_ID } from './loot';
 import { gateFlags, type GateId } from './engine/townGates';
+import { sideUnlocked, unlockMirror } from './questUnlocks';
 
 export type NpcObjectiveType =
   | 'KILL_KIND' | 'KILL_TOTAL' | 'KILL_ELITE' | 'KILL_BOSS'   // kill counts (KILL_BOSS target: a boss kind)
@@ -209,6 +210,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
   const e = save.q[def.id];
   if (e) return e.s === 2 ? 'DONE' : 'ACTIVE';
   if (!questGate.open) return 'LOCKED';
+  if (!sideUnlocked(def.id, unlockMirror.n)) return 'LOCKED';   // (owner, Hades-style) opened by dying: questUnlocks.ts
   if (def.gate && !gateFlags[def.gate]) return 'LOCKED';
   if (def.after && save.q[def.after]?.s !== 2) return 'LOCKED';
   if (def.cond?.boss && !(save.bossKills[def.cond.boss] > 0)) return 'LOCKED';
@@ -219,7 +221,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
 export const npcQuestMinLevel = (def: NpcQuestDef): number => Math.max(def.minLevel ?? 0, def.cond?.rank ?? 0);
 /** Locked ONLY by the class level (its chain and boss condition are met): listed with "Lv N" in the quest window. */
 export function npcQuestLevelLocked(def: NpcQuestDef, save: NpcQuestSave, rank: number): boolean {
-  return questGate.open && !save.q[def.id] && rank < npcQuestMinLevel(def) && (!def.gate || gateFlags[def.gate])
+  return questGate.open && sideUnlocked(def.id, unlockMirror.n) && !save.q[def.id] && rank < npcQuestMinLevel(def) && (!def.gate || gateFlags[def.gate])
     && (!def.after || save.q[def.after]?.s === 2) && (!def.cond?.boss || save.bossKills[def.cond.boss] > 0);
 }
 

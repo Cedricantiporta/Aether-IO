@@ -14,6 +14,7 @@ import { GOLD_SCALE, ITEMS_POOL } from '../../constants';
 import { GameStatus, type Item } from '../../types';
 import { world } from '../world';
 import { storyBias, BIOMES } from '../roomDefs';
+import { liveStep } from '../../questUnlocks';
 
 /** Loot of `id` in the bag. */
 function bagCount(id: string): number {
@@ -45,7 +46,7 @@ export function rewardText(r: StoryStep['reward']): string {
 }
 /** The current step's offer when `npcName` gives it: its lines, then Accept (takes the quest, the chain moves on) / Later. */
 function storyOffer(npcName: string): { lines: string[]; offer: string } | null {
-  const s = useGameStore.getState().story, step = STORY[s.step];
+  const s = useGameStore.getState().story, step = liveStep(useGameStore.getState());   // (a still-locked step is not offered: questUnlocks.ts)
   if (!step || step.npc !== npcName || !step.talk || step.deliver) return null;
   return { lines: step.talk.slice(), offer: `story:${s.step}` };
 }
@@ -53,7 +54,7 @@ function storyOffer(npcName: string): { lines: string[]; offer: string } | null 
  *  (Accept / Later, see acceptStory); a delivery step hands the goods over when they are in the bag, pays the reward and
  *  rolls straight on into the next offer when that NPC gives it, else the NPC repeats what it needs. */
 export function storyTalk(npcName: string): { lines: string[]; offer: string } | null {
-  const st = useGameStore.getState(), s = st.story, step = STORY[s.step];
+  const st = useGameStore.getState(), s = st.story, step = liveStep(st);
   if (!step || step.npc !== npcName || !step.talk) return null;
   if (!step.deliver) return storyOffer(npcName);
   const have = bagCount(step.deliver.id), need = step.deliver.count, name = LOOT_BY_ID[step.deliver.id]?.name ?? step.deliver.id;
@@ -80,7 +81,7 @@ function bumpStory(n: number): void {
 /** True when killing this enemy (kind, champion flag) right now advances the current main step: its kill kind, or a
  *  champion / the depth-10 pre-boss of the step's biome for `goal` steps (also used for the quest icon on targets). */
 export function storyWantsKill(kind: string, mini = false): boolean {
-  const step = STORY[useGameStore.getState().story.step];
+  const step = liveStep(useGameStore.getState());
   if (!step) return false;
   if (step.kill) return kind === step.kill.kind || (step.kill.kind === 'SLIME_KING' && kind === 'SPLITTER' && mini);   // SLIME_KING: the Greenwood's depth-10 mini-boss
   const g = step.goal;
@@ -92,7 +93,7 @@ export function storyWantsKill(kind: string, mini = false): boolean {
 }
 const _drop = new Vector3();
 events.on('enemyDeath', (e) => {
-  const st = useGameStore.getState(), step = STORY[st.story.step];
+  const st = useGameStore.getState(), step = liveStep(st);
   if (!step || e.poof) return;
   if ((step.kill || step.goal) && storyWantsKill(e.kind, !!e.mini)) bumpStory(1);
   // quest drops: while a delivery step still needs goods this enemy carries, they drop often (35%)
@@ -103,20 +104,20 @@ events.on('enemyDeath', (e) => {
   }
 });
 events.on('hub', (e) => {
-  const step = STORY[useGameStore.getState().story.step];
+  const step = liveStep(useGameStore.getState());
   if (step?.act && step.act.kind === e.kind) bumpStory(e.n);
 });
 events.on('towerFloor', (e) => {   // post-game Tower step: progress = the best floor cleared
-  const st = useGameStore.getState(), step = STORY[st.story.step];
+  const st = useGameStore.getState(), step = liveStep(st);
   if (step?.act?.kind !== 'tower_floor' || e.floor <= st.story.p) return;
   if (e.floor >= step.act.count) st.setStory(st.story.step + 1, 0); else st.setStory(st.story.step, e.floor);
 });
 events.on('captiveFreed', () => {   // rescue steps: a captive freed in the step's biome (or deeper)
-  const step = STORY[useGameStore.getState().story.step];
+  const step = liveStep(useGameStore.getState());
   if (step?.goal?.kind === 'RESCUE' && world.room.biome >= step.goal.biome) bumpStory(1);
 });
 events.on('crateBreak', (e) => {   // a harvest node that yields what a delivery step needs always gives one
-  const st = useGameStore.getState(), step = STORY[st.story.step], d = step?.deliver ?? (step?.kill ? STORY[st.story.step + 1]?.deliver : undefined);
+  const st = useGameStore.getState(), step = liveStep(st), d = step?.deliver ?? (step?.kill ? STORY[st.story.step + 1]?.deliver : undefined);
   if (!d || !LOOT_TABLES[e.kind]?.includes(d.id) || bagCount(d.id) >= d.count) return;
   _drop.set(e.pos.x + (Math.random() - 0.5) * 1.4, 0, e.pos.z + (Math.random() - 0.5) * 1.4);
   spawnPickup('ITEM', _drop, 0, lootItem(LOOT_BY_ID[d.id]));
@@ -141,10 +142,10 @@ setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engi
   const moved = lastStep >= 0 && st.story.step > lastStep;
   lastEq = st.equipment; lastStep = st.story.step;
   // finished a field step during a run and the chain continues in town: say how to get there (the tracker offers a teleport)
-  const nx = STORY[st.story.step];
+  const nx = liveStep(st);
   if (moved && st.status === GameStatus.PLAYING && nx && (nx.npc || nx.at) && !nx.deliver)
     queueMicrotask(() => useGameStore.getState().addNotification(`Next: ${nx.line}. Tap the main quest to teleport home.`, '#f1d58e', 'SYSTEM'));
-  const step = STORY[st.story.step];
+  const step = liveStep(st);
   storyBias.rescue = step?.goal?.kind === 'RESCUE'; storyBias.champion = step?.goal?.kind === 'CHAMPION';   // rooms roll these more often meanwhile
   const at = st.story.step;
   // (fix) "Suit Up" needs a weapon the hero can wear: saves whose tutorial pull was a pet / high-level piece get the class
@@ -162,7 +163,7 @@ setTimeout(() => useGameStore.subscribe((st) => {   // (deferred: store <-> engi
 }), 0);
 events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods as they are picked up
   if (e.kind !== 'ITEM' || !e.name) return;
-  const st = useGameStore.getState(), step = STORY[st.story.step];
+  const st = useGameStore.getState(), step = liveStep(st);
   if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === e.name && st.story.p < step.deliver.count) {
     const have = Math.min(step.deliver.count, bagCount(step.deliver.id));
     st.setStory(st.story.step, Math.max(st.story.p + 1, have));
@@ -171,7 +172,7 @@ events.on('pickup', (e) => {   // delivery steps: the tracker counts the goods a
 });
 events.on('gameEnding', () => {
   const st = useGameStore.getState(), s = st.story;
-  if (!STORY[s.step]?.ending) return;
+  if (!liveStep(st)?.ending) return;
   if (STORY[s.step].id === 'remember' && !trueEndingReady(st.progress.endings)) {   // (owner, Hades-like) not yet: the memory slips away
     st.addNotification(`Her words slip away as the Font pulls you home... (${trueEndingNeed(st.progress.endings)})`, '#fff3c4', 'SYSTEM');
     return;

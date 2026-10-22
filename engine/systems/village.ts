@@ -97,6 +97,7 @@ import { BEACH, BEACH_COLLIDERS, FISH_SPOTS, FISH_SPOT_R, beachSide } from '../b
 import { fishingActive, startFishing, stopFishing, updateFishing } from './fishing';
 import { TOWN_GATES, GATE_BY_ID, GATE_PROMPT_R, gateDist2, gateFlags } from '../townGates';
 import { placeGateColliders } from './townGatesLogic';
+import { liveStep } from '../../questUnlocks';
 
 const INTERACT_R = 7;
 /** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
@@ -231,7 +232,7 @@ const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a', 
  *  quest) and one the hero is facing come first (scales the squared distance used for sorting). */
 function talkBias(i: number): number {
   const p = world.player, n = npcs[i], mk = npcMarkers()[i];
-  let k = STORY[useGameStore.getState().story.step]?.npc === NPCS[i].name || mk === 1 || mk === 3 ? 0.45 : 1;
+  let k = liveStep(useGameStore.getState())?.npc === NPCS[i].name || mk === 1 || mk === 3 ? 0.45 : 1;
   const dx = n.x - p.pos.x, dz = n.z - p.pos.z, l = Math.hypot(dx, dz);
   if (l > 1e-3 && (Math.sin(p.facing) * dx + Math.cos(p.facing) * dz) / l > 0.5) k *= 0.8;
   return k;
@@ -502,7 +503,7 @@ function navWalk(t: NavTarget, again?: () => void, chained = false): void {
  *  else the Adventure Portal. The equip step opens the bag. */
 export function walkToMain(): void {
   const st0 = useGameStore.getState();
-  if (STORY[st0.story.step]?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
+  if (liveStep(st0)?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
   const t = mainNav();
   if (t) navWalk(t, walkToMainHop);
 }

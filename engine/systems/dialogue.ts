@@ -8,6 +8,7 @@ import { NPCS } from '../townData';
 import { events } from '../events';
 import { useGameStore, makeItemById } from '../../store';
 import { STORY } from '../../story';
+import { storyHeld } from '../../questUnlocks';
 import { storyTalk, acceptStory, rewardText } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo, heardLines, npcRewardText } from './npcQuestLogic';
 import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel, npcQuestProgress, type NpcQuestDef } from '../../npcQuests';
@@ -49,7 +50,7 @@ export function dialogueOpen(): boolean { return useDialogue.getState().open; }
 
 /** The hint under a main-quest offer: what comes next + what accepting pays. */
 function storyHint(offer: string): string {
-  const n = Number(offer.slice(6)), next = STORY[n + 1], rw = STORY[n] ? rewardText(STORY[n].reward) : '';
+  const n = Number(offer.slice(6)), next = storyHeld(n + 1, useGameStore.getState().unlocks.n) ? undefined : STORY[n + 1], rw = STORY[n] ? rewardText(STORY[n].reward) : '';
   return [next ? `Next: ${next.line}` : '', rw].filter(Boolean).join('  ·  ');
 }
 /** The hint under a side-quest offer / reminder. */

@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
+import { storyCap } from '../../questUnlocks';
 import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
@@ -55,16 +56,19 @@ type Tab = 'MAIN' | 'SIDE';
 
 export const QuestLog: React.FC = () => {
   const open = useUiStore((s) => s.questLogOpen), setOpen = useUiStore((s) => s.openQuestLog);
-  const { story, nq, inv, rank, status, level } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, status: s.status, level: s.level })));
+  const { story, nq, inv, rank, status, level, unlocks } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, status: s.status, level: s.level, unlocks: s.unlocks })));
+  const cap = storyCap(unlocks.n);   // (owner, Hades-style) main steps past this are still locked: hidden until a death opens them
+  const held = story.step > cap;
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [tab, setTab] = useState<Tab>('MAIN');
-  const chapIdx = useMemo(() => CHAPTERS.map((c, i) => ({ ...c, a: storyIdx(c.from), b: i + 1 < CHAPTERS.length ? storyIdx(CHAPTERS[i + 1].from) : STORY.length })), []);
-  const curChap = Math.max(0, chapIdx.findIndex((c) => story.step >= c.a && story.step < c.b));
+  const chapAll = useMemo(() => CHAPTERS.map((c, i) => ({ ...c, a: storyIdx(c.from), b: i + 1 < CHAPTERS.length ? storyIdx(CHAPTERS[i + 1].from) : STORY.length })), []);
+  const chapIdx = chapAll.filter((c) => c.a <= cap);
+  const curChap = Math.max(0, chapIdx.findIndex((c) => Math.min(story.step, cap) >= c.a && Math.min(story.step, cap) < c.b));
   const [openChap, setOpenChap] = useState<string>(() => chapIdx[curChap]?.id ?? 'pro');
-  const [sel, setSel] = useState<number>(() => Math.min(story.step, STORY.length - 1));
+  const [sel, setSel] = useState<number>(() => Math.min(story.step, cap, STORY.length - 1));
   const [sideSel, setSideSel] = useState<string>('');
   // opening the window jumps to the current chapter and step
-  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, STORY.length - 1)); const u = useUiStore.getState(), t = u.questLogTab; if (t) { setTab(t); u.setQuestLogTab(''); }
+  useEffect(() => { if (open) { setOpenChap(chapIdx[curChap]?.id ?? 'pro'); setSel(Math.min(story.step, cap, STORY.length - 1)); const u = useUiStore.getState(), t = u.questLogTab; if (t) { setTab(t); u.setQuestLogTab(''); }
     const f = u.questLogFocus;   // a tracker row opened the log on this quest
     if (f) { useUiStore.setState({ questLogFocus: '' }); if (f.startsWith('side:')) setSideSel(f.slice(5)); } } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
   const npcActive = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, rank) === 'ACTIVE');
@@ -97,7 +101,7 @@ export const QuestLog: React.FC = () => {
                     <button className="qw-chap-h pe" onClick={() => !locked && setOpenChap(isOpen ? '' : c.id)}>
                       <span>{c.title}</span>{locked ? <Lock size={14} /> : done ? <Check size={15} /> : <ChevronDown size={15} style={{ transform: isOpen ? 'rotate(180deg)' : undefined }} />}
                     </button>
-                    {isOpen && !locked && STORY.slice(c.a, c.b).map((s, k) => {
+                    {isOpen && !locked && STORY.slice(c.a, Math.min(c.b, cap + 1)).map((s, k) => {
                       const i = c.a + k, st = i < story.step ? 'done' : i === story.step ? 'cur' : 'lock';
                       return (
                         <button key={s.id} className={`qw-step pe ${st} ${sel === i ? 'sel' : ''}`} onClick={() => st !== 'lock' && setSel(i)} disabled={st === 'lock'}>
@@ -109,6 +113,7 @@ export const QuestLog: React.FC = () => {
                   </div>
                 );
               })}
+              {held && story.step < STORY.length && <div className="qw-none">Nothing new right now. Rest in your bed at home: someone may come knocking.</div>}
             </div>
             {step ? (
               <div className="qw-det">

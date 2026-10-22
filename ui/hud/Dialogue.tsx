@@ -1,3 +1,4 @@
+import { storyHeld } from '../../questUnlocks';
 import React, { useEffect, useRef } from 'react';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { CuteStar } from '../components/CuteIcons';
@@ -32,7 +33,7 @@ function offerInfo(offer: string, level: number): OfferInfo | null {
     chips.push({ key: 'exp', icon: <CuteStar size={22} />, label: `${questXp('STORY', level).toLocaleString()} EXP` });
     pushCommon(st.reward.gold, st.reward.gems);
     (st.reward.items ?? []).forEach((it, i) => chips.push(itemChip(it.id, it.qty, i)));
-    return { title: 'New Quest', goal: (STORY[n + 1]?.line ?? st.line), chips };
+    return { title: 'New Quest', goal: (storyHeld(n + 1, useGameStore.getState().unlocks.n) ? undefined : STORY[n + 1]?.line) ?? st.line, chips };
   }
   const d = NPC_QUEST_BY_ID[offer]; if (!d) return null;
   const r = d.reward;

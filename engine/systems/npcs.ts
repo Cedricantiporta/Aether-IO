@@ -11,6 +11,7 @@ import { useGameStore } from '../../store';
 import { STORY, storyIdx } from '../../story';
 import { npcMarkers } from './npcQuestLogic';
 import { progressBubble, callBubble } from '../npcLines';
+import { liveStep } from '../../questUnlocks';
 
 const hits: Collider[] = [];
 /** Push a walker out of any building / prop collider it overlaps (safety net: routes are checked to be clear). */
@@ -175,7 +176,7 @@ export function updateNpcs(dt: number): void {
         npcs[pick].lastBubble = ti; npcs[pick].bubbleT = world.time;
         b.text = ti < pool.length ? pool[ti] : GENERIC_BUBBLES[(Math.random() * GENERIC_BUBBLES.length) | 0];
         // someone with something for the hero calls them over now and then; after a guardian falls, the town talks about it
-        const mk = STORY[useGameStore.getState().story.step]?.npc === d.name ? 4 : npcMarkers()[pick], r = Math.random();
+        const mk = liveStep(useGameStore.getState())?.npc === d.name ? 4 : npcMarkers()[pick], r = Math.random();
         const call = mk ? callBubble(mk) : null, news = r >= 0.4 && r < 0.65 ? progressBubble() : null;
         if (call && r < 0.4) b.text = call; else if (news) b.text = news;
         b.npc = pick; b.animal = -1; b.t = 0; b.life = 4; b.active = true; b.onScreen = false;

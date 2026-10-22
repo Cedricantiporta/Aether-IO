@@ -12,6 +12,7 @@ import { STORY } from '../../story';
 import { NPC_QUESTS } from '../../npcQuests';
 import { events } from '../events';
 import type { Item } from '../../types';
+import { liveStep } from '../../questUnlocks';
 
 const KEY = 'aether-survivor-cave-kit-v1';
 /** Seconds of light one spare flask pours into the lantern. */
@@ -65,7 +66,7 @@ export function buyFlasks(n: number, price: number): boolean {
 function reserved(id: string): number {
   const st = useGameStore.getState();
   let n = 0;
-  const step = STORY[st.story.step];
+  const step = liveStep(st);
   if (step?.deliver?.id === id) n = Math.max(n, step.deliver.count);
   for (const d of NPC_QUESTS) if (d.objective.type === 'DELIVER' && String(d.objective.target) === id && st.npcQuests.q[d.id]?.s === 1) n = Math.max(n, d.objective.count);
   return n;

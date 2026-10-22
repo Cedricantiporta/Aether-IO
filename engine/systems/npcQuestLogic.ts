@@ -17,6 +17,7 @@ import { addSpareFlasks } from './caveKit';
 import { NPCS } from '../townData';
 import { syncGateFlags, gateMask } from '../townGates';
 import { GameStatus, type Item } from '../../types';
+import { liveStep } from '../../questUnlocks';
 import {
   NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress, bagCount,
   type NpcQuestDef, type NpcQuestSave, type NpcObjective,
@@ -123,14 +124,14 @@ export function talkedTo(name: string): void { bump('TALK', 1, (o) => o.target =
 /** True when the NPC matters to an active quest right now: the main story step, a TALK target, or a giver / turn-in marker. */
 export function questNpc(name: string): boolean {
   const st = useGameStore.getState();
-  if (STORY[st.story.step]?.npc === name) return true;
+  if (liveStep(st)?.npc === name) return true;
   return NPC_QUESTS.some((d) => npcQuestStatus(d, st.npcQuests, st.heroRank) === 'ACTIVE'
     && ((d.objective.type === 'TALK' && d.objective.target === name) || (npcQuestTurnIn(d) === name && npcQuestReady(d, st.npcQuests, st.inventory))));
 }
 /** True when a ground item (by bag name) is still wanted by an active DELIVER quest (it gets a small gold light ray). */
 export function questWantsItem(name: string): boolean {
   const st = useGameStore.getState();
-  const step = STORY[st.story.step];   // the main story's current delivery
+  const step = liveStep(st);   // the main story's current delivery
   if (step?.deliver && LOOT_BY_ID[step.deliver.id]?.name === name && bagCount(st.inventory, step.deliver.id) < step.deliver.count) return true;
   return NPC_QUESTS.some((d) => {
     if ((d.objective.type !== 'DELIVER' && d.objective.type !== 'COLLECT_LOOT') || npcQuestStatus(d, st.npcQuests, st.heroRank) !== 'ACTIVE') return false;
@@ -175,13 +176,13 @@ events.on('pickup', (e) => {
 });
 
 // -------------------------------------------------------------- markers ---
-let mkSave: NpcQuestSave | null = null, mkInv: Item[] | null = null, mkRank = -1, mkGates = -1;
+let mkSave: NpcQuestSave | null = null, mkInv: Item[] | null = null, mkRank = -1, mkGates = -1, mkUnlocks: unknown = null;
 let mk: number[] = NPCS.map(() => 0);
 /** Marker per NPC index (0 none, 1 "!", 2 grey "?", 3 gold "?"); recomputed only when the quest state / bag / rank changed. */
 export function npcMarkers(): readonly number[] {
   const s = useGameStore.getState();
-  if (s.npcQuests !== mkSave || s.inventory !== mkInv || s.heroRank !== mkRank || gateMask() !== mkGates) {
-    mkSave = s.npcQuests; mkInv = s.inventory; mkRank = s.heroRank; mkGates = gateMask();
+  if (s.npcQuests !== mkSave || s.inventory !== mkInv || s.heroRank !== mkRank || gateMask() !== mkGates || s.unlocks !== mkUnlocks) {
+    mkUnlocks = s.unlocks; mkSave = s.npcQuests; mkInv = s.inventory; mkRank = s.heroRank; mkGates = gateMask();
     mk = NPCS.map((d) => npcMarker(d.name, s.npcQuests, s.inventory, s.heroRank));
   }
   return mk;

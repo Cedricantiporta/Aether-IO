@@ -23,6 +23,7 @@ import { disposeMerged, mergeCharacter, useCharacterInstance, useClips } from '.
 import { HANDSLOT_QUAT } from './weapons';
 import { labelMaterial } from './label';
 import type { NpcProp } from '../engine/townData';
+import { liveStep } from '../questUnlocks';
 
 // ------------------------------------------------------------------- props ---
 const propMat = litMat({ roughness: 0.7 });
@@ -98,7 +99,7 @@ function tunicGeo(col: string): BufferGeometry {
  *  delivery check reads the bag only a few times a second (cached by store identity). */
 let mmInv: unknown = null, mmStep = -1, mmReady = false;
 function mainMark(name: string): number {
-  const st = useGameStore.getState(), step = STORY[st.story.step];
+  const st = useGameStore.getState(), step = liveStep(st);
   if (!step || step.npc !== name) return 0;
   if (!step.deliver) return 4;
   if (st.inventory !== mmInv || st.story.step !== mmStep) { mmInv = st.inventory; mmStep = st.story.step; mmReady = bagCount(st.inventory, step.deliver.id) >= step.deliver.count; }

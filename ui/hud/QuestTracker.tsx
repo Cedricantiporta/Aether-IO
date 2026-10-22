@@ -12,6 +12,7 @@ import { LOOT_BY_ID } from '../../loot';
 import { mainNav, npcQuestNav, navDist, type NavTarget } from '../../engine/systems/questNav';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
+import { liveStep } from '../../questUnlocks';
 
 /** In a run, a quest that is ready to hand in (or a main-quest step that waits on someone in town) offers a trip home. */
 export function offerTeleport(then?: () => void): boolean {
@@ -91,7 +92,7 @@ export const QuestTracker: React.FC = () => {
   // NPC side quests (blue book icon): accepted, not yet handed in
   const nq = useGameStore((s) => s.npcQuests);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
-  const main = useGameStore((s) => STORY[s.story.step]);
+  const main = useGameStore((s) => liveStep(s));   // (a still-locked main step is hidden: questUnlocks.ts)
   if (story.length === 0 && !main) return null;
   const inv = useGameStore.getState().inventory;
   const rest = [

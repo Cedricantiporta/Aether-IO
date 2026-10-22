@@ -10,6 +10,7 @@ import { FALL_LINES } from '../../lore';
 import { DailyResultRows } from './DailyCard';
 import { WavesResultRows } from './WavesCard';
 import { useUiStore } from '../uiStore';
+import { leaveRun } from '../../engine/deathFlow';
 
 const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; record?: boolean; delay: number }> = ({ icon, label, value, record, delay }) => (
   <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 22 }}
@@ -25,7 +26,9 @@ export const GameOver: React.FC = () => {
   const { run, stats, resetGame: reset, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, resetGame: s.resetGame, hero: s.hero })));
   const victory = !!run?.victory;
   // after a defeat (not a victory) the town shows the "To do in town" popup once the hero spawns there
-  const resetGame = React.useCallback(() => { useUiStore.getState().setTodoPending(!victory); reset(); }, [reset, victory]);
+  // (owner, Hades-style) an adventure death never lands in the town square: straight into the dream (if due) or awake in bed at home
+  // (engine/deathFlow.ts, which also rolls the quest unlock); Tower / Daily / Waves keep the old return + the "To do in town" popup
+  const resetGame = React.useCallback(() => { if (leaveRun(victory)) return; useUiStore.getState().setTodoPending(!victory); reset(); }, [reset, victory]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Enter') resetGame(); };

@@ -13,6 +13,7 @@ import { DREAMS, nextDream, dreamsSeen, markDreamSeen, dreamLines } from '../../
 import { dreamView, dreamHooks } from '../../dreams';
 import { runInfo } from '../../engine/runMods';
 import { wakeInBed } from '../../engine/systems/village';
+import { announceUnlock } from '../../engine/deathFlow';
 
 const RUN = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.GAME_OVER]);
 
@@ -38,7 +39,7 @@ export const DreamOverlay: React.FC = () => {
       markDreamSeen(Math.max(dreamsSeen(), DREAMS.indexOf(d) + 1));
       const memory = d.voice === 'MEMORY';
       openCustomDialogue(memory ? 'A Memory' : 'Aelia', `${memory ? 'Your past' : 'A dream at the Font'} · ${d.title}`, memory ? '#c8d8ff' : '#fff3c4',
-        dreamLines(d, st.hero), { label: 'Wake up', accept: () => wake(() => { setOn(false); wakeInBed(); }) });
+        dreamLines(d, st.hero), { label: 'Wake up', accept: () => wake(() => { setOn(false); wakeInBed(); announceUnlock(2200); }) });
       setOn(true);
       return true;
     };

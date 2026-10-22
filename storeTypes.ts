@@ -133,6 +133,7 @@ export interface GameState {
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   npcQuests: NpcQuestSave;                          // NPC story quests: state + boss kill counters (saved with the profile)
+  unlocks: import('./questUnlocks').UnlockSave;     // death-unlocked quest beats (questUnlocks.ts; saved with the profile)
   materials: Record<Rarity, number>;
   elixirsNext: import('./elixirs').ElixirId[];        // elixirs drunk in town: their buffs start with the next run (saved with the profile)
   elixirsRun: import('./elixirs').ElixirId[];         // elixir buffs active in the current run (gone when the run ends)
@@ -207,6 +208,8 @@ export interface GameState {
   recordWave: (wave: number) => boolean;             // a wave cleared: best per class (true = new best) + one-time milestone rewards
   buyTech: (id: import('./tech').TechId) => boolean;
   setStory: (step: number, p?: number) => void;
+  /** (owner, Hades-style) after an adventure death / ending: maybe opens the next quest beat (questUnlocks.ts); returns it, or null (a quiet night) */
+  rollDeathUnlock: (force?: boolean) => import('./questUnlocks').Beat | null;
   debugSetLevel: (lv: number) => void;               // debug: set the current class level       // main story: move to `step` (progress `p`)   // Tech House: buy the next level of an upgrade
   moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
   deleteItems: (ids: string[]) => void;              // bag: permanently destroy items (multi-select delete)
