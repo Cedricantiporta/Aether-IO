@@ -13,7 +13,8 @@ import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, shortcutPoint, type ShapeKind } from './roomShape';
-import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, liquidCode, type Layout } from './roomFeatures';
+import { buildRoomNav } from './roomNav';
+import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, onBridge, liquidCode, type Layout } from './roomFeatures';
 import { isArenaRoom, buildArena } from './arenaRooms';
 import { buildCampRoom } from './campPaths';
 
@@ -149,8 +150,10 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     if (layout === 'RIVER') {
       buildRiver(def.river, rnd, colliders, !!def.lavaSea && def.river === 'LAVA');
       // nothing may block a bridge deck or its two mouths
-      for (let i = 0; i < feat.nb; i++) for (const d of [0, -(feat.hw + 2), feat.hw + 2]) {
-        riverPoint(feat.bridgeS[i], d, rp); keep.push({ x: rp[0], z: rp[1], r: Math.max(feat.bw + 0.8, 3.2) });
+      // (discs every ~2.5 m along the whole deck + both mouths: one disc per 9 m left a gap in the middle of the deck)
+      for (let i = 0; i < feat.nb; i++) {
+        const reach = hwAt(feat.bridgeS[i]) + 3.6;
+        for (let d = -reach; d <= reach + 0.01; d += 2.5) { riverPoint(feat.bridgeS[i], d, rp); keep.push({ x: rp[0], z: rp[1], r: feat.bw + 1.6 }); }
       }
     } else if (layout === 'LAKE') buildLakes(def.lake, rnd, colliders, nearKeep, type, index, def.hydras, vr?.lakeScale ?? 1);
     // (owner: hydras were hard to hit) keep a clear firing lane: nothing blocking near a hydra or between it and the room centre
@@ -314,6 +317,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   installRoom(colliders, shape.baseR + 1);
   commitCrates(crateList, rnd);
   feat.version++;
+  buildRoomNav(shape.maxR);   // walk grid + hero path / monster flow field (water rooms only)
 
   // ---- permanent environmental hazards (swamp puddles, quicksand, ember gas vents)
   if (hazard && !tower && !boss && type !== 'CAMP' && type !== 'FOUNTAIN' && type !== 'MERCHANT' && type !== 'CRYSTAL') {
@@ -326,7 +330,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       const r = hazard === 'GAS' ? rand(3, 4.2) : sandPits ? rand(4, 7) : rand(3.6, 5.5) * (coral ? 1.7 : 1);
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 5 - r);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (!insideShape(x, z, 5 + r)) continue;
+      if (!insideShape(x, z, 5 + r) || onBridge(x, z, r + 1)) continue;
       if (Math.hypot(x - sx, z - sz) < r + 6 || Math.hypot(x - stx, z - stz) < r + 5) continue;
       if (hz.some((h) => Math.hypot(x - h.x, z - h.z) < h.r + r + 1)) continue;
       if (inLiquid(x, z, r + 1)) continue;

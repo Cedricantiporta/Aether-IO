@@ -18,6 +18,7 @@ import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import type { RoomPlan } from '../types';
 import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
+import { onBridge } from '../roomFeatures';
 import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
 import { insideShape } from '../roomShape';
 import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
@@ -91,7 +92,7 @@ function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 
   for (let t = 0; t < 160; t++) {
     const a = Math.random() * Math.PI * 2, d = (rimMin + Math.random() * (rimMax - rimMin)) * R;
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (!insideShape(x, z, rad + 2.0)) continue;
+    if (!insideShape(x, z, rad + 2.0) || onBridge(x, z, rad + 1)) continue;   // (bridge decks stay clear)
     let ok = true;
     for (let k = 0; k < kx.length && ok; k++) if (Math.hypot(x - kx[k], z - kz[k]) < kr[k] + rad + pad) ok = false;
     if (!ok) continue;

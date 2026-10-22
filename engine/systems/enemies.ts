@@ -30,7 +30,7 @@ import type {
 } from '../types';
 import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
-  waveHpMult, waveDmgMult, waveSpeedMult,
+  waveHpMult, waveDmgMult, waveSpeedMult, isAquatic,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
@@ -50,6 +50,7 @@ import { towerMode, towerCrystals, dropTable } from './combat';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
+import { navActive, navTick, navFlow } from '../roomNav';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 import { TR, rollTraits, innateHinder } from '../enemyTraits';
@@ -142,7 +143,8 @@ const MINION_AGGRO = 12;
 const minTgt = new Int8Array(MAX_ENEMIES).fill(-1);
 const minRe = new Float32Array(MAX_ENEMIES);
 let anyMinion = false;
-let routed = false;   // this monster is being routed round a river / lake (no flanking)
+let routed = false;
+let navOn = false;   // roomNav flow field valid this frame   // this monster is being routed round a river / lake (no flanking)
 let curMin = -1;
 
 /** Non-narrowing state check (killEnemy may flip state inside callees). */
@@ -1424,7 +1426,17 @@ function updateEnemy(e: Enemy): void {
   }
   routed = false;
   // rivers / lakes: walkers head for a bridge (or round the shore) when liquid separates them from their target
-  if ((feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
+  // (river rooms: ground walkers sample the shared flow field when water forces a real detour; aquatic kinds / minion targets / a lost field fall back to routeAround)
+  let flowed = false;
+  if (navOn && curMin < 0 && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK' && tdist > e.radius + 3 && !isAquatic(e.kind)) {
+    const fd = navFlow(e.pos.x, e.pos.z, wayPt);
+    if (fd >= 0 && fd > tdist * 1.2 + 2.5) {
+      flowed = true; routed = true;
+      const wx = wayPt[0] - e.pos.x, wz = wayPt[1] - e.pos.z, wd = Math.sqrt(wx * wx + wz * wz) || 1;
+      tdist = fd; tdx = (wx / wd) * fd; tdz = (wz / wd) * fd;
+    }
+  }
+  if (!flowed && (feat.river || feat.nLakes > 0) && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK'
     && routeAround(e.pos.x, e.pos.z, px, pz, e.radius, wayPt)) {
     routed = true;
     const wx = wayPt[0] - e.pos.x, wz = wayPt[1] - e.pos.z, wd = Math.sqrt(wx * wx + wz * wz);
@@ -1706,6 +1718,8 @@ export function updateEnemies(dt: number): void {
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
+  navOn = navActive();
+  if (navOn) navTick(dt, px, pz);
   buildThreats();
   if (packPushT > 0) packPushT -= dt;
   anyMinion = false;

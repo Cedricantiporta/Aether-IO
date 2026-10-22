@@ -65,6 +65,12 @@ export function bridgeAt(s: number, pad = 0): number {
   for (let i = 0; i < feat.nb; i++) if (Math.abs(s - feat.bridgeS[i]) < feat.bw + pad) return i;
   return -1;
 }
+/** Is (x, z) on a bridge deck or within `pad` of it (deck length = the river width + both mouths)? Decoration must stay off these. */
+export function onBridge(x: number, z: number, pad = 0): boolean {
+  if (!feat.river || feat.nb === 0) return false;
+  const s = riverS(x, z);
+  return bridgeAt(s, pad) >= 0 && Math.abs(riverD(x, z)) < hwAt(s) + 3.6 + pad;
+}
 /** Pushes a point (loot) out of the lava rift along its normal; no-op in rooms without one. */
 export function pushOutOfRift(p: { x: number; z: number }, pad: number): void {
   if (!feat.rift) return;

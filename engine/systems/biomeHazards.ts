@@ -11,6 +11,7 @@ import type { RoomPlan } from '../types';
 import { BIOMES } from '../roomDefs';
 import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
+import { onBridge } from '../roomFeatures';
 import { insideShape } from '../roomShape';
 import { isStationary } from '../enemyDefs';
 import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect, type DamageOpts } from './combat';
@@ -68,7 +69,7 @@ function spot(rad: number, pad = 1, tries = 60): boolean {
   for (let t = 0; t < tries; t++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R * 0.9;
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (!insideShape(x, z, rad + 2.5)) continue;
+    if (!insideShape(x, z, rad + 2.5) || onBridge(x, z, rad + 1)) continue;   // (never on a bridge deck: bridges must stay usable)
     let ok = true;
     for (let k = 0; k < kx.length && ok; k++) if (Math.hypot(x - kx[k], z - kz[k]) < kr[k] + rad + pad) ok = false;
     if (!ok) continue;

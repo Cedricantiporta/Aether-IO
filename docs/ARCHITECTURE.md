@@ -78,6 +78,10 @@ pointer) every frame — the engine never touches the camera.
   `systems/biomeHazards.ts`, `systems/merchant.ts`. `world.director.wave` = depth wave so enemy / boss / loot scaling is shared by
   every mode. Render: `render/Room.tsx` (+ `Props`, `CampPath`, `RoomWater`, `biomeLook.tsx` for fog / sky / light and the
   town day-night cycle). Scene shows Room during a run and Terrain/Town only in town.
+* Room navigation (`engine/roomNav.ts`, river / lake / lava rooms only; zero cost elsewhere): `roomgen` calls `buildRoomNav(shape.maxR)` once per room, rasterising the installed colliders + outline into a 1 m
+  blocked grid (liquids are colliders with gaps at the bridge decks, so bridges are the only way over water). Hero AUTO-chase (`player.autoPathDir`) follows an A* path (`navFindPath`, string-pulled, replanned every 0.4 s) when `navClear` says the straight line to
+  its target is blocked. Ground monsters (`enemies.ts`, not bats / wraiths / bosses / stationary / aquatic) sample one shared Dijkstra flow field from the hero's cell (`navTick` ~3x per second, `navFlow`) when water forces a detour (walking distance > 1.2x straight + 2.5);
+  `roomFeatures.routeAround` remains the fallback. `roomFeatures.onBridge(x, z, pad)` keeps decoration / hazards / traps off bridge decks (roomgen keep discs, Props bushes, biomeHazards, roomTraps / roomEvents). The grid is valid only while `nav.featVer`/`obsVer` match (`navActive()`).
 * Tower family (`runInfo.mode === 'TOWER'`): Endless Tower, Daily Trial (`dailyChallenge.ts`), Endless Waves (`endlessWaves.ts`) use
   round arenas, no item drops / potions / Ankh / EXP (see HANDOFF 3.4).
 * Quests: Quest Board bounties (`quests.ts`), NPC side quests (`npcQuests.ts`), main story (`story.ts`); all share 3 active slots;

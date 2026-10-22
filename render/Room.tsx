@@ -23,7 +23,7 @@ import { world } from '../engine/world';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
-import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
+import { feat, inLiquid, onBridge, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater, LavaSea } from './RoomWater';
 import { bakeGridShore, setSeaShore } from './waterFx';
 import { Wanderer } from './Wanderer';
@@ -414,7 +414,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     for (let i = 0; i < N; i++) {
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shapeLimit(Math.cos(a), Math.sin(a)) - 2);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (hasLiquid && inLiquid(x, z, 0.4)) continue;
+      if (hasLiquid && (inLiquid(x, z, 0.4) || onBridge(x, z, 1.2))) continue;
       o.position.set(x, 0, z);
       o.rotation.set(0, rnd() * 6.28, 0);
       const s = 0.6 + rnd() * 1.3;
@@ -466,7 +466,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       for (let i = 0; i < NS * 3 && ns2 < NS; i++) {
         const a = r3() * Math.PI * 2, d = Math.sqrt(r3()) * (shapeLimit(Math.cos(a), Math.sin(a)) + 3);
         const x = Math.cos(a) * d, z = Math.sin(a) * d;
-        if (hasLiquid && inLiquid(x, z, 0.6)) continue;
+        if (hasLiquid && (inLiquid(x, z, 0.6) || onBridge(x, z, 1.2))) continue;
         o.position.set(x, 0, z); o.rotation.set(0, r3() * 6.28, 0); const sc = 0.9 + r3() * 1.3; o.scale.set(sc, sc, sc); o.updateMatrix();
         shrooms.setMatrixAt(ns2, o.matrix); cc.set(tones[Math.floor(r3() * tones.length)]); shrooms.setColorAt(ns2, cc); ns2++;
       }

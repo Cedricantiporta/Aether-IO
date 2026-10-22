@@ -17,6 +17,7 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { damagePlayer, damageEnemiesInRadius } from './combat';
 import { stationPos, startPos } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
+import { onBridge } from '../roomFeatures';
 import { OBJ_NAME, BIOMES } from '../roomDefs';
 import { isStationary } from '../enemyDefs';
 
@@ -95,7 +96,7 @@ function placeTraps(): void {
     tileX.length = tileZ.length = 0;
     for (const [ox, oz] of pat) {
       const x = cx + (swap ? oz : ox) * TRAP_TILE, z = cz + (swap ? ox : oz) * TRAP_TILE;
-      if (Math.hypot(x, z) > R * 0.82 || Math.hypot(x - sx, z - sz) < 6.5) { ok = false; break; }   // inside the arena, never under the hero's arrival
+      if (Math.hypot(x, z) > R * 0.82 || Math.hypot(x - sx, z - sz) < 6.5 || onBridge(x, z, TRAP_R + 1)) { ok = false; break; }   // inside the arena, never under the hero's arrival
       if (queryColliders(x, z, TRAP_R + 0.6, colOut).some((c) => Math.hypot(c.x - x, c.z - z) < c.r + TRAP_R)) { ok = false; break; }
       for (let k = 0; k < n; k++) if (Math.abs(e.traps[k].x - x) < TRAP_TILE * 1.6 && Math.abs(e.traps[k].z - z) < TRAP_TILE * 1.6) { ok = false; break; }   // a gap between groups
       if (!ok) break;

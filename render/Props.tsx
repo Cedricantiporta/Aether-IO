@@ -422,7 +422,7 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
     ruin: (m: InstancedMesh) => lists.ruin.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale * (0.8 + (i % 3) * 0.12), o.scale * (0.55 + (i % 3) * 0.3), o.scale * (0.8 + (i % 3) * 0.12))),
     bush: (m: InstancedMesh) => {
       const r = mulberry32(99); let c = 0;
-      for (const o of [...lists.oak, ...lists.palm]) { if (c >= 64) break; const a = r() * TAU; setInst(m, c++, o.pos.x + Math.cos(a) * (o.radius + 0.6), 0, o.pos.z + Math.sin(a) * (o.radius + 0.6), r() * 6, 0.9 + r() * 0.7); }
+      for (const o of [...lists.oak, ...lists.palm]) { if (c >= 64) break; const a = r() * TAU, bx = o.pos.x + Math.cos(a) * (o.radius + 0.6), bz = o.pos.z + Math.sin(a) * (o.radius + 0.6), sc = 0.9 + r() * 0.7; if (onBridge(bx, bz, sc * 1.6)) continue; setInst(m, c++, bx, 0, bz, r() * 6, sc); }   // (never on a bridge deck)
       m.count = c;
     },
   }), [lists]);
@@ -472,6 +472,7 @@ import { REGIONS } from '../engine/mapgen';
 import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { PointLight } from 'three';
 import { GameStatus } from '../types';
+import { onBridge } from '../engine/roomFeatures';
 import { useGameStore } from '../store';
 import { isLobbyStatus } from './CameraRig';
 

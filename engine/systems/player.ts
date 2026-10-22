@@ -23,6 +23,7 @@ import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, type Collider } from '../mapgen';
 import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
+import { navActive, navClear, navFindPath, navPath } from '../roomNav';
 import { dailyMods } from '../../dailyChallenge';
 
 /** Dashes never stack: one charge, a fixed recharge; dash levels only raise its damage. */
@@ -162,6 +163,24 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
     const lim = edgeLimit(p.pos.x, p.pos.z, 2);
     if (r2 > lim * lim && !clampToDeck(p.pos, ox, oz)) { const k = lim / Math.sqrt(r2); p.pos.x *= k; p.pos.z *= k; }
   }
+}
+
+// ---- AUTO-chase path following (engine/roomNav.ts A*): replanned every 0.4 s or when the target moved; waypoints live in navPath
+const pathDir = { x: 0, z: 0 };
+let pathN = 0, pathI = 0, pathAt = -9, pathGx = 0, pathGz = 0;
+function autoPathDir(x: number, z: number, gx: number, gz: number, dt: number): boolean {
+  void dt;
+  const now = world.time;
+  if (now - pathAt > 0.4 || now < pathAt || (gx - pathGx) ** 2 + (gz - pathGz) ** 2 > 6) {
+    pathN = navFindPath(x, z, gx, gz); pathI = 0; pathAt = now; pathGx = gx; pathGz = gz;
+  }
+  if (pathN === 0) return false;
+  while (pathI < pathN - 1 && (navPath[pathI * 2] - x) ** 2 + (navPath[pathI * 2 + 1] - z) ** 2 < 1.0) pathI++;
+  if (pathI < pathN - 1 && navClear(x, z, navPath[pathI * 2 + 2], navPath[pathI * 2 + 3])) pathI++;   // cut the corner when the next leg is already visible
+  const dx = navPath[pathI * 2] - x, dz = navPath[pathI * 2 + 1] - z, d = Math.sqrt(dx * dx + dz * dz);
+  if (d < 0.01) return false;
+  pathDir.x = dx / d; pathDir.z = dz / d;
+  return true;
 }
 
 export function updatePlayer(dt: number): void {
@@ -358,7 +377,11 @@ export function updatePlayer(dt: number): void {
     if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : chaseR);   // auto battle: hunt anywhere in the room
     if (e) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > range - 0.4 && d > 0.01) { mx = dx / d; mz = dz / d; ml = 1; autoChase = true; }   // (stops inside the firing check's range)
+      if (d > range - 0.4 && d > 0.01) {
+        mx = dx / d; mz = dz / d; ml = 1; autoChase = true;   // (stops inside the firing check's range)
+        // water / obstacles in the way (river rooms): follow an A* route (over a bridge, round the shore) instead of the straight line
+        if (navActive() && !navClear(p.pos.x, p.pos.z, e.pos.x, e.pos.z) && autoPathDir(p.pos.x, p.pos.z, e.pos.x, e.pos.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
+      }
     }
   }
 
