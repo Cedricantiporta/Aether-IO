@@ -1811,6 +1811,7 @@ function elemHit(kind: EnemyProjectileKind, dmg: number): void {
 }
 const ELEM_DMG: Partial<Record<EnemyProjectileKind, 'FIRE' | 'ICE' | 'POISON' | 'LIGHTNING'>> = { FIRE_BOLT: 'FIRE', BOLT: 'LIGHTNING', ICE_SHARD: 'ICE', POISON_ARROW: 'POISON' };
 
+const ENEMY_ARROW_SPEED = 0.8;
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
   opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number },
@@ -1821,8 +1822,9 @@ export function fireEnemyProjectile(
   p.active = true;
   p.kind = kind;
   p.pos.set(from.x, from.y > 0.5 ? from.y : 1.1, from.z);
-  p.vel.set(dir.x * speed, dir.y * speed, dir.z * speed);
-  p.life = opts?.life ?? def.life;
+  const slowArrow = kind === 'ARROW' || kind === 'POISON_ARROW' ? ENEMY_ARROW_SPEED : 1;   // (owner) enemy arrows a bit slower (same reach)
+  p.vel.set(dir.x * speed * slowArrow, dir.y * speed * slowArrow, dir.z * speed * slowArrow);
+  p.life = (opts?.life ?? def.life) / slowArrow;
   p.damage = damage;
   p.radius = opts?.radius ?? def.radius;
   p.homing = opts?.homing ?? 0;
