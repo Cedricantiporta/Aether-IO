@@ -14,6 +14,7 @@ import { NatureBatch } from './NatureBatch';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { makeWaterMaterial } from './waterFx';
+import { groundDetail } from './Room';
 import { inCaveClear } from '../engine/caveData';
 import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
@@ -100,7 +101,7 @@ function Ground({ q }: { q: QualityCfg }) {
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
       groundColor(x, z, y, c);
       col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
-      uv[k * 2] = x / 7; uv[k * 2 + 1] = z / 7;
+      uv[k * 2] = x / 8; uv[k * 2 + 1] = z / 8;   // (the Greenwood run rooms' painted lawn texture, period 8 m)
       // grass density + tint
       const r = Math.hypot(x, z), e = edgeR(Math.atan2(z, x));
       const pd = Math.hypot(x - POND.x, z - POND.z);
@@ -120,7 +121,8 @@ function Ground({ q }: { q: QualityCfg }) {
     g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
     g.setIndex(new BufferAttribute(idx, 1));
     g.computeVertexNormals();
-    const m = new MeshStandardMaterial({ vertexColors: true, map: detailTexture(), roughness: 0.95, metalness: 0 });
+    const [gTex, gGlow] = groundDetail('GRASS');
+    const m = new MeshStandardMaterial({ vertexColors: true, map: gTex, roughness: 0.96, metalness: 0, emissiveMap: gGlow, emissive: new Color(gGlow ? '#ffffff' : '#000000'), emissiveIntensity: gGlow ? 0.5 : 0 });
     const tex = new DataTexture(bytes, n, n, RGBAFormat);
     tex.colorSpace = SRGBColorSpace; tex.magFilter = LinearFilter; tex.minFilter = LinearFilter; tex.needsUpdate = true;
     return { geo: g, mat: m, mask: tex };

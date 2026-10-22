@@ -44,7 +44,7 @@ const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(
 
 /** Tree piece for a TOWN_TREES entry (kind 0 round, 1 palm, 2 / 3 pines), kit v3: blossom trees in the park, willows by the river and the lake, fruit trees by the farm, a natural oak / birch mix elsewhere. */
 export function treeFor(kind: number, h: number, x = 0, z = 0): NKPiece {
-  if (kind === 1) return 'palm_v3';
+  if (kind === 1) return x < -44 ? 'palm_v3' : h < 0.5 ? 'tree_oak_small' : 'tree_birch';   // (palms only on the beach)
   if (kind === 2) return 'tree_pine_layered_a';
   if (kind === 3) return 'tree_pine_layered_b';
   if (x > -31 && x < -13 && z > 11 && z < 23) return 'tree_blossom';                                   // the park beside the fountain
@@ -74,7 +74,7 @@ export function townPlaces(): Sets {
   for (const [x, z] of WELLS) put(S, 'well', P(x, groundAt(x, z), z, 0, 1));
   for (const [x, z] of SIGNPOSTS) put(S, 'signpost', P(x, groundAt(x, z), z, 0, 0.9));
   put(S, 'signpost', P(ENTRY_SIGN.x, 0, ENTRY_SIGN.z, 0, 0.9)); put(S, 'signpost', P(MINE_CAMP.sign.x, groundAt(MINE_CAMP.sign.x, MINE_CAMP.sign.z), MINE_CAMP.sign.z, 0, 0.9));
-  for (const [x1, z1, x2, z2] of STEP_PATHS) {
+  for (const [x1, z1, x2, z2] of STEP_PATHS.slice(0, 0)) {   // (owner 2026-10-22: no stepping-stone discs)
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 1.3));
     for (let i = 0; i <= n; i++) { const x = x1 + ((x2 - x1) * i) / n, z = z1 + ((z2 - z1) * i) / n; put(S, 'stone_path_tile', P(x + (hash2(x, z) - 0.5) * 0.25, groundAt(x, z), z + (hash2(x, z, 1) - 0.5) * 0.25, hash2(x, z, 2) * TAU, 0.72 + hash2(x, z, 3) * 0.12)); }
   }
@@ -170,7 +170,7 @@ function dressing(q: QualityCfg, S: Sets): void {
     }
     for (let i = 0; i < pts.length / 4; i++) {
       const x = pts[i * 4], z = pts[i * 4 + 1], s0 = pts[i * 4 + 2] * 0.62;
-      add(S, hash2(x, z) < 0.2 ? 'bush_flower' : 'bush_cluster', [{ x, y: groundY(x, z), z, ry: pts[i * 4 + 3], sx: s0, sy: s0 * (0.85 + hash2(x, z, 1) * 0.3), sz: s0 }]);
+      add(S, 'bush_cluster', [{ x, y: groundY(x, z), z, ry: pts[i * 4 + 3], sx: s0, sy: s0 * (0.85 + hash2(x, z, 1) * 0.3), sz: s0 }]);
     }
   }
   // ---- flower fields (flower_patch rings), tufts toward the forest edge, mushrooms
@@ -207,7 +207,7 @@ function dressing(q: QualityCfg, S: Sets): void {
       if (!ok(x, z) || lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;
       const s0 = 0.9 + rnd() * 0.6; M.push({ x, y: groundY(x, z), z, ry: rnd() * TAU, sx: s0, sy: s0, sz: s0 }); k++;
     }
-    add(S, 'flower_patch', Pt); add(S, 'grass_tuft', T); add(S, 'mushroom_cluster', M);
+    void Pt; void T; void M;   // (owner 2026-10-22: no flower mounds / grass tufts / mushrooms on the lawns)
   }
   // ---- rim boulders + boundary stones (rock_round_a / b) and the forest ring (5 species; the town's own trees add round_b + palm_b)
   {
@@ -229,7 +229,7 @@ function dressing(q: QualityCfg, S: Sets): void {
     for (let i = 0; i < total; i++) {
       const a = fr() * TAU, e = edgeR(a), d = Math.pow(fr(), 1.5) * 58 + 3, r = e + d, x = Math.cos(a) * r, z = Math.sin(a) * r, t = fr();
       if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // no forest in the lake / on the cave mound
-      const kind = d < 18 ? (t < 0.38 ? 'oak' : t < 0.52 ? 'palm' : t < 0.76 ? 'pineA' : 'pineB') : (t < 0.1 ? 'oak' : t < 0.55 ? 'pineA' : 'pineB');
+      const kind: string = d < 18 ? (t < 0.3 ? 'oak' : t < 0.65 ? 'pineA' : 'pineB') : (t < 0.1 ? 'oak' : t < 0.55 ? 'pineA' : 'pineB');
       const f = fr(), name = kind === 'oak' ? (f < 0.3 ? 'tree_oak_big' : f < 0.65 ? 'tree_oak_small' : 'tree_birch') : kind === 'palm' ? 'palm_v3' : kind === 'pineA' ? 'tree_pine_layered_a' : 'tree_pine_layered_b';
       const sc = (kind === 'oak' ? 0.24 : kind === 'palm' ? 0.26 : 0.2) * (kind === 'oak' ? 5 : kind === 'palm' ? 5 : 6) * (0.8 + fr() * 0.7) * (1 + d * 0.004) * 0.8;
       add(S, name, [{ x, y: groundY(x, z) - 0.2, z, ry: fr() * 6.28, sx: sc, sy: sc * (0.9 + fr() * 0.25), sz: sc }]);

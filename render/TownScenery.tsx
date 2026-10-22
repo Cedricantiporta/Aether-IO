@@ -18,7 +18,7 @@ import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
-  PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
+  PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, GATEWAY, GATEWAYS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
@@ -174,16 +174,13 @@ function buildDirtPaths(): BufferGeometry {
     const [x1, z1, x2, z2] = seg;
     const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), yaw = -Math.atan2(dz, dx);
     const nx = -dz / len, nz = dx / len;   // sideways
-    const w = Math.max(1.3, rd.w * 0.6), n = Math.max(2, Math.round(len / 1.1));
-    let drift = 0;
+    // (owner 2026-10-22: the Greenwood trail look) one even width, smooth rounded edges: a dense run of round discs, a darker packed rim under a lighter trodden centre. No blotches, no loose discs.
+    const w = Math.max(1.8, rd.w * 0.8), n = Math.max(2, Math.round(len / 0.45));
     for (let i = 0; i <= n; i++) {
-      const t = i / n; drift = drift * 0.7 + (rnd() - 0.5) * 0.35;   // a gently meandering centre line
-      const mx = x1 + dx * t + nx * drift, mz = z1 + dz * t + nz * drift;
-      const rw = (w / 2) * (0.85 + rnd() * 0.35), ry = yaw + (rnd() - 0.5) * 0.5;
-      r.cyl(rw + 0.45, rw + 0.45, 0.02, 9, [mx, 0.022, mz], '#86964c', [0, ry, 0], [1.45, 1, 1]);   // worn grass rim
-      r.cyl(rw, rw, 0.02, 9, [mx, 0.034, mz], '#8f7752', [0, ry + 0.4, 0], [1.4, 1, 1]);             // dirt
-      if (rnd() < 0.3) { const o = (rnd() - 0.5) * rw; r.cyl(rw * 0.35, rw * 0.35, 0.02, 7, [mx + nx * o, 0.046, mz + nz * o], '#a08a63', [0, rnd() * 3, 0], [1.5, 1, 1]); }   // paler sandy spots
-      if (rnd() < 0.18) { const side = rnd() < 0.5 ? -1 : 1, o = side * (rw + 0.6 + rnd() * 0.5); r.cyl(0.3 + rnd() * 0.25, 0.3, 0.02, 7, [mx + nx * o, 0.034, mz + nz * o], '#8f7752', [0, rnd() * 3, 0], [1.3, 1, 1]); }   // stray worn patches beside it
+      const t = i / n, mx = x1 + dx * t, mz = z1 + dz * t, gy = groundY(mx, mz);
+      r.cyl(w / 2 + 0.22, w / 2 + 0.22, 0.02, 14, [mx, gy + 0.03, mz], '#a98d5f');   // packed edge
+      r.cyl(w / 2, w / 2, 0.02, 14, [mx, gy + 0.045, mz], '#bd9e6e');                  // trodden path
+      r.cyl(w / 2 - 0.5, w / 2 - 0.5, 0.02, 14, [mx, gy + 0.06, mz], '#c8ab7b');       // lighter centre
     }
   }
   return r.build();
@@ -211,15 +208,15 @@ function buildRoads(): BufferGeometry {
   }
   // plaza (owner ref 2026-10-21): a cream disc paved in concentric rings of soft slabs round the portal lawn, an orange ring inlay between the rings, a terracotta kerb on the rim
   const px = PLAZA.x, pz = PLAZA.z, rnd = mulberry32(61), CREAM = ['#fffaf0', '#fbf3e0', '#fdf6e6', '#f5ebd2', '#f9f0da'];
-  r.cyl(PLAZA.r, PLAZA.r, 0.08, 48, [px, 0.05, pz], SURF);
-  r.cyl(5.4, 5.4, 0.1, 40, [px, 0.06, pz], '#d8cdb4');                                  // (grout colour under the rings)
+  r.cyl(PLAZA.r, PLAZA.r, 0.08, 72, [px, 0.05, pz], SURF);
+  r.cyl(PLAZA.r - 0.4, PLAZA.r - 0.4, 0.1, 64, [px, 0.06, pz], '#d8cdb4');               // (grout colour under the rings)
   const ring = (r0: number, r1: number, n: number, gap: number) => {
     const rm = (r0 + r1) / 2, arc = (TAU * rm) / n - gap;
     for (let i = 0; i < n; i++) { const a = (i / n) * TAU + (r0 * 7), k = rnd() < 0.18 ? 3 : Math.floor(rnd() * 3); r.box(arc, 0.02, r1 - r0 - gap, [px + Math.cos(a) * rm, 0.112, pz + Math.sin(a) * rm], CREAM[k], [0, -a + Math.PI / 2, 0], [1, 1]); }
   };
-  ring(3.8, 4.55, 24, 0.07); ring(4.6, 5.3, 34, 0.07);
-  r.torus(PLAZA.r - 0.32, 0.075, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 64);   // orange ring inlay
-  r.torus(3.74, 0.06, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 48);              // (and one hugging the lawn kerb)
+  for (let r0 = 2.4; r0 < PLAZA.r - 0.95; r0 += 0.78) { if (Math.abs(r0 - 6.0) < 0.4) continue; ring(r0, r0 + 0.72, Math.round((TAU * (r0 + 0.36)) / 1.05), 0.07); }   // (concentric slab rings, a gap for the inner orange inlay)
+  r.torus(PLAZA.r - 0.32, 0.075, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 96);   // orange ring inlay on the rim
+  r.torus(6.0, 0.06, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 72);               // (and a thinner one half way in)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
   return planarUv(r.build(), 6);
@@ -261,7 +258,7 @@ function buildKerbs(): BufferGeometry {
     for (let i = 0; i < n; i++) { const a = ((i + 0.5) / n) * TAU, kx = cx + Math.cos(a) * R, kz = cz + Math.sin(a) * R; if (skip?.(kx, kz)) continue; piece(arc + 0.02, kx, kz, -a + Math.PI / 2, y); }
   };
   const gap = (x: number, z: number) => paved.some((p) => inside(p, x, z, 0.1));   // (leave the street mouths open)
-  ring(PLAZA.x, PLAZA.z, PLAZA.r - 0.1, 60, 0, gap);
+  ring(PLAZA.x, PLAZA.z, PLAZA.r - 0.1, Math.round((TAU * (PLAZA.r - 0.1)) / 0.95), 0, gap);
   ring(GATE.x, GATE.z, 6.4, 30, 0, gap);
   return r.build();
 }
@@ -516,12 +513,9 @@ function addGraveyard(b: GB, g: GB, rnd: () => number): void {
 }
 
 // ------------------------------------------------------------------ plaza ---
-/** The plaza centrepiece (owner 2026-10-21): a kerbed round lawn the Adventure Portal stands on (the portal + flower_bed_round arc are kit v3, engine/townFill) and the two little round
- *  plinths of the guardian statue_heroes (engine/townFill) beside its door. */
+/** The plaza (owner 2026-10-22: bare open paving, the floor is in buildGround): just the two little round plinths of the guardian statue_heroes (engine/townFill) beside the portal. */
 function addPlaza(b: GB, g: GB): void {
   const D = PLAZA_DECOR, x = PLAZA.x, z = PLAZA.z;
-  b.torus(D.kerbR - 0.12, 0.2, [x, 0.12, z], '#e07f42', [Math.PI / 2, 0, 0], 1, 56);                    // rounded kerb stone
-  b.cyl(D.lawnR, D.lawnR, D.lawnY, 48, [x, D.lawnY / 2, z], '#74ad4c', [0, 0, 0], 1, [0.96, 1.04]);     // lawn
   for (const m of PLAZA_STATUES) {                                                                      // the guardians' little round plinths
     b.cyl(D.plinthR + 0.12, D.plinthR + 0.16, 0.12, 24, [m.x, D.lawnY + 0.04, m.z], '#bdb5a3');
     b.cyl(D.plinthR - 0.1, D.plinthR, D.statueY - D.lawnY - 0.1, 24, [m.x, D.lawnY + 0.1 + (D.statueY - D.lawnY - 0.1) / 2, m.z], '#d6cfbd');
@@ -596,6 +590,23 @@ function buildGateArch(b: GB, g: GB): void {
   for (const dz of [-1, 1]) { b.box(2.4, 2.4, 0.1, [x, 6.3, z + dz * (depth / 2 + 0.3)], '#2f58b0'); g.box(2.0, 0.07, 0.04, [x, 7.4, z + dz * (depth / 2 + 0.37)], '#ffd070'); g.box(2.0, 0.07, 0.04, [x, 5.3, z + dz * (depth / 2 + 0.37)], '#ffd070'); }
 }
 
+/** A free-standing stone gateway on an outskirts road (local frame: passage along z, origin = road centre): a short wall block with an arched opening, a lighter arch ring, keystone, battlements and a banner each side. */
+function buildWayGate(b: GB, g: GB, accent: string): void {
+  const hp = GATEWAY.hp, depth = 1.6, H = 4.4, spring = 2.3, ry = 1.5, W = GATEWAY.px + GATEWAY.pr + 0.1;
+  const outer = new Shape(); outer.moveTo(-W, 0); outer.lineTo(W, 0); outer.lineTo(W, H); outer.lineTo(-W, H); outer.closePath();
+  const hole = new Path(); hole.moveTo(-hp, 0); hole.lineTo(-hp, spring); hole.absellipse(0, spring, hp, ry, Math.PI, 0, true); hole.lineTo(hp, 0); hole.closePath(); outer.holes.push(hole);
+  // (the passage runs along z, so the block is extruded across x: rotate the shape's x axis onto the road's side axis)
+  b.add(new ExtrudeGeometry(outer, { depth, bevelEnabled: false, curveSegments: 14 }), [0, 0, -depth / 2], [0, 0, 0], 1, '#cbc4b2', [0.92, 1.05]);
+  const ringO = new Shape(), ro = hp + 0.4;
+  ringO.moveTo(-ro, 0); ringO.lineTo(-ro, spring); ringO.absellipse(0, spring, ro, ry + 0.4, Math.PI, 0, true); ringO.lineTo(ro, 0); ringO.lineTo(hp, 0); ringO.lineTo(hp, spring); ringO.absellipse(0, spring, hp, ry, 0, Math.PI, false); ringO.lineTo(-hp, 0); ringO.closePath();
+  b.add(new ExtrudeGeometry(ringO, { depth: depth + 0.24, bevelEnabled: false, curveSegments: 14 }), [0, 0, -depth / 2 - 0.12], [0, 0, 0], 1, '#ece4d0', [1, 1]);
+  b.box(0.5, 0.4, depth + 0.4, [0, spring + ry + 0.45, 0], accent);   // keystone
+  b.box(2 * W + 0.3, 0.3, depth + 0.4, [0, H + 0.15, 0], '#a79f8e');
+  for (const sx of [-1, 1]) for (let i = 0; i < 2; i++) b.box(0.8, 0.6, depth * 0.8, [sx * (hp + 0.55 + i * 1.05), H + 0.6, 0], '#b9b2a2');
+  for (const sx of [-1, 1]) for (const dz of [-1, 1]) { b.box(0.06, 1.9, 0.06, [sx * (hp + 0.5), 3.0, dz * (depth / 2 + 0.2)], '#6a5238'); b.box(0.04, 1.5, 0.9, [sx * (hp + 0.5) + dz * 0.0, 3.0, dz * (depth / 2 + 0.2)], accent); }
+  g.box(0.2, 0.3, 0.2, [0, spring + ry - 0.35, 0], '#ffd070');
+}
+
 function buildTown() {
   const chunks = new Map<string, Chunk>();
   const at = (x: number, z: number): Chunk => {
@@ -622,6 +633,7 @@ function buildTown() {
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
   { const c = at(PLAZA.x, PLAZA.z); addPlaza(c.b, c.g); }
   { const c = at(GATE.x, GATE.z); buildGateArch(c.b, c.g); }
+  for (const w of GATEWAYS) { const wb = new GB([1, 1]), wg = new GB([1, 1]); buildWayGate(wb, wg, w.name === 'beach' ? '#2f8fd0' : '#d08a2f'); put(w.x, w.z, w.rot, { b: wb.build(), g: wg.build() }); }
   for (const L of LOTS) lifted(L.x, L.z, (b, g) => addLot(b, g, L));
   lifted(-38, -30, (b, g) => addGraveyard(b, g, mulberry32(777)));
   // (benches: nature_kit_v1 park_bench at every TOWN_SEATS spot, render/NatureScenery.tsx)

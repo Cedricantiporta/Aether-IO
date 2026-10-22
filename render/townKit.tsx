@@ -118,11 +118,10 @@ function placements(): Record<string, Place[]> {
   return P;
 }
 
-/** v2 banner poles: castle steps, the gate, the plaza's north rim, the avenue mouth. [x, z, scale] (fronts face the camera). */
+/** v2 banner poles: castle steps, the gate, the avenue mouth. [x, z, scale] (fronts face the camera). */
 const BANNERS: [number, number, number][] = [
   [-5.4, -19.6, 0.8], [5.4, -19.6, 0.8],
   [-8.2, 41.6, 0.9], [8.2, 41.6, 0.9],
-  [-4.9, -3.2, 0.7], [4.9, -3.2, 0.7],
   [-3.9, 11.6, 0.7], [3.9, 11.6, 0.7],
 ];
 

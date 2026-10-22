@@ -7,7 +7,7 @@ Camera pitch ~50 deg and it rotates, so buildings may face any yaw (front = +z t
 | District | Where | What |
 | --- | --- | --- |
 | Castle | terrace x +-11, z -27.5..-19, stairs to z -14.6 | keep, two guards, banners, beds either side of the stairs |
-| Plaza | (0, 2), r 5.8 | the **Adventure Portal** (kit v3 x0.7, front south, front spot (0, 4.6)) on a kerbed round lawn, two guardian statues + flower beds, planters, two benches (north rim), Mira / Tobin; the six main shops ring it |
+| Plaza | (0, 2), r 9.0 | big open paved disc: the **Adventure Portal** (kit v3 x0.9, centre (0, -0.6), front south, front spot (0, 3.8)), two guardian statues beside it ((+-5.2, 3.4)), four double lamps on the rim diagonals ((+-5.7, -3.7 / 7.7)), two benches (x +-7.6, z 2), Mira / Tobin. No lawn, flower beds, planters or banners. Four shops 2x2 face each other across it (west / east, ~3 m off the rim) |
 | Market street | the avenue x 0, z 8..38 (5.2 m) | four stalls a side (x +-5.8), lamps; lanes cross at z 23.2 |
 | North street | z -6, x -40..40 (3.4 m) | notice board, Trainer yard (-16, -17); Armory / Supplies stand north of it (z -15.4); the old road stub to the quest board is gone |
 | Residential | terraces of plain houses straight on the streets (see Houses below); lane z 23.2 each side of the avenue (3 m) |
@@ -18,12 +18,13 @@ Camera pitch ~50 deg and it rotates, so buildings may face any yaw (front = +z t
 | Rises | West Rise (h 1.2), East Rise (h 0.8), x +-29..43.7, z 13..36.7 | cottages, the Fortune Teller's corner (W), the Tech House (E); stairs at z 23.2 and z 32.4 |
 | Garden strip | z 33..36 along the south wall | walkway from the rises to the avenue; forge yard entrance at x 17..21 |
 
-### The seven shops: a ring round the plaza (engine/townData `SHOP_LOOK`, constants `SHOP_POSITIONS`; all face the plaza centre)
-Counter + keeper = town_kit_v2 `shop_stall_house`; dressing = kit v3 pieces in shop-local coordinates (any yaw). Each shop has a short path (`SHOP_SPURS`) from its front point to the plaza rim (Tech: to the south street).
-- Armory (-8, -15.4) rot 0.3 and Potions (8, -15.4) rot -0.3: north of the north street. Armory: shield_rack, armor_stand, banner_pole_red. Potions: herb_garden_box, potion_shelf_cart, cauldron.
-- Fortune Teller (-12.4, 1.8) rot pi/2 and Blacksmith (12.4, 1.8) rot -pi/2: the flanks. Fortune: fortune_tent behind, hanging lanterns. Smith: forge_furnace, anvil_big, grindstone, weapon_rack, chimney smoke.
-- Pets (-12.6, 19.8) rot 2.75 and Warehouse (12.6, 19.8) rot -2.75: south of the south street. Pets: doghouse + pet_pen_fence, bird_cage. Warehouse: crate_stack_big, cart_hay.
-- Tech House (22, 2) rot -0.35: east band, tech_tower_small.
+### The seven shops: a 2x2 pair either side of the plaza (engine/townData `SHOP_LOOK`, constants `SHOP_POSITIONS`)
+Counter + keeper = town_kit_v2 `shop_stall_house`; dressing = kit v3 pieces in shop-local coordinates (any yaw). Each plaza shop has a short straight path (`SHOP_SPURS`, `spurPlaza`) from its front point to the plaza rim. Dressing of the four plaza shops stays inside local x +-3.1 (the pairs are 7 m apart) and goes BEHIND the shop (local z < 0 = away from the plaza) because the gap to the street kerbs is ~0.
+- West pair, facing east (rot pi/2), counters x -16.4: Fortune Teller (-16.4, -1.5) north, Pets (-16.4, 5.5) south. East pair, facing west (rot -pi/2), counters x 16.4: Blacksmith (16.4, -1.5) north, Warehouse (16.4, 5.5) south. Fronts (4.3 m ahead) at x +-12.1, so the paths are ~3 m long; the pairs span z -4.5..8.5 (between the street kerbs).
+- Fortune: fortune_tent behind, hanging lanterns. Pets: doghouse in a pet_pen_fence pen behind, bird_cage. Smith: forge_furnace + weapon_rack behind, anvil_big, grindstone, chimney smoke. Warehouse: crate_stack_big + cart_hay behind.
+- Armory (-12.6, 19.8) rot pi (the old Pets spot south of the south street, faces north, path to the street z 10); Tech House (24.8, 2) rot 0; Potions / Supplies (32, 2.6) rot 0: both face the south street.
+- The old Armory (-21.5, 2.6) and Warehouse (12.6, 19.8) spots are free again (the Warehouse one is open grass).
+Moved with it: the south-street lamps at x +-18.25 and +-9.4 and the plaza planters / north banners are gone; Lysa's patrol is z 10.4, x -15..-26; the east cat roams (10.4, 2.1); the plaza floor is rebuilt for r 9 (concentric slab rings, two orange inlays at r 6 and r 8.7, kerb ring of ~60 pieces; TownScenery buildGround / buildKerbs).
 Cottages fill the old shop spots. Keep every prop out of the corridors: north street z -7.5..-4.5, south street z 8.5..11.5, castle path / avenue |x| < 1.4 (check: collider scan in the chk scripts).
 Outskirts: Brewer (-10.2, 106.2), Fishmonger (-52.5, 24), Mining Supplies (61.5, 3) unchanged.
 
@@ -57,6 +58,11 @@ hedges, rocks and props (townFill.ts groves). Walks from the spawn (in front of 
 
 ## Floors (owner ref 2026-10-21: cream flagstones + terracotta kerbs + green lawns)
 Town paving (`render/TownScenery.tsx`): `flagTexture()` (tileable Voronoi canvas: big soft cream slabs, thin warm-grey grout, a few darker) shared by the yard paving and the street strips (world-planar UVs, tile 6 m, so they line up). `buildKerbs()` = ONE merged mesh of terracotta brick kerb along both edges of every paved street (skips street crossings, stairs, plaza/gate mouths) plus rings round the plaza and gate forecourt; grass-patch kerbs and the portal-lawn kerb are terracotta too. Plaza: concentric slab rings (boxes) round the portal lawn + an orange ring inlay; no star (portal covers the centre). Visual only; ROADS data, colliders and the minimap are unchanged. Cost: 1 extra draw call.
+
+## Outskirts (owner 2026-10-22: "so cluttered", Greenwood look)
+Outside the walls the look follows the Greenwood run rooms. Ground: `render/Terrain.tsx` uses `groundDetail('GRASS')` from `render/Room.tsx` (calm painted lawn, soft clover speckle in the texture, period 8 m). Paths: `buildDirtPaths` (`render/TownScenery.tsx`) = a dense run of round discs along every outskirts road, one even width (road w x 0.8, min 1.8), darker packed rim + tan trodden path + lighter centre; no blotches, no loose discs. Removed: all flower mounds (`deco()` in `engine/townFill.ts` refuses flower / tuft / mushroom pieces; the `natureLayout` scatter no longer adds them; `bush_flower` is now `bush_cluster`), the `stone_path_tile` discs (STEP_PATHS loop disabled), palms off the beach (`treeFor` + forest ring). Groves outside the walls and the river-bank props are thinned (about 40% / 22%). Trees: kit v3 oak / birch / fruit / blossom / layered pines are replaced in `render/natureKit.tsx` (`CUTE_TREES`, `cuteTree`) by procedural soft shapes (ball, tall capsule, rounded cube, 3-tier cone) on a trunk, same bbox so colliders and V3_K are unchanged.
+Gateways: the beach road and the mines road never cross the town wall (they start in the south gate meadow), so `GATEWAYS` (`engine/townData.ts`) are free-standing stone arches ON those roads (beach x -27, mines z 47; colliders = two pillar circles, opening 4 m); built by `buildWayGate`. The beach barricade (x -37) lies beyond the arch, the cave gate (z 9.5) far beyond.
+Lawn strips: a generator at the end of `engine/townData.ts` pushes flat rounded-rectangle lawns beside houses inside the walls into `GRASS_PATCHES` wherever the spot is free (terracotta kerb like the park); visual only.
 
 ## Story gates (2026-10-22)
 Four outskirts corners are blocked until the main story reaches a step (table `TOWN_GATES` in `engine/townGates.ts`; the state is derived from `story.step`, nothing saved). Coordinates are world x / z.

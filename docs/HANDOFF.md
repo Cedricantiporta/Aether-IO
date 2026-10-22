@@ -73,12 +73,10 @@ Death returns to town, loot kept (GameOver screen -> "To do in town" popup on ar
 town (and closes the open panel first).
 
 ### 3.2 Town hub (`status MENU`; `engine/townData.ts`, `engine/systems/village.ts`, `render/Town*.tsx`)
-- **Kingdom v5 (2026-10-21): shop ring + portal plaza** (on top of v4; any building yaw is fine now, the camera rotates). The six main shops RING THE PLAZA (0, 2) and face it
-  (`SHOP_POSITIONS` rot = any yaw; Armory (-8, -15.4) / Supplies (8, -15.4) north, Fortune (-12.4, 1.8) / Blacksmith (12.4, 1.8) flanks, Pets (-12.6, 19.8) / Warehouse (12.6, 19.8) south,
-  Tech House (22, 2) on the east band); the gaps between them keep the north street (z -6), south street (z 10), castle path and avenue open (the shop dressing in `SHOP_LOOK` is in
-  shop-local coordinates, `shopLocal` / `shopFront` turn it by the yaw; keep dressing out of the street corridors, see TOWN_PLAN). Each shop has its kit v3 signature props, potted
-  plants, an awning. **The Adventure Portal is the plaza's centrepiece** (`PORTAL` {0, 0.9}, `front` {0, 4.6}, kit v3 `adventure_portal` x `PORTAL_S` 0.7, front south) on a kerbed round
-  lawn with two small `statue_hero` guardians (`PLAZA_STATUES`) and flower beds; hero arrival / 'back from a run' spots are in front of it (engine/game.ts), solid = a row of circles in
+- **Kingdom v5 (2026-10-21): shop ring + portal plaza** (on top of v4; any building yaw is fine now, the camera rotates). Four shops stand 2x2 facing each other across the plaza (0, 2, r 9): Fortune (-16.4, -1.5) + Pets (-16.4, 5.5) west (rot pi/2), Blacksmith (16.4, -1.5) + Warehouse (16.4, 5.5) east (rot -pi/2); Armory (-12.6, 19.8) south of the south street, Tech House (24.8, 2) and Potions (32, 2.6) on the east band (`SHOP_POSITIONS`, rot = any yaw, keep every prop out of the street corridors and keep plaza-shop dressing within local x +-3.1 and behind the counter: `SHOP_LOOK` is in
+  shop-local coordinates, `shopLocal` / `shopFront` turn it by the yaw; see TOWN_PLAN). Each shop has its kit v3 signature props, potted
+  plants, an awning. **The Adventure Portal is the plaza's centrepiece** (`PORTAL` {0, -0.6}, `front` {0, 3.8}, kit v3 `adventure_portal` x `PORTAL_S` 0.9, front south) on bare paving
+  with two small `statue_hero` guardians (`PLAZA_STATUES`), four rim lamps and two benches (nothing else on the plaza: owner 2026-10-22); hero arrival / 'back from a run' spots are in front of it (engine/game.ts), solid = a row of circles in
   TOWN_COLLIDERS. **The Endless Tower stands in the old portal clearing** (`TOWER` {5, 155.4}, `ry` PI, door faces north onto the forest road, `door` / `out` spots; `TOWER_KNOLL` follows);
   the old tower site and its long path are gone, the Brewer's hut keeps a short lane (`TOWER_PATH_Z`). The gate arch is a real open passage (`buildGateArch`, `GATE_TOWER`). **Fewer cottages, each on a landscaped lot** (owner 2026-10-21): 15 houses inside the walls
   (was 31). `LOTS` (engine/townData, derived from `HOUSES`; lot frame = the house's, turned by `rot`) give each one a rounded-rectangle lawn (`LOT_PATCHES`, the paving has a hole + stone kerb),

@@ -17,7 +17,7 @@
 // ============================================================================
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
-  PORTAL, TOWER, TOWER_KNOLL, NESTS, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, STATUE, PLAZA_STATUES, PORTAL_S,
+  PORTAL, TOWER, TOWER_KNOLL, NESTS, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
 } from './townData';
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
@@ -33,7 +33,7 @@ export const PIECES = {
   fruit: ['tree_fruit'],
   blossom: ['tree_blossom'],
   willow: ['tree_willow'],
-  bush: ['bush_cluster', 'bush_cluster', 'bush_flower'],   // ([2] = the flowering one: one house corner in three)
+  bush: ['bush_cluster', 'bush_cluster', 'bush_cluster'],   // ([2] = the flowering one: one house corner in three)
   hedge: 'hedge_block',
   rock: ['rock_round_a', 'rock_cluster_small', 'rock_round_b', 'rock_cluster_small'],
   flowers: 'flower_patch',
@@ -164,6 +164,7 @@ function prop(piece: string, x: number, z: number, ry: number, s: number, sy?: n
 }
 /** Walk-through decoration (flowers, tufts): only needs the ground to be free of roads / doors / water. */
 function deco(piece: string, x: number, z: number, ry: number, s: number, sy?: number): boolean {
+  if (piece === PIECES.flowers || piece === PIECES.tuft || piece === PIECES.mushrooms) return false;   // (owner 2026-10-22: no loose flower mounds, grass tufts or mushrooms anywhere)
   if (blocked(x, z, 0.1, 2.6)) return false;
   put(piece, x, z, ry, s, sy); return true;
 }
@@ -252,15 +253,14 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
   for (const c of cc) addSolid(c[0], c[1], c[2]);
   return true;
 }
-// ---- the plaza (owner 2026-10-21): the Adventure Portal (kit v3, scale PORTAL_S, front south) stands on the kerbed round lawn in the middle of the shop ring, a flower_bed_round arc
-//      across its front (a gap at the door); two guardian statue_hero (shrunk, little plinths) flank its door (TownScenery addPlaza draws lawn, kerb and plinth)
+// ---- the plaza (owner 2026-10-22: bigger and open): the Adventure Portal (kit v3, scale PORTAL_S, front south) stands on the bare paved disc, two guardian statue_hero (shrunk, little plinths) flank
+//      it, four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
 {
-  const D = PLAZA_DECOR, cx = STATUE.x, cz = STATUE.z, k = PORTAL_S;
+  const D = PLAZA_DECOR, k = PORTAL_S;
   put('adventure_portal', PORTAL.x, PORTAL.z, 0, k, k, k, D.lawnY - 0.02);
-  for (const a of [0.95, 1.1, 2.04, 2.19]) put('flower_bed_round', cx + Math.cos(a) * D.bedR, cz + Math.sin(a) * D.bedR, a, D.bedS, D.bedS, D.bedS, D.lawnY);
   for (const m of PLAZA_STATUES) put('statue_hero', m.x, m.z, 0, m.s, m.s, m.s, D.statueY);
-  claim(cx, cz, D.kerbR + 0.3);
-  decor('lamp_post_double', -5.2, 6.4, 0, 1, { solid: 'disc', r: 0.35, force: true }); decor('lamp_post_double', 5.2, 6.4, 0, 1, { solid: 'disc', r: 0.35, force: true });
+  claim(PLAZA.x, PLAZA.z, PLAZA.r + 0.3);
+  for (const sx of [-1, 1]) for (const dz of [-1, 1]) decor('lamp_post_double', PLAZA.x + sx * 5.7, PLAZA.z + dz * 5.7, 0, 1, { solid: 'disc', r: 0.35, force: true });
   decor('banner_pole', -5.4, -16.6, 0, 1, { solid: 'disc', r: 0.35 }); decor('banner_pole', 5.4, -16.6, 0, 1, { solid: 'disc', r: 0.35 });
 }
 // ---- the castle terrace's great flight: stairs_stone stretched to the lift ramp (TERRACE: z1 -> stairZ over h; the code-built steps in TownScenery addTerrace are gone)
@@ -324,10 +324,10 @@ grove(Z(0, -38.6, 42, 0.9), 10, [PINES(1, [0.6, 0.8])], 73, 0.6, 1.2);
 
 // ================================================================ OUTSIDE: THE GATE MEADOW (z 38..60)
 // west half: a thick grove of oaks and pines (the woodcutters' wood) with the beach path + the carts' lane left open; flowers on the clearings
-grove(Z(-30, 49.5, 16, 9), 46, [OAKS(5), PINES(2), BUSHES(4, [0.6, 0.95])], 101, 0.7);
-grove(Z(-6, 56, 8, 4), 12, [BUSHES(3), OAKS(1, [0.8, 1])], 102, 0.8);
+grove(Z(-30, 49.5, 16, 9), 18, [OAKS(5), PINES(2), BUSHES(4, [0.6, 0.95])], 101, 0.7);
+grove(Z(-6, 56, 8, 4), 5, [BUSHES(3), OAKS(1, [0.8, 1])], 102, 0.8);
 // the gate's flanks and the bit between the stable and the east park
-grove(Z(-14, 42.4, 9, 2.2), 9, [BUSHES(3, [0.55, 0.8]), OAKS(1, [0.7, 0.9])], 103, 0.7); grove(Z(40, 44, 6, 6), 12, [OAKS(2), BUSHES(3), PINES(1)], 104, 0.8);
+grove(Z(-14, 42.4, 9, 2.2), 4, [BUSHES(3, [0.55, 0.8]), OAKS(1, [0.7, 0.9])], 103, 0.7); grove(Z(40, 44, 6, 6), 5, [OAKS(2), BUSHES(3), PINES(1)], 104, 0.8);
 carpet(Z(-20, 47, 14, 6), 36, PIECES.flowers, [0.8, 1.3], 105); carpet(Z(10, 56, 18, 3), 22, PIECES.flowers, [0.8, 1.3], 106);
 hedge(24, 41.8, 31, 41.8); hedge(-8, 40.4, -16, 40.4);
 prop(PIECES.haystack, -44, 45, 0.3, 0.8); prop(PIECES.haystack, -41, 47.5, 1.2, 0.7);
@@ -336,8 +336,8 @@ for (let x = -44; x <= 54; x += 3.0) {
   const rr = rng(Math.floor(x * 10) + 900);
   for (const side of [0, 1] as const) {
     const bz = riverBank(x, side) + (side === 0 ? -1.9 : 1.9) + (rr() - 0.5) * 1.2;
-    if (rr() < 0.55) prop(rr() < 0.6 ? PIECES.bush[0] : PIECES.bush[1], x + (rr() - 0.5), bz, rr() * TAU, 0.55 + rr() * 0.3, undefined, 0.2);
-    else if (rr() < 0.5) prop(pick(PIECES.rock, rr()), x, bz + (side ? 0.3 : -0.3), rr() * TAU, 0.45 + rr() * 0.4, undefined, 0.2);
+    if (rr() < 0.22) prop(rr() < 0.6 ? PIECES.bush[0] : PIECES.bush[1], x + (rr() - 0.5), bz, rr() * TAU, 0.55 + rr() * 0.3, undefined, 0.2);
+    else if (rr() < 0.2) prop(pick(PIECES.rock, rr()), x, bz + (side ? 0.3 : -0.3), rr() * TAU, 0.45 + rr() * 0.4, undefined, 0.2);
     deco(PIECES.tuft, x + 0.6, bz + (side ? -0.5 : 0.5), rr() * TAU, 0.9 + rr() * 0.7);
   }
 }
@@ -353,29 +353,29 @@ for (let x = -44; x <= 54; x += 7) {   // willows by the water: the south bank i
   for (let ix = 0; ix < 5; ix++) for (let iz = 0; iz < 4; iz++) { const x = -42 + ix * 4.4 + (iz % 2) * 2.2 + (r() - 0.5) * 0.6, z = 80.5 + iz * 4.6 + (r() - 0.5) * 0.6; prop(PIECES.fruit[0], x, z, r() * TAU, 0.85 + r() * 0.2, undefined, 0.3); }
 }
 carpet(Z(-38, 91, 7, 12), 30, PIECES.flowers, [0.8, 1.2], 302);
-grove(Z(-8, 86, 3.5, 6), 8, [BUSHES(3), OAKS(1, [0.75, 0.95])], 303, 0.7);
-grove(Z(10.5, 98, 3.6, 18), 16, [FRUITS(2), OAKS(1), PINES(1), BUSHES(3)], 304, 0.8);   // east of the road, west of the fields (the strip along the fence)
-grove(Z(56, 96, 6, 16), 18, [PINES(3), OAKS(1), ROCKS(2, [0.6, 1.1])], 305, 0.9);
-grove(Z(-25, 108, 20, 2.4), 10, [BUSHES(3), OAKS(1, [0.7, 0.9])], 306, 0.8);   // north verge of the Brewer's lane
+grove(Z(-8, 86, 3.5, 6), 3, [BUSHES(3), OAKS(1, [0.75, 0.95])], 303, 0.7);
+grove(Z(10.5, 98, 3.6, 18), 6, [FRUITS(2), OAKS(1), PINES(1), BUSHES(3)], 304, 0.8);   // east of the road, west of the fields (the strip along the fence)
+grove(Z(56, 96, 6, 16), 7, [PINES(3), OAKS(1), ROCKS(2, [0.6, 1.1])], 305, 0.9);
+grove(Z(-25, 108, 20, 2.4), 4, [BUSHES(3), OAKS(1, [0.7, 0.9])], 306, 0.8);   // north verge of the Brewer's lane
 // the hamlets: hedges, beds, hay and crates between the houses
 cluster([17.8, 123.2, 0.4], [28, 121.8, 1.9], [-18.2, 123.2, 0.5], [-28.6, 122.6, 2.5], [-37.8, 123.4, 1.1]);
 for (const hx of [13, 23, 32, -13.5, -23.5, -33, -42]) { prop(PIECES.bush[0], hx - 3.4, 123.2, hx, 0.7); prop(PIECES.bush[1], hx + 3.4, 123.6, hx + 1, 0.65); deco(PIECES.flowers, hx + 1.2, 125.2, hx, 1.0); }
 prop(PIECES.haystack, 36.5, 121, 0.6, 0.7); prop(PIECES.haystack, -46.5, 122.5, 0.2, 0.7);
 carpet(Z(-4, 118, 3, 6), 10, PIECES.flowers, [0.8, 1.1], 307);
-grove(Z(0, 125, 20, 3), 14, [BUSHES(3), OAKS(1, [0.7, 0.9]), PINES(1)], 308, 0.8);
+grove(Z(0, 125, 20, 3), 6, [BUSHES(3), OAKS(1, [0.7, 0.9]), PINES(1)], 308, 0.8);
 // ================================================================ OUTSIDE: THE TOWER ROAD (a forest on both sides, the road itself stays open; the Endless Tower stands at its end)
-grove(Z(-7, 148, 13, 18), 60, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 401, 0.7, 2.4);
-grove(Z(17, 148, 11, 18), 46, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 402, 0.7, 2.4);
-grove(Z(5, 160, 14, 6), 22, [PINES(4), OAKS(1), BUSHES(2)], 403, 0.7, 2.4);
+grove(Z(-7, 148, 13, 18), 24, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 401, 0.7, 2.4);
+grove(Z(17, 148, 11, 18), 18, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 402, 0.7, 2.4);
+grove(Z(5, 160, 14, 6), 9, [PINES(4), OAKS(1), BUSHES(2)], 403, 0.7, 2.4);
 carpet(Z(3, 138, 5, 12), 16, PIECES.flowers, [0.8, 1.1], 404);
 // ================================================================ OUTSIDE: THE OLD TOWER SITE (west, z 100..125): just forest now
-grove(Z(-62, 108, 22, 6), 34, [PINES(3), OAKS(2), BUSHES(3), ROCKS(1)], 501, 0.7, 2.4);
-grove(Z(-62, 118.6, 22, 3), 18, [PINES(3), OAKS(1), BUSHES(3)], 502, 0.7, 2.4);
+grove(Z(-62, 108, 22, 6), 14, [PINES(3), OAKS(2), BUSHES(3), ROCKS(1)], 501, 0.7, 2.4);
+grove(Z(-62, 118.6, 22, 3), 7, [PINES(3), OAKS(1), BUSHES(3)], 502, 0.7, 2.4);
 // ================================================================ OUTSIDE: THE MINES' SIDE + THE NORTH RING
-grove(Z(61, 60, 5, 22), 24, [PINES(3), ROCKS(2, [0.6, 1.1]), OAKS(1)], 601, 0.8, 2.6);
-grove(Z(60, 110, 8, 8), 14, [PINES(3), OAKS(1), ROCKS(1)], 602, 0.8, 2.6);
-grove(Z(58, -2, 8, 9), 12, [PINES(3), ROCKS(2, [0.6, 1.1]), BUSHES(2)], 603, 0.8, 2.6);
-grove(Z(0, -47, 34, 5), 40, [PINES(3), OAKS(2), ROCKS(2, [0.6, 1.1]), BUSHES(3)], 604, 0.8, 2.4);
+grove(Z(61, 60, 5, 22), 10, [PINES(3), ROCKS(2, [0.6, 1.1]), OAKS(1)], 601, 0.8, 2.6);
+grove(Z(60, 110, 8, 8), 6, [PINES(3), OAKS(1), ROCKS(1)], 602, 0.8, 2.6);
+grove(Z(58, -2, 8, 9), 5, [PINES(3), ROCKS(2, [0.6, 1.1]), BUSHES(2)], 603, 0.8, 2.6);
+grove(Z(0, -47, 34, 5), 16, [PINES(3), OAKS(2), ROCKS(2, [0.6, 1.1]), BUSHES(3)], 604, 0.8, 2.4);
 // stones + tufts on every bare outer edge of the meadows
 carpet(Z(0, 56, 44, 3), 60, PIECES.tuft, [0.9, 1.4], 701); carpet(Z(0, 112, 50, 14), 80, PIECES.tuft, [0.9, 1.4], 702); carpet(Z(30, 30, 24, 20), 40, PIECES.tuft, [0.9, 1.4], 703);
 carpet(Z(0, -47, 40, 4), 40, PIECES.mushrooms, [0.8, 1.2], 704);

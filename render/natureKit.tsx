@@ -15,7 +15,7 @@
 // ============================================================================
 import React, { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { BufferGeometry, Float32BufferAttribute, InstancedMesh, Material, Matrix4, Mesh, MeshDepthMaterial, MeshStandardMaterial, Object3D, RGBADepthPacking, Vector3 } from 'three';
+import { BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Float32BufferAttribute, IcosahedronGeometry, InstancedMesh, Material, Matrix4, Mesh, MeshDepthMaterial, MeshStandardMaterial, Object3D, RGBADepthPacking, Vector3 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BASE } from './models';
 import { Inst } from './Inst';
@@ -148,6 +148,62 @@ function bake(scene: Object3D): NatureKitData {
 /** Kit v3 pieces (public/models/town/kit_v3.glb, render/kitV3.tsx) as ordinary static pieces of this kit: the body (vertex colours = material x COLOR_0) and the
  *  emissive part (window_glow / rune_glow) become non-indexed float geometries with position / normal / color, exactly like the nature pieces, so ONE BatchedMesh
  *  (render/NatureBatch.tsx) draws trees, props and landmarks of both kits. Piece names never collide (v3: tree_oak_big, palm_v3, bush_cluster ...). */
+
+/** Owner 2026-10-22 ("I didn't like the rounded trees"): the lumpy multi-blob kit canopies (oak / birch / fruit / blossom) are replaced by ONE soft rounded canopy on a visible trunk,
+ *  the clean Zelda / Nintendo toy-tree look. Same footprint + height as the kit piece (so V3_K, colliders and layouts are unchanged). */
+type TreeShape = 'ball' | 'capsule' | 'cube' | 'cone';
+const CUTE_TREES: Record<string, { shape: TreeShape; leaf: string; leaf2: string; trunk: string; dots?: string }> = {
+  tree_oak_big: { shape: 'ball', leaf: '#4fa83a', leaf2: '#8fd24f', trunk: '#8a5a34' },
+  tree_oak_small: { shape: 'cube', leaf: '#60b845', leaf2: '#a2de5a', trunk: '#8a5a34' },
+  tree_birch: { shape: 'capsule', leaf: '#74c04a', leaf2: '#b9e164', trunk: '#d9ccb2' },
+  tree_fruit: { shape: 'ball', leaf: '#4fa83a', leaf2: '#8fd24f', trunk: '#8a5a34', dots: '#e5483a' },
+  tree_blossom: { shape: 'ball', leaf: '#ee9bbd', leaf2: '#ffc8dc', trunk: '#7d5236' },
+  tree_pine_layered_a: { shape: 'cone', leaf: '#2f9a4a', leaf2: '#6cc86a', trunk: '#8a5a34' },
+  tree_pine_layered_b: { shape: 'cone', leaf: '#3aa552', leaf2: '#7ad072', trunk: '#8a5a34' },
+};
+function cuteTree(name: string, box: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }): BufferGeometry {
+  const cfg = CUTE_TREES[name], H = box.maxY, R = Math.min(box.maxX - box.minX, box.maxZ - box.minZ) * 0.5 * 0.98;
+  const cx = (box.minX + box.maxX) / 2, cz = (box.minZ + box.maxZ) / 2;
+  const parts: BufferGeometry[] = [];
+  const paint = (g0: BufferGeometry, f: (x: number, y: number, z: number, o: Color) => void): BufferGeometry => {
+    const g = g0.index ? g0.toNonIndexed() : g0; if (g !== g0) g0.dispose();
+    const p = g.attributes.position, col = new Float32Array(p.count * 3), c = new Color();
+    for (let i = 0; i < p.count; i++) { f(p.getX(i), p.getY(i), p.getZ(i), c); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new Float32BufferAttribute(col, 3)); g.deleteAttribute('uv'); return g;
+  };
+  const a = new Color(cfg.leaf), b = new Color(cfg.leaf2), tc = new Color(cfg.trunk);
+  const grad = (y0: number, y1: number) => (x: number, y: number, z: number, o: Color) => { const k = Math.min(1, Math.max(0, (y - y0) / (y1 - y0))); o.copy(a).lerp(b, k * k * 0.9 + 0.05); };
+  let cy = 0, Ry = 0;
+  if (cfg.shape === 'cone') {   // 3 stacked soft cone tiers on a short trunk
+    const th = H * 0.2, tw = Math.max(0.16, R * 0.16);
+    const tr = new CylinderGeometry(tw * 0.8, tw * 1.15, th + 0.2, 10, 1); tr.translate(cx, (th + 0.2) / 2, cz);
+    parts.push(paint(tr, (x, y, z, o) => { o.copy(tc); }));
+    for (let t = 0; t < 3; t++) {
+      const h = H * 0.42, r = R * (1 - t * 0.27), y0 = th * 0.8 + t * H * 0.25, cn = new ConeGeometry(r, h, 14, 1); cn.translate(cx, y0 + h / 2, cz);
+      parts.push(paint(cn, grad(y0, y0 + h)));
+    }
+    const g = mergeGeometries(parts, false); for (const q of parts) q.dispose(); g.computeBoundingSphere(); return g;
+  }
+  const rx = cfg.shape === 'capsule' ? R * 0.78 : R;
+  Ry = cfg.shape === 'capsule' ? Math.min(H * 0.34, R * 1.7) : cfg.shape === 'cube' ? Math.min(H * 0.3, R * 0.85) : Math.min(H * 0.42, R * 0.95);
+  cy = H - Ry;
+  const trunkH = Math.max(0.6, cy - Ry * 0.25), tw = Math.max(0.16, R * 0.17);
+  const tr = new CylinderGeometry(tw * 0.78, tw * 1.15, trunkH, 10, 1); tr.translate(cx, trunkH / 2, cz);
+  parts.push(paint(tr, (x, y, z, o) => { o.copy(tc).multiplyScalar(0.88 + 0.12 * (y / trunkH)); }));
+  let cn: BufferGeometry;
+  if (cfg.shape === 'cube') {   // soft rounded cube: a subdivided box pulled toward a sphere
+    const bx = new BoxGeometry(2, 2, 2, 8, 8, 8), pos = bx.attributes.position, v = new Vector3();
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const n = v.clone().normalize().multiplyScalar(1.38); v.lerp(n, 0.55); pos.setXYZ(i, v.x, v.y, v.z); }
+    bx.computeVertexNormals(); cn = bx; cn.scale(rx * 0.74, Ry * 0.74, rx * 0.74);
+  } else { cn = new IcosahedronGeometry(1, 3); cn.scale(rx, Ry, rx); }
+  cn.translate(cx, cy, cz);
+  parts.push(paint(cn, grad(cy - Ry, cy + Ry)));
+  if (cfg.dots) {
+    const dc = new Color(cfg.dots);
+    for (let i = 0; i < 6; i++) { const t = i * 2.4 + 0.5, h = 0.25 + (i % 3) * 0.2, sp = new IcosahedronGeometry(Math.max(0.11, R * 0.07), 1); sp.translate(cx + Math.cos(t) * R * 0.86 * Math.sqrt(1 - h * h), cy + Ry * h * 0.9, cz + Math.sin(t) * R * 0.86 * Math.sqrt(1 - h * h)); parts.push(paint(sp, (x, y, z, o) => { o.copy(dc); })); }
+  }
+  const g = mergeGeometries(parts, false); for (const q of parts) q.dispose(); g.computeBoundingSphere(); return g;
+}
 function addKitV3(d: NatureKitData, k3: KitV3Data): void {
   const geo = (c: { pos: Float32Array; nrm: Float32Array; col: Float32Array } | null, name: string): BufferGeometry | null => {
     if (!c) return null;
@@ -157,8 +213,9 @@ function addKitV3(d: NatureKitData, k3: KitV3Data): void {
   };
   for (const [name, p] of Object.entries(k3.P)) {
     if (name === 'light_shaft' || d.S[name]) continue;
-    const body = geo(p.body, 'v3:' + name);
-    if (body) d.S[name] = { body, glow: geo(p.glow, 'v3:' + name + ':glow') };
+    let body = geo(p.body, 'v3:' + name);
+    if (body && CUTE_TREES[name]) { body.dispose(); body = cuteTree(name, p.box); body.name = 'v3:' + name; }
+    if (body) d.S[name] = { body, glow: CUTE_TREES[name] ? null : geo(p.glow, 'v3:' + name + ':glow') };
   }
 }
 
