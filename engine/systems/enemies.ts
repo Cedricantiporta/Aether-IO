@@ -82,7 +82,7 @@ const BOAR = { cd: 4, windup: 0.56, recover: 1.0, lineWidth: 2.0, chargeMul: 4.6
 const ZOMBIE = { grabR: 2.3, windup: 0.48, lunge: 0.3, recover: 0.7, cd: 2.6 };
 const WRAITH = { windup: 0.6, lunge: 0.4, recover: 0.7, cd: 3.2, lungeMul: 5.5, range: 13 };
 const BANDIT = { windup: 0.4, dash: 0.26, recover: 0.55, cd: 2.8, dashSpeed: 22, range: 8, lineW: 1.6, ring: 4.2 };
-const CRAB = { frontCos: 0.5, frontMul: 0.35, turn: 1.6 };
+const CRAB = { frontCos: 0.5, frontMul: 0.65, turn: 1.6 };
 /**
  * Free-hit window ("WINDED") for bosses + mini-bosses: after a big attack / combo (a WINDUP / ATTACK / RECOVER / special has just
  * ended) the boss pants for 1.2-2.0 s: no movement, no new attacks (contact damage still hurts), +10% damage taken, a

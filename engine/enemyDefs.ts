@@ -81,8 +81,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 12, gold: 3, cost: 4, minWave: 3, weight: 4, color: 0x78350f, knockResist: 0.4, armor: 25,
   },
   ROCK_CRAB: {
-    name: 'Rock Crab', hp: 150, speed: 2.1, radius: 0.95, scale: 1.2, contactDamage: 12, projectileDamage: 0,
-    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 1, armor: 60,
+    name: 'Rock Crab', hp: 95, speed: 2.1, radius: 0.95, scale: 1.2, contactDamage: 12, projectileDamage: 0,
+    xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 1, armor: 30,   // (owner: crabs were tankier than bosses) hp 150->95, armor 60->30, shell 0.35->0.65
   },
   BOSS_GOLEM: {
     name: 'Gorath the Mountain', hp: 1800, speed: 2.8, radius: 3.0, scale: 4, contactDamage: 25, projectileDamage: 18,
