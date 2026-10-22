@@ -123,6 +123,7 @@ town (and closes the open panel first).
 - A walled town (stone wall + gate, castle on a raised terrace, plaza with the founder's statue / fountain, chapel + graveyard,
   Golden Tankard tavern, windmill) with a large outskirts: meadow before the gate, a river with a great arched bridge,
   lake + west beach with pier and fishing, farm + barns + fields, hamlets, hills (`townHills.ts`), the Endless Tower at the end of the forest road
+  **Water (one stylised look everywhere, `render/waterFx.ts`):** `makeWaterMaterial` = fog-aware unlit ShaderMaterial (turquoise-to-deep tint by shore distance, caustic web, cross glints, white foam line + lapping line, swell warp, night tint). Time/night are shared uniforms `WATER_T`/`WATER_NIGHT`, written once per frame in `LookDriver`. Shore distance comes from: a baked R8 distance field (`bakeShoreField`; town lake+river = one merged mesh in `TownScenery` Lake, sea of Coral Isles rooms/camps via `bakeGridShore` from the ground mesh -> `setSeaShore`), a vertex attribute `aS` (pond in `Terrain.tsx`, dream stream in `DreamGarden.tsx`) or the analytic edge distance (`RoomWater` lakes/rivers/ice). Lava/chasm keep their own branches in `RoomWater`. New water = call `makeWaterMaterial`, never a new material.
   south of the farms, the **Adventure Portal** in the middle of the plaza (E at its front opens Set Out), a
   horse stable by the gate, Crystal Cave + mining camp east of the wall, the hermit trail. Always read coordinates from
   `townData.ts` / `constants.ts SHOP_POSITIONS`; they moved many times.

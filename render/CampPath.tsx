@@ -13,6 +13,7 @@ import { camp, campBuilt, campNearest, campHalfWidth, campAtS, type CampLayout, 
 import { BIOMES, variantOf, type BiomeDef, type GroundStyle } from '../engine/roomDefs';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
 import { groundMaterial, DETAIL_PERIOD } from './Room';
+import { bakeGridShore, setSeaShore } from './waterFx';
 
 const sstep = (a: number, b: number, x: number): number => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -142,6 +143,7 @@ function buildGround(P: CampPath) {
   }
   g.setAttribute('color', new Float32BufferAttribute(colA, 3));
   g.computeVertexNormals();
+  setSeaShore(L.edge.some((e) => e[1] === 'sea') ? bakeGridShore(pos.array, sx, sz, x0, z0, W, H, -0.45, 16) : null);   // (the sea's shore distance, render/waterFx.ts)
   const g2 = new BufferGeometry();
   g2.setAttribute('position', g.attributes.position); g2.setAttribute('normal', g.attributes.normal); g2.setAttribute('uv', g.attributes.uv); g2.setIndex(g.index);
   g2.setAttribute('color', new Float32BufferAttribute(colB, 4));

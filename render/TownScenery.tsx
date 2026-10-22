@@ -10,6 +10,9 @@ import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, ExtrudeGeometry, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { bakeShoreField, makeWaterMaterial } from './waterFx';
+import { groundY } from './terrainFn';
 import { TownKit } from './townKit';
 import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
@@ -643,32 +646,22 @@ function buildTown() {
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
-/** Soft bump texture for the lake surface (scrolled every frame -> gentle ripples). */
-function rippleTexture(): CanvasTexture {
-  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
-  const x = c.getContext('2d')!; x.fillStyle = '#808080'; x.fillRect(0, 0, N, N);
-  const rnd = mulberry32(91);
-  for (let i = 0; i < 260; i++) {
-    const px = rnd() * N, py = rnd() * N, r = 6 + rnd() * 22, v = rnd() < 0.5 ? 255 : 0;
-    for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) {
-      const g = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r);
-      g.addColorStop(0, `rgba(${v},${v},${v},.18)`); g.addColorStop(1, 'rgba(128,128,128,0)');
-      x.fillStyle = g; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2);
-    }
-  }
-  const t = new CanvasTexture(c); t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(10, 14);
-  return t;
-}
-
 /** The lake west of the town: animated water surface, sandy shore line, reeds and a few shore rocks. */
 function Lake() {
-  const { water, river, shore, mat, shoreMat } = useMemo(() => {
+  const { water, shore, mat, shoreMat, field } = useMemo(() => {
     const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 + 10 - LAKE.z0;   // (+10: the wavy south shore, townData.lakeSouth)
-    const water = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1 + 10) / 2);
+    const lakeG = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1 + 10) / 2);
     // the river south of the gate (same water, joins the lake at its west end)
-    const river = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 6, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
-    const bump = rippleTexture();
-    const mat = new MeshStandardMaterial({ color: new Color('#2c6f93'), roughness: 0.12, metalness: 0.15, bumpMap: bump, bumpScale: 0.6, transparent: true, opacity: 0.94 });
+    const riverG = new PlaneGeometry(RIVER.x1 + 1.5 - LAKE.x1 + 6, RIVER.z1 - RIVER.z0 + 6, 1, 1).rotateX(-Math.PI / 2).translate((RIVER.x1 + 1.5 + LAKE.x1 - 6) / 2, -0.2, (RIVER.z0 + RIVER.z1) / 2);
+    // stylised water (render/waterFx.ts): the lake + river are ONE merged mesh; the shore distance is baked once from groundY
+    const lakeX0 = (LAKE.x0 + LAKE.x1) / 2 - 3 - w / 2, lakeX1 = lakeX0 + w, lakeZ0 = LAKE.z0, lakeZ1 = LAKE.z1 + 10;
+    const rvX0 = LAKE.x1 - 6, rvX1 = RIVER.x1 + 1.5, rvZ0 = RIVER.z0 - 3, rvZ1 = RIVER.z1 + 3;
+    const fx0 = Math.min(lakeX0, rvX0) - 4, fz0 = lakeZ0 - 4, fx1 = Math.max(lakeX1, rvX1) + 4, fz1 = lakeZ1 + 4;
+    const field = bakeShoreField(fx0, fz0, fx1 - fx0, fz1 - fz0, 0.6, 10, (x, z) =>
+      ((x > lakeX0 && x < lakeX1 && z > lakeZ0 && z < lakeZ1 && groundY(x, z) < -0.15) || (x > rvX0 && x < rvX1 && z > rvZ0 && z < rvZ1 && groundY(x, z) < -0.2)));
+    const water = mergeGeometries([lakeG, riverG], false)!;
+    lakeG.dispose(); riverG.dispose();
+    const mat = makeWaterMaterial({ shore: 'tex', field, span: 8 });
     const b = new GB([0.85, 1.05]), rnd = mulberry32(303);
     // sandy shore strip + reeds + rocks along the waterline
     for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {
@@ -683,14 +676,12 @@ function Lake() {
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     // (the mainland beach is painted into the ground like the lakeside one: engine/beachData MAIN_BEACH, palms in render/Beach)
     const shore = b.build();
-    return { water, river, shore, mat, shoreMat: litMat({ roughness: 0.9 }) };
+    return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }), field };
   }, []);
-  useFrame((_, dt) => { const m = mat.bumpMap; if (m) { m.offset.x += dt * 0.01; m.offset.y += dt * 0.017; } });
-  useEffect(() => () => { water.dispose(); river.dispose(); shore.dispose(); mat.bumpMap?.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, river, shore, mat, shoreMat]);
+  useEffect(() => () => { water.dispose(); shore.dispose(); field.tex.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, shore, mat, shoreMat, field]);
   return (
     <>
-      <mesh geometry={water} material={mat} receiveShadow renderOrder={1} />
-      <mesh geometry={river} material={mat} receiveShadow renderOrder={1} />
+      <mesh geometry={water} material={mat} renderOrder={1} />
       <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
     </>
   );

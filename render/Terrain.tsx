@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   BufferGeometry, CanvasTexture, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, MeshStandardMaterial, PlaneGeometry,
-  RepeatWrapping, ShaderMaterial, SRGBColorSpace, BufferAttribute, DataTexture, LinearFilter, RGBAFormat, Vector3,
+  RepeatWrapping, SRGBColorSpace, BufferAttribute, DataTexture, LinearFilter, RGBAFormat, Vector3,
 } from 'three';
 import { ARENA_RADIUS, world } from '../engine/world';
 import { QualityCfg } from './quality';
@@ -13,7 +13,7 @@ import { GROUND_SIZE, POND, edgeR, groundY, lakeK, inForecourtUse, inYard, pondE
 import { NatureBatch } from './NatureBatch';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
-import { SUN_DIR } from './Sky';
+import { makeWaterMaterial } from './waterFx';
 import { inCaveClear } from '../engine/caveData';
 import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
@@ -161,13 +161,13 @@ function Pebbles({ q }: { q: QualityCfg }) {
 // -------------------------------------------------------------------- pond ---
 function pondGeometry() {
   const rings = 9, segs = 64;
-  const pos: number[] = [], rr: number[] = [], idx: number[] = [];
+  const pos: number[] = [], rr: number[] = [], idx: number[] = [];   // rr = metres to the shore
   for (let r = 0; r <= rings; r++) {
     for (let s = 0; s <= segs; s++) {
       const a = (s / segs) * TAU;
       const e = pondEdge(a) * 1.0;
       const k = r / rings;
-      pos.push(Math.cos(a) * e * k, 0, Math.sin(a) * e * k); rr.push(k);
+      pos.push(Math.cos(a) * e * k, 0, Math.sin(a) * e * k); rr.push((1 - k) * e);
     }
   }
   for (let r = 0; r < rings; r++) for (let s = 0; s < segs; s++) {
@@ -176,45 +176,16 @@ function pondGeometry() {
   }
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  g.setAttribute('aR', new Float32BufferAttribute(rr, 1));
+  g.setAttribute('aS', new Float32BufferAttribute(rr, 1));
   g.setIndex(idx);
   return g;
 }
-const WATER_VS = `varying float vR; varying vec3 vW; attribute float aR;
-void main(){ vR = aR; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const WATER_FS = `
-uniform float uTime; uniform vec3 uSun; varying float vR; varying vec3 vW;
-void main(){
-  vec2 p = vW.xz;
-  float t = uTime;
-  vec2 g = vec2(0.0);
-  g += cos(dot(p, vec2(1.0, 0.6)) * 1.7 + t * 1.3) * vec2(1.0, 0.6) * 1.7;
-  g += cos(dot(p, vec2(-0.7, 1.0)) * 2.6 - t * 1.1) * vec2(-0.7, 1.0) * 2.6 * 0.7;
-  g += cos(dot(p, vec2(0.3, -1.0)) * 4.9 + t * 1.9) * vec2(0.3, -1.0) * 4.9 * 0.4;
-  vec3 N = normalize(vec3(-g.x * 0.035, 1.0, -g.y * 0.035));
-  vec3 V = normalize(cameraPosition - vW);
-  float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
-  vec3 deep = vec3(0.05, 0.32, 0.48), shallow = vec3(0.28, 0.72, 0.70), sky = vec3(0.70, 0.88, 1.0);
-  vec3 col = mix(shallow, deep, smoothstep(0.95, 0.25, vR));
-  col = mix(col, sky, fres * 0.7 + 0.12);
-  vec3 H = normalize(normalize(uSun) + V);
-  col += vec3(1.0, 0.95, 0.8) * pow(max(dot(N, H), 0.0), 120.0) * 1.6;
-  float ripple = sin(vR * 55.0 - t * 2.2 + sin(p.x * 1.3 + p.y) * 2.0);
-  float foam = smoothstep(0.9, 0.985, vR + ripple * 0.012);
-  col = mix(col, vec3(0.95, 1.0, 1.0), foam * 0.85);
-  float alpha = mix(0.9, 0.7, smoothstep(0.75, 0.99, vR)) ;
-  alpha = mix(alpha, 0.95, foam);
-  gl_FragColor = vec4(col, alpha);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-}`;
-
 function Pond({ q }: { q: QualityCfg }) {
   const { geo, mat } = useMemo(() => ({
     geo: pondGeometry(),
-    mat: new ShaderMaterial({ vertexShader: WATER_VS, fragmentShader: WATER_FS, transparent: true, depthWrite: false, uniforms: { uTime: { value: 0 }, uSun: { value: SUN_DIR.clone() } } }),
+    mat: makeWaterMaterial({ shore: 'attr', span: 3.2 }),
   }), []);
-  useFrame(({ clock }) => { mat.uniforms.uTime.value = clock.elapsedTime; });
+  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
   const reeds = useMemo(() => {
     const g = new GB([0.7, 1.1]);
     for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; g.cyl(0.015, 0.03, 1.1 + (i % 2) * 0.4, 4, [Math.cos(a) * 0.12, 0.6, Math.sin(a) * 0.12], '#6a9a3a', [Math.sin(a) * 0.12, 0, Math.cos(a) * 0.12]); }

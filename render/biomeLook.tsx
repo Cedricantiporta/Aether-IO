@@ -1,5 +1,6 @@
 // Shared "look" of the current place (town = the original palette, run rooms = their biome): fog / background, sky tint,
 // hemisphere + sun light. Sky and Lighting read `look` every frame; LookDriver eases it towards the target and applies fog.
+import { WATER_T, WATER_NIGHT } from './waterFx';
 import { Color, Fog, Vector3, type PerspectiveCamera } from 'three';
 import { updateDistCull } from './distCull';
 import { useFrame } from '@react-three/fiber';
@@ -153,8 +154,9 @@ function copy(a: Look, b: Look, k: number): void {
 export const FOG_K = 0.85;   // closer camera (CameraRig CAM_CLOSE) sees less ground: fog + cull range shrink with it
 
 export function LookDriver() {
-  useFrame(({ scene, camera }, dt) => {
+  useFrame(({ scene, camera, clock }, dt) => {
     tickDreamFx(dt);
+    WATER_T.value = clock.elapsedTime; WATER_NIGHT.value = townFx.lamp;   // (the one per-frame write of the shared water look, render/waterFx.ts)
     if (dreamFx.haze > 0) lookDim.k = 1 + Math.sin(performance.now() * 0.0009) * 0.07 * dreamFx.haze; else if (lookDim.k !== 1 && !dreamFx.inDream && world.village.area !== 'CAVE') lookDim.k = 1;   // (the light breathes)
     if (townMode) applyTown(townT());
     else if (townSky.on && !runSky) { townSky.on = false; townSky.hor.setRGB(1, 0.93, 0.78); townSky.mid.setRGB(0.55, 0.8, 1); townSky.zen.setRGB(0.2, 0.5, 0.92); townFx.lamp = 0; townFx.stars = 0; }

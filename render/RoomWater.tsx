@@ -2,8 +2,8 @@
 // lake and the river / lava / chasm band analytically (no per-feature meshes), plus the bridges (merged static meshes).
 // Rebuilt when world.room.version changes; per frame only the time uniform moves. No per-frame allocations.
 import React, { useEffect, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Color, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3, Vector4 } from 'three';
+import { Color, Mesh, PlaneGeometry, ShaderMaterial, UniformsLib, UniformsUtils, Vector2, Vector3, Vector4 } from 'three';
+import { WATER_FN, WATER_T, WATER_NIGHT, WATER_VS, WATER_SHALLOW, WATER_DEEP, makeWaterMaterial, getSeaShore } from './waterFx';
 import { world } from '../engine/world';
 import { feat, MAX_LAKES, riverPoint, hwAt } from '../engine/roomFeatures';
 import { SINK } from './Room';
@@ -12,11 +12,14 @@ import { biomeOf } from '../engine/roomDefs';
 import { GB, litMat } from './util';
 import { useWorldCounter } from './hooks';
 
-const VS = `varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const VS = `varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;   // (lava sea / ocean below)
 const FS = `
-uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform vec4 uRiv3; uniform vec2 uRiv4; uniform float uTime; uniform int uKind; uniform float uCut;
-uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uRim;
-varying vec2 vP;
+#include <fog_pars_fragment>
+${WATER_FN}
+uniform vec3 uLakes[${MAX_LAKES}]; uniform int uNL; uniform vec4 uRiv; uniform vec4 uRiv2; uniform vec4 uRiv3; uniform vec2 uRiv4; uniform int uKind; uniform float uCut;
+uniform vec3 uRim;
+varying vec3 vW;
+#define vP vW.xz
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -47,23 +50,19 @@ void main(){
     vec3 hot = mix(uShallow, uDeep, n2 * n2);
     col = mix(hot * (1.0 + 0.18 * sin(t * 2.0 + n1 * 8.0)), uRim, crust * 0.9);
     col = mix(uRim * 0.6, col, smoothstep(0.0, 0.55, e));   // dark crust lip
-  } else {   // water / icy water
-    float depth = smoothstep(0.0, 3.5, e);
-    col = mix(uShallow, uDeep, depth);
-    float rip = fbm(q * 0.8 + vec2(t * 0.15, -t * 0.1)) * 0.6 + fbm(q * 2.1 - vec2(t * 0.2)) * 0.4;
-    col += vec3(0.10, 0.12, 0.13) * smoothstep(0.55, 0.85, rip);
-    float foam = smoothstep(0.55, 0.0, e) * (0.6 + 0.4 * sin(e * 14.0 - t * 2.5));
-    col = mix(col, vec3(0.92, 0.96, 1.0), foam * 0.7);
+  } else {   // water / icy water: the shared stylised look (render/waterFx.ts), e = distance to the shore
+    col = waterShade(vP, e);
     if (uKind == 3){ float ice = smoothstep(0.62, 0.7, fbm(vP * 0.22 + 7.3)); col = mix(col, vec3(0.86, 0.94, 1.0), ice * 0.85); }
   }
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
+  #include <fog_fragment>
 }`;
 
 const PAL: Record<string, [string, string, string]> = {   // shallow, deep, rim
-  WATER: ['#4cc0cf', '#155f86', '#3a5a40'],
-  ICE: ['#4a90b0', '#12304e', '#c8e0f0'],
+  WATER: [WATER_SHALLOW, WATER_DEEP, '#3a5a40'],
+  ICE: ['#62c6e6', '#2a68b4', '#c8e0f0'],
   LAVA: ['#e8460c', '#ff9a22', '#2a120c'],
   CHASM: ['#8a6cff', '#040208', '#7a5a3a'],
 };
@@ -122,18 +121,20 @@ export function RoomWater() {
     const pal = PAL[feat.liquid] ?? PAL.WATER;
     const def = biomeOf(world.room.biome);
     const rim = feat.liquid === 'CHASM' ? (def.style === 'VOID' ? '#3a2a5e' : '#9a6a3e') : pal[2];
-    const deep = feat.liquid === 'CHASM' && def.style === 'VOID' ? '#05030c' : pal[1];
-    const shallow = feat.liquid === 'WATER' && feat.variant === 2 && def.style === 'GRASS' ? '#5f8a5a' : pal[0];   // mire ponds: murky green
+    const mire = feat.liquid === 'WATER' && feat.variant === 2 && def.style === 'GRASS';
+    const deep = feat.liquid === 'CHASM' && def.style === 'VOID' ? '#05030c' : mire ? '#2c6a60' : pal[1];
+    const shallow = mire ? '#7fc47a' : pal[0];   // mire ponds: greener, murkier
+    const uni = UniformsUtils.merge([UniformsLib.fog, {
+      uLakes: { value: lakes }, uNL: { value: feat.nLakes },
+      uRiv: { value: new Vector4(feat.nx, feat.nz, feat.off, feat.river ? feat.hw : 0) },
+      uRiv2: { value: new Vector4(feat.amp, feat.freq, feat.ph, feat.river ? 1 : 0) },
+      uRiv3: { value: new Vector4(feat.amp2, feat.freq2, feat.ph2, feat.wAmp) }, uRiv4: { value: new Vector2(feat.wFreq, feat.wPh) },
+      uKind: { value: kind }, uCut: { value: flat ? -0.05 : -1.2 }, uSpan: { value: kind === 3 ? 3 : 3.6 },
+      uShallow: { value: new Color(shallow) }, uDeep: { value: new Color(deep) }, uRim: { value: new Color(rim) },
+    }]);
+    uni.uTime = WATER_T; uni.uNight = WATER_NIGHT;   // (shared, written once per frame by LookDriver)
     const mat = new ShaderMaterial({
-      vertexShader: VS, fragmentShader: FS, toneMapped: kind !== 1,
-      uniforms: {
-        uLakes: { value: lakes }, uNL: { value: feat.nLakes },
-        uRiv: { value: new Vector4(feat.nx, feat.nz, feat.off, feat.river ? feat.hw : 0) },
-        uRiv2: { value: new Vector4(feat.amp, feat.freq, feat.ph, feat.river ? 1 : 0) },
-        uRiv3: { value: new Vector4(feat.amp2, feat.freq2, feat.ph2, feat.wAmp) }, uRiv4: { value: new Vector2(feat.wFreq, feat.wPh) },
-        uTime: { value: 0 }, uKind: { value: kind }, uCut: { value: flat ? -0.05 : -1.2 },
-        uShallow: { value: new Color(shallow) }, uDeep: { value: new Color(deep) }, uRim: { value: new Color(rim) },
-      },
+      vertexShader: WATER_VS, fragmentShader: FS, toneMapped: kind !== 1, uniforms: uni, fog: true,
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
     });
     const plane = new Mesh(geo, mat); plane.position.y = flat ? 0.04 : -SINK * 0.62;   // the liquid lies down in the carved channel
@@ -154,7 +155,6 @@ export function RoomWater() {
     return { plane, mat, bridges };
   }, [ver]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (built) { built.plane.geometry.dispose(); built.mat.dispose(); for (const b of built.bridges) b.geometry.dispose(); } }, [built]);
-  useFrame(({ clock }) => { if (built) built.mat.uniforms.uTime.value = clock.elapsedTime; });
   if (!built) return null;
   return (
     <group key={ver}>
@@ -179,34 +179,18 @@ void main(){
   vec3 col = mix(hot * (1.0 + 0.18 * sin(t * 1.5 + n1 * 9.0)), vec3(0.12, 0.045, 0.025), crust * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }`;
-/** Coral Isles: a turquoise sea (shallow green-blue near the island, deeper blue further out, moving sun glints). */
-const OCEAN_FS = `
-uniform float uTime; varying vec2 vP;
-float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
-float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
-void main(){
-  float t = uTime, r = length(vP);
-  float n1 = fbm(vP * 0.08 + vec2(t * 0.02, t * 0.015)), n2 = fbm(vP * 0.35 - vec2(t * 0.06, t * 0.03));
-  vec3 shallow = vec3(0.25, 0.78, 0.76), deep = vec3(0.05, 0.36, 0.6);
-  vec3 col = mix(shallow, deep, smoothstep(30.0, 75.0, r + n1 * 18.0));
-  col *= 0.92 + n2 * 0.16;
-  float glint = smoothstep(0.78, 0.86, fbm(vP * 0.9 + vec2(t * 0.25, -t * 0.18)));
-  col += vec3(0.55, 0.6, 0.55) * glint * 0.6;
-  gl_FragColor = vec4(col, 1.0);
-}`;
 /** Ember Wastes: an animated lava sea around the room (the ground mesh drops below it beyond the wall ring); with `water`,
- *  the Coral Isles' turquoise sea instead. */
+ *  the Coral Isles' stylised turquoise sea instead. */
 export function LavaSea({ water = false }: { water?: boolean }) {
   const built = useMemo(() => {
     const S = 2 * (shape.maxR + 90);
     const geo = new PlaneGeometry(S, S, 1, 1); geo.rotateX(-Math.PI / 2);
-    const mat = new ShaderMaterial({ vertexShader: VS, fragmentShader: water ? OCEAN_FS : SEA_FS, toneMapped: false, uniforms: { uTime: { value: 0 } } });
+    // (Coral Isles / camp sea: the shared stylised water; its shore distance is the field baked from the ground mesh, render/waterFx.ts)
+    const mat = water ? makeWaterMaterial({ shore: 'tex', field: getSeaShore(), span: 15, shallow: '#5fe8d8', deep: '#1f78cf' })
+      : new ShaderMaterial({ vertexShader: VS, fragmentShader: SEA_FS, toneMapped: false, uniforms: { uTime: WATER_T } });
     const m = new Mesh(geo, mat); m.position.y = water ? -0.45 : -0.55; m.frustumCulled = false;
     return { m, geo, mat };
   }, [water]);
   useEffect(() => () => { built.geo.dispose(); built.mat.dispose(); }, [built]);
-  useFrame(({ clock }) => { built.mat.uniforms.uTime.value = clock.elapsedTime; });
   return <primitive object={built.m} />;
 }

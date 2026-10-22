@@ -25,6 +25,7 @@ import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, riverD, hwAt, riverS } from '../engine/roomFeatures';
 import { RoomWater, LavaSea } from './RoomWater';
+import { bakeGridShore, setSeaShore } from './waterFx';
 import { Wanderer } from './Wanderer';
 import { AllyActor } from './Ally';
 import { Finale } from './Finale';
@@ -390,6 +391,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     }
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
     g.computeVertexNormals();
+    setSeaShore(waterSea ? bakeGridShore(pos.array, seg, seg, -S / 2, -S / 2, S, S, -0.45, 16) : null);   // (the sea's shore distance, render/waterFx.ts)
     const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)

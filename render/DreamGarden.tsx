@@ -7,6 +7,7 @@ import { AdditiveBlending, BufferAttribute, CanvasTexture, Points, PointsMateria
 import { world } from '../engine/world';
 import { events } from '../engine/events';
 import { GB, litMat, mulberry32 } from './util';
+import { makeWaterMaterial } from './waterFx';
 
 const PETALS = ['#ff9ec4', '#ffffff', '#ffd75e', '#b9a6ff', '#ff7a8a', '#8fd0ff', '#ffb36b', '#f6c8ff'];
 const MAX_FLOWERS = 1400;
@@ -20,19 +21,19 @@ function buildGarden(): Garden {
   // the stream: a ribbon across the clearing (perpendicular to the walk), crossing it a little past the middle
   const mx = ux * R * 0.12, mz = uz * R * 0.12, W = 1.7;
   const cl = (s: number): [number, number] => { const o = Math.sin(s * 0.16) * 2.4 + Math.sin(s * 0.41 + 1) * 0.7; return [mx + vx * s + ux * o, mz + vz * s + uz * o]; };
-  const pos: number[] = [], idx: number[] = [], deco = new GB([0.85, 1.08]);
+  const pos: number[] = [], shore: number[] = [], idx: number[] = [], deco = new GB([0.85, 1.08]);
   let n = 0;
   for (let s = -R * 1.05; s <= R * 1.05; s += 0.8) {
     const [cx, cz] = cl(s), [nx, nz] = cl(s + 0.8), tx = nx - cx, tz = nz - cz, tl = Math.hypot(tx, tz) || 1, ox = -tz / tl, oz = tx / tl;
     const w = W * (0.9 + Math.sin(s * 0.7) * 0.15);
-    pos.push(cx + ox * w, 0.05, cz + oz * w, cx - ox * w, 0.05, cz - oz * w);
-    if (n > 0) { const a = (n - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    pos.push(cx + ox * w, 0.05, cz + oz * w, cx, 0.05, cz, cx - ox * w, 0.05, cz - oz * w); shore.push(0, w, 0);   // (aS: metres to the bank)
+    if (n > 0) { const a = (n - 1) * 3; idx.push(a, a + 1, a + 3, a + 1, a + 4, a + 3, a + 1, a + 2, a + 4, a + 2, a + 5, a + 4); }
     n++;
     if (Math.hypot(cx, cz) < R - 1) for (const sd of [-1, 1]) if (rnd() < 0.55 && Math.abs(s) > 3.2) {   // bank pebbles (clear of the bridge)
       const d = w + 0.25 + rnd() * 0.4; deco.sph(0.22 + rnd() * 0.3, [cx + ox * d * sd, 0.05, cz + oz * d * sd], rnd() < 0.5 ? '#9aa0a6' : '#b8b4a8', [1.2, 0.5, 1], 6, [0, rnd() * 6, 0]);
     }
   }
-  const river = new BufferGeometry(); river.setAttribute('position', new Float32BufferAttribute(pos, 3)); river.setIndex(idx); river.computeVertexNormals();
+  const river = new BufferGeometry(); river.setAttribute('position', new Float32BufferAttribute(pos, 3)); river.setAttribute('aS', new Float32BufferAttribute(shore, 1)); river.setIndex(idx);
   // the footbridge over the stream where the walk crosses it (deck along u, a gentle hump)
   { const [bx, bz] = cl(0), yaw = Math.atan2(ux, uz);
     const at = (a: number, b: number, y: number): [number, number, number] => [bx + ux * a + vx * b, y, bz + uz * a + vz * b];
@@ -82,7 +83,7 @@ export function DreamGarden() {
 function GardenMeshes({ g }: { g: Garden }) {
   const geo = useMemo(flowerGeo, []);
   const mat = useMemo(() => litMat({ roughness: 0.8 }), []);
-  const water = useMemo(() => new MeshStandardMaterial({ color: '#6cc4f0', emissive: new Color('#2a7ab0'), emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.88, side: DoubleSide }), []);
+  const water = useMemo(() => { const m = makeWaterMaterial({ shore: 'attr', span: 1.3, shallow: '#6fe6e0', deep: '#3d9be0' }); m.side = DoubleSide; return m; }, []);
   const decoMat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const inst = useRef<InstancedMesh>(null!);
   useEffect(() => {
@@ -91,11 +92,10 @@ function GardenMeshes({ g }: { g: Garden }) {
     inst.current.count = g.flowers.length; inst.current.instanceMatrix.needsUpdate = true; if (inst.current.instanceColor) inst.current.instanceColor.needsUpdate = true;
   }, [g]);
   useEffect(() => () => { geo.dispose(); mat.dispose(); water.dispose(); decoMat.dispose(); }, [geo, mat, water, decoMat]);
-  useFrame(({ clock }) => { water.emissiveIntensity = 0.22 + Math.sin(clock.elapsedTime * 1.6) * 0.08; });
   return (
     <>
       <instancedMesh ref={inst} args={[geo, mat, MAX_FLOWERS]} frustumCulled={false} receiveShadow />
-      <mesh geometry={g.river} material={water} receiveShadow />
+      <mesh geometry={g.river} material={water} />
       <DreamMotes />
       <mesh geometry={g.deco} material={decoMat} castShadow receiveShadow />
     </>
