@@ -15,6 +15,7 @@ import { Vector3 } from 'three';
 import { BOSS_ROTATION } from '../enemyDefs';
 import { addSpareFlasks } from './caveKit';
 import { NPCS } from '../townData';
+import { syncGateFlags, gateMask } from '../townGates';
 import { GameStatus, type Item } from '../../types';
 import {
   NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress, bagCount,
@@ -174,13 +175,13 @@ events.on('pickup', (e) => {
 });
 
 // -------------------------------------------------------------- markers ---
-let mkSave: NpcQuestSave | null = null, mkInv: Item[] | null = null, mkRank = -1;
+let mkSave: NpcQuestSave | null = null, mkInv: Item[] | null = null, mkRank = -1, mkGates = -1;
 let mk: number[] = NPCS.map(() => 0);
 /** Marker per NPC index (0 none, 1 "!", 2 grey "?", 3 gold "?"); recomputed only when the quest state / bag / rank changed. */
 export function npcMarkers(): readonly number[] {
   const s = useGameStore.getState();
-  if (s.npcQuests !== mkSave || s.inventory !== mkInv || s.heroRank !== mkRank) {
-    mkSave = s.npcQuests; mkInv = s.inventory; mkRank = s.heroRank;
+  if (s.npcQuests !== mkSave || s.inventory !== mkInv || s.heroRank !== mkRank || gateMask() !== mkGates) {
+    mkSave = s.npcQuests; mkInv = s.inventory; mkRank = s.heroRank; mkGates = gateMask();
     mk = NPCS.map((d) => npcMarker(d.name, s.npcQuests, s.inventory, s.heroRank));
   }
   return mk;
@@ -201,7 +202,7 @@ export function questDialogueFor(name: string): { mode: 'turnin' | 'offer' | 'pr
 
 // side quests unlock after the main-story tutorial (story step 'king' reached = the town tutorial is done)
 const GATE_STEP = Math.max(0, STORY.findIndex((st) => st.id === 'king'));
-const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; };
+const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; syncGateFlags(step); };   // (+ the story gates, engine/townGates.ts: side quests behind a closed gate stay hidden)
 setTimeout(() => {   // (deferred: this module loads while the store module is still initialising)
   syncGate(useGameStore.getState().story.step);
   useGameStore.subscribe((s, p) => { if (s.story !== p.story) syncGate(s.story.step); });

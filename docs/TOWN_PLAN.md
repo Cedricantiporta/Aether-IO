@@ -57,3 +57,14 @@ hedges, rocks and props (townFill.ts groves). Walks from the spawn (in front of 
 
 ## Floors (owner ref 2026-10-21: cream flagstones + terracotta kerbs + green lawns)
 Town paving (`render/TownScenery.tsx`): `flagTexture()` (tileable Voronoi canvas: big soft cream slabs, thin warm-grey grout, a few darker) shared by the yard paving and the street strips (world-planar UVs, tile 6 m, so they line up). `buildKerbs()` = ONE merged mesh of terracotta brick kerb along both edges of every paved street (skips street crossings, stairs, plaza/gate mouths) plus rings round the plaza and gate forecourt; grass-patch kerbs and the portal-lawn kerb are terracotta too. Plaza: concentric slab rings (boxes) round the portal lawn + an orange ring inlay; no star (portal covers the centre). Visual only; ROADS data, colliders and the minimap are unchanged. Cost: 1 extra draw call.
+
+## Story gates (2026-10-22)
+Four outskirts corners are blocked until the main story reaches a step (table `TOWN_GATES` in `engine/townGates.ts`; the state is derived from `story.step`, nothing saved). Coordinates are world x / z.
+| Gate | Blocker | Where | Opens (step id / index) | Hides |
+| --- | --- | --- | --- | --- |
+| beach | flooded-road barricade + sandbags, puddles, duck, sign | across the beach dirt road x -37, z 49.6..55.2 (+ invisible plugs at z 39.4..41.4, 46.4..48.6, 58.4..61.6) | `wolves` (3) | Fishmonger, fishing spots, pier, Ned, Marlo, Capt. Rhea |
+| cave | cave-in rubble, broken props, pickaxe, crystals, sign | in front of the mine mouth (70.2..74.6, z 9.5): a door gate, the camp stays open | `report2` (6) | the Enter Crystal Cave pill (Look pill instead) |
+| tower | fallen tree (root ball, crown, mushrooms, axe sign) | against the Endless Tower's door (1.2..8.8, z 150.2): a door gate | `wren` (7) | the tower door pill (the HUD corner icons still open Daily / Waves / Tower) |
+| hermit | thorny brambles (thorns, blossoms, vines, sign) | NE back trail (46.8..52.6, z -27) | `lysa2` (11) | Old Wend |
+Rules: a road gate must seal the walk at the hero's real size (collider r + 0.5; the A* grid is stricter, so verify with the flood fill, see HANDOFF "Story gates"); a gate's Look zone (3 m from its span) never overlaps a shop (7 m from its position), NPC (3.8 m), door or fishing prompt zone; the
+main story needs only the portal, shops, castle and Garrick / Wren / Lysa / Dorn / Roan, all inside the walls, so nothing before the Tower step (30) needs a gated place. The minimap draws closed gates as an orange bar with an "x" badge.

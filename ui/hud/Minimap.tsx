@@ -29,6 +29,7 @@ import { mainNav, npcQuestNav, navNpc } from '../../engine/systems/questNav';
 import { NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus } from '../../npcQuests';
 import { useUiStore } from '../uiStore';
 import { useRaf } from '../hooks/useRaf';
+import { TOWN_GATES, gateFlags, gateMask, type GateDef } from '../../engine/townGates';
 
 const mmPt: [number, number] = [0, 0];
 const SIZE = 200;   // css px across
@@ -93,13 +94,22 @@ function building(g: CanvasRenderingContext2D, x: number, z: number, rot: number
   g.restore();
 }
 
+/** A closed story gate (engine/townGates.ts): a bold orange bar over its blocked line and a round "x" badge, so the hero sees what is shut. */
+function gateMark(g: CanvasRenderingContext2D, gt: GateDef): void {
+  const [x1, z1, x2, z2] = gt.span, cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+  g.lineCap = 'round';
+  for (const [col, w] of [['#fff8e8', 3.4], ['#ff8a3c', 2.2]] as const) { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x1, z1); g.lineTo(x2, z2); g.stroke(); }
+  disc(g, cx, cz, 2.5, '#fff8e8'); disc(g, cx, cz, 1.9, '#ff6b3c');
+  g.strokeStyle = '#fff8e8'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(cx - 0.8, cz - 0.8); g.lineTo(cx + 0.8, cz + 0.8); g.moveTo(cx + 0.8, cz - 0.8); g.lineTo(cx - 0.8, cz + 0.8); g.stroke();
+}
+
 function bakeTown(): void {
   const pts = islePoints();
   let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
   for (let i = 0; i < ISLE_N; i++) { x0 = Math.min(x0, pts[i * 2]); x1 = Math.max(x1, pts[i * 2]); z0 = Math.min(z0, pts[i * 2 + 1]); z1 = Math.max(z1, pts[i * 2 + 1]); }
   x0 -= 40; z0 -= 40; x1 += 40; z1 += 40;
   const cleared = rockfallCleared(useGameStore.getState().npcQuests);
-  bake(`T:${mapSeed}:${world.obstaclesVersion}:${cleared ? 1 : 0}`, x0, z0, x1 - x0, z1 - z0, 2048, C.water, (g) => {
+  bake(`T:${mapSeed}:${world.obstaclesVersion}:${cleared ? 1 : 0}:${gateMask()}`, x0, z0, x1 - x0, z1 - z0, 2048, C.water, (g) => {
     g.fillStyle = C.water; g.fillRect(x0, z0, x1 - x0, z1 - z0);
     // island: sand rim, then grass with a lighter top
     g.beginPath(); for (let i = 0; i < ISLE_N; i++) { if (i === 0) g.moveTo(pts[0], pts[1]); else g.lineTo(pts[i * 2], pts[i * 2 + 1]); } g.closePath();
@@ -151,6 +161,7 @@ function bakeTown(): void {
     // shops: soft rounded tiles in each shop's colour; board / altar / trainer as small dots
     for (const s of SHOP_POSITIONS) { const x = s.position[0], z = s.position[2]; g.save(); g.translate(x, z); g.rotate(-(s.rot ?? 0)); g.fillStyle = C.shadow; rr(g, -2.4, -2.0, 4.8, 4.8, 1.6); g.fill(); g.fillStyle = mix(s.color, '#ffffff', 0.4); rr(g, -2.4, -2.4, 4.8, 4.8, 1.6); g.fill(); g.restore(); disc(g, x, z, 0.9, C.cream); }   // (the shops face any way: tiles turn with them)
     disc(g, SHRINE_POS[0], SHRINE_POS[2], 1.5, '#c7a2ff'); disc(g, TRAINER_POS[0], TRAINER_POS[2], 1.7, '#ffb05a');
+    for (const gt of TOWN_GATES) if (!gateFlags[gt.id]) gateMark(g, gt);   // closed story gates
   });
 }
 
@@ -259,7 +270,7 @@ export const Minimap: React.FC = () => {
     ctx.clearRect(0, 0, P, P);
     // ---- terrain (baked once per area / room)
     if (room) { const key = `R:${world.room.version}:${world.room.seed}:${world.room.biome}:${world.room.index}:${world.obstaclesVersion}:${shape.version}:${camp.ver}`; if (baked.key !== key) bakeRoom(); }
-    else if (town) { const key = `T:${mapSeed}:${world.obstaclesVersion}:${rockfallCleared(useGameStore.getState().npcQuests) ? 1 : 0}`; if (baked.key !== key) bakeTown(); }
+    else if (town) { const key = `T:${mapSeed}:${world.obstaclesVersion}:${rockfallCleared(useGameStore.getState().npcQuests) ? 1 : 0}:${gateMask()}`; if (baked.key !== key) bakeTown(); }
     else if (area !== 'CAVE') { if (baked.key !== `A:${area}`) bakeInterior(area); }
     if (area === 'CAVE') { ctx.fillStyle = '#6a6474'; ctx.fillRect(0, 0, P, P); }
     else if (baked.cv) {

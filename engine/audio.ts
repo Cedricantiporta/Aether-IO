@@ -853,6 +853,7 @@ export function initAudio(): () => void {
   offs.push(events.on('crateBreak', safe(() => sfxCrate())));
   offs.push(events.on('levelUp', safe(() => sfxLevelUp())));
   offs.push(events.on('questComplete', safe(() => sfxQuestComplete())));
+  offs.push(events.on('gateOpen', safe(() => { sfxBell(3); tone(150, 70, 0.45, 0.16, { type: 'triangle', delay: 0.05 }); noise(0.35, 0.12, 900, 200); })));   // (a new area opens: bell + a soft rumble of the blocker giving way)
   offs.push(events.on('dash', safe(() => sfxDash())));
   offs.push(events.on('noMana', safe(() => sfxBuzz())));
   offs.push(events.on('onCooldown', safe(() => sfxBuzz())));

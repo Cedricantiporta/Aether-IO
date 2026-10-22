@@ -12,6 +12,7 @@
 import type { Item, Rarity } from './types';
 import type { RoomType } from './engine/types';
 import { LOOT_BY_ID } from './loot';
+import { gateFlags, type GateId } from './engine/townGates';
 
 export type NpcObjectiveType =
   | 'KILL_KIND' | 'KILL_TOTAL' | 'KILL_ELITE' | 'KILL_BOSS'   // kill counts (KILL_BOSS target: a boss kind)
@@ -58,6 +59,8 @@ export interface NpcQuestDef {
   cond?: { boss?: string; rank?: number };
   /** class level needed before the quest is offered (shown as "Lv N" while locked) */
   minLevel?: number;
+  /** the quest needs a place behind this story gate (engine/townGates.ts): hidden until it is open */
+  gate?: GateId;
   /** the turn-in NPC when it is not the giver */
   turnIn?: string;
   /** TALK objectives: what the target NPC says when you pass the message on (shown first in their dialogue) */
@@ -93,7 +96,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   },
   // ---- the hermit north of the wall: a secret for Old Wend (his sunstone gift is tied to this quest, townData)
   {
-    id: 'pip_secret', minLevel: 3, giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
+    id: 'pip_secret', minLevel: 3, gate: 'hermit', giver: 'Pip', title: 'A Secret for the Hermit', summary: 'Talk to Old Wend behind the north wall',
     intro: ['Psst! Hero! I found a shiny pebble and I think the old hermit north of town would love it.', 'You:: Why would a hermit love a pebble?', 'Because it is SHINY. Everybody loves shiny.', 'But I am not allowed past the wall. Could you ask Old Wend what it is? Then come and tell me!'],
     progress: 'Did you see Old Wend yet? He lives behind the north wall of town.',
     heard: ['A shiny pebble, warm to the touch? That is a sunstone, child.', 'You:: A sunstone? Is it dangerous?', 'Only to socks. Tell little Pip to keep it out of the rain: it sulks when it gets wet.'],
@@ -122,7 +125,7 @@ export const NPC_QUESTS: NpcQuestDef[] = [
   // ---- (owner) Lv 30: Erin and the rockfall. Done -> the rocks shatter (townData rockfallCleared) and the old miners' road
   //      over the green is a shortcut to the mines.
   {
-    id: 'erin_boulder', minLevel: 30, giver: 'Erin', title: 'Beyond the Rocks', summary: 'Ask Grit in the Crystal Cave how to break the rockfall',
+    id: 'erin_boulder', minLevel: 30, gate: 'cave', giver: 'Erin', title: 'Beyond the Rocks', summary: 'Ask Grit in the Crystal Cave how to break the rockfall',
     intro: [
       'You! You look strong. Stronger than me. For now.',
       'You:: I like the confidence.',
@@ -206,6 +209,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
   const e = save.q[def.id];
   if (e) return e.s === 2 ? 'DONE' : 'ACTIVE';
   if (!questGate.open) return 'LOCKED';
+  if (def.gate && !gateFlags[def.gate]) return 'LOCKED';
   if (def.after && save.q[def.after]?.s !== 2) return 'LOCKED';
   if (def.cond?.boss && !(save.bossKills[def.cond.boss] > 0)) return 'LOCKED';
   if (rank < npcQuestMinLevel(def)) return 'LOCKED';
@@ -215,7 +219,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
 export const npcQuestMinLevel = (def: NpcQuestDef): number => Math.max(def.minLevel ?? 0, def.cond?.rank ?? 0);
 /** Locked ONLY by the class level (its chain and boss condition are met): listed with "Lv N" in the quest window. */
 export function npcQuestLevelLocked(def: NpcQuestDef, save: NpcQuestSave, rank: number): boolean {
-  return questGate.open && !save.q[def.id] && rank < npcQuestMinLevel(def)
+  return questGate.open && !save.q[def.id] && rank < npcQuestMinLevel(def) && (!def.gate || gateFlags[def.gate])
     && (!def.after || save.q[def.after]?.s === 2) && (!def.cond?.boss || save.bossKills[def.cond.boss] > 0);
 }
 

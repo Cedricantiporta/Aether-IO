@@ -95,6 +95,8 @@ import type { NpcQuestDef } from '../../npcQuests';
 import { openDialogue, advanceDialogue, acceptOffer, dialogueOpen, closeDialogue, useDialogue } from './dialogue';
 import { BEACH, BEACH_COLLIDERS, FISH_SPOTS, FISH_SPOT_R, beachSide } from '../beachData';
 import { fishingActive, startFishing, stopFishing, updateFishing } from './fishing';
+import { TOWN_GATES, GATE_BY_ID, GATE_PROMPT_R, gateDist2, gateFlags } from '../townGates';
+import { placeGateColliders } from './townGatesLogic';
 
 const INTERACT_R = 7;
 /** Harvest nodes regrow 24 real hours after the LAST one was harvested; state is saved so it survives reloads. */
@@ -152,6 +154,7 @@ export function placeVillageNodes(): void {
   rockCols.length = 0;   // (owner) Erin's rockfall blocks the old miners' road until his quest chain is done
   const broken = rockfallCleared(useGameStore.getState().npcQuests);
   ROCKFALL.forEach(([x, z, r], i) => { if (i === ROCKFALL_BREAK && broken) return; const c = addTempCollider(x, z, r, true); if (c && i === ROCKFALL_BREAK) rockCols.push(c); });   // (only the middle boulder can break)
+  placeGateColliders();   // (the story gates still closed: flooded road, cave-in, fallen tree, brambles; engine/townGates.ts)
   stopFishing();
   spawnTownMonsters();
   resetNpcs();
@@ -207,7 +210,7 @@ function sleepAtHome(): void {
   }, SLEEP_FADE);
 }
 
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'ride' | 'pet';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet';
 export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -222,7 +225,7 @@ const GATE_R = 3.2;   // (only on top of the portal platform)
 const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
 /** Fishing + the Fishmonger need class level UNLOCK_LV.FISHING (unlocks.ts); below it their pills read "Unlocks at Lv N". */
 export const fishingLocked = (): boolean => useGameStore.getState().level < UNLOCK_LV.FISHING;
-const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a';
+const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a', GATE_COLOR = '#ffd27a';
 
 /** Prompt priority when several NPCs / counters overlap: an NPC with something for you (main quest, new or finished side
  *  quest) and one the hero is facing come first (scales the squared distance used for sorting). */
@@ -263,13 +266,17 @@ function scanNearby(): void {
       else push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d);
     }
     d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
-    d = q(TOWER.door.x, TOWER.door.z); if (d < 16) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');
+    d = q(TOWER.door.x, TOWER.door.z); if (d < 16 && gateFlags.tower) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');   // (closed: the fallen tree's Look pill takes its place)
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     d = q(CHURCH_DOOR.x, CHURCH_DOOR.z); if (d < CHURCH_DOOR.r * CHURCH_DOOR.r) push('E', 'Enter', 'Chapel', '', -1, d, 'church');
     d = q(TAVERN_DOOR.x, TAVERN_DOOR.z); if (d < TAVERN_DOOR.r * TAVERN_DOOR.r) push('E', 'Enter', 'Golden Tankard', '', -1, d, 'tavern');
     d = q(HOME_DOOR.x, HOME_DOOR.z); if (d < HOME_DOOR.r * HOME_DOOR.r) push('E', 'Enter', 'Your house', '', -1, d, 'home');
     d = q(CHAPEL_SIDE.x, CHAPEL_SIDE.z); if (d < CHAPEL_SIDE.r * CHAPEL_SIDE.r) push('E', 'Enter', 'Chapel (side door)', '', 1, d, 'church');
-    d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');
+    d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r && gateFlags.cave) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');   // (closed: the cave-in's Look pill below takes its place)
+    for (let i = 0; i < TOWN_GATES.length; i++) {   // a story gate still closed: "Look" explains it (never near a shop / door pill, see engine/townGates.ts)
+      const g = TOWN_GATES[i]; if (gateFlags[g.id]) continue;
+      d = gateDist2(g, p.pos.x, p.pos.z); if (d < GATE_PROMPT_R * GATE_PROMPT_R) push('E', 'Look', g.name, '', i, d, 'blocked', GATE_COLOR);
+    }
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on
     // (only while a quest asks for it)
     if (wantsInteract('milk')) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'COW') continue; d = q(animals[i].x, animals[i].z); if (d < 7) push('E', 'Hold: Milk', 'Cow', '', 200 + i, d, 'farm'); }
@@ -315,6 +322,7 @@ function scanNearby(): void {
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
+  if (it.act === 'blocked') { const g = TOWN_GATES[it.node]; if (g && !gateFlags[g.id]) st.addNotification(g.line, GATE_COLOR, 'WARNING'); return; }   // (the sign explains it; WARNING toasts repeat at most every 3 s)
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
     if (st.isShopOpen || dialogueOpen() || v.pending) return;
@@ -326,7 +334,7 @@ export function interact(it: Interactable): void {
     else if (it.act === 'tavern') v.pending = 'TAVERN';
     else if (it.act === 'home') v.pending = 'HOME';
     else if (it.act === 'sleep') sleepAtHome();
-    else if (it.act === 'cave') v.pending = 'CAVE';
+    else if (it.act === 'cave') { if (gateFlags.cave) v.pending = 'CAVE'; }   // (a cave-in keeps it shut until the story opens it)
     else if (it.act === 'leave') { viaSide = v.area === 'CHURCH' && it.node === 1; v.pending = 'LEAVE'; }
     else if (it.act === 'down' || it.act === 'up' || it.act === 'bench') interactCave(it.act, it.node);
     else if (it.act === 'npc') openDialogue(it.node);
@@ -334,7 +342,7 @@ export function interact(it: Interactable): void {
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
       else st.startMode('ADVENTURE');   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
     }
-    else if (it.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });      // the Endless Tower building
+    else if (it.act === 'tower') { if (gateFlags.tower) events.emit('openSetOut', { mode: 'TOWER' }); }      // the Endless Tower building (a fallen tree keeps its door shut until the story opens it)
     else if (it.shop) st.openSpecificShop(it.shop);
     return;
   }
@@ -536,9 +544,9 @@ function arrive(): void {
   else if (g.act === 'castle') world.village.pending = 'ENTER';
   else if (g.act === 'church') world.village.pending = 'CHURCH';
   else if (g.act === 'tavern') world.village.pending = 'TAVERN';
-  else if (g.act === 'cave') world.village.pending = 'CAVE';
+  else if (g.act === 'cave') { if (gateFlags.cave) world.village.pending = 'CAVE'; else st.addNotification(GATE_BY_ID.cave.line, GATE_COLOR, 'WARNING'); }
   else if (g.act === 'leave') world.village.pending = 'LEAVE';
-  else if (g.act === 'tower') events.emit('openSetOut', { mode: 'TOWER' });
+  else if (g.act === 'tower') { if (gateFlags.tower) events.emit('openSetOut', { mode: 'TOWER' }); else st.addNotification(GATE_BY_ID.tower.line, GATE_COLOR, 'WARNING'); }
   else if (g.act === 'npc' && g.npc >= 0) openDialogue(g.npc);
 }
 

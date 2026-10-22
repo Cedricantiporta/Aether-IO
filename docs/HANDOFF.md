@@ -50,10 +50,10 @@ engine/            pure TS simulation (no React); world.ts = mutable singleton f
   game.ts input.ts camera.ts events.ts mapgen.ts audio.ts debug.ts runMods.ts runCards.ts
   roomDefs.ts roomgen.ts roomShape.ts roomFeatures.ts campPaths.ts   run structure, biomes, room building
   townData.ts townHills.ts castleData.ts churchData.ts tavernData.ts homeData.ts caveData.ts beachData.ts   town + interiors
-  gates.ts arenaRooms.ts wanderers.ts npcLines.ts enemyDefs.ts lootExtra.ts
+  gates.ts (Void trial gates) townGates.ts (story gates: blocked outskirts) arenaRooms.ts wanderers.ts npcLines.ts enemyDefs.ts lootExtra.ts
   systems/  player abilities skills combat enemies bosses bosses2 bossMech bossFx bossSpecials humanBosses darkHero eliteBig
             tricks director roomEvents biomeHazards projectiles zones pickups crates minions pets ally riruru
-            village npcs dialogue storyLogic npcQuestLogic questNav townPath cave fishing tutorial target aim combo heroTrail dailyRun ...
+            village npcs dialogue storyLogic townGatesLogic npcQuestLogic questNav townPath cave fishing tutorial target aim combo heroTrail dailyRun ...
 render/            R3F components (Scene, Room, Town*, Hero, Enemies, Bosses*, ...); read `world` in useFrame
 ui/                DOM HUD (hud/), windows (panels/, panels/shop/), screens/, components/, lib/ (dnd, padNav, inputMode, alerts, cursors)
 store.ts storeTypes.ts   Zustand meta/RPG state (profile in localStorage 'aether-survivor-profile-v1', one key per character slot)
@@ -88,6 +88,19 @@ town (and closes the open panel first).
   lot with `hero: true`): wider lot, blue-and-gold gate arch, flag pole, red rug, doghouse, "Your Home" name plate (`HeroHomeSign`). **Enterable-later houses**: `ENTERABLE_HOUSES` (yaw 0, door spots, listed in
   TOWN_PLAN). **Shops stand out**: the hanging icon signs are 1.5x. Cottages carry gentle yaws (`HOUSES[].rot`). Plaza floor: kerbed discs + a blue tile ring + a gold 8-point star (`buildRoads`); streets have a warm kerb. Floors: soft cream flagstones + cobbles (`pavingTexture` / `cobbleTexture`),
   calm grass colour drifts (Terrain `groundColor`). Old quest-board road stub removed.
+- **Story gates (2026-10-22): the map unfolds with the MAIN story** (`engine/townGates.ts` data + pure rules, `engine/systems/townGatesLogic.ts` runtime, `render/TownGates.tsx` meshes, Minimap marks).
+  Four outlying corners start blocked by a cute physical blocker and open when the story REACHES a step (`GateDef.opens` = step id, so the open state is derived from the saved `story.step`:
+  no extra save, refresh / new sessions / old saves past the step start fully open): **beach** (flooded-road barricade across the dirt road at x -37, z 49.6..55.2, opens at step `wolves` = after the Meadow trial; hides
+  the Fishmonger, fishing, Ned, Marlo, Capt. Rhea), **cave** (cave-in rubble in front of the mine mouth, a DOOR gate: the camp + Mining Supplies stay open, the Enter pill is replaced; opens at `report2` = Elderroot fallen),
+  **tower** (a fallen tree across the Endless Tower's door, a DOOR gate: the forest is open ground, and the Daily / Waves / Tower windows open from the HUD corner icons anywhere, so nothing is cut off; opens at `wren`),
+  **hermit** (thorny brambles across the narrow NE back trail at z -27; hides Old Wend; opens at `lysa2` = Marble Halls boss down). Road gates have colliders along `span` + invisible `plugs` (tiny gaps found by the QA
+  flood fill); door gates have `cols`. Prompt: ONE "E Look <name>" pill (village `act 'blocked'`, reach `GATE_PROMPT_R` 3 m from the span) that toasts the speech `line`; the zone never overlaps a shop / NPC / door prompt zone
+  (checked). Opening: `townGatesLogic.onStore` (store subscription, deferred) removes the colliders, bumps `obstaclesVersion` (path grid + minimap rebake), notifies `done`, emits `gateOpen` (bell + rumble in audio;
+  the quest fanfare already played with the step) and queues `gatePlay` so `render/TownGates` plays the 1.1 s removal (shake, sink, shrink, dust / leaves / chips) when the hero is within 70 m; otherwise it just vanishes.
+  Closed gates are static merged meshes (4 draw calls, no per-frame work). Side quests behind a gate carry `gate: '<id>'` in npcQuests (hidden until open): Pip's hermit secret (hermit), Erin's boulder (cave).
+  Step thresholds live in ONE table (`TOWN_GATES`), change them there. Debug: set the story step in the Debug tab and the gates close / open live. **QA:** `(await import('/engine/systems/townGatesLogic.ts')).gateSelfCheck()` in a
+  town page: per story step, the closed gates must not hide the step's targets or any core place; every gate must hide something; no Look zone may overlap another prompt zone; side quests without a `gate` must be doable with
+  every gate closed. A fresh save's path test (pw pathtest.js) now has 15 extra EXPECTED fails (194 pass / 19 fail with the 4 chicken-pen ones; fishing spots, Fishmonger, Ned, Marlo, Rhea, pier, Old Wend, the beach path; the tower door stays reachable, only its pill is swapped); a late-story save is the old 209 / 4.
 - **Kingdom v4 (2026-10-20): dense districts, seven separate shops** (full map + coordinates: `docs/TOWN_PLAN.md`). Inside the walls: castle terrace N, plaza + statue, market street
   (the avenue, 4 stalls a side), residential lanes (lane z 23.2 each side, houses 6 m apart at z 16.2 / 29.6, auto yards = lawn + planters from `HOUSES`), chapel quarter + graveyard (NW),
   tavern square (NE), park + fountain (SW), cottages on both rises, the old shop-row line (z 1.2) is cottages now. **The seven town shops are NOT a row any more**: each has its own spot
