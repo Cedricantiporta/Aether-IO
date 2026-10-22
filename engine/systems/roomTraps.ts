@@ -18,7 +18,7 @@ import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import type { RoomPlan } from '../types';
 import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
-import { queryColliders, addTempCollider, CRATE_HP, type Collider } from '../mapgen';
+import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
 import { insideShape } from '../roomShape';
 import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
@@ -31,8 +31,8 @@ const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0
 
 export const rt = {
   on: false, ver: 0,
-  nSiege: 0, siege: Array.from({ length: 4 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0 })),
-  nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0 })),
+  nSiege: 0, siege: Array.from({ length: 4 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null })),
+  nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
   nJet: 0, jet: Array.from({ length: 3 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
   nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, seed: 0 })),
@@ -44,6 +44,31 @@ export const rt = {
 export const trapMods = { grip: 1, slow: 1 };
 export const JET_WARN = 1.0, JET_ON = 1.5, VINE_REST = 4.5, BAR_LEN = 6.5, TOWER_WIND_T = TOWER_WIND, CATAPULT_WIND_T = CATAPULT_WIND, BOULDER_FLIGHT = FLIGHT;
 const POOL_GRIP = 0.16;
+/** (owner) at most this many stationaries of the room's one kind */
+const MAX_PIECES = 3;
+/** (owner) siege weapons and magic towers can be destroyed: HP = this many of the hero's average hits, a little more deeper in */
+const SIEGE_HP_HITS = 9, TOWER_HP_HITS = 12;
+const trapHp = (hits: number, depth: number): number => Math.max(30, useGameStore.getState().stats.damage * hits * (1 + 0.02 * depth));
+const hitOne = (o: { x: number; z: number; hp: number; maxHp: number; dead: boolean; col: Collider | null }, rad: number, x: number, z: number, r: number, dmg: number): boolean => {
+  if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + rad) ** 2) return false;
+  o.hp -= dmg;
+  events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
+  if (o.hp <= 0) {
+    o.dead = true; o.hp = 0;
+    if (o.col) { removeTempCollider(o.col); o.col = null; }
+    events.emit('explosion', { pos: new Vector3(o.x, 1, o.z), radius: 3, color: 0xffb060 });
+    addShake(0.25);
+  }
+  return true;
+};
+/** (owner) the hero's attacks / skills damage siege weapons and magic towers. True if something was hit. */
+export function hitRoomTraps(x: number, z: number, r: number, dmg: number): boolean {
+  if (!rt.on) return false;
+  let hit = false;
+  for (let i = 0; i < rt.nSiege; i++) hit = hitOne(rt.siege[i], 1.7, x, z, r, dmg) || hit;
+  for (let i = 0; i < rt.nTower; i++) hit = hitOne(rt.tower[i], 1.4, x, z, r, dmg) || hit;
+  return hit;
+}
 /** QA: force these hazard kinds (TRAP.*) into the next room, and the siege weapon kind (0 ballista / 1 catapult). */
 export const dbgTraps = { force: null as number[] | null, siege: -1, depth: -1, noObs: false };
 
@@ -116,7 +141,8 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   w[TRAP.TOWER] = b === 0 ? (idx >= 6 ? 8 : 0) : b === 6 ? 40 : 8 + 3 * b;
   w[TRAP.BAR] = b === 0 || (b === 1 && idx < 6) ? 0 : b === 5 ? 38 : 8 + 2 * b;
   w[TRAP.JET] = b <= 1 ? 0 : b === 5 ? 34 : 7 + 2 * b;
-  const n = early ? (rnd() < 0.4 ? 1 : 0) : (depth >= 22 || elite) ? 3 : depth >= 8 ? 2 : (rnd() < 0.75 ? 1 : 2);   // how many kinds this room gets
+  // (owner) most rooms have no stationaries; a room that has them gets ONE kind, at most 3 pieces
+  const n = dbgTraps.force ? 1 : rnd() < (early ? 0.15 : elite ? 0.5 : 0.3) ? 1 : 0;
   const picked: number[] = dbgTraps.force ? dbgTraps.force.slice() : [];
   for (let k = 0; k < n && !dbgTraps.force; k++) {
     let tot = 0; for (let i = 0; i < 7; i++) if (!picked.includes(i)) tot += w[i];
@@ -129,21 +155,23 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   const more = depth >= 30 ? 2 : depth >= 14 ? 1 : 0;
   for (const kind of picked) {
     if (kind === TRAP.SIEGE) {
-      const cnt = 1 + (more > 0 && rnd() < 0.6 ? 1 : 0);
+      const cnt = Math.min(MAX_PIECES, 1 + (rnd() < 0.5 ? 1 : 0) + (more > 0 && rnd() < 0.5 ? 1 : 0));
       for (let i = 0; i < cnt && rt.nSiege < rt.siege.length; i++) {
         if (!spot(1.7, 1.2, 0.72, 0.9, 16)) continue;
         const s = rt.siege[rt.nSiege++];
         s.kind = dbgTraps.siege >= 0 ? dbgTraps.siege : b >= 2 && (b >= 3 || rnd() < 0.5) ? (rnd() < 0.5 ? 1 : 0) : 0;   // 0 ballista, 1 catapult (desert and later)
         s.x = out[0]; s.z = out[1]; s.yaw = Math.atan2(-out[0], -out[1]); s.state = 0; s.t = 0; s.cd = 4 + rnd() * 3 + i * 2.5; s.locked = false; s.fired = false; s.tier = more;
-        keep(s.x, s.z, 3.2); addTempCollider(s.x, s.z, 1.7, false);
+        s.maxHp = s.hp = trapHp(SIEGE_HP_HITS, depth); s.dead = false;
+        keep(s.x, s.z, 3.2); s.col = addTempCollider(s.x, s.z, 1.7, false);
       }
     } else if (kind === TRAP.TOWER) {
-      const cnt = 1 + (more > 1 ? 1 : 0);
+      const cnt = Math.min(MAX_PIECES, 1 + (rnd() < 0.45 ? 1 : 0) + (more > 0 && rnd() < 0.4 ? 1 : 0));
       for (let i = 0; i < cnt && rt.nTower < rt.tower.length; i++) {
-        if (!spot(1.5, 1.2, 0.15, 0.7, 12)) continue;
+        if (!spot(1.5, 1.2, 0.0, 0.42, 10) && !spot(1.5, 1.2, 0.0, 0.6, 10)) continue;   // (owner) towers stand mostly in the middle
         const t = rt.tower[rt.nTower++];
         t.x = out[0]; t.z = out[1]; t.state = 0; t.t = 0; t.cd = 4.5 + rnd() * 3 + i * 2; t.a0 = rnd() * 6.28; t.volley = 0; t.glow = 0; t.tier = more + (b === 6 ? 1 : 0);
-        keep(t.x, t.z, 4); addTempCollider(t.x, t.z, 1.3, false);
+        t.maxHp = t.hp = trapHp(TOWER_HP_HITS, depth); t.dead = false;
+        keep(t.x, t.z, 4); t.col = addTempCollider(t.x, t.z, 1.3, false);
       }
     } else if (kind === TRAP.BAR) {
       const cnt = 1 + (more > 0 && rnd() < 0.5 ? 1 : 0);
@@ -163,7 +191,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
       }
     } else if (kind === TRAP.VINE) {
-      const cnt = 2 + Math.floor(rnd() * 2) + (more > 0 ? 1 : 0);
+      const cnt = Math.min(MAX_PIECES, 2 + Math.floor(rnd() * 2) + (more > 0 ? 1 : 0));
       for (let i = 0; i < cnt && rt.nVine < rt.vine.length; i++) {
         const r = 2.0 + rnd() * 0.5;
         if (!spot(r, 0.6, 0, 0.88, 0)) continue;
@@ -221,6 +249,7 @@ export function updateRoomTraps(dt: number): void {
   // ---- siege weapons
   for (let i = 0; i < rt.nSiege; i++) {
     const s = rt.siege[i];
+    if (s.dead) continue;
     const W = s.kind === 0 ? BALLISTA_WIND : CATAPULT_WIND;
     if (s.state === 0) {
       const dx = px - s.x, dz = pz - s.z, d = Math.hypot(dx, dz);
@@ -272,6 +301,7 @@ export function updateRoomTraps(dt: number): void {
   // ---- magic towers: charge, ring of orbs, (a second rotated ring deeper in)
   for (let i = 0; i < rt.nTower; i++) {
     const m = rt.tower[i];
+    if (m.dead) continue;
     m.glow = Math.max(0, m.glow - dt * 2);
     if (m.state === 0) {
       if (!fighting || !alive) { m.cd = Math.max(m.cd, 1.5); continue; }

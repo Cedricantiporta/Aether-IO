@@ -98,7 +98,7 @@ export function RoomTraps() {
     let nBb = 0, nCb = 0, nBo = 0, nTw = 0, nHub = 0, nArm = 0, nJet = 0, nJw = 0, nVn = 0, nPl = 0;
     if (on) {
       for (let i = 0; i < rt.nSiege; i++) {
-        const s = rt.siege[i]; if (!inView(s.x, s.z, 7)) continue;
+        const s = rt.siege[i]; if (s.dead || !inView(s.x, s.z, 7)) continue;
         const rec = s.state === 2 ? Math.max(0, 1 - s.t / 0.5) : 0, rx = -Math.sin(s.yaw) * rec * 0.35, rz = -Math.cos(s.yaw) * rec * 0.35;
         if (s.kind === 0) {
           setInst(S.balBase, nBb, s.x, 0, s.z, s.yaw, 1.5);
@@ -129,7 +129,7 @@ export function RoomTraps() {
         if (rnd() < dt * 40) FX.norm.emit(x, y, z, (rnd() - 0.5), 0.3, (rnd() - 0.5), 0.6, 0.5, 0.9, 0.55, 0.5, 0.42, 0.5, CELL.SMOKE);
       }
       for (let i = 0; i < rt.nTower; i++) {
-        const m = rt.tower[i]; if (!inView(m.x, m.z, 7)) continue;
+        const m = rt.tower[i]; if (m.dead || !inView(m.x, m.z, 7)) continue;
         const charge = m.state === 1 ? clamp(m.t / TOWER_WIND_T, 0, 1) : m.state === 2 ? 1 - clamp(m.t / 0.6, 0, 1) : 0;
         setInst(S.towB, nTw, m.x, 0, m.z, i, 1.3);
         const sc = 0.85 + 0.55 * charge + Math.sin(t * 2.5 + i) * 0.05;

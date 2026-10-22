@@ -8,6 +8,7 @@ import { KILL_XP_MUL } from '../../classLevels';
 // Engine-B (enemies/bosses/director) calls into this module.
 // ============================================================================
 import { hitCratesInRadius } from './crates';
+import { hitRoomTraps } from './roomTraps';
 import { lockedEnemy } from './target';
 import { debug } from '../debug';
 import { dropLoot } from './loot';
@@ -242,6 +243,7 @@ export function damageEnemiesInRadius(
   x: number, z: number, radius: number, amount: number, o: DamageOpts, status?: StatusEffect, excludeId = -1, maxHits = 1e9,
 ): number {
   hitCratesInRadius(x, z, radius, amount);   // (owner) skills break barrels too
+  if (o.source === 'PLAYER' && !o.env && !o.dot) hitRoomTraps(x, z, radius, amount);   // (owner) ...and siege weapons / magic towers
   const ids = world.enemyGrid.query(x, z, radius + 4, aoeOut);
   const r2 = radius * radius;
   let hits = 0;

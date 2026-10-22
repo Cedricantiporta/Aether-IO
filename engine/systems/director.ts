@@ -161,7 +161,7 @@ const MALAKAR_LAST_WORDS = [
 let towerFloor = 0;
 export const towerState = { floor: 0 };
 /** Camp room layout (storage chest pile left of the fire, training post right), set on room entry. */
-export const campPos = { storage: [0, 0] as [number, number], trainer: [0, 0] as [number, number], fire: [0, 0] as [number, number] };   // read by the HUD
+export const campPos = { storage: [0, 0] as [number, number], trainer: [0, 0] as [number, number], fire: [0, 0] as [number, number], /** (owner) blacksmith anvil: upgrade / craft / fuse between biomes */ anvil: [0, 0] as [number, number] };   // read by the HUD
 const FINAL_BIOME = BIOMES.length - 1;
 const towerBiome = (f: number): number => (waves.on ? waveBiome(f) : daily.on ? dailyBiome() : Math.floor((f - 1) / 5) % BIOMES.length);
 function towerPlan(f: number): RoomPlan {
@@ -309,7 +309,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   for (const po of r.portals) po.active = false;
   for (const m of r.markers) m.active = false;
   const [cx, cz] = stationPos(R);
-  campPos.storage[0] = cx - 6; campPos.storage[1] = cz; campPos.trainer[0] = cx + 6; campPos.trainer[1] = cz; campPos.fire[0] = cx; campPos.fire[1] = cz + 1;
+  campPos.storage[0] = cx - 6; campPos.storage[1] = cz; campPos.trainer[0] = cx + 6; campPos.trainer[1] = cz; campPos.fire[0] = cx; campPos.fire[1] = cz + 1; campPos.anvil[0] = cx - 3.2; campPos.anvil[1] = cz + 5;
   const kind = p.type === 'FOUNTAIN' ? 'FOUNTAIN' : p.type === 'MERCHANT' ? 'MERCHANT' : p.type === 'TREASURE' ? 'CHEST' : p.type === 'SHRINE' ? 'ALTAR' : 'NONE';
   r.station.kind = kind; r.station.x = cx; r.station.z = cz; r.station.used = false; r.station.ready = kind === 'FOUNTAIN' || kind === 'MERCHANT' || kind === 'ALTAR';
   {   // (owner) a Treasure stage sometimes holds more chests: 15% two, 5% three, set either side of the main one
@@ -1120,6 +1120,7 @@ function scanNearby(): void {
     if (r.plan.type === 'CAMP' && !r.plan.epilogue) {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
       const dt2 = q(campPos.trainer[0], campPos.trainer[1]); if (dt2 < 12) pushNearby('Train', 'Training Post', 31, dt2);
+      const da = q(campPos.anvil[0], campPos.anvil[1]); if (da < 12) pushNearby('Use', 'Blacksmith Anvil', 32, da);
     }
     const s = r.station;
     if (s.kind !== 'NONE' && !(s.used && s.kind !== 'MERCHANT')) {
@@ -1176,6 +1177,7 @@ export function interactRoom(it: Interactable): void {
   if (it.node >= 50 && it.node <= 56) { interactHub(it.node); return; }   // the Gatekeeper's courtyard
   if (it.node === 30) { st.openSpecificShop('WAREHOUSE'); return; }   // camp storage = the town warehouse
   if (it.node === 31) { st.openSpecificShop('SKILLS'); return; }      // camp training post
+  if (it.node === 32) { st.openSpecificShop('BLACKSMITH'); return; }  // (owner) camp anvil: upgrade / craft / fuse
   if (it.node >= 1000) { lootPickup(it.node - 1000); return; }   // loot an item on the ground
   if (it.node >= 100) {   // harvest stroke (held E repeats it every 0.3 s)
     const c = world.crates[it.node - 100];

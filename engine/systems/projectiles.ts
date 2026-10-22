@@ -18,6 +18,7 @@ import {
 } from './combat';
 import { queryColliders, type Collider } from '../mapgen';
 import { hitCrate } from './crates';
+import { hitRoomTraps } from './roomTraps';
 import { isHarvestNode } from '../mapgen';
 
 export interface ProjSpec {
@@ -40,6 +41,7 @@ const AXE_REACH_PER_SPEED = 0.38;
 const ORIGIN_Y = 1.2;
 const CRATE_HIT_RADIUS = 1.6;
 const CRATE_ID_OFFSET = 10000;
+const TRAP_HIT_KEY = 99999;
 
 const projOut: number[] = [];
 const bounceOut: number[] = [];
@@ -641,6 +643,13 @@ export function updateProjectiles(dt: number): void {
       if (p.pierce <= 0) { p.active = false; break; }
     }
     if (!p.active) continue;
+    // --- (owner) siege weapons / magic towers (once per projectile)
+    if (p.hitIds.indexOf(TRAP_HIT_KEY) === -1 && hitRoomTraps(nx, nz, 0.4, p.damage)) {
+      p.hitIds.push(TRAP_HIT_KEY);
+      events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
+      p.pierce -= 1;
+      if (p.pierce <= 0) { p.active = false; continue; }
+    }
 
     // --- enemies (swept test against the grid) ---
     const mx = (px + nx) * 0.5, mz = (pz + nz) * 0.5;

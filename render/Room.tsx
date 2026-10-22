@@ -619,13 +619,17 @@ function CampProps() {
     t.cyl(0.1, 0.1, 1.9, 6, [0, 0.95, 0], '#6a4a2a'); t.cyl(0.42, 0.36, 0.9, 8, [0, 1.25, 0], '#d9c08a'); t.sph(0.3, [0, 2.0, 0], '#d9c08a', 1, 7); t.box(1.5, 0.14, 0.14, [0, 1.5, 0], '#6a4a2a');
     t.box(0.12, 1.6, 0.12, [1.4, 0.8, -0.4], '#5a3a1e'); t.box(0.12, 1.6, 0.12, [2.6, 0.8, -0.4], '#5a3a1e'); t.box(1.4, 0.12, 0.12, [2.0, 1.4, -0.4], '#5a3a1e');
     for (let i = 0; i < 3; i++) t.box(0.08, 1.4, 0.08, [1.6 + i * 0.4, 0.75, -0.25], '#c4cad4', [0.25, 0, 0]);
-    return { base: b.build(), fire: g.build(), storage: s.build(), train: t.build() };
+    // (owner) blacksmith anvil (front left): stump + anvil + hammer
+    const an = new GB([0.75, 1.08]);
+    an.cyl(0.55, 0.65, 0.7, 10, [0, 0.35, 0], '#7a5a38'); an.box(1.1, 0.35, 0.55, [0, 0.95, 0], '#5c6470'); an.box(0.6, 0.3, 0.4, [0, 0.72, 0], '#4c535e');
+    an.cone(0.22, 0.6, 6, [0.8, 0.98, 0], '#5c6470', [0, 0, -Math.PI / 2]); an.box(0.12, 0.08, 0.7, [-0.15, 1.18, 0.1], '#6a4a2a', [0, 0.5, 0]); an.box(0.28, 0.2, 0.2, [-0.3, 1.2, -0.18], '#8a929e');
+    return { base: b.build(), fire: g.build(), storage: s.build(), train: t.build(), anvil: an.build() };
   }, []);
   const mats = useMemo(() => ({ lit: litMat({ roughness: 0.85 }), glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.8, 1.4, 1.0) }) }), []);
-  const root = useRef<Group>(null!), fire = useRef<Mesh>(null!), st = useRef<Group>(null!), tr = useRef<Group>(null!);
+  const root = useRef<Group>(null!), fire = useRef<Mesh>(null!), st = useRef<Group>(null!), tr = useRef<Group>(null!), an = useRef<Group>(null!);
   // floating name tags (like the town buildings) so the storage and the training post read at a glance
   const trDot = useGameStore((s) => canTrainSkill(s));   // (owner) red dot: a skill can be learned / upgraded
-  const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini', dot: trDot }) }), [trDot]);
+  const labs = useMemo(() => ({ st: labelMaterial('Storage', '#ffe6a8', { size: 46, plate: 'mini' }), tr: labelMaterial('Training Post', '#ffe6a8', { size: 46, plate: 'mini', dot: trDot }), an: labelMaterial('Blacksmith', '#ffe6a8', { size: 46, plate: 'mini' }) }), [trDot]);
   useFrame(({ clock }) => {
     const on = world.room.active && world.room.plan.type === 'CAMP' && !world.room.plan.epilogue;
     if (root.current) root.current.visible = on;
@@ -633,6 +637,7 @@ function CampProps() {
     root.current.position.set(campPos.fire[0], 0, campPos.fire[1] - 1);
     st.current.position.set(campPos.storage[0] - campPos.fire[0], 0, 0);
     tr.current.position.set(campPos.trainer[0] - campPos.fire[0], 0, 0);
+    an.current.position.set(campPos.anvil[0] - campPos.fire[0], 0, campPos.anvil[1] - (campPos.fire[1] - 1));
     const k = 1 + Math.sin(clock.elapsedTime * 13) * 0.08 + Math.sin(clock.elapsedTime * 7.3) * 0.06;
     fire.current.scale.set(k, k * 1.1, k);
   });
@@ -645,6 +650,8 @@ function CampProps() {
         <sprite material={labs.st.mat} position={[0, 3.2, 0]} scale={[labs.st.aspect * 1.0, 1.0, 1]} /></group>
       <group ref={tr}><mesh geometry={geos.train} material={mats.lit} castShadow receiveShadow />
         <sprite material={labs.tr.mat} position={[0.8, 3.2, 0]} scale={[labs.tr.aspect * 1.0, 1.0, 1]} /></group>
+      <group ref={an}><mesh geometry={geos.anvil} material={mats.lit} castShadow receiveShadow />
+        <sprite material={labs.an.mat} position={[0, 2.4, 0]} scale={[labs.an.aspect * 1.0, 1.0, 1]} /></group>
     </group>
   );
 }
