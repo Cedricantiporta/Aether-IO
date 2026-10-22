@@ -13,6 +13,7 @@ import {
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
+import { hitRoomTraps } from './roomTraps';
 
 /**
  * HUD progress. kind 'time': `t` = seconds remaining, `max` = full cooldown.
@@ -90,6 +91,7 @@ function smite(level: number): void {
   else { getAimDir(aim); smiteAt.set(pl.pos.x + aim.x * 5, 0, pl.pos.z + aim.z * 5); }
   const R = 3.2 + 0.3 * (level - 1), dmg = st.damage * 2.4 * st.skillDamage * lvScale(level);
   smiteStun.duration = 0.6 + 0.1 * (level - 1);
+  hitRoomTraps(smiteAt.x, smiteAt.z, R, dmg);   // (owner) stationaries take the smite too
   const ids = world.enemyGrid.query(smiteAt.x, smiteAt.z, R + 2, smiteOut);
   for (let i = 0; i < ids.length; i++) {
     const e = world.enemies[ids[i]];
@@ -165,6 +167,7 @@ function updateOrbitals(dt: number, level: number, chargeMul: number): void {
       b.spin = -a;
       blockEnemyProjectiles(b.pos.x, b.pos.z, 1.0);
       if (!doTick) continue;
+      hitRoomTraps(b.pos.x, b.pos.z, 1.6, dmg);
       const ids = world.enemyGrid.query(b.pos.x, b.pos.z, 6, bladeOut);
       for (let k = 0; k < ids.length; k++) {
         const e = world.enemies[ids[k]];
@@ -271,6 +274,7 @@ export function updateSkills(dt: number): void {
       const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, R + 2, auraOut);
       let hits = 0;
       const dmg = stats.damage * 0.6 * stats.skillDamage * lvScale(lv.consecrate);
+      hitRoomTraps(pl.pos.x, pl.pos.z, R, dmg);
       for (let i = 0; i < ids.length; i++) {
         const e = world.enemies[ids[i]];
         if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;

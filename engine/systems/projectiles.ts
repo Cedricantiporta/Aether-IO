@@ -18,7 +18,7 @@ import {
 } from './combat';
 import { queryColliders, type Collider } from '../mapgen';
 import { hitCrate } from './crates';
-import { hitRoomTraps } from './roomTraps';
+import { hitRoomTraps, trapAim } from './roomTraps';
 import { isHarvestNode } from '../mapgen';
 
 export interface ProjSpec {
@@ -264,6 +264,9 @@ export function fireBasicAttack(): void {
     const t = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
     if (t && t.active && t.state !== 'DYING') {
       const d = Math.hypot(t.pos.x - pl.pos.x, t.pos.z - pl.pos.z) - t.radius * 0.3;
+      speed = Math.max(3.5, Math.min(9.5, d + 1.5)) / AXE_REACH_PER_SPEED;
+    } else if (trapAim.obj && !trapAim.obj.dead) {   // (owner) a targeted stationary: throw the loop out to it
+      const d = Math.hypot(trapAim.obj.x - pl.pos.x, trapAim.obj.z - pl.pos.z) - trapAim.obj.rad * 0.5;
       speed = Math.max(3.5, Math.min(9.5, d + 1.5)) / AXE_REACH_PER_SPEED;
     }
   }
@@ -644,7 +647,7 @@ export function updateProjectiles(dt: number): void {
     }
     if (!p.active) continue;
     // --- (owner) siege weapons / magic towers (once per projectile)
-    if (p.hitIds.indexOf(TRAP_HIT_KEY) === -1 && hitRoomTraps(nx, nz, 0.4, p.damage)) {
+    if (p.hitIds.indexOf(TRAP_HIT_KEY) === -1 && hitRoomTraps(nx, nz, Math.max(0.4, p.radius * 0.5), p.damage)) {
       p.hitIds.push(TRAP_HIT_KEY);
       events.emit('projectileImpact', { pos: p.pos, kind: p.kind, tint: p.tint });
       p.pierce -= 1;

@@ -18,6 +18,8 @@ import {
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
+import { hitRoomTraps, trapAim } from './roomTraps';
+let chargeTrapHit = false;
 import { hitStop, slowMo, fovKick } from '../game';
 /** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
 const RAISE_N = [2, 3, 4, 5, 5];   // (owner: starts with 2 skeletons)
@@ -173,7 +175,7 @@ function aimPoint(range: number, minR: number, o: Vector3): Vector3 {
   else if (autoAim.id >= 0) {
     const e = world.enemies[autoAim.id];
     if (e.active && e.state !== 'DYING') { tx = e.pos.x; tz = e.pos.z; }
-  }
+  } else if (trapAim.obj && !trapAim.obj.dead) { tx = trapAim.obj.x; tz = trapAim.obj.z; }   // (owner) a targeted stationary
   let dx = tx - p.pos.x, dz = tz - p.pos.z;
   let d = Math.sqrt(dx * dx + dz * dz);
   if (d < 0.05) { dx = Math.sin(p.facing); dz = Math.cos(p.facing); d = 1; }
@@ -642,7 +644,7 @@ function shoulderCharge(holy = false): void {
   void kl;
   p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
   p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
-  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * DASH_DMG; a.chargeLv = lv; a.chargeHit.length = 0;
+  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * DASH_DMG; a.chargeLv = lv; a.chargeHit.length = 0; chargeTrapHit = false;
   if (holy) { events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0xffe08a }); announce('HOLY_CHARGE'); }
   events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
   p.anim.castT = 1;
@@ -929,6 +931,7 @@ function bigMeteorImpact(f: GroundFx): void {
   const a = abilityState;
   const px = f.x, pz = f.z;
   const R = 16.5; // impact radius -25%
+  hitRoomTraps(px, pz, R * 0.8, f.dmg * 0.6);   // (owner) the big meteor smashes stationaries too
   stunSt.duration = 1.5;
   const ids = world.enemyGrid.query(px, pz, R + 4, out);
   for (let i = 0; i < ids.length; i++) {
@@ -1129,6 +1132,7 @@ export function updateAbilities(dt: number): void {
   // ---- barbarian shoulder charge: bulldozes everything on its path
   if (a.chargeT > 0) {
     a.chargeT -= dt;
+    if (!chargeTrapHit && hitRoomTraps(p.pos.x + p.dashDir.x * 1.2, p.pos.z + p.dashDir.z * 1.2, 1.4, a.chargeDmg)) chargeTrapHit = true;   // (owner) the charge rams a stationary once
     const ids = world.enemyGrid.query(p.pos.x, p.pos.z, 6, out);
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];

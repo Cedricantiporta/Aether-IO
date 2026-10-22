@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Color, Mesh, PlaneGeometry, ShaderMaterial, DoubleSide } from 'three';
 import { world } from '../engine/world';
 import { currentTarget } from '../engine/systems/combat';
+import { trapAim, lockedTrap } from '../engine/systems/roomTraps';
 
 const VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const FS = `
@@ -39,6 +40,14 @@ export function TargetRing() {
 
   useFrame(({ clock }) => {
     const e = currentTarget();
+    const tr = e ? null : (lockedTrap() ?? trapAim.obj);   // (owner) a targeted siege weapon / tower / statue gets the ring too
+    if (!e && tr && !tr.dead && world.player.alive) {
+      const u = (mesh.material as ShaderMaterial).uniforms;
+      u.uTime.value = clock.elapsedTime; u.uColor.value.copy(RED);
+      const d = tr.rad * 2 + 1.8;
+      mesh.visible = true; mesh.position.set(tr.x, 0.1, tr.z); mesh.scale.set(d, 1, d);
+      return;
+    }
     if (!e || e.hideT > 0 || !world.player.alive) { mesh.visible = false; return; }
     const u = (mesh.material as ShaderMaterial).uniforms;
     u.uTime.value = clock.elapsedTime;

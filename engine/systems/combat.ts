@@ -8,7 +8,7 @@ import { KILL_XP_MUL } from '../../classLevels';
 // Engine-B (enemies/bosses/director) calls into this module.
 // ============================================================================
 import { hitCratesInRadius } from './crates';
-import { hitRoomTraps } from './roomTraps';
+import { hitRoomTraps, trapAim } from './roomTraps';
 import { lockedEnemy } from './target';
 import { debug } from '../debug';
 import { dropLoot } from './loot';
@@ -203,7 +203,7 @@ export function getAimDir(out: Vector3 = _aimTmp): Vector3 {
   else if (autoAim.id >= 0) {
     const e = world.enemies[autoAim.id];
     if (e.active && e.state !== 'DYING') { tx = e.pos.x; tz = e.pos.z; }
-  }
+  } else if (trapAim.obj && !trapAim.obj.dead) { tx = trapAim.obj.x; tz = trapAim.obj.z; }   // (owner) a targeted siege weapon / tower / statue
   const dx = tx - p.pos.x, dz = tz - p.pos.z;
   const l = Math.sqrt(dx * dx + dz * dz);
   if (l < 0.05) out.set(Math.sin(p.facing), 0, Math.cos(p.facing));

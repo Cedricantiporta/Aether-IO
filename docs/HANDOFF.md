@@ -186,6 +186,16 @@ town (and closes the open panel first).
   reaction, now also hurts the hero through a short red ring). Burn ticks are x`HERO_DOT_MUL` like every ticking hazard (jets use
   `env: true`, bars / jets apply BURN). Fair placement: clear of arrival / exits / station / props / each other, turrets hug the
   rim. QA: `roomTraps.dbgTraps` forces kinds. Fire bars, jets also burn monsters.
+  A room with stationaries has ONE kind, max 3 pieces. **Destructible** (siege weapons, magic towers, breath statues; `TrapObj`: hp from
+  `trapHp`, `hitRoomTraps` from `damageEnemiesInRadius`, projectiles (once each, hit radius ~ projectile radius), meteor / charge / smite /
+  blades / consecrate): hit flash + sparks, a small HP bar (instanced, enemy bar shader) once damaged or aimed at, break burst + `DESTROYED!`,
+  rubble heap, 4 gold + xp pickups. **Targeting**: `player.ts` picks the nearest live piece when no monster is clearly closer (1.5 u
+  hysteresis, range 22) into `trapAim.obj` (autoAim.id = -1 then); `getAimDir` / `aimPoint` / `autoTarget` / axe throw length follow it;
+  a click on a piece sets `trapLock` (`target.selectAt`, cleared by `clearTarget`); the AUTO bot walks to and swings at it during FIGHT.
+  **Fire / frost statue** (`TRAP.STATUE`, dbg `dbgTraps.statue` 0 fire / 1 frost): stone dragon head on the rim, telegraph 1.4 s (glowing
+  mouth + two lane strips + wedge, tracks you for 60% then locks), breath 2 s sweeping 0.5 rad, cone 11.5 m (0.55 -> 1.5 m half width),
+  tick 0.4 s: fire = 0.9% maxHP env damage + BURN, frost = 0.6% + SLOW + chill stack every 0.8 s; cooldown ~7 s. Weights: Ember 38, Desert 26,
+  Frostpeak 26 (frost), Void 22 (half frost), Swamp 12, Marble 8, Greenwood 5 (room 5+).
   Harvest nodes appear in ~half the rooms (hand-harvest only). Wanderers (story characters, max one per biome), ally
   fighter once per biome, Riruru (rare harmless blue slime, Greenwood). River/lake stages, rolling hills beyond the props.
 - **Camps are hand-authored transition paths** (`engine/campPaths.ts` `CAMP_LAYOUTS`, 7 layouts, waystation mid-path with

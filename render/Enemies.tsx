@@ -50,9 +50,9 @@ void main(){ vec2 p = (vUv - 0.5) * 2.0; float d = length(p); float ang = atan(p
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 }`;
-const BAR_VS = `attribute vec3 iPos; attribute vec3 iD; varying vec2 vUv; varying vec3 vD;
+export const BAR_VS = `attribute vec3 iPos; attribute vec3 iD; varying vec2 vUv; varying vec3 vD;
 void main(){ vec4 mv = viewMatrix * vec4(iPos, 1.0); mv.xy += position.xy * vec2(iD.z, iD.z * 0.16); gl_Position = projectionMatrix * mv; vUv = position.xy + 0.5; vD = iD; }`;
-const BAR_FS = `varying vec2 vUv; varying vec3 vD;
+export const BAR_FS = `varying vec2 vUv; varying vec3 vD;
 void main(){ float fill = vD.x; float kind = vD.y; vec2 p = vUv;
   float border = step(p.x, 0.018) + step(0.982, p.x) + step(p.y, 0.16) + step(0.84, p.y);
   vec3 col = vec3(0.07, 0.06, 0.09);

@@ -4,6 +4,7 @@
 // ============================================================================
 import { world } from '../world';
 import type { Enemy, EnemyKind } from '../types';
+import { pickTrapAt, trapLock } from './roomTraps';
 
 /** Locked enemy (pool id or -1). `kind`/`at` guard against the pool slot being recycled by another enemy. */
 export const target = { id: -1, kind: '' as EnemyKind | '', boss: false, at: 0 };
@@ -16,7 +17,7 @@ export const TARGET_DROP_RANGE = 40;
 const PICK_SLACK = 1.2;
 const out: number[] = [];
 
-export function clearTarget(): void { target.id = -1; target.kind = ''; target.boss = false; }
+export function clearTarget(): void { target.id = -1; target.kind = ''; target.boss = false; trapLock.obj = null; }
 
 /** The locked enemy if it is still valid, else null. */
 export function lockedEnemy(): Enemy | null {
@@ -53,7 +54,12 @@ export function lockEnemy(e: Enemy): void { target.id = e.id; target.kind = e.ki
 export const clickMoveTo = { on: false, x: 0, z: 0 };
 export function selectAt(x: number, z: number): void {
   const e = pickEnemyAt(x, z);
-  if (e) { if (target.id !== e.id) lockEnemy(e); } else clearTarget();
+  if (e) { trapLock.obj = null; if (target.id !== e.id) lockEnemy(e); }
+  else {   // (owner) no monster there: a siege weapon / tower / statue under the click becomes the lock
+    const t = pickTrapAt(x, z);
+    clearTarget();
+    if (t) trapLock.obj = t;
+  }
 }
 
 /** Queue a click/tap at client coordinates (processed next frame by CameraRig). */

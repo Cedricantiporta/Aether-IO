@@ -10,6 +10,7 @@ import { useGameStore } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo } from './target';
+import { trapAim, lockedTrap, nearestTrap, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
@@ -345,6 +346,25 @@ export function updatePlayer(dt: number): void {
       }
     }
   }
+  // ---- (owner) stationaries (siege weapons, towers, breath statues) are targets too: the click-locked one, else the nearest one when no
+  // monster is closer (a monster has to be clearly nearer to win it back, so the pick doesn't flicker)
+  {
+    let tr: TrapObj | null = null;
+    const lt = lockedEnemy() ? null : lockedTrap();
+    if (lt) tr = lt;
+    else if (st.settings.autoAim !== false && !lockedEnemy()) {
+      const tn = nearestTrap(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
+      if (tn) {
+        const en = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+        const de = en ? Math.hypot(en.pos.x - p.pos.x, en.pos.z - p.pos.z) - en.radius : 1e9;
+        const cur = trapAim.obj && !trapAim.obj.dead ? trapAim.obj : null;
+        const pick = cur && trapDist(cur, p.pos.x, p.pos.z) <= trapDist(tn, p.pos.x, p.pos.z) + 1.5 ? cur : tn;
+        if (trapDist(pick, p.pos.x, p.pos.z) + (cur === pick ? 1.5 : 0) < de) tr = pick;
+      }
+    }
+    if (tr) autoAim.id = -1;
+    trapAim.obj = tr;
+  }
   const dir = getAimDir(aim);
 
   // ---- movement input
@@ -373,6 +393,14 @@ export function updatePlayer(dt: number): void {
     // the targeted enemy (clicked lock, else the auto-aim pick) is always walked to until it is in weapon range
     const lk = lockedEnemy();
     const cur = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+    const tr = trapAim.obj;   // (owner) the bot also walks to and wrecks a targeted stationary (only while the room is being fought)
+    if (tr && !tr.dead && world.director.phase === 'FIGHT') {
+      const dx = tr.x - p.pos.x, dz = tr.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+      if (d - tr.rad * 0.6 > range - 0.4 && d > 0.01) {
+        mx = dx / d; mz = dz / d; ml = 1; autoChase = true;
+        if (navActive() && !navClear(p.pos.x, p.pos.z, tr.x, tr.z) && autoPathDir(p.pos.x, p.pos.z, tr.x, tr.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
+      }
+    } else {
     let e = lk ?? (cur && cur.active && cur.state !== 'DYING' ? cur : null);
     if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : chaseR);   // auto battle: hunt anywhere in the room
     if (e) {
@@ -382,6 +410,7 @@ export function updatePlayer(dt: number): void {
         // water / obstacles in the way (river rooms): follow an A* route (over a bridge, round the shore) instead of the straight line
         if (navActive() && !navClear(p.pos.x, p.pos.z, e.pos.x, e.pos.z) && autoPathDir(p.pos.x, p.pos.z, e.pos.x, e.pos.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
       }
+    }
     }
   }
 
@@ -429,7 +458,7 @@ export function updatePlayer(dt: number): void {
   // auto battle: cast ready skills while an enemy is close
   if (world.autoBattle.on && st.status === GameStatus.PLAYING && !stunned && (world.autoBattle.castT -= dt) <= 0) {
     world.autoBattle.castT = 0.5;
-    if (findNearestEnemy(p.pos.x, p.pos.z, 13)) autoCast();
+    if (findNearestEnemy(p.pos.x, p.pos.z, 13) || (trapAim.obj && trapDist(trapAim.obj, p.pos.x, p.pos.z) < 13)) autoCast();
   }
 
   // ---- basic attack: ONLY while the attack input is held (F key / touch ATTACK hub / gamepad button all set KeyF).
@@ -449,7 +478,9 @@ export function updatePlayer(dt: number): void {
     const range = heroRange(st);
     const lkd = lockedEnemy();
     const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
-    if (!lockInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
+    const trT = trapAim.obj;
+    const trInRange = !!trT && !trT.dead && trapDist(trT, p.pos.x, p.pos.z) <= range + 0.8;   // (owner) a stationary in reach is swung at too
+    if (!lockInRange && !trInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
   }
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;

@@ -12,6 +12,7 @@ import { aimOverride, autoAim, findNearestEnemy } from './combat';
 import { castActive, castUlt, tryDash, ultReady, castHold } from './abilities';
 import { edgeLimit } from '../mapgen';
 import { lockedEnemy } from './target';
+import { trapAim } from './roomTraps';
 import { camRel } from '../camera';
 
 const _td = { x: 0, z: 0 };
@@ -136,6 +137,7 @@ function autoTarget(): { x: number; z: number } | null {
   const lk = lockedEnemy();
   if (lk && (lk.pos.x - p.pos.x) ** 2 + (lk.pos.z - p.pos.z) ** 2 < 30 * 30) return { x: lk.pos.x, z: lk.pos.z };
   if (autoAim.id >= 0) { const e = world.enemies[autoAim.id]; if (e.active && e.state !== 'DYING') return { x: e.pos.x, z: e.pos.z }; }
+  if (trapAim.obj && !trapAim.obj.dead) return { x: trapAim.obj.x, z: trapAim.obj.z };   // (owner) a targeted stationary
   const e = findNearestEnemy(p.pos.x, p.pos.z, 26);
   return e ? { x: e.pos.x, z: e.pos.z } : null;
 }

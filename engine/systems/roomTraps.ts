@@ -8,6 +8,8 @@
 //   FIRE JET   a long straight jet that flickers (warning), blasts for ~1.5 s, rests. Burns hero and monsters.
 //   VINES      a patch of rooting vines: stay on it a moment and they grab (root 1 s; a dash breaks free), then it rests.
 //   FREEZE POOL frozen water: you slip on it (long glide) and chill builds up (bossFx addChill: 4 stacks freeze).
+//   FIRE / FROST STATUE a stone dragon head on the rim: glowing mouth + ground strip (telegraph), then a LONG breath cone (~11.5 m, 2 s, slowly
+//                sweeping) that burns (fire) or chills + slows (frost: Frostpeak / Void). Destructible like the siege weapons.
 //   BOMB BARRELS clusters of explosive barrels (crates.ts EXPLOSIVE_BARREL: hit one, the chain goes off; hurts monsters AND the hero).
 // Burn / poison ticks hit the hero HERO_DOT_MUL (x4, combat.ts) like every other ticking hazard: hazards here either use `env: true` ticks
 // or apply BURN (whose ticks are multiplied) so the numbers stay consistent.
@@ -22,18 +24,21 @@ import { onBridge } from '../roomFeatures';
 import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
 import { insideShape } from '../roomShape';
 import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
+import { spawnPickup } from './pickups';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { BT, addChill } from './bossFx';
 import { hz } from './biomeHazards';
 import { Vector3 } from 'three';
 
-export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6 } as const;
+export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7 } as const;
+const NKIND = 8;
 const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0;
 
 export const rt = {
   on: false, ver: 0,
-  nSiege: 0, siege: Array.from({ length: 4 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null })),
-  nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null })),
+  nSiege: 0, siege: Array.from({ length: 4 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.7, flash: 0, hitSeq: 0 })),
+  nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
+  nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
   nJet: 0, jet: Array.from({ length: 3 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
   nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, seed: 0 })),
@@ -43,40 +48,99 @@ export const rt = {
 };
 /** Movement modifiers read by biomeHazards.ts (combined with its own ice / bramble numbers). */
 export const trapMods = { grip: 1, slow: 1 };
+/** Breath statue numbers: telegraph 1.4 s, breath 2.0 s sweeping ~0.5 rad, reach 11.5 m from the mouth, ticks every 0.4 s. */
+export const STATUE_WARN = 1.4, STATUE_ON = 2.0, STATUE_LEN = 11.5, STATUE_SWEEP = 0.5, STATUE_MOUTH = 1.7, STATUE_TICK = 0.4;
+/** Current beam heading: the locked lane, swept across STATUE_SWEEP radians during the breath. */
+export const statueBeamYaw = (q: { lock: number; sw: number; t: number }): number => q.lock + q.sw * STATUE_SWEEP * (q.t / STATUE_ON - 0.5);
+/** Is (px, pz) inside the breath cone (narrow at the mouth, ~1.5 m half-width at the end)? */
+function coneHit(q: { x: number; z: number; yaw: number }, px: number, pz: number, extra: number): boolean {
+  const dx = px - q.x, dz = pz - q.z, ux = Math.sin(q.yaw), uz = Math.cos(q.yaw);
+  const along = dx * ux + dz * uz - STATUE_MOUTH;
+  if (along < -0.3 || along > STATUE_LEN) return false;
+  return Math.abs(dx * uz - dz * ux) < 0.55 + 0.95 * Math.max(0, along) / STATUE_LEN + extra;
+}
 export const JET_WARN = 1.0, JET_ON = 1.5, VINE_REST = 4.5, BAR_LEN = 6.5, TOWER_WIND_T = TOWER_WIND, CATAPULT_WIND_T = CATAPULT_WIND, BOULDER_FLIGHT = FLIGHT;
 const POOL_GRIP = 0.16;
 /** (owner) at most this many stationaries of the room's one kind */
 const MAX_PIECES = 3;
 /** (owner) siege weapons and magic towers can be destroyed: HP = this many of the hero's average hits, a little more deeper in */
-const SIEGE_HP_HITS = 9, TOWER_HP_HITS = 12;
+const SIEGE_HP_HITS = 9, TOWER_HP_HITS = 12, STATUE_HP_HITS = 10;
 const trapHp = (hits: number, depth: number): number => Math.max(30, useGameStore.getState().stats.damage * hits * (1 + 0.02 * depth));
-const hitOne = (o: { x: number; z: number; hp: number; maxHp: number; dead: boolean; col: Collider | null }, rad: number, x: number, z: number, r: number, dmg: number): boolean => {
-  if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + rad) ** 2) return false;
-  o.hp -= dmg;
-  events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
-  if (o.hp <= 0) {
-    o.dead = true; o.hp = 0;
-    if (o.col) { removeTempCollider(o.col); o.col = null; }
-    events.emit('explosion', { pos: new Vector3(o.x, 1, o.z), radius: 3, color: 0xffb060 });
-    addShake(0.25);
+/** A destroyable stationary (siege weapon / magic tower / breath statue). */
+export interface TrapObj { x: number; z: number; rad: number; hp: number; maxHp: number; dead: boolean; col: Collider | null; flash: number; hitSeq: number }
+/** The stationary the hero is aiming at (auto-target pick, written by player.ts) and the click-locked one (target.ts clearTarget clears it). */
+export const trapAim = { obj: null as TrapObj | null };
+export const trapLock = { obj: null as TrapObj | null };
+let curDepth = 0;
+export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && rt.on && world.room.active ? o : null; };
+/** i-th live-or-dead stationary across the three pools (no allocation). */
+const trapAt = (i: number): TrapObj => i < rt.nSiege ? rt.siege[i] : i < rt.nSiege + rt.nTower ? rt.tower[i - rt.nSiege] : rt.statue[i - rt.nSiege - rt.nTower];
+export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue;
+/** Distance from (x,z) to the surface of a piece. */
+export const trapDist = (o: TrapObj, x: number, z: number): number => Math.hypot(o.x - x, o.z - z) - o.rad;
+/** Nearest live stationary whose surface is within maxR of (x,z). */
+export function nearestTrap(x: number, z: number, maxR: number): TrapObj | null {
+  if (!rt.on || !world.room.active) return null;
+  let best: TrapObj | null = null, bd = maxR;
+  for (let i = 0, n = trapCount(); i < n; i++) {
+    const o = trapAt(i);
+    if (o.dead) continue;
+    const d = trapDist(o, x, z);
+    if (d < bd) { bd = d; best = o; }
   }
+  return best;
+}
+/** Click pick: a live piece whose body is under the ground point (+ a little slack). */
+export function pickTrapAt(x: number, z: number): TrapObj | null {
+  if (!rt.on || !world.room.active) return null;
+  let best: TrapObj | null = null, bd = 1.4;
+  for (let i = 0, n = trapCount(); i < n; i++) {
+    const o = trapAt(i);
+    if (o.dead) continue;
+    const d = Math.hypot(o.x - x, o.z - z) - o.rad;
+    if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+/** Destroyed: collider gone, blast, rubble (renderer), a little gold + xp. */
+function breakPiece(o: TrapObj): void {
+  o.dead = true; o.hp = 0;
+  if (o.col) { removeTempCollider(o.col); o.col = null; }
+  if (trapAim.obj === o) trapAim.obj = null;
+  if (trapLock.obj === o) trapLock.obj = null;
+  events.emit('explosion', { pos: new Vector3(o.x, 1, o.z), radius: 3.4, color: 0xffb060 });
+  events.emit('floatText', { pos: tmp.set(o.x, 3.4, o.z), text: 'DESTROYED!', color: 0xffe08a, scale: 1.1, dy: 1.6 });
+  addShake(0.32);
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * 6.283 + o.x;
+    tmp.set(o.x + Math.cos(a) * 1.6, 0, o.z + Math.sin(a) * 1.6);
+    spawnPickup('GOLD', tmp, 8 + curDepth * 0.3);
+  }
+  tmp.set(o.x, 0, o.z);
+  spawnPickup('XP', tmp, 12 + curDepth * 1.2);
+}
+const hitOne = (o: TrapObj, x: number, z: number, r: number, dmg: number): boolean => {
+  if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + o.rad) ** 2) return false;
+  o.hp -= dmg; o.flash = 1; o.hitSeq++;
+  events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
+  if (o.hp <= 0) breakPiece(o);
   return true;
 };
-/** (owner) the hero's attacks / skills damage siege weapons and magic towers. True if something was hit. */
+/** (owner) the hero's attacks / skills damage siege weapons, magic towers and breath statues. True if something was hit. */
 export function hitRoomTraps(x: number, z: number, r: number, dmg: number): boolean {
   if (!rt.on) return false;
   let hit = false;
-  for (let i = 0; i < rt.nSiege; i++) hit = hitOne(rt.siege[i], 1.7, x, z, r, dmg) || hit;
-  for (let i = 0; i < rt.nTower; i++) hit = hitOne(rt.tower[i], 1.4, x, z, r, dmg) || hit;
+  for (let i = 0, n = trapCount(); i < n; i++) hit = hitOne(trapAt(i), x, z, r, dmg) || hit;
   return hit;
 }
 /** QA: force these hazard kinds (TRAP.*) into the next room, and the siege weapon kind (0 ballista / 1 catapult). */
-export const dbgTraps = { force: null as number[] | null, siege: -1, depth: -1, noObs: false };
+export const dbgTraps = { force: null as number[] | null, siege: -1, depth: -1, noObs: false, statue: -1 /* 0 fire, 1 frost */ };
 
 const tmp = new Vector3(), tmpD = new Vector3();
 const colOut: Collider[] = [];
 const ids: number[] = [];
 const burn: StatusEffect = { type: 'BURN', duration: 2.2, value: 5 };
+const chillMob: StatusEffect = { type: 'SLOW', duration: 1.6, value: 0.55 };
 const maxHp = () => useGameStore.getState().stats.maxHealth;
 /** Hazard strength by depth (index through the whole run: biome * 15 + room): +1.1% per room, capped. */
 let scale = 1;
@@ -111,13 +175,14 @@ function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 
 
 /** Room entry (director.enterRoom, after setupBiomeHazards). biome: 0 Greenwood, 1 Marble, 2 Desert, 3 Swamp, 4 Frost, 5 Ember, 6 Void; idx: room 0..14. */
 export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void {
-  rt.on = false; rt.nSiege = rt.nTower = rt.nBar = rt.nJet = rt.nVine = rt.nPool = 0;
+  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nBar = rt.nJet = rt.nVine = rt.nPool = 0;
+  trapAim.obj = null; trapLock.obj = null;
   for (const b of rt.boulders) b.on = false;
   trapMods.grip = 1; trapMods.slow = 1;
   rt.ver++;
   if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue || plan.dream) return;
   const b = ((biome % 7) + 7) % 7, depth = dbgTraps.depth >= 0 ? dbgTraps.depth : biome * 15 + idx, elite = plan.type === 'ELITE';
-  scale = Math.min(1.45, 0.82 + 0.011 * depth);
+  scale = Math.min(1.45, 0.82 + 0.011 * depth); curDepth = depth;
   const R = world.room.radius;
   kx.length = kz.length = kr.length = 0;
   const [sx0, sz0] = startPos(R), [stx, stz] = stationPos(R);
@@ -134,7 +199,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
 
   const rnd = Math.random, early = b === 0 && idx < 3;
   // ---- candidate hazard kinds with a weight (0 = not in this biome / depth yet)
-  const w: number[] = [0, 0, 0, 0, 0, 0, 0];
+  const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
   w[TRAP.VINE] = b === 0 ? (idx >= 2 ? 30 : 0) : 9;
   w[TRAP.POOL] = b === 4 ? 40 : b >= 2 ? 8 : 0;
@@ -142,14 +207,16 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   w[TRAP.TOWER] = b === 0 ? (idx >= 6 ? 8 : 0) : b === 6 ? 40 : 8 + 3 * b;
   w[TRAP.BAR] = b === 0 || (b === 1 && idx < 6) ? 0 : b === 5 ? 38 : 8 + 2 * b;
   w[TRAP.JET] = b <= 1 ? 0 : b === 5 ? 34 : 7 + 2 * b;
+  // (owner) breath statues on the rim: Ember Wastes most, Desert / Frostpeak (frost variant) / Void next, Greenwood rarely and only from room 5
+  w[TRAP.STATUE] = b === 0 ? (idx >= 5 ? 5 : 0) : b === 1 ? 8 : b === 2 ? 26 : b === 3 ? 12 : b === 4 ? 26 : b === 5 ? 38 : 22;
   // (owner) most rooms have no stationaries; a room that has them gets ONE kind, at most 3 pieces
   const n = dbgTraps.force ? 1 : rnd() < (early ? 0.15 : elite ? 0.5 : 0.3) ? 1 : 0;
   const picked: number[] = dbgTraps.force ? dbgTraps.force.slice() : [];
   for (let k = 0; k < n && !dbgTraps.force; k++) {
-    let tot = 0; for (let i = 0; i < 7; i++) if (!picked.includes(i)) tot += w[i];
+    let tot = 0; for (let i = 0; i < NKIND; i++) if (!picked.includes(i)) tot += w[i];
     if (tot <= 0) break;
     let r = rnd() * tot, pick = -1;
-    for (let i = 0; i < 7; i++) { if (picked.includes(i)) continue; r -= w[i]; if (r <= 0) { pick = i; break; } }
+    for (let i = 0; i < NKIND; i++) { if (picked.includes(i)) continue; r -= w[i]; if (r <= 0) { pick = i; break; } }
     if (pick < 0) break;
     picked.push(pick);
   }
@@ -162,8 +229,18 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         const s = rt.siege[rt.nSiege++];
         s.kind = dbgTraps.siege >= 0 ? dbgTraps.siege : b >= 2 && (b >= 3 || rnd() < 0.5) ? (rnd() < 0.5 ? 1 : 0) : 0;   // 0 ballista, 1 catapult (desert and later)
         s.x = out[0]; s.z = out[1]; s.yaw = Math.atan2(-out[0], -out[1]); s.state = 0; s.t = 0; s.cd = 4 + rnd() * 3 + i * 2.5; s.locked = false; s.fired = false; s.tier = more;
-        s.maxHp = s.hp = trapHp(SIEGE_HP_HITS, depth); s.dead = false;
+        s.maxHp = s.hp = trapHp(SIEGE_HP_HITS, depth); s.dead = false; s.flash = 0; s.hitSeq = 0;
         keep(s.x, s.z, 3.2); s.col = addTempCollider(s.x, s.z, 1.7, false);
+      }
+    } else if (kind === TRAP.STATUE) {
+      const cnt = Math.min(MAX_PIECES, 1 + (rnd() < 0.5 ? 1 : 0) + (more > 0 && rnd() < 0.4 ? 1 : 0));
+      for (let i = 0; i < cnt && rt.nStatue < rt.statue.length; i++) {
+        if (!spot(1.5, 1.2, 0.74, 0.9, 14) && !spot(1.5, 0.8, 0.55, 0.92, 10)) continue;   // on the sides, near the wall, facing inward like the siege weapons
+        const q = rt.statue[rt.nStatue++];
+        q.kind = dbgTraps.statue >= 0 ? dbgTraps.statue : b === 4 ? 1 : b === 6 ? (rnd() < 0.5 ? 1 : 0) : 0;   // 0 fire, 1 frost
+        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 4.5 + rnd() * 3 + i * 2.5; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
+        q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
+        keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
       }
     } else if (kind === TRAP.TOWER) {
       const cnt = Math.min(MAX_PIECES, 1 + (rnd() < 0.45 ? 1 : 0) + (more > 0 && rnd() < 0.4 ? 1 : 0));
@@ -171,7 +248,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         if (!spot(1.5, 1.2, 0.0, 0.42, 10) && !spot(1.5, 1.2, 0.0, 0.6, 10)) continue;   // (owner) towers stand mostly in the middle
         const t = rt.tower[rt.nTower++];
         t.x = out[0]; t.z = out[1]; t.state = 0; t.t = 0; t.cd = 4.5 + rnd() * 3 + i * 2; t.a0 = rnd() * 6.28; t.volley = 0; t.glow = 0; t.tier = more + (b === 6 ? 1 : 0);
-        t.maxHp = t.hp = trapHp(TOWER_HP_HITS, depth); t.dead = false;
+        t.maxHp = t.hp = trapHp(TOWER_HP_HITS, depth); t.dead = false; t.flash = 0; t.hitSeq = 0;
         keep(t.x, t.z, 4); t.col = addTempCollider(t.x, t.z, 1.3, false);
       }
     } else if (kind === TRAP.BAR) {
@@ -225,7 +302,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       }
     }
   }
-  rt.on = rt.nSiege + rt.nTower + rt.nBar + rt.nJet + rt.nVine + rt.nPool > 0;
+  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nBar + rt.nJet + rt.nVine + rt.nPool > 0;
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -246,6 +323,8 @@ export function updateRoomTraps(dt: number): void {
   if (!room.active || !rt.on) return;
   const pl = world.player, alive = pl.alive, px = pl.pos.x, pz = pl.pos.z;
   const fighting = world.director.phase === 'FIGHT';
+
+  for (let i = 0, n = trapCount(); i < n; i++) { const o = trapAt(i); if (o.flash > 0) o.flash = Math.max(0, o.flash - dt * 5); }
 
   // ---- siege weapons
   for (let i = 0; i < rt.nSiege; i++) {
@@ -319,6 +398,58 @@ export function updateRoomTraps(dt: number): void {
       m.t += dt;
       if (m.volley === 1 && m.tier >= 2 && m.t >= 0.55) { towerRing(m); m.volley = 2; }
       if (m.t >= 0.9) { m.state = 0; m.cd = (6.2 - 0.4 * m.tier) * (0.85 + Math.random() * 0.4); }
+    }
+  }
+
+  // ---- breath statues: idle (faces you), telegraph (glowing mouth + ground strip, tracks you for the first part), breath (long sweeping cone), rest
+  for (let i = 0; i < rt.nStatue; i++) {
+    const q = rt.statue[i];
+    if (q.dead) continue;
+    q.glow = q.state === 1 ? Math.min(1, q.t / STATUE_WARN) : q.state === 2 ? 1 : Math.max(0, q.glow - dt * 2.5);
+    if (q.state === 0) {
+      const dx = px - q.x, dz = pz - q.z, d = Math.hypot(dx, dz);
+      if (d > 2) q.yaw += wrapPi(Math.atan2(dx, dz) - q.yaw) * Math.min(1, dt * 2.0);
+      if (!fighting || !alive) { q.cd = Math.max(q.cd, 1.5); continue; }
+      q.cd -= dt;
+      if (q.cd <= 0 && d < 24) { q.state = 1; q.t = 0; q.lock = q.yaw; q.sw = Math.random() < 0.5 ? -1 : 1; }
+    } else if (q.state === 1) {
+      q.t += dt;
+      if (!fighting || !alive) { q.state = 0; q.cd = 3; continue; }
+      if (q.t < STATUE_WARN * 0.6) { q.yaw += wrapPi(Math.atan2(px - q.x, pz - q.z) - q.yaw) * Math.min(1, dt * 6); q.lock = q.yaw; }   // aims at you, then the lane is locked
+      else q.yaw += wrapPi(q.lock - q.sw * STATUE_SWEEP * 0.5 - q.yaw) * Math.min(1, dt * 9);   // swings to the start of the sweep
+      if (q.t >= STATUE_WARN) { q.state = 2; q.t = 0; q.tick = 0; q.acc = 0; addShake(0.15); }
+    } else if (q.state === 2) {
+      q.t += dt;
+      q.yaw = statueBeamYaw(q);
+      q.tick -= dt;
+      if (q.tick <= 0) {
+        q.tick = STATUE_TICK;
+        if (alive && coneHit(q, px, pz, 0.3)) {
+          tmp.set(q.x, 0, q.z);
+          if (q.kind === 0) {
+            damagePlayer(maxHp() * 0.009 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: ticking hazard (x HERO_DOT_MUL)
+            applyPlayerDebuff('BURN', 2, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+          } else {
+            damagePlayer(maxHp() * 0.006 * scale / DMG_INFLATE, { pos: tmp, kind: 'ICE', env: true });
+            applyPlayerDebuff('SLOW', 1.4);
+            q.acc += STATUE_TICK;
+            if (q.acc >= 0.8) { q.acc = 0; addChill(1); }
+          }
+        }
+        const mx = q.x + Math.sin(q.yaw) * (STATUE_MOUTH + STATUE_LEN * 0.5), mz = q.z + Math.cos(q.yaw) * (STATUE_MOUTH + STATUE_LEN * 0.5);
+        world.enemyGrid.query(mx, mz, STATUE_LEN * 0.5 + 3, ids);
+        for (let k = 0; k < ids.length; k++) {
+          const e = world.enemies[ids[k]];
+          if (!mobOk(e) || e.boss) continue;
+          if (!coneHit(q, e.pos.x, e.pos.z, e.radius * 0.6)) continue;
+          if (q.kind === 0) { burn.value = Math.max(2, e.maxHp * 0.04 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
+          else applyStatus(e, chillMob);
+        }
+      }
+      if (q.t >= STATUE_ON) { q.state = 3; q.t = 0; }
+    } else {
+      q.t += dt;
+      if (q.t >= 0.5) { q.state = 0; q.cd = 7 * (1 - 0.05 * q.tier) * (0.85 + Math.random() * 0.4); }
     }
   }
 
