@@ -22,6 +22,7 @@ import {
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { islandRadius } from './mapgen';
+import { BARRIER_COLLIDERS } from './townBarriers';
 import { beachSandK, onDeckRect, FISH_SPOTS, CAMPFIRE, UMBRELLA, CRATES, NET_RACK, SHIP, DOCK } from './beachData';
 import { inCampYard, inCaveClear, CAVE_DOOR } from './caveData';
 
@@ -76,6 +77,8 @@ const solidNear = (x: number, z: number, pad: number): boolean => {
   return false;
 };
 const addSolid = (x: number, z: number, r: number): void => { const c: [number, number, number] = [x, z, r]; FILL_COLLIDERS.push(c); gridAdd(c); };
+// the street-edge plant boxes / hedges / low walls (engine/townBarriers.ts): solid first, so nothing loose is placed on top of them
+for (const c of BARRIER_COLLIDERS) addSolid(c[0], c[1], c[2]);
 
 /** Reserved ground: roads / lanes (+ half width), NPC homes + patrol legs, doors and shop fronts, stairs, fields, water, the camp, the portal ... */
 const reserved: { x: number; z: number; r: number }[] = [];
@@ -307,15 +310,17 @@ grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z
 hedge(-22.6, -37.2, -13.4, -37.2); hedge(-13.4, -37.2, -13.4, -22.6);
 grove(Z(-31, -37.4, 5, 1.4), 4, [PINES(1, [0.8, 1])], 32, 1.0, 2.4); grove(Z(-11.8, -26, 1.2, 9), 5, [PINES(1, [0.8, 1.05])], 33, 1.0, 2.4);
 // ---- trainer yard (north of the street, west of the castle path): hay, crates, a verge of flowers
-cluster([-8.4, -15.4, 0.3], [-23.6, -12.7, 2.4]);
+// (owner 2026-10-22: loose barrels / crates are tucked against walls, never in the open: the hill's retaining wall, the terrace corner)
+cluster([-32.6, -18.1, 0.2], [-9.4, -16.6, 0.3]);
 
 // ---- castle approach: a bush + bed either side of the terrace stairs' foot
 
 // ---- tavern square + Tavern Row: barrels and crates by the stairs and the tables, a verge of beds, hedged back gardens behind the row
-cluster([22.2, -13.4, 0.5], [34.6, -13.8, -0.4], [14.2, -9.8, 1.6], [24.6, -29.4, 0.9], [33.2, -29.8, 2.2], [43, -22.5, 0.2]);
+cluster([23.4, -15.2, 0.4], [34.2, -15.2, -0.4], [12.9, -14.9, 1.6], [24.3, -32.4, 0.9], [35.6, -33.0, 2.2], [42.0, -22.5, 0.2]);   // (against the Tavern Row retaining wall, the back houses' sides and the east wall)
 
 // ---- plaza + shop row: beds between the shops' backs and the street, banners are in townKit
-for (const gx of [-35.25, -26.75, -18.25, 18.25, 26.75, 35.25]) { cluster([gx, 3.3, gx * 1.7]); }
+// (inside the sealed pockets between the houses, hugging a house wall: not on any walkway)
+cluster([-35.9, 4.6, 0.7], [-25.6, 4.4, 2.1]);
 // ---- along the inside of the wall: a ragged line of bushes (the paving is bare up to the wall otherwise)
 for (const sx of [-1, 1]) {
   grove(Z(sx * 42.6, 0, 0.7, 38), 22, [PINES(1, [0.55, 0.7])], 71 + sx, 0.5, 1.2);   // (owner: no bushes along the walls)

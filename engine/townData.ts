@@ -364,17 +364,17 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
   PETS: { note: 'doghouse in a little pen of pet_pen_fence behind the shop, bird_cage, flower boxes (2x2 west pair, south)', extra: [], dress: [['flower_planter', -2.9, 5.0, 0, 1, 0.8], ['flower_planter', 2.9, 5.0, 0, 1, 0.8]],
     nk: [['doghouse', 0.2, -4.4, 0.5, 1.0, 0.8], ['pet_pen_fence', 0, -6.3, 0, 1.0], ['pet_pen_fence', -2.2, -4.6, Math.PI / 2, 1.0], ['pet_pen_fence', 2.2, -4.6, Math.PI / 2, 1.0],
       ['bird_cage', 2.7, 2.9, 0.3, 1.0, 0.4], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
-  FORTUNE: { note: 'a striped fortune_tent behind, hanging lanterns (2x2 west pair, north)', extra: [], dress: [['lamp_post', 3.0, 5.4, 0, 0.8, 0.3], ['flower_planter', -2.8, 4.8, 0, 1, 0.8]],
+  FORTUNE: { note: 'a striped fortune_tent behind, hanging lanterns (2x2 west pair, north)', extra: [], dress: [['lamp_post', 1.95, 5.2, 0, 0.8, 0.3], ['flower_planter', -2.8, 4.8, 0, 1, 0.8]],
     nk: [['fortune_tent', 0.3, -5.0, 0.4, 0.7, -1.0], ['hanging_lantern', -2.8, 4.4, 0, 1.0, 0.3], ['hanging_lantern', 2.8, 3.6, 0, 1.0, 0.3], ['potted_plant_b', -2.8, 3.4, 0, 1.0, 0.35], ['awning_red', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
-  SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.6, 3.6, 0, 1, 0.8], ['lamp_post', 3.9, 3.8, 0, 0.72, 0.3]],
+  SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.6, 3.6, 0, 1, 0.8], ['lamp_post', 1.95, 4.5, 0, 0.72, 0.3], ['lamp_post', -1.95, 4.5, 0, 0.72, 0.3]],
     nk: [['herb_garden_box', 0.4, -4.8, 0.1, 1.0, -0.55], ['potion_shelf_cart', 3.6, -4.2, -0.2, 1.0, -0.6], ['cauldron', -4.1, 3.4, 0.3, 1.0, 0.9], ['potted_plant_a', 3.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },   // (the shop stands between the graveyard aisle x -38 and the chapel road x -26: props in front + behind only)
-  ARMORY: { note: 'shield rack, armor stand, red banner poles (south of the south street, where the Pets shop stood; faces north)', extra: [], dress: [['lamp_post', 3.9, 3.8, 0, 0.72, 0.3]],
+  ARMORY: { note: 'shield rack, armor stand, red banner poles (south of the south street, where the Pets shop stood; faces north)', extra: [], dress: [['lamp_post', 1.95, 4.5, 0, 0.72, 0.3], ['lamp_post', -1.95, 4.5, 0, 0.72, 0.3]],
     nk: [['shield_rack', -4.6, 2.4, 0.3, 1.0, -0.5], ['armor_stand', 4.6, 2.6, -0.4, 1.0, 0.6], ['banner_pole_red', -4.2, 4.6, 0, 0.9, 0.3], ['banner_pole_red', 4.3, 5.3, 0, 0.9, 0.3], ['potted_plant_b', 3.7, 3.4, 0, 1.0, 0.35], ['awning_red', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
-  WAREHOUSE: { note: 'big crate stack + hay cart behind (2x2 east pair, south)', extra: [], dress: [['lamp_post', -3.0, 5.2, 0, 0.72, 0.3]],
+  WAREHOUSE: { note: 'big crate stack + hay cart behind (2x2 east pair, south)', extra: [], dress: [['lamp_post', -1.95, 5.2, 0, 0.72, 0.3]],
     nk: [['crate_stack_big', 1.5, -3.5, 0.2, 1.0, -0.75], ['cart_hay', -1.9, -3.6, 0.45, 1.0, -0.65], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 2.8, 3.4, 0, 1.0, 0.35]], cluster: [] },
   BLACKSMITH: { note: 'forge yard: forge_furnace + weapon_rack behind, anvil_big and grindstone by the counter, chimney smoke (2x2 east pair, north)', extra: [], dress: [],
     nk: [['forge_furnace', -1.6, -3.6, 0.1, 1.0, -0.7], ['anvil_big', -2.6, 4.7, 0.7, 1.0, 0.8], ['grindstone', 2.9, 4.4, -0.7, 1.0, 0.6], ['weapon_rack', 2.4, -3.2, Math.PI / 2, 1.0, -0.4], ['potted_plant_a', 2.9, 3.0, 0, 1.0, 0.35]], cluster: [] },
-  TECH: { note: 'tech_tower_small, lanterns', extra: [], dress: [['lamp_post', 3.9, 5.6, 0, 0.9, 0.3], ['lamp_post', -2.2, 5.8, 0, 0.9, 0.3], ['flower_planter', 2.6, 4.6, 0, 1, 0.8]],
+  TECH: { note: 'tech_tower_small, lanterns', extra: [], dress: [['lamp_post', 1.95, 5.2, 0, 0.9, 0.3], ['lamp_post', -1.95, 5.2, 0, 0.9, 0.3], ['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
     nk: [['tech_tower_small', 1.1, -4.9, 0.9, 0.8, -1.0], ['potted_plant_b', -3.9, 3.5, 0, 1.0, 0.35], ['awning_green', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3], ['bush_cluster', 5.2, 1.8, 0, 0.8, 0.8]], cluster: [] },
 };
 /** Shop-local (dx, dz) -> world (the front is +z turned by `rot`, +x = its right). */
@@ -417,6 +417,7 @@ export const ROADS: RoadSpec[] = [
   { x1: -42, z1: 23.2, x2: -2.4, z2: 23.2, w: ROAD_W.lane }, { x1: 2.4, z1: 23.2, x2: 42, z2: 23.2, w: ROAD_W.lane },
   // (the shops' counters are reached from the street / lane in front of each: SHOP_SPURS, a short path from the shop's front point to the street, whatever its yaw)
   ...SHOP_SPURS,
+  { x1: -38, z1: -6, x2: -38, z2: -16.2, w: ROAD_W.branch }, { x1: 28, z1: -6, x2: 28, z2: -12.5, w: ROAD_W.branch },   // (the graveyard stairs and the tavern square get their own paths off the north street, the barriers line its edge)
   { x1: 0, z1: -6, x2: 0, z2: TERRACE.stairZ + 0.3, w: ROAD_W.branch + 0.6 },     // castle path (to the terrace stairs)
   { x1: CHURCH.x, z1: -6, x2: CHURCH.x, z2: CHURCH.z + CHURCH.d / 2 + 0.4, w: ROAD_W.branch + 0.6 },   // chapel door
   { x1: TAVERN.x, z1: -12.5, x2: TAVERN.x, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // tavern door
@@ -543,7 +544,7 @@ export const LAMPS: [number, number][] = [
   // main avenue (+ the road on into the farmland)
   [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 34.2], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
   // south street (north edge), plaza, north street
-  [-35.25, 7.4], [-26.75, 7.4], [26.75, 7.4], [35.25, 7.4], [-12.5, -8.9], [12.5, -8.9], [-5, -8.9], [5, -8.9],
+  [-35.25, 7.75], [-26.75, 7.75], [-12.5, -8.25], [12.5, -8.25], [-5, -8.25], [5, -8.25],   // (on the kerb line of the plant-box barriers, engine/townBarriers.ts; the east shop-row lamps are the shops' own, SHOP_LOOK)
   // the dirt path from the meadow to the beach
   [-11, 53.9], [-27.5, 54.6], [-42.2, 52.3],
   // the riverside park
@@ -1260,3 +1261,6 @@ export const ANIMALS: AnimalDef[] = [
     for (const [cx, cz, rx, rz] of cands) if (free(cx, cz, rx, rz, { x: h.x, z: h.z, hx: hx0, hz: hz0 })) { GRASS_PATCHES.push([cx, cz, rx, rz, 0, 5]); mine.push({ x: cx, z: cz, hx: rx, hz: rz }); break; }
   }
 }
+
+// ---- (owner 2026-10-22) the big lawn blocks that the street-edge plant boxes / hedges seal off (engine/townBarriers.ts) get flat lawns, so they read as little private gardens, not bare fenced paving (visual only)
+for (const p of [[11.5, 16.8, 7.2, 3.4], [10.5, 27.6, 6.6, 1.6], [28.2, 27.6, 4.8, 1.6], [-21.5, 27.6, 4.6, 1.6]]) GRASS_PATCHES.push([p[0], p[1], p[2], p[3], 0, 5]);
