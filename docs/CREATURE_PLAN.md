@@ -2,8 +2,23 @@
 
 `public/models/creatures/creature_kit_v1.glb` (~1.9 MB, weld + meshopt medium), built by `art/blender/creature_kit_v1.py`
 (`--no-render`, `--no-compress`, `--only=monsters,bosses,pets,closeups`, `--closeup=a+b[,yaw,pitch,ortho,y,spacing]`; previews go to `$CREATURE_SHOTS`,
-default `art/renders/creatures/`). NOT wired into the game yet (no render/ or engine/ changes). Style: cute Nintendo / Zelda toy look, flat shared
+default `art/renders/creatures/`). Wired into the game for regular monsters and pets (see "Wired into the game" below); bosses still use their own models. Style: cute Nintendo / Zelda toy look, flat shared
 materials x vertex colour layer `COLOR_0` that MULTIPLIES the material colour (same loader rule as kit_v3), `glow_*` materials are emissive.
+
+## Wired into the game (2026-10-22)
+
+- `render/creatureKit.tsx`: loads the GLB itself (GLTFLoader + meshopt, NOT Suspense: `useCreatureKit()` returns null until it is in, so every kind keeps its old model meanwhile),
+  bakes every `_mesh` into joint space (material colour x `COLOR_0` = vertex colour; `*glow*` materials -> separate emissive geometry) and gives each joint its own geometry.
+  `jointPose(key, arch, ctx, out)` is the shared procedural animation (limb swing from `e.vel`, arm raise on WINDUP / ATTACK / melee windup + strike, head bob / look, wing flap,
+  tail wag, spinning orbit / ring parts, jaw, core pulse). `bodyArgs` does the whole-body bob / lean / squash per archetype.
+- Monsters: `getEnemyModels(base, kit)` swaps each mapped kind's `ModelDef` for a kit one (one instanced part per joint, material key `'kit'` = smooth-shaded vertex-colour lit, so the
+  existing hit flash / rim / status tint / elite glow / shield / health-bar code in `render/Enemies.tsx` is unchanged). `Poser.partM(i, matrix)` (render/enemyModels.ts) places a part with a
+  joint-chain matrix. Instance scale = `e.scale / ENEMY_DEFS[kind].scale` (the kit is authored at def scale), so size and hit radius are unchanged; `headY` / blob shadow come from the piece's bounds.
+- Pets: `PET_KIT` gives piece / archetype / scale / hover per pet id; `render/Pet.tsx` builds a small Object3D joint rig (`makeRig`, shared geometry) and animates it with `animateRig`
+  inside the existing PetActor / PetModel (hop, hover, trail, halo, growth stages, attack stretch all still come from the old PetDef).
+- Table of kinds: `render/creatureMap.ts` `MONSTER_KIT` (arch biped / quad / blob / fly / float / crawl / still, optional `lift` for flyers, archers on their tower and the sunk lake hydra, `caster` = arms up on windup).
+  Old models stay for: all `BOSS_*` kinds and boss adds (BOSS_SAPLING, BOSS_WYRMLING, BOSS_HYDRA_HEAD, BOSS_IMP, BOSS_CRYSTAL), `HUMAN_BOSS`, `DARK_HERO`, and any kind removed from the table.
+- Headless QA gotcha: vite adds `?t=` stamps to edited modules, so the harness' `import('/store.ts')` becomes a second store instance after any source edit: restart vite (and let it finish dependency optimisation with one warm-up page load) before screenshots.
 
 ## Joint convention
 

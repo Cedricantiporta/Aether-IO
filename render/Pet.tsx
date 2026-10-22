@@ -13,12 +13,15 @@ import { CELL, FX, embers, pushHalo, smokePuff } from './fx';
 import { GB, TAU, damp } from './util';
 import { isLobbyStatus } from './CameraRig';
 import { PET_STAGE_SCALE } from '../petGrowth';
+import { PET_KIT, type PetKitCfg } from './creatureMap';   // creature kit v1 (docs/CREATURE_PLAN.md): the pets' models
+import { animateRig, makeRig, useCreatureKit, type CreatureKit } from './creatureKit';
 
 interface PetPart { geo: BufferGeometry; mat: MatKey; tint?: number }
 interface PetDef {
   body?: BufferGeometry; parts?: PetPart[]; glow?: BufferGeometry;
   wing?: { geo: BufferGeometry; glow?: boolean; up?: boolean; mat?: MatKey; pivot: [number, number, number]; speed: number; amp: number };
   legs?: { geo: BufferGeometry; pivots: [number, number, number][] };
+  /** creature kit model (replaces the procedural parts / wings / legs above) */ kit?: { data: CreatureKit; cfg: PetKitCfg };
   hover: number; scale: number; hop?: boolean; trail?: 'fire' | 'sparkle' | 'wisp' | 'fairy' | 'ghost'; halo?: [number, number, number, number];
 }
 
@@ -206,9 +209,18 @@ function petMat(kind: MatKey, id: string, tint = 0xffffff): Material {
   return m;
 }
 const DEF_CACHE = new Map<string, PetDef | null>();
-function getDef(id: string): PetDef | null {
+function getDef(id: string, kit: CreatureKit | null = null): PetDef | null {
   if (!DEF_CACHE.has(id)) DEF_CACHE.set(id, DEFS[id] ? DEFS[id]() : null);
-  return DEF_CACHE.get(id)!;
+  const base = DEF_CACHE.get(id)!, k = PET_KIT[id];
+  if (!base || !kit || !k || !kit.P[k.piece]) return base;
+  // creature kit model: keeps the old def's behaviour (hop / trail / halo), swaps the body + sizes
+  const key = id + '#kit';
+  if (!KIT_DEFS.has(key) || KIT_DEFS.get(key)!.kit!.data !== kit) KIT_DEFS.set(key, { hover: k.hover, scale: k.scale, hop: base.hop, trail: base.trail, halo: base.halo, kit: { data: kit, cfg: k } });
+  return KIT_DEFS.get(key)!;
+}
+const KIT_DEFS = new Map<string, PetDef>();
+function useRig(def: PetDef, cast: boolean) {
+  return useMemo(() => (def.kit ? makeRig(def.kit.data, def.kit.cfg.piece, def.kit.cfg.arch, cast, def.kit.cfg.flap, def.kit.cfg.amp) : null), [def, cast]);
 }
 function partsOf(def: PetDef): PetPart[] {
   const l: PetPart[] = def.parts ? [...def.parts] : [];
@@ -227,7 +239,8 @@ export function Pet() {
     if (!p) return '';
     return DEFS[p.id] ? p.id : (PETS_POOL.find((x) => x.name === p.name)?.id ?? '');
   });
-  const def = useMemo(() => getDef(id), [id]);
+  const kit = useCreatureKit();
+  const def = useMemo(() => getDef(id, kit), [id, kit]);
   if (!def) return null;
   return <><PetActor key={id} id={id} def={def} /><PetFx /></>;
 }
@@ -268,13 +281,16 @@ function PetFx() {
 
 /** Standalone showcase model (no world access): bobs, flaps wings, hops and turns slowly. For UI previews. */
 export function PetModel({ id }: { id: string }) {
-  const def = useMemo(() => getDef(id), [id]);
+  const kit = useCreatureKit();
+  const def = useMemo(() => getDef(id, kit), [id, kit]);
   const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
   const legs = useRef<Group[]>([]);
   const lit = petMat('lit', id), glow = petMat('glow', id);
+  const rig = useRig(def ?? ({ hover: 0, scale: 1 } as PetDef), false);
   useFrame(({ clock }) => {
     if (!def) return;
     const t = clock.elapsedTime;
+    if (rig) animateRig(rig, t, 0.5, t * 8, 0);
     root.current.rotation.y = t * 0.6;
     let y = def.hover + (def.hover > 0.2 ? Math.sin(t * 3) * 0.12 : 0), sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(t * 5)) * 0.3; y += h; sq = 1 + h * 0.25; }
@@ -289,6 +305,7 @@ export function PetModel({ id }: { id: string }) {
   return (
     <group ref={root}>
       <group ref={model}>
+        {rig && <primitive object={rig.root} />}
         <PetMeshes def={def} id={id} />
         {w && <>
           <group ref={wR} position={w.pivot}><mesh geometry={w.geo} material={w.mat ? petMat(w.mat, id) : w.glow ? glow : lit} /></group>
@@ -304,6 +321,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
   const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
   const legs = useRef<Group[]>([]);
   const lit = petMat('lit', id), glow = petMat('glow', id);
+  const rig = useRig(def, true);
   const prof = useMemo(() => getPetProfile(PETS_POOL.find((x) => x.id === id)?.name), [id]);
   const size = prof.size;
   const animK = 0.55 + 0.45 * prof.moveSpeed; // slower pets hop/flap/trot slower
@@ -339,6 +357,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     model.current.scale.set(S0 * hx * (1 - 0.15 * a), S0 * sq * (1 - 0.1 * a), S0 * hx * (1 + 0.45 * a));
     model.current.position.z = a * 0.7 * size;
     model.current.rotation.x = (def.hover > 0.2 ? moving * 0.2 : 0) + a * 0.35;
+    if (rig) animateRig(rig, t, moving, s.phase * 12, a);
     if (def.wing && wL.current) { const f = Math.sin(s.phase * def.wing.speed) * def.wing.amp * (1 + moving * 0.3); const u = def.wing.up ? -1 : 1; wL.current.rotation.z = u * (f + 0.2); wR.current.rotation.z = -u * (f + 0.2); }
     for (let i = 0; i < legs.current.length; i++) if (legs.current[i]) legs.current[i].rotation.x = Math.sin(s.phase * 12 + (i % 2) * Math.PI + (i > 1 ? 1.5 : 0)) * 0.7 * moving;
     if (carryG.current) {
@@ -378,6 +397,7 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
   return (
     <group ref={root}>
       <group ref={model}>
+        {rig && <primitive object={rig.root} />}
         <PetMeshes def={def} id={id} cast />
         {w && <>
           <group ref={wR} position={w.pivot}><mesh geometry={w.geo} material={w.mat ? petMat(w.mat, id) : w.glow ? glow : lit} /></group>

@@ -4,7 +4,7 @@ import type { Enemy, EnemyKind } from '../engine/types';
 import { GB, TAU, clamp, lerp } from './util';
 import { makeBow } from './weapons';
 
-export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow' | 'ghost';
+export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow' | 'ghost' | 'kit';
 export interface Part { geo: BufferGeometry; mat: MatKey }
 export interface ModelDef {
   parts: Part[];
@@ -31,6 +31,8 @@ export class Poser {
     this.s.set(this.sc * sxz * this.fx, this.sc * sy * this.fy, this.sc * sxz * this.fx);
     this.base.compose(this.p, this.qb, this.s);
   }
+  /** creature kit: a part with a ready-made local matrix (joint chain), base * m */
+  partM(i: number, m: Matrix4) { this.out.multiplyMatrices(this.base, m); this.meshes[i].setMatrixAt(this.idx, this.out); }
   part(i: number, px: number, py: number, pz: number, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) {
     this.eul.set(rx, ry, rz, 'YXZ'); this.q.setFromEuler(this.eul);
     this.p.set(px, py, pz); this.s.set(sx, sy, sz);

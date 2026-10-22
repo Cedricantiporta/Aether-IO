@@ -21,6 +21,7 @@ import { CELL, FX, embers } from './fx';
 import { clamp, commitInst, liveRange, patchFlashRim, poolVisible, setInst } from './util';
 import { inView } from './view';
 import { MODEL_KINDS, ModelDef, Poser, getModels } from './enemyModels';
+import { getEnemyModels, useCreatureKit } from './creatureKit';   // creature kit v1 (regular monsters; bosses keep their own models)
 import type { EnemyKind } from '../engine/types';
 
 const MAX = 400;
@@ -67,18 +68,20 @@ void main(){ float fill = vD.x; float kind = vD.y; vec2 p = vUv;
 #include <colorspace_fragment>
 }`;
 
-interface KindRT { def: ModelDef; meshes: InstancedMesh[]; mats: ('lit' | 'lit2' | 'jelly' | 'glow' | 'ghost')[]; flash: InstancedBufferAttribute; }
+interface KindRT { def: ModelDef; meshes: InstancedMesh[]; mats: ('lit' | 'lit2' | 'jelly' | 'glow' | 'ghost' | 'kit')[]; flash: InstancedBufferAttribute; }
 
 export function Enemies() {
   const status = useGameStore((s) => s.status);
+  const kit = useCreatureKit();
   const sys = useMemo(() => {
-    const models = getModels();
+    const models = getEnemyModels(getModels(), kit);
     const lit = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.78, metalness: 0.02 }), 0.4);
     const lit2 = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, side: DoubleSide }), 0.4);
     const jelly = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.2, metalness: 0.0, transparent: true, opacity: 0.8, depthWrite: false }), 0.7);
     const glow = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const ghost = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
-    const mats = { lit, lit2, jelly, glow, ghost };
+    const kitMat = patchFlashRim(new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.8, metalness: 0.0 }), 0.4);
+    const mats = { lit, lit2, jelly, glow, ghost, kit: kitMat };
     const group = new Group();
     const kinds: Partial<Record<EnemyKind, KindRT>> = {};
     const poser = new Poser();
@@ -127,7 +130,7 @@ export function Enemies() {
     const qIcons: Sprite[] = [];
     for (let k = 0; k < Q_MAX; k++) { const sp = new Sprite(questIconMat()); sp.scale.set(0.62, 0.62, 1); sp.visible = false; sp.renderOrder = 61; group.add(sp); qIcons.push(sp); }
     return { qIcons, group, kinds, poser, shadows, shA, rings, rC, ringMat, bubble, ice, stars, halo, bg, barMesh, bPos, bD, frozenAt: new Float32Array(MAX), wasFrozen: new Uint8Array(MAX), shMax: new Float32Array(MAX) };
-  }, []);
+  }, [kit]);
   useEffect(() => () => { sys.group.traverse((o: any) => { o.geometry?.dispose?.(); }); }, [sys]);
 
   const counts = useMemo(() => new Int32Array(MODEL_KINDS.length), []);
