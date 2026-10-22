@@ -186,6 +186,7 @@ town (and closes the open panel first).
 ### 3.4 Other modes (Endless Tower building south-west of the gate = hub window `ui/screens/SetOut.tsx`)
 `runInfo.mode` is `'ADVENTURE'` or `'TOWER'`; the tower family shares the TOWER rules (no item drops, no potions/Ankh,
 healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
+- **Run-room floors (Zelda look, 2026-10-22)**: `render/Room.tsx` `RoomGround` = per-vertex colour zones (soft fringes round dirt / frost / ice patches; Greenwood paths are clean dirt trails, Sunscorch big sandstone flags, others flagstones; light paved rim band) x a baked 512px detail texture per `GroundStyle` (`groundDetail`: grass tuft marks + clover + emissive flower dots, bevelled cream marble tiles, sand ripples, bluish snow drifts + emissive glints, basalt Voronoi slabs with glowing amber seams, violet void tiles with star speckle). `groundMaterial()` is shared with `CampPath.tsx`. A low merged kerb (`buildKerb`, one draw call, skipped for Coral Isles whose rim is foam + turquoise shallows) rings every arena; the tower floor has a cobbled cream platform + torus kerb. Marble `ground` colours in `roomDefs.ts` are light (the warm lighting tints them).
 - **Endless Tower**: round arena floors, elite every 3rd, champion every 5th, boss every 10th; milestone rewards every 10th
   floor (`towerRewards.ts`); best floor per class in `progress.towerBest`.
 - **Daily Trial** (`dailyChallenge.ts`, Lv 15): seeded daily 5-floor climb with 2-3 modifiers, score, streak.

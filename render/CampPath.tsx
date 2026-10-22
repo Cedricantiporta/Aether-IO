@@ -12,7 +12,7 @@ import {
 import { camp, campBuilt, campNearest, campHalfWidth, campAtS, type CampLayout, type CampPath, type PieceType } from '../engine/campPaths';
 import { BIOMES, variantOf, type BiomeDef, type GroundStyle } from '../engine/roomDefs';
 import { GB, fbm, litMat, mulberry32, vnoise } from './util';
-import { groundDetail, DETAIL_PERIOD } from './Room';
+import { groundMaterial, DETAIL_PERIOD } from './Room';
 
 const sstep = (a: number, b: number, x: number): number => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -146,14 +146,7 @@ function buildGround(P: CampPath) {
   g2.setAttribute('position', g.attributes.position); g2.setAttribute('normal', g.attributes.normal); g2.setAttribute('uv', g.attributes.uv); g2.setIndex(g.index);
   g2.setAttribute('color', new Float32BufferAttribute(colB, 4));
   const mat = (pal: Pal, overlay: boolean): MeshStandardMaterial => {
-    const [dTex, eTex] = groundDetail(pal.style), per = DETAIL_PERIOD[pal.style];
-    const map = dTex.clone(); map.repeat.set(W / per, H / per); map.needsUpdate = true;
-    let emap = null;
-    if (eTex) { emap = eTex.clone(); emap.repeat.set(W / per, H / per); emap.needsUpdate = true; }
-    const m = new MeshStandardMaterial({
-      vertexColors: true, map, roughness: pal.style === 'MARBLE' ? 0.55 : pal.style === 'SNOW' ? 0.8 : 0.96, metalness: 0,
-      emissiveMap: emap, emissive: new Color(emap ? (pal.style === 'BASALT' ? '#ff6a1a' : '#9a6aff') : '#000000'), emissiveIntensity: emap ? (pal.style === 'BASALT' ? 1.1 : 0.7) : 0,
-    });
+    const m = groundMaterial(pal.style, W / DETAIL_PERIOD[pal.style], H / DETAIL_PERIOD[pal.style]);
     if (overlay) { m.transparent = true; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
     return m;
   };

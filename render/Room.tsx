@@ -10,7 +10,7 @@ import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
   CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
-  ShaderMaterial, Shape, ShapeGeometry, type BufferGeometry,
+  ShaderMaterial, Shape, ShapeGeometry, TorusGeometry, type BufferGeometry,
 } from 'three';
 import { FX, CELL } from './fx';
 import { useGameStore } from '../store';
@@ -42,103 +42,201 @@ const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.
 const _c = new Color(), _c2 = new Color(), _c3 = new Color(), _c4 = new Color();
 
 // ------------------------------------------------------------------ ground ---
-/** Tileable detail textures per ground style (built once each): [albedo multiplier, emissive glow or null]. */
+/** Border band / kerb stone tone per ground style (light paved band just inside the walls). */
+const RIM_TONE: Record<GroundStyle, string> = { GRASS: '#d8d0b4', MARBLE: '#e4d8bc', SAND: '#ecd09a', SNOW: '#ffffff', BASALT: '#6a5648', VOID: '#9a86d8' };
+const KERB_TONES: Record<GroundStyle, string[]> = {
+  GRASS: ['#cfc8b0', '#c2baa0', '#d8d2bc'], MARBLE: ['#e8dcc0', '#dccfb2', '#efe4cc'], SAND: ['#e6c98c', '#d9b87a', '#efd6a0'],
+  SNOW: ['#f4f8fd', '#e4eefa', '#ffffff'], BASALT: ['#4e3e36', '#5a483e', '#46362f'], VOID: ['#6a58b0', '#7a66c4', '#5c4a9e'],
+};
+/** A low rounded kerb round the arena outline (owner: tidy border like the town's): one merged mesh of short stone blocks, gaps where liquid crosses. */
+function buildKerb(style: GroundStyle, seed: number, hasLiquid: boolean): BufferGeometry {
+  const r = new GB([1, 1]), tones = KERB_TONES[style];
+  const nSeg = 150; let k = 0;
+  let px = 0, pz = 0, havePrev = false;
+  for (let i = 0; i <= nSeg; i++) {
+    const a = (i / nSeg) * Math.PI * 2, dx = Math.cos(a), dz = Math.sin(a), rad = shapeLimit(dx, dz) - 1.35, x = dx * rad, z = dz * rad;
+    if (havePrev) {
+      const mx = (x + px) / 2, mz = (z + pz) / 2, len = Math.hypot(x - px, z - pz), yaw = -Math.atan2(z - pz, x - px);
+      if (!(hasLiquid && inLiquid(mx, mz, 1.2))) {
+        const c = tones[k++ % tones.length];
+        r.box(len + 0.03, 0.2, 0.55, [mx, 0.1, mz], c, [0, yaw, 0], [0.88, 1.06]);
+        r.box(len - 0.05, 0.05, 0.4, [mx, 0.21, mz], tones[(k + 1) % tones.length], [0, yaw, 0], [1.02, 1.1]);   // (a lighter rounded top)
+      }
+    }
+    px = x; pz = z; havePrev = true;
+  }
+  return r.build();
+}
+/** Tileable painted-floor textures per ground style (built once each): [albedo multiplier, emissive glow or null].
+ *  Zelda-style (owner 2026-10-22): soft, rounded, toy-like details (tuft marks, bevelled tiles, ripples, snow drifts, glowing seams)
+ *  baked into one 512px canvas; the vertex colours supply the big colour zones. */
 const detailTex: Partial<Record<GroundStyle, [CanvasTexture, CanvasTexture | null]>> = {};
+const h2 = (a: number, b: number) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
 export function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null] {
   const hit = detailTex[style]; if (hit) return hit;
   const N = 512, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
   const c = mk(), g = c.getContext('2d')!;
-  const rnd = mulberry32(0xd37a1 + style.length * 977);
+  const rnd = mulberry32(0xd37a1 + style.length * 977 + style.charCodeAt(0) * 131);
   let glowC: HTMLCanvasElement | null = null;
-  const speck = (n: number, a: number, b: number, light: number) => { for (let i = 0; i < n; i++) { const v = a + rnd() * (b - a); g.fillStyle = rnd() < light ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${v})`; const s = 1 + rnd() * 2.5; g.fillRect(rnd() * N, rnd() * N, s, s); } };
-  /** Jittered-grid crack network (wraps seamlessly). */
-  const cracks = (ctx: CanvasRenderingContext2D, cells: number, style2: string, w: number) => {
-    const P: [number, number][][] = [];
-    for (let y = 0; y < cells; y++) { P.push([]); for (let x = 0; x < cells; x++) P[y].push([(x + 0.2 + rnd() * 0.6) * (N / cells), (y + 0.2 + rnd() * 0.6) * (N / cells)]); }
-    ctx.strokeStyle = style2; ctx.lineWidth = w; ctx.lineCap = 'round';
-    for (let y = 0; y < cells; y++) for (let x = 0; x < cells; x++) {
-      const a = P[y][x];
-      for (const [dx, dy] of [[1, 0], [0, 1], [1, (x + y) % 2 ? 1 : -1]]) {
-        const bx = (x + dx + cells) % cells, by = (y + dy + cells) % cells;
-        const b = P[by][bx];
-        const tx = b[0] + (x + dx >= cells ? N : x + dx < 0 ? -N : 0), ty = b[1] + (y + dy >= cells ? N : y + dy < 0 ? -N : 0);
-        for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) {
-          ctx.beginPath(); ctx.moveTo(a[0] + ox, a[1] + oy);
-          const mx = (a[0] + tx) / 2 + (rnd() - 0.5) * 10, my = (a[1] + ty) / 2 + (rnd() - 0.5) * 10;
-          ctx.lineTo(mx + ox, my + oy); ctx.lineTo(tx + ox, ty + oy); ctx.stroke();
-        }
-      }
+  /** Draw f at every wrapped copy of (x, y) that can touch the tile (seamless). */
+  const wrap = (x: number, y: number, r: number, f: (px: number, py: number) => void) => {
+    for (const ox of [-N, 0, N]) { if (x + ox < -r || x + ox > N + r) continue; for (const oy of [-N, 0, N]) { if (y + oy < -r || y + oy > N + r) continue; f(x + ox, y + oy); } }
+  };
+  const blobs = (ctx: CanvasRenderingContext2D, n: number, r0: number, r1: number, rgb: string, a0: number, a1: number) => {
+    for (let i = 0; i < n; i++) {
+      const x = rnd() * N, y = rnd() * N, r = r0 + rnd() * (r1 - r0), a = a0 + rnd() * (a1 - a0);
+      wrap(x, y, r, (px, py) => { const gr = ctx.createRadialGradient(px, py, 0, px, py, r); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = gr; ctx.fillRect(px - r, py - r, r * 2, r * 2); });
     }
   };
+  const speck = (n: number, a: number, b: number, light: number, size = 2.5) => { for (let i = 0; i < n; i++) { const v = a + rnd() * (b - a); g.fillStyle = rnd() < light ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${v})`; const s = 1 + rnd() * size; g.fillRect(rnd() * N, rnd() * N, s, s); } };
+  /** Per-pixel painter: f writes albedo rgb (0..255) into o[0..2] and optionally glow rgb into o[3..5]. */
+  const paint = (withGlow: boolean, f: (px: number, py: number, o: number[]) => void) => {
+    const img = g.createImageData(N, N), d = img.data, o = [0, 0, 0, 0, 0, 0];
+    let gimg: ImageData | null = null, gd: Uint8ClampedArray | null = null;
+    if (withGlow) { glowC = mk(); gimg = glowC.getContext('2d')!.createImageData(N, N); gd = gimg.data; }
+    for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
+      o[3] = o[4] = o[5] = 0; f(px, py, o);
+      const i = (py * N + px) * 4; d[i] = o[0]; d[i + 1] = o[1]; d[i + 2] = o[2]; d[i + 3] = 255;
+      if (gd) { gd[i] = o[3]; gd[i + 1] = o[4]; gd[i + 2] = o[5]; gd[i + 3] = 255; }
+    }
+    g.putImageData(img, 0, 0);
+    if (gimg) glowC!.getContext('2d')!.putImageData(gimg, 0, 0);
+  };
+  const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  /** Rounded-square tiles: edge distance (px, >0 inside) + tile ids. */
+  const tileAt = (px: number, py: number, n: number, rad: number) => {
+    const ts = N / n, tx = Math.floor(px / ts), ty = Math.floor(py / ts), lx = px - tx * ts - ts / 2, ly = py - ty * ts - ts / 2;
+    const qx = Math.abs(lx) - (ts / 2 - rad), qy = Math.abs(ly) - (ts / 2 - rad);
+    const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rad;
+    return { e: -sd, tx, ty, lx, ly, ts };
+  };
+  /** Jittered Voronoi (G x G seeds, wraps): per pixel nearest id, second id and border distance. */
+  const voro = (G: number, jit: number) => {
+    const cs = N / G, sx = new Float32Array(G * G), sy = new Float32Array(G * G);
+    for (let gy = 0; gy < G; gy++) for (let gx = 0; gx < G; gx++) { sx[gy * G + gx] = (gx + 0.5 + (rnd() - 0.5) * jit) * cs; sy[gy * G + gx] = (gy + 0.5 + (rnd() - 0.5) * jit) * cs; }
+    const E = new Float32Array(N * N), A = new Uint8Array(N * N), B = new Uint8Array(N * N), H = N / 2;
+    for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
+      const cx = Math.floor(px / cs), cy = Math.floor(py / cs); let d1 = 1e9, d2 = 1e9, i1 = 0, i2 = 0;
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+        const gx = (cx + ox + G) % G, gy = (cy + oy + G) % G, id = gy * G + gx;
+        let dx = Math.abs(px - sx[id]), dy = Math.abs(py - sy[id]); if (dx > H) dx = N - dx; if (dy > H) dy = N - dy;
+        const dd = dx * dx + dy * dy;
+        if (dd < d1) { d2 = d1; i2 = i1; d1 = dd; i1 = id; } else if (dd < d2) { d2 = dd; i2 = id; }
+      }
+      const k = py * N + px; E[k] = Math.sqrt(d2) - Math.sqrt(d1); A[k] = i1; B[k] = i2;
+    }
+    return { E, A, B };
+  };
   switch (style) {
-    case 'MARBLE': {   // castle flagstones: staggered rows of worn grey blocks with dark mortar, chips and cracks
-      g.fillStyle = 'rgb(58,52,46)'; g.fillRect(0, 0, N, N);
-      const rows = 4, h = N / rows;
-      for (let r = 0; r < rows; r++) {
-        let px = -rnd() * 80;
-        while (px < N) {
-          const w = 90 + rnd() * 80, v = 150 + Math.round(rnd() * 40), warm = Math.round(rnd() * 10);
-          for (const ox of [0, N, -N]) {
-            const sx = px + ox + 3, sy = r * h + 3, sw = w - 6, sh = h - 6;
-            g.fillStyle = `rgb(${v + warm},${v + warm * 0.5},${v - 8})`; g.fillRect(sx, sy, sw, sh);
-            const gr = g.createLinearGradient(sx, sy, sx + sw, sy + sh);
-            gr.addColorStop(0, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(0,0,0,.18)');
-            g.fillStyle = gr; g.fillRect(sx, sy, sw, sh);
-          }
-          px += w;
+    case 'MARBLE': {   // castle flagstones: big soft-cornered cream / grey-cream tiles, light grout, bevelled edges, faint veins
+      paint(false, (px, py, o) => {
+        const t = tileAt(px, py, 4, 16), tone = 0.9 + h2(t.tx, t.ty) * 0.1, warm = h2(t.ty + 7, t.tx + 3) < 0.5 ? 0 : 1;
+        const sm = smooth(1.5, 6, t.e), bev = 1 - 0.1 * (1 - smooth(4, 26, t.e)) + (t.lx + t.ly < -t.ts * 0.5 + 8 ? 0.03 : 0) * smooth(2, 8, t.e) - (t.lx + t.ly > t.ts * 0.5 - 8 ? 0.05 : 0) * smooth(2, 8, t.e);
+        const r = 246 * tone + warm * 4, gg = 238 * tone + warm * 1, b = 222 * tone - warm * 6;
+        o[0] = 176 + (r * bev - 176) * sm; o[1] = 168 + (gg * bev - 168) * sm; o[2] = 152 + (b * bev - 152) * sm;
+      });
+      g.lineCap = 'round';
+      for (let k = 0; k < 14; k++) { g.strokeStyle = `rgba(110,100,86,${0.05 + rnd() * 0.05})`; g.lineWidth = 1 + rnd() * 2; wrap(rnd() * N, rnd() * N, 90, (px, py) => { g.beginPath(); g.moveTo(px, py); g.quadraticCurveTo(px + (rnd() - 0.5) * 80, py + (rnd() - 0.5) * 80, px + (rnd() - 0.5) * 110, py + (rnd() - 0.5) * 110); g.stroke(); }); }
+      blobs(g, 26, 40, 90, '120,105,85', 0.04, 0.08); speck(900, 0.03, 0.07, 0.5);
+      break;
+    }
+    case 'SAND': {   // warm sand: soft wind-ripple bands (lit crest + shaded trough), tiny pebbles, grain
+      g.fillStyle = '#ecebe8'; g.fillRect(0, 0, N, N);
+      blobs(g, 30, 50, 110, '150,100,40', 0.04, 0.08); blobs(g, 30, 50, 110, '255,255,255', 0.1, 0.2);
+      g.lineCap = 'round';
+      for (let b = 0; b < 8; b++) {
+        const y0 = b * 64 + 12 + rnd() * 30, ph = rnd() * 6.28, amp = 7 + rnd() * 9, k = 2 + (b % 2);
+        for (const [dy, col, w] of [[0, 'rgba(150,100,45,0.17)', 7], [5, 'rgba(255,255,255,0.45)', 3.2]] as [number, string, number][]) {
+          g.strokeStyle = col; g.lineWidth = w; g.beginPath();
+          for (let x = 0; x <= N; x += 8) { const y = y0 + dy + Math.sin((x / N) * Math.PI * 2 * k + ph) * amp; x ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.stroke();
         }
       }
-      g.strokeStyle = 'rgba(40,34,28,0.55)'; g.lineWidth = 1.4;
-      for (let k = 0; k < 6; k++) { g.beginPath(); let x = rnd() * N, y = rnd() * N; g.moveTo(x, y); for (let s = 0; s < 5; s++) { x += (rnd() - 0.5) * 50; y += (rnd() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); }
-      speck(1500, 0.03, 0.08, 0.5);
+      for (let i = 0; i < 26; i++) { const x = rnd() * N, y = rnd() * N, r = 1.4 + rnd() * 2.4; wrap(x, y, 6, (px, py) => { g.fillStyle = 'rgba(120,85,45,0.2)'; g.beginPath(); g.ellipse(px + 1, py + 1.2, r * 1.2, r * 0.8, 0.3, 0, 6.3); g.fill(); g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(px, py, r, r * 0.7, 0.3, 0, 6.3); g.fill(); }); }
+      speck(3500, 0.04, 0.1, 0.45);
       break;
     }
-    case 'SAND': {   // grain + tiny wind ripples
-      g.fillStyle = '#f0f0f0'; g.fillRect(0, 0, N, N);
-      for (let y = 0; y < N; y += 6) { g.strokeStyle = `rgba(150,110,60,${0.06 + rnd() * 0.05})`; g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= N; x += 16) g.lineTo(x, y + Math.sin((x / N) * Math.PI * 4 + y * 0.05) * 3); g.stroke(); }
-      speck(5000, 0.05, 0.14, 0.45);
-      break;
-    }
-    case 'SNOW': g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, N, N); speck(3000, 0.04, 0.1, 0.4); for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(rnd() * N, rnd() * N, 1.5, 1.5); } break;
-    case 'BASALT': {   // plain volcanic rock: grainy plates with dark seams (no glowing cracks)
-      g.fillStyle = '#d4ccc6'; g.fillRect(0, 0, N, N); speck(6000, 0.06, 0.2, 0.35);
-      cracks(g, 4, 'rgba(40,24,16,0.55)', 2.5);
-      break;
-    }
-    case 'VOID': {   // faint hex-ish rune grid; the lines glow violet
-      g.fillStyle = '#e8e4f0'; g.fillRect(0, 0, N, N); speck(2500, 0.05, 0.14, 0.4);
+    case 'SNOW': {   // soft snow: bluish drift shading, curved drift marks, glints (emissive sparkles)
+      g.fillStyle = '#e9eef6'; g.fillRect(0, 0, N, N);
+      blobs(g, 44, 40, 100, '100,145,210', 0.1, 0.2); blobs(g, 44, 40, 100, '255,255,255', 0.2, 0.35);
+      g.lineCap = 'round';
+      for (let i = 0; i < 46; i++) { const l = 22 + rnd() * 40, a = (rnd() - 0.5) * 0.5; wrap(rnd() * N, rnd() * N, l, (px, py) => { g.strokeStyle = 'rgba(100,140,205,0.34)'; g.lineWidth = 4; g.beginPath(); g.moveTo(px, py); g.quadraticCurveTo(px + l / 2, py - 7 + a * 20, px + l, py + a * 20); g.stroke(); g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(px, py - 3); g.quadraticCurveTo(px + l / 2, py - 10 + a * 20, px + l, py - 3 + a * 20); g.stroke(); }); }
+      speck(1400, 0.02, 0.06, 0.4);
       glowC = mk(); const gg = glowC.getContext('2d')!; gg.fillStyle = '#000'; gg.fillRect(0, 0, N, N);
-      gg.strokeStyle = 'rgba(150,100,255,0.55)'; gg.lineWidth = 2.2;
-      const st = N / 4;
-      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const cx = (x + (y % 2) * 0.5) * st, cy = y * st + st / 2; gg.beginPath(); for (let k = 0; k <= 6; k++) { const a = (k / 6) * Math.PI * 2 + Math.PI / 6; gg.lineTo(cx + Math.cos(a) * st * 0.42, cy + Math.sin(a) * st * 0.42); } gg.stroke(); }
-      for (let i = 0; i < 160; i++) { gg.fillStyle = `rgba(200,170,255,${0.3 + rnd() * 0.6})`; gg.fillRect(rnd() * N, rnd() * N, 1.5, 1.5); }
+      for (let i = 0; i < 34; i++) { const s = 2.2 + rnd() * 2.6, a = 0.55 + rnd() * 0.45; wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = `rgba(210,235,255,${a})`; gg.beginPath(); gg.moveTo(px, py - s * 1.6); gg.lineTo(px + s * 0.35, py - s * 0.35); gg.lineTo(px + s * 1.6, py); gg.lineTo(px + s * 0.35, py + s * 0.35); gg.lineTo(px, py + s * 1.6); gg.lineTo(px - s * 0.35, py + s * 0.35); gg.lineTo(px - s * 1.6, py); gg.lineTo(px - s * 0.35, py - s * 0.35); gg.closePath(); gg.fill(); }); }
       break;
     }
-    default: {   // grass: blade speckle, a few clover dots
-      g.fillStyle = '#ececec'; g.fillRect(0, 0, N, N);
-      for (let i = 0; i < 6000; i++) { const x = rnd() * N, y = rnd() * N; g.strokeStyle = rnd() < 0.5 ? `rgba(255,255,255,${0.08 + rnd() * 0.1})` : `rgba(0,30,0,${0.06 + rnd() * 0.1})`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 4); g.stroke(); }
+    case 'BASALT': {   // dark basalt slabs: soft rounded polygons, deep grout, thin warm cracks glowing between some slabs
+      const { E, A, B } = voro(4, 0.75);
+      paint(true, (px, py, o) => {
+        const k = py * N + px, e = E[k], ia = A[k], ib = B[k], tone = 0.8 + h2(ia, 3) * 0.2, sm = smooth(1.2, 5.5, e), bev = 1 - 0.18 * (1 - smooth(3, 22, e)), n = (h2(px * 0.37, py * 0.53) - 0.5) * 0.06;
+        o[0] = 52 + (238 * tone * bev - 52) * sm + n * 255; o[1] = 46 + (226 * tone * bev - 46) * sm + n * 255; o[2] = 44 + (218 * tone * bev - 44) * sm + n * 255;
+        if (h2(Math.min(ia, ib), Math.max(ia, ib) + 11) < 0.34) {   // a glowing seam
+          const hot = 1 - smooth(0.4, 5.5, e), core = 1 - smooth(0.2, 2.2, e);
+          o[3] = 255 * hot * 0.75 + 255 * core * 0.25; o[4] = 105 * hot * 0.75 + 190 * core * 0.25; o[5] = 24 * hot * 0.75 + 80 * core * 0.25;
+        }
+      });
+      blobs(g, 30, 30, 80, '0,0,0', 0.05, 0.1); speck(1500, 0.04, 0.12, 0.35, 2);
+      break;
     }
-  }
-  if (style === 'BASALT' && glowC) {
-    // glow layer = the crack mask of the albedo, hot orange on black
-    const gg = glowC.getContext('2d')!;
-    const img = g.getImageData(0, 0, N, N), out = gg.createImageData(N, N);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const k = img.data[i] < 70 ? 1 : 0;
-      out.data[i] = 255 * k; out.data[i + 1] = 120 * k; out.data[i + 2] = 30 * k; out.data[i + 3] = 255;
+    case 'VOID': {   // deep violet rounded tiles, faint lit seams, soft star speckle + twinkles
+      paint(true, (px, py, o) => {
+        const t = tileAt(px, py, 4, 20), tone = 0.82 + h2(t.tx + 5, t.ty) * 0.18, sm = smooth(1.5, 6, t.e), bev = 1 - 0.14 * (1 - smooth(4, 26, t.e));
+        o[0] = 78 + (232 * tone * bev - 78) * sm; o[1] = 70 + (226 * tone * bev - 70) * sm; o[2] = 120 + (255 * tone * bev - 120) * sm;
+        const seam = (1 - smooth(0.5, 5, t.e)) * 0.55; o[3] = 150 * seam; o[4] = 95 * seam; o[5] = 255 * seam;
+      });
+      blobs(g, 28, 40, 90, '60,30,120', 0.06, 0.12); speck(1200, 0.03, 0.08, 0.4);
+      const gg = glowC!.getContext('2d')!;
+      for (let i = 0; i < 150; i++) { gg.fillStyle = `rgba(${200 + rnd() * 55},${170 + rnd() * 70},255,${0.25 + rnd() * 0.6})`; const s = 1 + rnd() * 1.6; gg.fillRect(rnd() * N, rnd() * N, s, s); }
+      for (let i = 0; i < 16; i++) { const s = 2.5 + rnd() * 2.5; wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = 'rgba(225,205,255,0.85)'; gg.fillRect(px - s, py - 0.6, s * 2, 1.2); gg.fillRect(px - 0.6, py - s, 1.2, s * 2); gg.beginPath(); gg.arc(px, py, 1.3, 0, 6.3); gg.fill(); }); }
+      break;
     }
-    gg.putImageData(out, 0, 0);
+    default: {   // grass: soft mottling, little three-blade tuft marks, clover; white / yellow / pink flower dots (emissive)
+      g.fillStyle = '#e6e8e2'; g.fillRect(0, 0, N, N);
+      blobs(g, 40, 40, 100, '10,60,10', 0.05, 0.1); blobs(g, 40, 40, 100, '255,255,230', 0.14, 0.26);
+      g.lineCap = 'round';
+      for (let i = 0; i < 120; i++) {
+        const s = 0.8 + rnd() * 0.6;
+        wrap(rnd() * N, rnd() * N, 14, (px, py) => {
+          g.fillStyle = 'rgba(0,50,0,0.1)'; g.beginPath(); g.ellipse(px, py + 1, 7 * s, 2.6 * s, 0, 0, 6.3); g.fill();
+          for (const [dx, h, bend, w] of [[-4, 8, -3, 2.4], [0, 11, 1, 2.6], [4, 8, 3, 2.4]]) {
+            g.strokeStyle = 'rgba(0,55,0,0.3)'; g.lineWidth = w * s; g.beginPath(); g.moveTo(px + dx * s, py); g.quadraticCurveTo(px + dx * s + bend * s * 0.3, py - h * s * 0.6, px + dx * s + bend * s, py - h * s); g.stroke();
+            g.strokeStyle = 'rgba(255,255,230,0.5)'; g.lineWidth = w * s * 0.4; g.beginPath(); g.moveTo(px + dx * s - 0.8, py - 1); g.quadraticCurveTo(px + dx * s + bend * s * 0.3 - 0.8, py - h * s * 0.6, px + dx * s + bend * s - 0.8, py - h * s + 1); g.stroke();
+          }
+        });
+      }
+      for (let i = 0; i < 36; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { g.fillStyle = 'rgba(0,50,0,0.16)'; for (const [dx, dy] of [[-2.6, 1], [2.6, 1], [0, -2.6]]) { g.beginPath(); g.arc(px + dx, py + dy, 2.5, 0, 6.3); g.fill(); } });
+      glowC = mk(); const gg = glowC.getContext('2d')!; gg.fillStyle = '#000'; gg.fillRect(0, 0, N, N);
+      const petal = ['#ffffff', '#fff6c8', '#ffd2e2', '#e4f0ff'];
+      for (let i = 0; i < 30; i++) {
+        const col = petal[Math.floor(rnd() * petal.length)], s = 0.85 + rnd() * 0.5;
+        wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = col; for (let k = 0; k < 5; k++) { const a = (k / 5) * 6.283 + 0.4; gg.beginPath(); gg.arc(px + Math.cos(a) * 2.5 * s, py + Math.sin(a) * 2.5 * s, 1.9 * s, 0, 6.3); gg.fill(); } gg.fillStyle = '#ffcf4a'; gg.beginPath(); gg.arc(px, py, 1.5 * s, 0, 6.3); gg.fill(); });
+      }
+    }
   }
   const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4;
   let e: CanvasTexture | null = null;
-  if (glowC) { e = new CanvasTexture(glowC); e.colorSpace = SRGBColorSpace; e.wrapS = e.wrapT = RepeatWrapping; }
+  if (glowC) { e = new CanvasTexture(glowC); e.colorSpace = SRGBColorSpace; e.wrapS = e.wrapT = RepeatWrapping; e.anisotropy = 4; }
   detailTex[style] = [t, e];
   return [t, e];
 }
 /** World units covered by one repeat of the detail texture. */
 /** How far the floor sinks under rivers / lakes (the liquid surface sits a little above the bed). */
 export const SINK = 2.4;
-export const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 7, MARBLE: 6, SAND: 9, SNOW: 8, BASALT: 10, VOID: 9 };
+export const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 8, MARBLE: 8, SAND: 9, SNOW: 8, BASALT: 10, VOID: 8 };
+/** The floor material of a ground style (shared by run rooms and the camp ground): detail texture repeated `rx` x `rz` times
+ *  over the mesh, glow map (flowers / glints / lava seams / violet seams) added as emissive. */
+export function groundMaterial(style: GroundStyle, rx: number, rz: number, glowScale = 1): MeshStandardMaterial {
+  const [dTex, eTex] = groundDetail(style);
+  const map = dTex.clone(); map.repeat.set(rx, rz); map.needsUpdate = true;
+  let emap: CanvasTexture | null = null;
+  if (eTex) { emap = eTex.clone(); emap.repeat.set(rx, rz); emap.needsUpdate = true; }
+  const glow = style === 'BASALT' ? 0.62 : style === 'VOID' ? 0.8 : 0.5;
+  return new MeshStandardMaterial({
+    vertexColors: true, map, roughness: style === 'MARBLE' ? 0.6 : style === 'SNOW' ? 0.8 : 0.96, metalness: 0,
+    emissiveMap: emap, emissive: new Color(emap ? '#ffffff' : '#000000'), emissiveIntensity: emap ? glow * glowScale : 0,
+  });
+}
 
 /** Distance outside the nearest liquid edge (negative = inside the liquid). */
 function liquidEdge(x: number, z: number): number {
@@ -149,7 +247,7 @@ function liquidEdge(x: number, z: number): number {
 }
 
 function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number; seed: number; boss: boolean; index: number }) {
-  const { geo, mat, tufts, slabs, shrooms } = useMemo(() => {
+  const { geo, mat, tufts, slabs, shrooms, kerb } = useMemo(() => {
     const def = biomeOf(biome);
     const vr = variantOf(def, index);
     const style = def.style;
@@ -159,10 +257,11 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const pos = g.attributes.position;
     const col = new Float32Array(pos.count * 3);
     const ground = vr?.ground ?? def.ground, patch = vr?.patch ?? def.patch;
-    const g0 = _c.set(ground[0]), g1 = _c2.set(ground[1]), edge = _c3.set(vr?.edge ?? def.edge), rim = _c4.set(style === 'MARBLE' ? '#9a8f7c' : style === 'SAND' ? '#b08a58' : '#8c877c').lerp(g0, 0.4);
+    const g0 = _c.set(ground[0]), g1 = _c2.set(ground[1]), edge = _c3.set(vr?.edge ?? def.edge), rim = _c4.set(RIM_TONE[style]).lerp(g0, 0.3);
     const so = (seed % 997) * 0.37;
     const lush = new Color(patch[0]), dry = new Color(patch[1]), dirt = new Color(patch[2]);
     const stone = new Color(def.stone), stoneC = new Color();
+    const pathDirt = new Color(vr?.patch[2] ?? def.patch[2]).lerp(new Color('#d9b87c'), style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.3 : 0.62);
     const bank = new Color(style === 'BASALT' ? '#1a0e0a' : style === 'SAND' ? (feat.liquid === 'CHASM' ? '#a87440' : '#8a7a4a') : style === 'SNOW' ? '#9ab4c8' : style === 'MARBLE' ? '#8a8272' : style === 'VOID' ? '#160f2a' : '#4a5a2a');
     const hasLiquid = feat.river || feat.nLakes > 0;
     const flatLava = feat.liquid === 'LAVA' && !feat.river;   // lava pools lie flat on the rock (only lava rivers cut channels)
@@ -182,7 +281,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       if (style === 'MARBLE') {
         // slab-to-slab tone (3-unit slabs), worn darker lanes, roots / moss creeping in from the cracks
         const tx = Math.floor(x / 3), tz = Math.floor(z / 3);
-        out.multiplyScalar(0.9 + vnoise(tx * 3.7 + so, tz * 5.3) * 0.16);
+        out.multiplyScalar(0.94 + vnoise(tx * 3.7 + so, tz * 5.3) * 0.1);
         out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45);
         out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75);
         const lane = Math.abs(x * -shape.fz + z * shape.fx);
@@ -190,7 +289,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
           const torn = sstep(0.62, 0.7, fbm(x * 0.12 + so, z * 0.12, 3));
           const inLane = sstep(2.9, 2.6, lane) * sstep(0.5, -1.5, u) * (1 - torn);
           out.lerp(tmpC.set('#6e1a20'), inLane * 0.85);
-          out.lerp(tmpC.set('#b8913a'), sstep(2.9, 2.6, lane) * sstep(2.2, 2.45, lane) * sstep(0.5, -1.5, u) * (1 - torn) * 0.7);
+          out.lerp(tmpC.set('#e8c870'), sstep(2.9, 2.6, lane) * sstep(2.2, 2.45, lane) * sstep(0.5, -1.5, u) * (1 - torn) * 0.7);
         }
       } else if (style === 'SAND') {
         // dunes: long wind ripples bending with the noise, troughs darker
@@ -201,34 +300,47 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         out.lerp(dirt, sstep(0.66, 0.76, zA) * 0.5);
       } else if (style === 'SNOW') {
         out.lerp(dry, sstep(0.5, 0.64, zB) * 0.6);
-        out.lerp(tmpC.set('#a8d4f0'), sstep(0.66, 0.74, zA) * 0.7);   // blue ice patches
+        out.lerp(tmpC.set('#ffffff'), sstep(0.6, 0.66, zA) * (1 - sstep(0.66, 0.7, zA)) * 0.55);   // frost fringe round the ice
+        out.lerp(tmpC.set('#9fd2f2'), sstep(0.66, 0.74, zA) * 0.75);   // blue ice patches
         out.lerp(dirt, sstep(0.7, 0.8, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.6);   // rock poking through
       } else if (style === 'BASALT') {
         out.lerp(lush, sstep(0.48, 0.62, zA) * 0.6);
-        out.lerp(dirt, sstep(0.55, 0.7, zB) * 0.8);
+        out.lerp(dirt, sstep(0.55, 0.7, zB) * 0.45);
         out.lerp(tmpC.set('#5a3220'), sstep(0.7, 0.78, fbm(x * 0.09 + so, z * 0.09, 3)) * 0.35);   // faint scorch
       } else if (style === 'VOID') {
         out.lerp(lush, sstep(0.48, 0.62, zA) * 0.7);
-        out.lerp(dirt, sstep(0.6, 0.72, zB) * 0.8);
+        out.lerp(dirt, sstep(0.6, 0.72, zB) * 0.4);   // (soft shadowed pools, not black holes)
       } else {
         // big colour zones: lush / dry grass and bare-dirt patches (more variety across the room)
         out.lerp(lush, sstep(0.48, 0.62, zA) * 0.85);
         out.lerp(dry, sstep(0.5, 0.64, zB) * 0.8);
-        out.lerp(dirt, sstep(0.64, 0.74, fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3)) * 0.85);
+        const zD = fbm(x * 0.09 + so, z * 0.09 + so * 0.3, 3);
+        out.lerp(tmpC.copy(dirt).lerp(g1, 0.5), sstep(0.6, 0.64, zD) * (1 - sstep(0.64, 0.68, zD)) * 0.5);   // worn-grass fringe
+        out.lerp(dirt, sstep(0.64, 0.74, zD) * 0.85);
       }
-      // stone path from the arrival side to the exits (most non-boss rooms), gently winding
+      // path from the arrival side to the exits (most non-boss rooms), gently winding: a clean dirt trail in the forest, flagstones elsewhere
       if (path) {
         const t = x * shape.fx + z * shape.fz, l = x * -shape.fz + z * shape.fx;
         const cl = Math.sin(t * 0.11 + so) * 2.6 + Math.sin(t * 0.27 - so) * 0.8;
         const w = 1.9 + vnoise(t * 0.2 + so, 3.1) * 0.9;
         const pd = Math.abs(l - cl) - w;
-        const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u) * (style === 'SAND' ? 0.55 : 1);
-        if (k > 0) {
-          const cx = x * 1.25, cz = z * 1.25, fx = cx - Math.floor(cx), fz = cz - Math.floor(cz) + (Math.floor(cx) % 2) * 0.5;
-          const gap = Math.min(fx, 1 - fx, fz - Math.floor(fz), 1 - (fz - Math.floor(fz)));
-          stoneC.copy(stone).multiplyScalar(0.85 + vnoise(Math.floor(cx) * 3.1, Math.floor(cz + (Math.floor(cx) % 2) * 0.5) * 2.7) * 0.3);
-          if (gap < 0.09) stoneC.multiplyScalar(0.62);
-          out.lerp(stoneC, k * 0.92);
+        if (style === 'GRASS') {
+          const k = sstep(0.9, -0.5, pd) * sstep(0.5, -1.5, u);
+          if (k > 0) {
+            const inner = sstep(-0.1, -1.1, pd);   // lighter trodden centre, darker packed edge
+            stoneC.copy(pathDirt).multiplyScalar(0.88 + inner * 0.16 + vnoise(x * 1.7 + so, z * 1.7) * 0.07);
+            out.lerp(stoneC, k * 0.95);
+          }
+        } else {
+          const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u) * (style === 'SAND' ? 0.7 : 1);
+          if (k > 0) {
+            const sc = style === 'SAND' ? 0.62 : 1.0;   // slab size (sand: big sandstone flags)
+            const cx = x * sc, cz = z * sc, fx = cx - Math.floor(cx), fz = cz - Math.floor(cz) + (Math.floor(cx) % 2) * 0.5;
+            const gap = Math.min(fx, 1 - fx, fz - Math.floor(fz), 1 - (fz - Math.floor(fz)));
+            stoneC.copy(stone).multiplyScalar((style === 'BASALT' ? 0.75 : 1) * (0.88 + vnoise(Math.floor(cx) * 3.1, Math.floor(cz + (Math.floor(cx) % 2) * 0.5) * 2.7) * 0.24));
+            stoneC.multiplyScalar(1 - 0.38 * sstep(0.14, 0.04, gap) + 0.05 * sstep(0.1, 0.3, gap));   // soft grout line + gently domed slab
+            out.lerp(stoneC, k * 0.92);
+          }
         }
       }
       // shore / bank around liquids: the floor drops away into a sunken channel (rock cliff strata on the slope)
@@ -242,12 +354,14 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
           out.lerp(tmpC.copy(bank).multiplyScalar(strata), Math.min(1, k * 1.4)).multiplyScalar(1 - k * 0.45);
         }
       }
-      // stone rim just inside the walls
-      out.lerp(rim, sstep(-1.4, -0.2, u) * 0.55);
+      // tidy rim just inside the walls: a soft lighter paved band with a darker outer line (the 3D kerb sits on it, buildKerb)
+      out.lerp(rim, sstep(-2.6, -1.6, u) * (1 - sstep(-0.9, -0.3, u)) * 0.6);
+      out.multiplyScalar(1 - sstep(-0.9, -0.5, u) * (1 - sstep(-0.3, 0.2, u)) * 0.22);
       // boss arena: a faint rune circle
       if (boss) {
         const rr = Math.abs(r - (shapeLimit(x, z) - 1) * 0.62);
-        out.lerp(g1, sstep(0.9, 0.2, rr) * 0.6).multiplyScalar(1 + sstep(0.5, 0.1, rr) * 0.25);
+        const r2 = Math.abs(r - (shapeLimit(x, z) - 1) * 0.3);
+        out.lerp(g1, Math.max(sstep(0.9, 0.2, rr), sstep(0.7, 0.15, r2)) * 0.6).multiplyScalar(1 + Math.max(sstep(0.5, 0.1, rr), sstep(0.4, 0.1, r2)) * 0.25);
         out.multiplyScalar(1 + sstep(R * 0.2, 0, r) * 0.2);
       }
       // lava sea: past the wall ring the rock crumbles away under the lava (a dark scorched lip first)
@@ -261,6 +375,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         const k = sstep(3.4, 7.0, u);
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
         out.lerp(tmpC.set('#c8b07a'), sstep(2.4, 3.8, u) * 0.7);
+        out.lerp(tmpC.set('#7fe6dc'), sstep(3.9, 5.6, u) * 0.85);   // turquoise shallows
+        out.lerp(tmpC.set('#ffffff'), sstep(0.7, 0, Math.abs(u - 3.5)) * 0.55);   // foam line
       }
       // rolling hills rising beyond the outer prop ring (owner: more elevation; not in the castle halls, the void or over the lava sea)
       if (!lavaSea && !waterSea && style !== 'MARBLE' && style !== 'VOID') {
@@ -274,15 +390,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     }
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
     g.computeVertexNormals();
-    const [dTex, eTex] = groundDetail(style);
-    const rep = S / DETAIL_PERIOD[style];
-    const map = dTex.clone(); map.repeat.set(rep, rep); map.needsUpdate = true;
-    let emap: CanvasTexture | null = null;
-    if (eTex) { emap = eTex.clone(); emap.repeat.set(rep, rep); emap.needsUpdate = true; }
-    const m = new MeshStandardMaterial({
-      vertexColors: true, map, roughness: style === 'MARBLE' ? 0.55 : style === 'SNOW' ? 0.8 : 0.96, metalness: 0,
-      emissiveMap: emap, emissive: new Color(emap ? (style === 'BASALT' ? '#ff6a1a' : '#9a6aff') : '#000000'), emissiveIntensity: emap ? (style === 'BASALT' ? 1.1 : 0.7) : 0,
-    });
+    const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
     const N = style === 'MARBLE' ? 26 : 45; // sparse clutter (user: fewer small bushes)
@@ -320,7 +428,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     inst.receiveShadow = true;
 
     // flat stepping stones along the stone path (one instanced draw)
-    const SG = new GB([0.9, 1.1]); SG.cyl(0.62, 0.7, 0.14, 6, [0, 0.05, 0], '#ffffff');
+    const SG = new GB([0.9, 1.1]); SG.cyl(0.62, 0.7, 0.14, 11, [0, 0.05, 0], '#ffffff');
     const slabs = new InstancedMesh(SG.build(), new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), 90);
     let ns = 0;
     if (path) {
@@ -363,7 +471,9 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       shrooms.count = ns2;
       if (shrooms.instanceColor) shrooms.instanceColor.needsUpdate = true;
     }
-    return { geo: g, mat: m, tufts: inst, slabs, shrooms };
+    const kerb = def.waterSea ? null : new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
+    if (kerb) kerb.receiveShadow = true;
+    return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb };
   }, [biome, R, seed, boss]);
   return (
     <>
@@ -371,6 +481,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       <primitive object={tufts} />
       <primitive object={slabs} />
       {shrooms && <primitive object={shrooms} />}
+      {kerb && <primitive object={kerb} />}
     </>
   );
 }
@@ -383,7 +494,7 @@ function towerCobbles(): CanvasTexture {
   const N = 1024, c = document.createElement('canvas'); c.width = c.height = N;
   const g = c.getContext('2d')!;
   const rnd = mulberry32(0x70e3);
-  g.fillStyle = '#4a4a4f'; g.fillRect(0, 0, N, N);   // mortar / cement
+  g.fillStyle = '#9a948a'; g.fillRect(0, 0, N, N);   // mortar / cement (light, warm)
   const cx = N / 2, ringW = 17;
   for (let r0 = 0; r0 < N * 0.72; r0 += ringW) {
     const n = Math.max(6, Math.round((Math.PI * 2 * (r0 + ringW / 2)) / 24));
@@ -391,22 +502,22 @@ function towerCobbles(): CanvasTexture {
     for (let i = 0; i < n; i++) {
       const a0 = off + (i / n) * Math.PI * 2 + 0.012, a1 = off + ((i + 1) / n) * Math.PI * 2 - 0.012;
       const rIn = r0 + 1.8, rOut = r0 + ringW - 1.8;
-      const v = 0.75 + rnd() * 0.4, warm = rnd() * 10;
-      g.fillStyle = `rgb(${Math.round(128 * v + warm)},${Math.round(126 * v + warm * 0.6)},${Math.round(122 * v)})`;
+      const v = 0.82 + rnd() * 0.22, warm = rnd() * 12;
+      g.fillStyle = `rgb(${Math.round(226 * v + warm)},${Math.round(216 * v + warm * 0.6)},${Math.round(198 * v)})`;
       g.beginPath(); g.arc(cx, cx, rOut, a0, a1); g.arc(cx, cx, Math.max(0, rIn), a1, a0, true); g.closePath(); g.fill();
       // a lighter top face for a little bevel
-      g.fillStyle = 'rgba(255,255,255,0.07)';
+      g.fillStyle = 'rgba(255,255,255,0.14)';
       g.beginPath(); g.arc(cx, cx, rOut - 3, a0 + 0.01, a1 - 0.01); g.arc(cx, cx, Math.max(0, rIn + 5), a1 - 0.01, a0 + 0.01, true); g.closePath(); g.fill();
     }
   }
   // grime + speckle so it reads as rough rock, not tiles
   for (let i = 0; i < 9000; i++) {
     const x = rnd() * N, y = rnd() * N, s = 1 + rnd() * 2.5;
-    g.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.06)'; g.fillRect(x, y, s, s);
+    g.fillStyle = rnd() < 0.5 ? 'rgba(60,40,20,0.1)' : 'rgba(255,255,255,0.08)'; g.fillRect(x, y, s, s);
   }
   for (let i = 0; i < 40; i++) {
     const x = rnd() * N, y = rnd() * N, r = 30 + rnd() * 90;
-    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(20,20,30,0.18)'); gr.addColorStop(1, 'rgba(20,20,30,0)');
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(90,70,50,0.12)'); gr.addColorStop(1, 'rgba(90,70,50,0)');
     g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   cobbleTex = new CanvasTexture(c); cobbleTex.colorSpace = SRGBColorSpace; cobbleTex.anisotropy = 4;
@@ -415,18 +526,21 @@ function towerCobbles(): CanvasTexture {
 
 /** Endless Tower floor: a round cobbled platform floating in the night sky (stone skirt below, rune ring, stars). */
 function TowerFloor({ R }: { R: number }) {
-  const { top, skirt, rune } = useMemo(() => {
+  const { top, skirt, rune, kerb } = useMemo(() => {
     const rr = R + 3.4;
     const tg = new CircleGeometry(rr, 96); tg.rotateX(-Math.PI / 2);
     const top = new Mesh(tg, new MeshStandardMaterial({ map: towerCobbles(), roughness: 0.95, metalness: 0 }));
     top.position.y = 0.005; top.receiveShadow = true;
     const sg = new CylinderGeometry(rr, rr * 0.55, 7, 48, 1, true);
-    const skirt = new Mesh(sg, new MeshStandardMaterial({ color: '#2c2c36', roughness: 1, side: DoubleSide }));
+    const skirt = new Mesh(sg, new MeshStandardMaterial({ color: '#5e5a6c', roughness: 1, side: DoubleSide }));
     skirt.position.y = -3.5;
     const rg = new RingGeometry(R * 0.62 - 0.12, R * 0.62 + 0.12, 96); rg.rotateX(-Math.PI / 2);
     const rune = new Mesh(rg, new MeshBasicMaterial({ color: '#6f8cff', transparent: true, opacity: 0.35, toneMapped: false, depthWrite: false }));
     rune.position.y = 0.02;
-    return { top, skirt, rune };
+    const kg = new TorusGeometry(rr - 0.35, 0.38, 8, 96); kg.rotateX(Math.PI / 2);   // rounded cream kerb round the platform
+    const kerb = new Mesh(kg, new MeshStandardMaterial({ color: '#efe4cc', roughness: 0.85 }));
+    kerb.position.y = 0.12; kerb.scale.y = 0.55; kerb.receiveShadow = true;
+    return { top, skirt, rune, kerb };
   }, [R]);
   useFrame(({ clock }) => { (rune.material as MeshBasicMaterial).opacity = 0.25 + Math.sin(clock.elapsedTime * 1.4) * 0.1; });
   return (
@@ -434,6 +548,7 @@ function TowerFloor({ R }: { R: number }) {
       <primitive object={top} />
       <primitive object={skirt} />
       <primitive object={rune} />
+      <primitive object={kerb} />
       <Stars radius={140} depth={60} count={2500} factor={5} saturation={0} fade speed={0.4} />
     </>
   );

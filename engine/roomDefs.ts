@@ -97,17 +97,17 @@ export const BIOMES: readonly BiomeDef[] = [
   { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Gorath's tread (Gorath the Mountain).
     // Inside the castle: flagstone floors with a worn red carpet, broken curtain walls with torches, banners and arched
     // windows, toppled pillars and rubble. No water stages here (user request).
-    name: 'Marble Halls', style: 'MARBLE', ground: ['#7c766c', '#958f83'], patch: ['#8a8478', '#6a655c', '#4f5a3c'], stone: '#a39d90', edge: '#0c0a08', fog: '#241d17',
+    name: 'Marble Halls', style: 'MARBLE', ground: ['#c4beb0', '#dad5c6'], patch: ['#8a8478', '#6a655c', '#4f5a3c'], stone: '#a39d90', edge: '#0c0a08', fog: '#241d17',
     hemiSky: '#ffd9a8', hemiGround: '#3a2e24', hemiI: 0.95, sun: '#ffcf96', sunI: 2.2, skyTint: [0.3, 0.25, 0.22], propTint: '#ffffff',
     border: ['CASTLEWALL'], outer: ['CASTLEWALL', 'COLUMN'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL', 'BRAZIER'], hazard: null,
     river: 'WATER', lake: 'WATER', layouts: [46, 24, 30, 0, 0], towers: false, hydras: false,
     variants: [
-      { name: 'Outer Ward', ground: ['#7c766c', '#958f83'], patch: ['#8a8478', '#6a655c', '#4f5a3c'],
+      { name: 'Outer Ward', ground: ['#c4beb0', '#dad5c6'], patch: ['#8a8478', '#6a655c', '#4f5a3c'],
         border: ['CASTLEWALL'], interior: ['COLUMN', 'STATUE', 'BRAZIER', 'RUIN', 'COLUMN', 'LOWWALL', 'BRAZIER'], hazard: null },
-      { name: 'Broken Hall', ground: ['#736d62', '#8a8476'], patch: ['#7a7468', '#5e594f', '#4a5a36'], propTint: '#e8e4dc',
+      { name: 'Broken Hall', ground: ['#bab4a4', '#d0cabb'], patch: ['#7a7468', '#5e594f', '#4a5a36'], propTint: '#e8e4dc',
         border: ['CASTLEWALL'], interior: ['RUIN', 'COLUMN', 'LOWWALL', 'RUIN', 'STATUE', 'BRAZIER', 'BOULDER'], hazard: null,
         hemiI: 0.9, sunI: 2.0 },
-      { name: 'Fallen Keep', ground: ['#5e5a4e', '#6e6a5a'], patch: ['#5a6040', '#504a40', '#3e5a2e'], propTint: '#d0d4c0',
+      { name: 'Fallen Keep', ground: ['#9c9a82', '#b2b09a'], patch: ['#5a6040', '#504a40', '#3e5a2e'], propTint: '#d0d4c0',
         border: ['CASTLEWALL'], interior: ['RUIN', 'DEAD_TREE', 'LOWWALL', 'BOULDER', 'COLUMN', 'TREE', 'RUIN'], hazard: null,
         fog: '#2e3028', hemiSky: '#d8e0c8', hemiGround: '#2e3424', hemiI: 1.1, sun: '#e8f0d8', sunI: 2.6, skyTint: [0.45, 0.48, 0.42] },
     ],
@@ -177,18 +177,18 @@ export const BIOMES: readonly BiomeDef[] = [
   },
   { // 4 Ember Wastes: islands of plain dark-brown rock in a sea of lava (the floor beyond the walls drops into it); lava
     // rivers sink into channels, lava pools lie flat and irregular and grow with depth
-    name: 'Ember Wastes', style: 'BASALT', ground: ['#3c2a20', '#523b2a'], patch: ['#4a3426', '#634530', '#2a1d15'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
+    name: 'Ember Wastes', style: 'BASALT', ground: ['#4c3528', '#684b35'], patch: ['#4a3426', '#634530', '#2a1d15'], stone: '#6e625c', edge: '#1e1210', fog: '#7a3c2c',
     hemiSky: '#ffd0b0', hemiGround: '#4a2e20', hemiI: 1.1, sun: '#ffd0a8', sunI: 2.8, skyTint: [1.1, 0.7, 0.55], propTint: '#c8a088',
     border: ['OBSIDIAN', 'BOULDER', 'ROCK', 'OBSIDIAN', 'ROCK'], interior: ['OBSIDIAN', 'ROCK', 'DEAD_TREE', 'BOULDER', 'ROCK'], hazard: null,
     river: 'LAVA', lake: 'LAVA', layouts: [28, 12, 8, 32, 20], towers: false, hydras: false, lavaSea: true,
     variants: [
-      { name: 'Ashen Slopes', ground: ['#3e2c22', '#54402e'], patch: ['#4a3628', '#66483a', '#2c1f16'],
+      { name: 'Ashen Slopes', ground: ['#4f382b', '#6b513a'], patch: ['#4a3628', '#66483a', '#2c1f16'],
         border: ['BOULDER', 'ROCK', 'OBSIDIAN', 'ROCK'], interior: ['ROCK', 'BOULDER', 'DEAD_TREE', 'ROCK', 'OBSIDIAN'], hazard: null,
         layouts: [28, 14, 8, 32, 18], lakeScale: 1 },
-      { name: 'Magma Fields', ground: ['#3a2820', '#4e3828'], patch: ['#463024', '#6a4430', '#281a12'],
+      { name: 'Magma Fields', ground: ['#4a3328', '#634733'], patch: ['#463024', '#6a4430', '#281a12'],
         border: ['OBSIDIAN', 'BOULDER', 'ROCK', 'OBSIDIAN'], interior: ['OBSIDIAN', 'ROCK', 'BOULDER', 'DEAD_TREE', 'ROCK'], hazard: 'GAS',
         layouts: [20, 10, 6, 34, 30], lakeScale: 1.3, hemiI: 1.05, sunI: 2.8 },
-      { name: 'Molten Core', ground: ['#34221a', '#463024'], patch: ['#40281e', '#5e3a26', '#22160e'], edge: '#140a08', propTint: '#b88068',
+      { name: 'Molten Core', ground: ['#422b21', '#593d2e'], patch: ['#40281e', '#5e3a26', '#22160e'], edge: '#140a08', propTint: '#b88068',
         border: ['OBSIDIAN', 'OBSIDIAN', 'BOULDER', 'ROCK'], interior: ['OBSIDIAN', 'OBSIDIAN', 'ROCK', 'BOULDER'], hazard: 'GAS',
         layouts: [14, 10, 4, 32, 40], lakeScale: 1.6, fog: '#6a2a1c', hemiSky: '#ffb090', hemiGround: '#40200f', hemiI: 1.0, sun: '#ffb080', sunI: 2.5, skyTint: [1.15, 0.6, 0.45] },
     ],
