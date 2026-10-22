@@ -475,6 +475,17 @@ screens, max-level question: class level cap is 50) have been removed.
     Head fix (2026-10-21): the KayKit ARCHER / KNIGHT / WIZARD heads have no skull under their baked hair (all of it uses the hair atlas cell), so dropping it left a hollow face mask seen from behind / above
     (hats + hair looked detached). npcBuild now KEEPS those triangles as the skull (squashed into the kit's skull box, hair colour, skin for `hair_bald_fringe`); BARBARIAN still drops its fringe. Only bones that carry vertices
     enter the merged skeleton (21 instead of 138).
+    **Wear kit restored + hardened (2026-10-22)** after the owner revert (commit a36eff2: "hats crazy", "buggy on first load, fine after respawn"). Headless QA could NOT reproduce a
+    first-load difference: the built mesh (positions + bone inverses hash), bind matrices and head-bone poses are bit-identical on the first town load, after a run-death respawn and after
+    castle in / out (also with the wear GLB / rig GLBs artificially delayed). What was fixed anyway, in the order a first load can go wrong: (1) `Npcs.tsx NpcActor` awaits the kit GLB, the clips
+    and both rigs BEFORE it clones anything (a suspended render throws its hook state away, so no half-built clones); (2) the NPC group stays `visible=false` until the merged mesh is built AND the mixer
+    has posed the skeleton once (`m.update(0)` + `updateMatrixWorld` in the effect, and the first visible frame always updates the mixer: the animation LOD used to skip up to 2 frames = raw rest pose);
+    (3) `npcBuild.ts` maps every KayKit part into the merged mesh space through its OWN bindMatrix (`bodyBindInverse x part.bindMatrix`, identity today) instead of assuming all parts share one;
+    (4) kit pieces are fitted against the bind inverses (never the animated pose). NOTE the head part's skin carries different inverse-bind matrices than the body skin (head IBM scale ~0.54 vs ~0.51),
+    so `buildNpc` keeps one skeleton slot per distinct (bone, inverse) pair; do not "simplify" that.
+    Hat size: the Blender hats / helms / hoods are big and low (brims hid the eyes from the high town camera), so `npcBuild.ts FIT` shrinks / lifts them at runtime per piece (`s` about pivot (0, py, 0), `dy`); tune
+    there, no Blender needed (there is no Blender in the cloud sandbox). QA: use the headless harness, pin an NPC beside the hero (freeCamera on, pitch 0.3, camera.zoom 0.5, yaw 0 = front) and
+    null its `patrol` so the engine does not turn it; compare fresh load / castle in-out / `startMode` + death + `resetGame`.
 10. **Camera (Link's Awakening / Echoes look, done 2026-10-20)**: `render/CameraRig.tsx` starts north-up (yaw 0) and forces pitch
    CAM_PITCH0 unless Settings "Free camera" (`settings.freeCamera`) is on; the player can always turn the camera (drag / right stick, V resets), and uses a long lens (FOV 26, pushed back
    by TELE so the framing matches FOV 40; lobby / class select keep FOV 40). TiltShift2 in `GameCanvas` (setting
