@@ -11,12 +11,13 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, pushHalo, smokePuff } from './fx';
 import { GB, TAU, clamp, commitInst, damp } from './util';
+import { makeBossMats, useBossRig } from './bossKit';
 
 const sin = Math.sin, cos = Math.cos, ice = '#8fd0f0', ice2 = '#d6f1ff', deep = '#3f86b8', horn = '#e6f6ff';
 const wrapPi = (a: number): number => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
 
 // ============================================================================ the dragon
-const NECK_N = 20, SC = 2.6;   // neck segments, overall size of the head / claws
+const NECK_N = 20, SC = 2.6, KIT_HEAD = 0.7, KIT_WING = 2;   // KIT_*: scale of the kit head (inside the SC head group) / wings   // neck segments, overall size of the head / claws
 function buildDragon() {
   // head (local +z = towards the arena), origin at the skull centre
   const head = new GB([0.78, 1.1]), glow = new GB([1, 1]), jaw = new GB([0.78, 1.1]);
@@ -84,7 +85,13 @@ export function GiantBosses() {
       hSeg: inst(n.seg, lit, MAX_HEADS * HN), hBelly: inst(n.belly, lit, MAX_HEADS * HN),
     };
   }, []);
-  const root = useRef<Group>(null!), headG = useRef<Group>(null!), jawG = useRef<Group>(null!);
+  const root = useRef<Group>(null!), headG = useRef<Group>(null!), jawG = useRef<Group>(null!), wingG = useRef<Group>(null!);
+  // creature-kit look for Glacius' head, jaw and wings (the neck / claws stay procedural: they are the rooted-giant part); old meshes show until the kit is in
+  const km = useMemo(() => makeBossMats(), []), rigH = useBossRig('boss_wyrm', km), rigW = useBossRig('boss_wyrm', km);
+  useMemo(() => {
+    if (rigH) { for (const k of ['body', 'legL', 'legR', 'tail', 'wingL', 'wingR']) rigH.J[k].visible = false; rigH.J.head.position.set(0, 0, 0); }
+    if (rigW) for (const k of ['body', 'legL', 'legR', 'tail', 'head']) rigW.J[k].visible = false;
+  }, [rigH, rigW]);
   const S = useRef({ dy: 0, pitch: 0, jaw: 0, yaw: 0, claw: 0, glow: 0 });
 
   useFrame(({ clock }, dtRaw) => {
@@ -115,6 +122,13 @@ export function GiantBosses() {
       const H = 6.2 + s.dy;
       headG.current.position.set(0, H, 0.4 - s.pitch * 2); headG.current.rotation.set(s.pitch, s.yaw, 0, 'YXZ'); headG.current.scale.setScalar(SC);
       jawG.current.rotation.x = s.jaw * 0.7;
+      if (rigH) rigH.J.jaw.rotation.x = s.jaw * 0.7;
+      if (rigW) {
+        const fl = 0.5 + sin(t * 1.6) * 0.12 + (p === 2 && (st === 'WINDUP' || st === 'ATTACK') ? 0.35 : 0) + (st === 'WINDUP' ? 0.1 : 0);
+        rigW.J.wingL.rotation.z = fl; rigW.J.wingR.rotation.z = -fl;
+        wingG.current.position.set(0, 3.6 + s.dy * 0.5, -3.4);
+      }
+      km.glow.color.setScalar(0.8 + s.glow * 0.8 + 0.2 * sin(TT * 5));
       G.glowM.color.setScalar(1.2 + s.glow * 0.8 + 0.2 * sin(TT * 5));
       // neck: rises steeply out of the rim behind the head, then dives below the arena, swaying
       const L = 22;
@@ -173,12 +187,18 @@ export function GiantBosses() {
       <group ref={root} visible={false}>
         <primitive object={G.segs} /><primitive object={G.spikes} /><primitive object={G.claws} />
         <group ref={headG}>
-          <mesh geometry={G.d.head} material={G.lit} castShadow />
-          <mesh geometry={G.d.glow} material={G.glowM} />
-          <group ref={jawG}><mesh geometry={G.d.jaw} material={G.lit} castShadow /></group>
+          <group visible={!rigH}>
+            <mesh geometry={G.d.head} material={G.lit} castShadow />
+            <mesh geometry={G.d.glow} material={G.glowM} />
+            <group ref={jawG}><mesh geometry={G.d.jaw} material={G.lit} castShadow /></group>
+          </group>
+          {rigH && <group scale={KIT_HEAD}><primitive object={rigH.root} /></group>}
         </group>
-        <mesh geometry={G.d.wingL} material={G.lit} position={[0, 0, -2.4]} />
-        <mesh geometry={G.d.wingR} material={G.lit} position={[0, 0, -2.4]} />
+        <group visible={!rigW}>
+          <mesh geometry={G.d.wingL} material={G.lit} position={[0, 0, -2.4]} />
+          <mesh geometry={G.d.wingR} material={G.lit} position={[0, 0, -2.4]} />
+        </group>
+        {rigW && <group ref={wingG} scale={KIT_WING}><primitive object={rigW.root} /></group>}
       </group>
       <primitive object={G.hSeg} /><primitive object={G.hBelly} />
     </>

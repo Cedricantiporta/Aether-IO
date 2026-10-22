@@ -1,5 +1,5 @@
 // Creature kit v1 wiring table (docs/CREATURE_PLAN.md): which kit piece draws which game kind / pet, and how it moves.
-// Pure data (no three imports). Bosses (BOSS_*) and boss adds are NOT here: they keep their own models.
+// Pure data (no three imports). Bosses (BOSS_*) are NOT here (render/bossKit.tsx); boss adds are.
 import type { EnemyKind } from '../engine/types';
 
 /** Motion archetype: picks the whole-body bob / lean and the joint swing rules (render/creatureKit.tsx `jointPose`). */
@@ -47,6 +47,12 @@ export const MONSTER_KIT: Partial<Record<EnemyKind, CreatureCfg>> = {
   VOID_STALKER: { piece: 'void_stalker', arch: 'biped', gait: 10 },
   VOID_EYE: { piece: 'void_eye', arch: 'float', lift: 1.4 },
   BONE_GOLEM: { piece: 'bone_golem', arch: 'biped', gait: 5 },
+  // boss adds (the bosses themselves are drawn by render/bossKit.tsx rigs)
+  BOSS_SAPLING: { piece: 'boss_sapling', arch: 'biped', gait: 9 },
+  BOSS_WYRMLING: { piece: 'boss_wyrmling', arch: 'fly', flap: 16, amp: 0.7, lift: 0.7 },
+  BOSS_IMP: { piece: 'boss_imp', arch: 'fly', flap: 20, amp: 0.8, lift: 0.7 },
+  BOSS_CRYSTAL: { piece: 'boss_crystal', arch: 'still' },
+  BOSS_HYDRA_HEAD: { piece: 'boss_hydra_head', arch: 'still', lift: -6.5 },
 };
 
 /** Pets (PETS_POOL ids): kit piece, motion, body scale and hover height (the old PetDef values are overridden). */

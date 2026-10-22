@@ -2,7 +2,7 @@
 
 `public/models/creatures/creature_kit_v1.glb` (~1.9 MB, weld + meshopt medium), built by `art/blender/creature_kit_v1.py`
 (`--no-render`, `--no-compress`, `--only=monsters,bosses,pets,closeups`, `--closeup=a+b[,yaw,pitch,ortho,y,spacing]`; previews go to `$CREATURE_SHOTS`,
-default `art/renders/creatures/`). Wired into the game for regular monsters and pets (see "Wired into the game" below); bosses still use their own models. Style: cute Nintendo / Zelda toy look, flat shared
+default `art/renders/creatures/`). Wired into the game for monsters, pets, bosses and boss adds (see "Wired into the game" below). Style: cute Nintendo / Zelda toy look, flat shared
 materials x vertex colour layer `COLOR_0` that MULTIPLIES the material colour (same loader rule as kit_v3), `glow_*` materials are emissive.
 
 ## Wired into the game (2026-10-22)
@@ -17,7 +17,16 @@ materials x vertex colour layer `COLOR_0` that MULTIPLIES the material colour (s
 - Pets: `PET_KIT` gives piece / archetype / scale / hover per pet id; `render/Pet.tsx` builds a small Object3D joint rig (`makeRig`, shared geometry) and animates it with `animateRig`
   inside the existing PetActor / PetModel (hop, hover, trail, halo, growth stages, attack stretch all still come from the old PetDef).
 - Table of kinds: `render/creatureMap.ts` `MONSTER_KIT` (arch biped / quad / blob / fly / float / crawl / still, optional `lift` for flyers, archers on their tower and the sunk lake hydra, `caster` = arms up on windup).
-  Old models stay for: all `BOSS_*` kinds and boss adds (BOSS_SAPLING, BOSS_WYRMLING, BOSS_HYDRA_HEAD, BOSS_IMP, BOSS_CRYSTAL), `HUMAN_BOSS`, `DARK_HERO`, and any kind removed from the table.
+  Boss adds (BOSS_SAPLING biped, BOSS_WYRMLING / BOSS_IMP fly, BOSS_CRYSTAL still, BOSS_HYDRA_HEAD still with `lift -6.5` so only the head of the standing neck shows, the
+  procedural neck chain in `GiantBosses.tsx` arches into it) are ordinary `MONSTER_KIT` entries (the old red imp tint is gone: the kit imp is already red).
+- Bosses (`render/bossKit.tsx`: `makeBossMats`, `makeBossRig(kit, piece, mats)` -> `{ root, J }` joint objects by kit name, `useBossRig`): the non-instanced boss components keep their old
+  procedural meshes / animation targets and ALSO build the kit rig; while the kit is not loaded the old meshes show, afterwards they are hidden (`visible={!rig}`) and the per-frame code copies
+  the same targets (arm swing, spread, pitch, bob, leg swing, turret yaw, glow, bark plates, shard spin) onto the kit joints. The kit rig sits in a wrapper group scaled
+  `e.scale / ENEMY_DEFS[kind].scale / oldRootScale` so the net size is the kit's authored size (hit radius untouched). Pieces: Golem `boss_golem` (Bosses.tsx), Lich `boss_lich`
+  (own transparent materials: vanish / clones; the kit `orb` joint replaces the 5 old soul orbs, which stay hidden but still feed the particles), Elderroot `boss_treant` (plates joint =
+  bark phase, material tint), Tide Hydra body `boss_hydra`, Ignar `boss_warlord` (heat tint on the material), Void Herald `boss_void` (shards / halo spin), Dune Colossus `boss_warmach` (6 legs
+  + shin, turret yaw), Glacius: kit `boss_wyrm` head + jaw (scale `KIT_HEAD`) and wings (`KIT_WING`) on the giant rooted rig; its neck, claws and the hydra neck chains stay procedural (they are the
+  rooted-giant part, no matching piece). Not kit: `HUMAN_BOSS`, `DARK_HERO`. Hit flash / boss bars / shields (BossWard) are unchanged (they never lived on these meshes).
 - Headless QA gotcha: vite adds `?t=` stamps to edited modules, so the harness' `import('/store.ts')` becomes a second store instance after any source edit: restart vite (and let it finish dependency optimisation with one warm-up page load) before screenshots.
 
 ## Joint convention

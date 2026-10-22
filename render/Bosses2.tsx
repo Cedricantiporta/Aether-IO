@@ -14,6 +14,11 @@ import { useGameStore } from '../store';
 import { dustPuff, embers, smokePuff, FX, CELL } from './fx';
 import { GB, TAU, clamp, damp } from './util';
 import { WarMachine } from './WarMachine';
+import { ENEMY_DEFS } from '../engine/enemyDefs';
+import { makeBossMats, useBossRig } from './bossKit';
+
+/** creature-kit piece per boss (render/bossKit.tsx); the procedural rigs below are the fallback until the kit GLB is in */
+const KIT_PIECE: Partial<Record<EnemyKind, string>> = { BOSS_TREANT: 'boss_treant', BOSS_HYDRA: 'boss_hydra', BOSS_WARLORD: 'boss_warlord', BOSS_VOID: 'boss_void' };
 
 const sin = Math.sin, cos = Math.cos;
 type V3 = [number, number, number];
@@ -205,6 +210,8 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2, 2, 2) }),
   }), []);
   const root = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), extra = useRef<Group>(null!);
+  const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
+  const km = useMemo(() => makeBossMats(), []), rig2 = useBossRig(KIT_PIECE[kind] || '', km);
   const S = useRef<Pose & { yaw: number; lastStep: number }>({ armL: 0, armR: 0, spread: 0.12, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0, yaw: 0, lastStep: 0 });
   const T = useMemo<Pose>(() => ({ armL: 0, armR: 0, spread: 0, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0 }), []);
 
@@ -246,6 +253,22 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     if (kind === 'BOSS_TREANT') mats.lit.color.setRGB(bossView.bark ? 0.62 : 1, bossView.bark ? 0.58 : 1, bossView.bark ? 0.55 : 1);
     if (kind === 'BOSS_WARLORD') { const f = bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, fl = 0.15 * sin(TT * 9) * f; mats.lit.color.setRGB(1 + 0.8 * f + fl, 1 - 0.3 * f, 1 - 0.45 * f); }   // charred red-hot body, flickering
 
+    if (rig2 && kw.current) {   // creature-kit joints follow the same targets as the old rig
+      const J = rig2.J, K = J.armL;
+      kw.current.scale.setScalar(e.scale / ENEMY_DEFS[kind].scale / sc / big);
+      kb.current.position.y = s.dy; kb.current.rotation.x = s.pitch; kb.current.rotation.z = b.rotation.z;
+      if (K) { K.rotation.x = s.armL; K.rotation.z = s.spread; J.armR.rotation.x = s.armR; J.armR.rotation.z = -s.spread; }
+      if (J.head) { J.head.rotation.x = sin(t * 1.3) * 0.04 - s.pitch * 0.4; J.head.rotation.y = sin(t * 0.7) * 0.12 * (kind === 'BOSS_VOID' ? 0.5 : 1); }
+      if (J.crown) { J.crown.rotation.z = sin(t * 1.1) * 0.03; J.crown.rotation.x = sin(t * 0.9) * 0.03; }
+      if (J.plates) J.plates.visible = bossView.bark;
+      if (J.tail) { J.tail.rotation.y = sin(t * 1.5) * 0.3 + s.extraY * 2; J.tail.rotation.x = sin(t * 1.1) * 0.06; }
+      if (J.legFL) { const lp = t * 2; J.legFL.rotation.x = J.legBR.rotation.x = sin(lp) * 0.08; J.legFR.rotation.x = J.legBL.rotation.x = -sin(lp) * 0.08; }
+      if (J.shards) J.shards.rotation.y = TT * (0.8 + s.glow * 0.5);
+      if (J.halo) { J.halo.rotation.y = TT * 1.2; J.halo.rotation.z = sin(TT * 0.9) * 0.06; }
+      km.glow.color.setScalar(0.8 + s.glow * 0.8 + 0.2 * sin(TT * 5));
+      km.lit.color.copy(mats.lit.color);
+    }
+
     // ambient particles / footfalls
     if (dt > 0 && e.state !== 'DYING' && e.state !== 'SPAWN') {
       const wx = e.pos.x + (Math.random() - 0.5) * e.radius * 1.6, wz = e.pos.z + (Math.random() - 0.5) * e.radius * 1.6;
@@ -268,6 +291,8 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 
   return (
     <group ref={root} visible={false}>
+      {rig2 && <group ref={kb}><group ref={kw}><primitive object={rig2.root} /></group></group>}
+      <group visible={!rig2}>
       <group ref={body}>
         <mesh geometry={rig.body} material={mats.lit} castShadow />
         <mesh geometry={rig.glow} material={mats.glow} />
@@ -284,6 +309,7 @@ function Boss2({ kind }: { kind: EnemyKind }) {
             {rig.extraGlow && <mesh geometry={rig.extraGlow} material={mats.glow} />}
           </group>
         )}
+      </group>
       </group>
     </group>
   );

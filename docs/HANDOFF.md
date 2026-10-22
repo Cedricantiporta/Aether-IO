@@ -442,14 +442,16 @@ screens, max-level question: class level cap is 50) have been removed.
    Authoring helpers worth reusing: `B.blob` (noise-displaced soft sphere), `B.tube` (swept tube), `B.surf`/`B.cloth` (parametric sheets/cloth), `B.lathe`
    with `lobes`, per-piece `b.grads[material] = fn(co, normal)` vertex-colour gradients, `b.jit` / `j=` hand-made irregularity. Never overlap coplanar
    faces (Cycles renders them black). Rebuild preview takes ~1 min per sheet (Cycles CPU, 20 samples).
-   **Creature kit v1 (built 2026-10-21; WIRED for regular monsters + pets, bosses not yet)**: `public/models/creatures/creature_kit_v1.glb` (~1.9 MB), built by `art/blender/creature_kit_v1.py`
+   **Creature kit v1 (built 2026-10-21; WIRED for monsters, pets, bosses and boss adds)**: `public/models/creatures/creature_kit_v1.glb` (~1.9 MB), built by `art/blender/creature_kit_v1.py`
    (reuses kit_v3 helpers; `--no-render`, `--no-compress`, `--only=`, `--closeup=`; previews in `$CREATURE_SHOTS` = `art/renders/creatures/`). 63 root Empties:
    33 monsters, 8 bosses + 5 boss adds, 17 pets (every ENEMY_DEFS kind and pet id except the humanoid `HUMAN_BOSS` / `DARK_HERO`, which keep the KayKit rigs).
    Each root has joint Empties `<name>_body/_head/_legL/_wingR/_tail/...` wrapping one `<joint>_mesh` (pivot at the joint, front +Z, ground-centre origin, metres,
    in-game size with def.scale applied; some nested, e.g. hydra necks). Roster, joints, sizes and animation hints: `docs/CREATURE_PLAN.md`.
    Wiring: `render/creatureKit.tsx` (non-suspending loader `useCreatureKit()`, bake, `jointPose`, `getEnemyModels`, pet `makeRig`/`animateRig`) + the per-kind table
-   `render/creatureMap.ts` (`MONSTER_KIT`, `PET_KIT`). All 33 non-boss kinds (also elites / mini-bosses, which are the same kinds) and all 17 pets use it; boss kinds, boss adds and
-   anything without a kit piece keep the old procedural models in `render/enemyModels.ts` / `render/Pet.tsx` (the fallback until the GLB has loaded).
+   `render/creatureMap.ts` (`MONSTER_KIT`, `PET_KIT`). All 33 non-boss kinds (also elites / mini-bosses, which are the same kinds), the 5 boss adds (`BOSS_SAPLING/WYRMLING/IMP/CRYSTAL/HYDRA_HEAD`) and all 17 pets use it. The big
+   non-instanced bosses use `render/bossKit.tsx` (`useBossRig(piece, mats)` = joint tree of a kit piece): Golem + Lich (`Bosses.tsx`), Elderroot / Hydra body / Ignar / Void Herald
+   (`Bosses2.tsx`), Dune Colossus (`WarMachine.tsx`), Glacius' head + wings (`GiantBosses.tsx`; neck and claws stay procedural). Each keeps its old rig + state-machine targets and
+   only drives the kit joints from them (old meshes hide once the kit is in). `HUMAN_BOSS` / `DARK_HERO` and anything without a kit piece keep their old models (also the fallback until the GLB has loaded).
    **Interiors on kit v3 (done 2026-10-20)**: `render/kitV3.tsx` is the general kit-v3 loader: `useKitV3()` bakes the GLB once (de-quantize, world matrix, material
    colour x glTF `COLOR_0` -> vertex colour; `*_glow` materials -> emissive geometry; `light_shaft` -> additive no-depth-write beam geometry using COLOR_0 alpha),
    `kitV3Box(piece)` gives a piece's local bounding box (colliders), `buildKitV3Static(kit, items)` / `<KitV3Static items />` merge `{piece,x,y,z,rotY,scale,tint,glow}`

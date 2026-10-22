@@ -30,7 +30,7 @@ const AFFIX_TINT: Record<string, [number, number, number]> = { HASTED: [1.2, 1.1
 // per-kind colour multiplier on top of the model's own colours (imps = red-hot goblins)
 const _tt: [number, number, number] = [1, 1, 1];
 const traitTint = (mask: number): [number, number, number] => { for (let i = 0; i < TRAIT_LIST.length; i++) if (mask & TRAIT_LIST[i].bit) { const t = TRAIT_LIST[i].tint; _tt[0] = 1 + (t[0] - 1) * 0.8; _tt[1] = 1 + (t[1] - 1) * 0.8; _tt[2] = 1 + (t[2] - 1) * 0.8; return _tt; } return _tt; };
-const KIND_TINT: Partial<Record<EnemyKind, [number, number, number]>> = { BOSS_IMP: [2.1, 0.5, 0.35] };
+const KIND_TINT: Partial<Record<EnemyKind, [number, number, number]>> = {};
 const AFFIX_COL: Record<string, number> = { HASTED: 0xffd23a, VAMPIRIC: 0xd0203a, FROZEN: 0x5ad0ff, VOLATILE: 0xff7a1a, SHIELDED: 0x4a8aff, NONE: 0xe8b030 };
 
 const SHADOW_VS = `attribute float iA; varying vec2 vUv; varying float vA;

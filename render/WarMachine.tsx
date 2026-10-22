@@ -10,6 +10,8 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { GB, clamp, damp } from './util';
 import { dustPuff, embers } from './fx';
+import { ENEMY_DEFS } from '../engine/enemyDefs';
+import { makeBossMats, useBossRig } from './bossKit';
 
 const OLIVE = '#7a844c', OLIVE2 = '#5f683a', DARK = '#3a3f2a', STEEL = '#55585e', AMBER = '#ffb347';
 const R = 2.4;   // authored footprint radius (scale = enemy.radius / R)
@@ -52,6 +54,8 @@ export function WarMachine() {
   }), []);
   const root = useRef<Group>(null!), body = useRef<Group>(null!), turret = useRef<Group>(null!);
   const legs = useRef<(Group | null)[]>([]), shins = useRef<(Group | null)[]>([]);
+  const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
+  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_warmach', km);   // creature kit look (old meshes stay until the kit is in)
   const S = useRef({ crouch: 0, lift: 0, glow: 1, tYaw: 0, lastStep: 0 });
 
   useFrame(({ clock }, dtRaw) => {
@@ -91,6 +95,19 @@ export function WarMachine() {
       sh.rotation.z = -(up * 0.6 + s.lift * 0.4) + s.crouch * 0.4;
     }
     mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * Math.sin(TT * 6));
+    if (rig && kw.current) {
+      const J = rig.J;
+      kw.current.scale.setScalar(e.scale / ENEMY_DEFS.BOSS_WARMACH.scale / sc);
+      kb.current.position.y = body.current.position.y;
+      J.turret.rotation.y = s.tYaw;
+      for (let i = 0; i < 6; i++) {
+        const side = i < 3 ? 1 : -1, ph = t * 6 + (i % 2 === (i < 3 ? 0 : 1) ? 0 : Math.PI);
+        const swing = Math.sin(ph) * 0.28 * moving, up = Math.max(0, Math.cos(ph)) * 0.35 * moving;
+        J['leg' + i].rotation.y = swing * side; J['leg' + i].rotation.z = side * (up + s.lift * 0.55 + s.crouch * 0.5);
+        J['shin' + i].rotation.z = side * (-(up * 0.6 + s.lift * 0.4) + s.crouch * 0.4);
+      }
+      km.glow.color.setScalar(0.8 + s.glow * 0.8 + 0.2 * Math.sin(TT * 6));
+    }
     if (dt > 0 && e.state !== 'DYING' && e.state !== 'SPAWN') {
       if (Math.random() < dt * 8) embers(e.pos.x + (Math.random() - 0.5) * e.radius, 2.5 * sc, e.pos.z + (Math.random() - 0.5) * e.radius, 1, 0xff9a3a, 0.3, 2.2, 0.9, 0.2);
       const step = Math.sin(t * 6) > 0 ? 1 : 0;
@@ -100,6 +117,8 @@ export function WarMachine() {
 
   return (
     <group ref={root} visible={false}>
+      {rig && <group ref={kb}><group ref={kw}><primitive object={rig.root} /></group></group>}
+      <group visible={!rig}>
       <group ref={body}>
         <mesh geometry={g.hull} material={mats.lit} castShadow />
         <mesh geometry={g.glow} material={mats.glow} />
@@ -115,6 +134,7 @@ export function WarMachine() {
             </group>
           </group>
         ))}
+      </group>
       </group>
     </group>
   );

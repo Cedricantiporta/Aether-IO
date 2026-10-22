@@ -10,6 +10,8 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, smokePuff } from './fx';
 import { GB, TAU, clamp, damp, lerp, noisify } from './util';
+import { ENEMY_DEFS } from '../engine/enemyDefs';
+import { makeBossMats, useBossRig } from './bossKit';
 
 const sin = Math.sin, cos = Math.cos;
 
@@ -74,6 +76,8 @@ export function Golem() {
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2, 2, 2) }),
   }), []);
   const g = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), lL = useRef<Group>(null!), lR = useRef<Group>(null!);
+  const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
+  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_golem', km);   // creature kit look (old meshes stay until the kit is in)
   const S = useRef({ armL: 0, armR: 0, pitch: 0, dy: 0, gl: 1, lastStep: 0, dustT: 0 });
   useFrame(({ clock }, dtRaw) => {
     const st = useGameStore.getState().status;
@@ -107,6 +111,16 @@ export function Golem() {
     aL.current.rotation.z = 0.12 + (e.state === 'WINDUP' ? 0.15 : 0); aR.current.rotation.z = -0.12 - (e.state === 'WINDUP' ? 0.15 : 0);
     lL.current.rotation.x = sin(legPh) * legAmp; lR.current.rotation.x = -sin(legPh) * legAmp;
     mats.glow.color.setScalar(1.3 + s.gl * 1.1 + 0.25 * sin(clock.elapsedTime * 5));
+    if (rig && kw.current) {
+      const J = rig.J, T = clock.elapsedTime;
+      kw.current.scale.setScalar(e.scale / ENEMY_DEFS.BOSS_GOLEM.scale / sc);
+      kb.current.position.y = s.dy; kb.current.rotation.x = s.pitch; kb.current.rotation.z = body.current.rotation.z;
+      J.armL.rotation.x = s.armL; J.armR.rotation.x = s.armR; J.armL.rotation.z = aL.current.rotation.z; J.armR.rotation.z = aR.current.rotation.z;
+      J.legL.rotation.x = lL.current.rotation.x; J.legR.rotation.x = lR.current.rotation.x;
+      J.head.rotation.x = sin(T * 1.3) * 0.04 - s.pitch * 0.4; J.head.rotation.y = sin(T * 0.7) * 0.12;
+      J.core.scale.setScalar(1 + 0.08 * sin(T * 4) + (s.gl - 1) * 0.06);
+      km.glow.color.setScalar(0.9 + s.gl * 0.8 + 0.2 * sin(T * 5));
+    }
     // stomp dust
     if (e.state === 'CHASE' && dt > 0) { const ph = Math.sin(legPh) > 0 ? 1 : 0; if (ph !== s.lastStep) { s.lastStep = ph; dustPuff(e.pos.x + (ph ? -1 : 1) * e.scale * 0.2, e.pos.z, 3, 2, 0xb8a888, 3); } }
     if (e.phase >= 1 && Math.random() < dt * (e.phase * 10) && e.state !== 'DYING') embers(e.pos.x + (Math.random() - 0.5) * 4, 3 + Math.random() * 4, e.pos.z + (Math.random() - 0.5) * 3, 1, 0xff7a1a, 0.2, 1.5, 1, 0.3);
@@ -114,6 +128,8 @@ export function Golem() {
   const hips = 0.95;
   return (
     <group ref={g} visible={false}>
+      {rig && <group ref={kb}><group ref={kw}><primitive object={rig.root} /></group></group>}
+      <group visible={!rig}>
       <group ref={body}>
         <mesh geometry={geo.body} material={mats.lit} castShadow receiveShadow />
         <mesh geometry={geo.glow} material={mats.glow} />
@@ -122,6 +138,7 @@ export function Golem() {
       </group>
       <group ref={lL} position={[-0.42, hips, 0]}><mesh geometry={geo.leg} material={mats.lit} castShadow receiveShadow /></group>
       <group ref={lR} position={[0.42, hips, 0]}><mesh geometry={geo.leg} material={mats.lit} castShadow receiveShadow /></group>
+      </group>
     </group>
   );
 }
@@ -176,6 +193,8 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
   }, []);
   const g = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), orbs = useRef<Group>(null!), rune = useRef<Mesh>(null!);
   const S = useRef({ armL: 0, armR: 0, gl: 1, alpha: 1, pitch: 0, runeK: 0 });
+  const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
+  const km = useMemo(() => makeBossMats(true), []), rig = useBossRig('boss_lich', km);   // creature kit look (old meshes stay until the kit is in)
   const runeGeo = useMemo(() => { const p = new PlaneGeometry(1, 1); p.rotateX(-Math.PI / 2); return p; }, []);
   const runeMat = useMemo(() => {
     const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d')!;
@@ -224,6 +243,16 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
     mats.lit.opacity = s.alpha; mats.glow.opacity = s.alpha; mats.lit.depthWrite = s.alpha > 0.95;
     mats.aura.opacity = 0.35 * s.alpha;
     root.visible = s.alpha > 0.01;
+    if (rig && kw.current) {
+      const J = rig.J;
+      kw.current.scale.setScalar(e.scale / ENEMY_DEFS.BOSS_LICH.scale / sc);
+      kb.current.position.y = hover * 0.55; kb.current.rotation.x = body.current.rotation.x; kb.current.rotation.z = body.current.rotation.z;
+      J.armL.rotation.x = s.armL; J.armR.rotation.x = s.armR; J.armL.rotation.z = 0.22; J.armR.rotation.z = -0.22;
+      J.head.rotation.x = sin(T * 1.7) * 0.05 - s.pitch * 0.5; J.head.rotation.y = sin(T * 0.9) * 0.18;
+      J.orb.rotation.y = T * orbSpeed; J.orb.position.y = 2.5 + sin(T * 2.1) * 0.15;
+      km.glow.color.setScalar(0.9 + s.gl * 0.8 + 0.25 * sin(T * 6));
+      km.lit.opacity = s.alpha; km.glow.opacity = s.alpha; km.lit.depthWrite = s.alpha > 0.95;
+    }
     // orbiting souls
     const os = orbs.current.children;
     for (let i = 0; i < os.length; i++) {
@@ -246,6 +275,8 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
   return (
     <>
       <group ref={g} visible={false}>
+        {rig && <group ref={kb}><group ref={kw}><primitive object={rig.root} /></group></group>}
+        <group visible={!rig}>
         <group ref={body}>
           <mesh geometry={geo.body} material={mats.lit} castShadow />
           <mesh geometry={geo.glow} material={mats.glow} />
@@ -255,7 +286,8 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
             <group position={[0, -1.15, 0.1]} rotation={[0, 0, 0]}><mesh geometry={geo.staff} material={mats.lit} castShadow /><mesh geometry={geo.staffGlow} material={mats.glow} /></group>
           </group>
         </group>
-        <group ref={orbs}>{orbIdx.map((i) => <mesh key={i} geometry={geo.orb} material={mats.glow} />)}</group>
+        <group ref={orbs} visible={!rig}>{orbIdx.map((i) => <mesh key={i} geometry={geo.orb} material={mats.glow} />)}</group>
+        </group>
         <mesh geometry={runeGeo} material={runeMat} ref={rune} position={[0, 0.08, 0]} visible={false} />
         <mesh geometry={runeGeo} material={mats.aura} position={[0, 0.06, 0]} scale={4.6} />
       </group>

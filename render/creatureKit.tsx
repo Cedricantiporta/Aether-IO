@@ -46,6 +46,8 @@ export function useCreatureKit(): CreatureKit | null {
   }, []);
   return k;
 }
+/** The baked kit if already loaded (non-React callers / debug). */
+export const getCreatureKit = (): CreatureKit | null => kitData;
 loadCreatureKit();
 
 // ------------------------------------------------------------------ baking
