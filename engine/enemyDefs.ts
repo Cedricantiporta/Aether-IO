@@ -53,16 +53,16 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 8, gold: 3, cost: 3, minWave: 3, weight: 6, color: 0xf97316, knockResist: 0, armor: 10,
   },
   BRUTE: {
-    name: 'Brute', hp: 220, speed: 3.0, radius: 1.2, scale: 1.8, contactDamage: 18, projectileDamage: 0,
-    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 1, armor: 40,
+    name: 'Brute', hp: 145, speed: 3.0, radius: 1.2, scale: 1.8, contactDamage: 18, projectileDamage: 0,
+    xp: 30, gold: 10, cost: 8, minWave: 6, weight: 3, color: 0x92400e, knockResist: 1, armor: 30,
   },
   SPLITTER: {
     name: 'Splitter', hp: 120, speed: 2.6, radius: 1.1, scale: 1.7, contactDamage: 12, projectileDamage: 0,
     xp: 18, gold: 6, cost: 6, minWave: 7, weight: 3, color: 0x4d7c0f, knockResist: 1, armor: 20,
   },
   ZOMBIE: {
-    name: 'Zombie', hp: 170, speed: 1.7, radius: 0.85, scale: 1.25, contactDamage: 11, projectileDamage: 0,
-    xp: 14, gold: 4, cost: 4, minWave: 3, weight: 4, color: 0x5f7a4a, knockResist: 0.5, armor: 25,
+    name: 'Zombie', hp: 115, speed: 1.7, radius: 0.85, scale: 1.25, contactDamage: 11, projectileDamage: 0,
+    xp: 14, gold: 4, cost: 4, minWave: 3, weight: 4, color: 0x5f7a4a, knockResist: 0.5, armor: 20,
   },
   WRAITH: {
     name: 'Wraith', hp: 55, speed: 3.6, radius: 0.6, scale: 1.1, contactDamage: 9, projectileDamage: 0,
@@ -70,14 +70,14 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   CRYSTAL_GOLEMITE: {
     name: 'Crystal Golemite', hp: 95, speed: 2.4, radius: 0.8, scale: 1.1, contactDamage: 10, projectileDamage: 9,
-    xp: 12, gold: 5, cost: 4, minWave: 4, weight: 4, color: 0xe879f9, knockResist: 0.4, armor: 45,
+    xp: 12, gold: 5, cost: 4, minWave: 4, weight: 4, color: 0xe879f9, knockResist: 0.4, armor: 30,
   },
   BANDIT: {
     name: 'Bandit', hp: 62, speed: 4.4, radius: 0.6, scale: 1.05, contactDamage: 8, projectileDamage: 0,
     xp: 9, gold: 6, cost: 3.5, minWave: 4, weight: 4, color: 0xb45309, knockResist: 0, armor: 15,
   },
   BOAR: {
-    name: 'Wild Boar', hp: 115, speed: 3.0, radius: 0.95, scale: 1.3, contactDamage: 13, projectileDamage: 0,
+    name: 'Wild Boar', hp: 90, speed: 3.0, radius: 0.95, scale: 1.3, contactDamage: 13, projectileDamage: 0,
     xp: 12, gold: 3, cost: 4, minWave: 3, weight: 4, color: 0x78350f, knockResist: 0.4, armor: 25,
   },
   ROCK_CRAB: {
@@ -139,7 +139,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 9, gold: 3, cost: 0, minWave: 1, weight: 0, color: 0x9a6a2a, knockResist: 1, armor: 10,
   },
   LAKE_HYDRA: {
-    name: 'Lurking Hydra', hp: 150, speed: 0, radius: 1.3, scale: 0.62, contactDamage: 12, projectileDamage: 10,
+    name: 'Lurking Hydra', hp: 110, speed: 0, radius: 1.3, scale: 0.62, contactDamage: 12, projectileDamage: 10,
     xp: 16, gold: 5, cost: 0, minWave: 1, weight: 0, color: 0x3f8f6a, knockResist: 1, armor: 20,
   },
   // ---- roster monsters
@@ -148,8 +148,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 2, gold: 1, cost: 0.6, minWave: 1, weight: 6, color: 0x2fa8a0, knockResist: 0, armor: 0,
   },
   SHIELDBEARER: {
-    name: 'Shieldbearer', hp: 190, speed: 2.2, radius: 0.85, scale: 1.3, contactDamage: 6, projectileDamage: 0,
-    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 1, armor: 70,
+    name: 'Shieldbearer', hp: 125, speed: 2.2, radius: 0.85, scale: 1.3, contactDamage: 6, projectileDamage: 0,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 3, color: 0xb08a3a, knockResist: 1, armor: 40,
   },
   // ---- biome-unique monsters
   SPORECAP: {
@@ -161,24 +161,24 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 9, gold: 2, cost: 3, minWave: 1, weight: 0, color: 0x6b6f78, knockResist: 0.1, armor: 10,
   },
   HAUNTED_ARMOR: {
-    name: 'Haunted Armor', hp: 210, speed: 2.0, radius: 0.9, scale: 1.35, contactDamage: 9, projectileDamage: 0,
-    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 0, color: 0x8a94a8, knockResist: 1, armor: 65,
+    name: 'Haunted Armor', hp: 135, speed: 2.0, radius: 0.9, scale: 1.35, contactDamage: 9, projectileDamage: 0,
+    xp: 18, gold: 5, cost: 5, minWave: 1, weight: 0, color: 0x8a94a8, knockResist: 1, armor: 35,
   },
   GARGOYLE: {
     name: 'Gargoyle', hp: 95, speed: 5.0, radius: 0.8, scale: 1.2, contactDamage: 11, projectileDamage: 0,
-    xp: 12, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0x7a7468, knockResist: 0.4, armor: 45,
+    xp: 12, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0x7a7468, knockResist: 0.4, armor: 30,
   },
   SCORPION: {
     name: 'Giant Scorpion', hp: 110, speed: 3.4, radius: 0.9, scale: 1.3, contactDamage: 8, projectileDamage: 13,
-    xp: 13, gold: 3, cost: 4, minWave: 1, weight: 0, color: 0xb8742a, knockResist: 0.4, armor: 35,
+    xp: 13, gold: 3, cost: 4, minWave: 1, weight: 0, color: 0xb8742a, knockResist: 0.4, armor: 25,
   },
   MUMMY: {
-    name: 'Mummy', hp: 160, speed: 1.8, radius: 0.8, scale: 1.2, contactDamage: 10, projectileDamage: 9,
+    name: 'Mummy', hp: 110, speed: 1.8, radius: 0.8, scale: 1.2, contactDamage: 10, projectileDamage: 9,
     xp: 14, gold: 4, cost: 4, minWave: 1, weight: 0, color: 0xd8c8a0, knockResist: 0.4, armor: 20,
   },
   YETI: {
-    name: 'Yeti', hp: 260, speed: 2.8, radius: 1.2, scale: 1.7, contactDamage: 17, projectileDamage: 0,
-    xp: 30, gold: 8, cost: 7, minWave: 1, weight: 0, color: 0xe8f0f8, knockResist: 1, armor: 30,
+    name: 'Yeti', hp: 170, speed: 2.8, radius: 1.2, scale: 1.7, contactDamage: 17, projectileDamage: 0,
+    xp: 30, gold: 8, cost: 7, minWave: 1, weight: 0, color: 0xe8f0f8, knockResist: 1, armor: 25,
   },
   FROST_WISP: {
     name: 'Frost Wisp', hp: 48, speed: 3.2, radius: 0.6, scale: 1.0, contactDamage: 4, projectileDamage: 10,

@@ -73,7 +73,7 @@ const BOSS_ADD_SHIELD_CHANCE = 0.35;
 /** A biome boss is alive (discrete spawns only: a short scan, no per-frame cost). */
 export function bossAlive(): boolean { for (const o of world.enemies) if (o.active && o.boss && o.state !== 'DYING') return true; return false; }
 /** Elite HP multiplier (owner: -30%, was 4). */
-const ELITE_HP = 2.8;
+const ELITE_HP = 2.0;   // (owner: heavy elites felt sturdier than bosses) 2.8 -> 2.0
 const ARCHER = { minR: 12, maxR: 18, windup: 0.48, recover: 0.5, cd: 2.4, arrowSpeed: 18 };
 const CULTIST = { minR: 10, maxR: 14, windup: 0.64, recover: 0.6, cd: 3.6, orbSpeed: 8, orbLife: 2.4, spread: 0.38 };
 const BOMBER = { trigger: 3, fuse: 1.0, radius: 3.5 };
