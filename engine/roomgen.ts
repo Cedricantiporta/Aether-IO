@@ -311,6 +311,13 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
         if (crateList.some((c) => Math.hypot(x - c.x, z - c.z) < 2.4)) continue;
         crateList.push({ kind: pickHarvest(rnd()), x, z }); added++;
       }
+      if (!calm && rnd() < 0.55) for (let t = 0; t < 60; t++) {   // (owner) most stages also hold one Mana Bloom
+        const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shape.maxR - 3);
+        const x = Math.cos(a) * d, z = Math.sin(a) * d;
+        if (!insideShape(x, z, 3) || blockedSpot(x, z, 1.1, 0.8)) continue;
+        if (crateList.some((c) => Math.hypot(x - c.x, z - c.z) < 2.4)) continue;
+        crateList.push({ kind: 'MANA_BLOOM', x, z }); break;
+      }
     }
   }
 

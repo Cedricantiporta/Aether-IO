@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Hexagon } from '../components/GoldIcons';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { motion } from 'framer-motion';
@@ -114,6 +114,9 @@ export const GlobalConfirm: React.FC = () => {
  *  cards flying out face down). Nothing turns on its own (owner): click a card to turn it, or Reveal All once every
  *  card back has landed.
  *  Epic+ cards glow; Legendary / Mythic get an aura and rays. Stays until the player draws again or leaves. */
+/** Summon cutscenes (owner): one per altar; a missing / broken video falls back to the short ritual for the session. */
+export const SUMMON_VIDEO = { GEM: `${((import.meta as any).env?.BASE_URL as string) || '/'}video/summon_gem.mp4` };
+let videoFailed = false;
 const ROMAN_N = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export const SummonReveal: React.FC = () => {
   const results = useUiStore((s) => s.summonResults);
@@ -123,15 +126,24 @@ export const SummonReveal: React.FC = () => {
   const gems = useGameStore((s) => s.gems);
   const shards = useGameStore((s) => s.crystals ?? 0);
   const [round, setRound] = useState(0);
-  const [phase, setPhase] = useState<'ritual' | 'cards'>('ritual');
+  const [phase, setPhase] = useState<'video' | 'ritual' | 'cards'>('ritual');
   const [flipped, setFlipped] = useState<boolean[]>([]);
   const [dealt, setDealt] = useState(false);   // every card back has landed: the Reveal All button appears
+  const dealTimer = useRef(0);
+  // (owner) the Gem Altar plays its summoning cutscene (public/video/summon_gem.mp4, 6 s, tap to skip) before the cards
+  const toCards = () => {
+    if (!results) return;
+    setPhase('cards'); window.clearTimeout(dealTimer.current);
+    dealTimer.current = window.setTimeout(() => setDealt(true), results.length * 60 + 750);
+  };
   useEffect(() => {
     if (!results) return;
-    setPhase('ritual'); setFlipped(results.map(() => false)); setDealt(false);
+    setFlipped(results.map(() => false)); setDealt(false);
+    if (altar === 'GEM' && !videoFailed) { setPhase('video'); return () => window.clearTimeout(dealTimer.current); }
+    setPhase('ritual');
     const t1 = setTimeout(() => setPhase('cards'), 1500);
     const t2 = setTimeout(() => setDealt(true), 1500 + results.length * 60 + 750);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => { clearTimeout(t1); clearTimeout(t2); window.clearTimeout(dealTimer.current); };
   }, [results, round]);
   useEffect(() => { if (results) preloadImages([summonCardUrl('card_back'), ...RARITIES_ALL.map((r) => summonCardUrl(`sfront_${r}`))]); }, [results]);
   const revealAll = () => setFlipped((f) => f.map(() => true));
@@ -147,6 +159,12 @@ export const SummonReveal: React.FC = () => {
   const tint = best.rarity === 'MYTHIC' ? '#ff4a3a' : best.rarity === 'LEGENDARY' ? '#ffc93a' : best.rarity === 'EPIC' ? '#b06aff' : '#4a9aff';
   return (
     <motion.div className="absolute inset-0 grid place-items-center pe sm-root" style={{ zIndex: 260, ['--tint' as any]: tint }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="summon-reveal">
+      {phase === 'video' && (
+        <div className="sm-video" onPointerDown={toCards} data-testid="summon-video">
+          <video src={SUMMON_VIDEO.GEM} autoPlay playsInline preload="auto" onEnded={toCards} onError={() => { videoFailed = true; toCards(); }} />
+          <span className="sm-skip">Tap to skip</span>
+        </div>
+      )}
       {phase === 'ritual' && (
         <div key={`r${round}`} className="sm-ritual" aria-hidden>
           <div className="sm-pillar" />

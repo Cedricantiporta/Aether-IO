@@ -62,8 +62,8 @@ pointer) every frame — the engine never touches the camera.
   (`store.WELCOME_GIFT`). `resetProfile` (Settings) wipes it. The warehouse is shared by all characters
   (`aether-survivor-shared-warehouse-v1`). Death keeps loot and xp.
 * Progression is **per-class permanent levels** (`classLevels.ts`, max Lv 50, XP `250*lv^1.5`, 2 SP per level). `heroRank` is only a
-  legacy alias for the current class level. Gear needs level (`constants.RANK_REQ`: Common 1 / Uncommon 8 / Rare 16 / Epic 24 /
-  Legendary 32 / Mythic 40). In-run only: wave cards (`engine/runCards.ts`) and the run copy of skill levels.
+  legacy alias for the current class level. Gear needs level (`constants.RANK_REQ`: Common 1 / Uncommon 6 / Rare 12 / Epic 18 /
+  Legendary 24 / Mythic 30). In-run only: wave cards (`engine/runCards.ts`) and the run copy of skill levels.
 * Town (status MENU): `engine/systems/village.ts` runs walking only (no director). Shops, quest board, trainer are always open;
   E interacts; click-to-walk with A* (`systems/townPath.ts`). Areas: TOWN, CASTLE, CHURCH, TAVERN, CAVE, HOME
   (`world.village.area`). Layout data in `engine/townData.ts`; the Adventure Portal / Endless Tower are buildings in the outskirts and

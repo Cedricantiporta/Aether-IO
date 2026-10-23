@@ -85,6 +85,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); break;
     case 'HEALTH': healPlayer(value); break;
+    case 'MANA': { const p = world.player, mx = useGameStore.getState().stats.maxMana; p.mana = Math.min(mx, p.mana + value); events.emit('floatText', { pos: p.pos, text: `+${Math.round(value)} MP`, color: 0x6ab8ff, scale: 0.9, dy: 2.2 }); break; }
     case 'ITEM': if (item) st.addItemToInventory(item); break;
   }
 }
@@ -267,6 +268,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); feedCoin('gems', value); break;
     case 'HEALTH': healPlayer(value); break;
+    case 'MANA': { const p = world.player, mx = useGameStore.getState().stats.maxMana; p.mana = Math.min(mx, p.mana + value); events.emit('floatText', { pos: p.pos, text: `+${Math.round(value)} MP`, color: 0x6ab8ff, scale: 0.9, dy: 2.2 }); break; }
     case 'ITEM': {
       const item = o.item;
       if (!item || !st.addItemToInventory(item)) { o.magnet = false; return; }

@@ -406,6 +406,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
 
   let dealt = amount;
   if (e.traits & TR.ELEM_RESIST && o.kind && o.kind !== 'PHYSICAL' && o.kind !== 'TRUE') dealt *= 0.5;   // Warded trait
+  if (o.kind === 'POISON' && (e.kind === 'SLIME' || e.kind === 'SPLITTER')) dealt *= 0.4;   // (owner) slimes shrug off poison (-60%)
   if (o.armorBreak) applyStatus(e, abStatus);
   if (o.frost) e.frostT = Math.max(e.frostT, 4);
   if (!o.dot) {
@@ -519,7 +520,8 @@ export function killEnemy(e: Enemy): void {
 
   if (Math.random() < 0.006) {   // heart drops: -80%
     dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5));
-    spawnPickup('HEALTH', dropPos, 20);
+    if (Math.random() < 0.4) spawnPickup('MANA', dropPos, Math.max(25, useGameStore.getState().stats.maxMana * 0.2));   // (owner) sometimes a mana orb instead of a heart
+    else spawnPickup('HEALTH', dropPos, 20);
   }
 
   onEnemyDeath(e);

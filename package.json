@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/gen_preload.mjs && vite build",
     "preview": "vite preview",
     "build:android": "vite build && npx cap sync android"
   },

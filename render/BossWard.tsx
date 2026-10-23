@@ -19,7 +19,7 @@ export function BossWard() {
   }), []);
   useFrame((_, dt) => {
     let id = wardedBossId();
-    if (id < 0) for (let i = 0; i < world.enemies.length; i++) { const x = world.enemies[i]; if (x.active && x.boss && !x.decoy && x.shield > 1) { id = i; break; } }   // (owner) a boss with a damage shield (Slime King's 30%) shows the sphere too
+    if (id < 0) for (let i = 0; i < world.enemies.length; i++) { const x = world.enemies[i]; if (x.active && x.boss && !x.decoy && x.shield > 1 && x.kind !== 'SPLITTER') { id = i; break; } }   // (owner) no bubble on the Slime King (SPLITTER) - its shield shows on the boss bar; other shielded bosses with a damage shield (Slime King's 30%) shows the sphere too
     const e = id >= 0 ? world.enemies[id] : null;
     const on = !!e && e.active && e.state !== 'DYING';
     mat.uniforms.uA.value = on ? Math.min(1, mat.uniforms.uA.value + dt * 3) : Math.max(0, mat.uniforms.uA.value - dt * 4);

@@ -263,7 +263,7 @@ export interface GroundFx {
 }
 
 // ---------------------------------------------------------------- pickups --
-export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'ITEM' | 'SHARD' | 'CRYSTAL'; // SHARD: value = rarity index (0 COMMON..4 MYTHIC); CRYSTAL: value = Aether Crystals
+export type PickupKind = 'XP' | 'GOLD' | 'GEM' | 'HEALTH' | 'MANA' | 'ITEM' | 'SHARD' | 'CRYSTAL';   // MANA: (owner) a blue mana orb, value = mana restored // SHARD: value = rarity index (0 COMMON..4 MYTHIC); CRYSTAL: value = Aether Crystals
 
 export interface Pickup {
   id: number;

@@ -93,6 +93,13 @@ export function Pickups() {
           pushHalo(p.pos.x, y + 0.15, p.pos.z, 1.3 * s, 0.55, 0.3, 1.0, 0.6, CELL.GLOW);
           break;
         }
+        case 'MANA': {   // (owner) a blue mana orb
+          const sc = (1 + Math.sin(t * 6 + p.id) * 0.08) * s * 1.1;
+          setInst(sys.shard, ns, p.pos.x, y + 0.15, p.pos.z, t * 1.5 + p.id, sc, sc, sc, 0, 0);
+          _c.setRGB(0.5, 1.2, 3.2); sys.shard.setColorAt(ns, _c); ns++;
+          pushHalo(p.pos.x, y + 0.15, p.pos.z, 1.2 * s, 0.3, 0.7, 1.6, 0.5, CELL.GLOW);
+          break;
+        }
         case 'HEALTH': {
           const sc = (1 + Math.sin(t * 6 + p.id) * 0.08) * s * 1.2;
           setInst(sys.heart, nh++, p.pos.x, y + 0.1, p.pos.z, t * 1.5 + p.id, sc, sc, sc, 0, 0);

@@ -21,9 +21,9 @@ export const SHARD_FUSE_COST: Record<'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY', n
 export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no break-down / fuse loop)
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
-/** Class level needed to equip / craft gear of a rarity (owner: Uncommon 10, Rare 20, Epic 30, Legendary 40, Mythic 50). */
+/** Class level needed to equip / craft gear of a rarity (owner: Uncommon 6, Rare 12, Epic 18, Legendary 24, Mythic 30). */
 export const RANK_REQ: Record<Rarity, number> = {
-  COMMON: 1, UNCOMMON: 8, RARE: 16, EPIC: 24, LEGENDARY: 32, MYTHIC: 40,   // (owner: steps of 8)
+  COMMON: 1, UNCOMMON: 6, RARE: 12, EPIC: 18, LEGENDARY: 24, MYTHIC: 30,   // (owner: steps of 6)
 };
 /** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
 export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 2.8;
