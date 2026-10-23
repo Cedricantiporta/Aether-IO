@@ -3777,3 +3777,7 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* (owner) painted menu icons (top-right row): the toy art itself, a soft shadow, a little lift on hover */
 .mb-art { display: block; width: 2.35rem; height: 2.35rem; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .55)); pointer-events: none; user-select: none; transition: transform .12s; }
 .sqbtn:hover .mb-art, .sqbtn.is-active .mb-art { transform: translateY(-2px) scale(1.06); }
+
+/* reward screen: Refresh beside the title */
+.rw-title-row { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.rw-title-row .rw-refresh { font-size: 13px; padding: 6px 14px; }

@@ -34,7 +34,7 @@ export const runCards = {
   regenCap: REGEN_CAP_BASE,
   potionBonus: 0,
   /** special values, 0 = not owned */
-  afflict: 0, sunder: 0, guardian: 0, slayer: 0, execute: 0, firstStrike: 0, secondWind: 0, linger: 0,
+  afflict: 0, sunder: 0, guardian: 0, /** Guardian's Spoils rarity (1 Rare .. 4 Mythic): sets the bonus pick's card rarities */ guardianTier: 0, slayer: 0, execute: 0, firstStrike: 0, secondWind: 0, linger: 0,
   /** at least one outgoing-damage special owned (fast exit) */
   anyDmg: false,
   taken: {} as Record<string, boolean>,
@@ -44,7 +44,7 @@ export function resetRunCards(): void {
   const r = runCards;
   r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
-  r.afflict = 0; r.sunder = 0; r.guardian = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
+  r.afflict = 0; r.sunder = 0; r.guardian = 0; r.guardianTier = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
   r.anyDmg = false; r.taken = {};
   aegisBiome = '';
 }
@@ -100,7 +100,7 @@ interface SpecialDef { id: SpecialId; name: string; vals: [number, number]; fmt:
 const SPECIALS: SpecialDef[] = [
   { id: 'AFFLICT', name: 'Afflictor', vals: [0.20, 0.30], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies with 3 or more status effects (burn, poison, freeze, slow, stun...)` },
   { id: 'SUNDER', name: 'Shieldbreaker', vals: [0.20, 0.35], weight: 0.15, fmt: (v) => `Enemy shields (bosses excepted) are ${pct(v)} weaker` },
-  { id: 'GUARDIAN', name: 'Guardian’s Spoils', vals: [0, 1], weight: 0.15, fmt: (_v, t) => `Every guardian or mini-boss stage also gives a card selection when cleared${t >= 4 ? ' (one more card to choose from)' : ''}` },
+  { id: 'GUARDIAN', name: 'Guardian’s Spoils', vals: [0, 1], weight: 0.15, fmt: (_v, t) => `Every guardian or mini-boss stage also gives a bonus stat card selection when cleared (${['all Common', 'all Common', 'Common, 50% chance one is Rare', 'Common, 50% chance one is Epic', 'Common, 50% chance one is Legendary'][Math.min(4, t)]}${t >= 4 ? ', one more card to choose from' : ''})` },
   { id: 'SLAYER', name: 'Giant Slayer', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Against bosses: deal +${pct(v)} damage and take ${pct(v)} less damage` },
   { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.15, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${[75, 75, 80, 85, 90][Math.min(4, t)]}% of max HP instead of 70%` },
   { id: 'EXECUTE', name: 'Executioner', vals: [0.25, 0.40], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies below 30% HP` },
@@ -228,7 +228,7 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   return out;
 }
 
-export interface RollOpts { trend?: TrendCounts; /** (owner) the run's first pick: 3 special cards, one Offense / Defense / Speed */ opener?: boolean; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean }
+export interface RollOpts { trend?: TrendCounts; /** (owner) the run's first pick: 3 special cards, one Offense / Defense / Speed */ opener?: boolean; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean; /** Guardian's Spoils bonus pick: stat cards only, Common, 50% one card at (spoils - 1) */ spoils?: number }
 /** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome.
  *  Offer weights lean toward the build categories the hero picked from (x1.25 per pick, max x2.5), but the leading
  *  category never fills more than 2 of the 3-4 cards, so there is always variety. */
@@ -236,6 +236,13 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
   earlyMul = EARLY_TIER_MUL[Number(biomeKey)] ?? null;
   const pool = candidates(ultUnlocked, true, biomeKey);
   const cards: Omit<Upgrade, 'id'>[] = [];
+  if (opts.spoils) {   // (owner) Guardian's Spoils: the bonus pick is plain Common stat cards; 50% one is raised (Epic GS: Rare, Legendary GS: Epic, Mythic GS: Legendary)
+    const pick = STATS.slice();
+    for (let i = 0; i < count && pick.length; i++) { const d = pick.splice(Math.floor(Math.random() * pick.length), 1)[0]; cards.push(mk(d.type, d.name, d.fmt(d.vals[0]), 0, d.vals[0])); }
+    const up = Math.min(3, opts.spoils - 1);
+    if (up > 0 && cards.length && Math.random() < 0.5) { const i = Math.floor(Math.random() * cards.length), d = statDef(cards[i].type)!; cards[i] = mk(d.type, d.name, d.fmt(d.vals[up]), up, d.vals[up]); }
+    return cards;
+  }
   if (opts.opener) {   // (owner) the first card choice of every run: one special per category
     for (const cat of ['OFFENSE', 'DEFENSE', 'UTILITY'] as const) {
       const opt = SPECIALS.filter((x) => !runCards.taken[x.id] && (SPECIAL_CAT[x.id] ?? 'UTILITY') === cat);
@@ -289,7 +296,7 @@ export function takeRunCard(u: Upgrade): boolean {
   switch (u.special) {
     case 'AFFLICT': r.afflict = v; break;
     case 'SUNDER': r.sunder = v; break;
-    case 'GUARDIAN': r.guardian = 1 + (t >= 4 ? 1 : 0); break;
+    case 'GUARDIAN': r.guardian = 1 + (t >= 4 ? 1 : 0); r.guardianTier = t; break;
     case 'SLAYER': r.slayer = v; break;
     case 'ALCHEMIST': r.potionBonus = v; r.regenCap = [0.75, 0.75, 0.8, 0.85, 0.9][Math.min(4, t)]; break;
     case 'EXECUTE': r.execute = v; break;

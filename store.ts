@@ -371,13 +371,13 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
 };
 
 /** Rolls the run reward cards (rarity tiers, specials, Death Defiance: engine/runCards.ts). Skill cards are no longer offered (Skill Trainer). */
-const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _stats: PlayerStats, count = 2, picks?: Upgrade[]): Upgrade[] => {
+const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _stats: PlayerStats, count = 2, picks?: Upgrade[], spoils = 0): Upgrade[] => {
   const st = useGameStore.getState(), rp = picks ?? st.runPicks;
   // Lucky Start (Tech House): the very first card choice of an adventure run (first biome) always holds an Epic card
   const epic = techLv(st.tech, 'lucky') > 0 && rp.length === 0 && runInfo.mode === 'ADVENTURE' && world.room.biome === 0;
   // (owner) the first card choice of every run: 3 special cards, one per category (Offense / Defense / Speed)
-  const opener = rp.length === 0;
-  return rollRunCards(opener ? 3 : count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic, opener }).map((c) => withCardText({ ...c, id: uid('card') }));
+  const opener = rp.length === 0 && !spoils;
+  return rollRunCards(opener ? 3 : count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic, opener, spoils }).map((c) => withCardText({ ...c, id: uid('card') }));
 };
 /** The store rewrites the Max HP number with HP_INFLATE (the catalogue lists the base value). */
 const withCardText = (opt: Upgrade): Upgrade => { if (opt.type === 'HEALTH') opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; return opt; };
@@ -1090,7 +1090,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         skillLevels: levels,
         stats: calc(base, state.equipment),
         runPicks: [...state.runPicks, upgrade],
-        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade]) : [],
+        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade], runCards.guardianTier || 1) : [],
         status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });
     },

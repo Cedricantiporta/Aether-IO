@@ -64,7 +64,13 @@ export const WaveReward: React.FC = () => {
     <motion.div className="absolute inset-0 pe rw-root" style={{ zIndex: 100 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="rw-head">
-        <div className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
+        <div className="rw-title-row">{/* (owner) Refresh sits right of the title; the rarity Upgrade stays under each card */}
+          <div className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
+          <button className="rw-pill rw-refresh" data-testid="rw-refresh" disabled={refreshes <= 0} onClick={() => refresh()}
+            {...tip(<SimpleTip title="Refresh cards" sub="Rerolls every card offered. Refreshes reset each run; Tech House adds more." />)}>
+            &#8635; Refresh ({refreshes}){!device.touch && <kbd>R</kbd>}
+          </button>
+        </div>
         <div className="s">Choose a reward · Depth {Math.max(1, wave)}</div>
         {lead && <div className="rw-trend" data-testid="rw-trend" data-cat={lead}>Build: {BUILD_NAME[lead]} <b>&uarr;</b></div>}
       </div>
@@ -81,10 +87,6 @@ export const WaveReward: React.FC = () => {
           </div>
         ))}
       </div>
-      <button className="rw-pill rw-refresh" data-testid="rw-refresh" disabled={refreshes <= 0} onClick={() => refresh()}
-        {...tip(<SimpleTip title="Refresh cards" sub="Rerolls every card offered. Refreshes reset each run; Tech House adds more." />)}>
-        &#8635; Refresh ({refreshes}){!device.touch && <kbd>R</kbd>}
-      </button>
     </motion.div>
   );
 };
