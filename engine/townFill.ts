@@ -22,7 +22,6 @@ import {
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { islandRadius } from './mapgen';
-import { BARRIER_COLLIDERS } from './townBarriers';
 import { beachSandK, onDeckRect, FISH_SPOTS, CAMPFIRE, UMBRELLA, CRATES, NET_RACK, SHIP, DOCK } from './beachData';
 import { inCampYard, inCaveClear, CAVE_DOOR } from './caveData';
 
@@ -77,8 +76,6 @@ const solidNear = (x: number, z: number, pad: number): boolean => {
   return false;
 };
 const addSolid = (x: number, z: number, r: number): void => { const c: [number, number, number] = [x, z, r]; FILL_COLLIDERS.push(c); gridAdd(c); };
-// the street-edge plant boxes / hedges / low walls (engine/townBarriers.ts): solid first, so nothing loose is placed on top of them
-for (const c of BARRIER_COLLIDERS) addSolid(c[0], c[1], c[2]);
 
 /** Reserved ground: roads / lanes (+ half width), NPC homes + patrol legs, doors and shop fronts, stairs, fields, water, the camp, the portal ... */
 const reserved: { x: number; z: number; r: number }[] = [];

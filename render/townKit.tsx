@@ -24,7 +24,6 @@ import {
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
 import { CLUTTER_SPOTS } from '../engine/townFill';
-import { BARRIERS, type Barrier } from '../engine/townBarriers';
 
 /** chunk edge of the town kit's instanced sets (the dense town has many more pieces: fewer, larger chunks keep the draw calls down; the camera only sees ~25 m anyway) */
 const CHUNK_V2 = 24;
@@ -151,73 +150,6 @@ function buildClutter(kit: Kit): BufferGeometry | null {
   return g;
 }
 
-
-// ---- street-edge barriers (engine/townBarriers.ts): wooden plant boxes with greenery + flowers, trimmed flowering hedges, low stone walls.
-// Procedural + vertex-coloured (like the kit pieces), baked into the same 32 m chunks as the other light pieces: no extra draw calls beyond the chunk meshes.
-const hash1 = (a: number, b: number, c = 0): number => { const s = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453; return s - Math.floor(s); };
-const FLOWER_COLS = ['#ff8fb1', '#ffd84d', '#fff3e0', '#ff7a6b', '#c3a6ff'].map((c) => new Color(c));
-const LEAF_COLS = ['#5cbf4e', '#49ab46', '#76cf5c', '#58b84f'].map((c) => new Color(c));
-const WOOD = new Color('#c78d55'), WOOD_D = new Color('#a06a3a'), WOOD_L = new Color('#e0aa72'), SOIL = new Color('#6b4630');
-const STONE_A = new Color('#eadfc6'), STONE_B = new Color('#dccfb0'), STONE_CAP = new Color('#f3ead6'), HEDGE = new Color('#4ea64a');
-/** Coloured, non-indexed, position + normal + colour only (so it merges with the kit geometries). */
-function coloured(g: BufferGeometry, c: Color, m: Matrix4): BufferGeometry {
-  const n = g.toNonIndexed(); g.dispose(); n.deleteAttribute('uv'); n.applyMatrix4(m);
-  const cnt = n.attributes.position.count, col = new Float32Array(cnt * 3);
-  for (let i = 0; i < cnt; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
-  n.setAttribute('color', new Float32BufferAttribute(col, 3));
-  return n;
-}
-/** All barrier geometry in world space, bucketed by 32 m chunk (same keys as the kit's light pieces). */
-function barrierParts(into: (key: string, g: BufferGeometry) => void): void {
-  const M = new Matrix4(), Q = new Quaternion(), E = new Euler(), P = new Vector3(), S = new Vector3(1, 1, 1);
-  for (const b of BARRIERS as Barrier[]) {
-    const dx = b.x2 - b.x1, dz = b.z2 - b.z1, len = Math.hypot(dx, dz), ry = Math.atan2(-dz, dx), cs = Math.cos(ry), sn = Math.sin(ry);
-    const n = Math.max(1, Math.round(len / (b.kind === 2 ? 1.2 : 1.6))), L = len / n;
-    for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n, cx = b.x1 + dx * t, cz = b.z1 + dz * t, y0 = townLift(cx, cz), key = Math.floor(cx / MERGE_CH) + ',' + Math.floor(cz / MERGE_CH);
-      const seed = hash1(cx, cz);
-      /** a part in the piece's local frame (u along the run, h up, v across), size (w, h, d), spun by yaw about the piece centre */
-      const put = (g: BufferGeometry, c: Color, u: number, h: number, v: number, sx = 1, sy = 1, sz = 1, spin = 0): void => {
-        Q.setFromEuler(E.set(0, ry + spin, 0)); P.set(cx + u * cs + v * sn, y0 + h, cz - u * sn + v * cs); S.set(sx, sy, sz); M.compose(P, Q, S);
-        into(key, coloured(g, c, M));
-      };
-      const flowers = (cnt: number, y: number, half: number, wide: number, off = 0): void => {
-        for (let f = 0; f < cnt; f++) {
-          const r1 = hash1(cx, cz, 10 + f + off), r2 = hash1(cx, cz, 30 + f + off), r3 = hash1(cx, cz, 50 + f + off);
-          put(new IcosahedronGeometry(0.11 + r3 * 0.04, 0), FLOWER_COLS[Math.floor(hash1(cx, cz, 70 + f + off) * FLOWER_COLS.length)], (r1 - 0.5) * 2 * half, y + r3 * 0.05, (r2 - 0.5) * wide);
-        }
-      };
-      if (b.kind === 0) {   // wooden plant box: planks, corner posts, a lighter rim, soil, round bushes and a few flowers
-        const w = L - 0.1;
-        put(new BoxGeometry(w, 0.46, 0.66), WOOD, 0, 0.23, 0);
-        put(new BoxGeometry(w + 0.02, 0.05, 0.68), WOOD_D, 0, 0.15, 0); put(new BoxGeometry(w + 0.02, 0.05, 0.68), WOOD_D, 0, 0.33, 0);
-        put(new BoxGeometry(w + 0.1, 0.07, 0.76), WOOD_L, 0, 0.5, 0);
-        for (const sd of [-1, 1]) put(new BoxGeometry(0.12, 0.54, 0.74), WOOD_D, sd * (w / 2 - 0.02), 0.27, 0);
-        put(new BoxGeometry(w - 0.1, 0.05, 0.56), SOIL, 0, 0.53, 0);
-        const nb = Math.max(2, Math.round(w / 0.5));
-        for (let k = 0; k < nb; k++) {
-          const u = -w / 2 + (w * (k + 0.5)) / nb, r = 0.27 + hash1(cx, cz, k) * 0.07;
-          put(new IcosahedronGeometry(r, 1), LEAF_COLS[Math.floor(hash1(cz, cx, k) * LEAF_COLS.length)], u, 0.62 + r * 0.55, (hash1(cx, cz, k + 5) - 0.5) * 0.08, 1, 0.8, 1);
-        }
-        flowers(2 + Math.round(seed * 2), 0.98, w / 2 - 0.15, 0.3);
-      } else if (b.kind === 1) {   // trimmed hedge: a green block with a rounded top of overlapping lumps + white / pink blossoms
-        const w = L - 0.06;
-        put(new BoxGeometry(w, 0.5, 0.68), HEDGE, 0, 0.25, 0);
-        const nb = Math.max(2, Math.round(w / 0.6));
-        for (let k = 0; k < nb; k++) put(new IcosahedronGeometry(0.4, 1), LEAF_COLS[(k + Math.floor(seed * 3)) % LEAF_COLS.length], -w / 2 + (w * (k + 0.5)) / nb, 0.58, 0, 1.1, 0.78, 0.95);
-        flowers(2, 0.95, w / 2 - 0.2, 0.4, 3);
-      } else {   // low stone wall: two-tone blocks with a pale cap and a tuft of green on top
-        const w = L - 0.04;
-        put(new BoxGeometry(w, 0.5, 0.56), seed < 0.5 ? STONE_A : STONE_B, 0, 0.25, 0);
-        put(new BoxGeometry(w + 0.04, 0.09, 0.66), STONE_CAP, 0, 0.55, 0);
-        put(new BoxGeometry(0.03, 0.5, 0.58), STONE_B, 0, 0.25, 0);
-        put(new IcosahedronGeometry(0.2, 1), LEAF_COLS[Math.floor(seed * LEAF_COLS.length)], (seed - 0.5) * w * 0.6, 0.72, 0, 1.2, 0.8, 1);
-        flowers(1, 0.8, w / 2 - 0.2, 0.2, 7);
-      }
-    }
-  }
-}
-
 /** Pieces up to this many vertices (planters, lamps, banners, stalls, wall segments, barrel clusters ...) are baked together per 32 m chunk: one draw call for the lot instead of one per
  *  piece type per chunk (the dense town has ~25 small piece types). Bigger pieces (houses, shops, landmarks) stay instanced per piece. */
 const LIGHT_VERTS = 1500, MERGE_CH = 32;
@@ -253,7 +185,6 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
     for (const s of light) for (const p of s.places) bake(s.piece.body, s.piece.glow, p);
     const spots = clutterSpots(), cg = buildClutter(k2);
     if (cg) for (const sp of spots) bake(cg, null, { x: sp[0], y: townLift(sp[0], sp[1]), z: sp[1], ry: sp[2], sx: 1, sy: 1, sz: 1 });
-    barrierParts((key, g) => { let e = by.get(key); if (!e) by.set(key, (e = { b: [], g: [] })); e.b.push(g); });
     const merged = Array.from(by.values()).map((e) => ({ body: mergeGeometries(e.b, false)!, glow: e.g.length ? mergeGeometries(e.g, false) : null }));
     for (const e of by.values()) for (const x of [...e.b, ...e.g]) x.dispose();
     return { heavy, merged };

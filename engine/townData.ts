@@ -1262,5 +1262,3 @@ export const ANIMALS: AnimalDef[] = [
   }
 }
 
-// ---- (owner 2026-10-22) the big lawn blocks that the street-edge plant boxes / hedges seal off (engine/townBarriers.ts) get flat lawns, so they read as little private gardens, not bare fenced paving (visual only)
-for (const p of [[11.5, 16.8, 7.2, 3.4], [10.5, 27.6, 6.6, 1.6], [28.2, 27.6, 4.8, 1.6], [-21.5, 27.6, 4.6, 1.6]]) GRASS_PATCHES.push([p[0], p[1], p[2], p[3], 0, 5]);

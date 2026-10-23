@@ -521,6 +521,14 @@ function addPlaza(b: GB, g: GB): void {
     b.cyl(D.plinthR - 0.1, D.plinthR, D.statueY - D.lawnY - 0.1, 24, [m.x, D.lawnY + 0.1 + (D.statueY - D.lawnY - 0.1) / 2, m.z], '#d6cfbd');
     b.torus(D.plinthR - 0.06, 0.035, [m.x, D.statueY - 0.03, m.z], TOWN_GOLD, [Math.PI / 2, 0, 0], 1, 28);
   }
+  // flush flower beds round the plinths (walk straight over them) + a thin warm inlay ring in the paving: walkable space reads as one open plaza
+  const FL = ['#ff8fb1', '#ffd84d', '#fff3e0', '#ff7a6b', '#c3a6ff'];
+  for (const m of PLAZA_STATUES) {
+    b.cyl(1.75, 1.75, 0.03, 28, [m.x, 0.17, m.z], '#6fb04f');
+    b.torus(1.75, 0.045, [m.x, 0.18, m.z], '#e6b98a', [Math.PI / 2, 0, 0], [1, 1, 0.5], 28);
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU + (m.x > 0 ? 0.3 : 0), d = i % 2 ? 1.2 : 1.5; b.sph(0.1, [m.x + Math.cos(a) * d, 0.27, m.z + Math.sin(a) * d], FL[i % 5], 1, 5); }
+  }
+  b.torus(PLAZA.r - 0.6, 0.06, [x, 0.13, z], '#e6b98a', [Math.PI / 2, 0, 0], [1, 1, 0.5], 72);
   g.sph(0.05, [x, 0.01, z], '#000000', 0.01, 3);
 }
 
