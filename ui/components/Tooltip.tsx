@@ -9,11 +9,13 @@ export const useTipStore = create<TipState>((set) => ({
 }));
 
 /** Spread onto any element: <div {...tip(<ItemTip item={i}/>)} /> */
+/** The element whose tip is showing: when it leaves the page (panel closed by a click / key) the tip goes with it. */
+let tipOwner: Element | null = null;
 export const tip = (content: React.ReactNode) => ({
-  onMouseEnter: () => useTipStore.getState().show(content),
-  onMouseLeave: () => useTipStore.getState().hide(),
+  onMouseEnter: (e: React.MouseEvent) => { tipOwner = e.currentTarget; useTipStore.getState().show(content); },
+  onMouseLeave: () => { tipOwner = null; useTipStore.getState().hide(); },
 });
-export const hideTip = () => useTipStore.getState().hide();
+export const hideTip = () => { tipOwner = null; useTipStore.getState().hide(); };
 
 /** Single global parchment tooltip that follows the cursor (position written via ref, no re-render). */
 export const TooltipLayer: React.FC = () => {
@@ -39,7 +41,13 @@ export const TooltipLayer: React.FC = () => {
     window.addEventListener('pointerdown', touch, true);   // tap-to-show: a new tap hides the old tip first, the tapped element's hover handler shows its own
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('pointerdown', touch, true); };
   }, []);
-  useEffect(() => { if (content) place(); }, [content]);
+  useEffect(() => {
+    if (!content) return;
+    place();
+    // (owner bug: the Refresh tip stayed after the card screen closed) unmounted owners never fire mouseleave
+    const id = window.setInterval(() => { if (tipOwner && !tipOwner.isConnected) hideTip(); }, 200);
+    return () => window.clearInterval(id);
+  }, [content]);
 
   if (!content) return null;
   return <div ref={ref} className="rpg-tooltip rpg-parchment" style={{ transform: 'translate(-999px,-999px)' }}>{content}</div>;

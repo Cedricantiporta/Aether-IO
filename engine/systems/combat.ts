@@ -215,14 +215,14 @@ export function getAimDir(out: Vector3 = _aimTmp): Vector3 {
 const nearOut: number[] = [];
 /** Nearest hittable enemy within maxR of (x,z), or null. */
 export function findNearestEnemy(x: number, z: number, maxR: number): Enemy | null {
-  const ids = world.enemyGrid.query(x, z, maxR, nearOut);
+  // (owner: auto skills ignored big bosses) distance to the enemy's EDGE, so a big boss whose centre is out of reach still counts
+  const ids = world.enemyGrid.query(x, z, maxR + 6, nearOut);
   let best: Enemy | null = null;
-  let bestD = maxR * maxR;
+  let bestD = maxR;
   for (let i = 0; i < ids.length; i++) {
     const e = world.enemies[ids[i]];
     if (!e.active || e.state === 'DYING') continue;
-    const dx = e.pos.x - x, dz = e.pos.z - z;
-    const d = dx * dx + dz * dz;
+    const d = Math.hypot(e.pos.x - x, e.pos.z - z) - Math.min(6, e.radius * 0.8);
     if (d < bestD) { bestD = d; best = e; }
   }
   return best;
