@@ -1,18 +1,19 @@
 // Active quest tracker (Korean-MMO style): right side, under the menu icons. Main quest first (gold), then accepted
 // NPC side quests, each with its objective, progress and (in town) the distance to where it continues.
-// Click = open the quest log on that quest (indicators only: no auto-pathing; owner).
+// Click = auto-path to where the quest continues (trackAndGo); a tracked, not yet accepted side quest shows "Talk to <giver>".
 import { GameStatus } from '../../types';
 import { useUiStore } from '../uiStore';
 import React, { useRef } from 'react';
 import { stepCount, STORY, type StoryStep } from '../../story';
 import { useGameStore } from '../../store';
-import { walkAfterArrive, walkToMain, walkToNpcObjective } from '../../engine/systems/village';
-import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn, bagCount, type NpcQuestDef } from '../../npcQuests';
+import { walkAfterArrive, walkToMain, walkToNpcObjective, walkToNpcQuest } from '../../engine/systems/village';
+import { NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestTurnIn, bagCount, type NpcQuestDef } from '../../npcQuests';
 import { LOOT_BY_ID } from '../../loot';
-import { mainNav, npcQuestNav, navDist, type NavTarget } from '../../engine/systems/questNav';
+import { mainNav, npcQuestNav, navNpc, navDist, type NavTarget } from '../../engine/systems/questNav';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { liveStep } from '../../questUnlocks';
+import { NPCS } from '../../engine/townData';
 
 /** In a run, a quest that is ready to hand in (or a main-quest step that waits on someone in town) offers a trip home. */
 export function offerTeleport(then?: () => void): boolean {
@@ -23,6 +24,23 @@ export function offerTeleport(then?: () => void): boolean {
     confirmLabel: 'Teleport', onConfirm: () => { if (then) walkAfterArrive(then); st.abandonRun(); },
   });
   return true;
+}
+/** Walk target of an offered (not yet accepted) side quest: its giver. */
+const offerNav = (d: NpcQuestDef): NavTarget | null => { const i = NPCS.findIndex((n) => n.name === d.giver); return i >= 0 ? navNpc(i) : null; };
+/** "Track" in the quest window / a click on a tracker row: auto-path to the quest (in a run, a town target offers the trip home first). */
+export function trackAndGo(key: string): void {
+  const inRun = useGameStore.getState().status === GameStatus.PLAYING;
+  if (key === 'main') {
+    if (inRun) { const t = mainNav(); if (t && !t.field) offerTeleport(walkToMain); return; }
+    walkToMain(); return;
+  }
+  const d = NPC_QUEST_BY_ID[key.slice(5)]; if (!d) return;
+  const st = useGameStore.getState(), s = npcQuestStatus(d, st.npcQuests, st.heroRank);
+  if (s === 'AVAILABLE') { const go = () => walkToNpcQuest(d.giver); if (inRun) offerTeleport(go); else go(); return; }
+  if (s !== 'ACTIVE') return;
+  const go = () => walkToNpcObjective(d);
+  if (inRun) { const t = npcQuestNav(d); if (t && !t.field) offerTeleport(go); return; }
+  go();
 }
 /** Rows the tracker shows at once (owner: 3, the main quest included). */
 const TRACK_MAX = 3;
@@ -88,22 +106,38 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   );
 };
 
+/** A side quest the hero tracked but has not accepted yet: "Talk to <giver>" (click = auto-path there). */
+const OfferRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
+  const dist = useDistance(() => offerNav(d));
+  return (
+    <div data-k="npc" className="qt-row npc" data-testid="npc-offer-row" role="button" title="Click: auto-path" onClick={() => trackAndGo('side:' + d.id)}>
+      <div className="qt-head"><i className="qt-mark">!</i><span>{d.giver}</span><span className="qt-dist" ref={dist} /></div>
+      <div className="qt-title">{d.title}</div>
+      <div className="qt-line"><b>{`Talk to ${d.giver}`}</b></div>
+    </div>
+  );
+};
+
 export const QuestTracker: React.FC = () => {
   // NPC side quests (blue book icon): accepted, not yet handed in
   const nq = useGameStore((s) => s.npcQuests);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const main = useGameStore((s) => liveStep(s));   // (a still-locked main step is hidden: questUnlocks.ts)
-  if (story.length === 0 && !main) return null;
+  const tk = useUiStore((s) => s.trackedQuest), heroRank = useGameStore((s) => s.heroRank);
+  const offerDef = tk.startsWith('side:') ? NPC_QUEST_BY_ID[tk.slice(5)] : undefined;
+  const offer = offerDef && npcQuestStatus(offerDef, nq, heroRank) === 'AVAILABLE' ? offerDef : undefined;   // (tracked from the quest window before accepting it)
+  if (story.length === 0 && !main && !offer) return null;
   const inv = useGameStore.getState().inventory;
   const rest = [
     ...story.filter((d) => npcQuestReady(d, nq, inv)),
     ...story.filter((d) => !npcQuestReady(d, nq, inv)),
-  ].slice(0, TRACK_MAX - (main ? 1 : 0));
+  ].slice(0, TRACK_MAX - (main ? 1 : 0) - (offer ? 1 : 0));
   return (
     <div className="qt pe" data-testid="quest-tracker">
       {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
       {/* (owner) at most 3 quests on screen: the main quest, then the ones ready to hand in, then the rest */}
       {main && <MainRow main={main} />}
+      {offer && <OfferRow d={offer} />}
       {rest.map((d) => <SideRow key={d.id} d={d} />)}
     </div>
   );

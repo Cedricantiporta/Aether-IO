@@ -3662,3 +3662,18 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .sm-face.tarot .sm-name { position: absolute; left: 22%; right: 22%; top: 82.4%; height: 7.6%; min-height: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden;
   font-size: 6cqw; line-height: 1; font-weight: 800; text-transform: none; letter-spacing: 0; color: #3b2a4a !important; text-shadow: 0 1px 0 rgba(255, 255, 255, .55); }
 .sm-cards.many .sm-face.tarot .sm-name { font-size: 5.4cqw; }
+
+/* (owner) painted anime banners in the summon window: the art fills the banner, the title sits on its calm left third */
+.sw-banner.art, .sw-win.gold .sw-banner.art, .sw-win.purple .sw-banner.art { background-size: cover; background-position: right center; background-color: #f4ead8; justify-content: center; min-height: 12rem; }
+.sw-banner.art .sw-title, .sw-banner.art .sw-subt, .sw-banner.art .sw-gems { max-width: 40%; color: #4a2f4d !important; text-shadow: 0 1px 0 rgba(255, 255, 255, .7) !important; position: relative; z-index: 1; }
+.sw-banner.art::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, rgba(255, 248, 236, .9) 0%, rgba(255, 248, 236, .75) 60%, transparent 100%); pointer-events: none; }
+.sw-banner.art .sw-title { font-size: 1.7rem; }
+.sw-banner.art .sw-subt { font-size: .82rem; opacity: .9; }
+.sw-art-strip { position: relative; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: .2rem; height: 7.5rem; margin: 0 2.6rem .8rem 0; padding: 0 1.4rem;
+  border-radius: .9rem; background-size: cover; background-position: right center; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); overflow: hidden; }
+.sw-art-strip b { display: flex; align-items: center; gap: .45rem; font-family: var(--font-title); font-size: 1.35rem; color: #4a2f4d; text-shadow: 0 1px 0 rgba(255, 255, 255, .7); }
+.sw-art-strip em { font-style: normal; font-size: .78rem; color: #5d4766; max-width: 38%; }
+
+/* new-quest marks (questSeen.ts): red dot on the Main / Side tabs, a small NEW pill on a quest row */
+.qw-tab .red-dot { top: .2rem; right: -.35rem; width: .55rem; height: .55rem; animation: none; background: #ff8a8a; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+.qw-new { flex: none; margin-left: .35rem; padding: .05rem .4rem; border-radius: 999px; background: #ff8a8a; color: #fff; font-size: .6rem; font-weight: 800; letter-spacing: .04em; line-height: 1.2; }

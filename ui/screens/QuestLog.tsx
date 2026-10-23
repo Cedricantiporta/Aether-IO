@@ -1,11 +1,11 @@
 // Quest window (MMO style): tabs Main / Side. Main: the story chapters on the left (expand to their steps:
 // done / current / locked), the selected step on the right (chapter banner, story text, objective with progress,
 // rewards, Track / Teleport). Side: NPC quests (active and offered).
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollText, Check, ChevronDown, Lock, MapPin, Navigation } from '../components/GoldIcons';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
-import { storyCap } from '../../questUnlocks';
+import { storyCap, liveStep } from '../../questUnlocks';
 import { useUiStore } from '../uiStore';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
@@ -15,7 +15,9 @@ import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
 import { abandonNpcQuest } from '../../engine/systems/npcQuestLogic';
 import { questXp } from '../../classLevels';
-import { offerTeleport } from '../hud/QuestTracker';
+import { offerTeleport, trackAndGo } from '../hud/QuestTracker';
+import { useNewMainQuest, useNewSideQuest } from '../lib/alerts';
+import { mainQuestId, sideQuestId } from '../../questSeen';
 import { ItemSlot } from '../components/ItemSlot';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { tip } from '../components/Tooltip';
@@ -23,8 +25,8 @@ import { SimpleTip } from '../components/ItemTip';
 import { lootItem } from '../../loot';
 import type { Item } from '../../types';
 
-/** Track = the minimap marker / guide follow this quest (indicators only, nothing walks). */
-const trackQuest = (key: string, title: string): void => { useUiStore.getState().setTrackedQuest(key); useGameStore.getState().addNotification('Tracking: ' + title, '#f1e2b8', 'SYSTEM'); };
+/** Track = the minimap marker / guide / tracker follow this quest AND the hero auto-paths there (offered quests: to the giver). */
+const trackQuest = (key: string, title: string): void => { useUiStore.getState().setTrackedQuest(key); useGameStore.getState().addNotification('Tracking: ' + title, '#f1e2b8', 'SYSTEM'); trackAndGo(key); };
 const itemName = (id: string) => ITEMS_POOL.find((i) => i.id === id)?.name ?? PETS_POOL.find((i) => i.id === id)?.name ?? LOOT_BY_ID[id]?.name ?? id;
 
 // rewards as bag slots: the real item art (rarity tint, stack count, hover tooltip); gold / gems as coin / gem squares
@@ -79,15 +81,29 @@ export const QuestLog: React.FC = () => {
   const chap = chapIdx.find((c) => sel >= c.a && sel < c.b) ?? chapIdx[0];
   const inRun = status === GameStatus.PLAYING;
   const mainTown = !!(step && (step.npc || step.at)) && !(step?.deliver && bagCount(inv, step.deliver.id) < step.deliver.count);   // continues in town right now
-  const track = () => { setOpen(false); useUiStore.getState().setTrackedQuest('main'); useGameStore.getState().addNotification('Tracking: ' + (step?.title ?? 'main quest'), '#f1e2b8', 'SYSTEM'); };
+  const track = () => { setOpen(false); trackQuest('main', step?.title ?? 'main quest'); };
   const side = [...npcActive, ...npcOpen, ...npcLocked].find((d) => d.id === sideSel) ?? npcActive[0] ?? npcOpen[0] ?? npcLocked[0];
+
+  // new-quest marks: dots live in the store (cleared once the quest is viewed); the NEW pills keep the ones that were new when the window opened
+  const dotMain = useNewMainQuest(), dotSide = useNewSideQuest();
+  const newAtOpen = useRef<string[]>([]);
+  useEffect(() => { if (open) { const g = useGameStore.getState(), seen = g.questSeen ?? []; const ids = [mainQuestId(liveStep(g)), ...npcOpen.map((d) => sideQuestId(d.id))].filter((id) => id && !seen.includes(id)); newAtOpen.current = ids; } }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const isNew = (id: string): boolean => newAtOpen.current.includes(id);
+  const liveMainId = mainQuestId(liveStep({ story, unlocks }));
+  useEffect(() => {
+    if (!open) return;
+    const ids: string[] = [];
+    if (tab === 'MAIN' && sel === story.step) ids.push(liveMainId);
+    if (tab === 'SIDE' && side && npcOpen.includes(side)) ids.push(sideQuestId(side.id));
+    if (ids.length) useGameStore.getState().markQuestsSeen(ids);
+  }, [open, tab, sel, story.step, liveMainId, side?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} title="Quests" icon={<ScrollText size={20} />} width="min(62rem, 96vw)" z={250} full>
       <div className="qw" data-testid="quest-log">
         <div className="qw-tabs">
           {([['MAIN', 'Main'], ['SIDE', 'Side']] as [Tab, string][]).map(([t, l]) => (
-            <button key={t} className={`qw-tab pe ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>{l}{t === 'SIDE' && npcActive.length > 0 && <span className="qw-n">{npcActive.length}</span>}</button>
+            <button key={t} className={`qw-tab pe ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>{l}{t === 'SIDE' && npcActive.length > 0 && <span className="qw-n">{npcActive.length}</span>}{(t === 'MAIN' ? dotMain : dotSide) && <i className="red-dot" data-testid={`qw-dot-${t}`} />}</button>
           ))}
         </div>
 
@@ -105,7 +121,7 @@ export const QuestLog: React.FC = () => {
                       const i = c.a + k, st = i < story.step ? 'done' : i === story.step ? 'cur' : 'lock';
                       return (
                         <button key={s.id} className={`qw-step pe ${st} ${sel === i ? 'sel' : ''}`} onClick={() => st !== 'lock' && setSel(i)} disabled={st === 'lock'}>
-                          <span>{k + 1}. {st === 'lock' ? '???' : s.title}</span>
+                          <span>{k + 1}. {st === 'lock' ? '???' : s.title}{st === 'cur' && isNew('main:' + s.id) && <b className="qw-new">NEW</b>}</span>
                           {st === 'done' ? <Check size={14} className="ok" /> : st === 'cur' ? <b className="qbadge">Q</b> : <Lock size={13} />}
                         </button>
                       );
@@ -151,7 +167,7 @@ export const QuestLog: React.FC = () => {
               {npcActive.length > 0 && <div className="qw-grp">Active</div>}
               {npcActive.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} ready={npcQuestReady(d, nq, inv)} />)}
               {npcOpen.length > 0 && <div className="qw-grp">Offered around town</div>}
-              {npcOpen.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} offer />)}
+              {npcOpen.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} offer fresh={isNew(sideQuestId(d.id))} />)}
               {npcLocked.length > 0 && <div className="qw-grp">Unlocks at a higher level</div>}
               {npcLocked.map((d) => <SideRow key={d.id} d={d} sel={side?.id === d.id} onSel={setSideSel} lockLv={npcQuestMinLevel(d)} />)}
             </div>
@@ -183,9 +199,9 @@ export const QuestLog: React.FC = () => {
   );
 };
 
-const SideRow: React.FC<{ d: NpcQuestDef; sel: boolean; onSel: (id: string) => void; ready?: boolean; offer?: boolean; lockLv?: number }> = ({ d, sel, onSel, ready, offer, lockLv }) => (
+const SideRow: React.FC<{ d: NpcQuestDef; sel: boolean; onSel: (id: string) => void; ready?: boolean; offer?: boolean; fresh?: boolean; lockLv?: number }> = ({ d, sel, onSel, ready, offer, fresh, lockLv }) => (
   <button className={`qw-step pe ${sel ? 'sel' : ''} ${ready ? 'ready' : ''} ${lockLv ? 'lvlock' : offer ? 'offer' : 'cur'}`} onClick={() => onSel(d.id)} data-testid={lockLv ? 'side-locked' : undefined}>
-    <span>{d.title} <em>· {d.giver}</em></span>
+    <span>{d.title} <em>· {d.giver}</em>{fresh && <b className="qw-new">NEW</b>}</span>
     {lockLv ? <b className="qw-lv"><Lock size={11} /> Lv {lockLv}</b> : ready ? <Check size={14} className="ok" /> : offer ? <b className="qbadge blue">!</b> : <b className="qbadge blue">Q</b>}
   </button>
 );

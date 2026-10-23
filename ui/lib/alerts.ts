@@ -14,6 +14,7 @@ import type { Equipment } from '../../storeTypes';
 import { CODEX_KEYS, type CodexTab } from '../../codexData';
 import { allocBlock, talentPointsTotal, talentsOf, talentsSpent } from '../../talents';
 import { allClaimed, goalClaimable } from '../../goals';
+import { unseenQuests } from '../../questSeen';
 
 const KEY = 'aether-survivor-seen-v1';
 interface Seen { items: string[]; codex: number }
@@ -111,3 +112,8 @@ export const useGoalsAlert = (): boolean => useGameStore((s) => {
   return m.daily.some(goalClaimable) || m.weekly.some(goalClaimable) || (!m.dailyBonus && allClaimed(m.daily)) || (!m.weeklyBonus && allClaimed(m.weekly))
     || m.unlocked.some((id) => !m.claimed.includes(id));
 });
+
+/** New (not yet viewed) main quest step / offered side quest: red dots on the Quest menu button and the Main / Side tabs (questSeen.ts). */
+export const useNewMainQuest = (): boolean => useGameStore((s) => unseenQuests(s).main.length > 0);
+export const useNewSideQuest = (): boolean => useGameStore((s) => unseenQuests(s).side.length > 0);
+export const useQuestAlert = (): boolean => useGameStore((s) => { const u = unseenQuests(s); return u.main.length + u.side.length > 0; });

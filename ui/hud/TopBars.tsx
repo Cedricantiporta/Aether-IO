@@ -3,7 +3,7 @@ import { PadHint } from '../components/PadBtn';
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
 import { CuteHero, CuteBag, CuteStar, CuteScroll, CuteMapPin, CuteShop, CuteGear, CuteTrophy, CuteBook, CuteLayers, CuteCalendar, CuteTower, CuteWaves } from '../components/CuteIcons';
-import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert } from '../lib/alerts';
+import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert, useQuestAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -189,14 +189,14 @@ export const MenuButtons: React.FC = () => {
   const shopOpen = useGameStore((s) => s.isShopOpen);
   const showMap = useGameStore((s) => s.settings.showMinimap !== false);
   const updateSettings = useGameStore((s) => s.updateSettings);
-  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert();
+  const bagDot = useBagAlert(), codexDot = useCodexAlert(), skillDot = useSkillAlert(), goalsDot = useGoalsAlert(), questDot = useQuestAlert();
   const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
     <div className="menu-row">
       <MenuBtn caption="Character" icon={<CuteHero size={30} />} label="Character" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
       <MenuBtn caption="Bag" icon={<CuteBag size={30} />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
       <MenuBtn caption="Skills" icon={<CuteStar size={30} />} label="Skill Trainer" hint="" onClick={() => openTownShop('SKILLS')} dot={skillDot} />
-      <MenuBtn caption="Quest" icon={<CuteScroll size={30} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} />
+      <MenuBtn caption="Quest" icon={<CuteScroll size={30} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} dot={questDot} />
       {/* (no big map exists: this shows / hides the minimap) */}
       <MenuBtn caption="Map" icon={<CuteMapPin size={30} />} label={showMap ? 'Hide minimap' : 'Show minimap'} hint="" onClick={() => updateSettings({ showMinimap: !showMap })} active={showMap} />
       <MenuBtn caption="Shop" icon={<CuteShop size={30} />} label="Summon shop" hint="" onClick={() => openTownShop('SUMMON')} active={shopOpen} />

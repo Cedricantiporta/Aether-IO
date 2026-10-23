@@ -133,6 +133,7 @@ export interface GameState {
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   npcQuests: NpcQuestSave;                          // NPC story quests: state + boss kill counters (saved with the profile)
+  questSeen: string[] | null;                       // quest ids already viewed in the quest window (red dots, questSeen.ts; null = seed on load)
   unlocks: import('./questUnlocks').UnlockSave;     // death-unlocked quest beats (questUnlocks.ts; saved with the profile)
   materials: Record<Rarity, number>;
   elixirsNext: import('./elixirs').ElixirId[];        // elixirs drunk in town: their buffs start with the next run (saved with the profile)
@@ -163,6 +164,7 @@ export interface GameState {
   setDifficulty: (d: Difficulty) => void;
   startGame: () => void;              // starts a run: leaves the town for the first room (profile is NOT touched; in-run state resets)
   resetGame: () => void;              // back to the town (status MENU, engine enterVillage); profile kept
+  markQuestsSeen: (ids: string[]) => void;       // the quest window showed these quests: their red dots clear
   abandonRun: () => void;             // finalize run rewards (rank xp + gold bonus) then back to the town
   resetProfile: () => void;           // wipe the saved profile (fresh profile + welcome gift)
   togglePause: () => void;            // Esc: PLAYING <-> PAUSED(+pause menu); closes panels first if any open

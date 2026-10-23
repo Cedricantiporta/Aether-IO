@@ -26,6 +26,8 @@ const BANNERS = [
   { id: 'SHOP', name: 'Gem Shop', sub: 'Supplies · shards', tone: '#5ee0f5', title: 'Gem Shop', blurb: '' },
   { id: 'TECH', name: 'Tech House', sub: 'Permanent upgrades', tone: '#7dffb0', title: 'Tech House', blurb: '' },
 ] as const;
+/** Painted anime banners per tab (public/art/ui/banner_<id>.webp); the left third is kept calm for the title. */
+const bannerUrl = (id: string): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/ui/banner_${id}.webp`;
 const PREVIEW_ORDER = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'COMMON'] as const;
 /** the supplies a pull can give (store SUMMON_SUPPLIES) */
 const SUPPLY_ITEMS = SUMMON_SUPPLIES.map(([id]) => ITEMS_POOL.find((i) => i.id === id)).filter(Boolean) as typeof ITEMS_POOL;
@@ -68,12 +70,10 @@ export const SummonWindow: React.FC = () => {
         </div>
         <div className="sw-main">
           <CloseX onClick={close} />
-          {tab === 'SHOP' && <GemShopTab />}
-          {tab === 'TECH' && <div className="sw-tech"><div className="sw-pane-h"><Cog size={18} /> Tech House <em>Permanent upgrades for every hero and every run</em></div><TechGrid /></div>}
+          {tab === 'SHOP' && <><div className="sw-art-strip" style={{ backgroundImage: `url(${bannerUrl('SHOP')})` }}><b>Gem Shop</b><em>Supplies, cores and shards for gems</em></div><GemShopTab /></>}
+          {tab === 'TECH' && <div className="sw-tech"><div className="sw-art-strip" style={{ backgroundImage: `url(${bannerUrl('TECH')})` }}><b><Cog size={18} /> Tech House</b><em>Permanent upgrades for every hero and every run</em></div><TechGrid /></div>}
           {altar && (<>
-          <div className="sw-banner">
-            <div className="sw-swirl" />
-            <div className="sw-orb"><Sparkles size={56} /></div>
+          <div className="sw-banner art" style={{ backgroundImage: `url(${bannerUrl(tab)})` }}>
             <div className="sw-title">{B.title}</div>
             <div className="sw-subt">{B.blurb}</div>
             <div className="sw-gems"><Cur size={18} /> {have.toLocaleString()}</div>

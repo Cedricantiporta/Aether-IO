@@ -152,11 +152,16 @@ town (and closes the open panel first).
 - **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe tool slot halves effort),
   harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (from the start;
   2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
-- **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). **Quest auto-pathing was removed by
-  owner request ("no autopath, only indicators"): no G key, tracker rows / banner "Destination" / quest-log Track / Upgrades "Go"
-  never walk.** Indicators only: area-aware quest targets (`systems/questNav.ts`) feed the guide arrow, the beacon and the round
-  minimap's tracked-quest ring (`uiStore.trackedQuest`: set by Track / Destination, '' = automatic). Tracker rows open the quest log on
-  that quest (`uiStore.openQuestLogOn`). NPC patrols with stuck handling.
+- **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). Quest targets are area-aware
+  (`systems/questNav.ts`) and feed the guide arrow, the beacon, the minimap's tracked-quest ring (`uiStore.trackedQuest`: set by Track /
+  Destination, '' = automatic) and the auto-path. **Track** in the quest window and a click on a tracker row both call
+  `QuestTracker.trackAndGo(key)` (auto-path in town; in a run a town target offers the teleport home first, field targets stay
+  indicator-only). Tracking an offered (not yet accepted) side quest walks to its giver and the tracker shows an "OfferRow" ("Talk to
+  <giver>"). NPC patrols with stuck handling.
+- **New-quest dots** (`questSeen.ts`, `store.questSeen`, saved in the profile; null = seed with everything available on first load):
+  ids `main:<step>` / `side:<quest>`. Red dot on the Quest menu button + Main/Side tabs (`ui/lib/alerts.ts useQuestAlert`), "NEW" pill on
+  the row; cleared by `markQuestsSeen` when the quest window shows that main step / selects that offered side quest. Main steps are
+  never "offered": `liveStep` puts an unlocked step straight into the log and tracker (a talk step's Accept in dialogue just completes it).
 - Town shows a few ambient cameo NPCs (Erin, Cabbage Man, Tilda, Corin, Nell ...) and speech bubbles; dialogue box has
   hero "reply" lines on the Next/Close button (`dialogue.replyAt`).
 

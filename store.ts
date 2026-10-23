@@ -66,6 +66,7 @@ import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId }
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { petPower, petStatMul, PET_PCT_STATS } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, npcQuestStatus, NPC_QUESTS, type NpcQuestSave } from './npcQuests';
+import { availableQuestIds } from './questSeen';
 import { BEATS, UNLOCK_CHANCE, emptyUnlocks, sanitizeUnlocks, storyHeld, unlockMirror, type Beat, type UnlockSave } from './questUnlocks';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
@@ -433,6 +434,7 @@ interface Profile {
   summonPity?: SummonPity;  // draws so far per altar (guaranteed Legendary every 60, Legendary/Mythic every 240)
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   unlocks?: UnlockSave;       // death-unlocked quest beats (questUnlocks.ts)
+  questSeen?: string[];       // quest ids the hero has already viewed (red dots, questSeen.ts)
   heroRank: number; rankXp: number;
   gameStats: GameStatistics; settings: Settings;
   welcomeGiftClaimed: boolean;
@@ -499,7 +501,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   v: PROFILE_VERSION,
   gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems, crystals: 20,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
-  heroRank: 1, rankXp: 0, npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
+  heroRank: 1, rankXp: 0, npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
@@ -542,6 +544,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
+              questSeen: Array.isArray(p.questSeen) ? p.questSeen.filter((x: unknown) => typeof x === 'string').slice(-400) : undefined,
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
               welcomeGiftClaimed: p.welcomeGiftClaimed !== false,
@@ -596,7 +599,7 @@ const writeProfile = (s: GameState): void => {
     s = stampGrades(s);   // (gear made at runtime always carries a grade, so the load migration never rescales it)
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, heroRank: s.heroRank, rankXp: s.rankXp,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
@@ -769,6 +772,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     unlocks: profile.unlocks ?? emptyUnlocks(),
+    questSeen: profile.questSeen ?? null,
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
@@ -876,6 +880,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       });
     },
 
+    markQuestsSeen: (ids) => { const cur = get().questSeen ?? []; const add = ids.filter((id) => id && !cur.includes(id)); if (add.length) set({ questSeen: [...cur, ...add].slice(-400) }); },
+
     abandonRun: () => {
       get().endRun({ ...world.run, wave: world.director.wave });
       get().resetGame();
@@ -886,7 +892,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), heroRank: 1, rankXp: 0, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
@@ -2034,9 +2040,13 @@ const flushProfile = (): void => {
 };
 unlockMirror.n = useGameStore.getState().unlocks.n;   // (npcQuestStatus reads the unlock count without the store)
 useGameStore.subscribe((s) => { unlockMirror.n = s.unlocks.n; });
+// "new quest" dots: first load (or a fresh / reset profile) marks everything already available as seen
+const seedQuestSeen = (): void => { const s = useGameStore.getState(); if (s.questSeen === null) useGameStore.setState({ questSeen: availableQuestIds(s) }); };
+seedQuestSeen();
+useGameStore.subscribe((s, prev) => { if (s.questSeen === null && prev.questSeen !== null) seedQuestSeen(); });
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
