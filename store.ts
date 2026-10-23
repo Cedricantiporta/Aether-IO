@@ -5,7 +5,7 @@
 import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
-import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts } from './engine/runCards';
+import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost } from './engine/runCards';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
@@ -1106,10 +1106,10 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     polishCard: (id) => {   // Card Polish: raise ONE offered card by a rarity tier (its numbers follow the new rarity)
       const s = get(), i = s.upgradeOptions.findIndex((o) => o.id === id), c = s.upgradeOptions[i];
-      if (s.status !== GameStatus.LEVEL_UP || s.cardPolish <= 0 || !c || c.polished || !canRarityUp(c)) return false;   // (owner) once per card
+      if (s.status !== GameStatus.LEVEL_UP || !c || s.cardPolish < polishCost(c) || !canRarityUp(c)) return false;   // (owner) costs rise with the tier (polishCost); no other limit
       const n = rarityUpCard(c); if (!n) return false;
-      const options = s.upgradeOptions.slice(); options[i] = withCardText({ ...n, id: uid('card'), polished: true });
-      set({ cardPolish: s.cardPolish - 1, upgradeOptions: options });
+      const options = s.upgradeOptions.slice(); options[i] = withCardText({ ...n, id: uid('card') });
+      set({ cardPolish: s.cardPolish - polishCost(c), upgradeOptions: options });
       return true;
     },
     upgradeSkill: (skill) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,13 +8,14 @@ import { SimpleTip } from '../components/ItemTip';
 import { Stars } from '../components/Stars';
 import { RARITY_NAME } from '../theme';
 import { device } from '../../engine/device';
-import { canRarityUp, trendCounts, trendLeader, BUILD_NAME } from '../../engine/runCards';
+import { canRarityUp, trendCounts, trendLeader, BUILD_NAME, polishCost } from '../../engine/runCards';
 import { ArcanaGlyph, tallArtKey, tallArtUrl, cardFrameUrl, cardBackdropUrl, RARITIES_ALL, preloadImages } from '../components/UpgradeIcons';
 
 const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, i, onPick }) => {
   const arcana = opt.rarity === 'LEGENDARY' || opt.rarity === 'MYTHIC' || opt.type === 'DEATH_DEFIANCE' || opt.type === 'SPECIAL';
   const art = tallArtKey(opt);
   const long = opt.name.length > 11;
+  const arcId = 'tcarc' + useId().replace(/:/g, '');
   return (
     <motion.button className="rw-card tarot" data-rarity={opt.rarity} data-arcana={arcana ? '1' : '0'} onClick={onPick}
       initial={{ y: 40, opacity: 0, scale: .92 }} animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -31,7 +32,11 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
         </span>
         <img className="tc-frame" src={cardFrameUrl(opt.rarity)} alt="" draggable={false} decoding="async" />
         {!device.touch && <span className="rw-num rpg-key">{i + 1}</span>}
-        <span className={`tc-name${long ? ' long' : ''}`}>{opt.name}</span>
+        {/* (owner) the title bends in a gentle smile, following the ribbon */}
+        <svg className={`tc-name${long ? ' long' : ''}`} viewBox="0 0 200 44" aria-label={opt.name}>
+          <path id={arcId} d="M 6 20 Q 100 40 194 20" fill="none" />
+          <text textAnchor="middle" {...(opt.name.length > 15 ? { textLength: 176, lengthAdjust: 'spacingAndGlyphs' as const } : {})}><textPath href={`#${arcId}`} startOffset="50%">{opt.name}</textPath></text>
+        </svg>
       </span>
       <div className="rw-body flex flex-col items-center gap-1 min-h-0 w-full">
         <Stars rarity={opt.rarity} />
@@ -99,9 +104,9 @@ export const WaveReward: React.FC = () => {
           <div className="rw-slot" key={opt.id + i}>
             <Card opt={opt} i={i} onPick={() => select(opt)} />
             {charges > 0 && (
-              <button className="rw-pill rw-up" data-testid={`rw-up-${i}`} disabled={!canRarityUp(opt) || !!opt.polished} onClick={() => polish(opt.id)}
-                {...tip(<SimpleTip title="Upgrade rarity" sub={opt.polished ? 'Already upgraded: a card can be upgraded only once.' : canRarityUp(opt) ? 'Raises this card by one rarity tier (stronger bonus). Uses 1 charge. Once per card.' : 'This card cannot go any higher.'} />)}>
-                {opt.polished ? 'Upgraded' : canRarityUp(opt) ? <>&#11014; Upgrade rarity ({charges})</> : 'Top rarity'}{!device.touch && canRarityUp(opt) && !opt.polished && <kbd>&#8679;{i + 1}</kbd>}
+              <button className="rw-pill rw-up" data-testid={`rw-up-${i}`} disabled={!canRarityUp(opt) || charges < polishCost(opt)} onClick={() => polish(opt.id)}
+                {...tip(<SimpleTip title="Upgrade rarity" sub={canRarityUp(opt) ? `Raises this card by one rarity tier (stronger bonus). Costs ${polishCost(opt)} charge${polishCost(opt) > 1 ? 's' : ''} (you have ${charges}): Common to Rare 1, Rare to Epic 2, Epic to Legendary 3, Legendary to Mythic 4.` : 'This card cannot go any higher.'} />)}>
+                {!canRarityUp(opt) ? 'Top rarity' : <>&#11014; Upgrade rarity ({polishCost(opt)}/{charges})</>}{!device.touch && canRarityUp(opt) && <kbd>&#8679;{i + 1}</kbd>}
               </button>
             )}
           </div>

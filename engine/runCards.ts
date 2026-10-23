@@ -45,6 +45,8 @@ export const runCards = {
   taken: {} as Record<string, boolean>,
 };
 
+/** (owner) charges a rarity upgrade costs: Common->Rare 1, Rare->Epic 2, Epic->Legendary 3, Legendary->Mythic 4. */
+export const polishCost = (c: { tier?: number }): number => (c.tier ?? 0) + 1;
 export function resetRunCards(): void {
   const r = runCards;
   r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.dashMod = null; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
@@ -110,7 +112,7 @@ const SPECIALS: SpecialDef[] = [
   { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.15, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${[75, 75, 80, 85, 90][Math.min(4, t)]}% of max HP instead of 70%` },
   { id: 'EXECUTE', name: 'Executioner', vals: [0.25, 0.40], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies below 30% HP` },
   { id: 'FIRST_STRIKE', name: 'First Strike', vals: [0.40, 0.70], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies at full HP` },
-  { id: 'SECOND_WIND', name: 'Second Wind', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Heal ${pct(v)} of max HP when a room is cleared` },
+  { id: 'SECOND_WIND', name: 'Second Wind', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Heal ${pct(v)} of max HP when a room is cleared (can fill up to 100% HP, not stopped by the regen cap)` },
   { id: 'GOLD_RUSH', name: 'Gold Rush', vals: [0.30, 0.50], weight: 0.15, fmt: (v) => `+${pct(v)} gold from all sources` },
   { id: 'LINGER', name: 'Lingering Malice', vals: [0.30, 0.50], weight: 0.15, fmt: (v) => `Status effects you inflict last ${pct(v)} longer` },
 ];

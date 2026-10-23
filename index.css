@@ -3860,3 +3860,7 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-title { margin-top: .1rem; color: #4a3420 !important; font-family: var(--font-title); font-weight: 900; font-size: .9rem; text-transform: none; letter-spacing: 0; line-height: 1.15; align-items: center; }
 .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-n { color: #fff !important; background: var(--qc); border-radius: 999px; padding: .08rem .5rem; font-family: var(--font-title); font-weight: 900; font-size: .68rem; box-shadow: 0 2px 0 var(--qd); white-space: nowrap; }
 .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line, .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line b { color: #7d6650 !important; font-weight: 700 !important; font-size: .66rem; opacity: 1 !important; line-height: 1.25; }
+/* (owner) curved card titles: an SVG text arc (smile) over the ribbon */
+.rw-card.tarot svg.tc-name { position: absolute; left: 17%; right: 17%; width: 66%; top: 80.2%; height: 11%; display: block; overflow: visible; pointer-events: none; }
+.rw-card.tarot svg.tc-name text { font-family: 'Cinzel', Georgia, 'Times New Roman', serif; font-weight: 800; font-size: 21px; fill: #3b2a4a; paint-order: stroke; stroke: rgba(255, 255, 255, .55); stroke-width: 1.5px; letter-spacing: .02em; dominant-baseline: middle; }
+.rw-card.tarot svg.tc-name.long text { font-size: 17px; letter-spacing: 0; }

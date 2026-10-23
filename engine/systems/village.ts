@@ -28,7 +28,7 @@ import { HOME_COLLIDERS, HOME_DOOR, HOME_EXIT, HOME_SPAWN, HOME_OUT, BED } from 
 import { dreamHooks } from '../../dreams';
 import { wake, SLEEP_FADE, dreamFx } from '../dreamFx';
 import { CHURCH_COLLIDERS, CHURCH_DOOR, CHURCH_EXIT, CHURCH_SPAWN, CHURCH_OUT, CHURCH_SIDE_EXIT, CHURCH_SIDE_SPAWN, PEW_SEATS } from '../churchData';
-import { CHAPEL_SIDE, TOWN_SEATS, type SeatSpec } from '../townData';
+import { CHAPEL_SIDE, TOWN_SEATS, WALL_GATES, type SeatSpec } from '../townData';
 /** The chapel was entered / left by its side door (the graveyard), not the front. */
 let viaSide = false;
 const seatsHere = (): SeatSpec[] => (world.village.area === 'CHURCH' ? PEW_SEATS : world.village.area === 'TOWN' ? TOWN_SEATS : []);
@@ -211,7 +211,7 @@ function sleepAtHome(): void {
   }, SLEEP_FADE);
 }
 
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'wallgate';
 export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -273,6 +273,10 @@ function scanNearby(): void {
     d = q(TAVERN_DOOR.x, TAVERN_DOOR.z); if (d < TAVERN_DOOR.r * TAVERN_DOOR.r) push('E', 'Enter', 'Golden Tankard', '', -1, d, 'tavern');
     d = q(HOME_DOOR.x, HOME_DOOR.z); if (d < HOME_DOOR.r * HOME_DOOR.r) push('E', 'Enter', 'Your house', '', -1, d, 'home');
     d = q(CHAPEL_SIDE.x, CHAPEL_SIDE.z); if (d < CHAPEL_SIDE.r * CHAPEL_SIDE.r) push('E', 'Enter', 'Chapel (side door)', '', 1, d, 'church');
+    for (let i = 0; i < WALL_GATES.length; i++) {   // (owner) the wall-tower gates: node = gate * 2 + (0 inside, 1 outside)
+      const g = WALL_GATES[i], shut = wallGateLocked(g.lv);
+      for (let s = 0; s < 2; s++) { d = s ? q(g.outX, g.outZ) : q(g.inX, g.inZ); if (d < g.r * g.r) push('E', shut ? 'Locked' : 'Go through', shut ? `${g.name} · Lv ${g.lv}` : g.name, '', i * 2 + s, d, 'wallgate', shut ? LOCK_COLOR : ''); }
+    }
     d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r && gateFlags.cave) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');   // (closed: the cave-in's Look pill below takes its place)
     for (let i = 0; i < TOWN_GATES.length; i++) {   // a story gate still closed: "Look" explains it (never near a shop / door pill, see engine/townGates.ts)
       const g = TOWN_GATES[i]; if (gateFlags[g.id]) continue;
@@ -319,10 +323,19 @@ function scanNearby(): void {
   for (let i = 0; i < MAX_NEARBY; i++) nearby[i].active = i < nearbyN;
 }
 
+const wallGateLocked = (lv: number): boolean => { const s = useGameStore.getState(); return lv > 0 && (s.classProg[s.hero]?.lv ?? 1) < lv; };
 /** Same action as pressing E / F next to the thing (used by the touch interact pills). */
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
+  if (it.act === 'wallgate') {   // through the wall: to the other side of the tower
+    const g = WALL_GATES[it.node >> 1]; if (!g || st.isShopOpen || dialogueOpen() || v.pending) return;
+    if (wallGateLocked(g.lv)) { st.addNotification(`The ${g.name} opens at Lv ${g.lv}.`, LOCK_COLOR, 'WARNING'); return; }
+    const out = (it.node & 1) === 0, tx = out ? g.outX : g.inX, tz = out ? g.outZ : g.inZ;
+    p.pos.set(tx, 0, tz); p.facing = Math.atan2(tx - (out ? g.inX : g.outX), tz - (out ? g.inZ : g.outZ));
+    world.pet.pos.set(tx, world.pet.pos.y, tz);   // the pet comes along
+    return;
+  }
   if (it.act === 'blocked') { const g = TOWN_GATES[it.node]; if (g && !gateFlags[g.id]) st.addNotification(g.line, GATE_COLOR, 'WARNING'); return; }   // (the sign explains it; WARNING toasts repeat at most every 3 s)
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {

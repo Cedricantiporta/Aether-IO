@@ -476,6 +476,12 @@ export const WALL_TOWERS: TowerSpec[] = [
   { x: -27, z: WALL.z1, r: 3.1, corner: false }, { x: 27, z: WALL.z1, r: 3.1, corner: false },
 ];
 /** Straight wall runs [x1, z1, x2, z2, outwardX, outwardZ] (outward normal is where the merlons stand). */
+/** (owner 2026-10-23) gates through the wall-tower doors: E at the door inside (or at the spot behind the tower outside) walks the hero
+ *  through to the other side. `lv` = class level needed (0 = always open). Spots checked walkable with townPath. */
+export const WALL_GATES: { name: string; inX: number; inZ: number; outX: number; outZ: number; lv: number; r: number }[] = [
+  { name: 'East Gate', inX: 40.6, inZ: 11.7, outX: 50.5, outZ: 9, lv: 40, r: 2.3 },     // the east wall tower by Madame Zora, out toward the mines
+  { name: 'Beach Gate', inX: -40.6, inZ: 11.7, outX: -51, outZ: 11.7, lv: 0, r: 2.3 },  // the west wall tower, out to the beach
+];
 export const WALL_RUNS: [number, number, number, number, number, number][] = [
   [WALL.x0, WALL.z0, WALL.x1, WALL.z0, 0, -1],              // north
   [WALL.x1, WALL.z0, WALL.x1, WALL.z1, 1, 0],               // east
