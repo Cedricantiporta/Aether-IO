@@ -12,7 +12,7 @@ import { useUiStore } from '../../uiStore';
 import { UNLOCK_LV } from '../../../unlocks';
 import {
   spareFlasks, onKitChange, buyFlasks, sellMineGoods, isMineGood, minePrice,
-  SPARE_FLASK_OIL, MAX_SPARE, FLASK_PRICE, KIT_FLASKS, KIT_PRICE, MINE_PREMIUM,
+  SPARE_FLASK_OIL, MAX_SPARE, flaskPrice, KIT_FLASKS, kitPrice, MINE_PREMIUM,
 } from '../../../engine/systems/caveKit';
 
 export const MineShopTab: React.FC = () => {
@@ -65,8 +65,8 @@ export const MineShopTab: React.FC = () => {
           {deepLocked && <> The deep floors open at Lv {UNLOCK_LV.CAVE}.</>}
         </div>
         <div className="flex flex-col gap-2">
-          {offer(1, FLASK_PRICE, 'Lantern Oil Flask', `One sealed flask: +${SPARE_FLASK_OIL} s of lantern light on a deep trip.`, 'buy-flask')}
-          {offer(KIT_FLASKS, KIT_PRICE, 'Miner\'s Kit', `${KIT_FLASKS} oil flasks, bundled for less (save ${(FLASK_PRICE * KIT_FLASKS - KIT_PRICE).toLocaleString()} G).`, 'buy-kit')}
+          {offer(1, flaskPrice(level), 'Lantern Oil Flask', `One sealed flask: +${SPARE_FLASK_OIL} s of lantern light on a deep trip.`, 'buy-flask')}
+          {offer(KIT_FLASKS, kitPrice(level), 'Miner\'s Kit', `${KIT_FLASKS} oil flasks, bundled for less (save ${(flaskPrice(level) * KIT_FLASKS - kitPrice(level)).toLocaleString()} G).`, 'buy-kit')}
         </div>
         <div className="rpg-label !text-[.55rem] mt-1.5 opacity-70">Bigger lanterns and refills: Grit's bench, inside the cave.</div>
       </div>

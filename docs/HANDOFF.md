@@ -148,6 +148,7 @@ town (and closes the open panel first).
   loot for 2x (`constants.ts`).
 - **Areas** (`world.village.area`): TOWN, CASTLE (King Aldric, throne dais), CHURCH (Sister Elowen), TAVERN, CAVE
   (Crystal Cave: persistent Floor 1 with Grit + per-trip deeper floors, lantern-oil timer, `engine/systems/cave.ts`),
+  **every floor has only 2-5 veins** (`rollVeinCount`: 2 35% / 3 35% / 4 20% / 5 10%; Floor 1 shows the first n of its 8 hand-placed slots, n saved in the cave save and re-rolled at each regrow, only when entering the cave), **cave gold prices scale with hero level** (`constants.caveGoldPrice`: base x (1 + 0.04 x (lv-1)); flask base 300, Miner's Kit 750, refill 400 + 200 x lantern level, Mining Pickaxe base 400 via `shopPrice`). The boot `LoadingScreen` has no title: just 'Loading…' + bar at the bottom centre.
   HOME (the adventurer's house: bed = sleep to dream). Same plumbing for each (`pending` area, `switchArea`, exit pill).
 - **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe tool slot halves effort),
   harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (from the start;

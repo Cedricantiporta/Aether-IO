@@ -12,7 +12,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).p
  *  (capacity tiers paid with gems OR shards). Opened by E at the bench; closes when you walk away. */
 export const LanternPanel: React.FC = () => {
   const open = useLanternPanel((s) => s.open);
-  const { gold, gems, materials, lv, best } = useGameStore(useShallow((s) => ({ gold: s.gold, gems: s.gems, materials: s.materials, lv: s.progress.caveLantern ?? 0, best: s.progress.caveBest ?? 1 })));
+  const { gold, gems, materials, lv, best, heroLv } = useGameStore(useShallow((s) => ({ heroLv: s.level, gold: s.gold, gems: s.gems, materials: s.materials, lv: s.progress.caveLantern ?? 0, best: s.progress.caveBest ?? 1 })));
   const [, tick] = useState(0);
   useEffect(() => { if (!open) return; const id = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(id); }, [open]);
   useEffect(() => {
@@ -23,7 +23,7 @@ export const LanternPanel: React.FC = () => {
   if (!open) return null;
   void lv; void best;
   const L = lanternLevel(), cap = oilMaxFor(L), next = L < LANTERN_MAX_LV ? oilMaxFor(L + 1) : 0, cost = L < LANTERN_MAX_LV ? LANTERN_COST[L] : null;
-  const oil = world.village.cave.oil, free = freeRefillToday(), price = REFILL_PRICE(L), full = oil >= cap - 0.5;
+  const oil = world.village.cave.oil, free = freeRefillToday(), price = REFILL_PRICE(L, heroLv), full = oil >= cap - 0.5;
   const btn = (enabled: boolean): React.CSSProperties => ({ padding: '.45rem .7rem', borderRadius: 999, border: 0, background: enabled ? '#fff6e0' : 'rgba(255,255,255,.1)', color: enabled ? '#2b2a2e' : '#9a968c', fontWeight: 700, fontSize: '.8rem', cursor: enabled ? 'pointer' : 'default', flex: 1 });
   return (
     <div className="absolute inset-0 flex items-center justify-center pe" style={{ zIndex: 60, background: 'rgba(0,0,0,.35)' }} onClick={() => useLanternPanel.setState({ open: false })} data-testid="lantern-panel">

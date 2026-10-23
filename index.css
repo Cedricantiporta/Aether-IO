@@ -780,7 +780,7 @@ html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap
 @keyframes rh-turn { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 
 /* loading screen */
-.loading-screen { position: fixed; inset: 0; z-index: 1900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4rem;
+.loading-screen { position: fixed; inset: 0; z-index: 1900; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1.4rem; padding-bottom: max(2.2rem, env(safe-area-inset-bottom));
   background: radial-gradient(ellipse at center, #2a1a0c, #0a0709 80%); transition: opacity .5s ease; }
 .loading-screen.done { opacity: 0; pointer-events: none; }
 .loading-bar { width: min(24rem, 70vw); }

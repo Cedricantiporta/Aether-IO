@@ -2,7 +2,7 @@
 // Zustand store — META / RPG state only (inventory, stats, panels, progression).
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
-import { GOLD_SCALE } from './constants';
+import { GOLD_SCALE, caveGoldPrice } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
 import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts } from './engine/runCards';
@@ -163,7 +163,10 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
-export const shopPrice = (item: { id: string; price: number; type?: string }): number => Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
+export const shopPrice = (item: { id: string; price: number; type?: string }): number => {
+  const p = Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
+  return item.id === 'tool_pickaxe' ? caveGoldPrice(p, useGameStore.getState().level) : p;   // (the Mining Pickaxe scales with hero level)
+};
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   COMMON: COLORS.rarityCommon, UNCOMMON: COLORS.rarityUncommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,

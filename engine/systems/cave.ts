@@ -1,6 +1,6 @@
 // ============================================================================
 // Crystal cave (village area 'CAVE'): Floor 1 is the persistent hub chamber (exit to the town, the old miner Grit and his
-// lantern bench, 8 veins that regrow 24 h after the last one is taken). Its stairs down stay LOCKED until every vein on the
+// lantern bench, 2-5 veins (rolled each regrow) that regrow 24 h after the last one is taken). Its stairs down stay LOCKED until every vein on the
 // floor is harvested; the same rule holds on every floor below.
 //
 // TRIPS: going down from Floor 1 starts a trip. Floors 2+ are generated fresh for every trip (seeded sizes, twin chambers,
@@ -20,7 +20,7 @@ import { world, MAX_CRATES, CAM_PITCH0 } from '../world';
 import {
   caveLayout, forgetCaveLayouts, CAVE_MAX_FLOOR, CAVE_GOODS, LANTERN_BASE, LANTERN_STEP, LANTERN_MAX_LV, LANTERN_COST, REFILL_PRICE, FLASK_OIL,
   FLASK_FLOOR_CHANCE, FLASK_DROP_CHANCE, HIDDEN_LADDER_CHANCE, MONSTER_FLOOR, RARE_NAME, RARE_COLOR, bonusShards, caveMonsterCount, depthOf,
-  goldVeinMul, rareHardness, rareVeinChance, rollDepthRarity, rollRareTier, tradeGoodChance, veinHardness, type CaveNodeKind,
+  goldVeinMul, rollVeinCount, setFloor1Count, rareHardness, rareVeinChance, rollDepthRarity, rollRareTier, tradeGoodChance, veinHardness, type CaveNodeKind,
 } from '../caveData';
 import { CRATE_HP, HARVEST_NAME, installInterior } from '../mapgen';
 import { useGameStore } from '../../store';
@@ -43,24 +43,27 @@ const SAVE_KEY = 'aether-survivor-cave-v2';
 const OLD_KEY = 'aether-survivor-cave-harvest-v1';
 const RARITIES: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Floor 1's veins (24 h regrow after the last one) + the lantern's oil and the day of the last free refill. */
-interface CaveSave { broken: number[]; rare: number[]; clearedAt: number; oil: number; freeDay: string }
-let save: CaveSave = { broken: [], rare: [], clearedAt: 0, oil: -1, freeDay: '' };
+interface CaveSave { broken: number[]; rare: number[]; clearedAt: number; oil: number; freeDay: string; n: number }
+let save: CaveSave = { broken: [], rare: [], clearedAt: 0, oil: -1, freeDay: '', n: 3 };
 let loaded = false;
 const num = (x: unknown, d = 0): number => (typeof x === 'number' && isFinite(x) ? x : d);
 const today = (): string => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
-const F1N = caveLayout(1).nodes.length;
+const f1n = (): number => caveLayout(1).nodes.length;   // (2-5, rolled again at every regrow)
 
 function load(): void {
   loaded = true;
-  save = { broken: [], rare: new Array(F1N).fill(0), clearedAt: 0, oil: -1, freeDay: '' };
+  save = { broken: [], rare: [], clearedAt: 0, oil: -1, freeDay: '', n: rollVeinCount(Math.random()) };
+  setFloor1Count(save.n); save.rare = new Array(f1n()).fill(0);
   try {
     if (typeof localStorage === 'undefined') return;
     const raw = localStorage.getItem(SAVE_KEY);
-    const ok = (i: unknown) => typeof i === 'number' && i >= 0 && i < F1N && (i | 0) === i;
+    const ok = (i: unknown) => typeof i === 'number' && i >= 0 && i < f1n() && (i | 0) === i;
     if (raw) {
       const s = JSON.parse(raw) ?? {};
+      // (older saves had 8 veins: keep a valid 2-5 count; indices past the new count are dropped)
+      save.n = typeof s.n === 'number' && s.n >= 2 && s.n <= 5 ? Math.floor(s.n) : save.n; setFloor1Count(save.n);
       save.broken = Array.isArray(s.broken) ? [...new Set<number>(s.broken.filter(ok))] : [];
-      save.rare = Array.from({ length: F1N }, (_, i) => Math.max(0, Math.min(4, Math.floor(num(Array.isArray(s.rare) ? s.rare[i] : 0)))));
+      save.rare = Array.from({ length: f1n() }, (_, i) => Math.max(0, Math.min(4, Math.floor(num(Array.isArray(s.rare) ? s.rare[i] : 0)))));
       save.clearedAt = Math.max(0, num(s.clearedAt));
       save.oil = num(s.oil, -1);
       save.freeDay = typeof s.freeDay === 'string' ? s.freeDay.slice(0, 12) : '';
@@ -97,11 +100,12 @@ const v3 = new Vector3();
 /** Monster slots of this floor (for oil-flask drops) + their last positions. */
 const mons = new Int16Array(16).fill(-1), monX = new Float32Array(16), monZ = new Float32Array(16);
 
-function floorState(f: number): { broken: number[]; rare: number[]; ladder: number } {
+function floorState(f: number, allowRegrow = false): { broken: number[]; rare: number[]; ladder: number } {
   if (f === 1) {
-    if (save.clearedAt > 0 && Date.now() - save.clearedAt >= DAY_MS) {   // Floor 1 regrows (fresh rare-vein rolls)
+    if (allowRegrow && save.clearedAt > 0 && Date.now() - save.clearedAt >= DAY_MS) {   // Floor 1 regrows (fresh rare-vein rolls)
       save.broken = []; save.clearedAt = 0;
-      save.rare = Array.from({ length: F1N }, () => (Math.random() < rareVeinChance(1) ? rollRareTier(1, Math.random()) : 0));
+      save.n = rollVeinCount(Math.random()); setFloor1Count(save.n);
+      save.rare = Array.from({ length: f1n() }, () => (Math.random() < rareVeinChance(1) ? rollRareTier(1, Math.random()) : 0));
       persist();
     }
     return { broken: save.broken, rare: save.rare, ladder: -1 };
@@ -136,7 +140,7 @@ export const debugTripSeed = (): number => tripSeed;
 export function debugSetLadder(i: number): void { const cv = world.village.cave; if (cv.floor < 2) return; floorState(cv.floor).ladder = i; cv.ladder = i; cv.ladderFound = false; }
 
 function placeFloor(f: number): void {
-  const cv = world.village.cave, L = caveLayout(f, cv.seed), s = floorState(f);
+  const cv = world.village.cave, s = floorState(f, true), L = caveLayout(f, cv.seed);   // (Floor 1 regrows here, before the layout is read)
   for (const c of world.crates) { c.active = false; c.respawnT = 0; c.hitFlash = 0; }
   cv.rare.fill(0);
   L.nodes.forEach((n, i) => {
@@ -451,7 +455,7 @@ export function refillLantern(): boolean {
   if (cv.oil >= cv.oilMax - 0.5) { st.addNotification('The lantern is already full.', '#ffd08a', 'SYSTEM'); return false; }
   if (save.freeDay !== today()) save.freeDay = today();
   else {
-    const price = REFILL_PRICE(lanternLevel());
+    const price = REFILL_PRICE(lanternLevel(), st.level);
     if (st.gold < price) { st.addNotification(`Not enough gold (${price.toLocaleString()} needed).`, '#ff7a7a', 'WARNING'); return false; }
     useGameStore.setState({ gold: st.gold - price }); events.emit('purchase', {}); 
   }

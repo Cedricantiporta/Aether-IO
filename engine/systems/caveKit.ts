@@ -6,7 +6,7 @@
 // The carried flasks are a small localStorage save (like the fishing rod / cave saves), so the store contract stays as is.
 // ============================================================================
 import { useGameStore } from '../../store';
-import { GOLD_SCALE, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
+import { caveGoldPrice, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
 import { STORY } from '../../story';
 import { NPC_QUESTS } from '../../npcQuests';
@@ -19,9 +19,12 @@ const KEY = 'aether-survivor-cave-kit-v1';
 export const SPARE_FLASK_OIL = 30;
 /** Most flasks the hero can carry (buying stops there; quest rewards may top it up to MAX_SPARE + 3). */
 export const MAX_SPARE = 6;
-export const FLASK_PRICE = 600 * GOLD_SCALE;   // (owner: way more expensive, was 60)
+/** Gold prices scale with the hero level (`caveGoldPrice`): a flask ~ one adventure room's gold, the kit saves a little. */
+export const FLASK_BASE = 300, KIT_BASE = 750;
+export const flaskPrice = (level: number): number => caveGoldPrice(FLASK_BASE, level);
 /** Miner's Kit: KIT_FLASKS flasks for less. */
-export const KIT_FLASKS = 3, KIT_PRICE = 1500 * GOLD_SCALE;   // (was 150)
+export const KIT_FLASKS = 3;
+export const kitPrice = (level: number): number => caveGoldPrice(KIT_BASE, level);
 /** The camp pays this much more than the usual sell price for ore and crystals. */
 export const MINE_PREMIUM = 1.1;
 /** Loot the camp buys (harvest ore / gems + the cave's deep trade goods). */

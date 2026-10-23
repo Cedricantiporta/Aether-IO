@@ -8,6 +8,8 @@
 //    installed by engine/systems/village.ts (switchArea).
 // ============================================================================
 
+import { caveGoldPrice } from '../constants';
+
 // ------------------------------------------------------------------ town side ---
 /** Cove carved out of the forest edge east of the ring path: the island edge radius bulges by `depth` * sin^2 between the
  *  angles a0..a1 (atan2(z, x) around the town centre), i.e. a wide rounded bay about x 56..74, z -2..30 that holds the
@@ -78,7 +80,7 @@ export const inCampYard = (x: number, z: number, m = 0): boolean => ((x - MINE_C
 // The cave has FLOORS. Floor 1 is the hand-made chamber below (exit to the town at the south end, the miner Grit and his
 // lantern bench by the entrance, the stairs down at the north end). Deeper floors are seeded variations (`caveLayout(n)`):
 // same kind of lumpy oval, the stairs you arrived by at the south end (they take you straight back up to Floor 1), the
-// stairs down at the north end, 6-8 veins, crystals tinted by depth. Every layout is centred on the world origin.
+// stairs down at the north end, 2-5 veins, crystals tinted by depth. Every layout is centred on the world origin.
 
 export type CaveNodeKind = 'CRYSTAL' | 'ORE' | 'GOLD_VEIN';
 export interface CaveNode { kind: CaveNodeKind; x: number; z: number }
@@ -142,18 +144,23 @@ function colliders(L: Omit<CaveLayout, 'colliders'>): [number, number, number][]
   return c;
 }
 
-function floorOne(): CaveLayout {
+/** Harvestable nodes per floor: 2..5, weighted 2: 35%, 3: 35%, 4: 20%, 5: 10% (`u` = uniform [0, 1)). */
+export function rollVeinCount(u: number): number { return u < 0.35 ? 2 : u < 0.7 ? 3 : u < 0.9 ? 4 : 5; }
+/** Order in which Floor 1's 8 hand-placed vein slots are used (first n of them; a mix of gold / ore / crystal, well spaced). */
+const F1_SLOT_ORDER = [4, 0, 5, 2, 1];
+
+function floorOne(count = 3): CaveLayout {
   const radius = caveRadius, S = radius(Math.PI / 2), N = radius(-Math.PI / 2);
   const tint = CAVE_TINTS[0];
   const L: Omit<CaveLayout, 'colliders'> = {
     floor: 1, rx: CAVE.rx, rz: CAVE.rz, ph: [0.7, 2.1, 0.3], radius, hazard: 'NONE', pools: [], twin: false,
     exit: { x: 0, z: S - 1.4, r: 4.2 }, spawn: { x: 0, z: S - 4.2 }, down: { x: 0, z: -N + 3.4, r: 4.2 },
-    nodes: [
+    nodes: ([
       // pulled in toward the middle (spaced ~4-6 apart) so none hide against the cave walls
       { kind: 'ORE', x: -8, z: 1 }, { kind: 'CRYSTAL', x: -6.5, z: -6.5 }, { kind: 'ORE', x: -2, z: -10 },
       { kind: 'CRYSTAL', x: 3.5, z: -9.5 }, { kind: 'GOLD_VEIN', x: 7.5, z: -5.5 }, { kind: 'CRYSTAL', x: 8.5, z: 1.5 },
       { kind: 'ORE', x: 7, z: 7 }, { kind: 'GOLD_VEIN', x: -1, z: -3 },
-    ],
+    ] as CaveNode[]).filter((_, i) => F1_SLOT_ORDER.slice(0, count).includes(i)),
     stalagmites: [
       [4.2, 0.5, 1.3], [5.6, -1.2, 0.9], [3.4, 2.1, 0.8], [-12.4, 5.2, 1.1], [12.6, 3.8, 1.0], [-5.6, -16, 1.2], [6.4, -15.6, 1.0],
       [-11.4, -6.8, 1.1], [12.4, -6.2, 0.9], [-12, 8, 0.7], [7.8, 13.4, 0.9], [-8.2, 13.6, 1.0],
@@ -186,7 +193,7 @@ function floorDeep(floor: number, seed: number): CaveLayout {
   const free = (x: number, z: number, m: number) => keep.every(([kx, kz, kr]) => (x - kx) ** 2 + (z - kz) ** 2 > (kr + m) ** 2);
   const at = (f0: number, f1: number): [number, number] => { const a = r() * Math.PI * 2, k = f0 + r() * (f1 - f0), rr = radius(a) * k; return [Math.cos(a) * rr, Math.sin(a) * rr]; };
   const nodes: CaveNode[] = [];
-  const nN = Math.min(12, Math.round((6 + Math.floor(r() * 3)) * Math.pow(size * (twin ? 1.3 : 1), 0.8)));
+  const nN = rollVeinCount(r());
   const kinds: CaveNodeKind[] = ['ORE', 'CRYSTAL', 'CRYSTAL', 'ORE', 'GOLD_VEIN'];
   for (let g = 0; g < 400 && nodes.length < nN; g++) {
     const [x, z] = at(0.12, 0.6);   // toward the middle (never tucked against the walls), still spaced out
@@ -234,7 +241,9 @@ function floorDeep(floor: number, seed: number): CaveLayout {
 }
 
 const layouts = new Map<string, CaveLayout>();
-const F1_LAYOUT = floorOne();
+let F1_LAYOUT = floorOne();
+/** Floor 1 shows `n` (2..5) of its vein slots; the cave save picks n again every regrow. */
+export function setFloor1Count(n: number): void { const c = Math.max(2, Math.min(5, n | 0)); if (c !== F1_LAYOUT.nodes.length) F1_LAYOUT = floorOne(c); }
 /** The layout of cave floor `floor` (1 = the fixed entrance chamber; deeper floors depend on the trip `seed`), cached. */
 export function caveLayout(floor: number, seed = 0): CaveLayout {
   const f = Math.max(1, Math.min(CAVE_MAX_FLOOR, floor | 0));
@@ -309,7 +318,8 @@ export const LANTERN_COST: { gems: number; shard: 'COMMON' | 'RARE' | 'EPIC' | '
   { gems: 300, shard: 'COMMON', shards: 90 }, { gems: 600, shard: 'RARE', shards: 60 }, { gems: 1100, shard: 'RARE', shards: 120 },
   { gems: 1800, shard: 'EPIC', shards: 45 }, { gems: 2700, shard: 'EPIC', shards: 90 }, { gems: 4200, shard: 'LEGENDARY', shards: 24 },
 ];
-export const REFILL_PRICE = (lv: number): number => 6000 + 4000 * lv;   // (was 1500 + 1000 x lv)
+/** Gold for a refill after the free one: (400 + 200 x lantern level) x (1 + 0.04 x (hero level - 1)). */
+export const REFILL_PRICE = (lv: number, heroLevel = 1): number => caveGoldPrice(400 + 200 * lv, heroLevel);
 export const FLASK_OIL = 20;
 /** Chance a deep floor hides an oil flask; chance a cave monster drops one. */
 export const FLASK_FLOOR_CHANCE = 0.45, FLASK_DROP_CHANCE = 0.12;
