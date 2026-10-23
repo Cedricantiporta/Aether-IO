@@ -340,6 +340,7 @@ export function autoCast(): void {
   for (let i = 0; i < order.length; i++) {
     const s = order[i];
     if ((st.skillLevels[s] ?? 0) <= 0 || p.cd[s] > 0 || p.mana < st.getManaCost(s)) continue;
+    if (st.settings.autoOff?.includes(s)) continue;   // (owner) this skill's AUTO pill is off
     if (st.hero === 'NECROMANCER' && s === 's3' && !anyMinion()) continue;
     castActive(i); return;
   }

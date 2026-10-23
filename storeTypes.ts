@@ -54,6 +54,8 @@ export interface Settings {
   /** Hard mode (Settings): runs started while it is on use the HARD difficulty (tougher, more enemies, better loot). */
   hardMode?: boolean;
   autoSkills: boolean;    // auto-cast skills 1/2/3 + ult at the auto-target (dash stays manual)
+  /** (owner) skills the AUTO bots leave alone ('s1' | 's2' | 's3' | 'ult'): the small AUTO pill above each skill slot */
+  autoOff?: string[];
   autoLootGear: 'OFF' | 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';   // lowest gear rarity that flies in by itself (default UNCOMMON)
   autoLootMaterials: boolean;  // monster loot, shards, potions fly in at any rarity
   autoLootRange: 'NEAR' | 'FAR';  // NEAR: walk up to items; FAR: the full magnet radius pulls them

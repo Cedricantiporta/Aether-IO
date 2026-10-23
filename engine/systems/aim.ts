@@ -272,13 +272,14 @@ function autoSkills(): void {
   if (autoState.next > world.time + 2) autoState.next = 0;   // (stale stamp from before a world.time reset, e.g. a town visit)
   if (!p.alive || world.time < autoState.next) return;
   autoState.next = world.time + 0.25;
-  if (isCastable('ult')) {
+  const off = st.settings.autoOff;
+  if (isCastable('ult') && !off?.includes('ult')) {
     const boss = findNearestEnemy(p.pos.x, p.pos.z, 24);
     if ((boss && boss.boss) || countNear(14) >= 6) { fire('ult', 'AUTO'); autoState.next = world.time + 1.2; return; }
   }
   for (let k = 0; k < AUTO_IDS.length; k++) {
     const id = AUTO_IDS[(autoState.i + k) % AUTO_IDS.length];
-    if (!isCastable(id)) continue;
+    if (!isCastable(id) || off?.includes(ACTIVE_ORDER[st.hero][(autoState.i + k) % AUTO_IDS.length])) continue;   // (the AUTO pills store slot names)
     const reach = aimable(id) ? 20 : 7; // self-centred skills need enemies close
     if (!findNearestEnemy(p.pos.x, p.pos.z, reach)) continue;
     fire(id, 'AUTO');

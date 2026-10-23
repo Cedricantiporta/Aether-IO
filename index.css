@@ -3788,3 +3788,11 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .bb-slim .bb-shield { height: .34rem; }
 .bb-shield-fill::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--rib, 10px) - 2px), rgba(5, 20, 34, .85) calc(var(--rib, 10px) - 2px) var(--rib, 10px)); }
 .bb-shield::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(143, 220, 255, .12) 8px 10px); }
+/* (owner) per-skill AUTO toggle above each skill slot */
+.auto-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+.auto-pill { position: absolute; top: -1.15rem; left: 50%; transform: translateX(-50%); z-index: 5; padding: 1px 6px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .06em; line-height: 1.4;
+  color: #0f3a1c; background: linear-gradient(#b8f5c6, #5fd38a); box-shadow: 0 2px 0 #2f8a52, 0 2px 6px rgba(0,0,0,.35); cursor: pointer; }
+.auto-pill.off { color: #e9e4da; background: linear-gradient(#6b6660, #4a4640); box-shadow: 0 2px 0 #2c2925; text-decoration: line-through; opacity: .85; }
+/* (owner) important action buttons (Bulk sell etc.) get a solid, readable container */
+.shop-foot .rpg-btn, .rpg-btn.btn-solid { background: linear-gradient(180deg, #ffe7a6, #e8b545) !important; color: #3a2608 !important;
+  box-shadow: 0 3px 0 #a6741e, 0 6px 12px rgba(0, 0, 0, .35) !important; padding: .45rem 1.15rem !important; min-height: 2.2rem; }
