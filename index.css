@@ -3612,3 +3612,53 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 
 /* (owner) showcase: one short instruction pill at a time, no story text */
 .sc-tip { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: .55rem 1.3rem; border-radius: 999px; background: rgba(255, 252, 240, .92); color: #3a3226; font-weight: 700; font-size: clamp(.9rem, 1.8vw, 1.15rem); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); transition: opacity .5s ease; white-space: nowrap; }
+
+/* ============================================================================
+   Anime tarot reward cards (ui/screens/WaveReward.tsx): rarity frame (1:2, transparent window + ribbon) over a tall picture.
+   ========================================================================== */
+.rw-card.tarot {
+  flex: 1 1 0; min-width: 4.6rem; height: auto; aspect-ratio: auto; padding: 0; gap: 6px; justify-content: flex-start; overflow: visible; border-radius: 0;
+  max-width: min(15rem, calc((100dvh - 14.5rem - var(--sat) - var(--sab)) / 2)); container-type: inline-size;
+  background: none !important; box-shadow: none !important; transition: filter .2s;
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .5)) drop-shadow(0 0 5px color-mix(in srgb, var(--rc) 35%, transparent));
+}
+.rw-card.tarot::before, .rw-card.tarot::after { display: none !important; }
+.rw-card.tarot:hover, .rw-card.tarot:focus-visible, .rw-card.tarot[data-arcana='1'] { box-shadow: none !important; }
+.rw-card.tarot[data-arcana='1'] { filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .5)) drop-shadow(0 0 9px color-mix(in srgb, var(--rc) 60%, transparent)); }
+.rw-card.tarot:hover, .rw-card.tarot:focus-visible { outline: none; filter: drop-shadow(0 16px 18px rgba(0, 0, 0, .55)) drop-shadow(0 0 16px var(--rc)); }
+.rw-card.tarot .tc { position: relative; display: block; width: 100%; aspect-ratio: 1 / 2; container-type: inline-size; }
+.rw-card.tarot .tc-win { position: absolute; left: 15.5%; right: 15.5%; top: 12%; bottom: 13%; overflow: hidden; background: #1b1530; display: grid; place-items: center; }
+.rw-card.tarot .tc-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; pointer-events: none; }
+.rw-card.tarot .tc-pic.bg { object-position: 50% 50%; }
+.rw-card.tarot .tc-glyph { position: relative; width: 78%; height: auto; aspect-ratio: 1; overflow: visible; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--rc) 70%, transparent)) drop-shadow(0 2px 2px rgba(0, 0, 0, .5)); }
+.rw-card.tarot .tc-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.rw-card.tarot .tc-name { position: absolute; left: 22%; right: 22%; top: 82.4%; height: 7.6%; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden;
+  font-family: 'Cinzel', Georgia, 'Times New Roman', serif; font-weight: 800; font-size: 6.3cqw; letter-spacing: .01em; line-height: 1; color: #3b2a4a; text-shadow: 0 1px 0 rgba(255, 255, 255, .55); }
+.rw-card.tarot .tc-name.long { font-size: 5cqw; letter-spacing: 0; }
+.rw-card.tarot .tc-num { position: absolute; left: 0; right: 0; top: 13%; text-align: center; font-family: 'Cinzel', Georgia, serif; font-weight: 800; font-size: 4.6cqw; letter-spacing: .2em; padding-left: .2em; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px rgba(0, 0, 0, .7); }
+.rw-card.tarot .rw-num { top: 1.6%; left: 4%; min-width: 1.15rem; height: 1.15rem; display: grid; place-items: center; border-radius: 999px; background: rgba(20, 14, 34, .7); color: #fff; font-size: .7rem; z-index: 3; }
+.rw-card.tarot .rw-body { flex: 0 0 auto; padding: 0 2px; }
+.rw-card.tarot .rw-rar { position: static; font-size: 10px; line-height: 1; }
+.rw-card.tarot .rw-title { display: none; }
+.rw-card.tarot .rw-desc { padding: 0 2px; font-size: 12px; text-shadow: 0 1px 2px #000; overflow-y: visible; }
+@container (max-width: 150px) { .rw-card.tarot .rw-title { display: flex; font-size: 11px; } .rw-card.tarot .rw-desc { font-size: 11px; } }
+@media (max-width: 599px) and (orientation: portrait) {
+  .rw-cards { gap: 6px; }
+  .rw-card.tarot { flex: 0 0 calc(33.333% - 4px); max-width: none; min-width: 0; }
+}
+
+/* Summon result cards: same anime tarot frame as the reward picker (rarity frame over the matching backdrop, item in the window, name on the ribbon). */
+.sm-card { width: 9rem; height: 18rem; }
+.sm-cards.many .sm-card { width: 6.6rem; height: 13.2rem; }
+.compact .sm-cards.many .sm-card { width: 5.2rem; height: 10.4rem; }
+.sm-face.tarot { padding: 0 !important; background: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible; container-type: inline-size; display: block; }
+.sm-card.open .sm-face.tarot { filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .5)); }
+.sm-card.open.sm-epic .sm-face.tarot { filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .5)) drop-shadow(0 0 7px var(--rc)); }
+.sm-card.open.sm-legendary .sm-face.tarot, .sm-card.open.sm-mythic .sm-face.tarot { filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .5)) drop-shadow(0 0 12px var(--rc)); }
+.sm-face.tarot .sm-window { position: absolute; left: 15.5%; right: 15.5%; top: 12%; bottom: 13%; width: auto; margin: 0; border-radius: 0 !important; overflow: hidden; background: #1b1530 !important; display: grid; place-items: center; }
+.sm-face.tarot .sm-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.sm-face.tarot .sm-item { position: relative; display: grid; place-items: center; margin-top: -8%; }
+.sm-face.tarot .sm-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.sm-face.tarot .sm-name { position: absolute; left: 22%; right: 22%; top: 82.4%; height: 7.6%; min-height: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden;
+  font-size: 6cqw; line-height: 1; font-weight: 800; text-transform: none; letter-spacing: 0; color: #3b2a4a !important; text-shadow: 0 1px 0 rgba(255, 255, 255, .55); }
+.sm-cards.many .sm-face.tarot .sm-name { font-size: 5.4cqw; }

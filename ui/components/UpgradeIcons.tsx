@@ -1,6 +1,6 @@
 import React from 'react';
 import { PaintedIcon } from './SkillIcons';
-import type { Upgrade, UpgradeType, SpecialId } from '../../types';
+import type { Upgrade, UpgradeType, SpecialId, Rarity } from '../../types';
 
 /** Painted emblems for every UpgradeType (64x64, transparent bg) — shown inside the glowing reward-card medallion. */
 const S = '#0d0703';
@@ -198,6 +198,20 @@ export const cardArtKey = (u: Pick<Upgrade, 'type' | 'special'>): string | null 
   return CARD_ART.has(k) ? k : null;
 };
 export const cardArtUrl = (k: string): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/${k}.webp`;
+/** Anime tarot cards: rarity frame (public/art/cards/frame_<RARITY>.webp, transparent picture window + empty ribbon) over a tall
+ *  picture (public/art/cards/tall/<KEY>.webp) or, without one, a rarity backdrop + the glyph. The small square art above is separate. */
+export const TALL_ART = new Set([...CARD_ART, 'ULT_FILL', 'AEGIS', 'DEATH_DEFIANCE', 'AFFLICT', 'SUNDER', 'GUARDIAN', 'SLAYER', 'ALCHEMIST',
+  'EXECUTE', 'FIRST_STRIKE', 'SECOND_WIND', 'GOLD_RUSH', 'LINGER']);
+export const tallArtKey = (u: Pick<Upgrade, 'type' | 'special'>): string | null => {
+  const k = (u.special as string | undefined) ?? u.type;
+  return TALL_ART.has(k) ? k : null;
+};
+const artBase = (): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/`;
+export const tallArtUrl = (k: string): string => `${artBase()}tall/${k}.webp`;
+export const cardFrameUrl = (r: Rarity): string => `${artBase()}frame_${r}.webp`;
+export const cardBackdropUrl = (r: Rarity): string => `${artBase()}tall/bg_${r === 'MYTHIC' ? 'MYTHIC' : r === 'LEGENDARY' || r === 'EPIC' ? 'LEGENDARY' : 'COMMON'}.webp`;
+export const RARITIES_ALL: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+export const preloadImages = (urls: string[]): void => { for (const u of urls) { const im = new Image(); im.decoding = 'async'; im.src = u; } };
 export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
   const ck = cardArtKey(upgrade);
   if (ck) return <img src={cardArtUrl(ck)} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'cover', borderRadius: 8 }} />;

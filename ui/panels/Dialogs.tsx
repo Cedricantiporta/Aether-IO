@@ -10,6 +10,7 @@ import { Button } from '../components/Button';
 import { ItemSlot } from '../components/ItemSlot';
 import { RARITY_TEXT, isHighValue, sellPrice, RARITY_RANK, RARITY_COLOR, isGear } from '../lib/game';
 import type { Item } from '../../types';
+import { cardFrameUrl, cardBackdropUrl, RARITIES_ALL, preloadImages } from '../components/UpgradeIcons';
 
 export const SellDialog: React.FC = () => {
   const item = useUiStore((s) => s.sellItem);
@@ -129,6 +130,7 @@ export const SummonReveal: React.FC = () => {
     const t2 = setTimeout(() => setDealt(true), 1500 + results.length * 60 + 750);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [results, round]);
+  useEffect(() => { if (results) preloadImages([...RARITIES_ALL.map(cardFrameUrl), ...RARITIES_ALL.map(cardBackdropUrl)]); }, [results]);
   const revealAll = () => setFlipped((f) => f.map(() => true));
   if (!results) return null;
   const gem = altar === 'GEM';
@@ -163,13 +165,10 @@ export const SummonReveal: React.FC = () => {
                   onClick={() => setFlipped((f) => { const n = f.slice(); n[i] = true; return n; })} data-testid="summon-card">
                   <span className="sm-inner">
                     <span className="sm-back"><i className="sm-back-sigil">✦</i><b>{ROMAN_N[i] ?? i + 1}</b></span>
-                    <span className="sm-face">
-                      {rk >= 3 && <span className="sm-aura" />}
-                      {rk >= 5 && <span className="sm-rays" />}
-                      <span className="sm-roman">{ROMAN_N[i] ?? i + 1}</span>
-                      <span className="sm-window"><ItemSlot item={it} size={many ? '3.6rem' : '5.6rem'} iconSize="82%" tooltip="buy" compare={false} /></span>
-                      <span className="sm-name" style={{ color: RARITY_TEXT[it.rarity] }}>{it.name}</span>
-                      <span className="stars sm" style={{ ['--n' as any]: rk, ['--rc' as any]: RARITY_COLOR[it.rarity] }} />
+                    <span className="sm-face tarot">
+                      <span className="sm-window"><img className="sm-bg" src={cardBackdropUrl(it.rarity)} alt="" draggable={false} decoding="async" /><span className="sm-item"><ItemSlot item={it} size={many ? '3.2rem' : '5rem'} iconSize="82%" tooltip="buy" compare={false} /></span></span>
+                      <img className="sm-frame" src={cardFrameUrl(it.rarity)} alt="" draggable={false} decoding="async" />
+                      <span className="sm-name">{it.name}</span>
                     </span>
                   </span>
                 </motion.button>
