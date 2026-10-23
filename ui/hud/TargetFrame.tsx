@@ -8,6 +8,7 @@ import type { Enemy } from '../../engine/types';
 import { clearTarget } from '../../engine/systems/target';
 import { currentTarget } from '../../engine/systems/combat';
 import { useRaf } from '../hooks/useRaf';
+import { StatusIcon } from '../components/StatusIcon';
 import { traitList } from '../../engine/enemyTraits';
 
 const AFFIX_NAME: Record<string, string> = { HASTED: 'Hasted', VAMPIRIC: 'Vampiric', FROZEN: 'Frozen', VOLATILE: 'Volatile', SHIELDED: 'Shielded' };
@@ -86,7 +87,7 @@ export const TargetFrame: React.FC<{ docked?: boolean }> = ({ docked }) => {
       <div className="tf-bot">
         <span className="tf-icons">
           {STATUSES.map((d, i) => (
-            <i key={d.id} ref={(el) => { icons.current[i] = el; }} data-on="0" className="tf-ic" title={d.label} style={{ color: d.color }}>{d.icon}</i>
+            <i key={d.id} ref={(el) => { icons.current[i] = el; }} data-on="0" className="tf-ic" title={d.label} style={{ color: d.color }}><StatusIcon type={d.id} size="100%" fallback={d.icon} /></i>
           ))}
         </span>
         <span ref={shield} className="tf-sh" />

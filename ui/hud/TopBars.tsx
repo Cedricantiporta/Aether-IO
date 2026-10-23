@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { ELIXIRS, ELIXIR_IDS, elixirItem, type ElixirId } from '../../elixirs';
 import { ItemArt } from '../components/ItemArt';
+import { StatusIcon } from '../components/StatusIcon';
 import type { LucideIcon } from '../components/GoldIcons';
 import { motion } from 'framer-motion';
 import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from '../components/GoldIcons';
@@ -35,7 +36,7 @@ export const HERO_ICON: Record<HeroClass, LucideIcon> = { ARCHER: Crosshair, WIZ
 
 const BuffSlot: React.FC<{ id: string; icon: React.ReactNode; label: string; color: string; refs: React.MutableRefObject<Record<string, HTMLElement | null>> }> = ({ id, icon, label, color, refs }) => (
   <div ref={(el) => { refs.current[id] = el; }} className="buff-slot" data-on="0" style={{ color }} {...tip(<SimpleTip title={label} sub="Active buff" color={color} />)}>
-    <span data-ic style={{ display: 'grid' }}>{icon}</span><span data-t />
+    <span data-ic style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center' }}><StatusIcon type={id} size="88%" fallback={icon} /></span><span data-t />
   </div>
 );
 
@@ -72,7 +73,7 @@ const DebuffRow: React.FC = () => {
     <div className="debuff-row" data-testid="debuff-row">
       {DEBUFFS.map((d) => (
         <div key={d.id} ref={(el) => { refs.current[d.id] = el; }} className="debuff-slot" data-on="0" data-debuff={d.id} style={{ ['--dc' as any]: d.color }} {...tip(<SimpleTip title={d.label} sub="Debuff" color={d.color} body={d.body} />)}>
-          <span style={{ display: 'grid' }}>{d.icon}</span><span data-t />
+          <span style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center' }}><StatusIcon type={d.id} size="100%" fallback={d.icon} /></span><span data-t />
         </div>
       ))}
     </div>

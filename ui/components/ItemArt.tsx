@@ -554,11 +554,56 @@ const Art: React.FC<{ k: string; c: string; size: number | string }> = React.mem
 ));
 Art.displayName = 'ItemArt';
 
+const GEAR_TYPES = new Set(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY']);
+/** Painted per-item gear icons (public/art/gear/<slug>.webp). slug = base item name, lowercase, apostrophes dropped, spaces -> '_'.
+ *  Only listed slugs are requested (no 404s); anything else keeps the generic SVG art. Add a slug here when you add a file. */
+const GEAR_PAINT = new Set([
+  'hunters_bow', 'greenwood_bow', 'hornet_recurve', 'stormpiercer', 'skyreaver', 'starfall_arc', 'twig_wand', 'mossy_staff',
+  'sages_staff', 'tidecaller', 'moonlit_scepter', 'astral_scepter', 'woodcutter_axe', 'iron_hatchet', 'battle_axe',
+  'bearded_greataxe', 'juggernaut_axe', 'colossus_cleaver', 'militia_sword', 'footmans_blade', 'knights_longsword',
+  'oathkeeper', 'lionheart', 'excalibur', 'bone_wand', 'mourners_staff', 'ossuary_staff', 'soulreaper', 'lichbane_scepter',
+  'crown_of_bones', 'shortbow', 'squire_sword', 'bone_crown', 'grave_shroud', 'grave_grips', 'bone_treads', 'copper_band',
+  'jade_ring', 'silver_signet', 'sapphire_loop', 'sunfire_ring', 'ring_of_eternity', 'bone_charm', 'clover_amulet',
+  'moonstone_pendant', 'wardstone_amulet', 'phoenix_locket', 'heart_of_aether', 'gale_longbow', 'gale_hood',
+  'archmages_scepter', 'archmages_circlet', 'warlords_greataxe', 'warlords_helm', 'oathbound_blade', 'paladin_greathelm',
+  'shadowstep_cowl', 'shadowstep_leathers', 'dragonbone_visage', 'dragonbone_hauberk', 'sovereigns_diadem',
+  'sovereigns_mantle', 'sovereigns_orb', 'dragonbone_fang',
+]);
+const TIER_PREFIX = /^(Worn|Sturdy|Fine|Masterwork|Heroic|Ascendant)\s+/;
+const GEAR_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/gear/';
+/** Item.name is the stable base name (grade / +N / affixes live in separate fields); strip a stray "+N" or grade word defensively. */
+export function gearSlug(item: Item): string | undefined {
+  if (!GEAR_TYPES.has(item.type)) return undefined;
+  const base = item.name.replace(/\s*\+\d+\s*$/, '').replace(/^(low|high)\s+/i, '');
+  const slug = (n: string) => n.toLowerCase().replace(/['\u2019]/g, '').trim().replace(/\s+/g, '_');
+  const s = slug(base);
+  if (GEAR_PAINT.has(s)) return s;
+  const t = slug(base.replace(TIER_PREFIX, '')); // class wear carries a tier word: "Worn Bone Crown" -> bone_crown
+  if (GEAR_PAINT.has(t)) return t;
+  // no own painting yet: borrow the closest painted look by kind so weapons / rings never fall back to the old flat art
+  const n = base.toLowerCase();
+  for (const [re, k] of GEAR_KIND) if (re.test(n)) return k;
+  return undefined;
+}
+const GEAR_KIND: [RegExp, string][] = [
+  [/longbow|\bbow\b|\barc\b/, 'hunters_bow'], [/scepter|sceptre/, 'astral_scepter'], [/staff|wand|rod\b/, 'sages_staff'],
+  [/greataxe|cleaver|crusher/, 'bearded_greataxe'], [/\baxe\b|hatchet/, 'battle_axe'], [/greatsword|\bsword\b|blade/, 'knights_longsword'],
+  [/locket/, 'phoenix_locket'], [/\bring\b|\bband\b|signet|loop/, 'copper_band'], [/amulet|pendant|charm/, 'moonstone_pendant'],
+];
+export const GearImg: React.FC<{ slug: string; size: number | string }> = React.memo(({ slug, size }) => (
+  <img src={`${GEAR_URL}${slug}.webp`} alt="" draggable={false} decoding="async"
+    style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} />
+));
+GearImg.displayName = 'GearImg';
+
 const SHARD_PAINT = new Set(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']);
 /** Painted icon for an item. `size` is px or a css length / percentage. */
-export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => (
+export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => {
+  const gs = gearSlug(item);
+  return gs ? <GearImg slug={gs} size={size} /> : (
   item.type === 'SHARD' ? (SHARD_PAINT.has(item.rarity) ? <PaintImg file={`shard_${item.rarity}`} size={size} /> : <ShardArt rarity={item.rarity} size={size} />) : item.type === 'CRYSTAL' ? <PaintImg file="aether_crystal" size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
-);
+  );
+};
 export const ItemArtByKey: React.FC<{ k: string; c?: string; size?: number | string }> = ({ k, c = '#e9b949', size = 26 }) => <Art k={k} c={c} size={size} />;
 
 /** Small painted UI glyphs used in headers / footers. */

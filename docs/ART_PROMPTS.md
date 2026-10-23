@@ -489,4 +489,6 @@ write these later from `Story.tsx` / `story.ts` / `dreams.ts` text if wanted.
 - Mapping = the ids in each list (order = left→right, top→bottom). Hook points: `PaintedIcon` (`ui/components/SkillIcons.tsx`),
   `UpgradeArt`/`ArcanaScene` (cards), `ItemArt.tsx` (items/pets/loot), GoldIcons/MenuGlyphs (menus/status), Codex `MonsterArt`,
   `ui/hud/Dialogue.tsx` (NPC portraits), `BossBar.tsx`. Prefer an `<img>` with the SVG as fallback when the file is missing.
+- Gear icons: `public/art/gear/<slug>.webp` (slug = base item name lowercased, apostrophes removed, spaces -> `_`; tier words Worn..Ascendant stripped). Hook: `gearSlug`/`GearImg` in `ItemArt.tsx`; add the slug to its `GEAR_PAINT` set when a file is added (missing = SVG fallback, no 404).
+- Status icons: `public/art/status/<id>.webp` (stun root silence defdown blind burn poison bleed slow freeze fear armorbreak battlecry rage haste shield). Hook: `ui/components/StatusIcon.tsx` (`statusIconId` maps engine types/aliases; used by the player debuff row + buffs in `TopBars.tsx` and `TargetFrame.tsx`; glyph fallback).
 - Gear: one painting per base; rarity stays the UI frame colour (optionally CSS `filter: hue-rotate` for set palettes).
