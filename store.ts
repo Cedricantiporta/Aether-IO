@@ -59,7 +59,7 @@ import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD,
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
 import { itemClass, canUseClass, classOnlyMsg, classFilter, OTHER_CLASS_SHARE, PICKAXE_ID } from './itemClass';
-import { crystalCount, syncCrystalStack } from './crystals';
+import { crystalCount, syncCrystalStack, crystalItem } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
@@ -1987,6 +1987,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const all = summonPool(altar, s.hero);   // the Shard Altar offers fewer top-tier pieces (summonPool.ts)
       const results: Item[] = [], gearOut: Item[] = [], supplies: Item[] = [];
       const shardGain: Partial<Record<Rarity, number>> = {};
+      let crystalGain = 0;
       let drawn = s.summonPity[altar] ?? 0;
       for (let k = 0; k < n; k++) {
         drawn++;
@@ -2011,6 +2012,16 @@ export const useGameStore = create<GameState>()((set, get) => {
           const sup = makeItemById(id, 1)[0];
           if (sup) { results.push(sup); supplies.push(sup); continue; }
         }
+        if (gem && !pity && !tutorial && Math.random() < SUMMON_SHARD_SHARE) {   // (owner) the Gem Altar gives Aether Crystals (1-5) or a stack of 3-6 potions instead of shards
+          if (Math.random() < 0.5) {
+            const q = [1, 1, 2, 2, 3, 3, 4, 5][Math.floor(Math.random() * 8)];
+            crystalGain += q; results.push(crystalItem(q));
+          } else {
+            const pot = makeItemById(Math.random() < 0.5 ? 'potion_hp' : 'potion_mana', 3 + Math.floor(Math.random() * 4))[0];
+            if (pot) { results.push(pot); supplies.push(pot); }
+          }
+          continue;
+        }
         if (!pity && !tutorial && Math.random() < SUMMON_SHARD_SHARE) {
           const sr: Rarity = rarity === 'COMMON' ? 'RARE' : rarity;
           const q = 1;   // (owner: a shard pull is always a single shard)
@@ -2023,8 +2034,10 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (pool.length === 0) pool = all;
         {   // (owner) the special summon-only pets come up more often than gear (60% of these pulls when the tier has one)
           const special = pool.filter((i) => i.type === 'PET' && (i as { summonOnly?: boolean }).summonOnly);
-          const gearOnly = pool.filter((i) => i.type !== 'PET');
-          if (special.length && Math.random() < 0.6) pool = special; else if (gearOnly.length) pool = gearOnly;
+          const pets = pool.filter((i) => i.type === 'PET'), gearOnly = pool.filter((i) => i.type !== 'PET');
+          if (special.length && Math.random() < 0.6) pool = special;
+          else if (pets.length && Math.random() < 0.35) pool = pets;   // (owner) pets come up a bit more often
+          else if (gearOnly.length) pool = gearOnly;
         }
         if (Math.random() < OTHER_CLASS_SHARE) {   // (owner) ~15% of gear pulls are another class's piece (shared warehouse / alts)
           const alt = ITEMS_POOL.filter((i) => isGear(i) && !i.retired && i.rarity === rarity && !canUseClass(i, s.hero) && !(altar === 'SHARD' && (rarity === 'LEGENDARY' || rarity === 'MYTHIC')));
@@ -2036,9 +2049,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const summonPity = { ...s.summonPity, [altar]: drawn };
       const materials = { ...s.materials };
       for (const r of Object.keys(shardGain) as Rarity[]) materials[r] = (materials[r] ?? 0) + shardGain[r]!;
-      // the Gem Altar also hands out an Aether Crystal per pull (owner: crystals come from gem summons too)
+      // the Gem Altar also hands out an Aether Crystal per pull (owner: crystals come from gem summons too), plus its crystal pulls
       events.emit('summonCast', {});
-      if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n }); feedReward({ crystals: n }); }
+      if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n + crystalGain }); feedReward({ crystals: n + crystalGain }); }
       else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, crystals: (s.crystals ?? 0) - cost });
       for (const it of supplies) get().addItemToInventory(it);   // (stack onto existing potions / cores)
       events.emit('hub', { kind: 'summon', n: results.length });
@@ -2182,8 +2195,11 @@ useGameStore.subscribe((s, p) => {
     const inv = syncCrystalStack(s.inventory, s.crystals ?? 0);
     if (inv !== s.inventory) useGameStore.setState({ inventory: inv });
   } else if (s.inventory !== p.inventory) {   // the stack was deleted / stored / retrieved -> count
+    // (owner bug: crystals never went down at the Crystal Altar) only when the STACK itself changed; a bag update that still
+    // carries the pre-spend stack (e.g. the shard-stack sync running first) must not copy the old count back
     const c = crystalCount(s.inventory);
-    if (c !== (s.crystals ?? 0)) useGameStore.setState({ crystals: c });
+    if (c !== crystalCount(p.inventory) && c !== (s.crystals ?? 0)) useGameStore.setState({ crystals: c });
+    else if (c !== (s.crystals ?? 0)) useGameStore.setState({ inventory: syncCrystalStack(s.inventory, s.crystals ?? 0) });
   }
 });
 

@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { summonPool } from '../../summonPool';
 import { shardItem } from '../../shards';
+import { crystalItem } from '../../crystals';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
 import { isGear } from '../lib/game';
 import { motion } from 'framer-motion';
@@ -10,7 +11,7 @@ import { Sparkles, X, Cog, Gem, Info } from '../components/GoldIcons';
 import { TechGrid } from './shop/Tech';
 import { ItemSlot } from '../components/ItemSlot';
 import { GEM_OFFERS, buyGemOffer } from '../../gemShop';
-import { useGameStore, questFree, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC, SUMMON_SUPPLIES } from '../../store';
+import { useGameStore, makeItemById, questFree, SUMMON_WEIGHTS, SUMMON_CAPS, SUMMON_COST_1, SUMMON_COST_10, GEM_SUMMON_WEIGHTS, GEM_SUMMON_CAPS, SHARD_COST_1, SHARD_COST_10, PITY_LEGEND, PITY_MYTHIC, SUMMON_SUPPLIES } from '../../store';
 import { Hexagon } from '../components/GoldIcons';
 import { useUiStore } from '../uiStore';
 import { GemGlyph } from '../components/SkillIcons';
@@ -83,12 +84,18 @@ export const SummonWindow: React.FC = () => {
               <div className="sw-pop-box sw-pop-wide" onClick={(e) => e.stopPropagation()}>
                 <div className="sw-pop-h">Possible rewards · {hero.charAt(0) + hero.slice(1).toLowerCase()}<CloseX onClick={() => setRewardsOpen(false)} /></div>
                 <div className="sw-preview rpg-scroll" data-testid="summon-preview">
+                  {gem && (   /* (owner) the Gem Altar gives Aether Crystals (1-5) or 3-6 potions instead of shards */
+                    <div className="sw-tier" style={{ ['--rc' as any]: '#b98cff' }}>
+                      <div className="sw-tier-h">Aether Crystals 1-5 · Potions 3-6<i>3</i></div>
+                      <div className="sw-tier-row">{[crystalItem(5), ...makeItemById('potion_hp', 6), ...makeItemById('potion_mana', 6)].map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+                    </div>
+                  )}
                   {PREVIEW_ORDER.filter((r) => r !== 'COMMON').map((r) => {
-                    // a pull: 25% a supply, else 40% one shard of the rolled tier / 60% gear (Common rolls become Rare) (store.summon)
-                    const list = [shardItem(r, 1), ...pool.filter((i) => i.rarity === r)];
+                    // a pull: a supply, else (Gem Altar) crystals / potions or (Crystal Altar) one shard of the rolled tier, else gear (store.summon)
+                    const list = gem ? pool.filter((i) => i.rarity === r) : [shardItem(r, 1), ...pool.filter((i) => i.rarity === r)];
                     return (
                       <div key={r} className="sw-tier" style={{ ['--rc' as any]: RARITY_LIGHT[r] }}>
-                        <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]} · shard or gear<i>{list.length}</i></div>
+                        <div className="sw-tier-h"><span className="rpg-gem" data-rarity={r} />{RATE_NAME[r]} · {gem ? 'gear' : 'shard or gear'}<i>{list.length}</i></div>
                         <div className="sw-tier-row">{list.map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
                       </div>
                     );

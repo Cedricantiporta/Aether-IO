@@ -68,10 +68,8 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
 
 /** (owner) Aether Crystals drop as glowing pickups (up to 5 pieces sharing `n`) that fly to the hero like coins. */
 const crystalAt = new Vector3();
-/** (owner) Aether Crystals were too easy to get: every ground drop is scaled to 40% (random rounding, so small drops still sometimes give 1). */
-export const CRYSTAL_DROP_MUL = 0.4;
 export function dropCrystals(n: number, at: { x: number; z: number }): void {
-  n = Math.floor(n * CRYSTAL_DROP_MUL + Math.random());
+  n = Math.floor(n);
   if (n <= 0) return;
   const k = Math.min(5, n);
   for (let i = 0; i < k; i++) spawnPickup('CRYSTAL', crystalAt.set(at.x, 0, at.z), Math.floor(n / k) + (i < n % k ? 1 : 0));
