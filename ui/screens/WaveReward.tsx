@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,13 +60,28 @@ export const WaveReward: React.FC = () => {
     return () => window.removeEventListener('keydown', h);
   }, [options, select, refresh, polish]);
 
+  // (owner) Refresh sits on the title line, its right edge lined up with the right edge of the last card
+  const rootRef = useRef<HTMLDivElement>(null), refBtn = useRef<HTMLButtonElement>(null), cardsRef = useRef<HTMLDivElement>(null), titleRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const root = rootRef.current, b = refBtn.current, cards = cardsRef.current, t = titleRef.current;
+      const last = cards?.lastElementChild?.firstElementChild as HTMLElement | null;
+      if (!root || !b || !last || !t) return;
+      const R = root.getBoundingClientRect(), L = last.getBoundingClientRect(), T = t.getBoundingClientRect();
+      b.style.left = `${L.right - R.left - b.offsetWidth}px`; b.style.top = `${T.top - R.top + (T.height - b.offsetHeight) / 2}px`; b.style.visibility = 'visible';
+    };
+    place();
+    const ro = new ResizeObserver(place); if (cardsRef.current) ro.observe(cardsRef.current);
+    window.addEventListener('resize', place); const id = window.setTimeout(place, 450);
+    return () => { ro.disconnect(); window.removeEventListener('resize', place); window.clearTimeout(id); };
+  }, [options.length]);
   return (
-    <motion.div className="absolute inset-0 pe rw-root" style={{ zIndex: 100 }}
+    <motion.div ref={rootRef} className="absolute inset-0 pe rw-root" style={{ zIndex: 100 }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="rw-head">
         <div className="rw-title-row">{/* (owner) Refresh sits right of the title; the rarity Upgrade stays under each card */}
-          <div className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
-          <button className="rw-pill rw-refresh" data-testid="rw-refresh" disabled={refreshes <= 0} onClick={() => refresh()}
+          <div ref={titleRef} className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
+          <button ref={refBtn} style={{ position: 'absolute', visibility: 'hidden' }} className="rw-pill rw-refresh" data-testid="rw-refresh" disabled={refreshes <= 0} onClick={() => refresh()}
             {...tip(<SimpleTip title="Refresh cards" sub="Rerolls every card offered. Refreshes reset each run; Tech House adds more." />)}>
             &#8635; Refresh ({refreshes}){!device.touch && <kbd>R</kbd>}
           </button>
@@ -74,7 +89,7 @@ export const WaveReward: React.FC = () => {
         <div className="s">Choose a reward · Depth {Math.max(1, wave)}</div>
         {lead && <div className="rw-trend" data-testid="rw-trend" data-cat={lead}>Build: {BUILD_NAME[lead]} <b>&uarr;</b></div>}
       </div>
-      <div className="rw-cards">
+      <div ref={cardsRef} className="rw-cards">
         {options.map((opt, i) => (
           <div className="rw-slot" key={opt.id + i}>
             <Card opt={opt} i={i} onPick={() => select(opt)} />
