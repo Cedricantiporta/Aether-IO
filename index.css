@@ -3783,3 +3783,8 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .rw-title-row .rw-refresh { font-size: 13px; padding: 6px 14px; }
 /* reward screen: the Upgrade rarity buttons all sit on one line at the bottom */
 .rw-slot > .rw-up { margin-top: auto; }
+/* (owner) boss shield bar: ribbed "I I I I" segments (dark tick every 5%) */
+.bb-shield { height: .5rem; }
+.bb-slim .bb-shield { height: .34rem; }
+.bb-shield-fill::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--rib, 10px) - 2px), rgba(5, 20, 34, .85) calc(var(--rib, 10px) - 2px) var(--rib, 10px)); }
+.bb-shield::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(143, 220, 255, .12) 8px 10px); }

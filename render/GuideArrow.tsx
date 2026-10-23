@@ -19,7 +19,7 @@ import { gateOpen } from '../story';
 // (owner) colour by what it leads to: main quest gold, side quest green, the Adventure Portal its own sky blue
 const GOLD = new Color('#ffc53d'), QUEST = new Color('#5fe07a'), PORTAL = new Color('#7ad8ff');
 const tgt = { x: 0, z: 0, reach: 2, col: GOLD, hideR: 4.5, mark: false };
-const use = (t: NavTarget, col: Color): boolean => { tgt.x = t.x; tgt.z = t.z; tgt.reach = t.reach; tgt.col = col; tgt.hideR = Math.max(4.5, t.reach + 1); tgt.mark = !t.hop; return true; };
+const use = (t: NavTarget, col: Color): boolean => { tgt.x = t.x; tgt.z = t.z; tgt.reach = t.reach; tgt.col = col; tgt.hideR = Math.max(4.5, t.reach + 1); tgt.mark = true; return true; };   // (owner) the ring + arrow always mark the goal: an NPC, a shop or a door to enter
 
 function pickTarget(): boolean {
   if (world.village.area === 'CAVE' && world.village.cave.floor > 1) return false;   // deep cave floors: no arrow (the way out is the trip's business)
