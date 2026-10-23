@@ -113,7 +113,7 @@ function shapeFor(id: string, cx: number, cz: number): void {
     if (id === 'dash') { A.shape = Shape.ARROW; A.len = 6; A.width = 2.2; A.x = p.pos.x + ux * 6; A.z = p.pos.z + uz * 6; A.targetX = cx; A.targetZ = cz; }
     else if (slot === 'q') line(38, 6 * (1 + S.galeWidth) * (1 + 0.1 * (lv.q - 1)));
     else if (slot === 's3') { A.shape = Shape.CONE; A.half = 0.305; A.len = 22; A.x = p.pos.x + ux * 22; A.z = p.pos.z + uz * 22; A.targetX = cx; A.targetZ = cz; }
-    else if (slot === 's4') circle(17, 17, 8.5);
+    else if (slot === 's4') circle(8.5, 8.5, 8.5);   // (Frost Field: half the old 17 m throw)
     else circle(28, 6, 14);
   } else if (hero === 'WIZARD') {
     if (id === 'dash') { circle(14 + 0.5 * lv.e, 4, 8.5 + 0.4 * (lv.e - 1)); A.shape = Shape.CIRCLE; }

@@ -431,7 +431,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const baseAng = Math.atan2(dz, dx);
       for (let i = -1; i <= 1; i++) {
         const a = baseAng + i * 0.5;
-        let x = p.pos.x + Math.cos(a) * 17, z = p.pos.z + Math.sin(a) * 17;
+        let x = p.pos.x + Math.cos(a) * 8.5, z = p.pos.z + Math.sin(a) * 8.5;   // (owner) Frost Field lands 50% closer (was 17)
         const r = Math.hypot(x, z), lim = edgeLimit(x, z, 3);
         if (r > lim) { x *= lim / r; z *= lim / r; }
         const f = mkFx('TRAP', x, z, 0.5, 0.6, 5.5, b * 3, R, 0x7fe0ff);
