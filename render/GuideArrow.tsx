@@ -44,11 +44,12 @@ const groundY = (x: number, z: number): number => (world.village.area !== 'TOWN'
 /** Ground guide in the town hub (owner): a trail of chevrons ">>>>" along the walkable route to the current goal, a pulsing
  *  ring at the goal and a bobbing arrow above it (NPC / shop / portal). Hidden once the hero is there. */
 export function GuideArrow() {
-  const geo = useMemo(() => ({ chev: thinArrowGeo(0.42, 0.42, 0, 0.16), ring: new RingGeometry(0.95, 1.2, 40).rotateX(-Math.PI / 2), bob: new ConeGeometry(0.34, 0.8, 4).rotateX(Math.PI) }), []);
+  const geo = useMemo(() => ({ chev: thinArrowGeo(0.5, 0.5, 0, 0.22), chevShadow: thinArrowGeo(0.58, 0.58, 0, 0.42).translate(0.06, -0.01, -0.1), ring: new RingGeometry(0.95, 1.2, 40).rotateX(-Math.PI / 2), bob: new ConeGeometry(0.34, 0.8, 4).rotateX(Math.PI) }), []);
   const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false, side: DoubleSide, color: GOLD.clone() }), []);
+  const shadowMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.55, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#1a1410' }), []);   // (owner) dark underlay so the trail reads on light paving
   const ringMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.75, toneMapped: false, depthWrite: false, side: DoubleSide, color: GOLD.clone() }), []);
   const bobMat = useMemo(() => new MeshBasicMaterial({ toneMapped: false, color: GOLD.clone() }), []);
-  const trail = useRef<InstancedMesh>(null!), ring = useRef<Mesh>(null!), bob = useRef<Mesh>(null!);
+  const trail = useRef<InstancedMesh>(null!), trailSh = useRef<InstancedMesh>(null!), ring = useRef<Mesh>(null!), bob = useRef<Mesh>(null!);
   const S = useRef({ acc: 1, has: false });
   useFrame(({ clock }, dt) => {
     const tr = trail.current; if (!tr) return;
@@ -84,18 +85,19 @@ export function GuideArrow() {
           if (Math.hypot(tgt.x - x, tgt.z - z) < tgt.reach + 0.6) { u = 1e9; k = r.n + 1; break; }   // stop short of the goal (the ring takes over)
           _e.set(0, Math.atan2(dx, dz), 0); _q.setFromEuler(_e); _p.set(x, groundY(x, z), z);
           const fade = Math.min(1, n / 3 + 0.35);
-          _s.set(fade, 1, fade); _m.compose(_p, _q, _s); tr.setMatrixAt(n++, _m);
+          _s.set(fade, 1, fade); _m.compose(_p, _q, _s); trailSh.current.setMatrixAt(n, _m); tr.setMatrixAt(n++, _m);
           u += STEP;
         }
         if (k > r.n || n >= TRAIL_N) break;
         until = u - L; ax = bx; az = bz; k++;
       }
     }
-    tr.count = n; tr.visible = n > 0;
-    if (n > 0) tr.instanceMatrix.needsUpdate = true;
+    tr.count = trailSh.current.count = n; tr.visible = trailSh.current.visible = n > 0;
+    if (n > 0) { tr.instanceMatrix.needsUpdate = true; trailSh.current.instanceMatrix.needsUpdate = true; }
   });
   return (
     <>
+      <instancedMesh ref={trailSh} args={[geo.chevShadow, shadowMat, TRAIL_N]} renderOrder={4} frustumCulled={false} visible={false} />
       <instancedMesh ref={trail} args={[geo.chev, mat, TRAIL_N]} renderOrder={5} frustumCulled={false} visible={false} />
       <mesh ref={ring} geometry={geo.ring} material={ringMat} renderOrder={5} visible={false} />
       <mesh ref={bob} geometry={geo.bob} material={bobMat} renderOrder={6} visible={false} />
