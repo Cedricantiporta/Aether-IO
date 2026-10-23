@@ -16,26 +16,19 @@ import { tip } from '../../components/Tooltip';
 import { SimpleTip } from '../../components/ItemTip';
 import { DASH_MODS } from '../../../dashMods';
 
-/** Dash Charm: one special ability for the dash, unlocked by dash level, swapped for free. */
-const DashCharms: React.FC<{ dashLv: number }> = ({ dashLv }) => {
-  const hero = useGameStore((s) => s.hero), chosen = useGameStore((s) => s.dashMods[s.hero] ?? null), setMod = useGameStore((s) => s.setDashMod);
-  return (
-    <div className="dash-charms" data-testid="dash-charms">
-      <span className="dc-title">Dash Charm <em>free to swap</em></span>
-      <div className="dc-list">
-        {DASH_MODS.map((m) => {
-          const locked = dashLv < m.lv, on = chosen === m.id && !locked;
-          return (
-            <button key={m.id} className={`dc-chip pe ${on ? 'on' : ''} ${locked ? 'lock' : ''}`} style={{ ['--dc' as any]: m.css }} disabled={locked}
-              data-testid={`dash-mod-${m.id}`} onClick={() => setMod(on ? null : m.id)} {...tip(<SimpleTip title={m.name} sub={locked ? `Unlocks at dash Lv ${m.lv}` : on ? 'Equipped (tap to remove)' : 'Tap to equip'} body={m.desc} />)}>
-              <i className="dc-dot" />{m.name}{locked && <small>Lv {m.lv}</small>}
-            </button>
-          );
-        })}
-      </div>
+/** Dash Charms (owner): found as a card once per run, so the trainer only lists them. */
+const DashCharms: React.FC<{ dashLv: number }> = () => (
+  <div className="dash-charms" data-testid="dash-charms">
+    <span className="dc-title">Dash Charm <em>one per run, found as a card</em></span>
+    <div className="dc-list">
+      {DASH_MODS.map((m) => (
+        <span key={m.id} className="dc-chip pe" style={{ ['--dc' as any]: m.css }} data-testid={`dash-mod-${m.id}`} {...tip(<SimpleTip title={m.name} sub="Can appear as a card during a run" body={m.desc} />)}>
+          <i className="dc-dot" />{m.name}
+        </span>
+      ))}
     </div>
-  );
-};
+  </div>
+);
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown.',

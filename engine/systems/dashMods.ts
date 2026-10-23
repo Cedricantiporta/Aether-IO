@@ -4,10 +4,10 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
-import { dashKey } from '../../abilityDefs';
+import { runCards } from '../runCards';
 import { damageEnemy, type DamageOpts } from './combat';
 import { spawnProjectile } from './projectiles';
-import { dashModDef, MIRROR_DMG_MUL, GUARD_FRAC, GUARD_SEC, BLADE_DMG, BLADE_KNOCK, BLADE_RADIUS, BLADE_BASE_BONUS, SWIFT_CD_MUL, SWIFT_SPEED, SWIFT_SEC, type DashMod } from '../../dashMods';
+import { MIRROR_DMG_MUL, GUARD_FRAC, GUARD_SEC, BLADE_DMG, BLADE_KNOCK, BLADE_RADIUS, BLADE_BASE_BONUS, SWIFT_CD_MUL, SWIFT_SPEED, SWIFT_SEC, type DashMod } from '../../dashMods';
 
 let cur: DashMod | null = null;       // the mod latched at the start of the current / last dash
 let wasDash = false;
@@ -17,13 +17,9 @@ const ids: number[] = [];
 const kd = new Vector3(), fxPos = new Vector3(), fxDir = new Vector3();
 const bladeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', noBackstab: true, knockDir: kd, knockback: BLADE_KNOCK };
 
-/** The hero's chosen Dash Charm if its dash level unlocks it, else null. */
+/** The Dash Charm card taken this run, else null. */
 export function chosenDashMod(): DashMod | null {
-  const st = useGameStore.getState();
-  const id = st.dashMods[st.hero];
-  const d = dashModDef(id);
-  if (!d) return null;
-  return (st.skillLevels[dashKey(st.hero)] ?? 1) >= d.lv ? d.id : null;
+  return runCards.dashMod;   // (owner) a once-per-run card now, not a trainer pick
 }
 
 /** Multiplier on the dash's own damage (Blade Step sharpens it). Valid after dashModStart. */

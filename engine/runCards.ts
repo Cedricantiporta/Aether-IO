@@ -5,6 +5,7 @@ import type { Enemy } from './types';
 import { POTION_COOLDOWN } from '../constants';
 import { runInfo } from './runMods';
 import type { Rarity, SpecialId, Upgrade, UpgradeType } from '../types';
+import { DASH_MODS, type DashMod } from '../dashMods';
 
 export const TIERS: Rarity[] = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 /** Base odds (percent) per tier; renormalised inside a card's own rarity range. Mythic only while none was offered this run. */
@@ -27,6 +28,8 @@ export const runCards = {
   defiance: 0, defianceTaken: 0,
   mythicOffered: false,
   dashStacks: 0,
+  /** (owner) the run's Dash Charm: offered as a card, once per run (null = none taken yet) */
+  dashMod: null as DashMod | null,
   /** Quickdraw Flask: cards taken and the total potion cooldown reduction (0..POTION_CD_CAP) */
   potionCdStacks: 0, potionCdCut: 0,
   /** (owner) Mana Thrift: skill mana cost cut (0..MANA_CUT_CAP); Surging Heart: ultimate charges this much faster (0..ULT_CHARGE_CAP) */
@@ -44,7 +47,7 @@ export const runCards = {
 
 export function resetRunCards(): void {
   const r = runCards;
-  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
+  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.dashMod = null; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
   r.afflict = 0; r.sunder = 0; r.guardian = 0; r.guardianTier = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
   r.anyDmg = false; r.taken = {};
@@ -117,7 +120,7 @@ export const ARCANA_NUMERAL: Record<string, string> = {
   DEATH_DEFIANCE: 'XIII', AEGIS: 'XI', AFFLICT: 'XV', SUNDER: 'XVI', GUARDIAN: 'IV', SLAYER: 'VIII', ALCHEMIST: 'XIV', EXECUTE: 'XII',
   FIRST_STRIKE: 'I', SECOND_WIND: 'XVII', GOLD_RUSH: 'X', LINGER: 'IX',
   DAMAGE: 'VII', HEALTH: 'III', DEFENSE: 'V', FIRE_RATE: 'VI', SPEED: 'XVIII', CRIT_RATE: 'XIX', CRIT_DAMAGE: 'XX', COOLDOWN: 'XXI',
-  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', POTION_CD: 'XIV', RESTORE: 'III', ULT_FILL: 'XVI', MANA_COST: 'XVII', ULT_CHARGE: 'XVI',
+  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', DASH_CHARM: 'VI', POTION_CD: 'XIV', RESTORE: 'III', ULT_FILL: 'XVI', MANA_COST: 'XVII', ULT_CHARGE: 'XVI',
 };
 
 // ------------------------------------------------------------------- rolling --
@@ -155,6 +158,9 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   if (runCards.dashStacks < DASH_CARD_MAX) {
     out.push({ weight: 0.7, cat: 'UTILITY', make: () => mk('DASH_COOLDOWN', 'Shadow Step', `-10% Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, 1, 0.1) });
   }
+  if (!runCards.dashMod) {   // (owner) Dash Charm: one per run, as a card
+    out.push({ weight: 0.55, cat: 'UTILITY', make: () => { const i = Math.floor(Math.random() * DASH_MODS.length), m = DASH_MODS[i]; return mk('DASH_CHARM', m.name, `Dash Charm (one per run): ${m.desc}`, 2, i); } });
+  }
   if (runCards.potionCdStacks < POTION_CD_STACKS_MAX && runCards.potionCdCut < POTION_CD_CAP - 1e-6) {
     out.push({ weight: 0.6, cat: 'UTILITY', make: () => {
       const t = rollTier(0, 3, false), v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut);
@@ -185,7 +191,7 @@ export const BUILD_NAME: Record<BuildCat, string> = { OFFENSE: 'Offense', DEFENS
 const TYPE_CAT: Partial<Record<UpgradeType, BuildCat>> = {
   DAMAGE: 'OFFENSE', FIRE_RATE: 'OFFENSE', CRIT_RATE: 'OFFENSE', CRIT_DAMAGE: 'OFFENSE', MULTISHOT: 'OFFENSE', KNOCKBACK: 'OFFENSE',
   HEALTH: 'DEFENSE', DEFENSE: 'DEFENSE', DMG_REDUCE: 'DEFENSE', LIFESTEAL: 'DEFENSE', RESTORE: 'DEFENSE', AEGIS: 'DEFENSE', DEATH_DEFIANCE: 'DEFENSE',
-  SPEED: 'UTILITY', DASH_COOLDOWN: 'UTILITY', COOLDOWN: 'UTILITY', POTION_CD: 'UTILITY',
+  SPEED: 'UTILITY', DASH_COOLDOWN: 'UTILITY', DASH_CHARM: 'UTILITY', COOLDOWN: 'UTILITY', POTION_CD: 'UTILITY',
   MAX_MANA: 'MAGIC', MANA_REGEN: 'MAGIC', ULT_FILL: 'MAGIC', MANA_COST: 'MAGIC', ULT_CHARGE: 'MAGIC',
 };
 const SPECIAL_CAT: Partial<Record<SpecialId, BuildCat>> = {
@@ -298,6 +304,7 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
 /** Applies the engine-side part of a picked card (the store applies the stat part). Returns true when handled here. */
 export function takeRunCard(u: Upgrade): boolean {
   const r = runCards, v = u.value;
+  if (u.type === 'DASH_CHARM') { r.dashMod = DASH_MODS[v]?.id ?? null; return true; }
   if (u.type === 'DASH_COOLDOWN') { r.dashStacks = Math.min(DASH_CARD_MAX, r.dashStacks + 1); return true; }
   if (u.type === 'MANA_COST') { r.manaCut = Math.min(MANA_CUT_CAP, r.manaCut + v); return true; }
   if (u.type === 'ULT_CHARGE') { r.ultCharge = Math.min(ULT_CHARGE_CAP, r.ultCharge + v); return true; }

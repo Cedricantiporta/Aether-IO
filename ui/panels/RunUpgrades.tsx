@@ -6,6 +6,7 @@ import { useUiStore } from '../uiStore';
 import { Modal } from '../components/Modal';
 import { Layers } from '../components/GoldIcons';
 import { RARITY_COLOR, RARITY_LIGHT, RARITY_NAME } from '../theme';
+import { DASH_MODS } from '../../dashMods';
 import { ARCANA_NUMERAL, DASH_CARD_MAX, DEFIANCE_MAX, POTION_CD_CAP } from '../../engine/runCards';
 import type { Upgrade, UpgradeType } from '../../types';
 
@@ -50,6 +51,7 @@ export function runTotals(picks: Upgrade[]): Line[] {
     const st = Math.min(DASH_CARD_MAX, n.DASH_COOLDOWN ?? 0);
     out.push({ key: 'DASH_COOLDOWN', text: `Dash CD -${st * 10}%`, note: st >= DASH_CARD_MAX ? `max ${DASH_CARD_MAX * 10}%` : undefined });
   }
+  if (has('DASH_CHARM')) out.push({ key: 'DASH_CHARM', text: `Dash Charm: ${DASH_MODS[add.DASH_CHARM ?? 0]?.name ?? '?'}`, note: 'one per run' });
   if (has('POTION_CD')) {
     const v = add.POTION_CD ?? 0;
     out.push({ key: 'POTION_CD', text: `Potion CD -${pct(Math.min(POTION_CD_CAP, v))}`, note: v >= POTION_CD_CAP - 1e-6 ? `max ${pct(POTION_CD_CAP)}` : undefined });

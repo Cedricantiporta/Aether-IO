@@ -3,7 +3,7 @@ import { dashModDef } from '../../dashMods';
 import { unlockLevel, DASH_UNLOCK_LV, ULT_UNLOCK_LV } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
-import { potionCooldown } from '../../engine/runCards';
+import { potionCooldown, runCards } from '../../engine/runCards';
 import { world } from '../../engine/world';
 import { ActionSlot } from './ActionSlot';
 import { SimpleTip } from '../components/ItemTip';
@@ -30,7 +30,7 @@ export const ActionBar: React.FC = () => {
   const sk = (k: keyof SkillLevels) => skillLevels[k];
   const SLOTS = ACTIVE_ORDER[hero].map((slot, i) => ({ slot, key: String(i + 1), code: ACTIVE_KEYS[i] }));
   const dDef = dashDef(hero), dLv = sk(dashKey(hero));
-  const dMod = dashModDef(useGameStore((st) => st.dashMods[st.hero]));   // the chosen Dash Charm (named on the dash tooltip)
+  const dMod = dashModDef(runCards.dashMod);   // this run's Dash Charm card (named on the dash tooltip)
   const ult = ULTS[hero];
   const ulv = sk('ult');
 
