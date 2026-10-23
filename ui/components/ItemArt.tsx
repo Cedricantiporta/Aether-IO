@@ -587,8 +587,25 @@ export function gearSlug(item: Item): string | undefined {
   // no own painting yet: borrow the closest painted look by kind so weapons / rings never fall back to the old flat art
   const n = base.toLowerCase();
   for (const [re, k] of GEAR_KIND) if (re.test(n)) return k;
-  return undefined;
+  for (const [re, k] of WEAR_KIND[item.type] ?? []) if (re.test(n)) return k;
+  return WEAR_DEFAULT[item.type];   // never fall back to the old flat drawing for gear
 }
+/** Wear without its own painting: match by material word, else the slot's default look. */
+const WEAR_KIND: Partial<Record<Item['type'], [RegExp, string][]>> = {
+  HELMET: [[/horn|hide|fur|wolf|tusk/, 'horned_helm'], [/plate|squire|iron|steel|great ?helm|visor/, 'plate_helm'], [/hat|apprentice|arcane|mage|silk|circlet|diadem/, 'arcane_hat'],
+    [/bone|crown|skull/, 'bone_crown'], [/grave|cowl|shadow/, 'shadowstep_cowl'], [/hood|cap|ranger|hunter|scout/, 'ranger_hood']],
+  ARMOR: [[/hide|fur|wolf|cuirass.*hide|hide.*cuirass/, 'wolfhide_vest'], [/plate|mail|cuirass|hauberk|steel|iron/, 'steel_cuirass'], [/robe|silk|apprentice|mantle/, 'silk_robe'],
+    [/shroud|grave|ash|crypt/, 'grave_shroud'], [/jerkin|leather|tunic|vest|ranger|hunter/, 'leather_jerkin']],
+  GLOVES: [[/fist|fur|wrap|hide|wolf/, 'fur_wraps'], [/gauntlet|squire|plate|steel|iron/, 'gauntlets'], [/bone|grip|grave|crypt/, 'grave_grips'],
+    [/silk|initiate|apprentice|glove/, 'silk_gloves'], [/bracer|hunter|ranger|leather/, 'ranger_bracers']],
+  BOOTS: [[/fur|hide|wolf/, 'hide_boots'], [/sabaton|greave|squire|plate|steel|iron/, 'sabatons'], [/slipper|soft|silk/, 'silk_slippers'],
+    [/bone|crypt|grave|tread/, 'bone_treads'], [/boot|strider|scout|ranger|hunter/, 'ranger_boots']],
+  ACCESSORY: [[/necklace|tusk|fang|tooth/, 'dragonbone_fang'], [/skull|bone/, 'bone_charm'], [/whistle|charm|clover|feather/, 'clover_amulet'],
+    [/seal|sigil|banner|reliquary|orb/, 'wardstone_amulet']],
+};
+const WEAR_DEFAULT: Partial<Record<Item['type'], string>> = {
+  HELMET: 'ranger_hood', ARMOR: 'leather_jerkin', GLOVES: 'ranger_bracers', BOOTS: 'ranger_boots', ACCESSORY: 'moonstone_pendant', WEAPON: 'squire_sword',
+};
 const GEAR_KIND: [RegExp, string][] = [
   [/longbow|\bbow\b|\barc\b/, 'hunters_bow'], [/scepter|sceptre/, 'astral_scepter'], [/staff|wand|rod\b/, 'sages_staff'],
   [/greataxe|cleaver|crusher/, 'bearded_greataxe'], [/\baxe\b|hatchet/, 'battle_axe'], [/greatsword|\bsword\b|blade/, 'knights_longsword'],
