@@ -219,7 +219,7 @@ export function updateRoomEvents(dt: number): void {
       }
       if (best >= 0) {
         const m = world.enemies[best];
-        m.maxHp = m.hp = Math.round(m.maxHp * 2.5); m.scale *= 1.25;
+        m.maxHp = m.hp = Math.round(m.maxHp * 5); m.scale *= 1.25;   // (owner) the Shadowcaster: 2x the old 2.5x
         e.darkId = best;
         events.emit('floatText', { pos: m.pos, text: 'SHADOWCASTER', color: 0xb47cff, scale: 1.0, dy: 2.4 });
       }

@@ -164,6 +164,9 @@ export const Currency: React.FC = () => {
 };
 
 const HINT_CODE: Record<string, string> = { C: 'KeyC', I: 'KeyI', J: 'KeyJ', O: 'KeyO', Esc: 'Escape' };
+/** (owner) painted toy-style menu icons instead of flat white glyphs (public/art/<f>.webp). */
+const ART_BASE = ((import.meta as any).env?.BASE_URL as string) || '/';
+const MenuArt: React.FC<{ f: string }> = ({ f }) => <img className="mb-art" src={`${ART_BASE}art/${f}.webp`} alt="" draggable={false} decoding="async" />;
 const MenuBtn: React.FC<{ icon: React.ReactNode; label: string; hint: string; onClick: () => void; active?: boolean; dot?: boolean; caption?: string; mini?: boolean; locked?: boolean; testid?: string }> = ({ icon, label, hint, onClick, active, dot, caption, mini, locked, testid }) => (
   <button data-testid={testid} data-locked={locked ? '1' : undefined} className={`sqbtn pe relative ${active ? 'is-active' : ''} ${caption ? 'mb-cap' : ''} ${mini ? 'mb-mini' : ''} ${locked ? 'is-locked' : ''}`} onClick={onClick} aria-label={label} {...tip(<div className="tip-pill">{label}{hint && <kbd>{keyHint(hint)}</kbd>}</div>)}>
     <span className="mb-ic">{icon}{dot && !locked && <i className="red-dot" />}{locked && <i className="mb-lock" aria-hidden />}</span>
@@ -193,14 +196,14 @@ export const MenuButtons: React.FC = () => {
   const attrDot = useGameStore((s) => attrPointsTotal(s.classProg[s.hero]?.lv ?? 1) > attrSpent(s.attrs[s.hero]));   // unspent attribute points
   return (
     <div className="menu-row">
-      <MenuBtn caption="Character" icon={<CuteHero size={30} />} label="Character" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
-      <MenuBtn caption="Bag" icon={<CuteBag size={30} />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
-      <MenuBtn caption="Skills" icon={<CuteStar size={30} />} label="Skill Trainer" hint="" onClick={() => openTownShop('SKILLS')} dot={skillDot} />
-      <MenuBtn caption="Quest" icon={<CuteScroll size={30} />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} dot={questDot} />
+      <MenuBtn caption="Character" icon={<MenuArt f="ui/menu_hero" />} label="Character" hint="C" onClick={toggleCharacterSheet} active={c} dot={attrDot} />
+      <MenuBtn caption="Bag" icon={<MenuArt f="items/bag" />} label="Bag" hint="I" onClick={toggleInventory} active={i} dot={bagDot} />
+      <MenuBtn caption="Skills" icon={<MenuArt f="ui/menu_skills" />} label="Skill Trainer" hint="" onClick={() => openTownShop('SKILLS')} dot={skillDot} />
+      <MenuBtn caption="Quest" icon={<MenuArt f="ui/menu_quests" />} label="Quests" hint="J" onClick={() => useUiStore.getState().openQuestLog(true)} dot={questDot} />
       {/* (no big map exists: this shows / hides the minimap) */}
-      <MenuBtn caption="Map" icon={<CuteMapPin size={30} />} label={showMap ? 'Hide minimap' : 'Show minimap'} hint="" onClick={() => updateSettings({ showMinimap: !showMap })} active={showMap} />
-      <MenuBtn caption="Shop" icon={<CuteShop size={30} />} label="Summon shop" hint="" onClick={() => openTownShop('SUMMON')} active={shopOpen} />
-      <MenuBtn caption="Menu" icon={<CuteGear size={30} />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
+      <MenuBtn caption="Map" icon={<MenuArt f="items/erase_scroll" />} label={showMap ? 'Hide minimap' : 'Show minimap'} hint="" onClick={() => updateSettings({ showMinimap: !showMap })} active={showMap} />
+      <MenuBtn caption="Shop" icon={<MenuArt f="items/gem" />} label="Summon shop" hint="" onClick={() => openTownShop('SUMMON')} active={shopOpen} />
+      <MenuBtn caption="Menu" icon={<MenuArt f="ui/menu_settings" />} label="Settings" hint="Esc" onClick={() => (useGameStore.getState().status === GameStatus.PLAYING ? togglePause() : useUiStore.getState().openSettings(true))} />
     </div>
   );
 };
