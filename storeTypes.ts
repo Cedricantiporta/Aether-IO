@@ -104,6 +104,7 @@ export interface GameState {
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
   discovered: Discovered;                    // Codex discoveries (item/pet/loot names, skill keys, monster keys); persisted
   codexClaimed: string[];                    // Codex tabs whose 100% reward was claimed
+  petSeen: string[];                         // Pet Collection: template ids of every pet species ever owned (petCollection.ts)
   meta: MetaState;                           // daily / weekly goals, achievements, equipped title (goals.ts; written by goalsTracker.ts)
 
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)

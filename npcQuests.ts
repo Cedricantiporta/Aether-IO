@@ -1,5 +1,5 @@
 // ============================================================================
-// NPC story quests: hand-written quests given by town NPCs: a small set of 7 side quests (the daily Quest Board was cut).
+// NPC story quests: hand-written quests given by town NPCs: a small set of side quests (the daily Quest Board was cut).
 // Pure data + helpers (no store import): the store keeps `npcQuests: NpcQuestSave` (persistent, saved in the profile),
 // the logic (accept / progress / turn-in) lives in engine/systems/npcQuestLogic.ts, dialogue in systems/dialogue.ts.
 // Chains: a quest with `after: '<id>'` only becomes available once that quest was turned in. `cond` hides a quest until a
@@ -189,6 +189,40 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     ],
     objective: { type: 'DELIVER', target: 'frost_scale', count: 3 },
     reward: { gold: 4000, gems: 60, shards: ['EPIC', 3] },
+  },
+  // ---- (owner) the Pet Quests: Hollis the farmer hands out FREE pets as the hero grows (Lv 3 / 12 / 22 / 32: Common, Uncommon, Rare, Epic).
+  //      No story / dying unlock (not a BEAT side quest): each opens on its level and is auto-accepted. Rewards feed the Pet Collection.
+  {
+    id: 'hollis_pet1', minLevel: 3, giver: 'Hollis', title: 'A Blob of Your Own', summary: 'Pop 10 slimes for Hollis (and win a pet!)',
+    intro: ['Hero! Come here, come here. Look at you, marching about all alone.', 'You:: I prefer "brooding".', 'Nonsense. Every hero needs a little friend. I raised a lot of critters on this farm.', 'The green slimes in the Greenwood are the friendliest ones, but they come in far too big a crowd. Pop ten of them to thin the herd and I will give you a blob of your very own.'],
+    progress: 'Ten slimes, hero! The green wobbly ones out in the Greenwood. Be gentle. Mostly.',
+    done: ['Ten popped! And look, one little fellow followed you home.', 'You:: He is looking at me.', 'He likes you. Here: a Green Blob. Feed him, pat him, do NOT put him in the soup.'],
+    objective: { type: 'KILL_KIND', target: 'SLIME', count: 10 },
+    reward: { gold: 300, items: [{ id: 'pet_blob', qty: 1 }] },
+  },
+  {
+    id: 'hollis_pet2', minLevel: 12, after: 'hollis_pet1', giver: 'Hollis', title: 'Wings in the Dark', summary: 'Chase off 20 bats for Hollis (and win a pet!)',
+    intro: ['Ah, there is my favourite hero! How is the blob?', 'You:: It ate my sock.', 'That means he loves you. Now: bats have been scaring my hens at night.', 'Chase off twenty of them out in the wilds and I will introduce you to a very polite one I know.'],
+    progress: 'Twenty bats, hero. Hens do not sleep when the bats are about.',
+    done: ['Twenty! My hens will sleep in at last.', 'You:: Do bats really make good friends?', 'This one does. He gathers up shiny things from far away. Meet your Vampire Bat.'],
+    objective: { type: 'KILL_KIND', target: 'BAT', count: 20 },
+    reward: { gold: 700, items: [{ id: 'pet_bat', qty: 1 }] },
+  },
+  {
+    id: 'hollis_pet3', minLevel: 22, after: 'hollis_pet2', giver: 'Hollis', title: 'The Brave Little Shell', summary: 'Defeat 3 elite monsters for Hollis (and win a pet!)',
+    intro: ['Look at you! A real, proper, scary hero now.', 'You:: I try.', 'There is a very shy fellow in my pond. Only comes out for heroes who beat the big, grumpy monsters.', 'Defeat three of the glowing elite ones and he will go with you. I promise.'],
+    progress: 'Three elite monsters, hero: the big, glowing, grumpy ones.',
+    done: ['Three elites! He is peeking out of the pond already.', 'You:: That is a very large turtle.', 'Slow and steady! He will shield you when you need it. Meet your Shield Turtle.'],
+    objective: { type: 'KILL_ELITE', count: 3 },
+    reward: { gold: 1500, gems: 10, items: [{ id: 'pet_turtle', qty: 1 }] },
+  },
+  {
+    id: 'hollis_pet4', minLevel: 32, after: 'hollis_pet3', giver: 'Hollis', title: 'Hollis and the Wolf', summary: 'Defeat 6 elite monsters for Hollis (and win a pet!)',
+    intro: ['Hero. Sit down. I have saved the best for last.', 'You:: The soup?', 'No. A wolf pup. A spirit one, silver as moonlight. He follows only those who have proven themselves.', 'Take down six of the big elite monsters and he is yours. He is a bit of a show-off.'],
+    progress: 'Six elite monsters. He is waiting by the fence, tail wagging.',
+    done: ['Six! He knew it before you did.', 'You:: He is... very fluffy.', 'And fast. Take care of him, hero. My finest friend, for my finest hero. Meet your Spirit Wolf.'],
+    objective: { type: 'KILL_ELITE', count: 6 },
+    reward: { gold: 3000, gems: 25, items: [{ id: 'pet_wolf', qty: 1 }] },
   },
 ];
 

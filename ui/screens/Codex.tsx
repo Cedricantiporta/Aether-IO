@@ -15,8 +15,9 @@ import { ENEMY_DEFS } from '../../engine/enemyDefs';
 import { RARITY_RANK, RARITY_TEXT } from '../lib/game';
 import { HERO_COLOR } from '../lib/game';
 import type { Item } from '../../types';
+import { PET_MILESTONES, PET_TOTAL } from '../../petCollection';
 
-const TABS = ['ITEMS', 'PETS', 'SKILLS', 'LOOT', 'MONSTERS'] as const;
+const TABS = ['ITEMS', 'PETS', 'SKILLS', 'LOOT', 'MONSTERS', 'COLLECTION'] as const;
 const SIL: React.CSSProperties = { filter: 'brightness(0) opacity(.6)' };
 const Mystery: React.FC<{ children: React.ReactNode }> = ({ children }) => <div style={SIL}>{children}</div>;
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
@@ -34,6 +35,46 @@ const MonsterArt: React.FC<{ m: MonsterEntry; size?: number }> = ({ m, size = 44
 const srcName = (k: string) => (k === 'ELITE' ? 'Elites' : k === 'MALAKAR' ? 'Malakar (final fall, very rare)' : ENEMY_DEFS[k as keyof typeof ENEMY_DEFS]?.name ?? k.charAt(0) + k.slice(1).toLowerCase().replace('_', ' '));
 const byRank = (a: Item, b: Item) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.name.localeCompare(b.name);
 
+/** Pet Collection: every pet species ever owned (store petSeen) in colour, the rest as silhouettes, plus the milestone bonuses. */
+const PetCollection: React.FC = () => {
+  const seen = useGameStore((st) => st.petSeen);
+  const have = new Set(seen);
+  const pets = [...PETS_POOL].sort(byRank);
+  const n = pets.filter((p) => have.has(p.id)).length;
+  return (
+    <div data-testid="pet-collection">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="rpg-label" data-testid="pet-collection-count">Pet species collected {n} / {PET_TOTAL}</span>
+        <span className="rpg-label ml-auto opacity-70">Every species you ever owned counts</span>
+      </div>
+      <div className="rpg-bar thin mb-3"><div className="fill" style={{ ['--fill' as any]: PET_TOTAL ? n / PET_TOTAL : 0 }} /></div>
+      <div className="flex flex-col gap-2 mb-4" data-testid="pet-milestones">
+        {PET_MILESTONES.map((m) => {
+          const ok = n >= m.n;
+          return (
+            <div key={m.n} data-reached={ok} className="flex items-center gap-3 px-3 py-2" style={{ borderRadius: 999, background: ok ? 'rgba(110,231,160,.18)' : 'rgba(255,255,255,.06)', opacity: ok ? 1 : 0.7 }}>
+              <span className="font-bold text-sm" style={{ minWidth: '3.4rem', color: ok ? '#6ee7a0' : 'var(--text-dim)' }}>{m.n} pets</span>
+              <span className="text-sm flex-1" style={{ color: ok ? '#fff' : 'var(--text-dim)' }}>{m.label}</span>
+              <span className="rpg-label !text-[.55rem]" style={{ color: ok ? '#6ee7a0' : undefined }}>{ok ? 'Reached' : `${m.n - n} to go`}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-4 gap-2" data-testid="pet-tiles">
+        {pets.map((p) => {
+          const ok = have.has(p.id);
+          return (
+            <div key={p.id} data-owned={ok} className="flex flex-col items-center gap-1 p-2" style={{ borderRadius: 18, background: ok ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.18)' }}>
+              {ok ? <ItemSlot item={p} size="3.6rem" iconSize={40} tooltip="buy" compare={false} /> : <Mystery><ItemSlot item={p} size="3.6rem" iconSize={40} tooltip="none" compare={false} /></Mystery>}
+              <span className="text-[.62rem] font-bold text-center leading-tight" style={{ color: ok ? RARITY_TEXT[p.rarity] : 'var(--text-dim)' }}>{ok ? p.name : '???'}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export const CodexDialog: React.FC = () => {
   const open = useUiStore((s) => s.codexOpen);
   const close = useUiStore((s) => s.openCodex);
@@ -45,7 +86,7 @@ export const CodexDialog: React.FC = () => {
   const claim = useGameStore((st) => st.claimCodexReward);
   const D = (t: CodexTab) => new Set(disc[t]);
   const dItems = D('items'), dPets = D('pets'), dSkills = D('skills'), dLoot = D('loot'), dMon = D('monsters');
-  const tk = tab.toLowerCase() as CodexTab;
+  const tk = (tab === 'COLLECTION' ? 'pets' : tab.toLowerCase()) as CodexTab;
   const total = CODEX_KEYS[tk].length;
   const found = CODEX_KEYS[tk].filter((k) => D(tk).has(k)).length;
   const done = found >= total;
@@ -57,7 +98,7 @@ export const CodexDialog: React.FC = () => {
         {TABS.map((t) => <button key={t} className={`rpg-subtab pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}</button>)}
         <button className="rpg-subtab pe ml-auto" onClick={() => useUiStore.getState().openStory(true)} data-testid="open-story">STORY</button>
       </div>
-      <div className="mb-3" data-testid="codex-progress">
+      {tab !== 'COLLECTION' && <div className="mb-3" data-testid="codex-progress">
         <div className="flex items-center gap-2 mb-1">
           <span className="rpg-label">{tab.charAt(0) + tab.slice(1).toLowerCase()} {found} / {total} discovered</span>
           {done && !claimed.includes(tk) && <button className="rpg-btn pe ml-auto" data-testid="codex-claim" onClick={() => claim(tk)}>Claim {CODEX_REWARD_GEMS} gems</button>}
@@ -65,9 +106,9 @@ export const CodexDialog: React.FC = () => {
           {!done && <span className="rpg-label ml-auto opacity-70">100% reward: {CODEX_REWARD_GEMS} gems</span>}
         </div>
         <div className="rpg-bar thin"><div className="fill" style={{ ['--fill' as any]: total ? found / total : 0 }} /></div>
-      </div>
+      </div>}
       <div className="rpg-frame p-4 rpg-scroll codex-frame" style={{ height: '26rem' }}>
-        {tab === 'LOOT' ? (
+        {tab === 'COLLECTION' ? <PetCollection /> : tab === 'LOOT' ? (
           <div className="grid grid-cols-2 gap-2" data-testid="codex-loot">
             {loot.map((l) => {
               const ok = dLoot.has(l.name);

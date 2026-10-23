@@ -54,6 +54,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
   }
   return { items, gold, count, loot, fish };
 }
+import { applyPetCollection, petMirror, petSpeciesId, sanitizePetSeen, PET_MILESTONES, PET_TOTAL } from './petCollection';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
@@ -308,6 +309,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   const wp = weaponPerk(equipment.weapon);   // axe perk: Bloodthirst = life steal
   if (wp?.k === 'LIFESTEAL') final.lifeSteal += lifeStealOf(wp.lv);
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
+  applyPetCollection(final);   // Pet Collection milestones (petCollection.ts)
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
   if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; final.damage *= 0.85; }   // (damage feeds basic attacks and skills)   // fragile, slow caster (user tuning)
   for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps
@@ -453,7 +455,7 @@ interface Profile {
   talents: Record<HeroClass, TalentRanks>;
   attrs?: Record<HeroClass, Attrs>;   // allocated attribute points per class (attributes.ts)
   starterGiven: Record<HeroClass, boolean>;
-  discovered?: Discovered; codexClaimed?: string[];
+  discovered?: Discovered; codexClaimed?: string[]; petSeen?: string[];
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
@@ -516,7 +518,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
-  discovered: emptyDiscovered(), codexClaimed: [],
+  discovered: emptyDiscovered(), codexClaimed: [], petSeen: [],
   meta: freshMeta(),
 });
 
@@ -565,7 +567,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               attrs: sanitizeAttrs(p.attrs),
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
-              discovered: sanitizeDiscovered(p.discovered),
+              discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen),
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
               meta: sanitizeMeta(p.meta),
               elixirs: Array.isArray(p.elixirs) ? p.elixirs.filter(isElixirId) : [],
@@ -613,7 +615,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -625,6 +627,7 @@ const writeProfile = (s: GameState): void => {
 
 const loaded = loadProfile();
 const profile = loaded.profile;
+petMirror.n = (profile.petSeen ?? []).length;   // Pet Collection bonuses are live from the first stat calculation
 
 // ---- shared warehouse: one storage for all characters (its own key). Each character's old per-profile warehouse is
 // merged in once (the profile keys already merged are remembered), then profiles store an empty warehouse.
@@ -794,7 +797,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     talents: profile.talents,
     attrs: profile.attrs ?? sanitizeAttrs(undefined),
     starterGiven: profile.starterGiven,
-    discovered: profile.discovered ?? emptyDiscovered(),
+    discovered: profile.discovered ?? emptyDiscovered(), petSeen: profile.petSeen ?? [],
     codexClaimed: profile.codexClaimed ?? [],
     meta: profile.meta ?? freshMeta(),
     gameStats: profile.gameStats,
@@ -910,7 +913,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
+        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
       syncDiscoveries();
       get().resetGame();
@@ -2090,7 +2093,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.dashMods === prev.dashMods && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.petSeen === prev.petSeen && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
@@ -2125,6 +2128,27 @@ function syncDiscoveries(): void {
   events.on('enemyHit', (e) => mon(e.kind));
   events.on('enemyDeath', (e) => { if (!e.poof) { mon(e.kind); if (e.elite) mon('ELITE'); } });
   events.on('bossSpawn', (e) => { const k = monsterKeyByName(e.name); if (k) mon(k); });
+}
+
+// ---- Pet Collection: record every pet species ever owned (bag / equipment / shared warehouse), apply the milestone bonuses.
+function syncPetSeen(quiet = false): void {
+  const s = useGameStore.getState();
+  const have = new Set(s.petSeen);
+  const add: string[] = [];
+  const see = (it: Item | null | undefined) => { const id = petSpeciesId(it); if (id && !have.has(id)) { have.add(id); add.push(id); } };
+  s.inventory.forEach(see); s.warehouse.forEach(see); (Object.values(s.equipment) as (Item | null)[]).forEach(see);
+  if (!add.length) return;
+  const before = PET_MILESTONES.filter((m) => s.petSeen.length >= m.n).length;
+  const petSeen = [...s.petSeen, ...add];
+  petMirror.n = petSeen.length;
+  useGameStore.setState({ petSeen, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, s.attrs?.[s.hero]) });
+  if (quiet) return;
+  const hit = PET_MILESTONES.filter((m) => petSeen.length >= m.n).length > before ? PET_MILESTONES.filter((m) => petSeen.length >= m.n).pop() : undefined;
+  s.addNotification(hit ? `Pet Collection ${petSeen.length} / ${PET_TOTAL}: ${hit.label}!` : `New pet species! Collection ${petSeen.length} / ${PET_TOTAL}`, hit ? COLORS.uiAccent : '#9fe3a8', 'SYSTEM');
+}
+{
+  useGameStore.subscribe((s, prev) => { if (s.inventory !== prev.inventory || s.equipment !== prev.equipment || s.warehouse !== prev.warehouse) syncPetSeen(); });
+  syncPetSeen(true);   // old saves: seed from the pets owned right now
 }
 
 // The active character's class is fixed (characters.ts): a brand-new character starts on its chosen class.
