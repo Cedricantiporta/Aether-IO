@@ -2054,7 +2054,13 @@ export const useGameStore = create<GameState>()((set, get) => {
       events.emit('summonCast', {});
       if (gem) { set({ gems: s.gems - cost, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, materials, crystals: (s.crystals ?? 0) + n + crystalGain }); feedReward({ crystals: n + crystalGain }); }
       else set({ materials, inventory: [...s.inventory, ...gearOut.map(markNew)], summonPity, crystals: (s.crystals ?? 0) - cost });
-      for (const it of supplies) get().addItemToInventory(it);   // (stack onto existing potions / cores)
+      for (const it of supplies) {   // (stack onto existing potions / cores)
+        if (potionKind(it)) {   // (owner) summoned potions ignore the 50 carry cap (stack past it; the shop still refuses to sell more)
+          const inv = insertItem(get().inventory, get().maxInventorySlots, markNew(it));
+          if (inv) { set({ inventory: inv }); continue; }
+        }
+        get().addItemToInventory(it);
+      }
       events.emit('hub', { kind: 'summon', n: results.length });
       return results;
     },
