@@ -3781,3 +3781,5 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* reward screen: Refresh beside the title */
 .rw-title-row { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .rw-title-row .rw-refresh { font-size: 13px; padding: 6px 14px; }
+/* reward screen: the Upgrade rarity buttons all sit on one line at the bottom */
+.rw-slot > .rw-up { margin-top: auto; }

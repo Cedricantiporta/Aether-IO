@@ -460,6 +460,7 @@ export interface RoomState {
   /** (owner) extra treasure chests on a Treasure stage (15%: 2 chests, 5%: 3): opened like the station chest. */
   chests: { on: boolean; x: number; z: number; used: boolean }[];
   shrineOn: boolean;     // shrine challenge accepted
+  shrineDone: boolean;   // shrine challenge won (the crystal lights up)
   hint: string;          // short objective text under the room plaque
 }
 

@@ -705,9 +705,12 @@ function Stations() {
       if (xb.current[i]) { xb.current[i]!.visible = s.ready && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
     }
     if (altar.current.visible) {
-      altarGlow.current.position.y = Math.sin(t * 1.7) * 0.15;
-      altarGlow.current.rotation.y = t * 0.8;
-      altarGlow.current.visible = !s.used || world.room.shrineOn;
+      // (owner) the shrine crystal is dull until the challenge is won, then it lights up and spins
+      const lit = world.room.shrineDone;
+      altarGlow.current.material = lit ? mats.glow : mats.lit;
+      altarGlow.current.position.y = lit ? Math.sin(t * 1.7) * 0.15 : 0;
+      altarGlow.current.rotation.y = lit ? t * 0.8 : 0.4;
+      altarGlow.current.visible = true;
     }
   });
   return (

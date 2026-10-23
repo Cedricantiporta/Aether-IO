@@ -169,7 +169,7 @@ function towerPlan(f: number): RoomPlan {
   if (daily.on) return dailyPlan(f);   // Daily Trial: the day's seeded floor sequence
   if (waves.on) return wavePlan(f);    // Endless Waves
   if (f % 10 === 0) return { type: 'BOSS', reward: 'NONE' };
-  if (f % 5 === 0) return { type: Math.random() < 0.35 ? 'DUEL' : 'MINIBOSS', reward: 'ITEM' };   // some champion floors: a dark hero duel
+  if (f % 5 === 0) return { type: Math.random() < 0.35 ? 'DUEL' : 'MINIBOSS', reward: 'CARD' };   // some champion floors: a dark hero duel
   if (f % 3 === 0) return { type: 'ELITE', reward: f % 2 ? 'GEMS' : 'CARD' };
   return { type: 'COMBAT', reward: f % 2 ? 'CARD' : f % 4 === 0 ? 'SHARDS' : 'GOLD' };
 }   // room index of this biome's crystal cavern door (-1: none this biome, 50%)
@@ -179,7 +179,7 @@ export function resetDirector(): void {
   const d = world.director;
   d.wave = 1; d.phase = 'FIGHT'; d.phaseT = 0; d.maxAlive = ROOM_MAX_ALIVE; d.aliveCount = 0; d.bossId = -1;
   const r = world.room;
-  r.active = false; r.fade = 1; r.fadeTarget = 0; r.enemiesLeft = 0; r.shrineOn = false;
+  r.active = false; r.fade = 1; r.fadeTarget = 0; r.enemiesLeft = 0; r.shrineOn = false; r.shrineDone = false;
   for (const p of r.portals) p.active = false;
   for (const m of r.markers) m.active = false;
   r.station.kind = 'NONE';
@@ -219,7 +219,7 @@ export function debugHumanBoss(b: number, idx: number, kind: HumanKind): void { 
 export function debugTowerHuman(n: number, kind: HumanKind): void {
   if (runInfo.mode !== 'TOWER' || waves.on || daily.on) return;
   debugHuman.kind = kind; towerFloor = n; towerState.floor = n; world.run.towerFloor = n - 1; world.room.fade = 1;
-  enterRoom(towerBiome(n), (n - 1) % ROOMS_PER_BIOME, { type: 'MINIBOSS', reward: 'ITEM' });
+  enterRoom(towerBiome(n), (n - 1) % ROOMS_PER_BIOME, { type: 'MINIBOSS', reward: 'CARD' });
 }
 export function debugDarkHero(b: number, idx: number, cls: HeroClass): void { debugDuelCls = cls; debugJump(b, idx, 'DUEL'); }
 /** Debug / QA: walk into gate `g`'s trial (as if E was pressed at it), or straight into the throne room. */
@@ -306,7 +306,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
-  r.fadeTarget = 0; r.shrineOn = false;
+  r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;
   for (const po of r.portals) po.active = false;
   for (const m of r.markers) m.active = false;
   const [cx, cz] = stationPos(R);
@@ -777,11 +777,18 @@ function grantReward(kind: RewardKind, bonus: number): void {
 
 /** (owner) Treasure chest: 1-2 different picks from a wide pool - a gold hoard, gems, a valuable trinket, a shard,
  *  potions, a reforge item, an Upgrade Core (Tier II deeper in), Aether Crystals, or now and then a piece of gear. */
-const CHEST_POOL: readonly (readonly [string, number])[] = [['gold', 22], ['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 9], ['crystals', 8]];
+const CHEST_POOL: readonly (readonly [string, number])[] = [['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 9], ['crystals', 8]];
+/** (owner) Treasure chests: each chest is EITHER a piece of gear OR a pile of gold (50/50), never both. Blessed (speed clear) = better gear / more gold. */
 function chestLoot(x: number, z: number): void {
   const st = useGameStore.getState();
-  const blessed = speedWon();   // (owner) treasure rooms: cleared in time = a blessed chest
-  const n = blessed ? 3 : 2, used = new Set<string>();   // (owner: better treasure: 2 picks, 3 when blessed)
+  const blessed = speedWon();
+  if (Math.random() < 0.5) { const it = st.rollItemDrop(rarityForDepth(depth, blessed ? 0.5 : 0.25, world.run.bossKills)); if (it) { spawnPickup('ITEM', at(x, z), 0, it); return; } }
+  const total = Math.round((90 + depth * 24) * (blessed ? 1.6 : 1));
+  for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(x, z), Math.round(total / 8));
+}
+/** (owner) The Challenge Shrine's prize: `n` different picks from the old chest pool (no gold), plus an upgrade core when `core`. */
+function treasurePool(x: number, z: number, n: number, core: boolean): void {
+  const used = new Set<string>();
   const give = (it: import('../../types').Item | undefined) => { if (it) spawnPickup('ITEM', at(x, z), 0, it); };
   for (let k = 0; k < n; k++) {
     let tot = 0; for (const [id, w] of CHEST_POOL) if (!used.has(id)) tot += w;
@@ -789,7 +796,6 @@ function chestLoot(x: number, z: number): void {
     for (const [id, w] of CHEST_POOL) { if (used.has(id)) continue; r -= w; if (r <= 0) { pick = id; break; } }
     used.add(pick);
     switch (pick) {
-      case 'gold': for (let i = 0; i < 6; i++) spawnPickup('GOLD', at(x, z), Math.round(50 + depth * 14)); break;
       case 'gems': for (let i = 0; i < 3; i++) spawnPickup('GEM', at(x, z), 2 + Math.floor(depth / 6)); break;
       case 'trinket': {   // a valuable sell-only trinket (Rare+, Epic+ deeper)
         const min = depth >= 30 ? 'EPIC' : 'RARE', order = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
@@ -804,8 +810,7 @@ function chestLoot(x: number, z: number): void {
       case 'crystals': dropCrystals(2 + Math.floor(depth / 10), { x, z }); break;
     }
   }
-  if (blessed || Math.random() < 0.3) give(st.rollItemDrop(rarityForDepth(depth, blessed ? 0.5 : 0.25, world.run.bossKills)) ?? undefined);   // gear: always when blessed (and better), else 30%
-  if (blessed) { for (let i = 0; i < 4; i++) spawnPickup('GEM', at(x, z), 2 + Math.floor(depth / 5)); give(makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]); }
+  if (core) give(makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
 }
 
 function bossRewards(): void {
@@ -931,15 +936,12 @@ function onCleared(): void {
   const t = plan.type;
   if (t === 'TREASURE') world.room.station.ready = true;
   // reward for this room
-  if (world.room.shrineOn) { rewardKind = 'CARD'; rewardBonus = 0.3; } else { rewardKind = plan.reward; rewardBonus = t === 'ELITE' ? 0.1 : t === 'MINIBOSS' ? 0.15 : t === 'DUEL' ? 0.25 : 0; }
+  if (world.room.shrineOn) { rewardKind = 'NONE'; rewardBonus = 0; } else { rewardKind = plan.reward; rewardBonus = t === 'ELITE' ? 0.1 : t === 'MINIBOSS' ? 0.15 : t === 'DUEL' ? 0.25 : 0; }
   rewardT = rewardKind === 'NONE' ? -1 : REWARD_DELAY;
   if (world.room.shrineOn) {
-    // challenge bonus on top of the card
-    // (owner: better altar rewards) a good piece of gear, often a second one, an upgrade core and more gems
-    const sx = world.room.station.x, sz = world.room.station.z;
-    for (let k = 0; k < (Math.random() < 0.5 ? 2 : 1); k++) { const it = st.rollItemDrop(rarityForDepth(depth, 0.5, world.run.bossKills)); if (it) spawnPickup('ITEM', at(sx, sz), 0, it); }
-    spawnPickup('ITEM', at(sx, sz), 0, makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
-    for (let i = 0; i < 5; i++) spawnPickup('GEM', at(sx, sz), 2 + Math.floor(depth / 5));
+    // (owner) the shrine pays the old treasure-chest pool (no gold): 3 picks of gems / trinket / shard / potions / reforge / core / crystals + a core
+    world.room.shrineDone = true;   // the crystal lights up (render/Room)
+    treasurePool(world.room.station.x, world.room.station.z, 3, true);
     shrineBonus = false;
     showPortals();
   } else if (plan.gate !== undefined) trialCleared();

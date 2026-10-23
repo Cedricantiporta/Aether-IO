@@ -11,9 +11,9 @@ export interface GateDef { id: string; name: string; sub: string; color: string;
 
 export const GATE_KEYS_NEEDED = 5;
 export const GATES: readonly GateDef[] = [
-  { id: 'SHADOW', name: 'Gate of Shadows', sub: 'Duel your own dark reflection', color: '#b06cff', steps: [{ type: 'DUEL', reward: 'ITEM' }] },
+  { id: 'SHADOW', name: 'Gate of Shadows', sub: 'Duel your own dark reflection', color: '#b06cff', steps: [{ type: 'DUEL', reward: 'CARD' }] },
   { id: 'HORDE', name: 'Gate of the Horde', sub: 'Two waves, then hold the totem', color: '#ef6a5e', steps: [{ type: 'COMBAT', reward: 'CARD' }, { type: 'COMBAT', reward: 'GEMS', obj: 'DEFEND' }] },
-  { id: 'THORNS', name: 'Gate of Thorns', sub: 'A spike-trap gauntlet', color: '#f2a93b', steps: [{ type: 'COMBAT', reward: 'GOLD', twist: 'TRAPS' }, { type: 'ELITE', reward: 'ITEM', twist: 'TRAPS' }] },
+  { id: 'THORNS', name: 'Gate of Thorns', sub: 'A spike-trap gauntlet', color: '#f2a93b', steps: [{ type: 'COMBAT', reward: 'GOLD', twist: 'TRAPS' }, { type: 'ELITE', reward: 'CARD', twist: 'TRAPS' }] },
   { id: 'HUNT', name: 'Gate of the Hunt', sub: 'Mark and slay in the dark', color: '#5fd6a0', steps: [{ type: 'COMBAT', reward: 'CARD', obj: 'HUNT', twist: 'DARK' }] },
   { id: 'HERALD', name: 'Gate of the Herald', sub: 'The Void Herald, Malakar\'s first servant', color: '#ff4d6d', steps: [{ type: 'BOSS', reward: 'NONE' }] },
 ];

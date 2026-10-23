@@ -280,9 +280,10 @@ const pick = <T,>(opts: readonly (readonly [T, number])[]): T => {
 
 function rollReward(type: RoomType): RewardKind {
   switch (type) {
-    case 'ELITE': return pick<RewardKind>([['CARD', 45], ['ITEM', 35], ['GEMS', 10], ['SHARDS', 10]]);
-    case 'MINIBOSS': case 'DUEL': return pick<RewardKind>([['ITEM', 45], ['CARD', 45], ['GEMS', 10]]);
-    case 'COMBAT': return pick<RewardKind>([['CARD', 40], ['GOLD', 18], ['SHARDS', 14], ['ITEM', 14], ['HEAL', 8], ['GEMS', 6]]);
+    // (owner) no more Gear portals: gear comes from treasure chests, bosses and monster drops
+    case 'ELITE': return pick<RewardKind>([['CARD', 60], ['GEMS', 15], ['SHARDS', 15], ['GOLD', 10]]);
+    case 'MINIBOSS': case 'DUEL': return pick<RewardKind>([['CARD', 85], ['GEMS', 15]]);
+    case 'COMBAT': return pick<RewardKind>([['CARD', 44], ['GOLD', 24], ['SHARDS', 16], ['HEAL', 9], ['GEMS', 7]]);
     default: return 'NONE'; // fountain / merchant / treasure / shrine / boss carry their own content
   }
 }
@@ -322,7 +323,7 @@ export function nextChoices(biome: number, index: number, out: RoomPlan[], merch
   out.length = 0;
   const next = index + 1;
   if (next >= BOSS_INDEX) { out.push({ type: 'BOSS', reward: 'NONE' }); return 1; }
-  if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'ITEM', preboss: true }); return 1; }
+  if (next === PREBOSS_INDEX) { out.push({ type: 'MINIBOSS', reward: 'CARD', preboss: true }); return 1; }
   // the boss key was found: a boss door opens beside the usual ones (fight early, or keep exploring)
   if (bossKey && next > PREBOSS_INDEX) { const n = nextChoices(biome, index, out, merchantOk, fountainOk, shrineOk, crystal, false); if (n >= 2) out.pop(); out.unshift({ type: 'BOSS', reward: 'NONE' }); return out.length; }
   if (next === REST_INDEX) { out.push({ type: 'MERCHANT', reward: 'NONE' }); return 1; }   // depth 14 is always the merchant (owner)
