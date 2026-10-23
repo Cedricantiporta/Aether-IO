@@ -8,6 +8,7 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
+import { nearestTrap, damageTrap } from './roomTraps';
 import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, applyStatus, type DamageOpts } from './combat';
 import type { Enemy } from '../types';
 import { inCurse } from './zones';
@@ -205,8 +206,11 @@ export function updateMinions(dt: number): void {
         if (d < bd) { bd = d; m.tgt = c.id; e = c; }
       }
     }
+    // (owner) no monster in reach: summons go after the nearest stationary (siege weapon / tower / statue)
+    const tr = e ? null : nearestTrap(m.x, m.z, 16);
     let tx: number, tz: number, stop: number;
     if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
+    else if (tr) { tx = tr.x; tz = tr.z; stop = reach + tr.rad * 0.9; }
     else {   // trail the hero in a loose ring
       const a = m.slot + slotI++ * 0.9;
       heroTrailAt(0.8 + (m.slot % 3) * 0.1, trailPt);   // (owner: summons follow with a ~1 s delay)
@@ -239,7 +243,15 @@ export function updateMinions(dt: number): void {
     m.walk += dt * speed * m.mv * (golem ? 0.9 : 1.6);
     if (d > 0.05) m.facing = Math.atan2(dx, dz);
     m.atkT -= dt;
-    if (e && d <= stop + 0.3 && m.atkT <= 0) {
+    if (tr && d <= stop + 0.3 && m.atkT <= 0) {
+      m.atkT = cd; m.swing = 1;
+      if (mage) { const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 1, pierce: 1, radius: 0.9, y: 1.2 }); if (p) p.tint = 9; }
+      else if (bow) { const p = spawnProjectile('ARROW', m.x, m.z, dx / d, dz / d, 32, m.dmg, { life: 0.8, pierce: 1, radius: 0.6, y: 1.4 }); if (p) p.tint = 10; }
+      else {
+        damageTrap(tr, m.dmg);
+        if (golem) events.emit('shockwave', { pos: tmp.set(tr.x, 0, tr.z).clone(), radius: 2.2, color: 0xb8a888 });
+      }
+    } else if (e && d <= stop + 0.3 && m.atkT <= 0) {
       m.atkT = cd; m.swing = 1;
       if (mage && m.skillT <= 0) {   // skeleton mage skill: CHAIN LIGHTNING, jumps through up to 4 enemies (brief stun)
         m.skillT = 7 / haste; m.spin = 1;

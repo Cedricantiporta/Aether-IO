@@ -18,7 +18,7 @@ import {
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
-import { hitRoomTraps, trapAim } from './roomTraps';
+import { hitRoomTraps, hitRoomTrapsRing, damageTrap, nearestTrap, trapDist, trapAim, type TrapObj } from './roomTraps';
 let chargeTrapHit = false;
 import { hitStop, slowMo, fovKick } from '../game';
 /** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
@@ -236,8 +236,8 @@ function mkZone(kind: 'TORNADO' | 'FROST_FIELD' | 'METEOR_SHADOW' | 'FIRE' | 'BL
 }
 
 // ============================================================ chain frost =====
-export interface ChainOrb { active: boolean; x: number; z: number; tx: number; tz: number; target: number; left: number; dmg: number; hit: number[]; t: number }
-export const chainOrbs: ChainOrb[] = Array.from({ length: 4 }, () => ({ active: false, x: 0, z: 0, tx: 0, tz: 0, target: -1, left: 0, dmg: 0, hit: [], t: 0 }));
+export interface ChainOrb { active: boolean; x: number; z: number; tx: number; tz: number; target: number; left: number; dmg: number; hit: number[]; t: number; trap: TrapObj | null; hitT: TrapObj[] }
+export const chainOrbs: ChainOrb[] = Array.from({ length: 4 }, () => ({ active: false, x: 0, z: 0, tx: 0, tz: 0, target: -1, left: 0, dmg: 0, hit: [], t: 0, trap: null, hitT: [] }));
 const CHAIN_RANGE = 9;
 const CHAIN_SPEED = 48;
 
@@ -280,12 +280,22 @@ function castChainFrost(lv: number, b: number): void {
   aimPoint(26, 2, tgt);
   const o = chainOrbs.find((c) => !c.active);
   if (!o) return;
-  const first = nearestFrom(tgt.x, tgt.z, 14, []);
-  o.active = true; o.x = p.pos.x; o.z = p.pos.z; o.t = 0; o.hit.length = 0;
+  let first = nearestFrom(tgt.x, tgt.z, 14, []);
+  let ft = nearestTrap(tgt.x, tgt.z, 14);   // (owner) a stationary is a valid chain target too
+  if (ft && first >= 0) { const fe = world.enemies[first]; if (trapDist(ft, tgt.x, tgt.z) ** 2 >= (fe.pos.x - tgt.x) ** 2 + (fe.pos.z - tgt.z) ** 2) ft = null; else first = -1; }
+  o.active = true; o.x = p.pos.x; o.z = p.pos.z; o.t = 0; o.hit.length = 0; o.hitT.length = 0; o.trap = ft;
   o.left = 6 + lv; o.dmg = b * 3.0; o.target = first;
   // no enemy near the aim point: the orb flies on to the aim point and bursts there
   o.tx = tgt.x; o.tz = tgt.z;
   announce('CHAIN_FROST');
+}
+
+/** Next chain target from the orb's position: the nearest un-hit enemy or stationary, whichever is closer. */
+function chainRetarget(o: ChainOrb, r: number): void {
+  const eid = nearestFrom(o.x, o.z, r, o.hit);
+  const tr = nearestTrap(o.x, o.z, r, o.hitT);
+  if (tr && eid >= 0) { const e = world.enemies[eid]; if (trapDist(tr, o.x, o.z) ** 2 >= (e.pos.x - o.x) ** 2 + (e.pos.z - o.z) ** 2) { o.trap = null; o.target = eid; return; } }
+  o.trap = tr; o.target = tr ? -1 : eid;
 }
 
 function updateChains(dt: number): void {
@@ -294,22 +304,27 @@ function updateChains(dt: number): void {
     if (!o.active) continue;
     o.t += dt;
     let e = o.target >= 0 ? world.enemies[o.target] : null;
-    if (e && (!e.active || e.state === 'DYING')) { o.target = nearestFrom(o.x, o.z, CHAIN_RANGE, o.hit); e = o.target >= 0 ? world.enemies[o.target] : null; if (!e) { o.active = false; continue; } }
-    const tx = e ? e.pos.x : o.tx, tz = e ? e.pos.z : o.tz;
+    let tr = o.trap;
+    if ((e && (!e.active || e.state === 'DYING')) || (tr && tr.dead)) {
+      chainRetarget(o, CHAIN_RANGE);
+      e = o.target >= 0 ? world.enemies[o.target] : null; tr = o.trap;
+      if (!e && !tr) { o.active = false; continue; }
+    }
+    const tx = e ? e.pos.x : tr ? tr.x : o.tx, tz = e ? e.pos.z : tr ? tr.z : o.tz;
     const dx = tx - o.x, dz = tz - o.z, d = Math.sqrt(dx * dx + dz * dz);
     const step = CHAIN_SPEED * dt;
-    if (d > step + 0.6) { o.x += (dx / d) * step; o.z += (dz / d) * step; if (o.t > 3) o.active = false; continue; }
+    if (d > step + 0.6 + (tr ? tr.rad : 0)) { o.x += (dx / d) * step; o.z += (dz / d) * step; if (o.t > 3) o.active = false; continue; }
     o.x = tx; o.z = tz;
-    if (!e) { events.emit('frostNova', { pos: new Vector3(o.x, 0, o.z), radius: 3 }); o.active = false; continue; }
+    if (!e && !tr) { events.emit('frostNova', { pos: new Vector3(o.x, 0, o.z), radius: 3 }); o.active = false; continue; }
     // impact
-    damageEnemy(e, o.dmg, frostOpts);
-    applyStatus(e, chillSt);
+    if (e) { damageEnemy(e, o.dmg, frostOpts); applyStatus(e, chillSt); o.hit.push(e.id); }
+    else if (tr) { damageTrap(tr, o.dmg); o.hitT.push(tr); }
     events.emit('frostNova', { pos: new Vector3(o.x, 0, o.z), radius: 3 });
     events.emit('lightning', { from: new Vector3(o.x, 1.2, o.z), to: new Vector3(o.x, 2.2, o.z) });
-    o.hit.push(e.id); o.left--;
+    o.left--;
     if (o.left <= 0) { o.active = false; continue; }
-    o.target = nearestFrom(o.x, o.z, CHAIN_RANGE, o.hit);
-    if (o.target < 0) o.active = false;
+    chainRetarget(o, CHAIN_RANGE);
+    if (o.target < 0 && !o.trap) o.active = false;
   }
 }
 
@@ -451,7 +466,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const a = abilityState;
       a.orbN = 3 + (lv >= 3 ? 1 : 0) + (stats.orbBonus | 0);
       if (a.orbN > 6) a.orbN = 6;
-      a.orbT = (4 + stats.stormBonus) * 0.5;   // Storm Orbs: half the duration a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
+      a.orbT = (4 + stats.stormBonus) * 0.5;   // Storm Orbs: half the duration
+      a.orbTick = 0.15; a.orbChain = 2 + Math.floor(lv / 2) + (stats.thunderChain | 0);
       a.orbDmg = b * 1.7;
       announce('STORM_ORBS');
     } else {
@@ -1036,6 +1052,7 @@ function stepFx(dt: number): void {
       f.sx += dt;
       if (f.sx >= 0.12) {
         f.sx = 0;
+        hitRoomTrapsRing(f.x, f.z, r, 2.6, f.dmg);   // (owner) the ring pulse scorches stationaries it sweeps over
         const ids = world.enemyGrid.query(f.x, f.z, r + 5, out);
         for (let n = 0; n < ids.length; n++) {
           const e = world.enemies[ids[n]];
@@ -1219,6 +1236,13 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
     if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
     const dx = e.pos.x - o.x, dz = e.pos.z - o.z, d = dx * dx + dz * dz;
     if (d < bd) { bd = d; best = e.id; }
+  }
+  // (owner) the orb also zaps the nearest stationary in range (its own 0.8 s tick is the per-orb cooldown)
+  const st = nearestTrap(o.x, o.z, 14);
+  if (st) {
+    orbFrom.set(o.x, o.y, o.z);
+    events.emit('lightning', { from: orbFrom.clone(), to: new Vector3(st.x, 1.6, st.z) });
+    damageTrap(st, a.orbDmg);
   }
   if (best < 0) return;
   hitList.length = 0;

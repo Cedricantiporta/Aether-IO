@@ -11,6 +11,7 @@ import type { Zone } from '../types';
 import {
   damageEnemy, damageEnemiesInRadius, applyStatus, damagePlayer, addShake, applyPlayerDebuff, type DamageOpts, type StatusEffect,
 } from './combat';
+import { hitRoomTraps } from './roomTraps';
 import { resolveTrick, updateWalls } from './tricks';
 import { resolveBossZone, arenaSlow, BT } from './bossFx';
 
@@ -36,6 +37,7 @@ const burnReal: StatusEffect = { type: 'BURN', duration: 3, value: 4 };
 const pathBurn: StatusEffect = { type: 'BURN', duration: 0.6, value: 2 };
 
 function fireTick(z: Zone): void {
+  hitRoomTraps(z.pos.x, z.pos.z, z.radius, z.damage * FIRE_TICK);   // (owner) player fire patches scorch stationaries too
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
   const dmg = z.damage * FIRE_TICK;
   for (let i = 0; i < ids.length; i++) {
@@ -76,6 +78,7 @@ function curseTick(z: Zone): void {
 }
 
 function dotTick(z: Zone, o: DamageOpts, slow: boolean): void {
+  hitRoomTraps(z.pos.x, z.pos.z, z.radius, z.damage * 0.25);   // (owner) Frost Field / tornado ticks hit stationaries too
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);
   const dmg = z.damage * 0.25;
   const rr = z.radius;

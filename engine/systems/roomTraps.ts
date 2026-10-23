@@ -79,12 +79,12 @@ export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue;
 /** Distance from (x,z) to the surface of a piece. */
 export const trapDist = (o: TrapObj, x: number, z: number): number => Math.hypot(o.x - x, o.z - z) - o.rad;
 /** Nearest live stationary whose surface is within maxR of (x,z). */
-export function nearestTrap(x: number, z: number, maxR: number): TrapObj | null {
+export function nearestTrap(x: number, z: number, maxR: number, skip?: readonly TrapObj[]): TrapObj | null {
   if (!rt.on || !world.room.active) return null;
   let best: TrapObj | null = null, bd = maxR;
   for (let i = 0, n = trapCount(); i < n; i++) {
     const o = trapAt(i);
-    if (o.dead) continue;
+    if (o.dead || (skip && skip.indexOf(o) !== -1)) continue;
     const d = trapDist(o, x, z);
     if (d < bd) { bd = d; best = o; }
   }
@@ -131,6 +131,21 @@ export function hitRoomTraps(x: number, z: number, r: number, dmg: number): bool
   if (!rt.on) return false;
   let hit = false;
   for (let i = 0, n = trapCount(); i < n; i++) hit = hitOne(trapAt(i), x, z, r, dmg) || hit;
+  return hit;
+}
+/** Single-target hit on one stationary (chain / bounce jumps, minion strikes, orb zaps). True if it took the hit. */
+export function damageTrap(o: TrapObj, dmg: number): boolean {
+  return rt.on && hitOne(o, o.x, o.z, 0, dmg);
+}
+/** Expanding ring pulse: hits every stationary whose body overlaps the band |dist - r| <= band. */
+export function hitRoomTrapsRing(x: number, z: number, r: number, band: number, dmg: number): boolean {
+  if (!rt.on) return false;
+  let hit = false;
+  for (let i = 0, n = trapCount(); i < n; i++) {
+    const o = trapAt(i);
+    if (o.dead || Math.abs(Math.hypot(o.x - x, o.z - z) - r) > band + o.rad) continue;
+    hit = hitOne(o, o.x, o.z, 0, dmg) || hit;
+  }
   return hit;
 }
 /** QA: force these hazard kinds (TRAP.*) into the next room, and the siege weapon kind (0 ballista / 1 catapult). */

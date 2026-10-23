@@ -18,7 +18,7 @@ import {
 } from './combat';
 import { queryColliders, type Collider } from '../mapgen';
 import { hitCrate } from './crates';
-import { hitRoomTraps, trapAim } from './roomTraps';
+import { hitRoomTraps, damageTrap, nearestTrap, trapDist, trapAim, type TrapObj } from './roomTraps';
 import { isHarvestNode } from '../mapgen';
 
 export interface ProjSpec {
@@ -142,6 +142,7 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
 const chainOut: number[] = [];
 const chainOpts: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', crit: false };
 const chainHit: Enemy[] = [];
+const chainHitT: TrapObj[] = [];
 /** Thundercaller proc: lightning leaps from `from` to 2 + lvl nearby enemies. */
 function chainLightning(from: Enemy, lvl: number): void {
   const st = useGameStore.getState().stats;
@@ -149,21 +150,31 @@ function chainLightning(from: Enemy, lvl: number): void {
   const ids = world.enemyGrid.query(from.pos.x, from.pos.z, 24, chainOut);
   chainHit.length = 0;
   chainHit.push(from);
-  let cur = from;
+  chainHitT.length = 0;
+  let curX = from.pos.x, curZ = from.pos.z;
   for (let n = 1 + lvl + (useGameStore.getState().stats.thunderChain | 0); n > 0; n--) {
     let best: Enemy | null = null, bd = 18 * 18;
     for (let i = 0; i < ids.length; i++) {
       const e = world.enemies[ids[i]];
       if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || chainHit.indexOf(e) !== -1) continue;
-      const dx = e.pos.x - cur.pos.x, dz = e.pos.z - cur.pos.z;
+      const dx = e.pos.x - curX, dz = e.pos.z - curZ;
       const d = dx * dx + dz * dz;
       if (d < bd) { bd = d; best = e; }
     }
+    // (owner) a stationary can take a jump too, when it is nearer than the next monster
+    const tr = nearestTrap(curX, curZ, 18, chainHitT);
+    if (tr && (!best || trapDist(tr, curX, curZ) ** 2 < bd)) {
+      events.emit('lightning', { from: new Vector3(curX, 1.2, curZ), to: new Vector3(tr.x, 1.6, tr.z) });
+      damageTrap(tr, dmg);
+      chainHitT.push(tr);
+      curX = tr.x; curZ = tr.z;
+      continue;
+    }
     if (!best) break;
-    events.emit('lightning', { from: new Vector3(cur.pos.x, 1.2, cur.pos.z), to: new Vector3(best.pos.x, 1.2, best.pos.z) });
+    events.emit('lightning', { from: new Vector3(curX, 1.2, curZ), to: new Vector3(best.pos.x, 1.2, best.pos.z) });
     damageEnemy(best, dmg, chainOpts);
     chainHit.push(best);
-    cur = best;
+    curX = best.pos.x; curZ = best.pos.z;
   }
 }
 
