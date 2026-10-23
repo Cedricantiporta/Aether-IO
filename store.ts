@@ -180,9 +180,9 @@ export const SUMMON_SUPPLIES: [string, number][] = [
   ['upgrade_core', 30], ['upgrade_core_2', 6], ['revive_ankh', 4], ['reforge_stone', 8], ['temper_oil', 10], ['binding_seal', 5], ['augment_rune', 6], ['potion_hp_big', 13], ['potion_mana_big', 13],
 ];
 const SUMMON_SUPPLY_TOTAL = SUMMON_SUPPLIES.reduce((n, [, w]) => n + w, 0);
-export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.75, EPIC: 3, LEGENDARY: 0.23, MYTHIC: 0.02 };   // (owner: gold / mythic rarer)
+export const SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 72, UNCOMMON: 0, RARE: 24.84, EPIC: 3, LEGENDARY: 0.15, MYTHIC: 0.01 };   // (owner: gold / mythic rarer, twice)
 /** Gem altar (gold): premium odds. */
-export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, UNCOMMON: 0, RARE: 41.4, EPIC: 12, LEGENDARY: 1.45, MYTHIC: 0.15 };   // (owner: gold / mythic rarer)
+export const GEM_SUMMON_WEIGHTS: Record<Rarity, number> = { COMMON: 45, UNCOMMON: 0, RARE: 42.02, EPIC: 12, LEGENDARY: 0.9, MYTHIC: 0.08 };   // (owner: gold / mythic rarer, twice)
 export const GEM_SUMMON_CAPS: Partial<Record<Rarity, number>> = { EPIC: 3, LEGENDARY: 1, MYTHIC: 1 };
 /** Crystal Altar (was the Shard Altar: owner - summoning with Common shards made no sense): Aether Crystals per pull. */
 export const SHARD_COST_1 = 10;

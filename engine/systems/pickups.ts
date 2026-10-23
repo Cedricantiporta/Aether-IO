@@ -22,7 +22,6 @@ const COLLECT_RADIUS = 1.2;
 const XP_MERGE_THRESHOLD = 300;
 const XP_MERGE_RADIUS = 4;
 const MAX_MAGNET_SPEED = 55;
-const PET_COLLECT_RANGE = 20;
 
 let xpActive = 0;
 /** Items the player dropped on purpose (dragged out of the bag): never auto-looted, only picked up by hand (E). */
@@ -127,7 +126,6 @@ function notifyLoot(item: Item): void {
 /** Player magnet radius (items outside it are candidates for the pet to fetch). */
 export function getMagnetRadius(st: ReturnType<typeof useGameStore.getState>): number {
   let r = st.stats.magnetRadius;   // (the Looter passive is gone)
-  if (st.equipment.pet?.petSkill === 'COLLECT') r = Math.max(r, PET_COLLECT_RANGE);
   return r;
 }
 

@@ -238,7 +238,7 @@ export const PETS_POOL: Item[] = [
     { 
         id: 'pet_bat', name: 'Vampire Bat', type: 'PET', rarity: 'UNCOMMON', price: 1000, level: 1, 
         stats: { damage: 5 }, // 1 Stat
-        description: 'Collects distant items.', petSkill: 'COLLECT' 
+        description: 'Every 5s bites the nearest enemy and drains its life to heal you.', petSkill: 'LEECH', petValue: 16, petCooldown: 5 
     },
     { 
         id: 'pet_fairy', name: 'Light Fairy', type: 'PET', rarity: 'RARE', price: 1500, level: 1, 

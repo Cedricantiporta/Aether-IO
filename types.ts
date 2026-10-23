@@ -45,7 +45,7 @@ export type ProjectileType = 'MAGIC' | 'ARROW' | 'AXE' | 'SWORD' | 'FIREBALL' | 
 export type AbilityType = 'METEOR' | 'ARROW_RAIN' | 'AXE_AURA' | 'FIREBALL' | 'AXE_SPIN' | 'NONE' | 'PIERCING_SHOT' | 'FREEZE_SPELL' | 'GRAVITY_SPELL' | 'MEGA_STAMP' | 'RAGE';
 export type ItemType = 'WEAPON' | 'ARMOR' | 'ACCESSORY' | 'HELMET' | 'GLOVES' | 'BOOTS' | 'POTION' | 'CORE' | 'PET' | 'REVIVE' | 'LOOT' | 'SHARD' | 'ELIXIR' | 'CRYSTAL' | 'TOOL';
 export type StatusEffectType = 'SLOW' | 'BURN' | 'STUN' | 'FREEZE' | 'POISON' | 'ARMOR_BREAK' | 'CHILL';
-export type PetSkillType = 'HEAL' | 'ATTACK_RANGED' | 'ATTACK_MELEE' | 'COLLECT' | 'REVIVE' | 'FIRE_TRAIL' | 'CHILL_SWOOP' | 'LOOT_BURP' | 'CHAIN_ZAP' | 'SHIELD' | 'MARK' | 'SLAM' | 'TIDAL_BEAM';
+export type PetSkillType = 'HEAL' | 'ATTACK_RANGED' | 'ATTACK_MELEE' | 'COLLECT' | 'REVIVE' | 'FIRE_TRAIL' | 'CHILL_SWOOP' | 'LOOT_BURP' | 'LEECH' | 'CHOMP' | 'CHAIN_ZAP' | 'SHIELD' | 'MARK' | 'SLAM' | 'TIDAL_BEAM';
 
 export interface PlayerStats {
   maxHealth: number;

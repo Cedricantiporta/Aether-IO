@@ -10,7 +10,7 @@ import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { useGameStore } from '../../store';
-import { damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, healPlayer, inFight, type DamageOpts } from './combat';
+import { damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, healPlayer, inFight, addShake, type DamageOpts } from './combat';
 import { events } from '../events';
 import { spawnPickup } from './pickups';
 import type { Enemy } from '../types';
@@ -331,6 +331,7 @@ export function updatePets(dt: number): void {
 const abOpts = (kind: DamageOpts['kind']): DamageOpts => ({ kind, source: 'PET' });
 const fireOpts = abOpts('FIRE'), iceOpts = abOpts('ICE'), lightOpts = abOpts('LIGHTNING'), slamOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET', armorBreak: true, noBackstab: true };
 const waterOpts = abOpts('MAGIC');
+const leechOpts = abOpts('MAGIC'), chompOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 let abT = 0;            // generic ability cooldown accumulator
 let trailT = 0, fireTickT = 0;
 let swoopT = 0, swoopEnemy: Enemy | null = null, swoopHit = false;
@@ -465,6 +466,33 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
           wp.attackT = 1;
           events.emit('floatText', { pos: wp.pos, text: 'BURP!', color: 0xffd23a, scale: 0.8, dy: 1.2 });
         }
+      }
+      break;
+    }
+    case 'LEECH': {   // (owner: pets no longer fetch-skill) Vampire Bat: bite + drain life to the hero
+      if (abT >= cd) {
+        const e = findNearestEnemy(wp.pos.x, wp.pos.z, 12);
+        if (e) {
+          abT = 0; wp.attackT = 1;
+          damageEnemy(e, dmg, leechOpts);
+          const h = Math.min(dmg * 0.6, maxHp * 0.06);
+          healPlayer(h);
+          events.emit('floatText', { pos: e.pos, text: 'DRAIN', color: 0xff5a7a, scale: 0.7, dy: 1 });
+        } else abT = cd;
+      }
+      break;
+    }
+    case 'CHOMP': {   // Mimic Chest: a big stunning bite on the nearest enemy
+      if (abT >= cd) {
+        const e = findNearestEnemy(wp.pos.x, wp.pos.z, 10);
+        if (e) {
+          abT = 0; wp.attackT = 1;
+          wp.pos.x += (e.pos.x - wp.pos.x) * 0.6; wp.pos.z += (e.pos.z - wp.pos.z) * 0.6;
+          damageEnemy(e, dmg * 1.6, chompOpts);
+          applyStatus(e, { type: 'STUN', duration: 1 });
+          addShake(0.15);
+          events.emit('floatText', { pos: e.pos, text: 'CHOMP!', color: 0xffd23a, scale: 0.85, dy: 1.2 });
+        } else abT = cd;
       }
       break;
     }
