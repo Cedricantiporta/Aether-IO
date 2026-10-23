@@ -10,7 +10,10 @@ import { Button } from '../components/Button';
 import { ItemSlot } from '../components/ItemSlot';
 import { RARITY_TEXT, isHighValue, sellPrice, RARITY_RANK, RARITY_COLOR, isGear } from '../lib/game';
 import type { Item } from '../../types';
-import { cardFrameUrl, cardBackdropUrl, RARITIES_ALL, preloadImages } from '../components/UpgradeIcons';
+import { RARITIES_ALL, preloadImages } from '../components/UpgradeIcons';
+import { ItemArt } from '../components/ItemArt';
+/** Summon card art: public/art/cards/card_back.webp + sfront_<RARITY>.webp (window x 18-82%, y 17-76%). */
+const summonCardUrl = (k: string): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/${k}.webp`;
 
 export const SellDialog: React.FC = () => {
   const item = useUiStore((s) => s.sellItem);
@@ -130,7 +133,7 @@ export const SummonReveal: React.FC = () => {
     const t2 = setTimeout(() => setDealt(true), 1500 + results.length * 60 + 750);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [results, round]);
-  useEffect(() => { if (results) preloadImages([...RARITIES_ALL.map(cardFrameUrl), ...RARITIES_ALL.map(cardBackdropUrl)]); }, [results]);
+  useEffect(() => { if (results) preloadImages([summonCardUrl('card_back'), ...RARITIES_ALL.map((r) => summonCardUrl(`sfront_${r}`))]); }, [results]);
   const revealAll = () => setFlipped((f) => f.map(() => true));
   if (!results) return null;
   const gem = altar === 'GEM';
@@ -164,10 +167,11 @@ export const SummonReveal: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 220, damping: 22, delay: i * 0.06 }}
                   onClick={() => setFlipped((f) => { const n = f.slice(); n[i] = true; return n; })} data-testid="summon-card">
                   <span className="sm-inner">
-                    <span className="sm-back"><i className="sm-back-sigil">✦</i><b>{ROMAN_N[i] ?? i + 1}</b></span>
-                    <span className="sm-face tarot">
-                      <span className="sm-window"><img className="sm-bg" src={cardBackdropUrl(it.rarity)} alt="" draggable={false} decoding="async" /><span className="sm-item"><ItemSlot item={it} size={many ? '3.2rem' : '5rem'} iconSize="82%" tooltip="buy" compare={false} /></span></span>
-                      <img className="sm-frame" src={cardFrameUrl(it.rarity)} alt="" draggable={false} decoding="async" />
+                    <span className="sm-back art"><img src={summonCardUrl('card_back')} alt="" draggable={false} decoding="async" /></span>
+                    <span className={`sm-face tarot sf r-${it.rarity}`}>
+                      {/* (owner) the window is tinted in the item's rarity colours so the item blends in (no square slot tile) */}
+                      <span className="sm-window"><span className="sm-halo" /><span className="sm-item"><ItemArt item={it} size={many ? '3.4rem' : '5.4rem'} /></span></span>
+                      <img className="sm-frame" src={summonCardUrl(`sfront_${it.rarity}`)} alt="" draggable={false} decoding="async" />
                       <span className="sm-name">{it.name}</span>
                     </span>
                   </span>

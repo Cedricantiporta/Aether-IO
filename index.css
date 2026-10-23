@@ -3677,3 +3677,13 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* new-quest marks (questSeen.ts): red dot on the Main / Side tabs, a small NEW pill on a quest row */
 .qw-tab .red-dot { top: .2rem; right: -.35rem; width: .55rem; height: .55rem; animation: none; background: #ff8a8a; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
 .qw-new { flex: none; margin-left: .35rem; padding: .05rem .4rem; border-radius: 999px; background: #ff8a8a; color: #fff; font-size: .6rem; font-weight: 800; letter-spacing: .04em; line-height: 1.2; }
+
+/* (owner) summon cards: painted back + per-rarity fronts; the window is a soft rarity-tinted glow so the item blends in */
+.sm-back.art { padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+.sm-back.art img { width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
+.sm-face.tarot.sf .sm-window { left: 17%; right: 17%; top: 16%; bottom: 23%; background: radial-gradient(circle at 50% 46%, #fffdf6 0%, var(--w1) 42%, var(--w2) 100%) !important; }
+.sm-face.tarot.sf .sm-halo { position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 55%, white) 0%, transparent 68%); opacity: .75; }
+.sm-face.tarot.sf .sm-item { margin-top: 0; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .25)); }
+.sm-face.tarot.sf .sm-name { top: 79.5%; height: 8%; }
+.sf.r-COMMON { --w1: #f6eef0; --w2: #e7d6dc; } .sf.r-UNCOMMON { --w1: #e6f6e3; --w2: #bfe3b8; } .sf.r-RARE { --w1: #e3f1fb; --w2: #a9d3f2; }
+.sf.r-EPIC { --w1: #efe4fb; --w2: #c9adef; } .sf.r-LEGENDARY { --w1: #fff2d1; --w2: #f6c66a; } .sf.r-MYTHIC { --w1: #ffe2d6; --w2: #f28a5f; }
