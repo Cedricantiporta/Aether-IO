@@ -483,6 +483,25 @@ write these later from `Story.tsx` / `story.ts` / `dreams.ts` text if wanted.
 
 ---
 
+### D1_missing_icons (4×4) — use STYLE v3 + the CUT-OUT rule (owner 2026-10-23: the icons still drawn in code)
+Order (left to right, top to bottom) → where it goes:
+1. Aether Leviathan pet: a small cute sky serpent, pale blue-teal with soft fins and a tiny crown of crystal horns → `public/art/items/pet_leviathan.webp` (ItemArt ITEM_PAINT)
+2. Bigger Bag: a plump leather backpack with an extra pocket → Tech House `bag`
+3. Warehouse Expansion: a little wooden storage shed / crate stack → Tech `warehouse`
+4. Potion Brewing: a round red potion flask over a tiny cauldron → Tech `potion`
+5. Treasure Sense: a gold coin with a magnifying glass → Tech `gold`
+6. Scholar: an open book with a glowing star bookmark → Tech `xp`
+7. Vitality Training: a red heart with a small dumbbell → Tech `vitality`
+8. Card Refresh: two tarot cards with a circular arrow → Tech `refresh`
+9. Card Polish: a tarot card with a sparkle brush / polishing cloth → Tech `polish`
+10. Lucky Start: a four-leaf clover on a tarot card → Tech `lucky`
+11. Bigger Lantern: a brass mining lantern with a warm flame → Tech `lantern`
+12. Gold coin (HUD currency, bigger and cleaner than the item one) → HUD gold icon
+13. Blue gem (HUD currency, faceted, bright cyan) → HUD gem icon
+14. Mana Thrift card emblem: a blue mana droplet with a downward arrow → card art `MANA_COST`
+15. Surging Heart card emblem: a golden heart with lightning sparks → card art `ULT_CHARGE`
+16. Dash Charm card emblem: a winged boot with a small charm → card art `DASH_CHARM`
+
 ## Slicing notes (for Claude)
 - Detect the black gutters (row/column mean luminance minima), crop each cell, inset 4 px, export webp at 256 and 128
   (and 64 for status) to `public/art/<sheet>/<id>.webp`; keep `art/raw/` originals out of the build.
