@@ -128,6 +128,8 @@ const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
 const sepOut: number[] = [];
 const tmpV = new Vector3();
 const bladeX: number[] = [];
+/** (owner) siege bolts (BALLISTA) pierce through monsters too: last hit time per enemy slot, so one bolt hits each monster once. */
+const siegeHitT = new Float32Array(4096).fill(-10), siegeOut: number[] = [];
 const bladeZ: number[] = [];
 
 // per-frame context (set in updateEnemies, read by AI helpers)
@@ -816,7 +818,7 @@ function aiTowerArcher(e: Enemy): void {
   switch (e.state) {
     case 'WINDUP':
       if (e.stateT >= TOWER.windup) {
-        const volley = e.phase % 3 === 2;
+        const volley = e.kind === 'GOBLIN_ARCHER' ? Math.random() < 0.1 : e.phase % 3 === 2;   // (owner) goblin archers: a multi-shot volley is the rare one
         shotFrom.set(e.pos.x + ux * 0.6, TOWER.height, e.pos.z + uz * 0.6);
         const drop = (1.1 - TOWER.height) / Math.max(4, tdist);   // arc down onto the target
         for (let k = volley ? -1 : 0; k <= (volley ? 1 : 0); k++) {
@@ -1809,7 +1811,8 @@ function elemShot(e: Enemy, plain: EnemyProjectileKind): EnemyProjectileKind {
     case 'FROST_WISP': case 'BOSS_WYRMLING': return 'ICE_SHARD';
     case 'SKELETON_MAGE': return Math.random() < Math.min(0.85, elemRoll() * 2) ? ((e.id & 1) === 0 ? 'FIRE_BOLT' : 'BOLT') : plain;
     case 'CULTIST': return Math.random() < elemRoll() ? ((e.id % 3) === 0 ? 'BOLT' : 'FIRE_BOLT') : plain;
-    case 'SKELETON_ARCHER': case 'GOBLIN_ARCHER': return Math.random() < elemRoll() * 0.9 ? 'POISON_ARROW' : plain;
+    case 'GOBLIN_ARCHER': return Math.random() < 0.18 ? (Math.random() < 0.5 ? 'FIRE_BOLT' : 'ICE_SHARD') : plain;   // (owner) mostly plain arrows; rarer fire or ice
+    case 'SKELETON_ARCHER': return Math.random() < elemRoll() * 0.9 ? 'POISON_ARROW' : plain;
     default: return plain;
   }
 }
@@ -1910,6 +1913,19 @@ export function updateEnemyProjectiles(dt: number): void {
       p.active = false;
       events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       continue;
+    }
+
+    // (owner) the siege bolt hits monsters on its way too (it keeps flying)
+    if (p.kind === 'BALLISTA') {
+      const ids = world.enemyGrid.query(p.pos.x, p.pos.z, 3, siegeOut);
+      for (let k = 0; k < ids.length; k++) {
+        const e = world.enemies[ids[k]];
+        if (!e.active || e.state === 'DYING' || world.time - siegeHitT[ids[k]] < 1) continue;
+        const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, r = e.radius + 0.6;
+        if (dx * dx + dz * dz > r * r) continue;
+        siegeHitT[ids[k]] = world.time;
+        damageEnemy(e, e.boss ? e.maxHp * 0.03 : Math.max(p.damage * 4, e.maxHp * 0.35), { kind: 'PHYSICAL' });
+      }
     }
 
     // solid obstacles
