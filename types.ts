@@ -14,7 +14,7 @@ export type ArmorGroup = 'HEAVY' | 'LIGHT' | 'ARCANE';   // wear is shared by gr
 export type HeroClass = 'ARCHER' | 'WIZARD' | 'BARBARIAN' | 'KNIGHT' | 'NECROMANCER';
 
 export type UpgradeType = 
-  'HEALTH' | 'SPEED' | 'DAMAGE' | 'FIRE_RATE' | 'MULTISHOT' | 'DASH_COOLDOWN' | 'POTION_CD' |
+  'HEALTH' | 'SPEED' | 'DAMAGE' | 'FIRE_RATE' | 'MULTISHOT' | 'DASH_COOLDOWN' | 'POTION_CD' | 'MANA_COST' | 'ULT_CHARGE' |
   'SKILL_ORBITAL' | 'SKILL_THUNDER' | 'SKILL_REGEN' | 'SKILL_MAGNET' |
   'SKILL_DASH' | 'SKILL_WEAPON' | 'SKILL_BARRIER' |
   'SKILL_PIERCING' | 'SKILL_BURNING' | 'SKILL_FREEZING' | 

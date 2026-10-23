@@ -72,10 +72,13 @@ export const ActionBar: React.FC = () => {
 
 /** (owner) Small AUTO pill above a skill: click it to keep the auto bots (AUTO battle / Auto skills) from casting this one. */
 const AutoPill: React.FC<{ id: string }> = ({ id }) => {
-  const off = useGameStore((st) => !!st.settings.autoOff?.includes(id));
+  const ult = id === 'ult';   // (owner) the ult starts manual: its pill lists it in autoOn; the skills start auto: their pills list them in autoOff
+  const off = useGameStore((st) => (ult ? !st.settings.autoOn?.includes(id) : !!st.settings.autoOff?.includes(id)));
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const st = useGameStore.getState(), cur = st.settings.autoOff ?? [];
+    const st = useGameStore.getState();
+    if (ult) { const cur = st.settings.autoOn ?? []; st.updateSettings({ autoOn: off ? [...cur, id] : cur.filter((x) => x !== id) }); return; }
+    const cur = st.settings.autoOff ?? [];
     st.updateSettings({ autoOff: off ? cur.filter((x) => x !== id) : [...cur, id] });
   };
   return (

@@ -1,5 +1,5 @@
 import { betterGearIds } from '../lib/alerts';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from '../components/GoldIcons';
 import { useGameStore, calculateTotalCP, calculateItemCP, RANK_REQ, RARITY_COLOR } from '../../store';
@@ -112,6 +112,11 @@ export const InventoryPanel: React.FC = () => {
   const shown = useMemo(() => (cat === 'ALL' ? sorted : sorted.filter((i) => catOf(i) === cat)), [sorted, cat]);
   // better gear than what is worn: red dot on the item and on its category tab (and ALL)
   const seeItem = useGameStore((s) => s.seeItem);
+  // (owner) opening the bag once is enough: when it closes, every "new" dot goes (no hovering each item)
+  useEffect(() => () => {
+    const st = useGameStore.getState();
+    if (st.inventory.some((i) => i.isNew)) useGameStore.setState({ inventory: st.inventory.map((i) => (i.isNew ? { ...i, isNew: false } : i)) });
+  }, []);
   const better = useMemo(() => betterGearIds(inventory, equipment, hero, rank), [inventory, equipment, hero, rank]);
   const betterCats = useMemo(() => { const c = new Set<string>(); for (const i of inventory) if (better.has(i.id)) { c.add(catOf(i)); c.add('ALL'); } return c; }, [inventory, better]);
   const empty = cat === 'ALL' ? Math.max(0, max - inventory.length) : Math.max(0, Math.max(12, Math.ceil(shown.length / 4) * 4 + 4) - shown.length);

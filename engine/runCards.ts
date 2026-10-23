@@ -29,6 +29,8 @@ export const runCards = {
   dashStacks: 0,
   /** Quickdraw Flask: cards taken and the total potion cooldown reduction (0..POTION_CD_CAP) */
   potionCdStacks: 0, potionCdCut: 0,
+  /** (owner) Mana Thrift: skill mana cost cut (0..MANA_CUT_CAP); Surging Heart: ultimate charges this much faster (0..ULT_CHARGE_CAP) */
+  manaCut: 0, ultCharge: 0,
   /** extra card selections queued behind the one on screen (Guardian's Spoils) */
   extraPicks: 0,
   regenCap: REGEN_CAP_BASE,
@@ -42,7 +44,7 @@ export const runCards = {
 
 export function resetRunCards(): void {
   const r = runCards;
-  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0;
+  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
   r.afflict = 0; r.sunder = 0; r.guardian = 0; r.guardianTier = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
   r.anyDmg = false; r.taken = {};
@@ -115,7 +117,7 @@ export const ARCANA_NUMERAL: Record<string, string> = {
   DEATH_DEFIANCE: 'XIII', AEGIS: 'XI', AFFLICT: 'XV', SUNDER: 'XVI', GUARDIAN: 'IV', SLAYER: 'VIII', ALCHEMIST: 'XIV', EXECUTE: 'XII',
   FIRST_STRIKE: 'I', SECOND_WIND: 'XVII', GOLD_RUSH: 'X', LINGER: 'IX',
   DAMAGE: 'VII', HEALTH: 'III', DEFENSE: 'V', FIRE_RATE: 'VI', SPEED: 'XVIII', CRIT_RATE: 'XIX', CRIT_DAMAGE: 'XX', COOLDOWN: 'XXI',
-  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', POTION_CD: 'XIV', RESTORE: 'III', ULT_FILL: 'XVI',
+  KNOCKBACK: 'II', LIFESTEAL: 'XIV', DMG_REDUCE: 'V', MAX_MANA: 'XVII', MANA_REGEN: 'XVII', DASH_COOLDOWN: 'VI', POTION_CD: 'XIV', RESTORE: 'III', ULT_FILL: 'XVI', MANA_COST: 'XVII', ULT_CHARGE: 'XVI',
 };
 
 // ------------------------------------------------------------------- rolling --
@@ -139,6 +141,11 @@ interface Entry { weight: number; cat: BuildCat; make: (allowMythic: boolean) =>
 const mk = (type: UpgradeType, name: string, description: string, tier: number, value: number, special?: SpecialId): Omit<Upgrade, 'id'> =>
   ({ type, name, description, rarity: TIERS[tier], tier, value, special });
 
+/** (owner) Mana Thrift (skills cost less mana) and Surging Heart (the ultimate fills faster): stacking, capped. */
+const MANA_CUT_VALS = [0.06, 0.09, 0.12, 0.16, 0.22], ULT_CHARGE_VALS = [0.10, 0.15, 0.20, 0.28, 0.40];
+export const MANA_CUT_CAP = 0.45, ULT_CHARGE_CAP = 0.8;
+function manaCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(MANA_CUT_VALS[t], MANA_CUT_CAP - runCards.manaCut); return mk('MANA_COST', 'Mana Thrift', `Skills cost ${pct(v)} less mana (max -${pct(MANA_CUT_CAP)} total)`, t, v); }
+function ultCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(ULT_CHARGE_VALS[t], ULT_CHARGE_CAP - runCards.ultCharge); return mk('ULT_CHARGE', 'Surging Heart', `Your Ultimate charges ${pct(v)} faster (max +${pct(ULT_CHARGE_CAP)} total)`, t, v); }
 /** Cards that can be offered right now (limits, stacks, once-per-run specials, once-per-biome Aegis). */
 function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string): Entry[] {
   const out: Entry[] = [];
@@ -154,6 +161,8 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
       return mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v);
     } });
   }
+  if (runCards.manaCut < MANA_CUT_CAP - 1e-6) out.push({ weight: 0.6, cat: 'MAGIC', make: (am) => manaCard(rollTier(0, 4, am)) });
+  if (runCards.ultCharge < ULT_CHARGE_CAP - 1e-6) out.push({ weight: 0.6, cat: 'MAGIC', make: (am) => ultCard(rollTier(0, 4, am)) });
   out.push({ weight: 0.3, cat: 'DEFENSE', make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
   if (ultUnlocked) out.push({ weight: 0.25, cat: 'MAGIC', make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
   if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
@@ -177,7 +186,7 @@ const TYPE_CAT: Partial<Record<UpgradeType, BuildCat>> = {
   DAMAGE: 'OFFENSE', FIRE_RATE: 'OFFENSE', CRIT_RATE: 'OFFENSE', CRIT_DAMAGE: 'OFFENSE', MULTISHOT: 'OFFENSE', KNOCKBACK: 'OFFENSE',
   HEALTH: 'DEFENSE', DEFENSE: 'DEFENSE', DMG_REDUCE: 'DEFENSE', LIFESTEAL: 'DEFENSE', RESTORE: 'DEFENSE', AEGIS: 'DEFENSE', DEATH_DEFIANCE: 'DEFENSE',
   SPEED: 'UTILITY', DASH_COOLDOWN: 'UTILITY', COOLDOWN: 'UTILITY', POTION_CD: 'UTILITY',
-  MAX_MANA: 'MAGIC', MANA_REGEN: 'MAGIC', ULT_FILL: 'MAGIC',
+  MAX_MANA: 'MAGIC', MANA_REGEN: 'MAGIC', ULT_FILL: 'MAGIC', MANA_COST: 'MAGIC', ULT_CHARGE: 'MAGIC',
 };
 const SPECIAL_CAT: Partial<Record<SpecialId, BuildCat>> = {
   AFFLICT: 'OFFENSE', SUNDER: 'OFFENSE', SLAYER: 'OFFENSE', EXECUTE: 'OFFENSE', FIRST_STRIKE: 'OFFENSE', LINGER: 'OFFENSE',
@@ -211,6 +220,7 @@ function maxTierOf(c: Pick<Upgrade, 'type' | 'special'>): number {
   if (statDef(c.type)) return 4;
   if (c.type === 'SPECIAL') return 4;
   if (c.type === 'POTION_CD') return 3;
+  if (c.type === 'MANA_COST' || c.type === 'ULT_CHARGE') return 4;
   return 0;
 }
 /** True when Card Polish can raise this card by one tier. */
@@ -222,6 +232,8 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   let out: Omit<Upgrade, 'id'> | null = null;
   const d = statDef(c.type);
   if (d) out = mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]);
+  else if (c.type === 'MANA_COST') out = manaCard(t);
+  else if (c.type === 'ULT_CHARGE') out = ultCard(t);
   else if (c.type === 'POTION_CD') { const v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut); out = mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v); }
   else if (c.type === 'SPECIAL') { const s = SPECIALS.find((x) => x.id === c.special); if (s) out = specCard(s, t); }
   if (out && out.tier === 4) runCards.mythicOffered = true;
@@ -287,6 +299,8 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
 export function takeRunCard(u: Upgrade): boolean {
   const r = runCards, v = u.value;
   if (u.type === 'DASH_COOLDOWN') { r.dashStacks = Math.min(DASH_CARD_MAX, r.dashStacks + 1); return true; }
+  if (u.type === 'MANA_COST') { r.manaCut = Math.min(MANA_CUT_CAP, r.manaCut + v); return true; }
+  if (u.type === 'ULT_CHARGE') { r.ultCharge = Math.min(ULT_CHARGE_CAP, r.ultCharge + v); return true; }
   if (u.type === 'POTION_CD') { r.potionCdStacks = Math.min(POTION_CD_STACKS_MAX, r.potionCdStacks + 1); r.potionCdCut = Math.min(POTION_CD_CAP, r.potionCdCut + v); return true; }
   if (u.type === 'DEATH_DEFIANCE') { if (r.defianceTaken < DEFIANCE_MAX) { r.defianceTaken++; r.defiance++; } return true; }
   if (u.type !== 'SPECIAL' || !u.special) return false;

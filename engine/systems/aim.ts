@@ -273,7 +273,7 @@ function autoSkills(): void {
   if (!p.alive || world.time < autoState.next) return;
   autoState.next = world.time + 0.25;
   const off = st.settings.autoOff;
-  if (isCastable('ult') && !off?.includes('ult')) {
+  if (isCastable('ult') && st.settings.autoOn?.includes('ult')) {
     const boss = findNearestEnemy(p.pos.x, p.pos.z, 24);
     if ((boss && boss.boss) || countNear(14) >= 6) { fire('ult', 'AUTO'); autoState.next = world.time + 1.2; return; }
   }

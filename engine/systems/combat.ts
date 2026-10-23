@@ -159,7 +159,7 @@ export function addUlt(n: number): void {
   const sl = useGameStore.getState().skillLevels;
   if (sl.ult <= 0) return;   // the ult is locked until Lv 10 (no charge)
   const wl = sl.weapon;
-  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1)); // ult charge (+40% vs 0.62)
+  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1) * (1 + runCards.ultCharge));   // (+ Surging Heart run card) // ult charge (+40% vs 0.62)
   if (p.ult >= 100) events.emit('ultReady', {});
 }
 

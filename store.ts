@@ -139,7 +139,7 @@ export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Mat
 export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * rank);
 /** Items each shop can put on sale (potion shop provisions, buyable pets). */
 export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.id === 'upgrade_core' || i.type === 'REVIVE');
-export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly).map((p) => p.id)];
+export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly && (p.rarity !== 'EPIC' || p.id === 'pet_wolf')).map((p) => p.id)];
 /** (owner: no more random 'X% off' shop sales) kept as a no-op so old callers still work. */
 export function rollSales(): Record<string, number> { return {}; }
 /** Current sale fraction for a shop item (0 when not on sale). */
@@ -1192,7 +1192,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (skill === 'e' && s.hero !== 'BARBARIAN') return 0; // class dash is free (charges)
       const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? Math.ceil((15 + s.skillLevels.freezeSpell * 2) * 0.5) : 0;   // passives cost half mana
       const total = cost > 0 ? Math.ceil(cost * (CLASS_MANA_MUL[s.hero] ?? 1) * (skill === 'freezeSpell' ? 0.65 : 0.75)) : 0;   // per-class mana cost multiplier (balance pass 2); (owner) skills -25%, passives -35%
-      return s.stats.manaCostCut > 0 ? Math.ceil(total * (1 - Math.min(0.8, s.stats.manaCostCut))) : total;
+      const cut = Math.min(0.8, (s.stats.manaCostCut || 0) + runCards.manaCut);   // (+ the Mana Thrift run card)
+      return cut > 0 ? Math.ceil(total * (1 - cut)) : total;
     },
 
     // ----------------------------------------------------------- items --

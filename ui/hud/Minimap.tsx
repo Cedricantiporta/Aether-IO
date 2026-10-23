@@ -350,7 +350,7 @@ export const Minimap: React.FC = () => {
     }
   });
   return (
-    <div className="pe relative mm-wrap" style={{ width: `${SIZE / 14.4}rem`, height: `${SIZE / 14.4}rem` }}>
+    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.22) / 14.4}rem`, height: `${(SIZE * 1.22) / 14.4}rem` }}>
       <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
       <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
     </div>

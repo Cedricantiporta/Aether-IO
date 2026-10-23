@@ -314,6 +314,15 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     }
   }
 
+  if (type === 'SHRINE' && !tower) {   // (owner) the Challenge Shrine has a Mana Bloom on either side of the altar
+    const [sx, sz] = stationPos();
+    for (const dx of [-6.2, 6.2]) {
+      const x = sx + dx, z = sz + 1.2;
+      for (let i = crateList.length - 1; i >= 0; i--) if (Math.hypot(crateList[i].x - x, crateList[i].z - z) < 2.4) crateList.splice(i, 1);
+      if (insideShape(x, z, 2)) crateList.push({ kind: 'MANA_BLOOM', x, z });
+    }
+  }
+
   world.obstacles = obstacles;
   world.obstaclesVersion++;
   installRoom(colliders, shape.baseR + 1);

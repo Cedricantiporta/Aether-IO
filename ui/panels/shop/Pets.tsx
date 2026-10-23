@@ -36,7 +36,7 @@ const PetBadges: React.FC<{ name: string }> = ({ name }) => {
 
 /** Pet House: Shop (bag-style grid; click a pet for details + Buy) and Care (feed / evolve the equipped pet) tabs. */
 /** (owner) the stable sells Common..Epic pets only; Legendary (gold) and Mythic (red) come from summons / fusion. */
-const SHOP_PETS = PETS_POOL.filter((q) => !q.summonOnly && q.rarity !== 'LEGENDARY' && q.rarity !== 'MYTHIC');
+const SHOP_PETS = PETS_POOL.filter((q) => !q.summonOnly && q.rarity !== 'LEGENDARY' && q.rarity !== 'MYTHIC' && (q.rarity !== 'EPIC' || q.id === 'pet_wolf'));   // (owner) the only Epic in the shop is the Spirit Wolf
 export const PetsTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const sales = useGameStore((s) => s.shopSales);

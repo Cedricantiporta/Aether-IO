@@ -46,6 +46,7 @@ export const ShopPanel: React.FC = () => {
   const [bulk, setBulk] = React.useState(false);
   const cur = TABS.find((t) => t.id === tab) ?? TABS[0];
   // drop a bag item on a shop: sell it (or pick it for upgrading at the blacksmith); the warehouse grid handles its own drops
+  const petsTab = useUiStore((s) => s.petsTab);
   const ui = useUiStore.getState();
   const sellDrop = useDrop((d) => d.from === 'BAG' && ['SUPPLIES', 'PETS', 'ARMORY', 'MERCHANT', 'BLACKSMITH', 'FISH'].includes(tab),
     (d) => { if (tab === 'BLACKSMITH') ui.setSelectedItem(d.item); else ui.setSellItem(d.item); });
@@ -71,7 +72,7 @@ export const ShopPanel: React.FC = () => {
           {tab === 'FISH' && <FishShopTab />}
           {tab === 'MINE' && <MineShopTab />}
         </div>
-        {SELL_TABS.includes(tab) && (
+        {SELL_TABS.includes(tab) && !(tab === 'PETS' && petsTab !== 'SHOP') && (   /* (owner) only on pages that sell things, not Pet Care / Fuse */
           <div className="shop-foot">
             <button className="rpg-btn rpg-btn-sm pe" onClick={() => setBulk(true)} data-testid="shop-bulk-sell">Bulk sell</button>
           </div>

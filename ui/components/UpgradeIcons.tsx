@@ -172,7 +172,7 @@ const ART: Record<UpgradeType, () => React.ReactNode> = {
   SKILL_RAGE: () => <g>{SwordA(-40)}{SwordA(40)}</g>, SKILL_STORM: () => <g><circle cx="32" cy="32" r="28" fill="none" stroke={u('purp')} strokeWidth="4" opacity=".8" />{Shield('purp')}</g>,
   SKILL_WARCRY: () => <g>{Shield('steel')}{SwordA(45)}</g>, SKILL_INSPIRE: Star, SKILL_PIERCE_SHOT: Arrow,
   COOLDOWN: Clock, KNOCKBACK: Chevrons, LIFESTEAL: Fang, DMG_REDUCE: () => Shield('blue'), MANA_REGEN: ManaSpring, DEATH_DEFIANCE: Ankh, SPECIAL: Star,
-  ULT_FILL: () => Spark(32, 32, 28, 'gold'), RESTORE: () => <g>{Heart('red')}{Spark(48, 14, 8)}</g>, AEGIS: () => Shield('gold'),
+  ULT_FILL: () => Spark(32, 32, 28, 'gold'), MANA_COST: Drop, ULT_CHARGE: () => Spark(32, 32, 24, 'gold'), RESTORE: () => <g>{Heart('red')}{Spark(48, 14, 8)}</g>, AEGIS: () => Shield('gold'),
   SKILL_HOLY_WAVE: () => <g>{SwordA(45)}</g>, SKILL_CONSECRATE: () => Shield('gold'), SKILL_SMITE: () => <g>{SwordA(0)}</g>, SKILL_RADIANT: Star, SKILL_GRAVECALL: Star, SKILL_SOULHARVEST: Star, SKILL_BONEARMOR: () => Shield('steel'),
 };
 
@@ -203,7 +203,9 @@ export const cardArtUrl = (k: string): string => `${((import.meta as any).env?.B
 export const TALL_ART = new Set([...CARD_ART, 'ULT_FILL', 'AEGIS', 'DEATH_DEFIANCE', 'AFFLICT', 'SUNDER', 'GUARDIAN', 'SLAYER', 'ALCHEMIST',
   'EXECUTE', 'FIRST_STRIKE', 'SECOND_WIND', 'GOLD_RUSH', 'LINGER']);
 export const tallArtKey = (u: Pick<Upgrade, 'type' | 'special'>): string | null => {
-  const k = (u.special as string | undefined) ?? u.type;
+  let k = (u.special as string | undefined) ?? u.type;
+  if (k === 'MANA_COST') k = TALL_ART.has('MANA_REGEN') ? 'MANA_REGEN' : 'MAX_MANA';   // (new cards share the nearest painting)
+  else if (k === 'ULT_CHARGE') k = 'ULT_FILL';
   return TALL_ART.has(k) ? k : null;
 };
 const artBase = (): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/`;
