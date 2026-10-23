@@ -3825,3 +3825,10 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .sm-face.tarot .sm-name { left: 17%; right: 17%; white-space: normal; text-align: center; line-height: 1.02; font-size: 7.2cqw; overflow: visible; word-break: normal; overflow-wrap: anywhere; }
 .sm-cards.many .sm-face.tarot .sm-name { font-size: 7.6cqw; }
 .sm-face.tarot.sf .sm-name { top: 78.6%; height: 9.6%; }
+/* (owner) boss HP bar docked top-centre under the gold / gems */
+.bb-slim.bb-top .bb-n { font-size: 1rem; color: #fff1ec !important; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .7); }
+.bb-slim.bb-top .bb-bar { padding-left: 1.7rem; }
+.bb-slim.bb-top .bb-track { height: 1.05rem; }
+.bb-slim.bb-top .bb-val { font-size: .72rem; }
+.bb-slim.bb-top .bb-shield { height: .32rem; }
+.bb-slim.bb-top .bb-ic { width: 1.5rem; height: 1.5rem; }

@@ -33,8 +33,12 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
     }
     if (!on) return;
     if (I && !I.onScreen) { if (root.current) root.current.style.opacity = '0'; return; }
-    // follow the boss: anchored above its head (clamped inside the screen)
-    if (root.current) {
+    // (owner) the real boss bar is docked top-centre under the gold / gems row; Malakar's illusion bars still float over the decoys
+    if (root.current && !I) {
+      const r = root.current;
+      r.style.transform = `translate(${(window.innerWidth / 2 - r.offsetWidth / 2).toFixed(1)}px, var(--bb-top, 3.3rem))`;
+      r.style.opacity = '1';
+    } else if (root.current) {   // illusions: anchored above the decoy's head (clamped inside the screen)
       const r = root.current, W = window.innerWidth, H = window.innerHeight, hw = r.offsetWidth / 2;
       // off screen (or no anchor yet): parked top-centre, under the depth tracker
       const x = b.onScreen ? Math.min(W - hw - 8, Math.max(hw + 8, b.sx)) : W / 2;
@@ -84,7 +88,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   });
 
   return (
-    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: '10.5rem', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid="boss-bar" className="bb-slim">
+    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: illusion === undefined ? 'min(26rem, 72vw)' : '10.5rem', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid={illusion === undefined ? 'boss-bar' : 'boss-bar-illusion'} className={`bb-slim${illusion === undefined ? ' bb-top' : ''}`}>
       <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
       <div className="bb-name text-center leading-none">
         <span ref={name} className="bb-n" /><span ref={title} className="bb-t" />
