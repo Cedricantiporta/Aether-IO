@@ -96,13 +96,13 @@ const STATS: StatDef[] = [
 ];
 
 interface SpecialDef { id: SpecialId; name: string; vals: [number, number]; fmt: (v: number, tier: number) => string; weight: number }
-/** vals = [LEGENDARY, MYTHIC] */
+/** vals = [LEGENDARY, MYTHIC]; (owner) specials also come as Rare (50% of the Legendary value) and Epic (75%), see specVal */
 const SPECIALS: SpecialDef[] = [
   { id: 'AFFLICT', name: 'Afflictor', vals: [0.20, 0.30], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies with 3 or more status effects (burn, poison, freeze, slow, stun...)` },
   { id: 'SUNDER', name: 'Shieldbreaker', vals: [0.20, 0.35], weight: 0.15, fmt: (v) => `Enemy shields (bosses excepted) are ${pct(v)} weaker` },
   { id: 'GUARDIAN', name: 'Guardian’s Spoils', vals: [0, 1], weight: 0.15, fmt: (_v, t) => `Every guardian or mini-boss stage also gives a card selection when cleared${t >= 4 ? ' (one more card to choose from)' : ''}` },
   { id: 'SLAYER', name: 'Giant Slayer', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Against bosses: deal +${pct(v)} damage and take ${pct(v)} less damage` },
-  { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.15, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${t >= 4 ? 90 : 85}% of max HP instead of 70%` },
+  { id: 'ALCHEMIST', name: 'Alchemist', vals: [0.15, 0.30], weight: 0.15, fmt: (v, t) => `Potions are ${pct(v)} more effective. Regeneration heals up to ${[75, 75, 80, 85, 90][Math.min(4, t)]}% of max HP instead of 70%` },
   { id: 'EXECUTE', name: 'Executioner', vals: [0.25, 0.40], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies below 30% HP` },
   { id: 'FIRST_STRIKE', name: 'First Strike', vals: [0.40, 0.70], weight: 0.15, fmt: (v) => `+${pct(v)} damage to enemies at full HP` },
   { id: 'SECOND_WIND', name: 'Second Wind', vals: [0.15, 0.25], weight: 0.15, fmt: (v) => `Heal ${pct(v)} of max HP when a room is cleared` },
@@ -120,6 +120,8 @@ export const ARCANA_NUMERAL: Record<string, string> = {
 
 // ------------------------------------------------------------------- rolling --
 /** Picks a tier in [min, max] with the base odds renormalised inside the range (mythic only when allowed). */
+const specVal = (s: SpecialDef, t: number): number => (t >= 4 ? s.vals[1] : t === 3 ? s.vals[0] : Math.round(s.vals[0] * (t === 2 ? 0.75 : 0.5) * 100) / 100);
+const specCard = (s: SpecialDef, t: number): Omit<Upgrade, 'id'> => { const v = specVal(s, t); return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); };
 function rollTier(min: number, max: number, allowMythic: boolean): number {
   const hm = runInfo.hard, em = earlyMul;
   let tot = 0;
@@ -160,7 +162,7 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   }
   for (const s of SPECIALS) {
     if (runCards.taken[s.id]) continue;
-    out.push({ weight: s.weight * (earlyMul?.[3] ?? 1), cat: SPECIAL_CAT[s.id] ?? 'UTILITY', make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
+    out.push({ weight: s.weight * (earlyMul?.[3] ?? 1), cat: SPECIAL_CAT[s.id] ?? 'UTILITY', make: (am) => specCard(s, rollTier(1, 4, am)) });   // (owner) Rare..Mythic, like the stat cards
   }
   void multishotOk;
   return out;
@@ -221,7 +223,7 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   const d = statDef(c.type);
   if (d) out = mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]);
   else if (c.type === 'POTION_CD') { const v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut); out = mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v); }
-  else if (c.type === 'SPECIAL') { const s = SPECIALS.find((x) => x.id === c.special); if (s) { const v = s.vals[1]; out = mk('SPECIAL', s.name, s.fmt(v, 4), 4, v, s.id); } }
+  else if (c.type === 'SPECIAL') { const s = SPECIALS.find((x) => x.id === c.special); if (s) out = specCard(s, t); }
   if (out && out.tier === 4) runCards.mythicOffered = true;
   return out;
 }
@@ -239,11 +241,9 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
       const opt = SPECIALS.filter((x) => !runCards.taken[x.id] && (SPECIAL_CAT[x.id] ?? 'UTILITY') === cat);
       const sp = opt[Math.floor(Math.random() * opt.length)];
       if (!sp) continue;
-      const t = !runCards.mythicOffered && Math.random() < 0.04 ? 4 : 3, v = sp.vals[t === 4 ? 1 : 0];
-      if (t === 4) runCards.mythicOffered = true;
-      cards.push(mk('SPECIAL', sp.name, sp.fmt(v, t), t, v, sp.id));
+      cards.push(specCard(sp, Math.random() < 0.65 ? 1 : 2));   // (owner) the opener is a taste: Rare or Epic, never Legendary / Mythic
     }
-    if (cards.length === 3) return cards;
+    if (cards.length === 3) { if (opts.epic && !cards.some((c) => (c.tier ?? 0) >= 2)) { const i = Math.floor(Math.random() * 3); const sp = SPECIALS.find((x) => x.id === cards[i].special)!; cards[i] = specCard(sp, 2); } return cards; }
     cards.length = 0;
   }
   const lead = opts.trend ? trendLeader(opts.trend) : null, leadCap = 2;   // (owner: at most 2 cards of the leading category; with 2 cards on offer that is no cap, the lean is the weight)
@@ -291,7 +291,7 @@ export function takeRunCard(u: Upgrade): boolean {
     case 'SUNDER': r.sunder = v; break;
     case 'GUARDIAN': r.guardian = 1 + (t >= 4 ? 1 : 0); break;
     case 'SLAYER': r.slayer = v; break;
-    case 'ALCHEMIST': r.potionBonus = v; r.regenCap = t >= 4 ? 0.9 : 0.85; break;
+    case 'ALCHEMIST': r.potionBonus = v; r.regenCap = [0.75, 0.75, 0.8, 0.85, 0.9][Math.min(4, t)]; break;
     case 'EXECUTE': r.execute = v; break;
     case 'FIRST_STRIKE': r.firstStrike = v; break;
     case 'SECOND_WIND': r.secondWind = v; break;
