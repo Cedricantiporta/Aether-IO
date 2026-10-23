@@ -11,6 +11,7 @@ import {
   AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
   CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
   ShaderMaterial, Shape, ShapeGeometry, TorusGeometry, type BufferGeometry,
+  Matrix4, Quaternion, Euler, Vector3,
 } from 'three';
 import { FX, CELL } from './fx';
 import { useGameStore } from '../store';
@@ -30,7 +31,7 @@ import { Wanderer } from './Wanderer';
 import { AllyActor } from './Ally';
 import { Finale } from './Finale';
 import { GB, commitInst, fbm, litMat, mulberry32, vnoise } from './util';
-import { triArrowGeo } from './arrowGeo';
+import { thinArrowGeo } from './arrowGeo';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
 import { labelMaterial } from './label';
@@ -925,34 +926,46 @@ function MerchantNpc() {
   );
 }
 
-/** Small arrows around the hero pointing at exit portals that are off-screen. */
+/** (owner) A scrolling chevron trail ">>>>" from the hero to every open exit portal, in the portal's colour (dark outline). */
+const TRAIL_PER = 22, TRAIL_STEP = 1.3;
+const _tm = new Matrix4(), _tq = new Quaternion(), _te = new Euler(), _tp = new Vector3(), _ts = new Vector3(1, 1, 1);
 function PortalGuides() {
-  const geo = useMemo(() => ({ core: triArrowGeo(0.5, 1.3, 0.38), rim: triArrowGeo(0.62, 1.48, 0.36).translate(0, 0, -0.09) }), []);   // notched triangles (render/arrowGeo): vivid core, dark rim
-  const mats = useMemo(() => [0, 1, 2, 3].map(() => new MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false, side: DoubleSide, color: new Color() })), []);
-  const rimMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#120e0a' }), []);
-  const refs = useRef<(Group | null)[]>([]);
+  const geo = useMemo(() => ({ chev: thinArrowGeo(0.5, 0.5, 0, 0.22), sh: thinArrowGeo(0.58, 0.58, 0, 0.42).translate(0.06, -0.01, -0.1) }), []);
+  const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.92, toneMapped: false, depthWrite: false, side: DoubleSide }), []);
+  const shMat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.55, toneMapped: false, depthWrite: false, side: DoubleSide, color: '#1a1410' }), []);
+  const N = TRAIL_PER * 4;
+  const trail = useRef<InstancedMesh>(null!), sh = useRef<InstancedMesh>(null!);
   const keys = useRef([-1, -1, -1, -1]);
+  const cols = useMemo(() => [0, 1, 2, 3].map(() => new Color()), []);
   useFrame(({ clock }) => {
-    const r = world.room, p = world.player.pos;
+    const r = world.room, p = world.player.pos, tr = trail.current, sm = sh.current;
+    if (!tr || !sm) return;
+    let n = 0;
+    const scroll = (clock.elapsedTime * 1.6) % TRAIL_STEP;
     for (let i = 0; i < 4; i++) {
-      const m = refs.current[i]; if (!m) continue;
       const po = r.portals[i];
+      if (!po.active || r.fade >= 0.5) continue;
       const dx = po.x - p.x, dz = po.z - p.z, d = Math.hypot(dx, dz);
-      m.visible = po.active && d > 15 && r.fade < 0.5;
-      if (!m.visible) continue;
-      const k = 4.2 + Math.sin(clock.elapsedTime * 5 + i) * 0.25;
-      m.position.set(p.x + (dx / d) * (k - 0.6), 0.25, p.z + (dz / d) * (k - 0.6));
-      m.rotation.y = Math.atan2(dx, dz);
+      if (d < 5) continue;
       const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward] + (po.plan.shortcut ? 250 : 0);
-      if (key !== keys.current[i]) { keys.current[i] = key; mats[i].color.set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)
+      if (key !== keys.current[i]) { keys.current[i] = key; cols[i].set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)
+      _te.set(0, Math.atan2(dx, dz), 0); _tq.setFromEuler(_te);
+      let c = 0;
+      for (let u = 1.6 + scroll; u < d - 3 && c < TRAIL_PER; u += TRAIL_STEP, c++) {
+        const f = Math.min(1, c / 3 + 0.35);
+        _tp.set(p.x + (dx / d) * u, 0.25, p.z + (dz / d) * u); _ts.set(f, 1, f); _tm.compose(_tp, _tq, _ts);
+        tr.setMatrixAt(n, _tm); sm.setMatrixAt(n, _tm); tr.setColorAt(n, cols[i]); n++;
+      }
     }
+    tr.count = sm.count = n; tr.visible = sm.visible = n > 0;
+    if (n > 0) { tr.instanceMatrix.needsUpdate = true; sm.instanceMatrix.needsUpdate = true; if (tr.instanceColor) tr.instanceColor.needsUpdate = true; }
   });
-  return <>{[0, 1, 2, 3].map((i) => (
-    <group key={i} ref={(m) => { refs.current[i] = m; }} visible={false}>
-      <mesh geometry={geo.rim} material={rimMat} renderOrder={5} />
-      <mesh geometry={geo.core} material={mats[i]} position={[0, 0.01, 0]} renderOrder={6} />
-    </group>
-  ))}</>;
+  return (
+    <>
+      <instancedMesh ref={sh} args={[geo.sh, shMat, N]} renderOrder={5} frustumCulled={false} visible={false} />
+      <instancedMesh ref={trail} args={[geo.chev, mat, N]} renderOrder={6} frustumCulled={false} visible={false} />
+    </>
+  );
 }
 
 // ----------------------------------------------------------- spawn markers ---
