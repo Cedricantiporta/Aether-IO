@@ -558,6 +558,8 @@ const GEAR_TYPES = new Set(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACC
 /** Painted per-item gear icons (public/art/gear/<slug>.webp). slug = base item name, lowercase, apostrophes dropped, spaces -> '_'.
  *  Only listed slugs are requested (no 404s); anything else keeps the generic SVG art. Add a slug here when you add a file. */
 const GEAR_PAINT = new Set([
+  'ranger_hood', 'leather_jerkin', 'ranger_bracers', 'ranger_boots', 'plate_helm', 'steel_cuirass', 'arcane_hat', 'silk_robe', 'silk_gloves', 'silk_slippers', 'gauntlets', 'horned_helm', 'wolfhide_vest', 'fur_wraps', 'hide_boots', 'sabatons',
+  
   'hunters_bow', 'greenwood_bow', 'hornet_recurve', 'stormpiercer', 'skyreaver', 'starfall_arc', 'twig_wand', 'mossy_staff',
   'sages_staff', 'tidecaller', 'moonlit_scepter', 'astral_scepter', 'woodcutter_axe', 'iron_hatchet', 'battle_axe',
   'bearded_greataxe', 'juggernaut_axe', 'colossus_cleaver', 'militia_sword', 'footmans_blade', 'knights_longsword',
@@ -580,6 +582,8 @@ export function gearSlug(item: Item): string | undefined {
   if (GEAR_PAINT.has(s)) return s;
   const t = slug(base.replace(TIER_PREFIX, '')); // class wear carries a tier word: "Worn Bone Crown" -> bone_crown
   if (GEAR_PAINT.has(t)) return t;
+  const u = slug(base.replace(TIER_PREFIX, '').replace(/^(shadowstep|dragonbone|sovereign'?s?|gale|archmage'?s|warlord'?s|oathbound)\s+/i, ''));   // per-class set piece: "Shadowstep Ranger Hood" -> ranger_hood
+  if (GEAR_PAINT.has(u)) return u;
   // no own painting yet: borrow the closest painted look by kind so weapons / rings never fall back to the old flat art
   const n = base.toLowerCase();
   for (const [re, k] of GEAR_KIND) if (re.test(n)) return k;
@@ -596,11 +600,21 @@ export const GearImg: React.FC<{ slug: string; size: number | string }> = React.
 ));
 GearImg.displayName = 'GearImg';
 
+/** Painted loot / fish icons (public/art/loot|fish/<slug>.webp, sheets B6-B9), slug = lowercased name, no apostrophes, spaces -> _. */
+const LOOT_PAINT = new Set(['abyssal_diamond', 'adamant_ore', 'ancient_acorn', 'ancient_relic', 'bat_wing', 'beetle_shell', 'bone_crown', 'champions_medal', 'cinder_core', 'crown_of_the_mountain', 'cultist_rune', 'cursed_skull', 'dark_tome_page', 'echo_crystal', 'echo_of_ruin', 'elderroot_heartwood', 'elite_trophy', 'goblin_chiefs_totem', 'goblin_ear', 'goblin_fang_necklace', 'golem_heartstone', 'grave_locket', 'heart_of_glacius', 'heart_of_the_void', 'herald_void_shard', 'hydra_fang', 'ignars_brand', 'iron_knuckle', 'lich_phylactery_shard', 'lichs_eye', 'malakars_soul_ember', 'marsh_scale', 'mithril_ore', 'ogre_tusk', 'ogre_war_banner', 'old_bone', 'old_coin_pouch', 'ore_nugget', 'pulsing_jelly_heart', 'raw_gemstone', 'royal_seal', 'rusty_tin_can', 'shimmering_core', 'silver_goblet', 'slime_gel', 'soggy_boot', 'volatile_gland', 'wyrm_frostscale']);
+const FISH_PAINT = new Set(['aetherfin_koi', 'crimson_salmon', 'crystal_sturgeon', 'deep_geode', 'ghost_catfish', 'golden_carp', 'lake_perch', 'lake_serpent_eel', 'lanternfish', 'moon_dragon_carp', 'moonlit_bream', 'rainbow_trout', 'reed_gudgeon', 'silver_minnow', 'silver_pike', 'starfire_crystal']);
+const ART_ROOT = ((import.meta as any).env?.BASE_URL as string) || '/';
+function lootArt(item: Item): string | undefined {
+  if (item.type !== 'LOOT') return undefined;
+  const s = item.name.toLowerCase().replace(/['\u2019]/g, '').trim().replace(/\s+/g, '_');
+  return LOOT_PAINT.has(s) ? `${ART_ROOT}art/loot/${s}.webp` : FISH_PAINT.has(s) ? `${ART_ROOT}art/fish/${s}.webp` : undefined;
+}
 const SHARD_PAINT = new Set(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']);
 /** Painted icon for an item. `size` is px or a css length / percentage. */
 export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => {
   const gs = gearSlug(item);
-  return gs ? <GearImg slug={gs} size={size} /> : (
+  const la = gs ? undefined : lootArt(item);
+  return gs ? <GearImg slug={gs} size={size} /> : la ? <img src={la} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} /> : (
   item.type === 'SHARD' ? (SHARD_PAINT.has(item.rarity) ? <PaintImg file={`shard_${item.rarity}`} size={size} /> : <ShardArt rarity={item.rarity} size={size} />) : item.type === 'CRYSTAL' ? <PaintImg file="aether_crystal" size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
   );
 };
