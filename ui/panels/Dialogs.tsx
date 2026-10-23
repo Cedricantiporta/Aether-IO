@@ -115,8 +115,9 @@ export const GlobalConfirm: React.FC = () => {
  *  card back has landed.
  *  Epic+ cards glow; Legendary / Mythic get an aura and rays. Stays until the player draws again or leaves. */
 /** Summon cutscenes (owner): one per altar; a missing / broken video falls back to the short ritual for the session. */
-export const SUMMON_VIDEO = { GEM: `${((import.meta as any).env?.BASE_URL as string) || '/'}video/summon_gem.mp4` };
-let videoFailed = false;
+const VBASE = `${((import.meta as any).env?.BASE_URL as string) || '/'}video/`;
+export const SUMMON_VIDEO: Record<string, string> = { GEM: `${VBASE}summon_gem.mp4`, SHARD: `${VBASE}summon_crystal.mp4` };   // GEM 6 s, Crystal Altar 8 s
+const videoFailed: Record<string, boolean> = {};
 const ROMAN_N = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export const SummonReveal: React.FC = () => {
   const results = useUiStore((s) => s.summonResults);
@@ -130,7 +131,7 @@ export const SummonReveal: React.FC = () => {
   const [flipped, setFlipped] = useState<boolean[]>([]);
   const [dealt, setDealt] = useState(false);   // every card back has landed: the Reveal All button appears
   const dealTimer = useRef(0);
-  // (owner) the Gem Altar plays its summoning cutscene (public/video/summon_gem.mp4, 6 s, tap to skip) before the cards
+  // (owner) each altar plays its summoning cutscene (SUMMON_VIDEO, tap to skip) before the cards
   const toCards = () => {
     if (!results) return;
     setPhase('cards'); window.clearTimeout(dealTimer.current);
@@ -139,7 +140,7 @@ export const SummonReveal: React.FC = () => {
   useEffect(() => {
     if (!results) return;
     setFlipped(results.map(() => false)); setDealt(false);
-    if (altar === 'GEM' && !videoFailed) { setPhase('video'); return () => window.clearTimeout(dealTimer.current); }
+    if (SUMMON_VIDEO[altar] && !videoFailed[altar]) { setPhase('video'); return () => window.clearTimeout(dealTimer.current); }
     setPhase('ritual');
     const t1 = setTimeout(() => setPhase('cards'), 1500);
     const t2 = setTimeout(() => setDealt(true), 1500 + results.length * 60 + 750);
@@ -161,7 +162,7 @@ export const SummonReveal: React.FC = () => {
     <motion.div className="absolute inset-0 grid place-items-center pe sm-root" style={{ zIndex: 260, ['--tint' as any]: tint }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-testid="summon-reveal">
       {phase === 'video' && (
         <div className="sm-video" onPointerDown={toCards} data-testid="summon-video">
-          <video src={SUMMON_VIDEO.GEM} autoPlay playsInline preload="auto" onEnded={toCards} onError={() => { videoFailed = true; toCards(); }} />
+          <video src={SUMMON_VIDEO[altar]} autoPlay playsInline preload="auto" onEnded={toCards} onError={() => { videoFailed[altar] = true; toCards(); }} />
           <span className="sm-skip">Tap to skip</span>
         </div>
       )}
