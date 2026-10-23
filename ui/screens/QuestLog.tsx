@@ -13,7 +13,6 @@ import { CHAPTERS, stepCount, storyIdx, STORY, type StoryStep } from '../../stor
 import { NPC_QUESTS, npcQuestProgress, npcQuestReady, npcQuestStatus, npcQuestLevelLocked, npcQuestMinLevel, bagCount, type NpcReward, type NpcQuestDef } from '../../npcQuests';
 import { GOLD_SCALE, ITEMS_POOL, PETS_POOL } from '../../constants';
 import { LOOT_BY_ID } from '../../loot';
-import { abandonNpcQuest } from '../../engine/systems/npcQuestLogic';
 import { questXp } from '../../classLevels';
 import { offerTeleport, trackAndGo } from '../hud/QuestTracker';
 import { useNewMainQuest, useNewSideQuest } from '../lib/alerts';
@@ -188,7 +187,7 @@ export const QuestLog: React.FC = () => {
                     </div>
                   </div>
                   {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); trackQuest('side:' + side.id, side.title); }}><MapPin size={15} /> Track</button>
-                    {!ready && <button className="qw-btn pe" data-testid="side-abandon" onClick={() => askConfirm({ title: `Abandon ${side.title}?`, body: `It goes back to ${side.giver}'s offers; your progress on it is lost.`, confirmLabel: 'Abandon', tone: 'danger', onConfirm: () => { abandonNpcQuest(side.id); } })}>Abandon</button>}</div>}
+                    </div>}
                   {!active && !lockLv && <div className="qw-btns"><button className="qw-btn pe" data-testid="side-track-offer" onClick={() => { setOpen(false); trackQuest('side:' + side.id, side.title); }}><MapPin size={15} /> Track</button></div>}
                 </div>
               );

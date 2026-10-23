@@ -163,7 +163,7 @@ town (and closes the open panel first).
 - **New-quest dots** (`questSeen.ts`, `store.questSeen`, saved in the profile; null = seed with everything available on first load):
   ids `main:<step>` / `side:<quest>`. Red dot on the Quest menu button + Main/Side tabs (`ui/lib/alerts.ts useQuestAlert`), "NEW" pill on
   the row; cleared by `markQuestsSeen` when the quest window shows that main step / selects that offered side quest. Main steps are
-  never "offered": `liveStep` puts an unlocked step straight into the log and tracker (a main talk step's dialogue has one "Okay" button (E / F / Space) that completes it; side offers keep Accept / Later).
+  never "offered": `liveStep` puts an unlocked step straight into the log and tracker (a main talk step's dialogue has one "Okay" button (E / F / Space) that completes it; side quests are auto-accepted too: `npcQuestLogic.autoAcceptSide` takes every AVAILABLE side quest the moment it unlocks (level, story, death unlock, chain) with the wide quest banner; no Abandon button). The travelling merchant's gear is always +2..+4. NPC and shopkeeper name tags are the hero name's size (0.78).
 - Town shows a few ambient cameo NPCs (Erin, Cabbage Man, Tilda, Corin, Nell ...) and speech bubbles; dialogue box has
   hero "reply" lines on the Next/Close button (`dialogue.replyAt`).
 

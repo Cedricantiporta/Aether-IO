@@ -408,7 +408,7 @@ const spurPlaza = (type: string): RoadSpec => {
   const sp = SHOP_POSITIONS.find((q) => q.type === type)!, f = shopFront(sp, 4.3), dx = PLAZA.x - f.x, dz = PLAZA.z - f.z, l = Math.hypot(dx, dz), k = (l - (PLAZA.r - 0.4)) / l;
   return { x1: f.x, z1: f.z, x2: f.x + dx * k, z2: f.z + dz * k, w: 2.8 };
 };
-const SHOP_SPURS: RoadSpec[] = [spurTo('SUPPLIES', 10, 'z'), spurTo('ARMORY', 10, 'z'), spurPlaza('PETS'), spurPlaza('WAREHOUSE'), spurPlaza('FORTUNE'), spurPlaza('BLACKSMITH'), spurTo('TECH', 10, 'z')];
+const SHOP_SPURS: RoadSpec[] = [spurTo('FORTUNE', 10, 'z'), spurTo('ARMORY', 10, 'z'), spurPlaza('PETS'), spurPlaza('WAREHOUSE'), spurPlaza('SUPPLIES'), spurPlaza('BLACKSMITH'), spurTo('TECH', 10, 'z')];
 export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 8, x2: 0, z2: BRIDGE.z0 + 0.3, w: ROAD_W.main },   // main avenue plaza -> gate -> the bridge
   { x1: -38, z1: 10, x2: 38, z2: 10, w: ROAD_W.street },         // south street

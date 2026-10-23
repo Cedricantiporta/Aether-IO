@@ -211,7 +211,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
       const e = smooth(closedK.current), c = NPC[type].pos, dr = DOOR[type];
       titleRef.current.position.set(c[0] + (dr[0] - c[0]) * e, 3.45, c[1] + (dr[1] - c[1]) * e);
       titleRef.current.visible = closedK.current < 0.985;
-      if (roleRef.current) { roleRef.current.position.set(titleRef.current.position.x, 4.0, titleRef.current.position.z); roleRef.current.visible = titleRef.current.visible; }
+      if (roleRef.current) { roleRef.current.position.set(titleRef.current.position.x, 4.2, titleRef.current.position.z); roleRef.current.visible = titleRef.current.visible; }
     }
     if (light.current) light.current.intensity = 14 + Math.sin(t * 9 + px) * 2 + Math.sin(t * 17) * 1.2;
     if (liquid.current) { const k = 1.4 + Math.sin(t * 4) * 0.35; mats.liquid.color.setRGB(0.5 * k, 1.8 * k, 0.6 * k); liquid.current.scale.y = 1 + Math.sin(t * 6) * 0.15; }
@@ -242,7 +242,7 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
     }
   });
 
-  const labelW = label.aspect * 0.55;   // small name tag over the shopkeeper's head
+  const labelW = label.aspect * 0.78;   // name tag over the shopkeeper's head (owner: as big as the hero's name)
   const signSide = type === 'BREWER' || kit ? -1 : 1;   // (owner: the brewer's sign post stood on the tower path; it hangs on the other side)
   return (
     <group position={[px, 0, pz]} rotation={[0, facing, 0]}>
@@ -254,8 +254,8 @@ function Shop({ type, position, color, q, facing = 0 }: { type: ShopType; positi
           <mesh geometry={sign.glow} material={mats.glow} />
         </group>
       </group>
-      <sprite ref={roleRef} material={role.mat} renderOrder={5} position={[NPC[type].pos[0], 4.0, NPC[type].pos[1]]} scale={[role.aspect * 0.46, 0.46, 1]} />
-      <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.45, NPC[type].pos[1]]} scale={[labelW, 0.55, 1]} />
+      <sprite ref={roleRef} material={role.mat} renderOrder={5} position={[NPC[type].pos[0], 4.2, NPC[type].pos[1]]} scale={[role.aspect * 0.6, 0.6, 1]} />
+      <sprite ref={titleRef} material={label.mat} renderOrder={5} position={[NPC[type].pos[0], 3.45, NPC[type].pos[1]]} scale={[labelW, 0.78, 1]} />
       {/* (owner: only the shopkeeper is clickable, not the building) */}
       <Shopkeeper cfg={NPC[type]} door={DOOR[type]} near={near} closed={closedK} onOpen={open} />
       {q.lights && <pointLight ref={light} position={[0, 3.6, 4.2]} color="#ffc47a" distance={14} decay={1.6} intensity={14} />}

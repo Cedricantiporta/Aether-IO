@@ -118,7 +118,7 @@ function NpcActor({ i }: { i: number }) {
   const clips = useClips();
   const group = useRef<Group>(null!), tag = useRef<Sprite>(null!), mark = useRef<Sprite>(null!), qicon = useRef<Sprite>(null!);
   const dot = useGameStore((s) => def.opens === 'SKILLS' ? canTrainSkill(s) || canBuyTalent(s) : def.opens === 'BLACKSMITH' ? canCraftAny(s) : false);   // red dot: something to do here
-  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, plate: 'mini', dot }), [def, dot]);
+  const label = useMemo(() => labelMaterial(def.name, def.accent, { size: 46, dot }), [def, dot]);
   const meshes = useRef<Mesh[]>(ch.meshes);
   const S = useRef({ mixer: null as AnimationMixer | null, idle: null as AnimationAction | null, walk: null as AnimationAction | null, talk: null as AnimationAction | null, w: 0, yaw: 0, wasTalking: false, tick: i, acc: 0, shadow: true, quest: false });
 
@@ -210,9 +210,9 @@ function NpcActor({ i }: { i: number }) {
     <group ref={group} position={[st.x, def.y ?? 0, st.z]} visible={false}>
       {/* NPCs use the hero's scale (1) so they match the player's size */}
       <group scale={def.scale}><primitive object={ch.root} /></group>
-      <sprite ref={mark} material={MARKS[1]!.mat} position={[0, 3.6 * def.scale, 0]} scale={[MARKS[1]!.aspect * 1.3, 1.3, 1]} visible={false} renderOrder={6} />
-      <sprite ref={tag} material={label.mat} position={[0, 2.85 * def.scale, 0]} scale={[label.aspect * 0.5, 0.5, 1]} visible={false} />
-      <sprite ref={qicon} material={questIconMat()} position={[-(label.aspect * 0.25) - 0.3, 2.85 * def.scale, 0]} scale={[0.46, 0.46, 1]} visible={false} />
+      <sprite ref={mark} material={MARKS[1]!.mat} position={[0, 3.95 * def.scale, 0]} scale={[MARKS[1]!.aspect * 1.3, 1.3, 1]} visible={false} renderOrder={6} />
+      <sprite ref={tag} material={label.mat} position={[0, 2.85 * def.scale, 0]} scale={[label.aspect * 0.78, 0.78, 1]} visible={false} />   {/* (owner) as big as the hero's name */}
+      <sprite ref={qicon} material={questIconMat()} position={[-(label.aspect * 0.39) - 0.4, 2.85 * def.scale, 0]} scale={[0.62, 0.62, 1]} visible={false} />
     </group>
   );
 }

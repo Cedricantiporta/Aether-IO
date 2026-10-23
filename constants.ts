@@ -63,8 +63,8 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     // The seven town shops RING THE PLAZA (owner 2026-10-21: W / E flanks, NW / NE / SW / SE corners + Tech House on the east outer band), each facing it, each with its own look (owner 2026-10-20: not one row): any yaw (owner 2026-10-21: the camera rotates now, so shops no longer have to face south): the front is +z turned by `rot`.
     // Structure + dressing per shop: engine/townData.ts SHOP_LOOK (data table, piece names; kit v3 swaps pieces there).
     { type: 'PETS', position: [-16.4, 0, 5.5], rot: Math.PI / 2, color: '#10b981' },          // beside the park (SW quarter)
-    { type: 'FORTUNE', position: [-16.4, 0, -1.5], rot: Math.PI / 2, color: '#a46bff' },   // fortune teller (summons): the quiet corner on the West Rise
-    { type: 'SUPPLIES', position: [32, 0, 2.6], rot: 0, color: '#3b82f6' },      // potion shop: the herb garden by the chapel / graveyard path
+    { type: 'FORTUNE', position: [32, 0, 2.6], rot: 0, color: '#a46bff' },   // fortune teller (summons): the herb-garden corner by the chapel path (owner: swapped with the potion shop)
+    { type: 'SUPPLIES', position: [-16.4, 0, -1.5], rot: Math.PI / 2, color: '#3b82f6' },      // potion shop: on the plaza, beside the pet shop (owner: swapped with Madame Zora)
     { type: 'ARMORY', position: [-12.6, 0, 19.8], rot: Math.PI, color: '#c9a052' },        // by the castle path, the guards' side
     { type: 'WAREHOUSE', position: [16.4, 0, 5.5], rot: -Math.PI / 2, color: '#b08850' },      // item storage (100 slots): market street, cart yard
     { type: 'BLACKSMITH', position: [16.4, 0, -1.5], rot: -Math.PI / 2, color: '#ef4444' },   // the forge yard by the gate
