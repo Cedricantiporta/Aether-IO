@@ -1249,9 +1249,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ progress: { ...p, daily } });
       if (first) {
         const rw = dailyReward(streak), now = get();
-        set({ gold: now.gold + rw.gold, gems: now.gems + rw.gems, materials: { ...now.materials, [rw.shardRarity]: now.materials[rw.shardRarity] + rw.shards, ...(rw.bonusShards ? { [rw.bonusRarity]: now.materials[rw.bonusRarity] + rw.bonusShards } : {}) } });
+        set({ gold: now.gold + rw.gold, gems: now.gems + rw.gems, crystals: (now.crystals ?? 0) + rw.crystals, ...(rw.bonusShards ? { materials: { ...now.materials, [rw.bonusRarity]: now.materials[rw.bonusRarity] + rw.bonusShards } } : {}) });
         notify(`Daily Trial reward${streak > 1 ? ` · ${streak}-day streak` : ''}!`, '#ffd24a', 'SYSTEM');
-        feedReward({ gold: rw.gold, gems: rw.gems, shards: rw.shards, shardRarity: rw.shardRarity });
+        feedReward({ gold: rw.gold, gems: rw.gems, crystals: rw.crystals });
         if (rw.bonusShards) feedReward({ shards: rw.bonusShards, shardRarity: rw.bonusRarity });
       }
       return { rewarded: first, newBest: r.score > prevBest };

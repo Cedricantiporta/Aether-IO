@@ -270,6 +270,13 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 { let n = 0; for (const [x, z, ry] of [[-20.0, 12.9, 0.3], [-4.6, 13.0, 0.2], [4.8, 13.0, -0.2], [17.0, 13.0, -0.3], [-33, 12.9, 0.1]] as const) if (n < 2 && decor('flower_cart', x, z, ry, 1, { solid: 'ring', r: 0.5, rad: 0.8 })) n++; }
 // ---- the notice board where the old quest board stood, 
 for (const [x, z] of [[-3.8, -8.4], [3.8, -8.4], [16.4, -9.0], [-16.4, -9.0]]) if (decor('notice_board', x, z, 0, 1, { solid: 'ring', r: 0.4, rad: 1.0 })) break;
+// ---- (owner 2026-10-23: dense medieval town) cosy dressing in the pockets between the house rows: each is skipped when it does not fit
+for (const [pc, x, z, ry, sc] of [
+  ['flower_cart', 12.4, -12.8, 0.2, 1], ['flower_cart', -13.2, -11.6, -0.2, 1], ['flower_cart', 14.4, 30.6, 0.3, 1],
+  ['fruit_crate', 32.4, 28, 0.3, 1], ['fruit_crate', -33.6, 28, -0.3, 1], ['fruit_crate', 31.2, -36.8, 0.2, 1],
+  ['potted_plant_a', -26.4, 24.9, 0, 1], ['potted_plant_b', 7.2, 14.8, 0, 1], ['potted_plant_a', 18, 14.8, 0, 1], ['potted_plant_b', -7.4, -15.2, 0, 1], ['potted_plant_a', 8.6, -15.2, 0, 1],
+  ['flower_bed_long', -33.6, -16.4, 0, 0.8], ['flower_bed_long', 8.4, 30.4, 0, 0.8], ['flower_bed_long', -36, 8.2, 0, 0.8],
+] as [string, number, number, number, number][]) decor(pc, x, z, ry, sc, { solid: 'ring', r: 0.45 });
 // ---- hedge_arch at the park entrances (the fountain park: north from the south street, east from the Pets shop; the east park: on its lane from the road)
 decor('hedge_arch', WELL_POS.x, 12.3, 0, 1, { solid: 'legs', r: 0.6, force: true });
 decor('hedge_arch', -15.4, 17.6, Math.PI / 2, 1, { solid: 'legs', r: 0.6, force: true });
@@ -299,7 +306,8 @@ put('fishing_net_rack', NET_RACK.x, NET_RACK.z, NET_RACK.rot, 1, 1, 1, 0);
   }
 }
 // ---- the park round the fountain: blossom trees + bushes (the hedge_arch entrances are above)
-grove(Z(WELL_POS.x, WELL_POS.z, 6.4, 3.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
+for (const [gx, gz] of [[WELL_POS.x, 12.6], [-15.3, 17.6], [WELL_POS.x, 21.4]]) resv(gx, gz, 2.4);   // the park's N / E / S entrance gaps stay free
+grove(Z(WELL_POS.x + 0.3, WELL_POS.z, 6.8, 4.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
 // ---- the garden strip along the south wall (z 33..36): beds, bushes, small trees; the avenue + hero's door stay free
 // ---- the rises (cottages at both south corners)
 grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);   // (owner: no loose bushes on the town paving)

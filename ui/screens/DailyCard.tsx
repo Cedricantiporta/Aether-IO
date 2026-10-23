@@ -59,7 +59,7 @@ export const DailyCard: React.FC = () => {
         {claimed ? <span className="done">Reward claimed today · retry for a better score</span> : <>
           <span><Coins size={13} color="#fbd34d" /> {rw.gold.toLocaleString()}</span>
           <span><Gem size={13} color="#5ee0f5" /> {rw.gems}</span>
-          <span><Sparkles size={13} color="#60a5fa" /> {rw.shards} Rare shards</span>
+          <span><Sparkles size={13} color="#7ad8ff" /> {rw.crystals} Aether Crystals</span>
           {rw.bonusShards > 0 && <span><Sparkles size={13} color="#c084fc" /> +{rw.bonusShards} Epic</span>}
         </>}
         <span className="streak"><Flame size={12} /> {nextStreak > 1 && !claimed ? `day ${nextStreak} streak bonus` : '+10% per streak day'}</span>

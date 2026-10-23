@@ -63,7 +63,7 @@ export const CharacterSheet: React.FC = () => {
         <div className="cs2-tabs">
           {(['ATTR', 'STATS'] as const).map((t) => <button key={t} className={`cs2-tab pe ${tab === t ? 'on' : ''}`} onClick={() => { setTab(t); if (t === 'STATS') setAlloc(false); }} data-testid={`char-tab-${t}`}>{t === 'ATTR' ? 'Attributes' : 'Stats'}{t === 'ATTR' && free > 0 && <i className="red-dot" />}</button>)}
         </div>
-        {tab === 'ATTR' && <AttrTree d={ad} allocOpen={alloc} onAlloc={() => setAlloc((v) => !v)} onDetails={() => { setAlloc(false); setTab('STATS'); }} />}
+        {tab === 'ATTR' && <AttrTree d={ad} allocOpen={alloc} onAlloc={() => setAlloc((v) => !v)} />}
         <div className="flex-1 min-h-0 rpg-scroll p-4 flex flex-col gap-3" style={tab === 'ATTR' ? { display: 'none' } : undefined}>
           <div className="flex items-center gap-3">
             <div className="rpg-medallion cs-avatar" style={{ width: '4.6rem', height: '4.6rem', ['--mc' as any]: HERO_COLOR[hero] }}><Icon size={32} /></div>
@@ -155,7 +155,7 @@ const useAttrDraft = () => {
 };
 type AttrDraft = ReturnType<typeof useAttrDraft>;
 
-const AttrTree: React.FC<{ d: AttrDraft; onDetails: () => void; onAlloc: () => void; allocOpen: boolean }> = ({ d, onDetails, onAlloc, allocOpen }) => {
+const AttrTree: React.FC<{ d: AttrDraft; onAlloc: () => void; allocOpen: boolean }> = ({ d, onAlloc, allocOpen }) => {
   const { hero, lv, saved, gold, draft, sel, setSel, left, prev, resetAttrs } = d;
   const Icon = HERO_ICON[hero];
   const cost = ATTR_RESET_GOLD * GOLD_SCALE;
@@ -192,7 +192,8 @@ const AttrTree: React.FC<{ d: AttrDraft; onDetails: () => void; onAlloc: () => v
           <button className="ax-btn pe" disabled={attrSpent(saved) === 0} title={`Refund every point for ${cost.toLocaleString()} gold`}
             onClick={() => useUiStore.getState().askConfirm({ title: 'Reset attributes?', body: `Refund all ${attrSpent(saved)} points for ${cost.toLocaleString()} gold.`, confirmLabel: 'Reset', tone: 'danger', onConfirm: () => { resetAttrs(); } })}
             style={gold < cost ? { opacity: 0.6 } : undefined}>Reset</button>
-          <button className="ax-btn pe" onClick={onDetails}>Details</button>
+          <button className="ax-btn pe" disabled={attrPointsTotal(lv) - attrSpent(saved) <= 0} data-testid="attr-auto-spend" title="Spend every free point for your class"
+            onClick={() => useGameStore.getState().setAttrs(autoAllocate(hero, saved, attrPointsTotal(lv) - attrSpent(saved)))}>Auto</button>
         </div>
       </section>
     </div>

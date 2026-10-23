@@ -242,10 +242,10 @@ export const FIELDS: FieldSpec[] = [
 ];
 /** The plaza centrepiece (owner 2026-10-21): a kerbed round lawn (top y lawnY) the Adventure Portal stands on, with a flower_bed_round arc (bedR) across its south front (a gap at the door).
  *  plinthR / statueY = the little plinths of PLAZA_STATUES. */
-export const PLAZA_DECOR = { lawnR: 0, kerbR: 5.2, bedR: 0, bedS: 0, plinthR: 0.55, lawnY: 0.12, statueY: 0.4 };   // (no lawn / beds any more: lawnY = the paving height the portal stands on; kerbR = the claimed radius round the portal)
+export const PLAZA_DECOR = { lawnR: 0, kerbR: 5.2, bedR: 0, bedS: 0, plinthR: 0.95, lawnY: 0.12, statueY: 0.62 };   // (no lawn / beds any more: lawnY = the paving height the portal stands on; kerbR = the claimed radius round the portal)
 export const STATUE = { x: 0, z: 2, r: 3.7 };   // (the lawn centre; the portal stands in it)
 /** Two little guardian statues (statue_hero shrunk to s, on small round plinths) flank the portal's door on its lawn (the founder's statue moved here from the plaza's middle). */
-export const PLAZA_STATUES: { x: number; z: number; r: number; s: number }[] = [{ x: -5.2, z: 3.4, r: 0.6, s: 0.5 }, { x: 5.2, z: 3.4, r: 0.6, s: 0.5 }];
+export const PLAZA_STATUES: { x: number; z: number; r: number; s: number }[] = [{ x: -5.2, z: 3.4, r: 1.0, s: 0.85 }, { x: 5.2, z: 3.4, r: 1.0, s: 0.85 }];
 /** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
  *  the chapel's side door (east gate) to the crypt at the west end, gravestones in four blocks, a dead tree, lanterns. */
 export const GRAVEYARD = { x0: -43.4, x1: -32.8, z0: -39.6, z1: -21, pathZ: -31.5, gateX: -38 };
@@ -262,10 +262,12 @@ export const CHAPEL_SIDE = { x: CHURCH.x - CHURCH.w / 2 - 2.0, z: CHURCH.z - 3.7
 /** Seats (benches) the hero can sit on in the town: x, z, facing yaw (the way a seated hero looks), seat height. */
 export interface SeatSpec { x: number; z: number; yaw: number; y: number }
 export const TOWN_SEATS: SeatSpec[] = [
-  { x: 7.6, z: 2, yaw: -Math.PI / 2, y: 0.55 }, { x: -7.6, z: 2, yaw: Math.PI / 2, y: 0.55 },   // the plaza's east / west rim between the two shop paths, facing the portal
+  { x: 8.1, z: 2, yaw: -Math.PI / 2, y: 0.55 }, { x: -8.1, z: 2, yaw: Math.PI / 2, y: 0.55 },   // the plaza's east / west rim between the two shop paths, facing the portal
   { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
-  { x: WELL_POS.x, z: WELL_POS.z - 3.7, yaw: 0, y: 0.55 }, { x: WELL_POS.x, z: WELL_POS.z + 3.7, yaw: Math.PI, y: 0.55 },   // the park, either side of the fountain
+  // the park round the fountain (owner 2026-10-23: more benches, none in the N / E / S entrance gaps): four on the diagonals 
+  { x: WELL_POS.x - 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 },
+  { x: WELL_POS.x - 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 },
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
@@ -276,7 +278,7 @@ export const TOWN_SEATS: SeatSpec[] = [
 /** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
 export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
 /** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
-export const WELLS: [number, number][] = [[30.8, 107.3], [18, 123.2], [-18.6, 123.4]];
+export const WELLS: [number, number][] = [[30.8, 107.3], [18, 123.2], [-18.6, 123.4], [25.2, 28.0]];   // (the last one: a courtyard well inside the walls)
 /** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
 export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6]];
 /** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
@@ -334,9 +336,9 @@ export const HOUSES: HouseSpec[] = [
   // ---- inside the walls (owner 2026-10-21: plain medieval houses packed in straight terraces on the streets, no yards): every house is AXIS-ALIGNED (rot 0 = door south, PI = door north),
   // fronts flush to the street / walkway (~0.6 m of kerb), 0.2 m between neighbours; none within 1.5 m of a stair flight or its approach (lot script in docs/TOWN_PLAN.md).
   // chapel quarter (on Chapel Hill): the sexton's cottage
-  K('house_small', -17, -34.5, 0.85),
+  K('house_small', -14.3, -34.5, 0.85),   // (clear of the wall tower's door + stairs at x -21)
   // Tavern Row tier (owner: fewer houses up here): three on the back row (fronts z -30), one cottage beside the tavern (front z -21)
-  K('house_two_storey', 19.96, -33.04, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 41.3, -33.6, 0.8),
+  K('house_two_storey', 15.8, -33.04, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 36.6, -33.4, 0.8),   // (the back row stands clear of the wall-tower doors / wall stairs at x 21 and 42)
   K('house_two_storey', 17, -24.2, 0.8),
   // the old shop row, north of the south street (fronts z 6.9)
   // (owner: more space) two houses west with a gap, the Armory beside them; east: the Potion Shop, then one narrow house
@@ -346,6 +348,25 @@ export const HOUSES: HouseSpec[] = [
   K('house_tower', 22.8, 15.3, 0.8, Math.PI),
   K('house_two_storey', -38.4, 17.96, 0.8), K('house_small', 38.8, 17.85, 0.85),
   K('house_two_storey', 18.5, 29.46, 0.8), K('house_two_storey', 38.2, 29.46, 0.8),
+  // (owner 2026-10-23: fill the empty paving, nothing on a street / lane / stair): either side of the avenue's south half, one on the north street's west side
+  K('house_small', 11.5, 15.3, 0.85, Math.PI), K('house_two_storey', -6.6, 15.3, 0.8, Math.PI), K('house_small', 10.5, 29.46, 0.85), K('house_gabled_narrow', -22.5, 29.46, 0.8),
+  // (owner 2026-10-23: dense medieval town: terraced rows on both sides of the streets, 2.2 m alleys every third house; generated once by a validity scan: clear of every street, stair approach, wall-tower door, shop front, park and plaza)
+  // N-street north
+  K('house_small', -32.88, -10.26, 0.85), K('house_gabled_narrow', 34.57, -10.78, 0.8),
+  // N-street south
+  K('house_gabled_narrow', -41.48, -1.22, 0.8, Math.PI), K('house_small', -37.53, -1.75, 0.85, Math.PI), K('house_tower', -33.03, -1.94, 0.8, Math.PI),
+  K('house_two_storey', -26.59, -1.78, 0.8, Math.PI), K('house_gabled_narrow', -22.61, -1.22, 0.8, Math.PI),
+  // N-street south E
+  K('house_two_storey', 38.16, -1.78, 0.8, Math.PI),
+  // S-street north
+  K('house_gabled_narrow', -23.98, 5.22, 0.8),
+  // lane north
+  K('house_tower', 7.08, 19.34, 0.8), K('house_tower', 11.54, 19.34, 0.8), K('house_two_storey', 16.08, 19.18, 0.8),
+  // tavern row 2
+  K('house_small', 21.63, -27.35, 0.85, Math.PI), K('house_two_storey', 26.21, -27.38, 0.8, Math.PI), K('house_small', 30.8, -27.35, 0.85, Math.PI),
+  K('house_small', 37.25, -27.35, 0.85, Math.PI), K('house_gabled_narrow', 41.19, -26.82, 0.8, Math.PI),
+  // hill row b
+  K('house_two_storey', -29.34, -34.48, 0.8, Math.PI), K('house_tower', -9.3, -34.64, 0.8, Math.PI),
 ];
 
 /** (no yards: the houses stand directly on the streets, see HOUSES) */
@@ -381,7 +402,8 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
 export const shopLocal = (px: number, pz: number, rot: number, dx: number, dz: number): [number, number] => [px + dx * Math.cos(rot) + dz * Math.sin(rot), pz - dx * Math.sin(rot) + dz * Math.cos(rot)];
 
 /** Decorative market stalls (town_kit_v2 'market_stall', fronts to the south; the useful shops are the SHOP_POSITIONS row). */
-export const STALLS: StallSpec[] = [   // (owner: the open stalls / tents looked unfinished: none for now)
+export const STALLS: StallSpec[] = [   // (owner 2026-10-23: two cosy stalls beside the castle path, off the streets)
+  { x: -8.4, z: -11.8, rot: 0, c1: '#d8584a', c2: '#fff3e0', goods: 0 }, { x: 8.4, z: -12.6, rot: 0, c1: '#4a8fd8', c2: '#fff3e0', goods: 1 },
 ];
 /** Shop row: shop x of the 7 kit shops (z 1.5, rot 0, in constants SHOP_POSITIONS); the gaps between them hold lamps, signs and barrels. */
 export const SHOP_ROW_Z = 1.5;
@@ -581,7 +603,7 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // inside the walls: the park, the tavern square, the castle approach (the rest of the greenery is townFill.ts: groves, hedges, beds)
-  { x: -27.6, z: 14.4, s: 3.3, kind: 0 }, { x: -18.6, z: 14.0, s: 3.0, kind: 0 }, { x: -26.8, z: 20.2, s: 3.0, kind: 0 },
+  { x: -27.6, z: 14.4, s: 3.3, kind: 0 }, { x: -17.4, z: 13.9, s: 3.0, kind: 0 }, { x: -27.4, z: 19.6, s: 3.0, kind: 0 },
   { x: 20.6, z: -9.8, s: 3.4, kind: 0 }, { x: 33.4, z: -9.6, s: 3.2, kind: 0 }, { x: -9.6, z: -17.2, s: 3.3, kind: 0 }, { x: 9.8, z: -17.6, s: 3.2, kind: 0 },
   { x: -43, z: -7.6, s: 3.0, kind: 2 },
   
@@ -607,10 +629,9 @@ export const TOWN_TREES: TreeSpec[] = [
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number, number?, number?][] = [
-  [WELL_POS.x, WELL_POS.z, 6.2, 3.9],   // the park lawn round the fountain
+  [WELL_POS.x + 0.3, WELL_POS.z, 6.9, 4.7],   // the park lawn round the fountain (owner 2026-10-23: bigger; x -29..-15, z 12.3..21.7 between the Rise, the Armory and the street / lane)
   [PEN.x, PEN.z, PEN.hw + 1.3, PEN.hd + 1.2],
   [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
-  [28, -11.4, 3.2, 1.4], [-12.5, -17, 2.4, 1.6],        // the tavern square's lawn, a verge in the trainer yard
   ...LOT_PATCHES,
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */

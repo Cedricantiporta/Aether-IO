@@ -206,15 +206,9 @@ function buildRoads(): BufferGeometry {
       r.box(pl + 0.01, 0.06, rd.w, [mx, 0.045 + y, mz], SURF, [0, yaw, 0]);
     }
   }
-  // plaza (owner ref 2026-10-21): a cream disc paved in concentric rings of soft slabs round the portal lawn, an orange ring inlay between the rings, a terracotta kerb on the rim
-  const px = PLAZA.x, pz = PLAZA.z, rnd = mulberry32(61), CREAM = ['#fffaf0', '#fbf3e0', '#fdf6e6', '#f5ebd2', '#f9f0da'];
+  // plaza (owner 2026-10-23: ONE pattern): a plain disc of the same cobble paving as the streets (no slab rings / grout disc on top of it)
+  const px = PLAZA.x, pz = PLAZA.z;
   r.cyl(PLAZA.r, PLAZA.r, 0.08, 72, [px, 0.05, pz], SURF);
-  r.cyl(PLAZA.r - 0.4, PLAZA.r - 0.4, 0.1, 64, [px, 0.06, pz], '#d8cdb4');               // (grout colour under the rings)
-  const ring = (r0: number, r1: number, n: number, gap: number) => {
-    const rm = (r0 + r1) / 2, arc = (TAU * rm) / n - gap;
-    for (let i = 0; i < n; i++) { const a = (i / n) * TAU + (r0 * 7), k = rnd() < 0.18 ? 3 : Math.floor(rnd() * 3); r.box(arc, 0.02, r1 - r0 - gap, [px + Math.cos(a) * rm, 0.112, pz + Math.sin(a) * rm], CREAM[k], [0, -a + Math.PI / 2, 0], [1, 1]); }
-  };
-  for (let r0 = 2.4; r0 < PLAZA.r - 0.95; r0 += 0.78) { ring(r0, r0 + 0.72, Math.round((TAU * (r0 + 0.36)) / 1.05), 0.07); }   // (concentric slab rings, a gap for the inner orange inlay)
   // (owner 2026-10-23: no orange ring inlays - the orange lines read as clutter)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
@@ -395,9 +389,9 @@ function buildRuin(kind: number, seed: number) {
  *  steps with plain side walls + a lamp post at the foot. */
 function addTier(b: GB, g: GB, T: TierSpec): void {
   const h = T.h, w = T.x1 - T.x0, d = T.z1 - T.z0, cx = (T.x0 + T.x1) / 2, cz = (T.z0 + T.z1) / 2, run = stairRun(h);
-  const face = '#ddd6c4', joint = '#c2bba9', cap = '#ebe5d6', top = '#d4cebf';
+  const face = '#ddd6c4', joint = '#c2bba9', cap = '#ebe5d6';
   b.box(w, h, d, [cx, h / 2, cz], face, [0, 0, 0], [0.94, 1.02]);
-  b.box(w - 0.2, 0.04, d - 0.2, [cx, h + 0.02, cz], top);
+  // (the top is the shared flagstone paving: buildTierTops)
   const sides: ('N' | 'S' | 'E' | 'W')[] = ['N', 'S', 'E', 'W'];
   for (const side of sides) {
     if (tierEdgeOnWall(side, T)) continue;
@@ -437,6 +431,20 @@ function addTier(b: GB, g: GB, T: TierSpec): void {
   }
 }
 
+/** Flat tops of the raised districts + the castle terrace with the SAME flagstone texture / world-planar UVs as the ground paving (rendered with the paving material). */
+function buildTierTops(): BufferGeometry {
+  const pos: number[] = [], idx: number[] = [];
+  const quad = (x0: number, x1: number, z0: number, z1: number, y: number) => { const o = pos.length / 3; pos.push(x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1); idx.push(o, o + 2, o + 1, o, o + 3, o + 2); };
+  for (const T of TIERS) quad(T.x0 + 0.1, T.x1 - 0.1, T.z0 + 0.1, T.z1 - 0.1, T.h + 0.04);
+  quad(TERRACE.x0 + 0.15, TERRACE.x1 - 0.15, TERRACE.z0 + 0.15, TERRACE.z1 - 0.15, TERRACE.h + 0.04);
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+  g.setAttribute('color', new Float32BufferAttribute(new Float32Array(pos.length).fill(1), 3));
+  g.setIndex(idx);
+  return planarUv(g, 6);
+}
+
 /** The chapel's side door (west wall of the kit nave, out to the graveyard; interact spot = townData CHAPEL_SIDE): the v2 chapel has only
  *  the front door, so a small arched oak door, a stone frame, two steps and a lantern are added here (world coords at y 0). */
 function addChapelSideDoor(b: GB, g: GB): void {
@@ -454,10 +462,8 @@ function addChapelSideDoor(b: GB, g: GB): void {
  *  wide flight of steps with sloped balustrades and lamp posts, and the foundation the keep stands on. */
 function addTerrace(b: GB, g: GB): void {
   const T = TERRACE, h = T.h, cx = (T.x0 + T.x1) / 2, w = T.x1 - T.x0, d = T.z1 - T.z0, cz = (T.z0 + T.z1) / 2;
-  const st = '#a39d90', cap = '#c4beb0', top = '#cfc9bb';
+  const st = '#a39d90', cap = '#c4beb0';
   b.box(w, h, d, [cx, h / 2, cz], st, [0, 0, 0], [0.8, 1.02]);
-  b.box(w - 0.3, 0.04, d - 0.3, [cx, h + 0.02, cz], top);
-  for (let x = T.x0 + 1.2; x < T.x1 - 0.6; x += 2.4) b.box(0.06, 0.05, d - 0.4, [x, h + 0.04, cz], '#b7b1a3');   // paving joints
   const { x: kx, z: kz, w: kw, d: kd } = CASTLE;
   b.box(kw + 2.4, h, kd + 1.6, [kx, h / 2, kz - 0.4], st, [0, 0, 0], [0.8, 1.02]);   // the keep's foundation
   for (let x = T.x0 + 0.6; x < T.x1; x += 1.6) b.box(1.3, 0.12, 0.4, [x, h * 0.5, T.z1 + 0.02], '#958f82');      // stone courses on the front face
@@ -521,13 +527,7 @@ function addPlaza(b: GB, g: GB): void {
     b.cyl(D.plinthR - 0.1, D.plinthR, D.statueY - D.lawnY - 0.1, 24, [m.x, D.lawnY + 0.1 + (D.statueY - D.lawnY - 0.1) / 2, m.z], '#d6cfbd');
     b.torus(D.plinthR - 0.06, 0.035, [m.x, D.statueY - 0.03, m.z], TOWN_GOLD, [Math.PI / 2, 0, 0], 1, 28);
   }
-  // flush flower beds round the plinths (walk straight over them): walkable space reads as one open plaza
-  const FL = ['#ff8fb1', '#ffd84d', '#fff3e0', '#ff7a6b', '#c3a6ff'];
-  for (const m of PLAZA_STATUES) {
-    b.cyl(1.75, 1.75, 0.03, 28, [m.x, 0.17, m.z], '#6fb04f');
-    b.torus(1.75, 0.045, [m.x, 0.18, m.z], '#e6b98a', [Math.PI / 2, 0, 0], [1, 1, 0.5], 28);
-    for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU + (m.x > 0 ? 0.3 : 0), d = i % 2 ? 1.2 : 1.5; b.sph(0.1, [m.x + Math.cos(a) * d, 0.27, m.z + Math.sin(a) * d], FL[i % 5], 1, 5); }
-  }
+  // (owner 2026-10-23: the statues stand straight on the paving, no grass bed / flowers / ring)
   g.sph(0.05, [x, 0.01, z], '#000000', 0.01, 3);
 }
 
@@ -661,7 +661,7 @@ function buildTown() {
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
-  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo };
+  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo, tops: buildTierTops() };
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
@@ -763,14 +763,15 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     lit: litMat({ roughness: 0.85 }),
     road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.map = flagTex; return m; })(),
     paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = flagTex; return m; })(),
+    tops: (() => { const m = litMat({ roughness: 1 }); m.map = flagTex; return m; })(),
     glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) })),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     dirt: litMat({ roughness: 1 }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }; }, []);
   useEffect(() => () => {
-    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
+    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose(); town.tops.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); mats.tops.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
   const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
@@ -791,6 +792,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
   return (
     <group>
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
+      <mesh geometry={town.tops} material={mats.tops} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <ChimneySmoke q={q} />
