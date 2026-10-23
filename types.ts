@@ -32,6 +32,8 @@ export interface Upgrade {
   id: string;
   /** rolled rarity tier 0..4 (COMMON..MYTHIC) for run cards; `value` already scales with it */
   tier?: number;
+  /** (owner) a card's rarity can be upgraded only once */
+  polished?: boolean;
   special?: SpecialId;
   type: UpgradeType;
   name: string;

@@ -349,7 +349,7 @@ export const HOUSES: HouseSpec[] = [
   K('house_two_storey', -38.4, 17.96, 0.8), K('house_small', 38.8, 17.85, 0.85),
   K('house_two_storey', 18.5, 29.46, 0.8), K('house_two_storey', 38.2, 29.46, 0.8),
   // (owner 2026-10-23: fill the empty paving, nothing on a street / lane / stair): either side of the avenue's south half, one on the north street's west side
-  K('house_small', 11.5, 15.3, 0.85, Math.PI), K('house_two_storey', -6.6, 15.3, 0.8, Math.PI), K('house_small', 10.5, 29.46, 0.85), K('house_gabled_narrow', -22.5, 29.46, 0.8),
+  K('house_small', 10.5, 29.46, 0.85), K('house_gabled_narrow', -22.5, 29.46, 0.8),   // (owner: the two houses either side of the avenue just south of the plaza were removed)
   // (owner 2026-10-23: dense medieval town: terraced rows on both sides of the streets, 2.2 m alleys every third house; generated once by a validity scan: clear of every street, stair approach, wall-tower door, shop front, park and plaza)
   // N-street north
   K('house_small', -32.88, -10.26, 0.85), K('house_gabled_narrow', 34.57, -10.78, 0.8),

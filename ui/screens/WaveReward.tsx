@@ -68,7 +68,12 @@ export const WaveReward: React.FC = () => {
       const last = cards?.lastElementChild?.firstElementChild as HTMLElement | null;
       if (!root || !b || !last || !t) return;
       const R = root.getBoundingClientRect(), L = last.getBoundingClientRect(), T = t.getBoundingClientRect();
-      b.style.left = `${L.right - R.left - b.offsetWidth}px`; b.style.top = `${T.top - R.top + (T.height - b.offsetHeight) / 2}px`; b.style.visibility = 'visible';
+      // (owner) right edge of the last card, on the title row; with few cards that would cover the title, so it moves right of
+      // the title, and when there is no room there either (narrow screens) it drops under the title row
+      const bw = b.offsetWidth, titleR = T.right - R.left + 14;
+      let x = L.right - R.left - bw, y = T.top - R.top + (T.height - b.offsetHeight) / 2;
+      if (x < titleR) { x = titleR; if (x + bw > R.width - 8) { x = L.right - R.left - bw; y = T.bottom - R.top + 4; } }
+      b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.visibility = 'visible';
     };
     place();
     const ro = new ResizeObserver(place); if (cardsRef.current) ro.observe(cardsRef.current);
@@ -94,9 +99,9 @@ export const WaveReward: React.FC = () => {
           <div className="rw-slot" key={opt.id + i}>
             <Card opt={opt} i={i} onPick={() => select(opt)} />
             {charges > 0 && (
-              <button className="rw-pill rw-up" data-testid={`rw-up-${i}`} disabled={!canRarityUp(opt)} onClick={() => polish(opt.id)}
-                {...tip(<SimpleTip title="Upgrade rarity" sub={canRarityUp(opt) ? 'Raises this card by one rarity tier (stronger bonus). Uses 1 charge.' : 'This card cannot go any higher.'} />)}>
-                {canRarityUp(opt) ? <>&#11014; Upgrade rarity ({charges})</> : 'Top rarity'}{!device.touch && canRarityUp(opt) && <kbd>&#8679;{i + 1}</kbd>}
+              <button className="rw-pill rw-up" data-testid={`rw-up-${i}`} disabled={!canRarityUp(opt) || !!opt.polished} onClick={() => polish(opt.id)}
+                {...tip(<SimpleTip title="Upgrade rarity" sub={opt.polished ? 'Already upgraded: a card can be upgraded only once.' : canRarityUp(opt) ? 'Raises this card by one rarity tier (stronger bonus). Uses 1 charge. Once per card.' : 'This card cannot go any higher.'} />)}>
+                {opt.polished ? 'Upgraded' : canRarityUp(opt) ? <>&#11014; Upgrade rarity ({charges})</> : 'Top rarity'}{!device.touch && canRarityUp(opt) && !opt.polished && <kbd>&#8679;{i + 1}</kbd>}
               </button>
             )}
           </div>

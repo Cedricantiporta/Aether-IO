@@ -1106,9 +1106,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
     polishCard: (id) => {   // Card Polish: raise ONE offered card by a rarity tier (its numbers follow the new rarity)
       const s = get(), i = s.upgradeOptions.findIndex((o) => o.id === id), c = s.upgradeOptions[i];
-      if (s.status !== GameStatus.LEVEL_UP || s.cardPolish <= 0 || !c || !canRarityUp(c)) return false;
+      if (s.status !== GameStatus.LEVEL_UP || s.cardPolish <= 0 || !c || c.polished || !canRarityUp(c)) return false;   // (owner) once per card
       const n = rarityUpCard(c); if (!n) return false;
-      const options = s.upgradeOptions.slice(); options[i] = withCardText({ ...n, id: uid('card') });
+      const options = s.upgradeOptions.slice(); options[i] = withCardText({ ...n, id: uid('card'), polished: true });
       set({ cardPolish: s.cardPolish - 1, upgradeOptions: options });
       return true;
     },

@@ -3832,3 +3832,31 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .bb-slim.bb-top .bb-val { font-size: .72rem; }
 .bb-slim.bb-top .bb-shield { height: .32rem; }
 .bb-slim.bb-top .bb-ic { width: 1.5rem; height: 1.5rem; }
+/* (owner 2026-10-23) quest tracker redesign: cute Zelda parchment cards (cream card, round coloured badge, dark readable text, count bubble) */
+.hud-root .qt { gap: .4rem; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row {
+  --qc: #4cc36b; --qd: #2f8f4c;
+  padding: .5rem .75rem .55rem 2.7rem !important; border-radius: 16px !important;
+  background: linear-gradient(180deg, #fffdf6 0%, #fbf1dc 100%) !important;
+  border: 2px solid #fff !important; outline: 0 !important;
+  box-shadow: 0 3px 0 rgba(150, 112, 62, .35), 0 6px 14px rgba(0, 0, 0, .28) !important;
+  transition: transform .12s ease, box-shadow .12s ease; filter: none !important;
+}
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[data-k='main'] { --qc: #f2b632; --qd: #a06a12; border-color: #ffe9a8 !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[data-k='npc'] { --qc: #4fa3ef; --qd: #2a6aa8; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[data-k='board'] { --qc: #58c46e; --qd: #2f8f4c; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[data-s='done'], .hud-root .qt .qt-row.qt-row.qt-row.qt-row.done { --qc: #4cc36b; --qd: #2f8f4c; border-color: #c9f2d2 !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[role='button']:hover { transform: translateX(3px); background: linear-gradient(180deg, #ffffff 0%, #fdf5e4 100%) !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row :is(.qt-head, .qt-title, .qt-line, .qt-line b, .qt-n, .qt-dist) { text-shadow: none !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-mark {
+  position: absolute; left: .5rem; top: 50%; transform: translateY(-50%); width: 1.7rem; height: 1.7rem; border-radius: 50%;
+  display: grid; place-items: center; font-style: normal; font-family: var(--font-title); font-weight: 900; font-size: .95rem;
+  color: #fff !important; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--qc) 70%, #fff), var(--qc) 70%) !important;
+  border: 2px solid #fff; box-shadow: 0 2px 0 var(--qd), 0 3px 6px rgba(0, 0, 0, .2) !important;
+}
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-head { color: var(--qd) !important; font-family: var(--font-title); font-weight: 900; font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-dist { color: #8a7358 !important; background: rgba(150, 112, 62, .12); border-radius: 999px; padding: .05rem .45rem; font-size: .6rem; font-weight: 800; text-transform: none; letter-spacing: 0; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-dist:empty { display: none; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-title { margin-top: .1rem; color: #4a3420 !important; font-family: var(--font-title); font-weight: 900; font-size: .9rem; text-transform: none; letter-spacing: 0; line-height: 1.15; align-items: center; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-n { color: #fff !important; background: var(--qc); border-radius: 999px; padding: .08rem .5rem; font-family: var(--font-title); font-weight: 900; font-size: .68rem; box-shadow: 0 2px 0 var(--qd); white-space: nowrap; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line, .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line b { color: #7d6650 !important; font-weight: 700 !important; font-size: .66rem; opacity: 1 !important; line-height: 1.25; }

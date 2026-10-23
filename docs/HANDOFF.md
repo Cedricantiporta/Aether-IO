@@ -279,6 +279,8 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   sit in a second row) with necks drawn by `GiantBosses`; Acid Barrage, Sweeping Heads (3 staggered cones), Head Slam (heads whip to
   marked circles and rest there = free hits), Tidal Surge (`WAVE_TIDE`). Boss bar, interrupt meter, wards, stagger, winded windows
   are unchanged (they live on the boss enemy). QA: `scratchpad` scenario `gp2_giant.mjs` style: `debugJump(biome, 14, 'BOSS')`.
+- **Quest tracker look** (owner 2026-10-23): cream parchment cards (last `.qt-row` block in index.css): round coloured badge (gold main / blue side / green done), dark brown title, count bubble, distance chip.
+- **Card Rarity Up is once per card** (`Upgrade.polished`, `store.polishCard`; the button then reads 'Upgraded'). The reward screen's Refresh button sits at the last card's right edge on the title row, or right of the title when that would cover it (few cards), or under the title on narrow screens.
 - **Boss HP bar** (`ui/hud/BossBar.tsx`, owner 2026-10-23): the real boss's bar is docked top-centre under the gold / gems row (`.bb-top`, min(26rem, 72vw) wide); Malakar's illusion bars still float over the decoys.
 - **Boss interrupt meter** (`systems/interrupt.ts`, bar in `ui/hud/BossBar.tsx`): hero hits fill it during a heal channel or a boss / champion special; full = cast cancelled + stagger; drains when idle. **Ticking damage** (poison / burn / bleed, rifts, hazard zones, brambles, lava) on the hero is x`HERO_DOT_MUL` (4, `combat.ts`; boss auras opt out with `noDotMul`; discrete trap / icicle hits are not multiplied).
 - Combat layer: monster tricks (`tricks.ts`), statuses, backstab/shield blocking, elite big attacks (`eliteBig.ts`), winded
