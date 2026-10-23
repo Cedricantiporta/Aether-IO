@@ -92,7 +92,21 @@ function brambles(L: number, ly: number): BufferGeometry {
   sign(b, L / 2 + 0.2, fz * 1.5, ly, (p) => { p(0, 0.14, 0.12, 0.3, RED); p(0, -0.12, 0.12, 0.12, RED); p(-0.3, -0.12, 0.16, 0.16, G2); p(0.3, -0.12, 0.16, 0.16, PINK); });   // "!" + a thorny sprig
   return b.build();
 }
-const BUILD: Record<GateDef['kind'], (L: number, ly: number) => BufferGeometry> = { barricade, tree: fallenTree, rubble, bramble: brambles, guard: () => new BufferGeometry() };   // (guard: the NPC is the blocker)
+const BUILD: Record<GateDef['kind'], (L: number, ly: number) => BufferGeometry> = { barricade, tree: fallenTree, rubble, bramble: brambles, guard: closedDoors };   // (guard: the side gate's closed oak doors; the guard NPC stands beside them)
+
+/** (owner) the East Gate while its guard holds it: two closed oak doors filling the side-gate arch (span = the passage, local x). */
+function closedDoors(L: number): BufferGeometry {
+  const b = new GB([0.85, 1.05]), H = 4.0, IRON = '#34343a';
+  for (const sx of [-1, 1]) {
+    const cx = sx * L / 4;
+    b.box(L / 2 - 0.04, H, 0.22, [cx, H / 2, 0], '#7a5230');
+    for (let q = 0; q < 4; q++) b.box(0.07, H, 0.26, [cx - L / 4 + 0.25 + q * (L / 2 - 0.5) / 3, H / 2, 0], '#5c3c20');
+    for (const y of [0.5, 1.6, 2.8]) b.box(L / 2 - 0.1, 0.16, 0.28, [cx, y, 0], IRON);
+    b.sph(0.11, [sx * 0.3, 1.5, 0.16], '#c9a44a', 1, 6); b.sph(0.11, [sx * 0.3, 1.5, -0.16], '#c9a44a', 1, 6);   // ring handles
+  }
+  b.box(0.12, H, 0.3, [0, H / 2, 0], '#4a3018');   // the seam
+  return b.build();
+}
 
 interface Place { cx: number; cz: number; y0: number; L: number; ry: number }
 function placeOf(g: GateDef): Place {

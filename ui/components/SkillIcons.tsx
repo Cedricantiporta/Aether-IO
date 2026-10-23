@@ -466,23 +466,14 @@ export const LockGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => (
   </svg>
 );
 
-export const CoinGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => (
-  <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden>
-    <defs><radialGradient id="cn-g" cx="40%" cy="35%" r="75%"><stop offset="0" stopColor="#fff3b0" /><stop offset=".55" stopColor="#e9a82a" /><stop offset="1" stopColor="#8b4f10" /></radialGradient></defs>
-    <circle cx="16" cy="16" r="14" fill="url(#cn-g)" stroke="#0d0703" strokeWidth="1.5" />
-    <circle cx="16" cy="16" r="9.5" fill="none" stroke="#7a4410" strokeWidth="1.6" />
-    <path d="M16 9 L18 14 H23 L19 17 L20.6 22 L16 19 L11.4 22 L13 17 L9 14 H14Z" fill="#fff0b0" opacity=".9" />
-  </svg>
+/** (owner) painted gold / gem icons (public/art/ui/hud_*.webp) everywhere a price or wallet shows. */
+const UI_ART = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/ui/';
+const UiPaint: React.FC<{ f: string; size: number }> = ({ f, size }) => (
+  <img src={`${UI_ART}${f}.webp`} alt="" draggable={false} decoding="async" width={size} height={size}
+    style={{ display: 'inline-block', width: size, height: size, objectFit: 'contain', verticalAlign: 'middle', transform: 'scale(1.18)', filter: 'drop-shadow(0 1px 1.5px rgba(0,0,0,.5))', pointerEvents: 'none' }} />
 );
-
-export const GemGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => (
-  <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden>
-    <defs><linearGradient id="gm-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#d4f6ff" /><stop offset=".5" stopColor="#3fb8f0" /><stop offset="1" stopColor="#1450b0" /></linearGradient></defs>
-    {/* (owner: no round container behind the gem) */}
-    <path d="M16 3 L28 12.5 L16 30 L4 12.5Z" fill="url(#gm-g)" stroke="#0d0703" strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M4 12.5 H28 M10.5 12.5 L16 3 L21.5 12.5 L16 30 L10.5 12.5" stroke="#fff" strokeOpacity=".6" strokeWidth=".9" fill="none" />
-  </svg>
-);
+export const CoinGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => <UiPaint f="hud_gold" size={size} />;
+export const GemGlyph: React.FC<{ size?: number }> = ({ size = 22 }) => <UiPaint f="hud_gem" size={size} />;
 
 export const SkullGlyph: React.FC<{ size?: number }> = ({ size = 24 }) => (
   <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden>

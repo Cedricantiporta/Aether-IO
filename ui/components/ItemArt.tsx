@@ -538,7 +538,7 @@ export function artKey(item: Item): string {
 const ITEM_PAINT: Record<string, string> = {
   pet_blob: 'pet_blob', pet_rock: 'pet_rock', pet_bat: 'pet_bat', pet_fox: 'pet_fox', pet_owl: 'pet_owl', pet_fairy: 'pet_fairy',
   pet_sprite: 'pet_sprite', pet_turtle: 'pet_turtle', pet_wolf: 'pet_wolf', pet_golem: 'pet_golem', pet_mimic: 'pet_mimic',
-  pet_dragon: 'pet_dragon', pet_shadowcat: 'pet_shadowcat', pet_crystal: 'pet_crystal', pet_phoenix: 'pet_phoenix', pet_demigod: 'pet_demigod',
+  pet_dragon: 'pet_dragon', pet_shadowcat: 'pet_shadowcat', pet_crystal: 'pet_crystal', pet_phoenix: 'pet_phoenix', pet_demigod: 'pet_demigod', pet_leviathan: 'pet_leviathan',
   potion_hp: 'potion_hp', potion_hp_fb: 'potion_hp', potion_hp_big: 'potion_hp_big', potion_mana: 'potion_mana', potion_mp_fb: 'potion_mana', potion_mana_big: 'potion_mana_big',
   upgrade_core: 'upgrade_core', core: 'upgrade_core', upgrade_core_2: 'upgrade_core_2', upgrade_core_3: 'upgrade_core_3',
   revive_ankh: 'revive_ankh', ankh: 'revive_ankh', reforge_stone: 'reforge_stone', temper_oil: 'temper_oil', augment_rune: 'augment_rune',

@@ -22,6 +22,7 @@ import { Inst } from './Inst';
 import { litMat, setInst } from './util';
 import { kitColor } from './townPalette';
 import { useKitV3, type KitV3Data } from './kitV3';
+import { toyTree, type ToyCfg } from './toyTrees';
 
 export const NATURE_URL = `${BASE}models/town/nature_kit_v1.glb`;
 
@@ -161,6 +162,16 @@ const CUTE_TREES: Record<string, { shape: TreeShape; leaf: string; leaf2: string
   tree_pine_layered_a: { shape: 'cone', leaf: '#2f9a4a', leaf2: '#6cc86a', trunk: '#8a5a34' },
   tree_pine_layered_b: { shape: 'cone', leaf: '#3aa552', leaf2: '#7ad072', trunk: '#8a5a34' },
 };
+/** The four reference-sheet toy trees (render/toyTrees.ts): round oak, layered pine, palm, blossom. Same footprint + height as the kit pieces they replace. */
+const TOY_TREES: Record<string, ToyCfg> = {
+  tree_oak_big: { kind: 'oak', leaf: '#4a9f3a', leaf2: '#98d856', trunk: '#8a5a34' },
+  tree_oak_small: { kind: 'oak', leaf: '#56ad40', leaf2: '#a6e060', trunk: '#8f5e36' },
+  tree_fruit: { kind: 'oak', leaf: '#4a9f3a', leaf2: '#98d856', trunk: '#8a5a34', fruit: '#e5483a' },
+  tree_blossom: { kind: 'blossom', leaf: '#e8708a', leaf2: '#ffa6b4', trunk: '#5a3822', fruit: '#ffe3ee' },
+  tree_pine_layered_a: { kind: 'pine', leaf: '#2f8f4a', leaf2: '#74cf6c', trunk: '#8a5a34', tiers: 6 },
+  tree_pine_layered_b: { kind: 'pine', leaf: '#379f50', leaf2: '#7fd672', trunk: '#8a5a34', tiers: 5 },
+  palm_v3: { kind: 'palm', leaf: '#3e9e46', leaf2: '#8fd65a', trunk: '#c79a62', lean: 1.0 },
+};
 function cuteTree(name: string, box: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }): BufferGeometry {
   const cfg = CUTE_TREES[name], H = box.maxY, R = Math.min(box.maxX - box.minX, box.maxZ - box.minZ) * 0.5 * 0.98;
   const cx = (box.minX + box.maxX) / 2, cz = (box.minZ + box.maxZ) / 2;
@@ -214,8 +225,9 @@ function addKitV3(d: NatureKitData, k3: KitV3Data): void {
   for (const [name, p] of Object.entries(k3.P)) {
     if (name === 'light_shaft' || d.S[name]) continue;
     let body = geo(p.body, 'v3:' + name);
-    if (body && CUTE_TREES[name]) { body.dispose(); body = cuteTree(name, p.box); body.name = 'v3:' + name; }
-    if (body) d.S[name] = { body, glow: CUTE_TREES[name] ? null : geo(p.glow, 'v3:' + name + ':glow') };
+    const toy = TOY_TREES[name], cute = CUTE_TREES[name];
+    if (body && (toy || cute)) { body.dispose(); body = toy ? toyTree(toy, p.box) : cuteTree(name, p.box); body.name = 'v3:' + name; }
+    if (body) d.S[name] = { body, glow: toy || cute ? null : geo(p.glow, 'v3:' + name + ':glow') };
   }
 }
 

@@ -72,7 +72,7 @@ export const TOWN_GATES: readonly GateDef[] = [
   },
   {   // (owner) the East Gate (townData SIDE_GATES): the guard Brannoc stands in the passage until the hero is level 40 (no blocker mesh: the guard is the NPC)
     id: 'east', kind: 'guard', name: 'East Gate', opens: 'wolves', minLv: 40,
-    span: [45, 7.4, 45, 11.8], yaw: -Math.PI / 2,
+    span: [45, 9.6 - 1.98, 45, 9.6 + 1.98], yaw: -Math.PI / 2,
     line: 'Brannoc blocks the East Gate: "The wilds past this gate eat adventurers for breakfast. Come back at level 40."',
     done: 'Brannoc steps aside: the East Gate is open!',
   },

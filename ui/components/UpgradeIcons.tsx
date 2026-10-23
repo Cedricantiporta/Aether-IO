@@ -208,6 +208,8 @@ export const tallArtKey = (u: Pick<Upgrade, 'type' | 'special'>): string | null 
   else if (k === 'ULT_CHARGE') k = 'ULT_FILL';
   return TALL_ART.has(k) ? k : null;
 };
+/** (owner) painted round emblems for the newer run cards (public/art/cards/emblem_<TYPE>.webp) */
+const EMBLEM_PAINT = new Set<string>(['MANA_COST', 'ULT_CHARGE', 'DASH_CHARM']);
 const artBase = (): string => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/cards/`;
 export const tallArtUrl = (k: string): string => `${artBase()}tall/${k}.webp`;
 export const cardFrameUrl = (r: Rarity): string => `${artBase()}frame_${r}.webp`;
@@ -218,6 +220,7 @@ export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; 
   const ck = cardArtKey(upgrade);
   if (ck) return <img src={cardArtUrl(ck)} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'cover', borderRadius: 8 }} />;
   if (upgrade.special) return <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden style={{ display: 'block', overflow: 'visible', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><Defs />{ART_SPECIAL[upgrade.special]()}</svg>;
+  if (EMBLEM_PAINT.has(upgrade.type)) return <img src={`${artBase()}emblem_${upgrade.type}.webp`} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'contain', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.6))' }} />;
   const pk = PAINTED[upgrade.type];
   if (pk) return <span style={{ display: 'block', width: size, height: size, borderRadius: 8, overflow: 'hidden', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><PaintedIcon id={pk} /></span>;
   return <Emblem t={upgrade.type} size={size} />;

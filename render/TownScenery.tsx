@@ -18,7 +18,7 @@ import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
-  PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, GATEWAY, GATEWAYS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
+  PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, GATEWAY, GATEWAYS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, SIDE_GATES, SIDE_GATE, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
   HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
@@ -563,38 +563,50 @@ function addLot(b: GB, g: GB, L: Lot): void {
 /** The town gate's arch (owner 2026-10-21: the v2 gatehouse was a solid black box): a real round passage cut through a stone block between the two kit v3 wall_tower_round
  *  towers (engine/townFill / natureLayout, GATE_TOWER), the oak doors swung open into the town, a raised portcullis, hanging lanterns and wall torches (lit underside). */
 function buildGateArch(b: GB, g: GB): void {
-  const hp = GATE_TOWER.x - GATE_TOWER.r - 0.15, depth = 2.6, H = 8.6, spring = 3.1, ry = 2.3, x = GATE.x, z = GATE.z;
+  gateArch(b, g, GATE.x, GATE.z, { hp: GATE_TOWER.x - GATE_TOWER.r - 0.15, W: 5.2, depth: 2.6, H: 8.6, spring: 3.1, ry: 2.3, doors: true });
+}
+/** A gatehouse arch in local frame (passage along z through a block spanning x): the main gate, and (owner 2026-10-23) the smaller side gates. */
+interface ArchP { hp: number; W: number; depth: number; H: number; spring: number; ry: number; doors: boolean }
+function gateArch(b: GB, g: GB, x: number, z: number, P: ArchP): void {
+  const { hp, depth, H, spring, ry, W } = P, k = H / 8.6;
   const STN = '#bfb8a8', TRIM = '#e4dcc8', IRON = '#34343a';
   // the wall block with the arch cut out of it (extruded shape: outer rectangle, elliptical-arch hole)
-  const outer = new Shape(); outer.moveTo(-5.2, 0); outer.lineTo(5.2, 0); outer.lineTo(5.2, H); outer.lineTo(-5.2, H); outer.closePath();
+  const outer = new Shape(); outer.moveTo(-W, 0); outer.lineTo(W, 0); outer.lineTo(W, H); outer.lineTo(-W, H); outer.closePath();
   const hole = new Path(); hole.moveTo(-hp, 0); hole.lineTo(-hp, spring); hole.absellipse(0, spring, hp, ry, Math.PI, 0, true); hole.lineTo(hp, 0); hole.closePath();
   outer.holes.push(hole);
   b.add(new ExtrudeGeometry(outer, { depth, bevelEnabled: false, curveSegments: 14 }), [x, 0, z - depth / 2], [0, 0, 0], 1, STN, [0.9, 1.06]);
   // a lighter arch ring, a little proud on both faces
-  const ringO = new Shape(); const ro = hp + 0.5;
-  ringO.moveTo(-ro, 0); ringO.lineTo(-ro, spring); ringO.absellipse(0, spring, ro, ry + 0.5, Math.PI, 0, true); ringO.lineTo(ro, 0); ringO.lineTo(hp, 0); ringO.lineTo(hp, spring); ringO.absellipse(0, spring, hp, ry, 0, Math.PI, false); ringO.lineTo(-hp, 0); ringO.closePath();
+  const ringO = new Shape(); const ro = hp + 0.5 * k;
+  ringO.moveTo(-ro, 0); ringO.lineTo(-ro, spring); ringO.absellipse(0, spring, ro, ry + 0.5 * k, Math.PI, 0, true); ringO.lineTo(ro, 0); ringO.lineTo(hp, 0); ringO.lineTo(hp, spring); ringO.absellipse(0, spring, hp, ry, 0, Math.PI, false); ringO.lineTo(-hp, 0); ringO.closePath();
   b.add(new ExtrudeGeometry(ringO, { depth: depth + 0.3, bevelEnabled: false, curveSegments: 14 }), [x, 0, z - depth / 2 - 0.15], [0, 0, 0], 1, TRIM, [1, 1]);
-  b.box(0.7, 0.5, depth + 0.5, [x, spring + ry + 0.55, z], TOWN_GOLD);                                              // keystone
+  b.box(0.7 * k, 0.5 * k, depth + 0.5, [x, spring + ry + 0.55 * k, z], TOWN_GOLD);                                              // keystone
   // cornice + battlements on the block between the towers
-  b.box(9.6, 0.4, depth + 0.5, [x, H + 0.2, z], '#a79f8e'); b.box(9.2, 0.18, depth + 0.7, [x, H + 0.5, z], '#d8d0bc');
-  for (let i = 0; i < 6; i++) b.box(1.05, 0.85, 0.9, [x - 4.0 + i * 1.6, H + 0.95, z + (depth - 0.8) / 2], '#b3ac9c');
-  for (let i = 0; i < 6; i++) b.box(1.05, 0.85, 0.9, [x - 4.0 + i * 1.6, H + 0.95, z - (depth - 0.8) / 2], '#b3ac9c');
-  // the two oak doors, swung open INTO the town (hinged on the north face of the passage, lying along its walls)
-  for (const sx of [-1, 1]) {
-    const hx = sx * (hp - 0.1), hz = z - depth / 2 + 0.05, len = 2.3;
-    b.box(0.16, 3.4, len, [x + hx, 1.7, hz - len / 2], '#7a5230', [0, 0, 0]);
-    for (const y of [0.55, 1.7, 2.85]) b.box(0.2, 0.16, len + 0.04, [x + hx, y, hz - len / 2], IRON);
-    for (let k = 0; k < 4; k++) b.box(0.2, 3.4, 0.07, [x + hx, 1.7, hz - 0.35 - k * 0.55], '#5c3c20');
-    b.box(0.3, 0.22, 0.3, [x + hx, 0.5, hz], IRON); b.box(0.3, 0.22, 0.3, [x + hx, 2.9, hz], IRON);
+  b.box(2 * W - 0.8, 0.4 * k, depth + 0.5, [x, H + 0.2 * k, z], '#a79f8e'); b.box(2 * W - 1.2, 0.18 * k, depth + 0.7, [x, H + 0.5 * k, z], '#d8d0bc');
+  const nB = Math.max(3, Math.round((2 * W - 1.6) / 1.6)), step = (2 * W - 2.4) / (nB - 1);
+  for (const sz of [1, -1]) for (let i = 0; i < nB; i++) b.box(1.05 * k, 0.85 * k, 0.9 * k, [x - (W - 1.2) + i * step, H + 0.95 * k, z + sz * (depth - 0.8 * k) / 2], '#b3ac9c');
+  if (P.doors) for (const sx of [-1, 1]) {   // the two oak doors, swung open INTO the town (hinged on the north face of the passage, lying along its walls)
+    const hx = sx * (hp - 0.1), hz = z - depth / 2 + 0.05, len = 2.3 * k, dh = 3.4 * k;
+    b.box(0.16, dh, len, [x + hx, dh / 2, hz - len / 2], '#7a5230', [0, 0, 0]);
+    for (const y of [0.16, 0.5, 0.84]) b.box(0.2, 0.16, len + 0.04, [x + hx, dh * y, hz - len / 2], IRON);
+    for (let q = 0; q < 4; q++) b.box(0.2, dh, 0.07, [x + hx, dh / 2, hz - 0.35 * k - q * 0.55 * k], '#5c3c20');
+    b.box(0.3, 0.22, 0.3, [x + hx, 0.5 * k, hz], IRON); b.box(0.3, 0.22, 0.3, [x + hx, 2.9 * k, hz], IRON);
   }
   // raised portcullis: the iron grille tucked up inside the arch (bars end in points above the opening)
-  for (let i = 0; i < 9; i++) b.box(0.08, 1.35, 0.1, [x - hp + 0.42 + i * ((2 * hp - 0.84) / 8), spring + ry - 0.55 - 0.15 * Math.abs(i - 4) / 4, z + 0.55], IRON);
-  b.box(2 * hp - 0.3, 0.1, 0.12, [x, spring + 1.5, z + 0.55], IRON); b.box(2 * hp - 0.3, 0.1, 0.12, [x, spring + 0.65, z + 0.55], IRON);
+  for (let i = 0; i < 9; i++) b.box(0.08, 1.35 * k, 0.1, [x - hp + 0.42 * k + i * ((2 * hp - 0.84 * k) / 8), spring + ry - 0.55 * k - 0.15 * k * Math.abs(i - 4) / 4, z + 0.55 * k], IRON);
+  b.box(2 * hp - 0.3, 0.1, 0.12, [x, spring + 1.5 * k, z + 0.55 * k], IRON); b.box(2 * hp - 0.3, 0.1, 0.12, [x, spring + 0.65 * k, z + 0.55 * k], IRON);
   // lit underside: two hanging lanterns inside the arch + torches on the passage walls
-  for (const lx of [-1.2, 1.2]) { b.cyl(0.02, 0.02, 0.9, 4, [x + lx, spring + ry - 0.45, z], IRON); b.box(0.34, 0.06, 0.34, [x + lx, spring + ry - 1.1, z], IRON); g.box(0.24, 0.34, 0.24, [x + lx, spring + ry - 1.3, z], '#ffd070'); b.box(0.34, 0.06, 0.34, [x + lx, spring + ry - 1.5, z], IRON); }
-  for (const sx of [-1, 1]) for (const dz of [-0.7, 0.7]) { b.box(0.2, 0.7, 0.08, [x + sx * (hp - 0.1), 2.6, z + dz], IRON); g.sph(0.17, [x + sx * (hp - 0.25), 3.1, z + dz], '#ffb04a', [1, 1.4, 1], 6); }
+  for (const lx of [-0.48 * hp, 0.48 * hp]) { b.cyl(0.02, 0.02, 0.9 * k, 4, [x + lx, spring + ry - 0.45 * k, z], IRON); b.box(0.34 * k, 0.06, 0.34 * k, [x + lx, spring + ry - 1.1 * k, z], IRON); g.box(0.24 * k, 0.34 * k, 0.24 * k, [x + lx, spring + ry - 1.3 * k, z], '#ffd070'); b.box(0.34 * k, 0.06, 0.34 * k, [x + lx, spring + ry - 1.5 * k, z], IRON); }
+  for (const sx of [-1, 1]) for (const dz of [-0.7 * k, 0.7 * k]) { b.box(0.2, 0.7 * k, 0.08, [x + sx * (hp - 0.1), 2.6 * k, z + dz], IRON); g.sph(0.17 * k, [x + sx * (hp - 0.25), 3.1 * k, z + dz], '#ffb04a', [1, 1.4, 1], 6); }
   // banners on the block's faces and the cornice
-  for (const dz of [-1, 1]) { b.box(2.4, 2.4, 0.1, [x, 6.3, z + dz * (depth / 2 + 0.3)], '#2f58b0'); g.box(2.0, 0.07, 0.04, [x, 7.4, z + dz * (depth / 2 + 0.37)], '#ffd070'); g.box(2.0, 0.07, 0.04, [x, 5.3, z + dz * (depth / 2 + 0.37)], '#ffd070'); }
+  for (const dz of [-1, 1]) { b.box(2.4 * k, 2.4 * k, 0.1, [x, 6.3 * k, z + dz * (depth / 2 + 0.3)], '#2f58b0'); g.box(2.0 * k, 0.07, 0.04, [x, 7.4 * k, z + dz * (depth / 2 + 0.37)], '#ffd070'); g.box(2.0 * k, 0.07, 0.04, [x, 5.3 * k, z + dz * (depth / 2 + 0.37)], '#ffd070'); }
+}
+/** (owner 2026-10-23) the side gates (townData SIDE_GATES): a smaller copy of the main gate between their two small towers, the passage running east-west.
+ *  The East Gate has no open doors here: while its guard holds it, closed doors stand in the passage (render/TownGates, gate 'east'). */
+export const SIDE_ARCH: ArchP = { hp: SIDE_GATE.off - SIDE_GATE.r - 0.12, W: SIDE_GATE.off, depth: 1.9, H: 6.2, spring: 2.5, ry: 1.55, doors: true };
+function buildSideGateArch(east: boolean): { b: BufferGeometry; g: BufferGeometry } {
+  const tb = new GB([1, 1]), tg = new GB([1, 1]);
+  gateArch(tb, tg, 0, 0, { ...SIDE_ARCH, doors: !east });
+  return { b: tb.build(), g: tg.build() };
 }
 
 /** A free-standing stone gateway on an outskirts road (local frame: passage along z, origin = road centre): a short wall block with an arched opening, a lighter arch ring, keystone, battlements and a banner each side. */
@@ -640,6 +652,7 @@ function buildTown() {
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
   { const c = at(PLAZA.x, PLAZA.z); addPlaza(c.b, c.g); }
   { const c = at(GATE.x, GATE.z); buildGateArch(c.b, c.g); }
+  for (const sg of SIDE_GATES) put(sg.x, sg.z, Math.PI / 2, buildSideGateArch(sg.x > 0));   // (local passage along z -> world along x)
   for (const w of GATEWAYS) { const wb = new GB([1, 1]), wg = new GB([1, 1]); buildWayGate(wb, wg, w.name === 'beach' ? '#2f8fd0' : '#d08a2f'); put(w.x, w.z, w.rot, { b: wb.build(), g: wg.build() }); }
   for (const L of LOTS) lifted(L.x, L.z, (b, g) => addLot(b, g, L));
   lifted(-38, -30, (b, g) => addGraveyard(b, g, mulberry32(777)));

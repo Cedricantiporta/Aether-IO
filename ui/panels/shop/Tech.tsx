@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cog, X, Lock, Check } from '../../components/GoldIcons';
-import { BagGlyph, ItemArtByKey, PaintImg } from '../../components/ItemArt';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { TECH, ROMAN, techLv, type TechId } from '../../../tech';
@@ -13,22 +12,11 @@ import { SimpleTip } from '../../components/ItemTip';
 import { useUiStore } from '../../uiStore';
 import { CloseX } from '../../components/CloseX';
 
-/** Painted item art for each upgrade (the same art the bag uses for real items). */
-const ART: Record<TechId, React.ReactNode> = {
-  bag: <BagGlyph size={44} />, warehouse: <ItemArtByKey k="chest" size={44} />, potion: <ItemArtByKey k="potion_hp_big" size={44} />,
-  gold: <ItemArtByKey k="loot_coin_pouch" size={44} />, xp: <ItemArtByKey k="loot_dark_page" size={44} />, vitality: <ItemArtByKey k="loot_golem_heart" size={44} />,
-  refresh: <ItemArtByKey k="erase_scroll" size={44} />, polish: <ItemArtByKey k="augment_rune" size={44} />, lucky: <PaintImg file="shard_EPIC" size={44} />,
-  lantern: (
-    <svg width={44} height={44} viewBox="0 0 48 48" aria-hidden>
-      <path d="M18 8h12M24 4v4" stroke="#6b5a3a" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <rect x="14" y="10" width="20" height="5" rx="2" fill="#4a3a26" />
-      <rect x="15" y="15" width="18" height="21" rx="3" fill="#ffd56a" opacity=".9" />
-      <ellipse cx="24" cy="26" rx="5" ry="7" fill="#fff4c8" />
-      <path d="M15 15v21M33 15v21M24 15v21" stroke="#4a3a26" strokeWidth="2" />
-      <rect x="13" y="36" width="22" height="5" rx="2" fill="#4a3a26" />
-    </svg>
-  ),
-};
+/** (owner) painted Tech House icons, one per upgrade (public/art/tech/<id>.webp). */
+const TECH_ART = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/tech/';
+const TechArt: React.FC<{ id: TechId }> = ({ id }) => (
+  <img src={`${TECH_ART}${id}.webp`} alt="" draggable={false} decoding="async" style={{ display: 'block', width: 48, height: 48, objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.5))' }} />
+);
 const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0', lantern: '#ffc85a', refresh: '#8fd3ff', polish: '#c79bff', lucky: '#ffb347' };
 
 export const TechWindow: React.FC = () => {
@@ -71,7 +59,7 @@ export const TechGrid: React.FC = () => {
                 return (
                   <button key={t} className={`tech-slot pe ${owned ? 'owned' : next ? (can ? 'can' : 'cant') : 'later'}`} style={{ ['--tc' as any]: TONE[d.id] }} data-testid={`tech-${d.id}-${t + 1}`}
                     {...tip(<SimpleTip title={name} body={owned ? `${d.per}. Bought.` : next ? `${d.per}. ${cost.toLocaleString()} gems.` : `${d.per}. Buy ${d.name} ${ROMAN[lv]} first.`} />)} onClick={click}>
-                    <span className="tech-ic">{ART[d.id]}</span>
+                    <span className="tech-ic"><TechArt id={d.id} /></span>
                     <b className="tech-lv">{ROMAN[t]}</b>
                     {owned && <span className="tech-owned"><Check size={14} /> Bought</span>}
                     {!owned && !next && <span className="tech-lock"><Lock size={14} /></span>}
