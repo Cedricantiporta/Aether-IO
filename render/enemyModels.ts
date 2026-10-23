@@ -57,7 +57,7 @@ function slime(): ModelDef {
   const core = new GB([1, 1]).ico(0.2, [0, 0.5, 0], '#3f9a1c', 1, 1).sph(0.06, [0.3, 0.35, 0.1], '#6fc22a', 1, 5).sph(0.05, [-0.28, 0.75, -0.1], '#6fc22a', 1, 5).sph(0.04, [0.1, 0.8, -0.3], '#6fc22a', 1, 5).build();
   const eyes = new GB([1, 1]);
   for (const s of [-1, 1]) {
-    eyes.sph(0.13, [s * 0.2, 0.68, 0.45], '#ffffff', [1, 1.15, 0.7], 7); eyes.sph(0.065, [s * 0.2, 0.66, 0.55], '#101018', [1, 1, 0.6], 6);
+    eyes.sph(0.085, [s * 0.2, 0.68, 0.5], '#1a1530', [0.78, 1.15, 0.6], 8); eyes.sph(0.02, [s * 0.2 + 0.015, 0.72, 0.56], '#ffffff', 1, 4);   // solid dark bean + tiny highlight (no googly whites)
   }
   eyes.box(0.2, 0.05, 0.04, [0, 0.46, 0.58], '#2a5a14');
   return {

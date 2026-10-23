@@ -136,3 +136,6 @@ Note: `boss_hydra` is the body only (body, 4 legs, tail); its heads are separate
 
 Monsters 554-1976 (a few chunky ones - yeti 1976, brute 1782, bone_golem 1746, mummy 1600 - sit above the 1500 target), bosses 3.1-5.2k, adds 0.4-1.5k, pets 506-1240.
 Preview sheets are rendered by the script (Cycles).
+
+## Eye style (no googly eyes)
+No white sclera balls. `eye()` / `face()` in `art/blender/creature_kit_v1.py` build either a solid dark glossy bean + tiny highlight (cute critters, `white='eye_white'`) or, for coloured / glowing `white` / `pupil` (menacing monsters, bosses), a slanted almond in that colour with a slit pupil and a dark lid cut. Hollow sockets (skeletons, shaman, bone golem) use `slit_eye()`. Rebuild: `pip install bpy` then `python3 art/blender/creature_kit_v1.py --no-render` (needs npx for the weld + meshopt step). `render/enemyModels.ts` slime fallback uses the same bean.

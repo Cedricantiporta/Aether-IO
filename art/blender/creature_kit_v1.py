@@ -218,19 +218,35 @@ def sb(b, pos, r, mat, sq=(1, 1, 1), seg=None, rings=None, rot=None):
     b.ball(pos, r, mat, sq=sq, seg=seg, rings=rings, rot=rot)
 
 
-def eye(b, x, y, z, r=0.1, look=(0.0, 0.0), pupil='eye_black', white='eye_white', sq=(1.0, 1.12), seg=None, shine=True, flip=1.0):
-    """big glossy toy eye on a +Z facing head: white, big dark pupil (shifted by look), tiny highlight"""
+def eye(b, x, y, z, r=0.1, look=(0.0, 0.0), pupil='eye_black', white='eye_white', sq=(1.0, 1.12), seg=None, shine=True, flip=1.0, ang=0.0, side=1):
+    """toy eye on a +Z facing head, NO big white ball (googly eyes were dropped).
+    cute (white == 'eye_white'): one solid glossy dark bean (narrow oval) + a tiny highlight dot; `ang` only tilts it a little (cute-determined).
+    menacing (coloured / glowing `white`, or a glowing `pupil`): a flat almond in that colour, slanted inwards-down by `ang` (side = -1 / +1 = which
+    face side, like the brows), a thin dark slit pupil and a heavy dark lid cut over the top so it looks fierce, not surprised."""
     seg = seg or (8 if r < 0.15 else 10)
-    sb(b, (x, y, z), r, white, sq=(sq[0], sq[1], 0.6), seg=seg)
-    px, py = x + look[0] * r * 0.28, y + look[1] * r * 0.28
-    sb(b, (px, py, z + r * 0.30), r * 0.68, pupil, sq=(0.92, 1.08, 0.62), seg=max(6, seg - 1))
-    if shine:
-        sb(b, (px + r * 0.22 * flip, py + r * 0.3, z + r * 0.60), r * 0.2, 'shine', sq=(1, 1, 0.6), seg=5, rings=3)
+    px, py = x + look[0] * r * 0.2, y + look[1] * r * 0.2
+    col = white if white != 'eye_white' else (pupil if pupil.startswith('glow') else None)
+    if col is None:      # cute bean
+        sb(b, (px, py, z + r * 0.12), r * 0.95, pupil, sq=(0.84 * sq[0], 1.1 * sq[1] / 1.12, 0.6), seg=max(9, seg), rot=Rz(side * ang * 0.35) if ang else None)
+        if shine:
+            sb(b, (px + r * 0.17 * flip, py + r * 0.32, z + r * 0.56), r * 0.17, 'shine', sq=(1, 1, 0.6), seg=5, rings=3)
+        return
+    a = ang if ang else 0.32           # menacing eyes always slant
+    sb(b, (x, y, z + r * 0.05), r * 1.05, col, sq=(1.2, 0.72, 0.6), seg=max(9, seg), rot=Rz(side * a))                    # almond
+    sb(b, (px, py - r * 0.02, z + r * 0.32), r * 0.5, 'eye_black', sq=(0.24, 1.0, 0.55), seg=7, rings=4)         # slit pupil
+    # lid: dark ellipse over the upper part, tilted the same way (inner end lower) -> determined glare
+    sb(b, (x - side * r * 0.06, y + r * 0.72, z + r * 0.22), r * 0.95, 'ink', sq=(1.2, 0.26, 0.5), seg=max(9, seg), rot=Rz(side * (a + 0.1)))
 
 
 def brow(b, x, y, z, w, ang, mat='ink', th=0.03):
     """little tilted eyebrow (cute-angry when angled inwards)"""
     b.rbox((x, y, z), (w, th, th * 1.2), mat, r=th * 0.45, rot=Rz(ang), smooth=True)
+
+
+def slit_eye(b, x, y, z, r, glow, side, ang=0.36, dark='eye_black'):
+    """hollow / armoured eye socket as a narrow slanted almond (inner end lower = determined) with a smaller glowing almond inside"""
+    sb(b, (x, y, z), r, dark, sq=(1.15, 0.58, 0.5), seg=9, rings=5, rot=Rz(side * ang))
+    sb(b, (x - side * r * 0.04, y - r * 0.04, z + r * 0.5), r * 0.62, glow, sq=(1.1, 0.5, 0.5), seg=8, rings=4, rot=Rz(side * ang))
 
 
 def cheek(b, x, y, z, r=0.07, mat='blush'):
@@ -303,7 +319,7 @@ def face(b, c, r, sq=(1, 1, 1), ex=0.38, ey=0.08, er=0.2, my=-0.34, mw=0.2, chee
     er_ = er * r
     for s in (-1, 1):
         x = cx + s * ex * r * sq[0]; y = cy + ey * r * sq[1]
-        eye(b, x, y, sz(c, r, sq, x, y) - er_ * sink, er_, look=look, pupil=pupil, white=white, sq=esq, shine=ecol_shine)
+        eye(b, x, y, sz(c, r, sq, x, y) - er_ * sink, er_, look=look, pupil=pupil, white=white, sq=esq, shine=ecol_shine, ang=(brows[0] if brows else 0.0), side=s, flip=s)
         if brows:
             ang, dy, wf = brows
             by = y + er_ * (1.3 + dy)
@@ -502,9 +518,7 @@ def skeleton_build(name, kind='bow', eye_glow='glow_red', H=1.75):
     for s in (-1, 1):
         x = s * 0.17
         zz = sz(hc, hr, hs, x, 1.53)
-        sb(h, (x, 1.53, zz - 0.03), 0.14, 'eye_black', sq=(1, 1.1, 0.5), seg=9, rings=5)
-        sb(h, (x + 0.01, 1.52, zz + 0.03), 0.065, eye_glow, sq=(1, 1.1, 0.5), seg=7, rings=4)
-        sb(h, (x + 0.04, 1.56, zz + 0.045), 0.025, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+        slit_eye(h, x, 1.53, zz - 0.01, 0.15, eye_glow, s)
     sb(h, (0, 1.42, sz(hc, hr, hs, 0, 1.42) - 0.01), 0.04, 'ink', sq=(1, 1.2, 0.5), seg=6, rings=4)
     for i in range(5):
         h.box(((i - 2) * 0.065, 1.2, 0.3), (0.04, 0.05, 0.03), 'bone_dark')
@@ -576,7 +590,7 @@ def cultist():
     horn(h, (0, 1.85, -0.05), (0, 2.12, -0.35), 0.18, 'cult_robe_dark', segs=8, curve=(0, 0.05, 0.0))
     sb(h, (0, 1.47, 0.22), 0.34, 'ink', sq=(1, 1.0, 0.7), seg=10, rings=6)
     for s in (-1, 1):
-        sb(h, (s * 0.15, 1.5, 0.43), 0.1, 'glow_pink', sq=(0.9, 1.25, 0.45), seg=8, rings=5)
+        sb(h, (s * 0.15, 1.5, 0.43), 0.1, 'glow_pink', sq=(1.15, 0.52, 0.45), seg=8, rings=5, rot=Rz(s * 0.35))
     cheek(h, 0, 1.3, 0.5, 0.0)
     for nm, s in (('armL', -1), ('armR', 1)):
         a = c.part(nm, (s * 0.38, 1.05, 0))
@@ -698,7 +712,7 @@ def wraith():
     for s in (-1, 1):
         x = s * 0.2
         zf = 0.5 * math.sqrt(max(0.0, 1 - (1.35 - 1.35) ** 2)) * 0.9
-        sb(b, (x, 1.32, 0.46), 0.15, 'eye_black', sq=(0.9, 1.25, 0.5), seg=9, rings=6)
+        sb(b, (x, 1.32, 0.46), 0.15, 'eye_black', sq=(0.72, 1.15, 0.5), seg=9, rings=6)
         sb(b, (x + 0.04, 1.38, 0.53), 0.045, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
         cheek(b, s * 0.36, 1.17, 0.44, 0.075)
     sb(b, (0, 1.12, 0.52), 0.07, 'mouth', sq=(1.2, 0.9, 0.5), seg=7, rings=4)
@@ -1018,7 +1032,7 @@ def haunted_armor():
     h.lathe([(0.0, 2.84), (0.18, 2.84), (0.18, 2.74), (0.0, 2.7)], 'haunted_gold', segs=9)
     sb(h, (0, 2.3, 0.3), 0.36, 'eye_black', sq=(1.15, 0.55, 0.6), seg=9, rings=5)
     for s in (-1, 1):
-        sb(h, (s * 0.15, 2.3, 0.54), 0.12, 'glow_cyan', sq=(0.9, 1.2, 0.45), seg=8, rings=5)
+        sb(h, (s * 0.15, 2.3, 0.54), 0.12, 'glow_cyan', sq=(1.2, 0.42, 0.45), seg=8, rings=5, rot=Rz(s * 0.3))
     horn(h, (0, 2.78, -0.05), (0, 3.15, -0.5), 0.12, 'haunted_plume', segs=8, curve=(0, 0.2, 0.0))
     horn(h, (0, 2.74, -0.1), (0, 2.9, -0.65), 0.1, 'haunted_plume', segs=7, curve=(0, 0.1, 0.0))
     for nm, s in (('armL', -1), ('armR', 1)):
@@ -1205,9 +1219,7 @@ def cinder_shaman():
     sb(h, (0, 1.58, 0.14), 0.4, 'shaman_bone', sq=(1.0, 1.05, 0.7), seg=10, rings=6)
     for s in (-1, 1):
         x = s * 0.16
-        sb(h, (x, 1.63, 0.46), 0.12, 'eye_black', sq=(1, 1.15, 0.5), seg=8, rings=5)
-        sb(h, (x + s * 0.0, 1.62, 0.5), 0.065, 'glow_orange', sq=(1, 1.1, 0.5), seg=7, rings=4)
-        sb(h, (x + 0.03, 1.67, 0.53), 0.025, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+        slit_eye(h, x, 1.63, 0.47, 0.13, 'glow_orange', s)
         horn(h, (s * 0.34, 1.7, 0.1), (s * 0.55, 1.95, 0.15), 0.08, 'shaman_bone', segs=6, curve=(s * 0.08, 0.0, 0.0))
         cheek(h, s * 0.27, 1.45, 0.47, 0.06, 'glow_orange')
     smile(h, 0, 1.4, 0.52, w=0.1, depth=0.03, mat='shaman_dark', th=0.014)
@@ -1266,7 +1278,8 @@ def void_eye():
     cy = 1.5
     sb(b, (0, cy, 0), 0.72, 'void_light', seg=12, rings=8)
     sb(b, (0, cy, 0.4), 0.46, 'void', sq=(1.0, 1.0, 0.55), seg=11, rings=7)
-    sb(b, (0, cy, 0.58), 0.27, 'eye_black', sq=(0.8, 1.15, 0.5), seg=9, rings=6)
+    sb(b, (0, cy, 0.58), 0.27, 'eye_black', sq=(0.34, 1.15, 0.5), seg=9, rings=6)       # slit pupil
+    sb(b, (0, cy + 0.34, 0.6), 0.4, 'void_deep', sq=(0.95, 0.26, 0.45), seg=10, rings=5)   # heavy lid
     sb(b, (0.1, cy + 0.14, 0.68), 0.075, 'shine', sq=(1, 1, 0.5), seg=6, rings=4)
     sb(b, (-0.12, cy - 0.12, 0.66), 0.035, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
     for k, (dx, dy, ang) in enumerate(((-0.45, 0.35, 0.6), (0.5, 0.3, -0.7), (-0.5, -0.25, -0.4))):
@@ -1328,9 +1341,7 @@ def bone_golem():
     for s in (-1, 1):
         x = s * 0.27
         zz = sz(hc, hr, hs, x, 3.0)
-        sb(h, (x, 3.0, zz - 0.04), 0.2, 'eye_black', sq=(1, 1.1, 0.5), seg=9, rings=6)
-        sb(h, (x, 2.98, zz + 0.04), 0.1, 'glow_purple', sq=(1, 1.1, 0.5), seg=8, rings=5)
-        sb(h, (x + 0.06, 3.04, zz + 0.07), 0.035, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+        slit_eye(h, x, 3.0, zz - 0.0, 0.22, 'glow_purple', s)
         horn(h, (s * 0.4, 3.45, 0.0), (s * 0.7, 3.95, -0.1), 0.14, 'bone_dark', segs=7, curve=(s * 0.1, 0, 0))
     sb(h, (0, 2.82, sz(hc, hr, hs, 0, 2.82) - 0.02), 0.06, 'ink', sq=(1, 1.2, 0.5), seg=6, rings=4)
     for i in range(6):
@@ -1469,9 +1480,7 @@ def boss_lich():
     for s in (-1, 1):
         x = s * 0.24
         zz = sz(hc, hr, hs, x, 2.6)
-        sb(h, (x, 2.6, zz - 0.04), 0.2, 'eye_black', sq=(1, 1.1, 0.5), seg=10, rings=7)
-        sb(h, (x, 2.58, zz + 0.05), 0.1, 'glow_purple', sq=(1, 1.1, 0.5), seg=9, rings=6)
-        sb(h, (x + 0.06, 2.65, zz + 0.08), 0.035, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+        slit_eye(h, x, 2.6, zz - 0.0, 0.22, 'glow_purple', s)
         brow(h, x, 2.88, sz(hc, hr, hs, x, 2.88) + 0.01, 0.3, s * 0.3, mat='bone_dark', th=0.06)
     sb(h, (0, 2.45, sz(hc, hr, hs, 0, 2.45) - 0.01), 0.06, 'ink', sq=(1, 1.2, 0.5), seg=6, rings=4)
     for i in range(6):
@@ -1614,8 +1623,7 @@ def boss_warlord():
     sb(h, (0, 3.0, 0.28), 0.46, 'ink', sq=(1.1, 0.95, 0.65), seg=10, rings=7)
     for s in (-1, 1):
         x = s * 0.2
-        sb(h, (x, 3.05, 0.66), 0.17, 'glow_orange', sq=(0.9, 1.15, 0.45), seg=9, rings=6)
-        sb(h, (x + 0.04, 3.1, 0.72), 0.04, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+        sb(h, (x, 3.05, 0.66), 0.17, 'glow_orange', sq=(1.15, 0.5, 0.45), seg=9, rings=6, rot=Rz(s * 0.4))
         horn(h, (s * 0.38, 3.35, 0.0), (s * 0.85, 3.95, -0.1), 0.17, 'warlord_gold', segs=8, curve=(s * 0.15, 0.0, 0.0))
         brow(h, x, 3.3, 0.6, 0.3, s * 0.4, mat='warlord_dark', th=0.07)
     h.lathe([(0.58, 3.05), (0.64, 3.05), (0.64, 2.98), (0.58, 2.98)], 'warlord_gold', segs=12, closed=True)
@@ -1687,10 +1695,9 @@ def boss_warmach():
         horn(b, (s * 0.8, 2.6, -0.9), (s * 0.85, 3.4, -1.0), 0.06, ST, segs=5)
     for k in (-1, 1):
         sb(b, (k * 0.55, 2.55, -0.9), 0.3, OL2, sq=(1, 0.6, 1), seg=8, rings=5)
-    sb(b, (0, 1.8, 2.05), 0.46, 'eye_white', sq=(1.4, 1.0, 0.55), seg=11, rings=7)
-    sb(b, (0, 1.8, 2.3), 0.3, 'glow_orange', sq=(1.1, 1.0, 0.5), seg=10, rings=6)
-    sb(b, (0, 1.8, 2.42), 0.14, 'eye_black', sq=(1.0, 1.1, 0.5), seg=8, rings=5)
-    sb(b, (0.1, 1.9, 2.47), 0.05, 'shine', sq=(1, 1, 0.5), seg=5, rings=3)
+    sb(b, (0, 1.8, 2.05), 0.46, 'ink', sq=(1.4, 0.62, 0.55), seg=11, rings=7)
+    sb(b, (0, 1.8, 2.3), 0.3, 'glow_orange', sq=(1.3, 0.42, 0.5), seg=10, rings=6)
+    sb(b, (0, 1.8, 2.42), 0.14, 'eye_black', sq=(0.35, 1.0, 0.5), seg=8, rings=5)
     brow(b, 0, 2.38, 2.0, 0.9, 0.0, mat=DK, th=0.14)
     tu = c.part('turret', (0, 2.6, -0.1))
     sb(tu, (0, 2.95, -0.1), 0.75, OL2, sq=(1.05, 0.62, 1.0), seg=10, rings=7)
