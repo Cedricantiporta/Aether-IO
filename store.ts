@@ -375,7 +375,9 @@ const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _sta
   const st = useGameStore.getState(), rp = picks ?? st.runPicks;
   // Lucky Start (Tech House): the very first card choice of an adventure run (first biome) always holds an Epic card
   const epic = techLv(st.tech, 'lucky') > 0 && rp.length === 0 && runInfo.mode === 'ADVENTURE' && world.room.biome === 0;
-  return rollRunCards(count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic }).map((c) => withCardText({ ...c, id: uid('card') }));
+  // (owner) the first card choice of every run: 3 special cards, one per category (Offense / Defense / Speed)
+  const opener = rp.length === 0;
+  return rollRunCards(opener ? 3 : count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic, opener }).map((c) => withCardText({ ...c, id: uid('card') }));
 };
 /** The store rewrites the Max HP number with HP_INFLATE (the catalogue lists the base value). */
 const withCardText = (opt: Upgrade): Upgrade => { if (opt.type === 'HEALTH') opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; return opt; };

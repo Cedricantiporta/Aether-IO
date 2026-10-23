@@ -220,6 +220,10 @@ export function updateRouteHint(fx: number, fz: number, tx: number, tz: number, 
   return routeHint;
 }
 
+/** The planned hint route (read-only): waypoints `wp[0..n)` (x, z pairs), `i` = the next one ahead of the hero. Drawn as the guide trail (render/GuideArrow). */
+export function routeHintPath(): { wp: Float32Array; i: number; n: number } { _rp.wp = hintWp; _rp.i = hintI; _rp.n = routeHint.ok ? hintN : 0; return _rp; }
+const _rp = { wp: new Float32Array(0), i: 0, n: 0 };
+
 /** Length of a route (from the start through `n` waypoints of `wp`). */
 export function routeLength(fx: number, fz: number, wp: Float32Array, n: number): number {
   let len = 0, px = fx, pz = fz;

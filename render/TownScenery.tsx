@@ -214,9 +214,8 @@ function buildRoads(): BufferGeometry {
     const rm = (r0 + r1) / 2, arc = (TAU * rm) / n - gap;
     for (let i = 0; i < n; i++) { const a = (i / n) * TAU + (r0 * 7), k = rnd() < 0.18 ? 3 : Math.floor(rnd() * 3); r.box(arc, 0.02, r1 - r0 - gap, [px + Math.cos(a) * rm, 0.112, pz + Math.sin(a) * rm], CREAM[k], [0, -a + Math.PI / 2, 0], [1, 1]); }
   };
-  for (let r0 = 2.4; r0 < PLAZA.r - 0.95; r0 += 0.78) { if (Math.abs(r0 - 6.0) < 0.4) continue; ring(r0, r0 + 0.72, Math.round((TAU * (r0 + 0.36)) / 1.05), 0.07); }   // (concentric slab rings, a gap for the inner orange inlay)
-  r.torus(PLAZA.r - 0.32, 0.075, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 96);   // orange ring inlay on the rim
-  r.torus(6.0, 0.06, [px, 0.118, pz], '#e07a3c', [Math.PI / 2, 0, 0], 1, 72);               // (and a thinner one half way in)
+  for (let r0 = 2.4; r0 < PLAZA.r - 0.95; r0 += 0.78) { ring(r0, r0 + 0.72, Math.round((TAU * (r0 + 0.36)) / 1.05), 0.07); }   // (concentric slab rings, a gap for the inner orange inlay)
+  // (owner 2026-10-23: no orange ring inlays - the orange lines read as clutter)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
   return planarUv(r.build(), 6);
@@ -224,7 +223,8 @@ function buildRoads(): BufferGeometry {
 
 /** Terracotta kerb (owner ref): a thin rounded orange-brick curb along both edges of every paved street inside the walls, round the plaza and the gate forecourt. Pieces that would cross
  *  another street, sit on a flight of steps or fall inside a plaza are left out. One merged mesh (no per-frame work). */
-function buildKerbs(): BufferGeometry {
+// (owner 2026-10-23: the street kerbs are gone - the orange lines read as clutter; kept for reference, not built)
+export function buildKerbs(): BufferGeometry {
   const r = new GB([1, 1]);
   const BR = ['#d9703a', '#e07f42', '#d36a36', '#e48a4c'];
   const paved = ROADS.filter((rd) => !rd.dirt).map((rd) => { const seg = clipZ(rd, -1e9, WALL.z1 + 2.5); return seg ? { rd, seg } : null; }).filter(Boolean) as { rd: typeof ROADS[number]; seg: [number, number, number, number] }[];
@@ -521,14 +521,13 @@ function addPlaza(b: GB, g: GB): void {
     b.cyl(D.plinthR - 0.1, D.plinthR, D.statueY - D.lawnY - 0.1, 24, [m.x, D.lawnY + 0.1 + (D.statueY - D.lawnY - 0.1) / 2, m.z], '#d6cfbd');
     b.torus(D.plinthR - 0.06, 0.035, [m.x, D.statueY - 0.03, m.z], TOWN_GOLD, [Math.PI / 2, 0, 0], 1, 28);
   }
-  // flush flower beds round the plinths (walk straight over them) + a thin warm inlay ring in the paving: walkable space reads as one open plaza
+  // flush flower beds round the plinths (walk straight over them): walkable space reads as one open plaza
   const FL = ['#ff8fb1', '#ffd84d', '#fff3e0', '#ff7a6b', '#c3a6ff'];
   for (const m of PLAZA_STATUES) {
     b.cyl(1.75, 1.75, 0.03, 28, [m.x, 0.17, m.z], '#6fb04f');
     b.torus(1.75, 0.045, [m.x, 0.18, m.z], '#e6b98a', [Math.PI / 2, 0, 0], [1, 1, 0.5], 28);
     for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU + (m.x > 0 ? 0.3 : 0), d = i % 2 ? 1.2 : 1.5; b.sph(0.1, [m.x + Math.cos(a) * d, 0.27, m.z + Math.sin(a) * d], FL[i % 5], 1, 5); }
   }
-  b.torus(PLAZA.r - 0.6, 0.06, [x, 0.13, z], '#e6b98a', [Math.PI / 2, 0, 0], [1, 1, 0.5], 72);
   g.sph(0.05, [x, 0.01, z], '#000000', 0.01, 3);
 }
 
@@ -662,7 +661,7 @@ function buildTown() {
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
-  return { chunks: out, roads: buildRoads(), kerb: buildKerbs(), dirt: buildDirtPaths(), paving: paving.geo };
+  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo };
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
@@ -768,11 +767,10 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     dirt: litMat({ roughness: 1 }),
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
-    kerb: litMat({ roughness: 0.9 }),
   }; }, []);
   useEffect(() => () => {
     town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); mats.kerb.dispose(); town.kerb.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
   }, [town, mats]);
   const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
@@ -794,7 +792,6 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     <group>
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
-      <mesh geometry={town.kerb} material={mats.kerb} receiveShadow={shadows} />
       <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <ChimneySmoke q={q} />
       <Lake />

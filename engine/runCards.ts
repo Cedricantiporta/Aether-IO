@@ -226,7 +226,7 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   return out;
 }
 
-export interface RollOpts { trend?: TrendCounts; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean }
+export interface RollOpts { trend?: TrendCounts; /** (owner) the run's first pick: 3 special cards, one Offense / Defense / Speed */ opener?: boolean; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean }
 /** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome.
  *  Offer weights lean toward the build categories the hero picked from (x1.25 per pick, max x2.5), but the leading
  *  category never fills more than 2 of the 3-4 cards, so there is always variety. */
@@ -234,6 +234,18 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
   earlyMul = EARLY_TIER_MUL[Number(biomeKey)] ?? null;
   const pool = candidates(ultUnlocked, true, biomeKey);
   const cards: Omit<Upgrade, 'id'>[] = [];
+  if (opts.opener) {   // (owner) the first card choice of every run: one special per category
+    for (const cat of ['OFFENSE', 'DEFENSE', 'UTILITY'] as const) {
+      const opt = SPECIALS.filter((x) => !runCards.taken[x.id] && (SPECIAL_CAT[x.id] ?? 'UTILITY') === cat);
+      const sp = opt[Math.floor(Math.random() * opt.length)];
+      if (!sp) continue;
+      const t = !runCards.mythicOffered && Math.random() < 0.04 ? 4 : 3, v = sp.vals[t === 4 ? 1 : 0];
+      if (t === 4) runCards.mythicOffered = true;
+      cards.push(mk('SPECIAL', sp.name, sp.fmt(v, t), t, v, sp.id));
+    }
+    if (cards.length === 3) return cards;
+    cards.length = 0;
+  }
   const lead = opts.trend ? trendLeader(opts.trend) : null, leadCap = 2;   // (owner: at most 2 cards of the leading category; with 2 cards on offer that is no cap, the lean is the weight)
   let leadN = 0;
   for (let i = 0; i < count && pool.length > 0; i++) {
