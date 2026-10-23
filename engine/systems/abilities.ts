@@ -426,7 +426,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.facing = Math.atan2(dx, dz);
       announce('LIGHT_ARROW');
     } else {
-      const R = 7.5 + 0.5 * (lv - 1);
+      const R = 4.5 + 0.35 * (lv - 1);   // (owner) Frost Field circles smaller (was 7.5 + 0.5/lv)
       const baseAng = Math.atan2(dz, dx);
       for (let i = -1; i <= 1; i++) {
         const a = baseAng + i * 0.5;
