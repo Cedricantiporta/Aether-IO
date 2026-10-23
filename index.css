@@ -3681,7 +3681,7 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* (owner) summon cards: painted back + per-rarity fronts; the window is a soft rarity-tinted glow so the item blends in */
 .sm-back.art { padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
 .sm-back.art img { width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
-.sm-face.tarot.sf .sm-window { left: 17%; right: 17%; top: 16%; bottom: 23%; background: radial-gradient(circle at 50% 46%, #fffdf6 0%, var(--w1) 42%, var(--w2) 100%) !important; }
+.sm-face.tarot.sf .sm-window { box-shadow: none !important; border-radius: 0 !important; left: 17%; right: 17%; top: 16%; bottom: 23%; background: radial-gradient(circle at 50% 46%, #fffdf6 0%, var(--w1) 42%, var(--w2) 100%) !important; }
 .sm-face.tarot.sf .sm-halo { position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--rc) 55%, white) 0%, transparent 68%); opacity: .75; }
 .sm-face.tarot.sf .sm-item { margin-top: 0; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .25)); }
 .sm-face.tarot.sf .sm-name { top: 79.5%; height: 8%; }
