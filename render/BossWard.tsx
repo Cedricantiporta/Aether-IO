@@ -26,7 +26,8 @@ export function BossWard() {
     m.current.visible = mat.uniforms.uA.value > 0.01;
     if (!on || !e) return;
     mat.uniforms.uT.value += dt;
-    const r = Math.max(e.radius * 1.45, e.scale * 0.8) * (1 + Math.sin(mat.uniforms.uT.value * 2.4) * 0.025);
+    const r = Math.min(Math.max(e.radius * 1.45, e.scale * 0.8), e.radius * 1.15 + 0.8) * (   // (owner: the Slime King's bubble was huge) hug the body
+      1 + Math.sin(mat.uniforms.uT.value * 2.4) * 0.025);
     m.current.position.set(e.pos.x, r * 0.55, e.pos.z);
     m.current.scale.setScalar(r);
   });

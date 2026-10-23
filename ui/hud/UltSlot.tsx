@@ -16,7 +16,8 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
   const root = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const txt = useRef<HTMLSpanElement>(null);
-  const last = useRef({ v: -1, ready: false, active: false });
+  const cdEl = useRef<HTMLDivElement>(null);
+  const last = useRef({ v: -1, ready: false, active: false, cd: -1 });
   useRaf(() => {
     if (locked) return;   // (static 'Lv N' label below)
     const p = world.player;
@@ -25,16 +26,19 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
     const ready = p.ult >= 99.99 && p.ultT <= 0 && cd <= 0;
     const active = p.ultT > 0;
     const l = last.current;
+    // (owner) cooldown like the dash: a dark cover with the seconds left, big in the middle
+    const cds = cd > 0 && !active ? (cd < 10 ? Math.ceil(cd * 10) / 10 : Math.ceil(cd)) : 0;
+    if (cds !== l.cd && cdEl.current) { l.cd = cds; cdEl.current.style.display = cds > 0 ? '' : 'none'; cdEl.current.textContent = cds > 0 ? (cd < 10 ? cds.toFixed(1) : String(cds)) : ''; if (cds === 0) l.v = -1; }
     if (v !== l.v && fill.current && txt.current) {
       l.v = v;
       fill.current.style.setProperty('--ult', String(p.ult / 100));
-      txt.current.textContent = ready ? keyHint('R') : `${v}%`;
+      txt.current.textContent = ready ? keyHint('R') : cd > 0 && !active ? '' : `${v}%`;
     }
     if (ready !== l.ready || active !== l.active) {
       l.ready = ready; l.active = active;
       root.current?.setAttribute('data-ready', ready ? '1' : '0');
       root.current?.setAttribute('data-active', active ? '1' : '0');
-      if (txt.current) txt.current.textContent = ready ? keyHint('R') : active ? '...' : cd > 0 ? `${Math.ceil(cd)}s` : `${Math.floor(p.ult)}%`;
+      if (txt.current) txt.current.textContent = ready ? keyHint('R') : active ? '...' : cd > 0 ? '' : `${Math.floor(p.ult)}%`;
     }
   });
   const shake = () => {
@@ -69,11 +73,13 @@ export const UltSlot: React.FC<Props> = ({ icon, tooltip, color, locked = 0 }) =
         .ult-slot [data-active="1"] .ult-glow{opacity:1;animation:ultPulse .35s ease-in-out infinite}
         .ult-slot .ult-txt{position:absolute;left:0;right:0;bottom:12%;text-align:center;font-weight:800;font-size:.8rem;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;z-index:4;pointer-events:none}
         .ult-slot [data-ready="1"] .ult-txt{color:#fff3c0;font-size:1.05rem;bottom:34%;text-shadow:0 0 8px #c88a10,0 1px 3px #000}
+        .ult-slot .ult-cd{position:absolute;inset:0;border-radius:50%;background:rgba(10,8,14,.62);display:grid;place-items:center;z-index:3;pointer-events:none;font-weight:800;font-size:1.35rem;color:#fff;text-shadow:0 1px 3px #000}
         @keyframes ultPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}
       `}</style>
       <div ref={root} data-ready="0" data-active="0" data-locked={locked ? '1' : '0'} style={{ position: 'absolute', inset: 0 }}>
         <div className="ult-glow" />
         <div className="ult-core"><div className="ico">{icon}</div><div ref={fill} className="ult-fill" /></div>
+        <div ref={cdEl} className="ult-cd" style={{ display: 'none' }} />
         <span ref={txt} className="ult-txt">{locked ? `Lv ${locked}` : '0%'}</span>
       </div>
       {pad ? <PadBtn b="RT" className="pad-badge" /> : <span className="rpg-key">R</span>}
