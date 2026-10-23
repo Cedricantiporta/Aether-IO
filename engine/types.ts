@@ -501,6 +501,8 @@ export interface RunStats {
 export interface CameraState {
   trauma: number;        // 0..1 screen shake, render squares it
   zoom: number;          // 1 = default; bosses push out a bit
+  /** (owner) player zoom: 1 = default framing, down to USER_ZOOM_MIN (closer). Mouse wheel / two-finger pinch. */
+  uz?: number;
   yaw: number;           // free-camera orbit around the hero (rad, 0 = looking north / -z)
   pitch: number;         // elevation angle (rad)
   dist: number;          // player zoom (wheel / pinch), multiplies the distance

@@ -46,3 +46,41 @@
 .so-locked { display: flex; flex-direction: column; gap: .35rem; align-items: center; text-align: center; padding: 1.4rem .8rem; border: 1px solid rgba(200,150,46,.35); background: rgba(10,8,6,.6); }
 .so-locked b { font-family: var(--font-title); font-size: 1rem; color: var(--gold-light, #f1d58a); }
 .so-locked span { font-size: .8rem; color: #b8ad98; }
+/* (owner 2026-10-23) Daily Trial card: cute, clearer, a big reward list */
+.dc .dc-mods { display: flex; flex-direction: column; gap: .4rem; }
+.dc .dc-mod.dc-mod { display: grid; grid-template-columns: 6.2rem 1fr; align-items: center; gap: .6rem; padding: .5rem .7rem; border-radius: 14px !important;
+  background: color-mix(in srgb, var(--c) 14%, rgba(255, 255, 255, .05)) !important; border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent) !important; }
+.dc .dc-mod.dc-mod b { color: var(--c); font-family: var(--font-title); font-weight: 900; font-size: .9rem; }
+.dc .dc-mod.dc-mod span { color: #f3ecdf; font-size: .82rem; font-weight: 600; }
+.dc .dc-grid { gap: .45rem; }
+.dc .dc-stat.dc-stat { border-radius: 14px !important; background: rgba(255, 255, 255, .07) !important; padding: .45rem .3rem !important; }
+.dc .dc-stat b { font-size: 1.15rem; }
+.dcr { margin-top: .7rem; padding: .7rem .75rem .8rem; border-radius: 18px; background: linear-gradient(180deg, #fffaf0, #f7ead0); border: 2px solid #fff;
+  box-shadow: 0 3px 0 rgba(150, 112, 62, .45), 0 8px 18px rgba(0, 0, 0, .3); }
+.dcr-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .55rem; }
+.dcr-head span { font-family: var(--font-title); font-weight: 900; font-size: 1.05rem; color: #4a3420; }
+.dcr-head em { font-style: normal; display: inline-flex; align-items: center; gap: .25rem; font-size: .72rem; font-weight: 800; color: #fff; background: #f08a3c; border-radius: 999px; padding: .15rem .55rem; box-shadow: 0 2px 0 #b85e1c; }
+.dcr-row { display: flex; gap: .5rem; }
+.dcr-tile { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .15rem; padding: .55rem .3rem .5rem; border-radius: 14px; background: #fff; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .06); }
+.dcr-tile b { font-family: var(--font-title); font-weight: 900; font-size: 1.35rem; line-height: 1.1; color: #4a3420; }
+.dcr-tile small { font-size: .68rem; font-weight: 800; color: #8a7358; text-align: center; line-height: 1.1; }
+.dcr-tile.gold { background: linear-gradient(180deg, #fff6d8, #ffe9a8); } .dcr-tile.gold b { color: #a06a12; }
+.dcr-tile.gem { background: linear-gradient(180deg, #e8fbff, #c6f0fb); } .dcr-tile.gem b { color: #1d7fa0; }
+.dcr-tile.cry { background: linear-gradient(180deg, #eef3ff, #d6e2ff); } .dcr-tile.cry b { color: #3b5bc0; }
+.dcr-tile.epic { background: linear-gradient(180deg, #f6ecff, #e5d0ff); } .dcr-tile.epic b { color: #7b3fc4; }
+.dcr.claimed .dcr-tile { filter: grayscale(.6); opacity: .7; }
+.dcr-done { margin-top: .5rem; text-align: center; font-size: .78rem; font-weight: 800; color: #2f8f4c; }
+/* (owner) wide, not tall: two columns (details | reward) when there is room */
+.dc-cols { display: grid; grid-template-columns: 1fr; gap: .9rem; }
+@media (min-width: 760px) { .dc-cols { grid-template-columns: 1.15fr 1fr; align-items: start; } .dc-colR .dcr { margin-top: 1.4rem; } }
+.dc-colR .dcr-row { flex-wrap: wrap; }
+.dc-colR .dcr-tile { min-width: 5.5rem; }
+/* tower hub: tabs as a left column */
+.so-split { display: grid; grid-template-columns: 1fr; gap: .9rem; }
+@media (min-width: 760px) {
+  .so-split { grid-template-columns: 11rem 1fr; align-items: start; }
+  .so-tabs.so-tabs-side.so-tabs-side { display: flex !important; flex-direction: column; gap: .35rem; width: auto; padding: .35rem; border-radius: 18px; background: rgba(255, 255, 255, .05); }
+  .so-tabs-side .so-tab { justify-content: flex-start; text-align: left; padding: .65rem .8rem !important; border-radius: 14px !important; font-size: .88rem; width: 100%; display: flex; align-items: center; gap: .45rem; }
+  .so-tabs-side .so-tab.on { background: rgba(255, 255, 255, .14) !important; color: #fff; }
+}
+.so-page { min-width: 0; }

@@ -12,8 +12,10 @@ import { requestClick } from './systems/target';
 import { setPadMode } from '../ui/lib/inputMode';
 import { padMove, padActivate, padTab, padScroll, padSlider, padClear } from '../ui/lib/padNav';
 
-// ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit, no zoom (wheel / pinch do nothing)
-const PITCH_MIN = 0.55, PITCH_MAX = 1.3;   // (owner: no camera zoom at all)
+// ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit + tilt; wheel / two-finger pinch = zoom in (owner: a bit closer only)
+const PITCH_MIN = 0.55, PITCH_MAX = 1.3;
+export const USER_ZOOM_MIN = 0.62;
+function zoomBy(f: number): void { const c = world.camera; c.uz = Math.min(1, Math.max(USER_ZOOM_MIN, (c.uz ?? 1) * f)); }
 const orbitAllowed = () => {
   const st = useGameStore.getState().status;
   return st === GameStatus.PLAYING || (st === GameStatus.MENU && useUiStore.getState().titleDone);
@@ -88,7 +90,7 @@ export function installInput(): () => void {
         if (inGame) st.toggleCharacterSheet();
         break;
       case 'KeyV':   // reset the camera (default angle, zoom and facing)
-        if (inGame) { const c = world.camera; c.yaw = (st.status === GameStatus.MENU && world.village.area === 'TOWN' ? CAM_YAW_TOWN : 0) + Math.round(c.yaw / (Math.PI * 2)) * Math.PI * 2; c.pitch = CAM_PITCH0; c.dist = 1; }   // (nearest full turn: it swings back, no spin)
+        if (inGame) { const c = world.camera; c.yaw = (st.status === GameStatus.MENU && world.village.area === 'TOWN' ? CAM_YAW_TOWN : 0) + Math.round(c.yaw / (Math.PI * 2)) * Math.PI * 2; c.pitch = CAM_PITCH0; c.dist = 1; c.uz = 1; }   // (nearest full turn: it swings back, no spin)
         break;
       default: break;
     }
@@ -136,11 +138,14 @@ export function installInput(): () => void {
     if (e.pointerType !== 'touch' || onUi(e) || !orbitAllowed()) return;
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
   };
+  const pinchD = (): number => { let ax = 0, ay = 0, bx = 0, by = 0, i = 0; for (const v of touches.values()) { if (i === 0) { ax = v.x; ay = v.y; } else if (i === 1) { bx = v.x; by = v.y; } i++; } return Math.hypot(ax - bx, ay - by); };
   const onTouchMove = (e: PointerEvent) => {
     const t = touches.get(e.pointerId); if (!t) return;
     if (touches.size === 1) orbit((e.clientX - t.x) * 1.15, (e.clientY - t.y) * 1.15);
+    else if (touches.size === 2) { const d0 = pinchD(); t.x = e.clientX; t.y = e.clientY; const d1 = pinchD(); if (d0 > 20 && d1 > 20) zoomBy(d0 / d1); return; }   // pinch out = closer
     t.x = e.clientX; t.y = e.clientY;
   };
+  const onWheel = (e: WheelEvent) => { if (onUi(e) || !orbitAllowed()) return; zoomBy(Math.exp(e.deltaY * 0.0012)); };
   const onTouchUp = (e: PointerEvent) => { touches.delete(e.pointerId); };
   // click / tap = select a target (processed by CameraRig). Drags and holds are not clicks; UI (.pe) is ignored.
   const downs: Record<number, { x: number; y: number; t: number }> = {};
@@ -174,6 +179,7 @@ export function installInput(): () => void {
   window.addEventListener('pointermove', onTouchMove);
   window.addEventListener('pointerup', onTouchUp);
   window.addEventListener('pointercancel', onTouchUp);
+  window.addEventListener('wheel', onWheel, { passive: true });
   const onBlur = () => { rmb.on = false; lmb.down = false; touches.clear(); };
   window.addEventListener('blur', onBlur);
 
@@ -264,6 +270,7 @@ export function installInput(): () => void {
     window.removeEventListener('pointermove', onTouchMove);
     window.removeEventListener('pointerup', onTouchUp);
     window.removeEventListener('pointercancel', onTouchUp);
+    window.removeEventListener('wheel', onWheel);
     window.removeEventListener('blur', onBlur);
     window.removeEventListener('gamepadconnected', onPadConnect);
     cancelAnimationFrame(padRaf);

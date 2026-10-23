@@ -7,6 +7,7 @@ import { useRaf } from '../hooks/useRaf';
 import { DAILY_FLOORS, DAILY_MODS, daily, dailyBiomeName, dailyFor, dailyMult, dailyReward, dayKey, liveStreak, prevDay, secondsToReset } from '../../dailyChallenge';
 import { HERO_META } from '../lib/heroes';
 import { timeMMSS } from '../lib/game';
+import { PaintImg } from '../components/ItemArt';
 import './daily.css';
 
 const hms = (s: number) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}:${m < 10 ? '0' : ''}${m}:${x < 10 ? '0' : ''}${x}`; };
@@ -43,6 +44,7 @@ export const DailyCard: React.FC = () => {
         </div>
         <div className="dc-reset">New trial in<span ref={reset} data-testid="daily-reset">{hms(secondsToReset())}</span></div>
       </div>
+      <div className="dc-cols"><div className="dc-colL">
       <div className="dc-label">Today's modifiers · score x{dailyMult(def).toFixed(2)}</div>
       <div className="dc-mods" data-testid="daily-mods">
         {def.mods.map((m) => (
@@ -55,16 +57,21 @@ export const DailyCard: React.FC = () => {
         <div className="dc-stat"><em>Streak</em><b data-testid="daily-streak">{streak} {streak === 1 ? 'day' : 'days'}</b></div>
         <div className="dc-stat"><em>Tries today</em><b>{today ? save.tries : 0}</b></div>
       </div>
-      <div className="dc-reward" data-testid="daily-reward">
-        {claimed ? <span className="done">Reward claimed today · retry for a better score</span> : <>
-          <span><Coins size={13} color="#fbd34d" /> {rw.gold.toLocaleString()}</span>
-          <span><Gem size={13} color="#5ee0f5" /> {rw.gems}</span>
-          <span><Sparkles size={13} color="#7ad8ff" /> {rw.crystals} Aether Crystals</span>
-          {rw.bonusShards > 0 && <span><Sparkles size={13} color="#c084fc" /> +{rw.bonusShards} Epic</span>}
-        </>}
-        <span className="streak"><Flame size={12} /> {nextStreak > 1 && !claimed ? `day ${nextStreak} streak bonus` : '+10% per streak day'}</span>
+      </div><div className="dc-colR">
+      {/* (owner) a big, obvious reward list: painted icons, large numbers */}
+      <div className={`dcr${claimed ? ' claimed' : ''}`} data-testid="daily-reward">
+        <div className="dcr-head"><span>{claimed ? "Today's reward: claimed" : "Today's reward"}</span>
+          <em><Flame size={13} /> {nextStreak > 1 && !claimed ? `Day ${nextStreak} streak bonus +${Math.min(6, nextStreak - 1) * 10}%` : '+10% per streak day'}</em></div>
+        <div className="dcr-row">
+          <div className="dcr-tile gold"><PaintImg file="gold" size="2.6rem" /><b>{rw.gold.toLocaleString()}</b><small>Gold</small></div>
+          <div className="dcr-tile gem"><PaintImg file="gem" size="2.6rem" /><b>{rw.gems}</b><small>Gems</small></div>
+          <div className="dcr-tile cry"><PaintImg file="aether_crystal" size="2.6rem" /><b>{rw.crystals}</b><small>Aether Crystals</small></div>
+          {rw.bonusShards > 0 && <div className="dcr-tile epic"><PaintImg file="shard_EPIC" size="2.6rem" /><b>+{rw.bonusShards}</b><small>Epic shard</small></div>}
+        </div>
+        {claimed && <div className="dcr-done">Claimed today · play again for a better score</div>}
       </div>
       <div className="dc-note"><Trophy size={10} style={{ display: 'inline', verticalAlign: '-1px' }} /> Same trial for every player today. Normal difficulty, no Ascension. Rewards once per day.</div>
+      </div></div>
     </div>
   );
 };

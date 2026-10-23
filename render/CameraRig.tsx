@@ -42,7 +42,7 @@ export function isLobbyStatus(s: GameStatus) {
 /** Free-orbit follow camera (MMORPG style: yaw / pitch / zoom from engine/input), screen shake, ground-plane aim, and a cinematic lobby orbit. */
 export function CameraRig() {
   const cam = useThree((s) => s.camera) as PerspectiveCamera;
-  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, t: 0, look: new Vector3(), lobbyBlend: 0, lift: 0, tele: TELE });
+  const st = useRef({ csBlend: 0, yaw: 0, pitch: CAM_PITCH0, dist: 1, tgt: new Vector3(0, 1, 0), pos: new Vector3(0, 30, 22), init: false, zoom: 1, uz: 1, t: 0, look: new Vector3(), lobbyBlend: 0, lift: 0, tele: TELE });
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -69,13 +69,14 @@ export function CameraRig() {
     // free orbit camera: yaw / pitch / orbit around the hero
     const C = world.camera;
     const free = !!setts?.freeCamera;
-    if (!free) C.pitch = CAM_PITCH0;   // default: fixed diorama tilt, but the player may turn the camera (drag / right stick; V resets to north-up). Free camera also tilts.
+    void free;   // (owner) the player may always tilt the camera up / down (drag); V resets yaw, tilt and zoom
     if (status === GameStatus.MENU && world.village.area !== 'TOWN' && C.dist > 0.85) C.dist = 0.85;   // indoors (castle hall, crystal cave): keep the camera close so the walls do not block the view
     if (Math.abs(C.yaw - s.yaw) > 2) s.yaw = C.yaw;   // big jumps (spawn facing the gate) snap instead of spinning
     s.yaw = damp(s.yaw, C.yaw, 14, dt); s.pitch = damp(s.pitch, C.pitch, 14, dt); s.dist = damp(s.dist, C.dist, 10, dt);
     s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
     _tgt.x -= Math.sin(s.yaw) * LOOK_AHEAD; _tgt.z -= Math.cos(s.yaw) * LOOK_AHEAD;   // away from the camera = north when yaw 0
-    const R = CAM_DIST0 * s.zoom * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
+    s.uz = damp(s.uz, C.uz ?? 1, 10, dt);
+    const R = CAM_DIST0 * s.zoom * s.uz * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
     // ---- lobby orbit: sweep around the hero/town

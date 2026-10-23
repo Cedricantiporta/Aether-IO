@@ -1,6 +1,9 @@
 // Title wordmark (owner reference: a sword crest in a diamond frame with light wisps above a mixed-case gold serif
 // title, a ruled subtitle under it). Pure SVG + CSS (index.css .tlogo-*).
-import React from 'react';
+import React, { useState } from 'react';
+
+/** (owner) the painted title logo: public/art/ui/logo.webp; until that file exists the drawn wordmark below is shown. */
+const LOGO_URLS = ['webp', 'png'].map((e) => `${((import.meta as any).env?.BASE_URL as string) || '/'}art/ui/logo.${e}`);   // (logo.webp, else logo.png)
 
 const Crest: React.FC = () => (
   <svg className="tlogo-crest" viewBox="0 0 200 170" aria-hidden>
@@ -29,11 +32,21 @@ const Crest: React.FC = () => (
   </svg>
 );
 
-export const TitleLogo: React.FC<{ sub?: string; tag?: string }> = ({ sub = 'Guardians of the Font', tag }) => (
+export const TitleLogo: React.FC<{ sub?: string; tag?: string }> = ({ sub = 'Guardians of the Font', tag }) => {
+  const [img, setImg] = useState<'try' | 'ok' | 'none'>('try');
+  const [k, setK] = useState(0);
+  if (img !== 'none') return (
+    <div className="tlogo tlogo-img">
+      <img key={k} src={LOGO_URLS[k]} alt="Aether Survivor: Guardians of the Font" draggable={false} onLoad={() => setImg('ok')} onError={() => { if (k + 1 < LOGO_URLS.length) setK(k + 1); else setImg('none'); }} style={{ visibility: img === 'ok' ? 'visible' : 'hidden' }} />
+      {tag && <div className="tlogo-tag">{tag}</div>}
+    </div>
+  );
+  return (
   <div className="tlogo">
     <Crest />
     <div className="tlogo-word" data-text="Aether Survivor"><span className="cap">A</span>ether <span className="cap">S</span>urvivo<span className="cap end">r</span></div>
     <div className="tlogo-sub"><i /><span>{sub}</span><i /></div>
     {tag && <div className="tlogo-tag">{tag}</div>}
   </div>
-);
+  );
+};

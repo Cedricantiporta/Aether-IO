@@ -59,15 +59,18 @@ export const SetOutWindow: React.FC = () => {
   for (let k = 1; k <= 3; k++) ms.push({ floor: reachedTop + k * TOWER_STEP, state: 'locked' });
   const go = () => { if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode); };
   return (
-    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={go}>
+    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width={mode === 'TOWER' ? 'min(56rem, calc(100vw - 1.5rem))' : '24rem'} z={160} onClose={() => setOpen(false)} onConfirm={go}>
+      {/* (owner) the tower hub is wide: the tabs are a column on the left, the page on the right */}
+      <div className={mode === 'TOWER' ? 'so-split' : ''}>
       {mode === 'TOWER' && (
-        <div className="so-tabs" role="tablist">
+        <div className="so-tabs so-tabs-side" role="tablist">
           <button className={`so-tab pe ${tab === 'RUN' ? 'on' : ''}`} onClick={() => setTab('RUN')} data-testid="so-tab-run"><Castle size={14} /> Tower</button>
           <button className={`so-tab pe ${tab === 'DAILY' ? 'on' : ''}`} onClick={() => setTab('DAILY')} data-testid="so-tab-daily"><CalendarDays size={14} /> Daily Trial{dailyLocked ? <small className="so-lock">Lv {UNLOCK_LV.DAILY}</small> : dailyDot && <i className="dot" />}</button>
           <button className={`so-tab pe ${tab === 'WAVES' ? 'on' : ''}`} onClick={() => setTab('WAVES')} data-testid="so-tab-waves"><Waves size={14} /> Endless Waves{wavesLocked && <small className="so-lock">Lv {UNLOCK_LV.WAVES}</small>}</button>
           {progress.ascensionMax > 0 && <button className={`so-tab pe ${tab === 'ASC' ? 'on' : ''}`} onClick={() => setTab('ASC')} data-testid="so-tab-asc"><Swords size={14} /> Ascension</button>}
         </div>
       )}
+      <div className="so-page">
       {((isDaily && dailyLocked) || (isWaves && wavesLocked)) && <div className="so-locked" data-testid="so-locked">
         <b>{isDaily ? 'Daily Trial' : 'Endless Waves'}</b>
         <span>Unlocks at level {isDaily ? UNLOCK_LV.DAILY : UNLOCK_LV.WAVES}. You are level {level}.</span>
@@ -125,6 +128,8 @@ export const SetOutWindow: React.FC = () => {
         </div>
       )}
       <Button className="w-full mt-3" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked} onClick={go} data-testid="so-go">{featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
+      </div>
+      </div>
     </Modal>
   );
 };

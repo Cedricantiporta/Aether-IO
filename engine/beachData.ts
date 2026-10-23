@@ -33,7 +33,7 @@ export const DECK_RECTS: [number, number, number, number][] = [
 export interface FishSpot { x: number; z: number; dx: number; dz: number; dist: number; luck: number; label: string }
 export const FISH_SPOTS: FishSpot[] = [
   { x: -92.6, z: 31, dx: -1, dz: 0, dist: 7.5, luck: 1.25, label: 'Pier end' },
-  { x: -63.6, z: 16, dx: -0.995, dz: -0.1, dist: 6.5, luck: 1, label: 'Shoreline' },
+  { x: -64.4, z: 16, dx: -0.995, dz: -0.1, dist: 5.5, luck: 1, label: 'Shoreline' },   // (owner: moved up to the water's edge; the walkable sand ends at ~x -64.6)
   { x: -63.8, z: 41.5, dx: -0.995, dz: 0.1, dist: 6.5, luck: 1, label: 'Shoreline' },
 ];
 /** Radius around a fishing spot where the "Fish" pill shows. */

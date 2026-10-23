@@ -3864,3 +3864,6 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .rw-card.tarot svg.tc-name { position: absolute; left: 17%; right: 17%; width: 66%; top: 80.2%; height: 11%; display: block; overflow: visible; pointer-events: none; }
 .rw-card.tarot svg.tc-name text { font-family: 'Cinzel', Georgia, 'Times New Roman', serif; font-weight: 800; font-size: 21px; fill: #3b2a4a; paint-order: stroke; stroke: rgba(255, 255, 255, .55); stroke-width: 1.5px; letter-spacing: .02em; dominant-baseline: middle; }
 .rw-card.tarot svg.tc-name.long text { font-size: 17px; letter-spacing: 0; }
+/* (owner) painted title logo */
+.tlogo.tlogo-img { display: flex; flex-direction: column; align-items: center; }
+.tlogo.tlogo-img img { width: min(34rem, 86vw); height: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .45)); pointer-events: none; user-select: none; }

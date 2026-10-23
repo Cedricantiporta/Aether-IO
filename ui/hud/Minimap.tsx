@@ -337,20 +337,25 @@ export const Minimap: React.FC = () => {
         ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(bx + ax * 5 * u, by + az * 5 * u); ctx.lineTo(bx - ax * 2 * u - az * 4.5 * u, by - az * 2 * u + ax * 4.5 * u); ctx.lineTo(bx - ax * 2 * u + az * 4.5 * u, by - az * 2 * u - ax * 4.5 * u); ctx.closePath(); ctx.fill();
       }
     }
-    // ---- hero: a round cream badge with a cute face + a tiny facing pointer
+    // ---- night: the map darkens with the time of day (town clock; a run keeps its start time) - drawn under the markers
     {
-      const r = 8.6 * u, fx = Math.sin(p.facing), fz = Math.cos(p.facing);
-      if (town && world.village.ride.on) { ctx.globalAlpha = 0.5; disc(ctx, h, h, r + 4 * u, '#d9a066'); ctx.globalAlpha = 1; }
-      ctx.fillStyle = C.gold; ctx.beginPath();   // pointer
-      ctx.moveTo(h + fx * (r + 7 * u), h + fz * (r + 7 * u)); ctx.lineTo(h + fx * (r - 0.5 * u) - fz * 4.4 * u, h + fz * (r - 0.5 * u) + fx * 4.4 * u); ctx.lineTo(h + fx * (r - 0.5 * u) + fz * 4.4 * u, h + fz * (r - 0.5 * u) - fx * 4.4 * u); ctx.closePath(); ctx.fill();
-      ctx.save(); ctx.shadowColor = 'rgba(40,30,20,.35)'; ctx.shadowBlur = 5 * u; ctx.shadowOffsetY = 1.5 * u; disc(ctx, h, h, r, C.hero); ctx.restore();
-      ctx.fillStyle = 'rgba(255,150,140,.55)'; ctx.beginPath(); ctx.arc(h - 4.6 * u, h + 2 * u, 1.7 * u, 0, Math.PI * 2); ctx.arc(h + 4.6 * u, h + 2 * u, 1.7 * u, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(h - 2.9 * u, h - 1.4 * u, 1.35 * u, 0, Math.PI * 2); ctx.arc(h + 2.9 * u, h - 1.4 * u, 1.35 * u, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.3 * u; ctx.beginPath(); ctx.arc(h, h + 1.6 * u, 2.6 * u, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      const t = room ? world.runTime : town ? world.townTime : 0.25;
+      const nk = (room && world.runPhase === 0) ? 0 : Math.min(1, Math.max(0, -Math.cos((t - 0.25) * Math.PI * 2) * 1.4));
+      if (nk > 0.01 && area !== 'CAVE') { ctx.fillStyle = `rgba(16, 22, 58, ${(nk * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, P, P); }
+    }
+    // ---- hero (owner: no smiley): a white-rimmed gold arrowhead pointing where the hero faces
+    {
+      const fx = Math.sin(p.facing), fz = Math.cos(p.facing), L = 9.5 * u, W = 6.4 * u, B = 4.2 * u;
+      if (town && world.village.ride.on) { ctx.globalAlpha = 0.5; disc(ctx, h, h, 12 * u, '#d9a066'); ctx.globalAlpha = 1; }
+      const tipx = h + fx * L, tipy = h + fz * L, lx = h - fx * B - fz * W, ly = h - fz * B + fx * W, rx = h - fx * B + fz * W, ry = h - fz * B - fx * W, nx = h - fx * 1.2 * u, ny = h - fz * 1.2 * u;
+      ctx.save(); ctx.shadowColor = 'rgba(20,20,30,.45)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1.2 * u;
+      ctx.beginPath(); ctx.moveTo(tipx, tipy); ctx.lineTo(lx, ly); ctx.lineTo(nx, ny); ctx.lineTo(rx, ry); ctx.closePath();
+      ctx.fillStyle = C.gold; ctx.fill(); ctx.restore();
+      ctx.lineJoin = 'round'; ctx.lineWidth = 1.8 * u; ctx.strokeStyle = '#ffffff'; ctx.stroke();
     }
   });
   return (
-    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.22) / 14.4}rem`, height: `${(SIZE * 1.22) / 14.4}rem` }}>
+    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.45) / 14.4}rem`, height: `${(SIZE * 1.45) / 14.4}rem` }}>
       <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
       <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
     </div>

@@ -30,7 +30,7 @@ export const DailyPopup: React.FC = () => {
   if (!open) return null;
   const start = () => { setOpen(false); useGameStore.getState().startDaily(); };
   return (
-    <Modal open title="Today's Daily Trial" ribbon tone="gold" width="24rem" z={170} onClose={() => setOpen(false)} onConfirm={start}>
+    <Modal open title="Today's Daily Trial" ribbon tone="gold" width="min(48rem, calc(100vw - 1.5rem))" z={170} onClose={() => setOpen(false)} onConfirm={start}>
       <div data-testid="daily-popup"><DailyCard /></div>
       <div className="flex gap-2 mt-3">
         <Button className="flex-1" variant="primary" size="lg" onClick={start} data-testid="daily-popup-start">Start</Button>
