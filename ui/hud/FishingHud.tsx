@@ -66,7 +66,7 @@ export const FishingHud: React.FC = () => {
   const act = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); const F = world.fishing; if (F.state === FISH.CAST || F.state === FISH.WAIT) stopFishing('You reel in the line.'); else fishAction(); };
   return (
     <div ref={root} data-testid="fishing-hud" style={{ display: 'none', position: 'absolute', left: '50%', bottom: device.touch ? '30%' : '22%', transform: 'translateX(-50%)', zIndex: 31,
-      width: 'min(420px, 86vw)', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 18px 14px', pointerEvents: 'none', borderRadius: 22,
+      width: 'min(420px, 86vw)', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 18px 14px', pointerEvents: 'none', borderRadius: 10,
       background: 'rgba(30,30,34,.78)', boxShadow: '0 6px 18px rgba(0,0,0,.38)' }}>
       <div ref={title} style={{ fontFamily: 'var(--font-title)', fontSize: 18, fontWeight: 700, letterSpacing: '.01em', textShadow: '0 2px 6px rgba(0,0,0,.8)' }} />
       <div ref={sub} style={{ fontSize: 12, color: 'rgba(246,232,200,.75)', textShadow: '0 1px 3px rgba(0,0,0,.8)' }} />

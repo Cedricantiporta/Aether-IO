@@ -589,3 +589,5 @@ gates/dark heroes, Malakar two-stage finale -> Oct 16: gear catalog rework (6 ti
 story rewrite + true-heir arc, controller + recorded audio, bounty board v2, Slime King / Ignar rework -> Oct 17: run
 cards with rarities, HP/damage x2, dreams + hero house, horses, humanoid mini bosses, biome hazards, day/night cycle,
 hand-authored camp paths. For anything older than this, `git log` subjects are descriptive.
+
+- **UI roundness (owner: crisp, not bubbly)**: corner radii live in the `v13 roundness` block at the end of `index.css`: `--r-title` 3px, `--r-btn` 6px, `--r-slot` 6px, `--r-panel` 10px (older `--z-r*` vars point at them). Change those four to tune the whole UI; inherently round things (minimap, ult orb, potion bubbles, close X, mobile skill wheel) stay circular.

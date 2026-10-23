@@ -24,10 +24,10 @@ export const LanternPanel: React.FC = () => {
   void lv; void best;
   const L = lanternLevel(), cap = oilMaxFor(L), next = L < LANTERN_MAX_LV ? oilMaxFor(L + 1) : 0, cost = L < LANTERN_MAX_LV ? LANTERN_COST[L] : null;
   const oil = world.village.cave.oil, free = freeRefillToday(), price = REFILL_PRICE(L, heroLv), full = oil >= cap - 0.5;
-  const btn = (enabled: boolean): React.CSSProperties => ({ padding: '.45rem .7rem', borderRadius: 999, border: 0, background: enabled ? '#fff6e0' : 'rgba(255,255,255,.1)', color: enabled ? '#2b2a2e' : '#9a968c', fontWeight: 700, fontSize: '.8rem', cursor: enabled ? 'pointer' : 'default', flex: 1 });
+  const btn = (enabled: boolean): React.CSSProperties => ({ padding: '.45rem .7rem', borderRadius: 6, border: 0, background: enabled ? '#fff6e0' : 'rgba(255,255,255,.1)', color: enabled ? '#2b2a2e' : '#9a968c', fontWeight: 700, fontSize: '.8rem', cursor: enabled ? 'pointer' : 'default', flex: 1 });
   return (
     <div className="absolute inset-0 flex items-center justify-center pe" style={{ zIndex: 60, background: 'rgba(0,0,0,.35)' }} onClick={() => useLanternPanel.setState({ open: false })} data-testid="lantern-panel">
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(25rem, 92vw)', background: 'rgba(32,32,38,.92)', border: 0, borderRadius: 22, padding: '1.2rem', color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,.42)' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(25rem, 92vw)', background: 'rgba(32,32,38,.92)', border: 0, borderRadius: 10, padding: '1.2rem', color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,.42)' }}>
         <div className="flex items-center justify-between" style={{ marginBottom: '.5rem' }}>
           <div style={{ fontFamily: 'var(--font-title)', fontWeight: 700, fontSize: '1.1rem', color: '#fff' }}>Grit's Lantern Bench</div>
           <CloseX className="inline" onClick={() => useLanternPanel.setState({ open: false })} />

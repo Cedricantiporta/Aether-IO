@@ -3719,3 +3719,57 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .dc-chip.on { border-color: var(--dc); background: rgba(255, 255, 255, .16); box-shadow: 0 0 10px -2px var(--dc); }
 .dc-chip.lock { opacity: .45; cursor: not-allowed; }
 .dc-chip small { font-size: .62rem; opacity: .8; }
+
+/* ======================================================================================================
+   v13 roundness (owner, 2026-10-23): "the UI is too rounded; still a roguelite MMORPG, Zelda does not use too-rounded UI either."
+   ONE place to tune the corner radius of everything. Pills / 999px / 14-30px corners are gone: crisp, friendly, not bubbly.
+   Stays circular on purpose: minimap, avatars, ult orb, potion bubbles, buff dots, dash dots, rarity dots, red dots, close X, mobile
+   skill wheel / attack buttons, bars / toggles / sliders (meters, not containers), tarot cards, anime banners. KEEP LAST.
+   ====================================================================================================== */
+:root {
+  --r-title: 3px;    /* titles, title containers, headers, banners, section labels, tags / chips that hold text */
+  --r-btn: 6px;      /* buttons, tabs, Enter / E prompt pills, inputs, key caps, small badges */
+  --r-slot: 6px;     /* item / equipment / skill / buff slots, grid cells, list rows, icon tiles */
+  --r-panel: 10px;   /* windows, dialogs, tooltips, cards, quest rows, inner blocks */
+  --z-r: var(--r-panel); --z-r-sm: var(--r-slot); --z-r-lg: var(--r-panel); --z-r-tile: var(--r-slot);
+}
+/* panels / windows / cards / tooltips */
+.rpg-panel, .rpg-panel.stone, .rpg-panel.slim, .rpg-panel.flat-shadow, .modal-card .rpg-panel, .sw-win, .ws-win, .np-panel, .tt-win, .cs-dia-frame, .rpg-parchment, .rpg-parchment.big,
+.rpg-frame, .rpg-frame.gold, .rpg-card, .upn-row, .modal-card, .go-root > *:is(.rpg-panel, .go-wrap), .cs-confirm-box, .sw-pop-box, .so-win, .sm-window, .lp-win,
+.sw-side, .ws-side, .tt-side, .bag-side, .qw-side, .qw-det, .qw-sec, .qw-cur, .qw-obj, .qw-rew, .at-detail, .at-points, .ws-stage, .ws-stats, .ws-result, .ws-mats, .ws-rates,
+.ws-rates div, .sw-preview, .sw-rates, .sw-pity, .sw-tier, .sw-wallet, .tech-row, .cs-stat-rows, .cs-info, .cs-preview, .cs-equip, .cs-tags, .brew-card, .st-row, .st-char,
+.dc-mod, .dc-route, .dc-stat, .dc-reward, .dc-badge .m, .enc-row, .enc-stats, .enc-item, .wh-bottom, .wh-search, .go-rows, .go-root :is(.go-row, .go-rows > *), .bag-equip, .bag-foot,
+.fc-row, .sr-row, .ql-row, .qw-grp, .ax-held, .rpg-tooltip, .tt-pop, .cmp-tip, .rpg-tooltip.rpg-parchment:not(:has(.tip-pill)), .npc-bubble, .dlg, .compact .dlg, .dlg-offer,
+.hud-root .qt .qt-row.qt-row.qt-row, .qt-row, .dash-charms, .toast-pill, .upn, .qt-toast-line, .qb-band, .sm-face:not(.tarot), .sc-tip, .sc-skip {
+  border-radius: var(--r-panel) !important;
+}
+.panel-head, .panel-head.v4, .ws-head, .np-head, .sw-side-head { border-radius: var(--r-panel) var(--r-panel) 0 0 !important; }
+/* titles / headers / banners / pills that hold titles: square-ish, no pill background */
+.qw-banner, .qw-banner[data-ch], .dc-head, .wh-goldbar, .go-head, .bag-equip-head, .k-sub, .area-pill, .upn-pill, .upn-hint, .rw-trend, .rw-pill, .tip-pill, .tf-trait, .dlg-chip, .dc-chip,
+.qb-hint, .qw-new, .qw-n, .qw-lv, .rpg-pill, .rpg-badge, .cap-pill, .portal-tag, .dlg-name, .vb-badge { border-radius: var(--r-title) !important; }
+.k-sub, .tip-pill, .tf-trait, .area-pill { background-color: transparent; }
+.k-sub, .area-pill { background: none !important; box-shadow: none !important; text-shadow: var(--z-float, 0 1px 3px rgba(0, 0, 0, .6)); }
+/* buttons / tabs / prompts / inputs / key caps */
+.rpg-btn, .qw-btn, .sw-btn, .dlg-btn, .dlg-btn.reply, .ws-go, .bag-del-go, .cs-change, .cs-confirm, .upn-btn, .np-btn, .story-skip,
+:is(.enc-btn, .wh-btn, .tt-learn, .tt-respec, .sw-rates-btn, .go-btn, .so-go, .lp-btn, .np-back, .fc-btn, .sr-btn), .interact-pill, .cb.cb-big, .rw-pill,
+.rpg-tab, .rpg-subtab, .bag-tab, .cs2-tab, .sw-tab, .qw-tab, .ws-cat-h, .bag-cat, .so-tab,
+:is(.bag-tabs, .cs2-tabs, .qw-tabs, .so-tabs, .sw-tabs, .rpg-tabs, .ws-cats, .tp-chips, .st-segs, .tt-tabs), .st-seg, .st-seg button,
+.np-input, .cs-input, .np-field, input[type='text'], select, .rpg-key, .cb-key, .tc-key, .rb-key, .rbtn .rb-key, kbd, .dlg-btn kbd, .dlg-next kbd, .tip-pill kbd, .rw-pill kbd,
+.skill-row .act-wrap > .rpg-key, .skill-row .ult-slot > .rpg-key, .slot-qty, .slot-plus, .slot-price, .slot-lock, .slot-sale, .slot-free-badge, .sqbtn, .sqbtn.sqbtn, .sqbtn.is-active,
+.skill-row .hud-slot.is-round .slot-qty, .ws-rec, .ws-mat, .ws-stat, .ws-can, .brew-chip, .tp-chip, .cs-diff, .cs-slot { border-radius: var(--r-btn) !important; }
+.rpg-btn-icon { border-radius: var(--r-btn) !important; }
+.rpg-btn-icon.round, .win-x, .close-x, .sw-x, .np-x, .modal-x, .dlg-x, .tf-x { border-radius: 50% !important; }
+/* slots */
+.rpg-slot, .hud-slot, .hud-slot.is-dim, .cs-eq-cell, .slot-grid > *, .bag-grid > *, .forge-slot, .tech-slot, .debuff-slot, .ws-mat-art, .tw-ic, .sk-ic, .tt-art > *,
+.skill-row .hud-slot, .skill-row .hud-slot.is-dim, .sm-name, .rbtn, .tt-node.sq, .buff-slot, .cpill, .qw-list > *, .cs-row, .cs-item, .at-row, .sk-row,
+.hud-slot .cd-sweep, .hud-slot .mana-lack, .hud-slot .cd-ready, .hud-slot.slot-shake::after,
+.skill-row .hud-slot .cd-sweep, .skill-row .hud-slot .mana-lack, .skill-row .hud-slot .cd-ready, .skill-row .hud-slot.slot-shake::after { border-radius: var(--r-slot) !important; }
+.skill-row .hud-slot .slot-icon, .skill-row .hud-slot .painted, .skill-row .hud-slot .painted-art { border-radius: inherit !important; }
+/* the ultimate + potion bubbles + buff dots stay circular */
+.skill-row .hud-slot.is-round, .skill-row .ult-slot, .skill-row .ult-slot.hud-slot, .skill-row .hud-slot.is-round .cd-sweep, .skill-row .hud-slot.is-round .mana-lack,
+.skill-row .hud-slot.is-round .cd-ready, .skill-row .hud-slot.is-round.slot-shake::after, .buff-dot { border-radius: 50% !important; }
+/* minimap stays round; its square-ish fallbacks */
+.hud-mm-top .pe.relative.mm-wrap, .hud-mm-top .mm-canvas, .mm-canvas, .mm-north { border-radius: 50% !important; }
+/* mobile touch skill wheel: thumb targets stay circular (attack + face buttons); small system chips go square-ish */
+.tc-btn, .tc-knob, .tc-base, .tc-ring, .pbtn.pb-face, .pbtn.pb-stick { border-radius: 50% !important; }
+.pbtn.pb-sys { border-radius: var(--r-btn) !important; }

@@ -23,6 +23,7 @@ import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { tip } from '../components/Tooltip';
 import { SimpleTip } from '../components/ItemTip';
 import { lootItem } from '../../loot';
+import { SIDE_GOLD_MUL } from '../../engine/systems/npcQuestLogic';
 import type { Item } from '../../types';
 
 /** Track = the minimap marker / guide / tracker follow this quest AND the hero auto-paths there (offered quests: to the giver). */
@@ -41,13 +42,13 @@ const CurSlot: React.FC<{ icon: React.ReactNode; n: number; label: string }> = (
     <div className="rpg-slot fluid qw-cur">{icon}<span className="slot-qty">{n.toLocaleString()}</span></div>
   </div>
 );
-export const Rewards: React.FC<{ r: NpcReward; scale?: boolean; xp?: number }> = ({ r, scale, xp }) => {
+export const Rewards: React.FC<{ r: NpcReward; scale?: boolean; xp?: number; side?: boolean }> = ({ r, scale, xp, side }) => {
   const g = (r as NpcReward).gold, gems = r.gems, items = (r as NpcReward).items;
   const list: [string, number][] = [...(items ?? []).map((it) => [it.id, it.qty ?? 1] as [string, number])];
   return (
     <div className="qw-rew">
       {!!xp && <CurSlot icon={<span className="qw-xp">EXP</span>} n={xp} label="EXP" />}
-      {!!g && <CurSlot icon={<CoinGlyph size={34} />} n={scale ? g * GOLD_SCALE : g} label="Gold" />}
+      {!!g && <CurSlot icon={<CoinGlyph size={34} />} n={scale ? Math.round(g * GOLD_SCALE * (side ? SIDE_GOLD_MUL : 1)) : g} label="Gold" />}
       {!!gems && <CurSlot icon={<GemGlyph size={34} />} n={gems} label="Gems" />}
       {list.map(([id, n]) => { const it = rewardItem(id, n); return it ? <div key={id} className="qw-ri"><ItemSlot item={it} fluid size="100%" iconSize="78%" qty={n} tooltip="none" compare={false} /></div> : null; })}
     </div>
@@ -183,7 +184,7 @@ export const QuestLog: React.FC = () => {
                       <div className="qw-sec">Objective</div>
                       <div className="qw-obj">{lockLv ? <><Lock size={13} /> Requires Lv {lockLv} (you are Lv {rank}). {side.summary}</> : !active ? `Talk to ${side.giver} to start` : ready ? `Done! Return to ${side.turnIn ?? side.giver}.` : <>{side.summary}{side.objective.count > 1 ? <b> {n} / {side.objective.count}</b> : null}</>}</div>
                       <div className="qw-sec">Rewards</div>
-                      <Rewards r={side.reward} scale xp={questXp('SIDE', level)} />
+                      <Rewards r={side.reward} scale side xp={questXp('SIDE', level)} />
                     </div>
                   </div>
                   {active && <div className="qw-btns"><button className="qw-btn pe" onClick={() => { setOpen(false); trackQuest('side:' + side.id, side.title); }}><MapPin size={15} /> Track</button>

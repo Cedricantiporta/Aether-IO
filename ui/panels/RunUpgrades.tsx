@@ -75,7 +75,7 @@ const CardRow: React.FC<{ g: Group }> = ({ g }) => {
   const numeral = ARCANA_NUMERAL[c.special ?? c.type];
   return (
     <div className="rpg-frame flex items-start gap-2 p-2" style={{ border: 0, boxShadow: `0 0 14px ${col}44` }} data-testid="run-card">
-      <div className="grid place-items-center shrink-0 rpg-num" style={{ width: '2.4rem', height: '2.4rem', border: 0, borderRadius: 14, background: `${col}33`, color: RARITY_LIGHT[c.rarity], fontSize: numeral && numeral.length > 3 ? '.6rem' : '.8rem' }}>{numeral ?? '*'}</div>
+      <div className="grid place-items-center shrink-0 rpg-num" style={{ width: '2.4rem', height: '2.4rem', border: 0, borderRadius: 6, background: `${col}33`, color: RARITY_LIGHT[c.rarity], fontSize: numeral && numeral.length > 3 ? '.6rem' : '.8rem' }}>{numeral ?? '*'}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <b style={{ color: RARITY_LIGHT[c.rarity] }}>{c.name}</b>
