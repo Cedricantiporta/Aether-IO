@@ -135,6 +135,7 @@ export function advanceDialogue(): void {
   if (!s.open) return;
   const reply = replyAt(s.lines, s.idx + 1) !== null && !(s.offer && s.idx + 1 >= s.lines.length - 1);   // the button said the hero's reply: skip that line
   if (reply && s.idx + 1 < s.lines.length - 1) { onLine(s.npc, s.idx + 1); const idx = s.idx + 2; useDialogue.setState({ idx }); onLine(s.npc, idx); return; }
+  if (s.offer.startsWith('story:') && s.idx >= s.lines.length - 1) { acceptOffer(); return; }   // main quest: the single "Okay" button (E / Space too) = what Accept did
   if (s.idx >= s.lines.length - 1 || reply) {
     if (reply) onLine(s.npc, s.idx + 1);
     const tab = s.npc >= 0 && !s.offer && !s.turnIn ? NPCS[s.npc].opens : undefined;

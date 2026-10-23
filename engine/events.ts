@@ -33,6 +33,7 @@ export interface GameEvents {
   shoot: { pos: Vector3; dir: Vector3; kind: ProjectileKind };
   ability: { pos: Vector3; dir: Vector3; name: string }; // 'ARROW_RAIN','FIREBALL','AXE_SPIN','PIERCING_SHOT','GRAVITY_SPELL','RAGE','SPRINT','EARTHWALL','VITALITY'
   dash: { from: Vector3; dir: Vector3 };
+  dashFx: { pos: Vector3; dir: Vector3; mod: import('../dashMods').DashMod; end: boolean };   // Dash Charm visuals: end=false the trail at the start, end=true the burst (reflect / hit / shield / wind)
   levelUp: { pos: Vector3; level: number };
   noMana: {};
   onCooldown: { slot: string };

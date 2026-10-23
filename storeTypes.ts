@@ -133,6 +133,7 @@ export interface GameState {
   warehouseGold: number;                            // gold kept in the warehouse (safe, saved with the profile)
   warehouse: Item[];                                // town storage (WAREHOUSE_LIMIT slots, saved with the profile)
   npcQuests: NpcQuestSave;                          // NPC story quests: state + boss kill counters (saved with the profile)
+  dashMods: Partial<Record<HeroClass, import('./dashMods').DashMod>>;   // chosen Dash Charm per class
   questSeen: string[] | null;                       // quest ids already viewed in the quest window (red dots, questSeen.ts; null = seed on load)
   unlocks: import('./questUnlocks').UnlockSave;     // death-unlocked quest beats (questUnlocks.ts; saved with the profile)
   materials: Record<Rarity, number>;
@@ -140,6 +141,8 @@ export interface GameState {
   elixirsRun: import('./elixirs').ElixirId[];         // elixir buffs active in the current run (gone when the run ends)
   equipment: Equipment;
   upgradeOptions: Upgrade[];          // room-clear reward cards (status LEVEL_UP)
+  cardRefresh: number;                // Card Refresh uses left this run (1 free + Tech House tiers; reset on run start)
+  cardPolish: number;                 // Card Polish (rarity up) charges left this run (Tech House tiers; reset on run start)
   runPicks: Upgrade[];                // every reward card picked this run, in order (reset on run start; feeds the Run Upgrades panel)
 
   // ---- UI panels
@@ -164,6 +167,7 @@ export interface GameState {
   setDifficulty: (d: Difficulty) => void;
   startGame: () => void;              // starts a run: leaves the town for the first room (profile is NOT touched; in-run state resets)
   resetGame: () => void;              // back to the town (status MENU, engine enterVillage); profile kept
+  setDashMod: (mod: import('./dashMods').DashMod | null) => void;   // Skill Trainer: pick / clear the hero's Dash Charm
   markQuestsSeen: (ids: string[]) => void;       // the quest window showed these quests: their red dots clear
   abandonRun: () => void;             // finalize run rewards (rank xp + gold bonus) then back to the town
   resetProfile: () => void;           // wipe the saved profile (fresh profile + welcome gift)
@@ -208,10 +212,14 @@ export interface GameState {
   startShowcase: () => void;                         // the one-off fully powered arena fight for a new character (engine/showcase.ts): a temporary overlay
   endShowcase: (won: boolean) => void;               // restores the real profile and returns to town
   recordWave: (wave: number) => boolean;             // a wave cleared: best per class (true = new best) + one-time milestone rewards
+  refreshCards: () => boolean;                       // reroll the offered reward cards (costs 1 refresh)
+  polishCard: (id: string) => boolean;               // raise one offered card's rarity by a tier (costs 1 charge)
   buyTech: (id: import('./tech').TechId) => boolean;
   setStory: (step: number, p?: number) => void;
   /** (owner, Hades-style) after an adventure death / ending: maybe opens the next quest beat (questUnlocks.ts); returns it, or null (a quiet night) */
   rollDeathUnlock: (force?: boolean) => import('./questUnlocks').Beat | null;
+  /** (owner) on a hero level-up: ~70% chance to open the next not-yet-opened SIDE quest beat early (questUnlocks.ts `early`); returns it or null */
+  rollLevelUnlock: () => import('./questUnlocks').Beat | null;
   debugSetLevel: (lv: number) => void;               // debug: set the current class level       // main story: move to `step` (progress `p`)   // Tech House: buy the next level of an upgrade
   moveGold: (n: number) => void;                   // warehouse gold: + deposit from the bag, - withdraw to the bag
   deleteItems: (ids: string[]) => void;              // bag: permanently destroy items (multi-select delete)

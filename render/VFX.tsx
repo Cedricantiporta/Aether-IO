@@ -10,6 +10,7 @@ import type { DamageKind } from '../engine/events';
 import { world } from '../engine/world';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
+import { dashModDef } from '../dashMods';
 import {
   CELL, DECALS, FLASHES, FX, Particles, bolt, chunks, dustPuff, embers, flashLight, flashStar, getAtlas, glowPuff,
   ringBurst, scorch, smokePuff, sparks, splat,
@@ -387,6 +388,24 @@ export function VFX() {
       for (let i = 0; i < 10; i++) {
         FX.add.emit(p.x + (Math.random() - 0.5) * 0.8, 0.5 + Math.random() * 1.2, p.z + (Math.random() - 0.5) * 0.8, -e.dir.x * 6, 0, -e.dir.z * 6, 0.3, 0.3, 0.05, 1.4, 1.4, 1.6, 0.9, CELL.STREAK, 0, 2, 0, 0, 0.08);
       }
+    }));
+
+    off.push(on('dashFx', (e) => {   // Dash Charm tints: silver Mirror, gold Guard, red Blade slash, green Swift wind
+      const p = e.pos, hex = dashModDef(e.mod)?.hex ?? 0xffffff;
+      if (!e.end) {   // the trail along the dash line
+        const len = 7;
+        for (let i = 0; i < 14; i++) {
+          const t = (i / 13) * len, ox = (Math.random() - 0.5) * 0.7, oz = (Math.random() - 0.5) * 0.7;
+          setTimeout(() => { glowPuff(p.x + e.dir.x * t + ox, 0.5 + Math.random() * 1.1, p.z + e.dir.z * t + oz, hex, 0.9, 0.4, 1.6, 0.7); }, i * 14);
+        }
+        return;
+      }
+      if (e.mod === 'MIRROR') { ringBurst(p.x, p.y, p.z, hex, 0.3, 1.8, 0.35, 2); sparks(p.x, p.y, p.z, 10, hex, 9, 0.22, 0.35, 1.6); }
+      else if (e.mod === 'GUARD') { ringBurst(p.x, 1.1, p.z, hex, 0.5, 2.6, 0.5, 2); glowPuff(p.x, 1.2, p.z, hex, 3.2, 0.5, 1.4, 0.55); sparks(p.x, 1.2, p.z, 10, 0xfff0a0, 5, 0.22, 0.5, 1.5); }
+      else if (e.mod === 'BLADE') {   // a red slash streak across the hit enemy
+        sparks(p.x, p.y, p.z, 12, hex, 11, 0.24, 0.3, 1.8, e.dir.x, 0, e.dir.z, 0.6);
+        FX.add.emit(p.x - e.dir.z * 0.9, p.y + 0.3, p.z + e.dir.x * 0.9, e.dir.z * 9, -1.5, -e.dir.x * 9, 0.22, 0.35, 0.05, 2.2, 0.5, 0.5, 0.95, CELL.STREAK, 0, 2, 0, 0, 0);
+      } else { for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; FX.add.emit(p.x + Math.cos(a) * 0.8, 0.4 + Math.random() * 1.2, p.z + Math.sin(a) * 0.8, Math.cos(a) * 3, 0.5, Math.sin(a) * 3, 0.5, 0.25, 0.05, 0.5, 1.8, 0.6, 0.85, CELL.STREAK, 0, 1.5, 0, 0, 0.05); } ringBurst(p.x, 0.3, p.z, hex, 0.4, 2.2, 0.4, 1.6); }
     }));
 
     off.push(on('levelUp', (e) => {

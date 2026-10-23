@@ -115,7 +115,7 @@ function notifyLoot(item: Item): void {
     const slot = item.type.toLowerCase() as 'weapon';
     const cur = st.equipment[slot];
     const better = calculateItemCP(item) > (cur ? calculateItemCP(cur) : 0);
-    const usable = st.heroRank >= RANK_REQ[item.rarity] && canUseClass(item, st.hero);
+    const usable = (item.type === 'PET' || st.heroRank >= RANK_REQ[item.rarity]) && canUseClass(item, st.hero);
     if (better && usable) action = { label: 'EQUIP', onClick: () => useGameStore.getState().equipItem(item) };
   }
   const plus = item.level > 1 && item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'LOOT' ? ` +${item.level - 1}` : '';

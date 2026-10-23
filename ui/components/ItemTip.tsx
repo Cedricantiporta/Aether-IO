@@ -64,7 +64,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}
-        {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'ELIXIR' && (
+        {item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'ELIXIR' && item.type !== 'PET' && (
           <span className={level < req ? 'neg' : ''}> · Req Lv {req}</span>
         )}
       </div>

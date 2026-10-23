@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cog, X, Lock, Check } from '../../components/GoldIcons';
-import { BagGlyph, ItemArtByKey } from '../../components/ItemArt';
+import { BagGlyph, ItemArtByKey, PaintImg } from '../../components/ItemArt';
 import { useGameStore } from '../../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { TECH, ROMAN, techLv, type TechId } from '../../../tech';
@@ -17,6 +17,7 @@ import { CloseX } from '../../components/CloseX';
 const ART: Record<TechId, React.ReactNode> = {
   bag: <BagGlyph size={44} />, warehouse: <ItemArtByKey k="chest" size={44} />, potion: <ItemArtByKey k="potion_hp_big" size={44} />,
   gold: <ItemArtByKey k="loot_coin_pouch" size={44} />, xp: <ItemArtByKey k="loot_dark_page" size={44} />, vitality: <ItemArtByKey k="loot_golem_heart" size={44} />,
+  refresh: <ItemArtByKey k="erase_scroll" size={44} />, polish: <ItemArtByKey k="augment_rune" size={44} />, lucky: <PaintImg file="shard_EPIC" size={44} />,
   lantern: (
     <svg width={44} height={44} viewBox="0 0 48 48" aria-hidden>
       <path d="M18 8h12M24 4v4" stroke="#6b5a3a" strokeWidth="3" fill="none" strokeLinecap="round" />
@@ -28,7 +29,7 @@ const ART: Record<TechId, React.ReactNode> = {
     </svg>
   ),
 };
-const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0', lantern: '#ffc85a' };
+const TONE: Record<TechId, string> = { bag: '#e9b949', warehouse: '#c9a070', potion: '#ff6b7a', gold: '#ffd24a', xp: '#7fd8ff', vitality: '#7dffb0', lantern: '#ffc85a', refresh: '#8fd3ff', polish: '#c79bff', lucky: '#ffb347' };
 
 export const TechWindow: React.FC = () => {
   const { gems, close } = useGameStore(useShallow((s) => ({ gems: s.gems, close: s.closeAllUI })));

@@ -1,6 +1,6 @@
 // Tech House: permanent account upgrades bought with gems (bag / warehouse space, potion strength, gold, xp, vitality).
 // Each level is sold as its own one-time upgrade (tier I, II, ...), bought in order; `cost(lv)` = gems for tier lv + 1.
-export type TechId = 'bag' | 'warehouse' | 'potion' | 'gold' | 'xp' | 'vitality' | 'lantern';
+export type TechId = 'bag' | 'warehouse' | 'potion' | 'gold' | 'xp' | 'vitality' | 'lantern' | 'refresh' | 'polish' | 'lucky';
 export interface TechDef { id: TechId; name: string; max: number; per: string; cost: (lv: number) => number }
 export const TECH: TechDef[] = [
   { id: 'bag', name: 'Bigger Bag', max: 5, per: '+10 bag slots', cost: (lv) => 20 * 2 ** lv },
@@ -9,9 +9,15 @@ export const TECH: TechDef[] = [
   { id: 'gold', name: 'Treasure Sense', max: 5, per: '+4% gold found', cost: (lv) => 20 * 2 ** lv },
   { id: 'xp', name: 'Scholar', max: 5, per: '+4% experience', cost: (lv) => 20 * 2 ** lv },
   { id: 'vitality', name: 'Vitality Training', max: 5, per: '+3% max health', cost: (lv) => 25 * 2 ** lv },
+  // Run reward cards (ui/screens/WaveReward.tsx). Every hero also gets 1 free Refresh per run (FREE_REFRESHES); tier counts are ADDED.
+  { id: 'refresh', name: 'Card Refresh', max: 4, per: '+1 card Refresh each run', cost: (lv) => 30 * 2 ** lv },
+  { id: 'polish', name: 'Card Polish', max: 3, per: '+1 card Rarity Up each run', cost: (lv) => 40 * 2 ** lv },
+  { id: 'lucky', name: 'Lucky Start', max: 1, per: 'an Epic card in the first card choice', cost: () => 150 },
   // (owner: the bigger lantern is sold only here, 100 gems a tier, never for shards; level mirrored in progress.caveLantern)
   { id: 'lantern', name: 'Bigger Lantern', max: 6, per: '+30 s of cave lantern oil', cost: () => 100 },
 ];
+/** Refreshes every hero gets per run before any Card Refresh tier. */
+export const FREE_REFRESHES = 1;
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 export type TechLevels = Partial<Record<TechId, number>>;
 export const techLv = (t: TechLevels | undefined, id: TechId): number => Math.max(0, Math.min(TECH.find((d) => d.id === id)!.max, Math.floor(t?.[id] ?? 0)));

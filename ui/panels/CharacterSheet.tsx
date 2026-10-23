@@ -14,6 +14,7 @@ import { HERO_COLOR, timeMMSS } from '../lib/game';
 import { activeSets, SET_COLOR_DARK } from '../../itemSets';
 import { ATTR_INFO, ATTR_KEYS, ATTR_RESET_GOLD, attrPointsTotal, attrSpent, ATTR_STATS, attrPreview, type AttrKey, type Attrs, autoAllocate } from '../../attributes';
 import { GOLD_SCALE } from '../../constants';
+import { PROJ_RESIST } from '../../dashMods';
 import { useUiStore } from '../uiStore';
 
 export const CharacterSheet: React.FC = () => {
@@ -46,7 +47,7 @@ export const CharacterSheet: React.FC = () => {
     ['Move speed', stats.moveSpeed.toFixed(1)], ['HP regen', `${stats.regen.toFixed(1)}/s`], ['Mana regen', `${stats.manaRegen.toFixed(1)}/s`],
     ['Crit rate', pct(stats.critRate)], ['Crit damage', pct(stats.critDamage)], ['Attack speed', stats.fireRate.toFixed(2)],
     ['Cooldown red.', `-${pct(stats.cooldownReduction)}`], ['Skill damage', pct(stats.skillDamage)], ['Multishot', stats.multishot.toFixed(1)],
-    ['Magnet range', stats.magnetRadius.toFixed(1)], ['Dodge', pct(stats.dodge)], ['Knockback', stats.knockback.toFixed(1)],
+    ['Magnet range', stats.magnetRadius.toFixed(1)], ['Dodge', pct(stats.dodge)], ['Knockback', stats.knockback.toFixed(1)], ['Projectile resist', pct(PROJ_RESIST[hero])],
   ];
   const extra: [string, string][] = ([
     ['Life steal', stats.lifeSteal, pct], ['Thorns', stats.thorns, (v: number) => v.toFixed(0)], ['Gold find', stats.goldFind, pct], ['XP gain', stats.xpBonus, pct],

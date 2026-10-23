@@ -41,6 +41,7 @@ import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
 import { hooks } from './hooks';
 import { runCards, cardDamageMul } from '../runCards';
+import { PROJ_RESIST } from '../../dashMods';
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
@@ -759,11 +760,12 @@ function applyTraitHit(tr: number, from?: Vector3): void {
   else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean }): void {
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
   if (debug.god) return;   // debug god mode
+  if (o?.proj) amount *= 1 - PROJ_RESIST[st.hero];   // class projectile resist (Knight 25%, Barbarian 15%, Necromancer 10%)
   amount *= DMG_INFLATE;   // (owner) monsters / bosses / hazards hit twice as hard (hero HP is x2 too, store HP_INFLATE)
   const isDot = !!o?.dot;
   if ((isDot || o?.env) && !o?.noDotMul) amount *= HERO_DOT_MUL;   // (owner) ticking damage hurts the hero 4x more

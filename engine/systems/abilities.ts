@@ -5,6 +5,7 @@
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
+import { dashModStart, dashModFx, dashDmgBonus, updateDashMods } from './dashMods';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
 import { edgeLimit, queryColliders, type Collider } from '../mapgen';
@@ -28,6 +29,7 @@ import { hooks } from './hooks';
 /** State for render/UI of multi-frame abilities. */
 /** Every class dash deals 70% less damage (user tuning: dashes are for movement). */
 const DASH_DMG = 0.3;
+const dashMul = (): number => DASH_DMG * dashDmgBonus();   // (Blade Step: +25% dash damage)
 const judgeRays = Array.from({ length: 12 }, () => ({ x: 0, z: 0, t: 0, id: -1 }));
 const judgeUsed: number[] = [];
 let judgeN = 0;
@@ -410,7 +412,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.invulnT = Math.max(p.invulnT, inv);
       events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
       const R = 4.2 + 0.3 * (lv - 1);   // a smaller blast
-      mkFx('ARROW_STICK', p.pos.x, p.pos.z, 0.6, 0.85, R, b * 8 * DASH_DMG, 0, 0xffe8a0);
+      mkFx('ARROW_STICK', p.pos.x, p.pos.z, 0.6, 0.85, R, b * 8 * dashMul(), 0, 0xffe8a0);
       for (let i = 0; i < 6; i++) {
         const a = Math.random() * 6.283, d = 0.4 + Math.random() * 1.1;
         mkFx('ARROW_STICK', p.pos.x + Math.cos(a) * d, p.pos.z + Math.sin(a) * d, 0.6, 0.85, 0, 0, 0, 0xffe8a0);
@@ -456,10 +458,10 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       const R = 5 + 0.25 * (lv - 1);   // smaller nova (user)
       const from = p.pos.clone();
-      novaAt(from.x, from.z, R, b * 3 * DASH_DMG, lv);
+      novaAt(from.x, from.z, R, b * 3 * dashMul(), lv);
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
       p.invulnT = Math.max(p.invulnT, 0.35);
-      novaAt(tgt.x, tgt.z, R, b * 3 * DASH_DMG, lv);
+      novaAt(tgt.x, tgt.z, R, b * 3 * dashMul(), lv);
       events.emit('blink', { from, to: p.pos.clone() });
       announce('BLINK_NOVA');
     } else if (slot === 's3') {
@@ -497,7 +499,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       p.dashIframes = true;
       const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
       necroSlow.duration = 2;
-      damageEnemiesInRadius(from.x, from.z, R, b * 1.25 * DASH_DMG, physOpts, necroSlow);
+      damageEnemiesInRadius(from.x, from.z, R, b * 1.25 * dashMul(), physOpts, necroSlow);
       events.emit('explosion', { pos: from, radius: R, color: 0xd8d0b8 });
       p.pos.set(tgt.x, 0, tgt.z); p.vel.set(0, 0, 0);
       p.invulnT = Math.max(p.invulnT, 0.35);
@@ -634,7 +636,7 @@ function barbLeap(auto: boolean): void {
   } else aimPoint(12, 4, tgt);
   safeSpot(tgt);
   a.leapT = a.leapDur; a.leapSx = p.pos.x; a.leapSz = p.pos.z; a.leapTx = tgt.x; a.leapTz = tgt.z;
-  a.leapDmg = base(lv) * 3.5 * DASH_DMG; a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)
+  a.leapDmg = base(lv) * 3.5 * dashMul(); a.leapLv = lv; a.leapDash = true;   // -70% damage (user tuning)
   p.invulnT = Math.max(p.invulnT, a.leapDur + 0.1);
   events.emit('leap', { from: p.pos.clone(), to: tgt.clone(), dur: a.leapDur });
   p.anim.castT = 1;
@@ -660,7 +662,7 @@ function shoulderCharge(holy = false): void {
   void kl;
   p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
   p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
-  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * DASH_DMG; a.chargeLv = lv; a.chargeHit.length = 0; chargeTrapHit = false;
+  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * dashMul(); a.chargeLv = lv; a.chargeHit.length = 0; chargeTrapHit = false;
   if (holy) { events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0xffe08a }); announce('HOLY_CHARGE'); }
   events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
   p.anim.castT = 1;
@@ -1080,6 +1082,7 @@ export function updateAbilities(dt: number): void {
   const p = world.player;
   const a = abilityState;
 
+  updateDashMods(dt, a.leapT > 0);
   stepFx(dt);
   updateChains(dt);
   updateUlt(dt);
@@ -1281,7 +1284,9 @@ export function tryDash(auto: boolean): boolean {
   if (p.dashCd <= 0) p.dashCd = p.dashCdMax;
   p.dashCharges--;
   p.rootT = 0; p.slowT = 0; // dash cleanses root + slow
+  dashModStart();
   castDashSkill(auto);
+  dashModFx();
   return true;
 }
 

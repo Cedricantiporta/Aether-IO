@@ -133,7 +133,7 @@ function rollTier(min: number, max: number, allowMythic: boolean): number {
 /** Quickdraw Flask: potion cooldown cut per tier [COMMON, RARE, EPIC, LEGENDARY] */
 const POTION_CD_VALS = [0.10, 0.15, 0.20, 0.28];
 
-interface Entry { weight: number; make: (allowMythic: boolean) => Omit<Upgrade, 'id'> }
+interface Entry { weight: number; cat: BuildCat; make: (allowMythic: boolean) => Omit<Upgrade, 'id'> }
 const mk = (type: UpgradeType, name: string, description: string, tier: number, value: number, special?: SpecialId): Omit<Upgrade, 'id'> =>
   ({ type, name, description, rarity: TIERS[tier], tier, value, special });
 
@@ -141,45 +141,125 @@ const mk = (type: UpgradeType, name: string, description: string, tier: number, 
 function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string): Entry[] {
   const out: Entry[] = [];
   for (const d of STATS) {
-    out.push({ weight: 1, make: (am) => { const t = rollTier(0, 4, am); return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); } });
+    out.push({ weight: 1, cat: TYPE_CAT[d.type] ?? 'UTILITY', make: (am) => { const t = rollTier(0, 4, am); return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); } });
   }
   if (runCards.dashStacks < DASH_CARD_MAX) {
-    out.push({ weight: 0.7, make: () => mk('DASH_COOLDOWN', 'Shadow Step', `-10% Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, 1, 0.1) });
+    out.push({ weight: 0.7, cat: 'UTILITY', make: () => mk('DASH_COOLDOWN', 'Shadow Step', `-10% Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, 1, 0.1) });
   }
   if (runCards.potionCdStacks < POTION_CD_STACKS_MAX && runCards.potionCdCut < POTION_CD_CAP - 1e-6) {
-    out.push({ weight: 0.6, make: () => {
+    out.push({ weight: 0.6, cat: 'UTILITY', make: () => {
       const t = rollTier(0, 3, false), v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut);
       return mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v);
     } });
   }
-  out.push({ weight: 0.3, make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
-  if (ultUnlocked) out.push({ weight: 0.25, make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
-  if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
+  out.push({ weight: 0.3, cat: 'DEFENSE', make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
+  if (ultUnlocked) out.push({ weight: 0.25, cat: 'MAGIC', make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
+  if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
   if (runCards.defianceTaken < DEFIANCE_MAX) {
-    out.push({ weight: 0.2 * (earlyMul?.[3] ?? 1), make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
+    out.push({ weight: 0.2 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
   }
   for (const s of SPECIALS) {
     if (runCards.taken[s.id]) continue;
-    out.push({ weight: s.weight * (earlyMul?.[3] ?? 1), make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
+    out.push({ weight: s.weight * (earlyMul?.[3] ?? 1), cat: SPECIAL_CAT[s.id] ?? 'UTILITY', make: (am) => { const t = am && Math.random() < 0.04 ? 4 : 3; const v = s.vals[t === 4 ? 1 : 0]; return mk('SPECIAL', s.name, s.fmt(v, t), t, v, s.id); } });
   }
   void multishotOk;
   return out;
 }
 
-/** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome. */
-export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: string): Omit<Upgrade, 'id'>[] {
+// ------------------------------------------------------------- build trend --
+/** (owner) Build categories: card offers lean toward what the hero has been picking this run. */
+export type BuildCat = 'OFFENSE' | 'DEFENSE' | 'UTILITY' | 'MAGIC';
+export const BUILD_CATS: BuildCat[] = ['OFFENSE', 'DEFENSE', 'UTILITY', 'MAGIC'];
+export const BUILD_NAME: Record<BuildCat, string> = { OFFENSE: 'Offense', DEFENSE: 'Defense', UTILITY: 'Speed', MAGIC: 'Magic' };
+const TYPE_CAT: Partial<Record<UpgradeType, BuildCat>> = {
+  DAMAGE: 'OFFENSE', FIRE_RATE: 'OFFENSE', CRIT_RATE: 'OFFENSE', CRIT_DAMAGE: 'OFFENSE', MULTISHOT: 'OFFENSE', KNOCKBACK: 'OFFENSE',
+  HEALTH: 'DEFENSE', DEFENSE: 'DEFENSE', DMG_REDUCE: 'DEFENSE', LIFESTEAL: 'DEFENSE', RESTORE: 'DEFENSE', AEGIS: 'DEFENSE', DEATH_DEFIANCE: 'DEFENSE',
+  SPEED: 'UTILITY', DASH_COOLDOWN: 'UTILITY', COOLDOWN: 'UTILITY', POTION_CD: 'UTILITY',
+  MAX_MANA: 'MAGIC', MANA_REGEN: 'MAGIC', ULT_FILL: 'MAGIC',
+};
+const SPECIAL_CAT: Partial<Record<SpecialId, BuildCat>> = {
+  AFFLICT: 'OFFENSE', SUNDER: 'OFFENSE', SLAYER: 'OFFENSE', EXECUTE: 'OFFENSE', FIRST_STRIKE: 'OFFENSE', LINGER: 'OFFENSE',
+  ALCHEMIST: 'DEFENSE', SECOND_WIND: 'DEFENSE', GUARDIAN: 'UTILITY', GOLD_RUSH: 'UTILITY',
+};
+/** Build category of a card (skill cards, if ever offered again, count as Magic). */
+export const cardCat = (c: { type: UpgradeType; special?: SpecialId }): BuildCat =>
+  (c.type === 'SPECIAL' ? (c.special ? SPECIAL_CAT[c.special] : undefined) : TYPE_CAT[c.type]) ?? (String(c.type).startsWith('SKILL_') ? 'MAGIC' : 'UTILITY');
+export type TrendCounts = Record<BuildCat, number>;
+/** Picks per category in this run (derived from the store's `runPicks`, so there is no second copy to keep in sync). */
+export function trendCounts(picks: readonly { type: UpgradeType; special?: SpecialId }[]): TrendCounts {
+  const t: TrendCounts = { OFFENSE: 0, DEFENSE: 0, UTILITY: 0, MAGIC: 0 };
+  for (const p of picks) t[cardCat(p)]++;
+  return t;
+}
+/** The category the hero leans on (a unique maximum with at least 1 pick), else null. */
+export function trendLeader(t: TrendCounts): BuildCat | null {
+  let best: BuildCat | null = null, bv = 0, tie = false;
+  for (const c of BUILD_CATS) { if (t[c] > bv) { best = c; bv = t[c]; tie = false; } else if (t[c] === bv && bv > 0) tie = true; }
+  return tie ? null : best;
+}
+/** +25% offer weight per pick of that category, capped at x2.5. */
+export const TREND_STEP = 0.25, TREND_CAP = 2.5;
+const trendMul = (t: TrendCounts | undefined, c: BuildCat): number => (t ? Math.min(TREND_CAP, 1 + TREND_STEP * t[c]) : 1);
+
+// ------------------------------------------------------------ rarity tools --
+/** Statted cards whose numbers scale with the tier (the ones Card Polish can raise). */
+const statDef = (type: UpgradeType): StatDef | undefined => STATS.find((d) => d.type === type);
+/** Highest tier this card can be raised to (0 = cannot be raised: its numbers do not depend on the rarity). */
+function maxTierOf(c: Pick<Upgrade, 'type' | 'special'>): number {
+  if (statDef(c.type)) return 4;
+  if (c.type === 'SPECIAL') return 4;
+  if (c.type === 'POTION_CD') return 3;
+  return 0;
+}
+/** True when Card Polish can raise this card by one tier. */
+export const canRarityUp = (c: Pick<Upgrade, 'type' | 'special' | 'tier'>): boolean => (c.tier ?? 0) < maxTierOf(c);
+/** The same card one rarity tier higher (new numbers + description), or null when it cannot go higher. Mythic marks the run's Mythic as offered. */
+export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
+  if (!canRarityUp(c)) return null;
+  const t = (c.tier ?? 0) + 1;
+  let out: Omit<Upgrade, 'id'> | null = null;
+  const d = statDef(c.type);
+  if (d) out = mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]);
+  else if (c.type === 'POTION_CD') { const v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut); out = mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v); }
+  else if (c.type === 'SPECIAL') { const s = SPECIALS.find((x) => x.id === c.special); if (s) { const v = s.vals[1]; out = mk('SPECIAL', s.name, s.fmt(v, 4), 4, v, s.id); } }
+  if (out && out.tier === 4) runCards.mythicOffered = true;
+  return out;
+}
+
+export interface RollOpts { trend?: TrendCounts; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean }
+/** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome.
+ *  Offer weights lean toward the build categories the hero picked from (x1.25 per pick, max x2.5), but the leading
+ *  category never fills more than 2 of the 3-4 cards, so there is always variety. */
+export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: string, opts: RollOpts = {}): Omit<Upgrade, 'id'>[] {
   earlyMul = EARLY_TIER_MUL[Number(biomeKey)] ?? null;
   const pool = candidates(ultUnlocked, true, biomeKey);
   const cards: Omit<Upgrade, 'id'>[] = [];
+  const lead = opts.trend ? trendLeader(opts.trend) : null, leadCap = 2;   // (owner: at most 2 cards of the leading category; with 2 cards on offer that is no cap, the lean is the weight)
+  let leadN = 0;
   for (let i = 0; i < count && pool.length > 0; i++) {
-    let tot = 0; for (const e of pool) tot += e.weight;
+    const capped = lead && leadN >= leadCap && pool.some((e) => e.cat !== lead);   // leader is full: roll among the others
+    let tot = 0; for (const e of pool) tot += (capped && e.cat === lead ? 0 : e.weight * trendMul(opts.trend, e.cat));
     let r = Math.random() * tot, idx = 0;
-    for (; idx < pool.length - 1; idx++) { r -= pool[idx].weight; if (r <= 0) break; }
+    for (; idx < pool.length - 1; idx++) { r -= (capped && pool[idx].cat === lead ? 0 : pool[idx].weight * trendMul(opts.trend, pool[idx].cat)); if (r <= 0) break; }
     const e = pool.splice(idx, 1)[0];
     const c = e.make(!runCards.mythicOffered);
     if (c.tier === 4) runCards.mythicOffered = true;
     if (c.type === 'AEGIS') aegisBiome = biomeKey;
+    if (lead && e.cat === lead) leadN++;
     cards.push(c);
+  }
+  if (opts.epic && cards.length > 0 && !cards.some((c) => (c.tier ?? 0) >= 2)) {   // Lucky Start: raise a card (or swap in a stat card) to Epic
+    const up = cards.map((c, i) => ({ c, i })).filter((x) => maxTierOf(x.c as Upgrade) >= 2);
+    if (up.length) {
+      const pick = up[Math.floor(Math.random() * up.length)];
+      const tmp = { ...pick.c, id: '' } as Upgrade;
+      let n: Omit<Upgrade, 'id'> | null = tmp;
+      while (n && (n.tier ?? 0) < 2) n = rarityUpCard({ ...n, id: '' });
+      if (n) cards[pick.i] = n;
+    } else {
+      const d = STATS[Math.floor(Math.random() * STATS.length)];
+      cards[0] = mk(d.type, d.name, d.fmt(d.vals[2]), 2, d.vals[2]);
+    }
   }
   return cards;
 }

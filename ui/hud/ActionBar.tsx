@@ -1,4 +1,5 @@
 import React from 'react';
+import { dashModDef } from '../../dashMods';
 import { unlockLevel, DASH_UNLOCK_LV, ULT_UNLOCK_LV } from '../../classLevels';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store';
@@ -28,6 +29,7 @@ export const ActionBar: React.FC = () => {
   const sk = (k: keyof SkillLevels) => skillLevels[k];
   const SLOTS = ACTIVE_ORDER[hero].map((slot, i) => ({ slot, key: String(i + 1), code: ACTIVE_KEYS[i] }));
   const dDef = dashDef(hero), dLv = sk(dashKey(hero));
+  const dMod = dashModDef(useGameStore((st) => st.dashMods[st.hero]));   // the chosen Dash Charm (named on the dash tooltip)
   const ult = ULTS[hero];
   const ulv = sk('ult');
 
@@ -51,7 +53,7 @@ export const ActionBar: React.FC = () => {
       })}
       <ActionSlot id="dash" keyLabel="SPACE" keyCode="Space" size="4.3rem" icon={<PaintedIcon id={dDef.icon} />} level={dashOpen ? dLv : 0} active={dashOpen}
         getCd={() => (world.village.ride.on ? { t: world.village.ride.dashCd, max: 6 } : { t: p.dashCd, max: p.dashCdMax })}
-        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`), cdLine(`Lv ${dLv}`, dDef.per(dLv))]} />} />
+        tooltip={<SimpleTip title={`Dash: ${dDef.name}`} sub={dashOpen ? `Class dash [Space] · Lv ${dLv}${hero === 'BARBARIAN' ? '' : ' · hold to aim, release to cast'}` : `Locked · unlocks at Lv ${DASH_UNLOCK_LV}`} body={dDef.desc} lines={[cdLine('Mana', 'Free'), cdLine('Recharge', `${p.dashCdMax.toFixed(1)}s`), cdLine(`Lv ${dLv}`, dDef.per(dLv)), cdLine('Charm', dMod ? dMod.name : 'None (Skill Trainer)')]} />} />
 
       <ActionSlot id="hp" keyLabel="Z" keyCode="KeyZ" size="3.7rem" round qty={hpQty} active={true} accent="#d6252b"
         icon={<PaintedIcon id="HP" />} getCd={() => ({ t: p.hpPotCd, max: potionCooldown() })}

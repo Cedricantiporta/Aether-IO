@@ -129,8 +129,8 @@ export const Dialogue: React.FC = () => {
         {last && offer
           ? (
             <span className="dlg-choices">
-              <button className="dlg-btn" data-testid="dialogue-later" onPointerDown={(e) => { stop(e); closeDialogue(); }}>Later{!device.touch && <kbd>E</kbd>}</button>
-              <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); if (offer.startsWith('story:')) { const st = STORY[Number(offer.slice(6))]; if (st) questBanner('main', st.title, 'accepted'); } }}>{acceptLabel}{!device.touch && <kbd>F</kbd>}</button>
+              {!offer.startsWith('story:') && <button className="dlg-btn" data-testid="dialogue-later" onPointerDown={(e) => { stop(e); closeDialogue(); }}>Later{!device.touch && <kbd>E</kbd>}</button>}
+              <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); if (offer.startsWith('story:')) { const st = STORY[Number(offer.slice(6))]; if (st) questBanner('main', st.title, 'accepted'); } }}>{offer.startsWith('story:') ? 'Okay' : acceptLabel}{!device.touch && <kbd>{offer.startsWith('story:') ? 'E' : 'F'}</kbd>}</button>
             </span>
           )
           : <span className="dlg-choices"><span className={`dlg-btn${reply ? ' reply' : ''}`} data-testid="dialogue-next" aria-label={last ? 'Close' : 'Next'}>{reply ? `\u201c${reply}\u201d` : last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span></span>}

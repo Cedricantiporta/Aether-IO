@@ -14,6 +14,28 @@ import { activeDefs, dashDef, dashKey, isDashKey, ULTS } from '../../../abilityD
 import { PAINTED_ART, PaintedIcon, SKILL_KEYS } from '../../components/SkillIcons';
 import { tip } from '../../components/Tooltip';
 import { SimpleTip } from '../../components/ItemTip';
+import { DASH_MODS } from '../../../dashMods';
+
+/** Dash Charm: one special ability for the dash, unlocked by dash level, swapped for free. */
+const DashCharms: React.FC<{ dashLv: number }> = ({ dashLv }) => {
+  const hero = useGameStore((s) => s.hero), chosen = useGameStore((s) => s.dashMods[s.hero] ?? null), setMod = useGameStore((s) => s.setDashMod);
+  return (
+    <div className="dash-charms" data-testid="dash-charms">
+      <span className="dc-title">Dash Charm <em>free to swap</em></span>
+      <div className="dc-list">
+        {DASH_MODS.map((m) => {
+          const locked = dashLv < m.lv, on = chosen === m.id && !locked;
+          return (
+            <button key={m.id} className={`dc-chip pe ${on ? 'on' : ''} ${locked ? 'lock' : ''}`} style={{ ['--dc' as any]: m.css }} disabled={locked}
+              data-testid={`dash-mod-${m.id}`} onClick={() => setMod(on ? null : m.id)} {...tip(<SimpleTip title={m.name} sub={locked ? `Unlocks at dash Lv ${m.lv}` : on ? 'Equipped (tap to remove)' : 'Tap to equip'} body={m.desc} />)}>
+              <i className="dc-dot" />{m.name}{locked && <small>Lv {m.lv}</small>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const HINT: Record<string, string> = {
   regen: 'More HP regenerated each second.', magnet: 'Larger pickup range.', dash: 'Shorter dash cooldown.',
@@ -61,7 +83,8 @@ const RunSkills: React.FC = () => {
           ? [<span key="a" className="muted">Lv {lvl}: {r.now(lvl)}</span>, ...(!max ? [<span key="b" className="pos">Lv {lvl + 1}: {r.now(lvl + 1)}</span>] : [])]
           : (!max && HINT[r.key] ? [<span key="c" className="pos">Next: {HINT[r.key]}</span>] : []);
         return (
-          <div key={r.key} className={`sk-row ${lvl > 0 ? 'on' : ''}`} data-testid={`skill-${r.key}`} {...tip(<SimpleTip title={r.name} sub={r.tag ? `Key ${r.tag}` : 'Passive'} body={short(r.desc)} lines={lines} />)}>
+          <React.Fragment key={r.key}>
+          <div className={`sk-row ${lvl > 0 ? 'on' : ''}`} data-testid={`skill-${r.key}`} {...tip(<SimpleTip title={r.name} sub={r.tag ? `Key ${r.tag}` : 'Passive'} body={short(r.desc)} lines={lines} />)}>
             <div className="sk-ic" style={{ ['--rc' as any]: r.color ?? (info?.classType ? HERO_COLOR[info.classType as keyof typeof HERO_COLOR] : '#e9b949') }}>{r.icon}</div>
             <div className="sk-txt">
               <span className="sk-lv">LV {lvl}/5</span>
@@ -71,6 +94,8 @@ const RunSkills: React.FC = () => {
               : lockedLv ? <span className="sk-state lock">Lv {need}</span>
               : <button className={`sk-btn pe ${can ? 'can' : ''}`} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)}>{lvl === 0 ? 'Learn' : 'Upgrade'} <em>{cost === 0 ? 'Free' : `${cost} SP`}</em></button>}
           </div>
+          {dash && <DashCharms dashLv={Math.max(1, lvl)} />}
+          </React.Fragment>
         );
       })}
     </div>

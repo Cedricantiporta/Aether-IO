@@ -26,7 +26,7 @@ export const RANK_REQ: Record<Rarity, number> = {
   COMMON: 1, UNCOMMON: 8, RARE: 16, EPIC: 24, LEGENDARY: 32, MYTHIC: 40,   // (owner: steps of 8)
 };
 /** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
-export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 1.4;
+export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 2.8;
 /** Share of the base price gear and pets sell for (owner: 3x the old 30%). Loot / shards sell at full value. */
 export const GEAR_SELL_RATE = 0.9;
 const BUY_GEAR_TYPES = new Set(['WEAPON', 'ARMOR', 'HELMET', 'GLOVES', 'BOOTS', 'ACCESSORY']);

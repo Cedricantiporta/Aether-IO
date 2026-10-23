@@ -13,7 +13,7 @@ export const START_SP = 3;
 export const SP_PER_LEVEL = 2;
 export const MAX_LEVEL = 50;
 /** The class dash unlocks at this class level (below it Space does nothing). */
-export const DASH_UNLOCK_LV = 6;   // (owner: was 20, then 8)
+export const DASH_UNLOCK_LV = 1;   // (owner: dash from level 1; was 20, 8, 6)
 
 /** The ultimate unlocks (auto-learned, bar pre-filled once) at this class level (owner). */
 export const ULT_UNLOCK_LV = 10;

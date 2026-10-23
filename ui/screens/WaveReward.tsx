@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,6 +8,7 @@ import { SimpleTip } from '../components/ItemTip';
 import { Stars } from '../components/Stars';
 import { RARITY_NAME } from '../theme';
 import { device } from '../../engine/device';
+import { canRarityUp, trendCounts, trendLeader, BUILD_NAME } from '../../engine/runCards';
 import { ArcanaGlyph, tallArtKey, tallArtUrl, cardFrameUrl, cardBackdropUrl, RARITIES_ALL, preloadImages } from '../components/UpgradeIcons';
 
 const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, i, onPick }) => {
@@ -43,18 +44,21 @@ const Card: React.FC<{ opt: Upgrade; i: number; onPick: () => void }> = ({ opt, 
 };
 
 export const WaveReward: React.FC = () => {
-  const { options, select, wave } = useGameStore(useShallow((s) => ({ options: s.upgradeOptions, select: s.selectUpgrade, wave: s.wave })));
+  const { options, select, wave, refresh, polish, refreshes, charges, picks } = useGameStore(useShallow((s) => ({ options: s.upgradeOptions, select: s.selectUpgrade, wave: s.wave, refresh: s.refreshCards, polish: s.polishCard, refreshes: s.cardRefresh, charges: s.cardPolish, picks: s.runPicks })));
   const boss = wave % 10 === 0;
+  const lead = useMemo(() => trendLeader(trendCounts(picks)), [picks]);
 
   useEffect(() => { preloadImages([...RARITIES_ALL.map(cardFrameUrl), ...options.map((o) => tallArtKey(o)).filter((k): k is string => !!k).map(tallArtUrl)]); }, [options]);
-  useEffect(() => {
+  useEffect(() => {   // 1-4 pick a card, Shift+1-4 raise that card's rarity, R refreshes all cards
     const h = (e: KeyboardEvent) => {
+      if (e.code === 'KeyR' && !e.repeat) { refresh(); return; }
       const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
-      if (m && options[+m[1] - 1]) select(options[+m[1] - 1]);
+      if (!m || !options[+m[1] - 1]) return;
+      if (e.shiftKey) polish(options[+m[1] - 1].id); else select(options[+m[1] - 1]);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [options, select]);
+  }, [options, select, refresh, polish]);
 
   return (
     <motion.div className="absolute inset-0 pe rw-root" style={{ zIndex: 100 }}
@@ -62,10 +66,25 @@ export const WaveReward: React.FC = () => {
       <div className="rw-head">
         <div className="t">{boss ? 'Boss defeated' : 'Room cleared'}</div>
         <div className="s">Choose a reward · Depth {Math.max(1, wave)}</div>
+        {lead && <div className="rw-trend" data-testid="rw-trend" data-cat={lead}>Build: {BUILD_NAME[lead]} <b>&uarr;</b></div>}
       </div>
       <div className="rw-cards">
-        {options.map((opt, i) => <Card key={opt.id + i} opt={opt} i={i} onPick={() => select(opt)} />)}
+        {options.map((opt, i) => (
+          <div className="rw-slot" key={opt.id + i}>
+            <Card opt={opt} i={i} onPick={() => select(opt)} />
+            {charges > 0 && (
+              <button className="rw-pill rw-up" data-testid={`rw-up-${i}`} disabled={!canRarityUp(opt)} onClick={() => polish(opt.id)}
+                {...tip(<SimpleTip title="Upgrade rarity" sub={canRarityUp(opt) ? 'Raises this card by one rarity tier (stronger bonus). Uses 1 charge.' : 'This card cannot go any higher.'} />)}>
+                {canRarityUp(opt) ? <>&#11014; Upgrade rarity ({charges})</> : 'Top rarity'}{!device.touch && canRarityUp(opt) && <kbd>&#8679;{i + 1}</kbd>}
+              </button>
+            )}
+          </div>
+        ))}
       </div>
+      <button className="rw-pill rw-refresh" data-testid="rw-refresh" disabled={refreshes <= 0} onClick={() => refresh()}
+        {...tip(<SimpleTip title="Refresh cards" sub="Rerolls every card offered. Refreshes reset each run; Tech House adds more." />)}>
+        &#8635; Refresh ({refreshes}){!device.touch && <kbd>R</kbd>}
+      </button>
     </motion.div>
   );
 };

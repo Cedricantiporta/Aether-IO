@@ -18,6 +18,7 @@ import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abili
 import { wardedBossId } from './bossMech';
 import { updateSkillInput, resetAim } from './aim';
 import { dashKey } from '../../abilityDefs';
+import { dashCdMul, dashSpeedMul } from './dashMods';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
@@ -276,7 +277,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD * Math.pow(0.95, Math.max(0, (dLv ?? 1) - 1)) * (1 - 0.1 * runCards.dashStacks);   // (owner) 4.1 s, -5% per dash level above 1; no gear / talent CDR
+  p.dashCdMax = DASH_CD * Math.pow(0.95, Math.max(0, (dLv ?? 1) - 1)) * (1 - 0.1 * runCards.dashStacks) * dashCdMul();   // (owner) 4.1 s, -5% per dash level above 1; no gear / talent CDR
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {
@@ -423,7 +424,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow;
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow * dashSpeedMul();
     const lerpK = 1 - Math.exp(-12 * dt * iceGrip);   // (Frostpeak ice: x0.25 grip)
     p.vel.x += (mx * speed - p.vel.x) * lerpK;
     p.vel.z += (mz * speed - p.vel.z) * lerpK;

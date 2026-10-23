@@ -899,14 +899,14 @@ function hitPlayerShot(s: DarkShot, e: Enemy): void {
   hitSpark();
   const l = Math.hypot(s.vx, s.vz) || 1, dx = s.vx / l, dz = s.vz / l;
   switch (s.tag) {
-    case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('DEFDOWN', 4); push(dx, dz, 1.6); break;
-    case SHOT_LIGHT: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); break;
-    case SHOT_FIRE: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 3, Math.max(2, s.dmg * 0.1)); events.emit('explosion', { pos: p.pos, radius: 2.4, color: 0xff6a3a }); break;
-    case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.4); break;
-    case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC' }); push(dx, dz, 2.6); break;
-    case SHOT_CLEAVE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.0); break;   // (bleeding)
-    case SHOT_BONE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', slow: 0.4 }); slowPlayer(2); break;
-    default: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL' }); break;
+    case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', proj: true }); applyPlayerDebuff('DEFDOWN', 4); push(dx, dz, 1.6); break;
+    case SHOT_LIGHT: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC', proj: true }); break;
+    case SHOT_FIRE: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE', proj: true }); applyPlayerDebuff('BURN', 3, Math.max(2, s.dmg * 0.1)); events.emit('explosion', { pos: p.pos, radius: 2.4, color: 0xff6a3a }); break;
+    case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE', proj: true }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.4); break;
+    case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC', proj: true }); push(dx, dz, 2.6); break;
+    case SHOT_CLEAVE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', proj: true }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.0); break;   // (bleeding)
+    case SHOT_BONE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', proj: true, slow: 0.4 }); slowPlayer(2); break;
+    default: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', proj: true }); break;
   }
 }
 

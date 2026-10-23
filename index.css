@@ -3690,3 +3690,32 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .sm-face.tarot.sf .sm-name { top: 79.5%; height: 8%; }
 .sf.r-COMMON { --w1: #f6eef0; --w2: #e7d6dc; } .sf.r-UNCOMMON { --w1: #e6f6e3; --w2: #bfe3b8; } .sf.r-RARE { --w1: #e3f1fb; --w2: #a9d3f2; }
 .sf.r-EPIC { --w1: #efe4fb; --w2: #c9adef; } .sf.r-LEGENDARY { --w1: #fff2d1; --w2: #f6c66a; } .sf.r-MYTHIC { --w1: #ffe2d6; --w2: #f28a5f; }
+
+/* Reward picker: Refresh / Upgrade-rarity pills + build-trend tag (cute rounded pills, owner 2026-10-23) */
+.rw-slot { flex: 1 1 0; min-width: 4.6rem; max-width: min(15rem, calc((100dvh - 14.5rem - var(--sat) - var(--sab)) / 2)); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rw-slot > .rw-card.tarot { flex: 0 0 auto; width: 100%; max-width: none; }
+@media (max-width: 599px) and (orientation: portrait) { .rw-slot { flex: 0 0 calc(33.333% - 4px); max-width: none; min-width: 0; } }
+.rw-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 16px; border: 0; border-radius: 999px; cursor: var(--cur-hand, pointer);
+  font-family: var(--font-title); font-weight: 800; font-size: 13px; letter-spacing: .02em; color: #3a2a12; background: linear-gradient(#ffe9a8, #ffc65a);
+  box-shadow: 0 3px 0 #b8832a, 0 6px 12px rgba(0, 0, 0, .35); transition: transform .12s, filter .12s; }
+.rw-pill:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.06); }
+.rw-pill:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #b8832a; }
+.rw-pill:disabled { cursor: default; filter: grayscale(.7) brightness(.8); opacity: .65; }
+.rw-pill kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; font: inherit; font-size: 10px; border-radius: 999px; background: rgba(255, 255, 255, .55); color: inherit; }
+.rw-up { font-size: 11px; padding: 5px 10px; text-align: center; background: linear-gradient(#e6d2ff, #b894f5); box-shadow: 0 3px 0 #7a56c2, 0 6px 12px rgba(0, 0, 0, .35); color: #2c1a52; }
+.rw-up:active:not(:disabled) { box-shadow: 0 1px 0 #7a56c2; }
+.rw-refresh { background: linear-gradient(#c9ecff, #78c4f2); box-shadow: 0 3px 0 #3f86b8, 0 6px 12px rgba(0, 0, 0, .35); color: #10324a; }
+.rw-refresh:active:not(:disabled) { box-shadow: 0 1px 0 #3f86b8; }
+.rw-trend { display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff; background: rgba(255, 255, 255, .16); }
+.rw-trend b { color: #ffe27a; }
+
+/* Dash Charm picker (Skill Trainer, under the Dash row): soft rounded chips */
+.dash-charms { margin: -.1rem 0 .25rem .6rem; padding: .45rem .6rem .55rem; border-radius: 14px; background: rgba(122, 208, 255, .08); border: 1px solid rgba(122, 208, 255, .22); }
+.dc-title { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .04em; color: #bfe6ff; margin-bottom: .35rem; }
+.dc-title em { font-style: normal; font-weight: 600; opacity: .6; margin-left: .4rem; }
+.dc-list { display: flex; flex-wrap: wrap; gap: .35rem; }
+.dc-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 800; color: #eef3f8; background: rgba(255, 255, 255, .07); border: 2px solid rgba(255, 255, 255, .12); cursor: pointer; }
+.dc-chip .dc-dot { width: .7rem; height: .7rem; border-radius: 50%; background: var(--dc); box-shadow: 0 0 6px var(--dc); }
+.dc-chip.on { border-color: var(--dc); background: rgba(255, 255, 255, .16); box-shadow: 0 0 10px -2px var(--dc); }
+.dc-chip.lock { opacity: .45; cursor: not-allowed; }
+.dc-chip small { font-size: .62rem; opacity: .8; }

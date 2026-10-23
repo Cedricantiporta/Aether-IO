@@ -5,7 +5,7 @@
 import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
-import { runCards, rollRunCards, takeRunCard } from './engine/runCards';
+import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts } from './engine/runCards';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey } from './characters';
@@ -14,7 +14,7 @@ import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
-import { TECH, ROMAN, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
+import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, hardMul, phaseOfTime, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
@@ -67,7 +67,9 @@ import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { petPower, petStatMul, PET_PCT_STATS } from './petGrowth';
 import { emptyNpcQuests, sanitizeNpcQuests, npcQuestStatus, NPC_QUESTS, type NpcQuestSave } from './npcQuests';
 import { availableQuestIds } from './questSeen';
-import { BEATS, UNLOCK_CHANCE, emptyUnlocks, sanitizeUnlocks, storyHeld, unlockMirror, type Beat, type UnlockSave } from './questUnlocks';
+import { isDashMod, type DashMod } from './dashMods';
+const sanitizeDashMods = (x: any): Partial<Record<HeroClass, DashMod>> => { const o: Partial<Record<HeroClass, DashMod>> = {}; if (x && typeof x === 'object') for (const k of Object.keys(x)) if (isDashMod(x[k])) o[k as HeroClass] = x[k]; return o; };
+import { BEATS, UNLOCK_CHANCE, LEVEL_UNLOCK_CHANCE, nextBeatIndex, nextSideBeatIndex, emptyUnlocks, sanitizeUnlocks, storyHeld, unlockMirror, type Beat, type UnlockSave } from './questUnlocks';
 import type { EnemyKind } from './engine/types';
 import { world } from './engine/world';
 import { events } from './engine/events';
@@ -368,12 +370,14 @@ const getSkillCardDetails = (key: keyof SkillLevels, level: number, stats: Playe
 };
 
 /** Rolls the run reward cards (rarity tiers, specials, Death Defiance: engine/runCards.ts). Skill cards are no longer offered (Skill Trainer). */
-const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _stats: PlayerStats, count = 2): Upgrade[] =>
-  rollRunCards(count, (skillLevels.ult ?? 0) > 0, String(world.room.biome)).map((c) => {
-    const opt: Upgrade = { ...c, id: uid('card') };
-    if (c.type === 'HEALTH') opt.description = `+${Math.round(c.value * HP_INFLATE)} Max HP`;
-    return opt;
-  });
+const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _stats: PlayerStats, count = 2, picks?: Upgrade[]): Upgrade[] => {
+  const st = useGameStore.getState(), rp = picks ?? st.runPicks;
+  // Lucky Start (Tech House): the very first card choice of an adventure run (first biome) always holds an Epic card
+  const epic = techLv(st.tech, 'lucky') > 0 && rp.length === 0 && runInfo.mode === 'ADVENTURE' && world.room.biome === 0;
+  return rollRunCards(count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic }).map((c) => withCardText({ ...c, id: uid('card') }));
+};
+/** The store rewrites the Max HP number with HP_INFLATE (the catalogue lists the base value). */
+const withCardText = (opt: Upgrade): Upgrade => { if (opt.type === 'HEALTH') opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; return opt; };
 
 /** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
 const addCores = (inv: Item[], n: number): Item[] => {
@@ -434,6 +438,7 @@ interface Profile {
   summonPity?: SummonPity;  // draws so far per altar (guaranteed Legendary every 60, Legendary/Mythic every 240)
   npcQuests?: NpcQuestSave;   // NPC story quests (npcQuests.ts)
   unlocks?: UnlockSave;       // death-unlocked quest beats (questUnlocks.ts)
+  dashMods?: Record<string, string>;   // chosen Dash Charm per class (dashMods.ts)
   questSeen?: string[];       // quest ids the hero has already viewed (red dots, questSeen.ts)
   heroRank: number; rankXp: number;
   gameStats: GameStatistics; settings: Settings;
@@ -544,6 +549,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
+              dashMods: sanitizeDashMods(p.dashMods),
               questSeen: Array.isArray(p.questSeen) ? p.questSeen.filter((x: unknown) => typeof x === 'string').slice(-400) : undefined,
               heroRank: Math.max(1, Math.floor(num(p.heroRank, 1))), rankXp: num(p.rankXp, 0),
               gameStats: mergeStats(p.gameStats), settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}), ...(p.mus1 ? {} : { musicVolume: Math.round((p.settings?.musicVolume ?? 0.5) * 80) / 100 }), ...(p.al1 ? {} : { autoLootGear: 'UNCOMMON' as const, autoLootMaterials: true, clickMove: true }) },
@@ -599,7 +605,7 @@ const writeProfile = (s: GameState): void => {
     s = stampGrades(s);   // (gear made at runtime always carries a grade, so the load migration never rescales it)
     const p: Profile = {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
-      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
+      maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
       talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
@@ -735,6 +741,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     activeAbilityQ: WEAPON_Q[hero] as AbilityType | null,
     upgradeOptions: [] as Upgrade[],
     runPicks: [] as Upgrade[],
+    cardRefresh: FREE_REFRESHES, cardPolish: 0,
     isInventoryOpen: false,
     isShopOpen: false,
     isCharacterSheetOpen: false,
@@ -773,6 +780,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     unlocks: profile.unlocks ?? emptyUnlocks(),
     questSeen: profile.questSeen ?? null,
+    dashMods: sanitizeDashMods(profile.dashMods),
+    setDashMod: (mod) => { const s = get(); const dm = { ...s.dashMods }; if (mod) dm[s.hero] = mod; else delete dm[s.hero]; set({ dashMods: dm }); },
     heroRank: profile.heroRank,
     rankXp: profile.rankXp,
     welcomeGiftClaimed: profile.welcomeGiftClaimed,
@@ -841,6 +850,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         isCharacterSheetOpen: false,
         isPauseMenuOpen: false,
         runPicks: [],
+        cardRefresh: FREE_REFRESHES + techLv(state.tech, 'refresh'), cardPolish: techLv(state.tech, 'polish'),   // (per run: Card Refresh / Card Polish, Tech House)
         notifications: [],
         actionResult: null,
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
@@ -892,7 +902,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
@@ -1074,11 +1084,25 @@ export const useGameStore = create<GameState>()((set, get) => {
         skillLevels: levels,
         stats: calc(base, state.equipment),
         runPicks: [...state.runPicks, upgrade],
-        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0)) : [],
+        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade]) : [],
         status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });
     },
 
+    refreshCards: () => {   // Card Refresh: reroll every offered card (uses one of this run's refreshes)
+      const s = get();
+      if (s.status !== GameStatus.LEVEL_UP || s.cardRefresh <= 0 || s.upgradeOptions.length === 0) return false;
+      set({ cardRefresh: s.cardRefresh - 1, upgradeOptions: generateUpgradeOptions(s.hero, s.skillLevels, s.stats, s.upgradeOptions.length) });
+      return true;
+    },
+    polishCard: (id) => {   // Card Polish: raise ONE offered card by a rarity tier (its numbers follow the new rarity)
+      const s = get(), i = s.upgradeOptions.findIndex((o) => o.id === id), c = s.upgradeOptions[i];
+      if (s.status !== GameStatus.LEVEL_UP || s.cardPolish <= 0 || !c || !canRarityUp(c)) return false;
+      const n = rarityUpCard(c); if (!n) return false;
+      const options = s.upgradeOptions.slice(); options[i] = withCardText({ ...n, id: uid('card') });
+      set({ cardPolish: s.cardPolish - 1, upgradeOptions: options });
+      return true;
+    },
     upgradeSkill: (skill) => {
       const s = get();
       const lvl = s.skillLevels[skill];
@@ -1314,11 +1338,23 @@ export const useGameStore = create<GameState>()((set, get) => {
       // nothing left to do (the main chain is locked and no side quest is on offer or running): always opens something
       const idle = storyHeld(s.story.step, u.n) && !NPC_QUESTS.some((d) => { const q = npcQuestStatus(d, s.npcQuests, s.heroRank); return q === 'AVAILABLE' || q === 'ACTIVE'; });
       if (!(force || u.n === 0 || u.miss >= 2 || idle || Math.random() < UNLOCK_CHANCE)) { set({ unlocks: { n: u.n, miss: u.miss + 1 } }); return null; }
-      const beat: Beat = BEATS[u.n];
-      unlockMirror.n = u.n + 1;
-      set({ unlocks: { n: u.n + 1, miss: 0 } });
+      const bi = nextBeatIndex(u), beat: Beat = BEATS[bi];   // (beats a level-up already opened are skipped)
+      if (!beat) return null;
+      const unlocks: UnlockSave = { n: bi + 1, miss: 0 };
+      const early = (u.early ?? []).filter((id) => BEATS.findIndex((b) => b.id === id) > bi);
+      if (early.length) unlocks.early = early;
+      unlockMirror.n = unlocks.n; unlockMirror.early = early;
+      set({ unlocks });
       for (const g of beat.gift?.items ?? []) for (const it of makeItemById(g.id, g.qty)) if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });
       return beat;
+    },
+    rollLevelUnlock: () => {
+      const u = get().unlocks, i = nextSideBeatIndex(u);
+      if (i < 0 || Math.random() >= LEVEL_UNLOCK_CHANCE) return null;
+      const early = [...(u.early ?? []), BEATS[i].id];
+      unlockMirror.early = early;
+      set({ unlocks: { ...u, early } });
+      return BEATS[i];
     },
     setAttrs: (a) => {
       const s = get(), lv = s.classProg[s.hero]?.lv ?? 1;
@@ -1431,7 +1467,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     equipItem: (item) => {
       const s = get();
-      const req = RANK_REQ[item.rarity];
+      const req = item.type === 'PET' ? 0 : RANK_REQ[item.rarity];   // (owner) pets have no level requirement
       if (s.heroRank < req) { notify(`Requires Lv ${req}!`, 'red', 'WARNING'); return; }
       if (!canUseClass(item, s.hero)) {   // (owner) weapons and wear are class exclusive
         notify(classOnlyMsg(item), 'red', 'WARNING');
@@ -1480,7 +1516,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const tryEquip = (slot: EquipSlot, type: ItemType) => {
         const candidates = inventory.filter((i) =>
-          i.type === type && s.heroRank >= RANK_REQ[i.rarity] && canUseClass(i, s.hero));
+          i.type === type && (type === 'PET' || s.heroRank >= RANK_REQ[i.rarity]) && canUseClass(i, s.hero));
         if (candidates.length === 0) return;
         let best = candidates[0];
         let bestCP = calculateItemCP(best);
@@ -2038,15 +2074,15 @@ const flushProfile = (): void => {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   writeProfile(useGameStore.getState());
 };
-unlockMirror.n = useGameStore.getState().unlocks.n;   // (npcQuestStatus reads the unlock count without the store)
-useGameStore.subscribe((s) => { unlockMirror.n = s.unlocks.n; });
+unlockMirror.n = useGameStore.getState().unlocks.n; unlockMirror.early = useGameStore.getState().unlocks.early ?? [];   // (npcQuestStatus reads the unlock count without the store)
+useGameStore.subscribe((s) => { unlockMirror.n = s.unlocks.n; unlockMirror.early = s.unlocks.early ?? []; });
 // "new quest" dots: first load (or a fresh / reset profile) marks everything already available as seen
 const seedQuestSeen = (): void => { const s = useGameStore.getState(); if (s.questSeen === null) useGameStore.setState({ questSeen: availableQuestIds(s) }); };
 seedQuestSeen();
 useGameStore.subscribe((s, prev) => { if (s.questSeen === null && prev.questSeen !== null) seedQuestSeen(); });
 useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
-    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.heroRank === prev.heroRank
+    && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.dashMods === prev.dashMods && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
     && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);

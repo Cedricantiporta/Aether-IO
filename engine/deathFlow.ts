@@ -16,6 +16,7 @@ import { openCustomDialogue, dialogueOpen } from './systems/dialogue';
 import { nextDream, dreamView } from '../dreams';
 import { liveStep, type Beat } from '../questUnlocks';
 import { GameStatus } from '../types';
+import { events } from './events';
 
 /** The unlock rolled by the last death / ending, waiting to be announced once the hero is awake at home. */
 const pending: { beat: Beat | null } = { beat: null };
@@ -60,3 +61,19 @@ export function announceUnlock(delayMs = 0): void {
   };
   if (delayMs > 0) setTimeout(go, delayMs); else go();
 }
+
+/** (owner) A hero level-up (in town or in a run) has a ~70% chance to open the next side quest early (store.rollLevelUnlock).
+ *  Announced with a notification; in town, and only when no dialogue is open, also with the usual "someone is waiting" scene.
+ *  At most one per level-up (several levels gained at once still roll once). */
+events.on('levelUp', () => {
+  if (showcase.on || runInfo.mode === 'TOWER') return;
+  const st = useGameStore.getState(), b = st.rollLevelUnlock();
+  if (!b) return;
+  st.addNotification(`Someone has a new request for you... ${b.who} is waiting`, '#fff3c4', 'SYSTEM');
+  if (st.status !== GameStatus.MENU) return;   // in a run: just the notification (no popups mid-fight)
+  setTimeout(() => {
+    const now = useGameStore.getState();
+    if (now.status !== GameStatus.MENU || dialogueOpen()) return;
+    openCustomDialogue(b.who, b.title, '#fff3c4', b.lines, { label: 'Got it', accept: () => { /* just closes */ } });
+  }, 1800);
+});

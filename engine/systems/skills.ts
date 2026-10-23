@@ -13,6 +13,7 @@ import {
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
+import { resetDashMods } from './dashMods';
 import { hitRoomTraps } from './roomTraps';
 
 /**
@@ -56,7 +57,7 @@ export function resetSkills(): void {
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
-  resetProcs();
+  resetProcs(); resetDashMods();
 }
 
 function setCd(key: string, remaining: number, max: number): void {

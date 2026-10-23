@@ -72,24 +72,46 @@ export const storyHeld = (step: number, n: number): boolean => step > storyCap(n
 export const liveStep = (s: { story: { step: number }; unlocks: { n: number } }): StoryStep | undefined => (storyHeld(s.story.step, s.unlocks.n) ? undefined : STORY[s.story.step]);
 
 const SIDE_FIRST: Record<string, number> = (() => { const m: Record<string, number> = {}; BEATS.forEach((b, i) => { for (const id of b.side ?? []) m[id] = i; }); return m; })();
-/** Side quest `id` was unlocked by beat number < n (ids no beat mentions are always open). */
-export const sideUnlocked = (id: string, n: number): boolean => !(id in SIDE_FIRST) || SIDE_FIRST[id] < n;
+/** Side quest `id` was unlocked by beat number < n, or its side beat was opened early by a level-up (`early` = beat ids;
+ *  ids no beat mentions are always open). */
+export const sideUnlocked = (id: string, n: number, early?: readonly string[]): boolean => !(id in SIDE_FIRST) || SIDE_FIRST[id] < n || (!!early && early.length > 0 && early.includes(BEATS[SIDE_FIRST[id]].id));
 
 export interface UnlockSave {
   /** beats opened so far (BEATS[0..n-1]) */
   n: number;
   /** deaths in a row that opened nothing (the third always does) */
   miss: number;
+  /** (owner) side-quest beats (ids) opened EARLY by a hero level-up, ahead of `n`; main-story order still follows `n` only.
+   *  A death roll skips beats listed here (nextBeatIndex) and drops the ones `n` has passed. */
+  early?: string[];
 }
 export const emptyUnlocks = (): UnlockSave => ({ n: 0, miss: 0 });
-/** Mirror of `unlocks.n` for modules without store access (npcQuests.npcQuestStatus); written by store.ts. */
-export const unlockMirror = { n: 0 };
+/** Mirror of `unlocks.n` / `unlocks.early` for modules without store access (npcQuests.npcQuestStatus); written by store.ts. */
+export const unlockMirror: { n: number; early: readonly string[] } = { n: 0, early: [] };
+
+/** Index of the next beat a DEATH opens: the first at or after `n` that a level-up has not already opened. */
+export function nextBeatIndex(u: UnlockSave): number {
+  let i = u.n;
+  while (i < BEATS.length && u.early?.includes(BEATS[i].id)) i++;
+  return i;
+}
+/** Index of the next not-yet-opened SIDE beat (skips main-story beats), or -1 when none is left: what a level-up opens. */
+export function nextSideBeatIndex(u: UnlockSave): number {
+  for (let i = u.n; i < BEATS.length; i++) if (BEATS[i].side && !u.early?.includes(BEATS[i].id)) return i;
+  return -1;
+}
+/** (owner) Chance a hero level-up opens the next side quest early. */
+export const LEVEL_UNLOCK_CHANCE = 0.7;
 
 /** Old saves (no `unlocks` field): keep everything the hero already reached, i.e. open every beat up to the last one whose
  *  target is already on the way (main step reached / side quest accepted or done). */
 export function sanitizeUnlocks(raw: unknown, step: number, sideSeen: (id: string) => boolean): UnlockSave {
   const r = raw as Partial<UnlockSave> | null | undefined;
-  if (r && typeof r === 'object' && Number.isFinite(Number(r.n))) return { n: Math.max(0, Math.min(BEATS.length, Math.floor(Number(r.n)))), miss: Math.max(0, Math.min(2, Math.floor(Number(r.miss) || 0))) };
+  if (r && typeof r === 'object' && Number.isFinite(Number(r.n))) {
+    const n = Math.max(0, Math.min(BEATS.length, Math.floor(Number(r.n))));
+    const early = Array.isArray(r.early) ? r.early.filter((id): id is string => typeof id === 'string' && BEATS.findIndex((b) => b.id === id) >= n && !!BEATS.find((b) => b.id === id)?.side) : [];
+    return { n, miss: Math.max(0, Math.min(2, Math.floor(Number(r.miss) || 0))), ...(early.length ? { early } : {}) };
+  }
   let n = 0, prev = BASE_CAP;
   BEATS.forEach((b, i) => {
     if (b.story) { if (step > prev) n = i + 1; prev = Math.max(prev, storyIdx(b.story)); }   // the chain already moved into this stretch
