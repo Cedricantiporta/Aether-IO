@@ -21,7 +21,7 @@ import { HOME_DOOR } from '../homeData';
 import { CAVE_DOOR } from '../caveData';
 import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
 import { NPC_QUESTS } from '../../npcQuests';
-import { TOWN_GATES, GATE_PROMPT_R, gateDist2, gateFlags, gateMask, gateColliders, gateOpenAt, syncGateFlags, type GateId } from '../townGates';
+import { TOWN_GATES, GATE_PROMPT_R, gateDist2, gateFlags, gateMask, gateColliders, gateOpenAt, syncGateFlags, gateLevel, type GateId } from '../townGates';
 
 const live: Partial<Record<GateId, Collider[]>> = {};
 /** Gates that just opened and whose removal animation has not played yet (render/TownGates consumes them). */
@@ -45,6 +45,7 @@ function dropCols(i: number): void {
 /** Called by village.placeVillageNodes right after the town's colliders are (re)built: syncs the flags and registers the closed gates' colliders. */
 export function placeGateColliders(): void {
   const s = useGameStore.getState();
+  gateLevel.lv = s.heroRank;
   syncGateFlags(s.story.step);
   for (const k of Object.keys(live)) live[k as GateId] = undefined;   // (mapgen rebuilt its grid: the old collider objects are gone)
   TOWN_GATES.forEach((g, i) => { known[g.id] = gateFlags[g.id]; if (!gateFlags[g.id]) addCols(i); });
@@ -54,9 +55,12 @@ export function placeGateColliders(): void {
 
 let lastStep = -1;
 const known: Partial<Record<GateId, boolean>> = {};   // (the state this module last acted on; the flags may be synced earlier by npcQuestLogic)
+let lastLv = -1;
 function onStore(announce: boolean): void {
-  const step = useGameStore.getState().story.step;
-  const advanced = announce && step > lastStep && lastStep >= 0;
+  const st = useGameStore.getState(), step = st.story.step;
+  gateLevel.lv = st.heroRank;
+  const advanced = announce && ((step > lastStep && lastStep >= 0) || (st.heroRank > lastLv && lastLv >= 0));
+  lastLv = st.heroRank;
   lastStep = step;
   syncGateFlags(step);
   const inTown = townLive();
@@ -77,7 +81,7 @@ function onStore(announce: boolean): void {
 }
 setTimeout(() => {   // (deferred: the store module is still initialising while this one loads)
   onStore(false);
-  useGameStore.subscribe((s, p) => { if (s.story.step !== p.story.step) onStore(true); });
+  useGameStore.subscribe((s, p) => { if (s.story.step !== p.story.step || s.heroRank !== p.heroRank) onStore(true); });
 }, 0);
 
 export { gateFlags, gateMask };

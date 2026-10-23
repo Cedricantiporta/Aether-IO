@@ -20,6 +20,8 @@ export interface GateDef {
   name: string;
   /** main-story step id: the gate is open once the story has REACHED that step (= the step before it is done) */
   opens: string;
+  /** (owner) opens at this hero level instead of a story step */
+  minLv?: number;
   /** the blocked line [x1, z1, x2, z2] (colliders along it; the prompt reaches PROMPT_R from it) */
   span: [number, number, number, number];
   /** side the sign + pile face: world yaw (the sign's front points along (sin yaw, cos yaw)) */
@@ -49,10 +51,10 @@ export const TOWN_GATES: readonly GateDef[] = [
     done: 'The flood drained: the road to the beach is open!',
   },
   {   // a cave-in piled up in front of the mine mouth (the camp itself stays open: Mining Supplies is there)
-    id: 'cave', kind: 'rubble', name: 'Cave-in', opens: 'report2',
+    id: 'cave', kind: 'rubble', name: 'Cave-in', opens: 'report2', minLv: 27,
     span: [70.2, 9.5, 74.6, 9.5], yaw: 0, door: true,
     cols: [[71.2, 9.3, 1.0], [73.6, 9.3, 1.0], [72.4, 10.0, 1.0]],
-    line: 'Cave-in! The miners say they will dig it out once Elderroot stops shaking the hills. Defeat the Greenwood\'s guardian first.',
+    line: 'Cave-in! The miners say only a seasoned adventurer could survive down there. Come back at level 27.',
     done: 'The miners dug out the cave-in: the Crystal Cave is open!',
   },
   {   // the Endless Tower: a great tree has fallen across its door (the forest is open ground, so it blocks the DOOR; the Daily / Waves / Tower windows
@@ -74,7 +76,9 @@ export const GATE_BY_ID: Readonly<Record<GateId, GateDef>> = Object.fromEntries(
 /** Open state of every gate (live copy, kept in sync with the store by townGatesLogic / npcQuestLogic via syncGateFlags). Starts open. */
 export const gateFlags: Record<GateId, boolean> = { beach: true, cave: true, tower: true, hermit: true };
 /** Pure rule: is `g` open at story step `step`? */
-export const gateOpenAt = (g: GateDef, step: number): boolean => step >= storyIdx(g.opens);
+/** Hero level the level-gated gates read (kept in sync from the store by townGatesLogic). */
+export const gateLevel = { lv: 1 };
+export const gateOpenAt = (g: GateDef, step: number, lv = gateLevel.lv): boolean => (g.minLv ? lv >= g.minLv : step >= storyIdx(g.opens));
 /** Recomputes every flag; returns a bitmask of the gates whose state CHANGED (bit i = TOWN_GATES[i]). */
 export function syncGateFlags(step: number): number {
   let ch = 0;

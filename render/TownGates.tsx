@@ -101,7 +101,7 @@ function placeOf(g: GateDef): Place {
 }
 
 export function TownGates() {
-  const mask = useGameStore((s) => TOWN_GATES.reduce((m, g, i) => (gateOpenAt(g, s.story.step) ? m : m | (1 << i)), 0));   // closed gates (changes only when a gate opens / closes)
+  const mask = useGameStore((s) => TOWN_GATES.reduce((m, g, i) => (gateOpenAt(g, s.story.step, s.heroRank) ? m : m | (1 << i)), 0));   // closed gates (changes only when a gate opens / closes)
   const mat = useMemo(() => litMat({ roughness: 0.85 }), []);
   const geos = useMemo(() => TOWN_GATES.map((g) => { const p = placeOf(g); return BUILD[g.kind](p.L, g.yaw - p.ry); }), []);
   const places = useMemo(() => TOWN_GATES.map(placeOf), []);
