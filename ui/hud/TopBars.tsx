@@ -231,13 +231,13 @@ export const SubMenuButtons: React.FC = () => {
   const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
   const upCount = useGameStore((s) => s.runPicks.length);
   const upOpen = useUiStore((s) => s.runUpgradesOpen);
-  const goalsDot = useGoalsAlert(), codexDot = useCodexAlert();
+  const goalsDot = useGoalsAlert();
   return (
     <div className="submenu-row">
       {inRun && <MenuBtn mini icon={<CuteLayers size={22} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
       <ModeIcons />
       <MenuBtn mini icon={<CuteTrophy size={22} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
-      <MenuBtn mini icon={<CuteBook size={22} />} label="Codex" hint="Bestiary" onClick={() => useUiStore.getState().openCodex(true)} dot={codexDot} />
+      <MenuBtn mini icon={<CuteBook size={22} />} label="Codex" hint="Bestiary" onClick={() => useUiStore.getState().openCodex(true)} />{/* (owner) no red dot on the Codex */}
     </div>
   );
 };

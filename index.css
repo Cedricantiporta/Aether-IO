@@ -3796,3 +3796,10 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* (owner) important action buttons (Bulk sell etc.) get a solid, readable container */
 .shop-foot .rpg-btn, .rpg-btn.btn-solid { background: linear-gradient(180deg, #ffe7a6, #e8b545) !important; color: #3a2608 !important;
   box-shadow: 0 3px 0 #a6741e, 0 6px 12px rgba(0, 0, 0, .35) !important; padding: .45rem 1.15rem !important; min-height: 2.2rem; }
+/* (owner) the small mode / achievement / codex icons stack in a column on the right side */
+.submenu-row { flex-direction: column; flex-wrap: nowrap !important; align-items: flex-end; }
+/* (owner) summon x10: always 5 columns x 2 rows; Epic and up carry an aura in their rarity colour (face down and face up) */
+.sm-cards.many { display: grid; grid-template-columns: repeat(5, auto); justify-content: center; max-width: none; }
+.sm-card.sm-epic, .sm-card.sm-legendary, .sm-card.sm-mythic { filter: drop-shadow(0 0 10px var(--rc)) drop-shadow(0 0 4px var(--rc)); animation: smAura 1.6s ease-in-out infinite; }
+.sm-card.sm-legendary, .sm-card.sm-mythic { animation-duration: 1.1s; }
+@keyframes smAura { 0%, 100% { filter: drop-shadow(0 0 7px var(--rc)) drop-shadow(0 0 3px var(--rc)); } 50% { filter: drop-shadow(0 0 16px var(--rc)) drop-shadow(0 0 6px var(--rc)); } }
