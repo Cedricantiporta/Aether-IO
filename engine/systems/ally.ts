@@ -81,7 +81,7 @@ function spawnAlly(): boolean {
   m.rise = 0; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0; m.spin = 0;
   m.skillT = 2 + Math.random() * 2;
   m.dmg = Math.max(4, s.damage * DMG_FRAC);
-  m.hp = m.maxHp = Math.max(60, s.maxHealth * 1.5);
+  m.hp = m.maxHp = Math.max(120, s.maxHealth * 3);   // (owner) helpers last twice as long
   m.def = 0.2;
   ally.def = Math.floor(Math.random() * ALLIES.length);
   ally.on = true; ally.slot = k; ally.phase = FIGHT; ally.t = 0; ally.fade = 0; ally.ver++;
