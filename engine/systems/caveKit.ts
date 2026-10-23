@@ -19,8 +19,8 @@ const KEY = 'aether-survivor-cave-kit-v1';
 export const SPARE_FLASK_OIL = 30;
 /** Most flasks the hero can carry (buying stops there; quest rewards may top it up to MAX_SPARE + 3). */
 export const MAX_SPARE = 6;
-/** Gold prices scale with the hero level (`caveGoldPrice`): a flask ~ one adventure room's gold, the kit saves a little. */
-export const FLASK_BASE = 300, KIT_BASE = 750;
+/** Gold prices at Lv 27 (the level the cave opens), +4% per hero level above it (`caveGoldPrice`). */
+export const FLASK_BASE = 6000, KIT_BASE = 15000;
 export const flaskPrice = (level: number): number => caveGoldPrice(FLASK_BASE, level);
 /** Miner's Kit: KIT_FLASKS flasks for less. */
 export const KIT_FLASKS = 3;

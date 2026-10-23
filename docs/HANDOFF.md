@@ -148,9 +148,9 @@ town (and closes the open panel first).
   loot for 2x (`constants.ts`).
 - **Areas** (`world.village.area`): TOWN, CASTLE (King Aldric, throne dais), CHURCH (Sister Elowen), TAVERN, CAVE
   (Crystal Cave: persistent Floor 1 with Grit + per-trip deeper floors, lantern-oil timer, `engine/systems/cave.ts`),
-  **every floor has only 2-5 veins** (`rollVeinCount`: 2 35% / 3 35% / 4 20% / 5 10%; Floor 1 shows the first n of its 8 hand-placed slots, n saved in the cave save and re-rolled at each regrow, only when entering the cave), **cave gold prices scale with hero level** (`constants.caveGoldPrice`: base x (1 + 0.04 x (lv-1)); flask base 300, Miner's Kit 750, refill 400 + 200 x lantern level, Mining Pickaxe base 400 via `shopPrice`). The boot `LoadingScreen` has no title: just 'Loading…' + bar at the bottom centre.
+  **every floor has only 2-5 veins** (`rollVeinCount`: 2 35% / 3 35% / 4 20% / 5 10%; Floor 1 shows the first n of its 8 hand-placed slots, n saved in the cave save and re-rolled at each regrow, only when entering the cave), **cave gold prices** (`constants.caveGoldPrice`: the base is the price at Lv 27, the level the cave opens, then +4% per hero level above 27; flask 6,000, Miner's Kit 15,000, lantern refill 6,000 + 4,000 x lantern level). **Mining Pickaxe = a WEAPON** (`tool_pickaxe`, `itemClass.PICKAXE_ID`; retired from shops / drops, damage 3, projectileType SWORD = plain slash for every class, no class / level limit): given once by Grit's Lv 27 quest `grit_pick` (npcQuests.ts, LISTEN type; `rewardItems` skips it if already owned). While it is the equipped weapon `crates.hitCrate(.., byHand)` hits 2x. Old saves: a TOOL pickaxe (tool slot / bag / warehouse) becomes this weapon in the bag (`store.ts` oldPickaxeFix); the `tool` equipment slot is retired (kept in the type, always null, no UI). Equipping works anywhere, cave included (Bag, `I`). The boot `LoadingScreen` has no title: just 'Loading…' + bar at the bottom centre.
   HOME (the adventurer's house: bed = sleep to dream). Same plumbing for each (`pending` area, `switchArea`, exit pill).
-- **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe tool slot halves effort),
+- **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe equipped as the weapon halves effort),
   harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (from the start;
   2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
 - **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). Quest targets are area-aware
@@ -298,7 +298,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
 - **Gear**: six tiers Common/Uncommon/Rare/Epic/Legendary(orange)/Mythic with level gates **1/8/16/24/32/40**
   (`constants.RANK_REQ`); drops may be one tier above the equippable cap. Catalog = one item per class per slot per rarity
   (`itemCatalog.ts`, ids `c_<class>_<slot>_<n>`, older items `retired`), rings/amulets with special effects, weapon perks
-  (`weaponPerks.ts`), item sets, bonus lines (`affixes.ts`: slots per rarity, perfect rolls), Mining tool slot. +N upgrades
+  (`weaponPerks.ts`), item sets, bonus lines (`affixes.ts`: slots per rarity, perfect rolls), Mining Pickaxe weapon. +N upgrades
   at the Blacksmith (cores: Upgrade/Refined/Radiant, fail/shatter at +8/+9), +7 and above glow. Crafting (`crafting.ts`,
   Workshop window), Reforge (`reforge.ts`: Reforge Stone = reroll all / one line, **Tempering Oil = swaps each line's stat TYPE but
   keeps its quality** (same % of the tier value, perfect stays perfect), **Binding Seal** locks a line (`ItemAffix.locked`: Stone + Oil

@@ -22,7 +22,7 @@ export const CaveHud: React.FC = () => {
     if (cv.floor !== L.floor || cv.left !== L.left || cv.best !== L.best) {
       L.floor = cv.floor; L.left = cv.left; L.best = cv.best;
       if (title.current) title.current.textContent = `Crystal Cave · Floor ${cv.floor}`;
-      if (sub.current) sub.current.textContent = `${cv.left > 0 ? `${cv.left} vein${cv.left === 1 ? '' : 's'} left` : 'Stairs down open'} · Best: Floor ${Math.max(cv.best, caveBest())}`;
+      if (sub.current) sub.current.textContent = `${cv.left > 0 ? `${cv.left} vein${cv.left === 1 ? '' : 's'} left (I: swap to your pickaxe)` : 'Stairs down open (I: swap back to your weapon)'} · Best: Floor ${Math.max(cv.best, caveBest())}`;
     }
     const sec = Math.ceil(cv.oil);
     if (sec !== L.sec && time.current) { L.sec = sec; time.current.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }

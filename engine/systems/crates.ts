@@ -9,6 +9,7 @@ import type { Crate } from '../types';
 import type { Rarity } from '../../types';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import { GameStatus } from '../../types';
+import { PICKAXE_ID } from '../../itemClass';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { CRATE_HP, isHarvestNode } from '../mapgen';
@@ -53,9 +54,9 @@ export function hitCratesInRadius(x: number, z: number, r: number, amount: numbe
   }
 }
 
-/** Mining Pickaxe (equipment slot 'tool'): hold-E harvest strokes hit twice as hard = half the hits. */
-export const PICKAXE_ID = 'tool_pickaxe';
-export const hasPickaxe = (): boolean => useGameStore.getState().equipment.tool?.id === PICKAXE_ID;
+/** Mining Pickaxe (equipped as the WEAPON): hold-E harvest strokes hit twice as hard = half the hits. */
+export { PICKAXE_ID };
+export const hasPickaxe = (): boolean => useGameStore.getState().equipment.weapon?.id === PICKAXE_ID;
 
 /** Deals damage to a crate; breaks it at 0 hp. */
 /** `byHand`: a harvest stroke (hold E). Harvest nodes ignore every other hit (attacks, explosions). */

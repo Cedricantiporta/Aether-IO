@@ -512,6 +512,7 @@ const DRAW: Record<string, Draw> = {
 
 const ID_BY_NAME = new Map<string, string>([...ITEMS_POOL, ...PETS_POOL].map((i) => [i.name, i.id]));
 export function artKey(item: Item): string {
+  if (item.id === 'tool_pickaxe') return 'tool_pickaxe';   // (the Mining Pickaxe is a weapon, but has its own art)
   if (DRAW[item.id]) return item.id;
   const tpl = ID_BY_NAME.get(item.name);
   if (tpl && DRAW[tpl]) return tpl; // bag instances carry unique ids: match their template by name

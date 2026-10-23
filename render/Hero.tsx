@@ -21,6 +21,7 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, sparks } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
+import { PICKAXE_ID } from '../itemClass';
 import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, makePickaxe, WeaponGeo } from './weapons';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
@@ -49,6 +50,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.color) { mt.color.set(t); if (cls === 'NECROMANCER') mt.color.multiply(NECRO_TINT); }
   }, [ch, cls]);
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
+  const isPick = useGameStore((s) => s.equipment?.weapon?.id === PICKAXE_ID);   // the Mining Pickaxe is the equipped weapon: shown in hand instead of the class weapon
   const eq = useGameStore((s) => s.equipment);
   const weaponGlowKey = useGameStore((s) => glowKeyOf(s.equipment?.weapon));
   const wearGlowKey = useGameStore((s) => WEAR_SLOTS.map((k) => glowKeyOf((s.equipment as any)?.[k])).join('|'));
@@ -68,7 +70,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     if (!ch.handR) return;
     const tier = RARITY_TIER[rarity] ?? 0;
     const accent = RARITY_ACCENT[rarity] || RARITY_ACCENT.COMMON;
-    const w = buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier);
+    const w = isPick ? makePickaxe() : buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier);
     const grp = new Group();
     grp.quaternion.copy(HANDSLOT_QUAT);
     grp.scale.setScalar(1 + 0.05 * tier);
@@ -85,25 +87,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     (grp as any).userData.tier = tier;
     const g = grp;
     return () => { S.current.wpn = null; S.current.wpnGlow = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
-  }, [ch, cls, rarity, weaponGlowKey]);
-
-  // ---- Mining Pickaxe (tool slot): shown in the right hand while mining / harvesting instead of the weapon
-  const hasPick = useGameStore((s) => s.equipment?.tool?.id === 'tool_pickaxe');
-  useEffect(() => {
-    const hand = ch.handR;
-    S.current.pick = null;
-    if (!hand || !hasPick) return;
-    const w = makePickaxe();
-    const grp = new Group();
-    grp.quaternion.copy(HANDSLOT_QUAT);
-    grp.visible = false;
-    const body = new Mesh(w.body, litMat({ roughness: 0.6, metalness: 0.35 })); body.castShadow = true;
-    const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.2, 1.2, 1.2) }));
-    grp.add(body, glowM);
-    hand.add(grp);
-    S.current.pick = grp;
-    return () => { hand.remove(grp); S.current.pick = null; w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
-  }, [ch, hasPick]);
+  }, [ch, cls, rarity, weaponGlowKey, isPick]);
 
   // ---- the knight's shield on the left arm (tinted like the weapon's rarity)
   useEffect(() => {

@@ -15,9 +15,13 @@ export const GROUP_OF: Record<HeroClass, ArmorGroup> = { KNIGHT: 'HEAVY', BARBAR
 export const GROUP_HEROES: Record<ArmorGroup, HeroClass[]> = { HEAVY: ['KNIGHT', 'BARBARIAN'], LIGHT: ['ARCHER', 'NECROMANCER'], ARCANE: ['WIZARD'] };
 export const GROUP_NAME: Record<ArmorGroup, string> = { HEAVY: 'Heavy armor', LIGHT: 'Light armor', ARCANE: 'Arcane robes' };
 
+/** The Mining Pickaxe (Grit's quest gift): a weapon every class can equip, whatever its level / class (its SWORD slash is just the basic melee swing). */
+export const PICKAXE_ID = 'tool_pickaxe';
+export const isPickaxe = (i: { id: string } | null | undefined): boolean => !!i && i.id === PICKAXE_ID;
+
 /** Weapon: the one class that can wield it (undefined = anyone). */
 export function itemClass(i: Item): HeroClass | undefined {
-  if (i.type !== 'WEAPON') return undefined;
+  if (i.type !== 'WEAPON' || i.id === PICKAXE_ID) return undefined;
   if (i.classType) return i.classType;
   return i.projectileType ? BY_PROJECTILE[i.projectileType] : undefined;
 }

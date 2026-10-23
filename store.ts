@@ -2,7 +2,7 @@
 // Zustand store — META / RPG state only (inventory, stats, panels, progression).
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
-import { GOLD_SCALE, caveGoldPrice } from './constants';
+import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
 import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts } from './engine/runCards';
@@ -57,7 +57,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
-import { itemClass, canUseClass, classOnlyMsg, classFilter, OTHER_CLASS_SHARE } from './itemClass';
+import { itemClass, canUseClass, classOnlyMsg, classFilter, OTHER_CLASS_SHARE, PICKAXE_ID } from './itemClass';
 import { crystalCount, syncCrystalStack } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
@@ -163,10 +163,8 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
-export const shopPrice = (item: { id: string; price: number; type?: string }): number => {
-  const p = Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
-  return item.id === 'tool_pickaxe' ? caveGoldPrice(p, useGameStore.getState().level) : p;   // (the Mining Pickaxe scales with hero level)
-};
+export const shopPrice = (item: { id: string; price: number; type?: string }): number =>
+  Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   COMMON: COLORS.rarityCommon, UNCOMMON: COLORS.rarityUncommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,
@@ -428,7 +426,10 @@ export function rollDropPlus(i: Item | null, tier: 0 | 1 | 2): Item | null {
 
 // -------------------------------------------------------------- persistence --
 /** Old saves: gear without a grade is rescaled to the new tier ladder once and stamped LOW (grade.ts migrateGear). */
-const migrateEquipment = (e: Equipment): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, migrateGear(v as Item | null)])) as unknown as Equipment;
+const migrateEquipment = (e: Equipment): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, k === 'tool' ? null : migrateGear(v as Item | null)])) as unknown as Equipment;
+/** The Mining Pickaxe used to be a TOOL (own slot); it is now a weapon item. Old saves: a TOOL pickaxe (bag / warehouse / tool slot) becomes the weapon, kept in the bag. */
+export const newPickaxe = (): Item => { const t = ITEMS_POOL.find((i) => i.id === PICKAXE_ID)!; return { ...t, stats: { ...t.stats }, quantity: 1, grade: 'LOW' }; };   // (fixed stats: never rolled)
+const oldPickaxeFix = (i: Item): Item => (i && i.id === PICKAXE_ID && i.type === 'TOOL' ? newPickaxe() : i);
 interface Profile {
   v: number;
   gold: number; gems: number; crystals?: number;
@@ -545,11 +546,11 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             profile: {
               v: PROFILE_VERSION,
               gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems), crystals: num(p.crystals, 20),
-              inventory: Array.isArray(p.inventory) ? p.inventory.map(petRetier).map(migrateGear).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
+              inventory: Array.isArray(p.inventory) ? [...p.inventory, ...(p.equipment?.tool?.id === PICKAXE_ID ? [p.equipment.tool] : [])].map(oldPickaxeFix).map(petRetier).map(migrateGear).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
               equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment),
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
               dashMods: sanitizeDashMods(p.dashMods),
@@ -1470,7 +1471,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     equipItem: (item) => {
       const s = get();
-      const req = item.type === 'PET' ? 0 : RANK_REQ[item.rarity];   // (owner) pets have no level requirement
+      const req = item.type === 'PET' || item.id === PICKAXE_ID ? 0 : RANK_REQ[item.rarity];   // (owner) pets have no level requirement
       if (s.heroRank < req) { notify(`Requires Lv ${req}!`, 'red', 'WARNING'); return; }
       if (!canUseClass(item, s.hero)) {   // (owner) weapons and wear are class exclusive
         notify(classOnlyMsg(item), 'red', 'WARNING');

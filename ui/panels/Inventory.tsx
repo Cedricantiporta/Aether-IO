@@ -137,7 +137,7 @@ export const InventoryPanel: React.FC = () => {
           </button>
           {equipOpen && (
             <div className="bag-equip-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 4.2rem)', justifyContent: 'center', gap: '.25rem .9rem' }} data-testid="paper-doll">
-              <DollSlot slot="tool" label="Tool" item={equipment.tool} onClick={() => unequipItem('tool')} />
+              <span />
               <DollSlot slot="helmet" label="Helmet" item={equipment.helmet} onClick={() => unequipItem('helmet')} />
               <span />
               <DollSlot slot="weapon" label="Weapon" item={equipment.weapon} onClick={() => unequipItem('weapon')} />

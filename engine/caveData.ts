@@ -318,8 +318,8 @@ export const LANTERN_COST: { gems: number; shard: 'COMMON' | 'RARE' | 'EPIC' | '
   { gems: 300, shard: 'COMMON', shards: 90 }, { gems: 600, shard: 'RARE', shards: 60 }, { gems: 1100, shard: 'RARE', shards: 120 },
   { gems: 1800, shard: 'EPIC', shards: 45 }, { gems: 2700, shard: 'EPIC', shards: 90 }, { gems: 4200, shard: 'LEGENDARY', shards: 24 },
 ];
-/** Gold for a refill after the free one: (400 + 200 x lantern level) x (1 + 0.04 x (hero level - 1)). */
-export const REFILL_PRICE = (lv: number, heroLevel = 1): number => caveGoldPrice(400 + 200 * lv, heroLevel);
+/** Gold for a refill after the free one: (6,000 + 4,000 x lantern level) at Lv 27, +4% per hero level above 27 (`caveGoldPrice`). */
+export const REFILL_PRICE = (lv: number, heroLevel = 27): number => caveGoldPrice(6000 + 4000 * lv, heroLevel);
 export const FLASK_OIL = 20;
 /** Chance a deep floor hides an oil flask; chance a cave monster drops one. */
 export const FLASK_FLOOR_CHANCE = 0.45, FLASK_DROP_CHANCE = 0.12;

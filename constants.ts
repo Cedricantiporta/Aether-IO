@@ -54,8 +54,10 @@ export const DIFFICULTY_MODS: Record<Difficulty, { hp: number; dmg: number; spaw
 
 /** Economy scale: every gold amount in the game is x10 (shortbow 100 -> 1000, start 1k -> 10k). */
 export const GOLD_SCALE = 10;
-/** Crystal-cave / Mining Supplies gold prices scale with the hero level: base x (1 + 0.04 x (level - 1)), rounded to 10 G. */
-export const caveGoldPrice = (base: number, level: number): number => Math.round((base * (1 + 0.04 * (Math.max(1, level) - 1))) / 10) * 10;
+/** Crystal-cave / Mining Supplies gold prices: `base` is the price at Lv 27 (the level the cave opens), then +4% per hero level above 27:
+ *  base x (1 + 0.04 x max(0, level - 27)), rounded to 10 G. */
+export const CAVE_PRICE_LV = 27;
+export const caveGoldPrice = (base: number, level: number): number => Math.round((base * (1 + 0.04 * Math.max(0, level - CAVE_PRICE_LV))) / 10) * 10;
 
 export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMORY' | 'FORTUNE' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; position: [number, number, number]; color: string; rot?: number }[] = [
     // The seven town shops RING THE PLAZA (owner 2026-10-21: W / E flanks, NW / NE / SW / SE corners + Tech House on the east outer band), each facing it, each with its own look (owner 2026-10-20: not one row): any yaw (owner 2026-10-21: the camera rotates now, so shops no longer have to face south): the front is +z turned by `rot`.
@@ -278,8 +280,8 @@ export const PETS_POOL: Item[] = [
 
 // ITEMS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
 export const ITEMS_POOL: Item[] = [
-  // --- TOOLS (own equip slot 'tool'; sold at the Mining Supplies stall) ---
-  { id: 'tool_pickaxe', name: 'Mining Pickaxe', type: 'TOOL', stats: {}, rarity: 'COMMON', price: 40, level: 1, description: 'A sturdy miner\'s pickaxe. While equipped (Tool slot) every ore vein, crystal, herb and other harvest node needs half the effort: mining, in the cave, in town and on adventures.' },
+  // --- Mining Pickaxe: a weapon (every class, no level / class limit) given by Grit's quest; never sold, dropped or crafted (retired below). Simple melee slash; harvest strokes hit 2x while it is equipped.
+  { id: 'tool_pickaxe', name: 'Mining Pickaxe', type: 'WEAPON', projectileType: 'SWORD', stats: { damage: 3 }, rarity: 'COMMON', price: 40, level: 1, description: 'Equip it as your weapon: every ore vein, crystal, herb and other harvest node takes half the hits. Its swing is weak, so swap back to your real weapon (Bag) before you fight.' },
   // --- CONSUMABLES ---
   { id: 'potion_hp', name: 'Health Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 HP. Only works at 70% HP or lower.' },
   { id: 'potion_mana', name: 'Mana Potion', type: 'POTION', stats: {}, restoreAmount: 50, rarity: 'COMMON', price: 150, level: 1, description: 'Restores 100 Mana. Only works at 70% Mana or lower.' },

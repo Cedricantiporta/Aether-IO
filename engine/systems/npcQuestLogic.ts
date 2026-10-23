@@ -6,7 +6,8 @@ import { questXp } from '../../classLevels';
 import { STORY } from '../../story';
 import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
-import { useGameStore, makeItemById, instantiate } from '../../store';
+import { useGameStore, makeItemById, instantiate, newPickaxe } from '../../store';
+import { PICKAXE_ID } from '../../itemClass';
 import { events } from '../events';
 import { world } from '../world';
 import { LOOT_BY_ID, LOOT_TABLES, lootItem } from '../../loot';
@@ -18,6 +19,8 @@ import { NPCS } from '../townData';
 import { syncGateFlags, gateMask } from '../townGates';
 import { GameStatus, type Item } from '../../types';
 import { liveStep } from '../../questUnlocks';
+/** (owner) side quests pay 70% more gold */
+export const SIDE_GOLD_MUL = 1.7;
 import {
   NPC_QUESTS, NPC_QUEST_BY_ID, npcQuestStatus, questGate, npcQuestReady, npcQuestTurnIn, npcMarker, npcQuestProgress, bagCount,
   type NpcQuestDef, type NpcQuestSave, type NpcObjective,
@@ -46,6 +49,10 @@ export function acceptNpcQuest(id: string): boolean {
 
 /** Gear / pets are instantiated (affixes rolled); stackable goods go through makeItemById. */
 function rewardItems(id: string, qty: number): Item[] {
+  if (id === PICKAXE_ID) {   // the Mining Pickaxe: fixed stats, given once (skipped when the hero already owns one)
+    const s = useGameStore.getState();
+    return s.equipment.weapon?.id === PICKAXE_ID || s.inventory.some((i) => i.id === PICKAXE_ID) ? [] : [newPickaxe()];
+  }
   const tpl = PETS_POOL.find((i) => i.id === id) ?? ITEMS_POOL.find((i) => i.id === id);
   if (!tpl) return [];
   return tpl.type === 'PET' || tpl.type === 'WEAPON' || tpl.type === 'ARMOR' || tpl.type === 'HELMET' || tpl.type === 'GLOVES' || tpl.type === 'BOOTS' || tpl.type === 'ACCESSORY'
@@ -89,7 +96,7 @@ export function completeNpcQuest(id: string): boolean {
   }
   const s = useGameStore.getState();
   useGameStore.setState({
-    gold: s.gold + (def.reward.gold ?? 0) * GOLD_SCALE,
+    gold: s.gold + Math.round((def.reward.gold ?? 0) * GOLD_SCALE * SIDE_GOLD_MUL),
     gems: s.gems + (def.reward.gems ?? 0),
     npcQuests: { ...s.npcQuests, q: { ...s.npcQuests.q, [id]: { s: 2, p: def.objective.count } } },
   });
@@ -98,7 +105,7 @@ export function completeNpcQuest(id: string): boolean {
   const qxp = questXp('SIDE', s.level); useGameStore.getState().addExperience(qxp);   // (owner) every quest pays EXP
   notify(`Quest complete: ${def.title}`);
   events.emit('hub', { kind: 'quest', n: 1 });   // (daily / weekly goals: 'Complete a quest')
-  feedReward({ gold: (def.reward.gold ?? 0) * GOLD_SCALE, gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
+  feedReward({ gold: Math.round((def.reward.gold ?? 0) * GOLD_SCALE * SIDE_GOLD_MUL), gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
   return true;
 }
 
@@ -240,7 +247,7 @@ events.on('crateBreak', (e) => { const id = wantedDrop(e.kind); if (id) dropWant
 export function npcRewardText(r: NpcQuestDef['reward']): string {
   const parts: string[] = [];
   parts.push(`${questXp('SIDE', useGameStore.getState().level).toLocaleString()} EXP`);
-  if (r.gold) parts.push(`${(r.gold * GOLD_SCALE).toLocaleString()} gold`);
+  if (r.gold) parts.push(`${Math.round(r.gold * GOLD_SCALE * SIDE_GOLD_MUL).toLocaleString()} gold`);
   if (r.gems) parts.push(`${r.gems} gems`);
   if (r.shards) parts.push(`${r.shards[0].charAt(0)}${r.shards[0].slice(1).toLowerCase()} shards x${r.shards[1]}`);
   if (r.flasks) parts.push(`Lantern Oil Flask x${r.flasks}`);

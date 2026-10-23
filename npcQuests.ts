@@ -123,6 +123,25 @@ export const NPC_QUESTS: NpcQuestDef[] = [
     objective: { type: 'DELIVER', target: 'silver_goblet', count: 2 },
     reward: { gold: 1250, gems: 15, items: [{ id: 'reforge_stone', qty: 1 }] },
   },
+  // ---- (owner) Lv 27: the Crystal Cave opens; Grit gives the Mining Pickaxe (a weapon: equip it for veins, swap back to fight)
+  {
+    id: 'grit_pick', minLevel: 27, gate: 'cave', giver: 'Grit', title: 'Grit\'s Spare Pick', summary: 'Hear old Grit out in the Crystal Cave',
+    intro: [
+      'Ha! A new face at the veins. Come here, youngster, sit a minute.',
+      'You:: I came to mine, not to chat.',
+      'Bare hands will get you nowhere in this hill. Forty years I have kept a spare pick for the day somebody asked nicely.',
+      'You:: I did not ask.',
+      'Nicely enough. Hear me out and it is yours.',
+    ],
+    progress: 'Talk to Grit again, in the Crystal Cave.',
+    done: [
+      'Here. My old spare. It is a poor weapon, mind: swing it at a bat and the bat will laugh.',
+      'But put it in your weapon slot and every vein, crystal and herb gives way in half the hits.',
+      'Open your Bag to swap it in for the veins, and your real weapon back for the monsters. Works down in the cave, too.',
+    ],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { gold: 500, items: [{ id: 'tool_pickaxe', qty: 1 }] },
+  },
   // ---- (owner) Lv 30: Erin and the rockfall. Done -> the rocks shatter (townData rockfallCleared) and the old miners' road
   //      over the green is a shortcut to the mines.
   {

@@ -81,7 +81,7 @@ export interface Equipment {
   boots: Item | null;
   accessory: Item | null;
   pet: Item | null;
-  /** Mining Pickaxe: halves the effort of every hold-E harvest (crates.ts hitCrate) */
+  /** (retired slot: the Mining Pickaxe is now a weapon, itemClass.PICKAXE_ID; old saves are migrated in store.ts) */
   tool: Item | null;
 }
 
