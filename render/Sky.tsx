@@ -106,7 +106,7 @@ export function Lighting({ q }: { q: QualityCfg }) {
     const l = sun.current;
     const c = l.shadow.camera;
     c.left = -38; c.right = 38; c.top = 38; c.bottom = -38; c.near = 1; c.far = 170; c.updateProjectionMatrix();
-    l.shadow.bias = -0.0004; l.shadow.normalBias = 0.05;
+    l.shadow.bias = -0.0008; l.shadow.normalBias = Math.max(0.08, (76 / (q.shadowMap || 512)) * 1.6);   // (owner: thin 'grinder cut' streaks on the paving = shadow acne at low sun: bias scales with the shadow texel)
     l.shadow.mapSize.set(q.shadowMap || 512, q.shadowMap || 512);
     l.shadow.map?.dispose(); (l.shadow as any).map = null;
   }, [q.shadowMap]);
