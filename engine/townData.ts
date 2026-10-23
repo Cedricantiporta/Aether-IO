@@ -270,6 +270,8 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: WELL_POS.x - 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 },
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
+  // (owner 2026-10-23) the avenue to the gate: benches just outside each edge, backs to the road (facing the houses / shops), clear of the lane at z 23
+  { x: 4.8, z: 16.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 16.8, yaw: -Math.PI / 2, y: 0.55 }, { x: 4.8, z: 29.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 29.8, yaw: -Math.PI / 2, y: 0.55 },
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 22.6, 34, 39.6].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),   // (the east park's benches flank the gazebo)
@@ -361,7 +363,8 @@ export const HOUSES: HouseSpec[] = [
   // S-street north
   K('house_gabled_narrow', -23.98, 5.22, 0.8),
   // lane north
-  K('house_tower', 7.08, 19.34, 0.8), K('house_tower', 11.54, 19.34, 0.8), K('house_two_storey', 16.08, 19.18, 0.8),
+  // (owner 2026-10-23: the lane's two houses here became Madame Zora's shop + the Tech House, constants SHOP_POSITIONS)
+  K('house_two_storey', 32, 3.0, 0.8), K('house_small', 24.6, 2.4, 0.85),   // (houses where those two shops stood on the East Rise)
   // tavern row 2
   K('house_small', 21.63, -27.35, 0.85, Math.PI), K('house_two_storey', 26.21, -27.38, 0.8, Math.PI), K('house_small', 30.8, -27.35, 0.85, Math.PI),
   K('house_small', 37.25, -27.35, 0.85, Math.PI), K('house_gabled_narrow', 41.19, -26.82, 0.8, Math.PI),
@@ -471,21 +474,19 @@ export const WALL_TOWERS: TowerSpec[] = [
   { x: WALL.x0, z: WALL.z0, r: 3.6, corner: true }, { x: WALL.x1, z: WALL.z0, r: 3.6, corner: true },
   { x: WALL.x0, z: WALL.z1, r: 3.6, corner: true }, { x: WALL.x1, z: WALL.z1, r: 3.6, corner: true },
   { x: -22.5, z: WALL.z0, r: 3.1, corner: false }, { x: 0, z: WALL.z0, r: 3.1, corner: false }, { x: 22.5, z: WALL.z0, r: 3.1, corner: false },
-  { x: WALL.x0, z: -14.7, r: 3.1, corner: false }, { x: WALL.x0, z: 11.7, r: 3.1, corner: false },
-  { x: WALL.x1, z: -14.7, r: 3.1, corner: false }, { x: WALL.x1, z: 11.7, r: 3.1, corner: false },
+  { x: WALL.x0, z: -14.7, r: 3.1, corner: false },
+  { x: WALL.x1, z: -14.7, r: 3.1, corner: false },   // (the towers at z 11.7 are now the SIDE_GATES)
   { x: -27, z: WALL.z1, r: 3.1, corner: false }, { x: 27, z: WALL.z1, r: 3.1, corner: false },
 ];
 /** Straight wall runs [x1, z1, x2, z2, outwardX, outwardZ] (outward normal is where the merlons stand). */
-/** (owner 2026-10-23) gates through the wall-tower doors: E at the door inside (or at the spot behind the tower outside) walks the hero
- *  through to the other side. `lv` = class level needed (0 = always open). Spots checked walkable with townPath. */
-export const WALL_GATES: { name: string; inX: number; inZ: number; outX: number; outZ: number; lv: number; r: number }[] = [
-  { name: 'East Gate', inX: 40.6, inZ: 11.7, outX: 50.5, outZ: 9, lv: 40, r: 2.3 },     // the east wall tower by Madame Zora, out toward the mines
-  { name: 'Beach Gate', inX: -40.6, inZ: 11.7, outX: -51, outZ: 11.7, lv: 0, r: 2.3 },  // the west wall tower, out to the beach
-];
+/** (owner 2026-10-23) side gates through the east / west walls where the z 11.7 towers stood: two small towers flank an open
+ *  passage (walk straight through, no prompt). The East Gate's guard (NPCS 'Brannoc' + townGates 'east') stops you until Lv 40. */
+export const SIDE_GATE = { off: 3.6, r: 1.5 };   // tower centres at z +- off from the gate centre; passage ~4 m clear
+export const SIDE_GATES: { x: number; z: number; name: string }[] = [{ x: WALL.x1, z: 9.6, name: 'East Gate' }, { x: WALL.x0, z: 9.6, name: 'Beach Gate' }]   // (z 9.6: clear of the raised Rises that start at z 13);
 export const WALL_RUNS: [number, number, number, number, number, number][] = [
   [WALL.x0, WALL.z0, WALL.x1, WALL.z0, 0, -1],              // north
-  [WALL.x1, WALL.z0, WALL.x1, WALL.z1, 1, 0],               // east
-  [WALL.x0, WALL.z0, WALL.x0, WALL.z1, -1, 0],              // west
+  [WALL.x1, WALL.z0, WALL.x1, 9.6 - 3.6, 1, 0], [WALL.x1, 9.6 + 3.6, WALL.x1, WALL.z1, 1, 0],    // east (split by the East Gate)
+  [WALL.x0, WALL.z0, WALL.x0, 9.6 - 3.6, -1, 0], [WALL.x0, 9.6 + 3.6, WALL.x0, WALL.z1, -1, 0],   // west (split by the Beach Gate)
   [WALL.x1, WALL.z1, WALL.gateHalf, WALL.z1, 0, 1],         // south-east, up to the gatehouse
   [-WALL.gateHalf, WALL.z1, WALL.x0, WALL.z1, 0, 1],        // south-west
 ];
@@ -569,8 +570,11 @@ export const SIGNS: SignSpec[] = [];
 
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
+  // (owner) the summon + tech shop paths off the south street: a lamp either side of each
+  [7.2, 13.2], [12.0, 13.2], [14.8, 13.2], [19.6, 13.2],
   // main avenue (+ the road on into the farmland)
-  [3, 14], [-3, 20], [3, 24], [-3, 34], [3, 34.2], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
+  // (owner 2026-10-23) the avenue from the plaza to the gate: lamps in mirrored pairs on both edges
+  [3.2, 13.5], [-3.2, 13.5], [3.2, 20], [-3.2, 20], [3.2, 26.5], [-3.2, 26.5], [3.2, 33], [-3.2, 33], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
   // south street (north edge), plaza, north street
   [-35.25, 7.75], [-26.75, 7.75], [-12.5, -8.25], [12.5, -8.25], [-5, -8.25], [5, -8.25],   // (on the kerb line of the plant-box barriers, engine/townBarriers.ts; the east shop-row lamps are the shops' own, SHOP_LOOK)
   // the dirt path from the meadow to the beach
@@ -587,6 +591,10 @@ for (let i = LAMPS.length - 1; i >= 0; i--) {
 /** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
 export interface PlanterSpec { x: number; z: number; w: number; d: number; kind: 0 | 1 }
 export const PLANTERS: PlanterSpec[] = [
+  // (owner 2026-10-23) the avenue to the gate: mirrored flower boxes on both edges, between the lamps
+  { x: 3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: -3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: 3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 }, { x: -3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 },
+  // (owner) flower boxes lining the summon + tech shop paths
+  { x: 7.3, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 11.9, z: 15.4, w: 0.9, d: 2.0, kind: 1 }, { x: 14.9, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 19.5, z: 15.4, w: 0.9, d: 2.0, kind: 1 },
   // north street + castle path
   { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
   // castle approach: flower beds lining the path and the castle front
@@ -607,7 +615,7 @@ export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3
 export const TOWN_TREES: TreeSpec[] = [
   // hermit path (outside the walls): east ring and north ring, both sides of the trail
   { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
-  { x: 48.5, z: 12, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
+  { x: 49.5, z: 4.2, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // inside the walls: the park, the tavern square, the castle approach (the rest of the greenery is townFill.ts: groves, hedges, beds)
   { x: -27.6, z: 14.4, s: 3.3, kind: 0 }, { x: -17.4, z: 13.9, s: 3.0, kind: 0 }, { x: -27.4, z: 19.6, s: 3.0, kind: 0 },
   { x: 20.6, z: -9.8, s: 3.4, kind: 0 }, { x: 33.4, z: -9.6, s: 3.2, kind: 0 }, { x: -9.6, z: -17.2, s: 3.3, kind: 0 }, { x: 9.8, z: -17.6, s: 3.2, kind: 0 },
@@ -755,6 +763,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (const sx of [-1, 1]) c.push([GATE.x + sx * GATE_TOWER.x, GATE.z, GATE_TOWER.r]);   // (the gate towers; the 5.3-wide arch between them stays walkable)
   // town wall: towers + a continuous chain of overlapping circles along every run
   for (const t of WALL_TOWERS) c.push([t.x, t.z, t.r]);
+  for (const g of SIDE_GATES) for (const s of [-1, 1]) c.push([g.x, g.z + s * SIDE_GATE.off, SIDE_GATE.r]);   // the side gates' towers
   for (const [x1, z1, x2, z2] of WALL_RUNS) {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len / 1.8));
     for (let i = 0; i <= n; i++) c.push([x1 + ((x2 - x1) * i) / n, z1 + ((z2 - z1) * i) / n, 1.5]);
@@ -888,6 +897,13 @@ export const NPCS: NpcDef[] = [
       ['I have guarded this gate eleven years. The gate has never once been stolen. You are welcome.'],
     ],
     bubbles: ['Curfew at dusk. Do not make me ring it twice.', 'Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
+  },
+  {   // (owner) the East Gate's guard (SIDE_GATES; townGates 'east' blocks the passage until Lv 40)
+    name: 'Brannoc', role: 'East Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1.05, prop: 'spear', accent: '#ffd27a', home: [42.2, 5.0],
+    talk: [['Halt! Past the East Gate the wilds get nasty. Bigger beasts, meaner rocks, angrier bees.', 'Come back when you are level 40 and I will step aside. Promise.'],
+      ['You again? Still the rules: level 40, then the gate is yours.', 'I do not make the rules. I just stand very firmly in front of them.'],
+      ['Once you are strong enough, the whole east is yours to explore. Bring me back a nice rock.']],
+    bubbles: ['None shall pass! Unless they are level 40.', 'East Gate, guarded since breakfast.', 'Halt! ...Oh, carry on, I meant the pigeon.'],
   },
   // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
   {

@@ -11,8 +11,8 @@
 // ============================================================================
 import { storyIdx } from '../story';
 
-export type GateId = 'beach' | 'cave' | 'tower' | 'hermit';
-export type GateKind = 'barricade' | 'rubble' | 'tree' | 'bramble';
+export type GateId = 'beach' | 'cave' | 'tower' | 'hermit' | 'east';
+export type GateKind = 'barricade' | 'rubble' | 'tree' | 'bramble' | 'guard';
 export interface GateDef {
   id: GateId;
   kind: GateKind;
@@ -70,11 +70,17 @@ export const TOWN_GATES: readonly GateDef[] = [
     line: 'Thick thorny brambles choke the hermit\'s trail. Maybe they will wither once the Marble Halls are cleared.',
     done: 'The brambles withered away: the hermit\'s trail is open!',
   },
+  {   // (owner) the East Gate (townData SIDE_GATES): the guard Brannoc stands in the passage until the hero is level 40 (no blocker mesh: the guard is the NPC)
+    id: 'east', kind: 'guard', name: 'East Gate', opens: 'wolves', minLv: 40,
+    span: [45, 7.4, 45, 11.8], yaw: -Math.PI / 2,
+    line: 'Brannoc blocks the East Gate: "The wilds past this gate eat adventurers for breakfast. Come back at level 40."',
+    done: 'Brannoc steps aside: the East Gate is open!',
+  },
 ];
 export const GATE_BY_ID: Readonly<Record<GateId, GateDef>> = Object.fromEntries(TOWN_GATES.map((g) => [g.id, g])) as Record<GateId, GateDef>;
 
 /** Open state of every gate (live copy, kept in sync with the store by townGatesLogic / npcQuestLogic via syncGateFlags). Starts open. */
-export const gateFlags: Record<GateId, boolean> = { beach: true, cave: true, tower: true, hermit: true };
+export const gateFlags: Record<GateId, boolean> = { beach: true, cave: true, tower: true, hermit: true, east: true };
 /** Pure rule: is `g` open at story step `step`? */
 /** Hero level the level-gated gates read (kept in sync from the store by townGatesLogic). */
 export const gateLevel = { lv: 1 };

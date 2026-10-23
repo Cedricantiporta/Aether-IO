@@ -16,7 +16,7 @@
 // ============================================================================
 import {
   TOWN_TREES, FENCES, LOT_FENCES, HOUSES, TOWN_SEATS, CHURCH, PARK_EAST, WELLS, SIGNPOSTS, STEP_PATHS, CARTS, HAYSTACK, TRAIL_ROCKS, FIELDS, FARM, SCARECROW,
-  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA,
+  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA,
 } from '../engine/townData';
 import { V3_K } from '../engine/kitV3Data';
 import { hillAt } from '../engine/townHills';
@@ -130,6 +130,7 @@ export function townPlaces(): Sets {
     const k = t.r / 3.0, inx = PLAZA.x - t.x, inz = PLAZA.z - t.z, ry = Math.atan2(inx, inz);
     put(S, 'wall_tower_round', P(t.x, 0, t.z, ry, k, k * (t.corner ? 0.86 : 0.76)));
   }
+  for (const g of SIDE_GATES) for (const s of [-1, 1]) { const k = SIDE_GATE.r / 3.0; put(S, 'wall_tower_round', P(g.x, 0, g.z + s * SIDE_GATE.off, s > 0 ? Math.PI : 0, k, k * 0.95)); }   // (owner) side gates: two small towers, doors facing the passage
   for (const sx of [-1, 1]) { const k = GATE_TOWER.r / 3.0; put(S, 'wall_tower_round', P(GATE.x + sx * GATE_TOWER.x, 0, GATE.z, -sx * Math.PI / 2, k, k * 0.95)); }   // the gate's two towers (door side faces the passage)
   { const L = BRIDGE.z1 - BRIDGE.z0; put(S, 'bridge_stone_arch', { x: 0, y: 0, z: (BRIDGE.z0 + BRIDGE.z1) / 2, ry: Math.PI / 2, sx: L / 10.9, sy: 1.12, sz: (BRIDGE.hw * 2 + 0.4) / 3.8 }); }
   { const L = MINE_BRIDGE.z1 - MINE_BRIDGE.z0; put(S, 'bridge_wood_small', { x: MINE_BRIDGE.x, y: 0, z: (MINE_BRIDGE.z0 + MINE_BRIDGE.z1) / 2, ry: Math.PI / 2, sx: L / 6.5, sy: 0.62, sz: (MINE_BRIDGE.hw * 2 + 0.5) / 2.2 }); }

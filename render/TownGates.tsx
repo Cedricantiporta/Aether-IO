@@ -4,7 +4,7 @@
 // Colliders + prompts + the unlock announcement live in engine/systems/townGatesLogic.ts / village.ts. Open gates are never drawn.
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { BufferGeometry, Group } from 'three';
+import { BufferGeometry, type Group } from 'three';
 import { useGameStore } from '../store';
 import { TOWN_GATES, gateOpenAt, type GateDef } from '../engine/townGates';
 import { gatePlay } from '../engine/systems/townGatesLogic';
@@ -92,7 +92,7 @@ function brambles(L: number, ly: number): BufferGeometry {
   sign(b, L / 2 + 0.2, fz * 1.5, ly, (p) => { p(0, 0.14, 0.12, 0.3, RED); p(0, -0.12, 0.12, 0.12, RED); p(-0.3, -0.12, 0.16, 0.16, G2); p(0.3, -0.12, 0.16, 0.16, PINK); });   // "!" + a thorny sprig
   return b.build();
 }
-const BUILD: Record<GateDef['kind'], (L: number, ly: number) => BufferGeometry> = { barricade, tree: fallenTree, rubble, bramble: brambles };
+const BUILD: Record<GateDef['kind'], (L: number, ly: number) => BufferGeometry> = { barricade, tree: fallenTree, rubble, bramble: brambles, guard: () => new BufferGeometry() };   // (guard: the NPC is the blocker)
 
 interface Place { cx: number; cz: number; y0: number; L: number; ry: number }
 function placeOf(g: GateDef): Place {

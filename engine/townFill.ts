@@ -18,6 +18,7 @@
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, TOWER, TOWER_KNOLL, NESTS, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
+  SIDE_GATES,
 } from './townData';
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
@@ -96,6 +97,7 @@ resv(TOWER.door.x, TOWER.door.z, 4); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, 
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
 resv(HERO_HOUSE.x - 0.8, HERO_HOUSE.z + HERO_HOUSE.d / 2 + 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
 for (const s of TOWN_SEATS) resv(s.x, s.z, 1.7);
+for (const g of SIDE_GATES) for (const dx of [-3.5, 0, 3.5]) resv(g.x + dx, g.z, 2.6);   // (owner) the side gates' passages stay clear
 const rects: [number, number, number, number][] = [];   // x0 z0 x1 z1
 for (const F of [...FIELDS, FARM]) rects.push([F.x - F.hw - 1.5, F.z - F.hd - 1.5, F.x + F.hw + 1.5, F.z + F.hd + 1.5]);
 for (const T of TIERS) {
