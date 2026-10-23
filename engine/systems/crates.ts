@@ -7,7 +7,7 @@ import { world, MAX_CRATES } from '../world';
 import { events } from '../events';
 import type { Crate } from '../types';
 import type { Rarity } from '../../types';
-import { useGameStore, DMG_INFLATE } from '../../store';
+import { useGameStore, DMG_INFLATE, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
 import { PICKAXE_ID } from '../../itemClass';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -144,6 +144,10 @@ export function breakCrate(c: Crate): void {
     case 'CRYSTAL': {   // Crystal Cluster: Aether Crystals (a bag item, the Crystal Altar's currency) + a rare shard
       if (inRun) dropCrystals(2 + Math.floor(Math.random() * 3), { x: c.pos.x, z: c.pos.z });   // 2..4 Aether Crystals
       shards(c, 2 + Math.floor(Math.random() * 3), 0.08, 0.01);
+      if (inRun && Math.random() < 0.45) {   // (owner) crystals often hold a Health or Mana potion
+        const pot = makeItemById(Math.random() < 0.5 ? 'potion_hp' : 'potion_mana', 1)[0];
+        if (pot) spawnPickup('ITEM', dropAt(c, 0.8, -0.4), 0, pot);
+      }
       break;
     }
     case 'RARE_VEIN': case 'EPIC_VEIN': case 'LEGEND_VEIN': {   // crystal-cavern veins: one high-tier shard (+ gold)
