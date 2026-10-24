@@ -583,19 +583,7 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
           else if (kind === 2) { const sc = 1.6 + r() * 1.4; for (let k = 0, n = 1 + Math.floor(r() * 3); k < n; k++) add(qtPick(QT_PEBBLES, r()), { x: x + (r() - 0.5) * 0.7, y: 0, z: z + (r() - 0.5) * 0.7, ry: r() * TAU, sx: sc, sy: sc, sz: sc }); }
           else { const sc = 1.4 + r() * 0.9; add(r() < 0.3 ? 'Bush_Common_Flowers' : 'Bush_Common', { x, y: 0, z, ry: r() * TAU, sx: sc, sy: sc * (0.9 + r() * 0.2), sz: sc }); }   // hedge bushes along the room edge
         }
-        if (mainT) {   // stepping stones down the painted trail
-          const r2 = mulberry32(seed ^ 0x7a11);
-          for (let ti = 0; ti < mainT.length; ti += 2) {
-            const d = mainT[ti];
-            for (let k = 0; k < 2; k++) {
-              const l = k === 0 ? (r2() - 0.5) * 0.9 : (r2() < 0.5 ? -1 : 1) * (1.0 + r2() * 0.9), x = d.x - l * shape.fz, z = d.z + l * shape.fx;
-              if (k === 1 && r2() < 0.55) continue;
-              if (Math.hypot(x, z) > shapeLimit(x, z) - 2.6 || r2() < 0.18 || !free(x, z, 0.5)) continue;
-              const node = qtPick(QT_PATH, r2()), sc = (k === 0 ? 1.35 : 0.95) * (0.85 + r2() * 0.4);
-              add(node, { x, y: 0.015, z, ry: r2() * TAU, sx: sc, sy: 1.1, sz: sc });
-            }
-          }
-        }
+        // (owner 2026-10-24: no stepping-stone path down the trail in Greenwood)
       }
     }
     } else {
