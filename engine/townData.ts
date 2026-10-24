@@ -142,10 +142,10 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 /** Hermit's camp outside the north wall (campfire + bedroll, drawn in TownScenery). */
 export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
-export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }   // 0 broken pillar, 1 ruined wall, 2 fallen arch
+export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 2 }   // 0 broken pillar, 2 fallen arch (owner 2026-10-24: the ruined wall stubs are gone)
 export const RUINS: RuinSpec[] = [
-  { x: 57.6, z: 25, rot: 0.3, kind: 1 } /* (moved off the cave bay mouth, see caveData) */, { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 55.5, z: -16, rot: 1.2, kind: 0 } /* (moved off the trail: it blocked the way to Old Wend) */, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
-  { x: 47, z: -47.5, rot: 0.8, kind: 1 }, { x: 34, z: -51, rot: 0.1, kind: 0 }, { x: 26, z: -44.4, rot: -0.1, kind: 1 }, { x: 16.5, z: -51.5, rot: 0.2, kind: 2 },
+  { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 55.5, z: -16, rot: 1.2, kind: 0 } /* (moved off the trail: it blocked the way to Old Wend) */, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
+  { x: 34, z: -51, rot: 0.1, kind: 0 }, { x: 16.5, z: -51.5, rot: 0.2, kind: 2 },
   { x: 9, z: -45, rot: 0, kind: 0 },
 ];
 /** Big boulders along the narrow back trail (x, z, collider r, render scale): a rocky, half-blocked way round to the hermit,
@@ -395,8 +395,8 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
     nk: [['crate_stack_big', 1.5, -3.5, 0.2, 1.0, -0.75], ['cart_hay', -1.9, -3.6, 0.45, 1.0, -0.65], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 2.8, 3.4, 0, 1.0, 0.35]], cluster: [] },
   BLACKSMITH: { note: 'forge yard: forge_furnace + weapon_rack behind, anvil_big and grindstone by the counter, chimney smoke (2x2 east pair, north)', extra: [], dress: [],
     nk: [['forge_furnace', -1.6, -3.6, 0.1, 1.0, -0.7], ['anvil_big', -2.6, 4.7, 0.7, 1.0, 0.8], ['grindstone', 2.9, 4.4, -0.7, 1.0, 0.6], ['weapon_rack', 2.4, -3.2, Math.PI / 2, 1.0, -0.4], ['potted_plant_a', 2.9, 3.0, 0, 1.0, 0.35]], cluster: [] },
-  TECH: { note: 'tech_tower_small, lanterns', extra: [], dress: [['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
-    nk: [['tech_tower_small', 1.1, -4.9, 0.9, 0.8, -1.0], ['potted_plant_b', -3.9, 3.5, 0, 1.0, 0.35], ['awning_green', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3], ['bush_cluster', 5.2, 1.8, 0, 0.8, 0.8]], cluster: [] },
+  TECH: { note: 'lanterns (owner 2026-10-24: the little round tech tower is gone)', extra: [], dress: [['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
+    nk: [['potted_plant_b', -3.9, 3.5, 0, 1.0, 0.35], ['awning_green', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3], ['bush_cluster', 5.2, 1.8, 0, 0.8, 0.8]], cluster: [] },
 };
 /** Shop-local (dx, dz) -> world (the front is +z turned by `rot`, +x = its right). */
 export const shopLocal = (px: number, pz: number, rot: number, dx: number, dz: number): [number, number] => [px + dx * Math.cos(rot) + dz * Math.sin(rot), pz - dx * Math.sin(rot) + dz * Math.cos(rot)];
