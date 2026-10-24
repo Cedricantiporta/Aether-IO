@@ -94,7 +94,7 @@ export const GameCanvas: React.FC = () => {
       camera={{ position: [0, 32, 22], fov: 40, near: 0.5, far: 420 }}
       gl={{ antialias: q.name !== 'LOW', powerPreference: 'high-performance', stencil: false, alpha: false }}
       style={{ touchAction: 'none' }}
-      onCreated={({ gl }) => { gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.1; gl.outputColorSpace = SRGBColorSpace; }}
+      onCreated={(st) => { const { gl } = st; if ((import.meta as any).env?.DEV) (window as any).__r3f = st; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.1; gl.outputColorSpace = SRGBColorSpace; }}
     >
       <FrameDriver q={q} />
       <Scene />

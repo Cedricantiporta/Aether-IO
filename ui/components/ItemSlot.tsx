@@ -1,4 +1,6 @@
 import { gradeOf } from '../../grade';
+/** (owner) the High-grade glow takes its tier's colour (light tints so it reads as light, not paint) */
+const HIGH_GLOW: Record<string, string> = { EPIC: '#f1c8ff', LEGENDARY: '#ffe0a0', MYTHIC: '#ffb8b0' };
 import React from 'react';
 import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
@@ -51,7 +53,7 @@ export const ItemSlot: React.FC<Props> = ({
   const style = { ['--slot' as any]: size } as React.CSSProperties;
   const content = (
     <>
-      {item && isGear(item) && gradeOf(item) === 'HIGH' && <span className="slot-highglow" data-testid="grade-badge" title="High grade" />}
+      {item && isGear(item) && gradeOf(item) === 'HIGH' && <span className="slot-highglow" data-testid="grade-badge" title="High grade" style={{ ['--hg' as any]: HIGH_GLOW[item.rarity] ?? '#ffffff' }} />}
       {item ? <span className="slot-icon" style={otherClass ? { opacity: 0.55, filter: 'saturate(.6)' } : undefined}><ItemIcon item={item} size={iconSize} /></span>
         : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
