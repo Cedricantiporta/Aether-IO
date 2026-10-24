@@ -39,3 +39,4 @@ Open the deployed site in Chrome on Android -> menu -> **Add to Home screen**. I
 ## Credits
 - 3D models: [KayKit](https://kaylousberg.itch.io/) (CC0)
 - Nature assets: [Kenney](https://kenney.nl/) (CC0)
+- Nature models: [Quaternius](https://quaternius.com/) Stylized Nature MegaKit (CC0)

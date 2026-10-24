@@ -17,6 +17,8 @@ import { WINDMILL } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { Place, KitPiece, KitSet, useNatureKit, natureLit, type NatureKitData } from './natureKit';
 import { natureLayout, groundAt, type Sets } from './natureLayout';
+import { QtBatch } from './qtNature';
+import { isQt } from '../engine/qtData';
 
 const _q = new Quaternion(), _e = new Euler(), _p = new Vector3(), _s = new Vector3(), _m = new Matrix4();
 const matOf = (p: Place): Matrix4 => { _q.setFromEuler(_e.set(0, p.ry, 0)); return _m.compose(_p.set(p.x, p.y ?? 0, p.z), _q, _s.set(p.sx, p.sy, p.sz)); };
@@ -112,8 +114,10 @@ export function NatureBatch({ q }: { q: QualityCfg }) {
     setBatches(b);
     return () => { b.body.dispose(); b.glow?.dispose(); };
   }, [multi, sets, kit, lit, glowMat, shadows]);
+  const qtSets = useMemo(() => { const m: Sets = new Map(); sets.forEach((l, k) => { if (isQt(k)) m.set(k, l); }); return m; }, [sets]);
   return (
     <group>
+      <React.Suspense fallback={null}><QtBatch sets={qtSets} shadows={shadows} /></React.Suspense>
       {multi ? (batches && <><primitive object={batches.body} />{batches.glow && <primitive object={batches.glow} />}</>) : <ChunkedNature sets={sets} kit={kit} lit={lit} glow={glowMat} shadows={shadows} />}
       <WindmillBlades lit={lit} />
     </group>

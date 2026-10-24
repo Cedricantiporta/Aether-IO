@@ -1,5 +1,5 @@
 // Obstacle renderer: trees (Kenney GLB), pines, rocks, houses, fences, ruins. Rebuilt per run (obstaclesVersion).
-import React, { useMemo, useRef } from 'react';
+import React, { Suspense, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { InstancedMesh, MeshBasicMaterial, Color, Group, OctahedronGeometry } from 'three';
 import { world } from '../engine/world';
@@ -9,6 +9,10 @@ import { GB, glowMat, litMat, mulberry32, setInst, TAU } from './util';
 import { makeRockGeo, useNature } from './models';
 import { useObstaclesVersion } from './hooks';
 import { QualityCfg } from './quality';
+import { QtBatch } from './qtNature';
+import type { Place } from './natureKit';
+import { QT_PREFIX, QT_H, QT_COMMON, QT_PINE, QT_TWISTED, QT_DEAD, QT_ROCKS, qtPick } from '../engine/qtData';
+import { onBridge as onBridgeQt } from '../engine/roomFeatures';
 
 export function makeHouse() {
   const body = new GB([0.82, 1.06]);
@@ -340,7 +344,22 @@ function WindmillView({ o, body, blades, mat }: { o: Obstacle; body: any; blades
 }
 
 /** `tint` multiplies every prop colour (run rooms tint scenery per biome). */
-export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
+/** Which obstacle kinds of a run room are drawn with the Quaternius nature pieces (public/models/nature_qt.glb, render/qtNature.tsx), by biome (name) and depth variant (0..2). Colliders / positions are the room's own. */
+export interface QtRoom { biome: string; v: number }
+interface QtPlan { oak?: string[]; pine?: boolean; dead?: boolean; rock?: boolean; bushes?: boolean; shrooms?: boolean; conks?: boolean }
+function qtPlan(r: QtRoom): QtPlan {
+  switch (r.biome) {
+    case 'Greenwood': return { oak: r.v < 2 ? QT_COMMON : QT_TWISTED, pine: true, dead: true, rock: true, bushes: r.v < 2, shrooms: r.v >= 1, conks: r.v >= 2 };
+    case 'Marble Halls': return { oak: QT_TWISTED, dead: true, conks: true, rock: true };
+    case 'Sunscorch Desert': case 'Ember Wastes': return { dead: true, rock: true };
+    case 'Frostpeak': return { pine: true, rock: true };
+    default: return {};
+  }
+}
+const qtHash = (a: number, b: number, k = 0): number => { const v = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453; return v - Math.floor(v); };
+
+/** `tint` multiplies every prop colour (run rooms tint scenery per biome). `qt`: draw trees / rocks of this biome with the Quaternius pieces instead of the procedural ones. */
+export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRoom }) {
   const nat = useNature();
   useObstaclesVersion();
   const obs = world.obstacles;
@@ -427,15 +446,56 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
     },
   }), [lists]);
 
+  const plan = useMemo(() => (qt ? qtPlan(qt) : null), [qt?.biome, qt?.v]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const qtSets = useMemo(() => {
+    if (!plan) return null;
+    const S = new Map<string, Place[]>(), add = (node: string, p: Place) => { const k = QT_PREFIX + node; let l = S.get(k); if (!l) S.set(k, (l = [])); l.push(p); };
+    const hOld = (g: { boundingBox: { max: { y: number } } | null; computeBoundingBox: () => void }) => { if (!g.boundingBox) g.computeBoundingBox(); return g.boundingBox!.max.y; };
+    const hOak = hOld(nat.oak), hPA = hOld(nat.pineA), hPB = hOld(nat.pineB);
+    // trees: the old fill scale x the old model's height = the height to match (x 1.1, a touch wider), the variant by obstacle id
+    const tree = (o: Obstacle, nodes: string[], tall: number, h0: number, k: number) => {
+      const node = qtPick(nodes, qtHash(o.pos.x, o.pos.z, 3)), r = mulberry32(o.id * 7 + k), s = o.scale * tall * (0.9 + r() * 0.25), kk = (s * h0) / QT_H[node] * 1.1, w = kk * 1.08;
+      add(node, { x: o.pos.x, y: -0.05, z: o.pos.z, ry: o.rot, sx: w, sy: kk * (0.92 + r() * 0.14), sz: w });
+      const rb = mulberry32(o.id * 13 + 5);
+      if (plan.conks && rb() < 0.55) { const a = rb() * TAU, sc = 1.6 + rb() * 0.9; add('Mushroom_Laetiporus', { x: o.pos.x + Math.cos(a) * (o.radius * 0.5 + 0.3), y: 0.15, z: o.pos.z + Math.sin(a) * (o.radius * 0.5 + 0.3), ry: rb() * TAU, sx: sc, sy: sc, sz: sc }); }
+    };
+    if (plan.oak) for (const o of [...lists.oak, ...lists.palm]) tree(o, plan.oak, 3.7, hOak, 1);
+    if (plan.pine) { for (const o of lists.pineA) tree(o, QT_PINE, 4.0, hPA, 3); for (const o of lists.pineB) tree(o, QT_PINE, 4.0, hPB, 4); }
+    if (plan.dead) for (const o of lists.dead) { const node = qtPick(QT_DEAD, qtHash(o.pos.x, o.pos.z, 5)), k = (3.9 * o.scale) / QT_H[node] * (0.9 + qtHash(o.id, 1) * 0.2); add(node, { x: o.pos.x, y: -0.05, z: o.pos.z, ry: o.rot, sx: k, sy: k, sz: k }); }
+    if (plan.rock) {
+      const rocks = lists.rock.flat();
+      for (const o of rocks) {
+        const node = QT_ROCKS[o.id % 3], r = mulberry32(o.id * 5 + 9), s = o.radius * 0.95;
+        add(node, { x: o.pos.x, y: 0, z: o.pos.z, ry: o.rot, sx: s * (0.9 + r() * 0.2), sy: s * (0.62 + r() * 0.3), sz: s * (0.9 + r() * 0.2) });
+        if (r() < 0.6) for (let i = 0, n = 2 + Math.floor(r() * 3); i < n; i++) {   // pebbles round the foot of the rock
+          const a = r() * TAU, d = o.radius * (1.05 + r() * 0.5), sc = 1.7 + r() * 1.3;
+          if (onBridgeQt(o.pos.x + Math.cos(a) * d, o.pos.z + Math.sin(a) * d, 0.5)) continue;
+          add(qtPick(['Pebble_Round_1', 'Pebble_Round_2', 'Pebble_Round_3', 'Pebble_Square_1', 'Pebble_Square_2', 'Pebble_Square_3'], r()), { x: o.pos.x + Math.cos(a) * d, y: 0, z: o.pos.z + Math.sin(a) * d, ry: r() * TAU, sx: sc, sy: sc, sz: sc });
+        }
+      }
+    }
+    if (plan.bushes || plan.shrooms) {   // bushes (with flowers) and little mushrooms at the foot of the trees, like the procedural bush set
+      const r = mulberry32(99); let nb = 0;
+      for (const o of [...lists.oak, ...lists.palm, ...lists.pineA, ...lists.pineB]) {
+        if (nb >= 64) break;
+        const a = r() * TAU, d = o.radius + 0.7 + r() * 0.6, bx = o.pos.x + Math.cos(a) * d, bz = o.pos.z + Math.sin(a) * d, roll = r();
+        if (onBridgeQt(bx, bz, 1.2)) continue;
+        if (plan.bushes && roll < 0.6) { const sc = 1.3 + r() * 0.8; add(roll < 0.25 ? 'Bush_Common_Flowers' : 'Bush_Common', { x: bx, y: 0, z: bz, ry: r() * TAU, sx: sc, sy: sc * (0.9 + r() * 0.2), sz: sc }); nb++; }
+        else if (plan.shrooms && roll > 0.55) { for (let i = 0; i < 3; i++) { const sc = 1.6 + r() * 1.0; add('Mushroom_Common', { x: bx + (r() - 0.5) * 0.9, y: 0, z: bz + (r() - 0.5) * 0.9, ry: r() * TAU, sx: sc, sy: sc, sz: sc }); } nb++; }
+      }
+    }
+    return S;
+  }, [plan, lists, nat]);
   const nTrees = lists.oak.length + lists.palm.length + lists.pineA.length + lists.pineB.length;
   void nTrees;
   return (
     <group key={world.obstaclesVersion}>
-      {lists.oak.length > 0 && <Inst geo={nat.oak} mat={natMat} count={lists.oak.length} fill={fills.oak} cast receive />}
-      {lists.palm.length > 0 && <Inst geo={nat.palm} mat={natMat} count={lists.palm.length} fill={fills.palm} cast receive />}
-      {lists.pineA.length > 0 && <Inst geo={nat.pineA} mat={natMat} count={lists.pineA.length} fill={fills.pineA} cast receive />}
-      {lists.pineB.length > 0 && <Inst geo={nat.pineB} mat={natMat} count={lists.pineB.length} fill={fills.pineB} cast receive />}
-      {rocks.map((g, k) => lists.rock[k].length > 0 && <Inst key={k} geo={g} mat={mats.lit} count={lists.rock[k].length} fill={fills.rock[k]} cast receive />)}
+      {qtSets && qtSets.size > 0 && <Suspense fallback={null}><QtBatch sets={qtSets} shadows={q.shadowMap > 0} tint={tint} /></Suspense>}
+      {lists.oak.length > 0 && !plan?.oak && <Inst geo={nat.oak} mat={natMat} count={lists.oak.length} fill={fills.oak} cast receive />}
+      {lists.palm.length > 0 && !plan?.oak && <Inst geo={nat.palm} mat={natMat} count={lists.palm.length} fill={fills.palm} cast receive />}
+      {lists.pineA.length > 0 && !plan?.pine && <Inst geo={nat.pineA} mat={natMat} count={lists.pineA.length} fill={fills.pineA} cast receive />}
+      {lists.pineB.length > 0 && !plan?.pine && <Inst geo={nat.pineB} mat={natMat} count={lists.pineB.length} fill={fills.pineB} cast receive />}
+      {!plan?.rock && rocks.map((g, k) => lists.rock[k].length > 0 && <Inst key={k} geo={g} mat={mats.lit} count={lists.rock[k].length} fill={fills.rock[k]} cast receive />)}
       {lists.house.length > 0 && <>
         <Inst geo={house.body} mat={mats.lit} count={lists.house.length} fill={fills.house} cast receive />
         <Inst geo={house.glow} mat={mats.glow} count={lists.house.length} fill={fills.house} />
@@ -458,11 +518,11 @@ export function Props({ q, tint }: { q: QualityCfg; tint?: string }) {
       {biomeGeo.cwall.map((g, k) => lists.cwall[k].length > 0 && <React.Fragment key={'cw' + k}><Inst geo={g.body} mat={mats.lit} count={lists.cwall[k].length} fill={fills.cwall[k]} cast receive /><Inst geo={g.glow} mat={mats.fire} count={lists.cwall[k].length} fill={fills.cwall[k]} /></React.Fragment>)}
       {lists.brazier.length > 0 && <><Inst geo={biomeGeo.brazier.body} mat={mats.lit} count={lists.brazier.length} fill={fills.flat(lists.brazier)} cast receive /><Inst geo={biomeGeo.brazier.glow} mat={mats.fire} count={lists.brazier.length} fill={fills.flat(lists.brazier)} /></>}
       {lists.tower.length > 0 && <Inst geo={biomeGeo.tower} mat={mats.lit} count={lists.tower.length} fill={fills.flat(lists.tower)} cast receive />}
-      {lists.dead.length > 0 && <Inst geo={biomeGeo.dead} mat={mats.lit} count={lists.dead.length} fill={fills.simple(lists.dead)} cast receive />}
+      {lists.dead.length > 0 && !plan?.dead && <Inst geo={biomeGeo.dead} mat={mats.lit} count={lists.dead.length} fill={fills.simple(lists.dead)} cast receive />}
       {biomeGeo.ice.map((g, k) => lists.ice[k].length > 0 && <Inst key={'i' + k} geo={g} mat={mats.lit} count={lists.ice[k].length} fill={fills.ice[k]} cast receive />)}
       {lists.obsidian.length > 0 && <><Inst geo={biomeGeo.obsidian.body} mat={mats.lit} count={lists.obsidian.length} fill={fills.simple(lists.obsidian)} cast receive /><Inst geo={biomeGeo.obsidian.glow} mat={mats.fire} count={lists.obsidian.length} fill={fills.simple(lists.obsidian)} /></>}
       {lists.windmill.map((o) => <WindmillView key={o.id} o={o} body={wmBody} blades={wmBlades} mat={mats.lit} />)}
-      {lists.oak.length + lists.palm.length > 0 && <Inst geo={bush} mat={mats.lit} count={64} fill={fills.bush} receive />}
+      {!plan?.oak && !plan?.bushes && lists.oak.length + lists.palm.length > 0 && <Inst geo={bush} mat={mats.lit} count={64} fill={fills.bush} receive />}
     </group>
   );
 }

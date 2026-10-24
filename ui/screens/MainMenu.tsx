@@ -52,7 +52,7 @@ export const TitleScreen: React.FC = () => {
       </motion.div>
       <div className="absolute left-0 right-0 bottom-[2.2rem] flex flex-col items-center gap-3">
         <Button variant="primary" size="lg" pulse onClick={() => setTitleDone(true)} data-testid="enter-village"><Shield size={22} /> Enter</Button>
-        <div className="text-[.68rem] text-outline" style={{ color: '#e8d9b0', opacity: .85 }}>3D characters by KayKit (CC0) · Trees by Kenney (CC0)</div>
+        <div className="text-[.68rem] text-outline" style={{ color: '#e8d9b0', opacity: .85 }}>3D characters by KayKit (CC0) · Trees by Kenney (CC0) · Nature models: Quaternius (CC0)</div>
       </div>
     </div>
   );
