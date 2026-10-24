@@ -675,6 +675,15 @@ function Stations() {
     mat: new MeshBasicMaterial({ color: new Color(1.6, 1.25, 0.55), transparent: true, opacity: 0.32, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), []);
   useEffect(() => () => { beamRes.geo.dispose(); beamRes.mat.dispose(); }, [beamRes]);
+  // (owner) the shrine lights up once activated: a violet light column + a glowing rune ring round its base
+  const shrineFx = useRef<Group>(null!), shrineBeam = useRef<Mesh>(null!), shrineRing = useRef<Mesh>(null!);
+  const shrineRes = useMemo(() => ({
+    beam: new CylinderGeometry(0.55, 0.95, 9, 18, 1, true).translate(0, 4.5, 0),
+    ring: new RingGeometry(1.25, 1.65, 48).rotateX(-Math.PI / 2).translate(0, 0.04, 0),
+    mat: new MeshBasicMaterial({ color: new Color(1.3, 0.75, 1.8), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
+    ringMat: new MeshBasicMaterial({ color: new Color(1.5, 0.9, 2.0), transparent: true, opacity: 0.75, blending: AdditiveBlending, depthWrite: false, toneMapped: false }),
+  }), []);
+  useEffect(() => () => { shrineRes.beam.dispose(); shrineRes.ring.dispose(); shrineRes.mat.dispose(); shrineRes.ringMat.dispose(); }, [shrineRes]);
   useFrame(({ clock }, dt) => {
     const s = world.room.station, t = clock.elapsedTime;
     const on = world.room.active;
@@ -707,11 +716,21 @@ function Stations() {
     }
     if (altar.current.visible) {
       // (owner) the shrine crystal is dull until the challenge is won, then it lights up and spins
-      const lit = world.room.shrineDone;
+      // (owner) ...and from the moment it is activated: the challenge runs under a pulsing violet light column
+      const done = world.room.shrineDone, active = world.room.shrineOn && !done, lit = done || active;
       altarGlow.current.material = lit ? mats.glow : mats.lit;
-      altarGlow.current.position.y = lit ? Math.sin(t * 1.7) * 0.15 : 0;
-      altarGlow.current.rotation.y = lit ? t * 0.8 : 0.4;
+      altarGlow.current.position.y = lit ? Math.sin(t * (active ? 3 : 1.7)) * 0.15 : 0;
+      altarGlow.current.rotation.y = lit ? t * (active ? 2.2 : 0.8) : 0.4;
       altarGlow.current.visible = true;
+      shrineFx.current.visible = lit;
+      if (lit) {
+        const pulse = active ? 0.5 + 0.5 * Math.sin(t * 4) : 0.5;
+        shrineRes.mat.opacity = active ? 0.22 + pulse * 0.16 : 0.14;
+        shrineBeam.current.rotation.y = t * 0.5;
+        shrineRes.ringMat.opacity = 0.45 + pulse * 0.4;
+        shrineRing.current.scale.setScalar(1 + pulse * 0.08);
+        shrineRing.current.rotation.y = -t * 0.6;
+      }
     }
   });
   return (
@@ -741,6 +760,10 @@ function Stations() {
       <group ref={altar} scale={1.7}>   {/* a big shrine */}
         <mesh geometry={geos.altar} material={mats.lit} castShadow receiveShadow />
         <mesh ref={altarGlow} geometry={geos.altarGlow} material={mats.glow} />
+        <group ref={shrineFx} visible={false}>
+          <mesh ref={shrineBeam} geometry={shrineRes.beam} material={shrineRes.mat} renderOrder={3} />
+          <mesh ref={shrineRing} geometry={shrineRes.ring} material={shrineRes.ringMat} renderOrder={3} />
+        </group>
       </group>
     </group>
   );
