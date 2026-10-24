@@ -84,7 +84,8 @@ export function Sky({ q }: { q: QualityCfg }) {
     const ch = clouds.current.children;
     for (let i = 0; i < ch.length; i++) {
       const c = list[i]; c.a += c.sp * dt;
-      ch[i].position.set(Math.cos(c.a) * c.d * fit, c.h * fit, Math.sin(c.a) * c.d * fit);
+      ch[i].position.set(Math.cos(c.a) * c.d * fit, camera.position.y + 12 + c.h * fit, Math.sin(c.a) * c.d * fit);
+      ch[i].scale.set(c.s * fit, c.s * 0.42 * fit, 1);   // always above the camera: a short far plane used to pull them down over the play area (owner: 'fog too much')
     }
   });
   return (
