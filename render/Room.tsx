@@ -410,6 +410,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const tm = new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     const inst = new InstancedMesh(tgeo, tm, N);
     const rnd = mulberry32(seed ^ 0x51ed);
+    const trailD = style === 'GRASS' && path ? roomTrail(seed).discs : null;   // (owner 2026-10-24: no tufts on the soil trail)
     const o = new Object3D();
     const cc = new Color();
     let nt = 0;
@@ -417,6 +418,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shapeLimit(Math.cos(a), Math.sin(a)) - 2);
       const x = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.cos(a) * d, z = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.sin(a) * d;
       if (isHalls && hallsSdf(x, z) < 1.2) continue;
+      if (trailD && trailD.some((d) => (d.x - x) ** 2 + (d.z - z) ** 2 < (d.r + 0.6) ** 2)) continue;
       if (hasLiquid && (inLiquid(x, z, 0.4) || onBridge(x, z, 1.2))) continue;
       o.position.set(x, 0, z);
       o.rotation.set(0, rnd() * 6.28, 0);
