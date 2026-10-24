@@ -76,7 +76,7 @@ export function GroundFx() {
     for (let i = 0; i < fx.length; i++) {
       const f = fx[i];
       if (!f.active) continue;
-      if (f.kind !== 'BIG_METEOR' && f.kind !== 'GOLEM_DROP' && f.kind !== 'TRAP' && !inView(f.x, f.z, 20 + f.radius)) continue;
+      if (f.kind !== 'BIG_METEOR' && f.kind !== 'BOSS_METEOR' && f.kind !== 'GOLEM_DROP' && f.kind !== 'TRAP' && !inView(f.x, f.z, 20 + f.radius)) continue;
       const sd = f.seed;
       switch (f.kind) {
         case 'RAIN_ARROW': {
@@ -119,7 +119,7 @@ export function GroundFx() {
           if (dt > 0 && rnd() < 0.5 && gate()) FX.norm.emit(x, y, z, (rnd() - 0.5), 1, (rnd() - 0.5), 0.8, 1.0, 2.0, 0.2, 0.17, 0.15, 0.4, CELL.SMOKE, 0, 1, rnd() * 6, 0.5);
           break;
         }
-        case 'BIG_METEOR': {
+        case 'BIG_METEOR': case 'BOSS_METEOR': {
           if (f.t >= f.delay) break;
           const k = clamp(f.t / f.delay, 0, 1);
           const e = k * k;

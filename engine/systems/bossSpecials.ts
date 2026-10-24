@@ -7,7 +7,7 @@
 //   Warden   RAISE THE DEAD   Captain AMBUSH   Behemoth PRISM BEAM   Old Tusk STAMPEDE   Shellback TIDAL SHELL
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocEnemy } from '../world';
+import { world, allocEnemy, allocFx } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
 import { edgeLimit } from '../mapgen';
@@ -20,6 +20,8 @@ import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEne
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
+/** Boulder Prison: rises this long after the shout, 15 of 16 rock slots (one small opening) at PRISON_R, meteor lands PRISON_FALL s later. */
+const PRISON_RISE = 0.45, PRISON_N = 16, PRISON_R = 6.0, PRISON_FALL = 1.9;
 export const SP_NAME: Record<number, string> = {
   21: 'Boulder Prison!', 22: 'Magma Veins!', 23: 'Soul Chains!', 24: 'Death Clones!', 25: 'Raise the Dead!', 26: 'Ambush!', 27: 'Prism Beam!', 28: 'Stampede!', 29: 'Tidal Shell!', 30: 'Belly Flop!', 31: 'Acid Flood!', 32: 'Acid Rain!',
 };
@@ -94,14 +96,30 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
   stop(e);
   switch (e.spKind) {
     case SP.PRISON: {
-      if (e.spStep === 0 && t >= 1.0) {
+      // (owner) the ring rises ON the hero (re-centred at the moment it rises), closed rocks shoulder to shoulder with ONE small opening
+      // (dash cannot pass: the rocks are solid colliders), then a meteor falls into the middle
+      if (e.spStep === 0 && t >= PRISON_RISE) {
         e.spStep = 1;
-        for (let i = 0; i < d.slots.length; i += 2) raiseWallAt(d.slots[i], d.slots[i + 1], 1.5, 4.0, true);
-        spawnTelegraphCircle(d.cx, d.cz, 5, 1.2, power(e) * 1.4, 0xef4444);
+        tv.set(p.pos.x, 0, p.pos.z); clampArena(tv, PRISON_R + 1.5); d.cx = tv.x; d.cz = tv.z;
+        const gap = (Math.random() * PRISON_N) | 0;
+        for (let i = 0; i < PRISON_N; i++) {
+          if (i === gap) continue;
+          const a = (i / PRISON_N) * 6.283;
+          raiseWallAt(d.cx + Math.sin(a) * PRISON_R, d.cz + Math.cos(a) * PRISON_R, 1.5, PRISON_FALL + 1.6, true);
+        }
+        spawnTelegraphCircle(d.cx, d.cz, PRISON_R - 0.6, PRISON_FALL, power(e) * 2.2, 0xef4444);
+        const f = allocFx();
+        if (f) { f.active = true; f.hostile = false; f.kind = 'BOSS_METEOR'; f.x = d.cx; f.z = d.cz; f.delay = PRISON_FALL; f.life = PRISON_FALL + 0.2; f.radius = PRISON_R; f.dmg = 0; f.aux = 0; f.color = 0xff7a1a; }
         events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'PRISON', radius: 7 });
         addShake(0.4);
       }
-      if (t >= 2.5) e.spKind = 0;
+      if (e.spStep === 1 && t >= PRISON_RISE + PRISON_FALL) {
+        e.spStep = 2;
+        events.emit('ultImpact', { pos: tv.set(d.cx, 0, d.cz).clone(), name: 'METEOR', radius: PRISON_R * 1.4 });
+        events.emit('crater', { pos: tv.set(d.cx, 0, d.cz).clone(), radius: PRISON_R * 0.7, color: 0x1a0d06 });
+        addShake(0.8);
+      }
+      if (t >= PRISON_RISE + PRISON_FALL + 0.5) e.spKind = 0;
       break;
     }
     case SP.VEINS: {
@@ -313,17 +331,7 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
   data.set(e.id, d);
   const pw = power(e);
   switch (id) {
-    case SP.PRISON: {
-      const N = 10, gap = (Math.random() * N) | 0;
-      for (let i = 0; i < N; i++) {
-        if (i === gap || i === (gap + 1) % N) continue;
-        const a = (i / N) * 6.283;
-        tv.set(p.x + Math.sin(a) * 6.5, 0, p.z + Math.cos(a) * 6.5); clampArena(tv, 2);
-        d.slots.push(tv.x, tv.z);
-        spawnTelegraphCircle(tv.x, tv.z, 1.7, 1.0, 0, 0xb08a5a);
-      }
-      break;
-    }
+    case SP.PRISON: break;   // (the ring is placed when it rises, see updateSpecial)
     case SP.VEINS:
       for (let l2 = 0; l2 < 3; l2++) {
         const a = d.ang + (l2 - 1) * 0.55;

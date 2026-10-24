@@ -242,7 +242,7 @@ export interface Zone {
 
 // ------------------------------------------------------------- ground fx --
 // Timed ground effects driven by abilities: falling arrows/meteors, spikes, traps, pillars, rings.
-export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'RING' | 'GOLEM_DROP';
+export type GroundFxKind = 'RAIN_ARROW' | 'METEOR' | 'SPIKE' | 'ARROW_STICK' | 'CRYSTAL' | 'TRAP' | 'ROCK' | 'BIG_METEOR' | 'RING' | 'GOLEM_DROP' | 'BOSS_METEOR';   // BOSS_METEOR: the falling rock only (Gorath's Boulder Prison; its damage is the strike circle)
 export interface GroundFx {
   id: number;
   active: boolean;

@@ -155,8 +155,9 @@ void main(){
     // quicksand (sand-coloured instance tint): a slow sandy swirl that darkens toward the sinking centre
     float qs = step(0.25, vC.r - vC.b);
     float swirl = 0.5 + 0.5 * sin(atan(q.y, q.x) * 3.0 + rr * 14.0 - uTime * 1.2 + n * 5.0);
-    vec3 sand = vC * (0.62 + 0.3 * n + 0.12 * swirl) * mix(0.55, 1.0, smoothstep(0.0, 0.7, rr));
-    col = mix(vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62), vec4(sand + edge * vec3(0.06, 0.045, 0.025), body * 0.42), qs);   // (owner 2026-10-24: subtler quicksand)
+    vec3 sand = vC * (0.52 + 0.3 * n + 0.24 * swirl) * mix(0.38, 1.0, smoothstep(0.0, 0.7, rr));
+    float lip = exp(-pow((rr - 0.86) / 0.07, 2.0));   // a soft darker lip so the pit reads at a glance
+    col = mix(vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62), vec4(sand * (1.0 - 0.3 * lip), body * 0.6), qs);   // (owner 2026-10-24: quicksand a bit easier to spot again)
   } else {
     float vent = 0.3;
     float rr = r;
