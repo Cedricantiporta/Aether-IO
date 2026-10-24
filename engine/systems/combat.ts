@@ -702,8 +702,10 @@ export const KB = {
   FLINCH: { kb: 0.5, down: 0 },    // big monsters' ordinary swings
   PUSH:   { kb: 3.2, down: 0 },    // mini-boss / elite cones, charges that clip, boss secondary hits
   HEAVY:  { kb: 4.5, down: 0 },    // big telegraphed strikes that stun
-  SLAM:   { kb: 5, down: 0.75 },   // boss signature slams, elite ground slams, charges that connect
-  CRUSH:  { kb: 6, down: 0.9 },    // the very heaviest (final bosses' ults)
+  SLAM:   { kb: 5, down: 1.0 },    // boss signature slams, elite ground slams, charges / tackles that connect (owner: high-impact hits = 1 s down)
+  CRUSH:  { kb: 6, down: 1.2 },    // the very heaviest (final bosses' ults)
+  ROCK:   { kb: 4.5, down: 1.0 },  // (owner) any rock hit is hard + heavy: thrown rocks, rock slams, rockfall
+  BOULDER: { kb: 6, down: 3.0 },   // (owner) Gorath's 360 rock ring + the prison meteor: 3 s on the ground (a dash gets you up)
 } as const;
 let knockWordT = -10;
 

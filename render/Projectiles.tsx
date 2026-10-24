@@ -515,7 +515,7 @@ export function Projectiles() {
           if (emit) FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.3, 0.45, 0.05, 2.1, 2.1, 2.3, 0.7, CELL.STREAK, 0, 0, 0, 0, 0);
           break;
         case 'ROCK':
-          place(ims, i, x, y, z, t * 3 + n, t * 2.2, t * 1.7, 1.3);
+          place(ims, i, x, y, z, t * 3 + n, t * 2.2, t * 1.7, 1.3 * Math.max(1, p.radius / 0.8));   // (Gorath's ring boulders are bigger)
           if (emit && Math.random() < dt * 20) FX.norm.emit(x, y, z, (Math.random() - 0.5), 0.3, (Math.random() - 0.5), 0.5, 0.4, 0.9, 0.55, 0.5, 0.42, 0.5, CELL.SMOKE);
           break;
       }

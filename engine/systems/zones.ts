@@ -317,7 +317,7 @@ function expire(z: Zone): void {
       const p = world.player;
       const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
       const rr = z.radius + PLAYER_RADIUS;
-      if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0 });
+      if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
       addShake(Math.min(0.5, 0.1 + z.radius * 0.03));
       break;

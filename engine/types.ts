@@ -238,6 +238,8 @@ export interface Zone {
   activeFor: number;     // GAS vents: seconds active per cycle
   trick: number;         // TELEGRAPH_*: signature-trick id resolved on expiry (0 none)
   aux: number;           // free: FIRE zones: 1 = real stacking burn
+  kb: number;            // TELEGRAPH_CIRCLE: hero push distance on hit (0 none)
+  down: number;          // TELEGRAPH_CIRCLE: hero knockdown seconds on hit (0 none) - heavy rock / slam strikes
 }
 
 // ------------------------------------------------------------- ground fx --

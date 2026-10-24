@@ -264,8 +264,8 @@ export function updatePlayer(dt: number): void {
   // ---- knockdown / knockback (combat.knockHero): eased slide through the normal collision, then the get-up
   p.knockImmuneT = tickDown(p.knockImmuneT, dt);
   if (p.downT > 0) {
-    // a dash during the get-up window (last ~40%) cancels the rest of it
-    if (p.downT < p.downMax * 0.4 && p.dashCharges > 0 && (inp.pressed.Space || world.input.touchAim.active && world.input.touchAim.id === 'dash')) p.downT = 0.001;
+    // (owner) a dash cancels the knockdown at any time
+    if (p.dashCharges > 0 && (inp.pressed.Space || world.input.touchAim.active && world.input.touchAim.id === 'dash')) p.downT = 0.001;
     p.downT -= dt;
     if (p.downT <= 0) { p.downT = 0; p.invulnT = Math.max(p.invulnT, GETUP_INVULN); }
     if (abilityState.lpT > 0) abilityState.lpT = 0;   // an interrupted Lightpiercer charge is lost

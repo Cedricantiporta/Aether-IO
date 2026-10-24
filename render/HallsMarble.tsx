@@ -6,7 +6,7 @@
 // bright cream / blue / gold palette (the MTL colours are near-black). Walls, columns and statues are colliders: the walls ARE the mask edge,
 // columns / statues are mask islands. One InstancedMesh per piece (~10 draw calls), built once per room.
 // ============================================================================
-import React, { Suspense, use, useMemo, useRef } from 'react';
+import React, { Suspense, use, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferGeometry, CanvasTexture, Color, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, PointLight, DoubleSide } from 'three';
 import { world } from '../engine/world';
@@ -82,6 +82,18 @@ function loadKit(): Promise<Kit> {
     });
     return kit;
   }));
+}
+
+/** (owner 2026-10-24: the old fluted procedural column is gone) the castle-kit Column / Column2 for run-room COLUMN obstacles
+ *  (render/Props), scaled to a ~0.75 m radius like the obstacle collider. null until the kit has loaded. */
+export function useKitColumnGeo(): [BufferGeometry, BufferGeometry] | null {
+  const [g, setG] = useState<[BufferGeometry, BufferGeometry] | null>(null);
+  useEffect(() => {
+    let on = true; const S = 0.75 / 0.652;
+    loadKit().then((k) => { if (on) setG([k.Column.clone().scale(S, S, S), k.Column2.clone().scale(S, S, S)]); }).catch(() => { kitP = null; });
+    return () => { on = false; };
+  }, []);
+  return g;
 }
 
 /** Kicks off the OBJ fetch + geometry build early (the first run room of biome 1 does it), so entering Marble Halls never waits on the network. */

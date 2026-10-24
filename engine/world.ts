@@ -57,7 +57,7 @@ function makeZone(id: number): Zone {
   return {
     id, active: false, kind: 'FIRE', hostile: false, pos: v(), dir: v(), radius: 1, length: 0,
     life: 0, maxLife: 1, damage: 0, tickT: 0, maxPull: 0, color: 0xffffff,
-    permanent: false, period: 0, activeFor: 0, trick: 0, aux: 0,
+    permanent: false, period: 0, activeFor: 0, trick: 0, aux: 0, kb: 0, down: 0,
   };
 }
 
@@ -225,7 +225,7 @@ export function allocZone(): Zone | null {
   const z = grab(world.zones, 'z');
   if (!z) return null;
   z.tickT = 0; z.maxPull = 0; z.length = 0; z.dir.set(0, 0, 1); z.hostile = false;
-  z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0;
+  z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0; z.kb = 0; z.down = 0;
   return z;
 }
 

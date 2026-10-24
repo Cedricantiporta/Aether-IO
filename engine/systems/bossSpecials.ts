@@ -18,6 +18,7 @@ import { hooks } from './hooks';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
+import { KB } from './combat';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
 /** Boulder Prison: rises this long after the shout, 15 of 16 rock slots (one small opening) at PRISON_R, meteor lands PRISON_FALL s later. */
@@ -107,7 +108,8 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
           const a = (i / PRISON_N) * 6.283;
           raiseWallAt(d.cx + Math.sin(a) * PRISON_R, d.cz + Math.cos(a) * PRISON_R, 1.5, PRISON_FALL + 1.6, true);
         }
-        spawnTelegraphCircle(d.cx, d.cz, PRISON_R - 0.6, PRISON_FALL, power(e) * 2.2, 0xef4444);
+        const mz = spawnTelegraphCircle(d.cx, d.cz, PRISON_R - 0.6, PRISON_FALL, power(e) * 2.2, 0xef4444);
+        if (mz) { mz.kb = KB.BOULDER.kb; mz.down = KB.BOULDER.down; }   // (owner) the meteor is rock: 3 s down
         const f = allocFx();
         if (f) { f.active = true; f.hostile = false; f.kind = 'BOSS_METEOR'; f.x = d.cx; f.z = d.cz; f.delay = PRISON_FALL; f.life = PRISON_FALL + 0.2; f.radius = PRISON_R; f.dmg = 0; f.aux = 0; f.color = 0xff7a1a; }
         events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'PRISON', radius: 7 });
@@ -371,7 +373,7 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
       break;
     }
     case SP.SHELL: break;
-    case SP.SLAM: d.zone = tel(p.x, p.z, FLOP.r, FLOP.land, pw * 2.2, 0x9be32a); break;
+    case SP.SLAM: d.zone = tel(p.x, p.z, FLOP.r, FLOP.land, pw * 2.2, 0x9be32a); if (d.zone) { d.zone.kb = KB.SLAM.kb; d.zone.down = KB.SLAM.down; } break;   // (owner) the Slime King's slam knocks you down
     case SP.FLOOD: tel(p.x, p.z, 8.5, 1.5, 0, 0x9be32a); break;
     case SP.RAIN: {
       const N = 9 + 3 * e.phase;

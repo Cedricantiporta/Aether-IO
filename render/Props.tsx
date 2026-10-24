@@ -13,6 +13,7 @@ import { QtBatch } from './qtNature';
 import type { Place } from './natureKit';
 import { roomTrail } from './groundPath';
 import { useHorseStatueGeo } from './qtVillage';
+import { useKitColumnGeo } from './HallsMarble';
 import { N2, QT_R, QT_PREFIX, QT_H, QT_COMMON, QT_PINE, QT_TWISTED, QT_DEAD, QT_ROCKS, QT_PATH, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES, qtPick } from '../engine/qtData';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { onBridge as onBridgeQt, inLiquid as inLiquidQt, feat as featQt } from '../engine/roomFeatures';
@@ -210,22 +211,6 @@ function makeBones() {
   g.sph(0.32, [1.35, 0.28, 0], bone, [1.3, 0.85, 1], 8); g.box(0.36, 0.14, 0.3, [1.7, 0.16, 0], bone2);   // skull + snout
   for (const s of [-1, 1]) { g.sph(0.08, [1.45, 0.38, s * 0.18], '#3a2a1a', 1, 5); g.cone(0.08, 0.7, 5, [1.2, 0.55, s * 0.3], bone, [0, 0, -0.9 + s * 0.0], [1, 1, 1]); }
   g.cyl(0.05, 0.05, 1.0, 4, [-0.4, 0.06, 0.8], bone2, [0, 0.6, Math.PI / 2]);
-  return g.build();
-}
-function makeColumn(broken: boolean) {
-  const g = new GB([0.72, 1.08]);
-  const m = '#a8a194', m2 = '#8f887b', moss = '#5a7a40';
-  g.box(1.6, 0.35, 1.6, [0, 0.18, 0], m2); g.cyl(0.72, 0.78, 0.3, 14, [0, 0.5, 0], m);
-  const h = broken ? 2.4 : 4.6;
-  g.cyl(0.55, 0.6, h, 14, [0, 0.65 + h / 2, 0], m);
-  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; g.box(0.06, h, 0.06, [Math.cos(a) * 0.57, 0.65 + h / 2, Math.sin(a) * 0.57], m2); }
-  if (broken) {
-    g.ico(0.58, [0.05, 0.65 + h, 0], m2, [1, 0.45, 1], 0, [0.3, 0.2, 0.1]);
-    g.cyl(0.55, 0.55, 1.0, 12, [1.3, 0.5, 0.5], m, [0.2, 0.3, Math.PI / 2]);   // fallen drum
-    g.sph(0.45, [0.4, 0.2, 0.6], moss, [1.4, 0.35, 1], 5);
-  } else {
-    g.cyl(0.8, 0.6, 0.35, 14, [0, 0.65 + h + 0.18, 0], m); g.box(1.8, 0.35, 1.8, [0, 0.65 + h + 0.5, 0], m2);
-  }
   return g.build();
 }
 function makeLowWall() {
@@ -432,8 +417,9 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
   const bush = useMemo(makeBush, []);
   const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
   const wmBody = useMemo(makeWindmillBody, []), wmBlades = useMemo(makeBlades, []);
+  const kitCol = useKitColumnGeo();
   const biomeGeo = useMemo(() => ({
-    cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), column: makeColumn(false), columnB: makeColumn(true), wall: makeLowWall(), cwall: [0, 1, 2].map(makeCastleWall),
+    cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), wall: makeLowWall(), cwall: [0, 1, 2].map(makeCastleWall),
     brazier: makeBrazier(), tower: makeArcherTower(), dead: makeDeadTree(), obsidian: makeObsidian(),
     ice: [61, 62].map((sd, i) => makeRockGeo(sd * 7, i ? '#b8d8ee' : '#d4ecfa', '#f4fbff', 0.9)),
   }), []);
@@ -694,8 +680,8 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
       {lists.cactus.length > 0 && !plan?.cactus && <Inst geo={biomeGeo.cactus} mat={mats.lit} count={lists.cactus.length} fill={fills.simple(lists.cactus)} cast receive />}
       {lists.sandstone.length > 0 && !plan?.sandstone && <Inst geo={biomeGeo.sandstone} mat={mats.lit} count={lists.sandstone.length} fill={fills.simple(lists.sandstone, 0.85)} cast receive />}
       {lists.bones.length > 0 && <Inst geo={biomeGeo.bones} mat={mats.lit} count={lists.bones.length} fill={fills.simple(lists.bones)} receive />}
-      {lists.column.length > 0 && <Inst geo={biomeGeo.column} mat={mats.lit} count={lists.column.length} fill={fills.simple(lists.column)} cast receive />}
-      {lists.columnB.length > 0 && <Inst geo={biomeGeo.columnB} mat={mats.lit} count={lists.columnB.length} fill={fills.simple(lists.columnB)} cast receive />}
+      {kitCol && lists.column.length > 0 && <Inst key={'c' + kitCol[0].id} geo={kitCol[0]} mat={mats.lit} count={lists.column.length} fill={fills.simple(lists.column)} cast receive />}
+      {kitCol && lists.columnB.length > 0 && <Inst key={'cb' + kitCol[1].id} geo={kitCol[1]} mat={mats.lit} count={lists.columnB.length} fill={fills.simple(lists.columnB)} cast receive />}
       {lists.wall.length > 0 && <Inst geo={biomeGeo.wall} mat={mats.lit} count={lists.wall.length} fill={fills.wall} cast receive />}
       {biomeGeo.cwall.map((g, k) => lists.cwall[k].length > 0 && <React.Fragment key={'cw' + k}><Inst geo={g.body} mat={mats.lit} count={lists.cwall[k].length} fill={fills.cwall[k]} cast receive /><Inst geo={g.glow} mat={mats.fire} count={lists.cwall[k].length} fill={fills.cwall[k]} /></React.Fragment>)}
       {lists.brazier.length > 0 && <><Inst geo={biomeGeo.brazier.body} mat={mats.lit} count={lists.brazier.length} fill={fills.flat(lists.brazier)} cast receive /><Inst geo={biomeGeo.brazier.glow} mat={mats.fire} count={lists.brazier.length} fill={fills.flat(lists.brazier)} /></>}
@@ -755,4 +741,4 @@ export function Campfire({ q }: { q: QualityCfg }) {
     </group>
   );
 }
-export const __builders = { makeCactus, makeSandstone, makeColumn, makeLowWall, makeArcherTower, makeHouse, makeFence, makeRuin, makeBush, makeStump, makeWell, makeStatue, makeTent, makeLog, makeSpire, makeWindmillBody, makeBlades };
+export const __builders = { makeCactus, makeSandstone, makeLowWall, makeArcherTower, makeHouse, makeFence, makeRuin, makeBush, makeStump, makeWell, makeStatue, makeTent, makeLog, makeSpire, makeWindmillBody, makeBlades };

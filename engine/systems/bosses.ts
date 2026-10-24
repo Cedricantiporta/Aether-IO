@@ -18,7 +18,8 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { edgeLimit } from '../mapgen';
 import { events } from '../events';
-import type { Enemy } from '../types';
+import type { Enemy, Zone } from '../types';
+import { KB } from './combat';
 import { BOSS_NAMES, type BossKind } from '../enemyDefs';
 import { useGameStore } from '../../store';
 import {
@@ -102,7 +103,7 @@ function golemWindup(e: Enemy): number {
     default: return (0.9 - 0.1 * e.phase) * (e.patternT > 0 ? 0.6 : 1);
   }
 }
-function golemChargeSpeed(e: Enemy): number { return 22 + 3 * e.phase; }
+function golemChargeSpeed(e: Enemy): number { return (22 + 3 * e.phase) * 0.6; }   // (owner: Gorath 40% slower)
 
 function golem(e: Enemy, dist: number): void {
   const player = world.player.pos;
@@ -147,6 +148,9 @@ function golem(e: Enemy, dist: number): void {
   }
 }
 
+/** (owner) Gorath's slams are rock: they knock the hero down. */
+function rockTel(z: Zone | null): void { if (z) { z.kb = KB.ROCK.kb; z.down = KB.ROCK.down; } }
+
 function beginGolemPattern(e: Enemy, ux: number, uz: number): void {
   e.pattern = (e.pattern + 1) % 3;
   e.patternT = 0;
@@ -157,14 +161,14 @@ function beginGolemPattern(e: Enemy, ux: number, uz: number): void {
     const life = golemWindup(e);
     const dmg = e.projectileDamage * 1.6;
     const n = 3 + e.phase;
-    spawnTelegraphCircle(px, pz, 5, life, dmg, 0xef4444);
+    rockTel(spawnTelegraphCircle(px, pz, 5, life, dmg, 0xef4444));
     const base = Math.random() * Math.PI * 2;
     for (let i = 1; i < n; i++) {
       const a = base + (i / (n - 1)) * Math.PI * 2;
       const r = 6 + Math.random() * 3;
       posV.set(px + Math.sin(a) * r, 0, pz + Math.cos(a) * r);
       clampToArena(posV, 3);
-      spawnTelegraphCircle(posV.x, posV.z, 5, life, dmg, 0xef4444);
+      rockTel(spawnTelegraphCircle(posV.x, posV.z, 5, life, dmg, 0xef4444));
     }
     enter(e, 'WINDUP');
   } else if (e.pattern === RING) {
@@ -218,7 +222,7 @@ function fireRockRing(e: Enemy): void {
   for (let i = 0; i < n; i++) {
     const a = e.angle + i * step;
     dirV.set(Math.sin(a), 0, Math.cos(a));
-    fireEnemyProjectile(e.pos, dirV, 'ROCK', speed, e.projectileDamage, { life: 4, radius: 0.8 });
+    fireEnemyProjectile(e.pos, dirV, 'ROCK', speed, e.projectileDamage, { life: 4, radius: 1.5, debuff: 3 });   // (owner) bigger boulders, 3 s knockdown
   }
   events.emit('shake', { amount: 0.3 });
 }
