@@ -3874,3 +3874,13 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 }
 .win-x:hover, .win-x.modal-x:hover, .close-x:hover, .sw-x:hover, .np-x:hover, .modal-x:hover, .dlg-x:hover, .tf-x:hover { background: transparent !important; color: #fff !important; transform: scale(1.15); }
 .win-x svg { width: 20px; height: 20px; }
+/* (owner 2026-10-24) quest tracker rows: transparent dark, square corners, light text (overrides the parchment cards above) */
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row {
+  border-radius: 0 !important; background: rgba(12, 14, 20, .55) !important; border: 0 !important; border-left: 3px solid var(--qc) !important;
+  box-shadow: none !important;
+}
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row[role='button']:hover { background: rgba(12, 14, 20, .7) !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-head { color: var(--qc) !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-title { color: #fff !important; text-shadow: 0 1px 2px rgba(0, 0, 0, .6) !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line, .hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-line b { color: rgba(255, 255, 255, .78) !important; }
+.hud-root .qt .qt-row.qt-row.qt-row.qt-row .qt-dist { color: rgba(255, 255, 255, .8) !important; background: rgba(255, 255, 255, .12); }
