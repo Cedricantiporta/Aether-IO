@@ -189,7 +189,7 @@ function buildRoads(): BufferGeometry {
       const t0 = i / n, t1 = (i + 1) / n, mx = x1 + dx * (t0 + t1) / 2, mz = z1 + dz * (t0 + t1) / 2;
       const ya = townLift(x1 + dx * t0, z1 + dz * t0), yb = townLift(x1 + dx * t1, z1 + dz * t1), y = townLift(mx, mz);
       if (Math.abs(ya - yb) > 0.01 || Math.abs(y - ya) > 0.01) continue;
-      r.box(pl + 0.01, 0.06, rd.w, [mx, 0.045 + y, mz], SURF, [0, yaw, 0]);
+      r.box(pl + 0.4, 0.06, rd.w, [mx, 0.045 + y, mz], SURF, [0, yaw, 0]);   // (owner: the 1 m pieces overlap well: their end faces showed as thin 'l l l' stripes across the street)
     }
   }
   // plaza (owner 2026-10-23: ONE pattern): a plain disc of the same cobble paving as the streets (no slab rings / grout disc on top of it)
@@ -780,9 +780,9 @@ export function TownScenery({ q }: { q: QualityCfg }) {
   const town = useMemo(() => buildTown(), []);
   const mats = useMemo(() => { const flagTex = flagTexture(); return {
     lit: litMat({ roughness: 0.85 }),
-    road: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.map = flagTex; return m; })(),
-    paving: (() => { const m = litMat({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 }); m.map = flagTex; return m; })(),
-    tops: (() => { const m = litMat({ roughness: 1 }); m.map = flagTex; return m; })(),
+    road: (() => { const m = litMat({ roughness: 1, flatShading: false }); m.map = flagTex;   /* (no polygonOffset: on the big flat paving it drew thin streaks; the layers are cm apart anyway) */ return m; })(),
+    paving: (() => { const m = litMat({ roughness: 1, flatShading: false }); m.map = flagTex; return m; })(),
+    tops: (() => { const m = litMat({ roughness: 1, flatShading: false }); m.map = flagTex; return m; })(),
     glow: nightGlow(new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.4, 1.1) })),
     ring: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
     dirt: litMat({ roughness: 1 }),
