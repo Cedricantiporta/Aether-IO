@@ -271,7 +271,7 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   return out;
 }
 
-export interface RollOpts { trend?: TrendCounts; /** (owner) the run's first pick: 3 special cards, one Offense / Defense / Speed */ opener?: boolean; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean; /** Guardian's Spoils bonus pick: stat cards only, Common, 50% one card at (spoils - 1) */ spoils?: number }
+export interface RollOpts { trend?: TrendCounts; /** (owner) the run's first pick: 3 different special cards (any mix, at most 2 of one category) */ opener?: boolean; /** Lucky Start: make sure at least one offered card is Epic or better */ epic?: boolean; /** Guardian's Spoils bonus pick: stat cards only, Common, 50% one card at (spoils - 1) */ spoils?: number }
 /** Rolls `count` distinct cards. Marks the Mythic as offered (one per run) and Aegis as offered for this biome.
  *  Offer weights lean toward the build categories the hero picked from (x1.25 per pick, max x2.5), but the leading
  *  category never fills more than 2 of the 3-4 cards, so there is always variety. */
@@ -287,10 +287,12 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
     return cards;
   }
   if (opts.opener) {   // (owner) the first card choice of every run: one special per category
-    for (const cat of ['OFFENSE', 'DEFENSE', 'UTILITY'] as const) {
-      const opt = SPECIALS.filter((x) => !runCards.taken[x.id] && (SPECIAL_CAT[x.id] ?? 'UTILITY') === cat);
-      const sp = opt[Math.floor(Math.random() * opt.length)];
-      if (!sp) continue;
+    // (owner 2026-10-24 "the start cards feel the same": the old one-per-category rule only ever offered ~6 cards (Defense and Speed had two each).
+    // Now any 3 different specials, at most 2 from one category, so every run opens differently.)
+    const opt = SPECIALS.filter((x) => !runCards.taken[x.id]).sort(() => Math.random() - 0.5), per: Record<string, number> = {};
+    for (const sp of opt) {
+      if (cards.length >= 3) break;
+      const cat = SPECIAL_CAT[sp.id] ?? 'UTILITY'; if ((per[cat] ?? 0) >= 2) continue; per[cat] = (per[cat] ?? 0) + 1;
       cards.push(specCard(sp, Math.random() < 0.65 ? 1 : 2));   // (owner) the opener is a taste: Rare or Epic, never Legendary / Mythic
     }
     if (cards.length === 3) { if (opts.epic && !cards.some((c) => (c.tier ?? 0) >= 2)) { const i = Math.floor(Math.random() * 3); const sp = SPECIALS.find((x) => x.id === cards[i].special)!; cards[i] = specCard(sp, 2); } return cards; }

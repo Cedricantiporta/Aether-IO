@@ -404,8 +404,8 @@ export const QT_DECOR: [piece: string, row: FillRow][] = [];
   type Kind = 'garden' | 'wild' | 'stone';
   // (owner 2026-10-24 "everything is scattered": no loose plants on paving / verges / wall feet / house corners. Flowers + bushes only in the parks, round flower beds and a few tidy bush piles.)
   const MIX: Record<Kind, [string, number, number, number][]> = {   // piece, weight, scale lo, scale hi
-    garden: [['N_BushBerries_1', 0.8, 0.8, 1.1], ['N_BushBerries_2', 0.8, 0.8, 1.1], ['N_Flowers', 3.0, 1.0, 1.5], ['Flower_3_Group', 2.0, 0.9, 1.2], ['Flower_4_Group', 2.0, 0.9, 1.2], ['Flower_3_Single', 1.0, 1.0, 1.4], ['Flower_4_Single', 1.0, 1.0, 1.4]],
-    wild: [['N_Bush_1', 1, 0.9, 1.2], ['N_Bush_2', 1, 0.9, 1.2], ['N_BushBerries_1', 0.7, 0.9, 1.2]],
+    garden: [['Bush_Common_Flowers', 0.8, 0.8, 1.1], ['Bush_Common', 0.8, 0.8, 1.1], ['N_Flowers', 3.0, 1.0, 1.5], ['Flower_3_Group', 2.0, 0.9, 1.2], ['Flower_4_Group', 2.0, 0.9, 1.2], ['Flower_3_Single', 1.0, 1.0, 1.4], ['Flower_4_Single', 1.0, 1.0, 1.4]],
+    wild: [['Bush_Common', 1, 0.9, 1.2], ['Bush_Common_Flowers', 1, 0.9, 1.2], ['Bush_Common_Flowers', 0.7, 0.9, 1.2]],
     stone: [['Pebble_Round_1', 1, 1.7, 2.4]],
   };
   void QT_FLOWERS; void QT_GRASS; void QT_CLOVER; void QT_PEBBLES;
@@ -437,7 +437,7 @@ export const QT_DECOR: [piece: string, row: FillRow][] = [];
     for (let t = 0, k = 0; t < n * 12 && k < n; t++) {
       const a = dr() * TAU, d = Math.sqrt(dr()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       if (!okSpot(x, z)) continue;
-      const sc = 1.0 + dr() * 0.6, name = ['N_BushBerries_1', 'N_Bush_1', 'N_Bush_2', 'N_BushBerries_2'][Math.floor(dr() * 4)];
+      const sc = 1.0 + dr() * 0.6, name = ['Bush_Common_Flowers', 'Bush_Common', 'Bush_Common_Flowers', 'Bush_Common'][Math.floor(dr() * 4)];
       QT_DECOR.push([QT_PREFIX + name, [x, z, dr() * TAU, sc, sc * (0.9 + dr() * 0.2), sc]]); k++;
     }
   };

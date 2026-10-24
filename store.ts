@@ -377,7 +377,7 @@ const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _sta
   const st = useGameStore.getState(), rp = picks ?? st.runPicks;
   // Lucky Start (Tech House): the very first card choice of an adventure run (first biome) always holds an Epic card
   const epic = techLv(st.tech, 'lucky') > 0 && rp.length === 0 && runInfo.mode === 'ADVENTURE' && world.room.biome === 0;
-  // (owner) the first card choice of every run: 3 special cards, one per category (Offense / Defense / Speed)
+  // (owner) the first card choice of every run: 3 different special cards (any mix, at most 2 of one category)
   const opener = rp.length === 0 && !spoils;
   return rollRunCards(opener ? 3 : count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic, opener, spoils }).map((c) => withCardText({ ...c, id: uid('card') }));
 };

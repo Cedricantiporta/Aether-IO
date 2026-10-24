@@ -365,13 +365,13 @@ function qtPlan(r: QtRoom): QtPlan {
       if (r.v >= 2) return { legacy: true, tree: QT_TWISTED, pine: QT_PINE, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stumpMoss, log: g.logMoss, bushes: B1, shrooms: true, conks: true, ground: true, deco: g.plants, decoN: 0.4 };
       return { legacy: true, tree: r.v === 0 ? QT_COMMON : cat(QT_COMMON, QT_COMMON, QT_PINE), pine: QT_PINE, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stumpMoss, log: g.logMoss, bushes: B1, shrooms: r.v >= 1, conks: r.v >= 1, ground: true, path: !r.camp && !r.boss && ((r.seed ?? 1) % 5) !== 0, deco: g.plants, decoN: 0.3 };
     }
-    case 'Marble Halls': return { tree: cat(g.commonAutumn, g.commonDead, g.birchAutumn), pine: cat(g.commonDead, g.birchDead), dead: cat(g.commonDead, g.birchDead), rock: g.rockMoss, boulder: g.rockMoss, stump: g.stumpMoss, log: g.logMoss, bushes: g.bush, deco: cat(g.plants, [g.flowers]), decoN: 0.35 };
-    case 'Sunscorch Desert': return { tree: cat(g.commonDead, g.birchDead), pine: cat(g.commonDead, g.birchDead), dead: cat(g.commonDead, g.birchDead, g.willowDead), rock: cat(g.rockSand, g.rockSand, g.rock), boulder: g.rockSand, stump: g.stump, log: g.log, cactus: true, sandstone: true, deco: ['N_Plant_2', 'N_Plant_2', 'N_Grass_Short', ...g.cactusFlower], decoN: 0.7 };
-    case 'Coral Isles': return { tree: g.palm, pine: g.palm, dead: g.palm, rock: g.rockSand, boulder: g.rockSand, stump: g.stump, log: g.log, sandstone: true, bushes: g.bush, deco: cat(g.plants, [g.flowers], g.grass), decoN: 0.6, big: true };
-    case 'Ember Wastes': return { tree: cat(g.commonDead, g.birchDead, g.willowDead), pine: cat(g.commonDead, g.willowDead), dead: cat(g.commonDead, g.birchDead, g.willowDead), rock: g.rock, boulder: g.rock, stump: g.stump, log: g.log };
+    case 'Marble Halls': return { tree: cat(QT_COMMON, QT_DEAD), pine: QT_DEAD, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stumpMoss, log: g.logMoss, bushes: ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'], deco: g.plants, decoN: 0.35 };   // (owner 2026-10-24: textured pack-1 trees, not pack-2's flat autumn blobs)
+    case 'Sunscorch Desert': return { tree: QT_DEAD, pine: QT_DEAD, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stump, log: g.log, cactus: true, sandstone: true, deco: ['N_Plant_2', 'N_Plant_2', 'N_Grass_Short', ...g.cactusFlower], decoN: 0.7 };
+    case 'Coral Isles': return { tree: g.palm, pine: g.palm, dead: g.palm, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stump, log: g.log, sandstone: true, bushes: ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'], deco: cat(g.plants, [g.flowers], g.grass), decoN: 0.6, big: true };
+    case 'Ember Wastes': return { tree: QT_DEAD, pine: QT_DEAD, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stump, log: g.log };
     case 'Frostpeak': return { tree: cat(g.commonSnow, g.birchSnow, g.willowSnow), pine: g.pineSnow, dead: cat(g.commonDeadSnow, g.birchDeadSnow, g.willowDeadSnow), rock: g.rockSnow, boulder: g.rockSnow, stump: g.stumpSnow, log: g.logSnow, bushes: g.bushSnow };
-    case 'The Void': return { dead: cat(g.commonDead, g.birchDead, g.willowDead), rock: g.rock, boulder: g.rock, stump: g.stump, log: g.log };
-    default: return { rock: g.rock, boulder: g.rock };
+    case 'The Void': return { dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stump, log: g.log };
+    default: return { rock: QT_ROCKS, boulder: QT_ROCKS };
   }
 }
 const qtHash = (a: number, b: number, k = 0): number => { const v = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453; return v - Math.floor(v); };

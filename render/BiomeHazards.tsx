@@ -10,7 +10,7 @@ import {
 import { inView } from './view';
 import { CELL, pushHalo } from './fx';
 import { QtBatch } from './qtNature';
-import { N2, QT_PREFIX, qtPick } from '../engine/qtData';
+import { QT_PREFIX, qtPick } from '../engine/qtData';
 import type { Place } from './natureKit';
 import { GB, TAU, clamp, commitInst, glowMat, litMat, setInst } from './util';
 
@@ -38,7 +38,7 @@ function BrambleBushes() {
     for (let i = 0; i < hz.nBr; i++) {
       const b = hz.br[i];
       let h = 0; const rnd = () => { h = (h * 1664525 + 1013904223 + i * 7919) >>> 0; return h / 4294967296; };
-      const n = 5 + Math.floor(rnd() * 2), pool = [...N2.bushBerries, ...N2.bush, ...N2.bushBerries];
+      const n = 5 + Math.floor(rnd() * 2), pool = ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'];   // (owner 2026-10-24: textured pack-1 bushes, not pack-2 lumps)
       for (let k = 0; k < n; k++) {
         const a = (k / n) * TAU + rnd() * 0.8, d = k === 0 ? 0 : b.r * (0.35 + rnd() * 0.45), sc = (0.85 + rnd() * 0.5) * Math.max(0.9, b.r * 0.8);
         add(qtPick(pool, rnd()), { x: b.x + Math.cos(a) * d, y: 0, z: b.z + Math.sin(a) * d, ry: rnd() * TAU, sx: sc, sy: sc * (0.9 + rnd() * 0.25), sz: sc });

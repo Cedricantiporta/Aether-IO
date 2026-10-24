@@ -32,7 +32,7 @@ export function isHallsRoom(biome: number, type: RoomType, seed: number, index: 
   if (shapeDbg.force === 'HALLS') return true;
   if (shapeDbg.force) return false;
   if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return false;   // the very first room of a run stays simple
-  return mulberry32(seed ^ 0x5eed11)() < (BIOMES[biome % BIOMES.length].style === 'MARBLE' ? 1 : 0.25);   // (owner) Marble Halls = every fight room is an indoor castle hall
+  return mulberry32(seed ^ 0x5eed11)() < (BIOMES[biome % BIOMES.length].style === 'MARBLE' ? 1 : 0.6);   // (owner) Marble Halls = every fight room is an indoor castle hall; elsewhere most fight rooms are chambers + passages
 }
 
 /** Stage layout of a room (pure function of biome, type, seed and room index). */
