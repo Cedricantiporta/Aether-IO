@@ -6,6 +6,7 @@ import { world, allocZone } from '../world';
 import { useGameStore } from '../../store';
 import { events } from '../events';
 import { isAquatic, isStationary } from '../enemyDefs';
+import { lava, lavaAt } from '../lavaFloor';
 import { feat, riverD, riverS, hwAt } from '../roomFeatures';
 import type { Zone } from '../types';
 import {
@@ -353,6 +354,26 @@ function riftUpdate(dt: number): void {
   }
 }
 
+const LAVA_BURN: StatusEffect = { type: 'BURN', duration: 2, value: 3 };
+let lavaT = 0;
+/** Ember lava floor (lavaFloor.ts): walkable; the hero is slowed and burns unless dashing, monsters burn a little. O(1) grid lookups. */
+function lavaUpdate(dt: number): void {
+  const p = world.player;
+  if (p.alive && p.dashT <= 0 && lavaAt(p.pos.x, p.pos.z)) {
+    envSlow = Math.min(envSlow, 0.7);
+    if (p.burnT <= 0.5) applyPlayerDebuff('BURN', 3, 8 + world.director.wave * 1.2);
+  }
+  lavaT += dt;
+  if (lavaT < 0.3) return;
+  lavaT = 0;
+  const es = world.enemies;
+  for (let i = 0; i < es.length; i++) {
+    const e = es[i];
+    if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.boss || e.kind === 'BAT' || e.kind === 'WRAITH' || isStationary(e.kind)) continue;
+    if (lavaAt(e.pos.x, e.pos.z)) { LAVA_BURN.value = Math.max(1, e.maxHp * 0.012); applyStatus(e, LAVA_BURN); }
+  }
+}
+
 export function updateZones(dt: number): void {
   const ew = world.player.earthwall;
   if (ew.active) {
@@ -362,6 +383,7 @@ export function updateZones(dt: number): void {
 
   envSlow = arenaSlow(); // Glacius blizzard slows the whole arena
   if (feat.rift) riftUpdate(dt);
+  if (lava.on && world.room.active) lavaUpdate(dt);
   updateWalls(dt);
   const zones = world.zones;
   for (let i = 0; i < zones.length; i++) {

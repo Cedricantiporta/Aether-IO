@@ -143,3 +143,55 @@ export function applyPathShader(mat: MeshStandardMaterial, mask: PathMask | null
   mat.customProgramCacheKey = () => 'groundPathV2' + (mask ? 'p' : '') + (sand ? 's' : '');
   mat.needsUpdate = true;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Ember lava floor (engine/lavaFloor.ts): the same blurred disc mask, drawn as a cooled dark crust rim around a glowing molten core. `inverted`: the mask holds the
+// ROCK (heavy-lava rooms) and the lava is everything else. Time comes from the shared `lavaTime` uniform (written by RoomGround's useFrame).
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------
+export const lavaTime = { value: 0 };
+const LAVA_COMMON = /* glsl */ `
+uniform sampler2D uPath; uniform vec4 uPm; uniform float uLT; uniform float uLInv;
+float lvK = 0.0, lvC = 0.0, lvH = 0.0;
+float lvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float lvNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(lvHash(i), lvHash(i + vec2(1.0, 0.0)), f.x), mix(lvHash(i + vec2(0.0, 1.0)), lvHash(i + vec2(1.0, 1.0)), f.x), f.y); }`;
+const LAVA_COLOR = /* glsl */ `
+{
+  vec2 mq = (vPW - uPm.xy) * uPm.zw;
+  if (mq.x > 0.0 && mq.x < 1.0 && mq.y > 0.0 && mq.y < 1.0) {
+    float pm = texture2D(uPath, mq).r;
+    if (uLInv > 0.5) pm = 1.0 - pm;
+    if (pm > 0.2) {
+      float n = lvNoise(vPW * 0.8) * 0.6 + lvNoise(vPW * 2.1 + 7.0) * 0.4;
+      float e = pm + (n - 0.5) * 0.3;
+      lvK = smoothstep(0.5, 0.54, e);
+      float crust = smoothstep(0.12, 0.44, e) * (1.0 - lvK);
+      vec3 rock = diffuseColor.rgb * 0.2 + vec3(0.02, 0.008, 0.005);
+      diffuseColor.rgb = mix(diffuseColor.rgb, rock, crust);
+      vec2 fl = vPW * 0.55 + vec2(uLT * 0.12, -uLT * 0.07);
+      float heat = lvNoise(fl) * 0.5 + lvNoise(fl * 2.3 - uLT * 0.15) * 0.35 + lvNoise(fl * 5.0 + uLT * 0.2) * 0.15;
+      lvC = smoothstep(0.66, 1.0, e + (heat - 0.5) * 0.4) * (0.2 + 0.8 * smoothstep(0.38, 0.72, heat));
+      lvH = heat;
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.02, 0.0), lvK);
+    }
+  }
+}`;
+const LAVA_EMIT = /* glsl */ `
+if (lvK > 0.0) {
+  float pulse = 0.88 + 0.12 * sin(uLT * 1.7 + lvH * 6.0);
+  vec3 deep = vec3(0.9, 0.14, 0.012), hot = vec3(1.0, 0.5, 0.08);
+  vec3 lc = mix(deep, hot, clamp(lvC * (0.55 + lvH * 0.6), 0.0, 1.0));
+  lc *= mix(0.62, 1.0, lvC);
+  totalEmissiveRadiance = mix(totalEmissiveRadiance, lc * 1.0 * pulse, lvK);
+}`;
+/** Patch an Ember ground material to show the lava of `mask` (see above). */
+export function applyLavaShader(mat: MeshStandardMaterial, mask: PathMask, inverted: boolean): void {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uPath = { value: mask.tex }; sh.uniforms.uPm = { value: mask.o }; sh.uniforms.uLT = lavaTime; sh.uniforms.uLInv = { value: inverted ? 1 : 0 };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vPW;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPW = position.xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vPW;' + LAVA_COMMON)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + LAVA_COLOR)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' + LAVA_EMIT);
+  };
+  mat.customProgramCacheKey = () => 'lavaFloorV1';
+  mat.needsUpdate = true;
+}

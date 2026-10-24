@@ -124,7 +124,7 @@ export interface CaveLayout {
   bench: { x: number; z: number; r: number } | null;
   /** crystal / light colours by depth: cyan -> violet -> magenta -> gold -> crimson */
   tint: [string, string];
-  /** hazard theme (seeded, floors 4+): LAVA pools burn, POISON puddles poison while you stand in them */
+  /** hazard theme (seeded, floors 4+): LAVA streams (lavaFloor.ts) burn, POISON puddles poison while you stand in them */
   hazard: 'NONE' | 'LAVA' | 'POISON';
   /** hazard pools [x, z, r] (walk-through; never on the stairs path, the veins or the spawn) */
   pools: [number, number, number][];
@@ -237,7 +237,7 @@ function floorDeep(floor: number, seed: number): CaveLayout {
   }
   // hazard pools: off the straight walk from the arrival stairs to the stairs down, the veins and every prop
   const pools: [number, number, number][] = [];
-  if (hazard !== 'NONE') {
+  if (hazard === 'POISON') {   // (LAVA floors paint streams instead: engine/lavaFloor.ts caveLava)
     const ax = spawn.x, az = spawn.z, bx = down.x, bz = down.z, ll = (bx - ax) ** 2 + (bz - az) ** 2;
     const offPath = (x: number, z: number, m: number) => { const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / ll)); return (x - ax - t * (bx - ax)) ** 2 + (z - az - t * (bz - az)) ** 2 > m * m; };
     const want = 4 + Math.floor(r() * 3) + Math.round(size * 2) - 2;
