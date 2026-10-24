@@ -6,8 +6,10 @@
 // bright cream / blue / gold palette (the MTL colours are near-black). Walls, columns and statues are colliders: the walls ARE the mask edge,
 // columns / statues are mask islands. One InstancedMesh per piece (~10 draw calls), built once per room.
 // ============================================================================
-import React, { Suspense, use, useMemo } from 'react';
-import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Mesh, MeshStandardMaterial, Object3D, DoubleSide } from 'three';
+import React, { Suspense, use, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { AdditiveBlending, BufferGeometry, CanvasTexture, Color, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, PointLight, DoubleSide } from 'three';
+import { world } from '../engine/world';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { halls, hallsSdf, HC } from '../engine/roomHalls';
 import { BASE } from './models';
@@ -26,7 +28,9 @@ const PAL: Record<string, string> = {
 };
 const PIECES = ['Column', 'Column2', 'Wall_Modular', 'Arch', 'Pedestal', 'Pedestal2', 'Statue_Horse', 'Banner_wall', 'Torch', 'Vase', 'Cobweb'] as const;
 type Piece = typeof PIECES[number];
-type Kit = Record<Piece, BufferGeometry>;
+type Kit = Record<Piece, BufferGeometry> & { flame: BufferGeometry };
+/** centroid of the torch flame in the Torch's local space (set by loadKit) */
+const flameC = { x: 0, y: 0.5, z: 0 };
 
 /** per-piece pivot fix: recentre x/z and/or drop the bottom to y = 0 */
 const FIX: Partial<Record<Piece, { cxz?: boolean; floor?: boolean }>> = { Statue_Horse: { cxz: true }, Vase: { cxz: true }, Wall_Modular: { floor: true } };
@@ -37,14 +41,19 @@ function loadKit(): Promise<Kit> {
   return (kitP ??= Promise.all(PIECES.map((n) => fetch(`${BASE}models/dungeon/${n}.obj`).then((r) => r.text()).then((t) => new OBJLoader().parse(t.replace(/^l .*$/gm, ''))))).then((objs) => {
     const kit = {} as Kit, c = new Color();
     PIECES.forEach((n, pi) => {
-      const pos: number[] = [], nor: number[] = [], col: number[] = [];
+      const pos: number[] = [], nor: number[] = [], col: number[] = [], fpos: number[] = [], fnor: number[] = [];
       objs[pi].traverse((o) => {
         const m = o as Mesh; if (!m.isMesh) return;
         const g = m.geometry, P = g.attributes.position, N = g.attributes.normal;
         const mats = Array.isArray(m.material) ? m.material : [m.material];
         const groups = g.groups.length ? g.groups : [{ start: 0, count: P.count, materialIndex: 0 }];
         for (const gr of groups) {
-          c.set(PAL[mats[gr.materialIndex ?? 0].name] ?? '#eee6d2');
+          const mn = mats[gr.materialIndex ?? 0].name;
+          c.set(PAL[mn] ?? '#eee6d2');
+          if (n === 'Torch' && mn === 'Fire') {   // the flame is its own emissive mesh (the lit torch glows)
+            for (let i = gr.start; i < gr.start + gr.count; i++) { fpos.push(P.getX(i), P.getY(i), P.getZ(i)); fnor.push(0, 1, 0); }
+            continue;
+          }
           for (let i = gr.start; i < gr.start + gr.count; i++) {
             pos.push(P.getX(i), P.getY(i), P.getZ(i)); if (N) nor.push(N.getX(i), N.getY(i), N.getZ(i)); else nor.push(0, 1, 0);
             col.push(c.r, c.g, c.b);
@@ -64,6 +73,12 @@ function loadKit(): Promise<Kit> {
       g.setAttribute('position', new Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new Float32BufferAttribute(nor, 3)); g.setAttribute('color', new Float32BufferAttribute(col, 3));
       g.computeBoundingSphere();
       kit[n] = g;
+      if (n === 'Torch') {
+        const fg = new BufferGeometry();
+        fg.setAttribute('position', new Float32BufferAttribute(fpos, 3)); fg.setAttribute('normal', new Float32BufferAttribute(fnor, 3));
+        fg.computeBoundingSphere(); kit.flame = fg;
+        if (fpos.length) { let sx = 0, sy = 0, sz = 0; const k = fpos.length / 3; for (let i = 0; i < fpos.length; i += 3) { sx += fpos[i]; sy += fpos[i + 1]; sz += fpos[i + 2]; } flameC.x = sx / k; flameC.y = sy / k; flameC.z = sz / k; }
+      }
     });
     return kit;
   }));
@@ -131,23 +146,7 @@ function layout(seed: number): Partial<Record<Piece, Put[]>> {
       else if (wi % 11 === 3) add('Cobweb', fx, 2.5, fz, ryf, 2.2);
     }
   }
-  // ---- vase clusters hugging the walls (some on little pedestals)
-  const nCl = 7 + Math.floor(rnd() * 4);
-  for (let t = 0, got = 0; got < nCl && t < 400; t++) {
-    const x = halls.x0 + rnd() * w * HC, z = halls.z0 + rnd() * h * HC, d = hallsSdf(x, z);
-    if (d < 1.6 || d > 3.2 || nearIsl(x, z, 2.2) || nearArch(x, z, 6.5)) continue;
-    let near = false; for (const q of L.Vase ?? []) if (Math.hypot(q.x - x, q.z - z) < 7) { near = true; break; }
-    if (near) continue;
-    got++;
-    const m = 2 + Math.floor(rnd() * 3);
-    for (let k = 0; k < m; k++) {
-      const a = rnd() * TAU, r = 0.3 + rnd() * 1.1, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
-      if (!free(px, pz, 1.2)) continue;
-      const s = 2.4 + rnd() * 1.6;
-      if (k === 0 && rnd() < 0.5) { add('Pedestal2', px, 0, pz, rnd() * TAU, 0.4); add('Vase', px, 0.93, pz, rnd() * TAU, s * 0.8); }
-      else add('Vase', px, 0, pz, rnd() * TAU, s);
-    }
-  }
+  // (jars / barrels along the walls are breakable crates now: engine/roomgen.ts)
   return L;
 }
 
@@ -167,7 +166,65 @@ function Pieces({ seed, shadows }: { seed: number; shadows: boolean }) {
     }
     return out;
   }, [seed, halls.version]);   // eslint-disable-line react-hooks/exhaustive-deps
-  return <>{meshes.map((m) => <primitive key={m.id} object={m} />)}</>;
+  const torches = useMemo(() => layout(seed).Torch ?? [], [seed, halls.version]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return <>{meshes.map((m) => <primitive key={m.id} object={m} />)}<TorchGlow torches={torches} flame={kit.flame} shadows={shadows} /></>;
+}
+
+const NLIGHT = 3;
+let poolTex: CanvasTexture | null = null;
+function glowTex(): CanvasTexture {
+  if (poolTex) return poolTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d')!, gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,170,70,0.55)'); gr.addColorStop(0.5, 'rgba(255,140,50,0.2)'); gr.addColorStop(1, 'rgba(255,120,40,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return (poolTex = new CanvasTexture(cv));
+}
+
+/** Wall torches that really glow: an emissive flame per torch, a warm additive light pool on the floor in front of it, and (on the higher
+ *  quality tiers) NLIGHT real point lights that hop to the torches nearest the hero. */
+function TorchGlow({ torches, flame, shadows }: { torches: Put[]; flame: BufferGeometry; shadows: boolean }) {
+  const lights = useRef<(PointLight | null)[]>([]);
+  const res = useMemo(() => {
+    const fm = new MeshBasicMaterial({ color: new Color(3.2, 1.9, 0.5), toneMapped: false, side: DoubleSide });
+    const o = new Object3D(), n = torches.length;
+    const fl = new InstancedMesh(flame, fm, Math.max(1, n)), pm = new MeshBasicMaterial({ map: glowTex(), transparent: true, blending: AdditiveBlending, depthWrite: false, toneMapped: false });
+    const pools = new InstancedMesh(new PlaneGeometry(1, 1).rotateX(-Math.PI / 2), pm, Math.max(1, n));
+    const pos = new Float32Array(n * 3);
+    torches.forEach((q, i) => {
+      o.position.set(q.x, q.y, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.sx, q.sy, q.sz); o.updateMatrix(); fl.setMatrixAt(i, o.matrix);
+      const c = Math.cos(q.ry), s = Math.sin(q.ry), lx = flameC.x * q.sx, lz = flameC.z * q.sz;
+      pos[i * 3] = q.x + lx * c + lz * s; pos[i * 3 + 1] = q.y + flameC.y * q.sy; pos[i * 3 + 2] = q.z - lx * s + lz * c;
+      // the pool lies on the floor a little way out from the wall (the torch front faces into the hall)
+      o.position.set(pos[i * 3] + Math.sin(q.ry + Math.PI) * 2.2, 0.07, pos[i * 3 + 2] + Math.cos(q.ry + Math.PI) * 2.2); o.rotation.set(0, 0, 0); o.scale.set(11, 1, 11); o.updateMatrix(); pools.setMatrixAt(i, o.matrix);
+    });
+    fl.count = n; pools.count = n; fl.frustumCulled = false; pools.frustumCulled = false; pools.renderOrder = 2;
+    fl.instanceMatrix.needsUpdate = true; pools.instanceMatrix.needsUpdate = true;
+    return { fl, pools, pos };
+  }, [torches, flame]);
+  useFrame(({ clock }) => {
+    const L = lights.current, n = res.pos.length / 3, p = world.player.pos, t = clock.elapsedTime;
+    res.pools.material.opacity = 0.9 + Math.sin(t * 7.3) * 0.08;
+    for (let k = 0; k < NLIGHT; k++) {
+      const li = L[k]; if (!li) continue;
+      let best = -1, bd = 1e9;
+      for (let i = 0; i < n; i++) {
+        const dx = res.pos[i * 3] - p.x, dz = res.pos[i * 3 + 2] - p.z, d = dx * dx + dz * dz;
+        if (d >= bd) continue;
+        let taken = false;
+        for (let j = 0; j < k; j++) { const o = L[j]; if (o && o.userData.i === i) { taken = true; break; } }
+        if (!taken) { bd = d; best = i; }
+      }
+      if (best < 0) { li.visible = false; continue; }
+      li.visible = true; li.userData.i = best;
+      li.position.set(res.pos[best * 3] + (p.x - res.pos[best * 3]) * 0.04, res.pos[best * 3 + 1] - 0.3, res.pos[best * 3 + 2] + (p.z - res.pos[best * 3 + 2]) * 0.04);
+      li.intensity = 38 + Math.sin(t * 9 + best) * 5;
+    }
+  });
+  return <>
+    <primitive object={res.fl} /><primitive object={res.pools} />
+    {shadows && Array.from({ length: NLIGHT }, (_, k) => <pointLight key={k} ref={(l) => { lights.current[k] = l; }} color="#ffa24a" intensity={38} distance={17} decay={2} />)}
+  </>;
 }
 
 export function HallsMarble({ seed, shadows }: { seed: number; shadows: boolean }) {

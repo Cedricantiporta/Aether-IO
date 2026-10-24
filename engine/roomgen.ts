@@ -329,6 +329,24 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       for (const c of crateList) if (Math.hypot(x - c.x, z - c.z) < 2.4) { ok = false; break; }
       if (ok) crateList.push({ kind, x, z });
     }
+    // Marble Halls (owner): clusters of jars (+ the odd barrel) hug the castle walls; they are real crates (solid until smashed, small drops)
+    if (isHalls && def.style === 'MARBLE' && !cave) {
+      const jr = mulberry32(seed ^ 0x1a4b), nCl = 7 + Math.floor(jr() * 4), mid: [number, number][] = [];
+      for (let t = 0, got = 0; got < nCl && t < 500; t++) {
+        const x = halls.x0 + jr() * halls.w * 0.5, z = halls.z0 + jr() * halls.h * 0.5, d = hallsSdf(x, z);
+        if (d < 1.6 || d > 3.2 || nearKeep(x, z, 1.5) || mid.some((q) => Math.hypot(q[0] - x, q[1] - z) < 7)) continue;
+        let ok = false;
+        for (const [ix, iz, ir] of halls.islands) if (Math.hypot(x - ix, z - iz) < ir + 1.4) { ok = true; break; }
+        for (const a of halls.arches) if (Math.hypot(x - a[0], z - a[1]) < 6.5) ok = true;
+        if (ok) continue;
+        mid.push([x, z]); got++;
+        for (let k = 0, m = 2 + Math.floor(jr() * 3); k < m; k++) {
+          const a = jr() * Math.PI * 2, r = 0.5 + jr() * 1.1, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r, kind: CrateKind = jr() < 0.2 ? 'BARREL' : 'POT';
+          if (hallsSdf(px, pz) < 1.3 || blockedSpot(px, pz, 0.7, 0.4) || crateList.some((c) => Math.hypot(px - c.x, pz - c.z) < 1.5)) continue;
+          crateList.push({ kind, x: px, z: pz });
+        }
+      }
+    }
     // harvest nodes (hold E): half the rooms have one (sometimes 2); kind decides the look and the yield
     if (!cave && !tower && type !== 'CAMP') {
       // (owner) fewer in battle rooms (~1 in 5 has one), plenty in the quiet rooms (fountain / merchant / shrine: 2-4)

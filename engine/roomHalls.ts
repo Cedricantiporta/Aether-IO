@@ -172,7 +172,7 @@ const DESIGNS: Record<HallsVariant, Design> = {
   COLUMNS: {
     castle: true,
     blobs: [[0, -36, 20, 12, 0, 0, 4], [0, 2, 24, 14, 0, 0, 4], [-4, 42, 18, 12, 0, 0, 4], [-38, 2, 10, 8, 0, 0, 3]],
-    paths: [{ c: [[0, -26], [0, -20], [0, -16], [0, -10]], w0: 6.9, w1: 6.9 }, { c: [[-2, 14], [-2, 20], [-2, 26], [-2, 32]], w0: 6.9, w1: 6.9 }, { c: [[-22, 2], [-24, 2], [-27, 2], [-30, 2]], w0: 6.9, w1: 6.9 }],
+    paths: [{ c: [[0, -26], [0, -20], [0, -16], [0, -10]], w0: 8.4, w1: 8.4 }, { c: [[-2, 14], [-2, 20], [-2, 26], [-2, 32]], w0: 8.4, w1: 8.4 }, { c: [[-22, 2], [-24, 2], [-27, 2], [-30, 2]], w0: 8.4, w1: 8.4 }],
     islands: [
       [-15, -42, 0.85], [-8, -42, 0.85], [8, -42, 0.85], [15, -42, 0.85], [-15, -30, 0.85], [-8, -30, 0.85], [8, -30, 0.85], [15, -30, 0.85],
       [-16, -7, 0.85], [-8, -7, 0.85], [8, -7, 0.85], [16, -7, 0.85], [-16, 11, 0.85], [-8, 11, 0.85], [8, 11, 0.85], [16, 11, 0.85],
@@ -180,7 +180,7 @@ const DESIGNS: Record<HallsVariant, Design> = {
     ],
     statues: [[19, 2], [-43, 2], [10, 50], [0, -45]],
     arches: [[0, -23, 0], [0, -13, 0], [-2, 17, 0], [-2, 29, 0], [-26, 2, 90]],
-    start: [0, -41], exit: [-4, 47], hub: [0, 2], target: [1500, 2100],
+    start: [0, -41], exit: [-4, 47], hub: [0, 2], target: [1950, 2750],
   },
   // a big heart clearing with three spokes (arrival pocket, dead-end pocket, exit pocket)
   CROSS: {
@@ -286,9 +286,10 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
   for (let pass = 0; ; pass++) {
     I = instantiate(D, mulberry(seed ^ 0x51ed270b), scale, ang, mirror);   // (same jitter every pass)
     rasterise(I, seed);
-    let ns = Math.min(1.3, Math.max(0.7, scale * Math.sqrt(target / Math.max(100, halls.area))));
-    if (halls.extent * (ns / scale) > 76) ns = (scale * 76) / halls.extent;
-    if (pass >= 2 || Math.abs(ns / scale - 1) < 0.04 && halls.extent <= 76) break;
+    const cap = D.castle ? 86 : 76;   // (Marble Halls are the biggest layouts)
+    let ns = Math.min(D.castle ? 1.45 : 1.3, Math.max(0.7, scale * Math.sqrt(target / Math.max(100, halls.area))));
+    if (halls.extent * (ns / scale) > cap) ns = (scale * cap) / halls.extent;
+    if (pass >= 2 || Math.abs(ns / scale - 1) < 0.04 && halls.extent <= cap) break;
     scale = ns;
   }
   finishPoints(I);

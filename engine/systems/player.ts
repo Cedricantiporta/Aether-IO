@@ -442,7 +442,7 @@ export function updatePlayer(dt: number): void {
     const c = crates[i];
     if (!c.active) continue;
     const dx = c.pos.x - p.pos.x, dz = c.pos.z - p.pos.z;
-    if ((c.kind === 'POT' || c.kind === 'HAY') && dx * dx + dz * dz < 1.21) breakCrate(c);
+    if ((c.kind === 'HAY' || (c.kind === 'POT' && !world.room.active)) && dx * dx + dz * dz < 1.21) breakCrate(c);
   }
 
   // ---- anim / facing: face where you walk; when standing still, face the target
