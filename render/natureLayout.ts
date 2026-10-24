@@ -20,11 +20,11 @@ import {
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
-import { QT_PREFIX, QT_H, QT_R, QT_COMMON, QT_PINE, N2, qtLod, qtPick } from '../engine/qtData';
+import { QT_PREFIX, QT_H, QT_R, QT_ROCKS, QT_COMMON, QT_PINE, N2, qtLod, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
 import { FILL, PIECES, QT_DECOR } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
-import { CAVE_MOUTH, MINE_CAMP, inCaveClear } from '../engine/caveData';
+import { CAVE_MOUTH, CAVE_ROCKS, CAVE_FORMATIONS, MINE_CAMP, inCaveClear } from '../engine/caveData';
 import { ARENA_RADIUS } from '../engine/world';
 import { mulberry32 } from './util';
 import { edgeR, groundY, inForecourtUse, inYard, lakeK } from './terrainFn';
@@ -41,6 +41,26 @@ export const groundAt = (x: number, z: number): number => townLift(x, z) + hillA
 export type Sets = Map<string, Place[]>;
 const put = (S: Sets, name: NKPiece, p: Place) => { let l = S.get(name); if (!l) S.set(name, (l = [])); l.push(p); };
 const P = (x: number, y: number, z: number, ry: number, s: number, sy = s): Place => ({ x, y, z, ry, sx: s, sy, sz: s });
+/** (owner) Rock formation of the textured Quaternius pack-1 rocks (engine/qtData QT_ROCKS, the Ember Wastes halls-wall look): `n` (3-7) overlapping rocks of mixed size about (x, z), footprint half-size R
+ *  (scaled up generously), one big core, medium ones round it, one or two small ones stacked on top, random yaw. y = the ground. */
+const qtRock = (S: Sets, node: string, x: number, y: number, z: number, hw: number, hmul: number, ry: number): void => {
+  const s0 = hw / QT_R[node];
+  put(S, QT_PREFIX + node, { x, y, z, ry, sx: s0, sy: (hw * hmul) / QT_H[node], sz: s0 * 1.1 });
+};
+const rockPut = (S: Sets, x: number, y: number, z: number, R: number, seed: number, n = 0, grow = 1.4): void => {
+  const h = (k: number): number => hash2(x, z, seed * 7 + k), cnt = n || (R < 0.45 ? 3 : 3 + Math.floor(h(1) * 5)), G = R * grow, a0 = h(2) * TAU;
+  const core = G * (0.8 + h(3) * 0.2), hm = 0.85 + h(4) * 0.5;
+  qtRock(S, qtPick(QT_ROCKS, h(5)), x, y - 0.12, z, core, hm, h(6) * TAU);
+  const nStack = cnt >= 5 ? 1 + (cnt > 6 ? 1 : 0) : 0, nSide = cnt - 1 - nStack;
+  for (let i = 0; i < nSide; i++) {
+    const a = a0 + (i / nSide) * TAU + (h(10 + i) - 0.5) * 0.7, d = G * (0.55 + h(20 + i) * 0.35), hw = G * (0.38 + h(30 + i) * 0.3);
+    qtRock(S, qtPick(QT_ROCKS, h(40 + i)), x + Math.cos(a) * d, y - 0.12, z + Math.sin(a) * d, hw, 0.7 + h(50 + i) * 0.7, h(60 + i) * TAU);
+  }
+  for (let i = 0; i < nStack; i++) {   // stacked on the core: they make the formation tall
+    const hw = core * (0.5 - i * 0.12);
+    qtRock(S, qtPick(QT_ROCKS, h(70 + i)), x + (h(80 + i) - 0.5) * core * 0.5, y + core * hm * (0.95 + i * 0.5), z + (h(90 + i) - 0.5) * core * 0.5, hw, 0.8 + h(100 + i) * 0.4, h(110 + i) * TAU);
+  }
+};
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
 const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(z - DOCK.z) < 7;
 
@@ -111,19 +131,18 @@ export function townPlaces(): Sets {
   // ---- market carts on the meadow (kind 1 = a haystack), the haystack in the wheat field, trail boulders
   for (const k of CARTS) { if (k.kind === 1) put(S, 'haystack', P(k.x, groundAt(k.x, k.z), k.z, 0, 0.8)); else put(S, 'market_cart', P(k.x, groundAt(k.x, k.z), k.z, 0, 1)); }
   put(S, 'haystack', P(HAYSTACK.x, 0, HAYSTACK.z, 0, 0.85));
-  TRAIL_ROCKS.forEach(([x, z, r], i) => {   // kit v3: the big boulders are cliff_rock_large, the rest rock_round / rock_cluster_small
-    const sc = (r / 1.3) * (0.95 + hash2(x, z) * 0.2), ry = hash2(x, z, 1) * TAU;
-    if (r >= 2.2) { const k = (r / 4.1) * (0.95 + hash2(x, z) * 0.15); put(S, 'cliff_rock_large', P(x, groundAt(x, z) - 0.25 * k, z, ry, k, k * (0.85 + hash2(x, z, 2) * 0.25))); }
-    else if (r < 1.2) { const k = (r / 0.9) * 0.9; put(S, 'rock_cluster_small', P(x, groundAt(x, z) - 0.1 * k, z, ry, k, k)); }
-    else put(S, i % 2 ? 'rock_round_a' : 'rock_round_b', P(x, groundAt(x, z) - 0.15 * sc, z, ry, sc, sc * (0.9 + hash2(x, z, 2) * 0.3)));
-  });
+  TRAIL_ROCKS.forEach(([x, z, r], i) => rockPut(S, x, groundAt(x, z), z, r * 1.05, 700 + i, r >= 1.5 ? 6 : 0));   // formations of faceted boulders (collider r unchanged)
   // ---- outskirts buildings (fronts south): the nature-kit houses of HOUSES (farmhouse, barn, coop)
   for (const h of HOUSES) if (h.nk) put(S, h.nk as NKPiece, P(h.x, groundAt(h.x, h.z), h.z, 0, h.s ?? 1));
   put(S, 'windmill', P(WINDMILL.x, groundAt(WINDMILL.x, WINDMILL.z), WINDMILL.z, 0, WINDMILL.s));
   put(S, 'stable', P(STABLE.x, groundAt(STABLE.x, STABLE.z), STABLE.z, 0, 1));
   put(S, 'brewer_hut', P(BREWER_HUT.x, groundAt(BREWER_HUT.x, BREWER_HUT.z), BREWER_HUT.z, 0, 1));
   put(S, 'endless_tower', P(TOWER.x, groundAt(TOWER.x, TOWER.z), TOWER.z, TOWER.ry, 1));
-  put(S, 'mine_entrance', P(CAVE_MOUTH.x, groundAt(CAVE_MOUTH.x, CAVE_MOUTH.z), CAVE_MOUTH.z, 0, 1));
+  {   // the Crystal Cave mouth: a big cliff of faceted boulders (engine/caveData CAVE_ROCKS; the dark opening + crystals are drawn by render/CaveEntrance.tsx)
+    const gy = Math.max(0, groundAt(CAVE_MOUTH.x, CAVE_MOUTH.z)) - 0.15;
+    for (const [lx, lz, base, R, hr, , v] of CAVE_ROCKS) qtRock(S, QT_ROCKS[v % 3], CAVE_MOUTH.x + lx, gy + base - 0.15, CAVE_MOUTH.z + lz, R * 1.15, (R * hr * 1.7) / (R * 1.15), hash2(lx, lz) * TAU);
+    CAVE_FORMATIONS.forEach(([lx, lz, R], i) => rockPut(S, CAVE_MOUTH.x + lx, gy, CAVE_MOUTH.z + lz, R, 900 + i, 6, 1.5));
+  }
   for (const t of MINE_CAMP.tents) put(S, 'mining_camp_tent', P(t.x, groundAt(t.x, t.z), t.z, 0, 1));
   // ---- the pier: dock segments along the walkway (posts every 3.8 m), plank tiles + edge posts on the T-head, rails on its north / south edges, boats
   {
@@ -138,11 +157,10 @@ export function townPlaces(): Sets {
   put(S, 'small_boat', P(ROWBOAT.x, 0.02, ROWBOAT.z, ROWBOAT.rot + Math.PI, 1.05));   // beached on the sand
   // ---- rocks of the shore (owner beach mock 2026-10-24): chunky rounded SANDSTONE boulders (pack 2 Rock_Sand_1-7: warm orange, lit tops, darker sides, faint strata) stacked in clusters of 5-9 that read as a
   //      cliff: the headland closing the beach's north end, a rocky outcrop where sand meets water, a small islet in the shallows, lone rocks on the sand, the lake's south + east shores
-  const rockC = (x: number, z: number, r: number, y: number, k: number, n = 6) => {
-    const R = Math.max(0.7, r), put1 = (px: number, pz: number, hw: number, hmul: number, py: number, kk: number) => { const node = qtPick(N2.rockSand, hash2(px, pz, kk)), s0 = hw / QT_R[node]; put(S, QT_PREFIX + node, { x: px, y: py, z: pz, ry: hash2(px, pz, kk + 1) * TAU, sx: s0, sy: (hw * hmul) / QT_H[node], sz: s0 }); };
-    put1(x, z, R * 0.78, 1.15 + hash2(x, z, k) * 0.4, y, k);
-    put1(x + (hash2(x, z, k + 2) - 0.5) * R * 0.4, z + (hash2(x, z, k + 3) - 0.5) * R * 0.4, R * 0.5, 1.0 + hash2(x, z, k + 4) * 0.4, y + R * 0.85, k + 5);
-    for (let i = 0; i < n - 2; i++) { const a = hash2(x, z, k + 10 + i) * TAU, d = R * (0.55 + hash2(x, z, k + 20 + i) * 0.35); put1(x + Math.cos(a) * d, z + Math.sin(a) * d, R * (0.36 + hash2(x, z, k + 30 + i) * 0.22), 0.7 + hash2(x, z, k + 40 + i) * 0.5, y + (i % 3) * 0.05, k + 50 + i); }
+  const rockC = (x: number, z: number, r: number, y: number, k: number, n = 6) => {   // (owner: Quaternius rock formations, same footprint but bigger)
+    const R = Math.max(0.7, r);
+    if (R > 1.9) { rockPut(S, x - R * 0.3, y, z, R * 0.85, k, 6); rockPut(S, x + R * 0.35, y, z + R * 0.2, R * 0.7, k + 1, 5); }
+    else rockPut(S, x, y, z, R * (n >= 6 ? 1.1 : 0.95), k, n >= 6 ? 7 : n >= 4 ? 5 : 3);
   };
   HEADLAND.forEach(([x, z, r], i) => rockC(x, z, r, -0.2, 3 + i, i % 3 === 0 ? 8 : 6));
   for (let i = 0; i < 5; i++) { const x = -70.5 - i * 1.4 - hash2(i, 1), z = 4 + (hash2(i, 2) - 0.5) * 3; rockC(x, z, 0.9 + hash2(i, 3) * 0.5, -0.5, 20 + i, 4); }
@@ -290,11 +308,23 @@ export function natureLayout(q: QualityCfg): Sets {
   dressing(q, out);
   // kit v3 pieces take their own size (engine/kitV3Data V3_K): the tables above keep the numbers of the old pieces
   out.forEach((l, k) => { const m = V3_K[k]; if (m) out.set(k, l.map((p) => ({ x: p.x, y: p.y, z: p.z, ry: p.ry, sx: p.sx * m, sy: p.sy * m, sz: p.sz * m }))); });
+  qtRockSwap(out);
   bushSwap(q, out);
   qtDecor(q, out);
   qtForest(q, out);
   if (q.name !== 'HIGH') for (const k of ['N_Wheat', 'N_Corn_1', 'N_Corn_2']) { const l = out.get(QT_PREFIX + k); if (l) out.set(QT_PREFIX + k, l.filter((_, i) => (q.name === 'LOW' ? i % 2 === 0 : i % 4 !== 3))); }   // (the fields thin out on the lower tiers)
   return out;
+}
+
+/** (owner) Every round kit rock of the town map (grove / river-bank / rim boulders, boundary stones: rock_round_a / b, rock_cluster_small, cliff_rock_large) becomes a formation of
+ *  3-6 Quaternius rocks on the same spot and footprint. Small stones stay small (3 pebbles), the big rim boulders become real formations. */
+const ROCK_SWAP: Record<string, number> = { rock_round_a: 1.1, rock_round_b: 1.1, rock_cluster_small: 1.05, cliff_rock_large: 4.1 };
+function qtRockSwap(out: Sets): void {
+  for (const name of Object.keys(ROCK_SWAP)) {
+    const list = out.get(name); if (!list) continue;
+    list.forEach((p, i) => { const R = Math.max(0.35, ROCK_SWAP[name] * p.sx * (name === 'cliff_rock_large' ? 0.8 : 0.95)); rockPut(out, p.x, (p.y ?? 0) + 0.12 * R, p.z, R, i * 3 + name.length, R > 2.4 ? 7 : 0); });
+    out.set(name, []);
+  }
 }
 
 /** Every old faceted bush (kit bush_cluster / bush_round / bush_flower) becomes a pile of 2-3 soft rounded pack bushes (BushBerries / Bush_1-2) on the same spot and footprint. */
