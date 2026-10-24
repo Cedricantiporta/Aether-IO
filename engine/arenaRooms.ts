@@ -10,6 +10,7 @@ import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
 import type { Obstacle, ObstacleKind, RoomType } from './types';
 import { biomeOf } from './roomDefs';
 import { buildShape, shape, dbg } from './roomShape';
+import { disableRoomNav } from './roomNav';
 import { HUB_R, CASTLE_DOOR, KEEPER_POS, gatePos } from './gates';
 
 export const isArenaRoom = (t: RoomType): boolean => t === 'DUEL' || t === 'GATEKEEPER' || t === 'FOUNTAIN';
@@ -27,6 +28,7 @@ const SPEC: Record<string, { s: [number, number]; r: (s: number) => number }> = 
 const gp: [number, number] = [0, 0];
 
 export function buildArena(biome: number, type: RoomType, R: number, seed: number): void {
+  disableRoomNav();
   const f = dbg.force; dbg.force = 'ROUND';
   buildShape(type, R, seed);
   dbg.force = f;

@@ -21,7 +21,9 @@ import { runInfo } from '../engine/runMods';
 import { showcase } from '../engine/showcase';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
-import { shape, shapeLimit } from '../engine/roomShape';
+import { shape, shapeLimit, outlineU } from '../engine/roomShape';
+import { hallsSdf } from '../engine/roomHalls';
+import { HallsWalls } from './HallsWalls';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, onBridge, riverD, hwAt, riverS } from '../engine/roomFeatures';
@@ -268,14 +270,15 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const hasLiquid = feat.river || feat.nLakes > 0;
     const flatLava = feat.liquid === 'LAVA' && !feat.river;   // lava pools lie flat on the rock (only lava rivers cut channels)
     const lavaSea = !!def.lavaSea, waterSea = !!def.waterSea;
-    const path = !boss && (seed % 5) !== 0 && style !== 'MARBLE' && style !== 'VOID';
+    const isHalls = shape.kind === 'HALLS';
+    const path = !boss && !isHalls && (seed % 5) !== 0 && style !== 'MARBLE' && style !== 'VOID';
     const out = new Color(), tmpC = new Color();
     const duneA = (seed % 360) * 0.0174, dux = Math.cos(duneA), duz = Math.sin(duneA);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       const r = Math.hypot(x, z);
       // signed distance-ish to the walkable outline (0 at the old disc edge R), so rim / outside tint follow the shape
-      const u = r - (shapeLimit(x, z) - 1);
+      const u = outlineU(x, z, r);
       const n1 = fbm(x * 0.06 + so, z * 0.06 - so, 3), n2 = vnoise(x * 0.9 + so, z * 0.9);
       out.copy(g0).lerp(g1, sstep(0.3, 0.72, n1)).multiplyScalar(0.9 + n2 * 0.2);
       out.lerp(g1, sstep(0.62, 0.78, fbm(x * 0.14 - so, z * 0.14 + so, 2)) * 0.35);
@@ -396,7 +399,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = style === 'MARBLE' ? 26 : 45; // sparse clutter (user: fewer small bushes)
+    const N = (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? 4 : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
     const tg = new GB([0.8, 1.1]);
     if (style === 'MARBLE') { tg.box(0.5, 0.18, 0.4, [0, 0.09, 0], '#ffffff', [0, 0.4, 0.1]); tg.box(0.3, 0.14, 0.3, [0.4, 0.07, 0.2], '#ffffff', [0.2, 1, 0]); }
     else if (style === 'SAND') { tg.ico(0.22, [0, 0.06, 0], '#ffffff', [1.4, 0.4, 1.1], 0); tg.cone(0.04, 0.4, 3, [0.15, 0.2, 0], '#ffffff', [0.3, 0, 0.4]); tg.cone(0.04, 0.35, 3, [-0.1, 0.18, 0.05], '#ffffff', [-0.3, 0, -0.4]); }
@@ -414,7 +417,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     let nt = 0;
     for (let i = 0; i < N; i++) {
       const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * (shapeLimit(Math.cos(a), Math.sin(a)) - 2);
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      const x = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.cos(a) * d, z = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.sin(a) * d;
+      if (isHalls && hallsSdf(x, z) < 1.2) continue;
       if (hasLiquid && (inLiquid(x, z, 0.4) || onBridge(x, z, 1.2))) continue;
       o.position.set(x, 0, z);
       o.rotation.set(0, rnd() * 6.28, 0);
@@ -466,7 +470,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       let ns2 = 0;
       for (let i = 0; i < NS * 3 && ns2 < NS; i++) {
         const a = r3() * Math.PI * 2, d = Math.sqrt(r3()) * (shapeLimit(Math.cos(a), Math.sin(a)) + 3);
-        const x = Math.cos(a) * d, z = Math.sin(a) * d;
+        const x = isHalls ? (r3() - 0.5) * 2 * shape.maxR : Math.cos(a) * d, z = isHalls ? (r3() - 0.5) * 2 * shape.maxR : Math.sin(a) * d;
+        if (isHalls && hallsSdf(x, z) < 0.8) continue;
         if (hasLiquid && (inLiquid(x, z, 0.6) || onBridge(x, z, 1.2))) continue;
         o.position.set(x, 0, z); o.rotation.set(0, r3() * 6.28, 0); const sc = 0.9 + r3() * 1.3; o.scale.set(sc, sc, sc); o.updateMatrix();
         shrooms.setMatrixAt(ns2, o.matrix); cc.set(tones[Math.floor(r3() * tones.length)]); shrooms.setColorAt(ns2, cc); ns2++;
@@ -474,7 +479,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       shrooms.count = ns2;
       if (shrooms.instanceColor) shrooms.instanceColor.needsUpdate = true;
     }
-    const kerb = def.waterSea ? null : new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
+    const kerb = def.waterSea || isHalls ? null : new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
     if (kerb) kerb.receiveShadow = true;
     return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb };
   }, [biome, R, seed, boss]);
@@ -1016,6 +1021,7 @@ export function Room({ q }: { q: QualityCfg }) {
   return (
     <>
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : isCamp ? <CampGround key={ver} ver={ver} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
+      {r.active && !tower && !isCamp && shape.kind === 'HALLS' && <HallsWalls key={'hw' + ver} biome={r.biome} seed={r.seed} />}
       {r.active && isCamp && <><CampPieces key={'cp' + ver} ver={ver} /><CampShards key={'cs' + ver} ver={ver} /></>}
       {r.active && !tower && <RoomWater />}
       {r.active && !tower && !isCamp && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}

@@ -590,7 +590,7 @@ function placeMarker(kind: EnemyKind, x: number, z: number, elite: boolean, dur:
 
 function pickAnchor(minPlayerDist: number): boolean {
   const pp = world.player.pos;
-  for (let t = 0; t < 40; t++) {
+  for (let t = 0; t < 120; t++) {   // (HALLS: the open floor is a fraction of the bounding disc)
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (shape.maxR - 4);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (!insideShape(x, z, 4)) continue;

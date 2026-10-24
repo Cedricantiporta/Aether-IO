@@ -5,7 +5,7 @@ import { GOLD_SCALE } from '../../constants';
 // ============================================================================
 import { Vector3 } from 'three';
 import { world, allocPickup } from '../world';
-import { edgeLimit, bounds, pushOutOfColliders } from '../mapgen';
+import { edgeLimit, bounds, pushOutOfColliders, roomHalls } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
 import { hardMul } from '../runMods';
@@ -42,7 +42,7 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);
-  const maxD = d > bounds.checkR ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;
+  const maxD = d > bounds.checkR && !roomHalls() ? edgeLimit(tmpPos.x, tmpPos.z, 2) : 1e9;   // (HALLS: pushOutOfColliders slides it off the walls)
   if (d > maxD) tmpPos.multiplyScalar(maxD / d);
   if (bounds.room) pushOutOfColliders(tmpPos, 1.3);   // never inside a lake, river or rock
 

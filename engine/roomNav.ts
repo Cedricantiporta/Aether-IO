@@ -11,7 +11,8 @@
 // Pure TS, no React.
 // ============================================================================
 import { world } from './world';
-import { queryColliders, edgeLimit, bounds, type Collider } from './mapgen';
+import { queryColliders, edgeLimit, bounds, roomHalls, type Collider } from './mapgen';
+import { hallsSdf } from './roomHalls';
 import { feat } from './roomFeatures';
 
 const MAX_DIM = 160;
@@ -72,7 +73,7 @@ function hpop(): number {
 
 /** Is the grid valid for the room that is installed right now? (stale after a camp / arena / town install) */
 export function navActive(): boolean {
-  return nav.on && nav.featVer === feat.version && nav.obsVer === world.obstaclesVersion;
+  return nav.on && bounds.room && nav.featVer === feat.version;   // (obstaclesVersion also moves for town gate changes mid-run: camp / arena builds call disableRoomNav instead)
 }
 
 export function disableRoomNav(): void { nav.on = false; }
@@ -80,8 +81,9 @@ export function disableRoomNav(): void { nav.on = false; }
 /** Rasterises the installed room. `extent` = max walkable radius. Call after installRoom + the final feat.version++. */
 export function buildRoomNav(extent: number): void {
   nav.on = false;
-  if (!bounds.room || !((feat.river && !feat.rift) || feat.nLakes > 0)) return;
-  const half = extent + 3;
+  const halls = roomHalls();
+  if (!bounds.room || !(halls || (feat.river && !feat.rift) || feat.nLakes > 0)) return;
+  const half = Math.ceil(extent + 3);
   nav.cell = Math.max(1, (2 * half) / MAX_DIM);
   nav.w = Math.min(MAX_DIM, Math.ceil((2 * half) / nav.cell));
   nav.x0 = -half; nav.z0 = -half;
@@ -89,8 +91,7 @@ export function buildRoomNav(extent: number): void {
   for (let cz = 0; cz < w; cz++) for (let cx = 0; cx < w; cx++) {
     const x = nav.x0 + (cx + 0.5) * c, z = nav.z0 + (cz + 0.5) * c;
     let b = 0;
-    const lim = edgeLimit(x, z, 1.5);
-    if (x * x + z * z > lim * lim) b = 1;
+    if (halls ? hallsSdf(x, z) < 1.2 : x * x + z * z > edgeLimit(x, z, 1.5) ** 2) b = 1;
     else {
       const l = queryColliders(x, z, 0.6, cols);
       for (let i = 0; i < l.length; i++) {

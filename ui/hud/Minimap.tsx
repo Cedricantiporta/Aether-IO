@@ -21,6 +21,7 @@ import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
 import { islandRadius, mapSeed } from '../../engine/mapgen';
 import { BEACH, DOCK } from '../../engine/beachData';
 import { shape, SHAPE_N } from '../../engine/roomShape';
+import { halls, HC } from '../../engine/roomHalls';
 import { camp, campOn } from '../../engine/campPaths';
 import { SHOP_POSITIONS } from '../../constants';
 import { portalLabel, biomeOf, variantOf } from '../../engine/roomDefs';
@@ -184,13 +185,29 @@ function bakeRoom(): void {
   const ext = shape.maxR + 10, bg = mix(edge, floor, 0.35);
   bake(`R:${r.version}:${r.seed}:${r.biome}:${r.index}:${world.obstaclesVersion}:${shape.version}:${camp.ver}`, -ext, -ext, ext * 2, ext * 2, 1500, bg, (g) => {
     g.fillStyle = bg; g.fillRect(-ext, -ext, ext * 2, ext * 2);
-    g.beginPath();
-    for (let i = 0; i <= SHAPE_N; i += 2) {
-      const th = -Math.PI + (i * Math.PI * 2) / SHAPE_N, rr_ = shape.table[i], x = Math.cos(th) * rr_, y = Math.sin(th) * rr_;
-      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    if (shape.kind === 'HALLS') {   // chambers + corridors: the walkable mask as merged row runs (outline pass, then floor pass)
+      const w = halls.w, hh = halls.h, O = halls.open, outline = mix(floor, '#f6e8bb', 0.5);
+      for (let pass = 0; pass < 2; pass++) {
+        g.fillStyle = pass === 0 ? outline : floor;
+        const e = pass === 0 ? 0.75 : 0;
+        for (let j = 0; j < hh; j++) {
+          let i0 = -1;
+          for (let i = 0; i <= w; i++) {
+            const on = i < w && O[j * w + i] === 1;
+            if (on && i0 < 0) i0 = i;
+            else if (!on && i0 >= 0) { g.fillRect(halls.x0 + i0 * HC - e, halls.z0 + j * HC - e, (i - i0) * HC + e * 2, HC + e * 2); i0 = -1; }
+          }
+        }
+      }
+    } else {
+      g.beginPath();
+      for (let i = 0; i <= SHAPE_N; i += 2) {
+        const th = -Math.PI + (i * Math.PI * 2) / SHAPE_N, rr_ = shape.table[i], x = Math.cos(th) * rr_, y = Math.sin(th) * rr_;
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.closePath(); g.lineWidth = 4; g.strokeStyle = mix(floor, '#f6e8bb', 0.5); g.stroke(); g.fillStyle = floor; g.fill();
+      g.save(); g.clip(); g.lineWidth = 14; g.strokeStyle = floorHi; g.globalAlpha = 0.4; g.stroke(); g.restore(); g.globalAlpha = 1;
     }
-    g.closePath(); g.lineWidth = 4; g.strokeStyle = mix(floor, '#f6e8bb', 0.5); g.stroke(); g.fillStyle = floor; g.fill();
-    g.save(); g.clip(); g.lineWidth = 14; g.strokeStyle = floorHi; g.globalAlpha = 0.4; g.stroke(); g.restore(); g.globalAlpha = 1;
     // liquids
     if (feat.river || feat.nLakes > 0) {
       const lc = feat.liquid === 'LAVA' ? '#ff8a3a' : feat.liquid === 'CHASM' ? '#4a4258' : feat.liquid === 'ICE' ? '#cdeaf5' : C.water;

@@ -16,7 +16,8 @@ import {
   damageEnemy, damageEnemiesInRadius, autoAim, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
   type DamageOpts, type StatusEffect,
 } from './combat';
-import { queryColliders, type Collider } from '../mapgen';
+import { queryColliders, roomHalls, type Collider } from '../mapgen';
+import { hallsWall } from '../roomHalls';
 import { hitCrate } from './crates';
 import { hitRoomTraps, damageTrap, nearestTrap, trapDist, trapAim, type TrapObj } from './roomTraps';
 import { isHarvestNode } from '../mapgen';
@@ -533,6 +534,7 @@ export function updateProjectiles(dt: number): void {
   const pool = world.projectiles;
   const maxR = st.status === GameStatus.MENU ? 120 : ARENA_RADIUS + 20;   // the town hub is bigger than a room (hermit path monsters)
   const maxR2 = maxR * maxR;
+  const hallsRoom = roomHalls();
 
   for (let i = 0; i < pool.length; i++) {
     const p = pool[i];
@@ -625,7 +627,7 @@ export function updateProjectiles(dt: number): void {
     // --- obstacles ---
     if (blockedByObstacles(p.kind)) {
       const cols = queryColliders(nx, nz, 1.2, colOut);
-      let blocked = false;
+      let blocked = hallsRoom && hallsWall(nx, nz);   // (HALLS walls)
       for (let c = 0; c < cols.length; c++) {
         const o = cols[c];
         if (!o.blocksProjectiles) continue;

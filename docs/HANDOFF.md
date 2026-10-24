@@ -48,7 +48,7 @@ daily, so the code wins: `constants.ts`, `classLevels.ts`, `engine/roomDefs.ts`,
 ```
 engine/            pure TS simulation (no React); world.ts = mutable singleton for per-frame state
   game.ts input.ts camera.ts events.ts mapgen.ts audio.ts debug.ts runMods.ts runCards.ts
-  roomDefs.ts roomgen.ts roomShape.ts roomFeatures.ts campPaths.ts   run structure, biomes, room building
+  roomDefs.ts roomgen.ts roomShape.ts roomHalls.ts roomFeatures.ts campPaths.ts   run structure, biomes, room building
   townData.ts townHills.ts castleData.ts churchData.ts tavernData.ts homeData.ts caveData.ts beachData.ts   town + interiors
   gates.ts (Void trial gates) townGates.ts (story gates: blocked outskirts) arenaRooms.ts wanderers.ts npcLines.ts enemyDefs.ts lootExtra.ts
   systems/  player abilities skills combat enemies bosses bosses2 bossMech bossFx bossSpecials humanBosses darkHero eliteBig
@@ -552,6 +552,18 @@ screens, max-level question: class level cap is 50) have been removed.
   still come from the old `town_kit.glb`.
 - **Rooms**: one disc/shape around 0,0 built from a seed (`roomgen.buildRoom`, `roomShape` polar table, `mapgen.installRoom`),
   only the current room exists; camp rooms use `roomShape.fixed` spots.
+- **HALLS rooms** (dungeon floor plans): ~1 in 4 combat / elite / treasure rooms (`roomgen.isHallsRoom`; never boss / camp / merchant /
+  fountain / tower modes / sea biomes / the very first room) are chambers joined by 4.5-5.5 m corridors (straight, Z or L), a big hall with
+  wall lanes + pillars, an L-hall, or a 3-5 room "dungeon" with an optional side room. `engine/roomHalls.ts` builds a 0.5 m walkable mask
+  + signed distance field (`hallsSdf`, `hallsPush` slides along walls, `hallsSegClear`, `hallsRayStop` for blink / aim); origin = hub chamber
+  centre; arrival / station / exit come from `halls.*` through `roomShape.startPoint / stationPoint / portalPoint`. `shape.kind === 'HALLS'`
+  (`mapgen.roomHalls()`) switches every consumer from the radial `edgeLimit` clamp to the mask: player `resolveStep`, enemy clamp + `isSpawnable`,
+  pickups, projectiles (both pools), ability aim, `insideShape` (props / traps / director anchors only in chambers, >= 3.2 m from walls).
+  `shape.table` is only the star-convex kernel seen from the hub (safe fallback for unpatched radial callers; boss code is not patched, halls
+  never host bosses). `roomNav` builds its 1 m grid for halls too (monsters flow through corridors whenever a wall blocks the straight line;
+  hero click-move / auto-chase use A*); `navActive` no longer depends on `obstaclesVersion` (camp / arena builds call `disableRoomNav`).
+  Walls are drawn by `render/HallsWalls.tsx` (greedy-tiled rounded blocks, 2 InstancedMesh, tinted per ground style); the minimap draws the mask.
+  QA: `roomShape.dbg.force = 'HALLS'` (+ `dbg.variant = 'TWIN' | 'TRIPLE' | 'DUNGEON' | 'HALL' | 'LHALL'`). Minions / pets still ignore walls.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.
 - **Boss wards / barriers**: `bossMech.ts` (`WARD_AT` 0.5, `BARRIER_CD`), per-boss ward kinds (crystals, sporecaps,
   hellhounds, spare hydra heads, frost shell, power cores, void phase, cultists).

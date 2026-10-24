@@ -48,9 +48,10 @@ import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { towerMode, towerCrystals, dropTable } from './combat';
 import '../lootExtra';
-import { queryColliders, edgeLimit, bounds, pushOutOfCrates, type Collider } from '../mapgen';
+import { queryColliders, edgeLimit, bounds, pushOutOfCrates, roomHalls, type Collider } from '../mapgen';
+import { hallsPush, hallsSdf, hallsWall } from '../roomHalls';
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
-import { navActive, navTick, navFlow } from '../roomNav';
+import { navActive, navTick, navFlow, navClear } from '../roomNav';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 import { TR, rollTraits, innateHinder } from '../enemyTraits';
@@ -179,6 +180,7 @@ export function isUntargetable(e: Enemy): boolean {
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
 
+let hallsOn = false;   // the installed room is a HALLS layout (set once per frame in updateEnemies)
 const spawnCols: Collider[] = [];
 function blockedAt(x: number, z: number, pad: number): boolean {
   const cols = queryColliders(x, z, pad + 1, spawnCols);
@@ -194,8 +196,9 @@ function blockedAt(x: number, z: number, pad: number): boolean {
 
 /** Is (x,z) a legal spawn spot (inside arena, outside obstacles)? */
 export function isSpawnable(x: number, z: number): boolean {
-  const r2 = x * x + z * z;
-  if (r2 > bounds.checkR2) {
+  if (roomHalls()) { if (hallsSdf(x, z) < 1.4) return false; }   // (HALLS: open floor only, never inside a wall)
+  else if (x * x + z * z > bounds.checkR2) {
+    const r2 = x * x + z * z;
     const lim = edgeLimit(x, z, 3);
     if (r2 > lim * lim) return false;
   }
@@ -1432,7 +1435,7 @@ function updateEnemy(e: Enemy): void {
   let flowed = false;
   if (navOn && curMin < 0 && !still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'ATTACK' && tdist > e.radius + 3 && !isAquatic(e.kind)) {
     const fd = navFlow(e.pos.x, e.pos.z, wayPt);
-    if (fd >= 0 && fd > tdist * 1.2 + 2.5) {
+    if (fd >= 0 && (fd > tdist * 1.2 + 2.5 || (hallsOn && !navClear(e.pos.x, e.pos.z, px, pz)))) {   // (HALLS: any wall between the monster and its target)
       flowed = true; routed = true;
       const wx = wayPt[0] - e.pos.x, wz = wayPt[1] - e.pos.z, wd = Math.sqrt(wx * wx + wz * wz) || 1;
       tdist = fd; tdx = (wx / wd) * fd; tdz = (wz / wd) * fd;
@@ -1591,7 +1594,8 @@ function updateEnemy(e: Enemy): void {
   }
 
   const r2 = e.pos.x * e.pos.x + e.pos.z * e.pos.z;
-  if (r2 > bounds.checkR2 && !e.rooted) {   // (a rooted boss may sit beyond the rim: the Hydra's body)
+  if (hallsOn) { if (!e.rooted) hallsPush(e.pos, 0.3 + e.radius * 0.7); }   // (HALLS rooms: slide along the walls)
+  else if (r2 > bounds.checkR2 && !e.rooted) {   // (a rooted boss may sit beyond the rim: the Hydra's body)
     const lim = edgeLimit(e.pos.x, e.pos.z, 1);
     if (r2 > lim * lim) {
       const s = lim / Math.sqrt(r2);
@@ -1721,6 +1725,7 @@ export function updateEnemies(dt: number): void {
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
   navOn = navActive();
+  hallsOn = roomHalls();
   if (navOn) navTick(dt, px, pz);
   buildThreats();
   if (packPushT > 0) packPushT -= dt;
@@ -1929,8 +1934,8 @@ export function updateEnemyProjectiles(dt: number): void {
     }
 
     // solid obstacles
-    let blocked = false;
-    for (let k = 0; k < obs.length; k++) {
+    let blocked = hallsOn && hallsWall(p.pos.x, p.pos.z);   // (HALLS walls stop shots too)
+    for (let k = 0; k < obs.length && !blocked; k++) {
       const o = obs[k];
       if (!o.blocksProjectiles) continue;
       const dx = p.pos.x - o.pos.x;

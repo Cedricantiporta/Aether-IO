@@ -10,7 +10,7 @@ import { ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
 import { ULT_MAX } from '../../abilityDefs';
 import { aimOverride, autoAim, findNearestEnemy } from './combat';
 import { castActive, castUlt, tryDash, ultReady, castHold } from './abilities';
-import { edgeLimit } from '../mapgen';
+import { clampRoomAim } from '../mapgen';
 import { lockedEnemy } from './target';
 import { trapAim } from './roomTraps';
 import { camRel } from '../camera';
@@ -87,6 +87,7 @@ function aimable(id: string): boolean {
 
 // ------------------------------------------------------------ shape table --
 /** Fills aimState for `id` with the cursor at (cx, cz) world ground point. */
+const aimPt = { x: 0, z: 0 };
 function shapeFor(id: string, cx: number, cz: number): void {
   const p = world.player, st = useGameStore.getState(), hero = st.hero, lv = st.skillLevels, A = aimState, S = st.stats;
   let dx = cx - p.pos.x, dz = cz - p.pos.z;
@@ -97,9 +98,9 @@ function shapeFor(id: string, cx: number, cz: number): void {
   const circle = (range: number, minR: number, radius: number) => {
     const dd = Math.min(range, Math.max(minR, d));
     A.clamped = d > range + 0.5;
-    let x = p.pos.x + ux * dd, z = p.pos.z + uz * dd;
-    const r = Math.hypot(x, z), lim = edgeLimit(x, z, 3);
-    if (r > lim) { x *= lim / r; z *= lim / r; }
+    aimPt.x = p.pos.x + ux * dd; aimPt.z = p.pos.z + uz * dd;
+    clampRoomAim(aimPt, p.pos.x, p.pos.z, 3);
+    const x = aimPt.x, z = aimPt.z;
     A.shape = Shape.CIRCLE; A.x = x; A.z = z; A.radius = radius; A.len = dd;
     A.targetX = x; A.targetZ = z;
   };

@@ -6,8 +6,9 @@
 // ============================================================================
 
 import { runInfo } from './runMods';
+import { halls, buildHallsLayout, hallsSdf, placeMargin, type HallsVariant } from './roomHalls';
 
-export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'CROSS';
+export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'CROSS' | 'HALLS';
 export const SHAPE_N = 256;
 const TAU = Math.PI * 2;
 
@@ -28,7 +29,12 @@ export const shape = {
 export const fixed = { on: false, sx: 0, sz: 0, stx: 0, stz: 0, ex: 0, ez: 0, dx: 0, dz: -1 };
 
 /** QA hook: set `dbg.force` to build every following room with that outline (also reachable from tests via import). */
-export const dbg: { force: ShapeKind | null } = { force: null };
+export const dbg: { force: ShapeKind | null; variant: HallsVariant | null } = { force: null, variant: null };
+
+/** Room types that may roll a HALLS layout (chambers joined by corridors, engine/roomHalls.ts). */
+export const hallsType = (type: string): boolean => type === 'COMBAT' || type === 'ELITE' || type === 'TREASURE';
+/** Is the room that is built / installed right now a HALLS room? (the table below is then only the star-convex kernel seen from the hub) */
+export const isHalls = (): boolean => shape.kind === 'HALLS';
 
 /** Walkable limit radius in direction `angle` (radians, atan2(z, x) convention). */
 export function shapeAt(angle: number): number {
@@ -47,8 +53,14 @@ export function shapeLimit(x: number, z: number): number {
 
 /** Is (x, z) at least `margin` inside the outline? */
 export function insideShape(x: number, z: number, margin: number): boolean {
+  if (shape.kind === 'HALLS') return hallsSdf(x, z) >= placeMargin(margin);   // (props / traps / anchors: chambers only, never corridors)
   const lim = shapeLimit(x, z) - margin;
   return x * x + z * z < lim * lim && lim > 0;
+}
+
+/** Signed outline coordinate for the floor tint: 1 at the walkable limit, < 1 inside, > 1 beyond (r = hypot(x, z)). */
+export function outlineU(x: number, z: number, r: number): number {
+  return shape.kind === 'HALLS' ? 1 - hallsSdf(x, z) : r - (shapeLimit(x, z) - 1);
 }
 
 /** Point on the outline at `theta`, pushed `off` along the outward normal. */
@@ -109,7 +121,9 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
   }
   if (opts?.long) picked = rnd() < 0.5 ? 'ELLIPSE' : 'RECT';
   if (opts?.force) picked = opts.force;
-  const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dbg.force ?? picked;   // tower floors: always a round arena
+  const dk = dbg.force === 'HALLS' && !hallsType(type) ? null : dbg.force;   // (HALLS only ever replaces fight rooms)
+  const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dk ?? picked;   // tower floors: always a round arena
+  if (kind === 'HALLS') return buildHallsShape(type, R, rnd);
   const stretch = opts?.long ? 1 : 0;   // long stages: a much longer hall / oval
   const theta0 = rnd() * TAU;
   let F: Fn, areaK = 1, axis = false;
@@ -163,19 +177,40 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
   return kind;
 }
 
+/** HALLS: builds the walkable mask (engine/roomHalls.ts) and fills `shape` with the star-convex kernel seen from the hub
+ *  centre (so any code that still clamps radially with edgeLimit stays inside the open floor of the hub chamber). */
+function buildHallsShape(type: string, R: number, rnd: () => number): ShapeKind {
+  buildHallsLayout(type, R, rnd, dbg.variant ?? undefined);
+  const T = shape.table, dA = TAU / SHAPE_N;
+  let mn = 1e9;
+  for (let i = 0; i < SHAPE_N; i++) {
+    const th = -Math.PI + i * dA, c = Math.cos(th), s = Math.sin(th);
+    let r = 0;
+    while (r < 70 && hallsSdf(c * (r + 0.25), s * (r + 0.25)) >= 0.3) r += 0.25;
+    T[i] = r; if (r < mn) mn = r;
+  }
+  T[SHAPE_N] = T[0]; T[SHAPE_N + 1] = T[1];
+  shape.kind = 'HALLS'; shape.maxR = halls.extent; shape.minR = mn; shape.baseR = Math.sqrt(halls.area / Math.PI); shape.version++;
+  shape.fx = halls.fx; shape.fz = halls.fz;
+  return 'HALLS';
+}
+
 /** Hero arrival point (back side of the room). */
 export function startPoint(out: [number, number]): void {
+  if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.sx; out[1] = halls.sz; return; }
   if (fixed.on) { out[0] = fixed.sx; out[1] = fixed.sz; return; }
   const k = 0.55 * shapeAt(Math.atan2(-shape.fz, -shape.fx));
   out[0] = -shape.fx * k; out[1] = -shape.fz * k;
 }
 /** Station (fountain / merchant / chest / altar) point, just ahead of the centroid. */
 export function stationPoint(out: [number, number]): void {
+  if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.stx; out[1] = halls.stz; return; }
   if (fixed.on) { out[0] = fixed.stx; out[1] = fixed.stz; return; }
   out[0] = shape.fx * shape.baseR * 0.1; out[1] = shape.fz * shape.baseR * 0.1;
 }
 /** The boss-shortcut door: behind the middle exit, 10 units further into the room. */
 export function shortcutPoint(out: [number, number]): void {
+  if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.ex - halls.dx * 9; out[1] = halls.ez - halls.dz * 9; return; }
   if (fixed.on) { out[0] = fixed.ex - fixed.dx * 9; out[1] = fixed.ez - fixed.dz * 9; return; }
   portalPoint(1, 3, out);
   const l = Math.hypot(out[0], out[1]);
@@ -183,6 +218,11 @@ export function shortcutPoint(out: [number, number]): void {
 }
 /** Exit portal i of n: spread across the width at the front-most spot that keeps >= 5 of clearance to the outline. */
 export function portalPoint(i: number, n: number, out: [number, number]): void {
+  if (shape.kind === 'HALLS' && !fixed.on) {   // the far end of the journey: the slots spread across the last chamber
+    const cap = Math.max(2, halls.exitHalf - 3.4), lat = n === 2 ? (i === 0 ? -1 : 1) * Math.min(4.8, cap) : n === 3 ? (i - 1) * Math.min(5.6, cap) : 0;
+    out[0] = halls.ex - halls.dz * lat; out[1] = halls.ez + halls.dx * lat;
+    return;
+  }
   if (fixed.on) {   // the far end of the authored path: the slots spread across it
     const lat = n === 2 ? (i === 0 ? -1 : 1) * 4.2 : n === 3 ? (i - 1) * 5.2 : 0;
     out[0] = fixed.ex - fixed.dz * lat; out[1] = fixed.ez + fixed.dx * lat;

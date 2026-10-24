@@ -18,6 +18,7 @@ import { Vector3 } from 'three';
 import { installRoom, commitCrates, mulberry32, type Collider } from './mapgen';
 import { shape, SHAPE_N, fixed } from './roomShape';
 import { world } from './world';
+import { disableRoomNav } from './roomNav';
 import type { Obstacle, ObstacleKind, CrateKind } from './types';
 
 export type EdgeMode = 'hills' | 'flat' | 'sea' | 'lava' | 'abyss';
@@ -408,6 +409,7 @@ const SAMPLE = 0.25;
 
 /** Builds the transition-path camp that opens biome `biome`: scenery, colliders, bounds envelope, fixed spots. */
 export function buildCampRoom(biome: number): void {
+  disableRoomNav();
   const L = campLayoutFor(biome), P = buildPath(L);
   camp.cur = P; camp.ver++;
   const rnd = mulberry32(L.seed);

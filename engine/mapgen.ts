@@ -5,7 +5,8 @@
 // the REGIONS stay in recognisable places.
 // ============================================================================
 import { Vector3 } from 'three';
-import { shapeLimit } from './roomShape';
+import { shapeLimit, shape } from './roomShape';
+import { hallsPush, hallsRayStop, hallsSdf } from './roomHalls';
 import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TRAINER_POS } from './world';
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
@@ -28,6 +29,7 @@ export interface Collider {
 const pushCols: Collider[] = [];
 export function pushOutOfColliders(p: { x: number; z: number }, pad: number): void {
   pushOutOfRift(p, pad);
+  if (roomHalls()) hallsPush(p, Math.min(pad, 1.4));
   for (let pass = 0; pass < 3; pass++) {
     const cols = queryColliders(p.x, p.z, pad + 4, pushCols);
     let moved = false;
@@ -151,6 +153,33 @@ function baseRadius(angle: number): number {
 /** Walled town + small forecourt; edge radius for an angle (angle = atan2(z, x)), with a little per-run wobble. */
 export function islandRadius(angle: number): number {
   return baseRadius(angle) - 1.2 + Math.sin(angle * 3 + phase1) * 0.7 + Math.sin(angle * 5 + phase2) * 0.5;
+}
+
+/** Is the installed run room a HALLS layout (walkable mask with corridors, engine/roomHalls.ts)? Radial clamps do not apply then. */
+export function roomHalls(): boolean { return bounds.room && shape.kind === 'HALLS'; }
+
+/** Pulls (x, z) back inside the walkable room by `margin`: the radial edge clamp, or a push out of the HALLS walls. Allocation-free. */
+export function clampRoomPos(p: { x: number; z: number }, margin: number): void {
+  if (!bounds.room) return;
+  if (shape.kind === 'HALLS') { hallsPush(p, margin * 0.5); return; }
+  const r = Math.hypot(p.x, p.z), lim = shapeLimit(p.x, p.z) - margin;
+  if (r > lim && r > 1e-6) { const k = lim / r; p.x *= k; p.z *= k; }
+}
+
+/** Aim / blink / ground-skill targets: HALLS stops the point at the first wall on the line from (fx, fz); other rooms clamp radially. */
+export function clampRoomAim(p: { x: number; z: number }, fx: number, fz: number, margin: number): void {
+  if (roomHalls()) { hallsRayStop(fx, fz, p.x, p.z, margin * 0.5, p); return; }
+  if (bounds.room) { clampRoomPos(p, margin); return; }
+  const r = Math.hypot(p.x, p.z), lim = islandRadius(Math.atan2(p.z, p.x)) - margin;
+  if (r > lim) { p.x *= lim / r; p.z *= lim / r; }
+}
+/** Is (x, z) a legal spot for an entity body of `margin`? (HALLS: open floor; star rooms: inside the limit) */
+export function roomOpen(x: number, z: number, margin: number): boolean {
+  if (roomHalls()) return hallsSdf(x, z) >= margin * 0.5;
+  const r2 = x * x + z * z;
+  if (r2 <= bounds.checkR2) return true;
+  const lim = edgeLimit(x, z, margin);
+  return r2 <= lim * lim;
 }
 
 /** Walkable limit radius at (x,z): islandRadius(angle) - margin. Cheap early-out for callers: only needed when |p| > bounds.checkR. */

@@ -12,7 +12,8 @@ import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
 import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
-import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, shortcutPoint, type ShapeKind } from './roomShape';
+import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, shortcutPoint, dbg as shapeDbg, hallsType, type ShapeKind } from './roomShape';
+import { halls } from './roomHalls';
 import { buildRoomNav } from './roomNav';
 import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, onBridge, liquidCode, type Layout } from './roomFeatures';
 import { isArenaRoom, buildArena } from './arenaRooms';
@@ -24,9 +25,22 @@ export const layoutDbg: { force: Layout | null } = { force: null };
 const FIGHT: Partial<Record<RoomType, boolean>> = { COMBAT: true, ELITE: true, TREASURE: true };
 const LAYOUTS: Layout[] = ['PLAIN', 'BIG', 'LONG', 'RIVER', 'LAKE'];
 
+/** Does this fight room use a HALLS layout (chambers joined by corridors, engine/roomHalls.ts)? ~1 in 4 combat / elite / treasure
+ *  rooms; never towers, camps, boss / merchant / fountain / duel arenas or the sea biomes (their floor drops away beyond the walls). */
+export function isHallsRoom(biome: number, type: RoomType, seed: number, index: number): boolean {
+  if (runInfo.mode === 'TOWER' || !hallsType(type)) return false;
+  if (shapeDbg.force === 'HALLS') return true;
+  if (shapeDbg.force) return false;
+  const bd = biomeOf(biome);
+  if (bd.lavaSea || bd.waterSea) return false;
+  if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return false;   // the very first room of a run stays simple
+  return mulberry32(seed ^ 0x5eed11)() < 0.25;
+}
+
 /** Stage layout of a room (pure function of biome, type, seed and room index). */
 export function roomLayout(biome: number, type: RoomType, seed: number, index: number): Layout {
   if (runInfo.mode === 'TOWER') return 'PLAIN';
+  if (isHallsRoom(biome, type, seed, index)) return 'PLAIN';   // (halls carry no river / lake / big stage)
   const r = mulberry32(seed ^ 0x2545f491)();
   if (type === 'MINIBOSS') return layoutDbg.force === 'BIG' || r < 0.3 ? 'BIG' : 'PLAIN';
   if (!FIGHT[type]) return 'PLAIN';
@@ -110,8 +124,9 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   buildShape(type, R, seed, {
     weights: fightRoom || type === 'MINIBOSS' ? def.shapes : undefined,
     long: layout === 'LONG',
-    force: layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
+    force: isHallsRoom(biome, type, seed, index) ? 'HALLS' : layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
   });
+  const isHalls = shape.kind === 'HALLS';
   const vr = tower ? null : variantOf(def, index);
   const border = vr?.border ?? def.border, interior = vr?.interior ?? def.interior, hazard = vr ? vr.hazard : def.hazard;
   const outerKinds = def.outer ?? border;
@@ -137,6 +152,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   keep.push({ x: sx, z: sz, r: 4.5 });
   if (!boss) keep.push({ x: stx, z: stz, r: type === 'MINIBOSS' ? 12 : type === 'SHRINE' ? 8 : 5 });   // mini-boss rooms: a wide open arena where the champion spawns (big ones never wedge in rocks)
   for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 }); }
+  if (isHalls) for (const k of halls.keep) keep.push({ x: k[0], z: k[1], r: k[2] });   // (corridor mouths stay open)
   shortcutSlot(tmpPortal); keep.push({ x: tmpPortal[0], z: tmpPortal[1], r: 4 });
   const nearKeep = (x: number, z: number, r: number): boolean => { for (const k of keep) if (Math.hypot(x - k.x, z - k.z) < k.r + r) return true; return false; };
   const blockedSpot = (x: number, z: number, r: number, gap: number): boolean => {
@@ -193,7 +209,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; add('STATUE', Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55, 1.1, 1.2, true); }
   }
   const castle = border.every((k) => k === 'CASTLEWALL');   // curtain wall segments abut each other
-  const n1 = tower ? 0 : Math.ceil(P / Math.max(castle ? 3.3 : 2.6, P / 70));
+  const n1 = tower || isHalls ? 0 : Math.ceil(P / Math.max(castle ? 3.3 : 2.6, P / 70));   // (halls: the walls are the mask, render/HallsWalls.tsx)
   if (n1 > 0) ringWalk(n1, 1.6, 0.03, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.2)) return;   // the river flows out through a gap in the wall
     const kind = wallKind(pickKind(border));
@@ -201,7 +217,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const s = rand(sp.s[0], sp.s[1]);
     add(kind, x, z, Math.max(1.5, sp.r(rnd, s)), s, true, true, kind === 'LOWWALL' || kind === 'CASTLEWALL' ? tangentRot(x, z) : rnd() * Math.PI * 2);
   });
-  const n2 = tower || def.lavaSea || def.waterSea ? 0 : Math.ceil(P / Math.max(5.2, P / 34));   // (lava sea: nothing stands out in the lava)
+  const n2 = tower || isHalls || def.lavaSea || def.waterSea ? 0 : Math.ceil(P / Math.max(5.2, P / 34));   // (lava sea: nothing stands out in the lava)
   if (n2 > 0) ringWalk(n2, 5, 0.1, (x, z) => {
     if (feat.river && inLiquid(x, z, 1.5)) return;
     const kind = wallKind(pickKind(outerKinds));
@@ -212,7 +228,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
 
   // ---- interior obstacles
   const big = layout === 'BIG';
-  const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(7, 11) * (big ? 1.6 : 1)) : 5;
+  const count = tower ? 0 : boss ? 6 : type === 'COMBAT' || type === 'ELITE' || type === 'MINIBOSS' || type === 'TREASURE' ? Math.round(rand(7, 11) * (big ? 1.6 : isHalls ? 0.75 : 1)) : 5;
   if (tower) { /* open floor */ } else if (boss) {
     // each biome's boss arena has its own pillar plan (everything else stays open for the dance):
     // rings of [count, radius fraction, angle offset, size]
@@ -233,7 +249,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     }
   } else {
     // marble halls: colonnades along the hall (most fight rooms)
-    if (def.style === 'MARBLE' && fightRoom && rnd() < 0.75) {
+    if (def.style === 'MARBLE' && fightRoom && !isHalls && rnd() < 0.75) {
       const fa = Math.atan2(shape.fz, shape.fx);
       const w = Math.min(shapeAt(fa + Math.PI / 2), shapeAt(fa - Math.PI / 2));
       const lat = Math.max(6, w * 0.55), back = shapeAt(fa + Math.PI) * 0.8, front = shapeAt(fa) * 0.8;

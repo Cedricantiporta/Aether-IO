@@ -22,7 +22,8 @@ import { dashCdMul, dashSpeedMul } from './dashMods';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
-import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, type Collider } from '../mapgen';
+import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, roomHalls, type Collider } from '../mapgen';
+import { hallsPush } from '../roomHalls';
 import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
 import { navActive, navClear, navFindPath, navPath } from '../roomNav';
@@ -160,6 +161,7 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
   }
   p.pos.x = nx; p.pos.z = nz; p.pos.y = 0;
   pushOutOfCrates(p.pos, 0.5);
+  if (roomHalls()) { hallsPush(p.pos, 1.0); return; }   // (HALLS rooms: slide along the walls; the radial clamp below does not apply)
   const r2 = p.pos.x * p.pos.x + p.pos.z * p.pos.z;
   if (r2 > bounds.checkR2) {
     const lim = edgeLimit(p.pos.x, p.pos.z, 2);
@@ -382,7 +384,7 @@ export function updatePlayer(dt: number): void {
   // click-to-move (setting): walk to the clicked ground point; any movement input cancels it
   if (clickMoveTo.on) {
     if (ml > 0) clickMoveTo.on = false;
-    else { const dx = clickMoveTo.x - p.pos.x, dz = clickMoveTo.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > 0.4) { mx = dx / d; mz = dz / d; ml = 1; } else clickMoveTo.on = false; }
+    else { const dx = clickMoveTo.x - p.pos.x, dz = clickMoveTo.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > 0.4) { mx = dx / d; mz = dz / d; ml = 1; if (navActive() && !navClear(p.pos.x, p.pos.z, clickMoveTo.x, clickMoveTo.z) && autoPathDir(p.pos.x, p.pos.z, clickMoveTo.x, clickMoveTo.z, dt)) { mx = pathDir.x; mz = pathDir.z; } } else clickMoveTo.on = false; }
   }
 
   // ---- auto-chase (AUTO-battle bot only): no movement input + an enemy inside the chase ring but outside weapon range -> walk toward it.

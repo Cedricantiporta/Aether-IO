@@ -8,7 +8,7 @@ import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { dashModStart, dashModFx, dashDmgBonus, updateDashMods } from './dashMods';
 import { Vector3 } from 'three';
 import { world, allocZone, allocFx } from '../world';
-import { edgeLimit, queryColliders, type Collider } from '../mapgen';
+import { edgeLimit, queryColliders, clampRoomAim, bounds, type Collider } from '../mapgen';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
@@ -182,13 +182,14 @@ function aimPoint(range: number, minR: number, o: Vector3): Vector3 {
   let d = Math.sqrt(dx * dx + dz * dz);
   if (d < 0.05) { dx = Math.sin(p.facing); dz = Math.cos(p.facing); d = 1; }
   const dd = Math.min(range, Math.max(minR, d));
-  let x = p.pos.x + (dx / d) * dd, z = p.pos.z + (dz / d) * dd;
+  const x = p.pos.x + (dx / d) * dd, z = p.pos.z + (dz / d) * dd;
+  if (bounds.room) { hallsAim.x = x; hallsAim.z = z; clampRoomAim(hallsAim, p.pos.x, p.pos.z, 3); return o.set(hallsAim.x, 0, hallsAim.z); }   // (HALLS: stops at the first wall)
   const r = Math.hypot(x, z);
   const lim = edgeLimit(x, z, 3);
-  if (r > lim) { x *= lim / r; z *= lim / r; }
-  return o.set(x, 0, z);
+  return o.set(r > lim ? (x * lim) / r : x, 0, r > lim ? (z * lim) / r : z);
 }
 
+const hallsAim = { x: 0, z: 0 };
 /** Nudges a point out of obstacle colliders. */
 function safeSpot(o: Vector3): void {
   for (let pass = 0; pass < 3; pass++) {
@@ -431,9 +432,9 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       const baseAng = Math.atan2(dz, dx);
       for (let i = -1; i <= 1; i++) {
         const a = baseAng + i * 0.5;
-        let x = p.pos.x + Math.cos(a) * 8.5, z = p.pos.z + Math.sin(a) * 8.5;   // (owner) Frost Field lands 50% closer (was 17)
-        const r = Math.hypot(x, z), lim = edgeLimit(x, z, 3);
-        if (r > lim) { x *= lim / r; z *= lim / r; }
+        hallsAim.x = p.pos.x + Math.cos(a) * 8.5; hallsAim.z = p.pos.z + Math.sin(a) * 8.5;   // (owner) Frost Field lands 50% closer (was 17)
+        clampRoomAim(hallsAim, p.pos.x, p.pos.z, 3);
+        const x = hallsAim.x, z = hallsAim.z;
         const f = mkFx('TRAP', x, z, 0.5, 0.6, 5.5, b * 3, R, 0x7fe0ff);
         if (f) { f.sx = p.pos.x; f.sz = p.pos.z; }
       }
