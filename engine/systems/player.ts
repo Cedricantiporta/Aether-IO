@@ -277,7 +277,7 @@ export function updatePlayer(dt: number): void {
   const maxShield = lv.barrier <= 0 ? 0 : lv.barrier >= 5 ? 2 : 1;
   if (maxShield > p.maxShieldCharges) p.shieldCharges += maxShield - p.maxShieldCharges;
   p.maxShieldCharges = maxShield;
-  p.dashCdMax = DASH_CD * Math.pow(0.95, Math.max(0, (dLv ?? 1) - 1)) * (1 - 0.1 * runCards.dashStacks) * dashCdMul();   // (owner) 4.1 s, -5% per dash level above 1; no gear / talent CDR
+  p.dashCdMax = DASH_CD * Math.pow(0.95, Math.max(0, (dLv ?? 1) - 1)) * (1 - runCards.dashCut) * dashCdMul();   // (owner) 4.1 s, -5% per dash level above 1; no gear / talent CDR
   p.shieldCdMax = Math.max(20, 48 - 4 * lv.barrier);
 
   if (p.dashCharges < p.maxDashCharges) {

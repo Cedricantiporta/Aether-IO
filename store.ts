@@ -1071,9 +1071,9 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'CRIT_RATE': base.critRate += upgrade.value; break;
           case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
           case 'MULTISHOT': base.multishot += upgrade.value; break;
-          case 'ULT_FILL': world.player.ult = Math.max(world.player.ult, Math.min(100, upgrade.value)); break;
-          case 'RESTORE': { const hp = state.stats.maxHealth * 0.3; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * 0.3); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
-          case 'AEGIS': { const sh = upgrade.value;   // a flat 80 HP shield (owner)
+          case 'ULT_FILL': world.player.ult = Math.min(100, Math.max(world.player.ult, world.player.ult + upgrade.value)); break;   // (Rare: +60%, Epic+: full)
+          case 'RESTORE': { const f = upgrade.value > 0 && upgrade.value < 1 ? upgrade.value : 0.3, hp = state.stats.maxHealth * f; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * f); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
+          case 'AEGIS': { const sh = upgrade.value;   // the shield HP by the card's rarity (60 / 80 / 110 / 150)
  world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
           case 'COOLDOWN': base.cooldownReduction += upgrade.value; break;
           case 'KNOCKBACK': base.knockback += base.knockback * upgrade.value; break;
