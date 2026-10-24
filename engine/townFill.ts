@@ -208,7 +208,7 @@ function carpet(zn: Zone, n0: number, piece: string, s: [number, number], seed: 
   const r = rng(seed), n = Math.max(1, Math.round(n0 * (piece === PIECES.flowers ? 0.34 : piece === PIECES.mushrooms ? 0.4 : 1))), big = piece === PIECES.flowers ? 1.3 : 1;   // (a flower patch is ~950 triangles: fewer, bigger beds)
   for (let t = 0, k = 0; t < n * 12 && k < n; t++) {
     const x = zn.cx + (r() * 2 - 1) * zn.rx, z = zn.cz + (r() * 2 - 1) * zn.rz;
-    if (!inZone(zn, x, z) || solidNear(x, z, 0.5)) continue;
+    if (!inZone(zn, x, z) || blocked(x, z, 0.8)) continue;   // (owner 2026-10-24: never on a road / soil path)
     const sc = (s[0] + r() * (s[1] - s[0])) * big;
     if (deco(piece, x, z, r() * TAU, sc, sc * (0.85 + r() * 0.3))) k++;
   }
