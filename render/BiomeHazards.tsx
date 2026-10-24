@@ -88,8 +88,8 @@ export function BiomeHazards() {
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
       icicle: u(icg, glowMat({ color: new Color(1.1, 1.8, 2.3) }), 10),
       rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 3),
-      rField: u(disc, flat(new Color(0.7, 0.25, 1.4), 0.1), 3),
-      rGlow: u(rgg.build(), glowMat({ color: new Color(1.5, 0.9, 2.6) }), 3),
+      rField: u(disc, flat(new Color(0.12, 0.03, 0.22), 0.22), 3),   // (owner 2026-10-24: subtle dark black-hole field)
+      rGlow: u(rgg.build(), glowMat({ color: new Color(0.35, 0.12, 0.6) }), 3),   // (a faint dark-violet swirl, not a bright glyph)
     };
   }, []);
 
@@ -141,7 +141,7 @@ export function BiomeHazards() {
         setInst(S.rDark, nRift, r.x, 0.05, r.z, 0, HZ_RIFT_CORE_R * 1.25 * pulse, 1, HZ_RIFT_CORE_R * 1.25 * pulse);
         setInst(S.rField, nRift, r.x, 0.045, r.z, 0, HZ_RIFT_PULL_R, 1, HZ_RIFT_PULL_R);
         setInst(S.rGlow, nRift++, r.x, 0.0, r.z, -t * 1.4 + i, 0.82 * pulse, 1, 0.82 * pulse);
-        pushHalo(r.x, 0.5, r.z, 5.5 + Math.sin(t * 2 + i) * 0.5, 0.9, 0.3, 1.8, 0.45, CELL.GLOW);
+        pushHalo(r.x, 0.5, r.z, 4 + Math.sin(t * 2 + i) * 0.4, 0.25, 0.06, 0.45, 0.25, CELL.GLOW);
       }
     }
     commitInst(S.br, nBr); commitInst(S.stem, nMu); commitInst(S.cap, nMu); commitInst(S.puff, nPuff); commitInst(S.cring, nRing);

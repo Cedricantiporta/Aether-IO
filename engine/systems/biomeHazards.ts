@@ -26,7 +26,8 @@ const BRAMBLE_TICK = 0.5, BRAMBLE_DMG = 0.012, BRAMBLE_SLOW = 0.7, BRAMBLE_HOLD 
 const SHROOM_TRIGGER = 2.2, SHROOM_CD = 6, CLOUD_R = 2.5, CLOUD_T = 3, CLOUD_TICK = 0.5, CLOUD_HERO = 0.015, CLOUD_MOB = 0.04;
 const ICE_GRIP = 0.25;   // the hero's velocity lerp rate on ice (x0.25)
 const ICICLE_WARN = 1.0, ICICLE_R = 1.9, ICICLE_DMG = 0.08, ICICLE_STAY = 0.7;
-const RIFT_PULL_R = 5, RIFT_CORE_R = 1.6, RIFT_PULL = 3.0, RIFT_TICK = 0.5, RIFT_HERO = 0.02, RIFT_MOB = 0.02;
+const RIFT_PULL_R = 6.5, RIFT_CORE_R = 2.0, RIFT_PULL = 5.0,   // (owner 2026-10-24: bigger, stronger pull)
+  RIFT_TICK = 0.5, RIFT_HERO = 0.02, RIFT_MOB = 0.02;
 const FLIP_WARN = 1.5, FLIP_T = 3, FLIP_SPEED = 3;
 
 export const hz = {
@@ -47,6 +48,8 @@ export const HZ_CLOUD_R = CLOUD_R, HZ_RIFT_PULL_R = RIFT_PULL_R, HZ_RIFT_CORE_R 
 export let hazSlow = 1;
 export let iceGrip = 1;
 export let driftX = 0;
+/** (owner 2026-10-24) the hero stands in a Void rift's pull: dashing is blocked (abilities.ts). */
+export let inRift = false;
 export let driftZ = 0;
 
 const tmp = new Vector3();
@@ -88,7 +91,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   for (const c of hz.clouds) c.on = false;
   for (const i of hz.ic) i.on = false;
   hz.flip.state = 0; hz.flip.t = 0;
-  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; brCd = brHold = riftCd = plRiftCd = 0; icT = 3;
+  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; brCd = brHold = riftCd = plRiftCd = 0; icT = 3;
   hz.ver++;
   if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue) return;
   const b = biome % BIOMES.length;
@@ -157,7 +160,7 @@ export function updateBiomeHazards(dt: number): void {
 }
 function tickBiomeHazards(dt: number): void {
   const room = world.room, pl = world.player;
-  if (!room.active || hz.kind === HZ.NONE) { hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; return; }
+  if (!room.active || hz.kind === HZ.NONE) { hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; return; }
   const fighting = world.director.phase === 'FIGHT';
   const alive = pl.alive;
   const px = pl.pos.x, pz = pl.pos.z;
@@ -264,7 +267,7 @@ function tickBiomeHazards(dt: number): void {
     }
   } else {
     // ---- rifts: a gentle pull inside the pull radius, an HP drain in the core (hero and monsters)
-    riftCd -= dt; plRiftCd -= dt;
+    riftCd -= dt; plRiftCd -= dt; inRift = false;
     const tick = riftCd <= 0; if (tick) riftCd = RIFT_TICK;
     for (let i = 0; i < hz.nRift; i++) {
       const r = hz.rift[i];
@@ -273,6 +276,7 @@ function tickBiomeHazards(dt: number): void {
         if (d < RIFT_PULL_R && d > 0.05) {
           const s = RIFT_PULL * (1 - d / RIFT_PULL_R);
           dX += dx / d * s; dZ += dz / d * s;
+          inRift = true; world.player.blindT = Math.max(world.player.blindT, 0.35);   // (owner: no dash inside a rift; the vision darkens)
           if (d < RIFT_CORE_R && plRiftCd <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', dot: true }); }
         }
       }
