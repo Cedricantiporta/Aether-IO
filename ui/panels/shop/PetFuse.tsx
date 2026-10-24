@@ -44,22 +44,9 @@ export const PetFuse: React.FC = () => {
   const ORDER: Item['rarity'][] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
   const autoGroups = (list: Item[]) => ORDER.filter((r) => (FUSE_CHANCE[r] ?? 0) > 0 && nextTier(r) && list.filter((p) => p.rarity === r && p.level <= 1).length >= FUSE_COUNT);
   const canAuto = autoGroups(pets).length > 0;
-  const autoFuse = () => {
-    setSel([]);
-    const rs: FuseResult[] = [];
-    for (let guard = 0; guard < 200; guard++) {
-      const now = useGameStore.getState().inventory.filter((i) => i.type === 'PET');
-      const r = autoGroups(now)[0];
-      if (!r) break;
-      const ids = now.filter((p) => p.rarity === r && p.level <= 1).slice(0, FUSE_COUNT).map((p) => p.id);
-      const res = fusePets(ids);
-      if (!res) break;
-      rs.push(res);
-    }
-    setLast(rs);
-    const made = rs.length, won = rs.filter((r) => r.ok).length;
-    if (made) useGameStore.getState().addNotification(`Auto fuse: ${made} fusion${made > 1 ? 's' : ''}, ${won} succeeded`, '#ffd24a', 'SYSTEM');
-  };
+  /** (owner 2026-10-24) Auto: only fills the 5 slots (lowest tier first); the player presses Fuse */
+  const autoFuse = () => { const r = autoGroups(pets)[0]; if (!r) return; setLast([]); setSel(pets.filter((p) => p.rarity === r && p.level <= 1).slice(0, FUSE_COUNT).map((p) => p.id)); };
+
   return (
     <div className="flex flex-col gap-3" data-testid="pet-fuse">
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
@@ -81,7 +68,7 @@ export const PetFuse: React.FC = () => {
         </div>
         <button className="rpg-btn bevel pe px-4 py-1.5" disabled={picked.length !== FUSE_COUNT} onClick={go} data-testid="fuse-go">Fuse</button>
         {nSets >= 2 && <button className="rpg-btn bevel pe px-3 py-1.5" onClick={goMany} data-testid="fuse-many" title={`Fuse ${nSets} sets of ${FUSE_COUNT} at once`}>Fuse x{nSets}</button>}
-        <button className="rpg-btn bevel pe px-4 py-1.5" disabled={!canAuto} onClick={autoFuse} data-testid="fuse-auto" title="Fuse every group of 5 same-tier pets, lowest tier first (pets above Lv 1 are kept)">Auto fuse</button>
+        <button className="rpg-btn bevel pe px-4 py-1.5" disabled={!canAuto} onClick={autoFuse} data-testid="fuse-auto" title="Put 5 same-tier pets in the slots, lowest tier first (pets above Lv 1 are kept)">Auto fill</button>
       </div>
       <FuseResults rs={last} testid="fuse-result" />
       <div className="rpg-label">Pets in your bag</div>

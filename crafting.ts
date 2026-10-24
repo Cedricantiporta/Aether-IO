@@ -69,7 +69,8 @@ function recipeLoot(slot: CraftSlot, rarity: Rarity, hero: HeroClass): LootNeed[
   const w = slot === 'weapon' ? 1.5 : 1;
   const n = (x: number) => Math.ceil(x * w);
   const out: LootNeed[] = [];
-  const add = (id: string, count: number) => { const e = out.find((l) => l.id === id); if (e) e.count += count; else out.push({ id, count }); };
+  const X4 = new Set(['champion_medal', 'ore_nugget', 'mithril_ore', 'adamant_ore']);   // (owner 2026-10-24: medals + ores cost 4x)
+  const add = (id: string, count0: number) => { const count = X4.has(id) ? count0 * 4 : count0; const e = out.find((l) => l.id === id); if (e) e.count += count; else out.push({ id, count }); };
   switch (rarity) {
     case 'COMMON': add(fam[0], n(5)); add('ore_nugget', n(2)); break;
     case 'RARE': add(fam[0], n(10)); add(fam[1], n(4)); add('ore_nugget', n(4)); break;
@@ -101,7 +102,7 @@ for (const hero of ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as
       const rarity = CRAFT_RARITIES[ri];
       const loot = recipeLoot(slot, rarity, hero);
       const key = `${hero}:${slot}:${rarity}`;
-      RECIPES[key] = { key, slot, rarity, hero, shards: SHARD_COST[rarity], gold: GOLD_COST[rarity] * (slot === 'weapon' ? 1.5 : 1), loot, rankReq: RANK_REQ[rarity] };
+      RECIPES[key] = { key, slot, rarity, hero, shards: SHARD_COST[rarity] * 4, gold: GOLD_COST[rarity] * (slot === 'weapon' ? 1.5 : 1) * 4,   /* (owner 2026-10-24: gold + shards 4x) */ loot, rankReq: RANK_REQ[rarity] };
     }
   }
 }

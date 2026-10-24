@@ -68,18 +68,8 @@ export const ItemFuse: React.FC = () => {
     });
     return out;
   };
-  const auto = () => {
-    const gs = groups();
-    if (!gs.length) return;
-    ask({ title: `Auto fuse ${gs.length} set${gs.length > 1 ? 's' : ''}?`, body: `Every full set of ${FUSE_COUNT} same-tier, same-type gear in your bag (${gs.length * FUSE_COUNT} pieces) will be fused. Equipped gear is never used.`, confirmLabel: 'Auto fuse', tone: 'danger', onConfirm: () => {
-      setSel([]);
-      const rs: FuseResult[] = [];
-      for (const ids of gs) { const r = fuseItems(ids); if (r) rs.push(r); }
-      setLast(rs);
-      const won = rs.filter((r) => r.ok).length;
-      useGameStore.getState().addNotification(`Auto fuse: ${rs.length} fusion${rs.length === 1 ? '' : 's'}, ${won} upgraded`, won ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
-    } });
-  };
+  /** (owner 2026-10-24) Auto: only fills the 5 slots with the first full set (lowest tier first); the player presses Fuse */
+  const auto = () => { const gs = groups(); if (!gs.length) return; setLast([]); setSel(gs[0]); };
   const go = () => { if (picked.length !== FUSE_COUNT) return; const ids = sel; setSel([]); play(picked[0], () => { const r = fuseItems(ids); return r ? [r] : []; }); };
   /** (owner) Fuse xN: up to FUSE_BATCH sets of the picked tier + type at once (the picked pieces first, then the rest of the bag) */
   const sets = (): string[][] => {
@@ -109,7 +99,7 @@ export const ItemFuse: React.FC = () => {
             : <span className="rpg-label">Pick {FUSE_COUNT} pieces of one tier and one type from your bag below</span>}
         </div>
         <div className="flex gap-2">
-          <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!groups().length} onClick={auto} data-testid="ifuse-auto">Auto Fuse</button>
+          <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!groups().length} onClick={auto} data-testid="ifuse-auto">Auto Fill</button>
           <button className="rpg-btn bevel pe px-4 py-1.5" disabled={picked.length !== FUSE_COUNT} onClick={go} data-testid="ifuse-go">Fuse</button>
           {nSets >= 2 && <button className="rpg-btn bevel pe px-3 py-1.5" onClick={goMany} data-testid="ifuse-many" title={`Fuse ${nSets} sets of ${FUSE_COUNT} at once`}>Fuse x{nSets}</button>}
         </div>
