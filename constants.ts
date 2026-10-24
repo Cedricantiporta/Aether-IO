@@ -21,12 +21,13 @@ export const SHARD_FUSE_COST: Record<'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY', n
 export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no break-down / fuse loop)
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
-/** Class level needed to equip / craft gear of a rarity (owner: Uncommon 6, Rare 12, Epic 18, Legendary 24, Mythic 30). */
+/** Class level needed to equip / craft gear of a rarity (LOW grade). Owner 2026-10-24: Uncommon 6, Rare 12, Low Epic 18, High Epic 24,
+ *  Low Legendary 30, High Legendary 36, Low Mythic 42, High Mythic 48. */
 export const RANK_REQ: Record<Rarity, number> = {
-  COMMON: 1, UNCOMMON: 6, RARE: 12, EPIC: 18, LEGENDARY: 24, MYTHIC: 30,   // (owner: steps of 6)
+  COMMON: 1, UNCOMMON: 6, RARE: 12, EPIC: 18, LEGENDARY: 30, MYTHIC: 42,
 };
-/** (owner 2026-10-24) a HIGH-grade piece needs half a step more: Low Epic 18, High Epic 21, Low Legendary 24 ... */
-export const itemReq = (i: { rarity: Rarity; grade?: string }): number => RANK_REQ[i.rarity] + (i.grade === 'HIGH' ? 3 : 0);
+/** A HIGH-grade Epic / Legendary / Mythic piece needs one more step (+6). */
+export const itemReq = (i: { rarity: Rarity; grade?: string }): number => RANK_REQ[i.rarity] + (i.grade === 'HIGH' && (i.rarity === 'EPIC' || i.rarity === 'LEGENDARY' || i.rarity === 'MYTHIC') ? 6 : 0);
 /** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
 export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 2.8;
 /** Share of the base price gear and pets sell for (owner: 3x the old 30%). Loot / shards sell at full value. */

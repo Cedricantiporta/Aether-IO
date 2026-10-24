@@ -308,10 +308,17 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
   position: absolute; left: -.15rem; top: -.15rem; z-index: 4; padding: 0 .3rem; font-size: .62rem; font-weight: 800; line-height: 1.05rem; color: #3b1f04;
   background: linear-gradient(#ffe48a, #c9922f); border: 1.5px solid var(--outline); border-radius: .5rem;
 }
-.slot-grade {   /* High grade gear: a little sunny star pill on the corner */
-  position: absolute; right: -.15rem; top: -.15rem; z-index: 4; min-width: 1.05rem; padding: 0 .2rem; text-align: center; font-size: .66rem; font-weight: 900; line-height: 1.05rem;
-  color: #6a3a00; background: linear-gradient(#fff3a8, #ffc94a); border: 1.5px solid #fff; border-radius: .6rem; box-shadow: 0 1px 2px rgba(60, 30, 0, .45);
+.slot-highglow {   /* (owner 2026-10-24) High grade gear: a bright light behind the icon + a slow shimmering sparkle aura, no star badge */
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 252, 225, .95) 0%, rgba(255, 236, 160, .7) 28%, rgba(255, 210, 110, .28) 55%, rgba(255, 200, 90, 0) 75%);
+  box-shadow: inset 0 0 10px rgba(255, 240, 180, .85);
 }
+.slot-highglow::after {
+  content: ''; position: absolute; inset: -40%;
+  background: conic-gradient(from 0deg, transparent 0 20%, rgba(255, 255, 255, .55) 25%, transparent 30% 70%, rgba(255, 255, 255, .45) 75%, transparent 80%);
+  animation: highglow-spin 4.5s linear infinite; mix-blend-mode: screen;
+}
+@keyframes highglow-spin { to { transform: rotate(360deg); } }
 .tt-grade { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border-radius: .6rem; font-size: .62rem; font-weight: 900; vertical-align: .08em; background: #e8e2d0; color: #7a6a48; }
 .tt-grade.is-high { background: linear-gradient(#fff3a8, #ffc94a); color: #6a3a00; box-shadow: 0 1px 2px rgba(60, 30, 0, .35); }
 .slot-lock {

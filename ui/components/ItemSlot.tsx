@@ -1,3 +1,4 @@
+import { gradeOf } from '../../grade';
 import React from 'react';
 import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
@@ -50,11 +51,11 @@ export const ItemSlot: React.FC<Props> = ({
   const style = { ['--slot' as any]: size } as React.CSSProperties;
   const content = (
     <>
+      {item && isGear(item) && gradeOf(item) === 'HIGH' && <span className="slot-highglow" data-testid="grade-badge" title="High grade" />}
       {item ? <span className="slot-icon" style={otherClass ? { opacity: 0.55, filter: 'saturate(.6)' } : undefined}><ItemIcon item={item} size={iconSize} /></span>
         : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && item.type === 'PET' && tooltip !== 'buy' && <span className="slot-plus" data-testid="pet-lv-badge" style={petStage(item) > 1 ? { color: petStage(item) > 2 ? '#d8a8ff' : '#ffe08a' } : undefined}>Lv {petLv(item)}</span>}
-      {item && isGear(item) && item.grade === 'HIGH' && <span className="slot-grade" data-testid="grade-badge" title="High grade">★</span>}
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}

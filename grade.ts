@@ -12,11 +12,13 @@ const GEAR = new Set<string>(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'A
 /** stats that are not part of the tier ladder (archer bow reach is its own per-rarity table) */
 const FIXED_STATS = new Set<string>(['attackRange']);
 
-export const isGraded = (i: Item): boolean => GEAR.has(i.type);
-export const gradeOf = (i: Item): ItemGrade => (i.grade === 'HIGH' ? 'HIGH' : 'LOW');
+/** (owner 2026-10-24) only Epic / Legendary / Mythic gear has a Low / High grade; Common, Uncommon and Rare have none. */
+const GRADED_RARITY = new Set<string>(['EPIC', 'LEGENDARY', 'MYTHIC']);
+export const isGraded = (i: Item): boolean => GEAR.has(i.type) && GRADED_RARITY.has(i.rarity);
+export const gradeOf = (i: Item): ItemGrade => (i.grade === 'HIGH' && isGraded(i) ? 'HIGH' : 'LOW');
 const cap = (s: string): string => s.charAt(0) + s.slice(1).toLowerCase();
 /** "High Epic" / "Low Rare" */
-export const gradeLabel = (i: Item): string => `${gradeOf(i) === 'HIGH' ? 'High' : 'Low'} ${cap(i.rarity)}`;
+export const gradeLabel = (i: Item): string => (isGraded(i) ? `${gradeOf(i) === 'HIGH' ? 'High' : 'Low'} ${cap(i.rarity)}` : cap(i.rarity));
 
 const roundStat = (v: number): number => (Math.abs(v) >= 10 ? Math.round(v) : parseFloat(v.toFixed(3)));
 function scaleStats(i: Item, f: number): void {
@@ -42,7 +44,7 @@ export function rollGrade(i: Item, rng: () => number = Math.random, chance = GRA
 const GEN_NAMES = new Set(GENERATED_ITEMS.filter((t) => GEAR.has(t.type)).map((t) => t.name));
 export const GEAR_RESCALE: Record<Rarity, number> = Object.fromEntries((Object.keys(RIDX) as Rarity[]).map((r) => [r, TIER_REL[RIDX[r]] / OLD_TIER_REL[RIDX[r]]])) as Record<Rarity, number>;
 export function migrateGear<T extends Item | null | undefined>(it: T): T {
-  if (!it || !isGraded(it) || it.grade) return it;
+  if (!it || !GEAR.has(it.type) || it.grade) return it;
   const out = { ...it, stats: { ...it.stats }, grade: 'LOW' as ItemGrade };
   if (GEN_NAMES.has(it.name)) scaleStats(out, GEAR_RESCALE[it.rarity] ?? 1);
   return out as T;

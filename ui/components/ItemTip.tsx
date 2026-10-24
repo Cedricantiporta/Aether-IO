@@ -11,7 +11,7 @@ import { classTag, canUseClass } from '../../itemClass';
 import { charmText } from '../../accessoryCharms';
 import { affixText, isUnique } from '../../affixes';
 import { emptyAffixSlots } from '../../reforge';
-import { gradeLabel, gradeOf } from '../../grade';
+import { gradeLabel, gradeOf, isGraded } from '../../grade';
 import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { petPower, petStatMul, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
@@ -60,7 +60,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
     <div style={{ width: '16rem' }}>
       <div className="tt-name" data-rt={item.rarity}>
         {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
-        {isGear(item) && item.type !== 'PET' && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : ''}`} data-testid="grade-tag">{gradeOf(item) === 'HIGH' ? '★ ' : ''}{gradeLabel(item)}</span>}
+        {isGear(item) && item.type !== 'PET' && isGraded(item) && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : ''}`} data-testid="grade-tag">{gradeLabel(item)}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}

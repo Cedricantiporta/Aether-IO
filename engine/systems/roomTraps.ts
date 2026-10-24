@@ -232,7 +232,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   // ---- candidate hazard kinds with a weight (0 = not in this biome / depth yet)
   const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
-  w[TRAP.VINE] = b === 0 ? (idx >= 2 ? 30 : 0) : 9;
+  w[TRAP.VINE] = 0;   // (owner 2026-10-24: the grabbing snare plant is gone everywhere)
   w[TRAP.POOL] = b === 4 ? 40 : b >= 2 ? 8 : 0;
   const marbleH = b === 1 && shape.kind === 'HALLS';
   siegeLong = marbleH; near = null;
