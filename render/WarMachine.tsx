@@ -55,7 +55,7 @@ export function WarMachine() {
   const root = useRef<Group>(null!), body = useRef<Group>(null!), turret = useRef<Group>(null!);
   const legs = useRef<(Group | null)[]>([]), shins = useRef<(Group | null)[]>([]);
   const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
-  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_warmach', km);   // creature kit look (old meshes stay until the kit is in)
+  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_warmach', km, true, false);   // (owner 2026-10-24: blocky Colossus - the rounded kit body is off)   // creature kit look (old meshes stay until the kit is in)
   const S = useRef({ crouch: 0, lift: 0, glow: 1, tYaw: 0, lastStep: 0 });
 
   useFrame(({ clock }, dtRaw) => {

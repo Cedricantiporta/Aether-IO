@@ -30,7 +30,7 @@ export function makeBossRig(kit: CreatureKit, piece: string, m: BossMats, cast =
 }
 
 /** React helper: the rig for `piece` once the kit is loaded (null before: the caller keeps its old meshes visible). */
-export function useBossRig(piece: string, m: BossMats, cast = true): BossRig | null {
+export function useBossRig(piece: string, m: BossMats, cast = true, on = true): BossRig | null {
   const kit = useCreatureKit();
-  return useMemo(() => (kit ? makeBossRig(kit, piece, m, cast) : null), [kit, piece, m, cast]);
+  return useMemo(() => (kit && on ? makeBossRig(kit, piece, m, cast) : null), [kit, piece, m, cast, on]);
 }
