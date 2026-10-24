@@ -34,6 +34,8 @@ function shakeOff(e: Enemy, amp: number, t: number) { return sin(t * 70) * amp; 
 
 // ===================================================================== GOLEM
 function buildGolem() {
+  // (owner 2026-10-24: Gorath is blocky, Minecraft-style - stacked boxes, no rounded rocks)
+  const rock = (bb: GB, r: number, pos: [number, number, number], scl: [number, number, number], color: string, _seed = 1) => bb.box(2 * r * scl[0] * 0.9, 2 * r * scl[1] * 0.9, 2 * r * scl[2] * 0.9, pos, color);
   const stone = '#8c9199', stone2 = '#6d727a', moss = '#5aa03a', dark = '#4d5158';
   const body = new GB([0.72, 1.12]), glow = new GB([1, 1]);
   rock(body, 0.62, [0, 0.8, 0], [1.1, 0.9, 0.95], stone2, 3);                       // pelvis
@@ -42,15 +44,15 @@ function buildGolem() {
   rock(body, 0.36, [0, 2.22, 0.12], [1.0, 0.9, 1.0], stone, 13);                  // head
   body.box(0.62, 0.12, 0.2, [0, 2.3, 0.4], dark, [0.15, 0, 0]);                  // brow
   body.box(0.3, 0.2, 0.2, [0, 2.0, 0.34], stone2);                               // jaw
-  for (const s of [-1, 1]) { body.cone(0.1, 0.5, 4, [s * 0.28, 2.55, 0.0], stone2, [0, 0, -s * 0.4]); }
-  for (const [x, y, z, r] of [[0.4, 2.0, 0.1, 0.34], [-0.55, 1.95, -0.2, 0.28], [0.1, 1.2, -0.7, 0.4], [-0.3, 2.05, -0.5, 0.3]] as const) body.sph(r, [x, y, z], moss, [1.2, 0.35, 1], 6);
-  body.sph(0.3, [0.6, 0.85, 0.5], moss, [1, 0.3, 0.8], 5);
+  for (const s of [-1, 1]) { body.box(0.18, 0.42, 0.18, [s * 0.28, 2.55, 0.0], stone2, [0, 0, -s * 0.4]); }
+  for (const [x, y, z, r] of [[0.4, 2.0, 0.1, 0.34], [-0.55, 1.95, -0.2, 0.28], [0.1, 1.2, -0.7, 0.4], [-0.3, 2.05, -0.5, 0.3]] as const) body.box(r * 2.2, r * 0.6, r * 1.9, [x, y, z], moss);
+  body.box(0.6, 0.18, 0.48, [0.6, 0.85, 0.5], moss);
   // shoulder pauldron rocks
   for (const s of [-1, 1]) rock(body, 0.46, [s * 1.0, 2.05, 0], [1, 0.8, 1], stone, 17 + s);
   // glow: chest ring + core + cracks + eyes
-  glow.torus(0.46, 0.04, [0, 1.52, 0.8], '#ff9a2a', [0, 0, 0], 1, 20);
+  for (const [w, h, x, y] of [[0.92, 0.07, 0, 1.98], [0.92, 0.07, 0, 1.06], [0.07, 0.92, 0.46, 1.52], [0.07, 0.92, -0.46, 1.52]] as const) glow.box(w, h, 0.05, [x, y, 0.8], '#ff9a2a');   // square chest frame
   for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; glow.box(0.04, 0.38, 0.04, [cos(a) * 0.24, 1.52 + sin(a) * 0.24, 0.81], '#ff7a1a', [0, 0, a - Math.PI / 2]); }
-  glow.ico(0.17, [0, 1.52, 0.83], '#ffe080', 1, 0);
+  glow.box(0.3, 0.3, 0.1, [0, 1.52, 0.83], '#ffe080');
   const cr = (x: number, y: number, z: number, h: number, rz: number) => glow.box(0.045, h, 0.04, [x, y, z], '#ff7a1a', [0, 0, rz]);
   cr(0.5, 1.9, 0.78, 0.5, 0.4); cr(-0.55, 1.2, 0.75, 0.45, -0.5); cr(0.4, 1.1, 0.8, 0.35, -0.3); cr(-0.3, 1.9, 0.82, 0.3, 0.2); cr(0.0, 0.85, 0.7, 0.4, 0.1);
   for (const s of [-1, 1]) glow.box(0.17, 0.09, 0.08, [s * 0.15, 2.24, 0.42], '#ffb040');
@@ -58,10 +60,10 @@ function buildGolem() {
     const a = new GB([0.72, 1.12]), g = new GB([1, 1]);
     rock(a, 0.36, [0, -0.45, 0], [1, 1.5, 1], stone, 21 + s);
     rock(a, 0.54, [0, -1.25, 0.05], [1.1, 1.0, 1.1], stone2, 25 + s);
-    for (let i = 0; i < 4; i++) a.cone(0.09, 0.28, 4, [(i - 1.5) * 0.2, -1.6, 0.35], dark, [Math.PI / 2 + 0.3, 0, 0]);
-    a.sph(0.26, [0.05, -0.1, -0.1], moss, [1.2, 0.4, 1], 5);
-    g.torus(0.4, 0.035, [0, -0.78, 0], '#ff9a2a', [Math.PI / 2, 0, 0], 1, 14);
-    g.torus(0.32, 0.03, [0, -0.28, 0], '#ff9a2a', [Math.PI / 2, 0, 0], 1, 12);
+    for (let i = 0; i < 4; i++) a.box(0.16, 0.16, 0.3, [(i - 1.5) * 0.2, -1.6, 0.35], dark);
+    a.box(0.6, 0.2, 0.5, [0.05, -0.1, -0.1], moss);
+    g.box(0.9, 0.06, 0.9, [0, -0.78, 0], '#ff9a2a');
+    g.box(0.7, 0.06, 0.7, [0, -0.28, 0], '#ff9a2a');
     return { body: a.build(), glow: g.build() };
   };
   const leg = new GB([0.7, 1.1]);
@@ -77,7 +79,7 @@ export function Golem() {
   }), []);
   const g = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), lL = useRef<Group>(null!), lR = useRef<Group>(null!);
   const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
-  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_golem', km);   // creature kit look (old meshes stay until the kit is in)
+  const km = useMemo(() => makeBossMats(), []), rig = useBossRig('boss_golem', km, true, false);   // (owner 2026-10-24: blocky Gorath - the rounded kit body is off)   // creature kit look (old meshes stay until the kit is in)
   const S = useRef({ armL: 0, armR: 0, pitch: 0, dy: 0, gl: 1, lastStep: 0, dustT: 0 });
   useFrame(({ clock }, dtRaw) => {
     const st = useGameStore.getState().status;
