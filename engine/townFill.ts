@@ -311,6 +311,12 @@ put('fishing_net_rack', NET_RACK.x, NET_RACK.z, NET_RACK.rot, 1, 1, 1, 0);
 // ---- the park round the fountain: blossom trees + bushes
 for (const [gx, gz] of [[WELL_POS.x, 12.6], [-15.3, 17.6], [WELL_POS.x, 21.4]]) resv(gx, gz, 2.4);   // the park's N / E / S entrance gaps stay free
 grove(Z(WELL_POS.x + 0.3, WELL_POS.z, 6.8, 4.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
+// ---- (owner 2026-10-24) more green inside the town: round trees + bushes between the buildings and along the terrace edges (all textured Quaternius pack-1 pieces via natureLayout.qtForest); each only where it fits
+grove(Z(-17, -12.8, 7, 2.4), 3, [OAKS(2, [0.75, 0.95]), BUSHES(3, [0.6, 0.85])], 811, 0.7, 1.4); grove(Z(17, -12.8, 7, 2.4), 3, [OAKS(2, [0.75, 0.95]), BUSHES(3, [0.6, 0.85])], 812, 0.7, 1.4);   // (south of the Chapel Hill / Tavern Row edges)
+grove(Z(-33, -10.8, 8, 1.6), 3, [BUSHES(3, [0.6, 0.85]), OAKS(1, [0.7, 0.9])], 813, 0.7, 1.4); grove(Z(38, -10.8, 5, 1.6), 2, [BUSHES(3, [0.6, 0.85])], 814, 0.7, 1.4);
+grove(Z(-6, 15.4, 3.2, 1.2), 2, [BUSHES(3, [0.55, 0.75])], 815, 0.6, 1.4); grove(Z(6.4, 15.4, 3.2, 1.2), 2, [BUSHES(3, [0.55, 0.75])], 816, 0.6, 1.4);   // (either side of the avenue below the south street)
+grove(Z(-28, 30, 5, 2), 3, [OAKS(1, [0.65, 0.85]), BUSHES(3, [0.55, 0.8])], 817, 0.6, 1.4); grove(Z(28, 30, 5, 2), 3, [OAKS(1, [0.65, 0.85]), BUSHES(3, [0.55, 0.8])], 818, 0.6, 1.4);
+grove(Z(-23, 8, 2.2, 2), 2, [OAKS(1, [0.7, 0.9]), BUSHES(2, [0.6, 0.8])], 819, 0.6, 1.4); grove(Z(23.4, 7, 2, 2.5), 2, [BUSHES(1, [0.6, 0.8])], 820, 0.6, 1.4);
 // ---- the garden strip along the south wall (z 33..36): beds, bushes, small trees; the avenue + hero's door stay free
 // ---- the rises (cottages at both south corners)
 grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);   // (owner: no loose bushes on the town paving)

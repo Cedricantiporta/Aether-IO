@@ -6,7 +6,8 @@
 // ============================================================================
 import React, { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { BufferGeometry, Float32BufferAttribute, InstancedMesh, Material, Mesh } from 'three';
+import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Material, Mesh } from 'three';
+import { ROYAL_ROOF, ROYAL_ROOF_DARK } from './townPalette';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BASE } from './models';
 import { Inst } from './Inst';
@@ -33,6 +34,20 @@ function pieces(scene: import('three').Object3D): Record<string, BufferGeometry>
   return out;
 }
 
+/** Roof colour variants (owner 2026-10-24: roofs in deep blue / red / green, the same blue as the kit shops' roof_blue). The pack's roof vertices (RoofTiles teal 0x09 0x2a 0x31, the Inn's red 0x31 0x0c 0x08) are repainted. */
+export type RoofVariant = 'blue' | 'red' | 'green';
+export const ROOF_CYCLE: RoofVariant[] = ['blue', 'red', 'blue', 'green', 'blue', 'red', 'green'];
+const ROOF_RGB: Record<RoofVariant, Color> = { blue: new Color(ROYAL_ROOF), red: new Color('#b5472f'), green: new Color('#3f8a4c') };
+const ROOF_SRC = [[9, 42, 49], [49, 12, 8]];
+function recolorRoof(src: BufferGeometry, v: RoofVariant): BufferGeometry {
+  const g = src.clone(), c = g.attributes.color, t = ROOF_RGB[v], dark = v === 'blue' ? new Color(ROYAL_ROOF_DARK) : t;
+  for (let i = 0; i < c.count; i++) {
+    const r = Math.round(c.getX(i) * 255), gg = Math.round(c.getY(i) * 255), b = Math.round(c.getZ(i) * 255);
+    if (ROOF_SRC.some((q) => Math.abs(q[0] - r) < 2 && Math.abs(q[1] - gg) < 2 && Math.abs(q[2] - b) < 2)) { const k = 0.9 + ((i * 7) % 5) * 0.025; c.setXYZ(i, (i % 2 ? t.r : dark.r) * k, (i % 2 ? t.g : dark.g) * k, (i % 2 ? t.b : dark.b) * k); }
+  }
+  c.needsUpdate = true; return g;
+}
+
 type P = { x: number; y: number; z: number; ry: number; s: number };
 
 /** All village-pack scenery of the walled town + the hamlet: houses, the statue pair, the barrel clusters. `lit` = the town's lit vertex-colour material. */
@@ -41,8 +56,9 @@ export function VillageQt({ lit, shadows }: { lit: Material; shadows: boolean })
   const sets = useMemo(() => {
     const G = pieces(gltf.scene), list: { k: string; geo: BufferGeometry; places: P[] }[] = [];
     const by: Record<string, P[]> = {};
-    for (const h of HOUSES) if (isQvKit(h.kit)) (by[qvPiece(h.kit!)] ??= []).push({ x: h.x, y: townLift(h.x, h.z), z: h.z, ry: h.rot, s: 1 });
-    for (const k of Object.keys(QV_HOUSES)) if (by[k] && G[k]) list.push({ k, geo: G[k], places: by[k] });
+    let hi = 0;
+    for (const h of HOUSES) if (isQvKit(h.kit)) (by[qvPiece(h.kit!) + '|' + ROOF_CYCLE[hi++ % ROOF_CYCLE.length]] ??= []).push({ x: h.x, y: townLift(h.x, h.z), z: h.z, ry: h.rot, s: 1 });
+    for (const key of Object.keys(by)) { const [k, v] = key.split('|'); if (QV_HOUSES[k] && G[k]) list.push({ k: key, geo: recolorRoof(G[k], v as RoofVariant), places: by[key] }); }
     // the horse statues: pedestal + statue (the statue stands on the pedestal's top)
     if (G.Pedestal && G.Statue_Horse) {
       list.push({ k: 'Pedestal', geo: G.Pedestal, places: HORSE_STATUES.map((s) => ({ x: s.x, y: townLift(s.x, s.z), z: s.z, ry: s.ry, s: 1 })) });
