@@ -22,7 +22,7 @@ import { showcase } from '../engine/showcase';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { shape, shapeLimit, outlineU } from '../engine/roomShape';
-import { hallsSdf } from '../engine/roomHalls';
+import { halls, hallsSdf } from '../engine/roomHalls';
 import { HallsBorder, HallsColumns } from './HallsBorder';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
@@ -255,7 +255,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const def = biomeOf(biome);
     const vr = variantOf(def, index);
     const style = def.style;
-    const S = 2 * (shape.maxR + 44), seg = feat.river || feat.nLakes > 0 ? 260 : 160;   // finer grid where banks are carved
+    const hl = shape.kind === 'HALLS';
+    const S = 2 * (shape.maxR + (hl ? 24 : 44)), seg = hl ? 340 : feat.river || feat.nLakes > 0 ? 260 : 160;   // finer grid where banks are carved (halls: crisp organic edges)
     const g = new PlaneGeometry(S, S, seg, seg);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
@@ -391,7 +392,9 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         if (k > 0) pos.setY(i, pos.getY(i) + k * (1.6 + 5.5 * fbm(x * 0.045 + so, z * 0.045 - so, 3)) * (style === 'SAND' ? 0.8 : 1));
       }
       // floor beyond the walls (marble halls: dark interior void)
-      const e = isHalls && style !== 'MARBLE' ? sstep(0.6, 4, u) * 0.6 : sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);   // (halls: the ground between the chambers stays the biome floor, darkened)
+      let inIsl = false;   // (halls: the islands inside the floor keep the floor colour; only the outer ground fades)
+      if (isHalls && u > 0.3) for (let q = 0; q < halls.islands.length; q++) { const I = halls.islands[q]; if ((x - I[0]) ** 2 + (z - I[1]) ** 2 < (I[2] + 1.2) ** 2) { inIsl = true; break; } }
+      const e = inIsl ? 0 : isHalls && style !== 'MARBLE' ? sstep(0.6, 4, u) * 0.6 : sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);   // (halls: the ground between the chambers stays the biome floor, darkened)
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
       col[i * 3] = out.r; col[i * 3 + 1] = out.g; col[i * 3 + 2] = out.b;
     }
@@ -401,7 +404,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? 4 : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
+    const N = (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? (style === 'GRASS' ? 1 : 4) : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
     const tg = new GB([0.8, 1.1]);
     if (style === 'MARBLE') { tg.box(0.5, 0.18, 0.4, [0, 0.09, 0], '#ffffff', [0, 0.4, 0.1]); tg.box(0.3, 0.14, 0.3, [0.4, 0.07, 0.2], '#ffffff', [0.2, 1, 0]); }
     else if (style === 'SAND') { tg.ico(0.22, [0, 0.06, 0], '#ffffff', [1.4, 0.4, 1.1], 0); tg.cone(0.04, 0.4, 3, [0.15, 0.2, 0], '#ffffff', [0.3, 0, 0.4]); tg.cone(0.04, 0.35, 3, [-0.1, 0.18, 0.05], '#ffffff', [-0.3, 0, -0.4]); }
