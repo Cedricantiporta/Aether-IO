@@ -13,9 +13,9 @@ import { runInfo } from './runMods';
 import type { Obstacle, ObstacleKind, CrateKind, RoomType } from './types';
 import { biomeOf, variantOf, BIOMES } from './roomDefs';
 import { buildShape, shape, shapeAt, boundaryPoint, perimeter, insideShape, startPoint, stationPoint, portalPoint, shortcutPoint, dbg as shapeDbg, hallsType, type ShapeKind } from './roomShape';
-import { halls } from './roomHalls';
+import { halls, hallsSdf } from './roomHalls';
 import { buildRoomNav } from './roomNav';
-import { MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, onBridge, liquidCode, type Layout } from './roomFeatures';
+import { MAX_FIXED, MAX_LAKES, hwAt, feat, resetFeatures, riverD, riverS, riverPoint, inLiquid, onBridge, liquidCode, type Layout } from './roomFeatures';
 import { isArenaRoom, buildArena } from './arenaRooms';
 import { buildCampRoom } from './campPaths';
 
@@ -295,6 +295,22 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
       if (feat.river && (riverD(x, z) > 0) !== (riverD(stx, stz) > 0)) continue;
       add('ARCHER_TOWER', x, z, 1.45, 1, false, true, Math.atan2(sx - x, sz - z));
       feat.tx[feat.nTowers] = x; feat.tz[feat.nTowers] = z; feat.nTowers++;
+    }
+  }
+
+  // ---- HALLS dead-end pockets (owner): a reason to walk into every side chamber - stationary archer towers (they count for room clear,
+  // so the hero must go there) most of the time, rarely (~15%) an optional treasure chest. Own RNG: the rest of the room is unchanged.
+  if (isHalls && fightRoom) {
+    const pr = mulberry32(seed ^ 0x70c4e7);
+    for (const pk of halls.pockets) {
+      if (pr() < 0.15 && !feat.pChest.on) { feat.pChest.on = true; feat.pChest.x = pk[0]; feat.pChest.z = pk[1]; keep.push({ x: pk[0], z: pk[1], r: 3 }); continue; }
+      const want = pr() < 0.4 ? 2 : 1;
+      for (let t = 0, got = 0; t < 30 && got < want && feat.nTowers < MAX_FIXED; t++) {
+        const a = pr() * Math.PI * 2, d = got === 0 && t === 0 ? 0 : 3 + pr() * 3, x = pk[0] + Math.cos(a) * d, z = pk[1] + Math.sin(a) * d;
+        if (hallsSdf(x, z) < 3 || blockedSpot(x, z, 1.6, 2)) continue;
+        add('ARCHER_TOWER', x, z, 1.45, 1, false, true, Math.atan2(sx - x, sz - z));
+        feat.tx[feat.nTowers] = x; feat.tz[feat.nTowers] = z; feat.nTowers++; got++;
+      }
     }
   }
 

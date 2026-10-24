@@ -180,6 +180,9 @@ export function isUntargetable(e: Enemy): boolean {
   return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
 }
 
+/** HALLS rooms (owner): ordinary monsters idle until the hero comes within HALLS_AGGRO metres (or hurts one); once awake they stay awake, and wake packmates within 7 m. */
+const HALLS_AGGRO = 10;
+const awake = new Uint8Array(512);
 let hallsOn = false;   // the installed room is a HALLS layout (set once per frame in updateEnemies)
 const spawnCols: Collider[] = [];
 function blockedAt(x: number, z: number, pad: number): boolean {
@@ -362,6 +365,7 @@ export function spawnEnemy(
   if (boss) initSpecial(e);
   e.state = 'SPAWN';
   e.stateT = 0;
+  awake[e.id] = 0;
   e.winT = 0; e.winCd = WIND.firstMin + Math.random() * (WIND.firstMax - WIND.firstMin); e.winPhase = 0; e.winBusy = false;
   e.phase = 0;
   e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 3 : 0; // so first boss pattern is index 0
@@ -1454,7 +1458,7 @@ function updateEnemy(e: Enemy): void {
   if (!still && !e.boss && e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.state !== 'SPAWN' && e.state !== 'ATTACK' && e.state !== 'KITE' && tdist > e.radius + 1.5) steerAround(e);   // (ranged kiters aim along tdx: never bent)
 
   // leash: stray enemies re-enter near the arena edge close to the player
-  if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
+  if (!e.boss && !still && (!hallsOn || awake[e.id] || e.id >= 512) && e.kind !== 'BOSS_HYDRA_HEAD' && tdist > LEASH_DIST && findSpawnPoint(26, 34, tmpV)) {
     e.pos.copy(tmpV);
     tdx = px - e.pos.x; tdz = pz - e.pos.z; tdist = Math.sqrt(tdx * tdx + tdz * tdz);
   }
@@ -1511,6 +1515,15 @@ function updateEnemy(e: Enemy): void {
       if (b.shield <= 0) b.shieldMax = 0; else if (b.shield > b.shieldMax) b.shieldMax = b.shield;
     }
   }
+  let asleep = false;
+  if (hallsOn && !e.boss && !e.mini && !still && e.state !== 'SPAWN' && e.id < 512 && !awake[e.id]) {
+    const ex = player.pos.x - e.pos.x, ez = player.pos.z - e.pos.z;
+    if (ex * ex + ez * ez < HALLS_AGGRO * HALLS_AGGRO || e.hp < e.maxHp || e.hitFlash > 0 || curMin >= 0) {
+      awake[e.id] = 1;
+      const En = world.enemies;
+      for (let i = 0; i < En.length && i < 512; i++) { const o = En[i]; if (o.active && !awake[i] && (o.pos.x - e.pos.x) ** 2 + (o.pos.z - e.pos.z) ** 2 < 49) awake[i] = 1; }
+    } else asleep = true;
+  }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
   const winded = (e.boss || e.mini) && !e.decoy && tickWinded(e, dt, locked);
   const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
@@ -1530,6 +1543,7 @@ function updateEnemy(e: Enemy): void {
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
     else if (tg && e.state !== 'SPAWN') { goblinFlee(e, dt); desiredYaw = Math.atan2(e.vel.x, e.vel.z); }
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)
+    else if (asleep) { stop(e); desiredYaw = e.facing; }   // (HALLS: not yet aware of the hero)
     else runAI(e);
   } else {
     if (e.spKind !== 0) cancelSpecial(e);

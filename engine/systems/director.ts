@@ -321,6 +321,8 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
       const side = i === 0 ? 1 : -1, tx = cx + side * 5, tz = cz + 1.5;
       if (isSpawnable(tx, tz)) { c.x = tx; c.z = tz; } else { c.x = cx; c.z = cz + side * 5; }
     }
+    for (const c of r.chests) c.pocket = false;
+    if (feat.pChest.on) { const c = r.chests[1]; if (!c.on) { c.on = true; c.pocket = true; c.x = feat.pChest.x; c.z = feat.pChest.z; } }   // HALLS dead-end pocket: an optional chest (opens at any time)
   }
 
   const pl = world.player;
@@ -1130,7 +1132,7 @@ function scanNearby(): void {
       if (dk < 30) pushNearby('Talk', 'The Gatekeeper', 56, dk);
     }
     if (wander.on) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
-    if (r.station.kind === 'CHEST' && r.station.ready) for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; if (c.on && !c.used) { const dc = q(c.x, c.z); if (dc < 20) pushNearby('Open', 'Treasure Chest', 12 + i, dc); } }
+    for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; if (c.on && !c.used && (c.pocket || (r.station.kind === 'CHEST' && r.station.ready))) { const dc = q(c.x, c.z); if (dc < 20) pushNearby('Open', 'Treasure Chest', 12 + i, dc); } }
     if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP' && !r.plan.epilogue) {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
@@ -1184,7 +1186,7 @@ export function interactRoom(it: Interactable): void {
   }
   if (it.node === 12 || it.node === 13) {   // an extra treasure chest
     const c = r.chests[it.node - 12];
-    if (c && c.on && !c.used && r.station.ready && world.player.alive) { c.used = true; chestLoot(c.x, c.z); events.emit('shake', { amount: 0.25 }); vacuumT = 1.2; }
+    if (c && c.on && !c.used && (c.pocket || r.station.ready) && world.player.alive) { c.used = true; chestLoot(c.x, c.z); events.emit('shake', { amount: 0.25 }); vacuumT = 1.2; }
     return;
   }
   if (it.node === 40) { freeCaptive(); return; }   // rescue objective

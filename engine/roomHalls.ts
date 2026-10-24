@@ -28,6 +28,8 @@ export const halls = {
   keep: [] as [number, number, number][],
   /** castle halls (Marble): statue spots (also in `islands`, r 1.5) and arch doorways x, z, facing (rad) */
   statues: [] as [number, number][], arches: [] as [number, number, number][],
+  /** dead-end pockets (off the shortest start -> exit route): x, z, detour (m) - best first, at most 2 */
+  pockets: [] as [number, number, number][],
   area: 0, extent: 0,
   /** half width of the exit area (the portal slots spread within it) */
   exitHalf: 10,
@@ -290,8 +292,51 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
     scale = ns;
   }
   finishPoints(I);
+  findPockets();
   halls.variant = variant;
   halls.on = true; halls.version++;
+}
+
+const gdS = new Int32Array(MAXN), gdE = new Int32Array(MAXN), gq = new Int32Array(MAXN);
+/** 4-neighbour BFS over the open cells from cell `src` (distance in cells, -1 = unreachable). */
+function bfs(src: number, out: Int32Array): void {
+  const w = halls.w, n = w * halls.h, O = halls.open;
+  out.fill(-1, 0, n);
+  let h = 0, t = 0; gq[t++] = src; out[src] = 0;
+  while (h < t) {
+    const c = gq[h++], d = out[c] + 1;
+    if (c % w > 0 && O[c - 1] && out[c - 1] < 0) { out[c - 1] = d; gq[t++] = c - 1; }
+    if (c % w < w - 1 && O[c + 1] && out[c + 1] < 0) { out[c + 1] = d; gq[t++] = c + 1; }
+    if (c >= w && O[c - w] && out[c - w] < 0) { out[c - w] = d; gq[t++] = c - w; }
+    if (c < n - w && O[c + w] && out[c + w] < 0) { out[c + w] = d; gq[t++] = c + w; }
+  }
+}
+const cellOf = (x: number, z: number): number => Math.floor((z - halls.z0) / HC) * halls.w + Math.floor((x - halls.x0) / HC);
+
+/** Dead-end pockets: cells whose shortest start -> exit detour is long. Picks up to 2 spots (>= 3.4 m inside, >= 22 m apart). */
+function findPockets(): void {
+  halls.pockets.length = 0;
+  const a = cellOf(halls.sx, halls.sz), b = cellOf(halls.ex, halls.ez), n = halls.w * halls.h, O = halls.open;
+  if (!O[a] || !O[b]) return;
+  bfs(a, gdS); bfs(b, gdE);
+  const L = gdS[b];
+  if (L < 0) return;
+  const need = 26 / HC;   // detour over the main route (cells)
+  for (let k = 0; k < 2; k++) {
+    let best = -1, bd = 0;
+    for (let c = 0; c < n; c++) {
+      if (!O[c] || gdS[c] < 0 || halls.sdf[c] < 3.4) continue;
+      const d = gdS[c] + gdE[c] - L;
+      if (d < need || d <= bd) continue;
+      const x = halls.x0 + ((c % halls.w) + 0.5) * HC, z = halls.z0 + (Math.floor(c / halls.w) + 0.5) * HC;
+      let ok = true;
+      for (const p of halls.pockets) if (Math.hypot(p[0] - x, p[1] - z) < 22) { ok = false; break; }
+      if (Math.hypot(x - halls.sx, z - halls.sz) < 16 || Math.hypot(x - halls.ex, z - halls.ez) < 16) ok = false;
+      if (ok) { best = c; bd = d; }
+    }
+    if (best < 0) break;
+    halls.pockets.push([halls.x0 + ((best % halls.w) + 0.5) * HC, halls.z0 + (Math.floor(best / halls.w) + 0.5) * HC, bd * HC]);
+  }
 }
 
 const wob = new Float32Array(MAXN), ppass = new Float32Array(MAXN), pcore = new Float32Array(MAXN);

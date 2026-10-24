@@ -12,6 +12,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { halls, hallsSdf, HC } from '../engine/roomHalls';
 import { BASE } from './models';
 import { mulberry32 } from './util';
+import { events } from '../engine/events';
 
 const TAU = Math.PI * 2;
 
@@ -67,6 +68,11 @@ function loadKit(): Promise<Kit> {
     return kit;
   }));
 }
+
+/** Kicks off the OBJ fetch + geometry build early (the first run room of biome 1 does it), so entering Marble Halls never waits on the network. */
+export function preloadHallsMarble(): void { loadKit().catch(() => { kitP = null; }); }
+let preQueued = false;
+events.on('roomEnter', (e) => { if (!preQueued && e.biome === 0 && !e.boss) { preQueued = true; preloadHallsMarble(); } });
 
 interface Put { x: number; y: number; z: number; ry: number; sx: number; sy: number; sz: number }
 

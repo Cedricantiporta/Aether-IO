@@ -717,12 +717,12 @@ function Stations() {
     }
     for (let i = 0; i < 2; i++) {   // extra chests (positions relative to the station)
       const g = xc.current[i], c = world.room.chests[i]; if (!g) continue;
-      g.visible = on && s.kind === 'CHEST' && c.on;
+      g.visible = on && (s.kind === 'CHEST' || !!c.pocket) && c.on;
       if (!g.visible) continue;
       g.position.set(c.x - s.x, 0, c.z - s.z);
       xlid.current[i] += ((c.used ? 1 : 0) - xlid.current[i]) * Math.min(1, dt * 6);
       if (xl.current[i]) xl.current[i]!.rotation.x = -xlid.current[i] * 1.25;
-      if (xb.current[i]) { xb.current[i]!.visible = s.ready && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
+      if (xb.current[i]) { xb.current[i]!.visible = (s.ready || !!c.pocket) && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
     }
     if (altar.current.visible) {
       // (owner) the shrine crystal is dull until the challenge is won, then it lights up and spins

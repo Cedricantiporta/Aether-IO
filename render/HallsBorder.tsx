@@ -32,10 +32,12 @@ export function HallsBorder({ biome, seed, v, tint, shadows }: { biome: number; 
     };
     const tree = (px: number, pz: number, want: number, lo: boolean): void => {
       const node = qtPick(kit.tall, rnd()), k = want / (QT_H[node] ?? 5), w = k * (1.0 + rnd() * 0.2);
+      treePts.push(px, pz);
       add(lo ? qtLod(node) : node, { x: px, y: -0.05, z: pz, ry: rnd() * TAU, sx: w, sy: k * (0.92 + rnd() * 0.16), sz: w });
     };
     // Intentional clusters (owner: no even scatter): candidate centres on a loose 5 m grid inside a band round the floor, shuffled, each
     // accepted by a blotchy noise (so calm empty ground stays between groups) and by depth (dense near the edge, sparse behind).
+    const treePts: number[] = [];   // x, z of every tree placed (the edge-wall pass below fills the gaps)
     const cand: [number, number, number, boolean][] = [];
     const x1 = halls.x0 + halls.w * HC, z1 = halls.z0 + halls.h * HC, STEP = 4.5;
     for (let z = halls.z0; z < z1; z += STEP) for (let x = halls.x0; x < x1; x += STEP) {
@@ -69,6 +71,20 @@ export function HallsBorder({ biome, seed, v, tint, shadows }: { biome: number; 
         nTree++;
       }
       if (d < 7 && kit.lowP > 0) for (let k = 0, m = 1 + Math.floor(rnd() * 3); k < m; k++) { const a = rnd() * TAU, r = R0 * (0.7 + rnd() * 0.4), px = cx + Math.cos(a) * r, pz = cz + Math.sin(a) * r; if (free(px, pz, 1.0)) { bush(px, pz); nLow++; } }
+    }
+    // Continuous tree wall (owner): walk a fine grid just behind the floor edge; wherever no tree stands within ~3.4 m, plant a big one,
+    // so every stretch of the edge is lined (the bushes / rocks of the groups above stay as they are).
+    {
+      const gap2 = 3.4 * 3.4, STEP2 = 1.5;
+      for (let z = halls.z0; z < z1; z += STEP2) for (let x = halls.x0; x < x1; x += STEP2) {
+        const d = -hallsSdf(x, z);
+        if (d < 1.5 || d > 2.6 || nTree > 900) continue;
+        let near = false;
+        for (let i = 0; i < treePts.length; i += 2) { const dx = treePts[i] - x, dz = treePts[i + 1] - z; if (dx * dx + dz * dz < gap2) { near = true; break; } }
+        if (near || !free(x, z, 1.3)) continue;
+        tree(x, z, 8 + rnd() * 3, false);
+        nTree++;
+      }
     }
     // the islands inside the floor: a clump (a big tree or rock pile, bushes / rocks piled round it)
     for (const [ix, iz, ir] of halls.islands) {

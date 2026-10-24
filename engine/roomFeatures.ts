@@ -37,11 +37,13 @@ export const feat = {
   nLakes: 0, lx: new Float32Array(MAX_LAKES), lz: new Float32Array(MAX_LAKES), lr: new Float32Array(MAX_LAKES),
   // ---- stationary monsters placed by the layout: archer towers (GOBLIN_ARCHER on top) and lake hydras
   nTowers: 0, tx: new Float32Array(MAX_FIXED), tz: new Float32Array(MAX_FIXED),
+  /** HALLS dead-end pocket treasure (a chest instead of stationary monsters): on, x, z */
+  pChest: { on: false, x: 0, z: 0 },
   nHydras: 0, hx: new Float32Array(MAX_FIXED), hz: new Float32Array(MAX_FIXED),
 };
 
 export function resetFeatures(): void {
-  feat.layout = 'PLAIN'; feat.river = false; feat.rift = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0;
+  feat.layout = 'PLAIN'; feat.river = false; feat.rift = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0; feat.pChest.on = false;
   feat.version++;
 }
 
