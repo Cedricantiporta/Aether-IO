@@ -271,7 +271,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
   { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
   // (owner 2026-10-23) the avenue to the gate: benches just outside each edge, backs to the road (facing the houses / shops), clear of the lane at z 23
-  { x: 4.8, z: 16.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 16.8, yaw: -Math.PI / 2, y: 0.55 }, { x: 4.8, z: 29.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 29.8, yaw: -Math.PI / 2, y: 0.55 },
+  { x: -4.8, z: 16.8, yaw: -Math.PI / 2, y: 0.55 }, { x: 4.8, z: 29.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 29.8, yaw: -Math.PI / 2, y: 0.55 },
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 22.6, 34, 39.6].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),   // (the east park's benches flank the gazebo)
@@ -388,7 +388,7 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
   PETS: { note: 'doghouse in a little pen of pet_pen_fence behind the shop, bird_cage, flower boxes (2x2 west pair, south)', extra: [], dress: [['flower_planter', -2.9, 5.0, 0, 1, 0.8], ['flower_planter', 2.9, 5.0, 0, 1, 0.8]],
     nk: [['doghouse', 0.2, -4.4, 0.5, 1.0, 0.8], ['pet_pen_fence', 0, -6.3, 0, 1.0], ['pet_pen_fence', -2.2, -4.6, Math.PI / 2, 1.0], ['pet_pen_fence', 2.2, -4.6, Math.PI / 2, 1.0],
       ['bird_cage', 2.7, 2.9, 0.3, 1.0, 0.4], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
-  FORTUNE: { note: 'a striped fortune_tent behind, hanging lanterns (2x2 west pair, north)', extra: [], dress: [['lamp_post', 1.95, 5.2, 0, 0.8, 0.3], ['flower_planter', -2.8, 4.8, 0, 1, 0.8]],
+  FORTUNE: { note: 'a striped fortune_tent behind, hanging lanterns (2x2 west pair, north)', extra: [], dress: [['flower_planter', -2.8, 4.8, 0, 1, 0.8]],
     nk: [['fortune_tent', 0.3, -5.0, 0.4, 0.7, -1.0], ['hanging_lantern', -2.8, 4.4, 0, 1.0, 0.3], ['hanging_lantern', 2.8, 3.6, 0, 1.0, 0.3], ['potted_plant_b', -2.8, 3.4, 0, 1.0, 0.35], ['awning_red', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
   SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.6, 3.6, 0, 1, 0.8], ['lamp_post', 1.95, 4.5, 0, 0.72, 0.3], ['lamp_post', -1.95, 4.5, 0, 0.72, 0.3]],
     nk: [['herb_garden_box', 0.4, -4.8, 0.1, 1.0, -0.55], ['potion_shelf_cart', 3.6, -4.2, -0.2, 1.0, -0.6], ['cauldron', -4.1, 3.4, 0.3, 1.0, 0.9], ['potted_plant_a', 3.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },   // (the shop stands between the graveyard aisle x -38 and the chapel road x -26: props in front + behind only)
@@ -398,7 +398,7 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
     nk: [['crate_stack_big', 1.5, -3.5, 0.2, 1.0, -0.75], ['cart_hay', -1.9, -3.6, 0.45, 1.0, -0.65], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 2.8, 3.4, 0, 1.0, 0.35]], cluster: [] },
   BLACKSMITH: { note: 'forge yard: forge_furnace + weapon_rack behind, anvil_big and grindstone by the counter, chimney smoke (2x2 east pair, north)', extra: [], dress: [],
     nk: [['forge_furnace', -1.6, -3.6, 0.1, 1.0, -0.7], ['anvil_big', -2.6, 4.7, 0.7, 1.0, 0.8], ['grindstone', 2.9, 4.4, -0.7, 1.0, 0.6], ['weapon_rack', 2.4, -3.2, Math.PI / 2, 1.0, -0.4], ['potted_plant_a', 2.9, 3.0, 0, 1.0, 0.35]], cluster: [] },
-  TECH: { note: 'tech_tower_small, lanterns', extra: [], dress: [['lamp_post', 1.95, 5.2, 0, 0.9, 0.3], ['lamp_post', -1.95, 5.2, 0, 0.9, 0.3], ['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
+  TECH: { note: 'tech_tower_small, lanterns', extra: [], dress: [['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
     nk: [['tech_tower_small', 1.1, -4.9, 0.9, 0.8, -1.0], ['potted_plant_b', -3.9, 3.5, 0, 1.0, 0.35], ['awning_green', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3], ['bush_cluster', 5.2, 1.8, 0, 0.8, 0.8]], cluster: [] },
 };
 /** Shop-local (dx, dz) -> world (the front is +z turned by `rot`, +x = its right). */
@@ -570,8 +570,6 @@ export const SIGNS: SignSpec[] = [];
 
 /** Lamp posts (emissive bulb only, no real lights). */
 export const LAMPS: [number, number][] = [
-  // (owner) the summon + tech shop paths off the south street: a lamp either side of each
-  [7.2, 13.2], [12.0, 13.2], [14.8, 13.2], [19.6, 13.2],
   // main avenue (+ the road on into the farmland)
   // (owner 2026-10-23) the avenue from the plaza to the gate: lamps in mirrored pairs on both edges
   [3.2, 13.5], [-3.2, 13.5], [3.2, 20], [-3.2, 20], [3.2, 26.5], [-3.2, 26.5], [3.2, 33], [-3.2, 33], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
