@@ -454,14 +454,14 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
     const hOak = hOld(nat.oak), hPA = hOld(nat.pineA), hPB = hOld(nat.pineB);
     // trees: the old fill scale x the old model's height = the height to match (x 1.1, a touch wider), the variant by obstacle id
     const tree = (o: Obstacle, nodes: string[], tall: number, h0: number, k: number) => {
-      const node = qtPick(nodes, qtHash(o.pos.x, o.pos.z, 3)), r = mulberry32(o.id * 7 + k), s = o.scale * tall * (0.9 + r() * 0.25), kk = (s * h0) / QT_H[node] * 1.1, w = kk * 1.08;
+      const node = qtPick(nodes, qtHash(o.pos.x, o.pos.z, 3)), r = mulberry32(o.id * 7 + k), s = o.scale * tall * (0.9 + r() * 0.25), kk = Math.max(3.8 + r() * 0.8, s * h0 * 1.1) / QT_H[node], w = kk * 1.08;   // (owner: no knee-high trees: at least ~4 m tall)
       add(node, { x: o.pos.x, y: -0.05, z: o.pos.z, ry: o.rot, sx: w, sy: kk * (0.92 + r() * 0.14), sz: w });
       const rb = mulberry32(o.id * 13 + 5);
       if (plan.conks && rb() < 0.55) { const a = rb() * TAU, sc = 1.6 + rb() * 0.9; add('Mushroom_Laetiporus', { x: o.pos.x + Math.cos(a) * (o.radius * 0.5 + 0.3), y: 0.15, z: o.pos.z + Math.sin(a) * (o.radius * 0.5 + 0.3), ry: rb() * TAU, sx: sc, sy: sc, sz: sc }); }
     };
     if (plan.oak) for (const o of [...lists.oak, ...lists.palm]) tree(o, plan.oak, 3.7, hOak, 1);
     if (plan.pine) { for (const o of lists.pineA) tree(o, QT_PINE, 4.0, hPA, 3); for (const o of lists.pineB) tree(o, QT_PINE, 4.0, hPB, 4); }
-    if (plan.dead) for (const o of lists.dead) { const node = qtPick(QT_DEAD, qtHash(o.pos.x, o.pos.z, 5)), k = (3.9 * o.scale) / QT_H[node] * (0.9 + qtHash(o.id, 1) * 0.2); add(node, { x: o.pos.x, y: -0.05, z: o.pos.z, ry: o.rot, sx: k, sy: k, sz: k }); }
+    if (plan.dead) for (const o of lists.dead) { const node = qtPick(QT_DEAD, qtHash(o.pos.x, o.pos.z, 5)), k = Math.max(3.4, 3.9 * o.scale) / QT_H[node] * (0.9 + qtHash(o.id, 1) * 0.2); add(node, { x: o.pos.x, y: -0.05, z: o.pos.z, ry: o.rot, sx: k, sy: k, sz: k }); }
     if (plan.rock) {
       const rocks = lists.rock.flat();
       for (const o of rocks) {
