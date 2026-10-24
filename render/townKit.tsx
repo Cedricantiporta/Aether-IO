@@ -87,10 +87,17 @@ export const KIT_SHOPS = new Set(['SUPPLIES', 'BLACKSMITH', 'PETS', 'ARMORY', 'F
 const SHOP_ROOF: Record<string, 'blue' | 'red' | 'green'> = { PETS: 'green', FORTUNE: 'blue', SUPPLIES: 'green', ARMORY: 'red', WAREHOUSE: 'blue', BLACKSMITH: 'red', TECH: 'blue' };
 const ROOF_HEX = { red: '#b5472f', green: '#3f8a4c' };
 const _rc = new Color(), _roof = new Color();
-/** the v2 shop piece with its roof_blue vertices repainted (same material colour -> exact match) */
-function roofVariant(piece: KitPiece, v: 'red' | 'green'): KitPiece {
-  const g = piece.body.clone(), c = g.attributes.color, src = _roof.set(ROYAL_ROOF), dst = _rc.set(ROOF_HEX[v]);
-  for (let i = 0; i < c.count; i++) if (Math.abs(c.getX(i) - src.r) < 0.004 && Math.abs(c.getY(i) - src.g) < 0.004 && Math.abs(c.getZ(i) - src.b) < 0.004) { const k = 0.92 + ((i * 7) % 5) * 0.02; c.setXYZ(i, dst.r * k, dst.g * k, dst.b * k); }
+/** the v2 shop piece with its roof_blue vertices repainted (same material colour -> exact match); (owner 2026-10-24: the shops read much brighter
+ *  than the Quaternius houses) every other vertex is toned down (darker, a little less saturated) to sit with the village houses. */
+const SHOP_TONE = 0.8, SHOP_DESAT = 0.18;
+function roofVariant(piece: KitPiece, v: 'red' | 'green' | 'blue'): KitPiece {
+  const g = piece.body.clone(), c = g.attributes.color, src = _roof.set(ROYAL_ROOF), dst = _rc.set(v === 'blue' ? ROYAL_ROOF : ROOF_HEX[v]);
+  for (let i = 0; i < c.count; i++) {
+    const r = c.getX(i), gg = c.getY(i), b = c.getZ(i);
+    if (Math.abs(r - src.r) < 0.004 && Math.abs(gg - src.g) < 0.004 && Math.abs(b - src.b) < 0.004) { const k = 0.92 + ((i * 7) % 5) * 0.02; c.setXYZ(i, dst.r * k, dst.g * k, dst.b * k); continue; }
+    const l = r * 0.3 + gg * 0.59 + b * 0.11;
+    c.setXYZ(i, (r + (l - r) * SHOP_DESAT) * SHOP_TONE, (gg + (l - gg) * SHOP_DESAT) * SHOP_TONE, (b + (l - b) * SHOP_DESAT) * SHOP_TONE);
+  }
   c.needsUpdate = true; g.computeBoundingSphere();
   return { body: g, glow: piece.glow };
 }
@@ -108,7 +115,7 @@ function placements(): Record<string, Place[]> {
   // houses (fronts south)
   HOUSES.forEach((h) => { if (h.kit && !h.kit.startsWith('vh_')) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
   // the shop row
-  for (const sp of SHOP_POSITIONS) if (KIT_SHOPS.has(sp.type)) add(2, SHOP_ROOF[sp.type] && SHOP_ROOF[sp.type] !== 'blue' ? 'shop_stall_house@' + SHOP_ROOF[sp.type] : 'shop_stall_house', { x: sp.position[0], y: lift(sp.position[0], sp.position[2]), z: sp.position[2], ry: sp.rot ?? 0, sx: 1, sy: 1, sz: 1 });
+  for (const sp of SHOP_POSITIONS) if (KIT_SHOPS.has(sp.type)) add(2, 'shop_stall_house@' + (SHOP_ROOF[sp.type] ?? 'blue'), { x: sp.position[0], y: lift(sp.position[0], sp.position[2]), z: sp.position[2], ry: sp.rot ?? 0, sx: 1, sy: 1, sz: 1 });
   // each town shop's own extras: more building pieces + props around the counter (engine/townData SHOP_LOOK, piece names; shop-local frame)
   for (const sp of SHOP_POSITIONS) {
     const L = SHOP_LOOK[sp.type]; if (!L) continue;
@@ -169,7 +176,7 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
   const sets = useMemo(() => {
     const P = placements();
     const list = Object.keys(P).map((k) => {
-      const [, name] = k.split(':'), [base, vr] = name.split('@'), piece = vr ? (k2[base] ? roofVariant(k2[base], vr as 'red' | 'green') : undefined) : k2[name];
+      const [, name] = k.split(':'), [base, vr] = name.split('@'), piece = vr ? (k2[base] ? roofVariant(k2[base], vr as 'red' | 'green' | 'blue') : undefined) : k2[name];
       return piece ? { k, piece, places: P[k], fill: (m: InstancedMesh) => { P[k].forEach((p, i) => setInst(m, i, p.x, p.y ?? 0, p.z, p.ry, p.sx, p.sy, p.sz)); m.count = P[k].length; } } : null;
     }).filter(Boolean) as { k: string; piece: KitPiece; places: Place[]; fill: (m: InstancedMesh) => void }[];
     const heavy = list.filter((s) => s.piece.body.attributes.position.count >= LIGHT_VERTS), light = list.filter((s) => s.piece.body.attributes.position.count < LIGHT_VERTS);
