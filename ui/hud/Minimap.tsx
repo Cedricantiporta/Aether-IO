@@ -340,8 +340,9 @@ export const Minimap: React.FC = () => {
     // ---- night: the map darkens with the time of day (town clock; a run keeps its start time) - drawn under the markers
     {
       const t = room ? world.runTime : town ? world.townTime : 0.25;
-      const nk = (room && world.runPhase === 0) ? 0 : Math.min(1, Math.max(0, -Math.cos((t - 0.25) * Math.PI * 2) * 1.4));
-      if (nk > 0.01 && area !== 'CAVE') { ctx.fillStyle = `rgba(16, 22, 58, ${(nk * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, P, P); }
+      // (owner) clock hour (TownClock: t 0 = 06:00): darkens from 17:00 (full by 20:00), lightens 04:00 - 07:00
+      const hr = (6 + t * 24) % 24, nk = (room && world.runPhase === 0) ? 0 : hr >= 17 ? Math.min(1, (hr - 17) / 3) : hr < 4 ? 1 : hr < 7 ? (7 - hr) / 3 : 0;
+      if (nk > 0.01 && area !== 'CAVE') { ctx.fillStyle = `rgba(12, 16, 46, ${(nk * 0.62).toFixed(3)})`; ctx.fillRect(0, 0, P, P); }
     }
     // ---- hero (owner: no smiley): a white-rimmed gold arrowhead pointing where the hero faces
     {
@@ -355,7 +356,7 @@ export const Minimap: React.FC = () => {
     }
   });
   return (
-    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.45) / 14.4}rem`, height: `${(SIZE * 1.45) / 14.4}rem` }}>
+    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.2) / 14.4}rem`, height: `${(SIZE * 1.2) / 14.4}rem` }}>
       <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
       <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
     </div>
