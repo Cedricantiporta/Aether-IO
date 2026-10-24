@@ -42,6 +42,8 @@ function bakeKit(scene: any, loc: Record<string, [number, number]> | null): Kit 
     if (!(o as Mesh).isMesh) return;
     const m = o as Mesh;
     const name = (m.parent && m.parent.type !== 'Scene' && m.parent.name ? m.parent.name : m.name).replace(/_\d+$/, '');
+    // (owner 2026-10-24) the planter's cube flowers + ball bushes are gone: the Quaternius nature flowers are planted in the bed instead (render/natureLayout bedPlants)
+    if (name === 'flower_planter' && /^(flower_red|flower_pink|leaf)/.test((m.material as MeshStandardMaterial).name || '')) return;
     const src = m.geometry.toNonIndexed(), g = new BufferGeometry();
     // de-quantize (int16 normalized -> float) BEFORE transforming, or world-space values get clamped to [-1, 1]
     for (const a of ['position', 'normal'] as const) {
@@ -92,7 +94,7 @@ function placements(): Record<string, Place[]> {
   const add = (v: 1 | 2, k: string, p: Place) => (P[key(v, k)] ??= []).push(p);
   const lift = (x: number, z: number) => townLift(x, z);
   // houses (fronts south)
-  HOUSES.forEach((h) => { if (h.kit) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
+  HOUSES.forEach((h) => { if (h.kit && !h.kit.startsWith('vh_')) { const s = h.s ?? 1; add(2, h.kit, { x: h.x, y: lift(h.x, h.z), z: h.z, ry: h.rot, sx: s, sy: s, sz: s }); } });
   // the shop row
   for (const sp of SHOP_POSITIONS) if (KIT_SHOPS.has(sp.type)) add(2, 'shop_stall_house', { x: sp.position[0], y: lift(sp.position[0], sp.position[2]), z: sp.position[2], ry: sp.rot ?? 0, sx: 1, sy: 1, sz: 1 });
   // each town shop's own extras: more building pieces + props around the counter (engine/townData SHOP_LOOK, piece names; shop-local frame)
@@ -126,28 +128,12 @@ const BANNERS: [number, number, number][] = [
 ];
 
 /** Barrel + crate clusters (one merged geometry, one instanced draw): [x, z, ry]. In the gaps of the shop row, by the stalls, at the gate. */
-function clutterSpots(): number[][] {
+export function clutterSpots(): number[][] {
   const P: number[][] = CLUTTER_SPOTS.map((c) => [c[0], c[1], c[2]]);   // (engine/townFill.ts: only the spots that fit, each one solid)
   for (const s of STALLS) if (Math.abs(s.x) > 8) P.push([s.x + 2.7, s.z + 0.4, s.rot + 0.4]);
   for (const sp of SHOP_POSITIONS) { const L = SHOP_LOOK[sp.type]; if (L) for (const [dx, dz, yaw] of L.cluster) { const [x, z] = shopLocal(sp.position[0], sp.position[2], sp.rot ?? 0, dx, dz); P.push([x, z, yaw]); } }
   P.push([GATE.x - 11.2, GATE.z + 3.6, 0.3], [GATE.x + 11.2, GATE.z + 3.6, 2.6]);
   return P;
-}
-
-/** One cluster of the kit's barrel + crate pieces, merged into a single geometry (body only: both are plain wood). */
-function buildClutter(kit: Kit): BufferGeometry | null {
-  const barrel = kit.barrel?.body, crate = kit.crate?.body;
-  if (!barrel || !crate) return null;
-  const parts: BufferGeometry[] = [];
-  const put = (g: BufferGeometry, x: number, y: number, z: number, ry: number, s: number) => {
-    _q.setFromEuler(_e.set(0, ry, 0)); _m.compose(_p.set(x, y, z), _q, _s.set(s, s, s));
-    parts.push(g.clone().applyMatrix4(_m));
-  };
-  put(barrel, 0, 0, 0, 0.3, 0.95); put(barrel, 0.95, 0, 0.15, 1.2, 0.9); put(barrel, 0.45, 0, -0.85, 2.0, 0.9);
-  put(crate, -0.95, 0, 0.1, 0.35, 0.95); put(crate, -0.85, 0.85, 0.1, -0.2, 0.75);
-  const g = mergeGeometries(parts, false); parts.forEach((p) => p.dispose());
-  g.computeBoundingSphere();
-  return g;
 }
 
 /** Pieces up to this many vertices (planters, lamps, banners, stalls, wall segments, barrel clusters ...) are baked together per 32 m chunk: one draw call for the lot instead of one per
@@ -183,9 +169,7 @@ export function TownKit({ lit, glow, shadows }: { lit: Material; glow: Material;
       e.b.push(geo.clone().applyMatrix4(_m)); if (glowGeo) e.g.push(glowGeo.clone().applyMatrix4(_m));
     };
     for (const s of light) for (const p of s.places) bake(s.piece.body, s.piece.glow, p);
-    const spots = clutterSpots(), cg = buildClutter(k2);
-    if (cg) for (const sp of spots) bake(cg, null, { x: sp[0], y: townLift(sp[0], sp[1]), z: sp[1], ry: sp[2], sx: 1, sy: 1, sz: 1 });
-    const merged = Array.from(by.values()).map((e) => ({ body: mergeGeometries(e.b, false)!, glow: e.g.length ? mergeGeometries(e.g, false) : null }));
+        const merged = Array.from(by.values()).map((e) => ({ body: mergeGeometries(e.b, false)!, glow: e.g.length ? mergeGeometries(e.g, false) : null }));
     for (const e of by.values()) for (const x of [...e.b, ...e.g]) x.dispose();
     return { heavy, merged };
   }, [k2]);

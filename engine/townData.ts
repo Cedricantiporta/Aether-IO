@@ -14,6 +14,7 @@
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Endless Tower at the road's end. The Adventure Portal is the plaza's centrepiece.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
+import { HORSE_STATUES } from './qtVillage';
 import { SHRINE_POS, TRAINER_POS } from './world';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { v3Ring, v3Disc } from './kitV3Data';
@@ -231,7 +232,7 @@ export function townLift(x: number, z: number): number {
 export const CHURCH = { x: -26, z: -26, w: 5.6, d: 9, rot: 0 };
 /** (owner) the adventurer's own little house in the south-west corner of the walls, door facing the town (enterable:
  *  the HOME area, engine/homeData.ts). */
-export const HERO_HOUSE = { x: -38.6, z: 29.4, w: 4.25, d: 3.9, rot: 0, wake: { x: -38.6, z: 33.8 } };   // (on the West Rise, door faces south toward the camera)
+export const HERO_HOUSE = { x: -38.6, z: 28.66, w: 4.93, d: 6.12, rot: Math.PI, wake: { x: -38.6, z: 33.8 } };   // (on the West Rise, door faces south toward the camera)
 /** The Golden Tankard = town_kit_v2 'tavern' drawn TAVERN_DZ south-of-centre-minus (piece origin = TAVERN.z + TAVERN_DZ); its front door sits at z + d/2. */
 export const TAVERN = { x: 28, z: -21, w: 9.6, d: 6.2, rot: 0 };
 export const TAVERN_DZ = -1.4;
@@ -283,7 +284,7 @@ export const TOWN_SEATS: SeatSpec[] = [
 /** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
 export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
 /** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
-export const WELLS: [number, number][] = [[30.8, 107.3], [18, 123.2], [-18.6, 123.4], [25.2, 28.0]];   // (the last one: a courtyard well inside the walls)
+export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-14, 122.6]];
 /** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
 export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6]];
 /** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
@@ -300,6 +301,10 @@ export const HOUSE_KIT: Record<string, { w: number; d: number; doorX: number; ch
   house_two_storey: { w: 5.4, d: 4.8, doorX: -1.1, chimney: [-1.4, 8.4, -0.5], front: 3.8, half: 3.4 },
   house_gabled_narrow: { w: 3.8, d: 6.2, doorX: 0, chimney: [0, 9.4, -1.2], front: 4.5, half: 2.9 },
   house_tower: { w: 5.2, d: 4.4, doorX: 1.0, chimney: [1.0, 6.0, -0.8], front: 3.6, half: 3.4 },
+  // the Quaternius village houses (public/models/village_qt.glb, scale 1): door centred on the front (+z) face
+  vh_House_1: { w: 4.93, d: 6.12, doorX: 0, chimney: [-0.46, 7.9, -1.7], front: 3.25, half: 2.7 },
+  vh_House_2: { w: 5.11, d: 7.87, doorX: 0, chimney: [-2.07, 7.0, -0.8], front: 4.1, half: 2.8 },
+  vh_Inn: { w: 9.27, d: 9.25, doorX: 0, chimney: [0, 0, 0], front: 4.9, half: 4.8 },
 };
 const K = (kit: HouseKit, x: number, z: number, s = 0.9, rot = 0): HouseSpec => {
   const n = HOUSE_COUNT++, k = HOUSE_KIT[kit] ?? HOUSE_KIT.house_small;
@@ -322,6 +327,20 @@ export function kitRing(c: [number, number, number][], piece: string, x: number,
   for (let j = 1; j < nz; j++) { const pz = z0 + ((z1 - z0) * j) / nz; c.push([x0, pz, r], [x1, pz, r]); }
   if (open === 'front') c.push([x0, z1, r], [x1, z1, r]);
 }
+/** a Quaternius village house (public/models/village_qt.glb; the scale is baked, rot 0 = door south, PI = door north, +-PI/2 = door east / west) */
+const V = (piece: 'House_1' | 'House_2' | 'Inn', x: number, z: number, rot = 0): HouseSpec => {
+  const n = HOUSE_COUNT++, kit = 'vh_' + piece, k = HOUSE_KIT[kit], sw = Math.abs(Math.sin(rot)) > 0.7;
+  return { x, z, rot, w: k.w, d: k.d, floors: 2, wall: WALLS[(n * 3 + 1) % WALLS.length], roof: ROOFS[(n * 5 + 2) % ROOFS.length], trim: '#f4ead2', chimney: piece !== 'Inn', door: DOORS[n % DOORS.length], kit, s: 1 };
+};
+/** a village house by its FRONT line: x, the z of the door face; rot 0 (door south) or PI (door north) */
+const VF = (piece: 'House_1' | 'House_2' | 'Inn', x: number, fz: number, rot = 0): HouseSpec => V(piece, x, rot === 0 ? fz - HOUSE_KIT['vh_' + piece].d / 2 : fz + HOUSE_KIT['vh_' + piece].d / 2, rot);
+/** Collider ring of a house body (half extents hx, hz): circles r 0.85 along the outline, outermost reach = the wall + 0.25. */
+export function houseRing(c: [number, number, number][], x: number, z: number, hx: number, hz: number, r = 0.85): void {
+  const x0 = x - hx + r - 0.25, x1 = x + hx - r + 0.25, z0 = z - hz + r - 0.25, z1 = z + hz - r + 0.25;
+  const nx = Math.max(1, Math.ceil((x1 - x0) / (r * 1.5))), nz = Math.max(1, Math.ceil((z1 - z0) / (r * 1.5)));
+  for (let i = 0; i <= nx; i++) { const px = x0 + ((x1 - x0) * i) / nx; c.push([px, z0, r], [px, z1, r]); }
+  for (let j = 1; j < nz; j++) { const pz = z0 + ((z1 - z0) * j) / nz; c.push([x0, pz, r], [x1, pz, r]); }
+}
 const NKB = (nk: string, x: number, z: number, s: number): HouseSpec => { const f = NK[nk]; return { x, z, rot: 0, w: (f[1] - f[0]) * s, d: (f[3] - f[2]) * s, floors: 1, wall: '#e9dfc8', roof: '#3b2a20', trim: '#f4ead2', chimney: false, door: '#5a3a1e', nk, s }; };
 /** Chimney cap of the farmhouse piece (piece space, scale 1) for the smoke FX. */
 export const NK_CHIMNEY: Record<string, [number, number, number]> = { farmhouse: [-2.3, 6.0, -0.8] };
@@ -332,47 +351,22 @@ export const HOUSES: HouseSpec[] = [
   { ...NKB('farmhouse', FARMHOUSE.x, FARMHOUSE.z, FARMHOUSE.s), chimney: true },
   NKB('barn', BARN.x, BARN.z, BARN.s),
   NKB('chicken_coop', COOP.x, COOP.z, COOP.s),
-  // the hamlet on the meadow west of the coop, beside the portal
-  K('house_small', 13, 121, 0.95), K('house_two_storey', 23, 123.5, 0.8),
-  // a second little hamlet west of the portal
-  K('house_small', -13.5, 121, 0.95), K('house_two_storey', -23.5, 124, 0.8), K('house_tower', -33, 120, 0.8),
-  // (owner) the adventurer's house (HERO_HOUSE): small, one floor, on the West Rise, door facing south
-  { ...K('house_small', HERO_HOUSE.x, HERO_HOUSE.z, 0.85), w: HERO_HOUSE.w, d: HERO_HOUSE.d, wall: '#e9dfc8', chimney: true, door: '#8a2f22' },
-  // ---- inside the walls (owner 2026-10-21: plain medieval houses packed in straight terraces on the streets, no yards): every house is AXIS-ALIGNED (rot 0 = door south, PI = door north),
-  // fronts flush to the street / walkway (~0.6 m of kerb), 0.2 m between neighbours; none within 1.5 m of a stair flight or its approach (lot script in docs/TOWN_PLAN.md).
-  // chapel quarter (on Chapel Hill): the sexton's cottage
-  K('house_small', -14.3, -34.5, 0.85),   // (clear of the wall tower's door + stairs at x -21)
-  // Tavern Row tier (owner: fewer houses up here): three on the back row (fronts z -30), one cottage beside the tavern (front z -21)
-  K('house_two_storey', 15.8, -33.04, 0.8), K('house_small', 31.24, -33.15, 0.85), K('house_gabled_narrow', 36.6, -33.4, 0.8),   // (the back row stands clear of the wall-tower doors / wall stairs at x 21 and 42)
-  K('house_two_storey', 17, -24.2, 0.8),
-  // the old shop row, north of the south street (fronts z 6.9)
-  // (owner: more space) two houses west with a gap, the Armory beside them; east: the Potion Shop, then one narrow house
-  K('house_two_storey', -40.2, 3.86, 0.8), K('house_small', -29.72, 3.75, 0.85),
-  K('house_gabled_narrow', 38.8, 3.3, 0.8),
-  // south of the south street, east of the avenue (door north onto the street), then the rises (fronts on the lane z 21) and the south walkway (fronts z 32.5)
-  K('house_tower', 22.8, 15.3, 0.8, Math.PI),
-  K('house_two_storey', -38.4, 17.96, 0.8), K('house_small', 38.8, 17.85, 0.85),
-  K('house_two_storey', 18.5, 29.46, 0.8), K('house_two_storey', 38.2, 29.46, 0.8),
-  // (owner 2026-10-23: fill the empty paving, nothing on a street / lane / stair): either side of the avenue's south half, one on the north street's west side
-  K('house_small', 10.5, 29.46, 0.85), K('house_gabled_narrow', -22.5, 29.46, 0.8),   // (owner: the two houses either side of the avenue just south of the plaza were removed)
-  // (owner 2026-10-23: dense medieval town: terraced rows on both sides of the streets, 2.2 m alleys every third house; generated once by a validity scan: clear of every street, stair approach, wall-tower door, shop front, park and plaza)
-  // N-street north
-  K('house_small', -32.88, -10.26, 0.85), K('house_gabled_narrow', 34.57, -10.78, 0.8),
-  // N-street south
-  K('house_gabled_narrow', -41.48, -1.22, 0.8, Math.PI), K('house_small', -37.53, -1.75, 0.85, Math.PI), K('house_tower', -33.03, -1.94, 0.8, Math.PI),
-  K('house_two_storey', -26.59, -1.78, 0.8, Math.PI), K('house_gabled_narrow', -22.61, -1.22, 0.8, Math.PI),
-  // N-street south E
-  K('house_two_storey', 38.16, -1.78, 0.8, Math.PI),
-  // S-street north
-  K('house_gabled_narrow', -23.98, 5.22, 0.8),
-  // lane north
-  // (owner 2026-10-23: the lane's two houses here became Madame Zora's shop + the Tech House, constants SHOP_POSITIONS)
-  K('house_two_storey', 32, 3.0, 0.8), K('house_small', 24.6, 2.4, 0.85),   // (houses where those two shops stood on the East Rise)
-  // tavern row 2
-  K('house_small', 21.63, -27.35, 0.85, Math.PI), K('house_two_storey', 26.21, -27.38, 0.8, Math.PI), K('house_small', 30.8, -27.35, 0.85, Math.PI),
-  K('house_small', 37.25, -27.35, 0.85, Math.PI), K('house_gabled_narrow', 41.19, -26.82, 0.8, Math.PI),
-  // hill row b
-  K('house_two_storey', -29.34, -34.48, 0.8, Math.PI), K('house_tower', -9.3, -34.64, 0.8, Math.PI),
+  // ---- the Quaternius village houses (owner 2026-10-24): every door faces the nearest street / lane, rows share one setback (front line) parallel to it, the back of a row
+  // faces the kingdom wall or a back garden. Few, well spaced; nothing between two houses without a door onto a path.
+  // the hamlet on the forest road south of the farm bridge: two houses a side, doors toward the road (x 0)
+  V('House_1', 6.7, 118, -Math.PI / 2), V('House_2', 7.1, 125.2, -Math.PI / 2), V('House_2', -7.1, 118.8, Math.PI / 2), V('House_1', -6.7, 126.6, Math.PI / 2),
+  // the adventurer's house (HERO_HOUSE): West Rise, south row of the lane z 23.2, door north onto the lane, back to the south wall
+  { ...VF('House_1', HERO_HOUSE.x, 25.6, Math.PI), wall: '#e9dfc8', door: '#8a2f22' },
+  // North Street, south side (doors north onto the street, front line z -3.4): a west row and an east row
+  VF('House_1', -40, -3.4, Math.PI), VF('House_2', -33.7, -3.4, Math.PI), VF('House_1', -27.4, -3.4, Math.PI),
+  VF('House_2', 24, -3.4, Math.PI), VF('House_1', 30.3, -3.4, Math.PI), VF('House_1', 36.6, -3.4, Math.PI),
+  // the rises: north rows face the lane z 23.2 from the north (front line z 20.8), south rows face it from the south (front line z 25.6; backs to the south wall)
+  VF('House_1', -39.5, 20.8, 0), VF('House_1', 39.5, 20.8, 0), VF('House_1', 38.5, 25.6, Math.PI),
+  // Market Row: south of the lane either side of the avenue, doors north (front line z 25.6)
+  VF('House_1', -26.2, 25.6, Math.PI), VF('House_1', -20.4, 25.6, Math.PI),   // (the chicken pen PEN fills x -16.4..-9)
+  VF('Inn', 11.8, 25.6, Math.PI), VF('House_1', 21.7, 25.6, Math.PI),
+  // Tavern Row: a row against the north wall, doors south onto the Tavern Row lane (z -29.2, ROADS), backs to the wall
+  VF('House_1', 16, -31.6, 0), VF('House_1', 22.4, -31.6, 0), VF('House_1', 28.8, -31.6, 0), VF('House_1', 35.2, -31.6, 0),
 ];
 
 /** (no yards: the houses stand directly on the streets, see HOUSES) */
@@ -449,6 +443,7 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: -6, x2: 0, z2: TERRACE.stairZ + 0.3, w: ROAD_W.branch + 0.6 },     // castle path (to the terrace stairs)
   { x1: CHURCH.x, z1: -6, x2: CHURCH.x, z2: CHURCH.z + CHURCH.d / 2 + 0.4, w: ROAD_W.branch + 0.6 },   // chapel door
   { x1: TAVERN.x, z1: -12.5, x2: TAVERN.x, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // tavern door
+  { x1: 13, z1: -29.2, x2: 42.5, z2: -29.2, w: ROAD_W.lane },   // Tavern Row lane (the back row of houses faces it)
   { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
@@ -506,10 +501,10 @@ export const lotW = (l: { x: number; z: number; rot: number }, lx: number, lz: n
 // (owner 2026-10-21: no yards / lots: the arrays above stay empty so the scenery + fill code that reads them needs no changes)
 
 /** Houses that will become enterable (another agent may wire their interiors): the door spot is on the path just outside the front door, inside the lot's gate (any yaw); `yaw` = the way the house faces. */
-export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-40.2, 3.86, 'North Street Cottage'], [18.5, 29.46, 'Market Row House'], [-29.72, 3.75, 'West Row House']] as [number, number, string][]).flatMap(([hx, hz, name]) => {
-  const h = HOUSES.find((q) => q.x === hx && q.z === hz); if (!h) return [];
-  const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1;
-  return [{ name: name as string, x: h.x, z: h.z, door: { x: +(h.x + k.doorX * s).toFixed(2), z: +(h.z + k.front * s + 0.9).toFixed(2) }, yaw: h.rot }];
+export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-40, -3.4, 'North Street Cottage'], [21.7, 25.6, 'Market Row House'], [-33.7, -3.4, 'West Row House']] as [number, number, string][]).flatMap(([hx, fz, name]) => {
+  const h = HOUSES.find((q) => q.x === hx && !q.nk && Math.abs(q.z + (q.rot ? -1 : 1) * q.d / 2 - fz) < 0.05); if (!h) return [];
+  const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1, c = Math.cos(h.rot), n = Math.sin(h.rot), f = k.front * s + 0.9;
+  return [{ name: name as string, x: h.x, z: h.z, door: { x: +(h.x + k.doorX * s * c + f * n).toFixed(2), z: +(h.z - k.doorX * s * n + f * c).toFixed(2) }, yaw: h.rot }];
 });
 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
@@ -671,10 +666,11 @@ export const HAYSTACK = { x: FARM.x - 5, z: FARM.z - 4 };
 /** Movement colliders [x, z, r] registered with mapgen.addTempCollider after the island is generated. */
 export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
-  for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
+  for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else if (h.kit?.startsWith('vh_')) { const sw = Math.abs(Math.sin(h.rot)) > 0.7; houseRing(c, h.x, h.z, (sw ? h.d : h.w) / 2, (sw ? h.w : h.d) / 2); } else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
   c.push([TOWER.x, TOWER.z - 0.3, TOWER.r]);
   { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z + 0.7 * k, 0.9 * k]); }   // the adventure_portal kit piece: the stone arch + its base, a wall across the plaza
   for (const m of PLAZA_STATUES) c.push([m.x, m.z, m.r]);
+  for (const m of HORSE_STATUES) c.push([m.x, m.z, m.r]);   // the horse statues (pedestal 1.4 m wide)
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);

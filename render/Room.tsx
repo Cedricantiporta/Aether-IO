@@ -11,7 +11,7 @@ import {
   AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
   CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SphereGeometry, SRGBColorSpace,
   ShaderMaterial, Shape, ShapeGeometry, TorusGeometry, type BufferGeometry,
-  Matrix4, Quaternion, Euler, Vector3,
+  Matrix4, Quaternion, Euler, Vector3, type DataTexture,
 } from 'three';
 import { FX, CELL } from './fx';
 import { useGameStore } from '../store';
@@ -37,6 +37,7 @@ import { GB, commitInst, fbm, litMat, mulberry32, vnoise } from './util';
 import { thinArrowGeo } from './arrowGeo';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
+import { applyPathShader, pathMask, roomTrail } from './groundPath';
 import { labelMaterial } from './label';
 import type { QualityCfg } from './quality';
 import { SpecialRooms } from './SpecialRooms';
@@ -75,10 +76,10 @@ function buildKerb(style: GroundStyle, seed: number, hasLiquid: boolean): Buffer
 /** Tileable painted-floor textures per ground style (built once each): [albedo multiplier, emissive glow or null].
  *  Zelda-style (owner 2026-10-22): soft, rounded, toy-like details (tuft marks, bevelled tiles, ripples, snow drifts, glowing seams)
  *  baked into one 512px canvas; the vertex colours supply the big colour zones. */
-const detailTex: Partial<Record<GroundStyle, [CanvasTexture, CanvasTexture | null]>> = {};
+const detailTex: Partial<Record<string, [CanvasTexture, CanvasTexture | null]>> = {};
 const h2 = (a: number, b: number) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
-export function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture | null] {
-  const hit = detailTex[style]; if (hit) return hit;
+export function groundDetail(style: GroundStyle, beach = false): [CanvasTexture, CanvasTexture | null] {
+  const key = beach ? style + 'B' : style, hit = detailTex[key]; if (hit) return hit;
   const N = 512, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
   const c = mk(), g = c.getContext('2d')!;
   const rnd = mulberry32(0xd37a1 + style.length * 977 + style.charCodeAt(0) * 131);
@@ -145,7 +146,14 @@ export function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture 
       blobs(g, 26, 40, 90, '120,105,85', 0.04, 0.08); speck(900, 0.03, 0.07, 0.5);
       break;
     }
-    case 'SAND': {   // warm sand: soft wind-ripple bands (lit crest + shaded trough), tiny pebbles, grain
+    case 'SAND': if (beach) {   // beach (owner mock): warm golden sand, soft darker painted patches, small orange pebbles, a few tiny green sprouts
+      g.fillStyle = '#f6f0e4'; g.fillRect(0, 0, N, N);
+      blobs(g, 26, 40, 90, '255,248,225', 0.22, 0.38);
+      for (let i = 0; i < 46; i++) { const cx0 = rnd() * N, cy0 = rnd() * N, nc = 6 + Math.floor(rnd() * 8); wrap(cx0, cy0, 40, (px, py) => { g.fillStyle = 'rgba(196,146,84,0.26)'; let ox = 0, oy = 0; for (let k = 0; k < nc; k++) { ox += (rnd() - 0.5) * 16; oy += (rnd() - 0.5) * 16; g.beginPath(); g.arc(px + ox * 0.6, py + oy * 0.6, 5 + rnd() * 12, 0, 6.3); g.fill(); } }); }
+      for (let i = 0; i < 110; i++) { const x = rnd() * N, y = rnd() * N, r = 1.5 + rnd() * 2.2; wrap(x, y, 5, (px, py) => { g.fillStyle = rnd() < 0.8 ? 'rgba(214,126,70,0.9)' : 'rgba(170,96,60,0.9)'; g.beginPath(); g.ellipse(px, py, r * 1.1, r, rnd() * 3, 0, 6.3); g.fill(); }); }
+      g.lineCap = 'round'; for (let i = 0; i < 14; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { g.strokeStyle = 'rgba(120,176,80,0.95)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(px - 2.6, py - 5); g.lineTo(px, py); g.lineTo(px + 2.6, py - 5); g.stroke(); });
+      break;
+    } else {   // warm sand: soft wind-ripple bands (lit crest + shaded trough), tiny pebbles, grain
       g.fillStyle = '#ecebe8'; g.fillRect(0, 0, N, N);
       blobs(g, 30, 50, 110, '150,100,40', 0.04, 0.08); blobs(g, 30, 50, 110, '255,255,255', 0.1, 0.2);
       g.lineCap = 'round';
@@ -196,33 +204,28 @@ export function groundDetail(style: GroundStyle): [CanvasTexture, CanvasTexture 
       for (let i = 0; i < 16; i++) { const s = 2.5 + rnd() * 2.5; wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = 'rgba(225,205,255,0.85)'; gg.fillRect(px - s, py - 0.6, s * 2, 1.2); gg.fillRect(px - 0.6, py - s, 1.2, s * 2); gg.beginPath(); gg.arc(px, py, 1.3, 0, 6.3); gg.fill(); }); }
       break;
     }
-    default: {   // grass: soft mottling, little three-blade tuft marks, clover; white / yellow / pink flower dots (emissive)
-      g.fillStyle = '#e6e8e2'; g.fillRect(0, 0, N, N);
-      blobs(g, 40, 40, 100, '10,60,10', 0.05, 0.1); blobs(g, 40, 40, 100, '255,255,230', 0.14, 0.26);
-      g.lineCap = 'round';
-      for (let i = 0; i < 120; i++) {
-        const s = 0.8 + rnd() * 0.6;
-        wrap(rnd() * N, rnd() * N, 14, (px, py) => {
-          g.fillStyle = 'rgba(0,50,0,0.1)'; g.beginPath(); g.ellipse(px, py + 1, 7 * s, 2.6 * s, 0, 0, 6.3); g.fill();
-          for (const [dx, h, bend, w] of [[-4, 8, -3, 2.4], [0, 11, 1, 2.6], [4, 8, 3, 2.4]]) {
-            g.strokeStyle = 'rgba(0,55,0,0.3)'; g.lineWidth = w * s; g.beginPath(); g.moveTo(px + dx * s, py); g.quadraticCurveTo(px + dx * s + bend * s * 0.3, py - h * s * 0.6, px + dx * s + bend * s, py - h * s); g.stroke();
-            g.strokeStyle = 'rgba(255,255,230,0.5)'; g.lineWidth = w * s * 0.4; g.beginPath(); g.moveTo(px + dx * s - 0.8, py - 1); g.quadraticCurveTo(px + dx * s + bend * s * 0.3 - 0.8, py - h * s * 0.6, px + dx * s + bend * s - 0.8, py - h * s + 1); g.stroke();
+    default: {   // grass (owner mock): soft mottling + little leafy clover clumps (dark / mid / light leaves), a few white clover flowers (emissive dots)
+      g.fillStyle = '#eef0ea'; g.fillRect(0, 0, N, N);
+      blobs(g, 44, 40, 100, '20,90,20', 0.06, 0.12); blobs(g, 44, 40, 100, '255,255,225', 0.14, 0.26);
+      const LEAF = ['rgb(128,176,104)', 'rgb(150,198,122)', 'rgb(176,214,140)', 'rgb(255,255,238)', 'rgb(112,160,92)'];
+      for (let i = 0; i < 300; i++) {
+        const s = 0.8 + rnd() * 0.7, cx0 = rnd() * N, cy0 = rnd() * N, nl = 3 + Math.floor(rnd() * 3), col0 = Math.floor(rnd() * LEAF.length), rot0 = rnd() * 6.28;
+        wrap(cx0, cy0, 14, (px, py) => {
+          for (let k = 0; k < nl; k++) {
+            const a = rot0 + (k / nl) * 6.283 + (rnd() - 0.5) * 0.5, d = (3 + rnd() * 4) * s;
+            g.fillStyle = LEAF[(col0 + k) % LEAF.length]; g.beginPath(); g.ellipse(px + Math.cos(a) * d, py + Math.sin(a) * d, 5.2 * s, 3.3 * s, a, 0, 6.3); g.fill();
           }
         });
       }
-      for (let i = 0; i < 36; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { g.fillStyle = 'rgba(0,50,0,0.16)'; for (const [dx, dy] of [[-2.6, 1], [2.6, 1], [0, -2.6]]) { g.beginPath(); g.arc(px + dx, py + dy, 2.5, 0, 6.3); g.fill(); } });
       glowC = mk(); const gg = glowC.getContext('2d')!; gg.fillStyle = '#000'; gg.fillRect(0, 0, N, N);
-      const petal = ['#ffffff', '#fff6c8', '#ffd2e2', '#e4f0ff'];
-      for (let i = 0; i < 30; i++) {
-        const col = petal[Math.floor(rnd() * petal.length)], s = 0.85 + rnd() * 0.5;
-        wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = col; for (let k = 0; k < 5; k++) { const a = (k / 5) * 6.283 + 0.4; gg.beginPath(); gg.arc(px + Math.cos(a) * 2.5 * s, py + Math.sin(a) * 2.5 * s, 1.9 * s, 0, 6.3); gg.fill(); } gg.fillStyle = '#ffcf4a'; gg.beginPath(); gg.arc(px, py, 1.5 * s, 0, 6.3); gg.fill(); });
-      }
+      for (let i = 0; i < 7; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = '#d8d8c8'; gg.beginPath(); gg.arc(px, py, 3.4, 0, 6.3); gg.fill(); gg.fillStyle = '#ffffff'; gg.beginPath(); gg.arc(px, py, 2.2, 0, 6.3); gg.fill(); });
+      break;
     }
   }
   const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4;
   let e: CanvasTexture | null = null;
   if (glowC) { e = new CanvasTexture(glowC); e.colorSpace = SRGBColorSpace; e.wrapS = e.wrapT = RepeatWrapping; e.anisotropy = 4; }
-  detailTex[style] = [t, e];
+  detailTex[key] = [t, e];
   return [t, e];
 }
 /** World units covered by one repeat of the detail texture. */
@@ -231,8 +234,8 @@ export const SINK = 2.4;
 export const DETAIL_PERIOD: Record<GroundStyle, number> = { GRASS: 8, MARBLE: 8, SAND: 9, SNOW: 8, BASALT: 10, VOID: 8 };
 /** The floor material of a ground style (shared by run rooms and the camp ground): detail texture repeated `rx` x `rz` times
  *  over the mesh, glow map (flowers / glints / lava seams / violet seams) added as emissive. */
-export function groundMaterial(style: GroundStyle, rx: number, rz: number, glowScale = 1): MeshStandardMaterial {
-  const [dTex, eTex] = groundDetail(style);
+export function groundMaterial(style: GroundStyle, rx: number, rz: number, glowScale = 1, beach = false): MeshStandardMaterial {
+  const [dTex, eTex] = groundDetail(style, beach);
   const map = dTex.clone(); map.repeat.set(rx, rz); map.needsUpdate = true;
   let emap: CanvasTexture | null = null;
   if (eTex) { emap = eTex.clone(); emap.repeat.set(rx, rz); emap.needsUpdate = true; }
@@ -252,7 +255,7 @@ function liquidEdge(x: number, z: number): number {
 }
 
 function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number; seed: number; boss: boolean; index: number }) {
-  const { geo, mat, tufts, slabs, shrooms, kerb } = useMemo(() => {
+  const { geo, mat, tufts, slabs, shrooms, kerb, pathTex } = useMemo(() => {
     const def = biomeOf(biome);
     const vr = variantOf(def, index);
     const style = def.style;
@@ -332,12 +335,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         const w = 1.9 + vnoise(t * 0.2 + so, 3.1) * 0.9;
         const pd = Math.abs(l - cl) - w;
         if (style === 'GRASS') {
-          const k = sstep(0.9, -0.5, pd) * sstep(0.5, -1.5, u);
-          if (k > 0) {
-            const inner = sstep(-0.1, -1.1, pd);   // lighter trodden centre, darker packed edge
-            stoneC.copy(pathDirt).multiplyScalar(0.88 + inner * 0.16 + vnoise(x * 1.7 + so, z * 1.7) * 0.07);
-            out.lerp(stoneC, k * 0.95);
-          }
+          // (the soil trail of the grass rooms is a per-pixel mask in the ground shader: render/groundPath.ts)
         } else {
           const k = sstep(0.6, -0.4, pd) * sstep(0.5, -1.5, u) * (style === 'SAND' ? 0.7 : 1);
           if (k > 0) {
@@ -402,10 +400,15 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
     g.computeVertexNormals();
     setSeaShore(waterSea ? bakeGridShore(pos.array, seg, seg, -S / 2, -S / 2, S, S, -0.45, 16) : null);   // (the sea's shore distance, render/waterFx.ts)
-    const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
+    const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1, !!def.waterSea);   // (Darkwood: the flower dots stay faint)
+    let pathTex: DataTexture | null = null;
+    if (style === 'GRASS' && path) {   // soft wandering soil trail + branch + clearings with a ragged leafy edge (owner mock)
+      const hs = shape.maxR + 6, pm = pathMask(roomTrail(seed).discs, -hs, -hs, hs * 2, hs * 2, 9);
+      applyPathShader(m, pm); pathTex = pm.tex;
+    }
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = style === 'MARBLE' && shape.kind === 'HALLS' ? 0 : (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? (style === 'GRASS' ? 1 : 4) : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
+    const N = style === 'MARBLE' ? (shape.kind === 'HALLS' ? 0 : 26) : 45; // sparse clutter (castle halls: none, clean marble)
     const tg = new GB([0.8, 1.1]);
     if (style === 'MARBLE') { tg.box(0.5, 0.18, 0.4, [0, 0.09, 0], '#ffffff', [0, 0.4, 0.1]); tg.box(0.3, 0.14, 0.3, [0.4, 0.07, 0.2], '#ffffff', [0.2, 1, 0]); }
     else if (style === 'SAND') { tg.ico(0.22, [0, 0.06, 0], '#ffffff', [1.4, 0.4, 1.1], 0); tg.cone(0.04, 0.4, 3, [0.15, 0.2, 0], '#ffffff', [0.3, 0, 0.4]); tg.cone(0.04, 0.35, 3, [-0.1, 0.18, 0.05], '#ffffff', [-0.3, 0, -0.4]); }
@@ -488,8 +491,9 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const kerb = def.waterSea || isHalls || style === 'GRASS' ? null :   // (owner: no stone kerb round the Greenwood meadow; halls have a tree / rock border instead)
        new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
     if (kerb) kerb.receiveShadow = true;
-    return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb };
+    return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb, pathTex };
   }, [biome, R, seed, boss]);
+  useEffect(() => () => { pathTex?.dispose(); }, [pathTex]);
   return (
     <>
       <mesh geometry={geo} material={mat} receiveShadow />
@@ -1053,7 +1057,7 @@ export function Room({ q }: { q: QualityCfg }) {
       {r.active && !tower && <RoomWater />}
       {r.active && !tower && !isCamp && shape.kind !== 'HALLS' && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
       {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower ? { biome: def.name, v: def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0, seed: r.seed, boss: r.plan.type === 'BOSS', camp: isCamp } : undefined} /></Suspense>
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower ? { biome: isCamp && camp.cur ? (BIOMES[camp.cur.layout.to]?.name ?? def.name) : def.name, v: isCamp ? 0 : def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0, seed: r.seed, boss: r.plan.type === 'BOSS', camp: isCamp } : undefined} /></Suspense>
       <Stations />
       <CampProps />
       {!tower && <Suspense fallback={null}><Wanderer /><AllyActor /></Suspense>}

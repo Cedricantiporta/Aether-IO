@@ -13,9 +13,9 @@ export const HOME_TABLE = { x: 1.2, z: 0.4 };
 export const HOME_SPAWN = { x: 0, z: 2.8 };
 export const HOME_EXIT = { x: 0, z: 4.2, r: 2.6 };
 /** The house door in the town (the house faces south, +z, toward the camera; the kit door sits 0.8 left of the centre line). */
-export const HOME_DOOR = { x: HERO_HOUSE.x - 0.8, z: HERO_HOUSE.z + HERO_HOUSE.d / 2 + 1.1, r: 2.6 };
+export const HOME_DOOR = { x: HERO_HOUSE.x, z: HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, r: 2.6 };   // (the house faces NORTH onto the lane z 23.2 now, backs to the south wall)
 /** Where the hero stands after walking out of the house (facing the town). */
-export const HOME_OUT = { x: HERO_HOUSE.x - 0.8, z: HERO_HOUSE.z + HERO_HOUSE.d / 2 + 2.2 };
+export const HOME_OUT = { x: HERO_HOUSE.x, z: HERO_HOUSE.z - HERO_HOUSE.d / 2 - 2.2 };
 
 /** Furniture placed around the room (visual + colliders): wardrobe + bookshelf on the north wall, desk with a stool on the west wall, a barrel + plants. */
 export const HOME_WARDROBE = { x: -0.9, z: -3.5 };

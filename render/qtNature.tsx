@@ -17,6 +17,8 @@ import { QT_PREFIX, qtNode } from '../engine/qtData';
 import type { Place } from './natureKit';
 
 export const QT_URL = `${BASE}models/nature_qt.glb`;
+/** pack 2: flat vertex-coloured pieces (nodes `N_<name>`, art/blender/quaternius_nature2.py) */
+export const QT2_URL = `${BASE}models/nature_qt2.glb`;
 
 /** how each GLB material is shaded: colour multiplier (linear, >1 brightens the dull source textures), leaf cards (radial normals + gradient), cutout */
 interface MatCfg { color: [number, number, number]; leaf?: 'ball' | 'up'; cut?: boolean; grad?: [number, number] }
@@ -34,6 +36,7 @@ const MAT_CFG: Record<string, MatCfg> = {
   Mushrooms: { color: [1.25, 1.2, 1.2] },
   Rocks: { color: [2.4, 2.35, 2.15], grad: [0.85, 1.05] },
   PathRocks: { color: [1.4, 1.4, 1.4] },
+  Flat: { color: [1.45, 1.45, 1.4], grad: [0.84, 1.12] },   // pack 2: the colour is in the vertices
 };
 
 /** per piece: matName -> geometry (non-indexed; position / normal / uv / color) */
@@ -41,16 +44,15 @@ export interface QtKit { P: Record<string, Record<string, BufferGeometry>>; mats
 const cache: { kit: QtKit | null } = { kit: null };
 const _v = new Vector3(), _c = new Color();
 
-function bake(scene: Object3D): QtKit {
+function bake(scene: Object3D, P: Record<string, Record<string, BufferGeometry>> = {}, mats: Record<string, MeshStandardMaterial> = {}): QtKit {
   scene.updateMatrixWorld(true);
-  const P: Record<string, Record<string, BufferGeometry>> = {}, mats: Record<string, MeshStandardMaterial> = {};
   const parts: Record<string, Record<string, BufferGeometry[]>> = {};
   scene.traverse((o) => {
     const m = o as Mesh; if (!m.isMesh) return;
     // the piece = the root-level node above this mesh (a multi-material piece is a group of one mesh per material)
     let k: Object3D = m; while (k.parent && k.parent !== scene) k = k.parent;
     const piece = k.name;
-    const mt = m.material as MeshStandardMaterial, mname = (mt.name || '').split('.')[0];
+    const mt = m.material as MeshStandardMaterial, flat = !m.geometry.attributes.uv && !!m.geometry.attributes.color, mname = flat ? 'Flat' : (mt.name || '').split('.')[0];
     if (!MAT_CFG[mname]) return;
     if (!mats[mname]) {
       const cfg = MAT_CFG[mname];
@@ -72,7 +74,7 @@ function bake(scene: Object3D): QtKit {
     for (let i = 0; i < n; i++) {
       _v.fromBufferAttribute(src.attributes.position, i).applyMatrix4(rel);
       pos[i * 3] = _v.x; pos[i * 3 + 1] = _v.y; pos[i * 3 + 2] = _v.z; cx += _v.x; cy += _v.y; cz += _v.z; minY = Math.min(minY, _v.y); maxY = Math.max(maxY, _v.y);
-      uv[i * 2] = src.attributes.uv.getX(i); uv[i * 2 + 1] = src.attributes.uv.getY(i);
+      if (src.attributes.uv) { uv[i * 2] = src.attributes.uv.getX(i); uv[i * 2 + 1] = src.attributes.uv.getY(i); }
     }
     cx /= n; cy /= n; cz /= n;
     const cfg = MAT_CFG[mname], H = Math.max(0.01, maxY - minY);
@@ -89,7 +91,8 @@ function bake(scene: Object3D): QtKit {
         nrm[i * 3] = _v.x; nrm[i * 3 + 1] = _v.y; nrm[i * 3 + 2] = _v.z;
       }
       const gr = cfg.grad ? cfg.grad[0] + (cfg.grad[1] - cfg.grad[0]) * t : 1;
-      col[i * 3] = gr; col[i * 3 + 1] = gr; col[i * 3 + 2] = gr * (cfg.leaf === 'ball' ? 0.94 : 1);
+      if (flat) { const c = src.attributes.color; col[i * 3] = c.getX(i) * gr; col[i * 3 + 1] = c.getY(i) * gr; col[i * 3 + 2] = c.getZ(i) * gr; }
+      else { col[i * 3] = gr; col[i * 3 + 1] = gr; col[i * 3 + 2] = gr * (cfg.leaf === 'ball' ? 0.94 : 1); }
     }
     src.dispose();
     g.setAttribute('position', new Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new Float32BufferAttribute(nrm, 3));
@@ -110,10 +113,10 @@ function bake(scene: Object3D): QtKit {
 
 /** The baked kit (loaded once; suspends until the GLB is in). */
 export function useQtKit(): QtKit {
-  const gltf = useGLTF(QT_URL);
-  return useMemo(() => (cache.kit ??= bake(gltf.scene)), [gltf]);
+  const [gltf, gltf2] = useGLTF([QT_URL, QT2_URL]);
+  return useMemo(() => (cache.kit ??= bake(gltf2.scene, ...(() => { const k = bake(gltf.scene); return [k.P, k.mats] as const; })())), [gltf, gltf2]);
 }
-useGLTF.preload(QT_URL);
+useGLTF.preload(QT_URL); useGLTF.preload(QT2_URL);
 
 // ------------------------------------------------------------------ drawing
 const _q = new Quaternion(), _e = new Euler(), _p = new Vector3(), _s = new Vector3(), _m = new Matrix4();

@@ -7,12 +7,15 @@ import { mainNav } from '../engine/systems/questNav';
 import { STORY } from '../story';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { BASE } from './models';
+import { TextureLoader, type Texture } from 'three';
 import { AdditiveBlending, ExtrudeGeometry, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeShoreField, makeWaterMaterial } from './waterFx';
 import { groundY } from './terrainFn';
+import { VillageQt } from './qtVillage';
 import { TownKit } from './townKit';
 import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
@@ -93,9 +96,8 @@ function buildHouse(h: HouseSpec, idx: number): { b: BufferGeometry; g: BufferGe
   // clutter: barrels / crates / mushrooms / bush
   const bx = -w / 2 - 0.9;
   if (idx % 3 === 0) { for (const [x, z] of [[bx, d / 2 - 0.4], [bx - 0.5, d / 2 - 1.3]]) { b.cyl(0.5, 0.55, 0.9, 9, [x, 0.45, z], '#8a5a30'); b.cyl(0.56, 0.56, 0.08, 9, [x, 0.3, z], '#3a3a40'); b.cyl(0.56, 0.56, 0.08, 9, [x, 0.65, z], '#3a3a40'); } }
-  else if (idx % 3 === 1) { b.box(0.9, 0.8, 0.9, [bx, 0.4, d / 2 - 0.5], '#a4793f', [0, 0.3, 0]); b.box(0.6, 0.55, 0.6, [bx, 1.05, d / 2 - 0.4], '#b88a4e', [0, 0.7, 0]); }
+  else if (idx % 3 === 1) { for (const [x, z, s] of [[bx, d / 2 - 0.5, 1], [bx - 0.6, d / 2 - 1.2, 0.8]] as number[][]) { b.cyl(0.42 * s, 0.48 * s, 0.8 * s, 10, [x, 0.4 * s, z], '#a4793f'); b.cyl(0.48 * s, 0.48 * s, 0.07, 10, [x, 0.58 * s, z], '#6a4a2a'); } }   // (barrels, not crate cubes)
   else for (const [x, z, s] of [[bx, d / 2 - 0.5, 1], [bx - 0.7, d / 2 - 1.2, 0.7]] as number[][]) { b.cyl(0.14 * s, 0.18 * s, 0.7 * s, 6, [x, 0.35 * s, z], '#f1e6d0'); b.sph(0.55 * s, [x, 0.75 * s, z], '#e0443a', [1, 0.6, 1], 8); for (let k = 0; k < 4; k++) b.sph(0.1 * s, [x + Math.cos(k * 1.7) * 0.3 * s, 0.95 * s, z + Math.sin(k * 1.7) * 0.3 * s], '#fff', 1, 4); }
-  b.sph(0.6, [w / 2 + 0.7, 0.45, d / 2 - 0.2], '#3f8f3a', [1, 0.8, 1], 6);
   for (let i = 0; i < 5; i++) { const a = rnd() * TAU; b.sph(0.12 + rnd() * 0.05, [Math.cos(a) * (w / 2 + 0.2 + rnd()), 0.16, d / 2 + 1.5 + Math.abs(Math.sin(a)) * 0.8], ['#ff7aa8', '#ffe14a', '#ffffff', '#9ac8ff', '#ff9a4a'][(i + idx) % 5], 1, 4); }
   return { b: b.build(), g: g.build() };
 }
@@ -118,31 +120,13 @@ function grain(x: CanvasRenderingContext2D, N: number, rnd: () => number, amp: n
 }
 /** The town's flagstones (owner ref 2026-10-21): big soft irregular polygonal slabs in light cream with thin warm-grey grout, a few slabs a touch darker. A tileable Voronoi baked once into a
  *  canvas (4x4 jittered seeds per tile; distance to the nearest / second nearest seed gives the grout line, softened so the slabs look rounded). */
-function flagTexture(): CanvasTexture {
-  const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
-  const x = c.getContext('2d')!;
-  const rnd = mulberry32(31), G = 4, seeds: [number, number, number][] = [];
-  const PAL: [number, number, number][] = [[252, 246, 230], [249, 241, 222], [253, 248, 236], [246, 238, 218], [240, 230, 208], [250, 244, 228]];
-  for (let gy = 0; gy < G; gy++) for (let gx = 0; gx < G; gx++) seeds.push([((gx + 0.5 + (rnd() - 0.5) * 0.7) / G) * N, ((gy + 0.5 + (rnd() - 0.5) * 0.7) / G) * N, rnd() < 0.2 ? 4 : Math.floor(rnd() * 4)]);
-  const img = x.createImageData(N, N), d = img.data, H = N / 2;
-  for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
-    let d1 = 1e9, d2 = 1e9, bi = 0;
-    for (let i = 0; i < seeds.length; i++) {
-      let dx = Math.abs(px - seeds[i][0]), dy = Math.abs(py - seeds[i][1]); if (dx > H) dx = N - dx; if (dy > H) dy = N - dy;
-      const dd = dx * dx + dy * dy;
-      if (dd < d1) { d2 = d1; d1 = dd; bi = i; } else if (dd < d2) d2 = dd;
-    }
-    const e = Math.sqrt(d2) - Math.sqrt(d1);                       // 0 on the border between two slabs
-    const groutT = Math.min(1, Math.max(0, (e - 1.8) / 4));         // 0 grout .. 1 slab (soft shoulder)
-    const sm = groutT * groutT * (3 - 2 * groutT), pal = PAL[seeds[bi][2] === 4 ? 4 : seeds[bi][2] % 4], bevel = 1 - 0.07 * Math.max(0, 1 - (e - 2.5) / 22);   // (slab edges roll off a little darker: rounded look)
-    const o = (py * N + px) * 4;
-    d[o] = 196 + (pal[0] * bevel - 196) * sm; d[o + 1] = 186 + (pal[1] * bevel - 186) * sm; d[o + 2] = 168 + (pal[2] * bevel - 168) * sm; d[o + 3] = 255;
-  }
-  x.putImageData(img, 0, 0);
-  const t = new CanvasTexture(c);
-  t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
+export function flagTexture(): Texture {
+  // (owner 2026-10-24 tiles mock) the baked seamless pale cream-peach puffy flagstone tile: public/art/ground/flagstone.webp, 1 tile = FLAG_TILE m (~1.2 m stones); art/bake_flagstone.py
+  const t = new TextureLoader().load(`${BASE}art/ground/flagstone.webp`);
+  t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
+export const FLAG_TILE = 9.6;
 
 /** World-space planar UVs (xz / tile) so the stones line up across roads and the plaza. */
 function planarUv(g: BufferGeometry, tile: number): BufferGeometry {
@@ -212,7 +196,7 @@ function buildRoads(): BufferGeometry {
   // (owner 2026-10-23: no orange ring inlays - the orange lines read as clutter)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
-  return planarUv(r.build(), 6);
+  return planarUv(r.build(), FLAG_TILE);
 }
 
 /** Terracotta kerb (owner ref): a thin rounded orange-brick curb along both edges of every paved street inside the walls, round the plaza and the gate forecourt. Pieces that would cross
@@ -284,7 +268,7 @@ function buildPaving(): { geo: BufferGeometry; patches: [number, number][][] } {
   g.rotateX(-Math.PI / 2);
   g.translate(0, 0.02, 0);
   g.setAttribute('color', new Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3));
-  return { geo: planarUv(g, 6), patches };
+  return { geo: planarUv(g, FLAG_TILE), patches };
 }
 
 /** Low stone kerb around a grass patch + a few muted wild flowers inside. */
@@ -442,7 +426,7 @@ function buildTierTops(): BufferGeometry {
   g.setAttribute('normal', new Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
   g.setAttribute('color', new Float32BufferAttribute(new Float32Array(pos.length).fill(1), 3));
   g.setIndex(idx);
-  return planarUv(g, 6);
+  return planarUv(g, FLAG_TILE);
 }
 
 /** The chapel's side door (west wall of the kit nave, out to the graveyard; interact spot = townData CHAPEL_SIDE): the v2 chapel has only
@@ -674,7 +658,7 @@ function buildTown() {
   addRiverBanks(at((RIVER.x0 + RIVER.x1) / 2, 68).b, mulberry32(4711));
   const out: { body: BufferGeometry; glow: BufferGeometry }[] = [];
   chunks.forEach((c) => out.push({ body: c.b.build(), glow: c.g.build() }));
-  return { chunks: out, roads: buildRoads(), dirt: buildDirtPaths(), paving: paving.geo, tops: buildTierTops() };
+  return { chunks: out, roads: buildRoads(), paving: paving.geo, tops: buildTierTops() };
 }
 
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
@@ -783,8 +767,8 @@ export function TownScenery({ q }: { q: QualityCfg }) {
     beam: new MeshBasicMaterial({ color: new Color('#ffd36a'), transparent: true, opacity: 0.12, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }; }, []);
   useEffect(() => () => {
-    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.dirt.dispose(); town.paving.dispose(); town.tops.dispose();
-    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); mats.tops.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose(); mats.dirt.dispose();
+    town.chunks.forEach((c) => { c.body.dispose(); c.glow.dispose(); }); town.roads.dispose(); town.paving.dispose(); town.tops.dispose();
+    mats.lit.dispose(); mats.road.map?.dispose(); mats.road.dispose(); mats.paving.dispose(); mats.tops.dispose(); forgetNightGlow(mats.glow); mats.glow.dispose(); mats.ring.dispose(); mats.beam.dispose();
   }, [town, mats]);
   const ring = useRef<Mesh>(null!), beam = useRef<Mesh>(null!);
   useFrame(({ clock }) => {
@@ -807,10 +791,10 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.paving} material={mats.paving} receiveShadow={shadows} />
       <mesh geometry={town.tops} material={mats.tops} receiveShadow={shadows} />
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
-      <mesh geometry={town.dirt} material={mats.dirt} receiveShadow={shadows} />
       <ChimneySmoke q={q} />
       <Lake />
       <React.Suspense fallback={null}><TownKit lit={mats.lit} glow={mats.glow} shadows={shadows} /></React.Suspense>
+      <React.Suspense fallback={null}><VillageQt lit={mats.lit} shadows={shadows} /></React.Suspense>
       {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>
