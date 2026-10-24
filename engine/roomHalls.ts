@@ -322,17 +322,20 @@ function findPockets(): void {
   bfs(a, gdS); bfs(b, gdE);
   const L = gdS[b];
   if (L < 0) return;
-  const need = 26 / HC;   // detour over the main route (cells)
+  // the main route = cells on a shortest start -> exit path; `edt` becomes the squared distance (cells^2) to it
+  for (let c = 0; c < n; c++) edt[c] = O[c] && gdS[c] >= 0 && gdS[c] + gdE[c] <= L + 4 ? 0 : INF;
+  edt2d(halls.w, halls.h);
+  const need = 17 / HC;   // a pocket is >= 17 m from the route (the far corner of a big chamber is not)
   for (let k = 0; k < 2; k++) {
     let best = -1, bd = 0;
     for (let c = 0; c < n; c++) {
       if (!O[c] || gdS[c] < 0 || halls.sdf[c] < 3.4) continue;
-      const d = gdS[c] + gdE[c] - L;
+      const d = Math.sqrt(edt[c]);
       if (d < need || d <= bd) continue;
       const x = halls.x0 + ((c % halls.w) + 0.5) * HC, z = halls.z0 + (Math.floor(c / halls.w) + 0.5) * HC;
       let ok = true;
       for (const p of halls.pockets) if (Math.hypot(p[0] - x, p[1] - z) < 22) { ok = false; break; }
-      if (Math.hypot(x - halls.sx, z - halls.sz) < 16 || Math.hypot(x - halls.ex, z - halls.ez) < 16) ok = false;
+      
       if (ok) { best = c; bd = d; }
     }
     if (best < 0) break;

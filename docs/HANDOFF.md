@@ -556,6 +556,13 @@ screens, max-level question: class level cap is 50) have been removed.
   still come from the old `town_kit.glb`.
 - **Rooms**: one disc/shape around 0,0 built from a seed (`roomgen.buildRoom`, `roomShape` polar table, `mapgen.installRoom`),
   only the current room exists; camp rooms use `roomShape.fixed` spots.
+- **HALLS v4 additions**: (1) HallsBorder has an edge-wall pass: every stretch of the edge (1.5-2.6 m behind the floor) with no tree within 3.4 m gets a big
+  8-11 m tree (cap 900), so the trees form a continuous wall. (2) **Pockets**: `roomHalls.findPockets` (BFS + EDT) finds spots >= 17 m from the shortest
+  start->exit route (`halls.pockets`, max 2). `roomgen` puts stationary archer towers there (count for room clear via `feat.tx/tz`, director `fixedKind`)
+  or, 15%, an optional chest (`feat.pChest` -> `world.room.chests[1].pocket`, opens any time). (3) Monsters in HALLS rooms idle until the hero is within
+  `HALLS_AGGRO` (10 m) or hurts one (enemies.ts `awake[]`; wakes packmates within 7 m; bosses / mini-bosses unchanged). (4) Marble Halls: darker look
+  (biomeLook), `HallsMarble` preloads its OBJ kit on the first biome-1 room (`preloadHallsMarble`), torches have emissive flames + floor light pools +
+  3 real point lights near the hero (quality tier: shadows on), jars / barrels are breakable crates (`roomgen`; POT now solid in run rooms).
 - **HALLS rooms** (owner-approved organic floor plans, mockup `shots/halls_design/proposal.png`): ~1 in 4 combat / elite / treasure rooms
   (`roomgen.isHallsRoom`; never boss / mini-boss / camp / merchant / fountain / shrine / tower modes / the very first room). Six designs in
   `engine/roomHalls.ts` DESIGNS (soft blobs + bezier passages + islands, jittered, rotated, mirrored, scaled to ~1500-2000 m2): TWIN
