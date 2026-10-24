@@ -14,7 +14,7 @@ export type Liquid = 'WATER' | 'LAVA' | 'CHASM' | 'ICE';
 export const LIQ = { NONE: 0, WATER: 1, LAVA: 2, CHASM: 3, ICE: 1 } as const;
 export const liquidCode = (l: Liquid): number => (l === 'LAVA' ? 2 : l === 'CHASM' ? 3 : 1);
 
-export const MAX_LAKES = 16;
+export const MAX_LAKES = 48;   // (the fountain moat is a ring of ~34 overlapping pools)
 export const MAX_BRIDGES = 3;
 export const MAX_FIXED = 4;
 
@@ -40,10 +40,12 @@ export const feat = {
   /** HALLS dead-end pocket treasure (a chest instead of stationary monsters): on, x, z */
   pChest: { on: false, x: 0, z: 0 },
   nHydras: 0, hx: new Float32Array(MAX_FIXED), hz: new Float32Array(MAX_FIXED),
+  /** Fountain room: the island's moat (a ring of pools, drawn / walled like lakes) crossed by 4 small bridges at N / E / S / W: centre, mid radius, half width, deck half width */
+  moat: { on: false, x: 0, z: 0, r: 0, hw: 0, bw: 1.7 },
 };
 
 export function resetFeatures(): void {
-  feat.layout = 'PLAIN'; feat.river = false; feat.rift = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0; feat.pChest.on = false;
+  feat.layout = 'PLAIN'; feat.river = false; feat.rift = false; feat.nb = 0; feat.nLakes = 0; feat.nTowers = 0; feat.nHydras = 0; feat.variant = 0; feat.pChest.on = false; feat.moat.on = false;
   feat.version++;
 }
 
@@ -69,6 +71,10 @@ export function bridgeAt(s: number, pad = 0): number {
 }
 /** Is (x, z) on a bridge deck or within `pad` of it (deck length = the river width + both mouths)? Decoration must stay off these. */
 export function onBridge(x: number, z: number, pad = 0): boolean {
+  if (feat.moat.on) {   // the four moat decks run radially along +-x / +-z
+    const m = feat.moat, rx = x - m.x, rz = z - m.z, ax = Math.abs(rx), az = Math.abs(rz);
+    if ((az < m.bw + pad && Math.abs(ax - m.r) < m.hw + 3.6 + pad) || (ax < m.bw + pad && Math.abs(az - m.r) < m.hw + 3.6 + pad)) return true;
+  }
   if (!feat.river || feat.nb === 0) return false;
   const s = riverS(x, z);
   return bridgeAt(s, pad) >= 0 && Math.abs(riverD(x, z)) < hwAt(s) + 3.6 + pad;

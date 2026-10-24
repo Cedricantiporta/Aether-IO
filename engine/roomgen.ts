@@ -25,14 +25,14 @@ export const layoutDbg: { force: Layout | null } = { force: null };
 const FIGHT: Partial<Record<RoomType, boolean>> = { COMBAT: true, ELITE: true, TREASURE: true };
 const LAYOUTS: Layout[] = ['PLAIN', 'BIG', 'LONG', 'RIVER', 'LAKE'];
 
-/** Does this fight room use a HALLS layout (chambers joined by corridors, engine/roomHalls.ts)? ~1 in 4 combat / elite / treasure
- *  rooms; never towers, camps, boss / merchant / fountain / duel arenas. */
+/** Does this fight room use a HALLS layout (chambers joined by corridors, engine/roomHalls.ts)? (owner) almost every combat / treasure stage in
+ *  every biome (92%; all of them in Marble Halls); never elite, mini-boss, boss, shrine, fountain, merchant, camp, duel or tower stages. */
 export function isHallsRoom(biome: number, type: RoomType, seed: number, index: number): boolean {
   if (runInfo.mode === 'TOWER' || !hallsType(type)) return false;
   if (shapeDbg.force === 'HALLS') return true;
   if (shapeDbg.force) return false;
   if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return false;   // the very first room of a run stays simple
-  return mulberry32(seed ^ 0x5eed11)() < (BIOMES[biome % BIOMES.length].style === 'MARBLE' ? 1 : 0.6);   // (owner) Marble Halls = every fight room is an indoor castle hall; elsewhere most fight rooms are chambers + passages
+  return mulberry32(seed ^ 0x5eed11)() < (BIOMES[biome % BIOMES.length].style === 'MARBLE' ? 1 : 0.92);   // (owner) Marble Halls = every fight room is an indoor castle hall; elsewhere almost every one is chambers + passages
 }
 
 /** Stage layout of a room (pure function of biome, type, seed and room index). */

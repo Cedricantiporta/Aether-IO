@@ -141,6 +141,15 @@ export function RoomWater() {
     plane.renderOrder = 1; plane.frustumCulled = false;
     // bridges
     const bridges: Mesh[] = [];
+    if (feat.moat.on) {   // the fountain moat's four small decks (N / E / S / W)
+      const style = def.style === 'MARBLE' ? 'MARBLE' : def.style === 'BASALT' ? 'BASALT' : def.style === 'VOID' ? 'CRYSTAL' : def.style === 'SAND' ? 'STONE' : def.style === 'SNOW' ? 'STONE' : 'STONE';
+      const bm = litMat({ roughness: 0.85 }), mo = feat.moat;
+      for (let k = 0; k < 4; k++) {
+        const a = k * Math.PI / 2, dx = Math.cos(a), dz = Math.sin(a);
+        const m = new Mesh(bridgeGeo(style, (mo.hw + 0.35) * 2 + 4.5, mo.bw), bm); m.position.set(mo.x + dx * mo.r, 0, mo.z + dz * mo.r); m.rotation.y = Math.atan2(dx, dz);
+        m.castShadow = true; m.receiveShadow = true; bridges.push(m);
+      }
+    }
     if (feat.river) {
       const style = def.style === 'MARBLE' ? 'MARBLE' : def.style === 'BASALT' ? 'BASALT' : def.style === 'VOID' ? 'CRYSTAL' : def.style === 'SAND' ? 'ROPE' : def.style === 'SNOW' ? 'STONE' : 'WOOD';
       const bm = litMat({ roughness: 0.85 });

@@ -10,13 +10,15 @@ import { mulberry32, installRoom, commitCrates, type Collider } from './mapgen';
 import type { Obstacle, ObstacleKind, RoomType } from './types';
 import { biomeOf } from './roomDefs';
 import { buildShape, shape, dbg } from './roomShape';
-import { disableRoomNav } from './roomNav';
+import { disableRoomNav, buildRoomNav } from './roomNav';
+import { feat, resetFeatures, liquidCode, MAX_LAKES } from './roomFeatures';
 import { HUB_R, CASTLE_DOOR, KEEPER_POS, gatePos } from './gates';
 
 export const isArenaRoom = (t: RoomType): boolean => t === 'DUEL' || t === 'GATEKEEPER' || t === 'FOUNTAIN';
-export function arenaRadius(t: RoomType): number { return t === 'GATEKEEPER' ? HUB_R : t === 'DUEL' ? 21 : 19; }
+export function arenaRadius(t: RoomType): number { return t === 'GATEKEEPER' ? HUB_R : t === 'DUEL' ? 21 : t === 'FOUNTAIN' ? 23 : 19; }
 /** Fountain plaza: marble columns ring (radius around the station). */
-export const PLAZA_COLS = 8, PLAZA_COL_R = 8.2;
+/** Fountain island: the moat's mid radius / half width (visual pools) / collider half width; the 8 columns stand on the outer bank. */
+export const PLAZA_COLS = 8, PLAZA_COL_R = 12.8, MOAT_R = 8.6, MOAT_HW = 2.3, MOAT_BW = 1.7;
 /** Duel ring: braziers stand just inside the pillar ring at this fraction of R. */
 export const DUEL_BRAZIERS = 8;
 
@@ -29,6 +31,7 @@ const gp: [number, number] = [0, 0];
 
 export function buildArena(biome: number, type: RoomType, R: number, seed: number): void {
   disableRoomNav();
+  resetFeatures();   // (no stage liquids of the previous room)
   const f = dbg.force; dbg.force = 'ROUND';
   buildShape(type, R, seed);
   dbg.force = f;
@@ -76,10 +79,39 @@ export function buildArena(biome: number, type: RoomType, R: number, seed: numbe
   } else if (type === 'FOUNTAIN') {
     const cz = -shape.baseR * 0.1;   // station = stationPos (round room)
     for (let i = 0; i < PLAZA_COLS; i++) { const a = (i / PLAZA_COLS) * Math.PI * 2 + Math.PI / PLAZA_COLS; col(Math.cos(a) * PLAZA_COL_R, cz + Math.sin(a) * PLAZA_COL_R, 0.65); }
+    buildMoat(0, cz, colliders);
   }
 
   world.obstacles = obstacles;
   world.obstaclesVersion++;
   installRoom(colliders, shape.baseR + 1);
   commitCrates([], rnd);
+  feat.version++;
+  if (type === 'FOUNTAIN') buildRoomNav(shape.maxR);   // (click-to-move finds the bridges)
+}
+
+/** The fountain's moat: a ring of overlapping pools (drawn by the water shader like lakes) + liquid colliders with gaps where the 4 decks cross at N / E / S / W. */
+function buildMoat(cx: number, cz: number, colliders: Collider[]): void {
+  const m = feat.moat; m.on = true; m.x = cx; m.z = cz; m.r = MOAT_R; m.hw = MOAT_HW - 0.35; m.bw = MOAT_BW;
+  feat.liquid = 'WATER';
+  const code = liquidCode('WATER');
+  const n = Math.min(MAX_LAKES, Math.round((Math.PI * 2 * MOAT_R) / 1.6));
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2, k = feat.nLakes++;
+    feat.lx[k] = cx + Math.cos(a) * MOAT_R; feat.lz[k] = cz + Math.sin(a) * MOAT_R; feat.lr[k] = MOAT_HW;
+  }
+  const rr = m.hw - 0.15;   // collider chain along the ring, gapped at the decks
+  const wrap = (v: number): number => { while (v > Math.PI) v -= Math.PI * 2; while (v < -Math.PI) v += Math.PI * 2; return v; };
+  for (let s = 0; s < Math.PI * 2 * MOAT_R; s += 1.0) {
+    const a = s / MOAT_R;
+    let near = false;
+    for (let k = 0; k < 4; k++) if (Math.abs(wrap(a - k * Math.PI / 2)) * MOAT_R < m.bw + rr) { near = true; break; }
+    if (!near) colliders.push({ x: cx + Math.cos(a) * MOAT_R, z: cz + Math.sin(a) * MOAT_R, r: rr, blocksProjectiles: false, liquid: code });
+  }
+  for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) {   // small discs filling the water beside each deck
+    for (let ds = m.bw + 0.6; ds < m.bw + m.hw + 1; ds += 0.9) for (let d = -m.hw + 0.6; d <= m.hw - 0.6; d += 1.1) {
+      const a = k * Math.PI / 2 + sd * ds / MOAT_R;
+      colliders.push({ x: cx + Math.cos(a) * (MOAT_R + d), z: cz + Math.sin(a) * (MOAT_R + d), r: 0.6, blocksProjectiles: false, liquid: code });
+    }
+  }
 }

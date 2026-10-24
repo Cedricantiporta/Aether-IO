@@ -17,7 +17,10 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { damagePlayer, damageEnemiesInRadius } from './combat';
 import { stationPos, startPos } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
-import { onBridge } from '../roomFeatures';
+import { onBridge, feat } from '../roomFeatures';
+import { shape } from '../roomShape';
+import { halls, hallsSdf, hallsRandomSpot } from '../roomHalls';
+import { portalSlot, shortcutSlot } from '../roomgen';
 import { OBJ_NAME, BIOMES } from '../roomDefs';
 import { isStationary } from '../enemyDefs';
 
@@ -52,6 +55,7 @@ export function startRoomEvent(plan: RoomPlan): void {
   resetRoomEvent();
   const e = E();
   e.obj = plan.obj ?? ''; e.twist = plan.twist ?? '';
+  if (!e.twist && shape.kind === 'HALLS' && plan.type === 'COMBAT' && Math.random() < 0.5) e.twist = 'TRAPS';   // (owner) HALLS rooms hold more spike traps
   if (!e.obj && !e.twist) return;
   const [cx, cz] = stationPos(world.room.radius);
   e.x = cx; e.z = cz;
@@ -74,6 +78,18 @@ const TRAP_PATTERNS: readonly (readonly [number, number])[][] = [
   [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]],
 ];
 const tileX: number[] = [], tileZ: number[] = [];
+const hp: [number, number] = [0, 0], pp2: [number, number] = [0, 0];
+/** HALLS: is (x, z) within `r` of a portal slot, the boss shortcut, the station or a chest? */
+function clearSpot(x: number, z: number, r: number): boolean {
+  const R = world.room.radius;
+  for (let n = 1; n <= 3; n++) for (let i = 0; i < n; i++) { portalSlot(i, n, R, pp2); if (Math.hypot(x - pp2[0], z - pp2[1]) < r + 4) return true; }
+  shortcutSlot(pp2); if (Math.hypot(x - pp2[0], z - pp2[1]) < r + 4) return true;
+  const [sx, sz] = stationPos(R);   // (the station / chests are placed after this runs: use the planned spots)
+  if (Math.hypot(x - sx, z - sz) < r + 8) return true;
+  if (feat.pChest.on && Math.hypot(x - feat.pChest.x, z - feat.pChest.z) < r + 3) return true;
+  return false;
+}
+void halls;
 
 function placeTraps(): void {
   const e = E(), R = world.room.radius, cap = e.traps.length;
@@ -82,7 +98,7 @@ function placeTraps(): void {
   const up = (TRAP_PERIOD0 - TRAP_FIRE0) * (marble ? 1.6 : 1), warn = (TRAP_FIRE0 - TRAP_WARN0) * (marble ? 0.8 : 1);
   TRAP_WARN = TRAP_WARN0 * (marble ? 0.75 : 1); TRAP_FIRE = TRAP_WARN + warn; TRAP_PERIOD = TRAP_FIRE + up;
   trapScale = marble ? 1.4 : 1; TRAP_R = TRAP_R0 * trapScale; TRAP_TILE = TRAP_R * 2; trapDrain = marble; plTrapCd = 0;
-  const TRAP_W = marble ? TRAP_W_MARBLE : TRAP_W_STD, maxGroups = marble ? 10 : 6;
+  const isH = shape.kind === 'HALLS', TRAP_W = marble ? TRAP_W_MARBLE : TRAP_W_STD, maxGroups = (marble ? 10 : 6) * (isH ? 2 : 1);
   const [sx, sz] = startPos(R);
   let n = 0, groups = 0;
   for (let t = 0; t < 300 && groups < maxGroups && n < cap; t++) {
@@ -91,12 +107,13 @@ function placeTraps(): void {
     const pat = TRAP_PATTERNS[pi], swap = Math.random() < 0.5;   // 1x3 lines run along x or z
     if (n + pat.length > cap) continue;
     const a = Math.random() * Math.PI * 2, d = 5 + Math.sqrt(Math.random()) * (R * 0.66 - 5);
-    const cx = Math.cos(a) * d, cz = Math.sin(a) * d;
+    let cx = Math.cos(a) * d, cz = Math.sin(a) * d;
+    if (isH) { if (!hallsRandomSpot(TRAP_TILE * 1.5 + 1.5, hp)) continue; cx = hp[0]; cz = hp[1]; }   // (HALLS: anywhere on the open floor, away from the edges)
     let ok = true;
     tileX.length = tileZ.length = 0;
     for (const [ox, oz] of pat) {
       const x = cx + (swap ? oz : ox) * TRAP_TILE, z = cz + (swap ? ox : oz) * TRAP_TILE;
-      if (Math.hypot(x, z) > R * 0.82 || Math.hypot(x - sx, z - sz) < 6.5 || onBridge(x, z, TRAP_R + 1)) { ok = false; break; }   // inside the arena, never under the hero's arrival
+      if ((isH ? hallsSdf(x, z) < TRAP_R + 1.2 : Math.hypot(x, z) > R * 0.82) || Math.hypot(x - sx, z - sz) < 6.5 || onBridge(x, z, TRAP_R + 1) || (isH && clearSpot(x, z, TRAP_R + 1.5))) { ok = false; break; }   // inside the arena, never under the hero's arrival / exits / chests
       if (queryColliders(x, z, TRAP_R + 0.6, colOut).some((c) => Math.hypot(c.x - x, c.z - z) < c.r + TRAP_R)) { ok = false; break; }
       for (let k = 0; k < n; k++) if (Math.abs(e.traps[k].x - x) < TRAP_TILE * 1.6 && Math.abs(e.traps[k].z - z) < TRAP_TILE * 1.6) { ok = false; break; }   // a gap between groups
       if (!ok) break;
