@@ -9,7 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, AnimationMixer, CircleGeometry, Color, ConeGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Group, InstancedMesh,
-  CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SRGBColorSpace,
+  CanvasTexture, CylinderGeometry, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, RepeatWrapping, RingGeometry, SphereGeometry, SRGBColorSpace,
   ShaderMaterial, Shape, ShapeGeometry, TorusGeometry, type BufferGeometry,
   Matrix4, Quaternion, Euler, Vector3,
 } from 'three';
@@ -589,13 +589,20 @@ function stationGeos() {
   cl.box(0.2, 1.3, 1.4, [-0.7, 0, 0], '#d4a63a'); cl.box(0.2, 1.3, 1.4, [0.7, 0, 0], '#d4a63a');
   const cg = new GB([1, 1]);
   cg.box(0.35, 0.4, 0.2, [0, 0.8, 0.7], '#ffe08a'); cg.sph(0.3, [0, 1.35, 0], '#ffd24a', [2.4, 0.3, 1.6], 6);
-  // altar
-  const a = new GB([0.8, 1.08]);
-  a.cyl(1.6, 1.9, 0.5, 8, [0, 0.25, 0], '#6d6a78'); a.cyl(1.1, 1.3, 0.5, 8, [0, 0.75, 0], '#807d8c'); a.box(1.0, 1.3, 1.0, [0, 1.65, 0], '#8e8a9c');
-  a.box(0.4, 1.9, 0.4, [-1.7, 1.0, 0.8], '#6d6a78'); a.box(0.4, 1.9, 0.4, [1.7, 1.0, 0.8], '#6d6a78'); a.box(0.4, 1.9, 0.4, [-1.7, 1.0, -0.8], '#6d6a78'); a.box(0.4, 1.9, 0.4, [1.7, 1.0, -0.8], '#6d6a78');
+  // altar (owner 2026-10-24: a cute cream shrine; its big crystal is dull stone-violet until the challenge is activated, then it glows)
+  const a = new GB([0.8, 1.08]), PI2 = Math.PI / 2;
+  a.cyl(2.0, 2.2, 0.35, 18, [0, 0.175, 0], '#d6cbb2'); a.cyl(1.6, 1.75, 0.3, 18, [0, 0.5, 0], '#ece4d2');
+  a.torus(1.63, 0.07, [0, 0.66, 0], '#5b8fd9', [PI2, 0, 0], 1, 28);
+  a.cyl(0.42, 0.58, 1.1, 12, [0, 1.2, 0], '#f2ebdc'); a.torus(0.5, 0.06, [0, 0.95, 0], '#e8c04a', [PI2, 0, 0], 1, 18);
+  a.cyl(0.78, 0.48, 0.28, 12, [0, 1.88, 0], '#ece4d2'); a.torus(0.74, 0.07, [0, 2.02, 0], '#e8c04a', [PI2, 0, 0], 1, 22);
+  for (let k = 0; k < 4; k++) {   // four little standing stones round the dais, each crowned with a small gem (in the glow mesh)
+    const ang = Math.PI / 4 + (k * Math.PI) / 2, x = Math.cos(ang) * 1.72, z = Math.sin(ang) * 1.72;
+    a.box(0.4, 0.9, 0.4, [x, 1.05, z], '#e2d8c2', [0, ang, 0]); a.cyl(0.26, 0.26, 0.12, 8, [x, 1.56, z], '#e8c04a');
+  }
   const ag = new GB([1, 1]);
-  ag.octa(0.55, [0, 3.0, 0], '#c084fc', [0.8, 1.3, 0.8]); ag.torus(1.0, 0.07, [0, 2.3, 0], '#e0b8ff', [Math.PI / 2, 0, 0], 1, 16);
-  ag.box(0.5, 0.06, 0.5, [0, 2.32, 0], '#e0b8ff', [0, 0.78, 0]);
+  ag.octa(0.5, [0, 3.05, 0], '#a98bff', [0.95, 2.0, 0.95]);
+  ag.octa(0.17, [0.78, 2.6, 0.18], '#cdb6ff', [0.8, 1.5, 0.8]); ag.octa(0.15, [-0.72, 2.75, -0.2], '#cdb6ff', [0.8, 1.5, 0.8]);
+  for (let k = 0; k < 4; k++) { const ang = Math.PI / 4 + (k * Math.PI) / 2; ag.octa(0.14, [Math.cos(ang) * 1.72, 1.78, Math.sin(ang) * 1.72], '#c4a8ff', [0.9, 1.4, 0.9]); }
   return {
     fountain: f.build(), fountainWater: fw.build(), stall: m.build(), stallLamps: ml.build(), chest: cb.build(), chestLid: cl.build(), chestGlow: cg.build(), altar: a.build(), altarGlow: ag.build(),
   };
@@ -675,15 +682,13 @@ function Stations() {
     mat: new MeshBasicMaterial({ color: new Color(1.6, 1.25, 0.55), transparent: true, opacity: 0.32, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
   }), []);
   useEffect(() => () => { beamRes.geo.dispose(); beamRes.mat.dispose(); }, [beamRes]);
-  // (owner) the shrine lights up once activated: a violet light column + a glowing rune ring round its base
-  const shrineFx = useRef<Group>(null!), shrineBeam = useRef<Mesh>(null!), shrineRing = useRef<Mesh>(null!);
-  const shrineRes = useMemo(() => ({
-    beam: new CylinderGeometry(0.55, 0.95, 9, 18, 1, true).translate(0, 4.5, 0),
-    ring: new RingGeometry(1.25, 1.65, 48).rotateX(-Math.PI / 2).translate(0, 0.04, 0),
-    mat: new MeshBasicMaterial({ color: new Color(1.3, 0.75, 1.8), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, toneMapped: false }),
-    ringMat: new MeshBasicMaterial({ color: new Color(1.5, 0.9, 2.0), transparent: true, opacity: 0.75, blending: AdditiveBlending, depthWrite: false, toneMapped: false }),
+  // (owner) "glow = the crystal glows": a soft additive halo hugging the crystal (no light column)
+  const shrineHalo = useRef<Mesh>(null!);
+  const haloRes = useMemo(() => ({
+    geo: new SphereGeometry(0.95, 20, 14).scale(1, 1.55, 1).translate(0, 3.05, 0),
+    mat: new MeshBasicMaterial({ color: new Color(0.9, 0.6, 1.6), transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, toneMapped: false }),
   }), []);
-  useEffect(() => () => { shrineRes.beam.dispose(); shrineRes.ring.dispose(); shrineRes.mat.dispose(); shrineRes.ringMat.dispose(); }, [shrineRes]);
+  useEffect(() => () => { haloRes.geo.dispose(); haloRes.mat.dispose(); }, [haloRes]);
   useFrame(({ clock }, dt) => {
     const s = world.room.station, t = clock.elapsedTime;
     const on = world.room.active;
@@ -722,15 +727,8 @@ function Stations() {
       altarGlow.current.position.y = lit ? Math.sin(t * (active ? 3 : 1.7)) * 0.15 : 0;
       altarGlow.current.rotation.y = lit ? t * (active ? 2.2 : 0.8) : 0.4;
       altarGlow.current.visible = true;
-      shrineFx.current.visible = lit;
-      if (lit) {
-        const pulse = active ? 0.5 + 0.5 * Math.sin(t * 4) : 0.5;
-        shrineRes.mat.opacity = active ? 0.22 + pulse * 0.16 : 0.14;
-        shrineBeam.current.rotation.y = t * 0.5;
-        shrineRes.ringMat.opacity = 0.45 + pulse * 0.4;
-        shrineRing.current.scale.setScalar(1 + pulse * 0.08);
-        shrineRing.current.rotation.y = -t * 0.6;
-      }
+      shrineHalo.current.visible = lit;
+      if (lit) { const pulse = active ? 0.5 + 0.5 * Math.sin(t * 3.2) : 0.5; haloRes.mat.opacity = active ? 0.2 + pulse * 0.18 : 0.16; shrineHalo.current.position.y = altarGlow.current.position.y; }
     }
   });
   return (
@@ -760,10 +758,7 @@ function Stations() {
       <group ref={altar} scale={1.7}>   {/* a big shrine */}
         <mesh geometry={geos.altar} material={mats.lit} castShadow receiveShadow />
         <mesh ref={altarGlow} geometry={geos.altarGlow} material={mats.glow} />
-        <group ref={shrineFx} visible={false}>
-          <mesh ref={shrineBeam} geometry={shrineRes.beam} material={shrineRes.mat} renderOrder={3} />
-          <mesh ref={shrineRing} geometry={shrineRes.ring} material={shrineRes.ringMat} renderOrder={3} />
-        </group>
+        <mesh ref={shrineHalo} geometry={haloRes.geo} material={haloRes.mat} visible={false} renderOrder={3} />
       </group>
     </group>
   );
