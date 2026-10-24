@@ -32,7 +32,7 @@ export const fixed = { on: false, sx: 0, sz: 0, stx: 0, stz: 0, ex: 0, ez: 0, dx
 export const dbg: { force: ShapeKind | null; variant: HallsVariant | null } = { force: null, variant: null };
 
 /** Room types that may roll a HALLS layout (chambers joined by corridors, engine/roomHalls.ts). */
-export const hallsType = (type: string): boolean => type === 'COMBAT' || type === 'TREASURE';   // (owner) elite / boss / mini-boss / shrine / fountain / merchant / camp rooms keep their own stages
+export const hallsType = (type: string): boolean => type === 'COMBAT' || type === 'ELITE' || type === 'TREASURE';   // (owner 2026-10-24: elites use the connected-rooms layout too) boss / mini-boss / shrine / fountain / merchant / camp rooms keep their own stages
 /** Is the room that is built / installed right now a HALLS room? (the table below is then only the star-convex kernel seen from the hub) */
 export const isHalls = (): boolean => shape.kind === 'HALLS';
 
