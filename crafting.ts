@@ -181,7 +181,8 @@ export const recipeTemplates = (recipe: Recipe): Item[] =>
 
 /** Stat scaling for "+N" items (also used by drops and the blacksmith): each + adds 25% of the base stats (owner: was
  *  x level - a +3 item had 4x its stats and out-ranked the tiers above it). plusMul(level) = 1 + 0.25 * (level - 1). */
-export const plusMul = (level: number): number => 1 + 0.25 * (Math.max(1, level) - 1);
+/** (owner 2026-10-24: smaller steps up to +4) +1..+4 add 10% of the base each, +5 and up 25% each. */
+export const plusMul = (level: number): number => { const n = Math.max(1, level) - 1; return 1 + 0.10 * Math.min(n, 4) + 0.25 * Math.max(0, n - 4); };
 const GEAR = new Set<string>(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY']);
 export const applyPlus = (item: Item, plus: number): void => {
   if (plus <= 0 || !GEAR.has(item.type)) return; // never level potions / cores / loot

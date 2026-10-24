@@ -1,6 +1,7 @@
 import type { Item, PlayerStats, Rarity, HeroClass } from '../../types';
 import { STAT_NAME, fmtFx } from '../../statFx';
-import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierFor } from '../../crafting';
+import { upgradeChanceAt, upgradeGoldFor, upgradeCoresAt, upgradeBreakAt, upgradeCoreTierFor, plusMul } from '../../crafting';
+import { PET_PCT_STATS } from '../../petGrowth';
 import { sellUnit } from '../../constants';
 
 export const RARITIES: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
@@ -58,9 +59,10 @@ export const upgradeBreakChance = (i: Item) => upgradeBreakAt(i.level);
 export const MAX_ITEM_LEVEL = 10;
 export function upgradedStats(i: Item): Partial<PlayerStats> {
   const out: Partial<PlayerStats> = {};
-  const lvl = Math.max(1, i.level);
+  const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);   // (the same step as the real upgrade in store.ts)
   (Object.keys(i.stats) as (keyof PlayerStats)[]).forEach((k) => {
-    out[k] = parseFloat(((i.stats[k]! / lvl) * (lvl + 1)).toFixed(2));
+    const pct = PET_PCT_STATS.has(k);
+    out[k] = parseFloat((i.stats[k]! * (pct ? 1 + (f - 1) / 3 : f)).toFixed(pct ? 4 : 2));
   });
   return out;
 }

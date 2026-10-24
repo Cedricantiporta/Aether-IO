@@ -405,7 +405,7 @@ export const instantiate = (template: Item, grade?: import('./types').ItemGrade)
 }), Math.random, GRADE_HIGH_CHANCE, grade);   // gear rolls LOW / HIGH grade (grade.ts)
 
 const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => Object.keys(stats) as (keyof PlayerStats)[];
-/** One +level on a gear item, the same step as a blacksmith upgrade (+25% of the base per level; % stats a third as fast). */
+/** One +level on a gear item, the same step as a blacksmith upgrade (+10% of the base per level up to +4, then +25%; % stats a third as fast). */
 export const plusOne = (i: Item): Item => {
   const stats: Partial<PlayerStats> = { ...i.stats };
   const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);
@@ -1870,7 +1870,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const upgraded = (i: Item): Item => {
         const stats: Partial<PlayerStats> = { ...i.stats };
-        const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);   // +25% of the base per level
+        const lvl = Math.max(1, i.level), f = plusMul(lvl + 1) / plusMul(lvl);   // crafting.ts plusMul: +10% of the base per level up to +4, then +25%
         for (const k of mutableStatKeys(stats)) {
           const v = stats[k];
           if (v === undefined) continue;
