@@ -1,7 +1,8 @@
 import { playNextDream } from './DreamOverlay';
 import { markDreamSeen } from '../../dreams';
 // Settings > Debug: cheats for testing (god mode, currencies, skills, rank) and jumping to any biome / room / boss.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store';
 import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
@@ -79,6 +80,8 @@ export const DebugTab: React.FC = () => {
   const [room, setRoom] = useState(0);
   const [type, setType] = useState<RoomType>('COMBAT');
   const [boss, setBoss] = useState<string>(debug.bossOverride);
+  const [foot, setFoot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setFoot(document.getElementById('pause-footer-extra')); }, []);
 
   const go = () => {
     setDebug({ bossOverride: (boss || '') as typeof debug.bossOverride });
@@ -162,6 +165,6 @@ export const DebugTab: React.FC = () => {
       <Button size="sm" disabled={inRun} onClick={() => { useUiStore.getState().openSettings(false); setTimeout(() => playNextDream(), 200); }}>Play next dream</Button>
       <Button size="sm" onClick={() => markDreamSeen(0)}>Reset dreams</Button>
     </Line>
-    <div className="py-2"><Button className="w-full" variant="primary" onClick={go} data-testid="dbg-go">{inRun ? 'Jump now' : 'Start run here'}</Button></div>
+    {foot && createPortal(<Button variant="primary" onClick={go} data-testid="dbg-go" style={{ minWidth: '9rem' }}>{inRun ? 'Jump now' : 'Start run here'}</Button>, foot)}   {/* (owner) beside Done in the footer, only on this tab */}
   </>);
 };

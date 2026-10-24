@@ -277,9 +277,9 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 for (const [x, z] of [[-3.8, -8.4], [3.8, -8.4], [16.4, -9.0], [-16.4, -9.0]]) if (decor('notice_board', x, z, 0, 1, { solid: 'ring', r: 0.4, rad: 1.0 })) break;
 // ---- (owner 2026-10-23: dense medieval town) cosy dressing in the pockets between the house rows: each is skipped when it does not fit
 for (const [pc, x, z, ry, sc] of [
-  ['flower_cart', 12.4, -12.8, 0.2, 1], ['flower_cart', -13.2, -11.6, -0.2, 1], ['flower_cart', 14.4, 30.6, 0.3, 1],
+  ['flower_cart', 14.4, 30.6, 0.3, 1],   // (owner 2026-10-24: no carts in front of the castle steps)
   ['fruit_crate', 32.4, 28, 0.3, 1], ['fruit_crate', -33.6, 28, -0.3, 1], ['fruit_crate', 31.2, -36.8, 0.2, 1],
-  ['potted_plant_a', -26.4, 24.9, 0, 1], ['potted_plant_b', 7.2, 14.8, 0, 1], ['potted_plant_a', 18, 14.8, 0, 1], ['potted_plant_b', -7.4, -15.2, 0, 1], ['potted_plant_a', 8.6, -15.2, 0, 1],
+  ['potted_plant_a', -26.4, 24.9, 0, 1], ['potted_plant_b', 7.2, 14.8, 0, 1], ['potted_plant_a', 18, 14.8, 0, 1], 
   ['flower_bed_long', -33.6, -16.4, 0, 0.8], ['flower_bed_long', 8.4, 30.4, 0, 0.8], ['flower_bed_long', -36, 8.2, 0, 0.8],
 ] as [string, number, number, number, number][]) decor(pc, x, z, ry, sc, { solid: 'ring', r: 0.45 });
 // ---- (park entrances: no arches)

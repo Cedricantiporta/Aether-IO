@@ -88,8 +88,8 @@ export function BiomeHazards() {
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
       icicle: u(icg, glowMat({ color: new Color(1.1, 1.8, 2.3) }), 10),
       rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 3),
-      rField: u(disc, flat(new Color(0.12, 0.03, 0.22), 0.22), 3),   // (owner 2026-10-24: subtle dark black-hole field)
-      rGlow: u(rgg.build(), glowMat({ color: new Color(0.35, 0.12, 0.6) }), 3),   // (a faint dark-violet swirl, not a bright glyph)
+      rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 3),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
+      rGlow: u(rgg.build(), glowMat({ color: new Color(0.9, 0.35, 1.5) }), 3),   // (a bright violet swirl round the black core)
     };
   }, []);
 

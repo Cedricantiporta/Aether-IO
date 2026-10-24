@@ -203,7 +203,7 @@ export const SettingsDialog: React.FC = () => {
         </>)}
         </div>
       </div>
-      <div className="mt-3 flex justify-end"><Button variant="primary" onClick={() => close(false)} style={{ minWidth: '9rem' }}>Done</Button></div>
+      <div className="mt-3 flex justify-end gap-2"><span id="pause-footer-extra" className="contents" /><Button variant="primary" onClick={() => close(false)} style={{ minWidth: '9rem' }}>Done</Button></div>
     </Modal>
   );
 };

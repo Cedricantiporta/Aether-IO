@@ -139,7 +139,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 9, gold: 3, cost: 0, minWave: 1, weight: 0, color: 0x9a6a2a, knockResist: 1, armor: 10,
   },
   LAKE_HYDRA: {
-    name: 'Lurking Hydra', hp: 110, speed: 0, radius: 1.3, scale: 0.62, contactDamage: 12, projectileDamage: 10,
+    name: 'Lurking Hydra', hp: 190, speed: 0, radius: 1.7, scale: 0.85,   /* (owner 2026-10-24: bigger, more hp) */ contactDamage: 12, projectileDamage: 10,
     xp: 16, gold: 5, cost: 0, minWave: 1, weight: 0, color: 0x3f8f6a, knockResist: 1, armor: 20,
   },
   // ---- roster monsters

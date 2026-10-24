@@ -243,7 +243,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   // (owner) breath statues on the rim: Ember Wastes most, Desert / Frostpeak (frost variant) / Void next, Greenwood rarely and only from room 5
   w[TRAP.STATUE] = b === 0 ? (idx >= 5 ? 5 : 0) : b === 1 ? 8 : b === 2 ? 26 : b === 3 ? 12 : b === 4 ? 26 : b === 5 ? 38 : 22;
   if (b === 2) { w[TRAP.SIEGE] = 0; w[TRAP.TOWER] = 34; }   // (owner 2026-10-24) Sunscorch Desert: magic towers, never ballistas
-  if (b === 0) w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = 0;   // (owner 2026-10-24) Greenwood: no stationaries but its goblin archer towers
+  if (b === 0 || b === 3 || b === 6) w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = 0;   // (owner 2026-10-24) Greenwood: no stationaries but its goblin archer towers; Coral Isles: none at all (its lake hydras are the danger)
   const wS = w.slice();   // (the stationary weights, kept for the HALLS mix below)
   if (shape.kind === 'HALLS') w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = 0;   // (HALLS: the stationaries come as one planned mix below)
   // (owner) most rooms have no stationaries; a room that has them gets ONE kind, at most 3 pieces
@@ -342,7 +342,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   // ---- (owner) HALLS rooms: the stationaries come as ONE planned mix, never more than 4: a main kind x2-3, plus 1-2 of other kinds
   // (2 ballista + 2 fire breath, 3 fire breath + 1 ballista, 2 ballista + 1 fire breath + 1 rotating beam ...). Marble Halls: no goblin towers;
   // ballistas sit in the dead-end pockets / along the hall edges and shoot across a whole hall. No catapults anywhere any more.
-  if (shape.kind === 'HALLS' && (plan.type === 'COMBAT' || elite) && b !== 0 && !dbgTraps.force && (marbleH || rnd() < 0.75)) {
+  if (shape.kind === 'HALLS' && (plan.type === 'COMBAT' || elite) && b !== 0 && b !== 3 && b !== 6 && !dbgTraps.force && (marbleH || rnd() < 0.75)) {
     const pool: number[] = [];   // TRAP.* kinds this room may use (TRAP.BAR slot stands for the rotating flame beam here)
     if (marbleH ? true : wS[TRAP.SIEGE] > 0) pool.push(TRAP.SIEGE);
     if (marbleH ? true : wS[TRAP.STATUE] > 0) pool.push(TRAP.STATUE);

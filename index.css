@@ -313,12 +313,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
   background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .95) 0%, color-mix(in srgb, var(--hg, #fff) 80%, transparent) 30%, color-mix(in srgb, var(--hg, #fff) 30%, transparent) 55%, transparent 75%);
   box-shadow: inset 0 0 10px color-mix(in srgb, var(--hg, #fff) 85%, transparent);
 }
-.slot-highglow::after {
-  content: ''; position: absolute; inset: -40%;
-  background: conic-gradient(from 0deg, transparent 0 20%, rgba(255, 255, 255, .55) 25%, transparent 30% 70%, rgba(255, 255, 255, .45) 75%, transparent 80%);
-  animation: highglow-spin 4.5s linear infinite; mix-blend-mode: screen;
-}
-@keyframes highglow-spin { to { transform: rotate(360deg); } }
+/* (owner 2026-10-24: no animation on the High-grade glow) */
 .tt-grade { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border-radius: .6rem; font-size: .62rem; font-weight: 900; vertical-align: .08em; background: #e8e2d0; color: #7a6a48; }
 .tt-grade.is-high { background: linear-gradient(#fff3a8, #ffc94a); color: #6a3a00; box-shadow: 0 1px 2px rgba(60, 30, 0, .35); }
 .slot-lock {
@@ -1485,6 +1480,8 @@ button.tp-chip:hover { border-color: #f1d58e; color: #fff; }
 .wh-grid .rpg-slot.is-empty { opacity: .55; }
 .wh-search { width: 9rem; padding: .25rem .5rem; font-size: .74rem; color: #f3ead6; background: rgba(8, 9, 12, .7); border: 1px solid rgba(201, 162, 83, .35); outline: none; }
 .wh-search:focus { border-color: rgba(233, 196, 106, .8); }
+.wh-search option { background: #221c16; color: #f3ead6; }   /* (owner: the open dropdown list was white on white) */
+.wh-search option:checked { background: #6a4f22; color: #fff; }
 .wh-btn { padding: .28rem .7rem; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: #f6e6bd; background: linear-gradient(180deg, rgba(60, 48, 30, .9), rgba(24, 19, 12, .92)); border: 1px solid rgba(201, 162, 83, .55); }
 .wh-btn:hover { border-color: #e9c46a; color: #fff; }
 

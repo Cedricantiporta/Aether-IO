@@ -871,6 +871,12 @@ function aiLakeHydra(e: Enemy): void {
   if (e.angle <= 0 && e.state !== 'WINDUP') {
     e.angle = LHYDRA.up * (0.85 + Math.random() * 0.3);
     e.hideT = LHYDRA.down;
+    // (owner 2026-10-24) it can dive into one pool and come up in another: the hop happens while it is under water
+    if (feat.nLakes > 1 && Math.random() < 0.6) {
+      let k = Math.floor(Math.random() * feat.nLakes), far = 0;
+      for (let t = 0; t < feat.nLakes; t++) { const j = (k + t) % feat.nLakes, d = Math.hypot(feat.lx[j] - e.pos.x, feat.lz[j] - e.pos.z); if (d > feat.lr[j] + 2) { k = j; far = 1; break; } }
+      if (far) { const a = Math.random() * 6.283, r = feat.lr[k] * 0.35 * Math.random(); e.pos.set(feat.lx[k] + Math.cos(a) * r, e.pos.y, feat.lz[k] + Math.sin(a) * r); }
+    }
     enter(e, 'RECOVER');
     return;
   }

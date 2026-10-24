@@ -402,9 +402,7 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
 export const shopLocal = (px: number, pz: number, rot: number, dx: number, dz: number): [number, number] => [px + dx * Math.cos(rot) + dz * Math.sin(rot), pz - dx * Math.sin(rot) + dz * Math.cos(rot)];
 
 /** Decorative market stalls (town_kit_v2 'market_stall', fronts to the south; the useful shops are the SHOP_POSITIONS row). */
-export const STALLS: StallSpec[] = [   // (owner 2026-10-23: two cosy stalls beside the castle path, off the streets)
-  { x: -8.4, z: -11.8, rot: 0, c1: '#d8584a', c2: '#fff3e0', goods: 0 }, { x: 8.4, z: -12.6, rot: 0, c1: '#4a8fd8', c2: '#fff3e0', goods: 1 },
-];
+export const STALLS: StallSpec[] = [];   // (owner 2026-10-24: the two stalls in front of the castle steps are gone - an open square before the castle)
 /** Shop row: shop x of the 7 kit shops (z 1.5, rot 0, in constants SHOP_POSITIONS); the gaps between them hold lamps, signs and barrels. */
 export const SHOP_ROW_Z = 1.5;
 export const SHOP_ROW_X = [-39.5, -31, -22.5, 14, 22.5, 31, 39.5];
@@ -595,7 +593,7 @@ export const PLANTERS: PlanterSpec[] = [
   // (owner) flower boxes lining the summon + tech shop paths
   { x: 7.3, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 11.9, z: 15.4, w: 0.9, d: 2.0, kind: 1 }, { x: 14.9, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 19.5, z: 15.4, w: 0.9, d: 2.0, kind: 1 },
   // north street + castle path
-  { x: -2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 }, { x: 2.6, z: -11.5, w: 1.2, d: 3.0, kind: 1 },
+  // (owner 2026-10-24: no flower boxes in front of the castle steps)
   // castle approach: flower beds lining the path and the castle front
   { x: -4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 }, { x: 4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 },   // (flanking the keep's door steps)
   { x: -6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 }, { x: 6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 },

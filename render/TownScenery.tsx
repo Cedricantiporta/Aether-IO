@@ -127,6 +127,8 @@ export function flagTexture(): Texture {
   return t;
 }
 export const FLAG_TILE = 9.6;
+/** Height of the kit flower_planter's soil (its lawn top sits there). */
+const PLANTER_TOP = 0.62;
 
 /** World-space planar UVs (xz / tile) so the stones line up across roads and the plaza. */
 function planarUv(g: BufferGeometry, tile: number): BufferGeometry {
@@ -196,7 +198,7 @@ function buildRoads(): BufferGeometry {
   // (owner 2026-10-23: no orange ring inlays - the orange lines read as clutter)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
-  return planarUv(r.build(), FLAG_TILE);
+  return planarUv(tessellate(r.build(), 2.5), FLAG_TILE);
 }
 
 /** Terracotta kerb (owner ref): a thin rounded orange-brick curb along both edges of every paved street inside the walls, round the plaza and the gate forecourt. Pieces that would cross
@@ -242,6 +244,25 @@ export function buildKerbs(): BufferGeometry {
 }
 
 /** Paved yard: one flat polygon over the whole walled area with small grass patches cut out as holes. */
+/** Splits every triangle (longest edge first) until no edge is longer than `maxLen`, carrying every float attribute along:
+ *  no long thin slivers (owner: sliver fans - the holed paving shape, the plaza disc - showed as thin 'l l l' lines). Non-indexed output. */
+function tessellate(src: BufferGeometry, maxLen: number): BufferGeometry {
+  const g0 = src.index ? src.toNonIndexed() : src, names = Object.keys(g0.attributes), A = names.map((n) => g0.attributes[n]), out: number[][] = names.map(() => []);
+  const P = g0.attributes.position, vtx = (i: number): number[][] => A.map((a) => { const r: number[] = []; for (let k = 0; k < a.itemSize; k++) r.push(a.getComponent(i, k)); return r; });
+  const mid = (u: number[][], v: number[][]): number[][] => u.map((x, j) => x.map((c, k) => (c + v[j][k]) / 2));
+  const pi = names.indexOf('position'), len = (u: number[][], v: number[][]): number => Math.hypot(u[pi][0] - v[pi][0], u[pi][1] - v[pi][1], u[pi][2] - v[pi][2]);
+  const split = (a: number[][], b: number[][], c: number[][], d: number): void => {
+    const ab = len(a, b), bc = len(b, c), ca = len(c, a), m = Math.max(ab, bc, ca);
+    if (m <= maxLen || d > 18) { for (const v of [a, b, c]) v.forEach((x, j) => out[j].push(...x)); return; }
+    if (m === ab) { const k = mid(a, b); split(a, k, c, d + 1); split(k, b, c, d + 1); }
+    else if (m === bc) { const k = mid(b, c); split(a, b, k, d + 1); split(a, k, c, d + 1); }
+    else { const k = mid(c, a); split(a, b, k, d + 1); split(k, b, c, d + 1); }
+  };
+  for (let i = 0; i < P.count; i += 3) split(vtx(i), vtx(i + 1), vtx(i + 2), 0);
+  const g = new BufferGeometry();
+  names.forEach((n, j) => g.setAttribute(n, new Float32BufferAttribute(out[j], A[j].itemSize)));
+  return g;
+}
 function buildPaving(): { geo: BufferGeometry; patches: [number, number][][] } {
   const sh = new Shape();
   const X0 = WALL.x0 + 0.6, X1 = WALL.x1 - 0.6, Z0 = WALL.z0 + 0.6, Z1 = WALL.z1 + 0.6;
@@ -264,7 +285,7 @@ function buildPaving(): { geo: BufferGeometry; patches: [number, number][][] } {
     hole.closePath();
     sh.holes.push(hole);
   }
-  const g = new ShapeGeometry(sh);
+  const g = tessellate(new ShapeGeometry(sh), 2.5);   // (owner: the long sliver triangles of the holed shape showed as thin 'l l l' lines across the paving)
   g.rotateX(-Math.PI / 2);
   g.translate(0, 0.02, 0);
   g.setAttribute('color', new Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3));
@@ -425,7 +446,7 @@ function buildTierTops(): BufferGeometry {
   g.setAttribute('normal', new Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
   g.setAttribute('color', new Float32BufferAttribute(new Float32Array(pos.length).fill(1), 3));
   g.setIndex(idx);
-  return planarUv(g, FLAG_TILE);
+  return planarUv(tessellate(g, 2.5), FLAG_TILE);
 }
 
 /** The chapel's side door (west wall of the kit nave, out to the graveyard; interact spot = townData CHAPEL_SIDE): the v2 chapel has only
@@ -634,6 +655,8 @@ function buildTown() {
   { const c = at(CASTLE.x, CASTLE.z); addTerrace(c.b, c.g); }
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
   { const c = at(PLAZA.x, PLAZA.z); addPlaza(c.b, c.g); }
+  // (owner 2026-10-24) every flower box gets a flat green lawn top (a plain rounded green slab, not grass blades)
+  for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); at(p.x, p.z).b.box(len * 0.88, 0.06, wid * 0.72, [p.x, townLift(p.x, p.z) + PLANTER_TOP, p.z], '#7cbf4e', [0, along ? 0 : Math.PI / 2, 0]); }
   { const c = at(GATE.x, GATE.z); buildGateArch(c.b, c.g); }
   for (const sg of SIDE_GATES) put(sg.x, sg.z, Math.PI / 2, buildSideGateArch(sg.x > 0));   // (local passage along z -> world along x)
   for (const w of GATEWAYS) { const wb = new GB([1, 1]), wg = new GB([1, 1]); buildWayGate(wb, wg, w.name === 'beach' ? '#2f8fd0' : '#d08a2f'); put(w.x, w.z, w.rot, { b: wb.build(), g: wg.build() }); }

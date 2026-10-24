@@ -130,7 +130,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     }
     icT = 4 + Math.random() * 2;
   } else {
-    const n = 2 + (R > 32 ? 1 : 0);
+    const n = 3;   // (owner 2026-10-24: the black holes are the Void's stationaries)
     for (let i = 0; i < n && hz.nRift < hz.rift.length; i++) {
       if (!spot(RIFT_PULL_R * 0.7, 3)) continue;
       const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1];
