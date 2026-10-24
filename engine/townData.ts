@@ -898,8 +898,8 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Curfew at dusk. Do not make me ring it twice.', 'Move along, citizens.', 'All quiet at the gate.', 'Beware the Mire...'],
   },
-  {   // (owner) the East Gate's guard (SIDE_GATES; townGates 'east' blocks the passage until Lv 40)
-    name: 'Brannoc', role: 'East Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1.05, prop: 'spear', accent: '#ffd27a', home: [42.2, 5.0],
+  {   // (owner) the East Gate's guard (SIDE_GATES; townGates 'east' blocks the passage until Lv 40) (owner: stands right beside the gate doors)
+    name: 'Brannoc', role: 'East Gate Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1.05, prop: 'spear', accent: '#ffd27a', home: [43.5, 7.4],
     talk: [['Halt! Past the East Gate the wilds get nasty. Bigger beasts, meaner rocks, angrier bees.', 'Come back when you are level 40 and I will step aside. Promise.'],
       ['You again? Still the rules: level 40, then the gate is yours.', 'I do not make the rules. I just stand very firmly in front of them.'],
       ['Once you are strong enough, the whole east is yours to explore. Bring me back a nice rock.']],
