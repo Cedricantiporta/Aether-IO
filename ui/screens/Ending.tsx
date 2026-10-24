@@ -26,7 +26,7 @@ const storySlides = (): string[] => {
 };
 let STORY = storySlides();
 const CREDITS: [string, string][] = [
-  ['A game by', 'The Aether Survivor team'], ['3D characters', 'KayKit (CC0)'], ['Trees', 'Kenney (CC0)'], ['Built with', 'three.js · React · Zustand'],
+  ['A game by', 'The Aether Survivor team'], ['3D characters', 'KayKit (CC0)'], ['Trees', 'Kenney (CC0)'], ['Nature models', 'Quaternius (CC0)'], ['Built with', 'three.js · React · Zustand'],
 ];
 
 /** How long one story slide stays up (longer passages stay longer). */

@@ -1043,7 +1043,7 @@ export function Room({ q }: { q: QualityCfg }) {
       {r.active && !tower && <RoomWater />}
       {r.active && !tower && !isCamp && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
       {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} /></Suspense>
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower && !isCamp ? { biome: def.name, v: def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0 } : undefined} /></Suspense>
       <Stations />
       <CampProps />
       {!tower && <Suspense fallback={null}><Wanderer /><AllyActor /></Suspense>}

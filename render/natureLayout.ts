@@ -18,9 +18,10 @@ import {
   TOWN_TREES, FENCES, LOT_FENCES, HOUSES, TOWN_SEATS, CHURCH, PARK_EAST, WELLS, SIGNPOSTS, STEP_PATHS, CARTS, HAYSTACK, TRAIL_ROCKS, FIELDS, FARM, SCARECROW,
   STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA,
 } from '../engine/townData';
-import { V3_K } from '../engine/kitV3Data';
+import { V3_K, V3_BOX } from '../engine/kitV3Data';
+import { QT_PREFIX, QT_H, QT_COMMON, QT_PINE, qtLod, qtHash, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
-import { FILL, PIECES } from '../engine/townFill';
+import { FILL, PIECES, QT_DECOR } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
 import { CAVE_MOUTH, MINE_CAMP, inCaveClear } from '../engine/caveData';
 import { ARENA_RADIUS } from '../engine/world';
@@ -245,5 +246,39 @@ export function natureLayout(q: QualityCfg): Sets {
   dressing(q, out);
   // kit v3 pieces take their own size (engine/kitV3Data V3_K): the tables above keep the numbers of the old pieces
   out.forEach((l, k) => { const m = V3_K[k]; if (m) out.set(k, l.map((p) => ({ x: p.x, y: p.y, z: p.z, ry: p.ry, sx: p.sx * m, sy: p.sy * m, sz: p.sz * m }))); });
+  qtDecor(q, out);
+  qtForest(q, out);
   return out;
+}
+
+/** Quaternius (render/qtNature.tsx) walk-through decor of the town + meadows (engine/townFill QT_DECOR), thinned on the lower tiers. */
+function qtDecor(q: QualityCfg, out: Sets): void {
+  QT_DECOR.forEach(([piece, [x, z, ry, sx, sy, sz]], i) => {
+    if (q.name === 'LOW' ? i % 3 !== 0 : q.name === 'MEDIUM' ? i % 3 === 2 : false) return;
+    put(out, piece, { x, y: groundAt(x, z) - 0.02, z, ry, sx, sy, sz });
+  });
+}
+
+/** The generic forest trees OUTSIDE the walls (oak / birch / the two layered pines: TOWN_TREES, the grove tables of townFill, the forest ring) become Quaternius CommonTree / Pine
+ *  variants, sized to the toy tree they replace (same height x 1.12, a touch wider). On the island: the full ~2.5k-triangle models; off the island's edge: ~700-triangle LODs out to
+ *  30 m, past that the toy trees stay. Colliders, positions and counts are untouched. The blossom / fruit / willow / palm trees and everything inside the walls keep the toy look. */
+const QT_SWAP: Record<string, 'common' | 'pine'> = { tree_oak_big: 'common', tree_oak_small: 'common', tree_birch: 'common', tree_pine_layered_a: 'pine', tree_pine_layered_b: 'pine' };
+export const QT_FOREST_STATS = { hi: 0, lo: 0, tris: 0 };
+function qtForest(q: QualityCfg, out: Sets): void {
+  const low = q.name === 'LOW';
+  QT_FOREST_STATS.hi = QT_FOREST_STATS.lo = QT_FOREST_STATS.tris = 0;
+  for (const [piece, kind] of Object.entries(QT_SWAP)) {
+    const list = out.get(piece); if (!list) continue;
+    const keep: Place[] = [], H0 = V3_BOX[piece][4];
+    for (const p of list) {
+      const inside = Math.abs(p.x) < 47 && p.z > -43 && p.z < 40;
+      const dEdge = Math.hypot(p.x, p.z) - edgeR(Math.atan2(p.z, p.x));
+      if (inside || dEdge > 30) { keep.push(p); continue; }
+      const lo = low || dEdge > 0, node = qtPick(kind === 'common' ? QT_COMMON : QT_PINE, hash2(p.x, p.z, 11)), name = QT_PREFIX + (lo ? qtLod(node) : node);
+      const k = (H0 * p.sy) / QT_H[node] * 1.12, w = k * 1.06 * (p.sx / p.sy);
+      put(out, name, { x: p.x, y: p.y, z: p.z, ry: p.ry, sx: w, sy: k, sz: w });
+      if (lo) { QT_FOREST_STATS.lo++; QT_FOREST_STATS.tris += 700; } else { QT_FOREST_STATS.hi++; QT_FOREST_STATS.tris += 2500; }
+    }
+    out.set(piece, keep);
+  }
 }
