@@ -143,6 +143,9 @@ export function Projectiles() {
     const slashGoldG = crescent('#fff6d8', '#ffd76a', '#ffffff', 4.2, 0.48);   // Divine Avatar swing: gold / white
     const slashRedG = crescent('#ffd0d0', '#ff3a3a', '#ffffff', 4.2, 0.46);   // Legendary sword: crimson
     const slashDarkG = crescent('#3a2440', '#0c060e', '#c060ff', 4.2, 0.48);  // Mythic sword: black with a violet edge
+    // Ignar: bold fire crescent (his knight skill) / his dark knights' violet crescent
+    const fireCrescG = crescent('#ffb040', '#ff4a10', '#fff2b0', 4.4, 0.95);
+    const darkCrescG = crescent('#7a4ab8', '#1c0e2e', '#e0b0ff', 4.4, 0.95);
     // Bone Spear: a long jagged spear of bone
     const bs = new GB([0.85, 1.1]);
     bs.cyl(0.13, 0.18, 3.6, 6, [0, 0, -0.6], '#ebe5d0', [Math.PI / 2, 0, 0]); bs.cone(0.26, 1.3, 6, [0, 0, 1.75], '#f4efe0', [Math.PI / 2, 0, 0]);
@@ -209,6 +212,9 @@ export function Projectiles() {
       BOLT: mk([[boltG, glow]], 120),
       ICE_SHARD: mk([[iceG, glow]], MAXE),
       POISON_ARROW: mk([[pois.body, lit], [pois.glow, glow]], MAXE),
+      BIG_FLAME: mk([[orbG(0.42, '#ff6a1a', '#fff0b0'), glow]], 60),   // Ignar's giant fireball (scaled by its radius below)
+      FIRE_CRESCENT: mk([[fireCrescG, glow]], 80),
+      DARK_CRESCENT: mk([[darkCrescG, glow]], 40),
       BALLISTA: mk([[paGeo, glow]], 60),   // (owner) the siege bolt: a smaller Lightpiercer-style white arrow of light
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
@@ -481,6 +487,25 @@ export function Projectiles() {
           pushHalo(x, y, z, 2.8 * pu, 2.2, 0.8, 0.2, 0.65, CELL.GLOW);
           pushHalo(x, y, z, 1.3, 2.2, 1.6, 0.8, 0.8, CELL.GLOW);
           if (emit && Math.random() < dt * 34) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.2, 0.6 + Math.random() * 1.2, (Math.random() - 0.5) * 1.2, 0.45, 0.4, 0.05, 2.2, 0.9, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
+          break;
+        }
+        case 'BIG_FLAME': {   // (owner) ~2.5x bigger fireball: a fat swirling core, a big halo, a streaming ember tail
+          const pu = (1 + 0.15 * Math.sin(t * 14 + n)) * (p.radius / 0.5);
+          place(ims, i, x, y, z, t * 2, t * 3, 0, pu);
+          pushHalo(x, y, z, 2.8 * pu, 2.2, 0.8, 0.2, 0.6, CELL.GLOW);
+          pushHalo(x, y, z, 1.3 * pu, 2.2, 1.6, 0.8, 0.8, CELL.GLOW);
+          if (emit && Math.random() < dt * 70) FX.add.emit(x + (Math.random() - 0.5) * 1.2, y + (Math.random() - 0.5) * 0.8, z + (Math.random() - 0.5) * 1.2, -vx * 0.08 + (Math.random() - 0.5), 0.8 + Math.random() * 1.4, -vz * 0.08 + (Math.random() - 0.5), 0.55, 1.1, 0.1, 2.3, 0.85, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
+          break;
+        }
+        case 'FIRE_CRESCENT': case 'DARK_CRESCENT': {   // a bold flat crescent sweeping along its lane (the knight's skill 1, in fire / shadow)
+          const fire = p.kind === 'FIRE_CRESCENT', sc = p.radius / 2.2, lf = 1 + 0.08 * Math.sin(t * 20 + n);
+          place(ims, i, x, y, z, Math.atan2(vx, vz), 0, 0, sc * lf, sc, sc);
+          if (fire) pushHalo(x, y, z, 3.4 * sc, 2.4, 0.9, 0.25, 0.5, CELL.GLOW); else pushHalo(x, y, z, 3.2 * sc, 1.2, 0.4, 2.0, 0.45, CELL.GLOW);
+          if (emit && Math.random() < dt * 60) {
+            const yw = Math.atan2(vx, vz), o = (Math.random() - 0.5) * 4 * sc;
+            if (fire) FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.45, 0.8, 0.1, 2.4, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 0.8);
+            else FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.5, -vz * 0.05, 0.4, 0.4, 0.05, 1.4, 0.5, 2.2, 0.7, CELL.STAR, 0, 0.3);
+          }
           break;
         }
         case 'FIRE_BOLT': {

@@ -5,7 +5,7 @@
 import { BossWard } from './BossWard';
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BufferGeometry, Color, DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { world } from '../engine/world';
 import type { Enemy, EnemyKind } from '../engine/types';
 import { bossView } from '../engine/systems/bosses2';
@@ -130,6 +130,32 @@ function buildWarlord(): Rig {
   return { r: 1.0, body: body.build(), glow: glow.build(), armL: armBase(-1).build(), armR: aR.build(), armRGlow: gR.build(), armLPos: [-0.95, 2.45, 0], armRPos: [0.95, 2.45, 0], extraPos: NONE };
 }
 
+/** Ignar's devil wings (Burning Form): a big, rounded bat wing, plane xy, root at the shoulder, reaching out along +x (mirror for the left one).
+ *  Dark-red scalloped membrane over chunky bones with little knobs and a claw - cute and toy-like, not spiky. */
+function buildDevilWing(): { skin: BufferGeometry; bones: BufferGeometry } {
+  const S: V3 = [0, 0, 0], E: V3 = [1.3, 1.6, 0], W: V3 = [3.0, 2.5, 0], B: V3 = [0.25, -1.9, 0];
+  const T: V3[] = [[5.0, 2.9, 0], [5.3, 1.0, 0], [4.1, -0.9, 0], [2.4, -1.7, 0]];
+  const mid = (a: V3, b: V3): V3 => [(a[0] + b[0]) / 2 + (W[0] - (a[0] + b[0]) / 2) * 0.22, (a[1] + b[1]) / 2 + (W[1] - (a[1] + b[1]) / 2) * 0.22, 0.05];
+  const ring: V3[] = [T[0], mid(T[0], T[1]), T[1], mid(T[1], T[2]), T[2], mid(T[2], T[3]), T[3], mid(T[3], B), B];
+  const pos: number[] = [], col: number[] = [];
+  const c1 = new Color('#e0483c'), c2 = new Color('#7a1224'), tmp = new Color();
+  const vtx = (v: V3) => { pos.push(v[0], v[1], v[2]); const d = Math.hypot(v[0] - W[0], v[1] - W[1]) / 3.6; tmp.copy(c1).lerp(c2, Math.min(1, d)); col.push(tmp.r, tmp.g, tmp.b); };
+  for (let i = 0; i < ring.length - 1; i++) { vtx(W); vtx(ring[i]); vtx(ring[i + 1]); }
+  vtx(W); vtx(B); vtx(S);
+  const skin = new BufferGeometry();
+  skin.setAttribute('position', new Float32BufferAttribute(pos, 3)); skin.setAttribute('color', new Float32BufferAttribute(col, 3)); skin.computeVertexNormals();
+  const bn = new GB([0.85, 1.1]), bone = '#3a1418', knob = '#e8a060';
+  const seg = (a: V3, b: V3, r0: number, r1: number) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+    bn.cyl(r1, r0, len, 6, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0], bone, [0, 0, Math.atan2(-dx, dy)]);
+  };
+  seg(S, E, 0.26, 0.2); seg(E, W, 0.2, 0.15);
+  for (const t of T) { seg(W, t, 0.1, 0.05); bn.sph(0.1, t, knob, 1, 5); }
+  bn.sph(0.3, S, '#5a1a20', 1, 6); bn.sph(0.24, E, bone, 1, 6); bn.sph(0.22, W, bone, 1, 6);
+  bn.cone(0.1, 0.55, 5, [W[0] + 0.1, W[1] + 0.38, 0], knob, [0, 0, -0.25]);   // little thumb claw
+  return { skin, bones: bn.build() };
+}
+
 function buildVoid(): Rig {
   const dk = '#1b0b30', mid = '#2a1048', pur = '#c084fc', hi = '#e9d5ff';
   const body = new GB([0.7, 1.15]), glow = new GB([1, 1]), shards = new GB([0.8, 1.2]), sg = new GB([1, 1]);
@@ -194,6 +220,11 @@ function targets(e: Enemy, T: Pose, t: number): void {
       else if (p === 1) { if (W) { const w = clamp(k, 0, 1); T.armR = -3.0 * w; T.glow += w; } else if (A) { T.armR = 0.5; T.pitch = 0.3; T.dy = -0.2; T.glow += 1.4; } }
       else if (p === 2) { if (W || A) { T.armR = T.armL = -2.7; T.glow += 1.3; } }
       else if (p === 3) { if (W) { T.armR = -1.2 * clamp(k / 0.8, 0, 1); T.pitch = -0.2; } else if (A) { T.armR = 0.9; T.pitch = 0.3; T.glow += 1.4; } }
+      else if (p === 4) { if (W) { const w = clamp(k / 0.5, 0, 1); T.armR = -2.8 * w; T.pitch = -0.15 * w; T.glow += w * 1.4; } else if (A || R) { T.armR = 0.9; T.pitch = 0.3; T.glow += 1.6; } }   // Flame Crescent: sword up, then a sweeping cut
+      else if (p === 5) { if (W || A) { const w = W ? clamp(k / 0.8, 0, 1) : 1; T.armR = T.armL = -2.9 * w; T.spread = 0.5 * w; T.dy = 0.2 * w; T.glow += 1.8 * w; } }   // Radiant Burst: arms thrown up
+      else if (p === 6) { if (W || A) { T.armR = T.armL = -1.0; T.spread = -0.6; T.pitch = 0.12; T.glow += 1.6; } }   // Blazing Guard: arms crossed in front
+      else if (p === 7) { if (W) { T.pitch = -0.25 * clamp(k / 0.5, 0, 1); T.armR = -1.6; T.glow += 1.0; } else if (A) { T.pitch = bossView.dashPh === 0 ? 0.55 : 0.2; T.armR = bossView.dashPh === 0 ? 1.2 : 0.9; T.armL = 0.6; T.glow += 1.8; } }   // Blazing Rush: leaning into the charge
+      if (bossView.guardT > 0) T.glow += 1.0;
       break;
     default: // BOSS_VOID
       T.dy = 1.5 + sin(t * 1.7) * 0.2; T.spin = 0.7;
@@ -210,7 +241,9 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2, 2, 2) }),
   }), []);
   const root = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), extra = useRef<Group>(null!);
-  const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
+  const kb = useRef<Group>(null!), kw = useRef<Group>(null!), wingL = useRef<Group>(null!), wingR = useRef<Group>(null!);
+  const wing = useMemo(() => (kind === 'BOSS_WARLORD' ? buildDevilWing() : null), [kind]);
+  const wingMat = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, metalness: 0, side: DoubleSide, emissive: new Color('#5a0c12'), emissiveIntensity: 0.7 }), []);
   const km = useMemo(() => makeBossMats(), []), rig2 = useBossRig(KIT_PIECE[kind] || '', km);
   const S = useRef<Pose & { yaw: number; lastStep: number }>({ armL: 0, armR: 0, spread: 0.12, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0, yaw: 0, lastStep: 0 });
   const T = useMemo<Pose>(() => ({ armL: 0, armR: 0, spread: 0, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0 }), []);
@@ -248,6 +281,16 @@ function Boss2({ kind }: { kind: EnemyKind }) {
       if (kind === 'BOSS_VOID') { extra.current.rotation.y = TT * (0.8 + s.glow * 0.5); extra.current.position.y = sin(TT * 1.3) * 0.15; }
       else if (kind === 'BOSS_TREANT') extra.current.visible = bossView.bark;
       else extra.current.rotation.y = s.extraY;
+    }
+    if (wingL.current) {   // (owner) devil wings in the Burning Form: they unfurl during the ignition and flap a little
+      const f = bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, wr = wingR.current, wl = wingL.current;
+      wl.visible = wr.visible = f > 0.02;
+      const act = e.state === 'WINDUP' || e.state === 'ATTACK', fl = sin(TT * (act ? 7 : 4)) * (act ? 0.3 : 0.2), open = 0.25 + 0.35 * f;
+      const ws = 0.85 * f;
+      wr.scale.set(ws, ws, ws); wl.scale.set(-ws, ws, ws);
+      wr.rotation.y = open + fl; wl.rotation.y = -(open + fl);
+      wr.rotation.z = wl.rotation.z = 0.12 + fl * 0.35;
+      wr.rotation.z = 0.12 + fl * 0.35; wl.rotation.z = -(0.12 + fl * 0.35);
     }
     mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * sin(TT * 5));
     if (kind === 'BOSS_TREANT') mats.lit.color.setRGB(bossView.bark ? 0.62 : 1, bossView.bark ? 0.58 : 1, bossView.bark ? 0.55 : 1);
@@ -291,6 +334,12 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 
   return (
     <group ref={root} visible={false}>
+      {wing && ([wingR, wingL] as const).map((ref, k) => (
+        <group key={k} ref={ref} position={[k === 0 ? 0.55 : -0.55, 2.3, -0.7]} visible={false}>
+          <mesh geometry={wing.skin} material={wingMat} castShadow />
+          <mesh geometry={wing.bones} material={wingMat} castShadow />
+        </group>
+      ))}
       {rig2 && <group ref={kb}><group ref={kw}><primitive object={rig2.root} /></group></group>}
       <group visible={!rig2}>
       <group ref={body}>

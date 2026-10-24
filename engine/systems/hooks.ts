@@ -2,6 +2,8 @@
 import type { Enemy, GroundFx } from '../types';
 export const hooks = {
   onCleanse: () => {},
+  /** A giant fireball (Ignar) ended at (x, z): bosses2.ts leaves a capped fire patch + burst there. */
+  fireImpact: (_x: number, _z: number, _r: number) => {},
   /** A boss / mini-boss just became staggered (stagger bar filled). */
   onStagger: (_e: Enemy) => {},
   /** Damage multiplier applied to a boss (bark armor, hydra heads shielding the body...). Returns 1 for everything else. */

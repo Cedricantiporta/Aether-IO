@@ -51,6 +51,7 @@ export const MONSTER_KIT: Partial<Record<EnemyKind, CreatureCfg>> = {
   BOSS_SAPLING: { piece: 'boss_sapling', arch: 'biped', gait: 9 },
   BOSS_WYRMLING: { piece: 'boss_wyrmling', arch: 'fly', flap: 16, amp: 0.7, lift: 0.7 },
   BOSS_IMP: { piece: 'boss_imp', arch: 'fly', flap: 20, amp: 0.8, lift: 0.7 },
+  BOSS_DKNIGHT: { piece: 'skeleton_warrior', arch: 'biped', gait: 11 },
   BOSS_CRYSTAL: { piece: 'boss_crystal', arch: 'still' },
   BOSS_HYDRA_HEAD: { piece: 'boss_hydra_head', arch: 'still', lift: -6.5 },
 };

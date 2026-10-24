@@ -24,7 +24,7 @@ import {
 } from './enemies';
 import {
   BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
-  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx,
+  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch,
 } from './bossFx';
 import { wardedBossId } from './bossMech';
 
@@ -63,6 +63,7 @@ export const S = {
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
   enraged: false, wheelA: 0, ringT: 0, cleaveCd: 0, wheelN: 0,
+  guardT: 0, shT: 0, dashPh: 2, dashT: 0, dashLen: 0, slashT: 0, slashD: 0, trailD: 0, sx: 0, sz: 0, sdx: 0, sdz: 1,   // (owner rework) Blazing Guard / fire shield timers, dash + slash state, fire-trail lane
   formT: 0, auraT: 0,   // (owner) Burning Form: formT = the transformation in progress; enraged = in the burning form
   // the Dune Colossus (desert war machine)
   rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
@@ -81,7 +82,7 @@ export function resetBosses2(): void {
   for (let k = 0; k < 8; k++) S.lungeT[k] = 0;
   S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
-  S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0;
+  S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0; S.guardT = 0; S.shT = 0; S.dashPh = 2;
   S.voidOn = false; S.gravT = 0; S.pushed = false;
 }
 
@@ -168,14 +169,14 @@ interface Atk {
   windTick?(e: Enemy): void;
 }
 const LISTS: Partial<Record<EnemyKind, Atk[]>> = {};
-const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.6, BOSS_VOID: 1.7 };
+const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.2, BOSS_WARMACH: 1.6, BOSS_VOID: 1.7 };
 
 function cdFor(e: Enemy): number {
   return (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.5 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1);
 }
 
 /** (owner) Ignar's Burning Form: wind-ups, telegraphs and recoveries take 70% of the time. */
-const fast = (e: Enemy): number => (e.kind === 'BOSS_WARLORD' && S.enraged ? 0.7 : 1);
+const fast = (e: Enemy): number => (e.kind === 'BOSS_WARLORD' ? (S.enraged ? 0.66 : 0.82) : 1);
 /** Ignar's hit power (x1.3 in the Burning Form). */
 const ipwr = (e: Enemy): number => pwr(e) * (S.enraged ? 1.3 : 1);
 
@@ -228,7 +229,7 @@ hooks.damageMul = (e: Enemy): number => {
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
   if (e.kind === 'BOSS_HYDRA') return HYDRA_MUL[S.headsDead];
-  if (e.kind === 'BOSS_WARLORD' && S.formT > 0) return 0;   // transforming: untouchable
+  if (e.kind === 'BOSS_WARLORD') return S.formT > 0 ? 0 : S.guardT > 0 ? 0.5 : 1;   // transforming: untouchable; Blazing Guard: half damage
   return 1;
 };
 
@@ -266,7 +267,7 @@ export function bossDied2(e: Enemy): void {
   const list = world.enemies;
   for (let i = 0; i < list.length; i++) { const a = list[i]; if (a.active && isBossAdd(a.kind)) poofAdd(a); }
   endBossFx();
-  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.formT = 0; S.voidOn = false;
+  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.formT = 0; S.guardT = 0; S.voidOn = false;
   stat('BossDied');
 }
 
@@ -677,65 +678,169 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
 }
 
 // ============================================================ IGNAR ===========
-const I_WHEEL = 0, I_PILLARS = 1, I_IMPS = 2, I_CLEAVE = 3;
-const WARLORD_ORDER = [I_PILLARS, I_WHEEL, I_IMPS, I_PILLARS, I_WHEEL];
+// (owner rework) Ignar fights like a FIRE version of the hero Knight: Flame Crescent (knight skill 1), Radiant Burst (ring of
+// crescents + a fire shield), Blazing Guard (knight skill 2: knock-back burst then -50% damage), a Dash into a Slash. Plus giant
+// fireballs, 360-degree rings of fire pillars, and dark knights (they use the knight's crescent). Every hit burns; fire trails
+// are FIREPATCH zones capped by bossFx.firePatch() so the arena never fills up.
+const I_WHEEL = 0, I_PILLARS = 1, I_KNIGHTS = 2, I_CLEAVE = 3, I_CRESCENT = 4, I_BURST = 5, I_GUARD = 6, I_DASH = 7;
+const WARLORD_ORDER = [I_CRESCENT, I_DASH, I_PILLARS, I_WHEEL, I_BURST, I_CRESCENT, I_KNIGHTS, I_DASH, I_PILLARS, I_GUARD, I_WHEEL];
+const DASH_SP = 40, CRESC_SP = 27, KNIGHT_CAP = 3;
+
+/** A fiery knight crescent from Ignar towards angle `a` (x, z = sin, cos). Burns on hit. */
+function crescent(e: Enemy, a: number, speed: number, life: number, radius: number, dmg: number): void {
+  dirV.set(Math.sin(a), 0, Math.cos(a));
+  tv.set(e.pos.x + dirV.x * 1.6, 1.2, e.pos.z + dirV.z * 1.6);
+  fireEnemyProjectile(tv, dirV, 'FIRE_CRESCENT', speed, dmg, { life, radius, debuff: 2 });
+}
+/** Drops fire patches behind a travelling slash / dash: every `step` metres along the lane from (S.sx, S.sz), up to `upTo`. */
+function laneTrail(e: Enemy, upTo: number, step: number, r: number): void {
+  while (S.trailD <= upTo) { firePatch(S.sx + S.sdx * S.trailD, S.sz + S.sdz * S.trailD, r, 2.6, ipwr(e) * 0.1); S.trailD += step; }
+}
+function ipwrNow(): number { const b = bossEnemy(); return b ? ipwr(b) : 10; }
+hooks.fireImpact = (x: number, z: number, r: number): void => {   // a giant fireball ends: a burst and a (capped) fire patch
+  firePatch(x, z, r * 1.15, 2.6, ipwrNow() * 0.1);
+  events.emit('explosion', { pos: new Vector3(x, 0.5, z), radius: r * 1.4, color: 0xff6a1a });
+};
 
 LISTS.BOSS_WARLORD = [
-  { // Flame Wheel: Ignar plants himself and spins; rings of fire bolts with a rotating gap pattern fly outward.
-    name: 'Flame Wheel!', wind: () => 1.0, act: () => (S.enraged ? 4.4 : 3.6), rec: () => 1.1,
-    begin(e) { circle(e.pos.x, e.pos.z, 5, 1.0, BT.VISUAL, 0, 0xff6a1a); },
+  { // Flame Wheel: Ignar plants himself and spins; rings of GIANT fireballs with a rotating gap pattern fly outward.
+    name: 'Flame Wheel!', wind: () => 0.9, act: () => (S.enraged ? 4.2 : 3.4), rec: () => 0.9,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.9 * fast(e), BT.VISUAL, 0, 0xff6a1a); },
     fire(e) { S.wheelA = Math.random() * 6.283; S.ringT = 0; S.wheelN = 0; void e; },
     tick(e, dt) {
       stand(e);
       S.ringT -= dt;
       if (S.ringT > 0) return;
-      S.ringT = (S.enraged ? 0.27 : 0.34) - 0.03 * e.phase;
-      S.wheelA += 0.21;
-      const n = 10 + (S.enraged ? 2 : 0);
+      S.ringT = (S.enraged ? 0.5 : 0.62) - 0.03 * e.phase;
+      S.wheelA += 0.55;
+      const n = S.enraged ? 7 : 6;   // (owner) fireballs ~2.5x bigger: fewer per ring so there are always gaps
       for (let i = 0; i < n; i++) {
         const a = S.wheelA + (i / n) * 6.283;
         dirV.set(Math.sin(a), 0, Math.cos(a));
-        tv.set(e.pos.x, 1.2, e.pos.z);
-        fireEnemyProjectile(tv, dirV, 'FLAME', S.enraged ? 11.5 : 9, ipwr(e) * 0.6, { life: 4.5, radius: 0.55, debuff: 2 });
+        tv.set(e.pos.x + dirV.x * 1.5, 1.6, e.pos.z + dirV.z * 1.5);
+        fireEnemyProjectile(tv, dirV, 'BIG_FLAME', S.enraged ? 10.5 : 8.5, ipwr(e) * 0.8, { life: 3.0, radius: 1.4, debuff: 2 });
       }
       S.wheelN++;
-      if ((S.wheelN & 3) === 0) events.emit('shake', { amount: 0.2 });
+      if ((S.wheelN & 1) === 0) events.emit('shake', { amount: 0.2 });
     },
   },
-  { // Fire Pillars: a salvo of erupting pillars, the first under you, the rest fanning out where you are heading.
-    name: 'Pillars of Cinder!', wind: () => 1.0, act: () => 0.4, rec: () => 1.0,
+  { // Pillars of Cinder: rings of erupting pillars all the way round him (360 degrees), rippling outwards.
+    name: 'Pillars of Cinder!', wind: () => 1.0, act: () => 0.4, rec: () => 0.9,
     begin(e) {
-      const p = world.player, n = 4 + e.phase + (S.enraged ? 1 : 0);   // (owner: fewer + spread out; was 5 + 2 phase + 2)
-      const px: number[] = [], pz: number[] = [];
-      for (let i = 0, tries = 0; i < n && tries < n * 10; tries++) {
-        const life = (1.0 + i * 0.2) * fast(e);
-        let x = p.pos.x, z = p.pos.z;
-        if (i > 0) { const a = Math.random() * 6.283, r = 6 + Math.random() * 8; x += Math.sin(a) * r + p.vel.x * life * 0.5; z += Math.cos(a) * r + p.vel.z * life * 0.5; }
-        tv.set(x, 0, z); clampArena(tv, 2); clampToVoid(tv, 2);
-        let ok = true; for (let k = 0; k < px.length; k++) if ((px[k] - tv.x) ** 2 + (pz[k] - tv.z) ** 2 < 7 * 7) { ok = false; break; }
-        if (!ok) continue;
-        px.push(tv.x); pz.push(tv.z); i++;
-        circle(tv.x, tv.z, S.enraged ? 3.0 : 2.6, life, BT.PILLAR, ipwr(e) * 1.5, S.enraged ? 0xff2a0a : 0xff5a1a);
+      const en = S.enraged, base = Math.random() * 6.283, pr = en ? 2.5 : 2.2;
+      const rings = en ? 3 : 2;
+      for (let ri = 0; ri < rings; ri++) {
+        const rr = en ? 6.5 + ri * 5.8 : 7.5 + ri * 6.5, n = en ? (ri === 1 ? 10 : 7) : (ri === 0 ? 8 : 12);   // normal 20 pillars, burning form 24
+        for (let k = 0; k < n; k++) {
+          const a = base + ri * 0.45 + (k / n) * 6.283, x = e.pos.x + Math.sin(a) * rr, z = e.pos.z + Math.cos(a) * rr;
+          const lim = edgeLimit(x, z, 2); if (x * x + z * z > lim * lim) continue;
+          circle(x, z, pr, (0.95 + ri * 0.4) * fast(e), BT.PILLAR, ipwr(e) * 1.4, en ? 0xff2a0a : 0xff5a1a);
+        }
       }
+      events.emit('shake', { amount: 0.15 });
     },
     fire() { /* pillars erupt as their telegraphs expire */ },
   },
-  { // Summon Imps: fire imps pour out of a portal at his feet.
-    name: 'Summon Imps!', wind: () => 1.0, act: () => 0.4, rec: () => 0.8,
-    begin(e) { circle(e.pos.x, e.pos.z, 5, 1.0, BT.VISUAL, 0, 0xff3a1a); },
+  { // Call the Dark Knights: 2-3 dark knights step out of a ring of shadow (max 3 alive).
+    name: 'Call the Dark Knights!', wind: () => 0.9, act: () => 0.4, rec: () => 0.7,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 4.5, 0.9 * fast(e), BT.VISUAL, 0, 0x8a4aff); },
     fire(e) {
-      const n = 2 + e.phase + (S.enraged ? 1 : 0), base = Math.random() * 6.283;   // (balance pass: 2-4 per call, max 6 alive; was 3-5, max 10)
+      const room = KNIGHT_CAP - countAdds('BOSS_DKNIGHT'), n = Math.min(room, 2 + (S.enraged || e.phase >= 1 ? 1 : 0)), base = Math.random() * 6.283;
       for (let i = 0; i < n; i++) {
-        const a = base + (i / n) * 6.283, r = e.radius + 2;
-        spawnAdd('BOSS_IMP', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 0.5, 0.75, 6);
+        const a = base + (i / Math.max(n, 1)) * 6.283, r = e.radius + 3.2;
+        spawnAdd('BOSS_DKNIGHT', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 1, 1, KNIGHT_CAP);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 6 });
     },
   },
-  { // Hellcleave: a close-range cone slash with a shove and a stun.
-    name: 'Hellcleave!', wind: () => 0.8, act: () => 0.3, rec: () => 0.7,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, S.enraged ? 12 : 10, 0.95, 0.8 * fast(e), BT.SWEEP, ipwr(e) * 1.6, 0xff6a1a); },
-    fire() { /* resolves with the telegraph */ },
+  { // Hellcleave: a close-range cone slash with a shove and a stun; it burns and scorches the ground in its arc.
+    name: 'Hellcleave!', wind: () => 0.7, act: () => 0.3, rec: () => 0.6,
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, S.enraged ? 12 : 10, 0.95, 0.7 * fast(e), BT.SWEEP, ipwr(e) * 1.6, 0xff6a1a); },
+    fire(e) {
+      const p = world.player, rg = S.enraged ? 12 : 10;
+      if (p.alive && inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, rg, 0.95)) applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
+      const a0 = Math.atan2(e.dir.x, e.dir.z);
+      for (let k = -1; k <= 1; k++) firePatch(e.pos.x + Math.sin(a0 + k * 0.55) * rg * 0.62, e.pos.z + Math.cos(a0 + k * 0.55) * rg * 0.62, 1.7, 2.6, ipwr(e) * 0.1);
+    },
+    windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
+  },
+  { // Flame Crescent (knight skill 1): a huge crescent of fire sweeps along a lane (a fan of three in the Burning Form).
+    name: 'Flame Crescent!', wind: () => 0.6, act: () => 0.55, rec: () => 0.5,
+    begin(e, ux, uz) {
+      e.dir.set(ux, 0, uz);
+      const n = S.enraged ? 3 : 1;
+      for (let i = 0; i < n; i++) { const a = Math.atan2(ux, uz) + (n === 1 ? 0 : (i - 1) * 0.42); lane(e, Math.sin(a), Math.cos(a), 25, 5, 0.6 * fast(e), BT.VISUAL, 0, 0xff7a2a); }
+    },
+    fire(e) {
+      const base = Math.atan2(e.dir.x, e.dir.z), n = S.enraged ? 3 : 1;
+      for (let i = 0; i < n; i++) crescent(e, base + (n === 1 ? 0 : (i - 1) * 0.42), CRESC_SP, 0.85, 2.3, ipwr(e) * 1.5);
+      S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
+      events.emit('shake', { amount: 0.18 });
+    },
+    tick(e, dt) { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 21), 4.5, 1.6); },   // the fire trail follows the crescent
+    windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
+  },
+  { // Radiant Burst (knight passive): a fiery burst round him and a ring of crescents, then a fire shield wraps him.
+    name: 'Radiant Burst!', wind: () => 0.85, act: () => 0.4, rec: () => 0.7,
+    begin(e) {
+      circle(e.pos.x, e.pos.z, 7.5, 0.85 * fast(e), BT.FBURST, ipwr(e) * 1.3, 0xff5a1a);
+      const n = S.enraged ? 10 : 8; S.wheelA = Math.random() * 6.283;
+      for (let i = 0; i < n; i++) { const a = S.wheelA + (i / n) * 6.283; lane(e, Math.sin(a), Math.cos(a), 17, 3.2, 0.85 * fast(e), BT.VISUAL, 0, 0xff8a3a); }
+    },
+    fire(e) {
+      const n = S.enraged ? 10 : 8;
+      for (let i = 0; i < n; i++) crescent(e, S.wheelA + (i / n) * 6.283, 17, 0.9, 1.5, ipwr(e) * 0.9);
+      e.shield = Math.max(e.shield, e.maxHp * 0.04); S.shT = 7;   // fire shield (a small absorb, 7 s)
+      events.emit('floatText', { pos: e.pos, text: 'FIRE SHIELD', color: 0xffb040, scale: 0.9, dy: 2.8 });
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0xffb040 });
+      for (let i = 0; i < 4; i++) { const a = S.wheelA + (i / 4) * 6.283 + 0.4; firePatch(e.pos.x + Math.sin(a) * 4, e.pos.z + Math.cos(a) * 4, 1.5, 2.4, ipwr(e) * 0.1); }
+    },
+  },
+  { // Blazing Guard (knight skill 2): a knock-back burst, then he takes half damage for a few seconds.
+    name: 'Blazing Guard!', wind: () => 0.6, act: () => 0.4, rec: () => 0.5,
+    begin(e) { circle(e.pos.x, e.pos.z, 8.5, 0.6 * fast(e), BT.FBURST, ipwr(e) * 1.1, 0xff7a1a); },
+    fire(e) {
+      S.guardT = 3.5;
+      events.emit('shieldBlock', { pos: e.pos.clone(), radius: 3.4, gold: true });
+      events.emit('floatText', { pos: e.pos, text: 'BLAZING GUARD', color: 0xffd070, scale: 0.9, dy: 2.8 });
+    },
+  },
+  { // Dash and Slash: a telegraphed rush along a lane (burning trail, hits what it touches), then an instant crescent slash.
+    name: 'Blazing Rush!', wind: () => 0.55, act: () => 1.0, rec: () => 0.55,
+    begin(e, ux, uz, dist) {
+      e.dir.set(ux, 0, uz); S.dashLen = Math.min(Math.max(dist - 3, 6), 20);
+      lane(e, ux, uz, S.dashLen + 1, 3.4, 0.55 * fast(e), BT.VISUAL, 0, 0xff5a1a);
+    },
+    fire(e) {
+      S.dashPh = 0; S.dashT = S.dashLen / DASH_SP; S.ramHit = false;
+      S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 1.5; S.slashD = 0;
+      events.emit('trick', { pos: e.pos.clone(), kind: 'LEAP', radius: 4 });
+    },
+    tick(e, dt, ux, uz) {
+      if (S.dashPh === 0) {
+        drive(e, S.sdx, S.sdz, DASH_SP); S.slashD += DASH_SP * dt; S.dashT -= dt;
+        laneTrail(e, S.slashD, 3.2, 1.7);
+        const p = world.player;
+        if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 1.3) ** 2) {
+          S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
+        }
+        if (S.dashT <= 0) {   // arrived: a quick aimed slash
+          S.dashPh = 1; stand(e); e.dir.set(ux, 0, uz); S.slashT = 0.34 * fast(e);
+          lane(e, ux, uz, 24, 5, S.slashT, BT.VISUAL, 0, 0xff7a2a);
+        }
+      } else if (S.dashPh === 1) {
+        stand(e); requestYaw(Math.atan2(e.dir.x, e.dir.z)); S.slashT -= dt;
+        if (S.slashT <= 0) {
+          const a = Math.atan2(e.dir.x, e.dir.z);
+          crescent(e, a, CRESC_SP, 0.8, 2.3, ipwr(e) * 1.4);
+          if (S.enraged) { crescent(e, a + 0.4, CRESC_SP, 0.8, 2.0, ipwr(e) * 1.1); crescent(e, a - 0.4, CRESC_SP, 0.8, 2.0, ipwr(e) * 1.1); }
+          S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
+          S.dashPh = 2; S.slashT = 0.3; events.emit('shake', { amount: 0.2 });
+        }
+      } else { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 20), 4.5, 1.6); S.slashT -= dt; }
+    },
+    done: () => S.dashPh === 2 && S.slashT <= 0,
+    end(e) { stand(e); S.dashPh = 2; },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
   },
 ];
@@ -743,12 +848,12 @@ LISTS.BOSS_WARLORD = [
 function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WARLORD!;
   // (owner) Second form at half health: Ignar bursts into flame (a short untouchable transformation that ends in a fire
-  // nova), then fights as the Burning Form - faster moves, shorter telegraphs, harder hits, a scorching aura.
+  // nova), then fights as the Burning Form - faster moves, shorter telegraphs, harder hits, a scorching aura, devil wings.
   if (!S.enraged && S.formT <= 0 && e.hp < e.maxHp * 0.5) {
     const a = list[e.pattern];
     if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
     enter(e, 'CHASE'); stand(e);
-    S.formT = 2.0;
+    S.formT = 2.0; S.guardT = 0;
     circle(e.pos.x, e.pos.z, 9, 2.0, BT.PILLAR, pwr(e) * 1.4, 0xff2a0a);   // get out before the nova
     events.emit('shake', { amount: 0.6 });
     events.emit('floatText', { pos: e.pos, text: 'IGNITING...', color: 0xff6a1a, scale: 1.3, dy: 2.6 });
@@ -758,7 +863,7 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   if (S.formT > 0) {
     S.formT -= dt; stand(e);
     if (S.formT <= 0) {
-      S.enraged = true; e.speed *= 1.35;
+      S.enraged = true; e.speed *= 1.3;
       spawnWave(e.pos.x, e.pos.z, 16, 22, 1.4, pwr(e) * 0.8, WAVE_FIRE, 0xff4a1a, e.radius);
       events.emit('shake', { amount: 1.0 });
       events.emit('floatText', { pos: e.pos, text: 'BURNING FORM', color: 0xff3a1a, scale: 1.5, dy: 2.8 });
@@ -767,6 +872,8 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
     }
     return;
   }
+  if (S.guardT > 0) S.guardT -= dt;
+  if (S.shT > 0) { S.shT -= dt; if (S.shT <= 0) e.shield = 0; }
   if (S.enraged) {   // scorching aura: standing close to him burns
     S.auraT -= dt;
     if (S.auraT <= 0) {
@@ -781,7 +888,11 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   if (e.attackCd > 0) return;
   let id: number;
   if (dist < (S.enraged ? 10 : 8) && S.cleaveCd <= 0) { id = I_CLEAVE; S.cleaveCd = S.enraged ? 3.5 : 6; }
-  else id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
+  else {
+    id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
+    if (id === I_DASH && dist < 9) id = I_BURST;                                   // too close to rush: burst instead
+    if (id === I_KNIGHTS && countAdds('BOSS_DKNIGHT') >= KNIGHT_CAP) id = I_CRESCENT;   // knights capped
+  }
   beginAtk(e, list, id, ux, uz, dist);
 }
 

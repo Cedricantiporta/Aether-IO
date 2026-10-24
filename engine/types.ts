@@ -34,6 +34,7 @@ export type EnemyKind =
   | 'BOSS_SAPLING'    // boss add: Elderroot mini-treant (walks, fuses, bursts into thorns)
   | 'BOSS_HYDRA_HEAD' // boss part: separately targetable hydra head (positioned by the hydra AI)
   | 'BOSS_IMP'        // boss add: Ignar fire imp (goblin model, tinted)
+  | 'BOSS_DKNIGHT'    // boss add: Ignar's dark knight (skeleton-warrior model, dark tint; its attack is the knight's crescent slash)
   | 'BOSS_WYRMLING'   // boss add: Glacius's baby wyrm (flies, kites, fires slowing ice shards)
   | 'GOBLIN_ARCHER'   // stationary: shoots from a wooden archer tower (the tower is an obstacle; the archer is killable)
   | 'LAKE_HYDRA'      // stationary: a hydra head peeking from a lake (water stages); spits, bites, submerges
@@ -174,7 +175,9 @@ export interface Projectile {
 
 // -------------------------------------------------------- enemy projectiles --
 export type EnemyProjectileKind = 'ARROW' | 'ORB' | 'SLOW_ORB' | 'BOSS_ORB' | 'ROCK' | 'FLAME' | 'AXE'
-  | 'FIRE_BOLT' | 'BOLT' | 'ICE_SHARD' | 'POISON_ARROW' | 'BALLISTA';   // elemental shots (enemies.ts elemental table): burn / shock (short stun) / chill (3 stacks freeze) / poison; BALLISTA: room war machine bolt (roomTraps.ts)   // AXE: dark barbarian boomerang (drawn by render/DarkHero)
+  | 'FIRE_BOLT' | 'BOLT' | 'ICE_SHARD' | 'POISON_ARROW' | 'BALLISTA'
+  | 'BIG_FLAME' | 'FIRE_CRESCENT' | 'DARK_CRESCENT';   // Ignar: giant fireball (leaves a fire patch where it ends) / fiery knight crescent / his dark knights' crescent (render/Projectiles.tsx)
+   // elemental shots (enemies.ts elemental table): burn / shock (short stun) / chill (3 stacks freeze) / poison; BALLISTA: room war machine bolt (roomTraps.ts)   // AXE: dark barbarian boomerang (drawn by render/DarkHero)
 
 export interface EnemyProjectile {
   id: number;

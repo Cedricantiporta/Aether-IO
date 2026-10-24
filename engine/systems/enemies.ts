@@ -35,6 +35,7 @@ import {
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
+import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore, rollDropPlus } from '../../store';
@@ -535,6 +536,39 @@ function aiChaser(e: Enemy, hop: boolean): void {
   if (e.state !== 'CHASE') { enter(e, 'CHASE'); }
   const inv = 1 / Math.max(tdist, 0.001);
   setVel(e, tdx * inv, tdz * inv, e.speed * (hop ? hopMult(e) : 1));
+}
+
+/** Ignar's dark knight (owner): closes in, then looses the knight's skill-1 crescent slash (telegraphed line first) and backs off. */
+const DKNIGHT = { windup: 0.6, recover: 0.8, cd: 3.2, range: 10.5, crescent: 19, life: 0.62 };
+function aiDarkKnight(e: Enemy): void {
+  const inv = 1 / Math.max(tdist, 0.001);
+  const ux = tdx * inv, uz = tdz * inv;
+  switch (e.state) {
+    case 'WINDUP':
+      stop(e); desiredYaw = Math.atan2(e.dir.x, e.dir.z);
+      if (e.stateT >= DKNIGHT.windup) {
+        tmpV.set(e.dir.x, 0, e.dir.z);
+        fireEnemyProjectile(e.pos, tmpV, 'DARK_CRESCENT', DKNIGHT.crescent, e.projectileDamage * 1.3, { life: DKNIGHT.life, radius: 1.7 });
+        events.emit('shake', { amount: 0.06 });
+        e.attackCd = DKNIGHT.cd * (0.85 + Math.random() * 0.4);
+        enter(e, 'RECOVER');
+      }
+      return;
+    case 'RECOVER':
+      setVel(e, -ux, -uz, e.speed * 0.5);
+      if (e.stateT >= DKNIGHT.recover) enter(e, 'CHASE');
+      return;
+    default:
+      if (e.state !== 'CHASE') enter(e, 'CHASE');
+      if (tdist > DKNIGHT.range - 3) setVel(e, ux, uz, e.speed); else stop(e);
+      desiredYaw = Math.atan2(ux, uz);
+      if (e.attackCd <= 0 && tdist < DKNIGHT.range) {
+        e.dir.set(ux, 0, uz);
+        const zn = spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, 12, 3.4, DKNIGHT.windup, 0xa070ff);
+        if (zn) { zn.trick = 30; zn.damage = 0; }   // 30 = BT.VISUAL (warning only)
+        enter(e, 'WINDUP');
+      }
+  }
 }
 
 function aiBat(e: Enemy): void {
@@ -1257,6 +1291,7 @@ function runAI(e: Enemy): void {
     case 'BOSS_SAPLING': aiSapling(e); break;
     case 'BOSS_HYDRA_HEAD': aiHydraHead(e); break;
     case 'BOSS_IMP': aiChaser(e, false); break;
+    case 'BOSS_DKNIGHT': aiDarkKnight(e); break;
     case 'GOBLIN_ARCHER': aiTowerArcher(e); break;
     case 'LAKE_HYDRA': aiLakeHydra(e); break;
     case 'SCARAB': aiScarab(e); break;
@@ -1831,6 +1866,9 @@ const PROJ_DEFAULTS: Record<EnemyProjectileKind, { life: number; radius: number 
   ICE_SHARD: { life: 2.2, radius: 0.4 },
   POISON_ARROW: { life: 2.5, radius: 0.35 },
   BALLISTA: { life: 2.2, radius: 0.55 },
+  BIG_FLAME: { life: 3.2, radius: 1.4 },
+  FIRE_CRESCENT: { life: 0.9, radius: 2.3 },
+  DARK_CRESCENT: { life: 0.7, radius: 1.7 },
 };
 
 // ------------------------------------------------------------ elemental shots (owner) --------
@@ -1926,7 +1964,7 @@ export function updateEnemyProjectiles(dt: number): void {
     p.pos.y += p.vel.y * dt;
     p.pos.z += p.vel.z * dt;
     p.life -= dt;
-    if (p.life <= 0 || p.pos.x * p.pos.x + p.pos.z * p.pos.z > maxR * maxR) { p.active = false; continue; }
+    if (p.life <= 0 || p.pos.x * p.pos.x + p.pos.z * p.pos.z > maxR * maxR) { p.active = false; if (p.kind === 'BIG_FLAME' && p.life <= 0) hooks.fireImpact(p.pos.x, p.pos.z, p.radius); continue; }
 
     // earthwall dome
     if (ew.active) {
@@ -2009,6 +2047,7 @@ export function updateEnemyProjectiles(dt: number): void {
         if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
+        if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       }
     }
