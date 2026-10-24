@@ -79,6 +79,14 @@ function bakeMesh(m: Mesh, mat: Matrix4): BufferGeometry {
   return g;
 }
 
+/** one plain warm brown (lighting gives the rails / posts their shading) */
+const FENCE_BROWN = [0.43, 0.27, 0.15];
+function plainBrown(g: BufferGeometry): void {
+  const c = g.attributes.color;
+  for (let i = 0; i < c.count; i++) c.setXYZ(i, FENCE_BROWN[0], FENCE_BROWN[1], FENCE_BROWN[2]);
+  c.needsUpdate = true;
+}
+
 function bake(scene: Object3D): NatureKitData {
   scene.updateMatrixWorld(true);
   const stat: Record<string, { b: BufferGeometry[]; g: BufferGeometry[] }> = {};
@@ -99,6 +107,7 @@ function bake(scene: Object3D): NatureKitData {
     if (!k || !kind) return;
     if (kind === 'static') {
       const g = bakeMesh(m, m.matrixWorld), e = (stat[k.name] ??= { b: [], g: [] });
+      if (k.name === 'fence_wood') plainBrown(g);   // (owner 2026-10-24: every farm / path fence is a plain brown wooden fence)
       ((mt.name || '').includes('glow') ? e.g : e.b).push(g);
       if (k.name === 'dock_segment' && mt.name === 'wood') (stat.dock_deck ??= { b: [], g: [] }).b.push(bakeMesh(m, m.matrixWorld));   // the planks alone (the T-head tiles get their own posts)
     } else if (kind === 'blades') {

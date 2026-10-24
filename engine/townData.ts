@@ -67,7 +67,7 @@ export function riverBank(x: number, side: 0 | 1): number {
 export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riverBank(x, 0) - 1.4, z1: riverBank(x, 1) + 1.4, h: 0.55 }; })();
 export const onMineBridge = (x: number, z: number, m = 0): boolean => Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.hw + m && z > MINE_BRIDGE.z0 - m && z < MINE_BRIDGE.z1 + m;
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
-export const BRIDGE = { hw: 4.2, z0: 57.5, z1: 78.5, h: 1.6 };
+export const BRIDGE = { hw: 6.3, z0: 57.5, z1: 78.5, h: 1.6 };
 /** The Adventure Portal (owner 2026-10-21: it moved INSIDE the kingdom, into the middle of the plaza the seven shops ring): the kit v3 `adventure_portal` at scale PORTAL_S,
  *  its front facing south (+z, the avenue / the gate), standing on the plaza's round lawn. `front` = where the hero stands to step in (also the 'came back from a run' spot is 2.5 m south of it). */
 export const PORTAL_S = 0.9;
