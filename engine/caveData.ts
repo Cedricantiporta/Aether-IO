@@ -15,21 +15,39 @@ import { caveGoldPrice } from '../constants';
  *  angles a0..a1 (atan2(z, x) around the town centre), i.e. a wide rounded bay about x 56..74, z -2..30 that holds the
  *  mining camp (walkable; the forest, rim rocks and edge bushes follow the new edge automatically). */
 export const CAVE_BAY = { a0: -0.15, a1: 0.5, depth: 12 };
-/** The mine entrance = nature_kit_v1 'mine_entrance' (a rocky mound with a timber-framed arch and a short rail track, 7.3 x 8 m) at the
- *  back of the bay; its front faces south like every building, toward the camera and the camp yard. */
-export const CAVE_MOUTH = { x: 72.4, z: 4.8, rot: 0 };
+/** The Crystal Cave mouth: a BIG formation of faceted boulders (the Boulder Prison rock, render/facetRock.ts; drawn by render/natureLayout.ts +
+ *  render/CaveEntrance.tsx). CAVE_MOUTH = the centre of the dark opening at ground level; the rock mass piles up to the LEFT / behind it, so the opening sits on
+ *  the right-hand side of the cliff as seen from the default camera (looking north; the opening faces south like every building, toward the camp yard). */
+export const CAVE_MOUTH = { x: 75, z: 4.8, rot: 0 };
 const FX = Math.sin(CAVE_MOUTH.rot), FZ = Math.cos(CAVE_MOUTH.rot);   // the opening's facing (unit xz)
+/** Opening of the cave (local to CAVE_MOUTH): half width, height, and the local z of its front plane. */
+export const CAVE_OPENING = { hw: 2.3, h: 4.9, z: 3.0 };
 /** Interact spot in front of the opening (E: "Enter Crystal Cave"). */
 export const CAVE_DOOR = { x: CAVE_MOUTH.x + FX * 7.2, z: CAVE_MOUTH.z + FZ * 7.2, r: 3.8 };
 /** Where the hero stands after leaving the cave (just outside the opening, facing the bay along CAVE_MOUTH.rot). */
 export const CAVE_OUT = { x: CAVE_MOUTH.x + FX * 8.4, z: CAVE_MOUTH.z + FZ * 8.4 };
-/** Kept free of random forest trees / rim rocks / edge bushes (the mound and the opening stay readable). */
-export const CAVE_CLEAR = { x: CAVE_MOUTH.x + FX * 1.5, z: CAVE_MOUTH.z + FZ * 1.5, r: 9.5 };
-/** Town colliders [x, z, r] of the entrance: the mound's footprint (x -3.7..3.7, z -2.6..3.4 of the kit piece; the rail track in front of the arch stays walkable). */
+/** Kept free of random forest trees / rim rocks / edge bushes (the cliff and the opening stay readable). */
+export const CAVE_CLEAR = { x: CAVE_MOUTH.x - 2, z: CAVE_MOUTH.z + 1, r: 15 };
+/** The cliff's boulders, local to CAVE_MOUTH [lx, lz, base height, radius R, height ratio, tint 0..3, variant 0..3]; (lx > 0 = east / right of the opening, lz > 0 = toward the camp / camera). */
+export const CAVE_ROCKS: [number, number, number, number, number, number, number][] = [
+  // the two jambs + the lintel round the opening
+  [-4.3, 2.2, 0, 1.9, 1.5, 1, 0], [-4.4, 1.9, 3.1, 1.4, 1.1, 1, 3], [4.2, 2.0, 0, 1.7, 1.4, 0, 1], [4.1, 1.9, 2.8, 1.2, 1.1, 0, 3],
+  [0, 1.7, 4.3, 2.4, 0.7, 0, 2], [-1.9, 1.0, 5.5, 1.7, 0.9, 1, 3], [1.9, 0.9, 5.1, 1.5, 0.9, 0, 0],
+  // the back of the cliff: a ring on the ground, then three tiers piling up to the left
+  [-8.4, -2.6, 0, 3.2, 1.3, 0, 0], [-5.5, -3.8, 0, 4.2, 1.5, 1, 1], [-1, -4.4, 0, 4.4, 1.6, 0, 0], [3.6, -3.4, 0, 3.8, 1.4, 1, 3], [-8.2, 0.4, 0, 2.5, 1.2, 1, 1],
+  [-7.2, -3.4, 3.4, 3.2, 1.2, 1, 3], [-3.2, -4.4, 4.6, 3.4, 1.3, 0, 0], [1.4, -4.2, 4.9, 3.0, 1.3, 1, 1], [-6.6, 0, 3.2, 2.0, 1.1, 0, 2],
+  [-5.6, -4.6, 7.8, 2.8, 1.1, 0, 1], [-1.4, -4.6, 8.7, 2.3, 1.2, 1, 0], [-8.6, -3.2, 6.4, 2.2, 1.0, 1, 2], [-3.6, -4.8, 11.0, 1.7, 1.1, 0, 3],
+  // the right shoulder (lower, so the opening reads as sitting on the right)
+  [6.2, 0.4, 0, 2.2, 1.2, 0, 0], [8.4, -1.8, 0, 2.6, 1.3, 1, 1], [7.2, 2.6, 0, 1.4, 1.0, 0, 3], [6.0, -1.0, 2.6, 1.7, 1.0, 1, 2],
+];
+/** Smaller boulder formations (3-6 rocks each, render/facetRock.ts facetFormation) scattered in front of / beside the cliff: [lx, lz, R, tint]. */
+export const CAVE_FORMATIONS: [number, number, number, number][] = [[-7.4, 5.4, 1.4, 0], [6.8, 5.8, 1.3, 1], [-10.4, 3.4, 1.1, 1], [9.8, 3.4, 1.3, 0], [10.2, -0.4, 1.7, 2]];
+/** Town colliders [x, z, r] of the entrance: the ground boulders of the cliff (the opening itself is not walkable, the door spot in front is). */
 export const CAVE_MOUTH_COLLIDERS: [number, number, number][] = ((): [number, number, number][] => {
   const c: [number, number, number][] = [];
-  for (const z of [-1.7, 0.4, 2.3]) for (let x = -2.9; x <= 2.91; x += 1.45) c.push([CAVE_MOUTH.x + x, CAVE_MOUTH.z + z, 1.15]);
-  c.push([CAVE_MOUTH.x - 0.4, CAVE_MOUTH.z - 3.4, 2.2]);   // (the back of the mound)
+  for (const [lx, lz, base, R] of CAVE_ROCKS) if (base === 0) c.push([CAVE_MOUTH.x + lx, CAVE_MOUTH.z + lz, R * 0.82]);
+  for (const x of [-2.2, 0, 2.2]) c.push([CAVE_MOUTH.x + x, CAVE_MOUTH.z + 0.6, 1.5]);   // the dark recess itself
+  for (const [lx, lz, R] of CAVE_FORMATIONS) c.push([CAVE_MOUTH.x + lx, CAVE_MOUTH.z + lz, R * 0.8]);
   return c;
 })();
 export const inCaveClear = (x: number, z: number, m = 0): boolean => (x - CAVE_CLEAR.x) ** 2 + (z - CAVE_CLEAR.z) ** 2 < (CAVE_CLEAR.r + m) ** 2;
@@ -50,13 +68,13 @@ export const MINE_CAMP = {
   ore: [[66.2, 12.6, 1.2], [58.6, 17.4, 1.0]] as [number, number, number][],
   /** crate stacks / barrels x, z, yaw */
   crates: [[56.6, 8.8, 0.3], [72.6, 18.2, -0.5]] as [number, number, number][],
-  barrels: [[67.2, 2.4], [68.0, 3.3], [73.4, 22.0]] as [number, number][],
+  barrels: [[66.0, 10.2], [66.9, 10.9], [73.4, 22.0]] as [number, number][],
   /** nature_kit_v1 'mining_camp_tent' (open triangle faces +z): the foreman's tent beside the stall, a second one by the siding */
   tents: [{ x: 57.4, z: 12.2 }, { x: 72.2, z: 26.4 }] as { x: number; z: number }[],
   /** tool rack with pickaxes and shovels (along the wall side, tools facing local +z) */
   rack: { x: 56.2, z: 22.4, rot: Math.PI / 2 },
   /** lantern posts (glow only) */
-  lanterns: [[60.6, 17.2], [67.6, 18.6], [56.6, 30.2], [66.4, 6.6], [75.6, 9.4]] as [number, number][],
+  lanterns: [[60.6, 17.2], [67.6, 18.6], [56.6, 30.2], [70.0, 10.2], [80.0, 10.2]] as [number, number][],
   /** signpost where the coop path enters the camp (nature_kit_v1 'signpost') */
   sign: { x: 56.4, z: 33.4 },
 };

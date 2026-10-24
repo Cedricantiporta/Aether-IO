@@ -1,6 +1,6 @@
 // Crystal cave floors (the village "CAVE" area, engine/systems/cave.ts): a rock chamber with a lumpy outline (bigger and
 // sometimes twin-chambered deeper down), a dusty stone floor, faceted rock walls (tall at the back, low at the front so the
-// camera sees in), boulders along the wall foot, stalagmites, glowing crystal clusters tinted by depth, mushrooms, the way
+// camera sees in), the wall ring of stacked Quaternius rocks, stalagmites, glowing crystal clusters tinted by depth, mushrooms, the way
 // out (Floor 1: daylight exit; deeper: the stairs you came down by), the stairs down (boarded up while veins remain),
 // lava / poison pools with embers / mist, the lucky ladder, oil flasks, and the rare-vein geodes (rarity-coloured glow,
 // a light beam for Legendary / Mythic). Static scenery is merged (floor + wall + ONE lit mesh + ONE glow mesh); 3 floor
@@ -14,7 +14,9 @@ import {
 import { CAVE, RARE_COLOR, caveLayout, type CaveLayout } from '../engine/caveData';
 import { world } from '../engine/world';
 import { GB, TAU, fbm, litMat, mulberry32, vnoise } from './util';
-import { makeRockGeo } from './models';
+import { QtBatch } from './qtNature';
+import { QT_H, QT_PREFIX, QT_R, QT_ROCKS, qtPick } from '../engine/qtData';
+import type { Place } from './natureKit';
 import { lookDim } from './biomeLook';
 import { Npcs } from './Npcs';
 import { caveCameo } from '../engine/systems/npcs';
@@ -61,7 +63,7 @@ function buildFloor(L: CaveLayout): BufferGeometry {
 /** Rock wall: a strip around the outline, rows from the floor to the wall top, then a cap running outward (hides the void). */
 function buildWall(L: CaveLayout): BufferGeometry {
   const M = 7, pos: number[] = [], col: number[] = [], idx: number[] = [];
-  const c = new Color(), lo = new Color('#3a342f'), hi = new Color('#8a8074'), cap = new Color('#1b1815'), tint = new Color(L.tint[0]).lerp(new Color('#4f777c'), 0.6);
+  const c = new Color(), lo = new Color('#1d1a18'), hi = new Color('#2c2824'), cap = new Color('#1b1815'), tint = new Color(L.tint[0]).lerp(new Color('#4f777c'), 0.6);
   if (L.hazard === 'LAVA') tint.set('#8a4a30');
   if (L.hazard === 'POISON') tint.set('#4f7a44');
   const rows = M + 2;
@@ -72,11 +74,11 @@ function buildWall(L: CaveLayout): BufferGeometry {
       if (j <= M) {
         const t = j / M;
         y = h * t;
-        r = R0 + 0.35 - 0.7 * Math.sin(Math.PI * t * 0.8) + 1.4 * t * t;   // bulges in a little, flares out at the top
+        r = R0 + 2.2 - 0.7 * Math.sin(Math.PI * t * 0.8) + 1.4 * t * t;   // bulges in a little, flares out at the top
         r += (fbm(a * 6 + y * 0.35 + L.floor, y * 0.5 + a * 2, 3) - 0.5) * 2.2 * (0.35 + t);
-        c.copy(lo).lerp(hi, sstep(0, 0.9, t) * (0.7 + vnoise(a * 20, y) * 0.5)).lerp(tint, sstep(0.55, 0.8, fbm(a * 3, y * 0.3 + 5 + L.floor, 2)) * 0.45);
+        c.copy(lo).lerp(hi, sstep(0, 0.9, t) * (0.7 + vnoise(a * 20, y) * 0.5)).lerp(tint, sstep(0.55, 0.8, fbm(a * 3, y * 0.3 + 5 + L.floor, 2)) * 0.12);
       } else {
-        y = h + 0.4; r = R0 + 1.4 + 0.35 + 9; c.copy(cap);
+        y = h + 0.4; r = R0 + 2.2 + 1.4 + 0.35 + 9; c.copy(cap);
       }
       pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
       col.push(c.r, c.g, c.b);
@@ -95,18 +97,32 @@ function buildWall(L: CaveLayout): BufferGeometry {
   return ng;
 }
 
+/** (owner) Rock formations along the wall foot (Quaternius Rock_Medium_1-3, the Ember halls-wall look): 3-5 overlapping rocks per group, the back wall (north) taller, the exit gap kept free. */
+function caveRockSets(L: CaveLayout): Map<string, Place[]> {
+  const S = new Map<string, Place[]>(), rnd = mulberry32(5151 + L.floor * 77 + Math.round(L.rx * 100));
+  const add = (x: number, y: number, z: number, hw: number, hm: number): void => {
+    const node = qtPick(QT_ROCKS, rnd()), k = hw / QT_R[node], key = QT_PREFIX + node; let l = S.get(key); if (!l) S.set(key, (l = []));
+    l.push({ x, y, z, ry: rnd() * TAU, sx: k, sy: (hw * hm) / QT_H[node], sz: k * (0.9 + rnd() * 0.3) });
+  };
+  // the wall ring: stacked rocks all round the outline (more layers where the wall is tall: the back), the exit gap kept free
+  const ng = Math.round(64 * (L.rx + L.rz) / (CAVE.rx + CAVE.rz));
+  for (let i = 0; i < ng; i++) {
+    const a = ((i + rnd() * 0.5) / ng) * TAU;
+    if (Math.abs(a - Math.PI / 2) < 0.2) continue;
+    const R0 = L.radius(a), h = wallH(a), layers = Math.max(1, Math.ceil(h / 3.4));
+    for (let j = 0; j < layers; j++) {
+      const hw = (2.2 + rnd() * 1.3) * (1 - j * 0.12), rr = R0 + hw * 0.62 + j * 0.9 + rnd() * 0.4, aj = a + (rnd() - 0.5) * 0.04;
+      add(Math.cos(aj) * rr, j * 2.9 - 0.2, Math.sin(aj) * rr, hw, 1.0 + rnd() * 0.5);
+    }
+    if (rnd() < 0.55) { const hw = 0.9 + rnd() * 0.9, rr = R0 + hw * 0.5; add(Math.cos(a + 0.05) * rr, -0.15, Math.sin(a + 0.05) * rr, hw, 0.7 + rnd() * 0.6); }   // a small boulder at the foot
+  }
+  return S;
+}
+
 function buildProps(L: CaveLayout): { body: BufferGeometry; glow: BufferGeometry } {
   const b = new GB([0.75, 1.08]), g = new GB([1, 1]);
   const rnd = mulberry32(4242 + L.floor * 77 + Math.round(L.rx * 100));
-  const rocks = [3, 7, 13, 19].map((s, i) => makeRockGeo(900 + s, i % 2 ? '#736b63' : '#665f58', L.hazard === 'POISON' ? '#5a7a4a' : L.hazard === 'LAVA' ? '#7a4a3a' : '#56706e', 0.85));
-  // ---- boulders along the wall foot (breaks up the outline), skipping the exit gap
-  const nb = Math.round(46 * (L.rx + L.rz) / (CAVE.rx + CAVE.rz));
-  for (let i = 0; i < nb; i++) {
-    const a = ((i + rnd() * 0.6) / nb) * TAU;
-    if (Math.abs(a - Math.PI / 2) < 0.2) continue;
-    const r = L.radius(a) + 0.2 + rnd() * 0.6, s = 0.9 + rnd() * 1.3 + (Math.sin(a) < 0 ? 0.6 : 0);
-    b.addColored(rocks[i % rocks.length], [Math.cos(a) * r, -0.15, Math.sin(a) * r], [0, rnd() * TAU, 0], [s * (0.9 + rnd() * 0.5), s * (0.7 + rnd() * 0.6), s * (0.9 + rnd() * 0.5)]);
-  }
+  const rocks: BufferGeometry[] = [];   // (the wall-foot boulders are Quaternius rock formations now: caveRockSets)
   rocks.forEach((r) => r.dispose());
   // ---- stalagmites: a main spike + 1-2 smaller ones
   for (const [x, z, s] of L.stalagmites) {
@@ -235,6 +251,7 @@ const _m = new Matrix4(), _q = new Quaternion(), _p = new Vector3(), _s = new Ve
 export function CaveInterior({ q }: { q: QualityCfg }) {
   const cv = world.village.cave;
   const L = caveLayout(cv.floor, cv.seed);
+  const rockSets = useMemo(() => caveRockSets(L), [L]);
   const geo = useMemo(() => ({ floor: buildFloor(L), wall: buildWall(L), ...buildProps(L), stairs: buildStairState(L), pools: buildPools(L), bits: buildBits() }), [L]);
   const mats = useMemo(() => ({
     floor: new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }),
@@ -332,6 +349,7 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
       <mesh geometry={geo.wall} material={mats.wall} receiveShadow={sh} />
       <mesh geometry={geo.body} material={mats.lit} castShadow={sh} receiveShadow={sh} />
       <mesh geometry={geo.glow} material={mats.glow} />
+      <React.Suspense fallback={null}><QtBatch sets={rockSets} shadows={sh} tint={L.hazard === 'LAVA' ? '#d9a088' : L.hazard === 'POISON' ? '#a9c9a0' : '#d6d0cc'} /></React.Suspense>
       <mesh ref={boards} geometry={geo.stairs.boards} material={mats.lit} castShadow={sh} />
       <mesh ref={open} geometry={geo.stairs.open} material={mats.open} visible={false} />
       {/* (the light stays mounted at intensity 0: toggling a light's visibility would recompile every material) */}
