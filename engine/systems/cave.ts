@@ -34,6 +34,7 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { sfxCave } from '../audio';
 import type { EnemyKind } from '../types';
 import { events } from '../events';
+import { caveLava, gridAt } from '../lavaFloor';
 import { UNLOCK_LV } from '../../unlocks';
 import { spareFlasks, takeSpareFlask, SPARE_FLASK_OIL } from './caveKit';
 import type { Rarity } from '../../types';
@@ -159,11 +160,13 @@ function placeFloor(f: number): void {
   if (f > 1 && Math.random() < FLASK_FLOOR_CHANCE) {
     for (let g = 0; g < 50; g++) {
       const a = Math.random() * Math.PI * 2, r = L.radius(a) * (0.45 + Math.random() * 0.35), x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (L.pools.some(([px, pz, pr]) => (x - px) ** 2 + (z - pz) ** 2 < (pr + 1) ** 2)) continue;
+      if (L.pools.some(([px, pz, pr]) => (x - px) ** 2 + (z - pz) ** 2 < (pr + 1) ** 2) || onLava(L, x, z)) continue;
       dropFlask(x, z); break;
     }
   }
 }
+/** Standing on a LAVA floor's painted streams (lavaFloor.ts)? */
+function onLava(L: ReturnType<typeof caveLayout>, x: number, z: number): boolean { const g = caveLava(L); return !!g && gridAt(g, x, z); }
 function dropFlask(x: number, z: number): void {
   for (const fl of world.village.cave.flasks) if (!fl.on) { fl.on = true; fl.x = x; fl.z = z; world.village.cave.ver++; return; }
 }
@@ -180,7 +183,7 @@ function spawnMonsters(f: number): void {
   for (let g = 0; g < 200 && made < n; g++) {
     const a = Math.random() * Math.PI * 2, r = L.radius(a) * (0.25 + Math.random() * 0.5), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if ((x - L.spawn.x) ** 2 + (z - L.spawn.z) ** 2 < 100) continue;   // never on top of the arrival stairs
-    if (L.pools.some(([px, pz, pr]) => (x - px) ** 2 + (z - pz) ** 2 < (pr + 1) ** 2)) continue;
+    if (L.pools.some(([px, pz, pr]) => (x - px) ** 2 + (z - pz) ** 2 < (pr + 1) ** 2) || onLava(L, x, z)) continue;
     const e = spawnEnemy(pool[Math.floor(Math.random() * pool.length)], v3.set(x, 0, z));
     if (e) { e.facing = Math.atan2(L.spawn.x - x, L.spawn.z - z); mons[made] = e.id; monX[made] = x; monZ[made] = z; made++; }
   }
@@ -368,15 +371,15 @@ export function updateCave(dt: number): boolean {
     }
   }
   // hazard pools: burn / poison while standing in them (poison lingers a moment)
-  if (L.pools.length && !busy) {
-    let inPool = false;
+  if ((L.pools.length || L.hazard === 'LAVA') && !busy) {
+    let inPool = p.alive && onLava(L, p.pos.x, p.pos.z);
     for (let i = 0; i < L.pools.length; i++) { const q = L.pools[i]; if ((p.pos.x - q[0]) ** 2 + (p.pos.z - q[1]) ** 2 < q[2] * q[2]) { inPool = true; break; } }
     if (inPool && L.hazard === 'POISON') poisonLeft = 2;
     hazardT -= dt; poisonLeft = Math.max(0, poisonLeft - dt);
     if ((inPool || poisonLeft > 0) && hazardT <= 0) {
       hazardT = 0.5;
       const max = useGameStore.getState().stats.maxHealth;
-      damagePlayer(max * (L.hazard === 'LAVA' ? 0.05 : 0.025), { dot: true, kind: L.hazard === 'LAVA' ? 'FIRE' : 'POISON' });
+      damagePlayer(max * (L.hazard === 'LAVA' ? 0.04 : 0.025), { dot: true, kind: L.hazard === 'LAVA' ? 'FIRE' : 'POISON' });
     }
   }
   // cave monsters: an oil flask now and then from the fallen ones

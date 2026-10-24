@@ -41,6 +41,7 @@ const SOUL_EMBER_CHANCE = 0.05;
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive, speedWon } from './roomEvents';
 import { setupBiomeHazards } from './biomeHazards';
 import { setupRoomTraps } from './roomTraps';
+import { setupLavaFloor } from '../lavaFloor';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
@@ -305,6 +306,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
   setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
+  setupLavaFloor(b, p, seed);   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;

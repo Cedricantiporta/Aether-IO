@@ -19,6 +19,8 @@ import { lookDim } from './biomeLook';
 import { Npcs } from './Npcs';
 import { caveCameo } from '../engine/systems/npcs';
 import { QualityCfg } from './quality';
+import { caveLava } from '../engine/lavaFloor';
+import { applyLavaShader, lavaTime, pathMask } from './groundPath';
 
 type V3 = [number, number, number];
 const N = 120;   // outline segments
@@ -236,8 +238,12 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
   const cv = world.village.cave;
   const L = caveLayout(cv.floor, cv.seed);
   const geo = useMemo(() => ({ floor: buildFloor(L), wall: buildWall(L), ...buildProps(L), stairs: buildStairState(L), pools: buildPools(L), bits: buildBits() }), [L]);
+  const lavaMask = useMemo(() => {   // LAVA floors: streams painted on the floor (engine/lavaFloor.ts caveLava, the same shader as the Ember Wastes)
+    const cl = caveLava(L);
+    return cl ? pathMask(cl.discs, -cl.o, -cl.o, cl.o * 2, cl.o * 2, 8) : null;
+  }, [L]);
   const mats = useMemo(() => ({
-    floor: new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }),
+    floor: (() => { const m = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }); if (lavaMask) applyLavaShader(m, lavaMask, false); return m; })(),
     wall: litMat({ roughness: 0.95, flatShading: true, side: DoubleSide }),
     lit: litMat({ roughness: 0.9, flatShading: true }),
     glow: new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.3, 1.3, 1.3) }),
@@ -250,7 +256,8 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
       vertexShader: PT_VS, fragmentShader: PT_FS, transparent: true, depthWrite: false, blending: AdditiveBlending,
       uniforms: { uTime: { value: 0 }, uRise: { value: L.hazard === 'LAVA' ? 3.5 : 1.6 }, uColor: { value: new Color(L.hazard === 'LAVA' ? '#ffa040' : '#9aff7a') } },
     }),
-  }), [L]);
+  }), [L, lavaMask]);
+  useEffect(() => () => { lavaMask?.tex.dispose(); }, [lavaMask]);
   useEffect(() => () => {
     geo.floor.dispose(); geo.wall.dispose(); geo.body.dispose(); geo.glow.dispose(); geo.stairs.boards.dispose(); geo.stairs.open.dispose();
     if (geo.pools) { geo.pools.glow.dispose(); geo.pools.rim.dispose(); geo.pools.pts.dispose(); }
@@ -277,7 +284,7 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
     const k = 1.25 + Math.sin(t * 1.3) * 0.08;   // crystals breathe a little
     mats.glow.color.setRGB(k * (0.4 + 0.6 * dim), k * (0.4 + 0.6 * dim), k * (0.4 + 0.6 * dim));
     mats.pool.color.setScalar(1.2 + Math.sin(t * 2.1) * 0.2);
-    mats.pts.uniforms.uTime.value = t;
+    mats.pts.uniforms.uTime.value = t; lavaTime.value = t;
     const lr = [l0, l1, l2];
     for (let i = 0; i < 3; i++) { const l = lr[i].current; if (l) l.intensity = L.lights[i][4] * (1 + Math.sin(t * (1.1 + i * 0.4) + i) * 0.08) * dim; }
     if (hero.current) {

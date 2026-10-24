@@ -3,6 +3,7 @@
 // big rarity-coloured diamonds) and the way out (gold arrow). `drawCaveFloorTag` puts "FLOOR n" on the frame.
 import { world } from '../../engine/world';
 import { caveLayout, RARE_COLOR } from '../../engine/caveData';
+import { caveLava } from '../../engine/lavaFloor';
 
 const diamond = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.75, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.75, y); ctx.closePath(); };
 
@@ -17,6 +18,7 @@ export function drawCaveMinimap(ctx: CanvasRenderingContext2D, cx: number, k: nu
     ctx.fillStyle = L.hazard === 'LAVA' ? 'rgba(255,110,40,.85)' : 'rgba(110,230,80,.75)';
     for (const [x, z, r] of L.pools) { ctx.beginPath(); ctx.arc(cx + x * k, cx + z * k, r * k, 0, Math.PI * 2); ctx.fill(); }
   }
+  { const cl = L.hazard === 'LAVA' ? caveLava(L) : null; if (cl) { ctx.fillStyle = 'rgba(255,110,40,.85)'; for (const d of cl.discs) { ctx.beginPath(); ctx.arc(cx + d.x * k, cx + d.z * k, Math.max(1, d.r * k), 0, Math.PI * 2); ctx.fill(); } } }
   // stairs down
   { const x = cx + L.down.x * k, y = cx + L.down.z * k, open = cv.left <= 0;
     ctx.fillStyle = open ? '#5fe0ff' : '#c0503a'; ctx.strokeStyle = '#0d0703'; ctx.lineWidth = 1.5 * DPR;
