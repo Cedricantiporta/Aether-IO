@@ -10,6 +10,7 @@ import { HALL, DAIS, PILLARS, TABLES, TABLE_STOOLS, BRAZIERS, BANNER_Z, THRONE_Z
 import { KitV3Static, type KitV3Item } from './kitV3';
 import { floorGrid, wallRun, onWall } from './interiorKit';
 import { Npcs } from './Npcs';
+import { flagTexture, FLAG_TILE } from './TownScenery';
 import { QualityCfg } from './quality';
 
 const PI = Math.PI;
@@ -53,6 +54,7 @@ function castleItems(): KitV3Item[] {
 
 export function CastleInterior({ q }: { q: QualityCfg }) {
   const items = useMemo(castleItems, []);
+  const flag = useMemo(() => { const m = new MeshStandardMaterial({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); const t = flagTexture().clone(); t.repeat.set((HALL.hw * 2 + 1) / FLAG_TILE, (HALL.hd * 2 + 1) / FLAG_TILE); t.needsUpdate = true; m.map = t; return m; }, []);   // (owner 2026-10-24: the town's pale puffy flagstones on the hall floor too)
   const outer = useMemo(() => new MeshStandardMaterial({ color: new Color('#1a1613'), roughness: 1 }), []);
   const l1 = useRef<PointLight>(null!), l2 = useRef<PointLight>(null!), l3 = useRef<PointLight>(null!);
   useFrame(({ clock }) => {
@@ -66,6 +68,7 @@ export function CastleInterior({ q }: { q: QualityCfg }) {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.34, 0]} material={outer}><planeGeometry args={[400, 400]} /></mesh>
       <KitV3Static items={items} cast={sh} receive={sh} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} material={flag} receiveShadow={sh}><planeGeometry args={[HALL.hw * 2 + 1, HALL.hd * 2 + 1]} /></mesh>
       <pointLight ref={l1} position={[-4.4, 2.6, -11.6]} color="#ffb070" distance={24} decay={2} intensity={42} />
       <pointLight ref={l2} position={[4.4, 2.6, -11.6]} color="#ffb070" distance={24} decay={2} intensity={42} />
       <pointLight ref={l3} position={[0, 3.2, 12]} color="#ffc080" distance={22} decay={2} intensity={34} />

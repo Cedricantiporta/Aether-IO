@@ -15,6 +15,7 @@ import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
 import { makeWaterMaterial } from './waterFx';
 import { groundDetail } from './Room';
+import { applyPathShader, dirtDiscs, pathMask } from './groundPath';
 import { inCaveClear } from '../engine/caveData';
 import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
@@ -90,7 +91,7 @@ function Ground({ q }: { q: QualityCfg }) {
     const seg = q.name === 'LOW' ? 120 : 180;
     const S = GROUND_SIZE, cell = S / seg, n = seg + 1;
     const pos = new Float32Array(n * n * 3), col = new Float32Array(n * n * 3), uv = new Float32Array(n * n * 2);
-    const bytes = new Uint8Array(n * n * 4);
+    const bytes = new Uint8Array(n * n * 4), sandA = new Float32Array(n * n);
     const c = new Color(), gc = new Color();
     const idx = new Uint32Array(seg * seg * 6);
     const pe = (x: number, z: number) => pondEdge(Math.atan2(z - POND.z, x - POND.x));
@@ -99,7 +100,7 @@ function Ground({ q }: { q: QualityCfg }) {
       const x = -S / 2 + i * cell, z = -S / 2 + j * cell;
       const y = groundY(x, z);
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
-      groundColor(x, z, y, c);
+      groundColor(x, z, y, c); sandA[k] = beachSandK(x, z);
       col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
       uv[k * 2] = x / 8; uv[k * 2 + 1] = z / 8;   // (the Greenwood run rooms' painted lawn texture, period 8 m)
       // grass density + tint
@@ -118,11 +119,16 @@ function Ground({ q }: { q: QualityCfg }) {
     const g = new BufferGeometry();
     g.setAttribute('position', new Float32BufferAttribute(pos, 3));
     g.setAttribute('color', new Float32BufferAttribute(col, 3));
-    g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+    g.setAttribute('uv', new Float32BufferAttribute(uv, 2)); g.setAttribute('aSand', new Float32BufferAttribute(sandA, 1));
     g.setIndex(new BufferAttribute(idx, 1));
     g.computeVertexNormals();
     const [gTex, gGlow] = groundDetail('GRASS');
     const m = new MeshStandardMaterial({ vertexColors: true, map: gTex, roughness: 0.96, metalness: 0, emissiveMap: gGlow, emissive: new Color(gGlow ? '#ffffff' : '#000000'), emissiveIntensity: gGlow ? 0.5 : 0 });
+    // the outskirts' dirt tracks (ROADS beyond the wall + dirt:true): wandering soft soil paths with a ragged leafy edge, per pixel in the ground shader (render/groundPath.ts)
+    const dd = dirtDiscs(); let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (const d of dd) { x0 = Math.min(x0, d.x - 5); x1 = Math.max(x1, d.x + 5); z0 = Math.min(z0, d.z - 5); z1 = Math.max(z1, d.z + 5); }
+    const pm = pathMask(dd, x0, z0, x1 - x0, z1 - z0, 6);
+    applyPathShader(m, pm, groundDetail('SAND', true)[0]);   // (+ the beach sand's own painted texture where the lakeside / mainland beach colour is)
     const tex = new DataTexture(bytes, n, n, RGBAFormat);
     tex.colorSpace = SRGBColorSpace; tex.magFilter = LinearFilter; tex.minFilter = LinearFilter; tex.needsUpdate = true;
     return { geo: g, mat: m, mask: tex };

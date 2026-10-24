@@ -402,10 +402,11 @@ carpet(Z(0, -47, 40, 4), 40, PIECES.mushrooms, [0.8, 1.2], 704);
 export const QT_DECOR: [piece: string, row: FillRow][] = [];
 {
   type Kind = 'garden' | 'wild' | 'stone';
+  // (owner 2026-10-24 "everything is scattered": no loose plants on paving / verges / wall feet / house corners. Flowers + bushes only in the parks, round flower beds and a few tidy bush piles.)
   const MIX: Record<Kind, [string, number, number, number][]> = {   // piece, weight, scale lo, scale hi
-    garden: [['Bush_Common_Flowers', 1.1, 1.0, 1.45], ['Flower_3_Group', 2.2, 0.85, 1.25], ['Flower_4_Group', 2.2, 0.85, 1.25], ['Flower_3_Single', 1.2, 1.0, 1.5], ['Flower_4_Single', 1.2, 1.0, 1.5], ['Clover_1', 1.6, 1.3, 2.0], ['Clover_2', 1.2, 1.3, 2.0], ['Grass_Common_Short', 1.2, 1.2, 1.9], ['Pebble_Round_1', 0.8, 1.7, 2.5], ['Pebble_Square_2', 0.8, 1.7, 2.5]],
-    wild: [['Grass_Common_Tall', 2.0, 1.0, 1.6], ['Grass_Wispy_Short', 1.6, 1.2, 1.9], ['Grass_Wispy_Tall', 1.2, 1.0, 1.5], ['Fern_1', 1.4, 0.8, 1.3], ['Flower_3_Group', 1.0, 0.9, 1.3], ['Flower_4_Group', 1.0, 0.9, 1.3], ['Clover_2', 1.0, 1.3, 2.0], ['Bush_Common', 0.9, 1.2, 1.8], ['Mushroom_Common', 0.5, 1.5, 2.3]],
-    stone: [['Pebble_Round_1', 2.0, 1.7, 2.8], ['Pebble_Round_2', 1.6, 1.7, 2.8], ['Pebble_Round_3', 1.4, 1.7, 2.8], ['Pebble_Square_1', 1.4, 1.7, 2.8], ['Pebble_Square_3', 1.0, 1.7, 2.8], ['Grass_Common_Short', 1.4, 1.2, 1.9], ['Clover_1', 1.2, 1.3, 2.0], ['Flower_3_Single', 0.6, 1.0, 1.4]],
+    garden: [['N_BushBerries_1', 0.8, 0.8, 1.1], ['N_BushBerries_2', 0.8, 0.8, 1.1], ['N_Flowers', 3.0, 1.0, 1.5], ['Flower_3_Group', 2.0, 0.9, 1.2], ['Flower_4_Group', 2.0, 0.9, 1.2], ['Flower_3_Single', 1.0, 1.0, 1.4], ['Flower_4_Single', 1.0, 1.0, 1.4]],
+    wild: [['N_Bush_1', 1, 0.9, 1.2], ['N_Bush_2', 1, 0.9, 1.2], ['N_BushBerries_1', 0.7, 0.9, 1.2]],
+    stone: [['Pebble_Round_1', 1, 1.7, 2.4]],
   };
   void QT_FLOWERS; void QT_GRASS; void QT_CLOVER; void QT_PEBBLES;
   const dr = rng(2410);
@@ -431,23 +432,18 @@ export const QT_DECOR: [piece: string, row: FillRow][] = [];
   clump(PARK_EAST.fountain.x - 3, PARK_EAST.fountain.z, 8, 14, 'garden'); clump(PARK_EAST.gazebo.x, PARK_EAST.gazebo.z, 6, 8, 'garden');
   // ---- round the flower beds and planters (positions of the decor() list above)
   for (const [x, z] of [[-33.6, -16.4], [8.4, 30.4], [-36, 8.2], [-26.4, 24.9], [7.2, 14.8], [18, 14.8], [-7.4, -15.2], [8.6, -15.2]]) clump(x, z, 2.6, 5, 'garden');
-  // ---- the foot of the town wall, inside (low stuff only: no bushes against the walls) and outside along the road verges
-  {
-    const ix = WALL.x1 - WALL.thick / 2 - 1.1, iz0 = WALL.z0 + WALL.thick / 2 + 1.1, iz1 = WALL.z1 - WALL.thick / 2 - 1.1;
-    along(-ix, iz0, ix, iz0, 7.5, 0, 1.1, 2, 'stone'); along(-ix, iz0, -ix, iz1, 7.5, 0, 1.1, 2, 'stone'); along(ix, iz0, ix, iz1, 7.5, 0, 1.1, 2, 'stone');
-    along(-ix, iz1, -8, iz1, 7.5, 0, 1.1, 2, 'stone'); along(8, iz1, ix, iz1, 7.5, 0, 1.1, 2, 'stone');
-    const ox = WALL.x1 + WALL.thick / 2 + 1.6, oz0 = WALL.z0 - WALL.thick / 2 - 1.6;
-    along(-ox, oz0, ox, oz0, 6.5, 0, 1.5, 3, 'wild'); along(-ox, oz0, -ox, WALL.z1, 6.5, 0, 1.5, 3, 'wild'); along(ox, oz0, ox, WALL.z1, 6.5, 0, 1.5, 3, 'wild');
-  }
-  // ---- the front corners of the houses inside the walls: a flower tuft and a few pebbles by the door step
-  for (const h of HOUSES) if (h.kit && Math.abs(h.x) < 44 && h.z > -40 && h.z < 37) {
-    const k = HOUSE_KIT[h.kit], sc = h.s ?? 1, hw = k.half * sc, d1 = k.front * sc, f = h.rot ? -1 : 1;
-    for (const sx of [-1, 1]) if (dr() < 0.7) clump(h.x + sx * (hw + 0.7), h.z + f * (d1 + 0.5), 0.9, 3, 'garden');
-  }
-  // ---- the meadows outside: verges of the road and the river banks, wild tufts + ferns + the odd bush and mushroom
-  for (const [x1, z1, x2, z2] of [[-44, 44, 44, 44], [-20, 58, 20, 58], [0, 128, 0, 168], [-44, 112, 44, 112]] as const) along(x1, z1, x2, z2, 5.5, 4.5, 2.2, 3, 'wild');
-  for (let x = -44; x <= 54; x += 6) { const rr = rng(Math.floor(x) + 4100); for (const side of [0, 1] as const) { const bz = riverBank(x, side) + (side === 0 ? -2.6 : 2.6); if (rr() < 0.6) clump(x + rr() * 2, bz, 1.6, 3, 'wild'); } }
-  clump(-20, 47, 10, 10, 'garden'); clump(10, 56, 12, 8, 'garden'); clump(-38, 91, 6, 10, 'garden'); clump(3, 138, 4, 8, 'garden');
+  // ---- a few tidy bush piles outside the walls (3-6 overlapping bushes each) on the meadows, with calm empty ground between them
+  const pile = (cx: number, cz: number, n: number, rad: number): void => {
+    for (let t = 0, k = 0; t < n * 12 && k < n; t++) {
+      const a = dr() * TAU, d = Math.sqrt(dr()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+      if (!okSpot(x, z)) continue;
+      const sc = 1.0 + dr() * 0.6, name = ['N_BushBerries_1', 'N_Bush_1', 'N_Bush_2', 'N_BushBerries_2'][Math.floor(dr() * 4)];
+      QT_DECOR.push([QT_PREFIX + name, [x, z, dr() * TAU, sc, sc * (0.9 + dr() * 0.2), sc]]); k++;
+    }
+  };
+  for (const [x, z] of [[-30, 46], [28, 47], [-8, 52], [14, 58], [-40, 60], [40, 62], [-22, 112], [20, 114], [-36, 120], [36, 118], [6, 132], [-6, 146], [10, 150]]) pile(x, z, 3 + Math.floor(dr() * 4), 1.5);
+  // ---- gardens: a small tidy flower + berry-bush clump in a few meadow spots (garden kind, not sprinkled)
+  clump(-20, 47, 2.4, 9, 'garden'); clump(10, 56, 2.4, 9, 'garden'); clump(-38, 91, 2.6, 10, 'garden'); clump(3, 138, 2.4, 8, 'garden');
 }
 
 // ================================================================ NPC ROUTE CHECK (owner: NPCs "teleport" when a patrol leg crosses a collider and they wedge)

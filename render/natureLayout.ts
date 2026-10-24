@@ -19,7 +19,7 @@ import {
   STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA,
 } from '../engine/townData';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
-import { QT_PREFIX, QT_H, QT_COMMON, QT_PINE, qtLod, qtHash, qtPick } from '../engine/qtData';
+import { QT_PREFIX, QT_H, QT_R, N2, qtLod, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
 import { FILL, PIECES, QT_DECOR } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
@@ -117,15 +117,26 @@ export function townPlaces(): Sets {
     put(S, 'small_boat', P(H.x0 + 3, -0.3, H.z1 + 1.8, Math.PI / 2 + 0.12, 1.05));   // moored on the north side of the head
   }
   put(S, 'small_boat', P(ROWBOAT.x, 0.02, ROWBOAT.z, ROWBOAT.rot + Math.PI, 1.05));   // beached on the sand
-  // ---- rocks of the shore: the headland closing the beach's north end, stepping stones into the lake, the lake's south shore, a few on the east shore
-  const rock = (x: number, z: number, w: number, hmul: number, y: number, k: number) => put(S, hash2(x, z, k) < 0.5 ? 'rock_round_a' : 'rock_round_b', P(x, y, z, hash2(x, z, k + 1) * TAU, w / 1.4, (w / 1.4) * hmul));
-  HEADLAND.forEach(([x, z, r], i) => { rock(x, z, r * 0.95, 1.3 + hash2(x, z) * 0.5, -0.1, 3); if (hash2(x, z, 5) < 0.7) rock(x + (hash2(x, z, 6) - 0.5) * 2, z + (hash2(x, z, 7) < 0.5 ? -1.6 : 1.5), r * 0.55, 1.2, -0.1, 8 + i); });
-  for (let i = 0; i < 5; i++) { const x = -70.5 - i * 1.4 - hash2(i, 1), z = 4 + (hash2(i, 2) - 0.5) * 3; rock(x, z, 0.9 + hash2(i, 3) * 0.7, 1.0, -0.15, 20 + i); }
-  for (const [x, z, r] of SOUTH_ROCKS) rock(x, z, r, 1.1 + hash2(x, z, 9) * 0.5, -0.15, 30);
+  // ---- rocks of the shore (owner beach mock 2026-10-24): chunky rounded SANDSTONE boulders (pack 2 Rock_Sand_1-7: warm orange, lit tops, darker sides, faint strata) stacked in clusters of 5-9 that read as a
+  //      cliff: the headland closing the beach's north end, a rocky outcrop where sand meets water, a small islet in the shallows, lone rocks on the sand, the lake's south + east shores
+  const rockC = (x: number, z: number, r: number, y: number, k: number, n = 6) => {
+    const R = Math.max(0.7, r), put1 = (px: number, pz: number, hw: number, hmul: number, py: number, kk: number) => { const node = qtPick(N2.rockSand, hash2(px, pz, kk)), s0 = hw / QT_R[node]; put(S, QT_PREFIX + node, { x: px, y: py, z: pz, ry: hash2(px, pz, kk + 1) * TAU, sx: s0, sy: (hw * hmul) / QT_H[node], sz: s0 }); };
+    put1(x, z, R * 0.78, 1.15 + hash2(x, z, k) * 0.4, y, k);
+    put1(x + (hash2(x, z, k + 2) - 0.5) * R * 0.4, z + (hash2(x, z, k + 3) - 0.5) * R * 0.4, R * 0.5, 1.0 + hash2(x, z, k + 4) * 0.4, y + R * 0.85, k + 5);
+    for (let i = 0; i < n - 2; i++) { const a = hash2(x, z, k + 10 + i) * TAU, d = R * (0.55 + hash2(x, z, k + 20 + i) * 0.35); put1(x + Math.cos(a) * d, z + Math.sin(a) * d, R * (0.36 + hash2(x, z, k + 30 + i) * 0.22), 0.7 + hash2(x, z, k + 40 + i) * 0.5, y + (i % 3) * 0.05, k + 50 + i); }
+  };
+  HEADLAND.forEach(([x, z, r], i) => rockC(x, z, r, -0.2, 3 + i, i % 3 === 0 ? 8 : 6));
+  for (let i = 0; i < 5; i++) { const x = -70.5 - i * 1.4 - hash2(i, 1), z = 4 + (hash2(i, 2) - 0.5) * 3; rockC(x, z, 0.9 + hash2(i, 3) * 0.5, -0.5, 20 + i, 4); }
+  rockC(-72.5, 15.5, 1.5, -0.55, 61, 6);   // the islet in the shallows
+  rockC(-66.4, 44.5, 1.2, -0.4, 62, 5);   // a small outcrop where the sand meets the water
+  for (const [x, z, r] of [[-62.9, 18.6, 0.6], [-52.6, 40.4, 0.55], [-56.4, 52.4, 0.65]]) rockC(x, z, r, -0.05, 70 + x, 3);   // lone rocks on the sand
+  for (const [x, z, r] of SOUTH_ROCKS) rockC(x, z, r * 1.05, -0.25, 30, r > 1.1 ? 6 : 4);
   for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {   // (the sandy east shore of the lake along the town's west wall; the beaches have their own props)
     if ((z > BEACH.z0 - 9 && z < BEACH.z1 + 8) || (z > riverBank(LAKE.x1, 0) - 3 && z < riverBank(LAKE.x1, 1) + 3) || (z > 72 && z < 103)) continue;
-    if (hash2(z, 4) < 0.18) rock(LAKE.x1 - 1.5 - hash2(z, 5) * 3, z + hash2(z, 6), (0.6 + hash2(z, 7) * 0.6) * 1.5, 0.7, -0.1, 40);
+    if (hash2(z, 4) < 0.18) rockC(LAKE.x1 - 1.5 - hash2(z, 5) * 3, z + hash2(z, 6), 0.7 + hash2(z, 7) * 0.5, -0.2, 40, 4);
   }
+  // a few cacti only at the dry back of the beach (by the wall), the palms (beachData PALMS) stand further out
+  for (const [x, z, s] of [[-47.3, 16, 1.0], [-47.0, 22.5, 1.25], [-47.8, 52.5, 1.1], [-47.2, 61, 0.9]]) { const node = qtPick(N2.cactus, hash2(x, z)), k = (2.6 * s) / QT_H[node]; put(S, QT_PREFIX + node, { x, y: Math.max(0, groundAt(x, z)) - 0.03, z, ry: hash2(x, z, 1) * TAU, sx: k, sy: k, sz: k }); }
   // ---- kit v3 landmarks: round wall towers (door side faces the town), the two bridges (stretched to the deck / railing colliders), 
   for (const t of WALL_TOWERS) {
     const k = t.r / 3.0, inx = PLAZA.x - t.x, inz = PLAZA.z - t.z, ry = Math.atan2(inx, inz);
@@ -135,6 +146,19 @@ export function townPlaces(): Sets {
   for (const sx of [-1, 1]) { const k = GATE_TOWER.r / 3.0; put(S, 'wall_tower_round', P(GATE.x + sx * GATE_TOWER.x, 0, GATE.z, -sx * Math.PI / 2, k, k * 0.95)); }   // the gate's two towers (door side faces the passage)
   { const L = BRIDGE.z1 - BRIDGE.z0; put(S, 'bridge_stone_arch', { x: 0, y: 0, z: (BRIDGE.z0 + BRIDGE.z1) / 2, ry: Math.PI / 2, sx: L / 10.9, sy: 1.12, sz: (BRIDGE.hw * 2 + 0.4) / 3.8 }); }
   { const L = MINE_BRIDGE.z1 - MINE_BRIDGE.z0; put(S, 'bridge_wood_small', { x: MINE_BRIDGE.x, y: 0, z: (MINE_BRIDGE.z0 + MINE_BRIDGE.z1) / 2, ry: Math.PI / 2, sx: L / 6.5, sy: 0.62, sz: (MINE_BRIDGE.hw * 2 + 0.5) / 2.2 }); }
+  // ---- lilypads: small clusters on the river and the lake (never under a bridge / the pier)
+  for (let x = -66; x <= 100; x += 7.4) {
+    if (Math.abs(x - 0) < BRIDGE.hw + 3.5 || Math.abs(x - MINE_BRIDGE.x) < MINE_BRIDGE.hw + 3.5) continue;
+    const hh = hash2(x, 61); if (hh < 0.3) continue;
+    const cz = (riverBank(x, 0) + riverBank(x, 1)) / 2 + (hash2(x, 62) - 0.5) * 2.6;
+    for (let k = 0, n = 3 + Math.floor(hash2(x, 63) * 3); k < n; k++) { const a = hash2(x, 64 + k) * TAU, d = hash2(x, 70 + k) * 1.6, sc = 0.8 + hash2(x, 80 + k) * 0.5; put(S, QT_PREFIX + 'N_Lilypad', P(x + Math.cos(a) * d, -0.17, cz + Math.sin(a) * d * 0.7, hash2(x, 90 + k) * TAU, sc)); }
+  }
+  for (let x = -76; x <= -58; x += 9) for (let z = LAKE.z0 + 24; z < LAKE.z1 - 20; z += 9) {
+    if ((z > BEACH.z0 - 12 && z < BEACH.z1 + 10) || (z > riverBank(LAKE.x1, 0) - 6 && z < riverBank(LAKE.x1, 1) + 6) || hash2(x, z, 5) < 0.55) continue;
+    const px = x + (hash2(x, z, 6) - 0.5) * 6, pz = z + (hash2(x, z, 7) - 0.5) * 6;
+    if (nearDock(px, pz)) continue;
+    for (let k = 0, n = 3 + Math.floor(hash2(x, z, 8) * 3); k < n; k++) { const a = hash2(x, z, 10 + k) * TAU, d = hash2(x, z, 20 + k) * 1.7; put(S, QT_PREFIX + 'N_Lilypad', P(px + Math.cos(a) * d, -0.17, pz + Math.sin(a) * d * 0.7, hash2(x, z, 30 + k) * TAU, 0.85 + hash2(x, z, 40 + k) * 0.5)); }
+  }
   // ---- crops: the wheat / cabbage / pumpkin rows of the fields (the soil + furrows are still the town's merged ground meshes)
   const crop = (F: { x: number; z: number; hw: number; hd: number; crop: FieldSpec['crop'] }, rnd: () => number, avoid = true) => {
     const { x, z, hw, hd } = F, wheat = F.crop === 'WHEAT', step = wheat ? 1.1 : 1.4;
@@ -142,9 +166,10 @@ export function townPlaces(): Sets {
       const px = x + xi + (rnd() - 0.5) * 0.14, pz = z + zi + (rnd() - 0.5) * 0.14;
       if (avoid && (Math.hypot(px - SCARECROW.x, pz - SCARECROW.z) < 1.3 || Math.hypot(px - HAYSTACK.x, pz - HAYSTACK.z) < 2.2)) continue;
       const r = rnd(), s = 0.8 + rnd() * 0.35, ry = rnd() * TAU;
-      if (wheat) put(S, 'crop_wheat', P(px, 0.05, pz, ry, s, s * (0.9 + rnd() * 0.3)));
-      else if (F.crop === 'CABBAGE') put(S, 'crop_cabbage', P(px, 0.05, pz, ry, s * 0.95));
-      else { if (r < 0.7) put(S, 'crop_pumpkin', P(px, 0.05, pz, ry, s * 0.9)); else put(S, 'crop_cabbage', P(px, 0.04, pz, ry, 0.5)); }
+      // (owner 2026-10-24: pack wheat + corn fill the fields; the soil + furrows are still the town's ground meshes)
+      if (wheat) { for (let k = 0; k < 3; k++) put(S, QT_PREFIX + 'N_Wheat', P(px + (rnd() - 0.5) * 0.95, 0.04, pz + (rnd() - 0.5) * 0.95, rnd() * TAU, s * (0.9 + rnd() * 0.3), s * (0.85 + rnd() * 0.4))); }
+      else if (F.crop === 'CABBAGE' || r < 0.7) { for (let k = 0; k < 2; k++) put(S, QT_PREFIX + (rnd() < 0.5 ? 'N_Corn_1' : 'N_Corn_2'), P(px + (rnd() - 0.5) * 0.9, 0.04, pz + (rnd() - 0.5) * 0.9, rnd() * TAU, s * 0.95, s * (0.9 + rnd() * 0.25))); }
+      else put(S, 'crop_pumpkin', P(px, 0.05, pz, ry, s * 0.9));
     }
   };
   { const r = mulberry32(88); crop({ ...FARM, crop: 'WHEAT' }, r); for (const F of FIELDS) crop(F, r, false); }
@@ -246,9 +271,28 @@ export function natureLayout(q: QualityCfg): Sets {
   dressing(q, out);
   // kit v3 pieces take their own size (engine/kitV3Data V3_K): the tables above keep the numbers of the old pieces
   out.forEach((l, k) => { const m = V3_K[k]; if (m) out.set(k, l.map((p) => ({ x: p.x, y: p.y, z: p.z, ry: p.ry, sx: p.sx * m, sy: p.sy * m, sz: p.sz * m }))); });
+  bushSwap(q, out);
   qtDecor(q, out);
   qtForest(q, out);
+  if (q.name !== 'HIGH') for (const k of ['N_Wheat', 'N_Corn_1', 'N_Corn_2']) { const l = out.get(QT_PREFIX + k); if (l) out.set(QT_PREFIX + k, l.filter((_, i) => (q.name === 'LOW' ? i % 2 === 0 : i % 4 !== 3))); }   // (the fields thin out on the lower tiers)
   return out;
+}
+
+/** Every old faceted bush (kit bush_cluster / bush_round / bush_flower) becomes a pile of 2-3 soft rounded pack bushes (BushBerries / Bush_1-2) on the same spot and footprint. */
+function bushSwap(q: QualityCfg, out: Sets): void {
+  const n = q.name === 'LOW' ? 2 : 3, pool = [...N2.bushBerries, ...N2.bush, ...N2.bushBerries];
+  for (const name of ['bush_cluster', 'bush_round', 'bush_flower']) {
+    const list = out.get(name); if (!list) continue;
+    const box = V3_BOX[name], hw = box ? (box[1] - box[0]) / 2 : 0.8;
+    for (const p of list) {
+      const R = hw * p.sx;
+      for (let i = 0; i < n; i++) {
+        const a = hash2(p.x, p.z, 50 + i) * TAU, d = i === 0 ? 0 : R * 0.5, sc = Math.max(0.55, R * 0.8) * (0.85 + hash2(p.x, p.z, 60 + i) * 0.3) * (i === 0 ? 1.1 : 0.85);
+        put(out, QT_PREFIX + qtPick(pool, hash2(p.x, p.z, 70 + i)), { x: p.x + Math.cos(a) * d, y: p.y, z: p.z + Math.sin(a) * d, ry: hash2(p.x, p.z, 80 + i) * TAU, sx: sc, sy: sc * (0.9 + hash2(p.x, p.z, 90 + i) * 0.2), sz: sc });
+      }
+    }
+    out.set(name, []);
+  }
 }
 
 /** Quaternius (render/qtNature.tsx) walk-through decor of the town + meadows (engine/townFill QT_DECOR), thinned on the lower tiers. */
@@ -259,25 +303,39 @@ function qtDecor(q: QualityCfg, out: Sets): void {
   });
 }
 
-/** The generic forest trees OUTSIDE the walls (oak / birch / the two layered pines: TOWN_TREES, the grove tables of townFill, the forest ring) become Quaternius CommonTree / Pine
- *  variants, sized to the toy tree they replace (same height x 1.12, a touch wider). On the island: the full ~2.5k-triangle models; off the island's edge: ~700-triangle LODs out to
- *  30 m, past that the toy trees stay. Colliders, positions and counts are untouched. The blossom / fruit / willow / palm trees and everything inside the walls keep the toy look. */
-const QT_SWAP: Record<string, 'common' | 'pine'> = { tree_oak_big: 'common', tree_oak_small: 'common', tree_birch: 'common', tree_fruit: 'common', tree_willow: 'common', tree_pine_layered_a: 'pine', tree_pine_layered_b: 'pine' };
+/** EVERY tree of the town + outskirts (oak / birch / fruit / blossom / willow / the two layered pines / palms: TOWN_TREES, the grove + park tables of townFill, the forest ring, the beach palms)
+ *  becomes a Quaternius pack 2 tree (`N_*`, public/models/nature_qt2.glb), sized like the toy tree it replaces (same height x 1.12 x 1.4, 4.8 .. 7.6 m, crowns widened with it): oak -> CommonTree /
+ *  BirchTree, blossom -> the Autumn variants (colour), fruit -> CommonTree with some Autumn, willow -> Willow (rivers + lake), pines -> PineTree, palm -> PalmTree_1-4; ~14 % of the trees outside
+ *  the walls are Autumn ones. On the island: the full ~1.7k-triangle models; off the island's edge: ~600-triangle LODs (Common / Birch / Pine). No toy tree is drawn any more:
+ *  colliders, positions and counts are untouched. */
+const TREE_SWAP = ['tree_oak_big', 'tree_oak_small', 'tree_birch', 'tree_fruit', 'tree_willow', 'tree_blossom', 'tree_pine_layered_a', 'tree_pine_layered_b', 'palm_v3'];
 export const QT_FOREST_STATS = { hi: 0, lo: 0, tris: 0 };
 function qtForest(q: QualityCfg, out: Sets): void {
   const low = q.name === 'LOW';
   QT_FOREST_STATS.hi = QT_FOREST_STATS.lo = QT_FOREST_STATS.tris = 0;
-  for (const [piece, kind] of Object.entries(QT_SWAP)) {
+  for (const piece of TREE_SWAP) {
     const list = out.get(piece); if (!list) continue;
-    const keep: Place[] = [], H0 = V3_BOX[piece][4];
+    const H0 = V3_BOX[piece][4];
     for (const p of list) {
-      const dEdge = Math.hypot(p.x, p.z) - edgeR(Math.atan2(p.z, p.x));
-      const lo = low || dEdge > 0, node = qtPick(kind === 'common' ? QT_COMMON : QT_PINE, hash2(p.x, p.z, 11)), name = QT_PREFIX + (lo ? qtLod(node) : node);
-      // (owner: trees must read clearly taller than the eaves: ~1.4x the old toy size, 4.8 .. 7.6 m, crowns widened with the height)
-      const hh = Math.min(7.6, Math.max(4.8, H0 * p.sy * 1.12 * 1.4)), k = hh / QT_H[node], w = k * 1.08 * (p.sx / p.sy);
+      const dEdge = Math.hypot(p.x, p.z) - edgeR(Math.atan2(p.z, p.x)), h1 = hash2(p.x, p.z, 11), h2 = hash2(p.x, p.z, 12), outside = !inYard(p.x, p.z, 0);
+      let pool: string[];
+      switch (piece) {
+        case 'tree_willow': pool = N2.willow; break;
+        case 'tree_blossom': pool = h2 < 0.5 ? N2.commonAutumn : N2.birchAutumn; break;
+        case 'tree_fruit': pool = h2 < 0.25 ? N2.commonAutumn : N2.common; break;
+        case 'tree_pine_layered_a': case 'tree_pine_layered_b': pool = N2.pine; break;
+        case 'palm_v3': pool = N2.palm; break;
+        default: pool = outside && h2 < 0.14 ? (h1 < 0.5 ? N2.commonAutumn : N2.birchAutumn) : h1 < 0.6 ? N2.common : N2.birch;
+      }
+      const node = qtPick(pool, hash2(p.x, p.z, 13)), lo = (low || dEdge > 0) && qtLod(node) !== node, name = QT_PREFIX + (lo ? qtLod(node) : node);
+      const hh = piece === 'palm_v3' ? Math.min(8, Math.max(5.5, H0 * p.sy * 1.12 * 1.5)) : Math.min(9, Math.max(7, H0 * p.sy * 1.12 * 1.4 * 1.5)), k = hh / QT_H[node], w = k * 1.02 * (p.sx / p.sy);
       put(out, name, { x: p.x, y: p.y, z: p.z, ry: p.ry, sx: w, sy: k, sz: w });
-      if (lo) { QT_FOREST_STATS.lo++; QT_FOREST_STATS.tris += 700; } else { QT_FOREST_STATS.hi++; QT_FOREST_STATS.tris += 2500; }
+      if (!lo && outside && dEdge < -8 && piece !== 'palm_v3' && hash2(p.x, p.z, 14) < 0.7) {   // (owner) 2-4 pack bushes huddled round the trunk of the outskirts trees (walk-through; the trunk's own table collider is unchanged)
+        const nb = 2 + Math.floor(hash2(p.x, p.z, 15) * 3), pool = [...N2.bushBerries, ...N2.bush, 'Bush_Common_Flowers'];
+        for (let i = 0; i < nb; i++) { const a = hash2(p.x, p.z, 16 + i) * TAU, d = 1.1 + hash2(p.x, p.z, 26 + i) * 0.9, sc = 0.7 + hash2(p.x, p.z, 36 + i) * 0.8; put(out, QT_PREFIX + qtPick(pool, hash2(p.x, p.z, 46 + i)), { x: p.x + Math.cos(a) * d, y: p.y, z: p.z + Math.sin(a) * d, ry: hash2(p.x, p.z, 56 + i) * TAU, sx: sc, sy: sc * 0.95, sz: sc }); }
+      }
+      if (lo) { QT_FOREST_STATS.lo++; QT_FOREST_STATS.tris += 600; } else { QT_FOREST_STATS.hi++; QT_FOREST_STATS.tris += 1700; }
     }
-    out.set(piece, keep);
+    out.set(piece, []);
   }
 }

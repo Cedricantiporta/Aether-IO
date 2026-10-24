@@ -1,6 +1,6 @@
 // Biome hazard visuals (engine/systems/biomeHazards.ts): Greenwood brambles / spore mushrooms / poison clouds, Frostpeak ice sheets /
 // icicle telegraphs + falling icicles, Void rifts. Pooled InstancedMeshes, written from `hz` each frame (tiny counts), culled with inView.
-import React, { useMemo } from 'react';
+import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, CylinderGeometry, DynamicDrawUsage, InstancedMesh, MeshBasicMaterial, RingGeometry, type BufferGeometry, type Material } from 'three';
 import { world } from '../engine/world';
@@ -9,6 +9,9 @@ import {
 } from '../engine/systems/biomeHazards';
 import { inView } from './view';
 import { CELL, pushHalo } from './fx';
+import { QtBatch } from './qtNature';
+import { N2, QT_PREFIX, qtPick } from '../engine/qtData';
+import type { Place } from './natureKit';
 import { GB, TAU, clamp, commitInst, glowMat, litMat, setInst } from './util';
 
 const mk = (g: BufferGeometry, m: Material, cap: number): InstancedMesh => {
@@ -18,6 +21,34 @@ const flat = (color: Color | string | number, opacity: number): MeshBasicMateria
   new MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false });
 const PUFFS = 6;
 const ICICLE_H = 3.4;
+
+/** Greenwood bramble patches (hz.br) drawn as dense piles of 4-6 overlapping pack bushes (BushBerries / Bush_1-2), 1.4-2.2 m each; rebuilt only when the patch set changes. */
+function BrambleBushes() {
+  const [sig, setSig] = useState('');
+  const last = useRef('');
+  useFrame(() => {
+    let k = '';
+    if (world.room.active && hz.kind === HZ.GREEN) for (let i = 0; i < hz.nBr; i++) { const b = hz.br[i]; k += Math.round(b.x * 10) + ',' + Math.round(b.z * 10) + ',' + Math.round(b.r * 10) + ';'; }
+    if (k !== last.current) { last.current = k; setSig(k); }
+  });
+  const sets = useMemo(() => {
+    const S = new Map<string, Place[]>();
+    if (!sig) return S;
+    const add = (node: string, p: Place) => { const key = QT_PREFIX + node; let l = S.get(key); if (!l) S.set(key, (l = [])); l.push(p); };
+    for (let i = 0; i < hz.nBr; i++) {
+      const b = hz.br[i];
+      let h = 0; const rnd = () => { h = (h * 1664525 + 1013904223 + i * 7919) >>> 0; return h / 4294967296; };
+      const n = 5 + Math.floor(rnd() * 2), pool = [...N2.bushBerries, ...N2.bush, ...N2.bushBerries];
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * TAU + rnd() * 0.8, d = k === 0 ? 0 : b.r * (0.35 + rnd() * 0.45), sc = (0.85 + rnd() * 0.5) * Math.max(0.9, b.r * 0.8);
+        add(qtPick(pool, rnd()), { x: b.x + Math.cos(a) * d, y: 0, z: b.z + Math.sin(a) * d, ry: rnd() * TAU, sx: sc, sy: sc * (0.9 + rnd() * 0.25), sz: sc });
+      }
+    }
+    return S;
+  }, [sig]);
+  if (sets.size === 0) return null;
+  return <Suspense fallback={null}><QtBatch key={sig} sets={sets} shadows={false} /></Suspense>;
+}
 
 export function BiomeHazards() {
   const S = useMemo(() => {
@@ -67,7 +98,7 @@ export function BiomeHazards() {
     const on = world.room.active && hz.kind !== HZ.NONE;
     let nBr = 0, nMu = 0, nPuff = 0, nRing = 0, nIce = 0, nTel = 0, nIc = 0, nRift = 0;
     if (on && hz.kind === HZ.GREEN) {
-      for (let i = 0; i < hz.nBr; i++) { const b = hz.br[i]; if (inView(b.x, b.z, 4)) setInst(S.br, nBr++, b.x, 0, b.z, b.rot, b.r, b.r * 0.8, b.r); }
+      // (the bramble patches are drawn as piled pack bushes now: BrambleBushes below; the collider / sting zone is unchanged)
       for (let i = 0; i < hz.nMu; i++) {
         const m = hz.mu[i]; if (!inView(m.x, m.z, 4)) continue;
         const ready = m.cd <= 0, pulse = ready ? 1 + Math.sin(t * 3 + i) * 0.07 : 0.7;   // recharging: shrunken
@@ -124,6 +155,7 @@ export function BiomeHazards() {
       <primitive object={S.br} /><primitive object={S.stem} /><primitive object={S.cap} />
       <primitive object={S.cring} /><primitive object={S.puff} />
       <primitive object={S.tFill} /><primitive object={S.tRing} /><primitive object={S.icicle} />
+      <BrambleBushes />
     </>
   );
 }
