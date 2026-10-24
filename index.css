@@ -2354,7 +2354,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .bb-cap { position: absolute; top: 50%; width: .62rem; height: .62rem; transform: translateY(-50%) rotate(45deg);
   background: linear-gradient(135deg, #fff1c4, #b98a3a); border: 1px solid #2a1a07; box-shadow: 0 0 4px rgba(0, 0, 0, .7); }
 .bb-cap.l { left: .15rem; } .bb-cap.r { right: .15rem; }
-.bb-shield { position: relative; height: .38rem; margin: 0 0 2px; background: #0a1420; border: 1px solid #050304; box-shadow: 0 0 0 0 transparent; }
+.bb-shield { position: relative; height: 1.05rem; margin: 0 0 2px; background: #0a1420; border: 1px solid #050304; box-shadow: 0 0 0 0 transparent; }
 .bb-shield-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #d4f3ff, #8fdcff 50%, #3d9ccc); box-shadow: 0 0 6px #8fdcff; }
 
 /* an empty bonus-line slot (a line was erased): grey strip, filled again with an Augment Rune */
@@ -2595,7 +2595,7 @@ body.is-dragging .drop-cell.drop-hot > .rpg-slot { outline: 2px solid rgba(233, 
 .bb-slim .bb-bar { padding: 0 0 0 1.25rem; }
 .bb-slim .bb-track { height: .62rem; border-radius: 1px; border: 1px solid #0a0709; box-shadow: none; }
 .bb-slim .bb-val { font-size: .58rem; }
-.bb-slim .bb-shield { height: .22rem; }
+.bb-slim .bb-shield { height: .62rem; border-radius: 1px; }   /* (owner 2026-10-24) as tall as the HP bar */
 .bb-slim .bb-ic { position: absolute; left: 0; top: 50%; width: 1.1rem; height: 1.1rem; transform: translateY(-50%); color: #e8473a; filter: drop-shadow(0 1px 1px #000) drop-shadow(0 0 3px rgba(0, 0, 0, .8)); }
 .bb-slim .rpg-label { display: none; }
 
@@ -3788,8 +3788,8 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* reward screen: the Upgrade rarity buttons all sit on one line at the bottom */
 .rw-slot > .rw-up { margin-top: auto; }
 /* (owner) boss shield bar: ribbed "I I I I" segments (dark tick every 5%) */
-.bb-shield { height: .5rem; }
-.bb-slim .bb-shield { height: .34rem; }
+.bb-shield { height: 1.05rem; border-radius: 5px; overflow: hidden; }   /* (owner 2026-10-24) boss shield bar as tall as the HP bar */
+.bb-slim .bb-shield { height: .62rem; } .bb-slim.bb-top .bb-shield { height: 1.05rem; }
 .bb-shield-fill::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--rib, 10px) - 2px), rgba(5, 20, 34, .85) calc(var(--rib, 10px) - 2px) var(--rib, 10px)); }
 .bb-shield::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(143, 220, 255, .12) 8px 10px); }
 /* (owner) per-skill AUTO toggle above each skill slot */
