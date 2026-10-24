@@ -24,9 +24,8 @@ export const CASTLE_DOOR = { x: 0, z: -23.2, r: 4.6 };
 
 export const PILLARS: [number, number][] = [];
 for (const x of [-7.5, 7.5]) for (const z of [-8, -1, 6, 13]) PILLARS.push([x, z]);
-/** Banquet tables [x, z]: round tables (kit round_table x1.5, radius ~1.35) with four stools each (TABLE_STOOLS), three on each side of the hall. */
+/** Banquet tables [x, z] (owner 2026-10-24: removed from the throne hall, the list stays empty). */
 export const TABLES: [number, number][] = [];
-for (const x of [-10.6, 10.6]) for (const z of [-3.5, 2, 7.5]) TABLES.push([x, z]);
 export const TABLE_STOOLS: [number, number][] = [];
 for (const [x, z] of TABLES) for (const sx of [-1, 1]) for (const sz of [-1, 1]) TABLE_STOOLS.push([x + sx * 1.3, z + sz * 1.3]);
 /** Candle stands (the old braziers): two flanking the dais, two by the door. */
