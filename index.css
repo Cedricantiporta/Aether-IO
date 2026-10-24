@@ -3867,3 +3867,10 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 /* (owner) painted title logo */
 .tlogo.tlogo-img { display: flex; flex-direction: column; align-items: center; }
 .tlogo.tlogo-img img { width: min(34rem, 86vw); height: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .45)); pointer-events: none; user-select: none; }
+/* (owner 2026-10-24) close buttons: just the white X, no round container, always inside the window's top-right corner */
+.win-x, .win-x.modal-x, .is-touch .win-x.modal-x, .compact .win-x, .close-x, .sw-x, .np-x, .modal-x, .dlg-x, .tf-x {
+  background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+  color: rgba(255, 255, 255, .86) !important; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55));
+}
+.win-x:hover, .win-x.modal-x:hover, .close-x:hover, .sw-x:hover, .np-x:hover, .modal-x:hover, .dlg-x:hover, .tf-x:hover { background: transparent !important; color: #fff !important; transform: scale(1.15); }
+.win-x svg { width: 20px; height: 20px; }

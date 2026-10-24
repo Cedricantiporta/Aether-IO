@@ -84,3 +84,14 @@
   .so-tabs-side .so-tab.on { background: rgba(255, 255, 255, .14) !important; color: #fff; }
 }
 .so-page { min-width: 0; }
+/* (owner 2026-10-24) the tower hub keeps ONE window size on every tab (the page scrolls inside), the side tabs never overflow */
+@media (min-width: 760px) {
+  .so-split { grid-template-columns: 12.5rem 1fr; width: min(52rem, calc(100vw - 4rem)); }
+  .so-split .so-page { height: min(30rem, calc(100vh - 12rem)); overflow-y: auto; overflow-x: hidden; padding-right: .2rem; }
+}
+.so-tabs-side .so-tab { white-space: nowrap; }
+.so-tabs-side .so-tab .so-lock { margin-left: auto; flex: none; }
+/* the daily header is never covered by the modifier list */
+.dc-head { flex-wrap: wrap; height: auto !important; min-height: 0; position: relative; z-index: 1; }
+.dc-head > div:first-of-type { min-width: 0; flex: 1 1 12rem; }
+.dc-head small { display: block; white-space: normal; line-height: 1.3; }
