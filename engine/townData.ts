@@ -521,44 +521,12 @@ export const FENCES: [number, number, number, number][] = [
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
-  // (owner, red lines) the road from the bridge up to the cross paths, both sides; nothing on toward the portal
-  [-3.4, 78.5, -3.4, TOWER_PATH_Z - 2],   // west side: bridge -> the Brewer's lane
-  [3.4, 78.5, 3.4, FARM.z - 1.8], [3.4, FARM.z + 1.8, 3.4, 108.2],                       // east side: bridge -> farm track (gap at the farm path)
-  // the path from the chicken coop up to the mines: rail fences along both sides (owner)
-  ...(() => {
-    const pts: [number, number][] = [[43, 111], [48.5, 100.5], [54, 91], [58, 79], [59.2, 64]], f: [number, number, number, number][] = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [bx, bz] = pts[i + 1], l0 = Math.hypot(bx - pts[i][0], bz - pts[i][1]);
-      for (const sd of [-1, 1]) {
-        // (first run, inner side: starts clear of the farm track so it does not poke across it; owner red lines: the
-        // outer side runs all the way to the track, and both join the track's fences)
-        const cut = i === 0 && sd < 0 ? 4.2 : 0;
-        const ax = pts[i][0] + (bx - pts[i][0]) / l0 * cut, az = pts[i][1] + (bz - pts[i][1]) / l0 * cut;
-        const l = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / l * 2.3, nz = (bx - ax) / l * 2.3;
-        const sx0 = ax + nx * sd, sz0 = az + nz * sd, sx1 = bx + nx * sd, sz1 = bz + nz * sd;
-        // (the river now runs on east under this path: the fences stop at the banks, the footbridge's railings take over)
-        const rx = (sx0 + sx1) / 2, rN = riverBank(rx, 0) - 1.4, rS = riverBank(rx, 1) + 1.4;
-        if (Math.min(sz0, sz1) < rS && Math.max(sz0, sz1) > rN) {
-          const at = (zz: number): [number, number] => { const t = (zz - sz0) / (sz1 - sz0); return [sx0 + (sx1 - sx0) * t, zz]; };
-          const hi = sz0 > sz1 ? [sx0, sz0] : [sx1, sz1], lo = sz0 > sz1 ? [sx1, sz1] : [sx0, sz0];
-          if (hi[1] > rS) { const p = at(rS); f.push([hi[0], hi[1], p[0], p[1]]); }
-          if (lo[1] < rN) { const p = at(rN); f.push([lo[0], lo[1], p[0], p[1]]); }
-        } else f.push([sx0, sz0, sx1, sz1]);
-        if (i === 0) f.push(sd < 0 ? [42, 108.7, ax + nx * sd, az + nz * sd] : [43.6, 113.2, ax + nx * sd, az + nz * sd]);   // joints to the track fences
-      }
-    }
-    return f;
-  })(),
-  // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
-  // (owner, red lines) closed along both sides now; the south side joins the road's east fence
-  [3.4, 108.3, 30.5, 108.9], [30.5, 108.9, 33.2, 108.9], [38.4, 108.8, 42, 108.7],   // (gap at x 33..38: the way up into the farm yard)
-  [5, 112.8, 20.6, 113.1], [20.6, 113.1, ANIMAL_PEN.gate0, 113.2], [ANIMAL_PEN.gate1, 113.2, 43.6, 113.2],   // (gap: the animal pen's entrance)
+  // (owner 2026-10-24) no fences along the paths / roads any more (road from the bridge, coop -> mines path, farm track, tower lane);
+  // only the crop fields, pens, paddock and graveyard keep theirs. The animal pen's north side (it used to be the track fence):
+  [ANIMAL_PEN.x0, 113.2, ANIMAL_PEN.gate0, 113.2], [ANIMAL_PEN.gate1, 113.2, 43.6, 113.2],
   // (owner) the animal pen: west, south and east sides (its north side is the track fence above)
   [ANIMAL_PEN.x0, ANIMAL_PEN.z0, ANIMAL_PEN.x0, ANIMAL_PEN.z1], [ANIMAL_PEN.x0, ANIMAL_PEN.z1, ANIMAL_PEN.x1, ANIMAL_PEN.z1],
   [ANIMAL_PEN.x1, ANIMAL_PEN.z1, ANIMAL_PEN.x1, 113.6], [43.6, 113.2, ANIMAL_PEN.x1, 113.6],
-  // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
-  [-4.4, TOWER_PATH_Z - 1.8, -5.6, TOWER_PATH_Z - 1.8], [-14.8, TOWER_PATH_Z - 1.8, -21, TOWER_PATH_Z - 1.8],   // (gap in front of the Brewer's door)
-  [-4.4, TOWER_PATH_Z + 1.8, -21, TOWER_PATH_Z + 1.8],   // (owner, red lines: closed along the hamlet side too; stops short of the tower clearing)
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
