@@ -25,6 +25,8 @@ export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
 export const RANK_REQ: Record<Rarity, number> = {
   COMMON: 1, UNCOMMON: 6, RARE: 12, EPIC: 18, LEGENDARY: 24, MYTHIC: 30,   // (owner: steps of 6)
 };
+/** (owner 2026-10-24) a HIGH-grade piece needs half a step more: Low Epic 18, High Epic 21, Low Legendary 24 ... */
+export const itemReq = (i: { rarity: Rarity; grade?: string }): number => RANK_REQ[i.rarity] + (i.grade === 'HIGH' ? 3 : 0);
 /** Shop buy multipliers on the base price (owner): gear at the Armory x4, pets x1.4 (upgrade costs keep the base price). */
 export const BUY_MUL_GEAR = 4, BUY_MUL_PET = 2.8;
 /** Share of the base price gear and pets sell for (owner: 3x the old 30%). Loot / shards sell at full value. */

@@ -2,7 +2,7 @@ import { betterGearIds } from '../lib/alerts';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, LayoutGrid, Sword, Shield, Gem, FlaskConical, Hexagon, PawPrint, Ellipsis, Swords, Heart, Wind } from '../components/GoldIcons';
-import { useGameStore, calculateTotalCP, calculateItemCP, RANK_REQ, RARITY_COLOR } from '../../store';
+import { useGameStore, calculateTotalCP, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import type { Item } from '../../types';
 import type { EquipSlot } from '../../storeTypes';
@@ -95,7 +95,7 @@ export const InventoryPanel: React.FC = () => {
 
   const selectedLive = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id)) : null;
 
-  const lockedFor = (it: Item) => isGear(it) && (RANK_REQ[it.rarity] > rank || !canUseClass(it, hero));
+  const lockedFor = (it: Item) => isGear(it) && (itemReq(it) > rank || !canUseClass(it, hero));
   const { deposit, withdraw } = useGameStore(useShallow((s) => ({ deposit: s.depositItem, withdraw: s.withdrawItem })));
   // the bag accepts equipped items (unequip) and warehouse items (withdraw)
   const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });

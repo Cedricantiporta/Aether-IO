@@ -11,7 +11,7 @@ import type { PickupKind } from '../types';
 import { hardMul } from '../runMods';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
-import { useGameStore, calculateItemCP, RANK_REQ, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
 /** (owner) gold coins picked up from the ground are worth 70% less (kills, crates, bosses, rewards). */
 const GOLD_LOOT_MUL = 0.3;
 import { healPlayer, grantKillXp } from './combat';
@@ -115,7 +115,7 @@ function notifyLoot(item: Item): void {
     const slot = item.type.toLowerCase() as 'weapon';
     const cur = st.equipment[slot];
     const better = calculateItemCP(item) > (cur ? calculateItemCP(cur) : 0);
-    const usable = (item.type === 'PET' || st.heroRank >= RANK_REQ[item.rarity]) && canUseClass(item, st.hero);
+    const usable = (item.type === 'PET' || st.heroRank >= itemReq(item)) && canUseClass(item, st.hero);
     if (better && usable) action = { label: 'EQUIP', onClick: () => useGameStore.getState().equipItem(item) };
   }
   const plus = item.level > 1 && item.type !== 'POTION' && item.type !== 'CORE' && item.type !== 'REVIVE' && item.type !== 'LOOT' ? ` +${item.level - 1}` : '';

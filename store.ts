@@ -25,7 +25,7 @@ import {
 } from './types';
 import {
   ITEMS_POOL, HERO_STATS, PETS_POOL, COLORS, capRarity, buyMul, sellUnit, SKILLS_INFO, INVENTORY_LIMIT, WAREHOUSE_LIMIT, UPGRADES_POOL, POTION_STACK_LIMIT,
-  MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ,
+  MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ, itemReq,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
 import { rollGrade, migrateGear, GRADE_HIGH_CHANCE } from './grade';
@@ -132,7 +132,7 @@ export function brewGemCost(inv: Item[], id: ElixirId, n: number): number {
   for (const p of ELIXIRS[id].parts) g += Math.max(0, p.count * n - lootOwned(inv, p.id)) * (BREW_GEM[LOOT_BY_ID[p.id]?.rarity ?? 'COMMON'] ?? 1);
   return g;
 }
-export { RANK_REQ };
+export { RANK_REQ, itemReq };
 /** Hero rank xp needed to go from rank r to r+1. */
 export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Math.max(1, r), 1.35));
 /** Passive perk: +1% gold find per rank, capped at +50%. */
@@ -718,7 +718,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     }
     if (!equipment.weapon) {
       // prefer the best class weapon already in the bag; only mint a starter when there is none
-      const own = inventory.filter((i) => i.type === 'WEAPON' && i.classType === hero && profileRank() >= RANK_REQ[i.rarity])
+      const own = inventory.filter((i) => i.type === 'WEAPON' && i.classType === hero && profileRank() >= itemReq(i))
         .sort((a, b) => calculateItemCP(b) - calculateItemCP(a))[0];
       if (own) { inventory.splice(inventory.indexOf(own), 1); equipment.weapon = own; }
       else {
@@ -1477,7 +1477,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     equipItem: (item) => {
       const s = get();
-      const req = item.type === 'PET' || item.id === PICKAXE_ID ? 0 : RANK_REQ[item.rarity];   // (owner) pets have no level requirement
+      const req = item.type === 'PET' || item.id === PICKAXE_ID ? 0 : itemReq(item);   // (owner) pets have no level requirement
       if (s.heroRank < req) { notify(`Requires Lv ${req}!`, 'red', 'WARNING'); return; }
       if (!canUseClass(item, s.hero)) {   // (owner) weapons and wear are class exclusive
         notify(classOnlyMsg(item), 'red', 'WARNING');
@@ -1526,7 +1526,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
       const tryEquip = (slot: EquipSlot, type: ItemType) => {
         const candidates = inventory.filter((i) =>
-          i.type === type && (type === 'PET' || s.heroRank >= RANK_REQ[i.rarity]) && canUseClass(i, s.hero));
+          i.type === type && (type === 'PET' || s.heroRank >= itemReq(i)) && canUseClass(i, s.hero));
         if (candidates.length === 0) return;
         let best = candidates[0];
         let bestCP = calculateItemCP(best);

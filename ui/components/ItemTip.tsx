@@ -1,7 +1,7 @@
 import React from 'react';
 import { ankhCooldownLeft } from '../../engine/systems/combat';
 import type { Item, PlayerStats } from '../../types';
-import { useGameStore, calculateItemCP, RANK_REQ, shopPrice, potionKind, potionCount, POTION_CAP } from '../../store';
+import { useGameStore, calculateItemCP, RANK_REQ, itemReq, shopPrice, potionKind, potionCount, POTION_CAP } from '../../store';
 import { fmtItemStat, STAT_LABEL, TYPE_LABEL, sellPrice, slotOf, isGear } from '../lib/game';
 import { lootCraftUse } from '../../crafting';
 import { LOOT_BY_NAME } from '../../loot';
@@ -48,7 +48,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
   const slot = slotOf(item);
   const equipped = compare && slot ? equipment[slot] : null;
   const isEquippedItself = equipped === item;
-  const req = RANK_REQ[item.rarity];
+  const req = itemReq(item);
   const tag = classTag(item);
   const wrongClass = isGear(item) && !canUseClass(item, heroClass);
   const cp = calculateItemCP(item);
