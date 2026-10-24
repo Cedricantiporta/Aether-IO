@@ -105,7 +105,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
   BOSS_WARMACH: {
-    name: 'The Dune Colossus', hp: 6500, speed: 1.2, radius: 10, scale: 20, contactDamage: 45, projectileDamage: 30,   // (owner: 5x bigger, 2.5x hp, 1.5x damage, very slow-moving)
+    name: 'The Dune Colossus', hp: 6500, speed: 1.2, radius: 5, scale: 10, contactDamage: 45, projectileDamage: 30,   // (owner: 2.5x the old size (was 5x, then 50% smaller), 2.5x hp, 1.5x damage, very slow-moving)
     xp: 14, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0x6e7a45, knockResist: 1, armor: 75,
   },
   BOSS_WARLORD: {

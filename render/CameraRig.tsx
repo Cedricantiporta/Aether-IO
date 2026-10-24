@@ -76,9 +76,9 @@ export function CameraRig() {
     s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
     _tgt.x -= Math.sin(s.yaw) * LOOK_AHEAD; _tgt.z -= Math.cos(s.yaw) * LOOK_AHEAD;   // away from the camera = north when yaw 0
     s.uz = damp(s.uz, C.uz ?? 1, 10, dt);
-    // the Dune Colossus is 5x: pull the camera back during its fight so the machine and the hero both fit
+    // the Dune Colossus is 2.5x: pull the camera back during its fight so the machine and the hero both fit
     const bId = world.director.bossId, bE = bId >= 0 ? world.enemies[bId] : null;
-    s.bossK = damp(s.bossK, bE && bE.active && bE.kind === 'BOSS_WARMACH' && status === GameStatus.PLAYING ? 2.5 : 1, 1.5, dt);
+    s.bossK = damp(s.bossK, bE && bE.active && bE.kind === 'BOSS_WARMACH' && status === GameStatus.PLAYING ? 1.6 : 1, 1.5, dt);
     const R = CAM_DIST0 * s.bossK * s.zoom * s.uz * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
