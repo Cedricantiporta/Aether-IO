@@ -156,7 +156,7 @@ town (and closes the open panel first).
   HOME (the adventurer's house: bed = sleep to dream). Same plumbing for each (`pending` area, `switchArea`, exit pill).
 - **Activities**: fishing (`systems/fishing.ts`, Lv 3), mining (hold E on nodes; Mining Pickaxe equipped as the weapon halves effort),
   harvest nodes, farm chores (milk/eggs, held E), pet the animals, sit on benches, **ride horses** (from the start;
-  2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 gems -> starts a run in the Coral Isles).
+  2x speed, horse dash), Crystal Cave (Lv 5), Gull Queen ship ticket (60 Aether Crystals -> starts a run in the Coral Isles).
 - **Navigation**: click-to-walk on the ground with A* (`systems/townPath.ts`, Settings clickMove). Quest targets are area-aware
   (`systems/questNav.ts`) and feed the guide arrow, the beacon, the minimap's tracked-quest ring (`uiStore.trackedQuest`: set by Track /
   Destination, '' = automatic) and the auto-path. **Track** in the quest window and a click on a tracker row both call

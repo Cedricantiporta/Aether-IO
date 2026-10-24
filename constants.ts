@@ -73,7 +73,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'BLACKSMITH', position: [16.4, 0, -1.5], rot: -Math.PI / 2, color: '#ef4444' },   // the forge yard by the gate
     { type: 'TECH', position: [17.2, 0, 19.8], rot: Math.PI, color: '#5fc8e8' },   // Tech House: beside Madame Zora, same row   // Tech House (permanent upgrades): on the East Rise
     { type: 'BREWER', position: [-10.2, 0, 106.2], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
-    { type: 'FISH', position: [-52.5, 0, 24], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
+    { type: 'FISH', position: [-52.5, 0, 1], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050' },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];
 /** Loot pill label colours by rarity (Common white ... Mythic red). */

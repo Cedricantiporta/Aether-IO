@@ -18,6 +18,21 @@ import { groundDetail } from './Room';
 import { applyPathShader, dirtDiscs, pathMask } from './groundPath';
 import { inCaveClear } from '../engine/caveData';
 import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
+import { RIVER, riverBank } from '../engine/townData';
+
+/** (owner 2026-10-24) a continuous sand strip along both river banks (gently wavy width, the whole length of the river). */
+function riverSandK(x: number, z: number): number {
+  if (x < RIVER.x0 - 2 || x > RIVER.x1 + 2 || z < RIVER.z0 - 9 || z > RIVER.z1 + 9) return 0;
+  let best = 0;
+  for (const side of [0, 1] as const) {
+    const d = side ? z - riverBank(x, 1) : riverBank(x, 0) - z;   // metres out of the water onto the bank
+    if (d < -2 || d > 6) continue;
+    const w = 2.4 + Math.sin(x * 0.17 + side * 2.7) * 0.6 + Math.sin(x * 0.53 + side) * 0.3;   // strip width
+    best = Math.max(best, Math.min(1, Math.max(0, (w - d) / 1.0)));
+  }
+  return best;
+}
+const sandAt = (x: number, z: number): number => Math.max(beachSandK(x, z), riverSandK(x, z));
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
 const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(z - DOCK.z) < 7;
 
@@ -58,7 +73,7 @@ function groundColor(x: number, z: number, y: number, out: Color) {
     out.lerp(cT.set('#12200f'), sstep(e + 10, e + 60, r) * 0.7);
   }
   // lakeside beach: warm dry sand, darker wet sand toward the water line
-  const sk = beachSandK(x, z);
+  const sk = sandAt(x, z);
   if (sk > 0) {
     cT.set('#e2cd96').lerp(cD.set('#d4ba82'), n2).multiplyScalar(0.95 + n3 * 0.08);
     const shoreX = z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6 ? -49.5 - mainShoreOff(z) : BEACH.shoreX + beachWobble(z);   // (LAKE.x1; the wet band follows the wavy water line)
@@ -100,7 +115,7 @@ function Ground({ q }: { q: QualityCfg }) {
       const x = -S / 2 + i * cell, z = -S / 2 + j * cell;
       const y = groundY(x, z);
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
-      groundColor(x, z, y, c); sandA[k] = beachSandK(x, z);
+      groundColor(x, z, y, c); sandA[k] = sandAt(x, z);
       col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
       uv[k * 2] = x / 8; uv[k * 2 + 1] = z / 8;   // (the Greenwood run rooms' painted lawn texture, period 8 m)
       // grass density + tint

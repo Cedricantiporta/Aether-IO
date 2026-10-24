@@ -1099,10 +1099,10 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Captain Rhea Saltwind', role: 'Ship Captain', model: 'KNIGHT', tint: '#f3e3c3', scale: 1.05, prop: 'none', accent: '#6fd0e0', home: [-89, 23.4], ship: true, noHat: true,
     talk: [
-      ['Ahoy! The Gull Queen sails for the Coral Isles at every tide.', 'Sixty gems and you skip the long walk through three realms. Interested?'],
-      ['The Isles are warm, the water is clear and the locals bite. Mostly the crabs.', 'A ticket is sixty gems. You start right on the first island.'],
+      ['Ahoy! The Gull Queen sails for the Coral Isles at every tide.', 'Sixty Aether Crystals and you skip the long walk through three realms. Interested?'],
+      ['The Isles are warm, the water is clear and the locals bite. Mostly the crabs.', 'A ticket is sixty Aether Crystals. You start right on the first island.'],
     ],
-    bubbles: ['All aboard for the Coral Isles!', 'Sixty gems a ticket!', 'Fair winds today.'],
+    bubbles: ['All aboard for the Coral Isles!', 'Sixty crystals a ticket!', 'Fair winds today.'],
   },
   {
     name: 'Hollis', role: 'Farmer', model: 'BARBARIAN', tint: '#f3e3c3', scale: 1, prop: 'none', accent: '#d9b56a', home: [36.2, 101.9], speed: 1.2,

@@ -24,7 +24,7 @@ import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { islandRadius } from './mapgen';
-import { beachSandK, onDeckRect, FISH_SPOTS, CAMPFIRE, UMBRELLA, CRATES, NET_RACK, SHIP, DOCK } from './beachData';
+import { beachZoneK, onDeckRect, FISH_SPOTS, CAMPFIRE, UMBRELLA, CRATES, NET_RACK, SHIP, DOCK } from './beachData';
 import { inCampYard, inCaveClear, CAVE_DOOR } from './caveData';
 
 /** role -> kit piece names (kit v3 trees / bushes + the nature kit's hedge, rocks, props). Piece sizes are normalised in engine/kitV3Data V3_K, so the scale ranges below keep the old numbers. */
@@ -129,7 +129,7 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   for (const l of legs) if (distSeg(x, z, l[0], l[1], l[2], l[3]) < l[4] + pad) return true;
   for (const q of rects) if (x > q[0] - pad && x < q[2] + pad && z > q[1] - pad && z < q[3] + pad) return true;
   if (Math.hypot(x, z) > islandRadius(Math.atan2(z, x)) - edge) return true;
-  if (isTownWater(x, z) || onDeckRect(x, z, 2) >= 0 || beachSandK(x, z) > 0.1) return true;
+  if (isTownWater(x, z) || onDeckRect(x, z, 2) >= 0 || beachZoneK(x, z) > 0.1) return true;
   if (x > RIVER.x0 - 2 && x < RIVER.x1 + 2 && z > riverBank(x, 0) - 1.4 && z < riverBank(x, 1) + 1.4) return true;
   if (inCampYard(x, z, 1) || inCaveClear(x, z, 1)) return true;
   if (Math.hypot(x - TOWER.x, z - TOWER.z) < TOWER_KNOLL.r + 1) return true;

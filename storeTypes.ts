@@ -206,7 +206,7 @@ export interface GameState {
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
   startMode: (mode: 'ADVENTURE' | 'TOWER', startBiome?: number) => void;
-  sailToIsles: () => boolean;         // the captain's 60-gem ticket: an adventure run that opens in the Coral Isles   // start a run in this mode (sets engine runInfo, then startGame)
+  sailToIsles: () => boolean;         // the captain's 60 Aether Crystal ticket: an adventure run that opens in the Coral Isles   // start a run in this mode (sets engine runInfo, then startGame)
   setAscension: (lv: number) => void;
   completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
   recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero

@@ -40,7 +40,7 @@ import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
 /** The captain's ticket: sail from the pier straight to the Coral Isles (biome 3, its first room). */
-export const SHIP_TICKET_GEMS = 60;
+export const SHIP_TICKET_CRYSTALS = 60;   // (owner 2026-10-24) the Coral Isles ticket costs Aether Crystals, not gems
 const REFORGE_NAMES = new Set(Object.values(REFORGE_ITEM).map((r) => r.name));
 /** What a bulk sell would take from the bag (gear at 30%, loot stacks at full value). Shared by the store and the popup preview. */
 export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gold: number; count: number; loot: number; fish: number } {
@@ -1200,8 +1200,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ---- run modes: adventure (+ Ascension) / endless tower
     sailToIsles: () => {
       const s = get();
-      if (s.gems < SHIP_TICKET_GEMS) { notify(`A ticket costs ${SHIP_TICKET_GEMS} gems.`, '#ff8a80', 'SYSTEM'); return false; }
-      set({ gems: s.gems - SHIP_TICKET_GEMS }); events.emit('purchase', {}); 
+      if ((s.crystals ?? 0) < SHIP_TICKET_CRYSTALS) { notify(`A ticket costs ${SHIP_TICKET_CRYSTALS} Aether Crystals.`, '#ff8a80', 'SYSTEM'); return false; }
+      set({ crystals: (s.crystals ?? 0) - SHIP_TICKET_CRYSTALS }); events.emit('purchase', {}); 
       get().startMode('ADVENTURE', 3);
       return true;
     },

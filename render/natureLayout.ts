@@ -171,7 +171,7 @@ export function townPlaces(): Sets {
     else rockPut(S, x, y, z, R * (n >= 6 ? 1.1 : 0.95), k, n >= 6 ? 7 : n >= 4 ? 5 : 3);
   };
   HEADLAND.forEach(([x, z, r], i) => rockC(x, z, r, -0.2, 3 + i, i % 3 === 0 ? 8 : 6));
-  for (let i = 0; i < 5; i++) { const x = -70.5 - i * 1.4 - hash2(i, 1), z = 4 + (hash2(i, 2) - 0.5) * 3; rockC(x, z, 0.9 + hash2(i, 3) * 0.5, -0.5, 20 + i, 4); }
+  rockC(-71.5, -6, 1.3, -0.5, 20, 5);   // (owner 2026-10-24: only a couple of rocks out in the water)
   rockC(-72.5, 15.5, 1.5, -0.55, 61, 6);   // the islet in the shallows
   rockC(-66.4, 44.5, 1.2, -0.4, 62, 5);   // a small outcrop where the sand meets the water
   for (const [x, z, r] of [[-62.9, 18.6, 0.6], [-52.6, 40.4, 0.55], [-56.4, 52.4, 0.65]]) rockC(x, z, r, -0.05, 70 + x, 3);   // lone rocks on the sand

@@ -7,7 +7,7 @@ import { useDialogue, advanceDialogue, closeDialogue, acceptOffer, replyAt } fro
 import { device } from '../../engine/device';
 import { useGameEvent } from '../hooks/useEvent';
 import { useUiStore } from '../uiStore';
-import { useGameStore, SHIP_TICKET_GEMS } from '../../store';
+import { useGameStore, SHIP_TICKET_CRYSTALS } from '../../store';
 import { activeChar } from '../../characters';
 import { questBanner } from './QuestBanner';
 import { STORY } from '../../story';
@@ -83,10 +83,10 @@ const Typed: React.FC<{ text: string; testId: string }> = ({ text, testId }) => 
 /** The captain's ticket (engine/systems/dialogue emits hub 'ship' at the end of the talk). */
 const useShipOffer = () => useGameEvent('hub', (e) => {
   if (e.kind !== 'ship') return;
-  const gems = useGameStore.getState().gems;
+  const cr = useGameStore.getState().crystals ?? 0;
   useUiStore.getState().askConfirm({
-    title: 'Sail to the Coral Isles?', confirmLabel: gems >= SHIP_TICKET_GEMS ? `Buy ticket · ${SHIP_TICKET_GEMS} gems` : 'Not enough gems',
-    body: `A run that starts straight in the Coral Isles (depth 1), skipping the first three realms. You have ${gems} gems.`,
+    title: 'Sail to the Coral Isles?', confirmLabel: cr >= SHIP_TICKET_CRYSTALS ? `Buy ticket · ${SHIP_TICKET_CRYSTALS} Aether Crystals` : 'Not enough Aether Crystals',
+    body: `A run that starts straight in the Coral Isles (depth 1), skipping the first three realms. You have ${cr} Aether Crystals.`,
     onConfirm: () => { useGameStore.getState().sailToIsles(); },
   });
 });

@@ -11,15 +11,15 @@
 // ============================================================================
 
 /** Beach extent: sand between the wall (x = -45) and the water line `shoreX`, from the headland (z0) to the forest (z1). */
-export const BEACH = { shoreX: -65, z0: 6, z1: 58, wallX: -45, wallZ: 38, wallHalf: 1.3 };
+export const BEACH = { shoreX: -65, z0: -6, z1: 58, wallX: -45, wallZ: 38, wallHalf: 1.3 };
 /** Walkable island box for the beach (must contain the origin, see townData ISLAND_BOXES / mapgen boxExit). Its north side
  *  (z = -2) is never reached: the headland rocks at z ~ 5 block the way. */
-export const BEACH_BOX: [number, number, number, number] = [-68.5, -2, 0, 58];
+export const BEACH_BOX: [number, number, number, number] = [-68.5, -14, 0, 58];
 
 /** Boardwalk (on the sand, visual only): from the entrance by the corner tower west, then north along the beach. */
 export const BOARDWALK = { z: 47, xE: -46.5, x: -58.5, zN: 12, w: 2.4 };
 /** The pier: a plank walkway west into the lake from the boardwalk + a wide T-head at its end. Deck top y = DOCK.y. */
-export const DOCK = { z: 30, x0: -57.3, x1: -80, hw: 1.3, head: { x0: -94, x1: -80, z0: 22, z1: 36 }, y: 0.12 };   // (owner: a bigger head)
+export const DOCK = { z: 30, x0: -57.3, x1: -80, hw: 2.6, head: { x0: -94, x1: -80, z0: 22, z1: 36 }, y: 0.12 };   // (owner: a bigger head)
 /** The Coral Isles ship, moored along the south side of the pier head (visual; the water around it is not walkable). */
 export const SHIP = { x: -91, z: 15.2, len: 26, beam: 7 };
 /** Walkable deck rectangles [x0, z0, x1, z1] (a hero-radius inside the planks): walkable over water. */
@@ -40,12 +40,14 @@ export const FISH_SPOTS: FishSpot[] = [
 export const FISH_SPOT_R = 3.2;
 
 /** Fishmonger's stall (the shop itself is constants SHOP_POSITIONS 'FISH'): on the beach, facing the boardwalk / water. */
-export const FISH_STALL = { x: -52.5, z: 24, rot: 0 };   // mid-beach, well clear of the corner tower (never seen / reached through the wall)
+export const FISH_STALL = { x: -52.5, z: 1, rot: 0 };   // (owner 2026-10-24) north of the beach gate, on the extended beach (never seen / reached through the wall)
 
-/** Rocky headland closing the north end of the beach (rock centres x, z, radius). */
-export const HEADLAND: [number, number, number][] = (() => {
+/** (owner 2026-10-24) the beach runs further north; its north end is closed by an invisible line from the wall to the water (the castle's
+ *  side / back is not walkable) with only a couple of rocks on it. HEADLAND = the drawn rocks, HEADLAND_BLOCK = the colliders. */
+export const HEADLAND: [number, number, number][] = [[-46.9, -8.2, 1.9], [-49.8, -8.9, 1.3]];
+export const HEADLAND_BLOCK: [number, number, number][] = (() => {
   const r: [number, number, number][] = [];
-  for (let i = 0; i < 15; i++) { const x = -46.6 - i * 1.65; r.push([x, 4.6 + Math.sin(i * 1.7) * 0.6, 1.75 + (i % 3) * 0.25]); }
+  for (let x = -46; x >= -70; x -= 1.5) r.push([x, -8.4, 1.1]);
   return r;
 })();
 
@@ -85,7 +87,7 @@ export const ENTRY_SIGN = { x: -46, z: 44.4 };   // signpost at the boardwalk en
 /** Movement colliders [x, z, r] (registered by village.placeVillageNodes after the island is generated). */
 export const BEACH_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
-  for (const h of HEADLAND) c.push(h);
+  for (const h of HEADLAND_BLOCK) c.push(h);
   for (const [x, z, r] of SOUTH_ROCKS) c.push([x, z, r * 0.9]);
   for (const p of PALMS) c.push([p[0], p[1], 0.6]);
   c.push([CAMPFIRE.x, CAMPFIRE.z, 1.0], [UMBRELLA.x, UMBRELLA.z, 0.35]);
@@ -126,7 +128,19 @@ export function beachSandK(x: number, z: number): number {
   // west of the wall: all sand; south of the corner tower it fades toward the meadow (x -44 .. -40)
   const edgeX = z > 40 ? -40 - (z - 40) * 0.1 : -44.5;
   const sx = Math.min(1, Math.max(0, (edgeX - x) / 4));
-  return sz * sx;
+  // (owner 2026-10-24) the half by the wall stays grass: the sand starts about half-way to the water, along a wavy, irregular edge
+  const gx = -54.5 + Math.sin(z * 0.29 + 0.7) * 2.3 + Math.sin(z * 0.83 + 2.1) * 1.1 + Math.sin(z * 1.9) * 0.4;
+  const gk = Math.min(1, Math.max(0, (gx - x) / 2.2));
+  return sz * sx * gk;
+}
+/** The whole beach stretch (sand + the grass strip by the wall): where the town fill keeps out (no trees / bushes on the beach walk). */
+export function beachZoneK(x: number, z: number): number {
+  if (x < -36 && z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6) return beachSandK(x, z);
+  if (x > -38 || z < BEACH.z0 - 9 || z > BEACH.z1 + 8) return 0;
+  const bx = Math.max(0, -40 - x), bulge = Math.sin(bx * 0.22) * 2.5;
+  const sz = Math.min(1, Math.max(0, (z - (BEACH.z0 - 6) - bulge) / 6)) * Math.min(1, Math.max(0, (BEACH.z1 + 6 - z - bulge) / 8));
+  const edgeX = z > 40 ? -40 - (z - 40) * 0.1 : -44.5;
+  return sz * Math.min(1, Math.max(0, (edgeX - x) / 4));
 }
 
 /** True when (x, z) is OUTSIDE the town wall on the beach / meadow side (west of the west wall's outer face, or south of
