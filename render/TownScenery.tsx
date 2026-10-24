@@ -11,7 +11,6 @@ import { BASE } from './models';
 import { TextureLoader, type Texture } from 'three';
 import { AdditiveBlending, ExtrudeGeometry, BufferGeometry, CanvasTexture, ConeGeometry, MeshStandardMaterial, PlaneGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, Mesh, MeshBasicMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Sprite } from 'three';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
-import { facetGeo } from './facetRock';
 import { Inst } from './Inst';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeShoreField, makeWaterMaterial } from './waterFx';
@@ -320,10 +319,9 @@ function addField(b: GB, F: FieldSpec): void {
 function addRiverBanks(b: GB, rnd: () => number): void {
   for (let x = RIVER.x0 + 22; x < RIVER.x1; x += 2.6) {
     if (Math.abs(x) < BRIDGE.hw + 2) continue;
-    for (const zb of [riverBank(x, 0) - 0.4, riverBank(x, 1) + 0.4]) if (rnd() < 0.55) b.add(facetGeo((rnd() * 4) | 0), [x + rnd() * 1.6, 0.05, zb + (rnd() - 0.5) * 0.8], [0, rnd() * 6.28, 0], (0.5 + rnd() * 0.7) * 1.1, ['#a39c90', '#9a9ca0', '#aaa598'][(rnd() * 3) | 0]);
+    // (the bank stones + the spring rocks are Quaternius rock formations now: render/natureLayout townPlaces)
     if (rnd() < 0.3) { const zr = rnd() < 0.5 ? riverBank(x, 0) + 0.6 : riverBank(x, 1) - 0.6; for (let k = 0; k < 3; k++) b.cyl(0.03, 0.05, 1.1 + rnd() * 0.6, 4, [x + rnd(), 0.2, zr + (rnd() - 0.5)], '#6f8f3a'); }
   }
-  for (let i = 0; i < 9; i++) b.add(facetGeo(i), [RIVER.x1 - 1 + rnd() * 3, 0.5 + rnd() * 0.6, RIVER.z0 + 4 + rnd() * (RIVER.z1 - RIVER.z0 - 8)], [0, rnd() * 6.28, 0], (1.0 + rnd() * 1.3) * 1.15, ['#9a9ca0', '#a39c90'][i % 2]);
 }
 
 interface Chunk { b: GB; g: GB }

@@ -282,10 +282,8 @@ for (const [pc, x, z, ry, sc] of [
   ['potted_plant_a', -26.4, 24.9, 0, 1], ['potted_plant_b', 7.2, 14.8, 0, 1], ['potted_plant_a', 18, 14.8, 0, 1], ['potted_plant_b', -7.4, -15.2, 0, 1], ['potted_plant_a', 8.6, -15.2, 0, 1],
   ['flower_bed_long', -33.6, -16.4, 0, 0.8], ['flower_bed_long', 8.4, 30.4, 0, 0.8], ['flower_bed_long', -36, 8.2, 0, 0.8],
 ] as [string, number, number, number, number][]) decor(pc, x, z, ry, sc, { solid: 'ring', r: 0.45 });
-// ---- hedge_arch at the park entrances (the fountain park: north from the south street, east from the Pets shop; the east park: on its lane from the road)
-decor('hedge_arch', WELL_POS.x, 12.3, 0, 1, { solid: 'legs', r: 0.6, force: true });
-decor('hedge_arch', -15.4, 17.6, Math.PI / 2, 1, { solid: 'legs', r: 0.6, force: true });
-decor('hedge_arch', 18.0, 54.4, Math.PI / 2, 1, { solid: 'legs', r: 0.6, force: true });
+// ---- (park entrances: no arches)
+// (owner 2026-10-24: the hedge arches are gone)
 // ---- landmark outside: the Coral Isles ship at the pier head
 put('ship_big', SHIP.x, SHIP.z, Math.PI / 2, 1.5, 1.5, 1.5, -0.1);
 // ---- the beach: umbrella, crates, net rack, campfire (positions + colliders: engine/beachData)
@@ -310,7 +308,7 @@ put('fishing_net_rack', NET_RACK.x, NET_RACK.z, NET_RACK.rot, 1, 1, 1, 0);
     if (r() < 0.5) put('lily_pads', x - 2.6 - r() * 2, z + (r() - 0.5) * 2, r() * TAU, 0.8 + r() * 0.6, 1, 0.8 + r() * 0.6, -0.17);
   }
 }
-// ---- the park round the fountain: blossom trees + bushes (the hedge_arch entrances are above)
+// ---- the park round the fountain: blossom trees + bushes
 for (const [gx, gz] of [[WELL_POS.x, 12.6], [-15.3, 17.6], [WELL_POS.x, 21.4]]) resv(gx, gz, 2.4);   // the park's N / E / S entrance gaps stay free
 grove(Z(WELL_POS.x + 0.3, WELL_POS.z, 6.8, 4.4), 3, [BLOSSOMS(1)], 29, 0.6, 1.4);
 // ---- the garden strip along the south wall (z 33..36): beds, bushes, small trees; the avenue + hero's door stay free

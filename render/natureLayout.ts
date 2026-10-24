@@ -16,7 +16,7 @@
 // ============================================================================
 import {
   TOWN_TREES, FENCES, LOT_FENCES, HOUSES, TOWN_SEATS, CHURCH, PARK_EAST, WELLS, SIGNPOSTS, STEP_PATHS, CARTS, HAYSTACK, TRAIL_ROCKS, FIELDS, FARM, SCARECROW,
-  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA, PLANTERS, SHOP_LOOK, shopLocal,
+  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, RIVER, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA, PLANTERS, SHOP_LOOK, shopLocal,
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
@@ -47,7 +47,7 @@ const qtRock = (S: Sets, node: string, x: number, y: number, z: number, hw: numb
   const s0 = hw / QT_R[node];
   put(S, QT_PREFIX + node, { x, y, z, ry, sx: s0, sy: (hw * hmul) / QT_H[node], sz: s0 * 1.1 });
 };
-const rockPut = (S: Sets, x: number, y: number, z: number, R: number, seed: number, n = 0, grow = 1.4): void => {
+export const rockPut = (S: Sets, x: number, y: number, z: number, R: number, seed: number, n = 0, grow = 1.4): void => {
   const h = (k: number): number => hash2(x, z, seed * 7 + k), cnt = n || (R < 0.45 ? 3 : 3 + Math.floor(h(1) * 5)), G = R * grow, a0 = h(2) * TAU;
   const core = G * (0.8 + h(3) * 0.2), hm = 0.85 + h(4) * 0.5;
   qtRock(S, qtPick(QT_ROCKS, h(5)), x, y - 0.12, z, core, hm, h(6) * TAU);
@@ -131,7 +131,15 @@ export function townPlaces(): Sets {
   // ---- market carts on the meadow (kind 1 = a haystack), the haystack in the wheat field, trail boulders
   for (const k of CARTS) { if (k.kind === 1) put(S, 'haystack', P(k.x, groundAt(k.x, k.z), k.z, 0, 0.8)); else put(S, 'market_cart', P(k.x, groundAt(k.x, k.z), k.z, 0, 1)); }
   put(S, 'haystack', P(HAYSTACK.x, 0, HAYSTACK.z, 0, 0.85));
-  TRAIL_ROCKS.forEach(([x, z, r], i) => rockPut(S, x, groundAt(x, z), z, r * 1.05, 700 + i, r >= 1.5 ? 6 : 0));   // formations of faceted boulders (collider r unchanged)
+  TRAIL_ROCKS.forEach(([x, z, r], i) => rockPut(S, x, groundAt(x, z), z, r * 1.05, 700 + i, r >= 1.5 ? 6 : 0));
+  { // (owner 2026-10-24) river-bank stones + the rocky spring at the river's east end: real rock formations (were faceted chunks in TownScenery)
+    const rr = mulberry32(4711);
+    for (let x = RIVER.x0 + 22; x < RIVER.x1; x += 2.6) {
+      if (Math.abs(x) < BRIDGE.hw + 2) continue;
+      for (const zb of [riverBank(x, 0) - 0.4, riverBank(x, 1) + 0.4]) if (rr() < 0.55) { const px = x + rr() * 1.6, pz = zb + (rr() - 0.5) * 0.8; rockPut(S, px, groundAt(px, pz), pz, 0.45 + rr() * 0.4, 1300 + Math.round(x * 3)); }
+    }
+    for (let i = 0; i < 6; i++) { const px = RIVER.x1 - 1 + rr() * 3, pz = RIVER.z0 + 4 + rr() * (RIVER.z1 - RIVER.z0 - 8); rockPut(S, px, groundAt(px, pz), pz, 1.0 + rr() * 0.9, 1500 + i, 6); }
+  }   // formations of faceted boulders (collider r unchanged)
   // ---- outskirts buildings (fronts south): the nature-kit houses of HOUSES (farmhouse, barn, coop)
   for (const h of HOUSES) if (h.nk) put(S, h.nk as NKPiece, P(h.x, groundAt(h.x, h.z), h.z, 0, h.s ?? 1));
   put(S, 'windmill', P(WINDMILL.x, groundAt(WINDMILL.x, WINDMILL.z), WINDMILL.z, 0, WINDMILL.s));

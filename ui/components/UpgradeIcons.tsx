@@ -217,6 +217,7 @@ export const cardBackdropUrl = (r: Rarity): string => `${artBase()}tall/bg_${r =
 export const RARITIES_ALL: Rarity[] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
 export const preloadImages = (urls: string[]): void => { for (const u of urls) { const im = new Image(); im.decoding = 'async'; im.src = u; } };
 export const UpgradeArt: React.FC<{ upgrade: Pick<Upgrade, 'type' | 'special'>; size?: number | string }> = ({ upgrade, size = 56 }) => {
+  if (upgrade.type === 'DASH_CHARM' && !upgrade.special) return null;   // (owner 2026-10-24: the Dash Charm cards - Blade Step etc. - show no icon)
   const ck = cardArtKey(upgrade);
   if (ck) return <img src={cardArtUrl(ck)} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'cover', borderRadius: 8 }} />;
   if (upgrade.special) return <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden style={{ display: 'block', overflow: 'visible', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.7))' }}><Defs />{ART_SPECIAL[upgrade.special]()}</svg>;
