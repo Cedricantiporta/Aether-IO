@@ -10,11 +10,11 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { GB, clamp, damp } from './util';
 import { dustPuff, embers } from './fx';
-import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { makeBossMats, useBossRig } from './bossKit';
 
 const OLIVE = '#7a844c', OLIVE2 = '#5f683a', DARK = '#3a3f2a', STEEL = '#55585e', AMBER = '#ffb347';
-const R = 2.4;   // authored footprint radius (scale = enemy.radius / R)
+const R = 2.4;   // authored footprint radius (old meshes: scale = size / R)
+const BASE_SCALE = 4, BASE_RADIUS = 3.4;   // the model was authored for the original 4x / 3.4 m boss; the Colossus now spawns at 5x (scale 20) and the model follows e.scale
 // leg hips: [x, z, outward yaw]
 const HIPS: [number, number, number][] = [[1.35, 1.25, 0.55], [1.5, 0, 0], [1.35, -1.25, -0.55], [-1.35, 1.25, Math.PI - 0.55], [-1.5, 0, Math.PI], [-1.35, -1.25, Math.PI + 0.55]];
 
@@ -76,7 +76,7 @@ export function WarMachine() {
     let yOff = 0, shx = 0;
     if (e.state === 'SPAWN') { const k = clamp(e.stateT / 1.6, 0, 1); yOff = -(1 - k * k) * 5; shx = Math.sin(TT * 60) * 0.06 * (1 - k); }
     if (e.state === 'DYING') { const k = clamp(e.deathT / 0.6, 0, 1); yOff = -k * 2.5; shx = Math.sin(TT * 80) * 0.1 * (1 - k); s.glow = 3 * (1 - k); }
-    const sc = e.radius / R;
+    const sc = (e.scale / BASE_SCALE) * (BASE_RADIUS / R);
     r.position.set(e.pos.x + shx * sc, e.pos.y + yOff, e.pos.z);
     r.rotation.y = e.facing;
     r.scale.setScalar(sc);
@@ -88,7 +88,7 @@ export function WarMachine() {
     // legs: alternating tripod gait while moving; all lift together for the stomp
     for (let i = 0; i < 6; i++) {
       const L = legs.current[i], sh = shins.current[i]; if (!L || !sh) continue;
-      const ph = t * 6 + (i % 2 === (i < 3 ? 0 : 1) ? 0 : Math.PI);
+      const ph = t * 2.6 + (i % 2 === (i < 3 ? 0 : 1) ? 0 : Math.PI);
       const swing = Math.sin(ph) * 0.28 * moving, up = Math.max(0, Math.cos(ph)) * 0.35 * moving;
       L.rotation.y = HIPS[i][2] + swing;
       L.rotation.z = up + s.lift * 0.55 + s.crouch * 0.5;
@@ -97,7 +97,7 @@ export function WarMachine() {
     mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * Math.sin(TT * 6));
     if (rig && kw.current) {
       const J = rig.J;
-      kw.current.scale.setScalar(e.scale / ENEMY_DEFS.BOSS_WARMACH.scale / sc);
+      kw.current.scale.setScalar((e.scale / BASE_SCALE) / sc);
       kb.current.position.y = body.current.position.y;
       J.turret.rotation.y = s.tYaw;
       for (let i = 0; i < 6; i++) {
@@ -109,9 +109,9 @@ export function WarMachine() {
       km.glow.color.setScalar(0.8 + s.glow * 0.8 + 0.2 * Math.sin(TT * 6));
     }
     if (dt > 0 && e.state !== 'DYING' && e.state !== 'SPAWN') {
-      if (Math.random() < dt * 8) embers(e.pos.x + (Math.random() - 0.5) * e.radius, 2.5 * sc, e.pos.z + (Math.random() - 0.5) * e.radius, 1, 0xff9a3a, 0.3, 2.2, 0.9, 0.2);
-      const step = Math.sin(t * 6) > 0 ? 1 : 0;
-      if (moving > 0.2 && step !== s.lastStep) { s.lastStep = step; dustPuff(e.pos.x, e.pos.z, 3, 2.2, 0xb8a888, 3); }
+      if (Math.random() < dt * 8) embers(e.pos.x + (Math.random() - 0.5) * e.radius, 2.5 * sc * 0.4, e.pos.z + (Math.random() - 0.5) * e.radius, 1, 0xff9a3a, 0.3, 2.2, 0.9, 0.2);
+      const step = Math.sin(t * 2.6) > 0 ? 1 : 0;
+      if (moving > 0.2 && step !== s.lastStep) { s.lastStep = step; dustPuff(e.pos.x, e.pos.z, 7, 4.5, 0xb8a888, 3); }
     }
   });
 
