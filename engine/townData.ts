@@ -249,7 +249,7 @@ export const FIELDS: FieldSpec[] = [
 export const PLAZA_DECOR = { lawnR: 0, kerbR: 5.2, bedR: 0, bedS: 0, plinthR: 0.95, lawnY: 0.12, statueY: 0.62 };   // (no lawn / beds any more: lawnY = the paving height the portal stands on; kerbR = the claimed radius round the portal)
 export const STATUE = { x: 0, z: 2, r: 3.7 };   // (the lawn centre; the portal stands in it)
 /** Two little guardian statues (statue_hero shrunk to s, on small round plinths) flank the portal's door on its lawn (the founder's statue moved here from the plaza's middle). */
-export const PLAZA_STATUES: { x: number; z: number; r: number; s: number }[] = [{ x: -5.2, z: 3.4, r: 1.0, s: 0.85 }, { x: 5.2, z: 3.4, r: 1.0, s: 0.85 }];
+export const PLAZA_STATUES: { x: number; z: number; r: number; s: number }[] = [];   // (owner 2026-10-24: the only statues are the two horse statues by the portal, engine/qtVillage HORSE_STATUES)
 /** The old graveyard on the strip between the chapel and the west wall (owner): fenced, a path through the middle from
  *  the chapel's side door (east gate) to the crypt at the west end, gravestones in four blocks, a dead tree, lanterns. */
 export const GRAVEYARD = { x0: -43.4, x1: -32.8, z0: -39.6, z1: -21, pathZ: -31.5, gateX: -38 };

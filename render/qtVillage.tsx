@@ -66,4 +66,15 @@ export function VillageQt({ lit, shadows }: { lit: Material; shadows: boolean })
     </group>
   );
 }
+/** (owner 2026-10-24: the horse is the only statue) one merged pedestal + horse geometry for run-room STATUE obstacles (render/Props). */
+export function useHorseStatueGeo(): BufferGeometry | null {
+  const gltf = useGLTF(VILLAGE_URL);
+  return useMemo(() => {
+    const G = pieces(gltf.scene);
+    if (!G.Pedestal || !G.Statue_Horse) return null;
+    const h = G.Statue_Horse.clone(); h.translate(0, PEDESTAL_H, 0);
+    const g = mergeGeometries([G.Pedestal.clone(), h], false); h.dispose();
+    g?.computeBoundingSphere(); return g;
+  }, [gltf]);
+}
 useGLTF.preload(VILLAGE_URL);

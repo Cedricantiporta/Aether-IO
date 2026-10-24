@@ -12,6 +12,7 @@ import { QualityCfg } from './quality';
 import { QtBatch } from './qtNature';
 import type { Place } from './natureKit';
 import { roomTrail } from './groundPath';
+import { useHorseStatueGeo } from './qtVillage';
 import { N2, QT_R, QT_PREFIX, QT_H, QT_COMMON, QT_PINE, QT_TWISTED, QT_DEAD, QT_ROCKS, QT_PATH, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES, qtPick } from '../engine/qtData';
 import { shape, shapeLimit } from '../engine/roomShape';
 import { onBridge as onBridgeQt, inLiquid as inLiquidQt, feat as featQt } from '../engine/roomFeatures';
@@ -107,6 +108,12 @@ function makeWell() {
   g.prism(3.6, 1.4, 3.4, [0, 3.9, 0], '#b9492f', [0, Math.PI / 2, 0]);
   g.cyl(0.015, 0.015, 1.4, 4, [0.2, 2.3, 0], '#ccc'); g.cyl(0.22, 0.17, 0.3, 7, [0.2, 1.5, 0], '#6a4828');
   return g.build();
+}
+/** Run-room STATUE obstacles: the village pack's horse statue on its pedestal (the only statue in the game, owner 2026-10-24). */
+function HorseStatues({ list, mat }: { list: Obstacle[]; mat: import('three').Material }) {
+  const geo = useHorseStatueGeo();
+  if (!geo) return null;
+  return <Inst geo={geo} mat={mat} count={list.length} fill={(m: InstancedMesh) => list.forEach((o, i) => setInst(m, i, o.pos.x, 0, o.pos.z, o.rot, o.scale * 1.25))} cast receive />;
 }
 function makeStatue() {
   const g = new GB([0.72, 1.1]);
@@ -423,7 +430,7 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
   const fence = useMemo(makeFence, []);
   const ruin = useMemo(makeRuin, []);
   const bush = useMemo(makeBush, []);
-  const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), statue = useMemo(makeStatue, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
+  const stump = useMemo(makeStump, []), well = useMemo(makeWell, []), tent = useMemo(makeTent, []), log = useMemo(makeLog, []), spire = useMemo(makeSpire, []);
   const wmBody = useMemo(makeWindmillBody, []), wmBlades = useMemo(makeBlades, []);
   const biomeGeo = useMemo(() => ({
     cactus: makeCactus(), sandstone: makeSandstone(), bones: makeBones(), column: makeColumn(false), columnB: makeColumn(true), wall: makeLowWall(), cwall: [0, 1, 2].map(makeCastleWall),
@@ -680,7 +687,7 @@ export function Props({ q, tint, qt }: { q: QualityCfg; tint?: string; qt?: QtRo
       {!plan?.rock && boulders.map((g, k) => lists.boulder[k].length > 0 && <Inst key={'b' + k} geo={g} mat={mats.lit} count={lists.boulder[k].length} fill={fills.boulder[k]} cast receive />)}
       {lists.stump.length > 0 && !plan?.stump && <Inst geo={stump} mat={mats.lit} count={lists.stump.length} fill={fills.simple(lists.stump)} cast receive />}
       {lists.well.length > 0 && <Inst geo={well} mat={mats.lit} count={lists.well.length} fill={fills.simple(lists.well)} cast receive />}
-      {lists.statue.length > 0 && <Inst geo={statue} mat={mats.lit} count={lists.statue.length} fill={fills.simple(lists.statue)} cast receive />}
+      {lists.statue.length > 0 && <Suspense fallback={null}><HorseStatues list={lists.statue} mat={mats.lit} /></Suspense>}
       {lists.log.length > 0 && !plan?.log && <Inst geo={log} mat={mats.lit} count={lists.log.length} fill={fills.simple(lists.log)} cast receive />}
       {lists.tent.length > 0 && <><Inst geo={tent.body} mat={mats.lit} count={lists.tent.length} fill={fills.simple(lists.tent)} cast receive /><Inst geo={tent.glow} mat={mats.glow} count={lists.tent.length} fill={fills.simple(lists.tent)} /></>}
       {lists.spire.length > 0 && <><Inst geo={spire.body} mat={mats.lit} count={lists.spire.length} fill={fills.simple(lists.spire)} cast receive /><Inst geo={spire.glow} mat={mats.crystal} count={lists.spire.length} fill={fills.simple(lists.spire)} /></>}
