@@ -5,7 +5,7 @@
 //   (Marble Halls is dressed by render/HallsMarble.tsx: castle walls, columns, arches, statues.)
 // One BatchedMesh set (QtBatch), built once per room. No per-frame work.
 import React, { Suspense, useMemo } from 'react';
-import { halls, hallsSdf, HC } from '../engine/roomHalls';
+import { halls, hallsSdf, hallsBridge, HC } from '../engine/roomHalls';
 import { biomeOf } from '../engine/roomDefs';
 import { QT_PREFIX, QT_H, qtLod, qtPick } from '../engine/qtData';
 import { hallsKit } from '../engine/hallsBorder';
@@ -42,7 +42,8 @@ export function HallsBorder({ biome, seed, v, tint, shadows }: { biome: number; 
     const x1 = halls.x0 + halls.w * HC, z1 = halls.z0 + halls.h * HC, STEP = 4.5;
     for (let z = halls.z0; z < z1; z += STEP) for (let x = halls.x0; x < x1; x += STEP) {
       const px = x + (rnd() - 0.5) * STEP * 0.8, pz = z + (rnd() - 0.5) * STEP * 0.8, d = -hallsSdf(px, pz);
-      if (d < 1.4 || d > 15) continue;
+      if (d < 1.4 || d > (kit.shore ? 2.4 : 15)) continue;
+      if (kit.shore && hallsBridge(px, pz)) continue;
       const cam = hallsSdf(px, pz + 0.9) - hallsSdf(px, pz - 0.9) < -0.3;   // the camera sits to the south (+z): floor to the north = camera side
       cand.push([px, pz, d, cam]);
     }
@@ -61,7 +62,7 @@ export function HallsBorder({ biome, seed, v, tint, shadows }: { biome: number; 
         continue;
       }
       if (nTree > 650) continue;
-      const n = d < 4 ? 6 + Math.floor(rnd() * 6) : d < 8 ? 4 + Math.floor(rnd() * 4) : 3 + Math.floor(rnd() * 3), R0 = 2.2 + n * 0.22;
+      const n = kit.shore ? 1 + Math.floor(rnd() * 2) : d < 4 ? 6 + Math.floor(rnd() * 6) : d < 8 ? 4 + Math.floor(rnd() * 4) : 3 + Math.floor(rnd() * 3), R0 = kit.shore ? 1.6 : 2.2 + n * 0.22;
       const placed: [number, number][] = [];
       for (let k = 0, tries = 0; k < n && tries < n * 6; tries++) {
         const a = rnd() * TAU, r = Math.sqrt(rnd()) * R0, px = cx + Math.cos(a) * r, pz = cz + Math.sin(a) * r;
@@ -79,10 +80,11 @@ export function HallsBorder({ biome, seed, v, tint, shadows }: { biome: number; 
       for (let z = halls.z0; z < z1; z += STEP2) for (let x = halls.x0; x < x1; x += STEP2) {
         const d = -hallsSdf(x, z);
         if (d < 1.5 || d > 2.6 || nTree > 900) continue;
+        if (kit.shore && (hallsBridge(x, z) || hallsBridge(x + 2.5, z) || hallsBridge(x - 2.5, z) || hallsBridge(x, z + 2.5) || hallsBridge(x, z - 2.5))) continue;   // (the bridge mouths stay open)
         let near = false;
         for (let i = 0; i < treePts.length; i += 2) { const dx = treePts[i] - x, dz = treePts[i + 1] - z; if (dx * dx + dz * dz < gap2) { near = true; break; } }
         if (near || !free(x, z, 1.3)) continue;
-        tree(x, z, 8 + rnd() * 3, false);
+        tree(x, z, kit.shore ? 6.5 + rnd() * 2 : 8 + rnd() * 3, false);
         nTree++;
       }
     }

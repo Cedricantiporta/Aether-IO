@@ -42,6 +42,7 @@ import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive, speedWon
 import { setupBiomeHazards } from './biomeHazards';
 import { setupRoomTraps } from './roomTraps';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
+import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
@@ -592,6 +593,10 @@ function placeMarker(kind: EnemyKind, x: number, z: number, elite: boolean, dur:
 
 function pickAnchor(minPlayerDist: number): boolean {
   const pp = world.player.pos;
+  if (shape.kind === 'HALLS' && halls.passPts.length && Math.random() < 0.3) {   // (owner) HALLS: some packs wait along the passages (they idle / wander until the hero is near)
+    const q = halls.passPts[Math.floor(Math.random() * halls.passPts.length)];
+    if ((q[0] - pp.x) ** 2 + (q[1] - pp.z) ** 2 >= minPlayerDist * minPlayerDist && isSpawnable(q[0], q[1])) { anchorX = q[0]; anchorZ = q[1]; return true; }
+  }
   for (let t = 0; t < 120; t++) {   // (HALLS: the open floor is a fraction of the bounding disc)
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (shape.maxR - 4);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;

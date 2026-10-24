@@ -8,9 +8,11 @@
 //   rocks     rocks (also low, used on the camera side too); pebbles scatter by the rocks
 //   rockP / lowP  chance per border cell to add a rock / a bush instead of a tree
 // ============================================================================
-import { QT_COMMON, QT_PINE, QT_TWISTED, QT_DEAD, QT_ROCKS, QT_PEBBLES } from './qtData';
+import { QT_COMMON, QT_PINE, QT_TWISTED, QT_DEAD, QT_ROCKS, QT_PEBBLES, N2 } from './qtData';
 
-export interface HallsKit { tall: string[]; tallDeep?: string[]; low: string[]; rocks: string[]; pebbles: string[]; rockP: number; lowP: number }
+export interface HallsKit { tall: string[]; tallDeep?: string[]; low: string[]; rocks: string[]; pebbles: string[]; rockP: number; lowP: number;
+  /** islands in the sea (Coral Isles): dress only the sand rim of each chamber (a few palms + beach rocks); the rest of the ground is water */
+  shore?: boolean }
 
 const ROCKS = QT_ROCKS, PEB = QT_PEBBLES;
 export const HALLS_BORDER: Record<string, HallsKit> = {
@@ -18,8 +20,8 @@ export const HALLS_BORDER: Record<string, HallsKit> = {
   Frostpeak: { tall: QT_PINE, low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.14, lowP: 0 },
   'Sunscorch Desert': { tall: QT_DEAD, low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.24, lowP: 0 },
   'Ember Wastes': { tall: QT_DEAD, low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.26, lowP: 0 },
-  'Coral Isles': { tall: [...QT_COMMON, ...QT_TWISTED], low: ['Bush_Common'], rocks: ROCKS, pebbles: PEB, rockP: 0.1, lowP: 0.14 },
-  default: { tall: [...QT_TWISTED, ...QT_DEAD], low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.16, lowP: 0 },
+  'Coral Isles': { tall: N2.palm, low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.2, lowP: 0, shore: true },   // (owner) palms (pack 2's is the only palm), sand, beach rocks - never twisted trees
+  default: { tall: QT_DEAD, low: [], rocks: ROCKS, pebbles: PEB, rockP: 0.16, lowP: 0 },
 };
 export const hallsKit = (biomeName: string, v: number): HallsKit => {
   const k = HALLS_BORDER[biomeName] ?? HALLS_BORDER.default;

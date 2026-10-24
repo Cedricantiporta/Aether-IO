@@ -563,6 +563,19 @@ screens, max-level question: class level cap is 50) have been removed.
   `HALLS_AGGRO` (10 m) or hurts one (enemies.ts `awake[]`; wakes packmates within 7 m; bosses / mini-bosses unchanged). (4) Marble Halls: darker look
   (biomeLook), `HallsMarble` preloads its OBJ kit on the first biome-1 room (`preloadHallsMarble`), torches have emissive flames + floor light pools +
   3 real point lights near the hero (quality tier: shadows on), jars / barrels are breakable crates (`roomgen`; POT now solid in run rooms).
+- **HALLS v5 additions**: (1) `isHallsRoom`: 92% of combat / treasure stages in every biome (100% Marble); `hallsType` no longer includes ELITE (elite, mini-boss, boss, shrine,
+  fountain, merchant, camp, duel keep their own stages). (2) Marble Halls (`castleDesign()` in roomHalls.ts, generated per room): 4 rectangular halls (~4500-6000 m2, 2x before) in a
+  chain start -> passage 1 -> middle hall (hub) -> passage 2 -> exit hall, + a side hall off passage 3; passages are straight, 18-48 m (1.5x-4x the old 12 m, capped so the chain
+  stays within ~100 m of the hub = ARENA_RADIUS), arch doorways every ~14 m. `MAX_W` 480 cells, nav grid `MAX_DIM` 176. `halls.passPts` (points along corridors) -> `director.pickAnchor`
+  puts 30% of the monster groups in passages. (3) Spike traps (`roomEvents.placeTraps`) sample the halls mask (never near portals / station / pocket chest); halls COMBAT rooms get
+  the TRAPS twist 50% more often and twice the groups. `roomTraps`: halls rooms add 0-3 extra fire JETS and 0-2 rotating flame BEAMS (`rt.beam`, one 8-12 m arm on a pillar:
+  rest -> 1.5 s floor-line telegraph -> 6 s slow sweep (0.42-0.62 rad/s); rests for good once the room is clear). (4) `PortalGuides` (Room.tsx): chevrons follow `roomNav.navGuide`
+  (flow-field descent + string pulling, cached per portal, rebuilt only when `navFlowGoal()` = the hero's nav cell changes); straight when the way is open. (5) Pocket chests
+  show no light beam until `director.phase !== 'FIGHT'`. (6) Fountain room: `arenaRoom` radius 23, a moat ring (`feat.moat` + ~34 lake pools, liquid colliders gapped at 4 decks N/E/S/W,
+  `onBridge` knows the decks, `RoomWater` draws them), marble island + outer paving ring (`SpecialRooms.FountainPlaza`), columns on the outer bank. `MAX_LAKES` 48.
+  (7) Pets: `PetProfile.aoe` = splash radius of every basic for Spirit Wolf, Gold Dragon, Iron Golem, Phoenix, Crystal Golemling, Leviathan at any rarity (melee splash = 50% of the hit).
+  (8) Coral Isles HALLS: `HALLS_BORDER['Coral Isles']` = pack-2 palms (`shore` kit: palms + beach rocks only on the sand rim), the ground sinks under passages / outside the chambers,
+  the Coral sea plane shows, `render/HallsBridges.tsx` draws plank bridges over `halls.bridgeSegs` (`halls.bridge` = corridor cells outside every chamber). No TwistedTree outside deep Greenwood.
 - **HALLS rooms** (owner-approved organic floor plans, mockup `shots/halls_design/proposal.png`): ~1 in 4 combat / elite / treasure rooms
   (`roomgen.isHallsRoom`; never boss / mini-boss / camp / merchant / fountain / shrine / tower modes / the very first room). Six designs in
   `engine/roomHalls.ts` DESIGNS (soft blobs + bezier passages + islands, jittered, rotated, mirrored, scaled to ~1500-2000 m2): TWIN

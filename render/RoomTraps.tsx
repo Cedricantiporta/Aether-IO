@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BoxGeometry, BufferGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial, Sphere, Vector3, type Material } from 'three';
 import { world } from '../engine/world';
-import { rt, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
+import { rt, BEAM_WARN, BEAM_ON, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
 import { inView } from './view';
 import { CELL, FX, pushHalo, sparks, chunks, dustPuff, smokePuff, embers, scorch, flashStar } from './fx';
 import { BAR_VS, BAR_FS } from './Enemies';
@@ -156,8 +156,8 @@ export function RoomTraps() {
       balBase: mk(bb.build(), lit, 4), balTop: mk(bt.build(), lit, 4), balBolt: mk(bg.build(), glowMat(), 4),
       catBase: mk(cb.build(), lit, 4), catArm: mk(ca.build(), lit, 4), catRock: mk(boulderG, lit, 4), boulder: mk(boulderG, lit, 6),
       towB: mk(tb.build(), lit, 3), towG: mk(tg, glowMat({ color: new Color(1.5, 1.2, 2.2) }), 3),
-      hub: mk(hb.build(), lit, 3), hubG: mk(hg, glowMat({ color: new Color(1.5, 1.2, 0.8) }), 3), armB: mk(armB.build(), lit, 12), armG: mk(armG.build(), glowMat({ color: new Color(1.6, 1.4, 1.1) }), 12),
-      jetB: mk(jb.build(), lit, 3), jetG: mk(jg, addM, 3), jetW: mk(jwarn, flat(new Color(2.2, 0.8, 0.3), 0.5), 3),
+      hub: mk(hb.build(), lit, 6), hubG: mk(hg, glowMat({ color: new Color(1.5, 1.2, 0.8) }), 6), armB: mk(armB.build(), lit, 16), armG: mk(armG.build(), glowMat({ color: new Color(1.6, 1.4, 1.1) }), 16),
+      jetB: mk(jb.build(), lit, 5), jetG: mk(jg, addM, 5), jetW: mk(jwarn, flat(new Color(2.2, 0.8, 0.3), 0.5), 16),
       vine: mk(vg.build(), lit, 5), pool: mk(pg.build(), litMat({ roughness: 0.15, metalness: 0.25 }), 4),
       pdisc: mk(new CylinderGeometry(1, 1, 0.03, 28), flat(new Color(0.7, 1.8, 2.4), 0.2), 4),
       rubble: mk(rg.build(), lit, 10),
@@ -293,6 +293,25 @@ export function RoomTraps() {
           if (rnd() < dt * 26) { const d = 1 + rnd() * (BAR_LEN - 1); FX.add.emit(b.x + Math.sin(a) * d, 1.4, b.z + Math.cos(a) * d, (rnd() - 0.5) * 0.8, 1.2 + rnd(), (rnd() - 0.5) * 0.8, 0.45, 0.55, 0.05, 2.3, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 1); }
         }
         pushHalo(b.x, 1.5, b.z, 4.5, 2.2, 1.0, 0.3, 0.5, CELL.GLOW);
+      }
+      for (let i = 0; i < rt.nBeam; i++) {   // (owner) HALLS: a pillar with ONE very long rotating flame arm (8 - 12 m)
+        const m = rt.beam[i]; if (!inView(m.x, m.z, m.len + 2)) continue;
+        setInst(S.hub, nHub, m.x, 0, m.z, i, 1.15); setInst(S.hubG, nHub, m.x, 0, m.z, t * 2, (1 + Math.sin(t * 6) * 0.06) * (m.state === 0 ? 0.7 : 1.15));
+        nHub++;
+        const sx = Math.sin(m.a), cz = Math.cos(m.a), k = m.len / BAR_LEN;
+        if (m.state === 1) {   // telegraph: the lane flickers on the floor (the arm will start here and sweep round)
+          const fl = 0.5 + 0.5 * Math.sin(t * 36), ramp = clamp(m.t / BEAM_WARN, 0, 1);
+          setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, m.a, 0.7 + 0.7 * fl, 1, (m.len - 1.2) * (0.3 + 0.7 * ramp));
+          if (rnd() < dt * 40) FX.add.emit(m.x + sx * (1.5 + rnd() * m.len * 0.9), 0.3, m.z + cz * (1.5 + rnd() * m.len * 0.9), 0, 1.5, 0, 0.5, 0.3, 0.05, 2.4, 0.9, 0.25, 0.8, CELL.FLAME, -0.5, 1);
+          pushHalo(m.x, 1.8, m.z, 3 + 2 * ramp, 2.4, 1.0, 0.3, 0.5 + 0.4 * ramp, CELL.GLOW);
+        } else if (m.state === 2) {
+          const grow = clamp(m.t / 0.4, 0, 1) * clamp((BEAM_ON - m.t) / 0.5, 0, 1);
+          setInst(S.armB, nArm, m.x, 0, m.z, m.a, 1.2, 1.2, k * grow); setInst(S.armG, nArm, m.x, 0, m.z, m.a, 1.5, 1.5, k * grow);
+          nArm++;
+          setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, m.a, 0.55, 1, (m.len - 1.2) * grow);   // scorched lane under the arm
+          for (let q = 0; q < 3; q++) if (rnd() < dt * 50) { const d = 1 + rnd() * (m.len - 1) * grow; FX.add.emit(m.x + Math.sin(m.a) * d, 1.4, m.z + Math.cos(m.a) * d, (rnd() - 0.5) * 0.8, 1.4 + rnd(), (rnd() - 0.5) * 0.8, 0.5, 0.6, 0.05, 2.3, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 1); }
+          for (let h = 1; h <= 4; h++) pushHalo(m.x + sx * h * m.len / 4.6 * grow, 1.4, m.z + cz * h * m.len / 4.6 * grow, 3.2, 2.2, 1.0, 0.3, 0.45, CELL.GLOW);
+        }
       }
       for (let i = 0; i < rt.nJet; i++) {
         const j = rt.jet[i]; if (!inView(j.x, j.z, j.len + 2)) continue;

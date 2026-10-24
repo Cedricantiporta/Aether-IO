@@ -9,11 +9,12 @@ import {
   AdditiveBlending, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial,
   Object3D, PlaneGeometry, RingGeometry, SRGBColorSpace,
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Flame, Lock, Unlock, Skull } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { runInfo } from '../engine/runMods';
 import { GATES, GATE_KEYS_NEEDED, gateState, gatePos, CASTLE_DOOR, KEEPER_POS } from '../engine/gates';
-import { PLAZA_COLS, PLAZA_COL_R, DUEL_BRAZIERS } from '../engine/arenaRooms';
+import { PLAZA_COLS, PLAZA_COL_R, MOAT_R, MOAT_HW, DUEL_BRAZIERS } from '../engine/arenaRooms';
 import { shape } from '../engine/roomShape';
 import { CELL, FX, embers } from './fx';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
@@ -290,7 +291,8 @@ const PETALS = 70;
 function FountainPlaza({ q }: { q: QualityCfg }) {
   const res = useMemo(() => {
     const cz = -shape.baseR * 0.1;
-    const fg = new CircleGeometry(10.8, 64); fg.rotateX(-Math.PI / 2);
+    // marble paving: the island inside the moat + a wide ring on the outer bank (the moat itself is carved water: no floor over it)
+    const fg = mergeGeometries([new CircleGeometry(MOAT_R - MOAT_HW + 0.5, 56).rotateX(-Math.PI / 2), new RingGeometry(MOAT_R + MOAT_HW - 0.5, PLAZA_COL_R + 2.6, 72).rotateX(-Math.PI / 2)])!;
     const floor = new Mesh(fg, new MeshStandardMaterial({ map: marbleTex(), roughness: 0.45, metalness: 0.05 }));
     floor.position.set(0, 0.014, cz); floor.receiveShadow = true;
     const b = new GB([0.82, 1.06]);

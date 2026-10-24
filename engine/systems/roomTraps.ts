@@ -20,9 +20,10 @@ import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import type { RoomPlan } from '../types';
 import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
-import { onBridge } from '../roomFeatures';
+import { onBridge, feat } from '../roomFeatures';
 import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
-import { insideShape } from '../roomShape';
+import { insideShape, shape } from '../roomShape';
+import { hallsRandomSpot, hallsSdf } from '../roomHalls';
 import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
 import { spawnPickup } from './pickups';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
@@ -40,7 +41,9 @@ export const rt = {
   nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
-  nJet: 0, jet: Array.from({ length: 3 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
+  /** HALLS only: a pillar that sends ONE very long (8 - 12 m) flame beam round: idle -> telegraph (floor line) -> rotating blaze -> rest */
+  nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, state: 0, t: 0, off: 3, hitCd: 0, tick: 0 })),
+  nJet: 0, jet: Array.from({ length: 5 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
   nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, seed: 0 })),
   nPool: 0, pool: Array.from({ length: 4 }, () => ({ x: 0, z: 0, r: 2.8, acc: 0 })),
   /** boulders in flight (catapult): drawn by the renderer, the damage is the floor circle's */
@@ -59,6 +62,7 @@ function coneHit(q: { x: number; z: number; yaw: number }, px: number, pz: numbe
   if (along < -0.3 || along > STATUE_LEN) return false;
   return Math.abs(dx * uz - dz * ux) < 0.55 + 0.95 * Math.max(0, along) / STATUE_LEN + extra;
 }
+export const BEAM_WARN = 1.5, BEAM_ON = 6.0;
 export const JET_WARN = 1.0, JET_ON = 1.5, VINE_REST = 4.5, BAR_LEN = 6.5, TOWER_WIND_T = TOWER_WIND, CATAPULT_WIND_T = CATAPULT_WIND, BOULDER_FLIGHT = FLIGHT;
 const POOL_GRIP = 0.16;
 /** (owner) at most this many stationaries of the room's one kind */
@@ -167,10 +171,11 @@ const keep = (x: number, z: number, r: number): void => { kx.push(x); kz.push(z)
 const out: [number, number] = [0, 0];
 /** A free floor spot for a disc of `rad` between rimMin..rimMax (fractions of the room radius; turrets hug the rim). */
 function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 0): boolean {
-  const R = world.room.radius;
-  for (let t = 0; t < 160; t++) {
-    const a = Math.random() * Math.PI * 2, d = (rimMin + Math.random() * (rimMax - rimMin)) * R;
-    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+  const R = world.room.radius, H = shape.kind === 'HALLS';
+  for (let t = 0; t < (H ? 400 : 160); t++) {
+    let x: number, z: number;
+    if (H) { if (!hallsRandomSpot(rad + 2.0, out)) return false; x = out[0]; z = out[1]; }   // (HALLS: anywhere on the open floor; the rim fractions mean nothing)
+    else { const a = Math.random() * Math.PI * 2, d = (rimMin + Math.random() * (rimMax - rimMin)) * R; x = Math.cos(a) * d; z = Math.sin(a) * d; }
     if (!insideShape(x, z, rad + 2.0) || onBridge(x, z, rad + 1)) continue;   // (bridge decks stay clear)
     let ok = true;
     for (let k = 0; k < kx.length && ok; k++) if (Math.hypot(x - kx[k], z - kz[k]) < kr[k] + rad + pad) ok = false;
@@ -190,7 +195,7 @@ function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 
 
 /** Room entry (director.enterRoom, after setupBiomeHazards). biome: 0 Greenwood, 1 Marble, 2 Desert, 3 Swamp, 4 Frost, 5 Ember, 6 Void; idx: room 0..14. */
 export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void {
-  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nBar = rt.nJet = rt.nVine = rt.nPool = 0;
+  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nBar = rt.nBeam = rt.nJet = rt.nVine = rt.nPool = 0;
   trapAim.obj = null; trapLock.obj = null;
   for (const b of rt.boulders) b.on = false;
   trapMods.grip = 1; trapMods.slow = 1;
@@ -211,6 +216,8 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   for (let i = 0; i < hz.nIce; i++) keep(hz.ice[i].x, hz.ice[i].z, hz.ice[i].r * 0.5);
   for (let i = 0; i < hz.nRift; i++) keep(hz.rift[i].x, hz.rift[i].z, 4);
   for (const c of world.crates) if (c.active) keep(c.pos.x, c.pos.z, 0.9);
+  if (feat.pChest.on) keep(feat.pChest.x, feat.pChest.z, 4);
+  for (let i = 0; i < feat.nTowers; i++) keep(feat.tx[i], feat.tz[i], 3.5);
 
   const rnd = Math.random, early = b === 0 && idx < 3;
   // ---- candidate hazard kinds with a weight (0 = not in this biome / depth yet)
@@ -317,7 +324,28 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       }
     }
   }
-  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nBar + rt.nJet + rt.nVine + rt.nPool > 0;
+  // ---- (owner) HALLS rooms: extra stationary FIRE on top of whatever the room rolled - fire-breathing jets and the long rotating flame beam
+  if (shape.kind === 'HALLS' && plan.type === 'COMBAT' && !(b === 0 && idx < 2)) {
+    const nj = (rnd() < 0.7 ? 1 : 0) + (rnd() < 0.4 ? 1 : 0) + (more > 0 && rnd() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nj && rt.nJet < rt.jet.length; i++) {
+      if (!spot(2.0, 0.8, 0, 1, 10)) continue;
+      const j = rt.jet[rt.nJet++];
+      j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = 10 + rnd() * 3; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0; j.t = -(rnd() * 2.5);
+      keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
+    }
+    const nb = (rnd() < 0.75 ? 1 : 0) + (rnd() < 0.3 ? 1 : 0);
+    for (let i = 0; i < nb && rt.nBeam < rt.beam.length; i++) {
+      const len = 8 + rnd() * 4;
+      let got = false;   // a roomy spot (the arm reaches ~len m): the pillar's disc is small, the open floor round it is checked here
+      for (let t = 0; t < 30 && !got; t++) if (spot(2.4, 1.0, 0, 1, 16) && hallsSdf(out[0], out[1]) >= len * 0.42) got = true;
+      if (!got) continue;
+      const m = rt.beam[rt.nBeam++];
+      m.x = out[0]; m.z = out[1]; m.a = rnd() * 6.28; m.w = (rnd() < 0.5 ? -1 : 1) * (0.42 + 0.05 * Math.min(4, depth / 10)); m.len = len;
+      m.state = 0; m.t = 0; m.off = 2.5 + rnd() * 3; m.hitCd = 0; m.tick = 0;
+      keep(m.x, m.z, 5); addTempCollider(m.x, m.z, 1.1, false);
+    }
+  }
+  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nBar + rt.nBeam + rt.nJet + rt.nVine + rt.nPool > 0;
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -493,6 +521,35 @@ export function updateRoomTraps(dt: number): void {
         for (let q = 0; q < 4 && !hit; q++) if (armDist(e.pos.x, e.pos.z, b.x, b.z, b.a + q * Math.PI / 2, b.len) < 0.9 + e.radius * 0.6) hit = true;
         if (hit) { burn.value = Math.max(2, e.maxHp * 0.03 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
       }
+    }
+  }
+
+  // ---- rotating flame beams (HALLS): rest -> telegraph (the lane glows on the floor, the pillar flares) -> a slowly turning beam -> rest
+  for (let i = 0; i < rt.nBeam; i++) {
+    const m = rt.beam[i];
+    m.t += dt;
+    if (m.hitCd > 0) m.hitCd -= dt;
+    if (!fighting && m.state > 0) { m.state = 0; m.t = 0; m.off = 99; }   // (the room is clear: the beams rest for good, the exits stay safe)
+    if (m.state === 0) { if (m.t >= m.off && fighting && alive) { m.state = 1; m.t = 0; } }
+    else if (m.state === 1) { if (m.t >= BEAM_WARN) { m.state = 2; m.t = 0; m.tick = 0; addShake(0.1); } }
+    else {
+      m.a += m.w * dt;
+      if (alive && m.hitCd <= 0 && pl.dashT <= 0 && armDist(px, pz, m.x, m.z, m.a, m.len) < 0.95) {
+        m.hitCd = 1.0; tmp.set(m.x, 0, m.z);
+        damagePlayer(dmgOf(0.05), { pos: tmp, kind: 'FIRE' });
+        applyPlayerDebuff('BURN', 2.0, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+      }
+      m.tick += dt;
+      if (m.tick >= 0.3) {
+        m.tick = 0;
+        world.enemyGrid.query(m.x, m.z, m.len + 1.5, ids);
+        for (let k = 0; k < ids.length; k++) {
+          const e = world.enemies[ids[k]];
+          if (!mobOk(e) || e.boss) continue;
+          if (armDist(e.pos.x, e.pos.z, m.x, m.z, m.a, m.len) < 0.9 + e.radius * 0.6) { burn.value = Math.max(2, e.maxHp * 0.03 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
+        }
+      }
+      if (m.t >= BEAM_ON) { m.state = 0; m.t = 0; m.off = 4 + Math.random() * 2.5; }
     }
   }
 

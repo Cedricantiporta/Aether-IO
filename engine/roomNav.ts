@@ -15,7 +15,7 @@ import { queryColliders, edgeLimit, bounds, roomHalls, type Collider } from './m
 import { hallsSdf } from './roomHalls';
 import { feat } from './roomFeatures';
 
-const MAX_DIM = 160;
+const MAX_DIM = 176;
 const MAX_N = MAX_DIM * MAX_DIM;
 /** Distance a cell centre keeps from a collider (hero push-out is r + 0.5; + half a cell of slack). */
 const CLEAR = 1.0;
@@ -257,4 +257,51 @@ export function navFlow(x: number, z: number, out: [number, number]): number {
   out[0] = nav.x0 + ((cur % w) + 0.5) * nav.cell;
   out[1] = nav.z0 + (((cur / w) | 0) + 0.5) * nav.cell;
   return d0 * nav.cell;
+}
+
+/** Cell the flow field was last computed from (the hero's cell): changes only when the hero walks into a new cell. -1 = no field. */
+export const navFlowGoal = (): number => (flowOk && navActive() ? flowGoal : -1);
+
+/**
+ * Guide route for the exit arrows (render/Room.tsx PortalGuides): follows the flow field downhill from the goal (a portal) to the hero's cell,
+ * string-pulls it, and writes waypoints HERO-FIRST (x, z pairs, the goal last) to `out`. Returns the waypoint count, 0 = no field / no route
+ * (the caller then draws a straight trail). Allocation-free; call it only when `navFlowGoal()` changes.
+ */
+export function navGuide(gx: number, gz: number, out: Float32Array): number {
+  if (!flowOk || !navActive()) return 0;
+  const w = nav.w;
+  const g = freeCell(gx, gz, 6);
+  if (g < 0 || flow[g] >= 1e8) return 0;
+  let n = 0, cur = g;
+  while (n < MAX_N - 1 && flow[cur] > 0) {   // downhill: goal -> hero
+    chain[n++] = cur;
+    const cx = cur % w, cz = (cur / w) | 0;
+    let best = cur, bv = flow[cur];
+    for (let d = 0; d < 8; d++) {
+      const nx = cx + DX[d], nz = cz + DZ[d];
+      if (!ok(nx, nz)) continue;
+      if (d >= 4 && (!ok(cx + DX[d], cz) || !ok(cx, cz + DZ[d]))) continue;
+      const v = flow[nz * w + nx];
+      if (v < bv) { bv = v; best = nz * w + nx; }
+    }
+    if (best === cur) break;
+    cur = best;
+  }
+  chain[n++] = cur;
+  // chain[0] = goal ... chain[n-1] = hero cell: reverse to hero-first, then string-pull (lookahead window 48 cells)
+  for (let i = 0, j = n - 1; i < j; i++, j--) { const t = chain[i]; chain[i] = chain[j]; chain[j] = t; }
+  const cap = out.length >> 1;
+  let o = 0, i = 0;
+  const px = (c: number): number => nav.x0 + ((c % w) + 0.5) * nav.cell, pz = (c: number): number => nav.z0 + (((c / w) | 0) + 0.5) * nav.cell;
+  let ax = px(chain[0]), az = pz(chain[0]);
+  out[o * 2] = ax; out[o * 2 + 1] = az; o++;
+  while (i < n - 1 && o < cap - 1) {
+    let far = i + 1;
+    for (let j = Math.min(n - 1, i + 48); j > i + 1; j--) if (navClear(ax, az, px(chain[j]), pz(chain[j]))) { far = j; break; }
+    ax = px(chain[far]); az = pz(chain[far]);
+    out[o * 2] = ax; out[o * 2 + 1] = az; o++;
+    i = far;
+  }
+  out[(o - 1) * 2] = gx; out[(o - 1) * 2 + 1] = gz;
+  return o;
 }

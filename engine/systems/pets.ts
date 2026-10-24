@@ -41,6 +41,8 @@ export interface PetProfile {
   fetches: boolean; fetchSpeed: number; fetchRange: number;
   attacks: boolean; attackMode: 'melee' | 'ranged'; dmgFactor: number; atkCd: number;
   heals: boolean;
+  /** (owner) splash radius of every basic attack, whatever the rarity (the big pets: Iron Golem slam, Crystal Golemling, Phoenix, Gold Dragon, Leviathan, Spirit Wolf) */
+  aoe?: number;
   /** Visual/physical size multiplier (render scale + follow distance). */
   size: number;
   /** Burn applied by melee hits. */
@@ -66,11 +68,11 @@ export const PET_PROFILES: Record<string, PetProfile> = {
   'Green Blob':      { moveSpeed: 0.9, fetches: true, fetchSpeed: 5, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.6, atkCd: 0.9, heals: false, size: 0.85 },   // (owner: a basic melee attacker now, no heal)
   'Vampire Bat':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 30, fetchRange: 24, attacks: true, attackMode: 'melee', dmgFactor: 0.5, atkCd: 0.8, heals: false, size: 0.85 },
   'Light Fairy':     { moveSpeed: 1.0, fetches: true, fetchSpeed: 14, fetchRange: 14, ...NO_ATK, heals: true, size: 0.5 },
-  'Spirit Wolf':     { moveSpeed: 1.4, fetches: true, fetchSpeed: 8, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 1, atkCd: 0.45, heals: false, size: 1.1 },
-  'Gold Dragon':     { moveSpeed: 1.0, fetches: true, fetchSpeed: 15, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 1, atkCd: 1.0, heals: false, size: 1.6 },
+  'Spirit Wolf':     { aoe: 2.2, moveSpeed: 1.4, fetches: true, fetchSpeed: 8, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 1, atkCd: 0.45, heals: false, size: 1.1 },
+  'Gold Dragon':     { aoe: 2.4, moveSpeed: 1.0, fetches: true, fetchSpeed: 15, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 1, atkCd: 1.0, heals: false, size: 1.6 },
   'Pet Rock':        { moveSpeed: 0.3, ...NO_FETCH, ...NO_ATK, heals: false, size: 0.5 },
-  'Iron Golem':      { moveSpeed: 0.55, ...NO_FETCH, attacks: true, attackMode: 'melee', dmgFactor: 2.5, atkCd: 2.2, heals: false, size: 1.9 },
-  'Phoenix':         { moveSpeed: 1.2, fetches: true, fetchSpeed: 17, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 0.8, atkCd: 1.2, heals: false, size: 1.2 },
+  'Iron Golem':      { aoe: 3.4, moveSpeed: 0.55, ...NO_FETCH, attacks: true, attackMode: 'melee', dmgFactor: 2.5, atkCd: 2.2, heals: false, size: 1.9 },
+  'Phoenix':         { aoe: 3.0, moveSpeed: 1.2, fetches: true, fetchSpeed: 17, fetchRange: 14, attacks: true, attackMode: 'ranged', dmgFactor: 0.8, atkCd: 1.2, heals: false, size: 1.2 },
   'Celestial Wisp':  { moveSpeed: 1.5, fetches: true, fetchSpeed: 30, fetchRange: 24, attacks: true, attackMode: 'ranged', dmgFactor: 1, atkCd: 0.6, heals: false, size: 0.7 },
 };
 Object.assign(PET_PROFILES, {
@@ -80,8 +82,8 @@ Object.assign(PET_PROFILES, {
   'Storm Sprite':       { moveSpeed: 1.3, fetches: true, fetchSpeed: 20, fetchRange: 16, ...NO_ATK, heals: false, size: 0.55 },
   'Shield Turtle':      { moveSpeed: 0.5, ...NO_FETCH, ...NO_ATK, heals: false, size: 1.0 },
   'Shadow Cat':         { moveSpeed: 1.6, fetches: true, fetchSpeed: 20, fetchRange: 16, attacks: true, attackMode: 'melee', dmgFactor: 1.1, atkCd: 0.4, heals: false, size: 0.9 },
-  'Crystal Golemling':  { moveSpeed: 0.6, ...NO_FETCH, attacks: true, attackMode: 'melee', dmgFactor: 1.5, atkCd: 1.6, heals: false, size: 1.3 },
-  'Aether Leviathan':   { moveSpeed: 1.1, fetches: true, fetchSpeed: 20, fetchRange: 16, attacks: true, attackMode: 'ranged', dmgFactor: 0.6, atkCd: 0.8, heals: false, size: 2.0 },
+  'Crystal Golemling':  { aoe: 2.8, moveSpeed: 0.6, ...NO_FETCH, attacks: true, attackMode: 'melee', dmgFactor: 1.5, atkCd: 1.6, heals: false, size: 1.3 },
+  'Aether Leviathan':   { aoe: 3.0, moveSpeed: 1.1, fetches: true, fetchSpeed: 20, fetchRange: 16, attacks: true, attackMode: 'ranged', dmgFactor: 0.6, atkCd: 0.8, heals: false, size: 2.0 },
 } as Record<string, PetProfile>);
 const DEFAULT_PROFILE: PetProfile = { size: 1, moveSpeed: 1, fetches: true, fetchSpeed: 20, fetchRange: 14, attacks: true, attackMode: 'melee', dmgFactor: 0.45, atkCd: 0.9, heals: false };
 for (const k in PET_ELEMENT) if (PET_PROFILES[k]) PET_PROFILES[k].el = PET_ELEMENT[k];
@@ -252,7 +254,7 @@ export function updatePets(dt: number): void {
         // elemental shots: Phoenix fireballs splash + burn, Gold Dragon embers, Wisp starlight pierces, Leviathan water slows
         const fire = el === PET_EL.FIRE, gold = el === PET_EL.GOLD, light = el === PET_EL.LIGHT, water = el === PET_EL.WATER;
         const p = spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, fire ? 22 : water ? 24 : gold ? 26 : light ? 34 : 30, base,
-          { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: Math.max(fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0, tier > 0 ? 2 : 0) });   // Legendary+: every shot splashes
+          { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: Math.max(fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0, tier > 0 ? 2 : 0, prof.aoe ?? 0) });   // Legendary+: every shot splashes
         if (p && el) {
           p.tint = 20 + el;
           if (fire) { fxBurn.value = 4 + base * 0.25; p.effect = fxBurn; }
@@ -263,7 +265,8 @@ export function updatePets(dt: number): void {
         wp.atkCd = atkCd;
         meleeOpts.fromX = wp.pos.x; meleeOpts.fromZ = wp.pos.z;   // (backstab / block origin = the pet)
         damageEnemy(enemy, base, meleeOpts);
-        if (tier > 0) damageEnemiesInRadius(enemy.pos.x, enemy.pos.z, 2.2, base * 0.5, meleeOpts, undefined, enemy.id);   // Legendary+: a mini splash
+        const sp = Math.max(tier > 0 ? 2.2 : 0, prof.aoe ?? 0);   // a splash round the target: Legendary+ pets, and the big pets at any rarity (prof.aoe)
+        if (sp > 0) { damageEnemiesInRadius(enemy.pos.x, enemy.pos.z, sp, base * 0.5, meleeOpts, undefined, enemy.id); if (prof.aoe && prof.size > 1.5) events.emit('shockwave', { pos: enemy.pos.clone(), radius: sp, color: 0xc8a070 }); }
         meleeOpts.fromX = undefined; meleeOpts.fromZ = undefined;
         if (prof.ignite) applyStatus(enemy, { type: 'BURN', duration: 3, value: 4 + base * 0.2 });
         if (el === PET_EL.NATURE) { fxPoison.value = 1 + base * 0.15; applyStatus(enemy, fxPoison); }

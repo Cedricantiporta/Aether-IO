@@ -11,7 +11,7 @@
 export type HallsVariant = 'TWIN' | 'FROZEN' | 'DUNES' | 'COLUMNS' | 'CROSS' | 'CRESCENT';
 
 export const HC = 0.5;                 // cell size (m)
-const MAX_W = 380;                     // grid cells per side (190 m)
+const MAX_W = 480;                     // grid cells per side (240 m): the long Marble Halls chains are ~210 m end to end
 const PAD = 12;                        // blocked border (cells)
 const MAXN = MAX_W * MAX_W;
 
@@ -19,6 +19,10 @@ export const halls = {
   on: false, version: 0, variant: 'TWIN' as HallsVariant,
   w: 0, h: 0, x0: 0, z0: 0,
   open: new Uint8Array(MAXN),
+  /** 1 = open cell inside a passage and outside every chamber (Coral Isles: a plank bridge over the sea) */
+  bridge: new Uint8Array(MAXN),
+  /** passage segments that are bridges: flat ax, az, bx, bz, half width */
+  bridgeSegs: [] as number[],
   sdf: new Float32Array(MAXN),
   /** arrival, station, exit centre, boss-shortcut spot, exit direction (unit), overall start->exit direction. */
   sx: 0, sz: 0, stx: 0, stz: 0, ex: 0, ez: 0, scx: 0, scz: 0, dx: 0, dz: -1, fx: 0, fz: -1,
@@ -30,6 +34,8 @@ export const halls = {
   statues: [] as [number, number][], arches: [] as [number, number, number][],
   /** dead-end pockets (off the shortest start -> exit route): x, z, detour (m) - best first, at most 2 */
   pockets: [] as [number, number, number][],
+  /** points along the passage centre lines (>= 9 m from the start / exit, ~10 m apart): some monsters are placed here (director.pickAnchor) */
+  passPts: [] as [number, number][],
   area: 0, extent: 0,
   /** half width of the exit area (the portal slots spread within it) */
   exitHalf: 10,
@@ -89,6 +95,12 @@ export function hallsSdf(x: number, z: number): number {
   return (S[k] * (1 - fx) + S[k + 1] * fx) * (1 - fz) + (S[k + w] * (1 - fx) + S[k + w + 1] * fx) * fz;
 }
 
+/** Is (x, z) on a passage cell outside every chamber (a bridge in the Coral Isles)? */
+export function hallsBridge(x: number, z: number): boolean {
+  const i = Math.floor((x - halls.x0) / HC), j = Math.floor((z - halls.z0) / HC);
+  return i >= 0 && j >= 0 && i < halls.w && j < halls.h && halls.bridge[j * halls.w + i] === 1;
+}
+
 /** Is (x, z) inside blocked ground (or outside the layout)? */
 export function hallsWall(x: number, z: number): boolean { return hallsSdf(x, z) < 0.05; }
 
@@ -128,6 +140,16 @@ export function hallsRayStop(fx: number, fz: number, x: number, z: number, m: nu
   out.x = lx; out.z = lz;
 }
 
+/** A random open spot >= `margin` m from every edge (rejection sampling over the grid box); false when none was found. Callers do their own spacing checks. */
+export function hallsRandomSpot(margin: number, out: [number, number]): boolean {
+  const gw = halls.w * HC, gh = halls.h * HC;
+  for (let t = 0; t < 400; t++) {
+    const x = halls.x0 + Math.random() * gw, z = halls.z0 + Math.random() * gh;
+    if (hallsSdf(x, z) >= margin) { out[0] = x; out[1] = z; return true; }
+  }
+  return false;
+}
+
 /** Open-floor test with a margin in metres (placement helpers). */
 export function hallsInside(x: number, z: number, margin: number): boolean { return hallsSdf(x, z) >= margin; }
 
@@ -145,7 +167,7 @@ interface Design {
   castle?: boolean; statues?: [number, number][]; arches?: [number, number, number][];
 }
 
-const DESIGNS: Record<HallsVariant, Design> = {
+const DESIGNS: Record<Exclude<HallsVariant, 'COLUMNS'>, Design> = {
   // two big kidney clearings joined by one long winding path, a tree island in each
   TWIN: {
     blobs: [[-22, -30, 24, 17, 20, 0.25], [17, 26, 25, 18, -15, -0.25]],
@@ -167,21 +189,6 @@ const DESIGNS: Record<HallsVariant, Design> = {
     islands: [[-28, 30, 2.8], [24, -26, 3.0], [-18, 22, 2.0], [14, -18, 2.0]],
     start: [-32, 38], exit: [30, -32], hub: [-18, 34], target: [1450, 1850],
   },
-  // Marble Halls (indoors in the castle): rectangular halls (softened corners) joined by straight passages with arch doorways, rows of
-  // columns along the long walls, statue spots at the hall ends. Only the walls / dark void outside; see render/HallsMarble.tsx.
-  COLUMNS: {
-    castle: true,
-    blobs: [[0, -36, 20, 12, 0, 0, 4], [0, 2, 24, 14, 0, 0, 4], [-4, 42, 18, 12, 0, 0, 4], [-38, 2, 10, 8, 0, 0, 3]],
-    paths: [{ c: [[0, -26], [0, -20], [0, -16], [0, -10]], w0: 8.4, w1: 8.4 }, { c: [[-2, 14], [-2, 20], [-2, 26], [-2, 32]], w0: 8.4, w1: 8.4 }, { c: [[-22, 2], [-24, 2], [-27, 2], [-30, 2]], w0: 8.4, w1: 8.4 }],
-    islands: [
-      [-15, -42, 0.85], [-8, -42, 0.85], [8, -42, 0.85], [15, -42, 0.85], [-15, -30, 0.85], [-8, -30, 0.85], [8, -30, 0.85], [15, -30, 0.85],
-      [-16, -7, 0.85], [-8, -7, 0.85], [8, -7, 0.85], [16, -7, 0.85], [-16, 11, 0.85], [-8, 11, 0.85], [8, 11, 0.85], [16, 11, 0.85],
-      [-17, 36, 0.85], [-10, 36, 0.85], [6, 36, 0.85], [12, 36, 0.85], [-17, 48, 0.85], [-10, 48, 0.85], [6, 48, 0.85], [12, 48, 0.85],
-    ],
-    statues: [[19, 2], [-43, 2], [10, 50], [0, -45]],
-    arches: [[0, -23, 0], [0, -13, 0], [-2, 17, 0], [-2, 29, 0], [-26, 2, 90]],
-    start: [0, -41], exit: [-4, 47], hub: [0, 2], target: [1950, 2750],
-  },
   // a big heart clearing with three spokes (arrival pocket, dead-end pocket, exit pocket)
   CROSS: {
     blobs: [[0, 0, 21, 19, 0, 0], [-4, -44, 15, 11, 0, 0.1], [36, 20, 14, 12, 0, 0], [-34, 24, 15, 12, 0, 0]],
@@ -197,6 +204,42 @@ const DESIGNS: Record<HallsVariant, Design> = {
     start: [-28, -24], exit: [26, 22], hub: [0, -10], target: [1600, 2000],
   },
 };
+
+
+/** Marble Halls (indoors in the castle), generated per room: four rectangular halls (softened corners) joined by STRAIGHT passages with arch
+ *  doorways, rows of columns along the long walls, statue spots at the hall ends. The halls are ~2x the old floor area (~4700 m2 in all) and the
+ *  passages 1.5x - 4x longer than the old ~12 m (18 - 48 m, capped so the whole chain stays within ~100 m of the hub). The chain runs along z:
+ *  start hall -> passage 1 -> middle hall (the hub) -> passage 2 -> exit hall, plus a side hall (dead-end pocket) off the middle hall via passage 3.
+ *  Only the walls / dark void outside; see render/HallsMarble.tsx. */
+function castleDesign(rnd: () => number): Design {
+  const R = (a: number, b: number): number => a + rnd() * (b - a);
+  const BASE = 12, W = 8.4, CAP = 88;
+  const h1 = { hx: R(21, 27), hz: R(11, 13.5) }, h2 = { hx: R(27, 33), hz: R(14, 17) }, h3 = { hx: R(20, 26), hz: R(11, 13.5) }, h4 = { hx: R(11, 14), hz: R(9, 11) };
+  const L1 = Math.min(BASE * R(1.5, 4), CAP - h2.hz - 2 * h1.hz), L2 = Math.min(BASE * R(1.5, 4), CAP - h2.hz - 2 * h3.hz);
+  const side = rnd() < 0.5 ? -1 : 1, L3 = Math.min(BASE * R(1.5, 3.2), CAP - h2.hx - 2 * h4.hx);
+  const c1z = -(h2.hz + L1 + h1.hz), c3z = h2.hz + L2 + h3.hz, c4x = side * (h2.hx + L3 + h4.hx);
+  const o1 = R(-5, 5), o3 = R(-5, 5), o2 = 0;                       // halls sit a little off the axis; the passages stay straight
+  const p1 = (o1 + o2) / 2, p2 = (o2 + o3) / 2;                       // passage lane x (inside both halls)
+  const blobs: Blob[] = [[o1, c1z, h1.hx, h1.hz, 0, 0, 4], [o2, 0, h2.hx, h2.hz, 0, 0, 4], [o3, c3z, h3.hx, h3.hz, 0, 0, 4], [c4x, 0, h4.hx, h4.hz, 0, 0, 3]];
+  const line = (x0: number, z0: number, x1: number, z1: number): Path => ({ c: [[x0, z0], [x0 + (x1 - x0) / 3, z0 + (z1 - z0) / 3], [x0 + (x1 - x0) * 2 / 3, z0 + (z1 - z0) * 2 / 3], [x1, z1]], w0: W, w1: W });
+  const paths: Path[] = [line(p1, c1z + h1.hz - 2, p1, -h2.hz + 2), line(p2, h2.hz - 2, p2, c3z - h3.hz + 2), line(side * (h2.hx - 2), 0, side * (h2.hx + L3 + 2), 0)];
+  const islands: [number, number, number][] = [];
+  for (const [cx, cz, hx, hz] of [[o1, c1z, h1.hx, h1.hz], [o2, 0, h2.hx, h2.hz], [o3, c3z, h3.hx, h3.hz]]) {
+    for (const rz of [-1, 1]) for (let x = 8; x <= hx - 7; x += 8) for (const sx of [-1, 1]) islands.push([cx + sx * x, cz + rz * (hz - 5), 0.85]);
+  }
+  // arch doorways: both ends of every passage plus one about every 14 m between
+  const arches: [number, number, number][] = [];
+  const lane = (x: number, za: number, zb: number, deg: number, alongX: boolean): void => {
+    const n = Math.max(1, Math.round(Math.abs(zb - za) / 14));
+    for (let k = 0; k <= n; k++) { const t = k / n, d = za + (zb - za) * t, e = k === 0 ? 1 : k === n ? -1 : 0, q = d + e * 1.2 * Math.sign(zb - za); arches.push(alongX ? [q, x, deg] : [x, q, deg]); }
+  };
+  lane(p1, c1z + h1.hz - 1, -h2.hz + 1, 0, false); lane(p2, h2.hz - 1, c3z - h3.hz + 1, 0, false); lane(0, side * (h2.hx - 1), side * (h2.hx + L3 + 1), 90, true);
+  const statues: [number, number][] = [[o2 + h2.hx - 4, 0], [o2 - h2.hx + 4, 0], [c4x + side * (h4.hx - 4), 0], [o3, c3z + h3.hz - 3], [o1, c1z - h1.hz + 3]];
+  return {
+    castle: true, blobs, paths, islands, statues, arches,
+    start: [o1, c1z - h1.hz + 6], exit: [o3 - 3, c3z + h3.hz - 6], hub: [0, 0], target: [0, 0],
+  };
+}
 
 function mulberry(seed: number): () => number {
   let a = seed >>> 0;
@@ -245,7 +288,10 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
     const [x, z] = T(b[0] + jx, b[1] + jz);
     const rot = (mirror ? -b[4] : b[4]) * Math.PI / 180 + ang, rx = b[2] * scale * js, rz = b[3] * scale * (castle ? 1 : 0.94 + rnd() * 0.12);
     out.blobs.push({ x, z, rx, rz, c: Math.cos(rot), s: Math.sin(rot), kid: mirror ? -b[5] : b[5], box: (b[6] ?? 0) * scale, hx: rx, hz: rz });
-    ext(x, z, Math.max(rx, rz) * 1.2 + 3);
+    if (castle) {   // a rectangle: its exact rotated bounding box (the grid is large enough for the long chain only when tight)
+      const ex = Math.abs(rx * Math.cos(rot)) + Math.abs(rz * Math.sin(rot)) + 2, ez = Math.abs(rx * Math.sin(rot)) + Math.abs(rz * Math.cos(rot)) + 2;
+      out.mnx = Math.min(out.mnx, x - ex); out.mxx = Math.max(out.mxx, x + ex); out.mnz = Math.min(out.mnz, z - ez); out.mxz = Math.max(out.mxz, z + ez);
+    } else ext(x, z, Math.max(rx, rz) * 1.2 + 3);
   }
   for (const p of D.paths) {
     const pts: [number, number][] = p.c.map((q, i) => T(q[0] + (i > 0 && i < 3 && !castle ? (rnd() - 0.5) * 5 : 0), q[1] + (i > 0 && i < 3 && !castle ? (rnd() - 0.5) * 5 : 0)));
@@ -255,7 +301,7 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
       const t = i / N, a = (1 - t) ** 3, b = 3 * t * (1 - t) ** 2, c = 3 * t * t * (1 - t), d = t ** 3;
       const x = a * pts[0][0] + b * pts[1][0] + c * pts[2][0] + d * pts[3][0], z = a * pts[0][1] + b * pts[1][1] + c * pts[2][1] + d * pts[3][1];
       if (i > 0) out.segs.push(px, pz, x, z, (p.w0 + (p.w1 - p.w0) * t) / 2);
-      px = x; pz = z; ext(x, z, 6);
+      px = x; pz = z; ext(x, z, castle ? 5 : 6);
     }
     out.keep.push([pts[0][0], pts[0][1], 5.5], [pts[3][0], pts[3][1], 5.5]);
   }
@@ -267,6 +313,7 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
   if (D.statues) for (const st of D.statues) {   // (castle: a few of the statue spots, at random: not every hall has one)
     if (rnd() > 0.3 || out.statues.length >= 2) continue;
     const [x, z] = T(st[0], st[1]);
+    if (out.keep.some((k) => Math.hypot(x - k[0], z - k[1]) < 1.5 + 6.5)) continue;   // (never in a passage mouth)
     out.islands.push([x, z, 1.5]); out.statues.push([x, z]); ext(x, z, 3);
   }
   if (D.arches) for (const a of D.arches) { const [x, z] = T(a[0], a[1]); out.arches.push([x, z, a[2] * Math.PI / 180 - ang]); }
@@ -279,11 +326,12 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
   void type; void R;
   const rnd = mulberry(seed ^ 0x3c6ef372);
   const variant = force ?? pickVariant(style, name, rnd);
-  const D = DESIGNS[variant];
+  const D = variant === 'COLUMNS' ? castleDesign(mulberry(seed ^ 0xca571e)) : DESIGNS[variant];
   const ang = D.castle ? Math.floor(rnd() * 4) * Math.PI / 2 : rnd() * Math.PI * 2, mirror = D.castle ? false : rnd() < 0.5;
   const target = D.target[0] + rnd() * (D.target[1] - D.target[0]);
   let scale = 1, I: Inst;
   for (let pass = 0; ; pass++) {
+    if (D.castle) { I = instantiate(D, mulberry(seed ^ 0x51ed270b), 1, ang, mirror); rasterise(I, seed); break; }   // (the castle plan is authored at its final size)
     I = instantiate(D, mulberry(seed ^ 0x51ed270b), scale, ang, mirror);   // (same jitter every pass)
     rasterise(I, seed);
     const cap = D.castle ? 86 : 76;   // (Marble Halls are the biggest layouts)
@@ -294,8 +342,26 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
   }
   finishPoints(I);
   findPockets();
+  findPassPts(I);
   halls.variant = variant;
   halls.on = true; halls.version++;
+}
+
+/** Points along the passage centre lines (inside the corridor, not in a chamber), >= 9 m from the start / exit, at least ~9 m apart. */
+function findPassPts(I: Inst): void {
+  halls.passPts.length = 0;
+  const ns = I.segs.length / 5;
+  let acc = 0;
+  for (let s = 0; s < ns; s++) {
+    const a = s * 5, ax = I.segs[a], az = I.segs[a + 1], bx = I.segs[a + 2], bz = I.segs[a + 3], hw = I.segs[a + 4];
+    acc += Math.hypot(bx - ax, bz - az);
+    if (acc < 9) continue;
+    const d = hallsSdf(bx, bz);
+    if (d < 2.4 || d > hw + 0.7) continue;                                   // (inside a chamber: not a passage point)
+    if (Math.hypot(bx - halls.sx, bz - halls.sz) < 9 || Math.hypot(bx - halls.ex, bz - halls.ez) < 9) continue;
+    if (halls.passPts.some((q) => Math.hypot(q[0] - bx, q[1] - bz) < 8)) continue;
+    halls.passPts.push([bx, bz]); acc = 0;
+  }
 }
 
 const gdS = new Int32Array(MAXN), gdE = new Int32Array(MAXN), gq = new Int32Array(MAXN);
@@ -343,7 +409,7 @@ function findPockets(): void {
   }
 }
 
-const wob = new Float32Array(MAXN), ppass = new Float32Array(MAXN), pcore = new Float32Array(MAXN);
+const bdist = new Float32Array(MAXN), wob = new Float32Array(MAXN), ppass = new Float32Array(MAXN), pcore = new Float32Array(MAXN);
 
 function rasterise(I: Inst, seed: number): void {
   const pad = PAD * HC;
@@ -384,6 +450,7 @@ function rasterise(I: Inst, seed: number): void {
       const q = Math.hypot(u / B.rx, v / B.rz);
       d = Math.min(d, (q - 1) * Math.min(B.rx, B.rz) * 0.9);
     }
+    bdist[j * w + i] = d;   // (distance to the nearest chamber blob)
     // passages: core distance (hard-stamped open) and the soft one
     const core = pcore[j * w + i];
     d = Math.min(d, ppass[j * w + i]);
@@ -409,7 +476,10 @@ function rasterise(I: Inst, seed: number): void {
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) c += wob[(j + dj) * w + i + di] < 0 ? 1 : 0;
     O[k] = c >= 5 ? 1 : 0;
   }
+  for (let k = 0; k < w * h; k++) halls.bridge[k] = O[k] && bdist[k] > 0.8 ? 1 : 0;
   finishMask(I);
+  halls.bridgeSegs.length = 0;
+  for (let q = 0; q < I.segs.length; q += 5) { const mx = (I.segs[q] + I.segs[q + 2]) / 2, mz = (I.segs[q + 1] + I.segs[q + 3]) / 2; if (hallsBridge(mx, mz)) halls.bridgeSegs.push(I.segs[q], I.segs[q + 1], I.segs[q + 2], I.segs[q + 3], I.segs[q + 4]); }
   void n;
 }
 

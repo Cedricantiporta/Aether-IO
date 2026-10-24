@@ -22,12 +22,14 @@ import { showcase } from '../engine/showcase';
 import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, Store, Sword } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
 import { shape, shapeLimit, outlineU } from '../engine/roomShape';
-import { halls, hallsSdf } from '../engine/roomHalls';
+import { halls, hallsSdf, hallsBridge } from '../engine/roomHalls';
 import { HallsBorder } from './HallsBorder';
 import { HallsMarble } from './HallsMarble';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, onBridge, riverD, hwAt, riverS } from '../engine/roomFeatures';
+import { navClear, navFlowGoal, navGuide } from '../engine/roomNav';
+import { HallsBridges } from './HallsBridges';
 import { RoomWater, LavaSea } from './RoomWater';
 import { bakeGridShore, setSeaShore } from './waterFx';
 import { Wanderer } from './Wanderer';
@@ -367,6 +369,14 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         out.lerp(tmpC.set('#1a0c08'), sstep(2.6, 4.2, u) * 0.85);
       }
       // island biome: wet sand at the waterline, then the beach shelves down under the sea
+      if (waterSea && isHalls) {   // Coral Isles HALLS: each chamber is a sandy island, the passages are bridges over the sea: the ground sinks under them and outside the chambers
+        const ou = hallsBridge(x, z) ? 3.4 : -hallsSdf(x, z);
+        const k = sstep(1.5, 4.2, ou);
+        if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
+        out.lerp(tmpC.set('#c8b07a'), sstep(0.2, 1.4, ou) * 0.7);
+        out.lerp(tmpC.set('#7fe6dc'), sstep(2.0, 3.6, ou) * 0.85);
+        out.lerp(tmpC.set('#ffffff'), sstep(0.7, 0, Math.abs(ou - 1.9)) * 0.45);
+      }
       if (waterSea && !isHalls) {
         const k = sstep(3.4, 7.0, u);
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
@@ -382,7 +392,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       // floor beyond the walls (marble halls: dark interior void)
       let inIsl = false;   // (halls: the islands inside the floor keep the floor colour; only the outer ground fades)
       if (isHalls && u > 0.3) for (let q = 0; q < halls.islands.length; q++) { const I = halls.islands[q]; if ((x - I[0]) ** 2 + (z - I[1]) ** 2 < (I[2] + 1.2) ** 2) { inIsl = true; break; } }
-      const e = inIsl ? 0 : isHalls && style !== 'MARBLE' ? sstep(0.6, 4, u) * 0.6 : sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);   // (halls: the ground between the chambers stays the biome floor, darkened)
+      const e = inIsl || (isHalls && waterSea) ? 0 : isHalls && style !== 'MARBLE' ? sstep(0.6, 4, u) * 0.6 : sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);   // (halls: the ground between the chambers stays the biome floor, darkened)
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
       col[i * 3] = out.r; col[i * 3 + 1] = out.g; col[i * 3 + 2] = out.b;
     }
@@ -724,7 +734,8 @@ function Stations() {
       g.position.set(c.x - s.x, 0, c.z - s.z);
       xlid.current[i] += ((c.used ? 1 : 0) - xlid.current[i]) * Math.min(1, dt * 6);
       if (xl.current[i]) xl.current[i]!.rotation.x = -xlid.current[i] * 1.25;
-      if (xb.current[i]) { xb.current[i]!.visible = (s.ready || !!c.pocket) && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
+      /* (owner) a pocket chest stays dark (no light beam) until every monster of the room is dead */
+      if (xb.current[i]) { xb.current[i]!.visible = (c.pocket ? world.director.phase !== 'FIGHT' : s.ready) && !c.used; xb.current[i]!.rotation.y = t * 0.4; }
     }
     if (altar.current.visible) {
       // (owner) the shrine crystal is dull until the challenge is won, then it lights up and spins
@@ -952,8 +963,11 @@ function MerchantNpc() {
 }
 
 /** (owner) A scrolling chevron trail ">>>>" from the hero to every open exit portal, in the portal's colour (dark outline). */
-const TRAIL_PER = 22, TRAIL_STEP = 1.3;
+const TRAIL_PER = 34, TRAIL_STEP = 1.3;
 const _tm = new Matrix4(), _tq = new Quaternion(), _te = new Euler(), _tp = new Vector3(), _ts = new Vector3(1, 1, 1);
+/** (owner) HALLS / water rooms: the trail follows the walkable route (engine/roomNav flow field), cached per portal and rebuilt only when the hero enters a new nav cell. */
+const GUIDE_PTS = 160;
+const gPath = [0, 1, 2, 3].map(() => new Float32Array(GUIDE_PTS * 2)), gN = [0, 0, 0, 0], gKey = [-2, -2, -2, -2], gPKey = [-1, -1, -1, -1];
 function PortalGuides() {
   const geo = useMemo(() => ({ chev: thinArrowGeo(0.5, 0.5, 0, 0.22), sh: thinArrowGeo(0.58, 0.58, 0, 0.42).translate(0.06, -0.01, -0.1) }), []);
   const mat = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.92, toneMapped: false, depthWrite: false, side: DoubleSide }), []);
@@ -967,15 +981,43 @@ function PortalGuides() {
     if (!tr || !sm) return;
     let n = 0;
     const scroll = (clock.elapsedTime * 1.6) % TRAIL_STEP;
+    const goal = navFlowGoal();
     for (let i = 0; i < 4; i++) {
       const po = r.portals[i];
-      if (!po.active || r.fade >= 0.5) continue;
+      if (!po.active || r.fade >= 0.5) { gKey[i] = -2; continue; }
       const dx = po.x - p.x, dz = po.z - p.z, d = Math.hypot(dx, dz);
       if (d < 5) continue;
       const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward] + (po.plan.shortcut ? 250 : 0);
       if (key !== keys.current[i]) { keys.current[i] = key; cols[i].set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)
-      _te.set(0, Math.atan2(dx, dz), 0); _tq.setFromEuler(_te);
+      // route: straight when the way is open, else the cached walkable path (rebuilt only when the hero's nav cell or the portal changed)
+      let np = 0;
+      if (goal >= 0 && !navClear(p.x, p.z, po.x, po.z)) {
+        const pk = (po.x * 7 + po.z * 13) | 0;
+        if (gKey[i] !== goal || gPKey[i] !== pk) { gKey[i] = goal; gPKey[i] = pk; gN[i] = navGuide(po.x, po.z, gPath[i]); }
+        np = gN[i];
+      }
       let c = 0;
+      if (np > 1) {
+        const P = gPath[i];
+        let ax = p.x, az = p.z, seg = 0, next = 1.6 + scroll, acc = 0;
+        // walk the polyline hero -> waypoints, dropping a chevron every TRAIL_STEP, aligned to the segment
+        while (seg < np && c < TRAIL_PER) {
+          const bx = P[seg * 2], bz = P[seg * 2 + 1], sx = bx - ax, sz = bz - az, sl = Math.hypot(sx, sz);
+          if (sl < 1e-3) { seg++; continue; }
+          while (acc + sl >= next && c < TRAIL_PER) {
+            const t = (next - acc) / sl, last = seg >= np - 1 && Math.hypot(bx - (ax + sx * t), bz - (az + sz * t)) < 3;
+            if (last) { seg = np; break; }
+            const f = Math.min(1, c / 3 + 0.35);
+            _te.set(0, Math.atan2(sx, sz), 0); _tq.setFromEuler(_te);
+            _tp.set(ax + sx * t, 0.25, az + sz * t); _ts.set(f, 1, f); _tm.compose(_tp, _tq, _ts);
+            tr.setMatrixAt(n, _tm); sm.setMatrixAt(n, _tm); tr.setColorAt(n, cols[i]); n++; c++;
+            next += TRAIL_STEP;
+          }
+          acc += sl; ax = bx; az = bz; seg++;
+        }
+        continue;
+      }
+      _te.set(0, Math.atan2(dx, dz), 0); _tq.setFromEuler(_te);
       for (let u = 1.6 + scroll; u < d - 3 && c < TRAIL_PER; u += TRAIL_STEP, c++) {
         const f = Math.min(1, c / 3 + 0.35);
         _tp.set(p.x + (dx / d) * u, 0.25, p.z + (dz / d) * u); _ts.set(f, 1, f); _tm.compose(_tp, _tq, _ts);
@@ -1046,7 +1088,8 @@ export function Room({ q }: { q: QualityCfg }) {
         : <HallsBorder key={'hb' + ver} biome={r.biome} seed={r.seed} v={def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0} tint={variantOf(def, r.index)?.propTint ?? def.propTint} shadows={q.shadowMap > 0} />)}
       {r.active && isCamp && <><CampPieces key={'cp' + ver} ver={ver} /><CampShards key={'cs' + ver} ver={ver} /></>}
       {r.active && !tower && <RoomWater />}
-      {r.active && !tower && !isCamp && shape.kind !== 'HALLS' && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
+      {r.active && !tower && !isCamp && (shape.kind !== 'HALLS' ? (def.lavaSea || def.waterSea) : def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
+      {r.active && !tower && !isCamp && shape.kind === 'HALLS' && def.waterSea && <HallsBridges key={'hbr' + ver} />}
       {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower ? { biome: isCamp && camp.cur ? (BIOMES[camp.cur.layout.to]?.name ?? def.name) : def.name, v: isCamp ? 0 : def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0, seed: r.seed, boss: r.plan.type === 'BOSS', camp: isCamp } : undefined} /></Suspense>
       <Stations />
