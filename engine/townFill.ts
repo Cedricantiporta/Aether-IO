@@ -95,8 +95,8 @@ for (const [x, z] of NESTS) resv(x, z, 2.2);
 // (owner) the animal pen stays clear of decor (animals wander it; the entrance must stay open)
 for (let x = ANIMAL_PEN.x0 + 1; x < ANIMAL_PEN.x1; x += 2.5) for (let z = ANIMAL_PEN.z0 - 1; z < ANIMAL_PEN.z1; z += 2.5) resv(x, z, 2.2);
 for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
-resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3);
-resv(TOWER.door.x, TOWER.door.z, 4); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
+resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3); resv(PORTAL.out.x, PORTAL.out.z, 3);
+resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOWER.x, TOWER.z, TOWER.r + 2); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
 resv(HERO_HOUSE.x, HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
 for (const s of TOWN_SEATS) resv(s.x, s.z, 1.7);
@@ -133,6 +133,7 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   if (x > RIVER.x0 - 2 && x < RIVER.x1 + 2 && z > riverBank(x, 0) - 1.4 && z < riverBank(x, 1) + 1.4) return true;
   if (inCampYard(x, z, 1) || inCaveClear(x, z, 1)) return true;
   if (Math.hypot(x - TOWER.x, z - TOWER.z) < TOWER_KNOLL.r + 1) return true;
+  if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6) return true;   // (the portal's clearing)
   return false;
 }
 /** Free for a prop of radius r that also keeps `gap` from every earlier fill placement. */
@@ -258,11 +259,11 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
   for (const c of cc) addSolid(c[0], c[1], c[2]);
   return true;
 }
-// ---- the plaza (owner 2026-10-22: bigger and open): the Adventure Portal (kit v3, scale PORTAL_S, front south) stands on the bare paved disc, two guardian statue_hero (shrunk, little plinths) flank
-//      it, four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
+// ---- the plaza (owner 2026-10-24: the Adventure Portal left it, the paved disc is open): four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
+// ---- the Adventure Portal (kit v3, scale PORTAL_S, front north, down the forest road) stands in the forest clearing south of the walls, where the Endless Tower used to be
+put('adventure_portal', PORTAL.x, PORTAL.z, PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);
 {
-  const D = PLAZA_DECOR, k = PORTAL_S;
-  put('adventure_portal', PORTAL.x, PORTAL.z, 0, k, k, k, D.lawnY - 0.02);
+  const D = PLAZA_DECOR;
   for (const m of PLAZA_STATUES) put('statue_hero', m.x, m.z, 0, m.s, m.s, m.s, D.statueY);
   claim(PLAZA.x, PLAZA.z, PLAZA.r + 0.3);
   for (const sx of [-1, 1]) for (const dz of [-1, 1]) decor('lamp_post_double', PLAZA.x + sx * 5.7, PLAZA.z + dz * 5.7, 0, 1, { solid: 'disc', r: 0.35, force: true });
@@ -385,7 +386,12 @@ grove(Z(0, 125, 20, 3), 6, [BUSHES(3), OAKS(1, [0.7, 0.9]), PINES(1)], 308, 0.8)
 // ================================================================ OUTSIDE: THE TOWER ROAD (a forest on both sides, the road itself stays open; the Endless Tower stands at its end)
 grove(Z(-7, 148, 13, 18), 24, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 401, 0.7, 2.4);
 grove(Z(17, 148, 11, 18), 18, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 402, 0.7, 2.4);
-grove(Z(5, 160, 14, 6), 9, [PINES(4), OAKS(1), BUSHES(2)], 403, 0.7, 2.4);
+grove(Z(5, 161, 15, 8), 22, [PINES(4), OAKS(3), BUSHES(2)], 403, 0.7, 2.4);   // (owner 2026-10-24) the Adventure Portal's back: a thick wall of trees behind it
+grove(Z(5, 172, 20, 8), 18, [PINES(4), OAKS(2), BUSHES(2)], 405, 0.7, 2.4);
+// ---- the Endless Tower's own clearing (east, deeper): forest round its back and sides, its dirt path stays open
+grove(Z(31, 176, 20, 8), 20, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 406, 0.7, 2.4);
+grove(Z(46, 160, 7, 14), 10, [PINES(4), OAKS(2), BUSHES(2)], 407, 0.7, 2.4);
+grove(Z(24, 160, 9, 6), 8, [PINES(3), OAKS(2), BUSHES(2)], 408, 0.7, 2.4);
 carpet(Z(3, 138, 5, 12), 16, PIECES.flowers, [0.8, 1.1], 404);
 // ================================================================ OUTSIDE: THE OLD TOWER SITE (west, z 100..125): just forest now
 grove(Z(-62, 108, 22, 6), 14, [PINES(3), OAKS(2), BUSHES(3), ROCKS(1)], 501, 0.7, 2.4);

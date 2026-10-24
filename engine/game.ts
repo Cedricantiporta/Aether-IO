@@ -1,6 +1,6 @@
 import { CAM_PITCH0 } from './world';
 import { resetBossMech } from './systems/bossMech';
-import { PLAZA, TOWER, PORTAL } from './townData';
+import { PLAZA, TOWER, PORTAL, PLAZA_ARRIVAL } from './townData';
 import { runInfo } from './runMods';
 import { saveSpot, loadSpot } from './lastSpot';
 import { CAVE_OUT, CAVE_MOUTH } from './caveData';
@@ -125,14 +125,16 @@ function rebuildEnemyGrid(): void {
 }
 
 let villageReady = false;
+/** A run started since the last time the town was entered (the next enterVillage puts the hero back at the portal, not in the plaza). */
+let cameFromRun = false;
 let spotPending = true;   // (a browser refresh: the last spot is restored once, when the player leaves the title / character select)
 /** Back where the hero was before the refresh (lastSpot.ts): town spot / inside an interior; a run -> in front of the adventure portal,
  *  a tower mode -> outside the tower, the mines -> outside the cave mouth. */
 function applyLastSpot(): void {
   const s = loadSpot(), p = world.player;
   if (!s) return;
-  if (s.area === 'RUN') { p.pos.set(PORTAL.front.x, 0, PORTAL.front.z + 2.2); p.facing = Math.PI; }   // 2.2 m in front of the portal (south of its door), looking at it
-  else if (s.area === 'TOWER') { p.pos.set(TOWER.out.x, 0, TOWER.out.z); p.facing = 0; }   // (the door faces north onto the road: step out, look back at it)
+  if (s.area === 'RUN') { p.pos.set(PORTAL.out.x, 0, PORTAL.out.z); p.facing = 0; }   // a little down the forest road from the portal (north of it), looking at it (south)
+  else if (s.area === 'TOWER') { p.pos.set(TOWER.out.x, 0, TOWER.out.z); p.facing = 0; }   // (the door faces north onto its path: step out, look back at it)
   else if (s.area === 'CAVE') { p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot; }
   else if (s.area === 'TOWN') { p.pos.set(s.x, 0, s.z); p.facing = s.f; }
   else { restoreInterior(s.area as 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME', s.x, s.z, s.f); return; }
@@ -163,13 +165,14 @@ export function enterVillage(): void {
   generateMap();
   placeVillageNodes();
   resetSystems();
-  // every arrival (new game, back from a run) is in the centre of the town plaza, under the arrival light ray
-  // in front of the Adventure Portal (the plaza's middle, south side), facing it and the castle road beyond
-  world.player.pos.set(PORTAL.front.x, 0, PORTAL.front.z + 1.4);
-  world.player.facing = Math.PI;                 // face north
+  // the first arrival of a session (new game / boot) is in the middle of the town plaza, under the arrival light ray, facing the castle road;
+  // coming back from an Adventure run (owner 2026-10-24: the portal stands in the forest clearing now) is on the road in front of the portal, looking at it
+  if (cameFromRun) { world.player.pos.set(PORTAL.out.x, 0, PORTAL.out.z); world.player.facing = 0; }
+  else { world.player.pos.set(PLAZA_ARRIVAL.x, 0, PLAZA_ARRIVAL.z); world.player.facing = Math.PI; }   // (face north)
+  cameFromRun = false;
   world.camera.yaw = 0;                          // camera behind the hero
   if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
-    world.player.pos.set(TOWER.out.x, 0, TOWER.out.z); world.player.facing = 0;   // (the tower's door faces north onto the road: step out, look back at it)
+    world.player.pos.set(TOWER.out.x, 0, TOWER.out.z); world.player.facing = 0;   // (the tower's door faces north onto its path: step out, look back at it)
   }
   runInfo.back = '';
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
@@ -182,6 +185,7 @@ export function enterVillage(): void {
 
 /** A run: leaves the town and loads room 1 of the first biome (the town map is rebuilt by enterVillage when it ends). */
 export function startRun(): void {
+  cameFromRun = true;
   clearWorld();
   world.enemyGrid.clear();
   resetSystems();

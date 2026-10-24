@@ -47,15 +47,48 @@ function mount(i: number): void {
   p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
 }
 hooks.dismount = () => dismount();
-/** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). */
-export function dismount(): void {
+/** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). `home`: the horse trots back to its stable paddock instead (auto dismount at the town wall).
+ *  Any dismount restarts the auto-horse walking timer (3 s of walking again before the horse is summoned). */
+export function dismount(home = false): void {
   const v = world.village; if (!v.ride.on) return;
-  const a = animals[v.ride.horse], p = world.player;
-  v.ride.on = false; v.ride.horse = -1; v.ride.dashT = 0;
+  const hi = v.ride.horse, a = animals[hi], p = world.player;
+  v.ride.on = false; v.ride.horse = -1; v.ride.dashT = 0; v.ride.moveT = 0;
   if (!a) return;
   a.ridden = false; a.moving = false; a.wait = 1.5; a.hx = a.tx = a.x; a.hz = a.tz = a.z;
   p.pos.set(a.x + Math.cos(a.yaw) * 1.1, 0, a.z - Math.sin(a.yaw) * 1.1);   // step off to the horse's left
   p.vel.set(0, 0, 0);
+  if (home) { const d = ANIMALS[hi]; a.x = a.hx = a.tx = d.x; a.z = a.hz = a.tz = d.z; }
+}
+// ---- auto horse (owner 2026-10-24): outside the town walls, ~3 s of continuous walking / auto-pathing summons a stable horse (it is teleported to the hero with a dust puff) and the hero rides;
+//      crossing the wall line dismounts (the horse trots back to its paddock). No unlock gate (the stable horses are free from the start, like the manual E ride). All scalars, no allocation.
+export const AUTO_HORSE_S = 3;
+/** Outside-the-walls test with a margin (m > 0 grows the walled rectangle: the wall's own thickness + the gate arch count as inside). */
+const insideWalls = (x: number, z: number, m: number): boolean => x > WALL.x0 - m && x < WALL.x1 + m && z > WALL.z0 - m && z < WALL.z1 + m;
+/** Dismount spots: the hero is about to press E at the portal / the tower door / the mine mouth (their pills need him on foot). */
+const landingNear = (x: number, z: number, r: number): boolean =>
+  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < r * r || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
+function autoHorse(dt: number, talking: boolean): void {
+  const v = world.village, rd = v.ride, p = world.player;
+  if (v.area !== 'TOWN') { rd.moveT = 0; return; }
+  if (rd.on) {
+    if (insideWalls(p.pos.x, p.pos.z, 1.3)) { dismount(true); return; }   // through the gate / side gate: off at the wall (horse back to the paddock)
+    if (landingNear(p.pos.x, p.pos.z, 5.5)) dismount();                   // arrived at the portal / tower / cave: on foot for the E prompt
+    else if (talking || useGameStore.getState().isShopOpen) dismount();   // a conversation / shop window: get off first
+    return;
+  }
+  const inp = world.input, k = inp.keys;
+  const moving = (v.go.on || k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.ArrowUp || k.ArrowDown || k.ArrowLeft || k.ArrowRight || inp.joy.active) && p.vel.x * p.vel.x + p.vel.z * p.vel.z > 0.36;
+  if (!moving || insideWalls(p.pos.x, p.pos.z, 3) || v.pending || v.fade > 0 || v.sit.on || talking || fishingActive() || v.miningT > 0 || k.KeyF
+    || p.dashT > 0 || p.knockT > 0 || p.downT > 0 || p.anim.hurtT > 0.05 || landingNear(p.pos.x, p.pos.z, 9)) { rd.moveT = 0; return; }
+  rd.moveT += dt;
+  if (rd.moveT < AUTO_HORSE_S) return;
+  // summon the nearest stable horse that is not taken: it appears at the hero (cute dust puff, a happy head toss), the hero swings up
+  let best = -1, bd = 1e9;
+  for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'HORSE' || animals[i].ridden) continue; const d = (animals[i].x - p.pos.x) ** 2 + (animals[i].z - p.pos.z) ** 2; if (d < bd) { bd = d; best = i; } }
+  rd.moveT = 0;
+  if (best < 0) return;
+  const a = animals[best]; a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing;
+  mount(best); rd.puff = true; rd.dashCd = Math.max(rd.dashCd, 0);
 }
 /** The ridden horse follows the hero (called after the hero moved). */
 function syncRide(dt: number): void {
@@ -666,6 +699,7 @@ export function updateVillage(dt: number): void {
     if (k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.ArrowUp || k.ArrowDown || k.ArrowLeft || k.ArrowRight || inp.joy.active || v.go.on || inp.pressed.Space) standUp();
     else { p.vel.x = p.vel.z = 0; p.pos.set(v.sit.x, 0, v.sit.z); p.facing = v.sit.yaw; p.anim.moveBlend *= Math.max(0, 1 - dt * 10); }
   } else { updatePlayerVillage(dt); if (v.ride.on) syncRide(dt); }
+  autoHorse(dt, talking);
   updatePetTown(dt);
   updateCrates(dt);
   // persistent harvest (town nodes / cave nodes, each with its own save): a node that just broke is recorded; when every

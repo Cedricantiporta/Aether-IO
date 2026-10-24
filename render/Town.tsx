@@ -23,7 +23,7 @@ import { TownGates } from './TownGates';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER, TOWER_KNOLL, PORTAL, PORTAL_S, PLAZA_DECOR, HERO_HOUSE, townLift } from '../engine/townData';
+import { TOWER, TOWER_KNOLL, PORTAL, PORTAL_S, HERO_HOUSE, townLift } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
 import { Beach } from './Beach';
@@ -427,7 +427,7 @@ function HeroHomeSign() {
   return <group position={[x, townLift(x, z), z]}><sprite material={label.mat} position={[0, 5.6, 0]} scale={[label.aspect * 0.9, 0.9, 1]} /></group>;
 }
 
-// ---- Adventure Portal: kit v3 `adventure_portal` (engine/townFill puts it in the plaza lawn at PORTAL, x PORTAL_S, front south); this adds the swirling gateway, rune stones, light + label
+// ---- Adventure Portal: kit v3 `adventure_portal` (engine/townFill puts it in the forest clearing at PORTAL, x PORTAL_S, turned by PORTAL.ry: front north, down the road); this adds the swirling gateway, rune stones, light + label
 function PortalLandmark() {
   const mats = useMemo(() => ({
     lit: litMat({ roughness: 0.92 }),
@@ -447,10 +447,10 @@ function PortalLandmark() {
     if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = 1.5 + i * 0.7 + Math.sin(t * 1.5 + i) * 0.18; }); }
   });
   const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(PORTAL.front.x, PORTAL.front.z, 'none', '', 2.2); };
-  const k = PORTAL_S, y0 = PLAZA_DECOR.lawnY;
+  const k = PORTAL_S, y0 = 0;
   return (
-    <group position={[PORTAL.x, y0, PORTAL.z]}>
-      {/* the swirling gateway over the kit piece's stone disc (its front faces south, +z: the hero comes from the plaza) */}
+    <group position={[PORTAL.x, y0, PORTAL.z]} rotation={[0, PORTAL.ry, 0]}>
+      {/* the swirling gateway over the kit piece's stone disc (local +z = its front; the group is turned by PORTAL.ry so the front faces the forest road) */}
       <group position={[0, 5.3 * k / 1.5, 0.62 * k / 1.5]} scale={k / 1.5}>
         <mesh material={mats.disc}><circleGeometry args={[3.35, 40]} /></mesh>
         <mesh ref={r1} material={mats.swirl} position={[0, 0, 0.02]}><ringGeometry args={[1.2, 3.3, 40, 1, 0, Math.PI * 1.3]} /></mesh>

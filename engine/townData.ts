@@ -68,10 +68,13 @@ export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riv
 export const onMineBridge = (x: number, z: number, m = 0): boolean => Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.hw + m && z > MINE_BRIDGE.z0 - m && z < MINE_BRIDGE.z1 + m;
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
 export const BRIDGE = { hw: 6.3, z0: 57.5, z1: 78.5, h: 1.6 };
-/** The Adventure Portal (owner 2026-10-21: it moved INSIDE the kingdom, into the middle of the plaza the seven shops ring): the kit v3 `adventure_portal` at scale PORTAL_S,
- *  its front facing south (+z, the avenue / the gate), standing on the plaza's round lawn. `front` = where the hero stands to step in (also the 'came back from a run' spot is 2.5 m south of it). */
+/** The Adventure Portal (owner 2026-10-24: it left the plaza and stands where the Endless Tower used to, in the forest clearing at the end of the bending forest road): the kit v3
+ *  `adventure_portal` at scale PORTAL_S, turned by `ry` (PI) so its front faces north, down the road. `front` = where the hero stands to step in (E, guide arrow, minimap icon), `out` = where he
+ *  reappears after a run (a little further down the road, looking at it). Nothing stands in the plaza any more. */
 export const PORTAL_S = 0.9;
-export const PORTAL = { x: 0, z: -0.6, r: 4.4, front: { x: 0, z: 3.8 } };   // (front = the arch's south edge PORTAL.z + 3.06 + 1.3 m)
+export const PORTAL = { x: 5, z: 155.4, r: 4.4, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = the arch's road-side edge PORTAL.z - (3.06 + 1.3) m)
+/** First arrival of a session (new game / boot, not coming back from a run): the middle of the town plaza, in front of the castle road. */
+export const PLAZA_ARRIVAL = { x: 0, z: 4.6 };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -22.2, z: 17 };   // (the park fountain, south-west quarter)
 export const PEN = { x: -12.7, z: 29.6, hw: 3.7, hd: 2.2 };   // (chickens, between two houses of the south-west row)
@@ -99,8 +102,9 @@ export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 /** The Endless Tower: deep in the south-west forest at the end of a long, narrow clearing (owner: deeper in), on a raised
  *  knoll (townLift TOWER_KNOLL). The Elixir Brewer keeps her hut on the path just before it. */
 export const TOWER_PATH_Z = 112;   // the Brewer's lane: the short woodland path west from the road along this z (it no longer reaches the tower)
-/** (owner 2026-10-21) the Tower stands in the old portal clearing at the end of the bending forest road, turned to face the road (north, -z): door = where the hero stands to go in, `out` = where he reappears after a run. */
-export const TOWER = { x: 5, z: 155.4, r: 3.9, ry: Math.PI, door: { x: 5, z: 148.7 }, out: { x: 5, z: 146.1 } };   // nature_kit_v1 'endless_tower' (its front is local +z, turned by ry)
+/** (owner 2026-10-24) the Tower stands deeper in the forest, east of the Adventure Portal's clearing, at the end of its own dirt path that branches off the forest road to the RIGHT (east); door faces north
+ *  onto that path's last stretch: door = where the hero stands to go in, `out` = where he reappears after a run. */
+export const TOWER = { x: 31, z: 168, r: 3.9, ry: Math.PI, door: { x: 31, z: 161.3 }, out: { x: 31, z: 158.7 } };   // nature_kit_v1 'endless_tower' (its front is local +z, turned by ry)
 export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
 /** Height of the Endless Tower's knoll at (x, z) (0 off it): the hero (townLift) and the ground mesh (render/terrainFn) both use it. */
 export function towerKnollAt(x: number, z: number): number {
@@ -122,7 +126,8 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [0, 0, 64, 112],      // the strip east of the farm: the dirt path from the chicken coop up to the mines (round the river's east end)
   [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
   [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Adventure Portal)
-  [-18, -10, 28, 168],   // (owner) the forest road south past the hamlets to the Endless Tower's clearing
+  [-18, -10, 28, 168],   // (owner) the forest road south past the hamlets to the Adventure Portal's clearing
+  [0, 0, 52, 186],       // (owner 2026-10-24) deeper forest south-east of the portal clearing: the Endless Tower's own clearing at the end of its east branch
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
 
@@ -447,7 +452,9 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: TOWER_PATH_Z, x2: -21, z2: TOWER_PATH_Z, w: 1.8 },   // the Brewer's lane (a narrow woodland path west from the road to her door and the turn-around beyond it)
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
-  { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: TOWER.door.x, z2: TOWER.door.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Endless Tower
+  { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.front.x, z2: PORTAL.front.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal's clearing (the old tower spot)
+  // (owner 2026-10-24) the Endless Tower's own dirt path: branches off the forest road to the right (east) and winds deeper into the forest to the tower's door
+  { x1: 4.4, z1: 143.5, x2: 14, z2: 146.5, w: 2.8, dirt: true }, { x1: 14, z1: 146.5, x2: 23.5, z2: 150.5, w: 2.8, dirt: true }, { x1: 23.5, z1: 150.5, x2: 30, z2: 155.5, w: 2.8, dirt: true }, { x1: 30, z1: 155.5, x2: TOWER.door.x, z2: TOWER.door.z + 0.4, w: 2.8, dirt: true },
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)
@@ -595,9 +602,19 @@ export const TOWN_TREES: TreeSpec[] = [
   ...(() => {
     const t: TreeSpec[] = [];
     const road: [number, number][] = [[0, 130], [1.8, 134], [3.6, 138.5], [4.4, 142.5]];
-    road.forEach(([x, z], i) => { t.push({ x: x - 7.5 - (i % 2), z, s: 3.2 + (i % 3) * 0.3, kind: (i % 3) as 0 | 1 | 2 }); t.push({ x: x + 7.5 + ((i + 1) % 2), z: z + 1, s: 3.3 + ((i + 1) % 3) * 0.3, kind: ((i + 2) % 3) as 0 | 1 | 2 }); });
+    road.forEach(([x, z], i) => { t.push({ x: x - 7.5 - (i % 2), z, s: 3.2 + (i % 3) * 0.3, kind: (i % 3) as 0 | 1 | 2 }); if (i < 3) t.push({ x: x + 7.5 + ((i + 1) % 2), z: z + 1, s: 3.3 + ((i + 1) % 3) * 0.3, kind: ((i + 2) % 3) as 0 | 1 | 2 }); });
+    // (owner 2026-10-24) behind the Adventure Portal: a thick double arc of trees (the portal faces north, down the road, so they wrap its back and sides)
+    for (let i = 0; i <= 14; i++) {
+      const a = -1.9 + (3.8 * i) / 14, r = 11 + (i % 2) * 1.6;   // angle from +z (south)
+      t.push({ x: PORTAL.x + Math.sin(a) * r, z: PORTAL.z + Math.cos(a) * r, s: 3.4 + (i % 3) * 0.35, kind: ((i + 1) % 4) as 0 | 1 | 2 | 3 });
+    }
+    for (let i = 0; i <= 11; i++) {
+      const a = -1.5 + (3.0 * i) / 11, r = 15.5 + (i % 3) * 1.5;
+      t.push({ x: PORTAL.x + Math.sin(a) * r, z: PORTAL.z + Math.cos(a) * r, s: 3.5 + ((i + 1) % 3) * 0.35, kind: ((i + 2) % 4) as 0 | 1 | 2 | 3 });
+    }
+    // the Endless Tower's clearing: a horseshoe round its back and sides, open to the north (its path)
     for (let i = 0; i <= 10; i++) {
-      const a = -1.95 + (3.9 * i) / 10, r = 13 + (i % 2) * 1.6;   // angle from +z (south): the arc wraps the back and sides
+      const a = -1.95 + (3.9 * i) / 10, r = 13 + (i % 2) * 1.6;
       t.push({ x: TOWER.x + Math.sin(a) * r, z: TOWER.z + Math.cos(a) * r, s: 3.4 + (i % 3) * 0.35, kind: ((i + 1) % 4) as 0 | 1 | 2 | 3 });
     }
     return t;
@@ -634,7 +651,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else if (h.kit?.startsWith('vh_')) { const sw = Math.abs(Math.sin(h.rot)) > 0.7; houseRing(c, h.x, h.z, (sw ? h.d : h.w) / 2, (sw ? h.w : h.d) / 2); } else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
   c.push([TOWER.x, TOWER.z - 0.3, TOWER.r]);
-  { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z + 0.7 * k, 0.9 * k]); }   // the adventure_portal kit piece: the stone arch + its base, a wall across the plaza
+  { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z - 0.7 * k, 0.9 * k]); }   // the adventure_portal kit piece (turned to face north): the stone arch + its base, a wall across the clearing
   for (const m of PLAZA_STATUES) c.push([m.x, m.z, m.r]);
   for (const m of HORSE_STATUES) c.push([m.x, m.z, m.r]);   // the horse statues (pedestal 1.4 m wide)
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
@@ -757,6 +774,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = RIVER.x0; x <= RIVER.x1; x += 6) c.push([x, (RIVER.z0 + RIVER.z1) / 2, 9]);
   for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([TOWER.x, TOWER.z, 13], [TOWER.x, TOWER.z - 6, 9]);   // the tower clearing
+  c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
   c.push([BREWER_HUT.x, BREWER_HUT.z, 7.5]);   // the brewer's yard
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);

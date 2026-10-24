@@ -5,11 +5,11 @@
 // portal / tower). The fade uses a chamfer distance transform over a rasterised "flat" mask, so it stays cheap.
 // Walkable: the engine keeps y = 0; renderers add it via render/lift.ts liftAt(), the ground mesh via terrainFn.groundY.
 // ============================================================================
-import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, TOWN_COLLIDERS, VILLAGE_NODES } from './townData';
+import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, TOWN_COLLIDERS, VILLAGE_NODES } from './townData';
 import { SHOP_POSITIONS } from '../constants';
 import { inCampYard } from './caveData';
 
-const X0 = -80, Z0 = -80, NX = 170, NZ = 225;   // grid covers x -80..90, z -80..145
+const X0 = -80, Z0 = -80, NX = 170, NZ = 275;   // grid covers x -80..90, z -80..195 (the forest south of the portal clearing + the tower clearing)
 let H: Float32Array | null = null;
 
 function noise(x: number, z: number): number {
@@ -43,7 +43,7 @@ function build(): Float32Array {
   // fields, the farm, buildings, the portal + tower clearings, harvest nodes, the mining camp
   for (const F of [...FIELDS, FARM]) rect(F.x - F.hw - 2, F.z - F.hd - 2, F.x + F.hw + 2, F.z + F.hd + 2);
   for (const s of SHOP_POSITIONS) circle(s.position[0], s.position[2], 7);
-  circle(TOWER.x, TOWER.z, 11); circle(TOWER.door.x, TOWER.door.z, 3);
+  circle(TOWER.x, TOWER.z, 11); circle(TOWER.door.x, TOWER.door.z, 3); circle(PORTAL.x, PORTAL.z, 11); circle(PORTAL.front.x, PORTAL.front.z, 3);
   for (const v of VILLAGE_NODES) circle(v.x, v.z, 3);
   mark(30, -20, 90, 40, (x, z) => inCampYard(x, z, 3));
   // every town collider (houses, barn, coop, fences, lamps, trees, carts, ruins, windmill...) with a small apron

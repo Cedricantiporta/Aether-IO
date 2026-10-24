@@ -155,7 +155,7 @@ export const world = {
     shrineOn: false, shrineDone: false, hint: '',
   } as RoomState,
   /** Town state (harvest node cooldown). */
-  village: { sit: { on: false, x: 0, z: 0, yaw: 0, y: 0, /** lying in the home bed (woken from a dream): render tips the hero onto their back */ lie: false }, /** (owner) riding a stable horse (animals[horse]): faster, no fighting, E dismounts */ ride: { on: false, horse: -1, /** horse dash: > 0 while charging (s), recharge timer (s), charge direction, dust-puff request */ dashT: 0, dashCd: 0, dx: 0, dz: 1, puff: false }, harvestCd: 0, /** > 0 while the hero is mining / harvesting (no attacks or skills; a hit interrupts it) */ miningT: 0, area: 'TOWN' as 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE' | 'CAVE' | 'DOWN' | 'UP' | 'CHURCH' | 'TAVERN' | 'HOME', spawnFx: 0,
+  village: { sit: { on: false, x: 0, z: 0, yaw: 0, y: 0, /** lying in the home bed (woken from a dream): render tips the hero onto their back */ lie: false }, /** (owner) riding a stable horse (animals[horse]): faster, no fighting, E dismounts */ ride: { on: false, horse: -1, /** horse dash: > 0 while charging (s), recharge timer (s), charge direction, dust-puff request */ dashT: 0, dashCd: 0, dx: 0, dz: 1, puff: false, /** auto horse (village.ts autoHorse): seconds of continuous walking outside the walls (3 s summons the horse), reset by stopping / any dismount */ moveT: 0 }, harvestCd: 0, /** > 0 while the hero is mining / harvesting (no attacks or skills; a hit interrupts it) */ miningT: 0, area: 'TOWN' as 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME', areaVer: 0, fade: 0, pending: '' as '' | 'ENTER' | 'LEAVE' | 'CAVE' | 'DOWN' | 'UP' | 'CHURCH' | 'TAVERN' | 'HOME', spawnFx: 0,
     // crystal cave (engine/systems/cave.ts): current floor + the trip's seed (deep floors are new every trip), veins left,
     // lantern oil (s, one timer for the whole trip), combat on deep floors, the lucky ladder of this floor (node index, -1
     // none) + whether it is found, rare-vein tier per crate slot (0 normal, 1..4), oil flasks lying on the floor
@@ -253,7 +253,7 @@ export function clearWorld(): void {
   for (const p of world.pickups) p.active = false;
   world.itemPickupsVersion++;
   Object.assign(world.player, makePlayer(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
-  world.village.sit.on = false; world.village.ride.on = false; world.village.ride.horse = -1; world.village.ride.dashT = 0; world.village.ride.dashCd = 0;
+  world.village.sit.on = false; world.village.ride.on = false; world.village.ride.horse = -1; world.village.ride.dashT = 0; world.village.ride.dashCd = 0; world.village.ride.moveT = 0;
   world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1;
   for (const w of world.walls) w.active = false;
   world.camera.trauma = 0;

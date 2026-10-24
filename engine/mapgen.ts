@@ -79,7 +79,7 @@ const CRATE_SPACE: Record<CrateKind, number> = {
 
 // ------------------------------------------------------------ collider grid --
 const CELL = 8;
-const HALF = ARENA_RADIUS + 12;
+const HALF = Math.max(ARENA_RADIUS + 12, 200);   // (the town map reaches z ~190: the forest south of the portal clearing + the Endless Tower)
 const COLS = Math.ceil((HALF * 2) / CELL) + 1;
 let cells: Collider[][] = [];
 let colliders: Collider[] = [];

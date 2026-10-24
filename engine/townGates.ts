@@ -60,7 +60,7 @@ export const TOWN_GATES: readonly GateDef[] = [
   {   // the Endless Tower: a great tree has fallen across its door (the forest is open ground, so it blocks the DOOR; the Daily / Waves / Tower windows
       // also open from the HUD corner icons anywhere in town, so nothing else is cut off)
     id: 'tower', kind: 'tree', name: 'Fallen tree', opens: 'wren', door: true,
-    span: [1.2, 150.2, 8.8, 150.2], yaw: Math.PI,
+    span: [27.2, 162.8, 34.8, 162.8], yaw: Math.PI,
     line: 'A giant tree has fallen across the Endless Tower\'s door. The King\'s woodcutters will clear it once you report Elderroot\'s fall.',
     done: 'The woodcutters cleared the fallen tree: the Endless Tower is open!',
   },
