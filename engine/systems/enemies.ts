@@ -181,8 +181,20 @@ export function isUntargetable(e: Enemy): boolean {
 }
 
 /** HALLS rooms (owner): ordinary monsters idle until the hero comes within HALLS_AGGRO metres (or hurts one); once awake they stay awake, and wake packmates within 7 m. */
-const HALLS_AGGRO = 10;
+const HALLS_AGGRO = 15;   // (owner 2026-10-24: 10 m was too short)
 const awake = new Uint8Array(512);
+/** (owner 2026-10-24) idle HALLS monsters mill about their spot instead of standing frozen (gargoyles stay put): home point + wander heading / timer per enemy id. */
+const homeOk = new Uint8Array(512), homeX = new Float32Array(512), homeZ = new Float32Array(512), wanT = new Float32Array(512), wanA = new Float32Array(512);
+function idleWander(e: Enemy, dt: number): void {
+  const i = e.id;
+  if (!homeOk[i]) { homeOk[i] = 1; homeX[i] = e.pos.x; homeZ[i] = e.pos.z; wanT[i] = Math.random() * 2; wanA[i] = 99; }
+  wanT[i] -= dt;
+  if (wanT[i] <= 0) { wanT[i] = 1.4 + Math.random() * 2.4; wanA[i] = Math.random() < 0.35 ? 99 : Math.random() * Math.PI * 2; }
+  const hx = homeX[i] - e.pos.x, hz = homeZ[i] - e.pos.z, hd = Math.hypot(hx, hz);
+  if (hd > 3.5) { setVel(e, hx / hd, hz / hd, e.speed * 0.35); return; }
+  if (wanA[i] > 9) { stop(e); return; }
+  setVel(e, Math.sin(wanA[i]), Math.cos(wanA[i]), e.speed * 0.3);
+}
 let hallsOn = false;   // the installed room is a HALLS layout (set once per frame in updateEnemies)
 const spawnCols: Collider[] = [];
 function blockedAt(x: number, z: number, pad: number): boolean {
@@ -365,7 +377,7 @@ export function spawnEnemy(
   if (boss) initSpecial(e);
   e.state = 'SPAWN';
   e.stateT = 0;
-  awake[e.id] = 0;
+  awake[e.id] = 0; homeOk[e.id] = 0;
   e.winT = 0; e.winCd = WIND.firstMin + Math.random() * (WIND.firstMax - WIND.firstMin); e.winPhase = 0; e.winBusy = false;
   e.phase = 0;
   e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 3 : 0; // so first boss pattern is index 0
@@ -1543,7 +1555,7 @@ function updateEnemy(e: Enemy): void {
     else if (e.boss && e.state !== 'SPAWN') updateBoss(e, dt, tdist);
     else if (tg && e.state !== 'SPAWN') { goblinFlee(e, dt); desiredYaw = Math.atan2(e.vel.x, e.vel.z); }
     else if (e.fearT > 0 && !e.boss && e.state !== 'SPAWN') stop(e);   // cowering (stunned-like)
-    else if (asleep) { stop(e); desiredYaw = e.facing; }   // (HALLS: not yet aware of the hero)
+    else if (asleep) { if (e.kind === 'GARGOYLE') stop(e); else idleWander(e, dt); const vx = e.vel.x, vz = e.vel.z; desiredYaw = vx * vx + vz * vz > 0.01 ? Math.atan2(vx, vz) : e.facing; }   // (HALLS: not yet aware of the hero - mills about its spot)
     else runAI(e);
   } else {
     if (e.spKind !== 0) cancelSpecial(e);
