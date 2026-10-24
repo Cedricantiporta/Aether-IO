@@ -1252,16 +1252,16 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   // farm (outside the gate, nature_kit_v1 round animals): cows + a dog in the yard in front of the barn, sheep and pigs in the pasture
   // behind it, hens by the coop
-  // (owner 2026-10-24) the farm animals live in the fenced pen south of the farm track (ANIMAL_PEN): hens round the coop
-  // (west), cows / sheep / pigs in the east half; the dog stays in the farm yard
-  { kind: 'COW', x: 40.4, z: 116.6, rx: 1.4, rz: 0.9, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 44.0, z: 118.4, rx: 1.0, rz: 1.0, speed: 0.5, tint: '#8a5a3a' },
-  { kind: 'COW', x: 40.2, z: 119.8, rx: 1.3, rz: 0.8, speed: 0.5, tint: '#e8e0d0' },
-  { kind: 'SHEEP', x: 41.0, z: 123.2, rx: 1.6, rz: 0.9, speed: 0.6, tint: '#ffffff' },
-  { kind: 'SHEEP', x: 44.2, z: 122.4, rx: 1.0, rz: 1.0, speed: 0.55, tint: '#efe4d0' },
-  { kind: 'SHEEP', x: 43.4, z: 125.0, rx: 1.4, rz: 0.6, speed: 0.6, tint: '#8a7358' },
-  { kind: 'PIG', x: 37.0, z: 124.6, rx: 1.0, rz: 0.8, speed: 0.7, tint: '#f6a6b8' },
-  { kind: 'PIG', x: 37.6, z: 121.4, rx: 0.8, rz: 0.8, speed: 0.7, tint: '#e8949e' },
+  // (owner 2026-10-24) cows graze in the yard in front of the barn (its door path x 41.4 left clear), sheep in the pasture behind it;
+  // the fenced pen across the farm track (ANIMAL_PEN) keeps the coop, the hens and the pigs
+  { kind: 'COW', x: 37.4, z: 104.9, rx: 1.3, rz: 0.7, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 45.0, z: 104.6, rx: 1.0, rz: 0.8, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 41.6, z: 106.6, rx: 1.0, rz: 0.4, speed: 0.5, tint: '#e8e0d0' },
+  { kind: 'SHEEP', x: 39.5, z: 86.4, rx: 1.8, rz: 1.4, speed: 0.6, tint: '#ffffff' },
+  { kind: 'SHEEP', x: 44.0, z: 85.4, rx: 1.6, rz: 1.4, speed: 0.55, tint: '#efe4d0' },
+  { kind: 'SHEEP', x: 41.8, z: 82.8, rx: 1.6, rz: 1.0, speed: 0.6, tint: '#8a7358' },
+  { kind: 'PIG', x: 41.4, z: 119.6, rx: 1.6, rz: 1.2, speed: 0.7, tint: '#f6a6b8' },
+  { kind: 'PIG', x: 43.6, z: 123.6, rx: 1.2, rz: 1.0, speed: 0.7, tint: '#e8949e' },
   { kind: 'DOG', x: 35, z: 102.6, rx: 3.2, rz: 0.8, speed: 1.8, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x - 1.8, z: COOP.z + 6.0, rx: 1.0, rz: 0.7, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x + 1.6, z: COOP.z + 6.4, rx: 1.0, rz: 0.7, speed: 1.0, tint: '#e0a070' },

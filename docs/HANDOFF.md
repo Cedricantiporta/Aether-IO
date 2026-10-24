@@ -27,6 +27,7 @@ daily, so the code wins: `constants.ts`, `classLevels.ts`, `engine/roomDefs.ts`,
 - **Potions STAY.** The owner once asked to remove them, then reversed it ("dont remove potions"). Z/X potions, the
   auto-potions setting, shop and loot potions are permanent features. Do not remove or hide them.
 - Wants "a real development studio" result: game-like polish, good performance on phones (the Android APK is the target).
+- **No cubes** (owner 2026-10-24, firm): "don't cubify the game, this is not Minecraft". No box-shaped scenery: walls, pillars, rocks, ledges and borders are rounded / organic (round columns, rocks, trees, curved edges).
 - Free / lightweight assets only (KayKit + Kenney CC0 in `public/models`, meshopt-compressed; the owner's own recorded
   music + SFX in `public/audio`). Only registry.npmjs.org is reachable from the cloud container (no other downloads).
 - Tell them when a new APK is downloadable: GitHub -> Actions -> latest "Android APK" run -> Artifacts ->
@@ -125,8 +126,8 @@ town (and closes the open panel first).
   park fountain 36.4, 49.4, benches `TOWN_SEATS` along the river, stepping stones `STEP_PATHS`; keep the lane z 52-59 free), the **farm** across the
   bridge (windmill 31, 83.6 with spinning blades; farmhouse 31, 96.2 = west column and barn 41.5, 96.8 = east column; the dog + a well in the yard
   z 102-107, entered through the gap x 33-38 of the farm track's north fence; across the track, through the facing gap in its south fence, the fenced
-  **animal pen** `ANIMAL_PEN` x 29-46, z 113-127: chicken coop 32.4, 117 with the egg nests + Dalla in front and seven hens, cows / sheep / pigs in
-  the east half; townFill keeps it clear of decor), the **Elixir Brewer's hut** (-10.2, 106.2, door onto the tower path), the **Endless Tower**
+  **animal pen** `ANIMAL_PEN` x 29-46, z 113-127: chicken coop 32.4, 117 with the egg nests + Dalla in front and seven hens, the two pigs in the east
+  half; townFill keeps it clear of decor); the cows graze in the yard in front of the barn, the sheep in the pasture behind it (x 38-46, z 82-88), the **Elixir Brewer's hut** (-10.2, 106.2, door onto the tower path), the **Endless Tower**
   (-74, 106.2 on its knoll, door = `TOWER.door`, the hero stands on the path z 112), the **mine entrance** (72.4, 4.8), two tents and a siding in the
   camp, the **pier** (dock segments + posts + `fence_wood` rails, kit boats), market carts, haystacks, crops, wells, signposts. The Fishmonger and
   Mining Supplies stalls are town_kit_v2 `shop_stall_house` pieces (same keeper offsets as the town shops); the Brewer's `NPC/DOOR/CAULDRON`
