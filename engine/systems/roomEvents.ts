@@ -55,6 +55,7 @@ export function startRoomEvent(plan: RoomPlan): void {
   resetRoomEvent();
   const e = E();
   e.obj = plan.obj ?? ''; e.twist = plan.twist ?? '';
+  if (e.twist === 'TRAPS' && BIOMES[world.room.biome % BIOMES.length].name === 'Sunscorch Desert') e.twist = '';   // (owner) no spike floor traps in the Sunscorch Desert
   if (!e.twist && shape.kind === 'HALLS' && (plan.type === 'COMBAT' || (plan.type === 'ELITE' && world.room.biome % BIOMES.length === MARBLE_BIOME)) && Math.random() < (world.room.biome % BIOMES.length === MARBLE_BIOME ? 1 : 0.5)) e.twist = 'TRAPS';   // (owner) HALLS rooms hold more spike traps
   if (!e.obj && !e.twist) return;
   const [cx, cz] = stationPos(world.room.radius);
@@ -92,6 +93,7 @@ function clearSpot(x: number, z: number, r: number): boolean {
 void halls;
 
 function placeTraps(): void {
+  if (BIOMES[world.room.biome % BIOMES.length].name === 'Sunscorch Desert') { E().nTraps = 0; return; }
   const e = E(), R = world.room.radius, cap = e.traps.length;
   const marble = world.room.biome % BIOMES.length === MARBLE_BIOME;
   // Marble Halls: tiles x1.4, warning->spike 0.75x faster cycle, spikes up 1.6x longer, 1.75x the groups, 3x3 / cross favoured

@@ -6,7 +6,7 @@ import { showcase } from '../showcase';
 import { techLv } from '../../tech';
 import { world } from '../world';
 import { events } from '../events';
-import { useGameStore } from '../../store';
+import { useGameStore, DMG_INFLATE } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo } from './target';
@@ -41,7 +41,8 @@ const DASH_TIME = 0.18;
 const DASH_SPEED = 24;   // shorter dashes for every class (was 32, before that 42)
 const DEATH_DELAY = 1.2;
 const COLLIDE_PAD = 0.5;
-let lavaTouch = false;
+const tmpThorn = new Vector3();
+let lavaTouch = false, thornC: Collider | null = null, thornAt = -9;
 
 const colOut: Collider[] = [];
 const aim = new Vector3();
@@ -146,6 +147,7 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
       const dx = nx - c.x, dz = nz - c.z;
       const min = c.r + COLLIDE_PAD;
       const d2 = dx * dx + dz * dz;
+      if (c.thorn && d2 < (min + 0.15) * (min + 0.15)) thornC = c;   // (cactus: brushing it hurts)
       if (d2 >= min * min) continue;
       if (c.liquid === 2) lavaTouch = true;
       const d = Math.sqrt(d2);
@@ -156,6 +158,13 @@ function resolveStep(p: typeof world.player, x: number, z: number): void {
   }
   if (lavaTouch && p.burnT <= 0.3 && p.alive) applyPlayerDebuff('BURN', 2.5, 4 + world.director.wave * 0.8);   // walked into lava
   lavaTouch = false;
+  if (thornC) {   // cactus contact: a small direct hit + a little shove, 0.6 s apart, scaling with depth
+    const c = thornC; thornC = null;
+    if (p.alive && world.time - thornAt >= 0.6 && bounds.room) {
+      thornAt = world.time; tmpThorn.set(c.x, 0, c.z);
+      damagePlayer(useGameStore.getState().stats.maxHealth * 0.035 * (0.8 + 0.012 * world.director.wave) / DMG_INFLATE, { pos: tmpThorn, kind: 'PHYSICAL', kb: 1.4 });
+    }
+  }
   if (!bounds.room && world.village.area === 'TOWN' && isTownWater(nx, nz)) {   // never walk onto the lake / river (slide along the shore)
     if (!isTownWater(nx, oz)) nz = oz; else if (!isTownWater(ox, nz)) nx = ox; else { nx = ox; nz = oz; }
   }

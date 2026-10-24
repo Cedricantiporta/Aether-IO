@@ -580,6 +580,7 @@ screens, max-level question: class level cap is 50) have been removed.
   weapons per pocket + 2-3 along the walls (alternating ballista / catapult, `rt.siege` max 6), long range (`siegeLong`: fire up to 95 m, bolt life 3.4 s, 90 m lane); they fire while the
   fight lasts, are destructible, and do NOT gate room clear. Marble COMBAT / ELITE halls always get the TRAPS twist (spikes, roomEvents), 1-3 breath statues, 1-2 jets, 1-2 rotating beams
   (rest after clear). Fire breath statues + jets everywhere: 1.5x length (statue 17.25 m, jets 15-22 m) and continuous direct hits every 0.25 s (`FIRE_TICK`; statue 1.6%, jet 2% max HP) plus burn.
+- **Desert**: Sunscorch Desert has no spike traps (roomDefs never rolls the TRAPS twist there, roomEvents drops it, `placeTraps` returns empty). Cactus colliders (`Collider.thorn`, set in roomgen `add`) hurt on contact: `player.resolveStep` deals 3.5% max HP (scaled by depth) + 1.4 u knockback, 0.6 s apart.
 - **HALLS rooms** (owner-approved organic floor plans, mockup `shots/halls_design/proposal.png`): ~1 in 4 combat / elite / treasure rooms
   (`roomgen.isHallsRoom`; never boss / mini-boss / camp / merchant / fountain / shrine / tower modes / the very first room). Six designs in
   `engine/roomHalls.ts` DESIGNS (soft blobs + bezier passages + islands, jittered, rotated, mirrored, scaled to ~1500-2000 m2): TWIN

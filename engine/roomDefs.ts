@@ -303,7 +303,7 @@ const plan = (type: RoomType, next = 0): RoomPlan => {
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {
     if (type === 'COMBAT' && Math.random() < (storyBias.rescue ? 0.55 : 0.35)) p.obj = pick<RoomObjective>([['DEFEND', 30], ['RESCUE', storyBias.rescue ? 110 : 25], ['GOBLIN', 25], ['HUNT', 20]]);
-    if (Math.random() < 0.3) p.twist = pick<RoomTwist>([['TRAPS', 35], ['DARK', 25], ['CURSED', 20], ['GOLDEN', 20]]);
+    if (Math.random() < 0.3) p.twist = pick<RoomTwist>([['TRAPS', BIOMES[planBiome % BIOMES.length].name === 'Sunscorch Desert' ? 0 : 35], ['DARK', 25], ['CURSED', 20], ['GOLDEN', 20]]);
   }
   return p;
 };

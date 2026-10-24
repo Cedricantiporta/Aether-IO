@@ -140,7 +140,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
 
   const add = (kind: ObstacleKind, x: number, z: number, radius: number, scale: number, blocks: boolean, collide = true, rot = rnd() * Math.PI * 2): void => {
     obstacles.push({ id: id++, kind, pos: new Vector3(x, 0, z), radius, scale, rot, blocksProjectiles: blocks });
-    if (collide) colliders.push({ x, z, r: radius, blocksProjectiles: blocks });
+    if (collide) colliders.push(kind === 'CACTUS' ? { x, z, r: radius, blocksProjectiles: blocks, thorn: true } : { x, z, r: radius, blocksProjectiles: blocks });
   };
 
   // keep-clear spots: arrival, station, all three exit slots

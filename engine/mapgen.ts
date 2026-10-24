@@ -23,6 +23,8 @@ export interface Collider {
   blocksProjectiles: boolean;
   /** Run-room liquid (roomFeatures.LIQ): 0 / undefined = solid prop, 1 water, 2 lava (burns on touch), 3 chasm. */
   liquid?: number;
+  /** Cactus: touching it hurts (player.resolveStep). */
+  thorn?: boolean;
 }
 
 /** Pushes (x, z) out of every collider (props and liquids) by `pad`; used for loot that lands in a lake or on a rock. */
