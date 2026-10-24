@@ -23,7 +23,7 @@ import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, 
 import { world } from '../engine/world';
 import { shape, shapeLimit, outlineU } from '../engine/roomShape';
 import { hallsSdf } from '../engine/roomHalls';
-import { HallsWalls } from './HallsWalls';
+import { HallsBorder, HallsColumns } from './HallsBorder';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, onBridge, riverD, hwAt, riverS } from '../engine/roomFeatures';
@@ -290,7 +290,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45);
         out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75);
         const lane = Math.abs(x * -shape.fz + z * shape.fx);
-        if (!boss) {   // worn royal carpet down the hall: crimson with a gold border, frayed and torn in places
+        if (!boss && !isHalls) {   // worn royal carpet down the hall: crimson with a gold border, frayed and torn in places
           const torn = sstep(0.62, 0.7, fbm(x * 0.12 + so, z * 0.12, 3));
           const inLane = sstep(2.9, 2.6, lane) * sstep(0.5, -1.5, u) * (1 - torn);
           out.lerp(tmpC.set('#6e1a20'), inLane * 0.85);
@@ -370,13 +370,13 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         out.multiplyScalar(1 + sstep(R * 0.2, 0, r) * 0.2);
       }
       // lava sea: past the wall ring the rock crumbles away under the lava (a dark scorched lip first)
-      if (lavaSea) {
+      if (lavaSea && !isHalls) {
         const k = sstep(3.6, 6.0, u);
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.4 * k));
         out.lerp(tmpC.set('#1a0c08'), sstep(2.6, 4.2, u) * 0.85);
       }
       // island biome: wet sand at the waterline, then the beach shelves down under the sea
-      if (waterSea) {
+      if (waterSea && !isHalls) {
         const k = sstep(3.4, 7.0, u);
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
         out.lerp(tmpC.set('#c8b07a'), sstep(2.4, 3.8, u) * 0.7);
@@ -384,12 +384,12 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         out.lerp(tmpC.set('#ffffff'), sstep(0.7, 0, Math.abs(u - 3.5)) * 0.55);   // foam line
       }
       // rolling hills rising beyond the outer prop ring (owner: more elevation; not in the castle halls, the void or over the lava sea)
-      if (!lavaSea && !waterSea && style !== 'MARBLE' && style !== 'VOID') {
+      if (!lavaSea && !waterSea && style !== 'MARBLE' && style !== 'VOID' && !isHalls) {
         const k = sstep(7, 22, u);
         if (k > 0) pos.setY(i, pos.getY(i) + k * (1.6 + 5.5 * fbm(x * 0.045 + so, z * 0.045 - so, 3)) * (style === 'SAND' ? 0.8 : 1));
       }
       // floor beyond the walls (marble halls: dark interior void)
-      const e = sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);
+      const e = isHalls && style !== 'MARBLE' ? sstep(0.6, 4, u) * 0.6 : sstep(0.2, style === 'MARBLE' ? 2.2 : 3.2, u);   // (halls: the ground between the chambers stays the biome floor, darkened)
       out.lerp(edge, e).multiplyScalar(1 - e * 0.35);
       col[i * 3] = out.r; col[i * 3 + 1] = out.g; col[i * 3 + 2] = out.b;
     }
@@ -1044,10 +1044,12 @@ export function Room({ q }: { q: QualityCfg }) {
   return (
     <>
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : isCamp ? <CampGround key={ver} ver={ver} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
-      {r.active && !tower && !isCamp && shape.kind === 'HALLS' && <HallsWalls key={'hw' + ver} biome={r.biome} seed={r.seed} />}
+      {r.active && !tower && !isCamp && shape.kind === 'HALLS' && (def.style === 'MARBLE'
+        ? <HallsColumns key={'hc' + ver} seed={r.seed} />
+        : <HallsBorder key={'hb' + ver} biome={r.biome} seed={r.seed} v={def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0} tint={variantOf(def, r.index)?.propTint ?? def.propTint} shadows={q.shadowMap > 0} />)}
       {r.active && isCamp && <><CampPieces key={'cp' + ver} ver={ver} /><CampShards key={'cs' + ver} ver={ver} /></>}
       {r.active && !tower && <RoomWater />}
-      {r.active && !tower && !isCamp && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
+      {r.active && !tower && !isCamp && shape.kind !== 'HALLS' && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
       {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
       <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower && !isCamp ? { biome: def.name, v: def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0 } : undefined} /></Suspense>
       <Stations />

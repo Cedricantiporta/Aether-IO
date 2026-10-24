@@ -26,13 +26,11 @@ const FIGHT: Partial<Record<RoomType, boolean>> = { COMBAT: true, ELITE: true, T
 const LAYOUTS: Layout[] = ['PLAIN', 'BIG', 'LONG', 'RIVER', 'LAKE'];
 
 /** Does this fight room use a HALLS layout (chambers joined by corridors, engine/roomHalls.ts)? ~1 in 4 combat / elite / treasure
- *  rooms; never towers, camps, boss / merchant / fountain / duel arenas or the sea biomes (their floor drops away beyond the walls). */
+ *  rooms; never towers, camps, boss / merchant / fountain / duel arenas. */
 export function isHallsRoom(biome: number, type: RoomType, seed: number, index: number): boolean {
   if (runInfo.mode === 'TOWER' || !hallsType(type)) return false;
   if (shapeDbg.force === 'HALLS') return true;
   if (shapeDbg.force) return false;
-  const bd = biomeOf(biome);
-  if (bd.lavaSea || bd.waterSea) return false;
   if (biome % BIOMES.length === 0 && index === 0 && biome < BIOMES.length) return false;   // the very first room of a run stays simple
   return mulberry32(seed ^ 0x5eed11)() < 0.25;
 }
@@ -123,7 +121,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const fightRoom = !!FIGHT[type];
   buildShape(type, R, seed, {
     weights: fightRoom || type === 'MINIBOSS' ? def.shapes : undefined,
-    long: layout === 'LONG',
+    long: layout === 'LONG', style: def.style, name: def.name,
     force: isHallsRoom(biome, type, seed, index) ? 'HALLS' : layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
   });
   const isHalls = shape.kind === 'HALLS';

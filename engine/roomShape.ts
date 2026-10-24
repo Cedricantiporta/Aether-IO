@@ -109,7 +109,7 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 }
 
 /** Builds the outline for a room of nominal radius R (walkable limit ~ R + 1 for a disc). Fills `shape`. */
-export interface ShapeOpts { force?: ShapeKind; weights?: [string, number][]; long?: boolean }
+export interface ShapeOpts { force?: ShapeKind; weights?: [string, number][]; long?: boolean; style?: string; name?: string }
 export function buildShape(type: string, R: number, seed: number, opts?: ShapeOpts): ShapeKind {
   fixed.on = false;
   const rnd = mulberry(seed ^ 0x7f4a7c15);
@@ -123,7 +123,7 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
   if (opts?.force) picked = opts.force;
   const dk = dbg.force === 'HALLS' && !hallsType(type) ? null : dbg.force;   // (HALLS only ever replaces fight rooms)
   const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dk ?? picked;   // tower floors: always a round arena
-  if (kind === 'HALLS') return buildHallsShape(type, R, rnd);
+  if (kind === 'HALLS') return buildHallsShape(type, R, seed, opts?.style ?? 'GRASS', opts?.name ?? '');
   const stretch = opts?.long ? 1 : 0;   // long stages: a much longer hall / oval
   const theta0 = rnd() * TAU;
   let F: Fn, areaK = 1, axis = false;
@@ -179,8 +179,8 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
 
 /** HALLS: builds the walkable mask (engine/roomHalls.ts) and fills `shape` with the star-convex kernel seen from the hub
  *  centre (so any code that still clamps radially with edgeLimit stays inside the open floor of the hub chamber). */
-function buildHallsShape(type: string, R: number, rnd: () => number): ShapeKind {
-  buildHallsLayout(type, R, rnd, dbg.variant ?? undefined);
+function buildHallsShape(type: string, R: number, seed: number, style: string, name: string): ShapeKind {
+  buildHallsLayout(type, R, seed, style, name, dbg.variant ?? undefined);
   const T = shape.table, dA = TAU / SHAPE_N;
   let mn = 1e9;
   for (let i = 0; i < SHAPE_N; i++) {
@@ -210,7 +210,7 @@ export function stationPoint(out: [number, number]): void {
 }
 /** The boss-shortcut door: behind the middle exit, 10 units further into the room. */
 export function shortcutPoint(out: [number, number]): void {
-  if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.ex - halls.dx * 9; out[1] = halls.ez - halls.dz * 9; return; }
+  if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.scx; out[1] = halls.scz; return; }
   if (fixed.on) { out[0] = fixed.ex - fixed.dx * 9; out[1] = fixed.ez - fixed.dz * 9; return; }
   portalPoint(1, 3, out);
   const l = Math.hypot(out[0], out[1]);
