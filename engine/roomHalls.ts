@@ -165,7 +165,7 @@ const DESIGNS: Record<HallsVariant, Design> = {
   COLUMNS: {
     blobs: [[0, -34, 20, 13, 0, 0], [0, 4, 24, 15, 0, 0], [-6, 42, 18, 13, 0, 0], [-34, 6, 10, 8, 0, 0]],
     paths: [{ c: [[0, -22], [4, -16], [-4, -12], [0, -8]], w0: 6.9, w1: 6.9 }, { c: [[-2, 18], [6, 24], [-8, 30], [-6, 32]], w0: 6.9, w1: 6.9 }, { c: [[-22, 6], [-26, 6], [-28, 6], [-30, 6]], w0: 6.9, w1: 6.9 }],
-    islands: [[-9, 3, 1.9], [-3, 3, 1.9], [3, 3, 1.9], [9, 3, 1.9], [-13, 14, 1.9], [13, 14, 1.9], [-6, -36, 1.9], [6, -36, 1.9], [-8, 44, 1.9], [6, 44, 1.9]],
+    islands: [[-7, -3, 1.9], [-7, 3, 1.9], [-7, 9, 1.9], [7, -3, 1.9], [7, 3, 1.9], [7, 9, 1.9], [-6, -36, 1.9], [6, -36, 1.9], [-8, 44, 1.9], [6, 44, 1.9]],
     start: [0, -40], exit: [-6, 46], hub: [0, 8], target: [1500, 1900],
   },
   // a big heart clearing with three spokes (arrival pocket, dead-end pocket, exit pocket)
@@ -180,7 +180,7 @@ const DESIGNS: Record<HallsVariant, Design> = {
     blobs: [[-4, -2, 30, 20, 15, 0.55], [26, 18, 12, 14, 0, 0], [-26, -22, 11, 10, 0, 0]],
     paths: [{ c: [[-24, -20], [0, -30], [24, -10], [26, 14]], w0: 12, w1: 10 }],
     islands: [[-2, 2, 5.0], [-16, 6, 2.6], [10, -2, 2.8], [-8, -14, 2.4], [18, 14, 2.4]],
-    start: [-28, -24], exit: [26, 22], hub: [-4, -12], target: [1600, 2000],
+    start: [-28, -24], exit: [26, 22], hub: [0, -10], target: [1600, 2000],
   },
 };
 
@@ -247,7 +247,7 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
   }
   for (const i of D.islands) {   // (an island never sits in a passage mouth)
     const [x, z] = T(i[0], i[1]);
-    if (out.keep.some((k) => Math.hypot(x - k[0], z - k[1]) < i[2] + 9)) continue;
+    if (out.keep.some((k) => Math.hypot(x - k[0], z - k[1]) < i[2] + 5.5)) continue;
     out.islands.push([x, z, i[2]]); ext(x, z, i[2] + 2);
   }
   out.start = T(D.start[0], D.start[1]); out.exit = T(D.exit[0], D.exit[1]); out.hub = T(D.hub[0], D.hub[1]);

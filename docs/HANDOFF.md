@@ -555,18 +555,26 @@ screens, max-level question: class level cap is 50) have been removed.
   still come from the old `town_kit.glb`.
 - **Rooms**: one disc/shape around 0,0 built from a seed (`roomgen.buildRoom`, `roomShape` polar table, `mapgen.installRoom`),
   only the current room exists; camp rooms use `roomShape.fixed` spots.
-- **HALLS rooms** (dungeon floor plans): ~1 in 4 combat / elite / treasure rooms (`roomgen.isHallsRoom`; never boss / camp / merchant /
-  fountain / tower modes / sea biomes / the very first room) are chambers joined by 4.5-5.5 m corridors (straight, Z or L), a big hall with
-  wall lanes + pillars, an L-hall, or a 3-5 room "dungeon" with an optional side room. `engine/roomHalls.ts` builds a 0.5 m walkable mask
-  + signed distance field (`hallsSdf`, `hallsPush` slides along walls, `hallsSegClear`, `hallsRayStop` for blink / aim); origin = hub chamber
-  centre; arrival / station / exit come from `halls.*` through `roomShape.startPoint / stationPoint / portalPoint`. `shape.kind === 'HALLS'`
-  (`mapgen.roomHalls()`) switches every consumer from the radial `edgeLimit` clamp to the mask: player `resolveStep`, enemy clamp + `isSpawnable`,
-  pickups, projectiles (both pools), ability aim, `insideShape` (props / traps / director anchors only in chambers, >= 3.2 m from walls).
-  `shape.table` is only the star-convex kernel seen from the hub (safe fallback for unpatched radial callers; boss code is not patched, halls
-  never host bosses). `roomNav` builds its 1 m grid for halls too (monsters flow through corridors whenever a wall blocks the straight line;
-  hero click-move / auto-chase use A*); `navActive` no longer depends on `obstaclesVersion` (camp / arena builds call `disableRoomNav`).
-  Walls are drawn by `render/HallsWalls.tsx` (greedy-tiled rounded blocks, 2 InstancedMesh, tinted per ground style); the minimap draws the mask.
-  QA: `roomShape.dbg.force = 'HALLS'` (+ `dbg.variant = 'TWIN' | 'TRIPLE' | 'DUNGEON' | 'HALL' | 'LHALL'`). Minions / pets still ignore walls.
+- **HALLS rooms** (owner-approved organic floor plans, mockup `shots/halls_design/proposal.png`): ~1 in 4 combat / elite / treasure rooms
+  (`roomgen.isHallsRoom`; never boss / mini-boss / camp / merchant / fountain / shrine / tower modes / the very first room). Six designs in
+  `engine/roomHalls.ts` DESIGNS (soft blobs + bezier passages + islands, jittered, rotated, mirrored, scaled to ~1500-2000 m2): TWIN
+  (Twin Glades), CROSS (Crossroads), CRESCENT (Crescent Walk), FROZEN (Frozen Hollows), DUNES (Dune Canyons), COLUMNS (Hall of Columns);
+  `pickVariant`: Marble -> COLUMNS, Frostpeak -> FROZEN / CRESCENT, Desert + Ember -> DUNES / CRESCENT, others -> TWIN / CROSS / CRESCENT.
+  The layout is a 0.5 m walkable mask + signed distance field (`hallsSdf`, `hallsPush` slides along the edge, `hallsSegClear`,
+  `hallsRayStop` for blink / aim). Passages are >= ~5 m (a hard core is stamped, so noise never pinches one shut). Origin = hub; arrival /
+  station / exit / shortcut spots come from `halls.*` via `roomShape.startPoint / stationPoint / portalPoint / shortcutPoint`.
+  `shape.kind === 'HALLS'` (`mapgen.roomHalls()`) switches every consumer from the radial `edgeLimit` clamp to the mask: player `resolveStep`,
+  enemy clamp + `isSpawnable`, pickups, projectiles (both pools), ability aim, `insideShape` (props / traps / anchors only in the open,
+  >= 3.2 m from the edge). `shape.table` is only the star-convex kernel seen from the hub (fallback for unpatched radial callers; bosses
+  are unpatched and never host halls). `roomNav` builds its 1 m grid for halls (monsters flow through passages whenever the straight
+  line is blocked; hero click-move / auto-chase use A*); `navActive` no longer depends on `obstaclesVersion` (camp / arena builds call
+  `disableRoomNav`). Looks: `render/HallsBorder.tsx` dresses the edge and the unwalkable ground between chambers with the biome's
+  Quaternius pieces from ONE table, `engine/hallsBorder.ts` HALLS_BORDER (tall trees far side + on islands, `_lo` away from the edge,
+  bushes / rocks on the camera side so monsters stay visible; caps 700 trees / 420 low); swap node names there when the second pack is
+  baked into nature_qt.glb. Marble Halls: no border at all, the floor ends in black (Room.tsx ground fade) and the islands are round fluted
+  columns (`HallsColumns`, some broken). Halls skip the lava / sea ground drop. The minimap draws the mask.
+  QA: `roomShape.dbg.force = 'HALLS'` (+ `dbg.variant = 'TWIN' | 'FROZEN' | 'DUNES' | 'COLUMNS' | 'CROSS' | 'CRESCENT'`); after editing
+  engine files restart vite before dynamic-import QA scripts (HMR makes duplicate module instances). Minions / pets still ignore the edge.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.
 - **Boss wards / barriers**: `bossMech.ts` (`WARD_AT` 0.5, `BARRIER_CD`), per-boss ward kinds (crystals, sporecaps,
   hellhounds, spare hydra heads, frost shell, power cores, void phase, cultists).
