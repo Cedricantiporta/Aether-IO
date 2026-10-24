@@ -53,7 +53,7 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
 }
 
 /** Boss arena radius per biome (Gorath 34 ... the Void Herald / Malakar 50): big bosses need room to move. */
-const BOSS_ARENA_R = [34, 38, 42, 44, 46, 48, 50];
+const BOSS_ARENA_R = [34, 38, 56, 44, 46, 48, 50];   // (biome 3 = Sunscorch: a big square for the 5x Dune Colossus)
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger; BIG stages ~1.4x. */
 export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): number {
@@ -122,7 +122,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   buildShape(type, R, seed, {
     weights: fightRoom || type === 'MINIBOSS' ? def.shapes : undefined,
     long: layout === 'LONG', style: def.style, name: def.name,
-    force: isHallsRoom(biome, type, seed, index) ? 'HALLS' : layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
+    force: isHallsRoom(biome, type, seed, index) ? 'HALLS' : type === 'BOSS' && def.boss === 'BOSS_WARMACH' ? 'SQUARE' : layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
   });
   const isHalls = shape.kind === 'HALLS';
   const vr = tower ? null : variantOf(def, index);

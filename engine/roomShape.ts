@@ -8,7 +8,7 @@
 import { runInfo } from './runMods';
 import { halls, buildHallsLayout, hallsSdf, placeMargin, type HallsVariant } from './roomHalls';
 
-export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'CROSS' | 'HALLS';
+export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'SQUARE' | 'CROSS' | 'HALLS';
 export const SHAPE_N = 256;
 const TAU = Math.PI * 2;
 
@@ -137,6 +137,7 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
     }
     case 'PEANUT': { const e = 0.52 + rnd() * 0.1; F = (x, z) => Math.hypot(x, z) - (1 + e * Math.cos(2 * Math.atan2(z, x))); areaK = 0.92; axis = true; break; }
     case 'RECT': { const w = 1.35 + rnd() * 0.4 + stretch * 1.0; F = (x, z) => boxF(x, z, w, 1, 0.4); areaK = 0.95; axis = true; break; }
+    case 'SQUARE': { F = (x, z) => boxF(x, z, 1, 1, 0.3); areaK = 1.0; axis = true; break; }   // rounded-corner square (the Dune Colossus arena)
     case 'CROSS': { F = (x, z) => smin(boxF(x, z, 1, 0.42, 0.15), boxF(x, z, 0.42, 1, 0.15), 0.4); areaK = 0.9; axis = true; break; }
     default: F = (x, z) => Math.hypot(x, z) - 1; break;
   }

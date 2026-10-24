@@ -794,15 +794,15 @@ LISTS.BOSS_WARMACH = [
   { // Artillery Barrage: mortar shells rain where you are and where you are heading (sand blasts, no fire).
     name: 'Artillery Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0,
     begin(e) {
-      const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.6, p.pos.z + p.vel.z * 0.6, 5 + e.phase, 6.5, 13, 7);   // (was 8 + 2 phase, bunched)
-      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 2.8, 1.0 + i * 0.17, BT.SHELL, pwr(e) * 1.3, 0xd9b36a);
+      const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.6, p.pos.z + p.vel.z * 0.6, 5 + e.phase, 11, 22, 12);   // (was 8 + 2 phase, bunched)
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 5.6, 1.1 + i * 0.17, BT.SHELL, pwr(e) * 1.3, 0xd9b36a);
       events.emit('shake', { amount: 0.3 });
     },
     fire() { /* shells land as their telegraphs expire */ },
   },
   { // Molten Ray: the turret sweeps a stream of molten bolts across the arena.
-    name: 'Molten Ray!', wind: () => 1.1, act: () => 1.7, rec: () => 1.0,
-    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.75; cone(e, ux, uz, 30, 0.8, 1.1, BT.VISUAL, 0, 0xffa040); },
+    name: 'Molten Ray!', wind: () => 1.4, act: () => 1.7, rec: () => 1.0,
+    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.75; cone(e, ux, uz, 62, 0.8, 1.4, BT.VISUAL, 0, 0xffa040); },
     fire() { S.rayT = 0; S.rayN = 0; },
     tick(e, dt) {
       stand(e);
@@ -811,23 +811,23 @@ LISTS.BOSS_WARMACH = [
       S.rayT = 0.05;
       S.rayA += 1.5 / 34;   // sweeps ~1.5 rad over the attack
       dirV.set(Math.sin(S.rayA), 0, Math.cos(S.rayA));
-      tv.set(e.pos.x + dirV.x * e.radius, 2.2, e.pos.z + dirV.z * e.radius);
-      fireEnemyProjectile(tv, dirV, 'FLAME', 24, pwr(e) * 0.5, { life: 1.6, radius: 0.7, debuff: 2 });
+      tv.set(e.pos.x + dirV.x * e.radius * 0.9, 6, e.pos.z + dirV.z * e.radius * 0.9);
+      fireEnemyProjectile(tv, dirV, 'FLAME', 30, pwr(e) * 0.5, { life: 2.0, radius: 1.4, debuff: 2 });
       if ((S.rayN++ & 3) === 0) events.emit('shake', { amount: 0.12 });
     },
     windTick(e) { requestYaw(S.rayA + 0.75); },
   },
   { // Seismic Stomp: all six legs slam down; shockwaves under each leg and around the hull.
-    name: 'Seismic Stomp!', wind: () => 0.9, act: () => 0.3, rec: () => 0.9,
+    name: 'Seismic Stomp!', wind: () => 1.2, act: () => 0.3, rec: () => 0.9,
     begin(e) {
-      for (let i = 0; i < 6; i++) { const a = e.facing + (i / 6) * 6.283 + 0.52; spawnTelegraphCircle(e.pos.x + Math.sin(a) * e.radius * 1.5, e.pos.z + Math.cos(a) * e.radius * 1.5, 3.4, 0.9, pwr(e) * 1.4, 0xff7a1a); }
-      spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2.5, 1.1, pwr(e) * 1.2, 0xffa040);
+      for (let i = 0; i < 6; i++) { const a = e.facing + (i / 6) * 6.283 + 0.52; spawnTelegraphCircle(e.pos.x + Math.sin(a) * e.radius * 2.0, e.pos.z + Math.cos(a) * e.radius * 2.0, 6.8, 1.1, pwr(e) * 1.4, 0xff7a1a); }
+      spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 5, 1.3, pwr(e) * 1.2, 0xffa040);
     },
     fire() { events.emit('shake', { amount: 0.7 }); },
   },
   { // Missile Swarm: three volleys of seeking fire missiles.
     name: 'Missile Swarm!', wind: () => 0.8, act: () => 1.6, rec: () => 1.0,
-    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 1, 0.8, BT.VISUAL, 0, 0xffa040); },
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 2, 0.8, BT.VISUAL, 0, 0xffa040); },
     fire() { S.rayT = 0; S.rayN = 0; },
     tick(e, dt, ux, uz) {
       stand(e);
@@ -838,17 +838,17 @@ LISTS.BOSS_WARMACH = [
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.32;
         dirV.set(Math.sin(a), 0, Math.cos(a));
-        tv.set(e.pos.x, 3, e.pos.z);
-        fireEnemyProjectile(tv, dirV, 'FLAME', 10, pwr(e) * 0.7, { life: 4, radius: 0.6, homing: 1.4, debuff: 2 });
+        tv.set(e.pos.x + dirV.x * e.radius * 0.7, 8, e.pos.z + dirV.z * e.radius * 0.7);
+        fireEnemyProjectile(tv, dirV, 'FLAME', 12, pwr(e) * 0.7, { life: 5, radius: 1.2, homing: 1.4, debuff: 2 });
       }
     },
   },
   { // Rampage: the machine lowers itself and charges along a lane, trampling anything in the way.
-    name: 'Rampage!', wind: () => 1.0, act: () => 0.9, rec: () => 1.2,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 28, e.radius * 2 + 1, 1.0, BT.VISUAL, 0, 0xff5a1a); },
+    name: 'Rampage!', wind: () => 1.6, act: () => 1.8, rec: () => 1.4,
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 30, e.radius * 2 + 1, 1.6, BT.VISUAL, 0, 0xff5a1a); },
     fire() { events.emit('shake', { amount: 0.5 }); },
     tick(e) {
-      drive(e, e.dir.x, e.dir.z, e.speed * 9);
+      drive(e, e.dir.x, e.dir.z, 13 + 1.5 * e.phase);   // (very slow walker, but the charge is still a real threat: ~25 m lane)
       const p = world.player, d = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
       if (!S.ramHit && p.alive && d < e.radius + 1.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
     },
@@ -861,10 +861,10 @@ function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   const list = LISTS.BOSS_WARMACH!;
   if (S.stompCd > 0) S.stompCd -= dt;
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  keepRange(e, ux, uz, dist, 9, 17, e.speed * (1 + 0.12 * e.phase), 0.35);
+  keepRange(e, ux, uz, dist, 20, 36, e.speed * (1 + 0.12 * e.phase), 0.35);
   if (e.attackCd > 0) return;
   let id: number;
-  if (dist < e.radius + 6 && S.stompCd <= 0) { id = M_STOMP; S.stompCd = 7; }   // too close: stomp you away
+  if (dist < e.radius + 10 && S.stompCd <= 0) { id = M_STOMP; S.stompCd = 7; }   // too close: stomp you away
   else id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length];
   beginAtk(e, list, id, ux, uz, dist);
 }
