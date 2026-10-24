@@ -18,7 +18,7 @@ import { edgeLimit } from '../mapgen';
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
 export const BT = {
   VISUAL: 30, ROOT: 31, SPIT: 32, SWEEP: 33, BREATH: 34, SPIKES: 35, DIVE: 36, PILLAR: 37, SURFACE: 38,
-  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43, LASH: 44,
+  CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43, LASH: 44, FBURST: 45,
 } as const;
 
 // ------------------------------------------------------------------ pools --
@@ -51,6 +51,16 @@ export const bossStats: Record<string, number> = {};
 export function stat(name: string): void { bossStats[name] = (bossStats[name] ?? 0) + 1; }
 
 const tv = new Vector3();
+
+/** Ignar's fire trails (owner): a FIREPATCH that is skipped once FIRE_CAP patches are alive, so the arena never fills up. */
+export const FIRE_CAP = 22;
+export function firePatch(x: number, z: number, r: number, life: number, dps: number): boolean {
+  let n = 0;
+  const zs = world.zones;
+  for (let i = 0; i < zs.length; i++) { const q = zs[i]; if (q.active && q.kind === 'FIREPATCH') n++; }
+  if (n >= FIRE_CAP) return false;
+  return spawnHostileZone('FIREPATCH', x, z, r, life, dps, 0xff5a1a) !== null;
+}
 
 // ------------------------------------------------------------- spawners ----
 export function spawnWave(x: number, z: number, speed: number, maxR: number, thick: number, dmg: number, kind: number, color: number, startR = 0.5): void {
@@ -191,9 +201,16 @@ export function resolveBossZone(z: Zone): void {
       break;
     case BT.PILLAR:
       if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
-      spawnProp(PROP_PILLAR, z.pos.x, z.pos.z, 0, 0.9, z.radius, 9);
-      spawnHostileZone('FIREPATCH', z.pos.x, z.pos.z, z.radius * 0.8, 2.5, pw * 0.12, 0xff5a1a);
+      spawnProp(PROP_PILLAR, z.pos.x, z.pos.z, 0, 0.9, z.radius, 6.5);   // (owner rework: 20+ pillars at once, so a bit lower to keep the screen readable)
+      firePatch(z.pos.x, z.pos.z, z.radius * 0.7, 2.4, pw * 0.12);
       events.emit('trick', { pos: z.pos.clone(), kind: 'PILLAR', radius: z.radius });
+      break;
+    case BT.FBURST:   // Ignar's Radiant Burst / Blazing Guard: a fiery knock-back burst around him that leaves a ring of embers
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.SLAM }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
+      events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.5, color: 0xff7a2a });
+      events.emit('explosion', { pos: z.pos.clone(), radius: z.radius * 0.8, color: 0xff6a1a });
+      for (let k = 0; k < 6; k++) { const a = (k / 6) * 6.283 + z.pos.x; firePatch(z.pos.x + Math.sin(a) * z.radius * 0.75, z.pos.z + Math.cos(a) * z.radius * 0.75, 1.5, 2.2, pw * 0.1); }
+      addShake(0.4);
       break;
     case BT.SHELL:   // the Dune Colossus' mortar shell: a sand blast and a crater, no fire left behind
       if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.5); }

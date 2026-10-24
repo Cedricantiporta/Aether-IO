@@ -1120,10 +1120,10 @@ export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
     SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
     HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal(),
-    SKELETON_WARRIOR: raisedSkeleton('W'), SKELETON_MAGE: raisedSkeleton('M'), BONE_GOLEM: boneGolem() };
+    SKELETON_WARRIOR: raisedSkeleton('W'), BOSS_DKNIGHT: raisedSkeleton('W'), SKELETON_MAGE: raisedSkeleton('M'), BONE_GOLEM: boneGolem() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
   'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
   'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING',
-  'SKELETON_WARRIOR', 'SKELETON_MAGE', 'BONE_GOLEM'];
+  'SKELETON_WARRIOR', 'BOSS_DKNIGHT', 'SKELETON_MAGE', 'BONE_GOLEM'];

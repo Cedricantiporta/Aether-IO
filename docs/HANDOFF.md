@@ -301,7 +301,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
 - **Bosses** (`bosses.ts`, `bosses2.ts`, `bossMech.ts` = shared ward/barrier/rain layer, `bossFx.ts`, `bossSpecials.ts`,
   `humanBosses.ts`; `render/Bosses2.tsx`, `WarMachine.tsx`, `HumanBosses.tsx`): Greenwood **Elderroot** (Treant), Marble
   Halls **Gorath** (Golem), Desert **The Dune Colossus** (war machine: 5x model scale 20, radius 10, very slow walker, 2x attack areas, fought in a 56 m rounded-square arena with a pulled-back camera), Coral Isles **The Tide Hydra**, Frostpeak
-  **Glacius** (Wyrm), Ember **Ignar** (Warlord, Burning Form at 50% hp), Void **Void Herald**; the Greenwood depth-10
+  **Glacius** (Wyrm), Ember **Ignar** (Warlord, a fire version of the Knight: Flame Crescent / Radiant Burst / Blazing Guard / dash+slash, giant fireballs, 360 pillar rings, up to 3 dark knights `BOSS_DKNIGHT`, burn + capped fire trails via `bossFx.firePatch`; Burning Form at 50% hp grows devil wings), Void **Void Herald**; the Greenwood depth-10
   **Slime King**; **Malakar** (Lich, mini-boss in crypt biomes and the final two-stage fight); humanoid mini bosses Varn /
   Sable / Rook; dark hero duels (`darkHero.ts`). Each boss has a ward once per fight at 50% hp, periodic absorb barrier,
   spread-out impact salvos, an arena per biome (`roomgen.BOSS_ARENA_R`).
@@ -625,7 +625,7 @@ screens, max-level question: class level cap is 50) have been removed.
 Method: a Playwright harness (not in the repo) drives `updateGame(1/30)` with a bot that dodges most telegraphs, plays
 "shop" progressions (equip better loot, spend points) and boss-room tests per class/level. Findings that still hold:
 - Barbarian and Knight are the strongest runners; Wizard weakest at bosses; Archer was boosted (+20% base damage).
-- Boss adds were capped (Hydra regrowth max 4, Lich summons only under 9 monsters, Ignar imps max 6, champion escort
+- Boss adds were capped (Hydra regrowth max 4, Lich summons only under 9 monsters, Ignar dark knights max 3, champion escort
   `MINI_MAX_ALIVE` 10) because fights ran 500 s+ or flooded the room.
 - Endless Waves: late waves are slow (hp grows with depth^2); if it feels like a slog lower `waveDepth`.
 - Economy: XP Lv 1 -> 10 takes ~40 min; Lv 50 estimated 15-20 h.

@@ -110,7 +110,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   BOSS_WARLORD: {
     name: 'Ignar the Infernal Warlord', hp: 3220,   // (owner: +40% for the Burning Form; was 2300)
-    speed: 3.4, radius: 2.4, scale: 3.6, contactDamage: 28, projectileDamage: 19,
+    speed: 5.4, radius: 2.04, scale: 3.06, contactDamage: 28, projectileDamage: 19,   // (owner: way faster, ~15% smaller; was speed 3.4 / radius 2.4 / scale 3.6)
     xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
   },
   BOSS_VOID: {
@@ -132,6 +132,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   BOSS_IMP: {
     name: 'Fire Imp', hp: 70, speed: 5.4, radius: 0.55, scale: 0.9, contactDamage: 11, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xff6a1a, knockResist: 0, armor: 5,
+  },
+  BOSS_DKNIGHT: {
+    name: 'Dark Knight', hp: 150, speed: 4.6, radius: 0.9, scale: 1.45, contactDamage: 0, projectileDamage: 14,
+    xp: 0, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0x4a3a7a, knockResist: 0.5, armor: 25,
   },
   // ---- stage monsters (placed by the room layout, not rolled from the roster)
   GOBLIN_ARCHER: {
@@ -249,7 +253,7 @@ export type BossKind =
 /** Bosses in biome order (the Lich is a mini-boss room option, so it is not part of the order). Used by the Codex. */
 export const BOSS_ROTATION: readonly BossKind[] = ['BOSS_GOLEM', 'BOSS_TREANT', 'BOSS_HYDRA', 'BOSS_WYRM', 'BOSS_WARLORD', 'BOSS_VOID', 'BOSS_LICH'];
 /** Summons / body parts of the new bosses: no xp, loot or gold; vanish when their boss dies. */
-export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_WYRMLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP' || k === 'BOSS_CRYSTAL'; }
+export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' || k === 'BOSS_WYRMLING' || k === 'BOSS_HYDRA_HEAD' || k === 'BOSS_IMP' || k === 'BOSS_DKNIGHT' || k === 'BOSS_CRYSTAL'; }
 
 export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },
