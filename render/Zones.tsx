@@ -156,7 +156,7 @@ void main(){
     float qs = step(0.25, vC.r - vC.b);
     float swirl = 0.5 + 0.5 * sin(atan(q.y, q.x) * 3.0 + rr * 14.0 - uTime * 1.2 + n * 5.0);
     vec3 sand = vC * (0.62 + 0.3 * n + 0.12 * swirl) * mix(0.55, 1.0, smoothstep(0.0, 0.7, rr));
-    col = mix(vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62), vec4(sand + edge * vec3(0.12, 0.09, 0.05), body * 0.9), qs);
+    col = mix(vec4(c + edge * vec3(0.25, 0.3, 0.35) + sparkle * 0.8, body * 0.62), vec4(sand + edge * vec3(0.06, 0.045, 0.025), body * 0.42), qs);   // (owner 2026-10-24: subtler quicksand)
   } else {
     float vent = 0.3;
     float rr = r;

@@ -100,6 +100,12 @@ const burstSlow = { type: 'SLOW' as const, duration: 2.5, value: 0.45 };
 const burstStun = { type: 'STUN' as const, duration: 0.6 };
 /** Legendary / Mythic pet signature: an elemental area burst on the target (Wisp starfall, Phoenix fire nova, Leviathan
  *  tidal wave, Shadow Cat pounce, Gold Dragon fire, Crystal Golemling shards). */
+/** (owner 2026-10-24) A pet hit = 100%..300% of the hero's basic attack damage, scaled by how slowly the pet attacks
+ *  (a 0.4 s nibbler ~100%, a 2.2 s golem slam ~300%) + its own pet power. */
+function petHit(petValue: number, lvMul: number, heroDmg: number, atkCd: number): number {
+  const k = Math.min(1, Math.max(0, (atkCd - 0.4) / 1.8));
+  return petValue * lvMul + heroDmg * (1 + 2 * k);
+}
 function petBurst(x: number, z: number, el: number, tier: number, dmg: number): void {
   const r = tier === 2 ? 5.5 : 4.5;
   burstOpts.kind = el === PET_EL.FIRE || el === PET_EL.GOLD ? 'FIRE' : el === PET_EL.WATER || el === PET_EL.CRYSTAL ? 'ICE' : el === PET_EL.LIGHT ? 'LIGHTNING' : 'MAGIC';
@@ -232,13 +238,13 @@ export function updatePets(dt: number): void {
       burstT -= dt;
       if (burstT <= 0 && ed < (ranged ? 20 : 8)) {
         burstT = tier === 2 ? 5 : 7;
-        const bBase = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * prof.dmgFactor;
+        const bBase = petHit(pet.petValue ?? 10, lvMul, st.stats.damage, prof.atkCd);
         petBurst(enemy.pos.x, enemy.pos.z, prof.el ?? 0, tier, bBase * (tier === 2 ? 3 : 2.2));
       }
     }
     if (wp.atkCd <= 0 && ed < strikeR) {
       const factor = prof.dmgFactor;
-      const base = ((pet.petValue ?? 10) * lvMul + st.stats.damage * 0.15) * factor;
+      const base = petHit(pet.petValue ?? 10, lvMul, st.stats.damage, prof.atkCd); void factor;
       wp.attackT = 1;
       const el = prof.el ?? 0;
       if (ranged) {

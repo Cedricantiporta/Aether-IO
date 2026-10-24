@@ -87,7 +87,7 @@ const RunSkills: React.FC = () => {
               : lockedLv ? <span className="sk-state lock">Lv {need}</span>
               : <button className={`sk-btn pe ${can ? 'can' : ''}`} disabled={!can} onClick={() => upgrade(r.key as keyof SkillLevels)}>{lvl === 0 ? 'Learn' : 'Upgrade'} <em>{cost === 0 ? 'Free' : `${cost} SP`}</em></button>}
           </div>
-          {dash && <DashCharms dashLv={Math.max(1, lvl)} />}
+          {/* (owner 2026-10-24: no Dash Charm list on the trainer) */}
           </React.Fragment>
         );
       })}

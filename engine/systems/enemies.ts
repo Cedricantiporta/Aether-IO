@@ -808,7 +808,7 @@ function miniSlam(e: Enemy): boolean {
 }
 
 // ------------------------------------------------------------ stage monsters + new kinds --------
-const TOWER = { range: 26, windup: 0.6, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
+const TOWER = { range: 32, windup: 0.6, recover: 0.45, cd: 2.2, arrowSpeed: 21, height: 3.7 };
 const LHYDRA = { range: 20, windup: 0.64, recover: 0.6, cd: 2.9, orbSpeed: 9, up: 7.5, down: 2.2 };
 // Blocking stance: facing is LOCKED for the whole stance (turn 0, so the shieldbearer can be walked around), frontal arc = within
 // ~75 deg of its facing (frontCos = cos 75 deg; the flanks are NOT covered); hits from behind / the side bypass the block and take SHIELD.backstab (+50%).

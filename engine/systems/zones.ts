@@ -192,7 +192,8 @@ function quicksandUpdate(z: Zone, dt: number): void {
     if (d2 < rr * rr) {
       envSlow = Math.min(envSlow, 1 - SAND_SLOW);
       const d = Math.sqrt(d2) || 1e-3;
-      if (p.dashT <= 0) { const pull = (2 + 1.5 * (1 - Math.min(1, d / R))) * dt; if (d > pull) { p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull; } }   // (a dash breaks free)
+      if (p.dashT <= 0) { const pull = 2 * (2 + 1.5 * (1 - Math.min(1, d / R))) * dt;   // (owner 2026-10-24: 2x pull on the hero)
+      if (d > pull) { p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull; } }   // (a dash breaks free)
       if (tick && d < R * SAND_CORE && p.dashT <= 0) damagePlayer(dps * HAZARD_TICK, { pos: z.pos, env: true });
     }
   }
@@ -205,7 +206,8 @@ function quicksandUpdate(z: Zone, dt: number): void {
     const d = Math.sqrt(d2) || 1e-3;
     if (e.slowT < 0.1) e.slowT = 0.1;
     if (e.slowFactor < SAND_SLOW) e.slowFactor = SAND_SLOW;
-    if (!e.boss && !isStationary(e.kind)) { const pull = (2 + 1.5 * (1 - Math.min(1, d / R))) * dt; if (d > pull) { e.pos.x += (dx / d) * pull; e.pos.z += (dz / d) * pull; } }
+    if (!e.boss && !isStationary(e.kind)) { const pull = 0.2 * (2 + 1.5 * (1 - Math.min(1, d / R))) * dt;   // (owner: 80% less pull on monsters)
+      if (d > pull) { e.pos.x += (dx / d) * pull; e.pos.z += (dz / d) * pull; } }
     if (tick && d < R * SAND_CORE && !isStationary(e.kind)) damageEnemy(e, dps * 2 * HAZARD_TICK, sandOpts);
   }
 }
