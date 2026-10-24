@@ -619,7 +619,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME
       p.pos.set(CHAPEL_SIDE.x - 0.6, 0, CHAPEL_SIDE.z); p.facing = -Math.PI / 2;
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else if (from === 'HOME') {   // on the doorstep of the hero's house, facing the town
-      p.pos.set(HOME_OUT.x, 0, HOME_OUT.z); p.facing = 0;   // (the house faces south now: step out toward the camera)
+      p.pos.set(HOME_OUT.x, 0, HOME_OUT.z); p.facing = Math.PI;   // (the house faces north onto the lane now: step out away from the camera)
       C.yaw = 0; C.dist = 1; C.pitch = CAM_PITCH0;
     } else if (from === 'TAVERN') {   // in front of the Golden Tankard, facing the town
       p.pos.set(TAVERN_OUT.x, 0, TAVERN_OUT.z); p.facing = 0;

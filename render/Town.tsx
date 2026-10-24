@@ -423,7 +423,7 @@ function TowerLandmark() {
 // ---- the adventurer's house (owner: unique): a name plate over its blue-and-gold gate arch 
 function HeroHomeSign() {
   const label = useMemo(() => labelMaterial('Your Home', '#ffe9a8', { size: 64, plate: 'plate' }), []);
-  const x = HERO_HOUSE.x - 0.8, z = HERO_HOUSE.z + HERO_HOUSE.d / 2;   // (over the front door)
+  const x = HERO_HOUSE.x, z = HERO_HOUSE.z - HERO_HOUSE.d / 2;   // (over the front door)
   return <group position={[x, townLift(x, z), z]}><sprite material={label.mat} position={[0, 5.6, 0]} scale={[label.aspect * 0.9, 0.9, 1]} /></group>;
 }
 

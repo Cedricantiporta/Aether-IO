@@ -13,6 +13,7 @@ import { Inst } from './Inst';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeShoreField, makeWaterMaterial } from './waterFx';
 import { groundY } from './terrainFn';
+import { VillageQt } from './qtVillage';
 import { TownKit } from './townKit';
 import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
@@ -811,6 +812,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <ChimneySmoke q={q} />
       <Lake />
       <React.Suspense fallback={null}><TownKit lit={mats.lit} glow={mats.glow} shadows={shadows} /></React.Suspense>
+      <React.Suspense fallback={null}><VillageQt lit={mats.lit} shadows={shadows} /></React.Suspense>
       {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}
       <mesh ref={ring} material={mats.ring} position={[GATE.x, 0.12, GATE.z - 1]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[3.6, 4.0, 40]} /></mesh>
       <mesh ref={beam} material={mats.beam} position={[GATE.x, 18, GATE.z - 1]}><cylinderGeometry args={[1.0, 1.7, 36, 14, 1, true]} /></mesh>
