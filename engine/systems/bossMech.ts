@@ -98,6 +98,8 @@ function resolve(s: (typeof strikes)[number]): void {
   }
 }
 
+/** The Dune Colossus is a giant: its rain / quake blasts are 2x wider (owner), all other bosses 1x. */
+const bigK = (e: Enemy): number => (e.kind === 'BOSS_WARMACH' ? 2 : 1);
 function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
 
 /** Cataclysm: a wide rain of impacts over the arena, aimed bursts on the player and their heading. */
@@ -105,16 +107,17 @@ function rain(e: Enemy, m: Mech): void {
   const p = world.player, n = 9 + 3 * e.phase, R = arenaR(), dmg = pwr(e) * RAIN_DMG;
   events.emit('floatText', { pos: e.pos, text: m.rainWord, color: m.rainColor, scale: 1.2, dy: 5 });
   // impacts are spread out (owner: not bunched up): every centre keeps >= RAIN_GAP from the others, with gaps to walk through
-  rainN = 0;
+  rainN = 0; RAIN_GAP = 8.5 * (bigK(e) > 1 ? 1.7 : 1);
   // aimed: one on the player and one where they are running to
-  place(p.pos.x, p.pos.z, 3.0, 1.3, dmg, m, true);
-  place(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, 2.8, 1.6, dmg, m, false);
+  place(p.pos.x, p.pos.z, 3.0 * bigK(e), 1.3, dmg, m, true);
+  place(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, 2.8 * bigK(e), 1.6, dmg, m, false);
   for (let i = 0, tries = 0; i < n && tries < n * 12; tries++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R;
-    if (place(Math.cos(a) * d, Math.sin(a) * d, 2.6 + Math.random() * 0.8, 1.1 + Math.random() * 1.1, dmg, m, false)) i++;
+    if (place(Math.cos(a) * d, Math.sin(a) * d, (2.6 + Math.random() * 0.8) * bigK(e), 1.1 + Math.random() * 1.1, dmg, m, false)) i++;
   }
 }
-const RAIN_GAP = 8.5, rainX: number[] = [], rainZ: number[] = [];
+let RAIN_GAP = 8.5;
+const rainX: number[] = [], rainZ: number[] = [];
 let rainN = 0;
 /** One rain impact, unless it would sit closer than RAIN_GAP to one already placed (force: always). */
 function place(x: number, z: number, r: number, t: number, dmg: number, m: Mech, force: boolean): boolean {
@@ -126,7 +129,7 @@ function place(x: number, z: number, r: number, t: number, dmg: number, m: Mech,
 
 /** Quake: a big ring around the boss carrying its signature crowd control. */
 function quake(e: Enemy, m: Mech): void {
-  strike(e.pos.x, e.pos.z, e.radius + 6 + e.phase * 1.5, 1.15, pwr(e) * QUAKE_DMG, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a);
+  strike(e.pos.x, e.pos.z, e.radius + (6 + e.phase * 1.5) * bigK(e), 1.15, pwr(e) * QUAKE_DMG, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a);
 }
 
 /** Ward: immune until the crystals (or the summoned guard) fall. */
@@ -150,7 +153,7 @@ function raiseWard(e: Enemy, m: Mech): void {
   }
   S.wardOn = true; S.wardT = 0;
   if (kind !== 'PHASE') {
-    const near = kind === 'CORES', R = near ? e.radius + 4.5 : arenaR() * 0.7, n = Math.min(m.guard === 'BOSS_HYDRA_HEAD' ? 3 : 5, (kind === 'GUARD' ? 2 : 3) + e.phase);
+    const near = kind === 'CORES', R = near ? e.radius + 4.5 * bigK(e) : arenaR() * 0.7, n = Math.min(m.guard === 'BOSS_HYDRA_HEAD' ? 3 : 5, (kind === 'GUARD' ? 2 : 3) + e.phase);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
       if (kind === 'GUARD') { const gr = e.rooted ? e.radius * 0.9 + 1 : 4; tv.set(e.pos.x + Math.cos(a) * gr, 0, e.pos.z + Math.sin(a) * gr); }

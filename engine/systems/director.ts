@@ -685,6 +685,7 @@ function tickSpawns(dt: number): void {
     bossPending = false;
     const kind = finalFight ? 'BOSS_LICH' : nextBossKind || debug.bossOverride || biomeBoss(biome);
     if (isRootedBoss(kind)) { rootedHome(kind, R.radius, 0, rootTmp); placeMarker(kind, rootTmp.x, rootTmp.z, false, 1.8, 2); }   // (giant rooted boss: its marker sits on its root spot)
+    else if (kind === 'BOSS_WARMACH' && shape.kind === 'SQUARE') placeMarker(kind, shape.fx * R.radius * 0.18, shape.fz * R.radius * 0.18, false, 1.8, 2);   // the 5x Colossus rises ahead of the hero's arrival side (never on top of the hero)
     else placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
     for (let i = 0; i < extraBosses.length; i++) {   // Endless Waves: more bosses around the arena (no boss bar of their own until the first falls)
       const a = Math.PI * (0.5 + (i + 1) / (extraBosses.length + 1));
