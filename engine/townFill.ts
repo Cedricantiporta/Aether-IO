@@ -98,7 +98,7 @@ for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
 resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3);
 resv(TOWER.door.x, TOWER.door.z, 4); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
-resv(HERO_HOUSE.x - 0.8, HERO_HOUSE.z + HERO_HOUSE.d / 2 + 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
+resv(HERO_HOUSE.x, HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
 for (const s of TOWN_SEATS) resv(s.x, s.z, 1.7);
 for (const g of SIDE_GATES) for (const dx of [-3.5, 0, 3.5]) resv(g.x + dx, g.z, 2.6);   // (owner) the side gates' passages stay clear
 const rects: [number, number, number, number][] = [];   // x0 z0 x1 z1

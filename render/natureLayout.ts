@@ -16,8 +16,9 @@
 // ============================================================================
 import {
   TOWN_TREES, FENCES, LOT_FENCES, HOUSES, TOWN_SEATS, CHURCH, PARK_EAST, WELLS, SIGNPOSTS, STEP_PATHS, CARTS, HAYSTACK, TRAIL_ROCKS, FIELDS, FARM, SCARECROW,
-  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA,
+  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA, PLANTERS, SHOP_LOOK, shopLocal,
 } from '../engine/townData';
+import { SHOP_POSITIONS } from '../constants';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
 import { QT_PREFIX, QT_H, QT_R, N2, qtLod, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
@@ -54,6 +55,20 @@ export function treeFor(kind: number, h: number, x = 0, z = 0): NKPiece {
   return h < 0.25 ? 'tree_oak_big' : h < 0.62 ? 'tree_oak_small' : 'tree_birch';
 }
 
+/** Quaternius flowers (the nature pack) planted in a stone bed: rect of half extents hx, hz about (cx, cz) turned by ry, soil top at y. Replaces the kit's cube flowers + ball bushes. */
+function bedPlants(S: Sets, cx: number, cz: number, ry: number, hx: number, hz: number, y: number, k: number): void {
+  const c = Math.cos(ry), sn = Math.sin(ry), area = hx * hz * 4, n = Math.max(3, Math.min(9, Math.round(area * 2.4)));
+  const FL = ['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single'], r = mulberry32(Math.floor(cx * 91 + cz * 17 + k * 7 + 1000));
+  const long = hx >= hz, cols = long ? n : 1, rows = long ? 1 : n;
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, jx = (r() - 0.5) * 0.35, jz = (r() - 0.5) * 0.5;
+    const lx = long ? t * (hx - 0.28) + jx * 0.4 : (r() - 0.5) * 2 * (hx - 0.28), lz = long ? (r() - 0.5) * 2 * (hz - 0.25) + jz * 0.2 : t * (hz - 0.28) + jz * 0.4;
+    const x = cx + lx * c + lz * sn, z = cz - lx * sn + lz * c, bush = i % 4 === 1, sc = (bush ? 0.75 : 0.55 + r() * 0.2);
+    put(S, QT_PREFIX + (bush ? 'Bush_Common_Flowers' : FL[Math.floor(r() * FL.length)]), P(x, y, z, r() * TAU, sc, sc));
+    void cols; void rows;
+  }
+}
+
 export function townPlaces(): Sets {
   const S: Sets = new Map();
   // ---- trees (round / pine / palm), free rotation + a little size variety; scale from the old tree size (s ~ 3.0 .. 3.9)
@@ -66,6 +81,10 @@ export function townPlaces(): Sets {
     const low = /rock/.test(name) ? 0.2 * sx : /tree|palm|pine/.test(name) ? 0.1 : 0;
     put(S, name as NKPiece, { x, y: ay !== undefined ? ay : groundAt(x, z) - low, z, ry, sx, sy, sz });
   }
+  // ---- plant boxes (owner 2026-10-24): the stone beds keep their stone, the flowers are the Quaternius nature pack
+  for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); bedPlants(S, p.x, p.z, along ? 0 : Math.PI / 2, len / 2 - 0.1, wid / 2 - 0.1, townLift(p.x, p.z) + 0.68, 1); }
+  for (const sp of SHOP_POSITIONS) { const L = SHOP_LOOK[sp.type]; if (!L) continue; for (const [piece, dx, dz, yaw, sx, sz] of [...L.extra, ...L.dress] as [string, number, number, number, number, number][]) { if (piece !== 'flower_planter') continue; const [x, z] = shopLocal(sp.position[0], sp.position[2], sp.rot ?? 0, dx, dz); bedPlants(S, x, z, (sp.rot ?? 0) + yaw, 0.85 * (sx ?? 1) - 0.1, 0.45 * (sz ?? 1) - 0.1, townLift(x, z) + 0.68, 2); } }
+  for (const name of ['flower_bed_long', 'flower_bed_round']) for (const [x, z, ry, sx, , sz, ay] of (FILL[name] ?? [])) { const y = (ay !== undefined ? ay : groundAt(x, z)) + 0.5 * sx; if (name === 'flower_bed_long') bedPlants(S, x, z, ry, 2.0 * sx, 0.55 * sz, y, 3); else bedPlants(S, x, z, ry, 1.0 * sx, 1.0 * sz, y, 4); }
   // ---- palms along the beach and the lake shore (beachData PALMS: x, z, scale, lean yaw)
   PALMS.forEach(([x, z, s, lean]) => put(S, 'palm_v3', P(x, Math.max(0, groundAt(x, z)), z, lean, s * (0.9 + hash2(x, z) * 0.2))));
   // ---- park: benches (the seats' sit points), the gazebo + fountain, wells, signposts, stepping stones

@@ -53,6 +53,7 @@ export function bakeKitV3(scene: Object3D): KitV3Data {
     while (k.parent && k.parent !== scene) k = k.parent;   // the root Empty of the piece
     const name = k.name;
     if (!name) return;
+    if (/^flower_bed/.test(name) && /^(flower_red|flower_pink|leaf|leaf_light|gold|cream_white)/.test((m.material as MeshStandardMaterial).name || '')) return;   // (owner 2026-10-24: the beds' cube flowers + ball bushes: render/natureLayout plants Quaternius flowers instead)
     const e = (acc[name] ??= { body: mk(), glow: mk(), shaft: mk(), box: { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9, minZ: 1e9, maxZ: -1e9 } });
     const mt = m.material as MeshStandardMaterial, g = m.geometry, p = g.attributes.position, nr = g.attributes.normal, cl = g.attributes.color, idx = g.index;
     const base = kitColor(mt.name) ?? mt.color, br = base.r, bg = base.g, bb = base.b;
