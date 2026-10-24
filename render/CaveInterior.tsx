@@ -63,7 +63,7 @@ function buildFloor(L: CaveLayout): BufferGeometry {
 /** Rock wall: a strip around the outline, rows from the floor to the wall top, then a cap running outward (hides the void). */
 function buildWall(L: CaveLayout): BufferGeometry {
   const M = 7, pos: number[] = [], col: number[] = [], idx: number[] = [];
-  const c = new Color(), lo = new Color('#3a342f'), hi = new Color('#5a534b'), cap = new Color('#1b1815'), tint = new Color(L.tint[0]).lerp(new Color('#4f777c'), 0.6);
+  const c = new Color(), lo = new Color('#1d1a18'), hi = new Color('#2c2824'), cap = new Color('#1b1815'), tint = new Color(L.tint[0]).lerp(new Color('#4f777c'), 0.6);
   if (L.hazard === 'LAVA') tint.set('#8a4a30');
   if (L.hazard === 'POISON') tint.set('#4f7a44');
   const rows = M + 2;
@@ -74,11 +74,11 @@ function buildWall(L: CaveLayout): BufferGeometry {
       if (j <= M) {
         const t = j / M;
         y = h * t;
-        r = R0 + 0.35 - 0.7 * Math.sin(Math.PI * t * 0.8) + 1.4 * t * t;   // bulges in a little, flares out at the top
+        r = R0 + 2.2 - 0.7 * Math.sin(Math.PI * t * 0.8) + 1.4 * t * t;   // bulges in a little, flares out at the top
         r += (fbm(a * 6 + y * 0.35 + L.floor, y * 0.5 + a * 2, 3) - 0.5) * 2.2 * (0.35 + t);
-        c.copy(lo).lerp(hi, sstep(0, 0.9, t) * (0.7 + vnoise(a * 20, y) * 0.5)).lerp(tint, sstep(0.55, 0.8, fbm(a * 3, y * 0.3 + 5 + L.floor, 2)) * 0.45);
+        c.copy(lo).lerp(hi, sstep(0, 0.9, t) * (0.7 + vnoise(a * 20, y) * 0.5)).lerp(tint, sstep(0.55, 0.8, fbm(a * 3, y * 0.3 + 5 + L.floor, 2)) * 0.12);
       } else {
-        y = h + 0.4; r = R0 + 1.4 + 0.35 + 9; c.copy(cap);
+        y = h + 0.4; r = R0 + 2.2 + 1.4 + 0.35 + 9; c.copy(cap);
       }
       pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
       col.push(c.r, c.g, c.b);
@@ -111,10 +111,10 @@ function caveRockSets(L: CaveLayout): Map<string, Place[]> {
     if (Math.abs(a - Math.PI / 2) < 0.2) continue;
     const R0 = L.radius(a), h = wallH(a), layers = Math.max(1, Math.ceil(h / 3.4));
     for (let j = 0; j < layers; j++) {
-      const hw = (2.2 + rnd() * 1.3) * (1 - j * 0.12), rr = R0 + 0.5 + j * 0.9 + rnd() * 0.5, aj = a + (rnd() - 0.5) * 0.04;
+      const hw = (2.2 + rnd() * 1.3) * (1 - j * 0.12), rr = R0 + hw * 0.62 + j * 0.9 + rnd() * 0.4, aj = a + (rnd() - 0.5) * 0.04;
       add(Math.cos(aj) * rr, j * 2.9 - 0.2, Math.sin(aj) * rr, hw, 1.0 + rnd() * 0.5);
     }
-    if (rnd() < 0.55) { const hw = 0.9 + rnd() * 0.9, rr = R0 - 0.2 - rnd() * 0.9; add(Math.cos(a + 0.05) * rr, -0.15, Math.sin(a + 0.05) * rr, hw, 0.7 + rnd() * 0.6); }   // a small boulder at the foot
+    if (rnd() < 0.55) { const hw = 0.9 + rnd() * 0.9, rr = R0 + hw * 0.5; add(Math.cos(a + 0.05) * rr, -0.15, Math.sin(a + 0.05) * rr, hw, 0.7 + rnd() * 0.6); }   // a small boulder at the foot
   }
   return S;
 }
@@ -349,7 +349,7 @@ export function CaveInterior({ q }: { q: QualityCfg }) {
       <mesh geometry={geo.wall} material={mats.wall} receiveShadow={sh} />
       <mesh geometry={geo.body} material={mats.lit} castShadow={sh} receiveShadow={sh} />
       <mesh geometry={geo.glow} material={mats.glow} />
-      <React.Suspense fallback={null}><QtBatch sets={rockSets} shadows={sh} tint={L.hazard === 'LAVA' ? '#d9a088' : L.hazard === 'POISON' ? '#a9c9a0' : '#a9a6c8'} /></React.Suspense>
+      <React.Suspense fallback={null}><QtBatch sets={rockSets} shadows={sh} tint={L.hazard === 'LAVA' ? '#d9a088' : L.hazard === 'POISON' ? '#a9c9a0' : '#d6d0cc'} /></React.Suspense>
       <mesh ref={boards} geometry={geo.stairs.boards} material={mats.lit} castShadow={sh} />
       <mesh ref={open} geometry={geo.stairs.open} material={mats.open} visible={false} />
       {/* (the light stays mounted at intensity 0: toggling a light's visibility would recompile every material) */}
