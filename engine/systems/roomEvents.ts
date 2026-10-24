@@ -55,7 +55,7 @@ export function startRoomEvent(plan: RoomPlan): void {
   resetRoomEvent();
   const e = E();
   e.obj = plan.obj ?? ''; e.twist = plan.twist ?? '';
-  if (!e.twist && shape.kind === 'HALLS' && plan.type === 'COMBAT' && Math.random() < 0.5) e.twist = 'TRAPS';   // (owner) HALLS rooms hold more spike traps
+  if (!e.twist && shape.kind === 'HALLS' && (plan.type === 'COMBAT' || (plan.type === 'ELITE' && world.room.biome % BIOMES.length === MARBLE_BIOME)) && Math.random() < (world.room.biome % BIOMES.length === MARBLE_BIOME ? 1 : 0.5)) e.twist = 'TRAPS';   // (owner) HALLS rooms hold more spike traps
   if (!e.obj && !e.twist) return;
   const [cx, cz] = stationPos(world.room.radius);
   e.x = cx; e.z = cz;

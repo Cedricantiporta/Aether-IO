@@ -23,7 +23,7 @@ import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
 import { onBridge, feat } from '../roomFeatures';
 import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
 import { insideShape, shape } from '../roomShape';
-import { hallsRandomSpot, hallsSdf } from '../roomHalls';
+import { hallsRandomSpot, hallsSdf, halls } from '../roomHalls';
 import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
 import { spawnPickup } from './pickups';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
@@ -37,7 +37,7 @@ const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0
 
 export const rt = {
   on: false, ver: 0,
-  nSiege: 0, siege: Array.from({ length: 4 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.7, flash: 0, hitSeq: 0 })),
+  nSiege: 0, siege: Array.from({ length: 6 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.7, flash: 0, hitSeq: 0 })),
   nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
@@ -52,7 +52,7 @@ export const rt = {
 /** Movement modifiers read by biomeHazards.ts (combined with its own ice / bramble numbers). */
 export const trapMods = { grip: 1, slow: 1 };
 /** Breath statue numbers: telegraph 1.4 s, breath 2.0 s sweeping ~0.5 rad, reach 11.5 m from the mouth, ticks every 0.4 s. */
-export const STATUE_WARN = 1.4, STATUE_ON = 2.0, STATUE_LEN = 11.5, STATUE_SWEEP = 0.5, STATUE_MOUTH = 1.7, STATUE_TICK = 0.4;
+export const STATUE_WARN = 1.4, STATUE_ON = 2.0, STATUE_LEN = 17.25, STATUE_SWEEP = 0.5, STATUE_MOUTH = 1.7, STATUE_TICK = 0.4, FIRE_TICK = 0.25;
 /** Current beam heading: the locked lane, swept across STATUE_SWEEP radians during the breath. */
 export const statueBeamYaw = (q: { lock: number; sw: number; t: number }): number => q.lock + q.sw * STATUE_SWEEP * (q.t / STATUE_ON - 0.5);
 /** Is (px, pz) inside the breath cone (narrow at the mouth, ~1.5 m half-width at the end)? */
@@ -169,13 +169,22 @@ const dmgOf = (pct: number): number => maxHp() * pct * scale / DMG_INFLATE;
 const kx: number[] = [], kz: number[] = [], kr: number[] = [];
 const keep = (x: number, z: number, r: number): void => { kx.push(x); kz.push(z); kr.push(r); };
 const out: [number, number] = [0, 0];
+/** Marble Halls pockets: when set, spot() samples within near[2] m of (near[0], near[1]) instead of anywhere on the floor. */
+let near: [number, number, number] | null = null;
+/** Marble Halls: siege weapons reach across a whole hall (fire range, bolt life, lane length). */
+let siegeLong = false;
+/** HALLS: when < 99, spot() only accepts floor within this many m of the wall (statues / edge siege weapons hug the walls). */
+let wallD = 99;
+const SIEGE_RANGE = 42, SIEGE_RANGE_LONG = 95;
 /** A free floor spot for a disc of `rad` between rimMin..rimMax (fractions of the room radius; turrets hug the rim). */
 function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 0): boolean {
   const R = world.room.radius, H = shape.kind === 'HALLS';
   for (let t = 0; t < (H ? 400 : 160); t++) {
     let x: number, z: number;
-    if (H) { if (!hallsRandomSpot(rad + 2.0, out)) return false; x = out[0]; z = out[1]; }   // (HALLS: anywhere on the open floor; the rim fractions mean nothing)
+    if (H && near) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * near[2]; x = near[0] + Math.cos(a) * d; z = near[1] + Math.sin(a) * d; if (hallsSdf(x, z) < rad + 2.5) continue; }
+    else if (H) { if (!hallsRandomSpot(rad + 2.0, out)) return false; x = out[0]; z = out[1]; }   // (HALLS: anywhere on the open floor; the rim fractions mean nothing)
     else { const a = Math.random() * Math.PI * 2, d = (rimMin + Math.random() * (rimMax - rimMin)) * R; x = Math.cos(a) * d; z = Math.sin(a) * d; }
+    if (H && wallD < 99 && hallsSdf(x, z) > wallD) continue;
     if (!insideShape(x, z, rad + 2.0) || onBridge(x, z, rad + 1)) continue;   // (bridge decks stay clear)
     let ok = true;
     for (let k = 0; k < kx.length && ok; k++) if (Math.hypot(x - kx[k], z - kz[k]) < kr[k] + rad + pad) ok = false;
@@ -225,7 +234,9 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
   w[TRAP.VINE] = b === 0 ? (idx >= 2 ? 30 : 0) : 9;
   w[TRAP.POOL] = b === 4 ? 40 : b >= 2 ? 8 : 0;
-  w[TRAP.SIEGE] = b === 0 ? (idx >= 5 ? 12 : 0) : 14 + 3 * b;
+  const marbleH = b === 1 && shape.kind === 'HALLS';
+  siegeLong = marbleH; near = null;
+  w[TRAP.SIEGE] = marbleH ? 0 : b === 0 ? (idx >= 5 ? 12 : 0) : 14 + 3 * b;   // (Marble Halls gets its own siege placement below)
   w[TRAP.TOWER] = b === 0 ? (idx >= 6 ? 8 : 0) : b === 6 ? 40 : 8 + 3 * b;
   w[TRAP.BAR] = b === 0 || (b === 1 && idx < 6) ? 0 : b === 5 ? 38 : 8 + 2 * b;
   w[TRAP.JET] = b <= 1 ? 0 : b === 5 ? 34 : 7 + 2 * b;
@@ -286,7 +297,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       for (let i = 0; i < cnt && rt.nJet < rt.jet.length; i++) {
         if (!spot(2.0, 0.8, 0.1, 0.8, 8)) continue;
         const j = rt.jet[rt.nJet++];
-        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = 12 + rnd() * 3; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0;
+        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (12 + rnd() * 3) * 1.5; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0;
         j.t = -(rnd() * 2.5);   // staggered start
         keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
       }
@@ -324,16 +335,53 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       }
     }
   }
+  // ---- (owner) Marble Halls: NO goblin towers; long-range stationary siege weapons (ballistas + catapults) sit in the dead-end pockets (1-2 each) and
+  // along the hall edges. They shoot across a whole hall while the fight lasts (stop when the room is clear) and can be destroyed; not needed for room clear.
+  if (marbleH && (plan.type === 'COMBAT' || elite)) {
+    let alt = rnd() < 0.5 ? 1 : 0;
+    const place = (): boolean => {
+      if (rt.nSiege >= rt.siege.length || !spot(1.7, 1.2, 0, 1, 14)) return false;
+      const s = rt.siege[rt.nSiege++];
+      s.kind = dbgTraps.siege >= 0 ? dbgTraps.siege : (alt ^= 1);   // mix: they alternate ballista / catapult
+      s.x = out[0]; s.z = out[1]; s.yaw = Math.atan2(-out[0], -out[1]); s.state = 0; s.t = 0; s.cd = 4 + rnd() * 3 + rt.nSiege * 1.5; s.locked = false; s.fired = false; s.tier = more;
+      s.maxHp = s.hp = trapHp(SIEGE_HP_HITS, depth); s.dead = false; s.flash = 0; s.hitSeq = 0;
+      keep(s.x, s.z, 3.2); s.col = addTempCollider(s.x, s.z, 1.7, false);
+      return true;
+    };
+    for (const pk of halls.pockets) {
+      near = [pk[0], pk[1], 6];
+      const want = rnd() < 0.45 ? 2 : 1;
+      for (let i = 0; i < want; i++) place();
+    }
+    near = null;
+    const nEdge = 2 + (more > 0 && rnd() < 0.5 ? 1 : 0);
+    wallD = 8;
+    for (let i = 0; i < nEdge; i++) place();
+    wallD = 99;
+  }
   // ---- (owner) HALLS rooms: extra stationary FIRE on top of whatever the room rolled - fire-breathing jets and the long rotating flame beam
-  if (shape.kind === 'HALLS' && plan.type === 'COMBAT' && !(b === 0 && idx < 2)) {
-    const nj = (rnd() < 0.7 ? 1 : 0) + (rnd() < 0.4 ? 1 : 0) + (more > 0 && rnd() < 0.5 ? 1 : 0);
+  if (shape.kind === 'HALLS' && (plan.type === 'COMBAT' || (marbleH && elite)) && !(b === 0 && idx < 2)) {
+    if (marbleH) {   // Marble Halls: 1-2 fire-breathing dragon statues on the walls (+1 deeper in) ...
+      wallD = 8;
+      const ns = 1 + (rnd() < 0.55 ? 1 : 0) + (more > 0 && rnd() < 0.5 ? 1 : 0);
+      for (let i = 0; i < ns && rt.nStatue < rt.statue.length; i++) {
+        if (!spot(1.5, 1.2, 0, 1, 14)) continue;
+        const q = rt.statue[rt.nStatue++];
+        q.kind = dbgTraps.statue >= 0 ? dbgTraps.statue : 0;
+        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 4.5 + rnd() * 3 + i * 2.5; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
+        q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
+        keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
+      }
+      wallD = 99;
+    }
+    const nj = marbleH ? 1 + (rnd() < 0.5 ? 1 : 0) : (rnd() < 0.7 ? 1 : 0) + (rnd() < 0.4 ? 1 : 0) + (more > 0 && rnd() < 0.5 ? 1 : 0);   // ... + 1-2 fire jets
     for (let i = 0; i < nj && rt.nJet < rt.jet.length; i++) {
       if (!spot(2.0, 0.8, 0, 1, 10)) continue;
       const j = rt.jet[rt.nJet++];
-      j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = 10 + rnd() * 3; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0; j.t = -(rnd() * 2.5);
+      j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (10 + rnd() * 3) * 1.5; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0; j.t = -(rnd() * 2.5);
       keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
     }
-    const nb = (rnd() < 0.75 ? 1 : 0) + (rnd() < 0.3 ? 1 : 0);
+    const nb = marbleH ? 1 + (rnd() < 0.55 ? 1 : 0) : (rnd() < 0.75 ? 1 : 0) + (rnd() < 0.3 ? 1 : 0);
     for (let i = 0; i < nb && rt.nBeam < rt.beam.length; i++) {
       const len = 8 + rnd() * 4;
       let got = false;   // a roomy spot (the arm reaches ~len m): the pillar's disc is small, the open floor round it is checked here
@@ -379,7 +427,7 @@ export function updateRoomTraps(dt: number): void {
       if (d > 2) s.yaw += wrapPi(Math.atan2(dx, dz) - s.yaw) * Math.min(1, dt * 2.4);   // idles, slowly turning to face you
       if (!fighting || !alive) { s.cd = Math.max(s.cd, 1.5); continue; }
       s.cd -= dt;
-      if (s.cd <= 0 && d > 9 && d < 42) { s.state = 1; s.t = 0; s.locked = false; s.fired = false; }
+      if (s.cd <= 0 && d > 9 && d < (siegeLong ? SIEGE_RANGE_LONG : SIEGE_RANGE)) { s.state = 1; s.t = 0; s.locked = false; s.fired = false; }
     } else if (s.state === 1) {
       s.t += dt;
       if (!fighting || !alive) { s.state = 0; s.cd = 3; continue; }
@@ -388,13 +436,13 @@ export function updateRoomTraps(dt: number): void {
           s.yaw += wrapPi(Math.atan2(px - s.x, pz - s.z) - s.yaw) * Math.min(1, dt * 7);
           if (s.t >= W * 0.45) {
             s.locked = true; s.lx = Math.sin(s.yaw); s.lz = Math.cos(s.yaw);
-            const zn = spawnTelegraphLine(s.x + s.lx * 1.5, s.z + s.lz * 1.5, s.lx, s.lz, 48, 1.4, W * 0.55, 0xffa040);
+            const zn = spawnTelegraphLine(s.x + s.lx * 1.5, s.z + s.lz * 1.5, s.lx, s.lz, siegeLong ? 90 : 48, 1.4, W * 0.55, 0xffa040);
             if (zn) zn.trick = BT.VISUAL;
           }
         }
         if (s.t >= W) {
           tmp.set(s.x + s.lx * 1.8, 1.3, s.z + s.lz * 1.8); tmpD.set(s.lx, 0, s.lz);
-          fireEnemyProjectile(tmp, tmpD, 'BALLISTA', 31, dmgOf(0.1), { life: 2.0, radius: 0.55 });
+          fireEnemyProjectile(tmp, tmpD, 'BALLISTA', 31, dmgOf(0.1), { life: siegeLong ? 3.4 : 2.0, radius: 0.55 });
           events.emit('shake', { amount: 0.12 });
           s.state = 2; s.t = 0;
         }
@@ -454,7 +502,7 @@ export function updateRoomTraps(dt: number): void {
       if (d > 2) q.yaw += wrapPi(Math.atan2(dx, dz) - q.yaw) * Math.min(1, dt * 2.0);
       if (!fighting || !alive) { q.cd = Math.max(q.cd, 1.5); continue; }
       q.cd -= dt;
-      if (q.cd <= 0 && d < 24) { q.state = 1; q.t = 0; q.lock = q.yaw; q.sw = Math.random() < 0.5 ? -1 : 1; }
+      if (q.cd <= 0 && d < 30) { q.state = 1; q.t = 0; q.lock = q.yaw; q.sw = Math.random() < 0.5 ? -1 : 1; }
     } else if (q.state === 1) {
       q.t += dt;
       if (!fighting || !alive) { q.state = 0; q.cd = 3; continue; }
@@ -466,11 +514,11 @@ export function updateRoomTraps(dt: number): void {
       q.yaw = statueBeamYaw(q);
       q.tick -= dt;
       if (q.tick <= 0) {
-        q.tick = STATUE_TICK;
+        q.tick = q.kind === 0 ? FIRE_TICK : STATUE_TICK;   // (owner) fire breath: continuous direct hits while you stand in it
         if (alive && coneHit(q, px, pz, 0.3)) {
           tmp.set(q.x, 0, q.z);
           if (q.kind === 0) {
-            damagePlayer(maxHp() * 0.009 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: ticking hazard (x HERO_DOT_MUL)
+            damagePlayer(maxHp() * 0.016 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: ticking hazard (x HERO_DOT_MUL)
             applyPlayerDebuff('BURN', 2, Math.max(2, 3 + world.director.wave * 0.5) * scale);
           } else {
             damagePlayer(maxHp() * 0.006 * scale / DMG_INFLATE, { pos: tmp, kind: 'ICE', env: true });
@@ -562,10 +610,10 @@ export function updateRoomTraps(dt: number): void {
     else if (j.state === 2) {
       j.tick -= dt;
       if (j.tick <= 0) {
-        j.tick = 0.4;
+        j.tick = FIRE_TICK;
         if (alive && armDist(px, pz, j.x, j.z, j.ang, j.len) < 1.05) {
           tmp.set(j.x, 0, j.z);
-          damagePlayer(maxHp() * 0.012 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: a ticking hazard, x HERO_DOT_MUL like the others
+          damagePlayer(maxHp() * 0.02 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: a ticking hazard, x HERO_DOT_MUL like the others
           applyPlayerDebuff('BURN', 2, Math.max(2, 3 + world.director.wave * 0.5) * scale);
         }
         world.enemyGrid.query(j.x + Math.sin(j.ang) * j.len * 0.5, j.z + Math.cos(j.ang) * j.len * 0.5, j.len * 0.5 + 2, ids);

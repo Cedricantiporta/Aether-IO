@@ -153,14 +153,14 @@ export function RoomTraps() {
     const bars = { mesh: barMesh, geo: bgeo, pos: bPos, d: bD, max: BMAX };
     const sts = statueGeo('#d8b49e', '#b08a78', '#ee6a3a', '#fff2d8'), stsF = statueGeo('#d6e8f4', '#a2bfd6', '#58b4ec', '#ffffff');
     const S = {
-      balBase: mk(bb.build(), lit, 4), balTop: mk(bt.build(), lit, 4), balBolt: mk(bg.build(), glowMat(), 4),
-      catBase: mk(cb.build(), lit, 4), catArm: mk(ca.build(), lit, 4), catRock: mk(boulderG, lit, 4), boulder: mk(boulderG, lit, 6),
+      balBase: mk(bb.build(), lit, 6), balTop: mk(bt.build(), lit, 6), balBolt: mk(bg.build(), glowMat(), 6),
+      catBase: mk(cb.build(), lit, 6), catArm: mk(ca.build(), lit, 6), catRock: mk(boulderG, lit, 6), boulder: mk(boulderG, lit, 6),
       towB: mk(tb.build(), lit, 3), towG: mk(tg, glowMat({ color: new Color(1.5, 1.2, 2.2) }), 3),
       hub: mk(hb.build(), lit, 6), hubG: mk(hg, glowMat({ color: new Color(1.5, 1.2, 0.8) }), 6), armB: mk(armB.build(), lit, 16), armG: mk(armG.build(), glowMat({ color: new Color(1.6, 1.4, 1.1) }), 16),
       jetB: mk(jb.build(), lit, 5), jetG: mk(jg, addM, 5), jetW: mk(jwarn, flat(new Color(2.2, 0.8, 0.3), 0.5), 16),
       vine: mk(vg.build(), lit, 5), pool: mk(pg.build(), litMat({ roughness: 0.15, metalness: 0.25 }), 4),
       pdisc: mk(new CylinderGeometry(1, 1, 0.03, 28), flat(new Color(0.7, 1.8, 2.4), 0.2), 4),
-      rubble: mk(rg.build(), lit, 10),
+      rubble: mk(rg.build(), lit, 12),
       stB: mk(sts, lit, 3), stE: mk(eyeGeo, glowMat({ color: new Color(2.2, 1.5, 0.3) }), 3), stT: mk(throatGeo, glowMat({ color: new Color(2.6, 1.1, 0.25) }), 3),
       sfB: mk(stsF, lit, 3), sfE: mk(eyeGeo, glowMat({ color: new Color(0.7, 1.9, 2.6) }), 3), sfT: mk(throatGeo, glowMat({ color: new Color(0.6, 1.7, 2.6) }), 3),
       flO: mk(flameGeo, fireM(new Color(1.7, 0.5, 0.1), 0.34), 48), flI: mk(flameGeo, fireM(new Color(1.7, 0.95, 0.3), 0.4), 48),
@@ -168,7 +168,7 @@ export function RoomTraps() {
       wdF: mk(wedgeGeo, wedgeFire, 4), wdI: mk(wedgeGeo, wedgeFrost, 4),
       spF: mk(stripGeo, flat(new Color(1.9, 0.7, 0.25), 0.4), 8), spI: mk(stripGeo, flat(new Color(0.4, 1.4, 2.1), 0.4), 8),
     };
-    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(4), tower: new Int32Array(3), statue: new Int32Array(3), dead: new Uint8Array(10), ver: -1 } };
+    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(6), tower: new Int32Array(3), statue: new Int32Array(3), dead: new Uint8Array(12), ver: -1 } };
   }, []);
   const S = X.S;
 
@@ -219,7 +219,7 @@ export function RoomTraps() {
       }
       for (let i = 0; i < rt.nTower; i++) {
         const m = rt.tower[i];
-        pieceFx(m, sn.tower, i, sn.dead, 4 + i, 2.4, 0x9a92a6, 0xc9c2d4);
+        pieceFx(m, sn.tower, i, sn.dead, 6 + i, 2.4, 0x9a92a6, 0xc9c2d4);
         if (m.dead) { if (inView(m.x, m.z, 5)) setInst(S.rubble, nRu++, m.x, 0, m.z, i * 2.3 + m.z, 1.45); continue; }
         if (!inView(m.x, m.z, 7)) continue;
         nBar = addBar(X.bars, nBar, m, 7.6, m === aimed);
@@ -233,7 +233,7 @@ export function RoomTraps() {
       }
       for (let i = 0; i < rt.nStatue; i++) {
         const q = rt.statue[i];
-        pieceFx(q, sn.statue, i, sn.dead, 7 + i, 1.8, q.kind ? 0xa2bfd6 : 0xb08a78, q.kind ? 0xd6e8f4 : 0xd8b49e);
+        pieceFx(q, sn.statue, i, sn.dead, 9 + i, 1.8, q.kind ? 0xa2bfd6 : 0xb08a78, q.kind ? 0xd6e8f4 : 0xd8b49e);
         if (q.dead) { if (inView(q.x, q.z, 5)) setInst(S.rubble, nRu++, q.x, 0, q.z, i * 1.3 + q.x, 1.2); continue; }
         if (!inView(q.x, q.z, STATUE_LEN + 5)) continue;
         nBar = addBar(X.bars, nBar, q, 5.0, q === aimed);

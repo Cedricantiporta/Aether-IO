@@ -304,6 +304,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
     const pr = mulberry32(seed ^ 0x70c4e7);
     for (const pk of halls.pockets) {
       if (pr() < 0.15 && !feat.pChest.on) { feat.pChest.on = true; feat.pChest.x = pk[0]; feat.pChest.z = pk[1]; keep.push({ x: pk[0], z: pk[1], r: 3 }); continue; }
+      if (def.style === 'MARBLE') continue;   // (owner) Marble Halls: no goblin towers - roomTraps puts long-range ballistas / catapults in the pockets instead
       const want = pr() < 0.4 ? 2 : 1;
       for (let t = 0, got = 0; t < 30 && got < want && feat.nTowers < MAX_FIXED; t++) {
         const a = pr() * Math.PI * 2, d = got === 0 && t === 0 ? 0 : 3 + pr() * 3, x = pk[0] + Math.cos(a) * d, z = pk[1] + Math.sin(a) * d;
