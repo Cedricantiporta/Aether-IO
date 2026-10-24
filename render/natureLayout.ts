@@ -20,7 +20,7 @@ import {
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
-import { QT_PREFIX, QT_H, QT_R, N2, qtLod, qtPick } from '../engine/qtData';
+import { QT_PREFIX, QT_H, QT_R, QT_COMMON, QT_PINE, N2, qtLod, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
 import { FILL, PIECES, QT_DECOR } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
@@ -299,7 +299,7 @@ export function natureLayout(q: QualityCfg): Sets {
 
 /** Every old faceted bush (kit bush_cluster / bush_round / bush_flower) becomes a pile of 2-3 soft rounded pack bushes (BushBerries / Bush_1-2) on the same spot and footprint. */
 function bushSwap(q: QualityCfg, out: Sets): void {
-  const n = q.name === 'LOW' ? 2 : 3, pool = [...N2.bushBerries, ...N2.bush, ...N2.bushBerries];
+  const n = q.name === 'LOW' ? 2 : 3, pool = ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'];
   for (const name of ['bush_cluster', 'bush_round', 'bush_flower']) {
     const list = out.get(name); if (!list) continue;
     const box = V3_BOX[name], hw = box ? (box[1] - box[0]) / 2 : 0.8;
@@ -339,18 +339,18 @@ function qtForest(q: QualityCfg, out: Sets): void {
       const dEdge = Math.hypot(p.x, p.z) - edgeR(Math.atan2(p.z, p.x)), h1 = hash2(p.x, p.z, 11), h2 = hash2(p.x, p.z, 12), outside = !inYard(p.x, p.z, 0);
       let pool: string[];
       switch (piece) {
-        case 'tree_willow': pool = N2.willow; break;
-        case 'tree_blossom': pool = h2 < 0.5 ? N2.commonAutumn : N2.birchAutumn; break;
-        case 'tree_fruit': pool = h2 < 0.25 ? N2.commonAutumn : N2.common; break;
-        case 'tree_pine_layered_a': case 'tree_pine_layered_b': pool = N2.pine; break;
+        case 'tree_willow': pool = QT_COMMON; break;   // (owner 2026-10-24: textured pack-1 trees, not pack-2's flat low-poly ones)
+        case 'tree_blossom': pool = QT_COMMON; break;
+        case 'tree_fruit': pool = QT_COMMON; break;
+        case 'tree_pine_layered_a': case 'tree_pine_layered_b': pool = QT_PINE; break;
         case 'palm_v3': pool = N2.palm; break;
-        default: pool = outside && h2 < 0.14 ? (h1 < 0.5 ? N2.commonAutumn : N2.birchAutumn) : h1 < 0.6 ? N2.common : N2.birch;
+        default: pool = QT_COMMON;
       }
       const node = qtPick(pool, hash2(p.x, p.z, 13)), lo = (low || dEdge > 0) && qtLod(node) !== node, name = QT_PREFIX + (lo ? qtLod(node) : node);
       const hh = piece === 'palm_v3' ? Math.min(8, Math.max(5.5, H0 * p.sy * 1.12 * 1.5)) : Math.min(9, Math.max(7, H0 * p.sy * 1.12 * 1.4 * 1.5)), k = hh / QT_H[node], w = k * 1.02 * (p.sx / p.sy);
       put(out, name, { x: p.x, y: p.y, z: p.z, ry: p.ry, sx: w, sy: k, sz: w });
       if (!lo && outside && dEdge < -8 && piece !== 'palm_v3' && hash2(p.x, p.z, 14) < 0.7) {   // (owner) 2-4 pack bushes huddled round the trunk of the outskirts trees (walk-through; the trunk's own table collider is unchanged)
-        const nb = 2 + Math.floor(hash2(p.x, p.z, 15) * 3), pool = [...N2.bushBerries, ...N2.bush, 'Bush_Common_Flowers'];
+        const nb = 2 + Math.floor(hash2(p.x, p.z, 15) * 3), pool = ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'];
         for (let i = 0; i < nb; i++) { const a = hash2(p.x, p.z, 16 + i) * TAU, d = 1.1 + hash2(p.x, p.z, 26 + i) * 0.9, sc = 0.7 + hash2(p.x, p.z, 36 + i) * 0.8; put(out, QT_PREFIX + qtPick(pool, hash2(p.x, p.z, 46 + i)), { x: p.x + Math.cos(a) * d, y: p.y, z: p.z + Math.sin(a) * d, ry: hash2(p.x, p.z, 56 + i) * TAU, sx: sc, sy: sc * 0.95, sz: sc }); }
       }
       if (lo) { QT_FOREST_STATS.lo++; QT_FOREST_STATS.tris += 600; } else { QT_FOREST_STATS.hi++; QT_FOREST_STATS.tris += 1700; }

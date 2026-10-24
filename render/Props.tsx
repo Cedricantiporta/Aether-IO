@@ -360,8 +360,10 @@ function qtPlan(r: QtRoom): QtPlan {
   const g = N2;
   switch (r.biome) {
     case 'Greenwood': {
-      if (r.v >= 2) return { legacy: true, tree: cat(g.commonDead, g.birchDead, QT_TWISTED, QT_TWISTED), autumn: g.willowDead, autumnP: 0.2, pine: g.pine, dead: cat(g.commonDead, g.willowDead, QT_DEAD), rock: g.rockMoss, boulder: g.rockMoss, stump: g.stumpMoss, log: g.logMoss, bushes: g.bush, shrooms: true, conks: true, ground: true, deco: g.plants, decoN: 0.4 };
-      return { legacy: true, tree: r.v === 0 ? cat(g.common, g.common, g.birch) : cat(g.common, g.birch, g.pine), autumn: cat(g.commonAutumn, g.birchAutumn), autumnP: 0.12, water: g.willow, pine: g.pine, dead: cat(g.commonDead, g.birchDead), rock: g.rockMoss, boulder: g.rockMoss, stump: g.stumpMoss, log: g.logMoss, bushes: cat(g.bushBerries, g.bush), shrooms: r.v >= 1, conks: r.v >= 1, ground: true, path: !r.camp && !r.boss && ((r.seed ?? 1) % 5) !== 0, deco: g.plants, decoN: 0.3 };
+      // (owner 2026-10-24: Greenwood keeps the textured pack-1 trees / rocks / bushes - pack-2's flat low-poly trees, blob rocks and berry bushes looked wrong here)
+      const B1 = ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'];
+      if (r.v >= 2) return { legacy: true, tree: QT_TWISTED, pine: QT_PINE, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stumpMoss, log: g.logMoss, bushes: B1, shrooms: true, conks: true, ground: true, deco: g.plants, decoN: 0.4 };
+      return { legacy: true, tree: r.v === 0 ? QT_COMMON : cat(QT_COMMON, QT_COMMON, QT_PINE), pine: QT_PINE, dead: QT_DEAD, rock: QT_ROCKS, boulder: QT_ROCKS, stump: g.stumpMoss, log: g.logMoss, bushes: B1, shrooms: r.v >= 1, conks: r.v >= 1, ground: true, path: !r.camp && !r.boss && ((r.seed ?? 1) % 5) !== 0, deco: g.plants, decoN: 0.3 };
     }
     case 'Marble Halls': return { tree: cat(g.commonAutumn, g.commonDead, g.birchAutumn), pine: cat(g.commonDead, g.birchDead), dead: cat(g.commonDead, g.birchDead), rock: g.rockMoss, boulder: g.rockMoss, stump: g.stumpMoss, log: g.logMoss, bushes: g.bush, deco: cat(g.plants, [g.flowers]), decoN: 0.35 };
     case 'Sunscorch Desert': return { tree: cat(g.commonDead, g.birchDead), pine: cat(g.commonDead, g.birchDead), dead: cat(g.commonDead, g.birchDead, g.willowDead), rock: cat(g.rockSand, g.rockSand, g.rock), boulder: g.rockSand, stump: g.stump, log: g.log, cactus: true, sandstone: true, deco: ['N_Plant_2', 'N_Plant_2', 'N_Grass_Short', ...g.cactusFlower], decoN: 0.7 };

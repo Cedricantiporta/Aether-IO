@@ -149,9 +149,7 @@ export function groundDetail(style: GroundStyle, beach = false): [CanvasTexture,
     case 'SAND': if (beach) {   // beach (owner mock): warm golden sand, soft darker painted patches, small orange pebbles, a few tiny green sprouts
       g.fillStyle = '#f6f0e4'; g.fillRect(0, 0, N, N);
       blobs(g, 26, 40, 90, '255,248,225', 0.22, 0.38);
-      for (let i = 0; i < 46; i++) { const cx0 = rnd() * N, cy0 = rnd() * N, nc = 6 + Math.floor(rnd() * 8); wrap(cx0, cy0, 40, (px, py) => { g.fillStyle = 'rgba(196,146,84,0.26)'; let ox = 0, oy = 0; for (let k = 0; k < nc; k++) { ox += (rnd() - 0.5) * 16; oy += (rnd() - 0.5) * 16; g.beginPath(); g.arc(px + ox * 0.6, py + oy * 0.6, 5 + rnd() * 12, 0, 6.3); g.fill(); } }); }
-      for (let i = 0; i < 110; i++) { const x = rnd() * N, y = rnd() * N, r = 1.5 + rnd() * 2.2; wrap(x, y, 5, (px, py) => { g.fillStyle = rnd() < 0.8 ? 'rgba(214,126,70,0.9)' : 'rgba(170,96,60,0.9)'; g.beginPath(); g.ellipse(px, py, r * 1.1, r, rnd() * 3, 0, 6.3); g.fill(); }); }
-      g.lineCap = 'round'; for (let i = 0; i < 14; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { g.strokeStyle = 'rgba(120,176,80,0.95)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(px - 2.6, py - 5); g.lineTo(px, py); g.lineTo(px + 2.6, py - 5); g.stroke(); });
+      // (owner 2026-10-24: no pebble / sprout dots on the beach - plain soft sand)
       break;
     } else {   // warm sand: soft wind-ripple bands (lit crest + shaded trough), tiny pebbles, grain
       g.fillStyle = '#ecebe8'; g.fillRect(0, 0, N, N);
@@ -208,17 +206,8 @@ export function groundDetail(style: GroundStyle, beach = false): [CanvasTexture,
       g.fillStyle = '#eef0ea'; g.fillRect(0, 0, N, N);
       blobs(g, 44, 40, 100, '20,90,20', 0.06, 0.12); blobs(g, 44, 40, 100, '255,255,225', 0.14, 0.26);
       const LEAF = ['rgb(128,176,104)', 'rgb(150,198,122)', 'rgb(176,214,140)', 'rgb(255,255,238)', 'rgb(112,160,92)'];
-      for (let i = 0; i < 300; i++) {
-        const s = 0.8 + rnd() * 0.7, cx0 = rnd() * N, cy0 = rnd() * N, nl = 3 + Math.floor(rnd() * 3), col0 = Math.floor(rnd() * LEAF.length), rot0 = rnd() * 6.28;
-        wrap(cx0, cy0, 14, (px, py) => {
-          for (let k = 0; k < nl; k++) {
-            const a = rot0 + (k / nl) * 6.283 + (rnd() - 0.5) * 0.5, d = (3 + rnd() * 4) * s;
-            g.fillStyle = LEAF[(col0 + k) % LEAF.length]; g.beginPath(); g.ellipse(px + Math.cos(a) * d, py + Math.sin(a) * d, 5.2 * s, 3.3 * s, a, 0, 6.3); g.fill();
-          }
-        });
-      }
+      // (owner 2026-10-24: no clover / flower dots on the grass - plain soft mottling)
       glowC = mk(); const gg = glowC.getContext('2d')!; gg.fillStyle = '#000'; gg.fillRect(0, 0, N, N);
-      for (let i = 0; i < 7; i++) wrap(rnd() * N, rnd() * N, 8, (px, py) => { gg.fillStyle = '#d8d8c8'; gg.beginPath(); gg.arc(px, py, 3.4, 0, 6.3); gg.fill(); gg.fillStyle = '#ffffff'; gg.beginPath(); gg.arc(px, py, 2.2, 0, 6.3); gg.fill(); });
       break;
     }
   }
