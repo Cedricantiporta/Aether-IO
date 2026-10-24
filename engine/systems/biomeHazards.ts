@@ -104,8 +104,8 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   for (let i = 0; i < 2; i++) { portalSlot(i, 2, R, po); keep(po[0], po[1], 6); }   // (a 2-exit room spreads them differently)
   shortcutSlot(po); keep(po[0], po[1], 5);
   hz.kind = kind;
-  if (kind === HZ.GREEN) {
-    const nb = 4 + (elite ? 1 : 0) + Math.floor(Math.random() * 3), nm = 3 + (Math.random() < 0.5 ? 1 : 0);
+  if (kind === HZ.GREEN) {   // (owner 2026-10-24: no damaging / entangling bramble bushes - nb = 0; the mushroom patches stay)
+    const nb = 0, nm = 3 + (Math.random() < 0.5 ? 1 : 0);
     for (let i = 0; i < nb && hz.nBr < hz.br.length; i++) {
       const r = 1.7 + Math.random() * 0.8;
       if (!spot(r, 1.5)) continue;
