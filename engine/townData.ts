@@ -84,7 +84,10 @@ export const BREWER_HUT = { x: -10.2, z: 106.2, rot: 0 };   // (owner: near the 
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 41.5, z: 96.8, s: 0.85 };   // nature_kit_v1 'barn' (front = south onto the farm yard), east column of the farm clearing
 export const FARMHOUSE = { x: 31, z: 96.2, s: 0.85 };   // nature_kit_v1 'farmhouse', west column (Hollis lives here)
-export const COOP = { x: 26.2, z: 103.2, s: 1 };   // nature_kit_v1 'chicken_coop', back-left of the farm yard
+/** (owner 2026-10-24) the animal pen on the lot south of the farm track: fenced on every side, its entrance a gap in the
+ *  track's south fence facing the farm yard's own gap (x gate0..gate1). Coop + hens west, cows / sheep / pigs east. */
+export const ANIMAL_PEN = { x0: 29.2, x1: 46.2, z0: 113.2, z1: 126.6, gate0: 34.4, gate1: 38.6 };
+export const COOP = { x: 32.4, z: 117.0, s: 1 };   // nature_kit_v1 'chicken_coop' (front = south), north-west corner of the animal pen
 /** Egg nests in front (south) of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
 export const NESTS: [number, number][] = [[COOP.x - 1.4, COOP.z + 3.4], [COOP.x, COOP.z + 3.7], [COOP.x + 1.4, COOP.z + 3.4]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
@@ -556,7 +559,10 @@ export const FENCES: [number, number, number, number][] = [
   // the farm track past the coop (owner: fences along this pathway): both sides, gaps for the hamlet doors and the coop yard
   // (owner, red lines) closed along both sides now; the south side joins the road's east fence
   [3.4, 108.3, 30.5, 108.9], [30.5, 108.9, 33.2, 108.9], [38.4, 108.8, 42, 108.7],   // (gap at x 33..38: the way up into the farm yard)
-  [5, 112.8, 20.6, 113.1], [20.6, 113.1, 43.6, 113.2],
+  [5, 112.8, 20.6, 113.1], [20.6, 113.1, ANIMAL_PEN.gate0, 113.2], [ANIMAL_PEN.gate1, 113.2, 43.6, 113.2],   // (gap: the animal pen's entrance)
+  // (owner) the animal pen: west, south and east sides (its north side is the track fence above)
+  [ANIMAL_PEN.x0, ANIMAL_PEN.z0, ANIMAL_PEN.x0, ANIMAL_PEN.z1], [ANIMAL_PEN.x0, ANIMAL_PEN.z1, ANIMAL_PEN.x1, ANIMAL_PEN.z1],
+  [ANIMAL_PEN.x1, ANIMAL_PEN.z1, ANIMAL_PEN.x1, 113.6], [43.6, 113.2, ANIMAL_PEN.x1, 113.6],
   // the woodland path from the road to the Endless Tower (z = TOWER.z): both sides, gaps at the west hamlet doors
   [-4.4, TOWER_PATH_Z - 1.8, -5.6, TOWER_PATH_Z - 1.8], [-14.8, TOWER_PATH_Z - 1.8, -21, TOWER_PATH_Z - 1.8],   // (gap in front of the Brewer's door)
   [-4.4, TOWER_PATH_Z + 1.8, -21, TOWER_PATH_Z + 1.8],   // (owner, red lines: closed along the hamlet side too; stops short of the tower clearing)
@@ -1111,8 +1117,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x - 3.8, COOP.z + 2.0], speed: 1.3,
-    patrol: [[COOP.x - 4.2, COOP.z + 2.4], [COOP.x - 4.2, COOP.z + 4.4]],   // beside the nests in front of the coop
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x + 3.6, COOP.z + 3.0], speed: 1.3,
+    patrol: [[COOP.x + 3.4, COOP.z + 3.2], [COOP.x + 3.4, COOP.z + 5.4]],   // beside the nests in front of the coop (inside the animal pen)
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -1246,17 +1252,24 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CAT', x: -24, z: 11, rx: 4, rz: 1.2, speed: 1.9, tint: '#ff9a4a' },
   // farm (outside the gate, nature_kit_v1 round animals): cows + a dog in the yard in front of the barn, sheep and pigs in the pasture
   // behind it, hens by the coop
-  { kind: 'COW', x: 32.5, z: 105.2, rx: 1.4, rz: 0.9, speed: 0.6, tint: '#ffffff' },
-  { kind: 'COW', x: 37.5, z: 105.9, rx: 1.4, rz: 0.8, speed: 0.5, tint: '#8a5a3a' },
-  { kind: 'COW', x: 42.2, z: 104.9, rx: 1.3, rz: 0.9, speed: 0.5, tint: '#e8e0d0' },
-  { kind: 'SHEEP', x: 39.5, z: 84.6, rx: 2.0, rz: 1.8, speed: 0.6, tint: '#ffffff' },
-  { kind: 'SHEEP', x: 44.5, z: 86.4, rx: 1.8, rz: 1.6, speed: 0.55, tint: '#efe4d0' },
-  { kind: 'SHEEP', x: 41.5, z: 82.4, rx: 1.8, rz: 1.2, speed: 0.6, tint: '#8a7358' },
-  { kind: 'PIG', x: 47.2, z: 83.4, rx: 1.4, rz: 1.4, speed: 0.7, tint: '#f6a6b8' },
-  { kind: 'PIG', x: 47.6, z: 88.2, rx: 1.2, rz: 1.2, speed: 0.7, tint: '#e8949e' },
+  // (owner 2026-10-24) cows graze in the yard in front of the barn (its door path x 41.4 left clear), sheep in the pasture behind it;
+  // the fenced pen across the farm track (ANIMAL_PEN) keeps the coop, the hens and the pigs
+  { kind: 'COW', x: 37.4, z: 104.9, rx: 1.3, rz: 0.7, speed: 0.6, tint: '#ffffff' },
+  { kind: 'COW', x: 45.0, z: 104.6, rx: 1.0, rz: 0.8, speed: 0.5, tint: '#8a5a3a' },
+  { kind: 'COW', x: 41.6, z: 106.6, rx: 1.0, rz: 0.4, speed: 0.5, tint: '#e8e0d0' },
+  { kind: 'SHEEP', x: 39.5, z: 86.4, rx: 1.8, rz: 1.4, speed: 0.6, tint: '#ffffff' },
+  { kind: 'SHEEP', x: 44.0, z: 85.4, rx: 1.6, rz: 1.4, speed: 0.55, tint: '#efe4d0' },
+  { kind: 'SHEEP', x: 41.8, z: 82.8, rx: 1.6, rz: 1.0, speed: 0.6, tint: '#8a7358' },
+  { kind: 'PIG', x: 41.4, z: 119.6, rx: 1.6, rz: 1.2, speed: 0.7, tint: '#f6a6b8' },
+  { kind: 'PIG', x: 43.6, z: 123.6, rx: 1.2, rz: 1.0, speed: 0.7, tint: '#e8949e' },
   { kind: 'DOG', x: 35, z: 102.6, rx: 3.2, rz: 0.8, speed: 1.8, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x - 3.4, z: COOP.z + 2.6, rx: 1.4, rz: 0.8, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x + 3.4, z: COOP.z - 0.6, rx: 1.2, rz: 1.0, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: COOP.x - 1.8, z: COOP.z + 6.0, rx: 1.0, rz: 0.7, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x + 1.6, z: COOP.z + 6.4, rx: 1.0, rz: 0.7, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: COOP.x - 1.2, z: COOP.z + 8.2, rx: 1.2, rz: 0.6, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x + 2.0, z: COOP.z + 8.4, rx: 1.0, rz: 0.6, speed: 1.0, tint: '#8a5a3a' },
+  { kind: 'CHICKEN', x: COOP.x + 3.4, z: COOP.z + 1.0, rx: 0.6, rz: 1.0, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x - 2.2, z: COOP.z + 2.0, rx: 0.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: COOP.x + 0.4, z: COOP.z + 7.4, rx: 1.4, rz: 0.5, speed: 1.2, tint: '#ffffff' },
   { kind: 'CAT', x: 10.4, z: 2.1, rx: 0.3, rz: 0.6, speed: 1.7, tint: '#8a8a96' },
   { kind: 'DOG', x: -16.4, z: 20.4, rx: 1.4, rz: 0.5, speed: 1.6, tint: '#ffffff' }, { kind: 'CAT', x: -8.4, z: 20.6, rx: 1.2, rz: 0.5, speed: 1.5, tint: '#e8c08a' },   // (the pet shop's front yard)
   // the east riverside park

@@ -27,7 +27,7 @@ const MAT_CFG: Record<string, MatCfg> = {
   Leaves_NormalTree: { color: [2.5, 3.1, 4], leaf: 'ball', cut: true, grad: [0.78, 1.28] },
   Leaves_TwistedTree: { color: [1.5, 20, 60], leaf: 'ball', cut: true, grad: [0.8, 1.25] },   // (the source leaf is crimson: an orchid-purple canopy reads cute, not gory)
   Leaves_Pine: { color: [3.0, 3.8, 4], leaf: 'ball', cut: true, grad: [0.78, 1.25] },
-  Leaves_Bush: { color: [0.45, 60, 6], leaf: 'ball', cut: true, grad: [0.8, 1.2] },
+  Leaves_Bush: { color: [0.7, 95, 8], leaf: 'ball', cut: true, grad: [0.8, 1.2] },
   Leaves: { color: [1.25, 1.25, 1.25], leaf: 'up', cut: true, grad: [0.9, 1.1] },
   Flowers: { color: [1.2, 1.2, 1.2], leaf: 'up', cut: true },
   Grass: { color: [1.3, 1.4, 1.2], leaf: 'up', cut: true, grad: [0.85, 1.15] },

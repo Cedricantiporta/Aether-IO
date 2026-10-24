@@ -854,10 +854,11 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     events.emit('playerRevive', { pos: p.pos, source: 'PHOENIX' });
     return;
   }
-  // Death Defiance (run card): spend a charge, rise again at half HP (automatic, no prompt)
+  // Death Defiance (run card): spend a charge, rise again with the card's HP share (automatic, no prompt)
   if (runCards.defiance > 0) {
     runCards.defiance--;
-    p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
+    p.hp = st.stats.maxHealth * runCards.defianceHp;   // (40 / 50 / 70% by the best Death Defiance card's rarity)
+    p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
     p.invulnT = Math.max(p.invulnT, 5);
     p.reviveFx = 1;
     st.addNotification(`DEATH DEFIED! (${runCards.defiance} charge${runCards.defiance === 1 ? '' : 's'} left)`, COLORS.rarityLegendary ?? COLORS.rarityEpic, 'SYSTEM');

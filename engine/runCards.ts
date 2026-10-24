@@ -28,6 +28,10 @@ export const runCards = {
   defiance: 0, defianceTaken: 0,
   mythicOffered: false,
   dashStacks: 0,
+  /** Shadow Step: total dash cooldown cut (each card adds its tier's share) */
+  dashCut: 0,
+  /** Death Defiance: HP fraction the hero rises with (the best card taken this run) */
+  defianceHp: 0.5,
   /** (owner) the run's Dash Charm: offered as a card, once per run (null = none taken yet) */
   dashMod: null as DashMod | null,
   /** Quickdraw Flask: cards taken and the total potion cooldown reduction (0..POTION_CD_CAP) */
@@ -49,7 +53,7 @@ export const runCards = {
 export const polishCost = (c: { tier?: number }): number => (c.tier ?? 0) + 1;
 export function resetRunCards(): void {
   const r = runCards;
-  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.dashMod = null; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
+  r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.dashCut = 0; r.defianceHp = 0.5; r.dashMod = null; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
   r.afflict = 0; r.sunder = 0; r.guardian = 0; r.guardianTier = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
   r.anyDmg = false; r.taken = {};
@@ -151,6 +155,19 @@ const MANA_CUT_VALS = [0.06, 0.09, 0.12, 0.16, 0.22], ULT_CHARGE_VALS = [0.10, 0
 export const MANA_CUT_CAP = 0.45, ULT_CHARGE_CAP = 0.8;
 function manaCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(MANA_CUT_VALS[t], MANA_CUT_CAP - runCards.manaCut); return mk('MANA_COST', 'Mana Thrift', `Skills cost ${pct(v)} less mana (max -${pct(MANA_CUT_CAP)} total)`, t, v); }
 function ultCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(ULT_CHARGE_VALS[t], ULT_CHARGE_CAP - runCards.ultCharge); return mk('ULT_CHARGE', 'Surging Heart', `Your Ultimate charges ${pct(v)} faster (max +${pct(ULT_CHARGE_CAP)} total)`, t, v); }
+/** (owner 2026-10-24) the formerly fixed cards roll a rarity too; their numbers per tier [COMMON, RARE, EPIC, LEGENDARY, MYTHIC]
+ *  (index below a card's lowest tier is unused). */
+const STEP_VALS = [0.06, 0.08, 0.10, 0.13, 0.16], RESTORE_VALS = [0.2, 0.25, 0.3, 0.4, 0.55], AEGIS_VALS = [0, 60, 80, 110, 150],
+  ULT_FILL_VALS = [0, 60, 100, 100, 100], ULT_FILL_BONUS = [0, 0, 0, 0.08, 0.15], DEFY_VALS = [0, 0, 0.4, 0.5, 0.7];
+export const ultFillBonus = (t: number): number => ULT_FILL_BONUS[Math.min(4, t)] ?? 0;
+function stepCard(t: number): Omit<Upgrade, 'id'> { const v = STEP_VALS[t]; return mk('DASH_COOLDOWN', 'Shadow Step', `-${pct(v)} Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, t, v); }
+function restoreCard(t: number): Omit<Upgrade, 'id'> { const v = RESTORE_VALS[t]; return mk('RESTORE', 'Second Breath', `Restore ${pct(v)} HP and Mana`, t, v); }
+function ultFillCard(t: number): Omit<Upgrade, 'id'> {
+  const v = ULT_FILL_VALS[t], b = ULT_FILL_BONUS[t];
+  return mk('ULT_FILL', 'Surge of Fury', `${v >= 100 ? 'Fill your Ultimate meter' : `Charge your Ultimate by ${v}%`}${b > 0 ? `, and it charges ${pct(b)} faster for the rest of the run` : ''}`, t, v);
+}
+function aegisCard(t: number): Omit<Upgrade, 'id'> { const v = AEGIS_VALS[t]; return mk('AEGIS', 'Aegis', `A ${v} HP shield (absorbs damage until broken) · once per biome`, t, v); }
+function defyCard(t: number): Omit<Upgrade, 'id'> { const v = DEFY_VALS[t]; return mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with ${pct(v)} HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, t, v); }
 /** Cards that can be offered right now (limits, stacks, once-per-run specials, once-per-biome Aegis). */
 function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string): Entry[] {
   const out: Entry[] = [];
@@ -158,7 +175,7 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
     out.push({ weight: 1, cat: TYPE_CAT[d.type] ?? 'UTILITY', make: (am) => { const t = rollTier(0, 4, am); return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); } });
   }
   if (runCards.dashStacks < DASH_CARD_MAX) {
-    out.push({ weight: 0.7, cat: 'UTILITY', make: () => mk('DASH_COOLDOWN', 'Shadow Step', `-10% Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, 1, 0.1) });
+    out.push({ weight: 0.7, cat: 'UTILITY', make: (am) => stepCard(rollTier(0, 4, am)) });
   }
   if (!runCards.dashMod) {   // (owner) Dash Charm: one per run, as a card
     out.push({ weight: 0.55, cat: 'UTILITY', make: () => { const i = Math.floor(Math.random() * DASH_MODS.length), m = DASH_MODS[i]; return mk('DASH_CHARM', m.name, `Dash Charm (one per run): ${m.desc}`, 2, i); } });
@@ -171,11 +188,11 @@ function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string
   }
   if (runCards.manaCut < MANA_CUT_CAP - 1e-6) out.push({ weight: 0.6, cat: 'MAGIC', make: (am) => manaCard(rollTier(0, 4, am)) });
   if (runCards.ultCharge < ULT_CHARGE_CAP - 1e-6) out.push({ weight: 0.6, cat: 'MAGIC', make: (am) => ultCard(rollTier(0, 4, am)) });
-  out.push({ weight: 0.3, cat: 'DEFENSE', make: () => mk('RESTORE', 'Second Breath', 'Restore 30% HP and Mana', 1, 1) });
-  if (ultUnlocked) out.push({ weight: 0.25, cat: 'MAGIC', make: () => mk('ULT_FILL', 'Surge of Fury', 'Fill your Ultimate meter', 2, 100) });
-  if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: () => mk('AEGIS', 'Aegis', 'An 80 HP shield (absorbs damage until broken) · once per biome', 3, 80) });
+  out.push({ weight: 0.3, cat: 'DEFENSE', make: (am) => restoreCard(rollTier(0, 4, am)) });
+  if (ultUnlocked) out.push({ weight: 0.25, cat: 'MAGIC', make: (am) => ultFillCard(rollTier(1, 4, am)) });
+  if (aegisBiome !== biomeKey) out.push({ weight: 0.3 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: (am) => aegisCard(rollTier(1, 4, am)) });
   if (runCards.defianceTaken < DEFIANCE_MAX) {
-    out.push({ weight: 0.2 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: () => mk('DEATH_DEFIANCE', 'Death Defiance', `When you would die, return with 50% HP instead (automatic). Charges ${runCards.defiance} → ${runCards.defiance + 1} (max ${DEFIANCE_MAX} per run)`, 3, 1) });
+    out.push({ weight: 0.2 * (earlyMul?.[3] ?? 1), cat: 'DEFENSE', make: (am) => defyCard(rollTier(2, 4, am)) });
   }
   for (const s of SPECIALS) {
     if (runCards.taken[s.id]) continue;
@@ -229,6 +246,7 @@ function maxTierOf(c: Pick<Upgrade, 'type' | 'special'>): number {
   if (c.type === 'SPECIAL') return 4;
   if (c.type === 'POTION_CD') return 3;
   if (c.type === 'MANA_COST' || c.type === 'ULT_CHARGE') return 4;
+  if (c.type === 'DASH_COOLDOWN' || c.type === 'RESTORE' || c.type === 'ULT_FILL' || c.type === 'AEGIS' || c.type === 'DEATH_DEFIANCE') return 4;
   return 0;
 }
 /** True when Card Polish can raise this card by one tier. */
@@ -242,6 +260,11 @@ export function rarityUpCard(c: Upgrade): Omit<Upgrade, 'id'> | null {
   if (d) out = mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]);
   else if (c.type === 'MANA_COST') out = manaCard(t);
   else if (c.type === 'ULT_CHARGE') out = ultCard(t);
+  else if (c.type === 'DASH_COOLDOWN') out = stepCard(t);
+  else if (c.type === 'RESTORE') out = restoreCard(t);
+  else if (c.type === 'ULT_FILL') out = ultFillCard(t);
+  else if (c.type === 'AEGIS') out = aegisCard(t);
+  else if (c.type === 'DEATH_DEFIANCE') out = defyCard(t);
   else if (c.type === 'POTION_CD') { const v = Math.min(POTION_CD_VALS[t], POTION_CD_CAP - runCards.potionCdCut); out = mk('POTION_CD', 'Quickdraw Flask', `-${pct(v)} Potion cooldown (${runCards.potionCdStacks + 1}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, t, v); }
   else if (c.type === 'SPECIAL') { const s = SPECIALS.find((x) => x.id === c.special); if (s) out = specCard(s, t); }
   if (out && out.tier === 4) runCards.mythicOffered = true;
@@ -307,11 +330,12 @@ export function rollRunCards(count: number, ultUnlocked: boolean, biomeKey: stri
 export function takeRunCard(u: Upgrade): boolean {
   const r = runCards, v = u.value;
   if (u.type === 'DASH_CHARM') { r.dashMod = DASH_MODS[v]?.id ?? null; return true; }
-  if (u.type === 'DASH_COOLDOWN') { r.dashStacks = Math.min(DASH_CARD_MAX, r.dashStacks + 1); return true; }
+  if (u.type === 'DASH_COOLDOWN') { if (r.dashStacks < DASH_CARD_MAX) { r.dashStacks++; r.dashCut = Math.min(0.5, r.dashCut + (v > 0 && v < 1 ? v : 0.1)); } return true; }
   if (u.type === 'MANA_COST') { r.manaCut = Math.min(MANA_CUT_CAP, r.manaCut + v); return true; }
   if (u.type === 'ULT_CHARGE') { r.ultCharge = Math.min(ULT_CHARGE_CAP, r.ultCharge + v); return true; }
   if (u.type === 'POTION_CD') { r.potionCdStacks = Math.min(POTION_CD_STACKS_MAX, r.potionCdStacks + 1); r.potionCdCut = Math.min(POTION_CD_CAP, r.potionCdCut + v); return true; }
-  if (u.type === 'DEATH_DEFIANCE') { if (r.defianceTaken < DEFIANCE_MAX) { r.defianceTaken++; r.defiance++; } return true; }
+  if (u.type === 'DEATH_DEFIANCE') { if (r.defianceTaken < DEFIANCE_MAX) { r.defianceTaken++; r.defiance++; r.defianceHp = Math.max(r.defianceHp, v > 0 && v < 1 ? v : 0.5); } return true; }
+  if (u.type === 'ULT_FILL') { const b = ultFillBonus(u.tier ?? 2); if (b > 0) r.ultCharge = Math.min(ULT_CHARGE_CAP, r.ultCharge + b); return false; }   // (the fill itself is the store's)
   if (u.type !== 'SPECIAL' || !u.special) return false;
   if (r.taken[u.special]) return true;
   r.taken[u.special] = true;

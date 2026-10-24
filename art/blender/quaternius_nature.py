@@ -32,10 +32,13 @@ SMALL = ['Bush_Common', 'Bush_Common_Flowers', 'Fern_1', 'Flower_3_Group', 'Flow
          'Grass_Common_Short', 'Grass_Common_Tall', 'Grass_Wispy_Short', 'Grass_Wispy_Tall', 'Clover_1', 'Clover_2',
          'Mushroom_Common', 'Mushroom_Laetiporus', 'Plant_1', 'Plant_1_Big', 'Plant_7', 'Plant_7_Big',
          'Pebble_Round_1', 'Pebble_Round_2', 'Pebble_Round_3', 'Pebble_Square_1', 'Pebble_Square_2', 'Pebble_Square_3',
-         'Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3']
+         'Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3',
+         'RockPath_Round_Small_1', 'RockPath_Round_Small_2', 'RockPath_Round_Small_3', 'RockPath_Round_Thin', 'RockPath_Round_Wide',
+         'RockPath_Square_Small_1', 'RockPath_Square_Small_2', 'RockPath_Square_Small_3', 'RockPath_Square_Thin', 'RockPath_Square_Wide']
 BUDGET = {n: 2500 for n in TREES}
 BUDGET.update({n: 600 for n in SMALL})
 BUDGET['Mushroom_Laetiporus'] = 450
+BUDGET.update({n: 160 for n in SMALL if n.startswith('RockPath_')})   # flat stepping stones: tiny
 # far-forest LODs (`<name>_lo`, same size / silhouette, ~700 tris): the outskirts forest draws these past the island's edge
 LODS = [f'CommonTree_{i}' for i in range(1, 6)] + [f'Pine_{i}' for i in range(1, 6)]
 BUDGET.update({n + '_lo': 700 for n in LODS})
