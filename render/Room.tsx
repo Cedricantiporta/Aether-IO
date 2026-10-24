@@ -283,7 +283,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         // slab-to-slab tone (3-unit slabs), worn darker lanes, roots / moss creeping in from the cracks
         const tx = Math.floor(x / 3), tz = Math.floor(z / 3);
         out.multiplyScalar(0.94 + vnoise(tx * 3.7 + so, tz * 5.3) * 0.1);
-        if (isHalls) out.lerp(tmpC.set('#f4f6fc'), 0.85).multiply(tmpC.set('#ffffff').setRGB(1.2, 1.32, 1.6));   // castle halls: bright clean cream marble, no dark moss / dirt blotches
+        if (isHalls) out.lerp(tmpC.set('#d8d6d0'), 0.85).multiply(tmpC.set('#ffffff').setRGB(0.62, 0.66, 0.78));   // castle halls: dim stone marble (owner: biome 2 darker), no dark moss / dirt blotches
         else { out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45); out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75); }
         const lane = Math.abs(x * -shape.fz + z * shape.fx);
         if (!boss && !isHalls) {   // worn royal carpet down the hall: crimson with a gold border, frayed and torn in places

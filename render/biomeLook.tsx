@@ -141,7 +141,8 @@ export function setLook(biome: number, snap = false, index = 0): void {
     target.sun.set(v?.sun ?? b.sun); target.sunI = v?.sunI ?? b.sunI; target.sky.set(...(v?.skyTint ?? b.skyTint)); target.near = 50;
     target.far = b.style === 'VOID' || b.style === 'BASALT' || (v?.fog && v.hemiI !== undefined && v.hemiI < 0.9) ? 115 : 150;
     applyRunPhase(biome, index);
-    if (b.style === 'MARBLE' && shape.kind === 'HALLS') { target.hemiI *= 0.5; target.sunI *= 0.42; target.fog.multiplyScalar(0.55); target.sky.multiplyScalar(0.5); }   // (owner) Marble Halls are moody indoors: the wall torches carry the light (render/HallsMarble.tsx)
+    if (b.style === 'MARBLE' && shape.kind === 'HALLS') { target.hemiI *= 0.32; target.sunI *= 0.24; target.fog.multiplyScalar(0.35); target.sky.multiplyScalar(0.3); }
+    else if (b.style === 'MARBLE') { target.hemiI *= 0.65; target.sunI *= 0.55; target.fog.multiplyScalar(0.6); target.sky.multiplyScalar(0.6); }   // (owner 2026-10-24: biome 2 darker everywhere)   // (owner) Marble Halls are moody indoors: the wall torches carry the light (render/HallsMarble.tsx)
     if (world.room.plan?.dream) applyDream();
   }
   if (snap) copy(look, target, 1);
