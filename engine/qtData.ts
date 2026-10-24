@@ -19,6 +19,8 @@ export const QT_H: Record<string, number> = {
   Mushroom_Common: 0.27, Mushroom_Laetiporus: 0.36, Plant_1: 0.59, Plant_1_Big: 2.22, Plant_7: 0.2, Plant_7_Big: 0.18,
   Pebble_Round_1: 0.05, Pebble_Round_2: 0.05, Pebble_Round_3: 0.06, Pebble_Square_1: 0.08, Pebble_Square_2: 0.08, Pebble_Square_3: 0.09,
   Rock_Medium_1: 1.19, Rock_Medium_2: 1.11, Rock_Medium_3: 1.2,
+  RockPath_Round_Small_1: 0.07, RockPath_Round_Small_2: 0.06, RockPath_Round_Small_3: 0.07, RockPath_Round_Thin: 0.07, RockPath_Round_Wide: 0.07,
+  RockPath_Square_Small_1: 0.09, RockPath_Square_Small_2: 0.09, RockPath_Square_Small_3: 0.1, RockPath_Square_Thin: 0.1, RockPath_Square_Wide: 0.12,
 };
 /** half width (m, scale 1) of the rocks (their layout scale is the old rock's radius) */
 export const QT_R: Record<string, number> = { Rock_Medium_1: 0.97, Rock_Medium_2: 0.91, Rock_Medium_3: 1.04 };
@@ -29,6 +31,8 @@ export const QT_TWISTED = [1, 2, 3, 4, 5].map((i) => `TwistedTree_${i}`);
 export const QT_DEAD = [1, 2, 3, 4, 5].map((i) => `DeadTree_${i}`);
 export const QT_ROCKS = ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'];
 export const QT_PEBBLES = ['Pebble_Round_1', 'Pebble_Round_2', 'Pebble_Round_3', 'Pebble_Square_1', 'Pebble_Square_2', 'Pebble_Square_3'];
+/** flat stepping stones (footprint ~0.6-1.3 m at scale 1) */
+export const QT_PATH = ['RockPath_Round_Small_1', 'RockPath_Round_Small_2', 'RockPath_Round_Small_3', 'RockPath_Round_Thin', 'RockPath_Round_Wide', 'RockPath_Square_Small_1', 'RockPath_Square_Small_2', 'RockPath_Square_Small_3', 'RockPath_Square_Thin', 'RockPath_Square_Wide'];
 export const QT_FLOWERS = ['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single'];
 export const QT_GRASS = ['Grass_Common_Short', 'Grass_Common_Tall', 'Grass_Wispy_Short', 'Grass_Wispy_Tall'];
 export const QT_CLOVER = ['Clover_1', 'Clover_2'];

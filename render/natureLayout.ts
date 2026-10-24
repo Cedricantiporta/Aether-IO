@@ -262,7 +262,7 @@ function qtDecor(q: QualityCfg, out: Sets): void {
 /** The generic forest trees OUTSIDE the walls (oak / birch / the two layered pines: TOWN_TREES, the grove tables of townFill, the forest ring) become Quaternius CommonTree / Pine
  *  variants, sized to the toy tree they replace (same height x 1.12, a touch wider). On the island: the full ~2.5k-triangle models; off the island's edge: ~700-triangle LODs out to
  *  30 m, past that the toy trees stay. Colliders, positions and counts are untouched. The blossom / fruit / willow / palm trees and everything inside the walls keep the toy look. */
-const QT_SWAP: Record<string, 'common' | 'pine'> = { tree_oak_big: 'common', tree_oak_small: 'common', tree_birch: 'common', tree_pine_layered_a: 'pine', tree_pine_layered_b: 'pine' };
+const QT_SWAP: Record<string, 'common' | 'pine'> = { tree_oak_big: 'common', tree_oak_small: 'common', tree_birch: 'common', tree_fruit: 'common', tree_willow: 'common', tree_pine_layered_a: 'pine', tree_pine_layered_b: 'pine' };
 export const QT_FOREST_STATS = { hi: 0, lo: 0, tris: 0 };
 function qtForest(q: QualityCfg, out: Sets): void {
   const low = q.name === 'LOW';
@@ -271,11 +271,10 @@ function qtForest(q: QualityCfg, out: Sets): void {
     const list = out.get(piece); if (!list) continue;
     const keep: Place[] = [], H0 = V3_BOX[piece][4];
     for (const p of list) {
-      const inside = Math.abs(p.x) < 47 && p.z > -43 && p.z < 40;
       const dEdge = Math.hypot(p.x, p.z) - edgeR(Math.atan2(p.z, p.x));
-      if (inside || dEdge > 30) { keep.push(p); continue; }
       const lo = low || dEdge > 0, node = qtPick(kind === 'common' ? QT_COMMON : QT_PINE, hash2(p.x, p.z, 11)), name = QT_PREFIX + (lo ? qtLod(node) : node);
-      const k = (H0 * p.sy) / QT_H[node] * 1.12, w = k * 1.06 * (p.sx / p.sy);
+      // (owner: trees must read clearly taller than the eaves: ~1.4x the old toy size, 4.8 .. 7.6 m, crowns widened with the height)
+      const hh = Math.min(7.6, Math.max(4.8, H0 * p.sy * 1.12 * 1.4)), k = hh / QT_H[node], w = k * 1.08 * (p.sx / p.sy);
       put(out, name, { x: p.x, y: p.y, z: p.z, ry: p.ry, sx: w, sy: k, sz: w });
       if (lo) { QT_FOREST_STATS.lo++; QT_FOREST_STATS.tris += 700; } else { QT_FOREST_STATS.hi++; QT_FOREST_STATS.tris += 2500; }
     }

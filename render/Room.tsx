@@ -357,8 +357,10 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         }
       }
       // tidy rim just inside the walls: a soft lighter paved band with a darker outer line (the 3D kerb sits on it, buildKerb)
-      out.lerp(rim, sstep(-2.6, -1.6, u) * (1 - sstep(-0.9, -0.3, u)) * 0.6);
-      out.multiplyScalar(1 - sstep(-0.9, -0.5, u) * (1 - sstep(-0.3, 0.2, u)) * 0.22);
+      if (style !== 'GRASS') {
+        out.lerp(rim, sstep(-2.6, -1.6, u) * (1 - sstep(-0.9, -0.3, u)) * 0.6);
+        out.multiplyScalar(1 - sstep(-0.9, -0.5, u) * (1 - sstep(-0.3, 0.2, u)) * 0.22);
+      }
       // boss arena: a faint rune circle
       if (boss) {
         const rr = Math.abs(r - (shapeLimit(x, z) - 1) * 0.62);
@@ -434,7 +436,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const SG = new GB([0.9, 1.1]); SG.cyl(0.62, 0.7, 0.14, 11, [0, 0.05, 0], '#ffffff');
     const slabs = new InstancedMesh(SG.build(), new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), 90);
     let ns = 0;
-    if (path) {
+    if (path && style !== 'GRASS') {   // (Greenwood: Quaternius RockPath stones, render/Props)
       const r2 = mulberry32(seed ^ 0x7a11);
       for (let t = -shape.maxR; t <= shape.maxR && ns < 90; t += 0.95) {
         const cl = Math.sin(t * 0.11 + so) * 2.6 + Math.sin(t * 0.27 - so) * 0.8;
@@ -474,7 +476,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       shrooms.count = ns2;
       if (shrooms.instanceColor) shrooms.instanceColor.needsUpdate = true;
     }
-    const kerb = def.waterSea ? null : new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
+    const kerb = def.waterSea || style === 'GRASS' ? null :   // (owner: no stone kerb round the Greenwood meadow: the grass blends into the forest)
+       new Mesh(buildKerb(style, seed, hasLiquid), litMat({ flatShading: false }));
     if (kerb) kerb.receiveShadow = true;
     return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb };
   }, [biome, R, seed, boss]);
@@ -1038,7 +1041,7 @@ export function Room({ q }: { q: QualityCfg }) {
       {r.active && !tower && <RoomWater />}
       {r.active && !tower && !isCamp && (def.lavaSea || def.waterSea) && <LavaSea key={'lava' + ver} water={!!def.waterSea} />}
       {r.active && isCamp && campSea && <LavaSea key={'csea' + ver} water={campSea === 'sea'} />}
-      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower && !isCamp ? { biome: def.name, v: def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0 } : undefined} /></Suspense>
+      <Suspense fallback={null}><Props q={q} tint={tower ? '#c4c8d6' : isCamp ? '#ffffff' : variantOf(def, r.index)?.propTint ?? def.propTint} qt={r.active && !tower ? { biome: def.name, v: def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0, seed: r.seed, boss: r.plan.type === 'BOSS', camp: isCamp } : undefined} /></Suspense>
       <Stations />
       <CampProps />
       {!tower && <Suspense fallback={null}><Wanderer /><AllyActor /></Suspense>}
