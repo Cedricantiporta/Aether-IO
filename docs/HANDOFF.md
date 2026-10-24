@@ -15,6 +15,8 @@ daily, so the code wins: `constants.ts`, `classLevels.ts`, `engine/roomDefs.ts`,
   language: what changed, what to try, what is still pending. No code jargon.
 - **Very cost-sensitive** (complained twice about usage): at most 1-2 sub-agents at a time, prefer small direct edits,
   few screenshots, do not re-verify things needlessly.
+- **No screenshot / visual QA unless asked** (owner 2026-10-24): "I'll check the updates myself unless I tell you so." Verify with tsc + vite build
+  (and logic checks where needed), push, and let the owner look; only take headless screenshots when the owner asks for them (mockups / plans still OK).
 - **Model split** (owner, 2026-10-20): **Opus = planning + review** (the main session: break the request down, write
   the brief, review the diff, commit). **Sonnet = execution** (all code writing: Agent tool `model: "sonnet"`).
   **Haiku = verification + navigation** (finding files/symbols, headless screenshot/QA runs, checking a change landed:
