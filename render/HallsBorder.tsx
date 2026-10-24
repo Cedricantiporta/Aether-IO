@@ -2,18 +2,16 @@
 //   * HallsBorder (all outdoor biomes): the edge of the floor and all the unwalkable ground between chambers is packed with the biome's
 //     natural blockers: dense rows of Quaternius trees (cheap `_lo` variants), bushes, rocks. Camera side (floor to the north of the
 //     border) stays low near the edge (bushes / rocks) so trees never hide monsters; tall trees stand only 5 m+ behind it.
-//   * HallsColumns (Marble Halls): no walls at all, the floor plan just ends in darkness (render/Room.tsx fades the ground to black);
-//     free-standing islands are drawn as round fluted columns (some broken), never cubes.
-// One BatchedMesh set (QtBatch) / two InstancedMeshes, built once per room. No per-frame work.
+//   (Marble Halls is dressed by render/HallsMarble.tsx: castle walls, columns, arches, statues.)
+// One BatchedMesh set (QtBatch), built once per room. No per-frame work.
 import React, { Suspense, useMemo } from 'react';
-import { Color, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
 import { halls, hallsSdf, HC } from '../engine/roomHalls';
 import { biomeOf } from '../engine/roomDefs';
 import { QT_PREFIX, QT_H, qtLod, qtPick } from '../engine/qtData';
 import { hallsKit } from '../engine/hallsBorder';
 import { QtBatch } from './qtNature';
 import type { Place } from './natureKit';
-import { GB, mulberry32 } from './util';
+import { mulberry32 } from './util';
 
 const TAU = Math.PI * 2;
 
@@ -87,46 +85,4 @@ function vnoise2(x: number, y: number): number {
   const h = (a: number, b: number): number => { const t = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return t - Math.floor(t); };
   const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), vv = fy * fy * (3 - 2 * fy);
   return (h(xi, yi) * (1 - u) + h(xi + 1, yi) * u) * (1 - vv) + (h(xi, yi + 1) * (1 - u) + h(xi + 1, yi + 1) * u) * vv;
-}
-
-// -------------------------------------------------------------- Marble columns
-let colGeo: { full: ReturnType<GB['build']>; broken: ReturnType<GB['build']> } | null = null;
-function columnGeos() {
-  if (colGeo) return colGeo;
-  const mk = (broken: boolean) => {
-    const g = new GB([0.82, 1.06]);
-    g.cyl(1.0, 1.08, 0.5, 18, [0, 0.25, 0], '#ffffff');                 // round base drum
-    g.cyl(1.12, 1.12, 0.14, 18, [0, 0.55, 0], '#ffffff');                // base ring
-    if (!broken) {
-      g.cyl(0.78, 0.86, 5.2, 12, [0, 3.2, 0], '#ffffff');              // fluted shaft (12 soft facets)
-      g.cyl(1.12, 0.84, 0.3, 18, [0, 5.95, 0], '#ffffff');             // capital flare
-      g.cyl(1.2, 1.2, 0.34, 18, [0, 6.25, 0], '#ffffff');              // abacus (round)
-    } else {
-      g.cyl(0.74, 0.86, 2.4, 12, [0, 1.9, 0], '#ffffff');
-      g.ico(0.8, [0, 3.1, 0], '#ffffff', [1, 0.55, 1], 0);             // jagged broken top
-    }
-    return g.build();
-  };
-  return (colGeo = { full: mk(false), broken: mk(true) });
-}
-
-export function HallsColumns({ seed }: { seed: number }) {
-  const { full, broken } = useMemo(() => {
-    const geos = columnGeos(), rnd = mulberry32(seed ^ 0xc01a);
-    const isl = halls.islands, nF = isl.length;
-    const mat = () => new MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0 });
-    const a = new InstancedMesh(geos.full, mat(), Math.max(1, nF)), b = new InstancedMesh(geos.broken, mat(), Math.max(1, nF));
-    const o = new Object3D(), c = new Color();
-    let na = 0, nb = 0;
-    for (const [x, z, r] of isl) {
-      const brk = rnd() < 0.3, k = r * 0.8, hs = 0.73 * (brk ? 0.9 + rnd() * 0.4 : 0.92 + rnd() * 0.2);   // shaft ~3.8 m, broken ones ~2.3 m
-      o.position.set(x, 0, z); o.rotation.set(0, rnd() * TAU, 0); o.scale.set(k, hs, k); o.updateMatrix();
-      c.set('#f3ead2').offsetHSL(0, 0, (rnd() - 0.5) * 0.06);
-      if (brk) { b.setMatrixAt(nb, o.matrix); b.setColorAt(nb++, c); } else { a.setMatrixAt(na, o.matrix); a.setColorAt(na++, c); }
-    }
-    a.count = na; b.count = nb;
-    for (const m of [a, b]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; }
-    return { full: a, broken: b };
-  }, [seed, halls.version]);   // eslint-disable-line react-hooks/exhaustive-deps
-  return (<><primitive object={full} /><primitive object={broken} /></>);
 }

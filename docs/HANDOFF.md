@@ -571,8 +571,15 @@ screens, max-level question: class level cap is 50) have been removed.
   `disableRoomNav`). Looks: `render/HallsBorder.tsx` dresses the edge and the unwalkable ground between chambers with the biome's
   Quaternius pieces from ONE table, `engine/hallsBorder.ts` HALLS_BORDER (tall trees far side + on islands, `_lo` away from the edge,
   bushes / rocks on the camera side so monsters stay visible; caps 700 trees / 420 low); swap node names there when the second pack is
-  baked into nature_qt.glb. Marble Halls: no border at all, the floor ends in black (Room.tsx ground fade) and the islands are round fluted
-  columns (`HallsColumns`, some broken). Halls skip the lava / sea ground drop. The minimap draws the mask.
+  baked into nature_qt.glb. Marble Halls (COLUMNS) is an indoor castle: `castle` design = rounded RECTANGLE halls (blob 7th value = corner radius), straight
+  passages, quarter-turn rotation, no wobble; `render/HallsMarble.tsx` loads the Quaternius dungeon kit (`public/models/dungeon/*.obj`, copied from
+  `art/`; a stray `l` line is stripped from Statue_Horse before parsing), recolours it from the PAL table (bright cream / blue / gold, red banners; the
+  MTL colours are near black) and draws ONE InstancedMesh per piece: Wall_Modular along the mask edge (walls ARE the collider; low balustrade on the
+  camera side), Arch in the doorways (`halls.arches`), Column / Column2 for islands r < 1.2 (3.8 m), Pedestal + Statue_Horse for islands r >= 1.2
+  (`halls.statues`, each design spot kept with 30%, max 2 -> many rooms have none), banners / torches / cobwebs on tall walls, vase clusters. Outside the
+  walls the ground fades to black; the floor is bright clean marble (no moss / dirt / rubble). Other outdoor biomes keep the tree / rock border.
+  `CameraRig` snaps (no glide) when the hero jumps > 22 m in one frame (halls start spots are far from the hub; the glide crossed the black void).
+  Headless note: SwiftShader shows a black canvas for ~5-9 s after a halls room is built (700-tree batch + shader compile); wait before screenshots. Halls skip the lava / sea ground drop. The minimap draws the mask.
   QA: `roomShape.dbg.force = 'HALLS'` (+ `dbg.variant = 'TWIN' | 'FROZEN' | 'DUNES' | 'COLUMNS' | 'CROSS' | 'CRESCENT'`); after editing
   engine files restart vite before dynamic-import QA scripts (HMR makes duplicate module instances). Minions / pets still ignore the edge.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.

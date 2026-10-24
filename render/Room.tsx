@@ -23,7 +23,8 @@ import { Coins, Diamond, Droplets, Flame, Gem, Heart, Package, Skull, Sparkles, 
 import { world } from '../engine/world';
 import { shape, shapeLimit, outlineU } from '../engine/roomShape';
 import { halls, hallsSdf } from '../engine/roomHalls';
-import { HallsBorder, HallsColumns } from './HallsBorder';
+import { HallsBorder } from './HallsBorder';
+import { HallsMarble } from './HallsMarble';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { BIOMES, biomeOf, portalLabel, variantOf, type GroundStyle } from '../engine/roomDefs';
 import { feat, inLiquid, onBridge, riverD, hwAt, riverS } from '../engine/roomFeatures';
@@ -288,8 +289,8 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
         // slab-to-slab tone (3-unit slabs), worn darker lanes, roots / moss creeping in from the cracks
         const tx = Math.floor(x / 3), tz = Math.floor(z / 3);
         out.multiplyScalar(0.94 + vnoise(tx * 3.7 + so, tz * 5.3) * 0.1);
-        out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45);
-        out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75);
+        if (isHalls) out.lerp(tmpC.set('#f4f6fc'), 0.85).multiply(tmpC.set('#ffffff').setRGB(1.2, 1.32, 1.6));   // castle halls: bright clean cream marble, no dark moss / dirt blotches
+        else { out.lerp(dry, sstep(0.55, 0.7, zB) * 0.45); out.lerp(dirt, sstep(0.62, 0.74, zA) * 0.75); }
         const lane = Math.abs(x * -shape.fz + z * shape.fx);
         if (!boss && !isHalls) {   // worn royal carpet down the hall: crimson with a gold border, frayed and torn in places
           const torn = sstep(0.62, 0.7, fbm(x * 0.12 + so, z * 0.12, 3));
@@ -404,7 +405,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     const m = groundMaterial(style, S / DETAIL_PERIOD[style], S / DETAIL_PERIOD[style], style === 'GRASS' && vr && def.variants!.indexOf(vr) === 2 ? 0.2 : 1);   // (Darkwood: the flower dots stay faint)
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
-    const N = (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? (style === 'GRASS' ? 1 : 4) : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
+    const N = style === 'MARBLE' && shape.kind === 'HALLS' ? 0 : (style === 'MARBLE' ? 26 : 45) * (shape.kind === 'HALLS' ? (style === 'GRASS' ? 1 : 4) : 1); // sparse clutter (user: fewer small bushes; halls: more tries, most land in walls)
     const tg = new GB([0.8, 1.1]);
     if (style === 'MARBLE') { tg.box(0.5, 0.18, 0.4, [0, 0.09, 0], '#ffffff', [0, 0.4, 0.1]); tg.box(0.3, 0.14, 0.3, [0.4, 0.07, 0.2], '#ffffff', [0.2, 1, 0]); }
     else if (style === 'SAND') { tg.ico(0.22, [0, 0.06, 0], '#ffffff', [1.4, 0.4, 1.1], 0); tg.cone(0.04, 0.4, 3, [0.15, 0.2, 0], '#ffffff', [0.3, 0, 0.4]); tg.cone(0.04, 0.35, 3, [-0.1, 0.18, 0.05], '#ffffff', [-0.3, 0, -0.4]); }
@@ -1046,7 +1047,7 @@ export function Room({ q }: { q: QualityCfg }) {
     <>
       {r.active && (tower ? <TowerFloor key={ver} R={r.radius} /> : isCamp ? <CampGround key={ver} ver={ver} /> : <RoomGround key={ver} biome={r.biome} R={r.radius} seed={r.seed} boss={r.plan.type === 'BOSS'} index={r.index} />)}
       {r.active && !tower && !isCamp && shape.kind === 'HALLS' && (def.style === 'MARBLE'
-        ? <HallsColumns key={'hc' + ver} seed={r.seed} />
+        ? <HallsMarble key={'hm' + ver} seed={r.seed} shadows={q.shadowMap > 0} />
         : <HallsBorder key={'hb' + ver} biome={r.biome} seed={r.seed} v={def.variants ? Math.min(def.variants.length - 1, Math.floor(r.index / 5)) : 0} tint={variantOf(def, r.index)?.propTint ?? def.propTint} shadows={q.shadowMap > 0} />)}
       {r.active && isCamp && <><CampPieces key={'cp' + ver} ver={ver} /><CampShards key={'cs' + ver} ver={ver} /></>}
       {r.active && !tower && <RoomWater />}

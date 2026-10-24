@@ -100,7 +100,8 @@ export function CameraRig() {
       _pos.lerp(_v, s.csBlend); _tgt.lerp(_d, s.csBlend);
     }
 
-    if (!s.init) { s.pos.copy(_pos); s.tgt.copy(_tgt); s.init = true; }
+    // a big jump of the hero (room start in a halls layout, teleports) snaps the camera: gliding 50 m across the dark void between chambers read as a black frame
+    if (!s.init || (_tgt.x - s.tgt.x) ** 2 + (_tgt.z - s.tgt.z) ** 2 > 22 * 22) { s.pos.copy(_pos); s.tgt.copy(_tgt); s.init = true; }
     const kf = s.csBlend > 0.05 ? 5 : lobby ? 2.2 : 7;
     s.pos.x = damp(s.pos.x, _pos.x, kf, dt); s.pos.y = damp(s.pos.y, _pos.y, kf, dt); s.pos.z = damp(s.pos.z, _pos.z, kf, dt);
     s.tgt.x = damp(s.tgt.x, _tgt.x, kf, dt); s.tgt.y = damp(s.tgt.y, _tgt.y, kf, dt); s.tgt.z = damp(s.tgt.z, _tgt.z, kf, dt);

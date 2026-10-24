@@ -26,6 +26,8 @@ export const halls = {
   islands: [] as [number, number, number][],
   /** points that must stay clear of props (passage mouths): x, z, r triples. */
   keep: [] as [number, number, number][],
+  /** castle halls (Marble): statue spots (also in `islands`, r 1.5) and arch doorways x, z, facing (rad) */
+  statues: [] as [number, number][], arches: [] as [number, number, number][],
   area: 0, extent: 0,
   /** half width of the exit area (the portal slots spread within it) */
   exitHalf: 10,
@@ -131,12 +133,14 @@ export function hallsInside(x: number, z: number, margin: number): boolean { ret
 export function placeMargin(margin: number): number { return Math.max(3.2, Math.min(margin, 6)); }
 
 // ------------------------------------------------------------------ designs ---
-type Blob = [number, number, number, number, number, number];   // cx, cz, rx, rz, rotation (deg), kidney bend
+type Blob = [number, number, number, number, number, number, number?];   // cx, cz, rx, rz, rotation (deg), kidney bend, [corner radius: > 0 = rounded rectangle (castle hall) with half sizes rx, rz]
 type Path = { c: [number, number][]; w0: number; w1: number };   // cubic bezier control points + start / end width
 interface Design {
   blobs: Blob[]; paths: Path[]; islands: [number, number, number][];
   start: [number, number]; exit: [number, number]; hub: [number, number];
   target: [number, number];     // wanted floor area range (m2); positions are scaled to hit it
+  /** castle halls: straight passages, no wobble, quarter-turn rotation; optional statue spots (each kept at random) and arch doorways x, z, facing (deg) */
+  castle?: boolean; statues?: [number, number][]; arches?: [number, number, number][];
 }
 
 const DESIGNS: Record<HallsVariant, Design> = {
@@ -161,12 +165,20 @@ const DESIGNS: Record<HallsVariant, Design> = {
     islands: [[-28, 30, 2.8], [24, -26, 3.0], [-18, 22, 2.0], [14, -18, 2.0]],
     start: [-32, 38], exit: [30, -32], hub: [-18, 34], target: [1450, 1850],
   },
-  // Marble Halls: three hall-clearings + a side room, floor ends in black, rows of round columns
+  // Marble Halls (indoors in the castle): rectangular halls (softened corners) joined by straight passages with arch doorways, rows of
+  // columns along the long walls, statue spots at the hall ends. Only the walls / dark void outside; see render/HallsMarble.tsx.
   COLUMNS: {
-    blobs: [[0, -34, 20, 13, 0, 0], [0, 4, 24, 15, 0, 0], [-6, 42, 18, 13, 0, 0], [-34, 6, 10, 8, 0, 0]],
-    paths: [{ c: [[0, -22], [4, -16], [-4, -12], [0, -8]], w0: 6.9, w1: 6.9 }, { c: [[-2, 18], [6, 24], [-8, 30], [-6, 32]], w0: 6.9, w1: 6.9 }, { c: [[-22, 6], [-26, 6], [-28, 6], [-30, 6]], w0: 6.9, w1: 6.9 }],
-    islands: [[-7, -3, 1.9], [-7, 3, 1.9], [-7, 9, 1.9], [7, -3, 1.9], [7, 3, 1.9], [7, 9, 1.9], [-6, -36, 1.9], [6, -36, 1.9], [-8, 44, 1.9], [6, 44, 1.9]],
-    start: [0, -40], exit: [-6, 46], hub: [0, 8], target: [1500, 1900],
+    castle: true,
+    blobs: [[0, -36, 20, 12, 0, 0, 4], [0, 2, 24, 14, 0, 0, 4], [-4, 42, 18, 12, 0, 0, 4], [-38, 2, 10, 8, 0, 0, 3]],
+    paths: [{ c: [[0, -26], [0, -20], [0, -16], [0, -10]], w0: 6.9, w1: 6.9 }, { c: [[-2, 14], [-2, 20], [-2, 26], [-2, 32]], w0: 6.9, w1: 6.9 }, { c: [[-22, 2], [-24, 2], [-27, 2], [-30, 2]], w0: 6.9, w1: 6.9 }],
+    islands: [
+      [-15, -42, 0.85], [-8, -42, 0.85], [8, -42, 0.85], [15, -42, 0.85], [-15, -30, 0.85], [-8, -30, 0.85], [8, -30, 0.85], [15, -30, 0.85],
+      [-16, -7, 0.85], [-8, -7, 0.85], [8, -7, 0.85], [16, -7, 0.85], [-16, 11, 0.85], [-8, 11, 0.85], [8, 11, 0.85], [16, 11, 0.85],
+      [-17, 36, 0.85], [-10, 36, 0.85], [6, 36, 0.85], [12, 36, 0.85], [-17, 48, 0.85], [-10, 48, 0.85], [6, 48, 0.85], [12, 48, 0.85],
+    ],
+    statues: [[19, 2], [-43, 2], [10, 50], [0, -45]],
+    arches: [[0, -23, 0], [0, -13, 0], [-2, 17, 0], [-2, 29, 0], [-26, 2, 90]],
+    start: [0, -41], exit: [-4, 47], hub: [0, 2], target: [1500, 2100],
   },
   // a big heart clearing with three spokes (arrival pocket, dead-end pocket, exit pocket)
   CROSS: {
@@ -208,33 +220,33 @@ function vnoise(x: number, y: number): number {
 
 /** The concrete (jittered, scaled, rotated) layout in WORLD coordinates (origin = hub). */
 interface Inst {
-  blobs: { x: number; z: number; rx: number; rz: number; c: number; s: number; kid: number }[];
+  blobs: { x: number; z: number; rx: number; rz: number; c: number; s: number; kid: number; box: number; hx: number; hz: number }[];
   segs: number[];            // flat: ax, az, bx, bz, halfWidth
-  islands: [number, number, number][];
+  islands: [number, number, number][]; statues: [number, number][]; arches: [number, number, number][];
   start: [number, number]; exit: [number, number]; hub: [number, number];
-  keep: [number, number, number][];
+  keep: [number, number, number][]; castle: boolean;
   mnx: number; mnz: number; mxx: number; mxz: number;
 }
 
 function instantiate(D: Design, rnd: () => number, scale: number, ang: number, mirror: boolean): Inst {
-  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const ca = Math.cos(ang), sa = Math.sin(ang), castle = !!D.castle;
   const hubP = D.hub;
   const T = (x: number, z: number): [number, number] => {   // plan -> world: scale about the hub, mirror, rotate
     let px = (x - hubP[0]) * scale, pz = (z - hubP[1]) * scale;
     if (mirror) px = -px;
     return [px * ca - pz * sa, px * sa + pz * ca];
   };
-  const out: Inst = { blobs: [], segs: [], islands: [], start: [0, 0], exit: [0, 0], hub: [0, 0], keep: [], mnx: 1e9, mnz: 1e9, mxx: -1e9, mxz: -1e9 };
+  const out: Inst = { blobs: [], segs: [], islands: [], statues: [], arches: [], start: [0, 0], exit: [0, 0], hub: [0, 0], keep: [], castle, mnx: 1e9, mnz: 1e9, mxx: -1e9, mxz: -1e9 };
   const ext = (x: number, z: number, r: number): void => { out.mnx = Math.min(out.mnx, x - r); out.mnz = Math.min(out.mnz, z - r); out.mxx = Math.max(out.mxx, x + r); out.mxz = Math.max(out.mxz, z + r); };
   for (const b of D.blobs) {
-    const jx = (rnd() - 0.5) * 4, jz = (rnd() - 0.5) * 4, js = 0.92 + rnd() * 0.16;
+    const jx = castle ? 0 : (rnd() - 0.5) * 4, jz = castle ? 0 : (rnd() - 0.5) * 4, js = castle ? 1 : 0.92 + rnd() * 0.16;
     const [x, z] = T(b[0] + jx, b[1] + jz);
-    const rot = (mirror ? -b[4] : b[4]) * Math.PI / 180 + ang, rx = b[2] * scale * js, rz = b[3] * scale * (0.94 + rnd() * 0.12);
-    out.blobs.push({ x, z, rx, rz, c: Math.cos(rot), s: Math.sin(rot), kid: mirror ? -b[5] : b[5] });
+    const rot = (mirror ? -b[4] : b[4]) * Math.PI / 180 + ang, rx = b[2] * scale * js, rz = b[3] * scale * (castle ? 1 : 0.94 + rnd() * 0.12);
+    out.blobs.push({ x, z, rx, rz, c: Math.cos(rot), s: Math.sin(rot), kid: mirror ? -b[5] : b[5], box: (b[6] ?? 0) * scale, hx: rx, hz: rz });
     ext(x, z, Math.max(rx, rz) * 1.2 + 3);
   }
   for (const p of D.paths) {
-    const pts: [number, number][] = p.c.map((q, i) => T(q[0] + (i > 0 && i < 3 ? (rnd() - 0.5) * 5 : 0), q[1] + (i > 0 && i < 3 ? (rnd() - 0.5) * 5 : 0)));
+    const pts: [number, number][] = p.c.map((q, i) => T(q[0] + (i > 0 && i < 3 && !castle ? (rnd() - 0.5) * 5 : 0), q[1] + (i > 0 && i < 3 && !castle ? (rnd() - 0.5) * 5 : 0)));
     let px = 0, pz = 0;
     const N = 36;
     for (let i = 0; i <= N; i++) {
@@ -250,6 +262,12 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
     if (out.keep.some((k) => Math.hypot(x - k[0], z - k[1]) < i[2] + 5.5)) continue;
     out.islands.push([x, z, i[2]]); ext(x, z, i[2] + 2);
   }
+  if (D.statues) for (const st of D.statues) {   // (castle: a few of the statue spots, at random: not every hall has one)
+    if (rnd() > 0.3 || out.statues.length >= 2) continue;
+    const [x, z] = T(st[0], st[1]);
+    out.islands.push([x, z, 1.5]); out.statues.push([x, z]); ext(x, z, 3);
+  }
+  if (D.arches) for (const a of D.arches) { const [x, z] = T(a[0], a[1]); out.arches.push([x, z, a[2] * Math.PI / 180 - ang]); }
   out.start = T(D.start[0], D.start[1]); out.exit = T(D.exit[0], D.exit[1]); out.hub = T(D.hub[0], D.hub[1]);
   return out;
 }
@@ -260,7 +278,7 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
   const rnd = mulberry(seed ^ 0x3c6ef372);
   const variant = force ?? pickVariant(style, name, rnd);
   const D = DESIGNS[variant];
-  const ang = rnd() * Math.PI * 2, mirror = rnd() < 0.5;
+  const ang = D.castle ? Math.floor(rnd() * 4) * Math.PI / 2 : rnd() * Math.PI * 2, mirror = D.castle ? false : rnd() < 0.5;
   const target = D.target[0] + rnd() * (D.target[1] - D.target[0]);
   let scale = 1, I: Inst;
   for (let pass = 0; ; pass++) {
@@ -309,6 +327,11 @@ function rasterise(I: Inst, seed: number): void {
       const u = dx * B.c + dz * B.s;
       let v = -dx * B.s + dz * B.c;
       if (B.kid) v += B.kid * (u / B.rx) * (u / B.rx) * B.rz;
+      if (B.box > 0) {   // rounded rectangle: exact distance in metres
+        const qx = Math.abs(u) - (B.hx - B.box), qz = Math.abs(v) - (B.hz - B.box);
+        d = Math.min(d, Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - B.box);
+        continue;
+      }
       const q = Math.hypot(u / B.rx, v / B.rz);
       d = Math.min(d, (q - 1) * Math.min(B.rx, B.rz) * 0.9);
     }
@@ -317,7 +340,7 @@ function rasterise(I: Inst, seed: number): void {
     d = Math.min(d, ppass[j * w + i]);
     // soft wobble: strongest deep inside / far out, small at the edge so passages keep their width
     const nz = (vnoise(x * 0.16 + p1, z * 0.16) - 0.5) * 2 * 1.3 + (vnoise(x * 0.45, z * 0.45 + p2) - 0.5) * 2 * 0.5;
-    d += nz * Math.min(1, Math.max(0.15, (-d + 2) / 6));
+    d += nz * (I.castle ? 0.12 : 1) * Math.min(1, Math.max(0.15, (-d + 2) / 6));
     // islands (blocked): carve a wobbly disc
     let isl = 0;
     for (let k = 0; k < ni; k++) {
@@ -367,6 +390,7 @@ function finishMask(I: Inst): void {
   halls.extent = Math.sqrt(ext);
   halls.islands = I.islands.slice();
   halls.keep = I.keep.slice();
+  halls.statues = I.statues.slice(); halls.arches = I.arches.slice();
 }
 
 /** Arrival / exit / station / shortcut points (pulled inward until they have room), exit slot spread. */
