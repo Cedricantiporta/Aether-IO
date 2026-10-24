@@ -17,7 +17,7 @@
 // ============================================================================
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
-  PORTAL, TOWER, TOWER_KNOLL, NESTS, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
+  PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
   SIDE_GATES, PARK_EAST,
 } from './townData';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
@@ -92,6 +92,8 @@ for (const n of NPCS) {
 for (const a of ANIMALS) legs.push([a.x - a.rx, a.z, a.x + a.rx, a.z, a.rz + 1.4]);
 for (const sp of SHOP_POSITIONS) { const f = shopFront(sp, 3.8); resv(f.x, f.z, 3.2); }
 for (const [x, z] of NESTS) resv(x, z, 2.2);
+// (owner) the animal pen stays clear of decor (animals wander it; the entrance must stay open)
+for (let x = ANIMAL_PEN.x0 + 1; x < ANIMAL_PEN.x1; x += 2.5) for (let z = ANIMAL_PEN.z0 - 1; z < ANIMAL_PEN.z1; z += 2.5) resv(x, z, 2.2);
 for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
 resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3);
 resv(TOWER.door.x, TOWER.door.z, 4); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);

@@ -275,7 +275,7 @@ function scanNearby(): void {
     d = q(CHAPEL_SIDE.x, CHAPEL_SIDE.z); if (d < CHAPEL_SIDE.r * CHAPEL_SIDE.r) push('E', 'Enter', 'Chapel (side door)', '', 1, d, 'church');
     d = q(CAVE_DOOR.x, CAVE_DOOR.z); if (d < CAVE_DOOR.r * CAVE_DOOR.r && gateFlags.cave) push('E', 'Enter', 'Crystal Cave', '', -1, d, 'cave');   // (closed: the cave-in's Look pill below takes its place)
     for (let i = 0; i < TOWN_GATES.length; i++) {   // a story gate still closed: "Look" explains it (never near a shop / door pill, see engine/townGates.ts)
-      const g = TOWN_GATES[i]; if (gateFlags[g.id]) continue;
+      const g = TOWN_GATES[i]; if (gateFlags[g.id] || g.kind === 'guard') continue;   // (a guarded gate: its guard's Talk pill explains it instead)
       d = gateDist2(g, p.pos.x, p.pos.z); if (d < GATE_PROMPT_R * GATE_PROMPT_R) push('E', 'Look', g.name, '', i, d, 'blocked', GATE_COLOR);
     }
     // farm: milk a cow, take an egg from a nest; Pip's cat while her quest is on

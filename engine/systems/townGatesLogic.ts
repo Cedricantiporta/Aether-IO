@@ -163,6 +163,7 @@ export function gateSelfCheck(): string[] {
   });
   // 2b) one prompt at a time: a gate's Look zone never overlaps a shop / NPC / door / fishing prompt zone (its own door excepted), and a door gate's door spot is inside its zone
   TOWN_GATES.forEach((g) => {
+    if (g.kind === 'guard') return;   // (no Look pill: the guard NPC's Talk pill explains the gate, village.ts)
     const src: [string, number, number, number][] = [];
     for (const s of SHOP_POSITIONS) src.push([`shop ${s.type}`, s.position[0], s.position[2], 7]);   // (village.INTERACT_R)
     for (const n of NPCS) { if (n.area) continue; src.push([n.name, n.home[0], n.home[1], 3.8]); n.patrol?.forEach((p) => src.push([n.name + ' patrol', p[0], p[1], 3.8])); }   // (npcs.TALK_R)
