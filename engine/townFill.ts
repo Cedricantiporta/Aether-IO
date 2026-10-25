@@ -20,6 +20,7 @@ import {
   PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
   SIDE_GATES, PARK_EAST,
 } from './townData';
+import { TOWN_CHESTS } from './townChests';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { SHOP_POSITIONS, shopFront } from '../constants';
@@ -100,6 +101,7 @@ resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOW
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
 resv(HERO_HOUSE.x, HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
 for (const s of TOWN_SEATS) resv(s.x, s.z, 1.7);
+for (const ch of TOWN_CHESTS) resv(ch.x, ch.z, 2.6);   // (the hidden treasure chests: no tree / bush / rock dropped on or right beside them)
 for (const g of SIDE_GATES) for (const dx of [-3.5, 0, 3.5]) resv(g.x + dx, g.z, 2.6);   // (owner) the side gates' passages stay clear
 const rects: [number, number, number, number][] = [];   // x0 z0 x1 z1
 for (const F of [...FIELDS, FARM]) rects.push([F.x - F.hw - 1.5, F.z - F.hd - 1.5, F.x + F.hw + 1.5, F.z + F.hd + 1.5]);

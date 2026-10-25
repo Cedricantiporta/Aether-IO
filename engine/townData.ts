@@ -19,6 +19,7 @@ import { SHRINE_POS, TRAINER_POS } from './world';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { v3Ring, v3Disc } from './kitV3Data';
 import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff, lakeSouthZ } from './beachData';
+import { TOWN_CHESTS, CHEST_R } from './townChests';
 
 /** `kit` = which town_kit_v2 piece draws it (render/townKit.tsx; undefined = the procedural barn / coop), `s` = uniform scale of that
  *  piece. Every house faces south (+z, rot 0) so the north-up camera always sees its front (owner: Echoes-of-Wisdom framing). */
@@ -681,6 +682,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (const t of TOWN_TREES) c.push([t.x, t.z, 0.85]);
   for (const g of GATEWAYS) for (const sx of [-1, 1]) c.push([g.x + Math.cos(g.rot) * sx * GATEWAY.px, g.z - Math.sin(g.rot) * sx * GATEWAY.px, GATEWAY.pr]);
   for (const [x, z, r] of TRAIL_ROCKS) c.push([x, z, r]);
+  for (const ch of TOWN_CHESTS) c.push([ch.x, ch.z, CHEST_R]);   // the hidden treasure chests (engine/townChests.ts)
   c.push([SCARECROW.x, SCARECROW.z, 0.5], [HAYSTACK.x, HAYSTACK.z, 1.7]);   // (the haystack is the kit piece at scale 0.85)
   // the brewer's cauldron, work table and barrels in front of / beside the hut (hut-local -> world; the hut itself is the shop collider)
   { const { x, z } = BREWER_HUT;   // (the kit's round hut + the barrel and bottles by its door)
