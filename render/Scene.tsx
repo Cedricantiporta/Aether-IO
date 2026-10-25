@@ -41,6 +41,7 @@ import { Zones } from './Zones';
 import { GroundFx } from './GroundFx';
 import { AimIndicator } from './AimIndicator';
 import { RangeRing } from './RangeRing';
+import { EnemyGuide } from './EnemyGuide';
 import { TargetRing } from './TargetRing';
 import { TrickFx, CrystalWalls } from './TrickFx';
 import { Pickups } from './Pickups';
@@ -132,6 +133,7 @@ export function Scene() {
           <AimIndicator />
           <TargetRing />
           <RangeRing />
+          <EnemyGuide />
           <TrickFx />
           <CrystalWalls />
           <Enemies />

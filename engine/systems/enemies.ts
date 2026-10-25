@@ -430,6 +430,16 @@ export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title
   return e;
 }
 
+/** Soft-despawn every living enemy of `kind` with a death poof (no loot, no xp): the optional tower archers once a room is cleared. */
+export function poofKind(kind: string): void {
+  const list = world.enemies;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e.active || e.state === 'DYING' || e.kind !== kind) continue;
+    e.state = 'DYING'; e.stateT = 0; e.deathT = 0; e.hp = 0; e.vel.set(0, 0, 0);
+    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: e.elite, boss: e.boss, scale: e.scale, poof: true });
+  }
+}
 /** Soft-despawn every living enemy with a death poof (no loot, no xp). */
 export function poofAllEnemies(): void {
   const list = world.enemies;
@@ -1832,13 +1842,13 @@ export function updateEnemies(dt: number): void {
         frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - eff) * 2);
         updateEnemy(e);
         frameDt = dt; frameDecay = baseDecay; frameDotTick = baseTick;
-        if (e.active && !isDying(e)) alive++;
+        if (e.active && !isDying(e) && e.kind !== 'GOBLIN_ARCHER') alive++;
         continue;
       }
     }
     lodAcc[i] = 0;
     updateEnemy(e);
-    if (e.active && !isDying(e)) alive++;
+    if (e.active && !isDying(e) && e.kind !== 'GOBLIN_ARCHER') alive++;   // (owner 2026-10-25) tower archers are optional: they never hold up the room clear
   }
   world.director.aliveCount = alive;
   tickHumanBoss(dt);   // humanoid mini boss: boss bar, strikes, traps, banner / ward

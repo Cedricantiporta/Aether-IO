@@ -14,6 +14,8 @@ import { padMove, padActivate, padTab, padScroll, padSlider, padClear } from '..
 
 // ---- MMORPG free camera: right-drag / one-finger drag on empty screen = orbit + tilt; wheel / two-finger pinch = zoom in (owner: a bit closer only)
 const PITCH_MIN = 0.55, PITCH_MAX = 1.3;
+/** (owner 2026-10-25) a right click on the scene holds a virtual Space for 2 frames (aim.ts reads it as a dash key press). */
+export const rclickDash = { n: 0 };
 export const USER_ZOOM_MIN = 0.62;
 function zoomBy(f: number): void { const c = world.camera; c.uz = Math.min(1, Math.max(USER_ZOOM_MIN, (c.uz ?? 1) * f)); }
 const orbitAllowed = () => {
@@ -109,7 +111,7 @@ export function installInput(): () => void {
   };
   const onUi = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('.pe');
   // right mouse: cancels a held skill indicator, otherwise drag = orbit the camera
-  const rmb = { on: false, x: 0, y: 0 };
+  const rmb = { on: false, x: 0, y: 0, sx: 0, sy: 0, moved: false, ui: true };
   // left mouse: a drag that starts on the scene (not UI) also orbits once it moves past a few pixels; a click still selects
   const lmb = { down: false, drag: false, x: 0, y: 0, sx: 0, sy: 0 };
   const onMouseDown = (e: MouseEvent) => {
@@ -118,7 +120,8 @@ export function installInput(): () => void {
       inp.mouseDown = true;
       if (orbitAllowed() && !aimState.active) { lmb.down = true; lmb.drag = false; lmb.x = lmb.sx = e.clientX; lmb.y = lmb.sy = e.clientY; }
     } else if (e.button === 2) {
-      if (aimState.active) { cancelAim(); inp.cancelAim = true; }
+      rmb.sx = e.clientX; rmb.sy = e.clientY; rmb.moved = false; rmb.ui = false;
+      if (aimState.active) { cancelAim(); inp.cancelAim = true; rmb.ui = true; }
       else if (orbitAllowed()) { rmb.on = true; rmb.x = e.clientX; rmb.y = e.clientY; }
     }
   };
@@ -129,6 +132,7 @@ export function installInput(): () => void {
       lmb.x = e.clientX; lmb.y = e.clientY;
     }
     if (!rmb.on) return;
+    if (Math.hypot(e.clientX - rmb.sx, e.clientY - rmb.sy) > 6) rmb.moved = true;
     orbit(e.clientX - rmb.x, e.clientY - rmb.y);
     rmb.x = e.clientX; rmb.y = e.clientY;
   };
@@ -162,7 +166,15 @@ export function installInput(): () => void {
   };
   const onPtrCancel = (e: PointerEvent) => { delete downs[e.pointerId]; };
   const onContext = (e: Event) => { if (aimState.active || !onUi(e)) e.preventDefault(); };
-  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) inp.mouseDown = false; else if (e.button === 2) rmb.on = false; if (e.button === 0) lmb.down = false; };
+  const onMouseUp = (e: MouseEvent) => {
+    if (e.button === 0) inp.mouseDown = false;
+    else if (e.button === 2) {
+      // (owner 2026-10-25) a right CLICK (no camera drag) on the scene = dash (same as Space; on horseback the horse charge)
+      if (!rmb.moved && !rmb.ui && !onUi(e)) { inp.pressed.Space = true; rclickDash.n = 2; }
+      rmb.on = false; rmb.ui = true;
+    }
+    if (e.button === 0) lmb.down = false;
+  };
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);

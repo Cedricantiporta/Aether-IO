@@ -44,7 +44,7 @@ import { setupBiomeHazards } from './biomeHazards';
 import { setupRoomTraps } from './roomTraps';
 import { setupLavaFloor } from '../lavaFloor';
 import { setupIceFloor } from '../iceFloor';
-import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
+import { spawnEnemy, spawnMiniBoss, isSpawnable, poofKind } from './enemies';
 import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -997,6 +997,7 @@ function tickFinale(dt: number): void {
 
 function onCleared(): void {
   const d = dd(), st = useGameStore.getState();
+  poofKind('GOBLIN_ARCHER');   // (owner 2026-10-25) the optional tower archers leave once the room is clear
   world.boss.active = false;
   if (plan.epilogue) {   // the quiet clearing: no portals or rewards, only the Keeper of the Font waiting
     d.phase = 'CLEARED'; d.phaseT = 0;

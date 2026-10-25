@@ -1,3 +1,4 @@
+import { rclickDash } from '../input';
 // ============================================================================
 // Aimed ("MOBA-style") casting. Desktop: press-and-HOLD a skill key shows a ground indicator,
 // RELEASE casts there, right-click / Esc cancels. Touch: drag from the skill button, release casts,
@@ -198,9 +199,10 @@ export function updateSkillInput(): void {
   if (inp.cancelAim) { inp.cancelAim = false; if (aimState.active) { cancelAim(); } }
 
   // ---- keyboard
+  if (rclickDash.n > 0) rclickDash.n--;
   for (let i = 0; i < SKILL_KEYS.length; i++) {
     const [code, id] = SKILL_KEYS[i];
-    const down = !!inp.keys[code];
+    const down = !!inp.keys[code] || (code === 'Space' && rclickDash.n > 0);   // (right click = dash)
     const was = !!held[code];
     held[code] = down;
     if (down && !was) {

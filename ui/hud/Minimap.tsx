@@ -4,6 +4,7 @@
 // the tracked quest ring) are drawn on top from the world. No React state, no per-frame allocations (module scratch).
 import React, { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
+import { createPortal } from 'react-dom';
 import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
 import { useGameStore } from '../../store';
 import { TAP } from '../../engine/tavernData';
@@ -401,7 +402,7 @@ export const Minimap: React.FC = () => {
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10V4h6M20 10V4h-6M4 14v6h6M20 14v6h-6" /></svg>
         </button>
       </div>
-      {open && <FullMap />}
+      {open && createPortal(<FullMap />, document.body)}   {/* (portal: the minimap box is zoomed / offset, which dragged a fixed popup to the side) */}
     </>
   );
 };
