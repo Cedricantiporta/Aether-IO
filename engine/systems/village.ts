@@ -15,7 +15,8 @@ import { STORY, gateOpen } from '../../story';
 import { world, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB, RARITY_LABEL_COLOR } from '../../constants';
-import { useGameStore } from '../../store';
+import { useGameStore, potionCount, shopPrice, makeItemById } from '../../store';
+import { ITEMS_POOL } from '../../constants';
 import { updatePlayerVillage } from './player';
 import { hooks } from './hooks';
 import { updateCrates, hitCrate } from './crates';
@@ -379,7 +380,7 @@ export function interact(it: Interactable): void {
     else if (it.act === 'npc') openDialogue(it.node);
     else if (it.act === 'gate') {   // adventure; sealed until the King's first task (main story)
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
-      else st.startMode('ADVENTURE');   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
+      else if (readyForAdventure()) st.startMode('ADVENTURE');   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
     }
     else if (it.act === 'tower') { if (gateFlags.tower) events.emit('openSetOut', { mode: 'TOWER' }); }      // the Endless Tower building (a fallen tree keeps its door shut until the story opens it)
     else if (it.shop) st.openSpecificShop(it.shop);
@@ -389,6 +390,29 @@ export function interact(it: Interactable): void {
   if (it.act === 'loot') { lootPickup(it.node); return; }
   const c = world.crates[it.node];
   if (c && c.active && v.harvestCd <= 0) { hitCrate(c, 15, true); v.harvestCd = 0.3; v.miningT = 0.45; p.anim.attackT = 1; p.facing = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z); }
+}
+
+/** (owner 2026-10-25) Before an adventure: a full bag or 2 or fewer health potions stops the hero with a centred prompt
+ *  ("Open Shop" opens the Supplies shop: buy potions / sell items). Too poor for even one potion: 3 are given for free. */
+const MIN_POTIONS = 2, FREE_POTIONS = 3;
+function readyForAdventure(): boolean {
+  const st = useGameStore.getState(), ui = useUiStore.getState();
+  if (st.inventory.length >= st.maxInventorySlots) {
+    ui.askConfirm({ title: 'Your bag is full', body: 'There is no room for loot. Sell some items first, then set out.', confirmLabel: 'Open Shop', tone: 'primary', onConfirm: () => useGameStore.getState().openSpecificShop('SUPPLIES') });
+    return false;
+  }
+  if (potionCount(st.inventory, 'hp') > MIN_POTIONS) return true;
+  const potion = ITEMS_POOL.find((i) => i.id === 'potion_hp');
+  if (potion && st.gold >= shopPrice(potion)) {
+    ui.askConfirm({ title: 'Low on potions', body: `You only have ${potionCount(st.inventory, 'hp')} health potions. Buy some potions first.`, confirmLabel: 'Open Shop', tone: 'primary', onConfirm: () => useGameStore.getState().openSpecificShop('SUPPLIES') });
+    return false;
+  }
+  ui.askConfirm({ title: 'Low on potions', body: `You cannot afford potions right now, so the Supplies shop gives you ${FREE_POTIONS} health potions for free. Good luck out there!`, confirmLabel: 'Set Out', tone: 'primary', onConfirm: () => {
+    const g = useGameStore.getState();
+    for (const it of makeItemById('potion_hp', FREE_POTIONS)) g.addItemToInventory(it);
+    g.startMode('ADVENTURE');
+  } });
+  return false;
 }
 
 // ---- click-to-walk along the streets. The town's streets form a "+" through the plaza: the south street (z 10),
