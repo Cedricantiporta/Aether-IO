@@ -421,8 +421,9 @@ function fullMapClick(e: React.MouseEvent<HTMLCanvasElement>): void {
   const x = baked.x0 + (cx - fmT.ox) / fmT.k, z = baked.z0 + (cy - fmT.oy) / fmT.k;
   if (world.room.active) { clickMoveTo.on = true; clickMoveTo.x = x; clickMoveTo.z = z; }
   else walkTo(x, z, 'none', '', 0.8);
-  useFullMap.setState({ open: false });
+  fmGo.x = x; fmGo.z = z; fmGo.t = performance.now();   // (owner: the map stays open; a marker shows where the hero heads)
 }
+const fmGo = { x: 0, z: 0, t: -1e9 };
 const FullMap: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   const [title] = useState(() => (world.room.active ? 'Stage map' : world.village.area === 'TOWN' ? 'Kingdom map' : 'Map'));
@@ -462,6 +463,14 @@ const FullMap: React.FC = () => {
       else if (e.elite) { disc(ctx, x, y, 5.2 * u, '#2a1030'); disc(ctx, x, y, 4.2 * u, '#c084fc'); }
       else { disc(ctx, x, y, 3.8 * u, '#3a0a0a'); disc(ctx, x, y, 2.9 * u, C.red); }
     }
+    {   // the clicked walk target (while the hero is still heading there)
+      const going = world.room.active ? clickMoveTo.on : world.village.go.on;
+      if (going && performance.now() - fmGo.t < 60000) {
+        const gx = sx(fmGo.x), gy = sy(fmGo.z), pr = 1 + Math.sin(now * 6) * 0.15;
+        ctx.lineWidth = 2.4 * u; ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.arc(gx, gy, 8 * u * pr, 0, Math.PI * 2); ctx.stroke();
+        disc(ctx, gx, gy, 3 * u, C.gold);
+      }
+    }
     const p = world.player, hx = sx(p.pos.x), hy = sy(p.pos.z), pulse = 1 + Math.sin(now * 5) * 0.15;
     ctx.globalAlpha = 0.35; disc(ctx, hx, hy, 12 * u * pulse, C.gold); ctx.globalAlpha = 1;
     const fx = Math.sin(p.facing), fz = Math.cos(p.facing), L = 11 * u, W = 7 * u, B = 4.6 * u;
@@ -472,7 +481,7 @@ const FullMap: React.FC = () => {
     <div className="fullmap-root pe" data-testid="full-map" onClick={close}>
       <div className="fullmap-card" onClick={(e) => e.stopPropagation()}>
         <div className="fullmap-head"><span>{title}</span><button className="fullmap-x" aria-label="Close map" onClick={close}>{'\u2715'}</button></div>
-        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there" />
+        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there (the map stays open)" />
         <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">Click the map to walk there · M / Esc to close</span></div>
       </div>
     </div>

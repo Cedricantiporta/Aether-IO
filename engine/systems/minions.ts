@@ -54,13 +54,17 @@ const tmp = new Vector3();
 function minionMul(): { dmg: number; life: number; haste: number } {
   const st = useGameStore.getState(), s = st.stats, wp = weaponPerk(st.equipment.weapon);
   const h = wp?.k === 'HORDE' ? hordeMul(wp.lv) : 1;
-  return { dmg: (1 + (s.minionDmg || 0)) * h, life: h, haste: 1 + (s.minionHaste || 0) };
+  // (owner 2026-10-25) flatter scaling: summons start stronger (BASE_MUL) but talents / gear / the wand perk count at UPG_K
+  const hk = 1 + UPG_K * (h - 1);
+  return { dmg: (1 + UPG_K * (s.minionDmg || 0)) * hk, life: hk, haste: 1 + UPG_K * (s.minionHaste || 0) };
 }
 
 /** Summons are permanent: they stay until slain (life 0 = permanent). */
 export const PERMANENT = 0;
 /** Skeleton tuning: move speed x0.8, damage x0.7, attack speed x0.7 (attack interval / 0.7). */
 const SPEED_MUL = 0.8, DMG_MUL = 0.7, ATK_SPD_MUL = 0.7;
+/** (owner 2026-10-25) necro scaling: every summon +35% damage and HP at the base, upgrades (talents, gear, perk, skill level) count less. */
+const BASE_MUL = 1.35, UPG_K = 0.6;
 let bornSeq = 0;
 let ultHold = 0;   // the ult cooldown frozen while the ult army stands
 
@@ -87,20 +91,21 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   if (!m) return;
   m.active = true; m.kind = kind; m.x = x; m.z = z; m.facing = world.player.facing;
   m.life = m.maxLife = life <= 0 ? Infinity : dropped ? life : life * mm.life;   // (the ult golem lasts exactly its timer)
-  m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.04 : 1);   // (the bone golem hits 4% harder: 1.3 x 0.8)
+  m.dmg = dmg * mm.dmg * DMG_MUL * BASE_MUL * (kind === MINION_GOLEM ? 1.04 : 1);   // (the bone golem hits 4% harder: 1.3 x 0.8)
   m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
   m.shield = 0; m.shieldT = 0; m.burnT = m.poisonT = m.stunT = m.slowT = 0; m.burnDps = m.poisonDps = 0;
   m.rise = dropped ? 0 : 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
-  // skeleton warriors grow with Raise Dead's level: +10% HP and +4% damage reduction per level (max 40%)
+  // skeleton warriors grow with Raise Dead's level: +5% HP and +2% damage reduction per level (max 20%)
   const rdLv = Math.max(1, useGameStore.getState().skillLevels.q || 1), warrior = kind === MINION_WARRIOR;
   m.hp = m.maxHp = st.maxHealth * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.22)   // Raise Dead skeletons +30% HP; archers / mages are frail (0.22, was 0.3)
     * 1.2                                                    // every summon +20% HP
-    * (warrior ? 1 + 0.1 * (rdLv - 1) : 1)
+    * (warrior ? 1 + 0.05 * (rdLv - 1) : 1)                 // (+5% per Raise Dead level; was 10%)
+    * BASE_MUL
     * (src === SRC_RAISE ? 1.5 : 1)                         // Raise Dead skeletons: +50% HP
-    * (1 + (st.minionLife || 0) * 0.1) * mm.life;   // minionLife talent: +10% HP per point; HORDE perk too
-  m.def = (warrior ? Math.min(0.4, 0.04 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE && (warrior || kind === MINION_GOLEM) ? 0.1 : 0);   // Raise Dead warriors: +10% defense (archers / mages get none)
+    * (1 + (st.minionLife || 0) * 0.1 * UPG_K) * mm.life;   // minionLife talent: +6% HP per point (x UPG_K); HORDE perk too
+  m.def = (warrior ? Math.min(0.2, 0.02 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE && (warrior || kind === MINION_GOLEM) ? 0.1 : 0);   // Raise Dead warriors: +10% defense (archers / mages get none)
   m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
   if (!dropped) events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }

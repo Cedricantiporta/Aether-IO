@@ -488,16 +488,16 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
         // random warrior / archer / mage, at least one of each in the army
-        spawnMinion(pickRaiseKind(), p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9, PERMANENT, 1);
+        spawnMinion(pickRaiseKind(), p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9 / Math.sqrt(lvMul(lv)), PERMANENT, 1);   // (owner: skill level counts as sqrt)
       }
       announce('RAISE_DEAD');
     } else if (slot === 'e') {   // SOUL STEP: blink, bone shards burst where you stood
       if (dashAuto && !aimOverride.on) {
         const md = moveDir(tgt) ? tgt.clone() : new Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
         aimOverride.on = true; aimOverride.x = p.pos.x + md.x * 8; aimOverride.z = p.pos.z + md.z * 8;   // (shorter dash range)
-        aimPoint(11 + 0.5 * lv, 4, tgt);
+        aimPoint(9.5 + 0.4 * lv, 4, tgt);
         aimOverride.on = false;
-      } else aimPoint(11 + 0.5 * lv, 4, tgt);
+      } else aimPoint(9.5 + 0.4 * lv, 4, tgt);   // (owner 2026-10-25: Soul Step a bit shorter; was 11 + 0.5 / lv)
       safeSpot(tgt);
       p.dashIframes = true;
       const from = p.pos.clone(), R = 5 + 0.3 * (lv - 1);
@@ -518,8 +518,8 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       events.emit('shockwave', { pos: p.pos.clone(), radius: 6, color: 0xb48cff });
       announce('BONE_WARD');
     } else {   // PLAGUE GROUND: a cursed patch; the fallen rise for you
-      aimPoint(26, 7.5, tgt);
-      const R = 7.5 + 0.4 * (lv - 1);
+      aimPoint(20, 6.5, tgt);   // (owner 2026-10-25: a bit shorter / smaller; was 26 m, 7.5 m)
+      const R = 6.5 + 0.3 * (lv - 1);
       mkZone('CURSE', tgt.x, tgt.z, R, 5 + 0.3 * lv, b * 0.6, 0x9a3aff);
       abilityState.curseRaise = 2 + Math.floor(lv / 2);
       announce('CURSE_FIELD');

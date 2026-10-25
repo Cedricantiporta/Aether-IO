@@ -56,7 +56,7 @@ const AUTO_TARGET_RANGE = 22;
 /** Basic attack reach: class base (archer 16.5, owner: a bit shorter) + the attackRange stat (DEX, talents, bows, gear lines). */
 export const heroRange = (st: { hero: string; stats: { attackRange?: number } }): number => (ATTACK_RANGE[st.hero] ?? 18) + (st.stats.attackRange || 0);
 /** Basic-attack range per class: used for the AUTO-battle bot, the chase ring and the town hermit hits (manual attacks fire at any range). */
-const ATTACK_RANGE: Record<string, number> = { ARCHER: 16.5, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 17 };   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
+const ATTACK_RANGE: Record<string, number> = { ARCHER: 16.5, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 15 };   // (owner 2026-10-25: necro 15, was 17)   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
 const STOP_TO_FIRE_DELAY = 0.12;
 /** Move-speed multiplier right after a basic attack / cast: every class can attack while walking, a bit slower (owner: ~12%). */
 const ATTACK_MOVE_MUL = 0.88;

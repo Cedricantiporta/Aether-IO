@@ -60,8 +60,8 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 11,   // (owner: 11 s; was 16.2)
-      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. The cooldown only starts once the last skeleton has fallen, and every summon slain costs you 9% of your max HP. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 4 / 5 / 5), +10% skeleton HP and +4% skeleton damage reduction per level.',
-      per: (lv) => `${[2, 3, 4, 5, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * lvMul(lv))} dmg per hit · +${(lv - 1) * 10}% HP · ${Math.min(40, (lv - 1) * 4)}% armour` },
+      desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. The cooldown only starts once the last skeleton has fallen, and every summon slain costs you 9% of your max HP. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 4 / 5 / 5), +5% skeleton HP and +2% skeleton damage reduction per level.',
+      per: (lv) => `${[2, 3, 4, 5, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * 1.35 * Math.sqrt(lvMul(lv)))} dmg per hit · +${(lv - 1) * 5}% HP · ${Math.min(20, (lv - 1) * 2)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
       desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
       per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
@@ -70,7 +70,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       per: (lv) => `shield ${Math.round((0.3 + 0.05 * (lv - 1)) * 100)}% of each summon's max HP · ${8 + lv - 1}s` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
-      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.4 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },
+      per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(6.5 + 0.3 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },
   ],
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
