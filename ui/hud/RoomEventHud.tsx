@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { OBJ_NAME, TWIST_NAME, TWIST_DESC } from '../../engine/roomDefs';
+import { useGameStore } from '../../store';
 
 export const RoomEventHud: React.FC = () => {
   const box = useRef<HTMLDivElement>(null), title = useRef<HTMLDivElement>(null), line = useRef<HTMLDivElement>(null);
@@ -25,7 +26,8 @@ export const RoomEventHud: React.FC = () => {
         st.maskComposite = 'intersect'; st.webkitMaskComposite = 'source-in';
       }
     }
-    const show = live && (!!e.obj || !!e.twist);
+    const tips = useGameStore.getState().settings.roomTips === true;   // (owner) twist explanations only when enabled in Settings
+    const show = live && (!!e.obj || (!!e.twist && (tips || e.twist === 'DARK')));
     let t = '', l = '', k = -1, col = '#e8d6a8';
     if (show) {
       if (e.obj) {
@@ -39,7 +41,7 @@ export const RoomEventHud: React.FC = () => {
         else if (e.obj === 'HUNT') { l = e.enemy >= 0 ? `Kill the marked monster: ${Math.max(0, Math.ceil(e.tmax - e.t))}s` : 'Marking the bounty...'; if (e.enemy >= 0) k = Math.max(0, 1 - e.t / e.tmax); }
       }
       if (e.twist === 'DARK' && !e.obj) { t = TWIST_NAME.DARK; l = e.lifted ? 'The darkness lifted' : 'Slay the glowing Shadowcaster to lift the darkness'; col = '#e6dcc4'; }
-      else if (e.twist) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#e6dcc4'; void tw; }
+      else if (e.twist && tips) { const tw = `${TWIST_NAME[e.twist]}: ${TWIST_DESC[e.twist]}`; if (!t) { t = TWIST_NAME[e.twist]; l = TWIST_DESC[e.twist]; } else l += ` · ${TWIST_NAME[e.twist]}`; if (!e.obj) col = '#e6dcc4'; void tw; }
     }
     const s = `${show}|${t}|${l}|${col}`;
     if (s !== sig.current) {

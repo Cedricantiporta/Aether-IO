@@ -49,7 +49,8 @@ export interface Settings {
   batterySaver: boolean;  // FPS 30 + LOW quality
   cameraLead: boolean;    // desktop: the camera drifts toward the mouse cursor (off by default)
   freeCamera: boolean;    // off (default): fixed north-up "diorama" camera (Link's Awakening style); on: free orbit (yaw / pitch drag)
-  tiltShift: boolean;     // tilt-shift blur at the top + bottom of the screen (diorama look; on by default)
+  tiltShift: boolean;
+  roomTips: boolean;      // (owner 2026-10-25) show the room twist explanations (Spike Traps: ..., Cursed: ...) — off by default     // tilt-shift blur at the top + bottom of the screen (diorama look; on by default)
   aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)
   /** Hard mode (Settings): runs started while it is on use the HARD difficulty (tougher, more enemies, better loot). */
   hardMode?: boolean;

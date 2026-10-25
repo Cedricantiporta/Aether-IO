@@ -1316,12 +1316,15 @@ function interactHub(node: number): void {
 
 // ------------------------------------------------------------ frame ---------
 // ---- (owner 2026-10-25) stage timer: every run stage has a time limit (no soaking a room to drink potions / regen). Hidden until the
-// last STAGE_SHOW seconds (ui/hud/StageTimer shows it then); at 0 the hero takes STAGE_TICK damage every second until he leaves.
+// last STAGE_SHOW seconds (ui/hud/StageTimer shows it then); at 0 the hero takes stageTick() damage every second until he leaves. Danger rooms only.
 export const stageClock = { on: false, left: 0, max: 0, tick: 0 };
-const STAGE_SHOW = 30, STAGE_TICK = 10;
+const STAGE_SHOW = 30;
+/** (owner) time-up damage per second: 5 in the first biome, +5 per biome after */
+const stageTick = (): number => 5 + 5 * Math.max(0, world.room.biome);
 function resetStageClock(): void {
   const t = plan.type, sc = stageClock;
-  sc.on = !waves.on && !showcase.on;
+  const danger = t === 'COMBAT' || t === 'ELITE' || t === 'MINIBOSS' || t === 'DUEL' || t === 'BOSS' || t === 'TREASURE';   // (owner: not in safe rooms: fountain, merchant, camp, shrine ...)
+  sc.on = danger && !waves.on && !showcase.on;
   sc.max = t === 'BOSS' ? 360 : t === 'MINIBOSS' || t === 'DUEL' ? 240 : t === 'ELITE' ? 210 : t === 'COMBAT' ? 180 : 150;
   if (shape.kind === 'HALLS') sc.max += 60;   // the dungeon rooms are long walks
   sc.left = sc.max; sc.tick = 0;
@@ -1333,7 +1336,7 @@ function tickStageClock(dt: number): void {
   sc.left -= dt;
   if (sc.left > 0) return;
   sc.tick -= dt;
-  if (sc.tick <= 0) { sc.tick = 1; damagePlayer(STAGE_TICK / DMG_INFLATE, {}); }
+  if (sc.tick <= 0) { sc.tick = 1; damagePlayer(stageTick() / DMG_INFLATE, {}); }
 }
 
 export function updateDirector(dt: number): void {

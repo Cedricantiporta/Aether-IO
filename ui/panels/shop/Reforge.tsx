@@ -1,7 +1,7 @@
 // Blacksmith > Reforge: rework the blue bonus lines of a piece of gear (reforge.ts / store.reforgeItem). Reforge Stone =
-// reroll every line, or (Reroll on a line) just that one line; Tempering Oil = change the stat TYPE of every line but keep its
-// quality (perfect stays perfect); Binding Seal = lock a line (Stone + Oil skip it, lock stays on the item); Augment Rune = fill
-// an empty slot. Equipped gear can be reforged too.
+// reroll VALUES only (one line, or all unsealed lines); Tempering Oil = reroll the TYPES of all unsealed lines; Binding Seal =
+// lock a line (the all-lines Stone and the Oil skip it, lock stays on the item); Augment Rune = fill an empty slot.
+// Equipped gear can be reforged too.
 import React, { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../../store';
@@ -31,7 +31,8 @@ export const ReforgeTab: React.FC = () => {
     <div className="flex flex-col gap-3" data-testid="reforge-tab">
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">
         Rework the <b style={{ color: '#1f5fbf' }}>blue bonus lines</b> of your gear. A <b style={{ color: '#e0b21a' }}>perfect</b> line (yellow) rolls at 125% of its tier.{' '}
-        <b>Reforge Stone</b> rerolls lines, <b>Tempering Oil</b> swaps what each line is but keeps its quality, <b>Binding Seal</b> locks a line so neither touches it.
+        <b>Reforge Stone</b> rerolls the <i>values</i> only (the stat stays: Crit DMG 1% → Crit DMG 2%), on one line or all lines.{' '}
+        <b>Tempering Oil</b> rerolls the <i>types</i> of all lines (new stats). <b>Binding Seal</b> locks a line so the all-lines rerolls skip it.
         Tools come from the Gem Shop, the travelling merchant and boss chests.
       </div>
       <div className="rpg-frame p-3 flex gap-3 items-start">
@@ -47,7 +48,7 @@ export const ReforgeTab: React.FC = () => {
                   {a.locked
                     ? <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem] flex items-center gap-1" onClick={() => go('UNSEAL', i)} data-testid={`unseal-${i}`} title="Take the seal off (free)"><Lock size={11} /> Sealed</button>
                     : <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('SEAL') < 1 || nLock >= cap} onClick={() => go('SEAL', i)} data-testid={`seal-${i}`} title={cap < 1 ? 'Needs 2+ bonus lines' : nLock >= cap ? 'Keep at least one open line' : 'Lock this line (1 Binding Seal)'}>Seal</button>}
-                  <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={a.locked || have('LINE') < 1} onClick={() => go('LINE', i)} data-testid={`reroll-line-${i}`} title="Reroll only this line (1 Reforge Stone)">Reroll</button>
+                  <button className="rpg-btn bevel pe px-2 py-0.5 text-[.68rem]" disabled={have('VALUE') < 1} onClick={() => go('VALUE', i)} data-testid={`reroll-line-${i}`} title="Reroll this line's value, same stat (1 Reforge Stone)">Reroll value</button>
                 </span>}
               </div>
             )) : null}
@@ -62,8 +63,8 @@ export const ReforgeTab: React.FC = () => {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || sel.rarity === 'COMMON' || !nFree || have('REROLL') < 1} onClick={() => go('REROLL')} data-testid="reforge-reroll">Reroll lines · {REFORGE_ITEM.REROLL.name} ({have('REROLL')})</button>
-        <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || !nFree || have('TEMPER') < 1} onClick={() => go('TEMPER')} data-testid="reforge-temper">Change line types · {REFORGE_ITEM.TEMPER.name} ({have('TEMPER')})</button>
+        <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || !nFree || have('VALUE') < 1} onClick={() => go('VALUE')} data-testid="reforge-reroll">Reroll all values · {REFORGE_ITEM.VALUE.name} ({have('VALUE')})</button>
+        <button className="rpg-btn bevel pe px-3 py-1.5" disabled={!sel || sel.rarity === 'COMMON' || !nFree || have('TEMPER') < 1} onClick={() => go('TEMPER')} data-testid="reforge-temper">Reroll all types · {REFORGE_ITEM.TEMPER.name} ({have('TEMPER')})</button>
         <span className="rpg-label self-center">{REFORGE_ITEM.SEAL.name}: {have('SEAL')} · {REFORGE_ITEM.ADD.name}: {have('ADD')}</span>
       </div>
       <div className="rpg-label">Your gear</div>
