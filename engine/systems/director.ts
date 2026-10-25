@@ -97,7 +97,7 @@ const burstEnd = [0, 0, 0, 0, 0, 0, 0, 0];
 const burstSize = [0, 0, 0, 0, 0, 0, 0, 0];
 // (owner 2026-10-25) HALLS ("dungeon") rooms: each burst fills ONE chamber ("sac"). The first is the chamber nearest the arrival; the next
 // opens only when every monster is down, in the nearest chamber to the hero not used yet (no chamber twice). More monsters overall.
-let sacMode = false, sacCur = -1, sacUsed = 0;
+let sacMode = false, sacCur = -1, sacUsed = 0, sacChain = 0;
 const SAC_MORE = 1.4;
 let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
@@ -479,7 +479,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
   const tower = runInfo.mode === 'TOWER' ? (daily.on ? 1.5 : waves.on ? waveCrowd(towerFloor) : 2) : 1;   // Endless Tower: twice the monsters per floor (Daily Trial: x1.5)
   sacMode = shape.kind === 'HALLS' && halls.chambers.length >= 2 && (plan.type === 'COMBAT' || plan.type === 'ELITE' || plan.type === 'TREASURE') && runInfo.mode !== 'TOWER';
-  sacUsed = 0; sacCur = -1;
+  sacUsed = 0; sacCur = -1; sacChain = 0;
   let points = Math.min(waveBudget(depth) * mult * roomy * tower * (sacMode ? SAC_MORE : 1), 160 * tower * (sacMode ? SAC_MORE : 1)) * mods.spawn;
   // (owner) the first quest, "Trial of the Meadow" (defeat slimes): while it is open the Greenwood packs carry a guaranteed slime group,
   // so it can always be finished in the first rooms of the first run
@@ -611,6 +611,26 @@ function sacPick(x: number, z: number): void {
     if (d < bd) { bd = d; best = i; }
   }
   sacCur = best; if (best >= 0) sacUsed |= 1 << best;
+  if (best >= 0 && sacChain === 0) sacRollChain();
+}
+/** (owner) sometimes 2-3 chambers wake together, more likely when the next one is close by. */
+function sacRollChain(): void {
+  const c = halls.chambers[sacCur]; if (!c) return;
+  let bd = 1e9;
+  for (let i = 0; i < halls.chambers.length && i < 31; i++) { if (sacUsed & (1 << i)) continue; const o = halls.chambers[i]; bd = Math.min(bd, Math.hypot(o[0] - c[0], o[1] - c[1])); }
+  if (bd > 1e8) return;
+  const p = bd < 34 ? 0.45 : 0.15;
+  if (Math.random() < p) sacChain = Math.random() < p * 0.5 ? 2 : 1;
+}
+/** An unused chamber the hero has walked close to (it wakes early), or -1. */
+function sacNear(): number {
+  const pp = world.player.pos;
+  for (let i = 0; i < halls.chambers.length && i < 31; i++) {
+    if (sacUsed & (1 << i)) continue;
+    const c = halls.chambers[i];
+    if ((pp.x - c[0]) ** 2 + (pp.z - c[1]) ** 2 < (c[2] + 6) ** 2) return i;
+  }
+  return -1;
 }
 /** A spawn spot inside the current sac (kept off the hero when possible). */
 function sacAnchor(minPlayerDist: number): boolean {
@@ -777,8 +797,11 @@ function tickSpawns(dt: number): void {
     }
   } else if (curBurst + 1 < bursts) {
     burstT += dt;
-    if (sacMode) {   // the next chamber wakes only when this one is cleared (nearest unused chamber to the hero)
-      if (d.aliveCount + pending === 0) { curBurst++; burstT = 0; groupIdx = 0; sacPick(world.player.pos.x, world.player.pos.z); }
+    if (sacMode) {   // the next chamber wakes when: chained with this one (nearby sacs together), the hero walks close to it, or every monster is down
+      const near = sacNear();
+      if (sacChain > 0) { const c = halls.chambers[sacCur]; sacChain--; curBurst++; burstT = 0; groupIdx = 0; const keep = sacChain; sacChain = -1; sacPick(c[0], c[1]); sacChain = keep; }
+      else if (near >= 0) { curBurst++; burstT = 0; groupIdx = 0; sacCur = near; sacUsed |= 1 << near; sacRollChain(); }
+      else if (d.aliveCount + pending === 0) { curBurst++; burstT = 0; groupIdx = 0; sacPick(world.player.pos.x, world.player.pos.z); }
     } else {
       const low = Math.max(3, Math.floor(burstSize[curBurst] * 0.6));   // (owner) stacking spawns: the next group arrives while this one still fights
       if (d.aliveCount + pending <= low || burstT > 7) { curBurst++; burstT = 0; }
