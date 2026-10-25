@@ -1027,6 +1027,12 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Such a lovely hall.', 'Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
+  // (owner 2026-10-25) a beggar beside the plaza fountain: 1,000 gold a day, ten days in a row = 60,000 back (engine/beggar.ts)
+  {
+    name: 'Old Tobin', role: 'Beggar', model: 'ROGUE', tint: '#bfae92', scale: 0.95, prop: 'none', accent: '#c9b48a', home: [-4.6, 7.4], noHat: true, tunic: '#8a7a62',
+    talk: [['Spare a coin?']],
+    bubbles: ['Spare a coin, friend?', 'Bless you.', 'Cold night tonight...', 'I was somebody once.'],
+  },
   // (owner 2026-10-25) the castle wings: a cook in the kitchen, guards in the dining hall and the treasury
   {
     name: 'Cook Bramble', role: 'Castle Cook', model: 'BARBARIAN', tint: '#fff4e6', scale: 1.05, prop: 'none', accent: '#ffb27a', home: [-31.6, 14.4], speed: 1.1, area: 'CASTLE', noHat: true, tunic: '#f8f4ec',

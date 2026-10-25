@@ -13,6 +13,7 @@ import { storyTalk, acceptStory, rewardText } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo, heardLines, npcRewardText } from './npcQuestLogic';
 import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel, npcQuestProgress, type NpcQuestDef } from '../../npcQuests';
 import { takeNews } from '../npcLines';
+import { BEGGAR_NAME, BEGGAR_GIFT, BEGGAR_DAYS, BEGGAR_REWARD, beggarStreak, beggarGaveToday, donateToBeggar } from '../beggar';
 
 /** `offer`: quest offered on the last line (Accept / Later; `story:<step>` = main quest); `turnIn`: NPC quest id paid out
  *  when line `turnInAt` is reached; `hint`: small objective / reward line shown under the LAST line. */
@@ -73,8 +74,27 @@ function meetBeats(name: string): string[] {
   return ['There you are! I have been waiting for you.', `${step.line}. I am counting on you.`];
 }
 
+/** (owner) The beggar: a daily 1,000 gold donation, ten days in a row pays 60,000 back (engine/beggar.ts). */
+function beggarDialogue(npc: number): void {
+  const d = NPCS[npc], st = useGameStore.getState();
+  const streak = beggarStreak();
+  if (beggarGaveToday()) { openCustomDialogue(d.name, d.role, d.accent, [`Bless you, friend. ${streak} day${streak === 1 ? '' : 's'} in a row now. Same time tomorrow?`]); return; }
+  const lines = [streak > 0 ? `You came back! ${streak} day${streak === 1 ? '' : 's'} in a row. Could you spare another 1,000 gold today?` : 'Spare a little gold for an old man? 1,000 would buy bread for a week... or a day. I am very hungry.', `(${streak} / ${BEGGAR_DAYS} days in a row. Miss a day and the count starts over.)`];
+  openCustomDialogue(d.name, d.role, d.accent, lines, { label: `Give ${BEGGAR_GIFT.toLocaleString()} gold`, accept: () => {
+    const r = donateToBeggar();
+    if (r === 'poor') { st.addNotification(`You need ${BEGGAR_GIFT.toLocaleString()} gold.`, 'red', 'WARNING'); return; }
+    if (r === 'done') {
+      openCustomDialogue(d.name, d.role, d.accent, ['Ten days. Ten days you never forgot an old man.', 'I was a merchant prince once, before the Dimming. I hid my fortune and waited for one kind soul.', `Take it, all of it: ${BEGGAR_REWARD.toLocaleString()} gold. I am going home now. Thank you, friend.`]);
+      st.addNotification(`${d.name} repaid your kindness: ${BEGGAR_REWARD.toLocaleString()} gold!`, '#ffd27a', 'SYSTEM');
+      return;
+    }
+    st.addNotification(`You gave ${BEGGAR_GIFT.toLocaleString()} gold to ${d.name}. (${beggarStreak()} / ${BEGGAR_DAYS})`, '#ffd27a', 'SYSTEM');
+  } });
+}
+
 export function openDialogue(npc: number): void {
   const d = NPCS[npc]; if (!d) return;
+  if (d.name === BEGGAR_NAME) { beggarDialogue(npc); return; }
   const meet = meetBeats(d.name);
   let ci: number;
   if (d.ordered) { ci = guideStep[npc]; guideStep[npc] = (ci + 1) % d.talk.length; }
