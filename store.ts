@@ -115,7 +115,7 @@ const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.7, sfxVolume: 0.8, musicVolume: 0.4, quality: _dd.quality,
   showDamageNumbers: true, screenShake: true, autoPotions: true, clickMove: true,
   autoAim: _dd.autoAim, autoQuality: true, fpsLimit: _dd.fpsLimit, showFps: false, uiScale: _dd.uiScale,
-  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, freeCamera: false, tiltShift: true, roomTips: false, autoChase: false, autoLootGear: 'UNCOMMON', autoLootMaterials: true, autoLootRange: 'NEAR', autoLootOnClear: false,
+  showEnemyBars: true, showMinimap: true, vibration: true, joystickSide: 'LEFT', batterySaver: false, castMode: 'AIMED', autoSkills: false, aimAtCursor: false, cameraLead: false, freeCamera: false, tiltShift: true, roomTips: false, autoChase: false, autoNextSac: false, autoLootGear: 'UNCOMMON', autoLootMaterials: true, autoLootRange: 'NEAR', autoLootOnClear: false,
 };
 
 const EMPTY_EQUIPMENT: Equipment = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, accessory: null, pet: null, tool: null };

@@ -41,6 +41,8 @@ export const halls = {
   chambers: [] as [number, number, number][],
   /** size class of each chamber (parallel to `chambers`): 0 small, 1 medium, 2 big */
   classes: [] as number[],
+  /** linear route (owner 2026-10-25): chamber indexes in visiting order, start chamber first, exit chamber last, a dead-end pocket right after the chamber it hangs off */
+  order: [] as number[],
   /** the procedural generator gave up for this seed and a fixed template was used (stats / QA) */
   fellBack: false,
   /** points along the passage centre lines (>= 9 m from the start / exit, ~10 m apart): some monsters are placed here (director.pickAnchor) */
@@ -278,7 +280,7 @@ interface Inst {
   segs: number[];            // flat: ax, az, bx, bz, halfWidth
   islands: [number, number, number][]; statues: [number, number][]; arches: [number, number, number][];
   start: [number, number]; exit: [number, number]; hub: [number, number];
-  keep: [number, number, number][]; castle: boolean;
+  keep: [number, number, number][]; castle: boolean; order?: number[];
   mnx: number; mnz: number; mxx: number; mxz: number;
 }
 
@@ -332,7 +334,7 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
 
 /** Procedural plan -> instance (world = plan: the hub chamber is at the origin) */
 function instFromGen(G: GenOut): Inst {
-  const out: Inst = { blobs: [], segs: [], islands: [], statues: [], arches: [], start: [G.start[0], G.start[1]], exit: [G.exit[0], G.exit[1]], hub: [0, 0], keep: [], castle: G.castle, mnx: 1e9, mnz: 1e9, mxx: -1e9, mxz: -1e9 };
+  const out: Inst = { blobs: [], segs: [], islands: [], statues: [], arches: [], start: [G.start[0], G.start[1]], exit: [G.exit[0], G.exit[1]], hub: [0, 0], keep: [], castle: G.castle, order: G.order, mnx: 1e9, mnz: 1e9, mxx: -1e9, mxz: -1e9 };
   const ext = (x: number, z: number, r: number): void => { out.mnx = Math.min(out.mnx, x - r); out.mnz = Math.min(out.mnz, z - r); out.mxx = Math.max(out.mxx, x + r); out.mxz = Math.max(out.mxz, z + r); };
   for (const b of G.blobs) {
     out.blobs.push({ x: b.x, z: b.z, rx: b.rx, rz: b.rz, c: Math.cos(b.rot), s: Math.sin(b.rot), kid: b.kid, box: b.box, hx: b.rx, hz: b.rz, cls: b.cls });
@@ -387,7 +389,7 @@ export function buildHallsLayout(type: string, R: number, seed: number, style: s
   const rnd = mulberry(seed ^ 0x3c6ef372);
   const marble = style === 'MARBLE';
   const tplVariant = force && force !== 'RANDOM' ? force : pickVariant(style, name, rnd);
-  const useGen = force === 'RANDOM' || (!force && rnd() < (marble ? 0.85 : 0.8));
+  const useGen = force === 'RANDOM' || !force;   // (owner 2026-10-25: maps are linear -> always the procedural chain; the fixed templates remain only as a QA force / last-resort fallback)
   halls.fellBack = false;
   if (useGen) {
     const count = pickCount(mulberry(seed ^ 0x1b873593), type);   // (chosen once; later attempts lose a chamber when the plan will not fit)
@@ -591,6 +593,11 @@ function finishMask(I: Inst): void {
   halls.islands = I.islands.slice();
   halls.chambers = I.blobs.map((b) => [b.x, b.z, Math.min(b.rx, b.rz)] as [number, number, number]);
   halls.classes = I.blobs.map((b) => b.cls ?? classOfR(Math.min(b.rx, b.rz)));
+  if (I.order) halls.order = I.order.slice();
+  else {   // fixed template (QA only): nearest the arrival first
+    const ds = halls.chambers.map((c) => Math.hypot(c[0] - I.start[0], c[1] - I.start[1]));
+    halls.order = halls.chambers.map((_, i) => i).sort((a, b) => ds[a] - ds[b]);
+  }
   halls.keep = I.keep.slice();
   halls.statues = I.statues.slice(); halls.arches = I.arches.slice();
 }

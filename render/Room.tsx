@@ -905,8 +905,17 @@ function Portals() {
     for (let i = 0; i < 4; i++) {
       const g = groups.current[i], L = lifts.current[i]; if (!g || !L) continue;
       const p = world.room.portals[i];
-      g.visible = p.active;
-      if (!p.active) { last.current[i] = -1; continue; }
+      g.visible = p.active || p.pre === true;
+      if (!p.active) {   // (HALLS) a dormant arch: only the dim stone + runes stand there (no vortex, ring, label)
+        last.current[i] = -1;
+        if (p.pre) {
+          g.position.set(p.x, 0, p.z); g.scale.setScalar(1);
+          const L0 = lifts.current[i]; if (L0) { L0.position.y = 0; L0.rotation.z = 0; }
+          runeMats[i].color.setRGB(0.22, 0.22, 0.24);
+          vortexMats[i].uniforms.uAlpha.value = 0; sigilMats[i].opacity = 0; innerMats[i].opacity = 0;
+        }
+        continue;
+      }
       const sc = p.big ? 2.1 : 1;
       g.position.set(p.x, 0, p.z); g.scale.setScalar(sc);
       const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0) + (p.plan.shortcut ? 250 : 0);
@@ -916,9 +925,10 @@ function Portals() {
         runeMats[i].color.copy(cols[i]).multiplyScalar(2.0); vortexMats[i].uniforms.uColor.value.copy(cols[i]); sigilMats[i].color.copy(cols[i]); innerMats[i].color.copy(cols[i]);
       }
       // rise out of the ground (ease-out with a little settle), then the vortex ignites
-      const k = Math.min(1, p.t / RISE), e = 1 - Math.pow(1 - k, 3), settle = k < 1 ? 0 : Math.max(0, 0.06 * Math.sin(Math.min(1, (p.t - RISE) / 0.35) * Math.PI));
+      const pre = p.pre === true, tt = pre ? p.t + RISE * 0.8 : p.t;   // (an arch that already stood there only ignites)
+      const k = pre ? 1 : Math.min(1, p.t / RISE), e = 1 - Math.pow(1 - k, 3), settle = pre || k < 1 ? 0 : Math.max(0, 0.06 * Math.sin(Math.min(1, (p.t - RISE) / 0.35) * Math.PI));
       L.position.y = -4.9 * (1 - e) - settle; L.rotation.z = (1 - e) * 0.05 * Math.sin(t * 40);   // (tremble while rising)
-      const ign = Math.min(1, Math.max(0, (p.t - RISE * 0.8) / 0.6));
+      const ign = Math.min(1, Math.max(0, (tt - RISE * 0.8) / 0.6));
       vortexMats[i].uniforms.uTime.value = t + i * 3; vortexMats[i].uniforms.uAlpha.value = ign * (0.85 + 0.15 * Math.sin(t * 2.3 + i));
       runeMats[i].color.copy(cols[i]).multiplyScalar(0.4 + 1.8 * ign * (0.8 + 0.2 * Math.sin(t * 3 + i)));
       sigilMats[i].opacity = (0.25 + 0.3 * ign) * (0.8 + 0.2 * Math.sin(t * 2.5 + i)); innerMats[i].opacity = 0.08 + 0.14 * ign;

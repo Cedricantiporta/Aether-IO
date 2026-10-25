@@ -28,7 +28,7 @@ import { runMods, runInfo, veteran } from '../runMods';
 import {
   BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef, capCard, useCard, cardBudget,
 } from '../roomDefs';
-import { shape, insideShape } from '../roomShape';
+import { shape, insideShape, fixed } from '../roomShape';
 import { camp, campStartFacing } from '../campPaths';
 import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { showcase, showcaseVictory, SHOWCASE_BIOME, SHOWCASE_DEPTH } from '../showcase';
@@ -318,7 +318,10 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;
-  for (const po of r.portals) po.active = false;
+  for (const po of r.portals) { po.active = false; po.pre = false; }
+  if (shape.kind === 'HALLS' && !fixed.on && runInfo.mode !== 'TOWER' && p.type !== 'BOSS') {   // (owner) HALLS: the exit arches already stand in the last chamber, dormant until the room is cleared
+    for (let i = 0; i < 2; i++) { portalSlot(i, 2, r.radius, slot); const po = r.portals[i]; po.pre = true; po.x = slot[0]; po.z = slot[1]; }
+  }
   for (const m of r.markers) m.active = false;
   const [cx, cz] = stationPos(R);
   campPos.storage[0] = cx - 6; campPos.storage[1] = cz; campPos.trainer[0] = cx + 6; campPos.trainer[1] = cz; campPos.fire[0] = cx; campPos.fire[1] = cz + 1; campPos.anvil[0] = cx - 3.2; campPos.anvil[1] = cz + 5;
@@ -604,25 +607,39 @@ function placeMarker(kind: EnemyKind, x: number, z: number, elite: boolean, dur:
   return true;
 }
 
-/** The unused chamber nearest (x, z) becomes the current sac. */
+/** The next unused chamber along the linear route (halls.order: start first, exit last) = -1 when every chamber has woken. */
+function sacNextIdx(): number {
+  const o = halls.order;
+  for (let k = 0; k < o.length; k++) { const i = o[k]; if (i < 31 && !(sacUsed & (1 << i))) return i; }
+  for (let i = 0; i < halls.chambers.length && i < 31; i++) if (!(sacUsed & (1 << i))) return i;   // (no order: any unused one)
+  return -1;
+}
+/** The next chamber of the route becomes the current sac (x, z unused: the map is linear now). */
 function sacPick(x: number, z: number): void {
-  let best = -1, bd = 1e9;
-  for (let i = 0; i < halls.chambers.length && i < 31; i++) {
-    if (sacUsed & (1 << i)) continue;
-    const c = halls.chambers[i], d = (c[0] - x) ** 2 + (c[1] - z) ** 2;
-    if (d < bd) { bd = d; best = i; }
-  }
+  void x; void z;
+  const best = sacNextIdx();
   sacCur = best; if (best >= 0) sacUsed |= 1 << best;
   if (best >= 0 && sacChain === 0) sacRollChain();
 }
 /** (owner) sometimes 2-3 chambers wake together, more likely when the next one is close by. */
 function sacRollChain(): void {
   const c = halls.chambers[sacCur]; if (!c) return;
-  let bd = 1e9;
-  for (let i = 0; i < halls.chambers.length && i < 31; i++) { if (sacUsed & (1 << i)) continue; const o = halls.chambers[i]; bd = Math.min(bd, Math.hypot(o[0] - c[0], o[1] - c[1])); }
-  if (bd > 1e8) return;
+  const nx = sacNextIdx();
+  if (nx < 0) return;
+  const bd = Math.hypot(halls.chambers[nx][0] - c[0], halls.chambers[nx][1] - c[1]);
   const p = bd < 34 ? 0.45 : 0.15;
   if (Math.random() < p) sacChain = Math.random() < p * 0.5 ? 2 : 1;
+}
+/** Auto-walk (setting 'Auto: walk to next area', read by systems/player.ts): where the hero should walk when no monster is near. 0 = nowhere, 1 = the sac that is awake
+ *  (the next one along halls.order wakes as soon as the previous one is beaten), 2 = the exit chamber (every sac beaten / room cleared). Fills out.x / out.z. */
+export function sacWalkGoal(out: { x: number; z: number }): number {
+  const d = world.director;
+  if (!sacMode || shape.kind !== 'HALLS' || (d.phase !== 'FIGHT' && d.phase !== 'CLEARED')) return 0;
+  const t = world.room.plan.type;
+  if (t !== 'COMBAT' && t !== 'ELITE' && t !== 'TREASURE') return 0;
+  if (d.phase === 'CLEARED' || (nextUnit >= unitN && curBurst + 1 >= bursts && d.aliveCount === 0 && activeMarkers() === 0)) { out.x = halls.ex; out.z = halls.ez; return 2; }
+  const c = halls.chambers[sacCur]; if (!c) return 0;
+  out.x = c[0]; out.z = c[1]; return 1;
 }
 /** An unused chamber the hero has walked close to (it wakes early), or -1. */
 function sacNear(): number {

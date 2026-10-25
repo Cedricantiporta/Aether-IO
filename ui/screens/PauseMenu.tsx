@@ -109,6 +109,7 @@ export const SettingsDialog: React.FC = () => {
           <Sec title="Combat">
             {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
             {tog('Hard mode', 'hardMode', hardUnlocked ? 'Enemies have +40% HP, deal +35% damage and come in greater numbers. Rewards: +50% gold and XP, better item and card rarity odds. Takes effect from your next run.' : 'Clear a full run to unlock', !hardUnlocked)}
+            {tog('Auto: walk to next area', 'autoNextSac', 'In dungeon stages, after the monsters of an area are beaten your hero walks to the next area by itself. Any movement input takes over.')}
             {tog('Auto: chase enemies', 'autoChase', 'With AUTO on, your hero walks to enemies anywhere in the room. Off: AUTO only fights enemies in reach of an attack or skill; you do the walking.')}
             {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}

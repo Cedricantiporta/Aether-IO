@@ -220,8 +220,10 @@ export function shortcutPoint(out: [number, number]): void {
 /** Exit portal i of n: spread across the width at the front-most spot that keeps >= 5 of clearance to the outline. */
 export function portalPoint(i: number, n: number, out: [number, number]): void {
   if (shape.kind === 'HALLS' && !fixed.on) {   // the far end of the journey: the slots spread across the last chamber
-    const cap = Math.max(2, halls.exitHalf - 3.4), lat = n === 2 ? (i === 0 ? -1 : 1) * Math.min(4.8, cap) : n === 3 ? (i - 1) * Math.min(5.6, cap) : 0;
-    out[0] = halls.ex - halls.dz * lat; out[1] = halls.ez + halls.dx * lat;
+    const cap = Math.max(2, halls.exitHalf - 3.4), w = Math.min(4.8, cap);
+    // the two arches stand from the start (dormant): 1 door = the left arch, 2 doors = both, 3 doors (boss key) = both + one a little further back in the middle
+    const lat = n === 1 ? -w : i === 2 ? 0 : (i === 0 ? -1 : 1) * w, back = n === 3 && i === 2 ? 6 : 0;
+    out[0] = halls.ex - halls.dz * lat - halls.dx * back; out[1] = halls.ez + halls.dx * lat - halls.dz * back;
     return;
   }
   if (fixed.on) {   // the far end of the authored path: the slots spread across it
