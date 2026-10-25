@@ -5,7 +5,7 @@
 // minionTarget), so the skeletons hold the line.
 import { heroTrailAt } from './heroTrail';
 import { Vector3 } from 'three';
-import { world } from '../world';
+import { world, allocZone } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { nearestTrap, damageTrap } from './roomTraps';
@@ -114,6 +114,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
 
 function crumble(m: (typeof world.minions)[number]): void {
   m.active = false;
+  if (m.kind === MINION_GOLEM && m.src === SRC_ULT && world.player.alive) golemExplode(m.x, m.z, m.dmg);
   events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: m.kind === MINION_GOLEM ? 2.5 : 1.2, color: 0xd8d0b8 });
 }
 
@@ -200,11 +201,77 @@ function chainLightning(x: number, z: number, first: Enemy, dmg: number): void {
   }
 }
 
-export function clearMinions(): void { for (const m of world.minions) m.active = false; summonedN = 0; }
+// ---- bone golem extras (owner 2026-10-25): area slam, boulder lob, burning explosion when it ends
+const GOLEM_HIT_R = 3.4;
+const rockO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 1.5 };
+const boomO: DamageOpts = { kind: 'FIRE', source: 'PET', knockback: 2 };
+const boomBurn = { type: 'BURN' as const, duration: 4, value: 4 };
+const rockStun = { type: 'STUN' as const, duration: 0.5 };
+const ROCK_T = 0.9, ROCK_R = 3.6;
+const rocks = Array.from({ length: 4 }, () => ({ on: false, x: 0, z: 0, t: 0, dmg: 0 }));
+let rockCd = 0;
+function mkBurnPatch(x: number, z: number, r: number, life: number, dps: number): void {
+  const zn = allocZone();
+  if (!zn) return;
+  zn.active = true; zn.kind = 'FIRE'; zn.hostile = false;
+  zn.pos.set(x, 0, z); zn.radius = r; zn.life = zn.maxLife = life; zn.damage = dps; zn.color = 0xff5a1a;
+  zn.length = 0; zn.maxPull = 0; zn.tickT = 0; zn.aux = 1;   // aux 1 = real burn on everything inside (zones.fireTick)
+}
+/** The golem ends (timer out or slain): fiery blast + burn on everything near, and a burning patch for 5 s. */
+function golemExplode(x: number, z: number, dmg: number): void {
+  const R = 6;
+  boomBurn.value = Math.max(2, dmg * 0.4);
+  damageEnemiesInRadius(x, z, R, dmg * 2.5, boomO, boomBurn);
+  mkBurnPatch(x, z, R * 0.8, 5, dmg * 0.5);
+  tmp.set(x, 0, z);
+  events.emit('explosion', { pos: tmp.clone(), radius: R * 0.7, color: 0xff6a2a });
+  events.emit('shockwave', { pos: tmp.clone(), radius: R * 1.4, color: 0xffa050 });
+  events.emit('crater', { pos: tmp.clone(), radius: R * 0.45, color: 0x1a0c08 });
+}
+/** Every 4-6 s, if an enemy is 6-16 m away: lob a boulder (telegraphed by a shadow circle) that lands after ROCK_T. */
+function golemRockAI(m: (typeof world.minions)[number], dt: number, e: Enemy | null): void {
+  rockCd -= dt;
+  if (rockCd > 0 || m.rise > 0) return;
+  const ids2 = world.enemyGrid.query(m.x, m.z, 16, ids);
+  let best: Enemy | null = null, bd = 1e9;
+  for (let k = 0; k < ids2.length; k++) {
+    const c = world.enemies[ids2[k]];
+    if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || c.hideT > 0) continue;
+    const d2 = (c.pos.x - m.x) ** 2 + (c.pos.z - m.z) ** 2;
+    if (d2 < 36 || d2 > 256) continue;
+    if (d2 < bd) { bd = d2; best = c; }
+  }
+  if (!best) { rockCd = 0.5; return; }
+  for (let k = 0; k < rocks.length; k++) {
+    const r = rocks[k]; if (r.on) continue;
+    r.on = true; r.x = best.pos.x; r.z = best.pos.z; r.t = ROCK_T; r.dmg = m.dmg * 1.5;
+    const zn = allocZone();
+    if (zn) { zn.active = true; zn.kind = 'METEOR_SHADOW'; zn.hostile = false; zn.pos.set(r.x, 0, r.z); zn.radius = ROCK_R; zn.life = zn.maxLife = ROCK_T; zn.damage = 0; zn.color = 0xb8a888; zn.length = 0; zn.maxPull = 0; zn.tickT = 0; }
+    m.swing = 1;
+    break;
+  }
+  rockCd = 4 + Math.random() * 2;
+}
+function updateRocks(dt: number): void {
+  for (let k = 0; k < rocks.length; k++) {
+    const r = rocks[k]; if (!r.on) continue;
+    r.t -= dt;
+    if (r.t > 0) continue;
+    r.on = false;
+    damageEnemiesInRadius(r.x, r.z, ROCK_R, r.dmg, rockO, rockStun);
+    tmp.set(r.x, 0, r.z);
+    events.emit('explosion', { pos: tmp.clone(), radius: ROCK_R * 0.6, color: 0xb8a888 });
+    events.emit('shockwave', { pos: tmp.clone(), radius: ROCK_R * 1.2, color: 0xb8a888 });
+    events.emit('crater', { pos: tmp.clone(), radius: ROCK_R * 0.4, color: 0x1a1208 });
+  }
+}
+
+export function clearMinions(): void { for (const m of world.minions) m.active = false; summonedN = 0; for (const r of rocks) r.on = false; rockCd = 0; }
 export function minionCount(kind = -1, src = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind) && (src < 0 || m.src === src)) n++; return n; }
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
+  updateRocks(dt);
   updateAlly(dt);   // the run ally lives in a minion slot but has its own brain
   let slotI = 0, army = false, raised = false;
   let alive = 0;
@@ -241,7 +308,7 @@ export function updateMinions(dt: number): void {
     if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
     if (m.skillT > 0) m.skillT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 3.2 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
+    const reach = golem ? 4.8 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 / 1.2 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
@@ -283,7 +350,7 @@ export function updateMinions(dt: number): void {
       mv = dt > 0 ? s / (speed * dt) : 0;
     }
     // bodies: never stand inside a monster or another summon (pushed out to touching distance)
-    const mr = golem ? 1.3 : 0.55;
+    const mr = golem ? 1.95 : 0.55;
     const near = world.enemyGrid.query(m.x, m.z, mr + 6, ids);
     for (let k = 0; k < near.length; k++) {
       const c = world.enemies[near[k]];
@@ -294,20 +361,21 @@ export function updateMinions(dt: number): void {
     for (let k = 0; k < M.length; k++) {
       if (k === i) continue;
       const o = M[k]; if (!o.active || o.rise > 0) continue;
-      const ox = m.x - o.x, oz = m.z - o.z, min = mr + (o.kind === MINION_GOLEM ? 1.3 : 0.55), o2 = ox * ox + oz * oz;
+      const ox = m.x - o.x, oz = m.z - o.z, min = mr + (o.kind === MINION_GOLEM ? 1.95 : 0.55), o2 = ox * ox + oz * oz;
       if (o2 < min * min && o2 > 1e-6) { const od = Math.sqrt(o2), push = (min - od) * 0.5; m.x += (ox / od) * push; m.z += (oz / od) * push; }
     }
     m.mv += (mv - m.mv) * Math.min(1, dt * 10);
     m.walk += dt * speed * m.mv * (golem ? 0.9 : 1.6);
     if (d > 0.05) m.facing = Math.atan2(dx, dz);
     m.atkT -= dt;
+    if (golem && m.src === SRC_ULT) golemRockAI(m, dt, e);
     if (tr && d <= stop + 0.3 && m.atkT <= 0) {
       m.atkT = cd; m.swing = 1;
       if (mage) { const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 1, pierce: 1, radius: 0.9, y: 1.2 }); if (p) p.tint = 9; }
       else if (bow) { const p = spawnProjectile('ARROW', m.x, m.z, dx / d, dz / d, 32, m.dmg, { life: 0.8, pierce: 1, radius: 0.6, y: 1.4 }); if (p) p.tint = 10; }
       else {
         damageTrap(tr, m.dmg);
-        if (golem) events.emit('shockwave', { pos: tmp.set(tr.x, 0, tr.z).clone(), radius: 2.2, color: 0xb8a888 });
+        if (golem) events.emit('shockwave', { pos: tmp.set(tr.x, 0, tr.z).clone(), radius: GOLEM_HIT_R, color: 0xb8a888 });
       }
     } else if (e && d <= stop + 0.3 && m.atkT <= 0) {
       m.atkT = cd; m.swing = 1;
@@ -333,8 +401,10 @@ export function updateMinions(dt: number): void {
           cleaveO.knockback = 0.6;
           damageEnemiesInRadius(m.x, m.z, 2.8, m.dmg * 2, cleaveO);
           events.emit('shockwave', { pos: tmp.set(m.x, 0, m.z).clone(), radius: 2.8, color: 0xc9b8ff });
+        } else if (golem) {   // (owner 2026-10-25) the golem's slam hits everything around the target
+          damageEnemiesInRadius(e.pos.x, e.pos.z, GOLEM_HIT_R, m.dmg, hitO);
+          events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: GOLEM_HIT_R, color: 0xb8a888 });
         } else damageEnemy(e, m.dmg, hitO);
-        if (golem) events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: 2.2, color: 0xb8a888 });
       }
     }
   }
