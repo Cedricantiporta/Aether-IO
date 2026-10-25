@@ -109,8 +109,9 @@ const POTION_MAX_FRAC = 0.7;
 function usePotion(health: boolean): boolean {
   const st = useGameStore.getState();
   const p = world.player;
-  if (dailyMods.noPotions || towerMode()) {   // Daily Trial: Dry Flasks; the tower modes never allow potions (owner)
-    if (world.time - dryTextT > 4) { dryTextT = world.time; events.emit('floatText', { pos: p.pos, text: towerMode() ? 'NO POTIONS IN THE TOWER' : 'DRY FLASKS: NO POTIONS', color: 0xef5f55, scale: 0.8, dy: 2.6 }); }
+  const noTower = towerMode() && !showcase.on;   // (owner 2026-10-25: the hero trial runs on the tower rules but its 99 potions work)
+  if (dailyMods.noPotions || noTower) {   // Daily Trial: Dry Flasks; the tower modes never allow potions (owner)
+    if (world.time - dryTextT > 4) { dryTextT = world.time; events.emit('floatText', { pos: p.pos, text: noTower ? 'NO POTIONS IN THE TOWER' : 'DRY FLASKS: NO POTIONS', color: 0xef5f55, scale: 0.8, dy: 2.6 }); }
     return false;
   }
   // (owner) a potion only works at or below 70% of that bar: at 71% it does not drink
