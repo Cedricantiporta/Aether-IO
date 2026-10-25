@@ -46,3 +46,28 @@ export function openChest(i: number): void {
   st.addNotification('You found a hidden treasure chest!', '#ffd27a', 'SYSTEM');
   feedReward({ gold: r.gold, gems: r.gems, items, shards: r.shards?.[1], shardRarity: r.shards?.[0] }, true);   // loot feed + "Received" lines + fanfare
 }
+
+// ---- (owner 2026-10-25) the royal treasury: on some days Guard Odo is off duty, and then the closed treasury chest can be
+// opened once for TREASURY_GOLD. Days are picked from the local date (about 1 in 4), so re-entering the castle never rerolls.
+export const TREASURY_GOLD = 50000;
+let dayCache = 0, dayAt = -1;
+/** Local calendar day number (re-read once a minute: npcs.ts asks every frame). */
+const dayNo = (): number => {
+  const now = Date.now();
+  if (now - dayAt > 60000) { dayAt = now; const d = new Date(); dayCache = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
+  return dayCache;
+};
+/** True on the days the treasury guard is away. */
+export function treasuryUnguarded(): boolean { const n = dayNo(); return ((n * 2654435761) >>> 0) % 4 === 1; }
+const treasuryKey = (): string => `treasury:${dayNo()}`;
+/** The unguarded treasury chest can still be opened today. */
+export const treasuryOpenable = (): boolean => treasuryUnguarded() && !useGameStore.getState().chestsOpened.includes(treasuryKey());
+export function openTreasury(): void {
+  if (!treasuryOpenable()) return;
+  const st = useGameStore.getState(), p = world.player;
+  p.anim.castT = Math.max(p.anim.castT, 0.8);
+  useGameStore.setState({ chestsOpened: [...st.chestsOpened.filter((id) => !id.startsWith('treasury:')), treasuryKey()] });
+  st.addGold(TREASURY_GOLD);
+  st.addNotification('The guard is away... you help yourself to the royal treasury!', '#ffd27a', 'SYSTEM');
+  feedReward({ gold: TREASURY_GOLD }, true);
+}

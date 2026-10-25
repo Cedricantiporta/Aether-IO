@@ -8,7 +8,8 @@ import { interacted, wantsInteract, npcMarkers } from './npcQuestLogic';
 import { animals, petAnimal } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT, WHEEL_PIN } from '../townData';
 import { TOWN_CHESTS, CHEST_REACH } from '../townChests';
-import { tickChests, openChest, chestIsOpen } from './townChestLogic';
+import { tickChests, openChest, chestIsOpen, treasuryOpenable, openTreasury } from './townChestLogic';
+import { TREASURY_CHESTS } from '../castleData';
 import { saveSpot } from '../lastSpot';
 import { useUiStore } from '../../ui/uiStore';
 import { STORY, gateOpen } from '../../story';
@@ -283,6 +284,7 @@ function scanNearby(): void {
   const area = world.village.area, castle = area === 'CASTLE';
   if (castle) {
     d = q(CASTLE_EXIT.x, CASTLE_EXIT.z); if (d < CASTLE_EXIT.r * CASTLE_EXIT.r) push('E', 'Leave', 'Castle', '', -1, d, 'leave');
+    if (treasuryOpenable()) { const c = TREASURY_CHESTS[0]; d = q(c[0], c[1]); if (d < CHEST_REACH * CHEST_REACH) push('E', 'Open', 'Royal Treasure', '', -1, d, 'chest', CHEST_COLOR); }   // (owner) only while Guard Odo is away
   } else if (area === 'CHURCH') {
     d = q(CHURCH_EXIT.x, CHURCH_EXIT.z); if (d < CHURCH_EXIT.r * CHURCH_EXIT.r) push('E', 'Leave', 'Chapel', '', -1, d, 'leave');
     d = q(CHURCH_SIDE_EXIT.x, CHURCH_SIDE_EXIT.z); if (d < CHURCH_SIDE_EXIT.r * CHURCH_SIDE_EXIT.r) push('E', 'Out to', 'Graveyard', '', 1, d, 'leave');
@@ -361,7 +363,7 @@ function scanNearby(): void {
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
-  if (it.act === 'chest') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && !v.ride.on) openChest(it.node); return; }
+  if (it.act === 'chest') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && !v.ride.on) { if (it.node < 0) openTreasury(); else openChest(it.node); } return; }
   if (it.act === 'blocked') { const g = TOWN_GATES[it.node]; if (g && !gateFlags[g.id]) st.addNotification(g.line, GATE_COLOR, 'WARNING'); return; }   // (the sign explains it; WARNING toasts repeat at most every 3 s)
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
@@ -393,7 +395,7 @@ export function interact(it: Interactable): void {
 }
 
 /** (owner 2026-10-25) Before an adventure: a full bag or 2 or fewer health potions stops the hero with a centred prompt
- *  ("Open Shop" opens the Supplies shop: buy potions / sell items). Too poor for even one potion: 3 are given for free. */
+ *  (health or mana; "Open Shop" opens the Supplies shop: buy potions / sell items). Too poor for one: 3 of each low kind are given free. */
 const MIN_POTIONS = 2, FREE_POTIONS = 3;
 function readyForAdventure(): boolean {
   const st = useGameStore.getState(), ui = useUiStore.getState();
@@ -401,16 +403,19 @@ function readyForAdventure(): boolean {
     ui.askConfirm({ title: 'Your bag is full', body: 'There is no room for loot. Sell some items first, then set out.', confirmLabel: 'Open Shop', tone: 'primary', onConfirm: () => useGameStore.getState().openSpecificShop('SUPPLIES') });
     return false;
   }
-  if (potionCount(st.inventory, 'hp') > MIN_POTIONS) return true;
-  const potion = ITEMS_POOL.find((i) => i.id === 'potion_hp');
+  const hp = potionCount(st.inventory, 'hp'), mp = potionCount(st.inventory, 'mp');
+  if (hp > MIN_POTIONS && mp > MIN_POTIONS) return true;   // (owner) health AND mana potions both count
+  const low = hp <= MIN_POTIONS && mp <= MIN_POTIONS ? `${hp} health and ${mp} mana potions` : hp <= MIN_POTIONS ? `${hp} health potions` : `${mp} mana potions`;
+  const potion = ITEMS_POOL.find((i) => i.id === (hp <= MIN_POTIONS ? 'potion_hp' : 'potion_mana'));
   if (potion && st.gold >= shopPrice(potion)) {
-    ui.askConfirm({ title: 'Low on potions', body: `You only have ${potionCount(st.inventory, 'hp')} health potions. Buy some potions first.`, confirmLabel: 'Open Shop', tone: 'primary', onConfirm: () => useGameStore.getState().openSpecificShop('SUPPLIES') });
+    ui.askConfirm({ title: 'Low on potions', body: `You only have ${low}. Buy some potions first.`, confirmLabel: 'Open Shop', tone: 'primary', onConfirm: () => useGameStore.getState().openSpecificShop('SUPPLIES') });
     return false;
   }
-  ui.askConfirm({ title: 'Low on potions', body: `You cannot afford potions right now, so the Supplies shop gives you ${FREE_POTIONS} health potions for free. Good luck out there!`, confirmLabel: 'Set Out', tone: 'primary', onConfirm: () => {
+  ui.askConfirm({ title: 'Low on potions', body: `You only have ${low} and cannot afford more, so the Supplies shop gives you ${FREE_POTIONS} for free. Good luck out there!`, confirmLabel: 'Set Out', tone: 'primary', onConfirm: () => {
     const g = useGameStore.getState();
-    for (const it of makeItemById('potion_hp', FREE_POTIONS)) g.addItemToInventory(it);
-    g.startMode('ADVENTURE');
+    if (hp <= MIN_POTIONS) for (const it of makeItemById('potion_hp', FREE_POTIONS)) g.addItemToInventory(it);
+    if (mp <= MIN_POTIONS) for (const it of makeItemById('potion_mana', FREE_POTIONS)) useGameStore.getState().addItemToInventory(it);
+    useGameStore.getState().startMode('ADVENTURE');
   } });
   return false;
 }

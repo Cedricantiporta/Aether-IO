@@ -413,6 +413,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (o.frost) e.frostT = Math.max(e.frostT, 4);
   if (!o.dot) {
     if (e.armor > 0) dealt *= 100 / (100 + e.armor * (e.armorBreakT > 0 ? ARMOR_BREAK_FACTOR : 1));
+    if (e.kind === 'GOBLIN_ARCHER') dealt *= 0.5;   // (owner) tower archers: 2x defense like every stationary (roomTraps TRAP_DEF)
     if (e.staggerT > 0) dealt *= 1.25;
     if (e.winT > 0) dealt *= WINDED_DMG_MULT;   // boss / mini-boss free-hit window
     // BACK ATTACK: the attacker (a projectile's origin, a pet / minion, else the hero) is in the enemy's rear 120 deg arc.

@@ -24,12 +24,12 @@ export const MAX_SKELETONS = 5;
  *  1 Raise Dead (5, permanent), 3 Plague Ground (5 warriors that crumble after 8 s), 4 weapon perk (2),
  *  5 Grave Call (2 warriors that crumble after 8 s + 1 s per level),
  *  2 the ult's bone golem (no skeleton cap). */
-export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5, SRC_LAST = 6;
+export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5, SRC_LAST = 7;   // (6 = the run ally, ally.ts)
 /** (owner 2026-10-25) When the Necromancer's last summon falls, one skeleton warrior rises for LAST_LIFE seconds (once per wipe). */
 const LAST_LIFE = 5;
 let summonedN = 0;   // non-backup summons alive last frame
 const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
-const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2, 1];
+const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2, MAX_SKELETONS, 1];
 export const PLAGUE_LIFE = 8;
 const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
 function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === src) { skN[m.kind]++; n++; } return n; }

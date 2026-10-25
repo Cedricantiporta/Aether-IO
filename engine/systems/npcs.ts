@@ -3,6 +3,7 @@
 // Pure state (preallocated, no per-frame allocation). render/Npcs.tsx draws it; the DOM bubble layer
 // reads `bubbles` (screen positions are written by render/Npcs.tsx each frame).
 // ============================================================================
+import { treasuryUnguarded } from './townChestLogic';
 import { world } from '../world';
 import { NPCS, ANIMALS, GENERIC_BUBBLES, FIELDS } from '../townData';
 import { useDialogue } from './dialogue';
@@ -82,7 +83,7 @@ export function npcInStory(i: number): boolean {
 /** (owner) the deep floor the cave cameo (townData `deep`, Steve) is on this mining trip (0 = none; set by cave.ts). */
 export const caveCameo = { floor: 0 };
 const caveFloorOf = (i: number): number => (NPCS[i].deep ? caveCameo.floor : 1);
-const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === caveFloorOf(i)) && npcInStory(i);   // (cave NPCs live on Floor 1, the cameo deeper)
+const inArea = (i: number): boolean => (NPCS[i].area ?? 'TOWN') === world.village.area && (NPCS[i].area !== 'CAVE' || world.village.cave.floor === caveFloorOf(i)) && npcInStory(i) && !(NPCS[i].name === 'Guard Odo' && treasuryUnguarded());   // (Odo is off duty some days: townChestLogic) (cave NPCs live on Floor 1, the cameo deeper)
 
 export function updateNpcs(dt: number): void {
   cabbageWatch();
