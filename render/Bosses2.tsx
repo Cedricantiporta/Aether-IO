@@ -16,9 +16,11 @@ import { GB, TAU, clamp, damp } from './util';
 import { WarMachine } from './WarMachine';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
 import { makeBossMats, useBossRig } from './bossKit';
+import { blade, limb, lump, spike } from './bossShapes';
 
-/** creature-kit piece per boss (render/bossKit.tsx); the procedural rigs below are the fallback until the kit GLB is in */
-const KIT_PIECE: Partial<Record<EnemyKind, string>> = { BOSS_TREANT: 'boss_treant', BOSS_HYDRA: 'boss_hydra', BOSS_WARLORD: 'boss_warlord', BOSS_VOID: 'boss_void' };
+/** creature-kit piece per boss (render/bossKit.tsx). EMPTY on purpose (owner 2026-10-25: the kit versions read as round baby toys): Elderroot, the Hydra body, Ignar and the Void Herald
+ *  use the angular procedural rigs below. Add a kind here to switch it back to the GLB piece. */
+const KIT_PIECE: Partial<Record<EnemyKind, string>> = {};
 
 const sin = Math.sin, cos = Math.cos;
 type V3 = [number, number, number];
@@ -36,47 +38,82 @@ const NONE: V3 = [0, 0, 0];
 function outward(a: number, tilt: number): V3 { return [tilt, a, 0]; }   // cone tilted from +y toward the (sin a, cos a) direction
 
 function buildTreant(): Rig {
-  const bark = '#5b3a1e', bark2 = '#7a4e28', root = '#46301a', leaf = '#4f9a26', leaf2 = '#7bc83a';
+  const bark = '#5b3a1e', bark2 = '#7a4e28', root = '#46301a', leaf = '#4f9a26', leaf2 = '#7bc83a', thorn = '#c9b27a';
   const body = new GB([0.72, 1.12]), glow = new GB([1, 1]), plates = new GB([0.9, 1.1]);
-  body.cyl(0.62, 0.98, 2.6, 9, [0, 1.4, 0], bark);
-  body.cyl(0.5, 0.62, 1.3, 9, [0, 3.3, 0], bark2);
-  body.sph(0.3, [0.5, 2.0, 0.6], bark2, [1, 1, 0.6], 6); body.sph(0.25, [-0.55, 2.7, 0.5], bark2, [1, 1, 0.6], 6); body.sph(0.22, [0.1, 1.2, 0.85], bark2, [1, 1, 0.6], 6);
+  // gnarled trunk: 7-sided taper with buttress ridges and bark thorns (no round blobs)
+  body.cyl(0.6, 1.0, 2.6, 7, [0, 1.4, 0], bark);
+  body.cyl(0.62, 0.62, 1.3, 6, [0, 3.3, 0], bark2);
+  body.cyl(0.4, 0.66, 0.5, 6, [0, 2.75, 0], bark);                                               // jaw block under the face
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.5; spike(body, [sin(a) * 0.75, 1.2 + (i % 2) * 0.8, cos(a) * 0.75], [sin(a) * 1.25, 2.0 + (i % 2) * 1.0, cos(a) * 1.25], 0.2, 4, bark2); }
+  lump(body, 0.34, [0.5, 2.0, 0.6], bark2, [1, 1.2, 0.6]); lump(body, 0.28, [-0.55, 2.7, 0.5], bark2, [1, 1.2, 0.6]); lump(body, 0.26, [0.1, 1.2, 0.85], bark2, [1, 1.2, 0.6]);
   for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU + 0.3; body.cone(0.3, 1.9, 5, [sin(a) * 1.0, 0.35, cos(a) * 1.0], root, outward(a, 1.25)); }
-  for (const [x, y, z, s, c] of [[0, 4.25, 0, 1.15, leaf], [0.9, 4.0, 0.3, 0.8, leaf2], [-0.85, 4.05, -0.2, 0.85, leaf], [0.1, 4.7, -0.4, 0.7, leaf2], [-0.2, 3.9, 0.9, 0.6, leaf]] as [number, number, number, number, string][]) body.ico(s, [x, y, z], c, [1.1, 0.85, 1.1], 1);
-  for (let i = 0; i < 11; i++) {   // (owner: rooted) thick roots creeping far across the ground, with knobs
-    const a = (i / 11) * TAU + 0.15, len = 2.6 + (i % 3) * 0.9, d = 1.0 + len * 0.5;
-    body.cyl(0.14, 0.5 - (i % 3) * 0.05, len, 6, [sin(a) * d, 0.3, cos(a) * d], root, [1.5, a, 0]);   // tapering round root
-    body.sph(0.17, [sin(a) * (d + len * 0.5), 0.2, cos(a) * (d + len * 0.5)], bark2, 1, 5);              // rounded tip
-    body.ico(0.34, [sin(a) * (d - len * 0.2), 0.42, cos(a) * (d - len * 0.2)], bark2, [1, 0.7, 1], 0);   // knuckle
+  // brow ridges, nose and fangs: a scowling face
+  for (const s of [-1, 1]) {
+    lump(body, 0.3, [s * 0.27, 3.5, 0.52], bark, [1.1, 0.4, 0.8], [0, 0, -s * 0.45]);
+    spike(body, [s * 0.18, 2.78, 0.6], [s * 0.2, 2.35, 0.78], 0.07, 4, thorn);
+    spike(body, [s * 0.5, 3.6, 0.1], [s * 0.95, 4.35, -0.1], 0.12, 4, bark2);
   }
-  body.box(0.46, 0.14, 0.12, [0, 2.75, 0.62], '#1a0e06');                                         // mouth
-  for (const s of [-1, 1]) { glow.sph(0.11, [s * 0.24, 3.25, 0.55], '#d8ff5a', [1, 1.2, 0.6], 6); glow.sph(0.06, [s * 0.5, 1.9, 0.78], '#9be32a', 1, 5); }
-  glow.torus(0.7, 0.04, [0, 2.2, 0], '#9be32a', [Math.PI / 2, 0, 0], 1, 14);
+  spike(body, [0, 3.2, 0.55], [0, 2.95, 0.95], 0.1, 4, bark2);
+  body.cyl(0.26, 0.2, 0.14, 5, [0, 2.78, 0.6], '#1a0e06', [Math.PI / 2, 0, 0], [1.4, 1, 0.6]);   // mouth
+  for (let i = -1; i <= 1; i++) spike(body, [i * 0.14, 2.84, 0.64], [i * 0.14, 2.52 - (i === 0 ? 0.1 : 0), 0.7], 0.05, 4, thorn);
+  // antler crown: forked horns + a ring of leaf blades (jagged, not leafy balls)
+  for (const s of [-1, 1]) {
+    limb(body, [s * 0.35, 3.9, 0], [s * 0.85, 4.8, -0.1], 0.2, 0.13, 5, bark);
+    limb(body, [s * 0.85, 4.8, -0.1], [s * 1.05, 5.7, -0.25], 0.13, 0.07, 5, bark);
+    spike(body, [s * 1.05, 5.7, -0.25], [s * 1.2, 6.4, -0.3], 0.07, 4, thorn);
+    spike(body, [s * 0.85, 4.8, -0.1], [s * 1.7, 5.4, -0.2], 0.1, 4, bark);
+    spike(body, [s * 0.6, 4.3, 0], [s * 1.3, 4.5, 0.3], 0.09, 4, bark2);
+  }
+  for (let i = 0; i < 13; i++) {
+    const a = (i / 13) * TAU + 0.2, rr = 0.35 + (i % 3) * 0.2, y0 = 3.95 + (i % 2) * 0.15, c = i % 2 ? leaf2 : leaf, o = rr + 0.55 + (i % 3) * 0.12;
+    blade(body, [sin(a) * rr, y0, cos(a) * rr], [sin(a) * o, y0 + 1.15 + (i % 3) * 0.3, cos(a) * o], 0.2, 0.07, c);
+  }
+  for (let i = 0; i < 11; i++) {   // (owner: rooted) thick roots creeping far across the ground, tapering to claw tips
+    const a = (i / 11) * TAU + 0.15, len = 2.6 + (i % 3) * 0.9, d = 1.0 + len * 0.5, e0 = d + len * 0.48;
+    body.cyl(0.14, 0.5 - (i % 3) * 0.05, len, 5, [sin(a) * d, 0.3, cos(a) * d], root, [1.5, a, 0]);
+    spike(body, [sin(a) * e0, 0.2, cos(a) * e0], [sin(a) * (e0 + 0.9), 0.1, cos(a) * (e0 + 0.9)], 0.15, 4, bark2);
+    lump(body, 0.34, [sin(a) * (d - len * 0.2), 0.42, cos(a) * (d - len * 0.2)], bark2, [1, 0.7, 1]);
+  }
+  for (const s of [-1, 1]) { blade(glow, [s * 0.14, 3.2, 0.52], [s * 0.42, 3.32, 0.56], 0.07, 0.05, '#d8ff5a'); glow.octa(0.07, [s * 0.5, 1.9, 0.82], '#9be32a', [1, 1.4, 0.6]); }
+  glow.torus(0.7, 0.04, [0, 2.2, 0], '#9be32a', [Math.PI / 2, 0, 0], 1, 8);
+  // arms: tapered branch limbs with elbow thorns and long clawed twig fingers
   const arm = new GB([0.75, 1.1]);
-  arm.cyl(0.26, 0.17, 2.0, 6, [0, -1.0, 0], bark); arm.sph(0.28, [0, -2.05, 0], bark2, 1, 6);
-  for (let i = -1; i <= 1; i++) arm.cone(0.07, 0.8, 4, [i * 0.14, -2.4, 0.05], bark, [0.1, 0, i * 0.4 + Math.PI]);
-  arm.ico(0.3, [0.2, -0.7, 0.15], leaf, 1, 0);
+  limb(arm, [0, 0, 0], [0, -1.1, 0.1], 0.3, 0.22, 6, bark); limb(arm, [0, -1.1, 0.1], [0, -2.0, 0.2], 0.22, 0.17, 6, bark);
+  spike(arm, [0, -1.1, 0.25], [0, -1.15, 0.9], 0.1, 4, thorn); spike(arm, [0.2, -0.5, 0], [0.75, -0.2, 0], 0.09, 4, bark2);
+  lump(arm, 0.3, [0, -2.1, 0.2], bark2, [1, 0.8, 1]);
+  for (let i = 0; i < 4; i++) { const x = (i - 1.5) * 0.18; limb(arm, [x, -2.15, 0.2], [x * 1.6, -2.75, 0.3], 0.08, 0.05, 4, bark); spike(arm, [x * 1.6, -2.75, 0.3], [x * 2.0, -3.4, 0.4], 0.05, 4, thorn); }
+  blade(arm, [0.25, -0.7, 0.15], [0.65, -0.1, 0.15], 0.14, 0.05, leaf);
   for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; plates.cone(0.2, 1.0, 4, [sin(a) * 1.05, 1.0 + (i % 3) * 0.7, cos(a) * 1.05], '#9aa0aa', outward(a, 1.0)); }
   plates.cone(0.25, 1.1, 4, [0, 4.0, 0], '#9aa0aa');
   const armG = arm.build();
-  return { r: 1.15, body: body.build(), glow: glow.build(), armL: armG, armR: armG, extra: plates.build(), armLPos: [-1.0, 3.6, 0], armRPos: [1.0, 3.6, 0], extraPos: NONE };
+  return { r: 1.15, body: body.build(), glow: glow.build(), extra: plates.build(), armL: armG, armR: armG, armLPos: [-1.0, 3.6, 0], armRPos: [1.0, 3.6, 0], extraPos: NONE };
 }
 
+/** Mire Hydra body (mostly below the rim): a low, armoured, crocodile-like bulk: faceted back, tall dorsal plates, thick spiked neck bases, clawed legs, blade tail. */
 function buildHydra(): Rig {
-  const sk = '#2f6f3a', sk2 = '#4c8a3a', belly = '#a8c47a', dark = '#1f4a28';
+  const sk = '#2f6f3a', sk2 = '#4c8a3a', belly = '#a8c47a', dark = '#1f4a28', bone = '#e4e0b8';
   const body = new GB([0.72, 1.12]), glow = new GB([1, 1]), tail = new GB([0.75, 1.1]);
-  body.sph(1.5, [0, 1.0, 0], sk, [1.15, 0.65, 1.4], 11);
-  body.sph(1.2, [0, 0.62, 0.2], belly, [1.1, 0.4, 1.3], 8);
-  for (let i = 0; i < 8; i++) body.cone(0.22, 0.8, 4, [(i % 2 ? 0.32 : -0.32), 1.6, -1.3 + i * 0.4], dark, [-0.15, 0, 0]);
-  for (const [x, z] of [[1.25, 0.8], [-1.25, 0.8], [1.15, -0.8], [-1.15, -0.8]]) body.cyl(0.36, 0.5, 0.8, 6, [x, 0.4, z], sk2);
-  for (let k = -1; k <= 1; k++) body.sph(0.62, [k * 0.95, 1.1, 1.55], sk2, [1, 0.8, 1], 7);   // neck stumps the heads grow from
-  for (const [x, y, z] of [[0.7, 1.3, -0.4], [-0.8, 1.2, 0.2], [0.2, 1.4, -1.0]]) body.sph(0.4, [x, y, z], sk2, [1, 0.5, 1], 6);
-  for (const s of [-1, 1]) glow.sph(0.1, [s * 0.9, 0.75, -0.5], '#ffe14a', 1, 5);
-  tail.cyl(0.55, 0.7, 1.4, 7, [0, 0, -0.7], sk, [Math.PI / 2, 0, 0]);
-  tail.cyl(0.32, 0.55, 1.4, 7, [0, 0, -2.0], sk, [Math.PI / 2, 0, 0]);
-  tail.cone(0.34, 1.7, 6, [0, 0, -3.4], sk2, [-Math.PI / 2, 0, 0]);
-  for (let i = 0; i < 5; i++) tail.cone(0.2, 0.6, 4, [0, 0.55 - i * 0.04, -0.5 - i * 0.7], dark);
-  tail.cone(0.5, 1.1, 4, [0.9, 0, -3.5], '#c8d8a0', [-Math.PI / 2, 0, 0.9]); tail.cone(0.5, 1.1, 4, [-0.9, 0, -3.5], '#c8d8a0', [-Math.PI / 2, 0, -0.9]); // tail fins
+  lump(body, 1.55, [0, 1.0, 0], sk, [1.15, 0.6, 1.45]);
+  lump(body, 1.25, [0, 0.62, 0.2], belly, [1.1, 0.38, 1.3]);
+  for (let i = 0; i < 9; i++) { const z = -1.4 + i * 0.4, h = 0.9 + (i % 3) * 0.35, x = i % 2 ? 0.3 : -0.3; spike(body, [x, 1.45, z], [x, 1.45 + h, z - 0.35], 0.22, 4, dark, [1, 1, 0.5]); }
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) spike(body, [s * 1.0, 1.1, -0.9 + i * 0.7], [s * 1.55, 1.2 + (i % 2) * 0.25, -1.1 + i * 0.7], 0.15, 4, bone);   // flank spikes
+  for (const [x, z] of [[1.25, 0.8], [-1.25, 0.8], [1.15, -0.8], [-1.15, -0.8]]) {   // crouched, clawed legs
+    const s = Math.sign(x);
+    limb(body, [x * 0.8, 1.0, z], [x * 1.25, 0.55, z + 0.1], 0.5, 0.36, 5, sk2);
+    limb(body, [x * 1.25, 0.55, z + 0.1], [x * 1.3, 0.05, z + 0.35], 0.36, 0.3, 5, sk2);
+    for (let c = -1; c <= 1; c++) spike(body, [x * 1.3 + c * 0.18, 0.1, z + 0.4], [x * 1.3 + c * 0.24 + s * 0.05, -0.05, z + 0.95], 0.1, 4, bone);
+  }
+  for (let k = -1; k <= 1; k++) {   // spiked neck bases the heads grow from (hexagonal taper, not balls)
+    limb(body, [k * 0.95, 0.7, 1.0], [k * 0.95, 1.35, 1.75], 0.8, 0.52, 6, sk2);
+    for (const s of [-1, 1]) spike(body, [k * 0.95 + s * 0.45, 1.3, 1.55], [k * 0.95 + s * 0.85, 1.75, 1.35], 0.13, 4, bone);
+  }
+  for (const [x, y, z] of [[0.7, 1.4, -0.4], [-0.8, 1.3, 0.2], [0.2, 1.5, -1.0]]) lump(body, 0.42, [x, y, z], sk2, [1, 0.6, 1]);
+  for (const s of [-1, 1]) glow.octa(0.11, [s * 0.9, 0.75, -0.5], '#ffe14a', [1.3, 0.8, 0.9]);
+  limb(tail, [0, 0, -0.1], [0, 0, -1.4], 0.7, 0.5, 6, sk, [1, 0.75, 1]);
+  limb(tail, [0, 0, -1.4], [0, 0, -2.7], 0.5, 0.3, 6, sk, [1, 0.75, 1]);
+  spike(tail, [0, 0, -2.7], [0, 0, -4.9], 0.3, 4, sk2, [1, 0.5, 1]);
+  for (let i = 0; i < 6; i++) spike(tail, [0, 0.5 - i * 0.04, -0.3 - i * 0.65], [0, 1.2 - i * 0.12, -0.7 - i * 0.65], 0.2 - i * 0.015, 4, dark, [1, 1, 0.5]);
+  blade(tail, [0, 0, -3.3], [1.6, 0, -4.1], 0.3, 0.08, '#c8d8a0'); blade(tail, [0, 0, -3.3], [-1.6, 0, -4.1], 0.3, 0.08, '#c8d8a0');   // tail blades
   return { r: 1.75, body: body.build(), glow: glow.build(), extra: tail.build(), armLPos: NONE, armRPos: NONE, extraPos: [0, 0.95, -1.7] };
 }
 
@@ -107,35 +144,57 @@ function buildWyrm(): Rig {
   return { r: 1.25, body: body.build(), glow: glow.build(), armL: wing(-1), armR: wing(1), extra: tail.build(), armLPos: [-0.6, 0.55, 0.3], armRPos: [0.6, 0.55, 0.3], extraPos: [0, 0, -1.3] };
 }
 
+/** Ignar: a tall, spiked demon-knight. Tapered plate torso (6 sides), spiked pauldrons, long swept horns, a slit-eyed helm, tattered cape blades, a serrated flame blade. */
 function buildWarlord(): Rig {
-  const dark = '#2e2022', iron = '#4a3a3e', red = '#8a2a20', glowC = '#ff7a1a';
+  const dark = '#2e2022', iron = '#4a3a3e', red = '#8a2a20', glowC = '#ff7a1a', gold = '#c8a050', steel = '#cfd2d8';
   const body = new GB([0.72, 1.12]), glow = new GB([1, 1]);
   for (const s of [-1, 1]) {
-    body.cyl(0.3, 0.24, 1.1, 6, [s * 0.38, 0.55, 0], dark); body.box(0.42, 0.2, 0.7, [s * 0.38, 0.1, 0.12], iron);
-    body.sph(0.52, [s * 0.9, 2.5, 0], red, [1, 0.8, 1], 7);
-    for (let i = 0; i < 3; i++) body.cone(0.1, 0.55, 4, [s * (0.9 + i * 0.12), 2.9 - i * 0.1, i * 0.05 - 0.05], iron, [0, 0, -s * (0.5 + i * 0.3)]);
-    body.cone(0.12, 0.9, 4, [s * 0.34, 3.15, 0.0], '#c8a050', [0, 0, -s * 0.55]);             // helm horns
+    limb(body, [s * 0.38, 0.05, 0.05], [s * 0.4, 0.6, 0], 0.3, 0.3, 6, dark); limb(body, [s * 0.4, 0.6, 0], [s * 0.38, 1.15, 0], 0.3, 0.24, 6, dark);
+    spike(body, [s * 0.4, 0.62, 0.2], [s * 0.42, 0.7, 0.72], 0.14, 4, iron);                                  // knee spike
+    limb(body, [s * 0.38, 0.12, 0.1], [s * 0.38, 0.1, 0.62], 0.3, 0.14, 5, iron, [1, 0.6, 1]);               // boot: tapered toe wedge
+    body.cyl(0.26, 0.42, 0.7, 6, [s * 0.9, 2.5, 0], red, [0, 0, -s * 0.35]);                                 // pauldron plate
+    body.cyl(0.4, 0.5, 0.18, 6, [s * 0.95, 2.78, 0], iron, [0, 0, -s * 0.35]);
+    for (let i = 0; i < 3; i++) spike(body, [s * (0.85 + i * 0.16), 2.85 - i * 0.12, i * 0.1 - 0.1], [s * (1.2 + i * 0.5), 3.5 - i * 0.28, i * 0.14 - 0.14], 0.12 - i * 0.015, 4, iron);
+    limb(body, [s * 0.3, 3.0, 0.02], [s * 0.78, 3.55, -0.05], 0.14, 0.1, 5, gold);                           // helm horns: out, then up
+    spike(body, [s * 0.78, 3.55, -0.05], [s * 0.98, 4.5, -0.18], 0.1, 4, gold);
+    spike(body, [s * 0.4, 2.85, 0.35], [s * 0.7, 2.65, 0.75], 0.06, 4, gold);                                  // cheek tusk
+    spike(body, [s * 0.5, 1.05, 0.25], [s * 0.7, 0.2, 0.55], 0.12, 4, iron);                                  // tasset blade
   }
-  body.box(1.25, 1.2, 0.85, [0, 1.75, 0], iron); body.box(1.4, 0.75, 0.95, [0, 2.0, 0.02], red);
-  body.box(1.1, 0.2, 0.8, [0, 1.15, 0], '#1a1214'); body.cyl(0.55, 0.8, 0.8, 7, [0, 0.95, 0], dark);
-  body.box(0.55, 0.55, 0.55, [0, 2.9, 0.05], dark); body.box(0.58, 0.18, 0.5, [0, 3.2, 0.05], iron);
-  body.box(1.1, 1.8, 0.06, [0, 1.7, -0.55], '#5a1410');
-  for (let i = 0; i < 4; i++) glow.box(0.07, 0.5, 0.03, [(i - 1.5) * 0.28, 1.85 + (i % 2) * 0.12, 0.5], glowC, [0, 0, (i - 1.5) * 0.18]);
-  glow.box(0.4, 0.07, 0.04, [0, 2.9, 0.34], '#ffd070'); glow.sph(0.18, [0, 1.4, 0.5], '#ff4a10', 1, 6);
-  const armBase = (s: number) => { const a = new GB([0.75, 1.1]); a.cyl(0.24, 0.2, 1.1, 6, [0, -0.55, 0], dark); a.sph(0.3, [0, -1.15, 0], red, 1, 6); a.cone(0.1, 0.4, 4, [s * 0.22, -1.1, 0.1], iron, [0, 0, -s * 1.2]); return a; };
+  body.cyl(0.95, 0.55, 1.35, 6, [0, 1.8, 0], iron, [0, 0, 0], [1, 1, 0.75]);                                 // chest: wide shoulders tapering to the waist
+  body.cyl(1.0, 0.8, 0.85, 6, [0, 2.1, 0.04], red, [0, 0, 0], [1, 1, 0.8]);                                  // red breastplate
+  spike(body, [0, 2.3, 0.62], [0, 1.65, 0.95], 0.22, 4, iron, [1, 1, 0.6]);                                   // keel ridge
+  body.cyl(0.5, 0.82, 0.8, 6, [0, 0.95, 0], dark); body.cyl(0.85, 0.85, 0.16, 6, [0, 1.2, 0], '#1a1214');     // hips + belt
+  lump(body, 0.4, [0, 2.95, 0.03], dark, [0.85, 1.15, 1]);                                                   // helm
+  limb(body, [0, 2.9, 0.15], [0, 2.75, 0.62], 0.3, 0.12, 5, iron, [0.9, 0.8, 1]);                            // long visor / muzzle
+  blade(body, [0, 3.15, -0.05], [0, 3.95, -0.55], 0.12, 0.05, '#c8472a');                                    // crest fin
+  for (let i = 0; i < 4; i++) { const x = (i - 1.5) * 0.3; spike(body, [x, 1.9, -0.45], [x * 1.2, 0.2 - (i % 2) * 0.4, -0.7], 0.2, 4, '#5a1410', [1, 1, 0.3]); }   // tattered cape blades
+  spike(body, [0, 2.7, -0.4], [0, 2.9, -1.0], 0.12, 4, iron);
+  for (let i = 0; i < 4; i++) glow.box(0.07, 0.5, 0.03, [(i - 1.5) * 0.28, 1.85 + (i % 2) * 0.12, 0.5], glowC, [0, 0, (i - 1.5) * 0.18]);   // chest cracks
+  for (const s of [-1, 1]) glow.octa(0.13, [s * 0.17, 3.0, 0.5], '#ffd070', [1.7, 0.3, 0.6], [0, 0, -s * 0.35]);   // narrow slanted eye slits
+  glow.octa(0.2, [0, 1.4, 0.55], '#ff4a10', [1, 1.2, 0.7]);
+  const armBase = (s: number) => {
+    const a = new GB([0.75, 1.1]);
+    limb(a, [0, 0, 0], [0, -0.55, 0.05], 0.26, 0.22, 6, dark); limb(a, [0, -0.55, 0.05], [0, -1.1, 0.1], 0.24, 0.2, 6, dark);
+    a.cyl(0.26, 0.34, 0.5, 6, [0, -1.15, 0.08], red);                                                       // gauntlet
+    spike(a, [s * 0.2, -0.6, 0.1], [s * 0.7, -0.45, 0.1], 0.1, 4, iron);                                     // elbow spike
+    spike(a, [s * 0.22, -1.1, 0.1], [s * 0.45, -1.7, 0.2], 0.09, 4, iron);
+    return a;
+  };
   const aR = armBase(1), gR = new GB([1, 1]);
-  aR.cyl(0.07, 0.07, 0.7, 5, [0, -1.35, 0.25], '#2a1a1a', [Math.PI / 2, 0, 0]); aR.box(0.9, 0.12, 0.14, [0, -1.15, 0.35], '#c8a050');
-  aR.box(0.26, 3.0, 0.08, [0, -2.9, 0.35], '#cfd2d8'); aR.cone(0.13, 0.5, 4, [0, -4.55, 0.35], '#cfd2d8', [Math.PI, 0, 0]);
-  gR.box(0.12, 2.9, 0.1, [0, -2.9, 0.35], glowC);
+  aR.cyl(0.07, 0.07, 0.7, 5, [0, -1.35, 0.25], '#2a1a1a', [Math.PI / 2, 0, 0]);
+  spike(aR, [0.2, -1.15, 0.35], [0.7, -0.85, 0.35], 0.1, 4, gold); spike(aR, [-0.2, -1.15, 0.35], [-0.7, -0.85, 0.35], 0.1, 4, gold);   // swept cross-guard
+  spike(aR, [0, -1.2, 0.35], [0, -4.7, 0.35], 0.22, 4, steel, [1, 1, 0.22]);                                // blade: long diamond section tapering to a point
+  for (let i = 0; i < 4; i++) for (const s of [-1, 1]) spike(aR, [s * 0.12, -2.0 - i * 0.55, 0.35], [s * 0.3, -2.25 - i * 0.55, 0.35], 0.06, 3, steel);   // serrations
+  spike(gR, [0, -1.3, 0.35], [0, -4.4, 0.35], 0.09, 4, glowC, [1, 1, 0.5]);
   return { r: 1.0, body: body.build(), glow: glow.build(), armL: armBase(-1).build(), armR: aR.build(), armRGlow: gR.build(), armLPos: [-0.95, 2.45, 0], armRPos: [0.95, 2.45, 0], extraPos: NONE };
 }
 
-/** Ignar's devil wings (Burning Form): a big, rounded bat wing, plane xy, root at the shoulder, reaching out along +x (mirror for the left one).
- *  Dark-red scalloped membrane over chunky bones with little knobs and a claw - cute and toy-like, not spiky. */
+/** Ignar's devil wings (Burning Form): a big bat wing, plane xy, root at the shoulder, reaching out along +x (mirror for the left one).
+ *  Dark-red membrane with deep scalloped cuts between long pointed finger bones, each ending in a claw tip; a jagged, menacing silhouette. */
 function buildDevilWing(): { skin: BufferGeometry; bones: BufferGeometry } {
-  const S: V3 = [0, 0, 0], E: V3 = [1.3, 1.6, 0], W: V3 = [3.0, 2.5, 0], B: V3 = [0.25, -1.9, 0];
-  const T: V3[] = [[5.0, 2.9, 0], [5.3, 1.0, 0], [4.1, -0.9, 0], [2.4, -1.7, 0]];
-  const mid = (a: V3, b: V3): V3 => [(a[0] + b[0]) / 2 + (W[0] - (a[0] + b[0]) / 2) * 0.22, (a[1] + b[1]) / 2 + (W[1] - (a[1] + b[1]) / 2) * 0.22, 0.05];
+  const S: V3 = [0, 0, 0], E: V3 = [1.4, 1.9, 0], W: V3 = [3.0, 2.6, 0], B: V3 = [0.25, -1.9, 0];
+  const T: V3[] = [[5.4, 4.4, 0], [6.6, 1.9, 0], [5.2, -0.9, 0], [3.4, -2.5, 0]];
+  const mid = (a: V3, b: V3): V3 => [(a[0] + b[0]) / 2 + (W[0] - (a[0] + b[0]) / 2) * 0.5, (a[1] + b[1]) / 2 + (W[1] - (a[1] + b[1]) / 2) * 0.5, 0.05];   // deep scallop: tips stay sharp
   const ring: V3[] = [T[0], mid(T[0], T[1]), T[1], mid(T[1], T[2]), T[2], mid(T[2], T[3]), T[3], mid(T[3], B), B];
   const pos: number[] = [], col: number[] = [];
   const c1 = new Color('#e0483c'), c2 = new Color('#7a1224'), tmp = new Color();
@@ -145,32 +204,44 @@ function buildDevilWing(): { skin: BufferGeometry; bones: BufferGeometry } {
   const skin = new BufferGeometry();
   skin.setAttribute('position', new Float32BufferAttribute(pos, 3)); skin.setAttribute('color', new Float32BufferAttribute(col, 3)); skin.computeVertexNormals();
   const bn = new GB([0.85, 1.1]), bone = '#3a1418', knob = '#e8a060';
-  const seg = (a: V3, b: V3, r0: number, r1: number) => {
-    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
-    bn.cyl(r1, r0, len, 6, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0], bone, [0, 0, Math.atan2(-dx, dy)]);
-  };
-  seg(S, E, 0.26, 0.2); seg(E, W, 0.2, 0.15);
-  for (const t of T) { seg(W, t, 0.1, 0.05); bn.sph(0.1, t, knob, 1, 5); }
-  bn.sph(0.3, S, '#5a1a20', 1, 6); bn.sph(0.24, E, bone, 1, 6); bn.sph(0.22, W, bone, 1, 6);
-  bn.cone(0.1, 0.55, 5, [W[0] + 0.1, W[1] + 0.38, 0], knob, [0, 0, -0.25]);   // little thumb claw
+  limb(bn, S, E, 0.26, 0.18, 5, bone); limb(bn, E, W, 0.18, 0.14, 5, bone);
+  for (const t of T) {
+    limb(bn, W, t, 0.1, 0.05, 5, bone);
+    const dx = t[0] - W[0], dy = t[1] - W[1], l = Math.hypot(dx, dy);
+    spike(bn, t, [t[0] + dx / l * 0.55, t[1] + dy / l * 0.55, 0], 0.07, 4, knob);                     // claw tip
+  }
+  spike(bn, [S[0], S[1], 0], [-0.1, 0.5, 0], 0.3, 5, '#5a1a20');
+  spike(bn, [E[0], E[1], 0], [E[0] + 0.1, E[1] + 0.6, 0], 0.16, 4, knob);                               // elbow spur
+  spike(bn, [W[0], W[1], 0], [W[0] - 0.3, W[1] + 1.0, 0], 0.14, 4, knob);                               // wrist thumb claw
   return { skin, bones: bn.build() };
 }
 
 function buildVoid(): Rig {
   const dk = '#1b0b30', mid = '#2a1048', pur = '#c084fc', hi = '#e9d5ff';
   const body = new GB([0.7, 1.15]), glow = new GB([1, 1]), shards = new GB([0.8, 1.2]), sg = new GB([1, 1]);
-  body.cone(0.95, 2.5, 9, [0, 1.25, 0], dk);
-  for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU; body.cone(0.16, 0.7, 4, [sin(a) * 0.85, 0.0, cos(a) * 0.85], mid, [Math.PI, 0, 0]); }
-  body.octa(0.75, [0, 2.35, 0], mid, [1, 1.3, 0.8]);
-  body.sph(0.36, [0, 3.15, 0.1], '#0b0416', [1, 1.15, 1], 8);
-  for (const s of [-1, 1]) body.cone(0.12, 1.2, 4, [s * 0.38, 3.65, -0.1], mid, [-0.2, 0, -s * 0.55]);
-  glow.torus(0.78, 0.045, [0, 3.2, -0.4], pur, [0, 0, 0], 1, 20);
-  for (const s of [-1, 1]) glow.sph(0.075, [s * 0.14, 3.2, 0.4], hi, [1, 1.4, 0.6], 6);
+  body.cone(0.95, 2.5, 6, [0, 1.25, 0], dk);                                                              // 6-sided tapered robe
+  for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU; spike(body, [sin(a) * 0.85, 0.25, cos(a) * 0.85], [sin(a) * 1.05, -0.35, cos(a) * 1.05], 0.16, 4, mid); }   // tattered hem blades
+  body.octa(0.75, [0, 2.35, 0], mid, [1.1, 1.3, 0.8]);
+  for (const s of [-1, 1]) {   // spiked shoulder mantle + back blades
+    spike(body, [s * 0.5, 2.55, 0], [s * 1.3, 3.0, -0.1], 0.2, 4, mid);
+    spike(body, [s * 0.35, 2.2, -0.3], [s * 0.9, 3.4, -0.9], 0.14, 4, dk);
+  }
+  lump(body, 0.4, [0, 3.15, 0.1], '#0b0416', [0.8, 1.25, 1]);                                              // hooded skull
+  limb(body, [0, 3.05, 0.2], [0, 2.9, 0.62], 0.22, 0.08, 5, '#0b0416', [0.9, 0.7, 1]);                      // pointed mask snout
+  for (const s of [-1, 1]) {   // crown: two long swept horns, each with a fork
+    limb(body, [s * 0.28, 3.4, -0.05], [s * 0.6, 4.1, -0.3], 0.13, 0.09, 5, mid);
+    spike(body, [s * 0.6, 4.1, -0.3], [s * 0.75, 5.0, -0.55], 0.09, 4, mid);
+    spike(body, [s * 0.5, 3.9, -0.2], [s * 1.2, 4.3, -0.3], 0.08, 4, mid);
+  }
+  glow.torus(0.78, 0.045, [0, 3.2, -0.4], pur, [0, 0, 0], 1, 8);
+  for (const s of [-1, 1]) glow.octa(0.11, [s * 0.15, 3.2, 0.42], hi, [1.7, 0.35, 0.6], [0, 0, -s * 0.4]);   // narrow slanted eyes
   glow.octa(0.2, [0, 2.35, 0.5], pur, [1, 1.4, 0.8]);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU, y = 1.6 + (i % 3) * 0.55, r = 1.7 + (i % 2) * 0.3; shards.octa(0.3 + (i % 2) * 0.1, [sin(a) * r, y, cos(a) * r], mid, [0.7, 1.5, 0.7], [0.3, a, 0.2]); sg.octa(0.1, [sin(a) * r, y, cos(a) * r], pur); }
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU, y = 1.6 + (i % 3) * 0.55, r = 1.7 + (i % 2) * 0.3; shards.octa(0.3 + (i % 2) * 0.1, [sin(a) * r, y, cos(a) * r], mid, [0.6, 2.0, 0.6], [0.3, a, 0.2]); sg.octa(0.1, [sin(a) * r, y, cos(a) * r], pur); }
   const arm = new GB([0.7, 1.15]);
   arm.cone(0.2, 1.8, 5, [0, -0.75, 0], mid, [Math.PI, 0, 0]);
-  const hand = new GB([1, 1]).sph(0.17, [0, -1.75, 0], hi, 1, 6);
+  const hand = new GB([1, 1]);
+  hand.octa(0.2, [0, -1.75, 0], hi, [0.8, 1.3, 0.8]);
+  for (let i = -1; i <= 1; i++) spike(hand, [i * 0.1, -1.85, 0.05], [i * 0.2, -2.45, 0.15], 0.05, 4, hi);    // claws
   const armG = arm.build();
   return { r: 1.0, body: body.build(), glow: glow.build(), armL: armG, armR: armG, armRGlow: hand.build(), extra: shards.build(), extraGlow: sg.build(), armLPos: [-0.8, 2.6, 0], armRPos: [0.8, 2.6, 0], extraPos: NONE };
 }

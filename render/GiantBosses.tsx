@@ -1,6 +1,6 @@
 // Giant ROOTED bosses that are only partly in the arena (owner request): Glacius the Frost Wyrm rises out of the far rim (head, long neck and the two
 // front claws gripping the rim; the rest of the dragon is below the arena), and the Mire Hydra's long necks that arch in from its body beyond the
-// rim to its five heads. Elderroot (rooted, huge) uses the ordinary Bosses2 rig. Everything here is cute / toy style: chunky, rounded, bright.
+// rim to its five heads. Elderroot (rooted, huge) uses the ordinary Bosses2 rig. Angular low-poly style (owner 2026-10-25): tapered wedges, spikes and faceted plates, bright palette, no round blobs.
 // Engine side: systems/bosses2.ts (patterns), enemies.ts (rooted: pinned at rootX / rootZ), enemyDefs.rootedHome.
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -11,61 +11,86 @@ import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { CELL, FX, pushHalo, smokePuff } from './fx';
 import { GB, TAU, clamp, commitInst, damp } from './util';
-import { makeBossMats, useBossRig } from './bossKit';
+import { blade, limb, lump, spike } from './bossShapes';
 
+type V3 = [number, number, number];
 const sin = Math.sin, cos = Math.cos, ice = '#8fd0f0', ice2 = '#d6f1ff', deep = '#3f86b8', horn = '#e6f6ff';
 const wrapPi = (a: number): number => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
 
 // ============================================================================ the dragon
-const NECK_N = 20, SC = 2.6, KIT_HEAD = 0.7, KIT_WING = 2;   // KIT_*: scale of the kit head (inside the SC head group) / wings   // neck segments, overall size of the head / claws
+// Owner 2026-10-25: bosses must not look like round baby toys. Glacius is built from low-poly angular parts (5-sided tapered limbs, detail-0 icosahedra,
+// 4-sided spikes) under flatShading: long wedge snout, slanted slit eyes, swept horns, crest, fangs, serrated neck plates, clawed talons, a jagged finger-bone wing.
+const NECK_N = 20, SC = 2.6;   // neck segments, overall size of the head / claws
 function buildDragon() {
   // head (local +z = towards the arena), origin at the skull centre
   const head = new GB([0.78, 1.1]), glow = new GB([1, 1]), jaw = new GB([0.78, 1.1]);
-  head.sph(1.15, [0, 0, 0], ice, [1, 0.88, 1.4], 11);
-  head.box(0.95, 0.62, 1.6, [0, -0.1, 1.7], ice2);                        // snout
-  head.sph(0.52, [0, 0.12, 2.55], ice2, [1, 0.7, 0.8], 7);               // nose
+  lump(head, 1.05, [0, 0, 0], ice, [0.95, 0.78, 1.3]);                                                   // angular cranium
+  limb(head, [0, 0.05, 0.6], [0, -0.12, 3.35], 0.78, 0.3, 5, ice2, [1, 0.62, 1]);                          // long tapered wedge snout
+  limb(head, [0, 0.42, 0.8], [0, 0.34, 3.2], 0.2, 0.1, 4, deep);                                          // nose ridge
+  spike(head, [0, 0.34, 3.1], [0, 0.2, 3.7], 0.16, 4, ice2);                                              // nose horn
   for (const s of [-1, 1]) {
-    head.cone(0.26, 2.0, 5, [s * 0.62, 0.95, -0.6], horn, [-0.95, 0, s * 0.3]);            // horns
-    head.cone(0.14, 1.0, 4, [s * 1.0, 0.35, -0.9], horn, [-0.5, 0, s * 0.9]);
-    head.cone(0.12, 0.5, 4, [s * 0.34, -0.45, 2.3], '#ffffff', [Math.PI, 0, 0]);            // upper fangs
-    head.sph(0.34, [s * 0.5, 0.5, 1.0], deep, [1, 0.8, 0.6], 6);                              // brow ridge
-    glow.sph(0.24, [s * 0.58, 0.46, 1.12], '#7df3ff', [1, 1, 0.6], 6);                       // glowing eyes
-    glow.sph(0.09, [s * 0.24, 0.2, 2.78], '#bff6ff', 1, 4);                                  // nostrils glint
+    spike(head, [s * 0.55, 0.75, -0.2], [s * 1.6, 1.7, -3.4], 0.34, 5, horn);                               // main horns: long, swept back
+    spike(head, [s * 0.95, 0.15, -0.3], [s * 2.4, 0.5, -2.3], 0.2, 4, horn);                                // lower horns
+    spike(head, [s * 0.95, -0.15, 0.7], [s * 1.9, -0.55, -0.1], 0.16, 4, horn);                             // cheek spikes
+    spike(head, [s * 0.4, -0.3, 2.2], [s * 0.42, -1.15, 2.45], 0.11, 4, '#ffffff');                         // upper fangs
+    for (let i = 0; i < 3; i++) spike(head, [s * 0.3, -0.3, 2.6 + i * 0.25], [s * 0.3, -0.7, 2.65 + i * 0.25], 0.06, 3, '#ffffff');
+    lump(head, 0.4, [s * 0.52, 0.5, 1.05], deep, [1.1, 0.34, 0.9], [0, 0, -s * 0.5]);                       // heavy slanted brow ridge
+    blade(glow, [s * 0.34, 0.4, 1.2], [s * 0.9, 0.62, 1.15], 0.1, 0.07, '#7df3ff');                         // narrow glowing slit eye
+    glow.octa(0.07, [s * 0.24, 0.18, 3.55], '#bff6ff', [1, 0.6, 1.4]);                                      // nostril glint
   }
-  for (let i = 0; i < 5; i++) head.cone(0.18, 0.8 - i * 0.08, 4, [0, 0.95 - i * 0.05, -0.2 - i * 0.55], horn, [0.35, 0, 0]);   // crest
-  jaw.box(0.85, 0.3, 1.9, [0, -0.62, 1.55], deep); jaw.box(0.7, 0.22, 0.6, [0, -0.64, 2.4], ice2);
-  for (const s of [-1, 1]) jaw.cone(0.1, 0.4, 4, [s * 0.32, -0.38, 2.15], '#ffffff');
-  // neck segment (unit sphere, instanced) + a dorsal spike
-  const seg = new GB([0.82, 1.1]).ico(1, [0, 0, 0], ice, [1, 1, 1], 1).build();
-  const spike = new GB([1, 1]).cone(0.34, 1.1, 4, [0, 0.55, 0], horn).build();
-  // front claw: palm + three toes with claws, pointing +z
+  for (let i = 0; i < 6; i++) spike(head, [0, 0.8 - i * 0.04, -0.1 - i * 0.55], [0, 1.9 - i * 0.2, -0.8 - i * 0.62], 0.2 - i * 0.015, 4, horn, [0.7, 1, 1]);   // crest
+  limb(jaw, [0, -0.52, 0.2], [0, -0.58, 3.0], 0.62, 0.26, 5, deep, [1, 0.45, 1]);                          // lower jaw wedge
+  spike(jaw, [0, -0.7, 2.7], [0, -1.35, 3.2], 0.16, 4, ice2);                                              // chin spike
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 3; i++) spike(jaw, [s * 0.3, -0.45, 1.6 + i * 0.5], [s * 0.3, 0.05, 1.7 + i * 0.5], 0.07, 3, '#ffffff');   // lower teeth
+    spike(jaw, [s * 0.55, -0.6, 0.6], [s * 1.2, -0.95, 0.1], 0.12, 4, horn);                                // jaw frill
+  }
+  // neck segment (faceted, instanced, uniform scale) + dorsal spike with two swept side fins
+  const seg = new GB([0.82, 1.1]).ico(1, [0, 0, 0], ice, [1, 0.85, 1.2], 0).build();
+  const spk = new GB([1, 1]);
+  spike(spk, [0, 0.3, 0], [0, 1.9, -0.45], 0.32, 4, horn, [0.6, 1, 1]);
+  for (const s of [-1, 1]) spike(spk, [s * 0.35, 0.2, 0], [s * 1.05, 0.95, -0.35], 0.14, 4, horn);
+  const spike_ = spk.build();
+  // front claw: armoured palm + three long tapered toes with hooked talons, pointing +z
   const claw = new GB([0.8, 1.1]);
-  claw.sph(1.5, [0, 0.7, 0], ice, [1.05, 0.62, 1.25], 9);
-  claw.sph(1.0, [0, 0.35, 0.5], ice2, [1, 0.5, 1.1], 7);
+  lump(claw, 1.5, [0, 0.7, 0], ice, [1.1, 0.5, 1.25]);
+  lump(claw, 1.0, [0, 0.3, 0.6], ice2, [1.1, 0.4, 1.1]);
   for (let i = -1; i <= 1; i++) {
-    claw.cyl(0.36, 0.42, 1.7, 6, [i * 0.8, 0.45, 1.9], ice, [Math.PI / 2 - 0.12, 0, 0]);
-    claw.cone(0.26, 0.95, 5, [i * 0.8, 0.28, 3.1], '#ffffff', [Math.PI / 2 + 0.25, 0, 0]);
+    limb(claw, [i * 0.8, 0.5, 1.0], [i * 0.9, 0.3, 2.7], 0.45, 0.3, 5, ice);
+    spike(claw, [i * 0.9, 0.3, 2.6], [i * 0.95, -0.1, 4.3], 0.3, 4, '#ffffff');
+    spike(claw, [i * 0.8, 1.05, 1.3], [i * 0.8, 1.9, 0.9], 0.18, 4, horn);                                 // knuckle spike
   }
-  claw.cone(0.22, 0.8, 5, [-1.45, 0.45, 0.9], horn, [Math.PI / 2, 0, 0.9]);   // dew claw
-  // wing bones rising behind the rim
+  spike(claw, [-1.4, 0.45, 0.7], [-2.6, 0.2, 1.9], 0.24, 4, horn);                                        // dew claw
+  // wing: arm bone, wrist, four long finger bones with claw tips and a deeply scalloped membrane
   const wing = (s: number) => {
     const w = new GB([0.82, 1.1]);
-    w.cyl(0.26, 0.4, 11, 6, [s * 0.4, 5.2, 0], horn, [0, 0, -s * 0.5]);
-    w.cyl(0.18, 0.26, 8, 6, [s * 4.6, 10.1, 0], horn, [0, 0, s * 1.15]);
-    w.tri([s * 0.5, 0.6, 0], [s * 3.2, 10.8, 0], [s * 10.5, 14, 0], deep);
-    w.tri([s * 0.5, 0.6, 0], [s * 10.5, 14, 0], [s * 13, 8, 0], ice);
-    w.tri([s * 0.5, 0.6, 0], [s * 13, 8, 0], [s * 9, 1.0, 0], deep);
+    const W: V3 = [s * 3.4, 10.6, 0], T: V3[] = [[s * 10.8, 14.6, 0], [s * 14.4, 9.4, 0], [s * 12.2, 3.2, 0], [s * 8, 0.2, 0]], R: V3 = [s * 0.5, 0.6, 0];
+    limb(w, [s * -0.4, -0.5, 0], W, 0.55, 0.28, 5, horn);                                                  // arm bone
+    spike(w, W, [s * 3.0, 12.6, 0], 0.22, 4, horn);                                                         // wrist spike
+    const mid = (a: V3, b: V3): V3 => { const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; return [mx + (W[0] - mx) * 0.38, my + (W[1] - my) * 0.38, 0]; };
+    const ring: V3[] = [T[0], mid(T[0], T[1]), T[1], mid(T[1], T[2]), T[2], mid(T[2], T[3]), T[3], mid(T[3], R)];
+    ring.push(R);
+    for (let i = 0; i < ring.length - 1; i++) w.tri(W, ring[i], ring[i + 1], i % 4 < 2 ? deep : ice);
+    w.tri(W, R, [s * 0.5, 9, 0], deep);
+    for (const t of T) {
+      limb(w, W, t, 0.22, 0.07, 5, horn);
+      const dx = t[0] - W[0], dy = t[1] - W[1], l = Math.hypot(dx, dy);
+      spike(w, t, [t[0] + dx / l * 1.3, t[1] + dy / l * 1.3, 0], 0.13, 4, '#ffffff');
+    }
     return w.build();
   };
-  return { head: head.build(), jaw: jaw.build(), glow: glow.build(), seg, spike, claw: claw.build(), wingL: wing(-1), wingR: wing(1) };
+  return { head: head.build(), jaw: jaw.build(), glow: glow.build(), seg, spike: spike_, claw: claw.build(), wingL: wing(-1), wingR: wing(1) };
 }
 
 // ============================================================================ the hydra necks
 const HN = 16, MAX_HEADS = 8;
 function buildNeck() {
-  const seg = new GB([0.8, 1.12]).ico(1, [0, 0, 0], '#35823f', [1, 1, 1], 1).build();
-  const belly = new GB([0.9, 1.1]).ico(1, [0, 0, 0], '#c8d88a', [0.5, 0.8, 0.5], 1).build();
-  return { seg, belly };
+  const seg = new GB([0.8, 1.12]).ico(1, [0, 0, 0], '#35823f', [1, 0.9, 1.2], 0).build();
+  const belly = new GB([0.9, 1.1]).ico(1, [0, 0, 0], '#c8d88a', [0.5, 0.8, 0.5], 0).build();
+  const ridge = new GB([1, 1]);   // dorsal plate with two swept side barbs, one per neck segment
+  spike(ridge, [0, 0.25, 0], [0, 1.5, -0.4], 0.3, 4, '#1f4a28', [0.55, 1, 1]);
+  for (const s of [-1, 1]) spike(ridge, [s * 0.5, 0.2, 0], [s * 1.0, 0.85, -0.3], 0.12, 4, '#e4e0b8');
+  return { seg, belly, ridge: ridge.build() };
 }
 
 const _o = new Object3D();
@@ -82,16 +107,11 @@ export function GiantBosses() {
     return {
       d, lit, glowM,
       segs: inst(d.seg, lit, NECK_N), spikes: inst(d.spike, lit, NECK_N), claws: inst(d.claw, lit, 2),
-      hSeg: inst(n.seg, lit, MAX_HEADS * HN), hBelly: inst(n.belly, lit, MAX_HEADS * HN),
+      hSeg: inst(n.seg, lit, MAX_HEADS * HN), hBelly: inst(n.belly, lit, MAX_HEADS * HN), hRidge: inst(n.ridge, lit, MAX_HEADS * HN),
     };
   }, []);
-  const root = useRef<Group>(null!), headG = useRef<Group>(null!), jawG = useRef<Group>(null!), wingG = useRef<Group>(null!);
-  // creature-kit look for Glacius' head, jaw and wings (the neck / claws stay procedural: they are the rooted-giant part); old meshes show until the kit is in
-  const km = useMemo(() => makeBossMats(), []), rigH = useBossRig('boss_wyrm', km), rigW = useBossRig('boss_wyrm', km);
-  useMemo(() => {
-    if (rigH) { for (const k of ['body', 'legL', 'legR', 'tail', 'wingL', 'wingR']) rigH.J[k].visible = false; rigH.J.head.position.set(0, 0, 0); }
-    if (rigW) for (const k of ['body', 'legL', 'legR', 'tail', 'head']) rigW.J[k].visible = false;
-  }, [rigH, rigW]);
+  const root = useRef<Group>(null!), headG = useRef<Group>(null!), jawG = useRef<Group>(null!);
+  const wingLg = useRef<Group>(null!), wingRg = useRef<Group>(null!);
   const S = useRef({ dy: 0, pitch: 0, jaw: 0, yaw: 0, claw: 0, glow: 0 });
 
   useFrame(({ clock }, dtRaw) => {
@@ -122,13 +142,8 @@ export function GiantBosses() {
       const H = 6.2 + s.dy;
       headG.current.position.set(0, H, 0.4 - s.pitch * 2); headG.current.rotation.set(s.pitch, s.yaw, 0, 'YXZ'); headG.current.scale.setScalar(SC);
       jawG.current.rotation.x = s.jaw * 0.7;
-      if (rigH) rigH.J.jaw.rotation.x = s.jaw * 0.7;
-      if (rigW) {
-        const fl = 0.5 + sin(t * 1.6) * 0.12 + (p === 2 && (st === 'WINDUP' || st === 'ATTACK') ? 0.35 : 0) + (st === 'WINDUP' ? 0.1 : 0);
-        rigW.J.wingL.rotation.z = fl; rigW.J.wingR.rotation.z = -fl;
-        wingG.current.position.set(0, 3.6 + s.dy * 0.5, -3.4);
-      }
-      km.glow.color.setScalar(0.8 + s.glow * 0.8 + 0.2 * sin(TT * 5));
+      const fl = 0.04 + sin(t * 1.6) * 0.07 + (p === 2 && (st === 'WINDUP' || st === 'ATTACK') ? 0.22 : 0) + (st === 'WINDUP' ? 0.05 : 0);   // slow flap, big on the roar
+      wingRg.current.rotation.z = fl; wingLg.current.rotation.z = -fl;
       G.glowM.color.setScalar(1.2 + s.glow * 0.8 + 0.2 * sin(TT * 5));
       // neck: rises steeply out of the rim behind the head, then dives below the arena, swaying
       const L = 22;
@@ -172,14 +187,15 @@ export function GiantBosses() {
           const u = (q + 0.5) / HN, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u;
           const sw = sin(TT * 1.4 + u * 5 + nHead * 1.3) * 0.7 * sin(Math.PI * u);
           const x = a * bx + b * mx + c * hx + nx * sw, y = a * by + b * my + c * hy, z = a * bz + b * mz + c * hz + nz * sw;
-          const r = 1.55 - 0.35 * u;
+          const r = 1.4 - 0.45 * u;
           put(G.hSeg, nHead * HN + q, x, y, z, r, r, r);
           put(G.hBelly, nHead * HN + q, x, y - r * 0.35, z, r * 0.75, r * 0.7, r * 0.75);
+          put(G.hRidge, nHead * HN + q, x, y + r * 0.7, z, r * 0.9, r * 0.9, r * 0.9);
         }
         nHead++;
       }
     }
-    commitInst(G.hSeg, nHead * HN); commitInst(G.hBelly, nHead * HN);
+    commitInst(G.hSeg, nHead * HN); commitInst(G.hBelly, nHead * HN); commitInst(G.hRidge, nHead * HN);
   });
 
   return (
@@ -187,20 +203,14 @@ export function GiantBosses() {
       <group ref={root} visible={false}>
         <primitive object={G.segs} /><primitive object={G.spikes} /><primitive object={G.claws} />
         <group ref={headG}>
-          <group visible={!rigH}>
-            <mesh geometry={G.d.head} material={G.lit} castShadow />
-            <mesh geometry={G.d.glow} material={G.glowM} />
-            <group ref={jawG}><mesh geometry={G.d.jaw} material={G.lit} castShadow /></group>
-          </group>
-          {rigH && <group scale={KIT_HEAD}><primitive object={rigH.root} /></group>}
+          <mesh geometry={G.d.head} material={G.lit} castShadow />
+          <mesh geometry={G.d.glow} material={G.glowM} />
+          <group ref={jawG}><mesh geometry={G.d.jaw} material={G.lit} castShadow /></group>
         </group>
-        <group visible={!rigW}>
-          <mesh geometry={G.d.wingL} material={G.lit} position={[0, 0, -2.4]} />
-          <mesh geometry={G.d.wingR} material={G.lit} position={[0, 0, -2.4]} />
-        </group>
-        {rigW && <group ref={wingG} scale={KIT_WING}><primitive object={rigW.root} /></group>}
+        <group ref={wingRg} position={[0, 0.6, -2.4]}><mesh geometry={G.d.wingR} material={G.lit} position={[0, -0.6, 0]} /></group>
+        <group ref={wingLg} position={[0, 0.6, -2.4]}><mesh geometry={G.d.wingL} material={G.lit} position={[0, -0.6, 0]} /></group>
       </group>
-      <primitive object={G.hSeg} /><primitive object={G.hBelly} />
+      <primitive object={G.hSeg} /><primitive object={G.hBelly} /><primitive object={G.hRidge} />
     </>
   );
 }
