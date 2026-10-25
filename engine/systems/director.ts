@@ -92,8 +92,12 @@ let nextUnit = 0;
 let bursts = 0;
 let curBurst = 0;
 let burstT = 0;
-const burstEnd = [0, 0, 0, 0];
-const burstSize = [0, 0, 0, 0];
+const burstEnd = [0, 0, 0, 0, 0, 0, 0, 0];
+const burstSize = [0, 0, 0, 0, 0, 0, 0, 0];
+// (owner 2026-10-25) HALLS ("dungeon") rooms: each burst fills ONE chamber ("sac"). The first is the chamber nearest the arrival; the next
+// opens only when every monster is down, in the nearest chamber to the hero not used yet (no chamber twice). More monsters overall.
+let sacMode = false, sacCur = -1, sacUsed = 0;
+const SAC_MORE = 1.4;
 let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
 /** Endless Waves stacking (owner): extra bosses beside the wave's boss, and how many mini-bosses a wave brings. */
@@ -472,7 +476,9 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
   const tower = runInfo.mode === 'TOWER' ? (daily.on ? 1.5 : waves.on ? waveCrowd(towerFloor) : 2) : 1;   // Endless Tower: twice the monsters per floor (Daily Trial: x1.5)
-  let points = Math.min(waveBudget(depth) * mult * roomy * tower, 160 * tower) * mods.spawn;
+  sacMode = shape.kind === 'HALLS' && halls.chambers.length >= 2 && (plan.type === 'COMBAT' || plan.type === 'ELITE' || plan.type === 'TREASURE') && runInfo.mode !== 'TOWER';
+  sacUsed = 0; sacCur = -1;
+  let points = Math.min(waveBudget(depth) * mult * roomy * tower * (sacMode ? SAC_MORE : 1), 160 * tower * (sacMode ? SAC_MORE : 1)) * mods.spawn;
   // (owner) the first quest, "Trial of the Meadow" (defeat slimes): while it is open the Greenwood packs carry a guaranteed slime group,
   // so it can always be finished in the first rooms of the first run
   const sl = plan.type === 'COMBAT' || plan.type === 'TREASURE' ? slimeQuestLeft() : 0;
@@ -491,6 +497,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   for (let i = 0; i < elites; i++) pushGroup(rosterPick(def, 99, 1.5), 1, true);
   // bursts: split the normal units in equal parts; elites join the last burst
   bursts = Math.max(1, Math.min(Math.ceil(nBursts / 2), 2));   // (owner) fewer, bigger groups: 20 enemies = 2 x 10, not 4 x 5
+  if (sacMode) { bursts = Math.min(halls.chambers.length, burstEnd.length); sacPick(halls.sx, halls.sz); }   // one burst per chamber
   let prev = 0;
   for (let b = 0; b < bursts; b++) {
     const end = b === bursts - 1 ? unitN : Math.min(normal, Math.round(((b + 1) * normal) / bursts));
@@ -593,9 +600,37 @@ function placeMarker(kind: EnemyKind, x: number, z: number, elite: boolean, dur:
   return true;
 }
 
+/** The unused chamber nearest (x, z) becomes the current sac. */
+function sacPick(x: number, z: number): void {
+  let best = -1, bd = 1e9;
+  for (let i = 0; i < halls.chambers.length && i < 31; i++) {
+    if (sacUsed & (1 << i)) continue;
+    const c = halls.chambers[i], d = (c[0] - x) ** 2 + (c[1] - z) ** 2;
+    if (d < bd) { bd = d; best = i; }
+  }
+  sacCur = best; if (best >= 0) sacUsed |= 1 << best;
+}
+/** A spawn spot inside the current sac (kept off the hero when possible). */
+function sacAnchor(minPlayerDist: number): boolean {
+  const c = halls.chambers[sacCur]; if (!c) return false;
+  const pp = world.player.pos;
+  for (let pass = 0; pass < 3; pass++) {
+    const md = pass === 0 ? minPlayerDist : pass === 1 ? minPlayerDist * 0.6 : 0;
+    for (let t = 0; t < 40; t++) {
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * c[2] * 0.8;
+      const x = c[0] + Math.cos(a) * r, z = c[1] + Math.sin(a) * r;
+      if (!insideShape(x, z, 3) || !isSpawnable(x, z)) continue;
+      if ((x - pp.x) ** 2 + (z - pp.z) ** 2 < md * md) continue;
+      anchorX = x; anchorZ = z; return true;
+    }
+  }
+  return false;
+}
+
 function pickAnchor(minPlayerDist: number): boolean {
   const pp = world.player.pos;
-  if (shape.kind === 'HALLS' && halls.passPts.length && Math.random() < 0.3) {   // (owner) HALLS: some packs wait along the passages (they idle / wander until the hero is near)
+  if (sacMode && shape.kind === 'HALLS') { if (sacAnchor(minPlayerDist)) return true; }
+  else if (shape.kind === 'HALLS' && halls.passPts.length && Math.random() < 0.3) {   // (owner) HALLS: some packs wait along the passages (they idle / wander until the hero is near)
     const q = halls.passPts[Math.floor(Math.random() * halls.passPts.length)];
     if ((q[0] - pp.x) ** 2 + (q[1] - pp.z) ** 2 >= minPlayerDist * minPlayerDist && isSpawnable(q[0], q[1])) { anchorX = q[0]; anchorZ = q[1]; return true; }
   }
@@ -740,8 +775,12 @@ function tickSpawns(dt: number): void {
     }
   } else if (curBurst + 1 < bursts) {
     burstT += dt;
-    const low = Math.max(3, Math.floor(burstSize[curBurst] * 0.6));   // (owner) stacking spawns: the next group arrives while this one still fights
-    if (d.aliveCount + pending <= low || burstT > 7) { curBurst++; burstT = 0; }
+    if (sacMode) {   // the next chamber wakes only when this one is cleared (nearest unused chamber to the hero)
+      if (d.aliveCount + pending === 0) { curBurst++; burstT = 0; groupIdx = 0; sacPick(world.player.pos.x, world.player.pos.z); }
+    } else {
+      const low = Math.max(3, Math.floor(burstSize[curBurst] * 0.6));   // (owner) stacking spawns: the next group arrives while this one still fights
+      if (d.aliveCount + pending <= low || burstT > 7) { curBurst++; burstT = 0; }
+    }
   }
 }
 

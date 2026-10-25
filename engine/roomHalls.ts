@@ -34,6 +34,8 @@ export const halls = {
   statues: [] as [number, number][], arches: [] as [number, number, number][],
   /** dead-end pockets (off the shortest start -> exit route): x, z, detour (m) - best first, at most 2 */
   pockets: [] as [number, number, number][],
+  /** the chambers ("sacs"): centre x, z and the smaller half axis (m). director: monsters fill them one by one, nearest the arrival first */
+  chambers: [] as [number, number, number][],
   /** points along the passage centre lines (>= 9 m from the start / exit, ~10 m apart): some monsters are placed here (director.pickAnchor) */
   passPts: [] as [number, number][],
   area: 0, extent: 0,
@@ -508,6 +510,7 @@ function finishMask(I: Inst): void {
   }
   halls.extent = Math.sqrt(ext);
   halls.islands = I.islands.slice();
+  halls.chambers = I.blobs.map((b) => [b.x, b.z, Math.min(b.rx, b.rz)] as [number, number, number]);
   halls.keep = I.keep.slice();
   halls.statues = I.statues.slice(); halls.arches = I.arches.slice();
 }
