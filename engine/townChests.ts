@@ -1,6 +1,6 @@
 // ============================================================================
 // Hidden treasure chests in the town hub (owner 2026-10-25): small toy chests tucked into out-of-the-way nooks of the hub
-// (behind rocks and buildings, forest corners, the beach). E opens one (lid swings up), it pays a one-time reward and stays
+// (behind rocks and buildings, forest corners, the beach). E opens one (lid swings up), it pays its reward and stays open until the next local day (owner 2026-10-25: chests refill daily)
 // open. Opened ids are saved with the hero (store.chestsOpened). Pure data (no imports): townData adds the colliders,
 // townFill keeps trees / decor off the spots, render/TownChests draws them, engine/systems/townChestLogic opens them.
 // ============================================================================

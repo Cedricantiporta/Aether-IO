@@ -7,17 +7,19 @@ import { TOWN_CHESTS } from '../townChests';
 import type { Item } from '../../types';
 
 const OPENED = 99;   // chestT of a chest opened in an earlier visit / session (lid already up, no animation)
-let seen: string[] | null = null;
+let seen: string[] | null = null, seenDay = -1;
+/** (owner 2026-10-25) town chests refill every day: an opened chest is saved as `<id>@<local day>`. */
+const chestKey = (id: string): string => `${id}@${dayNo()}`;
 
 export const chestIsOpen = (i: number): boolean => world.village.chestT[i] >= 0;
 
 /** Called every town frame: re-sync the lids when the saved list changed (load / reset), advance the opening timers. */
 export function tickChests(dt: number): void {
-  const t = world.village.chestT, st = useGameStore.getState();
-  if (st.chestsOpened !== seen) {
-    seen = st.chestsOpened;
+  const t = world.village.chestT, st = useGameStore.getState(), day = dayNo();
+  if (st.chestsOpened !== seen || day !== seenDay) {   // (a new day refills every chest)
+    seen = st.chestsOpened; seenDay = day;
     for (let i = 0; i < TOWN_CHESTS.length; i++) {
-      const open = seen.includes(TOWN_CHESTS[i].id);
+      const open = seen.includes(chestKey(TOWN_CHESTS[i].id));
       if (open && t[i] < 0) t[i] = OPENED; else if (!open && t[i] >= 0) t[i] = -1;
     }
   }
@@ -28,7 +30,7 @@ export function tickChests(dt: number): void {
 export function openChest(i: number): void {
   const c = TOWN_CHESTS[i]; if (!c || world.village.chestT[i] >= 0) return;
   const st = useGameStore.getState(), p = world.player;
-  if (st.chestsOpened.includes(c.id)) { world.village.chestT[i] = OPENED; return; }
+  if (st.chestsOpened.includes(chestKey(c.id))) { world.village.chestT[i] = OPENED; return; }
   const r = c.reward, items: Item[] = [];
   if (r.item) {
     for (const it of makeItemById(r.item.id, r.item.qty)) {
@@ -38,7 +40,8 @@ export function openChest(i: number): void {
   }
   world.village.chestT[i] = 0;
   p.facing = Math.atan2(c.x - p.pos.x, c.z - p.pos.z); p.anim.castT = Math.max(p.anim.castT, 0.8);
-  useGameStore.setState({ chestsOpened: [...st.chestsOpened, c.id] });
+  const dayTag = `@${dayNo()}`;
+  useGameStore.setState({ chestsOpened: [...st.chestsOpened.filter((id) => id.startsWith('treasury:') || id.endsWith(dayTag)), chestKey(c.id)] });   // (yesterday's openings are dropped)
   if (r.gold) st.addGold(r.gold);
   if (r.gems) st.addGems(r.gems);
   if (r.shards) st.addMaterial(r.shards[0], r.shards[1]);
