@@ -69,7 +69,9 @@ const POOL_GRIP = 0.16;
 const MAX_PIECES = 3;
 /** (owner) siege weapons and magic towers can be destroyed: HP = this many of the hero's average hits, a little more deeper in */
 const SIEGE_HP_HITS = 9, TOWER_HP_HITS = 12, STATUE_HP_HITS = 10;
-const trapHp = (hits: number, depth: number): number => Math.max(30, useGameStore.getState().stats.damage * hits * (1 + 0.02 * depth));
+// (owner 2026-10-25) stationaries: +60% hp and 2x defense (every hit on them deals half: TRAP_DEF in hitOne)
+const trapHp = (hits: number, depth: number): number => Math.max(48, useGameStore.getState().stats.damage * hits * (1 + 0.02 * depth) * 1.6);
+const TRAP_DEF = 0.5;
 /** A destroyable stationary (siege weapon / magic tower / breath statue). */
 export interface TrapObj { x: number; z: number; rad: number; hp: number; maxHp: number; dead: boolean; col: Collider | null; flash: number; hitSeq: number }
 /** The stationary the hero is aiming at (auto-target pick, written by player.ts) and the click-locked one (target.ts clearTarget clears it). */
@@ -125,6 +127,7 @@ function breakPiece(o: TrapObj): void {
 }
 const hitOne = (o: TrapObj, x: number, z: number, r: number, dmg: number): boolean => {
   if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + o.rad) ** 2) return false;
+  dmg *= TRAP_DEF;
   o.hp -= dmg; o.flash = 1; o.hitSeq++;
   events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
   if (o.hp <= 0) breakPiece(o);
