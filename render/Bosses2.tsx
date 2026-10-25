@@ -46,7 +46,6 @@ function buildTreant(): Rig {
   body.cyl(0.4, 0.66, 0.5, 6, [0, 2.75, 0], bark);                                               // jaw block under the face
   for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.5; spike(body, [sin(a) * 0.75, 1.2 + (i % 2) * 0.8, cos(a) * 0.75], [sin(a) * 1.25, 2.0 + (i % 2) * 1.0, cos(a) * 1.25], 0.2, 4, bark2); }
   lump(body, 0.34, [0.5, 2.0, 0.6], bark2, [1, 1.2, 0.6]); lump(body, 0.28, [-0.55, 2.7, 0.5], bark2, [1, 1.2, 0.6]); lump(body, 0.26, [0.1, 1.2, 0.85], bark2, [1, 1.2, 0.6]);
-  for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU + 0.3; body.cone(0.3, 1.9, 5, [sin(a) * 1.0, 0.35, cos(a) * 1.0], root, outward(a, 1.25)); }
   // brow ridges, nose and fangs: a scowling face
   for (const s of [-1, 1]) {
     lump(body, 0.3, [s * 0.27, 3.5, 0.52], bark, [1.1, 0.4, 0.8], [0, 0, -s * 0.45]);
@@ -68,12 +67,7 @@ function buildTreant(): Rig {
     const a = (i / 13) * TAU + 0.2, rr = 0.35 + (i % 3) * 0.2, y0 = 3.95 + (i % 2) * 0.15, c = i % 2 ? leaf2 : leaf, o = rr + 0.55 + (i % 3) * 0.12;
     blade(body, [sin(a) * rr, y0, cos(a) * rr], [sin(a) * o, y0 + 1.15 + (i % 3) * 0.3, cos(a) * o], 0.2, 0.07, c);
   }
-  for (let i = 0; i < 11; i++) {   // (owner: rooted) thick roots creeping far across the ground, tapering to claw tips
-    const a = (i / 11) * TAU + 0.15, len = 2.6 + (i % 3) * 0.9, d = 1.0 + len * 0.5, e0 = d + len * 0.48;
-    body.cyl(0.14, 0.5 - (i % 3) * 0.05, len, 5, [sin(a) * d, 0.3, cos(a) * d], root, [1.5, a, 0]);
-    spike(body, [sin(a) * e0, 0.2, cos(a) * e0], [sin(a) * (e0 + 0.9), 0.1, cos(a) * (e0 + 0.9)], 0.15, 4, bark2);
-    lump(body, 0.34, [sin(a) * (d - len * 0.2), 0.42, cos(a) * (d - len * 0.2)], bark2, [1, 0.7, 1]);
-  }
+  // (owner 2026-10-25: no roots: they read as floating roots)
   for (const s of [-1, 1]) { blade(glow, [s * 0.14, 3.2, 0.52], [s * 0.42, 3.32, 0.56], 0.07, 0.05, '#d8ff5a'); glow.octa(0.07, [s * 0.5, 1.9, 0.82], '#9be32a', [1, 1.4, 0.6]); }
   glow.torus(0.7, 0.04, [0, 2.2, 0], '#9be32a', [Math.PI / 2, 0, 0], 1, 8);
   // arms: tapered branch limbs with elbow thorns and long clawed twig fingers
