@@ -15,6 +15,7 @@ import { npcMarkers } from '../engine/systems/npcQuestLogic';
 import { mainNav, navNpc, npcArea, type NavTarget } from '../engine/systems/questNav';
 import { updateRouteHint, routeHintPath } from '../engine/systems/townPath';
 import { gateOpen } from '../story';
+import { autoWalkGoal } from '../engine/systems/village';
 
 // (owner) colour by what it leads to: main quest gold, side quest green, the Adventure Portal its own sky blue
 const GOLD = new Color('#ffc53d'), QUEST = new Color('#5fe07a'), PORTAL = new Color('#7ad8ff');
@@ -24,6 +25,9 @@ const use = (t: NavTarget, col: Color): boolean => { tgt.x = t.x; tgt.z = t.z; t
 function pickTarget(): boolean {
   if (world.village.area === 'CAVE' && world.village.cave.floor > 1) return false;   // deep cave floors: no arrow (the way out is the trip's business)
   const st = useGameStore.getState();
+  // 0) (owner 2026-10-25) an auto-walk in progress: the trail leads where the hero is actually walking
+  const w = autoWalkGoal();
+  if (w) { tgt.x = w.x; tgt.z = w.z; tgt.reach = w.reach; tgt.col = w.kind === 'main' ? GOLD : w.kind === 'side' ? QUEST : PORTAL; tgt.hideR = Math.max(2.5, w.reach + 0.5); tgt.mark = true; return true; }
   // 1) the main quest when it waits on someone / a shop in town (gold)
   const main = mainNav();
   if (main && !main.field) return use(main, GOLD);

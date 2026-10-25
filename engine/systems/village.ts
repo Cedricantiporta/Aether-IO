@@ -512,6 +512,7 @@ export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' |
   if (st.isShopOpen || dialogueOpen() || world.village.pending) return;
   if (act === 'npc' && npc >= 0 && npcs[npc]) { x = npcs[npc].x; z = npcs[npc].z; r = TALK_REACH; }
   walkStamp.t = performance.now();
+  walkKind = nextKind ?? 'other'; nextKind = null;
   g.act = act; g.tab = tab; g.npc = npc; g.r = 0.9;
   goT.x = x; goT.z = z; goT.reach = r; goT.repaths = 0; goT.track = 0.4;
   goT.resume = hopNext; hopNext = null;   // (a quest walk through a door carries on in the next area)
@@ -520,6 +521,13 @@ export function walkTo(x: number, z: number, act: 'shop' | 'castle' | 'church' |
 }
 /** Walk state beside world.village.go: the real target + reach, stuck detection, re-path budget, NPC follow timer. */
 const goT = { x: 0, z: 0, reach: 1.6, best: 1e9, stuck: 0, repaths: 0, track: 0, resume: null as (() => void) | null, hops: 0 };
+/** (owner 2026-10-25) What the current auto-walk is for, so the ground guide trail (render/GuideArrow) follows it:
+ *  'main' quest (gold), 'side' quest (green), anything else (a clicked shop / NPC / door: sky blue). */
+let walkKind: 'main' | 'side' | 'other' = 'other', nextKind: 'main' | 'side' | null = null;
+/** The live auto-walk goal (null when not auto-walking). */
+export function autoWalkGoal(): { x: number; z: number; reach: number; kind: 'main' | 'side' | 'other' } | null {
+  return world.village.go.on ? { x: goT.x, z: goT.z, reach: goT.reach, kind: walkKind } : null;
+}
 /** Set by navWalk just before walkTo: what to walk to next when this walk ends at a door / exit (castle, cave). */
 let hopNext: (() => void) | null = null;
 function planRoute(): boolean {
@@ -572,13 +580,13 @@ export function walkToMain(): void {
   const st0 = useGameStore.getState();
   if (liveStep(st0)?.at === 'BAG') { if (!st0.isInventoryOpen) st0.toggleInventory(); return; }   // equip step: open the bag
   const t = mainNav();
-  if (t) navWalk(t, walkToMainHop);
+  if (t) { nextKind = 'main'; navWalk(t, walkToMainHop); }
 }
-function walkToMainHop(): void { const t = mainNav(); if (t) navWalk(t, walkToMainHop, true); }
+function walkToMainHop(): void { const t = mainNav(); if (t) { nextKind = 'main'; navWalk(t, walkToMainHop, true); } }
 /** NPC side quest click: the NPC who takes it in when ready, the TALK target, the farm chore, the shop of a shop action,
  *  else the Adventure Portal. Takes the quest (or, legacy form, its objective + the NPC to walk to). */
 export function walkToNpcObjective(o: { type: string; target?: string | string[] } | NpcQuestDef, npc?: string | null): void {
-  if ('objective' in o) { const again = (): void => navWalk(npcQuestNav(o), again, true); navWalk(npcQuestNav(o), again); return; }
+  if ('objective' in o) { const again = (): void => { nextKind = 'side'; navWalk(npcQuestNav(o), again, true); }; nextKind = 'side'; navWalk(npcQuestNav(o), again); return; }
   if (npc) { walkToNpcQuest(npc); return; }
   navWalk(npcQuestNav({ id: '', giver: '', title: '', summary: '', intro: [], progress: '', done: [], objective: { type: o.type as NpcQuestDef['objective']['type'], target: o.target, count: 1 }, reward: {} }));
 }
@@ -588,7 +596,7 @@ export function walkAfterArrive(fn: () => void): void { afterArrive = fn; afterT
 /** Walk to talk with NPC `name` (through the castle door / exit when needed); unknown name: the Adventure Portal. */
 export function walkToNpcQuest(name: string | null): void {
   const i = name ? NPCS.findIndex((n) => n.name === name) : -1;
-  if (i >= 0) { const again = (): void => navWalk(navNpc(i), again, true); navWalk(navNpc(i), again); return; }
+  if (i >= 0) { const again = (): void => { nextKind = 'side'; navWalk(navNpc(i), again, true); }; nextKind = 'side'; navWalk(navNpc(i), again); return; }
   if (world.village.area === 'CASTLE') walkTo(CASTLE_EXIT.x, CASTLE_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'CHURCH') walkTo(CHURCH_EXIT.x, CHURCH_EXIT.z, 'leave', '', 2);
   else if (world.village.area === 'TAVERN') walkTo(TAVERN_EXIT.x, TAVERN_EXIT.z, 'leave', '', 2);
