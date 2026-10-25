@@ -93,11 +93,13 @@ export function townPlaces(): Sets {
   const S: Sets = new Map();
   // ---- trees (round / pine / palm), free rotation + a little size variety; scale from the old tree size (s ~ 3.0 .. 3.9)
   for (const t of TOWN_TREES) {
+    if (inSea(t.x, t.z)) continue;
     const h = hash2(t.x, t.z), sc = t.s * 0.3 * (0.9 + hash2(t.x, t.z, 2) * 0.22);
     put(S, treeFor(t.kind, h, t.x, t.z), P(t.x, groundAt(t.x, t.z), t.z, hash2(t.x, t.z, 1) * TAU, sc, sc * (0.95 + hash2(t.x, t.z, 3) * 0.14)));
   }
   // ---- the dense dressing (engine/townFill.ts): rows are [x, z, yaw, sx, sy, sz]; the ground height is added here
   for (const name of Object.keys(FILL)) for (const [x, z, ry, sx, sy, sz, ay] of FILL[name]) {
+    if (inSea(x, z)) continue;
     const low = /rock/.test(name) ? 0.2 * sx : /tree|palm|pine/.test(name) ? 0.1 : 0;
     put(S, name as NKPiece, { x, y: ay !== undefined ? ay : groundAt(x, z) - low, z, ry, sx, sy, sz });
   }
@@ -175,7 +177,7 @@ export function townPlaces(): Sets {
   rockC(-72.5, 15.5, 1.5, -0.55, 61, 6);   // the islet in the shallows
   rockC(-66.4, 44.5, 1.2, -0.4, 62, 5);   // a small outcrop where the sand meets the water
   for (const [x, z, r] of [[-62.9, 18.6, 0.6], [-52.6, 40.4, 0.55], [-56.4, 52.4, 0.65]]) rockC(x, z, r, -0.05, 70 + x, 3);   // lone rocks on the sand
-  for (const [x, z, r] of SOUTH_ROCKS) rockC(x, z, r * 1.05, -0.25, 30, r > 1.1 ? 6 : 4);
+  for (const [x, z, r] of SOUTH_ROCKS) if (!inSea(x, z, 4)) rockC(x, z, r * 1.05, -0.25, 30, r > 1.1 ? 6 : 4);
   for (let z = LAKE.z0 + 16; z < LAKE.z1 - 16; z += 3) {   // (the sandy east shore of the lake along the town's west wall; the beaches have their own props)
     if ((z > BEACH.z0 - 9 && z < BEACH.z1 + 8) || (z > riverBank(LAKE.x1, 0) - 3 && z < riverBank(LAKE.x1, 1) + 3) || (z > 72 && z < 103)) continue;
     if (hash2(z, 4) < 0.18) rockC(LAKE.x1 - 1.5 - hash2(z, 5) * 3, z + hash2(z, 6), 0.7 + hash2(z, 7) * 0.5, -0.2, 40, 4);
@@ -222,6 +224,8 @@ export function townPlaces(): Sets {
 }
 
 const _cache: { town: Sets | null } = { town: null };
+/** Past the island's visual edge (+ a small margin): open sea, nothing is planted there (the cave headland stays). */
+const inSea = (x: number, z: number, m = 2): boolean => Math.hypot(x, z) > edgeR(Math.atan2(z, x)) + m && !inCaveClear(x, z);
 const add = (S: Sets, name: string, l: Place[]) => { let t = S.get(name); if (!t) S.set(name, (t = [])); t.push(...l); };
 
 /** Edge bushes, flower patches, grass tufts, mushroom clusters (quality-scaled). */
@@ -285,7 +289,7 @@ function dressing(q: QualityCfg, S: Sets): void {
   {
     const nRock = Math.round(70 * q.forest) + 24, rnd = mulberry32(100), A: Place[] = [], B: Place[] = [], Cl: Place[] = [], Sm: Place[] = [];
     for (let i = 0; i < nRock; i++) {
-      const a = ((i + rnd()) / nRock) * TAU, e = edgeR(a), r = e + (rnd() - 0.3) * 6, x = Math.cos(a) * r, z = Math.sin(a) * r, s0 = (0.9 + rnd() * 1.3) * 0.62;
+      const a = ((i + rnd()) / nRock) * TAU, e = edgeR(a), r = e - 0.5 + (rnd() - 0.3) * 2.5, x = Math.cos(a) * r, z = Math.sin(a) * r, s0 = (0.9 + rnd() * 1.3) * 0.62;
       if (z < 38 && rnd() < 0.6) continue;   // back and sides of the walled town: keep it sparse
       if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1) || nearDock(x, z)) continue;   // (the cave mouth + the pier stay clear)
       if (i % 6 === 0) { const k = s0 * 0.5; Cl.push({ x, y: groundY(x, z) - k * 0.35, z, ry: rnd() * 6.28, sx: k, sy: k * (0.9 + rnd() * 0.5), sz: k }); continue; }   // (kit v3 cliff_rock_large: the big boulders of the rim)
@@ -297,7 +301,7 @@ function dressing(q: QualityCfg, S: Sets): void {
       if (!inCaveClear(x, z) && !nearDock(x, z)) { const pl = { x, y: groundY(x, z) - 0.05, z, ry: rnd() * 6.28, sx: s0, sy: s0 * (0.8 + rnd() * 0.6), sz: s0 }; if (i % 3 === 0) { pl.sx = pl.sz = s0 * 1.1; pl.sy = s0 * 1.1; Sm.push(pl); } else (i % 2 ? A : B).push(pl); }   // (a third of the boundary stones are kit v3 rock_cluster_small)
     }
     add(S, 'rock_round_a', A); add(S, 'rock_round_b', B); add(S, 'cliff_rock_large', Cl); add(S, 'rock_cluster_small', Sm);
-    const fr = mulberry32(2024), total = Math.round(1100 * q.forest);
+    const fr = mulberry32(2024), total = 0;   // (owner 2026-10-25: the kingdom is an island in the sea: no forest ring past the edge any more)
     for (let i = 0; i < total; i++) {
       const a = fr() * TAU, e = edgeR(a), d = Math.pow(fr(), 1.5) * 58 + 3, r = e + d, x = Math.cos(a) * r, z = Math.sin(a) * r, t = fr();
       if (lakeK(x, z) > 0.02 || inCaveClear(x, z, 1)) continue;   // no forest in the lake / on the cave mound
@@ -356,6 +360,7 @@ function bushSwap(q: QualityCfg, out: Sets): void {
 function qtDecor(q: QualityCfg, out: Sets): void {
   QT_DECOR.forEach(([piece, [x, z, ry, sx, sy, sz]], i) => {
     if (q.name === 'LOW' ? i % 3 !== 0 : q.name === 'MEDIUM' ? i % 3 === 2 : false) return;
+    if (inSea(x, z)) return;
     put(out, piece, { x, y: groundAt(x, z) - 0.02, z, ry, sx, sy, sz });
   });
 }

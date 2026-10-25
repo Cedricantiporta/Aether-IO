@@ -9,7 +9,7 @@ import { QualityCfg } from './quality';
 import { useGameStore } from '../store';
 import { isLobbyStatus } from './CameraRig';
 import { GB, fbm, litMat, mulberry32, setInst, TAU, vnoise, lerp } from './util';
-import { GROUND_SIZE, POND, edgeR, groundY, lakeK, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
+import { GROUND_BOX, POND, edgeR, groundY, lakeK, inForecourtUse, inYard, pondEdge, regionAt, sstep } from './terrainFn';
 import { NatureBatch } from './NatureBatch';
 import { Inst } from './Inst';
 import { REGIONS } from '../engine/mapgen';
@@ -41,6 +41,8 @@ const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
 // ------------------------------------------------------------------ ground ---
 const cG = new Color(), cD = new Color(), cD2 = new Color(), cT = new Color();
 const _rg = { w: 0, style: null as any, grass: 1, kind: '' };
+/** 0..1: the sandy band along the island's shore (starts ~3.5 m inside the visual edge). */
+function shoreSandK(r: number, e: number): number { return sstep(e - 3.5, e - 1.4, r); }
 function groundColor(x: number, z: number, y: number, out: Color) {
   const r = Math.hypot(x, z), a = Math.atan2(z, x), e = edgeR(a);
   const n1 = fbm(x * 0.03 + 20, z * 0.03, 3), n2 = fbm(x * 0.11 + 5, z * 0.11, 3), n3 = vnoise(x * 0.9, z * 0.9);
@@ -64,13 +66,13 @@ function groundColor(x: number, z: number, y: number, out: Color) {
     out.lerp(cT.set('#c8b784'), sand * 0.85);
     out.lerp(cT.set('#6d5a3c'), sstep(pe + 0.5, pe - 1.5, pd));
   }
-  // outside the playable edge: dark forest floor, rock on height
-  const t = sstep(e - 4, e + 5, r);
+  // outside the playable edge: the sandy shore band (soft, bright), wet sand at the water line, a teal tint where it dips under the sea
+  const t = shoreSandK(r, e);
   if (t > 0) {
-    cT.set('#2a4a22').lerp(cD.set('#3e5a2a'), n2);
-    out.lerp(cT, t * 0.92).multiplyScalar(lerp(1, 0.62, t));
-    out.lerp(cT.set('#59606a'), sstep(3.0, 6.5, y + (n2 - 0.5) * 2) * 0.8);
-    out.lerp(cT.set('#12200f'), sstep(e + 10, e + 60, r) * 0.7);
+    cT.set('#ecd9a3').lerp(cD.set('#e0c88e'), n2).multiplyScalar(0.97 + n3 * 0.06);
+    cT.lerp(cD.set('#c4a874'), sstep(e - 1.2, e + 0.6, r));
+    cT.lerp(cD.set('#8fcfb8'), sstep(-0.2, -0.9, y));
+    out.lerp(cT, t);
   }
   // lakeside beach: warm dry sand, darker wet sand toward the water line
   const sk = sandAt(x, z);
@@ -103,23 +105,24 @@ function detailTexture() {
 // grass vertex shader samples, so grass can wrap endlessly around the player over a huge map with a fixed instance count.
 function Ground({ q }: { q: QualityCfg }) {
   const { geo, mat, mask } = useMemo(() => {
-    const seg = q.name === 'LOW' ? 120 : 180;
-    const S = GROUND_SIZE, cell = S / seg, n = seg + 1;
-    const pos = new Float32Array(n * n * 3), col = new Float32Array(n * n * 3), uv = new Float32Array(n * n * 2);
-    const bytes = new Uint8Array(n * n * 4), sandA = new Float32Array(n * n);
+    const cell = q.name === 'LOW' ? 2.4 : 1.9, B = GROUND_BOX;
+    const sx = Math.ceil((B.x1 - B.x0) / cell), sz = Math.ceil((B.z1 - B.z0) / cell), nx = sx + 1, nz = sz + 1, nv = nx * nz;
+    const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), uv = new Float32Array(nv * 2);
+    const bytes = new Uint8Array(nv * 4), sandA = new Float32Array(nv);
     const c = new Color(), gc = new Color();
-    const idx = new Uint32Array(seg * seg * 6);
+    const idx = new Uint32Array(sx * sz * 6);
     const pe = (x: number, z: number) => pondEdge(Math.atan2(z - POND.z, x - POND.x));
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-      const k = j * n + i;
-      const x = -S / 2 + i * cell, z = -S / 2 + j * cell;
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const k = j * nx + i;
+      const x = B.x0 + i * cell, z = B.z0 + j * cell;
       const y = groundY(x, z);
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
-      groundColor(x, z, y, c); sandA[k] = sandAt(x, z);
+      groundColor(x, z, y, c);
+      const r = Math.hypot(x, z), e = edgeR(Math.atan2(z, x));
+      sandA[k] = Math.max(sandAt(x, z), shoreSandK(r, e) * 0.9);
       col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
       uv[k * 2] = x / 8; uv[k * 2 + 1] = z / 8;   // (the Greenwood run rooms' painted lawn texture, period 8 m)
       // grass density + tint
-      const r = Math.hypot(x, z), e = edgeR(Math.atan2(z, x));
       const pd = Math.hypot(x - POND.x, z - POND.z);
       let dens = regionAt(x, z, _rg).grass *  sstep(e - 1, e - 6, r) * sstep(pe(x, z) + 0.3, pe(x, z) + 2.5, pd);
       gc.copy(c).multiplyScalar(1.55); gc.convertLinearToSRGB();
@@ -127,8 +130,8 @@ function Ground({ q }: { q: QualityCfg }) {
       bytes[k * 4 + 3] = Math.round(dens * 255);
     }
     let t = 0;
-    for (let j = 0; j < seg; j++) for (let i = 0; i < seg; i++) {
-      const a = j * n + i, b = a + 1, d = a + n, e2 = d + 1;
+    for (let j = 0; j < sz; j++) for (let i = 0; i < sx; i++) {
+      const a = j * nx + i, b = a + 1, d = a + nx, e2 = d + 1;
       idx[t++] = a; idx[t++] = d; idx[t++] = b; idx[t++] = b; idx[t++] = d; idx[t++] = e2;
     }
     const g = new BufferGeometry();
@@ -144,7 +147,7 @@ function Ground({ q }: { q: QualityCfg }) {
     for (const d of dd) { x0 = Math.min(x0, d.x - 5); x1 = Math.max(x1, d.x + 5); z0 = Math.min(z0, d.z - 5); z1 = Math.max(z1, d.z + 5); }
     const pm = pathMask(dd, x0, z0, x1 - x0, z1 - z0, 6);
     applyPathShader(m, pm, groundDetail('SAND', true)[0]);   // (+ the beach sand's own painted texture where the lakeside / mainland beach colour is)
-    const tex = new DataTexture(bytes, n, n, RGBAFormat);
+    const tex = new DataTexture(bytes, nx, nz, RGBAFormat);
     tex.colorSpace = SRGBColorSpace; tex.magFilter = LinearFilter; tex.minFilter = LinearFilter; tex.needsUpdate = true;
     return { geo: g, mat: m, mask: tex };
   }, [q.name]);
