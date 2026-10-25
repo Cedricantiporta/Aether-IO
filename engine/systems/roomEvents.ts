@@ -97,8 +97,9 @@ function placeTraps(): void {
   const e = E(), R = world.room.radius, cap = e.traps.length;
   const marble = world.room.biome % BIOMES.length === MARBLE_BIOME;
   // Marble Halls: tiles x1.4, warning->spike 0.75x faster cycle, spikes up 1.6x longer, 1.75x the groups, 3x3 / cross favoured
-  const up = (TRAP_PERIOD0 - TRAP_FIRE0) * (marble ? 1.6 : 1), warn = (TRAP_FIRE0 - TRAP_WARN0) * (marble ? 0.8 : 1);
-  TRAP_WARN = TRAP_WARN0 * (marble ? 0.75 : 1); TRAP_FIRE = TRAP_WARN + warn; TRAP_PERIOD = TRAP_FIRE + up;
+  // (owner 2026-10-25) step-triggered: a tile rests flat (t = 0) until a foot lands on it (hero or monster), then a fast cycle
+  // (short glow -> spikes up -> down) that repeats for as long as anyone still stands on it
+  TRAP_WARN = 0.0001; TRAP_FIRE = 0.3; TRAP_PERIOD = marble ? 1.0 : 0.85;
   trapScale = marble ? 1.4 : 1; TRAP_R = TRAP_R0 * trapScale; TRAP_TILE = TRAP_R * 2; trapDrain = marble; plTrapCd = 0;
   const isH = shape.kind === 'HALLS', TRAP_W = marble ? TRAP_W_MARBLE : TRAP_W_STD, maxGroups = (marble ? 10 : 6) * (isH ? 2 : 1);
   const [sx, sz] = startPos(R);
@@ -122,8 +123,7 @@ function placeTraps(): void {
       tileX.push(x); tileZ.push(z);
     }
     if (!ok) continue;
-    const t0 = Math.random() * TRAP_PERIOD;
-    for (let k = 0; k < tileX.length; k++) { const tr = e.traps[n++]; tr.x = tileX[k]; tr.z = tileZ[k]; tr.t = t0; tr.hit = false; }
+    for (let k = 0; k < tileX.length; k++) { const tr = e.traps[n++]; tr.x = tileX[k]; tr.z = tileZ[k]; tr.t = 0; tr.hit = false; }
     groups++;
   }
   e.nTraps = n;
@@ -251,18 +251,33 @@ export function updateRoomEvents(dt: number): void {
     if (plTrapCd > 0) plTrapCd -= dt;
     for (let i = 0; i < e.nTraps; i++) {
       const tr = e.traps[i];
+      if (tr.t <= 0) { if (stepOn(tr.x, tr.z)) { tr.t = 0.0002; tr.hit = false; } continue; }   // resting flat until something steps on it
       tr.t += dt;
-      if (tr.t >= TRAP_PERIOD) { tr.t -= TRAP_PERIOD; tr.hit = false; }
+      if (tr.t >= TRAP_PERIOD) { tr.hit = false; tr.t = stepOn(tr.x, tr.z) ? 0.0002 : 0; continue; }   // still occupied: fire again at once
       if (tr.t >= TRAP_FIRE && !tr.hit) {
         tr.hit = true;
-        if (pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 * SPIKE_MUL / DMG_INFLATE, { pos: tmp }); plTrapCd = 0.8; /* (12% max HP: already scales with the x2 HP) */ }
+        if (pl.alive && plTrapCd <= 0 && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) { tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.12 * SPIKE_MUL / DMG_INFLATE, { pos: tmp }); plTrapCd = 0.7; /* (12% max HP: already scales with the x2 HP) */ }
         damageEnemiesInRadius(tr.x, tr.z, TRAP_R * 1.15, Math.max(20, useGameStore.getState().stats.damage * 2.5), { kind: 'PHYSICAL', source: 'PLAYER', env: 'TRAP' });
       } else if (trapDrain && tr.t >= TRAP_FIRE && plTrapCd <= 0 && pl.alive && Math.abs(pl.pos.x - tr.x) < TRAP_R && Math.abs(pl.pos.z - tr.z) < TRAP_R) {
-        // long-lived spikes: stepping onto a raised tile still hurts (at most one hit per 0.8 s, 60% of the burst)
-        plTrapCd = 0.8; tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.07 * SPIKE_MUL / DMG_INFLATE, { pos: tmp });
+        // raised spikes: stepping onto a raised tile still hurts (at most one hit per 0.7 s, 60% of the burst)
+        plTrapCd = 0.7; tmp.set(tr.x, 0, tr.z); damagePlayer(useGameStore.getState().stats.maxHealth * 0.07 * SPIKE_MUL / DMG_INFLATE, { pos: tmp });
       }
     }
   }
+}
+
+/** Is a foot on this spike tile? The hero (not mid-dash) or any walking monster (no bosses, flyers or stationaries). */
+const stepIds: number[] = [];
+function stepOn(x: number, z: number): boolean {
+  const pl = world.player;
+  if (pl.alive && pl.dashT <= 0 && Math.abs(pl.pos.x - x) < TRAP_R && Math.abs(pl.pos.z - z) < TRAP_R) return true;
+  world.enemyGrid.query(x, z, TRAP_R + 1.5, stepIds);
+  for (let k = 0; k < stepIds.length; k++) {
+    const m = world.enemies[stepIds[k]];
+    if (!m.active || m.state === 'DYING' || m.state === 'SPAWN' || m.boss || m.kind === 'BAT' || m.kind === 'WRAITH' || isStationary(m.kind)) continue;
+    if (Math.abs(m.pos.x - x) < TRAP_R && Math.abs(m.pos.z - z) < TRAP_R) return true;
+  }
+  return false;
 }
 
 /** The room was cleared: totems / captives that held count now. */
