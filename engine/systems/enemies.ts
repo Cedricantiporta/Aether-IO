@@ -1543,7 +1543,7 @@ function updateEnemy(e: Enemy): void {
   if (e.waterT > 0) { e.waterT -= dt; if (e.waterT <= 0 && isStationary(e.kind)) e.dir.set(e.pos.x, 0, e.pos.z); }   // (stationary again: pinned where it ended up)
   if (e.burnT > 0) {
     e.burnT -= dt;
-    if (frameDotTick) damageEnemy(e, e.burnDps * 0.5 * Math.max(1, e.burnStacks), { kind: 'FIRE', dot: true });
+    if (frameDotTick) damageEnemy(e, e.burnDps * 0.5 * Math.max(1, e.burnStacks) * (e.kind === 'BOSS_WARLORD' || e.kind === 'BOSS_WARMACH' ? 0.2 : 1), { kind: 'FIRE', dot: true });   // (owner: Ignar resists burn: 80% less)
     if (e.burnT <= 0) { e.burnDps = 0; e.burnStacks = 0; }
   }
   if (e.state !== 'DYING' && e.poisonT > 0) {

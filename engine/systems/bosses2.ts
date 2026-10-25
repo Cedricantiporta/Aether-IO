@@ -678,7 +678,7 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
 }
 
 // ============================================================ IGNAR ===========
-// (owner rework) Ignar fights like a FIRE version of the hero Knight: Flame Crescent (knight skill 1), Radiant Burst (ring of
+// (owner 2026-10-25: crescents ~50% bigger, orange-yellow fire; Ignar resists burn, enemies.ts) (owner rework) Ignar fights like a FIRE version of the hero Knight: Flame Crescent (knight skill 1), Radiant Burst (ring of
 // crescents + a fire shield), Blazing Guard (knight skill 2: knock-back burst then -50% damage), a Dash into a Slash. Plus giant
 // fireballs, 360-degree rings of fire pillars, and dark knights (they use the knight's crescent). Every hit burns; fire trails
 // are FIREPATCH zones capped by bossFx.firePatch() so the arena never fills up.
@@ -769,11 +769,11 @@ LISTS.BOSS_WARLORD = [
     begin(e, ux, uz) {
       e.dir.set(ux, 0, uz);
       const n = S.enraged ? 3 : 1;
-      for (let i = 0; i < n; i++) { const a = Math.atan2(ux, uz) + (n === 1 ? 0 : (i - 1) * 0.42); lane(e, Math.sin(a), Math.cos(a), 25, 5, 0.6 * fast(e), BT.VISUAL, 0, 0xff7a2a); }
+      for (let i = 0; i < n; i++) { const a = Math.atan2(ux, uz) + (n === 1 ? 0 : (i - 1) * 0.42); lane(e, Math.sin(a), Math.cos(a), 25, 7, 0.6 * fast(e), BT.VISUAL, 0, 0xff7a2a); }
     },
     fire(e) {
       const base = Math.atan2(e.dir.x, e.dir.z), n = S.enraged ? 3 : 1;
-      for (let i = 0; i < n; i++) crescent(e, base + (n === 1 ? 0 : (i - 1) * 0.42), CRESC_SP, 0.85, 2.3, ipwr(e) * 1.5);
+      for (let i = 0; i < n; i++) crescent(e, base + (n === 1 ? 0 : (i - 1) * 0.42), CRESC_SP, 0.85, 3.4, ipwr(e) * 1.5);
       S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
       events.emit('shake', { amount: 0.18 });
     },
@@ -785,11 +785,11 @@ LISTS.BOSS_WARLORD = [
     begin(e) {
       circle(e.pos.x, e.pos.z, 7.5, 0.85 * fast(e), BT.FBURST, ipwr(e) * 1.3, 0xff5a1a);
       const n = S.enraged ? 10 : 8; S.wheelA = Math.random() * 6.283;
-      for (let i = 0; i < n; i++) { const a = S.wheelA + (i / n) * 6.283; lane(e, Math.sin(a), Math.cos(a), 17, 3.2, 0.85 * fast(e), BT.VISUAL, 0, 0xff8a3a); }
+      for (let i = 0; i < n; i++) { const a = S.wheelA + (i / n) * 6.283; lane(e, Math.sin(a), Math.cos(a), 17, 4.6, 0.85 * fast(e), BT.VISUAL, 0, 0xff8a3a); }
     },
     fire(e) {
       const n = S.enraged ? 10 : 8;
-      for (let i = 0; i < n; i++) crescent(e, S.wheelA + (i / n) * 6.283, 17, 0.9, 1.5, ipwr(e) * 0.9);
+      for (let i = 0; i < n; i++) crescent(e, S.wheelA + (i / n) * 6.283, 17, 0.9, 2.2, ipwr(e) * 0.9);
       e.shield = Math.max(e.shield, e.maxHp * 0.04); S.shT = 7;   // fire shield (a small absorb, 7 s)
       events.emit('floatText', { pos: e.pos, text: 'FIRE SHIELD', color: 0xffb040, scale: 0.9, dy: 2.8 });
       events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0xffb040 });
@@ -826,14 +826,14 @@ LISTS.BOSS_WARLORD = [
         }
         if (S.dashT <= 0) {   // arrived: a quick aimed slash
           S.dashPh = 1; stand(e); e.dir.set(ux, 0, uz); S.slashT = 0.34 * fast(e);
-          lane(e, ux, uz, 24, 5, S.slashT, BT.VISUAL, 0, 0xff7a2a);
+          lane(e, ux, uz, 24, 7, S.slashT, BT.VISUAL, 0, 0xff7a2a);
         }
       } else if (S.dashPh === 1) {
         stand(e); requestYaw(Math.atan2(e.dir.x, e.dir.z)); S.slashT -= dt;
         if (S.slashT <= 0) {
           const a = Math.atan2(e.dir.x, e.dir.z);
-          crescent(e, a, CRESC_SP, 0.8, 2.3, ipwr(e) * 1.4);
-          if (S.enraged) { crescent(e, a + 0.4, CRESC_SP, 0.8, 2.0, ipwr(e) * 1.1); crescent(e, a - 0.4, CRESC_SP, 0.8, 2.0, ipwr(e) * 1.1); }
+          crescent(e, a, CRESC_SP, 0.8, 3.4, ipwr(e) * 1.4);
+          if (S.enraged) { crescent(e, a + 0.4, CRESC_SP, 0.8, 3.0, ipwr(e) * 1.1); crescent(e, a - 0.4, CRESC_SP, 0.8, 3.0, ipwr(e) * 1.1); }
           S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
           S.dashPh = 2; S.slashT = 0.3; events.emit('shake', { amount: 0.2 });
         }

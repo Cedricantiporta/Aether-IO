@@ -144,7 +144,7 @@ export function Projectiles() {
     const slashRedG = crescent('#ffd0d0', '#ff3a3a', '#ffffff', 4.2, 0.46);   // Legendary sword: crimson
     const slashDarkG = crescent('#3a2440', '#0c060e', '#c060ff', 4.2, 0.48);  // Mythic sword: black with a violet edge
     // Ignar: bold fire crescent (his knight skill) / his dark knights' violet crescent
-    const fireCrescG = crescent('#ffb040', '#ff4a10', '#fff2b0', 4.4, 0.95);
+    const fireCrescG = crescent('#ffc63a', '#ff7a14', '#fff6c8', 4.4, 0.95);   // (owner: orange-yellow fire)
     const darkCrescG = crescent('#7a4ab8', '#1c0e2e', '#e0b0ff', 4.4, 0.95);
     // Bone Spear: a long jagged spear of bone
     const bs = new GB([0.85, 1.1]);
@@ -500,10 +500,10 @@ export function Projectiles() {
         case 'FIRE_CRESCENT': case 'DARK_CRESCENT': {   // a bold flat crescent sweeping along its lane (the knight's skill 1, in fire / shadow)
           const fire = p.kind === 'FIRE_CRESCENT', sc = p.radius / 2.2, lf = 1 + 0.08 * Math.sin(t * 20 + n);
           place(ims, i, x, y, z, Math.atan2(vx, vz), 0, 0, sc * lf, sc, sc);
-          if (fire) pushHalo(x, y, z, 3.4 * sc, 2.4, 0.9, 0.25, 0.5, CELL.GLOW); else pushHalo(x, y, z, 3.2 * sc, 1.2, 0.4, 2.0, 0.45, CELL.GLOW);
+          if (fire) pushHalo(x, y, z, 3.6 * sc, 2.6, 1.45, 0.35, 0.55, CELL.GLOW); else pushHalo(x, y, z, 3.2 * sc, 1.2, 0.4, 2.0, 0.45, CELL.GLOW);
           if (emit && Math.random() < dt * 60) {
             const yw = Math.atan2(vx, vz), o = (Math.random() - 0.5) * 4 * sc;
-            if (fire) FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.45, 0.8, 0.1, 2.4, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 0.8);
+            if (fire) FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 1.0 * sc, 0.1, 2.6, 1.3, 0.25, 0.85, CELL.FLAME, -0.5, 0.8);
             else FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.5, -vz * 0.05, 0.4, 0.4, 0.05, 1.4, 0.5, 2.2, 0.7, CELL.STAR, 0, 0.3);
           }
           break;
