@@ -19,7 +19,7 @@ export const CornerButtons: React.FC = () => {
     <div className="corner-btns pe" data-testid="corner-btns">
       <button ref={autoEl} className="cb cb-big" data-testid="cb-auto" aria-label="Auto battle" {...tip(<SimpleTip title="Auto battle" sub="Toggle (no hotkey)" body="Hunts the nearest enemy and casts ready skills by itself." />)}
         onClick={() => { world.autoBattle.on = !world.autoBattle.on; }}>
-        <Swords size={16} /><span className="cb-auto">AUTO</span>
+        <span className="auto-ring" aria-hidden /><Swords size={16} /><span className="cb-auto">AUTO</span>
       </button>
     </div>
   );

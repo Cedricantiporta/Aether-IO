@@ -3894,3 +3894,14 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
   padding: .25rem .8rem; border-radius: 999px; background: rgba(40, 24, 12, .72); color: #ffe7b0; font-weight: 800; font-size: 1rem; transition: opacity .3s; text-shadow: 0 1px 2px #000; }
 .stage-timer[data-out='1'] { background: rgba(140, 20, 20, .85); color: #fff; animation: stPulse .8s ease-in-out infinite; }
 @keyframes stPulse { 50% { transform: translateX(-50%) scale(1.08); } }
+
+/* (owner 2026-10-25) AUTO on: a shiny two-arc ring spins round the button (off: no ring) */
+.auto-ring { position: absolute; left: 50%; top: 50%; width: 3.4rem; height: 3.4rem; margin: -1.7rem 0 0 -1.7rem; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: conic-gradient(from 0deg, transparent 0 8%, #fff6c8 18%, #ffc94a 32%, transparent 42% 58%, #fff6c8 68%, #ffc94a 82%, transparent 92%);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 61%, #000 72%, transparent 75%); mask: radial-gradient(circle, transparent 58%, #000 61%, #000 72%, transparent 75%);
+  filter: drop-shadow(0 0 4px rgba(255, 210, 110, .9)); }
+.cb-big.on .auto-ring, .tc-auto.on .auto-ring { opacity: 1; animation: auto-spin 1.6s linear infinite; }
+.cb.cb-big .auto-ring { width: 4.2rem; height: 4.2rem; margin: -2.1rem 0 0 -2.1rem; }
+.cb-big.on .cb-auto, .cb-big.on svg { color: #ffe9a8; filter: drop-shadow(0 0 5px rgba(255, 200, 90, .9)); }
+@keyframes auto-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cb-big.on .auto-ring, .tc-auto.on .auto-ring { animation-duration: 6s; } }

@@ -205,7 +205,7 @@ const AutoBtn: React.FC<{ at: At; left: boolean }> = ({ at, left }) => {
   const [on, setOn] = React.useState(world.autoBattle.on);
   return (
     <button className={`tc-auto pe ${on ? 'on' : ''}`} style={slotStyle(at, left, 38)} data-testid="tc-auto"
-      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); world.autoBattle.on = !world.autoBattle.on; setOn(world.autoBattle.on); }}>Auto</button>
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); world.autoBattle.on = !world.autoBattle.on; setOn(world.autoBattle.on); }}><span className="auto-ring" aria-hidden />Auto</button>
   );
 };
 
