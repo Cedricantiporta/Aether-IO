@@ -13,24 +13,26 @@ const m4 = new Matrix4();
 
 /** A lathe from (radius, height) pairs. */
 const lathe = (pts: number[][], seg = 40): LatheGeometry => new LatheGeometry(pts.map(([r, y]) => new Vector2(r, y)), seg);
+/** Same, profile listed the other way round (a lathe face is only seen from the side its profile winds towards). */
+const latheR = (pts: number[][], seg = 40): LatheGeometry => lathe(pts.slice().reverse(), seg);
 
 export function PlazaFountain({ shadows }: { shadows: boolean }) {
   const geo = useMemo(() => ({
     // outer basin: low wall with a fat rounded rim, the inside drops to the water floor
-    basin: lathe([[0, 0.05], [BASIN_R - 0.3, 0.05], [BASIN_R - 0.3, 0.42], [BASIN_R - 0.34, 0.6], [BASIN_R - 0.2, 0.74], [BASIN_R, 0.78], [BASIN_R + 0.2, 0.74], [BASIN_R + 0.34, 0.6], [BASIN_R + 0.34, 0.12], [BASIN_R + 0.46, 0.02], [BASIN_R + 0.46, 0]], 56),
+    basin: latheR([[0, 0.05], [BASIN_R - 0.3, 0.05], [BASIN_R - 0.3, 0.42], [BASIN_R - 0.34, 0.6], [BASIN_R - 0.2, 0.74], [BASIN_R, 0.78], [BASIN_R + 0.2, 0.74], [BASIN_R + 0.34, 0.6], [BASIN_R + 0.34, 0.12], [BASIN_R + 0.46, 0.02], [BASIN_R + 0.46, 0]], 56),
     // centre column with a bulb, lower bowl, slim neck, upper bowl, top knob
     column: lathe([[0, 0], [0.62, 0], [0.62, 0.2], [0.42, 0.34], [0.38, 0.9], [0.5, 1.1], [0.36, 1.32], [0, 1.32]]),
     bowl1: lathe([[0, 1.25], [0.5, 1.28], [1.2, 1.5], [1.62, 1.72], [1.7, 1.84], [1.6, 1.9], [1.5, 1.8], [0, 1.74]]),
     neck: lathe([[0, 1.8], [0.26, 1.8], [0.2, 2.2], [0.3, 2.45], [0.16, 2.62], [0, 2.62]]),
     bowl2: lathe([[0, 2.56], [0.3, 2.58], [0.72, 2.74], [0.9, 2.9], [0.84, 2.96], [0.76, 2.88], [0, 2.84]]),
     knob: lathe([[0, 2.86], [0.14, 2.9], [0.2, 3.04], [0.14, 3.2], [0.05, 3.32], [0, 3.36]], 20),
-    water: lathe([[0, 0.52], [BASIN_R - 0.3, 0.52]], 56),
-    pool1: lathe([[0, 1.84], [1.52, 1.84]]),
-    pool2: lathe([[0, 2.88], [0.78, 2.88]]),
+    water: latheR([[0, 0.52], [BASIN_R - 0.3, 0.52]], 56),
+    pool1: latheR([[0, 1.84], [1.52, 1.84]]),
+    pool2: latheR([[0, 2.88], [0.78, 2.88]]),
     // thin water curtains falling from each bowl's lip
     fall1: lathe([[1.66, 1.88], [1.78, 1.6], [1.86, 1.0], [1.9, 0.52]]),
     fall2: lathe([[0.88, 2.94], [0.96, 2.6], [1.02, 2.1], [1.06, 1.86]]),
-    ripple: lathe([[0.92, 0.535], [1.0, 0.535]], 40),
+    ripple: latheR([[0.92, 0.535], [1.0, 0.535]], 40),
     pad: lathe([[0, 0.54], [0.34, 0.54], [0.34, 0.56], [0, 0.56]], 14),
     drop: lathe([[0, -0.07], [0.05, -0.03], [0.045, 0.03], [0, 0.07]], 6),
     flower: lathe([[0, 0.55], [0.09, 0.58], [0.1, 0.64], [0, 0.66]], 8),
@@ -39,7 +41,7 @@ export function PlazaFountain({ shadows }: { shadows: boolean }) {
     stone: new MeshStandardMaterial({ color: new Color('#f2e8d4'), roughness: 0.75 }),
     trim: new MeshStandardMaterial({ color: new Color('#cfe9f5'), roughness: 0.6 }),
     water: new MeshStandardMaterial({ color: new Color('#58c8ee'), roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.88, emissive: new Color('#1a6a8a'), emissiveIntensity: 0.25 }),
-    fall: new MeshStandardMaterial({ color: new Color('#bfeeff'), roughness: 0.1, transparent: true, opacity: 0.42, side: DoubleSide, depthWrite: false, emissive: new Color('#5fd6ff'), emissiveIntensity: 0.3 }),
+    fall: new MeshStandardMaterial({ color: new Color('#bfeeff'), roughness: 0.1, transparent: true, opacity: 0.28, side: DoubleSide, depthWrite: false, emissive: new Color('#5fd6ff'), emissiveIntensity: 0.3 }),
     foam: new MeshStandardMaterial({ color: new Color('#ffffff'), transparent: true, opacity: 0.6, depthWrite: false, emissive: new Color('#ffffff'), emissiveIntensity: 0.4 }),
     drop: new MeshStandardMaterial({ color: new Color('#e4f8ff'), emissive: new Color('#8fe3ff'), emissiveIntensity: 0.6, transparent: true, opacity: 0.85 }),
     pad: new MeshStandardMaterial({ color: new Color('#7ccf5a'), roughness: 0.8 }),
@@ -66,7 +68,7 @@ export function PlazaFountain({ shadows }: { shadows: boolean }) {
     mats.foam.opacity = 0.35 + 0.2 * Math.sin(t * 2);
     if (f1.current) f1.current.rotation.y = t * 0.4;
     if (f2.current) f2.current.rotation.y = -t * 0.5;
-    mats.fall.opacity = 0.38 + 0.08 * Math.sin(t * 6);
+    mats.fall.opacity = 0.24 + 0.06 * Math.sin(t * 6);
   });
   const { x, z } = PLAZA_FOUNTAIN, y = townLift(x, z) + 0.1;
   return (

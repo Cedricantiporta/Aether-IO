@@ -279,9 +279,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: WELL_POS.x - 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 },
   { x: WELL_POS.x - 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 },
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
-  { x: 14.5, z: 12.3, yaw: Math.PI, y: 0.55 }, { x: -14.5, z: 12.3, yaw: Math.PI, y: 0.55 },     // south street, facing the shops
-  // (owner 2026-10-23) the avenue to the gate: benches just outside each edge, backs to the road (facing the houses / shops), clear of the lane at z 23
-  { x: -4.8, z: 16.8, yaw: -Math.PI / 2, y: 0.55 }, { x: 4.8, z: 29.8, yaw: Math.PI / 2, y: 0.55 }, { x: -4.8, z: 29.8, yaw: -Math.PI / 2, y: 0.55 },
+  // (owner 2026-10-25) no benches on the south street or the avenue any more (they stood in the walkways)
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 22.6, 34, 39.6].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),   // (the east park's benches flank the gazebo)
