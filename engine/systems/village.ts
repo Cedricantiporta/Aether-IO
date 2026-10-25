@@ -41,10 +41,11 @@ function sitDown(i: number): void {
 }
 const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', COW: 'Cow', HORSE: 'Horse', SHEEP: 'Sheep', PIG: 'Pig', DOG: 'Dog', DUCK: 'Duck' };
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
-function mount(i: number): void {
+function mount(i: number, keepGo = false): void {
   const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
   v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
-  p.pos.set(a.x, 0, a.z); p.vel.set(0, 0, 0); p.facing = a.yaw; v.go.on = false;
+  p.pos.set(a.x, 0, a.z); p.facing = a.yaw;
+  if (!keepGo) { p.vel.set(0, 0, 0); v.go.on = false; }   // (auto horse: the click-walk / guide auto-path carries on in the saddle)
 }
 hooks.dismount = () => dismount();
 /** Get off: the horse stays where it was left and grazes there (back in the paddock when the town reloads). `home`: the horse trots back to its stable paddock instead (auto dismount at the town wall).
@@ -64,9 +65,9 @@ export function dismount(home = false): void {
 export const AUTO_HORSE_S = 3;
 /** Outside-the-walls test with a margin (m > 0 grows the walled rectangle: the wall's own thickness + the gate arch count as inside). */
 const insideWalls = (x: number, z: number, m: number): boolean => x > WALL.x0 - m && x < WALL.x1 + m && z > WALL.z0 - m && z < WALL.z1 + m;
-/** Dismount spots: the hero is about to press E at the portal / the tower door / the mine mouth (their pills need him on foot). */
+/** Dismount spots (owner: off the horse well before the Adventure Portal: its front and the arch itself, r + 3): the hero is about to press E at the portal / the tower door / the mine mouth (their pills need him on foot). */
 const landingNear = (x: number, z: number, r: number): boolean =>
-  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < r * r || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
+  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < (r + 3) * (r + 3) || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
 function autoHorse(dt: number, talking: boolean): void {
   const v = world.village, rd = v.ride, p = world.player;
   if (v.area !== 'TOWN') { rd.moveT = 0; return; }
@@ -88,7 +89,7 @@ function autoHorse(dt: number, talking: boolean): void {
   rd.moveT = 0;
   if (best < 0) return;
   const a = animals[best]; a.x = p.pos.x; a.z = p.pos.z; a.yaw = p.facing;
-  mount(best); rd.puff = true; rd.dashCd = Math.max(rd.dashCd, 0);
+  mount(best, true); rd.puff = true; rd.dashCd = Math.max(rd.dashCd, 0);
 }
 /** The ridden horse follows the hero (called after the hero moved). */
 function syncRide(dt: number): void {
