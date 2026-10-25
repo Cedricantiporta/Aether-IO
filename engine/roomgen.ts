@@ -52,8 +52,9 @@ export function roomLayout(biome: number, type: RoomType, seed: number, index: n
   return 'PLAIN';
 }
 
-/** Boss arena radius per biome (Gorath 34 ... the Void Herald / Malakar 50): big bosses need room to move. */
-const BOSS_ARENA_R = [34, 38, 56, 44, 46, 48, 50];   // (biome 3 = Sunscorch: a big square for the 5x Dune Colossus)
+/** Boss arena radius per biome (Gorath 27 ... the Void Herald / Malakar 39). (owner 2026-10-25: ~22% smaller, the old ones let you
+ *  run to the edge and dodge everything; big bosses still have room to move) */
+const BOSS_ARENA_R = [27, 30, 44, 34, 36, 37, 39];   // (biome 3 = Sunscorch: a big square for the 5x Dune Colossus)
 
 /** Walkable radius for a room (the walls ring starts just outside it). Boss arenas are bigger; BIG stages ~1.4x. */
 export function roomRadius(type: RoomType, seed: number, biome = 0, index = 1): number {

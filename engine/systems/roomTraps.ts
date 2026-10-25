@@ -46,8 +46,9 @@ export const rt = {
   /** Frostpeak ice-laser turrets: idle (faces you, cd) -> telegraph (floor line, tracks then locks) -> beam -> rest */
   nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
-  /** HALLS only: a pillar that sends ONE very long (8 - 12 m) flame beam round: idle -> telegraph (floor line) -> rotating blaze -> rest */
-  nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, state: 0, t: 0, off: 3, hitCd: 0, tick: 0 })),
+  /** HALLS only: a pillar with 2 - 4 long (7 - 12 m) flame arms that turn round it: idle -> telegraph (floor lines) -> rotating blaze.
+   *  The arms are solid: they shove the hero (and monsters) along like a turning barricade. */
+  nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, n: 2, state: 0, t: 0, off: 3, hitCd: 0, tick: 0 })),
   nJet: 0, jet: Array.from({ length: 5 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
   nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, seed: 0 })),
   nPool: 0, pool: Array.from({ length: 4 }, () => ({ x: 0, z: 0, r: 2.8, acc: 0 })),
@@ -428,12 +429,12 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
       } else {   // rotating flame beam
         if (rt.nBeam >= rt.beam.length) continue;
-        const len = 8 + rnd() * 4;
+        const nArms = 2 + Math.floor(rnd() * 3), len = (8 + rnd() * 4) * (nArms === 4 ? 0.85 : 1);   // (owner 2026-10-25: 2 - 4 arms)
         let got = false;   // a roomy spot (the arm reaches ~len m): the pillar's disc is small, the open floor round it is checked here
         for (let t = 0; t < 30 && !got; t++) if (spot(2.4, 1.0, 0, 1, 16) && hallsSdf(out[0], out[1]) >= len * 0.42) got = true;
         if (!got) continue;
         const m = rt.beam[rt.nBeam++];
-        m.x = out[0]; m.z = out[1]; m.a = rnd() * 6.28; m.w = (rnd() < 0.5 ? -1 : 1) * (0.42 + 0.05 * Math.min(4, depth / 10)); m.len = len;
+        m.x = out[0]; m.z = out[1]; m.a = rnd() * 6.28; m.w = (rnd() < 0.5 ? -1 : 1) * (0.42 + 0.05 * Math.min(4, depth / 10)); m.len = len; m.n = nArms;
         m.state = 0; m.t = 0; m.off = 0.8 + rnd() * 1.2; m.hitCd = 0; m.tick = 0;
         keep(m.x, m.z, 5); addTempCollider(m.x, m.z, 1.1, false);
       }
@@ -452,6 +453,21 @@ function armDist(px: number, pz: number, x: number, z: number, a: number, len: n
   const along = dx * ux + dz * uz;
   if (along < -0.6 || along > len + 0.4) return 99;
   return Math.abs(dx * uz - dz * ux);
+}
+
+/** Flame-arm barricade: the arm is a solid bar (half-width ARM_HALF). Anything overlapping it is pushed out to the side the arm is
+ *  turning towards (so it gets swept along), unless that would put it outside the room (then the arm just burns through). */
+const ARM_HALF = 0.45, PLAYER_R = 0.5;
+function armShove(p: { x: number; z: number }, r: number, x: number, z: number, a: number, len: number): void {
+  const dx = p.x - x, dz = p.z - z, ux = Math.sin(a), uz = Math.cos(a);
+  const along = dx * ux + dz * uz;
+  if (along < 0.9 || along > len + 0.2) return;   // (the pillar's own collider handles the hub)
+  const side = dx * uz - dz * ux, lim = ARM_HALF + r;
+  if (Math.abs(side) >= lim) return;
+  const dir = side >= 0 ? 1 : -1;   // (the arm moves < 0.1 m a frame, so whatever overlaps is on the side it is sweeping into)
+  const nx = x + ux * along + uz * dir * lim, nz = z + uz * along - ux * dir * lim;
+  if (!insideShape(nx, nz, r)) return;
+  p.x = nx; p.z = nz;
 }
 
 export function updateRoomTraps(dt: number): void {
@@ -657,7 +673,20 @@ export function updateRoomTraps(dt: number): void {
     else if (m.state === 1) { if (m.t >= BEAM_WARN) { m.state = 2; m.t = 0; m.tick = 0; addShake(0.1); } }
     else {
       m.a += m.w * dt;
-      if (alive && m.hitCd <= 0 && pl.dashT <= 0 && armDist(px, pz, m.x, m.z, m.a, m.len) < 0.95) {
+      const grow = Math.min(1, m.t / 0.4), step = Math.PI * 2 / m.n;
+      let near = 99;
+      for (let q = 0; q < m.n; q++) {
+        const a = m.a + q * step;
+        near = Math.min(near, armDist(px, pz, m.x, m.z, a, m.len));
+        if (alive) armShove(pl.pos, PLAYER_R, m.x, m.z, a, m.len * grow);   // the hero can't walk or dash through: the arm pushes him along
+      }
+      world.enemyGrid.query(m.x, m.z, m.len + 1.5, ids);
+      for (let k = 0; k < ids.length; k++) {
+        const e = world.enemies[ids[k]];
+        if (!mobOk(e) || e.boss) continue;
+        for (let q = 0; q < m.n; q++) armShove(e.pos, e.radius, m.x, m.z, m.a + q * step, m.len * grow);
+      }
+      if (alive && m.hitCd <= 0 && pl.dashT <= 0 && near < 0.95 + ARM_HALF) {
         m.hitCd = 1.0; tmp.set(m.x, 0, m.z);
         damagePlayer(dmgOf(0.05), { pos: tmp, kind: 'FIRE' });
         applyPlayerDebuff('BURN', 2.0, Math.max(2, 3 + world.director.wave * 0.5) * scale);
@@ -669,7 +698,8 @@ export function updateRoomTraps(dt: number): void {
         for (let k = 0; k < ids.length; k++) {
           const e = world.enemies[ids[k]];
           if (!mobOk(e) || e.boss) continue;
-          if (armDist(e.pos.x, e.pos.z, m.x, m.z, m.a, m.len) < 0.9 + e.radius * 0.6) { burn.value = Math.max(2, e.maxHp * 0.03 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
+          let d = 99; for (let q = 0; q < m.n; q++) d = Math.min(d, armDist(e.pos.x, e.pos.z, m.x, m.z, m.a + q * Math.PI * 2 / m.n, m.len));
+          if (d < 0.9 + ARM_HALF + e.radius * 0.6) { burn.value = Math.max(2, e.maxHp * 0.03 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
         }
       }
       // (owner 2026-10-25) once lit, the rotating beam stays on for the whole fight (it only rests when the room is clear)

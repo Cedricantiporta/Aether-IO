@@ -307,7 +307,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   **Glacius** (Wyrm), Ember **Ignar** (Warlord, a fire version of the Knight: Flame Crescent / Radiant Burst / Blazing Guard / dash+slash, giant fireballs, 360 pillar rings, up to 3 dark knights `BOSS_DKNIGHT`, burn + capped fire trails via `bossFx.firePatch`; Burning Form at 50% hp grows devil wings), Void **Void Herald**; the Greenwood depth-10
   **Slime King**; **Malakar** (Lich, mini-boss in crypt biomes and the final two-stage fight); humanoid mini bosses Varn /
   Sable / Rook; dark hero duels (`darkHero.ts`). Each boss has a ward once per fight at 50% hp, periodic absorb barrier,
-  spread-out impact salvos, an arena per biome (`roomgen.BOSS_ARENA_R`).
+  spread-out impact salvos, an arena per biome (`roomgen.BOSS_ARENA_R`, radius 27-39 (Sunscorch square 44), kept small so the hero cannot just run to the edge).
 
 ### 3.6 Progression and economy
 - **Per-class permanent levels** (`classProg` in the profile; `heroRank` is a legacy alias = current class level that
@@ -572,8 +572,9 @@ screens, max-level question: class level cap is 50) have been removed.
   chain start -> passage 1 -> middle hall (hub) -> passage 2 -> exit hall, + a side hall off passage 3; passages are straight, 18-48 m (1.5x-4x the old 12 m, capped so the chain
   stays within ~100 m of the hub = ARENA_RADIUS), arch doorways every ~14 m. `MAX_W` 480 cells, nav grid `MAX_DIM` 176. `halls.passPts` (points along corridors) -> `director.pickAnchor`
   puts 30% of the monster groups in passages. (3) Spike traps (`roomEvents.placeTraps`) sample the halls mask (never near portals / station / pocket chest); halls COMBAT rooms get
-  the TRAPS twist 50% more often and twice the groups. `roomTraps`: halls rooms add 0-3 extra fire JETS and 0-2 rotating flame BEAMS (`rt.beam`, one 8-12 m arm on a pillar:
-  rest -> 1.5 s floor-line telegraph -> 6 s slow sweep (0.42-0.62 rad/s); rests for good once the room is clear). (4) `PortalGuides` (Room.tsx): chevrons follow `roomNav.navGuide`
+  the TRAPS twist 50% more often and twice the groups. `roomTraps`: halls rooms add 0-3 extra fire JETS and 0-2 rotating flame BEAMS (`rt.beam`, 2-4 arms of 8-12 m (x0.85 with 4) on a pillar:
+  rest -> 1.5 s floor-line telegraph -> slow sweep (0.42-0.62 rad/s) that stays on for the fight; rests for good once the room is clear. The arms are solid
+  (`armShove`): the hero and non-boss monsters are pushed along by an arm instead of walking / dashing through it, unless the push would leave the room). (4) `PortalGuides` (Room.tsx): chevrons follow `roomNav.navGuide`
   (flow-field descent + string pulling, cached per portal, rebuilt only when `navFlowGoal()` = the hero's nav cell changes); straight when the way is open. (5) Pocket chests
   show no light beam until `director.phase !== 'FIGHT'`. (6) Fountain room: `arenaRoom` radius 23, a moat ring (`feat.moat` + ~34 lake pools, liquid colliders gapped at 4 decks N/E/S/W,
   `onBridge` knows the decks, `RoomWater` draws them), marble island + outer paving ring (`SpecialRooms.FountainPlaza`), columns on the outer bank. `MAX_LAKES` 48.

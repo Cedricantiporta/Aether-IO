@@ -168,8 +168,8 @@ export function RoomTraps() {
       balBase: mk(bb.build(), lit, 6), balTop: mk(bt.build(), lit, 6), balBolt: mk(bg.build(), glowMat(), 6),
       catBase: mk(cb.build(), lit, 6), catArm: mk(ca.build(), lit, 6), catRock: mk(boulderG, lit, 6), boulder: mk(boulderG, lit, 6),
       towB: mk(tb.build(), lit, 3), towG: mk(tg, glowMat({ color: new Color(1.5, 1.2, 2.2) }), 3),
-      hub: mk(hb.build(), lit, 6), hubG: mk(hg, glowMat({ color: new Color(1.5, 1.2, 0.8) }), 6), armB: mk(armB.build(), lit, 16), armG: mk(armG.build(), glowMat({ color: new Color(1.6, 1.4, 1.1) }), 16),
-      jetB: mk(jb.build(), lit, 5), jetG: mk(jg, addM, 5), jetW: mk(jwarn, flat(new Color(2.2, 0.8, 0.3), 0.5), 16),
+      hub: mk(hb.build(), lit, 6), hubG: mk(hg, glowMat({ color: new Color(1.5, 1.2, 0.8) }), 6), armB: mk(armB.build(), lit, 28), armG: mk(armG.build(), glowMat({ color: new Color(1.6, 1.4, 1.1) }), 28),
+      jetB: mk(jb.build(), lit, 5), jetG: mk(jg, addM, 5), jetW: mk(jwarn, flat(new Color(2.2, 0.8, 0.3), 0.5), 32),
       vine: mk(vg.build(), lit, 5), pool: mk(pg.build(), litMat({ roughness: 0.15, metalness: 0.25 }), 4),
       pdisc: mk(new CylinderGeometry(1, 1, 0.03, 28), flat(new Color(0.7, 1.8, 2.4), 0.2), 4),
       rubble: mk(rg.build(), lit, 12),
@@ -337,23 +337,29 @@ export function RoomTraps() {
         }
         pushHalo(b.x, 1.5, b.z, 4.5, 2.2, 1.0, 0.3, 0.5, CELL.GLOW);
       }
-      for (let i = 0; i < rt.nBeam; i++) {   // (owner) HALLS: a pillar with ONE very long rotating flame arm (8 - 12 m)
+      for (let i = 0; i < rt.nBeam; i++) {   // (owner) HALLS: a pillar with 2 - 4 long rotating flame arms (solid: they shove the hero along)
         const m = rt.beam[i]; if (!inView(m.x, m.z, m.len + 2)) continue;
         setInst(S.hub, nHub, m.x, 0, m.z, i, 1.15); setInst(S.hubG, nHub, m.x, 0, m.z, t * 2, (1 + Math.sin(t * 6) * 0.06) * (m.state === 0 ? 0.7 : 1.15));
         nHub++;
-        const sx = Math.sin(m.a), cz = Math.cos(m.a), k = m.len / BAR_LEN;
-        if (m.state === 1) {   // telegraph: the lane flickers on the floor (the arm will start here and sweep round)
+        const k = m.len / BAR_LEN, step = Math.PI * 2 / m.n;
+        if (m.state === 1) {   // telegraph: the lanes flicker on the floor (the arms will start here and sweep round)
           const fl = 0.5 + 0.5 * Math.sin(t * 36), ramp = clamp(m.t / BEAM_WARN, 0, 1);
-          setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, m.a, 0.7 + 0.7 * fl, 1, (m.len - 1.2) * (0.3 + 0.7 * ramp));
-          if (rnd() < dt * 40) FX.add.emit(m.x + sx * (1.5 + rnd() * m.len * 0.9), 0.3, m.z + cz * (1.5 + rnd() * m.len * 0.9), 0, 1.5, 0, 0.5, 0.3, 0.05, 2.4, 0.9, 0.25, 0.8, CELL.FLAME, -0.5, 1);
+          for (let q = 0; q < m.n; q++) {
+            const a = m.a + q * step, sx = Math.sin(a), cz = Math.cos(a);
+            setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, a, 0.7 + 0.7 * fl, 1, (m.len - 1.2) * (0.3 + 0.7 * ramp));
+            if (rnd() < dt * 20) FX.add.emit(m.x + sx * (1.5 + rnd() * m.len * 0.9), 0.3, m.z + cz * (1.5 + rnd() * m.len * 0.9), 0, 1.5, 0, 0.5, 0.3, 0.05, 2.4, 0.9, 0.25, 0.8, CELL.FLAME, -0.5, 1);
+          }
           pushHalo(m.x, 1.8, m.z, 3 + 2 * ramp, 2.4, 1.0, 0.3, 0.5 + 0.4 * ramp, CELL.GLOW);
         } else if (m.state === 2) {
           const grow = clamp(m.t / 0.4, 0, 1);   // (owner: always on once lit)
-          setInst(S.armB, nArm, m.x, 0, m.z, m.a, 1.2, 1.2, k * grow); setInst(S.armG, nArm, m.x, 0, m.z, m.a, 1.5, 1.5, k * grow);
-          nArm++;
-          setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, m.a, 0.55, 1, (m.len - 1.2) * grow);   // scorched lane under the arm
-          for (let q = 0; q < 3; q++) if (rnd() < dt * 50) { const d = 1 + rnd() * (m.len - 1) * grow; FX.add.emit(m.x + Math.sin(m.a) * d, 1.4, m.z + Math.cos(m.a) * d, (rnd() - 0.5) * 0.8, 1.4 + rnd(), (rnd() - 0.5) * 0.8, 0.5, 0.6, 0.05, 2.3, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 1); }
-          for (let h = 1; h <= 4; h++) pushHalo(m.x + sx * h * m.len / 4.6 * grow, 1.4, m.z + cz * h * m.len / 4.6 * grow, 3.2, 2.2, 1.0, 0.3, 0.45, CELL.GLOW);
+          for (let q = 0; q < m.n; q++) {
+            const a = m.a + q * step, sx = Math.sin(a), cz = Math.cos(a);
+            setInst(S.armB, nArm, m.x, 0, m.z, a, 1.2, 1.2, k * grow); setInst(S.armG, nArm, m.x, 0, m.z, a, 1.5, 1.5, k * grow);
+            nArm++;
+            setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, a, 0.55, 1, (m.len - 1.2) * grow);   // scorched lane under the arm
+            if (rnd() < dt * 40) { const d = 1 + rnd() * (m.len - 1) * grow; FX.add.emit(m.x + sx * d, 1.4, m.z + cz * d, (rnd() - 0.5) * 0.8, 1.4 + rnd(), (rnd() - 0.5) * 0.8, 0.5, 0.6, 0.05, 2.3, 0.85, 0.2, 0.8, CELL.FLAME, -0.5, 1); }
+            for (let h = 1; h <= 2; h++) pushHalo(m.x + sx * h * m.len / 2.6 * grow, 1.4, m.z + cz * h * m.len / 2.6 * grow, 3.2, 2.2, 1.0, 0.3, 0.45, CELL.GLOW);
+          }
         }
       }
       for (let i = 0; i < rt.nJet; i++) {
