@@ -99,8 +99,8 @@ function buildRig(d: RigDef, mat: Material, glow: Material): Rig {
   return { root, hips, head, armL, armR, legL, legR };
 }
 
-const SCALE = [1.3, 1.3, 1.9, 1.3];   // warrior, mage, golem, bowman
-const BAR_Y = [2.75, 3.0, 5.8, 2.85];
+const SCALE = [1.3, 1.3, 2.85, 1.3];   // warrior, mage, golem, bowman
+const BAR_Y = [2.75, 3.0, 8.7, 2.85];
 
 export function Minions() {
   const N = world.minions.length;
@@ -179,15 +179,15 @@ export function Minions() {
       // HP bar once hurt, always facing the camera
       const frac = m.maxHp > 0 ? Math.max(0, m.hp / m.maxHp) : 1;
       S.ward.visible = m.shield > 0 && rise <= 0;
-      if (S.ward.visible) { const r = (golem ? 2.3 : 1.25) * (1 + Math.sin(t * 5 + i) * 0.03); S.ward.scale.set(r, r * 1.15, r); S.ward.position.y = golem ? 2.4 : 1.25; S.ward.rotation.y = t * 0.6; }
+      if (S.ward.visible) { const r = (golem ? 3.45 : 1.25) * (1 + Math.sin(t * 5 + i) * 0.03); S.ward.scale.set(r, r * 1.15, r); S.ward.position.y = golem ? 3.6 : 1.25; S.ward.rotation.y = t * 0.6; }
       S.bar.visible = frac < 0.999 && rise <= 0;
       if (S.bar.visible) {
         S.bar.position.y = BAR_Y[k] * fade;
         S.bar.quaternion.copy(camera.quaternion);
-        S.bar.scale.setScalar(golem ? 1.5 : 1);
+        S.bar.scale.setScalar(golem ? 2.2 : 1);
         S.fill.scale.x = frac; S.fill.position.x = -(1 - frac) / 2;
       }
-      if ((k !== 1 && k !== 3) || (i + Math.floor(t * 4)) % 2 === 0) pushHalo(m.x, golem ? 2.6 : 1.8, m.z, golem ? 2.4 : 1.3, 1.0, 0.5, 2.0, 0.22, CELL.GLOW);   // violet necromantic glow
+      if ((k !== 1 && k !== 3) || (i + Math.floor(t * 4)) % 2 === 0) pushHalo(m.x, golem ? 3.9 : 1.8, m.z, golem ? 3.6 : 1.3, 1.0, 0.5, 2.0, 0.22, CELL.GLOW);   // violet necromantic glow
     }
   });
   return <>{slots.map((s, i) => <primitive key={i} object={s.outer} />)}</>;

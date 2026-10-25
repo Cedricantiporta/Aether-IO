@@ -220,7 +220,7 @@ function slotHeld(slot: string): boolean {
 }
 
 /** Army of the Dead: the golem meteor (fall time, impact radius) and how long the golem stands. */
-const GOLEM_DROP_T = 0.9, GOLEM_DROP_R = 5.5, GOLEM_LIFE = 20;
+const GOLEM_DROP_T = 0.9, GOLEM_DROP_R = 5.5, GOLEM_LIFE = 26;   // (owner 2026-10-25: +30%)
 
 function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff, launch = false): GroundFx | null {
   const f = allocFx();
@@ -1031,7 +1031,7 @@ function resolveFx(f: GroundFx): void {
     }
     case 'BIG_METEOR': bigMeteorImpact(f); break;
     case 'GOLEM_DROP':
-      // the golem lands: stun + knock everything in the crater, then it stands up and fights for 20 s
+      // the golem lands: stun + knock everything in the crater, then it stands up and fights for 26 s
       stunSt.duration = 1.2;
       damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physKnock, stunSt);
       spawnMinion(MINION_GOLEM, f.x, f.z, f.aux, GOLEM_LIFE, 2, true);
