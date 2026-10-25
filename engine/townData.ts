@@ -1282,6 +1282,9 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'CHICKEN', x: 50.2, z: 123.6, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
   { kind: 'CHICKEN', x: 54.0, z: 126.0, rx: 2.2, rz: 1.2, speed: 1.0, tint: '#e0a070' },
   { kind: 'CHICKEN', x: 59.0, z: 114.6, rx: 1.4, rz: 1.6, speed: 1.2, tint: '#ffffff' },
+  // two hens stay home in the pen by the coop (no nests there any more)
+  { kind: 'CHICKEN', x: COOP.x - 1.2, z: COOP.z + 5.6, rx: 1.0, rz: 0.7, speed: 1.0, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: COOP.x + 2.0, z: COOP.z + 7.4, rx: 1.0, rz: 0.6, speed: 1.0, tint: '#8a5a3a' },
   { kind: 'CAT', x: 10.4, z: 2.1, rx: 0.3, rz: 0.6, speed: 1.7, tint: '#8a8a96' },
   { kind: 'DOG', x: -16.4, z: 20.4, rx: 1.4, rz: 0.5, speed: 1.6, tint: '#ffffff' }, { kind: 'CAT', x: -8.4, z: 20.6, rx: 1.2, rz: 0.5, speed: 1.5, tint: '#e8c08a' },   // (the pet shop's front yard)
   // the east riverside park

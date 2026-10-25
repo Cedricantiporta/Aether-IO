@@ -238,7 +238,7 @@ export function questIconMat(): SpriteMaterial {
 // (the animals themselves are nature_kit_v1 round animals, render/KitAnimals.tsx; the AI is engine/systems/npcs.ts)
 /** Bubble anchor height per animal (petting lines). */
 const ANIMAL_BUBBLE_Y: Record<string, number> = { CHICKEN: 1.6, CAT: 1.5, COW: 2.6, HORSE: 3.0, SHEEP: 2.2, PIG: 1.8, DOG: 1.7, DUCK: 1.4 };
-/** Egg nests in front of the coop (an egg shows when one is ready) + Pip's wheel-pin mate: Corin's lost wheel pin (Biscuit the cat is a KitAnimals instance). */
+/** Egg nests (spread over the free-range grass east of the pen) (an egg shows when one is ready) + Pip's wheel-pin mate: Corin's lost wheel pin (Biscuit the cat is a KitAnimals instance). */
 function FarmBits() {
   const geos = useMemo(() => {
     const n = new GB([0.8, 1.05]); n.cyl(0.42, 0.34, 0.16, 10, [0, 0.08, 0], '#c9a050'); n.cyl(0.3, 0.3, 0.05, 10, [0, 0.16, 0], '#8a6a30');
