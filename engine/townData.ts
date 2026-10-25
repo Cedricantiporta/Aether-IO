@@ -1024,6 +1024,28 @@ export const NPCS: NpcDef[] = [
     ],
     bubbles: ['Such a lovely hall.', 'Such a lovely hall.', 'Heroes! How thrilling.', 'The wine is excellent today.'],
   },
+  // (owner 2026-10-25) the castle wings: a cook in the kitchen, guards in the dining hall and the treasury
+  {
+    name: 'Cook Bramble', role: 'Castle Cook', model: 'BARBARIAN', tint: '#fff4e6', scale: 1.05, prop: 'none', accent: '#ffb27a', home: [-31.6, 14.4], speed: 1.1, area: 'CASTLE', noHat: true, tunic: '#f8f4ec',
+    patrol: [[-31.6, 14.4], [-27.4, 14.4]],   // (between the cauldron and the prep island, south of it)
+    talk: [['Out of my kitchen! ...Oh. It is you. Sit. Eat something. You look like the Font spat you out.', 'Which it did. I heard.'],
+      ['The King has eaten nothing but soup for ten years. Same soup. His daughter\'s favourite. I make it every day.', 'Do not tell him I cried into it once. It was a good batch.'],
+      ['Bring me something from the wilds that is not trying to bite me and I will make you a pie. A real one.']],
+    bubbles: ['Who touched my ladle?', 'Mind the pot, it is hot!', 'More salt... no. Less salt.', 'Soup again!'],
+  },
+  {
+    name: 'Guard Pell', role: 'Royal Guard', model: 'KNIGHT', tint: '#c9d6ff', scale: 1.05, prop: 'spear', accent: '#bcd0ff', home: [-19.4, -13.2], speed: 0.9, area: 'CASTLE',
+    patrol: [[-19.4, -13.2], [-31, -13.2]],   // (walks the north side of the dining hall)
+    talk: [['Dining hall duty. The best posting in the castle. Smell that? That is the smell of a guard who knows the cook.'],
+      ['Nobody has eaten at this long table since the princess vanished. We still set her place. Every night.']],
+    bubbles: ['Smells like soup.', 'All clear in the hall.', 'Do not touch the silverware.'],
+  },
+  {
+    name: 'Guard Odo', role: 'Treasury Guard', model: 'KNIGHT', tint: '#ffe7a6', scale: 1.05, prop: 'spear', accent: '#ffd36a', home: [29.8, 8.8], area: 'CASTLE',
+    talk: [['This is the royal treasury. I am the royal treasury guard. You are a royal... visitor. Keep your hands where I can see them.'],
+      ['I have counted every coin in here twice. Three hundred and twelve thousand, four hundred and six. And one button.']],
+    bubbles: ['No touching the gold.', 'I am watching you.', '...four hundred and six.'],
+  },
   // the chapel (west of the keep): the priestess tends the altar (talking once gives a blessing: a health potion)
   {
     name: 'Sister Elowen', role: 'Priestess', model: 'WIZARD', tint: '#ffffff', scale: 1, prop: 'staff', accent: '#bfe3ff', home: [0, -7.4], area: 'CHURCH', noHat: true, robe: '#f6f4ee', mitre: '#fbfaf5',
