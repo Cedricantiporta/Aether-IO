@@ -76,8 +76,8 @@ export const PORTAL_S = 0.9;
 export const PORTAL = { x: 5, z: 155.4, r: 4.4, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = the arch's road-side edge PORTAL.z - (3.06 + 1.3) m)
 /** First arrival of a session (new game / boot, not coming back from a run): the middle of the town plaza, in front of the castle road. */
 export const PLAZA_ARRIVAL = { x: 0, z: 7.6 };   // (south of the plaza fountain)
-/** (owner 2026-10-25) the fountain in the middle of the plaza (town_kit_v2 fountain_small scaled up; collider r). */
-export const PLAZA_FOUNTAIN = { x: 0, z: 2, s: 1.6, r: 3.0 };
+/** (owner 2026-10-25) the fountain in the middle of the plaza (render/PlazaFountain: two-tier storybook fountain; collider r). */
+export const PLAZA_FOUNTAIN = { x: 0, z: 2, r: 4.1 };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -22.2, z: 17 };   // (the park fountain, south-west quarter)
 export const PEN = { x: -12.7, z: 29.6, hw: 3.7, hd: 2.2 };   // (chickens, between two houses of the south-west row)
@@ -97,8 +97,8 @@ export const ANIMAL_PEN = { x0: 29.2, x1: 46.2, z0: 113.2, z1: 126.6, gate0: 34.
 export const COOP = { x: 32.4, z: 117.0, s: 1 };   // nature_kit_v1 'chicken_coop' (front = south), north-west corner of the animal pen
 /** Egg nests in front (south) of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
 /** (owner 2026-10-25) the hens range free on the open grass east of the animal pen; six egg nests spread out across it. */
-export const FREE_RANGE = { x: 53, z: 119.5 };
-export const NESTS: [number, number][] = [[49.6, 114.8], [55.4, 113.6], [58.4, 118.8], [50.6, 121.4], [55.8, 124.6], [49.8, 126.2]];
+export const FREE_RANGE = { x: 39, z: 134 };   // (owner 2026-10-25: the open grass just south of the pen)
+export const NESTS: [number, number][] = [[32.6, 130.2], [38.4, 129.6], [44.6, 130.8], [34.4, 135.8], [41.2, 137.2], [46.2, 135.6]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.6, z: -9.2 };   // (by the tavern's east wall, behind the crates)
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
@@ -658,7 +658,6 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
-  c.push([WELL_POS.x, WELL_POS.z, 1.9]);   // (the park fountain, town_kit_v2 fountain_small)
   c.push([PLAZA_FOUNTAIN.x, PLAZA_FOUNTAIN.z, PLAZA_FOUNTAIN.r]);   // the plaza fountain
   c.push([PARK_EAST.fountain.x, PARK_EAST.fountain.z, 2.0]); kitRing(c, 'gazebo', PARK_EAST.gazebo.x, PARK_EAST.gazebo.z, 1, 0.9, 'front');   // the east park
   for (const [x, z] of WELLS) c.push([x, z, 1.35]);
@@ -1128,8 +1127,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [FREE_RANGE.x - 2, FREE_RANGE.z], speed: 1.3,
-    patrol: [[FREE_RANGE.x - 2, FREE_RANGE.z], [FREE_RANGE.x + 2.5, FREE_RANGE.z - 2.5], [FREE_RANGE.x + 1, FREE_RANGE.z + 3]],   // (owner 2026-10-25) among her free-range hens and the nests
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [37.4, 118.6], speed: 1.3,
+    patrol: [[37.4, 118.6], [39.6, 120.4]],   // (owner 2026-10-25) inside the pen, beside the coop
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -1274,14 +1273,14 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'PIG', x: 41.4, z: 119.6, rx: 1.6, rz: 1.2, speed: 0.7, tint: '#f6a6b8' },
   { kind: 'PIG', x: 43.6, z: 123.6, rx: 1.2, rz: 1.0, speed: 0.7, tint: '#e8949e' },
   { kind: 'DOG', x: 35, z: 102.6, rx: 3.2, rz: 0.8, speed: 1.8, tint: '#ffffff' },
-  // (owner 2026-10-25) free-range hens, spread over the grass east of the pen (FREE_RANGE)
-  { kind: 'CHICKEN', x: 50.4, z: 116.4, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: 56.2, z: 116.0, rx: 2.2, rz: 1.8, speed: 1.0, tint: '#e0a070' },
-  { kind: 'CHICKEN', x: 53.2, z: 119.8, rx: 2.4, rz: 1.8, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: 57.6, z: 121.8, rx: 1.8, rz: 2.0, speed: 1.0, tint: '#8a5a3a' },
-  { kind: 'CHICKEN', x: 50.2, z: 123.6, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: 54.0, z: 126.0, rx: 2.2, rz: 1.2, speed: 1.0, tint: '#e0a070' },
-  { kind: 'CHICKEN', x: 59.0, z: 114.6, rx: 1.4, rz: 1.6, speed: 1.2, tint: '#ffffff' },
+  // (owner 2026-10-25) free-range hens, spread over the grass south of the pen (FREE_RANGE)
+  { kind: 'CHICKEN', x: 33.8, z: 132.4, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 39.6, z: 131.2, rx: 2.2, rz: 1.4, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: 45.0, z: 133.0, rx: 2.0, rz: 1.8, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 37.2, z: 135.4, rx: 2.4, rz: 1.6, speed: 1.0, tint: '#8a5a3a' },
+  { kind: 'CHICKEN', x: 42.4, z: 138.4, rx: 2.0, rz: 1.4, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 31.6, z: 137.6, rx: 1.6, rz: 1.4, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: 47.4, z: 138.6, rx: 1.6, rz: 1.4, speed: 1.2, tint: '#ffffff' },
   // two hens stay home in the pen by the coop (no nests there any more)
   { kind: 'CHICKEN', x: COOP.x - 1.2, z: COOP.z + 5.6, rx: 1.0, rz: 0.7, speed: 1.0, tint: '#ffffff' },
   { kind: 'CHICKEN', x: COOP.x + 2.0, z: COOP.z + 7.4, rx: 1.0, rz: 0.6, speed: 1.0, tint: '#8a5a3a' },

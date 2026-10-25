@@ -16,6 +16,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { bakeShoreField, makeWaterMaterial } from './waterFx';
 import { groundY } from './terrainFn';
 import { VillageQt } from './qtVillage';
+import { PlazaFountain } from './PlazaFountain';
 import { TownKit } from './townKit';
 import { ROYAL_ROOF, TOWN_GOLD, TOWN_BLUE_CLOTH } from './townPalette';
 import { labelMaterial } from './label';
@@ -815,6 +816,7 @@ export function TownScenery({ q }: { q: QualityCfg }) {
       <mesh geometry={town.roads} material={mats.road} receiveShadow={shadows} />
       <ChimneySmoke q={q} />
       <Lake />
+      <PlazaFountain shadows={shadows} />
       <React.Suspense fallback={null}><TownKit lit={mats.lit} glow={mats.glow} shadows={shadows} /></React.Suspense>
       <React.Suspense fallback={null}><VillageQt lit={mats.lit} shadows={shadows} /></React.Suspense>
       {town.chunks.map((c, i) => <TownChunk key={i} body={c.body} glow={c.glow} lit={mats.lit} glowMat={mats.glow} shadows={shadows} />)}

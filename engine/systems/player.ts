@@ -558,13 +558,8 @@ export function updatePlayerVillage(dt: number): void {
   if (!riding) updateSkillInput();
   updateAbilities(dt);
   const ta = world.input.touchAim, tDash = ta.active && ta.id === 'dash', tEdge = tDash && !rideTouchWas; rideTouchWas = tDash;
-  if (riding) {   // (owner) horse dash: Space / dash button = a short forward charge, 6 s recharge, no damage
-    rd.dashCd = tickDown(rd.dashCd, dt);
-    if (rd.dashT <= 0 && rd.dashCd <= 0 && (world.input.pressed.Space || tEdge)) {
-      rd.dashT = RIDE_DASH_T; rd.dashCd = RIDE_DASH_CD; rd.puff = true;
-      rd.dx = Math.sin(p.facing); rd.dz = Math.cos(p.facing);
-    }
-  } else rd.dashT = 0;
+  // (owner 2026-10-25) no horse dash any more: Space / the dash button do nothing on horseback
+  rd.dashT = 0; void tEdge;
   if (riding && rd.dashT > 0) {
     rd.dashT -= dt;
     const sp = st.stats.moveSpeed * MOVE_SPEED_SCALE * RIDE_SPEED * 2.5;

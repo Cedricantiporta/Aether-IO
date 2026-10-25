@@ -415,7 +415,7 @@ const useFullMap = create<{ open: boolean }>(() => ({ open: false }));
 const fmT = { ox: 0, oy: 0, k: 1, W: 1, H: 1, ok: false };
 /** (owner 2026-10-25) A click on the full map walks the hero there (town: the street router; run: the room navigation). */
 function fullMapClick(e: React.MouseEvent<HTMLCanvasElement>): void {
-  if (!fmT.ok) return;
+  if (!fmT.ok || fmV.dragged) { fmV.dragged = false; return; }   // (a drag to pan is not a walk order)
   const r = e.currentTarget.getBoundingClientRect();
   const cx = ((e.clientX - r.left) / r.width) * fmT.W, cy = ((e.clientY - r.top) / r.height) * fmT.H;
   const x = baked.x0 + (cx - fmT.ox) / fmT.k, z = baked.z0 + (cy - fmT.oy) / fmT.k;
@@ -424,10 +424,57 @@ function fullMapClick(e: React.MouseEvent<HTMLCanvasElement>): void {
   fmGo.x = x; fmGo.z = z; fmGo.t = performance.now();   // (owner: the map stays open; a marker shows where the hero heads)
 }
 const fmGo = { x: 0, z: 0, t: -1e9 };
+/** (owner 2026-10-25) Full map zoom + pan: zoom 1 = whole map fits; dx/dy = pan in canvas px. Wheel / pinch / +- zoom, drag pans. */
+const fmV = { zoom: 1, dx: 0, dy: 0, baseK: 1, dragged: false };
+const FM_ZMAX = 5;
+/** Zoom to z keeping the canvas point (cx, cy) still. */
+function fmZoomAt(z: number, cx: number, cy: number): void {
+  const z2 = Math.max(1, Math.min(FM_ZMAX, z)); if (!fmT.ok) { fmV.zoom = z2; return; }
+  const wx = (cx - fmT.ox) / fmT.k, wy = (cy - fmT.oy) / fmT.k, k2 = fmV.baseK * z2;
+  fmV.dx = cx - wx * k2 - (fmT.W - baked.w * k2) / 2; fmV.dy = cy - wy * k2 - (fmT.H - baked.h * k2) / 2; fmV.zoom = z2;
+}
 const FullMap: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   const [title] = useState(() => (world.room.active ? 'Stage map' : world.village.area === 'TOWN' ? 'Kingdom map' : 'Map'));
   const close = (): void => useFullMap.setState({ open: false });
+  useEffect(() => {
+    fmV.zoom = 1; fmV.dx = 0; fmV.dy = 0; fmV.dragged = false;
+    const c = ref.current; if (!c) return;
+    const toC = (clientX: number, clientY: number): [number, number] => {
+      const r = c.getBoundingClientRect(); return [((clientX - r.left) / r.width) * c.width, ((clientY - r.top) / r.height) * c.height];
+    };
+    const onWheel = (e: WheelEvent): void => { e.preventDefault(); const [cx, cy] = toC(e.clientX, e.clientY); fmZoomAt(fmV.zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2), cx, cy); };
+    const pts = new Map<number, { x: number; y: number }>();
+    let startX = 0, startY = 0, pinchD = 0;
+    const onDown = (e: PointerEvent): void => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); c.setPointerCapture(e.pointerId);
+      if (pts.size === 1) { startX = e.clientX; startY = e.clientY; fmV.dragged = false; }
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); fmV.dragged = true; }
+    };
+    const onMove = (e: PointerEvent): void => {
+      const q = pts.get(e.pointerId); if (!q) return;
+      const r = c.getBoundingClientRect(), sc = c.width / r.width;
+      if (pts.size === 1) {
+        fmV.dx += (e.clientX - q.x) * sc; fmV.dy += (e.clientY - q.y) * sc;
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) > 6) fmV.dragged = true;
+        q.x = e.clientX; q.y = e.clientY;
+      } else if (pts.size === 2) {
+        q.x = e.clientX; q.y = e.clientY;
+        const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchD > 0 && d > 0) { const [cx, cy] = toC((a.x + b.x) / 2, (a.y + b.y) / 2); fmZoomAt(fmV.zoom * (d / pinchD), cx, cy); }
+        pinchD = d;
+      }
+    };
+    const onUp = (e: PointerEvent): void => { pts.delete(e.pointerId); if (pts.size === 1) { const [a] = [...pts.values()]; startX = a.x; startY = a.y; } };
+    c.addEventListener('wheel', onWheel, { passive: false });
+    c.addEventListener('pointerdown', onDown); c.addEventListener('pointermove', onMove);
+    c.addEventListener('pointerup', onUp); c.addEventListener('pointercancel', onUp);
+    return () => {
+      c.removeEventListener('wheel', onWheel); c.removeEventListener('pointerdown', onDown); c.removeEventListener('pointermove', onMove);
+      c.removeEventListener('pointerup', onUp); c.removeEventListener('pointercancel', onUp);
+    };
+  }, []);
+  const zoomBtn = (f: number): void => { if (fmT.ok) fmZoomAt(fmV.zoom * f, fmT.W / 2, fmT.H / 2); };
   useRaf((_dt, now) => {
     const c = ref.current; if (!c) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1), wantW = Math.round(c.clientWidth * dpr), wantH = Math.round(c.clientHeight * dpr);
@@ -440,8 +487,13 @@ const FullMap: React.FC = () => {
       fmT.ok = false;
       ctx.fillStyle = '#e8e2d2'; ctx.font = `${16 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('No map here', W / 2, H / 2); return;
     }
-    const pad = 14 * u, k = Math.min((W - pad * 2) / baked.w, (H - pad * 2) / baked.h);
-    const ox = (W - baked.w * k) / 2, oy = (H - baked.h * k) / 2;
+    const pad = 14 * u; fmV.baseK = Math.min((W - pad * 2) / baked.w, (H - pad * 2) / baked.h);
+    const k = fmV.baseK * fmV.zoom;
+    {   // keep the map from being dragged off the card
+      const mx = Math.max(0, (baked.w * k - W) / 2) + W * 0.2, my = Math.max(0, (baked.h * k - H) / 2) + H * 0.2;
+      fmV.dx = Math.max(-mx, Math.min(mx, fmV.dx)); fmV.dy = Math.max(-my, Math.min(my, fmV.dy));
+    }
+    const ox = (W - baked.w * k) / 2 + fmV.dx, oy = (H - baked.h * k) / 2 + fmV.dy;
     ctx.fillStyle = baked.bg; ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(baked.cv, ox, oy, baked.w * k, baked.h * k);
@@ -481,8 +533,15 @@ const FullMap: React.FC = () => {
     <div className="fullmap-root pe" data-testid="full-map" onClick={close}>
       <div className="fullmap-card" onClick={(e) => e.stopPropagation()}>
         <div className="fullmap-head"><span>{title}</span><button className="fullmap-x" aria-label="Close map" onClick={close}>{'\u2715'}</button></div>
-        <canvas ref={ref} width={1600} height={1000} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there (the map stays open)" />
-        <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">Click the map to walk there · M / Esc to close</span></div>
+        <div className="fullmap-stage">
+          <canvas ref={ref} width={1600} height={1000} className="fullmap-canvas" style={{ cursor: 'grab', touchAction: 'none' }} onClick={fullMapClick} title="Click to walk there · drag to move · wheel to zoom" />
+          <div className="fullmap-zoom">
+            <button aria-label="Zoom in" onClick={() => zoomBtn(1.4)}>+</button>
+            <button aria-label="Zoom out" onClick={() => zoomBtn(1 / 1.4)}>{'\u2212'}</button>
+            <button aria-label="Fit whole map" title="Fit" onClick={() => { fmV.zoom = 1; fmV.dx = 0; fmV.dy = 0; }}>{'\u25A3'}</button>
+          </div>
+        </div>
+        <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">Click to walk · drag to move · wheel / pinch / + − to zoom · M / Esc to close</span></div>
       </div>
     </div>
   );

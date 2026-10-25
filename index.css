@@ -3916,6 +3916,10 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .fullmap-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-title); font-weight: 800; font-size: 1.05rem; color: #fff6e0; padding: 0 4px; }
 .fullmap-x { width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; }
 .fullmap-canvas { width: 100%; aspect-ratio: 16 / 10; border-radius: 16px; display: block; opacity: .82; }
+.fullmap-stage { position: relative; }
+.fullmap-zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.fullmap-zoom button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #fff6e0; color: #5a3b1a; font-size: 1.2rem; font-weight: 800; line-height: 1; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.25); display: grid; place-items: center; }
+.fullmap-zoom button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
 .fullmap-legend { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: rgba(255, 246, 224, .85); padding: 0 4px; }
 .fullmap-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 6px; }
 .fullmap-hint { margin-left: auto; opacity: .7; }
