@@ -1,4 +1,4 @@
-// (owner 2026-10-25) "Lost?" trail: in a run, when monsters are still alive but the hero has not hit anything for IDLE_S seconds,
+// (owner 2026-10-25) "Lost?" trail: in a run, when monsters are still alive but the hero has not hit anything for IDLE_S (5) seconds,
 // a red chevron trail ">>>>" leads along the walkable route (roomNav A*) to the nearest monster. Any hit hides it again.
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -11,7 +11,7 @@ import { GameStatus } from '../types';
 import { optionalForClear } from '../engine/enemyDefs';
 import { navActive, navClear, navFindPath, navPath } from '../engine/roomNav';
 
-const IDLE_S = 10, N = 40, STEP = 1.3;
+const IDLE_S = 5, N = 40, STEP = 1.3;
 const idle = { t: 0 };
 events.on('enemyHit', () => { idle.t = 0; });
 events.on('roomEnter', () => { idle.t = 0; });

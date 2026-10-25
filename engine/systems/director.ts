@@ -876,9 +876,12 @@ const CHEST_POOL: readonly (readonly [string, number])[] = [['gems', 14], ['trin
 function chestLoot(x: number, z: number): void {
   const st = useGameStore.getState();
   const blessed = speedWon();
-  if (Math.random() < 0.5) { const it = st.rollItemDrop(rarityForDepth(depth, blessed ? 0.5 : 0.25, world.run.bossKills)); if (it) { spawnPickup('ITEM', at(x, z), 0, it); return; } }
+  if (Math.random() < 0.5) { const it = st.rollItemDrop(rarityForDepth(depth, blessed ? 0.5 : 0.25, world.run.bossKills)); if (it) spawnPickup('ITEM', at(x, z), 0, it); }
+  // (owner 2026-10-25) gold always, plus a chance of gems and of Aether Crystals
   const total = Math.round((90 + depth * 24) * (blessed ? 1.6 : 1));
   for (let i = 0; i < 8; i++) spawnPickup('GOLD', at(x, z), Math.round(total / 8));
+  if (Math.random() < 0.4) for (let i = 0; i < 2; i++) spawnPickup('GEM', at(x, z), 1 + Math.floor(depth / 8));
+  if (Math.random() < 0.3) spawnPickup('CRYSTAL', at(x, z), 1 + Math.floor(Math.random() * 3));
 }
 /** (owner) The Challenge Shrine's prize: `n` different picks from the old chest pool (no gold), plus an upgrade core when `core`. */
 function treasurePool(x: number, z: number, n: number, core: boolean): void {

@@ -412,12 +412,12 @@ export const Minimap: React.FC = () => {
 /** (owner 2026-10-25) Full map popup (click the minimap / M): the whole baked area or stage with every enemy, exit, station and the hero. */
 const useFullMap = create<{ open: boolean }>(() => ({ open: false }));
 /** The full map's last drawing transform (canvas px <-> world metres), for click-to-walk. */
-const fmT = { ox: 0, oy: 0, k: 1, P: 1, ok: false };
+const fmT = { ox: 0, oy: 0, k: 1, W: 1, H: 1, ok: false };
 /** (owner 2026-10-25) A click on the full map walks the hero there (town: the street router; run: the room navigation). */
 function fullMapClick(e: React.MouseEvent<HTMLCanvasElement>): void {
   if (!fmT.ok) return;
   const r = e.currentTarget.getBoundingClientRect();
-  const cx = ((e.clientX - r.left) / r.width) * fmT.P, cy = ((e.clientY - r.top) / r.height) * fmT.P;
+  const cx = ((e.clientX - r.left) / r.width) * fmT.W, cy = ((e.clientY - r.top) / r.height) * fmT.H;
   const x = baked.x0 + (cx - fmT.ox) / fmT.k, z = baked.z0 + (cy - fmT.oy) / fmT.k;
   if (world.room.active) { clickMoveTo.on = true; clickMoveTo.x = x; clickMoveTo.z = z; }
   else walkTo(x, z, 'none', '', 0.8);
@@ -430,22 +430,22 @@ const FullMap: React.FC = () => {
   const close = (): void => useFullMap.setState({ open: false });
   useRaf((_dt, now) => {
     const c = ref.current; if (!c) return;
-    const cw = c.clientWidth, want = Math.round(cw * Math.min(2, window.devicePixelRatio || 1));
-    if (want > 0 && (c.width !== want || c.height !== want)) { c.width = want; c.height = want; }
+    const dpr = Math.min(2, window.devicePixelRatio || 1), wantW = Math.round(c.clientWidth * dpr), wantH = Math.round(c.clientHeight * dpr);
+    if (wantW > 0 && wantH > 0 && (c.width !== wantW || c.height !== wantH)) { c.width = wantW; c.height = wantH; }
     const ctx = c.getContext('2d'); if (!ctx) return;
-    const P = c.width, u = P / 520;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, P, P);
+    const W = c.width, H = c.height, P = Math.min(W, H), u = P / 520;   // (owner: landscape card; u from the short side)
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
     const room = world.room.active, area = room ? '' : world.village.area;
     if (!baked.cv || area === 'CAVE') {
       fmT.ok = false;
-      ctx.fillStyle = '#e8e2d2'; ctx.font = `${16 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('No map here', P / 2, P / 2); return;
+      ctx.fillStyle = '#e8e2d2'; ctx.font = `${16 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('No map here', W / 2, H / 2); return;
     }
-    const pad = 14 * u, k = (P - pad * 2) / Math.max(baked.w, baked.h);
-    const ox = (P - baked.w * k) / 2, oy = (P - baked.h * k) / 2;
-    ctx.fillStyle = baked.bg; ctx.fillRect(0, 0, P, P);
+    const pad = 14 * u, k = Math.min((W - pad * 2) / baked.w, (H - pad * 2) / baked.h);
+    const ox = (W - baked.w * k) / 2, oy = (H - baked.h * k) / 2;
+    ctx.fillStyle = baked.bg; ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(baked.cv, ox, oy, baked.w * k, baked.h * k);
-    fmT.ox = ox; fmT.oy = oy; fmT.k = k; fmT.P = P; fmT.ok = true;
+    fmT.ox = ox; fmT.oy = oy; fmT.k = k; fmT.W = W; fmT.H = H; fmT.ok = true;
     const sx = (x: number): number => ox + (x - baked.x0) * k, sy = (z: number): number => oy + (z - baked.z0) * k;
     if (room) {
       const r = world.room;
@@ -473,15 +473,15 @@ const FullMap: React.FC = () => {
     }
     const p = world.player, hx = sx(p.pos.x), hy = sy(p.pos.z), pulse = 1 + Math.sin(now * 5) * 0.15;
     ctx.globalAlpha = 0.35; disc(ctx, hx, hy, 12 * u * pulse, C.gold); ctx.globalAlpha = 1;
-    const fx = Math.sin(p.facing), fz = Math.cos(p.facing), L = 11 * u, W = 7 * u, B = 4.6 * u;
-    ctx.beginPath(); ctx.moveTo(hx + fx * L, hy + fz * L); ctx.lineTo(hx - fx * B - fz * W, hy - fz * B + fx * W); ctx.lineTo(hx - fx * 1.2 * u, hy - fz * 1.2 * u); ctx.lineTo(hx - fx * B + fz * W, hy - fz * B - fx * W); ctx.closePath();
+    const fx = Math.sin(p.facing), fz = Math.cos(p.facing), L = 11 * u, AW = 7 * u, B = 4.6 * u;
+    ctx.beginPath(); ctx.moveTo(hx + fx * L, hy + fz * L); ctx.lineTo(hx - fx * B - fz * AW, hy - fz * B + fx * AW); ctx.lineTo(hx - fx * 1.2 * u, hy - fz * 1.2 * u); ctx.lineTo(hx - fx * B + fz * AW, hy - fz * B - fx * AW); ctx.closePath();
     ctx.fillStyle = C.gold; ctx.fill(); ctx.lineWidth = 2 * u; ctx.strokeStyle = '#fff'; ctx.stroke();
   });
   return (
     <div className="fullmap-root pe" data-testid="full-map" onClick={close}>
       <div className="fullmap-card" onClick={(e) => e.stopPropagation()}>
         <div className="fullmap-head"><span>{title}</span><button className="fullmap-x" aria-label="Close map" onClick={close}>{'\u2715'}</button></div>
-        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there (the map stays open)" />
+        <canvas ref={ref} width={1600} height={1000} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there (the map stays open)" />
         <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">Click the map to walk there · M / Esc to close</span></div>
       </div>
     </div>

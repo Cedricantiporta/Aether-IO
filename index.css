@@ -3911,10 +3911,10 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 
 /* (owner 2026-10-25) full map popup (click the minimap / M) */
 .fullmap-root { position: fixed; inset: 0; z-index: 650; display: grid; place-items: center; background: rgba(10, 14, 24, .18); }
-.fullmap-card { width: min(94vmin, 920px); padding: 12px 14px 10px; border-radius: 22px; background: rgba(40, 48, 62, .55); backdrop-filter: blur(2px); box-shadow: 0 10px 36px rgba(0, 0, 0, .45); display: flex; flex-direction: column; gap: 8px; }
+.fullmap-card { width: min(94vw, 1280px, calc((94vh - 70px) * 1.6)); padding: 12px 14px 10px; border-radius: 22px; background: rgba(40, 48, 62, .55); backdrop-filter: blur(2px); box-shadow: 0 10px 36px rgba(0, 0, 0, .45); display: flex; flex-direction: column; gap: 8px; }
 .fullmap-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-title); font-weight: 800; font-size: 1.05rem; color: #fff6e0; padding: 0 4px; }
 .fullmap-x { width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; }
-.fullmap-canvas { width: 100%; aspect-ratio: 1 / 1; border-radius: 16px; display: block; opacity: .82; }
+.fullmap-canvas { width: 100%; aspect-ratio: 16 / 10; border-radius: 16px; display: block; opacity: .82; }
 .fullmap-legend { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: rgba(255, 246, 224, .85); padding: 0 4px; }
 .fullmap-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 6px; }
 .fullmap-hint { margin-left: auto; opacity: .7; }

@@ -300,15 +300,16 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   }
 
   // ---- HALLS dead-end pockets (owner): a reason to walk into every side chamber - stationary archer towers (they count for room clear,
-  // so the hero must go there) most of the time, rarely (~15%) an optional treasure chest. Own RNG: the rest of the room is unchanged.
+  // optional for the room clear) and, most of the time (75%, one per room), a treasure chest they guard. Own RNG: the rest of the room is unchanged.
   if (isHalls && fightRoom) {
     const pr = mulberry32(seed ^ 0x70c4e7);
     for (const pk of halls.pockets) {
-      if (pr() < 0.15 && !feat.pChest.on) { feat.pChest.on = true; feat.pChest.x = pk[0]; feat.pChest.z = pk[1]; keep.push({ x: pk[0], z: pk[1], r: 3 }); continue; }
+      let chestHere = false;
+      if (!feat.pChest.on && pr() < 0.75) { feat.pChest.on = true; feat.pChest.x = pk[0]; feat.pChest.z = pk[1]; keep.push({ x: pk[0], z: pk[1], r: 3 }); chestHere = true; }   // (owner 2026-10-25) most side pockets hold a treasure chest (guarded by the towers)
       if (def.style === 'MARBLE') continue;   // (owner) Marble Halls: no goblin towers - roomTraps puts long-range ballistas / catapults in the pockets instead
       const want = pr() < 0.4 ? 2 : 1;
       for (let t = 0, got = 0; t < 30 && got < want && feat.nTowers < MAX_FIXED; t++) {
-        const a = pr() * Math.PI * 2, d = got === 0 && t === 0 ? 0 : 3 + pr() * 3, x = pk[0] + Math.cos(a) * d, z = pk[1] + Math.sin(a) * d;
+        const a = pr() * Math.PI * 2, d = got === 0 && t === 0 && !chestHere ? 0 : 3.5 + pr() * 3, x = pk[0] + Math.cos(a) * d, z = pk[1] + Math.sin(a) * d;
         if (hallsSdf(x, z) < 3 || blockedSpot(x, z, 1.6, 2)) continue;
         add('ARCHER_TOWER', x, z, 1.45, 1, false, true, Math.atan2(sx - x, sz - z));
         feat.tx[feat.nTowers] = x; feat.tz[feat.nTowers] = z; feat.nTowers++; got++;
