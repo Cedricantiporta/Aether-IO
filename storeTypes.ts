@@ -50,7 +50,7 @@ export interface Settings {
   cameraLead: boolean;    // desktop: the camera drifts toward the mouse cursor (off by default)
   freeCamera: boolean;    // off (default): fixed north-up "diorama" camera (Link's Awakening style); on: free orbit (yaw / pitch drag)
   tiltShift: boolean;
-  autoNextSac: boolean;   // (owner 2026-10-25) dungeon (HALLS) stages: after the monsters of an area are beaten the hero walks to the next area by itself; off by default
+  autoNextSac: boolean;   // (unused since 2026-10-25: the PATH auto-walk was removed; kept so old saves load)
   autoChase: boolean;     // (owner 2026-10-25) AUTO battle walks to enemies anywhere in the room; off (default): only fights what is in reach
   roomTips: boolean;      // (owner 2026-10-25) show the room twist explanations (Spike Traps: ..., Cursed: ...) — off by default     // tilt-shift blur at the top + bottom of the screen (diorama look; on by default)
   aimAtCursor: boolean;   // desktop: skills/dash aim at the mouse (false = where the hero faces)

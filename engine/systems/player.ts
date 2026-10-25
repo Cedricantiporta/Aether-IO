@@ -9,7 +9,7 @@ import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
-import { lockedEnemy, updateTarget, clickMoveTo, lostGuide } from './target';
+import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target';
 import { trapAim, lockedTrap, nearestTrap, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
@@ -336,6 +336,7 @@ export function updatePlayer(dt: number): void {
     const lr = (heroRange(st)) + (lk ? lk.radius : 0);
     void lr;
     if (lk) autoAim.id = lk.id;   // a clicked target always wins (the hero walks to it when out of range)
+    else if (!world.input.keys.KeyF && !world.autoBattle.on && retaliateEnemy()) autoAim.id = retaliateEnemy()!.id;   // (owner) not fighting: face whoever just hit the hero
     else if (st.settings.autoAim === false) autoAim.id = -1;
     else {
       // always the closest enemy; a current target is only dropped for one clearly closer (1.5 u), so it doesn't flicker
@@ -430,26 +431,7 @@ export function updatePlayer(dt: number): void {
     }
   }
 
-  // ---- auto-walk to the next sac (setting 'Auto: walk to next area', off by default; HALLS dungeon stages): no movement input, no enemy near (combat / AUTO chase wins) -> walk to the awake sac, or to the exit chamber when everything is beaten
-  if (ml === 0 && st.settings.autoNextSac === true && st.status === GameStatus.PLAYING && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0 && !stunned && halls.on) {
-    const kind = sacWalkGoal(_sacGoal);
-    if (kind > 0 && !findNearestEnemy(p.pos.x, p.pos.z, 14)) {
-      const dx = _sacGoal.x - p.pos.x, dz = _sacGoal.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > (kind === 2 ? 3.5 : 5)) {
-        mx = dx / d; mz = dz / d; ml = 1;
-        if (navActive() && !navClear(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z) && autoPathDir(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
-      }
-    }
-  }
-
-  // ---- (owner) the PATH auto-walk also follows the red "lost" trail to a forgotten monster (any room shape)
-  if (ml === 0 && st.settings.autoNextSac === true && lostGuide.on && st.status === GameStatus.PLAYING && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0 && !stunned) {
-    const dx = lostGuide.x - p.pos.x, dz = lostGuide.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-    if (d > Math.max(3, heroRange(st) - 2)) {
-      mx = dx / d; mz = dz / d; ml = 1;
-      if (navActive() && !navClear(p.pos.x, p.pos.z, lostGuide.x, lostGuide.z) && autoPathDir(p.pos.x, p.pos.z, lostGuide.x, lostGuide.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
-    }
-  }
+  // (owner 2026-10-25) no PATH auto-walk in adventures any more (it pushed the hero into trees); the red lost trail is only a hint
 
   if (stunned || p.rootT > 0) { mx = 0; mz = 0; ml = 0; }
 
@@ -507,7 +489,13 @@ export function updatePlayer(dt: number): void {
   p.fireT = Math.max(-0.05, p.fireT - dt);
   const manual = !!world.input.keys.KeyF;
   const bot = !manual && world.autoBattle.on && st.status === GameStatus.PLAYING;
-  if (!manual && !bot) return;
+  // (owner 2026-10-25) hit back: not attacking anything else, the monster that just hurt the hero is in weapon reach
+  let ret = false;
+  if (!manual && !bot && st.status === GameStatus.PLAYING && !lockedEnemy()) {
+    const re = retaliateEnemy();
+    ret = !!re && autoAim.id === re.id && (re.pos.x - p.pos.x) ** 2 + (re.pos.z - p.pos.z) ** 2 <= (heroRange(st) + re.radius) ** 2;
+  }
+  if (!manual && !bot && !ret) return;
   // casting a skill: no basic attacks until the cast is done
   if (abilityState.castLockT > 0) { p.fireT = Math.max(p.fireT, 0.08); return; }
   if (p.dashT > 0 || abilityState.leapT > 0 || p.whirlT > 0) return;

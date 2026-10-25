@@ -192,6 +192,7 @@ export interface EnemyProjectile {
   slow?: number;         // applies slow to player on hit (0..1)
   debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
+  owner?: number;        // the shooter's enemy id (-1 = boss script / unknown): the hero hits back at it
 }
 
 // --------------------------------------------------------------- ground zones --

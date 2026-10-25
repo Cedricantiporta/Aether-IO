@@ -53,7 +53,7 @@ import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, roomHalls, type Collider } from '../mapgen';
 import { hallsPush, hallsSdf, hallsWall } from '../roomHalls';
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
-import { navActive, navTick, navFlow, navClear } from '../roomNav';
+import { nav, navActive, navTick, navFlow, navClear } from '../roomNav';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 import { TR, rollTraits, innateHinder } from '../enemyTraits';
@@ -251,6 +251,7 @@ export function findSpawnPoint(minD: number, maxD: number, out: Vector3, baseAng
 let bossTel = false;
 /** TR.* bits of the enemy being updated right now (telegraphs / projectiles it spawns inherit them). */
 let curTraits = 0;
+let curShooter = -1;   // the enemy being updated (its projectiles remember it: the hero retaliates)
 /** (owner) the caster monsters: their spells fly 2x as far and a bit faster (bosses / minis keep their tuning) */
 const MAGE_KINDS: ReadonlySet<string> = new Set(['CULTIST', 'SKELETON_MAGE', 'FROST_WISP', 'CINDER_SHAMAN', 'VOID_EYE']);
 export const MAGE_PROJ = { speed: 1.2, range: 2 };
@@ -1489,7 +1490,7 @@ function updateEnemy(e: Enemy): void {
   tdx = px - e.pos.x;
   tdz = pz - e.pos.z;
   tdist = Math.sqrt(tdx * tdx + tdz * tdz);
-  curTraits = e.traits; curMage = !e.boss && !e.mini && MAGE_KINDS.has(e.kind);
+  curShooter = e.id; curTraits = e.traits; curMage = !e.boss && !e.mini && MAGE_KINDS.has(e.kind);
   const still = (isStationary(e.kind) && !(e.waterT > 0)) || e.rooted;   // (a lake hydra that reached a water puddle is free to move; giant rooted bosses never are)
   // reaction delay (owner): while chasing from a distance, monsters head for where the hero was ~0.7-1 s ago; up close
   // (strike range) they track the real hero so their attacks still connect
@@ -1616,7 +1617,7 @@ function updateEnemy(e: Enemy): void {
     stop(e);
   }
   bossTel = false;
-  curTraits = 0; curMage = false;
+  curShooter = -1; curTraits = 0; curMage = false;
   if (isDying(e)) return; // bomber exploded
   if (!tg && !dodging && !still && !e.boss && !e.mini && !locked && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0) packAndFlank(e);
   // melee standoff (owner): a chasing monster halts a small step short of its target and strikes from there (wind-up +
@@ -1804,7 +1805,7 @@ export function updateEnemies(dt: number): void {
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
 
-  navOn = navActive();
+  navOn = navActive() && nav.water;   // (dry rooms: the grid is only for the hero's routes)
   hallsOn = roomHalls();
   if (navOn) navTick(dt, px, pz);
   buildThreats();
@@ -1936,6 +1937,7 @@ export function fireEnemyProjectile(
   p.slow = opts?.slow ?? 0;
   p.debuff = opts?.debuff ?? 0;
   p.traits = curTraits;
+  p.owner = curShooter;
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
   if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
 }
@@ -2062,7 +2064,7 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : null) });   // (owner) rocks knock you down
+        damagePlayer(p.damage, { pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : null) });   // (owner) rocks knock you down
         if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));

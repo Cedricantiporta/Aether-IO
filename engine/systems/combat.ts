@@ -9,7 +9,7 @@ import { KILL_XP_MUL } from '../../classLevels';
 // ============================================================================
 import { hitCratesInRadius } from './crates';
 import { hitRoomTraps, trapAim } from './roomTraps';
-import { lockedEnemy } from './target';
+import { lockedEnemy, noteAttacker } from './target';
 import { debug } from '../debug';
 import { dropLoot } from './loot';
 import { Vector3 } from 'three';
@@ -775,7 +775,7 @@ function applyTraitHit(tr: number, from?: Vector3): void {
   else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean }): void {
+export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
@@ -792,6 +792,20 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   }
 
   if (!isDot && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
+  if (!isDot && !o?.env) {   // (owner 2026-10-25) remember who hit the hero: it hits back (player.ts)
+    let src: Enemy | null = o?.src ?? (o?.srcId !== undefined && o.srcId >= 0 ? world.enemies[o.srcId] ?? null : null);
+    if (!src && o?.pos) {   // melee / scripted hits pass the attacker's position: the nearest monster to it
+      let bd = 16;
+      const L = world.enemies;
+      for (let i = 0; i < L.length; i++) {
+        const q = L[i]; if (!q.active || q.state === 'DYING') continue;
+        const d2 = (q.pos.x - o.pos.x) ** 2 + (q.pos.z - o.pos.z) ** 2;
+        if (d2 < bd) { bd = d2; src = q; }
+      }
+    }
+    if (!src && world.boss.active) { const L = world.enemies; for (let i = 0; i < L.length; i++) if (L[i].active && L[i].boss) { src = L[i]; break; } }   // boss scripts (beams, slams far away)
+    if (src && src.active && src.state !== 'DYING') noteAttacker(src);
+  }
 
   const barrier = st.skillLevels.barrier;
   const mods = runMods(st.difficulty);

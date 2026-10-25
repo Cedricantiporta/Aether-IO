@@ -17,6 +17,16 @@ export const clickMark = { x: 0, z: 0, t: -1e9, attack: false };
 export const TARGET_DROP_RANGE = 40;
 /** (owner 2026-10-25) The red "lost" trail's goal (render/EnemyGuide writes it): the PATH auto-walk follows it too. */
 export const lostGuide = { on: false, x: 0, z: 0 };
+/** (owner 2026-10-25) whoever just hurt the hero: the hero hits it back while not fighting anything else (player.ts). */
+export const retaliate = { id: -1, kind: '' as EnemyKind | '', until: 0 };
+export function noteAttacker(e: Enemy): void { retaliate.id = e.id; retaliate.kind = e.kind; retaliate.until = world.time + 4; }
+/** The enemy to hit back at, if any (alive, recent). */
+export function retaliateEnemy(): Enemy | null {
+  if (retaliate.id < 0 || world.time > retaliate.until) return null;
+  const e = world.enemies[retaliate.id];
+  if (!e || !e.active || e.state === 'DYING' || e.kind !== retaliate.kind || e.decoy) return null;
+  return e;
+}
 const PICK_SLACK = 1.2;
 const out: number[] = [];
 

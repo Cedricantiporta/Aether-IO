@@ -1,5 +1,5 @@
 // ============================================================================
-// Run-room navigation grid (rooms with a river / lake / lava / chasm only; zero cost everywhere else).
+// Run-room navigation grid (every run room; the monster flow field only in rooms with a river / lake / lava / chasm).
 //
 // Built ONCE per room by roomgen (after the colliders are installed) from the SAME colliders + outline the hero and the
 // monsters collide with: a cell is blocked when it is outside the walkable outline or within CLEAR of any collider
@@ -21,7 +21,8 @@ const MAX_N = MAX_DIM * MAX_DIM;
 const CLEAR = 1.0;
 const FLOW_EVERY = 0.33;
 
-export const nav = { on: false, w: 0, cell: 1, x0: 0, z0: 0, featVer: -1, obsVer: -1 };
+/** water: the room has liquid / halls (monsters use the flow field); else the grid only routes the hero round trees and rocks. */
+export const nav = { on: false, water: false, w: 0, cell: 1, x0: 0, z0: 0, featVer: -1, obsVer: -1 };
 
 const blocked = new Uint8Array(MAX_N);
 const flow = new Float32Array(MAX_N);
@@ -82,7 +83,8 @@ export function disableRoomNav(): void { nav.on = false; }
 export function buildRoomNav(extent: number): void {
   nav.on = false;
   const halls = roomHalls();
-  if (!bounds.room || !(halls || (feat.river && !feat.rift) || feat.nLakes > 0)) return;
+  if (!bounds.room) return;
+  nav.water = halls || (feat.river && !feat.rift) || feat.nLakes > 0;   // (owner 2026-10-25: the hero's auto-walks got stuck on forest trees, so every room gets the grid)
   const half = Math.ceil(extent + 3);
   nav.cell = Math.max(1, (2 * half) / MAX_DIM);
   nav.w = Math.min(MAX_DIM, Math.ceil((2 * half) / nav.cell));
