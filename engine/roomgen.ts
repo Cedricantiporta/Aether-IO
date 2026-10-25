@@ -203,7 +203,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   if (tower) {
     // tower floor: a cobbled disc open to the night sky, ringed by evenly spaced stone pillars (fixed layout every floor)
     const n = 28, rr = shape.baseR + 2.2;
-    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; add('RUIN', Math.cos(a) * rr, Math.sin(a) * rr, 1.6, 1.3, true); }
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; add('COLUMN', Math.cos(a) * rr, Math.sin(a) * rr, 1.6, 1.3, true); }
     for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; add('STATUE', Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55, 1.1, 1.2, true); }
   }
   const castle = border.every((k) => k === 'CASTLEWALL');   // curtain wall segments abut each other

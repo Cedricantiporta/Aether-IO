@@ -67,13 +67,13 @@ export const CAMP_LAYOUTS: CampLayout[] = [
       { t0: 0, t1: 0.2, kinds: ['TREE', 'PINE', 'TREE', 'PINE', 'ROCK'] },
       { t0: 0.2, t1: 0.4, kinds: ['ROCK', 'TREE', 'BOULDER', 'ROCK', 'TREE'] },
       { t0: 0.4, t1: 0.58, kinds: ['ROCK', 'LOWWALL', 'ROCK', 'TREE'] },
-      { t0: 0.58, t1: 0.72, kinds: ['LOWWALL', 'LOWWALL', 'RUIN', 'COLUMN'] },
+      { t0: 0.58, t1: 0.72, kinds: ['LOWWALL', 'LOWWALL', 'COLUMN', 'COLUMN'] },
       { t0: 0.72, t1: 1.01, kinds: ['CASTLEWALL', 'CASTLEWALL', 'CASTLEWALL', 'COLUMN'] },
     ],
     outer: [
       { t0: 0, t1: 0.26, kinds: ['TREE', 'PINE', 'TREE', 'PINE'] },
       { t0: 0.26, t1: 0.52, kinds: ['PINE', 'TREE', 'ROCK'] },
-      { t0: 0.52, t1: 0.68, kinds: ['RUIN', 'COLUMN', 'TREE'] },
+      { t0: 0.52, t1: 0.68, kinds: ['COLUMN', 'COLUMN', 'TREE'] },
       { t0: 0.68, t1: 1.01, kinds: ['CASTLEWALL', 'COLUMN', 'CASTLEWALL', 'BRAZIER'] },
     ], outerOff: 4.5,
     props: [
@@ -85,7 +85,7 @@ export const CAMP_LAYOUTS: CampLayout[] = [
     scatter: [
       { kinds: ['STUMP', 'LOG', 'ROCK'], t0: 0.05, t1: 0.38, n: 7, lmin: 3, lmax: 5.4, block: false },
       { kinds: ['ROCK'], t0: 0.1, t1: 0.36, n: 3, lmin: 3.6, lmax: 4.8, block: true },
-      { kinds: ['COLUMN', 'RUIN'], t0: 0.76, t1: 0.94, n: 4, lmin: 3.4, lmax: 4.9, block: true },
+      { kinds: ['COLUMN', 'COLUMN'], t0: 0.76, t1: 0.94, n: 4, lmin: 3.4, lmax: 4.9, block: true },
     ],
     pieces: [{ ty: 'GATE', t: 0.65 }], ribbons: [], shards: [],
     crates: [{ kind: 'BARREL', t: 0.46, l: 5.6 }, { kind: 'CRATE', t: 0.54, l: -5.6 }],
@@ -98,7 +98,7 @@ export const CAMP_LAYOUTS: CampLayout[] = [
     bulges: [[0.5, 5.5, 0.07], [0.04, 2, 0.04], [0.97, 3.5, 0.04], [0.3, 1.5, 0.03]], fire: 0.5, blend: [0.31, 0.43],
     wall: [
       { t0: 0, t1: 0.27, kinds: ['CASTLEWALL', 'CASTLEWALL', 'CASTLEWALL', 'COLUMN'] },
-      { t0: 0.27, t1: 0.36, kinds: ['CASTLEWALL', 'LOWWALL', 'RUIN', 'SANDSTONE'] },
+      { t0: 0.27, t1: 0.36, kinds: ['CASTLEWALL', 'LOWWALL', 'COLUMN', 'SANDSTONE'] },
       { t0: 0.36, t1: 0.62, kinds: ['SANDSTONE', 'ROCK', 'CACTUS', 'SANDSTONE'] },
       { t0: 0.62, t1: 1.01, kinds: ['SANDSTONE', 'CACTUS', 'ROCK', 'CACTUS', 'SANDSTONE'] },
     ],
@@ -216,18 +216,18 @@ export const CAMP_LAYOUTS: CampLayout[] = [
     wall: [
       { t0: 0, t1: 0.3, kinds: ['OBSIDIAN', 'BOULDER', 'ROCK', 'OBSIDIAN'] },
       { t0: 0.3, t1: 0.55, kinds: ['OBSIDIAN', '_', 'ROCK', 'CRYSTAL_SPIRE', '_'] },
-      { t0: 0.55, t1: 1.01, kinds: ['_', 'CRYSTAL_SPIRE', '_', '_', 'RUIN'] },
+      { t0: 0.55, t1: 1.01, kinds: ['_', 'CRYSTAL_SPIRE', '_', '_', 'BOULDER'] },
     ],
     outer: [
       { t0: 0, t1: 0.32, kinds: ['OBSIDIAN', 'ROCK', 'BOULDER'] },
     ], outerOff: 4.5,
     props: [
-      { k: 'CRYSTAL_SPIRE', t: 0.7, l: -4.6, c: true }, { k: 'CRYSTAL_SPIRE', t: 0.84, l: 4.8, c: true }, { k: 'RUIN', t: 0.92, l: -4.6, c: true },
+      { k: 'CRYSTAL_SPIRE', t: 0.7, l: -4.6, c: true }, { k: 'CRYSTAL_SPIRE', t: 0.84, l: 4.8, c: true }, { k: 'BOULDER', t: 0.92, l: -4.6, c: true },
       { k: 'LOG', t: 0.47, l: 3.4, s: 1.2 }, { k: 'LOG', t: 0.53, l: -3.4, s: 1.1 },
     ],
     scatter: [
       { kinds: ['ROCK', 'DEAD_TREE', 'BOULDER'], t0: 0.05, t1: 0.34, n: 6, lmin: 3.4, lmax: 5, block: false },
-      { kinds: ['CRYSTAL_SPIRE', 'RUIN'], t0: 0.6, t1: 0.95, n: 4, lmin: 3.6, lmax: 4.9, block: true },
+      { kinds: ['CRYSTAL_SPIRE', 'BOULDER'], t0: 0.6, t1: 0.95, n: 4, lmin: 3.6, lmax: 4.9, block: true },
     ],
     pieces: [{ ty: 'CRACK', t: 0.17, s: 0.9 }, { ty: 'CRACK', t: 0.32, s: 1.3, yaw: -0.3 }], ribbons: [],
     shards: [{ t0: 0.28, t1: 1.0, n: 44, out0: 3, out1: 15, y0: 0.6, y1: 6.5, s0: 0.5, s1: 1.9 }],
@@ -240,12 +240,12 @@ export const CAMP_LAYOUTS: CampLayout[] = [
     pts: [[1.7, 27.4], [5.2, 21.6], [1.7, 15.8], [-3.4, 10.1], [0, 4.3], [0, -4.3], [4.3, -10.1], [5.2, -17.3], [0.9, -24.5], [0, -29.5]],
     bulges: [[0.5, 5.5, 0.07], [0.04, 1.5, 0.04], [0.97, 3.5, 0.04]], fire: 0.5, blend: [0.4, 0.6],
     wall: [
-      { t0: 0, t1: 0.4, kinds: ['CRYSTAL_SPIRE', 'BOULDER', 'CRYSTAL_SPIRE', 'RUIN'] },
+      { t0: 0, t1: 0.4, kinds: ['CRYSTAL_SPIRE', 'BOULDER', 'CRYSTAL_SPIRE', 'BOULDER'] },
       { t0: 0.4, t1: 0.6, kinds: ['ROCK', 'TREE', 'CRYSTAL_SPIRE', 'TREE'] },
       { t0: 0.6, t1: 1.01, kinds: ['TREE', 'PINE', 'TREE', 'ROCK'] },
     ],
     outer: [
-      { t0: 0, t1: 0.4, kinds: ['CRYSTAL_SPIRE', 'RUIN'] },
+      { t0: 0, t1: 0.4, kinds: ['CRYSTAL_SPIRE', 'BOULDER'] },
       { t0: 0.4, t1: 1.01, kinds: ['TREE', 'PINE', 'TREE'] },
     ], outerOff: 4.5,
     props: [{ k: 'LOG', t: 0.47, l: 3.4, s: 1.2 }, { k: 'LOG', t: 0.53, l: -3.4, s: 1.1 }],

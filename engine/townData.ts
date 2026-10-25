@@ -149,11 +149,7 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 export const HERMIT_CAMP = { x: 0, z: -51 };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
 export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 2 }   // 0 broken pillar, 2 fallen arch (owner 2026-10-24: the ruined wall stubs are gone)
-export const RUINS: RuinSpec[] = [
-  { x: 57.5, z: -4.5, rot: 0, kind: 0 }, { x: 55.5, z: -16, rot: 1.2, kind: 0 } /* (moved off the trail: it blocked the way to Old Wend) */, { x: 54.6, z: -28, rot: -1.4, kind: 2 },
-  { x: 34, z: -51, rot: 0.1, kind: 0 }, { x: 16.5, z: -51.5, rot: 0.2, kind: 2 },
-  { x: 9, z: -45, rot: 0, kind: 0 },
-];
+export const RUINS: RuinSpec[] = [];   // (owner 2026-10-25: no old ruin pillars anywhere)
 /** Big boulders along the narrow back trail (x, z, collider r, render scale): a rocky, half-blocked way round to the hermit,
  *  always leaving a gap (walk grid checked). Drawn by render/TownScenery (merged rock meshes). */
 export const TRAIL_ROCKS: [number, number, number, number][] = [

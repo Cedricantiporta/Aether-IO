@@ -236,7 +236,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
   w[TRAP.VINE] = 0;   // (owner 2026-10-24: the grabbing snare plant is gone everywhere)
-  w[TRAP.POOL] = b === 4 ? 40 : b >= 2 ? 8 : 0;
+  w[TRAP.POOL] = b === 4 ? 40 : 0;   // (owner 2026-10-25) frozen pools only in the ice biome (Frostpeak)
   const marbleH = b === 1 && shape.kind === 'HALLS';
   siegeLong = marbleH; near = null;
   w[TRAP.SIEGE] = marbleH ? 0 : b === 0 ? (idx >= 5 ? 12 : 0) : 14 + 3 * b;   // (Marble Halls gets its own siege placement below)

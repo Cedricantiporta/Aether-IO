@@ -54,7 +54,7 @@ export function buildArena(biome: number, type: RoomType, R: number, seed: numbe
   for (let i = 0; i < n1; i++) {
     const a = (i / n1) * Math.PI * 2, x = Math.cos(a) * wallR, z = Math.sin(a) * wallR;
     if (type === 'GATEKEEPER' && z < -18 && Math.abs(x) < 13) continue;   // the castle front closes this arc
-    if (type === 'DUEL') { add('RUIN', x, z, 1.6, 1.35); continue; }       // a ring of old stone pillars
+    if (type === 'DUEL') { add('COLUMN', x, z, 1.6, 1.35); continue; }       // a ring of castle columns (owner: no old ruin pillars)
     const k = pickBorder(), sp = SPEC[k] ?? SPEC.ROCK, s = sp.s[0] + rnd() * (sp.s[1] - sp.s[0]);
     add(k, x, z, Math.max(1.5, sp.r(s)), s);
   }
