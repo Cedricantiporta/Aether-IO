@@ -96,7 +96,9 @@ export const FARMHOUSE = { x: 31, z: 96.2, s: 0.85 };   // nature_kit_v1 'farmho
 export const ANIMAL_PEN = { x0: 29.2, x1: 46.2, z0: 113.2, z1: 126.6, gate0: 34.4, gate1: 38.6 };
 export const COOP = { x: 32.4, z: 117.0, s: 1 };   // nature_kit_v1 'chicken_coop' (front = south), north-west corner of the animal pen
 /** Egg nests in front (south) of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
-export const NESTS: [number, number][] = [[COOP.x - 1.4, COOP.z + 3.4], [COOP.x, COOP.z + 3.7], [COOP.x + 1.4, COOP.z + 3.4]];
+/** (owner 2026-10-25) the hens range free on the open grass east of the animal pen; six egg nests spread out across it. */
+export const FREE_RANGE = { x: 53, z: 119.5 };
+export const NESTS: [number, number][] = [[49.6, 114.8], [55.4, 113.6], [58.4, 118.8], [50.6, 121.4], [55.8, 124.6], [49.8, 126.2]];
 /** Where Pip's cat Biscuit hides (only there while the quest is active). */
 export const HIDDEN_CAT = { x: 40.6, z: -9.2 };   // (by the tavern's east wall, behind the crates)
 /** Corin's lost wheel pin, in the grass by the haystack (only there while his quest needs it). */
@@ -1126,8 +1128,8 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Moo-ve along now!', 'Hay for days.', 'Good girls, good girls.'],
   },
   {
-    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [COOP.x + 3.6, COOP.z + 3.0], speed: 1.3,
-    patrol: [[COOP.x + 3.4, COOP.z + 3.2], [COOP.x + 3.4, COOP.z + 5.4]],   // beside the nests in front of the coop (inside the animal pen)
+    name: 'Dalla', role: 'Farmer', model: 'ARCHER', tint: '#ffe8d0', scale: 1, prop: 'basket', accent: '#f0b070', home: [FREE_RANGE.x - 2, FREE_RANGE.z], speed: 1.3,
+    patrol: [[FREE_RANGE.x - 2, FREE_RANGE.z], [FREE_RANGE.x + 2.5, FREE_RANGE.z - 2.5], [FREE_RANGE.x + 1, FREE_RANGE.z + 3]],   // (owner 2026-10-25) among her free-range hens and the nests
     talk: [['The hens are restless. Something prowls the fields at night.'], ['Fresh eggs, fresh bread, fresh air. Who needs the city?']],
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
@@ -1272,13 +1274,14 @@ export const ANIMALS: AnimalDef[] = [
   { kind: 'PIG', x: 41.4, z: 119.6, rx: 1.6, rz: 1.2, speed: 0.7, tint: '#f6a6b8' },
   { kind: 'PIG', x: 43.6, z: 123.6, rx: 1.2, rz: 1.0, speed: 0.7, tint: '#e8949e' },
   { kind: 'DOG', x: 35, z: 102.6, rx: 3.2, rz: 0.8, speed: 1.8, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x - 1.8, z: COOP.z + 6.0, rx: 1.0, rz: 0.7, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x + 1.6, z: COOP.z + 6.4, rx: 1.0, rz: 0.7, speed: 1.0, tint: '#e0a070' },
-  { kind: 'CHICKEN', x: COOP.x - 1.2, z: COOP.z + 8.2, rx: 1.2, rz: 0.6, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x + 2.0, z: COOP.z + 8.4, rx: 1.0, rz: 0.6, speed: 1.0, tint: '#8a5a3a' },
-  { kind: 'CHICKEN', x: COOP.x + 3.4, z: COOP.z + 1.0, rx: 0.6, rz: 1.0, speed: 1.1, tint: '#ffffff' },
-  { kind: 'CHICKEN', x: COOP.x - 2.2, z: COOP.z + 2.0, rx: 0.4, rz: 0.8, speed: 1.0, tint: '#e0a070' },
-  { kind: 'CHICKEN', x: COOP.x + 0.4, z: COOP.z + 7.4, rx: 1.4, rz: 0.5, speed: 1.2, tint: '#ffffff' },
+  // (owner 2026-10-25) free-range hens, spread over the grass east of the pen (FREE_RANGE)
+  { kind: 'CHICKEN', x: 50.4, z: 116.4, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 56.2, z: 116.0, rx: 2.2, rz: 1.8, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: 53.2, z: 119.8, rx: 2.4, rz: 1.8, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 57.6, z: 121.8, rx: 1.8, rz: 2.0, speed: 1.0, tint: '#8a5a3a' },
+  { kind: 'CHICKEN', x: 50.2, z: 123.6, rx: 2.0, rz: 1.6, speed: 1.1, tint: '#ffffff' },
+  { kind: 'CHICKEN', x: 54.0, z: 126.0, rx: 2.2, rz: 1.2, speed: 1.0, tint: '#e0a070' },
+  { kind: 'CHICKEN', x: 59.0, z: 114.6, rx: 1.4, rz: 1.6, speed: 1.2, tint: '#ffffff' },
   { kind: 'CAT', x: 10.4, z: 2.1, rx: 0.3, rz: 0.6, speed: 1.7, tint: '#8a8a96' },
   { kind: 'DOG', x: -16.4, z: 20.4, rx: 1.4, rz: 0.5, speed: 1.6, tint: '#ffffff' }, { kind: 'CAT', x: -8.4, z: 20.6, rx: 1.2, rz: 0.5, speed: 1.5, tint: '#e8c08a' },   // (the pet shop's front yard)
   // the east riverside park
