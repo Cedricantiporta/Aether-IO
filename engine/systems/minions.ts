@@ -24,9 +24,12 @@ export const MAX_SKELETONS = 5;
  *  1 Raise Dead (5, permanent), 3 Plague Ground (5 warriors that crumble after 8 s), 4 weapon perk (2),
  *  5 Grave Call (2 warriors that crumble after 8 s + 1 s per level),
  *  2 the ult's bone golem (no skeleton cap). */
-export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5;
+export const SRC_RAISE = 1, SRC_ULT = 2, SRC_PLAGUE = 3, SRC_WEAPON = 4, SRC_GRAVE = 5, SRC_LAST = 6;
+/** (owner 2026-10-25) When the Necromancer's last summon falls, one skeleton warrior rises for LAST_LIFE seconds (once per wipe). */
+const LAST_LIFE = 5;
+let summonedN = 0;   // non-backup summons alive last frame
 const trailPt = new Float32Array(2);   // delayed hero position (heroTrail)
-const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2];
+const SRC_CAP = [MAX_SKELETONS, MAX_SKELETONS, 0, 5, 2, 2, 1];
 export const PLAGUE_LIFE = 8;
 const skN = [0, 0, 0, 0];   // live skeletons per minion kind within one source (scratch)
 function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3] = 0; let n = 0; for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === src) { skN[m.kind]++; n++; } return n; }
@@ -167,14 +170,21 @@ function chainLightning(x: number, z: number, first: Enemy, dmg: number): void {
   }
 }
 
-export function clearMinions(): void { for (const m of world.minions) m.active = false; }
+export function clearMinions(): void { for (const m of world.minions) m.active = false; summonedN = 0; }
 export function minionCount(kind = -1, src = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind) && (src < 0 || m.src === src)) n++; return n; }
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
   updateAlly(dt);   // the run ally lives in a minion slot but has its own brain
   let slotI = 0, army = false, raised = false;
-  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE) raised = true; }
+  let alive = 0;
+  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE) raised = true; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
+  // the last summon fell: one skeleton warrior claws up beside the hero for a few seconds (not again until a new summon has risen)
+  if (alive === 0 && summonedN > 0 && pl.alive && world.room.active) {
+    const st = useGameStore.getState();
+    if (st.hero === 'NECROMANCER') spawnMinion(MINION_WARRIOR, pl.pos.x + Math.sin(pl.facing) * 2, pl.pos.z + Math.cos(pl.facing) * 2, st.stats.damage * 0.9, LAST_LIFE, SRC_LAST, true);
+  }
+  summonedN = alive;
   // Raise Dead: its cooldown stays full while any of its skeletons stands (it only ticks once the last one has fallen)
   if (raised && pl.cdMax.q > 0) pl.cd.q = pl.cdMax.q;
   // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen

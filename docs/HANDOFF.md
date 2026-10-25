@@ -618,7 +618,7 @@ screens, max-level question: class level cap is 50) have been removed.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.
 - **Boss wards / barriers**: `bossMech.ts` (`WARD_AT` 0.5, `BARRIER_CD`), per-boss ward kinds (crystals, sporecaps,
   hellhounds, spare hydra heads, frost shell, power cores, void phase, cultists).
-- **Necromancer summons**: per-source caps in `minions.ts`; Raise Dead army of up to 5 (3 warriors + 2 random archer/mage),
+- **Necromancer summons**: per-source caps in `minions.ts`; when the last summon falls (in a room, hero alive) one skeleton warrior rises beside the hero for 5 s (`SRC_LAST`, once per wipe: it does not count as a summon, so it does not re-trigger or hold Raise Dead's cooldown); Raise Dead army of up to 5 (3 warriors + 2 random archer/mage),
   Bone Ward shields summons, golem ult.
 - **Debug mode** (Settings > Debug, `ui/screens/DebugTab.tsx`, `engine/debug.ts`): god mode, one-hit kills, max stats/skills,
   jump to any biome/room/gate, special fights (Malakar, Riruru, dark hero per class, humanoid mini boss), dreams, town
