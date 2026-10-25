@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BoxGeometry, BufferGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial, Sphere, Vector3, type Material } from 'three';
 import { world } from '../engine/world';
-import { rt, BEAM_WARN, BEAM_ON, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
+import { rt, BEAM_WARN, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
 import { inView } from './view';
 import { CELL, FX, pushHalo, sparks, chunks, dustPuff, smokePuff, embers, scorch, flashStar } from './fx';
 import { BAR_VS, BAR_FS } from './Enemies';
@@ -305,7 +305,7 @@ export function RoomTraps() {
           if (rnd() < dt * 40) FX.add.emit(m.x + sx * (1.5 + rnd() * m.len * 0.9), 0.3, m.z + cz * (1.5 + rnd() * m.len * 0.9), 0, 1.5, 0, 0.5, 0.3, 0.05, 2.4, 0.9, 0.25, 0.8, CELL.FLAME, -0.5, 1);
           pushHalo(m.x, 1.8, m.z, 3 + 2 * ramp, 2.4, 1.0, 0.3, 0.5 + 0.4 * ramp, CELL.GLOW);
         } else if (m.state === 2) {
-          const grow = clamp(m.t / 0.4, 0, 1) * clamp((BEAM_ON - m.t) / 0.5, 0, 1);
+          const grow = clamp(m.t / 0.4, 0, 1);   // (owner: always on once lit)
           setInst(S.armB, nArm, m.x, 0, m.z, m.a, 1.2, 1.2, k * grow); setInst(S.armG, nArm, m.x, 0, m.z, m.a, 1.5, 1.5, k * grow);
           nArm++;
           setInst(S.jetW, nJw++, m.x + sx * 1.2, 0, m.z + cz * 1.2, m.a, 0.55, 1, (m.len - 1.2) * grow);   // scorched lane under the arm

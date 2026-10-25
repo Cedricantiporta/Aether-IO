@@ -301,7 +301,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       for (let i = 0; i < cnt && rt.nJet < rt.jet.length; i++) {
         if (!spot(2.0, 0.8, 0.1, 0.8, 8)) continue;
         const j = rt.jet[rt.nJet++];
-        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (12 + rnd() * 3) * 1.5; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0;
+        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (12 + rnd() * 3) * 1.5; j.state = 0; j.off = 1.6 + rnd() * 0.8; j.tick = 0;
         j.t = -(rnd() * 2.5);   // staggered start
         keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
       }
@@ -386,7 +386,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       } else if (kind === TRAP.JET) {
         if (rt.nJet >= rt.jet.length || !spot(2.0, 0.8, 0, 1, 10)) continue;
         const j = rt.jet[rt.nJet++];
-        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (10 + rnd() * 3) * 1.5; j.state = 0; j.off = 3.6 + rnd() * 1.2; j.tick = 0; j.t = -(rnd() * 2.5);
+        j.x = out[0]; j.z = out[1]; j.ang = rnd() * 6.28; j.len = (10 + rnd() * 3) * 1.5; j.state = 0; j.off = 1.6 + rnd() * 0.8; j.tick = 0; j.t = -(rnd() * 2.5);
         keep(j.x, j.z, 3); addTempCollider(j.x, j.z, 1.1, false);
       } else {   // rotating flame beam
         if (rt.nBeam >= rt.beam.length) continue;
@@ -396,7 +396,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         if (!got) continue;
         const m = rt.beam[rt.nBeam++];
         m.x = out[0]; m.z = out[1]; m.a = rnd() * 6.28; m.w = (rnd() < 0.5 ? -1 : 1) * (0.42 + 0.05 * Math.min(4, depth / 10)); m.len = len;
-        m.state = 0; m.t = 0; m.off = 2.5 + rnd() * 3; m.hitCd = 0; m.tick = 0;
+        m.state = 0; m.t = 0; m.off = 0.8 + rnd() * 1.2; m.hitCd = 0; m.tick = 0;
         keep(m.x, m.z, 5); addTempCollider(m.x, m.z, 1.1, false);
       }
     }
@@ -605,7 +605,7 @@ export function updateRoomTraps(dt: number): void {
           if (armDist(e.pos.x, e.pos.z, m.x, m.z, m.a, m.len) < 0.9 + e.radius * 0.6) { burn.value = Math.max(2, e.maxHp * 0.03 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
         }
       }
-      if (m.t >= BEAM_ON) { m.state = 0; m.t = 0; m.off = 4 + Math.random() * 2.5; }
+      // (owner 2026-10-25) once lit, the rotating beam stays on for the whole fight (it only rests when the room is clear)
     }
   }
 
@@ -631,7 +631,7 @@ export function updateRoomTraps(dt: number): void {
           if (armDist(e.pos.x, e.pos.z, j.x, j.z, j.ang, j.len) < 1.0 + e.radius * 0.6) { burn.value = Math.max(2, e.maxHp * 0.04 * (e.elite ? 0.5 : 1)); applyStatus(e, burn); }
         }
       }
-      if (j.t >= JET_ON) { j.state = 0; j.t = 0; j.off = 3.4 + Math.random() * 1.6; }
+      if (j.t >= JET_ON) { j.state = 0; j.t = 0; j.off = 1.5 + Math.random() * 0.9; }   // (owner 2026-10-25: breathes fire much more often)
     }
   }
 
