@@ -784,7 +784,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     progress: profile.progress ?? sanitizeProgress(undefined),
     tech: profile.tech ?? {},
     summonPity: profile.summonPity ?? { GEM: 0, SHARD: 0 },
-    story: profile.story ?? { step: storyIdx('slimes'), p: 0, v: STORY_V },   // a brand-new profile starts at the one open quest: defeat slimes (questUnlocks.ts)
+    story: profile.story ?? { step: storyIdx('king'), p: 0, v: STORY_V },   // a brand-new profile first talks to the King (who gives the slimes quest)
     classProg: profile.classProg ?? sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
     npcQuests: profile.npcQuests ?? emptyNpcQuests(),
     unlocks: profile.unlocks ?? emptyUnlocks(),
@@ -911,7 +911,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const f = freshProfile(get().settings);
       set({
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
-        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
+        maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('king'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
         talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], chestsOpened: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
@@ -1337,7 +1337,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         feedReward({ gold: (r.gold ?? 0) * GOLD_SCALE, gems: r.gems, items: gotItems, xp: qxp }, true);   // the rewards in the loot feed + under the tracker
       }
       if (step !== s.story.step) {
-        if (next && storyHeld(step, s.unlocks.n)) { /* the next stretch is still locked: it opens after a later death */ }
+        if (next && storyHeld(step, s.unlocks.n, s.unlocks.wait)) { /* the next stretch is still locked: it opens after a later death */ }
         else if (next) notify(`Main quest: ${next.title}`, '#f1d58e', 'SYSTEM');
         else notify('Main story complete!', '#f1d58e', 'SYSTEM');
       }
@@ -1346,14 +1346,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get(), u = s.unlocks;
       if (u.n >= BEATS.length) return null;
       // nothing left to do (the main chain is locked and no side quest is on offer or running): always opens something
-      const idle = storyHeld(s.story.step, u.n) && !NPC_QUESTS.some((d) => { const q = npcQuestStatus(d, s.npcQuests, s.heroRank); return q === 'AVAILABLE' || q === 'ACTIVE'; });
-      if (!(force || u.n === 0 || u.miss >= 2 || idle || Math.random() < UNLOCK_CHANCE)) { set({ unlocks: { n: u.n, miss: u.miss + 1 } }); return null; }
+      const idle = !u.wait?.length && storyHeld(s.story.step, u.n, u.wait) && !NPC_QUESTS.some((d) => { const q = npcQuestStatus(d, s.npcQuests, s.heroRank); return q === 'AVAILABLE' || q === 'ACTIVE'; });
+      if (!(force || u.n === 0 || u.miss >= 2 || idle || Math.random() < UNLOCK_CHANCE)) { set({ unlocks: { ...u, miss: u.miss + 1 } }); return null; }
       const bi = nextBeatIndex(u), beat: Beat = BEATS[bi];   // (beats a level-up already opened are skipped)
       if (!beat) return null;
       const unlocks: UnlockSave = { n: bi + 1, miss: 0 };
       const early = (u.early ?? []).filter((id) => BEATS.findIndex((b) => b.id === id) > bi);
       if (early.length) unlocks.early = early;
-      unlockMirror.n = unlocks.n; unlockMirror.early = early;
+      const wait = [...(u.wait ?? []).filter((id) => id !== beat.id), beat.id];   // (owner) its quests start when the hero talks to beat.who
+      unlocks.wait = wait;
+      unlockMirror.n = unlocks.n; unlockMirror.early = early; unlockMirror.wait = wait;
       set({ unlocks });
       for (const g of beat.gift?.items ?? []) for (const it of makeItemById(g.id, g.qty)) if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });
       return beat;
@@ -1361,9 +1363,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     rollLevelUnlock: () => {
       const u = get().unlocks, i = nextSideBeatIndex(u);
       if (i < 0 || Math.random() >= LEVEL_UNLOCK_CHANCE) return null;
-      const early = [...(u.early ?? []), BEATS[i].id];
-      unlockMirror.early = early;
-      set({ unlocks: { ...u, early } });
+      const early = [...(u.early ?? []), BEATS[i].id], wait = [...(u.wait ?? []), BEATS[i].id];
+      unlockMirror.early = early; unlockMirror.wait = wait;
+      set({ unlocks: { ...u, early, wait } });
       return BEATS[i];
     },
     setAttrs: (a) => {
@@ -2103,8 +2105,8 @@ const flushProfile = (): void => {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   writeProfile(useGameStore.getState());
 };
-unlockMirror.n = useGameStore.getState().unlocks.n; unlockMirror.early = useGameStore.getState().unlocks.early ?? [];   // (npcQuestStatus reads the unlock count without the store)
-useGameStore.subscribe((s) => { unlockMirror.n = s.unlocks.n; unlockMirror.early = s.unlocks.early ?? []; });
+unlockMirror.n = useGameStore.getState().unlocks.n; unlockMirror.early = useGameStore.getState().unlocks.early ?? []; unlockMirror.wait = useGameStore.getState().unlocks.wait ?? [];   // (npcQuestStatus reads the unlock count without the store)
+useGameStore.subscribe((s) => { unlockMirror.n = s.unlocks.n; unlockMirror.early = s.unlocks.early ?? []; unlockMirror.wait = s.unlocks.wait ?? []; });
 // "new quest" dots: first load (or a fresh / reset profile) marks everything already available as seen
 const seedQuestSeen = (): void => { const s = useGameStore.getState(); if (s.questSeen === null) useGameStore.setState({ questSeen: availableQuestIds(s) }); };
 seedQuestSeen();

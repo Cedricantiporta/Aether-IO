@@ -33,7 +33,7 @@ function offerInfo(offer: string, level: number): OfferInfo | null {
     chips.push({ key: 'exp', icon: <CuteStar size={22} />, label: `${questXp('STORY', level).toLocaleString()} EXP` });
     pushCommon(st.reward.gold, st.reward.gems);
     (st.reward.items ?? []).forEach((it, i) => chips.push(itemChip(it.id, it.qty, i)));
-    return { title: 'New Quest', goal: (storyHeld(n + 1, useGameStore.getState().unlocks.n) ? undefined : STORY[n + 1]?.line) ?? st.line, chips };
+    return { title: 'New Quest', goal: (storyHeld(n + 1, useGameStore.getState().unlocks.n, useGameStore.getState().unlocks.wait) ? undefined : STORY[n + 1]?.line) ?? st.line, chips };
   }
   const d = NPC_QUEST_BY_ID[offer]; if (!d) return null;
   const r = d.reward;
@@ -129,8 +129,9 @@ export const Dialogue: React.FC = () => {
         {last && offer
           ? (
             <span className="dlg-choices">
-              {!offer.startsWith('story:') && <button className="dlg-btn" data-testid="dialogue-later" onPointerDown={(e) => { stop(e); closeDialogue(); }}>Later{!device.touch && <kbd>E</kbd>}</button>}
-              <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); if (offer.startsWith('story:')) { const st = STORY[Number(offer.slice(6))]; if (st) questBanner('main', st.title, 'accepted'); } }}>{offer.startsWith('story:') ? 'Okay' : acceptLabel}{!device.touch && <kbd>{offer.startsWith('story:') ? 'E' : 'F'}</kbd>}</button>
+              {offer === 'custom' && <button className="dlg-btn" data-testid="dialogue-later" onPointerDown={(e) => { stop(e); closeDialogue(); }}>Later{!device.touch && <kbd>E</kbd>}</button>}
+              {/* (owner 2026-10-25) a quest starts by talking to its NPC: one "Okay" button, no Later */}
+              <button className="dlg-btn accept" data-testid="dialogue-accept" onPointerDown={(e) => { stop(e); acceptOffer(); if (offer.startsWith('story:')) { const st = STORY[Number(offer.slice(6))]; if (st) questBanner('main', st.title, 'accepted'); } else if (offer !== 'custom') { const d = NPC_QUEST_BY_ID[offer]; if (d) questBanner('side', d.title, 'accepted'); } }}>{offer !== 'custom' ? 'Okay' : acceptLabel}{!device.touch && <kbd>{offer !== 'custom' ? 'E' : 'F'}</kbd>}</button>
             </span>
           )
           : <span className="dlg-choices"><span className={`dlg-btn${reply ? ' reply' : ''}`} data-testid="dialogue-next" aria-label={last ? 'Close' : 'Next'}>{reply ? `\u201c${reply}\u201d` : last ? 'Close' : 'Next'}{!device.touch && <kbd>E</kbd>}</span></span>}

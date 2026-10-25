@@ -12,7 +12,7 @@ import { LOOT_BY_ID } from '../../loot';
 import { mainNav, npcQuestNav, navNpc, navDist, type NavTarget } from '../../engine/systems/questNav';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
-import { liveStep } from '../../questUnlocks';
+import { liveStep, pendingBeats, type Beat } from '../../questUnlocks';
 import { NPCS } from '../../engine/townData';
 
 /** In a run, a quest that is ready to hand in (or a main-quest step that waits on someone in town) offers a trip home. */
@@ -25,8 +25,11 @@ export function offerTeleport(then?: () => void): boolean {
   });
   return true;
 }
-/** Walk target of an offered (not yet accepted) side quest: its giver. */
-const offerNav = (d: NpcQuestDef): NavTarget | null => { const i = NPCS.findIndex((n) => n.name === d.giver); return i >= 0 ? navNpc(i) : null; };
+/** Walk target of an NPC by name (an offered side quest's giver, the NPC a woken-up beat sent you to). */
+const whoNav = (who: string): NavTarget | null => { const i = NPCS.findIndex((n) => n.name === who); return i >= 0 ? navNpc(i) : null; };
+const offerNav = (d: NpcQuestDef): NavTarget | null => whoNav(d.giver);
+/** Tap on a "Talk to <who>" row: walk there (in a run, offers the trip home first). */
+function goTalk(who: string): void { const go = () => walkToNpcQuest(who); if (useGameStore.getState().status === GameStatus.PLAYING) offerTeleport(go); else go(); }
 /** "Track" in the quest window / a click on a tracker row: auto-path to the quest (in a run, a town target offers the trip home first). */
 export function trackAndGo(key: string): void {
   const inRun = useGameStore.getState().status === GameStatus.PLAYING;
@@ -106,11 +109,11 @@ const SideRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   );
 };
 
-/** A side quest the hero tracked but has not accepted yet: "Talk to <giver>" (click = auto-path there). */
+/** A side quest that is open but not accepted yet: "Talk to <giver>" (tap = auto-path there; talking starts it). */
 const OfferRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   const dist = useDistance(() => offerNav(d));
   return (
-    <div data-k="npc" className="qt-row npc" data-testid="npc-offer-row" role="button" title="Click: auto-path" onClick={() => trackAndGo('side:' + d.id)}>
+    <div data-k="npc" className="qt-row npc" data-testid="npc-offer-row" role="button" title="Click: auto-path" onClick={() => goTalk(d.giver)}>
       <div className="qt-head"><i className="qt-mark">!</i><span>{d.giver}</span><span className="qt-dist" ref={dist} /></div>
       <div className="qt-title">{d.title}</div>
       <div className="qt-line"><b>{`Talk to ${d.giver}`}</b></div>
@@ -118,26 +121,45 @@ const OfferRow: React.FC<{ d: NpcQuestDef }> = ({ d }) => {
   );
 };
 
+/** (owner 2026-10-25) A beat the hero woke up to: its quests start once he talks to `who` (no quests by telepathy). */
+const MeetRow: React.FC<{ b: Beat }> = ({ b }) => {
+  const dist = useDistance(() => whoNav(b.who));
+  const main = !!b.story;
+  return (
+    <div data-k={main ? 'main' : 'npc'} className={`qt-row ${main ? 'main' : 'npc'}`} data-testid="meet-row" role="button" title="Click: auto-path" onClick={() => goTalk(b.who)}>
+      <div className="qt-head"><i className="qt-mark">!</i><span>{main ? 'Main Quest' : b.who}</span><span className="qt-dist" ref={dist} /></div>
+      <div className="qt-title">{b.title}</div>
+      <div className="qt-line"><b>{`Talk to ${b.who}`}</b></div>
+    </div>
+  );
+};
+
 export const QuestTracker: React.FC = () => {
   // NPC side quests (blue book icon): accepted, not yet handed in
-  const nq = useGameStore((s) => s.npcQuests);
+  const nq = useGameStore((s) => s.npcQuests), unlocks = useGameStore((s) => s.unlocks);
   const story = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, 1) === 'ACTIVE');
   const main = useGameStore((s) => liveStep(s));   // (a still-locked main step is hidden: questUnlocks.ts)
-  const tk = useUiStore((s) => s.trackedQuest), heroRank = useGameStore((s) => s.heroRank);
-  const offerDef = tk.startsWith('side:') ? NPC_QUEST_BY_ID[tk.slice(5)] : undefined;
-  const offer = offerDef && npcQuestStatus(offerDef, nq, heroRank) === 'AVAILABLE' ? offerDef : undefined;   // (tracked from the quest window before accepting it)
-  if (story.length === 0 && !main && !offer) return null;
+  const heroRank = useGameStore((s) => s.heroRank);
+  const meet = pendingBeats(unlocks);
+  const offers = NPC_QUESTS.filter((d) => npcQuestStatus(d, nq, heroRank) === 'AVAILABLE');   // open, waiting for a talk with the giver
+  if (story.length === 0 && !main && !meet.length && !offers.length) return null;
   const inv = useGameStore.getState().inventory;
+  // (owner) at most 3 rows: the main quest (or who to see for it), people to talk to, ready to hand in, then the rest
+  const mainMeet = meet.filter((b) => b.story), sideMeet = meet.filter((b) => !b.story);
+  let room = TRACK_MAX - (main ? 1 : 0) - Math.min(1, mainMeet.length);
+  const sm = sideMeet.slice(0, Math.max(0, room)); room -= sm.length;
+  const of = offers.slice(0, Math.max(0, room)); room -= of.length;
   const rest = [
     ...story.filter((d) => npcQuestReady(d, nq, inv)),
     ...story.filter((d) => !npcQuestReady(d, nq, inv)),
-  ].slice(0, TRACK_MAX - (main ? 1 : 0) - (offer ? 1 : 0));
+  ].slice(0, Math.max(0, room));
   return (
     <div className="qt pe" data-testid="quest-tracker">
       {/* (owner: no 'Received ...' lines under the tracker - the loot feed already shows rewards) */}
-      {/* (owner) at most 3 quests on screen: the main quest, then the ones ready to hand in, then the rest */}
       {main && <MainRow main={main} />}
-      {offer && <OfferRow d={offer} />}
+      {!main && mainMeet[0] && <MeetRow b={mainMeet[0]} />}
+      {sm.map((b) => <MeetRow key={b.id} b={b} />)}
+      {of.map((d) => <OfferRow key={d.id} d={d} />)}
       {rest.map((d) => <SideRow key={d.id} d={d} />)}
     </div>
   );

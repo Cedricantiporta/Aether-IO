@@ -8,7 +8,7 @@ import { NPCS } from '../townData';
 import { events } from '../events';
 import { useGameStore, makeItemById } from '../../store';
 import { STORY } from '../../story';
-import { storyHeld } from '../../questUnlocks';
+import { storyHeld, liveStep, BEATS } from '../../questUnlocks';
 import { storyTalk, acceptStory, rewardText } from './storyLogic';
 import { acceptNpcQuest, completeNpcQuest, questDialogueFor, talkedTo, heardLines, npcRewardText } from './npcQuestLogic';
 import { NPC_QUESTS, npcQuestLevelLocked, npcQuestMinLevel, npcQuestProgress, type NpcQuestDef } from '../../npcQuests';
@@ -50,7 +50,7 @@ export function dialogueOpen(): boolean { return useDialogue.getState().open; }
 
 /** The hint under a main-quest offer: what comes next + what accepting pays. */
 function storyHint(offer: string): string {
-  const n = Number(offer.slice(6)), next = storyHeld(n + 1, useGameStore.getState().unlocks.n) ? undefined : STORY[n + 1], rw = STORY[n] ? rewardText(STORY[n].reward) : '';
+  const n = Number(offer.slice(6)), next = storyHeld(n + 1, useGameStore.getState().unlocks.n, useGameStore.getState().unlocks.wait) ? undefined : STORY[n + 1], rw = STORY[n] ? rewardText(STORY[n].reward) : '';
   return [next ? `Next: ${next.line}` : '', rw].filter(Boolean).join('  ·  ');
 }
 /** The hint under a side-quest offer / reminder. */
@@ -60,8 +60,22 @@ function sideHint(def: NpcQuestDef, mode: 'offer' | 'progress'): string {
   return [`Objective: ${def.summary}`, npcRewardText(def.reward)].filter(Boolean).join('  ·  ');
 }
 
+/** (owner 2026-10-25) Talking to the NPC a woken-up beat sent you to starts its quests (no quests by telepathy). Returns the
+ *  lines that hand over a field main quest (a talk step with this NPC says its own lines instead; side quests are offered next). */
+function meetBeats(name: string): string[] {
+  const st = useGameStore.getState(), u = st.unlocks;
+  if (!u.wait?.some((id) => BEATS.find((b) => b.id === id)?.who === name)) return [];
+  const wait = u.wait.filter((id) => BEATS.find((b) => b.id === id)?.who !== name);
+  useGameStore.setState({ unlocks: { ...u, wait } });
+  const before = liveStep(st), step = liveStep(useGameStore.getState());
+  if (!step || step === before || step.npc === name) return [];
+  st.addNotification(`Main quest: ${step.title}`, '#f1d58e', 'SYSTEM');
+  return ['There you are! I have been waiting for you.', `${step.line}. I am counting on you.`];
+}
+
 export function openDialogue(npc: number): void {
   const d = NPCS[npc]; if (!d) return;
+  const meet = meetBeats(d.name);
   let ci: number;
   if (d.ordered) { ci = guideStep[npc]; guideStep[npc] = (ci + 1) % d.talk.length; }
   else { ci = Math.floor(Math.random() * d.talk.length); if (d.talk.length > 1 && ci === lastConvo[npc]) ci = (ci + 1) % d.talk.length; }
@@ -72,7 +86,7 @@ export function openDialogue(npc: number): void {
   talkedTo(d.name);
   // a side quest ready to hand in is paid first, even when this NPC also has the main quest (no blocked turn-ins)
   const nq0 = questDialogueFor(d.name);
-  const pre: string[] = [...heard];
+  const pre: string[] = [...meet, ...heard];
   let turnIn = '', turnInAt = -1;
   if (nq0?.mode === 'turnin') { pre.push(...nq0.def.done); turnIn = nq0.def.id; turnInAt = pre.length - 1; }
   // main story: the step's NPC tells its part (replaces the ambient talk) and the chain moves on
@@ -92,12 +106,14 @@ export function openDialogue(npc: number): void {
     lines.length = 0;
     lines.push(...qLines);
     if (giftAvailable(npc)) lines.unshift(d.gift!.text);
-    lines.unshift(...heard);
+    lines.unshift(...meet, ...heard);
   } else if (turnIn) {
     lines.length = 0;
     if (giftAvailable(npc)) lines.push(d.gift!.text);
     lines.push(...pre);
     turnInAt = lines.length - 1;   // paid on the last line (then it may roll on into this NPC's next quest)
+  } else if (meet.length) {
+    lines.length = 0; lines.push(...meet, ...heard);
   } else {
     const news = takeNews(d.name);   // one-off news after a guardian fell
     if (news) lines.unshift(news);
@@ -135,7 +151,7 @@ export function advanceDialogue(): void {
   if (!s.open) return;
   const reply = replyAt(s.lines, s.idx + 1) !== null && !(s.offer && s.idx + 1 >= s.lines.length - 1);   // the button said the hero's reply: skip that line
   if (reply && s.idx + 1 < s.lines.length - 1) { onLine(s.npc, s.idx + 1); const idx = s.idx + 2; useDialogue.setState({ idx }); onLine(s.npc, idx); return; }
-  if (s.offer.startsWith('story:') && s.idx >= s.lines.length - 1) { acceptOffer(); return; }   // main quest: the single "Okay" button (E / Space too) = what Accept did
+  if (s.offer && s.offer !== 'custom' && s.idx >= s.lines.length - 1) { acceptOffer(); return; }   // a quest offer: the single "Okay" button (E / Space too) = Accept   // main quest: the single "Okay" button (E / Space too) = what Accept did
   if (s.idx >= s.lines.length - 1 || reply) {
     if (reply) onLine(s.npc, s.idx + 1);
     const tab = s.npc >= 0 && !s.offer && !s.turnIn ? NPCS[s.npc].opens : undefined;

@@ -161,7 +161,7 @@ export function sanitizeStory(raw: unknown, endings: number, isNew: boolean): St
     if (r.v === 2 && step >= V2_GOLEM) { step = step === V2_GOLEM ? 15 : step + 2; if (step === 15) p = 0; }   // v2 -> v3: the Slime King steps were added before the Golem
     return fromList(V3, step, p);
   }
-  if (isNew) return { step: IDX.slimes, p: 0, v: STORY_V };   // (the one quest open at the start: questUnlocks.ts)
+  if (isNew) return { step: IDX.king, p: 0, v: STORY_V };   // (owner 2026-10-25) a new hero first speaks with the King, who sends him after the slimes
   return { step: endings > 0 ? POST : storyIdx('slimeking'), p: 0, v: STORY_V };   // pre-story saves: straight to the first guardian
 }
 export const storyStep = (s: StorySave): StoryStep | null => STORY[s.step] ?? null;

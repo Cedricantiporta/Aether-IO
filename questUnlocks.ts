@@ -64,17 +64,29 @@ export const BEATS: readonly Beat[] = [
 /** The chain is open up to `slimes` for everyone; every story beat opens it up to its `story` step. */
 const BASE_CAP = storyIdx('slimes');
 const STORY_CAPS: number[] = (() => { let c = BASE_CAP; return BEATS.map((b) => (c = b.story ? Math.max(c, storyIdx(b.story)) : c)); })();
-/** Highest main-story step index open after `n` beats. */
-export const storyCap = (n: number): number => (n <= 0 ? BASE_CAP : STORY_CAPS[Math.min(n, BEATS.length) - 1]);
+/** Highest main-story step index open after `n` beats (beats in `wait` = the hero has not spoken to their NPC yet: not open). */
+export const storyCap = (n: number, wait?: readonly string[]): number => {
+  if (!wait || !wait.length) return n <= 0 ? BASE_CAP : STORY_CAPS[Math.min(n, BEATS.length) - 1];
+  let c = BASE_CAP;
+  for (let i = 0; i < Math.min(n, BEATS.length); i++) { const b = BEATS[i]; if (b.story && !wait.includes(b.id)) c = Math.max(c, storyIdx(b.story)); }
+  return c;
+};
 /** True when main step `step` has not been unlocked yet (it is hidden: no talk, no kills counted, no tracker row). */
-export const storyHeld = (step: number, n: number): boolean => step > storyCap(n);
+export const storyHeld = (step: number, n: number, wait?: readonly string[]): boolean => step > storyCap(n, wait);
 /** The main step the hero is on, or undefined when it is finished or still locked. */
-export const liveStep = (s: { story: { step: number }; unlocks: { n: number } }): StoryStep | undefined => (storyHeld(s.story.step, s.unlocks.n) ? undefined : STORY[s.story.step]);
+export const liveStep = (s: { story: { step: number }; unlocks: { n: number; wait?: string[] } }): StoryStep | undefined => (storyHeld(s.story.step, s.unlocks.n, s.unlocks.wait) ? undefined : STORY[s.story.step]);
+/** (owner 2026-10-25) Beats opened but not met yet: their quests only start once the hero talks to `who` (the tracker shows
+ *  "Talk to <who>"; a tap walks there). Main-story beats first. */
+export const pendingBeats = (u: { wait?: string[] }): Beat[] => {
+  const out: Beat[] = [];
+  for (const b of BEATS) if (u.wait?.includes(b.id)) out.push(b);
+  return out.sort((a, b) => (a.story ? 0 : 1) - (b.story ? 0 : 1));
+};
 
 const SIDE_FIRST: Record<string, number> = (() => { const m: Record<string, number> = {}; BEATS.forEach((b, i) => { for (const id of b.side ?? []) m[id] = i; }); return m; })();
 /** Side quest `id` was unlocked by beat number < n, or its side beat was opened early by a level-up (`early` = beat ids;
  *  ids no beat mentions are always open). */
-export const sideUnlocked = (id: string, n: number, early?: readonly string[]): boolean => !(id in SIDE_FIRST) || SIDE_FIRST[id] < n || (!!early && early.length > 0 && early.includes(BEATS[SIDE_FIRST[id]].id));
+export const sideUnlocked = (id: string, n: number, early?: readonly string[], wait?: readonly string[]): boolean => !(id in SIDE_FIRST) || ((SIDE_FIRST[id] < n || (!!early && early.length > 0 && early.includes(BEATS[SIDE_FIRST[id]].id))) && !(wait && wait.includes(BEATS[SIDE_FIRST[id]].id)));
 
 export interface UnlockSave {
   /** beats opened so far (BEATS[0..n-1]) */
@@ -84,10 +96,12 @@ export interface UnlockSave {
   /** (owner) side-quest beats (ids) opened EARLY by a hero level-up, ahead of `n`; main-story order still follows `n` only.
    *  A death roll skips beats listed here (nextBeatIndex) and drops the ones `n` has passed. */
   early?: string[];
+  /** (owner) beat ids opened but whose NPC (`who`) the hero has not spoken to yet: their quests wait for that talk */
+  wait?: string[];
 }
 export const emptyUnlocks = (): UnlockSave => ({ n: 0, miss: 0 });
 /** Mirror of `unlocks.n` / `unlocks.early` for modules without store access (npcQuests.npcQuestStatus); written by store.ts. */
-export const unlockMirror: { n: number; early: readonly string[] } = { n: 0, early: [] };
+export const unlockMirror: { n: number; early: readonly string[]; wait: readonly string[] } = { n: 0, early: [], wait: [] };
 
 /** Index of the next beat a DEATH opens: the first at or after `n` that a level-up has not already opened. */
 export function nextBeatIndex(u: UnlockSave): number {
@@ -110,7 +124,8 @@ export function sanitizeUnlocks(raw: unknown, step: number, sideSeen: (id: strin
   if (r && typeof r === 'object' && Number.isFinite(Number(r.n))) {
     const n = Math.max(0, Math.min(BEATS.length, Math.floor(Number(r.n))));
     const early = Array.isArray(r.early) ? r.early.filter((id): id is string => typeof id === 'string' && BEATS.findIndex((b) => b.id === id) >= n && !!BEATS.find((b) => b.id === id)?.side) : [];
-    return { n, miss: Math.max(0, Math.min(2, Math.floor(Number(r.miss) || 0))), ...(early.length ? { early } : {}) };
+    const wait = Array.isArray(r.wait) ? r.wait.filter((id): id is string => typeof id === 'string' && BEATS.some((b) => b.id === id)) : [];
+    return { n, miss: Math.max(0, Math.min(2, Math.floor(Number(r.miss) || 0))), ...(early.length ? { early } : {}), ...(wait.length ? { wait } : {}) };
   }
   let n = 0, prev = BASE_CAP;
   BEATS.forEach((b, i) => {

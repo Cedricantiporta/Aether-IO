@@ -19,7 +19,7 @@ import { npcQuestReady, npcQuestTurnIn, type NpcQuestDef } from '../../npcQuests
 import { TAVERN_DOOR, TAVERN_EXIT } from '../tavernData';
 import { HOME_EXIT } from '../homeData';
 import type { ShopTab } from '../../storeTypes';
-import { liveStep } from '../../questUnlocks';
+import { pendingBeats, liveStep } from '../../questUnlocks';
 
 export type NavAct = 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none';
 type Area = 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME';
@@ -96,8 +96,11 @@ export function navSpot(at: Spot, o: NavTarget = mk()): NavTarget | null {
 const MAIN = mk();
 /** Where the main quest continues (null: the chain is finished, or the step is done from the bag). */
 export function mainNav(): NavTarget | null {
-  const step = liveStep(useGameStore.getState());
-  if (!step) return null;
+  const st = useGameStore.getState(), step = liveStep(st);
+  if (!step) {   // (owner) the next stretch waits for a talk with the NPC a woken-up beat named
+    const b = pendingBeats(st.unlocks).find((x) => x.story), i = b ? NPCS.findIndex((n) => n.name === b.who) : -1;
+    return i >= 0 ? navNpc(i, MAIN) : null;
+  }
   if (step.npc) { const i = NPCS.findIndex((n) => n.name === step.npc); if (i >= 0) return navNpc(i, MAIN); }
   if (step.at) return navSpot(step.at, MAIN);
   return portal(MAIN);

@@ -214,21 +214,9 @@ const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; s
 setTimeout(() => {   // (deferred: this module loads while the store module is still initialising)
   syncGate(useGameStore.getState().story.step);
   useGameStore.subscribe((s, p) => { if (s.story !== p.story) syncGate(s.story.step); });
-  // (owner) side quests are auto-accepted: the moment one reveals itself it lands in the quest log (wide banner)
-  autoAcceptSide();
-  useGameStore.subscribe((s, p) => {
-    if (s.npcQuests !== p.npcQuests || s.heroRank !== p.heroRank || s.story !== p.story || s.unlocks !== p.unlocks) setTimeout(autoAcceptSide, 0);   // (after the gate / unlock mirrors synced)
-  });
+  // (owner 2026-10-25) side quests are NOT auto-accepted any more: an open one shows in the tracker as "Talk to <giver>"
+  // (tap = walk there) and starts when the hero speaks with them (dialogue.ts: one "Okay" button)
 }, 0);
-function autoAcceptSide(): void {
-  const st = useGameStore.getState();
-  const ids = NPC_QUESTS.filter((d) => npcQuestStatus(d, st.npcQuests, st.heroRank) === 'AVAILABLE').map((d) => d.id);
-  if (!ids.length) return;
-  const q = { ...st.npcQuests.q };
-  for (const id of ids) q[id] = { s: 1, p: 0 };
-  useGameStore.setState({ npcQuests: { ...st.npcQuests, q } });
-  for (const id of ids) notify(`Quest accepted: ${NPC_QUEST_BY_ID[id].title}`);
-}
 
 // ----------------------------------------------------------- quest drops ---
 // While an accepted DELIVER quest still needs goods, monsters / harvest nodes that carry them drop them more often

@@ -59,7 +59,7 @@ type Tab = 'MAIN' | 'SIDE';
 export const QuestLog: React.FC = () => {
   const open = useUiStore((s) => s.questLogOpen), setOpen = useUiStore((s) => s.openQuestLog);
   const { story, nq, inv, rank, status, level, unlocks } = useGameStore(useShallow((s) => ({ story: s.story, nq: s.npcQuests, inv: s.inventory, rank: s.heroRank, status: s.status, level: s.level, unlocks: s.unlocks })));
-  const cap = storyCap(unlocks.n);   // (owner, Hades-style) main steps past this are still locked: hidden until a death opens them
+  const cap = storyCap(unlocks.n, unlocks.wait);   // (owner, Hades-style) main steps past this are still locked: hidden until a death opens them
   const held = story.step > cap;
   const askConfirm = useUiStore((s) => s.askConfirm);
   const [tab, setTab] = useState<Tab>('MAIN');
