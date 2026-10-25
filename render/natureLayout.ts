@@ -99,7 +99,7 @@ export function townPlaces(): Sets {
   }
   // ---- the dense dressing (engine/townFill.ts): rows are [x, z, yaw, sx, sy, sz]; the ground height is added here
   for (const name of Object.keys(FILL)) for (const [x, z, ry, sx, sy, sz, ay] of FILL[name]) {
-    if (inSea(x, z)) continue;
+    if (inSea(x, z) && ay === undefined && !/ship|boat|pier|dock|buoy/.test(name)) continue;   // (the moored ship, boats and pier pieces belong in the water)
     const low = /rock/.test(name) ? 0.2 * sx : /tree|palm|pine/.test(name) ? 0.1 : 0;
     put(S, name as NKPiece, { x, y: ay !== undefined ? ay : groundAt(x, z) - low, z, ry, sx, sy, sz });
   }
@@ -108,7 +108,7 @@ export function townPlaces(): Sets {
   for (const sp of SHOP_POSITIONS) { const L = SHOP_LOOK[sp.type]; if (!L) continue; for (const [piece, dx, dz, yaw, sx, sz] of [...L.extra, ...L.dress] as [string, number, number, number, number, number][]) { if (piece !== 'flower_planter') continue; const [x, z] = shopLocal(sp.position[0], sp.position[2], sp.rot ?? 0, dx, dz); bedPlants(S, x, z, (sp.rot ?? 0) + yaw, 0.85 * (sx ?? 1) - 0.1, 0.45 * (sz ?? 1) - 0.1, townLift(x, z) + 0.68, 2); } }
   for (const name of ['flower_bed_long', 'flower_bed_round']) for (const [x, z, ry, sx, , sz, ay] of (FILL[name] ?? [])) { const y = (ay !== undefined ? ay : groundAt(x, z)) + 0.5 * sx; if (name === 'flower_bed_long') bedPlants(S, x, z, ry, 2.0 * sx, 0.55 * sz, y, 3); else bedPlants(S, x, z, ry, 1.0 * sx, 1.0 * sz, y, 4); }
   // ---- palms along the beach and the lake shore (beachData PALMS: x, z, scale, lean yaw)
-  PALMS.forEach(([x, z, s, lean]) => put(S, 'palm_v3', P(x, Math.max(0, groundAt(x, z)), z, lean, s * (0.9 + hash2(x, z) * 0.2))));
+  PALMS.forEach(([x, z, s, lean]) => groundY(x, z) > -0.3 && put(S, 'palm_v3', P(x, Math.max(0, groundAt(x, z)), z, lean, s * (0.9 + hash2(x, z) * 0.2))));
   // ---- park: benches (the seats' sit points), the gazebo + fountain, wells, signposts, stepping stones
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; put(S, 'park_bench', P(s.x, townLift(s.x, s.z), s.z, s.yaw, 1.05)); }
   put(S, 'gazebo', P(PARK_EAST.gazebo.x, townLift(PARK_EAST.gazebo.x, PARK_EAST.gazebo.z), PARK_EAST.gazebo.z, 0, 1));
@@ -174,7 +174,7 @@ export function townPlaces(): Sets {
   };
   HEADLAND.forEach(([x, z, r], i) => rockC(x, z, r, -0.2, 3 + i, i % 3 === 0 ? 8 : 6));
   rockC(-71.5, -6, 1.3, -0.5, 20, 5);   // (owner 2026-10-24: only a couple of rocks out in the water)
-  rockC(-72.5, 15.5, 1.5, -0.55, 61, 6);   // the islet in the shallows
+  // (owner 2026-10-25: the islet rock in front of the Shoreline fishing spot was removed)
   rockC(-66.4, 44.5, 1.2, -0.4, 62, 5);   // a small outcrop where the sand meets the water
   for (const [x, z, r] of [[-62.9, 18.6, 0.6], [-52.6, 40.4, 0.55], [-56.4, 52.4, 0.65]]) rockC(x, z, r, -0.05, 70 + x, 3);   // lone rocks on the sand
   for (const [x, z, r] of SOUTH_ROCKS) if (!inSea(x, z, 4)) rockC(x, z, r * 1.05, -0.25, 30, r > 1.1 ? 6 : 4);

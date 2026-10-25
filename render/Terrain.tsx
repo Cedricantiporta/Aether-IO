@@ -42,7 +42,7 @@ const wind = { uTime: { value: 0 }, uPlayer: { value: new Vector3(0, 0, 0) } };
 const cG = new Color(), cD = new Color(), cD2 = new Color(), cT = new Color();
 const _rg = { w: 0, style: null as any, grass: 1, kind: '' };
 /** 0..1: the sandy band along the island's shore (starts ~3.5 m inside the visual edge). */
-function shoreSandK(r: number, e: number): number { return sstep(e - 3.5, e - 1.4, r); }
+function shoreSandK(r: number, e: number): number { return sstep(e - 2.2, e - 0.6, r); }
 function groundColor(x: number, z: number, y: number, out: Color) {
   const r = Math.hypot(x, z), a = Math.atan2(z, x), e = edgeR(a);
   const n1 = fbm(x * 0.03 + 20, z * 0.03, 3), n2 = fbm(x * 0.11 + 5, z * 0.11, 3), n3 = vnoise(x * 0.9, z * 0.9);
@@ -105,7 +105,7 @@ function detailTexture() {
 // grass vertex shader samples, so grass can wrap endlessly around the player over a huge map with a fixed instance count.
 function Ground({ q }: { q: QualityCfg }) {
   const { geo, mat, mask } = useMemo(() => {
-    const cell = q.name === 'LOW' ? 2.4 : 1.9, B = GROUND_BOX;
+    const cell = q.name === 'LOW' ? 1.6 : 1.1, B = GROUND_BOX;   // (owner 2026-10-25: 1.9 m cells drew a saw-tooth water line)
     const sx = Math.ceil((B.x1 - B.x0) / cell), sz = Math.ceil((B.z1 - B.z0) / cell), nx = sx + 1, nz = sz + 1, nv = nx * nz;
     const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), uv = new Float32Array(nv * 2);
     const bytes = new Uint8Array(nv * 4), sandA = new Float32Array(nv);

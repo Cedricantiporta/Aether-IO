@@ -718,10 +718,10 @@ function Lake() {
       if (z > BEACH.z0 - 9 && z < BEACH.z1 + 8) { rnd(); continue; }   // the beach stretch has its own shore (render/Beach.tsx)
       if (z > riverBank(LAKE.x1, 0) - 3 && z < riverBank(LAKE.x1, 1) + 3) { rnd(); continue; }   // (no slab floating in the river mouth)
       if (z > MAIN_BEACH.z0 - 6 && z < MAIN_BEACH.z1 + 6) { rnd(); continue; }   // (the mainland beach has its own sand)
-      { const r = 2.1 + rnd() * 0.4; b.cyl(r, r + 0.15, 0.12, 14, [LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8, -0.08, z], '#d9c99e'); }   // (rounded, not slabs)
-      if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
+      { const r = 2.1 + rnd() * 0.4, sx = LAKE.x1 - 0.6 + (rnd() - 0.5) * 0.8; if (groundY(sx, z) > -0.6) b.cyl(r, r + 0.15, 0.12, 14, [sx, -0.08, z], '#d9c99e'); }   // (rounded, not slabs; none out in the open sea)
+      if (rnd() < 0.55) for (let k = 0; k < 4; k++) { const rx = LAKE.x1 - 2.4 - rnd() * 2.2, rz = z + (rnd() - 0.5) * 2.6, h = 1.0 + rnd() * 0.9; if (groundY(rx, rz) < -0.9) continue; b.cyl(0.03, 0.05, h, 4, [rx, h / 2 - 0.2, rz], k % 2 ? '#6f8f3a' : '#5d7d2e', [(rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3]); if (k === 0) b.cyl(0.07, 0.07, 0.3, 5, [rx, h - 0.1, rz], '#6a4a2a'); }
       rnd(); rnd(); rnd();   // (the shore rocks are nature_kit_v1 rock_round pieces, render/NatureScenery.tsx)
-      if (rnd() < 0.12) b.cyl(0.5, 0.5, 0.06, 10, [LAKE.x1 - 6 - rnd() * 6, -0.1, z], '#4f8f3e');   // lily pad
+      if (rnd() < 0.12) { const lx = LAKE.x1 - 6 - rnd() * 6; if (groundY(lx, z) > -1.4) b.cyl(0.5, 0.5, 0.06, 10, [lx, -0.1, z], '#4f8f3e'); }   // lily pad (shallows only)
     }
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     // (the mainland beach is painted into the ground like the lakeside one: engine/beachData MAIN_BEACH, palms in render/Beach)

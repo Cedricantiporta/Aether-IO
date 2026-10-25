@@ -96,8 +96,8 @@ function groundYLand(x: number, z: number) {
   if (r < e - 2) return hill;
   // outside the walkable edge the island ends in the sea: the bank dips from the hills to just under the water line at ~edgeR, then the
   // sea floor falls away (the opaque sea surface hides it; render/TownScenery Sea)
-  const k = sstep(e - 2, e + 1.6, r);
-  let y = hill * (1 - k) - 0.35 * k - 2.7 * sstep(e + 1.6, e + 12, r);
+  const k = sstep(e - 1.5, e + 3.5, r);
+  let y = hill * (1 - k) - 0.45 * k - 2.6 * sstep(e + 3.5, e + 14, r);
   // the Crystal Cave's cliff stands half past the edge: keep a small headland of dry ground under it
   const cd = Math.hypot(x - CAVE_CLEAR.x, z - CAVE_CLEAR.z);
   if (cd < 14) y = Math.max(y, -0.15 + 0.6 * sstep(14, 6, cd));
