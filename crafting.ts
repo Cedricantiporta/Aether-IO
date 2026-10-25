@@ -70,7 +70,8 @@ function recipeLoot(slot: CraftSlot, rarity: Rarity, hero: HeroClass): LootNeed[
   const n = (x: number) => Math.ceil(x * w);
   const out: LootNeed[] = [];
   const X4 = new Set(['champion_medal', 'ore_nugget', 'mithril_ore', 'adamant_ore']);   // (owner 2026-10-24: medals + ores cost 4x)
-  const add = (id: string, count0: number) => { const count = X4.has(id) ? count0 * 4 : count0; const e = out.find((l) => l.id === id); if (e) e.count += count; else out.push({ id, count }); };
+  const add = (id: string, count0: number) => { const count = id === 'champion_medal' ? count0 * 3 : X4.has(id) ? count0 * 4 : count0;   // (owner 2026-10-25: champion medals 3x)
+ const e = out.find((l) => l.id === id); if (e) e.count += count; else out.push({ id, count }); };
   switch (rarity) {
     case 'COMMON': add(fam[0], n(5)); add('ore_nugget', n(2)); break;
     case 'RARE': add(fam[0], n(10)); add(fam[1], n(4)); add('ore_nugget', n(4)); break;

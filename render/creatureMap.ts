@@ -53,7 +53,7 @@ export const MONSTER_KIT: Partial<Record<EnemyKind, CreatureCfg>> = {
   BOSS_IMP: { piece: 'boss_imp', arch: 'fly', flap: 20, amp: 0.8, lift: 0.7 },
   BOSS_DKNIGHT: { piece: 'skeleton_warrior', arch: 'biped', gait: 11 },
   BOSS_CRYSTAL: { piece: 'boss_crystal', arch: 'still' },
-  BOSS_HYDRA_HEAD: { piece: 'boss_hydra_head', arch: 'still', lift: -6.5 },
+  // (owner 2026-10-25) BOSS_HYDRA_HEAD: the kit head read as round; the procedural angular head in render/enemyModels hydraHead() is used
 };
 
 /** Pets (PETS_POOL ids): kit piece, motion, body scale and hover height (the old PetDef values are overridden). */

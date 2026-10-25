@@ -603,22 +603,28 @@ function sapling(): ModelDef {
 
 /** One of the Mire Hydra's three heads: a tall swaying neck with a fanged snout (the body stays with the boss). */
 function hydraHead(): ModelDef {
-  const skin = '#3f8f4a', skin2 = '#6bc25a', belly = '#c8d88a';
+  // (owner 2026-10-25: less round) an angular serpent head: faceted skull, long wedge snout + jaw, swept horns, crest and cheek spikes
+  const skin = '#3f8f4a', skin2 = '#5fb050', dark = '#2a5a30', belly = '#c8d88a', bone = '#efe2b8';
   const g = new GB([0.8, 1.1]);
-  g.cyl(0.62, 0.78, 1.2, 8, [0, 0.6, 0], skin);                     // base
-  g.cyl(0.46, 0.6, 1.4, 8, [0, 1.8, 0.1], skin, [0.12, 0, 0]);      // neck
-  g.cyl(0.4, 0.46, 1.2, 8, [0, 2.9, 0.3], skin2, [0.28, 0, 0]);
-  for (let i = 0; i < 4; i++) g.cone(0.1, 0.34, 4, [0, 1.2 + i * 0.5, -0.45 + i * 0.12], '#2a6a32', [-0.5, 0, 0]); // back spines
-  g.box(0.5, 0.7, 0.3, [0, 1.6, 0.52], belly, [0.1, 0, 0]);          // throat plates
-  g.sph(0.62, [0, 3.6, 0.7], skin2, [1, 0.85, 1.15], 9);             // skull
-  g.box(0.62, 0.34, 0.9, [0, 3.38, 1.4], skin2);                    // snout
-  g.box(0.56, 0.16, 0.8, [0, 3.1, 1.34], '#2a5a30');                // jaw
-  for (const s of [-1, 1]) {
-    g.cone(0.07, 0.3, 4, [s * 0.22, 3.12, 1.7], '#fff4d0', [Math.PI, 0, 0]);   // fangs
-    g.cone(0.12, 0.5, 4, [s * 0.4, 4.05, 0.45], '#2a5a30', [-0.5, 0, s * 0.5]); // horns
+  g.cyl(0.6, 0.8, 1.2, 6, [0, 0.6, 0], skin);                       // base
+  g.cyl(0.44, 0.6, 1.4, 6, [0, 1.8, 0.1], skin, [0.12, 0, 0]);       // neck
+  g.cyl(0.38, 0.46, 1.2, 6, [0, 2.9, 0.3], skin2, [0.28, 0, 0]);
+  for (let i = 0; i < 5; i++) g.cone(0.13, 0.5 + (i % 2) * 0.15, 4, [0, 1.1 + i * 0.55, -0.42 + i * 0.13], dark, [-0.6, 0, 0]);   // back spines
+  for (let i = 0; i < 3; i++) g.box(0.46 - i * 0.05, 0.3, 0.2, [0, 1.2 + i * 0.5, 0.5 + i * 0.05], belly, [0.15, 0, 0]);   // throat plates
+  g.octa(0.66, [0, 3.62, 0.75], skin2, [0.95, 0.62, 1.25]);           // faceted skull
+  g.cone(0.42, 1.5, 4, [0, 3.5, 1.75], skin2, [Math.PI / 2, Math.PI / 4, 0], [1.1, 1, 0.55]);   // wedge snout
+  g.cone(0.34, 1.25, 4, [0, 3.12, 1.6], dark, [Math.PI / 2 + 0.22, Math.PI / 4, 0], [1.05, 1, 0.4]);   // lower jaw
+  g.cone(0.08, 0.35, 4, [0, 3.85, 2.05], bone, [-0.3, 0, 0]);         // nose horn
+  for (const s2 of [-1, 1]) {
+    g.box(0.36, 0.1, 0.42, [s2 * 0.3, 3.92, 1.05], dark, [0.15, 0, -s2 * 0.35]);                     // brow ridge
+    g.cone(0.13, 1.1, 4, [s2 * 0.38, 4.15, 0.3], bone, [-1.05, 0, s2 * 0.42]);                        // long horn, swept back
+    g.cone(0.09, 0.7, 4, [s2 * 0.52, 3.85, 0.25], bone, [-1.3, 0, s2 * 0.9]);                         // second horn
+    g.cone(0.08, 0.45, 4, [s2 * 0.55, 3.35, 0.85], dark, [-0.4, 0, s2 * 1.3]);                        // cheek spike
+    for (let k = 0; k < 3; k++) g.cone(0.05, 0.26, 4, [s2 * (0.16 + k * 0.05), 3.24, 2.2 - k * 0.28], bone, [Math.PI, 0, 0]);   // fangs
   }
+  for (let i = 0; i < 4; i++) g.cone(0.1, 0.42 - i * 0.05, 4, [0, 4.0 - i * 0.12, 0.55 - i * 0.32], dark, [-0.7, 0, 0]);   // crest
   const eyes = new GB([1, 1]);
-  for (const s of [-1, 1]) eyes.sph(0.12, [s * 0.34, 3.78, 1.05], '#ffe14a', [1, 1, 0.7], 6);
+  for (const s of [-1, 1]) eyes.sph(0.12, [s * 0.32, 3.76, 1.2], '#ffe14a', [1.4, 0.45, 0.7], 6, [0, 0, -s * 0.3]);   // narrow slanted eyes
   return {
     parts: [{ geo: g.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }], headY: 4.6, shadow: 1.1,
     pose(e, P, t) {

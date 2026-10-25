@@ -280,7 +280,7 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 export const HP_INFLATE = 1.6, DMG_INFLATE = 2;   // (owner) hero HP x2 then -20% (every HP source: base, items, upgrades, cards)
 /** last time each WARNING toast text was shown (addNotification de-dupes repeats within 3 s) */
 const warnAt = new Map<string, number>();
-export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.08 } as const;   // (owner 2026-10-25: life steal reduced)
+export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.03 } as const;   // (owner 2026-10-25: life steal reduced, very small cap; combat.ts also caps it at 1% max HP healed per second)
 
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
 const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>, attrs?: Attrs): PlayerStats => {

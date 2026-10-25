@@ -82,7 +82,9 @@ export interface StatusEffect {
 }
 
 const dropPos = new Vector3();
-let lsAcc = 0;
+let lsAcc = 0, lsWinT = -1, lsWin = 0;
+/** (owner 2026-10-25: life steal was OP in big packs) life steal heals at most LS_SEC_CAP of max HP per second, whatever the hit count */
+const LS_SEC_CAP = 0.01;
 let thornT = -1;
 const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 
@@ -453,7 +455,15 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     // Life steal (gear affixes / sets / talents): direct player damage only; healed in chunks to limit floating text.
     if (o.source === 'PLAYER' && !o.dot) {
       const ls = useGameStore.getState().stats.lifeSteal;
-      if (ls > 0) { lsAcc += Math.min(dealt, 4000) * ls; if (lsAcc >= 2) { healPlayer(lsAcc); lsAcc = 0; } }
+      if (ls > 0) {
+        lsAcc += Math.min(dealt, 4000) * ls;
+        if (lsAcc >= 2) {
+          if (world.time - lsWinT >= 1) { lsWinT = world.time; lsWin = 0; }
+          const room = Math.max(0, useGameStore.getState().stats.maxHealth * LS_SEC_CAP - lsWin), h = Math.min(lsAcc, room);
+          if (h > 0) { healPlayer(h); lsWin += h; }
+          lsAcc = 0;
+        }
+      }
     }
   }
 
