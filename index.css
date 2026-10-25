@@ -3555,9 +3555,12 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 :is(.bag-tabs, .cs2-tabs, .qw-tabs, .so-tabs, .sw-tabs, .rpg-tabs, .ws-cats, .tp-chips, .st-segs, .tt-tabs) { background: none !important; padding: 0; }
 .so-tabs { display: grid; }
 /* secondary actions = plain text buttons (primary / go stay pills) */
-:is(.cs-change, .np-back, .sw-rates-btn, .bag-del-go, .tt-respec, .story-skip, .rpg-btn-sm:not(.rpg-btn-primary):not(.rpg-btn-green)) {
+:is(.cs-change, .np-back, .sw-rates-btn, .bag-del-go, .tt-respec, .story-skip) {
   background-color: transparent !important; box-shadow: none !important; color: var(--z-dim) !important;
 }
+/* (owner 2026-10-25) small buttons (Equip title, View, ...) were see-through with dim text: a soft visible pill instead */
+.rpg-btn-sm:not(.rpg-btn-primary):not(.rpg-btn-green):not(.rpg-btn-danger) { background-color: rgba(255, 246, 224, .18) !important; color: #fff !important; box-shadow: inset 0 0 0 1px rgba(255, 246, 224, .35) !important; }
+.rpg-btn-sm:not(.rpg-btn-primary):not(.rpg-btn-green):not(.rpg-btn-danger):hover:not(:disabled) { background-color: rgba(255, 246, 224, .3) !important; }
 :is(.cs-change, .np-back, .sw-rates-btn, .bag-del-go, .tt-respec, .story-skip):hover:not(:disabled) { background-color: var(--z-hover) !important; color: #fff !important; filter: none; }
 /* panel headers float on the panel */
 .panel-head, .panel-head.v4, .ws-head, .np-head, .sw-side-head { background: none !important; box-shadow: none !important; }

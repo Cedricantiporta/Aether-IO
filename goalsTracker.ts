@@ -1,3 +1,4 @@
+import { showcase } from './engine/showcase';
 import { feedReward } from './rewardFeed';
 // ============================================================================
 // Goals + achievements tracker. Counts come from the typed event bus (kills, rooms, harvest, hub actions) and from
@@ -57,7 +58,7 @@ export function flush(): void {
     reset();
   }
   // achievements
-  const ctx: AchCtx = { meta: m, rank: s.heroRank, mythic: hasMythic(s), warehouse: s.warehouse.length };
+  const ctx: AchCtx = { meta: m, rank: s.heroRank, mythic: !showcase.on && hasMythic(s), warehouse: s.warehouse.length };   // (the trial's borrowed Mythic set does not count)
   const fresh = ACHIEVEMENTS.filter((a) => !m.unlocked.includes(a.id) && a.value(ctx) >= a.target);
   if (fresh.length) m = { ...m, unlocked: [...m.unlocked, ...fresh.map((a) => a.id)] };
   if (m !== s.meta) useGameStore.setState({ meta: m });

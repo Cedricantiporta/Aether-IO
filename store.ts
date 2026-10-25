@@ -1279,6 +1279,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         difficulty: 'NORMAL',
         classProg: { ...s.classProg, [hero]: ov.classProg }, talents: { ...s.talents, [hero]: ov.talents }, attrs: { ...s.attrs, [hero]: ov.attrs },
         equipment: ov.equipment, elixirsNext: [], isShopOpen: false, isInventoryOpen: false, isCharacterSheetOpen: false,
+        // (owner 2026-10-25) the trial bag: 99 health + 99 mana potions (the real bag comes back with the snapshot)
+        inventory: [...makeItemById('potion_hp', 99), ...makeItemById('potion_mana', 99)],
       });
       get().startGame();
       world.player.ult = 100; world.player.mana = get().stats.maxMana; world.player.hp = get().stats.maxHealth;   // full ultimate + resources from the first second
@@ -1290,7 +1292,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (snap) {   // everything but the screen flow comes back exactly as it was (profile, bag, gear, skills, stats, currencies, codex ...)
         const keep: Record<string, unknown> = {};
         for (const k of Object.keys(snap) as (keyof GameState)[]) {
-          if (typeof snap[k] === 'function' || k === 'status' || k === 'notifications' || k === 'lastRun' || k === 'actionResult' || k === 'upgradeOptions' || k === 'runPicks') continue;
+          if (typeof snap[k] === 'function' || k === 'status' || k === 'notifications' || k === 'lastRun' || k === 'actionResult' || k === 'upgradeOptions' || k === 'runPicks' || k === 'meta') continue;   // (owner 2026-10-25) achievements / titles / goal counters earned in the trial are kept
           keep[k] = snap[k];
         }
         set(keep as Partial<GameState>);
