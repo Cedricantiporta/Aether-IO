@@ -21,7 +21,8 @@ import { liveStep } from '../../questUnlocks';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
-import { useGameStore, makeItemById } from '../../store';
+import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
+import { damagePlayer } from './combat';
 import { GameStatus } from '../../types';
 import { runMods, runInfo, veteran } from '../runMods';
 import {
@@ -348,7 +349,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   }
 
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.aliveCount = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
-  roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
+  roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false; resetStageClock();
   unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;
 
@@ -1071,7 +1072,7 @@ function nextWave(): void {
   r.plan = plan;
   world.boss.active = false; nextBossKind = '';
   d.wave = depth; d.phase = 'FIGHT'; d.phaseT = 0; d.bossId = -1; d.maxAlive = ROOM_MAX_ALIVE;
-  roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false;
+  roomT = 0; clearT = 0; rewardT = -1; vacuumT = 0; vacuumTick = 0; shrineBonus = false; resetStageClock();
   unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;
   for (const po of r.portals) po.active = false;
@@ -1312,6 +1313,27 @@ function interactHub(node: number): void {
 }
 
 // ------------------------------------------------------------ frame ---------
+// ---- (owner 2026-10-25) stage timer: every run stage has a time limit (no soaking a room to drink potions / regen). Hidden until the
+// last STAGE_SHOW seconds (ui/hud/StageTimer shows it then); at 0 the hero takes STAGE_TICK damage every second until he leaves.
+export const stageClock = { on: false, left: 0, max: 0, tick: 0 };
+const STAGE_SHOW = 30, STAGE_TICK = 10;
+function resetStageClock(): void {
+  const t = plan.type, sc = stageClock;
+  sc.on = !waves.on && !showcase.on;
+  sc.max = t === 'BOSS' ? 360 : t === 'MINIBOSS' || t === 'DUEL' ? 240 : t === 'ELITE' ? 210 : t === 'COMBAT' ? 180 : 150;
+  if (shape.kind === 'HALLS') sc.max += 60;   // the dungeon rooms are long walks
+  sc.left = sc.max; sc.tick = 0;
+}
+export const stageClockVisible = (): boolean => stageClock.on && stageClock.left <= STAGE_SHOW;
+function tickStageClock(dt: number): void {
+  const sc = stageClock; if (!sc.on || !world.player.alive) return;
+  if (dd().phase === 'LEAVING' || dd().phase === 'BIOME_DONE') return;
+  sc.left -= dt;
+  if (sc.left > 0) return;
+  sc.tick -= dt;
+  if (sc.tick <= 0) { sc.tick = 1; damagePlayer(STAGE_TICK / DMG_INFLATE, {}); }
+}
+
 export function updateDirector(dt: number): void {
   const d = dd(), r = world.room, st = useGameStore.getState();
   if (!r.active) return;
@@ -1322,6 +1344,7 @@ export function updateDirector(dt: number): void {
   tickDaily(dt);
   if (waves.on && waves.breakT >= 0 && d.phase === 'CLEARED' && st.status === GameStatus.PLAYING) { waves.breakT -= dt; if (waves.breakT < 0) nextWave(); }
 
+  tickStageClock(dt);
   switch (d.phase) {
     case 'FIGHT': tickFight(dt); break;
     case 'LEAVING': if (r.fade >= 0.999) finishLeave(); break;
