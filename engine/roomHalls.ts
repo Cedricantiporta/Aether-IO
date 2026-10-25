@@ -4,11 +4,14 @@
 // distance field of soft blobs + bezier passages (+ noise wobble), plus an exact signed distance field (sdf > 0 = metres inside the
 // open floor, < 0 = metres inside the blocked ground). Everything that clamps or collides asks the mask: hallsPush (slide along the
 // edge), hallsSegClear (line of sight / projectile paths), hallsSdf (placement margins). The edge is dressed by render/HallsBorder.tsx
-// (trees / rocks, or nothing but darkness + round columns in Marble Halls). Six designs, see DESIGNS below. Passages are >= 5 m wide
+// (trees / rocks, or nothing but darkness + round columns in Marble Halls). Layouts: ~80% procedural (roomHallsGen.ts), else one of six fixed designs (DESIGNS below). Passages are >= 5 m wide
 // (a hard core is stamped so the wobble can never pinch one shut), chambers 20-30 m. Pure TS; all buffers preallocated.
 // ============================================================================
 
-export type HallsVariant = 'TWIN' | 'FROZEN' | 'DUNES' | 'COLUMNS' | 'CROSS' | 'CRESCENT';
+import { genHalls, pickCount, bez, classOfR, type GenOut } from './roomHallsGen';
+
+/** 'RANDOM' = a procedural plan (engine/roomHallsGen.ts); the others are the fixed templates (COLUMNS = the fixed castle) */
+export type HallsVariant = 'TWIN' | 'FROZEN' | 'DUNES' | 'COLUMNS' | 'CROSS' | 'CRESCENT' | 'RANDOM';
 
 export const HC = 0.5;                 // cell size (m)
 const MAX_W = 480;                     // grid cells per side (240 m): the long Marble Halls chains are ~210 m end to end
@@ -36,6 +39,10 @@ export const halls = {
   pockets: [] as [number, number, number][],
   /** the chambers ("sacs"): centre x, z and the smaller half axis (m). director: monsters fill them one by one, nearest the arrival first */
   chambers: [] as [number, number, number][],
+  /** size class of each chamber (parallel to `chambers`): 0 small, 1 medium, 2 big */
+  classes: [] as number[],
+  /** the procedural generator gave up for this seed and a fixed template was used (stats / QA) */
+  fellBack: false,
   /** points along the passage centre lines (>= 9 m from the start / exit, ~10 m apart): some monsters are placed here (director.pickAnchor) */
   passPts: [] as [number, number][],
   area: 0, extent: 0,
@@ -169,7 +176,7 @@ interface Design {
   castle?: boolean; statues?: [number, number][]; arches?: [number, number, number][];
 }
 
-const DESIGNS: Record<Exclude<HallsVariant, 'COLUMNS'>, Design> = {
+const DESIGNS: Record<Exclude<HallsVariant, 'COLUMNS' | 'RANDOM'>, Design> = {
   // two big kidney clearings joined by one long winding path, a tree island in each
   TWIN: {
     blobs: [[-22, -30, 24, 17, 20, 0.25], [17, 26, 25, 18, -15, -0.25]],
@@ -267,7 +274,7 @@ function vnoise(x: number, y: number): number {
 
 /** The concrete (jittered, scaled, rotated) layout in WORLD coordinates (origin = hub). */
 interface Inst {
-  blobs: { x: number; z: number; rx: number; rz: number; c: number; s: number; kid: number; box: number; hx: number; hz: number }[];
+  blobs: { x: number; z: number; rx: number; rz: number; c: number; s: number; kid: number; box: number; hx: number; hz: number; cls?: number }[];
   segs: number[];            // flat: ax, az, bx, bz, halfWidth
   islands: [number, number, number][]; statues: [number, number][]; arches: [number, number, number][];
   start: [number, number]; exit: [number, number]; hub: [number, number];
@@ -323,12 +330,84 @@ function instantiate(D: Design, rnd: () => number, scale: number, ang: number, m
   return out;
 }
 
-/** Builds the mask for a room of nominal radius R. Fills `halls` (origin = hub). */
+/** Procedural plan -> instance (world = plan: the hub chamber is at the origin) */
+function instFromGen(G: GenOut): Inst {
+  const out: Inst = { blobs: [], segs: [], islands: [], statues: [], arches: [], start: [G.start[0], G.start[1]], exit: [G.exit[0], G.exit[1]], hub: [0, 0], keep: [], castle: G.castle, mnx: 1e9, mnz: 1e9, mxx: -1e9, mxz: -1e9 };
+  const ext = (x: number, z: number, r: number): void => { out.mnx = Math.min(out.mnx, x - r); out.mnz = Math.min(out.mnz, z - r); out.mxx = Math.max(out.mxx, x + r); out.mxz = Math.max(out.mxz, z + r); };
+  for (const b of G.blobs) {
+    out.blobs.push({ x: b.x, z: b.z, rx: b.rx, rz: b.rz, c: Math.cos(b.rot), s: Math.sin(b.rot), kid: b.kid, box: b.box, hx: b.rx, hz: b.rz, cls: b.cls });
+    if (G.castle) { out.mnx = Math.min(out.mnx, b.x - b.rx - 2); out.mxx = Math.max(out.mxx, b.x + b.rx + 2); out.mnz = Math.min(out.mnz, b.z - b.rz - 2); out.mxz = Math.max(out.mxz, b.z + b.rz + 2); }
+    else ext(b.x, b.z, Math.max(b.rx, b.rz) * 1.2 + 3);
+  }
+  for (const p of G.paths) {
+    let px = 0, pz = 0;
+    const N = 36, t4: [number, number] = [0, 0];
+    for (let i = 0; i <= N; i++) {
+      bez(p.c, i / N, t4);
+      if (i > 0) out.segs.push(px, pz, t4[0], t4[1], p.w / 2);
+      px = t4[0]; pz = t4[1]; ext(px, pz, G.castle ? 5 : 6);
+    }
+    out.keep.push([p.c[0][0], p.c[0][1], 5.5], [p.c[3][0], p.c[3][1], 5.5]);
+  }
+  for (const i of G.islands) { out.islands.push([i[0], i[1], i[2]]); ext(i[0], i[1], i[2] + 2); }
+  for (const s of G.statues) out.statues.push([s[0], s[1]]);
+  for (const a of G.arches) out.arches.push([a[0], a[1], a[2]]);
+  return out;
+}
+
+const MAX_EXTENT = 102;
+/** Is the rasterised procedural plan playable? Every chamber reachable from the arrival, exit reachable, start / exit / station with room, extent inside the buffer. */
+function genOk(G: GenOut): boolean {
+  if (halls.extent > MAX_EXTENT || halls.w >= MAX_W || halls.h >= MAX_W) return false;
+  if (hallsSdf(halls.sx, halls.sz) < 4.5 || hallsSdf(halls.ex, halls.ez) < 4.5 || hallsSdf(halls.stx, halls.stz) < 3.4) return false;
+  const a = cellOf(halls.sx, halls.sz), b = cellOf(halls.ex, halls.ez), w = halls.w, O = halls.open;
+  if (!O[a] || !O[b]) return false;
+  bfs(a, gdS);
+  if (gdS[b] < 0) return false;
+  for (const ch of halls.chambers) {   // (the nearest open cell to every chamber centre, within 4 m, must be reachable)
+    let ok = false;
+    const ci = Math.floor((ch[0] - halls.x0) / HC), cj = Math.floor((ch[1] - halls.z0) / HC);
+    for (let dj = -8; dj <= 8 && !ok; dj++) for (let di = -8; di <= 8; di++) {
+      const i = ci + di, j = cj + dj;
+      if (i < 0 || j < 0 || i >= w || j >= halls.h) continue;
+      const k = j * w + i;
+      if (O[k] && gdS[k] >= 0 && halls.sdf[k] > 2) { ok = true; break; }
+    }
+    if (!ok) return false;
+  }
+  void G;
+  return true;
+}
+
+/** Builds the mask for a room of nominal radius R. Fills `halls` (origin = hub).
+ *  ~80% of the rooms (85% in Marble Halls) get a procedural plan (roomHallsGen.ts: random chamber count / size classes / connections), the rest
+ *  one of the fixed templates; `force` = 'RANDOM' always generates. A plan the checks reject is regenerated (tighter) up to 40 times, then the template. */
 export function buildHallsLayout(type: string, R: number, seed: number, style: string, name: string, force?: HallsVariant): void {
-  void type; void R;
+  void R;
   const rnd = mulberry(seed ^ 0x3c6ef372);
-  const variant = force ?? pickVariant(style, name, rnd);
-  const D = variant === 'COLUMNS' ? castleDesign(mulberry(seed ^ 0xca571e)) : DESIGNS[variant];
+  const marble = style === 'MARBLE';
+  const tplVariant = force && force !== 'RANDOM' ? force : pickVariant(style, name, rnd);
+  const useGen = force === 'RANDOM' || (!force && rnd() < (marble ? 0.85 : 0.8));
+  halls.fellBack = false;
+  if (useGen) {
+    const count = pickCount(mulberry(seed ^ 0x1b873593), type);   // (chosen once; later attempts lose a chamber when the plan will not fit)
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const G = genHalls(mulberry((seed ^ 0x7f4a7c15) + attempt * 0x9e3779b1), type, marble, attempt, Math.max(2, count - (attempt >= 28 ? 2 : attempt >= 16 ? 1 : 0)));
+      if (!G) continue;
+      const I = instFromGen(G);
+      rasterise(I, seed);
+      finishPoints(I);
+      if (!genOk(G)) continue;
+      findPockets();
+      findPassPts(I);
+      halls.variant = 'RANDOM';
+      halls.on = true; halls.version++;
+      return;
+    }
+    halls.fellBack = true;
+  }
+  const variant: HallsVariant = tplVariant === 'RANDOM' ? (marble ? 'COLUMNS' : 'TWIN') : tplVariant;
+  const D = variant === 'COLUMNS' ? castleDesign(mulberry(seed ^ 0xca571e)) : DESIGNS[variant as Exclude<HallsVariant, 'COLUMNS' | 'RANDOM'>];
   const ang = D.castle ? Math.floor(rnd() * 4) * Math.PI / 2 : rnd() * Math.PI * 2, mirror = D.castle ? false : rnd() < 0.5;
   const target = D.target[0] + rnd() * (D.target[1] - D.target[0]);
   let scale = 1, I: Inst;
@@ -511,6 +590,7 @@ function finishMask(I: Inst): void {
   halls.extent = Math.sqrt(ext);
   halls.islands = I.islands.slice();
   halls.chambers = I.blobs.map((b) => [b.x, b.z, Math.min(b.rx, b.rz)] as [number, number, number]);
+  halls.classes = I.blobs.map((b) => b.cls ?? classOfR(Math.min(b.rx, b.rz)));
   halls.keep = I.keep.slice();
   halls.statues = I.statues.slice(); halls.arches = I.arches.slice();
 }
