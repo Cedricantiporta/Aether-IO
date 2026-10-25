@@ -18,7 +18,7 @@ import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { liveStep } from '../../questUnlocks';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
@@ -997,7 +997,7 @@ function tickFinale(dt: number): void {
 
 function onCleared(): void {
   const d = dd(), st = useGameStore.getState();
-  poofKind('GOBLIN_ARCHER');   // (owner 2026-10-25) the optional tower archers leave once the room is clear
+  for (const k of OPTIONAL_KINDS) poofKind(k);   // (owner 2026-10-25) the optional monsters (tower archers, hydras, gargoyles) leave once the room is clear
   world.boss.active = false;
   if (plan.epilogue) {   // the quiet clearing: no portals or rewards, only the Keeper of the Font waiting
     d.phase = 'CLEARED'; d.phaseT = 0;

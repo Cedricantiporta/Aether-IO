@@ -8,6 +8,7 @@ import { world } from '../engine/world';
 import { events } from '../engine/events';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
+import { optionalForClear } from '../engine/enemyDefs';
 import { navActive, navClear, navFindPath, navPath } from '../engine/roomNav';
 
 const IDLE_S = 10, N = 40, STEP = 1.3;
@@ -37,7 +38,7 @@ export function EnemyGuide() {
       const es = world.enemies;
       for (let i = 0; i < es.length; i++) {
         const e = es[i];
-        if (!e.active || e.state === 'DYING' || e.hideT > 0 || e.kind === 'GOBLIN_ARCHER') continue;   // (tower archers are optional)
+        if (!e.active || e.state === 'DYING' || e.hideT > 0 || optionalForClear(e.kind)) continue;   // (tower archers / hydras / gargoyles are optional)
         const d = (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2;
         if (d < bd) { bd = d; S.tgt = i; }
       }

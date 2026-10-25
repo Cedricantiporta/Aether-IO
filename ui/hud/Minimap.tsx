@@ -4,6 +4,8 @@
 // the tracked quest ring) are drawn on top from the world. No React state, no per-frame allocations (module scratch).
 import React, { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
+import { clickMoveTo } from '../../engine/systems/target';
+import { walkTo } from '../../engine/systems/village';
 import { createPortal } from 'react-dom';
 import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
 import { useGameStore } from '../../store';
@@ -409,6 +411,18 @@ export const Minimap: React.FC = () => {
 
 /** (owner 2026-10-25) Full map popup (click the minimap / M): the whole baked area or stage with every enemy, exit, station and the hero. */
 const useFullMap = create<{ open: boolean }>(() => ({ open: false }));
+/** The full map's last drawing transform (canvas px <-> world metres), for click-to-walk. */
+const fmT = { ox: 0, oy: 0, k: 1, P: 1, ok: false };
+/** (owner 2026-10-25) A click on the full map walks the hero there (town: the street router; run: the room navigation). */
+function fullMapClick(e: React.MouseEvent<HTMLCanvasElement>): void {
+  if (!fmT.ok) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  const cx = ((e.clientX - r.left) / r.width) * fmT.P, cy = ((e.clientY - r.top) / r.height) * fmT.P;
+  const x = baked.x0 + (cx - fmT.ox) / fmT.k, z = baked.z0 + (cy - fmT.oy) / fmT.k;
+  if (world.room.active) { clickMoveTo.on = true; clickMoveTo.x = x; clickMoveTo.z = z; }
+  else walkTo(x, z, 'none', '', 0.8);
+  useFullMap.setState({ open: false });
+}
 const FullMap: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   const [title] = useState(() => (world.room.active ? 'Stage map' : world.village.area === 'TOWN' ? 'Kingdom map' : 'Map'));
@@ -422,6 +436,7 @@ const FullMap: React.FC = () => {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, P, P);
     const room = world.room.active, area = room ? '' : world.village.area;
     if (!baked.cv || area === 'CAVE') {
+      fmT.ok = false;
       ctx.fillStyle = '#e8e2d2'; ctx.font = `${16 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('No map here', P / 2, P / 2); return;
     }
     const pad = 14 * u, k = (P - pad * 2) / Math.max(baked.w, baked.h);
@@ -429,6 +444,7 @@ const FullMap: React.FC = () => {
     ctx.fillStyle = baked.bg; ctx.fillRect(0, 0, P, P);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(baked.cv, ox, oy, baked.w * k, baked.h * k);
+    fmT.ox = ox; fmT.oy = oy; fmT.k = k; fmT.P = P; fmT.ok = true;
     const sx = (x: number): number => ox + (x - baked.x0) * k, sy = (z: number): number => oy + (z - baked.z0) * k;
     if (room) {
       const r = world.room;
@@ -456,8 +472,8 @@ const FullMap: React.FC = () => {
     <div className="fullmap-root pe" data-testid="full-map" onClick={close}>
       <div className="fullmap-card" onClick={(e) => e.stopPropagation()}>
         <div className="fullmap-head"><span>{title}</span><button className="fullmap-x" aria-label="Close map" onClick={close}>{'\u2715'}</button></div>
-        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" />
-        <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">M / Esc to close</span></div>
+        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" style={{ cursor: 'pointer' }} onClick={fullMapClick} title="Click to walk there" />
+        <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">Click the map to walk there · M / Esc to close</span></div>
       </div>
     </div>
   );

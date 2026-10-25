@@ -232,6 +232,9 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
 };
 
 /** Stage monsters that never move (archer on a tower, hydra in a lake): no separation, push-out, leash or knockback. */
+/** (owner 2026-10-25) Monsters a room does not need dead to be cleared (tower archers, lake hydras, gargoyles): they leave when it is. */
+export const OPTIONAL_KINDS: readonly EnemyKind[] = ['GOBLIN_ARCHER', 'LAKE_HYDRA', 'GARGOYLE'];
+export const optionalForClear = (k: EnemyKind): boolean => k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA' || k === 'GARGOYLE';
 export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA' || k === 'BOSS_CRYSTAL'; }
 /** (owner) Giant ROOTED bosses: they never walk. Elderroot stands rooted in the arena, Glacius rises out of the far rim (head / neck / claws), the
  *  Hydra's body lies beyond the rim with its heads reaching in. They fight with arena-wide telegraphed patterns (systems/bosses2.ts). */

@@ -31,6 +31,7 @@ import type {
 import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
   waveHpMult, waveDmgMult, waveSpeedMult, isAquatic,
+  optionalForClear,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion } from './minions';
@@ -1842,13 +1843,13 @@ export function updateEnemies(dt: number): void {
         frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - eff) * 2);
         updateEnemy(e);
         frameDt = dt; frameDecay = baseDecay; frameDotTick = baseTick;
-        if (e.active && !isDying(e) && e.kind !== 'GOBLIN_ARCHER') alive++;
+        if (e.active && !isDying(e) && !optionalForClear(e.kind)) alive++;
         continue;
       }
     }
     lodAcc[i] = 0;
     updateEnemy(e);
-    if (e.active && !isDying(e) && e.kind !== 'GOBLIN_ARCHER') alive++;   // (owner 2026-10-25) tower archers are optional: they never hold up the room clear
+    if (e.active && !isDying(e) && !optionalForClear(e.kind)) alive++;   // (owner 2026-10-25) tower archers / hydras / gargoyles are optional: they never hold up the room clear
   }
   world.director.aliveCount = alive;
   tickHumanBoss(dt);   // humanoid mini boss: boss bar, strikes, traps, banner / ward
