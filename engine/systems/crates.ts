@@ -140,6 +140,9 @@ export function breakCrate(c: Crate): void {
       const item = st.rollItemDrop(rollChestRarity());
       if (item) spawnPickup('ITEM', dropAt(c, 1, 0), 0, item);
       gold(c, 2, 20);
+      // (owner 2026-10-25) chests: gold always, a chance of gems and of Aether Crystals
+      if (Math.random() < 0.4) spawnPickup('GEM', dropAt(c, 1, 0), 2);
+      if (Math.random() < 0.3) spawnPickup('CRYSTAL', dropAt(c, 1, 0), 1 + Math.floor(Math.random() * 3));
       break;
     }
     case 'CRYSTAL': {   // Crystal Cluster: Aether Crystals (a bag item, the Crystal Altar's currency) + a rare shard

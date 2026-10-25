@@ -19,7 +19,7 @@ import { create } from 'zustand';
 import { world, MAX_CRATES, CAM_PITCH0 } from '../world';
 import {
   caveLayout, forgetCaveLayouts, CAVE_MAX_FLOOR, CAVE_GOODS, LANTERN_BASE, LANTERN_STEP, LANTERN_MAX_LV, LANTERN_COST, REFILL_PRICE, FLASK_OIL,
-  FLASK_FLOOR_CHANCE, FLASK_DROP_CHANCE, HIDDEN_LADDER_CHANCE, MONSTER_FLOOR, RARE_NAME, RARE_COLOR, bonusShards, caveMonsterCount, depthOf,
+  FLASK_FLOOR_CHANCE, FLASK_DROP_CHANCE, CAVE_CHEST_CHANCE, HIDDEN_LADDER_CHANCE, MONSTER_FLOOR, RARE_NAME, RARE_COLOR, bonusShards, caveMonsterCount, depthOf,
   goldVeinMul, rollVeinCount, setFloor1Count, rareHardness, rareVeinChance, rollDepthRarity, rollRareTier, tradeGoodChance, veinHardness, type CaveNodeKind,
 } from '../caveData';
 import { CRATE_HP, HARVEST_NAME, installInterior } from '../mapgen';
@@ -62,7 +62,7 @@ function load(): void {
     if (raw) {
       const s = JSON.parse(raw) ?? {};
       // (older saves had 8 veins: keep a valid 2-5 count; indices past the new count are dropped)
-      save.n = typeof s.n === 'number' && s.n >= 2 && s.n <= 5 ? Math.floor(s.n) : save.n; setFloor1Count(save.n);
+      save.n = typeof s.n === 'number' && s.n >= 2 && s.n <= 6 ? Math.floor(s.n) : save.n; setFloor1Count(save.n);
       save.broken = Array.isArray(s.broken) ? [...new Set<number>(s.broken.filter(ok))] : [];
       save.rare = Array.from({ length: f1n() }, (_, i) => Math.max(0, Math.min(4, Math.floor(num(Array.isArray(s.rare) ? s.rare[i] : 0)))));
       save.clearedAt = Math.max(0, num(s.clearedAt));
@@ -88,7 +88,7 @@ export const oilMaxFor = (lv: number): number => LANTERN_BASE + LANTERN_STEP * l
 const setProgress = (p: { caveLantern?: number; caveBest?: number }) => { const st = useGameStore.getState(); useGameStore.setState({ progress: { ...st.progress, ...p } }); };
 
 // ------------------------------------------------------------- trip state ---
-interface DeepFloor { broken: number[]; rare: number[]; ladder: number }
+interface DeepFloor { broken: number[]; rare: number[]; ladder: number; chest?: { x: number; z: number; taken: boolean } | null }
 /** Floors of the current trip (fresh every trip). */
 const deep = new Map<number, DeepFloor>();
 let tripSeed = 0;
@@ -101,7 +101,7 @@ const v3 = new Vector3();
 /** Monster slots of this floor (for oil-flask drops) + their last positions. */
 const mons = new Int16Array(16).fill(-1), monX = new Float32Array(16), monZ = new Float32Array(16);
 
-function floorState(f: number, allowRegrow = false): { broken: number[]; rare: number[]; ladder: number } {
+function floorState(f: number, allowRegrow = false): { broken: number[]; rare: number[]; ladder: number; chest?: { x: number; z: number; taken: boolean } | null } {
   if (f === 1) {
     if (allowRegrow && save.clearedAt > 0 && Date.now() - save.clearedAt >= DAY_MS) {   // Floor 1 regrows (fresh rare-vein rolls)
       save.broken = []; save.clearedAt = 0;
@@ -115,6 +115,7 @@ function floorState(f: number, allowRegrow = false): { broken: number[]; rare: n
   if (!s) {
     const n = caveLayout(f, tripSeed).nodes.length;
     s = { broken: [], rare: Array.from({ length: n }, () => (Math.random() < rareVeinChance(f) ? rollRareTier(f, Math.random()) : 0)), ladder: Math.random() < HIDDEN_LADDER_CHANCE ? Math.floor(Math.random() * n) : -1 };
+    s.chest = Math.random() < CAVE_CHEST_CHANCE ? chestSpot(caveLayout(f, tripSeed)) : null;   // (owner) sometimes a treasure chest
     deep.set(f, s);
   }
   return s;
@@ -140,6 +141,17 @@ export const debugTripSeed = (): number => tripSeed;
 /** Test / debug: put the lucky ladder of the current deep floor under vein `i`. */
 export function debugSetLadder(i: number): void { const cv = world.village.cave; if (cv.floor < 2) return; floorState(cv.floor).ladder = i; cv.ladder = i; cv.ladderFound = false; }
 
+/** A free spot for a floor's treasure chest: toward the middle, clear of the veins, stairs and arrival. */
+function chestSpot(L: ReturnType<typeof caveLayout>): { x: number; z: number; taken: boolean } | null {
+  for (let g = 0; g < 80; g++) {
+    const a = Math.random() * Math.PI * 2, r = L.radius(a) * (0.25 + Math.random() * 0.4), x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (L.nodes.some((nd) => (nd.x - x) ** 2 + (nd.z - z) ** 2 < 9) || (L.down.x - x) ** 2 + (L.down.z - z) ** 2 < 25 || (L.spawn.x - x) ** 2 + (L.spawn.z - z) ** 2 < 25) continue;
+    if (L.pools.some(([px, pz, pr]) => (x - px) ** 2 + (z - pz) ** 2 < (pr + 1.5) ** 2) || onLava(L, x, z)) continue;
+    return { x, z, taken: false };
+  }
+  return null;
+}
+
 function placeFloor(f: number): void {
   const cv = world.village.cave, s = floorState(f, true), L = caveLayout(f, cv.seed);   // (Floor 1 regrows here, before the layout is read)
   for (const c of world.crates) { c.active = false; c.respawnT = 0; c.hitFlash = 0; }
@@ -155,6 +167,12 @@ function placeFloor(f: number): void {
   cv.ladder = s.ladder; cv.ladderFound = s.ladder >= 0 && s.broken.indexOf(s.ladder) !== -1;
   if (s.ladder >= 0) { cv.lx = L.nodes[s.ladder].x; cv.lz = L.nodes[s.ladder].z; }
   cv.left = L.nodes.length - s.broken.length;
+  // the floor's treasure chest (a CHEST crate in the slot after the veins, one E press opens it)
+  const ci = L.nodes.length;
+  if (s.chest && !s.chest.taken && ci < MAX_CRATES) {
+    const c = world.crates[ci];
+    c.kind = 'CHEST'; c.pos.set(s.chest.x, 0, s.chest.z); c.rot = f * 0.7; c.maxHp = c.hp = 1; c.active = true; c.respawnT = 0;
+  }
   // an oil flask lies somewhere on some deep floors
   for (const fl of cv.flasks) fl.on = false;
   if (f > 1 && Math.random() < FLASK_FLOOR_CHANCE) {
@@ -338,6 +356,10 @@ export function updateCave(dt: number): boolean {
       useGameStore.getState().addNotification('A lucky ladder under the rubble! It leads one floor down.', '#ffe08a', 'SYSTEM');
     }
   }
+  if (s.chest && !s.chest.taken && n < MAX_CRATES && !world.crates[n].active) {   // the chest was opened
+    s.chest.taken = true; world.crates[n].respawnT = 0;
+    useGameStore.getState().addNotification('You found a treasure chest in the dark!', '#ffd27a', 'SYSTEM');
+  }
   if (changed) {
     cv.left = n - s.broken.length;
     if (f === 1) { if (cv.left === 0 && save.clearedAt === 0) save.clearedAt = Date.now(); persist(); }
@@ -433,6 +455,8 @@ export function scanCave(push: Push, px: number, pz: number): void {
     const t = cv.rare[i];
     push('E', 'Harvest', t > 0 ? RARE_NAME[t] : HARVEST_NAME[c.kind] ?? 'Vein', '', i, d, 'harvest', t > 0 ? RARE_COLOR[t] : '');
   }
+  { const ci = L.nodes.length, c = ci < MAX_CRATES ? world.crates[ci] : null;   // the floor's treasure chest
+    if (c && c.active && c.kind === 'CHEST') { d = q(c.pos.x, c.pos.z); if (d < HARVEST_R2) push('E', 'Open', 'Treasure Chest', '', ci, d, 'harvest', '#ffd27a'); } }
 }
 /** E on a cave pill (stairs / ladder / climb out / bench). */
 export function interactCave(act: string, node: number): void {

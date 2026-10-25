@@ -163,9 +163,9 @@ function colliders(L: Omit<CaveLayout, 'colliders'>): [number, number, number][]
 }
 
 /** Harvestable nodes per floor: 2..5, weighted 2: 35%, 3: 35%, 4: 20%, 5: 10% (`u` = uniform [0, 1)). */
-export function rollVeinCount(u: number): number { return u < 0.35 ? 2 : u < 0.7 ? 3 : u < 0.9 ? 4 : 5; }
+export function rollVeinCount(u: number): number { return u < 0.42 ? 3 : u < 0.82 ? 4 : u < 0.94 ? 5 : 6; }   // (owner 2026-10-25: mostly 3-4, sometimes 5-6)
 /** Order in which Floor 1's 8 hand-placed vein slots are used (first n of them; a mix of gold / ore / crystal, well spaced). */
-const F1_SLOT_ORDER = [4, 0, 5, 2, 1];
+const F1_SLOT_ORDER = [4, 0, 5, 2, 1, 6];
 
 function floorOne(count = 3): CaveLayout {
   const radius = caveRadius, S = radius(Math.PI / 2), N = radius(-Math.PI / 2);
@@ -341,6 +341,8 @@ export const REFILL_PRICE = (lv: number, heroLevel = 27): number => caveGoldPric
 export const FLASK_OIL = 20;
 /** Chance a deep floor hides an oil flask; chance a cave monster drops one. */
 export const FLASK_FLOOR_CHANCE = 0.45, FLASK_DROP_CHANCE = 0.12;
+/** (owner 2026-10-25) chance a deep cave floor hides a treasure chest (one, opened with E). */
+export const CAVE_CHEST_CHANCE = 0.3;
 /** Chance that a deep floor hides a lucky ladder down under one of its veins (revealed when that vein is harvested). */
 export const HIDDEN_LADDER_CHANCE = 0.3;
 /** Cave monsters from this floor down (count / strength scale with depth). */
