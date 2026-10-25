@@ -37,7 +37,7 @@ export const AFFIXES: AffixDef[] = [
   { key: 'move', g: 'util',  label: 'Move Speed',        stat: 'moveSpeed',       mul: true, tiers: [0, .03, .04, .06, .08], weight: 7, cp: 300 },
   { key: 'skill', g: 'atk', label: 'Skill Damage',      stat: 'skillDamage',     tiers: [0, .05, .08, .12, .17], weight: 8, cp: 100 },
   { key: 'cdr', g: 'util',   label: 'Cooldown Reduction', stat: 'cooldownReduction', tiers: [0, .02, .03, .045, .06], weight: 6, cp: 500 },
-  { key: 'steal', g: 'util', label: 'Life Steal',        stat: 'lifeSteal',       tiers: [0, .005, .008, .012, .016], weight: 5, cp: 3000 },
+  { key: 'steal', g: 'util', label: 'Life Steal',        stat: 'lifeSteal',       tiers: [0, .003, .004, .006, .008], weight: 5, cp: 3000 },   // (owner 2026-10-25: life steal halved everywhere)
   { key: 'thorn', g: 'def', label: 'Thorns',            stat: 'thorns',          tiers: [0, 5, 9, 15, 24], weight: 5, cp: 8 },
   { key: 'gold', g: 'util',  label: 'Gold Find',         stat: 'goldFind',        tiers: [0, .05, .08, .12, .17], weight: 6, cp: 200 },
   { key: 'xp', g: 'util',    label: 'XP Gain',           stat: 'xpBonus',         tiers: [0, .04, .06, .09, .12], weight: 6, cp: 200 },

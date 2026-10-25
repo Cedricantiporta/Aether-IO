@@ -10,7 +10,7 @@ interface Charm { key: string; name: string; stat: keyof PlayerStats; v: [number
 const pc = (v: number) => `${Math.round(v * 100)}%`;
 export const CHARMS: Charm[] = [
   { key: 'bloodrush', name: 'Bloodrush', stat: 'lowHpHaste', v: [0.15, 0.22, 0.3], text: (v) => `+${pc(v)} attack speed below 50% HP` },
-  { key: 'vampire', name: 'Vampiric', stat: 'lifeSteal', v: [0.01, 0.015, 0.022], text: (v) => `${(v * 100).toFixed(1)}% of damage dealt heals you` },
+  { key: 'vampire', name: 'Vampiric', stat: 'lifeSteal', v: [0.005, 0.008, 0.011], text: (v) => `${(v * 100).toFixed(1)}% of damage dealt heals you` },
   { key: 'thorns', name: 'Thornmail', stat: 'thorns', v: [12, 20, 32], text: (v) => `Attackers take ${v} damage` },
   { key: 'ember', name: 'Ember Heart', stat: 'onHitBurnChance', v: [0.06, 0.09, 0.13], text: (v) => `${pc(v)} chance to burn on hit` },
   { key: 'frost', name: 'Frostbite', stat: 'onHitSlowChance', v: [0.08, 0.12, 0.17], text: (v) => `${pc(v)} chance to slow on hit` },

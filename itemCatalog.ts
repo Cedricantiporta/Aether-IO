@@ -21,7 +21,7 @@ const T: Record<string, [St, number[]]> = {
   mana: ['maxMana', [20, 35, 60, 100, 160]], mregen: ['manaRegen', [.5, .8, 1.2, 1.8, 2.8]], regen: ['regen', [.4, .7, 1.1, 1.7, 2.6]],
   cdr: ['cooldownReduction', [.02, .03, .05, .07, .1]], kb: ['knockback', [.3, .5, .8, 1.2, 1.8]], dashcd: ['dashCooldown', [-.1, -.2, -.3, -.5, -.8]],
   mag: ['magnetRadius', [1, 1.5, 2.2, 3, 4.5]],
-  thorn: ['thorns', [4, 7, 12, 19, 30]], steal: ['lifeSteal', [.006, .01, .015, .022, .032]],
+  thorn: ['thorns', [4, 7, 12, 19, 30]], steal: ['lifeSteal', [.003, .005, .008, .011, .016]],
   gold: ['goldFind', [.05, .08, .12, .18, .27]], xp: ['xpBonus', [.04, .06, .09, .13, .2]],
 };
 /** (owner) wear (helmet / armor / gloves / boots) base stats are defensive only, Defense first; accessories carry the

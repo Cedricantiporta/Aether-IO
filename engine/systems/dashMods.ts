@@ -7,11 +7,11 @@ import { useGameStore } from '../../store';
 import { runCards } from '../runCards';
 import { damageEnemy, type DamageOpts } from './combat';
 import { spawnProjectile } from './projectiles';
-import { MIRROR_DMG_MUL, GUARD_FRAC, GUARD_SEC, BLADE_DMG, BLADE_KNOCK, BLADE_RADIUS, BLADE_BASE_BONUS, SWIFT_CD_MUL, SWIFT_SPEED, SWIFT_SEC, type DashMod } from '../../dashMods';
+import { MIRROR_DMG_MUL, GUARD_FRAC, GUARD_SEC, GUARD_CD, BLADE_DMG, BLADE_KNOCK, BLADE_RADIUS, BLADE_BASE_BONUS, SWIFT_CD_MUL, SWIFT_SPEED, SWIFT_SEC, type DashMod } from '../../dashMods';
 
 let cur: DashMod | null = null;       // the mod latched at the start of the current / last dash
 let wasDash = false;
-let guardT = 0, guardAmt = 0, swiftT = 0;
+let guardT = 0, guardAmt = 0, swiftT = 0, guardCd = 0;
 const hitIds: number[] = [];
 const ids: number[] = [];
 const kd = new Vector3(), fxPos = new Vector3(), fxDir = new Vector3();
@@ -42,7 +42,7 @@ export function dashModFx(): void {
 }
 
 export function resetDashMods(): void {
-  cur = null; wasDash = false; guardT = 0; guardAmt = 0; swiftT = 0; hitIds.length = 0;
+  cur = null; wasDash = false; guardT = 0; guardAmt = 0; swiftT = 0; guardCd = 0; hitIds.length = 0;
 }
 
 function dropGuard(): void {
@@ -54,6 +54,7 @@ function dropGuard(): void {
 export function updateDashMods(dt: number, leaping: boolean): void {
   const p = world.player;
   if (swiftT > 0) swiftT -= dt;
+  if (guardCd > 0) guardCd -= dt;
   if (guardT > 0) { guardT -= dt; if (guardT <= 0 || !p.alive) dropGuard(); }
   if (!p.alive) { wasDash = false; return; }
   const dashing = p.dashT > 0 || leaping;
@@ -94,7 +95,8 @@ export function updateDashMods(dt: number, leaping: boolean): void {
   }
 
   if (wasDash && !dashing && cur) {   // the dash just ended
-    if (cur === 'GUARD') {
+    if (cur === 'GUARD' && guardCd <= 0) {
+      guardCd = GUARD_CD;
       const amt = useGameStore.getState().stats.maxHealth * GUARD_FRAC;
       dropGuard();
       p.aegis += amt; p.aegisMax = Math.max(p.aegisMax, p.aegis); guardAmt = amt; guardT = GUARD_SEC;

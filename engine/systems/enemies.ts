@@ -308,7 +308,8 @@ function randomAffix(): EliteAffix {
 /** Hero-level scaling of every spawned enemy (per level above 1): HP, damage, and xp / gold. */
 const LEVEL_HP = 0.10, LEVEL_DMG = 0.065, LEVEL_REWARD = 0.04;   // (owner: raised from 7% / 4.5% / 3%)
 /** Biome bosses hit 15% softer (balance pass: level-8 heroes in shop gear lost 15 of 15 Elderroot fights). */
-const BOSS_DMG = 0.85;
+const BOSS_DMG = 0.6;   // (owner 2026-10-25: bosses hit far too hard next to normal monsters; was 0.85)
+const NORMAL_DMG = 1.6;   // (owner 2026-10-25: normal monsters barely hurt) ordinary monsters x1.6, elites x1.25 on top of their own x1.5
 /** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
 export const levelHpMul = (): number => 1 + LEVEL_HP * (Math.max(1, useGameStore.getState().level | 0) - 1);
 
@@ -341,7 +342,7 @@ export function spawnEnemy(
   // every monster, elite and boss also scales with the hero's level: +10% HP and +6.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), lvHp = 1 + LEVEL_HP * (lvl - 1), lvDmg = 1 + LEVEL_DMG * (lvl - 1);
   const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
-  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 : boss ? BOSS_DMG : 1) * lvDmg * ENEMY_DMG_MUL;
+  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL;
   // later biomes breed tougher monsters on top of the depth curve (owner): +15% HP and +10% damage per biome
   const bi = Math.max(0, Math.min(7, world.room.biome | 0));
   const biomeHp = 1 + 0.15 * bi, biomeDmg = 1 + 0.1 * bi;

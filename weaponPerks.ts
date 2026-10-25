@@ -34,7 +34,7 @@ export const pierceChance = (lv: number): number => [0, 0.2, 0.3, 0.4, 0.55][lv]
 export const twinSlashes = (lv: number): number => (lv >= 3 ? 3 : 2);
 export const greatMul = (lv: number): { size: number; dmg: number } => ({ size: 1 + 0.15 * lv, dmg: 1 + 0.1 * lv });
 export const bleedChance = (lv: number): number => 0.2 + 0.1 * lv;
-export const lifeStealOf = (lv: number): number => 0.02 * lv;
+export const lifeStealOf = (lv: number): number => 0.01 * lv;   // (owner 2026-10-25: halved)
 export const axeCount = (lv: number): number => (lv >= 3 ? 3 : 2);
 export const bigMul = (lv: number): { size: number; speed: number } => ({ size: 1 + 0.2 * lv, speed: 1 + 0.12 * lv });
 export const hordeMul = (lv: number): number => 1 + 0.2 * lv;   // minion damage + HP

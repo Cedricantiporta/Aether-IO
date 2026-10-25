@@ -86,7 +86,7 @@ export const SETS: SetDef[] = [
     bonuses: [
       { pieces: 2, text: '+15% max health', fx: { mul: { maxHealth: 0.15 } } },
       { pieces: 4, text: '25% chance to ignite on hit, +20 thorns', fx: { add: { onHitBurnChance: 0.25, thorns: 20 } } },
-      { pieces: 6, text: '+4% life steal, +20% damage', fx: { add: { lifeSteal: 0.04 }, mul: { damage: 0.2 } } },
+      { pieces: 6, text: '+2% life steal, +20% damage', fx: { add: { lifeSteal: 0.02 }, mul: { damage: 0.2 } } },
     ],
   },
   {

@@ -96,7 +96,7 @@ const EXTRA: Record<HeroClass, Row[][]> = {
     [['Haste', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Rewind', '', 2, 'regen', { add: { regen: 0.8 } }], ['Echoing Bolt', 'Thunder bolt N -1', 1, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }], ['Eternity', '', 2, 'special', { add: { skillDamage: 0.1 } }]],
   ],
   BARBARIAN: [
-    [['Savagery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Bloodthirst', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Rampage', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Gore', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
+    [['Savagery', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }], ['Bloodthirst', '', 2, 'regen', { add: { lifeSteal: 0.005 } }], ['Rampage', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Gore', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }]],
     [['Iron Hide', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Giant\'s Blood', '', 2, 'u:HEALTH', { add: { maxHealth: 18 } }], ['Thornmail', '', 2, 'barrier', { add: { thorns: 8 } }], ['Rooted', '', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }]],
     [['Fault Line', '', 2, 'stamp', { add: { stompPower: 0.2 } }], ['Hurl', '', 2, 'orbital', { add: { axeSize: 0.1 } }], ['Quake', '', 2, 'u:SKILL_STAMP', { add: { stunBonus: 0.3 } }], ['Landslide', '', 2, 'u:DAMAGE', { mul: { damage: 0.04 } }]],
     [['Battle Hunger', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }], ['Hide of Iron', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Boomerang', 'Axe Storm axes ricochet +1 more time', 1, 'stamp', { add: { axeBounce: 1 } }], ['Last Rites', '', 2, 'barrier', { add: { lowHpHaste: 0.1 } }]],
@@ -104,7 +104,7 @@ const EXTRA: Record<HeroClass, Row[][]> = {
   NECROMANCER: [
     [['Bone Armor', '', 2, 'RAISE_DEAD', { add: { minionLife: 1.5 } }], ['Grave Pact', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.1 } }], ['Dread March', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Ossuary', '', 2, 'RAISE_DEAD', { add: { minionDmg: 0.1 } }]],
     [['Blight', '', 2, 'CURSE_FIELD', { add: { skillDamage: 0.08 } }], ['Miasma', '', 2, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }], ['Necrosis', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }], ['Contagion', '', 2, 'BONE_WARD', { add: { skillDamage: 0.1 } }]],
-    [['Soul Leech', '', 2, 'regen', { add: { lifeSteal: 0.01 } }], ['Spectral Ward', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Undeath', '', 2, 'u:HEALTH', { add: { maxHealth: 15 } }], ['Eternal', '', 2, 'SOUL_STEP', { add: { dmgReduce: 0.03 } }]],
+    [['Soul Leech', '', 2, 'regen', { add: { lifeSteal: 0.005 } }], ['Spectral Ward', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Undeath', '', 2, 'u:HEALTH', { add: { maxHealth: 15 } }], ['Eternal', '', 2, 'SOUL_STEP', { add: { dmgReduce: 0.03 } }]],
     [['Marrow Feast', '', 2, 'u:HEALTH', { add: { maxHealth: 12 } }], ['Rattle', '', 2, 'u:FIRE_RATE', { add: { minionHaste: 0.1 } }], ['Bone Wall', '', 2, 'u:DEFENSE', { add: { defense: 4 } }], ['Grim Tide', '', 2, 'u:DAMAGE', { add: { minionDmg: 0.12 } }]],
   ],
   KNIGHT: [
@@ -204,8 +204,8 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Rage Mastery', 'Bloodrage Leap (Space) grants Rage for +1s longer', 3, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
       ['Last Stand', '+10% attack speed below 50% HP', 3, 'barrier', { add: { lowHpHaste: 0.1 } }],
       ['Brutality', '+15% crit damage', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.15 } }],
-      ['Frenzy', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
-      ['Undying Rage', '+40% damage below 35% HP, +2% life steal', 1, 'u:SKILL_RAGE', { add: { berserk: 0.4, lifeSteal: 0.02 } }],
+      ['Frenzy', '+0.5% life steal', 2, 'regen', { add: { lifeSteal: 0.005 } }],
+      ['Undying Rage', '+40% damage below 35% HP, +1% life steal', 1, 'u:SKILL_RAGE', { add: { berserk: 0.4, lifeSteal: 0.01 } }],
     ]],
     ['j', [
       ['Thick Skin', '+3 defense', 3, 'u:DEFENSE', { add: { defense: 3 } }],
@@ -226,7 +226,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
     ['w', [
       ['War Cry', '', 3, 'u:DAMAGE', { mul: { damage: 0.03 } }],
       ['Twin Axes', 'Axe Storm +1 axe', 1, 'orbital', { add: { axeCount: 1 } }],
-      ['Bloodbath', '', 3, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Bloodbath', '', 3, 'regen', { add: { lifeSteal: 0.005 } }],
       ['Long Leap', 'Bloodrage Leap grants Rage +1s longer', 2, 'BLOODRAGE_LEAP', { add: { rageBonus: 1 } }],
       ['Second Leap', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
       ['Conqueror', 'Axe Storm +1 axe and +1 ricochet, +40% damage below 35% HP', 1, 'u:SKILL_RAGE', { add: { axeCount: 1, axeBounce: 1, berserk: 0.4 } }],
@@ -253,7 +253,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Phylactery', '+12 max health', 3, 'u:HEALTH', { add: { maxHealth: 12 } }],
       ['Soul Well', '+20 max mana, +0.5 mana regen', 3, 'u:MAX_MANA', { add: { maxMana: 20, manaRegen: 0.5 } }],
       ['Grave Ward', '+3 defense', 3, 'u:DEFENSE', { add: { defense: 3 } }],
-      ['Drain', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Drain', '+0.5% life steal', 2, 'regen', { add: { lifeSteal: 0.005 } }],
       ['Deathless', 'Take 3% less damage', 2, 'u:DEFENSE', { add: { dmgReduce: 0.03 } }],
       ['Lichdom', 'Take 10% less damage, +15% max mana', 1, 'SOUL_STEP', { add: { dmgReduce: 0.1 }, mul: { maxMana: 0.15 } }],
     ]],
@@ -288,14 +288,14 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Faith', '+20 max mana, +0.5 mana regen', 3, 'u:MAX_MANA', { add: { maxMana: 20, manaRegen: 0.5 } }],
       ['Zeal', '+3% cooldown reduction', 3, 'u:SKILL_WEAPON', { add: { cooldownReduction: 0.03 } }],
       ['Radiance', '+10% skill damage', 2, 'HOLY_WAVE', { add: { skillDamage: 0.1 } }],
-      ['Sanctuary', '+1% life steal', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Sanctuary', '+0.5% life steal', 2, 'regen', { add: { lifeSteal: 0.005 } }],
       ['Light Incarnate', '+20% skill damage, +6% cooldown reduction', 1, 'JUDGMENT', { add: { skillDamage: 0.2, cooldownReduction: 0.06 } }],
     ]],
     ['p', [
       ['Oathkeeper', '', 3, 'u:HEALTH', { add: { maxHealth: 12 } }],
       ['Long Vigil', 'Divine Avatar lasts +2s', 1, 'DIVINE_AVATAR', { add: { avatarBonus: 2 } }],
       ['Penance', '', 3, 'barrier', { add: { thorns: 8 } }],
-      ['Mercy', '', 2, 'regen', { add: { lifeSteal: 0.01 } }],
+      ['Mercy', '', 2, 'regen', { add: { lifeSteal: 0.005 } }],
       ['Holy Charge', 'Dash +1 charge', 1, 'u:SKILL_DASH', { add: { dashCharges: 1 } }],
       ['Crusade', 'Divine Avatar +3s, +1 dash charge, take 8% less damage', 1, 'DIVINE_AVATAR', { add: { avatarBonus: 3, dashCharges: 1, dmgReduce: 0.08 } }],
     ]],
