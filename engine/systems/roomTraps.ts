@@ -275,7 +275,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         if (!spot(1.5, 1.2, 0.74, 0.9, 14) && !spot(1.5, 0.8, 0.55, 0.92, 10)) continue;   // on the sides, near the wall, facing inward like the siege weapons
         const q = rt.statue[rt.nStatue++];
         q.kind = dbgTraps.statue >= 0 ? dbgTraps.statue : b === 4 ? 1 : b === 6 ? (rnd() < 0.5 ? 1 : 0) : 0;   // 0 fire, 1 frost
-        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 4.5 + rnd() * 3 + i * 2.5; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
+        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 2 + rnd() * 1.5 + i * 1.2; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
         q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
         keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
       }
@@ -374,7 +374,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         if (!ok) continue;
         const q = rt.statue[rt.nStatue++];
         q.kind = dbgTraps.statue >= 0 ? dbgTraps.statue : b === 4 ? 1 : b === 6 ? (rnd() < 0.5 ? 1 : 0) : 0;
-        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 4.5 + rnd() * 3 + i * 2.5; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
+        q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 2 + rnd() * 1.5 + i * 1.2; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
         q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
         keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
       } else if (kind === TRAP.TOWER) {
@@ -548,7 +548,7 @@ export function updateRoomTraps(dt: number): void {
       if (q.t >= STATUE_ON) { q.state = 3; q.t = 0; }
     } else {
       q.t += dt;
-      if (q.t >= 0.5) { q.state = 0; q.cd = 7 * (1 - 0.05 * q.tier) * (0.85 + Math.random() * 0.4); }
+      if (q.t >= 0.5) { q.state = 0; q.cd = 3.2 * (1 - 0.05 * q.tier) * (0.85 + Math.random() * 0.4); }   // (owner 2026-10-25: breathes much more often; was 7 s)
     }
   }
 
