@@ -234,8 +234,9 @@ export function CameraRig() {
             const po = portalAt(gx, gz);
             if (po) { clickMoveTo.on = true; clickMoveTo.x = po.x; clickMoveTo.z = po.z; mark(po.x, po.z, false); return; }   // (owner) click a portal: walk to it (any movement setting; E to enter)
             const en = pickEnemyAt(gx, gz);
-            selectAt(gx, gz);
+            const locked = selectAt(gx, gz);
             if (en) mark(en.pos.x, en.pos.z, true);
+            else if (locked) mark(gx, gz, true);   // a stationary / barrel: attack it (no walk-to marker)
             else if (move) { clickMoveTo.on = true; clickMoveTo.x = gx; clickMoveTo.z = gz; mark(gx, gz, false); }   // (owner setting) left-click the ground to walk there
           }
         }

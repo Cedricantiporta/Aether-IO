@@ -4,7 +4,8 @@
 // ============================================================================
 import { world } from '../world';
 import type { Enemy, EnemyKind } from '../types';
-import { pickTrapAt, trapLock } from './roomTraps';
+import { pickTrapAt, trapLock, type TrapObj } from './roomTraps';
+import { isHarvestNode } from '../mapgen';
 
 /** Locked enemy (pool id or -1). `kind`/`at` guard against the pool slot being recycled by another enemy. */
 export const target = { id: -1, kind: '' as EnemyKind | '', boss: false, at: 0 };
@@ -17,7 +18,22 @@ export const TARGET_DROP_RANGE = 40;
 const PICK_SLACK = 1.2;
 const out: number[] = [];
 
-export function clearTarget(): void { target.id = -1; target.kind = ''; target.boss = false; trapLock.obj = null; }
+export function clearTarget(): void { target.id = -1; target.kind = ''; target.boss = false; trapLock.obj = null; crateLock.id = -1; }
+/** (owner 2026-10-25) A clicked barrel / crate / pot (anything breakable that is not a harvest node) becomes the lock through a
+ *  stand-in TrapObj, so aiming, the AUTO bot and the target ring treat it like a clicked stationary; real hits break the crate. */
+export const crateLock = { id: -1 };
+const crateProxy: TrapObj = { x: 0, z: 0, rad: 0.7, hp: 1, maxHp: 1, dead: true, col: null, flash: 0, hitSeq: 0, proxy: true };
+function pickCrateAt(x: number, z: number): number {
+  let best = -1, bd = 1.7 * 1.7;
+  const cs = world.crates;
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i];
+    if (!c.active || isHarvestNode(c.kind)) continue;
+    const d = (c.pos.x - x) ** 2 + (c.pos.z - z) ** 2;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
 
 /** The locked enemy if it is still valid, else null. */
 export function lockedEnemy(): Enemy | null {
@@ -29,6 +45,11 @@ export function lockedEnemy(): Enemy | null {
 
 /** Per-frame validation: drops the lock when the enemy died / despawned / ran far away. */
 export function updateTarget(): void {
+  if (crateLock.id >= 0) {   // the clicked crate: follow it, drop the lock once it breaks
+    const c = world.crates[crateLock.id];
+    if (!c || !c.active || trapLock.obj !== crateProxy) { crateProxy.dead = true; if (trapLock.obj === crateProxy) trapLock.obj = null; crateLock.id = -1; }
+    else { crateProxy.x = c.pos.x; crateProxy.z = c.pos.z; }
+  }
   if (target.id < 0) return;
   const e = lockedEnemy(), p = world.player;
   if (!e || (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2 > TARGET_DROP_RANGE * TARGET_DROP_RANGE) clearTarget();
@@ -52,14 +73,19 @@ export function lockEnemy(e: Enemy): void { target.id = e.id; target.kind = e.ki
 /** Click at a ground point: lock the enemy there, or clear the lock on empty ground. */
 /** (owner setting) left-click walk target in runs: the hero heads there until it arrives or any movement key is pressed. */
 export const clickMoveTo = { on: false, x: 0, z: 0 };
-export function selectAt(x: number, z: number): void {
+/** Returns true when something (monster, stationary, barrel) was locked. */
+export function selectAt(x: number, z: number): boolean {
   const e = pickEnemyAt(x, z);
-  if (e) { trapLock.obj = null; if (target.id !== e.id) lockEnemy(e); }
-  else {   // (owner) no monster there: a siege weapon / tower / statue under the click becomes the lock
-    const t = pickTrapAt(x, z);
-    clearTarget();
-    if (t) trapLock.obj = t;
-  }
+  if (e) { trapLock.obj = null; crateLock.id = -1; if (target.id !== e.id) lockEnemy(e); return true; }
+  // (owner) no monster there: a siege weapon / tower / statue under the click becomes the lock, else a barrel / crate
+  const t = pickTrapAt(x, z);
+  clearTarget();
+  if (t) { trapLock.obj = t; return true; }
+  const ci = pickCrateAt(x, z);
+  if (ci < 0) return false;
+  const c = world.crates[ci];
+  crateLock.id = ci; crateProxy.x = c.pos.x; crateProxy.z = c.pos.z; crateProxy.dead = false; trapLock.obj = crateProxy;
+  return true;
 }
 
 /** Queue a click/tap at client coordinates (processed next frame by CameraRig). */

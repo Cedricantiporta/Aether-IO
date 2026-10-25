@@ -82,12 +82,12 @@ const SIEGE_HP_HITS = 9, TOWER_HP_HITS = 12, STATUE_HP_HITS = 10;
 const trapHp = (hits: number, depth: number): number => Math.max(48, useGameStore.getState().stats.damage * hits * (1 + 0.02 * depth) * 1.6);
 const TRAP_DEF = 0.5;
 /** A destroyable stationary (siege weapon / magic tower / breath statue). */
-export interface TrapObj { x: number; z: number; rad: number; hp: number; maxHp: number; dead: boolean; col: Collider | null; flash: number; hitSeq: number }
+export interface TrapObj { x: number; z: number; rad: number; hp: number; maxHp: number; dead: boolean; col: Collider | null; flash: number; hitSeq: number; proxy?: boolean }   // proxy: a clicked barrel / crate (target.ts)
 /** The stationary the hero is aiming at (auto-target pick, written by player.ts) and the click-locked one (target.ts clearTarget clears it). */
 export const trapAim = { obj: null as TrapObj | null };
 export const trapLock = { obj: null as TrapObj | null };
 let curDepth = 0;
-export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && rt.on && world.room.active ? o : null; };
+export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && (rt.on || o.proxy) && world.room.active ? o : null; };
 /** i-th live-or-dead stationary across the three pools (no allocation). */
 const trapAt = (i: number): TrapObj => i < rt.nSiege ? rt.siege[i] : i < rt.nSiege + rt.nTower ? rt.tower[i - rt.nSiege] : i < rt.nSiege + rt.nTower + rt.nStatue ? rt.statue[i - rt.nSiege - rt.nTower] : rt.laser[i - rt.nSiege - rt.nTower - rt.nStatue];
 export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser;
