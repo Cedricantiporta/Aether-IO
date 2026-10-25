@@ -21,7 +21,7 @@ export const SHARD_FUSE_COST: Record<'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY', n
 export const MATERIAL_DOWNGRADE_YIELD = 2;   // (below every fusion cost: no break-down / fuse loop)
 /** Hard cap on projectiles per shot from every source (Multicast cards, gear, pets). */
 export const MULTISHOT_CAP = 6;   // bows with Multishot IV fire 6
-/** Class level needed to equip / craft gear of a rarity (LOW grade). Owner 2026-10-24: Uncommon 6, Rare 12, Low Epic 18, High Epic 24,
+/** Class level needed to equip / craft gear of a rarity (LOW / MID grade). Owner 2026-10-24: Uncommon 6, Rare 12, Low Epic 18, High Epic 24,
  *  Low Legendary 30, High Legendary 36, Low Mythic 42, High Mythic 48. */
 export const RANK_REQ: Record<Rarity, number> = {
   COMMON: 1, UNCOMMON: 6, RARE: 12, EPIC: 18, LEGENDARY: 30, MYTHIC: 42,

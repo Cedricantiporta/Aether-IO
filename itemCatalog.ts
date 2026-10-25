@@ -34,12 +34,13 @@ function statList(type: string, list: string[]): string[] {
   if (type === 'ACCESSORY') { const l = list.filter((k) => UTIL_KEYS.has(k)); for (const f of ['regen', 'cdr', 'steal', 'move', 'mregen']) if (!l.includes(f)) l.push(f); return l; }
   return list;
 }
-/** Tier ladder (owner 2026-10-21): base stats are low, every rarity is a big jump over the one below (x1.7 - x1.9 each;
- *  Common 1, Uncommon 1.7, Rare 2.9, Epic 5.5, Legendary 10.5, Mythic 20). Relative to the Epic value of every stat (T above
- *  is written for Epic; EPIC_ANCHOR = 0.9 of the old Epic numbers so a Low Epic is slightly under the old Epic and a High
- *  Epic, +35%, slightly over). HIGH grade (grade.ts) multiplies a piece by GRADE_HIGH_MUL. */
-export const TIER_LADDER = [1, 1.7, 2.9, 5.5, 10.5, 20];
-export const EPIC_ANCHOR = 0.9;
+/** Tier ladder (owner 2026-10-25): base stats are low and every rarity is a big jump over the one below (x1.7 / x1.8 / x2.0 /
+ *  x2.1 / x2.3: Common 1, Uncommon 1.7, Rare 3.06, Epic 6.12, Legendary 12.85, Mythic 29.55). Relative to the Epic value of every
+ *  stat (T above is written for Epic). EPIC_ANCHOR 0.70 puts Common 30% under the previous ladder's Common (0.1144 vs 0.1636 of
+ *  the old Epic) while Legendary / Mythic stay about where they were (-14% / +4%), so the late game is as beatable as before.
+ *  These template values are the MID grade; LOW x0.85 / HIGH x1.15 (grade.ts). */
+export const TIER_LADDER = [1, 1.7, 3.06, 6.12, 12.85, 29.55];
+export const EPIC_ANCHOR = 0.70;
 /** the pre-rework ladder relative to Epic (old saves are rescaled by TIER_REL / OLD_TIER_REL, see grade.ts) */
 export const OLD_TIER_REL = [1 / 1.4 / 1.25, Math.sqrt((1 / 1.4 / 1.25) * (1 / 1.4)), 1 / 1.4, 1, 1.75, 1.75 * 2.2];
 export const TIER_REL = TIER_LADDER.map((m) => (m / TIER_LADDER[3]) * EPIC_ANCHOR);

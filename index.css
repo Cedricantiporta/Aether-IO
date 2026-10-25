@@ -315,6 +315,7 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 }
 /* (owner 2026-10-24: no animation on the High-grade glow) */
 .tt-grade { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border-radius: .6rem; font-size: .62rem; font-weight: 900; vertical-align: .08em; background: #e8e2d0; color: #7a6a48; }
+.tt-grade.is-low { background: #ece6dc; color: #9a8f7c; }
 .tt-grade.is-high { background: linear-gradient(#fff3a8, #ffc94a); color: #6a3a00; box-shadow: 0 1px 2px rgba(60, 30, 0, .35); }
 .slot-lock {
   position: absolute; right: .1rem; bottom: .1rem; z-index: 5; display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: .3rem;

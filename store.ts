@@ -28,7 +28,7 @@ import {
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ, itemReq,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
-import { rollGrade, migrateGear, GRADE_HIGH_CHANCE } from './grade';
+import { rollGrade, migrateGear, legacyLowToMid, GRADE_DROP_ODDS } from './grade';
 import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
 import { newAcc, accumulate, applyAcc } from './statFx';
@@ -402,7 +402,7 @@ export const instantiate = (template: Item, grade?: import('./types').ItemGrade)
   affixes: undefined,
   grade: undefined,
   quantity: 1,
-}), Math.random, GRADE_HIGH_CHANCE, grade);   // gear rolls LOW / HIGH grade (grade.ts)
+}), Math.random, GRADE_DROP_ODDS, grade);   // gear rolls LOW / MID / HIGH grade (grade.ts)
 
 const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => Object.keys(stats) as (keyof PlayerStats)[];
 /** One +level on a gear item, the same step as a blacksmith upgrade (+10% of the base per level up to +4, then +25%; % stats a third as fast). */
@@ -429,10 +429,10 @@ export function rollDropPlus(i: Item | null, tier: 0 | 1 | 2): Item | null {
 }
 
 // -------------------------------------------------------------- persistence --
-/** Old saves: gear without a grade is rescaled to the new tier ladder once and stamped LOW (grade.ts migrateGear). */
-const migrateEquipment = (e: Equipment): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, k === 'tool' ? null : migrateGear(v as Item | null)])) as unknown as Equipment;
+/** Old saves: gear without a grade is rescaled to the new tier ladder once and stamped MID (grade.ts migrateGear). */
+const migrateEquipment = (e: Equipment, relabel = false): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, k === 'tool' ? null : (relabel ? legacyLowToMid : (x: Item | null) => x)(migrateGear(v as Item | null))])) as unknown as Equipment;
 /** The Mining Pickaxe used to be a TOOL (own slot); it is now a weapon item. Old saves: a TOOL pickaxe (bag / warehouse / tool slot) becomes the weapon, kept in the bag. */
-export const newPickaxe = (): Item => { const t = ITEMS_POOL.find((i) => i.id === PICKAXE_ID)!; return { ...t, stats: { ...t.stats }, quantity: 1, grade: 'LOW' }; };   // (fixed stats: never rolled)
+export const newPickaxe = (): Item => { const t = ITEMS_POOL.find((i) => i.id === PICKAXE_ID)!; return { ...t, stats: { ...t.stats }, quantity: 1, grade: 'MID' }; };   // (fixed stats: never rolled)
 const oldPickaxeFix = (i: Item): Item => (i && i.id === PICKAXE_ID && i.type === 'TOOL' ? newPickaxe() : i);
 interface Profile {
   v: number;
@@ -462,6 +462,7 @@ interface Profile {
   sp2?: boolean;      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
   mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
+  grade3?: boolean;   // 3-grade system (LOW/MID/HIGH): older saves relabel their old LOW as MID once (grade.ts legacyLowToMid)
   gold10?: boolean;   // one-time x10 economy migration (gold + stored item prices)
   meta?: MetaState;   // daily / weekly goals, achievements, equipped title (goals.ts)
   elixirs?: string[]; // elixirs drunk in town, waiting for the next run (elixirs.ts)
@@ -498,7 +499,7 @@ const baseGameStats = (): GameStatistics => ({
 /** Full COMMON starter set (weapon + helmet/armor/gloves/boots/accessory) for a class. */
 const starterPiece = (id: string): Item | null => {
   const tpl = ITEMS_POOL.find((i) => i.id === id);
-  return tpl ? { ...instantiate(tpl, 'LOW'), id: uid('start') } : null;
+  return tpl ? { ...instantiate(tpl, 'MID'), id: uid('start') } : null;
 };
 const starterEquipment = (hero: HeroClass): Equipment => {
   const g = STARTER_GEAR[hero];
@@ -552,11 +553,11 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
             profile: {
               v: PROFILE_VERSION,
               gold: num(p.gold, 0) * (p.gold10 ? 1 : GOLD_SCALE), gems: p.gems1k ? num(p.gems, 0) : Math.max(num(p.gems, 0), WELCOME_GIFT.gems), crystals: num(p.crystals, 20),
-              inventory: Array.isArray(p.inventory) ? [...p.inventory, ...(p.equipment?.tool?.id === PICKAXE_ID ? [p.equipment.tool] : [])].map(oldPickaxeFix).map(petRetier).map(migrateGear).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
-              equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment),
+              inventory: Array.isArray(p.inventory) ? [...p.inventory, ...(p.equipment?.tool?.id === PICKAXE_ID ? [p.equipment.tool] : [])].map(oldPickaxeFix).map(petRetier).map(migrateGear).map((i) => (p.grade3 ? i : legacyLowToMid(i))).map((i) => (!isGear(i) && i.type !== 'PET' && i.level !== 1 ? { ...i, level: 1 } : i)).map((i) => (p.gold10 ? i : { ...i, price: Math.round((i.price || 0) * GOLD_SCALE) })) : [],
+              equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment, !p.grade3),
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix).map((i) => (p.grade3 ? i : legacyLowToMid(i))) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
               dashMods: sanitizeDashMods(p.dashMods),
@@ -604,7 +605,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
-const stampOne = <T extends Item | null | undefined>(i: T): T => (i && !i.grade && ['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY'].includes(i.type) ? { ...i, grade: 'LOW' } : i);
+const stampOne = <T extends Item | null | undefined>(i: T): T => (i && !i.grade && ['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'ACCESSORY'].includes(i.type) ? { ...i, grade: 'MID' } : i);
 const stampGrades = (s: GameState): GameState => ({ ...s, inventory: s.inventory.some((i) => stampOne(i) !== i) ? s.inventory.map(stampOne) : s.inventory,
   warehouse: s.warehouse.some((i) => stampOne(i) !== i) ? s.warehouse.map(stampOne) : s.warehouse,
   equipment: Object.values(s.equipment).some((i) => stampOne(i as Item | null) !== i) ? Object.fromEntries(Object.entries(s.equipment).map(([k, v]) => [k, stampOne(v as Item | null)])) as unknown as Equipment : s.equipment });
@@ -617,7 +618,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -634,13 +635,13 @@ petMirror.n = (profile.petSeen ?? []).length;   // Pet Collection bonuses are li
 // ---- shared warehouse: one storage for all characters (its own key). Each character's old per-profile warehouse is
 // merged in once (the profile keys already merged are remembered), then profiles store an empty warehouse.
 const SHARED_WH_KEY = 'aether-survivor-shared-warehouse-v1';
-interface SharedWh { items: Item[]; gold: number; merged: string[] }
+interface SharedWh { items: Item[]; gold: number; merged: string[]; grade3?: boolean }
 const sharedWh: SharedWh = (() => {
   let w: SharedWh = { items: [], gold: 0, merged: [] };
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SHARED_WH_KEY) : null;
     const p = raw ? JSON.parse(raw) as Partial<SharedWh> : null;
-    if (p && typeof p === 'object') w = { items: Array.isArray(p.items) ? p.items : [], gold: num(p.gold, 0), merged: Array.isArray(p.merged) ? p.merged : [] };
+    if (p && typeof p === 'object') w = { items: Array.isArray(p.items) ? (p.grade3 ? p.items : p.items.map(legacyLowToMid)) : [], gold: num(p.gold, 0), merged: Array.isArray(p.merged) ? p.merged : [], grade3: true };
   } catch { /* corrupt / unavailable: start empty */ }
   if (!w.merged.includes(PROFILE_KEY)) {
     w = { items: [...w.items, ...(profile.warehouse ?? [])], gold: w.gold + (profile.warehouseGold ?? 0), merged: [...w.merged, PROFILE_KEY] };
@@ -650,7 +651,7 @@ const sharedWh: SharedWh = (() => {
 })();
 profile.warehouse = sharedWh.items; profile.warehouseGold = sharedWh.gold;
 const writeSharedWh = (items: Item[], gold: number): void => {
-  try { if (typeof localStorage !== 'undefined') localStorage.setItem(SHARED_WH_KEY, JSON.stringify({ items, gold, merged: sharedWh.merged })); } catch { /* ignore */ }
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(SHARED_WH_KEY, JSON.stringify({ items, gold, merged: sharedWh.merged, grade3: true })); } catch { /* ignore */ }
 };
 writeSharedWh(sharedWh.items, sharedWh.gold);
 
@@ -725,7 +726,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (own) { inventory.splice(inventory.indexOf(own), 1); equipment.weapon = own; }
       else {
         const tpl = ITEMS_POOL.find((i) => i.id === heroInfo.weaponId);
-        if (tpl) equipment.weapon = { ...instantiate(tpl, 'LOW'), id: uid('start_wep') };
+        if (tpl) equipment.weapon = { ...instantiate(tpl, 'MID'), id: uid('start_wep') };
       }
     }
     return { baseStats, inventory, equipment, stats: calculateStats(baseStats, equipment, hero, talents ?? get().talents, attrsOf(hero)) };
