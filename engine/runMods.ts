@@ -19,7 +19,7 @@ export const hardMul = (inTown: boolean): number => (runInfo.hard && !inTown ? H
 export interface RunMods extends AscMods { loot: number }
 /** (owner) Re-entering an already conquered biome (Adventure): more, tougher, angrier monsters (set per room by director.enterRoom). */
 export const veteran = { on: false };
-export const VET = { hp: 1.4, dmg: 1.3, spawn: 1.4, speed: 1.1, shieldChance: 0.25, attackCd: 0.7, trickCd: 0.6 };
+export const VET = { hp: 1.2, dmg: 1.15, spawn: 1.2, speed: 1.05, shieldChance: 0.12, attackCd: 0.85, trickCd: 0.8 };   // (owner 2026-10-25: softened, was 1.4 / 1.3 / 1.4 / 1.1 / 0.25 / 0.7 / 0.6)
 const asc: AscMods = { hp: 1, dmg: 1, spawn: 1, heal: 1, bossHp: 1, speed: 1, elites: 0, reward: 1 };
 const out: RunMods = { ...asc, loot: 1 };
 /** Difficulty x Ascension (one shared object: read it, don't keep it). */

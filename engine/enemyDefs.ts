@@ -291,8 +291,9 @@ export const SPAWN_TIME = 0.35;        // seconds ordinary enemies take to rise
 export const BOSS_SPAWN_TIME = 1.6;   // bosses rise slower
 
 export function waveHpMult(wave: number): number {
+  // (owner 2026-10-25 rebalance) flatter at the top: each biome start is ~1.5-2x the one before (was ~2-2.5x from biome 3 on)
   const w = wave - 1;
-  return 1 + 0.16 * w + 0.01 * w * w;
+  return 1 + 0.22 * w + 0.005 * w * w;
 }
 export function waveDmgMult(wave: number): number {
   // quadratic like HP (was linear 1 + 0.07w: depth 60 hit only 5x while the hero's HP / defense kept growing, so late
